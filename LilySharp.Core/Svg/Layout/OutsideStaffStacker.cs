@@ -273,6 +273,36 @@ internal static class OutsideStaffStacker
             foreach (var m in systems[sysIdx].Measures)
                 measureToSystem[m.MeasureIndex] = sysIdx;
 
+        var trackers = SeedAboveTrackers(systems, systemSkylines, articulations, tupletBrackets, measureToSystem);
+
+        // Movable outside-staff grobs, placed in ascending outside-staff-priority
+        // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
+        var adjTrills = PlaceTrills(trills, trackers, measureToSystem, systems);
+        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem);
+        var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
+        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem, systems);
+        var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem, systems);
+        var adjCustomTexts = PlaceCustomTexts(customTexts, trackers, measureToSystem, systems);
+        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem, systems);
+        var adjMarks = PlaceMusicMarks(musicMarks, trackers, measureToSystem, systems);
+
+        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics, adjTextSpanners);
+    }
+
+    /// <summary>
+    /// Builds and seeds the per-system UP occupancy trackers: the system
+    /// up-skyline (staff protrusions), the top-staff prefix clef ink, the
+    /// note-bound above-staff scripts, and the above-staff tuplet brackets.
+    /// These carry no outside-staff priority, so they seed the occupancy that
+    /// the movable grobs must clear.
+    /// </summary>
+    private static DirectionalOccupancy[] SeedAboveTrackers(
+        ImmutableArray<SystemLayout> systems,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<TupletBracketLayout> tupletBrackets,
+        Dictionary<int, int> measureToSystem)
+    {
         // UP trackers: smaller page Y = further above the staff. Occupancy
         // records the TOP edge of everything placed so far.
         var trackers = new DirectionalOccupancy[systems.Length];
@@ -370,228 +400,252 @@ internal static class OutsideStaffStacker
             }
         }
 
-        // ---- 50: TrillSpanner ----
-        var adjTrills = trills;
-        if (!trills.IsDefaultOrEmpty)
+        return trackers;
+    }
+
+    // ---- 50: TrillSpanner ----
+    private static ImmutableArray<TrillSpannerLayout> PlaceTrills(
+        ImmutableArray<TrillSpannerLayout> trills, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (trills.IsDefaultOrEmpty)
+            return trills;
+        var b = trills.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
         {
-            var b = trills.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var t = b[i];
-                // Lower-staff trills are already positioned over their own staff
-                // by the engraver; the staff-0 seeded occupancy would wrongly pull
-                // them back up to the top staff.
-                if (t.StaffIndex != 0)
-                    continue;
-                if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
-                    continue;
-                double sy = systems[sysIdx].Y;
-                // anchor = "tr" glyph baseline; ink extent from the font bbox
-                // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
-                double newAbs = Place(trackers[sysIdx],
-                    t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
-                    sy + t.Y,
-                    topOffset: -GlyphMetrics.OrnTrillGlyph.Top,
-                    bottomOffset: 0.25);
-                b[i] = t with { Y = newAbs - sy };
-            }
-            adjTrills = b.ToImmutable();
+            var t = b[i];
+            // Lower-staff trills are already positioned over their own staff
+            // by the engraver; the staff-0 seeded occupancy would wrongly pull
+            // them back up to the top staff.
+            if (t.StaffIndex != 0)
+                continue;
+            if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
+                continue;
+            double sy = systems[sysIdx].Y;
+            // anchor = "tr" glyph baseline; ink extent from the font bbox
+            // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
+            double newAbs = Place(trackers[sysIdx],
+                t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
+                sy + t.Y,
+                topOffset: -GlyphMetrics.OrnTrillGlyph.Top,
+                bottomOffset: 0.25);
+            b[i] = t with { Y = newAbs - sy };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 100: BarNumber (absolute page Y) ----
+    private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
+        ImmutableArray<BarNumberLayout> barNumbers, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem)
+    {
+        if (barNumbers.IsDefaultOrEmpty)
+            return barNumbers;
+        var b = barNumbers.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var bn = b[i];
+            if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int sysIdx))
+                continue;
+            // Measured digit width; digits have no descenders, cap
+            // height ~0.71em above the baseline anchor.
+            double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
+            double x0 = bn.RightAligned ? bn.X - width : bn.X;
+            double x1 = bn.RightAligned ? bn.X : bn.X + width;
+            double newY = Place(trackers[sysIdx], x0, x1,
+                bn.Y, topOffset: -0.71 * BarNumberEngraver.FontSize, bottomOffset: 0.0);
+            b[i] = bn with { Y = newY };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 250: DynamicText forced ABOVE (@f.up) ----
+    // LILYPOND-REF: scm/define-grobs.scm:1298 DynamicText.outside-staff-priority = 250
+    // Below-staff dynamics are handled by StackBelowStaff; here the FORCED-above ones
+    // stack outward from the staff and push higher-priority above-staff grobs (ottava,
+    // marks, …) clear of them. Text ascends UP from its baseline anchor.
+    private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
+        ImmutableArray<DynamicLayout> aboveDynamics, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (aboveDynamics.IsDefaultOrEmpty)
+            return aboveDynamics;
+        var b = aboveDynamics.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var dyn = b[i];
+            if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
+                continue;
+            double newAbs = Place(trackers[sysIdx],
+                dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
+                systems[sysIdx].Y + dyn.Y,
+                topOffset: -DynamicTextAscent, bottomOffset: 0.0);
+            b[i] = dyn with { Y = newAbs - systems[sysIdx].Y };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 350: TextSpanner (accel./rit. — LilyPond TextSpanner direction=UP) ----
+    // LILYPOND-REF: scm/define-grobs.scm TextSpanner (direction . UP),
+    //   (outside-staff-priority . 350), (staff-padding . 0.8). Placed above the
+    //   staff, clearing the up-skyline, instead of below where it hit low notes.
+    private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
+        ImmutableArray<TextSpannerLayout> textSpanners, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (textSpanners.IsDefaultOrEmpty)
+            return textSpanners;
+        var b = textSpanners.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var ts = b[i];
+            if (ts.StaffIndex != 0) continue; // top staff only, like trills
+            if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
+            double sy = systems[sysIdx].Y;
+            double newAbs = Place(trackers[sysIdx], ts.StartX, ts.EndX, sy + ts.Y,
+                topOffset: -TextSpannerAscent, bottomOffset: TextSpannerDescent);
+            b[i] = ts with { Y = newAbs - sy };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 400: OttavaBracket (above-staff only) ----
+    private static ImmutableArray<OttavaBracketLayout> PlaceOttavas(
+        ImmutableArray<OttavaBracketLayout> ottavas, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (ottavas.IsDefaultOrEmpty)
+            return ottavas;
+        var b = ottavas.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var o = b[i];
+            if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
+                continue;
+            // Lower-staff brackets are already placed over their OWN staff by
+            // OttavaBracketEngraver (via staffYByIndex); the staff-0 seeded
+            // occupancy would wrongly pull them up to the top staff. Same
+            // treatment as lower-staff trills above.
+            if (o.StaffIndex != 0)
+                continue;
+            double sy = systems[sysIdx].Y;
+            // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
+            // ~0.75em ascent; the end hook drops EdgeHeight below.
+            double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
+                sy + o.Y,
+                topOffset: -0.75 * (0.45 * 4.0),
+                bottomOffset: Math.Max(0.1, o.EdgeHeight));
+            b[i] = o with { Y = newAbs - sy };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 450: TextScript (^"...") ----
+    private static ImmutableArray<CustomTextLayout> PlaceCustomTexts(
+        ImmutableArray<CustomTextLayout> customTexts, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (customTexts.IsDefaultOrEmpty)
+            return customTexts;
+        var b = customTexts.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var ct = b[i];
+            if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
+                continue;
+            double sy = systems[sysIdx].Y;
+            // Centered italic text at 0.6 x 4sp; measured width (bold
+            // table, a slight overestimate for italic), ~0.75em ascent
+            // and ~0.25em descent around the baseline anchor.
+            const double ctFs = 0.6 * 4.0;
+            double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
+            double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
+                sy + ct.Y, topOffset: -0.75 * ctFs, bottomOffset: 0.25 * ctFs);
+            b[i] = ct with { Y = newAbs - sy };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 600: VoltaBracketSpanner ----
+    // LilyPond's outside-staff grob here is the SPANNER — an axis group
+    // holding ALL volta brackets of a system — so consecutive endings
+    // share ONE side-positioned Y per system instead of each bracket
+    // finding its own height over its own bars.
+    // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
+    //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
+    private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
+        ImmutableArray<VoltaBracketLayout> voltas, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (voltas.IsDefaultOrEmpty)
+            return voltas;
+        double VoltaBottom(VoltaBracketLayout v)
+        {
+            // anchor = bracket line. Hooks drop EdgeHeight; the volta
+            // number hangs from line+0.3 at 0.6 x 4sp (renderer
+            // geometry), so the deeper of the two bounds the extent.
+            double textDepth = string.IsNullOrEmpty(v.VoltaText)
+                ? 0
+                : 0.3 + 0.75 * (0.6 * 4.0);
+            return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
         }
 
-        // ---- 100: BarNumber (absolute page Y) ----
-        var adjBarNumbers = barNumbers;
-        if (!barNumbers.IsDefaultOrEmpty)
+        var b = voltas.ToBuilder();
+        foreach (var sysGroup in Enumerable.Range(0, b.Count)
+            .Where(i => measureToSystem.ContainsKey(b[i].StartMeasureIndex))
+            .GroupBy(i => measureToSystem[b[i].StartMeasureIndex]))
         {
-            var b = barNumbers.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var bn = b[i];
-                if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int sysIdx))
-                    continue;
-                // Measured digit width; digits have no descenders, cap
-                // height ~0.71em above the baseline anchor.
-                double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
-                double x0 = bn.RightAligned ? bn.X - width : bn.X;
-                double x1 = bn.RightAligned ? bn.X : bn.X + width;
-                double newY = Place(trackers[sysIdx], x0, x1,
-                    bn.Y, topOffset: -0.71 * BarNumberEngraver.FontSize, bottomOffset: 0.0);
-                b[i] = bn with { Y = newY };
-            }
-            adjBarNumbers = b.ToImmutable();
-        }
+            int sysIdx = sysGroup.Key;
+            double sy = systems[sysIdx].Y;
 
-        // ---- 250: DynamicText forced ABOVE (@f.up) ----
-        // LILYPOND-REF: scm/define-grobs.scm:1298 DynamicText.outside-staff-priority = 250
-        // Below-staff dynamics are handled by StackBelowStaff; here the FORCED-above ones
-        // stack outward from the staff and push higher-priority above-staff grobs (ottava,
-        // marks, …) clear of them. Text ascends UP from its baseline anchor.
-        var adjDynamics = aboveDynamics;
-        if (!aboveDynamics.IsDefaultOrEmpty)
+            // One required anchor for the whole spanner: the highest
+            // (smallest page Y) the occupancy demands across all of the
+            // system's brackets.
+            double anchor = double.MaxValue;
+            foreach (int i in sysGroup)
+            {
+                var v = b[i];
+                double required = trackers[sysIdx].Frontier(v.StartX, v.EndX)
+                    - OutsideStaffPadding - VoltaBottom(v);
+                anchor = Math.Min(anchor, Math.Min(sy + v.Y, required));
+            }
+
+            foreach (int i in sysGroup)
+            {
+                var v = b[i];
+                b[i] = v with { Y = anchor - sy };
+                trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
+            }
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 1500: MusicMark (rehearsal/section labels) ----
+    private static ImmutableArray<MusicMarkLayout> PlaceMusicMarks(
+        ImmutableArray<MusicMarkLayout> musicMarks, DirectionalOccupancy[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (musicMarks.IsDefaultOrEmpty)
+            return musicMarks;
+        var b = musicMarks.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
         {
-            var b = aboveDynamics.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var dyn = b[i];
-                if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
-                    continue;
-                double newAbs = Place(trackers[sysIdx],
-                    dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                    systems[sysIdx].Y + dyn.Y,
-                    topOffset: -DynamicTextAscent, bottomOffset: 0.0);
-                b[i] = dyn with { Y = newAbs - systems[sysIdx].Y };
-            }
-            adjDynamics = b.ToImmutable();
+            var m = b[i];
+            if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
+                continue;
+            // Spanner-handled marks (cresc./rit./ottava ...) are never
+            // drawn by DrawMusicMarks — registering them would reserve
+            // PHANTOM space and push real marks above thin air. Marks
+            // placed below the staff don't belong to the above pass.
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.Y > 0)
+                continue;
+            double sy = systems[sysIdx].Y;
+            var (halfWidth, top, bottom) = MusicMarkExtents(m);
+            double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,
+                sy + m.Y, topOffset: top, bottomOffset: bottom);
+            b[i] = m with { Y = newAbs - sy };
         }
-
-        // ---- 350: TextSpanner (accel./rit. — LilyPond TextSpanner direction=UP) ----
-        // LILYPOND-REF: scm/define-grobs.scm TextSpanner (direction . UP),
-        //   (outside-staff-priority . 350), (staff-padding . 0.8). Placed above the
-        //   staff, clearing the up-skyline, instead of below where it hit low notes.
-        var adjTextSpanners = textSpanners;
-        if (!textSpanners.IsDefaultOrEmpty)
-        {
-            var b = textSpanners.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var ts = b[i];
-                if (ts.StaffIndex != 0) continue; // top staff only, like trills
-                if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
-                double sy = systems[sysIdx].Y;
-                double newAbs = Place(trackers[sysIdx], ts.StartX, ts.EndX, sy + ts.Y,
-                    topOffset: -TextSpannerAscent, bottomOffset: TextSpannerDescent);
-                b[i] = ts with { Y = newAbs - sy };
-            }
-            adjTextSpanners = b.ToImmutable();
-        }
-
-        // ---- 400: OttavaBracket (above-staff only) ----
-        var adjOttavas = ottavas;
-        if (!ottavas.IsDefaultOrEmpty)
-        {
-            var b = ottavas.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var o = b[i];
-                if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
-                    continue;
-                // Lower-staff brackets are already placed over their OWN staff by
-                // OttavaBracketEngraver (via staffYByIndex); the staff-0 seeded
-                // occupancy would wrongly pull them up to the top staff. Same
-                // treatment as lower-staff trills above.
-                if (o.StaffIndex != 0)
-                    continue;
-                double sy = systems[sysIdx].Y;
-                // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
-                // ~0.75em ascent; the end hook drops EdgeHeight below.
-                double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
-                    sy + o.Y,
-                    topOffset: -0.75 * (0.45 * 4.0),
-                    bottomOffset: Math.Max(0.1, o.EdgeHeight));
-                b[i] = o with { Y = newAbs - sy };
-            }
-            adjOttavas = b.ToImmutable();
-        }
-
-        // ---- 450: TextScript (^"...") ----
-        var adjCustomTexts = customTexts;
-        if (!customTexts.IsDefaultOrEmpty)
-        {
-            var b = customTexts.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var ct = b[i];
-                if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
-                    continue;
-                double sy = systems[sysIdx].Y;
-                // Centered italic text at 0.6 x 4sp; measured width (bold
-                // table, a slight overestimate for italic), ~0.75em ascent
-                // and ~0.25em descent around the baseline anchor.
-                const double ctFs = 0.6 * 4.0;
-                double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
-                double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                    sy + ct.Y, topOffset: -0.75 * ctFs, bottomOffset: 0.25 * ctFs);
-                b[i] = ct with { Y = newAbs - sy };
-            }
-            adjCustomTexts = b.ToImmutable();
-        }
-
-        // ---- 600: VoltaBracketSpanner ----
-        // LilyPond's outside-staff grob here is the SPANNER — an axis group
-        // holding ALL volta brackets of a system — so consecutive endings
-        // share ONE side-positioned Y per system instead of each bracket
-        // finding its own height over its own bars.
-        // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
-        //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
-        var adjVoltas = voltas;
-        if (!voltas.IsDefaultOrEmpty)
-        {
-            double VoltaBottom(VoltaBracketLayout v)
-            {
-                // anchor = bracket line. Hooks drop EdgeHeight; the volta
-                // number hangs from line+0.3 at 0.6 x 4sp (renderer
-                // geometry), so the deeper of the two bounds the extent.
-                double textDepth = string.IsNullOrEmpty(v.VoltaText)
-                    ? 0
-                    : 0.3 + 0.75 * (0.6 * 4.0);
-                return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
-            }
-
-            var b = voltas.ToBuilder();
-            foreach (var sysGroup in Enumerable.Range(0, b.Count)
-                .Where(i => measureToSystem.ContainsKey(b[i].StartMeasureIndex))
-                .GroupBy(i => measureToSystem[b[i].StartMeasureIndex]))
-            {
-                int sysIdx = sysGroup.Key;
-                double sy = systems[sysIdx].Y;
-
-                // One required anchor for the whole spanner: the highest
-                // (smallest page Y) the occupancy demands across all of the
-                // system's brackets.
-                double anchor = double.MaxValue;
-                foreach (int i in sysGroup)
-                {
-                    var v = b[i];
-                    double required = trackers[sysIdx].Frontier(v.StartX, v.EndX)
-                        - OutsideStaffPadding - VoltaBottom(v);
-                    anchor = Math.Min(anchor, Math.Min(sy + v.Y, required));
-                }
-
-                foreach (int i in sysGroup)
-                {
-                    var v = b[i];
-                    b[i] = v with { Y = anchor - sy };
-                    trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
-                }
-            }
-            adjVoltas = b.ToImmutable();
-        }
-
-        // ---- 1500: MusicMark (rehearsal/section labels) ----
-        var adjMarks = musicMarks;
-        if (!musicMarks.IsDefaultOrEmpty)
-        {
-            var b = musicMarks.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
-            {
-                var m = b[i];
-                if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
-                    continue;
-                // Spanner-handled marks (cresc./rit./ottava ...) are never
-                // drawn by DrawMusicMarks — registering them would reserve
-                // PHANTOM space and push real marks above thin air. Marks
-                // placed below the staff don't belong to the above pass.
-                if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.Y > 0)
-                    continue;
-                double sy = systems[sysIdx].Y;
-                var (halfWidth, top, bottom) = MusicMarkExtents(m);
-                double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,
-                    sy + m.Y, topOffset: top, bottomOffset: bottom);
-                b[i] = m with { Y = newAbs - sy };
-            }
-            adjMarks = b.ToImmutable();
-        }
-
-        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics, adjTextSpanners);
+        return b.ToImmutable();
     }
 
     /// <summary>

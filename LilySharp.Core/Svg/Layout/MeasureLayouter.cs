@@ -133,8 +133,42 @@ internal sealed class MeasureLayouter
         // Each column's minimum distance must account for collisions between
         // items at adjacent timing points across ALL voices (e.g., accidentals, noteheads).
         // LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves
-        var timingToItems = new Dictionary<Fraction, List<MusicItem>>();
         var measuresToScan = allMeasures ?? new[] { measure };
+        var timingToItems = BuildTimingToItemsMap(measuresToScan);
+
+        // Full-measure rests get compact rods, not proportional whole-note
+        // spacing (see TryCreateAllRestSprings for the LilyPond reasoning).
+        if (TryCreateAllRestSprings(measure, measuresToScan) is { } restSprings)
+            return restSprings;
+
+        var springs = new List<Spring>();
+
+        // Spring 0: barline → first column (see CreateBarlineToFirstSpring).
+        springs.Add(CreateBarlineToFirstSpring(timings, timingToItems));
+
+        // Springs between adjacent timing columns (see CreateInterColumnSpring).
+        for (int i = 1; i < timings.Count; i++)
+            springs.Add(CreateInterColumnSpring(i, timings, timingToItems, measuresToScan, baseShortestDuration));
+
+        // End spring: last column → barline (see CreateLastToBarlineSpring).
+        springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration, baseShortestDuration));
+
+        return springs.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Builds the timing → items map used for skyline-based rod calculation:
+    /// each column's minimum distance must account for collisions between items
+    /// at adjacent timing points across ALL voices (accidentals, noteheads).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+    /// LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves.
+    /// </remarks>
+    private static Dictionary<Fraction, List<MusicItem>> BuildTimingToItemsMap(
+        IReadOnlyList<Measure> measuresToScan)
+    {
+        var timingToItems = new Dictionary<Fraction, List<MusicItem>>();
         foreach (var m in measuresToScan)
         {
             var t = Fraction.Zero;
@@ -149,13 +183,20 @@ internal sealed class MeasureLayouter
                 t += item.Duration;
             }
         }
+        return timingToItems;
+    }
 
-        // Full-measure rests are spaced by a compact rod, not proportionally
-        // to the notated whole note — when EVERY voice is resting the whole
-        // measure, the combined-timing path must compact exactly like the
-        // single-voice path, or line breaking and layout disagree about the
-        // measure's width and multi-measure-rest runs split or stretch.
-        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods
+    /// <summary>
+    /// When EVERY voice rests the whole measure, returns two compact rod springs
+    /// (not proportional whole-note spacing); otherwise null. The combined-timing
+    /// path must compact exactly like the single-voice path, or line breaking and
+    /// layout disagree about the measure's width and multi-measure-rest runs split
+    /// or stretch.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods</remarks>
+    private static ImmutableArray<Spring>? TryCreateAllRestSprings(
+        Measure measure, IReadOnlyList<Measure> measuresToScan)
+    {
         bool allFullMeasureRests = true;
         foreach (var m in measuresToScan)
         {
@@ -175,20 +216,24 @@ internal sealed class MeasureLayouter
                 new Spring(Math.Max(1.25 * inc, startMin), startMin, Math.Max(0.1, 0.25 * inc)),
                 new Spring(Math.Max(2.0 * inc, endMin), endMin, Math.Max(0.1, inc)));
         }
+        return null;
+    }
 
-        var springs = new List<Spring>();
-
-        // Spring 0: barline → first column. This is BREAKABLE spacing, not
-        // musical spacing: the gap after a barline is governed by the
-        // BarLine space-alist, NOT by the first note's duration, and it must
-        // never stretch under line justification (or the first note drifts
-        // rightward in stretched lines).
-        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist —
-        //   (first-note . (semi-shrink-space . 1.3))
-        // LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
-        //   semi-shrink-space: fixed = d/2, ideal = d, is_stretchable = false
-        //   → inverse stretch strength 0; compressible only down to fixed
-        //   (inverse compress = ideal − fixed = d/2).
+    /// <summary>
+    /// Spring 0: barline → first column. BREAKABLE spacing, not musical: the gap
+    /// after a barline is governed by the BarLine space-alist, NOT the first
+    /// note's duration, and it must never stretch under justification.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm BarLine space-alist —
+    ///   (first-note . (semi-shrink-space . 1.3))
+    /// LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
+    ///   semi-shrink-space: fixed = d/2, ideal = d, is_stretchable = false
+    ///   → inverse stretch strength 0; compressible only down to fixed.
+    /// </remarks>
+    private static Spring CreateBarlineToFirstSpring(
+        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
+    {
         double firstNoteSpace = EngravingDefaults.BarLineToFirstNoteSpace;
         double firstNoteMin = firstNoteSpace / 2;
 
@@ -203,12 +248,8 @@ internal sealed class MeasureLayouter
             }
 
             // A zero-duration clef/key/time change at the MEASURE START shares
-            // the first note's column and is drawn hanging LEFT of it. The
-            // inter-column springs below (see ~line 290) reserve that hung
-            // width via ChangeItemPrefixWidth, but the barline→first-column
-            // spring did not — so a measure-opening change had nothing pushing
-            // its column right and the hung glyph jammed against the barline.
-            // Reserve it here too (glyph + padding on both sides).
+            // the first note's column and is drawn hanging LEFT of it. Reserve
+            // that hung width so the change doesn't jam against the barline.
             // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
             // column precedes the musical column of the same moment.
             double startPrefix = ChangeItemPrefixWidth(firstItems);
@@ -220,135 +261,120 @@ internal sealed class MeasureLayouter
             startLeadGrace = LeadingGracePrefixWidth(firstItems);
         }
 
-        Spring firstSpring;
         if (startLeadGrace > 0)
         {
             // The grace is now the FIRST musical column after the barline, so the
-            // barline→grace gap uses tight GRACE spacing (spacing-increment), NOT
-            // the wider regular barline→first-note space. The grace group span +
-            // grace→main rod (startLeadGrace) then pushes the main note's column
-            // right. The whole front block is rigid (grace columns don't stretch).
+            // barline→grace gap uses tight GRACE spacing (spacing-increment). The
+            // whole front block is rigid (grace columns don't stretch).
             // LILYPOND-REF: scm/define-grobs.scm:1592 GraceSpacing
             //   (spacing-increment . 0.8) — grace columns space tighter than notes.
             // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
             //   column → … → main column.
             double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
             double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
-            firstSpring = new Spring(front, front, inverseStretchStrength: 0);
+            return new Spring(front, front, inverseStretchStrength: 0);
         }
-        else
+        return new Spring(
+            Math.Max(firstNoteSpace, firstNoteMin),
+            firstNoteMin,
+            inverseStretchStrength: 0);
+    }
+
+    /// <summary>
+    /// Spring connecting timing column <paramref name="i"/>-1 → <paramref name="i"/>:
+    /// duration-proportional ideal refined by left-head width, stem-direction
+    /// optical correction merged across voices, then skyline rods and hung-glyph
+    /// (clef/key change, leading grace) prefix reservation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:204-315
+    ///   stem_dir_correction; lily/spacing-spanner.cc:322-393 musical_column_spacing
+    ///   + lily/spring.cc:104 merge_springs.
+    /// </remarks>
+    private Spring CreateInterColumnSpring(
+        int i, List<Fraction> timings,
+        Dictionary<Fraction, List<MusicItem>> timingToItems,
+        IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration)
+    {
+        // This spring connects timings[i-1] → timings[i]; its duration is
+        // THAT segment. (A previous off-by-one used the FOLLOWING segment's
+        // duration, clamping a half-note gap down to the next quarter's length.)
+        Fraction segmentDuration = timings[i] - timings[i - 1];
+        // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
+        var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
+        var spring = SpacingRules.CreateTimingSpringMultiVoice(
+            segmentDuration, shortestPlaying, baseShortestDuration);
+
+        timingToItems.TryGetValue(timings[i - 1], out var prevItems);
+        timingToItems.TryGetValue(timings[i], out var nextItems);
+
+        // Refine the duration-based ideal to the LEFT column's actual head width
+        // (LilyPond's note-spacing.cc:77), BEFORE the stem correction.
+        if (prevItems != null)
+            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems);
+
+        // Stem-direction optical correction ([Wanske]), merged across simultaneous
+        // voices' wishes (single voice = its own wish; polyphony = averaged).
+        spring = SpacingRules.MergeVoiceStemWishes(
+            spring, measuresToScan, timings[i - 1], timings[i],
+            NoteSpacingParameters.Default);
+        if (prevItems != null && nextItems != null)
         {
-            firstSpring = new Spring(
-                Math.Max(firstNoteSpace, firstNoteMin),
-                firstNoteMin,
-                inverseStretchStrength: 0);
-        }
-        springs.Add(firstSpring);
-
-        // Springs between adjacent timing columns (duration-proportional + skyline rods)
-        // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
-        for (int i = 1; i < timings.Count; i++)
-        {
-            // This spring connects timings[i-1] → timings[i]; its duration is
-            // THAT segment. (A previous off-by-one used the FOLLOWING
-            // segment's duration here, which clamped a half-note gap down to
-            // the next quarter's length — half and quarter came out equal.)
-            Fraction segmentDuration = timings[i] - timings[i - 1];
-            // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
-            var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
-            var spring = SpacingRules.CreateTimingSpringMultiVoice(
-                segmentDuration, shortestPlaying, baseShortestDuration);
-
-            // LILYPOND-REF: lily/spacing-spanner.cc — apply rod from skyline collision
-            // between items at adjacent timing points across ALL voices.
-            // Take the maximum skyline distance across all voice pairs.
-            timingToItems.TryGetValue(timings[i - 1], out var prevItems);
-            timingToItems.TryGetValue(timings[i], out var nextItems);
-
-            // Refine the duration-based ideal to the LEFT column's actual head
-            // width (LilyPond's note-spacing.cc:77), BEFORE the stem correction
-            // that LilyPond applies afterward. Without this every note gap is
-            // ~0.1 ss tighter than LilyPond (the head-width vs generic-increment
-            // difference).
-            if (prevItems != null)
-                spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems);
-
-            // Stem-direction optical correction ([Wanske]): up-stem→down-stem
-            // gets extra space, down→up less. LilyPond computes it per voice
-            // inside each Note_spacing wish, then merges the simultaneous
-            // voices' wishes via merge_springs. For monophonic music this is
-            // the single voice's wish (base + its correction); for polyphony
-            // the per-voice corrections are averaged via Spring.Merge instead
-            // of being dropped.
-            // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
-            // LILYPOND-REF: lily/spacing-spanner.cc:322-393 musical_column_spacing
-            //   + lily/spring.cc:104 merge_springs
-            spring = SpacingRules.MergeVoiceStemWishes(
-                spring, measuresToScan, timings[i - 1], timings[i],
-                NoteSpacingParameters.Default);
-            if (prevItems != null && nextItems != null)
+            double maxSkyDist = 0;
+            foreach (var prev in prevItems)
             {
-                double maxSkyDist = 0;
-                foreach (var prev in prevItems)
+                bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
+                foreach (var next in nextItems)
                 {
-                    bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
-                    foreach (var next in nextItems)
-                    {
-                        double skyDist = SpacingRules.CalculateSkylineDistance(
-                            prev, next, staffY: 0, prevBeamed: prevBeamed);
-                        maxSkyDist = Math.Max(maxSkyDist, skyDist);
-                    }
-                }
-
-                if (maxSkyDist > spring.MinDistance)
-                {
-                    // Rods are MINIMA, never ideals: the spring's natural
-                    // length stays duration-based and the rod only blocks
-                    // compression below the collision distance (Spring's
-                    // blocking force handles min > ideal). Inflating the
-                    // ideal here used to swallow optical corrections and
-                    // over-stretch dense columns in justified lines.
-                    // LILYPOND-REF: lily/spacing-spanner.cc — set_min_distance.
-                    spring = new Spring(
-                        spring.IdealDistance,
-                        maxSkyDist,
-                        spring.InverseStretchStrength);
+                    double skyDist = SpacingRules.CalculateSkylineDistance(
+                        prev, next, staffY: 0, prevBeamed: prevBeamed);
+                    maxSkyDist = Math.Max(maxSkyDist, skyDist);
                 }
             }
 
-            // Mid-measure clef/key-signature changes have zero duration and
-            // share the next note's timing. LilyPond puts them in their own
-            // non-musical column BEFORE the musical column of that moment;
-            // approximate by reserving the change's width in this spring —
-            // the renderer hangs the glyph left of the column to match.
-            // LILYPOND-REF: lily/paper-column.cc — breakable (non-musical)
-            // columns precede the musical column of the same moment.
-            double prefixWidth = ChangeItemPrefixWidth(nextItems);
-            // Leading grace on the NEXT note hangs left of its column, between the
-            // two notes (same reservation as a hung clef change, see ~line 204).
-            prefixWidth += LeadingGracePrefixWidth(nextItems);
-            if (prefixWidth > 0)
+            if (maxSkyDist > spring.MinDistance)
+            {
+                // Rods are MINIMA, never ideals: the natural length stays
+                // duration-based and the rod only blocks compression below the
+                // collision distance. LILYPOND-REF: lily/spacing-spanner.cc — set_min_distance.
                 spring = new Spring(
-                    spring.IdealDistance + prefixWidth,
-                    spring.MinDistance + prefixWidth,
+                    spring.IdealDistance,
+                    maxSkyDist,
                     spring.InverseStretchStrength);
-
-            springs.Add(spring);
+            }
         }
 
-        // End spring: last column → barline (remaining duration)
-        // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
+        // Mid-measure clef/key change (zero duration, shares the next timing) and
+        // leading grace on the next note hang left of that column; reserve their
+        // width here so the renderer's hung glyph has room.
+        // LILYPOND-REF: lily/paper-column.cc — breakable columns precede the musical column.
+        double prefixWidth = ChangeItemPrefixWidth(nextItems);
+        prefixWidth += LeadingGracePrefixWidth(nextItems);
+        if (prefixWidth > 0)
+            spring = new Spring(
+                spring.IdealDistance + prefixWidth,
+                spring.MinDistance + prefixWidth,
+                spring.InverseStretchStrength);
+
+        return spring;
+    }
+
+    /// <summary>
+    /// End spring: last column → barline (remaining duration), with left-head-width
+    /// refinement and the last-item → barline skyline rod.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:77.</remarks>
+    private static Spring CreateLastToBarlineSpring(
+        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
+        IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration)
+    {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
         var endSpring = SpacingRules.CreateTimingSpringMultiVoice(
             endDuration, endShortestPlaying, baseShortestDuration);
 
-        // Apply skyline rod: last item → barline (max across all voices)
         if (timingToItems.TryGetValue(timings[^1], out var lastItems))
         {
-            // LilyPond's note-spacing.cc:77 head-width refinement applies to every
-            // Note_spacing spring, including the last note → barline one, so the
-            // gap after the final note matches an interior gap of the same value.
             endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems);
 
             double maxSkyDist = 0;
@@ -360,16 +386,13 @@ internal sealed class MeasureLayouter
 
             if (maxSkyDist > endSpring.MinDistance)
             {
-                // Rod = minimum only; see the loop above.
                 endSpring = new Spring(
                     endSpring.IdealDistance,
                     maxSkyDist,
                     endSpring.InverseStretchStrength);
             }
         }
-        springs.Add(endSpring);
-
-        return springs.ToImmutableArray();
+        return endSpring;
     }
 
     /// <summary>

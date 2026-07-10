@@ -28,63 +28,52 @@ internal sealed class SlurDetector
     {
         var slurs = new List<SlurItem>();
 
-        // Each voice runs its own slur engraver: a voice's open-slur stack must
-        // not pair with another voice's close, so the stack is per voice. A
-        // single-voice score iterates once with voiceIndex 0 (byte-identical).
+        // Each voice runs its own slur engraver: a voice's open-slur stack must not
+        // pair with another voice's close, so the stack resets at each voice change.
         // LILYPOND-REF: ly/engraver-init.ly — Slur_engraver lives in the Voice context.
-        for (int v = 0; v < score.Voices.Length; v++)
+        var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
+        int currentVoice = -1;
+
+        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
         {
-            var measures = score.Voices[v].Measures;
-            var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
-
-            for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+            if (v != currentVoice)
             {
-                var measure = measures[measureIdx];
+                openSlurs.Clear();
+                currentVoice = v;
+            }
 
-                for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
-                {
-                    var item = measure.Items[itemIdx];
-                    // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
-                    if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
-                        continue;
+            // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
+            if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
+                continue;
 
-                    if (hasStart)
-                    {
-                        openSlurs.Push((measureIdx, itemIdx, item));
-                    }
+            if (hasStart)
+            {
+                openSlurs.Push((measureIdx, itemIdx, item));
+            }
 
-                    if (hasEnd && openSlurs.Count > 0)
-                    {
-                        var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
+            if (hasEnd && openSlurs.Count > 0)
+            {
+                var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
 
-                        // Single voice: default DOWN, flipped UP when ANY covered
-                        // stem points DOWN — not just the start note's (a slur from
-                        // a stem-up note to a stem-down note goes UP, or it curves
-                        // straight into the later note's stem side). Polyphony: the
-                        // voice fixes the direction regardless of stems — the upper
-                        // voice curves UP, the lower voice DOWN, so the two voices'
-                        // slurs stay clear of each other.
-                        // LILYPOND-REF: lily/slur.cc Slur::calc_direction — d = DOWN,
-                        //   set UP if any non-rest note column has direction DOWN.
-                        // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set
-                        //   Slur.direction = UP / DOWN (voiceThree/Four alternate).
-                        bool curveUp = score.Voices.Length > 1
-                            ? (v % 2 == 0)
-                            : AnyCoveredStemDown(measures,
-                                startMeasureIdx, startItemIdx, measureIdx, itemIdx);
+                // Single voice: default DOWN, flipped UP when ANY covered stem
+                // points DOWN — not just the start note's (a slur from a stem-up
+                // note to a stem-down note goes UP, or it curves straight into the
+                // later note's stem side). Polyphony: the voice fixes the direction.
+                // LILYPOND-REF: lily/slur.cc Slur::calc_direction — d = DOWN, set UP
+                //   if any non-rest note column has direction DOWN.
+                bool curveUp = VoiceScan.SpanCurvesUp(score.Voices.Length, v,
+                    AnyCoveredStemDown(measures, startMeasureIdx, startItemIdx, measureIdx, itemIdx));
 
-                        slurs.Add(new SlurItem(
-                            // For a chord the slur anchors at the head on the curve side.
-                            MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
-                            MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
-                            curveUp,
-                            startMeasureIdx,
-                            measureIdx,
-                            startItemIdx,
-                            itemIdx,
-                            voiceIndex: v));
-                    }
-                }
+                slurs.Add(new SlurItem(
+                    // For a chord the slur anchors at the head on the curve side.
+                    MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
+                    MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
+                    curveUp,
+                    startMeasureIdx,
+                    measureIdx,
+                    startItemIdx,
+                    itemIdx,
+                    voiceIndex: v));
             }
         }
 

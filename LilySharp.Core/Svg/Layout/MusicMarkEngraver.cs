@@ -124,6 +124,30 @@ internal static class MusicMarkEngraver
     /// Section labels from measures are merged with explicit music marks and
     /// stacked using outside-staff-priority when they overlap.
     /// </summary>
+    /// <summary>
+    /// Measure indices covered by an above-staff volta bracket, and the highest
+    /// (most negative) volta Y across all brackets.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:3943 VoltaBracketSpanner outside-staff-priority=600</remarks>
+    private static (HashSet<int> Measures, double TopY) BuildVoltaCoverage(
+        ImmutableArray<VoltaBracketLayout> voltaBrackets)
+    {
+        var voltaMeasures = new HashSet<int>();
+        double voltaTopY = 0;
+        if (!voltaBrackets.IsDefaultOrEmpty)
+        {
+            foreach (var vb in voltaBrackets)
+            {
+                for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
+                    voltaMeasures.Add(mi);
+                // Track the highest (most negative) volta Y
+                if (vb.Y < voltaTopY)
+                    voltaTopY = vb.Y;
+            }
+        }
+        return (voltaMeasures, voltaTopY);
+    }
+
     public static ImmutableArray<MusicMarkLayout> Calculate(
         Score? score,
         ImmutableArray<MusicMarkItem> musicMarks,
@@ -162,21 +186,8 @@ internal static class MusicMarkEngraver
         // Marks at the same measure+position are sorted by outside-staff-priority
         // and stacked outward from the staff.
 
-        // Build volta bracket coverage: measure indices that have a volta bracket above
-        // LILYPOND-REF: define-grobs.scm:3943 VoltaBracketSpanner outside-staff-priority=600
-        var voltaMeasures = new HashSet<int>();
-        double voltaTopY = 0;
-        if (!voltaBrackets.IsDefaultOrEmpty)
-        {
-            foreach (var vb in voltaBrackets)
-            {
-                for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
-                    voltaMeasures.Add(mi);
-                // Track the highest (most negative) volta Y
-                if (vb.Y < voltaTopY)
-                    voltaTopY = vb.Y;
-            }
-        }
+        // Build volta bracket coverage: measure indices that have a volta bracket above.
+        var (voltaMeasures, voltaTopY) = BuildVoltaCoverage(voltaBrackets);
 
         // Group by measure + position + ANCHOR TIMING so only marks that share a
         // horizontal column stack vertically. Without the timing, a mid-measure

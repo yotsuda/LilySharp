@@ -240,55 +240,66 @@ internal sealed class MeasureBuilder
         return duration;
     }
 
+    /// <summary>
+    /// Auto-completes the current measure at a duration boundary (no explicit
+    /// barline written): the end barline defaults to a single bar and the recorded
+    /// boundary is non-explicit.
+    /// </summary>
     private void AutoCompleteMeasure(int sourceEnd)
+        => EmitMeasure(sourceEnd, BarlineType.Single, explicitBar: false);
+
+    /// <summary>
+    /// Emits the current measure and resets per-measure state. Shared by the
+    /// duration-boundary (auto) and explicit-barline paths, which differ only in
+    /// the default end barline and whether the boundary is marked explicit.
+    /// A no-op when no items are pending (so <c>_pendingBreak</c> survives to the
+    /// next real measure).
+    /// </summary>
+    private void EmitMeasure(int sourceEnd, BarlineType endType, bool explicitBar)
     {
-        // Check if duration aligns with time signature
+        if (_currentItems.Count == 0)
+            return;
+
         bool isAligned = _currentDuration == _timeSignature;
+        bool hasBreak = _pendingBreak;
+        _pendingBreak = false;
 
-        if (_currentItems.Count > 0)
-        {
-            // Apply pending break if any
-            bool hasBreak = _pendingBreak;
-            _pendingBreak = false;
+        _measures.Add(new Measure(
+            _currentItems.ToImmutableArray(),
+            _pendingStartBarline,
+            _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
+            _sectionLabel,
+            _measureSourceStart,
+            sourceEnd,
+            hasBreakAfter: hasBreak,
+            sectionLabelPosition: _sectionLabelPosition,
+            isPickup: _partialRestore != null));
 
-            _measures.Add(new Measure(
-                _currentItems.ToImmutableArray(),
-                _pendingStartBarline,
-                _pendingEndBarline != BarlineType.None ? _pendingEndBarline : BarlineType.Single,
-                _sectionLabel,
-                _measureSourceStart,
-                sourceEnd,
-                hasBreakAfter: hasBreak,
-                sectionLabelPosition: _sectionLabelPosition,
-                isPickup: _partialRestore != null));
+        _boundaries.Add(new MeasureBoundary(
+            sourceEnd,
+            _currentDuration,
+            IsExplicit: explicitBar,
+            IsAligned: isAligned));
 
-            // Record boundary
-            _boundaries.Add(new MeasureBoundary(
-                sourceEnd,
-                _currentDuration,
-                IsExplicit: false,
-                IsAligned: isAligned));
+        _currentItems.Clear();
+        _sectionLabel = null;
+        _sectionLabelPosition = 0;
+        _pendingStartBarline = BarlineType.None;
+        _pendingEndBarline = BarlineType.None;
+        _measureSourceStart = sourceEnd;
 
-            _currentItems.Clear();
-            _sectionLabel = null;
-            _sectionLabelPosition = 0;
-            _pendingStartBarline = BarlineType.None;
-            _pendingEndBarline = BarlineType.None;
-            _measureSourceStart = sourceEnd;
-
-            // BY DESIGN: Lily# is "explicit over implicit" (no hidden state) and does
-            // NOT auto-split a note across a barline the way LilyPond does. A note that
-            // overruns the meter makes an OVERFULL measure, which is a user error that
-            // MeasureValidator flags ("Measure duration exceeds time signature"); the
-            // fix is to write an explicit tie (c4 d e f4~ | f4 …). The renderer draws
-            // every note as written (nothing is lost — the bar is simply drawn wide)
-            // and resets the beat counter so the following (clean) measures stay
-            // aligned. So the excess beat count is intentionally dropped here, not
-            // carried into a tied continuation.
-            _currentDuration = Fraction.Zero;
-            RestorePartialIfPending();
-            MeasureCompleted?.Invoke();
-        }
+        // BY DESIGN: Lily# is "explicit over implicit" (no hidden state) and does
+        // NOT auto-split a note across a barline the way LilyPond does. A note that
+        // overruns the meter makes an OVERFULL measure, which is a user error that
+        // MeasureValidator flags ("Measure duration exceeds time signature"); the
+        // fix is to write an explicit tie (c4 d e f4~ | f4 …). The renderer draws
+        // every note as written (nothing is lost — the bar is simply drawn wide)
+        // and resets the beat counter so the following (clean) measures stay
+        // aligned. So the excess beat count is intentionally dropped here, not
+        // carried into a tied continuation.
+        _currentDuration = Fraction.Zero;
+        RestorePartialIfPending();
+        MeasureCompleted?.Invoke();
     }
 
     public void SetBreak()
@@ -363,38 +374,7 @@ internal sealed class MeasureBuilder
     /// barline type.
     /// </summary>
     private void CompleteMeasure(int sourceEnd, BarlineType endType)
-    {
-        bool isAligned = _currentDuration == _timeSignature;
-        bool hasBreak = _pendingBreak;
-        _pendingBreak = false;
-
-        _measures.Add(new Measure(
-            _currentItems.ToImmutableArray(),
-            _pendingStartBarline,
-            _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
-            _sectionLabel,
-            _measureSourceStart,
-            sourceEnd,
-            hasBreakAfter: hasBreak,
-            sectionLabelPosition: _sectionLabelPosition,
-            isPickup: _partialRestore != null));
-
-        _boundaries.Add(new MeasureBoundary(
-            sourceEnd,
-            _currentDuration,
-            IsExplicit: true,
-            IsAligned: isAligned));
-
-        _currentItems.Clear();
-        _sectionLabel = null;
-        _sectionLabelPosition = 0;
-        _pendingStartBarline = BarlineType.None;
-        _pendingEndBarline = BarlineType.None;
-        _measureSourceStart = sourceEnd;
-        _currentDuration = Fraction.Zero;
-        RestorePartialIfPending();
-        MeasureCompleted?.Invoke();
-    }
+        => EmitMeasure(sourceEnd, endType, explicitBar: true);
 
 
     public List<Measure> FinalizeMeasures(bool autoFinalBarline = true)

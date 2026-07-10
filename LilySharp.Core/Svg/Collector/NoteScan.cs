@@ -27,31 +27,43 @@ internal static class NoteScan
 {
     /// <summary>
     /// Scans forward from just after (<paramref name="startMeasureIdx"/>,
-    /// <paramref name="startItemIdx"/>) for the first <see cref="NoteItem"/> matching
+    /// <paramref name="startItemIdx"/>) for the first item satisfying
     /// <paramref name="match"/>, continuing into later measures. Returns null if none.
+    /// This is the shared forward scan; the typed helpers below wrap it with a predicate.
+    /// </summary>
+    public static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNext(
+        ImmutableArray<Measure> measures,
+        int startMeasureIdx,
+        int startItemIdx,
+        Func<MusicItem, bool> match)
+    {
+        // Rest of the start measure, then every following measure from its first item.
+        var current = measures[startMeasureIdx];
+        for (int i = startItemIdx + 1; i < current.Items.Length; i++)
+            if (match(current.Items[i]))
+                return (startMeasureIdx, i, current.Items[i]);
+
+        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
+        {
+            var measure = measures[m];
+            for (int i = 0; i < measure.Items.Length; i++)
+                if (match(measure.Items[i]))
+                    return (m, i, measure.Items[i]);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Scans forward for the first <see cref="NoteItem"/> matching <paramref name="match"/>.
     /// </summary>
     public static (int MeasureIdx, int ItemIdx, NoteItem Note)? FindNextNote(
         ImmutableArray<Measure> measures,
         int startMeasureIdx,
         int startItemIdx,
         Func<NoteItem, bool> match)
-    {
-        // Rest of the start measure, then every following measure from its first item.
-        var current = measures[startMeasureIdx];
-        for (int i = startItemIdx + 1; i < current.Items.Length; i++)
-            if (current.Items[i] is NoteItem c && match(c))
-                return (startMeasureIdx, i, c);
-
-        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
-        {
-            var measure = measures[m];
-            for (int i = 0; i < measure.Items.Length; i++)
-                if (measure.Items[i] is NoteItem c && match(c))
-                    return (m, i, c);
-        }
-
-        return null;
-    }
+        => FindNext(measures, startMeasureIdx, startItemIdx, x => x is NoteItem n && match(n))
+            is { } v ? (v.MeasureIdx, v.ItemIdx, (NoteItem)v.Item) : null;
 
     /// <summary>
     /// Like <see cref="FindNextNote"/> but matches a <see cref="NoteItem"/> OR a
@@ -62,20 +74,5 @@ internal static class NoteScan
         ImmutableArray<Measure> measures,
         int startMeasureIdx,
         int startItemIdx)
-    {
-        var current = measures[startMeasureIdx];
-        for (int i = startItemIdx + 1; i < current.Items.Length; i++)
-            if (current.Items[i] is NoteItem or ChordItem)
-                return (startMeasureIdx, i, current.Items[i]);
-
-        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
-        {
-            var measure = measures[m];
-            for (int i = 0; i < measure.Items.Length; i++)
-                if (measure.Items[i] is NoteItem or ChordItem)
-                    return (m, i, measure.Items[i]);
-        }
-
-        return null;
-    }
+        => FindNext(measures, startMeasureIdx, startItemIdx, x => x is NoteItem or ChordItem);
 }

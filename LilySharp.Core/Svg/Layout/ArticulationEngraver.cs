@@ -100,27 +100,18 @@ internal static class ArticulationEngraver
     /// - For notes below middle line: articulations go above (unless overridden)
     /// - Fermata and ornaments always go above
     /// </remarks>
-    public static ImmutableArray<ArticulationLayout> Calculate(
-        Score score,
-        ImmutableArray<ArticulationItem> articulations,
-        ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Func<int, int, double>? staffYAt = null,
-        Dictionary<int, Staff>? staffByIndex = null,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+    /// <summary>
+    /// Iteration order that stacks multiple scripts on one note in LilyPond's
+    /// script-priority order (staccato innermost, then tenuto, then default
+    /// scripts, then fermata), independent of the written order. Groups by note
+    /// (first-occurrence index keeps notes in their original order) and sorts by
+    /// priority within each note; OrderBy is stable so equal priorities keep the
+    /// written order. Reorders the ITERATION (not the array): SourceIndex must
+    /// stay the articulation's original index for click-to-source mapping.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/script.scm script-priority.</remarks>
+    private static int[] OrderByScriptPriority(ImmutableArray<ArticulationItem> articulations)
     {
-        if (articulations.IsDefaultOrEmpty)
-            return ImmutableArray<ArticulationLayout>.Empty;
-
-        // Stack multiple scripts on one note in LilyPond's script-priority order
-        // (staccato innermost, then tenuto, then default scripts, then fermata),
-        // independent of the written order. Group by note (first-occurrence index
-        // keeps notes in their original order) and sort by priority within each
-        // note; OrderBy is stable so equal priorities keep the written order.
-        // LILYPOND-REF: scm/script.scm script-priority.
-        // Reorder the ITERATION (not the array): SourceIndex below must stay the
-        // articulation's original index for click-to-source mapping.
         int[] order = Enumerable.Range(0, articulations.Length).ToArray();
         if (articulations.Length > 1)
         {
@@ -137,6 +128,23 @@ internal static class ArticulationEngraver
                 .ThenBy(i => ScriptPriority(articulations[i].Type))
                 .ToArray();
         }
+        return order;
+    }
+
+    public static ImmutableArray<ArticulationLayout> Calculate(
+        Score score,
+        ImmutableArray<ArticulationItem> articulations,
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Func<int, int, double>? staffYAt = null,
+        Dictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
+    {
+        if (articulations.IsDefaultOrEmpty)
+            return ImmutableArray<ArticulationLayout>.Empty;
+
+        int[] order = OrderByScriptPriority(articulations);
 
         var beamedTips = BuildBeamedStemTips(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);

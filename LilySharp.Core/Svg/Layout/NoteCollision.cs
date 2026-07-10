@@ -271,32 +271,7 @@ internal sealed class NoteCollision
 
         // Calculate offsets
         if (mergePossible && fullCollide && !closeHalf && !distantHalf)
-        {
-            // LILYPOND-REF: lily/note-collision.cc:252-261, 381-407
-            // Can merge — determine which head to hide.
-            // For same-headed merge: down-stem head is wiped.
-            // For differently-headed merge (half+quarter/eighth): the filled
-            // notehead is hidden, the open (half) notehead is kept visible.
-            bool upIsOpen = upNoteValue <= 2; // whole(1) or half(2) = open notehead
-            bool downIsOpen = downNoteValue <= 2;
-
-            bool hideUp, hideDown;
-            if (upNoteValue == downNoteValue)
-            {
-                // Same heads: standard merge, hide down-stem
-                hideUp = false;
-                hideDown = true;
-            }
-            else
-            {
-                // Different heads: hide the filled (shorter duration) head
-                hideUp = !upIsOpen;   // hide up if it's filled (quarter/eighth)
-                hideDown = !downIsOpen; // hide down if it's filled
-            }
-
-            return new NoteCollisionInfo(CollisionType.Merge, 0, 0,
-                shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown);
-        }
+            return ComputeMergeInfo(upNoteValue, downNoteValue);
 
         // LILYPOND-REF: lily/note-collision.cc:411-448
         // Detect whether down-stem dots should shift down instead of up.
@@ -322,82 +297,9 @@ internal sealed class NoteCollision
         }
 
         if (fullCollide || closeHalf || distantHalf)
-        {
-            // Select shift amount based on collision type (Lilypond line 297-302)
-            double shiftAmount;
-            CollisionType type;
-
-            if (fullCollide)
-            {
-                shiftAmount = _params.FullCollideShift;
-                type = CollisionType.Full;
-            }
-            else if (closeHalf || distantHalf)
-            {
-                // LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords()
-                // Meshing (interlocking noteheads) requires ALL of:
-                // - Notes are a second apart (already guaranteed by closeHalf/distantHalf)
-                // - Neither note is a whole note (round noteheads can't mesh)
-                // - Single notes in each voice (chords with multiple seconds don't mesh cleanly)
-                // - Different head groups (one open, one filled)
-                //   LilyPond checks: head_group_up != head_group_down
-                //   Open (half=2) vs filled (quarter=4, eighth=8, etc.) can interlock;
-                //   same group (half+half or quarter+quarter) cannot.
-                bool upIsOpen = upNoteValue == 2;   // half note = open notehead
-                bool downIsOpen = downNoteValue == 2;
-                bool differentHeadGroups = upIsOpen != downIsOpen;
-
-                bool canMesh = upNoteValue >= 2 && downNoteValue >= 2
-                             && differentHeadGroups
-                             && upStaffPositions.Count == 1 && downStaffPositions.Count == 1;
-
-                if (canMesh)
-                {
-                    // Use meshing shift: noteheads interlock tightly
-                    bool hasDots = upDots > 0 || downDots > 0;
-                    shiftAmount = hasDots
-                        ? _params.MeshingDottedShift
-                        : _params.MeshingGeneralShift;
-                    type = CollisionType.CloseHalf;
-                }
-                else if (differentHeadGroups)
-                {
-                    // LILYPOND-REF: lily/note-collision.cc:297-312
-                    // Different head groups but chords (can't fully mesh):
-                    // partial interlocking with standard half collision shift.
-                    shiftAmount = closeHalf
-                        ? _params.CloseHalfShift
-                        : _params.DistantHalfShift;
-                    type = CollisionType.CloseHalf;
-                }
-                else
-                {
-                    // LILYPOND-REF: lily/note-collision.cc:326 close_half_collide (0.52).
-                    // Same head groups cannot interlock; the symmetric +/-inner shift
-                    // (pinned by the consumer) yields a 2*0.52 ~= 1.0w separation, so the
-                    // two heads sit side by side. (The old magic 1.0 here was the
-                    // pre-doubled single-sided value for the left-edge frame.)
-                    shiftAmount = _params.CloseHalfShift;
-                    type = CollisionType.CloseHalf;
-                }
-            }
-            else
-            {
-                shiftAmount = _params.DistantHalfShift;
-                type = CollisionType.CloseHalf;
-            }
-
-            // LILYPOND-REF: lily/note-collision.cc automatic_shift (d*offset) +
-            // calc_positioning_done (translate amount - left_most): the columns
-            // shift symmetrically (+inner up / -inner down) and the consumer pins
-            // the leftmost group, so the 2-voice separation is 2*inner. (Lily#
-            // previously shifted only one side, ~half of LilyPond's separation.)
-            double upOffset = shiftUpRight ? shiftAmount : -shiftAmount;
-            double downOffset = shiftUpRight ? -shiftAmount : shiftAmount;
-
-            return new NoteCollisionInfo(type, upOffset, downOffset,
-                downDotForceDown: downDotForceDown);
-        }
+            return ComputeShiftInfo(upStaffPositions, downStaffPositions,
+                upNoteValue, downNoteValue, upDots, downDots,
+                fullCollide, closeHalf, distantHalf, shiftUpRight, downDotForceDown);
 
         // LILYPOND-REF: lily/note-collision.cc:332-337 — the "we're meshing" fallback.
         // Reached only for a voice CROSSING: the up-stem note sits more than a
@@ -422,6 +324,119 @@ internal sealed class NoteCollision
         double meshUpOffset = shiftUpRight ? meshShift : -meshShift;
         double meshDownOffset = shiftUpRight ? -meshShift : meshShift;
         return new NoteCollisionInfo(CollisionType.Meshing, meshUpOffset, meshDownOffset,
+            downDotForceDown: downDotForceDown);
+    }
+
+    /// <summary>
+    /// Merge case: two colliding heads at the same column combine into one.
+    /// Same-headed merge wipes the down-stem head; a differently-headed merge
+    /// (half + quarter/eighth) hides the FILLED head and keeps the open (half)
+    /// head visible.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-collision.cc:252-261, 381-407</remarks>
+    private static NoteCollisionInfo ComputeMergeInfo(int upNoteValue, int downNoteValue)
+    {
+        bool upIsOpen = upNoteValue <= 2; // whole(1) or half(2) = open notehead
+        bool downIsOpen = downNoteValue <= 2;
+
+        bool hideUp, hideDown;
+        if (upNoteValue == downNoteValue)
+        {
+            // Same heads: standard merge, hide down-stem
+            hideUp = false;
+            hideDown = true;
+        }
+        else
+        {
+            // Different heads: hide the filled (shorter duration) head
+            hideUp = !upIsOpen;   // hide up if it's filled (quarter/eighth)
+            hideDown = !downIsOpen; // hide down if it's filled
+        }
+
+        return new NoteCollisionInfo(CollisionType.Merge, 0, 0,
+            shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown);
+    }
+
+    /// <summary>
+    /// Full / close-half / distant-half collision: selects the shift amount and
+    /// type (meshing when heads can interlock, else the standard half/full shift),
+    /// then applies the symmetric +inner-up / -inner-down offsets.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords();
+    ///   :297-312, :326 close_half_collide; automatic_shift + calc_positioning_done —
+    ///   symmetric shift pinned by the consumer, so the 2-voice separation is 2*inner.
+    /// </remarks>
+    private NoteCollisionInfo ComputeShiftInfo(
+        IReadOnlyList<int> upStaffPositions, IReadOnlyList<int> downStaffPositions,
+        int upNoteValue, int downNoteValue, int upDots, int downDots,
+        bool fullCollide, bool closeHalf, bool distantHalf,
+        bool shiftUpRight, bool downDotForceDown)
+    {
+        // Select shift amount based on collision type (Lilypond line 297-302)
+        double shiftAmount;
+        CollisionType type;
+
+        if (fullCollide)
+        {
+            shiftAmount = _params.FullCollideShift;
+            type = CollisionType.Full;
+        }
+        else if (closeHalf || distantHalf)
+        {
+            // Meshing (interlocking noteheads) requires: notes a second apart
+            // (guaranteed by closeHalf/distantHalf), neither a whole note, single
+            // notes per voice, and different head groups (open vs filled). Same
+            // group (half+half or quarter+quarter) cannot mesh.
+            bool upIsOpen = upNoteValue == 2;   // half note = open notehead
+            bool downIsOpen = downNoteValue == 2;
+            bool differentHeadGroups = upIsOpen != downIsOpen;
+
+            bool canMesh = upNoteValue >= 2 && downNoteValue >= 2
+                         && differentHeadGroups
+                         && upStaffPositions.Count == 1 && downStaffPositions.Count == 1;
+
+            if (canMesh)
+            {
+                // Use meshing shift: noteheads interlock tightly
+                bool hasDots = upDots > 0 || downDots > 0;
+                shiftAmount = hasDots
+                    ? _params.MeshingDottedShift
+                    : _params.MeshingGeneralShift;
+                type = CollisionType.CloseHalf;
+            }
+            else if (differentHeadGroups)
+            {
+                // Different head groups but chords (can't fully mesh): partial
+                // interlocking with standard half collision shift.
+                // LILYPOND-REF: lily/note-collision.cc:297-312
+                shiftAmount = closeHalf
+                    ? _params.CloseHalfShift
+                    : _params.DistantHalfShift;
+                type = CollisionType.CloseHalf;
+            }
+            else
+            {
+                // Same head groups cannot interlock; the symmetric +/-inner shift
+                // (pinned by the consumer) yields a 2*0.52 ~= 1.0w separation, so
+                // the two heads sit side by side.
+                // LILYPOND-REF: lily/note-collision.cc:326 close_half_collide (0.52).
+                shiftAmount = _params.CloseHalfShift;
+                type = CollisionType.CloseHalf;
+            }
+        }
+        else
+        {
+            shiftAmount = _params.DistantHalfShift;
+            type = CollisionType.CloseHalf;
+        }
+
+        // Symmetric shift (+inner up / -inner down); the consumer pins the
+        // leftmost group, so the 2-voice separation is 2*inner.
+        double upOffset = shiftUpRight ? shiftAmount : -shiftAmount;
+        double downOffset = shiftUpRight ? -shiftAmount : shiftAmount;
+
+        return new NoteCollisionInfo(type, upOffset, downOffset,
             downDotForceDown: downDotForceDown);
     }
 

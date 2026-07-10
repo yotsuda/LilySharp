@@ -1237,11 +1237,27 @@ public sealed partial class LilySharpLanguageServer
 
     private static bool PartIsPercussion(string text, string partName)
     {
-        var m = System.Text.RegularExpressions.Regex.Match(text,
-            @"\bpart\s+" + System.Text.RegularExpressions.Regex.Escape(partName)
-            + @"\s*\{(?<body>[^}]*)\}");
-        return m.Success && System.Text.RegularExpressions.Regex.IsMatch(
-            m.Groups["body"].Value, @"\bclef\s*:?\s*percussion\b");
+        // Locate `part <partName> {`, then extract the BALANCED body (up to its
+        // matching close brace) instead of stopping at the first `}`. The old
+        // `[^}]*` regex mis-detected a percussion part whose body has a nested
+        // voice/section block BEFORE its `clef percussion` (the nested `}` cut
+        // the body short). Brace matching ignores `{`/`}` inside strings/comments.
+        var head = System.Text.RegularExpressions.Regex.Match(text,
+            @"\bpart\s+" + System.Text.RegularExpressions.Regex.Escape(partName) + @"\s*\{");
+        if (!head.Success) return false;
+
+        int open = head.Index + head.Length - 1; // index of the '{'
+        var code = CodeMask(text, text.Length);
+        int depth = 0, bodyEnd = text.Length;    // unclosed (mid-edit) → scan to end
+        for (int i = open; i < text.Length; i++)
+        {
+            if (!code[i]) continue;
+            if (text[i] == '{') depth++;
+            else if (text[i] == '}' && --depth == 0) { bodyEnd = i; break; }
+        }
+
+        string body = text[(open + 1)..bodyEnd];
+        return System.Text.RegularExpressions.Regex.IsMatch(body, @"\bclef\s*:?\s*percussion\b");
     }
 
     /// <summary>

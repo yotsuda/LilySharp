@@ -100,4 +100,15 @@ public class CompletionContextCommentStringTests
         Assert.True(LilySharpLanguageServer.IsInsidePercussionPartMusic(clean, clean.Length, out _));
         Assert.True(LilySharpLanguageServer.IsInsidePercussionPartMusic(stray, stray.Length, out _));
     }
+
+    [Fact]
+    public void PercussionScan_ClefAfterNestedBlockInPartDecl_StillDetected()
+    {
+        // The part declaration has a nested block BEFORE its `clef percussion`.
+        // The old `[^}]*` regex stopped the body at the nested '}', missed the
+        // clef, and failed to detect the drum part; the balanced-brace scan sees
+        // the whole body.
+        var text = "part dr { section Intro { } clef percussion }\nsection A { dr {\n  hihat4\n  ";
+        Assert.True(LilySharpLanguageServer.IsInsidePercussionPartMusic(text, text.Length, out _));
+    }
 }

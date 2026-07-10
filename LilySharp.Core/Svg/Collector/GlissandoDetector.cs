@@ -33,54 +33,40 @@ internal sealed class GlissandoDetector
     {
         var glissandos = new List<GlissandoItem>();
 
-        // Each voice runs its own glissando engraver; scan them all so a second
-        // voice's glissando is not lost. Single-voice scores iterate once with
-        // voiceIndex 0 (byte-identical).
+        // Each voice runs its own glissando engraver; VoiceScan walks them all so a
+        // second voice's glissando is not lost.
         // LILYPOND-REF: scm/scheme-engravers.scm — Glissando_engraver per Voice.
-        for (int v = 0; v < score.Voices.Length; v++)
+        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
         {
-            var measures = score.Voices[v].Measures;
+            if (item is not NoteItem startNote || !startNote.HasGlissando)
+                continue;
 
-            for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+            // Glissandos connect to the next note of any pitch — a note OR
+            // a chord (a chord endpoint used to be skipped, dropping the gliss).
+            var endItem = NoteScan.FindNextNoteOrChord(measures, measureIdx, itemIdx);
+            if (endItem != null)
             {
-                var measure = measures[measureIdx];
-
-                for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+                var (endMeasureIdx, endItemIdx, endNode) = endItem.Value;
+                // Into a chord: connect to the nearest chord tone (single line;
+                // LilyPond fans to every tone, a future refinement).
+                int endPos = endNode switch
                 {
-                    if (measure.Items[itemIdx] is not NoteItem startNote)
-                        continue;
+                    NoteItem n => n.StaffPosition,
+                    ChordItem c when c.Notes.Length > 0 =>
+                        c.Notes.MinBy(cn => System.Math.Abs(cn.StaffPosition - startNote.StaffPosition)).StaffPosition,
+                    _ => startNote.StaffPosition,
+                };
 
-                    if (!startNote.HasGlissando)
-                        continue;
-
-                    // Glissandos connect to the next note of any pitch — a note OR
-                    // a chord (a chord endpoint used to be skipped, dropping the gliss).
-                    var endItem = NoteScan.FindNextNoteOrChord(measures, measureIdx, itemIdx);
-                    if (endItem != null)
-                    {
-                        var (endMeasureIdx, endItemIdx, item) = endItem.Value;
-                        // Into a chord: connect to the nearest chord tone (single line;
-                        // LilyPond fans to every tone, a future refinement).
-                        int endPos = item switch
-                        {
-                            NoteItem n => n.StaffPosition,
-                            ChordItem c when c.Notes.Length > 0 =>
-                                c.Notes.MinBy(cn => System.Math.Abs(cn.StaffPosition - startNote.StaffPosition)).StaffPosition,
-                            _ => startNote.StaffPosition,
-                        };
-
-                        glissandos.Add(new GlissandoItem(
-                            StartMeasureIndex: measureIdx,
-                            StartItemIndex: itemIdx,
-                            StartStaffPosition: startNote.StaffPosition,
-                            EndMeasureIndex: endMeasureIdx,
-                            EndItemIndex: endItemIdx,
-                            EndStaffPosition: endPos,
-                            Style: GlissandoStyle.Line,
-                            SourcePosition: startNote.SourcePosition,
-                            VoiceIndex: v));
-                    }
-                }
+                glissandos.Add(new GlissandoItem(
+                    StartMeasureIndex: measureIdx,
+                    StartItemIndex: itemIdx,
+                    StartStaffPosition: startNote.StaffPosition,
+                    EndMeasureIndex: endMeasureIdx,
+                    EndItemIndex: endItemIdx,
+                    EndStaffPosition: endPos,
+                    Style: GlissandoStyle.Line,
+                    SourcePosition: startNote.SourcePosition,
+                    VoiceIndex: v));
             }
         }
 
