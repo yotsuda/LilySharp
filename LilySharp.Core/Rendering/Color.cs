@@ -31,36 +31,24 @@ public readonly record struct Color(byte R, byte G, byte B, byte A = 255)
     /// <summary>Opaque white.</summary>
     public static readonly Color White = new(255, 255, 255);
 
-    /// <summary>Parses "#RRGGBB", "#RRGGBBAA", or a CSS named color (limited subset).</summary>
+    /// <summary>
+    /// Parses "#rgb", "#RRGGBB", "#RRGGBBAA", or a CSS/X11 named color, THROWING on
+    /// an empty or unrecognized spec (unlike <see cref="ColorParser.Parse"/>, which
+    /// returns null). The hex formats and name table are shared with that parser via
+    /// <see cref="ColorParser.TryParse"/>; the only difference is this contract plus
+    /// "black" → opaque <see cref="Black"/> (the shared core returns null for "black",
+    /// which the renderer wants so backends supply their own default black).
+    /// </summary>
     public static Color Parse(string spec)
     {
         if (string.IsNullOrWhiteSpace(spec))
             throw new ArgumentException("Color spec is empty", nameof(spec));
 
-        if (spec.StartsWith('#'))
-        {
-            var hex = spec.AsSpan(1);
-            if (hex.Length == 6 || hex.Length == 8)
-            {
-                byte r = byte.Parse(hex[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-                byte g = byte.Parse(hex.Slice(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-                byte b = byte.Parse(hex.Slice(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-                byte a = hex.Length == 8
-                    ? byte.Parse(hex.Slice(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)
-                    : (byte)255;
-                return new Color(r, g, b, a);
-            }
-        }
+        if (string.Equals(spec, "black", StringComparison.OrdinalIgnoreCase))
+            return Black;
 
-        return spec.ToLowerInvariant() switch
-        {
-            "black" => Black,
-            "white" => White,
-            "red" => new Color(255, 0, 0),
-            "green" => new Color(0, 128, 0),
-            "blue" => new Color(0, 0, 255),
-            _ => throw new FormatException($"Unrecognised color: {spec}")
-        };
+        return ColorParser.TryParse(spec)
+            ?? throw new FormatException($"Unrecognised color: {spec}");
     }
 
     /// <summary>Renders as "#RRGGBB" (ignoring alpha) or "#RRGGBBAA" if A &lt; 255.</summary>

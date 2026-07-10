@@ -19,11 +19,17 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Validates measures against time signatures.
+/// Validates measures against time signatures (per-block fullness). Cross-part
+/// alignment lives in <see cref="CrossPartMeasureValidator"/>; the two share the
+/// warned-span set and the <see cref="MeasureDurations"/> beat-counting logic.
 /// </summary>
 internal sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
+    // Spans already flagged by the per-block fullness pass. The cross-part pass
+    // reads this to avoid double-reporting the same bar (one root cause, one
+    // diagnostic); the set is shared with CrossPartMeasureValidator.
+    private readonly HashSet<(int Start, int Length)> _warnedSpans = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4
     private bool _senzaMisura; // time none: no bar-length validation
     // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction
@@ -52,7 +58,9 @@ internal sealed class MeasureValidator : ISemanticValidator
     {
         var root = tree.GetRoot();
         ValidateNode(root);
-        ValidateCrossPart(root);
+        // Cross-part alignment runs AFTER per-block fullness and shares its
+        // warned spans, so a fullness warning suppresses a mismatch report.
+        new CrossPartMeasureValidator(_diagnostics, _warnedSpans).Validate(root);
     }
 
     private void ValidateNode(SyntaxNode node)
@@ -181,7 +189,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         var durations = new Fraction[measures.Count];
         var defaultDuration = Fraction.Quarter;
         for (int di = 0; di < measures.Count; di++)
-            durations[di] = CalculateMeasureDuration(measures[di].Items, ref defaultDuration);
+            durations[di] = MeasureDurations.CalculateMeasureDuration(measures[di].Items, ref defaultDuration);
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -251,12 +259,7 @@ internal sealed class MeasureValidator : ISemanticValidator
 
                     // A short FINAL bar is exempt ONLY when it completes the
                     // opening pickup (anacrusis: pickup + final == one bar).
-                    // Without such a pickup it is a genuine short bar — a
-                    // miscount, or a section reused mid-form by a `structure`
-                    // whose "last" bar is actually interior — and warns like any
-                    // interior bar. (Per-section validation cannot see a bar
-                    // split across an ADJACENT section boundary; that legitimate
-                    // case belongs to the assembled-stream bar check.)
+                    // Without such a pickup it is a genuine short bar and warns.
                     bool completesOpeningPickup = isLast
                         && openingPickupIndex >= 0 && openingPickupIndex < i
                         && openingPickupDuration + duration == expected;
@@ -267,44 +270,56 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // always checked strictly — that is the whole point of \partial.
                     bool isBarePickup = isFirst && partialLength == null;
 
-                    if (partialLength != null || (!completesOpeningPickup && !isBarePickup))
-                    {
-                        var span = GetSpan(measure.Items);
-                        _warnedSpans.Add((span.Start, span.Length));
-                        _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
-                            partialLength != null
-                                ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
-                                : $"Measure duration {duration} is less than time signature {_meterText}");
-                    }
-                    else if (isBarePickup)
-                    {
-                        // An underfull FIRST bar is conventionally an anacrusis,
-                        // but written bare it is indistinguishable from a
-                        // miscount, gets no strict length check, and bar
-                        // numbering counts it as bar 1. Nudge toward declaring
-                        // it (a declared pickup is checked exactly and numbered
-                        // as bar 0).
-                        var span = GetSpan(measure.Items);
-                        _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
-                            $"first measure is shorter than the meter ({duration} of {_meterText}); " +
-                            $"if this is a pickup, declare it with '{SuggestPartial(duration)}' " +
-                            "(top level or in the voice) so its length is checked and " +
-                            "bar numbering starts after it");
-                    }
-                    // else: completesOpeningPickup — exempt, no diagnostic.
+                    EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup, isBarePickup);
                 }
                 else if (duration > expected)
                 {
-                    // Overfull measure — always worth flagging.
-                    var span = GetSpan(measure.Items);
-                    _warnedSpans.Add((span.Start, span.Length));
-                    _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
-                        partialLength != null
-                            ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
-                            : $"Measure duration {duration} exceeds time signature {_meterText}");
+                    EmitOverfull(measure, duration, expected, partialLength);
                 }
             }
         }
+    }
+
+    /// <summary>Emits the diagnostic (if any) for a bar shorter than its expected
+    /// fill: a hard incomplete-measure warning, a soft pickup-without-partial nudge
+    /// for a bare first bar, or nothing when the bar completes the opening pickup.</summary>
+    private void EmitUnderfull(MeasureContent measure, Fraction duration, Fraction expected,
+        Fraction? partialLength, bool completesOpeningPickup, bool isBarePickup)
+    {
+        if (partialLength != null || (!completesOpeningPickup && !isBarePickup))
+        {
+            var span = MeasureDurations.GetSpan(measure.Items);
+            _warnedSpans.Add((span.Start, span.Length));
+            _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
+                partialLength != null
+                    ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
+                    : $"Measure duration {duration} is less than time signature {_meterText}");
+        }
+        else if (isBarePickup)
+        {
+            // An underfull FIRST bar is conventionally an anacrusis, but written
+            // bare it is indistinguishable from a miscount, gets no strict length
+            // check, and bar numbering counts it as bar 1. Nudge toward declaring
+            // it (a declared pickup is checked exactly and numbered as bar 0).
+            var span = MeasureDurations.GetSpan(measure.Items);
+            _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
+                $"first measure is shorter than the meter ({duration} of {_meterText}); " +
+                $"if this is a pickup, declare it with '{SuggestPartial(duration)}' " +
+                "(top level or in the voice) so its length is checked and " +
+                "bar numbering starts after it");
+        }
+        // else: completesOpeningPickup — exempt, no diagnostic.
+    }
+
+    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
+    private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected, Fraction? partialLength)
+    {
+        var span = MeasureDurations.GetSpan(measure.Items);
+        _warnedSpans.Add((span.Start, span.Length));
+        _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
+            partialLength != null
+                ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
+                : $"Measure duration {duration} exceeds time signature {_meterText}");
     }
 
     /// <summary>True when the node sits inside a music block (an in-music
@@ -397,342 +412,5 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
 
         return measures;
-    }
-
-    private Fraction CalculateMeasureDuration(List<SyntaxNode> items, ref Fraction defaultDuration)
-    {
-        var total = Fraction.Zero;
-        foreach (var item in items)
-            total += ItemDuration(item, ref defaultDuration);
-        return total;
-    }
-
-    /// <summary>
-    /// Metric duration of a single music item, recursing into tuplets (scaled by
-    /// their ratio) so triplets etc. fill the correct fraction of the bar.
-    /// </summary>
-    private Fraction ItemDuration(SyntaxNode item, ref Fraction defaultDuration)
-    {
-        switch (item)
-        {
-            case NoteSyntax note:
-                var noteDuration = DurationCalculator.GetDuration(note, defaultDuration);
-                if (note.Duration != null) defaultDuration = noteDuration;
-                return noteDuration;
-
-            case DrumNoteSyntax drum:
-                var drumDuration = drum.Duration is { } dd
-                    ? dd.ToFraction()
-                    : defaultDuration;
-                if (drum.Duration != null) defaultDuration = drumDuration;
-                return drumDuration;
-
-            case RestSyntax rest:
-                var restDuration = DurationCalculator.GetDuration(rest, defaultDuration);
-                if (rest.Duration != null) defaultDuration = restDuration;
-                return restDuration;
-
-            case ChordSyntax chord:
-                var chordDuration = DurationCalculator.GetDuration(chord, defaultDuration);
-                if (chord.Duration != null) defaultDuration = chordDuration;
-                return chordDuration;
-
-            case TupletExpressionSyntax tuplet:
-                // actual = written * BaseDivision / TupletRatio
-                // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).
-                var inner = Fraction.Zero;
-                foreach (var bodyItem in tuplet.Body.Items)
-                    inner += ItemDuration(bodyItem, ref defaultDuration);
-                if (tuplet.TupletRatio > 0)
-                    inner *= new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
-                return inner;
-
-            case GraceExpressionSyntax:
-                // Grace notes are ornamental and consume no metric time.
-                return Fraction.Zero;
-
-            case RepeatExpressionSyntax rep
-                when rep.RepeatType.Text == "tremolo"
-                  && int.TryParse(rep.Count.Text, out int tremCount):
-            {
-                // LILYPOND-REF: lily/chord-tremolo-iterator.cc — the tremolo
-                // repeat's metric length is count × body (8 × c32 = a quarter).
-                var body = Fraction.Zero;
-                foreach (var bodyItem in rep.Body.Items)
-                    body += ItemDuration(bodyItem, ref defaultDuration);
-                return body * new Fraction(tremCount, 1);
-            }
-
-            default:
-                return Fraction.Zero;
-        }
-    }
-
-
-    // =================================================================
-    // Cross-part validation
-    // =================================================================
-    //
-    // Time signatures are SCORE-level (like LilyPond's Timing context): a
-    // "time" declared at top level or section level governs every part, so
-    // a part that writes the right number of beats without restating the
-    // time signature is correct and must NOT warn. What the time signature
-    // cannot explain — two parts disagreeing about a measure's length at
-    // the same index — breaks vertical alignment, span bars and playback,
-    // and is reported here. Fullness warnings already emitted by the
-    // per-block pass suppress the mismatch report for the same source span
-    // (one root cause, one diagnostic).
-
-    private sealed class DurationResetMarker
-    {
-        public static readonly DurationResetMarker Instance = new();
-    }
-
-    private readonly record struct PartMeasure(Fraction Duration, TextSpan Span);
-
-    private readonly HashSet<(int Start, int Length)> _warnedSpans = new();
-    private Dictionary<string, SyntaxNode>? _phraseBodies;
-
-    private void ValidateCrossPart(SyntaxNode root)
-    {
-        _phraseBodies = new Dictionary<string, SyntaxNode>();
-        foreach (var n in root.DescendantNodes())
-        {
-            if (n is PhraseDeclarationSyntax ph)
-                _phraseBodies[ph.Name.Text] = ph.Body;
-            else if (n is VariableDeclarationSyntax vd)
-                _phraseBodies[vd.Name.Text] = vd.Expression;
-        }
-
-        // Document-order walk: top-level time declarations update the score
-        // time; each section validates with the time in force at its site.
-        var time = new Fraction(4, 4);
-        WalkForSections(root, ref time);
-    }
-
-    private void WalkForSections(SyntaxNode node, ref Fraction time)
-    {
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child == null || child is SyntaxTokenNode)
-                continue;
-            switch (child)
-            {
-                case TimeSignatureSyntax ts:
-                    time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
-                    break;
-                case SectionDeclarationSyntax section:
-                    time = ValidateSectionCrossPart(section, time);
-                    break;
-                case PhraseDeclarationSyntax:
-                case VariableDeclarationSyntax:
-                    break; // bodies are validated where referenced
-                default:
-                    WalkForSections(child, ref time);
-                    break;
-            }
-        }
-    }
-
-    private Fraction ValidateSectionCrossPart(SectionDeclarationSyntax section, Fraction time)
-    {
-        // Section items in document order: a section-level time declaration
-        // applies to the part blocks that follow it. Each part records the
-        // time in force at its own position.
-        var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<PartMeasure> Measures)>();
-        for (int i = 0; i < section.SlotCount; i++)
-        {
-            var child = section.GetChild(i);
-            switch (child)
-            {
-                case TimeSignatureSyntax ts:
-                    time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
-                    break;
-                case PartBlockSyntax pb:
-                    parts.Add((pb.Name, time, pb.PartName.Span, BuildPartMeasures(pb)));
-                    break;
-            }
-        }
-
-        if (parts.Count < 2)
-            return time;
-
-        // A time declared BETWEEN part blocks would put the parts of one
-        // section in different meters — flag it; alignment is undefined.
-        for (int p = 1; p < parts.Count; p++)
-        {
-            if (parts[p].Time != parts[0].Time)
-            {
-                _diagnostics.Warning(parts[p].TimeSpan, DiagnosticCodes.ConflictingTimeSignatures,
-                    $"Part '{parts[p].Name}' is in {parts[p].Time} but part '{parts[0].Name}' is in {parts[0].Time} within the same section");
-            }
-        }
-
-        int maxLen = parts.Max(p => p.Measures.Count);
-        for (int i = 0; i < maxLen; i++)
-        {
-            var present = parts.Where(p => i < p.Measures.Count).ToList();
-            if (present.Count < 2)
-                continue;
-
-            var durations = present.Select(p => p.Measures[i].Duration).Distinct().ToList();
-            if (durations.Count <= 1)
-                continue;
-
-            // Blame the parts whose duration deviates from their meter; if
-            // none matches the meter, blame everyone after the first.
-            var conformers = present.Where(p => p.Measures[i].Duration == p.Time).ToList();
-            var reference = conformers.Count > 0 ? conformers[0] : present[0];
-            foreach (var part in present)
-            {
-                if (part.Measures[i].Duration == reference.Measures[i].Duration)
-                    continue;
-                var span = part.Measures[i].Span;
-                if (_warnedSpans.Contains((span.Start, span.Length)))
-                    continue; // already explained by a fullness warning
-                _warnedSpans.Add((span.Start, span.Length));
-                _diagnostics.Warning(span, DiagnosticCodes.MeasureDurationMismatch,
-                    $"Measure {i + 1} of part '{part.Name}' lasts {part.Measures[i].Duration} but part '{reference.Name}' has {reference.Measures[i].Duration} — parts will not align");
-            }
-        }
-
-        return time;
-    }
-
-    /// <summary>
-    /// Flattens a part block into measures, expanding $phrase references
-    /// (each reference enters a fresh default-duration frame, matching the
-    /// collector's phrase-fresh semantics) and splitting at written
-    /// barlines. Tuplet/grace interiors are handled by ItemDuration.
-    /// </summary>
-    private List<PartMeasure> BuildPartMeasures(PartBlockSyntax part)
-    {
-        var stream = new List<object>();
-        FlattenMusic(part, stream, new HashSet<string>());
-
-        var measures = new List<PartMeasure>();
-        var current = new List<SyntaxNode>();
-        var defaultDuration = Fraction.Quarter;
-        var total = Fraction.Zero;
-
-        void Flush()
-        {
-            if (current.Count == 0)
-                return;
-            measures.Add(new PartMeasure(total, GetSpan(current)));
-            current = new List<SyntaxNode>();
-            total = Fraction.Zero;
-        }
-
-        foreach (var entry in stream)
-        {
-            if (entry is DurationResetMarker)
-            {
-                defaultDuration = Fraction.Quarter;
-                continue;
-            }
-            var node = (SyntaxNode)entry;
-            if (node is BarlineSyntax)
-            {
-                Flush();
-                continue;
-            }
-            total += ItemDuration(node, ref defaultDuration);
-            current.Add(node);
-        }
-        Flush();
-        return measures;
-    }
-
-    private void FlattenMusic(SyntaxNode scope, List<object> output, HashSet<string> activeRefs)
-    {
-        // A variable bound to a single music node has no relevant
-        // DESCENDANTS — the node itself is the content.
-        if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax
-            or TupletExpressionSyntax or GraceExpressionSyntax)
-        {
-            output.Add(scope);
-            return;
-        }
-
-        foreach (var n in scope.DescendantNodes())
-        {
-            // Tuplet/grace interiors are folded into their wrapper by
-            // ItemDuration; inline-volta interiors are ordinary written
-            // measures and flow through as themselves. Repeat interiors are
-            // expanded by the RepeatExpressionSyntax case below.
-            if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
-                || IsInside<RepeatExpressionSyntax>(n, scope))
-                continue;
-
-            switch (n)
-            {
-                case NoteSyntax:
-                case DrumNoteSyntax:
-                case RestSyntax:
-                case ChordSyntax:
-                case BarlineSyntax:
-                case TupletExpressionSyntax:
-                case GraceExpressionSyntax:
-                    output.Add(n);
-                    break;
-
-                // The cross-part alignment must see repeats at their PLAYED
-                // length: percent/unfold repeat their body COUNT times (the
-                // collector expands them into that many real measures), a
-                // tremolo is one metric item folded by ItemDuration — before
-                // this the cello's `repeat percent 3` counted once and every
-                // later measure "misaligned".
-                // LILYPOND-REF: lily/percent-repeat-iterator.cc,
-                //   lily/chord-tremolo-iterator.cc.
-                case RepeatExpressionSyntax rep:
-                    if (rep.RepeatType.Text == "tremolo")
-                    {
-                        output.Add(rep);
-                    }
-                    else if (int.TryParse(rep.Count.Text, out int repCount))
-                    {
-                        for (int r = 0; r < Math.Max(1, repCount); r++)
-                        {
-                            output.Add(DurationResetMarker.Instance);
-                            FlattenMusic(rep.Body, output, activeRefs);
-                        }
-                    }
-                    break;
-
-                case VariableReferenceSyntax varRef:
-                    var name = varRef.Name.Text;
-                    if (_phraseBodies!.TryGetValue(name, out var body) && activeRefs.Add(name))
-                    {
-                        output.Add(DurationResetMarker.Instance);
-                        FlattenMusic(body, output, activeRefs);
-                        activeRefs.Remove(name);
-                    }
-                    break;
-            }
-        }
-    }
-
-    private static bool IsInside<T>(SyntaxNode node, SyntaxNode scope) where T : SyntaxNode
-    {
-        for (var p = node.Parent; p != null && p != scope; p = p.Parent)
-        {
-            if (p is T)
-                return true;
-        }
-        return false;
-    }
-
-    private static TextSpan GetSpan(List<SyntaxNode> items)
-    {
-        if (items.Count == 0)
-            return new TextSpan(0, 0);
-
-        // Use Span (not Position/FullSpan) to exclude leading/trailing trivia like comments
-        int start = items[0].Span.Start;
-        var lastSpan = items[^1].Span;
-        int end = lastSpan.Start + lastSpan.Length;
-        return new TextSpan(start, end - start);
     }
 }

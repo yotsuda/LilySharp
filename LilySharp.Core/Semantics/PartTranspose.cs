@@ -59,9 +59,11 @@ public static class PartTranspose
 
     /// <summary>
     /// A free-standing top-level <c>transpose d</c> (not a part-header attribute):
-    /// the score-wide default.
+    /// the score-wide default. Public so callers that already hold each part's
+    /// declaration can compute the default once and combine it themselves
+    /// (own ?? default) rather than re-scanning the tree per part.
     /// </summary>
-    private static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
+    public static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
     {
         foreach (var prop in root.DescendantNodes().OfType<PropertyAssignmentSyntax>())
             if (IsTranspose(prop) && !IsInsidePart(prop))

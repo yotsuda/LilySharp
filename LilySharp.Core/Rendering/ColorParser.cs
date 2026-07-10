@@ -27,28 +27,29 @@ namespace LilySharp.Core.Rendering;
 /// <remarks>LILYPOND-REF: scm/output-lib.scm — x11-color mapping.</remarks>
 internal static class ColorParser
 {
-    public static Color? Parse(string s)
+    /// <summary>
+    /// The renderer's grob-color contract: null on empty, unrecognized, or the
+    /// no-op "black" (backends use their own default black). Delegates to the
+    /// shared <see cref="TryParse"/> core (which returns null for "black").
+    /// </summary>
+    public static Color? Parse(string s) => TryParse(s);
+
+    /// <summary>
+    /// The single canonical color-spec parser shared with <see cref="Color.Parse"/>:
+    /// <c>#rgb</c> / <c>#rrggbb</c> / <c>#rrggbbaa</c> hex, plus the CSS/X11 name
+    /// subset. Returns null for empty, "black" (a caller that wants opaque black
+    /// handles it explicitly), and anything unrecognized. <see cref="Color.Parse"/>
+    /// layers its throw-on-unknown + opaque-"black" contract on top of this, so the
+    /// name table and hex formats live in ONE place.
+    /// </summary>
+    internal static Color? TryParse(string s)
     {
-        // Hex literal: #rgb / #rrggbb
-        if (s.Length >= 4 && s[0] == '#')
-        {
-            ReadOnlySpan<char> hex = s.AsSpan(1);
-            if (hex.Length == 3 &&
-                TryParseHexNibble(hex[0], out int r3) &&
-                TryParseHexNibble(hex[1], out int g3) &&
-                TryParseHexNibble(hex[2], out int b3))
-            {
-                return new Color((byte)(r3 * 17), (byte)(g3 * 17), (byte)(b3 * 17));
-            }
-            if (hex.Length == 6 &&
-                TryParseHexByte(hex[0], hex[1], out int r6) &&
-                TryParseHexByte(hex[2], hex[3], out int g6) &&
-                TryParseHexByte(hex[4], hex[5], out int b6))
-            {
-                return new Color((byte)r6, (byte)g6, (byte)b6);
-            }
+        if (string.IsNullOrEmpty(s))
             return null;
-        }
+
+        if (s[0] == '#')
+            return TryParseHex(s.AsSpan(1));
+
         // Named color (subset of CSS / X11)
         return s.ToLowerInvariant() switch
         {
@@ -66,6 +67,33 @@ internal static class ColorParser
             "brown" => new Color(165, 42, 42),
             _ => null,
         };
+    }
+
+    private static Color? TryParseHex(ReadOnlySpan<char> hex)
+    {
+        if (hex.Length == 3 &&
+            TryParseHexNibble(hex[0], out int r3) &&
+            TryParseHexNibble(hex[1], out int g3) &&
+            TryParseHexNibble(hex[2], out int b3))
+        {
+            return new Color((byte)(r3 * 17), (byte)(g3 * 17), (byte)(b3 * 17));
+        }
+        if (hex.Length == 6 &&
+            TryParseHexByte(hex[0], hex[1], out int r6) &&
+            TryParseHexByte(hex[2], hex[3], out int g6) &&
+            TryParseHexByte(hex[4], hex[5], out int b6))
+        {
+            return new Color((byte)r6, (byte)g6, (byte)b6);
+        }
+        if (hex.Length == 8 &&
+            TryParseHexByte(hex[0], hex[1], out int r8) &&
+            TryParseHexByte(hex[2], hex[3], out int g8) &&
+            TryParseHexByte(hex[4], hex[5], out int b8) &&
+            TryParseHexByte(hex[6], hex[7], out int a8))
+        {
+            return new Color((byte)r8, (byte)g8, (byte)b8, (byte)a8);
+        }
+        return null;
     }
 
     private static bool TryParseHexNibble(char c, out int v)

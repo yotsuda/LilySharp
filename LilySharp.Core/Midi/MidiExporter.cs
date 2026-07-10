@@ -58,6 +58,14 @@ public sealed class MidiExporter
     private bool _structureDriven;
     private bool _structurePlayed;
 
+    // Part declarations by name (first-wins), built once in Export so PartTimbre /
+    // PartOctaveAnchor / part-transpose lookups are O(1) instead of a full-tree
+    // scan per part per section per repeat pass.
+    private Dictionary<string, PartDeclarationSyntax> _partDecls = new();
+    // Score-wide `transpose` default (a free-standing top-level transpose),
+    // computed once; a part's own transpose overrides it.
+    private (int step, int alt, int oct)? _scoreTransposeDefault;
+
     // Per-PART relative-pitch state, carried across sections and repeat
     // passes — matching the collector, which streams one part's blocks
     // sequentially through the whole piece.
@@ -115,6 +123,7 @@ public sealed class MidiExporter
         _root = tree.GetRoot();
         _phraseBodies = new Dictionary<string, SyntaxNode>();
         _sections = new Dictionary<string, SectionDeclarationSyntax>();
+        _partDecls = new Dictionary<string, PartDeclarationSyntax>();
         foreach (var n in _root.DescendantNodes())
         {
             if (n is PhraseDeclarationSyntax ph)
@@ -123,7 +132,10 @@ public sealed class MidiExporter
                 _phraseBodies[vd.Name.Text] = vd.Expression;
             else if (n is SectionDeclarationSyntax sd)
                 _sections[sd.Name.Text] = sd;
+            else if (n is PartDeclarationSyntax pd)
+                _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
+        _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
         _structureDriven = _root.DescendantNodes().OfType<StructureDeclarationSyntax>()
             .Any(s => !IsInsideRender(s));
         _structurePlayed = false;
@@ -181,7 +193,11 @@ public sealed class MidiExporter
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
                 // (sounding-pitch shift) for the notes inside, then disarm it.
-                var transpose = _root != null ? PartTranspose.Read(_root, partBlock.Name) : null;
+                // Part's own transpose (from the cached declaration) overrides the
+                // score-wide default — same result as PartTranspose.Read(root, name),
+                // without the per-call tree scan.
+                var transpose = (_partDecls.TryGetValue(partBlock.Name, out var tpd)
+                    ? PartTranspose.Read(tpd) : null) ?? _scoreTransposeDefault;
                 _currentTransposeSemitones = transpose is { } t
                     ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct)
                     : 0;
@@ -468,27 +484,21 @@ public sealed class MidiExporter
     private int PartTimbre(string partName)
     {
         string? source = null;
-        if (_root != null)
+        if (_partDecls.TryGetValue(partName, out var partDecl))
         {
-            foreach (var partDecl in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
+            foreach (var prop in partDecl.Properties)
             {
-                if (partDecl.Name.Text != partName)
-                    continue;
-                foreach (var prop in partDecl.Properties)
+                if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
                 {
-                    if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
-                    {
-                        // MIDI timbre follows the preset (the bare word), not a
-                        // trailing "…" display label: instrument violin "1st Violin".
-                        var texts = new System.Collections.Generic.List<string>();
-                        for (int vi = 2; vi < prop.SlotCount; vi++)
-                            if (prop.GetChild(vi) is SyntaxTokenNode vt)
-                                texts.Add(vt.Text);
-                        source = LilySharp.Core.Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
-                        break;
-                    }
+                    // MIDI timbre follows the preset (the bare word), not a
+                    // trailing "…" display label: instrument violin "1st Violin".
+                    var texts = new System.Collections.Generic.List<string>();
+                    for (int vi = 2; vi < prop.SlotCount; vi++)
+                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                            texts.Add(vt.Text);
+                    source = LilySharp.Core.Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
+                    break;
                 }
-                break;
             }
         }
         return TimbreFamily(source ?? partName);
@@ -513,12 +523,7 @@ public sealed class MidiExporter
     /// <summary>The part's header `octave N` anchor, or 4 when absent.</summary>
     private int PartOctaveAnchor(string partName)
     {
-        if (_root == null)
-            return 4;
-        foreach (var partDecl in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
-        {
-            if (partDecl.Name.Text != partName)
-                continue;
+        if (_partDecls.TryGetValue(partName, out var partDecl))
             foreach (var prop in partDecl.Properties)
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == "octave"
@@ -526,7 +531,6 @@ public sealed class MidiExporter
                     && int.TryParse(v.Text, out int oct))
                     return oct;
             }
-        }
         return 4;
     }
 
