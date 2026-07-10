@@ -1084,14 +1084,19 @@ internal sealed class MultiStaffLayouter
 
             if (group.IsGrandStaff)
             {
-                double groupHeight = staffHeight; // first staff
+                // Accumulate each staff's ACTUAL height (a tab/ossia staff in a
+                // grand staff differs from the nominal staffHeight), matching this
+                // method's own non-grand branch and the fixed CalculateSystemHeight
+                // overload — the fixed-staffHeight version here mis-measured a
+                // grand staff containing a non-normal staff.
+                double groupHeight = GetStaffHeight(group.Staves[0]); // first staff
                 for (int s = 1; s < group.Staves.Length; s++)
                 {
                     int upperIdx = globalStaffIdx + s - 1;
                     int lowerIdx = globalStaffIdx + s;
                     double gap = CalculateStaffGapWithSkylines(
                         sp.StaffStaff, staffHeight, staffSkylines, upperIdx, lowerIdx);
-                    groupHeight += gap + staffHeight;
+                    groupHeight += gap + GetStaffHeight(group.Staves[s]);
                 }
                 height += groupHeight;
             }
