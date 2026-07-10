@@ -434,7 +434,7 @@ public sealed partial class MeasureCollector
     // See SectionState.
     private readonly SectionState _sectionState = new();
     private readonly Dictionary<string, SyntaxNode> _variables = new();
-    private StructureDeclarationSyntax? _structure;
+    private FormDeclarationSyntax? _form;
     // A top-level partial N (a GlobalSetting, like time/key): the pickup is a
     // fact of the piece, so it arms EVERY voice's first measure. In-music
     // partial still works per voice (and mid-piece).
@@ -617,7 +617,7 @@ public sealed partial class MeasureCollector
     /// Collects a Score from a syntax tree.
     /// </summary>
     public Score Collect(SyntaxTree tree, string? voiceName = null,
-        StructureDeclarationSyntax? localStructure = null,
+        FormDeclarationSyntax? localForm = null,
         string? attachedChordPart = null,
         ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names)
     {
@@ -628,8 +628,8 @@ public sealed partial class MeasureCollector
         CollectDefinitions(tree.GetRoot());
         // An explicitly passed form overrides the primary-form default for this
         // collection (used by callers that render a specific form directly).
-        if (localStructure != null)
-            _structure = localStructure;
+        if (localForm != null)
+            _form = localForm;
 
         // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
@@ -788,7 +788,7 @@ public sealed partial class MeasureCollector
         // This score renders its bound form (resolved by name in the RenderSpec).
         // Fall back to the primary form only when the reference is unresolved (a
         // validator error) so a typo still previews something.
-        _structure = renderSpec.Form ?? _structure;
+        _form = renderSpec.Form ?? _form;
         _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
         _meta.InitialKeyCustom = _meta.KeyCustom;
         // Capture the file-level `octave absolute/relative` default AFTER the
@@ -1377,7 +1377,7 @@ public sealed partial class MeasureCollector
         // fresh instance, so this only matters for reuse via the public API.)
         _pitchTrace.Clear();
         _lyricsRowNames = new();
-        _structure = null;
+        _form = null;
         _filePartial = null;
         _root = null;
         _octave.ResetAll();
@@ -1571,13 +1571,13 @@ public sealed partial class MeasureCollector
                         _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
                     break;
 
-                case StructureDeclarationSyntax form:
+                case FormDeclarationSyntax form:
                     // A score binds its form by name (from the RenderSpec). When a
                     // path doesn't specify one (single-staff Collect, exporters),
                     // fall back to the PRIMARY form: `main` if present, else the
                     // first declared. (`main` is matched case-sensitively.)
-                    if (form.NameText == "main" || _structure == null)
-                        _structure = form;
+                    if (form.NameText == "main" || _form == null)
+                        _form = form;
                     break;
 
                 case VariableDeclarationSyntax varDecl:
@@ -1755,9 +1755,9 @@ public sealed partial class MeasureCollector
         }
 
         // Process based on structure or sections
-        if (_structure != null)
+        if (_form != null)
         {
-            ProcessStructure(ProcessNodes, builder);
+            ProcessForm(ProcessNodes, builder);
         }
         else if (_sectionState.Sections.Count > 0)
         {
@@ -1804,16 +1804,16 @@ public sealed partial class MeasureCollector
             _sectionState.StartMeasure[name] = startMeasure;
         if (!_sectionState.AllStarts.TryGetValue(name, out var list))
             _sectionState.AllStarts[name] = list = new List<int>();
-        // ProcessStructure runs once PER PART, so the same occurrence is recorded
+        // ProcessForm runs once PER PART, so the same occurrence is recorded
         // several times on a multi-part score — a distinct start per occurrence, so
         // dedup by value keeps one entry each (and never duplicates the chords/lyrics).
         if (!list.Contains(startMeasure))
             list.Add(startMeasure);
     }
 
-    private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
+    private void ProcessForm(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
-        foreach (var child in _structure!.DescendantNodes())
+        foreach (var child in _form!.DescendantNodes())
         {
             switch (child)
             {
@@ -1830,7 +1830,7 @@ public sealed partial class MeasureCollector
                     }
                     break;
 
-                case StructureRepeatBlockSyntax repeat:
+                case FormRepeatBlockSyntax repeat:
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
 
@@ -1846,7 +1846,7 @@ public sealed partial class MeasureCollector
                     int navMeasure = target
                         ? builder.CurrentMeasureIndex
                         : Math.Max(0, builder.CurrentMeasureIndex - 1);
-                    // ProcessStructure runs once PER PART; a structure-level mark
+                    // ProcessForm runs once PER PART; a structure-level mark
                     // must engrave once per SCORE — without this guard a grand
                     // staff printed "Fine" / "D.C. al Fine" twice, stacked.
                     if (!_musicMarks.Any(m => m.Type == navMark
@@ -1962,7 +1962,7 @@ public sealed partial class MeasureCollector
 
         // Walk the structure's children IN SOURCE ORDER so navigation marks
         // (segno / to coda / D.S. …) interleave with the section references at
-        // the right bars — a rows-only score never runs ProcessStructure, so
+        // the right bars — a rows-only score never runs ProcessForm, so
         // the band grid lost exactly the signs a band chart needs. Labels are
         // stamped onto the grid row's measures afterwards.
         int cur = 0;
@@ -1985,9 +1985,9 @@ public sealed partial class MeasureCollector
             cur = _sectionState.StartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
         }
 
-        if (_structure != null)
+        if (_form != null)
         {
-            foreach (var child in _structure.DescendantNodes())
+            foreach (var child in _form.DescendantNodes())
             {
                 switch (child)
                 {
@@ -1995,7 +1995,7 @@ public sealed partial class MeasureCollector
                         AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
                         break;
                     case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
-                        // Same anchoring as ProcessStructure: targets (segno/coda)
+                        // Same anchoring as ProcessForm: targets (segno/coda)
                         // at the NEXT section's start, jump text at the end of
                         // the section just played.
                         var navMark = NavigationToMusicMark(nav.MarkType);
@@ -2017,7 +2017,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private static bool IsInsideRepeatBlock(SyntaxNode node) => node.IsInside<StructureRepeatBlockSyntax>();
+    private static bool IsInsideRepeatBlock(SyntaxNode node) => node.IsInside<FormRepeatBlockSyntax>();
 
     /// <summary>
     /// Checks if a node is inside music content (phrase/section/variable body).

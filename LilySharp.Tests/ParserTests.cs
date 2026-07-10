@@ -1058,7 +1058,7 @@ lyrics { do re mi fa sol }
     }
 
     [Fact]
-    public void ParseStructureRepeatBlock()
+    public void ParseFormRepeatBlock()
     {
         var source = @"
 section A {
@@ -1071,12 +1071,12 @@ form main {
         var tree = SyntaxTree.Parse(source);
         var root = tree.GetRoot();
 
-        // Find StructureDeclarationSyntax
-        var structure = root.DescendantNodes().OfType<StructureDeclarationSyntax>().FirstOrDefault();
+        // Find FormDeclarationSyntax
+        var structure = root.DescendantNodes().OfType<FormDeclarationSyntax>().FirstOrDefault();
         Assert.NotNull(structure);
 
-        // Find StructureRepeatBlockSyntax
-        var repeat = root.DescendantNodes().OfType<StructureRepeatBlockSyntax>().FirstOrDefault();
+        // Find FormRepeatBlockSyntax
+        var repeat = root.DescendantNodes().OfType<FormRepeatBlockSyntax>().FirstOrDefault();
         Assert.NotNull(repeat);
 
         // Check slots - should have |:, A (reference), and :|

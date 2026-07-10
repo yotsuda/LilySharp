@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// first and second endings, not after both.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class StructureVoltaTests
+public sealed class FormVoltaTests
 {
     private const string Head =
         "part m { clef treble }\n" +

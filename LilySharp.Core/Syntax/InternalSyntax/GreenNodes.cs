@@ -239,7 +239,7 @@ internal sealed class BeamMarkerGreen : GreenSyntaxNode
 /// <summary>
 /// An inline volta ending inside a <c>|: … :|</c> repeat: <c>[1. … ]</c> (or
 /// a range/list <c>[1-2. …]</c> / <c>[1,3. …]</c>). Holds the volta number(s)
-/// and the ending's music. Distinct from <see cref="StructureAlternativeGreen"/>,
+/// and the ending's music. Distinct from <see cref="FormAlternativeGreen"/>,
 /// which references a named section rather than carrying literal music.
 /// </summary>
 /// <remarks>
@@ -638,18 +638,18 @@ internal sealed class PartBlockGreen : GreenSyntaxNode
 /// <summary>
 /// Structure declaration: structure { ... }
 /// </summary>
-internal sealed class StructureDeclarationGreen : GreenSyntaxNode
+internal sealed class FormDeclarationGreen : GreenSyntaxNode
 {
-    public StructureDeclarationGreen(
-        SyntaxToken structureKeyword,
+    public FormDeclarationGreen(
+        SyntaxToken formKeyword,
         SyntaxToken? name,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.StructureDeclaration,
+        : base(SyntaxKind.FormDeclaration,
             name != null
-                ? [structureKeyword, name, openBrace, .. items, closeBrace]
-                : [structureKeyword, openBrace, .. items, closeBrace])
+                ? [formKeyword, name, openBrace, .. items, closeBrace]
+                : [formKeyword, openBrace, .. items, closeBrace])
     {
     }
 }
@@ -702,31 +702,31 @@ internal sealed class MusicMarkGreen : GreenSyntaxNode
 /// <summary>
 /// Repeat block in structure: |: ... :| or |: ... :| x3
 /// </summary>
-internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
+internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
 {
     // Simple repeat: |: items :|
-    public StructureRepeatBlockGreen(
+    public FormRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
         SyntaxToken repeatEnd)
-        : base(SyntaxKind.StructureRepeatBlock, [repeatStart, .. items, repeatEnd])
+        : base(SyntaxKind.FormRepeatBlock, [repeatStart, .. items, repeatEnd])
     {
     }
 
     // Repeat with alternatives: |: items | 1. A :| 2. B
-    public StructureRepeatBlockGreen(
+    public FormRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
         SyntaxToken? barline,
         GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative)
-        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, null, null))
+        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, null, null))
     {
     }
 
     // Repeat with count: |: items :| x3
-    public StructureRepeatBlockGreen(
+    public FormRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
         SyntaxToken? barline,
@@ -735,7 +735,7 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         GreenNode? finalAlternative,
         SyntaxToken? xToken,
         SyntaxToken? repeatCount)
-        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, xToken, repeatCount))
+        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, xToken, repeatCount))
     {
     }
 
@@ -775,19 +775,19 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
 /// <summary>
 /// Alternative in repeat: 1. A, 2. B or [1. A] or [1-3. A] or [1. ~A]
 /// </summary>
-internal sealed class StructureAlternativeGreen : GreenSyntaxNode
+internal sealed class FormAlternativeGreen : GreenSyntaxNode
 {
     // Legacy style: 1. A
-    public StructureAlternativeGreen(
+    public FormAlternativeGreen(
         SyntaxToken number,
         SyntaxToken dot,
         SyntaxToken sectionName)
-        : base(SyntaxKind.StructureAlternative, [number, dot, sectionName])
+        : base(SyntaxKind.FormAlternative, [number, dot, sectionName])
     {
     }
 
     // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A] or [1. A "label"]
-    public StructureAlternativeGreen(
+    public FormAlternativeGreen(
         SyntaxToken openBracket,
         SyntaxToken number,
         SyntaxToken? separator,
@@ -797,7 +797,7 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken sectionName,
         SyntaxToken? displayLabel,
         SyntaxToken? closeBracket)
-        : base(SyntaxKind.StructureAlternative,
+        : base(SyntaxKind.FormAlternative,
             BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, displayLabel, closeBracket))
     {
     }

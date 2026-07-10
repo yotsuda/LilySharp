@@ -76,7 +76,7 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>section</c> keyword.</summary>
     SectionKeyword,
     /// <summary>The <c>form</c> keyword (node kind stays "Structure" internally).</summary>
-    StructureKeyword,
+    FormKeyword,
     /// <summary>The <c>using</c> keyword.</summary>
     UsingKeyword,
     /// <summary>The <c>version</c> keyword (optional language-version directive).</summary>
@@ -330,7 +330,7 @@ public enum SyntaxKind : ushort
     /// <summary>A section declaration node (<c>section Name { ... }</c>).</summary>
     SectionDeclaration,
     /// <summary>A form declaration node (<c>form Name { ... }</c>).</summary>
-    StructureDeclaration,
+    FormDeclaration,
     /// <summary>A using directive node (<c>using "file.lys"</c>).</summary>
     UsingDirective,
     /// <summary>An optional language-version directive node (<c>version 1</c>) —
@@ -375,9 +375,9 @@ public enum SyntaxKind : ushort
     /// <summary>A custom-text node (<c>_"text"</c> in a structure).</summary>
     CustomText,
     /// <summary>A structure repeat block node (<c>|: ... :|</c> in a structure).</summary>
-    StructureRepeatBlock,
+    FormRepeatBlock,
     /// <summary>A structure alternative node (<c>1. A, 2. B</c> in a structure).</summary>
-    StructureAlternative,
+    FormAlternative,
     /// <summary>A navigation mark node (<c>segno</c>, <c>fine</c>, <c>coda</c>, <c>dc</c>, <c>ds</c>; legacy).</summary>
     NavigationMark,
     /// <summary>A music mark node (<c>@segno</c>, <c>@fine</c>, <c>@ds.al.fine</c>; new).</summary>

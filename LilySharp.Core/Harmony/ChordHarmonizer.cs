@@ -119,7 +119,7 @@ public static class ChordHarmonizer
             // Collect just this section's melody (a local structure naming only it) and
             // harmonize it, exactly as the section-major path does per section.
             var measures = new MeasureCollector()
-                .Collect(tree, voice, SectionStructure(section.Name.Text)).Voice.Measures;
+                .Collect(tree, voice, SectionForm(section.Name.Text)).Voice.Measures;
             var entries = HarmonizeMeasures(measures, pcByPos, chords);
             if (entries.Count == 0)
                 continue;
@@ -157,7 +157,7 @@ public static class ChordHarmonizer
             // Collect only THIS section for the voice, via a structure that names
             // just it (resolved against the whole tree's section definitions) — so
             // the track follows the written section, not the structure's ordering.
-            var local = SectionStructure(section.Name.Text);
+            var local = SectionForm(section.Name.Text);
             var measures = new MeasureCollector()
                 .Collect(tree, melodyBlock.PartName.Text, local).Voice.Measures;
 
@@ -262,9 +262,9 @@ public static class ChordHarmonizer
 
     // A structure that names one section, parsed standalone; its reference resolves
     // against the main tree's section definitions when passed to Collect.
-    private static StructureDeclarationSyntax? SectionStructure(string sectionName)
+    private static FormDeclarationSyntax? SectionForm(string sectionName)
         => SyntaxTree.Parse("form main { " + sectionName + " }").GetRoot()
-            .DescendantNodes<StructureDeclarationSyntax>().FirstOrDefault();
+            .DescendantNodes<FormDeclarationSyntax>().FirstOrDefault();
 
     // Common chords first when the pitch score ties (I / IV / V over iii / vii°).
     private static int DegreePreference(int degree) => degree switch

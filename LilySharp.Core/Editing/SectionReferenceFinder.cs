@@ -48,7 +48,7 @@ public static class SectionReferenceFinder
             {
                 SectionDeclarationSyntax decl => decl.Name,
                 SectionReferenceSyntax r => r.Identifier,
-                StructureAlternativeSyntax alt => alt.SectionName,
+                FormAlternativeSyntax alt => alt.SectionName,
                 // `~NAME` has no dedicated red node — it is a generic node whose
                 // children are [ ~ , identifier ].
                 { Kind: SyntaxKind.SilentSectionReference } s => s.GetChild(1) as SyntaxTokenNode,

@@ -58,8 +58,8 @@ public sealed class MidiExporter
     // declares the same section name once per part (`part melody { section A … }`,
     // `part bass { section A … }`); a structure reference plays them all.
     private Dictionary<string, List<SectionDeclarationSyntax>>? _sections;
-    private bool _structureDriven;
-    private bool _structurePlayed;
+    private bool _formDriven;
+    private bool _formPlayed;
 
     // Part declarations by name (first-wins), built once in Export so PartTimbre /
     // PartOctaveAnchor / part-transpose lookups are O(1) instead of a full-tree
@@ -143,8 +143,8 @@ public sealed class MidiExporter
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
-        _structureDriven = _root.DescendantNodes().OfType<StructureDeclarationSyntax>().Any();
-        _structurePlayed = false;
+        _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
+        _formPlayed = false;
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -182,18 +182,18 @@ public sealed class MidiExporter
             case SectionDeclarationSyntax sectionDecl:
                 // With a structure the play order is ITS job; declarations
                 // are silent (they used to play in file order regardless).
-                if (!_structureDriven)
+                if (!_formDriven)
                     PlaySection(sectionDecl, track, conductorTrack);
                 break;
 
-            case StructureDeclarationSyntax formDecl:
+            case FormDeclarationSyntax formDecl:
                 // A file may declare several named forms; MIDI plays the PRIMARY
                 // one (`main`, else the first declared) so the .mid matches the
                 // canonical arrangement.
-                if (!_structurePlayed && IsPrimaryForm(formDecl))
+                if (!_formPlayed && IsPrimaryForm(formDecl))
                 {
-                    _structurePlayed = true;
-                    PlayStructure(formDecl, track, conductorTrack);
+                    _formPlayed = true;
+                    PlayForm(formDecl, track, conductorTrack);
                 }
                 break;
 
@@ -337,9 +337,9 @@ public sealed class MidiExporter
 
     /// <summary>True when <paramref name="form"/> is the PRIMARY form to play: the
     /// one named <c>main</c> (case-sensitive), or the first declared if none is.</summary>
-    private bool IsPrimaryForm(StructureDeclarationSyntax form)
+    private bool IsPrimaryForm(FormDeclarationSyntax form)
     {
-        var forms = _root!.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var forms = _root!.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
         var primary = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
         return ReferenceEquals(form, primary);
     }
@@ -442,7 +442,7 @@ public sealed class MidiExporter
     /// text are visual and skipped. D.C./D.S. jump SEMANTICS are not yet
     /// honored (they would need segno/fine targets in time).
     /// </summary>
-    private void PlayStructure(StructureDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
+    private void PlayForm(FormDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
     {
         for (int i = 0; i < structure.SlotCount; i++)
         {
@@ -452,14 +452,14 @@ public sealed class MidiExporter
                 case SectionReferenceSyntax reference:
                     PlaySectionByName(reference.SectionName, track, conductorTrack);
                     break;
-                case StructureRepeatBlockSyntax repeatBlock:
+                case FormRepeatBlockSyntax repeatBlock:
                     PlayRepeatBlock(repeatBlock, track, conductorTrack);
                     break;
             }
         }
     }
 
-    private void PlayRepeatBlock(StructureRepeatBlockSyntax repeatBlock, MidiTrack track, MidiTrack conductorTrack)
+    private void PlayRepeatBlock(FormRepeatBlockSyntax repeatBlock, MidiTrack track, MidiTrack conductorTrack)
     {
         var body = new List<string>();
         var alternatives = new List<string>();
@@ -470,7 +470,7 @@ public sealed class MidiExporter
                 case SectionReferenceSyntax reference:
                     body.Add(reference.SectionName);
                     break;
-                case StructureAlternativeSyntax alt:
+                case FormAlternativeSyntax alt:
                     alternatives.Add(alt.SectionName.Text);
                     break;
             }

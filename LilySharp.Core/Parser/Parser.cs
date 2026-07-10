@@ -310,7 +310,7 @@ internal sealed partial class Parser
         {
             // New section-oriented structure
             SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
-            SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
+            SyntaxKind.FormKeyword => ParseFormDeclaration(),
             SyntaxKind.UsingKeyword => ParseUsingDirective(),
             // `score [ "basename" ] { layout }` — a printable score (visual
             // layout). The output format/extension is a CLI choice, not source.

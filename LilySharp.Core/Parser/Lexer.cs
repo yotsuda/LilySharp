@@ -520,7 +520,7 @@ internal sealed class Lexer
             // New structure keywords
             "version" => SyntaxKind.VersionKeyword,
             "section" => SyntaxKind.SectionKeyword,
-            "form" => SyntaxKind.StructureKeyword,   // piece-level form (play/render order); node kind stays "Structure" internally
+            "form" => SyntaxKind.FormKeyword,   // piece-level form (play/render order); node kind stays "Structure" internally
             "using" => SyntaxKind.UsingKeyword,
             "tab" => SyntaxKind.TabKeyword,
             "ossia" => SyntaxKind.OssiaKeyword,

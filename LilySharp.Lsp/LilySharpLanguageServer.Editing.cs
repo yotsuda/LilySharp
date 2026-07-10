@@ -380,7 +380,7 @@ public sealed partial class LilySharpLanguageServer
         // so this is an on-demand convenience, not a warning.
         var sections = doc.Tree.GetNodes<SectionDeclarationSyntax>()
             .OrderBy(s => s.Position).ToList();
-        if (sections.Count > 0 && !doc.Tree.GetNodes<StructureDeclarationSyntax>().Any())
+        if (sections.Count > 0 && !doc.Tree.GetNodes<FormDeclarationSyntax>().Any())
         {
             var names = string.Join(" ", sections.Select(s => s.SectionName));
             // Slot it between the sections and the first render/score if present,

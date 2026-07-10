@@ -94,7 +94,7 @@ public sealed partial class LilySharpLanguageServer
             OnceModifierSyntax => "**Once**: Applies override/revert for one note only",
             PhraseDeclarationSyntax phrase => $"**Phrase**: `{phrase.Name.Text}` — Reusable music block",
             SectionDeclarationSyntax section => $"**Section**: `{section.SectionName}` — Groups parts for a musical section",
-            StructureDeclarationSyntax => "**Structure**: Defines playback order of sections",
+            FormDeclarationSyntax => "**Structure**: Defines playback order of sections",
             RenderDeclarationSyntax => "**Score**: A printable score — visual layout (staff assignment). Output format is a CLI choice.",
             VariableDeclarationSyntax varDecl => $"**Variable**: `{varDecl.Name.Text}`",
             VariableReferenceSyntax varRef => $"**Variable reference**: `${varRef.Name.Text}`",
@@ -173,7 +173,7 @@ public sealed partial class LilySharpLanguageServer
             VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
             PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
             SectionDeclarationSyntax section => ($"section {section.SectionName}", SymbolKind.Namespace),
-            StructureDeclarationSyntax => ("form", SymbolKind.Struct),
+            FormDeclarationSyntax => ("form", SymbolKind.Struct),
             RenderDeclarationSyntax render => (RenderSymbolName(render), SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             // Tuplets and voice-parallel blocks are inline music constructs, not

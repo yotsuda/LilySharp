@@ -120,7 +120,7 @@ public static class RenderSpecParser
     /// Resolves a score's <c>form &lt;Name&gt;</c> reference to the matching top-level
     /// form declaration (case-sensitive). Null when the name is empty or unknown.
     /// </summary>
-    private static StructureDeclarationSyntax? ResolveForm(RenderDeclarationSyntax render, string formName)
+    private static FormDeclarationSyntax? ResolveForm(RenderDeclarationSyntax render, string formName)
     {
         if (string.IsNullOrEmpty(formName))
             return null;
@@ -128,7 +128,7 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
         return root.DescendantNodes()
-            .OfType<StructureDeclarationSyntax>()
+            .OfType<FormDeclarationSyntax>()
             .FirstOrDefault(f => string.Equals(f.NameText, formName, System.StringComparison.Ordinal));
     }
 

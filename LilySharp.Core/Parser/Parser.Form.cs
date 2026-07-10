@@ -24,9 +24,9 @@ internal sealed partial class Parser
     /// <summary>
     /// Parse form declaration: form Name { ... }
     /// </summary>
-    private StructureDeclarationGreen ParseStructureDeclaration()
+    private FormDeclarationGreen ParseFormDeclaration()
     {
-        var keyword = Expect(SyntaxKind.StructureKeyword);   // the `form` keyword
+        var keyword = Expect(SyntaxKind.FormKeyword);   // the `form` keyword
 
         // A form is always named: `form Main { … }`. A score binds to it by that
         // name (`score Main { … }`); the reserved name `main` writes to the input
@@ -43,13 +43,13 @@ internal sealed partial class Parser
 
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var items = ParseList(SyntaxKind.CloseBrace, ParseStructureItem);
+        var items = ParseList(SyntaxKind.CloseBrace, ParseFormItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new StructureDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+        return new FormDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
-    private GreenNode? ParseStructureItem()
+    private GreenNode? ParseFormItem()
     {
         return Current.Kind switch
         {
@@ -65,7 +65,7 @@ internal sealed partial class Parser
             SyntaxKind.Tilde => ParseSilentSectionReference(),
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),
-            SyntaxKind.RepeatStartBar => ParseStructureRepeatBlock(),
+            SyntaxKind.RepeatStartBar => ParseFormRepeatBlock(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
@@ -153,7 +153,7 @@ internal sealed partial class Parser
     /// <summary>
     /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section] or [1. ~Section]
     /// </summary>
-    private StructureAlternativeGreen ParseVoltaBracket()
+    private FormAlternativeGreen ParseVoltaBracket()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
         var number = Expect(SyntaxKind.IntegerLiteral);
@@ -183,13 +183,13 @@ internal sealed partial class Parser
         // The ']' is optional: present = closed (right cap drawn), absent = open.
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
 
-        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, displayLabel, closeBracket);
+        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, displayLabel, closeBracket);
     }
 
     /// <summary>
     /// Parse repeat block: |: ... :| or |: ... :| x3
     /// </summary>
-    private StructureRepeatBlockGreen ParseStructureRepeatBlock()
+    private FormRepeatBlockGreen ParseFormRepeatBlock()
     {
         var startBar = Expect(SyntaxKind.RepeatStartBar);
 
@@ -231,7 +231,7 @@ internal sealed partial class Parser
                     "not '[1. ...] [2. ...] :|'");
             }
 
-            var item = ParseStructureItem();
+            var item = ParseFormItem();
             if (item != null)
                 items.Add(item);
             else
@@ -242,7 +242,7 @@ internal sealed partial class Parser
         {
             while (Check(SyntaxKind.IntegerLiteral) && !Check(SyntaxKind.RepeatEndBar))
             {
-                alternatives.Add(ParseStructureAlternative());
+                alternatives.Add(ParseFormAlternative());
             }
         }
 
@@ -253,7 +253,7 @@ internal sealed partial class Parser
         //   |: Intro2 B C A2 [1. D] :| [2. Outro]
         GreenNode? finalAlternative = null;
         if (Check(SyntaxKind.IntegerLiteral))
-            finalAlternative = ParseStructureAlternative();
+            finalAlternative = ParseFormAlternative();
         else if (Check(SyntaxKind.OpenBracket))
             finalAlternative = ParseVoltaBracket();
 
@@ -266,7 +266,7 @@ internal sealed partial class Parser
             repeatCount = Expect(SyntaxKind.IntegerLiteral);
         }
 
-        return new StructureRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, xToken, repeatCount);
+        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, xToken, repeatCount);
 
     }
 
@@ -275,7 +275,7 @@ internal sealed partial class Parser
     /// The bracket is required — <c>[1. SectionName]</c> — so this rejects the bare
     /// form with a hint and recovers by keeping the parsed alternative.
     /// </summary>
-    private StructureAlternativeGreen ParseStructureAlternative()
+    private FormAlternativeGreen ParseFormAlternative()
     {
         int startPos = _textPosition;
         var number = Expect(SyntaxKind.IntegerLiteral);
@@ -287,7 +287,7 @@ internal sealed partial class Parser
             $"A volta ending must be bracketed: write '[{number.Text}. {section.Text}]'. " +
             "The closing ']' is optional (present = closed cap, absent = open).");
 
-        return new StructureAlternativeGreen(number, dot, section);
+        return new FormAlternativeGreen(number, dot, section);
     }
 
     /// <summary>

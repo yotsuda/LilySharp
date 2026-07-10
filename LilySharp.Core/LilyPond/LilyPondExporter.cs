@@ -61,7 +61,7 @@ public sealed class LilyPondExporter
         foreach (var s in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
             _sections.TryAdd(s.SectionName, s);
         // Emit the PRIMARY form (`main`, else the first declared).
-        var forms = root.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var forms = root.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
         var structure = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
 
         _sb.AppendLine("\\version \"2.24.0\"");
@@ -80,7 +80,7 @@ public sealed class LilyPondExporter
         _sb.AppendLine("music = {");
         EmitLeadingDirectives(root);
         if (structure != null)
-            EmitStructure(structure);
+            EmitForm(structure);
         else
             foreach (var s in SectionsInDeclarationOrder(root))
                 EmitSectionBody(s);
@@ -128,7 +128,7 @@ public sealed class LilyPondExporter
         return null;
     }
 
-    private void EmitStructure(StructureDeclarationSyntax structure)
+    private void EmitForm(FormDeclarationSyntax structure)
     {
         foreach (var child in structure.DescendantNodes())
         {
@@ -139,7 +139,7 @@ public sealed class LilyPondExporter
                 case { Kind: SyntaxKind.SilentSectionReference } sr when !IsInsideRepeat(sr)
                         && sr.GetChild(1) is SyntaxTokenNode nm:
                     EmitSectionRef(nm.Text, label: false); break;
-                case StructureRepeatBlockSyntax repeat:
+                case FormRepeatBlockSyntax repeat:
                     EmitRepeat(repeat); break;
                 case NavigationMarkSyntax nav when !IsInsideRepeat(nav):
                     _sb.AppendLine().Append("  ").AppendLine(NavMarkLy(nav.MarkType)); break;
@@ -162,13 +162,13 @@ public sealed class LilyPondExporter
         _ => ""
     };
 
-    private void EmitRepeat(StructureRepeatBlockSyntax repeat)
+    private void EmitRepeat(FormRepeatBlockSyntax repeat)
     {
         _sb.AppendLine();
         _sb.AppendLine("  \\repeat volta 2 {");
         foreach (var r in repeat.DescendantNodes().OfType<SectionReferenceSyntax>())
             if (!IsInsideAlternative(r)) EmitSectionRef(r.SectionName, indent: "    ");
-        var alts = repeat.DescendantNodes().OfType<StructureAlternativeSyntax>().ToList();
+        var alts = repeat.DescendantNodes().OfType<FormAlternativeSyntax>().ToList();
         _sb.AppendLine("  }");
         if (alts.Count > 0)
         {
@@ -379,7 +379,7 @@ public sealed class LilyPondExporter
 
     private static bool IsInsideGrace(SyntaxNode node) => node.IsInside<GraceExpressionSyntax>();
 
-    private static bool IsInsideRepeat(SyntaxNode node) => node.IsInside<StructureRepeatBlockSyntax>();
+    private static bool IsInsideRepeat(SyntaxNode node) => node.IsInside<FormRepeatBlockSyntax>();
 
-    private static bool IsInsideAlternative(SyntaxNode node) => node.IsInside<StructureAlternativeSyntax>();
+    private static bool IsInsideAlternative(SyntaxNode node) => node.IsInside<FormAlternativeSyntax>();
 }

@@ -22,7 +22,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 [Trait("Category", "Unit")]
-public class StructureDeclarationValidatorTests
+public class FormDeclarationValidatorTests
 {
     private static string Wrap(string formsAndScore) => $@"
 title ""t""
@@ -35,7 +35,7 @@ section B {{ melody {{ g'4 a b c | }} }}
 
     private static IReadOnlyList<Diagnostic> Validate(string formsAndScore)
     {
-        var validator = new StructureDeclarationValidator();
+        var validator = new FormDeclarationValidator();
         validator.Validate(SyntaxTree.Parse(Wrap(formsAndScore)));
         return validator.Diagnostics;
     }

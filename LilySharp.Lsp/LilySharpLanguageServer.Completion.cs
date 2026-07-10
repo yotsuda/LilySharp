@@ -74,7 +74,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? GetDrumCompletions(inVoice)
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted),
-            CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
+            CompletionContext.FormBlock => GetFormCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
@@ -289,7 +289,7 @@ public sealed partial class LilySharpLanguageServer
     /// text (<c>_"…"</c>). Deliberately offers NO note names — the structure is a
     /// playback order of sections, not music.
     /// </summary>
-    internal static CompletionList GetStructureCompletions(string text)
+    internal static CompletionList GetFormCompletions(string text)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
@@ -377,7 +377,7 @@ public sealed partial class LilySharpLanguageServer
         Unknown,
         TopLevel,
         MusicBlock,
-        StructureBlock,
+        FormBlock,
         PartBlock,
         AfterClef,
         AfterKey,
@@ -514,7 +514,7 @@ public sealed partial class LilySharpLanguageServer
         // names. A form is always named, so the `form` keyword is the frame Prefix.
         var formFrames = ScanOpenBlocks(text, offset, ReadFrame);
         if (formFrames.Count > 0 && formFrames[^1].Prefix == "form")
-            return CompletionContext.StructureBlock;
+            return CompletionContext.FormBlock;
 
         // Inside score "name" { } / grandStaff { }: the body is a render spec.
         // After its reference keywords only the declared part names fit; a

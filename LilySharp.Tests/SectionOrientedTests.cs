@@ -70,7 +70,7 @@ public class SectionOrientedTests
     }
 
     [Fact]
-    public void ParseStructureDeclaration()
+    public void ParseFormDeclaration()
     {
         var source = """
             section A { guitar { c4 } }

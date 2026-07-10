@@ -28,7 +28,7 @@ namespace LilySharp.Tests;
 /// to coda / D.C. / D.S. al fine|coda) are engraved like the inline @-marks.
 /// </summary>
 [Trait("Category", "Unit")]
-public class StructureNavigationTests
+public class FormNavigationTests
 {
     private static MusicMarkType[] Marks(string structure)
     {

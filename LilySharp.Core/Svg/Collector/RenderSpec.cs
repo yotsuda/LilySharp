@@ -110,7 +110,7 @@ public sealed record RenderSpec(
     // The form this score renders, resolved from its `score <FormName>` header
     // against the file's `form <Name> { ... }` declarations. Null when the name is
     // missing or unknown (a validator error) — the score then renders nothing.
-    StructureDeclarationSyntax? Form = null
+    FormDeclarationSyntax? Form = null
 )
 {
     /// <summary>Whether this render contains a grand staff.</summary>

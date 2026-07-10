@@ -90,7 +90,7 @@ public class SvgSnapshotTests
         // articulation is pushed outer (LayoutEngine fingering/articulation pass).
         yield return new object[] { "test/fingering-articulation" };
         // A volta-bracket alternative with a display label: [1. B "label"] shows
-        // the label above the bracket (StructureAlternative displayLabel slot).
+        // the label above the bracket (FormAlternative displayLabel slot).
         yield return new object[] { "test/volta-labels" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };

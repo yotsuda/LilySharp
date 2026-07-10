@@ -177,9 +177,9 @@ form main {
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         
         // Verify the alternative has IsSilent flag
-        var structure = tree.GetRoot().DescendantNodes().OfType<StructureDeclarationSyntax>().First();
-        var repeatBlock = structure.DescendantNodes().OfType<StructureRepeatBlockSyntax>().First();
-        var alternatives = repeatBlock.DescendantNodes().OfType<StructureAlternativeSyntax>().ToList();
+        var structure = tree.GetRoot().DescendantNodes().OfType<FormDeclarationSyntax>().First();
+        var repeatBlock = structure.DescendantNodes().OfType<FormRepeatBlockSyntax>().First();
+        var alternatives = repeatBlock.DescendantNodes().OfType<FormAlternativeSyntax>().ToList();
         
         Assert.Equal(2, alternatives.Count);
         Assert.False(alternatives[0].IsSilent); // [1. Bridge]

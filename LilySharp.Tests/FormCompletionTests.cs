@@ -25,7 +25,7 @@ namespace LilySharp.Tests;
 /// navigation marks, never note names.
 /// </summary>
 [Trait("Category", "Unit")]
-public class StructureCompletionTests
+public class FormCompletionTests
 {
     private const string Doc = """
         part m {
@@ -40,7 +40,7 @@ public class StructureCompletionTests
     public void InsideFormBlock_IsDetected()
     {
         int offset = Doc.IndexOf("Intro segno") + "Intro ".Length; // inside form main { }
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.StructureBlock,
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.FormBlock,
             LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
 
@@ -50,14 +50,14 @@ public class StructureCompletionTests
         // Inside a section's music block the completions route to music (note)
         // names, not the form body's section/navigation list.
         int offset = Doc.IndexOf("c4 d");
-        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.StructureBlock,
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.FormBlock,
             LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
 
     [Fact]
     public void StructureCompletions_OfferSectionNamesAndNavMarks()
     {
-        var labels = LilySharpLanguageServer.GetStructureCompletions(Doc).Items
+        var labels = LilySharpLanguageServer.GetFormCompletions(Doc).Items
             .Select(i => i.Label).ToHashSet();
 
         Assert.Contains("Intro", labels);   // declared section names
@@ -70,7 +70,7 @@ public class StructureCompletionTests
     [Fact]
     public void StructureCompletions_OfferRepeatVoltaAndOtherSyntax()
     {
-        var labels = LilySharpLanguageServer.GetStructureCompletions(Doc).Items
+        var labels = LilySharpLanguageServer.GetFormCompletions(Doc).Items
             .Select(i => i.Label).ToHashSet();
 
         Assert.Contains("|:", labels);     // repeat barlines
@@ -88,7 +88,7 @@ public class StructureCompletionTests
     [Fact]
     public void StructureCompletions_OfferNoNoteNames()
     {
-        var labels = LilySharpLanguageServer.GetStructureCompletions(Doc).Items
+        var labels = LilySharpLanguageServer.GetFormCompletions(Doc).Items
             .Select(i => i.Label).ToHashSet();
 
         foreach (var note in new[] { "c", "d", "e", "f", "g", "a", "b" })

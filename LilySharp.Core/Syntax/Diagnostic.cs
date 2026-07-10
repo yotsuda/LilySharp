@@ -223,7 +223,7 @@ public static class DiagnosticCodes
     /// (<c>@mark(A)</c> instead of <c>@mark("A")</c>).</summary>
     public const string MarkLabelNotQuoted = "LYS1009";
     /// <summary>Semantic error: multiple structure declarations were found.</summary>
-    public const string MultipleStructureDeclarations = "LYS1015";
+    public const string MultipleFormDeclarations = "LYS1015";
     /// <summary>Semantic error: a <c>form</c> was declared without a name.</summary>
     public const string UnnamedForm = "LYS1016";
     /// <summary>Semantic error: two forms share the same name.</summary>

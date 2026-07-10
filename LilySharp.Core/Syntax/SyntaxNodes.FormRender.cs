@@ -110,15 +110,15 @@ public sealed partial class PartBlockSyntax : SyntaxNode
 /// Represents a form declaration: <c>form Name { ... }</c> (the surface keyword
 /// is <c>form</c>; the node kind stays "Structure" internally).
 /// </summary>
-public sealed partial class StructureDeclarationSyntax : SyntaxNode
+public sealed partial class FormDeclarationSyntax : SyntaxNode
 {
-    internal StructureDeclarationSyntax(StructureDeclarationGreen green, SyntaxNode? parent, int position)
+    internal FormDeclarationSyntax(FormDeclarationGreen green, SyntaxNode? parent, int position)
         : base(green, parent, position)
     {
     }
 
     /// <summary>The <c>form</c> keyword token.</summary>
-    public SyntaxTokenNode StructureKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode FormKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>The form's name token (e.g. <c>Main</c>), or null when a malformed
     /// declaration omitted it. Names are case-sensitive.</summary>
@@ -173,9 +173,9 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
 /// <summary>
 /// Represents a repeat block in structure: |: ... :|
 /// </summary>
-public sealed partial class StructureRepeatBlockSyntax : SyntaxNode
+public sealed partial class FormRepeatBlockSyntax : SyntaxNode
 {
-    internal StructureRepeatBlockSyntax(StructureRepeatBlockGreen green, SyntaxNode? parent, int position)
+    internal FormRepeatBlockSyntax(FormRepeatBlockGreen green, SyntaxNode? parent, int position)
         : base(green, parent, position)
     {
     }
@@ -184,9 +184,9 @@ public sealed partial class StructureRepeatBlockSyntax : SyntaxNode
 /// <summary>
 /// Represents an alternative in structure: 1. SectionName or [1. SectionName] or [1-3. SectionName] or [1. ~SectionName]
 /// </summary>
-public sealed partial class StructureAlternativeSyntax : SyntaxNode
+public sealed partial class FormAlternativeSyntax : SyntaxNode
 {
-    internal StructureAlternativeSyntax(StructureAlternativeGreen green, SyntaxNode? parent, int position)
+    internal FormAlternativeSyntax(FormAlternativeGreen green, SyntaxNode? parent, int position)
         : base(green, parent, position)
     {
     }

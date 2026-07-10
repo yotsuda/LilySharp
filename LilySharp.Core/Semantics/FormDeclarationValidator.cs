@@ -27,7 +27,7 @@ namespace LilySharp.Core.Semantics;
 /// stem; any other name becomes the output file name unless a <c>"basename"</c>
 /// overrides it.
 /// </summary>
-internal sealed class StructureDeclarationValidator : ISemanticValidator
+internal sealed class FormDeclarationValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 
@@ -35,7 +35,7 @@ internal sealed class StructureDeclarationValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        var forms = tree.GetNodes<StructureDeclarationSyntax>().ToList();
+        var forms = tree.GetNodes<FormDeclarationSyntax>().ToList();
 
         // Every form must be named; names are unique and case-sensitive.
         var declared = new HashSet<string>(StringComparer.Ordinal);
@@ -44,7 +44,7 @@ internal sealed class StructureDeclarationValidator : ISemanticValidator
             string name = form.NameText;
             if (string.IsNullOrEmpty(name))
             {
-                _diagnostics.Error(form.StructureKeyword.Span, DiagnosticCodes.UnnamedForm,
+                _diagnostics.Error(form.FormKeyword.Span, DiagnosticCodes.UnnamedForm,
                     "A 'form' must be named, e.g. 'form main { ... }'.");
                 continue;
             }

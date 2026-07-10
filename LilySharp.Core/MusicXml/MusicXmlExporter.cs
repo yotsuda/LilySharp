@@ -195,7 +195,7 @@ public sealed class MusicXmlExporter
     {
         var sectionDecls = root.DescendantNodes().OfType<SectionDeclarationSyntax>().ToList();
         // Export the PRIMARY form (`main`, else the first declared).
-        var forms = root.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var forms = root.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
         var structure = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
 
         if (structure == null)
@@ -217,7 +217,7 @@ public sealed class MusicXmlExporter
                 byName[s.SectionName] = list = new List<SectionDeclarationSyntax>();
             list.Add(s);
         }
-        WalkStructure(structure, byName);
+        WalkForm(structure, byName);
     }
 
     private void EmitSection(SectionDeclarationSyntax section)
@@ -281,7 +281,7 @@ public sealed class MusicXmlExporter
     // measure they open (they mark where a jump lands).
     private readonly List<System.Xml.Linq.XElement> _pendingTargetDirections = new();
 
-    private void WalkStructure(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void WalkForm(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         _pendingTargetDirections.Clear();
         for (int i = 0; i < container.SlotCount; i++)
@@ -291,10 +291,10 @@ public sealed class MusicXmlExporter
                 case SectionReferenceSyntax r:
                     EmitWithPendingTargets(() => EmitSectionByName(byName, r.SectionName));
                     break;
-                case StructureRepeatBlockSyntax rb:
+                case FormRepeatBlockSyntax rb:
                     EmitWithPendingTargets(() => EmitRepeatBlock(rb, byName));
                     break;
-                case StructureAlternativeSyntax alt:
+                case FormAlternativeSyntax alt:
                     EmitWithPendingTargets(() => EmitSectionByName(byName, alt.SectionName.Text));
                     break;
                 case { Kind: SyntaxKind.SilentSectionReference } silent
@@ -385,11 +385,11 @@ public sealed class MusicXmlExporter
     /// back-to-back repeat spans (each <c>:| |:</c>); every span is bracketed with a
     /// forward repeat on its first measure and a backward repeat on its last, per
     /// part — mirroring the inline-barline handling.</summary>
-    private void EmitRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool hasEndings = false;
         for (int i = 0; i < rb.SlotCount; i++)
-            if (rb.GetChild(i) is StructureAlternativeSyntax) { hasEndings = true; break; }
+            if (rb.GetChild(i) is FormAlternativeSyntax) { hasEndings = true; break; }
 
         if (hasEndings)
             EmitVoltaRepeatBlock(rb, byName);
@@ -397,7 +397,7 @@ public sealed class MusicXmlExporter
             EmitPlainRepeatBlock(rb, byName);
     }
 
-    private void EmitPlainRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitPlainRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         var runs = new List<List<SyntaxNode>>();
         var cur = new List<SyntaxNode>();
@@ -420,7 +420,7 @@ public sealed class MusicXmlExporter
                 continue;
             var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
-                EmitStructureItem(item, byName);
+                EmitFormItem(item, byName);
             foreach (var p in Document.Parts)
             {
                 if (p.Measures.Count > startIdx.GetValueOrDefault(p))
@@ -437,7 +437,7 @@ public sealed class MusicXmlExporter
     /// backward repeat sits on the last measure before the <c>:|</c>; endings AFTER
     /// the <c>:|</c> are final (type "discontinue", no repeat). A silent <c>~</c>
     /// ending suppresses its bracket (as the engraving does) but still plays.</summary>
-    private void EmitVoltaRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitVoltaRepeatBlock(FormRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool forwardPending = true;
         bool afterEndBar = false;
@@ -445,7 +445,7 @@ public sealed class MusicXmlExporter
         for (int i = 0; i < rb.SlotCount; i++)
         {
             var child = rb.GetChild(i);
-            if (child is StructureAlternativeSyntax alt)
+            if (child is FormAlternativeSyntax alt)
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitSectionByName(byName, alt.SectionName.Text);
@@ -467,7 +467,7 @@ public sealed class MusicXmlExporter
             else if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
             {
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
-                EmitStructureItem(child, byName);
+                EmitFormItem(child, byName);
                 if (forwardPending)
                 {
                     foreach (var p in Document.Parts)
@@ -487,12 +487,12 @@ public sealed class MusicXmlExporter
         }
     }
 
-    private void EmitStructureItem(SyntaxNode item, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    private void EmitFormItem(SyntaxNode item, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         switch (item)
         {
             case SectionReferenceSyntax r: EmitSectionByName(byName, r.SectionName); break;
-            case StructureAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
+            case FormAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
             case { Kind: SyntaxKind.SilentSectionReference } silent
                     when silent.GetChild(1) is SyntaxTokenNode nm:
                 EmitSectionByName(byName, nm.Text);
@@ -502,7 +502,7 @@ public sealed class MusicXmlExporter
 
     /// <summary>The MusicXML <c>&lt;ending number&gt;</c> list for a volta: "1", a
     /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3.]</c> → "1,3".</summary>
-    private static string EndingNumbers(StructureAlternativeSyntax alt)
+    private static string EndingNumbers(FormAlternativeSyntax alt)
     {
         int n = alt.AlternativeNumber;
         if (alt.Separator is not { } sep || alt.EndNumber is not { } endTok
@@ -942,7 +942,7 @@ public sealed class MusicXmlExporter
             case VariableDeclarationSyntax:
             case PartDeclarationSyntax:
             case SectionDeclarationSyntax:
-            case StructureDeclarationSyntax:
+            case FormDeclarationSyntax:
                 // Skip declarations — they're handled elsewhere
                 break;
 

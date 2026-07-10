@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Collector;
 // MeasureCollector.cs as a partial class; same instance state, no behavior change.
 public sealed partial class MeasureCollector
 {
-    private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
+    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
@@ -85,7 +85,7 @@ public sealed partial class MeasureCollector
                     builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     ProcessSection(silentSection, processNodes, builder);
                 }
-                else if (child is StructureAlternativeSyntax alt)
+                else if (child is FormAlternativeSyntax alt)
                 {
                     string altSectionName = alt.SectionName.Text;
                     if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
