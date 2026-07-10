@@ -15,7 +15,7 @@ phrase test {
 }
 
 section Main {
-  bass_part { $test }
+  bass_part { test }
 }
 
 form main { Main }

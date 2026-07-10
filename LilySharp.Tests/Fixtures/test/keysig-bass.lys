@@ -22,12 +22,12 @@ phrase gMajorBass {
 
 section FMajor {
   key f major
-  bassLine { $fMajorBass }
+  bassLine { fMajorBass }
 }
 
 section GMajor {
   key g major
-  bassLine { $gMajorBass }
+  bassLine { gMajorBass }
 }
 
 form main { FMajor GMajor }

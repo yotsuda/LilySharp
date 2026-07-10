@@ -98,25 +98,25 @@
   <rect x="84.21" y="34.91" width="0.19" height="4.00" fill="#000000"/>
   <rect x="100.96" y="34.91" width="0.19" height="4.00" fill="#000000"/>
   <rect x="101.45" y="34.91" width="0.60" height="4.00" fill="#000000"/>
-  <line x1="2.86" y1="30.57" x2="2.86" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="541"/>
-  <line x1="2.86" y1="30.57" x2="55.91" y2="30.57" stroke="#000000" stroke-width="0.130" data-pos="541"/>
-  <line x1="55.91" y1="30.57" x2="55.91" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="541"/>
-  <text x="3.36" y="30.87" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="541">1.</text>
-  <line x1="56.51" y1="30.57" x2="56.51" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="557"/>
-  <line x1="56.51" y1="30.57" x2="101.75" y2="30.57" stroke="#000000" stroke-width="0.130" data-pos="557"/>
-  <line x1="101.75" y1="30.57" x2="101.75" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="557"/>
-  <text x="57.01" y="30.87" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="557">2.</text>
+  <line x1="2.86" y1="30.57" x2="2.86" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="537"/>
+  <line x1="2.86" y1="30.57" x2="55.91" y2="30.57" stroke="#000000" stroke-width="0.130" data-pos="537"/>
+  <line x1="55.91" y1="30.57" x2="55.91" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="537"/>
+  <text x="3.36" y="30.87" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="537">1.</text>
+  <line x1="56.51" y1="30.57" x2="56.51" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="553"/>
+  <line x1="56.51" y1="30.57" x2="101.75" y2="30.57" stroke="#000000" stroke-width="0.130" data-pos="553"/>
+  <line x1="101.75" y1="30.57" x2="101.75" y2="32.57" stroke="#000000" stroke-width="0.130" data-pos="553"/>
+  <text x="57.01" y="30.87" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="553">2.</text>
   <text x="0.05" y="32.67" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">5</text>
   <rect x="0.30" y="10.77" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="325"/>
   <text x="1.29" y="12.97" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="325">A</text>
   <text class="music" x="3.09" y="12.97" font-size="1.60" data-pos="0"></text>
   <line x1="3.60" y1="12.97" x2="3.60" y2="11.57" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="4.19" y="12.97" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>
-  <rect x="52.75" y="11.81" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="361"/>
-  <text x="53.68" y="14.01" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="361">B</text>
-  <rect x="0.30" y="27.41" width="8.35" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="397"/>
-  <text x="4.47" y="29.61" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="397">Ending1</text>
-  <rect x="56.21" y="27.41" width="8.35" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="440"/>
-  <text x="60.39" y="29.61" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="440">Ending2</text>
+  <rect x="52.75" y="11.81" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="360"/>
+  <text x="53.68" y="14.01" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="360">B</text>
+  <rect x="0.30" y="27.41" width="8.35" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="395"/>
+  <text x="4.47" y="29.61" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="395">Ending1</text>
+  <rect x="56.21" y="27.41" width="8.35" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="437"/>
+  <text x="60.39" y="29.61" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="437">Ending2</text>
   </g>
 </svg>

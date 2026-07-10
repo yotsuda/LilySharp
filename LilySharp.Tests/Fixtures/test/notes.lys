@@ -42,7 +42,7 @@ phrase mixed {
 }
 
 section Main {
-  melody { $wholeAndHalf $quarters $eighths $sixteenths $dotted $rests $mixed }
+  melody { wholeAndHalf quarters eighths sixteenths dotted rests mixed }
 }
 
 form main { Main }

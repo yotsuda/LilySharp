@@ -20,7 +20,7 @@ phrase clefChanges {
 }
 
 section Main {
-  melody { $clefChanges }
+  melody { clefChanges }
 }
 
 form main { Main }

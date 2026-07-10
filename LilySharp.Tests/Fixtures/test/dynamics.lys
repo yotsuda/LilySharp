@@ -26,7 +26,7 @@ phrase withArticulations {
 }
 
 section Main {
-  melody { $basicDynamics $crescDecres $withArticulations }
+  melody { basicDynamics crescDecres withArticulations }
 }
 
 form main { Main }

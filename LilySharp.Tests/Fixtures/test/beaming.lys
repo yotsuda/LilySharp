@@ -30,7 +30,7 @@ phrase mixedBeams {
 }
 
 section Main {
-  melody { $beamsWithRests $eighthBeams $sixteenthBeams $mixedBeams }
+  melody { beamsWithRests eighthBeams sixteenthBeams mixedBeams }
 }
 
 form main { Main }

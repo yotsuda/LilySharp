@@ -119,20 +119,20 @@ phrase p_bass { g2 c | g4 a b c | g2~ g4 r | d2 g | }
 
 // --- 構造（section → structure → render）------------------------------------
 section A {
-  rh { $p_basics $p_accidentals $p_expression }
-  lh { $p_bass $p_bass $p_bass }
+  rh { p_basics p_accidentals p_expression }
+  lh { p_bass p_bass p_bass }
 }
 section B {
-  rh { $p_tiesSlurs $p_beams $p_rhythm }
-  lh { $p_bass $p_bass $p_bass }
+  rh { p_tiesSlurs p_beams p_rhythm }
+  lh { p_bass p_bass p_bass }
 }
 section C {
-  rh { $p_mmr $p_fingering $p_halfTies $p_chordTies }
-  lh { $p_bass $p_bass $p_bass $p_bass }
+  rh { p_mmr p_fingering p_halfTies p_chordTies }
+  lh { p_bass p_bass p_bass p_bass }
 }
 section D {
-  rh { $p_ornaments $p_repeat $p_voices }
-  lh { $p_bass $p_bass $p_bass }
+  rh { p_ornaments p_repeat p_voices }
+  lh { p_bass p_bass p_bass }
 }
 
 form main { A B C D }

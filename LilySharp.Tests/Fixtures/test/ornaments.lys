@@ -28,7 +28,7 @@ phrase tremoloTest {
 }
 
 section Main {
-  melody { $trills $mordentPrall $turns $tremoloTest }
+  melody { trills mordentPrall turns tremoloTest }
 }
 
 form main { Main }

@@ -140,22 +140,22 @@
   <rect x="68.70" y="19.29" width="0.19" height="4.00" fill="#000000"/>
   <rect x="82.96" y="19.29" width="0.19" height="4.00" fill="#000000"/>
   <rect x="83.45" y="19.29" width="0.60" height="4.00" fill="#000000"/>
-  <line x1="38.07" y1="10.73" x2="38.07" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="38.07" y1="10.73" x2="53.83" y2="10.73" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="53.83" y1="10.73" x2="53.83" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <text x="38.57" y="11.03" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="601">1.</text>
-  <line x1="54.43" y1="10.73" x2="54.43" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="619"/>
-  <line x1="54.43" y1="10.73" x2="68.59" y2="10.73" stroke="#000000" stroke-width="0.130" data-pos="619"/>
-  <line x1="68.59" y1="10.73" x2="68.59" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="619"/>
-  <text x="54.93" y="11.03" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="619">2.</text>
+  <line x1="38.07" y1="10.73" x2="38.07" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="599"/>
+  <line x1="38.07" y1="10.73" x2="53.83" y2="10.73" stroke="#000000" stroke-width="0.130" data-pos="599"/>
+  <line x1="53.83" y1="10.73" x2="53.83" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="599"/>
+  <text x="38.57" y="11.03" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="599">1.</text>
+  <line x1="54.43" y1="10.73" x2="54.43" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="617"/>
+  <line x1="54.43" y1="10.73" x2="68.59" y2="10.73" stroke="#000000" stroke-width="0.130" data-pos="617"/>
+  <line x1="68.59" y1="10.73" x2="68.59" y2="12.73" stroke="#000000" stroke-width="0.130" data-pos="617"/>
+  <text x="54.93" y="11.03" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="617">2.</text>
   <rect x="0.30" y="14.45" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
   <text x="1.29" y="16.65" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="529">A</text>
-  <rect x="20.61" y="15.49" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="555"/>
-  <text x="21.54" y="17.69" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="555">B</text>
-  <rect x="37.77" y="7.57" width="4.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="555"/>
-  <text x="39.92" y="9.77" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="555">first</text>
-  <rect x="54.13" y="7.57" width="6.76" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="555"/>
-  <text x="57.51" y="9.77" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="555">second</text>
+  <rect x="20.61" y="15.49" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="21.54" y="17.69" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="554">B</text>
+  <rect x="37.77" y="7.57" width="4.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="39.92" y="9.77" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="554">first</text>
+  <rect x="54.13" y="7.57" width="6.76" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="57.51" y="9.77" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="554">second</text>
   <rect x="68.89" y="13.73" width="3.09" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
   <text x="70.43" y="15.93" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="529">A2</text>
   </g>

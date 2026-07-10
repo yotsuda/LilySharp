@@ -15,19 +15,19 @@ phrase ending1 { e4 f g a | g2. r4 | }
 phrase ending2 { c4 d e f | c1 | }
 
 section A {
-  melody { $themeA }
+  melody { themeA }
 }
 
 section B {
-  melody { $themeB }
+  melody { themeB }
 }
 
 section Ending1 {
-  melody { $ending1 }
+  melody { ending1 }
 }
 
 section Ending2 {
-  melody { $ending2 }
+  melody { ending2 }
 }
 
 // Structure with repeat and volta

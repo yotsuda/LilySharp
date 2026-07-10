@@ -11,8 +11,8 @@ part melody { clef treble }
 phrase intro { d4 e e f | g2 g | }
 phrase verse { a4 g f e | d2. r4 | }
 
-section Intro { melody { $intro } }
-section Verse { melody { $verse } }
+section Intro { melody { intro } }
+section Verse { melody { verse } }
 section Chorus { key g major
   melody { g4 a b c | d2 d | }
 }

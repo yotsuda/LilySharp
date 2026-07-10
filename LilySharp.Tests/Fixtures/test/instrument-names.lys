@@ -43,10 +43,10 @@ phrase vcLine {
 }
 
 section Main {
-  violin1 { $vln1Line }
-  violin2 { $vln2Line }
-  viola { $vlaLine }
-  cello { $vcLine }
+  violin1 { vln1Line }
+  violin2 { vln2Line }
+  viola { vlaLine }
+  cello { vcLine }
 }
 
 form main { Main }

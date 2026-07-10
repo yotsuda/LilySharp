@@ -30,7 +30,7 @@ phrase graceChord {
 }
 
 section Main {
-  melody { $graceBasic $acciaccaturaTest $appoggiaturaTest $graceChord }
+  melody { graceBasic acciaccaturaTest appoggiaturaTest graceChord }
 }
 
 form main { Main }

@@ -34,19 +34,19 @@ phrase ending1 { e4 f g a | c'1 | }
 phrase ending2 { c'4 b a g | c1 | }
 
 section A {
-  melody { $chorale $figured $overrideDemo }
+  melody { chorale figured overrideDemo }
 }
 
 section B {
-  melody { $themeA }
+  melody { themeA }
 }
 
 section End1 {
-  melody { $ending1 }
+  melody { ending1 }
 }
 
 section End2 {
-  melody { $ending2 }
+  melody { ending2 }
 }
 
 form main {

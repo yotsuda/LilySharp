@@ -21,6 +21,6 @@ phrase tune {
   time 4/4 d2 g |
 }
 
-section Main { melody { $tune } }
+section Main { melody { tune } }
 form main { Main }
 score main "timesig-change-linebreak" { staff melody }

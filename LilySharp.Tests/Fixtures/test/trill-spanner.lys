@@ -20,9 +20,9 @@ phrase m2 { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
 // Multiple trill spanners
 phrase m3 { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | g4 a b c' | }
 
-section A { melody { $m1 } }
-section B { melody { $m2 } }
-section C { melody { $m3 } }
+section A { melody { m1 } }
+section B { melody { m2 } }
+section C { melody { m3 } }
 
 form main { A B C }
 

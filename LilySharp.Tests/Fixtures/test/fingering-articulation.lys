@@ -16,7 +16,7 @@ phrase fa {
   g'4@marcato@finger(1) c''4@tenuto@marcato@finger(3) e'4@staccato@finger(2) r4 |
 }
 
-section Main { melody { $fa } }
+section Main { melody { fa } }
 form main { Main }
 score main "fingering-articulation" {
   staff melody

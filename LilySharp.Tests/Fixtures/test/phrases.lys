@@ -9,7 +9,7 @@ key c major
 
 part melody
 
-// Phrase definitions using $name reference syntax
+// Phrase definitions using name reference syntax
 phrase intro {
   c4 d e f | g2 g |
 }
@@ -24,7 +24,7 @@ phrase chorus {
 
 // Multiple phrase references in one section
 section Main {
-  melody { $intro $verse $chorus }
+  melody { intro verse chorus }
 }
 
 form main { Main }

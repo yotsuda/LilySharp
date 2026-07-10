@@ -37,7 +37,7 @@ phrase kneedBeam {
 }
 
 section Main {
-  melody { $featheredAccel $featheredRit $nestedTuplet $percentRepeat $kneedBeam }
+  melody { featheredAccel featheredRit nestedTuplet percentRepeat kneedBeam }
 }
 
 form main { Main }

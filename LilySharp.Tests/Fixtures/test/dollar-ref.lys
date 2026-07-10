@@ -1,4 +1,4 @@
-// $name Phrase Reference Test
+// name Phrase Reference Test
 // Tests the $ syntax for phrase references
 title "Dollar Reference"
 composer "Lily#"
@@ -14,13 +14,13 @@ phrase motifA { c4 d e f | }
 phrase motifB { g4 a b c' | }
 phrase motifC { c4 e g c' | }
 
-// Reference phrases with $name in sections
+// Reference phrases with name in sections
 section First {
-  melody { $motifA $motifB }
+  melody { motifA motifB }
 }
 
 section Second {
-  melody { $motifC $motifA }
+  melody { motifC motifA }
 }
 
 // Reuse sections — the second occurrence of First gets its own display

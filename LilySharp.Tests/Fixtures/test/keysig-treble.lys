@@ -27,17 +27,17 @@ phrase fMajor {
 
 section DMajor {
   key d major
-  melody { $dMajor }
+  melody { dMajor }
 }
 
 section GMajor {
   key g major
-  melody { $gMajor }
+  melody { gMajor }
 }
 
 section FMajor {
   key f major
-  melody { $fMajor }
+  melody { fMajor }
 }
 
 form main { DMajor GMajor FMajor }

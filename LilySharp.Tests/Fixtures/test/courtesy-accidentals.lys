@@ -37,7 +37,7 @@ phrase noAutoFlatCourtesy {
 }
 
 section Main {
-  melody { $noAutoCourtesy $explicitCourtesy $noCourtesy $noAutoFlatCourtesy }
+  melody { noAutoCourtesy explicitCourtesy noCourtesy noAutoFlatCourtesy }
 }
 
 form main { Main }

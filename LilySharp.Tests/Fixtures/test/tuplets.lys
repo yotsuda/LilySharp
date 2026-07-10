@@ -25,7 +25,7 @@ phrase mixedTuplets {
 }
 
 section Main {
-  melody { $triplets $tripletsHigh $mixedTuplets }
+  melody { triplets tripletsHigh mixedTuplets }
 }
 
 form main { Main }

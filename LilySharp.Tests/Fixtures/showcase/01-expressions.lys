@@ -34,7 +34,7 @@ phrase finale {
 }
 
 section Main {
-  melody { $intro $theme $bridge $finale }
+  melody { intro theme bridge finale }
 }
 
 form main { Main }

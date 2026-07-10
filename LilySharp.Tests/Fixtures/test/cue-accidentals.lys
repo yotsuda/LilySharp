@@ -15,7 +15,7 @@ phrase test {
 }
 
 section Main {
-  melody { $test }
+  melody { test }
 }
 
 form main { Main }

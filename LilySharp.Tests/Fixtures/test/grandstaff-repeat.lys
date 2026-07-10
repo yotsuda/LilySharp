@@ -21,8 +21,8 @@ phrase lhBass {
 }
 
 section Main {
-  rh { $rhTune }
-  lh { $lhBass }
+  rh { rhTune }
+  lh { lhBass }
 }
 
 form main { Main }

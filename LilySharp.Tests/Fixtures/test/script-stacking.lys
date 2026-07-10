@@ -16,7 +16,7 @@ phrase stack {
   g'4@staccato@accent@marcato c''4@tenuto@marcato@staccato e'4@accent@staccato r4 |
 }
 
-section Main { melody { $stack } }
+section Main { melody { stack } }
 form main { Main }
 score main "script-stacking" {
   staff melody

@@ -40,7 +40,7 @@ phrase arpeggioDemo {
 }
 
 section Main {
-  melody { $graceDemo $slurTie $tupletDemo $glissDemo $arpeggioDemo }
+  melody { graceDemo slurTie tupletDemo glissDemo arpeggioDemo }
 }
 
 form main { Main }

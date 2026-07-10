@@ -32,7 +32,7 @@ phrase hairpinAcrossBreak {
 }
 
 section Main {
-  melody { $slurAcrossBreak $tieAcrossBreak $hairpinAcrossBreak }
+  melody { slurAcrossBreak tieAcrossBreak hairpinAcrossBreak }
 }
 
 form main { Main }

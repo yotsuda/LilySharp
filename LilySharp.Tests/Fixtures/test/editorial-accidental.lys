@@ -16,7 +16,7 @@ phrase ficta {
 }
 
 section Main {
-  melody { $ficta }
+  melody { ficta }
 }
 
 form main { Main }

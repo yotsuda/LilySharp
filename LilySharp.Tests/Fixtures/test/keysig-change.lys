@@ -20,9 +20,9 @@ phrase m2 { c4 d e f | key f major bes4 a g f | c'4 d e f | }
 // Phrase with sharps to flats: G major → Eb major (cancel F#, add Bb Eb Ab)
 phrase m3 { g'4 a b c | key ees major bes4 aes g f | ees4 f g aes | bes4 c' d ees | }
 
-section A { melody { $m1 } }
-section B { melody { $m2 } }
-section C { melody { $m3 } }
+section A { melody { m1 } }
+section B { melody { m2 } }
+section C { melody { m3 } }
 
 form main { A B C }
 

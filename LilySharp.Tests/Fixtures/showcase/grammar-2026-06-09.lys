@@ -24,7 +24,7 @@ part melody {
 
 // -----------------------------------------------------------------------------
 // G2 — named music is declared ONLY with `phrase` (the old `name = {}` / `let`
-//      forms were removed). Reference a phrase with `$name`.
+//      forms were removed). Reference a phrase with `name`.
 // -----------------------------------------------------------------------------
 phrase intro {
   c4 d e f | g2 g |
@@ -41,7 +41,7 @@ phrase tr {
 // -----------------------------------------------------------------------------
 {
   // Reuse phrases by reference:
-  $intro
+  intro
 
   // G3 — articulations resolve from `@name` text via a registry:
   c4@staccato d@staccato e@accent f@accent |
@@ -60,5 +60,5 @@ phrase tr {
   repeat tremolo 4 { c16 }
 
   // Reference the phrase whose name is a former keyword:
-  $tr
+  tr
 }

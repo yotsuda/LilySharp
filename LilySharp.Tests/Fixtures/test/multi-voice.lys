@@ -18,7 +18,7 @@ phrase threeVoices {
 }
 
 section Main {
-  melody { $twoVoices $threeVoices }
+  melody { twoVoices threeVoices }
 }
 
 form main { Main }

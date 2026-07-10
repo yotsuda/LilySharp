@@ -21,15 +21,15 @@ phrase lowPhrase {
 
 // Deliberately end high, then verify next section resets
 section A {
-  melody { $highPhrase }
+  melody { highPhrase }
 }
 
 section B {
-  melody { $lowPhrase }
+  melody { lowPhrase }
 }
 
 section C {
-  melody { $highPhrase $lowPhrase }
+  melody { highPhrase lowPhrase }
 }
 
 form main { A B C }

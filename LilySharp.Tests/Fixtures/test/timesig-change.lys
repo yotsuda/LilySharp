@@ -23,7 +23,7 @@ phrase meterChanges {
 }
 
 section Main {
-  melody { $meterChanges }
+  melody { meterChanges }
 }
 
 form main { Main }

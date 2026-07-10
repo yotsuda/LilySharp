@@ -23,8 +23,8 @@ phrase cueChords {
 }
 
 section Main {
-  melody { $cueMelody }
-  chords { $cueChords }
+  melody { cueMelody }
+  chords { cueChords }
 }
 
 form main { Main }

@@ -44,8 +44,8 @@ phrase lhPedal {
 }
 
 section Main {
-  rightHand { $rhTheme $rhOttava }
-  leftHand { $lhAccomp $lhPedal }
+  rightHand { rhTheme rhOttava }
+  leftHand { lhAccomp lhPedal }
 }
 
 form main { Main }

@@ -28,7 +28,7 @@ phrase extreme {
 }
 
 section Main {
-  melody { $highNotes $lowNotes $extreme }
+  melody { highNotes lowNotes extreme }
 }
 
 form main { Main }

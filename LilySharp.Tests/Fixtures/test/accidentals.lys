@@ -32,7 +32,7 @@ phrase chordAccidentals {
 }
 
 section Main {
-  melody { $sharps $flats $consecutive $chordAccidentals }
+  melody { sharps flats consecutive chordAccidentals }
 }
 
 form main { Main }

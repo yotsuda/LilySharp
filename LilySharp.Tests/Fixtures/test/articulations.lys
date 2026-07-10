@@ -30,7 +30,7 @@ phrase mixed {
 }
 
 section Main {
-  melody { $staccatoAccent $tenutoMarcato $fermataPortato $mixed }
+  melody { staccatoAccent tenutoMarcato fermataPortato mixed }
 }
 
 form main { Main }

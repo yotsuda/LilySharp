@@ -31,7 +31,7 @@ phrase mixedChords {
 }
 
 section Main {
-  melody { $basicTriads $accidentalChords $seventhChords $mixedChords }
+  melody { basicTriads accidentalChords seventhChords mixedChords }
 }
 
 form main { Main }

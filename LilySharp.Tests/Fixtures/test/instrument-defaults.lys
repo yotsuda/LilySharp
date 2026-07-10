@@ -43,10 +43,10 @@ phrase bassLine {
 }
 
 section Main {
-  guitar { $guitarLine }
-  tenorVoice { $tenorLine }
-  pianoRH { $trebleLine }
-  pianoLH { $bassLine }
+  guitar { guitarLine }
+  tenorVoice { tenorLine }
+  pianoRH { trebleLine }
+  pianoLH { bassLine }
 }
 
 form main { Main }
