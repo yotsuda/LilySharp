@@ -416,6 +416,10 @@ internal sealed class MultiStaffLayouter
         {
             var staff = group.Staves[i];
             bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
+            // Real per-staff height: a tab/ossia staff inside a grand staff differs
+            // from the nominal staffHeight, matching the single/bracket helpers and
+            // CalculateSystemHeight (the old fixed staffHeight mis-placed such staves).
+            double thisStaffHeight = GetStaffHeight(staff);
 
             if (hidden)
             {
@@ -426,20 +430,22 @@ internal sealed class MultiStaffLayouter
                     Height: 0,
                     Tuning: staff.Tuning,
                     InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia,
                     IsHidden: true));
             }
             else
             {
                 if (anyVisible)
-                    currentY += staffHeight + Math.Max(0, staffSpacing);
+                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
 
                 staffLayouts.Add(new StaffLayout(
                     StaffIndex: startIndex + i,
                     Clef: staff.Clef,
                     Y: currentY,
-                    Height: staffHeight,
+                    Height: thisStaffHeight,
                     Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName));
+                    InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia));
                 anyVisible = true;
             }
         }
@@ -452,7 +458,12 @@ internal sealed class MultiStaffLayouter
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
         }
 
-        double totalHeight = currentY + staffHeight - y;
+        double lastVisibleHeight = 0;
+        for (int i = staffLayouts.Count - 1; i >= 0; i--)
+        {
+            if (!staffLayouts[i].IsHidden) { lastVisibleHeight = staffLayouts[i].Height; break; }
+        }
+        double totalHeight = currentY + lastVisibleHeight - y;
         double braceX = CurrentIndent - SystemStartBracePadding;
 
         var grandStaffLayout = new GrandStaffLayout(
