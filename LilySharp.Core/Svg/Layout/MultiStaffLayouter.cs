@@ -868,7 +868,7 @@ internal sealed class MultiStaffLayouter
                 var lyricMeasure = score.IsLeadSheet
                     ? DensestMeasure(allMeasures)
                     : primaryMeasure;
-                springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+                springs = LyricSpacing.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {
@@ -940,24 +940,7 @@ internal sealed class MultiStaffLayouter
             // across the whole page. Compression still applies.
             bool singleSystemRagged = systemIndex == 0 && isLastSystem
                 && new SpringSolver(allSprings).IdealTotalLength < springTargetWidth;
-            if (_options.RaggedRight || singleSystemRagged)
-            {
-                double naturalLength = solver.IdealTotalLength;
-                if (naturalLength < springTargetWidth)
-                {
-                    force = 0;
-                }
-                else
-                {
-                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
-                    force = solvedForce;
-                }
-            }
-            else
-            {
-                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
-                force = solvedForce;
-            }
+            force = SystemForceSolver.ResolveForce(solver, springTargetWidth, _options.RaggedRight || singleSystemRagged);
         }
 
         // Second pass: layout measures using the solved force

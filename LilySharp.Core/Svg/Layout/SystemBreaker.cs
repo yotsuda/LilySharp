@@ -155,7 +155,7 @@ internal sealed class SystemBreaker
                 var lyricMeasure = score.IsLeadSheet
                     ? MultiStaffLayouter.DensestMeasure(allMeasures)
                     : primaryMeasure;
-                springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+                springs = LyricSpacing.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {

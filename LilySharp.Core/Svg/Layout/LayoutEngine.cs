@@ -143,18 +143,30 @@ internal sealed class LayoutEngine
         {
             var prelimSystems = systems.ToImmutableArray();
             var prelimBeams = _elementCoordinator.LayoutBeams(score, prelimSystems);
-            var prelimAnn = CalculateAnnotationLayouts(
-                score, prelimSystems,
-                score.Dynamics, score.Articulations, score.GraceNotes,
-                score.Lyrics, score.MusicMarks, score.CustomTexts,
-                score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
-                score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
-                trillSpanners: score.TrillSpanners,
-                beamGroups: _elementCoordinator.DetectBeamGroups(score),
-                beamLayouts: prelimBeams,
-                systemSkylines: perSystemSkylines,
-                tupletForceStemUp: score.IsMultiVoice,
-                staffVoices: score.Voices);
+            var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
+            {
+                Score = score,
+                Systems = prelimSystems,
+                Dynamics = score.Dynamics,
+                Articulations = score.Articulations,
+                GraceNotes = score.GraceNotes,
+                Lyrics = score.Lyrics,
+                MusicMarks = score.MusicMarks,
+                CustomTexts = score.CustomTexts,
+                VoltaBrackets = score.VoltaBrackets,
+                TupletBrackets = score.TupletBrackets,
+                Arpeggios = score.Arpeggios,
+                Measures = score.Voice.Measures,
+                FiguredBasses = score.FiguredBasses,
+                ChordNames = score.ChordNames,
+                PercentRepeats = score.PercentRepeats,
+                TrillSpanners = score.TrillSpanners,
+                BeamGroups = _elementCoordinator.DetectBeamGroups(score),
+                BeamLayouts = prelimBeams,
+                SystemSkylines = perSystemSkylines,
+                TupletForceStemUp = score.IsMultiVoice,
+                StaffVoices = score.Voices,
+            });
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn,
                 _elementCoordinator.LayoutTies(score, prelimSystems),
@@ -188,18 +200,30 @@ internal sealed class LayoutEngine
         // LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility
         var beamGroups = _elementCoordinator.DetectBeamGroups(score);
 
-        var annotations = CalculateAnnotationLayouts(
-            score, systemsArray,
-            score.Dynamics, score.Articulations, score.GraceNotes,
-            score.Lyrics, score.MusicMarks, score.CustomTexts,
-            score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
-            score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
-            trillSpanners: score.TrillSpanners,
-            beamGroups: beamGroups,
-            beamLayouts: beamLayouts,
-            systemSkylines: perSystemSkylines,
-            tupletForceStemUp: score.IsMultiVoice,
-            staffVoices: score.Voices);
+        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
+        {
+            Score = score,
+            Systems = systemsArray,
+            Dynamics = score.Dynamics,
+            Articulations = score.Articulations,
+            GraceNotes = score.GraceNotes,
+            Lyrics = score.Lyrics,
+            MusicMarks = score.MusicMarks,
+            CustomTexts = score.CustomTexts,
+            VoltaBrackets = score.VoltaBrackets,
+            TupletBrackets = score.TupletBrackets,
+            Arpeggios = score.Arpeggios,
+            Measures = score.Voice.Measures,
+            FiguredBasses = score.FiguredBasses,
+            ChordNames = score.ChordNames,
+            PercentRepeats = score.PercentRepeats,
+            TrillSpanners = score.TrillSpanners,
+            BeamGroups = beamGroups,
+            BeamLayouts = beamLayouts,
+            SystemSkylines = perSystemSkylines,
+            TupletForceStemUp = score.IsMultiVoice,
+            StaffVoices = score.Voices,
+        });
 
         // Calculate part combination layouts for multi-voice scores.
         // LILYPOND-REF: part combination is opt-in (\partcombine); plain << \\ >>
@@ -420,19 +444,30 @@ internal sealed class LayoutEngine
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
                 prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex));
             }
-            var prelimAnn = CalculateAnnotationLayouts(
-                prelimScore, prelimSystems,
-                score.Dynamics, score.Articulations, score.GraceNotes,
-                score.Lyrics, score.MusicMarks, score.CustomTexts,
-                score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
-                prelimStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
-                score.PercentRepeats,
-                trillSpanners: score.TrillSpanners,
-                beamGroups: _elementCoordinator.DetectBeamGroups(prelimScore),
-                beamLayouts: prelimBeams.ToImmutableArray(),
-                systemSkylines: perSystemSkylines,
-                tupletForceStemUp: prelimStaff.IsMultiVoice,
-                staffVoices: prelimStaff.Voices);
+            var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
+            {
+                Score = prelimScore,
+                Systems = prelimSystems,
+                Dynamics = score.Dynamics,
+                Articulations = score.Articulations,
+                GraceNotes = score.GraceNotes,
+                Lyrics = score.Lyrics,
+                MusicMarks = score.MusicMarks,
+                CustomTexts = score.CustomTexts,
+                VoltaBrackets = score.VoltaBrackets,
+                TupletBrackets = score.TupletBrackets,
+                Arpeggios = score.Arpeggios,
+                Measures = prelimStaff.PrimaryVoice.Measures,
+                FiguredBasses = score.FiguredBasses,
+                ChordNames = score.ChordNames,
+                PercentRepeats = score.PercentRepeats,
+                TrillSpanners = score.TrillSpanners,
+                BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
+                BeamLayouts = prelimBeams.ToImmutableArray(),
+                SystemSkylines = perSystemSkylines,
+                TupletForceStemUp = prelimStaff.IsMultiVoice,
+                StaffVoices = prelimStaff.Voices,
+            });
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
             pagingSkylines = AugmentSkylinesForPaging(
@@ -447,37 +482,8 @@ internal sealed class LayoutEngine
             pagingSkylines, perSystemHeights, perSystemBands);
 
         // Calculate beams/ties/slurs/glissandos per staff
-        var allBeamLayouts = new List<BeamLayout>();
-        var allTieLayouts = new List<TieLayout>();
-        var allSlurLayouts = new List<SlurLayout>();
-        var allGlissandoLayouts = new List<GlissandoLayout>();
-        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
-        {
-            // Beam detection breaks at tuplet boundaries by note index, so scope
-            // the tuplets to THIS staff — a tuplet on another staff must not split
-            // this staff's beams at a colliding index.
-            var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
-            var staffScore = new Score(
-                staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                // Beam detection must see tuplet spans: auto beams break at
-                // tuplet boundaries (BeamDetector).
-                tupletBrackets: staffTuplets);
-            // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
-            // staff must expose all its voices (not just the primary) — else voice 2's
-            // eighths never beam. Single-voice staves reuse the primary-voice score,
-            // so their layout is unchanged.
-            var staffSpannerScore = staff.Voices.Length > 1
-                ? new Score(
-                    staff.Voices, score.TimeSignature, score.KeySignature,
-                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: staffTuplets)
-                : staffScore;
-            allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
-            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex));
-            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
-        }
+        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts) =
+            LayoutAllSpanners(score, systemsArray);
 
         // Resolve cross-staff layouts per voice
         var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
@@ -525,70 +531,95 @@ internal sealed class LayoutEngine
                 foreach (var st in sg.Staves)
                     staffYByIndex[st.StaffIndex] = st.Y;
 
-        var annotations = CalculateAnnotationLayouts(
-            primaryScore, systemsArray,
-            score.Dynamics, score.Articulations, score.GraceNotes,
-            score.Lyrics, score.MusicMarks, score.CustomTexts,
-            score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
-            primaryStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
-            score.PercentRepeats, crossStaffLayouts,
-            trillSpanners: score.TrillSpanners,
+        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
+        {
+            Score = primaryScore,
+            Systems = systemsArray,
+            Dynamics = score.Dynamics,
+            Articulations = score.Articulations,
+            GraceNotes = score.GraceNotes,
+            Lyrics = score.Lyrics,
+            MusicMarks = score.MusicMarks,
+            CustomTexts = score.CustomTexts,
+            VoltaBrackets = score.VoltaBrackets,
+            TupletBrackets = score.TupletBrackets,
+            Arpeggios = score.Arpeggios,
+            Measures = primaryStaff.PrimaryVoice.Measures,
+            FiguredBasses = score.FiguredBasses,
+            ChordNames = score.ChordNames,
+            PercentRepeats = score.PercentRepeats,
+            CrossStaffLayouts = crossStaffLayouts,
+            TrillSpanners = score.TrillSpanners,
             // bracket-visibility = if-no-beam needs the beam groups; without
             // them every tuplet bracket draws even when fully beamed. The
             // beam LAYOUTS let the suppressed-bracket number attach to the
             // beam itself.
-            beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore),
-            beamLayouts: allBeamLayouts.ToImmutableArray(),
-            systemSkylines: perSystemSkylines,
-            tupletForceStemUp: primaryStaff.IsMultiVoice,
-            staffVoices: primaryStaff.Voices,
-            voicesByStaff: voicesByStaff,
-            measuresByStaff: measuresByStaff,
-            staffYByIndex: staffYByIndex,
-            staffByIndex: staffByIndex);
+            BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
+            BeamLayouts = allBeamLayouts.ToImmutableArray(),
+            SystemSkylines = perSystemSkylines,
+            TupletForceStemUp = primaryStaff.IsMultiVoice,
+            StaffVoices = primaryStaff.Voices,
+            VoicesByStaff = voicesByStaff,
+            MeasuresByStaff = measuresByStaff,
+            StaffYByIndex = staffYByIndex,
+            StaffByIndex = staffByIndex,
+        });
 
-        // Voice collision offsets / head-wipes for multi-voice staves, so the
-        // renderer can nudge opposing voices apart. Computed per staff; the keys
-        // are (measureIndex, voiceId, itemIndex) — fully correct for the common
-        // single-multi-voice-staff case. (Multiple multi-voice staves in one
-        // system would share keys; rare, handled best-effort.)
-        var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
-        var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
-        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
-        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
-        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
-        {
-            if (staff.Voices.Length < 2)
-                continue;
-
-            var staffScore = new Score(
-                staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef));
-            var (vo, hw, df) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
-            foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
-            foreach (var k in hw) headWipeBuilder.Add(k);
-            foreach (var k in df) dotForceDownBuilder.Add(k);
-
-            // Part combination is opt-in (\partcombine); plain << \\ >> voices
-            // carry no a2/Solo text. Gated off by default to match LilyPond.
-            if (_options.EnablePartCombine && partCombineLayouts.IsEmpty)
-            {
-                var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
-                var combineItems = PartCombineAnalyzer.Analyze(
-                    staff.Voices[0], staff.Voices[1], score.TimeSignature);
-                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, staff.Voices[0].Measures);
-            }
-        }
+        var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
+            CalculateVoiceCollisions(score, systemsArray);
 
         var result = BuildScoreLayout(pages, systemsArray,
             allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
             allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
             annotations,
-            voiceOffsetsBuilder.ToImmutable(),
-            headWipeBuilder.ToImmutable(),
-            dotForceDownBuilder.ToImmutable(),
+            voiceOffsets,
+            headWipes,
+            dotForceDown,
             ImmutableDictionary<RestShiftKey, double>.Empty,
             partCombineLayouts);
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
+    }
+
+    /// <summary>
+    /// Lays out beams, ties, slurs and glissandos for every staff (each detected
+    /// per voice, so a polyphonic staff exposes all its voices). Extracted verbatim
+    /// from the multi-staff <c>Layout</c> body.
+    /// </summary>
+    private (List<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos)
+        LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
+    {
+        var allBeamLayouts = new List<BeamLayout>();
+        var allTieLayouts = new List<TieLayout>();
+        var allSlurLayouts = new List<SlurLayout>();
+        var allGlissandoLayouts = new List<GlissandoLayout>();
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        {
+            // Beam detection breaks at tuplet boundaries by note index, so scope
+            // the tuplets to THIS staff — a tuplet on another staff must not split
+            // this staff's beams at a colliding index.
+            var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
+            var staffScore = new Score(
+                staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                // Beam detection must see tuplet spans: auto beams break at
+                // tuplet boundaries (BeamDetector).
+                tupletBrackets: staffTuplets);
+            // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
+            // staff must expose all its voices (not just the primary) — else voice 2's
+            // eighths never beam. Single-voice staves reuse the primary-voice score,
+            // so their layout is unchanged.
+            var staffSpannerScore = staff.Voices.Length > 1
+                ? new Score(
+                    staff.Voices, score.TimeSignature, score.KeySignature,
+                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: staffTuplets)
+                : staffScore;
+            allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
+            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
+            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex));
+            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
+        }
+        return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts);
     }
 
     // F3/S5-3a: route a system's measure layout through the session cache when one
@@ -1277,28 +1308,70 @@ internal sealed class LayoutEngine
         }
     }
 
-    private AnnotationLayouts CalculateAnnotationLayouts(
-        Score? score, ImmutableArray<SystemLayout> systems,
-        ImmutableArray<DynamicItem> dynamics, ImmutableArray<ArticulationItem> articulations,
-        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<LyricItem> lyrics,
-        ImmutableArray<MusicMarkItem> musicMarks, ImmutableArray<CustomTextItem> customTexts,
-        ImmutableArray<VoltaBracketItem> voltaBrackets, ImmutableArray<TupletBracketItem> tupletBrackets,
-        ImmutableArray<ArpeggioItem> arpeggios, ImmutableArray<Measure> measures,
-        ImmutableArray<FiguredBassItem>? figuredBasses = null,
-        ImmutableArray<ChordNameItem>? chordNames = null,
-        ImmutableArray<PercentRepeatItem>? percentRepeats = null,
-        ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null,
-        ImmutableArray<TrillSpannerItem>? trillSpanners = null,
-        ImmutableArray<BeamGroup>? beamGroups = null,
-        ImmutableArray<BeamLayout>? beamLayouts = null,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        bool tupletForceStemUp = false,
-        ImmutableArray<Voice> staffVoices = default,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null,
-        Dictionary<int, Staff>? staffByIndex = null)
+    /// <summary>
+    /// Inputs to <see cref="CalculateAnnotationLayouts"/>. Collapses the former
+    /// 21-parameter signature into one context object; the optional members default
+    /// to null/empty, matching the old optional parameters exactly.
+    /// </summary>
+    private sealed class AnnotationLayoutContext
     {
+        public required Score? Score { get; init; }
+        public required ImmutableArray<SystemLayout> Systems { get; init; }
+        public required ImmutableArray<DynamicItem> Dynamics { get; init; }
+        public required ImmutableArray<ArticulationItem> Articulations { get; init; }
+        public required ImmutableArray<GraceNoteItem> GraceNotes { get; init; }
+        public required ImmutableArray<LyricItem> Lyrics { get; init; }
+        public required ImmutableArray<MusicMarkItem> MusicMarks { get; init; }
+        public required ImmutableArray<CustomTextItem> CustomTexts { get; init; }
+        public required ImmutableArray<VoltaBracketItem> VoltaBrackets { get; init; }
+        public required ImmutableArray<TupletBracketItem> TupletBrackets { get; init; }
+        public required ImmutableArray<ArpeggioItem> Arpeggios { get; init; }
+        public required ImmutableArray<Measure> Measures { get; init; }
+        public ImmutableArray<FiguredBassItem>? FiguredBasses { get; init; }
+        public ImmutableArray<ChordNameItem>? ChordNames { get; init; }
+        public ImmutableArray<PercentRepeatItem>? PercentRepeats { get; init; }
+        public ImmutableArray<CrossStaffLayout>? CrossStaffLayouts { get; init; }
+        public ImmutableArray<TrillSpannerItem>? TrillSpanners { get; init; }
+        public ImmutableArray<BeamGroup>? BeamGroups { get; init; }
+        public ImmutableArray<BeamLayout>? BeamLayouts { get; init; }
+        public IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? SystemSkylines { get; init; }
+        public bool TupletForceStemUp { get; init; }
+        public ImmutableArray<Voice> StaffVoices { get; init; }
+        public Dictionary<int, ImmutableArray<Voice>>? VoicesByStaff { get; init; }
+        public Dictionary<int, ImmutableArray<Measure>>? MeasuresByStaff { get; init; }
+        public Dictionary<int, double>? StaffYByIndex { get; init; }
+        public Dictionary<int, Staff>? StaffByIndex { get; init; }
+    }
+
+    private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
+    {
+        var score = ctx.Score;
+        var systems = ctx.Systems;
+        var dynamics = ctx.Dynamics;
+        var articulations = ctx.Articulations;
+        var graceNotes = ctx.GraceNotes;
+        var lyrics = ctx.Lyrics;
+        var musicMarks = ctx.MusicMarks;
+        var customTexts = ctx.CustomTexts;
+        var voltaBrackets = ctx.VoltaBrackets;
+        var tupletBrackets = ctx.TupletBrackets;
+        var arpeggios = ctx.Arpeggios;
+        var measures = ctx.Measures;
+        var figuredBasses = ctx.FiguredBasses;
+        var chordNames = ctx.ChordNames;
+        var percentRepeats = ctx.PercentRepeats;
+        var crossStaffLayouts = ctx.CrossStaffLayouts;
+        var trillSpanners = ctx.TrillSpanners;
+        var beamGroups = ctx.BeamGroups;
+        var beamLayouts = ctx.BeamLayouts;
+        var systemSkylines = ctx.SystemSkylines;
+        var tupletForceStemUp = ctx.TupletForceStemUp;
+        var staffVoices = ctx.StaffVoices;
+        var voicesByStaff = ctx.VoicesByStaff;
+        var measuresByStaff = ctx.MeasuresByStaff;
+        var staffYByIndex = ctx.StaffYByIndex;
+        var staffByIndex = ctx.StaffByIndex;
+
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
 
         // Per-system staff-Y resolver. A staff's within-system offset can differ
@@ -1565,6 +1638,49 @@ internal sealed class LayoutEngine
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
             StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
+    }
+
+    /// <summary>
+    /// Voice collision offsets / head-wipes / dot-force-down for multi-voice staves
+    /// (so the renderer can nudge opposing voices apart), plus opt-in part-combine
+    /// layouts. Keys are (measureIndex, voiceId, itemIndex) — correct for the common
+    /// single-multi-voice-staff case. Extracted verbatim from the multi-staff
+    /// <c>Layout</c> body.
+    /// </summary>
+    private (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+             ImmutableHashSet<VoiceItemKey> HeadWipes,
+             ImmutableHashSet<VoiceItemKey> DotForceDown,
+             ImmutableArray<PartCombineLayout> PartCombine)
+        CalculateVoiceCollisions(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
+    {
+        var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
+        var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        {
+            if (staff.Voices.Length < 2)
+                continue;
+
+            var staffScore = new Score(
+                staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef));
+            var (vo, hw, df) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
+            foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
+            foreach (var k in hw) headWipeBuilder.Add(k);
+            foreach (var k in df) dotForceDownBuilder.Add(k);
+
+            // Part combination is opt-in (\partcombine); plain << \\ >> voices
+            // carry no a2/Solo text. Gated off by default to match LilyPond.
+            if (_options.EnablePartCombine && partCombineLayouts.IsEmpty)
+            {
+                var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+                var combineItems = PartCombineAnalyzer.Analyze(
+                    staff.Voices[0], staff.Voices[1], score.TimeSignature);
+                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, staff.Voices[0].Measures);
+            }
+        }
+        return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
+                dotForceDownBuilder.ToImmutable(), partCombineLayouts);
     }
 
     /// <summary>

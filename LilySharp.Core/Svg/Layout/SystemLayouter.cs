@@ -145,27 +145,7 @@ internal sealed class SystemLayouter
             // default is #f, so the last system is justified like the others.
             // RaggedRight (when set globally) still skips justification for every
             // system.
-            if (_options.RaggedRight)
-            {
-                double naturalLength = solver.IdealTotalLength;
-                if (naturalLength < springTargetWidth)
-                {
-                    // Line is shorter than available - use natural spacing (force = 0)
-                    force = 0;
-                }
-                else
-                {
-                    // Line is too long - solve normally (may need compression)
-                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
-                    force = solvedForce;
-                }
-            }
-            else
-            {
-                // Non-ragged: justify to fill available width
-                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
-                force = solvedForce;
-            }
+            force = SystemForceSolver.ResolveForce(solver, springTargetWidth, _options.RaggedRight);
         }
 
         // Layout measures using the solved force
@@ -293,27 +273,7 @@ internal sealed class SystemLayouter
             // default is #f, so the last system is justified like the others.
             // RaggedRight (when set globally) still skips justification for every
             // system.
-            if (_options.RaggedRight)
-            {
-                double naturalLength = solver.IdealTotalLength;
-                if (naturalLength < springTargetWidth)
-                {
-                    // Line is shorter than available - use natural spacing (force = 0)
-                    force = 0;
-                }
-                else
-                {
-                    // Line is too long - solve normally (may need compression)
-                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
-                    force = solvedForce;
-                }
-            }
-            else
-            {
-                // Non-ragged: justify to fill available width
-                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
-                force = solvedForce;
-            }
+            force = SystemForceSolver.ResolveForce(solver, springTargetWidth, _options.RaggedRight);
         }
 
         // Layout measures using the solved force
