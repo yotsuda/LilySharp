@@ -102,17 +102,9 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsChordWordChar(char c) => char.IsLetterOrDigit(c);
 
     /// <summary>
-    /// True when <paramref name="offset"/> sits inside a nameless <c>chords { … }</c>
-    /// block — found by tracking the keyword before each open brace and seeing
-    /// whether the innermost still-open block is <c>chords</c>.
-    /// </summary>
-    private static bool IsInsideChordNamesBlock(string text, int offset)
-        => InnermostOpenBlock(text, offset) == "chords";
-
-    /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>chords [name] { … }</c>
     /// block — INCLUDING a <c>section</c> nested in one (the part-major chord track).
-    /// Unlike <see cref="IsInsideChordNamesBlock"/> this matches the NAMED form too
+    /// This matches the NAMED form too
     /// (<c>chords harmony {</c>, whose word before the brace is the name). Used to
     /// offer chord entries: the diatonic chords, and quality tokens after ':'.
     /// </summary>

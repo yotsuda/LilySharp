@@ -27,7 +27,6 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private readonly StringBuilder _sb;
     private readonly bool _interactive;
     private int? _currentSourcePosition;
-    private int _groupDepth;
 
     public SvgDrawingContext(StringBuilder sb, bool interactive = false)
     {
@@ -198,11 +197,9 @@ internal sealed class SvgDrawingContext : IDrawingContext
                 transform.TranslateX, transform.TranslateY, transform.ScaleX, transform.ScaleY);
             _sb.AppendLine($"  <g transform=\"{ts}\">");
         }
-        _groupDepth++;
         return new ScopeAction(() =>
         {
             _sb.AppendLine("  </g>");
-            _groupDepth--;
         });
     }
 

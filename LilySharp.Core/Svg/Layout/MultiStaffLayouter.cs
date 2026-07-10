@@ -521,7 +521,7 @@ internal sealed class MultiStaffLayouter
             }
         }
 
-        double totalHeight = group.StaffCount == 1 || !anyVisible
+        double totalHeight = group.StaffCount == 1
             ? lastVisibleHeight
             : currentY + lastVisibleHeight - y;
 

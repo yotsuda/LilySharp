@@ -451,7 +451,11 @@ internal sealed partial class Parser
     private GreenNode ParsePartOption()
     {
         var keyword = Advance(); // transpose, octave, instrument, or clef
-        var colon = Expect(SyntaxKind.Colon);
+        // Attributes are written bare ('transpose d'), matching the top-level
+        // part-property form (ParsePartProperty). A stray ':' is flagged as
+        // legacy and consumed rather than demanded — before, Expect(Colon) here
+        // raised a spurious "Expected ':'" on the canonical bare form.
+        var colon = ConsumeRejectedColon();
         var value = Advance(); // value token
         return new PropertyAssignmentGreen(keyword, colon, [value]);
     }

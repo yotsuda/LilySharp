@@ -183,19 +183,22 @@ public class MidiTests
         // 2 grace notes + 1 main note = 3 notes total
         Assert.Equal(3, notes.Count);
 
-        // Grace notes should have short duration (1/32 = 60 ticks at 480 PPQ)
-        Assert.Equal(60, notes[0].DurationTicks);
-        Assert.Equal(60, notes[1].DurationTicks);
+        // Grace sounding time is 9/40 of the WRITTEN duration (LILYPOND-REF:
+        // ly/articulate.ly ac:defaultGraceFactor = 9/40), not a fixed 1/32. The
+        // c8 is an eighth (240 ticks at 480 PPQ); d threads the eighth, so both
+        // graces sound round(9/40 * 240) = 54 ticks.
+        Assert.Equal(54, notes[0].DurationTicks);
+        Assert.Equal(54, notes[1].DurationTicks);
     }
 
     [Fact]
     public void ExportGraceNotes_StealTimeFromFollowingNote_KeepsMetricGrid()
     {
         // Grace notes steal their time from the FOLLOWING note (LilyPond's MIDI
-        // convention). Two 1/32 graces (60 ticks each = 120 total) precede e4;
-        // e4 gives up those 120 ticks, so the note AFTER the grace+note pair (f4)
-        // still lands on the downbeat one quarter (480 ticks) later — the graces
-        // do NOT push the rest of the piece late.
+        // convention). Each grace sounds 9/40 of its written eighth = round(9/40 *
+        // 240) = 54 ticks (108 total for the two); e4 gives up those 108 ticks, so
+        // the note AFTER the grace+note pair (f4) still lands on the downbeat one
+        // quarter (480 ticks) later — the graces do NOT push the piece late.
         var source = "grace { c8 d } e4 f4";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
@@ -203,13 +206,13 @@ public class MidiTests
         var notes = midi.Tracks.Skip(1).First().Notes;
         Assert.Equal(4, notes.Count); // 2 graces + e + f
 
-        // Graces at ticks 0 and 60, e4 at 120.
+        // Graces at ticks 0 and 54, e4 at 108.
         Assert.Equal(0, notes[0].StartTick);
-        Assert.Equal(60, notes[1].StartTick);
-        Assert.Equal(120, notes[2].StartTick);
-        // e4 (nominal 480) gives up 120 ticks -> sounds 360.
-        Assert.Equal(360, notes[2].DurationTicks);
-        // f4 stays on the grid at tick 480, not pushed to 600.
+        Assert.Equal(54, notes[1].StartTick);
+        Assert.Equal(108, notes[2].StartTick);
+        // e4 (nominal 480) gives up 108 ticks -> sounds 372.
+        Assert.Equal(372, notes[2].DurationTicks);
+        // f4 stays on the grid at tick 480, not pushed late.
         Assert.Equal(480, notes[3].StartTick);
         Assert.Equal(480, notes[3].DurationTicks);
     }

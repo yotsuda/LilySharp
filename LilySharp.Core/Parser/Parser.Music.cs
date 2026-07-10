@@ -21,16 +21,6 @@ namespace LilySharp.Core.Parser;
 
 internal sealed partial class Parser
 {
-    private GreenNode ParseMusicExpression()
-    {
-        return Current.Kind switch
-        {
-            SyntaxKind.OpenBrace => ParseMusicBlock(),
-            _ => ParseMusicBlock() // fallback
-        };
-    }
-
-
     private MusicBlockGreen ParseMusicBlock()
     {
         var openBrace = Expect(SyntaxKind.OpenBrace);

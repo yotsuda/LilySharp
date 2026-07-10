@@ -91,7 +91,6 @@ internal sealed class MeasureBuilder
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
-    private Fraction _defaultDuration = Fraction.Quarter;
 
     // When a 'partial N' shortens the next measure to a pickup, the meter to
     // restore once that measure closes is parked here. LILYPOND-REF:
@@ -211,17 +210,6 @@ internal sealed class MeasureBuilder
     public void AddItemWithoutDuration(MusicItem item)
     {
         _currentItems.Add(item);
-
-        // Update default duration (for subsequent notes)
-        Fraction baseDuration = item switch
-        {
-            NoteItem note => note.BaseDuration,
-            RestItem rest => rest.BaseDuration,
-            ChordItem chord => chord.BaseDuration,
-            _ => Fraction.Zero
-        };
-        if (baseDuration != Fraction.Zero)
-            _defaultDuration = baseDuration;
     }
 
     /// <summary>
@@ -248,17 +236,6 @@ internal sealed class MeasureBuilder
             ChordItem chord => chord.Duration,
             _ => Fraction.Zero
         };
-
-        // Update default duration (use base duration without dots)
-        Fraction baseDuration = item switch
-        {
-            NoteItem note => note.BaseDuration,
-            RestItem rest => rest.BaseDuration,
-            ChordItem chord => chord.BaseDuration,
-            _ => Fraction.Zero
-        };
-        if (baseDuration != Fraction.Zero)
-            _defaultDuration = baseDuration;
 
         return duration;
     }

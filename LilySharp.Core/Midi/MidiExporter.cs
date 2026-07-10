@@ -940,28 +940,72 @@ public sealed class MidiExporter
 
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {
-        // Grace notes steal time from the following note.
-        // Use a fixed short duration (1/32 note per grace note)
-        int graceDuration = _ticksPerQuarter / 8; // 1/32 note
+        // Grace notes/chords steal time from the following note (see
+        // _pendingGraceSteal), so the beat after the grace pair stays on the
+        // metric grid. Duration threads WITHIN the grace group: a written value
+        // (grace c16) is honored and carried to later unwritten items; an
+        // unwritten leading grace falls back to a 1/32 note. The main stream's
+        // _defaultDuration is untouched — the grace has its own local memory.
+        //
+        // Sounding time is 9/40 of the grace's NOTATED duration, LilyPond's
+        // built-in MIDI behavior. LILYPOND-REF: ly/articulate.ly
+        // ac:defaultGraceFactor = 9/40 ("though the notation reference says 1/4").
+        Fraction? written = null;
+        int GraceTicks(Fraction? w) => w is { } d
+            ? (int)RoundedDiv((long)FractionToTicks(d) * 9, 40)
+            : _ticksPerQuarter / 8;
 
-        foreach (var note in grace.Body.Items.OfType<NoteSyntax>())
+        foreach (var item in grace.Body.Items)
         {
-            int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
-
-            track.Notes.Add(new MidiNote(
-                track.Channel,
-                midiPitch,
-                _velocity,
-                _currentTick,
-                graceDuration,
-                note.Position,
-                SourceOrdinal: NextOrdinal(note.Position)
-            ));
-
-            _currentTick += graceDuration;
-            // The following note gives up this time (see _pendingGraceSteal), so
-            // the beat after the grace+note pair stays on the metric grid.
-            _pendingGraceSteal += graceDuration;
+            switch (item)
+            {
+                case NoteSyntax note:
+                {
+                    if (note.Duration != null) written = note.Duration.ToFraction();
+                    int g = GraceTicks(written);
+                    int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
+                    track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
+                        note.Position, QuarterBend: note.Pitch.QuarterOffset,
+                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
+                    _currentTick += g;
+                    _pendingGraceSteal += g;
+                    break;
+                }
+                case ChordSyntax chord:
+                {
+                    if (chord.Duration != null) written = chord.Duration.ToFraction();
+                    int g = GraceTicks(written);
+                    int chordOrdinal = NextOrdinal(chord.Position);
+                    // Within-chord relative octave: each pitch is relative to the
+                    // previous; the item AFTER the chord is relative to the chord's
+                    // FIRST pitch (matches ProcessChord / CreateChordItem).
+                    bool isFirst = true;
+                    int firstNoteName = _currentNoteName, firstOctave = _currentOctave;
+                    foreach (var pitch in chord.Pitches)
+                    {
+                        int mp = CalculateRelativeMidiPitch(pitch);
+                        if (isFirst) { firstNoteName = _currentNoteName; firstOctave = _currentOctave; isFirst = false; }
+                        track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
+                            chord.Position, QuarterBend: pitch.QuarterOffset,
+                            SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                    }
+                    _currentNoteName = firstNoteName;
+                    _currentOctave = firstOctave;
+                    _currentTick += g;
+                    _pendingGraceSteal += g;
+                    break;
+                }
+                case RestSyntax rest:
+                {
+                    if (rest.Duration != null) written = rest.Duration.ToFraction();
+                    int g = GraceTicks(written);
+                    // A grace rest is a silent spacer: it consumes grace time (the
+                    // following note steals it) but emits no note.
+                    _currentTick += g;
+                    _pendingGraceSteal += g;
+                    break;
+                }
+            }
         }
     }
 
