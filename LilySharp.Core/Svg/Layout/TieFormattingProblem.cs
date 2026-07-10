@@ -25,9 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed class TieCandidate
 {
     public double StartX { get; set; }
-    public double StartY { get; set; }
     public double EndX { get; set; }
-    public double EndY { get; set; }
     public double Height { get; set; }
     public bool CurveUp { get; set; }
 
@@ -62,9 +60,10 @@ internal sealed class TieFormattingProblem
 {
     private readonly TieItem _tie;
     private readonly double _startX;
-    private readonly double _startY;
     private readonly double _endX;
-    private readonly double _endY;
+    // A tie has a single vertical anchor (its endpoints share one Y — the page Y
+    // of the staff's middle line); the scorer walks half-spaces out from there.
+    private readonly double _y;
     private readonly TieDetails _details;
     private readonly IReadOnlyList<TieLayout>? _existingTies;
     private readonly double _staffHeight;
@@ -75,9 +74,8 @@ internal sealed class TieFormattingProblem
     public TieFormattingProblem(
         TieItem tie,
         double startX,
-        double startY,
         double endX,
-        double endY,
+        double y,
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
         double staffHeight = 4.0,
@@ -89,9 +87,8 @@ internal sealed class TieFormattingProblem
         _isBrokenRight = isBrokenRight;
         _tie = tie;
         _startX = startX;
-        _startY = startY;
         _endX = endX;
-        _endY = endY;
+        _y = y;
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
         _staffHeight = staffHeight;
@@ -166,7 +163,7 @@ internal sealed class TieFormattingProblem
         // walk outward one half-space at a time, in BOTH directions, with the
         // walk direction doubling as the candidate's curve direction.
         int notePos = _tie.StaffPosition;
-        double staffMiddleY = _startY + notePos * 0.5; // page Y of the middle line
+        double staffMiddleY = _y + notePos * 0.5; // page Y of the middle line
         int defaultDir = _tie.CurveUp ? +1 : -1;       // LP convention: up = +1
 
         var candidates = new List<TieCandidate>
@@ -283,9 +280,7 @@ internal sealed class TieFormattingProblem
         return new TieCandidate
         {
             StartX = _startX + _details.XGap,
-            StartY = _startY,
             EndX = _endX - _details.XGap,
-            EndY = _endY,
             Height = height,
             CurveUp = dir > 0,
             AttachmentY = attachmentY,

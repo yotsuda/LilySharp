@@ -802,7 +802,7 @@ internal sealed class ElementCoordinator
                 }
 
                 var problem = new TieFormattingProblem(
-                    tieForProblem, segStartX, y, segEndX, y,
+                    tieForProblem, segStartX, segEndX, y,
                     existingTies: tieLayouts,
                     staffHeight: _options.StaffHeight,
                     startDots: segment.IsFirst ? startDots : 0,

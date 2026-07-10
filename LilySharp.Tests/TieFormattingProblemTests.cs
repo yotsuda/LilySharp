@@ -40,7 +40,7 @@ public class TieFormattingProblemTests
     public void Solve_BasicTie_ReturnsValidLayout()
     {
         var tie = CreateTie(0, curveUp: true);
-        var problem = new TieFormattingProblem(tie, 5, 2, 15, 2);
+        var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
         var layout = problem.Solve();
 
@@ -53,7 +53,7 @@ public class TieFormattingProblemTests
     public void Solve_TieCurveUp_HasNegativeControlY()
     {
         var tie = CreateTie(0, curveUp: true);
-        var problem = new TieFormattingProblem(tie, 5, 2, 15, 2);
+        var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
         var layout = problem.Solve();
 
@@ -66,7 +66,7 @@ public class TieFormattingProblemTests
     public void Solve_TieCurveDown_HasPositiveControlY()
     {
         var tie = CreateTie(0, curveUp: false);
-        var problem = new TieFormattingProblem(tie, 5, 2, 15, 2);
+        var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
         var layout = problem.Solve();
 
@@ -79,12 +79,12 @@ public class TieFormattingProblemTests
     public void Solve_WithExistingTies_AvoidsCollision()
     {
         var tie1 = CreateTie(0, curveUp: true);
-        var problem1 = new TieFormattingProblem(tie1, 5, 2, 15, 2);
+        var problem1 = new TieFormattingProblem(tie1, 5, 15, 2);
         var layout1 = problem1.Solve();
 
         var tie2 = CreateTie(1, curveUp: true);
         var existingTies = new[] { layout1 };
-        var problem2 = new TieFormattingProblem(tie2, 5, 2.5, 15, 2.5, existingTies: existingTies);
+        var problem2 = new TieFormattingProblem(tie2, 5, 15, 2.5, existingTies: existingTies);
         var layout2 = problem2.Solve();
 
         // The second tie should be positioned to avoid the first
@@ -96,8 +96,8 @@ public class TieFormattingProblemTests
     public void Solve_ShortTie_HasCompactHeight()
     {
         var tie = CreateTie(0, curveUp: true);
-        var shortProblem = new TieFormattingProblem(tie, 5, 2, 7, 2);
-        var longProblem = new TieFormattingProblem(tie, 5, 2, 20, 2);
+        var shortProblem = new TieFormattingProblem(tie, 5, 7, 2);
+        var longProblem = new TieFormattingProblem(tie, 5, 20, 2);
 
         var shortLayout = shortProblem.Solve();
         var longLayout = longProblem.Solve();
@@ -111,7 +111,7 @@ public class TieFormattingProblemTests
     public void Solve_TieAtStaffLine_ReturnsValidLayout()
     {
         var tie = CreateTie(0, curveUp: true);
-        var problem = new TieFormattingProblem(tie, 5, 2, 15, 2, staffHeight: 4);
+        var problem = new TieFormattingProblem(tie, 5, 15, 2, staffHeight: 4);
 
         var layout = problem.Solve();
 
@@ -170,8 +170,8 @@ public class TieFormattingProblemTests
         var tieDown = new TieItem(startNote, endNote, 0, curveUp: false, 0, 0, 0, 1);
 
         // With dot, the solver should favor the direction that avoids the dot
-        var problemUp = new TieFormattingProblem(tieUp, 5, 2, 15, 2, startDots: 1);
-        var problemDown = new TieFormattingProblem(tieDown, 5, 2, 15, 2, startDots: 1);
+        var problemUp = new TieFormattingProblem(tieUp, 5, 15, 2, startDots: 1);
+        var problemDown = new TieFormattingProblem(tieDown, 5, 15, 2, startDots: 1);
 
         var layoutUp = problemUp.Solve();
         var layoutDown = problemDown.Solve();
@@ -188,8 +188,8 @@ public class TieFormattingProblemTests
     {
         // Without dots, there should be no dot-related penalty difference
         var tie = CreateTie(0, curveUp: true);
-        var problemNoDots = new TieFormattingProblem(tie, 5, 2, 15, 2, startDots: 0);
-        var problemWithDots = new TieFormattingProblem(tie, 5, 2, 15, 2, startDots: 1);
+        var problemNoDots = new TieFormattingProblem(tie, 5, 15, 2, startDots: 0);
+        var problemWithDots = new TieFormattingProblem(tie, 5, 15, 2, startDots: 1);
 
         var layoutNoDots = problemNoDots.Solve();
         var layoutWithDots = problemWithDots.Solve();
@@ -208,7 +208,7 @@ public class TieFormattingProblemTests
         var endNote = CreateNote(1);
         var tie = new TieItem(startNote, endNote, 1, curveUp: true, 0, 0, 0, 1);
 
-        var problem = new TieFormattingProblem(tie, 5, 1.5, 15, 1.5, startDots: 1);
+        var problem = new TieFormattingProblem(tie, 5, 15, 1.5, startDots: 1);
         var layout = problem.Solve();
 
         Assert.NotNull(layout);
