@@ -145,6 +145,52 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
+    public void PartMajor_SectionBarCountDiffers_Warns()
+    {
+        // The same `section A` is written part-major in two parts with different bar
+        // counts (melody 2, bass 1). The collector pads bass to align, but the
+        // differing count is usually a miscount — warn (LYS2007), anchored on the
+        // shorter part's section.
+        var diags = Validate("""
+            time 4/4
+            part melody { section A { c4 d e f | g4 a b c' | } }
+            part bass { section A { c2 e2 | } }
+            form main { A }
+            """);
+        var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Single(m);
+        Assert.Contains("Section 'A'", m[0].Message);
+        Assert.Contains("bass", m[0].Message);
+    }
+
+    [Fact]
+    public void PartMajor_SectionBarCountsMatch_Silent()
+    {
+        // Equal bar counts across parts — no mismatch warning.
+        var diags = Validate("""
+            time 4/4
+            part melody { section A { c4 d e f | g4 a b c' | } }
+            part bass { section A { c2 e2 | c2 e2 | } }
+            form main { A }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
+    public void SectionMajor_ShorterPart_WarnsBarCountMismatch()
+    {
+        // lh runs one bar short of rh inside a section-major section: the per-measure
+        // loop only reaches the shared index, so the missing bar is caught by the
+        // count check.
+        var diags = Validate("""
+            time 4/4
+            section Main { rh { c4 d e f | g4 a b c' | } lh { c4 d e f | } }
+            form main { Main }
+            """);
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
+
+    [Fact]
     public void SingleStaffScores_AreUntouched()
     {
         // No second part — the cross-part pass must stay silent and the

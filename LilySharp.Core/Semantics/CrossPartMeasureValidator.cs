@@ -73,6 +73,50 @@ internal sealed class CrossPartMeasureValidator
         // time; each section validates with the time in force at its site.
         var time = new Fraction(4, 4);
         WalkForSections(root, ref time);
+
+        // Part-major (`part X { section S { … } }`) sections are not visited above
+        // (WalkForSections only sees section-major blocks that hold part sub-blocks),
+        // so cross-part alignment there is checked separately by section name.
+        ValidatePartMajorSections(root);
+    }
+
+    /// <summary>
+    /// Flags a section whose bar count differs between the parts that define it
+    /// part-major (the same `section S` written inside more than one `part`). The
+    /// collector pads the shorter parts with spacer rests to keep staves aligned,
+    /// so this renders — but a differing count is usually a miscount worth surfacing.
+    /// </summary>
+    private void ValidatePartMajorSections(SyntaxNode root)
+    {
+        // section name -> each defining part's (name, bar count, section-name span)
+        var byName = new Dictionary<string, List<(string Part, int Bars, TextSpan Span)>>();
+        foreach (var section in root.DescendantNodes())
+        {
+            if (section is not SectionDeclarationSyntax sec || sec.Parent is not PartDeclarationSyntax part)
+                continue; // only sections nested directly in a `part` (part-major)
+            int bars = BuildPartMeasures(sec).Count;
+            if (!byName.TryGetValue(sec.SectionName, out var list))
+                byName[sec.SectionName] = list = new();
+            list.Add((part.Name.Text, bars, sec.Name.Span));
+        }
+
+        foreach (var (name, list) in byName)
+        {
+            if (list.Count < 2)
+                continue;
+            int maxBars = list.Max(x => x.Bars);
+            if (list.All(x => x.Bars == maxBars))
+                continue; // all parts agree
+            var reference = list.First(x => x.Bars == maxBars);
+            foreach (var (part, bars, span) in list)
+            {
+                if (bars == maxBars)
+                    continue;
+                _diagnostics.Warning(span, DiagnosticCodes.SectionBarCountMismatch,
+                    $"Section '{name}' spans {bars} bar(s) in part '{part}' but {maxBars} in part "
+                    + $"'{reference.Part}' — the shorter part is padded with rests to align");
+            }
+        }
     }
 
     private void WalkForSections(SyntaxNode node, ref Fraction time)
@@ -162,19 +206,37 @@ internal sealed class CrossPartMeasureValidator
             }
         }
 
+        // Bar-count mismatch: a part with fewer bars than its section-mates is padded
+        // to align (the per-measure loop above only compares indices both parts reach).
+        int maxCount = parts.Max(p => p.Measures.Count);
+        if (parts.Any(p => p.Measures.Count != maxCount))
+        {
+            var longest = parts.First(p => p.Measures.Count == maxCount);
+            foreach (var part in parts)
+            {
+                if (part.Measures.Count == maxCount)
+                    continue;
+                _diagnostics.Warning(part.TimeSpan, DiagnosticCodes.SectionBarCountMismatch,
+                    $"Section '{section.SectionName}' spans {part.Measures.Count} bar(s) in part "
+                    + $"'{part.Name}' but {maxCount} in part '{longest.Name}' — the shorter part is "
+                    + "padded with rests to align");
+            }
+        }
+
         return time;
     }
 
     /// <summary>
-    /// Flattens a part block into measures, expanding $phrase references
-    /// (each reference enters a fresh default-duration frame, matching the
-    /// collector's phrase-fresh semantics) and splitting at written
-    /// barlines. Tuplet/grace interiors are handled by ItemDuration.
+    /// Flattens a music scope (a section-major part block, or a part-major
+    /// section body) into measures, expanding $phrase references (each reference
+    /// enters a fresh default-duration frame, matching the collector's phrase-fresh
+    /// semantics) and splitting at written barlines. Tuplet/grace interiors are
+    /// handled by ItemDuration.
     /// </summary>
-    private List<PartMeasure> BuildPartMeasures(PartBlockSyntax part)
+    private List<PartMeasure> BuildPartMeasures(SyntaxNode scope)
     {
         var stream = new List<object>();
-        FlattenMusic(part, stream, new HashSet<string>());
+        FlattenMusic(scope, stream, new HashSet<string>());
 
         var measures = new List<PartMeasure>();
         var current = new List<SyntaxNode>();

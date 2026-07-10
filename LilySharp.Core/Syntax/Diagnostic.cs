@@ -258,6 +258,9 @@ public static class DiagnosticCodes
     public const string MeasureDurationMismatch = "LYS2004";
     /// <summary>Measure error: conflicting time signatures were declared.</summary>
     public const string ConflictingTimeSignatures = "LYS2005";
+    /// <summary>Measure warning: the same section spans a different number of bars in
+    /// different parts, so the shorter parts are padded to align (often a miscount).</summary>
+    public const string SectionBarCountMismatch = "LYS2007";
 
     // Lyric warnings (LYS4xxx)
 
