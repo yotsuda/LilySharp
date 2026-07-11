@@ -842,6 +842,18 @@ internal sealed class MultiStaffLayouter
                     springs, allTimings, i, score.ChordNames, includeAttached: true);
             }
 
+            // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are
+            // wider than note heads and zigzag on chords; reserve their width in the
+            // SHARED columns so adjacent digits don't overprint.
+            foreach (var tGroup in score.StaffGroups)
+                foreach (var tStaff in tGroup.Staves)
+                    if (tStaff.IsTab && tStaff.Tuning is { } tabTuning
+                        && i < tStaff.PrimaryVoice.Measures.Length)
+                        springs = SpacingRules.ApplyTabChordSpacing(
+                            springs, allTimings, tStaff.PrimaryVoice.Measures[i],
+                            Tunings.GetTuning(tabTuning),
+                            Tunings.OctaveShift(tabTuning, tStaff.TabSourceClef));
+
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
             // BarLine semi-shrink. The prefix width itself ends at the ink.

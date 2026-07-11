@@ -1,0 +1,16 @@
+// Adjacent tab chords whose digits ZIGZAG into two columns. The zigzag (a Lily#
+// enlargement — LilyPond's fret numbers are tiny and unspaced) can push a chord's
+// right column into the next chord's left column, overprinting the digits. The
+// spacing engine reserves each tab item's true digit extent (incl. the zigzag) in
+// the shared note columns, so <c' e' g'> (frets 3/5/5, two columns) keeps clear of
+// the next chord instead of colliding.
+octave absolute
+part gt { clef treble_8 tuning guitar }
+section A {
+  gt { <c' e' g'>4 <c' e' g'> <c' e' g'> <c' e' g'> }
+}
+form main { A }
+score main "tab-chord-spacing" {
+  staff gt
+  tab gt
+}

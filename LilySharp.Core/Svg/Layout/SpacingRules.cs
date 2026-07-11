@@ -1443,6 +1443,63 @@ internal static class SpacingRules
         return result.ToImmutable();
     }
 
+    /// <summary>
+    /// Reserves the horizontal room a TAB staff's fret digits need in the SHARED
+    /// note columns, so adjacent digits (or a chord's zigzagged columns) do not
+    /// overprint. Tab fret numbers are a Lily# enlargement of LilyPond's tiny,
+    /// unspaced digits, so their width has no LilyPond analogue and is priced in
+    /// here on the "digits must not overlap" principle — the same one that drives
+    /// the chord zigzag. Widens each inter-column spring to hold the right extent
+    /// of the left column plus the left extent of the right column.
+    /// </summary>
+    public static ImmutableArray<Spring> ApplyTabChordSpacing(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        Model.Measure tabMeasure,
+        int[] tuning,
+        int octaveShift)
+    {
+        if (springs.Length != timings.Count + 1)
+            return springs;
+
+        var left = new double[timings.Count];
+        var right = new double[timings.Count];
+        bool any = false;
+        Fraction onset = Fraction.Zero;
+        foreach (var item in tabMeasure.Items)
+        {
+            if (item is Model.NoteItem or Model.ChordItem)
+                for (int t = 0; t < timings.Count; t++)
+                    if (timings[t] == onset)
+                    {
+                        var (l, r) = LilySharp.Core.Rendering.SharedRenderer.TabItemHalfExtent(
+                            item, tuning, octaveShift);
+                        left[t] = Math.Max(left[t], l);
+                        right[t] = Math.Max(right[t], r);
+                        any = true;
+                        break;
+                    }
+            onset += item.Duration;
+        }
+        if (!any)
+            return springs;
+
+        const double tabGap = 0.2; // clearance between adjacent digit columns
+        var result = springs.ToBuilder();
+        void Widen(int idx, double needed)
+        {
+            var s = result[idx];
+            if (needed > s.MinDistance)
+                result[idx] = new Spring(
+                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+        }
+        Widen(0, left[0]);
+        for (int t = 0; t < timings.Count - 1; t++)
+            Widen(t + 1, right[t] + left[t + 1] + tabGap);
+        Widen(timings.Count, right[^1]);
+        return result.ToImmutable();
+    }
+
 
     // ========================================
     // Skyline Generation

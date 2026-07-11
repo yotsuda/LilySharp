@@ -215,6 +215,48 @@ internal static partial class SharedRenderer
     private static double TabFretWidth(int fret) =>
         (fret.ToString().Length == 1 ? 0.625 : 1.0) * TabFretFontSize;
 
+    /// <summary>
+    /// Half-extents left and right of a tab note/chord's column X, spanning its
+    /// fret digits INCLUDING the chord zigzag column offsets. The spacing engine
+    /// prices this into the shared note columns so adjacent tab digits do not
+    /// overprint. Tab fret numbers are a Lily# enlargement (LilyPond's are tiny
+    /// and unspaced), so this width has no LilyPond analogue — it is designed on
+    /// the "digits must not overlap" principle that also drives the zigzag itself.
+    /// </summary>
+    internal static (double Left, double Right) TabItemHalfExtent(
+        MusicItem item, int[] tuning, int octaveShift)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+            {
+                var (_, fret) = Tunings.CalculateFret(
+                    n.Midi + octaveShift, tuning, n.StringNumber ?? 0);
+                double half = TabFretWidth(fret) / 2;
+                return (half, half);
+            }
+            case ChordItem c when c.Notes.Length > 0:
+            {
+                var notes = Tunings.CalculateChordFrets(
+                        c.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(), tuning)
+                    .Select(p => (str: p.stringNum, fret: p.fret))
+                    .OrderBy(p => p.str)
+                    .ToList();
+                double[] dx = AssignTabChordOffsets(notes);
+                double left = 0, right = 0;
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    double half = TabFretWidth(notes[i].fret) / 2;
+                    left = Math.Max(left, -dx[i] + half);
+                    right = Math.Max(right, dx[i] + half);
+                }
+                return (left, right);
+            }
+            default:
+                return (0, 0);
+        }
+    }
+
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
         double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)

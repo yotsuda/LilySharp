@@ -408,6 +408,9 @@ public class SvgSnapshotTests
         // A tied chord on a tab staff: each string's tie must sit on its own fret
         // digit (via the chord's exclusive allocation), not pile onto one string.
         yield return new object[] { "test/tab-chord-tie" };
+        // Adjacent zigzagging tab chords must reserve their digit width in the
+        // shared columns so the columns don't overprint.
+        yield return new object[] { "test/tab-chord-spacing" };
         yield return new object[] { "test/drum-groove" };
     }
 
