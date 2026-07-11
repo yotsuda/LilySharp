@@ -232,7 +232,7 @@ internal static partial class SharedRenderer
                             NoteItem n => n.Notehead,
                             ChordItem ch => ch.Notehead,
                             _ => NoteheadStyle.Default,
-                        }, up);
+                        }, up, noteValue: 8); // beamed heads are always filled (8th or shorter)
                 }
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);

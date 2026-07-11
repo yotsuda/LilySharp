@@ -125,7 +125,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
     public void DrawClosedBezier(
         (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
-        Color? fill = null)
+        Color? fill = null, double strokeWidth = 0)
     {
         var path = new XGraphicsPath();
         path.AddBezier(
@@ -139,7 +139,18 @@ internal sealed class PdfDrawingContext : IDrawingContext
             X(c1Back.X), X(c1Back.Y),
             X(p0.X), X(p0.Y));
         path.CloseFigure();
-        _gfx.DrawPath(new XSolidBrush(ToXColor(fill)), path);
+        var brush = new XSolidBrush(ToXColor(fill));
+        _gfx.DrawPath(brush, path);
+        // Round-cap/join stroke rounds the tapered ends (LilyPond slur/tie stencil).
+        if (strokeWidth > 0)
+        {
+            var pen = new XPen(ToXColor(fill), T(strokeWidth))
+            {
+                LineCap = XLineCap.Round,
+                LineJoin = XLineJoin.Round,
+            };
+            _gfx.DrawPath(pen, path);
+        }
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)

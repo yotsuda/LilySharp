@@ -83,11 +83,13 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Draws a tapered cubic Bézier "bow" (used for both ties and slurs) by
     /// emitting an outer curve from <c>start → c1 c2 → end</c> and an inner
-    /// curve back, offset toward the curve interior to create the LP-style
-    /// thicker middle / pointed endpoints.
+    /// curve back, offset toward the curve interior for the LP-style thicker
+    /// middle. A thin round-cap stroke rounds the tapered ends so they read as
+    /// rounded, not sharp points — matching LilyPond's stroked slur/tie stencil.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tie.cc, lily/slur.cc — Bezier bow rendering
+    /// LILYPOND-REF: lily/tie.cc, lily/slur.cc — Bezier bow rendering; the
+    ///   stencil is filled AND stroked with a round-cap line-thickness pen.
     /// </remarks>
     private static void DrawCurve(
         double startX, double startY, double endX, double endY,
@@ -100,7 +102,7 @@ internal static partial class SharedRenderer
         gc.DrawClosedBezier(
             (startX, startY), c1, c2,
             (endX, endY), c2Back, c1Back,
-            Color.Black);
+            Color.Black, EngravingDefaults.BowEndRounding);
     }
 
     /// <summary>

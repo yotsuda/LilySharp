@@ -72,6 +72,10 @@ public interface IDrawingContext
     /// then back through <paramref name="c2Back"/>, <paramref name="c1Back"/>
     /// to close.
     /// </summary>
+    /// <param name="strokeWidth">When &gt; 0, the filled path is also stroked with a
+    /// ROUND cap/join pen of this width in the fill colour — LilyPond strokes its
+    /// slur/tie stencil this way so the tapered ends read as rounded, not sharp
+    /// points.</param>
     void DrawClosedBezier(
         (double X, double Y) p0,
         (double X, double Y) c1,
@@ -79,7 +83,8 @@ public interface IDrawingContext
         (double X, double Y) p1,
         (double X, double Y) c2Back,
         (double X, double Y) c1Back,
-        Color? fill = null);
+        Color? fill = null,
+        double strokeWidth = 0);
 
     /// <summary>
     /// Draws a music-font glyph (Emmentaler) at the given baseline anchor.

@@ -1559,7 +1559,10 @@ internal static class SpacingRules
         if (!any)
             return springs;
 
-        double gap = MinItemGap;
+        // Clear the script from the neighbouring column by LilyPond's script-to-grob
+        // gap (each side's extra-spacing-width), not the wider generic item gap — so a
+        // fermata sits the LP distance from the next note's accidental, not further.
+        double gap = ArticulationSpacing.ScriptToNeighbourGap;
         var result = springs.ToBuilder();
         void Widen(int idx, double needed)
         {

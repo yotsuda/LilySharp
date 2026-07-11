@@ -60,22 +60,10 @@ internal readonly record struct ArticulationLayout(
 /// </remarks>
 internal static class ArticulationEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:2280 padding = 0.2 (the Script grob default).
-    private const double Padding = 0.2;
-
-    /// <summary>
-    /// A script's padding to its support. Most scripts use the 0.2 default, but a
-    /// few override it — notably a fermata (0.40), so it sits clearly above a beam
-    /// instead of hugging it, and portato (0.45).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: scm/script.scm — per-articulation <c>padding</c>.</remarks>
-    private static double PaddingFor(ArticulationType type) => type switch
-    {
-        ArticulationType.Fermata or ArticulationType.FermataShort
-            or ArticulationType.FermataLong => 0.40,
-        ArticulationType.Portato => 0.45,
-        _ => Padding,
-    };
+    /// <summary>A script's vertical padding to its support — the shared LP table
+    /// (fermata 0.40, portato 0.45, else 0.20). See <see cref="ArticulationSpacing"/>.</summary>
+    private static double PaddingFor(ArticulationType type) =>
+        ArticulationSpacing.VerticalPadding(type);
 
     // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
     private const double StaffPadding = 0.25;

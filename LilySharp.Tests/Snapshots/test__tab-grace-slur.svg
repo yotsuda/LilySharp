@@ -16,13 +16,13 @@
   <text class="music" x="0.30" y="12.43" font-size="4.00"></text>
   <text class="music" x="3.30" y="13.43" font-size="4.00"></text>
   <text class="music" x="7.80" y="13.93" font-size="4.00" data-pos="494"></text>
-  <line x1="9.04" y1="13.93" x2="9.04" y2="10.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="9.04" y1="13.78" x2="9.04" y2="10.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="12.62" y="12.93" font-size="4.00" data-pos="514"></text>
-  <line x1="12.69" y1="12.93" x2="12.69" y2="16.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="12.69" y1="13.08" x2="12.69" y2="16.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="15.63" y="12.43" font-size="4.00" data-pos="520"></text>
-  <line x1="15.69" y1="12.43" x2="15.69" y2="15.93" stroke="#000000" stroke-width="0.130"/>
+  <line x1="15.69" y1="12.58" x2="15.69" y2="15.93" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.56" y="11.43" font-size="4.00" data-pos="540"></text>
-  <line x1="20.62" y1="11.43" x2="20.62" y2="14.93" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.62" y1="11.58" x2="20.62" y2="14.93" stroke="#000000" stroke-width="0.130"/>
   <rect x="23.67" y="11.43" width="0.19" height="4.00" fill="#000000"/>
   <rect x="24.16" y="11.43" width="0.60" height="4.00" fill="#000000"/>
   <line x1="0.00" y1="21.93" x2="24.76" y2="21.93" stroke="#000000" stroke-width="0.100"/>
@@ -44,10 +44,10 @@
   <rect x="19.91" y="24.04" width="2.60" height="1.79" fill="#FFFFFF" data-pos="540"/>
   <text x="21.21" y="25.76" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="540">12</text>
   <line x1="20.62" y1="26.12" x2="20.62" y2="29.12" stroke="#000000" stroke-width="0.130"/>
-  <path d="M 8.10,13.03 C 9.12,11.82 11.31,11.30 12.32,12.03 C 11.31,11.03 9.12,11.55 8.10,13.03 Z" fill="#000000"/>
-  <path d="M 15.93,11.53 C 16.96,10.31 19.22,9.79 20.26,10.53 C 19.22,9.52 16.96,10.04 15.93,11.53 Z" fill="#000000"/>
-  <path d="M 8.45,25.39 C 9.90,21.64 11.83,21.64 13.28,23.89 C 11.83,21.37 9.90,21.37 8.45,25.39 Z" fill="#000000"/>
-  <path d="M 16.28,25.39 C 17.76,19.64 19.73,19.64 21.21,23.89 C 19.73,19.37 17.76,19.37 16.28,25.39 Z" fill="#000000"/>
+  <path d="M 8.10,13.03 C 9.12,11.82 11.31,11.30 12.32,12.03 C 11.31,11.03 9.12,11.55 8.10,13.03 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 15.93,11.53 C 16.96,10.31 19.22,9.79 20.26,10.53 C 19.22,9.52 16.96,10.04 15.93,11.53 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.45,25.39 C 9.90,21.64 11.83,21.64 13.28,23.89 C 11.83,21.37 9.90,21.37 8.45,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.28,25.39 C 17.76,19.64 19.73,19.64 21.21,23.89 C 19.73,19.37 17.76,19.37 16.28,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="10.94" y="13.43" font-size="2.60" data-pos="500"></text>
   <line x1="11.75" y1="13.43" x2="11.75" y2="11.15" stroke="#000000" stroke-width="0.085" data-pos="500"/>
   <text class="music" x="11.75" y="11.15" font-size="2.60" fill="#000000" data-pos="500"></text>

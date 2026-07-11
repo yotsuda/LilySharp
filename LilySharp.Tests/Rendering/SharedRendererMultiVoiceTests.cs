@@ -134,7 +134,7 @@ public sealed class SharedRendererMultiVoiceTests
         public void DrawCircle(double cx, double cy, double r, Color? fill = null) { }
         public void DrawClosedBezier((double X, double Y) p0, (double X, double Y) c1,
             (double X, double Y) c2, (double X, double Y) p1, (double X, double Y) c2Back,
-            (double X, double Y) c1Back, Color? fill = null) { }
+            (double X, double Y) c1Back, Color? fill = null, double strokeWidth = 0) { }
         public void DrawText(string text, double x, double y, double fontSize, string fontFamily,
             FontStyle style = FontStyle.Regular, TextAnchor anchor = TextAnchor.Start,
             Color? fill = null, VerticalAnchor verticalAnchor = VerticalAnchor.Baseline) { }

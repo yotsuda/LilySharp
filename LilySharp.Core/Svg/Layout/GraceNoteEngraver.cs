@@ -93,7 +93,8 @@ internal static class GraceNoteEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, double>? staffYByIndex = null,
-        Dictionary<int, Staff>? staffByIndex = null)
+        Dictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<ArticulationItem> articulations = default)
     {
         if (graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<GraceNoteLayout>.Empty;
@@ -156,8 +157,20 @@ internal static class GraceNoteEngraver
                 accidentalExtent = noteheadBBox.CenterX + accBBox.Width + GlyphMetrics.AccidentalNoteGap;
             }
 
+            // A wide above-script on the main note (fermata / ornament) overhangs
+            // its notehead to the LEFT; a leading grace's flag collides with it
+            // unless the grace is pushed further left. Reserve that overhang (plus
+            // the grace's own flag reach) so the grace clears the script, the way
+            // LilyPond keeps a grace and a fermata apart. Y-gated to a grace sitting
+            // at/above the main note, whose flag actually reaches the script's band.
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc + the Script joining the
+            //   main column's outside-staff skyline.
+            double scriptOverhang = ScriptOverhangForGrace(
+                articulations, grace, measure, graceGroupWidth);
+
             // Position grace notes to the left of the main note (including accidental)
-            double x = measureLayout.X + mainNoteX - accidentalExtent - graceGroupWidth - GraceToMainSpacing;
+            double x = measureLayout.X + mainNoteX - accidentalExtent - graceGroupWidth
+                     - GraceToMainSpacing - scriptOverhang;
 
             // Y position based on first note's staff position
             double y = 0;
@@ -198,6 +211,81 @@ internal static class GraceNoteEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Extra leftward shift for a grace group so its flag clears a wide above-script
+    /// (fermata / ornament) on the main note. Zero unless the main note carries such
+    /// a script AND the grace sits at or above it (only then does the grace's flag
+    /// rise into the script's band). The amount is the script's left overhang past
+    /// where the grace would otherwise reach, plus the grace's own flag reach — every
+    /// term glyph-derived, no hand-tuned constant.
+    /// </summary>
+    private static double ScriptOverhangForGrace(
+        ImmutableArray<ArticulationItem> articulations, GraceNoteItem grace, Measure measure,
+        double graceGroupWidth)
+    {
+        if (articulations.IsDefaultOrEmpty || grace.Notes.IsDefaultOrEmpty
+            || grace.MainNoteItemIndex >= measure.Items.Length)
+            return 0;
+        var mainItem = measure.Items[grace.MainNoteItemIndex];
+
+        int mainPos = mainItem switch
+        {
+            NoteItem n => n.StaffPosition,
+            ChordItem { Notes.Length: > 0 } c => c.Notes.Max(cn => cn.StaffPosition),
+            _ => 0
+        };
+        // Y-gate proxy: a grace below the main note keeps its flag out of the
+        // above-script's band, so it needs no extra room.
+        if (grace.Notes.Max(n => n.StaffPosition) < mainPos)
+            return 0;
+
+        foreach (var art in articulations)
+        {
+            if (art.StaffIndex != grace.StaffIndex || art.MeasureIndex != grace.MeasureIndex
+                || art.ItemIndex != grace.MainNoteItemIndex)
+                continue;
+            if (ArticulationEngraver.SpacingInkBox(art, mainItem, staffY: 0) is not { } box)
+                continue;
+            // Clear the grace's rightmost ink from the script's left edge by the SAME
+            // gap LilyPond keeps between two note-column grobs: each grob's separation
+            // box grows by extra-spacing-width (default 0.1) on the facing side, so a
+            // script and a grace clear by 0.1 + 0.1. Everything else is a real glyph
+            // extent, not a tuned constant.
+            // LILYPOND-REF: lily/separation-item.cc extra-spacing-width default
+            //   (-0.1 . 0.1); scm/define-grobs.scm Script inherits it.
+            double leftFromCenter = -box.XLeft;                 // script left edge
+            int noteValue = mainItem.Duration.Denominator <= 1 ? 1
+                : mainItem.Duration.Denominator <= 2 ? 2 : 4;
+            double centerX = GlyphMetrics.GetNoteheadBBox(noteValue).CenterX;
+            // The grace's rightmost ink, measured LEFTWARD from the main centre.
+            double graceInkRightFromCenter = centerX + graceGroupWidth + GraceToMainSpacing
+                - GraceInkRight(grace, graceGroupWidth);
+            double overhang = leftFromCenter + 2 * ArticulationSpacing.ScriptExtraSpacingWidth
+                            - graceInkRightFromCenter;
+            return Math.Max(0, overhang);
+        }
+        return 0;
+    }
+
+    /// <summary>The grace group's rightmost ink, measured from the group's LEFT edge.
+    /// A single flagged grace protrudes past its head by the flag (placed at the stem
+    /// like a normal note's, then scaled); any other group keeps its ink within the
+    /// reserved spring width, so the junction (width) is used.</summary>
+    private static double GraceInkRight(GraceNoteItem grace, double graceGroupWidth)
+    {
+        if (grace.Notes.Length == 1)
+        {
+            var d = grace.Notes[0].BaseDuration;
+            if (d.Numerator == 1 && d.Denominator >= 8)
+            {
+                var flag = GlyphMetrics.GetFlagBBox(d.Denominator, stemUp: true);
+                if (flag != default)
+                    return (GlyphMetrics.StemUpSE.X + flag.Width) * GraceScale;
+            }
+        }
+        return graceGroupWidth;
     }
 
     /// <summary>

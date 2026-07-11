@@ -108,7 +108,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     public void DrawClosedBezier(
         (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
-        Color? fill = null)
+        Color? fill = null, double strokeWidth = 0)
     {
         using var path = new SKPath();
         path.MoveTo(X(p0.X), X(p0.Y));
@@ -122,6 +122,20 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             IsAntialias = true,
         };
         _canvas.DrawPath(path, paint);
+        // Round-cap/join stroke rounds the tapered ends (LilyPond slur/tie stencil).
+        if (strokeWidth > 0)
+        {
+            using var strokePaint = new SKPaint
+            {
+                Color = ToSKColor(fill),
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = T(strokeWidth),
+                StrokeCap = SKStrokeCap.Round,
+                StrokeJoin = SKStrokeJoin.Round,
+                IsAntialias = true,
+            };
+            _canvas.DrawPath(path, strokePaint);
+        }
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)

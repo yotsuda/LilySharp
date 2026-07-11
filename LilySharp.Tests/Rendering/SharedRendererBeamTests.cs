@@ -225,7 +225,7 @@ public sealed class SharedRendererBeamTests
         public void DrawClosedBezier(
             (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
             (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
-            Color? fill = null) { }
+            Color? fill = null, double strokeWidth = 0) { }
 
         public void DrawText(string text, double x, double y, double fontSize,
             string fontFamily, FontStyle style = FontStyle.Regular,

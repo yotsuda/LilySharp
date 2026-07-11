@@ -25,15 +25,15 @@
   <rect x="36.41" y="10.24" width="0.19" height="4.00" fill="#000000"/>
   <rect x="36.90" y="10.24" width="0.60" height="4.00" fill="#000000"/>
   <line x1="17.47" y1="8.04" x2="24.87" y2="9.44" stroke="#000000" stroke-width="0.480"/>
-  <line x1="17.54" y1="10.74" x2="17.54" y2="8.05" stroke="#000000" stroke-width="0.130"/>
-  <line x1="19.79" y1="13.74" x2="19.79" y2="8.48" stroke="#000000" stroke-width="0.130"/>
-  <line x1="22.30" y1="13.74" x2="22.30" y2="8.95" stroke="#000000" stroke-width="0.130"/>
-  <line x1="24.80" y1="13.74" x2="24.80" y2="9.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.54" y1="10.59" x2="17.54" y2="8.05" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.79" y1="13.59" x2="19.79" y2="8.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.30" y1="13.59" x2="22.30" y2="8.95" stroke="#000000" stroke-width="0.130"/>
+  <line x1="24.80" y1="13.59" x2="24.80" y2="9.43" stroke="#000000" stroke-width="0.130"/>
   <line x1="26.28" y1="15.05" x2="33.92" y2="14.23" stroke="#000000" stroke-width="0.480"/>
-  <line x1="26.35" y1="12.24" x2="26.35" y2="15.05" stroke="#000000" stroke-width="0.130"/>
-  <line x1="28.85" y1="11.74" x2="28.85" y2="14.78" stroke="#000000" stroke-width="0.130"/>
-  <line x1="31.35" y1="11.24" x2="31.35" y2="14.51" stroke="#000000" stroke-width="0.130"/>
-  <line x1="33.86" y1="10.74" x2="33.86" y2="14.24" stroke="#000000" stroke-width="0.130"/>
+  <line x1="26.35" y1="12.39" x2="26.35" y2="15.05" stroke="#000000" stroke-width="0.130"/>
+  <line x1="28.85" y1="11.89" x2="28.85" y2="14.78" stroke="#000000" stroke-width="0.130"/>
+  <line x1="31.35" y1="11.39" x2="31.35" y2="14.51" stroke="#000000" stroke-width="0.130"/>
+  <line x1="33.86" y1="10.89" x2="33.86" y2="14.24" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="16.95" y="7.19" font-size="4.00" data-pos="326"></text>
   <text class="music" x="19.21" y="7.64" font-size="4.00" data-pos="336"></text>
   <text class="music" x="21.71" y="14.71" font-size="4.00" data-pos="348"></text>

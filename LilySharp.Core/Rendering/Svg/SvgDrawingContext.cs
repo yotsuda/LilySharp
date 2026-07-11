@@ -90,13 +90,20 @@ internal sealed class SvgDrawingContext : IDrawingContext
     public void DrawClosedBezier(
         (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
-        Color? fill = null)
+        Color? fill = null, double strokeWidth = 0)
     {
         var color = (fill ?? Color.Black).ToHex();
         var d = string.Format(Inv,
             "M {0:F2},{1:F2} C {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2} C {8:F2},{9:F2} {10:F2},{11:F2} {0:F2},{1:F2} Z",
             p0.X, p0.Y, c1.X, c1.Y, c2.X, c2.Y, p1.X, p1.Y, c2Back.X, c2Back.Y, c1Back.X, c1Back.Y);
-        _sb.AppendLine($"  <path d=\"{d}\" fill=\"{color}\"{SourceAttr()}/>");
+        // A round-cap/round-join stroke in the fill colour rounds the tapered ends,
+        // matching LilyPond's slur/tie stencil (fill + round stroke).
+        var strokeAttr = strokeWidth > 0
+            ? string.Format(Inv,
+                " stroke=\"{0}\" stroke-width=\"{1:F2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"",
+                color, strokeWidth)
+            : "";
+        _sb.AppendLine($"  <path d=\"{d}\" fill=\"{color}\"{strokeAttr}{SourceAttr()}/>");
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)

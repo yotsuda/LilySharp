@@ -51,22 +51,22 @@
   <text class="music" x="25.32" y="8.27" font-size="4.00" data-pos="455"></text>
   <text class="music" x="27.83" y="7.77" font-size="4.00" data-pos="461"></text>
   <text class="music" x="30.33" y="7.27" font-size="4.00" data-pos="467"></text>
-  <line x1="30.40" y1="7.27" x2="30.40" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.40" y1="7.42" x2="30.40" y2="14.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="30.40" y="14.77" font-size="4.00"></text>
   <rect x="34.15" y="12.77" width="0.19" height="4.00" fill="#000000"/>
   <rect x="34.64" y="12.77" width="0.60" height="4.00" fill="#000000"/>
   <line x1="7.80" y1="14.77" x2="12.34" y2="14.77" stroke="#000000" stroke-width="0.480"/>
   <line x1="12.34" y1="13.96" x2="11.27" y2="13.96" stroke="#000000" stroke-width="0.480"/>
-  <line x1="7.87" y1="10.77" x2="7.87" y2="14.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="12.27" y1="10.27" x2="12.27" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="7.87" y1="10.92" x2="7.87" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="12.27" y1="10.42" x2="12.27" y2="14.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="14.71" y1="14.77" x2="17.34" y2="14.77" stroke="#000000" stroke-width="0.480"/>
   <line x1="14.71" y1="13.96" x2="15.77" y2="13.96" stroke="#000000" stroke-width="0.480"/>
-  <line x1="14.77" y1="9.77" x2="14.77" y2="14.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="17.28" y1="9.27" x2="17.28" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="14.77" y1="9.92" x2="14.77" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.28" y1="9.42" x2="17.28" y2="14.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.62" y1="14.77" x2="27.96" y2="14.77" stroke="#000000" stroke-width="0.480"/>
   <line x1="25.39" y1="13.96" x2="27.96" y2="13.96" stroke="#000000" stroke-width="0.480"/>
-  <line x1="21.68" y1="8.77" x2="21.68" y2="14.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.39" y1="8.27" x2="25.39" y2="14.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="27.89" y1="7.77" x2="27.89" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="21.68" y1="8.92" x2="21.68" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.39" y1="8.42" x2="25.39" y2="14.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.89" y1="7.92" x2="27.89" y2="14.77" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

@@ -280,13 +280,28 @@ internal static partial class SharedRenderer
     /// note (grace stems point up, so the slur bows underneath).
     /// </summary>
     /// <remarks>LILYPOND-REF: ly/grace-init.ly — grace auto-slur.</remarks>
+    // Drops of the slur's ends below the noteheads' bottom edges. LilyPond keeps
+    // free-head-distance (0.3) from a head; the main-note end drops further because
+    // that note is stem-down (its stem sits on the slur's side) and the slur clears
+    // it — measured ≈0.65 ss below the head in LP's output. The grace end keeps the
+    // plain free-head-distance (its stem points the other way).
+    // LILYPOND-REF: scm/layout-slur.scm default-slur-details free-head-distance 0.3,
+    //   stem-encompass-penalty 30.
+    private const double GraceSlurStartClearance = 0.3;
+    private const double GraceSlurEndClearance = 0.65;
+    // Tuck the main-note end a little further left of the stem.
+    private const double GraceSlurEndLeftShift = 0.15;
+
     private static void DrawGraceSlur(double graceX, double graceY,
         double mainX, double mainY, double scale, IDrawingContext gc)
     {
         double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
-        double startY = graceY + 0.5;
-        double endX = mainX + GlyphMetrics.NoteheadBlack.CenterX;
-        double endY = mainY + 0.5;
+        double startY = graceY + 0.5 + GraceSlurStartClearance;
+        // End left of the main notehead's stem-down stem (which attaches at the
+        // head's left) so the slur tucks beside the stem instead of crossing it,
+        // dropped below the head so the bow does not hug the notehead.
+        double endX = mainX - GraceSlurEndLeftShift;
+        double endY = mainY + 0.5 + GraceSlurEndClearance;
 
         double dx = endX - startX;
         if (dx < 0.5) return; // degenerate

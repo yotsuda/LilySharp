@@ -74,8 +74,9 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
         (double X, double Y) p1,
         (double X, double Y) c2Back,
         (double X, double Y) c1Back,
-        Color? fill = null)
-        => _inner.DrawClosedBezier(P(p0), P(c1), P(c2), P(p1), P(c2Back), P(c1Back), fill);
+        Color? fill = null,
+        double strokeWidth = 0)
+        => _inner.DrawClosedBezier(P(p0), P(c1), P(c2), P(p1), P(c2Back), P(c1Back), fill, strokeWidth);
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _inner.DrawGlyph(glyph, X(x), y, fontSize, fill);

@@ -348,6 +348,12 @@ internal static class EngravingDefaults
     /// <summary>Maximum thickness of slur at the middle (in staff spaces). Endpoints are thin.</summary>
     public const double SlurMidThickness = 0.30;
 
+    /// <summary>Width of the round-cap pen that strokes a slur/tie bow so its
+    /// tapered ends read as rounded rather than sharp points. LilyPond strokes its
+    /// slur/tie stencil with a line-thickness pen for the same reason.
+    /// LILYPOND-REF: lily/slur.cc / lily/tie.cc — filled + round-stroked stencil.</summary>
+    public const double BowEndRounding = 0.08;
+
 
     // === Conversion helpers ===
 

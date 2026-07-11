@@ -56,15 +56,15 @@
   <rect x="33.65" y="23.87" width="1.62" height="1.79" fill="#FFFFFF" data-pos="529"/>
   <text x="34.46" y="25.60" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="529">5</text>
   <line x1="17.47" y1="8.95" x2="25.35" y2="9.77" stroke="#000000" stroke-width="0.480"/>
-  <line x1="17.54" y1="13.27" x2="17.54" y2="8.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.28" y1="13.27" x2="20.28" y2="9.24" stroke="#000000" stroke-width="0.130"/>
-  <line x1="22.78" y1="13.27" x2="22.78" y2="9.51" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.28" y1="13.27" x2="25.28" y2="9.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.54" y1="13.12" x2="17.54" y2="8.96" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.28" y1="13.12" x2="20.28" y2="9.24" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.78" y1="13.12" x2="22.78" y2="9.51" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.28" y1="13.12" x2="25.28" y2="9.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="27.47" y1="11.58" x2="35.12" y2="10.76" stroke="#000000" stroke-width="0.480"/>
-  <line x1="27.54" y1="14.77" x2="27.54" y2="11.58" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.04" y1="14.27" x2="30.04" y2="11.31" stroke="#000000" stroke-width="0.130"/>
-  <line x1="32.55" y1="13.77" x2="32.55" y2="11.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.05" y1="13.27" x2="35.05" y2="10.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.54" y1="14.62" x2="27.54" y2="11.58" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.04" y1="14.12" x2="30.04" y2="11.31" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.55" y1="13.62" x2="32.55" y2="11.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.05" y1="13.12" x2="35.05" y2="10.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="17.47" y1="17.07" x2="25.35" y2="18.47" stroke="#000000" stroke-width="0.480"/>
   <line x1="17.54" y1="19.07" x2="17.54" y2="17.08" stroke="#000000" stroke-width="0.130"/>
   <line x1="20.28" y1="23.57" x2="20.28" y2="17.57" stroke="#000000" stroke-width="0.130"/>

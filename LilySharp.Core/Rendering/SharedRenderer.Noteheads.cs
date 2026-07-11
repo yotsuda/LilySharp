@@ -317,14 +317,25 @@ internal static partial class SharedRenderer
     /// <summary>Stem start offset from the head CENTER for styled noteheads:
     /// cross/slash ink only reaches the attach edge at its CORNERS, so the stem
     /// joins the corner on the stem's side (±½ss); the do-triangle's corners
-    /// are both at the bottom. Round heads attach at center (0).
-    /// LILYPOND-REF: mf/feta-noteheads.mf stem_attachment per head style.</summary>
-    private static double StemAttachYOffset(NoteheadStyle style, bool stemUp) => style switch
+    /// are both at the bottom. A FILLED round head starts the stem just INSIDE the
+    /// head (toward the stem's far end): the stem is painted over the head, and on a
+    /// slanted oval its straight edge would otherwise step past the head's tapering
+    /// corner at the exact centre — recessing the start hides that step where the
+    /// head is wider. An OPEN head (half / whole) must NOT recess: its centre is
+    /// hollow, so a recessed stem would show inside the void; it butts the centre.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf stem_attachment per head style;
+    ///   the stem overlaps the head stencil rather than butting its centre.</remarks>
+    private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue) => style switch
     {
         NoteheadStyle.Cross or NoteheadStyle.Slash => stemUp ? -0.5 : 0.5,
         NoteheadStyle.Triangle => 0.5,
+        _ when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
         _ => 0,
     };
+
+    /// <summary>How far a filled round head recesses the stem's start toward the far
+    /// end so the join clears the head's slanted corner.</summary>
+    private const double StemHeadInset = 0.15;
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
@@ -398,7 +409,7 @@ internal static partial class SharedRenderer
             double staffTopY = staffMiddleY - StaffHeight / 2.0;
             double stemEndY = StemCalculator.CalculateStemEndY(
                 noteY, stemUp, staffTopY, durLog, note.StaffPosition);
-            gc.DrawLine(stemX, noteY + StemAttachYOffset(note.Notehead, stemUp),
+            gc.DrawLine(stemX, noteY + StemAttachYOffset(note.Notehead, stemUp, noteValue),
                 stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
@@ -537,7 +548,7 @@ internal static partial class SharedRenderer
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
             // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).
             double stemStartY = (stemUp ? bottomY : topY)
-                + StemAttachYOffset(chord.Notehead, stemUp);
+                + StemAttachYOffset(chord.Notehead, stemUp, noteValue);
             int stemTipPos = stemUp ? maxPos : minPos;
             double stemTipNoteY = stemUp ? topY : bottomY;
             int durLog = StemCalculator.GetDurationLog(noteValue);
