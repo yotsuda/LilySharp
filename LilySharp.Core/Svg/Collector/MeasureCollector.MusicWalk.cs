@@ -565,11 +565,25 @@ public sealed partial class MeasureCollector
             var next = j + 1 < tupletItems.Count ? tupletItems[j + 1] : null;
             var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = PeekMarkers(next);
 
+            // Post-events (articulations, dynamics, figured bass, chord names,
+            // cross-staff) attach to a tuplet-inner note/chord/rest exactly as they
+            // do in the top-level stream — captured against the item's own index
+            // BEFORE it is added. Without this they were silently dropped.
+            int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+            int annItemIndex = builder.CurrentItemCount;
+            Fraction annAnchor = builder.CurrentDuration;
+
             if (item is NoteSyntax note)
             {
                 var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
                 writtenDuration += noteItem.Duration;
                 builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+                CollectDynamics(note, annMeasureIndex, annItemIndex);
+                CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
+                    noteItem.EditorialAccidental, annAnchor);
+                CollectFiguredBass(note, annMeasureIndex, annItemIndex);
+                CollectChordNames(note, annMeasureIndex, annItemIndex);
+                CollectCrossStaff(note, annMeasureIndex, annItemIndex);
                 lastSourcePosition = note.Position;
             }
             else if (item is RestSyntax rest)
@@ -577,6 +591,7 @@ public sealed partial class MeasureCollector
                 var restItem = CreateRestItem(rest);
                 writtenDuration += restItem.Duration;
                 builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
+                CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 lastSourcePosition = rest.Position;
             }
             else if (item is ChordSyntax chord)
@@ -585,6 +600,11 @@ public sealed partial class MeasureCollector
                     hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
                 writtenDuration += chordItem.Duration;
                 builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
+                CollectDynamics(chord, annMeasureIndex, annItemIndex);
+                CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
+                CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
+                CollectChordNames(chord, annMeasureIndex, annItemIndex);
+                CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
                 lastSourcePosition = chord.Position;
             }
             else if (item is TupletExpressionSyntax nestedTuplet)

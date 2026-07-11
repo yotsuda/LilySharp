@@ -1,0 +1,22 @@
+// Post-events (articulations, dynamics) attach to notes INSIDE a tuplet body,
+// not only to top-level notes — ProcessTuplet must run the same annotation
+// collectors the main stream does, or a staccato/accent/tenuto on a triplet
+// note is silently dropped.
+octave absolute
+time 4/4
+key c major
+
+part m { clef treble }
+
+section A {
+  m {
+    tuplet 3/2 { c'8@staccato e' g' } tuplet 3/2 { c''@accent g' e' }
+    tuplet 3/2 { d'@tenuto f' a' } tuplet 3/2 { b'@marcato g' d' }
+  }
+}
+
+form main { A }
+
+score main "tuplet-articulations" {
+  staff m
+}

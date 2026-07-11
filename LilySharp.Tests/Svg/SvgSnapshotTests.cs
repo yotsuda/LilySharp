@@ -163,6 +163,9 @@ public class SvgSnapshotTests
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };
+        // Articulations on notes INSIDE a tuplet body render (ProcessTuplet runs
+        // the same post-event collectors as the top-level stream).
+        yield return new object[] { "test/tuplet-articulations" };
         // A tab staff BELOW a notation staff of the same music: the tab's
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).
