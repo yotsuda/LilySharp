@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
+using LilySharp.Core.Music;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
@@ -108,6 +110,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
+                else if (name == "chord" && mark.Parent is ChordSyntax chord && !CanNameChord(chord))
+                    _diagnostics.Warning(
+                        chord.Span,
+                        DiagnosticCodes.ChordNotRecognized,
+                        "@chord can't name this chord — its notes match no known chord quality; "
+                        + "use the explicit form, e.g. @chord(c:maj7).");
                 break;
             }
         }
@@ -180,6 +188,24 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return false;
         var label = markName.Substring(5);
         return !(label.Length >= 2 && label[0] == '"' && label[^1] == '"');
+    }
+
+    /// <summary>
+    /// Whether a bare <c>@chord</c> can auto-name this chord. Only pure named-pitch
+    /// chords are checked (their recognition is key-independent); scale-degree
+    /// chords, which need the running key, are left to the collector and never
+    /// warned here.
+    /// </summary>
+    private static bool CanNameChord(ChordSyntax chord)
+    {
+        if (chord.Root is null || chord.Degrees.Any() || chord.DrumNames.Any())
+            return true;
+
+        int rootStep = RelativeOctave.StepIndex(chord.Root.PitchName.ToLowerInvariant()[0]);
+        var pcs = chord.Pitches.Select(p =>
+            RelativeOctave.StepSemitoneOf(RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]))
+            + p.AccidentalOffset);
+        return ChordStructure.TryRecognize(rootStep, chord.Root.AccidentalOffset, pcs, out _);
     }
 
     private void WarnUnknown(SyntaxNode node, string name)

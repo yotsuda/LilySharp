@@ -81,6 +81,26 @@ public sealed class ChordAutoNameTests
         Assert.Null(AutoName("<c des d>"));
     }
 
+    private static bool NotRecognizedDiagnosed(string chord)
+    {
+        var tree = SyntaxTree.Parse($"time 4/4\nkey c major\n{chord}@chord");
+        return LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Any(d => d.Code == DiagnosticCodes.ChordNotRecognized);
+    }
+
+    [Theory]
+    [InlineData("<c des d>")] // a cluster
+    [InlineData("<c e>")]     // a dyad names no quality
+    public void UnrecognizedChord_IsDiagnosed(string chord)
+        => Assert.True(NotRecognizedDiagnosed(chord));
+
+    [Theory]
+    [InlineData("<c e g>")]   // a real chord
+    [InlineData("<d f a c>")]
+    [InlineData("<c 3 5>")]   // a degree chord — left to the collector, never warned
+    public void RecognizedOrDegreeChord_IsNotDiagnosed(string chord)
+        => Assert.False(NotRecognizedDiagnosed(chord));
+
     [Fact]
     public void BareChordOnSingleNote_DerivesNothing()
     {

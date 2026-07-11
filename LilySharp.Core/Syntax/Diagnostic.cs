@@ -250,6 +250,10 @@ public static class DiagnosticCodes
     /// either all pitches (<c>&lt;c e g&gt;</c>) or a root and degrees (<c>&lt;c 3 5&gt;</c>).</summary>
     public const string ChordMixesPitchesAndDegrees = "LYS1019";
 
+    /// <summary>Warning: a bare <c>@chord</c> can't name its chord — the notes match
+    /// no known chord quality. Use the explicit form <c>@chord(c:maj7)</c>.</summary>
+    public const string ChordNotRecognized = "LYS1020";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>
