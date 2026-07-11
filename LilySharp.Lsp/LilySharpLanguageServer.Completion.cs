@@ -94,7 +94,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(AtFollowsChord(doc.Text, offset)),
-            CompletionContext.AfterArticulationPlacement => GetArticulationPlacementCompletions(doc.Text, offset),
+            CompletionContext.AfterArticulationPlacement => GetArticulationPlacementCompletions(doc.Text, offset, position),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
         };
@@ -1439,27 +1439,41 @@ public sealed partial class LilySharpLanguageServer
     /// already typed ('@fermata.'), the bare words are offered; otherwise they carry
     /// the leading dot so '@fermata' → '@fermata.up'.
     /// </summary>
-    internal static CompletionList GetArticulationPlacementCompletions(string text, int offset)
+    internal static CompletionList GetArticulationPlacementCompletions(
+        string text, int offset, Position? position = null)
     {
         int j = offset - 1;
         while (j >= 0 && char.IsLetter(text[j])) j--;
-        string p = (j >= 0 && text[j] == '.') ? "" : ".";
+        bool afterDot = j >= 0 && text[j] == '.';
+        string p = afterDot ? "" : ".";
+        // Replace from the placement word (after the dot), or INSERT at the cursor
+        // when there is no dot yet. Crucially the range must NOT reach back over the
+        // 'fermata' NAME: VS Code filters the items against the text in this range —
+        // 'fermata' matches neither '.up' nor '.down', so without an explicit range
+        // the items are hidden and nothing appears (the '@fermata|' case).
+        int replaceStart = afterDot ? j + 1 : offset;
+        LspRange? range = position == null ? null : new LspRange
+        {
+            Start = new Position(position.Line, position.Character - (offset - replaceStart)),
+            End = position,
+        };
+
+        CompletionItem Item(string word, string sort) => new()
+        {
+            Label = p + word,
+            Kind = CompletionItemKind.EnumMember,
+            Detail = word == "up"
+                ? "Force this articulation ABOVE the note"
+                : "Force this articulation BELOW the note",
+            SortText = sort,
+            FilterText = p + word,
+            TextEdit = range == null ? null : new TextEdit { Range = range, NewText = p + word },
+        };
+
         return new CompletionList
         {
             IsIncomplete = false,
-            Items = new[]
-            {
-                new CompletionItem
-                {
-                    Label = p + "up", Kind = CompletionItemKind.EnumMember,
-                    Detail = "Force this articulation ABOVE the note", SortText = "0up",
-                },
-                new CompletionItem
-                {
-                    Label = p + "down", Kind = CompletionItemKind.EnumMember,
-                    Detail = "Force this articulation BELOW the note", SortText = "1down",
-                },
-            },
+            Items = new[] { Item("up", "0up"), Item("down", "1down") },
         };
     }
 
