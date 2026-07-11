@@ -344,6 +344,10 @@ internal static class ArticulationEngraver
                 // that too, or an above-script (accent/staccato/fermata) lands on the
                 // number instead of above it.
                 double fretHalf = TabConstants.FretDigitHeight / 2.0;
+                var geom = new TabStaffGeometry(
+                    tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
+                double topLine = staffOffset;
+                double bottomLine = staffOffset + (strings - 1) * space;
                 double tabY;
                 if (tabAbove
                     && beamGroups.TryGetValue(
@@ -354,15 +358,24 @@ internal static class ArticulationEngraver
                     // Beamed, stem-up: the beam floats above the digits, so an
                     // above-script must clear the BEAM's outer edge at this note's x —
                     // not just the digit — exactly like the companion notation staff.
-                    var geom = new TabStaffGeometry(
-                        tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
                     tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
+                }
+                else if (tabAbove)
+                {
+                    // Above the note's own TOP digit — but never inside the staff, so
+                    // clamp to the top line. A high-string note clears its digit; a
+                    // low-string note just clears the staff, NOT a phantom top digit
+                    // (which parked the mark a whole staff away from the note).
+                    double noteTop = geom.StringY(geom.StemHeadString(item, stemUp: true));
+                    tabY = Math.Min(noteTop - fretHalf, topLine) - tabGap;
                 }
                 else
                 {
-                    tabY = tabAbove
-                        ? staffOffset - fretHalf - tabGap                          // above the top digit
-                        : staffOffset + (strings - 1) * space + fretHalf + tabGap; // below the bottom digit
+                    // Below the note's own BOTTOM digit, clamped to the bottom line —
+                    // so a high-string note's mark clears the staff line, not a
+                    // phantom bottom-string digit far below it.
+                    double noteBottom = geom.StringY(geom.StemHeadString(item, stemUp: false));
+                    tabY = Math.Max(noteBottom + fretHalf, bottomLine) + tabGap;
                 }
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
