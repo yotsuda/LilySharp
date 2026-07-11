@@ -405,21 +405,32 @@ internal static class LysWriter
             return token;
         }
 
-        /// <summary>Spell a chord: the first member is relative to the running
-        /// reference, each later member relative to the PREVIOUS member; the reference
-        /// then advances to the FIRST member (the note after a chord is reckoned from
-        /// it). This matches how the collector reads relative chords.</summary>
+        /// <summary>Spell a chord: the first member (root) is relative to the
+        /// running reference; every later member STACKS above the root (its octave
+        /// mark is the offset from the nearest octave at or above the root — the
+        /// same placement Lily# reads). The reference then advances to the root.
+        /// Root-anchored, so the emitted marks round-trip regardless of member
+        /// order and match <c>&lt;c 3 5&gt;</c>-style stacking.</summary>
         public string Chord(IReadOnlyList<ImportNote> members)
         {
-            int first = members[0].Octave * 7 + Mod7(members[0].Step);
-            int prev = _ref;
+            int rootStep = Mod7(members[0].Step);
+            int rootOctave = members[0].Octave;
             var parts = new List<string>();
-            foreach (var m in members)
+            for (int i = 0; i < members.Count; i++)
             {
-                parts.Add(Spell(prev, m.Step, m.Alter, m.Octave));
-                prev = m.Octave * 7 + Mod7(m.Step);
+                var m = members[i];
+                if (i == 0)
+                {
+                    parts.Add(Spell(_ref, m.Step, m.Alter, m.Octave));
+                }
+                else
+                {
+                    int letter = Mod7(m.Step);
+                    int stackedDefault = rootOctave + (letter >= rootStep ? 0 : 1);
+                    parts.Add(Format(letter, m.Alter, m.Octave - stackedDefault));
+                }
             }
-            _ref = first;
+            _ref = rootOctave * 7 + rootStep;
             return "<" + string.Join(" ", parts) + ">";
         }
 
@@ -427,7 +438,11 @@ internal static class LysWriter
         {
             int letter = Mod7(step);
             int def = (int)System.Math.Round((refDiatonic - letter) / 7.0, System.MidpointRounding.AwayFromZero);
-            int marks = octave - def;
+            return Format(letter, alter, octave - def);
+        }
+
+        private static string Format(int letter, int alter, int marks)
+        {
             string oct = marks > 0 ? new string('\'', marks) : marks < 0 ? new string(',', -marks) : "";
             return "cdefgab"[letter] + AlterSuffix(alter) + oct;
         }

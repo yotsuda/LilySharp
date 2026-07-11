@@ -127,13 +127,13 @@ score main ""t"" { staff melody }
     }
 
     [Fact]
-    public void Chord_RelativeOctave_IsReckonedFromPreviousNoteInChord()
+    public void Chord_MembersStackAboveRoot_OrderIndependent()
     {
-        // LilyPond: within <c g e>, g is relative to c (→ G3, down a fourth) and e
-        // is relative to g (→ E3, down a third), NOT relative to the first note c
-        // (which would give E4). Matches the renderer/collector.
+        // Lily# diverges from LilyPond: every chord member STACKS above the root
+        // (the first note), so <c g e> and <c e g> both sound C4 E4 G4 — the chord
+        // is independent of the order its notes are written. Matches the collector.
         var midi = new MidiExporter().Export(SyntaxTree.Parse("<c g e>4"));
         var pitches = midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToList();
-        Assert.Equal(new[] { 60, 55, 52 }, pitches); // C4, G3, E3 (e from g, not c)
+        Assert.Equal(new[] { 60, 67, 64 }, pitches); // C4, G4, E4 (g and e stacked above c)
     }
 }

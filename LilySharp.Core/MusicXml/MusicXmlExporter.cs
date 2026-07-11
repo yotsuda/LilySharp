@@ -1348,19 +1348,36 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the chord
         EmitPendingDynamic();
 
-        // LilyPond relative chords: each note is relative to the PREVIOUS note in
-        // the chord (state advances per pitch); the note after the chord is relative
-        // to the FIRST pitch. Matches MidiExporter and MeasureCollector.
+        // The first member is the ROOT (resolved relatively); every other member
+        // STACKS above it — the same octave placement as a scale degree, so the
+        // chord's pitches are independent of the written order (<c e g> == <c 3 5>
+        // == <c g e>); the note after the chord is relative to the root. A
+        // deliberate Lily# divergence from LilyPond, matching MidiExporter and
+        // MeasureCollector.
         int firstStep = _currentStep, firstOctave = _currentOctave;
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
             var (step, alter) = ParsePitch(pitch);
-            int targetOctave = ResolveRelativeOctave(pitch); // advances state per pitch
+            int targetOctave;
+            if (isFirst)
+            {
+                targetOctave = ResolveRelativeOctave(pitch); // root: relative, advances state
+                firstStep = _currentStep;
+                firstOctave = _currentOctave;
+            }
+            else if (_octaveAbsolute)
+            {
+                // Absolute mode: each member is a fixed pitch, no stacking.
+                targetOctave = ResolveRelativeOctave(pitch);
+            }
+            else
+            {
+                int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
+                targetOctave = firstOctave + (stepIdx >= firstStep ? 0 : 1) + pitch.OctaveOffset;
+            }
             (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
-
-            if (isFirst) { firstStep = _currentStep; firstOctave = _currentOctave; }
 
             var xmlNote = new MusicXmlNote
             {

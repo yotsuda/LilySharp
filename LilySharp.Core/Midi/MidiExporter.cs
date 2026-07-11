@@ -924,22 +924,38 @@ public sealed class MidiExporter
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
-        // LilyPond relative chords: each note is relative to the PREVIOUS note in
-        // the chord (so the state advances per pitch); the note AFTER the chord is
-        // relative to the chord's FIRST note. Matches MeasureCollector.CreateChordItem.
-        // LILYPOND-REF: notation manual — relative octave within chords.
+        // The first member is the ROOT (resolved relatively); every other member
+        // STACKS above it — the same octave placement as a scale degree, so a
+        // chord's pitches are independent of the order its notes are written
+        // (<c e g> == <c 3 5> == <c g e>). The note AFTER the chord is relative to
+        // the root. A deliberate Lily# divergence from LilyPond, matching the
+        // collector and the MusicXML exporter.
         bool isFirst = true;
         int firstNoteName = _currentNoteName;
         int firstOctave = _currentOctave;
 
         foreach (var pitch in pitches)
         {
-            int midiPitch = CalculateRelativeMidiPitch(pitch); // advances state per pitch
+            int midiPitch;
             if (isFirst)
             {
+                midiPitch = CalculateRelativeMidiPitch(pitch); // advances state
                 firstNoteName = _currentNoteName;
                 firstOctave = _currentOctave;
                 isFirst = false;
+            }
+            else if (_octaveAbsolute)
+            {
+                // Absolute mode: each member is a fixed pitch, no stacking.
+                midiPitch = CalculateRelativeMidiPitch(pitch);
+            }
+            else
+            {
+                int step = GetNoteName(pitch.BaseName);
+                int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
+                midiPitch = System.Math.Clamp(
+                    RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, octave) + _currentTransposeSemitones,
+                    0, 127);
             }
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 QuarterBend: pitch.QuarterOffset,

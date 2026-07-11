@@ -227,19 +227,38 @@ public sealed partial class MeasureCollector
         // Track first note's state for subsequent chord/note relative calculation
         int firstOctave = _octave.CurrentOctave;
         char firstPitchName = _octave.LastPitchName;
+        int rootStepForStack = 0;
 
         foreach (var pitch in chord.Pitches)
         {
-            var rp = CalculateStaffPosition(pitch);
-            _octave.CurrentOctave = rp.RelativeOctave;
-            int staffPosition = rp.StaffPosition;
-
-            // Remember first pitch's state (original octave drives the relative chain)
+            ResolvedPitch rp;
             if (notes.Count == 0)
             {
+                // The first member is the ROOT — resolved relative to the incoming
+                // frame; it anchors the chord and drives the next chord/note.
+                rp = CalculateStaffPosition(pitch);
                 firstOctave = rp.RelativeOctave;
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
+                rootStepForStack = GetPitchIndex(firstPitchName);
             }
+            else if (_octave.OctaveAbsolute)
+            {
+                // Absolute mode: every member is a fixed pitch (offset from the C
+                // anchor), already order-independent; no stacking.
+                rp = CalculateStaffPosition(pitch);
+            }
+            else
+            {
+                // Relative mode: every other member STACKS above the root — the same
+                // octave placement as a scale degree, so <c e g> == <c 3 5> and the
+                // chord's pitches are independent of the order its notes are written.
+                // A `,` drops a member below the root. (A deliberate Lily# divergence
+                // from LilyPond's per-member relative chain.)
+                int step = GetPitchIndex(pitch.PitchName.ToLowerInvariant()[0]);
+                int octave = firstOctave + (step >= rootStepForStack ? 0 : 1) + pitch.OctaveOffset;
+                rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, octave, pitch.Position);
+            }
+            int staffPosition = rp.StaffPosition;
 
             var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
