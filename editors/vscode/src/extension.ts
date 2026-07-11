@@ -626,11 +626,15 @@ async function exportPreview(
         return;
     }
 
-    // Default filename: the selected score's name, else the source file's basename.
+    // Default filename (matches `lysc svg --all`): the `main` score writes the
+    // source file's basename; every other score appends its name to it —
+    // song.lys + `score sub` → song-sub, + `score sub "custom"` → song-custom.
     const docUri = vscode.Uri.parse(uri);
     const baseDir = vscode.Uri.joinPath(docUri, '..');
     const sourceName = (docUri.path.split('/').pop() || 'score').replace(/\.lys$/i, '');
-    const baseName = renderName && renderName.length > 0 ? renderName : sourceName;
+    const baseName = renderName && renderName.length > 0
+        ? `${sourceName}-${renderName}`
+        : sourceName;
 
     // Default name WITHOUT an extension: the dialog's "Save as type"
     // dropdown appends the chosen one. Baking .pdf into the name meant the
