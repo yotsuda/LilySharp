@@ -124,6 +124,27 @@ public class RenderSpecTests
     }
 
     [Fact]
+    public void ResolveOutputStem_MainIsStem_EveryOtherScoreAppendsItsName()
+    {
+        var tree = SyntaxTree.Parse("""
+            part m { section A { c4 d e f | } }
+            form main { A }
+            form other { A A }
+            score main { staff m }
+            score other { staff m }
+            score other "custom" { staff m }
+            """);
+        var specs = RenderSpecParser.FindAll(tree);
+
+        // main → the input stem itself; every other score appends its name to the
+        // stem — its form name (song + `score other` → song-other) or an explicit
+        // basename (song + `score other "custom"` → song-custom).
+        Assert.Equal("song", specs[0].ResolveOutputStem("song"));
+        Assert.Equal("song-other", specs[1].ResolveOutputStem("song"));
+        Assert.Equal("song-custom", specs[2].ResolveOutputStem("song"));
+    }
+
+    [Fact]
     public void ParseSingleStaff_ReturnsCorrectStructure()
     {
         var source = """

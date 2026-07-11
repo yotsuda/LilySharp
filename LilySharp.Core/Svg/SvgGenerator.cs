@@ -60,8 +60,14 @@ public static class SvgGenerator
     /// Returns a list of (filename, svgContent) tuples.
     /// If only one render block exists, returns a single item with that filename.
     /// </summary>
+    /// <param name="inputStem">
+    /// The input file's stem (name without extension). When given, each score's
+    /// filename is resolved against it (<c>main</c> → the stem; <c>score sub</c> →
+    /// <c>stem-sub</c>; an explicit basename → verbatim). When null, the raw
+    /// OutputFile is returned (empty for <c>main</c>) — the caller derives the name.
+    /// </param>
     public static IReadOnlyList<(string Filename, string Svg)> GenerateAll(
-        SyntaxTree tree, SvgRenderOptions? options = null)
+        SyntaxTree tree, SvgRenderOptions? options = null, string? inputStem = null)
     {
         options ??= SvgRenderOptions.Default;
         var allSpecs = RenderSpecParser.FindAll(tree);
@@ -78,7 +84,8 @@ public static class SvgGenerator
         {
             var (multiScore, layout) = BuildLayout(tree, spec);
             var svg = RenderToSvg(multiScore, layout, options);
-            results.Add((spec.OutputFile, svg));
+            var filename = inputStem != null ? spec.ResolveOutputStem(inputStem) : spec.OutputFile;
+            results.Add((filename, svg));
         }
 
         return results;

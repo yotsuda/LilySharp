@@ -227,7 +227,8 @@ static bool ValidateScoreName(LilySharp.Core.Syntax.SyntaxTree tree, string? sco
 static int ExecuteSvgAll(string inputPath, bool embedFont) =>
     RunOutputCommand(inputPath, null, tree =>
     {
-        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, MakeSvgOptions(embedFont));
+        var inputStem = Path.GetFileNameWithoutExtension(inputPath);
+        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, MakeSvgOptions(embedFont), inputStem);
         var inputDir = Path.GetDirectoryName(inputPath) ?? ".";
 
         Console.WriteLine($"Generating {results.Count} movement(s):");

@@ -113,6 +113,16 @@ public sealed record RenderSpec(
     FormDeclarationSyntax? Form = null
 )
 {
+    /// <summary>
+    /// The output file stem for this score, given the input file's stem: the
+    /// <c>main</c> score (empty OutputFile) uses the input stem as-is; every other
+    /// score appends its name — its form name, or an explicit basename — to the
+    /// input stem (<c>foo</c> + <c>score sub</c> → <c>foo-sub</c>; <c>foo</c> +
+    /// <c>score sub "custom"</c> → <c>foo-custom</c>).
+    /// </summary>
+    public string ResolveOutputStem(string inputStem) =>
+        string.IsNullOrEmpty(OutputFile) ? inputStem : $"{inputStem}-{OutputFile}";
+
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 
