@@ -329,9 +329,14 @@ internal static class ArticulationEngraver
                     || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
                         or ArticulationType.Flageolet;
                 bool tabAbove = tabForceAbove || !stemUp;
+                // A fret digit is centred on its string line, so a digit on the
+                // OUTER string protrudes half its height past the outer line. Clear
+                // that too, or an above-script (accent/staccato/fermata) lands on the
+                // number instead of above it.
+                double fretHalf = TabConstants.FretDigitHeight / 2.0;
                 double tabY = tabAbove
-                    ? staffOffset - tabGap                          // above the top line
-                    : staffOffset + (strings - 1) * space + tabGap; // below the bottom line
+                    ? staffOffset - fretHalf - tabGap                          // above the top digit
+                    : staffOffset + (strings - 1) * space + fretHalf + tabGap; // below the bottom digit
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
                 string tabGlyph = articulation.Type switch

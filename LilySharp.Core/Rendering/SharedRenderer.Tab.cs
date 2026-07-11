@@ -226,7 +226,7 @@ internal static partial class SharedRenderer
         // A dead (muted) note shows an "×" in place of the fret number.
         string fretText = isDead ? "×" : fret.ToString();
         double bgWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
-        double bgHeight = 0.6875 * TabFretFontSize;
+        double bgHeight = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight;
 
         using (gc.Source(sourcePosition))
         {

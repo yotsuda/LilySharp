@@ -154,6 +154,9 @@ public class SvgSnapshotTests
         // A tab staff on the indented first system: its lines start at the indent
         // (aligned with the notation staff), not the page margin.
         yield return new object[] { "test/tab-indent" };
+        // Articulations above a tab staff clear the fret digits (which protrude
+        // past the outer line), not land on the numbers.
+        yield return new object[] { "test/tab-articulations" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

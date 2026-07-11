@@ -1,0 +1,17 @@
+// Articulations above a tab staff (accent, staccato, fermata, tenuto) must clear
+// the fret DIGITS, which are centred on their string lines and protrude past the
+// outer line — not land on the numbers.
+title "Tab articulations"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { a'4@accent a@staccato a@fermata a@tenuto | }
+}
+
+form main { A }
+
+score main {
+  tab m
+}

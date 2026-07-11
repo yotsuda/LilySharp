@@ -33,6 +33,12 @@ internal static class TabConstants
 
     /// <summary>Grace fret digits relative to the main fret size (just slightly smaller).</summary>
     public const double GraceFretScale = 0.8;
+
+    /// <summary>Height (staff spaces) of a fret digit's occluding box — the digit's
+    /// visual extent, centred on its string line. Shared by the renderer (the
+    /// white background) and the articulation engraver (clearing a digit that
+    /// protrudes past the outer staff line).</summary>
+    public const double FretDigitHeight = 0.6875 * FretFontSize;
 }
 
 /// <summary>
