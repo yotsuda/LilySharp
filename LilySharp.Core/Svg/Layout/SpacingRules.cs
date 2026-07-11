@@ -1500,6 +1500,105 @@ internal static class SpacingRules
         return result.ToImmutable();
     }
 
+    /// <summary>
+    /// Reserves the sideways reach of a wide, always-outside script (a fermata or
+    /// ornament) in the shared note columns, so a fermata over one note does not
+    /// crowd the next note's accidental or head. The reservation is a SKYLINE
+    /// distance, so it only widens where the script's glyph and the neighbour's
+    /// ink overlap VERTICALLY — a fermata high above the staff leaves a low
+    /// following note's spacing untouched, exactly as LilyPond's Script grob
+    /// joins the note column's horizontal skyline only at its own Y band. Scripts
+    /// live in a separate collection keyed by (staff, measure, item); this aligns
+    /// them to columns by onset, like <see cref="ApplyTabChordSpacing"/>. Narrow
+    /// scripts contribute no box (see <see cref="ArticulationEngraver.SpacingInkBox"/>),
+    /// so most articulation fixtures are left exactly as before.
+    /// LILYPOND-REF: lily/separation-item.cc set_distance() — every grob in the
+    ///   note column (Script included) feeds the column's horizontal skyline.
+    /// </summary>
+    public static ImmutableArray<Spring> ApplyArticulationSpacing(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        Model.Measure measure,
+        ImmutableArray<ArticulationItem> articulations,
+        int measureIndex,
+        int staffIndex)
+    {
+        if (articulations.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
+            return springs;
+
+        // Per column: the note/chord starting at that onset, and any wide-script
+        // ink boxes it carries (skyline frame: column at X=0, middle line Y=0).
+        var colItem = new MusicItem?[timings.Count];
+        var colBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>?[timings.Count];
+        bool any = false;
+        Fraction onset = Fraction.Zero;
+        for (int oi = 0; oi < measure.Items.Length; oi++)
+        {
+            var item = measure.Items[oi];
+            if (item is Model.NoteItem or Model.ChordItem)
+                for (int t = 0; t < timings.Count; t++)
+                {
+                    if (timings[t] != onset)
+                        continue;
+                    colItem[t] ??= item;
+                    foreach (var art in articulations)
+                    {
+                        if (art.StaffIndex != staffIndex || art.MeasureIndex != measureIndex
+                            || art.ItemIndex != oi)
+                            continue;
+                        if (ArticulationEngraver.SpacingInkBox(art, item, staffY: 0) is { } box)
+                        {
+                            (colBoxes[t] ??= new()).Add(box);
+                            any = true;
+                        }
+                    }
+                    break;
+                }
+            onset += item.Duration;
+        }
+        if (!any)
+            return springs;
+
+        double gap = MinItemGap;
+        var result = springs.ToBuilder();
+        void Widen(int idx, double needed)
+        {
+            var s = result[idx];
+            if (needed > s.MinDistance)
+                result[idx] = new Spring(
+                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+        }
+
+        // The between-column spring t+1 spans colItem[t] → colItem[t+1]. A script
+        // on the LEFT column reaches RIGHT into the right column's left ink; a
+        // script on the RIGHT column reaches LEFT over the left column's right ink.
+        for (int t = 0; t + 1 < timings.Count; t++)
+        {
+            var left = colItem[t];
+            var right = colItem[t + 1];
+            if (left is null || right is null)
+                continue;
+            double needed = 0;
+            if (colBoxes[t] is { } lb)
+            {
+                double d = HorizontalSkyline.FromBoxes(lb, HorizontalDirection.Right)
+                    .Distance(ItemSkylineFactory.CreateLeftSkyline(right, 0, 0));
+                if (!double.IsNegativeInfinity(d))
+                    needed = Math.Max(needed, d + gap);
+            }
+            if (colBoxes[t + 1] is { } rb)
+            {
+                double d = ItemSkylineFactory.CreateRightSkyline(left, 0, 0)
+                    .Distance(HorizontalSkyline.FromBoxes(rb, HorizontalDirection.Left));
+                if (!double.IsNegativeInfinity(d))
+                    needed = Math.Max(needed, d + gap);
+            }
+            if (needed > 0)
+                Widen(t + 1, needed);
+        }
+        return result.ToImmutable();
+    }
+
 
     // ========================================
     // Skyline Generation

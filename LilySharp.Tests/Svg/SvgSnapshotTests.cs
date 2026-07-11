@@ -160,6 +160,9 @@ public class SvgSnapshotTests
         // An explicit .down overrides a fermata's default UP side — it sits below
         // the notes with the flipped glyph, not hugging the beam above.
         yield return new object[] { "test/fermata-down" };
+        // A fermata reaches sideways past the head; the next note's accidental is
+        // spaced clear of it (skyline-gated, so only when they overlap in Y).
+        yield return new object[] { "test/fermata-note-spacing" };
         // A tab staff BELOW a notation staff of the same music: the tab's
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).

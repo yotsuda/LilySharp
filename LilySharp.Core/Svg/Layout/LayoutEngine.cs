@@ -62,6 +62,11 @@ internal sealed class LayoutEngine
         // right skyline must not reserve flag width. (See MeasureLayouter.IsItemBeamed.)
         _measureLayouter.IsItemBeamed = BeamedPredicate(_elementCoordinator.DetectBeamGroups(score));
 
+        // A wide script (fermata / ornament) reaches sideways past its note head;
+        // the single-staff path reserves that in the shared columns (see
+        // SystemLayouter.ApplyArticulationSpacing / .Articulations).
+        _systemLayouter.Articulations = score.Articulations;
+
         var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration);
 
         // Pre-calculate first system skylines for initial Y positioning

@@ -172,6 +172,23 @@ internal sealed class SystemBreaker
                     springs, allTimings, i, score.ChordNames, includeAttached: true);
             }
 
+            // Mirror the system layout: a wide script (fermata / ornament) reserves
+            // its sideways reach per staff, so a bar it widens is priced the same in
+            // the break gate and cannot overflow when actually laid out.
+            if (!score.Articulations.IsDefaultOrEmpty)
+            {
+                int artStaffIndex = 0;
+                foreach (var aGroup in score.StaffGroups)
+                    foreach (var aStaff in aGroup.Staves)
+                    {
+                        if (i < aStaff.PrimaryVoice.Measures.Length)
+                            springs = SpacingRules.ApplyArticulationSpacing(
+                                springs, allTimings, aStaff.PrimaryVoice.Measures[i],
+                                score.Articulations, i, artStaffIndex);
+                        artStaffIndex++;
+                    }
+            }
+
             double ideal = 0, min = 0, invStretch = 0;
             foreach (var s in springs)
             {

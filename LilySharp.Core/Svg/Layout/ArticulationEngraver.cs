@@ -817,6 +817,49 @@ internal static class ArticulationEngraver
         return tips;
     }
 
+    /// <summary>
+    /// The ink box a wide, always-outside script (fermata family / ornament)
+    /// reserves in the note-SPACING skyline, or null for every other script.
+    /// The frame matches <see cref="ItemSkylineFactory"/>: the note column sits
+    /// at X = 0, <paramref name="staffY"/> is the middle line and Y increases
+    /// DOWNWARD. A fermata is ~1.33 sp wide — ~0.68 past the head — so its glyph
+    /// crowds a neighbouring column the note head alone never reaches; LilyPond
+    /// reserves that because the Script grob joins the note column's horizontal
+    /// skyline. Narrow scripts (staccato/accent/tenuto/marcato), bends and
+    /// breaths never protrude far enough to matter, so they are left out (null)
+    /// to keep the reservation — and the fixtures it moves — to the real cases.
+    /// The Y is the UNBEAMED placement: at spacing time the beam-quanted stem tip
+    /// is not visible, and the collision case is a HIGH note whose stem points
+    /// AWAY from the script, where note-head support already gives the exact Y.
+    /// LILYPOND-REF: lily/separation-item.cc — every grob in a note column
+    ///   (Script included) contributes to the column's horizontal skyline.
+    /// </summary>
+    internal static (double YBottom, double YTop, double XLeft, double XRight)? SpacingInkBox(
+        ArticulationItem articulation, MusicItem item, double staffY)
+    {
+        if (!(IsFermata(articulation.Type) || articulation.IsOrnament))
+            return null;
+
+        int staffPosition = GetStaffPosition(item);
+        bool stemUp = GetStemUp(item, staffPosition);
+
+        // The side CalculateYPosition will resolve to (fermata/ornament force UP
+        // unless an explicit .down overrides), so the glyph box matches the side.
+        bool isAbove = articulation.DirectionForced ? articulation.IsAbove : true;
+
+        double anchorEng = CalculateYPosition(articulation, staffPosition, stemUp, item,
+            beamedStemTipY: null);
+        // Engraver Y is measured from the staff top (middle line at StaffMiddle);
+        // shift into the skyline's middle-line-at-staffY frame.
+        double anchorSky = anchorEng - StaffMiddle + staffY;
+
+        // Glyph ink box (font frame, Y up); map about the anchor into Y-down.
+        var bbox = GetSeedBBox(articulation.Type, isAbove);
+        double yBottom = anchorSky - bbox.Top;
+        double yTop = anchorSky - bbox.Bottom;
+        return (yBottom, yTop, bbox.Left, bbox.Right);
+    }
+
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
         MusicItem? item = null, double? beamedStemTipY = null)
     {

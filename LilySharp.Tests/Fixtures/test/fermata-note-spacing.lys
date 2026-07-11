@@ -1,0 +1,20 @@
+// A fermata over one note reaches ~0.68 sp past the head; the following note's
+// accidental must clear that glyph, not print into it. The reservation is
+// skyline-gated by Y, so it only widens the column where the fermata and the
+// next note's ink actually overlap vertically (all four notes sit high above
+// the staff here, so they do).
+// LILYPOND-REF: lily/separation-item.cc — the Script grob joins the note
+//   column's horizontal skyline.
+octave absolute
+title "Fermata note spacing"
+key c major
+
+part m { clef treble }
+
+section A { m { aes'8@fermata bes' ces'' des'' } }
+
+form main { A }
+
+score main "fermata-note-spacing" {
+  staff m
+}

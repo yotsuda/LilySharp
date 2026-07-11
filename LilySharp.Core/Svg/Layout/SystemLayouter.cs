@@ -32,10 +32,39 @@ internal sealed class SystemLayouter
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;
 
+    /// <summary>
+    /// The score's articulations, injected by <see cref="LayoutEngine"/> before
+    /// layout (like <see cref="MeasureLayouter.IsItemBeamed"/>) so a wide script's
+    /// sideways reach can be reserved in this single-staff path without threading
+    /// the collection through every layout overload. Empty by default.
+    /// </summary>
+    public ImmutableArray<ArticulationItem> Articulations { get; set; } =
+        ImmutableArray<ArticulationItem>.Empty;
+
     public SystemLayouter(LayoutOptions options, MeasureLayouter measureLayouter)
     {
         _options = options;
         _measureLayouter = measureLayouter;
+    }
+
+    /// <summary>
+    /// The onset of each spacing column in a measure, so
+    /// <see cref="SpacingRules.ApplyArticulationSpacing"/> can align scripts (keyed
+    /// by item index) to columns. Matches the column set the spring builder used:
+    /// <see cref="SpacingRules.CreateSpringsForMeasure"/> skips loose items, while
+    /// the lyrics builder keeps every item.
+    /// </summary>
+    private static ImmutableArray<Fraction> ColumnOnsets(Measure measure, bool includeLoose)
+    {
+        var onsets = ImmutableArray.CreateBuilder<Fraction>();
+        var onset = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (includeLoose || !item.IsLoose)
+                onsets.Add(onset);
+            onset += item.Duration;
+        }
+        return onsets.ToImmutable();
     }
 
     /// <summary>
@@ -103,9 +132,16 @@ internal sealed class SystemLayouter
         double totalBarlineWidth = 0;
 
         bool firstMeasureOfSystem = true;
-        foreach (var measure in measures)
+        for (int mi = 0; mi < measures.Count; mi++)
         {
+            var measure = measures[mi];
             var springs = SpacingRules.CreateSpringsForMeasure(measure, baseShortestDuration);
+
+            // Reserve a wide script's (fermata / ornament) sideways reach in the
+            // shared columns; no-ops unless a script actually crowds a neighbour.
+            springs = SpacingRules.ApplyArticulationSpacing(
+                springs, ColumnOnsets(measure, includeLoose: false), measure,
+                Articulations, firstMeasureIndex + mi, staffIndex: 0);
 
             // LINE-START measure: spring 0 carries the prefix→first-note
             // spacing (space-alist of the last prefix item) instead of the
@@ -245,10 +281,18 @@ internal sealed class SystemLayouter
             var measure = measures[i];
             int measureIndex = firstMeasureIndex + i;
 
-            // Use lyrics-aware spring creation if lyrics exist
-            var springs = lyrics.Count > 0
+            // Use lyrics-aware spring creation if lyrics exist. The lyrics builder
+            // keeps every item as a column; the plain builder skips loose ones.
+            bool withLyrics = lyrics.Count > 0;
+            var springs = withLyrics
                 ? SpacingRules.CreateSpringsForMeasureWithLyrics(measure, measureIndex, lyrics, baseShortestDuration)
                 : SpacingRules.CreateSpringsForMeasure(measure, baseShortestDuration);
+
+            // Reserve a wide script's (fermata / ornament) sideways reach; no-ops
+            // unless a script actually crowds a neighbour column.
+            springs = SpacingRules.ApplyArticulationSpacing(
+                springs, ColumnOnsets(measure, includeLoose: withLyrics), measure,
+                Articulations, measureIndex, staffIndex: 0);
             measureSprings.Add(springs);
 
             double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)

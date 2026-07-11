@@ -854,6 +854,26 @@ internal sealed class MultiStaffLayouter
                             Tunings.GetTuning(tabTuning),
                             Tunings.OctaveShift(tabTuning, tStaff.TabSourceClef));
 
+            // Reserve a wide script's (fermata / ornament) sideways reach in the
+            // SHARED columns, per staff (a script is keyed by its own staff index),
+            // so a fermata over one note doesn't crowd the next note's accidental.
+            // Y-gated by the skyline: a fermata high above the staff leaves a low
+            // following note untouched. Staff enumeration matches the global index
+            // scripts are tagged with (see BuildAllStaffSkylines).
+            if (!score.Articulations.IsDefaultOrEmpty)
+            {
+                int artStaffIndex = 0;
+                foreach (var aGroup in score.StaffGroups)
+                    foreach (var aStaff in aGroup.Staves)
+                    {
+                        if (i < aStaff.PrimaryVoice.Measures.Length)
+                            springs = SpacingRules.ApplyArticulationSpacing(
+                                springs, allTimings, aStaff.PrimaryVoice.Measures[i],
+                                score.Articulations, i, artStaffIndex);
+                        artStaffIndex++;
+                    }
+            }
+
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
             // BarLine semi-shrink. The prefix width itself ends at the ink.
