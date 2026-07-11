@@ -157,6 +157,9 @@ public class SvgSnapshotTests
         // Articulations above a tab staff clear the fret digits (which protrude
         // past the outer line), not land on the numbers.
         yield return new object[] { "test/tab-articulations" };
+        // An explicit .down overrides a fermata's default UP side — it sits below
+        // the notes with the flipped glyph, not hugging the beam above.
+        yield return new object[] { "test/fermata-down" };
         // A tab staff BELOW a notation staff of the same music: the tab's
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).

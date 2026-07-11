@@ -271,10 +271,15 @@ public sealed partial class MeasureCollector
                     }
 
                     // An explicit '.up' / '.down' qualifier overrides the automatic side.
+                    bool directionForced = false;
                     if (articulationSyntax.ForcedAbove is bool forcedAbove)
+                    {
                         isAbove = forcedAbove;
+                        directionForced = true;
+                    }
 
-                    _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position, _currentStaffIndex));
+                    _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
+                        articulationSyntax.Position, _currentStaffIndex) { DirectionForced = directionForced });
                 }
                 else
                 {

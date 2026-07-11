@@ -1,0 +1,17 @@
+// An explicit .down places a fermata BELOW the note with the flipped glyph,
+// overriding its default UP direction — otherwise a forced-up fermata hugs (or
+// collides with) a beam it hangs over. The flageolet keeps its default UP side.
+title "Fermata down"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { g''8@accent a,@flageolet a@fermata.down a@portato d e f g }
+}
+
+form main { A }
+
+score main {
+  staff m
+}

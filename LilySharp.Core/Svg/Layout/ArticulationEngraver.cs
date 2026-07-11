@@ -352,7 +352,8 @@ internal static class ArticulationEngraver
                     || articulation.IsOrnament || articulation.IsEditorialAccidental
                     || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
                         or ArticulationType.Flageolet;
-                bool tabAbove = tabForceAbove || !stemUp;
+                bool tabAbove = articulation.DirectionForced
+                    ? articulation.IsAbove : (tabForceAbove || !stemUp);
                 // A fret digit is centred on its string line, so a digit on the
                 // OUTER string protrudes half its height past the outer line. Clear
                 // that too, or an above-script (accent/staccato/fermata) lands on the
@@ -522,7 +523,7 @@ internal static class ArticulationEngraver
                 || art.IsOrnament || art.IsEditorialAccidental
                 || art.Type is ArticulationType.UpBow or ArticulationType.DownBow
                     or ArticulationType.Flageolet;
-            bool above = tabForceAbove || !stemUp;
+            bool above = art.DirectionForced ? art.IsAbove : (tabForceAbove || !stemUp);
 
             double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
                 measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx])
@@ -827,7 +828,9 @@ internal static class ArticulationEngraver
             || articulation.IsEditorialAccidental
             || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
                 or ArticulationType.Flageolet;
-        bool isAbove = forceAbove || articulation.IsAbove;
+        // An explicit .up/.down wins over the default UP direction (e.g. \fermata.down).
+        bool isAbove = articulation.DirectionForced
+            ? articulation.IsAbove : (forceAbove || articulation.IsAbove);
 
         // Anchor on the chord's extreme head on the SCRIPT's side: the TOP
         // head when above, the BOTTOM head when below. The chord-midpoint

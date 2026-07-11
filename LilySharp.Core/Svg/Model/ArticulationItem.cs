@@ -40,6 +40,13 @@ public sealed record ArticulationItem
     /// <summary>Whether this articulation should be placed above the note.</summary>
     public bool IsAbove { get; }
 
+    /// <summary>
+    /// True when the side came from an explicit <c>.up</c>/<c>.down</c> qualifier,
+    /// so the engraver must honour <see cref="IsAbove"/> as-is instead of forcing a
+    /// fermata/ornament/bow to its default UP side.
+    /// </summary>
+    public bool DirectionForced { get; init; }
+
     /// <summary>Guitar bend amount in SEMITONES (2 = full step); only for
     /// <see cref="ArticulationType.Bend"/>.</summary>
     public int BendSemitones { get; init; }
