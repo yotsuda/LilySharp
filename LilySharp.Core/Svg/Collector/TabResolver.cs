@@ -209,7 +209,18 @@ internal sealed class TabResolver
                 if (items[i] is not NoteItem note) continue;
                 int midi = note.Midi + shift;
                 if (!IsTabPlaceable(midi, tun))
-                    _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, midi < lowestOpen));
+                {
+                    bool below = midi < lowestOpen;
+                    _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below));
+                    // Below the lowest string it would clamp to a wrong open string
+                    // (fret 0) — hide it on the tab entirely instead (see NoteItem).
+                    if (below && !note.TabBelowRange)
+                    {
+                        note = note with { TabBelowRange = true };
+                        items[i] = note;
+                        changed = true;
+                    }
+                }
                 int strNum, fret;
                 if (note.StringNumber.HasValue)
                 {

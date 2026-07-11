@@ -1,0 +1,20 @@
+// A note below the tab's lowest string can't be fretted; rather than clamp it to
+// a wrong open string (fret 0), the tab shows NOTHING for it — no fret number, no
+// stem, and a fully out-of-range beam group drops its beam too. The notation staff
+// still shows every note at its true pitch. Measure 1 is in range; measure 2 sits
+// an octave below the bass's low E, so its whole (beamed) run is blank on the tab.
+title "Tab below range"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { e8 f g a e f g a | c,8 d, e, f, c, d, e, f, | }
+}
+
+form main { A }
+
+score main {
+  staff m
+  tab m
+}

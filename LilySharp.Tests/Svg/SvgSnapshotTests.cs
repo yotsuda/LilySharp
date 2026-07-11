@@ -161,6 +161,9 @@ public class SvgSnapshotTests
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).
         yield return new object[] { "test/tab-articulations-multistaff" };
+        // A note below the tab's lowest string is hidden (no fret/stem/beam) rather
+        // than clamped to a wrong open string; the notation staff still shows it.
+        yield return new object[] { "test/tab-below-range" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

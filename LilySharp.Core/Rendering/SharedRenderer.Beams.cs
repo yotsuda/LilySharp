@@ -45,6 +45,12 @@ internal static partial class SharedRenderer
 
             var grp = beam.Group;
 
+            // A tab beam whose every member sounds below the lowest string is
+            // hidden entirely (no beam line, no stems) — see NoteItem.TabBelowRange.
+            if (grp.Members.Length > 0
+                && grp.Members.All(m => m.Item is NoteItem { TabBelowRange: true }))
+                continue;
+
             // The quanter's Y positions are staff positions relative to the
             // beam's OWN staff middle — resolve that staff in this system
             // (multi-staff scores; -1 = single staff = the system's first).
@@ -189,6 +195,9 @@ internal static partial class SharedRenderer
             for (int i = 0; i < grp.Members.Length; i++)
             {
                 var member = grp.Members[i];
+                // A member hidden below the tab's lowest string draws no stem.
+                if (member.Item is NoteItem { TabBelowRange: true })
+                    continue;
                 bool up = MemberUp(i);
                 double stemX = StemAttachX(i);
                 double beamY = leftBeamY + slope * (stemX - leftStemX);

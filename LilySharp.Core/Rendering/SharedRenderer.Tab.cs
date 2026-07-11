@@ -133,6 +133,10 @@ internal static partial class SharedRenderer
             switch (item)
             {
                 case NoteItem note:
+                    // A note below the tab's lowest string can't be fretted — show
+                    // nothing (no digit, no stem) rather than a wrong open string.
+                    if (note.TabBelowRange)
+                        break;
                     // A tie's destination keeps its rhythm (stem/beam) but hides
                     // its fret number — the held string is not re-struck.
                     if (!note.IsTieTarget)

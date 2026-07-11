@@ -232,6 +232,16 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: ly/property-init.ly \deadNote — cross notehead, muted.</remarks>
     public bool IsDead { get; init; }
 
+    /// <summary>
+    /// True when this note sounds BELOW the tab's lowest string, so it cannot be
+    /// fretted (it would otherwise clamp to a wrong open string, fret 0). On a tab
+    /// staff nothing is drawn for it — no fret number, no stem, no beam — since a
+    /// wrong pitch is worse than a gap. Set per tab staff (TabResolver); ignored on
+    /// notation staves, which show the note at its true pitch. A TabOutOfRange
+    /// warning still fires (TabRangeValidator).
+    /// </summary>
+    public bool TabBelowRange { get; init; }
+
     /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 
