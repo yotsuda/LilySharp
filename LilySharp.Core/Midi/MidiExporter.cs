@@ -104,6 +104,13 @@ public sealed class MidiExporter
     private SyntaxNode? _root;
     private int _currentTransposeSemitones;
 
+    // Phrase auto-transpose (movable motif): a phrase written in the score's home
+    // key sounds in whatever key is in effect where it is referenced. _ambientTonic
+    // tracks the running key (reset to home per section, advanced by key changes);
+    // the reference site adds the home→ambient shift to _currentTransposeSemitones.
+    private KeyTonic _homeTonic = KeyTonic.CMajor;
+    private KeyTonic _ambientTonic = KeyTonic.CMajor;
+
     /// <summary>Initializes a new <see cref="MidiExporter"/> with the given timing resolution.</summary>
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -143,6 +150,8 @@ public sealed class MidiExporter
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
+        _homeTonic = ScoreHomeKey.Read(_root);
+        _ambientTonic = _homeTonic;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _partPitchLanes.Clear();
@@ -248,6 +257,13 @@ public sealed class MidiExporter
                 ProcessTimeSignature(timeSig, conductorTrack);
                 break;
 
+            case KeySignatureSyntax keySig:
+                // MIDI pitches are absolute, so a key change emits nothing — but it
+                // advances the phrase auto-transpose baseline (where a later phrase
+                // reference lands).
+                _ambientTonic = KeyTonic.Of(keySig);
+                break;
+
             case TempoDeclarationSyntax tempo:
                 ProcessTempo(tempo, conductorTrack);
                 break;
@@ -324,7 +340,13 @@ public sealed class MidiExporter
                     // lower the movable phrase, matching the SVG collector's frame shift.
                     _currentOctave = _partOctaveAnchor + varRef.OctaveOffset;
                     _defaultDuration = Fraction.Quarter;
+                    // Auto-transpose the movable phrase from the home key to the
+                    // ambient key here (sounds an octave/interval up or down), on
+                    // top of any part transpose; restored after the body.
+                    int savedTranspose = _currentTransposeSemitones;
+                    _currentTransposeSemitones += PhraseTransposeSemitones();
                     ProcessNode(phraseBody, track, conductorTrack);
+                    _currentTransposeSemitones = savedTranspose;
                     _activePhrases.Remove(phName);
                 }
                 break;
@@ -354,6 +376,10 @@ public sealed class MidiExporter
     /// </summary>
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack)
     {
+        // A section is self-contained: its phrase auto-transpose baseline reverts
+        // to the score's home key (a mid-section modulation cannot leak out).
+        _ambientTonic = _homeTonic;
+
         // Part-major layout: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
         for (var p = section.Parent; p != null; p = p.Parent)
@@ -734,6 +760,22 @@ public sealed class MidiExporter
                 RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, targetOctave)
             + _currentTransposeSemitones,
             0, 127);
+    }
+
+    /// <summary>
+    /// The sounding shift, in semitones, that moves a movable phrase from the
+    /// score's home key to the current ambient key (nearest octave). 0 when there
+    /// is nothing to do — ambient equals home, or either key is custom/atonal.
+    /// </summary>
+    private int PhraseTransposeSemitones()
+    {
+        if (!_homeTonic.Valid || !_ambientTonic.Valid)
+            return 0;
+        var target = PitchTransposer.MovableInterval(
+            _homeTonic.Step, _homeTonic.Alter, _ambientTonic.Step, _ambientTonic.Alter);
+        return target is { } t
+            ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct)
+            : 0;
     }
 
     /// <summary>

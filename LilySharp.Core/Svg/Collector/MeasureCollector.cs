@@ -1456,13 +1456,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private static (int step, int alt, int oct)? ComposeTranspose(
         (int step, int alt, int oct)? inner, (int step, int alt, int oct)? outer)
-    {
-        if (inner == null) return outer;
-        if (outer == null) return inner;
-        var i = inner.Value;
-        var o = outer.Value;
-        return PitchTransposer.Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
-    }
+        => PitchTransposer.Compose(inner, outer);
 
     // ===== Phrase auto-transpose (movable motif) =====
 
@@ -1486,18 +1480,8 @@ public sealed partial class MeasureCollector
     {
         if (!_ambientTonicValid || _meta.InitialKeyCustom != null)
             return null;
-
-        int dStep = Mod7(_ambientTonicStep - _meta.KeyTonicStep);
-        int homeSemi = RelativeOctave.StepSemitoneOf(_meta.KeyTonicStep) + _meta.KeyTonicAlter;
-        int ambientSemi = RelativeOctave.StepSemitoneOf(_ambientTonicStep) + _ambientTonicAlter;
-        int dSemi = Mod12(ambientSemi - homeSemi);
-        if (dStep == 0 && dSemi == 0)
-            return null;
-
-        // Nearest octave: a shift of a tritone (6) or less goes up; more goes down.
-        int toOctave = dSemi <= 6 ? 0 : -1;
-        int toAlter = dSemi - RelativeOctave.StepSemitoneOf(dStep);
-        return (dStep, toAlter, toOctave);
+        return PitchTransposer.MovableInterval(
+            _meta.KeyTonicStep, _meta.KeyTonicAlter, _ambientTonicStep, _ambientTonicAlter);
     }
 
     /// <summary>
@@ -1520,9 +1504,6 @@ public sealed partial class MeasureCollector
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
     }
-
-    private static int Mod7(int a) => ((a % 7) + 7) % 7;
-    private static int Mod12(int a) => ((a % 12) + 12) % 12;
 
     private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
     {

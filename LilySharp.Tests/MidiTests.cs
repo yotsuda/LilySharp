@@ -86,6 +86,51 @@ public class MidiTests
     }
 
     [Fact]
+    public void PhraseReference_AutoTransposesToAmbientKey()
+    {
+        // Parity with the SVG collector: a phrase written in the home key sounds
+        // in the ambient key where referenced, by the nearest octave. Section B
+        // modulates to G, so Lick (in C) sounds down a fourth — G3 A3 B3 G3 =
+        // 55 57 59 55. Section A (home C) is untouched.
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        var pitches = Pitches("""
+            key c major
+            phrase Lick { c d e c }
+            part m {
+              section A { Lick }
+              section B { key g major Lick }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { 60, 62, 64, 60, /* G3 A3 B3 G3 */ 55, 57, 59, 55 }, pitches);
+    }
+
+    [Fact]
+    public void PhraseReference_InlineNotesAfterAreNotTransposed()
+    {
+        // The inline c after the phrase stays at written pitch (C4 = 60),
+        // relative to the phrase's last written note — not shifted to the key.
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        var pitches = Pitches("""
+            key c major
+            phrase Lick { c d e c }
+            part m {
+              section A { key g major Lick c }
+            }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { 55, 57, 59, 55, /* inline c = C4 */ 60 }, pitches);
+    }
+
+    [Fact]
     public void ExportWithDuration()
     {
         var source = "c4 c2 c1";

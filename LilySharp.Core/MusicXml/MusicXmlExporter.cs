@@ -93,6 +93,14 @@ public sealed class MusicXmlExporter
     private SyntaxNode? _root;
     private (int step, int alt, int oct)? _currentTranspose;
 
+    // Phrase auto-transpose (movable motif): a phrase written in the score's home
+    // key is respelled into whatever key is in effect where it is referenced.
+    // _ambientTonic tracks the running key (reset to home per voice and section,
+    // advanced by key changes); the reference composes the home→ambient interval
+    // onto _currentTranspose for the phrase body.
+    private KeyTonic _homeTonic = KeyTonic.CMajor;
+    private KeyTonic _ambientTonic = KeyTonic.CMajor;
+
     // Variable/phrase resolution
     private readonly Dictionary<string, SyntaxNode> _variables = new();
 
@@ -128,6 +136,8 @@ public sealed class MusicXmlExporter
 
         var root = tree.GetRoot();
         _root = root;
+        _homeTonic = ScoreHomeKey.Read(root);
+        _ambientTonic = _homeTonic;
 
         // Check if there are section declarations (multi-part)
         var hasSections = root.DescendantNodes().OfType<SectionDeclarationSyntax>().Any();
@@ -136,6 +146,7 @@ public sealed class MusicXmlExporter
         {
             // Simple single-part mode — collect metadata first, then process music
             CollectMetadata(root);
+            _ambientTonic = _homeTonic; // CollectMetadata walked every key; re-arm
             _currentPart = new MusicXmlPart { Name = "Part 1" };
             Document.Parts.Add(_currentPart);
             StartNewMeasure(addAttributes: true);
@@ -146,6 +157,7 @@ public sealed class MusicXmlExporter
         {
             // Multi-section mode: collect metadata first, then process sections
             CollectMetadata(root);
+            _ambientTonic = _homeTonic; // CollectMetadata walked every key; re-arm
             ProcessSections(root);
         }
 
@@ -222,6 +234,10 @@ public sealed class MusicXmlExporter
 
     private void EmitSection(SectionDeclarationSyntax section)
     {
+        // A section is self-contained: its phrase auto-transpose baseline reverts
+        // to the score's home key (a mid-section modulation cannot leak out).
+        _ambientTonic = _homeTonic;
+
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
 
@@ -524,6 +540,7 @@ public sealed class MusicXmlExporter
         // Reset state for this part's continuation
         _currentOctave = 4;
         _currentStep = 0;
+        _ambientTonic = _homeTonic; // each voice starts at the score's home key
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
         _tieToNextNote = false;
         _defaultDuration = Fraction.Quarter;
@@ -935,7 +952,13 @@ public sealed class MusicXmlExporter
                     _currentOctave = 4 + varRef.OctaveOffset;
                     _currentStep = 0;
                     _defaultDuration = Fraction.Quarter;
+                    // Auto-transpose the movable phrase from the home key to the
+                    // ambient key here (respelled), composed under any part
+                    // transpose; restored after the body.
+                    var savedTranspose = _currentTranspose;
+                    _currentTranspose = PitchTransposer.Compose(PhraseTransposeTarget(), savedTranspose);
                     ProcessNode(varBody);
+                    _currentTranspose = savedTranspose;
                 }
                 break;
 
@@ -1083,6 +1106,9 @@ public sealed class MusicXmlExporter
         // an unrecognized tonic falls back to 0 (C), as before.
         _keyFifths = KeySpelling.SharpsFor(pitch ?? "", mode) ?? 0;
         _keyMode = mode;
+
+        // Advance the phrase auto-transpose baseline to this key's (written) tonic.
+        _ambientTonic = KeyTonic.Of(key);
     }
 
     /// <summary>The part declaration's `clef` property (if any) sets the
@@ -1140,6 +1166,17 @@ public sealed class MusicXmlExporter
     // Respells a written pitch for a transposed part (no-op otherwise). The
     // relative octave is resolved on the ORIGINAL pitch by the caller; this only
     // moves the printed step / alter / octave.
+    /// <summary>
+    /// The home→ambient interval for a movable phrase at the current reference
+    /// site (nearest octave), or null when there is nothing to do — ambient
+    /// equals home, or either key is custom/atonal.
+    /// </summary>
+    private (int step, int alt, int oct)? PhraseTransposeTarget()
+        => _homeTonic.Valid && _ambientTonic.Valid
+            ? PitchTransposer.MovableInterval(
+                _homeTonic.Step, _homeTonic.Alter, _ambientTonic.Step, _ambientTonic.Alter)
+            : null;
+
     private (string step, int alter, int octave) ApplyTranspose(
         PitchSyntax pitch, string step, int alter, int octave)
     {

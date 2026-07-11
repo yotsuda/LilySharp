@@ -119,4 +119,43 @@ public static class PitchTransposer
     /// </summary>
     public static int KeySignatureFifthsShift(int toStep, int toAlteration)
         => StepFifths[toStep] + 7 * toAlteration;
+
+    /// <summary>
+    /// The c-relative transpose target (for <see cref="Transpose"/>) that moves
+    /// music from a home key's tonic to an ambient key's tonic by the NEAREST
+    /// octave — up when the shift is a tritone or less, otherwise down. Returns
+    /// null when there is nothing to do (the tonics are identical). Both tonics
+    /// are given as a diatonic step (0..6) and alteration in semitones.
+    /// </summary>
+    /// <remarks>
+    /// The single definition of "how a movable phrase lands," shared by the
+    /// renderer's collector and the MIDI / MusicXML exporters.
+    /// </remarks>
+    public static (int step, int alt, int oct)? MovableInterval(
+        int homeStep, int homeAlteration, int ambientStep, int ambientAlteration)
+    {
+        int dStep = Mod(ambientStep - homeStep, 7);
+        int dSemi = Mod(
+            (RelativeOctave.StepSemitoneOf(ambientStep) + ambientAlteration)
+            - (RelativeOctave.StepSemitoneOf(homeStep) + homeAlteration), 12);
+        if (dStep == 0 && dSemi == 0)
+            return null;
+
+        int toOctave = dSemi <= 6 ? 0 : -1;                      // nearest octave
+        int toAlteration = dSemi - RelativeOctave.StepSemitoneOf(dStep);
+        return (dStep, toAlteration, toOctave);
+    }
+
+    /// <summary>
+    /// Composes two c→target transpose intervals: apply <paramref name="outer"/>
+    /// after <paramref name="inner"/> (the written pitch moves by inner first,
+    /// then outer). Null on either side is the identity.
+    /// </summary>
+    public static (int step, int alt, int oct)? Compose(
+        (int step, int alt, int oct)? inner, (int step, int alt, int oct)? outer)
+    {
+        if (inner is not { } i) return outer;
+        if (outer is not { } o) return inner;
+        return Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
+    }
 }
