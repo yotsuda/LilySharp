@@ -157,6 +157,10 @@ public class SvgSnapshotTests
         // Articulations above a tab staff clear the fret digits (which protrude
         // past the outer line), not land on the numbers.
         yield return new object[] { "test/tab-articulations" };
+        // A tab staff BELOW a notation staff of the same music: the tab's
+        // forced-above fermata/flageolet drop into the inter-staff gap and must
+        // clear the notation staff's low noteheads (the gap reserves for them).
+        yield return new object[] { "test/tab-articulations-multistaff" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

@@ -188,7 +188,8 @@ internal sealed class SkylineBuilder
     /// </remarks>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildStaffSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<DynamicItem> dynamics = default)
+        ImmutableArray<DynamicItem> dynamics = default,
+        ImmutableArray<ArticulationLayout> articulationLayouts = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -216,7 +217,38 @@ internal sealed class SkylineBuilder
         // the staff's skyline used for spacing.
         AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleY, upSkyline, downSkyline);
 
+        // A tab staff's above/below Scripts (fermata, flageolet, accent, …) are
+        // engraved only after spacing, so they were absent from this skyline and a
+        // forced-above fermata dropped into the gap onto the staff above's low
+        // noteheads. Their staff-local extent is spacing-independent, so seed it now.
+        AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleY, upSkyline, downSkyline);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds staff-local Script articulation ink into the per-staff skylines so the
+    /// inter-staff gap reserves room for them. The layouts carry Y relative to the
+    /// staff top line (= this skyline's Y origin); the ink transform matches
+    /// LayoutEngine.AugmentSkylinesWithScripts (BBox Top is up-positive).
+    /// </summary>
+    private void AddArticulationLayoutsToSkyline(
+        ImmutableArray<ArticulationLayout> articulationLayouts,
+        double staffMiddleY, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (articulationLayouts.IsDefaultOrEmpty)
+            return;
+        double staffTopDevice = staffMiddleY - _staffHeight / 2;
+        foreach (var a in articulationLayouts)
+        {
+            double y = staffTopDevice + a.Y;
+            double inkTop = y - a.Ink.Top;
+            double inkBottom = y - a.Ink.Bottom;
+            var box = VerticalSkyline.FromBox(
+                a.X + a.Ink.Left, a.X + a.Ink.Right, inkBottom, inkTop,
+                a.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
+            (a.IsAbove ? upSkyline : downSkyline).Merge(box);
+        }
     }
 
     /// <summary>

@@ -413,6 +413,76 @@ internal static class ArticulationEngraver
         return layouts.ToImmutable();
     }
 
+    /// <summary>
+    /// Staff-LOCAL layouts (staff-top line at Y=0, no inter-staff offset) for a
+    /// tab staff's above/below Script articulations, so the per-staff skyline that
+    /// drives inter-staff spacing can reserve room for them. Without this, a tab's
+    /// forced-above fermata/flageolet sits in the gap and collides with the low
+    /// noteheads of the notation staff ABOVE it: the real (offset) layout is built
+    /// only AFTER spacing, but the staff-local extent doesn't depend on spacing, so
+    /// it can be computed here first. Mirrors the tab branch of <see cref="Calculate"/>
+    /// (single source of truth for the placement geometry); only Ink and side matter
+    /// for the skyline, so the glyph string is left empty and beam/multi-voice stem
+    /// refinements (which don't occur in tab+articulation fixtures) are skipped.
+    /// </summary>
+    internal static ImmutableArray<ArticulationLayout> CalculateTabStaffLocal(
+        Staff staff, int staffIndex,
+        ImmutableArray<ArticulationItem> articulations,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (!staff.IsTab || !staff.Tuning.HasValue || articulations.IsDefaultOrEmpty)
+            return ImmutableArray<ArticulationLayout>.Empty;
+
+        var measures = staff.PrimaryVoice.Measures;
+        int strings = Tunings.GetStringCount(staff.Tuning.Value);
+        double space = EngravingDefaults.TabStringSpace(strings);
+        double fretHalf = TabConstants.FretDigitHeight / 2.0;
+        const double tabGap = 1.0;
+
+        var result = ImmutableArray.CreateBuilder<ArticulationLayout>();
+        foreach (var art in articulations)
+        {
+            if (art.StaffIndex != staffIndex)
+                continue;
+            // The bend family and breathing signs are placed by the early branches
+            // in Calculate (at the note's own height / staff top), not as above/below
+            // Scripts — so they don't reserve an inter-staff band.
+            if (art.Type is ArticulationType.Fall or ArticulationType.Doit
+                or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop
+                or ArticulationType.Breath or ArticulationType.Caesura)
+                continue;
+
+            int layoutIdx = -1;
+            for (int i = 0; i < measureLayouts.Length; i++)
+                if (measureLayouts[i].MeasureIndex == art.MeasureIndex) { layoutIdx = i; break; }
+            if (layoutIdx < 0 || art.MeasureIndex >= measures.Length)
+                continue;
+            var measure = measures[art.MeasureIndex];
+            if (art.ItemIndex >= measure.Items.Length)
+                continue;
+            var item = measure.Items[art.ItemIndex];
+
+            int staffPosition = GetStaffPosition(item);
+            bool stemUp = GetStemUp(item, staffPosition);
+            bool tabForceAbove = IsFermata(art.Type)
+                || art.IsOrnament || art.IsEditorialAccidental
+                || art.Type is ArticulationType.UpBow or ArticulationType.DownBow
+                    or ArticulationType.Flageolet;
+            bool above = tabForceAbove || !stemUp;
+
+            double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
+                measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx]);
+            double y = above
+                ? -fretHalf - tabGap
+                : (strings - 1) * space + fretHalf + tabGap;
+
+            result.Add(new ArticulationLayout(
+                art.MeasureIndex, art.ItemIndex, colX, y, string.Empty, above,
+                art.SourcePosition, 1.0, GetSeedBBoxFor(art), StaffIndex: staffIndex));
+        }
+        return result.ToImmutable();
+    }
+
     // Padding between two stacked scripts (staff-spaces).
     // LILYPOND-REF: scm/script.scm padding ~0.2.
     private const double ScriptStackPadding = 0.2;

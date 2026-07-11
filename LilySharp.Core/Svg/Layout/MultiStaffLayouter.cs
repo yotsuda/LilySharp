@@ -1349,7 +1349,12 @@ internal sealed class MultiStaffLayouter
                 var dynamics = score.Dynamics.IsDefaultOrEmpty
                     ? ImmutableArray<DynamicItem>.Empty
                     : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
-                var sky = skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics);
+                // A tab staff's forced-above Scripts (fermata/flageolet) drop into
+                // the gap and hit the low noteheads of the staff above; reserve their
+                // staff-local extent so the inter-staff gap widens to clear them.
+                var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
+                    staff, thisStaff, score.Articulations, measureLayouts);
+                var sky = skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics, tabArticulations);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline

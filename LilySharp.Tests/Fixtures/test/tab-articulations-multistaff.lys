@@ -1,0 +1,18 @@
+// A notation staff ABOVE a tab staff of the same music: the tab's forced-above
+// Scripts (fermata, flageolet) sit in the inter-staff gap and must NOT collide
+// with the notation staff's low noteheads. The gap widens to reserve them.
+title "Tab articulations (multi-staff)"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { a'4@accent a@flageolet a@fermata a@portato | }
+}
+
+form main { A }
+
+score main {
+  staff m
+  tab m
+}
