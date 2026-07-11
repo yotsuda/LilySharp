@@ -151,6 +151,9 @@ public class SvgSnapshotTests
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };
+        // A tab staff on the indented first system: its lines start at the indent
+        // (aligned with the notation staff), not the page margin.
+        yield return new object[] { "test/tab-indent" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

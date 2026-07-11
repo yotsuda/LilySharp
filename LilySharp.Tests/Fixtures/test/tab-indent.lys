@@ -1,0 +1,18 @@
+// A tab staff on the FIRST (indented) system: an instrument name pushes the
+// system-start indent, and the tab staff lines must start at that indent —
+// aligned with the notation staff — not run left to the page margin.
+title "Tab indent"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { c d e f | g a g2 | }
+}
+
+form main { A }
+
+score main {
+  staff m
+  tab m
+}

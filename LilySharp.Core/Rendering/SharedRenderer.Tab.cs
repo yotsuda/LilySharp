@@ -54,9 +54,11 @@ internal static partial class SharedRenderer
         // notated an octave above where they sound.
         int octaveShift = Tunings.OctaveShift(tuningType, staff.TabSourceClef);
 
-        // One staff line per string, spaced stringSpace apart.
+        // One staff line per string, spaced stringSpace apart. Lines start at the
+        // system indent (systemStartX), like the notation staff — not the page
+        // margin, or on the first (indented) system they overrun to the left.
         for (int i = 0; i < stringCount; i++)
-            gc.DrawLine(0, staffY + i * stringSpace, staffRight, staffY + i * stringSpace,
+            gc.DrawLine(systemStartX, staffY + i * stringSpace, staffRight, staffY + i * stringSpace,
                 Color.Black, EngravingDefaults.StaffLineThickness);
 
         // Per-measure barlines at the tab staff height.
