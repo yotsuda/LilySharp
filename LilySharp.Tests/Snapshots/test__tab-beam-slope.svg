@@ -75,7 +75,7 @@
   <line x1="29.81" y1="23.57" x2="29.81" y2="20.27" stroke="#000000" stroke-width="0.130"/>
   <line x1="32.31" y1="23.57" x2="32.31" y2="20.27" stroke="#000000" stroke-width="0.130"/>
   <line x1="34.82" y1="23.57" x2="34.82" y2="20.27" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.96" y="8.98" font-size="4.00" data-pos="512"></text>
+  <text class="music" x="21.96" y="8.78" font-size="4.00" data-pos="512"></text>
   <text class="music" x="21.96" y="16.65" font-size="4.00" data-pos="512"></text>
   </g>
 </svg>
