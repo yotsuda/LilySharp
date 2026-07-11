@@ -93,7 +93,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
-            CompletionContext.AfterAt => GetArticulationCompletions(),
+            CompletionContext.AfterAt => GetArticulationCompletions(AtFollowsChord(doc.Text, offset)),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
         };
@@ -1376,8 +1376,48 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    internal static CompletionList GetArticulationCompletions()
+    /// <summary>
+    /// True when the <c>@</c> being completed is attached to a chord (the nearest
+    /// non-space char before it is <c>&gt;</c>). A bare <c>@chord</c> on a chord
+    /// auto-derives the symbol, so it is offered WITHOUT the <c>(…)</c> the note
+    /// form needs.
+    /// </summary>
+    private static bool AtFollowsChord(string text, int offset)
     {
+        int i = offset - 1;
+        while (i >= 0 && char.IsWhiteSpace(text[i])) i--;
+        // Skip a partial annotation word already typed after '@' (e.g. '@cho').
+        if (i >= 0 && text[i] != '@')
+            while (i >= 0 && (char.IsLetterOrDigit(text[i]) || text[i] == '-')) i--;
+        if (i < 0 || text[i] != '@') return false;
+        int j = i - 1;
+        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        return j >= 0 && text[j] == '>';
+    }
+
+    internal static CompletionList GetArticulationCompletions(bool afterChord = false)
+    {
+        // Bare '@chord' on a chord auto-derives the symbol from its notes — no '(…)'.
+        var chordItem = afterChord
+            ? new CompletionItem
+            {
+                Label = "chord", Kind = CompletionItemKind.Value,
+                Detail = "Auto chord name — derived from the chord's notes",
+                InsertText = "chord", SortText = "8chord",
+            }
+            : new CompletionItem
+            {
+                Label = "chord", Kind = CompletionItemKind.Value,
+                Detail = "Chord name — offers the current key's diatonic chords",
+                InsertText = "chord($0)", InsertTextFormat = InsertTextFormat.Snippet,
+                SortText = "8chord",
+                Command = new Command
+                {
+                    Title = "Suggest chords",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            };
+
         return new CompletionList
         {
             Items =
@@ -1458,21 +1498,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "fig(6 4)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
                 new CompletionItem { Label = "fig(5 3)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
 
-                // Chord name. Inserts '@chord()' with the caret inside the parens and
-                // immediately re-triggers completion, which then offers the current
-                // key's diatonic chords (see GetDiatonicChordCompletions).
-                new CompletionItem
-                {
-                    Label = "chord", Kind = CompletionItemKind.Value,
-                    Detail = "Chord name — offers the current key's diatonic chords",
-                    InsertText = "chord($0)", InsertTextFormat = InsertTextFormat.Snippet,
-                    SortText = "8chord",
-                    Command = new Command
-                    {
-                        Title = "Suggest chords",
-                        CommandIdentifier = "editor.action.triggerSuggest",
-                    },
-                }
+                // Chord name — on a note the '(…)' form (offers the key's diatonic
+                // chords); on a chord the bare auto-derive form. Built above.
+                chordItem
             ]
         };
     }

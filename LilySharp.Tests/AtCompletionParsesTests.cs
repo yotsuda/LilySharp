@@ -65,4 +65,25 @@ public class AtCompletionParsesTests
             "'@' completion offers items that don't parse or aren't recognized:\n"
             + string.Join("\n", failures));
     }
+
+    [Fact]
+    public void ChordCompletion_OnNote_InsertsParensForExplicitEntry()
+    {
+        var chord = LilySharpLanguageServer.GetArticulationCompletions(afterChord: false)
+            .Items.Single(i => i.Label == "chord");
+        Assert.Equal("chord($0)", chord.InsertText);
+        Assert.NotNull(chord.Command); // re-triggers the diatonic-chord suggestions
+    }
+
+    [Fact]
+    public void ChordCompletion_OnChord_InsertsBareAutoForm()
+    {
+        var chord = LilySharpLanguageServer.GetArticulationCompletions(afterChord: true)
+            .Items.Single(i => i.Label == "chord");
+        Assert.Equal("chord", chord.InsertText); // no '(…)': auto-derive from the notes
+        Assert.Null(chord.Command);
+
+        var tree = SyntaxTree.Parse("{ <c e g>@chord }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+    }
 }
