@@ -166,6 +166,9 @@ public class SvgSnapshotTests
         // Articulations on notes INSIDE a tuplet body render (ProcessTuplet runs
         // the same post-event collectors as the top-level stream).
         yield return new object[] { "test/tuplet-articulations" };
+        // A grace before a chord clears the chord's staggered accidental stack
+        // (grace-to-main gap uses the chord's full left extent, not one accidental).
+        yield return new object[] { "test/grace-chord-accidental" };
         // A tab staff BELOW a notation staff of the same music: the tab's
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).

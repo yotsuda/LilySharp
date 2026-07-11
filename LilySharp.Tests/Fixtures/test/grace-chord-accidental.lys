@@ -1,0 +1,19 @@
+// A grace before a CHORD reserves the chord's staggered accidental stack, not
+// just a single accidental — the grace-to-main gap uses the chord's full left
+// extent, so the grace clears the chord's flats/sharps instead of colliding
+// with them. (A note before it keeps this off the line-start prefix, which is a
+// separate spacing path.)
+octave absolute
+key c major
+
+part m { clef treble }
+
+section A {
+  m { g'4 acciaccatura { cis'8 } <e' ges' bes'>4 r2 }
+}
+
+form main { A }
+
+score main "grace-chord-accidental" {
+  staff m
+}

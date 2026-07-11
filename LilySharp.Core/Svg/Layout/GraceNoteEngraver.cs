@@ -141,20 +141,25 @@ internal static class GraceNoteEngraver
             double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
                                    - SpacingRules.GraceToMainRod;  // Exclude junction rod (added separately below)
 
-            // Account for main note's accidental width
-            // The layout reference point is at the notehead CENTER, but accidentals are
-            // drawn from the notehead LEFT edge. We need: centerX + accWidth + gap.
-            // LILYPOND-REF: grace-spacing.cc:65-80 positioning before main note
+            // Account for the main item's leftward accidental reach so the grace
+            // clears it. For a CHORD this is the STAGGERED accidental stack's leftmost
+            // extent, not one accidental — a chord main note reserved nothing before,
+            // so a grace collided with the chord's flats/sharps.
+            // LILYPOND-REF: grace-spacing.cc:65-80 positioning before main note;
+            //   lily/accidental-placement.cc for the staggered stack.
             double accidentalExtent = 0;
             var measure = graceMeasures[grace.MeasureIndex];
-            if (grace.MainNoteItemIndex < measure.Items.Length
-                && measure.Items[grace.MainNoteItemIndex] is NoteItem mainNote
-                && mainNote.Accidental != null)
+            if (grace.MainNoteItemIndex < measure.Items.Length)
             {
-                var noteheadBBox = GlyphMetrics.GetNoteheadBBox(
-                    mainNote.BaseDuration.Denominator <= 1 ? 1 : mainNote.BaseDuration.Denominator <= 2 ? 2 : 4);
-                var accBBox = GlyphMetrics.GetAccidentalBBox(mainNote.Accidental);
-                accidentalExtent = noteheadBBox.CenterX + accBBox.Width + GlyphMetrics.AccidentalNoteGap;
+                var mainItem = measure.Items[grace.MainNoteItemIndex];
+                bool hasAccidental = mainItem switch
+                {
+                    NoteItem n => n.Accidental != null,
+                    ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
+                    _ => false
+                };
+                if (hasAccidental)
+                    accidentalExtent = SpacingRules.CalculateLeftExtent(mainItem);
             }
 
             // A wide above-script on the main note (fermata / ornament) overhangs
