@@ -349,14 +349,14 @@ internal static class ArticulationEngraver
                     && beamGroups.TryGetValue(
                         (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
                         out var tabBeam)
-                    && tabBeam.StemUp)
+                    && tabBeam.Group.StemUp)
                 {
-                    // Beamed, stem-up: the beam floats a fixed distance above the
-                    // digits, so an above-script must clear the BEAM's outer edge —
+                    // Beamed, stem-up: the beam floats above the digits, so an
+                    // above-script must clear the BEAM's outer edge at this note's x —
                     // not just the digit — exactly like the companion notation staff.
                     var geom = new TabStaffGeometry(
                         tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
-                    tabY = TabBeamOuterEdgeY(tabBeam, geom) - tabGap;
+                    tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
                 }
                 else
                 {
@@ -712,10 +712,10 @@ internal static class ArticulationEngraver
     /// find the group's outer beam edge (the tab beam Y lives only in the renderer's
     /// geometry, recomputed here from the group's members via TabStaffGeometry).
     /// </summary>
-    private static Dictionary<(int Staff, int Measure, int Item), BeamGroup>
+    private static Dictionary<(int Staff, int Measure, int Item), BeamLayout>
         BuildBeamGroupMap(ImmutableArray<BeamLayout> beamLayouts)
     {
-        var map = new Dictionary<(int, int, int), BeamGroup>();
+        var map = new Dictionary<(int, int, int), BeamLayout>();
         if (beamLayouts.IsDefaultOrEmpty)
             return map;
         foreach (var beam in beamLayouts)
@@ -729,31 +729,37 @@ internal static class ArticulationEngraver
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty && i < beam.MemberStaffIndices.Length
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
-                map[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = group;
+                map[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = beam;
             }
         }
         return map;
     }
 
-    // The shortest tab stem, on the outermost string — the tab beam sits this far
-    // past the group's extreme digit. Single source with SharedRenderer's beam pass.
+    // The shortest tab stem, on the outermost digit — the tab beam sits this far
+    // past the group's extreme stem-head. Single source with SharedRenderer's beam pass.
     private const double TabBeamStem = 3.0;
 
     /// <summary>
-    /// Device-Y of a stem-up tab beam's OUTER (top) edge for a whole group — the
-    /// value a forced-above script must clear. Mirrors SharedRenderer's tab beam
-    /// placement: <c>min(stem-head Y) - TabBeamStem</c>, then out by half the beam.
+    /// Device-Y of a stem-up tab beam's OUTER (top) edge at <paramref name="noteX"/> —
+    /// the value a forced-above script there must clear. Recomputes the same sloped
+    /// beam line the renderer draws (<see cref="TabBeamMath"/>), so the two agree.
     /// </summary>
-    private static double TabBeamOuterEdgeY(BeamGroup group, TabStaffGeometry geom)
+    private static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
         double clearance = TabConstants.FretDigitHeight / 2 + 0.3; // matches TabStemHeadY
-        double extreme = double.MaxValue;
-        foreach (var m in group.Members)
+        var members = beam.Group.Members;
+        int n = Math.Min(members.Length, beam.MemberXPositions.Length);
+        double attach = beam.Group.StemUp
+            ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX;
+        var xs = new double[n];
+        var heads = new double[n];
+        for (int i = 0; i < n; i++)
         {
-            double headY = geom.StringY(geom.StemHeadString(m.Item, stemUp: true)) - clearance;
-            extreme = Math.Min(extreme, headY);
+            xs[i] = beam.MemberXPositions[i] + attach;
+            heads[i] = geom.StringY(geom.StemHeadString(members[i].Item, beam.Group.StemUp)) - clearance;
         }
-        return extreme - TabBeamStem - EngravingDefaults.BeamThickness / 2;
+        var line = TabBeamMath.Line(xs, heads, beam.Group.StemUp, TabBeamStem);
+        return TabBeamMath.At(line, noteX) - EngravingDefaults.BeamThickness / 2;
     }
 
     private static Dictionary<(int Staff, int Measure, int Item), (double TipY, bool StemUp)>

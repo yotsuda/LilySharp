@@ -110,21 +110,27 @@ internal static partial class SharedRenderer
             // high (open) string a short one — but never a stub.
             bool allTab = grp.Members.Length > 0 && Enumerable.Range(0, grp.Members.Length)
                 .All(i => MemberStaffOf(i)?.IsTab == true);
-            if (allTab)
-            {
-                const double tabBeamStem = 3.0; // shortest stem, on the outermost string
-                double extreme = grp.StemUp ? double.MaxValue : double.MinValue;
-                for (int i = 0; i < grp.Members.Length; i++)
-                {
-                    double nearY = TabStemHeadY(grp.Members[i].Item, grp.StemUp,
-                        LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(i)), MemberStaffOf(i)!);
-                    extreme = grp.StemUp ? Math.Min(extreme, nearY) : Math.Max(extreme, nearY);
-                }
-                leftBeamY = rightBeamY = extreme + (grp.StemUp ? -tabBeamStem : tabBeamStem);
-            }
-
             double leftStemX = StemAttachX(0);
             double rightStemX = StemAttachX(grp.Members.Length - 1);
+
+            if (allTab)
+            {
+                // Slope the tab beam along the digit contour (LP-like) so a high
+                // chord string doesn't pin it up and stretch the melody stems.
+                const double tabBeamStem = 3.0; // shortest stem, on the outermost digit
+                int n = grp.Members.Length;
+                var xs = new double[n];
+                var heads = new double[n];
+                for (int i = 0; i < n; i++)
+                {
+                    xs[i] = StemAttachX(i);
+                    heads[i] = TabStemHeadY(grp.Members[i].Item, grp.StemUp,
+                        LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(i)), MemberStaffOf(i)!);
+                }
+                var line = TabBeamMath.Line(xs, heads, grp.StemUp, tabBeamStem);
+                leftBeamY = TabBeamMath.At(line, leftStemX);
+                rightBeamY = TabBeamMath.At(line, rightStemX);
+            }
 
             // Extend each beam END outward by half the stem thickness so the beam
             // covers the terminal stems flush; otherwise it stops at the stem

@@ -167,6 +167,9 @@ public class SvgSnapshotTests
         // A forced-above script on a BEAMED note clears the beam on both the
         // notation staff and the tab (whose beam floats above the fret digits).
         yield return new object[] { "test/tab-beam-script" };
+        // A cross-string beamed group slopes the tab beam along the digit contour
+        // (LP-like), keeping the lower digits' stems short and above-scripts clear.
+        yield return new object[] { "test/tab-beam-slope" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

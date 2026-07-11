@@ -43,6 +43,41 @@ internal static class TabConstants
 }
 
 /// <summary>
+/// A sloped tab beam that follows the fret-digit contour (LilyPond-like) instead of
+/// sitting horizontal above the highest digit — otherwise a chord's high string pins
+/// the beam up and the lower melody digits grow very long stems. The line is the
+/// first→last stem-head slope, shifted so the SHORTEST stem equals the target length
+/// and every stem clears it. Shared by the renderer's beam pass and the articulation
+/// engraver (a forced-above script must clear the same beam).
+/// </summary>
+internal static class TabBeamMath
+{
+    /// <param name="xs">Each member's stem x (must be ascending, physical device X).</param>
+    /// <param name="headYs">Each member's stem-head Y (digit string line minus the gap).</param>
+    /// <param name="stemUp">Beam above the digits (up-stems) vs below.</param>
+    /// <param name="tabBeamStem">The shortest stem length (on the outermost digit).</param>
+    public static (double Slope, double InterceptY, double FirstX) Line(
+        double[] xs, double[] headYs, bool stemUp, double tabBeamStem)
+    {
+        int n = xs.Length;
+        double slope = (n > 1 && xs[n - 1] > xs[0])
+            ? (headYs[n - 1] - headYs[0]) / (xs[n - 1] - xs[0])
+            : 0.0;
+        double b = stemUp ? double.PositiveInfinity : double.NegativeInfinity;
+        for (int i = 0; i < n; i++)
+        {
+            double proj = headYs[i] - slope * (xs[i] - xs[0]);
+            b = stemUp ? System.Math.Min(b, proj) : System.Math.Max(b, proj);
+        }
+        b += stemUp ? -tabBeamStem : tabBeamStem;
+        return (slope, b, xs[0]);
+    }
+
+    public static double At((double Slope, double InterceptY, double FirstX) line, double x)
+        => line.Slope * (x - line.FirstX) + line.InterceptY;
+}
+
+/// <summary>
 /// The geometry of one tab staff: its tuning-derived string spacing / octave shift,
 /// and the string→Y and midi→fret conversions used by the renderer, the tie/grace
 /// layout, and the articulation engraver. Consolidates the chain

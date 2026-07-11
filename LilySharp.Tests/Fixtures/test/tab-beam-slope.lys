@@ -1,0 +1,20 @@
+// A beamed group spanning several strings: the tab beam SLOPES to follow the fret
+// contour (like LilyPond) rather than sitting horizontal above the highest digit —
+// which would stretch the lower digits' stems and push an above-script into the
+// staff. A high chord beamed with lower melody notes: the beam descends from the
+// chord, so the melody stems stay short and the fermata drops clear of the notes.
+title "Tab beam slope"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { <a' c g>8 a a@fermata a e f g a | }
+}
+
+form main { A }
+
+score main {
+  staff m
+  tab m
+}
