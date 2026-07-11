@@ -246,6 +246,10 @@ public static class DiagnosticCodes
     /// clef/instrument/tuning value); symbols are case-sensitive.</summary>
     public const string UnknownSymbolCase = "LYS1014";
 
+    /// <summary>Syntax error: a chord mixes named pitches and scale degrees — write
+    /// either all pitches (<c>&lt;c e g&gt;</c>) or a root and degrees (<c>&lt;c 3 5&gt;</c>).</summary>
+    public const string ChordMixesPitchesAndDegrees = "LYS1019";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

@@ -302,12 +302,31 @@ internal sealed partial class Parser
         var openAngle = Expect(SyntaxKind.OpenAngle);
         var pitches = new List<GreenNode?>();
 
+        // A chord is EITHER all named pitches (<c e g>) or an optional root pitch
+        // followed by scale degrees (<c 3 5>). Mixing the two — a second named
+        // pitch alongside degrees, or a pitch after a degree — is ambiguous, so
+        // flag it once (best-effort parse continues).
+        int pitchCount = 0;
+        bool sawDegree = false;
+        bool reportedMix = false;
+        void ReportMixOnce()
+        {
+            if (reportedMix) return;
+            reportedMix = true;
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.ChordMixesPitchesAndDegrees,
+                "A chord can't mix named pitches and scale degrees — write all pitches "
+                + "(<c e g>) or a root and degrees (<c 3 5>).");
+        }
+
         while (true)
         {
             if (IsPitchStart())
             {
+                if (sawDegree) ReportMixOnce(); // a named pitch after a degree
                 // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
                 pitches.Add(ParsePitch(inChord: true));
+                pitchCount++;
                 continue;
             }
             // Degree-chord member: after the root pitch, a bare number (or a
@@ -315,6 +334,8 @@ internal sealed partial class Parser
             // root — <d 3 5 7,> = root d + the 3rd/5th/7th of the current key.
             if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
             {
+                if (pitchCount > 1) ReportMixOnce(); // degrees stack on ONE root
+                sawDegree = true;
                 pitches.Add(ParseScaleDegree());
                 continue;
             }

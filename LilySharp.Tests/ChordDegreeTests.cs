@@ -130,4 +130,26 @@ public sealed class ChordDegreeTests
         var src = $"{{ {chord} }}";
         Assert.Equal(src, SyntaxTree.Parse(src).Root.ToFullString());
     }
+
+    private static bool MixDiagnosed(string chord) =>
+        SyntaxTree.Parse($"{{ {chord} }}").Diagnostics
+            .Any(d => d.Code == DiagnosticCodes.ChordMixesPitchesAndDegrees);
+
+    [Theory]
+    [InlineData("<c e 5>")]   // a second named pitch alongside a degree
+    [InlineData("<c 3 e>")]   // a named pitch after a degree
+    [InlineData("<3 c>")]     // omitted root, then a stray pitch
+    [InlineData("<c e 3 5>")]
+    public void MixingPitchesAndDegrees_IsDiagnosed(string chord) =>
+        Assert.True(MixDiagnosed(chord));
+
+    [Theory]
+    [InlineData("<c e g>")]   // all pitches (classic chord)
+    [InlineData("<d 3 5>")]   // one root + degrees
+    [InlineData("<3 5>")]     // degrees only (omitted root)
+    [InlineData("<1 3 5>")]
+    [InlineData("<c>")]
+    [InlineData("<d 3>")]
+    public void ValidChords_AreNotDiagnosedAsMixed(string chord) =>
+        Assert.False(MixDiagnosed(chord));
 }
