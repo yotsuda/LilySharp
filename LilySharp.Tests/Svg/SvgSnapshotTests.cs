@@ -397,6 +397,10 @@ public class SvgSnapshotTests
         // dotted quarter (dot beside the head), eighth (flag) — with bare
         // unquoted markings and pair-vs-pair stacking of adjacent tempo+label.
         yield return new object[] { "test/tempo-beat-units" };
+        // Swing feel-equation drawn to the right of "= 120": its ink reaches over
+        // the first beamed group, so the stacker must lift the whole tempo mark
+        // clear of both the beam and the fermata rising under the swing symbol.
+        yield return new object[] { "test/tempo-swing" };
         yield return new object[] { "test/drum-groove" };
     }
 

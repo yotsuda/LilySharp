@@ -1,0 +1,21 @@
+// Swing feel-equation beside the metronome mark: "♩ = 120  ♫ = ♩. ♪" under a
+// triplet "3". The equation is drawn to the RIGHT of "= 120", so its ink reaches
+// far past a plain metronome mark and sits over the first beamed group. The
+// outside-staff stacker must see that full left-anchored width (swing included)
+// and lift the whole mark clear of the beam AND the fermata that rise under it —
+// otherwise the swing symbol prints straight on the beam/fermata.
+title "Tempo Swing"
+composer "Lily#"
+
+part m { clef treble }
+
+section A {
+  m { tempo 120 swing
+      g''8 a, a@fermata a d e f g | }
+}
+
+form main { A }
+
+score main "tempo-swing" {
+  staff m
+}

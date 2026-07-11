@@ -647,8 +647,8 @@ internal static class OutsideStaffStacker
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.Y > 0)
                 continue;
             double sy = systems[sysIdx].Y;
-            var (halfWidth, top, bottom) = MusicMarkExtents(m);
-            double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,
+            var (x0, x1, top, bottom) = MusicMarkExtents(m);
+            double newAbs = Place(trackers[sysIdx], m.X + x0, m.X + x1,
                 sy + m.Y, topOffset: top, bottomOffset: bottom);
             b[i] = m with { Y = newAbs - sy };
         }
@@ -656,11 +656,15 @@ internal static class OutsideStaffStacker
     }
 
     /// <summary>
-    /// Extents of a music mark around its anchor, mirroring the renderer's
-    /// DrawSingleMusicMark geometry (boxed labels are anchored at the box
-    /// CENTER; plain text marks at the baseline).
+    /// Ink extents of a music mark as X offsets from its anchor (X0..X1) plus
+    /// vertical Top/Bottom, mirroring the renderer's DrawSingleMusicMark
+    /// geometry. Boxed labels and glyph symbols are CENTERED (X0 = -X1); the
+    /// metronome/tempo mark is LEFT-anchored — it draws rightward from m.X, so
+    /// its extent is 0..fullWidth, and that full width must include the swing
+    /// feel-equation drawn to its right (otherwise a beam/fermata sitting under
+    /// the swing symbol is invisible to the stacker and the mark prints on it).
     /// </summary>
-    private static (double HalfWidth, double Top, double Bottom) MusicMarkExtents(MusicMarkLayout m)
+    private static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(MusicMarkLayout m)
     {
         const double fontSize = 4.0; // renderer FontSize
 
@@ -671,7 +675,8 @@ internal static class OutsideStaffStacker
             var box = m.MarkType == MusicMarkType.Segno
                 ? GlyphMetrics.MarkSegno
                 : GlyphMetrics.MarkCoda;
-            return (Math.Max(-box.Left, box.Right), -box.Top, -box.Bottom);
+            double h = Math.Max(-box.Left, box.Right);
+            return (-h, h, -box.Top, -box.Bottom);
         }
 
         switch (m.MarkType)
@@ -686,20 +691,38 @@ internal static class OutsideStaffStacker
                 const double pad = 0.2;
                 double halfW = (SerifTextMetrics.MeasureBold(m.Text, fs) + 2 * pad) / 2;
                 double halfH = (fs + 2 * pad) / 2;
-                return (halfW, -halfH, halfH);
+                return (-halfW, halfW, -halfH, halfH);
             }
             case MusicMarkType.Tempo:
             {
-                // Metronome: notehead + stem (reaching ~1.5sp up) + "= NNN".
                 double textW = SerifTextMetrics.MeasureBold("= " + m.Text, 1.8);
-                return ((1.1 + textW) / 2 + 0.6, -1.5, 0.5);
+                if (m.SwingSubdivision == 0)
+                {
+                    // Non-swing metronome: the historical CENTERED estimate.
+                    // Physically the mark is left-anchored, but this well-tuned
+                    // width clears the line-start clef and reproduces every
+                    // existing snapshot, so it is kept as-is.
+                    double halfW = (1.1 + textW) / 2 + 0.6;
+                    return (-halfW, halfW, -1.5, 0.5);
+                }
+                // Swing: the feel-equation ("♫ = ♩. ♪" under a triplet 3) is drawn
+                // to the RIGHT of "= NNN", so the real ink reaches far past the
+                // centered estimate and can sit over a beam or fermata. Use the
+                // true LEFT-anchored span (mirrors CoPlaceTempoWithLabels' tempoW)
+                // so the stacker lifts the whole mark clear of that content, and
+                // the triplet bracket reaches a touch higher (~2sp) than the stem.
+                double sw = 2.3 + textW;
+                if (m.TempoText != null)
+                    sw += SerifTextMetrics.MeasureBold(m.TempoText, 2.2) + 1.5;
+                sw += 5.0;
+                return (-0.2, sw, -2.0, 0.5);
             }
             default:
             {
                 // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
                 double fs = fontSize * 0.7;
                 double halfW = SerifTextMetrics.MeasureBold(m.Text, fs) / 2;
-                return (halfW, -TextAscentEm * fs, TextDescentEm * fs);
+                return (-halfW, halfW, -TextAscentEm * fs, TextDescentEm * fs);
             }
         }
     }
