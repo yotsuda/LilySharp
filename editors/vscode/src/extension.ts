@@ -39,7 +39,7 @@ function armPanelReady(uri: string) {
 
 // Content for the "Lily#: New Score" command — a complete, valid, recognizable
 // piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
-// and demonstrates relative octaves (' / ,), the |: :| repeat, and structure replay.
+// and demonstrates relative octaves (' / ,), the |: :| repeat, and form replay.
 // (The same content is offered as a `score` snippet for files that already exist.)
 const NEW_SCORE_TEMPLATE = `version 1  // the Lily# language version this file targets
 
@@ -63,9 +63,9 @@ part melody {
 }
 
 // |: B :| repeats B; the reprise of A is re-labelled "A2".
-structure { A |: B :| A "A2" }
+form main { A |: B :| A "A2" }
 
-score "score" {
+score main {
   staff melody
 }
 `;
