@@ -94,6 +94,24 @@ public class ValueContextCompletionTests
     }
 
     [Fact]
+    public void TimeKeyword_AutoTriggersTheSignatureList()
+    {
+        // Completing `time` re-opens the suggest popup so 4/4, 3/4, … appear
+        // immediately, without a second Ctrl+Space. Both the top-level directive
+        // list and the in-music list carry the retrigger command.
+        foreach (var list in new[]
+        {
+            LilySharpLanguageServer.GetTopLevelCompletions(),
+            LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0),
+        })
+        {
+            var time = list.Items.Single(i => i.Label == "time");
+            Assert.NotNull(time.Command);
+            Assert.Equal("editor.action.triggerSuggest", time.Command!.CommandIdentifier);
+        }
+    }
+
+    [Fact]
     public void TitleContext_OffersOnlyTheQuotePair()
     {
         // The text itself is typed; the single snippet just drops "" and
