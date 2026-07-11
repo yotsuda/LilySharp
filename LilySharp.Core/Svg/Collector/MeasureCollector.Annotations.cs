@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -70,14 +71,68 @@ public sealed partial class MeasureCollector
 
         foreach (var child in articulations)
         {
-            if (child is MusicMarkSyntax markSyntax)
+            if (child is not MusicMarkSyntax markSyntax)
+                continue;
+
+            // Bare '@chord' auto-derives the symbol from the notes it's on. On a
+            // chord we recognize it; on a single note there is nothing to derive
+            // (the @chord() completion state), so it shows nothing.
+            if (markSyntax.MarkName == "chord")
             {
-                var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName, out var structure);
-                if (chordText != null)
-                    _chordNameCollector.AddInline(
-                        chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);
+                if (node is ChordSyntax autoChord
+                    && TryNameChord(autoChord, out var derived) && derived != null)
+                    _chordNameCollector.AddInline(derived.DisplayName, measureIndex, itemIndex,
+                        markSyntax.Position, _currentStaffIndex, derived);
+                continue;
             }
+
+            var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName, out var structure);
+            if (chordText != null)
+                _chordNameCollector.AddInline(
+                    chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);
         }
+    }
+
+    /// <summary>
+    /// Derives a chord symbol from a chord's notes (root = first member; the
+    /// remaining members' pitch classes give the quality). Returns false when the
+    /// notes match no known quality. Named-pitch and scale-degree members are both
+    /// resolved to pitch classes (degrees against the written key).
+    /// </summary>
+    private bool TryNameChord(ChordSyntax chord, out ChordStructure? structure)
+    {
+        structure = null;
+        int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
+        var pcs = new List<int>();
+        int rootStep, rootAlter;
+
+        if (chord.Root is { } rootPitch)
+        {
+            rootStep = GetPitchIndex(rootPitch.PitchName.ToLowerInvariant()[0]);
+            rootAlter = rootPitch.AccidentalOffset;
+            foreach (var p in chord.Pitches)
+                pcs.Add(RelativeOctave.StepSemitoneOf(GetPitchIndex(p.PitchName.ToLowerInvariant()[0]))
+                        + p.AccidentalOffset);
+        }
+        else if (chord.Degrees.Any())
+        {
+            // Omitted root (<1 3 5>): the degrees stack on the key's tonic.
+            rootStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            rootAlter = LilySharp.Core.Music.KeySpelling.Alteration(rootStep, keySharps);
+        }
+        else
+        {
+            return false;
+        }
+
+        foreach (var d in chord.Degrees)
+        {
+            var (s, alter, _) = ChordDegrees.Resolve(
+                rootStep, 4, d.Number, d.Alteration, d.OctaveOffset, keySharps);
+            pcs.Add(RelativeOctave.StepSemitoneOf(s) + alter);
+        }
+
+        return ChordStructure.TryRecognize(rootStep, rootAlter, pcs, out structure);
     }
 
     /// <summary>

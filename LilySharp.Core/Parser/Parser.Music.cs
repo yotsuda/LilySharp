@@ -664,6 +664,16 @@ private GreenNode?[] ParseArticulations()
                         }
                         articulations.Add(new MusicMarkGreen([.. parts]));
                     }
+                    else if (Current.Kind == SyntaxKind.Identifier
+                             && Current.Text.Equals("chord", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Bare '@chord' (no argument): auto-derive the chord symbol
+                        // from the notes it is attached to. Kept as a MusicMark (like
+                        // @chord(…)) so the chord-name collector handles it; the
+                        // explicit form is still @chord(c:maj7).
+                        var name = Advance();
+                        articulations.Add(new MusicMarkGreen([at, name]));
+                    }
                     else
                     {
                         // @staccato, @accent, @trill, etc. (a bare name; an annotation

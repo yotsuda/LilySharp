@@ -187,6 +187,32 @@ public static class ChordQualityRegistry
 
     /// <summary>All recognized quality tokens (for tooling / completion).</summary>
     public static IReadOnlyCollection<string> Tokens => ByToken.Keys;
+
+    // Reverse of Tones: each quality's pitch-class set (semitones-above-root mod 12)
+    // -> the quality, for recognizing a chord's notes. Every registered quality has
+    // a distinct set, so a match is unambiguous once the root is fixed.
+    private static readonly Dictionary<string, ChordQuality> ByPitchClasses = BuildPitchClassIndex();
+
+    private static Dictionary<string, ChordQuality> BuildPitchClassIndex()
+    {
+        var map = new Dictionary<string, ChordQuality>();
+        foreach (var (quality, tones) in Tones)
+            map[PitchClassKey(tones.Select(t => t.Semitone))] = quality;
+        return map;
+    }
+
+    private static string PitchClassKey(IEnumerable<int> semitones) =>
+        string.Join(",", semitones.Select(s => ((s % 12) + 12) % 12).Distinct().OrderBy(x => x));
+
+    /// <summary>
+    /// Recognizes a chord QUALITY from the set of semitone intervals above its root
+    /// (each reduced to a pitch class; 0 = the root itself). Returns false when the
+    /// interval set matches no registered quality. The root is supplied separately
+    /// by the caller (the chord's first member), so C6 and Am7 — which share a
+    /// pitch-class set — are told apart by their root.
+    /// </summary>
+    public static bool TryRecognize(IEnumerable<int> intervalsFromRoot, out ChordQuality quality)
+        => ByPitchClasses.TryGetValue(PitchClassKey(intervalsFromRoot), out quality);
 }
 
 /// <summary>
@@ -263,6 +289,26 @@ public sealed record ChordStructure(
             return sb.ToString();
         }
     }
+
+    /// <summary>
+    /// Recognizes a chord from its ROOT (first member) and the pitch classes of all
+    /// its members. Returns false when the members match no registered quality. Used
+    /// by the auto <c>@chord</c> annotation — the root is the chord's first note, so
+    /// C6 and Am7 (same pitch-class set) are told apart by it.
+    /// </summary>
+    public static bool TryRecognize(int rootStep, int rootAlter,
+        IEnumerable<int> memberPitchClasses, out ChordStructure? structure)
+    {
+        structure = null;
+        int rootPc = Mod12(Semantics.RelativeOctave.StepSemitoneOf(rootStep) + rootAlter);
+        var intervals = memberPitchClasses.Select(pc => Mod12(pc - rootPc));
+        if (!ChordQualityRegistry.TryRecognize(intervals, out var quality))
+            return false;
+        structure = new ChordStructure(rootStep, rootAlter, quality);
+        return true;
+    }
+
+    private static int Mod12(int a) => ((a % 12) + 12) % 12;
 
     /// <summary>
     /// This chord as a Roman-numeral scale degree in the given key, jazz style: an
