@@ -96,19 +96,17 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 
 ```lilysharp
 title "Example"
-tempo 4 = 120
+tempo 120
 time 4/4
 key c major
 
-phrase theme {
-    c4 d e f | g2 g |
-}
+// A reusable phrase, referenced by its bare name.
+phrase theme { c4 d e f | g2 g | }
 
-score {
-    part Melody {
-        $theme
-    }
-}
+part melody { clef treble }
+section Main { melody { theme } }
+form main { Main }
+score main { staff melody }
 ```
 
 ## Troubleshooting

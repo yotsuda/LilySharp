@@ -145,13 +145,13 @@ voice { c'2 d } voice { e2 f }   // each voice { } is a simultaneous voice
 
 ### Named music (phrases)
 
-Named music is declared with `phrase` and referenced with `$name`:
+Named music is declared with `phrase` and referenced by its bare name:
 
 ```lilysharp
 phrase motif { c4 d e f }
 
 part melody { clef treble }
-section Main { melody { $motif g2 g | } }
+section Main { melody { motif g2 g | } }
 form main { Main }
 score main "out" { staff melody }
 ```
