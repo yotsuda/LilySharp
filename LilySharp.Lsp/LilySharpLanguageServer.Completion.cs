@@ -94,6 +94,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(AtFollowsChord(doc.Text, offset)),
+            CompletionContext.AfterArticulationPlacement => GetArticulationPlacementCompletions(doc.Text, offset),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
         };
@@ -397,7 +398,8 @@ public sealed partial class LilySharpLanguageServer
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
-        AfterBackslash
+        AfterBackslash,
+        AfterArticulationPlacement
     }
 
     /// <summary>
@@ -424,6 +426,13 @@ public sealed partial class LilySharpLanguageServer
     {
         if (offset == 0)
             return CompletionContext.TopLevel;
+
+        // Right after a complete articulation name or its '.', offer the .up/.down
+        // placement qualifier — '@fermata|', '@fermata.|', '@fermata.d|'. Checked
+        // against the char immediately before the cursor (no whitespace skip) so a
+        // trailing space means the user has moved on to the next note.
+        if (IsArticulationPlacementContext(text, offset))
+            return CompletionContext.AfterArticulationPlacement;
 
         // Look back for context clues
         int i = offset - 1;
@@ -1387,6 +1396,71 @@ public sealed partial class LilySharpLanguageServer
             });
         }
         return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits right after a complete articulation
+    /// name or its '.', so the '.up'/'.down' placement qualifier fits:
+    /// '@fermata|', '@fermata.|', '@fermata.d|'. Only the char immediately before
+    /// the cursor is inspected — a trailing space means the user moved on.
+    /// </summary>
+    private static bool IsArticulationPlacementContext(string text, int offset)
+    {
+        int i = offset - 1;
+        if (i < 0) return false;
+
+        // '@name.<partial>' — skip a partial placement word ('u', 'do', …) to the dot.
+        int j = i;
+        while (j >= 0 && char.IsLetter(text[j])) j--;
+        if (j >= 0 && text[j] == '.')
+        {
+            int nameEnd = j - 1;
+            int k = nameEnd;
+            while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '-')) k--;
+            return k >= 0 && text[k] == '@' && nameEnd > k
+                && ArticulationRegistry.IsKnown(text.Substring(k + 1, nameEnd - k));
+        }
+
+        // '@name|' — cursor right after a COMPLETE articulation name (no dot, no
+        // space). A partial name ('@ferm') is not IsKnown, so the '@' list keeps
+        // showing until the name completes.
+        if (char.IsLetter(text[i]))
+        {
+            int k = i;
+            while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '-')) k--;
+            return k >= 0 && text[k] == '@'
+                && ArticulationRegistry.IsKnown(text.Substring(k + 1, i - k));
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The '.up' / '.down' placement qualifier for an articulation. When the '.' is
+    /// already typed ('@fermata.'), the bare words are offered; otherwise they carry
+    /// the leading dot so '@fermata' → '@fermata.up'.
+    /// </summary>
+    internal static CompletionList GetArticulationPlacementCompletions(string text, int offset)
+    {
+        int j = offset - 1;
+        while (j >= 0 && char.IsLetter(text[j])) j--;
+        string p = (j >= 0 && text[j] == '.') ? "" : ".";
+        return new CompletionList
+        {
+            IsIncomplete = false,
+            Items = new[]
+            {
+                new CompletionItem
+                {
+                    Label = p + "up", Kind = CompletionItemKind.EnumMember,
+                    Detail = "Force this articulation ABOVE the note", SortText = "0up",
+                },
+                new CompletionItem
+                {
+                    Label = p + "down", Kind = CompletionItemKind.EnumMember,
+                    Detail = "Force this articulation BELOW the note", SortText = "1down",
+                },
+            },
+        };
     }
 
     /// <summary>
