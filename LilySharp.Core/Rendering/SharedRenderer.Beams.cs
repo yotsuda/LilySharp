@@ -117,7 +117,9 @@ internal static partial class SharedRenderer
             {
                 // Slope the tab beam along the digit contour (LP-like) so a high
                 // chord string doesn't pin it up and stretch the melody stems.
-                const double tabBeamStem = 3.0; // shortest stem, on the outermost digit
+                // Shortest stem = the notation staff's beamed minimum, so a top
+                // digit's stem is as short as its companion notehead's, not longer.
+                const double tabBeamStem = EngravingDefaults.MinStemLength;
                 int n = grp.Members.Length;
                 var xs = new double[n];
                 var heads = new double[n];

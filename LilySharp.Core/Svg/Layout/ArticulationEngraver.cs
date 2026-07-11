@@ -749,8 +749,9 @@ internal static class ArticulationEngraver
     }
 
     // The shortest tab stem, on the outermost digit — the tab beam sits this far
-    // past the group's extreme stem-head. Single source with SharedRenderer's beam pass.
-    private const double TabBeamStem = 3.0;
+    // past the group's extreme stem-head. Matches the notation staff's beamed
+    // minimum. Single source with SharedRenderer's beam pass.
+    private const double TabBeamStem = EngravingDefaults.MinStemLength;
 
     /// <summary>
     /// Device-Y of a stem-up tab beam's OUTER (top) edge at <paramref name="noteX"/> —
