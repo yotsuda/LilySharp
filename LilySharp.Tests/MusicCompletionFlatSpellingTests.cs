@@ -77,4 +77,28 @@ public class MusicCompletionFlatSpellingTests
         // Only E-flat and A-flat have a Dutch contraction; B-flat stays "bes".
         Assert.Contains("bes", Labels(contracted: true));
     }
+
+    [Fact]
+    public void MusicCompletion_OffersEveryValidMusicKeyword()
+    {
+        // Everything the music-item parser accepts (Parser.Music.cs) should be
+        // offered — break/octave/tempo/partial/voice were previously missing.
+        var labels = LilySharpLanguageServer.GetMusicCompletions("", 0, false)
+            .Items.Select(i => i.Label).ToList();
+        foreach (var kw in new[] { "break", "octave", "tempo", "partial", "voice",
+                                   "repeat", "tuplet", "grace", "acciaccatura", "appoggiatura",
+                                   "clef", "key", "time", "override", "revert", "once" })
+            Assert.Contains(kw, labels);
+    }
+
+    [Fact]
+    public void MusicCompletion_InsideVoice_WithholdsNestedVoice()
+    {
+        // Nested voice blocks silently become siblings, so `voice` is withheld
+        // once the cursor is already inside a voice; other keywords stay.
+        var labels = LilySharpLanguageServer.GetMusicCompletions("", 0, false, insideVoice: true)
+            .Items.Select(i => i.Label).ToList();
+        Assert.DoesNotContain("voice", labels);
+        Assert.Contains("break", labels);
+    }
 }
