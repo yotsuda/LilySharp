@@ -927,7 +927,7 @@ internal sealed class ElementCoordinator
         return obstacles;
     }
 
-    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
+    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         var slurs = _slurDetector.DetectSlurs(score);
 
@@ -989,6 +989,21 @@ internal sealed class ElementCoordinator
                     segEndX = lastMeasure.X + lastMeasure.Width;
                 }
 
+                // On a TAB staff a slur connects fret DIGITS on their string
+                // lines, not notation pitch heights. The notation SlurScoringProblem
+                // (5 staff lines, pitch dy) is meaningless here and ran the arc
+                // through the digits — including a grace note's digit. Lay the tab
+                // slur out directly instead, hugging above the numbers it spans.
+                if (staff is { IsTab: true })
+                {
+                    var tabLayout = BuildTabSlurLayout(
+                        score, slur, segment.IsFirst, segment.IsLast, segSystem,
+                        staffIndex, staff, segStartX, segEndX, graceNotes);
+                    if (tabLayout != null)
+                        slurLayouts.Add(tabLayout);
+                    continue;
+                }
+
                 // Y at a broken edge anchors at the NEAREST covered note in
                 // this system, not at the slur's far endpoint — anchoring the
                 // continuation at the global end note's pitch ran the curve
@@ -1035,6 +1050,108 @@ internal sealed class ElementCoordinator
         }
 
         return slurLayouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Device-Y of an item's TOP fret-digit row (smallest string number = highest
+    /// line). Used both to hang a tab slur's endpoints off the digits and to find
+    /// the topmost digit the arch must clear.
+    /// </summary>
+    private static double TabItemTopDigitY(MusicItem item, TabStaffGeometry geom)
+        => geom.StringY(geom.StemHeadString(item, stemUp: true));
+
+    /// <summary>
+    /// Lays out a slur on a TAB staff: a shallow arch ABOVE the fret numbers,
+    /// anchored on each edge's digit and lifted clear of the TOPMOST digit it
+    /// spans — the encompassed main notes AND the grace digits hanging off them,
+    /// which is exactly what a pitch-based arc used to run straight through.
+    /// Bypasses <see cref="SlurScoringProblem"/> (five staff lines, pitch dy),
+    /// which does not model a tab staff.
+    /// </summary>
+    private SlurLayout? BuildTabSlurLayout(
+        Score score, SlurItem slur, bool isFirst, bool isLast, SystemLayout segSystem,
+        int staffIndex, Model.Staff staff, double segStartX, double segEndX,
+        ImmutableArray<GraceNoteItem> graceNotes)
+    {
+        var voice = score.Voices[slur.VoiceIndex];
+        double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
+        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef);
+
+        // The fret digits sit a TabHeadCenterOffset right of their note columns
+        // (see EngravingDefaults); shift the real (unbroken) edges to hang the
+        // slur off the digit, not the bare column — same as the tab tie.
+        double startX = segStartX + (isFirst ? EngravingDefaults.TabHeadCenterOffset : 0);
+        double endX = segEndX + (isLast ? EngravingDefaults.TabHeadCenterOffset : 0);
+        if (endX - startX < 0.5)
+            return null;
+
+        // Digit row at each edge (the edge item's top string). A broken
+        // continuation has no edge note in this piece — anchor at the staff top.
+        MusicItem? startItem = isFirst ? EdgeItem(voice, slur.StartMeasureIndex, slur.StartItemIndex) : null;
+        MusicItem? endItem = isLast ? EdgeItem(voice, slur.EndMeasureIndex, slur.EndItemIndex) : null;
+        double startDigitY = startItem is { } si ? TabItemTopDigitY(si, geom) : geom.StaffY;
+        double endDigitY = endItem is { } ei ? TabItemTopDigitY(ei, geom) : geom.StaffY;
+
+        // Topmost digit the arch must clear: every encompassed main note plus the
+        // grace digits attached to them.
+        double topDigitY = Math.Min(startDigitY, endDigitY);
+        foreach (var ml in segSystem.Measures)
+        {
+            int mi = ml.MeasureIndex;
+            if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex || mi >= voice.Measures.Length)
+                continue;
+            var items = voice.Measures[mi].Items;
+            int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
+            hi = Math.Min(hi, items.Length - 1);
+            for (int i = lo; i <= hi; i++)
+                if (items[i] is NoteItem or ChordItem)
+                    topDigitY = Math.Min(topDigitY, TabItemTopDigitY(items[i], geom));
+        }
+        var graces = graceNotes.IsDefault ? ImmutableArray<GraceNoteItem>.Empty : graceNotes;
+        foreach (var gr in graces)
+        {
+            if (gr.StaffIndex != staffIndex
+                || gr.MeasureIndex < slur.StartMeasureIndex || gr.MeasureIndex > slur.EndMeasureIndex)
+                continue;
+            int lo = gr.MeasureIndex == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = gr.MeasureIndex == slur.EndMeasureIndex ? slur.EndItemIndex : int.MaxValue;
+            if (gr.MainNoteItemIndex < lo || gr.MainNoteItemIndex > hi)
+                continue;
+            foreach (var gn in gr.Notes)
+                topDigitY = Math.Min(topDigitY, geom.DigitY(gn.Midi));
+        }
+
+        // Hug just above the digit (the visible glyph half-height plus a hair,
+        // matching the tab tie's clearance), and let the arch peak clear the
+        // topmost digit by the same margin — and rise a touch above the endpoints
+        // so it reads as a curve even on one string.
+        double clearance = 0.36 * TabConstants.FretFontSize + 0.1;
+        double startY = startDigitY - clearance;
+        double endY = endDigitY - clearance;
+        double peakY = Math.Min(topDigitY - clearance, Math.Min(startY, endY) - 0.4);
+        // Symmetric cubic midpoint B(0.5).y = (startY + endY + 6*controlY)/8; solve
+        // controlY so the peak reaches peakY.
+        double controlY = (8 * peakY - startY - endY) / 6;
+        double dx = endX - startX;
+        var c1 = (X: startX + dx * 0.3, Y: controlY);
+        var c2 = (X: startX + dx * 0.7, Y: controlY);
+
+        // Tab slurs bow UP (above the numbers), independent of the notation slur's
+        // pitch-derived direction; DrawBow tapers by CurveUp, so record it here.
+        var tabSlur = new SlurItem(
+            slur.StartStaffPosition, slur.EndStaffPosition, curveUp: true,
+            slur.StartMeasureIndex, slur.EndMeasureIndex,
+            slur.StartItemIndex, slur.EndItemIndex, slur.VoiceIndex);
+        return new SlurLayout(tabSlur, startX, startY, endX, endY, c1, c2,
+            isBrokenLeft: !isFirst, isBrokenRight: !isLast) { StaffIndex = staffIndex };
+
+        static MusicItem? EdgeItem(Voice v, int mi, int ii)
+        {
+            if (mi < 0 || mi >= v.Measures.Length) return null;
+            var items = v.Measures[mi].Items;
+            return ii >= 0 && ii < items.Length ? items[ii] : null;
+        }
     }
 
     /// <summary>

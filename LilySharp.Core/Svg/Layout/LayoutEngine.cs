@@ -442,7 +442,7 @@ internal sealed class LayoutEngine
                     : staffScore;
                 prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex));
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
-                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex));
+                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes));
             }
             var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
             {
@@ -616,7 +616,7 @@ internal sealed class LayoutEngine
                 : staffScore;
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex));
+            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
         return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts);

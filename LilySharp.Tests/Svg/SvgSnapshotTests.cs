@@ -401,6 +401,10 @@ public class SvgSnapshotTests
         // the first beamed group, so the stacker must lift the whole tempo mark
         // clear of both the beam and the fermata rising under the swing symbol.
         yield return new object[] { "test/tempo-swing" };
+        // A slur spanning a grace note on a tab staff must arch above the fret
+        // digits — clearing the encompassed main-note digits AND the grace digit —
+        // instead of running a pitch-based curve straight through them.
+        yield return new object[] { "test/tab-grace-slur" };
         yield return new object[] { "test/drum-groove" };
     }
 
