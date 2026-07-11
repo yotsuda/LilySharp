@@ -1538,11 +1538,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const entry of positions) {
                 const pos = typeof entry === 'object' ? entry.pos : entry;
                 const occ = typeof entry === 'object' ? entry.occ : -1;
-                // Skip the transparent notehead hit rects (interactive click
-                // targets): they share the head's data-pos but must never be
-                // recolored — a filled 'nh-hit' rect would show as a box.
+                // Skip two kinds of rect that share a note's data-pos but must
+                // never be recolored:
+                //  - the transparent 'nh-hit' notehead click target (a filled
+                //    box would show), and
+                //  - the white OCCLUDER behind a tab fret digit (it hides the
+                //    string line). A genuine boxed label (section/rehearsal) is
+                //    STROKED; the occluder is fill-only, so a strokeless rect is
+                //    the occluder. Leaving it in made hasBox true, which coloured
+                //    the box and suppressed the notehead's own highlight — so a
+                //    clicked note lit its tab digit's box but not the note itself.
                 let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'))
-                    .filter(el => !el.classList.contains('nh-hit'));
+                    .filter(el => !el.classList.contains('nh-hit'))
+                    .filter(el => !(el.tagName.toLowerCase() === 'rect' && !el.getAttribute('stroke')));
                 if (occ >= 0 && matches.length > 1) {
                     // Pick the occ-th printed INSTANCE — a chord's every head
                     // (plus dots/accidentals) shares one data-pos, so slicing
