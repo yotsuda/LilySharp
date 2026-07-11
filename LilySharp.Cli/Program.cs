@@ -319,6 +319,7 @@ static int RunPng(string[] args)
         .Value("output", "-o requires a file path", "-o", "--output")
         .Value("score", "--score requires a score name", "--score")
         .Value("scale", "--scale requires a number", "--scale")
+        .Flag("crop", "--crop")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "png");
 
@@ -329,7 +330,7 @@ static int RunPng(string[] args)
     var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".png");
     if (ioError != null) return OptionError(ioError, "png");
 
-    return ExecutePng(inputPath!, outputPath!, scale, r.Get("score"));
+    return ExecutePng(inputPath!, outputPath!, scale, r.Get("score"), r.Has("crop"));
 }
 
 static void ShowPngHelp()
@@ -346,6 +347,7 @@ static void ShowPngHelp()
         Options:
           -o, --output <file>    Output file path
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
+          --crop                 Trim whitespace to the content bounding box
           --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
@@ -357,7 +359,7 @@ static void ShowPngHelp()
         """);
 }
 
-static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null) =>
+static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null, bool crop = false) =>
     RunOutputCommand(inputPath, scoreName, tree =>
     {
         var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
@@ -366,7 +368,10 @@ static int ExecutePng(string inputPath, string outputPath, float scale, string? 
         // One file per page, following LilyPond's PNG naming: a single page
         // keeps the requested name, multiple pages become BASE-page1.png,
         // BASE-page2.png, … (scm/ps-to-png.scm).
-        var pages = PngGenerator.GeneratePages(tree, pngOptions, scoreName);
+        var rendered = PngGenerator.GeneratePages(tree, pngOptions, scoreName);
+        var pages = crop
+            ? rendered.Select(CropToContent).ToList()
+            : rendered.ToList();
         if (pages.Count == 1)
         {
             File.WriteAllBytes(outputPath, pages[0]);
@@ -389,6 +394,51 @@ static int ExecutePng(string inputPath, string outputPath, float scale, string? 
         Console.WriteLine($"  Scale: {scale:F1}x");
         return 0;
     });
+
+// Trims a PNG to the bounding box of its non-background (non-near-white) pixels,
+// plus a small margin, so a tiny snippet fills the frame instead of floating in a
+// page-sized sea of white. Returns the original bytes if nothing (or everything)
+// is background.
+static byte[] CropToContent(byte[] png, int marginPx = 8)
+{
+    using var bitmap = SkiaSharp.SKBitmap.Decode(png);
+    if (bitmap == null) return png;
+    int w = bitmap.Width, h = bitmap.Height;
+    int minX = w, minY = h, maxX = -1, maxY = -1;
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            var c = bitmap.GetPixel(x, y);
+            // "Ink" = any pixel darker than near-white on any channel (ignores the
+            // white/near-white page background and anti-aliasing fringe).
+            if (c.Alpha > 16 && (c.Red < 240 || c.Green < 240 || c.Blue < 240))
+            {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    if (maxX < minX || maxY < minY) return png; // blank image
+
+    minX = Math.Max(0, minX - marginPx);
+    minY = Math.Max(0, minY - marginPx);
+    maxX = Math.Min(w - 1, maxX + marginPx);
+    maxY = Math.Min(h - 1, maxY + marginPx);
+    int cw = maxX - minX + 1, ch = maxY - minY + 1;
+    if (cw >= w && ch >= h) return png; // already tight
+
+    using var cropped = new SkiaSharp.SKBitmap(cw, ch);
+    using (var canvas = new SkiaSharp.SKCanvas(cropped))
+    {
+        canvas.Clear(SkiaSharp.SKColors.White);
+        canvas.DrawBitmap(bitmap, new SkiaSharp.SKRect(minX, minY, maxX + 1, maxY + 1),
+            new SkiaSharp.SKRect(0, 0, cw, ch));
+    }
+    using var img = SkiaSharp.SKImage.FromBitmap(cropped);
+    using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+    return data.ToArray();
+}
 
 // ============ MIDI Command ============
 
