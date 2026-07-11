@@ -748,31 +748,20 @@ internal static class ArticulationEngraver
         return map;
     }
 
-    // The shortest tab stem, on the outermost digit — the tab beam sits this far
-    // past the group's extreme stem-head. Matches the notation staff's beamed
-    // minimum. Single source with SharedRenderer's beam pass.
-    private const double TabBeamStem = EngravingDefaults.MinStemLength;
-
     /// <summary>
     /// Device-Y of a stem-up tab beam's OUTER (top) edge at <paramref name="noteX"/> —
-    /// the value a forced-above script there must clear. Recomputes the same sloped
-    /// beam line the renderer draws (<see cref="TabBeamMath"/>), so the two agree.
+    /// the value a forced-above script there must clear. Recomputes the SAME quanted
+    /// beam line the renderer draws (<see cref="TabBeamQuant"/>), so the two agree.
     /// </summary>
     private static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
-        double clearance = TabConstants.FretDigitHeight / 2 + 0.3; // matches TabStemHeadY
-        var members = beam.Group.Members;
-        int n = Math.Min(members.Length, beam.MemberXPositions.Length);
+        int n = beam.Group.Members.Length;
         double attach = beam.Group.StemUp
             ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX;
         var xs = new double[n];
-        var heads = new double[n];
         for (int i = 0; i < n; i++)
-        {
-            xs[i] = beam.MemberXPositions[i] + attach;
-            heads[i] = geom.StringY(geom.StemHeadString(members[i].Item, beam.Group.StemUp)) - clearance;
-        }
-        var line = TabBeamMath.Line(xs, heads, beam.Group.StemUp, TabBeamStem);
+            xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0) + attach;
+        var line = TabBeamQuant.Compute(beam.Group, xs, geom);
         return TabBeamMath.At(line, noteX) - EngravingDefaults.BeamThickness / 2;
     }
 

@@ -43,60 +43,56 @@ internal static class TabConstants
 }
 
 /// <summary>
-/// A sloped tab beam that follows the fret-digit contour (LilyPond-like) instead of
-/// sitting horizontal above the highest digit — otherwise a chord's high string pins
-/// the beam up and the lower melody digits grow very long stems. The line is the
-/// first→last stem-head slope, shifted so the SHORTEST stem equals the target length
-/// and every stem clears it. Shared by the renderer's beam pass and the articulation
-/// engraver (a forced-above script must clear the same beam).
+/// A straight tab beam line in device Y, produced by <see cref="TabBeamQuant"/>.
+/// <see cref="At"/> evaluates it at any x. Shared by the renderer's beam pass and
+/// the articulation engraver (a forced-above script must clear the same beam).
 /// </summary>
 internal static class TabBeamMath
 {
-    /// <param name="xs">Each member's stem x (must be ascending, physical device X).</param>
-    /// <param name="headYs">Each member's stem-head Y (digit string line minus the gap).</param>
-    /// <param name="stemUp">Beam above the digits (up-stems) vs below.</param>
-    /// <param name="tabBeamStem">The shortest stem length (on the outermost digit).</param>
-    public static (double Slope, double InterceptY, double FirstX) Line(
-        double[] xs, double[] headYs, bool stemUp, double tabBeamStem)
-    {
-        int n = xs.Length;
-        // LilyPond's beam slope: a LEAST-SQUARES fit through the stem-heads (so one
-        // outlier digit — e.g. a chord's high string — doesn't pin the slope), then
-        // damped by 0.6*tanh(slope)/damping so it stays gentle. damping = 1 (the
-        // Beam grob default); concaveness is 0 for the ordinary contours here.
-        // LILYPOND-REF: lily/beam-quanting.cc least_squares_positions + slope_damping;
-        // scm/define-grobs.scm Beam.damping = 1, details.round-to-zero-slope = 0.02.
-        double slope = 0.0;
-        if (n > 1)
-        {
-            double mx = 0, my = 0;
-            for (int i = 0; i < n; i++) { mx += xs[i]; my += headYs[i]; }
-            mx /= n; my /= n;
-            double num = 0, den = 0;
-            for (int i = 0; i < n; i++)
-            {
-                double dx = xs[i] - mx;
-                num += dx * (headYs[i] - my);
-                den += dx * dx;
-            }
-            double ls = den != 0.0 ? num / den : 0.0;
-            const double damping = 1.0;
-            slope = 0.6 * System.Math.Tanh(ls) / damping;
-            if (System.Math.Abs(slope) < 0.02) slope = 0.0; // round-to-zero-slope
-        }
-        // Shift the line out so the SHORTEST stem is tabBeamStem and every stem clears.
-        double b = stemUp ? double.PositiveInfinity : double.NegativeInfinity;
-        for (int i = 0; i < n; i++)
-        {
-            double proj = headYs[i] - slope * (xs[i] - xs[0]);
-            b = stemUp ? System.Math.Min(b, proj) : System.Math.Max(b, proj);
-        }
-        b += stemUp ? -tabBeamStem : tabBeamStem;
-        return (slope, b, xs[0]);
-    }
-
     public static double At((double Slope, double InterceptY, double FirstX) line, double x)
         => line.Slope * (x - line.FirstX) + line.InterceptY;
+}
+
+/// <summary>
+/// Quants a TAB beam through LilyPond's ported beam quanter
+/// (<see cref="BeamScoringProblem"/>) by feeding the notes' STRING lines as the
+/// stem positions — so tab beams get the same least-squares → damping →
+/// concaveness → quanting treatment as notation beams (a chord/outlier flattens,
+/// a monotonic run slopes), instead of an ad-hoc slope. Returns the beam line in
+/// DEVICE Y (evaluate with <see cref="TabBeamMath.At"/>).
+/// </summary>
+internal static class TabBeamQuant
+{
+    public static (double Slope, double InterceptY, double FirstX) Compute(
+        BeamGroup group, double[] memberStemXs, TabStaffGeometry geom)
+    {
+        int n = group.Members.Length;
+        // A string line is 1.5 staff-spaces = 3 half-space positions; string 1 (the
+        // top line) is position 0, lower strings negative. The quanter reads
+        // itemXPositions by ItemIndex, so build that sparse array from the stems.
+        var stemPos = new int[n];
+        int maxIdx = 0;
+        for (int i = 0; i < n; i++)
+        {
+            int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
+            stemPos[i] = -(str - 1) * 3;
+            if (group.Members[i].ItemIndex > maxIdx) maxIdx = group.Members[i].ItemIndex;
+        }
+        var xById = new double[maxIdx + 1];
+        for (int i = 0; i < n; i++)
+            xById[group.Members[i].ItemIndex] = memberStemXs[i];
+
+        var (leftPos, rightPos) =
+            new BeamScoringProblem(group, xById, stemPositions: stemPos).Solve();
+
+        // Quanter Y is in half-space positions (position 0 = the top string line);
+        // map back to device Y at the outer stems.
+        double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
+        double leftY = geom.StaffY - leftPos * 0.5;
+        double rightY = geom.StaffY - rightPos * 0.5;
+        double slope = rightX > leftX ? (rightY - leftY) / (rightX - leftX) : 0.0;
+        return (slope, leftY, leftX);
+    }
 }
 
 /// <summary>

@@ -115,21 +115,16 @@ internal static partial class SharedRenderer
 
             if (allTab)
             {
-                // Slope the tab beam along the digit contour (LP-like) so a high
-                // chord string doesn't pin it up and stretch the melody stems.
-                // Shortest stem = the notation staff's beamed minimum, so a top
-                // digit's stem is as short as its companion notehead's, not longer.
-                const double tabBeamStem = EngravingDefaults.MinStemLength;
+                // Quant the tab beam through LilyPond's ported beam quanter, fed the
+                // notes' STRING lines — same least-squares/damping/concaveness/quanting
+                // as notation, so a chord/outlier flattens and a run slopes.
                 int n = grp.Members.Length;
                 var xs = new double[n];
-                var heads = new double[n];
-                for (int i = 0; i < n; i++)
-                {
-                    xs[i] = StemAttachX(i);
-                    heads[i] = TabStemHeadY(grp.Members[i].Item, grp.StemUp,
-                        LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(i)), MemberStaffOf(i)!);
-                }
-                var line = TabBeamMath.Line(xs, heads, grp.StemUp, tabBeamStem);
+                for (int i = 0; i < n; i++) xs[i] = StemAttachX(i);
+                var tabStaff0 = MemberStaffOf(0)!;
+                var geom = new TabStaffGeometry(tabStaff0.Tuning ?? TuningType.Guitar,
+                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)), tabStaff0.TabSourceClef);
+                var line = TabBeamQuant.Compute(grp, xs, geom);
                 leftBeamY = TabBeamMath.At(line, leftStemX);
                 rightBeamY = TabBeamMath.At(line, rightStemX);
             }

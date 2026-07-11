@@ -47,6 +47,8 @@ internal sealed class BeamScoringProblem
     private readonly double _rightX;
     private readonly double[] _stemXPositions;
     private readonly int[] _staffPositions;
+    private readonly int[] _headMin;
+    private readonly int[] _headMax;
     private readonly int _maxBeamCount;
     private readonly IReadOnlyList<BeamCollision> _collisions;
 
@@ -95,11 +97,18 @@ internal sealed class BeamScoringProblem
     private double _unquantedLeftY;
     private double _unquantedRightY;
 
+    /// <param name="stemPositions">
+    /// When set, replaces each member's pitch-based staff position (and its
+    /// concaveness head positions) — used to quant a TAB beam from the notes'
+    /// STRING lines instead of their pitch. One value per member, in staff
+    /// positions (half-spaces). Null keeps the notation-staff behaviour.
+    /// </param>
     public BeamScoringProblem(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
         BeamQuantParameters? parameters = null,
-        IReadOnlyList<BeamCollision>? collisions = null)
+        IReadOnlyList<BeamCollision>? collisions = null,
+        IReadOnlyList<int>? stemPositions = null)
     {
         _group = group;
         _itemXPositions = itemXPositions;
@@ -116,6 +125,8 @@ internal sealed class BeamScoringProblem
         // Extract stem positions (in staff positions)
         _stemXPositions = new double[group.Members.Length];
         _staffPositions = new int[group.Members.Length];
+        _headMin = new int[group.Members.Length];
+        _headMax = new int[group.Members.Length];
         _memberBeamCounts = new int[group.Members.Length];
         _maxBeamCount = 0;
 
@@ -123,7 +134,18 @@ internal sealed class BeamScoringProblem
         {
             var member = group.Members[i];
             _stemXPositions[i] = itemXPositions[member.ItemIndex] - _leftX; // relative to left
-            _staffPositions[i] = member.StaffPosition;
+            if (stemPositions != null)
+            {
+                // Tab: the note's STRING line is its stem position; a single digit
+                // has close == far, so both concaveness heads use the same value.
+                _staffPositions[i] = _headMin[i] = _headMax[i] = stemPositions[i];
+            }
+            else
+            {
+                _staffPositions[i] = member.StaffPosition;
+                _headMin[i] = member.HeadPositionMin;
+                _headMax[i] = member.HeadPositionMax;
+            }
             _memberBeamCounts[i] = Math.Max(1, member.BeamCount);
             _maxBeamCount = Math.Max(_maxBeamCount, member.BeamCount);
         }
@@ -412,9 +434,8 @@ internal sealed class BeamScoringProblem
         var far = new int[_group.Members.Length];
         for (int i = 0; i < _group.Members.Length; i++)
         {
-            var m = _group.Members[i];
-            close[i] = _beamDir > 0 ? m.HeadPositionMax : m.HeadPositionMin;
-            far[i] = _beamDir > 0 ? m.HeadPositionMin : m.HeadPositionMax;
+            close[i] = _beamDir > 0 ? _headMax[i] : _headMin[i];
+            far[i] = _beamDir > 0 ? _headMin[i] : _headMax[i];
         }
 
         // LILYPOND-REF: lily/beam-quanting.cc:730-737 — the bowl check runs on
