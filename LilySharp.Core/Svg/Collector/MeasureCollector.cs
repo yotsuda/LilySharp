@@ -101,6 +101,7 @@ internal sealed class MeasureBuilder
     private BarlineType _pendingStartBarline = BarlineType.None;
     private BarlineType _pendingEndBarline = BarlineType.None;
     private bool _pendingBreak = false;
+    private bool _pendingNoBreak = false;
     private string? _sectionLabel;
     private int _sectionLabelPosition;
     private int _measureSourceStart;
@@ -288,7 +289,9 @@ internal sealed class MeasureBuilder
 
         bool isAligned = _currentDuration == _timeSignature;
         bool hasBreak = _pendingBreak;
+        bool noBreak = _pendingNoBreak;
         _pendingBreak = false;
+        _pendingNoBreak = false;
 
         _measures.Add(new Measure(
             _currentItems.ToImmutableArray(),
@@ -298,6 +301,8 @@ internal sealed class MeasureBuilder
             _measureSourceStart,
             sourceEnd,
             hasBreakAfter: hasBreak,
+            // `nobreak` forbids a break after this measure (Force wins if both).
+            lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null));
 
@@ -343,6 +348,16 @@ internal sealed class MeasureBuilder
             // Mid-measure break - defer to next measure boundary
             _pendingBreak = true;
         }
+    }
+
+    /// <summary>Forbids a line break after this measure (<c>nobreak</c>, LP's
+    /// <c>\noBreak</c>) — the mirror of <see cref="SetBreak"/>.</summary>
+    public void SetNoBreak()
+    {
+        if (_currentItems.Count == 0 && _measures.Count > 0)
+            _measures[^1] = _measures[^1] with { LineBreakPermission = Layout.BreakPermission.Forbid };
+        else
+            _pendingNoBreak = true;
     }
 
     /// <summary>

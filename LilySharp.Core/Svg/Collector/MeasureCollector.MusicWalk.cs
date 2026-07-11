@@ -320,9 +320,12 @@ public sealed partial class MeasureCollector
                 }
                 break;
 
-            case BreakSyntax:
-                // 'break' keyword triggers line break
-                builder.SetBreak();
+            case BreakSyntax brk:
+                // 'break' forces a line break here; 'nobreak' forbids one.
+                if (brk.IsNoBreak)
+                    builder.SetNoBreak();
+                else
+                    builder.SetBreak();
                 break;
 
             case MusicMarkSyntax mark:

@@ -61,7 +61,7 @@ internal sealed partial class Parser
             SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => true,
             SyntaxKind.RepeatKeyword => true,
             SyntaxKind.TupletKeyword => true,
-            SyntaxKind.BreakKeyword => true,
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => true,
             SyntaxKind.PartialKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
@@ -124,7 +124,7 @@ internal sealed partial class Parser
             SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.BreakKeyword => ParseBreak(),
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
@@ -386,7 +386,9 @@ internal sealed partial class Parser
 
     private BreakGreen ParseBreak()
     {
-        var breakKeyword = Expect(SyntaxKind.BreakKeyword);
+        // `break` (force a line break here) or `nobreak` (forbid one). The keyword
+        // token distinguishes them; BreakSyntax.IsNoBreak reads it.
+        var breakKeyword = Advance();
         return new BreakGreen(breakKeyword);
     }
 

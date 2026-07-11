@@ -343,7 +343,7 @@ internal sealed partial class Parser
             SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.BreakKeyword => ParseBreak(),
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),

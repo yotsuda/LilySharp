@@ -85,7 +85,7 @@ public class MusicCompletionFlatSpellingTests
         // offered — break/octave/tempo/partial/voice were previously missing.
         var labels = LilySharpLanguageServer.GetMusicCompletions("", 0, false)
             .Items.Select(i => i.Label).ToList();
-        foreach (var kw in new[] { "break", "octave", "tempo", "partial", "voice",
+        foreach (var kw in new[] { "break", "nobreak", "octave", "tempo", "partial", "voice",
                                    "repeat", "tuplet", "grace", "acciaccatura", "appoggiatura",
                                    "clef", "key", "time", "override", "revert", "once" })
             Assert.Contains(kw, labels);

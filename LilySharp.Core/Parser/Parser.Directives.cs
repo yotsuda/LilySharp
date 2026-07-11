@@ -229,7 +229,8 @@ internal sealed partial class Parser
             "relative" => "Lily# is relative by default — drop '\\relative …'; switch modes "
                 + "with 'octave absolute'.",
             "addlyrics" => "Lily# writes lyrics as 'lyrics { … }', not '\\addlyrics'.",
-            "tempo" or "clef" or "key" or "time" or "transpose" or "octave"
+            "noBreak" or "nobreak" => "Lily# writes '\\noBreak' as 'nobreak' (no backslash).",
+            "tempo" or "clef" or "key" or "time" or "transpose" or "octave" or "break"
                 => $"Lily# commands take no leading backslash — write '{word} …', not '\\{word} …'.",
             _ => null
         };

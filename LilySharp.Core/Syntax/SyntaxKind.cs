@@ -167,6 +167,8 @@ public enum SyntaxKind : ushort
     ChannelKeyword,
     /// <summary>The <c>break</c> keyword (line break).</summary>
     BreakKeyword,
+    /// <summary>The <c>nobreak</c> keyword (forbid a line break here). LilyPond's <c>\noBreak</c>.</summary>
+    NoBreakKeyword,
     /// <summary>The <c>partial</c> keyword (anacrusis / pickup measure).</summary>
     PartialKeyword,
 

@@ -633,6 +633,9 @@ public sealed partial class BreakSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>break</c> keyword token.</summary>
+    /// <summary>The <c>break</c> / <c>nobreak</c> keyword token.</summary>
     public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>True for <c>nobreak</c> (forbid a line break here), false for <c>break</c>.</summary>
+    public bool IsNoBreak => BreakKeyword.Kind == SyntaxKind.NoBreakKeyword;
 }

@@ -231,8 +231,8 @@ public sealed class LilyPondExporter
             case TieSyntax:
                 if (_sb.Length > 0 && _sb[^1] == ' ') _sb.Length--;
                 _sb.Append("~ "); break;
-            case BreakSyntax:
-                _sb.Append("\\break "); break;
+            case BreakSyntax brk:
+                _sb.Append(brk.IsNoBreak ? "\\noBreak " : "\\break "); break;
             case KeySignatureSyntax k when IsInsideMusicContent(k):
                 _sb.Append($"\\key {k.Pitch.PitchName} \\{k.Mode.Text} "); break;
             case TimeSignatureSyntax ts when IsInsideMusicContent(ts):
