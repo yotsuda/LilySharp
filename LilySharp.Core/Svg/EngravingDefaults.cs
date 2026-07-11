@@ -186,6 +186,17 @@ internal static class EngravingDefaults
     public const double StemDownAttachX = StemThickness / 2;
     public const double StemDownAttachY = -0.168;
 
+    /// <summary>
+    /// Horizontal shift of a TAB fret number from its note column (the notehead's
+    /// LEFT edge) to the notehead CENTRE. A notation notehead is left-anchored at
+    /// the column while a fret digit is centre-anchored, so without this the digit
+    /// (and its stem) sit a notehead-width left of the companion notation staff's
+    /// note. Shifting the digit here — and drawing the tab stem at the notation
+    /// StemUpAttachX/StemDownAttachX — lines the two staves' stems up on one x while
+    /// keeping the stem attached to the (narrower) digit.
+    /// </summary>
+    public const double TabHeadCenterOffset = NoteheadBlackWidth / 2;
+
 
     // === Staff geometry (local engraver coordinates) ===
     /// <summary>Device-Y of the staff's middle line in the engravers' local

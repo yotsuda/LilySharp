@@ -86,13 +86,12 @@ internal static partial class SharedRenderer
             // which flips the stem's notehead attachment side.
             bool MemberUp(int i) => grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
 
-            // On a tab staff the stem rises from the CENTRE of the fret number
-            // (the note column = MemberXPositions), not a notehead edge — so a
-            // tab member gets no notehead attachment offset.
-            double StemAttachX(int i) => MemberStaffOf(i)?.IsTab == true
-                ? beam.MemberXPositions[i]
-                : beam.MemberXPositions[i]
-                    + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+            // Both notation and tab stems attach at the notehead edge (from the
+            // note column). On a tab staff the fret digit is centred a
+            // TabHeadCenterOffset to the RIGHT of the column, so this edge x lands
+            // on the digit and, crucially, matches the companion notation stem's x.
+            double StemAttachX(int i) => beam.MemberXPositions[i]
+                + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
 
             double leftBeamY = StaffFrame.PositionToDevice(beam.LeftY, staffMiddleY);
             double rightBeamY = StaffFrame.PositionToDevice(beam.RightY, staffMiddleY);

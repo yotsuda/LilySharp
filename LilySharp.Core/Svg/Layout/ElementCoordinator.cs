@@ -777,6 +777,11 @@ internal sealed class ElementCoordinator
                 var tieForProblem = tie;
                 if (staff is { IsTab: true })
                 {
+                    // The fret digits sit a TabHeadCenterOffset right of their note
+                    // columns (see EngravingDefaults), so shift the tie's note-end
+                    // attachments to match — otherwise the tie detaches to the left.
+                    if (segment.IsFirst) segStartX += EngravingDefaults.TabHeadCenterOffset;
+                    if (segment.IsLast) segEndX += EngravingDefaults.TabHeadCenterOffset;
                     // On a tab the tie connects two fret digits on ONE string, so it
                     // belongs on that string's line — NOT at the notation pitch height.
                     // It curves OPPOSITE the stem: below the digits when the stem

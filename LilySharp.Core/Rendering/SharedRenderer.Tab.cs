@@ -118,10 +118,13 @@ internal static partial class SharedRenderer
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
-            double itemX = useColumnTiming
+            double columnX = useColumnTiming
                 ? ml.X + ml.GetXForTiming(currentTiming)
                 : (i < ml.Items.Length ? ml.X + ml.Items[i].X : ml.X);
             currentTiming += item.Duration;
+            // The fret digit sits under the notehead CENTRE; the stem shares the
+            // companion notation staff's stem x (notehead edge). See TabHeadCenterOffset.
+            double itemX = columnX + EngravingDefaults.TabHeadCenterOffset;
 
             // Match this position against the beamed set (offset-independent),
             // keyed by voice so each voice's beams suppress only its own flags.
@@ -136,12 +139,12 @@ internal static partial class SharedRenderer
                         DrawTabNote(note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, gc, note.IsDead);
                     DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
-                        itemX, staffY, staff, isBeamed, gc);
+                        columnX, staffY, staff, isBeamed, gc);
                     break;
                 case ChordItem chord:
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
                     DrawUnbeamedTabStem(chord, chord.BaseDuration, chord.StemUp,
-                        itemX, staffY, staff, isBeamed, gc);
+                        columnX, staffY, staff, isBeamed, gc);
                     break;
                 // RestItem: nothing on a tab staff.
             }
@@ -151,12 +154,14 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Stem (and flag for eighths and shorter) for a tab note that is NOT part of
     /// a beam group — beamed notes get their stem from <see cref="DrawBeams"/>.
-    /// The stem rises from the fret number's centre (its string line, with a gap)
-    /// in the note's notation stem direction, so it stays parallel to the stem on
-    /// the companion notation staff. Whole notes carry no stem.
+    /// The stem sits at the companion notation staff's stem x (its notehead edge,
+    /// via StemUpAttachX/StemDownAttachX from the note column) so the two staves'
+    /// stems line up on one vertical; the fret digit, centred a
+    /// <see cref="EngravingDefaults.TabHeadCenterOffset"/> to the right of the
+    /// column, still catches the stem. Whole notes carry no stem.
     /// </summary>
     private static void DrawUnbeamedTabStem(MusicItem item, Fraction baseDuration,
-        bool stemUp, double itemX, double staffY, Staff staff,
+        bool stemUp, double columnX, double staffY, Staff staff,
         bool isBeamed, IDrawingContext gc)
     {
         int noteValue = baseDuration.Denominator;
@@ -165,6 +170,7 @@ internal static partial class SharedRenderer
             return; // whole notes have no stem; beamed notes are drawn elsewhere.
 
         const double stemLength = 3.0;
+        double stemX = columnX + (stemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
         double nearY = TabStemHeadY(item, stemUp, staffY, staff);
         double farY = nearY + (stemUp ? -stemLength : stemLength);
 
@@ -175,19 +181,19 @@ internal static partial class SharedRenderer
             // duration from. The two lines sit 0.355 staff-spaces apart, measured
             // from LilyPond's own tab output. LILYPOND-REF: ly/tablature-init.ly.
             const double halfGap = 0.355 / 2;
-            gc.DrawLine(itemX - halfGap, nearY, itemX - halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
-            gc.DrawLine(itemX + halfGap, nearY, itemX + halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
+            gc.DrawLine(stemX - halfGap, nearY, stemX - halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
+            gc.DrawLine(stemX + halfGap, nearY, stemX + halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
         }
         else
         {
-            gc.DrawLine(itemX, nearY, itemX, farY, Color.Black, EngravingDefaults.StemThickness);
+            gc.DrawLine(stemX, nearY, stemX, farY, Color.Black, EngravingDefaults.StemThickness);
         }
 
         if (noteValue >= 8)
         {
             var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
             if (flag.HasValue)
-                gc.DrawGlyph(flag.Value, itemX, farY, FontSize, null);
+                gc.DrawGlyph(flag.Value, stemX, farY, FontSize, null);
         }
     }
 

@@ -202,30 +202,36 @@ internal static class ArticulationEngraver
                 double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
                 double fx, fy;
+                Staff? tabBendStaff = null;
                 if (staffByIndex != null
                     && staffByIndex.TryGetValue(articulation.StaffIndex, out var ts)
                     && ts.IsTab && ts.Tuning.HasValue)
+                    tabBendStaff = ts;
+                // The fret digit sits a TabHeadCenterOffset right of the note column
+                // (see EngravingDefaults) — the gesture hangs off the digit, not the column.
+                double noteX = tabBendStaff != null ? itemX + EngravingDefaults.TabHeadCenterOffset : itemX;
+                if (tabBendStaff != null)
                 {
-                    var tt = ts.Tuning.Value;
+                    var tt = tabBendStaff.Tuning.Value;
                     int strings = Tunings.GetStringCount(tt);
                     double space = EngravingDefaults.TabStringSpace(strings);
                     int midi = item switch { NoteItem n => n.Midi,
                         ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
                     int? sn = item is NoteItem ni ? ni.StringNumber : null;
                     var (strNum, _) = Tunings.CalculateFret(
-                        midi + Tunings.OctaveShift(tt, ts.TabSourceClef), Tunings.GetTuning(tt), sn ?? 0);
-                    fx = itemX + BendTabXOffset;
+                        midi + Tunings.OctaveShift(tt, tabBendStaff.TabSourceClef), Tunings.GetTuning(tt), sn ?? 0);
+                    fx = noteX + BendTabXOffset;
                     fy = staffOffset + (strNum - 1) * space;
                 }
                 else
                 {
-                    fx = itemX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;
+                    fx = noteX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;
                     fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
                 }
                 bool approach = articulation.Type
                     is ArticulationType.Scoop or ArticulationType.Plop;
                 if (approach)
-                    fx = itemX - BendApproachXOffset; // the curve arrives FROM THE LEFT
+                    fx = noteX - BendApproachXOffset; // the curve arrives FROM THE LEFT
                 string bendGlyph = articulation.Type switch
                 {
                     ArticulationType.Scoop => "bendScoop",
@@ -312,9 +318,12 @@ internal static class ArticulationEngraver
             {
                 int strings = Tunings.GetStringCount(tabStaff.Tuning.Value);
                 double space = EngravingDefaults.TabStringSpace(strings);
+                // Centre on the fret digit, which sits a TabHeadCenterOffset right
+                // of the note column (see EngravingDefaults).
                 double colX = measureLayout.X
                     + LayoutUtilities.GetItemXOffset(artMeasures,
-                        articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                        articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                    + EngravingDefaults.TabHeadCenterOffset;
                 const double tabGap = 1.0;
                 // Fermata, ornaments and bow marks keep direction = UP on a tab
                 // staff too — LilyPond's TabVoice keeps the Script_engraver and
@@ -471,7 +480,8 @@ internal static class ArticulationEngraver
             bool above = tabForceAbove || !stemUp;
 
             double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
-                measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx]);
+                measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx])
+                + EngravingDefaults.TabHeadCenterOffset;
             double y = above
                 ? -fretHalf - tabGap
                 : (strings - 1) * space + fretHalf + tabGap;
