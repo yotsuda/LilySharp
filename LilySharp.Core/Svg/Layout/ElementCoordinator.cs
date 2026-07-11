@@ -788,7 +788,18 @@ internal sealed class ElementCoordinator
                     // points up, above when it points down (matching the tab stem,
                     // which uses note.StemUp).
                     var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef);
-                    double digitY = geom.DigitY(tie.StartNote.Midi, tie.StartNote.StringNumber);
+                    // A chord's per-string ties must each hug their OWN string.
+                    // LILYPOND-REF: lily/tab-note-heads-engraver.cc:106-123 — each
+                    // TabNoteHead's staff-position is the STRING LINE its
+                    // noteToFretFunction (exclusive chord allocation) assigned, and
+                    // the tie follows the heads. So resolve this note's string via
+                    // the chord's allocation, keyed by staff position (a chord tie's
+                    // synthesized start note carries no MIDI) — not a per-note
+                    // auto-fret, which hands several notes the same string.
+                    var tieItem = ItemAt(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex);
+                    double digitY = tieItem is ChordItem tieChord
+                        ? geom.ChordNoteDigitY(tieChord, tie.StaffPosition)
+                        : geom.DigitY(tie.StartNote.Midi, tie.StartNote.StringNumber);
                     // LilyPond hangs the tab tie right at the digit's edge — a small,
                     // shallow curve hugging the number — so offset by the VISIBLE
                     // glyph half-height plus a hair, not the full erase-box height.
@@ -1059,6 +1070,14 @@ internal sealed class ElementCoordinator
     /// </summary>
     private static double TabItemTopDigitY(MusicItem item, TabStaffGeometry geom)
         => geom.StringY(geom.StemHeadString(item, stemUp: true));
+
+    /// <summary>The voice item at (measure, index), or null if out of range.</summary>
+    private static MusicItem? ItemAt(Voice voice, int measureIndex, int itemIndex)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length) return null;
+        var items = voice.Measures[measureIndex].Items;
+        return itemIndex >= 0 && itemIndex < items.Length ? items[itemIndex] : null;
+    }
 
     /// <summary>
     /// Lays out a slur on a TAB staff: a shallow arch ABOVE the fret numbers,

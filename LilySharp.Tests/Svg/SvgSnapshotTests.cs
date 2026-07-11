@@ -405,6 +405,9 @@ public class SvgSnapshotTests
         // digits — clearing the encompassed main-note digits AND the grace digit —
         // instead of running a pitch-based curve straight through them.
         yield return new object[] { "test/tab-grace-slur" };
+        // A tied chord on a tab staff: each string's tie must sit on its own fret
+        // digit (via the chord's exclusive allocation), not pile onto one string.
+        yield return new object[] { "test/tab-chord-tie" };
         yield return new object[] { "test/drum-groove" };
     }
 

@@ -1,0 +1,15 @@
+// A tied chord on a TAB staff: each string's tie must hug its OWN fret digit.
+// LilyPond sets every TabNoteHead's staff-position to the string line its
+// exclusive fret allocation chose (tab-note-heads-engraver.cc), and the ties
+// follow the heads. Resolving each note's string per-note (auto-fret) instead
+// piled every tie onto one low string; here they spread across strings 1-3.
+octave absolute
+part gt { clef treble_8 tuning guitar }
+section A {
+  gt { <c' e' g'>2~ <c' e' g'>4 r4 }
+}
+form main { A }
+score main "tab-chord-tie" {
+  staff gt
+  tab gt
+}

@@ -139,6 +139,27 @@ internal readonly struct TabStaffGeometry
         => StringY(Fret(writtenMidi, preferredString).stringNum);
 
     /// <summary>
+    /// Device-Y of ONE chord note's fret digit, resolved through the chord's
+    /// EXCLUSIVE string allocation — the same <c>CalculateChordFrets</c> the
+    /// digits are drawn with — rather than a per-note auto-fret. A per-note
+    /// <see cref="DigitY"/> ignores the other notes and can hand several chord
+    /// notes the same low string, which is why a chord's per-string ties used to
+    /// pile up at the bottom of the staff instead of hugging their own digits.
+    /// Matches the note by STAFF POSITION — a chord tie's synthesized start note
+    /// carries no MIDI, only its staff position — and returns that string's line.
+    /// </summary>
+    public double ChordNoteDigitY(ChordItem chord, int staffPosition)
+    {
+        int shift = _octaveShift;
+        var alloc = Tunings.CalculateChordFrets(
+            chord.Notes.Select(n => (n.Midi + shift, n.StringNumber)).ToList(), _tuning);
+        for (int i = 0; i < chord.Notes.Length; i++)
+            if (chord.Notes[i].StaffPosition == staffPosition && alloc[i].stringNum >= 1)
+                return StringY(alloc[i].stringNum);
+        return StaffY;
+    }
+
+    /// <summary>
     /// The string a stem meets on this item: the TOP digit (smallest string number)
     /// for an up-stem, the BOTTOM for a down-stem. Chords use the same exclusive
     /// allocation the drawn chord does. Mirrors <c>TabStemHeadY</c> in the renderer.
