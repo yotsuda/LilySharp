@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
 
@@ -83,4 +84,28 @@ internal readonly struct TabStaffGeometry
     /// <summary>Device-Y of the fret digit row for a written MIDI pitch.</summary>
     public double DigitY(int writtenMidi, int? preferredString = null)
         => StringY(Fret(writtenMidi, preferredString).stringNum);
+
+    /// <summary>
+    /// The string a stem meets on this item: the TOP digit (smallest string number)
+    /// for an up-stem, the BOTTOM for a down-stem. Chords use the same exclusive
+    /// allocation the drawn chord does. Mirrors <c>TabStemHeadY</c> in the renderer.
+    /// </summary>
+    public int StemHeadString(MusicItem item, bool stemUp)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+                return Fret(n.Midi, n.StringNumber).stringNum;
+            case ChordItem c when c.Notes.Length > 0:
+                int shift = _octaveShift;
+                var alloc = Tunings.CalculateChordFrets(
+                    c.Notes.Select(x => (x.Midi + shift, x.StringNumber)).ToList(), _tuning);
+                int head = alloc[0].stringNum;
+                foreach (var a in alloc)
+                    head = stemUp ? System.Math.Min(head, a.stringNum) : System.Math.Max(head, a.stringNum);
+                return head;
+            default:
+                return 1;
+        }
+    }
 }

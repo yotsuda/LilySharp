@@ -156,6 +156,7 @@ internal static class ArticulationEngraver
         int[] order = OrderByScriptPriority(articulations);
 
         var beamedTips = BuildBeamedStemTips(beamLayouts);
+        var beamGroups = BuildBeamGroupMap(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
         // Per-note, per-side running offset so stacked scripts don't overprint:
         // each successive script on the same (staff, measure, item, side) is pushed
@@ -343,9 +344,26 @@ internal static class ArticulationEngraver
                 // that too, or an above-script (accent/staccato/fermata) lands on the
                 // number instead of above it.
                 double fretHalf = TabConstants.FretDigitHeight / 2.0;
-                double tabY = tabAbove
-                    ? staffOffset - fretHalf - tabGap                          // above the top digit
-                    : staffOffset + (strings - 1) * space + fretHalf + tabGap; // below the bottom digit
+                double tabY;
+                if (tabAbove
+                    && beamGroups.TryGetValue(
+                        (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                        out var tabBeam)
+                    && tabBeam.StemUp)
+                {
+                    // Beamed, stem-up: the beam floats a fixed distance above the
+                    // digits, so an above-script must clear the BEAM's outer edge —
+                    // not just the digit — exactly like the companion notation staff.
+                    var geom = new TabStaffGeometry(
+                        tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
+                    tabY = TabBeamOuterEdgeY(tabBeam, geom) - tabGap;
+                }
+                else
+                {
+                    tabY = tabAbove
+                        ? staffOffset - fretHalf - tabGap                          // above the top digit
+                        : staffOffset + (strings - 1) * space + fretHalf + tabGap; // below the bottom digit
+                }
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
                 string tabGlyph = articulation.Type switch
@@ -689,6 +707,55 @@ internal static class ArticulationEngraver
     /// LILYPOND-REF: lily/stem.cc — a beamed stem's end comes from the beam;
     /// side-position then sees that real extent via the stem support.
     /// </summary>
+    /// <summary>
+    /// Maps each primary-voice beamed item to its beam group, so the tab branch can
+    /// find the group's outer beam edge (the tab beam Y lives only in the renderer's
+    /// geometry, recomputed here from the group's members via TabStaffGeometry).
+    /// </summary>
+    private static Dictionary<(int Staff, int Measure, int Item), BeamGroup>
+        BuildBeamGroupMap(ImmutableArray<BeamLayout> beamLayouts)
+    {
+        var map = new Dictionary<(int, int, int), BeamGroup>();
+        if (beamLayouts.IsDefaultOrEmpty)
+            return map;
+        foreach (var beam in beamLayouts)
+        {
+            var group = beam.Group;
+            if (group.VoiceIndex != 0)
+                continue;
+            for (int i = 0; i < group.Members.Length; i++)
+            {
+                var member = group.Members[i];
+                int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty && i < beam.MemberStaffIndices.Length
+                    ? beam.MemberStaffIndices[i]
+                    : Math.Max(0, beam.StaffIndex);
+                map[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = group;
+            }
+        }
+        return map;
+    }
+
+    // The shortest tab stem, on the outermost string — the tab beam sits this far
+    // past the group's extreme digit. Single source with SharedRenderer's beam pass.
+    private const double TabBeamStem = 3.0;
+
+    /// <summary>
+    /// Device-Y of a stem-up tab beam's OUTER (top) edge for a whole group — the
+    /// value a forced-above script must clear. Mirrors SharedRenderer's tab beam
+    /// placement: <c>min(stem-head Y) - TabBeamStem</c>, then out by half the beam.
+    /// </summary>
+    private static double TabBeamOuterEdgeY(BeamGroup group, TabStaffGeometry geom)
+    {
+        double clearance = TabConstants.FretDigitHeight / 2 + 0.3; // matches TabStemHeadY
+        double extreme = double.MaxValue;
+        foreach (var m in group.Members)
+        {
+            double headY = geom.StringY(geom.StemHeadString(m.Item, stemUp: true)) - clearance;
+            extreme = Math.Min(extreme, headY);
+        }
+        return extreme - TabBeamStem - EngravingDefaults.BeamThickness / 2;
+    }
+
     private static Dictionary<(int Staff, int Measure, int Item), (double TipY, bool StemUp)>
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
     {
@@ -710,6 +777,12 @@ internal static class ArticulationEngraver
                     : 0;
                 double positionAtX = beam.LeftY + t * (beam.RightY - beam.LeftY);
                 double tipY = StaffMiddle - positionAtX * 0.5;
+                // The beam has thickness; a script on the beam's side must clear its
+                // OUTER edge, not the stem end (= beam centre). Push the tip out by
+                // half the beam thickness so side-position sees the whole beam.
+                // LILYPOND-REF: the Beam grob's stencil joins the script's support skyline.
+                tipY += member.MemberStemUp
+                    ? -EngravingDefaults.BeamThickness / 2 : EngravingDefaults.BeamThickness / 2;
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);

@@ -164,6 +164,9 @@ public class SvgSnapshotTests
         // A note below the tab's lowest string is hidden (no fret/stem/beam) rather
         // than clamped to a wrong open string; the notation staff still shows it.
         yield return new object[] { "test/tab-below-range" };
+        // A forced-above script on a BEAMED note clears the beam on both the
+        // notation staff and the tab (whose beam floats above the fret digits).
+        yield return new object[] { "test/tab-beam-script" };
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };

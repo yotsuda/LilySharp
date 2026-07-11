@@ -1,0 +1,19 @@
+// A forced-above script (fermata, harmonic) on a BEAMED note must clear the beam,
+// which floats above the notes — on the notation staff AND the tab, where the beam
+// sits a fixed distance above the fret digits. The fermata on the third eighth
+// hangs above both beams, not on them.
+title "Tab beamed script"
+time 4/4
+key c major
+
+part m {
+  instrument bass
+  section A { e8 f g@fermata a@flageolet e f g a | }
+}
+
+form main { A }
+
+score main {
+  staff m
+  tab m
+}
