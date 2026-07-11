@@ -131,6 +131,30 @@ public class MidiTests
     }
 
     [Fact]
+    public void ChordDegrees_SoundStackedOnTheRootInKey()
+    {
+        // <d 3 5 7,> = D4 + its 3rd/5th/7th in the key, the 7th an octave down:
+        // C4 D4 F4 A4 → 62 65 69 60 (order = root then degrees).
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        Assert.Equal(new[] { 62, 65, 69, 60 }, Pitches("key c major\n<d 3 5 7,>2"));
+    }
+
+    [Fact]
+    public void ChordDegrees_FollowTheKey()
+    {
+        // The same <d 3 5 7> sounds Dm7 in C (F natural) but D7 in G (F♯).
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        Assert.Equal(new[] { 62, 65, 69, 72 }, Pitches("key c major\n<d 3 5 7>1"));
+        Assert.Equal(new[] { 62, 66, 69, 72 }, Pitches("key g major\n<d 3 5 7>1"));
+    }
+
+    [Fact]
     public void ExportWithDuration()
     {
         var source = "c4 c2 c1";

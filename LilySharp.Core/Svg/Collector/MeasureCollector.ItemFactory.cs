@@ -267,11 +267,15 @@ public sealed partial class MeasureCollector
         // steps in the current key, then is placed absolutely (no relative-frame
         // advance — the root already set the frame for the next chord/note).
         int rootStep = GetPitchIndex(firstPitchName);
+        // Degrees stack in the WRITTEN key; the part transpose is then applied
+        // once by ResolveAbsolutePitch (TransposePitch). Using the displayed
+        // (already-transposed) key here would transpose a degree chord twice.
+        int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
         foreach (var degree in chord.Degrees)
         {
             var (step, alteration, octave) = ChordDegrees.Resolve(
                 rootStep, firstOctave, degree.Number, degree.Alteration,
-                degree.OctaveOffset, _meta.KeySharps);
+                degree.OctaveOffset, writtenKeySharps);
             var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
             var (accidental, isCourtesy) =
                 GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 
@@ -111,6 +112,12 @@ public sealed class MidiExporter
     private KeyTonic _homeTonic = KeyTonic.CMajor;
     private KeyTonic _ambientTonic = KeyTonic.CMajor;
 
+    // The running WRITTEN key signature (sharps; flats negative) that scale-degree
+    // chords (<d 3 5>) stack against. Reset to the score's key per section; the
+    // part transpose is applied separately (semitone shift), so this stays written.
+    private int _homeKeySharps;
+    private int _keySharps;
+
     /// <summary>Initializes a new <see cref="MidiExporter"/> with the given timing resolution.</summary>
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -152,6 +159,8 @@ public sealed class MidiExporter
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
         _homeTonic = ScoreHomeKey.Read(_root);
         _ambientTonic = _homeTonic;
+        _homeKeySharps = ScoreHomeKey.Sharps(_root);
+        _keySharps = _homeKeySharps;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _partPitchLanes.Clear();
@@ -260,8 +269,11 @@ public sealed class MidiExporter
             case KeySignatureSyntax keySig:
                 // MIDI pitches are absolute, so a key change emits nothing — but it
                 // advances the phrase auto-transpose baseline (where a later phrase
-                // reference lands).
+                // reference lands) and the scale-degree key that <d 3 5> stacks on.
                 _ambientTonic = KeyTonic.Of(keySig);
+                _keySharps = keySig.IsCustom ? 0 : KeySpelling.SharpsFor(
+                    keySig.Pitch.ToFullString().Trim().ToLowerInvariant(),
+                    keySig.Mode.Text.ToLowerInvariant()) ?? 0;
                 break;
 
             case TempoDeclarationSyntax tempo:
@@ -376,9 +388,11 @@ public sealed class MidiExporter
     /// </summary>
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack)
     {
-        // A section is self-contained: its phrase auto-transpose baseline reverts
-        // to the score's home key (a mid-section modulation cannot leak out).
+        // A section is self-contained: its phrase auto-transpose baseline and the
+        // scale-degree key both revert to the score's home key (a mid-section
+        // modulation cannot leak out).
         _ambientTonic = _homeTonic;
+        _keySharps = _homeKeySharps;
 
         // Part-major layout: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
@@ -929,6 +943,19 @@ public sealed class MidiExporter
             }
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 QuarterBend: pitch.QuarterOffset,
+                SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+        }
+
+        // Scale-degree members (<d 3 5 7,>): stack on the root by diatonic steps in
+        // the (written) key, then add the part transpose like any pitch.
+        foreach (var degree in chord.Degrees)
+        {
+            var (step, alter, octave) = ChordDegrees.Resolve(
+                firstNoteName, firstOctave, degree.Number, degree.Alteration,
+                degree.OctaveOffset, _keySharps);
+            int midiPitch = System.Math.Clamp(
+                RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
         }
 

@@ -60,6 +60,23 @@ public static class ScoreHomeKey
         return home;
     }
 
+    /// <summary>
+    /// The home key signature's sharp count (−7..+7; flats are negative). The
+    /// WRITTEN key that scale-degree chords stack against. A later top-level key
+    /// overrides an earlier one; no top-level key means C major (0). A custom
+    /// home key has no sharp count, so 0.
+    /// </summary>
+    public static int Sharps(SyntaxNode root)
+    {
+        int sharps = 0;
+        foreach (var key in root.DescendantNodes().OfType<KeySignatureSyntax>())
+            if (!IsInsideMusicContent(key) && !key.IsCustom)
+                sharps = KeySpelling.SharpsFor(
+                    key.Pitch.ToFullString().Trim().ToLowerInvariant(),
+                    key.Mode.Text.ToLowerInvariant()) ?? 0;
+        return sharps;
+    }
+
     // A key inside a section/phrase/part is a modulation, not the score home.
     // Mirrors MeasureCollector / MusicXmlExporter IsInsideMusicContent.
     private static bool IsInsideMusicContent(SyntaxNode node)

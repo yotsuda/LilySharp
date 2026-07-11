@@ -1402,6 +1402,35 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
+        // Scale-degree members (<d 3 5 7,>): stack on the root by diatonic steps in
+        // the (written) key, then apply the part transpose like any pitch.
+        foreach (var degree in chord.Degrees)
+        {
+            var (dstep, dalter, doctave) = ChordDegrees.Resolve(
+                firstStep, firstOctave, degree.Number, degree.Alteration,
+                degree.OctaveOffset, _keyFifths);
+            if (_currentTranspose is { } tr)
+                (dstep, dalter, doctave) = PitchTransposer.Transpose(
+                    dstep, dalter, doctave, tr.step, tr.alt, tr.oct);
+            var xmlNote = new MusicXmlNote
+            {
+                Step = "CDEFGAB"[dstep].ToString(),
+                Alter = dalter,
+                Octave = doctave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                IsChord = true,
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal,
+            };
+            if (_chordArpeggio == "arpeggiate")
+                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                    new System.Xml.Linq.XAttribute("number", 1)));
+            _currentMeasure.Notes.Add(xmlNote);
+            _chordMembers.Add(xmlNote);
+        }
+
         if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 2)
         {
             _chordMembers[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
