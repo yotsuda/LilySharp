@@ -155,6 +155,15 @@ public class MidiTests
     }
 
     [Fact]
+    public void ChordDegrees_OmittedRoot_SoundTheTonicTriad()
+    {
+        // <1 3 5> with no root = the key's tonic triad: C E G in C major.
+        var pitches = new MidiExporter().Export(SyntaxTree.Parse("key c major\n<1 3 5>2"))
+            .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
+        Assert.Equal(new[] { 60, 64, 67 }, pitches);
+    }
+
+    [Fact]
     public void ExportWithDuration()
     {
         var source = "c4 c2 c1";

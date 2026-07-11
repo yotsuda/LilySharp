@@ -47,6 +47,22 @@ public sealed class MusicXmlChordDegreeTests
     }
 
     [Fact]
+    public void OmittedRoot_ExportsTheTonicTriad()
+    {
+        // <1 3 5> with no root → the key's tonic triad C E G, the first degree
+        // being the chord onset (no <chord/> on it).
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse("key c major\n<1 3 5>2")).ToXml();
+        Assert.Equal(
+            new[] { ("C", 4), ("E", 4), ("G", 4) },
+            xml.Descendants("pitch")
+               .Select(p => (p.Element("step")!.Value, int.Parse(p.Element("octave")!.Value)))
+               .ToArray());
+        // Exactly one onset note (no <chord/>) — the rest are chord members.
+        int onsets = xml.Descendants("note").Count(n => n.Element("chord") == null && n.Element("pitch") != null);
+        Assert.Equal(1, onsets);
+    }
+
+    [Fact]
     public void GluedSharp_ExportsWithTheAccidental()
     {
         // <d 3is 5 7> → D F♯ A C: the raised 3rd is spelled F with alter +1.

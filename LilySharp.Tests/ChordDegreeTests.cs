@@ -94,6 +94,24 @@ public sealed class ChordDegreeTests
     }
 
     [Fact]
+    public void OmittedRoot_AnchorsOnTheKeyTonic()
+    {
+        // <1 3 5> with no root pitch = the tonic triad of the key: C E G in C.
+        Assert.Equal(new[] { 60, 64, 67 }, Midis("<1 3 5>2"));
+        // The same <1 3 5> follows the key — G B D in G major (tonic resolves
+        // relatively to G3, nearest to the opening frame).
+        Assert.Equal(new[] { 55, 59, 62 }, Midis("<1 3 5>2", key: "g major"));
+    }
+
+    [Fact]
+    public void OmittedRoot_WithoutDegreeOne_OmitsTheTonic()
+    {
+        // <3 5> sounds only the 3rd and 5th ABOVE the tonic (the tonic itself is
+        // not written, so not sounded): E G in C major.
+        Assert.Equal(new[] { 64, 67 }, Midis("<3 5>2"));
+    }
+
+    [Fact]
     public void ChordDuration_AppliesAfterTheAngle()
     {
         // Duration is written after '>', like an ordinary chord: <c 3 5>2 is a half.
@@ -104,6 +122,8 @@ public sealed class ChordDegreeTests
     [InlineData("<d 3 5 7,>2")]
     [InlineData("<d 3is 5 7>4")]
     [InlineData("<g 3 5 7 9>1")]
+    [InlineData("<1 3 5>2")]
+    [InlineData("<3 5>4")]
     public void DegreeChord_RoundTrips(string chord)
     {
         // Degrees live on green tokens, so ToFullString reproduces the source exactly.

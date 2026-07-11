@@ -263,6 +263,19 @@ public sealed partial class MeasureCollector
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
+        // Omitted root (<1 3 5> / <3 5>): the degrees are relative to the KEY'S
+        // TONIC (degree 1 = tonic). Anchor the (unsounded) tonic in the relative
+        // frame like a written root would be, so a following note stays relative
+        // to it. A custom/atonal key has no tonic, so fall back to C.
+        if (chord.Root is null && chord.Degrees.Any())
+        {
+            int tonicStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            char tonicName = "cdefgab"[tonicStep];
+            firstOctave = _octave.Resolve(tonicStep, 0, tonicName);
+            firstPitchName = tonicName;
+            _octave.CurrentOctave = firstOctave;
+        }
+
         // Scale-degree members (<d 3 5 7,>): each stacks on the root by diatonic
         // steps in the current key, then is placed absolutely (no relative-frame
         // advance — the root already set the frame for the next chord/note).

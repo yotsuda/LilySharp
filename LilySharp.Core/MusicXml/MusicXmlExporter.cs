@@ -1339,7 +1339,7 @@ public sealed class MusicXmlExporter
         _justAutoClosedPickup = false;
 
         var pitches = chord.Pitches.ToList();
-        if (pitches.Count == 0) return;
+        if (pitches.Count == 0 && !chord.Degrees.Any()) return;
 
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -1402,8 +1402,21 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
+        // Omitted root (<1 3 5> / <3 5>): anchor the degrees on the key's tonic
+        // (degree 1 = tonic), resolved relatively like a written root.
+        if (pitches.Count == 0 && chord.Degrees.Any())
+        {
+            int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+            firstOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, tonicStep, 0);
+            firstStep = tonicStep;
+            _currentStep = tonicStep;
+            _currentOctave = firstOctave;
+        }
+
         // Scale-degree members (<d 3 5 7,>): stack on the root by diatonic steps in
-        // the (written) key, then apply the part transpose like any pitch.
+        // the (written) key, then apply the part transpose like any pitch. When the
+        // root is omitted the FIRST degree is the chord's onset (no <chord/>).
+        bool needsOnset = pitches.Count == 0;
         foreach (var degree in chord.Degrees)
         {
             var (dstep, dalter, doctave) = ChordDegrees.Resolve(
@@ -1420,7 +1433,7 @@ public sealed class MusicXmlExporter
                 Duration = durationTicks,
                 Type = type,
                 Dots = dots,
-                IsChord = true,
+                IsChord = !needsOnset,
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
             };
@@ -1429,6 +1442,7 @@ public sealed class MusicXmlExporter
                     new System.Xml.Linq.XAttribute("number", 1)));
             _currentMeasure.Notes.Add(xmlNote);
             _chordMembers.Add(xmlNote);
+            needsOnset = false;
         }
 
         if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 2)

@@ -946,6 +946,17 @@ public sealed class MidiExporter
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
         }
 
+        // Omitted root (<1 3 5> / <3 5>): anchor the degrees on the key's tonic
+        // (degree 1 = tonic), resolved relatively like a written root.
+        if (pitches.Count == 0 && chord.Degrees.Any())
+        {
+            int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+            firstOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, tonicStep, 0);
+            firstNoteName = tonicStep;
+            _currentNoteName = tonicStep;
+            _currentOctave = firstOctave;
+        }
+
         // Scale-degree members (<d 3 5 7,>): stack on the root by diatonic steps in
         // the (written) key, then add the part transpose like any pitch.
         foreach (var degree in chord.Degrees)
