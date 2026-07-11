@@ -60,9 +60,31 @@ internal static class TabBeamMath
         double[] xs, double[] headYs, bool stemUp, double tabBeamStem)
     {
         int n = xs.Length;
-        double slope = (n > 1 && xs[n - 1] > xs[0])
-            ? (headYs[n - 1] - headYs[0]) / (xs[n - 1] - xs[0])
-            : 0.0;
+        // LilyPond's beam slope: a LEAST-SQUARES fit through the stem-heads (so one
+        // outlier digit — e.g. a chord's high string — doesn't pin the slope), then
+        // damped by 0.6*tanh(slope)/damping so it stays gentle. damping = 1 (the
+        // Beam grob default); concaveness is 0 for the ordinary contours here.
+        // LILYPOND-REF: lily/beam-quanting.cc least_squares_positions + slope_damping;
+        // scm/define-grobs.scm Beam.damping = 1, details.round-to-zero-slope = 0.02.
+        double slope = 0.0;
+        if (n > 1)
+        {
+            double mx = 0, my = 0;
+            for (int i = 0; i < n; i++) { mx += xs[i]; my += headYs[i]; }
+            mx /= n; my /= n;
+            double num = 0, den = 0;
+            for (int i = 0; i < n; i++)
+            {
+                double dx = xs[i] - mx;
+                num += dx * (headYs[i] - my);
+                den += dx * dx;
+            }
+            double ls = den != 0.0 ? num / den : 0.0;
+            const double damping = 1.0;
+            slope = 0.6 * System.Math.Tanh(ls) / damping;
+            if (System.Math.Abs(slope) < 0.02) slope = 0.0; // round-to-zero-slope
+        }
+        // Shift the line out so the SHORTEST stem is tabBeamStem and every stem clears.
         double b = stemUp ? double.PositiveInfinity : double.NegativeInfinity;
         for (int i = 0; i < n; i++)
         {
