@@ -415,6 +415,63 @@ public sealed class RestSyntax : SyntaxNode
 /// <summary>
 /// A chord: <c>&lt; pitches &gt;</c> + optional duration
 /// </summary>
+/// <summary>
+/// A scale-degree chord member (<c>3</c> / <c>3is</c> / <c>7,</c>): a degree
+/// number, an optional glued accidental, and octave marks. Resolved against the
+/// chord's root and the current key into a concrete pitch.
+/// </summary>
+public sealed class ScaleDegreeSyntax : SyntaxNode
+{
+    internal ScaleDegreeSyntax(ScaleDegreeGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The degree token — an <c>IntegerLiteral</c> (<c>3</c>) or a
+    /// <c>ScaleDegree</c> (<c>3is</c>).</summary>
+    public SyntaxTokenNode DegreeToken => (SyntaxTokenNode)GetChild(0)!;
+
+    private string Text => DegreeToken.Text;
+
+    private int DigitLength
+    {
+        get { int i = 0; while (i < Text.Length && char.IsDigit(Text[i])) i++; return i; }
+    }
+
+    /// <summary>The degree: 1 = root/unison, 3 = third, 7 = seventh, 8 = octave,
+    /// 9 = ninth, … (N = up N−1 diatonic scale steps from the root).</summary>
+    public int Number => int.TryParse(Text.AsSpan(0, DigitLength), out int n) ? n : 1;
+
+    /// <summary>Chromatic alteration from the glued accidental: <c>is</c>=+1,
+    /// <c>isis</c>=+2, <c>es</c>=−1, <c>eses</c>=−2, none = 0.</summary>
+    public int Alteration => Text[DigitLength..] switch
+    {
+        "is" => 1,
+        "isis" => 2,
+        "es" => -1,
+        "eses" => -2,
+        _ => 0,
+    };
+
+    /// <summary>Net octave shift from the trailing <c>'</c> / <c>,</c> marks.</summary>
+    public int OctaveOffset
+    {
+        get
+        {
+            int offset = 0;
+            for (int i = 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i) as SyntaxTokenNode;
+                if (child?.Kind == SyntaxKind.Apostrophe)
+                    offset++;
+                else if (child?.Kind == SyntaxKind.Comma)
+                    offset--;
+            }
+            return offset;
+        }
+    }
+}
+
 public sealed class ChordSyntax : SyntaxNode
 {
     internal ChordSyntax(ChordGreen green, SyntaxNode? parent, int position)
@@ -443,6 +500,31 @@ public sealed class ChordSyntax : SyntaxNode
                 if (GetChild(i) is PitchSyntax pitch)
                     yield return pitch;
             }
+        }
+    }
+
+    /// <summary>The scale-degree members (<c>&lt;d 3 5 7,&gt;</c> → 3, 5, 7,). Empty
+    /// for an ordinary all-pitch chord.</summary>
+    public IEnumerable<ScaleDegreeSyntax> Degrees
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is ScaleDegreeSyntax d)
+                    yield return d;
+        }
+    }
+
+    /// <summary>The root pitch (first member) of a degree chord — the anchor the
+    /// degrees stack on; null if the chord has no pitch member.</summary>
+    public PitchSyntax? Root
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is PitchSyntax p)
+                    return p;
+            return null;
         }
     }
 

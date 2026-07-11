@@ -338,8 +338,36 @@ internal sealed class Lexer
         int start = _position;
         while (char.IsDigit(Current))
             _position++;
+        // A scale-degree accidental glued to the number (chord degree <d 3is 5es>):
+        // capture it into one ScaleDegree token so `3es` stays atomic instead of
+        // splitting into 3 + the `es` pitch. Only when IMMEDIATELY adjacent (no
+        // space) and not the head of a longer word, so `3 es`, durations, tuplet
+        // numbers, etc. are untouched.
+        int accLen = GluedDegreeAccidentalLength();
+        if (accLen > 0)
+        {
+            _position += accLen;
+            return (SyntaxKind.ScaleDegree, _text[start.._position]);
+        }
         return (SyntaxKind.IntegerLiteral, _text[start.._position]);
     }
+
+    // Length of an accidental suffix (isis/eses/is/es, longest first) sitting
+    // immediately after the digits and NOT followed by another letter — else 0.
+    private int GluedDegreeAccidentalLength()
+    {
+        foreach (var suffix in DegreeAccidentalSuffixes)
+        {
+            int end = _position + suffix.Length;
+            if (end <= _text.Length
+                && _text.AsSpan(_position, suffix.Length).SequenceEqual(suffix)
+                && (end == _text.Length || !char.IsLetter(_text[end])))
+                return suffix.Length;
+        }
+        return 0;
+    }
+
+    private static readonly string[] DegreeAccidentalSuffixes = { "isis", "eses", "is", "es" };
 
     private (SyntaxKind kind, string text) ScanIdentifierOrKeyword()
     {

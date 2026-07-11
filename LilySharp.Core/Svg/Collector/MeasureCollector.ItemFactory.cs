@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -262,6 +263,25 @@ public sealed partial class MeasureCollector
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
+        // Scale-degree members (<d 3 5 7,>): each stacks on the root by diatonic
+        // steps in the current key, then is placed absolutely (no relative-frame
+        // advance — the root already set the frame for the next chord/note).
+        int rootStep = GetPitchIndex(firstPitchName);
+        foreach (var degree in chord.Degrees)
+        {
+            var (step, alteration, octave) = ChordDegrees.Resolve(
+                rootStep, firstOctave, degree.Number, degree.Alteration,
+                degree.OctaveOffset, _meta.KeySharps);
+            var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
+            var (accidental, isCourtesy) =
+                GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            notes.Add(new ChordNoteInfo(
+                rp.StaffPosition, accidental,
+                rp.StaffPosition is <= -6 or >= 6,
+                IsCourtesy: isCourtesy,
+                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+        }
+
         // Drum chord members (<bd hh>): placement/head/GM key from the
         // registry, mixed freely with pitched members.
         foreach (var drum in chord.DrumNames)
@@ -337,9 +357,19 @@ public sealed partial class MeasureCollector
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
         int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName);
+        return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.Position);
+    }
 
+    /// <summary>
+    /// Transpose + staff-position + pitch-trace for an already-absolute written
+    /// pitch (diatonic step 0..6, accidental in semitones, absolute octave).
+    /// Shared by ordinary pitches (after relative-octave resolution) and by
+    /// scale-degree chord members (absolute from the start, anchored on the root).
+    /// </summary>
+    private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position)
+    {
         // Display pitch = written pitch, transposed if the part has transpose:.
-        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, pitch.AccidentalOffset, actualOctave);
+        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, accidentalOffset, actualOctave);
 
         // Staff position 0 = middle line of the staff.
         //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3
@@ -360,7 +390,7 @@ public sealed partial class MeasureCollector
         };
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
-        _pitchTrace.Add(new PitchTraceEntry(pitch.Position, FormatPitch(dStep, dAlt, dOctave)));
+        _pitchTrace.Add(new PitchTraceEntry(position, FormatPitch(dStep, dAlt, dOctave)));
         return new ResolvedPitch(basePosition, actualOctave, dStep, dAlt, dOctave);
     }
 

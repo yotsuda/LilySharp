@@ -190,6 +190,21 @@ internal sealed class ChordGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A scale-degree chord member: a degree number (an <c>IntegerLiteral</c>, or a
+/// <c>ScaleDegree</c> token when an accidental is glued on — <c>3</c> / <c>3is</c>)
+/// followed by octave marks (<c>7,</c> / <c>5'</c>). Resolved against the chord's
+/// root and the current key into an actual pitch. See
+/// <see cref="LilySharp.Core.Music.ChordDegrees"/>.
+/// </summary>
+internal sealed class ScaleDegreeGreen : GreenSyntaxNode
+{
+    public ScaleDegreeGreen(SyntaxToken degree, GreenNode?[] octaveMarks)
+        : base(SyntaxKind.ChordDegree, [degree, .. octaveMarks])
+    {
+    }
+}
+
+/// <summary>
 /// A barline: |, ||, |., |:, :| with an optional <c>*N</c> explicit repeat
 /// count on a <c>:|</c> end-repeat (e.g. <c>:|*3</c> = play the span 3 times).
 /// </summary>

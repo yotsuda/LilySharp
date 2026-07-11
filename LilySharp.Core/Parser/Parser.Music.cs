@@ -310,6 +310,14 @@ internal sealed partial class Parser
                 pitches.Add(ParsePitch(inChord: true));
                 continue;
             }
+            // Degree-chord member: after the root pitch, a bare number (or a
+            // number with a glued accidental) is a scale degree stacked on the
+            // root — <d 3 5 7,> = root d + the 3rd/5th/7th of the current key.
+            if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
+            {
+                pitches.Add(ParseScaleDegree());
+                continue;
+            }
             // Drum chord member: <bd hh> — a bare drum name (no duration
             // inside the brackets, like pitches).
             if (Current.Kind == SyntaxKind.Identifier && DrumNameRegistry.Contains(Current.Text))
@@ -326,6 +334,17 @@ internal sealed partial class Parser
         var articulations = ParsePostEvents();
 
         return new ChordGreen(openAngle, [.. pitches], closeAngle, duration, tremolo, articulations);
+    }
+
+    // A scale-degree chord member: the degree number (with any glued accidental)
+    // then octave marks, mirroring ParsePitch's ' / , collection.
+    private ScaleDegreeGreen ParseScaleDegree()
+    {
+        var degree = Advance(); // IntegerLiteral or ScaleDegree
+        var marks = new List<GreenNode?>();
+        while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+            marks.Add(Advance());
+        return new ScaleDegreeGreen(degree, [.. marks]);
     }
 
     private BarlineGreen ParseBarline()

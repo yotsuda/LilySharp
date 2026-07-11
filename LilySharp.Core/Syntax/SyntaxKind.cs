@@ -276,6 +276,10 @@ public enum SyntaxKind : ushort
     Apostrophe,
     /// <summary>A dollar-sign <c>$</c> token.</summary>
     Dollar,
+    /// <summary>A scale-degree number with a glued accidental (chord degree
+    /// notation, e.g. <c>3is</c> / <c>3es</c> inside <c>&lt;d 3is 5&gt;</c>). A plain
+    /// degree number stays an <see cref="IntegerLiteral"/>.</summary>
+    ScaleDegree,
     /// <summary>A double opening angle <c>&lt;&lt;</c> token (parallel-music start).</summary>
     DoubleOpenAngle,
     /// <summary>A double closing angle <c>&gt;&gt;</c> token (parallel-music end).</summary>
@@ -409,6 +413,9 @@ public enum SyntaxKind : ushort
     Chord,
     /// <summary>A pitch node.</summary>
     Pitch,
+    /// <summary>A scale-degree chord member (<c>3</c> / <c>3is</c> / <c>7,</c>): a
+    /// degree number, optional glued accidental, and octave marks.</summary>
+    ChordDegree,
     /// <summary>A duration node.</summary>
     Duration,
 
