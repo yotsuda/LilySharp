@@ -402,12 +402,12 @@
   <line x1="9.74" y1="17.81" x2="9.74" y2="15.54" stroke="#000000" stroke-width="0.085" data-pos="227"/>
   <line x1="8.96" y1="16.04" x2="9.74" y2="15.54" stroke="#000000" stroke-width="0.312" data-pos="227"/>
   <line x1="8.96" y1="16.56" x2="9.74" y2="16.06" stroke="#000000" stroke-width="0.312" data-pos="227"/>
-  <path d="M 9.35,18.86 C 10.09,19.43 11.05,19.27 11.76,18.46 C 11.03,19.10 10.06,19.26 9.35,18.86 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
+  <path d="M 9.35,18.81 C 10.10,19.37 11.21,19.21 11.76,18.46 C 11.18,19.03 10.07,19.19 9.35,18.81 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
   <text class="music" x="27.32" y="15.31" font-size="2.60" data-pos="297"></text>
   <line x1="28.12" y1="15.31" x2="28.12" y2="13.04" stroke="#000000" stroke-width="0.085" data-pos="297"/>
   <text class="music" x="28.12" y="13.04" font-size="2.60" fill="#000000" data-pos="297"></text>
   <line x1="27.74" y1="14.44" x2="28.66" y2="13.69" stroke="#000000" stroke-width="0.127" data-pos="297"/>
-  <path d="M 27.74,16.36 C 28.10,16.60 28.55,16.44 28.85,15.96 C 28.49,16.28 28.04,16.44 27.74,16.36 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="297"/>
+  <path d="M 27.74,16.31 C 28.18,16.57 28.63,16.42 28.85,15.96 C 28.58,16.25 28.13,16.40 27.74,16.31 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="297"/>
   <text x="0.05" y="27.57" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">6</text>
   <text class="music" x="0.80" y="12.07" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="12.07" x2="1.31" y2="10.67" stroke="#000000" stroke-width="0.100" data-pos="0"/>

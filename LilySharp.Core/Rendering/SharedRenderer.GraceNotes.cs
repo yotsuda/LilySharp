@@ -291,7 +291,7 @@ internal static partial class SharedRenderer
     // plain free-head-distance (its stem points the other way).
     // LILYPOND-REF: scm/layout-slur.scm default-slur-details free-head-distance 0.3,
     //   stem-encompass-penalty 30.
-    private const double GraceSlurStartClearance = 0.55;
+    private const double GraceSlurStartClearance = 0.5;
     private const double GraceSlurEndClearance = 0.65;
     // Tuck the main-note end a little further left of the stem (stem-down mains only).
     private const double GraceSlurEndLeftShift = 0.15;
@@ -313,9 +313,26 @@ internal static partial class SharedRenderer
         double dx = endX - startX;
         if (dx < 0.5) return; // degenerate
 
-        double arcHeight = Math.Min(dx * 0.25, 1.2);
-        var c1 = (X: startX + dx * 0.3, Y: startY + 0.3 * (endY - startY) + arcHeight);
-        var c2 = (X: startX + dx * 0.7, Y: startY + 0.7 * (endY - startY) + arcHeight);
+        // Base slur curve straight from LilyPond: both inner control points sit
+        // `height` off the chord PERPENDICULAR and indented `indent` along it, giving a
+        // rounder, symmetric arc than a fixed 0.3/0.7 split with a vertical bump.
+        // Parameters are the Slur grob defaults (height-limit 2.0, ratio 0.25).
+        // LILYPOND-REF: lily/bezier-bow.cc slur_height / get_slur_indent_height —
+        //   height = F0_1(width*r0/h_inf)*h_inf, F0_1(x)=2/pi*atan(pi*x/2);
+        //   indent  = 2*h_inf - q^2/3.1/(width+q), q = 2*h_inf*3.1, capped at width/3.1.
+        // LILYPOND-REF: lily/slur-configuration.cc Slur_configuration::generate_curve —
+        //   control_[1] = LEFT + perp*height*dir + unit*(+indent);
+        //   control_[2] = RIGHT + perp*height*dir + unit*(-indent).
+        const double hInf = 2.0, r0 = 0.25, maxFraction = 1.0 / 3.1;
+        double dyc = endY - startY;
+        double len = Math.Sqrt(dx * dx + dyc * dyc);
+        double height = 2.0 / Math.PI * Math.Atan(Math.PI * (len * r0 / hInf) / 2.0) * hInf;
+        double q = 2.0 * hInf / maxFraction;
+        double indent = Math.Min(2.0 * hInf - q * q * maxFraction / (len + q), len * maxFraction);
+        double ux = dx / len, uy = dyc / len;   // chord unit
+        double perpX = -uy, perpY = ux;         // perpendicular, +Y (down) for a bow below
+        var c1 = (X: startX + perpX * height + ux * indent, Y: startY + perpY * height + uy * indent);
+        var c2 = (X: endX + perpX * height - ux * indent, Y: endY + perpY * height - uy * indent);
 
         DrawCurve(startX, startY, endX, endY, c1, c2,
             curveUp: false, EngravingDefaults.SlurMidThickness * scale, gc);
