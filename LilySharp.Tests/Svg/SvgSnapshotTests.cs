@@ -190,6 +190,10 @@ public class SvgSnapshotTests
         // A forced-above script on a BEAMED note clears the beam on both the
         // notation staff and the tab (whose beam floats above the fret digits).
         yield return new object[] { "test/tab-beam-script" };
+        // Augmentation dots draw to the right of a tab fret digit (and each chord
+        // string row) — the fret number carries no notehead, so the dot is the only
+        // dotted-value cue on the tab; the stem/flag show the base duration.
+        yield return new object[] { "test/tab-dotted-values" };
         // A cross-string beamed group slopes the tab beam along the digit contour
         // (LP-like), keeping the lower digits' stems short and above-scripts clear.
         yield return new object[] { "test/tab-beam-slope" };

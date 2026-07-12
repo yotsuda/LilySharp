@@ -1,0 +1,13 @@
+version 1
+title "tab dotted values"
+time 4/4
+key c major
+part gtr { instrument guitar }
+section A {
+  gtr { e4. f8 g4. a8 | <c e g>2. <d f a>4 | }
+}
+form main { A }
+score main {
+  staff gtr
+  tab gtr
+}

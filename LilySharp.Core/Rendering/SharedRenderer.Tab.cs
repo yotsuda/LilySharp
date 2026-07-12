@@ -141,7 +141,7 @@ internal static partial class SharedRenderer
                     // its fret number — the held string is not re-struck.
                     if (!note.IsTieTarget)
                         DrawTabNote(note.Midi, itemX, staffY,
-                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, gc, note.IsDead);
+                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, note.Dots, gc, note.IsDead);
                     DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
                         columnX, staffY, staff, isBeamed, gc);
                     break;
@@ -259,11 +259,32 @@ internal static partial class SharedRenderer
 
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
-        double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)
+        double stringSpace, int sourcePosition, int dots, IDrawingContext gc, bool isDead = false)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
         DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, isDead);
+        double noteY = staffY + (stringNum - 1) * stringSpace;
+        double digitWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
+        DrawTabAugmentationDots(dots, x, digitWidth, noteY, sourcePosition, gc);
+    }
+
+    /// <summary>
+    /// Draws a note/chord-row's augmentation dots to the RIGHT of its fret digit,
+    /// centred on the string line. The tab fret number carries no notehead, so the
+    /// dot is the only visible cue that a value is dotted (the stem/flag show the
+    /// undotted base duration). Mirrors the notation staff's one-dot-width padding.
+    /// </summary>
+    private static void DrawTabAugmentationDots(int dots, double digitCenterX,
+        double digitWidth, double noteY, int sourcePosition, IDrawingContext gc)
+    {
+        if (dots <= 0) return;
+        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        double dotStartX = digitCenterX + digitWidth / 2 + dotWidth;
+        using (gc.Source(sourcePosition))
+            for (int d = 0; d < dots; d++)
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                    dotStartX + d * 2 * dotWidth, noteY, FontSize, null);
     }
 
     /// <summary>
@@ -314,6 +335,22 @@ internal static partial class SharedRenderer
         double[] dx = AssignTabChordOffsets(notes);
         for (int i = 0; i < notes.Count; i++)
             DrawTabFret(notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace, chord.SourcePosition, gc);
+
+        // Augmentation dots sit to the right of the whole chord (its rightmost digit
+        // edge), one per string row — the tab analogue of the notation dot column.
+        // The helper puts dots a dot-width past digitCenterX + digitWidth/2, so pass
+        // itemX as the centre and 2*(rightEdge - itemX) as the width to land them
+        // just past the chord's rightmost digit.
+        if (chord.Dots > 0)
+        {
+            double rightEdge = itemX;
+            for (int i = 0; i < notes.Count; i++)
+                rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabFretWidth(notes[i].fret) / 2);
+            double alignWidth = 2 * (rightEdge - itemX);
+            foreach (var (str, _) in notes)
+                DrawTabAugmentationDots(chord.Dots, itemX, alignWidth,
+                    staffY + (str - 1) * stringSpace, chord.SourcePosition, gc);
+        }
     }
 
     /// <summary>
