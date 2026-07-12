@@ -62,7 +62,7 @@ public static class InstrumentDefaults
             "viola" => (ClefType.Alto, 3),
             "cello" => (ClefType.Bass, 3),
             "bass" or "contrabass" or "double-bass" or "bass-guitar" or "electric-bass"
-                or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => (ClefType.Bass, 2),
+                or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => (ClefType.Bass, 3),
             
             // Piano
             "piano-right" or "piano-treble" => (ClefType.Treble, 4),
@@ -131,6 +131,42 @@ public static class InstrumentDefaults
         "bass6" or "6-string-bass" => "bass6",
         "guitar" or "acoustic-guitar" or "electric-guitar" => "guitar",
         "ukulele" or "uke" => "ukulele",
+        _ => null,
+    };
+
+    /// <summary>
+    /// The preset's default SOUNDING transposition in semitones — the written→sounding
+    /// octave a transposing instrument carries, EXCLUDING any octave already shown by
+    /// the clef (guitar/tenor use a <c>treble_8</c> clef, so their octave rides the
+    /// clef and this is 0). The bass family sounds an octave below its plain bass-clef
+    /// notation (−12); the piccolo sounds an octave above (+12). This is the default a
+    /// part's explicit <c>transposition</c> property overrides, and the single value the
+    /// tab-fret shift and the MIDI playback pitch both read.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors MuseScore's <c>transposeChromatic</c> (instruments.xml): the bass carries
+    /// an explicit −12 while the guitar leans on its <c>G8vb</c> clef.
+    /// </remarks>
+    public static int GetTransposition(string? instrument) => instrument?.ToLowerInvariant() switch
+    {
+        "bass" or "bass-guitar" or "electric-bass" or "contrabass" or "double-bass"
+            or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => -12,
+        "piccolo" => 12,
+        _ => 0,
+    };
+
+    /// <summary>
+    /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,
+    /// <c>8vb</c>, <c>15ma</c>, <c>15mb</c>) to its signed semitone shift, or null if
+    /// the text is not a recognized marker. <c>vb</c>/<c>mb</c> = down (sounds lower),
+    /// <c>va</c>/<c>ma</c> = up.
+    /// </summary>
+    public static int? ParseTranspositionSemitones(string value) => value.ToLowerInvariant() switch
+    {
+        "8va" => 12,
+        "8vb" => -12,
+        "15ma" => 24,
+        "15mb" => -24,
         _ => null,
     };
 

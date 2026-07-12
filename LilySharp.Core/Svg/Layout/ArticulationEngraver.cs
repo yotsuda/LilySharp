@@ -222,7 +222,8 @@ internal static class ArticulationEngraver
                         ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
                     int? sn = item is NoteItem ni ? ni.StringNumber : null;
                     var (strNum, _) = Tunings.CalculateFret(
-                        midi + Tunings.OctaveShift(tt, tabBendStaff.TabSourceClef), Tunings.GetTuning(tt), sn ?? 0);
+                        midi + Tunings.SoundingShift(tabBendStaff.TabSourceClef, tabBendStaff.Transposition),
+                        Tunings.GetTuning(tt), sn ?? 0);
                     fx = noteX + BendTabXOffset;
                     fy = staffOffset + (strNum - 1) * space;
                 }
@@ -345,7 +346,7 @@ internal static class ArticulationEngraver
                 // number instead of above it.
                 double fretHalf = TabConstants.FretDigitHeight / 2.0;
                 var geom = new TabStaffGeometry(
-                    tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
+                    tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 double topLine = staffOffset;
                 double bottomLine = staffOffset + (strings - 1) * space;
                 // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the

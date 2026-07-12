@@ -67,7 +67,7 @@ public sealed class TabStringNumberTests
     [InlineData(TuningType.Ukulele, 0)]
     public void BassTuningsSound8vb(TuningType tuning, int expectedShift)
     {
-        Assert.Equal(expectedShift, Tunings.OctaveShift(tuning));
+        Assert.Equal(expectedShift, Tunings.TuningTransposition(tuning));
     }
 
     [Fact]

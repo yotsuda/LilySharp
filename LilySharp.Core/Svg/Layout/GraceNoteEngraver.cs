@@ -52,6 +52,9 @@ public readonly record struct GraceNoteLayout(
     TuningType? Tuning = null,
     // The tab staff's clef (treble_8 shifts written→sounding an octave down).
     ClefType TabClef = ClefType.Treble,
+    // The tab staff's resolved transposition (bass = −12); combines with TabClef for
+    // the written→sounding shift, matching the main tab digits.
+    int TabTransposition = 0,
     int SourceIndex = -1,                // F3/B: index into score.GraceNotes (data-pos resolved at render)
     int StaffIndex = -1                  // owning staff (ossia shrink); -1 = unknown/test construction
 );
@@ -125,11 +128,13 @@ internal static class GraceNoteEngraver
             // Tab staves render grace notes as small fret numbers, not noteheads.
             TuningType? tabTuning = null;
             var tabClef = ClefType.Treble;
+            int tabTransposition = 0;
             if (staffByIndex != null
                 && staffByIndex.TryGetValue(grace.StaffIndex, out var gst) && gst.IsTab)
             {
                 tabTuning = gst.Tuning ?? TuningType.Guitar;
                 tabClef = gst.TabSourceClef;
+                tabTransposition = gst.Transposition;
             }
             if (grace.MeasureIndex >= graceMeasures.Length)
                 continue;
@@ -210,6 +215,7 @@ internal static class GraceNoteEngraver
                 StaffYOffset: staffOffset,
                 Tuning: tabTuning,
                 TabClef: tabClef,
+                TabTransposition: tabTransposition,
                 SourceIndex: gi,
                 StaffIndex: grace.StaffIndex
             ));

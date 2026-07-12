@@ -1,0 +1,12 @@
+version 1
+// The explicit `transposition 8vb` states the sounding octave a bass carries — the
+// same knob `instrument bass` sets as a default. With plain `clef bass` + `tuning
+// bass`, a bare `c` (written C3) frets on the tab exactly as `instrument bass` does
+// (A string, 3rd fret) and the notation shows the written pitch.
+title "explicit transposition"
+time 4/4
+key c major
+part bs { clef bass tuning bass transposition 8vb }
+section A { bs { c1 | } }
+form main { A }
+score main { staff bs tab bs }

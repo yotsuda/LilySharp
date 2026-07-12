@@ -50,7 +50,7 @@ internal static partial class SharedRenderer
             // shrunken digit before the main fret.
             if (g.Tuning is { } graceTuning)
             {
-                DrawTabGraceNotes(g, sy, graceTuning, g.TabClef, gc);
+                DrawTabGraceNotes(g, sy, graceTuning, g.TabClef, g.TabTransposition, gc);
                 continue;
             }
 
@@ -142,11 +142,11 @@ internal static partial class SharedRenderer
     /// grace notes are just the shrunken digits ahead of the main fret.
     /// </summary>
     private static void DrawTabGraceNotes(GraceNoteLayout g, double sy, TuningType tuning,
-        ClefType clef, IDrawingContext gc)
+        ClefType clef, int transposition, IDrawingContext gc)
     {
         double tabTopY = sy + g.StaffYOffset;
         int[] tuningArray = Tunings.GetTuning(tuning);
-        int octaveShift = Tunings.OctaveShift(tuning, clef);
+        int octaveShift = Tunings.SoundingShift(clef, transposition);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
         // Tab grace digits sit only slightly below the main fret size (NOT the
         // 0.65 notehead grace scale): on a tab staff the fret number IS the note,

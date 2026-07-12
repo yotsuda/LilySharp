@@ -138,10 +138,22 @@ public sealed record Staff(
     public ClefType TabSourceClef { get; init; } = ClefType.Treble;
 
     /// <summary>
+    /// The part's resolved SOUNDING transposition in semitones (written→sounding),
+    /// EXCLUDING the octave the clef already carries — a bass sounds −12 from its plain
+    /// bass clef, a piccolo +12. Resolved once (explicit <c>transposition</c> property &gt;
+    /// instrument preset &gt; tuning default) and read by BOTH the tab fret shift
+    /// (<see cref="Tablature.Tunings.SoundingShift"/>) and MIDI, so the printed fret and
+    /// the sounding pitch always agree.
+    /// </summary>
+    public int Transposition { get; init; }
+
+    /// <summary>
     /// Creates a tablature staff with the specified tuning.
     /// </summary>
-    public static Staff CreateTab(TuningType tuning, Voice voice, ClefType sourceClef = ClefType.Treble)
-        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning) { TabSourceClef = sourceClef };
+    public static Staff CreateTab(TuningType tuning, Voice voice, ClefType sourceClef = ClefType.Treble,
+        int transposition = 0)
+        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning)
+        { TabSourceClef = sourceClef, Transposition = transposition };
 
     /// <summary>
     /// Creates an ossia staff (small alternative passage).

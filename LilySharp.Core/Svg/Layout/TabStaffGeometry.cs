@@ -124,11 +124,12 @@ internal readonly struct TabStaffGeometry
     /// <summary>Number of strings for this tuning.</summary>
     public int StringCount { get; }
 
-    public TabStaffGeometry(TuningType tuning, double staffY, ClefType clef = ClefType.Treble)
+    public TabStaffGeometry(TuningType tuning, double staffY, ClefType clef = ClefType.Treble,
+        int transposition = 0)
     {
         StaffY = staffY;
         _tuning = Tunings.GetTuning(tuning);
-        _octaveShift = Tunings.OctaveShift(tuning, clef);
+        _octaveShift = Tunings.SoundingShift(clef, transposition);
         StringCount = Tunings.GetStringCount(tuning);
         StringSpace = EngravingDefaults.TabStringSpace(StringCount);
     }

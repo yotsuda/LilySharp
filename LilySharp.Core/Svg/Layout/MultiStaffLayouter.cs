@@ -852,7 +852,7 @@ internal sealed class MultiStaffLayouter
                         springs = SpacingRules.ApplyTabChordSpacing(
                             springs, allTimings, tStaff.PrimaryVoice.Measures[i],
                             Tunings.GetTuning(tabTuning),
-                            Tunings.OctaveShift(tabTuning, tStaff.TabSourceClef));
+                            Tunings.SoundingShift(tStaff.TabSourceClef, tStaff.Transposition));
 
             // Reserve a wide script's (fermata / ornament) sideways reach in the
             // SHARED columns, per staff (a script is keyed by its own staff index),

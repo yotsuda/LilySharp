@@ -4,7 +4,7 @@ time 4/4
 key c major
 part m { instrument electric-bass }
 section A {
-  m { c4 d e f }
+  m { c,4 d e f }
 }
 form main { A }
 score main { staff m }

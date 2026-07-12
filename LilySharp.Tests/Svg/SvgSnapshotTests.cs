@@ -182,6 +182,9 @@ public class SvgSnapshotTests
         // beam edge (the beam floats off the digits, not at the notation height) —
         // otherwise the "3" overprints the tab beam.
         yield return new object[] { "test/tab-tuplet-number" };
+        // An explicit `transposition 8vb` frets a bare `c` on the tab exactly as the
+        // `instrument bass` preset does (the preset just bundles it) — A string, 3rd fret.
+        yield return new object[] { "test/transposition-explicit" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

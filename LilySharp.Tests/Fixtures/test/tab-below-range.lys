@@ -9,7 +9,7 @@ key c major
 
 part m {
   instrument bass
-  section A { e8 f g a e f g a | c,8 d, e, f, c, d, e, f, | }
+  section A { e,8 f g a e f g a | c,8 d, e, f, c, d, e, f, | }
 }
 
 form main { A }

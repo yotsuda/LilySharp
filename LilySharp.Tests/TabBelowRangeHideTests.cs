@@ -47,7 +47,7 @@ public sealed class TabBelowRangeHideTests
     public void BelowLowestString_FlaggedHiddenOnTab()
     {
         // Measure 2 (c, …) sits an octave below the bass's low E; measure 1 is playable.
-        var score = Collect("e8 f g a e f g a | c,8 d, e, f, c, d, e, f, |");
+        var score = Collect("e,8 f g a e f g a | c,8 d, e, f, c, d, e, f, |");
         Assert.All(TabNotes(score, 1), n => Assert.True(n.TabBelowRange));
         Assert.All(TabNotes(score, 0), n => Assert.False(n.TabBelowRange));
     }

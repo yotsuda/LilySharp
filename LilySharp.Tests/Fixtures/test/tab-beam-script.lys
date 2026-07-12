@@ -8,7 +8,7 @@ key c major
 
 part m {
   instrument bass
-  section A { e8 f g@fermata a@flageolet e f g a | }
+  section A { e,8 f g@fermata a@flageolet e f g a | }
 }
 
 form main { A }

@@ -7,7 +7,7 @@ key c major
 
 part m {
   instrument bass
-  section A { c' d e f | g a g2 | }
+  section A { c d e f | g a g2 | }
 }
 
 form main { A }

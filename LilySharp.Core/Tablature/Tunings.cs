@@ -75,22 +75,32 @@ public static class Tunings
     public static bool IsBass(TuningType type) =>
         type is TuningType.Bass or TuningType.Bass5 or TuningType.Bass6;
 
-    /// <summary>The octave shift (semitones) to apply to written pitches before
-    /// computing tab frets: −12 for bass tunings (8vb), 0 otherwise.</summary>
-    public static int OctaveShift(TuningType type) => IsBass(type) ? -12 : 0;
+    /// <summary>The DEFAULT sounding transposition (semitones) a tuning implies when a
+    /// part gives no explicit <c>transposition</c> and no instrument preset: −12 for
+    /// bass tunings (they sound 8vb from bass-clef notation), 0 otherwise. This is the
+    /// fallback the resolved <see cref="Svg.Model.Staff.Transposition"/> uses so a bare
+    /// <c>tuning bass</c> still frets the sounding pitch.</summary>
+    public static int TuningTransposition(TuningType type) => IsBass(type) ? -12 : 0;
 
-    /// <summary>
-    /// Clef-aware octave shift. LilyPond pitches are SOUNDING pitches; Lily#
-    /// writes display pitches, so the tab must recover the sounding octave
-    /// from the notation convention: a treble_8 part (standard guitar
-    /// notation) sounds an octave below what is written, and bass tunings
-    /// sound 8vb from their bass-clef notation. Without this, an open-string
-    /// arpeggio landed on frets 7–12 of the top string.
-    /// </summary>
-    public static int OctaveShift(TuningType type, Svg.Model.ClefType clef) =>
-        clef == Svg.Model.ClefType.Treble8Below ? -12
-        : IsBass(type) ? -12
-        : 0;
+    /// <summary>The octave a CLEF already carries: a <c>treble_8</c> part (standard
+    /// guitar/tenor notation) sounds an octave below what is written, <c>treble^8</c>
+    /// an octave above, <c>bass_8</c> an octave below. LilyPond pitches are SOUNDING
+    /// pitches; Lily# writes display pitches, so the tab and MIDI recover the sounding
+    /// octave from this plus the part's <c>transposition</c>.</summary>
+    public static int ClefOctaveShift(Svg.Model.ClefType clef) => clef switch
+    {
+        Svg.Model.ClefType.Treble8Below => -12,
+        Svg.Model.ClefType.Bass8Below => -12,
+        Svg.Model.ClefType.Treble8Above => 12,
+        _ => 0,
+    };
+
+    /// <summary>The total written→sounding shift for a tab staff: the clef octave plus
+    /// the part's resolved <c>transposition</c> (which already folds in the bass/preset
+    /// default). Both the fret calculation and MIDI playback read this one value, so a
+    /// note frets, sounds, and prints consistently.</summary>
+    public static int SoundingShift(Svg.Model.ClefType clef, int transposition) =>
+        ClefOctaveShift(clef) + transposition;
 
     /// <summary>
     /// String/fret allocation for a CHORD, mimicking LilyPond: notes with an

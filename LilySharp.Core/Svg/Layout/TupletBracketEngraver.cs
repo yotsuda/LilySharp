@@ -253,7 +253,7 @@ internal static class TupletBracketEngraver
                         && tstaff.IsTab && tstaff.Tuning.HasValue)
                     {
                         var geom = new TabStaffGeometry(
-                            tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef);
+                            tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
                         const double tabClearance = 0.5; // baseline above beam edge
                         double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
                         double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);

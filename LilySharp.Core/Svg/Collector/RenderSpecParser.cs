@@ -359,8 +359,26 @@ public static class RenderSpecParser
         // Carry the part's NOTATION clef: treble_8 marks written-8va
         // (guitar) parts, which the fret calculation shifts down an octave.
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
+        var transposition = ResolvePartTransposition(tab, voiceName, tuning);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
-        return new TabStaffSpec(staffSpec, tuning);
+        return new TabStaffSpec(staffSpec, tuning, transposition);
+    }
+
+    /// <summary>
+    /// Resolves a part's SOUNDING transposition (semitones, excluding the clef octave):
+    /// an explicit <c>transposition</c> property (<c>8vb</c> etc.) &gt; the instrument
+    /// preset's default (bass = −12, piccolo = +12) &gt; the tuning's default (bass
+    /// tunings = −12). This is the single value the tab fret shift and MIDI both read.
+    /// </summary>
+    private static int ResolvePartTransposition(SyntaxNode node, string partName, TuningType tuning)
+    {
+        var text = GetPartProperty(node, partName, "transposition");
+        if (text != null && InstrumentDefaults.ParseTranspositionSemitones(text) is int ex)
+            return ex;
+        var instrument = GetInstrument(node, partName)?.Preset;
+        return instrument != null
+            ? InstrumentDefaults.GetTransposition(instrument)
+            : Tablature.Tunings.TuningTransposition(tuning);
     }
 
     /// <summary>

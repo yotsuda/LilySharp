@@ -267,7 +267,7 @@ internal static partial class SharedRenderer
     private static double TabStemHeadY(MusicItem item, bool stemUp, double tabStaffTopY, Staff staff)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
-        int octaveShift = Tunings.OctaveShift(tuningType, staff.TabSourceClef);
+        int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
         int[] tuning = Tunings.GetTuning(tuningType);
 
         int midi = 0;

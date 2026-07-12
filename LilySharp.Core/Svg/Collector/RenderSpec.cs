@@ -75,7 +75,7 @@ public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderIte
 /// <summary>
 /// Tablature staff render item.
 /// </summary>
-public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning) : RenderItemSpec;
+public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0) : RenderItemSpec;
 
 /// <summary>
 /// Ossia staff render item (small alternative passage above/below main staff).
@@ -262,7 +262,7 @@ public sealed record RenderSpec(
                 // Tab / ossia staves don't support intra-staff polyphony; they
                 // take the primary voice only.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef);
+                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef, tab.Transposition);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 

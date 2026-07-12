@@ -787,7 +787,7 @@ internal sealed class ElementCoordinator
                     // It curves OPPOSITE the stem: below the digits when the stem
                     // points up, above when it points down (matching the tab stem,
                     // which uses note.StemUp).
-                    var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef);
+                    var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
                     // A chord's per-string ties must each hug their OWN string.
                     // LILYPOND-REF: lily/tab-note-heads-engraver.cc:106-123 — each
                     // TabNoteHead's staff-position is the STRING LINE its
@@ -1094,7 +1094,7 @@ internal sealed class ElementCoordinator
     {
         var voice = score.Voices[slur.VoiceIndex];
         double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
-        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef);
+        var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
 
         // The fret digits sit a TabHeadCenterOffset right of their note columns
         // (see EngravingDefaults); shift the real (unbroken) edges to hang the

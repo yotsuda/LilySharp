@@ -173,10 +173,11 @@ internal sealed class TabResolver
     /// closest to the previous note's keeps the hand in position. Tuning-dependent, so
     /// it runs per tab staff after the score is assembled.
     /// </summary>
-    public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble)
+    public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble,
+        int transposition = 0)
     {
         int[] tun = Tunings.GetTuning(tuning);
-        int shift = Tunings.OctaveShift(tuning, clef);
+        int shift = Tunings.SoundingShift(clef, transposition);
         int lowestOpen = tun.Min();
         int? prevFret = null; // hand position, carried across bar lines
 

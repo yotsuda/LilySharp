@@ -7,7 +7,7 @@ key c major
 
 part m {
   instrument bass
-  section A { a'4@accent a@staccato a@fermata a@tenuto | }
+  section A { a4@accent a@staccato a@fermata a@tenuto | }
 }
 
 form main { A }

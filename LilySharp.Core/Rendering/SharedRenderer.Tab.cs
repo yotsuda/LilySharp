@@ -50,9 +50,9 @@ internal static partial class SharedRenderer
         int stringCount = Tunings.GetStringCount(tuningType);
         int[] tuning = Tunings.GetTuning(tuningType);
         double stringSpace = EngravingDefaults.TabStringSpace(stringCount);
-        // Written→sounding recovery: treble_8 (guitar) and bass tunings are
-        // notated an octave above where they sound.
-        int octaveShift = Tunings.OctaveShift(tuningType, staff.TabSourceClef);
+        // Written→sounding recovery: the clef octave (treble_8) plus the part's
+        // resolved transposition (bass = −12) — one value shared with MIDI.
+        int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
 
         // One staff line per string, spaced stringSpace apart. Lines start at the
         // system indent (systemStartX), like the notation staff — not the page

@@ -349,6 +349,15 @@ internal sealed class Lexer
             _position += accLen;
             return (SyntaxKind.ScaleDegree, _text[start.._position]);
         }
+        // An ottava suffix glued to the digits (8va / 8vb / 15ma / 15mb) — the value
+        // of a `transposition` property. Kept as ONE Identifier token so the generic
+        // property parser captures "8vb" whole; the collector maps it to semitones.
+        int ottLen = GluedOttavaSuffixLength(start);
+        if (ottLen > 0)
+        {
+            _position += ottLen;
+            return (SyntaxKind.Identifier, _text[start.._position]);
+        }
         return (SyntaxKind.IntegerLiteral, _text[start.._position]);
     }
 
@@ -368,6 +377,27 @@ internal sealed class Lexer
     }
 
     private static readonly string[] DegreeAccidentalSuffixes = { "isis", "eses", "is", "es" };
+
+    // Length of an ottava suffix (va/vb/ma/mb) sitting immediately after the digits
+    // and NOT followed by another letter — else 0. Only the octave/double-octave
+    // numbers 8 and 15 take it, so an ordinary duration/tuplet number is untouched.
+    private int GluedOttavaSuffixLength(int numStart)
+    {
+        string num = _text[numStart.._position];
+        if (num is not ("8" or "15"))
+            return 0;
+        foreach (var suffix in OttavaSuffixes)
+        {
+            int end = _position + suffix.Length;
+            if (end <= _text.Length
+                && _text.AsSpan(_position, suffix.Length).SequenceEqual(suffix)
+                && (end == _text.Length || !char.IsLetter(_text[end])))
+                return suffix.Length;
+        }
+        return 0;
+    }
+
+    private static readonly string[] OttavaSuffixes = { "va", "vb", "ma", "mb" };
 
     private (SyntaxKind kind, string text) ScanIdentifierOrKeyword()
     {
