@@ -198,6 +198,18 @@ public static class ChordQualityRegistry
         var map = new Dictionary<string, ChordQuality>();
         foreach (var (quality, tones) in Tones)
             map[PitchClassKey(tones.Select(t => t.Semitone))] = quality;
+        // Shell voicings: a seventh chord with its (most omittable) PERFECT 5TH
+        // dropped is still that chord — <1 3 7> in C = C-E-B names as Cmaj7 without
+        // the G. Each dropped-fifth set is distinct from every full quality, so
+        // recognition stays unambiguous. Only the root+3rd+7th shells qualify; a
+        // fifthless triad is a bare dyad and left unnamed.
+        foreach (var q in new[]
+        {
+            ChordQuality.Major7, ChordQuality.Dominant7,
+            ChordQuality.Minor7, ChordQuality.MinorMajor7,
+        })
+            map.TryAdd(
+                PitchClassKey(Tones[q].Where(t => t.Semitone != 7).Select(t => t.Semitone)), q);
         return map;
     }
 
