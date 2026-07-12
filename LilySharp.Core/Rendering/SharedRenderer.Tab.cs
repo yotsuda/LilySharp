@@ -114,6 +114,10 @@ internal static partial class SharedRenderer
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
         double stringSpace = EngravingDefaults.TabStringSpace(stringCount);
+        // A tab stem's direction comes from the STRING (the tab head), not the notated
+        // pitch, so a bass run on the bottom strings points up like LilyPond.
+        var dirGeom = new TabStaffGeometry(
+            staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
 
         for (int i = 0; i < measure.Items.Length; i++)
         {
@@ -142,12 +146,12 @@ internal static partial class SharedRenderer
                     if (!note.IsTieTarget)
                         DrawTabNote(note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, note.Dots, gc, note.IsDead);
-                    DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
+                    DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
                         columnX, staffY, staff, isBeamed, gc);
                     break;
                 case ChordItem chord:
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
-                    DrawUnbeamedTabStem(chord, chord.BaseDuration, chord.StemUp,
+                    DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
                         columnX, staffY, staff, isBeamed, gc);
                     break;
                 // RestItem: nothing on a tab staff.

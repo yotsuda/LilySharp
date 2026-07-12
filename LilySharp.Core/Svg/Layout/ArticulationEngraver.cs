@@ -329,6 +329,12 @@ internal static class ArticulationEngraver
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                     + EngravingDefaults.TabHeadCenterOffset;
                 const double tabGap = 1.0;
+                var geom = new TabStaffGeometry(
+                    tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
+                // A tab stem's direction is string-based (the tab head), not the notated
+                // pitch — so a bass note on the bottom strings has an UP stem, and a
+                // stem-coupled mark sits on the opposite (DOWN) side.
+                bool tabStemUp = geom.StringStemUp(geom.MeanString(item));
                 // Fermata, ornaments and bow marks keep direction = UP on a tab
                 // staff too — LilyPond's TabVoice keeps the Script_engraver and
                 // the script side-positions above the staff symbol; only
@@ -339,14 +345,12 @@ internal static class ArticulationEngraver
                 // LILYPOND-REF: scm/define-grobs.scm:1365 fermata direction = UP.
                 bool tabForceAbove = IsForcedAbove(articulation);
                 bool tabAbove = articulation.DirectionForced
-                    ? articulation.IsAbove : (tabForceAbove || !stemUp);
+                    ? articulation.IsAbove : (tabForceAbove || !tabStemUp);
                 // A fret digit is centred on its string line, so a digit on the
                 // OUTER string protrudes half its height past the outer line. Clear
                 // that too, or an above-script (accent/staccato/fermata) lands on the
                 // number instead of above it.
                 double fretHalf = TabConstants.FretDigitHeight / 2.0;
-                var geom = new TabStaffGeometry(
-                    tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 double topLine = staffOffset;
                 double bottomLine = staffOffset + (strings - 1) * space;
                 // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the
@@ -357,19 +361,21 @@ internal static class ArticulationEngraver
                 // (e.g. `@accent.down` on a top-string, stem-down note), where an inside
                 // mark collides with the stem — that case clears the whole staff instead.
                 // Tuning-agnostic — the string geometry drives it.
-                bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != stemUp);
+                bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != tabStemUp);
                 double tabY;
                 bool isTabBeamed = beamGroups.TryGetValue(
                     (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
                     out var tabBeam);
-                if (tabAbove && isTabBeamed && tabBeam.Group.StemUp)
+                bool tabBeamUp = isTabBeamed
+                    && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
+                if (tabAbove && isTabBeamed && tabBeamUp)
                 {
                     // Beamed, stem-up: the beam floats above the digits, so an
                     // above-script must clear the BEAM's outer edge at this note's x —
                     // not just the digit — exactly like the companion notation staff.
                     tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
                 }
-                else if (!tabAbove && isTabBeamed && !tabBeam.Group.StemUp)
+                else if (!tabAbove && isTabBeamed && !tabBeamUp)
                 {
                     // Beamed, stem-down: the beam hangs below the digits, so a
                     // below-script (e.g. a forced `@accent.down`) must clear the BEAM's
@@ -800,15 +806,16 @@ internal static class ArticulationEngraver
     /// </summary>
     internal static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
+        // A tab beam's direction is string-based, not the notation pitch direction.
+        bool up = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
         int n = beam.Group.Members.Length;
-        double attach = beam.Group.StemUp
-            ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX;
+        double attach = up ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX;
         var xs = new double[n];
         for (int i = 0; i < n; i++)
             xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0) + attach;
-        var line = TabBeamQuant.Compute(beam.Group, xs, geom);
+        var line = TabBeamQuant.Compute(beam.Group, xs, geom, up);
         double half = EngravingDefaults.BeamThickness / 2;
-        return TabBeamMath.At(line, noteX) + (beam.Group.StemUp ? -half : half);
+        return TabBeamMath.At(line, noteX) + (up ? -half : half);
     }
 
     private static Dictionary<(int Staff, int Measure, int Item), (double TipY, bool StemUp)>

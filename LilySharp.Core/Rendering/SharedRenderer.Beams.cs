@@ -87,10 +87,29 @@ internal static partial class SharedRenderer
             Staff? MemberStaffOf(int i) => MemberStaffIdx(i) is var si && si >= 0
                 && staffByIndex.TryGetValue(si, out var s) ? s : null;
 
+            // A tab beam draws entirely on tab staves; its stem direction comes from
+            // the STRINGS (tab heads), not the notated pitch, so a bass run on the
+            // bottom strings beams UP like LilyPond — the opposite of the notation
+            // group's pitch-based direction.
+            bool allTab = grp.Members.Length > 0 && Enumerable.Range(0, grp.Members.Length)
+                .All(i => MemberStaffOf(i)?.IsTab == true);
+            TabStaffGeometry? tabDirGeom = null;
+            bool tabDir = false;
+            if (allTab && MemberStaffOf(0) is { } tabDirStaff)
+            {
+                var g = new TabStaffGeometry(tabDirStaff.Tuning ?? TuningType.Guitar,
+                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
+                    tabDirStaff.TabSourceClef, tabDirStaff.Transposition);
+                tabDirGeom = g;
+                tabDir = g.GroupStemUp(grp.Members.Select(m => m.Item));
+            }
+
             // Per-member stem direction: kneed beams mix up- and down-stems
             // within one group (LILYPOND-REF: beam.cc:894-982 consider_auto_knees),
-            // which flips the stem's notehead attachment side.
-            bool MemberUp(int i) => grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
+            // which flips the stem's notehead attachment side. A tab beam ignores the
+            // knee and uses its string-based direction.
+            bool MemberUp(int i) => tabDirGeom.HasValue ? tabDir
+                : grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
 
             // Both notation and tab stems attach at the notehead edge (from the
             // note column). On a tab staff the fret digit is centred a
@@ -102,30 +121,20 @@ internal static partial class SharedRenderer
             double leftBeamY = StaffFrame.PositionToDevice(beam.LeftY, staffMiddleY);
             double rightBeamY = StaffFrame.PositionToDevice(beam.RightY, staffMiddleY);
 
-            // A tab beam's height can't come from the notation quanter — its Y is
-            // in staff positions, not string lines, so mapped onto the tab staff it
-            // can land right on the fret numbers and leave stub stems. Instead lay a
-            // tab beam HORIZONTAL a fixed distance past the OUTERMOST digit, so each
-            // stem's length is set by its string: a low string gets a long stem, a
-            // high (open) string a short one — but never a stub.
-            bool allTab = grp.Members.Length > 0 && Enumerable.Range(0, grp.Members.Length)
-                .All(i => MemberStaffOf(i)?.IsTab == true);
+            // A tab beam's height can't come from the notation quanter — its Y is in
+            // staff positions, not string lines. Lay it out from the STRING contour so
+            // each stem's length is set by its string.
             double leftStemX = StemAttachX(0);
             double rightStemX = StemAttachX(grp.Members.Length - 1);
 
-            if (allTab)
+            if (tabDirGeom.HasValue)
             {
-                // Quant the tab beam through LilyPond's ported beam quanter, fed the
-                // notes' STRING lines — same least-squares/damping/concaveness/quanting
-                // as notation, so a chord/outlier flattens and a run slopes.
+                // Quant the tab beam from the notes' STRING lines, in the string-based
+                // stem direction (tabDir) rather than the notation pitch direction.
                 int n = grp.Members.Length;
                 var xs = new double[n];
                 for (int i = 0; i < n; i++) xs[i] = StemAttachX(i);
-                var tabStaff0 = MemberStaffOf(0)!;
-                var geom = new TabStaffGeometry(tabStaff0.Tuning ?? TuningType.Guitar,
-                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
-                    tabStaff0.TabSourceClef, tabStaff0.Transposition);
-                var line = TabBeamQuant.Compute(grp, xs, geom);
+                var line = TabBeamQuant.Compute(grp, xs, tabDirGeom.Value, tabDir);
                 leftBeamY = TabBeamMath.At(line, leftStemX);
                 rightBeamY = TabBeamMath.At(line, rightStemX);
             }
@@ -152,7 +161,7 @@ internal static partial class SharedRenderer
             for (int level = 1; level < maxBeamCount; level++)
             {
                 double offset = level * EngravingDefaults.BeamTranslation;
-                if (!grp.StemUp) offset = -offset;
+                if (!(tabDirGeom.HasValue ? tabDir : grp.StemUp)) offset = -offset;
                 double beamSpanX = rightStemX - leftStemX;
                 double BeamYAt(double x) => leftBeamY + offset +
                     (beamSpanX > 0.001 ? (x - leftStemX) / beamSpanX : 0) * (rightBeamY - leftBeamY);

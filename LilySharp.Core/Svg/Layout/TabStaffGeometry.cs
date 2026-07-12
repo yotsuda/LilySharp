@@ -64,7 +64,7 @@ internal static class TabBeamMath
 internal static class TabBeamQuant
 {
     public static (double Slope, double InterceptY, double FirstX) Compute(
-        BeamGroup group, double[] memberStemXs, TabStaffGeometry geom)
+        BeamGroup group, double[] memberStemXs, TabStaffGeometry geom, bool stemUp)
     {
         int n = group.Members.Length;
         double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
@@ -74,8 +74,8 @@ internal static class TabBeamQuant
         // the ported notation quanter tilts a run by pitch, so a same-string group of
         // different frets (all on one line) came out sloped and its stems inverted. A
         // tab beam is parallel to the strings; same string ⇒ flat.
-        double firstStr = geom.StringY(geom.StemHeadString(group.Members[0].Item, group.StemUp));
-        double lastStr = geom.StringY(geom.StemHeadString(group.Members[n - 1].Item, group.StemUp));
+        double firstStr = geom.StringY(geom.StemHeadString(group.Members[0].Item, stemUp));
+        double lastStr = geom.StringY(geom.StemHeadString(group.Members[n - 1].Item, stemUp));
         double rawSlope = span > 0.001 ? (lastStr - firstStr) / span : 0.0;
         // Damp the tilt exactly as LilyPond does — a raw string jump makes far too
         // steep a beam. LILYPOND-REF: beam-quanting.cc:766
@@ -95,11 +95,11 @@ internal static class TabBeamQuant
         double farAnchor = 0, nearAnchor = 0;
         for (int i = 0; i < n; i++)
         {
-            int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
-            double headY = geom.StringY(str) + (group.StemUp ? -clearance : clearance);
+            int str = geom.StemHeadString(group.Members[i].Item, stemUp);
+            double headY = geom.StringY(str) + (stemUp ? -clearance : clearance);
             double v = headY - slope * memberStemXs[i]; // beam intercept giving a zero stem here
             if (i == 0) { farAnchor = nearAnchor = v; }
-            else if (group.StemUp)
+            else if (stemUp)
             {
                 farAnchor = System.Math.Max(farAnchor, v);   // lowest head = longest up-stem
                 nearAnchor = System.Math.Min(nearAnchor, v); // highest head = shortest
@@ -110,9 +110,9 @@ internal static class TabBeamQuant
                 nearAnchor = System.Math.Max(nearAnchor, v); // lowest head = shortest
             }
         }
-        double beamFar = farAnchor + (group.StemUp ? -stemLen : stemLen);
-        double beamFloor = nearAnchor + (group.StemUp ? -minStem : minStem);
-        double intercept = group.StemUp
+        double beamFar = farAnchor + (stemUp ? -stemLen : stemLen);
+        double beamFloor = nearAnchor + (stemUp ? -minStem : minStem);
+        double intercept = stemUp
             ? System.Math.Min(beamFar, beamFloor)   // above the notes: the higher (smaller Y) wins
             : System.Math.Max(beamFar, beamFloor);  // below the notes: the lower (larger Y) wins
         double leftY = intercept + slope * leftX;
@@ -123,9 +123,9 @@ internal static class TabBeamQuant
         // by only ~1.6 gaps, not a full stem below it — otherwise a mid-string run (a
         // 9 on string 3) drew a beam two gaps under the bottom line. Pull the beam back
         // toward the staff, preserving the slope.
-        double edge = group.StemUp ? geom.StringY(1) : geom.StringY(geom.StringCount);
+        double edge = stemUp ? geom.StringY(1) : geom.StringY(geom.StringCount);
         double maxOverhang = 1.6 * geom.StringSpace;
-        if (group.StemUp)
+        if (stemUp)
         {
             double top = System.Math.Min(leftY, rightY);
             double shift = (edge - maxOverhang) - top;
@@ -228,5 +228,42 @@ internal readonly struct TabStaffGeometry
             default:
                 return 1;
         }
+    }
+
+    /// <summary>The mean tab-head string of a note/chord (a chord averages its notes),
+    /// for the string-based stem-direction decision.</summary>
+    public double MeanString(MusicItem item)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+                return Fret(n.Midi, n.StringNumber).stringNum;
+            case ChordItem c when c.Notes.Length > 0:
+                double sum = 0;
+                foreach (var x in c.Notes) sum += Fret(x.Midi, x.StringNumber).stringNum;
+                return sum / c.Notes.Length;
+            default:
+                return 1.0;
+        }
+    }
+
+    /// <summary>
+    /// The tab stem direction for a mean string position: UP for the LOWER half of the
+    /// fretboard (a low note, like a low notated pitch), DOWN for the upper. LilyPond
+    /// decides a tab stem from the STRING (the tab head), not the notated pitch — so a
+    /// bass run on the bottom strings points its stems up, not down.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: the TabStaff's stems follow the tab note-column positions
+    /// (Stem::calc_direction over the fret heads), not the sounding pitch.</remarks>
+    public bool StringStemUp(double meanString) => meanString > (StringCount + 1) / 2.0;
+
+    /// <summary>The string-based stem direction for a whole beam group (its members'
+    /// mean tab-head string).</summary>
+    public bool GroupStemUp(System.Collections.Generic.IEnumerable<MusicItem> items)
+    {
+        double sum = 0;
+        int count = 0;
+        foreach (var it in items) { sum += MeanString(it); count++; }
+        return StringStemUp(count > 0 ? sum / count : 1.0);
     }
 }
