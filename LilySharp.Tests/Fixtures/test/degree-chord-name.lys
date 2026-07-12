@@ -1,0 +1,10 @@
+version 1
+title "degree chord auto-name"
+time 4/4
+key c major
+part m { clef treble }
+section A {
+  m { <1 3 5>2@chord <2 4 6>2@chord | }
+}
+form main { A }
+score main { staff m }

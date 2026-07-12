@@ -132,7 +132,20 @@ public sealed partial class MeasureCollector
             pcs.Add(RelativeOctave.StepSemitoneOf(s) + alter);
         }
 
-        return ChordStructure.TryRecognize(rootStep, rootAlter, pcs, out structure);
+        // The chord's ROOT for naming is the FIRST DEGREE, not the key tonic that the
+        // degrees are measured from: <2 4 6> in C major is D-F-A, i.e. Dm rooted on D,
+        // not a C chord. (A named root already IS the chord root.)
+        int recogStep = rootStep, recogAlter = rootAlter;
+        if (chord.Root is null && chord.Degrees.Any())
+        {
+            var first = chord.Degrees.First();
+            var (fs, fa, _) = ChordDegrees.Resolve(
+                rootStep, 4, first.Number, first.Alteration, first.OctaveOffset, keySharps);
+            recogStep = fs;
+            recogAlter = fa;
+        }
+
+        return ChordStructure.TryRecognize(recogStep, recogAlter, pcs, out structure);
     }
 
     /// <summary>
