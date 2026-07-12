@@ -350,9 +350,13 @@ internal static class ArticulationEngraver
                 double bottomLine = staffOffset + (strings - 1) * space;
                 // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the
                 // tab staff, tucked just past the digit in the empty string-gap on the
-                // stem's far side; a forced-above script (fermata/ornament/bow/stopped/…)
-                // clears the whole staff. Tuning-agnostic — the string geometry drives it.
-                bool insideEligible = !IsForcedAbove(articulation);
+                // stem's FAR side; a forced-above script (fermata/ornament/bow/stopped/…)
+                // clears the whole staff. It must be the far side, though: an explicit
+                // .up/.down can force the mark onto the SAME side the stem travels
+                // (e.g. `@accent.down` on a top-string, stem-down note), where an inside
+                // mark collides with the stem — that case clears the whole staff instead.
+                // Tuning-agnostic — the string geometry drives it.
+                bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != stemUp);
                 double tabY;
                 if (tabAbove
                     && beamGroups.TryGetValue(
