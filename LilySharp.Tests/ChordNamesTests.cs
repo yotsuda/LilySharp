@@ -69,9 +69,11 @@ public sealed class ChordNamesTests
         Assert.Equal(expected, new ChordStructure(0, 0, q).Intervals);
     }
 
-    // Shell voicings: a seventh chord with the perfect 5th dropped still names as
-    // that chord (root+3rd+7th), e.g. <1 3 7> in C = C-E-B = Cmaj7.
+    // Fifthless voicings: a chord with the perfect 5th dropped still names as that
+    // chord — <1 3 7> in C = C-E-B = Cmaj7, and the root+3rd dyad <c e>/<c ees> = C/Cm.
     [Theory]
+    [InlineData(new[] { 0, 4 }, ChordQuality.Major)]
+    [InlineData(new[] { 0, 3 }, ChordQuality.Minor)]
     [InlineData(new[] { 0, 4, 11 }, ChordQuality.Major7)]
     [InlineData(new[] { 0, 4, 10 }, ChordQuality.Dominant7)]
     [InlineData(new[] { 0, 3, 10 }, ChordQuality.Minor7)]

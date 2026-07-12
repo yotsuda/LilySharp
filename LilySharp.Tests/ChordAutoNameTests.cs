@@ -90,13 +90,14 @@ public sealed class ChordAutoNameTests
 
     [Theory]
     [InlineData("<c des d>")] // a cluster
-    [InlineData("<c e>")]     // a dyad names no quality
+    [InlineData("<c g>")]     // a rootless-5th dyad has no 3rd to name a quality
     public void UnrecognizedChord_IsDiagnosed(string chord)
         => Assert.True(NotRecognizedDiagnosed(chord));
 
     [Theory]
     [InlineData("<c e g>")]   // a real chord
     [InlineData("<d f a c>")]
+    [InlineData("<c e>")]     // root+3rd dyad names its quality (C)
     [InlineData("<c 3 5>")]   // a degree chord — left to the collector, never warned
     public void RecognizedOrDegreeChord_IsNotDiagnosed(string chord)
         => Assert.False(NotRecognizedDiagnosed(chord));
