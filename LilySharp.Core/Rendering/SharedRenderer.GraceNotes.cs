@@ -334,6 +334,15 @@ internal static partial class SharedRenderer
         var solved = new SlurScoringProblem(
             slurItem, startX, startY, endX, endY, obstacles: obstacles).Solve();
 
+        // For a short grace→main span (a beamed grace run sits right against the main
+        // note) the scorer's free-head inset can drop every candidate, collapsing the
+        // width; keep the base attachments then so the bow stays visible.
+        bool degenerate = solved.EndX - solved.StartX < 1.0;
+        double sx = degenerate ? startX : solved.StartX;
+        double sy = degenerate ? startY : solved.StartY;
+        double ex = degenerate ? endX : solved.EndX;
+        double ey = degenerate ? endY : solved.EndY;
+
         // Draw the optimised endpoints with LilyPond's slur_shape base curve: both
         // inner control points sit `height` off the chord PERPENDICULAR, indented
         // `indent` along it — a rounder, symmetric arc. Slur grob defaults height-limit
@@ -341,7 +350,6 @@ internal static partial class SharedRenderer
         //   get_slur_indent_height (height = F0_1(width*r0/h_inf)*h_inf,
         //   F0_1(x)=2/pi*atan(pi*x/2); indent = 2*h_inf - q^2/3.1/(width+q),
         //   q = 2*h_inf*3.1, cap width/3.1); slur-configuration.cc generate_curve.
-        double sx = solved.StartX, sy = solved.StartY, ex = solved.EndX, ey = solved.EndY;
         const double hInf = 2.0, r0 = 0.25, maxFraction = 1.0 / 3.1;
         double dx = ex - sx, dyc = ey - sy;
         double len = Math.Sqrt(dx * dx + dyc * dyc);
