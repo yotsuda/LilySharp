@@ -361,7 +361,18 @@ internal sealed partial class Parser
     // then octave marks, mirroring ParsePitch's ' / , collection.
     private ScaleDegreeGreen ParseScaleDegree()
     {
+        int degreeStart = _textPosition;
         var degree = Advance(); // IntegerLiteral or ScaleDegree
+        // A scale degree is 1-based (1 = root); 0 (and anything that parses to < 1)
+        // is not a degree. Without this, <0 …> silently read as the step below the
+        // root (a leading tone), e.g. <0 2 4> as Bdim in C.
+        int digits = 0;
+        while (digits < degree.Text.Length && char.IsDigit(degree.Text[digits])) digits++;
+        if (int.TryParse(degree.Text.AsSpan(0, digits), out int number) && number < 1)
+            _diagnostics.Error(new TextSpan(degreeStart, Math.Max(1, degree.Width)),
+                DiagnosticCodes.InvalidScaleDegree,
+                $"Scale degree '{number}' is invalid — degrees are 1-based (1 = root, "
+                + "3 = third, …).");
         var marks = new List<GreenNode?>();
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
             marks.Add(Advance());

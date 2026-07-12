@@ -254,6 +254,10 @@ public static class DiagnosticCodes
     /// no known chord quality. Use the explicit form <c>@chord(c:maj7)</c>.</summary>
     public const string ChordNotRecognized = "LYS1020";
 
+    /// <summary>Syntax error: a scale degree is 1-based (1 = root/unison), so
+    /// <c>&lt;0 …&gt;</c> is invalid.</summary>
+    public const string InvalidScaleDegree = "LYS1021";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

@@ -43,6 +43,15 @@ public sealed class ChordDegreeTests
     private static int[] Midis(string body, string key = "c major") =>
         FirstChord(body, key).Notes.Select(n => n.Midi).ToArray();
 
+    [Theory]
+    [InlineData("<0 2 4>2")]  // degree 0 is not the leading tone — it is invalid
+    [InlineData("<0>2")]
+    public void ZeroDegree_IsDiagnosed(string body)
+    {
+        var tree = SyntaxTree.Parse($"time 4/4\nkey c major\n{body}");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.InvalidScaleDegree);
+    }
+
     [Fact]
     public void Degrees_StackDiatonicallyOnRoot()
     {
