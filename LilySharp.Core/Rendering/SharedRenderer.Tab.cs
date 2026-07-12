@@ -266,25 +266,34 @@ internal static partial class SharedRenderer
         DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, isDead);
         double noteY = staffY + (stringNum - 1) * stringSpace;
         double digitWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
-        DrawTabAugmentationDots(dots, x, digitWidth, noteY, sourcePosition, gc);
+        DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
 
     /// <summary>
     /// Draws a note/chord-row's augmentation dots to the RIGHT of its fret digit,
-    /// centred on the string line. The tab fret number carries no notehead, so the
-    /// dot is the only visible cue that a value is dotted (the stem/flag show the
-    /// undotted base duration). Mirrors the notation staff's one-dot-width padding.
+    /// nudged into the space ABOVE the string line (never centred on the line, where
+    /// they overprint it). The fret number sits on a line, so — exactly like a
+    /// notehead on a staff line — its dot moves off the line by one position (half a
+    /// staff space); LilyPond's Dot_configuration prefers the UP direction for that
+    /// move, so the dot lands above the digit. The tab fret number carries no
+    /// notehead, so the dot is the only dotted-value cue; the stem/flag show the base
+    /// duration.
+    /// LILYPOND-REF: lily/dot-configuration.cc Dot_configuration::badness — on-line
+    ///   dots displaced by one position, UP preferred.
     /// </summary>
     private static void DrawTabAugmentationDots(int dots, double digitCenterX,
-        double digitWidth, double noteY, int sourcePosition, IDrawingContext gc)
+        double digitWidth, double noteY, double stringSpace, int sourcePosition, IDrawingContext gc)
     {
         if (dots <= 0) return;
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
         double dotStartX = digitCenterX + digitWidth / 2 + dotWidth;
+        // One position off the line = half a staff space; on a tab the staff space is
+        // the string gap. UP is smaller device Y.
+        double dotY = noteY - stringSpace / 2;
         using (gc.Source(sourcePosition))
             for (int d = 0; d < dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                    dotStartX + d * 2 * dotWidth, noteY, FontSize, null);
+                    dotStartX + d * 2 * dotWidth, dotY, FontSize, null);
     }
 
     /// <summary>
@@ -349,7 +358,7 @@ internal static partial class SharedRenderer
             double alignWidth = 2 * (rightEdge - itemX);
             foreach (var (str, _) in notes)
                 DrawTabAugmentationDots(chord.Dots, itemX, alignWidth,
-                    staffY + (str - 1) * stringSpace, chord.SourcePosition, gc);
+                    staffY + (str - 1) * stringSpace, stringSpace, chord.SourcePosition, gc);
         }
     }
 
