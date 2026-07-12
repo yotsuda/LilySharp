@@ -555,8 +555,12 @@ internal sealed class SlurScoringProblem
                 if (dir * (slurY - stemY) < 0)
                 {
                     double stemDem = _parameters.StemEncompassPenalty;
-                    // Reduce for edges
-                    if (isEdge)
+                    // Reduce only at the edge whose stem points along the slur: the
+                    // left edge of an UP slur, the right edge of a DOWN slur — NOT any
+                    // edge. LILYPOND-REF: slur-configuration.cc:298 —
+                    //   if ((l_edge && dir == UP) || (r_edge && dir == DOWN)) dem /= 5.
+                    bool lEdge = j == 0, rEdge = j == _obstacles.Count - 1;
+                    if ((lEdge && dir > 0) || (rEdge && dir < 0))
                         stemDem /= 5;
                     demerit += stemDem;
                 }
