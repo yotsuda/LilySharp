@@ -65,6 +65,7 @@ internal static partial class SharedRenderer
             double scaledFontSize = FontSize * eff;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
+            int lastGraceStaffPos = 0;
             // Per-head geometry, collected so the stems/beam can be drawn once
             // the whole group's positions are known.
             var headX = new List<double>(g.Notes.Length);
@@ -96,6 +97,7 @@ internal static partial class SharedRenderer
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
                     lastNoteY = y;
+                    lastGraceStaffPos = note.StaffPosition;
                     currentX += 1.2 * eff;  // approximate advance per grace note
                 }
 
@@ -120,7 +122,9 @@ internal static partial class SharedRenderer
                     // RIGHT); the slur can then run to the head centre. A stem-down note
                     // keeps its stem on the LEFT, so the slur tucks short of it.
                     bool mainStemUp = g.MainNoteStaffPosition < 0;
-                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, mainStemUp, eff, gc);
+                    DrawGraceSlur(lastNoteX, lastNoteY, lastGraceStaffPos,
+                        g.MainNoteX, mainY, g.MainNoteStaffPosition, mainStemUp,
+                        g.MeasureIndex, eff, gc);
                 }
             }
         }
@@ -296,8 +300,9 @@ internal static partial class SharedRenderer
     // Tuck the main-note end a little further left of the stem (stem-down mains only).
     private const double GraceSlurEndLeftShift = 0.15;
 
-    private static void DrawGraceSlur(double graceX, double graceY,
-        double mainX, double mainY, bool mainStemUp, double scale, IDrawingContext gc)
+    private static void DrawGraceSlur(double graceX, double graceY, int graceStaffPos,
+        double mainX, double mainY, int mainStaffPos, bool mainStemUp,
+        int measureIndex, double scale, IDrawingContext gc)
     {
         double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
         double startY = graceY + 0.5 + GraceSlurStartClearance;
@@ -310,31 +315,45 @@ internal static partial class SharedRenderer
             : mainX - GraceSlurEndLeftShift;
         double endY = mainY + 0.5 + GraceSlurEndClearance;
 
-        double dx = endX - startX;
-        if (dx < 0.5) return; // degenerate
+        if (endX - startX < 0.5) return; // degenerate
 
-        // Base slur curve straight from LilyPond: both inner control points sit
-        // `height` off the chord PERPENDICULAR and indented `indent` along it, giving a
-        // rounder, symmetric arc than a fixed 0.3/0.7 split with a vertical bump.
-        // Parameters are the Slur grob defaults (height-limit 2.0, ratio 0.25).
-        // LILYPOND-REF: lily/bezier-bow.cc slur_height / get_slur_indent_height —
-        //   height = F0_1(width*r0/h_inf)*h_inf, F0_1(x)=2/pi*atan(pi*x/2);
-        //   indent  = 2*h_inf - q^2/3.1/(width+q), q = 2*h_inf*3.1, capped at width/3.1.
-        // LILYPOND-REF: lily/slur-configuration.cc Slur_configuration::generate_curve —
-        //   control_[1] = LEFT + perp*height*dir + unit*(+indent);
-        //   control_[2] = RIGHT + perp*height*dir + unit*(-indent).
+        // Optimise the endpoints through the SAME slur scorer the regular slurs use
+        // (LilyPond's Slur_score): enumerate attachment Ys around the base and pick the
+        // configuration that best encompasses the heads and flattens the slope. This is
+        // what pulls the grace-side start down when the main note is far below it,
+        // instead of a fixed clearance. The heads are fed as obstacles to encompass.
+        // LILYPOND-REF: lily/slur-scoring.cc Slur_score_state::solve / get_best_curve.
+        var slurItem = new SlurItem(graceStaffPos, mainStaffPos, curveUp: false,
+            measureIndex, measureIndex, startItemIndex: 0, endItemIndex: 0);
+        double graceHalf = 0.5 * scale, mainHalf = 0.5;
+        var obstacles = new List<SlurObstacle>
+        {
+            new(startX, graceY - graceHalf, graceY + graceHalf, SlurObstacleType.NoteHead),
+            new(endX, mainY - mainHalf, mainY + mainHalf, SlurObstacleType.NoteHead),
+        };
+        var solved = new SlurScoringProblem(
+            slurItem, startX, startY, endX, endY, obstacles: obstacles).Solve();
+
+        // Draw the optimised endpoints with LilyPond's slur_shape base curve: both
+        // inner control points sit `height` off the chord PERPENDICULAR, indented
+        // `indent` along it — a rounder, symmetric arc. Slur grob defaults height-limit
+        // 2.0, ratio 0.25. LILYPOND-REF: lily/bezier-bow.cc slur_height /
+        //   get_slur_indent_height (height = F0_1(width*r0/h_inf)*h_inf,
+        //   F0_1(x)=2/pi*atan(pi*x/2); indent = 2*h_inf - q^2/3.1/(width+q),
+        //   q = 2*h_inf*3.1, cap width/3.1); slur-configuration.cc generate_curve.
+        double sx = solved.StartX, sy = solved.StartY, ex = solved.EndX, ey = solved.EndY;
         const double hInf = 2.0, r0 = 0.25, maxFraction = 1.0 / 3.1;
-        double dyc = endY - startY;
+        double dx = ex - sx, dyc = ey - sy;
         double len = Math.Sqrt(dx * dx + dyc * dyc);
         double height = 2.0 / Math.PI * Math.Atan(Math.PI * (len * r0 / hInf) / 2.0) * hInf;
         double q = 2.0 * hInf / maxFraction;
         double indent = Math.Min(2.0 * hInf - q * q * maxFraction / (len + q), len * maxFraction);
         double ux = dx / len, uy = dyc / len;   // chord unit
         double perpX = -uy, perpY = ux;         // perpendicular, +Y (down) for a bow below
-        var c1 = (X: startX + perpX * height + ux * indent, Y: startY + perpY * height + uy * indent);
-        var c2 = (X: endX + perpX * height - ux * indent, Y: endY + perpY * height - uy * indent);
+        var c1 = (X: sx + perpX * height + ux * indent, Y: sy + perpY * height + uy * indent);
+        var c2 = (X: ex + perpX * height - ux * indent, Y: ey + perpY * height - uy * indent);
 
-        DrawCurve(startX, startY, endX, endY, c1, c2,
+        DrawCurve(sx, sy, ex, ey, c1, c2,
             curveUp: false, EngravingDefaults.SlurMidThickness * scale, gc);
     }
 
