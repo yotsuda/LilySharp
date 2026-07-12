@@ -123,7 +123,8 @@ internal static partial class SharedRenderer
                 for (int i = 0; i < n; i++) xs[i] = StemAttachX(i);
                 var tabStaff0 = MemberStaffOf(0)!;
                 var geom = new TabStaffGeometry(tabStaff0.Tuning ?? TuningType.Guitar,
-                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)), tabStaff0.TabSourceClef);
+                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
+                    tabStaff0.TabSourceClef, tabStaff0.Transposition);
                 var line = TabBeamQuant.Compute(grp, xs, geom);
                 leftBeamY = TabBeamMath.At(line, leftStemX);
                 rightBeamY = TabBeamMath.At(line, rightStemX);

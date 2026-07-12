@@ -67,68 +67,55 @@ internal static class TabBeamQuant
         BeamGroup group, double[] memberStemXs, TabStaffGeometry geom)
     {
         int n = group.Members.Length;
-        // A string line is 1.5 staff-spaces = 3 half-space positions; string 1 (the
-        // top line) is position 0, lower strings negative. The quanter reads
-        // itemXPositions by ItemIndex, so build that sparse array from the stems.
-        var stemPos = new int[n];
-        int maxIdx = 0;
-        for (int i = 0; i < n; i++)
-        {
-            int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
-            stemPos[i] = -(str - 1) * 3;
-            if (group.Members[i].ItemIndex > maxIdx) maxIdx = group.Members[i].ItemIndex;
-        }
-        var xById = new double[maxIdx + 1];
-        for (int i = 0; i < n; i++)
-            xById[group.Members[i].ItemIndex] = memberStemXs[i];
-
-        var (leftPos, rightPos) =
-            new BeamScoringProblem(group, xById, stemPositions: stemPos).Solve();
-
-        // Quanter Y is in half-space positions (position 0 = the top string line);
-        // map back to device Y at the outer stems.
         double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
-        double leftY = geom.StaffY - leftPos * 0.5;
-        double rightY = geom.StaffY - rightPos * 0.5;
-        double slope = rightX > leftX ? (rightY - leftY) / (rightX - leftX) : 0.0;
+        double span = rightX - leftX;
 
-        // Keep only the quanter's SLOPE. Its absolute Y models the 4 strings as a tall
-        // staff, so a stem-DOWN beam lands several string-gaps below the whole staff.
-        // Instead anchor the beam 3 string gaps past the FARTHEST member's STRING LINE
-        // (the one whose stem is longest — the HIGHEST digit for a down-stem, the
-        // lowest for an up-stem): measured from LilyPond's own SVG, a run spanning
-        // strings 1–3 beams right on the bottom line, i.e. 3 gaps below the TOP note,
-        // NOT 3 gaps below the closest note (which pushed the beam far past the staff).
-        // A floor keeps the closest note's stem from collapsing when the run spans the
-        // whole fretboard.
-        // LILYPOND-REF: lily/beam.cc stem-length from the outer stem; scm/define-grobs
-        // Stem.details.beamed-lengths (~3). On a tab the string gap IS the staff space.
-        double stemLen = 3.0 * geom.StringSpace;
-        double minStem = 1.0 * geom.StringSpace;
+        // Slope follows the STRING CONTOUR (first→last string), NOT the notation pitch:
+        // the ported notation quanter tilts a run by pitch, so a same-string group of
+        // different frets (all on one line) came out sloped and its stems inverted. A
+        // tab beam is parallel to the strings; same string ⇒ flat. Clamp the total tilt
+        // so a wide string jump doesn't make a steep beam.
+        double firstStr = geom.StringY(geom.StemHeadString(group.Members[0].Item, group.StemUp));
+        double lastStr = geom.StringY(geom.StemHeadString(group.Members[n - 1].Item, group.StemUp));
+        double slope = span > 0.001 ? (lastStr - firstStr) / span : 0.0;
+        double maxRise = 2.0 * geom.StringSpace;
+        if (span > 0.001 && System.Math.Abs(slope * span) > maxRise)
+            slope = System.Math.Sign(slope) * maxRise / span;
+
+        // Anchor the beam a fixed length from the digit HEADS (string line ± the digit
+        // clearance), measured along the slope. The FARTHEST member (longest stem) gets
+        // stemLen; a floor keeps the CLOSEST member's stem from collapsing to nothing
+        // when the run crosses strings — LilyPond's tab stems sit ~2–2.5 string gaps
+        // from the head, shorter than a notation stem.
+        // LILYPOND-REF: measured from LilyPond's own tab SVG (\tabFullNotation).
+        double stemLen = 2.4 * geom.StringSpace;
+        double minStem = 1.4 * geom.StringSpace;
+        double clearance = TabConstants.FretDigitHeight / 2 + 0.3;
         double farAnchor = 0, nearAnchor = 0;
         for (int i = 0; i < n; i++)
         {
             int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
-            double v = geom.StringY(str) - slope * memberStemXs[i]; // beam intercept ON this string
+            double headY = geom.StringY(str) + (group.StemUp ? -clearance : clearance);
+            double v = headY - slope * memberStemXs[i]; // beam intercept giving a zero stem here
             if (i == 0) { farAnchor = nearAnchor = v; }
             else if (group.StemUp)
             {
-                farAnchor = System.Math.Max(farAnchor, v);   // lowest digit = longest up-stem
-                nearAnchor = System.Math.Min(nearAnchor, v); // highest digit = shortest
+                farAnchor = System.Math.Max(farAnchor, v);   // lowest head = longest up-stem
+                nearAnchor = System.Math.Min(nearAnchor, v); // highest head = shortest
             }
             else
             {
-                farAnchor = System.Math.Min(farAnchor, v);   // highest digit = longest down-stem
-                nearAnchor = System.Math.Max(nearAnchor, v); // lowest digit = shortest
+                farAnchor = System.Math.Min(farAnchor, v);   // highest head = longest down-stem
+                nearAnchor = System.Math.Max(nearAnchor, v); // lowest head = shortest
             }
         }
         double beamFar = farAnchor + (group.StemUp ? -stemLen : stemLen);
         double beamFloor = nearAnchor + (group.StemUp ? -minStem : minStem);
         double intercept = group.StemUp
-            ? System.Math.Min(beamFar, beamFloor)   // above the notes: the smaller Y
-            : System.Math.Max(beamFar, beamFloor);  // below the notes: the larger Y
-        leftY = intercept + slope * leftX;
-        rightY = intercept + slope * rightX;
+            ? System.Math.Min(beamFar, beamFloor)   // above the notes: the higher (smaller Y) wins
+            : System.Math.Max(beamFar, beamFloor);  // below the notes: the lower (larger Y) wins
+        double leftY = intercept + slope * leftX;
+        double rightY = intercept + slope * rightX;
         return (slope, leftY, leftX);
     }
 }
