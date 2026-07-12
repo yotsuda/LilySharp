@@ -73,14 +73,15 @@ internal static class TabBeamQuant
         // Slope follows the STRING CONTOUR (first→last string), NOT the notation pitch:
         // the ported notation quanter tilts a run by pitch, so a same-string group of
         // different frets (all on one line) came out sloped and its stems inverted. A
-        // tab beam is parallel to the strings; same string ⇒ flat. Clamp the total tilt
-        // so a wide string jump doesn't make a steep beam.
+        // tab beam is parallel to the strings; same string ⇒ flat.
         double firstStr = geom.StringY(geom.StemHeadString(group.Members[0].Item, group.StemUp));
         double lastStr = geom.StringY(geom.StemHeadString(group.Members[n - 1].Item, group.StemUp));
-        double slope = span > 0.001 ? (lastStr - firstStr) / span : 0.0;
-        double maxRise = 2.0 * geom.StringSpace;
-        if (span > 0.001 && System.Math.Abs(slope * span) > maxRise)
-            slope = System.Math.Sign(slope) * maxRise / span;
+        double rawSlope = span > 0.001 ? (lastStr - firstStr) / span : 0.0;
+        // Damp the tilt exactly as LilyPond does — a raw string jump makes far too
+        // steep a beam. LILYPOND-REF: beam-quanting.cc:766
+        //   slope = 0.6 * tanh(slope) / (damping + concaveness),
+        // with the default damping = 1 and concaveness = 0 for a monotonic run.
+        double slope = 0.6 * System.Math.Tanh(rawSlope);
 
         // Anchor the beam a fixed length from the digit HEADS (string line ± the digit
         // clearance), measured along the slope. The FARTHEST member (longest stem) gets
