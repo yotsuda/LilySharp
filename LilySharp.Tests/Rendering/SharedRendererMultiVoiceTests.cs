@@ -129,6 +129,8 @@ public sealed class SharedRendererMultiVoiceTests
         public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null) { }
         public void DrawRectangle(double x, double y, double w, double h,
             Color? fill = null, Color? stroke = null, double sw = 0) { }
+        public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+            (double X, double Y) p2, (double X, double Y) p3, Color fill) { }
         public void DrawEllipse(double cx, double cy, double rx, double ry,
             Color? fill = null, Color? stroke = null, double sw = 0) { }
         public void DrawCircle(double cx, double cy, double r, Color? fill = null) { }

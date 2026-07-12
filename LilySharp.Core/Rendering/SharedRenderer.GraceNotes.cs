@@ -257,11 +257,19 @@ internal static partial class SharedRenderer
         double beamTrans = EngravingDefaults.BeamTranslation * scale;
         double halfStem = stemThick / 2;
 
+        // A beam is a PARALLELOGRAM with vertical ends (LP Lookup::beam): a plain
+        // sloped thick line caps its ends perpendicular to the slope and leaves a
+        // triangle poking past the vertical stem. Corners are the left/right ends
+        // (extended half a stem) at ±half the (vertical) beam thickness.
+        double beamHalf = beamThick / 2;
         void Beam(int a, int b, double off)
-            => gc.DrawLine(
-                StemX(a) - halfStem, BeamY(StemX(a)) + off - beamSlope * halfStem,
-                StemX(b) + halfStem, BeamY(StemX(b)) + off + beamSlope * halfStem,
-                Color.Black, beamThick);
+        {
+            double xL = StemX(a) - halfStem, xR = StemX(b) + halfStem;
+            double yL = BeamY(xL) + off, yR = BeamY(xR) + off;
+            gc.DrawFilledQuad(
+                (xL, yL - beamHalf), (xR, yR - beamHalf),
+                (xR, yR + beamHalf), (xL, yL + beamHalf), Color.Black);
+        }
 
         Beam(0, n - 1, 0);                    // primary across the whole group
         for (int level = 1; level < maxBeams; level++)

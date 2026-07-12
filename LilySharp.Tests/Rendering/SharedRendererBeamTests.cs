@@ -217,6 +217,9 @@ public sealed class SharedRendererBeamTests
         public void DrawRectangle(double x, double y, double width, double height,
             Color? fill = null, Color? stroke = null, double strokeWidth = 0) { }
 
+        public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+            (double X, double Y) p2, (double X, double Y) p3, Color fill) { }
+
         public void DrawEllipse(double cx, double cy, double rx, double ry,
             Color? fill = null, Color? stroke = null, double strokeWidth = 0) { }
 

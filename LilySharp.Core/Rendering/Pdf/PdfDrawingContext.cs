@@ -122,6 +122,17 @@ internal sealed class PdfDrawingContext : IDrawingContext
             X(cx - r), X(cy - r), T(r * 2), T(r * 2));
     }
 
+    public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+        (double X, double Y) p2, (double X, double Y) p3, Color fill)
+    {
+        var pts = new[]
+        {
+            new XPoint(X(p0.X), X(p0.Y)), new XPoint(X(p1.X), X(p1.Y)),
+            new XPoint(X(p2.X), X(p2.Y)), new XPoint(X(p3.X), X(p3.Y)),
+        };
+        _gfx.DrawPolygon(new XSolidBrush(ToXColor(fill)), pts, XFillMode.Alternate);
+    }
+
     public void DrawClosedBezier(
         (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,

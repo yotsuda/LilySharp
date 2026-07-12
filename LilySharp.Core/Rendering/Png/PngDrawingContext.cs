@@ -79,6 +79,19 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         }
     }
 
+    public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+        (double X, double Y) p2, (double X, double Y) p3, Color fill)
+    {
+        using var path = new SKPath();
+        path.MoveTo(X(p0.X), X(p0.Y));
+        path.LineTo(X(p1.X), X(p1.Y));
+        path.LineTo(X(p2.X), X(p2.Y));
+        path.LineTo(X(p3.X), X(p3.Y));
+        path.Close();
+        using var paint = new SKPaint { Color = ToSKColor(fill), Style = SKPaintStyle.Fill, IsAntialias = true };
+        _canvas.DrawPath(path, paint);
+    }
+
     public void DrawEllipse(double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
     {

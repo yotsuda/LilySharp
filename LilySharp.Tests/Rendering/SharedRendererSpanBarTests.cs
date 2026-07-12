@@ -105,6 +105,9 @@ public sealed class SharedRendererSpanBarTests
             Color? fill = null, Color? stroke = null, double sw = 0)
             => Rects.Add((x, y, w, h));
 
+        public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+            (double X, double Y) p2, (double X, double Y) p3, Color fill) { }
+
         public void DrawLine(double x1, double y1, double x2, double y2,
             Color? stroke = null, double strokeWidth = 0.1, (double On, double Off)? dash = null,
             LineCap cap = LineCap.Butt) { }

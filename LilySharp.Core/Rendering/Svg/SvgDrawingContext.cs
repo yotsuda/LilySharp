@@ -64,6 +64,14 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.AppendLine($"  <rect{attrs}/>");
     }
 
+    public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+        (double X, double Y) p2, (double X, double Y) p3, Color fill)
+    {
+        _sb.AppendLine(string.Format(Inv,
+            "  <polygon points=\"{0:F2},{1:F2} {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2}\" fill=\"{8}\"{9}/>",
+            p0.X, p0.Y, p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y, fill.ToHex(), SourceAttr()));
+    }
+
     public void DrawEllipse(double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
     {

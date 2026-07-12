@@ -55,6 +55,15 @@ public interface IDrawingContext
         double x, double y, double width, double height,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0);
 
+    /// <summary>Fills the quadrilateral p0→p1→p2→p3 (four straight edges). Used for a
+    /// beam, whose ends are VERTICAL even when the body slopes — a plain thick line
+    /// would cap its ends perpendicular to the slope and leave triangles past the
+    /// stems. LILYPOND-REF: lily/lookup.cc Lookup::beam.</summary>
+    void DrawFilledQuad(
+        (double X, double Y) p0, (double X, double Y) p1,
+        (double X, double Y) p2, (double X, double Y) p3,
+        Color fill);
+
     /// <summary>Draws an axis-aligned ellipse with optional fill and stroke.</summary>
     void DrawEllipse(
         double cx, double cy, double rx, double ry,

@@ -57,6 +57,10 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
         => _inner.DrawRectangle(X(x), y, width * _invScaleX, height, fill, stroke, strokeWidth);
 
+    public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
+        (double X, double Y) p2, (double X, double Y) p3, Color fill)
+        => _inner.DrawFilledQuad(P(p0), P(p1), P(p2), P(p3), fill);
+
     public void DrawEllipse(
         double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
