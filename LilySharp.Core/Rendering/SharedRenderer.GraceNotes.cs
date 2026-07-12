@@ -116,7 +116,11 @@ internal static partial class SharedRenderer
                     double mainY = os.Y(
                         StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY),
                         g.StaffIndex, g.MeasureIndex);
-                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, eff, gc);
+                    // A main note below the middle line is stem-up (stem on the head's
+                    // RIGHT); the slur can then run to the head centre. A stem-down note
+                    // keeps its stem on the LEFT, so the slur tucks short of it.
+                    bool mainStemUp = g.MainNoteStaffPosition < 0;
+                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, mainStemUp, eff, gc);
                 }
             }
         }
@@ -287,20 +291,23 @@ internal static partial class SharedRenderer
     // plain free-head-distance (its stem points the other way).
     // LILYPOND-REF: scm/layout-slur.scm default-slur-details free-head-distance 0.3,
     //   stem-encompass-penalty 30.
-    private const double GraceSlurStartClearance = 0.3;
+    private const double GraceSlurStartClearance = 0.55;
     private const double GraceSlurEndClearance = 0.65;
-    // Tuck the main-note end a little further left of the stem.
+    // Tuck the main-note end a little further left of the stem (stem-down mains only).
     private const double GraceSlurEndLeftShift = 0.15;
 
     private static void DrawGraceSlur(double graceX, double graceY,
-        double mainX, double mainY, double scale, IDrawingContext gc)
+        double mainX, double mainY, bool mainStemUp, double scale, IDrawingContext gc)
     {
         double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
         double startY = graceY + 0.5 + GraceSlurStartClearance;
-        // End left of the main notehead's stem-down stem (which attaches at the
-        // head's left) so the slur tucks beside the stem instead of crossing it,
-        // dropped below the head so the bow does not hug the notehead.
-        double endX = mainX - GraceSlurEndLeftShift;
+        // A stem-DOWN main note carries its stem on the head's LEFT, so end the slur
+        // short of it (tuck beside the stem). A stem-UP main note has a clear left side,
+        // so run the slur out to the head CENTRE. Dropped below the head either way so
+        // the bow does not hug the notehead.
+        double endX = mainStemUp
+            ? mainX + GlyphMetrics.NoteheadBlack.CenterX
+            : mainX - GraceSlurEndLeftShift;
         double endY = mainY + 0.5 + GraceSlurEndClearance;
 
         double dx = endX - startX;
