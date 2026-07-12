@@ -258,7 +258,7 @@ internal sealed class MeasureLayouter
             // Leading grace notes on the first note hang left of its column, after
             // the barline (LilyPond gives the grace its own column between the
             // barline and the main note).
-            startLeadGrace = LeadingGracePrefixWidth(firstItems);
+            startLeadGrace = LeadingGracePrefixWidth(firstItems, includeMainAccidental: true);
         }
 
         if (startLeadGrace > 0)
@@ -438,7 +438,8 @@ internal sealed class MeasureLayouter
     /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
     /// the group, so reserved space and drawn space agree.
     /// </remarks>
-    private static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items)
+    private static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items,
+        bool includeMainAccidental = false)
     {
         if (items == null) return 0;
         double w = 0;
@@ -450,8 +451,23 @@ internal sealed class MeasureLayouter
                 ChordItem c => c.LeadingGrace,
                 _ => ImmutableArray<GraceNoteInfo>.Empty
             };
-            if (!grace.IsDefaultOrEmpty)
-                w = Math.Max(w, SpacingRules.CalculateGraceGroupSpringWidth(grace));
+            if (grace.IsDefaultOrEmpty)
+                continue;
+            double hang = SpacingRules.CalculateGraceGroupSpringWidth(grace);
+            // At a LINE START the grace hangs left of the main item's OWN left ink
+            // (its accidental) with nothing before it, so the front spring must
+            // reserve grace + accidental, not their max — otherwise the grace
+            // overflows into the clef/key/time prefix. (Mid-line the previous note
+            // already provides that room, so the accidental is left out there.)
+            bool hasAccidental = item switch
+            {
+                NoteItem n => n.Accidental != null,
+                ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
+                _ => false
+            };
+            if (includeMainAccidental && hasAccidental)
+                hang += SpacingRules.CalculateLeftExtent(item);
+            w = Math.Max(w, hang);
         }
         return w;
     }

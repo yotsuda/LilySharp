@@ -1,0 +1,18 @@
+// A grace before an accidental note/chord at the LINE START must reserve the
+// grace group AND the main item's accidental in the prefix->first-note spring,
+// or the grace hangs left into the clef/key/time. The front spring adds the
+// main accidental to the leading-grace reservation (only at a line start).
+octave absolute
+key c major
+
+part m { clef treble }
+
+section A {
+  m { acciaccatura { cis'8 } <e' ges' bes'>4 r2. }
+}
+
+form main { A }
+
+score main "grace-accidental-line-start" {
+  staff m
+}

@@ -169,6 +169,9 @@ public class SvgSnapshotTests
         // A grace before a chord clears the chord's staggered accidental stack
         // (grace-to-main gap uses the chord's full left extent, not one accidental).
         yield return new object[] { "test/grace-chord-accidental" };
+        // A grace before an accidental chord AT THE LINE START reserves grace +
+        // accidental in the prefix spring, so it doesn't hang into the clef/time.
+        yield return new object[] { "test/grace-accidental-line-start" };
         // A tab staff BELOW a notation staff of the same music: the tab's
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).
