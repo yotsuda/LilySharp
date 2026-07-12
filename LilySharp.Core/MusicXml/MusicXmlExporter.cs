@@ -1425,6 +1425,10 @@ public sealed class MusicXmlExporter
         {
             int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
             firstOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, tonicStep, 0);
+            // The first degree is the chord's root; its octave mark sets the whole
+            // chord's register (<1' 3 5> == <c' 3 5>). Fold it into the root octave
+            // and skip it on that degree below.
+            firstOctave += chord.Degrees.First().OctaveOffset;
             firstStep = tonicStep;
             _currentStep = tonicStep;
             _currentOctave = firstOctave;
@@ -1434,11 +1438,14 @@ public sealed class MusicXmlExporter
         // the (written) key, then apply the part transpose like any pitch. When the
         // root is omitted the FIRST degree is the chord's onset (no <chord/>).
         bool needsOnset = pitches.Count == 0;
+        bool firstDeg = true;
         foreach (var degree in chord.Degrees)
         {
+            int degOctaveMarks = needsOnset && firstDeg ? 0 : degree.OctaveOffset;
+            firstDeg = false;
             var (dstep, dalter, doctave) = ChordDegrees.Resolve(
                 firstStep, firstOctave, degree.Number, degree.Alteration,
-                degree.OctaveOffset, _keyFifths);
+                degOctaveMarks, _keyFifths);
             if (_currentTranspose is { } tr)
                 (dstep, dalter, doctave) = PitchTransposer.Transpose(
                     dstep, dalter, doctave, tr.step, tr.alt, tr.oct);

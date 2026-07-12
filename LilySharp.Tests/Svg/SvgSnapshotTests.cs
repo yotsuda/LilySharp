@@ -168,6 +168,10 @@ public class SvgSnapshotTests
         // default (bass) resolves from the joined name, not the first "electric"
         // segment (which would fall through to the default treble).
         yield return new object[] { "test/instrument-hyphenated-clef" };
+        // The first degree of a rootless chord is its root: its octave mark sets the
+        // whole chord's register, so <1' 3 5> stacks the 3rd/5th on the RAISED root
+        // (== <c' 3 5>), not on the base tonic.
+        yield return new object[] { "test/degree-chord-root-octave" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

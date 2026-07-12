@@ -291,6 +291,11 @@ public sealed partial class MeasureCollector
             int tonicStep = _ambientTonicValid ? _ambientTonicStep : 0;
             char tonicName = "cdefgab"[tonicStep];
             firstOctave = _octave.Resolve(tonicStep, 0, tonicName);
+            // The FIRST degree is the chord's root; its own octave mark sets the
+            // whole chord's register, so <1' 3 5> == <c' 3 5> (the 3rd and 5th stack
+            // on the RAISED root, not on the base tonic). Fold it into the root octave
+            // here and skip it on that degree below so it is not applied twice.
+            firstOctave += chord.Degrees.First().OctaveOffset;
             firstPitchName = tonicName;
             _octave.CurrentOctave = firstOctave;
         }
@@ -303,11 +308,17 @@ public sealed partial class MeasureCollector
         // once by ResolveAbsolutePitch (TransposePitch). Using the displayed
         // (already-transposed) key here would transpose a degree chord twice.
         int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
+        // When the root is omitted, the first degree's octave mark was folded into
+        // firstOctave above (it acts as the root); don't apply it again here.
+        bool rootOmitted = chord.Root is null;
+        bool firstDegree = true;
         foreach (var degree in chord.Degrees)
         {
+            int octaveMarks = rootOmitted && firstDegree ? 0 : degree.OctaveOffset;
+            firstDegree = false;
             var (step, alteration, octave) = ChordDegrees.Resolve(
                 rootStep, firstOctave, degree.Number, degree.Alteration,
-                degree.OctaveOffset, writtenKeySharps);
+                octaveMarks, writtenKeySharps);
             var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
             var (accidental, isCourtesy) =
                 GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
