@@ -98,7 +98,12 @@ internal static partial class SharedRenderer
                     lastNoteX = currentX;
                     lastNoteY = y;
                     lastGraceStaffPos = note.StaffPosition;
-                    currentX += 1.2 * eff;  // approximate advance per grace note
+                    // Advance one grace column = head width + inter-grace space, the
+                    // SAME per-note step the layout reserves; the old width-only step
+                    // left the heads short of their reserved room and read as cramped.
+                    // LILYPOND-REF: GraceNoteEngraver GraceNoteWidth (1.2) +
+                    //   GraceNoteSpacing (0.3); grace-spacing.cc.
+                    currentX += (1.2 + 0.3) * eff;
                 }
 
                 // Stems (forced UP) plus the connecting beam, or a flag for a lone
@@ -208,18 +213,17 @@ internal static partial class SharedRenderer
         double StemX(int i) => xs[i] + upAttach;
         double StemEndY(int i) => ys[i] - stemLen;   // up = smaller device Y
 
-        // Draw each stem (head up to its stem end).
-        for (int i = 0; i < n; i++)
-            gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black, stemThick);
-
         int maxBeams = 0;
         foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);
-        if (maxBeams == 0) return;   // quarter-or-longer grace: bare stems only
-
         bool allBeamable = n > 1 && beamCounts.All(b => b >= 1);
-        if (!allBeamable)
+
+        if (maxBeams == 0 || !allBeamable)
         {
-            // Lone grace note (or a non-uniform group): flag each beamable head.
+            // Bare stems (fixed length) plus a flag per beamable head. A lone grace,
+            // a quarter-or-longer grace, or a non-uniform group takes this path.
+            for (int i = 0; i < n; i++)
+                gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black, stemThick);
+            if (maxBeams == 0) return;
             for (int i = 0; i < n; i++)
             {
                 if (beamCounts[i] == 0) continue;
@@ -234,18 +238,47 @@ internal static partial class SharedRenderer
             return;
         }
 
-        // Beam: primary across the whole group; secondaries stack toward the
-        // heads (downward) since grace stems point up.
+        // Beamed group. The beam is ONE straight line at a fixed stem length above
+        // the heads; each stem then runs from its head to that SLOPED line at its own
+        // x (a fixed per-stem length would leave the inner stems short of the beam and
+        // read as jagged). The beam ends extend half a stem past the outer stems so
+        // the corner squares off against the vertical stem edge.
+        // LILYPOND-REF: lily/beam.cc — stems terminate on the beam; beam.cc:631
+        //   horizontal_[dir] += dir * stem_width / 2 (flush end).
+        double beamLeftY = StemEndY(0), beamRightY = StemEndY(n - 1);
+        double span = StemX(n - 1) - StemX(0);
+        double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
+        double BeamY(double x) => beamLeftY + beamSlope * (x - StemX(0));
+
+        for (int i = 0; i < n; i++)
+            gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
+
         double beamThick = EngravingDefaults.BeamThickness * scale;
         double beamTrans = EngravingDefaults.BeamTranslation * scale;
-        gc.DrawLine(StemX(0), StemEndY(0), StemX(n - 1), StemEndY(n - 1), Color.Black, beamThick);
+        double halfStem = stemThick / 2;
+
+        void Beam(int a, int b, double off)
+            => gc.DrawLine(
+                StemX(a) - halfStem, BeamY(StemX(a)) + off - beamSlope * halfStem,
+                StemX(b) + halfStem, BeamY(StemX(b)) + off + beamSlope * halfStem,
+                Color.Black, beamThick);
+
+        Beam(0, n - 1, 0);                    // primary across the whole group
         for (int level = 1; level < maxBeams; level++)
         {
-            double off = level * beamTrans;   // downward toward the heads
-            for (int i = 0; i < n - 1; i++)
+            double off = level * beamTrans;   // secondaries stack toward the heads
+            int i = 0;
+            while (i < n - 1)
+            {
                 if (beamCounts[i] > level && beamCounts[i + 1] > level)
-                    gc.DrawLine(StemX(i), StemEndY(i) + off, StemX(i + 1), StemEndY(i + 1) + off,
-                        Color.Black, beamThick);
+                {
+                    int j = i;
+                    while (j < n - 1 && beamCounts[j] > level && beamCounts[j + 1] > level) j++;
+                    Beam(i, j, off);
+                    i = j;
+                }
+                else i++;
+            }
         }
         // Beamed acciaccatura would carry the slash on the beam itself
         // (Beam.stencil = slashed-stencil); not yet ported — only the lone-note
