@@ -90,16 +90,29 @@ internal static class TabBeamQuant
         double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
         double leftY = geom.StaffY - leftPos * 0.5;
         double rightY = geom.StaffY - rightPos * 0.5;
-        // The ported notation quanter measures the beam's free length (its distance
-        // past the outer digit) in NOTATION staff spaces; on the 1.5x tab staff that
-        // leaves the stems ~1 string gap short — the same under-scaling fixed for the
-        // unbeamed tab stem (LilyPond's tab stem is 3 staff spaces = 3 string gaps
-        // from the note head). Push the beam one string gap further from the digits,
-        // preserving slope, so beamed and unbeamed tab stems match.
-        double push = geom.StringSpace;
-        leftY += group.StemUp ? -push : push;
-        rightY += group.StemUp ? -push : push;
         double slope = rightX > leftX ? (rightY - leftY) / (rightX - leftX) : 0.0;
+
+        // Keep only the quanter's SLOPE. Its absolute Y models the 4 strings as a tall
+        // staff, so a stem-DOWN beam lands several string-gaps below the whole staff —
+        // a stem far too long. Re-anchor the beam at the SAME length as an unbeamed tab
+        // stem (3 string gaps from the digit head), measured from the TIGHTEST member,
+        // so beamed and unbeamed tab stems match and a down-stem doesn't overshoot.
+        // LILYPOND-REF: the tab stem reverts to Stem.length (define-grobs.scm); on a
+        // tab the string gap IS the staff space, so 3 gaps from the head.
+        double stemLen = 3.0 * geom.StringSpace;
+        double headClear = TabConstants.FretDigitHeight / 2 + 0.3;
+        double? anchor = null;
+        for (int i = 0; i < n; i++)
+        {
+            int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
+            double headY = geom.StringY(str) + (group.StemUp ? -headClear : headClear);
+            double v = headY - slope * memberStemXs[i]; // intercept giving a zero-length stem here
+            anchor = anchor is null ? v
+                : group.StemUp ? System.Math.Min(anchor.Value, v) : System.Math.Max(anchor.Value, v);
+        }
+        double intercept = anchor!.Value + (group.StemUp ? -stemLen : stemLen);
+        leftY = intercept + slope * leftX;
+        rightY = intercept + slope * rightX;
         return (slope, leftY, leftX);
     }
 }
