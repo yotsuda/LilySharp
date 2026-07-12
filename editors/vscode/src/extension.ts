@@ -277,7 +277,14 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);
-        })
+        }),
+        // Audition: sound the note under the caret (held: the keybinding re-fires on
+        // key-repeat, and the webview sustains until the repeats stop) or play the
+        // whole measure the caret is in. The preview webview is the synth.
+        vscode.commands.registerCommand('lilysharp.playNoteAtCursor', () =>
+            playAtCursor(context, 'note')),
+        vscode.commands.registerCommand('lilysharp.playMeasureAtCursor', () =>
+            playAtCursor(context, 'measure'))
     );
 
     // AI collaborative editing: select → prompt → validate → decide-on-score → apply.
@@ -358,6 +365,59 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     outputChannel.appendLine('Lily# extension activated');
+}
+
+// The clock time of the last play-note fire, so the webview can tell a fresh
+// key-press from an OS key-repeat of the same held key (both arrive as separate
+// command invocations — VS Code has no key-up event).
+let lastPlayNoteFire = 0;
+
+/**
+ * Audition through the preview webview's WebAudio synth: the caret's note
+ * (mode 'note', sustained while the key is held via key-repeat) or the whole
+ * measure the caret sits in (mode 'measure'). The synth lives in the preview, so
+ * if no preview is open this first press only opens it — press again to play.
+ */
+function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure') {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') { return; }
+    const doc = editor.document;
+    const panel = previewPanels.get(doc.uri.toString());
+    if (!panel) {
+        openPreview(context, vscode.ViewColumn.Beside);
+        return;
+    }
+    const offset = doc.offsetAt(editor.selection.active);
+    if (mode === 'measure') {
+        const [rangeStart, rangeEnd] = measureRangeAt(doc.getText(), offset);
+        panel.webview.postMessage({ type: 'playAtCursor', mode, rangeStart, rangeEnd });
+    } else {
+        const now = Date.now();
+        const gapMs = now - lastPlayNoteFire;
+        lastPlayNoteFire = now;
+        panel.webview.postMessage({ type: 'playAtCursor', mode, position: offset, gapMs });
+    }
+}
+
+/**
+ * The source range [start, end) of the measure containing `offset`: the span
+ * between the surrounding barlines (`|`), bounded by the enclosing music block
+ * (`{`…`}`) so a measure never spills into another part/section. Good enough for
+ * the common one-stream-per-line layout.
+ */
+function measureRangeAt(text: string, offset: number): [number, number] {
+    const clamped = Math.max(0, Math.min(offset, text.length));
+    let start = 0;
+    for (let i = clamped - 1; i >= 0; i--) {
+        const c = text[i];
+        if (c === '|' || c === '{' || c === '}') { start = i + 1; break; }
+    }
+    let end = text.length;
+    for (let i = clamped; i < text.length; i++) {
+        const c = text[i];
+        if (c === '|' || c === '{' || c === '}') { end = i; break; }
+    }
+    return [start, end];
 }
 
 function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn) {
@@ -1821,6 +1881,94 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }, 50);
         }
 
+        // ---- Audition: sound the caret's note (held) or its whole measure ----
+        // The caret's note rings while the key is held. VS Code has no key-up event,
+        // so a held key arrives as an OS key-repeat of the play command; each fire
+        // re-arms a watchdog, and the note stops once the repeats cease.
+        let heldCtx = null;
+        let heldOscs = [];
+        let heldPitchKey = '';     // pitches currently ringing, so a repeat sustains
+        let heldWatchdog = null;
+        let pendingAudition = null; // audition awaiting a fresh note list
+        const AUD_WAVE = ['triangle','sine','square','sawtooth','triangle','sine','sawtooth','square','sine','triangle'];
+
+        function stopHeldNote() {
+            if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
+            if (!heldCtx) return;
+            const t = heldCtx.currentTime;
+            for (const o of heldOscs) {
+                try {
+                    o.g.gain.cancelScheduledValues(t);
+                    o.g.gain.setTargetAtTime(0.0001, t, 0.05);
+                    o.osc.stop(t + 0.3);
+                } catch (e) { /* already ended */ }
+            }
+            const ctx = heldCtx;
+            heldCtx = null; heldOscs = []; heldPitchKey = '';
+            setTimeout(() => { try { ctx.close(); } catch (e) { /* noop */ } }, 400);
+        }
+
+        function holdNotes(pitches, timbre, gapMs) {
+            const key = pitches.slice().sort((a, b) => a - b).join(',');
+            // Fresh press (or a different note) re-attacks; a fast repeat of the SAME
+            // note leaves the tone ringing and only re-arms the watchdog.
+            const fresh = !heldCtx || key !== heldPitchKey || gapMs > 700;
+            if (fresh) {
+                stopHeldNote();
+                heldCtx = new AudioContext();
+                if (heldCtx.state === 'suspended') { heldCtx.resume(); }
+                const master = heldCtx.createGain();
+                master.gain.value = 0.22;
+                master.connect(heldCtx.destination);
+                const t0 = heldCtx.currentTime;
+                for (const p of pitches) {
+                    const osc = heldCtx.createOscillator();
+                    osc.type = AUD_WAVE[timbre] || 'triangle';
+                    osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
+                    const g = heldCtx.createGain();
+                    g.gain.setValueAtTime(0, t0);
+                    g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+                    osc.connect(g); g.connect(master);
+                    osc.start(t0);
+                    heldOscs.push({ osc, g });
+                }
+                heldPitchKey = key;
+            }
+            // Long window on a fresh press (bridge the OS repeat delay), short once
+            // the repeats are flowing (a snappy release when the key goes up).
+            if (heldWatchdog) { clearTimeout(heldWatchdog); }
+            heldWatchdog = setTimeout(stopHeldNote, fresh ? 700 : 220);
+        }
+
+        function auditionNote(position, gapMs) {
+            if (!playbackNotes) { return; }
+            // The note token nearest the caret (smallest |S - position|).
+            let best = null, bestD = Infinity;
+            for (const n of playbackNotes) {
+                if (n.S < 0) { continue; }
+                const d = Math.abs(n.S - position);
+                if (d < bestD) { bestD = d; best = n; }
+            }
+            if (!best) { return; }
+            const pitches = playbackNotes.filter(n => n.S === best.S).map(n => n.P);
+            if (pitches.length) { holdNotes(pitches, best.I || 0, gapMs); }
+        }
+
+        function auditionMeasure(start, end) {
+            if (!playbackNotes) { return; }
+            const sub = playbackNotes.filter(n => n.S >= start && n.S < end);
+            if (sub.length === 0) { return; }
+            let minT = Infinity;
+            for (const n of sub) { if (n.T < minT) { minT = n.T; } }
+            // Reschedule the measure to start at t=0, then reuse the full scheduler.
+            startPlayback(sub.map(n => Object.assign({}, n, { T: n.T - minT })), 0);
+        }
+
+        function runAudition(a) {
+            if (a.mode === 'measure') { auditionMeasure(a.rangeStart, a.rangeEnd); }
+            else { auditionNote(a.position, a.gapMs); }
+        }
+
         document.getElementById('playBtn').addEventListener('click', () => {
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
@@ -1874,6 +2022,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         hideErrorBanner();
                         svgContainer.classList.remove('stale');
                         svgContainer.innerHTML = message.svg;
+                        // The score changed: the cached note list is stale, so the
+                        // next audition / Play refetches fresh events.
+                        playbackNotes = null;
                         collectPages();
                         // Keep the chosen fit across re-renders; otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -1888,14 +2039,33 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 }
+                case 'playAtCursor': {
+                    // The synth needs a current note list. If it's stale (an edit
+                    // cleared it) or absent, fetch it and play once it arrives — but
+                    // only one fetch in flight, so a held key's repeats don't pile up.
+                    if (playbackNotes) {
+                        runAudition(message);
+                    } else {
+                        const inFlight = !!pendingAudition;
+                        pendingAudition = message;
+                        if (!inFlight) { vscode.postMessage({ type: 'requestPlayback' }); }
+                    }
+                    break;
+                }
                 case 'playbackData':
                     if (message.error || !message.notes) {
                         setPlayUi(false);
+                        pendingAudition = null;
                         if (message.error) {
                             zoomInfo.textContent = 'Play: ' + message.error;
                             zoomInfo.classList.add('visible');
                             setTimeout(() => zoomInfo.classList.remove('visible'), 2500);
                         }
+                    } else if (pendingAudition) {
+                        // These notes were fetched for an audition, not the Play button.
+                        playbackNotes = message.notes;
+                        const a = pendingAudition; pendingAudition = null;
+                        runAudition(a);
                     } else {
                         playbackNotes = message.notes;
                         let startAt = 0;

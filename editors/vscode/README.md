@@ -91,6 +91,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 5. Press `Ctrl+Shift+O` to jump to a symbol, or open the **Outline** view in the Explorer sidebar for the score structure
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
+8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth)
 
 ## Example
 
