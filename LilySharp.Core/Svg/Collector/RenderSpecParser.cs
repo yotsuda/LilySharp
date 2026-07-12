@@ -97,7 +97,13 @@ public static class RenderSpecParser
         {
             for (int ii = 0; ii < items.Count; ii++)
             {
-                if (items[ii] is SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false } st } sss)
+                // VoiceName is empty only when the part name failed to parse (a
+                // pitch-like token such as `staff a` / `staff b5` yields a zero-width
+                // missing token, reported as a syntax error). Skip auto-labeling it
+                // rather than indexing [0] into an empty string and crashing — the
+                // diagnostics already surface the real problem.
+                if (items[ii] is SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false } st } sss
+                    && st.VoiceName.Length > 0)
                 {
                     string defaultName = char.ToUpperInvariant(st.VoiceName[0]) + st.VoiceName[1..];
                     items[ii] = sss with { Staff = st with { InstrumentName = defaultName } };

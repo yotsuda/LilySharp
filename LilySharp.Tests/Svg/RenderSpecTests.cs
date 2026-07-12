@@ -91,6 +91,28 @@ public class RenderSpecTests
     }
 
     [Fact]
+    public void EnsembleWithAPitchNamedStaff_ReportsErrorWithoutCrashing()
+    {
+        // `staff a` / `staff b5` name a part with a pitch-letter token, which is not
+        // a valid part name — the parser reports it and leaves a zero-width (empty)
+        // VoiceName. With two+ plain staves the ensemble default-name pass runs;
+        // it must SKIP the empty name rather than index [0] into "" and throw
+        // IndexOutOfRangeException (found via TabRangeValidator -> FindAll).
+        var tree = SyntaxTree.Parse("""
+            part foo { clef treble }
+            part a { clef treble }
+            section A { foo { c'1 } a { c'1 } }
+            form main { A }
+            score main { staff foo staff a }
+            """);
+        Assert.True(tree.HasErrors);
+
+        var specs = RenderSpecParser.FindAll(tree); // must not throw
+        var single = Assert.IsType<SingleStaffSpec>(specs[0].Items[0]);
+        Assert.Equal("Foo", single.Staff.InstrumentName); // valid name still auto-labeled
+    }
+
+    [Fact]
     public void OmittedFilename_ParsesWithEmptyOutputFile()
     {
         // The output filename is optional: `score main { … }` is valid and
