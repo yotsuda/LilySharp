@@ -358,16 +358,23 @@ internal static class ArticulationEngraver
                 // Tuning-agnostic — the string geometry drives it.
                 bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != stemUp);
                 double tabY;
-                if (tabAbove
-                    && beamGroups.TryGetValue(
-                        (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
-                        out var tabBeam)
-                    && tabBeam.Group.StemUp)
+                bool isTabBeamed = beamGroups.TryGetValue(
+                    (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                    out var tabBeam);
+                if (tabAbove && isTabBeamed && tabBeam.Group.StemUp)
                 {
                     // Beamed, stem-up: the beam floats above the digits, so an
                     // above-script must clear the BEAM's outer edge at this note's x —
                     // not just the digit — exactly like the companion notation staff.
                     tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
+                }
+                else if (!tabAbove && isTabBeamed && !tabBeam.Group.StemUp)
+                {
+                    // Beamed, stem-down: the beam hangs below the digits, so a
+                    // below-script (e.g. a forced `@accent.down`) must clear the BEAM's
+                    // outer (bottom) edge, not just the bottom line — otherwise it
+                    // overprints the beam of its own long stem.
+                    tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) + tabGap;
                 }
                 else if (tabAbove)
                 {
@@ -784,9 +791,11 @@ internal static class ArticulationEngraver
     }
 
     /// <summary>
-    /// Device-Y of a stem-up tab beam's OUTER (top) edge at <paramref name="noteX"/> —
-    /// the value a forced-above script there must clear. Recomputes the SAME quanted
-    /// beam line the renderer draws (<see cref="TabBeamQuant"/>), so the two agree.
+    /// Device-Y of a tab beam's OUTER edge at <paramref name="noteX"/> — the top edge
+    /// for a stem-up beam (above the digits), the bottom edge for a stem-down beam
+    /// (below them) — i.e. the value a script on the beam's side must clear.
+    /// Recomputes the SAME quanted beam line the renderer draws
+    /// (<see cref="TabBeamQuant"/>), so the two agree.
     /// </summary>
     private static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
@@ -797,7 +806,8 @@ internal static class ArticulationEngraver
         for (int i = 0; i < n; i++)
             xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0) + attach;
         var line = TabBeamQuant.Compute(beam.Group, xs, geom);
-        return TabBeamMath.At(line, noteX) - EngravingDefaults.BeamThickness / 2;
+        double half = EngravingDefaults.BeamThickness / 2;
+        return TabBeamMath.At(line, noteX) + (beam.Group.StemUp ? -half : half);
     }
 
     private static Dictionary<(int Staff, int Measure, int Item), (double TipY, bool StemUp)>

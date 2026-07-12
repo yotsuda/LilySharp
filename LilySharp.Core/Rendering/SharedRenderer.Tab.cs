@@ -173,7 +173,15 @@ internal static partial class SharedRenderer
         if (noteValue < 2 || isBeamed)
             return; // whole notes have no stem; beamed notes are drawn elsewhere.
 
-        const double stemLength = 3.0;
+        // LilyPond's tabFullNotation reverts Stem.length to the default: 3 staff
+        // spaces measured FROM THE NOTE HEAD (define-grobs.scm Stem details lengths
+        // = 3.5 from the line / "3 measured from note head"). On a tab the staff space
+        // IS the string gap (1.5x a notation staff space), so the stem must be scaled
+        // by it — otherwise it comes out ~1 string-gap too short.
+        // LILYPOND-REF: scm/define-grobs.scm Stem details lengths.
+        double stringSpace = EngravingDefaults.TabStringSpace(
+            Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
+        double stemLength = 3.0 * stringSpace;
         double stemX = columnX + (stemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
         double nearY = TabStemHeadY(item, stemUp, staffY, staff);
         double farY = nearY + (stemUp ? -stemLength : stemLength);

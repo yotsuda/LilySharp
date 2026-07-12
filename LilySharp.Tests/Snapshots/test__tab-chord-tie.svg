@@ -40,15 +40,15 @@
   <text x="9.36" y="20.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="463">5</text>
   <rect x="6.73" y="19.68" width="1.62" height="1.79" fill="#FFFFFF" data-pos="463"/>
   <text x="7.54" y="21.40" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="463">5</text>
-  <line x1="7.69" y1="21.77" x2="7.69" y2="24.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="8.04" y1="21.77" x2="8.04" y2="24.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="7.69" y1="21.77" x2="7.69" y2="25.67" stroke="#000000" stroke-width="0.130"/>
+  <line x1="8.04" y1="21.77" x2="8.04" y2="25.67" stroke="#000000" stroke-width="0.130"/>
   <rect x="11.00" y="17.08" width="1.62" height="1.79" fill="#FFFFFF" data-pos="476"/>
   <text x="11.81" y="18.80" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="476">3</text>
   <rect x="12.83" y="18.38" width="1.62" height="1.79" fill="#FFFFFF" data-pos="476"/>
   <text x="13.64" y="20.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="476">5</text>
   <rect x="11.00" y="19.68" width="1.62" height="1.79" fill="#FFFFFF" data-pos="476"/>
   <text x="11.81" y="21.40" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="476">5</text>
-  <line x1="12.14" y1="21.77" x2="12.14" y2="24.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="12.14" y1="21.77" x2="12.14" y2="25.67" stroke="#000000" stroke-width="0.130"/>
   <path d="M 9.38,9.14 C 9.95,9.77 11.30,9.77 11.87,9.14 C 11.30,10.00 9.95,10.00 9.38,9.14 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.38,7.80 C 9.95,7.17 11.30,7.17 11.87,7.80 C 11.30,6.95 9.95,6.95 9.38,7.80 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.38,6.47 C 9.95,5.84 11.30,5.84 11.87,6.47 C 11.30,5.62 9.95,5.62 9.38,6.47 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>

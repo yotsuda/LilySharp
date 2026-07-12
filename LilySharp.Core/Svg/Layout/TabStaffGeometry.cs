@@ -90,6 +90,15 @@ internal static class TabBeamQuant
         double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
         double leftY = geom.StaffY - leftPos * 0.5;
         double rightY = geom.StaffY - rightPos * 0.5;
+        // The ported notation quanter measures the beam's free length (its distance
+        // past the outer digit) in NOTATION staff spaces; on the 1.5x tab staff that
+        // leaves the stems ~1 string gap short — the same under-scaling fixed for the
+        // unbeamed tab stem (LilyPond's tab stem is 3 staff spaces = 3 string gaps
+        // from the note head). Push the beam one string gap further from the digits,
+        // preserving slope, so beamed and unbeamed tab stems match.
+        double push = geom.StringSpace;
+        leftY += group.StemUp ? -push : push;
+        rightY += group.StemUp ? -push : push;
         double slope = rightX > leftX ? (rightY - leftY) / (rightX - leftX) : 0.0;
         return (slope, leftY, leftX);
     }

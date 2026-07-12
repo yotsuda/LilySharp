@@ -42,25 +42,25 @@
   <rect x="42.01" y="18.27" width="0.60" height="4.50" fill="#000000"/>
   <rect x="16.14" y="20.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="305"/>
   <text x="16.95" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="305">3</text>
-  <line x1="17.54" y1="20.07" x2="17.54" y2="17.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.54" y1="20.07" x2="17.54" y2="15.57" stroke="#000000" stroke-width="0.130"/>
   <rect x="19.21" y="20.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="308"/>
   <text x="20.03" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="308">5</text>
-  <line x1="19.44" y1="22.46" x2="19.44" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.44" y1="22.46" x2="19.44" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="22.22" y="20.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="310"/>
   <text x="23.03" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="310">7</text>
-  <line x1="22.44" y1="22.46" x2="22.44" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.44" y1="22.46" x2="22.44" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="25.22" y="20.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="312"/>
   <text x="26.03" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="312">8</text>
-  <line x1="25.44" y1="22.46" x2="25.44" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.44" y1="22.46" x2="25.44" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.48" y="20.37" width="2.60" height="1.79" fill="#FFFFFF" data-pos="316"/>
   <text x="31.78" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="316">10</text>
-  <line x1="31.20" y1="22.46" x2="31.20" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="31.20" y1="22.46" x2="31.20" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="33.49" y="20.37" width="2.60" height="1.79" fill="#FFFFFF" data-pos="318"/>
   <text x="34.79" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="318">12</text>
-  <line x1="34.20" y1="22.46" x2="34.20" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.20" y1="22.46" x2="34.20" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="36.49" y="20.37" width="2.60" height="1.79" fill="#FFFFFF" data-pos="320"/>
   <text x="37.79" y="22.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="320">10</text>
-  <line x1="37.02" y1="22.46" x2="37.02" y2="25.46" stroke="#000000" stroke-width="0.130"/>
-  <line x1="37.38" y1="22.46" x2="37.38" y2="25.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.02" y1="22.46" x2="37.02" y2="26.96" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.38" y1="22.46" x2="37.38" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>
