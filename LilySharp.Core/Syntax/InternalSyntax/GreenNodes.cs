@@ -181,10 +181,12 @@ internal sealed class ChordGreen : GreenSyntaxNode
         SyntaxToken openAngle,
         GreenNode?[] pitches,
         SyntaxToken closeAngle,
+        GreenNode?[] octaveMarks,
         DurationGreen? duration,
         SyntaxToken? tremolo,
         GreenNode?[] articulations)
-        : base(SyntaxKind.Chord, [openAngle, .. pitches, closeAngle, duration, tremolo, .. articulations])
+        : base(SyntaxKind.Chord,
+            [openAngle, .. pitches, closeAngle, .. octaveMarks, duration, tremolo, .. articulations])
     {
     }
 }

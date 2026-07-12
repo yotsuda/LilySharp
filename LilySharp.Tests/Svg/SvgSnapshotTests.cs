@@ -175,6 +175,9 @@ public class SvgSnapshotTests
         // A bare @chord on a rootless degree chord names it from its FIRST degree as
         // root: <2 4 6> in C major is Dm (D-F-A), not a C chord.
         yield return new object[] { "test/degree-chord-name" };
+        // Octave marks AFTER the closing '>' shift the WHOLE chord uniformly:
+        // <1 3 5>' up an octave, <1 3 5>, down one; <c e g>' shifts a named chord too.
+        yield return new object[] { "test/chord-octave-marks" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

@@ -1354,6 +1354,11 @@ public sealed class MusicXmlExporter
         // == <c g e>); the note after the chord is relative to the root. A
         // deliberate Lily# divergence from LilyPond, matching MidiExporter and
         // MeasureCollector.
+        // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
+        // chord; folding it into firstOctave flows through every stacked/degree member
+        // and the following note, matching MidiExporter and MeasureCollector.
+        int chordOctave = chord.ChordOctaveOffset;
+
         int firstStep = _currentStep, firstOctave = _currentOctave;
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
         bool isFirst = true;
@@ -1363,14 +1368,14 @@ public sealed class MusicXmlExporter
             int targetOctave;
             if (isFirst)
             {
-                targetOctave = ResolveRelativeOctave(pitch); // root: relative, advances state
+                targetOctave = ResolveRelativeOctave(pitch) + chordOctave; // root: relative, advances state
                 firstStep = _currentStep;
-                firstOctave = _currentOctave;
+                firstOctave = _currentOctave + chordOctave;
             }
             else if (_octaveAbsolute)
             {
                 // Absolute mode: each member is a fixed pitch, no stacking.
-                targetOctave = ResolveRelativeOctave(pitch);
+                targetOctave = ResolveRelativeOctave(pitch) + chordOctave;
             }
             else
             {
@@ -1424,7 +1429,7 @@ public sealed class MusicXmlExporter
         if (pitches.Count == 0 && chord.Degrees.Any())
         {
             int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-            firstOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, tonicStep, 0);
+            firstOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, tonicStep, 0) + chordOctave;
             firstStep = tonicStep;
             _currentStep = tonicStep;
             _currentOctave = firstOctave;

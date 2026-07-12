@@ -224,6 +224,12 @@ public sealed partial class MeasureCollector
     {
         var notes = new List<ChordNoteInfo>();
 
+        // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
+        // chord uniformly. Applying it to the root's resolved octave (and, for an
+        // omitted root, to the tonic anchor) flows through firstOctave into every
+        // stacked/degree member; absolute-mode members are shifted individually.
+        int chordOctave = chord.ChordOctaveOffset;
+
         // Track first note's state for subsequent chord/note relative calculation
         int firstOctave = _octave.CurrentOctave;
         char firstPitchName = _octave.LastPitchName;
@@ -236,7 +242,7 @@ public sealed partial class MeasureCollector
             {
                 // The first member is the ROOT — resolved relative to the incoming
                 // frame; it anchors the chord and drives the next chord/note.
-                rp = CalculateStaffPosition(pitch);
+                rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
                 firstOctave = rp.RelativeOctave;
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
                 rootStepForStack = GetPitchIndex(firstPitchName);
@@ -245,7 +251,7 @@ public sealed partial class MeasureCollector
             {
                 // Absolute mode: every member is a fixed pitch (offset from the C
                 // anchor), already order-independent; no stacking.
-                rp = CalculateStaffPosition(pitch);
+                rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
             }
             else
             {
@@ -290,7 +296,7 @@ public sealed partial class MeasureCollector
         {
             int tonicStep = _ambientTonicValid ? _ambientTonicStep : 0;
             char tonicName = "cdefgab"[tonicStep];
-            firstOctave = _octave.Resolve(tonicStep, 0, tonicName);
+            firstOctave = _octave.Resolve(tonicStep, 0, tonicName) + chordOctave;
             firstPitchName = tonicName;
             _octave.CurrentOctave = firstOctave;
         }
@@ -361,6 +367,17 @@ public sealed partial class MeasureCollector
     /// </summary>
     private readonly record struct ResolvedPitch(
         int StaffPosition, int RelativeOctave, int DisplayStep, int DisplayAlteration, int DisplayOctave);
+
+    /// <summary>Shift a resolved pitch by whole octaves (7 staff positions each) —
+    /// used for chord-level octave marks after the closing <c>&gt;</c>. The spelling
+    /// (step/alteration) is unchanged; only the register moves.</summary>
+    private static ResolvedPitch ShiftOctave(ResolvedPitch rp, int octaves) =>
+        octaves == 0 ? rp : rp with
+        {
+            StaffPosition = rp.StaffPosition + octaves * 7,
+            RelativeOctave = rp.RelativeOctave + octaves,
+            DisplayOctave = rp.DisplayOctave + octaves,
+        };
 
     /// <summary>One entry in the resolved-pitch trace: the source position of the
     /// written pitch and its resolved absolute spelling (e.g. "C6").</summary>

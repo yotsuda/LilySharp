@@ -930,6 +930,12 @@ public sealed class MidiExporter
         // (<c e g> == <c 3 5> == <c g e>). The note AFTER the chord is relative to
         // the root. A deliberate Lily# divergence from LilyPond, matching the
         // collector and the MusicXML exporter.
+        // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
+        // chord; folding it into firstOctave flows through every stacked/degree member
+        // and the following note, matching the collector and MusicXML exporter.
+        int chordOctave = chord.ChordOctaveOffset;
+        int chordShift = chordOctave * 12;
+
         bool isFirst = true;
         int firstNoteName = _currentNoteName;
         int firstOctave = _currentOctave;
@@ -939,15 +945,15 @@ public sealed class MidiExporter
             int midiPitch;
             if (isFirst)
             {
-                midiPitch = CalculateRelativeMidiPitch(pitch); // advances state
+                midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127); // advances state
                 firstNoteName = _currentNoteName;
-                firstOctave = _currentOctave;
+                firstOctave = _currentOctave + chordOctave;
                 isFirst = false;
             }
             else if (_octaveAbsolute)
             {
                 // Absolute mode: each member is a fixed pitch, no stacking.
-                midiPitch = CalculateRelativeMidiPitch(pitch);
+                midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127);
             }
             else
             {
@@ -967,7 +973,7 @@ public sealed class MidiExporter
         if (pitches.Count == 0 && chord.Degrees.Any())
         {
             int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-            firstOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, tonicStep, 0);
+            firstOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, tonicStep, 0) + chordOctave;
             firstNoteName = tonicStep;
             _currentNoteName = tonicStep;
             _currentOctave = firstOctave;

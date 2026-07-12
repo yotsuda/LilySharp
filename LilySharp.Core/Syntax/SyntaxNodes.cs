@@ -528,6 +528,27 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>Net octave shift from the <c>'</c> / <c>,</c> marks AFTER the closing
+    /// <c>&gt;</c> (<c>&lt;1 3 5&gt;'</c> = whole chord up an octave). A member's own
+    /// marks are inside its pitch/degree node, so only the chord-level marks — direct
+    /// apostrophe/comma tokens — count here.</summary>
+    public int ChordOctaveOffset
+    {
+        get
+        {
+            int offset = 0;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t)
+                {
+                    if (t.Kind == SyntaxKind.Apostrophe) offset++;
+                    else if (t.Kind == SyntaxKind.Comma) offset--;
+                }
+            }
+            return offset;
+        }
+    }
+
     /// <summary>
     /// Gets the duration of the chord (after the closing angle bracket).
     /// </summary>

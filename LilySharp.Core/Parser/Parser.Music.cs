@@ -350,11 +350,16 @@ internal sealed partial class Parser
         }
 
         var closeAngle = Expect(SyntaxKind.CloseAngle);
+        // Octave marks AFTER the closing '>' shift the WHOLE chord: <1 3 5>' up an
+        // octave, <c e g>,, down two. Each member's own octave still applies first.
+        var octaveMarks = new List<GreenNode?>();
+        while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+            octaveMarks.Add(Advance());
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
 
-        return new ChordGreen(openAngle, [.. pitches], closeAngle, duration, tremolo, articulations);
+        return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
     }
 
     // A scale-degree chord member: the degree number (with any glued accidental)
