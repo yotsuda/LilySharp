@@ -1,0 +1,10 @@
+version 1
+title "beamed script side"
+time 4/4
+key c major
+part m { clef treble }
+section A {
+  m { b8@staccato b g@staccato g e'@staccato e' d@staccato d }
+}
+form main { A }
+score main { staff m }

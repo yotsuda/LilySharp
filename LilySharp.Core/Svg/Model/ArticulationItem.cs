@@ -37,8 +37,10 @@ public sealed record ArticulationItem
     /// <summary>The item index within the measure.</summary>
     public int ItemIndex { get; }
 
-    /// <summary>Whether this articulation should be placed above the note.</summary>
-    public bool IsAbove { get; }
+    /// <summary>Whether this articulation should be placed above the note. Init so
+    /// the engraver can flip it to the beam-resolved side (a beamed note's stem, and
+    /// thus a stem-coupled script's side, follows the beam, not the note's own pitch).</summary>
+    public bool IsAbove { get; init; }
 
     /// <summary>
     /// True when the side came from an explicit <c>.up</c>/<c>.down</c> qualifier,

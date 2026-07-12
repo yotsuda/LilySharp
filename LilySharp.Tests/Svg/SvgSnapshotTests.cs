@@ -160,6 +160,10 @@ public class SvgSnapshotTests
         // An explicit .down overrides a fermata's default UP side — it sits below
         // the notes with the flipped glyph, not hugging the beam above.
         yield return new object[] { "test/fermata-down" };
+        // Scripts on BEAMED notes take the beam-resolved stem side: a stem-up beam
+        // group puts staccatos BELOW every note (even the high ones), not above the
+        // beam on the stem side.
+        yield return new object[] { "test/beamed-script-side" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

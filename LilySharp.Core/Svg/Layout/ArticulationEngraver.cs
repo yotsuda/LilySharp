@@ -336,10 +336,7 @@ internal static class ArticulationEngraver
                 // fermata INSIDE the staff under the bottom digit.
                 // LILYPOND-REF: ly/engraver-init.ly:1170-1188 TabVoice;
                 // LILYPOND-REF: scm/define-grobs.scm:1365 fermata direction = UP.
-                bool tabForceAbove = IsFermata(articulation.Type)
-                    || articulation.IsOrnament || articulation.IsEditorialAccidental
-                    || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
-                        or ArticulationType.Flageolet;
+                bool tabForceAbove = IsForcedAbove(articulation);
                 bool tabAbove = articulation.DirectionForced
                     ? articulation.IsAbove : (tabForceAbove || !stemUp);
                 // A fret digit is centred on its string line, so a digit on the
@@ -351,6 +348,11 @@ internal static class ArticulationEngraver
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef);
                 double topLine = staffOffset;
                 double bottomLine = staffOffset + (strings - 1) * space;
+                // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the
+                // tab staff, tucked just past the digit in the empty string-gap on the
+                // stem's far side; a forced-above script (fermata/ornament/bow/stopped/…)
+                // clears the whole staff. Tuning-agnostic — the string geometry drives it.
+                bool insideEligible = !IsForcedAbove(articulation);
                 double tabY;
                 if (tabAbove
                     && beamGroups.TryGetValue(
@@ -365,20 +367,25 @@ internal static class ArticulationEngraver
                 }
                 else if (tabAbove)
                 {
-                    // Above the note's own TOP digit — but never inside the staff, so
-                    // clamp to the top line. A high-string note clears its digit; a
-                    // low-string note just clears the staff, NOT a phantom top digit
-                    // (which parked the mark a whole staff away from the note).
+                    // Above the note's own TOP digit. A stem-coupled mark tucks just
+                    // above that digit (inside the staff when it isn't the top string);
+                    // a forced-above script clears the whole staff (clamped to the top
+                    // line, so a low-string note's mark doesn't park at a phantom top
+                    // digit a staff away).
                     double noteTop = geom.StringY(geom.StemHeadString(item, stemUp: true));
-                    tabY = Math.Min(noteTop - fretHalf, topLine) - tabGap;
+                    tabY = insideEligible
+                        ? noteTop - fretHalf - tabGap
+                        : Math.Min(noteTop - fretHalf, topLine) - tabGap;
                 }
                 else
                 {
-                    // Below the note's own BOTTOM digit, clamped to the bottom line —
-                    // so a high-string note's mark clears the staff line, not a
-                    // phantom bottom-string digit far below it.
+                    // Below the note's own BOTTOM digit — inside the staff for a
+                    // stem-coupled mark (when it isn't the bottom string), else clamped
+                    // to the bottom line so a forced mark clears the whole staff.
                     double noteBottom = geom.StringY(geom.StemHeadString(item, stemUp: false));
-                    tabY = Math.Max(noteBottom + fretHalf, bottomLine) + tabGap;
+                    tabY = insideEligible
+                        ? noteBottom + fretHalf + tabGap
+                        : Math.Max(noteBottom + fretHalf, bottomLine) + tabGap;
                 }
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
@@ -423,33 +430,45 @@ internal static class ArticulationEngraver
                 x -= scale * (accBBox.Left + accBBox.Width / 2.0);
             }
 
+            // Resolve the side against the BEAM-resolved stem: a stem-coupled script
+            // (staccato/accent/tenuto/…) sits opposite the stem, and a beamed note's
+            // stem follows the BEAM, not its own pitch — so a high note under a
+            // stem-up beam takes its dot BELOW like its neighbours, not above the
+            // beam. Fermata/ornament/bow keep their forced-UP side; an explicit
+            // .up/.down still wins. Same rule the tab branch above already applies.
+            bool forceAbove = IsForcedAbove(articulation);
+            bool effectiveAbove = articulation.DirectionForced
+                ? articulation.IsAbove : (forceAbove || !stemUp);
+            var effArt = effectiveAbove == articulation.IsAbove
+                ? articulation : articulation with { IsAbove = effectiveAbove };
+
             // Calculate Y position based on note position and direction, then bake
             // the staff's within-system offset (multi-staff) so the page-level
             // renderer's system-top + Y lands under THIS staff.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double y = CalculateYPosition(articulation, staffPosition, stemUp, item, beamedStemTipY) + staffOffset;
+            double y = CalculateYPosition(effArt, staffPosition, stemUp, item, beamedStemTipY) + staffOffset;
 
             // Stack multiple scripts on the same note & side outward (past the
             // previous glyph + a small padding) instead of overprinting them.
-            var stackKey = (articulation.StaffIndex, articulation.MeasureIndex,
-                articulation.ItemIndex, articulation.IsAbove);
+            var stackKey = (effArt.StaffIndex, effArt.MeasureIndex,
+                effArt.ItemIndex, effArt.IsAbove);
             double stackDelta = stackOffset.GetValueOrDefault(stackKey, 0.0);
-            y += articulation.IsAbove ? -stackDelta : stackDelta;
-            var seedBBox = GetSeedBBoxFor(articulation);
+            y += effArt.IsAbove ? -stackDelta : stackDelta;
+            var seedBBox = GetSeedBBoxFor(effArt);
             stackOffset[stackKey] = stackDelta + seedBBox.Height + ScriptStackPadding;
 
             layouts.Add(new ArticulationLayout(
-                articulation.MeasureIndex,
-                articulation.ItemIndex,
+                effArt.MeasureIndex,
+                effArt.ItemIndex,
                 x,
                 y,
-                articulation.GetGlyph(),
-                articulation.IsAbove,
-                articulation.SourcePosition,
+                effArt.GetGlyph(),
+                effArt.IsAbove,
+                effArt.SourcePosition,
                 scale,
                 seedBBox,
                 SourceIndex: arti,
-                StaffIndex: articulation.StaffIndex
+                StaffIndex: effArt.StaffIndex
             ));
         }
 
@@ -507,10 +526,7 @@ internal static class ArticulationEngraver
 
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
-            bool tabForceAbove = IsFermata(art.Type)
-                || art.IsOrnament || art.IsEditorialAccidental
-                || art.Type is ArticulationType.UpBow or ArticulationType.DownBow
-                    or ArticulationType.Flageolet;
+            bool tabForceAbove = IsForcedAbove(art);
             bool above = art.DirectionForced ? art.IsAbove : (tabForceAbove || !stemUp);
 
             double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
@@ -703,6 +719,18 @@ internal static class ArticulationEngraver
     private static bool IsFermata(ArticulationType t) =>
         t is ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong;
 
+    /// <summary>Scripts LilyPond gives direction UP regardless of the stem, so they
+    /// sit ABOVE the note (or above the beam) rather than opposite the stem: fermatas,
+    /// ornaments, editorial accidentals, bows, flageolet, and the technique marks
+    /// stopped (+) / heel / toe / snap-pizzicato. Everything else is stem-coupled and
+    /// takes the side opposite the (beam-resolved) stem.
+    /// LILYPOND-REF: scm/script.scm — these entries carry (direction . UP).</summary>
+    private static bool IsForcedAbove(ArticulationItem a) =>
+        IsFermata(a.Type) || a.IsOrnament || a.IsEditorialAccidental
+        || a.Type is ArticulationType.UpBow or ArticulationType.DownBow
+            or ArticulationType.Flageolet or ArticulationType.Stopped
+            or ArticulationType.Heel or ArticulationType.Toe or ArticulationType.SnapPizz;
+
     private static double GetNearExtent(ArticulationType type, bool isAbove)
     {
         var bbox = GetGlyphBBox(type, isAbove);
@@ -855,10 +883,7 @@ internal static class ArticulationEngraver
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
         // LILYPOND-REF: define-grobs.scm:100 AccidentalSuggestion: direction = UP
         // LILYPOND-REF: scm/script.scm — upbow/downbow/flageolet: direction = UP
-        bool forceAbove = IsFermata(articulation.Type) || articulation.IsOrnament
-            || articulation.IsEditorialAccidental
-            || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
-                or ArticulationType.Flageolet;
+        bool forceAbove = IsForcedAbove(articulation);
         // An explicit .up/.down wins over the default UP direction (e.g. \fermata.down).
         bool isAbove = articulation.DirectionForced
             ? articulation.IsAbove : (forceAbove || articulation.IsAbove);
