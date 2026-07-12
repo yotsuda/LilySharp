@@ -22,8 +22,9 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A note below the tab's lowest string is silently clamped to fret 0; the
-/// validator surfaces that as a warning (it would otherwise hide an octave slip).
+/// A note below the tab's lowest string is omitted from the tab (it can't be
+/// fretted); the validator surfaces that as a warning (it would otherwise hide an
+/// octave slip).
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class TabRangeValidatorTests

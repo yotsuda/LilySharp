@@ -62,8 +62,8 @@ internal sealed class TabRangeValidator : ISemanticValidator
                 _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                     DiagnosticCodes.TabOutOfRange,
                     w.BelowRange
-                        ? "note is below the tab's lowest string and was clamped to an open string (fret 0) " +
-                          "— likely an octave too low"
+                        ? "note is below the tab's lowest string and was omitted from the tab " +
+                          "(it shows only on the notation staff) — likely an octave too low"
                         : "note is above the tab's range (no fret 0-24 on any string) — likely an octave too high");
             }
         }
