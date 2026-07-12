@@ -968,10 +968,6 @@ public sealed class MidiExporter
         {
             int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
             firstOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, tonicStep, 0);
-            // The first degree is the chord's root; its octave mark sets the whole
-            // chord's register (<1' 3 5> == <c' 3 5>). Fold it into the root octave
-            // and skip it on that degree below.
-            firstOctave += chord.Degrees.First().OctaveOffset;
             firstNoteName = tonicStep;
             _currentNoteName = tonicStep;
             _currentOctave = firstOctave;
@@ -979,15 +975,11 @@ public sealed class MidiExporter
 
         // Scale-degree members (<d 3 5 7,>): stack on the root by diatonic steps in
         // the (written) key, then add the part transpose like any pitch.
-        bool degreeRootOmitted = pitches.Count == 0;
-        bool firstDeg = true;
         foreach (var degree in chord.Degrees)
         {
-            int degOctaveMarks = degreeRootOmitted && firstDeg ? 0 : degree.OctaveOffset;
-            firstDeg = false;
             var (step, alter, octave) = ChordDegrees.Resolve(
                 firstNoteName, firstOctave, degree.Number, degree.Alteration,
-                degOctaveMarks, _keySharps);
+                degree.OctaveOffset, _keySharps);
             int midiPitch = System.Math.Clamp(
                 RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,

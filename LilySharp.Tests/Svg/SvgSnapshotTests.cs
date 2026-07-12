@@ -168,9 +168,9 @@ public class SvgSnapshotTests
         // default (bass) resolves from the joined name, not the first "electric"
         // segment (which would fall through to the default treble).
         yield return new object[] { "test/instrument-hyphenated-clef" };
-        // The first degree of a rootless chord is its root: its octave mark sets the
-        // whole chord's register, so <1' 3 5> stacks the 3rd/5th on the RAISED root
-        // (== <c' 3 5>), not on the base tonic.
+        // A rootless degree chord is order-independent: each degree resolves against
+        // the key tonic on its own, so <1' 3 5> (1' = the octave = degree 8) is the
+        // same chord as <3 5 8>, whatever order the degrees are written in.
         yield return new object[] { "test/degree-chord-root-octave" };
         // A bare @chord on a rootless degree chord names it from its FIRST degree as
         // root: <2 4 6> in C major is Dm (D-F-A), not a C chord.
