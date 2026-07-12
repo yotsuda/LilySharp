@@ -164,6 +164,10 @@ public class SvgSnapshotTests
         // group puts staccatos BELOW every note (even the high ones), not above the
         // beam on the stem side.
         yield return new object[] { "test/beamed-script-side" };
+        // A hyphenated instrument preset ("electric-bass") is ONE word: its clef
+        // default (bass) resolves from the joined name, not the first "electric"
+        // segment (which would fall through to the default treble).
+        yield return new object[] { "test/instrument-hyphenated-clef" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

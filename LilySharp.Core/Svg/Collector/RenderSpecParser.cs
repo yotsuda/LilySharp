@@ -405,10 +405,17 @@ public static class RenderSpecParser
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
                 {
-                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
-                    if (valueToken == null) continue;
+                    // Join ALL value tokens — a hyphenated preset ("electric-bass")
+                    // is word+minus+word in the green tree, so child(2) alone is just
+                    // "electric" and would fall through to the default treble clef.
+                    var texts = new List<string>();
+                    for (int vi = 2; vi < prop.SlotCount; vi++)
+                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                            texts.Add(vt.Text);
+                    if (texts.Count == 0) continue;
 
-                    var (clef, _) = InstrumentDefaults.GetDefaults(valueToken.Text);
+                    var (clef, _) = InstrumentDefaults.GetDefaults(
+                        InstrumentDefaults.SplitInstrument(texts).Preset);
                     return clef;
                 }
             }

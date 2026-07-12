@@ -1546,7 +1546,16 @@ public sealed partial class MeasureCollector
                     clefPos = prop.NameToken.Span.Start;
                 }
                 else if (propName == "instrument")
-                    instrument = valueToken.Text.ToLowerInvariant();
+                {
+                    // Join ALL value tokens — a hyphenated preset ("electric-bass")
+                    // is word+minus+word in the green tree, so child(2) alone is just
+                    // "electric" and would fall through to the default treble clef.
+                    var texts = new List<string>();
+                    for (int vi = 2; vi < prop.SlotCount; vi++)
+                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                            texts.Add(vt.Text);
+                    instrument = InstrumentDefaults.SplitInstrument(texts).Preset.ToLowerInvariant();
+                }
                 else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
                     octave = oct;
             }

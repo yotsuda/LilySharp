@@ -9,6 +9,7 @@
         { "include": "#phrase-declaration" },
         { "include": "#lyrics-block" },
         { "include": "#variable-reference" },
+        { "include": "#instrument-value" },
         { "include": "#legacy-keywords" },
         { "include": "#keywords" },
         { "include": "#inline-volta" },
@@ -129,6 +130,18 @@
                     "captures": {
                         "1": { "name": "punctuation.definition.variable.lilysharp" },
                         "2": { "name": "variable.other.reference.lilysharp" }
+                    }
+                }
+            ]
+        },
+        "instrument-value": {
+            "patterns": [
+                {
+                    "comment": "The preset after 'instrument' is ONE hyphenated word ('electric-bass', 'double-bass'). Highlight the whole name — without this, the generic keyword rule colours only the trailing 'bass' segment and leaves 'electric-' plain. A quoted display label (instrument violin \"1st Violin\") is left to the string rule.",
+                    "match": "\\b(instrument)\\s+([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.instrument.lilysharp" }
                     }
                 }
             ]
