@@ -65,17 +65,17 @@
   <line x1="30.04" y1="14.12" x2="30.04" y2="11.31" stroke="#000000" stroke-width="0.130"/>
   <line x1="32.55" y1="13.62" x2="32.55" y2="11.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="35.05" y1="13.12" x2="35.05" y2="10.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="17.47" y1="14.56" x2="25.35" y2="15.97" stroke="#000000" stroke-width="0.480"/>
-  <line x1="17.54" y1="19.07" x2="17.54" y2="14.57" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.28" y1="23.57" x2="20.28" y2="15.06" stroke="#000000" stroke-width="0.130"/>
-  <line x1="22.78" y1="23.57" x2="22.78" y2="15.51" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.28" y1="23.57" x2="25.28" y2="15.95" stroke="#000000" stroke-width="0.130"/>
-  <line x1="27.47" y1="19.07" x2="35.12" y2="19.07" stroke="#000000" stroke-width="0.480"/>
-  <line x1="27.54" y1="23.57" x2="27.54" y2="19.07" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.04" y1="23.57" x2="30.04" y2="19.07" stroke="#000000" stroke-width="0.130"/>
-  <line x1="32.55" y1="23.57" x2="32.55" y2="19.07" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.05" y1="23.57" x2="35.05" y2="19.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.47" y1="15.76" x2="25.35" y2="17.16" stroke="#000000" stroke-width="0.480"/>
+  <line x1="17.54" y1="19.07" x2="17.54" y2="15.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.28" y1="23.57" x2="20.28" y2="16.26" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.78" y1="23.57" x2="22.78" y2="16.70" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.28" y1="23.57" x2="25.28" y2="17.15" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.47" y1="20.27" x2="35.12" y2="20.27" stroke="#000000" stroke-width="0.480"/>
+  <line x1="27.54" y1="23.57" x2="27.54" y2="20.27" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.04" y1="23.57" x2="30.04" y2="20.27" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.55" y1="23.57" x2="32.55" y2="20.27" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.05" y1="23.57" x2="35.05" y2="20.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.19" y="8.79" font-size="4.00" data-pos="511"></text>
-  <text class="music" x="22.19" y="14.16" font-size="4.00" data-pos="511"></text>
+  <text class="music" x="22.19" y="15.36" font-size="4.00" data-pos="511"></text>
   </g>
 </svg>

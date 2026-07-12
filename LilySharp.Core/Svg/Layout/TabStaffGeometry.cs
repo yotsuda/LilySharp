@@ -94,19 +94,21 @@ internal static class TabBeamQuant
 
         // Keep only the quanter's SLOPE. Its absolute Y models the 4 strings as a tall
         // staff, so a stem-DOWN beam lands several string-gaps below the whole staff —
-        // a stem far too long. Re-anchor the beam at the SAME length as an unbeamed tab
-        // stem (3 string gaps from the digit head), measured from the TIGHTEST member,
-        // so beamed and unbeamed tab stems match and a down-stem doesn't overshoot.
-        // LILYPOND-REF: the tab stem reverts to Stem.length (define-grobs.scm); on a
-        // tab the string gap IS the staff space, so 3 gaps from the head.
+        // a stem far too long. Re-anchor the beam a fixed length past the TIGHTEST
+        // member's STRING LINE (not its digit head): LilyPond's beamed tab stem is
+        // 3 string gaps from the note's string, putting the beam of a top-string run
+        // right on the bottom line (measured from LP's own SVG). Anchoring from the
+        // string — not the head — keeps the beam from drifting a digit-clearance too
+        // far, which lengthened both up- and down-stems.
+        // LILYPOND-REF: scm/define-grobs.scm Stem.details.beamed-lengths (~3); on a
+        // tab the string gap IS the staff space.
         double stemLen = 3.0 * geom.StringSpace;
-        double headClear = TabConstants.FretDigitHeight / 2 + 0.3;
         double? anchor = null;
         for (int i = 0; i < n; i++)
         {
             int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
-            double headY = geom.StringY(str) + (group.StemUp ? -headClear : headClear);
-            double v = headY - slope * memberStemXs[i]; // intercept giving a zero-length stem here
+            double lineY = geom.StringY(str);
+            double v = lineY - slope * memberStemXs[i]; // intercept giving a beam ON this string
             anchor = anchor is null ? v
                 : group.StemUp ? System.Math.Min(anchor.Value, v) : System.Math.Max(anchor.Value, v);
         }
