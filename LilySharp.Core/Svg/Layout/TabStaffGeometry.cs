@@ -117,6 +117,26 @@ internal static class TabBeamQuant
             : System.Math.Max(beamFar, beamFloor);  // below the notes: the lower (larger Y) wins
         double leftY = intercept + slope * leftX;
         double rightY = intercept + slope * rightX;
+
+        // Keep the beam from hanging far past the staff. LilyPond's tab stems shorten
+        // as the note sits lower on the fretboard so the beam clears the outer string
+        // by only ~1.6 gaps, not a full stem below it — otherwise a mid-string run (a
+        // 9 on string 3) drew a beam two gaps under the bottom line. Pull the beam back
+        // toward the staff, preserving the slope.
+        double edge = group.StemUp ? geom.StringY(1) : geom.StringY(geom.StringCount);
+        double maxOverhang = 1.6 * geom.StringSpace;
+        if (group.StemUp)
+        {
+            double top = System.Math.Min(leftY, rightY);
+            double shift = (edge - maxOverhang) - top;
+            if (shift > 0) { leftY += shift; rightY += shift; }
+        }
+        else
+        {
+            double bot = System.Math.Max(leftY, rightY);
+            double shift = bot - (edge + maxOverhang);
+            if (shift > 0) { leftY -= shift; rightY -= shift; }
+        }
         return (slope, leftY, leftX);
     }
 }
