@@ -1558,7 +1558,8 @@ internal sealed class LayoutEngine
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
             tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
-            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt);
+            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
+            staffByIndex: staffByIndex);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts);

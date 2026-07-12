@@ -178,6 +178,10 @@ public class SvgSnapshotTests
         // Octave marks AFTER the closing '>' shift the WHOLE chord uniformly:
         // <1 3 5>' up an octave, <1 3 5>, down one; <c e g>' shifts a named chord too.
         yield return new object[] { "test/chord-octave-marks" };
+        // A fully-beamed tuplet's number on a TAB staff must clear the ACTUAL tab
+        // beam edge (the beam floats off the digits, not at the notation height) —
+        // otherwise the "3" overprints the tab beam.
+        yield return new object[] { "test/tab-tuplet-number" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

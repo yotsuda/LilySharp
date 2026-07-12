@@ -797,7 +797,7 @@ internal static class ArticulationEngraver
     /// Recomputes the SAME quanted beam line the renderer draws
     /// (<see cref="TabBeamQuant"/>), so the two agree.
     /// </summary>
-    private static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
+    internal static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
         int n = beam.Group.Members.Length;
         double attach = beam.Group.StemUp

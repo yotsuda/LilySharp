@@ -1,0 +1,13 @@
+version 1
+tempo 100
+time 4/4
+key c major
+part melody {
+  instrument bass
+  section A { fis fis fis tuplet 3/4 { g16\2 fis e\3 } | }
+}
+form main { A }
+score main {
+  staff melody
+  tab melody
+}

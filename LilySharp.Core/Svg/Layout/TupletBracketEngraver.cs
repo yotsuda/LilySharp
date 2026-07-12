@@ -133,7 +133,8 @@ internal static class TupletBracketEngraver
         bool forceStemUp = false,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Func<int, int, double>? staffYAt = null)
+        Func<int, int, double>? staffYAt = null,
+        Dictionary<int, Staff>? staffByIndex = null)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -215,6 +216,7 @@ internal static class TupletBracketEngraver
             // notehead-based position (which reads as shifted up-left).
             // LILYPOND-REF: lily/tuplet-number.cc — number follows the beam
             // when there is no bracket.
+            bool tabBeamPlaced = false;
             if (!showBracket && !beamLayouts.IsDefaultOrEmpty)
             {
                 var beam = FindCoveringBeam(beamLayouts, tuplet, tupMeasures);
@@ -234,21 +236,57 @@ internal static class TupletBracketEngraver
                     // alone suffices; below the beam the digit body extends
                     // UPWARD from the baseline, so the digit height must be
                     // added or the number lands on the beam.
-                    const double clearance = 0.7;
                     const double digitHeight = 1.7; // cap height at 0.6·FontSize
-                    double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
-                    // Beam Y is in staff positions from the middle line;
-                    // bracket Y is staff spaces from the staff top. The
-                    // renderer adds its own -0.3/+0.8 text offset on top.
-                    startY = 2.0 - beam.LeftY * 0.5 + offset;
-                    endY = 2.0 - beam.RightY * 0.5 + offset;
+
+                    // On a TAB staff the beam floats a fixed distance off the fret
+                    // digits — NOT at the notation beam's staff-relative height — so
+                    // reconstructing its Y from beam.LeftY (a notation-frame value)
+                    // and shifting by the staff offset lands the number on the tab
+                    // beam. Instead clear the ACTUAL tab beam edge, recomputed from
+                    // the same quanter the renderer draws; that value already bakes
+                    // the staff offset, so skip the +staffOffset below.
+                    // LILYPOND-REF: ly/engraver-init.ly TabVoice — the tuplet number
+                    // sits outside the tab beam, mirroring ArticulationEngraver's
+                    // tab branch (TabBeamOuterEdgeY).
+                    if (staffByIndex != null
+                        && staffByIndex.TryGetValue(tuplet.StaffIndex, out var tstaff)
+                        && tstaff.IsTab && tstaff.Tuning.HasValue)
+                    {
+                        var geom = new TabStaffGeometry(
+                            tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef);
+                        const double tabClearance = 0.5; // baseline above beam edge
+                        double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
+                        double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);
+                        // Compensate the renderer's own -0.3 (up) / +0.8 (down) text
+                        // offset so the digit clears the beam by tabClearance.
+                        double tabOff = isStemUp
+                            ? -tabClearance + 0.3
+                            : tabClearance + digitHeight - 0.8;
+                        startY = sEdge + tabOff;
+                        endY = eEdge + tabOff;
+                        tabBeamPlaced = true;
+                    }
+                    else
+                    {
+                        const double clearance = 0.7;
+                        double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
+                        // Beam Y is in staff positions from the middle line;
+                        // bracket Y is staff spaces from the staff top. The
+                        // renderer adds its own -0.3/+0.8 text offset on top.
+                        startY = 2.0 - beam.LeftY * 0.5 + offset;
+                        endY = 2.0 - beam.RightY * 0.5 + offset;
+                    }
                 }
             }
 
             // Bake the staff's within-system offset (multi-staff) so the bracket
-            // sits over its OWN staff, not the first.
-            startY += staffOffset;
-            endY += staffOffset;
+            // sits over its OWN staff, not the first. The tab-beam path already
+            // baked it (its Y comes from TabStaffGeometry), so skip it there.
+            if (!tabBeamPlaced)
+            {
+                startY += staffOffset;
+                endY += staffOffset;
+            }
 
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,
