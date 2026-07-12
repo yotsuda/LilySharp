@@ -93,26 +93,40 @@ internal static class TabBeamQuant
         double slope = rightX > leftX ? (rightY - leftY) / (rightX - leftX) : 0.0;
 
         // Keep only the quanter's SLOPE. Its absolute Y models the 4 strings as a tall
-        // staff, so a stem-DOWN beam lands several string-gaps below the whole staff —
-        // a stem far too long. Re-anchor the beam a fixed length past the TIGHTEST
-        // member's STRING LINE (not its digit head): LilyPond's beamed tab stem is
-        // 3 string gaps from the note's string, putting the beam of a top-string run
-        // right on the bottom line (measured from LP's own SVG). Anchoring from the
-        // string — not the head — keeps the beam from drifting a digit-clearance too
-        // far, which lengthened both up- and down-stems.
-        // LILYPOND-REF: scm/define-grobs.scm Stem.details.beamed-lengths (~3); on a
-        // tab the string gap IS the staff space.
+        // staff, so a stem-DOWN beam lands several string-gaps below the whole staff.
+        // Instead anchor the beam 3 string gaps past the FARTHEST member's STRING LINE
+        // (the one whose stem is longest — the HIGHEST digit for a down-stem, the
+        // lowest for an up-stem): measured from LilyPond's own SVG, a run spanning
+        // strings 1–3 beams right on the bottom line, i.e. 3 gaps below the TOP note,
+        // NOT 3 gaps below the closest note (which pushed the beam far past the staff).
+        // A floor keeps the closest note's stem from collapsing when the run spans the
+        // whole fretboard.
+        // LILYPOND-REF: lily/beam.cc stem-length from the outer stem; scm/define-grobs
+        // Stem.details.beamed-lengths (~3). On a tab the string gap IS the staff space.
         double stemLen = 3.0 * geom.StringSpace;
-        double? anchor = null;
+        double minStem = 1.0 * geom.StringSpace;
+        double farAnchor = 0, nearAnchor = 0;
         for (int i = 0; i < n; i++)
         {
             int str = geom.StemHeadString(group.Members[i].Item, group.StemUp);
-            double lineY = geom.StringY(str);
-            double v = lineY - slope * memberStemXs[i]; // intercept giving a beam ON this string
-            anchor = anchor is null ? v
-                : group.StemUp ? System.Math.Min(anchor.Value, v) : System.Math.Max(anchor.Value, v);
+            double v = geom.StringY(str) - slope * memberStemXs[i]; // beam intercept ON this string
+            if (i == 0) { farAnchor = nearAnchor = v; }
+            else if (group.StemUp)
+            {
+                farAnchor = System.Math.Max(farAnchor, v);   // lowest digit = longest up-stem
+                nearAnchor = System.Math.Min(nearAnchor, v); // highest digit = shortest
+            }
+            else
+            {
+                farAnchor = System.Math.Min(farAnchor, v);   // highest digit = longest down-stem
+                nearAnchor = System.Math.Max(nearAnchor, v); // lowest digit = shortest
+            }
         }
-        double intercept = anchor!.Value + (group.StemUp ? -stemLen : stemLen);
+        double beamFar = farAnchor + (group.StemUp ? -stemLen : stemLen);
+        double beamFloor = nearAnchor + (group.StemUp ? -minStem : minStem);
+        double intercept = group.StemUp
+            ? System.Math.Min(beamFar, beamFloor)   // above the notes: the smaller Y
+            : System.Math.Max(beamFar, beamFloor);  // below the notes: the larger Y
         leftY = intercept + slope * leftX;
         rightY = intercept + slope * rightX;
         return (slope, leftY, leftX);
