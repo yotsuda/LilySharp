@@ -96,12 +96,31 @@ internal static partial class SharedRenderer
         (double X, double Y) c1, (double X, double Y) c2,
         bool curveUp, double midThickness, IDrawingContext gc)
     {
-        double direction = curveUp ? -1.0 : 1.0;
-        var c1Back = (X: c1.X, Y: c1.Y + direction * midThickness * 0.9);
-        var c2Back = (X: c2.X, Y: c2.Y + direction * midThickness * 0.9);
+        // Port of LilyPond's slur/tie stencil (lily/lookup.cc Lookup::slur): the
+        // computed control points (c1,c2) are the CENTRELINE of a "bezier sandwich" —
+        // two Béziers that share the endpoints, their middle control points offset by
+        // ±half the curve thickness PERPENDICULAR TO THE CHORD (control_[3] -
+        // control_[0]). Splitting the thickness symmetrically about the reference
+        // curve — rather than growing one edge off it — makes both ends taper to clean
+        // points and keeps the ribbon thickest at the middle even on a slanted bow (a
+        // grace slur runs diagonally down to the main note). `curveUp` no longer enters
+        // the thickness: LP's ±perp is symmetric, so the bow direction only shapes the
+        // control points, which the caller already set.
+        // LILYPOND-REF: lily/lookup.cc Lookup::slur —
+        //   perp = 0.5*curvethick*Offset(-dir[Y],dir[X]);
+        //   back.control_[1,2] += perp; curve.control_[1,2] -= perp; bezier_sandwich(…).
+        _ = curveUp;
+        double dx = endX - startX, dy = endY - startY;
+        double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
+        double half = 0.5 * midThickness * 0.9; // keep the previous total ribbon width
+        double perpX = -dy / len * half, perpY = dx / len * half;
+        var c1a = (X: c1.X + perpX, Y: c1.Y + perpY);
+        var c2a = (X: c2.X + perpX, Y: c2.Y + perpY);
+        var c1b = (X: c1.X - perpX, Y: c1.Y - perpY);
+        var c2b = (X: c2.X - perpX, Y: c2.Y - perpY);
         gc.DrawClosedBezier(
-            (startX, startY), c1, c2,
-            (endX, endY), c2Back, c1Back,
+            (startX, startY), c1a, c2a,
+            (endX, endY), c2b, c1b,
             Color.Black, EngravingDefaults.BowEndRounding);
     }
 

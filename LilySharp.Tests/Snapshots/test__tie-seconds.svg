@@ -31,9 +31,9 @@
   <rect x="16.96" y="9.97" width="0.19" height="4.00" fill="#000000"/>
   <rect x="27.79" y="9.97" width="0.19" height="4.00" fill="#000000"/>
   <rect x="28.28" y="9.97" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 9.38,15.72 C 9.95,16.35 11.30,16.35 11.87,15.72 C 11.30,16.58 9.95,16.58 9.38,15.72 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 10.69,14.30 C 11.26,13.67 12.61,13.67 13.19,14.30 C 12.61,13.45 11.26,13.45 10.69,14.30 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 20.71,14.97 C 21.29,15.60 22.64,15.60 23.21,14.97 C 22.64,15.83 21.29,15.83 20.71,14.97 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 22.02,13.22 C 22.60,12.60 23.95,12.60 24.52,13.22 C 23.95,12.37 22.60,12.37 22.02,13.22 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 9.38,15.72 C 9.95,16.47 11.30,16.47 11.87,15.72 C 11.30,16.24 9.95,16.24 9.38,15.72 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 10.69,14.30 C 11.26,13.79 12.61,13.79 13.19,14.30 C 12.61,13.56 11.26,13.56 10.69,14.30 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 20.71,14.97 C 21.29,15.72 22.64,15.72 23.21,14.97 C 22.64,15.49 21.29,15.49 20.71,14.97 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 22.02,13.22 C 22.60,12.71 23.95,12.71 24.52,13.22 C 23.95,12.48 22.60,12.48 22.02,13.22 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

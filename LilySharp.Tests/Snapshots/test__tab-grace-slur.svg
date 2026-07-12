@@ -44,10 +44,10 @@
   <rect x="19.91" y="24.04" width="2.60" height="1.79" fill="#FFFFFF" data-pos="540"/>
   <text x="21.21" y="25.76" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="540">12</text>
   <line x1="20.62" y1="26.12" x2="20.62" y2="30.62" stroke="#000000" stroke-width="0.130"/>
-  <path d="M 8.10,13.03 C 9.12,11.82 11.31,11.30 12.32,12.03 C 11.31,11.03 9.12,11.55 8.10,13.03 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 15.93,11.53 C 16.96,10.31 19.22,9.79 20.26,10.53 C 19.22,9.52 16.96,10.04 15.93,11.53 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 8.45,25.39 C 9.90,21.64 11.83,21.64 13.28,23.89 C 11.83,21.37 9.90,21.37 8.45,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 16.28,25.39 C 17.76,19.64 19.73,19.64 21.21,23.89 C 19.73,19.37 17.76,19.37 16.28,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.10,13.03 C 9.15,11.95 11.34,11.44 12.32,12.03 C 11.28,11.17 9.09,11.69 8.10,13.03 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 15.93,11.53 C 16.99,10.44 19.25,9.92 20.26,10.53 C 19.19,9.66 16.93,10.18 15.93,11.53 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.45,25.39 C 9.94,21.77 11.87,21.77 13.28,23.89 C 11.79,21.51 9.86,21.51 8.45,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.28,25.39 C 17.80,19.77 19.77,19.77 21.21,23.89 C 19.69,19.51 17.72,19.51 16.28,25.39 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="10.94" y="13.43" font-size="2.60" data-pos="500"></text>
   <line x1="11.75" y1="13.43" x2="11.75" y2="11.15" stroke="#000000" stroke-width="0.085" data-pos="500"/>
   <text class="music" x="11.75" y="11.15" font-size="2.60" fill="#000000" data-pos="500"></text>

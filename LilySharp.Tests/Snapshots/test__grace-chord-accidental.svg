@@ -29,6 +29,6 @@
   <line x1="10.31" y1="10.86" x2="10.31" y2="8.58" stroke="#000000" stroke-width="0.085" data-pos="418"/>
   <text class="music" x="10.31" y="8.58" font-size="2.60" fill="#000000" data-pos="418"></text>
   <line x1="9.92" y1="9.99" x2="10.85" y2="9.23" stroke="#000000" stroke-width="0.127" data-pos="418"/>
-  <path d="M 9.93,11.66 C 11.22,12.54 12.95,12.28 14.25,11.01 C 12.95,12.46 11.22,12.72 9.93,11.66 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
+  <path d="M 9.93,11.66 C 11.24,12.63 12.96,12.37 14.25,11.01 C 12.94,12.20 11.21,12.46 9.93,11.66 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
   </g>
 </svg>
