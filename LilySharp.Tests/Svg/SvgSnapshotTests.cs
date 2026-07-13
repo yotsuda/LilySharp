@@ -188,6 +188,9 @@ public class SvgSnapshotTests
         // An eighth-note triplet beams as ONE group (a single "3", no bracket) even
         // though its notes carry their written 1/8 duration across a beat boundary.
         yield return new object[] { "test/tuplet-eighth-beam" };
+        // A staccato on a beamed tab note sits opposite the BEAM's direction, not the
+        // note's own string — so a string-2 note under an up-beam gets its dot below.
+        yield return new object[] { "test/tab-staccato-beam-side" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

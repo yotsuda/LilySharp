@@ -331,10 +331,17 @@ internal static class ArticulationEngraver
                 const double tabGap = 1.0;
                 var geom = new TabStaffGeometry(
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
+                bool isTabBeamed = beamGroups.TryGetValue(
+                    (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                    out var tabBeam);
+                bool tabBeamUp = isTabBeamed
+                    && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
                 // A tab stem's direction is string-based (the tab head), not the notated
                 // pitch — so a bass note on the bottom strings has an UP stem, and a
-                // stem-coupled mark sits on the opposite (DOWN) side.
-                bool tabStemUp = geom.StringStemUp(geom.MeanString(item));
+                // stem-coupled mark sits on the opposite (DOWN) side. A BEAMED note takes
+                // its whole beam's direction, not its own string: an inner note on a high
+                // string still points up with the group, so its staccato dot sits below.
+                bool tabStemUp = isTabBeamed ? tabBeamUp : geom.StringStemUp(geom.MeanString(item));
                 // Fermata, ornaments and bow marks keep direction = UP on a tab
                 // staff too — LilyPond's TabVoice keeps the Script_engraver and
                 // the script side-positions above the staff symbol; only
@@ -363,11 +370,6 @@ internal static class ArticulationEngraver
                 // Tuning-agnostic — the string geometry drives it.
                 bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != tabStemUp);
                 double tabY;
-                bool isTabBeamed = beamGroups.TryGetValue(
-                    (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
-                    out var tabBeam);
-                bool tabBeamUp = isTabBeamed
-                    && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
                 if (tabAbove && isTabBeamed && tabBeamUp)
                 {
                     // Beamed, stem-up: the beam floats above the digits, so an

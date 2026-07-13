@@ -1,0 +1,11 @@
+// A staccato dot sits OPPOSITE the stem. On a tab a BEAMED note follows the
+// beam's (group) direction, not its own string: this group spans strings 4 and 2
+// with an UP beam, so every dot — including the string-2 notes' — sits BELOW the
+// digit, not on the stem side. (Using the per-note string put the string-2 dots
+// above, on the stem.)
+title "tab staccato on beamed group"
+time 4/4
+key c major
+part m { instrument bass section A { g8@staccato g g'\2@staccato g\2 | } }
+form main { A }
+score main { tab m }
