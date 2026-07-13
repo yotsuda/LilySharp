@@ -92,4 +92,43 @@ public class BreakKeywordTests
         // At least one measure should have HasBreakAfter=true
         Assert.Contains(score.Voice.Measures, m => m.HasBreakAfter);
     }
+
+    [Fact]
+    public void FormBreak_ForcesASystemBreakAfterThePrecedingSection()
+    {
+        // `form { A B break C }`: A=bar0, B=bar1, break flags bar 1 (after B), C=bar2.
+        var source = """
+            time 4/4
+            key c major
+            part m { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+              section C { c'4 d' e' f' | }
+            }
+            form main { A B break C }
+            score main { staff m }
+            """;
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m");
+        Assert.Equal(3, score.Voice.Measures.Length);
+        Assert.True(score.Voice.Measures[1].HasBreakAfter, "break after B (bar 1)");
+        Assert.False(score.Voice.Measures[0].HasBreakAfter);
+    }
+
+    [Fact]
+    public void FormNoBreak_ForbidsASystemBreakAfterThePrecedingSection()
+    {
+        var source = """
+            time 4/4
+            key c major
+            part m { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            form main { A nobreak B }
+            score main { staff m }
+            """;
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m");
+        Assert.Equal(LilySharp.Core.Svg.Layout.BreakPermission.Forbid,
+            score.Voice.Measures[0].LineBreakPermission);
+    }
 }

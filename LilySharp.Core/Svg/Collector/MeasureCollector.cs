@@ -2014,6 +2014,15 @@ public sealed partial class MeasureCollector
                     builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     ProcessSection(silentSection, processNodes, builder);
                     break;
+
+                // `break` / `nobreak` between sections force / forbid a system break
+                // after the section just played (SetBreak/SetNoBreak flag the last
+                // emitted measure). Runs once per part; each flags the same measure
+                // index, so the score-wide break stays consistent.
+                case BreakSyntax brk when !IsInsideRepeatBlock(brk):
+                    if (brk.IsNoBreak) builder.SetNoBreak();
+                    else builder.SetBreak();
+                    break;
             }
         }
     }

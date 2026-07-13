@@ -62,7 +62,13 @@ public sealed partial class MeasureCollector
             }
             else if (afterRepeatStart)
             {
-                if (child is SectionReferenceSyntax reference)
+                if (child is BreakSyntax brk)
+                {
+                    // `break` / `nobreak` inside the repeat flags the section just played.
+                    if (brk.IsNoBreak) builder.SetNoBreak();
+                    else builder.SetBreak();
+                }
+                else if (child is SectionReferenceSyntax reference)
                 {
                     if (_sectionState.Sections.TryGetValue(reference.SectionName, out var section))
                     {

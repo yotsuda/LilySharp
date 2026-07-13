@@ -67,6 +67,9 @@ internal sealed partial class Parser
             SyntaxKind.Underscore => ParseCustomText(),
             SyntaxKind.RepeatStartBar => ParseFormRepeatBlock(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
+            // `break` / `nobreak` between sections force / forbid a system break at
+            // that point in the played sequence (a layout directive, so no '@').
+            SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
                 => ParseNavigationMark(),
