@@ -153,6 +153,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/tab-tie" };
         // Rests render on a tab staff, centred on the tab's vertical middle.
         yield return new object[] { "test/tab-rest" };
+        // `tab … as numbers`: fret digits only — no stems, beams, dots, rests or
+        // tuplet brackets (the paired notation staff above carries the rhythm).
+        yield return new object[] { "test/tab-as-numbers" };
         // A tab staff on the indented first system: its lines start at the indent
         // (aligned with the notation staff), not the page margin.
         yield return new object[] { "test/tab-indent" };

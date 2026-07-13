@@ -118,6 +118,9 @@ internal static partial class SharedRenderer
         // pitch, so a bass run on the bottom strings points up like LilyPond.
         var dirGeom = new TabStaffGeometry(
             staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
+        // `tab … as numbers`: fret digits only — no stems, dots or rests (beams and
+        // tuplet brackets are suppressed at their own draw sites). Ties still print.
+        bool numbersOnly = staff.TabNumbersOnly;
 
         for (int i = 0; i < measure.Items.Length; i++)
         {
@@ -145,16 +148,19 @@ internal static partial class SharedRenderer
                     // its fret number — the held string is not re-struck.
                     if (!note.IsTieTarget)
                         DrawTabNote(note.Midi, itemX, staffY,
-                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, note.Dots, gc, note.IsDead);
-                    DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
-                        columnX, staffY, staff, isBeamed, gc);
+                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
+                            numbersOnly ? 0 : note.Dots, gc, note.IsDead);
+                    if (!numbersOnly)
+                        DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
+                            columnX, staffY, staff, isBeamed, gc);
                     break;
                 case ChordItem chord:
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
-                    DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
-                        columnX, staffY, staff, isBeamed, gc);
+                    if (!numbersOnly)
+                        DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
+                            columnX, staffY, staff, isBeamed, gc);
                     break;
-                case RestItem rest:
+                case RestItem rest when !numbersOnly:
                     // LilyPond's \tabFullNotation shows rests, centred vertically in the
                     // tab staff, with the same glyphs as the notation. Shift the shared
                     // DrawRest so its notation "middle line" (staffY + 2) lands on the

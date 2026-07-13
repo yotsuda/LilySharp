@@ -148,6 +148,13 @@ internal static class TupletBracketEngraver
             if (tuplet.MeasureIndex >= measureLayouts.Length)
                 continue;
 
+            // A numbers-only tab (`tab … as numbers`) draws no tuplet bracket or
+            // number — fret digits only, matching its suppressed stems and beams.
+            if (staffByIndex != null
+                && staffByIndex.TryGetValue(tuplet.StaffIndex, out var tupStaff)
+                && tupStaff is { IsTab: true, TabNumbersOnly: true })
+                continue;
+
             var measureLayout = measureLayouts[tuplet.MeasureIndex];
 
             // Find start and end X positions. Multi-staff layouts use

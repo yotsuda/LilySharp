@@ -148,12 +148,20 @@ public sealed record Staff(
     public int Transposition { get; init; }
 
     /// <summary>
+    /// A tab staff that prints fret digits ONLY (LilyPond's default TabStaff):
+    /// no stems, flags, beams, dots, rests or tuplet brackets — the rhythm is read
+    /// from a paired notation staff. False (this renderer's default) is the
+    /// <c>\tabFullNotation</c> equivalent. Set by <c>tab part as numbers</c>.
+    /// </summary>
+    public bool TabNumbersOnly { get; init; }
+
+    /// <summary>
     /// Creates a tablature staff with the specified tuning.
     /// </summary>
     public static Staff CreateTab(TuningType tuning, Voice voice, ClefType sourceClef = ClefType.Treble,
-        int transposition = 0)
+        int transposition = 0, bool numbersOnly = false)
         => new(ClefType.Tab, ImmutableArray.Create(voice), tuning)
-        { TabSourceClef = sourceClef, Transposition = transposition };
+        { TabSourceClef = sourceClef, Transposition = transposition, TabNumbersOnly = numbersOnly };
 
     /// <summary>
     /// Creates an ossia staff (small alternative passage).

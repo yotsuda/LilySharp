@@ -446,7 +446,7 @@ internal sealed partial class Parser
             tokens.Add(Advance()); // with
             tokens.Add(Advance()); // chords
             tokens.Add(ExpectPartName());
-            ConsumeChordDisplayMode(tokens); // `... as roman | both | names`
+            ConsumeAsSelector(tokens); // `... as roman | both | names`
         }
 
         return new StaffRenderGreen([.. tokens]);
@@ -460,16 +460,17 @@ internal sealed partial class Parser
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
         tokens.Add(ExpectPartName());
-        ConsumeChordDisplayMode(tokens);
+        ConsumeAsSelector(tokens);
         return new ChordRowRenderGreen([.. tokens]);
     }
 
-    /// <summary>Consumes an optional chord DISPLAY selector — <c>as roman | as both |
-    /// as names</c> — appending its two tokens. NB: <c>as</c> also lexes as the Dutch
-    /// A-flat pitch, so match it by TEXT, not token kind; the mode word follows. This
-    /// position (right after the chord-part name) is unambiguous — a bare pitch there
-    /// is meaningless — so the match is safe.</summary>
-    private void ConsumeChordDisplayMode(List<SyntaxToken> tokens)
+    /// <summary>Consumes an optional <c>as WORD</c> selector, appending its two tokens.
+    /// Shared by the chord display mode (<c>as roman | both | names</c>) and the tab
+    /// style (<c>as numbers | full</c>). NB: <c>as</c> also lexes as the Dutch A-flat
+    /// pitch, so match it by TEXT, not token kind; the mode word follows. This position
+    /// (right after the target name) is unambiguous — a bare pitch there is meaningless —
+    /// so the match is safe.</summary>
+    private void ConsumeAsSelector(List<SyntaxToken> tokens)
     {
         if (string.Equals(Current.Text, "as", System.StringComparison.Ordinal) && Peek(1) != null)
         {
@@ -543,6 +544,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
+        ConsumeAsSelector(tokens); // `... as numbers | full` (numbers-only tab)
         return new TabRenderGreen([.. tokens]);
     }
 

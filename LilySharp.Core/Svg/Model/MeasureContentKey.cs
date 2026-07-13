@@ -227,6 +227,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.IsLyricsTextRow);
         hc.Add(staff.TabSourceClef);
         hc.Add(staff.Transposition);
+        hc.Add(staff.TabNumbersOnly);
         hc.Add(staff.Lines);
     }
 

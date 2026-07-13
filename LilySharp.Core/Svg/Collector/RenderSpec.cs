@@ -75,7 +75,11 @@ public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderIte
 /// <summary>
 /// Tablature staff render item.
 /// </summary>
-public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0) : RenderItemSpec;
+public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0,
+    // `tab part as numbers`: show fret digits only — no stems, beams, flags, dots,
+    // rests or tuplet brackets (LilyPond's default TabStaff; `\tabFullNotation` is
+    // the opposite, and stays this renderer's default). Ties/slurs still print.
+    bool NumbersOnly = false) : RenderItemSpec;
 
 /// <summary>
 /// Ossia staff render item (small alternative passage above/below main staff).
@@ -262,7 +266,7 @@ public sealed record RenderSpec(
                 // Tab / ossia staves don't support intra-staff polyphony; they
                 // take the primary voice only.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef, tab.Transposition);
+                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef, tab.Transposition, tab.NumbersOnly);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 

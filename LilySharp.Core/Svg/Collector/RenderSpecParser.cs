@@ -338,6 +338,20 @@ public static class RenderSpecParser
         // [part] or [tuning, part]; braces (if any) are skipped.
         var toks = RenderTargetTokens(tab);
         if (toks.Count == 0) return null;
+
+        // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
+        // chord `as roman|both|names`). Strip it before reading the part/tuning so
+        // the part stays the last token. `numbers` = fret digits only; `full` (or
+        // absent) = this renderer's default rhythm-drawing tab.
+        bool numbersOnly = false;
+        int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
+        if (asIdx >= 0 && asIdx + 1 < toks.Count)
+        {
+            numbersOnly = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.OrdinalIgnoreCase);
+            toks = toks.GetRange(0, asIdx);
+        }
+        if (toks.Count == 0) return null;
+
         var partToken = toks[^1];
         var tuningToken = toks.Count >= 2 ? toks[0] : null;
         string voiceName = partToken.Text;
@@ -361,7 +375,7 @@ public static class RenderSpecParser
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
         var transposition = ResolvePartTransposition(tab, voiceName, tuning);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
-        return new TabStaffSpec(staffSpec, tuning, transposition);
+        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly);
     }
 
     /// <summary>

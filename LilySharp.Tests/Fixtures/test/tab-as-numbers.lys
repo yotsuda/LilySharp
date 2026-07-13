@@ -1,0 +1,13 @@
+// `tab part as numbers` = LilyPond's default TabStaff: fret DIGITS only, no
+// stems, flags, beams, dots, rests or tuplet brackets — the rhythm is read from
+// the paired notation staff above. (`tab part` alone stays full-notation.)
+// Covers a beamed run, a dotted value, a rest and a triplet on the tab: none of
+// their rhythm glyphs may appear on the numbers-only staff.
+time 4/4
+key c major
+part m { instrument bass section A { c8 e g8. e16 g4 r4 | tuplet 3/2 { c8 e g } e4 c2 | } }
+form main { A }
+score main {
+  staff m
+  tab m as numbers
+}

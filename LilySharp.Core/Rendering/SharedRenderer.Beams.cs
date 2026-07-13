@@ -93,6 +93,11 @@ internal static partial class SharedRenderer
             // group's pitch-based direction.
             bool allTab = grp.Members.Length > 0 && Enumerable.Range(0, grp.Members.Length)
                 .All(i => MemberStaffOf(i)?.IsTab == true);
+            // A numbers-only tab (`tab … as numbers`) prints fret digits alone — no
+            // beams (its stems are already suppressed in DrawTabMeasure). The finally
+            // below still disposes any ossia scope.
+            if (allTab && MemberStaffOf(0) is { TabNumbersOnly: true })
+                continue;
             TabStaffGeometry? tabDirGeom = null;
             bool tabDir = false;
             if (allTab && MemberStaffOf(0) is { } tabDirStaff)
