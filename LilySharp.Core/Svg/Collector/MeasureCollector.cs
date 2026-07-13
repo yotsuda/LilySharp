@@ -48,6 +48,17 @@ public record LyricSyllableWarning(
 );
 
 /// <summary>
+/// A section's plain (unbracketed) lyric verse that is fully shadowed by the section's
+/// <c>[N. …]</c> verses: every written-out occurrence already has a numbered verse, so
+/// the plain line — which only fills an occurrence NO bracket covers — never renders.
+/// <see cref="Span"/> anchors the first shadowed plain syllable.
+/// </summary>
+public record ShadowedPlainLyricWarning(
+    LilySharp.Core.Syntax.TextSpan Span,
+    string SectionName
+);
+
+/// <summary>
 /// Represents a bar check warning when barline position doesn't match time signature.
 /// </summary>
 public record BarCheckWarning(
@@ -563,6 +574,10 @@ public sealed partial class MeasureCollector
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricsCollector.Warnings;
+    /// <summary>Sections whose plain lyric verse is fully shadowed by their <c>[N. …]</c>
+    /// verses (never rendered). Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<ShadowedPlainLyricWarning> LyricShadowedPlainWarnings =>
+        _lyricsCollector.ShadowedPlainWarnings;
     private readonly List<NavigationMarkPlacementWarning> _navPlacementWarnings = new();
     /// <summary>Navigation marks written mid-measure instead of at a barline boundary.
     /// Populated as a side effect of Collect.</summary>

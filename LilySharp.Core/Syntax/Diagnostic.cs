@@ -286,6 +286,10 @@ public static class DiagnosticCodes
     /// <summary>Warning: a navigation mark (segno/coda/D.S./…) sits mid-measure rather
     /// than at a barline boundary.</summary>
     public const string NavigationMarkMidMeasure = "LYS4003";
+    /// <summary>Lyric warning: a section's plain (unbracketed) verse is fully shadowed
+    /// by its <c>[N. …]</c> verses — every written-out occurrence already has a numbered
+    /// verse, so the plain line (a fallback for uncovered occurrences) never renders.</summary>
+    public const string LyricPlainVerseShadowed = "LYS4004";
     /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";

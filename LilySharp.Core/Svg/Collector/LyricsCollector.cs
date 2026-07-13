@@ -37,12 +37,17 @@ internal sealed class LyricsCollector
 {
     private readonly List<LyricItem> _lyrics = new();
     private readonly List<LyricSyllableWarning> _warnings = new();
+    private readonly List<ShadowedPlainLyricWarning> _shadowedPlain = new();
 
     /// <summary>All collected lyric syllables (note-bound and row).</summary>
     public IReadOnlyList<LyricItem> Lyrics => _lyrics;
 
     /// <summary>Lyric lines with more syllables than notes (trailing words dropped).</summary>
     public IReadOnlyList<LyricSyllableWarning> Warnings => _warnings;
+
+    /// <summary>Plain lyric verses fully shadowed by a section's <c>[N. …]</c> verses
+    /// (they never render). Populated as a side effect of collection.</summary>
+    public IReadOnlyList<ShadowedPlainLyricWarning> ShadowedPlainWarnings => _shadowedPlain;
 
     /// <summary>
     /// Collects note-bound lyrics from every <c>lyrics { … }</c> block (skipping the
@@ -140,7 +145,7 @@ internal sealed class LyricsCollector
             // fallback line); verses numbered PAST the written-out occurrences — a
             // `|: :|` repeat that prints once but is sung again, or extra stanzas —
             // stack as further verses at the last occurrence.
-            void PlaceSection(IReadOnlyList<SyntaxNode> body, IReadOnlyList<int> starts)
+            void PlaceSection(IReadOnlyList<SyntaxNode> body, IReadOnlyList<int> starts, string sectionName)
             {
                 if (starts.Count == 0) return;
                 var (voltas, plain) = SplitVoltas(body);
@@ -151,28 +156,38 @@ internal sealed class LyricsCollector
                     return;
                 }
 
+                bool plainUsed = false;
                 for (int i = 1; i <= starts.Count; i++)
                 {
                     var hit = voltas.FirstOrDefault(v => v.Spec.Occurrences.Contains(i));
                     if (hit.Measures != null)
                         ProcessRun(hit.Measures, starts[i - 1], hit.Spec.PrimaryNumber, hit.Spec.HideLabel);
                     else if (plain is { Count: > 0 })
+                    {
                         ProcessRun(plain, starts[i - 1]);
+                        plainUsed = true;
+                    }
                 }
 
                 foreach (var v in voltas)
                     if (v.Spec.PrimaryNumber > starts.Count)
                         ProcessRun(v.Measures, starts[^1], v.Spec.PrimaryNumber, v.Spec.HideLabel);
+
+                // A plain verse only fills an occurrence NO bracket covers. If every
+                // occurrence already has a numbered verse, the plain line is dead — it
+                // never renders. Silent for the user, so flag it rather than dropping it.
+                if (!plainUsed && plain is { Count: > 0 })
+                    _shadowedPlain.Add(new ShadowedPlainLyricWarning(plain[0].Span, sectionName));
             }
 
             if (lyricsBlock.HasSections)
                 foreach (var section in lyricsBlock.Sections)
-                    PlaceSection(SectionLyricMeasures(section).ToList(), StartsFor(section.SectionName));
+                    PlaceSection(SectionLyricMeasures(section).ToList(), StartsFor(section.SectionName), section.SectionName);
             else
             {
                 string? enclosing = EnclosingSectionName(lyricsBlock);
                 if (enclosing != null)
-                    PlaceSection(lyricsBlock.Syllables.ToList(), StartsFor(enclosing));
+                    PlaceSection(lyricsBlock.Syllables.ToList(), StartsFor(enclosing), enclosing);
                 else
                     // Top level, no section to repeat under: take the first verse only
                     // (also flattens away any stray brackets so they never render as words).
