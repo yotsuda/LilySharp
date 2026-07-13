@@ -213,9 +213,8 @@ internal static class ArticulationEngraver
                 // The fret digit sits a TabHeadCenterOffset right of the note column
                 // (see EngravingDefaults) — the gesture hangs off the digit, not the column.
                 double noteX = tabBendStaff != null ? itemX + EngravingDefaults.TabHeadCenterOffset : itemX;
-                if (tabBendStaff != null)
+                if (tabBendStaff is { Tuning: { } tt })
                 {
-                    var tt = tabBendStaff.Tuning.Value;
                     int strings = Tunings.GetStringCount(tt);
                     double space = EngravingDefaults.TabStringSpace(strings);
                     int midi = item switch { NoteItem n => n.Midi,
@@ -334,7 +333,7 @@ internal static class ArticulationEngraver
                 bool isTabBeamed = beamGroups.TryGetValue(
                     (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
                     out var tabBeam);
-                bool tabBeamUp = isTabBeamed
+                bool tabBeamUp = tabBeam is not null
                     && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
                 // A tab stem's direction is string-based (the tab head), not the notated
                 // pitch — so a bass note on the bottom strings has an UP stem, and a
@@ -370,14 +369,17 @@ internal static class ArticulationEngraver
                 // Tuning-agnostic — the string geometry drives it.
                 bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != tabStemUp);
                 double tabY;
-                if (tabAbove && isTabBeamed && tabBeamUp)
+                // `tabBeam is not null` is equivalent to isTabBeamed here (the
+                // TryGetValue out), but stated this way it narrows tabBeam to
+                // non-null for the TabBeamOuterEdgeY call inside.
+                if (tabAbove && tabBeam is not null && tabBeamUp)
                 {
                     // Beamed, stem-up: the beam floats above the digits, so an
                     // above-script must clear the BEAM's outer edge at this note's x —
                     // not just the digit — exactly like the companion notation staff.
                     tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
                 }
-                else if (!tabAbove && isTabBeamed && !tabBeamUp)
+                else if (!tabAbove && tabBeam is not null && !tabBeamUp)
                 {
                     // Beamed, stem-down: the beam hangs below the digits, so a
                     // below-script (e.g. a forced `@accent.down`) must clear the BEAM's
