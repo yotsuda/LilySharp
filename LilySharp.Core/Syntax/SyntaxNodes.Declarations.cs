@@ -266,25 +266,22 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     {
         get
         {
-            // Look for the first integer before '=' (beat unit)
-            bool foundEquals = false;
+            // The beat unit is the integer BEFORE '=' (e.g. `4 = 116`). A plain
+            // `tempo 140` has no '=', so its number is the bpm, NOT a beat unit —
+            // return null and let the consumer default to a quarter note. (The old
+            // code returned the first integer unconditionally, so `tempo 140` was
+            // misread as a 140th-note beat unit and printed the wrong metronome glyph.)
+            int? beat = null;
             foreach (var value in Values)
             {
-                if (value is SyntaxTokenNode token)
-                {
-                    if (token.Kind == SyntaxKind.Equals)
-                    {
-                        foundEquals = true;
-                        break;
-                    }
-                    if (token.Kind == SyntaxKind.IntegerLiteral)
-                    {
-                        if (int.TryParse(token.Text, out var n))
-                            return n;
-                    }
-                }
+                if (value is not SyntaxTokenNode token)
+                    continue;
+                if (token.Kind == SyntaxKind.Equals)
+                    return beat ?? 4; // '=' present but no leading integer → quarter
+                if (token.Kind == SyntaxKind.IntegerLiteral && int.TryParse(token.Text, out var n))
+                    beat = n;
             }
-            return foundEquals ? 4 : null; // Default to quarter note if = is present
+            return null; // no '=' → plain bpm, no explicit beat unit
         }
     }
 
