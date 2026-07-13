@@ -34,11 +34,50 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     private readonly string? _fontDirectory;
     private readonly IFontResolver? _fallback;
 
+    // The document's configured text font (`font "X"`) and, when it asked to EMBED
+    // (`font "X" embedded`) and the licence allows, that font's bytes loaded from the
+    // system via SkiaSharp. Set per-document by PdfDocumentContext. When _embedBytes
+    // is null the configured font is NOT embedded — it resolves to the bundled serif
+    // instead, so a non-`embedded` document never silently embeds a system font.
+    private string? _textFamily;
+    private byte[]? _embedBytes;
+
     public EmmentalerFontResolver(string? fontDirectory = null, IFontResolver? fallback = null)
     {
         _fontDirectory = fontDirectory;
         _fallback = fallback;
     }
+
+    /// <summary>
+    /// Sets (or clears) the document's text font and whether to embed it. When
+    /// <paramref name="embed"/> is true and the font's licence permits embedding —
+    /// Free, or Gray (an explicit <c>embedded</c> honours a gray font, having already
+    /// warned) — its bytes are loaded for subset-embedding; a Forbidden/not-installed
+    /// font is not embedded. When embed is false the font is a reference only (it maps
+    /// to the bundled serif in PDF, so nothing proprietary is embedded without asking).
+    /// </summary>
+    public void SetTextFont(string? family, bool embed)
+    {
+        _textFamily = string.IsNullOrEmpty(family) ? null : family;
+        _embedBytes = null;
+        if (_textFamily == null || !embed)
+            return;
+        var cls = FontEmbedInfo.Classify(_textFamily);
+        if (cls is FontEmbedInfo.FontEmbedClass.Forbidden or FontEmbedInfo.FontEmbedClass.NotFound)
+            return;
+        _embedBytes = FontEmbedInfo.TryGetFontBytes(_textFamily);
+    }
+
+    // The bundled Liberation Serif (SIL OFL 1.1) face for a weight/slant — the PDF
+    // stand-in for the CSS-generic "serif" and for any non-embedded text font.
+    private static FontResolverInfo SerifFace(bool isBold, bool isItalic) =>
+        new((isBold, isItalic) switch
+        {
+            (true, true) => "LiberationSerif-BoldItalic#",
+            (true, false) => "LiberationSerif-Bold#",
+            (false, true) => "LiberationSerif-Italic#",
+            _ => "LiberationSerif#",
+        });
 
     public string DefaultFontName => "Emmentaler";
 
@@ -54,21 +93,27 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         // PdfSharpCore's fallback has no "serif" face and substitutes an
         // arbitrary installed font (e.g. the sans-serif "Agency"), so PDFs looked
         // nothing like the SVG — and embedded a proprietary system font. Resolve
-        // it to the bundled Liberation Serif (SIL OFL 1.1, metric-compatible with
-        // Times), which is licensed for both embedding and redistribution.
+        // it to the bundled Liberation Serif (metric-compatible with Times),
+        // which is licensed for both embedding and redistribution.
         if (name is "serif")
-            return new FontResolverInfo((isBold, isItalic) switch
-            {
-                (true, true) => "LiberationSerif-BoldItalic#",
-                (true, false) => "LiberationSerif-Bold#",
-                (false, true) => "LiberationSerif-Italic#",
-                _ => "LiberationSerif#",
-            });
+            return SerifFace(isBold, isItalic);
+        // The document's configured text font (`font "X"`, which the renderer maps
+        // every generic family onto). With `embedded` and a permitted licence we
+        // serve X's own bytes so PdfSharpCore subsets and embeds them (a portable
+        // PDF; bold/italic reuse the one face and PdfSharpCore synthesises emphasis).
+        // WITHOUT embedding, X resolves to the bundled serif — so a plain reference
+        // never silently embeds a system (possibly proprietary) font.
+        if (_textFamily != null && string.Equals(familyName, _textFamily, StringComparison.OrdinalIgnoreCase))
+            return _embedBytes != null ? new FontResolverInfo("LysEmbed#") : SerifFace(isBold, isItalic);
         return _fallback?.ResolveTypeface(familyName, isBold, isItalic);
     }
 
     public byte[] GetFont(string faceName)
     {
+        if (faceName == "LysEmbed#")
+            return _embedBytes ?? throw new InvalidOperationException(
+                "Embed font requested but its bytes were not loaded.");
+
         var fileName = faceName switch
         {
             "Emmentaler#" => "emmentaler-20.otf",

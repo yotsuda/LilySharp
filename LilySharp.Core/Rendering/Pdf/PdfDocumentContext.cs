@@ -48,6 +48,12 @@ internal sealed class PdfDocumentOptions
 
     /// <summary>Optional font directory override.</summary>
     public string? FontDirectory { get; init; }
+
+    /// <summary>The document's configured text font (<c>font "X"</c>), or null.</summary>
+    public string? TextFontFamily { get; init; }
+
+    /// <summary>Whether to subset-embed <see cref="TextFontFamily"/> (<c>embedded</c>).</summary>
+    public bool EmbedTextFont { get; init; }
 }
 
 /// <summary>
@@ -61,6 +67,7 @@ internal sealed class PdfDocumentContext : IDocumentContext
 {
     private static readonly object _resolverLock = new();
     private static bool _resolverInstalled;
+    private static EmmentalerFontResolver? _installedResolver;
 
     private readonly PdfDocumentOptions _options;
     private readonly PdfDocument _document;
@@ -71,7 +78,11 @@ internal sealed class PdfDocumentContext : IDocumentContext
     public PdfDocumentContext(PdfDocumentOptions? options = null)
     {
         _options = options ?? new PdfDocumentOptions();
-        EnsureFontResolver(_options.FontDirectory);
+        var resolver = EnsureFontResolver(_options.FontDirectory);
+        // Per-document text font + embed intent (font "X" [embedded]). The resolver
+        // is a process global set once, but this target is mutable and refreshed per
+        // document.
+        resolver.SetTextFont(_options.TextFontFamily, _options.EmbedTextFont);
         _document = new PdfDocument();
     }
 
@@ -151,18 +162,22 @@ internal sealed class PdfDocumentContext : IDocumentContext
     /// process per invocation); latent for a long-lived host (e.g. an LSP server
     /// rendering multiple documents with differing font directories).
     /// </remarks>
-    private static void EnsureFontResolver(string? fontDirectory)
+    private static EmmentalerFontResolver EnsureFontResolver(string? fontDirectory)
     {
         lock (_resolverLock)
         {
-            if (_resolverInstalled) return;
-            // PdfSharpCore allows the resolver to be set only once per process.
-            // We compose: ours first (Emmentaler), fallback to the existing
-            // resolver (PdfSharpCore's default handles common system fonts
-            // like "Serif" used by SharedRenderer for titles/lyrics/dynamics).
-            var existing = GlobalFontSettings.FontResolver;
-            GlobalFontSettings.FontResolver = new EmmentalerFontResolver(fontDirectory, existing);
-            _resolverInstalled = true;
+            if (!_resolverInstalled)
+            {
+                // PdfSharpCore allows the resolver to be set only once per process.
+                // We compose: ours first (Emmentaler), fallback to the existing
+                // resolver (PdfSharpCore's default handles common system fonts
+                // like "Serif" used by SharedRenderer for titles/lyrics/dynamics).
+                var existing = GlobalFontSettings.FontResolver;
+                _installedResolver = new EmmentalerFontResolver(fontDirectory, existing);
+                GlobalFontSettings.FontResolver = _installedResolver;
+                _resolverInstalled = true;
+            }
+            return _installedResolver!;
         }
     }
 }
