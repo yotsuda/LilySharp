@@ -168,6 +168,65 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
+    public void AfterSection_InUnnamedLyricsBlock_IsItsOwnContext()
+    {
+        // The lyrics track name is optional — `lyrics { … }`. The keyword then lands in
+        // the frame's Name, not its Prefix, and the context must still fire.
+        var text = "lyrics { section ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSection,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void UnnamedLyricsBlock_OffersKnownSectionsNotYetInThisTrack()
+    {
+        var text =
+            "part melody { section A { c } section B { d } }\n" +
+            "lyrics { section A { la la } section ";
+        Assert.Equal(new[] { "B" }, Missing(text));
+    }
+
+    [Fact]
+    public void WhenABraceAlreadyFollows_InsertsJustTheNameNoBody()
+    {
+        // A body already exists (`section ▮{ e }`), so completing B inserts only the
+        // name, not a second `{ }`.
+        var text = "part melody { section A { c } section B { d } }\n" +
+                   "part bass { section { e } }";
+        int offset = text.LastIndexOf("section ", System.StringComparison.Ordinal) + "section ".Length;
+        var b = LilySharpLanguageServer.GetMissingSectionNameCompletions(text, offset)
+            .Items.Single(i => i.Label == "B");
+        Assert.Equal("B", b.InsertText);
+        Assert.NotEqual(InsertTextFormat.Snippet, b.InsertTextFormat);
+    }
+
+    [Fact]
+    public void WhenABraceFollowsAPartialName_StillInsertsJustTheName()
+    {
+        // `section B▮ { … }` — editing the name of an already-braced section.
+        var text = "part melody { section A { c } section B { d } }\n" +
+                   "part bass { section B { e } }";
+        int offset = text.LastIndexOf("section B", System.StringComparison.Ordinal) + "section B".Length;
+        var b = LilySharpLanguageServer.GetMissingSectionNameCompletions(text, offset)
+            .Items.Single(i => i.Label == "B");
+        Assert.Equal("B", b.InsertText);
+    }
+
+    [Fact]
+    public void WithNoFollowingBrace_TheContainerCloseIsNotMistakenForABody()
+    {
+        // The next non-whitespace char is the part's own `}`, not a section body, so the
+        // snippet still opens the braces.
+        var text = "part melody { section A { c } section B { d } }\n" +
+                   "part bass { section A { e } section }";
+        int offset = text.LastIndexOf("section ", System.StringComparison.Ordinal) + "section ".Length;
+        var b = LilySharpLanguageServer.GetMissingSectionNameCompletions(text, offset)
+            .Items.Single(i => i.Label == "B");
+        Assert.Equal("B {\n\t$0\n}", b.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, b.InsertTextFormat);
+    }
+
+    [Fact]
     public void SectionPartProperty_RetriggersToOfferTheMissingSections()
     {
         var section = LilySharpLanguageServer.GetPartPropertyCompletions().Items

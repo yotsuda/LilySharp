@@ -166,7 +166,14 @@ public sealed partial class LilySharpLanguageServer
     internal static bool IsInsideSectionContainer(string text, int offset)
     {
         var frames = ScanOpenBlocks(text, offset, ReadFrame);
-        return frames.Count > 0 && frames[^1].Prefix is "part" or "lyrics";
+        if (frames.Count == 0)
+            return false;
+        var f = frames[^1];
+        // The introducing keyword is the Prefix for a NAMED block (`lyrics words {`) but
+        // the Name for an UNNAMED one (`lyrics {`, whose name is optional): pick whichever
+        // holds the keyword, as IsInsideChordsBlock does.
+        string keyword = f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix : f.Name;
+        return keyword is "part" or "lyrics";
     }
 
     /// <summary>
@@ -1195,7 +1202,8 @@ public sealed partial class LilySharpLanguageServer
     /// <c>form { }</c> references but that have not been written yet. The universe is every
     /// section NAME the document mentions — declarations AND form references (incl.
     /// <c>~silent</c> and volta alternatives). Picking one drops in the <c>{ }</c> body
-    /// with the caret inside. A brand-new name is typed freely; the list never blocks it.
+    /// with the caret inside, unless a <c>{</c> already follows (then just the name is
+    /// inserted). A brand-new name is typed freely; the list never blocks it.
     /// </summary>
     internal static CompletionList GetMissingSectionNameCompletions(string text, int offset)
     {
@@ -1215,6 +1223,11 @@ public sealed partial class LilySharpLanguageServer
         var here = IsInsideSectionContainer(text, offset)
             ? SectionsDeclaredInCurrentBlock(text, offset)
             : AllDeclaredSections(text, offset);
+
+        // Completing the name opens the `{ }` body with the caret inside — UNLESS a `{`
+        // already follows (the user is naming an existing braced section), in which case
+        // just the name is inserted so no second body appears.
+        bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
         return new CompletionList
         {
             Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
@@ -1222,9 +1235,8 @@ public sealed partial class LilySharpLanguageServer
                 Label = n,
                 Kind = CompletionItemKind.Reference,
                 Detail = "Section not yet declared here",
-                // Completing the name also opens the section body, caret inside.
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = n + " {\n\t$0\n}",
+                InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
+                InsertText = hasBrace ? n : n + " {\n\t$0\n}",
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
@@ -1273,6 +1285,20 @@ public sealed partial class LilySharpLanguageServer
             declared.Add(m.Groups[1].Value);
         }
         return declared;
+    }
+
+    /// <summary>
+    /// True when the section declaration at the cursor ALREADY has an open body — the
+    /// next non-whitespace character after the (possibly partial) name is <c>{</c>. Then
+    /// completing the name must not add a second <c>{ }</c>; it inserts just the name.
+    /// </summary>
+    private static bool SectionNameIsFollowedByBrace(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int i = Math.Clamp(offset, 0, text.Length);
+        while (i < text.Length && IsWordChar(text[i])) i++;        // rest of the partial name
+        while (i < text.Length && char.IsWhiteSpace(text[i])) i++; // whitespace to the brace
+        return i < text.Length && text[i] == '{';
     }
 
     /// <summary>
