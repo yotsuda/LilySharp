@@ -668,6 +668,11 @@ public sealed partial class MeasureCollector
     // or a standalone part-major header (`section A { key g major }`). Applied to every
     // part playing that section (an inline-music section walks its key as music instead).
     private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
+    // section name -> its own starting time / tempo, same rule as the header key: a
+    // section-major section or a standalone part-major header that carries the directive
+    // but no inline music. Applied to every part of the section.
+    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
+    private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new();
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -1728,16 +1733,22 @@ public sealed partial class MeasureCollector
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
                         _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
-                    // A section that carries its own `key` but no inline music applies
-                    // that key to every part of the section: section-major
+                    // A section that carries its own key / time / tempo but no inline
+                    // music applies those to every part of the section: section-major
                     // (`section A { key g major  melody { … } }`) or a standalone
                     // part-major header (`section A { key g major }`). An inline-music
-                    // section walks its key as music, so it is excluded to avoid a
+                    // section walks the directives as music, so it is excluded to avoid a
                     // double application. First one wins.
-                    if (!SectionHasInlineMusic(section)
-                        && FirstDirectKey(section) is { } headerKey
-                        && !_sectionHeaderKeys.ContainsKey(section.SectionName))
-                        _sectionHeaderKeys[section.SectionName] = headerKey;
+                    if (!SectionHasInlineMusic(section))
+                    {
+                        var nm = section.SectionName;
+                        if (FirstDirect<KeySignatureSyntax>(section) is { } hk && !_sectionHeaderKeys.ContainsKey(nm))
+                            _sectionHeaderKeys[nm] = hk;
+                        if (FirstDirect<TimeSignatureSyntax>(section) is { } ht && !_sectionHeaderTimes.ContainsKey(nm))
+                            _sectionHeaderTimes[nm] = ht;
+                        if (FirstDirect<TempoDeclarationSyntax>(section) is { } htp && !_sectionHeaderTempos.ContainsKey(nm))
+                            _sectionHeaderTempos[nm] = htp;
+                    }
                     break;
 
                 case FormDeclarationSyntax form:

@@ -156,11 +156,40 @@ public sealed partial class MeasureCollector
         // (running == score level) is a no-op. The redraw makes the revert visible
         // instead of silently leaving the previous signature on the staff.
         int sectionPos = section.Name.Span.Start;
-        var scoreTime = TimeSignatureFraction;
-        if (builder.CurrentMeasureLength != scoreTime)
+        // A section can state its own time (section-major or a standalone header): apply
+        // it and re-arm the measure length; otherwise revert to the score meter.
+        if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime))
+        {
+            builder.AddItem(new TimeSignatureChangeItem(
+                new TimeSignature(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
+                sectionPos));
+            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType));
+        }
+        else if (builder.CurrentMeasureLength != TimeSignatureFraction)
             builder.AddItem(new TimeSignatureChangeItem(
                 new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText),
                 sectionPos));
+
+        // A section can state its own tempo, printed as a metronome mark at its start.
+        if (_sectionHeaderTempos.TryGetValue(section.SectionName, out var sectionTempo))
+        {
+            if (sectionTempo.Bpm is int bpm)
+                _musicMarks.Add(new MusicMarkItem(
+                    MusicMarkType.Tempo, bpm.ToString(),
+                    builder.CurrentMeasureIndex, sectionPos,
+                    builder.CurrentItemCount, builder.CurrentDuration)
+                {
+                    TempoText = sectionTempo.Marking,
+                    TempoBeatUnit = sectionTempo.BeatUnit ?? 4,
+                    TempoDots = sectionTempo.BeatDots,
+                    SwingSubdivision = sectionTempo.SwingSubdivision,
+                });
+            else if (sectionTempo.Marking is { } marking)
+                _musicMarks.Add(new MusicMarkItem(
+                    MusicMarkType.Tempo, "",
+                    builder.CurrentMeasureIndex, sectionPos,
+                    builder.CurrentItemCount, builder.CurrentDuration) { TempoText = marking });
+        }
 
         // A section's own starting key sits beside the part blocks (section-major) or in
         // a standalone part-major header (`section A { key g major }`) — either way it is
@@ -263,13 +292,13 @@ public sealed partial class MeasureCollector
         builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, keySig.Position));
     }
 
-    /// <summary>The first <c>key</c> that is a DIRECT child of the section (its own
-    /// starting key), or null when the section states none.</summary>
-    private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)
+    /// <summary>The first direct-child directive of type <typeparamref name="T"/> (the
+    /// section's own starting key / time / tempo), or null when it states none.</summary>
+    private static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode
     {
         for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is KeySignatureSyntax k)
-                return k;
+            if (section.GetChild(i) is T t)
+                return t;
         return null;
     }
 
