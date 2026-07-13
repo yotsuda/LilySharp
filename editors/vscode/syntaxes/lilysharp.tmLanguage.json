@@ -98,7 +98,7 @@
             ]
         },
         "lyrics-block": {
-            "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text.",
+            "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text. The part-major form `lyrics { section A { … } }` nests one level: #lyrics-inner-section colours the section keyword+name AND balances its braces so this block doesn't end at the inner '}'.",
             "begin": "\\b(lyrics)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.lilysharp" },
@@ -109,6 +109,29 @@
             "endCaptures": {
                 "0": { "name": "punctuation.definition.block.lilysharp" }
             },
+            "patterns": [
+                { "include": "#lyrics-inner-section" },
+                { "include": "#lyrics-content" }
+            ]
+        },
+        "lyrics-inner-section": {
+            "comment": "Part-major lyric track: `section NAME { … }` written inside lyrics { }. Colour the section keyword and its name; the body is more lyric syllables, and matching the inner braces keeps the outer lyrics block from ending at this section's '}'.",
+            "begin": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.control.section.lilysharp" },
+                "2": { "name": "entity.name.section.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#lyrics-content" }
+            ]
+        },
+        "lyrics-content": {
+            "comment": "The syllable-safe inner tokens of a lyrics block: comments, quoted syllables, barlines and lyric connectors. Everything else stays plain text (a syllable).",
             "patterns": [
                 { "include": "#comments" },
                 { "include": "#strings" },
