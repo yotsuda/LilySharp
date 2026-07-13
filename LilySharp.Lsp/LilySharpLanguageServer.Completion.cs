@@ -87,7 +87,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterPartial => GetPartialCompletions(),
             CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
             CompletionContext.AfterFontName => GetFontNameCompletions(),
-            CompletionContext.AfterFontKeyword => GetFontNameCompletions(quoted: true),
+            CompletionContext.AfterFontKeyword => GetFontQuoteInsertCompletion(),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
@@ -815,19 +815,39 @@ public sealed partial class LilySharpLanguageServer
     /// the set does not change within a process.
     /// </summary>
     private static CompletionList? _fontNameCompletions;
-    private static CompletionList? _fontNameCompletionsQuoted;
 
     /// <summary>
     /// Installed font families that may be embedded into an exported PDF, annotated by
-    /// license class and CJK coverage. Offered inside a <c>font "…"</c> string (bare
-    /// name), and — when <paramref name="quoted"/> — at <c>font |</c> before any quotes,
-    /// where each item inserts the whole <c>"Family"</c> so Ctrl+Space completes to
-    /// <c>font "Family"</c>. See <see cref="BuildFontNameCompletions"/> for the shape.
+    /// license class and CJK coverage. Offered INSIDE a <c>font "…"</c> string (the bare
+    /// family name is inserted). At <c>font |</c> before the quotes, see
+    /// <see cref="GetFontQuoteInsertCompletion"/> instead.
     /// </summary>
-    internal static CompletionList GetFontNameCompletions(bool quoted = false)
-        => quoted
-            ? _fontNameCompletionsQuoted ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts(), quoted: true)
-            : _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
+    internal static CompletionList GetFontNameCompletions()
+        => _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
+
+    /// <summary>
+    /// At <c>font |</c> (the keyword typed, no quotes yet): a single item that inserts
+    /// the empty pair <c>"…"</c> with the caret between them and re-triggers suggestions,
+    /// so completion lands inside the string with the font-name list showing — mirroring
+    /// completing the <c>font</c> keyword itself.
+    /// </summary>
+    internal static CompletionList GetFontQuoteInsertCompletion()
+        => new()
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "\"…\"",
+                    FilterText = "font",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "\"$0\"",
+                    Detail = "Pick an installed, embeddable font",
+                    Command = new Command { Title = "Suggest font name", CommandIdentifier = "editor.action.triggerSuggest" },
+                }
+            ]
+        };
 
     /// <summary>
     /// Enumerates the installed font families and, for the embeddable ones (class
@@ -883,8 +903,7 @@ public sealed partial class LilySharpLanguageServer
     /// within a class, CJK-capable families first.
     /// </summary>
     internal static CompletionList BuildFontNameCompletions(
-        IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)> fonts,
-        bool quoted = false)
+        IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)> fonts)
     {
         var items = new List<CompletionItem>();
         foreach (var (family, cls, cjk) in fonts)
@@ -901,10 +920,6 @@ public sealed partial class LilySharpLanguageServer
                 Label = family,
                 Kind = CompletionItemKind.Value,
                 Detail = detail,
-                // At `font |` (no quotes) insert the whole quoted string so it completes
-                // to `font "Family"`; inside `font "…"` insert the bare family (Label).
-                InsertText = quoted ? $"\"{family}\"" : null,
-                FilterText = family,
                 // Free before Gray; within a class, CJK-capable first; then by name.
                 SortText = (cls == FontEmbedInfo.FontEmbedClass.Free ? "0" : "1")
                     + (cjk ? "0" : "1") + family,
@@ -1292,7 +1307,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature" },
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)" },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
@@ -1572,7 +1587,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "nobreak", Kind = CompletionItemKind.Keyword, InsertText = "nobreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
 
                 // Mid-measure declarations
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef" },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo" },

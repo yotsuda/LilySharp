@@ -59,18 +59,13 @@ public class FontNameCompletionTests
     }
 
     [Fact]
-    public void QuotedBuild_WrapsInsertTextInQuotes_BareOtherwise()
+    public void AfterFontKeyword_InsertsEmptyQuotesAndRetriggers()
     {
-        var synthetic = new (string, FontEmbedInfo.FontEmbedClass, bool)[]
-        {
-            ("Noto Serif CJK JP", FontEmbedInfo.FontEmbedClass.Free, true),
-        };
-        // At `font |` the item inserts the whole quoted string.
-        var quoted = LilySharpLanguageServer.BuildFontNameCompletions(synthetic, quoted: true).Items;
-        Assert.Equal("\"Noto Serif CJK JP\"", Assert.Single(quoted).InsertText);
-        // Inside `font "…"` the bare family is inserted (Label used; no explicit InsertText).
-        var bare = LilySharpLanguageServer.BuildFontNameCompletions(synthetic).Items;
-        Assert.Null(Assert.Single(bare).InsertText);
+        // At `font |` the single item inserts the empty pair with the caret between the
+        // quotes and re-triggers, so the font-name list shows inside the string.
+        var item = Assert.Single(LilySharpLanguageServer.GetFontQuoteInsertCompletion().Items);
+        Assert.Equal("\"$0\"", item.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
     }
 
     [Fact]

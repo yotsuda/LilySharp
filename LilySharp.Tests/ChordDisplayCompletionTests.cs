@@ -84,4 +84,12 @@ public class ChordDisplayCompletionTests
             .Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "roman", "both", "names" }, labels);
     }
+
+    [Fact]
+    public void TopLevelClef_RetriggersSuggestionsSoTheClefListShows()
+    {
+        // Completing `clef` should pop the clef-name list (like `time`), via a retrigger.
+        var clef = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == "clef");
+        Assert.Equal("editor.action.triggerSuggest", clef.Command?.CommandIdentifier);
+    }
 }
