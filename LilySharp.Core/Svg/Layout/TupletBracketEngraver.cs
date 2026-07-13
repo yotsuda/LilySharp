@@ -254,6 +254,14 @@ internal static class TupletBracketEngraver
                     {
                         var geom = new TabStaffGeometry(
                             tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
+                        // A tab beam's direction is string-based, not the notation
+                        // Group.StemUp — so the number sits on the tab beam's OWN side.
+                        isStemUp = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
+                        double tabStemOffset = isStemUp
+                            ? EngravingDefaults.StemUpAttachX
+                            : EngravingDefaults.StemDownAttachX;
+                        startX = beam.LeftX + tabStemOffset;
+                        endX = beam.RightX + tabStemOffset;
                         const double tabClearance = 0.5; // baseline above beam edge
                         double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
                         double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);
