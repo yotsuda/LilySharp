@@ -110,6 +110,17 @@ internal sealed partial class Parser
         var at = Expect(SyntaxKind.At);
         var name = ExpectMarkName();
 
+        // `@` modifies the note it follows; a navigation mark (segno/coda/fine/D.S./
+        // D.C./to coda) is a standalone landmark, not a note modifier, so it is BARE.
+        // Reject the `@`-prefixed form (recover by parsing it anyway).
+        if (name.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+            or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)
+        {
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.NavigationMarkIsBare,
+                $"A navigation mark is bare, not '@': write '{name.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
+        }
+
         // Handle compound marks like @ds.al.fine
         var parts = new List<SyntaxToken> { at, name };
         while (Check(SyntaxKind.Dot))

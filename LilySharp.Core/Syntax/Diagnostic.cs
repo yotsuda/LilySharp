@@ -239,6 +239,11 @@ public static class DiagnosticCodes
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 
+    /// <summary>Syntax error: a navigation mark was written with <c>@</c>
+    /// (<c>@segno</c>, <c>@ds.al.coda</c>). Navigation marks are bare — <c>@</c>
+    /// modifies a note, and a segno/coda/D.S. is a standalone landmark, not a note.</summary>
+    public const string NavigationMarkIsBare = "LYS1022";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

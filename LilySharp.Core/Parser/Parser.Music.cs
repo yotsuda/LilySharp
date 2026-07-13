@@ -125,6 +125,11 @@ internal sealed partial class Parser
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
+            // Navigation marks are standalone landmarks — bare (not '@'), the same
+            // token in a section's music (at a note) and in a form (at a boundary).
+            SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+                or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
+                => ParseNavigationMark(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
@@ -592,6 +597,23 @@ private GreenNode?[] ParseArticulations()
             {
                 // @staccato, @accent, @p, @f, etc.
                 var at = Advance();
+
+                // A navigation mark (segno/coda/fine/D.S./D.C./to coda) is a standalone
+                // BARE landmark, not a note modifier, so `note@segno` is rejected too
+                // (recover by consuming the whole compound mark).
+                if (Current.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword
+                    or SyntaxKind.CodaKeyword or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword
+                    or SyntaxKind.ToKeyword)
+                {
+                    var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+                    _diagnostics.Error(span, DiagnosticCodes.NavigationMarkIsBare,
+                        $"A navigation mark is bare, not '@': write '{Current.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
+                    var navParts = new List<SyntaxToken> { at, Advance() };
+                    while (Check(SyntaxKind.Dot)) { navParts.Add(Advance()); navParts.Add(Advance()); }
+                    articulations.Add(new MusicMarkGreen([.. navParts]));
+                    continue;
+                }
+
                 if (IsDynamicName())
                 {
                     // @p, @f, @mf, @cresc, etc. - dynamics with @ prefix (new style).

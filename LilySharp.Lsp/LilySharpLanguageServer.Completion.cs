@@ -1574,13 +1574,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo hairpin", SortText = "2cresc" },
                 new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo hairpin", SortText = "2decresc" },
 
-                // Music navigation signs that attach to a note. The compound
-                // jump DIRECTIVES (dc, ds al coda / al fine, rehearsal marks) are
-                // structure-level only and error after '@' — they belong in the
-                // structure { } completions, not here.
-                new CompletionItem { Label = "segno", Kind = CompletionItemKind.Value, Detail = "Segno sign", SortText = "3segno" },
-                new CompletionItem { Label = "coda", Kind = CompletionItemKind.Value, Detail = "Coda sign", SortText = "3coda" },
-                new CompletionItem { Label = "fine", Kind = CompletionItemKind.Value, Detail = "Fine (end)", SortText = "3fine" },
+                // Navigation signs (segno / coda / fine / D.S. / D.C. / to coda) are
+                // NOT offered here: they are standalone BARE landmarks, not note
+                // modifiers ('@'), so they come from the music / form completions.
                 // Rehearsal mark: @mark("A") drops a boxed label. Shown as a bare
                 // "mark" (like @text), but completes straight into the quotes so the
                 // caret lands where the label is typed.

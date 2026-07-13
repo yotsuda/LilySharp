@@ -2228,6 +2228,7 @@ public sealed partial class MeasureCollector
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
             or ParallelExpressionSyntax or InlineVoltaSyntax or MusicMarkSyntax
+            or NavigationMarkSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax
             or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax
             or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax;

@@ -199,38 +199,46 @@ form main {
     }
 
     [Fact]
-    public void ParseStructureDeclaration_MusicMark_Simple()
+    public void ParseStructureDeclaration_NavigationMark_Bare()
     {
+        // Navigation marks are BARE (a standalone landmark, not a note modifier).
         var source = @"
 form main {
     Intro
-    @segno
+    segno
     Verse
-    @fine
+    fine
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
-        
-        // Verify MusicMark nodes are created
-        var musicMarks = tree.GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().ToList();
-        Assert.Equal(2, musicMarks.Count);
-        Assert.Equal("segno", musicMarks[0].MarkName);
-        Assert.Equal("fine", musicMarks[1].MarkName);
+
+        var navs = tree.GetRoot().DescendantNodes().OfType<NavigationMarkSyntax>().ToList();
+        Assert.Equal(2, navs.Count);
     }
 
     [Fact]
-    public void ParseStructureDeclaration_MusicMark_Compound()
+    public void ParseStructureDeclaration_NavigationMark_WithAt_IsRejected()
+    {
+        // '@' modifies a note; a navigation mark with '@' (@segno) is a syntax error.
+        var source = "form main { Intro @segno Verse @fine }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.NavigationMarkIsBare);
+    }
+
+    [Fact]
+    public void ParseStructureDeclaration_NavigationMark_CompoundBare()
     {
         var source = @"
 form main {
     Intro
-    @ds.al.fine
+    ds al fine
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
-        
-        var musicMark = tree.GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().First();
-        Assert.Equal("ds.al.fine", musicMark.MarkName);
+
+        var nav = tree.GetRoot().DescendantNodes().OfType<NavigationMarkSyntax>().First();
+        Assert.NotNull(nav);
     }
 
     [Fact]

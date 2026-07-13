@@ -51,11 +51,18 @@ public class RestArticulationTests
     }
 
     [Fact]
-    public void RestWithMark_CollectsMusicMark()
+    public void BareNavigationMark_CollectsMusicMark()
     {
-        var tree = SyntaxTree.Parse("c2 r2@coda | d1 |");
+        // Navigation marks are standalone BARE landmarks (not '@'-attached): a bare
+        // 'coda' in a section's music collects the Coda sign.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            part m { clef treble section A { c2 r2 coda | d1 | } }
+            form main { A }
+            score main { staff m }
+            """);
         Assert.Empty(tree.Diagnostics);
-        var score = new MeasureCollector().Collect(tree);
+        var score = new MeasureCollector().Collect(tree, "m");
 
         Assert.Contains(score.MusicMarks, m => m.Type == MusicMarkType.Coda);
     }
