@@ -360,50 +360,47 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Keep the preview alive across an untitled -> file SAVE. Saving an untitled score
-    // CLOSES the untitled document and OPENS a new file: document, so a preview keyed by
-    // the old untitled URI would be orphaned and stop refreshing. The close and open
-    // events can arrive in either order, and the save may reformat/reindent the buffer,
-    // so we pair them by WHITESPACE-INSENSITIVE content within a short window, not timing.
-    const closedUntitledPreviews = new Map<string, { normText: string; time: number }>();
-    const normalize = (t: string) => t.replace(/\s+/g, '');
-    const tryAdoptOrphanPreview = (fileDoc: vscode.TextDocument | undefined) => {
-        if (!fileDoc || fileDoc.uri.scheme !== 'file' || fileDoc.languageId !== 'lilysharp') { return; }
-        const newUri = fileDoc.uri.toString();
+    // CLOSES the untitled document and OPENS/activates a new file: document, orphaning a
+    // preview keyed by the old untitled URI. Content can't be relied on to pair them (a
+    // format-on-save reindents/rewrites the buffer), so pair by RECENCY: when a lilysharp
+    // file becomes the active editor (or is saved) right after an untitled preview closed,
+    // re-key that preview onto it.
+    const closedUntitledPreviews = new Map<string, number>(); // untitled uri -> close time
+    const adoptRecentOrphanPreview = (doc: vscode.TextDocument | undefined) => {
+        if (!doc || doc.uri.scheme !== 'file' || doc.languageId !== 'lilysharp') { return; }
+        const newUri = doc.uri.toString();
         if (previewPanels.has(newUri) || closedUntitledPreviews.size === 0) { return; }
-        const newNorm = normalize(fileDoc.getText());
         const now = Date.now();
-        for (const [oldUri, info] of closedUntitledPreviews) {
-            if (now - info.time > 8000 || !previewPanels.has(oldUri)) { closedUntitledPreviews.delete(oldUri); continue; }
-            if (info.normText !== newNorm) { continue; }
-            closedUntitledPreviews.delete(oldUri);
-            migratePreviewKey(oldUri, newUri);
-            const panel = previewPanels.get(newUri);
-            if (panel) {
-                panel.title = `Preview: ${path.basename(fileDoc.uri.fsPath)}`;
-                // Refresh under the saved file. updatePreviewContent retries if the
-                // server hasn't registered the new document yet, so this can't flash a
-                // "Document not found" error.
-                updatePreviewContent(fileDoc, panel, context);
-            }
-            outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
-            return;
+        let best: string | undefined;
+        let bestTime = 0;
+        for (const [oldUri, closedAt] of closedUntitledPreviews) {
+            if (now - closedAt > 4000 || !previewPanels.has(oldUri)) { closedUntitledPreviews.delete(oldUri); continue; }
+            if (closedAt >= bestTime) { best = oldUri; bestTime = closedAt; }
         }
+        if (!best) { return; }
+        closedUntitledPreviews.delete(best);
+        migratePreviewKey(best, newUri);
+        const panel = previewPanels.get(newUri);
+        if (panel) {
+            panel.title = `Preview: ${path.basename(doc.uri.fsPath)}`;
+            // Refresh under the saved file; updatePreviewContent retries if the server
+            // has not registered it yet, so this cannot flash "Document not found".
+            updatePreviewContent(doc, panel, context);
+        }
+        outputChannel.appendLine(`Preview migrated ${best} -> ${newUri}`);
     };
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument(closedDoc => {
             const oldUri = closedDoc.uri.toString();
             if (closedDoc.uri.scheme === 'untitled' && previewPanels.has(oldUri)) {
-                closedUntitledPreviews.set(oldUri, { normText: normalize(closedDoc.getText()), time: Date.now() });
+                closedUntitledPreviews.set(oldUri, Date.now());
                 outputChannel.appendLine(`Untitled preview closed; pending migrate: ${oldUri}`);
-                // The saved file may already be open (event order varies) — try now too.
-                vscode.workspace.textDocuments.forEach(tryAdoptOrphanPreview);
             }
         }),
-        // The saved file appears via one of these: it opens, is saved, and becomes the
-        // active editor. Any of them triggers the (content-matched) adoption.
-        vscode.workspace.onDidOpenTextDocument(tryAdoptOrphanPreview),
-        vscode.workspace.onDidSaveTextDocument(tryAdoptOrphanPreview),
-        vscode.window.onDidChangeActiveTextEditor(editor => tryAdoptOrphanPreview(editor?.document))
+        // The saved file becomes the active editor (and fires a save) right after; either
+        // one adopts the just-closed untitled preview.
+        vscode.window.onDidChangeActiveTextEditor(editor => adoptRecentOrphanPreview(editor?.document)),
+        vscode.workspace.onDidSaveTextDocument(adoptRecentOrphanPreview)
     );
 
     // Watch for cursor position changes
@@ -517,6 +514,23 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         existingPanel.reveal(viewColumn);
         updatePreviewContent(document, existingPanel, context);
         return;
+    }
+
+    // Reuse an ORPHANED untitled preview (its buffer was saved to this file but the
+    // automatic migration missed) rather than opening a second window: re-key it here.
+    if (document.uri.scheme === 'file') {
+        for (const key of previewPanels.keys()) {
+            if (!key.startsWith('untitled:') || vscode.workspace.textDocuments.some(d => d.uri.toString() === key)) { continue; }
+            migratePreviewKey(key, uri);
+            const adopted = previewPanels.get(uri);
+            if (adopted) {
+                adopted.title = `Preview: ${path.basename(document.uri.fsPath)}`;
+                adopted.reveal(viewColumn);
+                updatePreviewContent(document, adopted, context);
+                outputChannel.appendLine(`Reused orphaned preview ${key} -> ${uri}`);
+                return;
+            }
+        }
     }
 
     // Create new preview panel with access to font resources
