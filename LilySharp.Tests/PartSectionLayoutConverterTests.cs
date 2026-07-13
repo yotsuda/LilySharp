@@ -187,4 +187,69 @@ public class PartSectionLayoutConverterTests
         Assert.Contains("// verse arrangement", converted);
         Assert.False(SyntaxTree.Parse(converted!).HasErrors);
     }
+
+    // A section-major section may state its own key beside its part blocks. It must not
+    // block the conversion (it used to refuse), and it becomes a standalone header.
+    private const string SectionMajorWithKey = """
+        section A {
+          key g major
+          melody { c4 c g' g }
+          bass { c2 e }
+        }
+        form main { A }
+        score main { staff melody  staff bass }
+        """;
+
+    [Fact]
+    public void Convert_SectionKey_NoLongerRefuses()
+    {
+        Assert.NotNull(PartSectionLayoutConverter.Convert(SectionMajorWithKey));
+    }
+
+    [Fact]
+    public void Convert_SectionMajorKey_ToPartMajor_EmitsStandaloneHeader()
+    {
+        var pm = PartSectionLayoutConverter.Convert(SectionMajorWithKey);
+        Assert.NotNull(pm);
+        _output.WriteLine(pm);
+        // The section's key stands parallel to the parts as its own header block…
+        Assert.Contains("section A { key g major }", pm);
+        // …and the part cells no longer carry it.
+        Assert.Contains("part melody {", pm);
+        Assert.Contains("section A { c4 c g' g }", pm);
+        Assert.False(SyntaxTree.Parse(pm!).HasErrors);
+    }
+
+    [Fact]
+    public void Convert_PartMajorStandaloneHeader_ToSectionMajor_FoldsTheKeyIn()
+    {
+        var src = """
+            part melody { section A { c4 c g' g } }
+            part bass { section A { c2 e } }
+            section A { key g major }
+            form main { A }
+            score main { staff melody  staff bass }
+            """;
+        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(src));
+        var sm = PartSectionLayoutConverter.Convert(src);
+        Assert.NotNull(sm);
+        _output.WriteLine(sm);
+        // The header folds back into the section, above its part cells.
+        Assert.Contains("key g major", sm);
+        Assert.Matches(@"section A \{\s*key g major", sm);
+        Assert.DoesNotContain("section A { key g major }", sm); // no longer standalone
+        Assert.False(SyntaxTree.Parse(sm!).HasErrors);
+    }
+
+    [Fact]
+    public void Convert_SectionKey_RoundTrips()
+    {
+        var pm = PartSectionLayoutConverter.Convert(SectionMajorWithKey);
+        var back = PartSectionLayoutConverter.Convert(pm!);
+        Assert.NotNull(back);
+        // The key survives the round trip, folded back into the section.
+        Assert.Contains("key g major", back);
+        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(back!));
+        Assert.False(SyntaxTree.Parse(back!).HasErrors);
+    }
 }

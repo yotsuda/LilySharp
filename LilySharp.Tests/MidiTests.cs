@@ -135,6 +135,27 @@ public class MidiTests
     }
 
     [Fact]
+    public void StandalonePartMajorSectionHeaderKey_AppliesToTheSection()
+    {
+        // A part-major layout can state a section's key once in a standalone header
+        // parallel to the parts — `section A { key g major }`. It must apply to every
+        // part playing A (here the phrase auto-transposes to G).
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        var pitches = Pitches("""
+            key c major
+            phrase Lick { c d e c }
+            part melody { section A { Lick } }
+            section A { key g major }
+            form main { A }
+            score main { staff melody }
+            """);
+        Assert.Equal(new[] { 55, 57, 59, 55 }, pitches);
+    }
+
+    [Fact]
     public void PhraseReference_InlineNotesAfterAreNotTransposed()
     {
         // The inline c after the phrase stays at written pitch (C4 = 60),

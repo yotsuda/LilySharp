@@ -105,7 +105,8 @@ public static class PartSectionLayoutConverter
         => TopLevel(root).OfType<SectionDeclarationSyntax>()
             .Where(s => DirectChildrenOfType<PartBlockSyntax>(s).Any())
             .Any(s => DirectChildren(s).Any(
-                c => c is not PartBlockSyntax and not ChordPartBlockSyntax and not LyricsBlockSyntax));
+                c => c is not PartBlockSyntax and not ChordPartBlockSyntax and not LyricsBlockSyntax
+                  && !IsSectionDirective(c)));
 
     // --- model extraction -----------------------------------------------------
 
@@ -123,6 +124,9 @@ public static class PartSectionLayoutConverter
         // (usually nameless) verse blocks in one section — and (track, section) text.
         var lyricTracks = new List<(string? Name, int Ordinal)>();
         var lyricCells = new Dictionary<(string? Name, int Ordinal, string Section), string>();
+        // section -> its own directive text (`key g major` …): a standalone part-major
+        // header, or the directives folded into a section-major section.
+        var sectionHeaders = new Dictionary<string, string>();
         var sectionOrder = new List<string>();
         void AddSection(string name)
         {
@@ -181,9 +185,21 @@ public static class PartSectionLayoutConverter
                     break;
                 }
 
+                // Standalone part-major section header: `section A { key g major }` — the
+                // section's directives stated once, parallel to the parts.
+                case SectionDeclarationSyntax header when IsSectionHeader(header):
+                    AddSection(header.SectionName);
+                    sectionHeaders[header.SectionName] = SectionDirectiveText(header);
+                    break;
+
                 case SectionDeclarationSyntax section
                         when DirectChildrenOfType<PartBlockSyntax>(section).Any(): // section-major
                     AddSection(section.SectionName);
+                    // Section-level directives (`key g major`) fold out to a standalone
+                    // header in part-major.
+                    var directives = SectionDirectiveText(section);
+                    if (directives.Length > 0)
+                        sectionHeaders[section.SectionName] = directives;
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
                         cells[(pb.Name, section.SectionName)] = BetweenBraces(pb.ToFullString());
                     // In-section chord tracks become part-major chord tracks and back.
@@ -216,8 +232,8 @@ public static class PartSectionLayoutConverter
 
         var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells);
         var body = target == LayoutForm.PartMajor
-            ? EmitPartMajor(parts, sectionOrder, cells, tracks)
-            : EmitSectionMajor(parts, sectionOrder, cells, tracks);
+            ? EmitPartMajor(parts, sectionOrder, cells, tracks, sectionHeaders)
+            : EmitSectionMajor(parts, sectionOrder, cells, tracks, sectionHeaders);
 
         return Reassemble(source, root, body);
     }
@@ -248,7 +264,8 @@ public static class PartSectionLayoutConverter
 
     private static string EmitPartMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells, TrackData tracks)
+        Dictionary<(string, string), string> cells, TrackData tracks,
+        Dictionary<string, string> sectionHeaders)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -261,6 +278,11 @@ public static class PartSectionLayoutConverter
                     sb.Append("  section ").Append(section).Append(' ').Append(Braced(music)).Append('\n');
             sb.Append("}\n");
         }
+        // A section's own directives (`key g major`) stand parallel to the parts as a
+        // standalone header, stated once for every part playing the section.
+        foreach (var section in sectionOrder)
+            if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
+                sb.Append("section ").Append(section).Append(" { ").Append(dir).Append(" }\n");
         // Each chord track becomes its own top-level block with inner sections.
         foreach (var chordName in tracks.ChordParts)
         {
@@ -286,7 +308,8 @@ public static class PartSectionLayoutConverter
 
     private static string EmitSectionMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells, TrackData tracks)
+        Dictionary<(string, string), string> cells, TrackData tracks,
+        Dictionary<string, string> sectionHeaders)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -298,6 +321,9 @@ public static class PartSectionLayoutConverter
         foreach (var section in sectionOrder)
         {
             sb.Append("section ").Append(section).Append(" {\n");
+            // A standalone header's directives fold back in at the section's top.
+            if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
+                sb.Append("  ").Append(dir).Append('\n');
             foreach (var (name, _) in parts)
                 if (cells.TryGetValue((name, section), out var music))
                     sb.Append("  ").Append(name).Append(' ').Append(Braced(music)).Append('\n');
@@ -337,7 +363,9 @@ public static class PartSectionLayoutConverter
             bool structural = member is PartDeclarationSyntax
                 || (member is ChordPartBlockSyntax cb && cb.HasSections)   // part-major chord track
                 || (member is LyricsBlockSyntax lb && lb.HasSections)      // part-major lyric track
-                || (member is SectionDeclarationSyntax s && DirectChildrenOfType<PartBlockSyntax>(s).Any());
+                || (member is SectionDeclarationSyntax s
+                        && (DirectChildrenOfType<PartBlockSyntax>(s).Any()  // section-major
+                            || IsSectionHeader(s)));                        // standalone header
             if (structural)
             {
                 if (!emitted)
@@ -374,6 +402,33 @@ public static class PartSectionLayoutConverter
 
     private static IEnumerable<T> DirectChildrenOfType<T>(SyntaxNode node) where T : SyntaxNode
         => DirectChildren(node).OfType<T>();
+
+    /// <summary>A section-level directive child — <c>key</c> / <c>time</c> / <c>tempo</c>
+    /// / <c>partial</c> / <c>clef</c> / <c>octave</c> — that a section may carry beside
+    /// its part blocks (section-major) or alone (a standalone part-major header).</summary>
+    private static bool IsSectionDirective(SyntaxNode n)
+        => n is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+            or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax;
+
+    /// <summary>A directives-only section header (<c>section A { key g major }</c>): no
+    /// part/chord/lyric blocks and no inline music, at least one directive. In part-major
+    /// it stands parallel to the parts; in section-major it folds into the section.</summary>
+    private static bool IsSectionHeader(SectionDeclarationSyntax s)
+    {
+        bool sawDirective = false;
+        foreach (var c in DirectChildren(s))
+        {
+            if (IsSectionDirective(c)) { sawDirective = true; continue; }
+            return false; // a part/chord/lyric block or inline music → not a bare header
+        }
+        return sawDirective;
+    }
+
+    /// <summary>The section's directive children joined verbatim (the header text folded
+    /// into / split out of a section), empty when it carries none.</summary>
+    private static string SectionDirectiveText(SectionDeclarationSyntax s)
+        => string.Join(" ", DirectChildren(s).Where(IsSectionDirective)
+            .Select(d => d.ToFullString().Trim()).Where(t => t.Length > 0));
 
     /// <summary>The inner content between a node's first <c>{</c> and last <c>}</c>,
     /// trimmed — preserves the music verbatim (including any inner comments).</summary>

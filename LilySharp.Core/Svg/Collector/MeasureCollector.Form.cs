@@ -162,14 +162,13 @@ public sealed partial class MeasureCollector
                 new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText),
                 sectionPos));
 
-        // A section-major section can state its own starting key —
-        //   section A { key g major  melody { … } }
-        // — which sits beside the part blocks and so is NOT reached by the per-part
-        // music walk. Apply it here (transposed per voice, printed on every staff); it
-        // overrides the score-level revert below. An inline-music section instead walks
-        // its `key` as music, so only the section-major case is handled here.
-        var sectionKey = SectionMajorStartKey(section);
-        if (sectionKey != null)
+        // A section's own starting key sits beside the part blocks (section-major) or in
+        // a standalone part-major header (`section A { key g major }`) — either way it is
+        // NOT reached by the per-part music walk. Apply it here (transposed per voice,
+        // printed on every staff); it overrides the score-level revert below. Keyed by
+        // section NAME so a standalone header applies whichever node represents the
+        // section. An inline-music section walks its `key` as music, so it is not mapped.
+        if (_sectionHeaderKeys.TryGetValue(section.SectionName, out var sectionKey))
         {
             ApplyKeySignatureChange(sectionKey, builder);
         }
@@ -264,26 +263,37 @@ public sealed partial class MeasureCollector
         builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, keySig.Position));
     }
 
-    /// <summary>
-    /// A section-major section's own starting <c>key</c>: the first <c>key</c> directly
-    /// inside a section that ALSO holds part blocks directly (<c>section A { key … melody
-    /// { … } }</c>). Returns null for an inline-music section, whose <c>key</c> is reached
-    /// by the music walk instead, and null when the section states no key.
-    /// </summary>
-    private static KeySignatureSyntax? SectionMajorStartKey(SectionDeclarationSyntax section)
+    /// <summary>The first <c>key</c> that is a DIRECT child of the section (its own
+    /// starting key), or null when the section states none.</summary>
+    private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)
     {
-        bool hasPartBlocks = false;
-        KeySignatureSyntax? key = null;
-        foreach (var child in section.DescendantNodes())
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is KeySignatureSyntax k)
+                return k;
+        return null;
+    }
+
+    /// <summary>
+    /// True when the section has a direct-child MUSIC node (note / phrase reference /
+    /// rest / …), as opposed to only directives (<c>key</c> / <c>time</c> / …) and part /
+    /// chord / lyric blocks. An inline-music section walks its own <c>key</c> as music;
+    /// a section-major or directives-only header does not.
+    /// </summary>
+    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
         {
-            if (child.Parent != section)
-                continue;                       // direct children only
-            if (child is PartBlockSyntax)
-                hasPartBlocks = true;
-            else if (child is KeySignatureSyntax k)
-                key ??= k;
+            var child = section.GetChild(i);
+            if (child is null or SyntaxTokenNode)
+                continue;
+            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
+                continue;
+            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax)
+                continue;
+            return true; // a music node
         }
-        return hasPartBlocks ? key : null;
+        return false;
     }
 
     /// <summary>

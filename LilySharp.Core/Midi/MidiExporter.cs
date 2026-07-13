@@ -59,6 +59,11 @@ public sealed class MidiExporter
     // declares the same section name once per part (`part melody { section A … }`,
     // `part bass { section A … }`); a structure reference plays them all.
     private Dictionary<string, List<SectionDeclarationSyntax>>? _sections;
+    // section name -> its own header key (a section carrying a `key` but no inline
+    // music: section-major, or a standalone part-major header `section A { key g major }`).
+    // Applied up front to every part of the section, since it is not walked with the
+    // part cell's music.
+    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
     private bool _formDriven;
     private bool _formPlayed;
 
@@ -152,6 +157,8 @@ public sealed class MidiExporter
                 if (!_sections.TryGetValue(sd.Name.Text, out var sameName))
                     _sections[sd.Name.Text] = sameName = new List<SectionDeclarationSyntax>();
                 sameName.Add(sd);
+                if (!SectionHasInlineMusic(sd) && FirstDirectKey(sd) is { } hk)
+                    _sectionHeaderKeys.TryAdd(sd.Name.Text, hk);
             }
             else if (n is PartDeclarationSyntax pd)
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
@@ -384,6 +391,35 @@ public sealed class MidiExporter
         return ReferenceEquals(form, primary);
     }
 
+    /// <summary>The first <c>key</c> that is a DIRECT child of the section, or null.</summary>
+    private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is KeySignatureSyntax k)
+                return k;
+        return null;
+    }
+
+    /// <summary>True when the section has a direct-child MUSIC node (note / phrase / …),
+    /// as opposed to only directives (<c>key</c> / <c>time</c> / …) and part / chord /
+    /// lyric blocks — i.e. its own <c>key</c> is walked as music, not a header.</summary>
+    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
+        {
+            var child = section.GetChild(i);
+            if (child is null or SyntaxTokenNode)
+                continue;
+            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
+                continue;
+            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax)
+                continue;
+            return true; // a music node
+        }
+        return false;
+    }
+
     /// <summary>
     /// Plays one section: its part blocks run SIMULTANEOUSLY (each from the
     /// section's start tick; the section ends with the longest part), and each
@@ -397,6 +433,17 @@ public sealed class MidiExporter
         // modulation cannot leak out).
         _ambientTonic = _homeTonic;
         _keySharps = _homeKeySharps;
+
+        // A section's own header key — stated beside the part blocks (section-major) or
+        // in a standalone part-major header — is not walked with the part cell's music,
+        // so apply it up front (overriding the home reset) for every part of the section.
+        if (_sectionHeaderKeys.TryGetValue(section.SectionName, out var headerKey))
+        {
+            _ambientTonic = KeyTonic.Of(headerKey);
+            _keySharps = headerKey.IsCustom ? 0 : KeySpelling.SharpsFor(
+                headerKey.Pitch.ToFullString().Trim().ToLowerInvariant(),
+                headerKey.Mode.Text.ToLowerInvariant()) ?? 0;
+        }
 
         // Part-major layout: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.

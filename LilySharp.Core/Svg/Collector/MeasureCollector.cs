@@ -663,6 +663,11 @@ public sealed partial class MeasureCollector
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
     private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
+    // section name -> its own starting key, for a section that carries a `key` but no
+    // inline music: a section-major section (`section A { key g major  melody { … } }`)
+    // or a standalone part-major header (`section A { key g major }`). Applied to every
+    // part playing that section (an inline-music section walks its key as music instead).
+    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -1723,6 +1728,16 @@ public sealed partial class MeasureCollector
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
                         _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
+                    // A section that carries its own `key` but no inline music applies
+                    // that key to every part of the section: section-major
+                    // (`section A { key g major  melody { … } }`) or a standalone
+                    // part-major header (`section A { key g major }`). An inline-music
+                    // section walks its key as music, so it is excluded to avoid a
+                    // double application. First one wins.
+                    if (!SectionHasInlineMusic(section)
+                        && FirstDirectKey(section) is { } headerKey
+                        && !_sectionHeaderKeys.ContainsKey(section.SectionName))
+                        _sectionHeaderKeys[section.SectionName] = headerKey;
                     break;
 
                 case FormDeclarationSyntax form:
