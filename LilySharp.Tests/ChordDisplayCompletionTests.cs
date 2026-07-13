@@ -95,4 +95,15 @@ public class ChordDisplayCompletionTests
         Assert.Contains("treble", clef.InsertText);
         Assert.Contains("bass", clef.InsertText);
     }
+
+    [Fact]
+    public void TopLevelTempo_InsertsAChoiceSnippetSoTheFormsShowAtOnce()
+    {
+        // Completing `tempo` inserts `tempo ` + a ${1|…|} choice of the tempo forms, so
+        // the space and the forms show at once (like clef).
+        var tempo = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == "tempo");
+        Assert.StartsWith("tempo ${1|", tempo.InsertText);
+        Assert.Contains("120", tempo.InsertText);
+        Assert.Contains("swing", tempo.InsertText);
+    }
 }

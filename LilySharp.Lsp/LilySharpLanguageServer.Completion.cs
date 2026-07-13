@@ -928,21 +928,32 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
+    // The written tempo forms — a bare BPM, a marking text, a beat-unit equation, or a
+    // swing feel. Shared by the value list and the `tempo` keyword snippet, whose ${1|…|}
+    // CHOICE (built from these Labels) drops the caret straight into the forms when
+    // `tempo` is completed — the space and the list appear at once, like `clef`. The
+    // Insert holds the placeholder version used by the value list.
+    private static readonly (string Label, string Insert, string Detail)[] TempoForms =
+    {
+        ("120", "${1:120}", "Metronome mark: ♩ = 120"),
+        ("\"Allegro\" 132", "\"${1:Allegro}\" ${2:132}", "Marking text + BPM: Allegro (♩ = 132)"),
+        ("\"Grave\" 4 = 54", "\"${1:Grave}\" ${2:4} = ${3:54}", "Marking + beat unit = BPM (4. = dotted unit)"),
+        ("120 swing", "${1:120} swing", "Swing feel (eighths; 'swing 16' for sixteenths)"),
+    };
+
+    /// <summary><c>tempo </c> + a snippet CHOICE of the tempo forms (none contain a comma,
+    /// so they are valid choice options).</summary>
+    internal static readonly string TempoSnippet =
+        "tempo ${1|" + string.Join(",", TempoForms.Select(t => t.Label)) + "|}";
+
     /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>
     /// nothing else fits (a bare BPM, a marking text, a beat-unit equation, or
     /// a swing feel).</summary>
     internal static CompletionList GetTempoCompletions()
     {
-        var forms = new (string Label, string Insert, string Detail)[]
-        {
-            ("120", "${1:120}", "Metronome mark: ♩ = 120"),
-            ("\"Allegro\" 132", "\"${1:Allegro}\" ${2:132}", "Marking text + BPM: Allegro (♩ = 132)"),
-            ("\"Grave\" 4 = 54", "\"${1:Grave}\" ${2:4} = ${3:54}", "Marking + beat unit = BPM (4. = dotted unit)"),
-            ("120 swing", "${1:120} swing", "Swing feel (eighths; 'swing 16' for sixteenths)"),
-        };
         return new CompletionList
         {
-            Items = forms.Select((t, i) => new CompletionItem
+            Items = TempoForms.Select((t, i) => new CompletionItem
             {
                 Label = t.Label,
                 Kind = CompletionItemKind.Snippet,
@@ -1312,7 +1323,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 new CompletionItem { Label = "font", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "font \"$0\"", Detail = "Text font; add `embedded` to subset-embed it in the exported PDF", Command = new Command { Title = "Suggest font name", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
+                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = TempoSnippet, Detail = "Tempo (BPM)" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature" },
                 new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = ClefSnippet, Detail = "Clef (treble/bass/alto/tenor)" },
@@ -1598,7 +1609,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = ClefSnippet, Detail = "Change clef", SortText = "3clef" },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo" },
+                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = TempoSnippet, Detail = "Change tempo (BPM)", SortText = "3tempo" },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode (absolute / relative)", SortText = "3octave", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup: the next measure is a partial of this length", SortText = "3partial" },
 
