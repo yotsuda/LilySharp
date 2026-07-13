@@ -73,6 +73,7 @@ public static class SemanticValidation
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
         new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
+        new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
     };
 
     /// <summary>

@@ -318,4 +318,17 @@ public static class DiagnosticCodes
     public const string DuplicateTrackSection = "LYS7002";
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     public const string UnexpectedCharacter = "LYS0014";
+
+    // Font warnings (LYS8xxx)
+    // (LYS6xxx is already taken by the render/score-declaration band above.)
+
+    /// <summary>Font warning: a font requested for embedding is under an unverified
+    /// license (gray) — only clearly-free fonts (OFL/Apache/…) are auto-cleared.</summary>
+    public const string FontEmbedLicenseUnclear = "LYS8001";
+    /// <summary>Font warning: a font requested for embedding has a restricted fsType
+    /// that forbids embedding, so it will not be embedded.</summary>
+    public const string FontEmbedForbidden = "LYS8002";
+    /// <summary>Font warning: a font requested for embedding is not installed on this
+    /// system, so it cannot be embedded.</summary>
+    public const string FontNotFound = "LYS8003";
 }
