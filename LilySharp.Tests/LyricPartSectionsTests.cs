@@ -98,6 +98,39 @@ public class LyricPartSectionsTests
         Assert.Equal(new[] { "0:Twin", "0:kle", "1:star", "2:how", "3:Twin", "3:kle", "4:star" }, byMeasure);
     }
 
+    [Fact]
+    public void PartMajorLyricTrack_AsIndependentRow_ReadsSectionSyllablesNotStructureTokens()
+    {
+        // A part-major lyric track referenced as an independent ROW (`lyrics words`)
+        // must read each inner section's syllables and align them to that section's
+        // bars — NOT walk the `section NAME { … }` wrapper and emit "section"/"A" as
+        // literal words (the row reader used to do exactly that).
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            lyrics words {
+              section A { Do re mi fa | }
+              section B { sol la ti do | }
+            }
+            form main { A B }
+            score main { staff melody  lyrics words }
+            """);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var rowTexts = score.Lyrics.Where(l => l.IsLyricsRow).Select(l => l.Text).ToList();
+
+        Assert.DoesNotContain("section", rowTexts);
+        Assert.Contains("Do", rowTexts);
+        Assert.Contains("sol", rowTexts);
+        // Section B's verse aligns to B's bar (index 1), not bar 0.
+        Assert.All(score.Lyrics.Where(l => l.Text == "sol"), l => Assert.Equal(1, l.MeasureIndex));
+    }
+
     private static string LyricSignature(string src)
     {
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");

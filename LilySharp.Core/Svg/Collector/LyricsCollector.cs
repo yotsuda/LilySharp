@@ -166,55 +166,20 @@ internal sealed class LyricsCollector
 
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         int maxIndex = -1;
-        int verse = 1;
-        int prevSectionStart = -1;
         var measureLen = new Fraction(timeBeats, timeBeatType);
 
-        foreach (var block in blocks)
+        // Spreads one run of lyric-measure nodes across the bars from absolute bar
+        // `startMeasure`, wrapping every `wrapBars` bars into stacked verses counted
+        // from `verseBase`. Returns the bar count (for the caller's verse bookkeeping).
+        int PlaceRun(IEnumerable<SyntaxNode> barNodes, int startMeasure, int wrapBars, int verseBase)
         {
-            int startMeasure = 0;
-            bool inSection = false;
-            for (var n = block.Parent; n != null; n = n.Parent)
+            int j = 0; // run-local bar index
+            foreach (var measureNode in barNodes)
             {
-                if (n is SectionDeclarationSyntax section
-                    && sectionStartMeasure.TryGetValue(section.SectionName, out int s))
-                {
-                    startMeasure = s;
-                    inSection = true;
-                    break;
-                }
-            }
-
-            // Wrap a block at its OWN section's bar count (verses written flat stack
-            // every section). A standalone block (not inside a section) wraps at the
-            // whole piece's length. Otherwise a short section's verse 2 would overrun
-            // into the next section's bars.
-            int wrapBars = totalBars;
-            if (inSection)
-            {
-                int sectionEnd = totalBars;
-                foreach (var st in sectionStartMeasure.Values)
-                    if (st > startMeasure && st < sectionEnd)
-                        sectionEnd = st;
-                wrapBars = sectionEnd - startMeasure;
-            }
-
-            // Verses stack within ONE section; a block in a new section restarts at
-            // verse 1, so its line sits directly under that section's staff rather than
-            // carrying over the previous section's verse offset.
-            if (startMeasure != prevSectionStart)
-            {
-                verse = 1;
-                prevSectionStart = startMeasure;
-            }
-
-            int j = 0; // block-local bar index
-            foreach (var measureNode in block.Syllables)
-            {
-                // Wrap a long block: bar j belongs to verse (j / wrapBars) and maps back
+                // Wrap a long run: bar j belongs to verse (j / wrapBars) and maps back
                 // onto bar (j % wrapBars). wrapBars <= 0 → no wrap (one verse).
                 int barInVerse = wrapBars > 0 ? j % wrapBars : j;
-                int v = verse + (wrapBars > 0 ? j / wrapBars : 0);
+                int v = verseBase + (wrapBars > 0 ? j / wrapBars : 0);
                 int mi = startMeasure + barInVerse;
 
                 var sylls = RowSyllables(measureNode);
@@ -244,8 +209,73 @@ internal sealed class LyricsCollector
                 }
                 j++;
             }
-            // The block produced ceil(j / wrapBars) stacked verses.
-            verse += wrapBars > 0 && j > 0 ? (j + wrapBars - 1) / wrapBars : 1;
+            return j;
+        }
+
+        // A run wraps within its OWN section's bars (up to the next section start) so a
+        // short section's verse 2 doesn't overrun into the next section; a top-level run
+        // wraps at the whole piece's length.
+        int SectionWrap(int startMeasure)
+        {
+            int sectionEnd = totalBars;
+            foreach (var st in sectionStartMeasure.Values)
+                if (st > startMeasure && st < sectionEnd)
+                    sectionEnd = st;
+            return sectionEnd - startMeasure;
+        }
+        static int VersesFrom(int bars, int wrapBars) =>
+            wrapBars > 0 && bars > 0 ? (bars + wrapBars - 1) / wrapBars : 1;
+
+        int verse = 1;
+        int prevSectionStart = -1;
+        // Part-major sectioned tracks stack verses per named section start.
+        var nextVerseBySection = new Dictionary<int, int>();
+        foreach (var block in blocks)
+        {
+            // Part-major track (`lyrics name { section A { .. } .. }`): each inner
+            // section's verse spreads across THAT named section's bars — the `section
+            // NAME { … }` wrapper is structure, not literal "section"/"NAME" syllables
+            // (which is what the flat reader below would otherwise emit).
+            if (block.HasSections)
+            {
+                foreach (var section in block.Sections)
+                {
+                    int start = sectionStartMeasure.GetValueOrDefault(section.SectionName, 0);
+                    int wrap = SectionWrap(start);
+                    int vb = nextVerseBySection.TryGetValue(start, out var v0) ? v0 : 1;
+                    int bars = PlaceRun(SectionLyricMeasures(section), start, wrap, vb);
+                    nextVerseBySection[start] = vb + VersesFrom(bars, wrap);
+                }
+                continue;
+            }
+
+            int startMeasure = 0;
+            bool inSection = false;
+            for (var n = block.Parent; n != null; n = n.Parent)
+            {
+                if (n is SectionDeclarationSyntax section
+                    && sectionStartMeasure.TryGetValue(section.SectionName, out int s))
+                {
+                    startMeasure = s;
+                    inSection = true;
+                    break;
+                }
+            }
+
+            int wrapBars = inSection ? SectionWrap(startMeasure) : totalBars;
+
+            // Verses stack within ONE section; a block in a new section restarts at
+            // verse 1, so its line sits directly under that section's staff rather than
+            // carrying over the previous section's verse offset.
+            if (startMeasure != prevSectionStart)
+            {
+                verse = 1;
+                prevSectionStart = startMeasure;
+            }
+
+            int barCount = PlaceRun(block.Syllables, startMeasure, wrapBars, verse);
+            // The block produced ceil(barCount / wrapBars) stacked verses.
+            verse += VersesFrom(barCount, wrapBars);
         }
 
         if (maxIndex < 0)
