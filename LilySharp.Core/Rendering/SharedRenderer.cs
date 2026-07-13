@@ -96,6 +96,11 @@ internal static partial class SharedRenderer
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
+            // `font "NAME"` header directive: remap every generic text family to the
+            // configured face for the header AND the body (music glyphs pass through).
+            // Wrap before DrawHeader and the margin group so both are covered.
+            if (!string.IsNullOrEmpty(score.TextFont))
+                gc = new TextFontDrawingContext(gc, score.TextFont!);
             // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
             // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
             // The title/composer header belongs to the FIRST page only (later

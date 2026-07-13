@@ -74,6 +74,13 @@ public sealed record MultiStaffScore
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
 
+    /// <summary>Text font-family for all non-music text (title/composer/lyrics/dynamics/etc.),
+    /// set by the <c>font "NAME"</c> header directive. Null uses the renderer default.</summary>
+    public string? TextFont { get; init; }
+
+    /// <summary>Whether the text font should be embedded (collected but unused this phase).</summary>
+    public bool EmbedFont { get; init; }
+
     /// <summary>Lyrics in the score.</summary>
     public ImmutableArray<LyricItem> Lyrics { get; }
 
@@ -243,6 +250,8 @@ public sealed record MultiStaffScore
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
+            TextFont = score.TextFont,
+            EmbedFont = score.EmbedFont,
         };
     }
 

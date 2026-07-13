@@ -27,6 +27,13 @@ internal sealed class MetadataState
     public string? Title;
     public string? Composer;
 
+    // Text font-family for all non-music text (title/composer/lyrics/dynamics/etc.),
+    // set by the top-level `font "NAME" [embedded]` header directive. Null = renderer
+    // default (generic serif/sans). EmbedFont is collected but unused this phase
+    // (font embedding is a later phase); the name is applied as a plain reference.
+    public string? TextFont;
+    public bool EmbedFont;
+
     // Source offsets of the header grobs (0 = none), emitted as data-pos so the
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
     public int TitlePosition;

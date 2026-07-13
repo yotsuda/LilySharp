@@ -703,7 +703,9 @@ public sealed partial class MeasureCollector
         new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition),
         _meta.TempoText,
         _meta.TempoBeatUnit,
-        _meta.TempoDots);
+        _meta.TempoDots,
+        _meta.TextFont,
+        _meta.EmbedFont);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -1633,6 +1635,14 @@ public sealed partial class MeasureCollector
             {
                 case MetadataDeclarationSyntax metadata:
                     CollectMetadata(metadata);
+                    break;
+
+                case FontDeclarationSyntax font:
+                    // `font "NAME" [embedded]` sets the text font-family for all
+                    // non-music text; the embedded flag is collected but unused this
+                    // phase (font embedding is deferred to a later phase).
+                    _meta.TextFont = font.FontName;
+                    _meta.EmbedFont = font.Embedded;
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:

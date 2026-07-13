@@ -70,7 +70,9 @@ public class ScoreAssemblerTests
             Header: new HeaderPositions(1, 2, 3, 4, 5),
             TempoText: "Allegro",
             TempoBeatUnit: 2,
-            TempoDots: 1);
+            TempoDots: 1,
+            TextFont: "Comic Sans MS",
+            EmbedFont: false);
 
     private static ImmutableArray<ChordNameItem> OneChord() =>
         ImmutableArray.Create(new ChordNameItem("C", 0, 0, 0));
