@@ -359,41 +359,44 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Keep the preview alive across an untitled -> file SAVE. Saving an untitled
-    // score CLOSES the untitled document and opens a new one with a file: URI, so a
-    // preview keyed by the old untitled URI would be orphaned and stop refreshing.
-    // When the saved file becomes the active editor with the same content, re-key the
-    // panel onto it so Ctrl+S keeps the preview live.
+    // Keep the preview alive across an untitled -> file SAVE. Saving an untitled score
+    // CLOSES the untitled document and OPENS a new file: document, so a preview keyed by
+    // the old untitled URI would be orphaned and stop refreshing. The close and open
+    // events can arrive in either order, and the save may normalize a trailing newline,
+    // so we pair them by TRIMMED content within a short window rather than by timing.
+    const closedUntitledPreviews = new Map<string, { text: string; time: number }>();
+    const tryAdoptOrphanPreview = (fileDoc: vscode.TextDocument) => {
+        if (fileDoc.uri.scheme !== 'file' || fileDoc.languageId !== 'lilysharp') { return; }
+        const newUri = fileDoc.uri.toString();
+        if (previewPanels.has(newUri)) { return; }
+        const newText = fileDoc.getText().trim();
+        const now = Date.now();
+        for (const [oldUri, info] of closedUntitledPreviews) {
+            if (now - info.time > 5000 || !previewPanels.has(oldUri)) { closedUntitledPreviews.delete(oldUri); continue; }
+            if (info.text !== newText) { continue; }
+            closedUntitledPreviews.delete(oldUri);
+            migratePreviewKey(oldUri, newUri);
+            const panel = previewPanels.get(newUri);
+            // Do NOT re-render: the save didn't change the content, so the webview still
+            // shows the correct score, and an immediate lilysharp/svg would race the
+            // server's didOpen for the saved file ("Document not found"). Next edit refreshes.
+            if (panel) { panel.title = `Preview: ${path.basename(fileDoc.uri.fsPath)}`; }
+            outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
+            return;
+        }
+    };
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument(closedDoc => {
             const oldUri = closedDoc.uri.toString();
-            if (closedDoc.uri.scheme !== 'untitled' || !previewPanels.has(oldUri)) { return; }
-            const savedText = closedDoc.getText();
-            // The saved file becomes active a tick after the close event; defer so it
-            // has settled before we look for it.
-            setTimeout(() => {
-                if (!previewPanels.has(oldUri)) { return; }  // already disposed/migrated
-                const active = vscode.window.activeTextEditor;
-                if (!active || active.document.languageId !== 'lilysharp') { return; }
-                const newUri = active.document.uri.toString();
-                // Migrate only to the just-SAVED file: a saved (non-untitled) doc with
-                // no preview of its own whose content matches what the untitled held.
-                if (active.document.uri.scheme === 'untitled' || newUri === oldUri
-                    || previewPanels.has(newUri) || active.document.getText() !== savedText) {
-                    return;
-                }
-                migratePreviewKey(oldUri, newUri);
-                const panel = previewPanels.get(newUri);
-                if (panel) {
-                    panel.title = `Preview: ${path.basename(active.document.uri.fsPath)}`;
-                }
-                // Do NOT re-render here: the save didn't change the content, so the
-                // webview already shows the correct score. An immediate lilysharp/svg
-                // request would also race the language server's didOpen for the saved
-                // file and come back "Document not found". The next edit refreshes it.
-                outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
-            }, 0);
-        })
+            if (closedDoc.uri.scheme === 'untitled' && previewPanels.has(oldUri)) {
+                closedUntitledPreviews.set(oldUri, { text: closedDoc.getText().trim(), time: Date.now() });
+                outputChannel.appendLine(`Untitled preview closed; pending migrate: ${oldUri}`);
+                // The saved file may already be open (event order varies) — try now too.
+                vscode.workspace.textDocuments.forEach(tryAdoptOrphanPreview);
+            }
+        }),
+        vscode.workspace.onDidOpenTextDocument(tryAdoptOrphanPreview),
+        vscode.workspace.onDidSaveTextDocument(tryAdoptOrphanPreview)
     );
 
     // Watch for cursor position changes
