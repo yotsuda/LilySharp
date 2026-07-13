@@ -79,7 +79,12 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transp
     // `tab part as numbers`: show fret digits only — no stems, beams, flags, dots,
     // rests or tuplet brackets (LilyPond's default TabStaff; `\tabFullNotation` is
     // the opposite, and stays this renderer's default). Ties/slurs still print.
-    bool NumbersOnly = false) : RenderItemSpec;
+    bool NumbersOnly = false,
+    // A named chord part whose symbols align above this tab staff
+    // (`tab part with chords CHORDPART [as roman|both|names]`) — exactly like the
+    // notation-staff `staff … with chords …` attachment.
+    string? WithChords = null,
+    ChordDisplayMode ChordDisplay = ChordDisplayMode.Names) : RenderItemSpec;
 
 /// <summary>
 /// Ossia staff render item (small alternative passage above/below main staff).
@@ -173,7 +178,7 @@ public sealed record RenderSpec(
                         yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay);
                     break;
                 case TabStaffSpec tab:
-                    yield return (tab.Staff.VoiceName, null, ChordDisplayMode.Names);
+                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay);
                     break;
                 case OssiaStaffSpec ossia:
                     yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names);

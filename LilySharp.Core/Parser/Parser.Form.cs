@@ -545,6 +545,16 @@ internal sealed partial class Parser
 
         tokens.Add(ExpectPartName());
         ConsumeAsSelector(tokens); // `... as numbers | full` (numbers-only tab)
+
+        // `with chords NAME [as roman|both|names]` attaches a chord part's symbols
+        // above the tab, exactly like the notation-staff form.
+        if (Check(SyntaxKind.WithKeyword) && Peek(1)?.Kind == SyntaxKind.ChordsKeyword)
+        {
+            tokens.Add(Advance()); // with
+            tokens.Add(Advance()); // chords
+            tokens.Add(ExpectPartName());
+            ConsumeAsSelector(tokens); // chord display: `as roman | both | names`
+        }
         return new TabRenderGreen([.. tokens]);
     }
 

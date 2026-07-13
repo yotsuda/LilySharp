@@ -335,8 +335,25 @@ public static class RenderSpecParser
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
     {
-        // [part] or [tuning, part]; braces (if any) are skipped.
+        // [tuning?] part [as numbers|full] [with chords NAME [as roman|both|names]];
+        // braces (if any) are skipped.
         var toks = RenderTargetTokens(tab);
+        if (toks.Count == 0) return null;
+
+        // `with chords NAME [as roman|both|names]` — a chord attachment, same as the
+        // notation-staff form. Split it off FIRST so the tab-style `as` below can't
+        // grab the chord-display `as` (both selectors can coexist:
+        // `tab m as numbers with chords h as both`).
+        string? withChords = null;
+        var chordDisplay = ChordDisplayMode.Names;
+        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
+        if (wi >= 0 && toks.Count >= wi + 3)
+        {
+            withChords = toks[wi + 2].Text; // [with][chords][NAME]
+            if (toks.Count >= wi + 5 && toks[wi + 3].Text == "as")
+                chordDisplay = ParseChordMode(toks[wi + 4].Text);
+            toks = toks.GetRange(0, wi);
+        }
         if (toks.Count == 0) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
@@ -375,7 +392,7 @@ public static class RenderSpecParser
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
         var transposition = ResolvePartTransposition(tab, voiceName, tuning);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
-        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly);
+        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly, withChords, chordDisplay);
     }
 
     /// <summary>
