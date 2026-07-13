@@ -169,8 +169,14 @@ internal sealed class LyricsCollector
                     }
                 }
 
+                // Extra stanzas — verses whose occurrences ALL lie past the written-out
+                // passes (a |: :| repeat printed once but sung again, or extra numbered
+                // stanzas) — stack at the last occurrence. Test every occurrence, not just
+                // the primary (label) number: a descending list like [3,1.] has primary 3
+                // but occurrence 1, which the per-occurrence loop already placed — stacking
+                // it here too would print it twice.
                 foreach (var v in voltas)
-                    if (v.Spec.PrimaryNumber > starts.Count)
+                    if (v.Spec.Occurrences.All(o => o > starts.Count))
                         ProcessRun(v.Measures, starts[^1], v.Spec.PrimaryNumber, v.Spec.HideLabel);
 
                 // A plain verse only fills an occurrence NO bracket covers. If every

@@ -211,6 +211,26 @@ public class LyricPartSectionsTests
     }
 
     [Fact]
+    public void DescendingListVolta_DoesNotDoublePlaceTheVerse()
+    {
+        // [3,1. …] covers occurrences 1 and 3 with label 3. A is written out only twice,
+        // so occurrence 1 takes the verse and occurrence 3 never happens. The verse must
+        // NOT also be stacked at the last occurrence just because its label (3) exceeds
+        // the written-out count — that would print it twice.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble section A { c'4 d' e' f' | } }
+            lyrics { section A { [3,1. one two three four |] } }
+            form main { A "1" A "2" }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody"); // occurrences at bars 0,1
+        Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
+        Assert.DoesNotContain(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 1);
+    }
+
+    [Fact]
     public void TildeVoltaLyrics_HideTheStanzaNumberButKeepTheWords()
     {
         var tree = SyntaxTree.Parse("""
