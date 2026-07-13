@@ -83,5 +83,11 @@ public sealed record LyricItem(
     // True when this syllable belongs to an independent lyrics ROW. The
     // engraver then places it WITHIN its row's band (by StaffIndex)
     // and takes its X from Timing, not from a note column.
-    bool IsLyricsRow = false
+    bool IsLyricsRow = false,
+
+    // True to suppress this verse's stanza-number prefix ("N."). Set by a
+    // `~`-marked per-occurrence verse (`[~2. …]`): the words apply to the pass but
+    // the number label is hidden. Does not affect the multi-verse count, so other
+    // verses still get their numbers.
+    bool HideStanza = false
 );

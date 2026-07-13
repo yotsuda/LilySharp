@@ -265,14 +265,28 @@ internal sealed partial class Parser
     private static bool IsLyricBarline(SyntaxKind kind) => SyntaxFacts.IsMeasureBarlineKind(kind);
 
     /// <summary>Parse a per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>.
-    /// The number keys the section's playback occurrence (1st time sung, 2nd, …) so a
+    /// The header selects the section's playback occurrence(s) — a single number, a
+    /// comma list (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), or a leading
+    /// <c>~</c> for "every occurrence EXCEPT these" (<c>[~1. …]</c>) — so a
     /// repeated/reprised section can carry different words each pass; the body is
     /// ordinary lyric measures. The closing <c>]</c> is optional (a run to the block's
     /// <c>}</c> recovers).</summary>
     private LyricVoltaGreen ParseLyricVolta()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
-        var number = Expect(SyntaxKind.IntegerLiteral);
+
+        // Header: `~? number ((',' | '-') number)*`. `~` negates the set (all but
+        // these); ',' lists, '-' ranges — mirroring the form's volta selector.
+        var header = new List<GreenNode?>();
+        if (Check(SyntaxKind.Tilde))
+            header.Add(Advance());
+        header.Add(Expect(SyntaxKind.IntegerLiteral));
+        while (Check(SyntaxKind.Comma) || Check(SyntaxKind.Minus))
+        {
+            header.Add(Advance());                       // ',' or '-'
+            header.Add(Expect(SyntaxKind.IntegerLiteral));
+        }
+
         var dot = Expect(SyntaxKind.Dot);
 
         var measures = new List<GreenNode?>();
@@ -286,7 +300,7 @@ internal sealed partial class Parser
         }
 
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
-        return new LyricVoltaGreen(openBracket, number, dot, [.. measures], closeBracket);
+        return new LyricVoltaGreen(openBracket, [.. header], dot, [.. measures], closeBracket);
     }
 
     /// <summary>

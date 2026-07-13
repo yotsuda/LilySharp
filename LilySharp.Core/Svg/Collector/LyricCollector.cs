@@ -65,8 +65,9 @@ internal sealed class LyricCollector
         IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
-        int verseNumber = 1)
-        => Collect(lyricsBlock.Syllables, noteItemIndices, out overflow, voiceId, verseNumber);
+        int verseNumber = 1,
+        bool hideStanza = false)
+        => Collect(lyricsBlock.Syllables, noteItemIndices, out overflow, voiceId, verseNumber, hideStanza);
 
     /// <summary>Collects lyrics from an explicit set of lyric-measure nodes (the
     /// whole block, or one part-major inner section's measures).</summary>
@@ -75,7 +76,8 @@ internal sealed class LyricCollector
         IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
-        int verseNumber = 1)
+        int verseNumber = 1,
+        bool hideStanza = false)
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllablesFrom(syllableMeasures);
@@ -146,7 +148,8 @@ internal sealed class LyricCollector
                     VoiceId: voiceId,
                     VerseNumber: verse,
                     Timing: timing,
-                    SourcePosition: position
+                    SourcePosition: position,
+                    HideStanza: hideStanza
                 ));
             }
             else

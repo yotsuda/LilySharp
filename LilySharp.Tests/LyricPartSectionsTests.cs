@@ -167,6 +167,73 @@ public class LyricPartSectionsTests
     }
 
     [Fact]
+    public void RepeatVoltaLyrics_StackAsVersesUnderTheOneRepeatedSection()
+    {
+        // B is sung twice via |: B :| but PRINTED once; its [1.][2.] verses stack as
+        // verses 1 and 2 at B's single bar (not spread to two positions).
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            lyrics {
+              section A { la la la la | }
+              section B { [1. up up up up |] [2. down down down down |] }
+            }
+            form main { A |: B :| }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody");
+        var atB = score.Lyrics.Where(l => l.MeasureIndex == 1).ToList(); // A=bar0, B=bar1
+        Assert.Contains(atB, l => l.Text == "up" && l.VerseNumber == 1);
+        Assert.Contains(atB, l => l.Text == "down" && l.VerseNumber == 2);
+    }
+
+    [Fact]
+    public void ListVoltaLyrics_ApplyToEachListedOccurrence()
+    {
+        // A occurs 3× written out; [1,3. …] covers occurrences 1 and 3, [2. …] the middle.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble section A { c'4 d' e' f' | } }
+            lyrics { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
+            form main { A "1" A "2" A "3" }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody"); // occurrences at bars 0,1,2
+        Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
+        Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 2);
+        Assert.Contains(score.Lyrics, l => l.Text == "aa" && l.MeasureIndex == 1);
+        Assert.DoesNotContain(score.Lyrics, l => l.Text == "aa" && l.MeasureIndex == 0);
+    }
+
+    [Fact]
+    public void TildeVoltaLyrics_HideTheStanzaNumberButKeepTheWords()
+    {
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            lyrics {
+              section A { la la la la | }
+              section B { [1. up up up up |] [~2. down down down down |] }
+            }
+            form main { A |: B :| }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody");
+        Assert.NotEmpty(score.Lyrics.Where(l => l.Text == "down"));
+        Assert.All(score.Lyrics.Where(l => l.Text == "down"), l => Assert.True(l.HideStanza));
+        Assert.All(score.Lyrics.Where(l => l.Text == "up"), l => Assert.False(l.HideStanza));
+    }
+
+    [Fact]
     public void PlainSectionLyrics_StillRepeatIdenticallyUnderEveryOccurrence()
     {
         // A section WITHOUT [N. …] brackets keeps the old behavior: the same verse

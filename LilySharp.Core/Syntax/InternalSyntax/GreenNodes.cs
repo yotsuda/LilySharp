@@ -1062,21 +1062,24 @@ internal sealed class LyricMeasureGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>. The number keys
-/// the section's playback occurrence (1st time sung, 2nd time, …), so a repeated or
-/// reprised section can carry different words each pass. The body is lyric measures,
+/// A per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>. The header keys
+/// the section's playback occurrence(s) so a repeated/reprised section can carry
+/// different words each pass — a single number (<c>[1. …]</c>), a comma list
+/// (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), or a <c>~</c>-negated set meaning
+/// "every occurrence EXCEPT these" (<c>[~1. …]</c>). The body is lyric measures,
 /// exactly like a plain (unbracketed) verse.
 /// </summary>
-/// <remarks>Slot layout: <c>[</c>, number, <c>.</c>, measures…, <c>]</c>.</remarks>
+/// <remarks>Slot layout: <c>[</c>, header tokens (<c>~</c>? number ((<c>,</c>|<c>-</c>)
+/// number)*), <c>.</c>, measures…, <c>]</c>.</remarks>
 internal sealed class LyricVoltaGreen : GreenSyntaxNode
 {
     public LyricVoltaGreen(
         SyntaxToken openBracket,
-        SyntaxToken number,
+        GreenNode?[] header,
         SyntaxToken dot,
         GreenNode?[] measures,
         SyntaxToken? closeBracket)
-        : base(SyntaxKind.LyricVolta, [openBracket, number, dot, .. measures, closeBracket])
+        : base(SyntaxKind.LyricVolta, [openBracket, .. header, dot, .. measures, closeBracket])
     {
     }
 }

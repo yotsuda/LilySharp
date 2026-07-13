@@ -63,13 +63,15 @@ part melody {
 }
 
 // Lyrics align one syllable per note. A trailing '-' hyphenates within a word
-// (Twin- kle), '|' marks a bar. A track can carry a section's verse; two blocks
-// for the SAME section stack as verses 1, 2 — here B's repeat is sung with
-// different words each pass ("Up above…" / "Like a diamond…").
+// (Twin- kle), '|' marks a bar. Plain words repeat every time a section is sung;
+// to sing DIFFERENT words each pass, number the verses with [1. …] [2. …] — here
+// B's |: :| repeat is sung "Up above…" then "Like a diamond…".
 lyrics {
   section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
-  section B { Up a- bove the | world so high | }
-  section B { Like a dia- mond | in the sky | }
+  section B {
+    [1. Up a- bove the | world so high |]
+    [2. Like a dia- mond | in the sky |]
+  }
 }
 
 // |: B :| repeats B; the reprise of A is re-labelled "A2".

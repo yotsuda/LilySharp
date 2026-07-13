@@ -80,6 +80,10 @@ internal static class StanzaNumberEngraver
         var firstLyricBySystem = new Dictionary<(int sys, int verse), LyricLayout>();
         foreach (var l in lyrics)
         {
+            // A `~`-marked verse (`[~2. …]`) still counts toward maxVerse above (so the
+            // other verses stay numbered) but prints no number of its own.
+            if (l.Item.HideStanza)
+                continue;
             if (!measureToSystem.TryGetValue(l.Item.MeasureIndex, out int sysIdx))
                 continue;
             var key = (sysIdx, l.Item.VerseNumber);
