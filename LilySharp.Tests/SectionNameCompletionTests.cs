@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Lsp;
+using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -80,6 +81,37 @@ public class SectionNameCompletionTests
         var labels = LilySharpLanguageServer.GetMissingSectionNameCompletions(text, offset)
             .Items.Select(i => i.Label).ToArray();
         Assert.Contains("B", labels);
+    }
+
+    [Fact]
+    public void AfterSection_InLyricsBlock_IsItsOwnContext()
+    {
+        var text = "lyrics words { section ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSection,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void LyricsBlock_OffersKnownSectionsNotYetInThisTrack()
+    {
+        // The lyrics track is filled in the same way: melody has A and B, the lyrics
+        // track already has A, so only B is offered.
+        var text =
+            "part melody { section A { c } section B { d } }\n" +
+            "lyrics words { section A { la la } section ";
+        Assert.Equal(new[] { "B" }, Missing(text));
+    }
+
+    [Fact]
+    public void CompletingASectionName_OpensTheBodyWithCaretInside()
+    {
+        var text =
+            "part melody { section A { c } section B { d } }\n" +
+            "part bass { section A { e } section ";
+        var b = LilySharpLanguageServer.GetMissingSectionNameCompletions(text, text.Length)
+            .Items.Single(i => i.Label == "B");
+        Assert.Equal("B {\n\t$0\n}", b.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, b.InsertTextFormat);
     }
 
     [Fact]

@@ -157,6 +157,19 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// True when <paramref name="offset"/> sits directly inside a container that holds
+    /// part-major inner sections — a <c>part</c> or <c>lyrics</c> block. (A chords track
+    /// has the same shape, but its body completes the chord vocabulary, intercepted
+    /// earlier.) Used to offer the document's not-yet-used section names after
+    /// <c>section</c>.
+    /// </summary>
+    internal static bool IsInsideSectionContainer(string text, int offset)
+    {
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count > 0 && frames[^1].Prefix is "part" or "lyrics";
+    }
+
+    /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>"…"</c> string literal.
     /// Strings never span lines, so an odd number of quotes between the line start
     /// and the cursor means the cursor is inside one.
@@ -559,12 +572,12 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterRemoveEmpty;
 
-        // Right after `section ` inside a part { } body: offer the document's section
-        // names this part does NOT yet declare (part-major fill-in), not the property
-        // list. `section` names an inner section; the useful suggestion is which known
-        // section is still missing here.
+        // Right after `section ` inside a part { } or lyrics { } body: offer the
+        // document's section names this container does NOT yet declare (part-major
+        // fill-in), not the property list. `section` names an inner section; the useful
+        // suggestion is which known section is still missing here.
         if (prevWord == "section"
-            && IsInsidePartBlock(text, offset)
+            && IsInsideSectionContainer(text, offset)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterSection;
 
@@ -1172,11 +1185,12 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// After <c>section </c> inside a <c>part { }</c> body, the document's section
-    /// names this part does NOT yet declare — so a part-major part can be filled in
-    /// with the sections it is still missing (e.g. part <c>bass</c> already has
-    /// <c>A</c>, so only <c>B</c> / <c>C</c> are offered). A brand-new name is typed
-    /// freely; the list never blocks it.
+    /// After <c>section </c> inside a <c>part { }</c> or <c>lyrics { }</c> body, the
+    /// document's section names this container does NOT yet declare — so a part-major
+    /// part / lyrics track can be filled in with the sections it is still missing (e.g.
+    /// part <c>bass</c> already has <c>A</c>, so only <c>B</c> / <c>C</c> are offered).
+    /// Picking one drops in the <c>{ }</c> body with the caret inside. A brand-new name
+    /// is typed freely; the list never blocks it.
     /// </summary>
     internal static CompletionList GetMissingSectionNameCompletions(string text, int offset)
     {
@@ -1191,7 +1205,7 @@ public sealed partial class LilySharpLanguageServer
                 known.Add(name);
         }
 
-        var here = SectionsDeclaredInCurrentPart(text, offset);
+        var here = SectionsDeclaredInCurrentBlock(text, offset);
         return new CompletionList
         {
             Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
@@ -1199,23 +1213,26 @@ public sealed partial class LilySharpLanguageServer
                 Label = n,
                 Kind = CompletionItemKind.Reference,
                 Detail = "Section not yet in this part",
+                // Completing the name also opens the section body, caret inside.
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = n + " {\n\t$0\n}",
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
     }
 
     /// <summary>
-    /// The section names already declared in the <c>part { }</c> block that encloses
-    /// <paramref name="offset"/> — EXCLUDING the (possibly incomplete) <c>section</c>
-    /// declaration at the cursor itself, so the name being typed is never filtered out
-    /// of <see cref="GetMissingSectionNameCompletions"/>.
+    /// The section names already declared in the <c>part { }</c> / <c>lyrics { }</c>
+    /// block that encloses <paramref name="offset"/> — EXCLUDING the (possibly
+    /// incomplete) <c>section</c> declaration at the cursor itself, so the name being
+    /// typed is never filtered out of <see cref="GetMissingSectionNameCompletions"/>.
     /// </summary>
-    private static System.Collections.Generic.HashSet<string> SectionsDeclaredInCurrentPart(string text, int offset)
+    private static System.Collections.Generic.HashSet<string> SectionsDeclaredInCurrentBlock(string text, int offset)
     {
         var declared = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         var mask = CodeMask(text, text.Length);
 
-        // The innermost still-open '{' at the cursor is the enclosing part body.
+        // The innermost still-open '{' at the cursor is the enclosing container body.
         var stack = new System.Collections.Generic.List<int>();
         int limit = Math.Min(offset, text.Length);
         for (int i = 0; i < limit; i++)
@@ -1227,7 +1244,7 @@ public sealed partial class LilySharpLanguageServer
         if (stack.Count == 0) return declared;
         int open = stack[^1];
 
-        // Its matching '}' (or end of document if the part is still unclosed).
+        // Its matching '}' (or end of document if the container is still unclosed).
         int depth = 0, close = text.Length;
         for (int i = open; i < text.Length; i++)
         {
