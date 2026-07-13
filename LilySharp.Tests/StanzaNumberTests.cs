@@ -38,11 +38,12 @@ public class StanzaNumberTests
         return new SystemLayout(idx, Y: 10, Width: 100, PrefixWidth: 5, Measures: ms);
     }
 
-    private static LyricItem MakeLyric(string text, int measure, int verse) =>
-        new(text, measure, ItemIndex: 0, VerseNumber: verse);
+    private static LyricItem MakeLyric(string text, int measure, int verse, bool hideStanza = false) =>
+        new(text, measure, ItemIndex: 0, VerseNumber: verse, HideStanza: hideStanza);
 
-    private static LyricLayout MakeLyricLayout(string text, int measure, int verse, double x, double y) =>
-        new(MakeLyric(text, measure, verse), X: x, Y: y, Width: 1.0,
+    private static LyricLayout MakeLyricLayout(string text, int measure, int verse, double x, double y,
+        bool hideStanza = false) =>
+        new(MakeLyric(text, measure, verse, hideStanza), X: x, Y: y, Width: 1.0,
             SourceIndex: -1);
 
     [Fact]
@@ -83,6 +84,37 @@ public class StanzaNumberTests
 
         var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
         Assert.Equal(4, stanza.Length);
+    }
+
+    [Fact]
+    public void HiddenVerse_SuppressesItsNumber_EvenWhenAnotherLineSharesThatVerse()
+    {
+        // The system numbers (2 verses). Verse 1 appears twice: one ~-hidden ([~1.]
+        // volta) and one plain (a reprise line sharing that baseline). "1." must NOT
+        // print — a ~-hidden verse suppresses the whole verse-1 baseline (the bug where
+        // the plain line kept re-printing the number the author hid).
+        var systems = ImmutableArray.Create(MakeSystem(0, (0, 5)));
+        var lyrics = ImmutableArray.Create(
+            MakeLyricLayout("up", measure: 0, verse: 1, x: 5, y: 20, hideStanza: true),
+            MakeLyricLayout("twinkle", measure: 0, verse: 1, x: 8, y: 20, hideStanza: false),
+            MakeLyricLayout("like", measure: 0, verse: 2, x: 5, y: 25));
+
+        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        Assert.DoesNotContain(stanza, s => s.VerseNumber == 1);
+        Assert.Contains(stanza, s => s.VerseNumber == 2 && s.Text == "2.");
+    }
+
+    [Fact]
+    public void HidingVerse2_LeavesVerse1Numbered()
+    {
+        var systems = ImmutableArray.Create(MakeSystem(0, (0, 5)));
+        var lyrics = ImmutableArray.Create(
+            MakeLyricLayout("up", measure: 0, verse: 1, x: 5, y: 20),
+            MakeLyricLayout("like", measure: 0, verse: 2, x: 5, y: 25, hideStanza: true));
+
+        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        Assert.Contains(stanza, s => s.VerseNumber == 1 && s.Text == "1.");
+        Assert.DoesNotContain(stanza, s => s.VerseNumber == 2);
     }
 
     [Fact]

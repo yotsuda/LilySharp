@@ -81,6 +81,15 @@ internal static class StanzaNumberEngraver
                 (versesInSystem.TryGetValue(sys, out var set) ? set : versesInSystem[sys] = new())
                     .Add(l.Item.VerseNumber);
 
+        // The stanza number is one label per (system, verse) at the left edge, so a
+        // `~2` on ONE section's verse must suppress that whole baseline — otherwise
+        // another (unhidden) section sharing the verse on the same system (a plain
+        // reprise line) would keep re-printing the number the author asked to hide.
+        var hiddenPairs = new HashSet<(int sys, int verse)>();
+        foreach (var l in lyrics)
+            if (l.Item.HideStanza && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int hs))
+                hiddenPairs.Add((hs, l.Item.VerseNumber));
+
         // Collect (system, verse) → first lyric in that system+verse (its Y is the verse baseline).
         var firstLyricBySystem = new Dictionary<(int sys, int verse), LyricLayout>();
         foreach (var l in lyrics)
@@ -94,14 +103,11 @@ internal static class StanzaNumberEngraver
                 && (!versesInSystem.TryGetValue(sysIdx, out var vs) || vs.Count <= 1))
                 continue;
             var key = (sysIdx, l.Item.VerseNumber);
-            if (!firstLyricBySystem.ContainsKey(key))
+            if (hiddenPairs.Contains(key))
+                continue; // a ~-hidden verse suppresses this baseline's number outright
+            // Keep the lyric whose X is leftmost in the system (the verse's start).
+            if (!firstLyricBySystem.TryGetValue(key, out var cur) || l.X < cur.X)
                 firstLyricBySystem[key] = l;
-            else
-            {
-                // Keep the lyric whose X is leftmost in the system.
-                if (l.X < firstLyricBySystem[key].X)
-                    firstLyricBySystem[key] = l;
-            }
         }
 
         var builder = ImmutableArray.CreateBuilder<StanzaNumberLayout>();
