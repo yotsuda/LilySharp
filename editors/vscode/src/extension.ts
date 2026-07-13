@@ -37,6 +37,22 @@ function armPanelReady(uri: string) {
     panelReady.set(uri, { promise, resolve });
 }
 
+// Re-key a live preview from oldUri to newUri (an untitled score saved to a file):
+// the panel and every per-document map entry move together so the preview keeps
+// updating under the saved file's URI instead of the discarded untitled one.
+function migratePreviewKey(oldUri: string, newUri: string) {
+    const panel = previewPanels.get(oldUri);
+    if (!panel || oldUri === newUri) { return; }
+    previewPanels.delete(oldUri);
+    previewPanels.set(newUri, panel);
+    const ready = panelReady.get(oldUri);
+    if (ready) { panelReady.delete(oldUri); panelReady.set(newUri, ready); }
+    const render = selectedRenders.get(oldUri);
+    if (render !== undefined) { selectedRenders.delete(oldUri); selectedRenders.set(newUri, render); }
+    const timer = debounceTimers.get(oldUri);
+    if (timer !== undefined) { debounceTimers.delete(oldUri); debounceTimers.set(newUri, timer); }
+}
+
 // Content for the "Lily#: New Score" command — a complete, valid, recognizable
 // piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
 // and demonstrates relative octaves (' / ,), the |: :| repeat, and form replay.
@@ -340,6 +356,40 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Keep the preview alive across an untitled -> file SAVE. Saving an untitled
+    // score CLOSES the untitled document and opens a new one with a file: URI, so a
+    // preview keyed by the old untitled URI would be orphaned and stop refreshing.
+    // When the saved file becomes the active editor with the same content, re-key the
+    // panel onto it so Ctrl+S keeps the preview live.
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument(closedDoc => {
+            const oldUri = closedDoc.uri.toString();
+            if (closedDoc.uri.scheme !== 'untitled' || !previewPanels.has(oldUri)) { return; }
+            const savedText = closedDoc.getText();
+            // The saved file becomes active a tick after the close event; defer so it
+            // has settled before we look for it.
+            setTimeout(() => {
+                if (!previewPanels.has(oldUri)) { return; }  // already disposed/migrated
+                const active = vscode.window.activeTextEditor;
+                if (!active || active.document.languageId !== 'lilysharp') { return; }
+                const newUri = active.document.uri.toString();
+                // Migrate only to the just-SAVED file: a saved (non-untitled) doc with
+                // no preview of its own whose content matches what the untitled held.
+                if (active.document.uri.scheme === 'untitled' || newUri === oldUri
+                    || previewPanels.has(newUri) || active.document.getText() !== savedText) {
+                    return;
+                }
+                migratePreviewKey(oldUri, newUri);
+                const panel = previewPanels.get(newUri);
+                if (panel) {
+                    panel.title = `Preview: ${path.basename(active.document.uri.fsPath)}`;
+                    updatePreviewContent(active.document, panel, context);
+                }
+                outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
+            }, 0);
+        })
+    );
+
     // Watch for cursor position changes
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(event => {
@@ -473,14 +523,20 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     armPanelReady(uri);
 
     panel.onDidDispose(() => {
-        outputChannel.appendLine(`Preview panel disposed: ${uri}`);
-        previewPanels.delete(uri);
-        panelReady.delete(uri);
-        selectedRenders.delete(uri);
-        const timer = debounceTimers.get(uri);
-        if (timer) {
-            clearTimeout(timer);
-            debounceTimers.delete(uri);
+        // Find this panel's CURRENT key by value: it may have been re-keyed when an
+        // untitled score was saved to a file (see onDidCloseTextDocument), so the URI
+        // captured here at creation can be stale — deleting by it would leak the entry.
+        for (const [key, value] of previewPanels) {
+            if (value !== panel) { continue; }
+            outputChannel.appendLine(`Preview panel disposed: ${key}`);
+            previewPanels.delete(key);
+            panelReady.delete(key);
+            selectedRenders.delete(key);
+            const timer = debounceTimers.get(key);
+            if (timer) {
+                clearTimeout(timer);
+                debounceTimers.delete(key);
+            }
         }
     });
 
