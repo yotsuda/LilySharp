@@ -115,11 +115,54 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void SectionNamesOutsideAPart_DoNotTriggerTheContext()
+    public void AfterSection_AtTopLevel_IsItsOwnContext()
     {
-        // Section-major top-level `section |` declares a NEW section; it is not the
-        // part-major fill-in, so the after-section context does not fire there.
+        // Section-major top-level `section |` is a declaration site too — it fills in
+        // from the form's references.
         var text = "section ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSection,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void SectionMajor_OffersFormReferencedSectionsNotYetDeclared()
+    {
+        // The form names A and B; only A is written, so `section ` at the top level
+        // offers B — the section the piece expects but that has not been declared.
+        var text =
+            "section A { melody { c d } }\n" +
+            "form main { A B A }\n" +
+            "section ";
+        Assert.Equal(new[] { "B" }, Missing(text));
+    }
+
+    [Fact]
+    public void SectionMajor_WithoutAForm_OffersNothing()
+    {
+        // No form means no known-but-unwritten section, so nothing is suggested.
+        var text =
+            "section A { melody { c d } }\n" +
+            "section ";
+        Assert.Empty(Missing(text));
+    }
+
+    [Fact]
+    public void SectionMajor_DoesNotReofferAnAlreadyDeclaredSection()
+    {
+        // A is declared and the form references it; it must not be offered again.
+        var text =
+            "section A { melody { c d } }\n" +
+            "section B { melody { e f } }\n" +
+            "form main { A B }\n" +
+            "section ";
+        Assert.Empty(Missing(text));
+    }
+
+    [Fact]
+    public void SectionInsideAMusicBody_DoesNotTriggerTheContext()
+    {
+        // `section` is not a declaration site inside a section's music body.
+        var text = "section A { melody { c d section ";
         Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterSection,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
     }

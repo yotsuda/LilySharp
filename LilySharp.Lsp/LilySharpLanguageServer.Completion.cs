@@ -572,13 +572,14 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterRemoveEmpty;
 
-        // Right after `section ` inside a part { } or lyrics { } body: offer the
-        // document's section names this container does NOT yet declare (part-major
-        // fill-in), not the property list. `section` names an inner section; the useful
-        // suggestion is which known section is still missing here.
+        // Right after `section `: offer the section names known to the piece but not yet
+        // declared in this scope, not the property list. Two scopes carry a fill-in:
+        // inside a part { } / lyrics { } container (part-major inner section) and at the
+        // top level (section-major declaration, filled from the form's references).
+        // `section` inside a music body is not a declaration site, so it is skipped.
         if (prevWord == "section"
-            && IsInsideSectionContainer(text, offset)
-            && !IsInsideStringLiteral(text, offset))
+            && !IsInsideStringLiteral(text, offset)
+            && (IsInsideSectionContainer(text, offset) || InnermostOpenBlock(text, offset) == null))
             return CompletionContext.AfterSection;
 
         // Directly inside a part { } header (and not after one of the
@@ -1185,34 +1186,42 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// After <c>section </c> inside a <c>part { }</c> or <c>lyrics { }</c> body, the
-    /// document's section names this container does NOT yet declare — so a part-major
-    /// part / lyrics track can be filled in with the sections it is still missing (e.g.
-    /// part <c>bass</c> already has <c>A</c>, so only <c>B</c> / <c>C</c> are offered).
-    /// Picking one drops in the <c>{ }</c> body with the caret inside. A brand-new name
-    /// is typed freely; the list never blocks it.
+    /// After <c>section </c>, the section names known to the piece but not yet declared
+    /// in this scope — so a section can be filled in with what is still missing. In a
+    /// <c>part { }</c> / <c>lyrics { }</c> container the missing set is measured against
+    /// the sections already in that container (part-major: <c>bass</c> already has
+    /// <c>A</c>, so only <c>B</c> / <c>C</c> are offered); at the top level (section-major)
+    /// it is measured against every declared section, so what remains is the sections the
+    /// <c>form { }</c> references but that have not been written yet. The universe is every
+    /// section NAME the document mentions — declarations AND form references (incl.
+    /// <c>~silent</c> and volta alternatives). Picking one drops in the <c>{ }</c> body
+    /// with the caret inside. A brand-new name is typed freely; the list never blocks it.
     /// </summary>
     internal static CompletionList GetMissingSectionNameCompletions(string text, int offset)
     {
-        // Every section declared anywhere (a real `section NAME {` declaration, in
-        // declaration order, deduplicated) — the universe of known sections.
+        // Every section NAME the document mentions — declaration names PLUS form
+        // references (a section the piece plays but you may not have written yet) — in
+        // document order, deduplicated. The parser resolves references robustly (bare,
+        // ~silent, and [1. NAME] volta alternatives), which a text scan cannot.
         var known = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)\s*\{"))
-        {
-            var name = m.Groups[1].Value;
-            if (seen.Add(name))
-                known.Add(name);
-        }
+        var root = SyntaxTree.Parse(text).GetRoot();
+        foreach (var tok in SectionReferenceFinder.AllSectionNameTokens(root))
+            if (seen.Add(tok.Text))
+                known.Add(tok.Text);
 
-        var here = SectionsDeclaredInCurrentBlock(text, offset);
+        // What already fills this scope: inside a container, that container's sections;
+        // at the top level, every declared section (so only form-only names remain).
+        var here = IsInsideSectionContainer(text, offset)
+            ? SectionsDeclaredInCurrentBlock(text, offset)
+            : AllDeclaredSections(text, offset);
         return new CompletionList
         {
             Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
             {
                 Label = n,
                 Kind = CompletionItemKind.Reference,
-                Detail = "Section not yet in this part",
+                Detail = "Section not yet declared here",
                 // Completing the name also opens the section body, caret inside.
                 InsertTextFormat = InsertTextFormat.Snippet,
                 InsertText = n + " {\n\t$0\n}",
@@ -1261,6 +1270,24 @@ public sealed partial class LilySharpLanguageServer
         foreach (Match m in Regex.Matches(text[open..close], @"\bsection\s+(\w+)\s*\{"))
         {
             if (open + m.Index == curKw) continue;
+            declared.Add(m.Groups[1].Value);
+        }
+        return declared;
+    }
+
+    /// <summary>
+    /// Every section declared anywhere in the document (section-major top-level or
+    /// part-major inner), EXCLUDING the declaration at the cursor itself. At the top
+    /// level this is the scope a new <c>section</c> joins, so subtracting it from the
+    /// known universe leaves the form-referenced sections not yet written.
+    /// </summary>
+    private static System.Collections.Generic.HashSet<string> AllDeclaredSections(string text, int offset)
+    {
+        var declared = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        int curKw = SectionKeywordStartBeforeCursor(text, offset);
+        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)\s*\{"))
+        {
+            if (m.Index == curKw) continue;
             declared.Add(m.Groups[1].Value);
         }
         return declared;
