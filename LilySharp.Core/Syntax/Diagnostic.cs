@@ -302,6 +302,8 @@ public static class DiagnosticCodes
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>
     public const string DuplicateCell = "LYS7001";
+    /// <summary>Structure error: a chords/lyrics track names the same section twice.</summary>
+    public const string DuplicateTrackSection = "LYS7002";
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     public const string UnexpectedCharacter = "LYS0014";
 }

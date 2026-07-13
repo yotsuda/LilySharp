@@ -70,6 +70,7 @@ public static class SemanticValidation
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
+        new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
     };
 
     /// <summary>
