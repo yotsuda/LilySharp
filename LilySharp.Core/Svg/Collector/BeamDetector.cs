@@ -92,12 +92,19 @@ internal sealed class BeamDetector
         // rhythmic group, so a beam ends where a tuplet starts or ends.
         // LILYPOND-REF: lily/auto-beam-engraver.cc — tuplet spans bound beams.
         var tupletBoundaries = new HashSet<(int measureIndex, int itemIndex)>();
+        // A tuplet is ONE beaming unit: its notes carry their WRITTEN duration (an 8th
+        // triplet's notes each read 1/8), so the per-beat grouping would cut the run
+        // where the written positions cross a beat — splitting a 3-note 8th triplet 2+1.
+        // Suppress the beat-boundary flush INSIDE a tuplet so all its notes beam.
+        var tupletInteriors = new HashSet<(int measureIndex, int itemIndex)>();
         if (!tupletBrackets.IsDefaultOrEmpty)
         {
             foreach (var bracket in tupletBrackets)
             {
                 tupletBoundaries.Add((bracket.MeasureIndex, bracket.StartNoteIndex));
                 tupletBoundaries.Add((bracket.MeasureIndex, bracket.EndNoteIndex + 1));
+                for (int i = bracket.StartNoteIndex; i <= bracket.EndNoteIndex; i++)
+                    tupletInteriors.Add((bracket.MeasureIndex, i));
             }
         }
 
@@ -118,7 +125,7 @@ internal sealed class BeamDetector
             foreach (var item in measure.Items)
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
-            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletBoundaries, voiceIndex, forceStemUp);
+            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletBoundaries, tupletInteriors, voiceIndex, forceStemUp);
         }
 
         return beamGroups.ToImmutableArray();
@@ -300,6 +307,7 @@ internal sealed class BeamDetector
         List<BeamGroup> beamGroups,
         HashSet<(int, int)>? consumed = null,
         HashSet<(int, int)>? tupletBoundaries = null,
+        HashSet<(int, int)>? tupletInteriors = null,
         int voiceIndex = 0,
         bool? forceStemUp = null)
     {
@@ -359,7 +367,9 @@ internal sealed class BeamDetector
                     groupStartPosition = currentPosition;
                 }
 
-                if (currentGroup.Count > 0 && CrossesGroupBoundary(groupStartPosition, currentPosition, beatLength))
+                if (currentGroup.Count > 0
+                    && !(tupletInteriors != null && tupletInteriors.Contains((measureIndex, i)))
+                    && CrossesGroupBoundary(groupStartPosition, currentPosition, beatLength))
                 {
                     // Flush current group at beat boundary
                     if (currentGroup.Count >= 2)

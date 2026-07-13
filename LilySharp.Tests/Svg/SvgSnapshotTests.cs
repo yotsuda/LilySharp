@@ -185,6 +185,9 @@ public class SvgSnapshotTests
         // An explicit `transposition 8vb` frets a bare `c` on the tab exactly as the
         // `instrument bass` preset does (the preset just bundles it) — A string, 3rd fret.
         yield return new object[] { "test/transposition-explicit" };
+        // An eighth-note triplet beams as ONE group (a single "3", no bracket) even
+        // though its notes carry their written 1/8 duration across a beat boundary.
+        yield return new object[] { "test/tuplet-eighth-beam" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

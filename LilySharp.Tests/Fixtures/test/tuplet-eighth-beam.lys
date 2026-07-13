@@ -1,0 +1,10 @@
+// A triplet of eighth notes beams as ONE group — its notes carry their WRITTEN
+// (1/8) duration, so per-beat grouping must not split the run where those written
+// positions cross a beat boundary (an 8th triplet at beat 3 came out 2+1 with a
+// stray flagged note and a bracket instead of a single "3").
+title "eighth triplet beams as one"
+time 4/4
+key c major
+part m { section A { c8 c c c tuplet 3/4 { e8 e e } | } }
+form main { A }
+score main { staff m }
