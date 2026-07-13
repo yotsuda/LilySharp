@@ -279,10 +279,13 @@ public static class DiagnosticCodes
     /// different parts, so the shorter parts are padded to align (often a miscount).</summary>
     public const string SectionBarCountMismatch = "LYS2007";
 
-    // Lyric warnings (LYS4xxx)
+    // Lyric diagnostics (LYS4xxx — warnings, plus one error)
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>
     public const string LyricSyllableOverflow = "LYS4001";
+    /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
+    /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
+    public const string LyricTrackNeedsSections = "LYS4002";
     /// <summary>Warning: a navigation mark (segno/coda/D.S./…) sits mid-measure rather
     /// than at a barline boundary.</summary>
     public const string NavigationMarkMidMeasure = "LYS4003";
@@ -290,9 +293,6 @@ public static class DiagnosticCodes
     /// by its <c>[N. …]</c> verses — every written-out occurrence already has a numbered
     /// verse, so the plain line (a fallback for uncovered occurrences) never renders.</summary>
     public const string LyricPlainVerseShadowed = "LYS4004";
-    /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
-    /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
-    public const string LyricTrackNeedsSections = "LYS4002";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>

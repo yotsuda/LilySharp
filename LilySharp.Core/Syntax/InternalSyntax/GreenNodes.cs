@@ -1065,9 +1065,9 @@ internal sealed class LyricMeasureGreen : GreenSyntaxNode
 /// A per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>. The header keys
 /// the section's playback occurrence(s) so a repeated/reprised section can carry
 /// different words each pass — a single number (<c>[1. …]</c>), a comma list
-/// (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), or a <c>~</c>-negated set meaning
-/// "every occurrence EXCEPT these" (<c>[~1. …]</c>). The body is lyric measures,
-/// exactly like a plain (unbracketed) verse.
+/// (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), with an optional leading <c>~</c>
+/// that HIDES the stanza-number label while still applying to the listed occurrence(s)
+/// (<c>[~1. …]</c>). The body is lyric measures, exactly like a plain (unbracketed) verse.
 /// </summary>
 /// <remarks>Slot layout: <c>[</c>, header tokens (<c>~</c>? number ((<c>,</c>|<c>-</c>)
 /// number)*), <c>.</c>, measures…, <c>]</c>.</remarks>

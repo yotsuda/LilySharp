@@ -266,17 +266,18 @@ internal sealed partial class Parser
 
     /// <summary>Parse a per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>.
     /// The header selects the section's playback occurrence(s) — a single number, a
-    /// comma list (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), or a leading
-    /// <c>~</c> for "every occurrence EXCEPT these" (<c>[~1. …]</c>) — so a
-    /// repeated/reprised section can carry different words each pass; the body is
-    /// ordinary lyric measures. The closing <c>]</c> is optional (a run to the block's
-    /// <c>}</c> recovers).</summary>
+    /// comma list (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), with an optional
+    /// leading <c>~</c> that HIDES the stanza-number label (<c>[~1. …]</c>) while still
+    /// applying to the listed occurrence(s) — so a repeated/reprised section can carry
+    /// different words each pass; the body is ordinary lyric measures. The closing
+    /// <c>]</c> is optional (a run to the block's <c>}</c> recovers).</summary>
     private LyricVoltaGreen ParseLyricVolta()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
 
-        // Header: `~? number ((',' | '-') number)*`. `~` negates the set (all but
-        // these); ',' lists, '-' ranges — mirroring the form's volta selector.
+        // Header: `~? number ((',' | '-') number)*`. A leading `~` hides the stanza
+        // number label (the words still apply to the listed occurrences); ',' lists,
+        // '-' ranges.
         var header = new List<GreenNode?>();
         if (Check(SyntaxKind.Tilde))
             header.Add(Advance());
