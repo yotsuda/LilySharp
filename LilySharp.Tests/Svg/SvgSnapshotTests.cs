@@ -342,6 +342,9 @@ public class SvgSnapshotTests
         // A pedal keeps its OWN staff's below-baseline; the system-wide lyric floor
         // (for jump marks) must not drop it past a lyric line on another staff.
         yield return new object[] { "test/pedal-below-lyrics" };
+        // A CJK lyric fills the em square (taller than any Latin word), so the lyric
+        // line must drop to clear notes dipping below the staff.
+        yield return new object[] { "test/cjk-lyric-clears-notes" };
         // A high lower-staff chord (reaching the upper staff's range with ledgers)
         // widens the inter-staff gap so it clears the upper staff's LINES, not
         // just its notes (the staff symbol joins the spacing skyline).

@@ -108,25 +108,41 @@ internal sealed class LyricEngraver
     private const string AscenderLetters = "bdfhijklt";
 
     /// <summary>
+    /// CJK (kana, ideographs, Hangul, fullwidth forms) up-extent as an em fraction.
+    /// These glyphs fill the em square — their ink top reaches the ideographic ascent,
+    /// ABOVE the Latin cap line — so a syllable like き needs more clearance than any
+    /// Latin word. Without this it would fall to <see cref="XHeightEm"/> (no upper/
+    /// ascender char matches) and overlap notes that dip below the staff.
+    /// </summary>
+    private const double CjkAscenderEm = 0.88;
+
+    /// <summary>True for a full-em-height script glyph (Hiragana, Katakana, CJK
+    /// ideographs incl. Ext. A, Hangul syllables, and fullwidth/halfwidth forms).</summary>
+    private static bool IsFullHeightGlyph(char c) =>
+        c is (>= '぀' and <= 'ヿ')   // Hiragana + Katakana
+          or (>= '㐀' and <= '鿿')   // CJK ideographs (Ext. A + BMP)
+          or (>= '가' and <= '힣')   // Hangul syllables
+          or (>= '＀' and <= '￯');  // Fullwidth / Halfwidth forms
+
+    /// <summary>
     /// Real up-extent (baseline → top of ink) of a lyric syllable in staff spaces,
     /// from the serif font's metrics at the lyric font size. LilyPond builds the
     /// LyricText skyline from the grob's true stencil bounding box; here the
     /// ascender / x-height em-fractions (measured from the rendered face) stand in
     /// for FreeType glyph metrics — mirroring how EstimateTextWidth derives advance
-    /// widths. The extent is the MAX over the syllable's glyphs (a single ascender
-    /// or capital lifts the whole box to the cap line), so the up-skyline reflects
-    /// the tallest ink the staff's down-skyline must clear.
+    /// widths. The extent is the MAX over the syllable's glyphs (a single ascender,
+    /// capital, or CJK glyph lifts the whole box), so the up-skyline reflects the
+    /// tallest ink the staff's down-skyline must clear.
     /// </summary>
     private static double LyricUpExtent(string text)
     {
         double em = XHeightEm;
         foreach (char c in text)
         {
+            if (IsFullHeightGlyph(c))
+                return LyricFontSize * CjkAscenderEm; // the tallest — no glyph exceeds it
             if (char.IsUpper(c) || char.IsDigit(c) || AscenderLetters.IndexOf(c) >= 0)
-            {
                 em = AscenderEm;
-                break;
-            }
         }
         return LyricFontSize * em;
     }

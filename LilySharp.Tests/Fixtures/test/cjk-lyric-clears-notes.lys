@@ -1,0 +1,11 @@
+// A CJK lyric (kana / ideograph / Hangul) fills the em square, so its ink reaches
+// higher than any Latin word. The lyric line must drop far enough to clear notes that
+// dip below the staff — otherwise the tall glyphs overlap the low noteheads. The low
+// c/d run here (below the treble staff) locks that clearance.
+title "CJK lyric clears low notes"
+time 4/4
+key c major
+part m { clef treble section A { c4 c d e | } }
+lyrics { section A { き ら き ら | } }
+form main { A }
+score main "cjk-lyric-clears-notes" { staff m }
