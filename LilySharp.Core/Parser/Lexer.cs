@@ -587,7 +587,6 @@ internal sealed class Lexer
             "transpose" => SyntaxKind.TransposeKeyword,
             "octave" => SyntaxKind.OctaveKeyword,
             "instrument" => SyntaxKind.InstrumentKeyword,
-            "channel" => SyntaxKind.ChannelKeyword,
 
 
             // Navigation keywords (structure block)

@@ -136,7 +136,7 @@ public class SectionOrientedTests
             section A { guitar { c4 } }
             form main { A }
             score main "song" {
-                guitar channel 1 instrument 25
+                guitar octave 1 instrument 25
             }
             """;
         var tree = SyntaxTree.Parse(source);

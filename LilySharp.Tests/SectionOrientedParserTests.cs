@@ -113,8 +113,8 @@ score main ""guitar"" {
     {
         var source = @"
 score main ""song"" {
-    guitar channel 1 instrument 25
-    bass channel 2 instrument 33
+    guitar octave 1 instrument 25
+    bass octave 2 instrument 33
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);

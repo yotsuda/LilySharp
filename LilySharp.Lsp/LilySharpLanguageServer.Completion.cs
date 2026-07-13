@@ -626,7 +626,6 @@ public sealed partial class LilySharpLanguageServer
             ("instrument", "Instrument preset (clef/octave/tuning defaults)", true),
             ("name", "Display name (system indent label)", false),
             ("tuning", "Tab tuning (guitar/bass/ukulele/…)", false),
-            ("channel", "MIDI channel", false),
             ("octave", "Octave mode or absolute base (absolute | relative | N)", true),
             ("transpose", "Transpose target pitch", false),
             ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)", true),

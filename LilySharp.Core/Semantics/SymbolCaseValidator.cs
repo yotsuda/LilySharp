@@ -37,7 +37,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
 
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
-        "clef", "instrument", "channel", "transpose", "transposition", "tuning",
+        "clef", "instrument", "transpose", "transposition", "tuning",
         "octave", "name", "removeEmpty", "lines",
     };
 

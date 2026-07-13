@@ -75,7 +75,7 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'part' | 'phrase' | 'section' | 'structure' | 'score'
         | 'staff' | 'grandStaff' | 'tab' | 'ossia' | 'voice'
-        | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'channel'
+        | 'lyrics' | 'chords' | 'tuning' | 'instrument'
         | 'transpose' | 'octave' | 'using' | 'use' | 'let' | 'break' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
         | 'repeat' | 'volta' | 'alternative'
@@ -175,7 +175,6 @@ PartDecl       = 'part' , Identifier , [ PartBody ] ;
 PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'        , ClefName
                | 'instrument'  , ( Identifier , [ String ] | String )
-               | 'channel'     , Integer
                | 'transpose'   , PitchToken
                | 'tuning'      , Identifier
                | 'name'        , String                      (* display name *)
@@ -199,7 +198,7 @@ ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
 
    part melody                        // minimal
    part melody { clef treble }        // bare attribute, no colon
-   part bass   { clef bass  instrument "Cello" channel 2 }
+   part bass   { clef bass  instrument "Cello" }
    part fill   { clef bass  removeEmpty all }   // hara-kiri staff
 *)
 

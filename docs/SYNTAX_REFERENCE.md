@@ -592,7 +592,7 @@ be declared and referenced).
 
 | Group | Words |
 |-------|-------|
-| Structure | `section` `form` `include` `tab` `ossia` `transpose` `octave` `instrument` `channel` |
+| Structure | `section` `form` `include` `tab` `ossia` `transpose` `octave` `instrument` |
 | Score / layout | `score` `part` `staff` `grandStaff` `voice` `phrase` `repeat` `volta` `alternative` `let` `use` `break` `partial` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |

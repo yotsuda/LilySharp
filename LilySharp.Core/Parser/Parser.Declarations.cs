@@ -118,11 +118,10 @@ internal sealed partial class Parser
         if (Current.Kind == SyntaxKind.TempoKeyword)
             return ParseTempoDeclaration();
 
-        // clef treble, instrument "Violin", channel 1, tuning standard, transpose d
+        // clef treble, instrument "Violin", tuning standard, transpose d
         if (Current.Kind == SyntaxKind.Identifier ||
             Current.Kind == SyntaxKind.ClefKeyword ||
             Current.Kind == SyntaxKind.InstrumentKeyword ||
-            Current.Kind == SyntaxKind.ChannelKeyword ||
             Current.Kind == SyntaxKind.TuningKeyword ||
             Current.Kind == SyntaxKind.OctaveKeyword ||
             Current.Kind == SyntaxKind.TransposeKeyword)

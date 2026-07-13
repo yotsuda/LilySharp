@@ -581,15 +581,14 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse MIDI part render: partName [channel:N] [instrument:N] [octave:N]
+    /// Parse MIDI part render: partName [instrument:N] [octave:N]
     /// </summary>
     private MidiPartRenderGreen ParseMidiPartRender()
     {
         var partName = ExpectPartName();
 
         var options = new List<GreenNode?>();
-        while (Current.Kind is SyntaxKind.ChannelKeyword
-            or SyntaxKind.InstrumentKeyword
+        while (Current.Kind is SyntaxKind.InstrumentKeyword
             or SyntaxKind.OctaveKeyword)
         {
             var optKeyword = Advance();

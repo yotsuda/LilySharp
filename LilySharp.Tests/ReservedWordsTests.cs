@@ -35,7 +35,7 @@ public class ReservedWordsTests
     {
         "version",
         "section", "form", "using", "tab", "ossia", "transpose", "octave",
-        "instrument", "channel",
+        "instrument",
         "score", "part", "staff", "grandStaff", "voice", "phrase", "repeat", "volta",
         "alternative", "break", "partial",
         "title", "composer", "tempo", "time", "key", "clef",

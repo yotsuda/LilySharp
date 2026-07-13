@@ -28,12 +28,12 @@ namespace LilySharp.Tests;
 /// green kind that has a dedicated <c>*Syntax</c> red class but no matching
 /// <c>case</c> in the switch falls through to <see cref="GenericSyntaxNode"/>,
 /// degrading navigation/rename with no error. (The original defect: MIDI part
-/// render — <c>partName channel:N</c> — was unreachable this way.)
+/// render — <c>partName instrument:N</c> — was unreachable this way.)
 /// </summary>
 [Trait("Category", "Unit")]
 public class CreateRedExhaustivenessTests
 {
-    // Direct regression for the original defect: a `partName channel:N` render
+    // Direct regression for the original defect: a `partName instrument:N` render
     // item must materialize as MidiPartRenderSyntax, not GenericSyntaxNode.
     [Fact]
     public void MidiPartRender_CreatesDedicatedRedNode()
@@ -42,7 +42,7 @@ public class CreateRedExhaustivenessTests
             "part melody { clef treble }\n" +
             "section Main { melody { c4 d e f | } }\n" +
             "form main { Main }\n" +
-            "score main \"audio\" { melody channel:1 }\n");
+            "score main \"audio\" { melody instrument:1 }\n");
 
         var renders = tree.GetRoot().DescendantNodes<MidiPartRenderSyntax>().ToList();
         Assert.Single(renders);
@@ -87,7 +87,7 @@ public class CreateRedExhaustivenessTests
             "lyrics { la la la la | la la | } }\n" +
             "form main { |: Main :| }\n" +
             "score main \"out\" { staff melody }\n" +
-            "score main \"audio\" { melody channel:1 }\n";
+            "score main \"audio\" { melody instrument:1 }\n";
 
         var tree = SyntaxTree.Parse(source);
         foreach (var node in tree.GetRoot().DescendantNodes())

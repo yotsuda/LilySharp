@@ -167,8 +167,6 @@ public enum SyntaxKind : ushort
     OctaveKeyword,
     /// <summary>The <c>instrument</c> keyword.</summary>
     InstrumentKeyword,
-    /// <summary>The <c>channel</c> keyword.</summary>
-    ChannelKeyword,
     /// <summary>The <c>break</c> keyword (line break).</summary>
     BreakKeyword,
     /// <summary>The <c>nobreak</c> keyword (forbid a line break here). LilyPond's <c>\noBreak</c>.</summary>
