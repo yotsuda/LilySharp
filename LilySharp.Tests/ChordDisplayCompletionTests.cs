@@ -99,6 +99,20 @@ public class ChordDisplayCompletionTests
     }
 
     [Fact]
+    public void PartPropertyClef_RetriggersLikeTheHeaderKeyword()
+    {
+        // A part `{ clef … }` completes clef from the part-property list; it must add the
+        // space and re-open suggestions too (this was the gap: header clef worked, part
+        // clef did nothing).
+        var props = LilySharpLanguageServer.GetPartPropertyCompletions().Items;
+        var clef = props.Single(i => i.Label == "clef");
+        Assert.Equal("clef $0", clef.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", clef.Command?.CommandIdentifier);
+        // A property with no value list stays a plain insert.
+        Assert.Null(props.Single(i => i.Label == "name").Command);
+    }
+
+    [Fact]
     public void KeyTonic_InsertsTonicPlusSpaceAndRetriggersSoTheScaleEnumerates()
     {
         // Picking a tonic lands on `key c ` and re-opens suggestions, so the scale list

@@ -618,19 +618,21 @@ public sealed partial class LilySharpLanguageServer
     /// pairs plus inner sections), matching docs/GRAMMAR.md PartProperty.</summary>
     internal static CompletionList GetPartPropertyCompletions()
     {
-        var props = new (string Label, string Detail)[]
+        // Values = the property takes a value LIST (clef → treble…, time → 4/4…): those
+        // items add a space and re-open suggestions so the list enumerates right after.
+        var props = new (string Label, string Detail, bool Values)[]
         {
-            ("clef", "Clef (treble/bass/alto/tenor/treble_8)"),
-            ("instrument", "Instrument preset (clef/octave/tuning defaults)"),
-            ("name", "Display name (system indent label)"),
-            ("tuning", "Tab tuning (guitar/bass/ukulele/…)"),
-            ("channel", "MIDI channel"),
-            ("octave", "Octave mode or absolute base (absolute | relative | N)"),
-            ("transpose", "Transpose target pitch"),
-            ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)"),
-            ("time", "Part-local time signature"),
-            ("tempo", "Part-local tempo"),
-            ("section", "Inner section (part-major form)"),
+            ("clef", "Clef (treble/bass/alto/tenor/treble_8)", true),
+            ("instrument", "Instrument preset (clef/octave/tuning defaults)", true),
+            ("name", "Display name (system indent label)", false),
+            ("tuning", "Tab tuning (guitar/bass/ukulele/…)", false),
+            ("channel", "MIDI channel", false),
+            ("octave", "Octave mode or absolute base (absolute | relative | N)", true),
+            ("transpose", "Transpose target pitch", false),
+            ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)", true),
+            ("time", "Part-local time signature", true),
+            ("tempo", "Part-local tempo", true),
+            ("section", "Inner section (part-major form)", false),
         };
         return new CompletionList
         {
@@ -639,6 +641,11 @@ public sealed partial class LilySharpLanguageServer
                 Label = p.Label,
                 Kind = CompletionItemKind.Property,
                 Detail = p.Detail,
+                InsertTextFormat = p.Values ? InsertTextFormat.Snippet : default,
+                InsertText = p.Values ? $"{p.Label} $0" : null,
+                Command = p.Values
+                    ? new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" }
+                    : null,
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
