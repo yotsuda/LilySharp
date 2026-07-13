@@ -40,26 +40,34 @@ internal sealed class NavigationPlacementValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         // Navigation marks live in a part's music, and the exact measure fill is only
-        // walked with a voice bound — the shared no-voice collect skips part-major
-        // music. Collect the primary part so its placements are recorded.
+        // walked with a voice bound — the shared no-voice collect skips part-major music.
+        // A mark can sit in ANY part's music, but a single voice-bound collect walks only
+        // that voice, so collect each declared part and union what they record (a mark in
+        // a secondary part would otherwise never warn). Dedup by source position.
         var root = tree.GetRoot();
-        // The first declared part names the primary voice (present in both part-major
-        // `part m { section … }` and section-major `part m { }` + `section A { m { … } }`).
-        string? voice = root.DescendantNodes().OfType<PartDeclarationSyntax>().FirstOrDefault()?.Name.Text;
+        var voices = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+            .Select(p => p.Name.Text).Distinct().ToList();
+        // Structureless top-level music has no part; fall back to the no-voice collect.
+        IEnumerable<string?> toWalk = voices.Count > 0 ? voices : new string?[] { null };
 
-        Svg.Collector.MeasureCollector collector;
-        try
+        var seen = new HashSet<int>();
+        foreach (var voice in toWalk)
         {
-            collector = new Svg.Collector.MeasureCollector();
-            collector.Collect(tree, voice);
-        }
-        catch
-        {
-            return; // a malformed score surfaces its real error elsewhere
-        }
+            Svg.Collector.MeasureCollector collector;
+            try
+            {
+                collector = new Svg.Collector.MeasureCollector();
+                collector.Collect(tree, voice);
+            }
+            catch
+            {
+                continue; // a malformed score surfaces its real error elsewhere
+            }
 
-        foreach (var w in collector.NavigationPlacementWarnings)
-            _diagnostics.Warning(new TextSpan(w.SourcePosition, 1), DiagnosticCodes.NavigationMarkMidMeasure,
-                $"the {w.MarkText} navigation mark sits mid-measure; place it at a barline boundary.");
+            foreach (var w in collector.NavigationPlacementWarnings)
+                if (seen.Add(w.SourcePosition))
+                    _diagnostics.Warning(new TextSpan(w.SourcePosition, 1), DiagnosticCodes.NavigationMarkMidMeasure,
+                        $"the {w.MarkText} navigation mark sits mid-measure; place it at a barline boundary.");
+        }
     }
 }

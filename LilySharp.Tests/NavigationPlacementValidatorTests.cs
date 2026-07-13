@@ -48,4 +48,31 @@ public class NavigationPlacementValidatorTests
 
     [Fact]
     public void BoundaryNav_IsClean() => Assert.False(WarnsMidMeasure(AtBoundary));
+
+    // The mark sits in the SECOND part's music; a first-part-only walk would miss it.
+    private const string SecondPartMidMeasure = """
+        time 4/4
+        part m { clef treble section A { c'4 d' e' f' | } }
+        part n { clef bass    section A { c4 segno d e f | } }
+        form main { A }
+        score main { staff m  staff n }
+        """;
+
+    [Fact]
+    public void MidMeasureNavInSecondPart_Warns() => Assert.True(WarnsMidMeasure(SecondPartMidMeasure));
+
+    [Fact]
+    public void Message_UsesNotationTerm_NotEnumName()
+    {
+        var v = new NavigationPlacementValidator();
+        v.Validate(SyntaxTree.Parse("""
+            time 4/4
+            part m { clef treble section A { c'4 ds al coda d' e' f' | } }
+            form main { A }
+            score main { staff m }
+            """));
+        var msg = v.Diagnostics.Single(d => d.Code == DiagnosticCodes.NavigationMarkMidMeasure).Message;
+        Assert.Contains("D.S. al Coda", msg);
+        Assert.DoesNotContain("DalSegno", msg);
+    }
 }

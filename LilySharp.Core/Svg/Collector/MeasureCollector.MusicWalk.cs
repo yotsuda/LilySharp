@@ -359,7 +359,25 @@ public sealed partial class MeasureCollector
                     var navType = NavigationToMusicMark(nav.MarkType);
                     // A landmark belongs at a barline; flag a mid-measure placement.
                     if (!builder.AtMeasureBoundary)
-                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.Position, navType.ToString()));
+                    {
+                        // The reader knows the notation term ("D.S.", "To Coda"), not the
+                        // internal enum name ("DalSegno") — spell it the way it is written.
+                        string term = nav.MarkType switch
+                        {
+                            NavigationMarkType.Segno => "segno",
+                            NavigationMarkType.Coda => "coda",
+                            NavigationMarkType.Fine => "Fine",
+                            NavigationMarkType.ToCoda => "To Coda",
+                            NavigationMarkType.DaCapo => "D.C.",
+                            NavigationMarkType.DaCapoAlFine => "D.C. al Fine",
+                            NavigationMarkType.DaCapoAlCoda => "D.C. al Coda",
+                            NavigationMarkType.DalSegno => "D.S.",
+                            NavigationMarkType.DalSegnoAlFine => "D.S. al Fine",
+                            NavigationMarkType.DalSegnoAlCoda => "D.S. al Coda",
+                            _ => nav.MarkType.ToString()
+                        };
+                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.Position, term));
+                    }
                     _musicMarks.Add(new MusicMarkItem(navType, builder.CurrentMeasureIndex, nav.Position));
                 }
                 break;
