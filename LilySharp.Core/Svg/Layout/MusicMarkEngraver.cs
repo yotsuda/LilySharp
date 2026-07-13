@@ -106,6 +106,10 @@ internal static class MusicMarkEngraver
     // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
     private const double JumpInstructionDrop = 1.5;
 
+    // A below-staff mark drops this far past the lowest lyric baseline (descent +
+    // gap) so "D.C." / "Fine" clear the words rather than overprinting them.
+    private const double LyricClearance = 2.0;
+
     /// <summary>A jump-FROM instruction (D.S./D.C. family) — placed below the staff.</summary>
     private static bool IsJumpInstruction(MusicMarkType type) =>
         type is MusicMarkType.DalSegno or MusicMarkType.DaCapo
@@ -231,6 +235,16 @@ internal static class MusicMarkEngraver
             foreach (var ml in system.Measures)
                 measureToSystemBottom[ml.MeasureIndex] = bottom;
         }
+
+        // Lowest lyric baseline per system — a below-staff mark (D.C./D.S./Fine)
+        // must drop past the lyrics, which occupy the same band under the staff, or
+        // it overprints them.
+        var systemLyricBottom = new Dictionary<int, double>();
+        if (!lyrics.IsDefaultOrEmpty)
+            foreach (var ly in lyrics)
+                if (measureToSystemIdx.TryGetValue(ly.Item.MeasureIndex, out int lySys)
+                    && (!systemLyricBottom.TryGetValue(lySys, out double cur) || ly.Y > cur))
+                    systemLyricBottom[lySys] = ly.Y;
 
         var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
 
@@ -371,6 +385,13 @@ internal static class MusicMarkEngraver
                 && measureToSystemBottom.TryGetValue(belowMarks[0].Mark.MeasureIndex, out double sysBottom))
             {
                 belowBase = BelowMarkBaseline(sysBottom) - Padding;
+            }
+            // Clear the lyric line if this system carries one below the staff.
+            if (belowMarks.Count > 0
+                && measureToSystemIdx.TryGetValue(belowMarks[0].Mark.MeasureIndex, out int belowSys)
+                && systemLyricBottom.TryGetValue(belowSys, out double lyricY))
+            {
+                belowBase = Math.Max(belowBase, lyricY + LyricClearance);
             }
             // Pedal CHANGES put the previous release "*" and the next
             // "Ped." in the same group; classic notation writes them SIDE BY

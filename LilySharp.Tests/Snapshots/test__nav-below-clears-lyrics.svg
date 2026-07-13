@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="289.5" viewBox="0 0 119.05 28.95">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  .music { font-family: 'Emmentaler', serif; }
+</style>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="11.64" x2="60.02" y2="11.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.64" x2="60.02" y2="12.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.64" x2="60.02" y2="13.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.64" x2="60.02" y2="14.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.64" x2="60.02" y2="15.64" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="14.64" font-size="4.00" data-pos="298"></text>
+  <text class="music" x="3.30" y="13.64" font-size="4.00" data-pos="263"></text>
+  <line x1="29.81" y1="10.64" x2="31.76" y2="10.64" stroke="#000000" stroke-width="0.200"/>
+  <line x1="34.01" y1="10.64" x2="35.96" y2="10.64" stroke="#000000" stroke-width="0.200"/>
+  <line x1="38.21" y1="10.64" x2="40.16" y2="10.64" stroke="#000000" stroke-width="0.200"/>
+  <line x1="38.21" y1="9.64" x2="40.16" y2="9.64" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="7.80" y="13.14" font-size="4.00" data-pos="324"></text>
+  <line x1="7.87" y1="13.29" x2="7.87" y2="16.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="11.11" y="12.64" font-size="4.00" data-pos="328"></text>
+  <line x1="11.18" y1="12.79" x2="11.18" y2="16.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="14.42" y="12.14" font-size="4.00" data-pos="331"></text>
+  <line x1="14.49" y1="12.29" x2="14.49" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="17.73" y="11.64" font-size="4.00" data-pos="334"></text>
+  <line x1="17.80" y1="11.79" x2="17.80" y2="15.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="25.93" y="11.14" font-size="4.00" data-pos="355"></text>
+  <line x1="26.00" y1="11.29" x2="26.00" y2="14.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="30.13" y="10.64" font-size="4.00" data-pos="359"></text>
+  <line x1="30.20" y1="10.79" x2="30.20" y2="14.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="34.33" y="10.14" font-size="4.00" data-pos="362"></text>
+  <line x1="34.40" y1="10.29" x2="34.40" y2="13.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="38.53" y="9.64" font-size="4.00" data-pos="365"></text>
+  <line x1="38.60" y1="9.79" x2="38.60" y2="13.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="45.89" y="13.14" font-size="4.00" data-pos="324"></text>
+  <line x1="45.95" y1="13.29" x2="45.95" y2="16.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="49.20" y="12.64" font-size="4.00" data-pos="328"></text>
+  <line x1="49.26" y1="12.79" x2="49.26" y2="16.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="52.51" y="12.14" font-size="4.00" data-pos="331"></text>
+  <line x1="52.57" y1="12.29" x2="52.57" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="55.82" y="11.64" font-size="4.00" data-pos="334"></text>
+  <line x1="55.88" y1="11.79" x2="55.88" y2="15.14" stroke="#000000" stroke-width="0.130"/>
+  <rect x="21.34" y="11.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="21.53" y="11.64" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="22.43" y="11.64" width="0.19" height="4.00" fill="#000000"/>
+  <circle cx="23.12" cy="13.14" r="0.20" fill="#000000"/>
+  <circle cx="23.12" cy="14.14" r="0.20" fill="#000000"/>
+  <circle cx="42.35" cy="13.14" r="0.20" fill="#000000"/>
+  <circle cx="42.35" cy="14.14" r="0.20" fill="#000000"/>
+  <rect x="42.85" y="11.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="43.34" y="11.64" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="58.93" y="11.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="59.42" y="11.64" width="0.60" height="4.00" fill="#000000"/>
+  <text x="7.80" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="398">la</text>
+  <text x="11.11" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="401">la</text>
+  <text x="14.42" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="404">la</text>
+  <text x="17.73" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="407">la</text>
+  <text x="45.89" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="398">la</text>
+  <text x="49.20" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="401">la</text>
+  <text x="52.51" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="404">la</text>
+  <text x="55.82" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="407">la</text>
+  <text x="25.93" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="428">up</text>
+  <text x="30.13" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="431">up</text>
+  <text x="34.33" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="434">up</text>
+  <text x="38.53" y="19.25" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="437">up</text>
+  <text x="43.44" y="23.25" font-size="2.80" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="468">D.C.</text>
+  <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
+  <text x="1.29" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="312">A</text>
+  <rect x="21.53" y="7.84" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>
+  <text x="22.47" y="10.04" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="343">B</text>
+  <rect x="43.94" y="7.84" width="3.09" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
+  <text x="45.48" y="10.04" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="312">A2</text>
+  </g>
+</svg>

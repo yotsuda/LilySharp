@@ -1,0 +1,16 @@
+// A below-staff jump instruction (D.C. / D.S. / Fine) must clear the lyric line,
+// which sits in the same band under the staff — otherwise the "D.C." overprints
+// the words. Here D.C. at the end of the |: B :| repeat drops below "up up up up".
+octave absolute
+time 4/4
+key c major
+part melody { clef treble
+  section A { c'4 d' e' f' | }
+  section B { g'4 a' b' c'' | }
+}
+lyrics {
+  section A { la la la la | }
+  section B { up up up up | }
+}
+form main { A |: B :| dc A "A2" }
+score main { staff melody }
