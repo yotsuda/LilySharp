@@ -353,10 +353,15 @@ public sealed partial class MeasureCollector
                 break;
 
             case NavigationMarkSyntax nav:
-                // A bare navigation mark inside a section's music: place its sign at
-                // the current note position (same MusicMarkItem the form-level form uses).
-                _musicMarks.Add(new MusicMarkItem(
-                    NavigationToMusicMark(nav.MarkType), builder.CurrentMeasureIndex, nav.Position));
+                {
+                    // A bare navigation mark inside a section's music: place its sign at
+                    // the current note position (same MusicMarkItem the form uses).
+                    var navType = NavigationToMusicMark(nav.MarkType);
+                    // A landmark belongs at a barline; flag a mid-measure placement.
+                    if (!builder.AtMeasureBoundary)
+                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.Position, navType.ToString()));
+                    _musicMarks.Add(new MusicMarkItem(navType, builder.CurrentMeasureIndex, nav.Position));
+                }
                 break;
 
             case ClefDeclarationSyntax clefDecl:

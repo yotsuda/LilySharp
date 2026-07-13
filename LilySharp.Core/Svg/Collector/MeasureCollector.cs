@@ -78,6 +78,10 @@ public record TabRangeWarning(
     bool BelowRange   // true = below the lowest string; false = above the top fret
 );
 
+/// <summary>A navigation mark (segno/coda/D.S./…) written mid-measure rather than at a
+/// barline boundary — an unusual placement worth flagging.</summary>
+public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText);
+
 /// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
@@ -137,6 +141,12 @@ internal sealed class MeasureBuilder
 
     /// <summary>Current item count within the current measure.</summary>
     public int CurrentItemCount => _currentItems.Count;
+
+    /// <summary>True at a measure boundary: no items yet in the current measure (just
+    /// after a barline, or the very start), or the measure is already full (a mark
+    /// written right before its barline). A navigation landmark belongs at such a
+    /// boundary; anything else is mid-measure.</summary>
+    public bool AtMeasureBoundary => _currentItems.Count == 0 || _currentDuration == _timeSignature;
 
     public string? SectionLabel
     {
@@ -553,6 +563,10 @@ public sealed partial class MeasureCollector
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricsCollector.Warnings;
+    private readonly List<NavigationMarkPlacementWarning> _navPlacementWarnings = new();
+    /// <summary>Navigation marks written mid-measure instead of at a barline boundary.
+    /// Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<NavigationMarkPlacementWarning> NavigationPlacementWarnings => _navPlacementWarnings;
     // Tablature post-pass (tie-string reconciliation + per-tuning string assignment),
     // extracted as a self-contained collaborator. Its warnings are surfaced below.
     private readonly TabResolver _tabResolver = new();

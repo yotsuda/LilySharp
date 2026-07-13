@@ -283,6 +283,9 @@ public static class DiagnosticCodes
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>
     public const string LyricSyllableOverflow = "LYS4001";
+    /// <summary>Warning: a navigation mark (segno/coda/D.S./…) sits mid-measure rather
+    /// than at a barline boundary.</summary>
+    public const string NavigationMarkMidMeasure = "LYS4003";
     /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";

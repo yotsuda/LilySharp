@@ -402,10 +402,15 @@ internal sealed partial class Parser
         if (IsPartNameStart())
             return Advance();
 
-        // Report error
+        // Report error. If a reserved word (segno/coda/time/…) was written where a
+        // name belongs, name the actual word and flag it as reserved — clearer than
+        // the internal token kind.
         var span = new TextSpan(_textPosition, Current.FullWidth);
+        string found = !string.IsNullOrEmpty(Current.Text) && char.IsLetter(Current.Text[0])
+            ? $"'{Current.Text}', a reserved word — pick another name"
+            : $"'{Current.Kind}'";
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-            $"Expected part name, found '{Current.Kind}'");
+            $"Expected a name, found {found}");
 
         // Zero-width missing token with NO trivia (Current keeps its own; borrowing it
         // here would double-count — see Expect).
