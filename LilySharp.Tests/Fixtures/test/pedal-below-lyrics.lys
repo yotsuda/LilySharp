@@ -1,0 +1,16 @@
+// A pedal mark sits on its OWN staff's below-baseline. It must NOT be pushed past a
+// lyric line elsewhere in the system: the piano's "Ped." / "*" stay under the piano
+// staff, not dropped below the vocal lyrics. The system-wide lyric floor is for jump
+// marks (D.C./D.S./Fine) only; it used to catch pedals too. Regression lock.
+title "A pedal keeps its own staff baseline, clear of the vocal lyrics"
+time 4/4
+key c major
+part voc { clef treble }
+part pno { clef bass }
+section A {
+  voc { c'4 d' e' f' | }
+  lyrics { la la la la | }
+  pno { c4 d@ped e f@ped(off) | }
+}
+form main { A }
+score main "pedal-below-lyrics" { staff voc  staff pno }

@@ -339,6 +339,9 @@ public class SvgSnapshotTests
         // A pedal "Ped." mark anchors at the note it is written on (its column),
         // not the measure start (music-mark AnchorTiming).
         yield return new object[] { "test/pedal-note-anchor" };
+        // A pedal keeps its OWN staff's below-baseline; the system-wide lyric floor
+        // (for jump marks) must not drop it past a lyric line on another staff.
+        yield return new object[] { "test/pedal-below-lyrics" };
         // A high lower-staff chord (reaching the upper staff's range with ledgers)
         // widens the inter-staff gap so it clears the upper staff's LINES, not
         // just its notes (the staff symbol joins the spacing skyline).

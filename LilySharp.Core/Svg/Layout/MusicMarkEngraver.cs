@@ -386,12 +386,17 @@ internal static class MusicMarkEngraver
             {
                 belowBase = BelowMarkBaseline(sysBottom) - Padding;
             }
-            // Clear the lyric line if this system carries one below the staff.
+            // A jump/other below-staff mark must drop past the lyric line it shares
+            // the band with (LyricClearance). Pedal text is EXEMPT — classic notation
+            // keeps "Ped."/"*" on its staff-relative baseline, never pushed under the
+            // words — so the floor lifts only the non-pedal stacking base, NOT
+            // `belowBase`, which the pedal branch below reads directly.
+            double stackBase = belowBase;
             if (belowMarks.Count > 0
                 && measureToSystemIdx.TryGetValue(belowMarks[0].Mark.MeasureIndex, out int belowSys)
                 && systemLyricBottom.TryGetValue(belowSys, out double lyricY))
             {
-                belowBase = Math.Max(belowBase, lyricY + LyricClearance);
+                stackBase = Math.Max(belowBase, lyricY + LyricClearance);
             }
             // Pedal CHANGES put the previous release "*" and the next
             // "Ped." in the same group; classic notation writes them SIDE BY
@@ -430,7 +435,7 @@ internal static class MusicMarkEngraver
                 }
                 else if (firstStacked)
                 {
-                    y = belowBase + Padding;
+                    y = stackBase + Padding;
                     stackBottomY = y + halfExtent;
                     firstStacked = false;
                 }
