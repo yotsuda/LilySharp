@@ -256,7 +256,11 @@ internal static class TupletBracketEngraver
                             tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
                         // A tab beam's direction is string-based, not the notation
                         // Group.StemUp — so the number sits on the tab beam's OWN side.
-                        isStemUp = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
+                        // Compute it from the tuplet's OWN tab notes (which carry the
+                        // assigned strings): the covering beam may be the companion
+                        // NOTATION beam, whose members have no string and would resolve
+                        // to a different fret — and the wrong direction.
+                        isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
                         double tabStemOffset = isStemUp
                             ? EngravingDefaults.StemUpAttachX
                             : EngravingDefaults.StemDownAttachX;
@@ -295,7 +299,6 @@ internal static class TupletBracketEngraver
                 startY += staffOffset;
                 endY += staffOffset;
             }
-
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,
                 startX,
@@ -452,11 +455,21 @@ internal static class TupletBracketEngraver
         ImmutableArray<BeamLayout> beamLayouts, TupletBracketItem tuplet,
         ImmutableArray<Measure> tupMeasures)
     {
+        // Prefer the beam on the tuplet's OWN staff: in a staff+tab score the same
+        // notes carry both a notation beam (no string numbers) and a tab beam. A tab
+        // tuplet must read its TAB beam so the number's side and the beam edge come
+        // from the strings, not the pitch. Covers() matches only measure+voice.
+        BeamLayout? fallback = null;
         foreach (var beam in beamLayouts)
         {
-            if (Covers(beam.Group, tuplet, tupMeasures))
+            if (!Covers(beam.Group, tuplet, tupMeasures))
+                continue;
+            if (beam.StaffIndex == tuplet.StaffIndex)
                 return beam;
+            fallback ??= beam;
         }
+        if (fallback != null)
+            return fallback;
         return null;
     }
 
@@ -556,6 +569,22 @@ internal static class TupletBracketEngraver
         }
 
         return (startY, endY);
+    }
+
+    /// <summary>
+    /// The NOTE/CHORD items a tuplet spans, read from its OWN staff's measures — so a
+    /// tab tuplet gets the assigned string numbers (the covering beam may be the
+    /// companion notation beam, whose members carry no string).
+    /// </summary>
+    private static System.Collections.Generic.IEnumerable<MusicItem> TupletNoteItems(
+        TupletBracketItem tuplet, ImmutableArray<Measure> measures)
+    {
+        if (measures.IsDefaultOrEmpty || tuplet.MeasureIndex >= measures.Length)
+            yield break;
+        var items = measures[tuplet.MeasureIndex].Items;
+        for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < items.Length; i++)
+            if (items[i] is NoteItem or ChordItem)
+                yield return items[i];
     }
 
     /// <summary>
