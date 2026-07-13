@@ -86,10 +86,13 @@ public class ChordDisplayCompletionTests
     }
 
     [Fact]
-    public void TopLevelClef_RetriggersSuggestionsSoTheClefListShows()
+    public void TopLevelClef_InsertsAChoiceSnippetSoTheClefValuesShowAtOnce()
     {
-        // Completing `clef` should pop the clef-name list (like `time`), via a retrigger.
+        // Completing `clef` inserts `clef ` + a ${1|…|} choice, so the space is added and
+        // the clef values show immediately (no extra keystroke / re-trigger).
         var clef = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == "clef");
-        Assert.Equal("editor.action.triggerSuggest", clef.Command?.CommandIdentifier);
+        Assert.StartsWith("clef ${1|", clef.InsertText);
+        Assert.Contains("treble", clef.InsertText);
+        Assert.Contains("bass", clef.InsertText);
     }
 }

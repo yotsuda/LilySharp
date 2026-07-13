@@ -1221,21 +1221,29 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    // The clef names, high → low pitch. Shared by the clef value list and the `clef`
+    // keyword snippet, whose ${1|…|} CHOICE drops the caret straight into this list when
+    // `clef` is completed — the space is inserted and the values show at once, with no
+    // separate keystroke or re-trigger.
+    private static readonly (string Label, string Detail)[] Clefs =
+    {
+        ("treble", "Treble (G) clef"),
+        ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
+        ("alto", "Alto (C) clef"),
+        ("tenor", "Tenor (C) clef"),
+        ("bass", "Bass (F) clef"),
+    };
+
+    /// <summary><c>clef </c> followed by a snippet CHOICE of the clef names.</summary>
+    internal static readonly string ClefSnippet =
+        "clef ${1|" + string.Join(",", Clefs.Select(c => c.Label)) + "|}";
+
     internal static CompletionList GetClefCompletions()
     {
-        // High → low pitch range.
-        var clefs = new (string Label, string Detail)[]
-        {
-            ("treble", "Treble (G) clef"),
-            ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
-            ("alto", "Alto (C) clef"),
-            ("tenor", "Tenor (C) clef"),
-            ("bass", "Bass (F) clef"),
-        };
         return new CompletionList
         {
             // SortText keeps the high→low order (VS Code otherwise sorts by label).
-            Items = clefs.Select((c, i) => new CompletionItem
+            Items = Clefs.Select((c, i) => new CompletionItem
             {
                 Label = c.Label,
                 Kind = CompletionItemKind.EnumMember,
@@ -1307,7 +1315,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature" },
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = ClefSnippet, Detail = "Clef (treble/bass/alto/tenor)" },
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
@@ -1587,7 +1595,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "nobreak", Kind = CompletionItemKind.Keyword, InsertText = "nobreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
 
                 // Mid-measure declarations
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = ClefSnippet, Detail = "Change clef", SortText = "3clef" },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo" },
