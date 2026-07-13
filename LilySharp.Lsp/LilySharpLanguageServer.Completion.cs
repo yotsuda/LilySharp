@@ -1200,29 +1200,42 @@ public sealed partial class LilySharpLanguageServer
                 Label = t.Label,
                 Kind = CompletionItemKind.EnumMember,
                 Detail = $"Tonic — {t.Detail} signature",
+                // Insert the tonic + a mode CHOICE so picking a tonic lands on
+                // `key TONIC ` with the mode dropdown already showing (one step).
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = $"{t.Label} {KeyModeChoice}",
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
     }
 
+    // The key modes. Shared by the mode value list and the tonic snippet, whose ${1|…|}
+    // CHOICE (built from these Labels) drops the caret straight into the mode list when a
+    // tonic is picked — so `key c` becomes `key c ` + the mode dropdown in one step.
+    private static readonly (string Label, string Detail)[] KeyModes =
+    {
+        ("major", "Major (ionian)"),
+        ("minor", "Natural minor (aeolian): major − 3 sharps"),
+        ("ionian", "Ionian (= major)"),
+        ("dorian", "Dorian: major − 2 sharps"),
+        ("phrygian", "Phrygian: major − 4 sharps"),
+        ("lydian", "Lydian: major + 1 sharp"),
+        ("mixolydian", "Mixolydian: major − 1 sharp"),
+        ("aeolian", "Aeolian (= minor)"),
+        ("locrian", "Locrian: major − 5 sharps"),
+    };
+
+    /// <summary>The mode-choice snippet appended after a tonic
+    /// (<c>${1|major,minor,…|}</c>).</summary>
+    private static readonly string KeyModeChoice =
+        "${1|" + string.Join(",", KeyModes.Select(m => m.Label)) + "|}";
+
     /// <summary>The modes valid after <c>key TONIC</c> — nothing else fits there.</summary>
     internal static CompletionList GetKeyModeCompletions()
     {
-        var modes = new (string Label, string Detail)[]
-        {
-            ("major", "Major (ionian)"),
-            ("minor", "Natural minor (aeolian): major − 3 sharps"),
-            ("ionian", "Ionian (= major)"),
-            ("dorian", "Dorian: major − 2 sharps"),
-            ("phrygian", "Phrygian: major − 4 sharps"),
-            ("lydian", "Lydian: major + 1 sharp"),
-            ("mixolydian", "Mixolydian: major − 1 sharp"),
-            ("aeolian", "Aeolian (= minor)"),
-            ("locrian", "Locrian: major − 5 sharps"),
-        };
         return new CompletionList
         {
-            Items = modes.Select((m, i) => new CompletionItem
+            Items = KeyModes.Select((m, i) => new CompletionItem
             {
                 Label = m.Label,
                 Kind = CompletionItemKind.EnumMember,

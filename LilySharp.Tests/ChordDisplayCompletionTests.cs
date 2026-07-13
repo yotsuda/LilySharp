@@ -106,4 +106,15 @@ public class ChordDisplayCompletionTests
         Assert.Contains("120", tempo.InsertText);
         Assert.Contains("swing", tempo.InsertText);
     }
+
+    [Fact]
+    public void KeyTonic_InsertsTheModeChoiceSoTheScaleShowsAfterPickingATonic()
+    {
+        // Picking a tonic inserts `TONIC ` + a mode ${1|major,…|} choice, so `key c`
+        // lands on `key c ` with the mode dropdown showing (no space to type).
+        var c = LilySharpLanguageServer.GetKeyTonicCompletions().Items.Single(i => i.Label == "c");
+        Assert.StartsWith("c ${1|major", c.InsertText);
+        Assert.Contains("minor", c.InsertText);
+        Assert.EndsWith("|}", c.InsertText);
+    }
 }
