@@ -108,6 +108,7 @@ internal sealed partial class Parser
     private MusicMarkGreen ParseMusicMark()
     {
         var at = Expect(SyntaxKind.At);
+        int nameStart = _textPosition; // the mark name starts here, before we consume it
         var name = ExpectMarkName();
 
         // `@` modifies the note it follows; a navigation mark (segno/coda/fine/D.S./
@@ -116,7 +117,9 @@ internal sealed partial class Parser
         if (name.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)
         {
-            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            // Squiggle the mark name itself, not the token after it (name is already
+            // consumed, so _textPosition/Current now point one token past it).
+            var span = new TextSpan(nameStart, Math.Max(1, name.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.NavigationMarkIsBare,
                 $"A navigation mark is bare, not '@': write '{name.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
         }

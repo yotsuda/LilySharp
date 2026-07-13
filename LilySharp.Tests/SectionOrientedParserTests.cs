@@ -222,8 +222,13 @@ form main {
         // '@' modifies a note; a navigation mark with '@' (@segno) is a syntax error.
         var source = "form main { Intro @segno Verse @fine }";
         var tree = SyntaxTree.Parse(source);
-        Assert.Contains(tree.Diagnostics,
-            d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.NavigationMarkIsBare);
+        var errors = tree.Diagnostics
+            .Where(d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.NavigationMarkIsBare)
+            .ToList();
+        Assert.Equal(2, errors.Count);
+        // The squiggle lands on the mark name itself, not the token after it.
+        Assert.Contains(errors, d => source.Substring(d.Span.Start, d.Span.Length).Trim() == "segno");
+        Assert.Contains(errors, d => source.Substring(d.Span.Start, d.Span.Length).Trim() == "fine");
     }
 
     [Fact]
