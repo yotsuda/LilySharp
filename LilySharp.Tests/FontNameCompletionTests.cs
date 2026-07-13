@@ -50,6 +50,30 @@ public class FontNameCompletionTests
     }
 
     [Fact]
+    public void AfterFontKeyword_NoQuotesYet_IsAfterFontKeyword()
+    {
+        // `font ` with the caret after it (no quotes typed): Ctrl+Space should complete
+        // the whole quoted name.
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontKeyword,
+            Ctx("font "));
+    }
+
+    [Fact]
+    public void QuotedBuild_WrapsInsertTextInQuotes_BareOtherwise()
+    {
+        var synthetic = new (string, FontEmbedInfo.FontEmbedClass, bool)[]
+        {
+            ("Noto Serif CJK JP", FontEmbedInfo.FontEmbedClass.Free, true),
+        };
+        // At `font |` the item inserts the whole quoted string.
+        var quoted = LilySharpLanguageServer.BuildFontNameCompletions(synthetic, quoted: true).Items;
+        Assert.Equal("\"Noto Serif CJK JP\"", Assert.Single(quoted).InsertText);
+        // Inside `font "…"` the bare family is inserted (Label used; no explicit InsertText).
+        var bare = LilySharpLanguageServer.BuildFontNameCompletions(synthetic).Items;
+        Assert.Null(Assert.Single(bare).InsertText);
+    }
+
+    [Fact]
     public void CursorInsideTitleString_StillAfterTitleText_NoRegression()
     {
         // The mirrored detection must not steal the title/composer string.

@@ -87,6 +87,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterPartial => GetPartialCompletions(),
             CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
             CompletionContext.AfterFontName => GetFontNameCompletions(),
+            CompletionContext.AfterFontKeyword => GetFontNameCompletions(quoted: true),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
@@ -415,6 +416,7 @@ public sealed partial class LilySharpLanguageServer
         AfterPartial,
         AfterTitleText,
         AfterFontName,
+        AfterFontKeyword,
         ScoreBlock,
         AfterStaffRef,
         AfterChordsRef,
@@ -517,6 +519,9 @@ public sealed partial class LilySharpLanguageServer
                 case "time": return CompletionContext.AfterTime;
                 case "partial": return CompletionContext.AfterPartial;
                 case "title" or "composer": return CompletionContext.AfterTitleText;
+                // `font |` with no quotes yet: offer the font names already wrapped in
+                // "…" so Ctrl+Space here completes to `font "Family"`.
+                case "font": return CompletionContext.AfterFontKeyword;
             }
         }
 
@@ -810,15 +815,19 @@ public sealed partial class LilySharpLanguageServer
     /// the set does not change within a process.
     /// </summary>
     private static CompletionList? _fontNameCompletions;
+    private static CompletionList? _fontNameCompletionsQuoted;
 
     /// <summary>
     /// Installed font families that may be embedded into an exported PDF, annotated by
-    /// license class and CJK coverage — offered inside a <c>font "…"</c> string so the
-    /// author need not remember exact family names. See
-    /// <see cref="BuildFontNameCompletions"/> for the item shape.
+    /// license class and CJK coverage. Offered inside a <c>font "…"</c> string (bare
+    /// name), and — when <paramref name="quoted"/> — at <c>font |</c> before any quotes,
+    /// where each item inserts the whole <c>"Family"</c> so Ctrl+Space completes to
+    /// <c>font "Family"</c>. See <see cref="BuildFontNameCompletions"/> for the shape.
     /// </summary>
-    internal static CompletionList GetFontNameCompletions()
-        => _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
+    internal static CompletionList GetFontNameCompletions(bool quoted = false)
+        => quoted
+            ? _fontNameCompletionsQuoted ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts(), quoted: true)
+            : _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
 
     /// <summary>
     /// Enumerates the installed font families and, for the embeddable ones (class
@@ -874,7 +883,8 @@ public sealed partial class LilySharpLanguageServer
     /// within a class, CJK-capable families first.
     /// </summary>
     internal static CompletionList BuildFontNameCompletions(
-        IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)> fonts)
+        IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)> fonts,
+        bool quoted = false)
     {
         var items = new List<CompletionItem>();
         foreach (var (family, cls, cjk) in fonts)
@@ -891,6 +901,10 @@ public sealed partial class LilySharpLanguageServer
                 Label = family,
                 Kind = CompletionItemKind.Value,
                 Detail = detail,
+                // At `font |` (no quotes) insert the whole quoted string so it completes
+                // to `font "Family"`; inside `font "…"` insert the bare family (Label).
+                InsertText = quoted ? $"\"{family}\"" : null,
+                FilterText = family,
                 // Free before Gray; within a class, CJK-capable first; then by name.
                 SortText = (cls == FontEmbedInfo.FontEmbedClass.Free ? "0" : "1")
                     + (cjk ? "0" : "1") + family,
