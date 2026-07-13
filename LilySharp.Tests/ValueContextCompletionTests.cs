@@ -56,6 +56,7 @@ public class ValueContextCompletionTests
     [InlineData("score main \"s\" { ", "ScoreBlock")]
     [InlineData("score main { ", "ScoreBlock")]
     [InlineData("score main \"s\" { staff ", "AfterStaffRef")]
+    [InlineData("score main \"s\" { tab ", "AfterStaffRef")]
     [InlineData("score main { grandStaff { staff ", "AfterStaffRef")]
     [InlineData("score main \"s\" { staff melody with ", "AfterWith")]
     [InlineData("score main \"s\" { staff melody with chords ", "AfterChordsRef")]

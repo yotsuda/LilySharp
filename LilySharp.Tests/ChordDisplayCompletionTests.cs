@@ -62,6 +62,22 @@ public class ChordDisplayCompletionTests
     }
 
     [Fact]
+    public void ScoreBlockCompletions_StaffAndTab_RetriggerPartNameSuggestions()
+    {
+        var items = LilySharpLanguageServer.GetScoreBlockCompletions().Items;
+        // `tab` is offered alongside `staff`.
+        Assert.Contains(items, i => i.Label == "tab");
+        // Both staff and tab re-open the popup to list the declared parts.
+        foreach (var label in new[] { "staff", "tab" })
+        {
+            var item = items.Single(i => i.Label == label);
+            Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+        }
+        // grandStaff opens a brace block, so it does NOT retrigger.
+        Assert.Null(items.Single(i => i.Label == "grandStaff").Command);
+    }
+
+    [Fact]
     public void DisplayModeCompletions_AreTheThreeModes()
     {
         var labels = LilySharpLanguageServer.GetChordDisplayModeCompletions().Items

@@ -536,6 +536,9 @@ public sealed partial class LilySharpLanguageServer
             switch (prevWord)
             {
                 case "staff": return CompletionContext.AfterStaffRef;
+                // `tab` references a part too (an optional tuning may precede the
+                // name, but the part is the useful suggestion right after `tab`).
+                case "tab": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
                 case "with": return CompletionContext.AfterWith;
@@ -810,12 +813,16 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The render-spec keywords valid inside a score / grandStaff body.</summary>
     internal static CompletionList GetScoreBlockCompletions()
     {
-        var specs = new (string Label, string Insert, string Detail)[]
+        // Retrigger = the item takes a part-name reference next, so re-open the
+        // completion popup after inserting the keyword and list the declared parts
+        // (grandStaff opens a brace block instead, so it doesn't).
+        var specs = new (string Label, string Insert, string Detail, bool Retrigger)[]
         {
-            ("staff", "staff $0", "A staff rendering the named part"),
-            ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)"),
-            ("chords", "chords $0", "Chord row (no staff) for the named chord part"),
-            ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part"),
+            ("staff", "staff $0", "A staff rendering the named part", true),
+            ("tab", "tab $0", "A tablature staff for the named part", true),
+            ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)", false),
+            ("chords", "chords $0", "Chord row (no staff) for the named chord part", true),
+            ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
         };
         return new CompletionList
         {
@@ -827,6 +834,9 @@ public sealed partial class LilySharpLanguageServer
                 InsertText = t.Insert,
                 Detail = t.Detail,
                 SortText = i.ToString(),
+                Command = t.Retrigger
+                    ? new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" }
+                    : null,
             }).ToArray()
         };
     }
