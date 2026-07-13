@@ -362,18 +362,19 @@ export function activate(context: vscode.ExtensionContext) {
     // Keep the preview alive across an untitled -> file SAVE. Saving an untitled score
     // CLOSES the untitled document and OPENS a new file: document, so a preview keyed by
     // the old untitled URI would be orphaned and stop refreshing. The close and open
-    // events can arrive in either order, and the save may normalize a trailing newline,
-    // so we pair them by TRIMMED content within a short window rather than by timing.
-    const closedUntitledPreviews = new Map<string, { text: string; time: number }>();
-    const tryAdoptOrphanPreview = (fileDoc: vscode.TextDocument) => {
-        if (fileDoc.uri.scheme !== 'file' || fileDoc.languageId !== 'lilysharp') { return; }
+    // events can arrive in either order, and the save may reformat/reindent the buffer,
+    // so we pair them by WHITESPACE-INSENSITIVE content within a short window, not timing.
+    const closedUntitledPreviews = new Map<string, { normText: string; time: number }>();
+    const normalize = (t: string) => t.replace(/\s+/g, '');
+    const tryAdoptOrphanPreview = (fileDoc: vscode.TextDocument | undefined) => {
+        if (!fileDoc || fileDoc.uri.scheme !== 'file' || fileDoc.languageId !== 'lilysharp') { return; }
         const newUri = fileDoc.uri.toString();
-        if (previewPanels.has(newUri)) { return; }
-        const newText = fileDoc.getText().trim();
+        if (previewPanels.has(newUri) || closedUntitledPreviews.size === 0) { return; }
+        const newNorm = normalize(fileDoc.getText());
         const now = Date.now();
         for (const [oldUri, info] of closedUntitledPreviews) {
-            if (now - info.time > 5000 || !previewPanels.has(oldUri)) { closedUntitledPreviews.delete(oldUri); continue; }
-            if (info.text !== newText) { continue; }
+            if (now - info.time > 8000 || !previewPanels.has(oldUri)) { closedUntitledPreviews.delete(oldUri); continue; }
+            if (info.normText !== newNorm) { continue; }
             closedUntitledPreviews.delete(oldUri);
             migratePreviewKey(oldUri, newUri);
             const panel = previewPanels.get(newUri);
@@ -387,22 +388,22 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
             return;
         }
-        if (closedUntitledPreviews.size > 0) {
-            outputChannel.appendLine(`Saved ${newUri} (len ${newText.length}) matched no pending untitled preview (${closedUntitledPreviews.size} pending)`);
-        }
     };
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument(closedDoc => {
             const oldUri = closedDoc.uri.toString();
             if (closedDoc.uri.scheme === 'untitled' && previewPanels.has(oldUri)) {
-                closedUntitledPreviews.set(oldUri, { text: closedDoc.getText().trim(), time: Date.now() });
+                closedUntitledPreviews.set(oldUri, { normText: normalize(closedDoc.getText()), time: Date.now() });
                 outputChannel.appendLine(`Untitled preview closed; pending migrate: ${oldUri}`);
                 // The saved file may already be open (event order varies) — try now too.
                 vscode.workspace.textDocuments.forEach(tryAdoptOrphanPreview);
             }
         }),
+        // The saved file appears via one of these: it opens, is saved, and becomes the
+        // active editor. Any of them triggers the (content-matched) adoption.
         vscode.workspace.onDidOpenTextDocument(tryAdoptOrphanPreview),
-        vscode.workspace.onDidSaveTextDocument(tryAdoptOrphanPreview)
+        vscode.workspace.onDidSaveTextDocument(tryAdoptOrphanPreview),
+        vscode.window.onDidChangeActiveTextEditor(editor => tryAdoptOrphanPreview(editor?.document))
     );
 
     // Watch for cursor position changes
@@ -653,6 +654,14 @@ async function updatePreviewContent(
 ) {
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
+
+    // A closed document can never be rendered — the server dropped it on didClose.
+    // This happens for an untitled buffer just saved to a file (its URI is gone) or a
+    // stale debounced refresh; skip instead of retrying a lookup that never succeeds.
+    if (document.isClosed) {
+        outputChannel.appendLine(`Skipping preview render for closed document ${uri}`);
+        return;
+    }
 
     outputChannel.appendLine(`updatePreviewContent called for ${uri}, clientReady=${clientReady}`);
 
