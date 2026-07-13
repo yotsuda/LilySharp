@@ -64,13 +64,14 @@ part melody {
 
 // Lyrics align one syllable per note. A trailing '-' hyphenates within a word
 // (Twin- kle), '|' marks a bar. Plain words repeat every time a section is sung;
-// to sing DIFFERENT words each pass, number the verses with [1. …] [2. …] — here
-// B's |: :| repeat is sung "Up above…" then "Like a diamond…".
+// to sing DIFFERENT words each pass, number the verses with [1. …] [2. …] (a
+// leading ~ as in [~1. …] hides the printed stanza number) — here B's |: :|
+// repeat is sung "Up above…" then "Like a diamond…".
 lyrics {
   section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
   section B {
-    [1. Up a- bove the | world so high |]
-    [2. Like a dia- mond | in the sky |]
+    [~1. Up a- bove the | world so high |]
+    [~2. Like a dia- mond | in the sky |]
   }
 }
 
