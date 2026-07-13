@@ -85,36 +85,26 @@ public class ChordDisplayCompletionTests
         Assert.Equal(new[] { "roman", "both", "names" }, labels);
     }
 
-    [Fact]
-    public void TopLevelClef_InsertsAChoiceSnippetSoTheClefValuesShowAtOnce()
+    // clef / tempo / key add the space and re-open suggestions (triggerSuggest) so the
+    // value list ENUMERATES without pre-filling a value.
+    [Theory]
+    [InlineData("clef", "clef $0")]
+    [InlineData("tempo", "tempo $0")]
+    [InlineData("key", "key $0")]
+    public void TopLevelValueKeyword_InsertsSpaceAndRetriggers(string label, string insert)
     {
-        // Completing `clef` inserts `clef ` + a ${1|…|} choice, so the space is added and
-        // the clef values show immediately (no extra keystroke / re-trigger).
-        var clef = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == "clef");
-        Assert.StartsWith("clef ${1|", clef.InsertText);
-        Assert.Contains("treble", clef.InsertText);
-        Assert.Contains("bass", clef.InsertText);
+        var item = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == label);
+        Assert.Equal(insert, item.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
     }
 
     [Fact]
-    public void TopLevelTempo_InsertsAChoiceSnippetSoTheFormsShowAtOnce()
+    public void KeyTonic_InsertsTonicPlusSpaceAndRetriggersSoTheScaleEnumerates()
     {
-        // Completing `tempo` inserts `tempo ` + a ${1|…|} choice of the tempo forms, so
-        // the space and the forms show at once (like clef).
-        var tempo = LilySharpLanguageServer.GetTopLevelCompletions().Items.Single(i => i.Label == "tempo");
-        Assert.StartsWith("tempo ${1|", tempo.InsertText);
-        Assert.Contains("120", tempo.InsertText);
-        Assert.Contains("swing", tempo.InsertText);
-    }
-
-    [Fact]
-    public void KeyTonic_InsertsTheModeChoiceSoTheScaleShowsAfterPickingATonic()
-    {
-        // Picking a tonic inserts `TONIC ` + a mode ${1|major,…|} choice, so `key c`
-        // lands on `key c ` with the mode dropdown showing (no space to type).
+        // Picking a tonic lands on `key c ` and re-opens suggestions, so the scale list
+        // enumerates with nothing pre-filled (no `major` auto-inserted).
         var c = LilySharpLanguageServer.GetKeyTonicCompletions().Items.Single(i => i.Label == "c");
-        Assert.StartsWith("c ${1|major", c.InsertText);
-        Assert.Contains("minor", c.InsertText);
-        Assert.EndsWith("|}", c.InsertText);
+        Assert.Equal("c $0", c.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", c.Command?.CommandIdentifier);
     }
 }
