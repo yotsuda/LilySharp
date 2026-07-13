@@ -257,16 +257,21 @@ internal static class TupletBracketEngraver
                     // tab branch (TabBeamOuterEdgeY).
                     if (staffByIndex != null
                         && staffByIndex.TryGetValue(tuplet.StaffIndex, out var tstaff)
-                        && tstaff.IsTab && tstaff.Tuning.HasValue)
+                        && tstaff.IsTab && tstaff.Tuning.HasValue
+                        // The tab-beam edge math below (TabBeamOuterEdgeY / TabBeamQuant)
+                        // reads the beam MEMBERS' assigned strings, which is only valid
+                        // when the covering beam is the tuplet's OWN tab beam. FindCovering-
+                        // Beam can fall back to the companion NOTATION beam (a different
+                        // staff), whose members carry no string and would quant a beam line
+                        // from missing fret data. Require the tab staff's own beam; the
+                        // notation fallback drops to the plain placement below.
+                        && beam.StaffIndex == tuplet.StaffIndex)
                     {
                         var geom = new TabStaffGeometry(
                             tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
                         // A tab beam's direction is string-based, not the notation
                         // Group.StemUp — so the number sits on the tab beam's OWN side.
-                        // Compute it from the tuplet's OWN tab notes (which carry the
-                        // assigned strings): the covering beam may be the companion
-                        // NOTATION beam, whose members have no string and would resolve
-                        // to a different fret — and the wrong direction.
+                        // Read it from the tuplet's tab notes (which carry the strings).
                         isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
                         double tabStemOffset = isStemUp
                             ? EngravingDefaults.StemUpAttachX
