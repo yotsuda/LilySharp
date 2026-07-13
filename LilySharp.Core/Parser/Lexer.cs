@@ -619,6 +619,8 @@ internal sealed class Lexer
             // Metadata keywords
             "title" => SyntaxKind.TitleKeyword,
             "composer" => SyntaxKind.ComposerKeyword,
+            "font" => SyntaxKind.FontKeyword,
+            "embedded" => SyntaxKind.EmbeddedKeyword,
             "tempo" => SyntaxKind.TempoKeyword,
             "time" => SyntaxKind.TimeKeyword,
             "key" => SyntaxKind.KeyKeyword,

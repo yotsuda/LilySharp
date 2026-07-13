@@ -107,6 +107,10 @@ public enum SyntaxKind : ushort
     TitleKeyword,
     /// <summary>The <c>composer</c> keyword.</summary>
     ComposerKeyword,
+    /// <summary>The <c>font</c> keyword.</summary>
+    FontKeyword,
+    /// <summary>The <c>embedded</c> keyword.</summary>
+    EmbeddedKeyword,
     /// <summary>The <c>tempo</c> keyword.</summary>
     TempoKeyword,
     /// <summary>The <c>time</c> keyword.</summary>
@@ -323,6 +327,8 @@ public enum SyntaxKind : ushort
     CompilationUnit,
     /// <summary>A metadata declaration node.</summary>
     MetadataDeclaration,
+    /// <summary>A font directive declaration node.</summary>
+    FontDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

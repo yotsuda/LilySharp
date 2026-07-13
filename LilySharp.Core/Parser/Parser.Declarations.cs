@@ -208,6 +208,40 @@ internal sealed partial class Parser
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
     }
 
+    private FontDeclarationGreen ParseFontDeclaration()
+    {
+        var keyword = Advance(); // font
+        var tokens = new List<GreenNode?>();
+
+        // The font name is a quoted string — mirror ParseMetadataDeclaration's
+        // handling (font "Noto Serif CJK JP"); a bare, unquoted value is rejected.
+        if (Check(SyntaxKind.StringLiteral))
+        {
+            tokens.Add(Advance());
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.MetadataValueMustBeQuoted,
+                $"The {keyword.Text} value must be a quoted string, e.g. {keyword.Text} \"…\".");
+            // Recover by consuming a loose run so the rest still parses.
+            while (Check(SyntaxKind.StringLiteral) ||
+                   Check(SyntaxKind.IntegerLiteral) ||
+                   Check(SyntaxKind.Identifier))
+            {
+                tokens.Add(Advance());
+            }
+        }
+
+        // Optional trailing 'embedded' keyword: font "meiryo" embedded.
+        if (Check(SyntaxKind.EmbeddedKeyword))
+        {
+            tokens.Add(Advance());
+        }
+
+        return new FontDeclarationGreen(keyword, [.. tokens]);
+    }
+
     // 'time 4/4' is written bare everywhere — as a music-stream command and as a
     // part/staff-header attribute. A stray ':' ('time: 4/4') is flagged and dropped
     // by ConsumeRejectedColon so the rest still parses.

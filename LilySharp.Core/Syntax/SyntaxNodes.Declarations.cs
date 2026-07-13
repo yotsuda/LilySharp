@@ -412,6 +412,52 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Font directive: font "NAME" [embedded]
+/// </summary>
+public sealed class FontDeclarationSyntax : SyntaxNode
+{
+    internal FontDeclarationSyntax(FontDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>font</c> keyword token.</summary>
+    public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The font name — the quoted string literal's unquoted value, or null if absent.
+    /// </summary>
+    public string? FontName
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
+                    return token.Text.Trim('"');
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// True iff the trailing <c>embedded</c> keyword token is present.
+    /// </summary>
+    public bool Embedded
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode token && token.Kind == SyntaxKind.EmbeddedKeyword)
+                    return true;
+            }
+            return false;
+        }
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr
 /// </summary>
 public sealed class VariableDeclarationSyntax : SyntaxNode

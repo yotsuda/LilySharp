@@ -352,6 +352,17 @@ internal sealed class MetadataDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Font directive: font "NAME" [embedded]
+/// </summary>
+internal sealed class FontDeclarationGreen : GreenSyntaxNode
+{
+    public FontDeclarationGreen(SyntaxToken keyword, GreenNode?[] tokens)
+        : base(SyntaxKind.FontDeclaration, [keyword, .. tokens])
+    {
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
 internal sealed class VariableDeclarationGreen : GreenSyntaxNode
