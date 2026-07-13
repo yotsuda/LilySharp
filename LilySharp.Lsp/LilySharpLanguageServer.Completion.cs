@@ -78,6 +78,7 @@ public sealed partial class LilySharpLanguageServer
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice),
             CompletionContext.FormBlock => GetFormCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
+            CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
@@ -407,6 +408,7 @@ public sealed partial class LilySharpLanguageServer
         MusicBlock,
         FormBlock,
         PartBlock,
+        AfterSection,
         AfterClef,
         AfterKey,
         AfterKeyTonic,
@@ -557,6 +559,15 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterRemoveEmpty;
 
+        // Right after `section ` inside a part { } body: offer the document's section
+        // names this part does NOT yet declare (part-major fill-in), not the property
+        // list. `section` names an inner section; the useful suggestion is which known
+        // section is still missing here.
+        if (prevWord == "section"
+            && IsInsidePartBlock(text, offset)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterSection;
+
         // Directly inside a part { } header (and not after one of the
         // value-taking keywords above): offer the part property names — a part
         // body holds properties (and inner sections), never notes.
@@ -618,8 +629,9 @@ public sealed partial class LilySharpLanguageServer
     /// pairs plus inner sections), matching docs/GRAMMAR.md PartProperty.</summary>
     internal static CompletionList GetPartPropertyCompletions()
     {
-        // Values = the property takes a value LIST (clef → treble…, time → 4/4…): those
-        // items add a space and re-open suggestions so the list enumerates right after.
+        // Values = the property takes a value LIST (clef → treble…, time → 4/4…) — or,
+        // for `section`, the document's not-yet-used section names: those items add a
+        // space and re-open suggestions so the list enumerates right after.
         var props = new (string Label, string Detail, bool Values)[]
         {
             ("clef", "Clef (treble/bass/alto/tenor/treble_8)", true),
@@ -631,7 +643,7 @@ public sealed partial class LilySharpLanguageServer
             ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)", true),
             ("time", "Part-local time signature", true),
             ("tempo", "Part-local tempo", true),
-            ("section", "Inner section (part-major form)", false),
+            ("section", "Inner section (part-major form)", true),
         };
         return new CompletionList
         {
@@ -1157,6 +1169,97 @@ public sealed partial class LilySharpLanguageServer
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
+    }
+
+    /// <summary>
+    /// After <c>section </c> inside a <c>part { }</c> body, the document's section
+    /// names this part does NOT yet declare — so a part-major part can be filled in
+    /// with the sections it is still missing (e.g. part <c>bass</c> already has
+    /// <c>A</c>, so only <c>B</c> / <c>C</c> are offered). A brand-new name is typed
+    /// freely; the list never blocks it.
+    /// </summary>
+    internal static CompletionList GetMissingSectionNameCompletions(string text, int offset)
+    {
+        // Every section declared anywhere (a real `section NAME {` declaration, in
+        // declaration order, deduplicated) — the universe of known sections.
+        var known = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)\s*\{"))
+        {
+            var name = m.Groups[1].Value;
+            if (seen.Add(name))
+                known.Add(name);
+        }
+
+        var here = SectionsDeclaredInCurrentPart(text, offset);
+        return new CompletionList
+        {
+            Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Section not yet in this part",
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// The section names already declared in the <c>part { }</c> block that encloses
+    /// <paramref name="offset"/> — EXCLUDING the (possibly incomplete) <c>section</c>
+    /// declaration at the cursor itself, so the name being typed is never filtered out
+    /// of <see cref="GetMissingSectionNameCompletions"/>.
+    /// </summary>
+    private static System.Collections.Generic.HashSet<string> SectionsDeclaredInCurrentPart(string text, int offset)
+    {
+        var declared = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        var mask = CodeMask(text, text.Length);
+
+        // The innermost still-open '{' at the cursor is the enclosing part body.
+        var stack = new System.Collections.Generic.List<int>();
+        int limit = Math.Min(offset, text.Length);
+        for (int i = 0; i < limit; i++)
+        {
+            if (!mask[i]) continue;
+            if (text[i] == '{') stack.Add(i);
+            else if (text[i] == '}' && stack.Count > 0) stack.RemoveAt(stack.Count - 1);
+        }
+        if (stack.Count == 0) return declared;
+        int open = stack[^1];
+
+        // Its matching '}' (or end of document if the part is still unclosed).
+        int depth = 0, close = text.Length;
+        for (int i = open; i < text.Length; i++)
+        {
+            if (!mask[i]) continue;
+            if (text[i] == '{') depth++;
+            else if (text[i] == '}' && --depth == 0) { close = i; break; }
+        }
+
+        // The cursor's own `section` keyword start (skip the partial name + whitespace,
+        // then the preceding word), excluded so an in-place edit of `section B {` still
+        // offers B.
+        int curKw = SectionKeywordStartBeforeCursor(text, offset);
+
+        foreach (Match m in Regex.Matches(text[open..close], @"\bsection\s+(\w+)\s*\{"))
+        {
+            if (open + m.Index == curKw) continue;
+            declared.Add(m.Groups[1].Value);
+        }
+        return declared;
+    }
+
+    /// <summary>Start index of the bare word two tokens before <paramref name="offset"/>
+    /// (skip the partial word being typed, the whitespace, then the preceding word) —
+    /// the <c>section</c> keyword in the after-<c>section</c> completion context.</summary>
+    private static int SectionKeywordStartBeforeCursor(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int i = Math.Min(offset, text.Length);
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the partial name
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--; // whitespace
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the `section` keyword
+        return i;
     }
 
     /// <summary>The octave-mode words valid right after <c>octave</c>. A bare
