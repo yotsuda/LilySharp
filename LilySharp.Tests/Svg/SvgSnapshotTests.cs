@@ -151,6 +151,8 @@ public class SvgSnapshotTests
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };
+        // Rests render on a tab staff, centred on the tab's vertical middle.
+        yield return new object[] { "test/tab-rest" };
         // A tab staff on the indented first system: its lines start at the indent
         // (aligned with the notation staff), not the page margin.
         yield return new object[] { "test/tab-indent" };

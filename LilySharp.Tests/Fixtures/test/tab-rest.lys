@@ -1,0 +1,7 @@
+// Rests show on a TAB staff (LilyPond \tabFullNotation), drawn with the same
+// glyphs as the notation and centred on the tab staff's own vertical middle —
+// not the notation "middle line" height. Eighth, quarter and half rests here
+// each land between the strings, clear of the fret digits.
+part m { instrument bass section A { c4 r8 e8 g4 r4 | c8 r8 r4 r2 | } }
+form main { A }
+score main { tab m }

@@ -154,7 +154,14 @@ internal static partial class SharedRenderer
                     DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
                         columnX, staffY, staff, isBeamed, gc);
                     break;
-                // RestItem: nothing on a tab staff.
+                case RestItem rest:
+                    // LilyPond's \tabFullNotation shows rests, centred vertically in the
+                    // tab staff, with the same glyphs as the notation. Shift the shared
+                    // DrawRest so its notation "middle line" (staffY + 2) lands on the
+                    // tab's own vertical centre.
+                    double tabMiddle = staffY + (stringCount - 1) * stringSpace / 2.0;
+                    DrawRest(rest, itemX, tabMiddle - 2.0, gc);
+                    break;
             }
         }
     }
