@@ -377,12 +377,18 @@ export function activate(context: vscode.ExtensionContext) {
             closedUntitledPreviews.delete(oldUri);
             migratePreviewKey(oldUri, newUri);
             const panel = previewPanels.get(newUri);
-            // Do NOT re-render: the save didn't change the content, so the webview still
-            // shows the correct score, and an immediate lilysharp/svg would race the
-            // server's didOpen for the saved file ("Document not found"). Next edit refreshes.
-            if (panel) { panel.title = `Preview: ${path.basename(fileDoc.uri.fsPath)}`; }
+            if (panel) {
+                panel.title = `Preview: ${path.basename(fileDoc.uri.fsPath)}`;
+                // Refresh under the saved file. updatePreviewContent retries if the
+                // server hasn't registered the new document yet, so this can't flash a
+                // "Document not found" error.
+                updatePreviewContent(fileDoc, panel, context);
+            }
             outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
             return;
+        }
+        if (closedUntitledPreviews.size > 0) {
+            outputChannel.appendLine(`Saved ${newUri} (len ${newText.length}) matched no pending untitled preview (${closedUntitledPreviews.size} pending)`);
         }
     };
     context.subscriptions.push(
@@ -642,7 +648,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
-    context: vscode.ExtensionContext
+    context: vscode.ExtensionContext,
+    retries: number = 8
 ) {
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
@@ -709,6 +716,15 @@ async function updatePreviewContent(
             return;
         }
 
+        if (response.Error === 'Document not found' && retries > 0 && previewPanels.has(uri)) {
+            // The language server has not registered this document yet — e.g. a file
+            // JUST saved from an untitled buffer, whose didOpen is still in flight.
+            // Retry briefly so the preview self-heals instead of flashing an error the
+            // user has to clear with Ctrl+K V.
+            outputChannel.appendLine(`Document not tracked yet, retrying (${retries} left): ${uri}`);
+            setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 150);
+            return;
+        }
         if (response.Error) {
             outputChannel.appendLine(`Sending error to webview: ${response.Error}`);
             panel.webview.postMessage({
