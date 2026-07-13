@@ -278,6 +278,9 @@ public static class DiagnosticCodes
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>
     public const string LyricSyllableOverflow = "LYS4001";
+    /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
+    /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
+    public const string LyricTrackNeedsSections = "LYS4002";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>

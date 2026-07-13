@@ -65,6 +65,7 @@ public static class SemanticValidation
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
+        new LyricTrackSectionValidator(),   // part-major lyrics track must use sections
         new TabTieStringValidator(),        // a tie naming two tab strings
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
