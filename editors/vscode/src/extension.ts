@@ -49,8 +49,11 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     if (ready) { panelReady.delete(oldUri); panelReady.set(newUri, ready); }
     const render = selectedRenders.get(oldUri);
     if (render !== undefined) { selectedRenders.delete(oldUri); selectedRenders.set(newUri, render); }
+    // Drop any pending debounce refresh: its callback captured the now-closed untitled
+    // document, so letting it fire would render the wrong (stale) doc. A later edit to
+    // the saved file schedules a fresh one under the new key.
     const timer = debounceTimers.get(oldUri);
-    if (timer !== undefined) { debounceTimers.delete(oldUri); debounceTimers.set(newUri, timer); }
+    if (timer !== undefined) { clearTimeout(timer); debounceTimers.delete(oldUri); }
 }
 
 // Content for the "Lily#: New Score" command — a complete, valid, recognizable
@@ -383,8 +386,11 @@ export function activate(context: vscode.ExtensionContext) {
                 const panel = previewPanels.get(newUri);
                 if (panel) {
                     panel.title = `Preview: ${path.basename(active.document.uri.fsPath)}`;
-                    updatePreviewContent(active.document, panel, context);
                 }
+                // Do NOT re-render here: the save didn't change the content, so the
+                // webview already shows the correct score. An immediate lilysharp/svg
+                // request would also race the language server's didOpen for the saved
+                // file and come back "Document not found". The next edit refreshes it.
                 outputChannel.appendLine(`Preview migrated ${oldUri} -> ${newUri}`);
             }, 0);
         })
