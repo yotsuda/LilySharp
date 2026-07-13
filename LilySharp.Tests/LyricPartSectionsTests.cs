@@ -131,6 +131,63 @@ public class LyricPartSectionsTests
         Assert.All(score.Lyrics.Where(l => l.Text == "sol"), l => Assert.Equal(1, l.MeasureIndex));
     }
 
+    [Fact]
+    public void PerOccurrenceVoltaLyrics_GiveEachSectionRenditionItsOwnWords()
+    {
+        // `[1. …] [2. …]` inside a lyric section = different words each time A is sung.
+        // Form: A (bars 0-1) |: ~B :| (bar 2) A "A2" (bars 3-4). Occurrence 1 takes
+        // verse 1, the A2 reprise takes verse 2 — not a repeat of verse 1.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | g'4 a' g'2 | }
+              section B { g'4 f' e' d' | }
+            }
+            lyrics {
+              section A {
+                [1. Twin- kle twin- kle | lit- tle star |]
+                [2. How I won- der | what you are |]
+              }
+            }
+            form main { A |: ~B :| A "A2" }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody");
+        var byMeasure = score.Lyrics
+            .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing.ToDouble())
+            .Select(l => $"{l.MeasureIndex}:{l.Text}").ToArray();
+
+        // First A (bar 0) sings verse 1; the A2 reprise (bar 3) sings verse 2.
+        Assert.Contains("0:Twin", byMeasure);
+        Assert.Contains("3:How", byMeasure);
+        // The verses do NOT bleed across occurrences.
+        Assert.DoesNotContain("0:How", byMeasure);
+        Assert.DoesNotContain("3:Twin", byMeasure);
+    }
+
+    [Fact]
+    public void PlainSectionLyrics_StillRepeatIdenticallyUnderEveryOccurrence()
+    {
+        // A section WITHOUT [N. …] brackets keeps the old behavior: the same verse
+        // appears at every occurrence (verse 1 == verse at the reprise).
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 f' e' d' | }
+            }
+            lyrics { section A { Do re mi fa | } }
+            form main { A |: ~B :| A "A2" }
+            score main { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody");
+        var atReprise = score.Lyrics.Where(l => l.MeasureIndex == 2).Select(l => l.Text).ToList();
+        // A is 1 bar; A2 starts at bar 2 (after A=0, B=1). Its words repeat A's.
+        Assert.Contains("Do", atReprise);
+    }
+
     private static string LyricSignature(string src)
     {
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");

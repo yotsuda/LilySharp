@@ -1,0 +1,19 @@
+// Per-occurrence lyric verses: `[1. …] [2. …]` inside a lyric section give the
+// section a different verse each time it is sung. Form A |: ~B :| A "A2": the
+// first A sings verse 1, the A2 reprise sings verse 2 — not a repeat of verse 1.
+title "verse per occurrence"
+octave absolute
+time 4/4
+key c major
+part melody { clef treble
+  section A { c'4 d' e' d' | c'4 e' g'2 | }
+  section B { g'4 g' g' g' | }
+}
+lyrics {
+  section A {
+    [1. Twin- kle twin- kle | lit- tle star |]
+    [2. How I won- der | what you are |]
+  }
+}
+form main { A |: ~B :| A "A2" }
+score main { staff melody }

@@ -1062,6 +1062,26 @@ internal sealed class LyricMeasureGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>. The number keys
+/// the section's playback occurrence (1st time sung, 2nd time, …), so a repeated or
+/// reprised section can carry different words each pass. The body is lyric measures,
+/// exactly like a plain (unbracketed) verse.
+/// </summary>
+/// <remarks>Slot layout: <c>[</c>, number, <c>.</c>, measures…, <c>]</c>.</remarks>
+internal sealed class LyricVoltaGreen : GreenSyntaxNode
+{
+    public LyricVoltaGreen(
+        SyntaxToken openBracket,
+        SyntaxToken number,
+        SyntaxToken dot,
+        GreenNode?[] measures,
+        SyntaxToken? closeBracket)
+        : base(SyntaxKind.LyricVolta, [openBracket, number, dot, .. measures, closeBracket])
+    {
+    }
+}
+
+/// <summary>
 /// A lyric syllable: text, melisma (~), or skip (_)
 /// </summary>
 internal sealed class LyricSyllableGreen : GreenSyntaxNode

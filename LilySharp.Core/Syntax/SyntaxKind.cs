@@ -353,6 +353,9 @@ public enum SyntaxKind : ushort
     LyricMeasure,
     /// <summary>A single lyric syllable node.</summary>
     LyricSyllable,
+    /// <summary>A per-occurrence lyric verse inside a lyric section, keyed by the
+    /// section's playback occurrence: <c>[1. syllables] [2. syllables]</c>.</summary>
+    LyricVolta,
     /// <summary>A chord-names block node (<c>chordnames { ... }</c> inside a section).</summary>
     ChordNamesBlock,
     /// <summary>A chord part block node (<c>chords name { ... }</c> inside a section; an independent chord part).</summary>

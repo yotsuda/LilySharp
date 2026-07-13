@@ -97,6 +97,14 @@ internal sealed partial class Parser
                 continue;
             }
 
+            // Per-occurrence verse: `[1. … ] [2. … ]` — different words each time the
+            // enclosing section is sung (a repeat/reprise).
+            if (Check(SyntaxKind.OpenBracket))
+            {
+                items.Add(ParseLyricVolta());
+                continue;
+            }
+
             var measure = ParseLyricMeasure();
             if (measure != null)
                 items.Add(measure);
@@ -121,6 +129,14 @@ internal sealed partial class Parser
         var measures = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
+            // Per-occurrence verse `[1. … ] [2. … ]`: this section's words for its 1st,
+            // 2nd, … playback pass.
+            if (Check(SyntaxKind.OpenBracket))
+            {
+                measures.Add(ParseLyricVolta());
+                continue;
+            }
+
             var measure = ParseLyricMeasure();
             if (measure != null)
                 measures.Add(measure);
@@ -248,6 +264,31 @@ internal sealed partial class Parser
     /// barline, matching the chord-block set).</summary>
     private static bool IsLyricBarline(SyntaxKind kind) => SyntaxFacts.IsMeasureBarlineKind(kind);
 
+    /// <summary>Parse a per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>.
+    /// The number keys the section's playback occurrence (1st time sung, 2nd, …) so a
+    /// repeated/reprised section can carry different words each pass; the body is
+    /// ordinary lyric measures. The closing <c>]</c> is optional (a run to the block's
+    /// <c>}</c> recovers).</summary>
+    private LyricVoltaGreen ParseLyricVolta()
+    {
+        var openBracket = Expect(SyntaxKind.OpenBracket);
+        var number = Expect(SyntaxKind.IntegerLiteral);
+        var dot = Expect(SyntaxKind.Dot);
+
+        var measures = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var measure = ParseLyricMeasure();
+            if (measure != null)
+                measures.Add(measure);
+            else
+                break;
+        }
+
+        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
+        return new LyricVoltaGreen(openBracket, number, dot, [.. measures], closeBracket);
+    }
+
     /// <summary>
     /// Parse a single lyric measure: syllable syllable ... |
     /// </summary>
@@ -258,7 +299,8 @@ internal sealed partial class Parser
     {
         var syllables = new List<GreenNode?>();
 
-        while (!IsLyricBarline(Current.Kind) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        while (!IsLyricBarline(Current.Kind) && !Check(SyntaxKind.CloseBrace)
+            && !Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.EndOfFile))
         {
             var syllable = ParseLyricSyllable();
             if (syllable != null)

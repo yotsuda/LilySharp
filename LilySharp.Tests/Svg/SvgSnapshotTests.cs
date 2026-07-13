@@ -158,6 +158,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/tab-as-numbers" };
         // `tab … with chords …`: a chord part's symbols align above the tab staff.
         yield return new object[] { "test/tab-with-chords" };
+        // Per-occurrence lyric verses `[1. …] [2. …]`: A sings verse 1, the A2 reprise verse 2.
+        yield return new object[] { "test/lyrics-volta" };
         // A tab staff on the indented first system: its lines start at the indent
         // (aligned with the notation staff), not the page margin.
         yield return new object[] { "test/tab-indent" };

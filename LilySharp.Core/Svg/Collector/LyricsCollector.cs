@@ -129,20 +129,74 @@ internal sealed class LyricsCollector
                 return new[] { sectionStartMeasure.GetValueOrDefault(sectionName, 0) };
             }
 
+            // Place a section's verse under each of its playback occurrences. A body
+            // with per-occurrence `[N. …]` verses gives the k-th occurrence its own
+            // words; a plain (unbracketed) body repeats identically (the old behavior).
+            void PlacePerOccurrence(IReadOnlyList<SyntaxNode> body, IEnumerable<int> starts)
+            {
+                int ordinal = 0;
+                foreach (int start in starts)
+                    ProcessRun(OccurrenceMeasures(body, ++ordinal), start);
+            }
+
             if (lyricsBlock.HasSections)
                 foreach (var section in lyricsBlock.Sections)
-                    foreach (int start in StartsFor(section.SectionName))
-                        ProcessRun(SectionLyricMeasures(section), start);
+                    PlacePerOccurrence(SectionLyricMeasures(section).ToList(), StartsFor(section.SectionName));
             else
             {
                 string? enclosing = EnclosingSectionName(lyricsBlock);
                 if (enclosing != null)
-                    foreach (int start in StartsFor(enclosing))
-                        ProcessRun(lyricsBlock.Syllables, start);
+                    PlacePerOccurrence(lyricsBlock.Syllables.ToList(), StartsFor(enclosing));
                 else
-                    ProcessRun(lyricsBlock.Syllables, ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
+                    // Top level, no section to repeat under: take the first verse only
+                    // (also flattens away any stray brackets so they never render as words).
+                    ProcessRun(OccurrenceMeasures(lyricsBlock.Syllables.ToList(), 1),
+                        ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
             }
         }
+    }
+
+    /// <summary>
+    /// The lyric measures a section body contributes to its <paramref name="ordinal"/>-th
+    /// (1-based) playback occurrence. A body written with per-occurrence verses
+    /// (<c>[1. …] [2. …]</c>) returns the bracket whose number matches; a body with no
+    /// brackets returns itself (identical words every pass — the default). When a pass
+    /// has no bracket of its own, a plain unbracketed line serves as the fallback, else
+    /// the highest-numbered verse at or below this pass (else the last written).
+    /// </summary>
+    private static IReadOnlyList<SyntaxNode> OccurrenceMeasures(IReadOnlyList<SyntaxNode> body, int ordinal)
+    {
+        Dictionary<int, List<SyntaxNode>>? voltas = null;
+        List<SyntaxNode>? plain = null;
+        foreach (var node in body)
+        {
+            if (node.Kind == SyntaxKind.LyricVolta)
+                (voltas ??= new())[VoltaNumber(node)] = VoltaMeasures(node).ToList();
+            else
+                (plain ??= new()).Add(node);
+        }
+
+        if (voltas == null)
+            return body;                                  // no brackets: same every pass
+        if (voltas.TryGetValue(ordinal, out var exact))
+            return exact;
+        if (plain is { Count: > 0 })
+            return plain;                                 // a plain line covers unbracketed passes
+        int key = voltas.Keys.Where(k => k <= ordinal).DefaultIfEmpty(voltas.Keys.Max()).Max();
+        return voltas[key];
+    }
+
+    /// <summary>The occurrence number of a <c>[N. …]</c> lyric verse (slot 1), or 0.</summary>
+    private static int VoltaNumber(SyntaxNode volta)
+        => volta.GetChild(1) is SyntaxTokenNode t && int.TryParse(t.Text, out int n) ? n : 0;
+
+    /// <summary>The lyric measures inside a <c>[N. … ]</c> verse (its non-token children,
+    /// after the '[' number '.'; the optional closing ']' and any null slot are skipped).</summary>
+    private static IEnumerable<SyntaxNode> VoltaMeasures(SyntaxNode volta)
+    {
+        for (int i = 3; i < volta.SlotCount; i++)
+            if (volta.GetChild(i) is SyntaxNode node and not SyntaxTokenNode)
+                yield return node;
     }
 
     /// <summary>
@@ -243,7 +297,10 @@ internal sealed class LyricsCollector
                     int start = sectionStartMeasure.GetValueOrDefault(section.SectionName, 0);
                     int wrap = SectionWrap(start);
                     int vb = nextVerseBySection.TryGetValue(start, out var v0) ? v0 : 1;
-                    int bars = PlaceRun(SectionLyricMeasures(section), start, wrap, vb);
+                    // A row places once per section, so a per-occurrence `[N. …]` verse
+                    // can't spread across passes here — take the first (and flatten the
+                    // brackets so they never render as literal words).
+                    int bars = PlaceRun(OccurrenceMeasures(SectionLyricMeasures(section).ToList(), 1), start, wrap, vb);
                     nextVerseBySection[start] = vb + VersesFrom(bars, wrap);
                 }
                 continue;
@@ -273,7 +330,7 @@ internal sealed class LyricsCollector
                 prevSectionStart = startMeasure;
             }
 
-            int barCount = PlaceRun(block.Syllables, startMeasure, wrapBars, verse);
+            int barCount = PlaceRun(OccurrenceMeasures(block.Syllables.ToList(), 1), startMeasure, wrapBars, verse);
             // The block produced ceil(barCount / wrapBars) stacked verses.
             verse += VersesFrom(barCount, wrapBars);
         }
