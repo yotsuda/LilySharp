@@ -1571,6 +1571,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "segno", Kind = CompletionItemKind.Value, Detail = "Segno sign", SortText = "3segno" },
                 new CompletionItem { Label = "coda", Kind = CompletionItemKind.Value, Detail = "Coda sign", SortText = "3coda" },
                 new CompletionItem { Label = "fine", Kind = CompletionItemKind.Value, Detail = "Fine (end)", SortText = "3fine" },
+                // Rehearsal mark: @mark("A") drops a boxed label; complete straight into
+                // the quotes so the caret lands where the label is typed.
+                new CompletionItem { Label = "mark(\"\")", FilterText = "mark", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "mark(\"$0\")", Detail = "Rehearsal mark (boxed label)", SortText = "3mark" },
 
                 // Spanners and brackets
                 new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner", SortText = "4rit" },
