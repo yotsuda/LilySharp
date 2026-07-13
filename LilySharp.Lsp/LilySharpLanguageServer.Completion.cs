@@ -93,6 +93,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
+            CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterWith => GetWithCompletions(),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
@@ -443,6 +444,7 @@ public sealed partial class LilySharpLanguageServer
         AfterStaffRef,
         AfterChordsRef,
         AfterLyricsRef,
+        AfterLyricsName,
         AfterWith,
         AfterChordAttachName,
         AfterChordDisplayAs,
@@ -629,6 +631,13 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterChordAttachName;
             return CompletionContext.ScoreBlock;
         }
+
+        // `lyrics ▮` at a DEFINITION site (outside a score block): the optional
+        // voice-binding name aligns the track to a voice/part (`lyrics sop { … }`), so
+        // offer the declared voice/part names — not the note stream. (A score-block
+        // `lyrics NAME` is a row reference, handled as AfterLyricsRef above.)
+        if (prevWord == "lyrics" && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterLyricsName;
 
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
@@ -1190,6 +1199,31 @@ public sealed partial class LilySharpLanguageServer
                 SortText = i.ToString("D2"),
             }).ToArray()
         };
+    }
+
+    /// <summary>
+    /// The names a <c>lyrics</c> track's optional voice-binding name can align to — the
+    /// declared parts (<c>part NAME { … }</c>, the usual target) and any explicitly named
+    /// voices (<c>voice NAME { … }</c>) — deduplicated, parts first.
+    /// </summary>
+    internal static CompletionList GetVoiceBindingNameCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        foreach (var keyword in new[] { "part", "voice" })
+            foreach (Match m in Regex.Matches(text, $@"\b{keyword}\s+(\w+)\s*\{{"))
+            {
+                var name = m.Groups[1].Value;
+                if (seen.Add(name))
+                    items.Add(new CompletionItem
+                    {
+                        Label = name,
+                        Kind = CompletionItemKind.Reference,
+                        Detail = "Voice / part to align the lyrics to",
+                        SortText = seen.Count.ToString("D2"),
+                    });
+            }
+        return new CompletionList { Items = items.ToArray() };
     }
 
     /// <summary>
