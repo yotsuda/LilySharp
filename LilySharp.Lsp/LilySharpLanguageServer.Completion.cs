@@ -25,6 +25,8 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
+using LilySharp.Core.Rendering;
+using SkiaSharp;
 using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
 using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = LilySharp.Core.Syntax.DiagnosticSeverity;
@@ -84,6 +86,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
             CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
+            CompletionContext.AfterFontName => GetFontNameCompletions(),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
@@ -163,6 +166,28 @@ public sealed partial class LilySharpLanguageServer
             if (text[i] == '"')
                 quotes++;
         return (quotes & 1) == 1;
+    }
+
+    /// <summary>
+    /// When <paramref name="offset"/> sits inside a <c>"…"</c> string, the bare keyword
+    /// that INTRODUCES that string — the word immediately before its opening quote
+    /// (e.g. "font" in <c>font "Noto|"</c>, "title" in <c>title "My Song|"</c>). Empty
+    /// when not in a string or when no bare word precedes the quote. Lets a value
+    /// completion key off the directive that owns the string the caret is in, so the
+    /// caret is served whether it sits just before the quote (<c>font |</c>) or already
+    /// inside it (<c>font "|"</c>).
+    /// </summary>
+    internal static string KeywordBeforeCurrentString(string text, int offset)
+    {
+        if (!IsInsideStringLiteral(text, offset))
+            return "";
+        // Walk back to the opening quote of the current (line-bounded) string.
+        int i = offset - 1;
+        while (i >= 0 && text[i] != '"' && text[i] != '\n') i--;
+        if (i < 0 || text[i] != '"')
+            return "";
+        // The bare word before that quote (WordBeforeCursor skips the whitespace).
+        return WordBeforeCursor(text, i);
     }
 
     /// <summary>
@@ -389,6 +414,7 @@ public sealed partial class LilySharpLanguageServer
         AfterTime,
         AfterPartial,
         AfterTitleText,
+        AfterFontName,
         ScoreBlock,
         AfterStaffRef,
         AfterChordsRef,
@@ -493,6 +519,18 @@ public sealed partial class LilySharpLanguageServer
                 case "title" or "composer": return CompletionContext.AfterTitleText;
             }
         }
+
+        // Inside a "…" string value, the directive that OWNS the string decides the
+        // completion. `font "Noto|"` offers the installed, embeddable font families;
+        // a `title`/`composer` string keeps its snippet (so the caret is served whether
+        // it sits just before the opening quote or already inside it). Every other
+        // string falls through unchanged.
+        switch (KeywordBeforeCurrentString(text, offset))
+        {
+            case "font": return CompletionContext.AfterFontName;
+            case "title" or "composer": return CompletionContext.AfterTitleText;
+        }
+
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
 
@@ -763,6 +801,102 @@ public sealed partial class LilySharpLanguageServer
                 },
             ]
         };
+    }
+
+    /// <summary>
+    /// The completion list offered inside a <c>font "…"</c> string: the installed,
+    /// embeddable font families. Computed once and cached — enumerating every installed
+    /// family, reading each OS/2 table and probing CJK glyph coverage is not free, and
+    /// the set does not change within a process.
+    /// </summary>
+    private static CompletionList? _fontNameCompletions;
+
+    /// <summary>
+    /// Installed font families that may be embedded into an exported PDF, annotated by
+    /// license class and CJK coverage — offered inside a <c>font "…"</c> string so the
+    /// author need not remember exact family names. See
+    /// <see cref="BuildFontNameCompletions"/> for the item shape.
+    /// </summary>
+    internal static CompletionList GetFontNameCompletions()
+        => _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
+
+    /// <summary>
+    /// Enumerates the installed font families and, for the embeddable ones (class
+    /// <see cref="FontEmbedInfo.FontEmbedClass.Free"/> or
+    /// <see cref="FontEmbedInfo.FontEmbedClass.Gray"/>), yields the family, its class,
+    /// and whether it covers Japanese. Every SkiaSharp call is guarded so a font that
+    /// fails to load or classify is simply skipped, never thrown out of completion.
+    /// </summary>
+    private static IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)>
+        EnumerateInstalledEmbeddableFonts()
+    {
+        var result = new List<(string, FontEmbedInfo.FontEmbedClass, bool)>();
+        string[] families;
+        try
+        {
+            families = SKFontManager.Default.FontFamilies.ToArray();
+        }
+        catch
+        {
+            return result; // no font manager — offer nothing rather than throw
+        }
+        foreach (var family in families)
+        {
+            if (string.IsNullOrWhiteSpace(family))
+                continue;
+            try
+            {
+                var cls = FontEmbedInfo.Classify(family);
+                if (cls is not (FontEmbedInfo.FontEmbedClass.Free or FontEmbedInfo.FontEmbedClass.Gray))
+                    continue; // not installed-and-embeddable (Forbidden / NotFound)
+                // Does the family cover Japanese? Probe 'か' (Hiragana KA, U+304B) —
+                // a zero glyph id means the codepoint is not covered.
+                bool cjk = false;
+                var tf = SKTypeface.FromFamilyName(family);
+                if (tf != null)
+                    cjk = tf.GetGlyph(0x304B) != 0;
+                result.Add((family, cls, cjk));
+            }
+            catch
+            {
+                // A font that fails to load / probe is skipped.
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Builds the <c>font "…"</c> completion items from a classified family list.
+    /// Split from the system enumeration so it is unit-testable with a synthetic list.
+    /// Keeps only the embeddable classes (<see cref="FontEmbedInfo.FontEmbedClass.Free"/>
+    /// / <see cref="FontEmbedInfo.FontEmbedClass.Gray"/>); each item's detail states the
+    /// license class and notes CJK coverage; the sort key floats Free before Gray and,
+    /// within a class, CJK-capable families first.
+    /// </summary>
+    internal static CompletionList BuildFontNameCompletions(
+        IEnumerable<(string Family, FontEmbedInfo.FontEmbedClass Cls, bool Cjk)> fonts)
+    {
+        var items = new List<CompletionItem>();
+        foreach (var (family, cls, cjk) in fonts)
+        {
+            if (cls is not (FontEmbedInfo.FontEmbedClass.Free or FontEmbedInfo.FontEmbedClass.Gray))
+                continue; // Forbidden (fsType blocks embedding) / NotFound — never offered
+            string detail = cls == FontEmbedInfo.FontEmbedClass.Free
+                ? "embeddable (OFL/libre)"
+                : "embeddable - license unverified";
+            if (cjk)
+                detail += " - CJK";
+            items.Add(new CompletionItem
+            {
+                Label = family,
+                Kind = CompletionItemKind.Value,
+                Detail = detail,
+                // Free before Gray; within a class, CJK-capable first; then by name.
+                SortText = (cls == FontEmbedInfo.FontEmbedClass.Free ? "0" : "1")
+                    + (cjk ? "0" : "1") + family,
+            });
+        }
+        return new CompletionList { Items = items.ToArray() };
     }
 
     /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>
