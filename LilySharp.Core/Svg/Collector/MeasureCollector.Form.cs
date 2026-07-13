@@ -162,7 +162,18 @@ public sealed partial class MeasureCollector
                 new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText),
                 sectionPos));
 
-        if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom)
+        // A section-major section can state its own starting key —
+        //   section A { key g major  melody { … } }
+        // — which sits beside the part blocks and so is NOT reached by the per-part
+        // music walk. Apply it here (transposed per voice, printed on every staff); it
+        // overrides the score-level revert below. An inline-music section instead walks
+        // its `key` as music, so only the section-major case is handled here.
+        var sectionKey = SectionMajorStartKey(section);
+        if (sectionKey != null)
+        {
+            ApplyKeySignatureChange(sectionKey, builder);
+        }
+        else if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom)
         {
             var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
             _meta.KeySharps = _sectionResetKeySharps;
@@ -213,6 +224,66 @@ public sealed partial class MeasureCollector
             for (int i = produced; i < canonical; i++)
                 builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.Position) { IsSpacer = true });
         }
+    }
+
+    /// <summary>
+    /// Apply a key-signature change at the builder's current position: update the running
+    /// key metadata (transposed for this voice), advance the phrase auto-transpose baseline
+    /// and the per-measure key map, and emit the <see cref="KeySignatureChangeItem"/>.
+    /// Shared by a mid-music <c>key</c> and a section-major section's own <c>key</c>.
+    /// </summary>
+    private void ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
+    {
+        var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+        KeySignature newKey;
+        if (keySig.IsCustom)
+        {
+            // Custom signature: alterations as written (transpose does not respell a
+            // custom map). A custom key has no tonic — phrases placed here are unshifted.
+            _meta.KeySharps = 0;
+            _meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
+            newKey = new KeySignature(0, _meta.KeyCustom);
+            _ambientTonicValid = false;
+        }
+        else
+        {
+            int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
+            _meta.KeySharps = newSharps;
+            _meta.KeyCustom = null;
+            newKey = new KeySignature(newSharps);
+            // Advance the phrase auto-transpose baseline to this key's (written) tonic.
+            _ambientTonicStep = Math.Max(0,
+                LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0]));
+            _ambientTonicAlter = keySig.Pitch.AccidentalOffset;
+            _ambientTonicValid = true;
+            // Record the modulation for Roman-numeral chord degrees at this bar onward
+            // (per-voice walk, so the SortedDictionary dedups by measure).
+            _keyByMeasure[builder.CurrentMeasureIndex] =
+                (Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
+        }
+        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, keySig.Position));
+    }
+
+    /// <summary>
+    /// A section-major section's own starting <c>key</c>: the first <c>key</c> directly
+    /// inside a section that ALSO holds part blocks directly (<c>section A { key … melody
+    /// { … } }</c>). Returns null for an inline-music section, whose <c>key</c> is reached
+    /// by the music walk instead, and null when the section states no key.
+    /// </summary>
+    private static KeySignatureSyntax? SectionMajorStartKey(SectionDeclarationSyntax section)
+    {
+        bool hasPartBlocks = false;
+        KeySignatureSyntax? key = null;
+        foreach (var child in section.DescendantNodes())
+        {
+            if (child.Parent != section)
+                continue;                       // direct children only
+            if (child is PartBlockSyntax)
+                hasPartBlocks = true;
+            else if (child is KeySignatureSyntax k)
+                key ??= k;
+        }
+        return hasPartBlocks ? key : null;
     }
 
     /// <summary>

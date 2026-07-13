@@ -401,42 +401,9 @@ public sealed partial class MeasureCollector
                 break;
 
             case KeySignatureSyntax keySig:
-                {
-                    // Mid-measure key signature change
-                    // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
-                    var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
-                    KeySignature newKey;
-                    if (keySig.IsCustom)
-                    {
-                        // Mid-piece custom signature: alterations as written
-                        // (transpose does not respell a custom map).
-                        _meta.KeySharps = 0;
-                        _meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
-                        newKey = new KeySignature(0, _meta.KeyCustom);
-                        // A custom key has no tonic — phrases placed here are unshifted.
-                        _ambientTonicValid = false;
-                    }
-                    else
-                    {
-                        int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
-                        _meta.KeySharps = newSharps;
-                        _meta.KeyCustom = null;
-                        newKey = new KeySignature(newSharps);
-                        // Advance the phrase auto-transpose baseline to this key's
-                        // (written) tonic.
-                        _ambientTonicStep = Math.Max(0,
-                            LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0]));
-                        _ambientTonicAlter = keySig.Pitch.AccidentalOffset;
-                        _ambientTonicValid = true;
-                        // Record the modulation for Roman-numeral chord degrees at this
-                        // bar onward (per-voice walk, so a SortedDictionary dedups by
-                        // measure). Custom signatures carry no tonic → no degree change.
-                        _keyByMeasure[builder.CurrentMeasureIndex] =
-                            (Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
-                    }
-                    var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
-                    builder.AddItem(keyChange);
-                }
+                // Mid-measure key signature change
+                // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
+                ApplyKeySignatureChange(keySig, builder);
                 break;
 
             case TimeSignatureSyntax timeSigChange:

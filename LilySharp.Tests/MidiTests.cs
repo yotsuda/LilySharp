@@ -110,6 +110,31 @@ public class MidiTests
     }
 
     [Fact]
+    public void SectionMajorKey_AppliesToTheSectionsPartBlocks()
+    {
+        // A section-major section states its own key beside its part blocks —
+        //   section B { key g major  melody { … } }
+        // — and it must apply to that block's music. Here the phrase auto-transposes to
+        // the section key (C major section A stays put; G major section B drops to G).
+        static int[] Pitches(string src) =>
+            new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
+                .Select(n => n.Pitch).ToArray();
+
+        var pitches = Pitches("""
+            key c major
+            phrase Lick { c d e c }
+            section A { melody { Lick } }
+            section B {
+              key g major
+              melody { Lick }
+            }
+            form main { A B }
+            score main { staff melody }
+            """);
+        Assert.Equal(new[] { 60, 62, 64, 60, /* G3 A3 B3 G3 */ 55, 57, 59, 55 }, pitches);
+    }
+
+    [Fact]
     public void PhraseReference_InlineNotesAfterAreNotTransposed()
     {
         // The inline c after the phrase stays at written pitch (C4 = 60),
