@@ -91,6 +91,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterWith => GetWithCompletions(),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
+            CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(AtFollowsChord(doc.Text, offset)),
@@ -395,6 +396,7 @@ public sealed partial class LilySharpLanguageServer
         AfterWith,
         AfterChordAttachName,
         AfterChordDisplayAs,
+        AfterTabDisplayAs,
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
@@ -530,9 +532,11 @@ public sealed partial class LilySharpLanguageServer
         // `with` continues into `with chords PART`.
         if (IsInsideScoreBlock(text, offset))
         {
-            // `… as |` → the chord DISPLAY modes (roman | both | names).
+            // `… as |` → a display selector, but which one depends on what the `as`
+            // governs: `tab … as` takes numbers|full, every other form (`chords … as`,
+            // `[staff|tab] … with chords … as`) takes roman|both|names.
             if (prevWord == "as")
-                return CompletionContext.AfterChordDisplayAs;
+                return AsSelectorContext(text, offset);
             switch (prevWord)
             {
                 case "staff": return CompletionContext.AfterStaffRef;
@@ -640,6 +644,36 @@ public sealed partial class LilySharpLanguageServer
         int end = i;
         while (i > 0 && IsWordChar(text[i - 1])) i--;        // the word before it
         return text.Substring(i, end - i);
+    }
+
+    /// <summary>
+    /// Which display selector an <c>as</c> in a score block governs. <c>tab … as</c>
+    /// takes <c>numbers | full</c>; every other <c>as</c> (a <c>chords</c> row, or a
+    /// <c>with chords …</c> attachment on a staff or tab) takes <c>roman | both | names</c>.
+    /// The word right before <c>as</c> is the target NAME in every case, so it can't
+    /// disambiguate — scan the words before <c>as</c> for the nearest governing keyword.
+    /// A <c>chords</c> seen first means a chord attachment (its <c>as</c> wins even on a
+    /// <c>tab</c> line); a <c>tab</c> seen first with no intervening <c>chords</c> is the
+    /// tab style. Anything else keeps the chord default.
+    /// </summary>
+    internal static CompletionContext AsSelectorContext(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the partial display word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the `as` itself
+        while (i > 0)
+        {
+            while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+            int end = i;
+            while (i > 0 && IsWordChar(text[i - 1])) i--;
+            if (end == i) break; // a non-word char (a brace or a quoted name) — give up
+            string w = text.Substring(i, end - i);
+            if (w == "chords" || w == "staff") return CompletionContext.AfterChordDisplayAs;
+            if (w == "tab") return CompletionContext.AfterTabDisplayAs;
+        }
+        return CompletionContext.AfterChordDisplayAs;
     }
 
     /// <summary>
@@ -895,6 +929,26 @@ public sealed partial class LilySharpLanguageServer
             ("roman", "Roman-numeral degrees for the key (I, IIm7, V7)"),
             ("both", "The Roman degree stacked above the absolute chord name"),
             ("names", "Absolute chord names (C, Am7)"),
+        };
+        return new CompletionList
+        {
+            Items = modes.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.Keyword,
+                Detail = t.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>After <c>tab … as</c>: the two tab display styles.</summary>
+    internal static CompletionList GetTabDisplayModeCompletions()
+    {
+        var modes = new (string Label, string Detail)[]
+        {
+            ("numbers", "Fret digits only — no stems, dots or rests"),
+            ("full", "Full tablature staff with stems, dots and rests (the default)"),
         };
         return new CompletionList
         {
