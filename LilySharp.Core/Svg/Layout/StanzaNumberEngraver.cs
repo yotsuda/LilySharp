@@ -66,25 +66,32 @@ internal static class StanzaNumberEngraver
         if (lyrics.IsDefaultOrEmpty || systems.IsDefaultOrEmpty)
             return ImmutableArray<StanzaNumberLayout>.Empty;
 
-        // Find max verse number; LP only labels verses when there are multiple.
-        int maxVerse = 0;
-        foreach (var l in lyrics)
-            if (l.Item.VerseNumber > maxVerse) maxVerse = l.Item.VerseNumber;
-        if (maxVerse <= 1 && !emitForFirstVerse)
-            return ImmutableArray<StanzaNumberLayout>.Empty;
-
         // Map measure → system index so we can match a lyric to its enclosing system.
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+
+        // Number verses PER SYSTEM: a stanza number is only useful where more than one
+        // verse actually stacks. A song whose verses all stack everywhere numbers every
+        // system (the usual case); a per-occurrence volta that puts a second verse on
+        // only one system leaves the single-verse systems (a lone reprise line) clean.
+        // A `~`-hidden verse still COUNTS toward a system's verse tally (so the visible
+        // verse beside it keeps its number) but prints no number itself.
+        var versesInSystem = new Dictionary<int, HashSet<int>>();
+        foreach (var l in lyrics)
+            if (measureToSystem.TryGetValue(l.Item.MeasureIndex, out int sys))
+                (versesInSystem.TryGetValue(sys, out var set) ? set : versesInSystem[sys] = new())
+                    .Add(l.Item.VerseNumber);
 
         // Collect (system, verse) → first lyric in that system+verse (its Y is the verse baseline).
         var firstLyricBySystem = new Dictionary<(int sys, int verse), LyricLayout>();
         foreach (var l in lyrics)
         {
-            // A `~`-marked verse (`[~2. …]`) still counts toward maxVerse above (so the
-            // other verses stay numbered) but prints no number of its own.
             if (l.Item.HideStanza)
                 continue;
             if (!measureToSystem.TryGetValue(l.Item.MeasureIndex, out int sysIdx))
+                continue;
+            // Only a system that stacks 2+ verses gets numbers (unless forced).
+            if (!emitForFirstVerse
+                && (!versesInSystem.TryGetValue(sysIdx, out var vs) || vs.Count <= 1))
                 continue;
             var key = (sysIdx, l.Item.VerseNumber);
             if (!firstLyricBySystem.ContainsKey(key))
