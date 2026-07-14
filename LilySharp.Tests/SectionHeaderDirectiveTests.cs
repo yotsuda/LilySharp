@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -89,6 +90,34 @@ public class SectionHeaderDirectiveTests
             score main { staff melody }
             """);
         Assert.Contains(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.Text == "140");
+    }
+
+    [Fact]
+    public void SectionPartial_ShortensTheSectionsFirstMeasure()
+    {
+        // `partial 4` gives section A a quarter-note pickup, so its first bar holds a
+        // single quarter rather than a full 4/4 measure.
+        var score = Collect("""
+            time 4/4
+            section A { partial 4  melody { g4 | c' d' e' f' | } }
+            form main { A }
+            score main { staff melody }
+            """);
+        Assert.Equal(Fraction.Quarter, score.Voice.Measures[0].TotalDuration);
+        Assert.Equal(new Fraction(4, 4), score.Voice.Measures[1].TotalDuration);
+    }
+
+    [Fact]
+    public void StandalonePartMajorHeaderPartial_AppliesToTheSection()
+    {
+        var score = Collect("""
+            time 4/4
+            part melody { section A { g4 | c' d' e' f' | } }
+            section A { partial 4 }
+            form main { A }
+            score main { staff melody }
+            """);
+        Assert.Equal(Fraction.Quarter, score.Voice.Measures[0].TotalDuration);
     }
 
     [Fact]

@@ -673,6 +673,7 @@ public sealed partial class MeasureCollector
     // but no inline music. Applied to every part of the section.
     private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
     private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new();
+    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new();
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -1748,6 +1749,8 @@ public sealed partial class MeasureCollector
                             _sectionHeaderTimes[nm] = ht;
                         if (FirstDirect<TempoDeclarationSyntax>(section) is { } htp && !_sectionHeaderTempos.ContainsKey(nm))
                             _sectionHeaderTempos[nm] = htp;
+                        if (FirstDirect<PartialDeclarationSyntax>(section) is { } hp && !_sectionHeaderPartials.ContainsKey(nm))
+                            _sectionHeaderPartials[nm] = hp;
                     }
                     break;
 

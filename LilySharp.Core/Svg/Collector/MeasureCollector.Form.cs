@@ -210,6 +210,12 @@ public sealed partial class MeasureCollector
                 new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos));
         }
 
+        // A section can begin with a pickup (`section A { partial 4  melody { … } }`):
+        // shorten its first measure, per part. Applied after any section meter so the
+        // pickup restores to the section's own time when it closes.
+        if (_sectionHeaderPartials.TryGetValue(section.SectionName, out var sectionPartial))
+            builder.SetPartial(sectionPartial.ToFraction());
+
         int startMeasure = builder.CurrentMeasureIndex;
         bool matched = false;
         foreach (var child in section.DescendantNodes())
