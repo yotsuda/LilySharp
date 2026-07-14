@@ -153,8 +153,17 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     applySoftLock(editor, sel);
 
     try {
+        // Progress lives in the status bar (Window), NOT a Notification toast:
+        // drive() awaits the user's decision on the candidate panel from inside
+        // this scope, so a Notification would leave a "rendering candidate… /
+        // Cancel" toast hanging over the review the whole time. The status-bar
+        // spinner is unobtrusive and needs no competing Cancel button — the
+        // candidate panel's Reject/Esc is the cancel affordance.
         await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: 'Lily#: AI transform', cancellable: true },
+            { location: vscode.ProgressLocation.Window, title: 'Lily#: AI transform', cancellable: false },
+            // Use the token withProgress hands us — `vscode.CancellationToken` is a TYPE,
+            // not a runtime object, so `vscode.CancellationToken.None` throws
+            // "Cannot read properties of undefined (reading 'None')".
             async (progress, token) => {
                 await drive(deps, client, chat, snapshot, instruction, progress, token);
             }
@@ -253,7 +262,18 @@ async function drive(
         progress.report({ message: 'rendering candidate…' });
         const reconstructed = spliceCandidate(snapshot, candidate);
         const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
-        const decision = await reviewOnScore(deps, renderBefore, renderAfter, instruction, candidate);
+        // Source-offset spans of the change so the panel can highlight WHERE it
+        // landed: in the "after" score the candidate occupies [start, start+len);
+        // in the "before" score the original selection occupied [start, end).
+        // The SVG carries data-pos (source offsets) for editor↔preview sync, so
+        // the webview lights up the notes whose data-pos falls in these spans.
+        const changed: ChangedSpans = {
+            afterLo: snapshot.startOffset,
+            afterHi: snapshot.startOffset + candidate.length,
+            beforeLo: snapshot.startOffset,
+            beforeHi: snapshot.endOffset,
+        };
+        const decision = await reviewOnScore(deps, renderBefore, renderAfter, instruction, candidate, changed);
 
         if (decision === 'reject') {
             deps.log('AI transform: rejected on the score.');
@@ -411,12 +431,19 @@ async function getFacts(client: LanguageClient, snapshot: Snapshot, token: vscod
 
 type Decision = 'accept' | 'iterate' | 'reject';
 
+/** Source-offset spans of the change, for highlighting in each pane. */
+interface ChangedSpans {
+    afterLo: number; afterHi: number;
+    beforeLo: number; beforeHi: number;
+}
+
 async function reviewOnScore(
     deps: AiTransformDeps,
     renderBefore: SvgResponse,
     renderAfter: SvgResponse,
     caption: string,
     candidate: string,
+    changed: ChangedSpans,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
     const fontUri = panel.webview.asWebviewUri(
@@ -426,7 +453,7 @@ async function reviewOnScore(
 
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
-        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate);
+        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed);
     panel.reveal(vscode.ViewColumn.Beside, true);
 
     return await new Promise<Decision>(resolve => {
@@ -461,7 +488,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
-    caption: string, candidate: string,
+    caption: string, candidate: string, changed: ChangedSpans,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -489,6 +516,9 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .toggle button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 .main { flex:1; overflow:auto; background:white; padding:16px; }
 .score svg { max-width:100%; height:auto; }
+/* The notes the AI changed — same non-destructive glow the main preview uses
+   for editor↔preview sync, so "what changed" reads at a glance. */
+.chg { filter: drop-shadow(0 0 3.5px #ff6600); }
 .pane { display:none; }
 .pane.show { display:block; }
 .snippet { margin:10px 16px 0; }
@@ -508,7 +538,7 @@ button:hover { opacity:0.9; }
 <body>
 <div class="header">
   <div>
-    <div class="cap">AI candidate — decide on the score</div>
+    <div class="cap">AI candidate — decide on the score · <span style="color:#ff6600">■</span> changed</div>
     <div class="prompt">${escapeHtml(caption)}</div>
   </div>
   <div class="spacer"></div>
@@ -535,14 +565,43 @@ button:hover { opacity:0.9; }
   const paneBefore = document.getElementById('paneBefore');
   const tAfter = document.getElementById('tAfter');
   const tBefore = document.getElementById('tBefore');
+
+  // Light up the notes whose source offset (data-pos) falls in the changed
+  // span, and remember the first so we can scroll it into view. The renderer
+  // emits data-pos for editor↔preview sync, so the same offsets the edit used
+  // map straight onto SVG elements here.
+  const CHANGED = ${JSON.stringify(changed)};
+  function markChanged(pane, lo, hi) {
+    let first = null;
+    pane.querySelectorAll('[data-pos]').forEach(el => {
+      const pos = parseInt(el.getAttribute('data-pos'), 10);
+      if (!isNaN(pos) && pos >= lo && pos < hi) {
+        el.classList.add('chg');
+        if (first === null) first = el;
+      }
+    });
+    return first;
+  }
+  const firstAfter = markChanged(paneAfter, CHANGED.afterLo, CHANGED.afterHi);
+  const firstBefore = markChanged(paneBefore, CHANGED.beforeLo, CHANGED.beforeHi);
+  function scrollToChange(after) {
+    const el = after ? firstAfter : firstBefore;
+    if (el && el.scrollIntoView) {
+      try { el.scrollIntoView({ block: 'center', inline: 'center' }); } catch (e) {}
+    }
+  }
+
   function show(after) {
     paneAfter.classList.toggle('show', after);
     paneBefore.classList.toggle('show', !after);
     tAfter.classList.toggle('on', after);
     tBefore.classList.toggle('on', !after);
+    scrollToChange(after);
   }
   tAfter.addEventListener('click', () => show(true));
   tBefore.addEventListener('click', () => show(false));
+  // Default pane is "After": center its first changed note once laid out.
+  scrollToChange(true);
   document.getElementById('accept').addEventListener('click', () => send('accept'));
   document.getElementById('iterate').addEventListener('click', () => send('iterate'));
   document.getElementById('reject').addEventListener('click', () => send('reject'));
