@@ -20,6 +20,7 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
+using LilySharp.Lsp;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -103,6 +104,14 @@ public class DoubleAngleArpeggioTests
         var src = "section A { m { << c e g >> } }\nform main { A }\nscore main { staff m }";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "m");
         Assert.Empty(score.TupletBrackets);
+    }
+
+    [Fact]
+    public void MusicCompletions_OfferTheArpeggioSnippet()
+    {
+        // In a music block, Ctrl+Space offers the `<< >>` arpeggio snippet, like `tuplet`.
+        var arp = LilySharpLanguageServer.GetMusicCompletions("", 0).Items.Single(i => i.Label == "<< >>");
+        Assert.Equal("<< $0 >>", arp.InsertText);
     }
 
     [Fact]
