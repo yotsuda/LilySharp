@@ -235,6 +235,7 @@ public sealed partial class LilySharpLanguageServer
     {
         CancelPendingDiagnostics(@params.TextDocument.Uri);
         _documentManager.Close(@params.TextDocument.Uri);
+        DropSvgSession(@params.TextDocument.Uri);
 
         // Clear diagnostics — sent BY NAME (see PublishDiagnostics for why NotifyAsync,
         // which sends params positionally, is wrong here).

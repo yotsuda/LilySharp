@@ -61,6 +61,41 @@ public class IncrementalCompilerTests
         Assert.Equal(Full(Base), Norm(session.Render()));
     }
 
+    private static string ApplyFirst(string text, string find, string rep)
+    {
+        int at = text.IndexOf(find, System.StringComparison.Ordinal);
+        Assert.True(at >= 0, $"snippet not found: {find}");
+        return text[..at] + rep + text[(at + find.Length)..];
+    }
+
+    [Fact]
+    public void RenderIncremental_OnExternallyEditedTrees_MatchesFullEachTime()
+    {
+        // Mirrors the LSP preview: the CALLER owns the tree (its own incremental reparse)
+        // and hands each new tree to the session via RenderIncremental. Every render must
+        // equal a full compile of that tree's text, across a sequence of edits — including
+        // the first (cold) render and later (warm, system-reusing) ones.
+        var text = Base;
+        var tree = SyntaxTree.Parse(text);
+        var session = new IncrementalCompiler(tree, Opt);
+
+        Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
+
+        var edits = new[]
+        {
+            ("c4 d e f", "c4 d e g"),   // one note in measure 1
+            ("d4 e f g", "d4 e f a"),   // one note in measure 3 (a different system's bar)
+            ("c4 d e g", "c4 d e f"),   // revert measure 1
+        };
+        foreach (var (find, rep) in edits)
+        {
+            var change = Replace(text, find, rep);
+            tree = tree.WithChange(change);
+            text = ApplyFirst(text, find, rep);
+            Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
+        }
+    }
+
     [Fact]
     public void WidthPreservingEdit_SkipsLineBreak_AndMatchesFull()
     {

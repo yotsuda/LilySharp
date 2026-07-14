@@ -114,6 +114,14 @@ public sealed class IncrementalCompiler
     /// when the gate is unchanged). Result equals a full recompile of the edited text.</summary>
     public string Edit(TextChange change) => Compile(_tree.WithChange(change), allowSkip: true);
 
+    /// <summary>Renders an ALREADY-updated tree incrementally — for a caller (the LSP
+    /// preview) that maintains the tree itself (its own incremental reparse) rather than
+    /// handing this session a <see cref="TextChange"/>. The first call warms the cache
+    /// (full compile); later calls reuse the systems whose content is unchanged. The
+    /// result is byte-identical to a full recompile of <paramref name="tree"/> — reuse is
+    /// keyed on the new score's per-measure content, not on how the tree was produced.</summary>
+    public string RenderIncremental(SyntaxTree tree) => Compile(tree, allowSkip: true);
+
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
         var spec = RenderSpecParser.FindFirst(tree);
