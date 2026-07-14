@@ -99,15 +99,22 @@ foreach ($db in $dbPaths) {
     }
 }
 
-# --- 4. Optional hard reset of the global state DB ---
+# --- 4. Optional hard reset of BOTH state DBs ---
+# Recurring SQLITE_BUSY here is Settings Sync's "UI State" cycle writing state.vscdb
+# at the same time as the main process, on the SAME file because VS Code fell back to
+# using globalStorage as the application store. Rebuilding both DBs can clear that
+# fallback so the two writers land on separate files again. If crashes persist, turn
+# Settings Sync OFF (Command Palette -> "Settings Sync: Turn Off") to remove the rival
+# writer entirely -- that is the guaranteed fix.
 if ($ResetState) {
-    $db = $dbPaths[0]
-    if ((Test-Path -LiteralPath $db) -and (Test-Unlocked $db)) {
-        $bak = "$db.reset-$(Get-Date -Format yyyyMMdd-HHmmss)"
-        Move-Item -LiteralPath $db -Destination $bak -Force
-        Ok "state.vscdb reset (backup: $(Split-Path $bak -Leaf)). VS Code rebuilds it; settings and extensions are untouched."
-    } elseif (Test-Path -LiteralPath $db) {
-        Note 'state.vscdb still locked - not reset.'
+    foreach ($db in $dbPaths) {
+        if ((Test-Path -LiteralPath $db) -and (Test-Unlocked $db)) {
+            $bak = "$db.reset-$(Get-Date -Format yyyyMMdd-HHmmss)"
+            Move-Item -LiteralPath $db -Destination $bak -Force
+            Ok "Reset $(Split-Path (Split-Path $db -Parent) -Leaf)\state.vscdb (backup: $(Split-Path $bak -Leaf)). VS Code rebuilds it; settings and extensions are untouched."
+        } elseif (Test-Path -LiteralPath $db) {
+            Note "$db still locked - not reset."
+        }
     }
 }
 
