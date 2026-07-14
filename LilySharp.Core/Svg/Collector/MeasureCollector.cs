@@ -1822,7 +1822,7 @@ public sealed partial class MeasureCollector
                 i--;
             }
             var m = i >= 0
-                ? System.Text.RegularExpressions.Regex.Match(tokens[i].Text, @"^([0-9]+)(\.*)$")
+                ? TempoBeatUnitRegex().Match(tokens[i].Text)
                 : System.Text.RegularExpressions.Match.Empty;
             if (m.Success)
             {
@@ -1833,6 +1833,11 @@ public sealed partial class MeasureCollector
         if (tempoDecl.SwingSubdivision != 0)
             _meta.SwingSubdivision = tempoDecl.SwingSubdivision;
     }
+
+    // The tempo beat-unit token: digits then optional dots (e.g. "4", "8."). Source-
+    // generated so the regex is built at compile time, not parsed/JIT'd at runtime.
+    [System.Text.RegularExpressions.GeneratedRegex(@"^([0-9]+)(\.*)$")]
+    private static partial System.Text.RegularExpressions.Regex TempoBeatUnitRegex();
 
     private int CalculateKeySharps(KeySignatureSyntax key)
     {

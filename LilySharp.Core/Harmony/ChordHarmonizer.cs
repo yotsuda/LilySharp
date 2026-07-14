@@ -41,7 +41,7 @@ namespace LilySharp.Core.Harmony;
 /// Future work: harmonic rhythm inference, a progression/cadence model, secondary
 /// dominants and sevenths.
 /// </remarks>
-public static class ChordHarmonizer
+public static partial class ChordHarmonizer
 {
     /// <summary>One section's generated chord track: the melody part-block it was
     /// read from (a chords part is added right after it) and the chords block text.</summary>
@@ -94,12 +94,19 @@ public static class ChordHarmonizer
     // Wire the melody staff to the chords once: `staff X` -> `staff X with chords harmony`.
     private static string AttachWithChords(string text, string melodyName)
     {
-        var staff = Regex.Match(text,
-            @"\bstaff\s+" + Regex.Escape(melodyName) + @"\b(?!\s+with\b)");
-        return staff.Success
-            ? text.Insert(staff.Index + staff.Length, " with chords harmony")
-            : text;
+        // Match any `staff NAME` (not already `… with`) and pick the melody's, rather than
+        // building a per-name pattern — keeps the regex source-generated (compile-time).
+        foreach (Match staff in StaffDeclRegex().Matches(text))
+            if (staff.Groups[1].Value == melodyName)
+                return text.Insert(staff.Index + staff.Length, " with chords harmony");
+        return text;
     }
+
+    [GeneratedRegex(@"\bstaff\s+(\w+)\b(?!\s+with\b)")]
+    private static partial Regex StaffDeclRegex();
+
+    [GeneratedRegex(@"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)")]
+    private static partial Regex KeyDeclRegex();
 
     /// <summary>
     /// Harmonizes a part-major melody INTO A SINGLE part-major chord track:
@@ -298,7 +305,7 @@ public static class ChordHarmonizer
 
     private static (char Tonic, int Sharps) ReadKey(string source)
     {
-        var m = Regex.Match(source, @"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)");
+        var m = KeyDeclRegex().Match(source);
         if (!m.Success)
             return ('c', 0);
         char tonic = char.ToLowerInvariant(m.Groups[1].Value[0]);

@@ -36,6 +36,33 @@ namespace LilySharp.Lsp;
 
 public sealed partial class LilySharpLanguageServer
 {
+    // ========== Source-generated regexes ==========
+    // Built at compile time (no runtime parse/JIT), reused across every completion pass.
+
+    [GeneratedRegex(@"\bsection\s+(\w+)")]
+    private static partial Regex SectionRefRegex();
+
+    [GeneratedRegex(@"\bsection\s+(\w+)\s*\{")]
+    private static partial Regex SectionDeclRegex();
+
+    [GeneratedRegex(@"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)")]
+    private static partial Regex KeyDeclRegex();
+
+    [GeneratedRegex(@"^[a-g](is|es|isis|eses)?$")]
+    private static partial Regex BareNoteNameRegex();
+
+    [GeneratedRegex(@"\bclef\s*:?\s*percussion\b")]
+    private static partial Regex PercussionClefRegex();
+
+    // A `KEYWORD name {` declaration: group 1 is the keyword, group 2 the name. A caller
+    // matches ANY declaration and filters by keyword, so the pattern stays constant (and
+    // source-generated) instead of embedding a runtime keyword.
+    [GeneratedRegex(@"\b(\w+)\s+(\w+)\s*\{")]
+    private static partial Regex DeclaredNameRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRunRegex();
+
     // ========== Completion ==========
 
     [JsonRpcMethod(Methods.TextDocumentCompletionName, UseSingleObjectParameterDeserialization = true)]
@@ -347,7 +374,7 @@ public sealed partial class LilySharpLanguageServer
         // deduplicated) — these are what a structure plays.
         var sections = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>();
-        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)"))
+        foreach (Match m in SectionRefRegex().Matches(text))
         {
             var name = m.Groups[1].Value;
             if (seen.Add(name))
@@ -720,7 +747,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>True for a bare pitch-name word (c…b with optional is/es
     /// accidental suffixes) — the tonic between `key` and its mode.</summary>
     internal static bool IsPitchName(string word)
-        => System.Text.RegularExpressions.Regex.IsMatch(word, "^[a-g](is|es|isis|eses)?$");
+        => BareNoteNameRegex().IsMatch(word);
 
     /// <summary>The word before <see cref="WordBeforeCursor"/> — "key" in
     /// <c>key a m|</c>, where the partial word is "m" and the previous is "a".</summary>
@@ -1183,9 +1210,10 @@ public sealed partial class LilySharpLanguageServer
     {
         var names = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>();
-        foreach (Match m in Regex.Matches(text, $@"\b{keyword}\s+(\w+)\s*\{{"))
+        foreach (Match m in DeclaredNameRegex().Matches(text))
         {
-            var name = m.Groups[1].Value;
+            if (m.Groups[1].Value != keyword) continue;
+            var name = m.Groups[2].Value;
             if (seen.Add(name))
                 names.Add(name);
         }
@@ -1211,9 +1239,10 @@ public sealed partial class LilySharpLanguageServer
         var items = new System.Collections.Generic.List<CompletionItem>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         foreach (var keyword in new[] { "part", "voice" })
-            foreach (Match m in Regex.Matches(text, $@"\b{keyword}\s+(\w+)\s*\{{"))
+            foreach (Match m in DeclaredNameRegex().Matches(text))
             {
-                var name = m.Groups[1].Value;
+                if (m.Groups[1].Value != keyword) continue;
+                var name = m.Groups[2].Value;
                 if (seen.Add(name))
                     items.Add(new CompletionItem
                     {
@@ -1313,7 +1342,7 @@ public sealed partial class LilySharpLanguageServer
         // offers B.
         int curKw = SectionKeywordStartBeforeCursor(text, offset);
 
-        foreach (Match m in Regex.Matches(text[open..close], @"\bsection\s+(\w+)\s*\{"))
+        foreach (Match m in SectionDeclRegex().Matches(text[open..close]))
         {
             if (open + m.Index == curKw) continue;
             declared.Add(m.Groups[1].Value);
@@ -1345,7 +1374,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var declared = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         int curKw = SectionKeywordStartBeforeCursor(text, offset);
-        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)\s*\{"))
+        foreach (Match m in SectionDeclRegex().Matches(text))
         {
             if (m.Index == curKw) continue;
             declared.Add(m.Groups[1].Value);
@@ -1571,8 +1600,7 @@ public sealed partial class LilySharpLanguageServer
         if (offset > text.Length) offset = text.Length;
         var prefix = text.Substring(0, offset);
         // tonic carries its own accidental suffix (fis, bes, …); mode is a word.
-        var matches = System.Text.RegularExpressions.Regex.Matches(
-            prefix, @"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)");
+        var matches = KeyDeclRegex().Matches(prefix);
         if (matches.Count == 0) return 0;
         var last = matches[matches.Count - 1];
         return LilySharp.Core.Music.KeySpelling.SharpsFor(
@@ -1606,8 +1634,7 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetDiatonicChordCompletions(string text, int offset)
     {
         var prefix = text.Substring(0, Math.Min(offset, text.Length));
-        var matches = Regex.Matches(
-            prefix, @"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)");
+        var matches = KeyDeclRegex().Matches(prefix);
         char tonic = 'c';
         int sharps = 0;
         if (matches.Count > 0)
@@ -1697,11 +1724,11 @@ public sealed partial class LilySharpLanguageServer
         // `[^}]*` regex mis-detected a percussion part whose body has a nested
         // voice/section block BEFORE its `clef percussion` (the nested `}` cut
         // the body short). Brace matching ignores `{`/`}` inside strings/comments.
-        var head = System.Text.RegularExpressions.Regex.Match(text,
-            @"\bpart\s+" + System.Text.RegularExpressions.Regex.Escape(partName) + @"\s*\{");
-        if (!head.Success) return false;
-
-        int open = head.Index + head.Length - 1; // index of the '{'
+        int open = -1;
+        foreach (Match h in DeclaredNameRegex().Matches(text))
+            if (h.Groups[1].Value == "part" && h.Groups[2].Value == partName)
+            { open = h.Index + h.Length - 1; break; } // index of the '{'
+        if (open < 0) return false;
         var code = CodeMask(text, text.Length);
         int depth = 0, bodyEnd = text.Length;    // unclosed (mid-edit) → scan to end
         for (int i = open; i < text.Length; i++)
@@ -1712,7 +1739,7 @@ public sealed partial class LilySharpLanguageServer
         }
 
         string body = text[(open + 1)..bodyEnd];
-        return System.Text.RegularExpressions.Regex.IsMatch(body, @"\bclef\s*:?\s*percussion\b");
+        return PercussionClefRegex().IsMatch(body);
     }
 
     /// <summary>

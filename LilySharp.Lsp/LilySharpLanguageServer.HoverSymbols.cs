@@ -225,7 +225,7 @@ public sealed partial class LilySharpLanguageServer
         // leading comment above it — the first token's span correctly excludes it.
         int start = node.GetChild(0)?.Span.Start ?? node.Span.Start;
         var raw = text.Substring(start, node.Span.End - start);
-        return System.Text.RegularExpressions.Regex.Replace(raw.Trim(), @"\s+", " ");
+        return WhitespaceRunRegex().Replace(raw.Trim(), " ");
     }
 
     // A part's instrument label for the outline detail: the quoted display name
