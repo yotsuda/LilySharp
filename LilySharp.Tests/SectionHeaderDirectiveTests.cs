@@ -67,6 +67,26 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
+    public void SectionTempo_OnAGrandStaff_EngravesOnceNotOncePerStaff()
+    {
+        // CollectMultiStaff walks the section once PER STAFF; a section tempo is a
+        // score-level mark, so a two-staff score must NOT stack two identical metronome
+        // marks. Regression: the grand staff printed "140" twice, overlapping.
+        var tree = SyntaxTree.Parse("""
+            tempo 100
+            part rh { section A { c'4 d' e' f' } section B { g'4 a' g' f' } }
+            part lh { clef bass  section A { c4 e g e } section B { c4 g, c g, } }
+            section A { }
+            section B { tempo 140 }
+            form main { A B }
+            score main { staff rh  staff lh }
+            """);
+        var renderSpec = RenderSpecParser.FindFirst(tree)!;
+        var score = new MeasureCollector().CollectMultiStaff(tree, renderSpec);
+        Assert.Single(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.Text == "140");
+    }
+
+    [Fact]
     public void FirstSectionTempo_ReplacesTheScoresOpeningTempo()
     {
         // Section A is first, so its `tempo 140` becomes the piece's opening metronome

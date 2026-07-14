@@ -177,8 +177,19 @@ public sealed partial class MeasureCollector
             // so it REPLACES the score's initial metronome mark rather than stacking a
             // second one on top of it (the initial time signature collapses the same
             // way). Anywhere else it prints a metronome mark at the section start.
+            // ProcessSection runs once PER PART; a section tempo is a score-level mark
+            // that must engrave ONCE — without this guard a grand staff printed the
+            // metronome mark twice, stacked (mirrors the navigation-mark guard).
+            bool tempoAlready = _musicMarks.Any(m =>
+                m.Type == MusicMarkType.Tempo
+                && m.MeasureIndex == builder.CurrentMeasureIndex
+                && m.SourcePosition == sectionPos);
             if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
                 CollectTempo(sectionTempo);
+            else if (tempoAlready)
+            {
+                // already emitted for an earlier staff of this section
+            }
             else if (sectionTempo.Bpm is int bpm)
                 _musicMarks.Add(new MusicMarkItem(
                     MusicMarkType.Tempo, bpm.ToString(),
