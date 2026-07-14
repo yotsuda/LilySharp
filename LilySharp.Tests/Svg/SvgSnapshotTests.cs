@@ -153,6 +153,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/tab-tie" };
         // Rests render on a tab staff, centred on the tab's vertical middle.
         yield return new object[] { "test/tab-rest" };
+        // A percent repeat over staff+tab prints ONLY the % sign on each staff — the tab
+        // hides its fret digits like the notation staff hides its notes (else bare,
+        // stemless digits sat under the % sign).
+        yield return new object[] { "test/tab-percent-repeat" };
         // `tab … as numbers`: fret digits only — no stems, beams, dots, rests or
         // tuplet brackets (the paired notation staff above carries the rhythm).
         yield return new object[] { "test/tab-as-numbers" };

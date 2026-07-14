@@ -1,0 +1,17 @@
+// A percent repeat over a staff+tab: the repeated iterations print ONLY the % sign
+// on BOTH staves. The notation staff hides its notes and the tab must hide its fret
+// digits the same way (their stems/beams are already suppressed) — otherwise the tab
+// left bare, stemless fret digits sitting under the % sign.
+part bl {
+  clef bass
+  tuning bass
+  section A {
+    a,,4\4 r8 g,,16 a,,\4 c, c, a,,8\4 g,, a,,\4 |
+    repeat percent 3 { a,,4\4 r8 g,,16 a,,\4 c, c, a,,8\4 g,, a,,\4 | }
+  }
+}
+form main { A }
+score main {
+  staff bl
+  tab bl
+}

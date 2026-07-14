@@ -44,7 +44,8 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
         double staffY, double staffRight, double systemStartX,
-        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems,
+        HashSet<int> percentCovered, IDrawingContext gc)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
@@ -96,6 +97,12 @@ internal static partial class SharedRenderer
 
         foreach (var ml in system.Measures)
         {
+            // A percent-repeat iteration prints ONLY the % sign — the notation staff
+            // hides its notes (SharedRenderer.Noteheads), and the tab must hide its fret
+            // digits the same way. Their stems/beams are already suppressed, so without
+            // this the tab left bare, stemless digits UNDER the % sign.
+            if (percentCovered.Contains(ml.MeasureIndex))
+                continue;
             for (int vi = 0; vi < staff.Voices.Length; vi++)
             {
                 var voice = staff.Voices[vi];

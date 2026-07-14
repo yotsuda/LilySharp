@@ -360,7 +360,14 @@ internal static partial class SharedRenderer
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
                 {
-                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX, beamedItems, sgc);
+                    // Measures this staff repeats under a % sign: hide their fret digits
+                    // (the % replaces them), exactly as the notation staff hides its notes.
+                    var tabPercentCovered = new HashSet<int>();
+                    foreach (var prItem in score.PercentRepeats)
+                        if (prItem.StaffIndex == globalIdx)
+                            tabPercentCovered.Add(prItem.MeasureIndex);
+                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX,
+                        beamedItems, tabPercentCovered, sgc);
                     continue;
                 }
 
