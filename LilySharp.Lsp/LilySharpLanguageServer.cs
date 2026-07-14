@@ -236,8 +236,9 @@ public sealed partial class LilySharpLanguageServer
         CancelPendingDiagnostics(@params.TextDocument.Uri);
         _documentManager.Close(@params.TextDocument.Uri);
 
-        // Clear diagnostics
-        _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
+        // Clear diagnostics — sent BY NAME (see PublishDiagnostics for why NotifyAsync,
+        // which sends params positionally, is wrong here).
+        _rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = @params.TextDocument.Uri,
             Diagnostics = []
@@ -330,7 +331,11 @@ public sealed partial class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
-        _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
+        // publishDiagnostics params must be sent BY NAME (a single object). NotifyAsync
+        // sends a single argument POSITIONALLY (params: [obj]); the client then rejects it
+        // ("defines parameters by name but received parameters by position") and drops the
+        // diagnostics. NotifyWithParameterObjectAsync sends the object as params directly.
+        _rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,
             Diagnostics = [.. diagnostics]

@@ -49,6 +49,8 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     if (ready) { panelReady.delete(oldUri); panelReady.set(newUri, ready); }
     const render = selectedRenders.get(oldUri);
     if (render !== undefined) { selectedRenders.delete(oldUri); selectedRenders.set(newUri, render); }
+    const posted = lastPostedSvg.get(oldUri);
+    if (posted !== undefined) { lastPostedSvg.delete(oldUri); lastPostedSvg.set(newUri, posted); }
     // Drop any pending debounce refresh: its callback captured the now-closed untitled
     // document, so letting it fire would render the wrong (stale) doc. A later edit to
     // the saved file schedules a fresh one under the new key.
@@ -106,6 +108,13 @@ const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 
 // Track selected render per document
 const selectedRenders = new Map<string, string>();
+
+// The last SVG (per URI) actually posted to a webview. The webview retains its content
+// (retainContextWhenHidden), so re-posting a byte-identical SVG is pure waste — a toggle
+// or save that recompiles to the same picture would otherwise push the whole (often
+// hundreds-of-KB) string across the extension→webview channel again. Invalidated when the
+// webview reloads (webviewReady) and when a panel is disposed / re-keyed.
+const lastPostedSvg = new Map<string, string>();
 
 // Constants
 const DEBOUNCE_DELAY_DEFAULT = 100;
@@ -562,6 +571,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             previewPanels.delete(key);
             panelReady.delete(key);
             selectedRenders.delete(key);
+            lastPostedSvg.delete(key);
             const timer = debounceTimers.get(key);
             if (timer) {
                 clearTimeout(timer);
@@ -575,6 +585,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         async message => {
             outputChannel.appendLine(`Received message from webview: ${message.type}`);
             if (message.type === 'webviewReady') {
+                // A (re)loaded webview is blank — drop the dedup memory so the next render
+                // always re-posts, even if the SVG matches what a previous instance showed.
+                lastPostedSvg.delete(uri);
                 panelReady.get(uri)?.resolve();
                 return;
             }
@@ -757,13 +770,22 @@ async function updatePreviewContent(
                 selectedRender: selectedRender || ''
             });
         } else if (response.Svg) {
-            outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length})`);
-            panel.webview.postMessage({
-                type: 'updateContent',
-                svg: response.Svg,
-                renders: response.Renders || [],
-                selectedRender: selectedRender || ''
-            });
+            // Skip the post when the picture is byte-identical to what the webview already
+            // shows — this is what spares a rapid edit/toggle/save burst from re-shipping
+            // the same large SVG. A different render selection compiles to a different SVG,
+            // so equality here already implies the same render.
+            if (lastPostedSvg.get(uri) === response.Svg) {
+                outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
+            } else {
+                outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length})`);
+                lastPostedSvg.set(uri, response.Svg);
+                panel.webview.postMessage({
+                    type: 'updateContent',
+                    svg: response.Svg,
+                    renders: response.Renders || [],
+                    selectedRender: selectedRender || ''
+                });
+            }
         } else {
             outputChannel.appendLine('Response has neither error nor SVG');
         }
