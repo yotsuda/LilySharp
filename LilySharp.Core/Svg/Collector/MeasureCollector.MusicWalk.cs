@@ -143,17 +143,42 @@ public sealed partial class MeasureCollector
         var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
         if (members.Count == 0)
             return;
-        // The first member resolves normally (relative to the previous note) and anchors
-        // the group; freeze the octave reference on it for every following member. A chord
-        // member anchors internally to its own first pitch, which becomes THIS anchor.
+        // The first member is the ROOT — resolved relative to the incoming frame; it
+        // anchors the group and drives the next note after it.
         ProcessMusicNode(members[0], builder);
         int anchorOctave = _octave.CurrentOctave;
+        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
+        int rootStep = GetPitchIndex(rootLetter);
+
+        // Every other member STACKS above the root — the SAME octave placement as a
+        // `<c e g>` chord member, so the pitches are independent of the order written
+        // (`<< c e g >>` == `<< c g >>` for g) and a `,` drops a member below the root.
+        // Absolute mode makes each member's octave = anchor + (step >= root ? 0 : 1) + its
+        // own '/, marks.
+        bool savedAbsolute = _octave.OctaveAbsolute;
+        int savedBase = _octave.OctaveBase;
         for (int i = 1; i < members.Count; i++)
         {
+            int step = GetPitchIndex(FirstPitchLetter(members[i]) ?? rootLetter);
+            _octave.OctaveAbsolute = true;
+            _octave.OctaveBase = anchorOctave + (step >= rootStep ? 0 : 1);
             ProcessMusicNode(members[i], builder);
-            _octave.CurrentOctave = anchorOctave; // re-freeze: octave stays on the first member
         }
+        _octave.OctaveAbsolute = savedAbsolute;
+        _octave.OctaveBase = savedBase;
+        // After the group the running reference is the root (chord-after behavior).
+        _octave.CurrentOctave = anchorOctave;
+        _octave.LastPitchName = rootLetter;
     }
+
+    /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root
+    /// (first pitch) — used to stack the arpeggio's members above the first.</summary>
+    private static char? FirstPitchLetter(SyntaxNode member) => member switch
+    {
+        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
+        _ => null,
+    };
 
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {

@@ -61,6 +61,27 @@ public class DoubleAngleArpeggioTests
     }
 
     [Fact]
+    public void EachNoteStacksAboveTheRoot_LikeAChord()
+    {
+        // `<< c g >>` — g is the fifth ABOVE c (G4), exactly like the chord `<c g>`, NOT
+        // the nearer G3 below.
+        Assert.Equal(new[] { 60, 67 },
+            Pitches("section A { m { << c g >> } }\nform main { A }\nscore main { staff m }"));
+    }
+
+    [Fact]
+    public void MemberOctavesAreIndependentOfWrittenOrder_AndMatchTheChord()
+    {
+        // Excluding the root, the members' octaves do NOT depend on the order written —
+        // `<< c e g >>` and `<< c g e >>` sound the same pitches (only the SEQUENCE
+        // differs) — and they match the chord `<c e g>`.
+        int[] Sorted(string m) => Pitches($"section A {{ m {{ {m} }} }}\nform main {{ A }}\nscore main {{ staff m }}").OrderBy(p => p).ToArray();
+        var ceg = Sorted("<< c e g >>");
+        Assert.Equal(ceg, Sorted("<< c g e >>"));
+        Assert.Equal(ceg, Sorted("<c e g>"));
+    }
+
+    [Fact]
     public void NestedChord_SoundsStacked_ThenTheSequenceContinues()
     {
         // `<< <c e> g >>` — a chord may be a member: its c and e sound together, then g

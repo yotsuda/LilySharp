@@ -961,16 +961,39 @@ public sealed class MidiExporter
         var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
         if (members.Count == 0)
             return;
-        // Dispatch each member (ProcessNote / ProcessChord) sequentially, freezing the
-        // octave on the first member (a chord member anchors to its own first pitch).
+        // The first member is the ROOT (normal relative resolution); it anchors the group.
         ProcessNode(members[0], track, conductorTrack);
         int anchorOctave = _currentOctave;
+        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
+        int rootStep = RelativeOctave.StepIndex(rootLetter);
+
+        // Every other member STACKS above the root — the same octave placement as a
+        // `<c e g>` chord member, so the pitches are order-independent. Absolute mode makes
+        // each member's octave = anchor + (step >= root ? 0 : 1) + its own '/, marks.
+        bool savedAbsolute = _octaveAbsolute;
+        int savedAnchor = _partOctaveAnchor;
         for (int i = 1; i < members.Count; i++)
         {
+            int step = RelativeOctave.StepIndex(FirstPitchLetter(members[i]) ?? rootLetter);
+            _octaveAbsolute = true;
+            _partOctaveAnchor = anchorOctave + (step >= rootStep ? 0 : 1);
             ProcessNode(members[i], track, conductorTrack);
-            _currentOctave = anchorOctave; // re-freeze: octave stays on the first member
         }
+        _octaveAbsolute = savedAbsolute;
+        _partOctaveAnchor = savedAnchor;
+        // After the group the running reference is the root (chord-after behavior).
+        _currentOctave = anchorOctave;
+        _currentNoteName = rootStep;
     }
+
+    /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root
+    /// (first pitch) — used to stack the arpeggio's members above the first.</summary>
+    private static char? FirstPitchLetter(SyntaxNode member) => member switch
+    {
+        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
+        _ => null,
+    };
 
     private void ProcessNote(NoteSyntax note, MidiTrack track)
     {
