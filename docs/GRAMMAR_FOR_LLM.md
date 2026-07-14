@@ -97,6 +97,23 @@ R1          // full-measure rest
 <c e g>4    // chord (shared duration), C major triad as a quarter
 ```
 
+## Arpeggios `<< … >>` (written-out broken chords)
+
+Notes play in SEQUENCE (each with its own duration) but octaves stack above the FIRST
+note, like a chord — so member octaves are order-independent (`<< c e g >>` and
+`<< c g >>` put g a fifth above c). A `,` drops a member below the root. NOT LilyPond's
+`<< >>` (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
+
+```
+<< c e g >>      // c, then e/g stacked above → an ascending arpeggio (E4 G4)
+<< c8 e g e >>   // per-note durations (eighth carries)
+<< <c e> g >>    // a chord member, then g
+<< c8 r e >>     // a rest is a gap; e still stacks above c
+<< c e g >>2     // a duration after >> = auto-tuplet: 3 quarters in a half (triplet 3:2)
+```
+
+Must fit in one measure (else it overflows the meter).
+
 ## Annotations (`@name` attached to a note or chord)
 
 Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:

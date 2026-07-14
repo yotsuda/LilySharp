@@ -130,6 +130,42 @@ Notes enclosed in angle brackets share a duration:
 <c e g b>1      % C major 7th, whole note
 ```
 
+### Arpeggios (`<< … >>`)
+
+An arpeggio is a *written-out* broken chord: the notes play in **sequence** (each with
+its own duration), but their octaves resolve like a chord — every note stacks **above the
+first** (the root). So the pitches don't depend on the order they are written:
+
+```
+<< c e g >>          % c, then e and g stacked above it (E4, G4) — an ascending arpeggio
+<< c g >>            % g is a fifth ABOVE c, exactly like the chord <c g>
+<< c g e >>          % same pitches as << c e g >>, only the play order differs
+<< c8 e g e >>       % each member takes its own duration (the eighth carries)
+```
+
+A `,` after a member drops it below the root; the first note anchors relative to the
+previous note in the stream (and a note *after* the group is relative to that first note).
+
+Members may be **chords** or **rests**:
+
+```
+<< <c e> g >>        % a chord member, then g — an arpeggio of stacked members
+<< c8 r e g >>       % the rest is a gap; e and g still stack above c
+```
+
+A **duration after `>>`** fits the whole group into that length as an automatic tuplet:
+
+```
+<< c e g >>2         % three quarters in the time of a half → a triplet (3:2)
+```
+
+The group must fit within one measure (otherwise it crosses the barline and the measure
+overflows its meter).
+
+> **Note:** this reuses `<< … >>`, which in LilyPond means simultaneous voices. Lily#
+> writes parallel voices as `voice { … } voice { … }` (§ Voices), so `<< … >>` is free to
+> mean an arpeggio here. A `\\` inside still reports the removed-polyphony hint.
+
 ## Articulations
 
 Articulations are attached to notes with the `@` prefix. Names are resolved from
@@ -404,6 +440,32 @@ section Main {
   leftHand { c2 c | }
 }
 ```
+
+### Section-level key, meter, tempo, and pickup
+
+A section may state its own `key`, `time`, `tempo`, or `partial` at the top of its body.
+These apply to the **whole section** — they print on every part of it, and revert to the
+score level at the next section (tempo persists):
+
+```
+section A {
+  key g major
+  time 3/4
+  melody { g4 a b | }
+}
+```
+
+In **part-major** layout, where each part holds its own inner sections, a section's key/
+meter/tempo can be stated once in a standalone **header** — a `section` block with only
+those settings — placed alongside the `part` blocks:
+
+```
+part melody { section A { c4 c g' g | } }
+part bass   { section A { c2 e | } }
+section A { key g major }        % applies to every part playing A
+```
+
+The layout converter turns the two forms into each other.
 
 ### Structure (Playback Order)
 

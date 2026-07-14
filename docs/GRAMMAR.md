@@ -232,7 +232,13 @@ SectionItem    = SectionSetting
                | ChordsBlock                      (* note-aligned OR named chord row *)
                ;
 
-SectionSetting = KeyDecl | TempoDecl | TimeDecl ;
+(* A section-level setting applies to the WHOLE section — its key / meter / tempo / pickup
+   prints on every part of the section, not just one voice. A section whose body is ONLY
+   settings (no part blocks) is a standalone header: in part-major layout it states a
+   section's key/meter/tempo once, parallel to the 'part' blocks, e.g.
+     part melody { section A { c d e f } }
+     section A { key g major }              (* applies to every part playing A *) *)
+SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
 
@@ -361,7 +367,7 @@ PartRef        = Identifier ;
 
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
-MusicItem      = Note | Rest | Chord | Barline | InlineVolta | PhraseRef
+MusicItem      = Note | Rest | Chord | Arpeggio | Barline | InlineVolta | PhraseRef
                | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand ;
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
@@ -380,6 +386,14 @@ Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
 Chord          = '<' , ChordNote , { ChordNote } , '>' , [ DurationToken ] , { Annotation } ;
 ChordNote      = PitchToken , { Annotation } ;
+
+(* Arpeggio: a written-out broken chord. The members play in SEQUENCE (each keeps its own
+   duration) but resolve octaves like a chord — every member stacks above the FIRST, so
+   their octaves are independent of the written order. A trailing DurationToken fits the
+   whole group into that length as an auto-tuplet. Members may be notes, chords or rests.
+   This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
+   'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
+Arpeggio       = '<<' , ( Note | Rest | Chord ) , { Note | Rest | Chord } , '>>' , [ DurationToken ] ;
 
 Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
