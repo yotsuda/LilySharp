@@ -139,6 +139,17 @@ public sealed record MultiStaffScore
     /// <summary>Whether this score has multiple staff groups.</summary>
     public bool IsMultiStaff => StaffGroups.Length > 1 || HasGrandStaff;
 
+    /// <summary>True when EVERY rendered staff is a tab staff — no notation staff draws a
+    /// key signature. An all-tab score reclaims the reserved key-signature prefix width
+    /// (there is no notation staff to align against), so its notes spread into it.</summary>
+    public bool AllStavesTab => StaffGroups.Length > 0
+        && StaffGroups.All(g => g.Staves.Length > 0 && g.Staves.All(s => s.IsTab));
+
+    /// <summary>The leading key-signature accidental count actually engraved at each
+    /// system head: the score key normally, but 0 for an all-tab score (tab never prints
+    /// a key signature, so its reserved prefix width is reclaimed).</summary>
+    public int LeadingKeySharps => AllStavesTab ? 0 : KeySignature.Sharps;
+
     /// <summary>Total number of individual staves.</summary>
     public int TotalStaffCount => StaffGroups.Sum(g => g.StaffCount);
 

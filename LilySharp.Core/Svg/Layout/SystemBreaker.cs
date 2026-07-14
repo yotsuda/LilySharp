@@ -98,9 +98,12 @@ internal sealed class SystemBreaker
         // matches the rendered fit (the layout subtracts the same indent from the
         // available width). Default indent 0 → no-op.
         // LILYPOND-REF: scm/output-lib.scm system-start-text indent.
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
+        // An all-tab score reserves no key-signature width (tab prints none), so the
+        // break budget matches the reclaimed prefix the layout uses; otherwise the score
+        // key, as before.
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, includeTimeSignature: true,
             score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false)
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, includeTimeSignature: false)
             + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)

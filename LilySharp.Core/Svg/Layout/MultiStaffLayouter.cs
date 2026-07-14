@@ -722,23 +722,28 @@ internal sealed class MultiStaffLayouter
         // WIDEST staff's active key: a transposed part (Staff.PerStaffKeySignature)
         // may carry more accidentals than the primary, and its signature must not
         // overrun the shared first-note column.
-        int activeKeySharps = score.KeySignature.Sharps;
+        // Tab staves never print a key signature. When EVERY staff is a tab, no key is
+        // drawn at the system head, so reserve none of its width — the notes spread into
+        // the reclaimed space (there is no notation staff to align against). A score with
+        // any notation staff keeps the existing widest-key reservation unchanged.
+        int activeKeySharps = score.AllStavesTab ? 0 : score.KeySignature.Sharps;
         int widestAccidentals = -1;
-        foreach (var staffGroup in score.StaffGroups)
-            foreach (var staff in staffGroup.Staves)
-            {
-                int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
-                var pv = staff.PrimaryVoice;
-                for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
-                    foreach (var item in pv.Measures[m].Items)
-                        if (item is KeySignatureChangeItem kc)
-                            sharps = kc.NewKey.Sharps;
-                if (Math.Abs(sharps) > widestAccidentals)
+        if (!score.AllStavesTab)
+            foreach (var staffGroup in score.StaffGroups)
+                foreach (var staff in staffGroup.Staves)
                 {
-                    widestAccidentals = Math.Abs(sharps);
-                    activeKeySharps = sharps;
+                    int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
+                    var pv = staff.PrimaryVoice;
+                    for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
+                        foreach (var item in pv.Measures[m].Items)
+                            if (item is KeySignatureChangeItem kc)
+                                sharps = kc.NewKey.Sharps;
+                    if (Math.Abs(sharps) > widestAccidentals)
+                    {
+                        widestAccidentals = Math.Abs(sharps);
+                        activeKeySharps = sharps;
+                    }
                 }
-            }
 
         // A meter change that OPENS this system's first measure (i.e. a change
         // landing exactly at the line break) is drawn in the prefix — clef, key,
