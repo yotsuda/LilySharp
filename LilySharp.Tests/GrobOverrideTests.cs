@@ -27,6 +27,37 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class GrobOverrideTests
 {
+    private static MultiStaffScore CollectMulti(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        return new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+    }
+
+    [Fact]
+    public void MultiStaff_InMusicOverride_IsSurfaced()
+    {
+        // Regression: BuildMultiStaffScore dropped grob overrides, so a two-staff
+        // score never coloured/hid anything even though the collector captured them.
+        var score = CollectMulti(
+            "part rh { clef treble }\npart lh { clef bass }\n" +
+            "section A { rh { override NoteHead.color = red c4 d e f | } lh { c2 g | } }\n" +
+            "form main { A }\nscore main { staff rh  staff lh }");
+        Assert.Single(score.GrobOverrides);
+        Assert.Equal("NoteHead", score.GrobOverrides[0].GrobType);
+    }
+
+    [Fact]
+    public void MultiStaff_TopLevelOverride_IsSurfaced()
+    {
+        // A document-wide override on a multi-staff score, seeded at (0,0).
+        var score = CollectMulti(
+            "override NoteHead.color = red\npart rh { clef treble }\npart lh { clef bass }\n" +
+            "section A { rh { c4 d e f | } lh { c2 g | } }\n" +
+            "form main { A }\nscore main { staff rh  staff lh }");
+        Assert.Single(score.GrobOverrides);
+        Assert.Equal(0, score.GrobOverrides[0].MeasureIndex);
+    }
+
     // --- Parser Tests ---
 
     [Fact]

@@ -1772,6 +1772,38 @@ public sealed partial class MeasureCollector
                     break;
             }
         }
+
+        // A STRUCTURED file (a form or sections) can carry a top-level override / revert /
+        // once (grammar §2.1 lists them as TopLevelItems). Such a directive sits OUTSIDE
+        // the music stream — the per-voice walk runs through sections and never reaches a
+        // root-level directive — so it is a document-wide default: seed it here at the
+        // first item (measure 0, item 0) so it is active from the first note of every
+        // voice. A BARE-music file has no such outer scope: there the overrides ARE the
+        // music stream (a mid-stream override's position matters) and the fallback walk in
+        // CollectMeasures collects them, so this is skipped to avoid double-counting.
+        if (_form != null || _sectionState.Sections.Count > 0)
+        {
+            foreach (var node in root.DescendantNodes())
+            {
+                if (node.Parent != root)
+                    continue; // only true top-level items; in-section overrides are walked
+                switch (node)
+                {
+                    case OverrideDeclarationSyntax od:
+                        CollectOverride(od, 0, 0, isOnce: false);
+                        break;
+                    case RevertDeclarationSyntax rd:
+                        CollectRevert(rd, 0, 0);
+                        break;
+                    case OnceModifierSyntax om when om.Command is OverrideDeclarationSyntax io:
+                        CollectOverride(io, 0, 0, isOnce: true);
+                        break;
+                    case OnceModifierSyntax om2 when om2.Command is RevertDeclarationSyntax ir:
+                        CollectRevert(ir, 0, 0);
+                        break;
+                }
+            }
+        }
     }
 
     private void CollectMetadata(MetadataDeclarationSyntax metadata)

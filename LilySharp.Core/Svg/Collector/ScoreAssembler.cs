@@ -66,8 +66,7 @@ internal sealed record ScoreContent(
 /// copy-pasted across three collector methods, which is how they drifted (the
 /// multi-voice path silently omitted chord names, percent repeats and cross-staff
 /// items — a copy-paste oversight when voice{}-block support was added). Both Score
-/// paths now surface the full annotation set; the multi-staff path still omits grob
-/// overrides/reverts (not surfaced at that level).
+/// paths now surface the full annotation set, including grob overrides/reverts.
 /// </summary>
 internal static class ScoreAssembler
 {
@@ -117,9 +116,9 @@ internal static class ScoreAssembler
         BuildScore(ImmutableArray.Create(voice), c);
 
     /// <summary>
-    /// Builds a <see cref="MultiStaffScore"/>. Chord-name / percent-repeat /
-    /// cross-staff items are included; grob overrides/reverts are not surfaced at the
-    /// multi-staff level (preserving the prior behavior of the collector).
+    /// Builds a <see cref="MultiStaffScore"/> with the full annotation set — chord names,
+    /// percent repeats, cross-staff items, and grob overrides/reverts (so a top-level or
+    /// in-music \override colours / hides grobs on a multi-staff score too).
     /// </summary>
     public static MultiStaffScore BuildMultiStaffScore(ImmutableArray<StaffGroup> staffGroups, ScoreContent c) =>
         new MultiStaffScore(
@@ -143,6 +142,8 @@ internal static class ScoreAssembler
             chordNames: c.ChordNames,
             percentRepeats: c.PercentRepeats,
             crossStaffItems: c.CrossStaffItems,
+            grobOverrides: c.GrobOverrides,
+            grobReverts: c.GrobReverts,
             trillSpanners: c.TrillSpanners,
             header: c.Header)
         {

@@ -156,7 +156,7 @@ public class ScoreAssemblerTests
     }
 
     [Fact]
-    public void BuildMultiStaffScore_IncludesChordExtras_ButNotGrob()
+    public void BuildMultiStaffScore_IncludesChordExtrasAndGrob()
     {
         var c = MakeContent(
             chordNames: OneChord(), percentRepeats: OnePercent(), crossStaff: OneCrossStaff(),
@@ -170,8 +170,9 @@ public class ScoreAssemblerTests
         Assert.Single(ms.ChordNames);
         Assert.Single(ms.PercentRepeats);
         Assert.Single(ms.CrossStaffItems);
-        // Grob overrides/reverts are not surfaced at the multi-staff level.
-        Assert.Empty(ms.GrobOverrides);
+        // Grob overrides/reverts now surface on a multi-staff score too.
+        Assert.Single(ms.GrobOverrides);
+        Assert.Single(ms.GrobReverts);
         // Init-only tempo properties flow through here too.
         Assert.Equal("Allegro", ms.TempoText);
         Assert.Equal(2, ms.TempoBeatUnit);
