@@ -85,10 +85,11 @@ public class ChordDisplayCompletionTests
         Assert.Equal(new[] { "roman", "both", "names" }, labels);
     }
 
-    // clef / tempo / key add the space and re-open suggestions (triggerSuggest) so the
-    // value list ENUMERATES without pre-filling a value.
+    // A global value keyword adds the space and re-opens suggestions (triggerSuggest) so
+    // the value list ENUMERATES without pre-filling a value. (clef is NOT global — it is a
+    // part property — so it is not tested here.)
     [Theory]
-    [InlineData("clef", "clef $0")]
+    [InlineData("octave", "octave $0")]
     [InlineData("tempo", "tempo $0")]
     [InlineData("key", "key $0")]
     public void TopLevelValueKeyword_InsertsSpaceAndRetriggers(string label, string insert)

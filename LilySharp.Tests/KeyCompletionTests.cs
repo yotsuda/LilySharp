@@ -83,16 +83,38 @@ public class KeyCompletionTests
     }
 
     [Fact]
-    public void TopLevelCompletions_CarryTheScoreTemplates()
+    public void TopLevelCompletions_CarryTheNewScoreTemplate()
     {
-        // The score templates moved from static VS Code snippets (which the
-        // editor merged into EVERY completion popup, even after `key a`) into
-        // the LSP's top-level items, where the context dispatch scopes them.
+        // The single-staff scaffold moved from a static VS Code snippet (which the
+        // editor merged into EVERY completion popup, even after `key a`) into the
+        // LSP's top-level items, where the context dispatch scopes it.
         var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
         Assert.Contains(items, i => i.Label == "newscore");
-        Assert.Contains(items, i => i.Label == "grandstaff");
         var modeItems = LilySharpLanguageServer.GetKeyModeCompletions().Items;
-        Assert.DoesNotContain(modeItems, i => i.Label == "newscore" || i.Label == "grandstaff");
+        Assert.DoesNotContain(modeItems, i => i.Label == "newscore");
+    }
+
+    [Fact]
+    public void TopLevelCompletions_OmitContextOnlyKeywords()
+    {
+        // Global scope offers only file-scope keywords (grammar §2.1 TopLevelItem).
+        // `clef` is a part property and `grandStaff` a score-block render item — each
+        // is offered in ITS context, never at the top level.
+        var top = LilySharpLanguageServer.GetTopLevelCompletions().Items;
+        Assert.DoesNotContain(top, i => i.Label == "clef");
+        Assert.DoesNotContain(top, i => i.Label is "grandStaff" or "grandstaff");
+
+        // …and each still appears where it IS valid.
+        Assert.Contains(LilySharpLanguageServer.GetPartPropertyCompletions().Items, i => i.Label == "clef");
+        Assert.Contains(LilySharpLanguageServer.GetScoreBlockCompletions().Items, i => i.Label == "grandStaff");
+    }
+
+    [Fact]
+    public void TopLevelCompletions_HaveNoDuplicateLabels()
+    {
+        var labels = LilySharpLanguageServer.GetTopLevelCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(labels.Length, labels.Distinct().Count());
     }
 
     [Fact]
