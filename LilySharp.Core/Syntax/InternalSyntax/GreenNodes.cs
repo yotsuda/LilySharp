@@ -192,6 +192,24 @@ internal sealed class ChordGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// An arpeggio: <c>&lt;&lt; note note ... &gt;&gt;</c> — the inner notes play in SEQUENCE
+/// (each with its own duration), but their octaves anchor to the FIRST note like a chord.
+/// An optional duration after <c>&gt;&gt;</c> is the group's target total (auto-tuplet).
+/// </summary>
+internal sealed class ArpeggioGreen : GreenSyntaxNode
+{
+    public ArpeggioGreen(
+        SyntaxToken openAngles,
+        GreenNode?[] notes,
+        SyntaxToken closeAngles,
+        DurationGreen? totalDuration)
+        : base(SyntaxKind.Arpeggio,
+            [openAngles, .. notes, closeAngles, totalDuration])
+    {
+    }
+}
+
+/// <summary>
 /// A scale-degree chord member: a degree number (an <c>IntegerLiteral</c>, or a
 /// <c>ScaleDegree</c> token when an accidental is glued on — <c>3</c> / <c>3is</c>)
 /// followed by octave marks (<c>7,</c> / <c>5'</c>). Resolved against the chord's

@@ -132,6 +132,28 @@ public sealed partial class MeasureCollector
         _pendingInlineVoltas.Clear();
     }
 
+    /// <summary>
+    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as SEQUENTIAL notes whose octaves
+    /// anchor to the first note — the chord rule (the octave reference stays frozen on the
+    /// first note while the pitch names flow), but each note is its own note with its own
+    /// duration rather than a stacked chord.
+    /// </summary>
+    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder)
+    {
+        var notes = arpeggio.Notes.ToList();
+        if (notes.Count == 0)
+            return;
+        // The first note resolves normally (relative to the previous note) and anchors
+        // the group; freeze the octave reference on it for every following note.
+        ProcessMusicNode(notes[0], builder);
+        int anchorOctave = _octave.CurrentOctave;
+        for (int i = 1; i < notes.Count; i++)
+        {
+            ProcessMusicNode(notes[i], builder);
+            _octave.CurrentOctave = anchorOctave; // re-freeze: octave stays on the first note
+        }
+    }
+
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
         switch (node)
@@ -293,6 +315,10 @@ public sealed partial class MeasureCollector
                             Bracket: arpBracket));
                     }
                 }
+                break;
+
+            case ArpeggioSyntax arpeggio:
+                ProcessArpeggio(arpeggio, builder);
                 break;
 
             case BarlineSyntax barline:

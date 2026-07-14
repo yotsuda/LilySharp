@@ -472,6 +472,43 @@ public sealed class ScaleDegreeSyntax : SyntaxNode
     }
 }
 
+/// <summary>
+/// An arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>): the notes play sequentially but their
+/// octaves anchor to the first note like a chord. An optional trailing duration is the
+/// group's target total (auto-tuplet).
+/// </summary>
+public sealed class ArpeggioSyntax : SyntaxNode
+{
+    internal ArpeggioSyntax(ArpeggioGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The arpeggio's notes, in order.</summary>
+    public IEnumerable<NoteSyntax> Notes
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is NoteSyntax n)
+                    yield return n;
+        }
+    }
+
+    /// <summary>The optional total duration written after <c>&gt;&gt;</c> (auto-tuplet
+    /// target), or null when the notes keep their own natural durations.</summary>
+    public DurationSyntax? TotalDuration
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is DurationSyntax d)
+                    return d;
+            return null;
+        }
+    }
+}
+
 public sealed class ChordSyntax : SyntaxNode
 {
     internal ChordSyntax(ChordGreen green, SyntaxNode? parent, int position)

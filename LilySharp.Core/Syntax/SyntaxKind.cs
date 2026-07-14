@@ -420,6 +420,9 @@ public enum SyntaxKind : ushort
     Rest,
     /// <summary>A chord node.</summary>
     Chord,
+    /// <summary>An arpeggio node (<c>&lt;&lt; c e g &gt;&gt;</c>): sequential notes with
+    /// chord-style octave anchoring to the first note.</summary>
+    Arpeggio,
     /// <summary>A pitch node.</summary>
     Pitch,
     /// <summary>A scale-degree chord member (<c>3</c> / <c>3is</c> / <c>7,</c>): a

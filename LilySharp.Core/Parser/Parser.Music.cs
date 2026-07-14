@@ -93,9 +93,12 @@ internal sealed partial class Parser
 
             SyntaxKind.VoiceKeyword => ParseVoiceBlocksCheckingNesting(),
 
-            // Removed syntax: report a migration hint, then recover by parsing the
-            // old structure so no cascade of errors follows.
-            SyntaxKind.DoubleOpenAngle => ParseRemovedParallelExpression(),
+            // `<< … >>` is an arpeggio (sequential notes, chord-octave anchoring). The
+            // OLD polyphony form carried a `\\` voice separator — route those to the
+            // migration hint instead, so old files still get the helpful error.
+            SyntaxKind.DoubleOpenAngle => DoubleAngleHasBackslashSeparator()
+                ? ParseRemovedParallelExpression()
+                : ParseArpeggio(),
 
             // A leading backslash on a known LilyPond command (\tempo, \new, …) —
             // a habit from LilyPond — gets a hint pointing at the Lily# form.
@@ -365,6 +368,38 @@ internal sealed partial class Parser
         var articulations = ParsePostEvents();
 
         return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
+    }
+
+    /// <summary>Parse an arpeggio: <c>&lt;&lt; note note … &gt;&gt;</c> with an optional
+    /// trailing duration (the auto-tuplet target). The notes play in sequence but anchor
+    /// their octaves to the first note (chord rule); resolved by the collector / MIDI.</summary>
+    private ArpeggioGreen ParseArpeggio()
+    {
+        var open = Expect(SyntaxKind.DoubleOpenAngle);
+        var notes = new List<GreenNode?>();
+        while (!Check(SyntaxKind.DoubleCloseAngle) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseMusicItem();
+            if (item == null) break;
+            notes.Add(item);
+        }
+        var close = Expect(SyntaxKind.DoubleCloseAngle);
+        var totalDuration = ParseOptionalDuration();
+        return new ArpeggioGreen(open, [.. notes], close, totalDuration);
+    }
+
+    /// <summary>True when the <c>&lt;&lt; … &gt;&gt;</c> starting at the cursor contains a
+    /// <c>\\</c> voice separator — the removed polyphony form — versus an arpeggio.</summary>
+    private bool DoubleAngleHasBackslashSeparator()
+    {
+        for (int i = 1; ; i++)
+        {
+            var kind = Peek(i).Kind;
+            if (kind is SyntaxKind.DoubleCloseAngle or SyntaxKind.EndOfFile)
+                return false;
+            if (kind == SyntaxKind.Backslash && Peek(i + 1).Kind == SyntaxKind.Backslash)
+                return true;
+        }
     }
 
     // A scale-degree chord member: the degree number (with any glued accidental)

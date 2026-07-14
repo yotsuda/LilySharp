@@ -273,6 +273,10 @@ public sealed class MidiExporter
                 ProcessChord(chord, track);
                 break;
 
+            case ArpeggioSyntax arpeggio:
+                ProcessArpeggio(arpeggio, track);
+                break;
+
             case TimeSignatureSyntax timeSig:
                 ProcessTimeSignature(timeSig, conductorTrack);
                 break;
@@ -946,6 +950,25 @@ public sealed class MidiExporter
     /// Gets the note name index (c=0, d=1, e=2, f=3, g=4, a=5, b=6).
     /// </summary>
     private static int GetNoteName(char baseName) => RelativeOctave.StepIndex(baseName);
+
+    /// <summary>
+    /// Plays an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as SEQUENTIAL notes whose octaves
+    /// anchor to the first note — the chord rule: the octave reference stays frozen on the
+    /// first note while the pitch names flow.
+    /// </summary>
+    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track)
+    {
+        var notes = arpeggio.Notes.ToList();
+        if (notes.Count == 0)
+            return;
+        ProcessNote(notes[0], track);
+        int anchorOctave = _currentOctave;
+        for (int i = 1; i < notes.Count; i++)
+        {
+            ProcessNote(notes[i], track);
+            _currentOctave = anchorOctave; // re-freeze: octave stays on the first note
+        }
+    }
 
     private void ProcessNote(NoteSyntax note, MidiTrack track)
     {
