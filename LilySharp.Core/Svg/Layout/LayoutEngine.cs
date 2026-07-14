@@ -376,7 +376,7 @@ internal sealed class LayoutEngine
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
                 Width: _options.ContentWidth - sysIndent,
-                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, isFirstSystem,
+                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, isFirstSystem && !score.AllStavesTab,
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent));

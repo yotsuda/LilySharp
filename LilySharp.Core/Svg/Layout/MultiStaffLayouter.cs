@@ -46,6 +46,13 @@ internal sealed class MultiStaffLayouter
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;
 
+    /// <summary>Clef→first-note gap (staff spaces) on an ALL-TAB line. The compact "TAB"
+    /// clef does not warrant the wide 5.0 space-alist gap an engraved clef reserves
+    /// (BreakAlignSpacing.FirstNoteSpring), so the notes begin close to it — a Lily#
+    /// choice, since a tab line carries no key/time between the clef and the first
+    /// fret.</summary>
+    private const double TabClefToFirstNoteSpace = 1.5;
+
     /// <summary>
     /// Current indent for the system being laid out (in staff spaces).
     /// Set by LayoutEngine before each system's layout calls.
@@ -750,15 +757,18 @@ internal sealed class MultiStaffLayouter
         // THEN time — like LilyPond, instead of hanging off the first note column.
         // Reserve the time-signature width in the prefix (not the measure spring).
         // Only on a non-first system; the first system carries the initial meter.
+        // A tab staff draws no time signature (DrawTabStaff skips the prefix meter), so
+        // an all-tab score reserves none of its width — like the key signature, matching
+        // what is drawn — and no meter change is hoisted into a prefix it does not have.
         TimeSignatureChangeItem? leadingTimeChange = null;
-        if (systemIndex > 0 && startMeasureIndex < primaryVoice.Measures.Length)
+        if (!score.AllStavesTab && systemIndex > 0 && startMeasureIndex < primaryVoice.Measures.Length)
             foreach (var item in primaryVoice.Measures[startMeasureIndex].Items)
             {
                 if (item is TimeSignatureChangeItem tc) { leadingTimeChange = tc; break; }
                 if (item.Duration > Fraction.Zero) break;
             }
 
-        bool prefixHasTime = systemIndex == 0 || leadingTimeChange != null;
+        bool prefixHasTime = !score.AllStavesTab && (systemIndex == 0 || leadingTimeChange != null);
         double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, prefixHasTime,
             leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats,
             leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
@@ -886,8 +896,13 @@ internal sealed class MultiStaffLayouter
             //   TimeSignature space-alist (first-note . ...).
             if (i == startMeasureIndex && springs.Length > 0)
             {
-                var (ideal, min) = SpacingRules.FirstNoteSpring(
-                    activeKeySharps, prefixHasTime);
+                // The 5.0 clef→first-note gap is tuned for a wide engraved clef; the
+                // compact "TAB" clef needs far less, so an all-tab line starts its notes
+                // close to the clef (there is no key/time between them either). Notation
+                // staves keep the LilyPond space-alist value.
+                var (ideal, min) = score.AllStavesTab
+                    ? (TabClefToFirstNoteSpace, TabClefToFirstNoteSpace)
+                    : SpacingRules.FirstNoteSpring(activeKeySharps, prefixHasTime);
                 var s0 = springs[0];
                 // When the opening meter change is hoisted into the prefix, its
                 // hang-left width is no longer reserved in the measure — use the
