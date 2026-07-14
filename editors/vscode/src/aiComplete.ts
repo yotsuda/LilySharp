@@ -108,7 +108,7 @@ async function computeSuggestion(
     }
 
     // Quiet resolution: never prompt or pop errors mid-typing.
-    const chat = await resolveChatClient(deps.secrets, true);
+    const chat = await resolveChatClient(true);
     if (!chat) {
         return undefined;
     }

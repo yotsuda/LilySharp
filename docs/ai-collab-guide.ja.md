@@ -93,24 +93,15 @@
 
 ---
 
-## モデルの設定（Copilot / BYO キー）
+## モデルの設定（VS Code / Copilot に従う）
 
-既定（`lilysharp.ai.provider = "auto"`）では **Copilot があればそれを使い、無ければ保存済みの API キー**を使います。
+Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使います。つまり **GitHub Copilot（または言語モデルを登録する他の拡張）で使えるモデル**に従い、Lily# 固有のモデル選択や API キー管理は**ありません**。
 
-### 自分の API キーを使う（Anthropic / OpenAI）
+- **GitHub Copilot を有効化**しておけば、そのまま使えます（Copilot が提供する GPT / Claude / Gemini などが対象）。
+- モデルの選択も認証もすべて VS Code / Copilot 側で完結します。`settings.json` に書くべき Lily# の AI モデル設定・API キーはありません。
+- Copilot が無い／モデルが選べない場合は「no language model available」と案内されます。その場合は Copilot を有効化してください。
 
-1. コマンドパレット → **「Lily#: Set AI API Key…」**（`lilysharp.setAiKey`）。
-2. プロバイダ（Anthropic / OpenAI）を選び、**API キーを入力**。
-   - キーは **VS Code の SecretStorage に安全に保存**され、`settings.json` には書き込まれません。
-3. 必要に応じてプロバイダを固定：
-
-```jsonc
-"lilysharp.ai.provider": "anthropic",   // auto | copilot | anthropic | openai
-"lilysharp.ai.model": "claude-sonnet-5" // 空なら各プロバイダの既定
-```
-
-- 既定モデル：Anthropic = `claude-sonnet-5`、OpenAI = `gpt-4.1`。
-- キーの削除：**「Lily#: Clear AI API Keys」**（`lilysharp.clearAiKey`）。
+> Lily# 固有の AI 設定は `lilysharp.ai.ghostCompletion`（機能2のゴースト補完のオン/オフ）だけです。
 
 ---
 

@@ -28,8 +28,6 @@ export interface AiTransformDeps {
     getClient: () => LanguageClient | undefined;
     /** True once the client has started and is ready to serve requests. */
     isReady: () => boolean;
-    /** SecretStorage for BYO-key providers (Anthropic / OpenAI). */
-    secrets: vscode.SecretStorage;
     log: (msg: string) => void;
 }
 
@@ -144,7 +142,7 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     }
 
     // Resolve the model: the user's Copilot models (vscode.lm) or a BYO key.
-    const chat = await resolveChatClient(deps.secrets, false);
+    const chat = await resolveChatClient(false);
     if (!chat) {
         return;
     }

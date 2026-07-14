@@ -10,7 +10,6 @@ import {
 } from 'vscode-languageclient/node';
 import { registerAiTransform } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
-import { registerKeyCommands } from './modelClient';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -333,14 +332,11 @@ export function activate(context: vscode.ExtensionContext) {
         extensionUri: context.extensionUri,
         getClient: () => client,
         isReady: () => clientReady,
-        secrets: context.secrets,
         log: (msg: string) => outputChannel.appendLine(msg),
     };
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
-    // BYO-key management commands (set/clear Anthropic/OpenAI API keys).
-    registerKeyCommands(context);
 
     // Watch for document changes
     context.subscriptions.push(
