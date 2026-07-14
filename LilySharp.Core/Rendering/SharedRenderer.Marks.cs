@@ -109,12 +109,14 @@ internal static partial class SharedRenderer
             double cy = sy + pr.Y;
             using (gc.Source(pr.SourcePosition))
             {
-                // Slash from bottom-left to top-right
+                // Slash from bottom-left to top-right, with a dot in each pocket it
+                // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph (the dots had
+                // their x offsets swapped, sitting upper-right / lower-left).
                 gc.DrawLine(cx - slashWidth / 2, cy + slashHeight / 2,
                     cx + slashWidth / 2, cy - slashHeight / 2,
                     Color.Black, thickness);
-                gc.DrawCircle(cx + dotOffset * 0.3, cy - dotOffset, dotRadius, Color.Black);
-                gc.DrawCircle(cx - dotOffset * 0.3, cy + dotOffset, dotRadius, Color.Black);
+                gc.DrawCircle(cx - dotOffset * 0.3, cy - dotOffset, dotRadius, Color.Black);
+                gc.DrawCircle(cx + dotOffset * 0.3, cy + dotOffset, dotRadius, Color.Black);
             }
         }
     }
