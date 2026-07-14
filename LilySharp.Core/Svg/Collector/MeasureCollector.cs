@@ -1411,7 +1411,7 @@ public sealed partial class MeasureCollector
         foreach (var node in voiceNode.DescendantNodes())
         {
             if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node)
-                || IsInsideGrace(node) || IsInsideInlineVolta(node))
+                || IsInsideGrace(node) || IsInsideInlineVolta(node) || node.IsInside<ArpeggioSyntax>())
                 continue;
             GatherMusicNode(node, musicNodes);
         }
@@ -1441,7 +1441,7 @@ public sealed partial class MeasureCollector
             // wrapper) — EXCEPT parallel: the per-voice path flattens << \\ >>
             // (see GatherMusicNode), so its descendants must reach the walk.
             if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-                || IsInsideInlineVolta(node) || IsInsideOnce(node))
+                || IsInsideInlineVolta(node) || IsInsideOnce(node) || node.IsInside<ArpeggioSyntax>())
                 continue;
 
             GatherMusicNode(node, musicNodes);
@@ -2292,7 +2292,7 @@ public sealed partial class MeasureCollector
     /// apart (which silently dropped overrides, drum notes, clefs, etc.).
     /// </summary>
     private static bool IsCollectableMusicNode(SyntaxNode node) =>
-        node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+        node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ArpeggioSyntax
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
             or ParallelExpressionSyntax or InlineVoltaSyntax or MusicMarkSyntax
@@ -2308,7 +2308,8 @@ public sealed partial class MeasureCollector
     /// </summary>
     private static bool IsInsideProcessedContainer(SyntaxNode node) =>
         IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-        || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node);
+        || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node)
+        || node.IsInside<ArpeggioSyntax>();
 
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.

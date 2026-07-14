@@ -961,6 +961,12 @@ public sealed class MidiExporter
         var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
         if (members.Count == 0)
             return;
+        // `<< … >>N` fits the members' natural total into N as an auto-tuplet: push its
+        // ratio so every member's played duration scales, like `tuplet num/base { … }`.
+        var ratio = ComputeArpeggioTupletRatio(arpeggio, members);
+        if (ratio is { } r)
+            _tupletStack.Push((r.Num, r.Base));
+
         // The first member is the ROOT (normal relative resolution); it anchors the group.
         ProcessNode(members[0], track, conductorTrack);
         int anchorOctave = _currentOctave;
@@ -981,9 +987,35 @@ public sealed class MidiExporter
         }
         _octaveAbsolute = savedAbsolute;
         _partOctaveAnchor = savedAnchor;
+        if (ratio is not null)
+            _tupletStack.Pop();
         // After the group the running reference is the root (chord-after behavior).
         _currentOctave = anchorOctave;
         _currentNoteName = rootStep;
+    }
+
+    /// <summary>The auto-tuplet ratio (Num in the time of Base) for <c>&lt;&lt; … &gt;&gt;N</c>:
+    /// the members' natural total over the target N, or null when there is no N or they
+    /// already match.</summary>
+    private (int Num, int Base)? ComputeArpeggioTupletRatio(ArpeggioSyntax arpeggio, System.Collections.Generic.List<SyntaxNode> members)
+    {
+        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
+            return null;
+        Fraction nat = Fraction.Zero;
+        Fraction running = _defaultDuration;
+        foreach (var m in members)
+        {
+            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration;
+            Fraction d = dur?.ToFraction() ?? running;
+            if (dur != null) running = d;
+            nat += d;
+        }
+        if (nat.Numerator == 0 || nat == target)
+            return null;
+        Fraction ratio = nat / target;
+        if (ratio.Numerator == ratio.Denominator)
+            return null;
+        return (ratio.Numerator, ratio.Denominator);
     }
 
     /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root

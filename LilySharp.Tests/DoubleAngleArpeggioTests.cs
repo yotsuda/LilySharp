@@ -16,6 +16,9 @@
 
 using System.Linq;
 using LilySharp.Core.Midi;
+using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -79,6 +82,27 @@ public class DoubleAngleArpeggioTests
         var ceg = Sorted("<< c e g >>");
         Assert.Equal(ceg, Sorted("<< c g e >>"));
         Assert.Equal(ceg, Sorted("<c e g>"));
+    }
+
+    [Fact]
+    public void TrailingDuration_MakesAnAutoTuplet()
+    {
+        // `<< c e g >>2` fits 3 quarters (3/4) into a half note (1/2) → a 3:2 triplet;
+        // in 2/4 it fills the measure exactly and draws a "3" bracket.
+        var src = "time 2/4\nsection A { m { << c e g >>2 } }\nform main { A }\nscore main { staff m }";
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "m");
+        Assert.Single(score.TupletBrackets);
+        Assert.Equal(3, score.TupletBrackets[0].Numerator);
+        Assert.Equal(2, score.TupletBrackets[0].Denominator);
+        Assert.Equal(new Fraction(1, 2), score.Voice.Measures[0].TotalDuration);
+    }
+
+    [Fact]
+    public void WithoutTrailingDuration_ThereIsNoTuplet()
+    {
+        var src = "section A { m { << c e g >> } }\nform main { A }\nscore main { staff m }";
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "m");
+        Assert.Empty(score.TupletBrackets);
     }
 
     [Fact]

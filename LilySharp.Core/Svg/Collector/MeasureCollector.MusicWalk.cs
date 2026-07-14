@@ -143,9 +143,17 @@ public sealed partial class MeasureCollector
         var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
         if (members.Count == 0)
             return;
+
+        // `<< … >>N` fits the members' natural total into N's duration as an auto-tuplet;
+        // without N they keep their natural durations. tuplet = (scale, num, base) or null.
+        var tuplet = ComputeArpeggioTuplet(arpeggio, members);
+        int measureIndex = builder.CurrentMeasureIndex;
+        int startNoteIndex = builder.CurrentItemCount;
+        Fraction writtenTotal = Fraction.Zero;
+
         // The first member is the ROOT — resolved relative to the incoming frame; it
         // anchors the group and drives the next note after it.
-        ProcessMusicNode(members[0], builder);
+        writtenTotal += EmitArpeggioMember(members[0], builder, tuplet?.Scale);
         int anchorOctave = _octave.CurrentOctave;
         char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
         int rootStep = GetPitchIndex(rootLetter);
@@ -153,8 +161,6 @@ public sealed partial class MeasureCollector
         // Every other member STACKS above the root — the SAME octave placement as a
         // `<c e g>` chord member, so the pitches are independent of the order written
         // (`<< c e g >>` == `<< c g >>` for g) and a `,` drops a member below the root.
-        // Absolute mode makes each member's octave = anchor + (step >= root ? 0 : 1) + its
-        // own '/, marks.
         bool savedAbsolute = _octave.OctaveAbsolute;
         int savedBase = _octave.OctaveBase;
         for (int i = 1; i < members.Count; i++)
@@ -162,13 +168,64 @@ public sealed partial class MeasureCollector
             int step = GetPitchIndex(FirstPitchLetter(members[i]) ?? rootLetter);
             _octave.OctaveAbsolute = true;
             _octave.OctaveBase = anchorOctave + (step >= rootStep ? 0 : 1);
-            ProcessMusicNode(members[i], builder);
+            writtenTotal += EmitArpeggioMember(members[i], builder, tuplet?.Scale);
         }
         _octave.OctaveAbsolute = savedAbsolute;
         _octave.OctaveBase = savedBase;
         // After the group the running reference is the root (chord-after behavior).
         _octave.CurrentOctave = anchorOctave;
         _octave.LastPitchName = rootLetter;
+
+        // Auto-tuplet: the scaled members were added WITHOUT duration — draw the bracket
+        // and add the group's actual (target) duration to the measure now.
+        if (tuplet is { } tp)
+        {
+            int endNoteIndex = builder.CurrentItemCount - 1;
+            if (endNoteIndex >= startNoteIndex)
+                _tupletBrackets.Add(new TupletBracketItem(tp.Num, tp.Base,
+                    startNoteIndex, endNoteIndex, measureIndex, arpeggio.Position, 0,
+                    _currentStaffIndex, _currentVoiceIndex));
+            builder.AddDuration(
+                new Fraction(writtenTotal.Numerator * tp.Base, writtenTotal.Denominator * tp.Num),
+                arpeggio.Position + 1);
+        }
+    }
+
+    /// <summary>Emit one arpeggio member: scaled (auto-tuplet) or at its natural duration.</summary>
+    private Fraction EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder, Fraction? scale)
+    {
+        if (scale is { } s)
+            return EmitScaledItem(member, builder, s, false, false, false, false, false);
+        ProcessMusicNode(member, builder); // natural duration; return value unused off the tuplet path
+        return Fraction.Zero;
+    }
+
+    /// <summary>
+    /// The auto-tuplet for <c>&lt;&lt; … &gt;&gt;N</c>: fits the members' natural total
+    /// (D_nat) into the target duration N. Returns the (TimeScale, ratio) as a tuplet of
+    /// <c>Num</c> in the time of <c>Base</c>, or null when there is no <c>N</c> or the
+    /// total already equals it (no tuplet needed).
+    /// </summary>
+    private (Fraction Scale, int Num, int Base)? ComputeArpeggioTuplet(ArpeggioSyntax arpeggio, List<SyntaxNode> members)
+    {
+        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
+            return null;
+        Fraction nat = Fraction.Zero;
+        Fraction running = _defaultDuration;
+        foreach (var m in members)
+        {
+            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration;
+            Fraction d = dur?.ToFraction() ?? running;
+            if (dur != null) running = d;
+            nat += d;
+        }
+        if (nat.Numerator == 0 || nat == target)
+            return null;
+        Fraction ratio = nat / target; // D_nat : D_target, reduced by Fraction
+        int num = ratio.Numerator, baseDiv = ratio.Denominator;
+        if (num == baseDiv)
+            return null;
+        return (new Fraction(baseDiv, num), num, baseDiv);
     }
 
     /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root
@@ -614,57 +671,19 @@ public sealed partial class MeasureCollector
             var next = j + 1 < tupletItems.Count ? tupletItems[j + 1] : null;
             var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = PeekMarkers(next);
 
-            // Post-events (articulations, dynamics, figured bass, chord names,
-            // cross-staff) attach to a tuplet-inner note/chord/rest exactly as they
-            // do in the top-level stream — captured against the item's own index
-            // BEFORE it is added. Without this they were silently dropped.
-            int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
-            int annItemIndex = builder.CurrentItemCount;
-            Fraction annAnchor = builder.CurrentDuration;
-
-            if (item is NoteSyntax note)
-            {
-                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
-                writtenDuration += noteItem.Duration;
-                builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
-                CollectDynamics(note, annMeasureIndex, annItemIndex);
-                CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
-                    noteItem.EditorialAccidental, annAnchor);
-                CollectFiguredBass(note, annMeasureIndex, annItemIndex);
-                CollectChordNames(note, annMeasureIndex, annItemIndex);
-                CollectCrossStaff(note, annMeasureIndex, annItemIndex);
-                lastSourcePosition = note.Position;
-            }
-            else if (item is RestSyntax rest)
-            {
-                var restItem = CreateRestItem(rest);
-                writtenDuration += restItem.Duration;
-                builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
-                CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
-                lastSourcePosition = rest.Position;
-            }
-            else if (item is ChordSyntax chord)
-            {
-                var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
-                writtenDuration += chordItem.Duration;
-                builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
-                CollectDynamics(chord, annMeasureIndex, annItemIndex);
-                CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
-                CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
-                CollectChordNames(chord, annMeasureIndex, annItemIndex);
-                CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
-                lastSourcePosition = chord.Position;
-            }
-            else if (item is TupletExpressionSyntax nestedTuplet)
+            if (item is TupletExpressionSyntax nestedTuplet)
             {
                 // LILYPOND-REF: lily/tuplet-bracket.cc - nested tuplet processing
                 // Recursively process nested tuplet; its actual duration
                 // counts as "written" duration for this outer tuplet
-                Fraction nestedActualDuration = ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
-                writtenDuration += nestedActualDuration;
-                lastSourcePosition = nestedTuplet.Position;
+                writtenDuration += ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
             }
+            else
+            {
+                writtenDuration += EmitScaledItem(item, builder, scale,
+                    hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+            }
+            lastSourcePosition = item.Position;
         }
 
         // Calculate actual duration: written × base / ratio
@@ -706,5 +725,53 @@ public sealed partial class MeasureCollector
         }
 
         return actualDuration;
+    }
+
+    /// <summary>
+    /// Emits one note / rest / chord at a tuplet-scaled duration (TimeScale carries the
+    /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
+    /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
+    /// </summary>
+    private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
+        bool hasTieAfter, bool hasSlurStartAfter, bool hasSlurEndAfter, bool hasBeamStartAfter, bool hasBeamEndAfter)
+    {
+        int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+        int annItemIndex = builder.CurrentItemCount;
+        Fraction annAnchor = builder.CurrentDuration;
+        switch (item)
+        {
+            case NoteSyntax note:
+            {
+                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+                CollectDynamics(note, annMeasureIndex, annItemIndex);
+                CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
+                    noteItem.EditorialAccidental, annAnchor);
+                CollectFiguredBass(note, annMeasureIndex, annItemIndex);
+                CollectChordNames(note, annMeasureIndex, annItemIndex);
+                CollectCrossStaff(note, annMeasureIndex, annItemIndex);
+                return noteItem.Duration;
+            }
+            case RestSyntax rest:
+            {
+                var restItem = CreateRestItem(rest);
+                builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
+                CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
+                return restItem.Duration;
+            }
+            case ChordSyntax chord:
+            {
+                var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
+                    hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+                builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
+                CollectDynamics(chord, annMeasureIndex, annItemIndex);
+                CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
+                CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
+                CollectChordNames(chord, annMeasureIndex, annItemIndex);
+                CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
+                return chordItem.Duration;
+            }
+        }
+        return Fraction.Zero;
     }
 }
