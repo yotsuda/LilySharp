@@ -173,7 +173,13 @@ public sealed partial class MeasureCollector
         // A section can state its own tempo, printed as a metronome mark at its start.
         if (_sectionHeaderTempos.TryGetValue(section.SectionName, out var sectionTempo))
         {
-            if (sectionTempo.Bpm is int bpm)
+            // At the very first timestep the section tempo IS the piece's opening tempo,
+            // so it REPLACES the score's initial metronome mark rather than stacking a
+            // second one on top of it (the initial time signature collapses the same
+            // way). Anywhere else it prints a metronome mark at the section start.
+            if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+                CollectTempo(sectionTempo);
+            else if (sectionTempo.Bpm is int bpm)
                 _musicMarks.Add(new MusicMarkItem(
                     MusicMarkType.Tempo, bpm.ToString(),
                     builder.CurrentMeasureIndex, sectionPos,

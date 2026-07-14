@@ -67,6 +67,23 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
+    public void FirstSectionTempo_ReplacesTheScoresOpeningTempo()
+    {
+        // Section A is first, so its `tempo 140` becomes the piece's opening metronome
+        // mark (replacing the score's `tempo 100`) instead of being hidden behind it.
+        var score = Collect("""
+            tempo 100
+            section A { tempo 140  melody { c4 d e f | } }
+            section B { melody { g4 a b c' | } }
+            form main { A B }
+            score main { staff melody }
+            """);
+        Assert.Equal(140, score.Tempo);
+        // It replaced the opening mark — no second Tempo mark stacked on top of it.
+        Assert.DoesNotContain(score.MusicMarks, m => m.Type == MusicMarkType.Tempo);
+    }
+
+    [Fact]
     public void StandalonePartMajorHeaderTime_AppliesToTheSection()
     {
         var score = Collect("""
