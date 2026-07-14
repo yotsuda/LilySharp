@@ -209,6 +209,11 @@ public sealed partial class LilySharpLanguageServer
 
     private static (int line, int character) GetLineAndCharacter(string text, int position)
     {
+        // A malformed/synthetic node can report a position outside the document; clamp it
+        // so the character is never negative (VS Code rejects a Position with a negative
+        // character, and one bad symbol range aborts the WHOLE documentSymbol response).
+        position = System.Math.Clamp(position, 0, text.Length);
+
         int line = 0;
         int lastLineStart = 0;
 
