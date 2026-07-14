@@ -88,4 +88,34 @@ public class DocumentSymbolRobustnessTests
         AssertNonNegative(symbols);
         Assert.NotEmpty(symbols!);
     }
+
+    // ---- GetLineAndCharacter: the offset -> (line, character) converter ----
+    // A node boundary landing exactly on the '\n' of a CRLF pair used to make the
+    // converter overshoot lastLineStart past the offset and return character = -1 —
+    // the "Illegal argument: character must be non-negative" that aborts documentSymbol
+    // on CRLF files (which is every file saved on Windows).
+
+    [Fact]
+    public void GetLineAndCharacter_OnTheLfOfACrlf_IsNotNegative()
+    {
+        // "ab\r\ncd": offset 3 is the '\n' (between '\r' at 2 and 'c' at 4).
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter("ab\r\ncd", 3);
+        Assert.True(character >= 0, $"character was {character}");
+        Assert.Equal(1, line);
+        Assert.Equal(0, character);
+    }
+
+    [Theory]
+    [InlineData("ab\r\ncd", 0, 0, 0)]   // start
+    [InlineData("ab\r\ncd", 2, 0, 2)]   // the '\r' — end of line 0
+    [InlineData("ab\r\ncd", 3, 1, 0)]   // the '\n' — the crash case, now column 0
+    [InlineData("ab\r\ncd", 4, 1, 0)]   // 'c' — start of line 1 (CRLF counted once)
+    [InlineData("ab\r\ncd", 5, 1, 1)]   // 'd'
+    [InlineData("ab\ncd", 3, 1, 0)]     // plain LF still maps correctly
+    [InlineData("x\r\ny\r\nz", 6, 2, 0)] // 'z' after two CRLFs — lines counted once each
+    public void GetLineAndCharacter_MapsCrlfAndLf(string text, int offset, int line, int character)
+    {
+        var (l, c) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+        Assert.Equal((line, character), (l, c));
+    }
 }

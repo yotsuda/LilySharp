@@ -207,7 +207,7 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    private static (int line, int character) GetLineAndCharacter(string text, int position)
+    internal static (int line, int character) GetLineAndCharacter(string text, int position)
     {
         // A malformed/synthetic node can report a position outside the document; clamp it
         // so the character is never negative (VS Code rejects a Position with a negative
@@ -227,13 +227,22 @@ public sealed partial class LilySharpLanguageServer
             else if (text[i] == '\r')
             {
                 line++;
-                if (i + 1 < text.Length && text[i + 1] == '\n')
+                // Treat CRLF as ONE line break — but only swallow the '\n' when it lies
+                // STRICTLY BEFORE position. If position sits exactly on the '\n' (a node
+                // boundary inside a CRLF — common in a CRLF file), swallowing it pushes
+                // lastLineStart past position, so `position - lastLineStart` goes NEGATIVE.
+                // VS Code then rejects the whole documentSymbol response with "Illegal
+                // argument: character must be non-negative". Guarding on `< position`
+                // keeps that '\n' uncounted, mapping the boundary to column 0.
+                if (i + 1 < position && text[i + 1] == '\n')
                     i++;
                 lastLineStart = i + 1;
             }
         }
 
-        return (line, position - lastLineStart);
+        // Belt-and-suspenders: the character can never be negative regardless of any
+        // line-ending edge above (a negative Position aborts the entire outline).
+        return (line, System.Math.Max(0, position - lastLineStart));
     }
 
     // ========== Folding Ranges ==========
