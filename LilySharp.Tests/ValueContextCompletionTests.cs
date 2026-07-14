@@ -39,6 +39,9 @@ public class ValueContextCompletionTests
     [InlineData("composer ", "AfterTitleText")]
     [InlineData("section A { m { time ", "AfterTime")]
     [InlineData("part m { tempo ", "AfterTempo")]
+    // `octave ` at global scope (and in a part header) offers only its two modes.
+    [InlineData("octave ", "AfterOctave")]
+    [InlineData("part m { octave ", "AfterOctave")]
     public void ValueKeywords_GetTheirOwnContext(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());
@@ -110,6 +113,22 @@ public class ValueContextCompletionTests
             Assert.NotNull(time.Command);
             Assert.Equal("editor.action.triggerSuggest", time.Command!.CommandIdentifier);
         }
+    }
+
+    [Fact]
+    public void OctaveKeyword_IsOfferedAtTopLevel_AndAutoTriggersTheModeList()
+    {
+        // `octave` completes at global scope and re-opens the suggest popup so
+        // absolute / relative appear immediately, without a second Ctrl+Space.
+        var octave = LilySharpLanguageServer.GetTopLevelCompletions().Items
+            .Single(i => i.Label == "octave");
+        Assert.Equal("octave $0", octave.InsertText);
+        Assert.NotNull(octave.Command);
+        Assert.Equal("editor.action.triggerSuggest", octave.Command!.CommandIdentifier);
+
+        var modes = LilySharpLanguageServer.GetOctaveCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "absolute", "relative" }, modes);
     }
 
     [Fact]
