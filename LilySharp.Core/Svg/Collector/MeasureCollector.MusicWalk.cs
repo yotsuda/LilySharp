@@ -140,17 +140,18 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder)
     {
-        var notes = arpeggio.Notes.ToList();
-        if (notes.Count == 0)
+        var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
+        if (members.Count == 0)
             return;
-        // The first note resolves normally (relative to the previous note) and anchors
-        // the group; freeze the octave reference on it for every following note.
-        ProcessMusicNode(notes[0], builder);
+        // The first member resolves normally (relative to the previous note) and anchors
+        // the group; freeze the octave reference on it for every following member. A chord
+        // member anchors internally to its own first pitch, which becomes THIS anchor.
+        ProcessMusicNode(members[0], builder);
         int anchorOctave = _octave.CurrentOctave;
-        for (int i = 1; i < notes.Count; i++)
+        for (int i = 1; i < members.Count; i++)
         {
-            ProcessMusicNode(notes[i], builder);
-            _octave.CurrentOctave = anchorOctave; // re-freeze: octave stays on the first note
+            ProcessMusicNode(members[i], builder);
+            _octave.CurrentOctave = anchorOctave; // re-freeze: octave stays on the first member
         }
     }
 

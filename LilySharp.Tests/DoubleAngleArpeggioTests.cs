@@ -61,6 +61,20 @@ public class DoubleAngleArpeggioTests
     }
 
     [Fact]
+    public void NestedChord_SoundsStacked_ThenTheSequenceContinues()
+    {
+        // `<< <c e> g >>` — a chord may be a member: its c and e sound together, then g
+        // follows in sequence (an arpeggio of a chord + a note).
+        var src = "section A { m { << <c e>8 g >> } }\nform main { A }\nscore main { staff m }";
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes;
+        Assert.Equal(3, notes.Count);
+        Assert.Equal(notes[0].StartTick, notes[1].StartTick); // the chord's two notes coincide
+        Assert.True(notes[2].StartTick > notes[1].StartTick); // g follows the chord
+        Assert.Contains(60, notes.Select(n => n.Pitch));       // c
+        Assert.Contains(64, notes.Select(n => n.Pitch));       // e (anchored to c)
+    }
+
+    [Fact]
     public void InnerDurationCarries_AndNotesAreSequentialNotStacked()
     {
         // `<< c8 e g >>` — e and g inherit the eighth; three eighths at distinct onsets.

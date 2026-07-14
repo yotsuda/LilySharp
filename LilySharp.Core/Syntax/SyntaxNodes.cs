@@ -495,6 +495,19 @@ public sealed class ArpeggioSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The arpeggio's members in source order — notes and/or nested chords
+    /// (<c>&lt;&lt; &lt;c e&gt; g &gt;&gt;</c>). Each plays in sequence; the octave anchors
+    /// to the first member.</summary>
+    public IEnumerable<SyntaxNode> Members
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is NoteSyntax or ChordSyntax)
+                    yield return GetChild(i)!;
+        }
+    }
+
     /// <summary>The optional total duration written after <c>&gt;&gt;</c> (auto-tuplet
     /// target), or null when the notes keep their own natural durations.</summary>
     public DurationSyntax? TotalDuration

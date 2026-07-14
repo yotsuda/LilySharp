@@ -274,7 +274,7 @@ public sealed class MidiExporter
                 break;
 
             case ArpeggioSyntax arpeggio:
-                ProcessArpeggio(arpeggio, track);
+                ProcessArpeggio(arpeggio, track, conductorTrack);
                 break;
 
             case TimeSignatureSyntax timeSig:
@@ -956,17 +956,19 @@ public sealed class MidiExporter
     /// anchor to the first note — the chord rule: the octave reference stays frozen on the
     /// first note while the pitch names flow.
     /// </summary>
-    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track)
+    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track, MidiTrack conductorTrack)
     {
-        var notes = arpeggio.Notes.ToList();
-        if (notes.Count == 0)
+        var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
+        if (members.Count == 0)
             return;
-        ProcessNote(notes[0], track);
+        // Dispatch each member (ProcessNote / ProcessChord) sequentially, freezing the
+        // octave on the first member (a chord member anchors to its own first pitch).
+        ProcessNode(members[0], track, conductorTrack);
         int anchorOctave = _currentOctave;
-        for (int i = 1; i < notes.Count; i++)
+        for (int i = 1; i < members.Count; i++)
         {
-            ProcessNote(notes[i], track);
-            _currentOctave = anchorOctave; // re-freeze: octave stays on the first note
+            ProcessNode(members[i], track, conductorTrack);
+            _currentOctave = anchorOctave; // re-freeze: octave stays on the first member
         }
     }
 
