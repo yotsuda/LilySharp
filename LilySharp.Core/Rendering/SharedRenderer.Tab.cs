@@ -168,17 +168,25 @@ internal static partial class SharedRenderer
                             columnX, staffY, staff, isBeamed, gc);
                     break;
                 case RestItem rest when !numbersOnly:
-                    // LilyPond's \tabFullNotation shows rests centred vertically in the tab
-                    // staff. Each rest glyph's INK sits at a different offset from its
-                    // notation origin — a half rest sits ABOVE its line, a whole rest hangs
-                    // BELOW it — so centring the origin alone left the half rest too high.
-                    // Centre the INK bbox on the tab's vertical middle, then undo DrawRest's
-                    // own staffY->origin offset (+1 for a whole rest, +2 otherwise).
+                    // In \tabFullNotation whole and half rests ATTACH to a staff line, just
+                    // like on the notation staff — a bar floating in a gap looks wrong. The
+                    // central inter-line space holds both: the HALF rest SITS ON the lower
+                    // central line (body above), the WHOLE rest HANGS FROM the upper one
+                    // (body below). Shorter rests (glyphs that span a line) stay centred on
+                    // the tab's vertical middle. `staffY + k*stringSpace` is the k-th line.
                     int restValue = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
-                    double tabMiddle = staffY + (stringCount - 1) * stringSpace / 2.0;
-                    double restOriginY = tabMiddle + (restBBox.Top + restBBox.Bottom) / 2.0;
-                    DrawRest(rest, itemX, restOriginY - (restValue == 1 ? 1.0 : 2.0), gc);
+                    double lowerCentralLineY = staffY + (stringCount / 2) * stringSpace;
+                    if (restValue == 2)      // half: DrawRest puts the origin (its bottom) at staffY+2
+                        DrawRest(rest, itemX, lowerCentralLineY - 2.0, gc);
+                    else if (restValue == 1) // whole: DrawRest puts the origin (its top) at staffY+1
+                        DrawRest(rest, itemX, lowerCentralLineY - stringSpace - 1.0, gc);
+                    else
+                    {
+                        var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
+                        double tabMiddle = staffY + (stringCount - 1) * stringSpace / 2.0;
+                        double restOriginY = tabMiddle + (restBBox.Top + restBBox.Bottom) / 2.0;
+                        DrawRest(rest, itemX, restOriginY - 2.0, gc);
+                    }
                     break;
             }
         }
