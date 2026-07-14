@@ -63,6 +63,12 @@ public sealed partial class LilySharpLanguageServer
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRunRegex();
 
+    // `override [once] Grob.property = <partial>` at the END of a line: group 1 is the
+    // property (after the last '.' before '='). The partial value carries no whitespace,
+    // so the caret is at the value position whether it sits just after '= ' or mid-value.
+    [GeneratedRegex(@"\boverride\b.*?\.([A-Za-z][\w-]*)\s*=\s*[^\s=]*$")]
+    private static partial Regex OverrideValueRegex();
+
     // ========== Completion ==========
 
     [JsonRpcMethod(Methods.TextDocumentCompletionName, UseSingleObjectParameterDeserialization = true)]
@@ -111,6 +117,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterOctave => GetOctaveCompletions(),
             CompletionContext.AfterOverride => GetOverrideCompletions(),
+            CompletionContext.AfterOverrideValue => GetOverrideValueCompletions(doc.Text, offset),
             CompletionContext.AfterRevert => GetRevertCompletions(),
             CompletionContext.AfterTempo => GetTempoCompletions(),
             CompletionContext.AfterTime => GetTimeCompletions(),
@@ -464,6 +471,7 @@ public sealed partial class LilySharpLanguageServer
         AfterKeyTonic,
         AfterOctave,
         AfterOverride,
+        AfterOverrideValue,
         AfterRevert,
         AfterTempo,
         AfterTime,
@@ -584,6 +592,12 @@ public sealed partial class LilySharpLanguageServer
                 // `revert |`: the same targets, without a value (revert Grob.property).
                 case "revert": return CompletionContext.AfterRevert;
             }
+
+            // `override [once] Grob.property = |` → the values that fit the property
+            // (colours for .color, true/false for .transparent). prevWord here is empty
+            // (the char before the caret is '='), so this is a separate check.
+            if (OverrideValueProperty(text, offset) is not null)
+                return CompletionContext.AfterOverrideValue;
         }
 
         // Inside a "…" string value, the directive that OWNS the string decides the
@@ -1434,18 +1448,20 @@ public sealed partial class LilySharpLanguageServer
     /// would mislead. Shared by <see cref="GetOverrideCompletions"/> (which appends
     /// <c>= value</c>) and <see cref="GetRevertCompletions"/> (which does not).
     /// </summary>
-    private static readonly (string Grob, string Property, string Value, string Detail)[] RenderedGrobProperties =
+    private static readonly (string Grob, string Property, string Kind, string Detail)[] RenderedGrobProperties =
     {
-        ("NoteHead", "color", "red", "Colour the note heads (red, blue, green, … or #RRGGBB)"),
-        ("Stem", "color", "red", "Colour the stems"),
-        ("NoteHead", "transparent", "true", "Hide the note head (true) or show it (false)"),
-        ("NoteColumn", "force-hshift", "0", "Manually shift colliding note columns sideways (staff-spaces)"),
+        ("NoteHead", "color", "color", "Colour the note heads"),
+        ("Stem", "color", "color", "Colour the stems"),
+        ("NoteHead", "transparent", "bool", "Show or hide the note head"),
+        ("NoteColumn", "force-hshift", "number", "Manually shift colliding note columns sideways (staff-spaces)"),
     };
 
     /// <summary>
     /// The grob-property overrides offered right after <c>override</c> (and
-    /// <c>once override</c>) — each a <c>Grob.property = value</c> fill-in with the value
-    /// pre-selected. See <see cref="RenderedGrobProperties"/> for why the set is limited.
+    /// <c>once override</c>). Each inserts <c>Grob.property = </c> and — for a property
+    /// with an enumerable value (a colour, or true/false) — re-opens the suggest popup so
+    /// the value list appears next, exactly like <c>key</c>/<c>clef</c>. No value is
+    /// pre-filled. See <see cref="RenderedGrobProperties"/> for why the set is limited.
     /// </summary>
     internal static CompletionList GetOverrideCompletions()
     {
@@ -1456,11 +1472,84 @@ public sealed partial class LilySharpLanguageServer
                 Label = $"{o.Grob}.{o.Property}",
                 Kind = CompletionItemKind.Property,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = $"{o.Grob}.{o.Property} = ${{1:{o.Value}}}",
+                InsertText = $"{o.Grob}.{o.Property} = ",
                 Detail = o.Detail,
+                SortText = i.ToString(),
+                // A numeric value (force-hshift) has nothing to enumerate, so it does not
+                // retrigger; colour / true-false do.
+                Command = o.Kind is "color" or "bool"
+                    ? new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" }
+                    : null,
+            }).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// The value forms offered after <c>override Grob.property = </c>, keyed by the
+    /// property at the cursor: named colours for <c>color</c>, <c>true</c>/<c>false</c>
+    /// for <c>transparent</c>. A numeric property (<c>force-hshift</c>) has no enumerable
+    /// value, so nothing is offered (the user types the number).
+    /// </summary>
+    internal static CompletionList GetOverrideValueCompletions(string text, int offset)
+        => OverrideValueProperty(text, offset) switch
+        {
+            "color" => GetColorCompletions(),
+            "transparent" => GetBooleanCompletions(),
+            _ => new CompletionList { Items = System.Array.Empty<CompletionItem>() },
+        };
+
+    /// <summary>The named colours <see cref="LilySharp.Core.Rendering.ColorParser"/>
+    /// understands (a hex <c>#RRGGBB</c> is also valid, but typed, not listed).</summary>
+    internal static CompletionList GetColorCompletions()
+    {
+        var colors = new[] { "red", "green", "blue", "orange", "purple", "brown",
+            "yellow", "cyan", "magenta", "gray", "black", "white" };
+        return new CompletionList
+        {
+            Items = colors.Select((c, i) => new CompletionItem
+            {
+                Label = c,
+                Kind = CompletionItemKind.Color,
+                InsertText = c,
+                Detail = "Named colour",
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The two boolean values, for <c>transparent</c> (hide / show).</summary>
+    internal static CompletionList GetBooleanCompletions()
+    {
+        var vals = new (string Label, string Detail)[]
+        {
+            ("true", "Hide the grob"),
+            ("false", "Show the grob (default)"),
+        };
+        return new CompletionList
+        {
+            Items = vals.Select((v, i) => new CompletionItem
+            {
+                Label = v.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = v.Detail,
                 SortText = i.ToString(),
             }).ToArray()
         };
+    }
+
+    /// <summary>
+    /// When the cursor sits at the VALUE of a grob override on the current line
+    /// (<c>override [once] Grob.property = |</c>, optionally with a partial value already
+    /// typed), returns the property name (e.g. "color"); otherwise null. Line-scoped and
+    /// gated to an <c>override</c> statement so a stray <c>x = </c> elsewhere is unaffected.
+    /// </summary>
+    internal static string? OverrideValueProperty(string text, int offset)
+    {
+        int lineStart = Math.Min(offset, text.Length);
+        while (lineStart > 0 && text[lineStart - 1] != '\n') lineStart--;
+        var line = text.Substring(lineStart, Math.Min(offset, text.Length) - lineStart);
+        var m = OverrideValueRegex().Match(line);
+        return m.Success ? m.Groups[1].Value : null;
     }
 
     /// <summary>

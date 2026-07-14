@@ -150,9 +150,47 @@ public class ValueContextCompletionTests
         Assert.Equal(
             new[] { "NoteHead.color", "Stem.color", "NoteHead.transparent", "NoteColumn.force-hshift" },
             labels);
-        // Each is a fill-in that lands the caret on the value.
+        // Inserts `Grob.property = ` (no value pre-filled) and re-opens the popup so the
+        // value list appears next — for an enumerable value (colour, true/false).
         var color = LilySharpLanguageServer.GetOverrideCompletions().Items.First();
-        Assert.Equal("NoteHead.color = ${1:red}", color.InsertText);
+        Assert.Equal("NoteHead.color = ", color.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", color.Command?.CommandIdentifier);
+        // A numeric value has nothing to enumerate, so it does not retrigger.
+        var hshift = LilySharpLanguageServer.GetOverrideCompletions().Items
+            .Single(i => i.Label == "NoteColumn.force-hshift");
+        Assert.Equal("NoteColumn.force-hshift = ", hshift.InsertText);
+        Assert.Null(hshift.Command);
+    }
+
+    [Theory]
+    [InlineData("override NoteHead.color = ", "AfterOverrideValue")]
+    [InlineData("override Stem.color = re", "AfterOverrideValue")]
+    [InlineData("once override NoteHead.transparent = ", "AfterOverrideValue")]
+    [InlineData("section A { m { c4 override NoteHead.color = ", "AfterOverrideValue")]
+    public void OverrideValuePosition_GetsItsOwnContext(string text, string expected)
+    {
+        Assert.Equal(expected, ContextOf(text).ToString());
+    }
+
+    [Fact]
+    public void OverrideValueCompletions_MatchTheProperty()
+    {
+        var colors = LilySharpLanguageServer
+            .GetOverrideValueCompletions("override NoteHead.color = ", "override NoteHead.color = ".Length)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Contains("red", colors);
+        Assert.Contains("blue", colors);
+        Assert.DoesNotContain("true", colors);
+
+        var bools = LilySharpLanguageServer
+            .GetOverrideValueCompletions("override NoteHead.transparent = ", "override NoteHead.transparent = ".Length)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "true", "false" }, bools);
+
+        // A numeric property offers nothing to enumerate.
+        Assert.Empty(LilySharpLanguageServer
+            .GetOverrideValueCompletions("override NoteColumn.force-hshift = ", "override NoteColumn.force-hshift = ".Length)
+            .Items);
     }
 
     [Fact]
