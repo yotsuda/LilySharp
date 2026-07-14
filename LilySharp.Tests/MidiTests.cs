@@ -156,6 +156,41 @@ public class MidiTests
     }
 
     [Fact]
+    public void StandalonePartMajorSectionHeaderTempo_ChangesTheConductorTempo()
+    {
+        // A standalone part-major header can state a section's tempo parallel to the
+        // parts — `section B { tempo 140 }`. On a NON-first section it must stamp a
+        // conductor tempo change at that section's start tick (not at tick 0), so
+        // playback speeds up there — matching the metronome mark the SVG prints.
+        var midi = new MidiExporter().Export(SyntaxTree.Parse("""
+            tempo 100
+            part melody { section A { c4 d e f } section B { g4 a g f } }
+            section B { tempo 140 }
+            form main { A B }
+            score main { staff melody }
+            """));
+        var conductor = midi.Tracks[0];
+        // 140 BPM = 428571 μs/beat, applied where section B begins (after A's 4/4 bar).
+        Assert.Contains(conductor.TempoChanges, tc => tc.MicrosecondsPerBeat == 428571 && tc.Tick > 0);
+    }
+
+    [Fact]
+    public void StandalonePartMajorSectionHeaderTime_ChangesTheConductorMeter()
+    {
+        // Likewise a standalone header's meter — `section B { time 3/4 }` — must stamp a
+        // conductor time-signature change at the section start, not only on the staff.
+        var midi = new MidiExporter().Export(SyntaxTree.Parse("""
+            time 4/4
+            part melody { section A { c4 d e f } section B { g4 a g } }
+            section B { time 3/4 }
+            form main { A B }
+            score main { staff melody }
+            """));
+        var conductor = midi.Tracks[0];
+        Assert.Contains(conductor.TimeSignatures, ts => ts.Numerator == 3 && ts.Denominator == 4 && ts.Tick > 0);
+    }
+
+    [Fact]
     public void PhraseReference_InlineNotesAfterAreNotTransposed()
     {
         // The inline c after the phrase stays at written pitch (C4 = 60),
