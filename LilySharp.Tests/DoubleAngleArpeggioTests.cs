@@ -105,6 +105,23 @@ public class DoubleAngleArpeggioTests
         Assert.Empty(score.TupletBrackets);
     }
 
+    [Fact]
+    public void MusicXmlExport_StacksMembersAboveTheRoot()
+    {
+        // Exported MusicXML places g in octave 4 (a fifth ABOVE c), matching the render —
+        // not the relative-nearest g3. (Previously the arpeggio was dropped entirely.)
+        var src = "section A { m { << c g >> } }\nform main { A }\nscore main { staff m }";
+        var path = System.IO.Path.GetTempFileName();
+        try
+        {
+            new LilySharp.Core.MusicXml.MusicXmlExporter().ExportToFile(SyntaxTree.Parse(src), path);
+            var xml = System.IO.File.ReadAllText(path);
+            Assert.Matches(@"<step>C</step>\s*<octave>4</octave>", xml);
+            Assert.Matches(@"<step>G</step>\s*<octave>4</octave>", xml);
+        }
+        finally { System.IO.File.Delete(path); }
+    }
+
     private static bool MeasureOverflows(string src)
     {
         var v = new LilySharp.Core.Semantics.MeasureValidator();

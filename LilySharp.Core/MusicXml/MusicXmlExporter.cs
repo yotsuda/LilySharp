@@ -35,8 +35,10 @@ public sealed class MusicXmlExporter
     private int _currentOctave = 4;
     private int _currentStep = 0;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
     // Octave mode (mirrors MeasureCollector): false = relative (default), true =
-    // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
+    // `octave absolute` ('/, are offsets from a fixed anchor, no carry). The anchor is
+    // normally C4 but is set per-member while stacking an arpeggio (`<< … >>`).
     private bool _octaveAbsolute;
+    private int _octaveAnchor = 4;
     private bool _initialOctaveAbsolute; // file-level default, restored per part
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
@@ -771,6 +773,10 @@ public sealed class MusicXmlExporter
                 ProcessChord(chord);
                 break;
 
+            case ArpeggioSyntax arpeggio:
+                ProcessArpeggio(arpeggio);
+                break;
+
             case RestSyntax rest:
                 ProcessRest(rest);
                 break;
@@ -1332,6 +1338,100 @@ public sealed class MusicXmlExporter
         _lastEmittedNotes.Add(xmlNote);
         MaybeClosePickup(duration);
     }
+
+    /// <summary>
+    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as sequential notes whose octaves
+    /// stack above the first member (the chord rule), with a trailing <c>N</c> becoming a
+    /// tuplet (time-modification + bracket) — mirroring MidiExporter / the collector.
+    /// </summary>
+    private void ProcessArpeggio(ArpeggioSyntax arpeggio)
+    {
+        var members = arpeggio.Members.ToList();
+        if (members.Count == 0)
+            return;
+
+        // Auto-tuplet: `<< … >>N` scales the members into N and stamps a bracket.
+        var ratio = ArpeggioTupletRatio(arpeggio, members);
+        var tupletMeasure = _currentMeasure;
+        int tupletFrom = _currentMeasure?.Notes.Count ?? 0;
+        int tupletNumber = 0;
+        if (ratio is { } r)
+        {
+            _tupletStack.Push((r.Num, r.Base));
+            tupletNumber = _tupletStack.Count;
+        }
+
+        // The first member is the root (normal relative); it anchors the group.
+        ProcessNode(members[0]);
+        int anchorOctave = _currentOctave;
+        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
+        int rootStep = RelativeOctave.StepIndex(rootLetter);
+
+        // Subsequent members stack above the root (absolute mode with the anchored octave).
+        bool savedAbsolute = _octaveAbsolute;
+        int savedAnchor = _octaveAnchor;
+        for (int i = 1; i < members.Count; i++)
+        {
+            int step = RelativeOctave.StepIndex(FirstPitchLetter(members[i]) ?? rootLetter);
+            _octaveAbsolute = true;
+            _octaveAnchor = anchorOctave + (step >= rootStep ? 0 : 1);
+            ProcessNode(members[i]);
+        }
+        _octaveAbsolute = savedAbsolute;
+        _octaveAnchor = savedAnchor;
+        // After the group the running reference is the root (chord-after behavior).
+        _currentOctave = anchorOctave;
+        _currentStep = rootStep;
+
+        if (ratio is not null)
+        {
+            _tupletStack.Pop();
+            if (_currentMeasure != null && ReferenceEquals(_currentMeasure, tupletMeasure))
+            {
+                var body = _currentMeasure.Notes;
+                int firstIdx = -1, lastIdx = -1;
+                for (int k = tupletFrom; k < body.Count; k++)
+                {
+                    if (body[k].IsChord || body[k].RawElement != null) continue;
+                    if (firstIdx < 0) firstIdx = k;
+                    lastIdx = k;
+                }
+                if (firstIdx >= 0)
+                {
+                    body[firstIdx].ExtraNotations.Add(TupletNotation("start", tupletNumber));
+                    body[lastIdx].ExtraNotations.Add(TupletNotation("stop", tupletNumber));
+                }
+            }
+        }
+    }
+
+    private (int Num, int Base)? ArpeggioTupletRatio(ArpeggioSyntax arpeggio, List<SyntaxNode> members)
+    {
+        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
+            return null;
+        Fraction nat = Fraction.Zero;
+        Fraction running = _defaultDuration;
+        foreach (var m in members)
+        {
+            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration ?? (m as RestSyntax)?.Duration;
+            Fraction d = dur?.ToFraction() ?? running;
+            if (dur != null) running = d;
+            nat += d;
+        }
+        if (nat.Numerator == 0 || nat == target)
+            return null;
+        Fraction ratio = nat / target;
+        if (ratio.Numerator == ratio.Denominator)
+            return null;
+        return (ratio.Numerator, ratio.Denominator);
+    }
+
+    private static char? FirstPitchLetter(SyntaxNode member) => member switch
+    {
+        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
+        _ => null,
+    };
 
     private void ProcessChord(ChordSyntax chord)
     {
@@ -1928,7 +2028,7 @@ public sealed class MusicXmlExporter
         // shared with the collector and the MIDI exporter (RelativeOctave is the
         // single source of truth). Matches MeasureCollector exactly.
         int targetOctave = _octaveAbsolute
-            ? 4 + pitch.OctaveOffset
+            ? _octaveAnchor + pitch.OctaveOffset
             : RelativeOctave.Resolve(
                 _currentStep, _currentOctave, noteName, pitch.OctaveOffset);
 
