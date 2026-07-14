@@ -168,12 +168,17 @@ internal static partial class SharedRenderer
                             columnX, staffY, staff, isBeamed, gc);
                     break;
                 case RestItem rest when !numbersOnly:
-                    // LilyPond's \tabFullNotation shows rests, centred vertically in the
-                    // tab staff, with the same glyphs as the notation. Shift the shared
-                    // DrawRest so its notation "middle line" (staffY + 2) lands on the
-                    // tab's own vertical centre.
+                    // LilyPond's \tabFullNotation shows rests centred vertically in the tab
+                    // staff. Each rest glyph's INK sits at a different offset from its
+                    // notation origin — a half rest sits ABOVE its line, a whole rest hangs
+                    // BELOW it — so centring the origin alone left the half rest too high.
+                    // Centre the INK bbox on the tab's vertical middle, then undo DrawRest's
+                    // own staffY->origin offset (+1 for a whole rest, +2 otherwise).
+                    int restValue = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
                     double tabMiddle = staffY + (stringCount - 1) * stringSpace / 2.0;
-                    DrawRest(rest, itemX, tabMiddle - 2.0, gc);
+                    double restOriginY = tabMiddle + (restBBox.Top + restBBox.Bottom) / 2.0;
+                    DrawRest(rest, itemX, restOriginY - (restValue == 1 ? 1.0 : 2.0), gc);
                     break;
             }
         }

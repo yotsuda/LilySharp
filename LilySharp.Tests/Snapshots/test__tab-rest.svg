@@ -16,7 +16,7 @@
   <rect x="4.36" y="9.61" width="1.62" height="1.79" fill="#FFFFFF" data-pos="332"/>
   <text x="5.17" y="11.33" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="332">3</text>
   <line x1="5.75" y1="9.31" x2="5.75" y2="4.81" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="8.87" y="9.75" font-size="4.00" data-pos="335"></text>
+  <text class="music" x="8.87" y="9.64" font-size="4.00" data-pos="335"></text>
   <rect x="10.26" y="8.11" width="1.62" height="1.79" fill="#FFFFFF" data-pos="338"/>
   <text x="11.07" y="9.83" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="338">2</text>
   <line x1="10.48" y1="10.19" x2="10.48" y2="14.69" stroke="#000000" stroke-width="0.130"/>
@@ -24,13 +24,13 @@
   <rect x="13.01" y="6.61" width="1.62" height="1.79" fill="#FFFFFF" data-pos="341"/>
   <text x="13.83" y="8.33" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="341">0</text>
   <line x1="13.24" y1="8.69" x2="13.24" y2="13.19" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="17.53" y="9.75" font-size="4.00" data-pos="344"></text>
+  <text class="music" x="17.53" y="9.90" font-size="4.00" data-pos="344"></text>
   <rect x="22.84" y="6.61" width="1.62" height="1.79" fill="#FFFFFF" data-pos="349"/>
   <text x="23.65" y="8.33" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="349">5</text>
   <line x1="23.07" y1="8.69" x2="23.07" y2="13.19" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.07" y="13.19" font-size="4.00"></text>
-  <text class="music" x="26.16" y="9.75" font-size="4.00" data-pos="352"></text>
-  <text class="music" x="28.36" y="9.75" font-size="4.00" data-pos="355"></text>
-  <text class="music" x="31.73" y="9.75" font-size="4.00" data-pos="358"></text>
+  <text class="music" x="26.16" y="9.64" font-size="4.00" data-pos="352"></text>
+  <text class="music" x="28.36" y="9.90" font-size="4.00" data-pos="355"></text>
+  <text class="music" x="31.73" y="10.06" font-size="4.00" data-pos="358"></text>
   </g>
 </svg>
