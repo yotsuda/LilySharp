@@ -1569,12 +1569,21 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
                 new CompletionItem
                 {
-                    Label = "newscore",
-                    FilterText = "newscore score template",
+                    Label = "template-twinkle",
+                    FilterText = "template scoretemplate score twinkle new",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody\n}\n$0",
-                    Detail = "Complete single-staff score (Twinkle template)",
+                    Detail = "Score template — single-staff (Twinkle, Twinkle, Little Star)",
+                },
+                new CompletionItem
+                {
+                    Label = "template-twinkle-piano",
+                    FilterText = "template scoretemplate score twinkle piano",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c,2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
+                    Detail = "Score template — piano / grand staff (Twinkle, Twinkle, Little Star)",
                 },
                 new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" }
             ]

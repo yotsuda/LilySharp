@@ -83,15 +83,17 @@ public class KeyCompletionTests
     }
 
     [Fact]
-    public void TopLevelCompletions_CarryTheNewScoreTemplate()
+    public void TopLevelCompletions_CarryTheScoreTemplates()
     {
-        // The single-staff scaffold moved from a static VS Code snippet (which the
-        // editor merged into EVERY completion popup, even after `key a`) into the
-        // LSP's top-level items, where the context dispatch scopes it.
+        // The score scaffolds moved from static VS Code snippets (which the editor
+        // merged into EVERY completion popup, even after `key a`) into the LSP's
+        // top-level items, where the context dispatch scopes them. They are named
+        // `template-…` so they read as templates, not keywords.
         var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
-        Assert.Contains(items, i => i.Label == "newscore");
+        Assert.Contains(items, i => i.Label == "template-twinkle");
+        Assert.Contains(items, i => i.Label == "template-twinkle-piano");
         var modeItems = LilySharpLanguageServer.GetKeyModeCompletions().Items;
-        Assert.DoesNotContain(modeItems, i => i.Label == "newscore");
+        Assert.DoesNotContain(modeItems, i => i.Label!.StartsWith("template-"));
     }
 
     [Fact]
