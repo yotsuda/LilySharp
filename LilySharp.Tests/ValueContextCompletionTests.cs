@@ -47,6 +47,9 @@ public class ValueContextCompletionTests
     [InlineData("override ", "AfterOverride")]
     [InlineData("once override ", "AfterOverride")]
     [InlineData("section A { m { c4 override ", "AfterOverride")]
+    // `revert ` offers the same grob targets, minus the value.
+    [InlineData("revert ", "AfterRevert")]
+    [InlineData("section A { m { c4 revert ", "AfterRevert")]
     public void ValueKeywords_GetTheirOwnContext(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());
@@ -150,6 +153,33 @@ public class ValueContextCompletionTests
         // Each is a fill-in that lands the caret on the value.
         var color = LilySharpLanguageServer.GetOverrideCompletions().Items.First();
         Assert.Equal("NoteHead.color = ${1:red}", color.InsertText);
+    }
+
+    [Fact]
+    public void RevertCompletions_OfferTheSameTargets_WithoutAValue()
+    {
+        // revert lists the same grob targets as override, but inserts just
+        // `Grob.property` (no `= value`) — you undo an override by picking it back.
+        var over = LilySharpLanguageServer.GetOverrideCompletions().Items.Select(i => i.Label).ToArray();
+        var revert = LilySharpLanguageServer.GetRevertCompletions().Items.Select(i => i.Label).ToArray();
+        Assert.Equal(over, revert);
+        var color = LilySharpLanguageServer.GetRevertCompletions().Items.First();
+        Assert.Equal("NoteHead.color", color.InsertText);
+    }
+
+    [Fact]
+    public void RevertKeyword_AutoTriggersThePropertyList_EverywhereItIsOffered()
+    {
+        foreach (var list in new[]
+        {
+            LilySharpLanguageServer.GetTopLevelCompletions(),
+            LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0),
+        })
+        {
+            var rv = list.Items.Single(i => i.Label == "revert");
+            Assert.Equal("revert $0", rv.InsertText);
+            Assert.Equal("editor.action.triggerSuggest", rv.Command?.CommandIdentifier);
+        }
     }
 
     [Fact]

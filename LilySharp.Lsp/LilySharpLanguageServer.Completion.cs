@@ -111,6 +111,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterOctave => GetOctaveCompletions(),
             CompletionContext.AfterOverride => GetOverrideCompletions(),
+            CompletionContext.AfterRevert => GetRevertCompletions(),
             CompletionContext.AfterTempo => GetTempoCompletions(),
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
@@ -463,6 +464,7 @@ public sealed partial class LilySharpLanguageServer
         AfterKeyTonic,
         AfterOctave,
         AfterOverride,
+        AfterRevert,
         AfterTempo,
         AfterTime,
         AfterPartial,
@@ -579,6 +581,8 @@ public sealed partial class LilySharpLanguageServer
                 // `override`): offer the grob properties that actually affect the
                 // rendered output as `Grob.property = value` fill-ins.
                 case "override": return CompletionContext.AfterOverride;
+                // `revert |`: the same targets, without a value (revert Grob.property).
+                case "revert": return CompletionContext.AfterRevert;
             }
         }
 
@@ -1424,31 +1428,56 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// The grob-property targets the renderer actually CONSUMES: colouring note heads /
+    /// stems, hiding a note head, and the manual note-column shift. Other grobs parse and
+    /// store but currently render as no-ops, so they are deliberately NOT offered — that
+    /// would mislead. Shared by <see cref="GetOverrideCompletions"/> (which appends
+    /// <c>= value</c>) and <see cref="GetRevertCompletions"/> (which does not).
+    /// </summary>
+    private static readonly (string Grob, string Property, string Value, string Detail)[] RenderedGrobProperties =
+    {
+        ("NoteHead", "color", "red", "Colour the note heads (red, blue, green, … or #RRGGBB)"),
+        ("Stem", "color", "red", "Colour the stems"),
+        ("NoteHead", "transparent", "true", "Hide the note head (true) or show it (false)"),
+        ("NoteColumn", "force-hshift", "0", "Manually shift colliding note columns sideways (staff-spaces)"),
+    };
+
+    /// <summary>
     /// The grob-property overrides offered right after <c>override</c> (and
-    /// <c>once override</c>). Deliberately lists only the <c>Grob.property</c> pairs the
-    /// renderer actually CONSUMES — colouring note heads / stems, hiding a note head, and
-    /// the manual note-column shift. Other grobs parse and store but currently render as
-    /// no-ops, so offering them would mislead. Each item is a <c>Grob.property = value</c>
-    /// fill-in with the value pre-selected.
+    /// <c>once override</c>) — each a <c>Grob.property = value</c> fill-in with the value
+    /// pre-selected. See <see cref="RenderedGrobProperties"/> for why the set is limited.
     /// </summary>
     internal static CompletionList GetOverrideCompletions()
     {
-        var overrides = new (string Label, string Insert, string Detail)[]
-        {
-            ("NoteHead.color", "NoteHead.color = ${1:red}", "Colour the note heads (red, blue, green, … or #RRGGBB)"),
-            ("Stem.color", "Stem.color = ${1:red}", "Colour the stems"),
-            ("NoteHead.transparent", "NoteHead.transparent = ${1:true}", "Hide the note head (true) or show it (false)"),
-            ("NoteColumn.force-hshift", "NoteColumn.force-hshift = ${1:0}", "Manually shift colliding note columns sideways (staff-spaces)"),
-        };
         return new CompletionList
         {
-            Items = overrides.Select((o, i) => new CompletionItem
+            Items = RenderedGrobProperties.Select((o, i) => new CompletionItem
             {
-                Label = o.Label,
+                Label = $"{o.Grob}.{o.Property}",
                 Kind = CompletionItemKind.Property,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = o.Insert,
+                InsertText = $"{o.Grob}.{o.Property} = ${{1:{o.Value}}}",
                 Detail = o.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// The grob properties offered right after <c>revert</c> — the SAME targets as
+    /// <see cref="GetOverrideCompletions"/> but WITHOUT a value, since <c>revert</c> takes
+    /// just <c>Grob.property</c> (it undoes a prior override, restoring the default).
+    /// </summary>
+    internal static CompletionList GetRevertCompletions()
+    {
+        return new CompletionList
+        {
+            Items = RenderedGrobProperties.Select((o, i) => new CompletionItem
+            {
+                Label = $"{o.Grob}.{o.Property}",
+                Kind = CompletionItemKind.Property,
+                InsertText = $"{o.Grob}.{o.Property}",
+                Detail = $"Restore {o.Grob}.{o.Property} to its default",
                 SortText = i.ToString(),
             }).ToArray()
         };
@@ -1602,7 +1631,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Opening pickup (a duration), declared once for every part", Command = new Command { Title = "Suggest pickup duration", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode: absolute | relative (default)", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $0", Detail = "Revert grob property", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem
                 {
@@ -1888,7 +1917,7 @@ public sealed partial class LilySharpLanguageServer
 
                 // Grob overrides
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", SortText = "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $0", Detail = "Revert grob property", SortText = "4revert", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", SortText = "4once", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } }
         });
 
