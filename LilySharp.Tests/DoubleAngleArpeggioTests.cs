@@ -105,6 +105,30 @@ public class DoubleAngleArpeggioTests
         Assert.Empty(score.TupletBrackets);
     }
 
+    private static bool MeasureOverflows(string src)
+    {
+        var v = new LilySharp.Core.Semantics.MeasureValidator();
+        v.Validate(SyntaxTree.Parse(src));
+        return v.Diagnostics.Any(d => d.Code == DiagnosticCodes.MeasureOverflow);
+    }
+
+    [Fact]
+    public void ArpeggioOverflowingItsMeasure_IsFlagged()
+    {
+        // `<< c e g >>` is 3 quarters; in 2/4 it would cross the barline — the within-
+        // measure constraint surfaces as the measure exceeding the meter.
+        Assert.True(MeasureOverflows(
+            "time 2/4\nsection A { m { << c e g >> } }\nform main { A }\nscore main { staff m }"));
+    }
+
+    [Fact]
+    public void ArpeggioFittingViaAutoTuplet_StaysWithinItsMeasure()
+    {
+        // `<< c e g >>2` fits a half note = the whole 2/4 bar, so no overflow.
+        Assert.False(MeasureOverflows(
+            "time 2/4\nsection A { m { << c e g >>2 } }\nform main { A }\nscore main { staff m }"));
+    }
+
     [Fact]
     public void NestedChord_SoundsStacked_ThenTheSequenceContinues()
     {
