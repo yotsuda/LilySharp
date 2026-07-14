@@ -110,6 +110,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterOctave => GetOctaveCompletions(),
+            CompletionContext.AfterOverride => GetOverrideCompletions(),
             CompletionContext.AfterTempo => GetTempoCompletions(),
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
@@ -461,6 +462,7 @@ public sealed partial class LilySharpLanguageServer
         AfterKey,
         AfterKeyTonic,
         AfterOctave,
+        AfterOverride,
         AfterTempo,
         AfterTime,
         AfterPartial,
@@ -573,6 +575,10 @@ public sealed partial class LilySharpLanguageServer
                 // `font |` with no quotes yet: offer the font names already wrapped in
                 // "…" so Ctrl+Space here completes to `font "Family"`.
                 case "font": return CompletionContext.AfterFontKeyword;
+                // `override |` (and `once override |`, whose previous word is also
+                // `override`): offer the grob properties that actually affect the
+                // rendered output as `Grob.property = value` fill-ins.
+                case "override": return CompletionContext.AfterOverride;
             }
         }
 
@@ -1417,6 +1423,37 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <summary>
+    /// The grob-property overrides offered right after <c>override</c> (and
+    /// <c>once override</c>). Deliberately lists only the <c>Grob.property</c> pairs the
+    /// renderer actually CONSUMES — colouring note heads / stems, hiding a note head, and
+    /// the manual note-column shift. Other grobs parse and store but currently render as
+    /// no-ops, so offering them would mislead. Each item is a <c>Grob.property = value</c>
+    /// fill-in with the value pre-selected.
+    /// </summary>
+    internal static CompletionList GetOverrideCompletions()
+    {
+        var overrides = new (string Label, string Insert, string Detail)[]
+        {
+            ("NoteHead.color", "NoteHead.color = ${1:red}", "Colour the note heads (red, blue, green, … or #RRGGBB)"),
+            ("Stem.color", "Stem.color = ${1:red}", "Colour the stems"),
+            ("NoteHead.transparent", "NoteHead.transparent = ${1:true}", "Hide the note head (true) or show it (false)"),
+            ("NoteColumn.force-hshift", "NoteColumn.force-hshift = ${1:0}", "Manually shift colliding note columns sideways (staff-spaces)"),
+        };
+        return new CompletionList
+        {
+            Items = overrides.Select((o, i) => new CompletionItem
+            {
+                Label = o.Label,
+                Kind = CompletionItemKind.Property,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = o.Insert,
+                Detail = o.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
     /// <summary>Tonic pitches offered right after <c>key</c>, in circle-of-fifths
     /// order (sharps up, then flats down) so related keys sit together.</summary>
     internal static CompletionList GetKeyTonicCompletions()
@@ -1564,9 +1601,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Opening pickup (a duration), declared once for every part", Command = new Command { Title = "Suggest pickup duration", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode: absolute | relative (default)", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
-                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem
                 {
                     Label = "template-twinkle",
@@ -1850,9 +1887,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup: the next measure is a partial of this length", SortText = "3partial" },
 
                 // Grob overrides
-                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", SortText = "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
-                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", SortText = "4once", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } }
         });
 
         // Parallel voices (voice { } voice { }): only meaningful directly in the

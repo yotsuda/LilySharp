@@ -42,6 +42,11 @@ public class ValueContextCompletionTests
     // `octave ` at global scope (and in a part header) offers only its two modes.
     [InlineData("octave ", "AfterOctave")]
     [InlineData("part m { octave ", "AfterOctave")]
+    // `override ` — and `once override `, whose previous word is also `override` —
+    // offers the grob properties (at global scope and mid-music).
+    [InlineData("override ", "AfterOverride")]
+    [InlineData("once override ", "AfterOverride")]
+    [InlineData("section A { m { c4 override ", "AfterOverride")]
     public void ValueKeywords_GetTheirOwnContext(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());
@@ -113,6 +118,38 @@ public class ValueContextCompletionTests
             Assert.NotNull(time.Command);
             Assert.Equal("editor.action.triggerSuggest", time.Command!.CommandIdentifier);
         }
+    }
+
+    [Fact]
+    public void OverrideKeyword_AutoTriggersThePropertyList_EverywhereItIsOffered()
+    {
+        // Completing `override` inserts a space and re-opens the suggest popup so the
+        // grob-property list appears immediately — at the top level and mid-music.
+        foreach (var list in new[]
+        {
+            LilySharpLanguageServer.GetTopLevelCompletions(),
+            LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0),
+        })
+        {
+            var ov = list.Items.Single(i => i.Label == "override");
+            Assert.Equal("override $0", ov.InsertText);
+            Assert.Equal("editor.action.triggerSuggest", ov.Command?.CommandIdentifier);
+        }
+    }
+
+    [Fact]
+    public void OverrideCompletions_OfferOnlyTheRenderedProperties()
+    {
+        // Only the Grob.property pairs the renderer actually consumes are offered
+        // (colour, transparency, force-hshift) — no misleading no-op overrides.
+        var labels = LilySharpLanguageServer.GetOverrideCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(
+            new[] { "NoteHead.color", "Stem.color", "NoteHead.transparent", "NoteColumn.force-hshift" },
+            labels);
+        // Each is a fill-in that lands the caret on the value.
+        var color = LilySharpLanguageServer.GetOverrideCompletions().Items.First();
+        Assert.Equal("NoteHead.color = ${1:red}", color.InsertText);
     }
 
     [Fact]
