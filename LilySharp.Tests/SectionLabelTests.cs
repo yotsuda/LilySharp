@@ -125,9 +125,11 @@ public class SectionLabelTests
         Assert.Empty(tree.Diagnostics);
     }
 
-    // --- Section rehearsal box is suppressed with only one distinct section ---
-    // (nothing to navigate between). This is a LAYOUT-stage decision, so these
-    // assert on the emitted SectionLabel MARKS, not the measures' SectionLabel
+    // --- A referenced section shows its rehearsal box ---
+    // Label visibility is the author's call: a section referenced by name shows its
+    // box (hide it with the silent reference `~Name`). The engraver does NOT auto-
+    // suppress single or repeated section boxes. This is a LAYOUT-stage decision, so
+    // these assert on the emitted SectionLabel MARKS, not the measures' SectionLabel
     // property (which stays set for reuse hashing).
 
     private static int SectionLabelMarkCount(string source)
@@ -140,9 +142,10 @@ public class SectionLabelTests
     }
 
     [Fact]
-    public void SingleSection_EmitsNoSectionLabelBox()
+    public void SingleSection_EmitsItsLabelBox()
     {
-        Assert.Equal(0, SectionLabelMarkCount("""
+        // A deliberately named, referenced section shows its label even alone.
+        Assert.Equal(1, SectionLabelMarkCount("""
             section Main { melody { c4 d e f | g1 } }
             form main { Main }
             score main "x" { staff melody }
@@ -150,10 +153,10 @@ public class SectionLabelTests
     }
 
     [Fact]
-    public void OneSectionRepeated_EmitsNoBox()
+    public void OneSectionRepeated_EmitsBoxForEachPass()
     {
-        // `form main { A A }` is one distinct section repeated — nothing to jump to.
-        Assert.Equal(0, SectionLabelMarkCount("""
+        // `form main { A A }` shows a box at each pass, marking where the repeat lands.
+        Assert.Equal(2, SectionLabelMarkCount("""
             section A { melody { c4 d e f | } }
             form main { A A }
             score main "x" { staff melody }

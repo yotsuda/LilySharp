@@ -169,18 +169,36 @@ public sealed class FormVoltaTests
     }
 
     [Fact]
-    public void SingleRepeatedSection_StillDropsRedundantBoxes()
+    public void SingleReferencedSection_ShowsItsLabel()
     {
-        // Guard the heuristic the fix above narrows: 'A A' (one section, no hidden
-        // sibling) is still one distinct section with nothing to navigate to — its
-        // boxes stay suppressed as noise.
+        // Label visibility is the author's call: a section referenced by name shows
+        // its box, even when it is the only one. (`~Body` is how you hide it.) The
+        // engraver no longer auto-suppresses single/repeated section boxes.
+        var tree = SyntaxTree.Parse(Head + "form main { A }" + Tail);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
+        var marks = MusicMarkEngraver.BuildAllMarks(
+            ImmutableArray<MusicMarkItem>.Empty, measures, tempo: null);
+        var labels = marks.Where(m => m.Type == MusicMarkType.SectionLabel)
+                          .Select(m => m.Text).ToArray();
+        Assert.Equal(new[] { "A" }, labels);
+    }
+
+    [Fact]
+    public void RepeatedSection_ShowsEachBox()
+    {
+        // 'A A' now shows both boxes (was suppressed as "redundant"): they mark
+        // where the repeat lands, and hiding is opt-in via '~'.
         var tree = SyntaxTree.Parse(Head + "form main { A A }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
         var marks = MusicMarkEngraver.BuildAllMarks(
             ImmutableArray<MusicMarkItem>.Empty, measures, tempo: null);
-        Assert.DoesNotContain(marks, m => m.Type == MusicMarkType.SectionLabel);
+        var labels = marks.Where(m => m.Type == MusicMarkType.SectionLabel)
+                          .OrderBy(m => m.MeasureIndex).Select(m => m.Text).ToArray();
+        Assert.Equal(new[] { "A", "A" }, labels);
     }
 
     [Fact]

@@ -1,25 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="142.7" viewBox="0 0 119.05 14.27" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="199.1" viewBox="0 0 119.05 19.91" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="250">Repeat</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <rect x="17.57" y="6.77" width="0.19" height="4.00"/>
-  <rect x="17.76" y="6.77" width="0.60" height="4.00"/>
-  <rect x="18.66" y="6.77" width="0.19" height="4.00"/>
-  <circle cx="19.35" cy="8.27" r="0.20"/>
-  <circle cx="19.35" cy="9.27" r="0.20"/>
-  <rect x="31.91" y="6.77" width="0.19" height="4.00"/>
-  <circle cx="43.08" cy="8.27" r="0.20"/>
-  <circle cx="43.08" cy="9.27" r="0.20"/>
-  <rect x="43.58" y="6.77" width="0.19" height="4.00"/>
-  <rect x="44.07" y="6.77" width="0.60" height="4.00"/>
-  <text x="7.88" y="9.67" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
-  <text x="12.56" y="9.67" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
-  <text x="22.42" y="9.67" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
-  <text x="26.90" y="9.67" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
-  <text x="36.67" y="9.67" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
+  <rect x="17.57" y="12.41" width="0.19" height="4.00"/>
+  <rect x="17.76" y="12.41" width="0.60" height="4.00"/>
+  <rect x="18.66" y="12.41" width="0.19" height="4.00"/>
+  <circle cx="19.35" cy="13.91" r="0.20"/>
+  <circle cx="19.35" cy="14.91" r="0.20"/>
+  <rect x="31.91" y="12.41" width="0.19" height="4.00"/>
+  <circle cx="43.08" cy="13.91" r="0.20"/>
+  <circle cx="43.08" cy="14.91" r="0.20"/>
+  <rect x="43.58" y="12.41" width="0.19" height="4.00"/>
+  <rect x="44.07" y="12.41" width="0.60" height="4.00"/>
+  <text x="7.88" y="15.31" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
+  <text x="12.56" y="15.31" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
+  <text x="22.42" y="15.31" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
+  <text x="26.90" y="15.31" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
+  <text x="36.67" y="15.31" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
+  <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="268"/>
+  <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="268">Main</text>
   </g>
 </svg>

@@ -136,8 +136,10 @@
   <rect x="35.42" y="47.47" width="0.19" height="4.00"/>
   <rect x="49.76" y="47.47" width="0.19" height="4.00"/>
   <rect x="50.25" y="47.47" width="0.60" height="4.00"/>
-  <text class="music" x="15.80" y="13.23" font-size="1.60" data-pos="0"></text>
-  <line x1="16.31" y1="13.23" x2="16.31" y2="11.83" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="16.90" y="13.23" font-size="1.80" data-pos="0">= 120</text>
+  <rect x="15.30" y="11.13" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="507"/>
+  <text x="18.01" y="13.33" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="507">Main</text>
+  <text class="music" x="21.51" y="13.33" font-size="1.60" data-pos="0"></text>
+  <line x1="22.02" y1="13.33" x2="22.02" y2="11.93" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <text x="22.61" y="13.33" font-size="1.80" data-pos="0">= 120</text>
   </g>
 </svg>

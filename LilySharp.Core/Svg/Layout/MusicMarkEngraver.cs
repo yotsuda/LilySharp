@@ -722,42 +722,29 @@ internal static class MusicMarkEngraver
         if (measures.IsDefaultOrEmpty)
             return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
 
-        // Collect section labels from measures. A suppressed section (`~B`) starts a
-        // section but shows no label: it lands as SectionLabel == null WITH a non-zero
-        // SectionLabelPosition (the section decl offset), whereas a plain continuation
-        // measure has both null/0. Track suppression so the noise heuristic below does
-        // not mistake a hand-hidden section for a single-section piece.
+        // Collect a rehearsal-box mark for every measure that carries a section
+        // label. Label VISIBILITY is the author's call, not the engraver's: a
+        // section shows its name by being referenced by name (`form main { Body }`)
+        // and hides it with the silent reference (`~Body`). So every non-null
+        // SectionLabel engraves — no auto-suppression of "single distinct section"
+        // or "repeated section" boxes. That heuristic fought the author's explicit
+        // `~` control and silently hid deliberately named single sections.
         var sectionLabels = new List<MusicMarkItem>();
-        bool hasSuppressedSection = false;
         for (int i = 0; i < measures.Length; i++)
         {
             var measure = measures[i];
-            if (measure.SectionLabel != null)
-            {
-                // Prefer the `section X` declaration offset so a click jumps there;
-                // fall back to the measure's music start when it wasn't threaded.
-                int pos = measure.SectionLabelPosition > 0
-                    ? measure.SectionLabelPosition
-                    : measure.SourceStart;
-                sectionLabels.Add(new MusicMarkItem(
-                    MusicMarkType.SectionLabel, measure.SectionLabel, i, pos));
-            }
-            else if (measure.SectionLabelPosition > 0)
-                hasSuppressedSection = true;
+            if (measure.SectionLabel == null)
+                continue;
+            // Prefer the `section X` declaration offset so a click jumps there;
+            // fall back to the measure's music start when it wasn't threaded.
+            int pos = measure.SectionLabelPosition > 0
+                ? measure.SectionLabelPosition
+                : measure.SourceStart;
+            sectionLabels.Add(new MusicMarkItem(
+                MusicMarkType.SectionLabel, measure.SectionLabel, i, pos));
         }
 
-        // A section rehearsal box exists to navigate BETWEEN sections. With only
-        // one distinct section (`structure { Main }`, or `structure { A A }` — one
-        // section repeated) there is nothing to navigate to, so the lone box is
-        // noise; drop it. An explicit display label counts as distinct, so an
-        // `A "A2"` alongside a plain `A` keeps its boxes. (Covers Count == 0 too.)
-        //
-        // But a hand-hidden section (`A |: ~B :| A`) means the author is actively
-        // curating marks — the form HAS multiple sections, one is just silenced —
-        // so the visible boxes must stay even when they collapse to one distinct
-        // text; otherwise hiding B wrongly wipes both A boxes too.
-        int distinctSectionLabels = sectionLabels.Select(s => s.Text).Distinct().Count();
-        if (distinctSectionLabels <= 1 && !hasSuppressedSection)
+        if (sectionLabels.Count == 0)
             return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
 
         // Merge: existing marks + section labels
