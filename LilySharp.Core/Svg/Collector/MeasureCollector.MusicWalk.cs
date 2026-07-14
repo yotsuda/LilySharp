@@ -151,30 +151,46 @@ public sealed partial class MeasureCollector
         int startNoteIndex = builder.CurrentItemCount;
         Fraction writtenTotal = Fraction.Zero;
 
-        // The first member is the ROOT — resolved relative to the incoming frame; it
-        // anchors the group and drives the next note after it.
-        writtenTotal += EmitArpeggioMember(members[0], builder, tuplet?.Scale);
-        int anchorOctave = _octave.CurrentOctave;
-        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
-        int rootStep = GetPitchIndex(rootLetter);
-
-        // Every other member STACKS above the root — the SAME octave placement as a
-        // `<c e g>` chord member, so the pitches are independent of the order written
-        // (`<< c e g >>` == `<< c g >>` for g) and a `,` drops a member below the root.
+        // The ROOT is the first PITCHED member (leading rests just advance time) — it
+        // resolves relative to the incoming frame and anchors the group. Every later
+        // PITCHED member STACKS above it (the same octave placement as a `<c e g>` chord
+        // member, so `<< c e g >>` == `<< c g >>` for g, and a `,` drops one below);
+        // rests keep the normal frame.
         bool savedAbsolute = _octave.OctaveAbsolute;
         int savedBase = _octave.OctaveBase;
-        for (int i = 1; i < members.Count; i++)
+        bool rootSet = false;
+        int anchorOctave = 0;
+        char rootLetter = 'c';
+        int rootStep = 0;
+        foreach (var member in members)
         {
-            int step = GetPitchIndex(FirstPitchLetter(members[i]) ?? rootLetter);
-            _octave.OctaveAbsolute = true;
-            _octave.OctaveBase = anchorOctave + (step >= rootStep ? 0 : 1);
-            writtenTotal += EmitArpeggioMember(members[i], builder, tuplet?.Scale);
+            char? letter = FirstPitchLetter(member);
+            if (rootSet && letter is { } l)
+            {
+                _octave.OctaveAbsolute = true;
+                _octave.OctaveBase = anchorOctave + (GetPitchIndex(l) >= rootStep ? 0 : 1);
+            }
+            else
+            {
+                _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
+            }
+            writtenTotal += EmitArpeggioMember(member, builder, tuplet?.Scale);
+            if (!rootSet && letter is { } rl)
+            {
+                rootSet = true;
+                anchorOctave = _octave.CurrentOctave;
+                rootLetter = rl;
+                rootStep = GetPitchIndex(rl);
+            }
         }
         _octave.OctaveAbsolute = savedAbsolute;
         _octave.OctaveBase = savedBase;
         // After the group the running reference is the root (chord-after behavior).
-        _octave.CurrentOctave = anchorOctave;
-        _octave.LastPitchName = rootLetter;
+        if (rootSet)
+        {
+            _octave.CurrentOctave = anchorOctave;
+            _octave.LastPitchName = rootLetter;
+        }
 
         // Auto-tuplet: the scaled members were added WITHOUT duration — draw the bracket
         // and add the group's actual (target) duration to the measure now.

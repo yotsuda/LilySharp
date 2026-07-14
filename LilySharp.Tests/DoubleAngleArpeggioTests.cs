@@ -65,6 +65,18 @@ public class DoubleAngleArpeggioTests
     }
 
     [Fact]
+    public void LeadingRest_DoesNotBecomeTheRoot_TheFirstPitchAnchors()
+    {
+        // A rest before the first pitch must NOT anchor the group (it has no pitch): the
+        // first PITCHED member `e` is the root, so the following `c` stacks ABOVE it (C5),
+        // exactly as `<< e c >>` does. Previously the leading rest made the root fall back
+        // to 'c', dropping the c to C4.
+        Assert.Equal(
+            Pitches("section A { m { << e c >> } }\nform main { A }\nscore main { staff m }"),
+            Pitches("section A { m { << r8 e c >> } }\nform main { A }\nscore main { staff m }"));
+    }
+
+    [Fact]
     public void EachNoteStacksAboveTheRoot_LikeAChord()
     {
         // `<< c g >>` — g is the fifth ABOVE c (G4), exactly like the chord `<c g>`, NOT

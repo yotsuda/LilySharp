@@ -1361,27 +1361,43 @@ public sealed class MusicXmlExporter
             tupletNumber = _tupletStack.Count;
         }
 
-        // The first member is the root (normal relative); it anchors the group.
-        ProcessNode(members[0]);
-        int anchorOctave = _currentOctave;
-        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
-        int rootStep = RelativeOctave.StepIndex(rootLetter);
-
-        // Subsequent members stack above the root (absolute mode with the anchored octave).
+        // The root is the first PITCHED member (leading rests just advance time); it
+        // resolves relatively and anchors the group. Subsequent PITCHED members stack above
+        // it (absolute mode with the anchored octave), order-independently; rests keep the
+        // normal frame.
         bool savedAbsolute = _octaveAbsolute;
         int savedAnchor = _octaveAnchor;
-        for (int i = 1; i < members.Count; i++)
+        bool rootSet = false;
+        int anchorOctave = 0;
+        int rootStep = 0;
+        foreach (var member in members)
         {
-            int step = RelativeOctave.StepIndex(FirstPitchLetter(members[i]) ?? rootLetter);
-            _octaveAbsolute = true;
-            _octaveAnchor = anchorOctave + (step >= rootStep ? 0 : 1);
-            ProcessNode(members[i]);
+            char? letter = FirstPitchLetter(member);
+            if (rootSet && letter is { } l)
+            {
+                _octaveAbsolute = true;
+                _octaveAnchor = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
+            }
+            else
+            {
+                _octaveAbsolute = savedAbsolute; // the root, and any rest
+            }
+            ProcessNode(member);
+            if (!rootSet && letter is { } rl)
+            {
+                rootSet = true;
+                anchorOctave = _currentOctave;
+                rootStep = RelativeOctave.StepIndex(rl);
+            }
         }
         _octaveAbsolute = savedAbsolute;
         _octaveAnchor = savedAnchor;
         // After the group the running reference is the root (chord-after behavior).
-        _currentOctave = anchorOctave;
-        _currentStep = rootStep;
+        if (rootSet)
+        {
+            _currentOctave = anchorOctave;
+            _currentStep = rootStep;
+        }
 
         if (ratio is not null)
         {

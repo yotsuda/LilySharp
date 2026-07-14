@@ -967,31 +967,46 @@ public sealed class MidiExporter
         if (ratio is { } r)
             _tupletStack.Push((r.Num, r.Base));
 
-        // The first member is the ROOT (normal relative resolution); it anchors the group.
-        ProcessNode(members[0], track, conductorTrack);
-        int anchorOctave = _currentOctave;
-        char rootLetter = FirstPitchLetter(members[0]) ?? 'c';
-        int rootStep = RelativeOctave.StepIndex(rootLetter);
-
-        // Every other member STACKS above the root — the same octave placement as a
-        // `<c e g>` chord member, so the pitches are order-independent. Absolute mode makes
-        // each member's octave = anchor + (step >= root ? 0 : 1) + its own '/, marks.
+        // The ROOT is the first PITCHED member (leading rests just advance time); it
+        // resolves relatively and anchors the group. Every later PITCHED member STACKS
+        // above it — the same octave placement as a `<c e g>` chord member, so the pitches
+        // are order-independent — while rests keep the normal frame. Absolute mode makes
+        // each stacked member's octave = anchor + (step >= root ? 0 : 1) + its own '/, marks.
         bool savedAbsolute = _octaveAbsolute;
         int savedAnchor = _partOctaveAnchor;
-        for (int i = 1; i < members.Count; i++)
+        bool rootSet = false;
+        int anchorOctave = 0;
+        int rootStep = 0;
+        foreach (var member in members)
         {
-            int step = RelativeOctave.StepIndex(FirstPitchLetter(members[i]) ?? rootLetter);
-            _octaveAbsolute = true;
-            _partOctaveAnchor = anchorOctave + (step >= rootStep ? 0 : 1);
-            ProcessNode(members[i], track, conductorTrack);
+            char? letter = FirstPitchLetter(member);
+            if (rootSet && letter is { } l)
+            {
+                _octaveAbsolute = true;
+                _partOctaveAnchor = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
+            }
+            else
+            {
+                _octaveAbsolute = savedAbsolute; // the root, and any rest
+            }
+            ProcessNode(member, track, conductorTrack);
+            if (!rootSet && letter is { } rl)
+            {
+                rootSet = true;
+                anchorOctave = _currentOctave;
+                rootStep = RelativeOctave.StepIndex(rl);
+            }
         }
         _octaveAbsolute = savedAbsolute;
         _partOctaveAnchor = savedAnchor;
         if (ratio is not null)
             _tupletStack.Pop();
         // After the group the running reference is the root (chord-after behavior).
-        _currentOctave = anchorOctave;
-        _currentNoteName = rootStep;
+        if (rootSet)
+        {
+            _currentOctave = anchorOctave;
+            _currentNoteName = rootStep;
+        }
     }
 
     /// <summary>The auto-tuplet ratio (Num in the time of Base) for <c>&lt;&lt; … &gt;&gt;N</c>:
