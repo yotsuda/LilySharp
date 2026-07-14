@@ -1005,7 +1005,7 @@ public sealed class MidiExporter
         Fraction running = _defaultDuration;
         foreach (var m in members)
         {
-            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration;
+            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration ?? (m as RestSyntax)?.Duration;
             Fraction d = dur?.ToFraction() ?? running;
             if (dur != null) running = d;
             nat += d;

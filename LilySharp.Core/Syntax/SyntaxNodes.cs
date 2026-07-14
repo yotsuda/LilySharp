@@ -495,15 +495,15 @@ public sealed class ArpeggioSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The arpeggio's members in source order — notes and/or nested chords
-    /// (<c>&lt;&lt; &lt;c e&gt; g &gt;&gt;</c>). Each plays in sequence; the octave anchors
-    /// to the first member.</summary>
+    /// <summary>The arpeggio's members in source order — notes, rests, and/or nested
+    /// chords (<c>&lt;&lt; c8 r &lt;e g&gt; &gt;&gt;</c>). Each plays in sequence; a rest
+    /// advances time but takes no part in the octave anchoring.</summary>
     public IEnumerable<SyntaxNode> Members
     {
         get
         {
             for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is NoteSyntax or ChordSyntax)
+                if (GetChild(i) is NoteSyntax or ChordSyntax or RestSyntax)
                     yield return GetChild(i)!;
         }
     }

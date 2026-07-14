@@ -130,6 +130,17 @@ public class DoubleAngleArpeggioTests
     }
 
     [Fact]
+    public void RestMember_IsAGapAndDoesNotAffectStacking()
+    {
+        // `<< c8 r e g >>` — the rest is a gap; e and g still stack above c.
+        var src = "section A { m { << c8 r e g >> } }\nform main { A }\nscore main { staff m }";
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes;
+        Assert.Equal(new[] { 60, 64, 67 }, notes.Select(n => n.Pitch).ToArray());
+        // The rest inserts a gap: c→e spans two eighths (note + rest), e→g only one.
+        Assert.True(notes[1].StartTick - notes[0].StartTick > notes[2].StartTick - notes[1].StartTick);
+    }
+
+    [Fact]
     public void NestedChord_SoundsStacked_ThenTheSequenceContinues()
     {
         // `<< <c e> g >>` — a chord may be a member: its c and e sound together, then g
