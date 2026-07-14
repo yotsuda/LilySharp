@@ -905,17 +905,17 @@
   <rect x="100.96" y="315.50" width="0.19" height="4.50"/>
   <rect x="101.45" y="315.50" width="0.60" height="4.50"/>
   <line x1="27.10" y1="215.50" x2="29.10" y2="213.50" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="27.80" cy="213.50" r="0.25" data-pos="417"/>
-  <circle cx="28.40" cy="215.50" r="0.25" data-pos="417"/>
+  <circle cx="27.60" cy="214.00" r="0.25" data-pos="417"/>
+  <circle cx="28.60" cy="215.00" r="0.25" data-pos="417"/>
   <line x1="76.84" y1="215.50" x2="78.84" y2="213.50" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="77.54" cy="213.50" r="0.25" data-pos="417"/>
-  <circle cx="78.14" cy="215.50" r="0.25" data-pos="417"/>
+  <circle cx="77.34" cy="214.00" r="0.25" data-pos="417"/>
+  <circle cx="78.34" cy="215.00" r="0.25" data-pos="417"/>
   <line x1="27.10" y1="318.50" x2="29.10" y2="316.50" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="27.80" cy="316.50" r="0.25" data-pos="417"/>
-  <circle cx="28.40" cy="318.50" r="0.25" data-pos="417"/>
+  <circle cx="27.60" cy="317.00" r="0.25" data-pos="417"/>
+  <circle cx="28.60" cy="318.00" r="0.25" data-pos="417"/>
   <line x1="76.84" y1="318.50" x2="78.84" y2="316.50" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="77.54" cy="316.50" r="0.25" data-pos="417"/>
-  <circle cx="78.14" cy="318.50" r="0.25" data-pos="417"/>
+  <circle cx="77.34" cy="317.00" r="0.25" data-pos="417"/>
+  <circle cx="78.34" cy="318.00" r="0.25" data-pos="417"/>
   <text x="0.05" y="211.50" font-size="1.75" font-weight="bold">3</text>
   </g>
 </svg>

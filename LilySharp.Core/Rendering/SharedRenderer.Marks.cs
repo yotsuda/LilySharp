@@ -98,8 +98,14 @@ internal static partial class SharedRenderer
         const double slope = 1.0;
         const double thickness = 0.48;
         const double slashWidth = 2.0;
-        const double dotOffset = 1.0;
         const double dotRadius = 0.25;
+        // LILYPOND-REF: lily/percent-repeat-interface.cc x_percent — each dot is
+        // translated ±0.5 staff-space vertically and pulled to just off the slash's
+        // left/right edge (slash half-width 1.0 minus the 0.75 dot-negative-kern, plus
+        // the dot's own radius ≈ 0.5). The upper dot sits upper-LEFT, the lower dot
+        // lower-RIGHT — the "%" glyph.
+        const double dotDx = 0.5;
+        const double dotDy = 0.5;
         double slashHeight = slashWidth * slope;
 
         foreach (var pr in layout.PercentRepeatLayouts)
@@ -110,13 +116,12 @@ internal static partial class SharedRenderer
             using (gc.Source(pr.SourcePosition))
             {
                 // Slash from bottom-left to top-right, with a dot in each pocket it
-                // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph (the dots had
-                // their x offsets swapped, sitting upper-right / lower-left).
+                // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph.
                 gc.DrawLine(cx - slashWidth / 2, cy + slashHeight / 2,
                     cx + slashWidth / 2, cy - slashHeight / 2,
                     Color.Black, thickness);
-                gc.DrawCircle(cx - dotOffset * 0.3, cy - dotOffset, dotRadius, Color.Black);
-                gc.DrawCircle(cx + dotOffset * 0.3, cy + dotOffset, dotRadius, Color.Black);
+                gc.DrawCircle(cx - dotDx, cy - dotDy, dotRadius, Color.Black);
+                gc.DrawCircle(cx + dotDx, cy + dotDy, dotRadius, Color.Black);
             }
         }
     }
