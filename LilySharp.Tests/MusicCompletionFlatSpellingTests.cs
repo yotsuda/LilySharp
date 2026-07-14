@@ -87,7 +87,7 @@ public class MusicCompletionFlatSpellingTests
             .Items.Select(i => i.Label).ToList();
         foreach (var kw in new[] { "break", "nobreak", "octave", "tempo", "partial", "voice",
                                    "repeat", "tuplet", "grace", "acciaccatura", "appoggiatura",
-                                   "clef", "key", "time", "override", "revert", "once" })
+                                   "clef", "key", "time", "override", "revert", "once override" })
             Assert.Contains(kw, labels);
     }
 
