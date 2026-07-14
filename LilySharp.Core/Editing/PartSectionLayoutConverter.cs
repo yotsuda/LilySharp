@@ -268,6 +268,12 @@ public static class PartSectionLayoutConverter
         Dictionary<string, string> sectionHeaders)
     {
         var sb = new StringBuilder();
+        // A section's own directives (`key g major`) stand parallel to the parts as a
+        // standalone header, stated once for every part playing the section. They lead
+        // the layout — a section's meter/key/tempo reads best BEFORE the parts that use it.
+        foreach (var section in sectionOrder)
+            if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
+                sb.Append("section ").Append(section).Append(" { ").Append(dir).Append(" }\n");
         foreach (var (name, attrs) in parts)
         {
             sb.Append("part ").Append(name).Append(" {\n");
@@ -278,11 +284,6 @@ public static class PartSectionLayoutConverter
                     sb.Append("  section ").Append(section).Append(' ').Append(Braced(music)).Append('\n');
             sb.Append("}\n");
         }
-        // A section's own directives (`key g major`) stand parallel to the parts as a
-        // standalone header, stated once for every part playing the section.
-        foreach (var section in sectionOrder)
-            if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
-                sb.Append("section ").Append(section).Append(" { ").Append(dir).Append(" }\n");
         // Each chord track becomes its own top-level block with inner sections.
         foreach (var chordName in tracks.ChordParts)
         {

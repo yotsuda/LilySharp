@@ -217,7 +217,10 @@ public class PartSectionLayoutConverterTests
         // …and the part cells no longer carry it.
         Assert.Contains("part melody {", pm);
         Assert.Contains("section A { c4 c g' g }", pm);
-        Assert.False(SyntaxTree.Parse(pm!).HasErrors);
+        // The header leads the layout — it comes BEFORE the parts that use it.
+        Assert.True(pm!.IndexOf("section A { key g major }", System.StringComparison.Ordinal)
+            < pm.IndexOf("part melody", System.StringComparison.Ordinal));
+        Assert.False(SyntaxTree.Parse(pm).HasErrors);
     }
 
     [Fact]
