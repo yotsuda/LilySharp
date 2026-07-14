@@ -78,6 +78,9 @@ function nextPlaceholder(): string {
 
 let cachedGrammar: string | undefined;
 let candidatePanel: vscode.WebviewPanel | undefined;
+// The resolver for the review round currently awaiting a decision. The panel's
+// message pump (registered once, at creation) routes Accept/Iterate/Reject here.
+let pendingDecision: ((d: Decision) => void) | undefined;
 let softLockDecoration: vscode.TextEditorDecorationType | undefined;
 
 /** Registers the `lilysharp.aiTransform` command. */
@@ -454,17 +457,12 @@ async function reviewOnScore(
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed);
     panel.reveal(vscode.ViewColumn.Beside, true);
 
+    // Hand this round's resolver to the panel's persistent message pump. Iterate
+    // reloads the webview (new html) each round; a listener registered here, right
+    // after that reload, could miss the reloaded frame's messages — so the pump is
+    // registered ONCE at panel creation (ensureCandidatePanel) and routes here.
     return await new Promise<Decision>(resolve => {
-        let settled = false;
-        const finish = (d: Decision) => { if (!settled) { settled = true; resolve(d); } };
-        const sub = panel.webview.onDidReceiveMessage((m: any) => {
-            if (m && (m.action === 'accept' || m.action === 'iterate' || m.action === 'reject')) {
-                sub.dispose();
-                finish(m.action);
-            }
-        });
-        // Closing the panel counts as reject.
-        const disp = panel.onDidDispose(() => { disp.dispose(); finish('reject'); });
+        pendingDecision = resolve;
     });
 }
 
@@ -478,7 +476,25 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
         'Lily# — AI candidate',
         { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [fontsUri] });
-    panel.onDidDispose(() => { candidatePanel = undefined; });
+
+    // One persistent message pump for the panel's whole lifetime. Registering the
+    // listener once — before any html is set — guarantees it receives Accept/
+    // Iterate/Reject across every review round, including after an iterate reload.
+    const settle = (d: Decision) => {
+        const resolve = pendingDecision;
+        pendingDecision = undefined;
+        resolve?.(d);
+    };
+    panel.webview.onDidReceiveMessage((m: any) => {
+        if (m && (m.action === 'accept' || m.action === 'iterate' || m.action === 'reject')) {
+            settle(m.action);
+        }
+    });
+    // Closing the panel counts as reject for whatever round is awaiting a decision.
+    panel.onDidDispose(() => {
+        candidatePanel = undefined;
+        settle('reject');
+    });
     candidatePanel = panel;
     return panel;
 }
