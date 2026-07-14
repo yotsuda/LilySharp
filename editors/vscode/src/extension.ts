@@ -117,7 +117,7 @@ const selectedRenders = new Map<string, string>();
 const lastPostedSvg = new Map<string, string>();
 
 // Constants
-const DEBOUNCE_DELAY_DEFAULT = 100;
+const DEBOUNCE_DELAY_DEFAULT = 60;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {

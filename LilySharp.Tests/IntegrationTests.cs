@@ -464,11 +464,13 @@ score main ""ossia-barline"" {
         // Ossia staff should be scaled — the transform exists at any scale < 1.
         Assert.Matches(@"scale\(0\.\d+", svg);
 
-        // SharedRenderer renders barlines as <rect ... fill="#000000"/> (or
-        // "black"; the SvgRenderer-era class="barline" attribute is gone).
-        // Count thin black rectangles as a barline proxy.
-        var barlineMatches = System.Text.RegularExpressions.Regex.Matches(
-            svg, @"<rect[^/]*fill=""(black|#000000)""");
-        Assert.True(barlineMatches.Count > 0, "Should have black-filled rects (barlines).");
+        // Barlines render as filled <rect>s. A black fill is now the SVG default
+        // (omitted to shrink the document), so a barline rect carries NO fill attribute —
+        // unlike the fill="none" hit/outline rects. Count a non-none rect as a barline proxy.
+        bool hasFilledRect = false;
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(svg, @"<rect\b[^>]*>"))
+            if (!m.Value.Contains("fill=\"none\"")) { hasFilledRect = true; break; }
+        Assert.True(hasFilledRect, "Should have a filled rect (barline).");
     }
 }

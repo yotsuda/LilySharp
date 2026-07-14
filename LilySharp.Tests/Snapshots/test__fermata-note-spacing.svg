@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="201.3" viewBox="0 0 119.05 20.13">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="201.3" viewBox="0 0 119.05 20.13" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="473">Fermata note spacing</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="473">Fermata note spacing</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.13" x2="21.33" y2="11.13" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.13" x2="21.33" y2="12.13" stroke="#000000" stroke-width="0.100"/>
@@ -27,8 +27,8 @@
   <text class="music" x="14.86" y="9.13" font-size="4.00" data-pos="568"></text>
   <text class="music" x="16.51" y="8.63" font-size="4.00" data-pos="574"></text>
   <text class="music" x="17.62" y="8.63" font-size="4.00" data-pos="574"></text>
-  <rect x="20.24" y="11.13" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="20.73" y="11.13" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="20.24" y="11.13" width="0.19" height="4.00"/>
+  <rect x="20.73" y="11.13" width="0.60" height="4.00"/>
   <line x1="8.86" y1="13.32" x2="17.75" y2="13.13" stroke="#000000" stroke-width="0.480"/>
   <line x1="8.93" y1="10.28" x2="8.93" y2="13.32" stroke="#000000" stroke-width="0.130"/>
   <line x1="12.16" y1="9.78" x2="12.16" y2="13.25" stroke="#000000" stroke-width="0.130"/>

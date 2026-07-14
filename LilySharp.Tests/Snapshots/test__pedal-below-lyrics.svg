@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="422.8" viewBox="0 0 119.05 42.28">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="422.8" viewBox="0 0 119.05 42.28" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="340">A pedal keeps its own staff baseline, clear of the vocal lyrics</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="340">A pedal keeps its own staff baseline, clear of the vocal lyrics</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <text x="4.25" y="19.77" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">Voc</text>
-  <text x="4.25" y="30.27" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">Pno</text>
+  <text x="4.25" y="19.77" font-size="3.00" text-anchor="middle" dominant-baseline="central">Voc</text>
+  <text x="4.25" y="30.27" font-size="3.00" text-anchor="middle" dominant-baseline="central">Pno</text>
   <line x1="8.50" y1="17.77" x2="8.50" y2="32.27" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.50" y1="17.77" x2="30.43" y2="17.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="18.77" x2="30.43" y2="18.77" stroke="#000000" stroke-width="0.100"/>
@@ -42,8 +42,8 @@
   <line x1="22.99" y1="11.42" x2="22.99" y2="19.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.23" y="7.27" font-size="4.00" data-pos="505"></text>
   <line x1="26.30" y1="7.42" x2="26.30" y2="19.77" stroke="#000000" stroke-width="0.130"/>
-  <rect x="29.34" y="17.77" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="29.83" y="17.77" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="29.34" y="17.77" width="0.19" height="4.00"/>
+  <rect x="29.83" y="17.77" width="0.60" height="4.00"/>
   <line x1="8.50" y1="28.27" x2="30.43" y2="28.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="29.27" x2="30.43" y2="29.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="30.27" x2="30.43" y2="30.27" stroke="#000000" stroke-width="0.100"/>
@@ -59,13 +59,13 @@
   <line x1="22.99" y1="29.92" x2="22.99" y2="33.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.23" y="29.27" font-size="4.00" data-pos="558"></text>
   <line x1="26.30" y1="29.42" x2="26.30" y2="32.77" stroke="#000000" stroke-width="0.130"/>
-  <rect x="29.34" y="28.27" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="29.83" y="28.27" width="0.60" height="4.00" fill="#000000"/>
-  <text x="16.30" y="36.38" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="523">la</text>
-  <text x="19.61" y="36.38" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="526">la</text>
-  <text x="22.92" y="36.38" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="529">la</text>
-  <text x="26.23" y="36.38" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="532">la</text>
-  <text x="19.61" y="34.27" font-size="2.80" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="551">Ped.</text>
-  <text x="26.23" y="34.27" font-size="2.80" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="559">*</text>
+  <rect x="29.34" y="28.27" width="0.19" height="4.00"/>
+  <rect x="29.83" y="28.27" width="0.60" height="4.00"/>
+  <text x="16.30" y="36.38" font-size="3.20" text-anchor="middle" data-pos="523">la</text>
+  <text x="19.61" y="36.38" font-size="3.20" text-anchor="middle" data-pos="526">la</text>
+  <text x="22.92" y="36.38" font-size="3.20" text-anchor="middle" data-pos="529">la</text>
+  <text x="26.23" y="36.38" font-size="3.20" text-anchor="middle" data-pos="532">la</text>
+  <text x="19.61" y="34.27" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="551">Ped.</text>
+  <text x="26.23" y="34.27" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="559">*</text>
   </g>
 </svg>

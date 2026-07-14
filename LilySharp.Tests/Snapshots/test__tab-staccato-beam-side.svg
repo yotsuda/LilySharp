@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="198.7" viewBox="0 0 119.05 19.87">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="198.7" viewBox="0 0 119.05 19.87" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="352">tab staccato on beamed group</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="352">tab staccato on beamed group</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="9.77" x2="15.98" y2="9.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="11.27" x2="15.98" y2="11.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.77" x2="15.98" y2="12.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="14.27" x2="15.98" y2="14.27" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.00" y="12.02" font-size="3.11"></text>
-  <rect x="14.89" y="9.77" width="0.19" height="4.50" fill="#000000"/>
-  <rect x="15.38" y="9.77" width="0.60" height="4.50" fill="#000000"/>
+  <rect x="14.89" y="9.77" width="0.19" height="4.50"/>
+  <rect x="15.38" y="9.77" width="0.60" height="4.50"/>
   <rect x="4.36" y="13.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="441"/>
-  <text x="5.17" y="15.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="441">3</text>
+  <text x="5.17" y="15.10" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="441">3</text>
   <rect x="6.86" y="13.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="453"/>
-  <text x="7.67" y="15.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="453">3</text>
+  <text x="7.67" y="15.10" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="453">3</text>
   <rect x="9.61" y="10.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="455"/>
-  <text x="10.43" y="12.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="455">5</text>
+  <text x="10.43" y="12.10" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="455">5</text>
   <rect x="12.12" y="10.37" width="1.62" height="1.79" fill="#FFFFFF" data-pos="469"/>
-  <text x="12.93" y="12.10" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="469">5</text>
+  <text x="12.93" y="12.10" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="469">5</text>
   <line x1="5.69" y1="9.15" x2="13.58" y2="7.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="5.75" y1="13.07" x2="5.75" y2="9.14" stroke="#000000" stroke-width="0.130"/>
   <line x1="8.26" y1="13.07" x2="8.26" y2="8.58" stroke="#000000" stroke-width="0.130"/>

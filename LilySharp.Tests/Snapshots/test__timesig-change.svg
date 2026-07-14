@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="248.1" viewBox="0 0 119.05 24.81">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="248.1" viewBox="0 0 119.05 24.81" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="279">Time Signature Changes</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="313">Lily#</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="279">Time Signature Changes</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="313">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="14.81" x2="58.89" y2="14.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.81" x2="58.89" y2="15.81" stroke="#000000" stroke-width="0.100"/>
@@ -47,11 +47,11 @@
   <line x1="51.75" y1="15.96" x2="51.75" y2="19.31" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="54.68" y="15.31" font-size="4.00" data-pos="606"></text>
   <line x1="54.75" y1="15.46" x2="54.75" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.42" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="32.82" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="48.89" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="57.80" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="58.29" y="14.81" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="20.42" y="14.81" width="0.19" height="4.00"/>
+  <rect x="32.82" y="14.81" width="0.19" height="4.00"/>
+  <rect x="48.89" y="14.81" width="0.19" height="4.00"/>
+  <rect x="57.80" y="14.81" width="0.19" height="4.00"/>
+  <rect x="58.29" y="14.81" width="0.60" height="4.00"/>
   <line x1="35.48" y1="16.99" x2="40.00" y2="17.63" stroke="#000000" stroke-width="0.480"/>
   <line x1="35.54" y1="13.96" x2="35.54" y2="17.00" stroke="#000000" stroke-width="0.130"/>
   <line x1="37.83" y1="14.46" x2="37.83" y2="17.33" stroke="#000000" stroke-width="0.130"/>
@@ -62,6 +62,6 @@
   <line x1="46.24" y1="16.46" x2="46.24" y2="19.00" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="0.80" y="12.07" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="12.07" x2="1.31" y2="10.67" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="1.90" y="12.07" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>
+  <text x="1.90" y="12.07" font-size="1.80" data-pos="0">= 120</text>
   </g>
 </svg>

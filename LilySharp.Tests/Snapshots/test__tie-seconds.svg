@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="212.0" viewBox="0 0 119.05 21.20">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="212.0" viewBox="0 0 119.05 21.20" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="456">Ties on seconds</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="483">Lily#</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="456">Ties on seconds</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="483">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="9.97" x2="28.88" y2="9.97" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="10.97" x2="28.88" y2="10.97" stroke="#000000" stroke-width="0.100"/>
@@ -28,12 +28,12 @@
   <text class="music" x="23.41" y="14.47" font-size="4.00" data-pos="586"></text>
   <text class="music" x="24.72" y="13.97" font-size="4.00" data-pos="586"></text>
   <line x1="24.65" y1="14.47" x2="24.65" y2="10.47" stroke="#000000" stroke-width="0.130"/>
-  <rect x="16.96" y="9.97" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="27.79" y="9.97" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="28.28" y="9.97" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 9.38,15.72 C 9.95,16.47 11.30,16.47 11.87,15.72 C 11.30,16.24 9.95,16.24 9.38,15.72 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 10.69,14.30 C 11.26,13.79 12.61,13.79 13.19,14.30 C 12.61,13.56 11.26,13.56 10.69,14.30 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 20.71,14.97 C 21.29,15.72 22.64,15.72 23.21,14.97 C 22.64,15.49 21.29,15.49 20.71,14.97 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 22.02,13.22 C 22.60,12.71 23.95,12.71 24.52,13.22 C 23.95,12.48 22.60,12.48 22.02,13.22 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="16.96" y="9.97" width="0.19" height="4.00"/>
+  <rect x="27.79" y="9.97" width="0.19" height="4.00"/>
+  <rect x="28.28" y="9.97" width="0.60" height="4.00"/>
+  <path d="M 9.38,15.72 C 9.95,16.47 11.30,16.47 11.87,15.72 C 11.30,16.24 9.95,16.24 9.38,15.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 10.69,14.30 C 11.26,13.79 12.61,13.79 13.19,14.30 C 12.61,13.56 11.26,13.56 10.69,14.30 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 20.71,14.97 C 21.29,15.72 22.64,15.72 23.21,14.97 C 22.64,15.49 21.29,15.49 20.71,14.97 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 22.02,13.22 C 22.60,12.71 23.95,12.71 24.52,13.22 C 23.95,12.48 22.60,12.48 22.02,13.22 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

@@ -152,8 +152,12 @@ internal sealed class SvgDocumentContext : IDocumentContext
         double heightPx = heightSpaces * _options.PixelsPerSpace;
 
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        // font-family="serif" is inherited by every text: non-music text (title, lyrics,
+        // fret digits, …) omits its own serif attribute and picks this up, while the
+        // ".music" CSS class overrides it for glyphs and a custom `font "NAME"` overrides
+        // it per element. Saves repeating font-family="serif" on hundreds of texts.
         sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\">",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\" font-family=\"serif\">",
             widthPx, heightPx, widthSpaces, heightSpaces));
         sb.AppendLine("<style>");
         var fontFaceRule = GetFontFaceRule();

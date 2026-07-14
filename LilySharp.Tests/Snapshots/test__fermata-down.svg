@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="207.0" viewBox="0 0 119.05 20.70">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="207.0" viewBox="0 0 119.05 20.70" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="244">Fermata down</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="244">Fermata down</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <text x="4.25" y="11.77" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">bass</text>
+  <text x="4.25" y="11.77" font-size="3.00" text-anchor="middle" dominant-baseline="central">bass</text>
   <line x1="8.50" y1="9.77" x2="37.50" y2="9.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="10.77" x2="37.50" y2="10.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="11.77" x2="37.50" y2="11.77" stroke="#000000" stroke-width="0.100"/>
@@ -22,8 +22,8 @@
   <text class="music" x="28.78" y="11.27" font-size="4.00" data-pos="372"></text>
   <text class="music" x="31.29" y="10.77" font-size="4.00" data-pos="374"></text>
   <text class="music" x="33.79" y="10.27" font-size="4.00" data-pos="376"></text>
-  <rect x="36.41" y="9.77" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="36.90" y="9.77" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="36.41" y="9.77" width="0.19" height="4.00"/>
+  <rect x="36.90" y="9.77" width="0.60" height="4.00"/>
   <line x1="17.47" y1="7.57" x2="24.87" y2="8.97" stroke="#000000" stroke-width="0.480"/>
   <line x1="17.54" y1="10.12" x2="17.54" y2="7.58" stroke="#000000" stroke-width="0.130"/>
   <line x1="19.79" y1="13.12" x2="19.79" y2="8.01" stroke="#000000" stroke-width="0.130"/>

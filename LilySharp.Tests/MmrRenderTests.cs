@@ -54,10 +54,10 @@ public class MmrRenderTests
         var svg = Render("R1*4 |");
         // The measure count is drawn with the music-font number glyph for '4'.
         Assert.Contains(CountDigit(4), svg);
-        // SharedRenderer emits hex colors (`#000000`) where SvgRenderer used named
-        // colors (`black`). Either form is acceptable — barlines/H-bar fill must exist.
-        Assert.True(svg.Contains("fill=\"black\"") || svg.Contains("fill=\"#000000\""),
-            "Expected at least one black-filled rect (barlines or H-bar).");
+        // The H-bar (and barlines) draw as filled rects. A black fill is now the SVG
+        // default (omitted to shrink the document), so assert the rect renders rather
+        // than a literal fill colour.
+        Assert.Contains("<rect", svg);
     }
 
     [Fact]

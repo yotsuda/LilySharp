@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="433.1" viewBox="0 0 119.05 43.31">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="433.1" viewBox="0 0 119.05 43.31" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="111">Ornaments &amp; Techniques</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="145">Lily# Showcase</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="111">Ornaments &amp; Techniques</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="145">Lily# Showcase</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="14.81" x2="102.05" y2="14.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.81" x2="102.05" y2="15.81" stroke="#000000" stroke-width="0.100"/>
@@ -68,11 +68,11 @@
   <line x1="94.01" y1="19.66" x2="94.01" y2="16.31" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="97.01" y="19.31" font-size="4.00" data-pos="466"></text>
   <line x1="98.25" y1="19.16" x2="98.25" y2="15.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="26.33" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="44.14" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="63.86" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="81.18" y="14.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="101.86" y="14.81" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="26.33" y="14.81" width="0.19" height="4.00"/>
+  <rect x="44.14" y="14.81" width="0.19" height="4.00"/>
+  <rect x="63.86" y="14.81" width="0.19" height="4.00"/>
+  <rect x="81.18" y="14.81" width="0.19" height="4.00"/>
+  <rect x="101.86" y="14.81" width="0.19" height="4.00"/>
   <line x1="0.00" y1="29.81" x2="102.05" y2="29.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="30.81" x2="102.05" y2="30.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="31.81" x2="102.05" y2="31.81" stroke="#000000" stroke-width="0.100"/>
@@ -136,24 +136,24 @@
   <text class="music" x="93.89" y="35.31" font-size="4.00" data-pos="702"></text>
   <text class="music" x="93.89" y="30.81" font-size="4.00" data-pos="702"></text>
   <line x1="95.13" y1="36.31" x2="95.13" y2="28.06" stroke="#000000" stroke-width="0.130"/>
-  <rect x="26.93" y="29.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="45.66" y="29.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="64.38" y="29.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="84.76" y="29.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="100.96" y="29.81" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="101.45" y="29.81" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 67.61,23.56 C 68.46,24.44 71.37,24.44 72.22,23.56 C 71.37,24.22 68.46,24.22 67.61,23.56 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 46.59,22.21 C 48.58,23.62 56.75,22.61 58.71,20.71 C 56.71,22.34 48.55,23.35 46.59,22.21 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="26.93" y="29.81" width="0.19" height="4.00"/>
+  <rect x="45.66" y="29.81" width="0.19" height="4.00"/>
+  <rect x="64.38" y="29.81" width="0.19" height="4.00"/>
+  <rect x="84.76" y="29.81" width="0.19" height="4.00"/>
+  <rect x="100.96" y="29.81" width="0.19" height="4.00"/>
+  <rect x="101.45" y="29.81" width="0.60" height="4.00"/>
+  <path d="M 67.61,23.56 C 68.46,24.44 71.37,24.44 72.22,23.56 C 71.37,24.22 68.46,24.22 67.61,23.56 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 46.59,22.21 C 48.58,23.62 56.75,22.61 58.71,20.71 C 56.71,22.34 48.55,23.35 46.59,22.21 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="84.50" y1="13.46" x2="84.50" y2="14.16" stroke="#000000" stroke-width="0.130" data-pos="425"/>
   <line x1="84.50" y1="13.46" x2="86.71" y2="13.29" stroke="#000000" stroke-width="0.130" data-pos="425"/>
   <line x1="88.71" y1="13.14" x2="90.92" y2="12.96" stroke="#000000" stroke-width="0.130" data-pos="425"/>
   <line x1="90.92" y1="12.96" x2="90.92" y2="13.66" stroke="#000000" stroke-width="0.130" data-pos="425"/>
-  <text x="87.71" y="12.91" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="425">3</text>
+  <text x="87.71" y="12.91" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="425">3</text>
   <line x1="8.27" y1="27.96" x2="8.27" y2="28.66" stroke="#000000" stroke-width="0.130" data-pos="470"/>
   <line x1="8.27" y1="27.96" x2="10.70" y2="28.14" stroke="#000000" stroke-width="0.130" data-pos="470"/>
   <line x1="12.70" y1="28.29" x2="15.12" y2="28.46" stroke="#000000" stroke-width="0.130" data-pos="470"/>
   <line x1="15.12" y1="28.46" x2="15.12" y2="29.16" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <text x="11.70" y="27.91" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="470">3</text>
+  <text x="11.70" y="27.91" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="470">3</text>
   <line x1="30.03" y1="36.52" x2="32.44" y2="37.61" stroke="#000000" stroke-width="0.100" data-pos="523"/>
   <line x1="48.75" y1="34.02" x2="51.16" y2="35.11" stroke="#000000" stroke-width="0.100" data-pos="560"/>
   <line x1="65.17" y1="30.41" x2="65.02" y2="30.52" stroke="#000000" stroke-width="0.100" data-pos="608"/>
@@ -400,17 +400,17 @@
   <text class="music" x="9.12" y="17.81" font-size="2.60" data-pos="227"></text>
   <line x1="8.96" y1="18.31" x2="8.96" y2="16.04" stroke="#000000" stroke-width="0.085" data-pos="227"/>
   <line x1="9.93" y1="17.81" x2="9.93" y2="15.54" stroke="#000000" stroke-width="0.085" data-pos="227"/>
-  <polygon points="8.91,15.90 9.97,15.36 9.97,15.67 8.91,16.22" fill="#000000" data-pos="227"/>
-  <polygon points="8.91,16.43 9.97,15.89 9.97,16.20 8.91,16.74" fill="#000000" data-pos="227"/>
-  <path d="M 9.85,19.11 C 10.41,19.49 11.11,19.34 11.46,18.76 C 11.07,19.17 10.37,19.32 9.85,19.11 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
+  <polygon points="8.91,15.90 9.97,15.36 9.97,15.67 8.91,16.22" data-pos="227"/>
+  <polygon points="8.91,16.43 9.97,15.89 9.97,16.20 8.91,16.74" data-pos="227"/>
+  <path d="M 9.85,19.11 C 10.41,19.49 11.11,19.34 11.46,18.76 C 11.07,19.17 10.37,19.32 9.85,19.11 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
   <text class="music" x="27.32" y="15.31" font-size="2.60" data-pos="297"></text>
   <line x1="28.12" y1="15.31" x2="28.12" y2="13.04" stroke="#000000" stroke-width="0.085" data-pos="297"/>
-  <text class="music" x="28.12" y="13.04" font-size="2.60" fill="#000000" data-pos="297"></text>
+  <text class="music" x="28.12" y="13.04" font-size="2.60" data-pos="297"></text>
   <line x1="27.74" y1="14.44" x2="28.66" y2="13.69" stroke="#000000" stroke-width="0.127" data-pos="297"/>
-  <path d="M 27.74,16.31 C 28.18,16.57 28.63,16.42 28.85,15.96 C 28.58,16.25 28.13,16.40 27.74,16.31 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="297"/>
-  <text x="0.05" y="27.57" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">6</text>
+  <path d="M 27.74,16.31 C 28.18,16.57 28.63,16.42 28.85,15.96 C 28.58,16.25 28.13,16.40 27.74,16.31 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="297"/>
+  <text x="0.05" y="27.57" font-size="1.75" font-weight="bold">6</text>
   <text class="music" x="0.80" y="12.07" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="12.07" x2="1.31" y2="10.67" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="1.90" y="12.07" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 100</text>
+  <text x="1.90" y="12.07" font-size="1.80" data-pos="0">= 100</text>
   </g>
 </svg>

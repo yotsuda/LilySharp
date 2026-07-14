@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="252.2" viewBox="0 0 119.05 25.22">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="252.2" viewBox="0 0 119.05 25.22" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -41,15 +41,15 @@
   <text class="music" x="42.90" y="19.72" font-size="4.00" data-pos="326"></text>
   <line x1="44.14" y1="19.57" x2="44.14" y2="15.22" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.99" y="18.22" font-size="4.00" data-pos="330"></text>
-  <rect x="20.42" y="13.22" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="31.75" y="13.22" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="46.51" y="13.22" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="55.15" y="13.22" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="55.64" y="13.22" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="20.42" y="13.22" width="0.19" height="4.00"/>
+  <rect x="31.75" y="13.22" width="0.19" height="4.00"/>
+  <rect x="46.51" y="13.22" width="0.19" height="4.00"/>
+  <rect x="55.15" y="13.22" width="0.19" height="4.00"/>
+  <rect x="55.64" y="13.22" width="0.60" height="4.00"/>
   <rect x="0.30" y="8.38" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
-  <text x="1.29" y="10.58" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="255">A</text>
+  <text x="1.29" y="10.58" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
   <rect x="31.94" y="6.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
-  <text x="32.88" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="298">B</text>
-  <text x="30.94" y="11.66" font-size="2.40" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="354">poco a poco dim.</text>
+  <text x="32.88" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="298">B</text>
+  <text x="30.94" y="11.66" font-size="2.40" font-style="italic" text-anchor="middle" data-pos="354">poco a poco dim.</text>
   </g>
 </svg>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="177.7" viewBox="0 0 119.05 17.77">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="177.7" viewBox="0 0 119.05 17.77" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="722">Cross-voice beam collision</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="722">Cross-voice beam collision</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="8.77" x2="29.97" y2="8.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="9.77" x2="29.97" y2="9.77" stroke="#000000" stroke-width="0.100"/>
@@ -23,8 +23,8 @@
   <text class="music" x="26.27" y="10.27" font-size="4.00" data-pos="830"></text>
   <line x1="6.93" y1="7.77" x2="9.87" y2="7.77" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="7.42" y="7.77" font-size="4.00" data-pos="849"></text>
-  <rect x="28.88" y="8.77" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="29.37" y="8.77" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="28.88" y="8.77" width="0.19" height="4.00"/>
+  <rect x="29.37" y="8.77" width="0.60" height="4.00"/>
   <line x1="9.26" y1="6.77" x2="17.55" y2="6.77" stroke="#000000" stroke-width="0.480"/>
   <line x1="9.32" y1="10.12" x2="9.32" y2="6.77" stroke="#000000" stroke-width="0.130"/>
   <line x1="12.48" y1="10.12" x2="12.48" y2="6.77" stroke="#000000" stroke-width="0.130"/>

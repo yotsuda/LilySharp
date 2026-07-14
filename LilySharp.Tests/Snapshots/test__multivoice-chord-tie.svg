@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="242.7" viewBox="0 0 119.05 24.27">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="242.7" viewBox="0 0 119.05 24.27" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="490">Multi-voice chord tie</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="490">Multi-voice chord tie</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="14.27" x2="30.27" y2="14.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.27" x2="30.27" y2="15.27" stroke="#000000" stroke-width="0.100"/>
@@ -47,10 +47,10 @@
   <text class="music" x="16.93" y="13.77" font-size="4.00" data-pos="630"></text>
   <line x1="17.00" y1="13.92" x2="17.00" y2="17.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.02" y="15.77" font-size="4.00" data-pos="635"></text>
-  <rect x="20.54" y="14.27" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="29.18" y="14.27" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="29.67" y="14.27" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 9.30,15.49 C 9.65,16.07 10.26,16.07 10.60,15.49 C 10.26,15.84 9.65,15.84 9.30,15.49 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 9.30,14.27 C 9.65,14.84 10.26,14.84 10.60,14.27 C 10.26,14.62 9.65,14.62 9.30,14.27 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="20.54" y="14.27" width="0.19" height="4.00"/>
+  <rect x="29.18" y="14.27" width="0.19" height="4.00"/>
+  <rect x="29.67" y="14.27" width="0.60" height="4.00"/>
+  <path d="M 9.30,15.49 C 9.65,16.07 10.26,16.07 10.60,15.49 C 10.26,15.84 9.65,15.84 9.30,15.49 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 9.30,14.27 C 9.65,14.84 10.26,14.84 10.60,14.27 C 10.26,14.62 9.65,14.62 9.30,14.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

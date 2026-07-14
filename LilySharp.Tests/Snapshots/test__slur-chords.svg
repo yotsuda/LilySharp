@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="224.5" viewBox="0 0 119.05 22.45">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="224.5" viewBox="0 0 119.05 22.45" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="317">Slurs on chords</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="344">Lily#</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="317">Slurs on chords</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="344">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="10.97" x2="28.88" y2="10.97" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="11.97" x2="28.88" y2="11.97" stroke="#000000" stroke-width="0.100"/>
@@ -27,10 +27,10 @@
   <text class="music" x="23.41" y="13.97" font-size="4.00" data-pos="525"></text>
   <text class="music" x="24.72" y="13.47" font-size="4.00" data-pos="525"></text>
   <line x1="24.65" y1="13.97" x2="24.65" y2="9.97" stroke="#000000" stroke-width="0.130"/>
-  <rect x="16.96" y="10.97" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="27.79" y="10.97" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="28.28" y="10.97" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 8.10,16.87 C 9.03,17.77 10.88,17.52 11.77,16.37 C 10.84,17.25 9.00,17.50 8.10,16.87 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 19.44,15.87 C 20.39,16.64 22.23,16.14 23.11,14.87 C 22.16,15.88 20.31,16.38 19.44,15.87 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="16.96" y="10.97" width="0.19" height="4.00"/>
+  <rect x="27.79" y="10.97" width="0.19" height="4.00"/>
+  <rect x="28.28" y="10.97" width="0.60" height="4.00"/>
+  <path d="M 8.10,16.87 C 9.03,17.77 10.88,17.52 11.77,16.37 C 10.84,17.25 9.00,17.50 8.10,16.87 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 19.44,15.87 C 20.39,16.64 22.23,16.14 23.11,14.87 C 22.16,15.88 20.31,16.38 19.44,15.87 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="183.6" viewBox="0 0 119.05 18.36">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="183.6" viewBox="0 0 119.05 18.36" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -22,13 +22,13 @@
   <text class="music" x="14.40" y="7.86" font-size="4.00" data-pos="441"></text>
   <line x1="14.46" y1="8.01" x2="14.46" y2="13.36" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.40" y="11.36" font-size="4.00" data-pos="457"></text>
-  <rect x="21.91" y="9.36" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="22.40" y="9.36" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="21.91" y="9.36" width="0.19" height="4.00"/>
+  <rect x="22.40" y="9.36" width="0.60" height="4.00"/>
   <text class="music" x="8.66" y="10.86" font-size="2.60" data-pos="418"></text>
   <text class="music" x="9.50" y="10.86" font-size="2.60" data-pos="418"></text>
   <line x1="10.31" y1="10.86" x2="10.31" y2="8.58" stroke="#000000" stroke-width="0.085" data-pos="418"/>
-  <text class="music" x="10.31" y="8.58" font-size="2.60" fill="#000000" data-pos="418"></text>
+  <text class="music" x="10.31" y="8.58" font-size="2.60" data-pos="418"></text>
   <line x1="9.92" y1="9.99" x2="10.85" y2="9.23" stroke="#000000" stroke-width="0.127" data-pos="418"/>
-  <path d="M 10.23,12.16 C 11.35,12.83 13.23,12.40 13.95,11.31 C 13.19,12.23 11.31,12.66 10.23,12.16 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
+  <path d="M 10.23,12.16 C 11.35,12.83 13.23,12.40 13.95,11.31 C 13.19,12.23 11.31,12.66 10.23,12.16 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
   </g>
 </svg>

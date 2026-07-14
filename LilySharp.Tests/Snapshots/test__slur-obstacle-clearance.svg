@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="206.6" viewBox="0 0 119.05 20.66">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="206.6" viewBox="0 0 119.05 20.66" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="326">Slur obstacle clearance</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="326">Slur obstacle clearance</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.66" x2="20.76" y2="11.66" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.66" x2="20.76" y2="12.66" stroke="#000000" stroke-width="0.100"/>
@@ -32,8 +32,8 @@
   <line x1="13.87" y1="8.81" x2="13.87" y2="13.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="16.56" y="9.66" font-size="4.00" data-pos="428"></text>
   <line x1="16.62" y1="9.81" x2="16.62" y2="13.66" stroke="#000000" stroke-width="0.130"/>
-  <rect x="19.67" y="11.66" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="20.16" y="11.66" width="0.60" height="4.00" fill="#000000"/>
-  <path d="M 8.10,7.76 C 9.69,6.57 14.67,6.57 16.26,7.76 C 14.67,6.30 9.69,6.30 8.10,7.76 Z" fill="#000000" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="19.67" y="11.66" width="0.19" height="4.00"/>
+  <rect x="20.16" y="11.66" width="0.60" height="4.00"/>
+  <path d="M 8.10,7.76 C 9.69,6.57 14.67,6.57 16.26,7.76 C 14.67,6.30 9.69,6.30 8.10,7.76 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

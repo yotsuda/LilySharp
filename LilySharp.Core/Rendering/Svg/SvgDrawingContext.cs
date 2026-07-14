@@ -34,6 +34,14 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _interactive = interactive;
     }
 
+    /// <summary>A fill attribute for a glyph/shape whose default is black. SVG's initial
+    /// <c>fill</c> is already black, so a black fill is redundant — omit it (this repeats
+    /// across thousands of glyphs, beams and rests per score). Non-black colours emit
+    /// normally; a null fill also defaults to black here (callers that need an UNFILLED
+    /// shape use the <c>fill="none"</c> paths, not this helper).</summary>
+    private static string FillAttr(Color? fill) =>
+        fill is { } f && f != Color.Black ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+
     public void DrawLine(double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
         (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
@@ -55,9 +63,9 @@ internal sealed class SvgDrawingContext : IDrawingContext
         var attrs = new StringBuilder(96);
         attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\"", x, y, width, height);
         if (fill is { } f)
-            attrs.AppendFormat(Inv, " fill=\"{0}\"", f.ToHex());
+            attrs.Append(FillAttr(f));       // black omitted (SVG default), non-black emitted
         else
-            attrs.Append(" fill=\"none\"");
+            attrs.Append(" fill=\"none\"");   // an explicitly UNFILLED rect
         if (stroke is { } s)
             attrs.AppendFormat(Inv, " stroke=\"{0}\" stroke-width=\"{1:F3}\"", s.ToHex(), strokeWidth);
         attrs.Append(SourceAttr());
@@ -68,8 +76,8 @@ internal sealed class SvgDrawingContext : IDrawingContext
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {
         _sb.AppendLine(string.Format(Inv,
-            "  <polygon points=\"{0:F2},{1:F2} {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2}\" fill=\"{8}\"{9}/>",
-            p0.X, p0.Y, p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y, fill.ToHex(), SourceAttr()));
+            "  <polygon points=\"{0:F2},{1:F2} {2:F2},{3:F2} {4:F2},{5:F2} {6:F2},{7:F2}\"{8}{9}/>",
+            p0.X, p0.Y, p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y, FillAttr(fill), SourceAttr()));
     }
 
     public void DrawEllipse(double cx, double cy, double rx, double ry,
@@ -78,7 +86,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         var attrs = new StringBuilder(96);
         attrs.AppendFormat(Inv, " cx=\"{0:F2}\" cy=\"{1:F2}\" rx=\"{2:F2}\" ry=\"{3:F2}\"", cx, cy, rx, ry);
         if (fill is { } f)
-            attrs.AppendFormat(Inv, " fill=\"{0}\"", f.ToHex());
+            attrs.Append(FillAttr(f));       // black omitted (SVG default), non-black emitted
         else
             attrs.Append(" fill=\"none\"");
         if (stroke is { } s)
@@ -89,10 +97,9 @@ internal sealed class SvgDrawingContext : IDrawingContext
 
     public void DrawCircle(double cx, double cy, double r, Color? fill = null)
     {
-        var color = (fill ?? Color.Black).ToHex();
         _sb.AppendLine(string.Format(Inv,
-            "  <circle cx=\"{0:F2}\" cy=\"{1:F2}\" r=\"{2:F2}\" fill=\"{3}\"{4}/>",
-            cx, cy, r, color, SourceAttr()));
+            "  <circle cx=\"{0:F2}\" cy=\"{1:F2}\" r=\"{2:F2}\"{3}{4}/>",
+            cx, cy, r, FillAttr(fill), SourceAttr()));
     }
 
     public void DrawClosedBezier(
@@ -111,12 +118,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
                 " stroke=\"{0}\" stroke-width=\"{1:F2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"",
                 color, strokeWidth)
             : "";
-        _sb.AppendLine($"  <path d=\"{d}\" fill=\"{color}\"{strokeAttr}{SourceAttr()}/>");
+        _sb.AppendLine($"  <path d=\"{d}\"{FillAttr(fill)}{strokeAttr}{SourceAttr()}/>");
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
-        var fillAttr = fill is { } f ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+        var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
             "  <text class=\"music\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
             x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
@@ -140,7 +147,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // head is clickable. Both carry the same data-pos (the glyph for
         // highlight, the rect for the click); the webview skips the .nh-hit rect
         // when it recolors highlights so the transparent box never shows.
-        var fillAttr = fill is { } f ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+        var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
             "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
             x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
@@ -162,7 +169,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // note's clickable area would spill left onto the (loose) accidental box.
         // pointer-events="none" keeps the highlight (fill recolor) while the
         // notehead's nh-hit rect owns the click.
-        var fillAttr = fill is { } f ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+        var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
             "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
             x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
@@ -174,8 +181,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
         var attrs = new StringBuilder(128);
-        attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\" font-family=\"{3}\"",
-            x, y, fontSize, EscapeAttr(fontFamily));
+        attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"", x, y, fontSize);
+        // The document root sets font-family="serif" (SvgDocumentContext.WriteHeader),
+        // so serif text inherits it — emit the attribute only for a DIFFERENT family
+        // (a custom `font "NAME"`); an element attribute still overrides the inherited one.
+        if (fontFamily != "serif")
+            attrs.AppendFormat(Inv, " font-family=\"{0}\"", EscapeAttr(fontFamily));
         if ((style & FontStyle.Bold) != 0)
             attrs.Append(" font-weight=\"bold\"");
         if ((style & FontStyle.Italic) != 0)
@@ -186,8 +197,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
             attrs.Append(verticalAnchor == VerticalAnchor.Middle
                 ? " dominant-baseline=\"central\""
                 : " dominant-baseline=\"hanging\"");
-        if (fill is { } f)
-            attrs.AppendFormat(Inv, " fill=\"{0}\"", f.ToHex());
+        attrs.Append(FillAttr(fill));
         attrs.Append(SourceAttr());
         _sb.AppendLine($"  <text{attrs}>{EscapeText(text)}</text>");
     }

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="327.0" viewBox="0 0 119.05 32.70">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="327.0" viewBox="0 0 119.05 32.70" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="79">Trill Spanners</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="105">Lily#</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="79">Trill Spanners</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="105">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="22.70" x2="95.56" y2="22.70" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="23.70" x2="95.56" y2="23.70" stroke="#000000" stroke-width="0.100"/>
@@ -83,13 +83,13 @@
   <line x1="88.17" y1="21.35" x2="88.17" y2="24.70" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="91.36" y="17.20" font-size="4.00" data-pos="512"></text>
   <line x1="91.42" y1="17.35" x2="91.42" y2="24.70" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.42" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="35.43" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="50.19" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="65.20" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="79.96" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="94.47" y="22.70" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="94.96" y="22.70" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="20.42" y="22.70" width="0.19" height="4.00"/>
+  <rect x="35.43" y="22.70" width="0.19" height="4.00"/>
+  <rect x="50.19" y="22.70" width="0.19" height="4.00"/>
+  <rect x="65.20" y="22.70" width="0.19" height="4.00"/>
+  <rect x="79.96" y="22.70" width="0.19" height="4.00"/>
+  <rect x="94.47" y="22.70" width="0.19" height="4.00"/>
+  <rect x="94.96" y="22.70" width="0.60" height="4.00"/>
   <text class="music" x="8.62" y="20.50" font-size="4.00" data-pos="233"></text>
   <line x1="10.52" y1="20.50" x2="10.62" y2="20.35" stroke="#000000" stroke-width="0.100" data-pos="233"/>
   <line x1="10.62" y1="20.35" x2="10.72" y2="20.30" stroke="#000000" stroke-width="0.100" data-pos="233"/>
@@ -371,13 +371,13 @@
   <line x1="75.88" y1="20.30" x2="75.98" y2="20.35" stroke="#000000" stroke-width="0.100" data-pos="471"/>
   <line x1="75.98" y1="20.35" x2="76.08" y2="20.50" stroke="#000000" stroke-width="0.100" data-pos="471"/>
   <rect x="0.30" y="17.86" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="520"/>
-  <text x="1.29" y="20.07" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="520">A</text>
+  <text x="1.29" y="20.07" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="520">A</text>
   <text class="music" x="3.09" y="20.06" font-size="1.60" data-pos="0"></text>
   <line x1="3.60" y1="20.06" x2="3.60" y2="18.66" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="4.19" y="20.06" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>
+  <text x="4.19" y="20.06" font-size="1.80" data-pos="0">= 120</text>
   <rect x="35.62" y="10.77" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="548"/>
-  <text x="36.55" y="12.97" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="548">B</text>
+  <text x="36.55" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="548">B</text>
   <rect x="65.39" y="15.28" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="576"/>
-  <text x="66.38" y="17.48" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="576">C</text>
+  <text x="66.38" y="17.48" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="576">C</text>
   </g>
 </svg>

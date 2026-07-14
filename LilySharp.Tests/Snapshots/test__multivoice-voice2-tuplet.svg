@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="243.2" viewBox="0 0 119.05 24.32">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="243.2" viewBox="0 0 119.05 24.32" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="499">Lower-voice tuplet</text>
+  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="499">Lower-voice tuplet</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="12.27" x2="35.75" y2="12.27" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="13.27" x2="35.75" y2="13.27" stroke="#000000" stroke-width="0.100"/>
@@ -44,8 +44,8 @@
   <text class="music" x="24.93" y="10.77" font-size="4.00" data-pos="645"></text>
   <text class="music" x="28.14" y="11.27" font-size="4.00" data-pos="648"></text>
   <text class="music" x="31.34" y="11.77" font-size="4.00" data-pos="651"></text>
-  <rect x="34.66" y="12.27" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="35.15" y="12.27" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="34.66" y="12.27" width="0.19" height="4.00"/>
+  <rect x="35.15" y="12.27" width="0.60" height="4.00"/>
   <line x1="7.80" y1="16.09" x2="12.94" y2="15.45" stroke="#000000" stroke-width="0.480"/>
   <line x1="7.87" y1="12.92" x2="7.87" y2="16.08" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.37" y1="12.42" x2="10.37" y2="15.77" stroke="#000000" stroke-width="0.130"/>
@@ -62,6 +62,6 @@
   <line x1="7.80" y1="18.12" x2="9.37" y2="17.97" stroke="#000000" stroke-width="0.130" data-pos="610"/>
   <line x1="11.37" y1="17.77" x2="12.94" y2="17.62" stroke="#000000" stroke-width="0.130" data-pos="610"/>
   <line x1="12.94" y1="17.62" x2="12.94" y2="16.92" stroke="#000000" stroke-width="0.130" data-pos="610"/>
-  <text x="10.37" y="18.67" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="610">3</text>
+  <text x="10.37" y="18.67" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="610">3</text>
   </g>
 </svg>
