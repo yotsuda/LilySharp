@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="392.9" viewBox="0 0 119.05 39.29" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="392.6" viewBox="0 0 119.05 39.26" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -103,10 +103,10 @@
   <text class="music" x="91.27" y="15.41" font-size="4.00" data-pos="379"></text>
   <text class="music" x="96.59" y="15.41" font-size="4.00" data-pos="389"></text>
   <text class="music" x="8.22" y="27.29" font-size="4.00" data-pos="431"></text>
-  <text class="music" x="39.56" y="33.63" font-size="4.00" data-pos="452"></text>
-  <text class="music" x="46.96" y="33.13" font-size="4.00" data-pos="462"></text>
-  <text class="music" x="54.36" y="32.63" font-size="4.00" data-pos="472"></text>
-  <text class="music" x="61.76" y="32.13" font-size="4.00" data-pos="482"></text>
+  <text class="music" x="39.56" y="34.19" font-size="4.00" data-pos="452"></text>
+  <text class="music" x="46.96" y="33.69" font-size="4.00" data-pos="462"></text>
+  <text class="music" x="54.36" y="33.19" font-size="4.00" data-pos="472"></text>
+  <text class="music" x="61.76" y="32.69" font-size="4.00" data-pos="482"></text>
   <text class="music" x="71.91" y="33.51" font-size="4.00" data-pos="557"></text>
   <text class="music" x="79.31" y="33.23" font-size="4.00" data-pos="568"></text>
   <text class="music" x="86.71" y="32.39" font-size="4.00" data-pos="577"></text>

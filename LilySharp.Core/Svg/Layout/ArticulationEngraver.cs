@@ -655,8 +655,8 @@ internal static class ArticulationEngraver
             //   1.4·line-thickness (≈0.14 ss), dot_size ≈ 0.32 ss ⇒ far extent ≈0.66 ss;
             //   dportato is the y-mirror, so the near (line) edge stays ~0.07 ss.
             ArticulationType.Portato => isAbove
-                ? new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.6600)
-                : new GlyphMetrics.BBox(-0.6000, -0.6600, 0.6000, 0.0700),
+                ? new GlyphMetrics.BBox(-0.6000, -0.6300, 0.6000, 0.0700)
+                : new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.6300),
             ArticulationType.Marcato => isAbove
                 ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
             ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove

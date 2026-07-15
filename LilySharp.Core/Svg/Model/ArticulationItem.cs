@@ -96,7 +96,13 @@ public sealed record ArticulationItem
         ArticulationType.Fermata => (IsAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
         ArticulationType.FermataShort => (IsAbove ? EmmentalerGlyphs.FermataShortAbove : EmmentalerGlyphs.FermataShortBelow).ToString(),
         ArticulationType.FermataLong => (IsAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
-        ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoAbove : EmmentalerGlyphs.ArticPortatoBelow).ToString(),
+        // The staccato DOT sits adjacent to the notehead, the tenuto LINE outside it
+        // (LILYPOND-REF: LilyPond portato output — dot nearest the head). Emmentaler's
+        // uportato (E04E) has the dot on the baseline-far side and dportato (E04F) the
+        // near side, so to get a dot-adjacent mark the ABOVE case wants dportato and the
+        // BELOW case uportato — the opposite of the naive name. Paired with the flipped
+        // Portato box in ArticulationEngraver.GetGlyphBBox.
+        ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoBelow : EmmentalerGlyphs.ArticPortatoAbove).ToString(),
         ArticulationType.Staccatissimo => (IsAbove ? EmmentalerGlyphs.ArticStaccatissimoAbove : EmmentalerGlyphs.ArticStaccatissimoBelow).ToString(),
         ArticulationType.UpBow => EmmentalerGlyphs.ArticUpBow.ToString(),
         ArticulationType.DownBow => EmmentalerGlyphs.ArticDownBow.ToString(),
