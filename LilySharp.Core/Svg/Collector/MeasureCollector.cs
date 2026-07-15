@@ -907,6 +907,11 @@ public sealed partial class MeasureCollector
     /// Collects a <see cref="MultiStaffScore"/> from a syntax tree based on a render specification.
     /// </summary>
     public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
+        => CollectMultiStaff(tree, renderSpec, harvestStructureMarks: true);
+
+    // <paramref name="harvestStructureMarks"/> is false on the isolated recursion that harvests
+    // unrendered parts' score-level marks, so that pass never re-enters the harvest.
+    private MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec, bool harvestStructureMarks)
     {
         Reset();
 
@@ -1192,8 +1197,74 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
+        // Navigation marks written in a part this score doesn't draw are still score-level, so
+        // surface them (a chords-only chart of a piece whose segno lives in the piano part).
+        if (harvestStructureMarks)
+            HarvestUnrenderedStructureMarks(tree, renderSpec);
+
         return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent());
     }
+
+    /// <summary>
+    /// Navigation marks (segno / coda / D.S. / D.C. / Fine / To Coda) and rehearsal marks are
+    /// SCORE-LEVEL — every part shares the bar grid and navigates together — so they must appear
+    /// on a score even when the part that WROTE them is not drawn. They already engrave once per
+    /// score when the carrying part IS rendered; this fills the gap for parts this score omits,
+    /// by collecting them from an isolated pass over the omitted parts (same form → matching bar
+    /// indices) and merging the ones this score is missing. Repeat barlines / voltas — which live
+    /// on the measures rather than as system marks — are NOT covered here.
+    /// </summary>
+    private void HarvestUnrenderedStructureMarks(SyntaxTree tree, RenderSpec renderSpec)
+    {
+        var root = tree.GetRoot();
+        var rendered = renderSpec.GetVoiceNames().ToHashSet(StringComparer.Ordinal);
+        var omitted = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+            .Select(p => p.Name.Text)
+            .Where(n => !rendered.Contains(n))
+            .Distinct(StringComparer.Ordinal)
+            .Where(n => PartHasNavigationMark(root, n))
+            .ToList();
+        if (omitted.Count == 0)
+            return;
+
+        // Isolated pass: draw ONLY the omitted parts against the SAME form, so their marks land
+        // on the same bar indices this score uses. A fresh collector keeps its state separate, and
+        // the inner call skips the harvest so it can't recurse.
+        var items = omitted
+            .Select(n => (RenderItemSpec)new SingleStaffSpec(new StaffSpec(ClefType.Treble, n)))
+            .ToImmutableArray();
+        MultiStaffScore harvested;
+        try { harvested = new MeasureCollector().CollectMultiStaff(tree, renderSpec with { Items = items }, harvestStructureMarks: false); }
+        catch { return; } // a harvest failure must never break the real render
+
+        foreach (var mark in harvested.MusicMarks)
+        {
+            if (!IsStructuralMark(mark.Type))
+                continue;
+            if (_musicMarks.Any(m => m.Type == mark.Type && m.MeasureIndex == mark.MeasureIndex
+                    && m.SourcePosition == mark.SourcePosition))
+                continue;
+            _musicMarks.Add(mark);
+        }
+    }
+
+    /// <summary>True when <paramref name="partName"/> writes a navigation mark in its music — the
+    /// cheap gate that avoids the isolated harvest pass when there is nothing to harvest.</summary>
+    private static bool PartHasNavigationMark(SyntaxNode root, string partName)
+    {
+        var part = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+            .FirstOrDefault(p => p.Name.Text == partName);
+        return part != null && part.DescendantNodes().OfType<NavigationMarkSyntax>().Any();
+    }
+
+    /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation
+    /// and rehearsal marks (not per-staff dynamics or the piece-wide tempo).</summary>
+    private static bool IsStructuralMark(MusicMarkType t) => t is
+        MusicMarkType.Segno or MusicMarkType.Coda or MusicMarkType.Fine or MusicMarkType.ToCoda
+        or MusicMarkType.DalSegno or MusicMarkType.DaCapo
+        or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
+        or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda
+        or MusicMarkType.Rehearsal;
 
     /// <summary>
     /// Bakes beam-resolved stem directions into the collected items, IN
