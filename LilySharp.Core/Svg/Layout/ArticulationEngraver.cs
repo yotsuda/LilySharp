@@ -647,6 +647,16 @@ internal static class ArticulationEngraver
             ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
             ArticulationType.Accent => GlyphMetrics.ArticAccent,
             ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
+            // Portato (tenuto line + staccato dot). Its near edge toward the note is
+            // only the line's half-thickness (~0.07 ss), NOT the 0.5 ss the generic
+            // fallback box assumed — which parked the mark ~0.43 ss too far below the
+            // note. LILYPOND-REF: mf/feta-scripts.mf draw_portato —
+            //   set_char_box(.6 ss, .6 ss, thick/2, .5 ss + .5 dot_size), thick =
+            //   1.4·line-thickness (≈0.14 ss), dot_size ≈ 0.32 ss ⇒ far extent ≈0.66 ss;
+            //   dportato is the y-mirror, so the near (line) edge stays ~0.07 ss.
+            ArticulationType.Portato => isAbove
+                ? new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.6600)
+                : new GlyphMetrics.BBox(-0.6000, -0.6600, 0.6000, 0.0700),
             ArticulationType.Marcato => isAbove
                 ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
             ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove
