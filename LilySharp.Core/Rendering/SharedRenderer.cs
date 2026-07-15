@@ -449,14 +449,23 @@ internal static partial class SharedRenderer
                 // voice 2 = stems down, with collision offsets / head wipes).
                 var voices = staff.Voices;
                 bool multiVoice = voices.Length > 1;
+                bool anyOverrides = !score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty;
                 for (int vi = 0; vi < voices.Length; vi++)
                 {
                     int voiceNumber = vi + 1;
                     bool? forcedStemUp = multiVoice
                         ? VoiceDefaults.GetDefaultStemUp(voiceNumber)
                         : null;
+                    // Scope the override resolver to THIS staff and voice: a global
+                    // override (null staff) is seen by all, a staff-/voice-scoped one only
+                    // where it was written. When the score has no overrides at all, reuse
+                    // the shared (empty) resolver to avoid per-voice allocation.
+                    var voiceResolver = anyOverrides
+                        ? GrobPropertyResolver.ForStaffVoice(
+                            score.GrobOverrides, score.GrobReverts, globalIdx, voiceNumber)
+                        : resolver;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
-                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, sgc,
+                        system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
                         fragFrom, fragTo, percentCovered);
                 }
 

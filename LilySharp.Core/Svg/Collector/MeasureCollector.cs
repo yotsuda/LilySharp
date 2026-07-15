@@ -1796,16 +1796,16 @@ public sealed partial class MeasureCollector
                 switch (node)
                 {
                     case OverrideDeclarationSyntax od:
-                        CollectOverride(od, 0, 0, isOnce: false);
+                        CollectOverride(od, 0, 0, isOnce: false, staffIndex: null); // global = all staves
                         break;
                     case RevertDeclarationSyntax rd:
-                        CollectRevert(rd, 0, 0);
+                        CollectRevert(rd, 0, 0, staffIndex: null);
                         break;
                     case OnceModifierSyntax om when om.Command is OverrideDeclarationSyntax io:
-                        CollectOverride(io, 0, 0, isOnce: true);
+                        CollectOverride(io, 0, 0, isOnce: true, staffIndex: null);
                         break;
                     case OnceModifierSyntax om2 when om2.Command is RevertDeclarationSyntax ir:
-                        CollectRevert(ir, 0, 0);
+                        CollectRevert(ir, 0, 0, staffIndex: null);
                         break;
                 }
             }

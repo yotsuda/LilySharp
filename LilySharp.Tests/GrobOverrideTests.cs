@@ -58,6 +58,43 @@ public class GrobOverrideTests
         Assert.Equal(0, score.GrobOverrides[0].MeasureIndex);
     }
 
+    [Fact]
+    public void InMusicOverride_IsTaggedWithItsStaff_GlobalIsNot()
+    {
+        // An override written in rh's music is scoped to rh's staff (index 0); a global
+        // one carries no staff scope (applies to all).
+        var scoped = CollectMulti(
+            "part rh { clef treble }\npart lh { clef bass }\n" +
+            "section A { rh { override NoteHead.color = red c4 d e f | } lh { c2 g | } }\n" +
+            "form main { A }\nscore main { staff rh  staff lh }");
+        Assert.Equal(0, Assert.Single(scoped.GrobOverrides).StaffIndex);
+
+        var global = CollectMulti(
+            "override NoteHead.color = red\npart rh { clef treble }\npart lh { clef bass }\n" +
+            "section A { rh { c4 d e f | } lh { c2 g | } }\n" +
+            "form main { A }\nscore main { staff rh  staff lh }");
+        Assert.Null(Assert.Single(global.GrobOverrides).StaffIndex);
+    }
+
+    [Fact]
+    public void ForStaffVoice_SeesOnlyInScopeOverrides()
+    {
+        var overrides = ImmutableArray.Create(
+            new GrobOverride("NoteHead", "color", "red", 0, 0, false, StaffIndex: 0),   // staff 0 only
+            new GrobOverride("Stem", "color", "blue", 0, 0, false, StaffIndex: null));  // all staves
+        var reverts = ImmutableArray<GrobRevert>.Empty;
+
+        var staff0 = GrobPropertyResolver.ForStaffVoice(overrides, reverts, staffIndex: 0, voiceIndex: 1);
+        staff0.AdvanceTo(0, 0);
+        Assert.Equal("red", staff0.GetString("NoteHead", "color"));
+        Assert.Equal("blue", staff0.GetString("Stem", "color"));
+
+        var staff1 = GrobPropertyResolver.ForStaffVoice(overrides, reverts, staffIndex: 1, voiceIndex: 1);
+        staff1.AdvanceTo(0, 0);
+        Assert.Null(staff1.GetString("NoteHead", "color"));   // staff-0 override is out of scope
+        Assert.Equal("blue", staff1.GetString("Stem", "color"));
+    }
+
     // --- Parser Tests ---
 
     [Fact]

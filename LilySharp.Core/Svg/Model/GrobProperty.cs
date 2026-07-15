@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -34,7 +35,12 @@ public sealed record GrobOverride(
     string Value,
     int MeasureIndex,
     int ItemIndex,
-    bool IsOnce = false);
+    bool IsOnce = false,
+    // Scope tags: null = broadest (all staves / all voices). A staff-scoped override
+    // (part body, section/voice music) carries StaffIndex; a voice-scoped one (a
+    // `voice {}` block) also carries VoiceIndex. A global override leaves both null.
+    int? StaffIndex = null,
+    int? VoiceIndex = null);
 
 /// <summary>
 /// A grob property revert collected from the source.
@@ -43,7 +49,9 @@ public sealed record GrobRevert(
     string GrobType,
     string PropertyName,
     int MeasureIndex,
-    int ItemIndex);
+    int ItemIndex,
+    int? StaffIndex = null,
+    int? VoiceIndex = null);
 
 /// <summary>
 /// Resolves grob property values at a given point in the score,
@@ -272,4 +280,25 @@ public sealed class GrobPropertyResolver
     /// </summary>
     public static GrobPropertyResolver Empty { get; } =
         new(ImmutableArray<GrobOverride>.Empty, ImmutableArray<GrobRevert>.Empty);
+
+    /// <summary>
+    /// A resolver seeing only the overrides/reverts in scope for the given staff and
+    /// voice: a directive with a null <c>StaffIndex</c> applies to every staff; one tagged
+    /// with a StaffIndex applies only to that staff; a non-null <c>VoiceIndex</c> narrows
+    /// it further to that one voice. Lets each render pass (one staff-voice) see exactly
+    /// the overrides that scope to it, so an override written in one staff/voice never
+    /// bleeds into another.
+    /// </summary>
+    public static GrobPropertyResolver ForStaffVoice(
+        ImmutableArray<GrobOverride> overrides, ImmutableArray<GrobRevert> reverts,
+        int staffIndex, int voiceIndex)
+    {
+        bool InScope(int? s, int? v)
+            => (s is null || s == staffIndex) && (v is null || v == voiceIndex);
+        var o = overrides.IsDefaultOrEmpty ? overrides
+            : overrides.Where(x => InScope(x.StaffIndex, x.VoiceIndex)).ToImmutableArray();
+        var r = reverts.IsDefaultOrEmpty ? reverts
+            : reverts.Where(x => InScope(x.StaffIndex, x.VoiceIndex)).ToImmutableArray();
+        return new GrobPropertyResolver(o, r);
+    }
 }

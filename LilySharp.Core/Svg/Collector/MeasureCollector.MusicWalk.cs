@@ -623,18 +623,18 @@ public sealed partial class MeasureCollector
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
-                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false);
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _currentStaffIndex);
                 break;
 
             case RevertDeclarationSyntax revertDecl:
-                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount);
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
                 break;
 
             case OnceModifierSyntax onceModifier:
                 if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
-                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true);
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true, staffIndex: _currentStaffIndex);
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
-                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount);
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
                 break;
         }
     }

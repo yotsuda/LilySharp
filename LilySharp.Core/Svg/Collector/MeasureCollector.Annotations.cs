@@ -184,7 +184,7 @@ public sealed partial class MeasureCollector
     /// Collects a grob property override from an OverrideDeclarationSyntax.
     /// LILYPOND-REF: lily/context-property.cc (push)
     /// </summary>
-    private void CollectOverride(OverrideDeclarationSyntax node, int measureIndex, int itemIndex, bool isOnce)
+    private void CollectOverride(OverrideDeclarationSyntax node, int measureIndex, int itemIndex, bool isOnce, int? staffIndex)
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
@@ -197,18 +197,18 @@ public sealed partial class MeasureCollector
         string value = node.ValueToken.Kind == SyntaxKind.StringLiteral
             ? node.ValueToken.Text.Trim('"')
             : string.Concat(node.ValueToken.Text.Where(c => !char.IsWhiteSpace(c)));
-        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce));
+        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex));
     }
 
     /// <summary>
     /// Collects a grob property revert from a RevertDeclarationSyntax.
     /// LILYPOND-REF: lily/context-property.cc (pop)
     /// </summary>
-    private void CollectRevert(RevertDeclarationSyntax node, int measureIndex, int itemIndex)
+    private void CollectRevert(RevertDeclarationSyntax node, int measureIndex, int itemIndex, int? staffIndex)
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
-        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex));
+        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex, staffIndex));
     }
 
     /// <summary>
