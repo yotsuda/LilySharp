@@ -1541,7 +1541,39 @@ public sealed partial class LilySharpLanguageServer
             if (text[i] == '{') stack.Add(i);
             else if (text[i] == '}' && stack.Count > 0) stack.RemoveAt(stack.Count - 1);
         }
-        if (stack.Count == 0) return declared;
+        if (stack.Count == 0)
+        {
+            // Top level: the enclosing "block" is the whole file, so its own sections are
+            // those declared at brace depth 0. A `section` nested in a part / lyrics track is
+            // that container's cell, NOT a top-level section, so it must not count — else a
+            // part-major `section B` would be treated as already present and never offered for
+            // pulling up to the top level.
+            int curTop = SectionKeywordStartBeforeCursor(text, offset);
+            int d = 0;
+            for (int i = 0; i < text.Length;)
+            {
+                if (!mask[i]) { i++; continue; }
+                char c = text[i];
+                if (c == '{') { d++; i++; continue; }
+                if (c == '}') { if (d > 0) d--; i++; continue; }
+                if (char.IsLetter(c) || c == '_')
+                {
+                    int s = i;
+                    while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] == '_')) i++;
+                    if (d == 0 && s != curTop && text[s..i] == "section")
+                    {
+                        int j = i;
+                        while (j < text.Length && char.IsWhiteSpace(text[j])) j++;
+                        int ns = j;
+                        while (j < text.Length && (char.IsLetterOrDigit(text[j]) || text[j] == '_')) j++;
+                        if (j > ns) declared.Add(text[ns..j]);
+                    }
+                    continue;
+                }
+                i++;
+            }
+            return declared;
+        }
         int open = stack[^1];
 
         // Its matching '}' (or end of document if the container is still unclosed).
@@ -1941,13 +1973,14 @@ public sealed partial class LilySharpLanguageServer
             items.RemoveAll(it => GlobalSingletonKeywords.Contains(it.Label!)
                                && ExistsAtGlobalScope(text, it.Label!));
 
-        // Part-major (no top-level `section` declared yet): offer the document's known section
-        // names — from the part cells and the form — as section-major fill-ins, so a section
-        // can be pulled up to the top level. Excluded once ANY global section exists (then the
-        // `section` keyword + its after-`section` list handle it, filtered against declarations).
-        // Top-level sections sit at column 0 (nest = ""); the new-section item is skipped (the
-        // top-level `section` keyword above already covers a fresh name).
-        if (text != null && !ExistsAtGlobalScope(text, "section"))
+        // Offer the document's known section names — from the part cells and the form — as
+        // section-major fill-ins, so a section can be pulled up to the top level. Sections
+        // ALREADY declared at the top level are dropped by SectionScaffoldItems (its
+        // `SectionsDeclaredInCurrentBlock` returns the depth-0 sections here), so writing
+        // `section A {}` still leaves `section B` on offer. Top-level sections sit at column 0
+        // (nest = ""); the new-section item is skipped (the top-level `section` keyword covers
+        // a fresh name).
+        if (text != null)
             items.AddRange(SectionScaffoldItems(text, offset, "Section", nest: "", includeNewSection: false));
 
         return new CompletionList { Items = items.ToArray() };

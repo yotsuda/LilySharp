@@ -94,16 +94,32 @@ public class TopLevelSingletonCompletionTests
     }
 
     [Fact]
-    public void WithAGlobalSectionAlready_TopLevelHasNoSectionNameScaffolds()
+    public void WithAGlobalSectionAlready_StillOffersTheOtherSectionNames()
     {
-        // A top-level (section-major) section exists → the `section` keyword + after-`section`
-        // list handle it; the name scaffolds are not added (they would re-offer declared names).
+        // A top-level `section A` exists, but the form also names B (not yet at the top level).
+        // Only the ALREADY-declared top-level section (A) is dropped; B stays on offer so it can
+        // be pulled up too. The bare `section` keyword also stays.
         var text = "section A { melody { c } }\nform main { A B }\n";
         var labels = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length)
             .Items.Select(i => i.Label!).ToArray();
         Assert.DoesNotContain("section A", labels);
-        Assert.DoesNotContain("section B", labels);
+        Assert.Contains("section B", labels);
         Assert.Contains("section", labels);   // the bare keyword stays
+    }
+
+    [Fact]
+    public void EmptyTopLevelSectionA_StillOffersSectionB()
+    {
+        // The user's repro: an empty top-level `section A {}`, with A and B defined in the part
+        // and named by the form. Completing at the top level offers `section B` (missing there)
+        // but not `section A` (already present) — a nested part cell for B does not suppress it.
+        var text = "section A {\n\t\n}\n\npart melody {\n  section A { c d e f }\n  section B {\n\t\n  }\n}\n"
+                 + "form main { A B }\n";
+        int caret = text.IndexOf("\n\npart", System.StringComparison.Ordinal); // blank line after section A
+        var labels = LilySharpLanguageServer.GetTopLevelCompletions(text, caret)
+            .Items.Select(i => i.Label!).ToArray();
+        Assert.Contains("section B", labels);
+        Assert.DoesNotContain("section A", labels);
     }
 
     [Fact]
