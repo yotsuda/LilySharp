@@ -1149,23 +1149,25 @@ internal static class ArticulationEngraver
             }
         }
 
-        // A script TALLER than a 1.0-ss staff space (marcato ≈1.1 ss) that quantized
-        // into a space still has its body straddling the adjacent line — and being
-        // taller than a space, the only in-staff seat that clears EVERY line is with
-        // its near edge on the outer staff line, the body hanging just outside. So
-        // seat an in-staff tall script on the outer line. Thinner quantized scripts
-        // (staccato dot 0.4 ss, tenuto dash 0.16 ss) fit within a space, so the >1.0
-        // guard leaves them — and every fixture that relies on their placement — alone.
-        // LILYPOND-REF: lily/side-position-interface.cc:421-431 — the on_line push
-        //   clears a script whose REFERENCE sits on a line; a glyph whose BODY is
-        //   taller than a space needs the same clearance against the line its body
-        //   crosses. Matches LilyPond seating marcato just outside the staff.
+        // LilyPond positions a script against the glyph's real ink SKYLINE, not a box:
+        // side-position-interface.cc:259 (my_dim = the glyph's vertical-skyline) and :354
+        // (dist = dim.distance(my_dim)). A marcato is a chevron whose ink sits HIGH over
+        // the notehead centre, so LP's skyline distance seats the ~1.1-ss-tall glyph clear
+        // of the staff — its near edge ends up a script-padding outside the outer line.
+        // Lily# approximates a script by its BOX (near extent 0 for marcato), which
+        // under-clears the tall glyph and leaves its body straddling a staff line. A glyph
+        // taller than a 1.0-ss space cannot sit between two lines anyway, so reproduce LP's
+        // result directly: seat an in-staff script taller than a space with its near edge a
+        // padding outside the outer staff line. Thinner quantized scripts (staccato dot
+        // 0.4 ss, tenuto dash 0.16 ss) fit within a space, so the >1.0 guard — and every
+        // fixture relying on their placement — is untouched.
         if (GetGlyphBBox(type, isAbove).Height > 1.0)
         {
+            double gap = PaddingFor(type);      // the script's own padding, as in LP
             if (isAbove && targetY > StaffTop && targetY <= StaffBottom)
-                targetY = StaffTop;          // glyph bottom rests on the top line, body above
+                targetY = StaffTop - gap;        // glyph bottom clears the top line by a gap
             else if (!isAbove && targetY >= StaffTop && targetY < StaffBottom)
-                targetY = StaffBottom;       // glyph top rests on the bottom line, body below
+                targetY = StaffBottom + gap;     // glyph top clears the bottom line by a gap
         }
 
         return targetY;
