@@ -1499,6 +1499,16 @@ public sealed partial class LilySharpLanguageServer
     /// the pitch-letter list there. A section sits at column 0, so a cell nests one level in.</summary>
     internal static CompletionList GetSectionBlockCompletions(string text, int offset)
     {
+        // In a PART-MAJOR file the music lives in `part X { section A { … } }`, so a top-level
+        // `section A { }` is a standalone HEADER: it carries section-wide directives (a pickup,
+        // key, time, tempo, a section-scoped grob override) that apply to every part of the
+        // section — never part cells. Offer those directives, not part names.
+        if (LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot())
+            == LilySharp.Core.Editing.LayoutForm.PartMajor)
+            return new CompletionList { Items = SectionHeaderDirectiveItems() };
+
+        // Section-major (or a parts file not yet committed to a layout): the section body holds
+        // one music cell per part. Offer the declared part names as `NAME { }` cell scaffolds.
         var parts = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         foreach (Match m in DeclaredNameRegex().Matches(text))
@@ -1520,6 +1530,18 @@ public sealed partial class LilySharpLanguageServer
             }).ToArray()
         };
     }
+
+    /// <summary>The directives a top-level section HEADER may carry in a part-major file: a
+    /// pickup and the section-wide key / time / tempo, plus a section-scoped grob override.
+    /// They apply to every part of the section; clef is deliberately absent (it is per-part).</summary>
+    private static CompletionItem[] SectionHeaderDirectiveItems() => new[]
+    {
+        new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup — shorten this section's first bar (applies to every part)" },
+        new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "This section's key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
+        new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "This section's time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
+        new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "This section's tempo (BPM)" },
+        new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Grob override — a default for this section on every staff", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
+    };
 
     /// <summary>
     /// The section names already declared in the <c>part { }</c> / <c>lyrics { }</c>

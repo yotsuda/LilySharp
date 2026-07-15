@@ -316,8 +316,10 @@ public class SectionNameCompletionTests
     // ----- a top-level section body in a doc WITH parts holds part cells, not notes -----
 
     [Fact]
-    public void InsideTopLevelSectionBody_WithParts_OffersPartCellScaffolds_NotNotes()
+    public void InsideTopLevelSectionBody_SectionMajor_OffersPartCellScaffolds_NotNotes()
     {
+        // Parts declared but not yet carrying inner sections (undetermined / section-major
+        // intent) → the top-level section body holds one cell per part. Offer part names.
         var text = "part melody { }\npart bass { }\nsection A { ";
         Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
@@ -325,6 +327,23 @@ public class SectionNameCompletionTests
         Assert.Equal(new[] { "melody", "bass" }, items.Select(i => i.Label).ToArray());
         // Not a fresh line (caret after `section A { `) → the cell nests one level in.
         Assert.Equal("\n\tmelody {\n\t\t$0\n\t}", items.Single(i => i.Label == "melody").InsertText);
+    }
+
+    [Fact]
+    public void InsideTopLevelSectionBody_PartMajor_OffersHeaderDirectives_NotPartNames()
+    {
+        // part-major (parts carry their own inner sections) → a top-level section is a HEADER:
+        // it holds section-wide directives (a pickup, key, time), never part cells. So the
+        // part names must NOT be offered there.
+        var text = "part melody { section A { c } }\npart bass { section A { d } }\nsection A { ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+        var labels = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Contains("partial", labels);
+        Assert.Contains("key", labels);
+        Assert.DoesNotContain("melody", labels);
+        Assert.DoesNotContain("bass", labels);
     }
 
     [Fact]
