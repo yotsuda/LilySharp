@@ -759,6 +759,11 @@ async function updatePreviewContent(
         }
         if (response.Error) {
             outputChannel.appendLine(`Sending error to webview: ${response.Error}`);
+            // The webview now shows an error, NOT the last SVG. Forget the cached SVG so the
+            // next successful render is always posted — otherwise, fixing an error back to a
+            // picture identical to the pre-error one hits the "unchanged, skip" path below and
+            // the error stays on screen forever.
+            lastPostedSvg.delete(uri);
             panel.webview.postMessage({
                 type: 'updateContent',
                 error: response.Error,
@@ -788,6 +793,9 @@ async function updatePreviewContent(
     } catch (error) {
         outputChannel.appendLine(`Request failed: ${error}`);
         if (previewPanels.has(uri)) {
+            // Same reason as the error branch above: an error replaces the SVG on screen, so
+            // drop the cache or the next identical render is skipped and the error persists.
+            lastPostedSvg.delete(uri);
             panel.webview.postMessage({
                 type: 'updateContent',
                 error: `Failed to generate preview: ${error}`,
