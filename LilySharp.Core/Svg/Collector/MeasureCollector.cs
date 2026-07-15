@@ -1015,7 +1015,7 @@ public sealed partial class MeasureCollector
         // Rows collect AFTER the music. A rows-only score has no music to
         // register the section starts — derive them from the row blocks.
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
-            EnsureSectionStartsForRows();
+            EnsureSectionStartsForRows(tree.GetRoot());
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
@@ -2327,9 +2327,12 @@ public sealed partial class MeasureCollector
     /// two-section chord grid printed both sections' symbols from bar 0,
     /// overlapped. No-op when music already filled the table.
     /// </summary>
-    private void EnsureSectionStartsForRows()
+    private void EnsureSectionStartsForRows(SyntaxNode root)
     {
-        if (_sectionState.StartMeasure.Count > 0 || _sectionState.Sections.Count == 0)
+        // Not `Sections.Count == 0`: a rows-only score's sections live INSIDE the chord / lyric
+        // tracks (chords X { section A { … } }) and are deliberately kept out of the structure
+        // Sections map, so bailing on an empty map stacked every section at bar 0.
+        if (_sectionState.StartMeasure.Count > 0)
             return;
 
         // Walk the structure's children IN SOURCE ORDER so navigation marks
@@ -2340,7 +2343,9 @@ public sealed partial class MeasureCollector
         int cur = 0;
         void AdvanceSection(string name, string? label, int pos)
         {
-            if (!_sectionState.Sections.TryGetValue(name, out var section))
+            int secBars = RowGridSectionBars(root, name);
+            // An unknown name — neither a track cell nor a structure section — has nothing to place.
+            if (secBars == 0 && !_sectionState.Sections.ContainsKey(name))
                 return;
             if (!_sectionState.StartMeasure.ContainsKey(name))
             {
@@ -2348,13 +2353,7 @@ public sealed partial class MeasureCollector
                 if (label != null)
                     _sectionState.RowLabels.Add((cur, label, pos));
             }
-
-            int chordBars = 0, lyricBars = 0;
-            foreach (var cb in section.DescendantNodes().OfType<ChordPartBlockSyntax>())
-                chordBars = Math.Max(chordBars, ChordNameCollector.CountBars(cb));
-            foreach (var lb in section.DescendantNodes().OfType<LyricsBlockSyntax>())
-                lyricBars = Math.Max(lyricBars, lb.Syllables.Count());
-            cur = _sectionState.StartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
+            cur = _sectionState.StartMeasure[name] + secBars;
         }
 
         if (_form != null)
@@ -2387,6 +2386,43 @@ public sealed partial class MeasureCollector
             foreach (var s in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
                 AdvanceSection(s.SectionName, s.SectionName, s.Name.Span.Start);
         }
+    }
+
+    /// <summary>
+    /// The bar span section <paramref name="name"/> occupies in the chord / lyric ROW grid. A
+    /// rows-only score never runs ProcessForm, so the section starts are laid out from here — and
+    /// the section must be counted however it is written: as a part-major chord / lyric TRACK
+    /// inner section (<c>chords X { section NAME { … } }</c>), whose bars live on the section
+    /// itself (the block is its ancestor, not a descendant), OR as chord / lyric blocks nested in
+    /// a section-major section. The descendant-only count missed the track form, so a rows-only
+    /// score with several sections stacked every section at bar 0.
+    /// </summary>
+    private int RowGridSectionBars(SyntaxNode root, string name)
+    {
+        int bars = 0;
+
+        // Part-major TRACKS: the section sits INSIDE the chord / lyric block.
+        foreach (var block in root.DescendantNodes().OfType<ChordPartBlockSyntax>())
+            if (block.HasSections)
+                foreach (var sec in block.Sections)
+                    if (sec.SectionName == name)
+                        bars = Math.Max(bars, ChordNameCollector.CountSectionBars(sec));
+        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+            if (block.HasSections)
+                foreach (var sec in block.Sections)
+                    if (sec.SectionName == name)
+                        bars = Math.Max(bars, 1 + sec.DescendantNodes().OfType<BarlineSyntax>().Count());
+
+        // Section-major: the chord / lyric blocks are nested in the (registered) section itself.
+        if (_sectionState.Sections.TryGetValue(name, out var representative))
+        {
+            foreach (var block in representative.DescendantNodes().OfType<ChordPartBlockSyntax>())
+                bars = Math.Max(bars, ChordNameCollector.CountBars(block));
+            foreach (var block in representative.DescendantNodes().OfType<LyricsBlockSyntax>())
+                bars = Math.Max(bars, block.Syllables.Count());
+        }
+
+        return bars;
     }
 
     private static bool IsInsideRepeatBlock(SyntaxNode node) => node.IsInside<FormRepeatBlockSyntax>();

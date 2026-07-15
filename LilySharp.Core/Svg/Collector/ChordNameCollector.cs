@@ -255,10 +255,19 @@ internal sealed class ChordNameCollector
     /// plus a trailing bar when entries follow the last barline (the same
     /// segmentation CollectPart commits by).</summary>
     public static int CountBars(ChordPartBlockSyntax block)
+        => CountBars(block.Items);
+
+    /// <summary>Bar count of a part-major chord-track inner section
+    /// (<c>chords X { section NAME { … } }</c>): its chords sit directly in the section, so
+    /// count them there rather than in a nested chord block.</summary>
+    public static int CountSectionBars(SectionDeclarationSyntax section)
+        => CountBars(SectionItems(section));
+
+    private static int CountBars(IEnumerable<SyntaxNode> items)
     {
         int bars = 0;
         bool pendingEntries = false;
-        foreach (var item in block.Items)
+        foreach (var item in items)
         {
             if (item is BarlineSyntax) { bars++; pendingEntries = false; }
             else if (item is ChordEntrySyntax) pendingEntries = true;
