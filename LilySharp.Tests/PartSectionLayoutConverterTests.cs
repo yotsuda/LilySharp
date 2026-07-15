@@ -143,6 +143,35 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
+    public void Convert_MultipleNamedLyricTracks_RoundTrip_NoLoss()
+    {
+        // Two named lyric tracks (EN + JA) on one melody — the 替え歌 / multi-language
+        // mechanism — must survive BOTH directions with each track's words intact.
+        var sm = """
+            part melody { clef treble }
+            section A { melody { c4 d e f | } lyrics en { do re mi fa | } lyrics ja { ど れ み ふぁ | } }
+            form main { A }
+            score main { staff melody lyrics en lyrics ja }
+            """;
+
+        var pm = PartSectionLayoutConverter.Convert(sm);
+        Assert.NotNull(pm);
+        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Contains("lyrics en {", pm);
+        Assert.Contains("lyrics ja {", pm);
+        Assert.Contains("do re mi fa", pm);
+        Assert.Contains("ど れ み ふぁ", pm);
+        Assert.False(SyntaxTree.Parse(pm!).HasErrors);
+
+        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        Assert.NotNull(sm2);
+        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Contains("lyrics en { do re mi fa | }", sm2);
+        Assert.Contains("lyrics ja { ど れ み ふぁ | }", sm2);
+        Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
+    }
+
+    [Fact]
     public void Convert_PlainSections_NotFlaggedAsUntransposable()
     {
         // The ordinary section-major file (only part blocks in its sections) must
