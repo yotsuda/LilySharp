@@ -308,6 +308,28 @@ public sealed partial class MeasureCollector
             && _sectionState.PartMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
         {
             ProcessMusicContainer(cell, processNodes);
+            matched = true;
+        }
+
+        // Single-part shorthand: bare music written straight into a top-level section
+        // (`part bl { clef bass } section A { c d e }`) is the lone part's music for this
+        // section — no part cell wraps it. Walk the section's OWN direct music (expanding
+        // phrase refs) for the current voice. (In a part-major file this loose music belongs
+        // to no part and is reported by SectionMusicNeedsPartValidator; rendering it here is
+        // harmless.) Only a GENUINE top-level section — a part-major section lives inside a
+        // part and its inline music is that part's alone, so other voices must spacer-fill it.
+        if (!matched && section.Parent is CompilationUnitSyntax && SectionHasInlineMusic(section))
+        {
+            var inline = new List<SyntaxNode>();
+            for (int i = 0; i < section.SlotCount; i++)
+            {
+                var child = section.GetChild(i);
+                if (child is VariableReferenceSyntax varRef)
+                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline);
+                else if (child != null && IsCollectableMusicNode(child))
+                    inline.Add(child);
+            }
+            processNodes(inline);
         }
 
         // Pad this voice up to the section's canonical bar count so every staff stays

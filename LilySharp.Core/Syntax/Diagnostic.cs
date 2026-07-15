@@ -259,6 +259,12 @@ public static class DiagnosticCodes
     /// fine.)</summary>
     public const string PartialOutsideSection = "LYS1024";
 
+    /// <summary>Semantic: in a PART-MAJOR file, a top-level <c>section</c> holds section-wide
+    /// directives and cells for DECLARED parts only. Loose music there (<c>section A { c d e }</c>)
+    /// belongs to no part — the parser reads the first pitch as a part-cell name, so it shows up
+    /// as a cell naming an undeclared part. Put the music inside a part instead.</summary>
+    public const string SectionMusicNeedsPart = "LYS1025";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

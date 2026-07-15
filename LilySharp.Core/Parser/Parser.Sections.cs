@@ -58,6 +58,12 @@ internal sealed partial class Parser
             SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
                 or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
                 when Peek(1)?.Kind == SyntaxKind.OpenBrace => ParsePartBlockWithKeyword(),
+            // Bare music (a note / rest / chord / …) in a section body. Parse it PROPERLY as
+            // music rather than dropping the tokens (plain pitches used to be skipped silently;
+            // notes carrying an @annotation were even mis-read as a part cell named after the
+            // annotation). This keeps it in the tree so SectionMusicNeedsPartValidator can report
+            // it in a part-major file (it belongs to no part).
+            _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
         };
     }
