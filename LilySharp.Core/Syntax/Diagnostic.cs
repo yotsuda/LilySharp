@@ -300,6 +300,11 @@ public static class DiagnosticCodes
     /// by its <c>[N. …]</c> verses — every written-out occurrence already has a numbered
     /// verse, so the plain line (a fallback for uncovered occurrences) never renders.</summary>
     public const string LyricPlainVerseShadowed = "LYS4004";
+
+    /// <summary>Warning: a top-level single-value global setting (tempo / time / key /
+    /// title / composer) is written more than once. Only the LAST occurrence takes effect;
+    /// each earlier one is silently overwritten.</summary>
+    public const string DuplicateGlobalSetting = "LYS4005";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>
