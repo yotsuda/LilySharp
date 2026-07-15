@@ -624,10 +624,13 @@ public sealed partial class MeasureCollector
 
             case OverrideDeclarationSyntax overrideDecl:
                 CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _currentStaffIndex);
+                // Track it so the next section boundary reverts it to the part default.
+                _sectionActiveGrobProps.Add((overrideDecl.GrobName.Text, overrideDecl.PropertyName.Text));
                 break;
 
             case RevertDeclarationSyntax revertDecl:
                 CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
+                _sectionActiveGrobProps.Remove((revertDecl.GrobName.Text, revertDecl.PropertyName.Text));
                 break;
 
             case OnceModifierSyntax onceModifier:

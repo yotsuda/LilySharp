@@ -640,6 +640,15 @@ public sealed partial class MeasureCollector
     // into the next section, nor into the same section reused elsewhere in the form.
     private string _sectionResetClef = "treble";
 
+    // The grob-override state a section boundary reverts to (the grob analogue of
+    // _sectionResetClef, but a SET): the part-default values — global + this voice's
+    // part-body overrides — snapshotted at collection start. Section-internal overrides
+    // reset to this at each boundary, so they never leak into the next section.
+    private readonly Dictionary<(string Grob, string Prop), string> _sectionResetOverrides = new();
+    // Grob properties changed by an IN-MUSIC override in the current section; each is
+    // reset (to the part default, or reverted) at the next section boundary.
+    private readonly HashSet<(string Grob, string Prop)> _sectionActiveGrobProps = new();
+
     // Running ambient key tonic (as WRITTEN, before any part transpose) tracked
     // across the voice walk for phrase auto-transpose: a phrase written in the
     // score's home key is shifted to whatever key is in effect where it is
@@ -1481,6 +1490,8 @@ public sealed partial class MeasureCollector
         _crossStaffItems.Clear();
         _grobOverrides.Clear();
         _grobReverts.Clear();
+        _sectionResetOverrides.Clear();
+        _sectionActiveGrobProps.Clear();
         _keyByMeasure.Clear();
         _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
@@ -1978,6 +1989,13 @@ public sealed partial class MeasureCollector
         _sectionResetKeyCustom = _meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
         _sectionResetClef = _meta.Clef;
+        // And the grob-override part default (global + this voice's part-body overrides,
+        // already collected at (0,0)) — the state each section boundary reverts to.
+        _sectionResetOverrides.Clear();
+        foreach (var ov in _grobOverrides)
+            if (ov.StaffIndex is null || ov.StaffIndex == _currentStaffIndex)
+                _sectionResetOverrides[(ov.GrobType, ov.PropertyName)] = ov.Value;
+        _sectionActiveGrobProps.Clear();
 
         // Arm the ambient tonic at the score's home key for this voice's walk
         // (phrase auto-transpose baseline).

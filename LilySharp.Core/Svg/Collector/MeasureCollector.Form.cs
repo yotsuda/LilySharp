@@ -157,6 +157,25 @@ public sealed partial class MeasureCollector
         // instead of silently leaving the previous signature on the staff.
         int sectionPos = section.Name.Span.Start;
 
+        // Grob overrides reset to the part default at each section boundary (self-
+        // containment, like clef/key/time): a section-internal override does not leak into
+        // the next section. For each grob property the PREVIOUS section changed in-music,
+        // restore the part-default value here, or revert when the part has no default.
+        // (`once` overrides auto-pop, so they are never tracked here.)
+        if (_sectionActiveGrobProps.Count > 0)
+        {
+            foreach (var (grob, prop) in _sectionActiveGrobProps)
+            {
+                if (_sectionResetOverrides.TryGetValue((grob, prop), out var defaultValue))
+                    _grobOverrides.Add(new GrobOverride(grob, prop, defaultValue,
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, false, _currentStaffIndex));
+                else
+                    _grobReverts.Add(new GrobRevert(grob, prop,
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, _currentStaffIndex));
+            }
+            _sectionActiveGrobProps.Clear();
+        }
+
         // Clef reverts to the part default the same way: a section that opens without its
         // own `clef` uses the part clef, so a mid-section clef change in a prior section
         // (or the same section played earlier) does not leak in. A section that opens with

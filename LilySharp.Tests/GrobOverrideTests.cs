@@ -125,6 +125,36 @@ public class GrobOverrideTests
     }
 
     [Fact]
+    public void SectionInternalOverride_ResetsAtTheBoundary()
+    {
+        // A's in-music override does not leak into B: the boundary reverts to the part
+        // default (none here, so NoteHead.color is unset in B).
+        var score = CollectMulti(
+            "part m { section A { override NoteHead.color = red c4 d e f | } section B { g4 a b c' | } }\n" +
+            "form main { A B }\nscore main { staff m }");
+        var r = GrobPropertyResolver.ForStaffVoice(score.GrobOverrides, score.GrobReverts, 0, 1);
+        r.AdvanceTo(0, 0);                                       // section A (measure 0)
+        Assert.Equal("red", r.GetString("NoteHead", "color"));
+        r.AdvanceTo(1, 0);                                       // section B (measure 1)
+        Assert.Null(r.GetString("NoteHead", "color"));          // reset at the boundary
+    }
+
+    [Fact]
+    public void PartDefaultPersists_WhileSectionOverrideIsCarvedWithin()
+    {
+        // Part default red; A overrides blue; B resets to the part default (red), not to
+        // nothing — the boundary reverts to the PART DEFAULT, not a bare revert.
+        var score = CollectMulti(
+            "part m { override NoteHead.color = red  section A { override NoteHead.color = blue c4 d e f | } section B { g4 a b c' | } }\n" +
+            "form main { A B }\nscore main { staff m }");
+        var r = GrobPropertyResolver.ForStaffVoice(score.GrobOverrides, score.GrobReverts, 0, 1);
+        r.AdvanceTo(0, 0);
+        Assert.Equal("blue", r.GetString("NoteHead", "color")); // A: section-internal
+        r.AdvanceTo(1, 0);
+        Assert.Equal("red", r.GetString("NoteHead", "color"));  // B: back to the part default
+    }
+
+    [Fact]
     public void ForStaffVoice_SeesOnlyInScopeOverrides()
     {
         var overrides = ImmutableArray.Create(
