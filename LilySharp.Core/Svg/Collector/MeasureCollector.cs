@@ -526,6 +526,11 @@ public sealed partial class MeasureCollector
     // voice (a lower voice's eighths must not break at an upper voice's triplet).
     // 0 = primary voice; the parallel sub-voices set it in BuildExtraVoiceTracks.
     private int _currentVoiceIndex = 0;
+    // The render voice number (1-based) when the walk is INSIDE a `voice {}` block, so an
+    // override there scopes to that voice; null in the main stream (staff-scoped). Set
+    // around each parallel sub-voice's processing (voice 0 in ProcessMusicNode, the extras
+    // in BuildExtraVoiceTracks).
+    private int? _currentVoiceScope;
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
@@ -1368,12 +1373,15 @@ public sealed partial class MeasureCollector
                 // Tag this sub-voice's tuplets with its voice index so their
                 // beam-breaking boundaries never leak into a sibling voice.
                 _currentVoiceIndex = t;
+                // Render voice number is t+1 — an override in this sub-voice scopes to it.
+                _currentVoiceScope = t + 1;
                 // No auto-final barline: this is a SPAN inside the piece, and a
                 // Final stamped on the span's last measure would win the
                 // cross-voice barline merge and print a final barline mid-piece.
                 var sub = CollectMeasuresFromNode(blocks[t], autoFinalBarline: false,
                     applyFilePartial: start == 0);
                 ResolveBeamStemDirections(sub);
+                _currentVoiceScope = null;
                 _currentVoiceIndex = 0;
                 _metadataMeasureOffset = 0;
 
@@ -1481,6 +1489,7 @@ public sealed partial class MeasureCollector
         _dynamics.Clear();
         _currentStaffIndex = 0;
         _currentVoiceIndex = 0;
+        _currentVoiceScope = null;
         _articulations.Clear();
         _graceNotes.Clear();
         _arpeggios.Clear();

@@ -197,7 +197,7 @@ public sealed partial class MeasureCollector
         string value = node.ValueToken.Kind == SyntaxKind.StringLiteral
             ? node.ValueToken.Text.Trim('"')
             : string.Concat(node.ValueToken.Text.Where(c => !char.IsWhiteSpace(c)));
-        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex));
+        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex, _currentVoiceScope));
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ public sealed partial class MeasureCollector
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
-        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex, staffIndex));
+        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex, staffIndex, _currentVoiceScope));
     }
 
     /// <summary>

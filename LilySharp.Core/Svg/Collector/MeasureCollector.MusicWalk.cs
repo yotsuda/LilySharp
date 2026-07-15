@@ -270,7 +270,12 @@ public sealed partial class MeasureCollector
                     var voiceBlocks = parallel.Voices.ToList();
                     _parallelSpans.Add((parallel, builder.CurrentMeasureIndex));
                     if (voiceBlocks.Count > 0)
+                    {
+                        // Voice 0 is render voice 1: an override in its block scopes to it.
+                        _currentVoiceScope = 1;
                         ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
+                        _currentVoiceScope = null;
+                    }
                 }
                 break;
 
