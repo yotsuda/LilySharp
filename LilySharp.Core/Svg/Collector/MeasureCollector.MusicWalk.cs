@@ -153,6 +153,10 @@ public sealed partial class MeasureCollector
         var sub = ArpeggioSubdivision.Compute(members.Count, total);
         Fraction scale = sub.TimeScale;
         var forced = (sub.MemberValue, sub.MemberDots);
+        // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): the
+        // shift is applied to the ROOT, and the stacked members / degrees inherit it through
+        // the anchor octave the root sets.
+        int groupOctave = arpeggio.OctaveOffset;
 
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
@@ -174,11 +178,14 @@ public sealed partial class MeasureCollector
             {
                 // Degrees anchor on the root (or the key tonic when none precedes them) and
                 // do NOT advance the running frame — the root already set it.
-                EmitArpeggioDegree(degree, builder, forced, scale, rootSet, rootStep, anchorOctave);
+                EmitArpeggioDegree(degree, builder, forced, scale, rootSet, rootStep, anchorOctave, groupOctave);
                 continue;
             }
 
             char? letter = FirstPitchLetter(member);
+            // The group octave shift applies to the ROOT member only; the stacked members
+            // pick it up via the anchor octave (which the shifted root sets).
+            bool isRoot = !rootSet && letter is not null;
             if (rootSet && letter is { } l)
             {
                 _octave.OctaveAbsolute = true;
@@ -188,7 +195,7 @@ public sealed partial class MeasureCollector
             {
                 _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            EmitArpeggioMember(member, builder, forced, scale);
+            EmitArpeggioMember(member, builder, forced, scale, isRoot ? groupOctave : 0);
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -228,16 +235,16 @@ public sealed partial class MeasureCollector
     /// equal-subdivision value and tuplet <paramref name="scale"/> (added WITHOUT
     /// advancing the measure duration — the group adds its total once).</summary>
     private void EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
-        (int Value, int Dots) forced, Fraction scale)
+        (int Value, int Dots) forced, Fraction scale, int octaveShift)
     {
         switch (member)
         {
             case PitchSyntax pitch:
-                builder.AddItemWithoutDuration(BuildArpeggioNoteItem(pitch, forced) with { TimeScale = scale });
+                builder.AddItemWithoutDuration(BuildArpeggioNoteItem(pitch, forced, octaveShift) with { TimeScale = scale });
                 break;
             case ChordSyntax chord:
                 builder.AddItemWithoutDuration(
-                    CreateChordItem(chord, forcedDuration: forced) with { TimeScale = scale });
+                    CreateChordItem(chord, forcedDuration: forced, extraOctave: octaveShift) with { TimeScale = scale });
                 break;
             case RestSyntax rest:
                 builder.AddItemWithoutDuration(
@@ -248,10 +255,11 @@ public sealed partial class MeasureCollector
 
     /// <summary>A bare arpeggio pitch → NoteItem, resolved through the octave frame the
     /// caller set up (root relative, later members stacked in absolute mode), at the group's
-    /// forced value/dots.</summary>
-    private NoteItem BuildArpeggioNoteItem(PitchSyntax pitch, (int Value, int Dots) forced)
+    /// forced value/dots. <paramref name="octaveShift"/> is the group-level octave mark,
+    /// applied to the root (0 for stacked members, which inherit it via the anchor).</summary>
+    private NoteItem BuildArpeggioNoteItem(PitchSyntax pitch, (int Value, int Dots) forced, int octaveShift)
     {
-        var rp = CalculateStaffPosition(pitch);
+        var rp = ShiftOctave(CalculateStaffPosition(pitch), octaveShift);
         _octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
         var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
@@ -273,18 +281,18 @@ public sealed partial class MeasureCollector
     /// once by <see cref="ResolveAbsolutePitch"/>). With no pitched root it anchors on the
     /// key tonic, like an omitted-root degree chord.</summary>
     private void EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
-        (int Value, int Dots) forced, Fraction scale, bool rootSet, int rootStep, int anchorOctave)
+        (int Value, int Dots) forced, Fraction scale, bool rootSet, int rootStep, int anchorOctave, int groupOctave)
     {
         int drootStep, drootOctave;
         if (rootSet)
         {
             drootStep = rootStep;
-            drootOctave = anchorOctave;
+            drootOctave = anchorOctave; // already includes the group octave (root was shifted)
         }
         else
         {
             drootStep = _ambientTonicValid ? _ambientTonicStep : 0;
-            drootOctave = _octave.Resolve(drootStep, 0, "cdefgab"[drootStep]);
+            drootOctave = _octave.Resolve(drootStep, 0, "cdefgab"[drootStep]) + groupOctave;
         }
         int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
         var (step, alteration, octave) = ChordDegrees.Resolve(

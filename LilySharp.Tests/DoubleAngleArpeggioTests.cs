@@ -142,6 +142,46 @@ public class DoubleAngleArpeggioTests
         Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<< c' e' g' >>"));
     }
 
+    [Fact]
+    public void TrailingOctaveMark_ShiftsTheWholeGroup()
+    {
+        // A ' / , AFTER the closing '>>' shifts the WHOLE group, exactly like a chord's
+        // `<c e g>,`. `<< c e g >>` is C4 E4 G4 (60 64 67).
+        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c e g >>,"));   // down an octave
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c e g >>'"));   // up an octave
+        Assert.Equal(new[] { 36, 40, 43 }, MidiPitches("<< c e g >>,,"));  // down two
+    }
+
+    [Fact]
+    public void TrailingOctaveMark_AppliesToDegreesToo()
+    {
+        // `<< c 3 5 >>,` = c e g, one octave down.
+        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c 3 5 >>,"));
+    }
+
+    [Fact]
+    public void TrailingOctaveMark_MatchesTheChordForm()
+    {
+        // The group octave mark is the same rule as a chord's `<c e g>,` — same pitches.
+        int[] Sorted(string m) => MidiPitches(m).OrderBy(p => p).ToArray();
+        Assert.Equal(Sorted("<c e g>,"), Sorted("<< c e g >>,"));
+        Assert.Equal(Sorted("<c e g>'"), Sorted("<< c e g >>'"));
+    }
+
+    [Fact]
+    public void TrailingOctaveMark_DoesNotChangeNoteValuesOrBeaming()
+    {
+        // A trailing ',' must only move the register — it must NOT alter the members'
+        // note value (a stray, unconsumed comma used to leak into an extra beam). Both
+        // groups are triplet EIGHTHS occupying one quarter.
+        (Fraction, int)[] Shape(string m) => Collect(m).Voice.Measures[0].Items
+            .OfType<LilySharp.Core.Svg.Model.NoteItem>()
+            .Select(n => (n.BaseDuration, n.Dots)).ToArray();
+        var sv = Shape("<< c e g >>,");
+        Assert.Equal(Shape("<< c e g >>"), sv);
+        Assert.All(sv, x => Assert.Equal(Fraction.Eighth, x.Item1));
+    }
+
     // ----- equal subdivision -----
 
     [Fact]

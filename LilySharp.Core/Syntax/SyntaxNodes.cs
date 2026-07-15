@@ -498,6 +498,28 @@ public sealed class ArpeggioSyntax : SyntaxNode
         }
     }
 
+    /// <summary>Net octave shift from the <c>'</c> / <c>,</c> marks AFTER the closing
+    /// <c>&gt;&gt;</c> (<c>&lt;&lt; c e g &gt;&gt;,</c> = the whole group down an octave), the
+    /// same rule as a chord's <c>&lt;c e g&gt;,</c>. A member's own marks live inside its
+    /// pitch/degree node, so only the group-level marks — direct apostrophe/comma tokens —
+    /// count here.</summary>
+    public int OctaveOffset
+    {
+        get
+        {
+            int offset = 0;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t)
+                {
+                    if (t.Kind == SyntaxKind.Apostrophe) offset++;
+                    else if (t.Kind == SyntaxKind.Comma) offset--;
+                }
+            }
+            return offset;
+        }
+    }
+
     /// <summary>The optional total duration written after <c>&gt;&gt;</c> (the group's
     /// total that the members equally subdivide), or null when the group inherits the
     /// running duration and acts like a single note.</summary>

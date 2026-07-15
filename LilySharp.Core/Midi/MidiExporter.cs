@@ -973,6 +973,9 @@ public sealed class MidiExporter
             _tupletStack.Push((sub.TupletNum, sub.TupletBase));
         var savedDefault = _defaultDuration;
         _defaultDuration = sub.MemberDisplay;
+        // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): applied
+        // to the ROOT, inherited by the stacked members / degrees via the anchor octave.
+        int groupOctave = arpeggio.OctaveOffset;
 
         // The ROOT is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Every later PITCHED member STACKS
@@ -990,11 +993,14 @@ public sealed class MidiExporter
             {
                 // Degrees anchor on the root (or the key tonic when none precedes them) and
                 // do NOT advance the running frame — the root already set it.
-                EmitArpeggioMidiDegree(degree, track, rootSet, rootStep, anchorOctave);
+                EmitArpeggioMidiDegree(degree, track, rootSet, rootStep, anchorOctave, groupOctave);
                 continue;
             }
 
             char? letter = FirstPitchLetter(member);
+            // The group octave shift applies to the ROOT member only; the stacked members
+            // inherit it via the anchor octave the shifted root sets.
+            bool isRoot = !rootSet && letter is not null;
             if (rootSet && letter is { } l)
             {
                 _octaveAbsolute = true;
@@ -1005,9 +1011,11 @@ public sealed class MidiExporter
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
             if (member is PitchSyntax pitch)
-                EmitArpeggioMidiPitch(pitch, track);
+                EmitArpeggioMidiPitch(pitch, track, isRoot ? groupOctave : 0);
+            else if (member is ChordSyntax chord)
+                ProcessChord(chord, track, isRoot ? groupOctave : 0);
             else
-                ProcessNode(member, track, conductorTrack); // nested chord / rest
+                ProcessNode(member, track, conductorTrack); // rest
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -1031,10 +1039,13 @@ public sealed class MidiExporter
     }
 
     /// <summary>Play one bare arpeggio pitch at the forced member duration, resolved through
-    /// the octave frame the caller set up (root relative, later members stacked absolute).</summary>
-    private void EmitArpeggioMidiPitch(PitchSyntax pitch, MidiTrack track)
+    /// the octave frame the caller set up (root relative, later members stacked absolute).
+    /// <paramref name="octaveShift"/> is the group-level octave mark, applied to the root (0
+    /// for stacked members, which inherit it via the anchor).</summary>
+    private void EmitArpeggioMidiPitch(PitchSyntax pitch, MidiTrack track, int octaveShift)
     {
-        int midiPitch = CalculateRelativeMidiPitch(pitch);
+        int midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + octaveShift * 12, 0, 127);
+        _currentOctave += octaveShift; // so the anchor octave carries the group shift
         int ticks = FractionToTicks(_defaultDuration);
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
             pitch.Position, QuarterBend: pitch.QuarterOffset,
@@ -1044,18 +1055,18 @@ public sealed class MidiExporter
 
     /// <summary>Play one scale-degree arpeggio member, stacked on the root (or the key tonic
     /// when no pitch precedes it) by diatonic steps in the key, then transposed like a pitch.</summary>
-    private void EmitArpeggioMidiDegree(ScaleDegreeSyntax degree, MidiTrack track, bool rootSet, int rootStep, int anchorOctave)
+    private void EmitArpeggioMidiDegree(ScaleDegreeSyntax degree, MidiTrack track, bool rootSet, int rootStep, int anchorOctave, int groupOctave)
     {
         int drootStep, drootOctave;
         if (rootSet)
         {
             drootStep = rootStep;
-            drootOctave = anchorOctave;
+            drootOctave = anchorOctave; // already includes the group octave (root was shifted)
         }
         else
         {
             drootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-            drootOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, drootStep, 0);
+            drootOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, drootStep, 0) + groupOctave;
         }
         var (step, alter, octave) = ChordDegrees.Resolve(
             drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
@@ -1183,7 +1194,7 @@ public sealed class MidiExporter
         _currentTick += durationTicks;
     }
 
-    private void ProcessChord(ChordSyntax chord, MidiTrack track)
+    private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
         // A chord breaks any pending tie chain. Chords are not currently tie
         // targets, and leaving stale _tiePending/_lastNoteIndex from the
@@ -1213,7 +1224,9 @@ public sealed class MidiExporter
         // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
         // chord; folding it into firstOctave flows through every stacked/degree member
         // and the following note, matching the collector and MusicXML exporter.
-        int chordOctave = chord.ChordOctaveOffset;
+        // extraOctave is the enclosing arpeggio's group-level shift when this chord is the
+        // arpeggio's root (`<< <c e> g >>,`); 0 otherwise.
+        int chordOctave = chord.ChordOctaveOffset + extraOctave;
         int chordShift = chordOctave * 12;
 
         bool isFirst = true;

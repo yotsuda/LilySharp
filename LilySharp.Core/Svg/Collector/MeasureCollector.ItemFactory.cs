@@ -222,7 +222,7 @@ public sealed partial class MeasureCollector
             : 0;
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -230,7 +230,9 @@ public sealed partial class MeasureCollector
         // chord uniformly. Applying it to the root's resolved octave (and, for an
         // omitted root, to the tonic anchor) flows through firstOctave into every
         // stacked/degree member; absolute-mode members are shifted individually.
-        int chordOctave = chord.ChordOctaveOffset;
+        // extraOctave is the enclosing arpeggio's group-level shift when this chord is
+        // the arpeggio's root (`<< <c e> g >>,`); 0 otherwise.
+        int chordOctave = chord.ChordOctaveOffset + extraOctave;
 
         // Track first note's state for subsequent chord/note relative calculation
         int firstOctave = _octave.CurrentOctave;

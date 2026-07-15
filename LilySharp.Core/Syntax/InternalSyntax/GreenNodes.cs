@@ -200,11 +200,12 @@ internal sealed class ArpeggioGreen : GreenSyntaxNode
 {
     public ArpeggioGreen(
         SyntaxToken openAngles,
-        GreenNode?[] notes,
+        GreenNode?[] members,
         SyntaxToken closeAngles,
+        GreenNode?[] octaveMarks,
         DurationGreen? totalDuration)
         : base(SyntaxKind.Arpeggio,
-            [openAngles, .. notes, closeAngles, totalDuration])
+            [openAngles, .. members, closeAngles, .. octaveMarks, totalDuration])
     {
     }
 }
