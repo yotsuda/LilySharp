@@ -110,7 +110,7 @@ public sealed partial class LilySharpLanguageServer
                 ? GetDrumCompletions(inVoice)
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice),
             CompletionContext.FormBlock => GetFormCompletions(doc.Text),
-            CompletionContext.PartBlock => GetPartPropertyCompletions(),
+            CompletionContext.PartBlock => GetPartBlockCompletions(doc.Text, offset),
             CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
             CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
             CompletionContext.AfterClef => GetClefCompletions(),
@@ -1367,6 +1367,18 @@ public sealed partial class LilySharpLanguageServer
     /// here; this list is opt-in (Ctrl+Space) and never blocks typing lyrics.
     /// </summary>
     internal static CompletionList GetLyricsSectionCompletions(string text, int offset)
+        => new() { Items = SectionScaffoldItems(text, offset, "Lyrics for this section").ToArray() };
+
+    /// <summary>
+    /// Section-name scaffold items — label <c>section NAME</c>, insert <c>section NAME { }</c>
+    /// with the caret in the body — for the document's sections not yet present in the block
+    /// at <paramref name="offset"/>. Shared by a top-level <c>lyrics { }</c> track and a
+    /// <c>part { }</c> body, which both hold <c>section NAME { … }</c> entries. The
+    /// <c>section</c> keyword is part of the LABEL (so the picker reads as <c>section A</c>,
+    /// matching what is inserted), and sorts after a part's property list.
+    /// </summary>
+    private static System.Collections.Generic.IEnumerable<CompletionItem> SectionScaffoldItems(
+        string text, int offset, string detail)
     {
         var known = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
@@ -1375,22 +1387,30 @@ public sealed partial class LilySharpLanguageServer
             if (seen.Add(tok.Text))
                 known.Add(tok.Text);
 
-        // Sections already written in THIS lyrics track are dropped, so the list is what is
-        // still missing (the same measure as the after-`section` completion).
+        // Sections already written in THIS block are dropped, so the list is what is still
+        // missing (the same measure as the after-`section` completion).
         var here = SectionsDeclaredInCurrentBlock(text, offset);
         bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
-        return new CompletionList
+        return known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
         {
-            Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
-            {
-                Label = n,
-                Kind = CompletionItemKind.Reference,
-                Detail = "Lyrics for this section",
-                InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
-                InsertText = hasBrace ? n : "section " + n + " {\n\t$0\n}",
-                SortText = i.ToString("D2"),
-            }).ToArray()
-        };
+            Label = "section " + n,
+            Kind = CompletionItemKind.Reference,
+            Detail = detail,
+            InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
+            InsertText = hasBrace ? "section " + n : "section " + n + " {\n\t$0\n}",
+            SortText = "z" + i.ToString("D2"), // after a part { } body's properties (00..09)
+        });
+    }
+
+    /// <summary>A <c>part { }</c> body's completions: its property names PLUS the document's
+    /// section names as <c>section NAME { }</c> scaffolds — a part-major part holds properties
+    /// AND inner sections. The bare <c>section</c> property still lets a NEW name be typed;
+    /// the scaffolds are the one-step shortcut for the sections the part is still missing.</summary>
+    internal static CompletionList GetPartBlockCompletions(string text, int offset)
+    {
+        var items = GetPartPropertyCompletions().Items.ToList();
+        items.AddRange(SectionScaffoldItems(text, offset, "Section"));
+        return new CompletionList { Items = items.ToArray() };
     }
 
     /// <summary>

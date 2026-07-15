@@ -252,8 +252,9 @@ public class SectionNameCompletionTests
             "part melody { section A { c } section B { d } }\n" +
             "lyrics { ";
         var items = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length).Items;
-        Assert.Equal(new[] { "A", "B" }, items.Select(i => i.Label).ToArray());
-        var a = items.Single(i => i.Label == "A");
+        // The label reads `section A` (matching what is inserted), not a bare `A`.
+        Assert.Equal(new[] { "section A", "section B" }, items.Select(i => i.Label).ToArray());
+        var a = items.Single(i => i.Label == "section A");
         Assert.Equal("section A {\n\t$0\n}", a.InsertText);
         Assert.Equal(InsertTextFormat.Snippet, a.InsertTextFormat);
     }
@@ -266,7 +267,7 @@ public class SectionNameCompletionTests
             "lyrics { section A { la } ";   // A already present → only B remains
         var labels = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length)
             .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "B" }, labels);
+        Assert.Equal(new[] { "section B" }, labels);
     }
 
     [Fact]
@@ -287,5 +288,23 @@ public class SectionNameCompletionTests
         var text = "lyrics { section A { ";
         Assert.NotEqual(LilySharpLanguageServer.CompletionContext.LyricsBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    // ----- directly inside a part { } body: properties + section scaffolds -----
+
+    [Fact]
+    public void DirectlyInsidePartBlock_OffersSectionScaffoldsAlongsideProperties()
+    {
+        var text = "part melody { section A { c } section B { d } }\npart bass { ";
+        var items = LilySharpLanguageServer.GetPartBlockCompletions(text, text.Length).Items;
+        // The part properties are still there…
+        Assert.Contains(items, i => i.Label == "clef");
+        // …plus one-step `section A` / `section B` scaffolds (label carries the keyword).
+        var scaffolds = items.Where(i => i.Label!.StartsWith("section ", System.StringComparison.Ordinal))
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "section A", "section B" }, scaffolds);
+        var a = items.Single(i => i.Label == "section A");
+        Assert.Equal("section A {\n\t$0\n}", a.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, a.InsertTextFormat);
     }
 }
