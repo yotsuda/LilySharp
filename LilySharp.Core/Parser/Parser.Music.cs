@@ -490,7 +490,7 @@ internal sealed partial class Parser
         var overrideKeyword = Expect(SyntaxKind.OverrideKeyword);
         var grobName = Expect(SyntaxKind.Identifier);
         var dot = Expect(SyntaxKind.Dot);
-        var propertyName = Expect(SyntaxKind.Identifier);
+        var propertyName = ParseGrobPropertyName();
         var equals = Expect(SyntaxKind.Equals);
 
         // Value: integer (lengths/positions), identifier (symbolic, e.g. up / red),
@@ -507,6 +507,39 @@ internal sealed partial class Parser
         };
 
         return new OverrideDeclarationGreen(overrideKeyword, grobName, dot, propertyName, equals, value);
+    }
+
+    /// <summary>
+    /// Parses a grob property name, reassembling a LilyPond-style hyphenated name
+    /// (<c>force-hshift</c>, <c>X-offset</c>) that the lexer splits into
+    /// <c>Identifier '-' Identifier …</c>. Mirrors the instrument <c>bass-guitar</c>
+    /// merge: the hyphens (and any interior trivia) fold into the token TEXT so its
+    /// width equals the source span and the tree round-trips, and the collector sees
+    /// the full <c>"force-hshift"</c> name.
+    /// </summary>
+    private SyntaxToken ParseGrobPropertyName()
+    {
+        var first = Expect(SyntaxKind.Identifier);
+        if (!(Check(SyntaxKind.Minus) && Peek(1)?.Kind == SyntaxKind.Identifier))
+            return first;
+
+        var text = new System.Text.StringBuilder(first.Text);
+        var pendingTrailing = first.TrailingTrivia;
+        while (Check(SyntaxKind.Minus) && Peek(1)?.Kind == SyntaxKind.Identifier)
+        {
+            var minus = Advance();
+            var part = Advance();
+            // Interior trivia has nowhere to live (a token's trivia is only leading or
+            // trailing), so keep it in the text — as CombineNegativeNumber does.
+            text.Append(pendingTrailing?.ToFullString() ?? "")
+                .Append(minus.LeadingTrivia?.ToFullString() ?? "")
+                .Append(minus.Text)
+                .Append(minus.TrailingTrivia?.ToFullString() ?? "")
+                .Append(part.LeadingTrivia?.ToFullString() ?? "")
+                .Append(part.Text);
+            pendingTrailing = part.TrailingTrivia;
+        }
+        return new SyntaxToken(SyntaxKind.Identifier, text.ToString(), first.LeadingTrivia, pendingTrailing);
     }
 
     /// <summary>
@@ -542,7 +575,7 @@ internal sealed partial class Parser
         var revertKeyword = Expect(SyntaxKind.RevertKeyword);
         var grobName = Expect(SyntaxKind.Identifier);
         var dot = Expect(SyntaxKind.Dot);
-        var propertyName = Expect(SyntaxKind.Identifier);
+        var propertyName = ParseGrobPropertyName();
         return new RevertDeclarationGreen(revertKeyword, grobName, dot, propertyName);
     }
 

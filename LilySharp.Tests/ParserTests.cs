@@ -551,6 +551,31 @@ $theme");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
+    [Fact]
+    public void OverrideProperty_AcceptsHyphenatedLilyPondName()
+    {
+        // LilyPond grob properties are kebab-case (force-hshift, X-offset). The lexer
+        // splits on '-', so the override parser reassembles the name into ONE token.
+        const string src = "{ override NoteColumn.force-hshift = 2 c4 d e f }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var ov = tree.GetRoot().DescendantNodes<OverrideDeclarationSyntax>().Single();
+        Assert.Equal("force-hshift", ov.PropertyName.Text);
+        // The folded hyphen/trivia keeps the tree byte-exact (root.FullWidth == text.Length).
+        Assert.Equal(src, tree.ToFullString());
+    }
+
+    [Fact]
+    public void RevertProperty_AcceptsHyphenatedLilyPondName()
+    {
+        const string src = "{ override NoteColumn.force-hshift = 1 c4 revert NoteColumn.force-hshift d }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var rv = tree.GetRoot().DescendantNodes<RevertDeclarationSyntax>().Single();
+        Assert.Equal("force-hshift", rv.PropertyName.Text);
+        Assert.Equal(src, tree.ToFullString());
+    }
+
     // ========== Repeat Tests ==========
 
     [Fact]
