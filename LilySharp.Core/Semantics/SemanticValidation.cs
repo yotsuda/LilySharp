@@ -76,6 +76,7 @@ public static class SemanticValidation
         new RevertContextValidator(),       // a revert/once outside a music stream
         new PartialScopeValidator(),        // a partial (pickup) outside a section
         new SectionMusicNeedsPartValidator(), // loose music in a part-major top-level section
+        new ScoreSettingInPartHeaderValidator(), // tempo/time as a part header property
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
     };

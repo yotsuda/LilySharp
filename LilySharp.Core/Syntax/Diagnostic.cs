@@ -265,6 +265,13 @@ public static class DiagnosticCodes
     /// as a cell naming an undeclared part. Put the music inside a part instead.</summary>
     public const string SectionMusicNeedsPart = "LYS1025";
 
+    /// <summary>Semantic: <c>tempo</c> / <c>time</c> written as a PART header property
+    /// (<c>part melody { tempo 120 … }</c>). These are score-level — every part shares one
+    /// tempo and meter — so they cannot belong to a single part. Put them at the top level (the
+    /// piece's opening value) or in a section header (a mid-piece change that applies to every
+    /// part).</summary>
+    public const string ScoreSettingInPartHeader = "LYS1026";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

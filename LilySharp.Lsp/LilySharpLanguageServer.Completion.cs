@@ -780,8 +780,9 @@ public sealed partial class LilySharpLanguageServer
             ("octave", "Octave mode or absolute base (absolute | relative | N)", true),
             ("transpose", "Transpose target pitch", false),
             ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)", true),
-            ("time", "Part-local time signature", true),
-            ("tempo", "Part-local tempo", true),
+            // `time` / `tempo` are NOT part properties — they are score-level (every part shares
+            // one meter and tempo). They belong at the top level or in a section header, so they
+            // are offered there, not here (LYS1026 rejects them in a part header).
             ("section", "Inner section (part-major form)", true),
         };
         return new CompletionList
