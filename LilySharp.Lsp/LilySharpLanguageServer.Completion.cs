@@ -111,6 +111,7 @@ public sealed partial class LilySharpLanguageServer
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice),
             CompletionContext.FormBlock => GetFormCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
+            CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
             CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
@@ -211,6 +212,25 @@ public sealed partial class LilySharpLanguageServer
         // holds the keyword, as IsInsideChordsBlock does.
         string keyword = f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix : f.Name;
         return keyword is "part" or "lyrics";
+    }
+
+    /// <summary>The keyword introducing a block frame: the <see cref="BlockFrame.Prefix"/> for
+    /// a NAMED block (<c>lyrics words {</c> → "lyrics"), else the <see cref="BlockFrame.Name"/>
+    /// for an unnamed one (<c>lyrics {</c> → "lyrics").</summary>
+    private static string FrameKeyword(BlockFrame f)
+        => f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix : f.Name;
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
+    /// <c>lyrics [name] { }</c> track — the innermost open block is that lyrics block AND it
+    /// is not nested in a <c>section</c> / <c>part</c> (a note-bound section cell like
+    /// <c>section A { melody {} lyrics {} }</c> holds syllables, not <c>section</c> entries).
+    /// A top-level track has no enclosing block, so the lyrics frame is the ONLY open one.
+    /// </summary>
+    internal static bool IsInsideTopLevelLyricsBlock(string text, int offset)
+    {
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count == 1 && FrameKeyword(frames[0]) == "lyrics";
     }
 
     /// <summary>
@@ -465,6 +485,7 @@ public sealed partial class LilySharpLanguageServer
         MusicBlock,
         FormBlock,
         PartBlock,
+        LyricsBlock,
         AfterSection,
         AfterClef,
         AfterKey,
@@ -689,6 +710,13 @@ public sealed partial class LilySharpLanguageServer
         // `lyrics NAME` is a row reference, handled as AfterLyricsRef above.)
         if (prevWord == "lyrics" && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterLyricsName;
+
+        // Directly inside a top-level `lyrics [name] { }` track (NOT a note-bound section
+        // cell like `section A { melody {} lyrics {} }`, and NOT an inner section's syllable
+        // body): the body holds `section NAME { syllables }`, so offer the document's section
+        // names as `section NAME { }` scaffolds instead of note names.
+        if (IsInsideTopLevelLyricsBlock(text, offset) && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.LyricsBlock;
 
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
@@ -1324,6 +1352,42 @@ public sealed partial class LilySharpLanguageServer
                 Detail = "Section not yet declared here",
                 InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
                 InsertText = hasBrace ? n : n + " {\n\t$0\n}",
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>
+    /// Completions offered DIRECTLY inside a top-level <c>lyrics [name] { }</c> track: the
+    /// document's section names not yet present in this track, each scaffolding a full
+    /// <c>section NAME { … }</c> entry (a section-major lyrics track holds
+    /// <c>section NAME { syllables }</c>). Unlike <see cref="GetMissingSectionNameCompletions"/>
+    /// — offered AFTER the user types <c>section</c> — this fires before it, so the insert
+    /// carries the <c>section</c> keyword. The grammar still allows a bare syllable stream
+    /// here; this list is opt-in (Ctrl+Space) and never blocks typing lyrics.
+    /// </summary>
+    internal static CompletionList GetLyricsSectionCompletions(string text, int offset)
+    {
+        var known = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        var root = SyntaxTree.Parse(text).GetRoot();
+        foreach (var tok in SectionReferenceFinder.AllSectionNameTokens(root))
+            if (seen.Add(tok.Text))
+                known.Add(tok.Text);
+
+        // Sections already written in THIS lyrics track are dropped, so the list is what is
+        // still missing (the same measure as the after-`section` completion).
+        var here = SectionsDeclaredInCurrentBlock(text, offset);
+        bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
+        return new CompletionList
+        {
+            Items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Lyrics for this section",
+                InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
+                InsertText = hasBrace ? n : "section " + n + " {\n\t$0\n}",
                 SortText = i.ToString("D2"),
             }).ToArray()
         };

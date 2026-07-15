@@ -234,4 +234,58 @@ public class SectionNameCompletionTests
         Assert.Equal("section $0", section.InsertText);
         Assert.Equal("editor.action.triggerSuggest", section.Command?.CommandIdentifier);
     }
+
+    // ----- directly inside a top-level lyrics { } track (before typing `section`) -----
+
+    [Fact]
+    public void DirectlyInsideTopLevelLyricsBlock_IsLyricsBlockContext_NotMusic()
+    {
+        foreach (var text in new[] { "lyrics { ", "lyrics words { " })
+            Assert.Equal(LilySharpLanguageServer.CompletionContext.LyricsBlock,
+                LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void DirectlyInsideTopLevelLyricsBlock_OffersSectionScaffoldsWithTheSectionKeyword()
+    {
+        var text =
+            "part melody { section A { c } section B { d } }\n" +
+            "lyrics { ";
+        var items = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length).Items;
+        Assert.Equal(new[] { "A", "B" }, items.Select(i => i.Label).ToArray());
+        var a = items.Single(i => i.Label == "A");
+        Assert.Equal("section A {\n\t$0\n}", a.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, a.InsertTextFormat);
+    }
+
+    [Fact]
+    public void DirectlyInsideTopLevelLyricsBlock_DropsSectionsAlreadyInThisTrack()
+    {
+        var text =
+            "part melody { section A { c } section B { d } }\n" +
+            "lyrics { section A { la } ";   // A already present → only B remains
+        var labels = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "B" }, labels);
+    }
+
+    [Fact]
+    public void NoteBoundSectionCellLyrics_IsNotLyricsBlockContext()
+    {
+        // `section A { melody {} lyrics { ` is a note-bound cell (its body is syllables),
+        // NOT a top-level track — it must not get the section-scaffold list.
+        var text = "section A { melody { c } lyrics { ";
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.LyricsBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void InsideAnInnerSectionOfALyricsTrack_IsNotLyricsBlockContext()
+    {
+        // `lyrics { section A { ` — the innermost open block is the section body
+        // (syllables), not the lyrics-track level.
+        var text = "lyrics { section A { ";
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.LyricsBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
 }
