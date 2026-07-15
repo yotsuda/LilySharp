@@ -313,6 +313,39 @@ public class SectionNameCompletionTests
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
     }
 
+    // ----- a top-level section body in a doc WITH parts holds part cells, not notes -----
+
+    [Fact]
+    public void InsideTopLevelSectionBody_WithParts_OffersPartCellScaffolds_NotNotes()
+    {
+        var text = "part melody { }\npart bass { }\nsection A { ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+        var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
+        Assert.Equal(new[] { "melody", "bass" }, items.Select(i => i.Label).ToArray());
+        // Not a fresh line (caret after `section A { `) → the cell nests one level in.
+        Assert.Equal("\n\tmelody {\n\t\t$0\n\t}", items.Single(i => i.Label == "melody").InsertText);
+    }
+
+    [Fact]
+    public void InsideTopLevelSectionBody_NoParts_StaysAMusicContext()
+    {
+        // A single-voice section (no parts declared) keeps its note completions.
+        var text = "section A { ";
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
+    [Fact]
+    public void PartMajorCellBody_IsNotASectionBlock()
+    {
+        // `part melody { section A { ` — a part-major cell body is that part's music (notes),
+        // not part blocks.
+        var text = "part melody { section A { ";
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
     // ----- directly inside a part { } body: properties + section scaffolds -----
 
     [Fact]

@@ -112,6 +112,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.FormBlock => GetFormCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartBlockCompletions(doc.Text, offset),
             CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
+            CompletionContext.SectionBlock => GetSectionBlockCompletions(doc.Text, offset),
             CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
@@ -231,6 +232,26 @@ public sealed partial class LilySharpLanguageServer
     {
         var frames = ScanOpenBlocks(text, offset, ReadFrame);
         return frames.Count == 1 && FrameKeyword(frames[0]) == "lyrics";
+    }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
+    /// <c>section [name] { }</c> — the innermost (and only) open block is that section. A
+    /// section nested in a <c>part</c> is a part-major cell (its body is that part's music,
+    /// not part blocks), so it is excluded.
+    /// </summary>
+    internal static bool IsInsideTopLevelSectionBody(string text, int offset)
+    {
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count == 1 && FrameKeyword(frames[0]) == "section";
+    }
+
+    /// <summary>True when the document declares at least one <c>part NAME { … }</c>.</summary>
+    private static bool HasDeclaredParts(string text)
+    {
+        foreach (Match m in DeclaredNameRegex().Matches(text))
+            if (m.Groups[1].Value == "part") return true;
+        return false;
     }
 
     /// <summary>
@@ -486,6 +507,7 @@ public sealed partial class LilySharpLanguageServer
         FormBlock,
         PartBlock,
         LyricsBlock,
+        SectionBlock,
         AfterSection,
         AfterClef,
         AfterKey,
@@ -717,6 +739,14 @@ public sealed partial class LilySharpLanguageServer
         // names as `section NAME { }` scaffolds instead of note names.
         if (IsInsideTopLevelLyricsBlock(text, offset) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.LyricsBlock;
+
+        // Directly inside a top-level `section { }` in a doc WITH parts: the body holds PART
+        // BLOCKS (`melody { … }`), not notes — so offer the declared parts as cell scaffolds,
+        // not the pitch letters. (A section in a NO-parts doc is a single voice and keeps its
+        // note completions; a section nested in a part is a part-major cell, likewise music.)
+        if (IsInsideTopLevelSectionBody(text, offset) && HasDeclaredParts(text)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.SectionBlock;
 
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
@@ -1461,6 +1491,34 @@ public sealed partial class LilySharpLanguageServer
             .ToList();
         items.AddRange(SectionScaffoldItems(text, offset, "Section"));
         return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>Completions offered DIRECTLY inside a top-level <c>section { }</c> in a doc
+    /// WITH parts: the declared part names as <c>NAME { }</c> cell scaffolds. A section-major
+    /// section's body holds part blocks (<c>melody { … }</c>), not notes — so this replaces
+    /// the pitch-letter list there. A section sits at column 0, so a cell nests one level in.</summary>
+    internal static CompletionList GetSectionBlockCompletions(string text, int offset)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in DeclaredNameRegex().Matches(text))
+            if (m.Groups[1].Value == "part" && seen.Add(m.Groups[2].Value))
+                parts.Add(m.Groups[2].Value);
+
+        bool freshLine = LineIsBlankBefore(text, WordStartBefore(text, offset));
+        string Body(string head) => freshLine ? head + " {\n\t$0\n}" : "\n\t" + head + " {\n\t\t$0\n\t}";
+        return new CompletionList
+        {
+            Items = parts.Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Part cell — this section's music for " + n,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = Body(n),
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
     }
 
     /// <summary>
