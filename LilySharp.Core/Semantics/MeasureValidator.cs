@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -39,6 +40,9 @@ internal sealed class MeasureValidator : ISemanticValidator
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
+    // True once the file has any part/section/form: a `partial` then belongs to a section
+    // directive; a bare note stream takes a leading `partial` instead. Drives the pickup hint.
+    private bool _structured;
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
@@ -57,6 +61,8 @@ internal sealed class MeasureValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
+        _structured = root.DescendantNodes().Any(n =>
+            n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
         ValidateNode(root);
         // Cross-part alignment runs AFTER per-block fullness and shares its
         // warned spans, so a fullness warning suppresses a mismatch report.
@@ -302,10 +308,15 @@ internal sealed class MeasureValidator : ISemanticValidator
             // check, and bar numbering counts it as bar 1. Nudge toward declaring
             // it (a declared pickup is checked exactly and numbered as bar 0).
             var span = MeasureDurations.GetSpan(measure.Items);
+            // A pickup is declared as a section directive in a structured file
+            // (section/part/form), or as a leading `partial` in a bare note stream. It is
+            // NOT allowed at the top level or inside a voice (see PartialScopeValidator).
+            string where = _structured
+                ? $"as a section directive (e.g. section A {{ {SuggestPartial(duration)}  … }})"
+                : $"with a leading '{SuggestPartial(duration)}'";
             _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
                 $"first measure is shorter than the meter ({duration} of {_meterText}); " +
-                $"if this is a pickup, declare it with '{SuggestPartial(duration)}' " +
-                "(top level or in the voice) so its length is checked and " +
+                $"if this is a pickup, declare it {where} so its length is checked and " +
                 "bar numbering starts after it");
         }
         // else: completesOpeningPickup — exempt, no diagnostic.
@@ -342,19 +353,29 @@ internal sealed class MeasureValidator : ISemanticValidator
         return false;
     }
 
-    /// <summary>True for a PART-MAJOR section (inline note/bar children), false for
-    /// a SECTION-MAJOR section (part blocks) or an empty one.</summary>
+    /// <summary>True for a PART-MAJOR section with actual inline music (note/bar children),
+    /// false for a SECTION-MAJOR section (part blocks), a directives-only header
+    /// (<c>section A { partial 2 }</c>), or an empty one. Mirrors the collector's
+    /// <c>SectionHasInlineMusic</c> — the two must not drift, or a directives-only header's
+    /// <c>partial</c>/<c>time</c> is classed as in-music here and dropped as a section-wide
+    /// pickup (a real bug: the pickup rendered fine but the bar was flagged short).</summary>
     private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
     {
-        bool sawItem = false;
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
             if (child is null or SyntaxTokenNode) continue;
-            if (child is PartBlockSyntax) return false; // section-major
-            sawItem = true;
+            // Part / chord / lyric blocks are section-major or track cells, not inline music.
+            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax) continue;
+            // A section-level directive (`partial`/`time`/`key`/`clef`/octave/grob) arms the
+            // whole section; it does NOT make the section inline music.
+            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
+                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
+                continue;
+            return true; // a music node
         }
-        return sawItem;
+        return false;
     }
 
     /// <summary>The `partial` clause matching a pickup of <paramref name="length"/>:
