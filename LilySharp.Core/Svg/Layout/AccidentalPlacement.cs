@@ -262,41 +262,32 @@ internal sealed class AccidentalPlacement
         // Track placed accidentals for flat-merge overlap (special case not in skyline)
         var placedEntries = new List<(double LeftEdge, double YBottom, double YTop, string Accidental, double Width)>();
 
-        // LILYPOND-REF: accidental-placement.cc set_ape_skylines()
-        // In LilyPond, overstrike only applies WITHIN the same note-name group (APE).
-        // Accidentals on different note names (e.g. D♮ vs F♮) are never overstriked.
-        int lastOctave = int.MinValue;
-        string lastAlteration = "";
-        double lastXLeft = 0;
-        int lastNoteName = int.MinValue;
+        // LILYPOND-REF: accidental-placement.cc set_ape_skylines() — accidentals of the SAME
+        // note name form one "APE" that shares a SINGLE horizontal column, whatever the octave.
+        // The first accidental of each note-name+alteration is positioned against the reference
+        // skyline; every later accidental at that note name snaps to the SAME column — a
+        // same-octave unison overstrikes, a different octave aligns vertically (C♯4 and C♯5 sit
+        // in one column, as LilyPond draws them). Snapping also sidesteps a spurious self-
+        // collision: the flat reference skyline merges a lower partner's left edge up across the
+        // gap to its neighbour, which would otherwise shove the upper partner an extra column left.
+        var apeColumn = new Dictionary<(int NoteName, string Accidental), double>();
 
         foreach (var entry in entries)
         {
-            int octave = OctaveOf(entry.StaffPosition);
-            // Note name class: staff positions with same value mod 7 are the same note name
-            // in different octaves (e.g. D4 and D5)
+            // Note name class: staff positions equal mod 7 are the same note name across octaves.
             int noteName = ((entry.StaffPosition % 7) + 7) % 7;
-            bool sameOctave = (octave == lastOctave);
-            bool sameNoteName = (noteName == lastNoteName);
+            var apeKey = (noteName, entry.Accidental);
 
-            // LILYPOND-REF: accidental-placement.cc set_ape_skylines()
-            // Same note name + same octave + same alteration → overstrike (share X position)
-            // This only applies within the same note-name group, matching LilyPond's APE architecture.
-            if (sameNoteName && sameOctave && entry.Accidental == lastAlteration)
+            // A later accidental of the same note name shares its APE's already-placed column.
+            if (apeColumn.TryGetValue(apeKey, out double sharedXLeft))
             {
                 // LILYPOND-REF: accidental-placement.cc:292-296 — glyph-shape skyline.
-                var overSkyline = AccidentalGlyphSkyline.Build(
+                var alignedSkyline = AccidentalGlyphSkyline.Build(
                     entry.Accidental, entry.YBottom, entry.YTop,
-                    lastXLeft, lastXLeft + entry.Width, Skyline.Direction.Left);
-                referenceSkyline = referenceSkyline.Merge(overSkyline);
-
+                    sharedXLeft, sharedXLeft + entry.Width, Skyline.Direction.Left);
+                referenceSkyline = referenceSkyline.Merge(alignedSkyline);
                 layouts.Add(new AccidentalLayout(
-                    entry.StaffPosition, entry.Accidental, lastXLeft,
-                    entry.IsCourtesy));
-                // LILYPOND-REF: last_octave and last_alteration always updated unconditionally
-                lastOctave = octave;
-                lastAlteration = entry.Accidental;
-                lastNoteName = noteName;
+                    entry.StaffPosition, entry.Accidental, sharedXLeft, entry.IsCourtesy));
                 continue;
             }
 
@@ -340,11 +331,7 @@ internal sealed class AccidentalPlacement
             layouts.Add(new AccidentalLayout(
                 entry.StaffPosition, entry.Accidental, xLeft,
                 entry.IsCourtesy));
-
-            lastOctave = octave;
-            lastAlteration = entry.Accidental;
-            lastXLeft = xLeft;
-            lastNoteName = noteName;
+            apeColumn[apeKey] = xLeft;
         }
 
         return layouts.ToImmutableArray();
