@@ -30,10 +30,12 @@ namespace LilySharp.Core.Semantics;
 /// <item>Single-voice section body: <c>section A { partial 2. c d f }</c> — the lone voice's
 /// pickup.</item>
 /// </list>
-/// The top level, a <c>part {}</c> header, or a <c>partial</c> nested inside one part block /
-/// voice are all errors (the first two aren't tied to a section; the last would apply to only
-/// one part). A bare-music file (no <c>part</c> / <c>section</c> / <c>form</c>) is a plain note
-/// stream, so a leading <c>partial</c> there is just that music's pickup and is fine.
+/// The top level, a <c>part {}</c> header, a <c>partial</c> nested inside one part block /
+/// voice, or a <c>partial</c> in a PART-MAJOR section cell (<c>part melody { section A {
+/// partial 2  … } }</c>) are all errors — none is tied to the section as a whole (the last
+/// would arm the pickup for only one part; write it in a standalone <c>section A { partial 2 }</c>
+/// header instead). A bare-music file (no <c>part</c> / <c>section</c> / <c>form</c>) is a plain
+/// note stream, so a leading <c>partial</c> there is just that music's pickup and is fine.
 /// </summary>
 internal sealed class PartialScopeValidator : ISemanticValidator
 {
@@ -53,10 +55,21 @@ internal sealed class PartialScopeValidator : ISemanticValidator
 
         foreach (var partial in root.DescendantNodes().OfType<PartialDeclarationSyntax>())
         {
-            // A section directive (section-major header OR single-voice section body) has the
-            // section as its immediate parent; anywhere else is wrong.
-            if (partial.Parent is SectionDeclarationSyntax)
+            if (partial.Parent is SectionDeclarationSyntax section)
+            {
+                // Fine as a TOP-LEVEL section directive (section-major header, standalone
+                // header, or single-voice section). But a section nested in a `part {}` is a
+                // PART-MAJOR CELL — one part's copy of the section — and a section-wide pickup
+                // does not belong to one part (which part's `partial` would win for the shared
+                // section?). Direct it to the standalone header instead.
+                if (!IsInsidePart(section))
+                    continue;
+                _diagnostics.Error(partial.Span, DiagnosticCodes.PartialOutsideSection,
+                    "'partial' cannot go in a part-major section cell — a pickup is section-wide, "
+                    + "not one part's. Declare it in a standalone section header next to the part "
+                    + "bodies: section A { partial 4 }.");
                 continue;
+            }
 
             string where = partial.Parent switch
             {
@@ -68,5 +81,15 @@ internal sealed class PartialScopeValidator : ISemanticValidator
                 $"'partial' cannot go in {where} — a pickup shortens the opening bar for every "
                 + "part of a section at once. Write it as a section directive: section A { partial 4  … }.");
         }
+    }
+
+    /// <summary>True when <paramref name="node"/> is nested inside a <c>part {}</c> — i.e. a
+    /// part-major section cell — rather than a top-level section.</summary>
+    private static bool IsInsidePart(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax)
+                return true;
+        return false;
     }
 }

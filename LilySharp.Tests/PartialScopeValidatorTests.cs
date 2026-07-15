@@ -48,10 +48,20 @@ public class PartialScopeValidatorTests
 
     [Fact]
     public void SingleVoiceSectionBodyPartial_Ok()
+        // A TOP-LEVEL single-voice section: the section itself IS the lone voice, so its
+        // partial is the section's pickup. (A partial in a part-MAJOR cell is different — it
+        // belongs to only one part; see PartialInPartMajorCell_Errors.)
         => Assert.Equal(0, ErrCount(
-            "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "time 4/4\nsection A { partial 4  g4 | c' d' e' f' | }\nform main { A }\nscore main { staff melody }"));
 
     // --- Rejected: not a section directive ---
+
+    [Fact]
+    public void PartialInPartMajorCell_Errors()
+        // A section nested in a `part {}` is one part's cell; a section-wide pickup does not
+        // belong there — write it in a standalone `section A { partial N }` header instead.
+        => Assert.Equal(1, ErrCount(
+            "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
 
     [Fact]
     public void TopLevelPartial_InStructuredFile_Errors()
