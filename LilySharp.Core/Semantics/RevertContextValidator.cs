@@ -60,8 +60,12 @@ internal sealed class RevertContextValidator : ISemanticValidator
             string? where = node.Parent switch
             {
                 PartDeclarationSyntax => "a part header",
+                // A section-MAJOR section holds part blocks, not a note stream — a directive
+                // directly in it is structural. A single-voice section (holds notes) is a
+                // music stream, so a revert there is fine.
+                SectionDeclarationSyntax s when IsSectionMajor(s) => "a section header",
                 _ when node.Parent == root && structured => "the top level",
-                _ => null, // in a note stream (a section, voice, or bare music) — fine
+                _ => null, // in a note stream (a single-voice section, part block, voice, or bare music)
             };
             if (where == null)
                 continue;
@@ -71,4 +75,11 @@ internal sealed class RevertContextValidator : ISemanticValidator
                 + "Set a default with a plain 'override' here, and 'revert' inside a section or voice.");
         }
     }
+
+    /// <summary>A section-major section holds part blocks (its body is per-part music),
+    /// so a directive directly in it is structural — unlike a single-voice section whose
+    /// body IS a note stream.</summary>
+    private static bool IsSectionMajor(SectionDeclarationSyntax section)
+        => section.DescendantNodes().Any(n => n.Parent == section
+            && n is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax);
 }

@@ -176,6 +176,24 @@ public sealed partial class MeasureCollector
             _sectionActiveGrobProps.Clear();
         }
 
+        // A section-major section can carry its OWN grob directive
+        // (`section A { override … melody {…} }`): a default for THIS section on every
+        // staff. Collect it here — once per voice, staff-scoped — at the section start, and
+        // track it so it resets at the next boundary (and re-applies on a reprise). An
+        // inline-music section walks its override as music instead, so it is excluded.
+        if (!SectionHasInlineMusic(section))
+        {
+            foreach (var child in section.DescendantNodes())
+            {
+                if (child.Parent == section && child is OverrideDeclarationSyntax secOv)
+                {
+                    CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
+                        isOnce: false, staffIndex: _currentStaffIndex);
+                    _sectionActiveGrobProps.Add((secOv.GrobName.Text, secOv.PropertyName.Text));
+                }
+            }
+        }
+
         // Clef reverts to the part default the same way: a section that opens without its
         // own `clef` uses the part clef, so a mid-section clef change in a prior section
         // (or the same section played earlier) does not leak in. A section that opens with
@@ -374,8 +392,9 @@ public sealed partial class MeasureCollector
             if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
                 continue;
             if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax)
-                continue;
+                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
+                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
+                continue; // a directive — a section-level grob override doesn't make it inline
             return true; // a music node
         }
         return false;

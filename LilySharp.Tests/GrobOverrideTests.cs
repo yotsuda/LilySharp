@@ -92,6 +92,31 @@ public class GrobOverrideTests
         Assert.Equal(0, ov.ItemIndex);
     }
 
+    [Fact]
+    public void SectionMajorOverride_ScopesToEveryStaffForThatSectionOnly()
+    {
+        // `section A { override … melody {…} bass {…} }` colours A on BOTH staves and, via
+        // the boundary reset, not B. Collected once per staff at A's start (measure 0).
+        var score = CollectMulti(
+            "part melody { clef treble }\npart bass { clef bass }\n" +
+            "section A { override NoteHead.color = red  melody { c4 d e f | } bass { c2 g | } }\n" +
+            "section B { melody { g4 a b c' | } bass { e2 c | } }\n" +
+            "form main { A B }\nscore main { staff melody  staff bass }");
+        var reds = score.GrobOverrides.Where(o => o.Value == "red").ToList();
+        Assert.Equal(2, reds.Count);
+        Assert.Contains(reds, o => o.StaffIndex == 0);   // melody
+        Assert.Contains(reds, o => o.StaffIndex == 1);   // bass
+        Assert.All(reds, o => Assert.Equal(0, o.MeasureIndex)); // section A start
+    }
+
+    [Fact]
+    public void SectionMajorRevert_IsAnError()
+    {
+        Assert.True(HasRevertContextError(
+            "part melody { clef treble }\nsection A { revert NoteHead.color  melody { c4 d e f | } }\n" +
+            "form main { A }\nscore main { staff melody }"));
+    }
+
     private static bool HasRevertContextError(string src)
         => LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src))
             .Any(d => d.Code == DiagnosticCodes.RevertOutsideMusic);

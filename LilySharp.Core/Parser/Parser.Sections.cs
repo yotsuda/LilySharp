@@ -46,6 +46,12 @@ internal sealed partial class Parser
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
+            // A section-level grob directive (section-major): `override Grob.prop = value`
+            // is a default for this section on every staff. revert/once parse too, then a
+            // validator rejects them (they belong in a music stream).
+            SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
+            SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
+            SyntaxKind.OnceKeyword => ParseOnceModifier(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),
             // bass, treble etc. can also be part names
