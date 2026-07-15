@@ -1391,24 +1391,70 @@ public sealed partial class LilySharpLanguageServer
         // missing (the same measure as the after-`section` completion).
         var here = SectionsDeclaredInCurrentBlock(text, offset);
         bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
-        return known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
+
+        // Indent so the section never lands inline: on a fresh (whitespace-only) line the
+        // plain snippet inherits that line's indent; when the caret sits after content (e.g.
+        // right after `part melody {`), force the section onto its OWN new line one level
+        // deeper (VS Code prepends the current line's indent to every following snippet line).
+        bool freshLine = LineIsBlankBefore(text, WordStartBefore(text, offset));
+        // head = the `section NAME` (or `section $1` for a new name); the tail is the body.
+        string Body(string head) => hasBrace ? head
+            : freshLine ? head + " {\n\t$0\n}"
+            : "\n\t" + head + " {\n\t\t$0\n\t}";
+
+        var items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
         {
             Label = "section " + n,
             Kind = CompletionItemKind.Reference,
             Detail = detail,
-            InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
-            InsertText = hasBrace ? "section " + n : "section " + n + " {\n\t$0\n}",
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = Body("section " + n),
             SortText = "z" + i.ToString("D2"), // after a part { } body's properties (00..09)
+        }).ToList();
+
+        // A brand-NEW section: `section {}` with the caret first BETWEEN `section` and `{`
+        // (the $1 name stop), then Tab drops into the body ($0). Offered even when every
+        // known section is already present, so a fresh name is always one pick away.
+        items.Add(new CompletionItem
+        {
+            Label = "section",
+            Kind = CompletionItemKind.Keyword,
+            Detail = "New section",
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = Body("section $1"),
+            SortText = "zzz", // after the named scaffolds
         });
+        return items;
+    }
+
+    /// <summary>The index where the identifier word at <paramref name="offset"/> begins
+    /// (letters/digits), so indentation is judged from the line content BEFORE the partial
+    /// word the completion will replace.</summary>
+    private static int WordStartBefore(string text, int offset)
+    {
+        int i = offset;
+        while (i > 0 && char.IsLetterOrDigit(text[i - 1])) i--;
+        return i;
+    }
+
+    /// <summary>True when everything from the start of the line to <paramref name="pos"/> is
+    /// whitespace — i.e. the caret is on its own (already-indented) line.</summary>
+    private static bool LineIsBlankBefore(string text, int pos)
+    {
+        for (int i = pos - 1; i >= 0 && text[i] != '\n'; i--)
+            if (!char.IsWhiteSpace(text[i])) return false;
+        return true;
     }
 
     /// <summary>A <c>part { }</c> body's completions: its property names PLUS the document's
     /// section names as <c>section NAME { }</c> scaffolds — a part-major part holds properties
-    /// AND inner sections. The bare <c>section</c> property still lets a NEW name be typed;
-    /// the scaffolds are the one-step shortcut for the sections the part is still missing.</summary>
+    /// AND inner sections. The bare <c>section</c> property is dropped: the scaffolds (and the
+    /// "New section" item) are the one-step way in, so it would be a redundant second entry.</summary>
     internal static CompletionList GetPartBlockCompletions(string text, int offset)
     {
-        var items = GetPartPropertyCompletions().Items.ToList();
+        var items = GetPartPropertyCompletions().Items
+            .Where(p => p.Label != "section")
+            .ToList();
         items.AddRange(SectionScaffoldItems(text, offset, "Section"));
         return new CompletionList { Items = items.ToArray() };
     }

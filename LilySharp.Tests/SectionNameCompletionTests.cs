@@ -246,17 +246,38 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void DirectlyInsideTopLevelLyricsBlock_OffersSectionScaffoldsWithTheSectionKeyword()
+    public void DirectlyInsideTopLevelLyricsBlock_OffersSectionScaffolds_AndANewSectionItem()
     {
         var text =
             "part melody { section A { c } section B { d } }\n" +
-            "lyrics { ";
+            "lyrics { ";   // caret after `{ ` on the SAME line (not a fresh line)
         var items = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length).Items;
-        // The label reads `section A` (matching what is inserted), not a bare `A`.
-        Assert.Equal(new[] { "section A", "section B" }, items.Select(i => i.Label).ToArray());
-        var a = items.Single(i => i.Label == "section A");
-        Assert.Equal("section A {\n\t$0\n}", a.InsertText);
-        Assert.Equal(InsertTextFormat.Snippet, a.InsertTextFormat);
+        var labels = items.Select(i => i.Label).ToArray();
+        // Named scaffolds (label reads `section A`, matching what is inserted) …
+        Assert.Contains("section A", labels);
+        Assert.Contains("section B", labels);
+        // … plus the brand-NEW-section item (bare `section`).
+        Assert.Contains("section", labels);
+        // Not on a fresh line → forced onto its own new, one-level-deeper line.
+        Assert.Equal("\n\tsection A {\n\t\t$0\n\t}",
+            items.Single(i => i.Label == "section A").InsertText);
+        // The new-section item puts the caret between `section` and `{` (the $1 name stop).
+        Assert.Equal("\n\tsection $1 {\n\t\t$0\n\t}",
+            items.Single(i => i.Label == "section").InsertText);
+        Assert.All(items, i => Assert.Equal(InsertTextFormat.Snippet, i.InsertTextFormat));
+    }
+
+    [Fact]
+    public void OnAFreshIndentedLineInsideTheTrack_TheSectionSnippetIsPlain()
+    {
+        // Caret on its own already-indented line → the plain snippet (VS Code inherits that
+        // line's indent), with no forced leading newline.
+        var text =
+            "part melody { section A { c } }\n" +
+            "lyrics {\n  ";
+        var items = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length).Items;
+        Assert.Equal("section A {\n\t$0\n}", items.Single(i => i.Label == "section A").InsertText);
+        Assert.Equal("section $1 {\n\t$0\n}", items.Single(i => i.Label == "section").InsertText);
     }
 
     [Fact]
@@ -264,10 +285,12 @@ public class SectionNameCompletionTests
     {
         var text =
             "part melody { section A { c } section B { d } }\n" +
-            "lyrics { section A { la } ";   // A already present → only B remains
+            "lyrics { section A { la } ";   // A already present → only B (plus the new-section item)
         var labels = LilySharpLanguageServer.GetLyricsSectionCompletions(text, text.Length)
             .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "section B" }, labels);
+        Assert.Contains("section B", labels);
+        Assert.DoesNotContain("section A", labels);
+        Assert.Contains("section", labels);
     }
 
     [Fact]
@@ -299,12 +322,14 @@ public class SectionNameCompletionTests
         var items = LilySharpLanguageServer.GetPartBlockCompletions(text, text.Length).Items;
         // The part properties are still there…
         Assert.Contains(items, i => i.Label == "clef");
-        // …plus one-step `section A` / `section B` scaffolds (label carries the keyword).
+        // …plus one-step `section A` / `section B` scaffolds (label carries the keyword)…
         var scaffolds = items.Where(i => i.Label!.StartsWith("section ", System.StringComparison.Ordinal))
             .Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "section A", "section B" }, scaffolds);
-        var a = items.Single(i => i.Label == "section A");
-        Assert.Equal("section A {\n\t$0\n}", a.InsertText);
-        Assert.Equal(InsertTextFormat.Snippet, a.InsertTextFormat);
+        // …and the new-section item. The redundant bare `section` PROPERTY is dropped.
+        Assert.Single(items.Where(i => i.Label == "section"));
+        // Not a fresh line (caret after `part bass { `) → forced onto its own indented line.
+        Assert.Equal("\n\tsection A {\n\t\t$0\n\t}",
+            items.Single(i => i.Label == "section A").InsertText);
     }
 }
