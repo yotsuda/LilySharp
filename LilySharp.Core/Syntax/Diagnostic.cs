@@ -244,6 +244,13 @@ public static class DiagnosticCodes
     /// modifies a note, and a segno/coda/D.S. is a standalone landmark, not a note.</summary>
     public const string NavigationMarkIsBare = "LYS1022";
 
+    /// <summary>Semantic error: a <c>revert</c> or <c>once</c> was written outside a music
+    /// stream (at the top level or in a <c>part {}</c> header). Both are positional — they
+    /// act from a point in the music forward — so they only make sense where notes flow; a
+    /// structural context has no such position. Set a default with a plain <c>override</c>
+    /// there instead, and revert inside a section/voice.</summary>
+    public const string RevertOutsideMusic = "LYS1023";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

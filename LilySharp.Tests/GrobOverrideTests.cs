@@ -92,6 +92,38 @@ public class GrobOverrideTests
         Assert.Equal(0, ov.ItemIndex);
     }
 
+    private static bool HasRevertContextError(string src)
+        => LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src))
+            .Any(d => d.Code == DiagnosticCodes.RevertOutsideMusic);
+
+    [Fact]
+    public void RevertOrOnce_OutsideMusic_IsAnError()
+    {
+        // A part header holds no note stream, so revert/once there is meaningless.
+        Assert.True(HasRevertContextError(
+            "part m { override NoteHead.color = red  revert NoteHead.color  section A { c4 d e f | } }\n" +
+            "form main { A }\nscore main { staff m }"));
+        // The top level of a STRUCTURED file (has a part/section/form) is structural too.
+        Assert.True(HasRevertContextError(
+            "override NoteHead.color = red\nrevert NoteHead.color\npart m { section A { c4 d e f | } }\n" +
+            "form main { A }\nscore main { staff m }"));
+    }
+
+    [Fact]
+    public void RevertOrOnce_InMusic_IsAllowed()
+    {
+        // A part-body override (a valid default) is not flagged.
+        Assert.False(HasRevertContextError(
+            "part m { override NoteHead.color = red  section A { c4 d e f | } }\n" +
+            "form main { A }\nscore main { staff m }"));
+        // Bare music: the top level IS a note stream, so a revert there is fine.
+        Assert.False(HasRevertContextError("override NoteHead.color = red c4 d revert NoteHead.color e f"));
+        // A revert inside a section's music is fine.
+        Assert.False(HasRevertContextError(
+            "part m { section A { override NoteHead.color = red c4 d revert NoteHead.color e f | } }\n" +
+            "form main { A }\nscore main { staff m }"));
+    }
+
     [Fact]
     public void ForStaffVoice_SeesOnlyInScopeOverrides()
     {

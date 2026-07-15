@@ -1590,21 +1590,10 @@ public sealed partial class MeasureCollector
             {
                 if (node.Parent != partDecl)
                     continue; // direct children only; section-internal directives are walked
-                switch (node)
-                {
-                    case OverrideDeclarationSyntax od:
-                        CollectOverride(od, 0, 0, isOnce: false, staffIndex: staffIndex);
-                        break;
-                    case RevertDeclarationSyntax rd:
-                        CollectRevert(rd, 0, 0, staffIndex: staffIndex);
-                        break;
-                    case OnceModifierSyntax om when om.Command is OverrideDeclarationSyntax io:
-                        CollectOverride(io, 0, 0, isOnce: true, staffIndex: staffIndex);
-                        break;
-                    case OnceModifierSyntax om2 when om2.Command is RevertDeclarationSyntax ir:
-                        CollectRevert(ir, 0, 0, staffIndex: staffIndex);
-                        break;
-                }
+                // Only a plain `override` is a valid part default; `revert` / `once` in a
+                // part header are positional and meaningless (flagged by the validator).
+                if (node is OverrideDeclarationSyntax od)
+                    CollectOverride(od, 0, 0, isOnce: false, staffIndex: staffIndex);
             }
         }
     }
@@ -1834,21 +1823,11 @@ public sealed partial class MeasureCollector
             {
                 if (node.Parent != root)
                     continue; // only true top-level items; in-section overrides are walked
-                switch (node)
-                {
-                    case OverrideDeclarationSyntax od:
-                        CollectOverride(od, 0, 0, isOnce: false, staffIndex: null); // global = all staves
-                        break;
-                    case RevertDeclarationSyntax rd:
-                        CollectRevert(rd, 0, 0, staffIndex: null);
-                        break;
-                    case OnceModifierSyntax om when om.Command is OverrideDeclarationSyntax io:
-                        CollectOverride(io, 0, 0, isOnce: true, staffIndex: null);
-                        break;
-                    case OnceModifierSyntax om2 when om2.Command is RevertDeclarationSyntax ir:
-                        CollectRevert(ir, 0, 0, staffIndex: null);
-                        break;
-                }
+                // Only a plain `override` is a valid global default. `revert` / `once` here
+                // are positional and have no effect at the structural top level — flagged by
+                // RevertContextValidator — so they are not collected.
+                if (node is OverrideDeclarationSyntax od)
+                    CollectOverride(od, 0, 0, isOnce: false, staffIndex: null); // global = all staves
             }
         }
     }
