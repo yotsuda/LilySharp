@@ -103,7 +103,7 @@ public sealed partial class LilySharpLanguageServer
 
         return context switch
         {
-            CompletionContext.TopLevel => GetTopLevelCompletions(),
+            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
@@ -1829,12 +1829,10 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    internal static CompletionList GetTopLevelCompletions()
+    internal static CompletionList GetTopLevelCompletions(string? text = null)
     {
-        return new CompletionList
+        var items = new System.Collections.Generic.List<CompletionItem>
         {
-            Items =
-            [
                 new CompletionItem { Label = "version", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "version ${1:1}", Detail = "Language version this file targets (a bare number; optional, first line)" },
                 new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
@@ -1871,9 +1869,47 @@ public sealed partial class LilySharpLanguageServer
                     InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
                     Detail = "Score template — piano / grand staff (Twinkle, Twinkle, Little Star)",
                 },
-                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" }
-            ]
+                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" },
         };
+
+        // Drop the singleton globals (metadata + piece-wide defaults) already written at the
+        // top level, so `title` / `composer` / `time` / `key` / … are not re-offered once the
+        // file has them. `override` (many grobs), `part`, `section`, `score`, … stay.
+        if (text != null)
+            items.RemoveAll(it => GlobalSingletonKeywords.Contains(it.Label!)
+                               && ExistsAtGlobalScope(text, it.Label!));
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
+    /// (title/composer/font/version) and the piece-wide defaults (time/key/tempo/octave).
+    /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
+    private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
+        new(StringComparer.Ordinal) { "version", "title", "composer", "font", "tempo", "time", "key", "octave" };
+
+    /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
+    /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>
+    private static bool ExistsAtGlobalScope(string text, string keyword)
+    {
+        var mask = CodeMask(text, text.Length);
+        int depth = 0;
+        for (int i = 0; i < text.Length;)
+        {
+            if (!mask[i]) { i++; continue; }            // inside a string / comment
+            char c = text[i];
+            if (c == '{') { depth++; i++; continue; }
+            if (c == '}') { if (depth > 0) depth--; i++; continue; }
+            if (char.IsLetter(c) || c == '_')
+            {
+                int start = i;
+                while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] == '_')) i++;
+                if (depth == 0 && text[start..i] == keyword)
+                    return true;
+                continue;                                // i already past the word
+            }
+            i++;
+        }
+        return false;
     }
 
     /// <summary>
