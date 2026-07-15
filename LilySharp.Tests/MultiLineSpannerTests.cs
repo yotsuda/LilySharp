@@ -152,4 +152,43 @@ public class MultiLineSpannerTests
         Assert.Equal(0, first.Slur.StartMeasureIndex);
         Assert.Equal(3, last.Slur.EndMeasureIndex);
     }
+
+    [Fact]
+    public void CrossSystemSlur_ContinuationCarriesItsOwnSegmentMeasure()
+    {
+        // The renderer's page-membership test keys off RenderMeasureIndex, which MUST be
+        // a measure on THAT piece's own system — not the slur's start measure. When a slur
+        // crosses a PAGE break, keying off the start measure drew the continuation on the
+        // start's page (the first system's top-left) and skipped it on its real page.
+        // Regression: feature-tour page-1 stray slur.
+        var source = "c4( d e f | g a b c' | break d' c' b a | g f e d) |";
+        var (_, layout) = BuildLayout(source);
+
+        Assert.True(layout.SlurLayouts.Length >= 2);
+        var first = layout.SlurLayouts[0];
+        var last = layout.SlurLayouts[^1];
+
+        // First piece anchors at the slur's own start; the continuation anchors at a LATER
+        // measure (its post-break system's first measure), so the page test targets ITS page.
+        Assert.Equal(0, first.RenderMeasureIndex);
+        Assert.True(last.RenderMeasureIndex > first.RenderMeasureIndex,
+            $"Continuation must carry a later segment measure ({last.RenderMeasureIndex}) than the first ({first.RenderMeasureIndex}).");
+        Assert.NotEqual(last.Slur.StartMeasureIndex, last.RenderMeasureIndex);
+    }
+
+    [Fact]
+    public void CrossSystemTie_ContinuationCarriesItsOwnSegmentMeasure()
+    {
+        // Same page-membership guarantee for ties (DrawTies has the identical keying).
+        var source = "c2 e2~ | break e4 f g a |";
+        var (_, layout) = BuildLayout(source);
+
+        Assert.True(layout.TieLayouts.Length >= 2);
+        var first = layout.TieLayouts[0];
+        var last = layout.TieLayouts[^1];
+
+        Assert.True(last.RenderMeasureIndex > first.RenderMeasureIndex,
+            $"Continuation must carry a later segment measure ({last.RenderMeasureIndex}) than the first ({first.RenderMeasureIndex}).");
+        Assert.NotEqual(last.Tie.StartMeasureIndex, last.RenderMeasureIndex);
+    }
 }

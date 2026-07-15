@@ -29,6 +29,14 @@ internal abstract record BowLayout
     /// ossia staves with the rest of the staff's notation.</summary>
     public int StaffIndex { get; init; } = -1;
 
+    /// <summary>Measure index used to decide which PAGE this (possibly broken) piece
+    /// renders on. For a cross-system break the piece's geometry is page-local to ITS
+    /// own system, so the page-membership test must key off a measure on that segment's
+    /// system — NOT the original spanner's start measure, which may sit on an earlier
+    /// page and would drag the continuation onto the wrong page. -1 falls back to the
+    /// model's own start measure (single-system bows).</summary>
+    public int RenderMeasureIndex { get; init; } = -1;
+
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
 

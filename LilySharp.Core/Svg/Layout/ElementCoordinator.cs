@@ -832,7 +832,7 @@ internal sealed class ElementCoordinator
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
-                tieLayouts.Add(problem.Solve() with { StaffIndex = staffIndex });
+                tieLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }
 
@@ -1020,7 +1020,7 @@ internal sealed class ElementCoordinator
                         score, slur, segment.IsFirst, segment.IsLast, segSystem,
                         staffIndex, staff, segStartX, segEndX, graceNotes);
                     if (tabLayout != null)
-                        slurLayouts.Add(tabLayout);
+                        slurLayouts.Add(tabLayout with { RenderMeasureIndex = segment.StartMeasureIndex });
                     continue;
                 }
 
@@ -1065,7 +1065,7 @@ internal sealed class ElementCoordinator
                     existingSlurs: slurLayouts,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
-                slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex });
+                slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }
 

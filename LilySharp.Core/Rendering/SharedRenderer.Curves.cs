@@ -33,12 +33,17 @@ internal static partial class SharedRenderer
     {
         foreach (var tie in layout.TieLayouts)
         {
-            if (!sysY.ContainsKey(tie.Tie.StartMeasureIndex))
+            // A broken tie's continuation is page-local to ITS OWN system, so key the
+            // page test off that segment's measure (RenderMeasureIndex), not the tie's
+            // start measure — otherwise a page-crossing tie draws its far piece on the
+            // start's page at the wrong spot and never on its real page.
+            int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
+            if (!sysY.ContainsKey(mi))
                 continue; // not on this page (geometry is page-local)
             DrawBow(tie.StartX, tie.StartY, tie.EndX, tie.EndY,
                 tie.Control1, tie.Control2, tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                tie.StaffIndex, tie.Tie.StartMeasureIndex, os, gc);
+                tie.StaffIndex, mi, os, gc);
         }
     }
 
@@ -47,12 +52,17 @@ internal static partial class SharedRenderer
     {
         foreach (var slur in layout.SlurLayouts)
         {
-            if (!sysY.ContainsKey(slur.Slur.StartMeasureIndex))
+            // A broken slur's continuation is page-local to ITS OWN system, so key the
+            // page test off that segment's measure (RenderMeasureIndex), not the slur's
+            // start measure — otherwise a page-crossing slur draws its far piece on the
+            // start's page (e.g. the first system's top-left) and never on its real page.
+            int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
+            if (!sysY.ContainsKey(mi))
                 continue; // not on this page (geometry is page-local)
             DrawBow(slur.StartX, slur.StartY, slur.EndX, slur.EndY,
                 slur.Control1, slur.Control2, slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
-                slur.StaffIndex, slur.Slur.StartMeasureIndex, os, gc);
+                slur.StaffIndex, mi, os, gc);
         }
     }
 
