@@ -196,9 +196,12 @@ public sealed class DurationSyntax : SyntaxNode
     public SyntaxTokenNode NumberToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
-    /// The base duration value (1, 2, 4, 8, 16, etc.)
+    /// The base duration value (1, 2, 4, 8, 16, etc.). Falls back to a quarter (4) when the
+    /// number token is empty or malformed — an error-recovery duration synthesised for a
+    /// broken input (e.g. <c>partial .</c>) must never throw here, or it takes the whole
+    /// render / diagnostics pass down with it (that emptied the Problems panel).
     /// </summary>
-    public int Value => int.Parse(NumberToken.Text);
+    public int Value => int.TryParse(NumberToken.Text, out int v) ? v : 4;
 
     /// <summary>
     /// Number of dots.

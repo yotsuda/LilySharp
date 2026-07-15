@@ -326,10 +326,20 @@ public sealed partial class LilySharpLanguageServer
         }
 
         // Semantic diagnostics — every validator via the shared registry (same set
-        // the CLI's `check` runs, so the two can never drift).
-        foreach (var d in LilySharp.Core.Semantics.SemanticValidation.Run(doc.Tree))
+        // the CLI's `check` runs, so the two can never drift). Defensive: a validator
+        // that throws on a broken tree must NOT blank the Problems panel — the parser
+        // diagnostics (which usually explain the breakage) still publish.
+        try
         {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+            foreach (var d in LilySharp.Core.Semantics.SemanticValidation.Run(doc.Tree))
+            {
+                diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+            }
+        }
+        catch
+        {
+            // Swallow: keep the syntax diagnostics collected above. A validator crash is a
+            // Lily# bug, not something the author can act on, and must not take down the LSP.
         }
 
         // publishDiagnostics params must be sent BY NAME (a single object). NotifyAsync

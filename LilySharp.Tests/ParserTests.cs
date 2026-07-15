@@ -576,6 +576,22 @@ $theme");
         Assert.Equal(src, tree.ToFullString());
     }
 
+    [Fact]
+    public void PartialWithoutDuration_GivesClearError_AndDoesNotCrashValidation()
+    {
+        // `partial .` (missing the note value): a clear message, not the raw
+        // "Expected 'IntegerLiteral', found 'Dot'". The recovered empty-number duration
+        // must not throw downstream — int.Parse("") once took the whole diagnostics pass
+        // down, emptying the Problems panel.
+        var tree = SyntaxTree.Parse(
+            "section A { partial . }\npart melody { section A { c2 | a1 } }\nform main { A }\nscore main { staff melody }");
+        Assert.Contains(tree.Diagnostics, d =>
+            d.Code == DiagnosticCodes.ExpectedToken && d.Message.Contains("'partial' needs a duration"));
+        // The full validator pass (what the LSP runs to fill the Problems panel) must not throw.
+        var ex = Record.Exception(() => LilySharp.Core.Semantics.SemanticValidation.Run(tree).ToList());
+        Assert.Null(ex);
+    }
+
     // ========== Repeat Tests ==========
 
     [Fact]

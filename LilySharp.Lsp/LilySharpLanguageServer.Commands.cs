@@ -181,7 +181,9 @@ public sealed partial class LilySharpLanguageServer
                 .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
                 .Select(d => {
                     var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
-                    return $"Line {line}, Col {col}: {d.Message}";
+                    // GetLineAndColumn is 0-based (LSP protocol); the preview text is read by
+                    // a human, so show 1-based line/column to match the editor gutter.
+                    return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
             return new SvgResponse
             {
@@ -279,7 +281,9 @@ public sealed partial class LilySharpLanguageServer
                 .Select(d =>
                 {
                     var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
-                    return $"Line {line}, Col {col}: {d.Message}";
+                    // GetLineAndColumn is 0-based (LSP protocol); the preview text is read by
+                    // a human, so show 1-based line/column to match the editor gutter.
+                    return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
             return new ExportResponse { Success = false, Error = errors };
         }
@@ -561,7 +565,9 @@ public sealed partial class LilySharpLanguageServer
                 .Select(d =>
                 {
                     var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
-                    return $"Line {line}, Col {col}: {d.Message}";
+                    // GetLineAndColumn is 0-based (LSP protocol); the preview text is read by
+                    // a human, so show 1-based line/column to match the editor gutter.
+                    return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
             return new SvgResponse { Svg = null, Error = errors, Renders = renders };
         }

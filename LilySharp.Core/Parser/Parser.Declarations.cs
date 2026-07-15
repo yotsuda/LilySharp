@@ -323,7 +323,24 @@ internal sealed partial class Parser
     private PartialDeclarationGreen ParsePartialDeclaration()
     {
         var partialKeyword = Expect(SyntaxKind.PartialKeyword);
-        var number = Expect(SyntaxKind.IntegerLiteral);
+
+        // A clear, specific error instead of the raw "Expected 'IntegerLiteral', found 'Dot'":
+        // `partial` needs a note-value number. Recover with a zero-width token (round-trip
+        // safe); DurationSyntax.Value tolerates the empty number (defaults to a quarter), so
+        // nothing downstream throws on the broken input.
+        SyntaxToken number;
+        if (Check(SyntaxKind.IntegerLiteral))
+        {
+            number = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, System.Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "'partial' needs a duration — a note value such as 'partial 4' or 'partial 2.'.");
+            number = new SyntaxToken(SyntaxKind.IntegerLiteral, "", null, null);
+        }
+
         var dots = new List<GreenNode?>();
         while (Check(SyntaxKind.Dot))
             dots.Add(Advance());
