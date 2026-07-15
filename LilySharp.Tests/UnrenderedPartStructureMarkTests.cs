@@ -91,4 +91,21 @@ public class UnrenderedPartStructureMarkTests
         Assert.DoesNotContain(measures.Skip(2), m =>                       // section B: no repeat
             m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
     }
+
+    [Fact]
+    public void VoltaBracketsInOmittedPart_ProjectOntoTheChordsOnlyScore()
+    {
+        // The piano part's |: … [1. …] :| [2. …] alternative endings must bracket the chords-only
+        // score's matching bars even though the piano staff is not drawn.
+        var src = """
+            time 4/4
+            part piano { clef treble  section A { |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] } }
+            chords prog { section A { c1 | g1 | a1 } }
+            form main { A }
+            score main { chords prog }
+            """;
+        var voltas = Collect(src).VoltaBrackets;
+        Assert.Contains(voltas, v => v.VoltaText.Contains('1'));
+        Assert.Contains(voltas, v => v.VoltaText.Contains('2'));
+    }
 }

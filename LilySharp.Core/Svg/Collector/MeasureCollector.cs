@@ -1250,6 +1250,16 @@ public sealed partial class MeasureCollector
             _musicMarks.Add(mark);
         }
 
+        // Volta brackets ([1.] [2.]) are system-level like navigation marks — merge the ones the
+        // score is missing (a part the score draws already contributed its own, deduped here).
+        foreach (var volta in harvested.VoltaBrackets)
+        {
+            if (_voltaBrackets.Any(v => v.StartMeasureIndex == volta.StartMeasureIndex
+                    && v.VoltaText == volta.VoltaText && v.SourcePosition == volta.SourcePosition))
+                continue;
+            _voltaBrackets.Add(volta);
+        }
+
         return harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
     }
 
@@ -1261,7 +1271,7 @@ public sealed partial class MeasureCollector
         var part = root.DescendantNodes().OfType<PartDeclarationSyntax>()
             .FirstOrDefault(p => p.Name.Text == partName);
         return part != null && part.DescendantNodes().Any(n =>
-            n is NavigationMarkSyntax
+            n is NavigationMarkSyntax or InlineVoltaSyntax
             || (n is BarlineSyntax bl && bl.BarToken.Text.Contains(':')));
     }
 
