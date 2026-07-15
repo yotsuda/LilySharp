@@ -50,6 +50,13 @@ internal sealed partial class Parser
                 continue;
             }
 
+            // A part-body grob directive: `override Grob.prop = value` is a default for
+            // this part's staff (revert/once are parsed too, then rejected by a validator —
+            // they belong in a music stream, not a part header).
+            if (Check(SyntaxKind.OverrideKeyword)) { properties.Add(ParseOverrideDeclaration()); continue; }
+            if (Check(SyntaxKind.RevertKeyword)) { properties.Add(ParseRevertDeclaration()); continue; }
+            if (Check(SyntaxKind.OnceKeyword)) { properties.Add(ParseOnceModifier()); continue; }
+
             var prop = ParsePartProperty();
             if (prop != null)
                 properties.Add(prop);

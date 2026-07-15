@@ -745,6 +745,8 @@ public sealed partial class MeasureCollector
         // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
         {
+            // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
             var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _meta.Clef = partClef;
@@ -934,6 +936,9 @@ public sealed partial class MeasureCollector
             _currentStaffIndex = collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
+
+            // Part-body grob defaults (`part <voice> { override … }`) scope to this staff.
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
 
             // `staff NAME with chords CHORDPART [as roman|both]`: remember the
             // attachment (and its display); the chord symbols are collected AFTER
@@ -1566,6 +1571,42 @@ public sealed partial class MeasureCollector
     {
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
+    }
+
+    /// <summary>
+    /// Collects a part's body-level grob directives (<c>part melody { override … }</c>) as
+    /// staff-scoped defaults at (0,0): they apply to this part's staff for the whole part,
+    /// persisting across its sections. Only DIRECT children of the part declaration are
+    /// taken (a directive inside a section is walked as music instead). Runs once per part
+    /// during the voice loop, where the staff index is known.
+    /// </summary>
+    private void CollectPartBodyOverrides(SyntaxNode root, string partName, int staffIndex)
+    {
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+            foreach (var node in partDecl.DescendantNodes())
+            {
+                if (node.Parent != partDecl)
+                    continue; // direct children only; section-internal directives are walked
+                switch (node)
+                {
+                    case OverrideDeclarationSyntax od:
+                        CollectOverride(od, 0, 0, isOnce: false, staffIndex: staffIndex);
+                        break;
+                    case RevertDeclarationSyntax rd:
+                        CollectRevert(rd, 0, 0, staffIndex: staffIndex);
+                        break;
+                    case OnceModifierSyntax om when om.Command is OverrideDeclarationSyntax io:
+                        CollectOverride(io, 0, 0, isOnce: true, staffIndex: staffIndex);
+                        break;
+                    case OnceModifierSyntax om2 when om2.Command is RevertDeclarationSyntax ir:
+                        CollectRevert(ir, 0, 0, staffIndex: staffIndex);
+                        break;
+                }
+            }
+        }
     }
 
     private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)

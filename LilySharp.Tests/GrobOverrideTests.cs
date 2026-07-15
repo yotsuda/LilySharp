@@ -77,6 +77,22 @@ public class GrobOverrideTests
     }
 
     [Fact]
+    public void PartBodyOverride_IsAStaffScopedDefault()
+    {
+        // `part melody { override … }` parses (no longer an error) and is collected as a
+        // staff-scoped default at (0,0), so it colours the whole part across its sections.
+        var score = CollectMulti(
+            "part melody { clef bass  override NoteHead.color = red\n" +
+            "  section A { clef treble c4 d e f | } section B { g4 a b c' | } }\n" +
+            "form main { A B }\nscore main { staff melody }");
+        var ov = Assert.Single(score.GrobOverrides);
+        Assert.Equal("red", ov.Value);
+        Assert.Equal(0, ov.StaffIndex);    // melody's staff
+        Assert.Equal(0, ov.MeasureIndex);  // part default, from the start
+        Assert.Equal(0, ov.ItemIndex);
+    }
+
+    [Fact]
     public void ForStaffVoice_SeesOnlyInScopeOverrides()
     {
         var overrides = ImmutableArray.Create(
