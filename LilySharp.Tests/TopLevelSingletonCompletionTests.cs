@@ -78,4 +78,41 @@ public class TopLevelSingletonCompletionTests
         Assert.Contains("title", labels);
         Assert.Contains("time", labels);
     }
+
+    // ----- part-major with no top-level section yet: known section names at the top level -----
+
+    [Fact]
+    public void PartMajorNoGlobalSection_OffersKnownSectionNamesAtTopLevel()
+    {
+        var text = "part melody { section A { c } section B { d } }\nform main { A B }\n";
+        var items = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length).Items;
+        var labels = items.Select(i => i.Label!).ToArray();
+        Assert.Contains("section A", labels);
+        Assert.Contains("section B", labels);
+        // A top-level section sits at column 0 (nest = ""); caret between the braces.
+        Assert.Equal("section A {\n\t$0\n}", items.Single(i => i.Label == "section A").InsertText);
+    }
+
+    [Fact]
+    public void WithAGlobalSectionAlready_TopLevelHasNoSectionNameScaffolds()
+    {
+        // A top-level (section-major) section exists → the `section` keyword + after-`section`
+        // list handle it; the name scaffolds are not added (they would re-offer declared names).
+        var text = "section A { melody { c } }\nform main { A B }\n";
+        var labels = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length)
+            .Items.Select(i => i.Label!).ToArray();
+        Assert.DoesNotContain("section A", labels);
+        Assert.DoesNotContain("section B", labels);
+        Assert.Contains("section", labels);   // the bare keyword stays
+    }
+
+    [Fact]
+    public void NoKnownSections_AddsNoScaffolds()
+    {
+        // No parts / form → nothing known → just the fixed top-level list (with `section`).
+        var labels = LilySharpLanguageServer.GetTopLevelCompletions("part melody { }\n", 16)
+            .Items.Select(i => i.Label!).ToArray();
+        Assert.Contains("section", labels);
+        Assert.DoesNotContain("section A", labels);
+    }
 }

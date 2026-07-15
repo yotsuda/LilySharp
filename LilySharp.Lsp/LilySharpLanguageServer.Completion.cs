@@ -103,7 +103,7 @@ public sealed partial class LilySharpLanguageServer
 
         return context switch
         {
-            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text),
+            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
@@ -1378,7 +1378,7 @@ public sealed partial class LilySharpLanguageServer
     /// matching what is inserted), and sorts after a part's property list.
     /// </summary>
     private static System.Collections.Generic.IEnumerable<CompletionItem> SectionScaffoldItems(
-        string text, int offset, string detail)
+        string text, int offset, string detail, string nest = "\t", bool includeNewSection = true)
     {
         var known = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
@@ -1398,9 +1398,11 @@ public sealed partial class LilySharpLanguageServer
         // deeper (VS Code prepends the current line's indent to every following snippet line).
         bool freshLine = LineIsBlankBefore(text, WordStartBefore(text, offset));
         // head = the `section NAME` (or `section $1` for a new name); the tail is the body.
+        // `nest` is one indent level for the enclosing block ("\t" inside part/lyrics; "" at
+        // the top level, where a section sits at column 0).
         string Body(string head) => hasBrace ? head
             : freshLine ? head + " {\n\t$0\n}"
-            : "\n\t" + head + " {\n\t\t$0\n\t}";
+            : "\n" + nest + head + " {\n" + nest + "\t$0\n" + nest + "}";
 
         var items = known.Where(n => !here.Contains(n)).Select((n, i) => new CompletionItem
         {
@@ -1414,16 +1416,18 @@ public sealed partial class LilySharpLanguageServer
 
         // A brand-NEW section: `section {}` with the caret first BETWEEN `section` and `{`
         // (the $1 name stop), then Tab drops into the body ($0). Offered even when every
-        // known section is already present, so a fresh name is always one pick away.
-        items.Add(new CompletionItem
-        {
-            Label = "section",
-            Kind = CompletionItemKind.Keyword,
-            Detail = "New section",
-            InsertTextFormat = InsertTextFormat.Snippet,
-            InsertText = Body("section $1"),
-            SortText = "zzz", // after the named scaffolds
-        });
+        // known section is already present, so a fresh name is always one pick away. Excluded
+        // where another `section` entry already exists (the top-level keyword list has one).
+        if (includeNewSection)
+            items.Add(new CompletionItem
+            {
+                Label = "section",
+                Kind = CompletionItemKind.Keyword,
+                Detail = "New section",
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = Body("section $1"),
+                SortText = "zzz", // after the named scaffolds
+            });
         return items;
     }
 
@@ -1829,7 +1833,7 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    internal static CompletionList GetTopLevelCompletions(string? text = null)
+    internal static CompletionList GetTopLevelCompletions(string? text = null, int offset = 0)
     {
         var items = new System.Collections.Generic.List<CompletionItem>
         {
@@ -1878,6 +1882,16 @@ public sealed partial class LilySharpLanguageServer
         if (text != null)
             items.RemoveAll(it => GlobalSingletonKeywords.Contains(it.Label!)
                                && ExistsAtGlobalScope(text, it.Label!));
+
+        // Part-major (no top-level `section` declared yet): offer the document's known section
+        // names — from the part cells and the form — as section-major fill-ins, so a section
+        // can be pulled up to the top level. Excluded once ANY global section exists (then the
+        // `section` keyword + its after-`section` list handle it, filtered against declarations).
+        // Top-level sections sit at column 0 (nest = ""); the new-section item is skipped (the
+        // top-level `section` keyword above already covers a fresh name).
+        if (text != null && !ExistsAtGlobalScope(text, "section"))
+            items.AddRange(SectionScaffoldItems(text, offset, "Section", nest: "", includeNewSection: false));
+
         return new CompletionList { Items = items.ToArray() };
     }
 
