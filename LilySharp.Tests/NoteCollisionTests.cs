@@ -177,10 +177,12 @@ public class NoteCollisionTests
     // --- LILYPOND-REF meshing multiplier tests (I-1) ---
 
     [Fact]
-    public void Meshing_SecondInterval_UsesGeneralShift()
+    public void CloseHalf_SecondInterval_UsesCloseHalfShift()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
-        // Meshing requires different head groups: half (open) + quarter (filled)
+        // A half (open) a second ABOVE a quarter (filled) in two voices is a close_half collide,
+        // which is ALWAYS the 0.52 shift — the meshing shift (0.17) is the fallback for a voice
+        // crossing where no close/distant/full/touch fired, never for an adjacent second.
+        // LILYPOND-REF: lily/note-collision.cc:325 close_half_collide → 0.52.
         var collision = new NoteCollision();
         var ups = new[] { 5 };    // One position above
         var downs = new[] { 4 };  // Adjacent position
@@ -188,14 +190,14 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(0.17, result.UpStemXOffset, 2);
+        Assert.Equal(0.52, result.UpStemXOffset, 2);
     }
 
     [Fact]
-    public void Meshing_SecondInterval_DottedNote_UsesDottedShift()
+    public void CloseHalf_SecondInterval_DottedNote_StillUsesCloseHalfShift()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
-        // Dotted notes with different head groups use MeshingDottedShift (0.1)
+        // A dot does not turn a close_half collide into meshing — it stays 0.52 (the dotted 0.1
+        // only applies in the meshing fallback). LILYPOND-REF: lily/note-collision.cc:325-337.
         var collision = new NoteCollision();
         var ups = new[] { 5 };
         var downs = new[] { 4 };
@@ -203,7 +205,7 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 4, upDots: 1, downDots: 0);
 
-        Assert.Equal(0.1, result.UpStemXOffset, 2);
+        Assert.Equal(0.52, result.UpStemXOffset, 2);
     }
 
     [Fact]

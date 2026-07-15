@@ -384,46 +384,15 @@ internal sealed class NoteCollision
         }
         else if (closeHalf || distantHalf)
         {
-            // Meshing (interlocking noteheads) requires: notes a second apart
-            // (guaranteed by closeHalf/distantHalf), neither a whole note, single
-            // notes per voice, and different head groups (open vs filled). Same
-            // group (half+half or quarter+quarter) cannot mesh.
-            bool upIsOpen = upNoteValue == 2;   // half note = open notehead
-            bool downIsOpen = downNoteValue == 2;
-            bool differentHeadGroups = upIsOpen != downIsOpen;
-
-            bool canMesh = upNoteValue >= 2 && downNoteValue >= 2
-                         && differentHeadGroups
-                         && upStaffPositions.Count == 1 && downStaffPositions.Count == 1;
-
-            if (canMesh)
-            {
-                // Use meshing shift: noteheads interlock tightly
-                bool hasDots = upDots > 0 || downDots > 0;
-                shiftAmount = hasDots
-                    ? _params.MeshingDottedShift
-                    : _params.MeshingGeneralShift;
-                type = CollisionType.CloseHalf;
-            }
-            else if (differentHeadGroups)
-            {
-                // Different head groups but chords (can't fully mesh): partial
-                // interlocking with standard half collision shift.
-                // LILYPOND-REF: lily/note-collision.cc:297-312
-                shiftAmount = closeHalf
-                    ? _params.CloseHalfShift
-                    : _params.DistantHalfShift;
-                type = CollisionType.CloseHalf;
-            }
-            else
-            {
-                // Same head groups cannot interlock; the symmetric +/-inner shift
-                // (pinned by the consumer) yields a 2*0.52 ~= 1.0w separation, so
-                // the two heads sit side by side.
-                // LILYPOND-REF: lily/note-collision.cc:326 close_half_collide (0.52).
-                shiftAmount = _params.CloseHalfShift;
-                type = CollisionType.CloseHalf;
-            }
+            // A half-collide is always the half shift — LilyPond's meshing shift (0.17) is NOT an
+            // option here: it is only the fallback when NONE of touch / full / close / distant
+            // fired (a voice crossing), handled separately below. Applying it in the close-half
+            // branch (formerly gated on "different head groups") shrank the offset so a half note
+            // and an eighth a second apart in two voices overlapped instead of sitting side by side.
+            // LILYPOND-REF: lily/note-collision.cc:325-330 — close_half → 0.52, distant_half → 0.4,
+            // both unconditional; meshing (0.17) is the else-branch that these preclude.
+            shiftAmount = closeHalf ? _params.CloseHalfShift : _params.DistantHalfShift;
+            type = CollisionType.CloseHalf;
         }
         else
         {
