@@ -42,6 +42,14 @@ internal sealed class ElementCoordinator
     private readonly VoiceCollector _voiceCollector = new();
     private readonly NoteCollision _noteCollision = new();
 
+    // force-hshift is DISABLED for the initial release. From source the written value is
+    // normalized away by horizontal justification and applies to the whole note column
+    // rather than to one voice, so it cannot do what it is for (a per-voice, magnitude-
+    // honoring, fractional shift). The resolver / NoteCollision support below is kept
+    // intact — flip this to true once that proper implementation lands. Not a `const`, so
+    // the disabled query does not read as unreachable code.
+    private static readonly bool ForceHshiftEnabled = false;
+
     public ElementCoordinator(LayoutOptions options)
     {
         _options = options;
@@ -89,8 +97,9 @@ internal sealed class ElementCoordinator
             // LILYPOND-REF: lily/note-collision.cc:486-502
             // Check for force-hshift manual override before auto-calculation.
             // When active, force-hshift replaces the auto-calculated offset.
+            // (Disabled for the initial release — see ForceHshiftEnabled.)
             double? forceHshift = null;
-            if (resolver != null)
+            if (ForceHshiftEnabled && resolver != null)
             {
                 // Advance resolver to the first entry's position in this column
                 int minItemIndex = column.Entries.Min(e => e.ItemIndex);

@@ -9,12 +9,11 @@ surprises.
 
 ## Effective overrides
 
-The renderer consumes only four grob properties; this design covers exactly these (other
+The renderer consumes only these grob properties; this design covers exactly these (other
 grobs parse and store but are no-ops today — a separate gap):
 
 - `NoteHead.color`, `Stem.color` — colour
 - `NoteHead.transparent` — hide / show
-- `NoteColumn.force-hshift` — manual collision shift
 
 Grob names are **PascalCase, LilyPond-style** (`NoteHead`, not `noteHead`/`Note`),
 case-sensitive. `title` (the keyword) and a future `Title` grob are distinct namespaces.
