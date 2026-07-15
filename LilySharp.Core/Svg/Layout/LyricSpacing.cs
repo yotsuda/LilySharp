@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -97,6 +99,91 @@ internal static class LyricSpacing
         }
 
         return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Lead-sheet variant: reserves lyric width against the TIMING COLUMNS the springs were
+    /// built from, matching each syllable to its column by <see cref="LyricItem.Timing"/>.
+    /// </summary>
+    /// <remarks>
+    /// On a lead sheet the chord and lyric rows subdivide a bar differently (e.g. chords on the
+    /// half note, three syllables on thirds), so the column count is the UNION of both and does
+    /// NOT equal the syllable count — the item-index <see cref="ApplyLyricSpacing"/> bails out on
+    /// that mismatch and the syllables crowd (and overrun the barline). This maps each syllable to
+    /// its column and reserves its ink across the springs SPANNING adjacent lyric columns (a
+    /// chord-only column may sit between two syllables), plus the leading/trailing extents against
+    /// the barlines. LILYPOND-REF: lily/separation-item.cc set_distance — syllable widths join the
+    /// column springs the spacing-spanner solves.
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyLeadSheetLyricSpacing(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> columnTimings,
+        int measureIndex,
+        IReadOnlyList<LyricItem> lyrics)
+    {
+        int cols = columnTimings.Count;
+        // springs = [start→col0, col0→col1, …, colLast→end] → length == cols + 1.
+        if (cols == 0 || springs.Length != cols + 1)
+            return springs;
+
+        var lyricsByCol = new Dictionary<int, List<LyricItem>>();
+        foreach (var ly in lyrics)
+        {
+            if (ly.MeasureIndex != measureIndex || !ly.IsLyricsRow)
+                continue;
+            int col = -1;
+            for (int c = 0; c < cols; c++)
+                if (columnTimings[c].Equals(ly.Timing)) { col = c; break; }
+            if (col < 0)
+                continue;
+            if (!lyricsByCol.TryGetValue(col, out var list))
+                lyricsByCol[col] = list = new List<LyricItem>();
+            list.Add(ly);
+        }
+        if (lyricsByCol.Count == 0)
+            return springs;
+
+        var result = springs.ToBuilder();
+        var lyricCols = lyricsByCol.Keys.OrderBy(c => c).ToList();
+
+        // Leading extent: the first syllable clears the start barline.
+        int firstCol = lyricCols[0];
+        BumpSpanMin(result, 0, firstCol,
+            GetLyricLeftExtent(lyricsByCol[firstCol]) + GlyphMetrics.MinItemGap);
+
+        // Between consecutive syllables (across any chord-only columns in between).
+        for (int p = 0; p + 1 < lyricCols.Count; p++)
+        {
+            int a = lyricCols[p], b = lyricCols[p + 1];
+            BumpSpanMin(result, a + 1, b,
+                CalculateLyricDistance(lyricsByCol[a], lyricsByCol[b]));
+        }
+
+        // Trailing extent: the last syllable clears the end barline.
+        int lastCol = lyricCols[^1];
+        BumpSpanMin(result, lastCol + 1, cols,
+            GetLyricRightExtent(lyricsByCol[lastCol]) + GlyphMetrics.MinItemGap);
+
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Ensures the total MIN distance of springs[<paramref name="from"/>..<paramref name="to"/>]
+    /// (inclusive) is at least <paramref name="need"/>, adding any deficit to the last spring of
+    /// the span so the right-hand column is pushed out (the syllable X follows its column).
+    /// </summary>
+    private static void BumpSpanMin(ImmutableArray<Spring>.Builder springs, int from, int to, double need)
+    {
+        if (from > to || from < 0 || to >= springs.Count)
+            return;
+        double have = 0;
+        for (int s = from; s <= to; s++)
+            have += springs[s].MinDistance;
+        if (need <= have)
+            return;
+        var sp = springs[to];
+        double newMin = sp.MinDistance + (need - have);
+        springs[to] = new Spring(System.Math.Max(sp.IdealDistance, newMin), newMin, sp.InverseStretchStrength);
     }
 
     /// <summary>

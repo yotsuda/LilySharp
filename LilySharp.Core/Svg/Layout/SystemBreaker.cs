@@ -155,10 +155,11 @@ internal sealed class SystemBreaker
             // the column springs the spacing-spanner solves.
             if (!score.Lyrics.IsDefaultOrEmpty)
             {
-                var lyricMeasure = score.IsLeadSheet
-                    ? MultiStaffLayouter.DensestMeasure(allMeasures)
-                    : primaryMeasure;
-                springs = LyricSpacing.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+                springs = score.IsLeadSheet
+                    // Mirror MultiStaffLayouter: on a lead sheet reserve lyric width by timing
+                    // column (union columns ≠ syllable count), else by note item.
+                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
+                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {

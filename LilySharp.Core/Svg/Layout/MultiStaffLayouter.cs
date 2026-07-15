@@ -831,10 +831,11 @@ internal sealed class MultiStaffLayouter
                 // syllables crowd. Reserve against the DENSEST row at this bar (the
                 // lyrics), whose item count matches the timing columns the springs
                 // were built from. Staff-backed scores keep the primary measure.
-                var lyricMeasure = score.IsLeadSheet
-                    ? DensestMeasure(allMeasures)
-                    : primaryMeasure;
-                springs = LyricSpacing.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+                springs = score.IsLeadSheet
+                    // The union timing columns don't match the syllable count on a lead sheet
+                    // (chords and lyrics subdivide the bar differently), so reserve by column.
+                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
+                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {
