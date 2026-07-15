@@ -206,18 +206,20 @@ public class ValueContextCompletionTests
     }
 
     [Fact]
-    public void RevertKeyword_AutoTriggersThePropertyList_EverywhereItIsOffered()
+    public void RevertAndOnce_AreMusicOnly_NotOfferedAtTopLevel()
     {
-        foreach (var list in new[]
-        {
-            LilySharpLanguageServer.GetTopLevelCompletions(),
-            LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0),
-        })
-        {
-            var rv = list.Items.Single(i => i.Label == "revert");
-            Assert.Equal("revert $0", rv.InsertText);
-            Assert.Equal("editor.action.triggerSuggest", rv.Command?.CommandIdentifier);
-        }
+        // `revert` / `once` are positional (music-only) — a top-level revert is LYS1023 —
+        // so the top-level list omits them, while the in-music list keeps them (with the
+        // property-list retrigger).
+        var top = LilySharpLanguageServer.GetTopLevelCompletions().Items;
+        Assert.DoesNotContain(top, i => i.Label == "revert");
+        Assert.DoesNotContain(top, i => i.Label is "once" or "once override");
+
+        var music = LilySharpLanguageServer.GetMusicCompletions("", keySharps: 0).Items;
+        var rv = music.Single(i => i.Label == "revert");
+        Assert.Equal("revert $0", rv.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", rv.Command?.CommandIdentifier);
+        Assert.Contains(music, i => i.Label == "once override");
     }
 
     [Fact]
