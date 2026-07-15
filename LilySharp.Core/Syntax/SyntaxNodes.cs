@@ -484,32 +484,23 @@ public sealed class ArpeggioSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The arpeggio's notes, in order.</summary>
-    public IEnumerable<NoteSyntax> Notes
-    {
-        get
-        {
-            for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is NoteSyntax n)
-                    yield return n;
-        }
-    }
-
-    /// <summary>The arpeggio's members in source order — notes, rests, and/or nested
-    /// chords (<c>&lt;&lt; c8 r &lt;e g&gt; &gt;&gt;</c>). Each plays in sequence; a rest
-    /// advances time but takes no part in the octave anchoring.</summary>
+    /// <summary>The arpeggio's members in source order — bare pitches, scale degrees,
+    /// nested chords, and/or rests (<c>&lt;&lt; c 3 &lt;e g&gt; r &gt;&gt;</c>), NONE of
+    /// which carry a duration. Each plays in sequence and takes an equal share of the
+    /// group's total; a rest is a gap that takes no part in the octave anchoring.</summary>
     public IEnumerable<SyntaxNode> Members
     {
         get
         {
             for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is NoteSyntax or ChordSyntax or RestSyntax)
+                if (GetChild(i) is PitchSyntax or ScaleDegreeSyntax or ChordSyntax or RestSyntax)
                     yield return GetChild(i)!;
         }
     }
 
-    /// <summary>The optional total duration written after <c>&gt;&gt;</c> (auto-tuplet
-    /// target), or null when the notes keep their own natural durations.</summary>
+    /// <summary>The optional total duration written after <c>&gt;&gt;</c> (the group's
+    /// total that the members equally subdivide), or null when the group inherits the
+    /// running duration and acts like a single note.</summary>
     public DurationSyntax? TotalDuration
     {
         get

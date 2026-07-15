@@ -387,13 +387,20 @@ Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
 Chord          = '<' , ChordNote , { ChordNote } , '>' , [ DurationToken ] , { Annotation } ;
 ChordNote      = PitchToken , { Annotation } ;
 
-(* Arpeggio: a written-out broken chord. The members play in SEQUENCE (each keeps its own
-   duration) but resolve octaves like a chord — every member stacks above the FIRST, so
-   their octaves are independent of the written order. A trailing DurationToken fits the
-   whole group into that length as an auto-tuplet. Members may be notes, chords or rests.
+(* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
+   in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
+   degree (never a duration): '<< c 3 5 >>' = c e g. The share becomes an auto-tuplet when it
+   is not a plain note value (3 members in a beat = a triplet, 5 = a quintuplet, 9 = a
+   nonuplet). A trailing DurationToken sets the total; without one the group inherits the
+   running duration and acts like a single note. Octaves resolve like a chord — every member
+   stacks above the FIRST pitched one, independent of the written order, and degrees stack by
+   diatonic steps in the key. Members may be pitches, scale degrees, chords or rests.
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
    'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
-Arpeggio       = '<<' , ( Note | Rest | Chord ) , { Note | Rest | Chord } , '>>' , [ DurationToken ] ;
+ArpMember      = PitchToken | ScaleDegree | Chord | Rest ;   (* no DurationToken on a member *)
+ScaleDegree    = Integer , [ 'is' | 'isis' | 'es' | 'eses' ] , { "'" | ',' } ;
+                 (* root-relative degree: 1 = root, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
+Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , [ DurationToken ] ;
 
 Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -133,29 +134,34 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as SEQUENTIAL notes whose octaves
-    /// anchor to the first note — the chord rule (the octave reference stays frozen on the
-    /// first note while the pitch names flow), but each note is its own note with its own
-    /// duration rather than a stacked chord.
+    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) — a written-out broken chord — as
+    /// SEQUENTIAL notes that EQUALLY SUBDIVIDE the group's total duration (an auto-tuplet
+    /// when the equal share is not a plain note value: 3 notes in a beat play a triplet, 5 a
+    /// quintuplet). The octaves anchor to the first pitched member — the chord rule (the
+    /// octave reference stays frozen on the root while the pitch names flow) — and scale
+    /// degrees (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) resolve against the root and the key.
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder)
     {
-        var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
+        var members = arpeggio.Members.ToList(); // bare pitches, degrees, chords and/or rests
         if (members.Count == 0)
             return;
 
-        // `<< … >>N` fits the members' natural total into N's duration as an auto-tuplet;
-        // without N they keep their natural durations. tuplet = (scale, num, base) or null.
-        var tuplet = ComputeArpeggioTuplet(arpeggio, members);
+        // The group occupies its total — the trailing `>>N`, or (absent one) the inherited
+        // running duration (it acts like a single note). Members split that total equally.
+        Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
+        var sub = ArpeggioSubdivision.Compute(members.Count, total);
+        Fraction scale = sub.TimeScale;
+        var forced = (sub.MemberValue, sub.MemberDots);
+
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
-        Fraction writtenTotal = Fraction.Zero;
 
         // The ROOT is the first PITCHED member (leading rests just advance time) — it
-        // resolves relative to the incoming frame and anchors the group. Every later
-        // PITCHED member STACKS above it (the same octave placement as a `<c e g>` chord
-        // member, so `<< c e g >>` == `<< c g >>` for g, and a `,` drops one below);
-        // rests keep the normal frame.
+        // resolves relative to the incoming frame and anchors the group. Every later PITCHED
+        // member STACKS above it (the same octave placement as a `<c e g>` chord member, so
+        // `<< c e g >>` == `<< c g >>` for g, and a `,` drops one below); rests keep the
+        // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octave.OctaveAbsolute;
         int savedBase = _octave.OctaveBase;
         bool rootSet = false;
@@ -164,6 +170,14 @@ public sealed partial class MeasureCollector
         int rootStep = 0;
         foreach (var member in members)
         {
+            if (member is ScaleDegreeSyntax degree)
+            {
+                // Degrees anchor on the root (or the key tonic when none precedes them) and
+                // do NOT advance the running frame — the root already set it.
+                EmitArpeggioDegree(degree, builder, forced, scale, rootSet, rootStep, anchorOctave);
+                continue;
+            }
+
             char? letter = FirstPitchLetter(member);
             if (rootSet && letter is { } l)
             {
@@ -174,7 +188,7 @@ public sealed partial class MeasureCollector
             {
                 _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            writtenTotal += EmitArpeggioMember(member, builder, tuplet?.Scale);
+            EmitArpeggioMember(member, builder, forced, scale);
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -192,63 +206,106 @@ public sealed partial class MeasureCollector
             _octave.LastPitchName = rootLetter;
         }
 
-        // Auto-tuplet: the scaled members were added WITHOUT duration — draw the bracket
-        // and add the group's actual (target) duration to the measure now.
-        if (tuplet is { } tp)
+        // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
+        if (sub.HasTuplet)
         {
             int endNoteIndex = builder.CurrentItemCount - 1;
             if (endNoteIndex >= startNoteIndex)
-                _tupletBrackets.Add(new TupletBracketItem(tp.Num, tp.Base,
+                _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
                     startNoteIndex, endNoteIndex, measureIndex, arpeggio.Position, 0,
                     _currentStaffIndex, _currentVoiceIndex));
-            builder.AddDuration(
-                new Fraction(writtenTotal.Numerator * tp.Base, writtenTotal.Denominator * tp.Num),
-                arpeggio.Position + 1);
         }
+        // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
+        // which is why the bracket indices were captured above).
+        builder.AddDuration(total, arpeggio.Position + 1);
+
+        // Acts like one note: a trailing `>>N` carries N as the running duration.
+        if (arpeggio.TotalDuration is { } td)
+            _defaultDuration = Fraction.FromNoteValue(td.Value);
     }
 
-    /// <summary>Emit one arpeggio member: scaled (auto-tuplet) or at its natural duration.</summary>
-    private Fraction EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder, Fraction? scale)
+    /// <summary>Emit one arpeggio pitch / chord / rest member at the group's forced
+    /// equal-subdivision value and tuplet <paramref name="scale"/> (added WITHOUT
+    /// advancing the measure duration — the group adds its total once).</summary>
+    private void EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
+        (int Value, int Dots) forced, Fraction scale)
     {
-        if (scale is { } s)
-            return EmitScaledItem(member, builder, s, false, false, false, false, false);
-        ProcessMusicNode(member, builder); // natural duration; return value unused off the tuplet path
-        return Fraction.Zero;
-    }
-
-    /// <summary>
-    /// The auto-tuplet for <c>&lt;&lt; … &gt;&gt;N</c>: fits the members' natural total
-    /// (D_nat) into the target duration N. Returns the (TimeScale, ratio) as a tuplet of
-    /// <c>Num</c> in the time of <c>Base</c>, or null when there is no <c>N</c> or the
-    /// total already equals it (no tuplet needed).
-    /// </summary>
-    private (Fraction Scale, int Num, int Base)? ComputeArpeggioTuplet(ArpeggioSyntax arpeggio, List<SyntaxNode> members)
-    {
-        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
-            return null;
-        Fraction nat = Fraction.Zero;
-        Fraction running = _defaultDuration;
-        foreach (var m in members)
+        switch (member)
         {
-            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration ?? (m as RestSyntax)?.Duration;
-            Fraction d = dur?.ToFraction() ?? running;
-            if (dur != null) running = d;
-            nat += d;
+            case PitchSyntax pitch:
+                builder.AddItemWithoutDuration(BuildArpeggioNoteItem(pitch, forced) with { TimeScale = scale });
+                break;
+            case ChordSyntax chord:
+                builder.AddItemWithoutDuration(
+                    CreateChordItem(chord, forcedDuration: forced) with { TimeScale = scale });
+                break;
+            case RestSyntax rest:
+                builder.AddItemWithoutDuration(
+                    CreateRestItem(rest, forcedDuration: forced) with { TimeScale = scale });
+                break;
         }
-        if (nat.Numerator == 0 || nat == target)
-            return null;
-        Fraction ratio = nat / target; // D_nat : D_target, reduced by Fraction
-        int num = ratio.Numerator, baseDiv = ratio.Denominator;
-        if (num == baseDiv)
-            return null;
-        return (new Fraction(baseDiv, num), num, baseDiv);
     }
 
-    /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root
-    /// (first pitch) — used to stack the arpeggio's members above the first.</summary>
+    /// <summary>A bare arpeggio pitch → NoteItem, resolved through the octave frame the
+    /// caller set up (root relative, later members stacked in absolute mode), at the group's
+    /// forced value/dots.</summary>
+    private NoteItem BuildArpeggioNoteItem(PitchSyntax pitch, (int Value, int Dots) forced)
+    {
+        var rp = CalculateStaffPosition(pitch);
+        _octave.CurrentOctave = rp.RelativeOctave;
+        int staffPosition = rp.StaffPosition;
+        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        if (pitch.QuarterOffset != 0)
+        {
+            accidental = QuarterToneAccidental(pitch, accidental);
+            isCourtesy = false;
+        }
+        bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
+        return new NoteItem(staffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
+            accidental, needsLedger, pitch.Position, 0, isCourtesy: isCourtesy)
+        {
+            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+        };
+    }
+
+    /// <summary>A scale-degree arpeggio member (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) → NoteItem,
+    /// stacked on the root by diatonic steps in the WRITTEN key (the transpose is applied
+    /// once by <see cref="ResolveAbsolutePitch"/>). With no pitched root it anchors on the
+    /// key tonic, like an omitted-root degree chord.</summary>
+    private void EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
+        (int Value, int Dots) forced, Fraction scale, bool rootSet, int rootStep, int anchorOctave)
+    {
+        int drootStep, drootOctave;
+        if (rootSet)
+        {
+            drootStep = rootStep;
+            drootOctave = anchorOctave;
+        }
+        else
+        {
+            drootStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            drootOctave = _octave.Resolve(drootStep, 0, "cdefgab"[drootStep]);
+        }
+        int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
+        var (step, alteration, octave) = ChordDegrees.Resolve(
+            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
+        var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
+        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
+        var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
+            accidental, needsLedger, degree.Position, 0, isCourtesy: isCourtesy)
+        {
+            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+        };
+        builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+    }
+
+    /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
+    /// root (first pitch) — used to stack the arpeggio's members above the first. Degrees
+    /// and rests return null (they do not anchor the frame).</summary>
     private static char? FirstPitchLetter(SyntaxNode member) => member switch
     {
-        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
         ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
         _ => null,
     };

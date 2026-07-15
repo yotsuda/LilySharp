@@ -182,13 +182,15 @@ public sealed partial class MeasureCollector
         };
     }
 
-    private RestItem CreateRestItem(RestSyntax rest)
+    private RestItem CreateRestItem(RestSyntax rest, (int Value, int Dots)? forcedDuration = null)
     {
-        int noteValue = rest.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        if (rest.Duration != null)
+        // An arpeggio member has no written duration — the group forces the
+        // equal-subdivision value/dots on it (and must not disturb the default carry).
+        int noteValue = forcedDuration?.Value ?? rest.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        if (forcedDuration == null && rest.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
 
-        int dots = rest.Duration?.DotCount ?? 0;
+        int dots = forcedDuration?.Dots ?? rest.Duration?.DotCount ?? 0;
 
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position)
@@ -220,7 +222,7 @@ public sealed partial class MeasureCollector
             : 0;
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -340,11 +342,13 @@ public sealed partial class MeasureCollector
         _octave.CurrentOctave = firstOctave;
         _octave.LastPitchName = firstPitchName;
 
-        int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        if (chord.Duration != null)
+        // An arpeggio member has no written duration — the group forces the
+        // equal-subdivision value/dots on it (and must not disturb the default carry).
+        int noteValue = forcedDuration?.Value ?? chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        if (forcedDuration == null && chord.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
 
-        int dots = chord.Duration?.DotCount ?? 0;
+        int dots = forcedDuration?.Dots ?? chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
         // Inside `repeat tremolo N { … }` (see CreateNoteItem).

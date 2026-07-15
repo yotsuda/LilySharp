@@ -74,13 +74,13 @@ internal static class MeasureDurations
 
             case ArpeggioSyntax arp:
             {
-                // `<< … >>` plays its members in sequence; recurse so their default-carry
-                // advances for what follows. A trailing `N` (auto-tuplet) fixes the whole
-                // group's metric total; otherwise it is the members' natural sum.
-                var arpSum = Fraction.Zero;
-                foreach (var member in arp.Members)
-                    arpSum += ItemDuration(member, ref defaultDuration);
-                return arp.TotalDuration?.ToFraction() ?? arpSum;
+                // `<< … >>` is one written-out broken chord: its durationless members
+                // equally subdivide the group's total, so it occupies exactly that total —
+                // the trailing `N`, or (absent one) the inherited running duration, so it
+                // acts like a single note both in metric length and in the default-carry.
+                var arpTotal = arp.TotalDuration?.ToFraction() ?? defaultDuration;
+                if (arp.TotalDuration != null) defaultDuration = arpTotal;
+                return arpTotal;
             }
 
             case GraceExpressionSyntax:

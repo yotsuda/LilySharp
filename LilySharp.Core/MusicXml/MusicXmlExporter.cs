@@ -1340,9 +1340,12 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>
-    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as sequential notes whose octaves
-    /// stack above the first member (the chord rule), with a trailing <c>N</c> becoming a
-    /// tuplet (time-modification + bracket) — mirroring MidiExporter / the collector.
+    /// Emits an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) — a written-out broken chord — as
+    /// SEQUENTIAL notes that EQUALLY SUBDIVIDE the group's total (an auto-tuplet, with
+    /// time-modification + bracket, when the share is not a plain note value). The octaves
+    /// stack above the first pitched member (the chord rule) and scale degrees
+    /// (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) resolve against the root and the key — mirroring
+    /// MidiExporter / the collector.
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio)
     {
@@ -1350,21 +1353,25 @@ public sealed class MusicXmlExporter
         if (members.Count == 0)
             return;
 
-        // Auto-tuplet: `<< … >>N` scales the members into N and stamps a bracket.
-        var ratio = ArpeggioTupletRatio(arpeggio, members);
+        // The group occupies its total (trailing `>>N`, or the inherited running duration);
+        // its members split that equally. An auto-tuplet fits M members into the P-note frame.
+        Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
+        var sub = ArpeggioSubdivision.Compute(members.Count, total);
         var tupletMeasure = _currentMeasure;
         int tupletFrom = _currentMeasure?.Notes.Count ?? 0;
         int tupletNumber = 0;
-        if (ratio is { } r)
+        if (sub.HasTuplet)
         {
-            _tupletStack.Push((r.Num, r.Base));
+            _tupletStack.Push((sub.TupletNum, sub.TupletBase));
             tupletNumber = _tupletStack.Count;
         }
+        var savedDefault = _defaultDuration;
+        _defaultDuration = sub.MemberDisplay; // forced member value/dots
 
         // The root is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Subsequent PITCHED members stack above
         // it (absolute mode with the anchored octave), order-independently; rests keep the
-        // normal frame.
+        // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octaveAbsolute;
         int savedAnchor = _octaveAnchor;
         bool rootSet = false;
@@ -1372,6 +1379,14 @@ public sealed class MusicXmlExporter
         int rootStep = 0;
         foreach (var member in members)
         {
+            if (member is ScaleDegreeSyntax degree)
+            {
+                // Degrees anchor on the root (or the key tonic when none precedes them) and
+                // do NOT advance the running frame — the root already set it.
+                EmitArpeggioXmlDegree(degree, rootSet, rootStep, anchorOctave);
+                continue;
+            }
+
             char? letter = FirstPitchLetter(member);
             if (rootSet && letter is { } l)
             {
@@ -1382,7 +1397,10 @@ public sealed class MusicXmlExporter
             {
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            ProcessNode(member);
+            if (member is PitchSyntax pitch)
+                EmitArpeggioXmlPitch(pitch);
+            else
+                ProcessNode(member); // nested chord / rest
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -1392,6 +1410,8 @@ public sealed class MusicXmlExporter
         }
         _octaveAbsolute = savedAbsolute;
         _octaveAnchor = savedAnchor;
+        // Acts like one note: a trailing `>>N` carries N as the running duration.
+        _defaultDuration = arpeggio.TotalDuration?.ToFraction() ?? savedDefault;
         // After the group the running reference is the root (chord-after behavior).
         if (rootSet)
         {
@@ -1399,7 +1419,7 @@ public sealed class MusicXmlExporter
             _currentStep = rootStep;
         }
 
-        if (ratio is not null)
+        if (sub.HasTuplet)
         {
             _tupletStack.Pop();
             if (_currentMeasure != null && ReferenceEquals(_currentMeasure, tupletMeasure))
@@ -1421,30 +1441,91 @@ public sealed class MusicXmlExporter
         }
     }
 
-    private (int Num, int Base)? ArpeggioTupletRatio(ArpeggioSyntax arpeggio, List<SyntaxNode> members)
+    /// <summary>A bare arpeggio pitch → one sequential note at the forced member duration,
+    /// resolved through the octave frame the caller set up.</summary>
+    private void EmitArpeggioXmlPitch(PitchSyntax pitch)
     {
-        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
-            return null;
-        Fraction nat = Fraction.Zero;
-        Fraction running = _defaultDuration;
-        foreach (var m in members)
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+
+        var (step, alter) = ParsePitch(pitch);
+        int targetOctave = ResolveRelativeOctave(pitch);
+        (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
+        int quarter = pitch.QuarterOffset;
+
+        var duration = _defaultDuration;
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+
+        _currentMeasure.Notes.Add(new MusicXmlNote
         {
-            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration ?? (m as RestSyntax)?.Duration;
-            Fraction d = dur?.ToFraction() ?? running;
-            if (dur != null) running = d;
-            nat += d;
+            Step = step,
+            Alter = quarter == 0 ? alter : alter + 0.5 * quarter,
+            Octave = targetOctave,
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            AccidentalName = (alter, quarter) switch
+            {
+                (0, 1) => "quarter-sharp",
+                (1, 1) => "three-quarters-sharp",
+                (0, -1) => "quarter-flat",
+                (-1, -1) => "three-quarters-flat",
+                _ => null,
+            },
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+        });
+        MaybeClosePickup(duration);
+    }
+
+    /// <summary>A scale-degree arpeggio member → one sequential note, stacked on the root
+    /// (or the key tonic when no pitch precedes it) by diatonic steps in the WRITTEN key,
+    /// then transposed like a pitch.</summary>
+    private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, bool rootSet, int rootStep, int anchorOctave)
+    {
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+
+        int drootStep, drootOctave;
+        if (rootSet)
+        {
+            drootStep = rootStep;
+            drootOctave = anchorOctave;
         }
-        if (nat.Numerator == 0 || nat == target)
-            return null;
-        Fraction ratio = nat / target;
-        if (ratio.Numerator == ratio.Denominator)
-            return null;
-        return (ratio.Numerator, ratio.Denominator);
+        else
+        {
+            drootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+            drootOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, drootStep, 0);
+        }
+        var (dstep, dalter, doctave) = ChordDegrees.Resolve(
+            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keyFifths);
+        if (_currentTranspose is { } tr)
+            (dstep, dalter, doctave) = PitchTransposer.Transpose(dstep, dalter, doctave, tr.step, tr.alt, tr.oct);
+
+        var duration = _defaultDuration;
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+
+        _currentMeasure.Notes.Add(new MusicXmlNote
+        {
+            Step = "CDEFGAB"[dstep].ToString(),
+            Alter = dalter,
+            Octave = doctave,
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+        });
+        MaybeClosePickup(duration);
     }
 
     private static char? FirstPitchLetter(SyntaxNode member) => member switch
     {
-        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
         ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
         _ => null,
     };

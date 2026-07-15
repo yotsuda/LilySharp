@@ -370,22 +370,48 @@ internal sealed partial class Parser
         return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
     }
 
-    /// <summary>Parse an arpeggio: <c>&lt;&lt; note note … &gt;&gt;</c> with an optional
-    /// trailing duration (the auto-tuplet target). The notes play in sequence but anchor
-    /// their octaves to the first note (chord rule); resolved by the collector / MIDI.</summary>
+    /// <summary>Parse an arpeggio: <c>&lt;&lt; member member … &gt;&gt;</c> with an optional
+    /// trailing duration (the group's total). A <c>&lt;&lt; … &gt;&gt;</c> is a written-out
+    /// broken chord: its members play in sequence and equally subdivide the total (an
+    /// auto-tuplet when needed), so members carry NO durations of their own — a bare number
+    /// is therefore always a scale degree, never a duration (this is what resolves the
+    /// <c>&lt;&lt; c 3 5 &gt;&gt;</c> ambiguity). Members mirror a chord body: a pitch
+    /// (<c>c</c>, <c>e'</c>), a scale degree (<c>3</c>, <c>5</c>), a nested chord
+    /// (<c>&lt;e g&gt;</c>), or a rest. Octaves and degrees are resolved by the collector /
+    /// exporters against the first pitched member (the root).</summary>
     private ArpeggioGreen ParseArpeggio()
     {
         var open = Expect(SyntaxKind.DoubleOpenAngle);
-        var notes = new List<GreenNode?>();
+        var members = new List<GreenNode?>();
         while (!Check(SyntaxKind.DoubleCloseAngle) && !Check(SyntaxKind.EndOfFile))
         {
-            var item = ParseMusicItem();
-            if (item == null) break;
-            notes.Add(item);
+            // Mirror ParseChord's member dispatch, minus per-member durations.
+            if (IsPitchStart())
+            {
+                members.Add(ParsePitch(inChord: true));
+            }
+            else if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
+            {
+                // A bare number is a scale degree (root-relative), like <c 3 5>.
+                members.Add(ParseScaleDegree());
+            }
+            else if (Check(SyntaxKind.OpenAngle))
+            {
+                members.Add(ParseChord());
+            }
+            else if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
+            {
+                // A gap in the sequence — no duration (it takes an equal share too).
+                members.Add(new RestGreen(Advance(), null, null, null, []));
+            }
+            else
+            {
+                break;
+            }
         }
         var close = Expect(SyntaxKind.DoubleCloseAngle);
         var totalDuration = ParseOptionalDuration();
-        return new ArpeggioGreen(open, [.. notes], close, totalDuration);
+        return new ArpeggioGreen(open, [.. members], close, totalDuration);
     }
 
     /// <summary>True when the <c>&lt;&lt; … &gt;&gt;</c> starting at the cursor contains a

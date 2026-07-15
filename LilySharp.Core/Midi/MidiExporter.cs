@@ -952,20 +952,27 @@ public sealed class MidiExporter
     private static int GetNoteName(char baseName) => RelativeOctave.StepIndex(baseName);
 
     /// <summary>
-    /// Plays an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) as SEQUENTIAL notes whose octaves
-    /// anchor to the first note — the chord rule: the octave reference stays frozen on the
-    /// first note while the pitch names flow.
+    /// Plays an arpeggio (<c>&lt;&lt; c e g &gt;&gt;</c>) — a written-out broken chord — as
+    /// SEQUENTIAL notes that EQUALLY SUBDIVIDE the group's total (an auto-tuplet when the
+    /// share is not a plain note value: 3 in a beat = a triplet, 5 = a quintuplet). The
+    /// octaves anchor to the first pitched member (the chord rule) and scale degrees
+    /// (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) resolve against the root and the key.
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track, MidiTrack conductorTrack)
     {
-        var members = arpeggio.Members.ToList(); // notes and/or nested chords, in order
+        var members = arpeggio.Members.ToList(); // bare pitches, degrees, chords and/or rests
         if (members.Count == 0)
             return;
-        // `<< … >>N` fits the members' natural total into N as an auto-tuplet: push its
-        // ratio so every member's played duration scales, like `tuplet num/base { … }`.
-        var ratio = ComputeArpeggioTupletRatio(arpeggio, members);
-        if (ratio is { } r)
-            _tupletStack.Push((r.Num, r.Base));
+
+        // The group occupies its total (trailing `>>N`, or the inherited running duration);
+        // its members split that equally. Push the auto-tuplet so every played duration
+        // scales like `tuplet num/base { … }`, and force the member value via _defaultDuration.
+        Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
+        var sub = ArpeggioSubdivision.Compute(members.Count, total);
+        if (sub.HasTuplet)
+            _tupletStack.Push((sub.TupletNum, sub.TupletBase));
+        var savedDefault = _defaultDuration;
+        _defaultDuration = sub.MemberDisplay;
 
         // The ROOT is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Every later PITCHED member STACKS
@@ -979,6 +986,14 @@ public sealed class MidiExporter
         int rootStep = 0;
         foreach (var member in members)
         {
+            if (member is ScaleDegreeSyntax degree)
+            {
+                // Degrees anchor on the root (or the key tonic when none precedes them) and
+                // do NOT advance the running frame — the root already set it.
+                EmitArpeggioMidiDegree(degree, track, rootSet, rootStep, anchorOctave);
+                continue;
+            }
+
             char? letter = FirstPitchLetter(member);
             if (rootSet && letter is { } l)
             {
@@ -989,7 +1004,10 @@ public sealed class MidiExporter
             {
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            ProcessNode(member, track, conductorTrack);
+            if (member is PitchSyntax pitch)
+                EmitArpeggioMidiPitch(pitch, track);
+            else
+                ProcessNode(member, track, conductorTrack); // nested chord / rest
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -999,8 +1017,11 @@ public sealed class MidiExporter
         }
         _octaveAbsolute = savedAbsolute;
         _partOctaveAnchor = savedAnchor;
-        if (ratio is not null)
+        if (sub.HasTuplet)
             _tupletStack.Pop();
+        // Acts like one note: a trailing `>>N` carries N as the running duration; an inherited
+        // total leaves it unchanged.
+        _defaultDuration = arpeggio.TotalDuration?.ToFraction() ?? savedDefault;
         // After the group the running reference is the root (chord-after behavior).
         if (rootSet)
         {
@@ -1009,35 +1030,49 @@ public sealed class MidiExporter
         }
     }
 
-    /// <summary>The auto-tuplet ratio (Num in the time of Base) for <c>&lt;&lt; … &gt;&gt;N</c>:
-    /// the members' natural total over the target N, or null when there is no N or they
-    /// already match.</summary>
-    private (int Num, int Base)? ComputeArpeggioTupletRatio(ArpeggioSyntax arpeggio, System.Collections.Generic.List<SyntaxNode> members)
+    /// <summary>Play one bare arpeggio pitch at the forced member duration, resolved through
+    /// the octave frame the caller set up (root relative, later members stacked absolute).</summary>
+    private void EmitArpeggioMidiPitch(PitchSyntax pitch, MidiTrack track)
     {
-        if (arpeggio.TotalDuration?.ToFraction() is not { } target)
-            return null;
-        Fraction nat = Fraction.Zero;
-        Fraction running = _defaultDuration;
-        foreach (var m in members)
-        {
-            var dur = (m as NoteSyntax)?.Duration ?? (m as ChordSyntax)?.Duration ?? (m as RestSyntax)?.Duration;
-            Fraction d = dur?.ToFraction() ?? running;
-            if (dur != null) running = d;
-            nat += d;
-        }
-        if (nat.Numerator == 0 || nat == target)
-            return null;
-        Fraction ratio = nat / target;
-        if (ratio.Numerator == ratio.Denominator)
-            return null;
-        return (ratio.Numerator, ratio.Denominator);
+        int midiPitch = CalculateRelativeMidiPitch(pitch);
+        int ticks = FractionToTicks(_defaultDuration);
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
+            pitch.Position, QuarterBend: pitch.QuarterOffset,
+            SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre));
+        _currentTick += ticks;
     }
 
-    /// <summary>The letter of a member's root pitch — a note's letter, or a chord's root
-    /// (first pitch) — used to stack the arpeggio's members above the first.</summary>
+    /// <summary>Play one scale-degree arpeggio member, stacked on the root (or the key tonic
+    /// when no pitch precedes it) by diatonic steps in the key, then transposed like a pitch.</summary>
+    private void EmitArpeggioMidiDegree(ScaleDegreeSyntax degree, MidiTrack track, bool rootSet, int rootStep, int anchorOctave)
+    {
+        int drootStep, drootOctave;
+        if (rootSet)
+        {
+            drootStep = rootStep;
+            drootOctave = anchorOctave;
+        }
+        else
+        {
+            drootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+            drootOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, drootStep, 0);
+        }
+        var (step, alter, octave) = ChordDegrees.Resolve(
+            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
+        int midiPitch = System.Math.Clamp(
+            RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+        int ticks = FractionToTicks(_defaultDuration);
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
+            degree.Position, SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
+        _currentTick += ticks;
+    }
+
+    /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
+    /// root (first pitch) — used to stack the arpeggio's members above the first. Degrees
+    /// and rests return null (they do not anchor the frame).</summary>
     private static char? FirstPitchLetter(SyntaxNode member) => member switch
     {
-        NoteSyntax n => n.Pitch.PitchName.ToLowerInvariant()[0],
+        PitchSyntax p => p.PitchName.ToLowerInvariant()[0],
         ChordSyntax c => c.Root?.PitchName.ToLowerInvariant()[0],
         _ => null,
     };
