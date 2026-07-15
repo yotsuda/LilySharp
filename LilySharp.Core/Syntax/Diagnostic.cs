@@ -251,6 +251,14 @@ public static class DiagnosticCodes
     /// there instead, and revert inside a section/voice.</summary>
     public const string RevertOutsideMusic = "LYS1023";
 
+    /// <summary>Semantic error: a <c>partial</c> (pickup) was written outside a section — at
+    /// the top level, in a <c>part {}</c> header, or nested inside a part block/voice. A pickup
+    /// shortens the opening bar for EVERY part of a section at once, so it belongs to the section,
+    /// not the piece and not one voice. Write it as a section directive: <c>section A { partial 4
+    /// … }</c>. (Bare music with no sections is a plain note stream, so a <c>partial</c> there is
+    /// fine.)</summary>
+    public const string PartialOutsideSection = "LYS1024";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 
@@ -302,8 +310,8 @@ public static class DiagnosticCodes
     public const string LyricPlainVerseShadowed = "LYS4004";
 
     /// <summary>Warning: a top-level single-value global setting (tempo / time / key /
-    /// title / composer) is written more than once. Only the LAST occurrence takes effect;
-    /// each earlier one is silently overwritten.</summary>
+    /// octave / title / composer / font) is written more than once. Only the LAST
+    /// occurrence takes effect; each earlier one is silently overwritten.</summary>
     public const string DuplicateGlobalSetting = "LYS4005";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward

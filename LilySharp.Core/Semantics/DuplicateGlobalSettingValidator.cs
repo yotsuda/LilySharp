@@ -21,8 +21,8 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Warns when a top-level single-value global setting (tempo / time / key / title /
-/// composer / font) is written more than once. Each of these sets ONE initial value, so
+/// Warns when a top-level single-value global setting (tempo / time / key / octave /
+/// title / composer / font) is written more than once. Each sets ONE value, so
 /// the collector keeps only the LAST occurrence — every earlier one is silently
 /// overwritten and has no effect. A directive inside music (a section / part / phrase /
 /// voice) is a mid-piece change, not a global default, so it is excluded.
@@ -45,6 +45,7 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 TempoDeclarationSyntax => "tempo",
                 TimeSignatureSyntax => "time",
                 KeySignatureSyntax => "key",
+                OctaveDirectiveSyntax => "octave",
                 FontDeclarationSyntax => "font",
                 MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
                 _ => null,

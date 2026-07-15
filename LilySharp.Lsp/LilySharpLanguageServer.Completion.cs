@@ -1717,10 +1717,11 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Opening pickup (a duration), declared once for every part", Command = new Command { Title = "Suggest pickup duration", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode: absolute | relative (default)", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
+                // `partial` is likewise NOT offered here — a pickup belongs to a section, not
+                // the piece (LYS1024); it appears in the section-level list instead.
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property (global default)", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem
                 {

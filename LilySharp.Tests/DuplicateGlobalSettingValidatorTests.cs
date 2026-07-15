@@ -43,6 +43,14 @@ public class DuplicateGlobalSettingValidatorTests
         => Assert.Equal(1, WarnCount("title \"A\"\ntitle \"B\"\n" + Tail));
 
     [Fact]
+    public void RepeatedComposer_Warns()
+        => Assert.Equal(1, WarnCount("composer \"A\"\ncomposer \"B\"\n" + Tail));
+
+    [Fact]
+    public void RepeatedTopLevelOctave_Warns()
+        => Assert.Equal(1, WarnCount("octave absolute\noctave relative\n" + Tail));
+
+    [Fact]
     public void SingleGlobalPlusMidSectionChange_DoesNotWarn()
         // One top-level tempo + a mid-section tempo change is a legitimate change, not a duplicate.
         => Assert.Equal(0, WarnCount("tempo 100\npart m { section A { c4 d | tempo 140 e f | } }\nform main { A }\nscore main { staff m }"));
