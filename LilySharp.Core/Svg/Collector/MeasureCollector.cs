@@ -1084,6 +1084,13 @@ public sealed partial class MeasureCollector
         foreach (var vs in staffVoices.Values)
             foreach (var v in vs)
                 flatVoices[v.Name] = v;
+        // A part this score OMITS still contributes score-level barlines (|: :|) and navigation
+        // marks. Feed its voices into the barline sync so the repeat propagates onto the drawn
+        // rows; the sentinel key keeps them out of the write-back below (only staffVoices' real
+        // names are drawn). Its navigation marks are merged into _musicMarks inside the harvest.
+        if (harvestStructureMarks)
+            foreach (var v in HarvestOmittedStructure(tree, renderSpec))
+                flatVoices[" omit:" + v.Name] = v;
         SynchronizeBarlines(flatVoices);
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key]
@@ -1197,24 +1204,20 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
-        // Navigation marks written in a part this score doesn't draw are still score-level, so
-        // surface them (a chords-only chart of a piece whose segno lives in the piano part).
-        if (harvestStructureMarks)
-            HarvestUnrenderedStructureMarks(tree, renderSpec);
-
         return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent());
     }
 
     /// <summary>
-    /// Navigation marks (segno / coda / D.S. / D.C. / Fine / To Coda) and rehearsal marks are
-    /// SCORE-LEVEL — every part shares the bar grid and navigates together — so they must appear
-    /// on a score even when the part that WROTE them is not drawn. They already engrave once per
-    /// score when the carrying part IS rendered; this fills the gap for parts this score omits,
-    /// by collecting them from an isolated pass over the omitted parts (same form → matching bar
-    /// indices) and merging the ones this score is missing. Repeat barlines / voltas — which live
-    /// on the measures rather than as system marks — are NOT covered here.
+    /// The structure a part contributes is SCORE-LEVEL even when the part isn't drawn: navigation
+    /// / rehearsal marks (segno / D.S. / …) and repeat barlines (|: :|) — every part shares the bar
+    /// grid and repeats / navigates together. This collects the parts this score OMITS from an
+    /// isolated pass against the SAME form (so bar indices match), merges the navigation marks the
+    /// score is missing into <see cref="_musicMarks"/>, and RETURNS the omitted parts' voices so
+    /// the caller feeds them to <see cref="SynchronizeBarlines"/> — that existing score-wide sync
+    /// then propagates their repeat barlines onto the drawn rows. Voltas (spanning brackets, not a
+    /// per-measure barline) remain a follow-up.
     /// </summary>
-    private void HarvestUnrenderedStructureMarks(SyntaxTree tree, RenderSpec renderSpec)
+    private IReadOnlyList<Voice> HarvestOmittedStructure(SyntaxTree tree, RenderSpec renderSpec)
     {
         var root = tree.GetRoot();
         var rendered = renderSpec.GetVoiceNames().ToHashSet(StringComparer.Ordinal);
@@ -1222,20 +1225,20 @@ public sealed partial class MeasureCollector
             .Select(p => p.Name.Text)
             .Where(n => !rendered.Contains(n))
             .Distinct(StringComparer.Ordinal)
-            .Where(n => PartHasNavigationMark(root, n))
+            .Where(n => PartHasStructure(root, n))
             .ToList();
         if (omitted.Count == 0)
-            return;
+            return System.Array.Empty<Voice>();
 
-        // Isolated pass: draw ONLY the omitted parts against the SAME form, so their marks land
-        // on the same bar indices this score uses. A fresh collector keeps its state separate, and
-        // the inner call skips the harvest so it can't recurse.
+        // Isolated pass: draw ONLY the omitted parts against the SAME form, so their structure
+        // lands on the same bar indices this score uses. A fresh collector keeps its state
+        // separate, and the inner call skips the harvest so it can't recurse.
         var items = omitted
             .Select(n => (RenderItemSpec)new SingleStaffSpec(new StaffSpec(ClefType.Treble, n)))
             .ToImmutableArray();
         MultiStaffScore harvested;
         try { harvested = new MeasureCollector().CollectMultiStaff(tree, renderSpec with { Items = items }, harvestStructureMarks: false); }
-        catch { return; } // a harvest failure must never break the real render
+        catch { return System.Array.Empty<Voice>(); } // a harvest failure must never break the render
 
         foreach (var mark in harvested.MusicMarks)
         {
@@ -1246,15 +1249,20 @@ public sealed partial class MeasureCollector
                 continue;
             _musicMarks.Add(mark);
         }
+
+        return harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
     }
 
-    /// <summary>True when <paramref name="partName"/> writes a navigation mark in its music — the
-    /// cheap gate that avoids the isolated harvest pass when there is nothing to harvest.</summary>
-    private static bool PartHasNavigationMark(SyntaxNode root, string partName)
+    /// <summary>True when <paramref name="partName"/> writes score-level structure (a navigation
+    /// mark or a repeat barline) in its music — the cheap gate that skips the isolated harvest
+    /// pass when there is nothing to harvest.</summary>
+    private static bool PartHasStructure(SyntaxNode root, string partName)
     {
         var part = root.DescendantNodes().OfType<PartDeclarationSyntax>()
             .FirstOrDefault(p => p.Name.Text == partName);
-        return part != null && part.DescendantNodes().OfType<NavigationMarkSyntax>().Any();
+        return part != null && part.DescendantNodes().Any(n =>
+            n is NavigationMarkSyntax
+            || (n is BarlineSyntax bl && bl.BarToken.Text.Contains(':')));
     }
 
     /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation

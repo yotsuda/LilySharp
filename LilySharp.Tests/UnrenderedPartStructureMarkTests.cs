@@ -71,4 +71,24 @@ public class UnrenderedPartStructureMarkTests
         var src = Source.Replace("segno c4 d e f", "c4 d e f");
         Assert.DoesNotContain(Collect(src).MusicMarks, m => m.Type == MusicMarkType.Segno);
     }
+
+    [Fact]
+    public void RepeatBarlinesInOmittedPart_ProjectOntoTheChordRow()
+    {
+        // The |: :| spans section A's two bars in the piano part; the chords-only score must draw
+        // the repeat over its own section-A measures even though the piano staff is not in it.
+        var src = """
+            time 4/4
+            part piano { clef treble  section A { |: c4 d e f | g a b c :| } section B { c1 | g1 } }
+            chords prog { section A { c1 | g1 } section B { c1 | g1 } }
+            form main { A B }
+            score main { chords prog }
+            """;
+        var measures = Collect(src).StaffGroups
+            .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
+        Assert.Equal(BarlineType.RepeatStart, measures[0].StartBarline);   // section A, bar 0
+        Assert.Equal(BarlineType.RepeatEnd, measures[1].EndBarline);       // section A, bar 1
+        Assert.DoesNotContain(measures.Skip(2), m =>                       // section B: no repeat
+            m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
+    }
 }
