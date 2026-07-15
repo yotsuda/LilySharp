@@ -24,11 +24,11 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// A section is self-contained: at its boundary the octave frame, default
-/// duration, meter and key all revert to the score level, so a mid-section
-/// meter/key change cannot leak into the next section (nor into the same
-/// section reused elsewhere by the form). When a prior section actually left a
-/// different value, the revert is drawn (a change grob) rather than silently
-/// leaving the old signature on the staff.
+/// duration, meter, key and clef all revert to the score/part level, so a
+/// mid-section meter/key/clef change cannot leak into the next section (nor into
+/// the same section reused elsewhere by the form). When a prior section actually
+/// left a different value, the revert is drawn (a change grob) rather than
+/// silently leaving the old signature/clef on the staff.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class SectionResetTests
@@ -81,14 +81,36 @@ public sealed class SectionResetTests
     }
 
     [Fact]
+    public void MidSectionClefChange_DoesNotLeakIntoNextSection()
+    {
+        // The part is bass; A opens with its own `clef treble`; B declares nothing, so it
+        // reverts to the part clef (bass) and redraws it. Without the reset B would inherit
+        // A's treble clef and render on the wrong staff lines.
+        var measures = Collect("""
+            part m {
+              clef bass
+              section A { clef treble c1 | }
+              section B { c1 | }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+
+        var bReset = measures[1].Items.OfType<ClefChangeItem>().FirstOrDefault();
+        Assert.NotNull(bReset);
+        Assert.Equal(ClefType.Bass, bReset!.NewClef); // reverted from treble back to the part clef
+    }
+
+    [Fact]
     public void NoMidSectionChange_EmitsNoResetGrob()
     {
         // Common case: nothing changed mid-section, so the boundary reset is a
-        // no-op — no phantom meter/key grobs at the section start.
+        // no-op — no phantom meter/key/clef grobs at the section start.
         var measures = Collect("""
             time 4/4
             key g major
             part m {
+              clef bass
               section A { c1 | }
               section B { c1 | }
             }
@@ -98,5 +120,6 @@ public sealed class SectionResetTests
 
         Assert.DoesNotContain(measures[1].Items, i => i is TimeSignatureChangeItem);
         Assert.DoesNotContain(measures[1].Items, i => i is KeySignatureChangeItem);
+        Assert.DoesNotContain(measures[1].Items, i => i is ClefChangeItem);
     }
 }

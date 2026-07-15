@@ -634,6 +634,12 @@ public sealed partial class MeasureCollector
     private int _sectionResetKeySharps;
     private string? _sectionResetKeyCustom;
 
+    // This voice's part-default clef, captured at collection start. A section boundary
+    // reverts the running clef to it (like key/time) so a section without its own clef
+    // uses the part default — a mid-section `clef` change (in one section) must not leak
+    // into the next section, nor into the same section reused elsewhere in the form.
+    private string _sectionResetClef = "treble";
+
     // Running ambient key tonic (as WRITTEN, before any part transpose) tracked
     // across the voice walk for phrase auto-transpose: a phrase written in the
     // score's home key is shifted to whatever key is in effect where it is
@@ -1950,6 +1956,8 @@ public sealed partial class MeasureCollector
         // so each section boundary can revert the running key to it.
         _sectionResetKeySharps = _meta.KeySharps;
         _sectionResetKeyCustom = _meta.KeyCustom;
+        // Same for the clef: the part default a section without its own clef reverts to.
+        _sectionResetClef = _meta.Clef;
 
         // Arm the ambient tonic at the score's home key for this voice's walk
         // (phrase auto-transpose baseline).

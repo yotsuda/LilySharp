@@ -156,6 +156,20 @@ public sealed partial class MeasureCollector
         // (running == score level) is a no-op. The redraw makes the revert visible
         // instead of silently leaving the previous signature on the staff.
         int sectionPos = section.Name.Span.Start;
+
+        // Clef reverts to the part default the same way: a section that opens without its
+        // own `clef` uses the part clef, so a mid-section clef change in a prior section
+        // (or the same section played earlier) does not leak in. A section that opens with
+        // its own `clef` overrides this at the music walk. Only redraw when it actually
+        // differs (first section is a no-op). Mirror the mid-music clef change so the
+        // default octave for relative pitches follows the reverted clef.
+        if (_meta.Clef != _sectionResetClef)
+        {
+            _meta.Clef = _sectionResetClef;
+            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            builder.AddItem(new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
+        }
+
         // A section can state its own time (section-major or a standalone header): apply
         // it and re-arm the measure length; otherwise revert to the score meter.
         if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime))
