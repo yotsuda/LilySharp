@@ -1037,7 +1037,8 @@ internal static class SpacingRules
         Fraction segmentDuration,
         Fraction shortestPlayingDuration,
         double? baseShortestDuration = null,
-        NoteSpacingParameters? noteParams = null)
+        NoteSpacingParameters? noteParams = null,
+        Fraction? measureLength = null)
     {
         // LILYPOND-REF: lily/spacing-basic.cc:113-119 — fall back to delta_t when no playing duration is known.
         if (shortestPlayingDuration <= Fraction.Zero)
@@ -1045,11 +1046,16 @@ internal static class SpacingRules
         if (shortestPlayingDuration <= Fraction.Zero)
             return CreateTimingSpring(segmentDuration, baseShortestDuration, noteParams);
 
-        // LILYPOND-REF: lily/spacing-basic.cc:144 — clamp shortest_playing to the segment's
-        // actual delta when the latter is shorter (avoids over-shrinking on rests).
+        // LILYPOND-REF: lily/spacing-basic.cc:144 — clamp shortest_playing to the MEASURE LENGTH
+        // (a multi-measure-rest guard), NOT to this segment's delta_t. Clamping to delta_t was a
+        // bug: it forced fraction = delta_t / shortest_playing = 1 for every sub-beat column, so an
+        // interleaved polyrhythm column (a triplet note landing between two straight eighths) took a
+        // FULL note's duration_space instead of its proportional share. The proportional part below
+        // (fraction * len) is exactly what keeps the other voice's eighths evenly spaced: two sub-
+        // gaps of a note sum back to that note's space only when shortest_playing stays the note.
         Fraction effectivePlaying = shortestPlayingDuration;
-        if (segmentDuration > Fraction.Zero && segmentDuration < effectivePlaying)
-            effectivePlaying = segmentDuration;
+        if (measureLength is { } mlen && mlen > Fraction.Zero && mlen < effectivePlaying)
+            effectivePlaying = mlen;
 
         double defaultMin = EngravingDefaults.SpacingIncrement;
         double bsd = baseShortestDuration ?? EngravingDefaults.BaseShortestDuration;
@@ -1059,9 +1065,15 @@ internal static class SpacingRules
         // LILYPOND-REF: lily/spacing-basic.cc:155-156 — fraction = delta_t / shortest_playing
         double fraction = segmentDuration.ToDouble() / effectivePlaying.ToDouble();
 
-        // LILYPOND-REF: lily/spacing-basic.cc:157 — Spring(fraction * len, fraction * min)
-        double idealDistance = Math.Max(fraction * len, defaultMin);
-        double minDistance = defaultMin;
+        // LILYPOND-REF: lily/spacing-basic.cc:157 — Spring(fraction * len, fraction * min).
+        // BOTH terms scale by fraction. A sub-beat interleaved column (fraction < 1 — e.g. a triplet
+        // note splitting one voice's straight eighth into two sub-gaps) gets its PROPORTIONAL share,
+        // not a full-notehead floor. Flooring the ideal at the whole increment (as this did before)
+        // inflated the shorter half of the split gap, so the other voice's eighths spread wider on
+        // exactly the beats the triplet stems land on. Genuine overlap is still blocked by the
+        // skyline rod computed in CreateInterColumnSpring — the ideal need not reserve a full head.
+        double idealDistance = fraction * len;
+        double minDistance = fraction * defaultMin;
 
         var np = noteParams ?? NoteSpacingParameters.Default;
         if (np.StrictNoteSpacing)

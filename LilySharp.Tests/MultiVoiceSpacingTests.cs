@@ -152,16 +152,21 @@ public class MultiVoiceSpacingTests
     }
 
     [Fact]
-    public void CreateTimingSpringMultiVoice_ShortestExceedsDelta_ClampsToDelta()
+    public void CreateTimingSpringMultiVoice_ShortestExceedsDelta_ScalesProportionally()
     {
-        // Defensive case: shortest_playing > delta (e.g. a long note overlapping a short slice).
-        // LP clamps shortest_playing to delta_t (spacing-basic.cc:144).
-        var delta = new Fraction(1, 8);
-        var longerShortest = new Fraction(1, 4);
-        var clamped = SpacingRules.CreateTimingSpringMultiVoice(delta, longerShortest, baseShortestDuration: 0.125);
-        var directDelta = SpacingRules.CreateTimingSpringMultiVoice(delta, delta, baseShortestDuration: 0.125);
+        // Polyrhythm case: a long note (shortest_playing 1/4) spans a short slice (delta 1/8) because
+        // another voice subdivides the beat. LP does NOT clamp shortest_playing to delta_t — that was
+        // a bug that forced fraction=1 on every sub-beat column. LP uses fraction = delta_t /
+        // shortest_playing (spacing-basic.cc:157) and clamps shortest_playing only to the MEASURE
+        // length (spacing-basic.cc:144). So a slice worth half the ruling note gets half its duration
+        // space, letting two such slices sum back to the whole note's width (keeping the other voice's
+        // notes evenly spaced).
+        var quarter = new Fraction(1, 4);
+        var halfOfQuarter = new Fraction(1, 8);
+        var slice = SpacingRules.CreateTimingSpringMultiVoice(halfOfQuarter, quarter, baseShortestDuration: 0.125);
+        var full = SpacingRules.CreateTimingSpringMultiVoice(quarter, quarter, baseShortestDuration: 0.125);
 
-        // Both should produce the same result because the clamp folds longerShortest to delta.
-        Assert.Equal(directDelta.IdealDistance, clamped.IdealDistance, precision: 6);
+        // delta 1/8 is exactly half of shortest_playing 1/4 -> half the ideal distance.
+        Assert.Equal(full.IdealDistance / 2.0, slice.IdealDistance, precision: 6);
     }
 }

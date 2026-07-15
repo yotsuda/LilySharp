@@ -186,6 +186,21 @@ internal sealed class MeasureLayouter
         return timingToItems;
     }
 
+    /// <summary>The item in <paramref name="m"/> (one voice's sequential items) that STARTS exactly
+    /// at <paramref name="t"/>, or null when this voice has no notehead at that column — so a
+    /// separation rod is only raised between two columns the SAME voice occupies.</summary>
+    private static MusicItem? ItemStartingAt(Measure m, Fraction t)
+    {
+        var acc = Fraction.Zero;
+        foreach (var item in m.Items)
+        {
+            if (acc == t) return item;
+            if (acc > t) break;
+            acc += item.Duration;
+        }
+        return null;
+    }
+
     /// <summary>
     /// When EVERY voice rests the whole measure, returns two compact rod springs
     /// (not proportional whole-note spacing); otherwise null. The combined-timing
@@ -302,8 +317,19 @@ internal sealed class MeasureLayouter
         Fraction segmentDuration = timings[i] - timings[i - 1];
         // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
         var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
+        // LILYPOND-REF: lily/spacing-basic.cc:144 — measure length caps shortest_playing (mmrest guard).
+        Fraction measureLength = Fraction.Zero;
+        foreach (var vm in measuresToScan)
+        {
+            var total = Fraction.Zero;
+            foreach (var item in vm.Items)
+                total += item.Duration;
+            if (total > measureLength)
+                measureLength = total;
+        }
         var spring = SpacingRules.CreateTimingSpringMultiVoice(
-            segmentDuration, shortestPlaying, baseShortestDuration);
+            segmentDuration, shortestPlaying, baseShortestDuration,
+            measureLength: measureLength > Fraction.Zero ? measureLength : null);
 
         timingToItems.TryGetValue(timings[i - 1], out var prevItems);
         timingToItems.TryGetValue(timings[i], out var nextItems);
@@ -318,31 +344,28 @@ internal sealed class MeasureLayouter
         spring = SpacingRules.MergeVoiceStemWishes(
             spring, measuresToScan, timings[i - 1], timings[i],
             NoteSpacingParameters.Default);
-        if (prevItems != null && nextItems != null)
+        // Collision rods are PER VOICE: two noteheads force a horizontal minimum only when the
+        // SAME voice puts one at each of these adjacent columns. Pairing items across voices/staves
+        // (as the aggregated prev/nextItems do, all at staffY 0) made a triplet note in ONE staff
+        // and a straight eighth in ANOTHER clash as if stacked, so the triplet's off-beat columns
+        // over-widened the other staff's eighths (they should stay evenly spaced, the triplet notes
+        // tucking between them). Compute the rod per voice-measure and take the max. A rod is a
+        // MINIMUM, never an ideal — the natural length stays duration-based.
+        // LILYPOND-REF: lily/spacing-spanner.cc — separation rods come from each staff's own
+        // Separation_item, not a cross-staff aggregate.
+        double maxSkyDist = 0;
+        foreach (var vm in measuresToScan)
         {
-            double maxSkyDist = 0;
-            foreach (var prev in prevItems)
-            {
-                bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
-                foreach (var next in nextItems)
-                {
-                    double skyDist = SpacingRules.CalculateSkylineDistance(
-                        prev, next, staffY: 0, prevBeamed: prevBeamed);
-                    maxSkyDist = Math.Max(maxSkyDist, skyDist);
-                }
-            }
-
-            if (maxSkyDist > spring.MinDistance)
-            {
-                // Rods are MINIMA, never ideals: the natural length stays
-                // duration-based and the rod only blocks compression below the
-                // collision distance. LILYPOND-REF: lily/spacing-spanner.cc — set_min_distance.
-                spring = new Spring(
-                    spring.IdealDistance,
-                    maxSkyDist,
-                    spring.InverseStretchStrength);
-            }
+            var prev = ItemStartingAt(vm, timings[i - 1]);
+            var next = ItemStartingAt(vm, timings[i]);
+            if (prev == null || next == null)
+                continue;
+            bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
+            maxSkyDist = Math.Max(maxSkyDist,
+                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0, prevBeamed: prevBeamed));
         }
+        if (maxSkyDist > spring.MinDistance)
+            spring = new Spring(spring.IdealDistance, maxSkyDist, spring.InverseStretchStrength);
 
         // Mid-measure clef/key change (zero duration, shares the next timing) and
         // leading grace on the next note hang left of that column; reserve their
