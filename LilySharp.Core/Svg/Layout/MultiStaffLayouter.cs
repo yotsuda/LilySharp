@@ -963,19 +963,20 @@ internal sealed class MultiStaffLayouter
                 measureWidth += spring.Length(force);
             }
 
-            // For a lyric score, place items with the lyric-widened spring chain
-            // (single-voice → columns coincide with items) so syllables sit under
-            // their spread-out notes. Without lyrics, re-solve as before so no
-            // existing layout shifts.
-            var primarySprings = measureSprings[i];
-            var itemLayouts = (!score.Lyrics.IsDefaultOrEmpty
-                    && primarySprings.Length == primaryMeasure.Items.Length + 1)
-                ? _measureLayouter.LayoutItems(primaryMeasure, measureWidth, primarySprings, force)
-                : _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
             var columnLayouts = _measureLayouter.LayoutColumns(
                 primaryMeasure, measureWidth, measureTimings[i],
                 baseShortestDuration, measureAllMeasures[i],
                 measureSprings[i], force);
+
+            // Derive the item slots FROM the solved columns so Items[i].X == the
+            // column-grid X the renderer draws the notehead at — the raw-slot readers
+            // (Hairpin / TextSpanner / TrillSpanner / TieVariant) then stay on the
+            // notehead instead of drifting when a bar opens with a mid-piece meter/clef
+            // change. Fall back to the item-spring layout only for a degenerate measure
+            // with no timing columns (all zero-duration items).
+            var itemLayouts = MeasureLayouter.LayoutItemsFromColumns(primaryMeasure, columnLayouts, measureWidth);
+            if (itemLayouts.IsDefaultOrEmpty && primaryMeasure.Items.Length > 0)
+                itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);

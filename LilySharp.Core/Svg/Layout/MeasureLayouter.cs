@@ -101,6 +101,71 @@ internal sealed class MeasureLayouter
     }
 
     /// <summary>
+    /// Derives item slots from the already-solved timing COLUMNS so each item's X
+    /// equals the column-grid X the renderer draws its notehead at (see
+    /// SharedRenderer.EnumerateStaffItems / MeasureLayout.GetXForTiming). This makes
+    /// <c>MeasureLayout.Items[i].X == GetXForTiming(itemTiming)</c> by construction, so
+    /// every consumer that reads the raw item slot (Hairpin / TextSpanner /
+    /// TrillSpanner / TieVariant) stays on the notehead grid instead of drifting when a
+    /// bar opens with a mid-piece meter/clef change — whose zero-duration grob would
+    /// otherwise consume an item spring slot and shove the following notes right.
+    /// </summary>
+    /// <remarks>
+    /// An item's onset timing is always one of the union timings the columns were
+    /// built from (a zero-duration change item shares the next note's column), so the
+    /// exact-match branch mirrors <see cref="LayoutUtilities.GetItemXOffset"/>. Width is
+    /// the distance to the next item's X (last item → the measure's content right edge),
+    /// keeping the pre-existing slot-width semantics its readers rely on. Returns Empty
+    /// when there are no columns (degenerate all-zero-duration measure); the caller then
+    /// falls back to the item-spring layout.
+    /// </remarks>
+    public static ImmutableArray<ItemLayout> LayoutItemsFromColumns(
+        Measure measure, ImmutableArray<ColumnLayout> columns, double totalWidth)
+    {
+        if (measure.Items.Length == 0 || columns.IsDefaultOrEmpty || columns.Length == 0)
+            return ImmutableArray<ItemLayout>.Empty;
+
+        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+        double contentRightX = totalWidth - endBarlineWidth;
+
+        var xs = new double[measure.Items.Length];
+        var timing = Fraction.Zero;
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            xs[i] = ColumnXForTiming(columns, timing);
+            timing += measure.Items[i].Duration;
+        }
+
+        var layouts = ImmutableArray.CreateBuilder<ItemLayout>(measure.Items.Length);
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            double width = (i + 1 < measure.Items.Length ? xs[i + 1] : contentRightX) - xs[i];
+            layouts.Add(new ItemLayout(i, xs[i], Math.Max(0, width)));
+        }
+        return layouts.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// X of the column whose timing matches <paramref name="timing"/> (exact where
+    /// possible, else nearest) — the same resolution as
+    /// <see cref="LayoutUtilities.GetItemXOffset"/>'s column branch.
+    /// </summary>
+    private static double ColumnXForTiming(ImmutableArray<ColumnLayout> columns, Fraction timing)
+    {
+        double targetT = timing.ToDouble();
+        double best = 0;
+        double bestDiff = double.MaxValue;
+        foreach (var col in columns)
+        {
+            if (col.Timing == timing)
+                return col.X;
+            double diff = Math.Abs(col.Timing.ToDouble() - targetT);
+            if (diff < bestDiff) { best = col.X; bestDiff = diff; }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// Creates timing-based springs for a measure, considering items from all voices.
     /// </summary>
     /// <remarks>

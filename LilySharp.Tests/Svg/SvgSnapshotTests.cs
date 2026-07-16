@@ -393,6 +393,7 @@ public class SvgSnapshotTests
         // fixture with a 3-natural cancellation.
         yield return new object[] { "test/keysig-cancel-naturals" };
         yield return new object[] { "test/trill-spanner" };
+        yield return new object[] { "test/lv-meterchange" };
         yield return new object[] { "test/courtesy-accidentals" };
         yield return new object[] { "test/editorial-accidental" };
         yield return new object[] { "test/multi-line-spanners" };

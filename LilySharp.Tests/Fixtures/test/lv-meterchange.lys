@@ -1,0 +1,5 @@
+part m { clef treble
+  section A { time 3/4 g4 a b | time 4/4 c'@laissezVibrer b a g | }
+}
+form main { A }
+score main { staff m }
