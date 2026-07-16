@@ -37,45 +37,6 @@ internal sealed class SystemBreaker
     }
 
     /// <summary>
-    /// Breaks measures into systems.
-    /// Uses the first voice as representative for measure widths.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/constrained-breaking.cc
-    /// Uses Knuth-Plass optimal algorithm when UseOptimalLineBreaking is true,
-    /// otherwise falls back to greedy first-fit algorithm.
-    /// </remarks>
-    public List<List<Measure>> BreakIntoSystems(Score score,
-                                                double? baseShortestDuration = null)
-    {
-        var measures = score.Voice.Measures;
-        // Fold each system's indent into the prefix width so the break decision
-        // matches the rendered fit (the layout subtracts the same indent from the
-        // available width). Default indent 0 → no-op.
-        // LILYPOND-REF: scm/output-lib.scm system-start-text indent.
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false)
-            + _options.ShortIndent;
-
-        if (_options.UseOptimalLineBreaking)
-        {
-            // Use Knuth-Plass optimal line breaking
-            var breaker = new KnuthPlassBreaker(
-                _options.ContentWidth,
-                firstPrefixWidth,
-                continuationPrefixWidth,
-                _options.LineBreakingTolerance,
-                raggedRight: _options.RaggedRight);
-
-            return breaker.BreakIntoLines(measures, baseShortestDuration);
-        }
-
-        // Fallback to greedy first-fit algorithm
-        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
-    }
-
-    /// <summary>
     /// Breaks measures into systems for a multi-staff score.
     /// Uses the primary voice of the first staff group for measure widths.
     /// </summary>

@@ -20,6 +20,7 @@ using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
@@ -92,21 +93,16 @@ public class PageLayouterSvgDemo
         Assert.False(tree.HasErrors);
 
         var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
+        var score = MultiStaffScore.FromScore(collector.Collect(tree));
 
         var options = LayoutOptions.Default;
-        var layoutEngine = new LayoutEngine(options);
-        var layout = layoutEngine.Layout(score);
+        var layout = new LayoutEngine(options).Layout(score);
 
         var skylineBuilder = new SkylineBuilder(options.StaffHeight);
-        var systemBreaker = new SystemBreaker(options);
-        var sysMeasures = systemBreaker.BreakIntoSystems(score);
-
-        for (int si = 0; si < layout.Systems.Length && si < sysMeasures.Count; si++)
+        for (int si = 0; si < layout.Systems.Length; si++)
         {
             var sys = layout.Systems[si];
-            var measures = sysMeasures[si];
-            var (upSky, _) = skylineBuilder.BuildSystemSkylines(measures, sys.Measures);
+            var (upSky, _) = skylineBuilder.BuildSystemSkylines(score, sys.Measures);
             double upExtent = LayoutUtilities.CalculateUpExtent(upSky);
 
             // upExtent should be reasonable (notes within ~2 octaves of staff)

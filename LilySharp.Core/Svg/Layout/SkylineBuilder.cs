@@ -355,59 +355,6 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Builds vertical skylines for a single-staff system.
-    /// </summary>
-    public (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
-        List<Measure> measures,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        double systemLeft = double.NaN)
-    {
-        var upSkyline = new VerticalSkyline(VerticalDirection.Up);
-        var downSkyline = new VerticalSkyline(VerticalDirection.Down);
-
-        // A single-staff system is one plain notation staff: seed its top and
-        // bottom LINES over the drawn width (see SeedSystemStaffSymbol).
-        SeedSystemStaffSymbol(measureLayouts, systemLeft,
-            seedTop: true, topLineY: 0.0,
-            seedBottom: true, bottomLineY: _staffHeight,
-            upSkyline, downSkyline);
-
-        // All dimensions in staff spaces (coordinate system is unified)
-        double staffMiddleY = _staffHeight / 2;
-        double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = EngravingDefaults.NoteheadHeight;
-
-        // Resolve item X through the shared column grid (like the multi-staff skyline
-        // above), so a bar opening with a mid-piece time/clef grob does not skew the item
-        // slot X off the grid and shift the skyline away from the drawn glyphs.
-        var measuresArr = measures.ToImmutableArray();
-        // Process measures in this system
-        for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
-        {
-            if (measureIndex >= measureLayouts.Length)
-                continue;
-
-            var measure = measures[measureIndex];
-            var measureLayout = measureLayouts[measureIndex];
-            for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
-            {
-                if (measureLayout.Columns.IsDefaultOrEmpty && itemIndex >= measureLayout.Items.Length)
-                    continue;
-
-                var item = measure.Items[itemIndex];
-                double itemX = measureLayout.X
-                    + LayoutUtilities.GetItemXOffset(measuresArr, measureIndex, itemIndex, measureLayout);
-
-                // LILYPOND-REF: lily/grob.cc:85-89 - Each grob contributes to skyline
-                AddMusicItemToSkylines(item, itemX, staffMiddleY,
-                    stemLength, noteheadHeight, upSkyline, downSkyline);
-            }
-        }
-
-        return (upSkyline, downSkyline);
-    }
-
-    /// <summary>
     /// Adds a music item's bounding boxes to the skylines.
     /// Dispatches to appropriate handler based on item type.
     /// </summary>
