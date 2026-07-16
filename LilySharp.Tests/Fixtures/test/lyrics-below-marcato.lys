@@ -1,0 +1,14 @@
+// A below-staff marcato on a low note must push the lyric line down so the
+// syllable clears the mark (the script joins the staff's down-skyline the
+// Lyrics row drops below). Regression: the 'v' used to overprint "Twin".
+title "Lyrics below marcato"
+tempo 100
+time 4/4
+key c major
+
+part melody { clef treble
+  section A { c4@marcato c g' g | a a g2 | }
+}
+lyrics { section A { Twin- kle twin- kle | lit- tle star | } }
+form main { A }
+score main "lyrics-below-marcato" { staff melody }

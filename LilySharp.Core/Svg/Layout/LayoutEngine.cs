@@ -1426,8 +1426,19 @@ internal sealed class LayoutEngine
             };
         }
 
+        // Scripts are laid out BEFORE the lyric/figured-bass rows: a note-bound
+        // script (marcato/staccato/tenuto/…) carries no outside-staff-priority, so it
+        // stays in the staff's support skyline that those rows drop below. Without the
+        // augmented DOWN skyline a marcato hanging under a low note overprints the
+        // syllable beneath it. LILYPOND-REF: lily/axis-group-interface.cc:359-474.
+        var articulationLayouts = score != null
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex,
+                beamLayouts ?? default)
+            : ImmutableArray<ArticulationLayout>.Empty;
+        var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
+
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, systemSkylines, staffYByIndex);
+            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
@@ -1462,21 +1473,6 @@ internal sealed class LayoutEngine
         //   pedalSustainStyle = 'text ("Ped." … "*"); 'bracket / 'mixed add the
         //   line+hook and are separate styles.
         var pedalBracketLayouts = ImmutableArray<PedalBracketLayout>.Empty;
-
-        // Scripts are laid out BEFORE the chord line: LilyPond's axis-group
-        // skyline includes note-bound scripts (they carry no
-        // outside-staff-priority), so a chord symbol must clear a staccato or
-        // fermata above a protruding note exactly like an accidental. The
-        // system skylines were built before script layout existed, so the
-        // chord-name pass gets an augmented COPY (other consumers keep the
-        // original skylines).
-        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
-        // outside-staff-priority stay in the support skyline.
-        var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts ?? default)
-            : ImmutableArray<ArticulationLayout>.Empty;
-        var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         // Layout figured bass (drops below below-staff scripts via the
         // script-augmented DOWN skylines)

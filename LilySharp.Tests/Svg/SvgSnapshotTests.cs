@@ -222,6 +222,9 @@ public class SvgSnapshotTests
         // forced-above fermata/flageolet drop into the inter-staff gap and must
         // clear the notation staff's low noteheads (the gap reserves for them).
         yield return new object[] { "test/tab-articulations-multistaff" };
+        // A below-staff marcato on a low note joins the staff's down-skyline, so the
+        // lyric row drops below it instead of the 'v' overprinting the syllable.
+        yield return new object[] { "test/lyrics-below-marcato" };
         // A note below the tab's lowest string is hidden (no fret/stem/beam) rather
         // than clamped to a wrong open string; the notation staff still shows it.
         yield return new object[] { "test/tab-below-range" };
