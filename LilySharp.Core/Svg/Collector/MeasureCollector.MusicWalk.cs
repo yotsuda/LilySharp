@@ -614,7 +614,7 @@ public sealed partial class MeasureCollector
                     // LILYPOND-REF: lily/time-signature-engraver.cc:94-122
                     //   process_music — `if (time_signature_) return;` (one per
                     //   timestep) and the last_spec_ comparison.
-                    if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+                    if (builder.AtPieceOpening)
                     {
                         _meta.TimeBeats = timeSigChange.Beats;
                         _meta.TimeBeatsText = timeSigChange.BeatsText;

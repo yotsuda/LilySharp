@@ -253,7 +253,7 @@ public sealed partial class MeasureCollector
                 m.Type == MusicMarkType.Tempo
                 && m.MeasureIndex == builder.CurrentMeasureIndex
                 && m.SourcePosition == sectionPos);
-            if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+            if (builder.AtPieceOpening)
                 CollectTempo(sectionTempo);
             else if (tempoAlready)
             {
@@ -411,7 +411,7 @@ public sealed partial class MeasureCollector
         // mirrors the opening time signature, which already collapses this way
         // (CaptureScoreContent takes _meta.TimeBeats after the section's own time). The
         // running key state above is left as set, so mid-piece changes still draw normally.
-        if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+        if (builder.AtPieceOpening)
         {
             _meta.InitialKeySharps = _meta.KeySharps;
             _meta.InitialKeyCustom = _meta.KeyCustom;

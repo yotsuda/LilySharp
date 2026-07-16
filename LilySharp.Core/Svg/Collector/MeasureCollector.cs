@@ -166,6 +166,12 @@ internal sealed class MeasureBuilder
     /// <summary>Current item count within the current measure.</summary>
     public int CurrentItemCount => _currentItems.Count;
 
+    /// <summary>True at the very opening of the piece — bar 0 with no music yet (zero-duration
+    /// grobs like a clef may already sit there). A directive here (a section's own
+    /// key / time / tempo overriding the score default) IS the opening value, not a change
+    /// within the piece, so it collapses into the initial signature / mark.</summary>
+    public bool AtPieceOpening => _measures.Count == 0 && _currentDuration == Fraction.Zero;
+
     /// <summary>True at a measure boundary: no items yet in the current measure (just
     /// after a barline, or the very start), or the measure is already full (a mark
     /// written right before its barline). A navigation landmark belongs at such a
@@ -353,27 +359,35 @@ internal sealed class MeasureBuilder
             IsExplicit: explicitBar,
             IsAligned: isAligned));
 
-        // An auto-filled close leaves an unconfirmed boundary (a following written
-        // barline just confirms it); a written-barline close is already confirmed, so a
-        // following bare barline opens a placeholder measure. See HandleBarline.
-        _autoBoundary = !explicitBar;
+        // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
+        // just confirms it); a written-barline close is already confirmed, so a following
+        // bare barline opens a placeholder measure. See HandleBarline.
+        ResetPerMeasureState(sourceEnd, autoBoundary: !explicitBar);
+    }
 
+    /// <summary>
+    /// Clears the per-measure accumulator after a measure is emitted — by content
+    /// (<see cref="EmitMeasure"/>) or as an empty placeholder (<see cref="EmitEmptyMeasure"/>):
+    /// resets the pending barlines / section label / duration, advances the source start,
+    /// sets the auto-fill boundary flag, restores a pending pickup meter, and fires
+    /// <see cref="MeasureCompleted"/>.
+    /// </summary>
+    /// <remarks>
+    /// The excess of an OVERFULL bar is intentionally dropped here: Lily# is "explicit over
+    /// implicit" and does NOT auto-split a note across a barline the way LilyPond does. An
+    /// overrun makes an overfull measure (MeasureValidator flags it; the fix is an explicit
+    /// tie <c>c4 d e f4~ | f4 …</c>), drawn as written with the beat counter reset so the
+    /// following bars stay aligned — the excess is not carried into a tied continuation.
+    /// </remarks>
+    private void ResetPerMeasureState(int sourceEnd, bool autoBoundary)
+    {
+        _autoBoundary = autoBoundary;
         _currentItems.Clear();
         _sectionLabel = null;
         _sectionLabelPosition = 0;
         _pendingStartBarline = BarlineType.None;
         _pendingEndBarline = BarlineType.None;
         _measureSourceStart = sourceEnd;
-
-        // BY DESIGN: Lily# is "explicit over implicit" (no hidden state) and does
-        // NOT auto-split a note across a barline the way LilyPond does. A note that
-        // overruns the meter makes an OVERFULL measure, which is a user error that
-        // MeasureValidator flags ("Measure duration exceeds time signature"); the
-        // fix is to write an explicit tie (c4 d e f4~ | f4 …). The renderer draws
-        // every note as written (nothing is lost — the bar is simply drawn wide)
-        // and resets the beat counter so the following (clean) measures stay
-        // aligned. So the excess beat count is intentionally dropped here, not
-        // carried into a tied continuation.
         _currentDuration = Fraction.Zero;
         RestorePartialIfPending();
         MeasureCompleted?.Invoke();
@@ -494,17 +508,9 @@ internal sealed class MeasureBuilder
 
         _boundaries.Add(new MeasureBoundary(sourceEnd, Fraction.Zero, IsExplicit: true, IsAligned: false));
 
-        _sectionLabel = null;
-        _sectionLabelPosition = 0;
-        _pendingStartBarline = BarlineType.None;
-        _pendingEndBarline = BarlineType.None;
-        _measureSourceStart = sourceEnd;
-        _currentDuration = Fraction.Zero;
-        // Closed by a written barline, so a further bare barline opens ANOTHER placeholder.
-        _autoBoundary = false;
-        RestorePartialIfPending();
         OnEmptyPlaceholder?.Invoke(sourceEnd);
-        MeasureCompleted?.Invoke();
+        // Closed by a written barline, so a further bare barline opens ANOTHER placeholder.
+        ResetPerMeasureState(sourceEnd, autoBoundary: false);
     }
 
     /// <summary>
