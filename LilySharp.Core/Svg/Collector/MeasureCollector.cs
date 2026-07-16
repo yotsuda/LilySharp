@@ -22,16 +22,6 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// Tracks measure boundary alignment status for incremental compilation.
-/// </summary>
-internal record MeasureBoundary(
-    int SourcePosition,
-    Fraction AccumulatedDuration,
-    bool IsExplicit,  // true if there was an explicit barline
-    bool IsAligned    // true if duration matches time signature
-);
-
-/// <summary>
 /// Reports a lyrics line that has MORE syllables than the notes it binds to, so
 /// the trailing syllables found no note and were silently dropped from the
 /// engraving. <see cref="Span"/> points at the FIRST dropped syllable, and
@@ -55,15 +45,6 @@ public record LyricSyllableWarning(
 public record ShadowedPlainLyricWarning(
     LilySharp.Core.Syntax.TextSpan Span,
     string SectionName
-);
-
-/// <summary>
-/// Represents a bar check warning when barline position doesn't match time signature.
-/// </summary>
-public record BarCheckWarning(
-    int SourcePosition,
-    Fraction ExpectedDuration,
-    Fraction ActualDuration
 );
 
 /// <summary>
@@ -100,8 +81,6 @@ internal sealed class MeasureBuilder
 {
     private readonly List<Measure> _measures = new();
     private readonly List<MusicItem> _currentItems = new();
-    private readonly List<MeasureBoundary> _boundaries = new();
-    private readonly List<BarCheckWarning> _barCheckWarnings = new();
 
     // True when the current measure boundary was created by AUTO-FILL (duration reached
     // the meter) and not yet closed by a written barline. Such a boundary absorbs ONE
@@ -147,9 +126,6 @@ internal sealed class MeasureBuilder
         _timeSignature = timeSignature;
         _measureSourceStart = sourceStart;
     }
-
-    public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
-    public IReadOnlyList<BarCheckWarning> BarCheckWarnings => _barCheckWarnings;
 
     /// <summary>Gets the current accumulated duration within the measure.</summary>
     public Fraction CurrentDuration => _currentDuration;
@@ -333,7 +309,6 @@ internal sealed class MeasureBuilder
         if (_currentItems.Count == 0)
             return;
 
-        bool isAligned = _currentDuration == _timeSignature;
         bool hasBreak = _pendingBreak;
         bool noBreak = _pendingNoBreak;
         _pendingBreak = false;
@@ -351,12 +326,6 @@ internal sealed class MeasureBuilder
             lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null));
-
-        _boundaries.Add(new MeasureBoundary(
-            sourceEnd,
-            _currentDuration,
-            IsExplicit: explicitBar,
-            IsAligned: isAligned));
 
         // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
         // just confirms it); a written-barline close is already confirmed, so a following
@@ -422,9 +391,9 @@ internal sealed class MeasureBuilder
     /// <summary>
     /// Handles an explicit barline: the WRITTEN barline is the measure
     /// boundary. The current measure is closed HERE, whatever its duration;
-    /// a duration mismatch is a warning (bar check), not a layout input.
-    /// Full measures are unaffected: duration auto-completion has already
-    /// closed them, so the barline arrives on an empty measure (no-op).
+    /// a duration mismatch is flagged by the measure validator (see remarks),
+    /// not a layout input. Full measures are unaffected: duration auto-completion
+    /// has already closed them, so the barline arrives on an empty measure (no-op).
     /// </summary>
     /// <remarks>
     /// This is the agreed Lily# semantic (the reverse of LilyPond, where
@@ -433,18 +402,6 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void HandleBarline(BarlineType barType, int position)
     {
-        // Bar check: verify current position is at a measure boundary
-        bool isAligned = _currentDuration == Fraction.Zero || _currentDuration == _timeSignature;
-
-        if (!isAligned)
-        {
-            // Emit warning: barline position doesn't match time signature
-            _barCheckWarnings.Add(new BarCheckWarning(
-                position,
-                _timeSignature,
-                _currentDuration));
-        }
-
         if (barType == BarlineType.RepeatStart)
         {
             // |: opens the NEXT measure; close anything pending first.
@@ -505,8 +462,6 @@ internal sealed class MeasureBuilder
             IsEmptyPlaceholder = true,
         });
 
-        _boundaries.Add(new MeasureBoundary(sourceEnd, Fraction.Zero, IsExplicit: true, IsAligned: false));
-
         OnEmptyPlaceholder?.Invoke(sourceEnd);
         // Closed by a written barline, so a further bare barline opens ANOTHER placeholder.
         ResetPerMeasureState(sourceEnd, autoBoundary: false);
@@ -525,8 +480,6 @@ internal sealed class MeasureBuilder
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
         {
-            bool isAligned = _currentDuration == _timeSignature;
-
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -536,12 +489,6 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,  // End position same as start for incomplete
                 sectionLabelPosition: _sectionLabelPosition,
                 isPickup: _partialRestore != null));
-
-            _boundaries.Add(new MeasureBoundary(
-                _measureSourceStart,
-                _currentDuration,
-                IsExplicit: false,
-                IsAligned: isAligned));
         }
 
         // Auto-set final barline on the last measure (music convention). Skipped
