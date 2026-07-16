@@ -68,7 +68,12 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax)
+                or VariableDeclarationSyntax or PartBlockSyntax
+                // A part-header directive (e.g. `part p { key bes major … }`) is a
+                // PER-PART default, not a global one — a part that sets no key of its
+                // own still inherits the top-level key. So it must not group with the
+                // global settings, or it would falsely flag the global as overwritten.
+                or PartDeclarationSyntax)
                 return true;
         return false;
     }

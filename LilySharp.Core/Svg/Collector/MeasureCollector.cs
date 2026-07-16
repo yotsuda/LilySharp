@@ -822,13 +822,17 @@ public sealed partial class MeasureCollector
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
-            var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _meta.Clef = partClef;
             _meta.ClefPosition = partClefPos;
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             _octave.OctaveBase = partOctave ?? 4;
             ApplyTranspose(partTranspose);
+            // A part-header key overrides the file key for THIS part (CollectDefinitions
+            // left the global key in place; a part that sets none keeps it).
+            if (partKey != null)
+                ApplyPartHeaderKey(partKey);
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
             // accidental engine match the transposed pitches.
@@ -997,6 +1001,11 @@ public sealed partial class MeasureCollector
         _form = renderSpec.Form ?? _form;
         _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
         _meta.InitialKeyCustom = _meta.KeyCustom;
+        // The file key's tonic/position too, so a part that sets its OWN header key
+        // can be undone for the next part that sets none (restored per voice below).
+        int globalKeyTonicStep = _meta.KeyTonicStep;
+        int globalKeyTonicAlter = _meta.KeyTonicAlter;
+        int globalKeyPosition = _meta.KeyPosition;
         // Capture the file-level `octave absolute/relative` default AFTER the
         // pre-scan, mirroring the single-staff path. Without this each part's
         // line-702 restore reads the post-Reset `false`, so a top-level
@@ -1073,7 +1082,7 @@ public sealed partial class MeasureCollector
             }
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             _meta.Clef = partClef ?? "treble";
             _meta.ClefPosition = partClefPos;
 
@@ -1084,13 +1093,27 @@ public sealed partial class MeasureCollector
             _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
-            // Re-arm this voice's running key from the written initial key,
-            // transposed by THIS part's option, so the accidental engine
-            // suppresses in-key accidentals correctly and the key does not leak
-            // between voices.
-            _meta.KeySharps = _octave.TransposeKeySharps(_meta.InitialKeySharps);
-            if (_octave.HasTranspose)
-                voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps);
+            // Re-arm this voice's running key. Restore the file key's tonic/custom
+            // first so a previous part's header key does not leak into a part that
+            // sets none; then, if THIS part has its own header key, apply it. The
+            // running key is transposed by THIS part's option so the accidental engine
+            // suppresses in-key accidentals correctly and the key does not leak.
+            _meta.KeyCustom = _meta.InitialKeyCustom;
+            _meta.KeyTonicStep = globalKeyTonicStep;
+            _meta.KeyTonicAlter = globalKeyTonicAlter;
+            _meta.KeyPosition = globalKeyPosition;
+            if (partKey != null)
+            {
+                ApplyPartHeaderKey(partKey);
+                _meta.KeySharps = _octave.TransposeKeySharps(_meta.KeySharps);
+                voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+            }
+            else
+            {
+                _meta.KeySharps = _octave.TransposeKeySharps(_meta.InitialKeySharps);
+                if (_octave.HasTranspose)
+                    voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps);
+            }
 
             _openingKeyOverride = null;
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
@@ -1805,7 +1828,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
+    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
@@ -1817,6 +1840,11 @@ public sealed partial class MeasureCollector
             int? octave = null;
             int clefPos = 0;
             (int step, int alt, int oct)? transpose = null;
+
+            // A part-header key (`part p { key bes major … }`) is this part's default
+            // key — applied per-part below, not folded into the global (file) key.
+            KeySignatureSyntax? partKey = partDecl.DescendantNodes()
+                .FirstOrDefault(n => n.Parent == partDecl && n is KeySignatureSyntax) as KeySignatureSyntax;
 
             // Check properties for clef, instrument, octave, and transpose
             foreach (var prop in partDecl.Properties)
@@ -1872,10 +1900,27 @@ public sealed partial class MeasureCollector
                 resolvedOctave ??= defaultOctave;
             }
 
-            return (resolvedClef, resolvedOctave, transpose, clefPos);
+            return (resolvedClef, resolvedOctave, transpose, clefPos, partKey);
         }
 
-        return (null, null, null, 0);
+        return (null, null, null, 0, null);
+    }
+
+    // Applies a part-header key as THIS part's written key: mirrors the global-key
+    // walk (see the KeySignatureSyntax case in CollectDefinitions) but scoped to the
+    // part being collected. Returns the written (pre-transpose) sharp count so the
+    // caller can transpose it like it would the global key.
+    private void ApplyPartHeaderKey(KeySignatureSyntax key)
+    {
+        _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+        if (!key.IsCustom)
+        {
+            _meta.KeyTonicStep = Math.Max(0,
+                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
+            _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
+        }
+        _meta.KeyCustom = key.IsCustom ? KeySignature.EncodeCustom(key.CustomAlterations) : null;
+        _meta.KeyPosition = key.Span.Start;
     }
 
     private void CollectDefinitions(SyntaxNode root)
@@ -2548,7 +2593,12 @@ public sealed partial class MeasureCollector
         while (parent != null)
         {
             if (parent is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax)
+                or VariableDeclarationSyntax or PartBlockSyntax
+                // A directive in a part header (`part p { key bes major … }`) is a
+                // PER-PART default, applied when that part is collected (GetPartDefaults),
+                // NOT a global one — otherwise it would overwrite the file-level key for
+                // every part, including those that set none of their own.
+                or PartDeclarationSyntax)
                 return true;
             parent = parent.Parent;
         }

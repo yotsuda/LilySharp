@@ -66,4 +66,29 @@ public class MultiStaffKeySignatureTests
             "form main { A } score main { staff melody staff melody2 }");
         Assert.Equal(new[] { 2, 3 }, sharps);
     }
+
+    [Fact]
+    public void PartHeaderKey_AppliesPerPart_AndDoesNotLeakToTheGlobalKey()
+    {
+        // The reported case: `melody`'s part-header key is B-flat major (2 flats = -2);
+        // `melody2` sets none, so it keeps the file key C major (0). The part key must
+        // NOT overwrite the global — else melody2 would wrongly show 2 flats too.
+        var sharps = OpeningSharpsPerStaff(
+            "key c major " +
+            "part melody { key bes major section A { c1 } } " +
+            "part melody2 { section A { e1 } } " +
+            "form main { A } score main { staff melody staff melody2 }");
+        Assert.Equal(new[] { -2, 0 }, sharps);
+    }
+
+    [Fact]
+    public void TwoPartHeaderKeys_EachStaffKeepsItsOwn()
+    {
+        // No file key at all: each part's own header key stands, no leak between them.
+        var sharps = OpeningSharpsPerStaff(
+            "part melody { key bes major section A { c1 } } " +
+            "part melody2 { key d major section A { e1 } } " +
+            "form main { A } score main { staff melody staff melody2 }");
+        Assert.Equal(new[] { -2, 2 }, sharps);
+    }
 }

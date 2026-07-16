@@ -58,4 +58,26 @@ public class DuplicateGlobalSettingValidatorTests
     [Fact]
     public void DistinctGlobals_DoNotWarn()
         => Assert.Equal(0, WarnCount("tempo 100\ntime 4/4\nkey g major\ntitle \"X\"\ncomposer \"Y\"\n" + Tail));
+
+    [Fact]
+    public void GlobalKeyPlusPartHeaderKey_DoesNotWarn()
+        // The part-header key is a per-part default, not a second global one: `melody2`
+        // (no key of its own) still inherits the global `key c major`, so it is NOT
+        // overwritten. (Regression: the part key used to group with the global.)
+        => Assert.Equal(0, WarnCount(
+            "key c major\npart melody { key bes major section A { c1 } }\n"
+            + "part melody2 { section A { e1 } }\n"
+            + "form main { A }\nscore main { staff melody staff melody2 }"));
+
+    [Fact]
+    public void TwoPartsEachWithOwnHeaderKey_DoNotWarn()
+        => Assert.Equal(0, WarnCount(
+            "part melody { key bes major section A { c1 } }\n"
+            + "part melody2 { key d major section A { e1 } }\n"
+            + "form main { A }\nscore main { staff melody staff melody2 }"));
+
+    [Fact]
+    public void TwoTopLevelKeys_StillWarn()
+        // The real duplicate the validator exists for must still fire.
+        => Assert.Equal(1, WarnCount("key c major\nkey d major\n" + Tail));
 }
