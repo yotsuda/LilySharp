@@ -19,7 +19,6 @@ using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -78,14 +77,7 @@ public sealed partial class MeasureCollector
             isCourtesy = true;
             // If no accidental shown, force the key-signature-matching accidental
             if (accidental == null)
-            {
-                int step = rp.DisplayStep;
-                int alt = GetKeySignatureAlteration(step);
-                accidental = alt switch
-                {
-                    >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
-                };
-            }
+                accidental = KeySignatureAccidentalName(rp.DisplayStep);
         }
 
         // LILYPOND-REF: lily/fingering-engraver.cc — finger event lookup at note creation.
@@ -110,12 +102,7 @@ public sealed partial class MeasureCollector
             }
             else
             {
-                int step = rp.DisplayStep;
-                int alt = GetKeySignatureAlteration(step);
-                editorialAccidental = alt switch
-                {
-                    >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
-                };
+                editorialAccidental = KeySignatureAccidentalName(rp.DisplayStep);
             }
             accidental = null; // suggestion replaces the left-of-note accidental
         }

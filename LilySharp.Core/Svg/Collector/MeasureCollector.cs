@@ -18,7 +18,6 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -1734,10 +1733,6 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Looks up clef and octave defaults from a part definition by name.
-    /// Priority: explicit attributes > instrument defaults > clef-based defaults.
-    /// </summary>
-    /// <summary>
     /// Arms (or clears) the part-option transpose from the parsed target.
     /// </summary>
     private void ApplyTranspose((int step, int alt, int oct)? transpose)
@@ -2151,6 +2146,14 @@ public sealed partial class MeasureCollector
         return LilySharp.Core.Music.KeySpelling.Alteration(step, _meta.KeySharps);
     }
 
+    /// <summary>The accidental glyph name ("doubleSharp" / "sharp" / "natural" / "flat" /
+    /// "doubleFlat") the current key signature dictates for diatonic <paramref name="step"/>.
+    /// Forced onto a note that shows none when it is made a courtesy or editorial accidental.</summary>
+    private string KeySignatureAccidentalName(int step) => GetKeySignatureAlteration(step) switch
+    {
+        >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
+    };
+
     /// <summary>
     /// Determines the displayed accidental for a pitch using LilyPond's default
     /// accidental style: an accidental is printed when the pitch's alteration
@@ -2195,12 +2198,6 @@ public sealed partial class MeasureCollector
 
         return (null, false);
     }
-
-    private static int PitchNameToStep(char name) => char.ToLower(name) switch
-    {
-        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
-        _ => 0
-    };
 
     private List<Measure> CollectMeasures()
     {
@@ -2294,10 +2291,6 @@ public sealed partial class MeasureCollector
         return builder.FinalizeMeasures();
     }
 
-    /// <summary>Records where a section occurrence begins: the first-only anchor
-    /// (<see cref="_sectionState.StartMeasure"/>) plus EVERY occurrence
-    /// (<see cref="_sectionState.AllStarts"/>), so a chord/lyric track can repeat under a
-    /// reprise (e.g. A played again as "A2").</summary>
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
     /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
     private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline()
@@ -2406,12 +2399,6 @@ public sealed partial class MeasureCollector
         }
     }
 
-    /// <summary>
-    /// The printed mark for one section occurrence: the per-occurrence display
-    /// label when given (<c>structure { First First "First (reprise)" }</c> —
-    /// an empty string suppresses the mark like <c>~First</c>), else the
-    /// section identifier.
-    /// </summary>
     /// <summary>Source offset of a section's <c>section X</c> declaration (0 if the
     /// name is unknown), so its label mark can jump to the declaration. Anchored on
     /// the <c>section</c> keyword (not the name) so hovering anywhere on the
@@ -2463,8 +2450,6 @@ public sealed partial class MeasureCollector
         NavigationMarkType.DalSegnoAlCoda => MusicMarkType.DalSegnoAlCoda,
         _ => MusicMarkType.Segno
     };
-
-    private static bool IsInsideRender(SyntaxNode node) => node.IsInside<RenderDeclarationSyntax>();
 
     /// <summary>
     /// Rows-only scores reach row collection with an EMPTY section-start
@@ -2981,7 +2966,7 @@ public sealed partial class MeasureCollector
             _tremoloPairShape = null;
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
-            && (bodyNodes[0] is NoteSyntax || bodyNodes[0] is ChordSyntax)
+            && bodyNodes[0] is NoteSyntax or ChordSyntax
             && TremoloTotalIsPrintable(count, bodyNodes[0]))
         {
             // LILYPOND-REF: lily/chord-tremolo-iterator.cc +
@@ -3003,16 +2988,20 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>The written duration value of a note or chord (0 when it declares none, or
+    /// the node is neither) — the base a tremolo's total duration is computed from.</summary>
+    private static int NoteOrChordDurationValue(SyntaxNode n) => n switch
+    {
+        NoteSyntax ns => ns.Duration?.Value ?? 0,
+        ChordSyntax cs => cs.Duration?.Value ?? 0,
+        _ => 0
+    };
+
     /// <summary>True when count × body duration reduces to a plain or dotted
     /// printable note value (1 → base, 3 → dotted, 7 → double-dotted).</summary>
     private static bool TremoloTotalIsPrintable(int count, SyntaxNode body)
     {
-        int value = body switch
-        {
-            NoteSyntax n => n.Duration?.Value ?? 0,
-            ChordSyntax ch => ch.Duration?.Value ?? 0,
-            _ => 0
-        };
+        int value = NoteOrChordDurationValue(body);
         if (value < 8 || count < 2)
             return false;
         return CombineTremoloDuration(count, value) != null;
@@ -3023,13 +3012,7 @@ public sealed partial class MeasureCollector
     /// beams = the subdivision's flag count (16th → 2).</summary>
     private static (int Value, int Dots, int Beams)? TremoloPairShape(int count, List<SyntaxNode> body)
     {
-        int V(SyntaxNode n) => n switch
-        {
-            NoteSyntax ns => ns.Duration?.Value ?? 0,
-            ChordSyntax cs => cs.Duration?.Value ?? 0,
-            _ => 0
-        };
-        int v1 = V(body[0]), v2 = V(body[1]);
+        int v1 = NoteOrChordDurationValue(body[0]), v2 = NoteOrChordDurationValue(body[1]);
         if (v2 == 0)
             v2 = v1; // second note inherits the first's duration (c16 e)
         if (v1 < 8 || v1 != v2 || count < 1)

@@ -19,7 +19,6 @@ using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Collector;
 
