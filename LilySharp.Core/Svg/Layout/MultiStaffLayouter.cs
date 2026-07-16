@@ -835,7 +835,7 @@ internal sealed class MultiStaffLayouter
                     // The union timing columns don't match the syllable count on a lead sheet
                     // (chords and lyrics subdivide the bar differently), so reserve by column.
                     ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
-                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
+                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, allTimings, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {

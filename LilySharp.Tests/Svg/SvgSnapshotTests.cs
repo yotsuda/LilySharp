@@ -275,6 +275,9 @@ public class SvgSnapshotTests
         // A section with no time of its own opens at the SCORE meter, not the meter a
         // prior section changed to mid-way (section B must NOT inherit A's inner 3/4).
         yield return new object[] { "test/section-meter-resets-to-global" };
+        // Syllables align to their notes and the bar widens for them even when it opens
+        // with a mid-piece time-signature change (the leading grob used to cluster them).
+        yield return new object[] { "test/lyrics-under-midpiece-meter" };
         yield return new object[] { "test/lyrics" };
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the
         // left of its lyrics, not floating at the top of the page.

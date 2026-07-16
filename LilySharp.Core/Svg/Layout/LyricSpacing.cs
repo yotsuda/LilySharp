@@ -48,11 +48,17 @@ internal static class LyricSpacing
     public static ImmutableArray<Spring> ApplyLyricSpacing(
         ImmutableArray<Spring> springs,
         Measure measure,
+        IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics)
     {
+        // The springs are built from TIMING COLUMNS. In a plain measure those columns
+        // coincide with the note items, so the item-index reservation below lines up. But
+        // when the bar opens with a non-note item (a mid-piece time/clef change) the item
+        // slots no longer match the columns — the item-index chain would bail and leave the
+        // syllables to crowd. Reserve by timing column instead.
         if (measure.Items.Length == 0 || springs.Length != measure.Items.Length + 1)
-            return springs;
+            return ReserveLyricWidthByColumn(springs, columnTimings, measureIndex, lyrics, _ => true);
 
         var lyricsByItem = new Dictionary<int, List<LyricItem>>();
         foreach (var lyric in lyrics)
@@ -120,6 +126,22 @@ internal static class LyricSpacing
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics)
+        => ReserveLyricWidthByColumn(springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow);
+
+    /// <summary>
+    /// Reserves lyric ink against the TIMING COLUMNS the springs were built from: each
+    /// syllable matched to its column by <see cref="LyricItem.Timing"/>, its width spread
+    /// across the springs spanning adjacent lyric columns (plus the leading/trailing extents
+    /// against the barlines). <paramref name="include"/> selects which lyrics participate
+    /// (row-only on a lead sheet; all on a staff). Robust to columns that carry no syllable
+    /// (a chord-only column, or a bar's leading time/clef change).
+    /// </summary>
+    private static ImmutableArray<Spring> ReserveLyricWidthByColumn(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> columnTimings,
+        int measureIndex,
+        IReadOnlyList<LyricItem> lyrics,
+        System.Func<LyricItem, bool> include)
     {
         int cols = columnTimings.Count;
         // springs = [start→col0, col0→col1, …, colLast→end] → length == cols + 1.
@@ -129,7 +151,7 @@ internal static class LyricSpacing
         var lyricsByCol = new Dictionary<int, List<LyricItem>>();
         foreach (var ly in lyrics)
         {
-            if (ly.MeasureIndex != measureIndex || !ly.IsLyricsRow)
+            if (ly.MeasureIndex != measureIndex || !include(ly))
                 continue;
             int col = -1;
             for (int c = 0; c < cols; c++)
@@ -151,7 +173,7 @@ internal static class LyricSpacing
         BumpSpanMin(result, 0, firstCol,
             GetLyricLeftExtent(lyricsByCol[firstCol]) + GlyphMetrics.MinItemGap);
 
-        // Between consecutive syllables (across any chord-only columns in between).
+        // Between consecutive syllables (across any note/chord-only columns in between).
         for (int p = 0; p + 1 < lyricCols.Count; p++)
         {
             int a = lyricCols[p], b = lyricCols[p + 1];

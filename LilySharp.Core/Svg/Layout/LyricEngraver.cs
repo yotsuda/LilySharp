@@ -375,22 +375,15 @@ internal sealed class LyricEngraver
 
         var measureLayout = measureLayouts[lyric.MeasureIndex];
 
-        // Get X position from the associated note.
+        // Get X position from the associated note's musical MOMENT against the shared
+        // column grid — the same X the renderer draws that timing at.
         // LILYPOND-REF: lily/lyric-engraver.cc:100-110 horizontal alignment
-        double noteX;
-        if (lyric.VoiceId > 0 || lyric.IsLyricsRow)
-        {
-            // A bound (non-primary) voice — or an independent lyrics ROW — resolves
-            // X from its musical moment against the shared column grid (the same X
-            // the renderer draws that timing at), not from a primary-voice item.
-            noteX = measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
-        }
-        else
-        {
-            if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)
-                return null;
-            noteX = measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
-        }
+        //
+        // Resolving by timing (not by the item's slot X) is essential when a measure
+        // opens with a non-note item — a mid-piece `time`/`clef` change: its ItemLayout.X
+        // does not track the note column grid, so a slot-index lookup compressed every
+        // syllable of that bar into a cluster. In a plain measure the two agree exactly.
+        double noteX = measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
 
         double textWidth = EstimateTextWidth(lyric.Text);
 

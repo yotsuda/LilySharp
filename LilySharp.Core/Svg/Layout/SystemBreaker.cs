@@ -159,7 +159,7 @@ internal sealed class SystemBreaker
                     // Mirror MultiStaffLayouter: on a lead sheet reserve lyric width by timing
                     // column (union columns ≠ syllable count), else by note item.
                     ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
-                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
+                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, allTimings, i, score.Lyrics);
             }
             if (score.IsLeadSheet)
             {

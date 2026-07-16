@@ -1,0 +1,16 @@
+// Lyrics must align to their notes even when the bar OPENS with a mid-piece
+// time-signature change. Bar 1 is a 3/4 pickup ("la la la"); bar 2 switches to
+// 4/4 and carries "Twin- kle twin- kle". The syllables must spread across bar 2's
+// four notes - the leading time grob used to skew the slot X and cluster them.
+title "Lyrics under a mid-piece meter change"
+time 3/4
+key c major
+
+part melody { clef treble }
+
+section A { g4 a b | time 4/4 c' b a g | a b c'2 | }
+lyrics words { la la la | Twin- kle twin- kle | lit- tle star | }
+
+form main { A }
+
+score main "midmeter" { staff melody with lyrics words }
