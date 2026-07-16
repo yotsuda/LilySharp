@@ -95,7 +95,11 @@ internal static class LedgerLineSpannerEngraver
                     continue;
                 if (ii >= measureLayout.Items.Length)
                     continue;
-                double centerX = measureLayout.X + measureLayout.Items[ii].X;
+                // Resolve via the shared column grid (the X the notehead is drawn at), not
+                // the raw item slot — a bar opening with a mid-piece time/clef grob skews the
+                // slot X off the grid, which drifted the ledger lines off their noteheads.
+                double centerX = measureLayout.X
+                    + LayoutUtilities.GetItemXOffset(voice.Measures, mi, ii, measureLayout);
                 double headWidth = EngravingDefaults.NoteheadBlackWidth;
                 double left = centerX - LedgerExtension;
                 double right = centerX + headWidth + LedgerExtension;

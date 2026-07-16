@@ -133,6 +133,11 @@ internal static class TieVariantEngraver
         MeasureLayout measureLayout, SystemLayout system, int staffIndex,
         TieVariantKind kind)
     {
+        // NOTE: still resolves X from the raw item slot. On the multi-staff path a bar that
+        // opens with a mid-piece time/clef grob skews the slot X off the column grid (see
+        // LayoutUtilities.GetItemXOffset), so a l.v./repeat tie in such a bar can drift.
+        // Migrating needs a Width-aware column resolve (this uses itemLayout.Width too), so
+        // it is left as a follow-up; the case is rare (l.v./repeat ties mid-meter-change).
         var itemLayout = measureLayout.Items[itemIndex];
         double noteCenterX = measureLayout.X + itemLayout.X + itemLayout.Width / 2.0;
 

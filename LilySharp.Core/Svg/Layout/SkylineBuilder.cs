@@ -377,6 +377,10 @@ internal sealed class SkylineBuilder
         double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
+        // Resolve item X through the shared column grid (like the multi-staff skyline
+        // above), so a bar opening with a mid-piece time/clef grob does not skew the item
+        // slot X off the grid and shift the skyline away from the drawn glyphs.
+        var measuresArr = measures.ToImmutableArray();
         // Process measures in this system
         for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
         {
@@ -387,12 +391,12 @@ internal sealed class SkylineBuilder
             var measureLayout = measureLayouts[measureIndex];
             for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
             {
-                if (itemIndex >= measureLayout.Items.Length)
+                if (measureLayout.Columns.IsDefaultOrEmpty && itemIndex >= measureLayout.Items.Length)
                     continue;
 
                 var item = measure.Items[itemIndex];
-                var itemLayout = measureLayout.Items[itemIndex];
-                double itemX = measureLayout.X + itemLayout.X;
+                double itemX = measureLayout.X
+                    + LayoutUtilities.GetItemXOffset(measuresArr, measureIndex, itemIndex, measureLayout);
 
                 // LILYPOND-REF: lily/grob.cc:85-89 - Each grob contributes to skyline
                 AddMusicItemToSkylines(item, itemX, staffMiddleY,

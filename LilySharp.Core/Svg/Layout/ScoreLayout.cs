@@ -78,12 +78,6 @@ internal sealed record MeasureLayout
     }
 
     /// <summary>
-    /// Gets X positions for all items (convenience accessor for LyricEngraver).
-    /// </summary>
-    public IReadOnlyList<double> ItemPositions =>
-        Items.Select(i => i.X).ToList();
-
-    /// <summary>
     /// Gets the X coordinate for a given timing within this measure.
     /// Uses column information if available, otherwise interpolates.
     /// </summary>
