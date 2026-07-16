@@ -394,6 +394,7 @@ public class SvgSnapshotTests
         yield return new object[] { "test/keysig-cancel-naturals" };
         yield return new object[] { "test/trill-spanner" };
         yield return new object[] { "test/section-empty-placeholder" };
+        yield return new object[] { "test/key-opening-override" };
         yield return new object[] { "test/lv-meterchange" };
         yield return new object[] { "test/courtesy-accidentals" };
         yield return new object[] { "test/editorial-accidental" };

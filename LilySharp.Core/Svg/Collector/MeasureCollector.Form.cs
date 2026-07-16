@@ -403,6 +403,21 @@ public sealed partial class MeasureCollector
             _keyByMeasure[builder.CurrentMeasureIndex] =
                 (Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
         }
+
+        // A key change at the very opening (bar 0, before any note sounds) IS the piece's
+        // opening key, not a change within it — e.g. a top-level `key d major` overridden by
+        // the first section's `key a major`. Fold it into the initial signature so the first
+        // measure shows the FINAL key from the start, with no redundant change drawn. This
+        // mirrors the opening time signature, which already collapses this way
+        // (CaptureScoreContent takes _meta.TimeBeats after the section's own time). The
+        // running key state above is left as set, so mid-piece changes still draw normally.
+        if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+        {
+            _meta.InitialKeySharps = _meta.KeySharps;
+            _meta.InitialKeyCustom = _meta.KeyCustom;
+            return;
+        }
+
         builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, keySig.Position));
     }
 
