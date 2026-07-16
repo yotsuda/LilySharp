@@ -485,9 +485,9 @@ internal sealed class MeasureLayouter
 
     /// <summary>
     /// Width a zero-duration clef/key-signature change at a timing column
-    /// needs in FRONT of that column (glyph + padding on both sides). When
-    /// several staves change at the same moment the glyphs align vertically,
-    /// so the MAX (not the sum) is reserved.
+    /// needs in FRONT of that column (glyph + padding on both sides). Several
+    /// changes sharing a column are drawn side by side, so their widths SUM
+    /// (see the inline note on the accumulation below).
     /// </summary>
     private static double ChangeItemPrefixWidth(IEnumerable<MusicItem>? items)
     {

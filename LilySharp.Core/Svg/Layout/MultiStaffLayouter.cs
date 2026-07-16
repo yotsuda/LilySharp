@@ -1056,21 +1056,6 @@ internal sealed class MultiStaffLayouter
         return measures;
     }
 
-    /// <summary>
-    /// The measure with the most items among <paramref name="measures"/> (all rows at
-    /// one bar). On a lead sheet this is the lyrics row (one spacer per syllable),
-    /// whose item count matches the timing-column grid the springs were built from —
-    /// the basis lyric-width reservation needs.
-    /// </summary>
-    internal static Measure DensestMeasure(IReadOnlyList<Measure> measures)
-    {
-        var best = measures[0];
-        for (int k = 1; k < measures.Count; k++)
-            if (measures[k].Items.Length > best.Items.Length)
-                best = measures[k];
-        return best;
-    }
-
     // --- Skyline-based staff spacing ---
 
     /// <summary>
