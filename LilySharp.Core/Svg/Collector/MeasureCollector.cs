@@ -645,6 +645,16 @@ public sealed partial class MeasureCollector
     // into the next section, nor into the same section reused elsewhere in the form.
     private string _sectionResetClef = "treble";
 
+    // This voice's score-level time signature, snapshotted at collection start (before any
+    // section music is walked). A section boundary reverts the running meter to it — like
+    // key/clef — so a mid-section `time` change cannot leak into the next section. The
+    // snapshot is essential: mid-music time changes MUTATE _meta.TimeBeats, so by the next
+    // boundary _meta no longer holds the score-level meter.
+    private int _sectionResetTimeBeats = 4;
+    private int _sectionResetTimeBeatType = 4;
+    private string? _sectionResetTimeBeatsText;
+    private bool _sectionResetTimeSenzaMisura;
+
     // The grob-override state a section boundary reverts to (the grob analogue of
     // _sectionResetClef, but a SET): the part-default values — global + this voice's
     // part-body overrides — snapshotted at collection start. Section-internal overrides
@@ -2109,6 +2119,12 @@ public sealed partial class MeasureCollector
         _sectionResetKeyCustom = _meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
         _sectionResetClef = _meta.Clef;
+        // And the score-level meter: the value a section without its own time reverts to.
+        // Captured here (before the section walk mutates _meta.Time via mid-music changes).
+        _sectionResetTimeBeats = _meta.TimeBeats;
+        _sectionResetTimeBeatType = _meta.TimeBeatType;
+        _sectionResetTimeBeatsText = _meta.TimeBeatsText;
+        _sectionResetTimeSenzaMisura = _meta.TimeSenzaMisura;
         // And the grob-override part default (global + this voice's part-body overrides,
         // already collected at (0,0)) — the state each section boundary reverts to.
         _sectionResetOverrides.Clear();

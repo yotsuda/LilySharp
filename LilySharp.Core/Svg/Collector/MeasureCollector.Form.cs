@@ -216,10 +216,23 @@ public sealed partial class MeasureCollector
                 sectionPos));
             builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType));
         }
-        else if (builder.CurrentMeasureLength != TimeSignatureFraction)
-            builder.AddItem(new TimeSignatureChangeItem(
-                new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText),
-                sectionPos));
+        else
+        {
+            // No section meter: revert the running meter to the SCORE level. Compare (and
+            // redraw) against the SNAPSHOT, not _meta.Time - a mid-music `time` in a prior
+            // section mutates _meta (which also drives the opening signature), so _meta no
+            // longer holds the score meter. Only redraw when the previous section actually
+            // left a different meter on the staff.
+            var resetTime = new Fraction(_sectionResetTimeBeats, _sectionResetTimeBeatType);
+            if (builder.CurrentMeasureLength != resetTime)
+            {
+                builder.AddItem(new TimeSignatureChangeItem(
+                    new TimeSignature(_sectionResetTimeBeats, _sectionResetTimeBeatType,
+                        _sectionResetTimeBeatsText, _sectionResetTimeSenzaMisura),
+                    sectionPos));
+                builder.SetMeasureLength(resetTime);
+            }
+        }
 
         // A section can state its own tempo, printed as a metronome mark at its start.
         if (_sectionHeaderTempos.TryGetValue(section.SectionName, out var sectionTempo))

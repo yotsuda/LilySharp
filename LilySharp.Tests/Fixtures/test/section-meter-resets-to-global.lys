@@ -1,0 +1,16 @@
+// A section with no time of its own opens at the SCORE meter, not the meter a
+// PREVIOUS section changed to mid-way. Section A opens 3/4 (its own pickup) then
+// switches to 4/4; section B, stating no time, must reset to the score 4/4 - the
+// 3/4 must not leak in. A2 replays A, so its 3/4 pickup returns.
+title "Section meter resets to score"
+time 4/4
+key c major
+
+part melody { clef treble }
+
+section A { time 3/4 c'4 d' e' | time 4/4 f'4 e' d' c' | d'2 e' | }
+section B { g'4 f' e' d' | c'1 | }
+
+form main { A B A "A2" }
+
+score main "meter" { staff melody }

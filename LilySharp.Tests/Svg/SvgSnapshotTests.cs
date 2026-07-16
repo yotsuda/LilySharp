@@ -272,6 +272,9 @@ public class SvgSnapshotTests
         // bar 3, not 4 — the BarNumberEngraver pickup offset. Verified vs LilyPond.
         yield return new object[] { "test/partial-barnumber" };
         yield return new object[] { "test/break" };
+        // A section with no time of its own opens at the SCORE meter, not the meter a
+        // prior section changed to mid-way (section B must NOT inherit A's inner 3/4).
+        yield return new object[] { "test/section-meter-resets-to-global" };
         yield return new object[] { "test/lyrics" };
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the
         // left of its lyrics, not floating at the top of the page.

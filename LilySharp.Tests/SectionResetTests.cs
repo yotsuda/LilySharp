@@ -62,6 +62,29 @@ public sealed class SectionResetTests
     }
 
     [Fact]
+    public void SectionThatReturnsToScoreMeter_DoesNotLeakItsOpeningMeterIntoNextSection()
+    {
+        // A opens 3/4 then switches BACK to 4/4 before it ends. B declares nothing and
+        // already runs in 4/4, so NO meter change is drawn at B. Regression guard: a
+        // mid-music `time` mutates the running meta, so B used to revert to A's OPENING
+        // 3/4 (the stale meta) instead of staying in the score 4/4.
+        var measures = Collect("""
+            time 4/4
+            part m {
+              section A { time 3/4 c4 d e | time 4/4 c1 | }
+              section B { c4 d e f | }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+
+        // A: [3/4 change + c d e], [4/4 change + c1]. B starts at measure index 2.
+        Assert.DoesNotContain(measures[2].Items, i => i is TimeSignatureChangeItem);
+        // c4 d e f fits one 4/4 bar; a leaked 3/4 would spill it into a second measure.
+        Assert.Equal(3, measures.Length);
+    }
+
+    [Fact]
     public void MidSectionKeyChange_DoesNotLeakIntoNextSection()
     {
         // A modulates to G major; B declares nothing, so it reverts to the score
