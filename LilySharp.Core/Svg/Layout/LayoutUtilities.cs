@@ -229,15 +229,33 @@ internal static class LayoutUtilities
         for (int i = 0; i < itemIndex && i < measure.Items.Length; i++)
             timing = timing + measure.Items[i].Duration;
 
+        return NearestColumnX(measureLayout.Columns, timing);
+    }
+
+    /// <summary>
+    /// X of the column whose timing matches <paramref name="timing"/> exactly, else the
+    /// nearest column by absolute timing distance (0 when there are no columns). This is
+    /// the snap-to-onset resolution shared by <see cref="GetItemXOffset"/> and
+    /// <see cref="MeasureLayouter.LayoutItemsFromColumns"/>. It is DISTINCT from
+    /// <see cref="MeasureLayout.GetXForTiming"/>, which interpolates between the
+    /// bracketing columns for a timing that falls BETWEEN onsets — do not fold the two
+    /// together. For an exact item onset (the only timings this helper is fed) both agree.
+    /// </summary>
+    internal static double NearestColumnX(ImmutableArray<ColumnLayout> columns, Fraction timing)
+    {
+        if (columns.IsDefaultOrEmpty)
+            return 0;
+
         double targetT = timing.ToDouble();
-        ColumnLayout? best = null;
+        double bestX = 0;
         double bestDiff = double.MaxValue;
-        foreach (var col in measureLayout.Columns)
+        foreach (var col in columns)
         {
-            if (col.Timing == timing) return col.X;
+            if (col.Timing == timing)
+                return col.X;
             double diff = Math.Abs(col.Timing.ToDouble() - targetT);
-            if (diff < bestDiff) { best = col; bestDiff = diff; }
+            if (diff < bestDiff) { bestX = col.X; bestDiff = diff; }
         }
-        return best?.X ?? 0;
+        return bestX;
     }
 }

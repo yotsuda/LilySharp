@@ -132,7 +132,7 @@ internal sealed class MeasureLayouter
         var timing = Fraction.Zero;
         for (int i = 0; i < measure.Items.Length; i++)
         {
-            xs[i] = ColumnXForTiming(columns, timing);
+            xs[i] = LayoutUtilities.NearestColumnX(columns, timing);
             timing += measure.Items[i].Duration;
         }
 
@@ -143,26 +143,6 @@ internal sealed class MeasureLayouter
             layouts.Add(new ItemLayout(i, xs[i], Math.Max(0, width)));
         }
         return layouts.MoveToImmutable();
-    }
-
-    /// <summary>
-    /// X of the column whose timing matches <paramref name="timing"/> (exact where
-    /// possible, else nearest) — the same resolution as
-    /// <see cref="LayoutUtilities.GetItemXOffset"/>'s column branch.
-    /// </summary>
-    private static double ColumnXForTiming(ImmutableArray<ColumnLayout> columns, Fraction timing)
-    {
-        double targetT = timing.ToDouble();
-        double best = 0;
-        double bestDiff = double.MaxValue;
-        foreach (var col in columns)
-        {
-            if (col.Timing == timing)
-                return col.X;
-            double diff = Math.Abs(col.Timing.ToDouble() - targetT);
-            if (diff < bestDiff) { best = col.X; bestDiff = diff; }
-        }
-        return best;
     }
 
     /// <summary>
