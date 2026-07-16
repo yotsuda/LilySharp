@@ -728,6 +728,12 @@ public sealed partial class MeasureCollector
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
     private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
+    // The opening key a section states for the voice CURRENTLY being collected (bar 0,
+    // before any note). Recorded per voice — the collect entry points fold it into that
+    // voice's own signature (score key for a single staff, the staff's own key for a
+    // multi-staff part), never the shared score key, so sibling staves with different
+    // opening keys do not overwrite each other. See ApplyKeySignatureChange.
+    private (int Sharps, string? Custom)? _openingKeyOverride;
     // section name -> its own starting key, for a section that carries a `key` but no
     // inline music: a section-major section (`section A { key g major  melody { … } }`)
     // or a standalone part-major header (`section A { key g major }`). Applied to every
@@ -834,8 +840,17 @@ public sealed partial class MeasureCollector
         // stream, the span is recorded in _parallelSpans), so sequential
         // measures and any number of parallel spans interleave correctly.
         _parallelSpans.Clear();
+        _openingKeyOverride = null;
         var measures = CollectMeasures();
         ResolveBeamStemDirections(measures);
+
+        // A section that OPENS with its own key folds into this single staff's opening
+        // signature (Score.KeySignature reads _meta.InitialKey*). See ApplyKeySignatureChange.
+        if (_openingKeyOverride is { } openingKey)
+        {
+            _meta.InitialKeySharps = openingKey.Sharps;
+            _meta.InitialKeyCustom = openingKey.Custom;
+        }
 
         // If any parallel span was seen, reconstruct the additional voices.
         // Pass the attached chord part through: BuildMultiVoiceScore collects it
@@ -1068,7 +1083,15 @@ public sealed partial class MeasureCollector
             if (_octave.HasTranspose)
                 voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps);
 
+            _openingKeyOverride = null;
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
+
+            // A section that OPENS with its own key (`part b { section A { key a … } }`)
+            // gives THIS staff its own opening signature — a sibling staff's different
+            // opening key must not overwrite it via the shared score key. Overrides the
+            // transpose entry above when both apply (the section key is what is written).
+            if (_openingKeyOverride is { } openingKey)
+                voiceKeyDict[voiceName] = new KeySignature(openingKey.Sharps, openingKey.Custom);
         }
 
         // Rows collect AFTER the music. A rows-only score has no music to
@@ -1665,6 +1688,7 @@ public sealed partial class MeasureCollector
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _emptyPlaceholderWarnings.Clear();
+        _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
         // names, and PitchTrace would grow without bound. (All current callers use a

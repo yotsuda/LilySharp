@@ -409,10 +409,12 @@ public sealed partial class MeasureCollector
         // mirrors the opening time signature, which already collapses this way
         // (CaptureScoreContent takes _meta.TimeBeats after the section's own time). The
         // running key state above is left as set, so mid-piece changes still draw normally.
+        // Recorded PER VOICE (not the shared _meta.InitialKeySharps): in a multi-staff
+        // score each staff keeps its own opening key, so `part a { key c … }` and
+        // `part b { key a … }` do not overwrite each other.
         if (builder.AtPieceOpening)
         {
-            _meta.InitialKeySharps = _meta.KeySharps;
-            _meta.InitialKeyCustom = _meta.KeyCustom;
+            _openingKeyOverride = (_meta.KeySharps, _meta.KeyCustom);
             return;
         }
 

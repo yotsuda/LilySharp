@@ -1,0 +1,4 @@
+part melody { section A { key c major c1 } }
+part melody2 { section A { key a major c1 } }
+form main { A }
+score main { staff melody staff melody2 }
