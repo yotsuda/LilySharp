@@ -430,15 +430,23 @@ export function activate(context: vscode.ExtensionContext) {
 
                     const offset = doc.offsetAt(event.selections[0].active);
                     const text = doc.getText();
-                    // Highlight only when the cursor touches a token: if it sits in a
-                    // pure-whitespace gap (line indent, between tokens) send -1 so the
-                    // preview clears instead of snapping to the nearest preceding grob.
                     const isWs = (c: string | undefined) =>
                         c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
-                    const onToken = !isWs(text[offset]) || !isWs(text[offset - 1]);
+                    // The caret's note is the one whose source lies INSIDE the
+                    // whitespace-delimited token under the caret. Send that token's start so
+                    // the preview highlights a note only when it belongs to THAT token —
+                    // never the nearest PRECEDING note when the caret is on a barline,
+                    // keyword, brace or a gap (their token holds no note, so the preview
+                    // clears). A caret in pure whitespace corresponds to no note.
+                    let tokenStart = -1;
+                    if (!isWs(text[offset]) || !isWs(text[offset - 1])) {
+                        tokenStart = offset;
+                        while (tokenStart > 0 && !isWs(text[tokenStart - 1])) { tokenStart--; }
+                    }
                     panel.webview.postMessage({
                         type: 'highlightPosition',
-                        position: onToken ? offset : -1,
+                        position: tokenStart >= 0 ? offset : -1,
+                        tokenStart,
                     });
                 }
             }
@@ -1519,6 +1527,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         let hideTimeout;
         let lastHighlightPos = -1;
+        let lastHighlightTokenStart = -1; // start of the caret's token, so re-highlight after a render keeps the containment guard
         let lastHighlightRanges = null;   // set while a selection (not a bare cursor) is highlighted
 
         // Pages of the current SVG (single-page SVGs have no g.page wrappers).
@@ -1652,17 +1661,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
         }
 
-        function highlightNearestElement(cursorPos) {
+        function highlightNearestElement(cursorPos, tokenStart) {
             // Clear previous highlights
             clearHighlights();
+            if (cursorPos < 0) { lastResolvedPos = -1; return; }
 
-            // Find nearest data-pos value
+            // The note the caret is on = the nearest one AT or before the caret that also
+            // lies within the caret's own token (data-pos >= tokenStart). The tokenStart
+            // guard is what rejects the nearest PRECEDING note when the caret sits on a
+            // barline / keyword / gap — that token holds no note, so nothing highlights.
             const elements = document.querySelectorAll('[data-pos]');
             let nearestPos = -1;
             let nearestDist = Infinity;
+            const floor = (typeof tokenStart === 'number' && tokenStart >= 0) ? tokenStart : 0;
             elements.forEach(el => {
                 const pos = parseInt(el.getAttribute('data-pos'), 10);
-                if (pos <= cursorPos) {
+                if (pos <= cursorPos && pos >= floor) {
                     const dist = cursorPos - pos;
                     if (dist < nearestDist) {
                         nearestDist = dist;
@@ -2177,7 +2191,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (lastHighlightRanges) {
                             highlightRange(lastHighlightRanges);
                         } else if (lastHighlightPos >= 0) {
-                            highlightNearestElement(lastHighlightPos);
+                            highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
                         }
                     }
                     break;
@@ -2236,8 +2250,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'highlightPosition':
                     lastHighlightPos = message.position;
+                    lastHighlightTokenStart = message.tokenStart;
                     lastHighlightRanges = null;
-                    highlightNearestElement(message.position);
+                    highlightNearestElement(message.position, message.tokenStart);
                     break;
                 case 'highlightRange':
                     lastHighlightRanges = message.ranges;
