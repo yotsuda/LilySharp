@@ -80,4 +80,20 @@ public class DuplicateGlobalSettingValidatorTests
     public void TwoTopLevelKeys_StillWarn()
         // The real duplicate the validator exists for must still fire.
         => Assert.Equal(1, WarnCount("key c major\nkey d major\n" + Tail));
+
+    [Fact]
+    public void GlobalKeyPlusPartHeaderKey_IsCompletelyClean()
+    {
+        // End-to-end guard for the reported symptom: the file key + one part's own
+        // header key is a fully VALID piece — no parse diagnostics, no semantic
+        // errors, and no overwrite warning of any kind.
+        var tree = SyntaxTree.Parse(
+            "key c major\npart melody { key bes major section A { c1 } }\n"
+            + "part melody2 { section A { e1 } }\n"
+            + "form main { A }\nscore main { staff melody staff melody2 }");
+        Assert.Empty(tree.Diagnostics);
+        var semantic = SemanticValidation.Run(tree);
+        Assert.DoesNotContain(semantic, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(semantic, d => d.Code == DiagnosticCodes.DuplicateGlobalSetting);
+    }
 }

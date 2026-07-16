@@ -74,6 +74,7 @@ public class SvgSnapshotTests
     {
         yield return new object[] { "test/notes" };
         yield return new object[] { "test/part-header-key" };
+        yield return new object[] { "test/part-header-key-per-part" };
         yield return new object[] { "test/chords" };
         yield return new object[] { "test/accidentals" };
         // Cue notes/chords scale their accidentals with the head (LP CueVoice

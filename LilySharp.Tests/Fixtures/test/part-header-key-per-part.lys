@@ -1,0 +1,1 @@
+key c major part melody { key bes major section A { c1 } } part melody2 { section A { e1 } } form main { A } score main { staff melody staff melody2 }
