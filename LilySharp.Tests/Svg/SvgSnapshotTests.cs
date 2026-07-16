@@ -73,6 +73,7 @@ public class SvgSnapshotTests
     public static IEnumerable<object[]> TestSamples()
     {
         yield return new object[] { "test/notes" };
+        yield return new object[] { "test/part-header-key" };
         yield return new object[] { "test/chords" };
         yield return new object[] { "test/accidentals" };
         // Cue notes/chords scale their accidentals with the head (LP CueVoice

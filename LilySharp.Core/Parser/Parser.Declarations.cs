@@ -57,6 +57,13 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.RevertKeyword)) { properties.Add(ParseRevertDeclaration()); continue; }
             if (Check(SyntaxKind.OnceKeyword)) { properties.Add(ParseOnceModifier()); continue; }
 
+            // A part-header key sets this part's default key (unlike time/tempo, which are
+            // score-wide, a key is legitimately per-part — e.g. transposing instruments).
+            // Parse it faithfully as a KeySignature so its tokens keep their source
+            // positions; without this the bare `key …` fell through to a skipped token,
+            // dropping its width and shifting every following note's source offset.
+            if (Check(SyntaxKind.KeyKeyword)) { properties.Add(ParseKeySignature()); continue; }
+
             var prop = ParsePartProperty();
             if (prop != null)
                 properties.Add(prop);
