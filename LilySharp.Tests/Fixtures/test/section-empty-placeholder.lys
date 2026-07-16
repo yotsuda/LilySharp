@@ -1,0 +1,3 @@
+part m { section A { c4 c g' g | | a a g2 } }
+form main { A }
+score main { staff m }

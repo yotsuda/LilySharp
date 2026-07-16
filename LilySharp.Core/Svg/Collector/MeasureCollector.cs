@@ -104,6 +104,14 @@ internal sealed class MeasureBuilder
     private readonly List<MeasureBoundary> _boundaries = new();
     private readonly List<BarCheckWarning> _barCheckWarnings = new();
 
+    // True when the current measure boundary was created by AUTO-FILL (duration reached
+    // the meter) and not yet closed by a written barline. Such a boundary absorbs ONE
+    // confirming barline silently; only a FURTHER bare barline (an empty region) opens a
+    // placeholder measure. False at the section start, after any written-barline close,
+    // and once content is added — so a leading `|` or a `| |` gap always opens a
+    // placeholder, whether its neighbour is full or underfull. See HandleBarline.
+    private bool _autoBoundary;
+
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
 
@@ -129,6 +137,11 @@ internal sealed class MeasureBuilder
     /// resets at measure boundaries.
     /// </summary>
     public Action? MeasureCompleted;
+
+    /// <summary>Fires with the source position of a bare-barline empty placeholder
+    /// measure as it is emitted, so the collector can surface a shorter-than-the-meter
+    /// warning. See <see cref="EmitEmptyMeasure"/> and <see cref="Measure.IsEmptyPlaceholder"/>.</summary>
+    public Action<int>? OnEmptyPlaceholder;
 
     public MeasureBuilder(Fraction timeSignature, int sourceStart = 0)
     {
@@ -176,6 +189,11 @@ internal sealed class MeasureBuilder
     /// <summary>Re-arms the auto-complete measure length without printing a grob
     /// (used when a leading meter change collapses into the initial time signature).</summary>
     public void SetMeasureLength(Fraction length) => _timeSignature = length;
+
+    /// <summary>Clears the auto-fill boundary flag at a section start, so a section that
+    /// OPENS with a bare <c>|</c> gets a leading placeholder measure rather than silently
+    /// confirming the previous section's auto-filled last bar. See <see cref="_autoBoundary"/>.</summary>
+    public void ResetMeasureBoundary() => _autoBoundary = false;
 
     /// <summary>
     /// Declares the current (in-progress) measure a pickup of <paramref name="length"/>:
@@ -239,6 +257,7 @@ internal sealed class MeasureBuilder
         }
 
         _currentItems.Add(item);
+        _autoBoundary = false; // content now fills this span; a barline closes IT, not an empty measure
 
         // Track duration
         var itemDuration = GetItemDuration(item);
@@ -258,6 +277,7 @@ internal sealed class MeasureBuilder
     public void AddItemWithoutDuration(MusicItem item)
     {
         _currentItems.Add(item);
+        _autoBoundary = false;
     }
 
     /// <summary>
@@ -332,6 +352,11 @@ internal sealed class MeasureBuilder
             _currentDuration,
             IsExplicit: explicitBar,
             IsAligned: isAligned));
+
+        // An auto-filled close leaves an unconfirmed boundary (a following written
+        // barline just confirms it); a written-barline close is already confirmed, so a
+        // following bare barline opens a placeholder measure. See HandleBarline.
+        _autoBoundary = !explicitBar;
 
         _currentItems.Clear();
         _sectionLabel = null;
@@ -424,11 +449,62 @@ internal sealed class MeasureBuilder
         }
         else if (endType != BarlineType.Single && _measures.Count > 0)
         {
-            // Barline at an already-closed boundary (e.g. ":|" right after
-            // auto-completion): retro-apply the type to the last measure.
-            var lastMeasure = _measures[^1];
-            _measures[^1] = lastMeasure with { EndBarline = endType };
+            // A TYPED barline (":|", "||", "|.") on an empty span decorates the PREVIOUS
+            // measure's end — retro-apply it, never an empty placeholder (the common
+            // final / double-bar / repeat-end case, incl. a phrase that already ended
+            // with a plain `|` before the form's ":|").
+            _measures[^1] = _measures[^1] with { EndBarline = endType };
+            _autoBoundary = false;
         }
+        else if (_autoBoundary)
+        {
+            // A bare `|` merely CONFIRMS a measure that auto-fill just closed — no new
+            // measure. It consumes the confirmation (a FURTHER bare `|` would open a
+            // placeholder).
+            _autoBoundary = false;
+        }
+        else
+        {
+            // A bare `|` on an unconfirmed boundary — a leading `|`, a `| |` gap, or a
+            // trailing `| |` — opens a real placeholder measure: it holds a slot so other
+            // parts stay aligned, renders as an empty bar, and is flagged
+            // shorter-than-the-meter until the author fills it (EmptyMeasureValidator).
+            EmitEmptyMeasure(position, endType);
+        }
+    }
+
+    /// <summary>
+    /// Emits an empty placeholder measure (0 items, 0 duration) for a bare barline gap.
+    /// See <see cref="Measure.IsEmptyPlaceholder"/>.
+    /// </summary>
+    private void EmitEmptyMeasure(int sourceEnd, BarlineType endType)
+    {
+        _measures.Add(new Measure(
+            ImmutableArray<MusicItem>.Empty,
+            _pendingStartBarline,
+            _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
+            _sectionLabel,
+            _measureSourceStart,
+            sourceEnd,
+            sectionLabelPosition: _sectionLabelPosition,
+            isPickup: _partialRestore != null)
+        {
+            IsEmptyPlaceholder = true,
+        });
+
+        _boundaries.Add(new MeasureBoundary(sourceEnd, Fraction.Zero, IsExplicit: true, IsAligned: false));
+
+        _sectionLabel = null;
+        _sectionLabelPosition = 0;
+        _pendingStartBarline = BarlineType.None;
+        _pendingEndBarline = BarlineType.None;
+        _measureSourceStart = sourceEnd;
+        _currentDuration = Fraction.Zero;
+        // Closed by a written barline, so a further bare barline opens ANOTHER placeholder.
+        _autoBoundary = false;
+        RestorePartialIfPending();
+        OnEmptyPlaceholder?.Invoke(sourceEnd);
+        MeasureCompleted?.Invoke();
     }
 
     /// <summary>
@@ -587,6 +663,13 @@ public sealed partial class MeasureCollector
     /// <summary>Navigation marks written mid-measure instead of at a barline boundary.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<NavigationMarkPlacementWarning> NavigationPlacementWarnings => _navPlacementWarnings;
+    // Source positions of empty placeholder measures (bare `|` gaps). A set so a section
+    // replayed by the form reports each spot once. Surfaced by EmptyMeasureValidator.
+    private readonly SortedSet<int> _emptyPlaceholderWarnings = new();
+    /// <summary>Barline positions where a bare-barline empty placeholder measure was
+    /// emitted (leading `|`, `| |` gap, trailing `| |`). Populated as a side effect of
+    /// Collect; each is flagged shorter-than-the-meter.</summary>
+    public IReadOnlyList<int> EmptyPlaceholderWarnings => _emptyPlaceholderWarnings.ToList();
     // Tablature post-pass (tie-string reconciliation + per-tuning string assignment),
     // extracted as a self-contained collaborator. Its warnings are surfaced below.
     private readonly TabResolver _tabResolver = new();
@@ -1578,6 +1661,7 @@ public sealed partial class MeasureCollector
             builder.SetPartial(subPickup);
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
+        builder.OnEmptyPlaceholder = pos => _emptyPlaceholderWarnings.Add(pos);
 
         _pendingInlineVoltas.Clear();
 
@@ -1628,6 +1712,7 @@ public sealed partial class MeasureCollector
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
+        _emptyPlaceholderWarnings.Clear();
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
         // names, and PitchTrace would grow without bound. (All current callers use a
@@ -2143,6 +2228,7 @@ public sealed partial class MeasureCollector
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
+        builder.OnEmptyPlaceholder = pos => _emptyPlaceholderWarnings.Add(pos);
 
         _pendingInlineVoltas.Clear();
 

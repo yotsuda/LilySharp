@@ -140,6 +140,11 @@ public sealed partial class MeasureCollector
         _octave.ResetForSection();
         _defaultDuration = Fraction.Quarter;
 
+        // A section is self-contained: clear the auto-fill boundary flag so a section that
+        // OPENS with a bare `|` gets a leading placeholder measure rather than silently
+        // confirming the previous section's auto-filled last bar.
+        builder.ResetMeasureBoundary();
+
         // The phrase auto-transpose baseline reverts with the key: a mid-section
         // modulation must not carry into the next section (nor a reused copy).
         // Unconditional — the running tonic can differ from home even when the

@@ -306,6 +306,10 @@ public static class DiagnosticCodes
     /// <summary>Measure warning: the same section spans a different number of bars in
     /// different parts, so the shorter parts are padded to align (often a miscount).</summary>
     public const string SectionBarCountMismatch = "LYS2007";
+    /// <summary>Measure warning: an empty placeholder measure written as a bare barline gap
+    /// (a leading `|`, a `| |` gap, or a trailing `| |`) holds a slot for alignment but has
+    /// no music — shorter than the meter until it is filled.</summary>
+    public const string EmptyPlaceholderMeasure = "LYS2008";
 
     // Lyric diagnostics (LYS4xxx — warnings, plus one error)
 

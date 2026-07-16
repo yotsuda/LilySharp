@@ -60,6 +60,7 @@ public static class SemanticValidation
     {
         new SymbolReferenceValidator(),     // undefined variable / phrase / section
         new MeasureValidator(),             // measure fullness / cross-part length
+        new EmptyMeasureValidator(),        // a bare `|` gap placeholder measure
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
