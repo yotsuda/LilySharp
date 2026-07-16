@@ -446,7 +446,10 @@ PhraseRef      = '$' , Identifier ;
 
 ### 8.3 Ties, Slurs, Beams
 
-Tie            = '~' ;            (* same pitch across notes/barline: c4~ | c4 *)
+Tie            = '~' ;            (* same pitch across notes/barline: c4~ | c4. A tie binds to
+                                     the IMMEDIATELY following note/chord, which must repeat the
+                                     tied pitch — a different pitch or a rest there ties nothing
+                                     and warns (LYS4007); different pitches connect with a slur. *)
 Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d f>) *)
 Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 

@@ -74,6 +74,18 @@ public record TabRangeWarning(
 public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText);
 
 /// <summary>
+/// A tie (<c>~</c>) whose immediately following timed item cannot receive it — a
+/// note/chord repeating none of the tied pitches, or an audible rest. A tie joins
+/// two notes of the SAME pitch, so this is almost always an authoring slip (a slur
+/// was meant, or the target note was mistyped). <see cref="SourcePosition"/> points
+/// at the following item (the one that fails to match).
+/// </summary>
+public record TieTargetWarning(
+    int SourcePosition,
+    bool IntoRest     // true = the tie runs into a rest; false = a pitch mismatch
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -640,6 +652,12 @@ public sealed partial class MeasureCollector
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabResolver.TieWarnings;
+    // Ties whose next timed item repeats none of the tied pitches (or is a rest).
+    // Scanned per finished voice by TieTargetScanner; surfaced by TieTargetValidator.
+    private readonly List<TieTargetWarning> _tieTargetWarnings = new();
+    /// <summary>Ties (<c>~</c>) whose following item cannot receive them — a pitch
+    /// mismatch or an audible rest. Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<TieTargetWarning> TieTargetWarnings => _tieTargetWarnings.ToList();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -874,6 +892,9 @@ public sealed partial class MeasureCollector
 
         // Single voice
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
+        // Tie sanity scan runs BEFORE the ottava display transposition (it compares
+        // written staff positions; an 8va span must not fake a pitch change).
+        TieTargetScanner.Scan(voice, _tieTargetWarnings);
 
         // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
         // (etc.) while sounding at their written pitch. Single-staff score, so
@@ -1497,6 +1518,10 @@ public sealed partial class MeasureCollector
         for (int i = 0; i < extras.Count; i++)
             voices.Add(new Voice($"voice{i + 2}", extras[i]));
 
+        // Tie sanity scan per voice, BEFORE the ottava display transposition.
+        foreach (var v in voices)
+            TieTargetScanner.Scan(v, _tieTargetWarnings);
+
         // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
         var multiVoiceOttava = DetectOttavaSpans(0);
         if (multiVoiceOttava.Count > 0)
@@ -1624,6 +1649,9 @@ public sealed partial class MeasureCollector
         var extras = BuildExtraVoiceTracks(track0);
         for (int i = 0; i < extras.Count; i++)
             voices.Add(new Voice($"{voiceName}.{i + 2}", extras[i]));
+        // Tie sanity scan per staff voice, BEFORE any display-only transform.
+        foreach (var v in voices)
+            TieTargetScanner.Scan(v, _tieTargetWarnings);
         return voices.ToImmutable();
     }
 
@@ -1720,6 +1748,7 @@ public sealed partial class MeasureCollector
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _emptyPlaceholderWarnings.Clear();
+        _tieTargetWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row

@@ -339,6 +339,10 @@ public static class DiagnosticCodes
     /// (<c>staff X with lyrics NAME</c>) nor placed as a <c>lyrics NAME</c> row in a score,
     /// so it never renders. Name it and reference it — there is no implicit auto-attach.</summary>
     public const string LyricUnattached = "LYS4006";
+    /// <summary>Warning: the item after a tie (<c>~</c>) does not repeat the tied
+    /// pitch (a different note, a chord with no matching pitch, or a rest). A tie
+    /// joins two notes of the SAME pitch; different pitches connect with a slur.</summary>
+    public const string TieTargetMismatch = "LYS4007";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>
