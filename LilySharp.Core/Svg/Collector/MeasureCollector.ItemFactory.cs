@@ -61,18 +61,16 @@ public sealed partial class MeasureCollector
             dots = pairDisp.Dots;
         }
 
-        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        bool isCourtesy = false;
 
         // Quarter tones always print their own accidental (they are never in
         // the key). LILYPOND-REF: quarter-tone note names ih/eh/isih/eseh.
         if (note.Pitch.QuarterOffset != 0)
-        {
             accidental = QuarterToneAccidental(note.Pitch, accidental);
-            isCourtesy = false;
-        }
 
-        // Check for explicit @courtesy annotation
-        if (!isCourtesy && _courtesySourcePositions.Contains(note.Position))
+        // Explicit @courtesy annotation: print the pitch's accidental in parentheses.
+        if (_courtesySourcePositions.Contains(note.Position))
         {
             isCourtesy = true;
             // If no accidental shown, force the key-signature-matching accidental
@@ -257,14 +255,11 @@ public sealed partial class MeasureCollector
             }
             int staffPosition = rp.StaffPosition;
 
-            var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
             // Quarter tones always print their own accidental (never in the key).
             if (pitch.QuarterOffset != 0)
-            {
                 accidental = QuarterToneAccidental(pitch, accidental);
-                isCourtesy = false;
-            }
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 
@@ -273,7 +268,7 @@ public sealed partial class MeasureCollector
 
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,
-                IsCourtesy: isCourtesy,
+                IsCourtesy: false,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
@@ -306,12 +301,11 @@ public sealed partial class MeasureCollector
                 rootStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, writtenKeySharps);
             var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
-            var (accidental, isCourtesy) =
-                GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
             notes.Add(new ChordNoteInfo(
                 rp.StaffPosition, accidental,
                 rp.StaffPosition is <= -6 or >= 6,
-                IsCourtesy: isCourtesy,
+                IsCourtesy: false,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 

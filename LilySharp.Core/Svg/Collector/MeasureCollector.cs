@@ -2169,7 +2169,7 @@ public sealed partial class MeasureCollector
     /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc — default style.</remarks>
     // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
     // accidental in semitones, and octave.
-    private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(int step, int actual, int octave)
+    private string? GetDisplayAccidental(int step, int actual, int octave)
     {
         var key = (step, octave);
         // In effect: a prior accidental on this exact pitch this measure, else
@@ -2183,20 +2183,18 @@ public sealed partial class MeasureCollector
         // Remember this pitch's alteration for the rest of the measure.
         _measureAccidentals[key] = actual;
 
-        if (actual != inEffect)
-        {
-            return (actual switch
-            {
-                2 => "doubleSharp",
-                1 => "sharp",
-                0 => "natural",
-                -1 => "flat",
-                -2 => "doubleFlat",
-                _ => null
-            }, false);
-        }
+        if (actual == inEffect)
+            return null;
 
-        return (null, false);
+        return actual switch
+        {
+            2 => "doubleSharp",
+            1 => "sharp",
+            0 => "natural",
+            -1 => "flat",
+            -2 => "doubleFlat",
+            _ => null
+        };
     }
 
     private List<Measure> CollectMeasures()
@@ -3070,7 +3068,7 @@ public sealed partial class MeasureCollector
                 int staffPosition = rp.StaffPosition;
 
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-                var (accidental, _) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+                var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
                 // Resolve grace note duration (inherit previous grace duration if not specified)
                 int noteValue = note.Duration?.Value ?? (int)graceDefaultDuration.Denominator;

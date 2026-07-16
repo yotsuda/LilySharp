@@ -261,15 +261,12 @@ public sealed partial class MeasureCollector
         var rp = ShiftOctave(CalculateStaffPosition(pitch), octaveShift);
         _octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
-        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         if (pitch.QuarterOffset != 0)
-        {
             accidental = QuarterToneAccidental(pitch, accidental);
-            isCourtesy = false;
-        }
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
         return new NoteItem(staffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, pitch.Position, 0, isCourtesy: isCourtesy)
+            accidental, needsLedger, pitch.Position, 0, isCourtesy: false)
         {
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
         };
@@ -297,10 +294,10 @@ public sealed partial class MeasureCollector
         var (step, alteration, octave) = ChordDegrees.Resolve(
             drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
-        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+        var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
         var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(forced.Value), forced.Dots,
-            accidental, needsLedger, degree.Position, 0, isCourtesy: isCourtesy)
+            accidental, needsLedger, degree.Position, 0, isCourtesy: false)
         {
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
         };
