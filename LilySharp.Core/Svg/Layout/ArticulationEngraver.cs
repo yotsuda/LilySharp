@@ -654,9 +654,20 @@ internal static class ArticulationEngraver
             //   set_char_box(.6 ss, .6 ss, thick/2, .5 ss + .5 dot_size), thick =
             //   1.4·line-thickness (≈0.14 ss), dot_size ≈ 0.32 ss ⇒ far extent ≈0.66 ss;
             //   dportato is the y-mirror, so the near (line) edge stays ~0.07 ss.
+            // Box ported straight from feta's draw_portato constants (LILYPOND-REF:
+            // mf/feta-scripts.mf), with line-thickness = 0.1 ss (LilyPond's default):
+            //   dot_size   = 2.4·0.1 + 0.08          = 0.32 ss   (drawdot diameter)
+            //   dot centre = 0.5 + 0.5·dot_size      = 0.66 ss   (drawdot (0, h))
+            //   NEAR edge  = dot centre + dot_size/2 = 0.82 ss   (the dot's outer rim,
+            //                                                      toward the note)
+            //   FAR edge   = thick/2 = 1.4·0.1/2     = 0.07 ss   (the tenuto line)
+            //   half-width = 0.6 ss                              (set_char_box .6, .6)
+            // The rim (0.82), NOT the centre, is what the staff-padding clamp measures —
+            // using the centre seated an in-staff note's dot only ~0.1 ss past a staff
+            // line (nearly touching); the rim clears it by the full staff-padding.
             ArticulationType.Portato => isAbove
-                ? new GlyphMetrics.BBox(-0.6000, -0.6300, 0.6000, 0.0700)
-                : new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.6300),
+                ? new GlyphMetrics.BBox(-0.6000, -0.8200, 0.6000, 0.0700)
+                : new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.8200),
             ArticulationType.Marcato => isAbove
                 ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
             ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove

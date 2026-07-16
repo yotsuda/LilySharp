@@ -21,7 +21,7 @@ phrase tenutoMarcato {
 
 phrase fermataPortato {
   c4@fermata r r r |
-  c4@portato d@portato e@portato f@portato |
+  g'4@portato d@portato e@portato f@portato |
 }
 
 phrase mixed {
