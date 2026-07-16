@@ -215,15 +215,20 @@ appoggiatura { c8 } d4       // unslashed grace
 voice { c'2 d } voice { e2 f }     // each voice { } is a simultaneous voice
 ```
 
-## Lyrics (inside a section, aligned to that part's notes)
+## Lyrics (a named track, attached to a staff)
 
-Syllables separated by spaces; `-` joins syllables of one word; `|` mirrors the music's barlines.
+A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
+attaches it under a staff with `staff X with lyrics NAME`. Syllables are separated by
+spaces; `-` joins syllables of one word; `|` mirrors the music's barlines.
 
 ```
+part melody
 section Main {
   melody { c4 d e f | g2 g | }
-  lyrics { Hap- py birth- day | to you | }
+  lyrics words { Hap- py birth- day | to you | }
 }
+form main { Main }
+score main { staff melody with lyrics words }
 ```
 
 ## Lead sheet (chords and/or lyrics, no staff)

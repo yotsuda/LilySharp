@@ -558,13 +558,16 @@ c4 d e f |        % 'once' applies to the next note only
 ## Lyrics
 
 ```
+part melody
 section Main {
   melody { c4 d e f | g2 g | }
-  lyrics {
+  lyrics words {
     Hap- py birth- day |
     to you |
   }
 }
+form main { Main }
+score main { staff melody with lyrics words }
 ```
 
 ## Music Marks

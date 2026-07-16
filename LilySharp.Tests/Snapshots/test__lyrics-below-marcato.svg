@@ -33,13 +33,13 @@
   <rect x="46.49" y="12.41" width="0.19" height="4.00"/>
   <rect x="46.98" y="12.41" width="0.60" height="4.00"/>
   <text class="music" x="10.23" y="18.11" font-size="4.00" data-pos="328"></text>
-  <text x="9.58" y="21.82" font-size="3.20" text-anchor="middle" data-pos="380">Twin</text>
-  <text x="15.91" y="21.82" font-size="3.20" text-anchor="middle" data-pos="386">kle</text>
-  <text x="21.71" y="21.82" font-size="3.20" text-anchor="middle" data-pos="390">twin</text>
-  <text x="27.51" y="21.82" font-size="3.20" text-anchor="middle" data-pos="396">kle</text>
-  <text x="33.26" y="21.82" font-size="3.20" text-anchor="middle" data-pos="402">lit</text>
-  <text x="37.20" y="21.82" font-size="3.20" text-anchor="middle" data-pos="407">tle</text>
-  <text x="42.11" y="21.82" font-size="3.20" text-anchor="middle" data-pos="411">star</text>
+  <text x="9.58" y="21.82" font-size="3.20" text-anchor="middle" data-pos="386">Twin</text>
+  <text x="15.91" y="21.82" font-size="3.20" text-anchor="middle" data-pos="392">kle</text>
+  <text x="21.71" y="21.82" font-size="3.20" text-anchor="middle" data-pos="396">twin</text>
+  <text x="27.51" y="21.82" font-size="3.20" text-anchor="middle" data-pos="402">kle</text>
+  <text x="33.26" y="21.82" font-size="3.20" text-anchor="middle" data-pos="408">lit</text>
+  <text x="37.20" y="21.82" font-size="3.20" text-anchor="middle" data-pos="413">tle</text>
+  <text x="42.11" y="21.82" font-size="3.20" text-anchor="middle" data-pos="417">star</text>
   <rect x="0.30" y="7.57" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="314"/>
   <text x="1.29" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="314">A</text>
   <text class="music" x="3.09" y="9.77" font-size="1.60" data-pos="0"></text>

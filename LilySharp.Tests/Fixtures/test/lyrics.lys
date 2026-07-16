@@ -15,7 +15,7 @@ section Main {
     a4 a a a |
     g1 |
   }
-  lyrics {
+  lyrics words {
     Twin- kle twin- kle |
     lit- tle |
     how I won- der |
@@ -26,5 +26,5 @@ section Main {
 form main { Main }
 
 score main "lyrics" {
-  staff melody
+  staff melody with lyrics words
 }

@@ -31,7 +31,7 @@ section Verse {
     a2.:m | g2. | a2.:m | e2. |
     a2.:m | g2. | a4.:m e4. | a2.:m |
   }
-  lyrics {
+  lyrics words {
     A- |
     las my love ~ you | do me wrong ~ to |
     cast me off ~ dis- | cour- teous- ly and |
@@ -55,7 +55,7 @@ section Chorus {
     c2. | g2. | a2.:m | e2. |
     c2. | g2. | a4.:m e4. | a2.:m |
   }
-  lyrics {
+  lyrics words {
     Green- sleeves ~ was | all my joy ~ Green- |
     sleeves was my ~ de- | light ~ Green- |
     sleeves was ~ my | heart of gold ~ and |
@@ -66,7 +66,7 @@ section Chorus {
 form main { Verse Chorus }
 
 score main "greensleeves" {
-  staff melody with chords prog
+  staff melody with chords prog with lyrics words
 }
 
 score main "greensleeves-grid" {

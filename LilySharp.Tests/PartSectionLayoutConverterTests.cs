@@ -120,17 +120,17 @@ public class PartSectionLayoutConverterTests
         // A lyrics block transposes to a part-major lyric track and back — no loss.
         var sm = """
             part melody { clef treble }
-            section A { melody { c4 c g' g | } lyrics { Twin- kle twin- kle | } }
-            section B { melody { g'4 g f f | } lyrics { how I won- der | } }
+            section A { melody { c4 c g' g | } lyrics w { Twin- kle twin- kle | } }
+            section B { melody { g'4 g f f | } lyrics w { how I won- der | } }
             form main { A B }
-            score main "s" { staff melody }
+            score main "s" { staff melody with lyrics w }
             """;
         Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
 
         var pm = PartSectionLayoutConverter.Convert(sm);
         Assert.NotNull(pm);
         Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
-        Assert.Contains("lyrics {", pm);
+        Assert.Contains("lyrics w {", pm);
         Assert.Contains("section A { Twin- kle twin- kle | }", pm);
         Assert.Contains("section B { how I won- der | }", pm);
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
@@ -138,7 +138,7 @@ public class PartSectionLayoutConverterTests
         var sm2 = PartSectionLayoutConverter.Convert(pm!);
         Assert.NotNull(sm2);
         Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
-        Assert.Contains("lyrics { Twin- kle twin- kle | }", sm2);
+        Assert.Contains("lyrics w { Twin- kle twin- kle | }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
 

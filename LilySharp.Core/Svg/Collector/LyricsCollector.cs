@@ -50,6 +50,21 @@ internal sealed class LyricsCollector
     public IReadOnlyList<ShadowedPlainLyricWarning> ShadowedPlainWarnings => _shadowedPlain;
 
     /// <summary>
+    /// Collects the note-bound lyrics attached to ONE staff via
+    /// <c>staff X with lyrics L [with lyrics L2 …]</c>: the named block(s) align to
+    /// <paramref name="measures"/> (the staff's primary voice) and render below the staff
+    /// at <paramref name="staffIndex"/>. Multiple names stack as verses (document order).
+    /// </summary>
+    public void CollectAttached(
+        SyntaxNode root, IReadOnlyList<string> blockNames, List<Measure> measures, int staffIndex,
+        IReadOnlySet<string> lyricsRowNames,
+        IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
+        IReadOnlyDictionary<string, int> sectionStartMeasure,
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null)
+        => CollectNoteBound(root, measures, lyricsRowNames, voiceMeasuresByName,
+            sectionStartMeasure, sectionAllStarts, onlyBlocks: blockNames, staffIndex: staffIndex);
+
+    /// <summary>
     /// Collects note-bound lyrics from every <c>lyrics { … }</c> block (skipping the
     /// independent ROW blocks, which <see cref="CollectRow"/> handles). A block aligns
     /// to the notes of the SECTION it is written in (offset to that section's first
@@ -59,12 +74,20 @@ internal sealed class LyricsCollector
     /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 process_music
     /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:100-150 note association
     /// </remarks>
+    /// <param name="onlyBlocks">When non-null, process ONLY the lyrics blocks whose
+    /// name is in this set (the explicit <c>staff X with lyrics NAME …</c> attachments
+    /// for one staff), stacking them as verses in document order. Null = every
+    /// non-row block (legacy path, no longer used by the render pipeline).</param>
+    /// <param name="staffIndex">Staff the syllables sit under; tagged onto each
+    /// <c>LyricItem</c> so a later staff's lyrics render beneath THAT staff.</param>
     public void CollectNoteBound(
         SyntaxNode root, List<Measure> measures,
         IReadOnlySet<string> lyricsRowNames,
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
-        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null)
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
+        IReadOnlyList<string>? onlyBlocks = null,
+        int staffIndex = 0)
     {
         var lyricsBlocks = root.DescendantNodes().OfType<LyricsBlockSyntax>().ToList();
         if (lyricsBlocks.Count == 0)
@@ -79,6 +102,13 @@ internal sealed class LyricsCollector
             // An independent lyrics row's block is collected by CollectRow (even-spread),
             // not here — skip it so it isn't also note-bound.
             if (lyricsBlock.VoiceName is { } rowName && lyricsRowNames.Contains(rowName))
+                continue;
+
+            // Explicit-attach filter: only the blocks this `with lyrics` clause names.
+            // An unnamed block can never be referenced, so it is skipped (and flagged
+            // elsewhere as an unattached-lyrics error).
+            if (onlyBlocks != null
+                && (lyricsBlock.VoiceName is not { } bn || !onlyBlocks.Contains(bn)))
                 continue;
 
             // `lyrics sop { … }` aligns to the same-named voice's notes; an unnamed
@@ -110,7 +140,9 @@ internal sealed class LyricsCollector
 
                 var lyrics = lyricCollector.Collect(syllableMeasures, aligned, out var overflow,
                     voiceId: voiceId, verseNumber, hideStanza: hideLabel);
-                _lyrics.AddRange(lyrics);
+                _lyrics.AddRange(staffIndex == 0
+                    ? lyrics
+                    : lyrics.Select(l => l with { StaffIndex = staffIndex }));
 
                 // A single block may auto-wrap into several stacked verses; the next
                 // block at this start begins after the highest verse this one produced.

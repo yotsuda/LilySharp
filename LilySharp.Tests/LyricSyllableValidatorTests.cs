@@ -36,6 +36,13 @@ public class LyricSyllableValidatorTests
         return validator.Diagnostics;
     }
 
+    // Lyrics attach EXPLICITLY (`staff m with lyrics w`) — there is no auto-attach, so a
+    // scored form is the only way the collector aligns syllables to notes and records the
+    // overflow this validator reads back.
+    private static string Scored(string music, string lyrics) =>
+        $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w {{ {lyrics} }}\n}}\n"
+        + "form main { S }\nscore main { staff m with lyrics w }\n";
+
     private static Diagnostic? Overflow(IReadOnlyList<Diagnostic> diags) =>
         diags.FirstOrDefault(d => d.Code == DiagnosticCodes.LyricSyllableOverflow);
 
@@ -43,7 +50,7 @@ public class LyricSyllableValidatorTests
     public void MoreSyllablesThanNotes_Warns()
     {
         // 4 notes, 5 syllables — "five" runs off the end and is dropped.
-        var diags = Validate("time 4/4\n{ c4 d e f }\nlyrics { one two three four five }\n");
+        var diags = Validate(Scored("c4 d e f", "one two three four five"));
         var warning = Overflow(diags);
         Assert.NotNull(warning);
         Assert.Equal(DiagnosticSeverity.Warning, warning!.Severity);
@@ -55,7 +62,7 @@ public class LyricSyllableValidatorTests
     [Fact]
     public void TwoExtraSyllables_NamesFirstAndCountsTheRest()
     {
-        var diags = Validate("time 4/4\n{ c4 d e f }\nlyrics { a b c d e f }\n");
+        var diags = Validate(Scored("c4 d e f", "a b c d e f"));
         var warning = Overflow(diags);
         Assert.NotNull(warning);
         Assert.Contains("lyric syllable 'e'", warning!.Message);
@@ -65,7 +72,7 @@ public class LyricSyllableValidatorTests
     [Fact]
     public void ExactMatch_NoWarning()
     {
-        var diags = Validate("time 4/4\n{ c4 d e f }\nlyrics { one two three four }\n");
+        var diags = Validate(Scored("c4 d e f", "one two three four"));
         Assert.Null(Overflow(diags));
     }
 
@@ -73,7 +80,7 @@ public class LyricSyllableValidatorTests
     public void FewerSyllablesThanNotes_NoWarning()
     {
         // A short lyric line is normal (melisma / instrumental tail), never overflow.
-        var diags = Validate("time 4/4\n{ c4 d e f }\nlyrics { one two }\n");
+        var diags = Validate(Scored("c4 d e f", "one two"));
         Assert.Null(Overflow(diags));
     }
 
@@ -87,7 +94,7 @@ public class LyricSyllableValidatorTests
     [Fact]
     public void WarningAnchorsAtTheFirstDroppedSyllable()
     {
-        var source = "time 4/4\n{ c4 d e f }\nlyrics { one two three four five }\n";
+        var source = Scored("c4 d e f", "one two three four five");
         var warning = Overflow(Validate(source));
         Assert.NotNull(warning);
         // Span points at the first word that vanished, so the editor squiggle

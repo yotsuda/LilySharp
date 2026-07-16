@@ -76,19 +76,28 @@ internal static class LysWriter
             WriteFlatSection(sb, doc, report, useRelative);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
+        // The part carrying lyrics attaches them EXPLICITLY (`staff X with lyrics NAME`) —
+        // there is no auto-attach, and an unreferenced block would be a LYS4006 error.
+        var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         sb.Append("score main \"imported\" {\n");
         for (int gi = 0; gi < doc.Parts.Count;)
         {
             var group = doc.Parts[gi].StaffGroup;
             if (group == null)
             {
-                sb.Append("  staff ").Append(doc.Parts[gi++].SafeName).Append('\n');
+                sb.Append("  staff ").Append(doc.Parts[gi].SafeName)
+                    .Append(WithLyricsSuffix(doc.Parts[gi], scoreLyricPart)).Append('\n');
+                gi++;
                 continue;
             }
             // A run of consecutive parts sharing a staff group = one grand staff.
             sb.Append("  grandStaff {\n");
             while (gi < doc.Parts.Count && doc.Parts[gi].StaffGroup == group)
-                sb.Append("    staff ").Append(doc.Parts[gi++].SafeName).Append('\n');
+            {
+                sb.Append("    staff ").Append(doc.Parts[gi].SafeName)
+                    .Append(WithLyricsSuffix(doc.Parts[gi], scoreLyricPart)).Append('\n');
+                gi++;
+            }
             sb.Append("  }\n");
         }
         sb.Append("}\n");
@@ -574,7 +583,31 @@ internal static class LysWriter
         => part.Measures.SelectMany(m => m.PrimaryItems)
             .OfType<ImportNote>().Any(n => n.Lyrics.Count > 0);
 
-    /// <summary>One <c>lyrics { ... }</c> block per verse present in the part's
+    /// <summary>Every distinct lyric verse number in the part, ascending.</summary>
+    private static IEnumerable<int> LyricVerses(ImportPart part)
+        => part.Measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>()
+            .SelectMany(n => n.Lyrics).Select(l => l.Verse).Distinct().OrderBy(v => v);
+
+    /// <summary>The name a verse's lyric track is written under, so the score can
+    /// reference it (<c>staff X with lyrics NAME</c>) — there is no auto-attach. Stable
+    /// across sections (keyed on the verse number) so one <c>with lyrics</c> collects
+    /// every section's cell for that verse.</summary>
+    private static string LyricTrackName(int verse) => verse <= 1 ? "words" : "words" + verse;
+
+    /// <summary>The <c>with lyrics NAME [with lyrics NAME2 …]</c> clauses a staff needs
+    /// when its part carries the score's lyrics (each verse is its own stacked track);
+    /// empty for any other staff.</summary>
+    private static string WithLyricsSuffix(ImportPart part, ImportPart? lyricPart)
+    {
+        if (part != lyricPart || lyricPart == null)
+            return "";
+        var sb = new StringBuilder();
+        foreach (int verse in LyricVerses(lyricPart))
+            sb.Append(" with lyrics ").Append(LyricTrackName(verse));
+        return sb.ToString();
+    }
+
+    /// <summary>One <c>lyrics NAME { ... }</c> block per verse present in the part's
     /// measures [start, end). Syllables walk the singable notes (no rests, chord
     /// members or tie continuations), synced to the music by a <c>|</c> per measure.</summary>
     private static IEnumerable<string> WriteLyrics(ImportPart part, int start, int end)
@@ -585,7 +618,7 @@ internal static class LysWriter
 
         foreach (int verse in verses)
         {
-            var sb = new StringBuilder("lyrics { ");
+            var sb = new StringBuilder("lyrics " + LyricTrackName(verse) + " { ");
             foreach (var measure in measures)
             {
                 foreach (var note in measure.PrimaryItems.OfType<ImportNote>())

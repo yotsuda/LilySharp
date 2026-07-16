@@ -13,11 +13,11 @@ section Main {
     c,4 c c c |
     g'4 a g f |
   }
-  lyrics {
+  lyrics words {
     up up up up |
     low low low low |
     up up up up |
   }
 }
 form main { Main }
-score main "lyrics-skyline" { staff melody }
+score main "lyrics-skyline" { staff melody with lyrics words }

@@ -744,7 +744,8 @@ public sealed partial class MeasureCollector
     public Score Collect(SyntaxTree tree, string? voiceName = null,
         FormDeclarationSyntax? localForm = null,
         string? attachedChordPart = null,
-        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names)
+        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names,
+        IReadOnlyList<string>? attachedLyricParts = null)
     {
         _voiceName = voiceName;
         Reset();
@@ -796,7 +797,7 @@ public sealed partial class MeasureCollector
         // itself (this method's CollectAttached below is never reached for the
         // multi-voice path).
         if (_parallelSpans.Count > 0)
-            return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay);
+            return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay, attachedLyricParts);
 
         // Single voice
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
@@ -806,8 +807,12 @@ public sealed partial class MeasureCollector
         // every ottava mark is on staff 0. See OttavaTransposer.
         voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
 
-        // Collect lyrics
-        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
+        // Lyrics attach EXPLICITLY via `score { staff X with lyrics L }`. There is NO
+        // implicit auto-attach anywhere: a `lyrics {}` block that no score references is a
+        // LYS4006 error (a scoreless loose-music file simply cannot show lyrics).
+        if (attachedLyricParts is { Count: > 0 })
+            _lyricsCollector.CollectAttached(tree.GetRoot(), attachedLyricParts, measures, 0,
+                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, _currentStaffIndex);
@@ -947,9 +952,13 @@ public sealed partial class MeasureCollector
         var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
         var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode)>();
+        // `staff NAME with lyrics L [with lyrics L2 …]`: named lyrics parts aligned
+        // note-by-note BELOW that staff, applied post-loop (verses in written order).
+        // StaffVoice = the staff's primary voice, whose notes the syllables align to.
+        var attachedLyrics = new List<(string PartName, int StaffIndex, string StaffVoice)>();
         // Chord rows are also deferred (see the ChordRowSpec branch below).
         var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode)>();
-        foreach (var (voiceName, withChords, chordDisplay) in renderSpec.GetVoiceBindings())
+        foreach (var (voiceName, withChords, chordDisplay, withLyrics) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
             _currentStaffIndex = collectStaffIndex++;
@@ -964,6 +973,11 @@ public sealed partial class MeasureCollector
             // the voice loop, once every section's start measure is registered.
             if (withChords != null)
                 attachedChords.Add((withChords, _currentStaffIndex, chordDisplay));
+
+            // `staff NAME with lyrics L`: remember each named lyrics part to align
+            // under THIS staff (post-loop, once section starts are registered).
+            foreach (var lyName in withLyrics)
+                attachedLyrics.Add((lyName, _currentStaffIndex, voiceName));
 
             // An independent chord row (`chords name [as roman|both]` in the score).
             // Defer its collection until AFTER the music voices: the section start
@@ -1090,21 +1104,25 @@ public sealed partial class MeasureCollector
         // names are drawn). Its navigation marks are merged into _musicMarks inside the harvest.
         if (harvestStructureMarks)
             foreach (var v in HarvestOmittedStructure(tree, renderSpec))
-                flatVoices[" omit:" + v.Name] = v;
+                flatVoices["omit:" + v.Name] = v;
         SynchronizeBarlines(flatVoices);
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key]
                 .Select(v => _tabResolver.ResolveVoiceTabTies(flatVoices[v.Name])).ToImmutableArray();
 
-        // Lyrics align to the melody — the primary voice of the FIRST staff.
-        // (Single-staff scores collect lyrics in Collect(); the grand-staff path
-        // did not, so lyrics silently vanished on a multi-part score.)
-        var firstVoiceName = renderSpec.GetVoiceNames().FirstOrDefault();
-        if (firstVoiceName != null
-            && staffVoices.TryGetValue(firstVoiceName, out var firstStaffVoices)
-            && firstStaffVoices.Length > 0)
+        // Note-bound lyrics attach EXPLICITLY via `staff NAME with lyrics L` — there is
+        // NO implicit auto-attach (an unreferenced `lyrics {}` block is a LYS4006 error).
+        // Group each staff's `with lyrics` names, align them to that staff's primary
+        // voice, and tag them with its staff index so they sit under THAT staff.
+        foreach (var group in attachedLyrics.GroupBy(a => (a.StaffIndex, a.StaffVoice)))
         {
-            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
+            if (staffVoices.TryGetValue(group.Key.StaffVoice, out var lyStaffVoices)
+                && lyStaffVoices.Length > 0)
+                _lyricsCollector.CollectAttached(
+                    tree.GetRoot(), group.Select(a => a.PartName).ToList(),
+                    lyStaffVoices[0].Measures.ToList(), group.Key.StaffIndex,
+                    _lyricsRowNames, _voiceMeasuresByName,
+                    _sectionState.StartMeasure, _sectionState.AllStarts);
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
@@ -1368,7 +1386,8 @@ public sealed partial class MeasureCollector
     /// </summary>
     private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root,
         string? attachedChordPart = null,
-        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names)
+        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names,
+        IReadOnlyList<string>? attachedLyricParts = null)
     {
         var voices = new List<Voice>
         {
@@ -1402,8 +1421,11 @@ public sealed partial class MeasureCollector
             }
         }
 
-        // Unnamed lyrics align with the primary voice; named ones bind above.
-        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
+        // Explicit `staff NAME with lyrics L` attach — no implicit auto-attach (see Collect).
+        // Named blocks whose name is a `voice NAME` bind to that voice; the rest align to voice 1.
+        if (attachedLyricParts is { Count: > 0 })
+            _lyricsCollector.CollectAttached(root, attachedLyricParts, track0, 0,
+                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionState.StartMeasure, _currentStaffIndex);

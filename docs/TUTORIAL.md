@@ -155,14 +155,20 @@ tuplet 5/4 { c16 d e f g } a4 b c' |
 
 ## Lyrics
 
+A `lyrics NAME { … }` track sits in the section beside the part it sings; the score
+attaches it under the staff with `staff X with lyrics NAME`.
+
 ```
+part melody
 section Verse {
   melody { c4 d e f | g2 g | }
-  lyrics {
+  lyrics words {
     Hap- py birth- day |
     to you |
   }
 }
+form main { Verse }
+score main { staff melody with lyrics words }
 ```
 
 ## Output Formats

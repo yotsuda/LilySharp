@@ -29,7 +29,7 @@ section Verse {
     g2. | g2. | c2. | g2. |
     e2.:m | d2.:7 | g2. |
   }
-  lyrics {
+  lyrics words {
     A- |
     maz- ~ ing | grace how | sweet the | sound that |
     saved ~ a | wretch like | me | I |
@@ -41,7 +41,7 @@ section Verse {
 form main { Verse }
 
 score main "amazing-grace" {
-  staff melody with chords prog
+  staff melody with chords prog with lyrics words
 }
 
 score main "amazing-grace-grid" {

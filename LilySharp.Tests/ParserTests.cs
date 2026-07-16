@@ -1230,7 +1230,7 @@ form main { A }
         var source = @"
 section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
-    lyrics { き ら き ら | ひ か | }
+    lyrics w { き ら き ら | ひ か | }
 }
 form main { Verse }
 ";
@@ -1245,7 +1245,7 @@ form main { Verse }
         var source = @"
 section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
-    lyrics { twi- nkle twi- nkle | li- tle | }
+    lyrics w { twi- nkle twi- nkle | li- tle | }
 }
 form main { Verse }
 ";
@@ -1259,7 +1259,7 @@ form main { Verse }
         var source = @"
 section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
-    lyrics { Glo~ ~ ri- a | in ex- | }
+    lyrics w { Glo~ ~ ri- a | in ex- | }
 }
 form main { Verse }
 ";
@@ -1273,8 +1273,8 @@ form main { Verse }
         var source = @"
 section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
-    lyrics { き ら き ら | ひ か | }
-    lyrics { ま ば た き | し て | }
+    lyrics w { き ら き ら | ひ か | }
+    lyrics w2 { ま ば た き | し て | }
 }
 form main { Verse }
 ";

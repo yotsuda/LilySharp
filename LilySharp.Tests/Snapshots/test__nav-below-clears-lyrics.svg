@@ -51,19 +51,19 @@
   <rect x="43.34" y="11.64" width="0.60" height="4.00"/>
   <rect x="58.93" y="11.64" width="0.19" height="4.00"/>
   <rect x="59.42" y="11.64" width="0.60" height="4.00"/>
-  <text x="7.80" y="19.25" font-size="3.20" text-anchor="middle" data-pos="398">la</text>
-  <text x="11.11" y="19.25" font-size="3.20" text-anchor="middle" data-pos="401">la</text>
-  <text x="14.42" y="19.25" font-size="3.20" text-anchor="middle" data-pos="404">la</text>
-  <text x="17.73" y="19.25" font-size="3.20" text-anchor="middle" data-pos="407">la</text>
-  <text x="45.89" y="19.25" font-size="3.20" text-anchor="middle" data-pos="398">la</text>
-  <text x="49.20" y="19.25" font-size="3.20" text-anchor="middle" data-pos="401">la</text>
-  <text x="52.51" y="19.25" font-size="3.20" text-anchor="middle" data-pos="404">la</text>
-  <text x="55.82" y="19.25" font-size="3.20" text-anchor="middle" data-pos="407">la</text>
-  <text x="25.93" y="19.25" font-size="3.20" text-anchor="middle" data-pos="428">up</text>
-  <text x="30.13" y="19.25" font-size="3.20" text-anchor="middle" data-pos="431">up</text>
-  <text x="34.33" y="19.25" font-size="3.20" text-anchor="middle" data-pos="434">up</text>
-  <text x="38.53" y="19.25" font-size="3.20" text-anchor="middle" data-pos="437">up</text>
-  <text x="43.44" y="23.25" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="468">D.C.</text>
+  <text x="7.80" y="19.25" font-size="3.20" text-anchor="middle" data-pos="404">la</text>
+  <text x="11.11" y="19.25" font-size="3.20" text-anchor="middle" data-pos="407">la</text>
+  <text x="14.42" y="19.25" font-size="3.20" text-anchor="middle" data-pos="410">la</text>
+  <text x="17.73" y="19.25" font-size="3.20" text-anchor="middle" data-pos="413">la</text>
+  <text x="45.89" y="19.25" font-size="3.20" text-anchor="middle" data-pos="404">la</text>
+  <text x="49.20" y="19.25" font-size="3.20" text-anchor="middle" data-pos="407">la</text>
+  <text x="52.51" y="19.25" font-size="3.20" text-anchor="middle" data-pos="410">la</text>
+  <text x="55.82" y="19.25" font-size="3.20" text-anchor="middle" data-pos="413">la</text>
+  <text x="25.93" y="19.25" font-size="3.20" text-anchor="middle" data-pos="434">up</text>
+  <text x="30.13" y="19.25" font-size="3.20" text-anchor="middle" data-pos="437">up</text>
+  <text x="34.33" y="19.25" font-size="3.20" text-anchor="middle" data-pos="440">up</text>
+  <text x="38.53" y="19.25" font-size="3.20" text-anchor="middle" data-pos="443">up</text>
+  <text x="43.44" y="23.25" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="474">D.C.</text>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
   <text x="1.29" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="312">A</text>
   <rect x="21.53" y="7.84" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>

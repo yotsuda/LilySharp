@@ -66,6 +66,7 @@ public static class SemanticValidation
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
         new LyricTrackSectionValidator(),   // part-major lyrics track must use sections
+        new LyricUnattachedValidator(),     // a lyrics block no score attaches / places
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
         new TabTieStringValidator(),        // a tie naming two tab strings
@@ -112,8 +113,13 @@ public static class SemanticValidation
     {
         try
         {
-            var collector = new MeasureCollector();
-            collector.Collect(tree);
+            // Collect the way the render path does (honoring `staff X with lyrics NAME`),
+            // so a validator reading back the collector's recorded warnings sees exactly
+            // what renders. A scoreless file has no RenderSpec and falls through to the
+            // single-staff collect with no attach — nothing is auto-attached.
+            var renderSpec = RenderSpecParser.FindFirst(tree);
+            var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
+            Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;
         }
         catch

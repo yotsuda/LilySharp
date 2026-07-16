@@ -250,16 +250,50 @@ public static class RenderSpecParser
         }
         if (toks.Count == 0) return null;
 
+        // Scan every `with X` clause (repeatable, any order): `with chords NAME
+        // [as roman|both|names]` and `with lyrics NAME`. Everything before the first
+        // `with` is the [clef?] part [display]. `with lyrics` stacks (verses).
         string? withChords = null;
         var chordDisplay = ChordDisplayMode.Names;
-        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (wi >= 1 && wi + 2 < toks.Count + 1 && toks.Count >= wi + 3)
+        var withLyrics = ImmutableArray.CreateBuilder<string>();
+        int firstWith = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
+        if (firstWith >= 1)
         {
-            withChords = toks[wi + 2].Text; // [with][chords][NAME]
-            // Optional `as roman | both | names` after the chord name.
-            if (toks.Count >= wi + 5 && toks[wi + 3].Text == "as")
-                chordDisplay = ParseChordMode(toks[wi + 4].Text);
-            toks = toks.GetRange(0, wi);    // what precedes = [clef?] part
+            int i = firstWith;
+            while (i < toks.Count)
+            {
+                if (toks[i].Kind != SyntaxKind.WithKeyword || i + 2 >= toks.Count)
+                {
+                    i++;
+                    continue;
+                }
+                var kind = toks[i + 1].Kind;   // chords | lyrics
+                string name = toks[i + 2].Text;
+                if (kind == SyntaxKind.ChordsKeyword)
+                {
+                    withChords = name;
+                    if (i + 4 < toks.Count && toks[i + 3].Text == "as")
+                    {
+                        chordDisplay = ParseChordMode(toks[i + 4].Text);
+                        i += 5;
+                    }
+                    else
+                    {
+                        i += 3;
+                    }
+                }
+                else if (kind == SyntaxKind.LyricsKeyword)
+                {
+                    if (name.Length > 0)
+                        withLyrics.Add(name);
+                    i += 3;
+                }
+                else
+                {
+                    i++;
+                }
+            }
+            toks = toks.GetRange(0, firstWith);
         }
         if (toks.Count == 0) return null;
 
@@ -322,7 +356,8 @@ public static class RenderSpecParser
             Lines: lines,
             WithChords: withChords,
             NameSuppressed: nameSuppressed,
-            ChordDisplay: chordDisplay);
+            ChordDisplay: chordDisplay,
+            WithLyrics: withLyrics.ToImmutable());
     }
 
     /// <summary>Maps the `as roman | both | names` selector text to its mode.</summary>

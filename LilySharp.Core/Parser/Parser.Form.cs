@@ -460,15 +460,20 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
             tokens.Add(Advance());
 
-        // `with chords NAME` attaches a NAMED chord part's symbols above this
-        // staff — the same progression can also feed a lead-sheet row, written
-        // once (grammar feedback: the nameless/named forms forced duplication).
-        if (Check(SyntaxKind.WithKeyword) && Peek(1)?.Kind == SyntaxKind.ChordsKeyword)
+        // Attachments compose with the single operator `with X`, repeatable and in
+        // any order: `with chords NAME [as roman|both|names]` (symbols above the staff)
+        // and `with lyrics NAME` (syllables note-aligned below the staff). The tokens
+        // are read positionally by RenderSpecParser.ParseStaff. `with lyrics` takes no
+        // `as` selector; multiple `with lyrics` stack as verses.
+        while (Check(SyntaxKind.WithKeyword)
+            && Peek(1)?.Kind is SyntaxKind.ChordsKeyword or SyntaxKind.LyricsKeyword)
         {
             tokens.Add(Advance()); // with
-            tokens.Add(Advance()); // chords
+            var attachKind = Current.Kind;
+            tokens.Add(Advance()); // chords | lyrics
             tokens.Add(ExpectPartName());
-            ConsumeAsSelector(tokens); // `... as roman | both | names`
+            if (attachKind == SyntaxKind.ChordsKeyword)
+                ConsumeAsSelector(tokens); // chords only: `... as roman | both | names`
         }
 
         return new StaffRenderGreen([.. tokens]);

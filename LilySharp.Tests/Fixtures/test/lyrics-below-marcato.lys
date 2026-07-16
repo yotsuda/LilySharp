@@ -9,6 +9,6 @@ key c major
 part melody { clef treble
   section A { c4@marcato c g' g | a a g2 | }
 }
-lyrics { section A { Twin- kle twin- kle | lit- tle star | } }
+lyrics words { section A { Twin- kle twin- kle | lit- tle star | } }
 form main { A }
-score main "lyrics-below-marcato" { staff melody }
+score main "lyrics-below-marcato" { staff melody with lyrics words }

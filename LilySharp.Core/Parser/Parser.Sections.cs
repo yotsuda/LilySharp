@@ -38,12 +38,28 @@ internal sealed partial class Parser
 
     private GreenNode? ParseSectionItem()
     {
+        // A lyrics track must be NAMED so a score can reference it (`staff X with lyrics
+        // NAME`), mirroring a `chords NAME` track. An UNNAMED inline `lyrics { … }` inside a
+        // section can never be referenced (and no longer auto-attaches), so it is an ordinary
+        // syntax error. Consume the block so the section's remaining items still parse cleanly,
+        // and report through the generic parser diagnostic (no dedicated code). A named
+        // `lyrics NAME { … }` falls through to the switch below and parses normally.
+        if (Check(SyntaxKind.LyricsKeyword) && Peek(1)?.Kind == SyntaxKind.OpenBrace)
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "an unnamed 'lyrics { ... }' block has no way to be attached; name it " +
+                "'lyrics NAME { ... }' and reference it with 'score { staff X with lyrics NAME }'.");
+            return ParseLyricsBlock();
+        }
+
         return Current.Kind switch
         {
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
+            // Only the NAMED form reaches here; the unnamed `lyrics { … }` was rejected above.
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             // A section-level grob directive (section-major): `override Grob.prop = value`

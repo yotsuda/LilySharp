@@ -26,14 +26,14 @@ section Main {
     voice { g,4  b,  c   a,  | d   d   d2 | }
     voice { g,,4 g,, c,  d,  | g,, d,  g,,2 }
   }
-  lyrics { Praise God from whom | all bless- ings | }
+  lyrics words { Praise God from whom | all bless- ings | }
 }
 
 form main { Main }
 
 score main "chorale" {
   grandStaff {
-    staff upper
+    staff upper with lyrics words
     staff lower
   }
 }

@@ -9,8 +9,8 @@ part voc { clef treble }
 part pno { clef bass }
 section A {
   voc { c'4 d' e' f' | }
-  lyrics { la la la la | }
+  lyrics words { la la la la | }
   pno { c4 d@ped e f@ped(off) | }
 }
 form main { A }
-score main "pedal-below-lyrics" { staff voc  staff pno }
+score main "pedal-below-lyrics" { staff voc with lyrics words  staff pno }

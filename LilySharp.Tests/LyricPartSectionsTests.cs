@@ -22,7 +22,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The part-major lyric track form: <c>lyrics { section A { .. } section B { .. } }</c>
+/// The part-major lyric track form: <c>lyrics w { section A { .. } section B { .. } }</c>
 /// — a verse written per section and replayed by the structure, the dual of an
 /// in-section lyrics block. Must parse and collect to the SAME lyrics as the
 /// equivalent section-major file.
@@ -33,10 +33,10 @@ public class LyricPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble }
-        section A { melody { c4 c g' g | a a g2 | } lyrics { Twin- kle twin- kle | lit- tle star | } }
-        section B { melody { g'4 g f f | e e d2 | } lyrics { how I won- der | what you are | } }
+        section A { melody { c4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
+        section B { melody { g'4 g f f | e e d2 | } lyrics w { how I won- der | what you are | } }
         form main { A B }
-        score main "s" { staff melody }
+        score main "s" { staff melody with lyrics w }
         """;
 
     private const string PartMajor = """
@@ -46,13 +46,23 @@ public class LyricPartSectionsTests
           section A { c4 c g' g | a a g2 | }
           section B { g'4 g f f | e e d2 | }
         }
-        lyrics {
+        lyrics w {
           section A { Twin- kle twin- kle | lit- tle star | }
           section B { how I won- der | what you are | }
         }
         form main { A B }
-        score main "s" { staff melody }
+        score main "s" { staff melody with lyrics w }
         """;
+
+    // Lyrics attach EXPLICITLY (`staff melody with lyrics w`); collect through the render
+    // path so the named track binds to the melody's notes exactly as it renders.
+    private static LilySharp.Core.Svg.Model.MultiStaffScore CollectScored(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        return new MeasureCollector().CollectMultiStaff(tree, spec!);
+    }
 
     [Fact]
     public void PartMajorLyricTrack_ParsesClean()
@@ -86,11 +96,11 @@ public class LyricPartSectionsTests
               section A { c'4 c' g' g' | a' a' g'2 | }
               section B { f'4 f' e' e' | }
             }
-            lyrics { section A { Twin- kle | star | } section B { how | } }
+            lyrics w { section A { Twin- kle | star | } section B { how | } }
             form main { A B A "A2" }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody");
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var byMeasure = score.Lyrics
             .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing.ToDouble())
             .Select(l => $"{l.MeasureIndex}:{l.Text}").ToArray();
@@ -144,7 +154,7 @@ public class LyricPartSectionsTests
               section A { c'4 d' e' f' | g'4 a' g'2 | }
               section B { g'4 f' e' d' | }
             }
-            lyrics {
+            lyrics w {
               section A {
                 [1. Twin- kle twin- kle | lit- tle star |]
                 [2. How I won- der | what you are |]
@@ -153,7 +163,7 @@ public class LyricPartSectionsTests
             form main { A |: ~B :| A "A2" }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody");
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var byMeasure = score.Lyrics
             .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing.ToDouble())
             .Select(l => $"{l.MeasureIndex}:{l.Text}").ToArray();
@@ -178,14 +188,14 @@ public class LyricPartSectionsTests
               section A { c'4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
-            lyrics {
+            lyrics w {
               section A { la la la la | }
               section B { [1. up up up up |] [2. down down down down |] }
             }
             form main { A |: B :| }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody");
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var atB = score.Lyrics.Where(l => l.MeasureIndex == 1).ToList(); // A=bar0, B=bar1
         Assert.Contains(atB, l => l.Text == "up" && l.VerseNumber == 1);
         Assert.Contains(atB, l => l.Text == "down" && l.VerseNumber == 2);
@@ -199,11 +209,11 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble section A { c'4 d' e' f' | } }
-            lyrics { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
+            lyrics w { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
             form main { A "1" A "2" A "3" }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody"); // occurrences at bars 0,1,2
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" }); // occurrences at bars 0,1,2
         Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
         Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 2);
         Assert.Contains(score.Lyrics, l => l.Text == "aa" && l.MeasureIndex == 1);
@@ -221,11 +231,11 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble section A { c'4 d' e' f' | } }
-            lyrics { section A { [3,1. one two three four |] } }
+            lyrics w { section A { [3,1. one two three four |] } }
             form main { A "1" A "2" }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody"); // occurrences at bars 0,1
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" }); // occurrences at bars 0,1
         Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
         Assert.DoesNotContain(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 1);
     }
@@ -240,14 +250,14 @@ public class LyricPartSectionsTests
               section A { c'4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
-            lyrics {
+            lyrics w {
               section A { la la la la | }
               section B { [1. up up up up |] [~2. down down down down |] }
             }
             form main { A |: B :| }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody");
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         Assert.NotEmpty(score.Lyrics.Where(l => l.Text == "down"));
         Assert.All(score.Lyrics.Where(l => l.Text == "down"), l => Assert.True(l.HideStanza));
         Assert.All(score.Lyrics.Where(l => l.Text == "up"), l => Assert.False(l.HideStanza));
@@ -265,11 +275,11 @@ public class LyricPartSectionsTests
               section A { c'4 d' e' f' | }
               section B { g'4 f' e' d' | }
             }
-            lyrics { section A { Do re mi fa | } }
+            lyrics w { section A { Do re mi fa | } }
             form main { A |: ~B :| A "A2" }
             score main { staff melody }
             """);
-        var score = new MeasureCollector().Collect(tree, "melody");
+        var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var atReprise = score.Lyrics.Where(l => l.MeasureIndex == 2).Select(l => l.Text).ToList();
         // A is 1 bar; A2 starts at bar 2 (after A=0, B=1). Its words repeat A's.
         Assert.Contains("Do", atReprise);
@@ -277,7 +287,7 @@ public class LyricPartSectionsTests
 
     private static string LyricSignature(string src)
     {
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
+        var score = CollectScored(src);
         return string.Join(" ", score.Lyrics
             .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing.ToDouble())
             .Select(l => $"{l.MeasureIndex}:{l.Text}"));

@@ -25,5 +25,5 @@ section Main {
 form main { Main }
 
 score main "named-voices" {
-  staff m
+  staff m with lyrics sop with lyrics alt
 }

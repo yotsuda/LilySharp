@@ -18,11 +18,11 @@ section A {
     e4@chord(c) e f g | a4@chord(a:m) g e d |
     f4@chord(f) a g f | e4@chord(g:7) d c2 |
   }
-  lyrics { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
+  lyrics words { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
 }
 
 form main { A }
 
 score main "lead-sheet" {
-  staff melody
+  staff melody with lyrics words
 }

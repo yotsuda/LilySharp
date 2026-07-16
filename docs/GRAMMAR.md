@@ -228,7 +228,7 @@ SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 SectionItem    = SectionSetting
                | PartBlock                        (* partName MusicBlock *)
                | VoiceBlock                       (* multi-voice on one staff *)
-               | LyricsBlock                      (* note-bound OR named row *)
+               | LyricsBlock                      (* named lyrics track; attach via 'with lyrics NAME' or a 'lyrics NAME' row *)
                | ChordsBlock                      (* note-aligned OR named chord row *)
                ;
 
@@ -242,10 +242,11 @@ SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
 
-(* Note-bound lyrics align to the SAME part's notes. A NAMED lyrics/chords block
-   (with an identifier before the brace) is an independent ROW placed in a score with
-   'lyrics NAME' / 'chords NAME' — see §7 (lead sheets). *)
-LyricsBlock    = 'lyrics' , [ Identifier ] , '{' , { LyricMeasure } , '}' ;
+(* A lyrics track is written in a section next to the part it sings, and named so a score
+   can reference it: attach it under a staff with 'staff X with lyrics NAME' (aligned to
+   that part's notes), or place it as an independent 'lyrics NAME' ROW — see §7 (lead
+   sheets). *)
+LyricsBlock    = 'lyrics' , Identifier , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricSyllable  = LyricText | '~' | '_' ;          (* '-' suffix joins one word's syllables *)
 
@@ -255,12 +256,14 @@ ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordEntry | Barline } , '}
 ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
                  (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
 
-(* Example:
+(* Example (the score attaches the named track under the staff):
    section Verse {
      key g major
      melody { c4 d e f | g2 g | }
-     lyrics { Twin- kle twin- kle | lit- tle star | }
+     lyrics words { Twin- kle twin- kle | lit- tle star | }
    }
+   form main { Verse }
+   score main { staff melody with lyrics words }
 *)
 
 ### 5.1 Multi-voice (one staff)
@@ -325,10 +328,12 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
                ;
 
-StaffRender    = 'staff' , [ ClefName ] , PartRef , [ 'with' 'chords' PartRef ] ;
-                 (* 'with chords NAME' aligns the named chord part's symbols
-                    above this staff; the same part can also feed a lead-sheet
-                    row ('chords NAME'), so a progression is written once *)
+StaffRender    = 'staff' , [ ClefName ] , PartRef , { 'with' ( 'chords' PartRef | 'lyrics' PartRef ) } ;
+                 (* Each 'with' clause ADDS to the staff: 'with chords NAME' aligns the
+                    named chord part's symbols ABOVE the staff; 'with lyrics NAME' aligns
+                    the named lyrics track's syllables BELOW it (repeat 'with lyrics' to
+                    stack verses). The same chord part can also feed a lead-sheet row
+                    ('chords NAME'), so a progression is written once. *)
 PartRef        = Identifier ;
 
 (* A 'score' may carry its OWN 'form main { … }' to render a different arrangement
@@ -495,7 +500,7 @@ phrase riff { c4 d e f | }
 
 section Verse {
   melody { $riff | g4@p a( b c') | }
-  lyrics { Sing a song now | one two three four | }
+  lyrics words { Sing a song now | one two three four | }
 }
 
 // A staff-less lead sheet (chords + lyrics, no notes):
@@ -504,10 +509,11 @@ section Sheet {
   lyrics words { Twin- kle twin- kle | lit- tle | star | }
 }
 
-form main { Verse }
+form main  { Verse }
+form sheet { Sheet }
 
-score main "demo"  { staff melody }
-score main "sheet" { form main { Sheet } chords prog lyrics words }
+score main  "demo"  { staff melody with lyrics words }
+score sheet "sheet" { chords prog lyrics words }
 ```
 
 MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).

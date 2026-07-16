@@ -48,11 +48,27 @@ internal sealed class LyricPlainVerseShadowedValidator : ISemanticValidator
         var root = tree.GetRoot();
         string? voice = root.DescendantNodes().OfType<PartDeclarationSyntax>().FirstOrDefault()?.Name.Text;
 
+        // Lyrics attach EXPLICITLY (`staff X with lyrics NAME`) — there is no auto-attach,
+        // so resolve the tracks the score binds to this voice and collect them; otherwise
+        // no verse is aligned and a genuinely-shadowed plain line goes unreported.
+        IReadOnlyList<string>? attachedLyrics = null;
+        var spec = Svg.Collector.RenderSpecParser.FindFirst(tree);
+        if (spec != null && voice != null)
+        {
+            var names = spec.GetVoiceBindings()
+                .Where(b => b.VoiceName == voice)
+                .SelectMany(b => b.WithLyrics)
+                .Distinct()
+                .ToList();
+            if (names.Count > 0)
+                attachedLyrics = names;
+        }
+
         Svg.Collector.MeasureCollector collector;
         try
         {
             collector = new Svg.Collector.MeasureCollector();
-            collector.Collect(tree, voice);
+            collector.Collect(tree, voice, attachedLyricParts: attachedLyrics);
         }
         catch
         {

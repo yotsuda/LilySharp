@@ -43,7 +43,10 @@ public sealed record StaffSpec(
     // instrument-name label for this staff.
     bool NameSuppressed = false,
     // How the attached chords are shown (`... as roman | both | names`).
-    ChordDisplayMode ChordDisplay = ChordDisplayMode.Names
+    ChordDisplayMode ChordDisplay = ChordDisplayMode.Names,
+    // Named lyrics parts aligned note-by-note BELOW this staff
+    // (staff NAME with lyrics L [with lyrics L2 ...]); multiple stack as verses.
+    ImmutableArray<string> WithLyrics = default
 );
 
 /// <summary>
@@ -164,30 +167,31 @@ public sealed record RenderSpec(
     /// the voice name plus the staff's attached chord part, if any
     /// (<c>staff NAME with chords CHORDPART</c>).
     /// </summary>
-    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay)> GetVoiceBindings()
+    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics)> GetVoiceBindings()
     {
+        static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
         foreach (var item in OrderedItems())
         {
             switch (item)
             {
                 case SingleStaffSpec single:
-                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay);
+                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics));
                     break;
                 case GrandStaffRenderSpec grand:
                     foreach (var staff in grand.GrandStaff.Staves)
-                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay);
+                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics));
                     break;
                 case TabStaffSpec tab:
-                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay);
+                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics));
                     break;
                 case OssiaStaffSpec ossia:
-                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names);
+                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty);
                     break;
                 case ChordRowSpec chordRow:
-                    yield return (chordRow.PartName, null, chordRow.DisplayMode);
+                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty);
                     break;
                 case LyricsRowSpec lyricsRow:
-                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names);
+                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty);
                     break;
             }
         }

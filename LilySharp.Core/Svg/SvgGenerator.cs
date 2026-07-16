@@ -135,8 +135,17 @@ public static class SvgGenerator
     /// <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> byte for byte.
     /// </summary>
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec)
+        => CollectScore(new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose },
+            tree, renderSpec);
+
+    /// <summary>
+    /// Collects into the GIVEN collector, so a caller that needs the collector's
+    /// recorded side effects (the shared-collect validators read back
+    /// <see cref="MeasureCollector.LyricWarnings"/> etc.) sees EXACTLY what the render
+    /// path produced — attached lyrics/chords included.
+    /// </summary>
+    internal static MultiStaffScore CollectScore(MeasureCollector collector, SyntaxTree tree, RenderSpec? renderSpec)
     {
-        var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
         if (renderSpec != null && renderSpec.IsMultiStaff)
             return collector.CollectMultiStaff(tree, renderSpec);
 
@@ -146,8 +155,13 @@ public static class SvgGenerator
             : null;
         var singleStaff = renderSpec is { Items.Length: 1 } && renderSpec.Items[0] is SingleStaffSpec s ? s.Staff : null;
         string? attachedChords = singleStaff?.WithChords;
+        // `staff NAME with lyrics L …` on a single-staff score (explicit attach; no
+        // implicit auto-attach — an unreferenced `lyrics {}` block is a LYS4006 error).
+        IReadOnlyList<string>? attachedLyrics = singleStaff is { WithLyrics.IsDefaultOrEmpty: false }
+            ? singleStaff.WithLyrics
+            : null;
         var score = collector.Collect(tree, voiceName, renderSpec?.Form, attachedChords,
-            singleStaff?.ChordDisplay ?? ChordDisplayMode.Names);
+            singleStaff?.ChordDisplay ?? ChordDisplayMode.Names, attachedLyrics);
 
         // The single-staff wrap used to drop the spec's instrument name — it
         // lives on the Staff (first-line label + indent), so
