@@ -32,7 +32,6 @@ internal sealed class LayoutEngine
     private readonly ElementCoordinator _elementCoordinator;
     private readonly SkylineBuilder _skylineBuilder;
     private readonly MeasureLayouter _measureLayouter = new();
-    private readonly SystemLayouter _systemLayouter;
     private readonly PageLayouter _pageLayouter;
     private readonly SystemBreaker _systemBreaker;
     private readonly MultiStaffLayouter _multiStaffLayouter;
@@ -42,209 +41,20 @@ internal sealed class LayoutEngine
         _options = options ?? LayoutOptions.Default;
         _elementCoordinator = new ElementCoordinator(_options);
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight);
-        _systemLayouter = new SystemLayouter(_options, _measureLayouter);
         _pageLayouter = new PageLayouter(_options);
         _systemBreaker = new SystemBreaker(_options);
         _multiStaffLayouter = new MultiStaffLayouter(_options, _measureLayouter);
     }
 
-    /// <summary>Calculates the complete layout for a single-staff score.</summary>
+    /// <summary>
+    /// Calculates the complete layout for a single-staff score by wrapping it in a
+    /// <see cref="MultiStaffScore"/> and running the single, real layout path — the same
+    /// path the renderer takes for every score (see SvgGenerator.CollectScore). Kept as a
+    /// convenience entry for the many single-voice call sites.
+    /// </summary>
     public ScoreLayout Layout(Score score)
     {
-        double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
-        double headerBottom = _options.MarginTop + headerHeight;
-
-        // LILYPOND-REF: lily/spacing-spanner.cc
-        // Calculate the common shortest duration across all voices for Gourlay spacing
-        double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
-
-        // Beam membership drives note spacing: a beamed note has no flag, so its
-        // right skyline must not reserve flag width. (See MeasureLayouter.IsItemBeamed.)
-        _measureLayouter.IsItemBeamed = BeamedPredicate(_elementCoordinator.DetectBeamGroups(score));
-
-        // A wide script (fermata / ornament) reaches sideways past its note head;
-        // the single-staff path reserves that in the shared columns (see
-        // SystemLayouter.ApplyArticulationSpacing / .Articulations).
-        _systemLayouter.Articulations = score.Articulations;
-
-        var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration);
-
-        // Pre-calculate first system skylines for initial Y positioning
-        var firstSystemMeasures = systemMeasures.Count > 0 ? systemMeasures[0] : new List<Measure>();
-        var firstMeasureLayouts = _systemLayouter.LayoutMeasuresForSystem(firstSystemMeasures, score.KeySignature.Sharps, true, 0,
-            baseShortestDuration: commonShortestDuration);
-        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(firstSystemMeasures, firstMeasureLayouts);
-        double currentY = LayoutUtilities.CalculateFirstSystemY(
-            headerBottom, LayoutUtilities.CalculateUpExtent(firstUpSkyline), _options.TopSystemPadding);
-
-        // Layout systems and build skylines in a single pass
-        var systems = new List<SystemLayout>();
-        var perSystemExtents = new List<(double upExtent, double downExtent)>();
-        var perSystemSkylines = new List<(VerticalSkyline up, VerticalSkyline down)>();
-        int firstMeasureIndex = 0;
-        for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
-        {
-            // End-of-line courtesy: when the NEXT system opens with a key
-            // change, this line reserves room after its final barline for
-            // the cancellation + new signature (LP explicitKeySignature-
-            // Visibility default all-visible — printed on both sides).
-            double courtesyW = 0;
-            if (sysIdx + 1 < systemMeasures.Count && systemMeasures[sysIdx + 1].Count > 0)
-            {
-                foreach (var lead in systemMeasures[sysIdx + 1][0].Items)
-                {
-                    if (lead is KeySignatureChangeItem kcNext)
-                    {
-                        courtesyW = SpacingRules.KeyCourtesySuffixWidth(
-                            kcNext.PreviousKey.Sharps, kcNext.NewKey.Sharps);
-                        break;
-                    }
-                    if (lead.Duration > Fraction.Zero)
-                        break;
-                }
-            }
-
-            var system = _systemLayouter.LayoutSystem(
-                sysIdx, systemMeasures[sysIdx], currentY,
-                score.KeySignature.Sharps, sysIdx == 0, firstMeasureIndex,
-                score.Lyrics, isLastSystem: sysIdx == systemMeasures.Count - 1,
-                baseShortestDuration: commonShortestDuration,
-                courtesySuffixWidth: courtesyW);
-            systems.Add(system);
-
-            var (upSkyline, downSkyline) = _skylineBuilder.BuildSystemSkylines(
-                systemMeasures[sysIdx], system.Measures, system.Indent);
-            perSystemSkylines.Add((upSkyline, downSkyline));
-            perSystemExtents.Add((
-                LayoutUtilities.CalculateUpExtent(upSkyline),
-                LayoutUtilities.CalculateDownExtent(downSkyline, _options.StaffHeight)));
-
-            currentY += _options.StaffHeight + _options.SystemSpacing;
-            firstMeasureIndex += systemMeasures[sysIdx].Count;
-        }
-
-        // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
-        // Augment system extents with estimated loose line heights (lyrics, dynamics,
-        // figured bass), collecting the whole-line bands (lyrics down / chord rows up)
-        // that must floor the inter-system skyline distance.
-        var perSystemBands = new List<(double bandUp, double bandDown)>();
-        var singleMeasureRanges = new List<(int startMeasure, int measureCount)>();
-        int measStart = 0;
-        foreach (var sysMeasures in systemMeasures)
-        {
-            singleMeasureRanges.Add((measStart, sysMeasures.Count));
-            measStart += sysMeasures.Count;
-        }
-        AugmentExtentsWithLooseLines(perSystemExtents,
-            score.Lyrics, score.Dynamics, score.FiguredBasses,
-            score.MusicMarks, score.VoltaBrackets, singleMeasureRanges,
-            score.ChordNames, perSystemBands);
-
-        // Preliminary annotation pass: real protrusions join the spacing
-        // extents (see EnrichExtentsWithAnnotationProtrusions). These
-        // layouts are discarded; the final pass below recomputes them
-        // against the re-spaced systems.
-        List<(VerticalSkyline up, VerticalSkyline down)>? pagingSkylines = perSystemSkylines;
-        {
-            var prelimSystems = systems.ToImmutableArray();
-            var prelimBeams = _elementCoordinator.LayoutBeams(score, prelimSystems);
-            var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
-            {
-                Score = score,
-                Systems = prelimSystems,
-                Dynamics = score.Dynamics,
-                Articulations = score.Articulations,
-                GraceNotes = score.GraceNotes,
-                Lyrics = score.Lyrics,
-                MusicMarks = score.MusicMarks,
-                CustomTexts = score.CustomTexts,
-                VoltaBrackets = score.VoltaBrackets,
-                TupletBrackets = score.TupletBrackets,
-                Arpeggios = score.Arpeggios,
-                Measures = score.Voice.Measures,
-                FiguredBasses = score.FiguredBasses,
-                ChordNames = score.ChordNames,
-                PercentRepeats = score.PercentRepeats,
-                TrillSpanners = score.TrillSpanners,
-                BeamGroups = _elementCoordinator.DetectBeamGroups(score),
-                BeamLayouts = prelimBeams,
-                SystemSkylines = perSystemSkylines,
-                TupletForceStemUp = score.IsMultiVoice,
-                StaffVoices = score.Voices,
-            });
-            EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
-                prelimAnn,
-                _elementCoordinator.LayoutTies(score, prelimSystems),
-                _elementCoordinator.LayoutSlurs(score, prelimSystems));
-            pagingSkylines = AugmentSkylinesForPaging(
-                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-                prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.BarNumbers);
-        }
-
-        var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), headerHeight, perSystemExtents, _options.StaffHeight,
-            pagingSkylines, perSystemBands: perSystemBands);
-
-        var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
-        var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
-        var slurLayouts = _elementCoordinator.LayoutSlurs(score, systemsArray);
-        var glissandoLayouts = _elementCoordinator.LayoutGlissandos(score, systemsArray);
-        // LILYPOND-REF: lily/note-collision.cc:486-502
-        // Create a resolver for force-hshift manual override during collision calculation
-        GrobPropertyResolver? collisionResolver = null;
-        if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)
-        {
-            collisionResolver = new GrobPropertyResolver(score.GrobOverrides, score.GrobReverts);
-        }
-        var (voiceOffsets, headWipeEntries, dotForceDownEntries) = _elementCoordinator.CalculateVoiceOffsets(score, collisionResolver);
-        var restShifts = _elementCoordinator.CalculateRestShifts(score, systemsArray, beamLayouts);
-
-        // Detect beam groups for tuplet bracket-visibility (if-no-beam)
-        // LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility
-        var beamGroups = _elementCoordinator.DetectBeamGroups(score);
-
-        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
-        {
-            Score = score,
-            Systems = systemsArray,
-            Dynamics = score.Dynamics,
-            Articulations = score.Articulations,
-            GraceNotes = score.GraceNotes,
-            Lyrics = score.Lyrics,
-            MusicMarks = score.MusicMarks,
-            CustomTexts = score.CustomTexts,
-            VoltaBrackets = score.VoltaBrackets,
-            TupletBrackets = score.TupletBrackets,
-            Arpeggios = score.Arpeggios,
-            Measures = score.Voice.Measures,
-            FiguredBasses = score.FiguredBasses,
-            ChordNames = score.ChordNames,
-            PercentRepeats = score.PercentRepeats,
-            TrillSpanners = score.TrillSpanners,
-            BeamGroups = beamGroups,
-            BeamLayouts = beamLayouts,
-            SystemSkylines = perSystemSkylines,
-            TupletForceStemUp = score.IsMultiVoice,
-            StaffVoices = score.Voices,
-        });
-
-        // Calculate part combination layouts for multi-voice scores.
-        // LILYPOND-REF: part combination is opt-in (\partcombine); plain << \\ >>
-        // voices are not combined and carry no a2/Solo text. Gated off by default.
-        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
-        if (_options.EnablePartCombine && score.IsMultiVoice && score.Voices.Length >= 2)
-        {
-            var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
-            var combineItems = PartCombineAnalyzer.Analyze(
-                score.Voices[0], score.Voices[1], score.TimeSignature);
-            partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, score.Voices[0].Measures);
-        }
-
-        var result = BuildScoreLayout(pages, systemsArray, beamLayouts, tieLayouts, slurLayouts,
-            glissandoLayouts, annotations, voiceOffsets, headWipeEntries, dotForceDownEntries, restShifts, partCombineLayouts);
-        return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
+        return Layout(MultiStaffScore.FromScore(score));
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>

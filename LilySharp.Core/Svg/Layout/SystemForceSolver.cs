@@ -18,10 +18,10 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Resolves the horizontal spring force for one system line. Extracted from the
-/// byte-identical ragged-solve branch that was duplicated three times
-/// (<see cref="SystemLayouter"/>'s note and lyric passes, and
-/// <see cref="MultiStaffLayouter"/>); the only per-site difference was the
-/// condition that selects ragged mode, which is now the <c>ragged</c> argument.
+/// byte-identical ragged-solve branch that was duplicated across the layout passes
+/// (<see cref="MultiStaffLayouter"/> and the single-staff measure pass); the only
+/// per-site difference was the condition that selects ragged mode, which is now the
+/// <c>ragged</c> argument.
 /// </summary>
 internal static class SystemForceSolver
 {

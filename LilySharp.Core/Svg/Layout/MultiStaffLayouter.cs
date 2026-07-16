@@ -802,7 +802,6 @@ internal sealed class MultiStaffLayouter
 
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
         // the entire system, then solve with a single SpringSolver for uniform force.
-        // This matches SystemLayouter's approach for single-staff scores.
 
         // First pass: collect timing springs and barline widths per measure
         var measureSprings = new List<ImmutableArray<Spring>>();
