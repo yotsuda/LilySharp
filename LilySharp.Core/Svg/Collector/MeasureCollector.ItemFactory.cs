@@ -229,12 +229,27 @@ public sealed partial class MeasureCollector
             ResolvedPitch rp;
             if (notes.Count == 0)
             {
-                // The first member is the ROOT — resolved relative to the incoming
-                // frame; it anchors the chord and drives the next chord/note.
-                rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
-                firstOctave = rp.RelativeOctave;
+                // The first member is the ROOT: its LETTER, resolved bare in the
+                // incoming frame, is the chord's ANCHOR — the stacking base and
+                // what the next chord/note is relative to. The root's own '/,
+                // marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4, and
+                // the next note stays relative to C4); only the whole-chord marks
+                // after '>' move the anchor. Absolute mode has no frame: the
+                // root's marks are its register and anchor the degrees as written.
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
                 rootStepForStack = GetPitchIndex(firstPitchName);
+                if (_octave.OctaveAbsolute)
+                {
+                    rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
+                    firstOctave = rp.RelativeOctave;
+                }
+                else
+                {
+                    int anchor = _octave.Resolve(rootStepForStack, 0, firstPitchName) + chordOctave;
+                    rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
+                        anchor + pitch.OctaveOffset, pitch.Position);
+                    firstOctave = anchor;
+                }
             }
             else if (_octave.OctaveAbsolute)
             {
@@ -324,7 +339,8 @@ public sealed partial class MeasureCollector
                 SourcePosition: drum.Position));
         }
 
-        // Next chord/note is relative to first pitch of this chord (Lilypond spec)
+        // The next chord/note is relative to the chord's ANCHOR — the root's bare
+        // letter plus any whole-chord '>' marks; the members' own marks stay local.
         _octave.CurrentOctave = firstOctave;
         _octave.LastPitchName = firstPitchName;
 

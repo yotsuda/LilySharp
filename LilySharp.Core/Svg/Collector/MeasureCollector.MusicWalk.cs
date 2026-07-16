@@ -175,9 +175,18 @@ public sealed partial class MeasureCollector
         {
             if (member is ScaleDegreeSyntax degree)
             {
-                // Degrees anchor on the root (or the key tonic when none precedes them) and
-                // do NOT advance the running frame — the root already set it.
-                EmitArpeggioDegree(degree, builder, forced, scale, rootSet, rootStep, anchorOctave, groupOctave);
+                // Degrees anchor on the root — or, before any pitched member, on the
+                // KEY TONIC (like an omitted-root degree chord), which then becomes
+                // the group's anchor and outgoing reference. A custom/atonal key has
+                // no tonic, so fall back to C.
+                if (!rootSet)
+                {
+                    rootSet = true;
+                    rootStep = _ambientTonicValid ? _ambientTonicStep : 0;
+                    rootLetter = "cdefgab"[rootStep];
+                    anchorOctave = _octave.Resolve(rootStep, 0, rootLetter) + groupOctave;
+                }
+                EmitArpeggioDegree(degree, builder, forced, scale, rootStep, anchorOctave);
                 continue;
             }
 
@@ -258,8 +267,25 @@ public sealed partial class MeasureCollector
     /// applied to the root (0 for stacked members, which inherit it via the anchor).</summary>
     private NoteItem BuildArpeggioNoteItem(PitchSyntax pitch, (int Value, int Dots) forced, int octaveShift)
     {
-        var rp = ShiftOctave(CalculateStaffPosition(pitch), octaveShift);
-        _octave.CurrentOctave = rp.RelativeOctave;
+        // Stacked members arrive in forced-absolute mode and keep the plain path.
+        // The ROOT, in relative mode, anchors on its bare LETTER: its own '/, marks
+        // are LOCAL to its sounding pitch (<< c' e g >> = C5 E4 G4) and do not move
+        // the anchor the group stacks on and propagates.
+        ResolvedPitch rp;
+        if (_octave.OctaveAbsolute)
+        {
+            rp = ShiftOctave(CalculateStaffPosition(pitch), octaveShift);
+            _octave.CurrentOctave = rp.RelativeOctave;
+        }
+        else
+        {
+            char name = pitch.PitchName.ToLowerInvariant()[0];
+            int step = GetPitchIndex(name);
+            int anchor = _octave.Resolve(step, 0, name) + octaveShift;
+            rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset,
+                anchor + pitch.OctaveOffset, pitch.Position);
+            _octave.CurrentOctave = anchor;
+        }
         int staffPosition = rp.StaffPosition;
         var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         if (pitch.QuarterOffset != 0)
@@ -273,26 +299,15 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>A scale-degree arpeggio member (<c>&lt;&lt; c 3 5 &gt;&gt;</c>) → NoteItem,
-    /// stacked on the root by diatonic steps in the WRITTEN key (the transpose is applied
-    /// once by <see cref="ResolveAbsolutePitch"/>). With no pitched root it anchors on the
-    /// key tonic, like an omitted-root degree chord.</summary>
+    /// stacked on the group's anchor (the root, or the key tonic when no pitched member
+    /// precedes — the caller resolves it) by diatonic steps in the WRITTEN key (the
+    /// transpose is applied once by <see cref="ResolveAbsolutePitch"/>).</summary>
     private void EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
-        (int Value, int Dots) forced, Fraction scale, bool rootSet, int rootStep, int anchorOctave, int groupOctave)
+        (int Value, int Dots) forced, Fraction scale, int rootStep, int anchorOctave)
     {
-        int drootStep, drootOctave;
-        if (rootSet)
-        {
-            drootStep = rootStep;
-            drootOctave = anchorOctave; // already includes the group octave (root was shifted)
-        }
-        else
-        {
-            drootStep = _ambientTonicValid ? _ambientTonicStep : 0;
-            drootOctave = _octave.Resolve(drootStep, 0, "cdefgab"[drootStep]) + groupOctave;
-        }
         int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
         var (step, alteration, octave) = ChordDegrees.Resolve(
-            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
+            rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.Position);
         var accidental = GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         bool needsLedger = rp.StaffPosition is <= -6 or >= 6;

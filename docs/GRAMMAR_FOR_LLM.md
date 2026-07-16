@@ -94,22 +94,34 @@ fis8        // F# eighth
 r4          // quarter rest
 s4          // invisible spacer rest
 R1          // full-measure rest
-<c e g>4    // chord (shared duration), C major triad as a quarter
+<c e g>4    // chord (shared duration after '>'), C major triad as a quarter
+<c 3 5>4    // the same triad by scale degrees (root + 3rd + 5th of the key)
+<1 3 5>2    // degrees only: anchored on the key TONIC (C E G in C major)
 ```
+
+Chord octaves — the ANCHOR model (one rule: a mark moves only what it is attached to):
+the anchor is the first member's bare LETTER (or the key tonic for a degrees-only
+chord), resolved nearest to the previous note; members sit at-or-above it, so order is
+free except the first slot (`<c e g>` = `<c g e>`; degrees are fully order-free). A
+`'`/`,` on a member moves THAT note only — the first member's included: `<c' e g>` =
+C5 E4 G4 and the next bare c is still C4. A `'`/`,` AFTER the `>` (before the duration)
+moves the whole chord AND the anchor, so it propagates: `<c e g>'4 c` = C5 E5 G5, C5.
 
 ## Arpeggios `<< … >>` (written-out broken chords)
 
-Notes play in SEQUENCE (each with its own duration) but octaves stack above the FIRST
-note, like a chord — so member octaves are order-independent (`<< c e g >>` and
-`<< c g >>` put g a fifth above c). A `,` drops a member below the root. NOT LilyPond's
-`<< >>` (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
+Members play in SEQUENCE and EQUALLY SUBDIVIDE the group's total (no per-member
+durations — a bare number is always a scale degree). Octaves follow the chord anchor
+model above; a degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
+(parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
 
 ```
-<< c e g >>      // c, then e/g stacked above → an ascending arpeggio (E4 G4)
-<< c8 e g e >>   // per-note durations (eighth carries)
+<< c e g >>      // c, then e/g stacked above (E4 G4); after c4 → a triplet of eighths
+<< c 3 5 >>      // by degrees: c e g
+<< 8 5 3 1 >>    // degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
 << <c e> g >>    // a chord member, then g
-<< c8 r e >>     // a rest is a gap; e still stacks above c
-<< c e g >>2     // a duration after >> = auto-tuplet: 3 quarters in a half (triplet 3:2)
+<< c r e >>      // a rest is a gap (an equal share); e still stacks above c
+<< c e g >>2     // a duration after >> = the group's total: 3 in a half (triplet 3:2)
+<< c e g >>'     // marks after >> shift the whole group and propagate to the next note
 ```
 
 Must fit in one measure (else it overflows the meter).

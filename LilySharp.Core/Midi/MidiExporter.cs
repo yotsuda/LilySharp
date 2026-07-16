@@ -991,9 +991,17 @@ public sealed class MidiExporter
         {
             if (member is ScaleDegreeSyntax degree)
             {
-                // Degrees anchor on the root (or the key tonic when none precedes them) and
-                // do NOT advance the running frame — the root already set it.
-                EmitArpeggioMidiDegree(degree, track, rootSet, rootStep, anchorOctave, groupOctave);
+                // Degrees anchor on the root — or, before any pitched member, on the
+                // KEY TONIC (like an omitted-root degree chord), which then becomes
+                // the group's anchor and outgoing reference. A custom/atonal key has
+                // no tonic, so fall back to C.
+                if (!rootSet)
+                {
+                    rootSet = true;
+                    rootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+                    anchorOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, rootStep, 0) + groupOctave;
+                }
+                EmitArpeggioMidiDegree(degree, track, rootStep, anchorOctave);
                 continue;
             }
 
@@ -1044,8 +1052,25 @@ public sealed class MidiExporter
     /// for stacked members, which inherit it via the anchor).</summary>
     private void EmitArpeggioMidiPitch(PitchSyntax pitch, MidiTrack track, int octaveShift)
     {
-        int midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + octaveShift * 12, 0, 127);
-        _currentOctave += octaveShift; // so the anchor octave carries the group shift
+        // Stacked members arrive in forced-absolute mode (plain path). The ROOT, in
+        // relative mode, anchors on its bare LETTER: its own '/, marks are LOCAL to
+        // its sounding pitch and do not move the anchor the group propagates.
+        int midiPitch;
+        if (_octaveAbsolute)
+        {
+            midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + octaveShift * 12, 0, 127);
+            _currentOctave += octaveShift; // so the anchor octave carries the group shift
+        }
+        else
+        {
+            int step = GetNoteName(pitch.BaseName);
+            int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, step, 0) + octaveShift;
+            midiPitch = System.Math.Clamp(
+                RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset)
+                + _currentTransposeSemitones, 0, 127);
+            _currentNoteName = step;
+            _currentOctave = anchor;
+        }
         int ticks = FractionToTicks(_defaultDuration);
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
             pitch.Position, QuarterBend: pitch.QuarterOffset,
@@ -1053,23 +1078,13 @@ public sealed class MidiExporter
         _currentTick += ticks;
     }
 
-    /// <summary>Play one scale-degree arpeggio member, stacked on the root (or the key tonic
-    /// when no pitch precedes it) by diatonic steps in the key, then transposed like a pitch.</summary>
-    private void EmitArpeggioMidiDegree(ScaleDegreeSyntax degree, MidiTrack track, bool rootSet, int rootStep, int anchorOctave, int groupOctave)
+    /// <summary>Play one scale-degree arpeggio member, stacked on the group's anchor (the
+    /// root, or the key tonic when no pitched member precedes — the caller resolves it) by
+    /// diatonic steps in the key, then transposed like a pitch.</summary>
+    private void EmitArpeggioMidiDegree(ScaleDegreeSyntax degree, MidiTrack track, int rootStep, int anchorOctave)
     {
-        int drootStep, drootOctave;
-        if (rootSet)
-        {
-            drootStep = rootStep;
-            drootOctave = anchorOctave; // already includes the group octave (root was shifted)
-        }
-        else
-        {
-            drootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-            drootOctave = RelativeOctave.Resolve(_currentNoteName, _currentOctave, drootStep, 0) + groupOctave;
-        }
         var (step, alter, octave) = ChordDegrees.Resolve(
-            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
+            rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
         int midiPitch = System.Math.Clamp(
             RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
         int ticks = FractionToTicks(_defaultDuration);
@@ -1215,12 +1230,13 @@ public sealed class MidiExporter
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
-        // The first member is the ROOT (resolved relatively); every other member
-        // STACKS above it — the same octave placement as a scale degree, so a
-        // chord's pitches are independent of the order its notes are written
-        // (<c e g> == <c 3 5> == <c g e>). The note AFTER the chord is relative to
-        // the root. A deliberate Lily# divergence from LilyPond, matching the
-        // collector and the MusicXML exporter.
+        // The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every
+        // other member STACKS above the anchor — the same octave placement as a
+        // scale degree, so a chord's pitches are independent of the order its notes
+        // are written (<c e g> == <c 3 5> == <c g e>). Each member's own '/, marks
+        // (the root's included) are LOCAL to that one note. The note AFTER the chord
+        // is relative to the anchor. A deliberate Lily# divergence from LilyPond,
+        // matching the collector and the MusicXML exporter.
         // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
         // chord; folding it into firstOctave flows through every stacked/degree member
         // and the following note, matching the collector and MusicXML exporter.
@@ -1238,9 +1254,26 @@ public sealed class MidiExporter
             int midiPitch;
             if (isFirst)
             {
-                midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127); // advances state
+                if (_octaveAbsolute)
+                {
+                    midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127); // advances state
+                    firstOctave = _currentOctave + chordOctave;
+                }
+                else
+                {
+                    // The root's LETTER resolved bare = the chord's ANCHOR; its own
+                    // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
+                    // and the next note stays relative to C4).
+                    int step = GetNoteName(pitch.BaseName);
+                    int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, step, 0) + chordOctave;
+                    midiPitch = System.Math.Clamp(
+                        RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset)
+                        + _currentTransposeSemitones, 0, 127);
+                    _currentNoteName = step;
+                    _currentOctave = anchor;
+                    firstOctave = anchor;
+                }
                 firstNoteName = _currentNoteName;
-                firstOctave = _currentOctave + chordOctave;
                 isFirst = false;
             }
             else if (_octaveAbsolute)

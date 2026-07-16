@@ -136,4 +136,37 @@ score main ""t"" { staff melody }
         var pitches = midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToList();
         Assert.Equal(new[] { 60, 67, 64 }, pitches); // C4, G4, E4 (g and e stacked above c)
     }
+
+    private static int[] MidiPitches(string music)
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(music));
+        return midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToArray();
+    }
+
+    [Fact]
+    public void Chord_MemberOctaveMarks_AreLocalToThatMember()
+    {
+        // A member's '/, marks shift only that ONE note from its stacked position —
+        // the root's included: <c' e g> = C5 E4 G4 (e and g stack above the BARE c),
+        // and <c' e' g'> is the close position C5 E5 G5, not a spread E6/G6.
+        Assert.Equal(new[] { 72, 64, 67 }, MidiPitches("<c' e g>4"));
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<c' e' g'>4"));
+    }
+
+    [Fact]
+    public void Chord_RootOctaveMark_DoesNotPropagateToTheNextNote()
+    {
+        // The chord's anchor is the root's bare LETTER: after <c' e g> the next bare
+        // c returns to C4 even though the root sounded at C5.
+        Assert.Equal(new[] { 72, 64, 67, 60 }, MidiPitches("<c' e g>4 c4"));
+    }
+
+    [Fact]
+    public void Chord_TrailingOctaveMark_MovesTheAnchor_AndPropagates()
+    {
+        // <c e g>' shifts the whole chord AND the next bare note continues in the
+        // new register — the anchor itself moved to C5. <c' e g> sounds the same
+        // chord but does NOT move the anchor: that is the distinction.
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c e g>'4 c4"));
+    }
 }

@@ -1384,9 +1384,17 @@ public sealed class MusicXmlExporter
         {
             if (member is ScaleDegreeSyntax degree)
             {
-                // Degrees anchor on the root (or the key tonic when none precedes them) and
-                // do NOT advance the running frame — the root already set it.
-                EmitArpeggioXmlDegree(degree, rootSet, rootStep, anchorOctave, groupOctave);
+                // Degrees anchor on the root — or, before any pitched member, on the
+                // KEY TONIC (like an omitted-root degree chord), which then becomes
+                // the group's anchor and outgoing reference. A custom/atonal key has
+                // no tonic, so fall back to C.
+                if (!rootSet)
+                {
+                    rootSet = true;
+                    rootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+                    anchorOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, rootStep, 0) + groupOctave;
+                }
+                EmitArpeggioXmlDegree(degree, rootStep, anchorOctave);
                 continue;
             }
 
@@ -1457,8 +1465,23 @@ public sealed class MusicXmlExporter
         _justAutoClosedPickup = false;
 
         var (step, alter) = ParsePitch(pitch);
-        int targetOctave = ResolveRelativeOctave(pitch) + octaveShift;
-        _currentOctave += octaveShift; // so the anchor octave carries the group shift
+        // Stacked members arrive in forced-absolute mode (plain path). The ROOT, in
+        // relative mode, anchors on its bare LETTER: its own '/, marks are LOCAL to
+        // its sounding pitch and do not move the anchor the group propagates.
+        int targetOctave;
+        if (_octaveAbsolute)
+        {
+            targetOctave = ResolveRelativeOctave(pitch) + octaveShift;
+            _currentOctave += octaveShift; // so the anchor octave carries the group shift
+        }
+        else
+        {
+            int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
+            int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + octaveShift;
+            targetOctave = anchor + pitch.OctaveOffset;
+            _currentStep = stepIdx;
+            _currentOctave = anchor;
+        }
         (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
         int quarter = pitch.QuarterOffset;
 
@@ -1489,27 +1512,16 @@ public sealed class MusicXmlExporter
         MaybeClosePickup(duration);
     }
 
-    /// <summary>A scale-degree arpeggio member → one sequential note, stacked on the root
-    /// (or the key tonic when no pitch precedes it) by diatonic steps in the WRITTEN key,
-    /// then transposed like a pitch.</summary>
-    private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, bool rootSet, int rootStep, int anchorOctave, int groupOctave)
+    /// <summary>A scale-degree arpeggio member → one sequential note, stacked on the group's
+    /// anchor (the root, or the key tonic when no pitched member precedes — the caller
+    /// resolves it) by diatonic steps in the WRITTEN key, then transposed like a pitch.</summary>
+    private void EmitArpeggioXmlDegree(ScaleDegreeSyntax degree, int rootStep, int anchorOctave)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
 
-        int drootStep, drootOctave;
-        if (rootSet)
-        {
-            drootStep = rootStep;
-            drootOctave = anchorOctave; // already includes the group octave (root was shifted)
-        }
-        else
-        {
-            drootStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-            drootOctave = RelativeOctave.Resolve(_currentStep, _currentOctave, drootStep, 0) + groupOctave;
-        }
         var (dstep, dalter, doctave) = ChordDegrees.Resolve(
-            drootStep, drootOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keyFifths);
+            rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keyFifths);
         if (_currentTranspose is { } tr)
             (dstep, dalter, doctave) = PitchTransposer.Transpose(dstep, dalter, doctave, tr.step, tr.alt, tr.oct);
 
@@ -1554,12 +1566,13 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the chord
         EmitPendingDynamic();
 
-        // The first member is the ROOT (resolved relatively); every other member
-        // STACKS above it — the same octave placement as a scale degree, so the
-        // chord's pitches are independent of the written order (<c e g> == <c 3 5>
-        // == <c g e>); the note after the chord is relative to the root. A
-        // deliberate Lily# divergence from LilyPond, matching MidiExporter and
-        // MeasureCollector.
+        // The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every
+        // other member STACKS above the anchor — the same octave placement as a
+        // scale degree, so the chord's pitches are independent of the written order
+        // (<c e g> == <c 3 5> == <c g e>). Each member's own '/, marks (the root's
+        // included) are LOCAL to that one note; the note after the chord is relative
+        // to the anchor. A deliberate Lily# divergence from LilyPond, matching
+        // MidiExporter and MeasureCollector.
         // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
         // chord; folding it into firstOctave flows through every stacked/degree member
         // and the following note, matching MidiExporter and MeasureCollector. extraOctave
@@ -1575,9 +1588,24 @@ public sealed class MusicXmlExporter
             int targetOctave;
             if (isFirst)
             {
-                targetOctave = ResolveRelativeOctave(pitch) + chordOctave; // root: relative, advances state
+                if (_octaveAbsolute)
+                {
+                    targetOctave = ResolveRelativeOctave(pitch) + chordOctave; // advances state
+                    firstOctave = _currentOctave + chordOctave;
+                }
+                else
+                {
+                    // The root's LETTER resolved bare = the chord's ANCHOR; its own
+                    // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
+                    // and the next note stays relative to C4).
+                    int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
+                    int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + chordOctave;
+                    targetOctave = anchor + pitch.OctaveOffset;
+                    _currentStep = stepIdx;
+                    _currentOctave = anchor;
+                    firstOctave = anchor;
+                }
                 firstStep = _currentStep;
-                firstOctave = _currentOctave + chordOctave;
             }
             else if (_octaveAbsolute)
             {

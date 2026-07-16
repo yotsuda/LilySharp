@@ -122,41 +122,66 @@ bes2.       % Bb dotted half note
 
 ### Chords
 
-Notes enclosed in angle brackets share a duration:
+Notes enclosed in angle brackets share a duration (written after the `>`):
 
 ```
 <c e g>4        % C major triad, quarter note
 <d fis a>2      % D major triad, half note
-<c e g b>1      % C major 7th, whole note
+<c 3 5>4        % the same triad by scale DEGREES: root + 3rd + 5th of the key
+<1 3 5>2        % degrees only — anchored on the key's tonic (C E G in C major)
+<2 4 6>2        % the ii triad (D F A in C major); degrees follow the key
+```
+
+**Octaves — the anchor model.** One rule: *a mark moves only what it is attached to.*
+
+- The chord's **anchor** is the first member's bare **letter** (or the key **tonic**
+  when the chord is degrees-only), resolved nearest to the previous note. The note
+  *after* the chord is relative to the anchor.
+- Every member sits at-or-above the anchor, so the written order doesn't matter
+  (`<c e g>` = `<c g e>`); only the first slot does (`<g c e>` anchors on g).
+  Degrees are fully order-independent (`<2 4 6>` = `<6 2 4>`).
+- A `'` / `,` **on a member** moves *that one note* only — the first member's
+  included: `<c' e g>` = C5 E4 G4, and the next bare `c` is still C4.
+- A `'` / `,` **after the `>`** (before the duration) moves the **whole chord**, anchor
+  included — so it *propagates*: after `<c e g>'4` (C5 E5 G5) a bare `c` continues at C5.
+
+```
+<c e g>4        % C4 E4 G4
+<c g,>4         % C4 G3 — a member ',' drops that one note
+<c' e g>4       % C5 E4 G4 — the root's mark is local; next bare c = C4
+<c e g>'4       % C5 E5 G5 — whole chord up; next bare c = C5
 ```
 
 ### Arpeggios (`<< … >>`)
 
-An arpeggio is a *written-out* broken chord: the notes play in **sequence** (each with
-its own duration), but their octaves resolve like a chord — every note stacks **above the
-first** (the root). So the pitches don't depend on the order they are written:
+An arpeggio is a *written-out* broken chord: the members play in **sequence** and
+**equally subdivide** the group's total duration (members carry no durations of their
+own — a bare number is always a scale degree). Octaves follow the chord anchor model:
 
 ```
 << c e g >>          % c, then e and g stacked above it (E4, G4) — an ascending arpeggio
 << c g >>            % g is a fifth ABOVE c, exactly like the chord <c g>
 << c g e >>          % same pitches as << c e g >>, only the play order differs
-<< c8 e g e >>       % each member takes its own duration (the eighth carries)
+<< c 3 5 >>          % by degrees: c e g
+<< 8 5 3 1 >>        % degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
+<< c e g >>'         % the whole group an octave up; the next bare note follows it there
 ```
-
-A `,` after a member drops it below the root; the first note anchors relative to the
-previous note in the stream (and a note *after* the group is relative to that first note).
 
 Members may be **chords** or **rests**:
 
 ```
 << <c e> g >>        % a chord member, then g — an arpeggio of stacked members
-<< c8 r e g >>       % the rest is a gap; e and g still stack above c
+<< c r e g >>        % the rest is a gap (an equal share of the total)
 ```
 
-A **duration after `>>`** fits the whole group into that length as an automatic tuplet:
+Without a trailing duration the group takes the running duration and acts like one
+note; a **duration after `>>`** sets the group's total. Either way the members split
+it equally, becoming an automatic tuplet when needed:
 
 ```
-<< c e g >>2         % three quarters in the time of a half → a triplet (3:2)
+<< c e g >>          % after c4: three notes in a quarter → a triplet of eighths
+<< c e g >>2         % three in the time of a half → triplet quarters (3:2)
+<< c d e f g >>4     % five in a quarter → a quintuplet
 ```
 
 The group must fit within one measure (otherwise it crosses the barline and the measure

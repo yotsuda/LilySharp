@@ -113,6 +113,18 @@ public sealed class ChordDegreeTests
     }
 
     [Fact]
+    public void DegreeChord_IsOrderIndependent()
+    {
+        // Degrees are absolute offsets from the tonic anchor, so ANY order — the
+        // first member included — sounds the same pitches: <2 4 6> = <6 2 4>
+        // = D F A (the ii triad) in C major.
+        Assert.Equal(new[] { 62, 65, 69 }, Midis("<2 4 6>2"));
+        Assert.Equal(
+            Midis("<2 4 6>2").OrderBy(p => p).ToArray(),
+            Midis("<6 2 4>2").OrderBy(p => p).ToArray());
+    }
+
+    [Fact]
     public void OmittedRoot_WithoutDegreeOne_OmitsTheTonic()
     {
         // <3 5> sounds only the 3rd and 5th ABOVE the tonic (the tonic itself is

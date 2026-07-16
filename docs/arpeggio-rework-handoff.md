@@ -50,17 +50,19 @@ it makes rhythm unintuitive — see the design discussion; the user agreed to dr
   → triplet; 5 → quintuplet; 9 → nonuplet (the guitar fast-picking use case). This is the
   main change from today's behavior (today it scales the members' *natural* durations).
 
-**Octaves (PRESERVE — already working):**
-- The **root** = first pitched member, resolved in the **current octave mode** (absolute or
-  relative) and the incoming frame. **Only the root is affected by the octave mode.**
-- Every **later member stacks above the root**, mode-INDEPENDENTLY (nearest pitch above, like a
-  `<c e g>` chord member). `'` / `,` shift from that stacked position (`<c e g'>` semantics:
-  `'` = +1 octave). So `<< c' e' g' >>` = C5 root, e' = the E a **10th** above (E6), g' = the G
-  a **12th** above (G6). Verified: MIDI `72 88 91` == the reference `c' e'' g''`.
+**Octaves (SUPERSEDED 2026-07 by the anchor model — see `GRAMMAR.md` §8.2):**
+- The group's **anchor** = the first pitched member's **bare LETTER** (or the key TONIC when
+  the group opens with degrees), resolved in the current octave mode and the incoming frame.
+  The note after the group is relative to the anchor.
+- Every member (the first included) places itself at-or-above the anchor; a member's own
+  `'` / `,` marks shift **that one note only** (`<< c' e' g' >>` = the close position
+  C5 E5 G5, MIDI `72 76 79` — the root's `'` no longer moves the stack). Marks after
+  `>>` shift the whole group AND the anchor (they propagate); marks inside never do.
 
-**Degrees** resolve against the **root's step/octave + the current key** (see `ChordDegrees.Resolve`).
+**Degrees** resolve against the **anchor's step/octave + the current key** (see `ChordDegrees.Resolve`).
 `<< c 3 5 >>` in C major = c, e, g. `<< d 3 5 >>` = d, f, a. A degree member is placed by the
-same "stack above root" rule.
+same "stack above the anchor" rule; a group that OPENS with degrees anchors on the key tonic
+(`<< 8 5 3 1 >>` = C5 G4 E4 C4 — a bare descending figure).
 
 **Errors:** `<< a \\ b >>` (a `\\` inside) stays the removed-polyphony hint (parallel voices are
 `voice { }`), NOT an arpeggio.

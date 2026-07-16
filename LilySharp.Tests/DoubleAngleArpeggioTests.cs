@@ -137,9 +137,37 @@ public class DoubleAngleArpeggioTests
     [Fact]
     public void OctaveMarksShiftFromTheStackedPosition()
     {
-        // `<< c' e' g' >>` — c' = C5 root; e' is the E a 10th above (E6), g' the G a 12th
-        // above (G6): the ' shifts from the stacked position, like `<c e g'>`. MIDI 72 88 91.
-        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<< c' e' g' >>"));
+        // A member's ' shifts that ONE note from its stacked position: g' = G5 above
+        // the untouched c e.
+        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<< c e g' >>"));
+        // The marks are LOCAL — the root's included: `<< c' e' g' >>` is the close
+        // position C5 E5 G5 (each member +1 from its own stacked spot), NOT a spread
+        // E6/G6 — the root's ' does not move the anchor the others stack on.
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c' e' g' >>"));
+    }
+
+    [Fact]
+    public void RootOctaveMark_IsLocal_AndDoesNotMoveTheAnchor()
+    {
+        // `<< c' e g >>` — the root SOUNDS at C5 but the group's anchor is its bare
+        // LETTER (C4): e and g stack above C4, and the next bare c returns to C4.
+        Assert.Equal(new[] { 72, 64, 67, 60 }, MidiPitches("<< c' e g >> c"));
+    }
+
+    [Fact]
+    public void TrailingOctaveMark_MovesTheAnchor_AndPropagates()
+    {
+        // `<< c e g >>'` — the whole group up an octave AND the next bare note
+        // continues in the new register (the anchor itself moved to C5).
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c e g >>' c"));
+    }
+
+    [Fact]
+    public void DegreeArpeggio_WritesDescendingFiguresWithoutMarks()
+    {
+        // Degrees self-describe their position above the tonic anchor, so a
+        // descending figure needs no ',' marks: << 8 5 3 1 >> = C5 G4 E4 C4.
+        Assert.Equal(new[] { 72, 67, 64, 60 }, MidiPitches("<< 8 5 3 1 >>"));
     }
 
     [Fact]

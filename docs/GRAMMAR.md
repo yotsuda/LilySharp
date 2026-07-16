@@ -389,23 +389,50 @@ MidMusicCommand = 'clef' , ClefName
 Note           = PitchToken , [ DurationToken ] , { Annotation } ;
 Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
-Chord          = '<' , ChordNote , { ChordNote } , '>' , [ DurationToken ] , { Annotation } ;
+(* A chord is EITHER letter mode — all named pitches, or ONE root pitch followed by scale
+   degrees ('<c e g>', '<c 3 5>') — or degree mode: degrees only, anchored on the key
+   TONIC ('<1 3 5>', '<2 4 6>'). Any other mix is an error (LYS1019). Octave marks may
+   follow the closing '>', BEFORE the duration: <c e g>'4 . *)
+Chord          = '<' , ( ChordNote , { ChordNote | ScaleDegree }
+                       | ScaleDegree , { ScaleDegree } )
+               , '>' , { "'" | ',' } , [ DurationToken ] , { Annotation } ;
 ChordNote      = PitchToken , { Annotation } ;
+
+(* Chord/arpeggio OCTAVES — the anchor model. One rule: a mark moves only what it is
+   attached to.
+   - ANCHOR: letter mode anchors on the FIRST member's bare LETTER, resolved nearest in
+     the incoming relative frame; degree mode anchors on the key TONIC (degree 1),
+     resolved the same way. The note AFTER the group is relative to the anchor.
+   - MEMBERS place themselves at-or-above the anchor: a letter takes the same-letter
+     pitch in the octave at/above it; degree N sits N−1 diatonic steps above it (8/9/13
+     carry upward, no special case). A member's own '/, marks shift THAT ONE note only —
+     the first member's included: <c' e g> = C5 E4 G4, and the next bare c is still C4.
+     Letter mode is order-independent except the first slot (<c e g> = <c g e>, but
+     <g c e> anchors on g); degree mode is FULLY order-independent (<2 4 6> = <6 2 4>
+     = D F A in C major, and degrees follow the key: Dm in C, D-major shapes in D).
+   - Marks AFTER '>' / '>>' move the WHOLE group an octave each, anchor included, so
+     they DO propagate: <c e g>' c = C5 E5 G5 then C5, whereas <c' e' g'> sounds the
+     same close-position chord but the next bare c stays C4. (A deliberate Lily#
+     divergence from LilyPond's per-member relative chain.) In 'octave absolute' mode
+     every member is a fixed pitch — no stacking, no frame — and the trailing marks
+     still shift the whole group. *)
 
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
    in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
    degree (never a duration): '<< c 3 5 >>' = c e g. The share becomes an auto-tuplet when it
    is not a plain note value (3 members in a beat = a triplet, 5 = a quintuplet, 9 = a
    nonuplet). A trailing DurationToken sets the total; without one the group inherits the
-   running duration and acts like a single note. Octaves resolve like a chord — every member
-   stacks above the FIRST pitched one, independent of the written order, and degrees stack by
-   diatonic steps in the key. Members may be pitches, scale degrees, chords or rests.
+   running duration and acts like a single note. Octaves follow the chord anchor model
+   (above): the anchor is the first pitched member's bare letter — or the key tonic when
+   the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
+   C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
+   and propagate. Members may be pitches, scale degrees, chords or rests.
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
    'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
 ArpMember      = PitchToken | ScaleDegree | Chord | Rest ;   (* no DurationToken on a member *)
 ScaleDegree    = Integer , [ 'is' | 'isis' | 'es' | 'eses' ] , { "'" | ',' } ;
-                 (* root-relative degree: 1 = root, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
-Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , [ DurationToken ] ;
+                 (* anchor-relative degree: 1 = root/tonic, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
+Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ DurationToken ] ;
 
 Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
