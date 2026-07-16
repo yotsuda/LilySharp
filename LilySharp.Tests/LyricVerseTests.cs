@@ -208,6 +208,28 @@ score main ""x"" { staff melody  lyrics verse }
     }
 
     [Fact]
+    public void RestBarBeforeLyrics_LeadingBarlineAlignsToTheRest_NotTheFirstNote()
+    {
+        // The melody opens with a whole-rest bar (r1); in a lyrics block that bar is
+        // skipped with a bare leading "| " (no s1). It must line up with the REST bar, so
+        // "Twin" lands on the first NOTE bar (index 1), not shifted a bar past it — a
+        // rest-only bar used to be dropped from the count and slid the whole verse over.
+        var score = Collect(@"
+time 4/4
+section Main {
+  melody { r1 | c'4 d' e' f' | g'4 a' b' c'' | }
+  lyrics melody { | Twin- kle twin- kle | lit- tle star | }
+}
+form main { Main }
+score main ""x"" { staff melody with lyrics melody }
+");
+        Assert.Equal(1, score.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
+        Assert.Equal(2, score.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
+        // Nothing lands on the rest bar (index 0).
+        Assert.DoesNotContain(score.Lyrics, l => l.MeasureIndex == 0);
+    }
+
+    [Fact]
     public void EmptyMeasure_SkipsBar_NoSyllableThere()
     {
         // Bar 2 of the lyric line is empty (`| |`), so no syllable lands in measure 1.

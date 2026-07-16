@@ -278,6 +278,9 @@ public class SvgSnapshotTests
         // Syllables align to their notes and the bar widens for them even when it opens
         // with a mid-piece time-signature change (the leading grob used to cluster them).
         yield return new object[] { "test/lyrics-under-midpiece-meter" };
+        // A whole-rest opening bar counts in the lyric alignment: a bare leading "| "
+        // skips it, so the verse lines up one bar in with no stray connector over the rest.
+        yield return new object[] { "test/lyrics-after-rest-bar" };
         yield return new object[] { "test/lyrics" };
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the
         // left of its lyrics, not floating at the top of the page.

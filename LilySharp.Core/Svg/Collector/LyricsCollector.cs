@@ -138,8 +138,11 @@ internal sealed class LyricsCollector
                     ? indices
                     : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
+                // Index the run from its own first bar, so a rest-only bar (an r1 pickup)
+                // still counts and a leading "| " lyric bar lines up with it.
                 var lyrics = lyricCollector.Collect(syllableMeasures, aligned, out var overflow,
-                    voiceId: voiceId, verseNumber, hideStanza: hideLabel);
+                    voiceId: voiceId, verseNumber, hideStanza: hideLabel,
+                    baseMeasureIndex: Math.Max(0, startMeasure));
                 _lyrics.AddRange(staffIndex == 0
                     ? lyrics
                     : lyrics.Select(l => l with { StaffIndex = staffIndex }));

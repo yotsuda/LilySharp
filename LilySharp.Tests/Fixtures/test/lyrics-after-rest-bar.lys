@@ -1,0 +1,17 @@
+// The melody opens with a whole-rest bar; the lyrics skip it with a bare leading
+// "| " (no s1). The verse must line up one bar in - "Twin- kle" on the first NOTE
+// bar - with NO stray hyphen/extender line drawn over the empty rest bar.
+title "Lyrics after a rest bar"
+tempo 100
+time 4/4
+key c major
+octave absolute
+
+part melody { clef treble }
+
+section A { r1 | c'4 c' g' g' | a' a' g'2 | f'4 f' e' e' | d' d' c'2 | }
+lyrics words { | Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
+
+form main { A }
+
+score main "rest-lyrics" { staff melody with lyrics words }

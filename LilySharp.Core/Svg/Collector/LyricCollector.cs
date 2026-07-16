@@ -77,7 +77,8 @@ internal sealed class LyricCollector
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1,
-        bool hideStanza = false)
+        bool hideStanza = false,
+        int baseMeasureIndex = 0)
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllablesFrom(syllableMeasures);
@@ -86,20 +87,22 @@ internal sealed class LyricCollector
         string firstDroppedText = "";
         int firstDroppedPosition = 0, firstDroppedBar = 0;
 
-        // Group the verse's notes by measure, in source order. A written "|" then
-        // advances by exactly ONE measure — so an EMPTY measure ("| |") skips a
-        // whole bar — and when the syllables run PAST the last measure they WRAP
-        // into the next stacked verse (1番, 2番, … written flat in one block).
+        // Group the verse's notes by measure INDEX (relative to the run's first bar). A
+        // written "|" advances by exactly ONE bar, so a measure with NO notes — a whole-bar
+        // rest, or an empty "| |" lyric bar — still occupies a slot. Indexing by the note's
+        // measure (not merely opening a new group on each change) keeps a rest-only bar in
+        // the count, so a leading "| " lines a verse up right after an r1 pickup; grouping
+        // by change used to COLLAPSE that bar and shift the whole verse over. Syllables that
+        // run PAST the last bar WRAP into the next stacked verse (1番, 2番, … in one block).
         var measures = new List<List<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)>>();
-        int lastMi = int.MinValue;
         foreach (var n in noteItemIndices)
         {
-            if (n.MeasureIndex != lastMi)
-            {
+            int local = n.MeasureIndex - baseMeasureIndex;
+            if (local < 0)
+                continue;
+            while (measures.Count <= local)
                 measures.Add(new List<(int, int, LilySharp.Core.Semantics.Fraction)>());
-                lastMi = n.MeasureIndex;
-            }
-            measures[^1].Add(n);
+            measures[local].Add(n);
         }
         int measureCount = measures.Count;
         if (measureCount == 0)
