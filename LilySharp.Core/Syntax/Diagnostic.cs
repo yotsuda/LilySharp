@@ -201,6 +201,11 @@ public static class DiagnosticCodes
     /// structured directives (<c>time</c>, <c>tempo</c>, <c>key</c>): <c>version 1</c>.</summary>
     public const string VersionNumberNotQuoted = "LYS0013";
 
+    /// <summary>Parser warning: a key gave no mode (<c>key bes</c>). The mode is
+    /// assumed to be <c>major</c>; write it explicitly (<c>key bes major</c>) to be
+    /// clear. A warning, not an error, so the piece still renders.</summary>
+    public const string KeyModeAssumedMajor = "LYS0014";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

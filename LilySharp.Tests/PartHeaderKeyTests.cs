@@ -84,4 +84,25 @@ public class PartHeaderKeyTests
         Assert.Equal(withPos, withRoot.FindNode(withPos)!.Position);
         Assert.Equal(withoutPos, withoutRoot.FindNode(withoutPos)!.Position);
     }
+
+    [Theory]
+    // A key with no mode is assumed major, in a part header AND in a music stream.
+    [InlineData("part melody { key bes section A { c d e f } } form main { A } score main { staff melody }")]
+    [InlineData("part melody { section A { key bes c d e f } } form main { A } score main { staff melody }")]
+    public void KeyWithoutMode_WarnsAndIsNotAnError(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        // Assumed-major is a soft nudge, never a hard error — the piece still renders.
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var w = Assert.Single(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.KeyModeAssumedMajor));
+        Assert.Equal(DiagnosticSeverity.Warning, w.Severity);
+        Assert.Contains("assuming major", w.Message);
+    }
+
+    [Fact]
+    public void KeyWithExplicitMode_HasNoModeWarning()
+    {
+        var tree = SyntaxTree.Parse(WithKey);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.KeyModeAssumedMajor);
+    }
 }

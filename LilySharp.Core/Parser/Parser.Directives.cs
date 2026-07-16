@@ -304,9 +304,13 @@ internal sealed partial class Parser
         }
         else
         {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected a mode: 'major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian' or 'locrian'");
+            // No mode written (`key bes`): assume major and WARN (not an error) — the
+            // most common key is major, so this stays valid and renders. The span
+            // points just past the pitch, where the mode would go.
+            var span = new TextSpan(_textPosition, 0);
+            _diagnostics.Warning(span, DiagnosticCodes.KeyModeAssumedMajor,
+                $"No mode given for 'key {pitch.ToFullString().Trim()}'; assuming major. " +
+                $"Write 'key {pitch.ToFullString().Trim()} major' to be explicit.");
             // Missing token: zero-width to preserve round-trip. Kind stays
             // MajorKeyword and SharpsFor("") resolves to major, so the recovery
             // default is unchanged.
