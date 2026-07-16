@@ -337,7 +337,11 @@ public readonly record struct ChordNoteInfo(
     // hh cross); Default falls back to the chord-level style.
     NoteheadStyle Notehead = NoteheadStyle.Default,
     // Absolute sounding MIDI number (clef-independent), for tab frets.
-    int Midi = 0
+    int Midi = 0,
+    // Source offset of THIS member's pitch token (so the interactive preview can
+    // highlight/select one chord note at a time and jump the caret to its exact
+    // pitch, not the chord's '<'). -1 = fall back to the chord's SourcePosition.
+    int SourcePosition = -1
 );
 
 /// <summary>

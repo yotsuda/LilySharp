@@ -30,9 +30,9 @@
   <text class="music" x="39.14" y="19.61" font-size="4.00" data-pos="446"></text>
   <line x1="40.38" y1="19.61" x2="40.38" y2="16.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="43.41" y="17.61" font-size="4.00" data-pos="449"></text>
-  <text class="music" x="49.36" y="20.61" font-size="4.00" data-pos="522"></text>
-  <text class="music" x="49.36" y="19.61" font-size="4.00" data-pos="522"></text>
-  <text class="music" x="49.36" y="18.61" font-size="4.00" data-pos="522"></text>
+  <text class="music" x="49.36" y="20.61" font-size="4.00" data-pos="523"></text>
+  <text class="music" x="49.36" y="19.61" font-size="4.00" data-pos="525"></text>
+  <text class="music" x="49.36" y="18.61" font-size="4.00" data-pos="527"></text>
   <line x1="50.60" y1="20.46" x2="50.60" y2="15.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="52.36" y="17.61" font-size="4.00" data-pos="531"></text>
   <text class="music" x="56.76" y="17.61" font-size="4.00" data-pos="534"></text>

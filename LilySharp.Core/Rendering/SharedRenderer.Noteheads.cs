@@ -481,8 +481,13 @@ internal static partial class SharedRenderer
         foreach (var al in accLayouts)
         {
             double ay = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
+            // Anchor the accidental to its own member's pitch offset so it
+            // highlights together with that head (fall back to the chord).
+            int accSource = chord.SourcePosition;
+            foreach (var n in chord.Notes)
+                if (n.StaffPosition == al.StaffPosition && n.SourcePosition >= 0) { accSource = n.SourcePosition; break; }
             DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                x + al.XOffset, ay, chord.SourcePosition, gc, headScale);
+                x + al.XOffset, ay, accSource, gc, headScale);
         }
 
         double topY = double.MaxValue, bottomY = double.MinValue;
@@ -495,8 +500,12 @@ internal static partial class SharedRenderer
             char memberHead = n.Notehead != NoteheadStyle.Default
                 ? EmmentalerGlyphs.GetNotehead(n.Notehead, noteValue)
                 : head;
+            // Each head carries ITS OWN pitch source offset so the interactive
+            // preview highlights/selects one chord note at a time and jumps the
+            // caret to that pitch, not the chord's '<' (falls back to the chord
+            // when a member has no recorded position).
             if (!headWiped && !headTransparent)
-                using (gc.Source(chord.SourcePosition))
+                using (gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale,
                         GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);

@@ -443,6 +443,12 @@ public readonly record struct MeasureContentKey(long Hash)
                     hc.Add(-1);
                 }
                 break;
+            case ChordNoteInfo cn:                     // nested chord member: its content
+                // GetHashCode would fold the position-dependent source offset, which the
+                // top-level ItemExclusions strips but cannot reach inside ChordItem.Notes.
+                // Normalize it out so the key stays position-independent (matches noteheads).
+                hc.Add(cn with { SourcePosition = -1 });
+                break;
             default:                                   // structs/enums/records: content GetHashCode
                 hc.Add(value);
                 break;

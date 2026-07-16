@@ -34,27 +34,27 @@
   <text class="music" x="33.39" y="14.91" font-size="4.00" data-pos="360"></text>
   <text class="music" x="35.89" y="14.41" font-size="4.00" data-pos="364"></text>
   <text class="music" x="38.40" y="13.91" font-size="4.00" data-pos="366"></text>
-  <text class="music" x="44.30" y="13.91" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="43.00" y="11.91" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="45.75" y="13.91" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="45.75" y="12.91" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="45.75" y="11.91" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="48.50" y="11.41" font-size="4.00" data-pos="387"></text>
-  <text class="music" x="49.45" y="13.41" font-size="4.00" data-pos="387"></text>
-  <text class="music" x="49.45" y="12.41" font-size="4.00" data-pos="387"></text>
-  <text class="music" x="49.45" y="11.41" font-size="4.00" data-pos="387"></text>
-  <text class="music" x="53.48" y="12.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="52.37" y="11.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="51.27" y="10.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="54.63" y="12.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="54.63" y="11.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="54.63" y="10.91" font-size="4.00" data-pos="397"></text>
-  <text class="music" x="58.21" y="12.91" font-size="4.00" data-pos="411"></text>
-  <text class="music" x="57.29" y="11.91" font-size="4.00" data-pos="411"></text>
-  <text class="music" x="56.36" y="10.91" font-size="4.00" data-pos="411"></text>
-  <text class="music" x="59.26" y="12.91" font-size="4.00" data-pos="411"></text>
-  <text class="music" x="59.26" y="11.91" font-size="4.00" data-pos="411"></text>
-  <text class="music" x="59.26" y="10.91" font-size="4.00" data-pos="411"></text>
+  <text class="music" x="44.30" y="13.91" font-size="4.00" data-pos="375"></text>
+  <text class="music" x="43.00" y="11.91" font-size="4.00" data-pos="381"></text>
+  <text class="music" x="45.75" y="13.91" font-size="4.00" data-pos="375"></text>
+  <text class="music" x="45.75" y="12.91" font-size="4.00" data-pos="379"></text>
+  <text class="music" x="45.75" y="11.91" font-size="4.00" data-pos="381"></text>
+  <text class="music" x="48.50" y="11.41" font-size="4.00" data-pos="392"></text>
+  <text class="music" x="49.45" y="13.41" font-size="4.00" data-pos="388"></text>
+  <text class="music" x="49.45" y="12.41" font-size="4.00" data-pos="390"></text>
+  <text class="music" x="49.45" y="11.41" font-size="4.00" data-pos="392"></text>
+  <text class="music" x="53.48" y="12.91" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="52.37" y="11.91" font-size="4.00" data-pos="402"></text>
+  <text class="music" x="51.27" y="10.91" font-size="4.00" data-pos="406"></text>
+  <text class="music" x="54.63" y="12.91" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="54.63" y="11.91" font-size="4.00" data-pos="402"></text>
+  <text class="music" x="54.63" y="10.91" font-size="4.00" data-pos="406"></text>
+  <text class="music" x="58.21" y="12.91" font-size="4.00" data-pos="412"></text>
+  <text class="music" x="57.29" y="11.91" font-size="4.00" data-pos="414"></text>
+  <text class="music" x="56.36" y="10.91" font-size="4.00" data-pos="416"></text>
+  <text class="music" x="59.26" y="12.91" font-size="4.00" data-pos="412"></text>
+  <text class="music" x="59.26" y="11.91" font-size="4.00" data-pos="414"></text>
+  <text class="music" x="59.26" y="10.91" font-size="4.00" data-pos="416"></text>
   <text class="music" x="62.96" y="14.41" font-size="4.00" data-pos="419"></text>
   <rect x="41.51" y="12.41" width="0.19" height="4.00"/>
   <rect x="69.37" y="12.41" width="0.19" height="4.00"/>

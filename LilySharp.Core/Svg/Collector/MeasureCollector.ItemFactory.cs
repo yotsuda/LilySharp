@@ -271,7 +271,8 @@ public sealed partial class MeasureCollector
                 IsCourtesy: false,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
-                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+                SourcePosition: pitch.Position));
         }
 
         // Omitted root (<1 3 5> / <3 5>): the degrees are relative to the KEY'S
@@ -306,7 +307,8 @@ public sealed partial class MeasureCollector
                 rp.StaffPosition, accidental,
                 rp.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: false,
-                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+                SourcePosition: degree.Position));
         }
 
         // Drum chord members (<bd hh>): placement/head/GM key from the
@@ -318,7 +320,8 @@ public sealed partial class MeasureCollector
                 dinfo.StaffPosition, null,
                 dinfo.StaffPosition is <= -6 or >= 6,
                 Notehead: dinfo.Notehead,
-                Midi: dinfo.GmKey));
+                Midi: dinfo.GmKey,
+                SourcePosition: drum.Position));
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
