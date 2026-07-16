@@ -449,6 +449,13 @@ internal sealed class MeasureBuilder
     /// </summary>
     private void EmitEmptyMeasure(int sourceEnd, BarlineType endType)
     {
+        // A pending break/nobreak belongs to THIS measure (as in EmitMeasure) — a `break`
+        // just before a bare `|` breaks after the placeholder, not the next real bar.
+        bool hasBreak = _pendingBreak;
+        bool noBreak = _pendingNoBreak;
+        _pendingBreak = false;
+        _pendingNoBreak = false;
+
         _measures.Add(new Measure(
             ImmutableArray<MusicItem>.Empty,
             _pendingStartBarline,
@@ -456,6 +463,8 @@ internal sealed class MeasureBuilder
             _sectionLabel,
             _measureSourceStart,
             sourceEnd,
+            hasBreakAfter: hasBreak,
+            lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null)
         {
