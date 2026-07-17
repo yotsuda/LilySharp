@@ -580,8 +580,19 @@ public sealed partial class MeasureCollector
 
     private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes,
         int diatonicSteps = 0)
+        => ExpandVariable(name, octaveOffset, musicNodes, diatonicSteps, new HashSet<string>());
+
+    private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes,
+        int diatonicSteps, HashSet<string> activeRefs)
     {
         if (!_variables.TryGetValue(name, out var expression))
+            return;
+
+        // Guard a reference cycle (x -> y -> x, or a three-way x -> y -> z -> x):
+        // a phrase already open on the active chain is not re-expanded, so nesting
+        // can never recurse forever. The cycle itself is reported once, statically,
+        // by PhraseCycleValidator; here we simply render the acyclic prefix.
+        if (!activeRefs.Add(name))
             return;
 
         // Each phrase reference evaluates its body in a FRESH relative frame
@@ -599,20 +610,30 @@ public sealed partial class MeasureCollector
             Music.PhraseAnchor.AnchorStep(expression,
                 n => _variables.TryGetValue(n, out var nested) ? nested : null)));
 
-        // Include the expression itself if it is a music node.
-        if (IsCollectableMusicNode(expression))
-            musicNodes.Add(expression);
+        // A phrase body may itself reference other phrases (phrase x { y }): expand a
+        // nested reference IN PLACE — recursing into its own fresh frame — instead of
+        // dropping it, so SVG stays in step with the MIDI / MusicXML exporters (which
+        // already recurse). A bare music node is collected as before; container
+        // expressions travel as ONE wrapper each (inner content skipped).
+        void Emit(SyntaxNode n)
+        {
+            if (n is VariableReferenceSyntax nestedRef)
+                ExpandVariable(nestedRef.Name.Text, nestedRef.OctaveOffset, musicNodes,
+                    nestedRef.DiatonicShiftSteps, activeRefs);
+            else if (IsCollectableMusicNode(n))
+                musicNodes.Add(n);
+        }
 
-        // Get music nodes from the variable expression descendants; container
-        // expressions travel as ONE wrapper node each (inner content skipped).
-        var nodes = expression.DescendantNodes()
-            .Where(n => !IsInsideProcessedContainer(n) && IsCollectableMusicNode(n));
-
-        musicNodes.AddRange(nodes);
+        if (expression is VariableReferenceSyntax || IsCollectableMusicNode(expression))
+            Emit(expression);
+        foreach (var n in expression.DescendantNodes())
+            if (!IsInsideProcessedContainer(n))
+                Emit(n);
 
         // Close the phrase so its auto-transpose is dropped before any inline
         // notes that follow the reference (paired with the reset marker above).
         musicNodes.Add(PhraseEndMarker.Instance);
+        activeRefs.Remove(name);
     }
 
     private static BarlineSyntax CreateBarlineSyntax(string barText, int position)

@@ -124,6 +124,12 @@ public sealed class MusicXmlExporter
 
     // Variable/phrase resolution
     private readonly Dictionary<string, SyntaxNode> _variables = new();
+    // Phrases open on the current expansion chain — a reference to one already
+    // active is a cycle (x -> y -> x, or longer) and is NOT re-expanded, so a
+    // recursive phrase renders its acyclic prefix instead of overflowing the stack.
+    // The cycle itself is reported once by PhraseCycleValidator. Matches the MIDI
+    // exporter's _activePhrases and the collector's ExpandVariable guard.
+    private readonly HashSet<string> _activePhrases = new();
 
     // drummap { } per-score overrides, built lazily off the root.
     private Dictionary<string, DrumInfo>? _drumOverridesCache;
@@ -968,7 +974,8 @@ public sealed class MusicXmlExporter
                 break;
 
             case VariableReferenceSyntax varRef:
-                if (_variables.TryGetValue(varRef.Name.Text, out var varBody))
+                if (_variables.TryGetValue(varRef.Name.Text, out var varBody)
+                    && _activePhrases.Add(varRef.Name.Text))
                 {
                     // Phrase bodies evaluate in a fresh relative frame so a
                     // $phrase means the same pitches at every call site
@@ -1013,6 +1020,7 @@ public sealed class MusicXmlExporter
                         _currentStep = astep;
                         _currentOctave = oct;
                     }
+                    _activePhrases.Remove(varRef.Name.Text);
                 }
                 break;
 

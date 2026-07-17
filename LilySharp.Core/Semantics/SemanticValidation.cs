@@ -59,6 +59,7 @@ public static class SemanticValidation
     public static IReadOnlyList<ISemanticValidator> CreateAll() => new ISemanticValidator[]
     {
         new SymbolReferenceValidator(),     // undefined variable / phrase / section
+        new PhraseCycleValidator(),         // a phrase referencing itself (x -> y -> x)
         new MeasureValidator(),             // measure fullness / cross-part length / empty `| |` placeholders
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names

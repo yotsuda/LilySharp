@@ -220,6 +220,10 @@ public static class DiagnosticCodes
     public const string UndefinedSection = "LYS1005";
     /// <summary>Semantic error: reference to an undefined phrase.</summary>
     public const string UndefinedPhrase = "LYS1006";
+    /// <summary>Semantic error: a phrase/variable reference cycle — a phrase references
+    /// itself, directly or through a chain (x -> y -> x, or x -> y -> z -> x). It can
+    /// never expand to a finite piece, so it is reported rather than silently truncated.</summary>
+    public const string PhraseReferenceCycle = "LYS1027";
     /// <summary>Semantic error: reference to an undefined part.</summary>
     public const string UndefinedPart = "LYS1007";
     /// <summary>Semantic error: an unknown annotation was used.</summary>

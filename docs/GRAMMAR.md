@@ -211,7 +211,10 @@ ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
 
 (* Reusable music fragments, referenced as $name. Defined before use. A phrase body
    evaluates in a fresh frame (default octave/pitch/duration), so $name means the same
-   notes at every call. *)
+   notes at every call. A phrase body MAY reference other phrases (phrase x { y }); the
+   reference expands in place (its own fresh frame). What it must NOT do is reference
+   itself, directly or around a ring (x -> y -> x, x -> y -> z -> x): a cycle would never
+   expand to a finite piece and is rejected with LYS1027. *)
 
 PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
