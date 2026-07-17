@@ -341,10 +341,9 @@ public static class DiagnosticCodes
     /// octave / title / composer / font) is written more than once. Only the LAST
     /// occurrence takes effect; each earlier one is silently overwritten.</summary>
     public const string DuplicateGlobalSetting = "LYS4005";
-    /// <summary>Lyric error: a top-level <c>lyrics</c> block is not attached to any staff
-    /// (<c>staff X with lyrics NAME</c>) nor placed as a <c>lyrics NAME</c> row in a score,
-    /// so it never renders. Name it and reference it — there is no implicit auto-attach.</summary>
-    public const string LyricUnattached = "LYS4006";
+    // LYS4006 (LyricUnattached) retired: a top-level lyrics block that no score
+    // references is silently ignored rather than flagged — an unused/unnamed lyrics
+    // block is not a diagnosable error. The code number is left unreused.
     /// <summary>Warning: the item after a tie (<c>~</c>) does not repeat the tied
     /// pitch (a different note, a chord with no matching pitch, or a rest). A tie
     /// joins two notes of the SAME pitch; different pitches connect with a slur.</summary>

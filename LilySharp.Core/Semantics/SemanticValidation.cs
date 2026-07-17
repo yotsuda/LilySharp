@@ -67,7 +67,6 @@ public static class SemanticValidation
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
         new LyricTrackSectionValidator(),   // part-major lyrics track must use sections
-        new LyricUnattachedValidator(),     // a lyrics block no score attaches / places
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
         new TabTieStringValidator(),        // a tie naming two tab strings

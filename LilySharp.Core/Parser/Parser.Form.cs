@@ -445,6 +445,31 @@ internal sealed partial class Parser
         return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
     }
 
+    /// <summary>
+    /// Expect the NAME after <c>with chords</c> / <c>with lyrics</c>. Lyrics and
+    /// chords are named symbols in Lily#: a score attaches them by the name the
+    /// block was given, so the name is required. When it is missing this reports a
+    /// clause-specific message anchored ON the <c>chords</c>/<c>lyrics</c> keyword
+    /// (span <paramref name="keywordInkStart"/>/<paramref name="keywordInkLength"/>)
+    /// — the plain <see cref="ExpectPartName"/> would instead land its opaque
+    /// "Expected a name, found 'CloseBrace'" on the score's closing brace, since a
+    /// trailing bare <c>with lyrics</c> leaves the next token a whole line away.
+    /// </summary>
+    private SyntaxToken ExpectAttachmentName(SyntaxKind attachKind, int keywordInkStart, int keywordInkLength)
+    {
+        if (IsPartNameStart())
+            return Advance();
+
+        string word = attachKind == SyntaxKind.LyricsKeyword ? "lyrics" : "chords";
+        _diagnostics.Error(new TextSpan(keywordInkStart, keywordInkLength),
+            DiagnosticCodes.ExpectedToken,
+            $"'with {word}' needs a name: name the block '{word} NAME {{ … }}' and "
+            + $"reference it here as 'with {word} NAME'.");
+
+        // Zero-width missing name; the render item recovers and the staff still parses.
+        return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
+    }
+
     private GreenNode? ParseRenderItem()
     {
         return Current.Kind switch
@@ -495,8 +520,12 @@ internal sealed partial class Parser
         {
             tokens.Add(Advance()); // with
             var attachKind = Current.Kind;
+            // Ink span of the `chords` / `lyrics` keyword, captured before it is
+            // consumed, so a missing name can be reported ON the keyword.
+            int kwInk = _textPosition + Current.LeadingTriviaWidth;
+            int kwLen = Current.Text.Length;
             tokens.Add(Advance()); // chords | lyrics
-            tokens.Add(ExpectPartName());
+            tokens.Add(ExpectAttachmentName(attachKind, kwInk, kwLen));
             if (attachKind == SyntaxKind.ChordsKeyword)
                 ConsumeAsSelector(tokens); // chords only: `... as roman | both | names`
         }
