@@ -385,9 +385,20 @@ public sealed partial class LilySharpLanguageServer
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
         int j = braceIndex - 1;
         while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        // Skip an optional quoted display name sitting right before the brace
+        // (`part melody "Violin I" {`). Without this the closing quote is read as the
+        // (empty) NAME word, so `part … "…" {` is not recognized as a part block and
+        // its body falls through to the music completions (note names, `break`).
+        if (j >= 0 && text[j] == '"')
+        {
+            j--;                                    // past the closing quote
+            while (j >= 0 && text[j] != '"') j--;   // back to the opening quote
+            j--;                                    // past the opening quote
+            while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        }
         int end1 = j + 1;
         while (j >= 0 && IsWordChar(text[j])) j--;
-        string name = text.Substring(j + 1, end1 - (j + 1));   // word before '{'
+        string name = text.Substring(j + 1, end1 - (j + 1));   // word before '{' (or before the display name)
         int k = j;
         while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
         int end2 = k + 1;

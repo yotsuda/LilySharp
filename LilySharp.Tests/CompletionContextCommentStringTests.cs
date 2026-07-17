@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Lsp;
 using Xunit;
 
@@ -64,6 +65,26 @@ public class CompletionContextCommentStringTests
         // Control: a genuine open part block is still detected.
         var doc = "part m {\n  clef treble\n  ";
         Assert.True(LilySharpLanguageServer.IsInsidePartBlock(doc, doc.Length));
+    }
+
+    [Fact]
+    public void PartBlockWithInlineDisplayName_RoutesToPartBody_NotMusic()
+    {
+        // `part melody "Violin I" {` — the quoted display name before the brace must
+        // not hide the part frame. It used to: the body then fell through to the
+        // music completions (note names, `break`) instead of the part-property list.
+        var doc = "part melody \"Violin I\" {\n  ";
+        Assert.True(LilySharpLanguageServer.IsInsidePartBlock(doc, doc.Length));
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.PartBlock,
+            LilySharpLanguageServer.GetCompletionContext(doc, doc.Length));
+
+        // A part body offers properties and section scaffolds — never pitch letters
+        // or `break`.
+        var labels = LilySharpLanguageServer.GetPartBlockCompletions(doc, doc.Length)
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Contains("clef", labels);
+        Assert.DoesNotContain("c", labels);
+        Assert.DoesNotContain("break", labels);
     }
 
     [Fact]
