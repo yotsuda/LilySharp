@@ -142,8 +142,38 @@ internal sealed partial class Parser
             SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)
                 ? ParseDrumNote()
                 : ParseBareVariableReference(),
+
+            // A bare number in a music stream is a DETACHED duration — the
+            // adjacency rule says a duration glues to what it lengthens, so
+            // `c 4` parses as the note c and this stray number. Report it here
+            // (returning no item; the sequence loop advances past it).
+            SyntaxKind.IntegerLiteral => ReportDetachedDuration(),
             _ => null
         };
+    }
+
+    /// <summary>Reports a glued (duration) number on a chord/arpeggio member
+    /// (LYS0015) and swallows it plus any glued dots, so the best-effort parse
+    /// neither misreads it as a scale degree nor trips over the dots. (Dropping
+    /// the tokens from the tree matches the sequence loop's skip recovery.)</summary>
+    private void ReportDurationInsideChord(string message)
+    {
+        var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+        _diagnostics.Error(span, DiagnosticCodes.DurationInsideChord, message);
+        Advance();
+        while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
+            Advance();
+    }
+
+    /// <summary>Reports a spaced number where a glued duration was probably meant
+    /// (LYS0016) and yields no music item — the caller's loop skips the token.</summary>
+    private GreenNode? ReportDetachedDuration()
+    {
+        var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+        _diagnostics.Error(span, DiagnosticCodes.DetachedDuration,
+            "A duration must be GLUED to what it lengthens - write c4 or <c e g>4; "
+            + "separated by a space, this number means nothing.");
+        return null;
     }
 
     // ========== Notes and Pitches ==========
@@ -177,13 +207,17 @@ internal sealed partial class Parser
 
     private DurationGreen? ParseOptionalDuration()
     {
-        if (!Check(SyntaxKind.IntegerLiteral))
+        // A duration is GLUED to what it lengthens (c4, <c e g>4, r2.) — the
+        // adjacency rule. A spaced number is NOT consumed; the music-item loop
+        // reports it as a detached duration (LYS0016), so `c 4` can't silently
+        // read as a quarter note.
+        if (!Check(SyntaxKind.IntegerLiteral) || !CurrentGluedToPrevious)
             return null;
 
         var number = Advance();
         var dots = new List<GreenNode?>();
 
-        while (Check(SyntaxKind.Dot))
+        while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
         {
             dots.Add(Advance());
         }
@@ -345,6 +379,18 @@ internal sealed partial class Parser
             // + the 3rd/5th/7th of the current key.
             if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
             {
+                // The adjacency rule: a number GLUED to the previous member is a
+                // DURATION (g2), which can't live inside the brackets — a spaced
+                // one (g 2) is a scale degree. Report and swallow it (plus glued
+                // dots) so <c e g2> doesn't silently gain a degree-2 note.
+                if (!first && CurrentGluedToPrevious)
+                {
+                    ReportDurationInsideChord(
+                        "A chord member can't carry a duration - members share one, "
+                        + "written after the closing '>': <c e g>2. (A spaced number "
+                        + "is a scale degree: <c e g 2>.)");
+                    continue;
+                }
                 degreeAnchored |= first; // an opening number anchors on the tonic
                 first = false;
                 pitches.Add(ParseScaleDegree());
@@ -386,6 +432,7 @@ internal sealed partial class Parser
     {
         var open = Expect(SyntaxKind.DoubleOpenAngle);
         var members = new List<GreenNode?>();
+        bool firstMember = true;
         while (!Check(SyntaxKind.DoubleCloseAngle) && !Check(SyntaxKind.EndOfFile))
         {
             // Mirror ParseChord's member dispatch, minus per-member durations.
@@ -395,7 +442,17 @@ internal sealed partial class Parser
             }
             else if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
             {
-                // A bare number is a scale degree (root-relative), like <c 3 5>.
+                // The adjacency rule: a number GLUED to the previous member is a
+                // DURATION (c8), which members don't carry — the group's total
+                // goes after '>>'. A spaced number is a scale degree (<< c 3 5 >>).
+                if (!firstMember && CurrentGluedToPrevious)
+                {
+                    ReportDurationInsideChord(
+                        "An arpeggio member can't carry a duration - the members "
+                        + "equally subdivide the group's total, written after the "
+                        + "closing '>>': << c e g >>2.");
+                    continue;
+                }
                 members.Add(ParseScaleDegree());
             }
             else if (Check(SyntaxKind.OpenAngle))
@@ -411,6 +468,7 @@ internal sealed partial class Parser
             {
                 break;
             }
+            firstMember = false;
         }
         var close = Expect(SyntaxKind.DoubleCloseAngle);
         // Octave marks AFTER the closing '>>' shift the WHOLE group: '<< c e g >>,'

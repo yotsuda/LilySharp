@@ -124,6 +124,16 @@ internal sealed partial class Parser
     private bool Check(SyntaxKind kind) => Current.Kind == kind;
     private bool CheckAny(params SyntaxKind[] kinds) => kinds.Contains(Current.Kind);
 
+    /// <summary>True when <see cref="Current"/> is GLUED to the previous token —
+    /// no whitespace or comment between them. Adjacency carries meaning in music:
+    /// a duration belongs to what it touches (<c>c4</c>, <c>&lt;c e g&gt;4</c>),
+    /// while a spaced number is a scale degree inside brackets and nothing outside.
+    /// (The lexer attaches an end-of-line comment/space run as the PREVIOUS
+    /// token's trailing trivia, so both sides are checked.)</summary>
+    private bool CurrentGluedToPrevious =>
+        Current.LeadingTriviaWidth == 0
+        && _position > 0 && _tokens[_position - 1].TrailingTriviaWidth == 0;
+
     private SyntaxToken Expect(SyntaxKind kind)
     {
         if (Check(kind))

@@ -392,8 +392,8 @@ score main ""third"" { staff treble rh }
 key C major
 time 4/4
 section Main {
-    melody { | c5/4 d5 e5 f5 | g5/1 | }
-    alt { | e5/4 f5 g5 a5 | b5/1 | }
+    melody { c'4 d e f | g1 | }
+    alt { e'4 f g a | b1 | }
 }
 form main { Main }
 score main ""ossia-test"" {
@@ -425,8 +425,8 @@ score main ""ossia-test"" {
 key C major
 time 4/4
 section Main {
-    melody { | c5/4 d5 e5 f5 | g5/1 | }
-    bassAlt { | c3/4 d3 e3 f3 | g3/1 | }
+    melody { c'4 d e f | g1 | }
+    bassAlt { c,4 d e f | g1 | }
 }
 form main { Main }
 score main ""ossia-clef"" {
@@ -450,8 +450,8 @@ score main ""ossia-clef"" {
 key C major
 time 4/4
 section Main {
-    melody { | c5/4 d5 e5 f5 | g5/1 | }
-    alt { | e5/4 f5 g5 a5 | b5/1 | }
+    melody { c'4 d e f | g1 | }
+    alt { e'4 f g a | b1 | }
 }
 form main { Main }
 score main ""ossia-barline"" {

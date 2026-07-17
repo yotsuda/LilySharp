@@ -371,6 +371,16 @@ public static class DiagnosticCodes
     public const string DuplicateTrackSection = "LYS7002";
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     public const string UnexpectedCharacter = "LYS0014";
+    /// <summary>Parse error: a duration written on a chord/arpeggio member
+    /// (<c>&lt;c e g2&gt;</c>). Members share one duration, written after the
+    /// closing bracket (<c>&lt;c e g&gt;2</c>, <c>&lt;&lt; c e g &gt;&gt;2</c>).
+    /// The adjacency rule tells it apart from a scale degree: a GLUED number
+    /// (<c>g2</c>) is a duration, a spaced one (<c>g 2</c>) is a degree.</summary>
+    public const string DurationInsideChord = "LYS0015";
+    /// <summary>Parse error: a bare number in a music stream — a DETACHED
+    /// duration. A duration must be glued to what it lengthens (<c>c4</c>,
+    /// <c>&lt;c e g&gt;4</c>); separated by a space it means nothing.</summary>
+    public const string DetachedDuration = "LYS0016";
 
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)
