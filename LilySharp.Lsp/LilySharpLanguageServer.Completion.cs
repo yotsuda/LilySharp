@@ -1983,8 +1983,8 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "template scoretemplate score twinkle new",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody\n}\n$0",
-                    Detail = "Score template — single-staff (Twinkle, Twinkle, Little Star)",
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\n// Named lyrics block, attached under the staff with `with lyrics verse`.\nlyrics verse {\n\tsection A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n\tsection B {\n\t\t[~1. Up a- bove the | world so high |]\n\t\t[~2. Like a dia- mond | in the sky |]\n\t}\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody with lyrics verse\n}\n$0",
+                    Detail = "Score template — single-staff + lyrics (Twinkle, Twinkle, Little Star)",
                 },
                 new CompletionItem
                 {
@@ -1995,7 +1995,7 @@ public sealed partial class LilySharpLanguageServer
                     InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
                     Detail = "Score template — piano / grand staff (Twinkle, Twinkle, Little Star)",
                 },
-                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" },
+                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} {\n\t$0\n}", Detail = "Named lyrics block (a score attaches it with `with lyrics NAME`)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

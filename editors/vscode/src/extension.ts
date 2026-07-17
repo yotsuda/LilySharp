@@ -88,7 +88,9 @@ part melody {
 // to sing DIFFERENT words each pass, number the verses with [1. …] [2. …] (a
 // leading ~ as in [~1. …] hides the printed stanza number) — here B's |: :|
 // repeat is sung "Up above…" then "Like a diamond…".
-lyrics {
+// The block is NAMED ('verse'); the score attaches it under a staff with
+// 'staff … with lyrics verse'. (Give a second lyrics block a different name.)
+lyrics verse {
   section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
   section B {
     [~1. Up a- bove the | world so high |]
@@ -100,7 +102,7 @@ lyrics {
 form main { A |: B :| A "A2" }
 
 score main {
-  staff melody
+  staff melody with lyrics verse
 }
 `;
 let debounceTimers = new Map<string, NodeJS.Timeout>();
