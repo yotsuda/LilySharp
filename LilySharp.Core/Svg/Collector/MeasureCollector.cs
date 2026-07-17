@@ -173,6 +173,14 @@ internal sealed class MeasureBuilder
     /// boundary; anything else is mid-measure.</summary>
     public bool AtMeasureBoundary => _currentItems.Count == 0 || _currentDuration == _timeSignature;
 
+    /// <summary>True when the current span holds measure-worthy content — something with
+    /// duration (a note/rest/chord) — as opposed to only zero-duration directives (a
+    /// leading <c>clef</c>/<c>key</c>/<c>time</c>). A bare or leading <c>|</c> CLOSES a
+    /// span with content; a directive-only span it merely CONFIRMS, carrying the
+    /// directive into the first real measure so no spurious directive-only empty bar is
+    /// drawn (the <c>clef treble x | …</c> case).</summary>
+    private bool HasMeasureContent => _currentDuration > Fraction.Zero;
+
     public string? SectionLabel
     {
         get => _sectionLabel;
@@ -268,11 +276,18 @@ internal sealed class MeasureBuilder
             return;
         }
 
+        var itemDuration = GetItemDuration(item);
         _currentItems.Add(item);
-        _confirmableBoundary = false; // content now fills this span; a barline closes IT, not an empty measure
+
+        // Real content fills this span, so a following barline closes IT, not an empty
+        // measure. A ZERO-duration directive (a clef change) does not fill anything — it
+        // leaves the boundary confirmable, so a bare or leading `|` carries the directive
+        // into the first real measure instead of closing a spurious clef-only empty bar
+        // (`clef treble x | …`).
+        if (itemDuration > Fraction.Zero)
+            _confirmableBoundary = false;
 
         // Track duration
-        var itemDuration = GetItemDuration(item);
         _currentDuration += itemDuration;
 
         // Auto-complete measure if we've reached or exceeded time signature
@@ -474,8 +489,9 @@ internal sealed class MeasureBuilder
     {
         if (barType == BarlineType.RepeatStart)
         {
-            // |: opens the NEXT measure; close anything pending first.
-            if (_currentItems.Count > 0)
+            // |: opens the NEXT measure; close anything pending first. A directive-only
+            // span (a leading clef) is NOT closed — it carries into the first repeat bar.
+            if (HasMeasureContent)
                 CompleteMeasure(position, BarlineType.Single);
             _pendingStartBarline = BarlineType.RepeatStart;
             // The `|:` IS the next measure's start boundary — record its offset so the
@@ -487,7 +503,7 @@ internal sealed class MeasureBuilder
 
         var endType = barType == BarlineType.None ? BarlineType.Single : barType;
 
-        if (_currentItems.Count > 0)
+        if (HasMeasureContent)
         {
             CompleteMeasure(position, endType);
         }

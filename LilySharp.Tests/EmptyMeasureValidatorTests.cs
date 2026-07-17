@@ -139,4 +139,36 @@ public class EmptyMeasureValidatorTests
         Assert.Equal(2, score.Voice.Measures.Length);
         Assert.All(score.Voice.Measures, m => Assert.False(m.IsEmptyPlaceholder));
     }
+
+    [Fact]
+    public void LeadingClefBeforePhrase_InsertsNoEmptyMeasure()
+    {
+        // A section-head DIRECTIVE (a `clef`) has zero duration, so it does NOT fill a
+        // span. When the phrase it precedes opens with a leading `|` (an anchor, not a
+        // separator), that `|` must merely confirm the section-start boundary and carry
+        // the clef into the FIRST real measure — not close a spurious clef-only empty bar.
+        // Regression: `clef treble x | …` used to draw an empty measure before the music.
+        var src = "phrase x { | c d e f | c' b a g | } "
+                + "part melody2 { section A { clef treble x | x | x | } } "
+                + "form main { A } score main { staff melody2 }";
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse(src), "melody2");
+
+        Assert.All(score.Voice.Measures, m => Assert.False(m.IsEmptyPlaceholder));
+        // The clef rides in the first content measure, whose first note is real music.
+        var first = score.Voice.Measures[0];
+        Assert.Contains(first.Items, i => i is LilySharp.Core.Svg.Model.ClefChangeItem);
+        Assert.Contains(first.Items, i => i is LilySharp.Core.Svg.Model.NoteItem);
+    }
+
+    [Fact]
+    public void LeadingClefBeforePhrase_WarnsNoEmptyMeasure()
+    {
+        // The validator agrees with the collector: no empty-measure warning is raised for
+        // a directive that merely precedes the phrase's leading anchor barline.
+        var src = "phrase x { | c d e f | c' b a g | } "
+                + "part melody2 { section A { clef treble x | x | x | } } "
+                + "form main { A } score main { staff melody2 }";
+        Assert.Equal(0, PlaceholderCountIn(src));
+    }
 }
