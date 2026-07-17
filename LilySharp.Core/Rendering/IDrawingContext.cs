@@ -150,6 +150,16 @@ public interface IDrawingContext
     IDisposable Source(int sourcePosition);
 
     /// <summary>
+    /// Like <see cref="Source(int)"/>, but the emitted elements ALSO carry the given
+    /// alias offsets (interactive SVG: a <c>data-alt</c> list), so a caret on any of them
+    /// highlights the element too — used where one drawn barline collapses several written
+    /// ones (a phrase <c>:|</c> plus the section <c>|</c>/<c>:|:</c> that confirms it).
+    /// The primary stays the click target. Non-interactive backends ignore the aliases.
+    /// </summary>
+    IDisposable Source(int sourcePosition, System.Collections.Generic.IReadOnlyList<int> aliases)
+        => Source(sourcePosition);
+
+    /// <summary>
     /// In interactive SVG, draws a transparent click target over the given
     /// rectangle, carrying the current <see cref="Source"/> position — used to
     /// give thin ink (a barline) a comfortably clickable area. Static backends

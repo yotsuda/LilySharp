@@ -60,124 +60,111 @@ public class NoteheadHitTargetTests
         Assert.Contains("<text class=\"music\" pointer-events=\"none\"", svg);
     }
 
+    // A barline can collapse several written bars: the renderer puts the CLICK target on
+    // data-pos and the extra HIGHLIGHT offsets on data-alt. These helpers read hit rects
+    // (one per drawn barline) tolerant of attribute order.
+    private static IEnumerable<string> HitRects(string svg) =>
+        Regex.Matches(svg, "<rect class=\"nh-hit\"[^>]*/>").Cast<Match>().Select(m => m.Value);
+
+    private static int[] ClickTargets(string svg) => HitRects(svg)
+        .Select(r => int.Parse(Regex.Match(r, "data-pos=\"(\\d+)\"").Groups[1].Value)).ToArray();
+
+    // Number of drawn barlines a caret on `pos` highlights (its data-pos, or a data-alt member).
+    private static int HighlightTargets(string svg, int pos) => HitRects(svg).Count(r =>
+        Regex.Match(r, "data-pos=\"(\\d+)\"").Groups[1].Value == pos.ToString()
+        || Regex.Match(r, "data-alt=\"([^\"]*)\"").Groups[1].Value.Split(' ').Contains(pos.ToString()));
+
     [Fact]
     public void PreviewBarlinesAreClickable()
     {
-        // A barline carries the measure boundary's source position for
-        // click-to-source and caret highlighting, plus a widened transparent hit
-        // rect (the ink alone is ~0.2 ss — too thin to click). Two measures, so a
-        // mid-line SINGLE barline exists (the shared Doc has only its final bar).
+        // Every drawn barline gets a widened transparent hit rect (the ink alone is
+        // ~0.2 ss — too thin to click) carrying a source offset.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse("""
             part m { clef treble section A { c'1 | d'1 } }
             form main { A }
             score main "s" { staff m }
             """), SvgRenderOptions.Preview());
-        var hits = Regex.Matches(svg,
-            "<rect class=\"nh-hit\" x=\"(-?[\\d.]+)\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>");
-        // Notehead hits are ~1.3 ss wide; the barline hit is the ink + 0.8 ss.
-        var barHits = hits.Cast<Match>()
-            .Where(h => double.Parse(h.Groups[2].Value) < 1.2).ToList();
-        Assert.NotEmpty(barHits);
-        // The visible barline rect right before it shares the same data-pos.
-        foreach (var h in barHits)
-            Assert.Contains($"data-pos=\"{h.Groups[3].Value}\"", svg);
+        Assert.NotEmpty(ClickTargets(svg));
     }
 
     [Fact]
     public void BarlineDataPosPointsAtTheBarlineInk_NotTheSpaceBeforeIt()
     {
-        // The caret->preview highlight matches an element whose data-pos is >= the
-        // caret token's INK start; a click jumps the editor to data-pos. So a
-        // barline's data-pos must be the '|' character's offset, not the whitespace
-        // in front of it — otherwise the highlight guard rejects it and a click
-        // lands on the space.
+        // A click jumps the editor to the hit rect's data-pos; it must be the '|'
+        // character's offset, not the whitespace in front of it.
         const string src = "part m { clef treble section A { c'1 | d'1 } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
         int barPos = src.IndexOf('|', src.IndexOf("c'1")); // the mid-measure '|'
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-
-        var barHits = Regex.Matches(svg,
-                "<rect class=\"nh-hit\" x=\"-?[\\d.]+\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[-\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
-            .Cast<Match>().Where(h => double.Parse(h.Groups[1].Value) < 1.2).ToList();
-        Assert.NotEmpty(barHits);
-        Assert.Contains(barHits, h => int.Parse(h.Groups[2].Value) == barPos);
+        Assert.Contains(barPos, ClickTargets(svg));
     }
 
     [Fact]
-    public void OuterBarlineAfterAPhraseOwnsTheBarline_NotThePhrasesTrailingBar()
+    public void OuterBarline_IsTheClickTarget_PhraseBarStillHighlights()
     {
-        // `phrase x { … | }` ends with a barline; in `section A { x | x }` the OUTER
-        // `|` confirms that close. The one drawn barline there is what the author edits
-        // at the section level, so its data-pos must be the SECTION `|`, so a caret on
-        // it highlights (before this it kept the phrase's trailing `|`, unreachable
-        // from the section).
+        // `phrase x { c1 | }` used as `x | x`: the drawn bar collapses the phrase's `|`
+        // and the section `|`. A CLICK jumps to the section bar (the outer edit point);
+        // a caret on EITHER the section `|` OR the phrase `|` highlights it.
         const string src = "phrase x { c1 | }\n"
                          + "part m { clef treble section A { x | x } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
-        int sectionBar = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between the two x
+        int sectionBar = src.IndexOf('|', src.IndexOf("{ x")); // between the two x
+        int phraseBar = src.IndexOf('|');                       // the phrase's own |
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        var barHits = Regex.Matches(svg,
-                "<rect class=\"nh-hit\" x=\"-?[\\d.]+\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[-\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
-            .Cast<Match>().Where(h => double.Parse(h.Groups[1].Value) < 1.2).ToList();
-        Assert.Contains(barHits, h => int.Parse(h.Groups[2].Value) == sectionBar);
+        Assert.Contains(sectionBar, ClickTargets(svg));         // click -> section
+        Assert.Equal(1, HighlightTargets(svg, sectionBar));     // section caret lights it
+        Assert.True(HighlightTargets(svg, phraseBar) >= 1);     // phrase caret lights it too
     }
 
     [Fact]
-    public void MergedRepeat_KeepsBothTheEndAndStartHighlightable()
+    public void MergedRepeat_EveryContributingBarHighlights_ClickGoesToSection()
     {
-        // `phrase x { |: … :| }` used as `x | x :|: x` merges the trailing `:|` with the
-        // next `|:` into one `:|:`. Both source offsets must stay highlightable: the `|:`
-        // (leading + the start half of each merge) at THREE spots, the `:|` (trailing +
-        // the end half of each merge) at THREE spots.
+        // `phrase x { |: c1 | d1 :| }` used as `x | x :|: x` collapses, at each inner
+        // boundary, the phrase `:|`, the section `|`/`:|:`, and the next phrase `|:` into
+        // ONE `:|:`. A caret on the phrase `|:` or `:|` lights all three call sites; a
+        // caret on a section bar lights its boundary; a click on a merged bar jumps to
+        // the section bar there.
         const string src = "phrase x { |: c1 | d1 :| }\n"
                          + "part m { clef treble section A { x | x :|: x } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
         int repeatStart = src.IndexOf("|:");
         int repeatEnd = src.IndexOf(":|");
+        int sectionPlain = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between x1 and x2
+        int sectionBoth = src.IndexOf(":|:");                    // the `:|:` between x2 and x3
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        // Count HIT RECTS (one per barline instance/half), not raw data-pos — a single
-        // barline paints several rects on one offset, which would mask a missing copy.
-        int Hits(int pos) => Regex.Matches(svg,
-            "<rect class=\"nh-hit\"[^>]* data-pos=\"" + pos + "\"/>").Count;
-        Assert.Equal(3, Hits(repeatStart));
-        Assert.Equal(3, Hits(repeatEnd));
+        Assert.Equal(3, HighlightTargets(svg, repeatStart));     // |: at all 3 sites
+        Assert.Equal(3, HighlightTargets(svg, repeatEnd));       // :| at all 3 sites
+        Assert.True(HighlightTargets(svg, sectionPlain) >= 1);   // section | lights its bar
+        Assert.True(HighlightTargets(svg, sectionBoth) >= 1);    // section :|: lights its bar
+        // Click on the merged bars jumps to the section bars.
+        Assert.Contains(sectionPlain, ClickTargets(svg));
+        Assert.Contains(sectionBoth, ClickTargets(svg));
     }
 
     [Fact]
-    public void PhraseTrailingRepeatEnd_HighlightsEveryCallSite_NotJustTheLast()
+    public void PhraseTrailingRepeatEnd_HighlightsEveryCallSite()
     {
-        // A phrase's trailing `:|` is a MEANINGFUL barline (not a plain bar the section's
-        // `|` can stand in for), so it keeps its own offset at every call site. In
-        // `section A { x | x | x }` all three drawn `:|` share the phrase's `:|` offset,
-        // so a caret on it lights all three (before this the plain-`|` retarget scattered
-        // them onto the section bars, leaving only the last copy).
+        // In `section A { x | x | x }` all three drawn `:|` light from the phrase's `:|`
+        // offset (it is a highlight alias on the merged bars, the click target on the last).
         const string src = "phrase x { |: c1 | c1 :| }\n"
                          + "part m { clef treble section A { x | x | x } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
         int repeatEnd = src.IndexOf(":|");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        int copies = Regex.Matches(svg,
-            "<rect class=\"nh-hit\"[^>]* pointer-events=\"all\" data-pos=\"" + repeatEnd + "\"/>").Count;
-        Assert.Equal(3, copies);
+        Assert.Equal(3, HighlightTargets(svg, repeatEnd));
     }
 
     [Fact]
     public void RepeatStartBarlineCarriesItsOwnOffset()
     {
-        // A `|:` opens the next measure; the drawn start barline must carry the `|:`
-        // offset (so a caret on it highlights), not the previous measure's close, which
-        // is what SourceStart otherwise holds.
+        // A `|:` opens the next measure; the drawn start barline must highlight from the
+        // `|:` offset, not the previous close SourceStart otherwise holds.
         const string src = "phrase x { |: c1 :| }\n"
                          + "part m { clef treble section A { x } }\n"
                          + "form main { A }\nscore main \"s\" { staff m }";
         int repeatStart = src.IndexOf("|:");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        // The `|:` hit rect carries the repeat-start offset (its ink is wider than a
-        // plain bar, so match any hit — a notehead never shares this offset).
-        var offsets = Regex.Matches(svg,
-                "<rect class=\"nh-hit\"[^>]* pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
-            .Cast<Match>().Select(h => int.Parse(h.Groups[1].Value)).ToList();
-        Assert.Contains(repeatStart, offsets);
+        Assert.True(HighlightTargets(svg, repeatStart) >= 1);
     }
 
     [Fact]

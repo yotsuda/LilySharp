@@ -1748,12 +1748,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             let nearestDist = Infinity;
             const floor = (typeof tokenStart === 'number' && tokenStart >= 0) ? tokenStart : 0;
             elements.forEach(el => {
-                const pos = parseInt(el.getAttribute('data-pos'), 10);
-                if (pos <= cursorPos && pos >= floor) {
-                    const dist = cursorPos - pos;
-                    if (dist < nearestDist) {
-                        nearestDist = dist;
-                        nearestPos = pos;
+                // A barline can carry several source offsets (its data-pos plus a
+                // data-alt list of the other written bars that collapse onto it); a
+                // caret on ANY of them resolves to it.
+                const positions = [parseInt(el.getAttribute('data-pos'), 10)];
+                const alt = el.getAttribute('data-alt');
+                if (alt) for (const a of alt.split(' ')) positions.push(parseInt(a, 10));
+                for (const pos of positions) {
+                    if (pos <= cursorPos && pos >= floor) {
+                        const dist = cursorPos - pos;
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestPos = pos;
+                        }
                     }
                 }
             });
@@ -1842,7 +1849,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 //    (the white mask) is the occluder to skip. Leaving the mask in
                 //    made hasBox true, which coloured the box and suppressed the
                 //    notehead's own highlight.
-                let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'))
+                // Match the primary data-pos OR any data-alt member (a barline that
+                // several written bars collapse onto lights from any of their offsets).
+                let matches = Array.from(document.querySelectorAll(
+                        '[data-pos="' + pos + '"], [data-alt~="' + pos + '"]'))
                     .filter(el => !el.classList.contains('nh-hit'))
                     .filter(el => !(el.tagName.toLowerCase() === 'rect'
                         && !el.getAttribute('stroke') && el.getAttribute('fill')));

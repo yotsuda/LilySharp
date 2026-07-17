@@ -105,12 +105,15 @@ internal sealed class MeasureBuilder
     private bool _confirmableBoundary = true;
     // True when the confirmable boundary sits right after a bar this stream JUST closed
     // (an auto-fill, or a phrase whose last bar was closed by its own trailing `|`), so a
-    // written `|` that confirms it should retarget that measure's SourceEnd onto the
-    // barline: the click/highlight then lands on the note-filling bar's WRITTEN `|`, and
-    // the OUTER `|` in `section { x | x }` owns the barline the phrase's trailing `|` drew.
-    // Cleared at section/phrase STARTS so a leading `|` there never retargets a prior
-    // measure (which belongs to the previous section/the pre-phrase stream).
+    // written `|`/`:|`/… that confirms it is recorded as a SOURCE of that measure's end
+    // (see AddEndBarlineSource). Cleared at section/phrase STARTS so a leading `|` there
+    // never attaches to a prior measure (which belongs to the previous section/the
+    // pre-phrase stream).
     private bool _boundaryRetargetable;
+    // True when _measures[^1] closed by AUTO-FILL with no written barline, so its SourceEnd
+    // is a placeholder (note+1). The FIRST written bar to confirm it replaces that, rather
+    // than being added alongside as an alias (there is no written bar there to keep).
+    private bool _lastEndAutoFill;
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
@@ -360,9 +363,40 @@ internal sealed class MeasureBuilder
         // bare barline is the second of a `| |` pair and opens a placeholder measure. See
         // HandleBarline.
         ResetPerMeasureState(sourceEnd, confirmableBoundary: !explicitBar);
-        // The confirmable boundary an auto-fill leaves is RETARGETABLE: a following
-        // written barline moves this measure's end onto it (see HandleBarline).
+        // The confirmable boundary an auto-fill leaves is attachable: a following written
+        // barline records itself as this measure's end source (see HandleBarline). An
+        // auto-fill left no written bar at SourceEnd, so the first such bar REPLACES it.
         _boundaryRetargetable = !explicitBar;
+        _lastEndAutoFill = !explicitBar;
+    }
+
+    /// <summary>
+    /// Records a WRITTEN barline at the current boundary as a source of the last measure's
+    /// END barline. A drawn barline can collapse several written ones (a phrase's <c>:|</c>,
+    /// a section <c>|</c>/<c>:|:</c> confirming it): a caret on ANY highlights it, and a
+    /// click jumps to the OUTERMOST — the largest offset, which is the section bar since a
+    /// phrase is declared (early) before it is referenced (later). An unwritten auto-fill
+    /// placeholder is replaced by the first written bar rather than kept as an alias.
+    /// </summary>
+    private void AddEndBarlineSource(int position)
+    {
+        var m = _measures[^1];
+        if (_lastEndAutoFill)
+        {
+            _measures[^1] = m with { SourceEnd = position };
+            _lastEndAutoFill = false;
+        }
+        else
+        {
+            var all = m.EndHighlightAliases.Append(m.SourceEnd).Append(position).Distinct().ToList();
+            int click = all.Max();
+            _measures[^1] = m with
+            {
+                SourceEnd = click,
+                EndHighlightAliases = all.Where(p => p != click).ToImmutableArray(),
+            };
+        }
+        _measureSourceStart = position; // the next measure starts after this written bar
     }
 
     /// <summary>
@@ -382,9 +416,10 @@ internal sealed class MeasureBuilder
     private void ResetPerMeasureState(int sourceEnd, bool confirmableBoundary)
     {
         _confirmableBoundary = confirmableBoundary;
-        // Only EmitMeasure(auto) re-arms this immediately after; every other reset
-        // (explicit close, empty placeholder) leaves a non-retargetable boundary.
+        // Only EmitMeasure(auto) re-arms these immediately after; every other reset
+        // (explicit close, empty placeholder) leaves a settled, non-attachable boundary.
         _boundaryRetargetable = false;
+        _lastEndAutoFill = false;
         _currentItems.Clear();
         _sectionLabel = null;
         _sectionLabelPosition = 0;
@@ -459,38 +494,25 @@ internal sealed class MeasureBuilder
         else if (endType != BarlineType.Single && _measures.Count > 0)
         {
             // A TYPED barline (":|", "||", "|.") on an empty span decorates the PREVIOUS
-            // measure's end — retro-apply it, never an empty placeholder (the common
-            // final / double-bar / repeat-end case, incl. a phrase that already ended
-            // with a plain `|` before the form's ":|"). Retarget SourceEnd to this
-            // written barline ONLY when it replaces a PLAIN `|` close (an auto-fill, or a
-            // phrase whose last bar ended `|`); a phrase's own TYPED `:|` keeps its offset
-            // so it highlights at every call site, not only where no section repeat follows.
-            bool wasPlainEnd = _measures[^1].EndBarline == BarlineType.Single;
-            _measures[^1] = _measures[^1] with
-            {
-                EndBarline = endType,
-                SourceEnd = _boundaryRetargetable && wasPlainEnd ? position : _measures[^1].SourceEnd,
-            };
+            // measure's end — retro-apply the type (never an empty placeholder). When this
+            // stream just closed that bar, record the typed bar as an end SOURCE: it takes
+            // the click target (the outer section repeat) while the bar's own close stays a
+            // highlight alias — so a phrase's `:|` still lights at every call site.
+            _measures[^1] = _measures[^1] with { EndBarline = endType };
+            if (_boundaryRetargetable)
+                AddEndBarlineSource(position);
             _confirmableBoundary = false;
             _boundaryRetargetable = false;
         }
         else if (_confirmableBoundary)
         {
-            // A bare `|` merely CONFIRMS the boundary it sits on — the section start
-            // (a leading `|`) or a measure auto-fill just closed. No new measure; it
-            // consumes the confirmation (a FURTHER bare `|` would be a `| |` pair).
-            // On an auto-fill close, retarget the measure's boundary to the written `|`
-            // so its click/highlight points at the barline, not the bar-filling note —
-            // BUT only when the closed bar's end is a PLAIN `|`. A TYPED end (`:|`, `||`,
-            // `|.`) is a meaningful barline the plain `|` cannot stand in for, so it keeps
-            // its own offset (e.g. a phrase's trailing `:|` highlights at every call site,
-            // not only where a section `|` happens to follow the last copy).
-            if (_boundaryRetargetable && _measures.Count > 0
-                && _measures[^1].EndBarline == BarlineType.Single)
-            {
-                _measures[^1] = _measures[^1] with { SourceEnd = position };
-                _measureSourceStart = position;
-            }
+            // A bare `|` merely CONFIRMS the boundary it sits on — a section start (leading
+            // `|`, nothing to attach) or a bar this stream just closed. In the latter case
+            // record the `|` as an end source (retargeting the click to it and keeping the
+            // bar's own close, if written, as a highlight alias). A FURTHER bare `|` with no
+            // closed bar to attach to is the second of a `| |` pair (the else branch).
+            if (_boundaryRetargetable && _measures.Count > 0)
+                AddEndBarlineSource(position);
             _confirmableBoundary = false;
             _boundaryRetargetable = false;
         }
@@ -578,15 +600,20 @@ internal sealed class MeasureBuilder
                 is BarlineType.RepeatStart or BarlineType.RepeatBoth;
             if (endsRepeat && startsRepeat)
             {
-                _measures[i] = _measures[i] with
+                // Fold the absorbed `|:`'s source into the combined `:|:`'s highlight set
+                // (a RepeatStart carries a written `|:`; a RepeatBoth start does not add a
+                // new one). The click target stays the outermost (max) offset.
+                var end = _measures[i];
+                var sources = end.EndHighlightAliases.Append(end.SourceEnd);
+                if (_measures[i + 1].StartBarline == BarlineType.RepeatStart)
+                    sources = sources.Append(_measures[i + 1].SourceStart);
+                var all = sources.Distinct().ToList();
+                int click = all.Max();
+                _measures[i] = end with
                 {
                     EndBarline = BarlineType.RepeatBoth,
-                    // Keep the absorbed `|:`'s offset so its half of the combined glyph
-                    // stays highlightable (its click/highlight source, distinct from the
-                    // `:|` end). A RepeatBoth start carries no leading `|:` of its own.
-                    MergedRepeatStartSource = _measures[i + 1].StartBarline == BarlineType.RepeatStart
-                        ? _measures[i + 1].SourceStart
-                        : _measures[i].MergedRepeatStartSource,
+                    SourceEnd = click,
+                    EndHighlightAliases = all.Where(p => p != click).ToImmutableArray(),
                 };
                 _measures[i + 1] = _measures[i + 1] with { StartBarline = BarlineType.None };
             }

@@ -27,6 +27,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private readonly StringBuilder _sb;
     private readonly bool _interactive;
     private int? _currentSourcePosition;
+    private IReadOnlyList<int>? _currentAliases;
 
     public SvgDrawingContext(StringBuilder sb, bool interactive = false)
     {
@@ -219,6 +220,19 @@ internal sealed class SvgDrawingContext : IDrawingContext
         return new ScopeAction(() => _currentSourcePosition = prev);
     }
 
+    public IDisposable Source(int sourcePosition, IReadOnlyList<int> aliases)
+    {
+        var prevPos = _currentSourcePosition;
+        var prevAliases = _currentAliases;
+        _currentSourcePosition = sourcePosition;
+        _currentAliases = _interactive && aliases.Count > 0 ? aliases : null;
+        return new ScopeAction(() =>
+        {
+            _currentSourcePosition = prevPos;
+            _currentAliases = prevAliases;
+        });
+    }
+
     public IDisposable BeginGroup(DrawingTransform transform)
     {
         if (transform.IsIdentity)
@@ -238,10 +252,18 @@ internal sealed class SvgDrawingContext : IDrawingContext
         });
     }
 
-    private string SourceAttr() =>
-        _currentSourcePosition.HasValue
-            ? string.Format(Inv, " data-pos=\"{0}\"", _currentSourcePosition.Value)
-            : "";
+    private string SourceAttr()
+    {
+        if (!_currentSourcePosition.HasValue)
+            return "";
+        var s = string.Format(Inv, " data-pos=\"{0}\"", _currentSourcePosition.Value);
+        // data-alt lists the extra highlight offsets: a caret on any of them lights this
+        // element too (the webview matches data-pos OR a data-alt member); the click still
+        // uses data-pos. Only in interactive mode (aliases are null otherwise).
+        return _currentAliases is { Count: > 0 }
+            ? s + string.Format(Inv, " data-alt=\"{0}\"", string.Join(" ", _currentAliases))
+            : s;
+    }
 
     private static string Escape(char c) => c switch
     {
