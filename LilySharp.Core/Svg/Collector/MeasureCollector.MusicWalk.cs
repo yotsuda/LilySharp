@@ -222,9 +222,12 @@ public sealed partial class MeasureCollector
         }
 
         // Post-events after '>>': a chord name (bare '@chord' derives it from the
-        // members; explicit '@chord(...)' shows as written), anchored on the group's
-        // first item like a chord's symbol.
+        // members; explicit '@chord(...)' shows as written) and a dynamic (@f — it
+        // takes effect at the group's start, as if written on the first member),
+        // both anchored on the group's first item. Other annotations are not
+        // applied; AnnotationNameValidator warns (LYS4008) so nothing is silent.
         CollectChordNames(arpeggio, measureIndex, startNoteIndex);
+        CollectDynamics(arpeggio, measureIndex, startNoteIndex);
 
         // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
         if (sub.HasTuplet)

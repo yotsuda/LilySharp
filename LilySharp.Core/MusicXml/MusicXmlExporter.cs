@@ -1405,6 +1405,13 @@ public sealed class MusicXmlExporter
         // to the ROOT, inherited by the stacked members / degrees via the anchor octave.
         int groupOctave = arpeggio.OctaveOffset;
 
+        // A dynamic on the group (`<< c e g >>@f`) sounds at its start: route it
+        // through the shared dynamic/wedge funnel and emit before the first member.
+        foreach (var a in arpeggio.Articulations)
+            if (a is DynamicSyntax dyn)
+                HandleDynamicText(dyn.DynamicToken.Text);
+        EmitPendingDynamic();
+
         // The root is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Subsequent PITCHED members stack above
         // it (absolute mode with the anchored octave), order-independently; rests keep the

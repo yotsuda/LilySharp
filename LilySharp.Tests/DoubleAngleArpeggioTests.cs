@@ -368,6 +368,47 @@ public class DoubleAngleArpeggioTests
     }
 
     [Fact]
+    public void GroupDynamic_TakesEffectAtTheGroupStart()
+    {
+        // `<< c e g >>@p` sounds the members at the same velocity a plain
+        // `c@p` sets — the dynamic acts as if written on the first member.
+        int reference = new MidiExporter().Export(Parse("c@p")).Tracks[1].Notes.Single().Velocity;
+        var notes = new MidiExporter().Export(Parse("<< c e g >>@p")).Tracks[1].Notes;
+        Assert.All(notes, n => Assert.Equal(reference, n.Velocity));
+    }
+
+    [Fact]
+    public void GroupDynamic_RendersAndExports()
+    {
+        // The collector anchors the dynamic on the group's first item; the
+        // MusicXML export carries the <dynamics> direction.
+        var score = Collect("<< c e g >>@f");
+        Assert.Contains(score.Dynamics, d => d.MeasureIndex == 0 && d.ItemIndex == 0);
+        Assert.Contains("<f />", ExportMusicXml("<< c e g >>@f"));
+    }
+
+    [Theory]
+    [InlineData("<< c e g >>@staccato")]   // articulations are unwired on the group
+    [InlineData("<< c e g >>@fermata")]
+    [InlineData("<< c@staccato e g >>")]   // and on a bare member
+    [InlineData("<< c@f e g >>")]          // a member dynamic: write it on the group
+    public void UnsupportedGroupAnnotation_Warns(string music)
+    {
+        var diags = LilySharp.Core.Semantics.SemanticValidation.Run(Parse(music));
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.ArpeggioAnnotationUnsupported);
+    }
+
+    [Theory]
+    [InlineData("<< c e g >>@f")]          // a group dynamic works
+    [InlineData("<< c e g >>@chord")]      // a chord name works
+    [InlineData("<< <c e>@arpeggio g >>")] // a nested chord keeps its own handling
+    public void SupportedGroupAnnotation_StaysQuiet(string music)
+    {
+        var diags = LilySharp.Core.Semantics.SemanticValidation.Run(Parse(music));
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.ArpeggioAnnotationUnsupported);
+    }
+
+    [Fact]
     public void PostEvents_AttachAfterTheClosingAngles()
     {
         // '@chord' (and post-events generally) attach after '>>' like a chord's,

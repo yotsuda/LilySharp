@@ -437,6 +437,10 @@ ChordNote      = PitchToken , { Annotation } ;
    the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
    C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
    and propagate. Members may be pitches, scale degrees, chords or rests.
+   Annotations after '>>': a dynamic (@f) applies to the whole group and a chord name
+   (@chord / @Am7) labels it; any other annotation on the group or a bare member is not
+   applied yet and warns (LYS4008) — nothing is dropped silently. A nested chord member
+   keeps its own annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
    'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
 ArpMember      = PitchToken | ScaleDegree | Chord | Rest ;   (* no DurationToken on a member *)

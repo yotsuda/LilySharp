@@ -1010,6 +1010,12 @@ public sealed class MidiExporter
         // to the ROOT, inherited by the stacked members / degrees via the anchor octave.
         int groupOctave = arpeggio.OctaveOffset;
 
+        // A dynamic on the group (`<< c e g >>@f`) takes effect at its start,
+        // exactly as if written on the first member (running state thereafter).
+        foreach (var a in arpeggio.Articulations)
+            if (a is DynamicSyntax { Level: not DynamicLevel.None } dyn)
+                _velocity = dyn.Velocity;
+
         // The ROOT is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Every later PITCHED member STACKS
         // above it — the same octave placement as a `<c e g>` chord member, so the pitches

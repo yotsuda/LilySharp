@@ -345,6 +345,11 @@ public static class DiagnosticCodes
     /// pitch (a different note, a chord with no matching pitch, or a rest). A tie
     /// joins two notes of the SAME pitch; different pitches connect with a slur.</summary>
     public const string TieTargetMismatch = "LYS4007";
+    /// <summary>Warning: an annotation on a broken-chord group
+    /// (<c>&lt;&lt; … &gt;&gt;@staccato</c>) or on one of its bare pitch members is
+    /// not applied — only a dynamic (<c>@f</c>) and a chord name (<c>@chord</c>)
+    /// work on the group so far. Surfaced so nothing is dropped in silence.</summary>
+    public const string ArpeggioAnnotationUnsupported = "LYS4008";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>

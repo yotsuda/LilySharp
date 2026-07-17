@@ -98,8 +98,14 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 var name = art.NameToken.Text;
                 if (!IsKnownPlainName(name))
                     WarnUnknown(art, name);
+                else if (OnArpeggioGroupOrMember(art))
+                    WarnArpeggioUnsupported(art, name);
                 break;
             }
+            case DynamicSyntax dyn when dyn.Parent is PitchSyntax { Parent: ArpeggioSyntax }:
+                // A dynamic works on the GROUP (`<< … >>@f`) but not on a bare member.
+                WarnArpeggioUnsupported(dyn, dyn.DynamicToken.Text);
+                break;
             case MusicMarkSyntax mark:
             {
                 var name = mark.MarkName;
@@ -122,6 +128,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this arpeggio — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(c:maj7).");
+                else if (OnArpeggioGroupOrMember(mark)
+                         && name != "chord" && ChordNameItem.ParseChordName(name) == null)
+                    // Chord names work on the group; everything else is unwired.
+                    WarnArpeggioUnsupported(mark, name);
                 break;
             }
         }
@@ -247,6 +257,19 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             + p.AccidentalOffset);
         return ChordStructure.TryRecognize(rootStep, pitches[0].AccidentalOffset, pcs, out _);
     }
+
+    /// <summary>True for an annotation sitting on a <c>&lt;&lt; … &gt;&gt;</c> group
+    /// itself or on one of its BARE pitch members (a nested chord member keeps the
+    /// chord's own annotation handling and is not flagged).</summary>
+    private static bool OnArpeggioGroupOrMember(SyntaxNode annotation) =>
+        annotation.Parent is ArpeggioSyntax
+        || annotation.Parent is PitchSyntax { Parent: ArpeggioSyntax };
+
+    private void WarnArpeggioUnsupported(SyntaxNode node, string name)
+        => _diagnostics.Warning(node.Span, DiagnosticCodes.ArpeggioAnnotationUnsupported,
+            $"'@{name}' on a '<< >>' group is not applied yet - only a dynamic (@f) and "
+            + "a chord name (@chord) work there; for per-note articulations write the "
+            + "passage as plain notes (a tuplet gives the same rhythm).");
 
     private void WarnUnknown(SyntaxNode node, string name)
     {
