@@ -185,8 +185,8 @@ public class IncrementalCompilerTests
         string src = """
             time 4/4
             key c major
-            part rh { clef treble name "Violin" }
-            part lh { clef bass name "Cello" }
+            part rh "Violin" { clef treble }
+            part lh "Cello" { clef bass }
             section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
             form main { Main }
             score main "x" { grandStaff { staff rh staff lh } }
@@ -195,7 +195,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "name \"Violin\"", "name \"Viola\"");
+        var change = Replace(src, "rh \"Violin\"", "rh \"Viola\"");
         var incremental = Norm(session.Edit(change));
 
         Assert.False(session.LastEditReusedLayout);

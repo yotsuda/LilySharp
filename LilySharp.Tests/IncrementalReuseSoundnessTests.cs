@@ -102,8 +102,8 @@ public class IncrementalReuseSoundnessTests
     private const string GrandStaff = """
         time 4/4
         key c major
-        part rh { clef treble name "Violin" }
-        part lh { clef bass name "Cello" }
+        part rh "Violin" { clef treble }
+        part lh "Cello" { clef bass }
         section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
         form main { Main }
         score main "x" { grandStaff { staff rh staff lh } }

@@ -28,14 +28,22 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.PartKeyword);
         var name = ExpectPartName();   // names may be clef-name words (bass/treble/...)
 
+        // Optional inline display name: `part melody "Violin I"`. This is the label
+        // printed for the part in every score that renders it (a score's
+        // `staff X "…"` overrides it per-score). Same `symbol "label"` idiom as a
+        // structure section (`A "A2"`) and a staff render (`staff X "…"`).
+        SyntaxToken? displayName = Check(SyntaxKind.StringLiteral) ? Advance() : (SyntaxToken?)null;
+
         // Check if there's a body
         if (!Check(SyntaxKind.OpenBrace))
         {
-            // No body: part name
-            return new PartDeclarationGreen(keyword, name);
+            // No body: part name ["display"]
+            return displayName is { } dnn
+                ? new PartDeclarationGreen(keyword, name, dnn)
+                : new PartDeclarationGreen(keyword, name);
         }
 
-        // With body: part name { props }
+        // With body: part name ["display"] { props }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var properties = new List<GreenNode?>();
@@ -72,7 +80,9 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new PartDeclarationGreen(keyword, name, openBrace, [.. properties], closeBrace);
+        return displayName is { } dn
+            ? new PartDeclarationGreen(keyword, name, dn, openBrace, [.. properties], closeBrace)
+            : new PartDeclarationGreen(keyword, name, openBrace, [.. properties], closeBrace);
     }
 
     /// <summary>

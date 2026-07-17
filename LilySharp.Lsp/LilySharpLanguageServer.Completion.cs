@@ -784,7 +784,6 @@ public sealed partial class LilySharpLanguageServer
         {
             ("clef", "Clef (treble/bass/alto/tenor/treble_8)", true),
             ("instrument", "Instrument preset (clef/octave/tuning defaults)", true),
-            ("name", "Display name (system indent label)", false),
             ("tuning", "Tab tuning (guitar/bass/ukulele/…)", false),
             ("octave", "Octave mode or absolute base (absolute | relative | N)", true),
             ("transpose", "Transpose target pitch", false),

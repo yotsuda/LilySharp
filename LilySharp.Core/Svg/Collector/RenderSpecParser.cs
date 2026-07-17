@@ -332,13 +332,13 @@ public static class RenderSpecParser
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
-        // Priority: per-score override ("…") > part `name` > part `instrument`.
+        // Priority: per-score override ("…") > part inline display name > instrument.
         // The ensemble default (capitalized part name) is applied in Parse()
         // once the staff count is known; ~ suppresses the label entirely.
         string? instrumentName = nameSuppressed
             ? null
             : nameOverride
-              ?? GetPartProperty(staff, voiceName, "name")
+              ?? GetPartDisplayName(staff, voiceName)
               ?? GetInstrument(staff, voiceName)?.DisplayName;
 
         // Hara-kiri, as a part property: `removeEmpty true` hides the staff in
@@ -511,6 +511,24 @@ public static class RenderSpecParser
             }
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// <summary>
+    /// The inline display name of the part named <paramref name="partName"/>
+    /// (<c>part melody "Violin I"</c>), or null. This is the part's default printed
+    /// label — a score's <c>staff X "…"</c> overrides it per-score.
+    /// </summary>
+    private static string? GetPartDisplayName(SyntaxNode node, string partName)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+            if (partDecl.Name.Text == partName && partDecl.DisplayName is { } dn)
+                return dn;
         return null;
     }
 

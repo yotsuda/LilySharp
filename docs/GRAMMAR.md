@@ -174,17 +174,25 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 (* Parts declare instruments/voices. Header attributes are written BARE — the same
    command form as the top-level commands (NO colon, NO '='). *)
 
-PartDecl       = 'part' , Identifier , [ PartBody ] ;
+PartDecl       = 'part' , Identifier , [ String ] , [ PartBody ] ;  (* String = display name *)
 PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'        , ClefName
                | 'instrument'  , ( Identifier , [ String ] | String )
                | 'transpose'   , PitchToken
                | 'tuning'      , Identifier
-               | 'name'        , String                      (* display name *)
                | 'octave'      , ( 'absolute' | 'relative' | Integer )
                | 'removeEmpty' , ( 'true' | 'all' | 'false' ) ;
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
+
+(* Display name: an optional quoted string right after the part name is the part's
+   default printed label (the staff-left name), shared by every score that renders
+   the part — `part vln1 "Violin I" { … }`. Same `symbol "label"` idiom as a
+   structure section (`A "A2"`) and a staff render (`staff X "…"`). A score's
+   `staff X "…"` overrides it for that score. Priority for the shown label:
+   `staff X "…"` (per-score) > part display name > `instrument` label > the
+   capitalized part identifier. (There is no `name` property — the inline string
+   replaced it.) *)
 
 (* instrument: a bare preset word (violin, cello, piano-right, …) drives the
    default clef/octave/tuning and the MIDI timbre, and is shown as the staff name.

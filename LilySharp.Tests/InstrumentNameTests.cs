@@ -32,10 +32,10 @@ namespace LilySharp.Tests;
 public class InstrumentNameTests
 {
     [Fact]
-    public void StaffSpec_InstrumentName_FromPartProperty()
+    public void StaffSpec_InstrumentName_FromInlineDisplayName()
     {
         var source = @"
-part violin { name: Violin }
+part violin ""Violin""
 phrase m { c4 d e f }
 section A { violin { $m } }
 form main { A }
@@ -52,7 +52,7 @@ score main ""test"" { staff violin }
     public void StaffSpec_InstrumentName_StringLiteral()
     {
         var source = @"
-part vln1 { name: ""Violin I"" }
+part vln1 ""Violin I""
 phrase m { c4 d e f }
 section A { vln1 { $m } }
 form main { A }
@@ -86,7 +86,7 @@ score main ""test"" { staff melody }
     public void GrandStaff_InstrumentName_CenteredInSvg()
     {
         var source = @"
-part rh { clef treble  name: Piano }
+part rh ""Piano"" { clef treble }
 part lh { clef bass }
 phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
@@ -109,8 +109,8 @@ score main ""test"" { grandStaff { staff rh staff lh } }
     public void MultiStaff_EachStaffHasOwnName()
     {
         var source = @"
-part vln { clef treble  name: Violin }
-part vla { clef alto  name: Viola }
+part vln ""Violin"" { clef treble }
+part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 form main { A }
@@ -129,8 +129,8 @@ score main ""test"" { staff vln staff vla }
     {
         // Multi-staff render spec needed for instrument name display
         var source = @"
-part vln { clef treble  name: ""Violin I"" }
-part vla { clef alto  name: Viola }
+part vln ""Violin I"" { clef treble }
+part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 form main { A }

@@ -6,24 +6,20 @@ composer "Lily#"
 tempo 120
 time 4/4
 
-part violin1 {
+part violin1 "Violin I" {
   clef treble
-  name "Violin I"
 }
 
-part violin2 {
+part violin2 "Violin II" {
   clef treble
-  name "Violin II"
 }
 
-part viola {
+part viola "Viola" {
   clef alto
-  name "Viola"
 }
 
-part cello {
+part cello "Cello" {
   clef bass
-  name "Cello"
 }
 
 phrase vln1Line {

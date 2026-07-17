@@ -500,24 +500,37 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     {
     }
 
-    // With body: keyword name { props } = 5+ slots
-    // Without body: keyword name = 2 slots
-    private bool HasBody => SlotCount > 2;
-
     /// <summary>The <c>part</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
     /// <summary>The declared part name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
 
-    // Properties are between braces if HasBody
+    /// <summary>The optional inline display-name token (<c>part melody "Violin I"</c>) —
+    /// a string literal sitting right after the name, before any body brace. Null when
+    /// absent. Detected by kind, so it never collides with the opening <c>{</c>.</summary>
+    private SyntaxTokenNode? DisplayNameToken =>
+        GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t ? t : null;
+
+    /// <summary>The part's default display name (surrounding quotes stripped), or null.
+    /// A score's <c>staff X "…"</c> overrides it for that score; otherwise this is the
+    /// label printed at the staff's left. Not a symbol — free text, may contain spaces.</summary>
+    public string? DisplayName => DisplayNameToken is { } t ? t.Text.Trim('"') : null;
+
+    // Layout: keyword name [displayName] [openBrace props… closeBrace]. The body,
+    // when present, begins at the first token after the optional display name.
+    private int OpenBraceIndex => DisplayNameToken != null ? 3 : 2;
+    private bool HasBody =>
+        SlotCount > OpenBraceIndex
+        && GetChild(OpenBraceIndex) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+
     /// <summary>The part's property assignments (empty when the part has no body block).</summary>
     public IEnumerable<PropertyAssignmentSyntax> Properties
     {
         get
         {
             if (!HasBody) yield break;
-            // Skip keyword, name, openBrace; stop before closeBrace
-            for (int i = 3; i < SlotCount - 1; i++)
+            // Between the opening brace and the closing one.
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
             {
                 if (GetChild(i) is PropertyAssignmentSyntax prop)
                     yield return prop;

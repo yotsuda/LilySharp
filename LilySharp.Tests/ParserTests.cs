@@ -161,6 +161,48 @@ public class ParserTests
     }
 
     [Fact]
+    public void PartInlineDisplayName_ParsesAndKeepsTheBody()
+    {
+        // `part melody "Violin I" { … }` — the display-name string sits between the
+        // name and the brace. It must not shift the body slots (clef still readable),
+        // must round-trip, and must not error.
+        var tree = SyntaxTree.Parse("part melody \"Violin I\" { clef treble }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var part = tree.GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>().Single();
+        Assert.Equal("melody", part.Name.Text);
+        Assert.Equal("Violin I", part.DisplayName);
+        Assert.Contains(part.Properties, p => p.NameToken.Text == "clef");
+        Assert.Equal("part melody \"Violin I\" { clef treble }", tree.Root.ToFullString());
+    }
+
+    [Fact]
+    public void PartWithoutDisplayName_HasNullDisplayName()
+    {
+        var part = SyntaxTree.Parse("part melody { clef treble }")
+            .GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>().Single();
+        Assert.Null(part.DisplayName);
+        Assert.Contains(part.Properties, p => p.NameToken.Text == "clef");
+    }
+
+    [Fact]
+    public void PartInlineDisplayName_WithoutBody()
+    {
+        var part = SyntaxTree.Parse("part melody \"Vln.\"")
+            .GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>().Single();
+        Assert.Equal("Vln.", part.DisplayName);
+        Assert.Empty(part.Properties);
+    }
+
+    [Fact]
+    public void RetiredNameProperty_IsFlaggedUnknown()
+    {
+        // The `name "…"` part property was retired in favor of `part X "…"`.
+        var diags = SemanticValidation.Run(
+            SyntaxTree.Parse("part melody { name \"X\" section A { c1 } }"));
+        Assert.Contains(diags, d => d.Message.Contains("Unknown part property 'name'"));
+    }
+
+    [Fact]
     public void ParseBarline()
     {
         var tree = SyntaxTree.Parse("c d | e f");
