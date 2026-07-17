@@ -461,13 +461,15 @@ internal sealed class MeasureBuilder
             // A TYPED barline (":|", "||", "|.") on an empty span decorates the PREVIOUS
             // measure's end — retro-apply it, never an empty placeholder (the common
             // final / double-bar / repeat-end case, incl. a phrase that already ended
-            // with a plain `|` before the form's ":|"). When it confirms an AUTO-FILLED
-            // close, retarget SourceEnd to the written barline so a click/highlight lands
-            // on it, not on the note that filled the bar.
+            // with a plain `|` before the form's ":|"). Retarget SourceEnd to this
+            // written barline ONLY when it replaces a PLAIN `|` close (an auto-fill, or a
+            // phrase whose last bar ended `|`); a phrase's own TYPED `:|` keeps its offset
+            // so it highlights at every call site, not only where no section repeat follows.
+            bool wasPlainEnd = _measures[^1].EndBarline == BarlineType.Single;
             _measures[^1] = _measures[^1] with
             {
                 EndBarline = endType,
-                SourceEnd = _boundaryRetargetable ? position : _measures[^1].SourceEnd,
+                SourceEnd = _boundaryRetargetable && wasPlainEnd ? position : _measures[^1].SourceEnd,
             };
             _confirmableBoundary = false;
             _boundaryRetargetable = false;

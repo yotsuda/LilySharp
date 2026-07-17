@@ -135,12 +135,12 @@ public class NoteheadHitTargetTests
         int repeatStart = src.IndexOf("|:");
         int repeatEnd = src.IndexOf(":|");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
-        int Copies(int pos) => Regex.Matches(svg,
-            "data-pos=\"" + pos + "\"").Count;
-        // Each drawn instance paints the glyph AND its hit rect on the offset, so both
-        // sides appear at least three times (once per call site).
-        Assert.True(Copies(repeatStart) >= 3, $"|: copies = {Copies(repeatStart)}");
-        Assert.True(Copies(repeatEnd) >= 3, $":| copies = {Copies(repeatEnd)}");
+        // Count HIT RECTS (one per barline instance/half), not raw data-pos — a single
+        // barline paints several rects on one offset, which would mask a missing copy.
+        int Hits(int pos) => Regex.Matches(svg,
+            "<rect class=\"nh-hit\"[^>]* data-pos=\"" + pos + "\"/>").Count;
+        Assert.Equal(3, Hits(repeatStart));
+        Assert.Equal(3, Hits(repeatEnd));
     }
 
     [Fact]
