@@ -251,8 +251,9 @@ internal sealed class ChordNameCollector
     /// renderer skips chord rows) but give the layout timing columns so the bar gets
     /// width even with no music staff (standalone lead sheet).
     /// </returns>
-    /// <summary>Bar count of a chord part block: one per written barline,
-    /// plus a trailing bar when entries follow the last barline (the same
+    /// <summary>Bar count of a chord part block: one per written barline —
+    /// except a lone bare '|' OPENING the run, which only anchors it — plus a
+    /// trailing bar when entries follow the last barline (the same
     /// segmentation CollectPart commits by).</summary>
     public static int CountBars(ChordPartBlockSyntax block)
         => CountBars(block.Items);
@@ -267,10 +268,27 @@ internal sealed class ChordNameCollector
     {
         int bars = 0;
         bool pendingEntries = false;
+        bool atRunStart = true;
         foreach (var item in items)
         {
-            if (item is BarlineSyntax) { bars++; pendingEntries = false; }
-            else if (item is ChordEntrySyntax) pendingEntries = true;
+            if (item is BarlineSyntax bar)
+            {
+                // Mirror ProcessRun: the leading anchor bar counts nothing.
+                // Any drift here pads the row grid with a phantom bar.
+                if (atRunStart && bar.BarToken.Text == "|")
+                {
+                    atRunStart = false;
+                    continue;
+                }
+                atRunStart = false;
+                bars++;
+                pendingEntries = false;
+            }
+            else if (item is ChordEntrySyntax)
+            {
+                atRunStart = false;
+                pendingEntries = true;
+            }
         }
         return bars + (pendingEntries ? 1 : 0);
     }
@@ -322,10 +340,21 @@ internal sealed class ChordNameCollector
                 pending.Clear();
             }
 
+            bool atRunStart = true;
             foreach (var item in items)
             {
                 if (item is BarlineSyntax bar)
                 {
+                    // A lone bare '|' OPENING the run anchors its start (the
+                    // bare-barline rule; same as music and lyrics) and creates
+                    // no bar — '| c1 | f1 |' == 'c1 | f1 |'; an empty leading
+                    // bar is the explicit '| |' pair, whose second bar commits.
+                    if (atRunStart && bar.BarToken.Text == "|")
+                    {
+                        atRunStart = false;
+                        continue;
+                    }
+                    atRunStart = false;
                     var t = MeasureCollector.ParseBarlineType(bar.BarToken.Text);
                     if (t == BarlineType.RepeatStart)
                     {
@@ -347,6 +376,7 @@ internal sealed class ChordNameCollector
                 }
                 else if (item is ChordEntrySyntax entry)
                 {
+                    atRunStart = false;
                     pending.Add(entry);
                 }
             }
@@ -371,8 +401,8 @@ internal sealed class ChordNameCollector
         if (maxIndex < 0)
             return ImmutableArray<Measure>.Empty;
 
-        // An empty bar (written as a bare "|") gets one whole-measure spacer rest so it
-        // keeps its width even with no music staff (standalone lead sheet), matching
+        // An empty bar (the explicit "| |" pair) gets one whole-measure spacer rest so
+        // it keeps its width even with no music staff (standalone lead sheet), matching
         // how empty lyric measures work.
         var emptyBar = ImmutableArray.Create<MusicItem>(
             new RestItem(new Fraction(timeBeats, timeBeatType), 0, 0) { IsSpacer = true });

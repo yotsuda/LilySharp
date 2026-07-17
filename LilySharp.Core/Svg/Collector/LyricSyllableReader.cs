@@ -108,6 +108,31 @@ internal static class LyricSyllableReader
         return sawBar;
     }
 
+    /// <summary>Bar count of a lyric container's run (a flat block, or a lyric-track
+    /// inner section): one per parsed <c>LyricMeasure</c> child, minus the lone
+    /// leading <c>|</c> anchor (which creates no bar). The counting twin of the
+    /// anchor skip in <c>LyricCollector.ParseSyllablesFrom</c> /
+    /// <c>LyricsCollector.PlaceRun</c> — any grid sized from lyric bars must use
+    /// THIS, or a fenced verse pads a phantom bar.</summary>
+    public static int CountBars(SyntaxNode container)
+    {
+        int bars = 0;
+        bool atRunStart = true;
+        for (int i = 0; i < container.SlotCount; i++)
+        {
+            if (container.GetChild(i) is not SyntaxNode m || m.Kind != SyntaxKind.LyricMeasure)
+                continue;
+            if (atRunStart)
+            {
+                atRunStart = false;
+                if (IsLeadingAnchor(m))
+                    continue;
+            }
+            bars++;
+        }
+        return bars;
+    }
+
     /// <summary>
     /// True for a lyric measure that is nothing but a lone bare <c>|</c> — the
     /// parse of a run that OPENS with a barline. Under the bare-barline rule

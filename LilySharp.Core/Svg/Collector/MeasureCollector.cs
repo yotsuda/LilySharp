@@ -2658,7 +2658,7 @@ public sealed partial class MeasureCollector
             if (block.HasSections)
                 foreach (var sec in block.Sections)
                     if (sec.SectionName == name)
-                        bars = Math.Max(bars, 1 + sec.DescendantNodes().OfType<BarlineSyntax>().Count());
+                        bars = Math.Max(bars, LyricSyllableReader.CountBars(sec));
 
         // Section-major: the chord / lyric blocks are nested in the (registered) section itself.
         if (_sectionState.Sections.TryGetValue(name, out var representative))
@@ -2666,7 +2666,7 @@ public sealed partial class MeasureCollector
             foreach (var block in representative.DescendantNodes().OfType<ChordPartBlockSyntax>())
                 bars = Math.Max(bars, ChordNameCollector.CountBars(block));
             foreach (var block in representative.DescendantNodes().OfType<LyricsBlockSyntax>())
-                bars = Math.Max(bars, block.Syllables.Count());
+                bars = Math.Max(bars, LyricSyllableReader.CountBars(block));
         }
 
         return bars;

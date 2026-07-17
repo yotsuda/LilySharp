@@ -261,7 +261,9 @@ lead-sheet row, written once. An independent `chords NAME { … }` and/or `lyric
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,
 `g:7`=G7, `c/g`=C over a G bass) and honours its duration; lyric syllables fill each
-bar. Barlines in the source (`|` `|:` `:|` `||` `|.`) are drawn.
+bar. Barlines in the source (`|` `|:` `:|` `||` `|.`) are drawn, and follow the same
+bare-barline rule as music and lyrics: a lone leading `|` only anchors the start
+(`| c1 | f1 |` == `c1 | f1 |`), an empty bar is the explicit `| |` pair.
 
 ```
 section Main {

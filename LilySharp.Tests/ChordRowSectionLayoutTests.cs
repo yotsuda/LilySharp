@@ -75,4 +75,34 @@ public class ChordRowSectionLayoutTests
             form main { A B }
             score main { chords prog }
             """));
+
+    [Fact]
+    public void LeadingBareBarline_AnchorsOnly_NoEmptyBar()
+    {
+        // A lone leading '|' merely anchors the run's start (the music rule),
+        // so a chord row is exactly its unfenced spelling — two bars, not three.
+        Assert.Equal(2, MeasureCount("""
+            time 4/4
+            chords prog { | c1 | f1 | }
+            form main { }
+            score main { chords prog }
+            """));
+        Assert.Equal(2, MeasureCount("""
+            time 4/4
+            chords prog { c1 | f1 | }
+            form main { }
+            score main { chords prog }
+            """));
+    }
+
+    [Fact]
+    public void ExplicitEmptyLeadingPair_KeepsTheBar()
+        // An empty leading bar is the explicit '| |' pair: the second bar
+        // survives, so the run is three bars (empty, C, F).
+        => Assert.Equal(3, MeasureCount("""
+            time 4/4
+            chords prog { | | c1 | f1 | }
+            form main { }
+            score main { chords prog }
+            """));
 }

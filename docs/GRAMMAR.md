@@ -353,7 +353,9 @@ PartRef        = Identifier ;
 (* A 'chords NAME { … }' / 'lyrics NAME { … }' part placed in a score with
    'chords NAME' / 'lyrics NAME' (instead of 'staff NAME') renders WITHOUT a staff:
    a grid of measure barlines, chord symbols between the bars (at their timing), and
-   lyrics below. Source barlines ( | |: :| || |. ) are drawn. *)
+   lyrics below. Source barlines ( | |: :| || |. ) are drawn, and follow the
+   bare-barline rule (below): a lone leading '|' only anchors the run's start
+   ('| c1 | f1 |' == 'c1 | f1 |'), an empty bar is the explicit '| |' pair. *)
 
 (* Example:
    section Main {
