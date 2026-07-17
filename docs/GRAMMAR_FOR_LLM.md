@@ -99,6 +99,11 @@ R1          // full-measure rest
 <1 3 5>2    // degrees only: anchored on the key TONIC (C E G in C major)
 ```
 
+A duration is GLUED to what it lengthens — `c4`, `<c e g>4` — never spaced
+(`c 4` is an error, LYS0016), and never on a chord/arpeggio member
+(`<c e g2>` is an error, LYS0015). A SPACED number inside brackets is a
+scale degree: `<c e g 2>`.
+
 Chord octaves — the ANCHOR model (one rule: a mark moves only what it is attached to):
 the anchor is the first member's bare LETTER (or the key tonic for a degrees-only
 chord), resolved nearest to the previous note; members sit at-or-above it, so order is

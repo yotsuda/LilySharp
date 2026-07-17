@@ -389,6 +389,13 @@ MidMusicCommand = 'clef' , ClefName
 Note           = PitchToken , [ DurationToken ] , { Annotation } ;
 Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
+
+(* ADJACENCY RULE: a DurationToken (number + dots) is GLUED to what it lengthens —
+   c4, r2., <c e g>4, << c e g >>2 — never spaced. A spaced number is a detached
+   duration (LYS0016: 'c 4' is the note c and a meaningless 4), and a glued number
+   on a chord/arpeggio MEMBER is a misplaced duration (LYS0015: members share one,
+   written after the bracket). A SPACED number inside brackets is a scale degree —
+   the adjacency is what tells <c e g2> (mistake) from <c e g 2> (degree). *)
 (* A chord is EITHER letter mode — a pitch anchor followed by any mix of pitches and
    scale degrees ('<c e g>', '<c 3 5>', '<c 3 g>'; every degree measures from the
    ANCHOR, so '<c e 5>' == '<c e g>') — or degree mode: degrees only, anchored on the
