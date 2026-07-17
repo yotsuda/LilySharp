@@ -356,8 +356,9 @@ public sealed partial class LilySharpLanguageServer
     private static Microsoft.VisualStudio.LanguageServer.Protocol.Diagnostic ConvertDiagnostic(
         LilySharp.Core.Syntax.Diagnostic d, string text)
     {
-        var (startLine, startCol) = GetLineAndColumn(text, d.Span.Start);
-        var (endLine, endCol) = GetLineAndColumn(text, d.Span.Start + d.Span.Length);
+        var (start, end) = TrimSpanToInk(text, d.Span.Start, d.Span.Start + d.Span.Length);
+        var (startLine, startCol) = GetLineAndColumn(text, start);
+        var (endLine, endCol) = GetLineAndColumn(text, end);
 
         return new Microsoft.VisualStudio.LanguageServer.Protocol.Diagnostic
         {
@@ -385,5 +386,23 @@ public sealed partial class LilySharpLanguageServer
     // hover/go-to-def reported different lines than rename/highlight.
     private static (int line, int col) GetLineAndColumn(string text, int position)
         => GetLineAndCharacter(text, position);
+
+    // Shrinks a diagnostic span to its INK — the range without leading/trailing
+    // whitespace. A composite node's Span (GreenSyntaxNode does not compute its
+    // own leading/trailing trivia) reaches to the FULL span, so the whitespace
+    // before its first token would push the squiggle left of the code (and the
+    // whitespace/newline after its last token would drag it right, even onto the
+    // next line). A token-derived span has no interior whitespace at its ends, so
+    // this is a no-op for those. An all-whitespace span (defensive — a real
+    // diagnostic points at code) is left untouched rather than collapsed.
+    internal static (int start, int end) TrimSpanToInk(string text, int start, int end)
+    {
+        start = Math.Clamp(start, 0, text.Length);
+        end = Math.Clamp(end, start, text.Length);
+        int s = start, e = end;
+        while (s < e && char.IsWhiteSpace(text[s])) s++;
+        while (e > s && char.IsWhiteSpace(text[e - 1])) e--;
+        return s < e ? (s, e) : (start, end);
+    }
 
 }
