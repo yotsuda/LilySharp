@@ -104,6 +104,25 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void OuterBarlineAfterAPhraseOwnsTheBarline_NotThePhrasesTrailingBar()
+    {
+        // `phrase x { … | }` ends with a barline; in `section A { x | x }` the OUTER
+        // `|` confirms that close. The one drawn barline there is what the author edits
+        // at the section level, so its data-pos must be the SECTION `|`, so a caret on
+        // it highlights (before this it kept the phrase's trailing `|`, unreachable
+        // from the section).
+        const string src = "phrase x { c1 | }\n"
+                         + "part m { clef treble section A { x | x } }\n"
+                         + "form main { A }\nscore main \"s\" { staff m }";
+        int sectionBar = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between the two x
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
+        var barHits = Regex.Matches(svg,
+                "<rect class=\"nh-hit\" x=\"-?[\\d.]+\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[-\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
+            .Cast<Match>().Where(h => double.Parse(h.Groups[1].Value) < 1.2).ToList();
+        Assert.Contains(barHits, h => int.Parse(h.Groups[2].Value) == sectionBar);
+    }
+
+    [Fact]
     public void StaticSvgHasNoHitRectsAndNoPointerEvents()
     {
         var svg = Render(SvgRenderOptions.Default);

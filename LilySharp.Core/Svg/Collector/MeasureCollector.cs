@@ -103,12 +103,14 @@ internal sealed class MeasureBuilder
     // is always a visible `| |` pair; a single bare `|` never creates one. See
     // HandleBarline.
     private bool _confirmableBoundary = true;
-    // True when the confirmable boundary is an AUTO-FILL close (the last note filled the
-    // bar) rather than a section/phrase start. A written `|` that confirms it then
-    // retargets the measure's SourceEnd to the barline, so the barline's click/highlight
-    // lands on the `|` and not on the note that happened to fill the bar. Cleared at
-    // section/phrase starts so a leading `|` there never retargets a prior measure.
-    private bool _boundaryFromAutoFill;
+    // True when the confirmable boundary sits right after a bar this stream JUST closed
+    // (an auto-fill, or a phrase whose last bar was closed by its own trailing `|`), so a
+    // written `|` that confirms it should retarget that measure's SourceEnd onto the
+    // barline: the click/highlight then lands on the note-filling bar's WRITTEN `|`, and
+    // the OUTER `|` in `section { x | x }` owns the barline the phrase's trailing `|` drew.
+    // Cleared at section/phrase STARTS so a leading `|` there never retargets a prior
+    // measure (which belongs to the previous section/the pre-phrase stream).
+    private bool _boundaryRetargetable;
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
@@ -190,12 +192,16 @@ internal sealed class MeasureBuilder
     /// OPENS with a bare <c>|</c> anchors its own start boundary (no empty measure),
     /// regardless of how the previous section's last bar was closed. See
     /// <see cref="_confirmableBoundary"/>.</summary>
-    public void ResetMeasureBoundary()
+    /// <summary>Re-arms the confirmable boundary at a section/phrase edge. A section or
+    /// phrase START passes <paramref name="retargetableClose"/> false (a leading `|` there
+    /// is an anchor). A phrase EXIT passes true: if the phrase ended with a CLOSED bar
+    /// (its own trailing `|`, or an auto-fill), an outer `|` that confirms it owns that
+    /// barline and retargets the phrase's last measure onto the written `|`.</summary>
+    public void ResetMeasureBoundary(bool retargetableClose = false)
     {
-        // A section/phrase start re-arms the boundary as an ANCHOR (a leading `|` just
-        // confirms the start), never a retargetable auto-fill of a prior measure.
         _confirmableBoundary = true;
-        _boundaryFromAutoFill = false;
+        _boundaryRetargetable = retargetableClose
+            && _currentItems.Count == 0 && _measures.Count > 0;
     }
 
     /// <summary>
@@ -356,7 +362,7 @@ internal sealed class MeasureBuilder
         ResetPerMeasureState(sourceEnd, confirmableBoundary: !explicitBar);
         // The confirmable boundary an auto-fill leaves is RETARGETABLE: a following
         // written barline moves this measure's end onto it (see HandleBarline).
-        _boundaryFromAutoFill = !explicitBar;
+        _boundaryRetargetable = !explicitBar;
     }
 
     /// <summary>
@@ -378,7 +384,7 @@ internal sealed class MeasureBuilder
         _confirmableBoundary = confirmableBoundary;
         // Only EmitMeasure(auto) re-arms this immediately after; every other reset
         // (explicit close, empty placeholder) leaves a non-retargetable boundary.
-        _boundaryFromAutoFill = false;
+        _boundaryRetargetable = false;
         _currentItems.Clear();
         _sectionLabel = null;
         _sectionLabelPosition = 0;
@@ -457,10 +463,10 @@ internal sealed class MeasureBuilder
             _measures[^1] = _measures[^1] with
             {
                 EndBarline = endType,
-                SourceEnd = _boundaryFromAutoFill ? position : _measures[^1].SourceEnd,
+                SourceEnd = _boundaryRetargetable ? position : _measures[^1].SourceEnd,
             };
             _confirmableBoundary = false;
-            _boundaryFromAutoFill = false;
+            _boundaryRetargetable = false;
         }
         else if (_confirmableBoundary)
         {
@@ -469,13 +475,13 @@ internal sealed class MeasureBuilder
             // consumes the confirmation (a FURTHER bare `|` would be a `| |` pair).
             // On an auto-fill close, retarget the measure's boundary to the written `|`
             // so its click/highlight points at the barline, not the bar-filling note.
-            if (_boundaryFromAutoFill && _measures.Count > 0)
+            if (_boundaryRetargetable && _measures.Count > 0)
             {
                 _measures[^1] = _measures[^1] with { SourceEnd = position };
                 _measureSourceStart = position;
             }
             _confirmableBoundary = false;
-            _boundaryFromAutoFill = false;
+            _boundaryRetargetable = false;
         }
         else
         {
@@ -2387,7 +2393,7 @@ public sealed partial class MeasureCollector
                 if (node is PhraseEndMarker)
                 {
                     ExitPhraseTranspose();
-                    builder.ResetMeasureBoundary();
+                    builder.ResetMeasureBoundary(retargetableClose: true);
                     continue;
                 }
 

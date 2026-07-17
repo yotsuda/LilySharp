@@ -91,10 +91,10 @@
   <line x1="78.48" y1="38.26" x2="78.48" y2="34.91" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="86.69" y="39.91" font-size="4.00" data-pos="317"></text>
   <rect x="33.62" y="34.91" width="0.19" height="4.00" data-pos="276"/>
-  <circle cx="54.62" cy="36.41" r="0.20" data-pos="285"/>
-  <circle cx="54.62" cy="37.41" r="0.20" data-pos="285"/>
-  <rect x="55.12" y="34.91" width="0.19" height="4.00" data-pos="285"/>
-  <rect x="55.61" y="34.91" width="0.60" height="4.00" data-pos="285"/>
+  <circle cx="54.62" cy="36.41" r="0.20" data-pos="550"/>
+  <circle cx="54.62" cy="37.41" r="0.20" data-pos="550"/>
+  <rect x="55.12" y="34.91" width="0.19" height="4.00" data-pos="550"/>
+  <rect x="55.61" y="34.91" width="0.60" height="4.00" data-pos="550"/>
   <rect x="84.21" y="34.91" width="0.19" height="4.00" data-pos="315"/>
   <rect x="100.96" y="34.91" width="0.19" height="4.00" data-pos="320"/>
   <rect x="101.45" y="34.91" width="0.60" height="4.00" data-pos="320"/>

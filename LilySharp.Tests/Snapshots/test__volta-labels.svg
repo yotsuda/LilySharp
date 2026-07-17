@@ -133,10 +133,10 @@
   <circle cx="22.20" cy="20.79" r="0.20" data-pos="492"/>
   <circle cx="22.20" cy="21.79" r="0.20" data-pos="492"/>
   <rect x="37.58" y="19.29" width="0.19" height="4.00" data-pos="523"/>
-  <circle cx="52.54" cy="20.79" r="0.20" data-pos="523"/>
-  <circle cx="52.54" cy="21.79" r="0.20" data-pos="523"/>
-  <rect x="53.04" y="19.29" width="0.19" height="4.00" data-pos="523"/>
-  <rect x="53.53" y="19.29" width="0.60" height="4.00" data-pos="523"/>
+  <circle cx="52.54" cy="20.79" r="0.20" data-pos="614"/>
+  <circle cx="52.54" cy="21.79" r="0.20" data-pos="614"/>
+  <rect x="53.04" y="19.29" width="0.19" height="4.00" data-pos="614"/>
+  <rect x="53.53" y="19.29" width="0.60" height="4.00" data-pos="614"/>
   <rect x="68.70" y="19.29" width="0.19" height="4.00" data-pos="523"/>
   <rect x="82.96" y="19.29" width="0.19" height="4.00" data-pos="492"/>
   <rect x="83.45" y="19.29" width="0.60" height="4.00" data-pos="492"/>

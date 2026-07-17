@@ -71,11 +71,13 @@ public sealed partial class MeasureCollector
             }
 
             // End of a phrase body: drop its auto-transpose so following inline
-            // notes stay at their written pitch.
+            // notes stay at their written pitch. A phrase that ended with a closed
+            // bar hands that bar over as retargetable, so an OUTER `|` (section {
+            // x | x }) owns the barline the phrase's trailing `|` drew.
             if (node is PhraseEndMarker)
             {
                 ExitPhraseTranspose();
-                builder.ResetMeasureBoundary();
+                builder.ResetMeasureBoundary(retargetableClose: true);
                 continue;
             }
 

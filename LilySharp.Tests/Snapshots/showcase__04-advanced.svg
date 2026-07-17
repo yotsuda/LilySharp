@@ -161,10 +161,10 @@
   <rect x="26.44" y="42.55" width="0.19" height="4.00" data-pos="666"/>
   <rect x="39.77" y="42.55" width="0.19" height="4.00" data-pos="675"/>
   <rect x="58.38" y="42.55" width="0.19" height="4.00" data-pos="705"/>
-  <circle cx="70.05" cy="44.05" r="0.20" data-pos="711"/>
-  <circle cx="70.05" cy="45.05" r="0.20" data-pos="711"/>
-  <rect x="70.55" y="42.55" width="0.19" height="4.00" data-pos="711"/>
-  <rect x="71.04" y="42.55" width="0.60" height="4.00" data-pos="711"/>
+  <circle cx="70.05" cy="44.05" r="0.20" data-pos="955"/>
+  <circle cx="70.05" cy="45.05" r="0.20" data-pos="955"/>
+  <rect x="70.55" y="42.55" width="0.19" height="4.00" data-pos="955"/>
+  <rect x="71.04" y="42.55" width="0.60" height="4.00" data-pos="955"/>
   <rect x="89.99" y="42.55" width="0.19" height="4.00" data-pos="742"/>
   <rect x="100.96" y="42.55" width="0.19" height="4.00" data-pos="747"/>
   <rect x="101.45" y="42.55" width="0.60" height="4.00" data-pos="747"/>
