@@ -303,6 +303,10 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('convertLayout command triggered');
             convertLayout();
         }),
+        vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
+            outputChannel.appendLine('extractPhrase command triggered');
+            extractPhrase();
+        }),
         vscode.commands.registerCommand('lilysharp.addChordTrack', () => {
             outputChannel.appendLine('addChordTrack command triggered');
             addChordTrack();
@@ -955,6 +959,62 @@ async function convertLayout() {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: layout conversion failed: ${err}`);
+    }
+}
+
+interface ExtractPhraseResponse {
+    Success: boolean;
+    NewText: string | null;
+    Error: string | null;
+}
+
+/**
+ * Extract-phrase refactoring: lifts the section music at the caret (or the whole
+ * measures the selection touches) into a top-level `phrase NAME { … }` and
+ * replaces it with the reference — the server verifies the result sounds
+ * identical (MIDI compare) or refuses without changes.
+ */
+async function extractPhrase() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to extract a phrase.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const name = await vscode.window.showInputBox({
+        prompt: 'Name for the extracted phrase (referenced as NAME, NAME\'(3), …)',
+        value: 'theme',
+        validateInput: v => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(v)
+            ? null : 'A phrase name is an identifier (letters, digits, _)',
+    });
+    if (!name) { return; }
+
+    const doc = editor.document;
+    const sel = editor.selection;
+    try {
+        const response = await client.sendRequest<ExtractPhraseResponse>('lilysharp/extractPhrase', {
+            textDocument: { uri: doc.uri.toString() },
+            selectionStart: doc.offsetAt(sel.start),
+            selectionEnd: doc.offsetAt(sel.end),
+            name,
+        });
+        if (response.Success && response.NewText != null) {
+            const fullRange = new vscode.Range(
+                doc.positionAt(0), doc.positionAt(doc.getText().length));
+            const edit = new vscode.WorkspaceEdit();
+            edit.replace(doc.uri, fullRange, response.NewText);
+            await vscode.workspace.applyEdit(edit);
+            vscode.window.showInformationMessage(
+                `Lily#: extracted phrase '${name}' — reference it from other parts (${name}, ${name}'(3), …).`);
+        } else {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: extract phrase failed: ${err}`);
     }
 }
 

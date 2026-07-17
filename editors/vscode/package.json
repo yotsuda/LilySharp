@@ -190,6 +190,11 @@
         "title": "Convert Layout (part-major ⇄ section-major)"
       },
       {
+        "command": "lilysharp.extractPhrase",
+        "category": "Lily#",
+        "title": "Extract Phrase from Section"
+      },
+      {
         "command": "lilysharp.addChordTrack",
         "category": "Lily#",
         "title": "Add Chord Track (auto-harmonize)"
@@ -247,6 +252,10 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.extractPhrase",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.addChordTrack",
           "when": "resourceLangId == lilysharp"
         },
@@ -283,6 +292,11 @@
           "command": "lilysharp.convertLayout",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.extractPhrase",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
         },
         {
           "command": "lilysharp.addChordTrack",

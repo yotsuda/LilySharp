@@ -143,6 +143,26 @@ public class ConvertLayoutResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/extractPhrase: the caret (or a selection —
+/// snapped outward to whole measures) and the name for the extracted phrase.
+/// Offsets are 0-based character offsets into the document text.</summary>
+public class ExtractPhraseParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int SelectionStart { get; set; }
+    public int SelectionEnd { get; set; }
+    public string Name { get; set; } = "";
+}
+
+/// <summary>Response for lilysharp/extractPhrase: the rewritten source (the
+/// refactoring is verified semantics-preserving server-side, or refused).</summary>
+public class ExtractPhraseResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/importMusicXml. A <see cref="FilePath"/> is
 /// preferred (handles a binary <c>.mxl</c>); <see cref="XmlText"/> is the fallback
 /// when only raw XML is on hand.</summary>

@@ -426,6 +426,27 @@ public sealed partial class LilySharpLanguageServer
     /// layouts (the editor command toggles whichever the file currently uses) and
     /// returns the rewritten source; the extension applies it as a full-document edit.
     /// </summary>
+    /// <summary>
+    /// The "Extract phrase" refactoring: lifts the section music at the caret (or
+    /// the whole measures a selection touches) into a top-level phrase and replaces
+    /// it with the reference. Verified semantics-preserving (the MIDI of the old
+    /// and new documents must match) or refused with no changes — see
+    /// <see cref="LilySharp.Core.Editing.PhraseExtractor"/>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/extractPhrase", UseSingleObjectParameterDeserialization = true)]
+    public ExtractPhraseResponse ExtractPhrase(ExtractPhraseParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ExtractPhraseResponse { Success = false, Error = "Document not found" };
+
+        var result = LilySharp.Core.Editing.PhraseExtractor.Extract(
+            doc.Text, @params.SelectionStart, @params.SelectionEnd, @params.Name);
+        return result.NewText != null
+            ? new ExtractPhraseResponse { Success = true, NewText = result.NewText }
+            : new ExtractPhraseResponse { Success = false, Error = result.Error };
+    }
+
     [JsonRpcMethod("lilysharp/convertLayout", UseSingleObjectParameterDeserialization = true)]
     public ConvertLayoutResponse ConvertLayout(ConvertLayoutParams @params)
     {
