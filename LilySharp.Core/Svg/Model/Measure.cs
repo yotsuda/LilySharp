@@ -155,7 +155,7 @@ public sealed record Measure
     /// True when this measure is an empty placeholder written as a bare barline gap —
     /// a leading <c>|</c>, a <c>| |</c> gap, or a trailing <c>| |</c> — with no music.
     /// It occupies a measure slot (so parts stay aligned), renders as an empty bar, and
-    /// is flagged by <c>EmptyMeasureValidator</c> as shorter-than-the-meter so the author
+    /// is flagged by <c>MeasureValidator</c> as shorter-than-the-meter so the author
     /// fills it later. Distinct from an intentionally empty track-fill measure (chords/
     /// lyrics alignment), which carries no flag and is silent.
     /// </summary>

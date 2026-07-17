@@ -34,12 +34,18 @@ namespace LilySharp.Tests;
 public class EmptyMeasureValidatorTests
 {
     private static int PlaceholderCount(string music)
+        => PlaceholderCountIn($"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}");
+
+    // The empty-placeholder warning now comes from MeasureValidator (over the shared
+    // MeasureModel), form-independently. It shares the MeasureIncomplete code with the
+    // underfull warning, so filter on the "empty measure" phrasing to count placeholders.
+    private static int PlaceholderCountIn(string source)
     {
-        var source = $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
-        var validator = new EmptyMeasureValidator();
+        var validator = new MeasureValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.MeasureIncomplete
-            && d.Severity == DiagnosticSeverity.Warning);
+            && d.Severity == DiagnosticSeverity.Warning
+            && d.Message.Contains("empty measure"));
     }
 
     [Theory]
@@ -66,6 +72,19 @@ public class EmptyMeasureValidatorTests
     [InlineData("c4 c g' g | a a g2 ||")]       // typed double barline, not a gap
     [InlineData("|")]                           // a lone bar delimits nothing: empty section
     public void NoBarePair_NoWarning(string music) => Assert.Equal(0, PlaceholderCount(music));
+
+    [Theory]
+    [InlineData("form main { A }")]   // referenced by the form
+    [InlineData("form main { }")]     // NOT referenced — validated all the same
+    [InlineData("")]                  // no form at all
+    public void EmptyMeasure_WarnsRegardlessOfTheForm(string form)
+    {
+        // A section validates the moment it is written, before it is wired into a
+        // form — the underfull check always did, and the empty-placeholder check now
+        // matches it (it used to be silent unless the form referenced the section).
+        var src = $"section A {{ melody {{ | | r1 }} }} {form} score main {{ staff melody }}";
+        Assert.Equal(1, PlaceholderCountIn(src));
+    }
 
     [Fact]
     public void LeadingSingleBar_CreatesNoMeasure()

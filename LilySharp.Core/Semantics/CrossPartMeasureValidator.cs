@@ -51,13 +51,6 @@ internal sealed class CrossPartMeasureValidator
         _warnedSpans = warnedSpans;
     }
 
-    private sealed class DurationResetMarker
-    {
-        public static readonly DurationResetMarker Instance = new();
-    }
-
-    private readonly record struct PartMeasure(Fraction Duration, TextSpan Span, bool IsEmpty = false);
-
     public void Validate(SyntaxNode root)
     {
         _phraseBodies = new Dictionary<string, SyntaxNode>();
@@ -149,7 +142,7 @@ internal sealed class CrossPartMeasureValidator
         // Section items in document order: a section-level time declaration
         // applies to the part blocks that follow it. Each part records the
         // time in force at its own position.
-        var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<PartMeasure> Measures)>();
+        var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>();
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
@@ -232,140 +225,12 @@ internal sealed class CrossPartMeasureValidator
     }
 
     /// <summary>
-    /// Flattens a music scope (a section-major part block, or a part-major
-    /// section body) into measures, expanding $phrase references (each reference
-    /// enters a fresh default-duration frame, matching the collector's phrase-fresh
-    /// semantics) and splitting at written barlines. Tuplet/grace interiors are
-    /// handled by ItemDuration.
+    /// Splits a music scope (a section-major part block, or a part-major section body)
+    /// into measures via the shared <see cref="MeasureModel"/> — the one place that
+    /// applies the bare-barline rule and expands phrase references. The empty-placeholder
+    /// warning is emitted from <see cref="MeasureValidator"/> over the same model, so the
+    /// two passes agree on which bars exist.
     /// </summary>
-    private List<PartMeasure> BuildPartMeasures(SyntaxNode scope)
-    {
-        var stream = new List<object>();
-        FlattenMusic(scope, stream, new HashSet<string>());
-
-        var measures = new List<PartMeasure>();
-        var current = new List<SyntaxNode>();
-        var defaultDuration = Fraction.Quarter;
-        var total = Fraction.Zero;
-        // The scope-start boundary absorbs one bare `|`; mirrors
-        // MeasureBuilder.HandleBarline / MeasureCollector.WalkBars so the three
-        // bar counters cannot drift (an empty `| |` pair IS a measure).
-        bool confirmable = true;
-
-        void FlushMusic()
-        {
-            if (current.Count == 0)
-                return;
-            measures.Add(new PartMeasure(total, MeasureDurations.GetSpan(current)));
-            current = new List<SyntaxNode>();
-            total = Fraction.Zero;
-            confirmable = false;
-        }
-
-        foreach (var entry in stream)
-        {
-            if (entry is DurationResetMarker)
-            {
-                defaultDuration = Fraction.Quarter;
-                continue;
-            }
-            var node = (SyntaxNode)entry;
-            if (node is BarlineSyntax bar)
-            {
-                if (current.Count > 0)
-                    FlushMusic(); // the barline closes the bar of music before it
-                else if (bar.BarToken.Text != "|")
-                    confirmable = false; // a typed bar decorates the boundary
-                else if (confirmable)
-                    confirmable = false; // a lone `|` anchors the boundary — no measure
-                else
-                    // the second of a `| |` pair: an empty placeholder measure
-                    measures.Add(new PartMeasure(Fraction.Zero, bar.Span, IsEmpty: true));
-                continue;
-            }
-            total += MeasureDurations.ItemDuration(node, ref defaultDuration);
-            current.Add(node);
-        }
-        FlushMusic(); // a trailing partial bar (music after the last barline) counts
-        return measures;
-    }
-
-    private void FlattenMusic(SyntaxNode scope, List<object> output, HashSet<string> activeRefs)
-    {
-        // A variable bound to a single music node has no relevant
-        // DESCENDANTS — the node itself is the content.
-        if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax
-            or TupletExpressionSyntax or GraceExpressionSyntax)
-        {
-            output.Add(scope);
-            return;
-        }
-
-        foreach (var n in scope.DescendantNodes())
-        {
-            // Tuplet/grace interiors are folded into their wrapper by
-            // ItemDuration; inline-volta interiors are ordinary written
-            // measures and flow through as themselves. Repeat interiors are
-            // expanded by the RepeatExpressionSyntax case below.
-            if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
-                || IsInside<RepeatExpressionSyntax>(n, scope))
-                continue;
-
-            switch (n)
-            {
-                case NoteSyntax:
-                case DrumNoteSyntax:
-                case RestSyntax:
-                case ChordSyntax:
-                case BarlineSyntax:
-                case TupletExpressionSyntax:
-                case GraceExpressionSyntax:
-                    output.Add(n);
-                    break;
-
-                // The cross-part alignment must see repeats at their PLAYED
-                // length: percent/unfold repeat their body COUNT times (the
-                // collector expands them into that many real measures), a
-                // tremolo is one metric item folded by ItemDuration — before
-                // this the cello's `repeat percent 3` counted once and every
-                // later measure "misaligned".
-                // LILYPOND-REF: lily/percent-repeat-iterator.cc,
-                //   lily/chord-tremolo-iterator.cc.
-                case RepeatExpressionSyntax rep:
-                    if (rep.RepeatType.Text == "tremolo")
-                    {
-                        output.Add(rep);
-                    }
-                    else if (int.TryParse(rep.Count.Text, out int repCount))
-                    {
-                        for (int r = 0; r < Math.Max(1, repCount); r++)
-                        {
-                            output.Add(DurationResetMarker.Instance);
-                            FlattenMusic(rep.Body, output, activeRefs);
-                        }
-                    }
-                    break;
-
-                case VariableReferenceSyntax varRef:
-                    var name = varRef.Name.Text;
-                    if (_phraseBodies!.TryGetValue(name, out var body) && activeRefs.Add(name))
-                    {
-                        output.Add(DurationResetMarker.Instance);
-                        FlattenMusic(body, output, activeRefs);
-                        activeRefs.Remove(name);
-                    }
-                    break;
-            }
-        }
-    }
-
-    private static bool IsInside<T>(SyntaxNode node, SyntaxNode scope) where T : SyntaxNode
-    {
-        for (var p = node.Parent; p != null && p != scope; p = p.Parent)
-        {
-            if (p is T)
-                return true;
-        }
-        return false;
-    }
+    private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope)
+        => MeasureModel.Split(scope, _phraseBodies!);
 }

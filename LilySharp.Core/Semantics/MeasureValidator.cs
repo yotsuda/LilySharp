@@ -63,10 +63,70 @@ internal sealed class MeasureValidator : ISemanticValidator
         var root = tree.GetRoot();
         _structured = root.DescendantNodes().Any(n =>
             n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
+        _phraseBodies = CollectPhraseBodies(root);
         ValidateNode(root);
+        // Empty `| |` placeholders are flagged over EVERY defined scope, independent of
+        // whether a form references it — the same reach the underfull check above has, so
+        // the two are consistent (a section validates the moment it is written, before it
+        // is wired into a form).
+        ValidateEmptyPlaceholders(root);
         // Cross-part alignment runs AFTER per-block fullness and shares its
         // warned spans, so a fullness warning suppresses a mismatch report.
         new CrossPartMeasureValidator(_diagnostics, _warnedSpans).Validate(root);
+    }
+
+    private Dictionary<string, SyntaxNode> _phraseBodies = new();
+
+    private static Dictionary<string, SyntaxNode> CollectPhraseBodies(SyntaxNode root)
+    {
+        var bodies = new Dictionary<string, SyntaxNode>();
+        foreach (var n in root.DescendantNodes())
+        {
+            if (n is PhraseDeclarationSyntax ph)
+                bodies[ph.Name.Text] = ph.Body;
+            else if (n is VariableDeclarationSyntax vd)
+                bodies[vd.Name.Text] = vd.Expression;
+        }
+        return bodies;
+    }
+
+    /// <summary>
+    /// Warns for every empty <c>| |</c> placeholder measure in the score, reading the
+    /// shared <see cref="MeasureModel"/> so the rule matches the render collector and the
+    /// cross-part pass exactly. The scopes enumerated here — each part block, each
+    /// part-major section's inline music, and a bare top-level stream — mirror what the
+    /// collector would render, but WITHOUT following the form, so an unreferenced section
+    /// is validated too. (Before this the warning came only from the form-driven collector,
+    /// so a defined-but-unused section's empty bars went unflagged.)
+    /// </summary>
+    private void ValidateEmptyPlaceholders(SyntaxNode root)
+    {
+        var scopes = new List<SyntaxNode>();
+        // Section-major: each part block's own music.
+        scopes.AddRange(root.DescendantNodes().OfType<PartBlockSyntax>());
+        // Part-major: a section whose body is inline music (no part-block children).
+        foreach (var sec in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+            if (!sec.DescendantNodes().OfType<PartBlockSyntax>().Any())
+                scopes.Add(sec);
+        // A bare top-level note stream (no parts/sections at all).
+        if (!root.DescendantNodes().Any(n =>
+                n is PartBlockSyntax or SectionDeclarationSyntax or PartDeclarationSyntax))
+            scopes.Add(root);
+
+        foreach (var scope in scopes)
+            foreach (var bar in MeasureModel.Split(scope, _phraseBodies))
+            {
+                if (!bar.IsEmpty)
+                    continue;
+                if (!_warnedSpans.Add((bar.Span.Start, bar.Span.Length)))
+                    continue; // already flagged (defensive; scopes don't overlap)
+                // The zero case of the underfull warning (LYS2001) — same kind as the
+                // user fills the bar (`| |` -> `| c4 |` -> full). ASCII punctuation only:
+                // this string reaches legacy-codepage consoles via the CLI.
+                _diagnostics.Warning(bar.Span, DiagnosticCodes.MeasureIncomplete,
+                    "Measure duration 0 is less than the meter - an empty measure; " +
+                    "fill it (or keep it as a slot that aligns the parts)");
+            }
     }
 
     private void ValidateNode(SyntaxNode node)
