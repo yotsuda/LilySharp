@@ -1845,7 +1845,23 @@ public sealed partial class MeasureCollector
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
         if (_phraseDiatonicSaves.Count > 0)
-            _octave.DiatonicShiftSteps = _phraseDiatonicSaves.Pop();
+        {
+            int restored = _phraseDiatonicSaves.Pop();
+            int delta = _octave.DiatonicShiftSteps - restored;
+            _octave.DiatonicShiftSteps = restored;
+            // Hand the running frame off at the phrase's SOUNDED end: the next
+            // note is relative to the phrase's last note as heard, so '(8) is
+            // exactly ' — after the phrase included. Only the anchoring moves;
+            // following notes still sound as written.
+            if (delta != 0)
+            {
+                var (s, _, o) = Music.DiatonicShift.Apply(
+                    GetPitchIndex(_octave.LastPitchName), 0, _octave.CurrentOctave,
+                    delta, _meta.KeySharps - _octave.TransposeKeySharps(0));
+                _octave.LastPitchName = "cdefgab"[s];
+                _octave.CurrentOctave = o;
+            }
+        }
     }
 
     /// <summary>

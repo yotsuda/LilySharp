@@ -101,6 +101,13 @@ public class MidiTests
         Assert.Equal(P("phrase M { c e g }\n{ M }"), P("phrase M { c e g }\n{ M'(1) }"));
         // Extra marks add whole octaves: ''(3) = an octave plus a third.
         Assert.Equal(new[] { 76, 79, 83 }, P("phrase M { c e g }\n{ M''(3) }"));
+
+        // The identity holds AFTER the phrase too: the running frame hands off
+        // at the SOUNDED end (a note after Melody'(8) continues where Melody'
+        // would), and only the anchoring moves — the following note still
+        // sounds as written.
+        Assert.Equal(P("phrase M { c e g }\n{ M' c }"), P("phrase M { c e g }\n{ M'(8) c }"));
+        Assert.Equal(new[] { 64, 67, 71, 72 }, P("phrase M { c e g }\n{ M'(3) c }")); // c nearest the sounded b
     }
 
     [Fact]

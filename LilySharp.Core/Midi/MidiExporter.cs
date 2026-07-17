@@ -397,6 +397,17 @@ public sealed class MidiExporter
                     ProcessNode(phraseBody, track, conductorTrack);
                     _currentTransposeSemitones = savedTranspose;
                     _diatonicShiftSteps = savedDiatonic;
+                    // Frame hand-off at the phrase's SOUNDED end (matches the
+                    // collector's ExitPhraseTranspose): a note after Melody'(3)
+                    // is relative to the shifted last note, so '(8) == '.
+                    if (varRef.DiatonicShiftSteps != 0)
+                    {
+                        var (s, _, o) = LilySharp.Core.Music.DiatonicShift.Apply(
+                            _currentNoteName, 0, _currentOctave,
+                            varRef.DiatonicShiftSteps, _keySharps);
+                        _currentNoteName = s;
+                        _currentOctave = o;
+                    }
                     _activePhrases.Remove(phName);
                 }
                 break;
