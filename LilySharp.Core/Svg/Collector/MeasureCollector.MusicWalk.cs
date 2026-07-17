@@ -221,6 +221,11 @@ public sealed partial class MeasureCollector
             _octave.LastPitchName = rootLetter;
         }
 
+        // Post-events after '>>': a chord name (bare '@chord' derives it from the
+        // members; explicit '@chord(...)' shows as written), anchored on the group's
+        // first item like a chord's symbol.
+        CollectChordNames(arpeggio, measureIndex, startNoteIndex);
+
         // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
         if (sub.HasTuplet)
         {

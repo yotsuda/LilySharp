@@ -2821,6 +2821,7 @@ public sealed partial class MeasureCollector
         NoteSyntax note => note.Articulations,
         ChordSyntax chord => chord.Articulations,
         DrumNoteSyntax drum => drum.Articulations,
+        ArpeggioSyntax arpeggio => arpeggio.Articulations,
         _ => Enumerable.Empty<SyntaxNode>()
     };
 

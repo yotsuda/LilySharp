@@ -367,6 +367,20 @@ public class DoubleAngleArpeggioTests
         finally { System.IO.File.Delete(path); }
     }
 
+    [Fact]
+    public void PostEvents_AttachAfterTheClosingAngles()
+    {
+        // '@chord' (and post-events generally) attach after '>>' like a chord's,
+        // and the green tokens round-trip the source exactly.
+        var src = "{ << c e g >>@chord }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        Assert.Equal(src, tree.Root.ToFullString());
+        var arp = tree.GetRoot().DescendantNodes<ArpeggioSyntax>().Single();
+        Assert.Contains(arp.Articulations, a =>
+            a is MusicMarkSyntax { MarkName: "chord" });
+    }
+
     // ----- editor affordance -----
 
     [Fact]

@@ -203,9 +203,10 @@ internal sealed class ArpeggioGreen : GreenSyntaxNode
         GreenNode?[] members,
         SyntaxToken closeAngles,
         GreenNode?[] octaveMarks,
-        DurationGreen? totalDuration)
+        DurationGreen? totalDuration,
+        GreenNode?[] articulations)
         : base(SyntaxKind.Arpeggio,
-            [openAngles, .. members, closeAngles, .. octaveMarks, totalDuration])
+            [openAngles, .. members, closeAngles, .. octaveMarks, totalDuration, .. articulations])
     {
     }
 }

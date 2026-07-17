@@ -536,6 +536,21 @@ public sealed class ArpeggioSyntax : SyntaxNode
             return null;
         }
     }
+
+    /// <summary>The articulations, dynamics, and music marks attached after the
+    /// closing <c>&gt;&gt;</c> (<c>&lt;&lt; c e g &gt;&gt;@chord</c>), like a chord's.</summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                    yield return child;
+            }
+        }
+    }
 }
 
 public sealed class ChordSyntax : SyntaxNode

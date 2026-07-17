@@ -416,7 +416,10 @@ internal sealed partial class Parser
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
             octaveMarks.Add(Advance());
         var totalDuration = ParseOptionalDuration();
-        return new ArpeggioGreen(open, [.. members], close, [.. octaveMarks], totalDuration);
+        // Post-events attach to the group like a chord's ('<< c e g >>@chord' —
+        // the auto chord name derives from the members).
+        var articulations = ParsePostEvents();
+        return new ArpeggioGreen(open, [.. members], close, [.. octaveMarks], totalDuration, articulations);
     }
 
     /// <summary>True when the <c>&lt;&lt; … &gt;&gt;</c> starting at the cursor contains a

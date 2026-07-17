@@ -74,6 +74,37 @@ public sealed class ChordAutoNameTests
         Assert.Equal("D7", AutoName("<d 3 5 7>", key: "g major"));
     }
 
+    [Theory]
+    [InlineData("<< c e g >>", "C")]        // pitches
+    [InlineData("<< c g e >>", "C")]        // order-independent members
+    [InlineData("<< d f a c >>", "Dm7")]
+    [InlineData("<< c 3 5 >>", "C")]        // root + degrees
+    [InlineData("<< 1 3 5 >>", "C")]        // degree-opened: anchored on the tonic
+    [InlineData("<< 8 5 3 1 >>", "C")]      // a descending figure names the same
+    [InlineData("<< 2 4 6 >>", "Dm")]       // named from its first degree, like <2 4 6>
+    [InlineData("<< <c e> g >>", "C")]      // a nested chord contributes its pitches
+    public void BareChord_NamesArpeggios(string arpeggio, string expected)
+        => Assert.Equal(expected, AutoName(arpeggio));
+
+    [Fact]
+    public void ArpeggioName_FollowsTheKey()
+    {
+        // << d 3 5 7 >> is Dm7 in C (F natural) but D7 in G (F♯), like the chord.
+        Assert.Equal("Dm7", AutoName("<< d 3 5 7 >>", key: "c major"));
+        Assert.Equal("D7", AutoName("<< d 3 5 7 >>", key: "g major"));
+    }
+
+    [Fact]
+    public void UnrecognizedArpeggio_ProducesNoSymbol_AndWarns()
+    {
+        Assert.Null(AutoName("<< c cis d >>")); // a cluster matches no quality
+        // The pure named-pitch case is key-independent, so LYS1020 warns statically.
+        Assert.Contains(
+            LilySharp.Core.Semantics.SemanticValidation.Run(
+                SyntaxTree.Parse("{ << c cis d >>@chord }")),
+            d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordNotRecognized);
+    }
+
     [Fact]
     public void UnrecognizedChord_ProducesNoSymbol()
     {

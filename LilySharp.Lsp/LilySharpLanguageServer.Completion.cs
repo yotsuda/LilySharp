@@ -51,6 +51,11 @@ public sealed partial class LilySharpLanguageServer
     [GeneratedRegex(@"^[a-g](is|es|isis|eses)?$")]
     private static partial Regex BareNoteNameRegex();
 
+    // A chord/arpeggio member pitch token — letter + glued accidental + octave
+    // marks (cis''). Used by the @chord completion's auto-name check.
+    [GeneratedRegex(@"^([a-g])(isis|eses|is|es)?[',]*$")]
+    private static partial Regex ChordMemberPitchRegex();
+
     [GeneratedRegex(@"\bclef\s*:?\s*percussion\b")]
     private static partial Regex PercussionClefRegex();
 
@@ -138,7 +143,11 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
-            CompletionContext.AfterAt => GetArticulationCompletions(AtFollowsChord(doc.Text, offset)),
+            // The bare-@chord item is offered only when the group before the '@'
+            // will actually auto-name; an unrecognizable one falls back to the
+            // note form — @chord() with the caret inside the parens.
+            CompletionContext.AfterAt => GetArticulationCompletions(
+                AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
             CompletionContext.AfterArticulationPlacement => GetArticulationPlacementCompletions(doc.Text, offset, position),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -2411,22 +2420,81 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// True when the <c>@</c> being completed is attached to a chord (the nearest
-    /// non-space char before it is <c>&gt;</c>). A bare <c>@chord</c> on a chord
-    /// auto-derives the symbol, so it is offered WITHOUT the <c>(…)</c> the note
-    /// form needs.
+    /// True when the <c>@</c> being completed is attached to a chord or a
+    /// <c>&lt;&lt; &gt;&gt;</c> arpeggio (the nearest char before it, past any
+    /// duration/tremolo like <c>&gt;4</c> / <c>&gt;4:8</c>, is <c>&gt;</c>). A bare
+    /// <c>@chord</c> there auto-derives the symbol, so it is offered WITHOUT the
+    /// <c>(…)</c> the note form needs.
     /// </summary>
-    private static bool AtFollowsChord(string text, int offset)
+    internal static bool AtFollowsChord(string text, int offset)
+        => ChordCloseBeforeAt(text, offset) >= 0;
+
+    /// <summary>The offset of the closing <c>&gt;</c> of the chord/arpeggio the
+    /// <c>@</c> at/behind <paramref name="offset"/> attaches to, or -1.</summary>
+    private static int ChordCloseBeforeAt(string text, int offset)
     {
         int i = offset - 1;
         while (i >= 0 && char.IsWhiteSpace(text[i])) i--;
         // Skip a partial annotation word already typed after '@' (e.g. '@cho').
         if (i >= 0 && text[i] != '@')
             while (i >= 0 && (char.IsLetterOrDigit(text[i]) || text[i] == '-')) i--;
-        if (i < 0 || text[i] != '@') return false;
+        if (i < 0 || text[i] != '@') return -1;
         int j = i - 1;
-        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-        return j >= 0 && text[j] == '>';
+        // The duration (and a :N tremolo) sit between the '>' and the '@'.
+        while (j >= 0 && (char.IsWhiteSpace(text[j]) || char.IsDigit(text[j])
+            || text[j] == '.' || text[j] == ':')) j--;
+        return j >= 0 && text[j] == '>' ? j : -1;
+    }
+
+    /// <summary>
+    /// Whether the chord/arpeggio before the <c>@</c> will auto-name under a bare
+    /// <c>@chord</c>. The same stance as AnnotationNameValidator.CanNameChord: only
+    /// pure named-pitch members are checked (key-independent); degrees or anything
+    /// this textual scan can't read are assumed nameable (the collector's call).
+    /// </summary>
+    internal static bool GroupBeforeAtAutoNames(string text, int offset)
+    {
+        int j = ChordCloseBeforeAt(text, offset);
+        if (j < 0) return true;
+        // The group body: between this '>' (an arpeggio's '>>' starts one char
+        // earlier) and its matching '<', bounded by the measure.
+        int close = j > 0 && text[j - 1] == '>' ? j - 1 : j;
+        int open = -1, depth = 0;
+        for (int k = close - 1; k >= 0; k--)
+        {
+            char c = text[k];
+            if (c == '|' || c == '{' || c == '}') break;
+            if (c == '>') depth++;
+            else if (c == '<')
+            {
+                if (depth > 0) depth--;
+                else { open = k; break; }
+            }
+        }
+        if (open < 0) return true;
+
+        // Tokenize the members; nested chord brackets dissolve (their pitches
+        // count like any member's).
+        var body = text.Substring(open + 1, close - open - 1).Replace('<', ' ').Replace('>', ' ');
+        int rootStep = -1, rootAlter = 0;
+        var pcs = new System.Collections.Generic.List<int>();
+        foreach (var token in body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var m = ChordMemberPitchRegex().Match(token);
+            if (m.Success)
+            {
+                int step = LilySharp.Core.Semantics.RelativeOctave.StepIndex(m.Groups[1].Value[0]);
+                int alter = m.Groups[2].Value switch
+                { "is" => 1, "isis" => 2, "es" => -1, "eses" => -2, _ => 0 };
+                if (rootStep < 0) { rootStep = step; rootAlter = alter; }
+                pcs.Add(LilySharp.Core.Semantics.RelativeOctave.StepSemitoneOf(step) + alter);
+                continue;
+            }
+            if (token is "r" or "s" or "R") continue;              // a rest is a gap
+            return true; // a degree (key-dependent) or unreadable — don't second-guess
+        }
+        if (rootStep < 0) return true; // nothing to derive from
+        return LilySharp.Core.Music.ChordStructure.TryRecognize(rootStep, rootAlter, pcs, out _);
     }
 
     internal static CompletionList GetArticulationCompletions(bool afterChord = false)

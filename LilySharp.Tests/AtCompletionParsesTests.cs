@@ -86,4 +86,35 @@ public class AtCompletionParsesTests
         var tree = SyntaxTree.Parse("{ <c e g>@chord }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
+
+    // ----- which chord form the '@' completion offers -----
+
+    private static bool AutoNames(string source)
+    {
+        int at = source.IndexOf('@') + 1;
+        return LilySharpLanguageServer.AtFollowsChord(source, at)
+            && LilySharpLanguageServer.GroupBeforeAtAutoNames(source, at);
+    }
+
+    [Theory]
+    [InlineData("{ <c e g>@ }")]          // recognizable chord → bare @chord
+    [InlineData("{ <c e g>4@ }")]         // duration between '>' and '@'
+    [InlineData("{ <d f a c>@ }")]
+    [InlineData("{ << c e g >>@ }")]      // arpeggio auto-names the same way
+    [InlineData("{ << c e g >>4@ }")]
+    [InlineData("{ <c 3 5>@ }")]          // degrees: key-dependent → collector's call
+    [InlineData("{ << <c e> g >>@ }")]    // nested chord member
+    public void RecognizableGroup_OffersBareChord(string source)
+        => Assert.True(AutoNames(source));
+
+    [Theory]
+    [InlineData("{ <c cis d>@ }")]        // a cluster: no known quality
+    [InlineData("{ <c>@ }")]              // a single pitch derives nothing
+    [InlineData("{ << c cis d >>@ }")]
+    public void UnrecognizableGroup_FallsBackToParenForm(string source)
+        => Assert.False(AutoNames(source));
+
+    [Fact]
+    public void NoteBeforeAt_IsNotAChord()
+        => Assert.False(LilySharpLanguageServer.AtFollowsChord("{ c4@ }", 5));
 }

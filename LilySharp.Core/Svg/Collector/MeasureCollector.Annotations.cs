@@ -74,12 +74,18 @@ public sealed partial class MeasureCollector
                 continue;
 
             // Bare '@chord' auto-derives the symbol from the notes it's on. On a
-            // chord we recognize it; on a single note there is nothing to derive
-            // (the @chord() completion state), so it shows nothing.
+            // chord (or a << >> arpeggio — a broken chord names the same way) we
+            // recognize it; on a single note there is nothing to derive (the
+            // @chord() completion state), so it shows nothing.
             if (markSyntax.MarkName == "chord")
             {
-                if (node is ChordSyntax autoChord
-                    && TryNameChord(autoChord, out var derived) && derived != null)
+                ChordStructure? derived = node switch
+                {
+                    ChordSyntax autoChord when TryNameChord(autoChord, out var s) => s,
+                    ArpeggioSyntax arp when TryNameArpeggio(arp, out var s) => s,
+                    _ => null,
+                };
+                if (derived != null)
                     _chordNameCollector.AddInline(derived.DisplayName, measureIndex, itemIndex,
                         markSyntax.Position, _currentStaffIndex, derived);
                 continue;
@@ -145,6 +151,69 @@ public sealed partial class MeasureCollector
         }
 
         return ChordStructure.TryRecognize(recogStep, recogAlter, pcs, out structure);
+    }
+
+    /// <summary>
+    /// Derives a chord symbol from a broken chord's members, the way
+    /// <see cref="TryNameChord"/> does for a stacked chord: the naming root is the
+    /// FIRST sounding member; every member (a nested chord contributes its pitches,
+    /// a degree resolves against the anchor in the written key) gives a pitch class.
+    /// The anchor for degrees = the first pitched member, or the key tonic when the
+    /// group opens with degrees — the same rule the octave semantics use.
+    /// </summary>
+    private bool TryNameArpeggio(ArpeggioSyntax arp, out ChordStructure? structure)
+    {
+        structure = null;
+        int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
+        var members = arp.Members
+            .Where(m => m is PitchSyntax or ChordSyntax or ScaleDegreeSyntax).ToList();
+        if (members.Count == 0)
+            return false;
+
+        var firstPitch = members
+            .Select(m => m switch { PitchSyntax p => p, ChordSyntax c => c.Root, _ => null })
+            .FirstOrDefault(p => p != null);
+        int anchorStep;
+        if (members[0] is ScaleDegreeSyntax || firstPitch is null)
+            anchorStep = _ambientTonicValid ? _ambientTonicStep : 0;
+        else
+            anchorStep = GetPitchIndex(firstPitch.PitchName.ToLowerInvariant()[0]);
+
+        var pcs = new List<int>();
+        int recogStep = -1, recogAlter = 0;
+        void Add(int step, int alter)
+        {
+            if (recogStep < 0) { recogStep = step; recogAlter = alter; }
+            pcs.Add(RelativeOctave.StepSemitoneOf(step) + alter);
+        }
+        void AddPitch(PitchSyntax p) =>
+            Add(GetPitchIndex(p.PitchName.ToLowerInvariant()[0]), p.AccidentalOffset);
+        void AddDegree(ScaleDegreeSyntax d, int rootStep)
+        {
+            var (s, alter, _) = ChordDegrees.Resolve(
+                rootStep, 4, d.Number, d.Alteration, d.OctaveOffset, keySharps);
+            Add(s, alter);
+        }
+
+        foreach (var member in members)
+        {
+            switch (member)
+            {
+                case PitchSyntax p:
+                    AddPitch(p);
+                    break;
+                case ChordSyntax c:
+                    foreach (var p in c.Pitches) AddPitch(p);
+                    int cRoot = c.Root is { } r
+                        ? GetPitchIndex(r.PitchName.ToLowerInvariant()[0]) : anchorStep;
+                    foreach (var d in c.Degrees) AddDegree(d, cRoot);
+                    break;
+                case ScaleDegreeSyntax d:
+                    AddDegree(d, anchorStep);
+                    break;
+            }
+        }
+        return recogStep >= 0 && ChordStructure.TryRecognize(recogStep, recogAlter, pcs, out structure);
     }
 
     /// <summary>

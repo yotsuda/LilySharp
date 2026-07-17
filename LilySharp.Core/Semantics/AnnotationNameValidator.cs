@@ -116,6 +116,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this chord — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(c:maj7).");
+                else if (name == "chord" && mark.Parent is ArpeggioSyntax arp && !CanNameArpeggio(arp))
+                    _diagnostics.Warning(
+                        arp.Span,
+                        DiagnosticCodes.ChordNotRecognized,
+                        "@chord can't name this arpeggio — its notes match no known chord quality; "
+                        + "use the explicit form, e.g. @chord(c:maj7).");
                 break;
             }
         }
@@ -206,6 +212,40 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             RelativeOctave.StepSemitoneOf(RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]))
             + p.AccidentalOffset);
         return ChordStructure.TryRecognize(rootStep, chord.Root.AccidentalOffset, pcs, out _);
+    }
+
+    /// <summary>
+    /// Whether a bare <c>@chord</c> can auto-name this broken chord. The same
+    /// stance as <see cref="CanNameChord"/>: only pure named-pitch members (a
+    /// nested chord contributes its pitches) are checked key-independently; any
+    /// scale degree defers to the collector and is never warned here.
+    /// </summary>
+    private static bool CanNameArpeggio(ArpeggioSyntax arp)
+    {
+        var pitches = new List<PitchSyntax>();
+        foreach (var member in arp.Members)
+        {
+            switch (member)
+            {
+                case ScaleDegreeSyntax:
+                    return true; // key-dependent — the collector's call
+                case PitchSyntax p:
+                    pitches.Add(p);
+                    break;
+                case ChordSyntax c:
+                    if (c.Degrees.Any())
+                        return true;
+                    pitches.AddRange(c.Pitches);
+                    break;
+            }
+        }
+        if (pitches.Count == 0)
+            return true; // nothing to derive from — the collector shows nothing
+        int rootStep = RelativeOctave.StepIndex(pitches[0].PitchName.ToLowerInvariant()[0]);
+        var pcs = pitches.Select(p =>
+            RelativeOctave.StepSemitoneOf(RelativeOctave.StepIndex(p.PitchName.ToLowerInvariant()[0]))
+            + p.AccidentalOffset);
+        return ChordStructure.TryRecognize(rootStep, pitches[0].AccidentalOffset, pcs, out _);
     }
 
     private void WarnUnknown(SyntaxNode node, string name)
