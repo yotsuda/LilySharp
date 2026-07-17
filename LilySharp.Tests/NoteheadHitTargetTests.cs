@@ -84,6 +84,26 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void BarlineDataPosPointsAtTheBarlineInk_NotTheSpaceBeforeIt()
+    {
+        // The caret->preview highlight matches an element whose data-pos is >= the
+        // caret token's INK start; a click jumps the editor to data-pos. So a
+        // barline's data-pos must be the '|' character's offset, not the whitespace
+        // in front of it — otherwise the highlight guard rejects it and a click
+        // lands on the space.
+        const string src = "part m { clef treble section A { c'1 | d'1 } }\n"
+                         + "form main { A }\nscore main \"s\" { staff m }";
+        int barPos = src.IndexOf('|', src.IndexOf("c'1")); // the mid-measure '|'
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
+
+        var barHits = Regex.Matches(svg,
+                "<rect class=\"nh-hit\" x=\"-?[\\d.]+\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[-\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
+            .Cast<Match>().Where(h => double.Parse(h.Groups[1].Value) < 1.2).ToList();
+        Assert.NotEmpty(barHits);
+        Assert.Contains(barHits, h => int.Parse(h.Groups[2].Value) == barPos);
+    }
+
+    [Fact]
     public void StaticSvgHasNoHitRectsAndNoPointerEvents()
     {
         var svg = Render(SvgRenderOptions.Default);

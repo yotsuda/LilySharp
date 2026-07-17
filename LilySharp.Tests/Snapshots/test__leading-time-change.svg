@@ -33,9 +33,9 @@
   <line x1="25.35" y1="16.76" x2="25.35" y2="13.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.11" y="16.41" font-size="4.00" data-pos="423"></text>
   <line x1="28.35" y1="16.26" x2="28.35" y2="12.91" stroke="#000000" stroke-width="0.130"/>
-  <rect x="18.97" y="12.41" width="0.19" height="4.00" data-pos="415"/>
-  <rect x="30.22" y="12.41" width="0.19" height="4.00" data-pos="424"/>
-  <rect x="30.71" y="12.41" width="0.60" height="4.00" data-pos="424"/>
+  <rect x="18.97" y="12.41" width="0.19" height="4.00" data-pos="416"/>
+  <rect x="30.22" y="12.41" width="0.19" height="4.00" data-pos="425"/>
+  <rect x="30.71" y="12.41" width="0.60" height="4.00" data-pos="425"/>
   <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="371"/>
   <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="371">Main</text>
   </g>

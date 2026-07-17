@@ -103,6 +103,12 @@ internal sealed class MeasureBuilder
     // is always a visible `| |` pair; a single bare `|` never creates one. See
     // HandleBarline.
     private bool _confirmableBoundary = true;
+    // True when the confirmable boundary is an AUTO-FILL close (the last note filled the
+    // bar) rather than a section/phrase start. A written `|` that confirms it then
+    // retargets the measure's SourceEnd to the barline, so the barline's click/highlight
+    // lands on the `|` and not on the note that happened to fill the bar. Cleared at
+    // section/phrase starts so a leading `|` there never retargets a prior measure.
+    private bool _boundaryFromAutoFill;
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
@@ -184,7 +190,13 @@ internal sealed class MeasureBuilder
     /// OPENS with a bare <c>|</c> anchors its own start boundary (no empty measure),
     /// regardless of how the previous section's last bar was closed. See
     /// <see cref="_confirmableBoundary"/>.</summary>
-    public void ResetMeasureBoundary() => _confirmableBoundary = true;
+    public void ResetMeasureBoundary()
+    {
+        // A section/phrase start re-arms the boundary as an ANCHOR (a leading `|` just
+        // confirms the start), never a retargetable auto-fill of a prior measure.
+        _confirmableBoundary = true;
+        _boundaryFromAutoFill = false;
+    }
 
     /// <summary>
     /// Declares the current (in-progress) measure a pickup of <paramref name="length"/>:
@@ -342,6 +354,9 @@ internal sealed class MeasureBuilder
         // bare barline is the second of a `| |` pair and opens a placeholder measure. See
         // HandleBarline.
         ResetPerMeasureState(sourceEnd, confirmableBoundary: !explicitBar);
+        // The confirmable boundary an auto-fill leaves is RETARGETABLE: a following
+        // written barline moves this measure's end onto it (see HandleBarline).
+        _boundaryFromAutoFill = !explicitBar;
     }
 
     /// <summary>
@@ -361,6 +376,9 @@ internal sealed class MeasureBuilder
     private void ResetPerMeasureState(int sourceEnd, bool confirmableBoundary)
     {
         _confirmableBoundary = confirmableBoundary;
+        // Only EmitMeasure(auto) re-arms this immediately after; every other reset
+        // (explicit close, empty placeholder) leaves a non-retargetable boundary.
+        _boundaryFromAutoFill = false;
         _currentItems.Clear();
         _sectionLabel = null;
         _sectionLabelPosition = 0;
@@ -433,16 +451,31 @@ internal sealed class MeasureBuilder
             // A TYPED barline (":|", "||", "|.") on an empty span decorates the PREVIOUS
             // measure's end — retro-apply it, never an empty placeholder (the common
             // final / double-bar / repeat-end case, incl. a phrase that already ended
-            // with a plain `|` before the form's ":|").
-            _measures[^1] = _measures[^1] with { EndBarline = endType };
+            // with a plain `|` before the form's ":|"). When it confirms an AUTO-FILLED
+            // close, retarget SourceEnd to the written barline so a click/highlight lands
+            // on it, not on the note that filled the bar.
+            _measures[^1] = _measures[^1] with
+            {
+                EndBarline = endType,
+                SourceEnd = _boundaryFromAutoFill ? position : _measures[^1].SourceEnd,
+            };
             _confirmableBoundary = false;
+            _boundaryFromAutoFill = false;
         }
         else if (_confirmableBoundary)
         {
             // A bare `|` merely CONFIRMS the boundary it sits on — the section start
             // (a leading `|`) or a measure auto-fill just closed. No new measure; it
             // consumes the confirmation (a FURTHER bare `|` would be a `| |` pair).
+            // On an auto-fill close, retarget the measure's boundary to the written `|`
+            // so its click/highlight points at the barline, not the bar-filling note.
+            if (_boundaryFromAutoFill && _measures.Count > 0)
+            {
+                _measures[^1] = _measures[^1] with { SourceEnd = position };
+                _measureSourceStart = position;
+            }
             _confirmableBoundary = false;
+            _boundaryFromAutoFill = false;
         }
         else
         {

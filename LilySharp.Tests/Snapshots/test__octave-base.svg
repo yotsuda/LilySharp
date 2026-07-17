@@ -48,11 +48,11 @@
   <line x1="58.22" y1="16.72" x2="58.22" y2="20.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="61.09" y="17.07" font-size="4.00" data-pos="646"></text>
   <line x1="62.33" y1="16.92" x2="62.33" y2="13.57" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.49" y="14.57" width="0.19" height="4.00" data-pos="615"/>
-  <rect x="35.25" y="14.57" width="0.19" height="4.00" data-pos="625"/>
-  <rect x="50.01" y="14.57" width="0.19" height="4.00" data-pos="637"/>
-  <rect x="64.20" y="14.57" width="0.19" height="4.00" data-pos="647"/>
-  <rect x="64.69" y="14.57" width="0.60" height="4.00" data-pos="647"/>
+  <rect x="20.49" y="14.57" width="0.19" height="4.00" data-pos="616"/>
+  <rect x="35.25" y="14.57" width="0.19" height="4.00" data-pos="627"/>
+  <rect x="50.01" y="14.57" width="0.19" height="4.00" data-pos="638"/>
+  <rect x="64.20" y="14.57" width="0.19" height="4.00" data-pos="648"/>
+  <rect x="64.69" y="14.57" width="0.60" height="4.00" data-pos="648"/>
   <rect x="0.30" y="10.77" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="584"/>
   <text x="3.01" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="584">Main</text>
   </g>

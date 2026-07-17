@@ -177,10 +177,10 @@
   <text class="music" x="94.52" y="32.31" font-size="4.00" data-pos="816"></text>
   <text class="music" x="97.81" y="25.31" font-size="4.00" data-pos="819"></text>
   <rect x="28.38" y="34.31" width="0.19" height="4.00" data-pos="705"/>
-  <rect x="51.35" y="34.31" width="0.19" height="4.00" data-pos="705"/>
-  <rect x="74.31" y="34.31" width="0.19" height="4.00" data-pos="720"/>
-  <rect x="100.96" y="34.31" width="0.19" height="4.00" data-pos="820"/>
-  <rect x="101.45" y="34.31" width="0.60" height="4.00" data-pos="820"/>
+  <rect x="51.35" y="34.31" width="0.19" height="4.00" data-pos="708"/>
+  <rect x="74.31" y="34.31" width="0.19" height="4.00" data-pos="721"/>
+  <rect x="100.96" y="34.31" width="0.19" height="4.00" data-pos="823"/>
+  <rect x="101.45" y="34.31" width="0.60" height="4.00" data-pos="823"/>
   <line x1="77.63" y1="36.12" x2="85.78" y2="35.49" stroke="#000000" stroke-width="0.480"/>
   <line x1="77.69" y1="39.16" x2="77.69" y2="36.12" stroke="#000000" stroke-width="0.130"/>
   <line x1="80.73" y1="39.16" x2="80.73" y2="35.88" stroke="#000000" stroke-width="0.130"/>

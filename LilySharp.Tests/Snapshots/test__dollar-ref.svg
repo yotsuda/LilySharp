@@ -78,13 +78,13 @@
   <line x1="90.13" y1="20.96" x2="90.13" y2="17.61" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="92.32" y="17.11" font-size="4.00" data-pos="241"></text>
   <line x1="92.39" y1="17.26" x2="92.39" y2="20.61" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.42" y="15.61" width="0.19" height="4.00" data-pos="213"/>
-  <rect x="35.61" y="15.61" width="0.19" height="4.00" data-pos="242"/>
-  <rect x="51.22" y="15.61" width="0.19" height="4.00" data-pos="272"/>
-  <rect x="65.98" y="15.61" width="0.19" height="4.00" data-pos="213"/>
-  <rect x="80.74" y="15.61" width="0.19" height="4.00" data-pos="213"/>
-  <rect x="95.43" y="15.61" width="0.19" height="4.00" data-pos="242"/>
-  <rect x="95.92" y="15.61" width="0.60" height="4.00" data-pos="242"/>
+  <rect x="20.42" y="15.61" width="0.19" height="4.00" data-pos="214"/>
+  <rect x="35.61" y="15.61" width="0.19" height="4.00" data-pos="244"/>
+  <rect x="51.22" y="15.61" width="0.19" height="4.00" data-pos="274"/>
+  <rect x="65.98" y="15.61" width="0.19" height="4.00" data-pos="214"/>
+  <rect x="80.74" y="15.61" width="0.19" height="4.00" data-pos="214"/>
+  <rect x="95.43" y="15.61" width="0.19" height="4.00" data-pos="244"/>
+  <rect x="95.92" y="15.61" width="0.60" height="4.00" data-pos="244"/>
   <rect x="0.30" y="10.77" width="4.92" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
   <text x="2.76" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
   <text class="music" x="6.02" y="12.97" font-size="1.60" data-pos="0"></text>

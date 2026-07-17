@@ -26,8 +26,8 @@
   <text class="music" x="18.43" y="14.41" font-size="4.00" data-pos="586"></text>
   <text class="music" x="19.67" y="13.91" font-size="4.00" data-pos="588"></text>
   <line x1="19.73" y1="14.06" x2="19.73" y2="17.91" stroke="#000000" stroke-width="0.130"/>
-  <rect x="22.78" y="12.41" width="0.19" height="4.00" data-pos="586"/>
-  <rect x="23.27" y="12.41" width="0.60" height="4.00" data-pos="586"/>
+  <rect x="22.78" y="12.41" width="0.19" height="4.00" data-pos="601"/>
+  <rect x="23.27" y="12.41" width="0.60" height="4.00" data-pos="601"/>
   <line x1="6.45" y1="16.51" x2="6.30" y2="16.62" stroke="#000000" stroke-width="0.100" data-pos="535"/>
   <line x1="6.30" y1="16.62" x2="6.25" y2="16.72" stroke="#000000" stroke-width="0.100" data-pos="535"/>
   <line x1="6.25" y1="16.72" x2="6.30" y2="16.83" stroke="#000000" stroke-width="0.100" data-pos="535"/>

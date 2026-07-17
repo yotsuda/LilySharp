@@ -35,9 +35,9 @@
   <rect x="28.88" y="15.61" width="0.19" height="4.00" data-pos="760"/>
   <rect x="43.84" y="15.61" width="0.19" height="4.00" data-pos="760"/>
   <rect x="56.70" y="15.61" width="0.19" height="4.00" data-pos="760"/>
-  <rect x="68.41" y="15.61" width="0.19" height="4.00" data-pos="760"/>
-  <rect x="82.70" y="15.61" width="0.19" height="4.00" data-pos="782"/>
-  <rect x="83.19" y="15.61" width="0.60" height="4.00" data-pos="782"/>
+  <rect x="68.41" y="15.61" width="0.19" height="4.00" data-pos="768"/>
+  <rect x="82.70" y="15.61" width="0.19" height="4.00" data-pos="783"/>
+  <rect x="83.19" y="15.61" width="0.60" height="4.00" data-pos="783"/>
   <line x1="10.50" y1="26.11" x2="83.79" y2="26.11" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.50" y1="27.11" x2="83.79" y2="27.11" stroke="#000000" stroke-width="0.100"/>
   <line x1="10.50" y1="28.11" x2="83.79" y2="28.11" stroke="#000000" stroke-width="0.100"/>
@@ -78,12 +78,12 @@
   <text class="music" x="78.67" y="27.11" font-size="4.00" data-pos="843"></text>
   <text class="music" x="79.59" y="27.11" font-size="4.00" data-pos="843"></text>
   <line x1="79.66" y1="27.26" x2="79.66" y2="30.61" stroke="#000000" stroke-width="0.130"/>
-  <rect x="28.88" y="26.11" width="0.19" height="4.00" data-pos="804"/>
-  <rect x="43.84" y="26.11" width="0.19" height="4.00" data-pos="815"/>
-  <rect x="56.70" y="26.11" width="0.19" height="4.00" data-pos="826"/>
-  <rect x="68.41" y="26.11" width="0.19" height="4.00" data-pos="833"/>
-  <rect x="82.70" y="26.11" width="0.19" height="4.00" data-pos="844"/>
-  <rect x="83.19" y="26.11" width="0.60" height="4.00" data-pos="844"/>
+  <rect x="28.88" y="26.11" width="0.19" height="4.00" data-pos="805"/>
+  <rect x="43.84" y="26.11" width="0.19" height="4.00" data-pos="816"/>
+  <rect x="56.70" y="26.11" width="0.19" height="4.00" data-pos="827"/>
+  <rect x="68.41" y="26.11" width="0.19" height="4.00" data-pos="834"/>
+  <rect x="82.70" y="26.11" width="0.19" height="4.00" data-pos="845"/>
+  <rect x="83.19" y="26.11" width="0.60" height="4.00" data-pos="845"/>
   <path d="M 47.59,30.86 C 48.19,31.62 49.62,31.62 50.21,30.86 C 49.62,31.39 48.19,31.39 47.59,30.86 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="10.80" y="10.77" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="733"/>
   <text x="13.51" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="733">Main</text>

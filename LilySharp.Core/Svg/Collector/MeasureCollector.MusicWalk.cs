@@ -517,7 +517,10 @@ public sealed partial class MeasureCollector
 
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
-                builder.HandleBarline(barType, barline.Position);
+                // Pass the '|' token's INK offset (not barline.Position, which includes
+                // leading trivia) so the barline's click/highlight data-pos lands on the
+                // written bar, not the whitespace before it.
+                builder.HandleBarline(barType, barline.BarToken.Span.Start);
                 break;
 
             case InlineVoltaSyntax volta:

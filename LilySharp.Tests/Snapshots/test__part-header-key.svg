@@ -33,7 +33,7 @@
   <line x1="30.75" y1="13.79" x2="30.75" y2="17.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="33.69" y="13.14" font-size="4.00" data-pos="56"></text>
   <line x1="33.75" y1="13.29" x2="33.75" y2="16.64" stroke="#000000" stroke-width="0.130"/>
-  <rect x="22.47" y="11.64" width="0.19" height="4.00" data-pos="47"/>
+  <rect x="22.47" y="11.64" width="0.19" height="4.00" data-pos="48"/>
   <rect x="36.80" y="11.64" width="0.19" height="4.00" data-pos="57"/>
   <rect x="37.29" y="11.64" width="0.60" height="4.00" data-pos="57"/>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="28"/>

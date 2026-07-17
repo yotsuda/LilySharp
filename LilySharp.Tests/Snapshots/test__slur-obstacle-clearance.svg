@@ -32,8 +32,8 @@
   <line x1="13.87" y1="9.56" x2="13.87" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="16.56" y="10.41" font-size="4.00" data-pos="428"></text>
   <line x1="16.62" y1="10.56" x2="16.62" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <rect x="19.67" y="12.41" width="0.19" height="4.00" data-pos="429"/>
-  <rect x="20.16" y="12.41" width="0.60" height="4.00" data-pos="429"/>
+  <rect x="19.67" y="12.41" width="0.19" height="4.00" data-pos="434"/>
+  <rect x="20.16" y="12.41" width="0.60" height="4.00" data-pos="434"/>
   <path d="M 8.10,8.51 C 9.69,7.31 14.67,7.31 16.26,8.51 C 14.67,7.04 9.69,7.04 8.10,8.51 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="391"/>
   <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="391">Main</text>

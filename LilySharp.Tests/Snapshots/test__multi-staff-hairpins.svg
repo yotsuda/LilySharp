@@ -24,9 +24,9 @@
   <line x1="27.70" y1="13.91" x2="27.70" y2="17.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.91" y="13.91" font-size="4.00" data-pos="602"></text>
   <line x1="31.98" y1="13.91" x2="31.98" y2="17.41" stroke="#000000" stroke-width="0.130"/>
-  <rect x="25.46" y="12.41" width="0.19" height="4.00" data-pos="591"/>
-  <rect x="36.29" y="12.41" width="0.19" height="4.00" data-pos="603"/>
-  <rect x="36.78" y="12.41" width="0.60" height="4.00" data-pos="603"/>
+  <rect x="25.46" y="12.41" width="0.19" height="4.00" data-pos="594"/>
+  <rect x="36.29" y="12.41" width="0.19" height="4.00" data-pos="606"/>
+  <rect x="36.78" y="12.41" width="0.60" height="4.00" data-pos="606"/>
   <line x1="8.50" y1="22.91" x2="37.38" y2="22.91" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="23.91" x2="37.38" y2="23.91" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="24.91" x2="37.38" y2="24.91" stroke="#000000" stroke-width="0.100"/>
@@ -46,9 +46,9 @@
   <line x1="27.70" y1="21.91" x2="27.70" y2="25.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.91" y="21.91" font-size="4.00" data-pos="635"></text>
   <line x1="31.98" y1="21.91" x2="31.98" y2="25.41" stroke="#000000" stroke-width="0.130"/>
-  <rect x="25.46" y="22.91" width="0.19" height="4.00" data-pos="626"/>
-  <rect x="36.29" y="22.91" width="0.19" height="4.00" data-pos="636"/>
-  <rect x="36.78" y="22.91" width="0.60" height="4.00" data-pos="636"/>
+  <rect x="25.46" y="22.91" width="0.19" height="4.00" data-pos="628"/>
+  <rect x="36.29" y="22.91" width="0.19" height="4.00" data-pos="638"/>
+  <rect x="36.78" y="22.91" width="0.60" height="4.00" data-pos="638"/>
   <text x="27.64" y="19.21" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="599">f</text>
   <text x="27.64" y="28.81" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">p</text>
   <line x1="21.07" y1="20.30" x2="27.14" y2="19.63" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="583"/>

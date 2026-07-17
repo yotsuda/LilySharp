@@ -41,11 +41,11 @@
   <text class="music" x="42.90" y="19.72" font-size="4.00" data-pos="326"></text>
   <line x1="44.14" y1="19.57" x2="44.14" y2="15.22" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.99" y="18.22" font-size="4.00" data-pos="330"></text>
-  <rect x="20.42" y="13.22" width="0.19" height="4.00" data-pos="284"/>
-  <rect x="31.75" y="13.22" width="0.19" height="4.00" data-pos="291"/>
-  <rect x="46.51" y="13.22" width="0.19" height="4.00" data-pos="327"/>
-  <rect x="55.15" y="13.22" width="0.19" height="4.00" data-pos="331"/>
-  <rect x="55.64" y="13.22" width="0.60" height="4.00" data-pos="331"/>
+  <rect x="20.42" y="13.22" width="0.19" height="4.00" data-pos="285"/>
+  <rect x="31.75" y="13.22" width="0.19" height="4.00" data-pos="292"/>
+  <rect x="46.51" y="13.22" width="0.19" height="4.00" data-pos="328"/>
+  <rect x="55.15" y="13.22" width="0.19" height="4.00" data-pos="333"/>
+  <rect x="55.64" y="13.22" width="0.60" height="4.00" data-pos="333"/>
   <rect x="0.30" y="8.38" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
   <text x="1.29" y="10.58" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
   <rect x="31.94" y="6.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
