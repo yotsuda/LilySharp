@@ -77,4 +77,19 @@ public class DurationAdjacencyTests
             .SelectMany(m => m.Items).OfType<ChordItem>().First();
         Assert.Equal(new[] { 60, 64, 67 }, chord.Notes.Select(n => n.Midi).ToArray());
     }
+
+    [Fact]
+    public void ErroneousSource_StillRendersBestEffort()
+    {
+        // The preview's contract: a file with parse errors renders whatever DID
+        // parse (the CLI, by contrast, gates on errors and writes nothing). The
+        // erroneous chord keeps its real notes and the following music survives.
+        var src = "part m { clef treble }\n"
+                + "section A { m { <c e g2>2 d 4 e2 } }\n"
+                + "form main { A }\nscore main { staff m }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.True(tree.HasErrors); // LYS0015 + LYS0016 are both in there
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree);
+        Assert.Contains("data-pos", svg); // real engraved content, not a blank page
+    }
 }

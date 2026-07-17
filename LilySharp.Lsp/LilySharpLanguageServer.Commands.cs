@@ -175,9 +175,15 @@ public sealed partial class LilySharpLanguageServer
         // Extract render definitions
         var renders = ExtractRenderInfo(tree);
 
+        // Best-effort policy: a tree with parse errors still renders — the parser's
+        // recovery drops the offending tokens, so the score that DID parse is shown
+        // and the error text rides along for the preview's banner. Only when the
+        // render itself fails does the response carry the error alone, and the
+        // viewer falls back to its last good picture (dimmed, client-side).
+        string? errorText = null;
         if (tree.HasErrors)
         {
-            var errors = string.Join("\n", tree.Diagnostics
+            errorText = string.Join("\n", tree.Diagnostics
                 .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
                 .Select(d => {
                     var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
@@ -185,12 +191,6 @@ public sealed partial class LilySharpLanguageServer
                     // a human, so show 1-based line/column to match the editor gutter.
                     return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
-            return new SvgResponse
-            {
-                Svg = null,
-                Error = errors,
-                Renders = renders
-            };
         }
 
         try
@@ -209,7 +209,7 @@ public sealed partial class LilySharpLanguageServer
             return new SvgResponse
             {
                 Svg = svg,
-                Error = null,
+                Error = errorText,
                 Renders = renders
             };
         }
@@ -218,7 +218,7 @@ public sealed partial class LilySharpLanguageServer
             return new SvgResponse
             {
                 Svg = null,
-                Error = ex.Message,
+                Error = errorText == null ? ex.Message : $"{errorText}\n{ex.Message}",
                 Renders = renders
             };
         }

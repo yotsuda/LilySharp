@@ -770,12 +770,37 @@ async function updatePreviewContent(
             setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 150);
             return;
         }
-        if (response.Error) {
+        if (response.Svg) {
+            // The response may carry an error TOO: a file with parse errors still
+            // renders best-effort (the bad parts are dropped), the score shows
+            // un-dimmed, and the banner carries the message. The dedup key folds
+            // the banner text in so an error-text change still posts.
+            // Skip the post when both are identical to what the webview already
+            // shows — this is what spares a rapid edit/toggle/save burst from
+            // re-shipping the same large SVG. A different render selection
+            // compiles to a different SVG, so equality already implies the render.
+            const key = response.Svg + ' ' + (response.Error ?? '');
+            if (lastPostedSvg.get(uri) === key) {
+                outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
+            } else {
+                outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length}`
+                    + `${response.Error ? ', with error banner' : ''})`);
+                lastPostedSvg.set(uri, key);
+                panel.webview.postMessage({
+                    type: 'updateContent',
+                    svg: response.Svg,
+                    error: response.Error ?? undefined,
+                    renders: response.Renders || [],
+                    selectedRender: selectedRender || ''
+                });
+            }
+        } else if (response.Error) {
             outputChannel.appendLine(`Sending error to webview: ${response.Error}`);
-            // The webview now shows an error, NOT the last SVG. Forget the cached SVG so the
-            // next successful render is always posted — otherwise, fixing an error back to a
-            // picture identical to the pre-error one hits the "unchanged, skip" path below and
-            // the error stays on screen forever.
+            // Nothing rendered: the webview keeps its last good score DIMMED with
+            // the error banner. Forget the cached SVG so the next successful render
+            // is always posted — otherwise, fixing an error back to a picture
+            // identical to the pre-error one hits the "unchanged, skip" path above
+            // and the error stays on screen forever.
             lastPostedSvg.delete(uri);
             panel.webview.postMessage({
                 type: 'updateContent',
@@ -783,23 +808,6 @@ async function updatePreviewContent(
                 renders: response.Renders || [],
                 selectedRender: selectedRender || ''
             });
-        } else if (response.Svg) {
-            // Skip the post when the picture is byte-identical to what the webview already
-            // shows — this is what spares a rapid edit/toggle/save burst from re-shipping
-            // the same large SVG. A different render selection compiles to a different SVG,
-            // so equality here already implies the same render.
-            if (lastPostedSvg.get(uri) === response.Svg) {
-                outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
-            } else {
-                outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length})`);
-                lastPostedSvg.set(uri, response.Svg);
-                panel.webview.postMessage({
-                    type: 'updateContent',
-                    svg: response.Svg,
-                    renders: response.Renders || [],
-                    selectedRender: selectedRender || ''
-                });
-            }
         } else {
             outputChannel.appendLine('Response has neither error nor SVG');
         }
@@ -2167,21 +2175,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (!hasPreview) {
                             svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
                         }
-                    } else if (message.error) {
-                        // Transient parse errors (a half-typed @articulation, an
-                        // unclosed brace, …) should NOT blank the score. Keep the
-                        // last good preview, dim it, and show the error in a banner.
-                        // Only when nothing has rendered yet do we show the error
-                        // in place (there is nothing to preserve).
-                        if (hasPreview) {
-                            svgContainer.classList.add('stale');
+                    } else if (message.svg) {
+                        // A score arrived — it is CURRENT, so never dimmed. It may
+                        // still carry an error banner: a file with parse errors
+                        // renders best-effort (the bad parts are simply dropped).
+                        if (message.error) {
                             showErrorBanner(message.error);
                         } else {
                             hideErrorBanner();
-                            svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                         }
-                    } else if (message.svg) {
-                        hideErrorBanner();
                         svgContainer.classList.remove('stale');
                         svgContainer.innerHTML = message.svg;
                         // The score changed: the cached note list is stale, so the
@@ -2197,6 +2199,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             highlightRange(lastHighlightRanges);
                         } else if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
+                        }
+                    } else if (message.error) {
+                        // Nothing could render at all. Keep the last good preview,
+                        // DIM it, and show the error in a banner. Only when nothing
+                        // has rendered yet do we show the error in place (there is
+                        // nothing to preserve).
+                        if (hasPreview) {
+                            svgContainer.classList.add('stale');
+                            showErrorBanner(message.error);
+                        } else {
+                            hideErrorBanner();
+                            svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                         }
                     }
                     break;
