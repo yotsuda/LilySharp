@@ -110,6 +110,24 @@ public sealed class MidiExporter
     private SyntaxNode? _root;
     private int _currentTransposeSemitones;
 
+    // Phrase-scoped diatonic shift (± scale steps) from a reference's interval
+    // argument (Melody'(3) = +2), applied to every written pitch in the WRITTEN
+    // key before the chromatic transpose — see WrittenToMidi. Nested references
+    // compose additively; saved/restored around each phrase body.
+    private int _diatonicShiftSteps;
+
+    /// <summary>Written pitch → MIDI key: the phrase-scoped diatonic shift (modal,
+    /// in the written key), then the chromatic transpose, then the clamp. The ONE
+    /// funnel every pitched emission uses, so the shift cannot miss a path.</summary>
+    private int WrittenToMidi(int step, int alter, int octave)
+    {
+        if (_diatonicShiftSteps != 0)
+            (step, alter, octave) = LilySharp.Core.Music.DiatonicShift.Apply(
+                step, alter, octave, _diatonicShiftSteps, _keySharps);
+        return Math.Clamp(
+            RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+    }
+
     // Phrase auto-transpose (movable motif): a phrase written in the score's home
     // key sounds in whatever key is in effect where it is referenced. _ambientTonic
     // tracks the running key (reset to home per section, advanced by key changes);
@@ -369,11 +387,16 @@ public sealed class MidiExporter
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
                     // ambient key here (sounds an octave/interval up or down), on
-                    // top of any part transpose; restored after the body.
+                    // top of any part transpose; restored after the body. The
+                    // reference's interval argument (Melody'(3)) adds a diatonic
+                    // scale-step shift on top (nested references compose).
                     int savedTranspose = _currentTransposeSemitones;
+                    int savedDiatonic = _diatonicShiftSteps;
                     _currentTransposeSemitones += PhraseTransposeSemitones();
+                    _diatonicShiftSteps += varRef.DiatonicShiftSteps;
                     ProcessNode(phraseBody, track, conductorTrack);
                     _currentTransposeSemitones = savedTranspose;
+                    _diatonicShiftSteps = savedDiatonic;
                     _activePhrases.Remove(phName);
                 }
                 break;
@@ -478,6 +501,7 @@ public sealed class MidiExporter
                 _partOctaveAnchor = 4;
                 _currentTimbre = 0;
                 _currentTransposeSemitones = 0;
+                _diatonicShiftSteps = 0;
                 return;
             }
         }
@@ -922,12 +946,10 @@ public sealed class MidiExporter
         _currentNoteName = noteName;
         _currentOctave = targetOctave;
 
-        // Calculate MIDI pitch (shared step→MIDI formula), then transpose + clamp.
-        return Math.Clamp(
-            RelativeOctave.StepToMidi(
-                RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, targetOctave)
-            + _currentTransposeSemitones,
-            0, 127);
+        // Calculate MIDI pitch (shared step→MIDI formula), then diatonic shift +
+        // transpose + clamp (WrittenToMidi).
+        return WrittenToMidi(
+            RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, targetOctave);
     }
 
     /// <summary>
@@ -1065,9 +1087,7 @@ public sealed class MidiExporter
         {
             int step = GetNoteName(pitch.BaseName);
             int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, step, 0) + octaveShift;
-            midiPitch = System.Math.Clamp(
-                RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset)
-                + _currentTransposeSemitones, 0, 127);
+            midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset);
             _currentNoteName = step;
             _currentOctave = anchor;
         }
@@ -1085,8 +1105,7 @@ public sealed class MidiExporter
     {
         var (step, alter, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
-        int midiPitch = System.Math.Clamp(
-            RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+        int midiPitch = WrittenToMidi(step, alter, octave);
         int ticks = FractionToTicks(_defaultDuration);
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
             degree.Position, SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
@@ -1266,9 +1285,7 @@ public sealed class MidiExporter
                     // and the next note stays relative to C4).
                     int step = GetNoteName(pitch.BaseName);
                     int anchor = RelativeOctave.Resolve(_currentNoteName, _currentOctave, step, 0) + chordOctave;
-                    midiPitch = System.Math.Clamp(
-                        RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset)
-                        + _currentTransposeSemitones, 0, 127);
+                    midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, anchor + pitch.OctaveOffset);
                     _currentNoteName = step;
                     _currentOctave = anchor;
                     firstOctave = anchor;
@@ -1285,9 +1302,7 @@ public sealed class MidiExporter
             {
                 int step = GetNoteName(pitch.BaseName);
                 int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
-                midiPitch = System.Math.Clamp(
-                    RelativeOctave.StepToMidi(step, pitch.AccidentalOffset, octave) + _currentTransposeSemitones,
-                    0, 127);
+                midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, octave);
             }
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 QuarterBend: pitch.QuarterOffset,
@@ -1312,8 +1327,7 @@ public sealed class MidiExporter
             var (step, alter, octave) = ChordDegrees.Resolve(
                 firstNoteName, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
-            int midiPitch = System.Math.Clamp(
-                RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+            int midiPitch = WrittenToMidi(step, alter, octave);
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
         }

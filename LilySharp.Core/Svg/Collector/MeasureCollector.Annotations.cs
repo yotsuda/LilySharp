@@ -108,6 +108,15 @@ public sealed partial class MeasureCollector
     {
         structure = null;
         int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
+        // Inside a shifted phrase reference (Melody'(3)) the chord SOUNDS a
+        // diatonic interval away from what is written — name what sounds.
+        int diatonic = _octave.DiatonicShiftSteps;
+        (int Step, int Alter) Sounding(int s, int a)
+        {
+            if (diatonic == 0) return (s, a);
+            var (ss, sa, _) = Music.DiatonicShift.Apply(s, a, 4, diatonic, keySharps);
+            return (ss, sa);
+        }
         var pcs = new List<int>();
         int rootStep, rootAlter;
 
@@ -116,8 +125,10 @@ public sealed partial class MeasureCollector
             rootStep = GetPitchIndex(rootPitch.PitchName.ToLowerInvariant()[0]);
             rootAlter = rootPitch.AccidentalOffset;
             foreach (var p in chord.Pitches)
-                pcs.Add(RelativeOctave.StepSemitoneOf(GetPitchIndex(p.PitchName.ToLowerInvariant()[0]))
-                        + p.AccidentalOffset);
+            {
+                var (s, a) = Sounding(GetPitchIndex(p.PitchName.ToLowerInvariant()[0]), p.AccidentalOffset);
+                pcs.Add(RelativeOctave.StepSemitoneOf(s) + a);
+            }
         }
         else if (chord.Degrees.Any())
         {
@@ -132,9 +143,10 @@ public sealed partial class MeasureCollector
 
         foreach (var d in chord.Degrees)
         {
-            var (s, alter, _) = ChordDegrees.Resolve(
+            var (ds, dalter, _) = ChordDegrees.Resolve(
                 rootStep, 4, d.Number, d.Alteration, d.OctaveOffset, keySharps);
-            pcs.Add(RelativeOctave.StepSemitoneOf(s) + alter);
+            var (s, a) = Sounding(ds, dalter);
+            pcs.Add(RelativeOctave.StepSemitoneOf(s) + a);
         }
 
         // The chord's ROOT for naming is the FIRST DEGREE, not the key tonic that the
@@ -149,6 +161,7 @@ public sealed partial class MeasureCollector
             recogStep = fs;
             recogAlter = fa;
         }
+        (recogStep, recogAlter) = Sounding(recogStep, recogAlter);
 
         return ChordStructure.TryRecognize(recogStep, recogAlter, pcs, out structure);
     }
@@ -181,8 +194,13 @@ public sealed partial class MeasureCollector
 
         var pcs = new List<int>();
         int recogStep = -1, recogAlter = 0;
+        // Inside a shifted phrase reference (Melody'(3)) the group SOUNDS a
+        // diatonic interval away from what is written — name what sounds.
+        int diatonic = _octave.DiatonicShiftSteps;
         void Add(int step, int alter)
         {
+            if (diatonic != 0)
+                (step, alter, _) = Music.DiatonicShift.Apply(step, alter, 4, diatonic, keySharps);
             if (recogStep < 0) { recogStep = step; recogAlter = alter; }
             pcs.Add(RelativeOctave.StepSemitoneOf(step) + alter);
         }

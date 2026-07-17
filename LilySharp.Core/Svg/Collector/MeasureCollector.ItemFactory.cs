@@ -427,8 +427,18 @@ public sealed partial class MeasureCollector
     /// </summary>
     private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position)
     {
+        // A phrase reference's interval argument (Melody'(3)) shifts the body by
+        // scale steps in the WRITTEN key — modal transposition, applied before the
+        // chromatic part transpose. The relative chain (RelativeOctave below)
+        // keeps running on the written pitch, like the transpose.
+        int dispStep = step, dispAlt = accidentalOffset, dispOct = actualOctave;
+        if (_octave.DiatonicShiftSteps != 0)
+            (dispStep, dispAlt, dispOct) = Music.DiatonicShift.Apply(
+                dispStep, dispAlt, dispOct, _octave.DiatonicShiftSteps,
+                _meta.KeySharps - _octave.TransposeKeySharps(0));
+
         // Display pitch = written pitch, transposed if the part has transpose:.
-        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, accidentalOffset, actualOctave);
+        var (dStep, dAlt, dOctave) = _octave.TransposePitch(dispStep, dispAlt, dispOct);
 
         // Staff position 0 = middle line of the staff.
         //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3

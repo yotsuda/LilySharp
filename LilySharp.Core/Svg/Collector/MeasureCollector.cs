@@ -748,6 +748,8 @@ public sealed partial class MeasureCollector
     // phrase referenced inside another restores cleanly). Pushed at the reset
     // marker, popped at the paired phrase-end marker.
     private readonly Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
+    // Saved diatonic-shift values, pushed/popped alongside _phraseTransposeSaves.
+    private readonly Stack<int> _phraseDiatonicSaves = new();
 
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
@@ -1825,12 +1827,16 @@ public sealed partial class MeasureCollector
     /// it. The phrase shift composes UNDER any part/score transpose (the written
     /// pitch moves home→ambient first, then the instrument transpose applies).
     /// </summary>
-    private void EnterPhraseTranspose()
+    private void EnterPhraseTranspose(int diatonicSteps = 0)
     {
         var saved = _octave.GetTranspose();
         _phraseTransposeSaves.Push(saved);
         if (PhraseTransposeTarget() is { } phrase)
             _octave.SetTranspose(ComposeTranspose(phrase, saved));
+        // The reference's interval argument (Melody'(3)) shifts the body's pitches
+        // by scale steps; nested references compose additively.
+        _phraseDiatonicSaves.Push(_octave.DiatonicShiftSteps);
+        _octave.DiatonicShiftSteps += diatonicSteps;
     }
 
     /// <summary>Restores the transpose saved by <see cref="EnterPhraseTranspose"/>.</summary>
@@ -1838,6 +1844,8 @@ public sealed partial class MeasureCollector
     {
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
+        if (_phraseDiatonicSaves.Count > 0)
+            _octave.DiatonicShiftSteps = _phraseDiatonicSaves.Pop();
     }
 
     /// <summary>
@@ -2285,6 +2293,8 @@ public sealed partial class MeasureCollector
         // (phrase auto-transpose baseline).
         ResetAmbientTonicToHome();
         _phraseTransposeSaves.Clear();
+        _phraseDiatonicSaves.Clear();
+        _octave.DiatonicShiftSteps = 0;
 
         var builder = new MeasureBuilder(TimeSignatureFraction);
         if (_filePartial is { } filePickup)
@@ -2307,7 +2317,7 @@ public sealed partial class MeasureCollector
                 if (node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose();
+                    EnterPhraseTranspose(reset.DiatonicSteps);
                     continue;
                 }
 
@@ -2985,7 +2995,7 @@ public sealed partial class MeasureCollector
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes, varRef.DiatonicShiftSteps);
             else
                 bodyNodes.Add(item);
         }

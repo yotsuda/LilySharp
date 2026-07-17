@@ -86,6 +86,52 @@ public class MidiTests
     }
 
     [Fact]
+    public void PhraseReference_IntervalArgument_ShiftsDiatonically()
+    {
+        // A GLUED '(N)' after the reference's marks is a diatonic interval:
+        // M'(3) plays the phrase a THIRD up in the key — c e g becomes e g b
+        // (the third's quality follows the scale), M,(2) a second down. '(8)
+        // is exactly ', and '(1) a unison no-op.
+        static int[] P(string src) => new MidiExporter().Export(SyntaxTree.Parse(src))
+            .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
+
+        Assert.Equal(new[] { 64, 67, 71 }, P("phrase M { c e g }\n{ M'(3) }"));  // e g b
+        Assert.Equal(new[] { 59, 62, 65 }, P("phrase M { c e g }\n{ M,(2) }"));  // b, d f
+        Assert.Equal(P("phrase M { c e g }\n{ M' }"), P("phrase M { c e g }\n{ M'(8) }"));
+        Assert.Equal(P("phrase M { c e g }\n{ M }"), P("phrase M { c e g }\n{ M'(1) }"));
+        // Extra marks add whole octaves: ''(3) = an octave plus a third.
+        Assert.Equal(new[] { 76, 79, 83 }, P("phrase M { c e g }\n{ M''(3) }"));
+    }
+
+    [Fact]
+    public void PhraseIntervalShift_QualityFollowsTheKey()
+    {
+        // Diatonic, not chromatic: shifting g-a up a third in G major gives
+        // b (a MAJOR third above g) then c (a MINOR third above a) — the scale
+        // decides each quality. LILYPOND-REF: \modalTranspose semantics.
+        var pitches = new MidiExporter().Export(SyntaxTree.Parse("""
+            key g major
+            phrase M { g4 a }
+            part m { section A { M'(3) } }
+            form main { A }
+            score main { staff m }
+            """)).Tracks[1].Notes.Select(n => n.Pitch).ToArray();
+        Assert.Equal(new[] { 59, 60 }, pitches); // B3 (g+4st), C4 (a+3st)
+    }
+
+    [Fact]
+    public void PhraseReference_SpacedParenIsStillASlur()
+    {
+        // The interval argument must be GLUED: `M' (c d)` keeps the plain
+        // octave-marked reference followed by a slurred pair.
+        var tree = SyntaxTree.Parse("phrase M { e4 }\n{ M' (c4 d4) }");
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var varRef = tree.GetRoot().DescendantNodes<VariableReferenceSyntax>().Single();
+        Assert.Equal(1, varRef.OctaveOffset);
+        Assert.Equal(0, varRef.DiatonicShiftSteps);
+    }
+
+    [Fact]
     public void PhraseReference_AutoTransposesToAmbientKey()
     {
         // Parity with the SVG collector: a phrase written in the home key sounds

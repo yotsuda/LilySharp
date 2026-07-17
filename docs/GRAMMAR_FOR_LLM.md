@@ -317,6 +317,10 @@ c4 d e f |
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
   phrase means the same notes at every `$call`. **Section boundaries also reset the frame.**
   After `$phrase`, the next note is relative to the phrase's last note.
+- A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`); a GLUED `'(N)`
+  is a DIATONIC interval — `Melody'(3)` plays the phrase a third up in the ambient key
+  (the quality follows the scale), `Motif,(2)` a second down; `'(8)` == `'`. Spaced,
+  ` (` still opens a slur. Great for sequences and parallel-third harmonies.
 - Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
   the top-level commands. Override/revert use `=`.
 - `removeEmpty true|all` in a part header hides that part's staff in systems where it only

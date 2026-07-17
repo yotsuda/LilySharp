@@ -464,7 +464,16 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)
 InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
 Beam           = '[' | ']' ;
-PhraseRef      = '$' , Identifier ;
+PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
+                 (* A movable phrase: it lands in the AMBIENT key at the reference
+                    site; trailing marks shift whole octaves (Chorus' / Chorus,). A
+                    GLUED '(N)' after at least one mark is a DIATONIC interval:
+                    Melody'(3) plays the phrase a third UP in the ambient key (the
+                    third's quality follows the scale), Motif,(2) a second down —
+                    sequences and parallel-third harmonies in one token. 1-based
+                    like a degree, so '(8) == ' and '(1) is a unison; extra marks
+                    add octaves (''(3) = an octave plus a third). The adjacency is
+                    what separates it from a slur: a SPACED ' (' still opens one. *)
 
 ### 8.3 Ties, Slurs, Beams
 

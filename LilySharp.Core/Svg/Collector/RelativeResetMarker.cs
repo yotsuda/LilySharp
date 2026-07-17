@@ -30,19 +30,27 @@ namespace LilySharp.Core.Svg.Collector;
 internal sealed class RelativeResetMarker : SyntaxNode
 {
     /// <summary>The offset-free reset used by the overwhelming common case.</summary>
-    public static readonly RelativeResetMarker Instance = new(0);
+    public static readonly RelativeResetMarker Instance = new(0, 0);
 
     /// <summary>Net octave shift applied to the reset frame (' = +1, , = -1).</summary>
     public int OctaveOffset { get; }
 
-    /// <summary>Reuses <see cref="Instance"/> for the (common) no-mark case.</summary>
-    public static RelativeResetMarker For(int octaveOffset)
-        => octaveOffset == 0 ? Instance : new RelativeResetMarker(octaveOffset);
+    /// <summary>Diatonic scale-step shift from the reference's interval argument
+    /// (<c>Melody'(3)</c> = +2 steps), applied to the phrase body's pitches after
+    /// relative resolution (see <see cref="OctaveContext.DiatonicShiftSteps"/>).</summary>
+    public int DiatonicSteps { get; }
 
-    private RelativeResetMarker(int octaveOffset)
+    /// <summary>Reuses <see cref="Instance"/> for the (common) unmarked case.</summary>
+    public static RelativeResetMarker For(int octaveOffset, int diatonicSteps = 0)
+        => octaveOffset == 0 && diatonicSteps == 0
+            ? Instance
+            : new RelativeResetMarker(octaveOffset, diatonicSteps);
+
+    private RelativeResetMarker(int octaveOffset, int diatonicSteps)
         : base(MarkerGreen.Shared, parent: null, position: 0)
     {
         OctaveOffset = octaveOffset;
+        DiatonicSteps = diatonicSteps;
     }
 
     private sealed class MarkerGreen : GreenNode

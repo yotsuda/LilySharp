@@ -544,25 +544,54 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     /// <summary>The referenced variable name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(NameIndex)!;
 
+    // Raw trailing tokens: the net '/, mark count and the optional glued
+    // interval argument (`'(3)`) parsed after them.
+    private (int Marks, int? Interval) MarkInfo()
+    {
+        int marks = 0;
+        int? interval = null;
+        for (int i = NameIndex + 1; i < SlotCount; i++)
+        {
+            var child = GetChild(i) as SyntaxTokenNode;
+            if (child?.Kind == SyntaxKind.Apostrophe)
+                marks++;
+            else if (child?.Kind == SyntaxKind.Comma)
+                marks--;
+            else if (child?.Kind == SyntaxKind.IntegerLiteral
+                     && int.TryParse(child.Text, out int n) && n >= 1)
+                interval = n;
+        }
+        return (marks, interval);
+    }
+
     /// <summary>
     /// Net octave shift from the trailing marks (<c>'</c> = +1, <c>,</c> = -1),
     /// applied when the movable phrase is placed at the reference site. Same
-    /// spelling and meaning as a pitch's octave marks.
+    /// spelling and meaning as a pitch's octave marks. With an interval argument
+    /// the LAST mark carries the interval instead of a whole octave
+    /// (<c>Melody'(3)</c> = up a third, no octave; <c>Melody''(3)</c> = up an
+    /// octave plus a third), so one mark is consumed here and reappears as
+    /// <see cref="DiatonicShiftSteps"/>.
     /// </summary>
     public int OctaveOffset
     {
         get
         {
-            int offset = 0;
-            for (int i = NameIndex + 1; i < SlotCount; i++)
-            {
-                var child = GetChild(i) as SyntaxTokenNode;
-                if (child?.Kind == SyntaxKind.Apostrophe)
-                    offset++;
-                else if (child?.Kind == SyntaxKind.Comma)
-                    offset--;
-            }
-            return offset;
+            var (marks, interval) = MarkInfo();
+            return interval is null ? marks : System.Math.Sign(marks) * (System.Math.Abs(marks) - 1);
+        }
+    }
+
+    /// <summary>Diatonic scale-step shift from the glued interval argument —
+    /// <c>Melody'(3)</c> = +2 steps (a third up in the ambient key),
+    /// <c>Motif,(2)</c> = −1 (a second down). 1-based like a degree, so
+    /// <c>'(8)</c> ≡ <c>'</c> and <c>'(1)</c> is a no-op; 0 with no argument.</summary>
+    public int DiatonicShiftSteps
+    {
+        get
+        {
+            var (marks, interval) = MarkInfo();
+            return interval is { } n ? System.Math.Sign(marks) * (n - 1) : 0;
         }
     }
 }

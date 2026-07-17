@@ -35,7 +35,7 @@ public sealed partial class MeasureCollector
     private void GatherMusicNode(SyntaxNode node, List<SyntaxNode> musicNodes)
     {
         if (node is VariableReferenceSyntax varRef)
-            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
+            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel
         // descendants, so the inner notes are collected (flattened) here — the
@@ -61,7 +61,7 @@ public sealed partial class MeasureCollector
             if (node is RelativeResetMarker reset)
             {
                 EnterDefaultFrame(reset.OctaveOffset);
-                EnterPhraseTranspose();
+                EnterPhraseTranspose(reset.DiatonicSteps);
                 continue;
             }
 

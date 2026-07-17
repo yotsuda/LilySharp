@@ -341,7 +341,7 @@ public sealed partial class MeasureCollector
             {
                 var child = section.GetChild(i);
                 if (child is VariableReferenceSyntax varRef)
-                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline);
+                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline, varRef.DiatonicShiftSteps);
                 else if (child != null && IsCollectableMusicNode(child))
                     inline.Add(child);
             }
@@ -570,7 +570,7 @@ public sealed partial class MeasureCollector
                 continue;
 
             if (node is VariableReferenceSyntax varRef)
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
             else if (IsCollectableMusicNode(node))
                 musicNodes.Add(node);
         }
@@ -578,7 +578,8 @@ public sealed partial class MeasureCollector
         processNodes(musicNodes);
     }
 
-    private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes)
+    private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes,
+        int diatonicSteps = 0)
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
@@ -590,8 +591,9 @@ public sealed partial class MeasureCollector
         // the moral equivalent of LilyPond variables carrying their own
         // \relative block. State flows OUT of the phrase normally, so a note
         // following $phrase is relative to the phrase's last note. Trailing marks
-        // on the reference (Chorus' / Chorus,) shift that fresh frame.
-        musicNodes.Add(RelativeResetMarker.For(octaveOffset));
+        // on the reference (Chorus' / Chorus,) shift that fresh frame; a glued
+        // interval argument (Chorus'(3)) shifts the body by scale steps.
+        musicNodes.Add(RelativeResetMarker.For(octaveOffset, diatonicSteps));
 
         // Include the expression itself if it is a music node.
         if (IsCollectableMusicNode(expression))

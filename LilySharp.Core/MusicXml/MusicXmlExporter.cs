@@ -95,6 +95,25 @@ public sealed class MusicXmlExporter
     private SyntaxNode? _root;
     private (int step, int alt, int oct)? _currentTranspose;
 
+    // Phrase-scoped diatonic shift (± scale steps) from a reference's interval
+    // argument (Melody'(3) = +2), applied to every written pitch in the WRITTEN
+    // key before the chromatic transpose (see ApplyWrittenTransforms). Nested
+    // references compose additively; saved/restored around each phrase body.
+    private int _diatonicShiftSteps;
+
+    /// <summary>Applies the phrase diatonic shift (modal, in the written key) and
+    /// the chromatic transpose to an already-absolute written pitch — the ONE
+    /// funnel for notes and degree members alike.</summary>
+    private (int step, int alter, int octave) ApplyWrittenTransforms(int step, int alter, int octave)
+    {
+        if (_diatonicShiftSteps != 0)
+            (step, alter, octave) = LilySharp.Core.Music.DiatonicShift.Apply(
+                step, alter, octave, _diatonicShiftSteps, _keyFifths);
+        if (_currentTranspose is { } tr)
+            (step, alter, octave) = PitchTransposer.Transpose(step, alter, octave, tr.step, tr.alt, tr.oct);
+        return (step, alter, octave);
+    }
+
     // Phrase auto-transpose (movable motif): a phrase written in the score's home
     // key is respelled into whatever key is in effect where it is referenced.
     // _ambientTonic tracks the running key (reset to home per voice and section,
@@ -960,11 +979,16 @@ public sealed class MusicXmlExporter
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
                     // ambient key here (respelled), composed under any part
-                    // transpose; restored after the body.
+                    // transpose; restored after the body. The reference's interval
+                    // argument (Melody'(3)) adds a diatonic scale-step shift on
+                    // top (nested references compose).
                     var savedTranspose = _currentTranspose;
+                    int savedDiatonic = _diatonicShiftSteps;
                     _currentTranspose = PitchTransposer.Compose(PhraseTransposeTarget(), savedTranspose);
+                    _diatonicShiftSteps += varRef.DiatonicShiftSteps;
                     ProcessNode(varBody);
                     _currentTranspose = savedTranspose;
+                    _diatonicShiftSteps = savedDiatonic;
                 }
                 break;
 
@@ -1186,11 +1210,10 @@ public sealed class MusicXmlExporter
     private (string step, int alter, int octave) ApplyTranspose(
         PitchSyntax pitch, string step, int alter, int octave)
     {
-        if (_currentTranspose is not { } tr)
+        if (_currentTranspose is null && _diatonicShiftSteps == 0)
             return (step, alter, octave);
-        var (ns, na, no) = PitchTransposer.Transpose(
-            RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, octave,
-            tr.step, tr.alt, tr.oct);
+        var (ns, na, no) = ApplyWrittenTransforms(
+            RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, octave);
         return ("CDEFGAB"[ns].ToString(), na, no);
     }
 
@@ -1522,8 +1545,7 @@ public sealed class MusicXmlExporter
 
         var (dstep, dalter, doctave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keyFifths);
-        if (_currentTranspose is { } tr)
-            (dstep, dalter, doctave) = PitchTransposer.Transpose(dstep, dalter, doctave, tr.step, tr.alt, tr.oct);
+        (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
 
         var duration = _defaultDuration;
         int durationTicks = FractionToTicks(duration);
@@ -1679,9 +1701,7 @@ public sealed class MusicXmlExporter
             var (dstep, dalter, doctave) = ChordDegrees.Resolve(
                 firstStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keyFifths);
-            if (_currentTranspose is { } tr)
-                (dstep, dalter, doctave) = PitchTransposer.Transpose(
-                    dstep, dalter, doctave, tr.step, tr.alt, tr.oct);
+            (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
             var xmlNote = new MusicXmlNote
             {
                 Step = "CDEFGAB"[dstep].ToString(),
