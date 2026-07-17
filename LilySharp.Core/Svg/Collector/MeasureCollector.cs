@@ -561,6 +561,26 @@ internal sealed class MeasureBuilder
                 isPickup: _partialRestore != null));
         }
 
+        // Back-to-back repeats collapse: a measure that ENDS with a repeat (`:|` or
+        // `:|:`) immediately followed by one that STARTS with a repeat (`|:` or `:|:`)
+        // is ONE combined barline (`:|:`), not two piled up — a phrase ending `:|`
+        // referenced right before another opening `|:` (or a section `:|:` between
+        // them) otherwise stacks thick bars and doubles the dots. The join becomes
+        // RepeatBoth and the next measure drops its now-duplicate start barline.
+        // LILYPOND-REF: lily/bar-line.cc — ":|.|:" / back-to-back repeat merging.
+        for (int i = 0; i + 1 < _measures.Count; i++)
+        {
+            bool endsRepeat = _measures[i].EndBarline
+                is BarlineType.RepeatEnd or BarlineType.RepeatBoth;
+            bool startsRepeat = _measures[i + 1].StartBarline
+                is BarlineType.RepeatStart or BarlineType.RepeatBoth;
+            if (endsRepeat && startsRepeat)
+            {
+                _measures[i] = _measures[i] with { EndBarline = BarlineType.RepeatBoth };
+                _measures[i + 1] = _measures[i + 1] with { StartBarline = BarlineType.None };
+            }
+        }
+
         // Auto-set final barline on the last measure (music convention). Skipped
         // for sub-streams that end mid-piece (a << \\ >> span's extra voice):
         // their last measure is not the piece's last, and the Final would win
