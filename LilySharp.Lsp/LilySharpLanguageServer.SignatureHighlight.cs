@@ -144,28 +144,27 @@ public sealed partial class LilySharpLanguageServer
 
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
-        var node = doc.Tree.FindNode(offset);
-        if (node == null) return null;
 
-        // Find variable name at position
-        string? variableName = FindVariableNameAt(node);
-        if (variableName == null) return null;
+        // Every occurrence of the symbol at the caret, across all named namespaces
+        // (the same model Rename and Find All References use). A declaration is a
+        // Write highlight, a reference a Read highlight.
+        var occurrences = SymbolOccurrences(doc, offset);
+        if (occurrences.Count == 0) return null;
 
-        // Declaration → Write, references → Read (ForEachOccurrence yields decls first).
         var highlights = new List<DocumentHighlight>();
-        ForEachOccurrence(doc.Tree.GetRoot(), variableName, (nameNode, isDeclaration) =>
+        foreach (var token in occurrences)
         {
-            var (line, character) = GetLineAndCharacter(doc.Text, nameNode.Span.Start);
+            var (line, character) = GetLineAndCharacter(doc.Text, token.Span.Start);
             highlights.Add(new DocumentHighlight
             {
                 Range = new LspRange
                 {
                     Start = new Position { Line = line, Character = character },
-                    End = new Position { Line = line, Character = character + nameNode.Width }
+                    End = new Position { Line = line, Character = character + token.Width }
                 },
-                Kind = isDeclaration ? DocumentHighlightKind.Write : DocumentHighlightKind.Read
+                Kind = IsDeclarationToken(token) ? DocumentHighlightKind.Write : DocumentHighlightKind.Read
             });
-        });
+        }
 
         return highlights.ToArray();
     }

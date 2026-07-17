@@ -178,6 +178,18 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
+    /// <summary>True when an occurrence NAME token is a DECLARATION (rather than a
+    /// reference), judged by its parent node — the node that introduces the name.
+    /// Distinguishes Write vs Read for Document Highlight and lets Find All References
+    /// honor <c>includeDeclaration=false</c>. A section-body part block
+    /// (<c>NAME { … }</c>) counts as a declaration: it defines the part's music.</summary>
+    private static bool IsDeclarationToken(SyntaxNode token) => token.Parent is
+        PartDeclarationSyntax or PartBlockSyntax
+        or SectionDeclarationSyntax
+        or FormDeclarationSyntax
+        or LyricsBlockSyntax or ChordPartBlockSyntax
+        or PhraseDeclarationSyntax or VariableDeclarationSyntax;
+
     /// <summary>Every <c>lyrics NAME</c> name token — the block declaration plus each
     /// reference (<c>staff … with lyrics NAME</c> clauses and independent
     /// <c>lyrics NAME</c> rows) — in document order.</summary>
@@ -341,53 +353,19 @@ public sealed partial class LilySharpLanguageServer
         var doc = _documentManager.GetDocument(uri);
         if (doc == null) return null;
 
-        var position = @params.Position;
-        var offset = GetOffset(doc.Text, position.Line, position.Character);
-        var node = doc.Tree.FindNode(offset);
+        var offset = GetOffset(doc.Text, @params.Position.Line, @params.Position.Character);
 
-        if (node == null) return null;
+        // Every occurrence of the symbol at the caret, across all named namespaces
+        // (the same model Rename and Document Highlight use). Filter out declarations
+        // when the client asked to exclude them.
+        var occurrences = SymbolOccurrences(doc, offset);
+        if (occurrences.Count == 0) return null;
 
-        string? name = null;
-
-        // Find variable name from reference or declaration
-        var varRef = FindAncestor<VariableReferenceSyntax>(node);
-        if (varRef != null)
-        {
-            name = varRef.Name.Text;
-        }
-        else
-        {
-            var varDecl = FindAncestor<VariableDeclarationSyntax>(node);
-            if (varDecl != null)
-            {
-                name = varDecl.Name.Text;
-            }
-        }
-
-        if (name == null) return null;
-
-        var locations = new List<Location>();
-
-        // Include declaration if requested
-        if (@params.Context.IncludeDeclaration)
-        {
-            var declName = FindVariableDefinition(doc.Tree.GetRoot(), name);
-            if (declName != null)
-            {
-                locations.Add(CreateLocation(uri, doc.Text, declName));
-            }
-        }
-
-        // Find all references
-        foreach (var reference in doc.Tree.GetRoot().DescendantNodes<VariableReferenceSyntax>())
-        {
-            if (reference.Name.Text == name)
-            {
-                locations.Add(CreateLocation(uri, doc.Text, reference.Name));
-            }
-        }
-
-        return locations.ToArray();
+        var include = @params.Context?.IncludeDeclaration ?? true;
+        return occurrences
+            .Where(t => include || !IsDeclarationToken(t))
+            .Select(t => CreateLocation(uri, doc.Text, t))
+            .ToArray();
     }
 
 }

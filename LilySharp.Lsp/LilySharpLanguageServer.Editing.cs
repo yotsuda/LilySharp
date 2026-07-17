@@ -51,7 +51,7 @@ public sealed partial class LilySharpLanguageServer
         // on, across all named namespaces. Empty when the caret is not on a rename-
         // able name — return null so the client shows "cannot rename" rather than a
         // no-op edit.
-        var occurrences = RenameOccurrences(doc, offset);
+        var occurrences = SymbolOccurrences(doc, offset);
         if (occurrences.Count == 0) return null;
 
         var edits = occurrences.Select(t => TokenTextEdit(doc.Text, t, newName)).ToArray();
@@ -66,10 +66,11 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Every occurrence token (declaration + references) of the symbol at
-    /// <paramref name="offset"/>, so Rename can rewrite them all at once. The
-    /// namespace dispatch and its reference model mirror Go to Definition's
-    /// <see cref="ResolveDefinitionTarget"/>, so rename and navigation never disagree
-    /// about what a name means at a position:
+    /// <paramref name="offset"/>. Shared by Rename (rewrite all), Find All References
+    /// (list them), and Document Highlight (mark them). The namespace dispatch and
+    /// its reference model mirror Go to Definition's
+    /// <see cref="ResolveDefinitionTarget"/>, so navigation, rename, and reference
+    /// search never disagree about what a name means at a position:
     /// <list type="bullet">
     /// <item><c>part</c> (declaration + section-body part blocks + score staff/ossia/
     /// tab/midi targets) — via <see cref="PartReferenceFinder"/>;</item>
@@ -81,7 +82,7 @@ public sealed partial class LilySharpLanguageServer
     /// <item><c>phrase</c> / legacy variable (declaration + bare references).</item>
     /// </list>
     /// </summary>
-    private static IReadOnlyList<SyntaxNode> RenameOccurrences(Document doc, int offset)
+    private static IReadOnlyList<SyntaxNode> SymbolOccurrences(Document doc, int offset)
     {
         var root = doc.Tree.GetRoot();
 
