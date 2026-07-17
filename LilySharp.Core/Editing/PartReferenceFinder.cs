@@ -76,6 +76,39 @@ public static class PartReferenceFinder
     }
 
     /// <summary>
+    /// Only the tokens that REFERENCE a part (score render targets: <c>staff</c> /
+    /// <c>ossia</c> / <c>tab</c> / midi part), NOT the declarations. A reference whose
+    /// name matches no <c>part NAME { … }</c> header and no section-body part block is an
+    /// undefined-part error — see <c>SymbolReferenceValidator</c>.
+    /// </summary>
+    public static IReadOnlyList<SyntaxTokenNode> ReferenceTokens(SyntaxNode root)
+    {
+        var tokens = new List<SyntaxTokenNode>();
+        foreach (var node in root.DescendantNodes())
+        {
+            switch (node)
+            {
+                case MidiPartRenderSyntax midi:
+                    tokens.Add(midi.PartName);
+                    break;
+                case StaffRenderSyntax staff:
+                    if (StaffPartToken(staff) is { } st)
+                        tokens.Add(st);
+                    break;
+                case OssiaRenderSyntax ossia:
+                    if (LastTargetToken(ossia) is { } ot)
+                        tokens.Add(ot);
+                    break;
+                case TabRenderSyntax tab:
+                    if (LastTargetToken(tab) is { } tt)
+                        tokens.Add(tt);
+                    break;
+            }
+        }
+        return tokens;
+    }
+
+    /// <summary>
     /// The part-name token whose span contains <paramref name="offset"/> (end
     /// inclusive, so a caret just past the identifier still resolves), or null
     /// when the offset is not on a part declaration or reference.

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
+using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -118,10 +120,46 @@ $undefined1
 $undefined2
 ";
         var tree = SyntaxTree.Parse(source);
-        
+
         var validator = new SymbolReferenceValidator();
         validator.Validate(tree);
-        
+
         Assert.Equal(4, validator.Diagnostics.Count);
+    }
+
+    private static IReadOnlyList<Diagnostic> Refs(string source)
+    {
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(SyntaxTree.Parse(source));
+        return validator.Diagnostics;
+    }
+
+    [Fact]
+    public void Validate_StaffNamesUndefinedPart_ReportsError()
+    {
+        // `staff melody2` names no part — a section-body block nor a header defines it.
+        var diags = Refs("section A { melody { c d e f } }\n"
+                       + "form main { A }\nscore main { staff melody\n staff melody2 }");
+        var undef = diags.Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains("melody2", undef[0].Message);
+    }
+
+    [Theory]
+    // A section-body part block DEFINES the part.
+    [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { staff melody }")]
+    // …as does a part header.
+    [InlineData("part melody { clef treble section A { c d e f } }\nform main { A }\nscore main { staff melody }")]
+    // A clef modifier before the part name is not the part.
+    [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { staff bass melody }")]
+    public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
+        => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
+
+    [Fact]
+    public void Validate_GrandStaffUndefinedInnerPart_ReportsError()
+    {
+        var diags = Refs("section A { rh { c1 } }\n"
+                       + "form main { A }\nscore main { grandStaff { staff rh staff lh } }");
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("lh"));
     }
 }

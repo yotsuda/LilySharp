@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Editing;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Validates that all symbol references (variables, phrases, sections) are defined.
+/// Validates that all symbol references (variables, phrases, sections, and the score's
+/// staff/ossia/tab part targets) are defined.
 /// </summary>
 internal sealed class SymbolReferenceValidator : ISemanticValidator
 {
@@ -52,6 +54,16 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         // Second pass: validate references
         foreach (var node in nodes)
             ValidateReferences(node);
+
+        // A score's staff/ossia/tab render targets must name a defined part — a `part
+        // NAME { … }` header OR a section-body part block `NAME { … }`. `score { staff
+        // melody2 }` with no such part is an error (it otherwise rendered an empty staff).
+        foreach (var reference in PartReferenceFinder.ReferenceTokens(root))
+            if (!_definedParts.Contains(reference.Text))
+                _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
+                    $"Undefined part: '{reference.Text}'. Define it with a section body "
+                    + $"('{reference.Text} {{ … }}' in a section) or a header "
+                    + $"('part {reference.Text} {{ … }}').");
     }
 
     private void CollectDefinitions(SyntaxNode node)
@@ -74,6 +86,12 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 
             case PartDeclarationSyntax partDecl:
                 _definedParts.Add(partDecl.Name.Text);
+                break;
+
+            // A section-body part block `melody { … }` DEFINES the part `melody` (its
+            // music), so a staff may render it even with no `part melody { … }` header.
+            case PartBlockSyntax partBlock:
+                _definedParts.Add(partBlock.PartName.Text);
                 break;
         }
     }
