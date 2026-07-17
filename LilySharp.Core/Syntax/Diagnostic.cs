@@ -315,8 +315,9 @@ public static class DiagnosticCodes
     /// different parts, so the shorter parts are padded to align (often a miscount).</summary>
     public const string SectionBarCountMismatch = "LYS2007";
     /// <summary>Measure warning: an empty placeholder measure written as a bare barline gap
-    /// (a leading `|`, a `| |` gap, or a trailing `| |`) holds a slot for alignment but has
-    /// no music — shorter than the meter until it is filled.</summary>
+    /// (an explicit <c>| |</c> pair — leading, mid-piece, or trailing; a SINGLE bare
+    /// <c>|</c> never creates one) holds a slot for alignment but has no music —
+    /// shorter than the meter until it is filled.</summary>
     public const string EmptyPlaceholderMeasure = "LYS2008";
 
     // Lyric diagnostics (LYS4xxx — warnings, plus one error)

@@ -20,18 +20,20 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Warns for an empty placeholder measure written as a bare barline gap — a leading
-/// <c>|</c>, a <c>| |</c> gap, or a trailing <c>| |</c>. Such a measure holds a slot so
+/// Warns for an empty placeholder measure — an explicit <c>| |</c> pair with no music
+/// between, anywhere (leading, mid-piece, or trailing). Such a measure holds a slot so
 /// other parts stay aligned (the intended "fix the alignment first, fill the notes
 /// later" workflow) but has no music, so it is shorter than the meter until filled.
+/// A SINGLE bare <c>|</c> never creates one: at the section's edges it anchors the
+/// boundary, between full bars it confirms the auto-filled close.
 /// </summary>
 /// <remarks>
-/// Which bare barlines open an empty measure depends on Lily#'s auto-fill boundary logic
-/// (a barline confirming an already-full bar is silent; a further one opens a placeholder),
-/// which <see cref="MeasureCollector"/> resolves exactly while collecting. Rather than
-/// re-derive that from the syntax tree — where a confirming trailing <c>|</c> is
-/// indistinguishable from a placeholder — this validator runs the collector and reads back
-/// the placeholder positions it recorded (<see cref="MeasureCollector.EmptyPlaceholderWarnings"/>).
+/// Which bare barlines pair into an empty measure depends on Lily#'s boundary logic
+/// (a barline anchoring the section start or confirming an already-full bar is silent;
+/// the second of a pair opens a placeholder), which <see cref="MeasureCollector"/>
+/// resolves exactly while collecting. Rather than re-derive that from the syntax tree,
+/// this validator runs the collector and reads back the placeholder positions it
+/// recorded (<see cref="MeasureCollector.EmptyPlaceholderWarnings"/>).
 /// </remarks>
 internal sealed class EmptyMeasureValidator : ISharedCollectValidator
 {
@@ -53,8 +55,8 @@ internal sealed class EmptyMeasureValidator : ISharedCollectValidator
         {
             // ASCII punctuation only: this string reaches legacy-codepage consoles via the CLI.
             _diagnostics.Warning(new TextSpan(pos, 1), DiagnosticCodes.EmptyPlaceholderMeasure,
-                "empty measure (a bare '|' with no music); it holds a slot to keep parts " +
-                "aligned but is shorter than the meter until you fill it");
+                "empty measure (a '| |' pair with no music between); it holds a slot to keep " +
+                "parts aligned but is shorter than the meter until you fill it");
         }
     }
 }

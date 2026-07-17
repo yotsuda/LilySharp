@@ -94,13 +94,15 @@ internal sealed class MeasureBuilder
     private readonly List<Measure> _measures = new();
     private readonly List<MusicItem> _currentItems = new();
 
-    // True when the current measure boundary was created by AUTO-FILL (duration reached
-    // the meter) and not yet closed by a written barline. Such a boundary absorbs ONE
-    // confirming barline silently; only a FURTHER bare barline (an empty region) opens a
-    // placeholder measure. False at the section start, after any written-barline close,
-    // and once content is added — so a leading `|` or a `| |` gap always opens a
-    // placeholder, whether its neighbour is full or underfull. See HandleBarline.
-    private bool _autoBoundary;
+    // True when the current measure boundary can absorb ONE confirming bare barline
+    // silently: the piece/section START (a leading `|` merely anchors the boundary) and
+    // an AUTO-FILL close (duration reached the meter; the following `|` confirms it).
+    // False after any WRITTEN barline consumed the boundary — a written close, a typed
+    // decoration, an absorbed confirmation, a placeholder — so a bare `|` there is the
+    // second of a `| |` PAIR and opens an empty placeholder measure. An empty measure
+    // is always a visible `| |` pair; a single bare `|` never creates one. See
+    // HandleBarline.
+    private bool _confirmableBoundary = true;
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
@@ -183,10 +185,11 @@ internal sealed class MeasureBuilder
     /// (used when a leading meter change collapses into the initial time signature).</summary>
     public void SetMeasureLength(Fraction length) => _timeSignature = length;
 
-    /// <summary>Clears the auto-fill boundary flag at a section start, so a section that
-    /// OPENS with a bare <c>|</c> gets a leading placeholder measure rather than silently
-    /// confirming the previous section's auto-filled last bar. See <see cref="_autoBoundary"/>.</summary>
-    public void ResetMeasureBoundary() => _autoBoundary = false;
+    /// <summary>Re-arms the confirmable boundary at a section start: a section that
+    /// OPENS with a bare <c>|</c> anchors its own start boundary (no empty measure),
+    /// regardless of how the previous section's last bar was closed. See
+    /// <see cref="_confirmableBoundary"/>.</summary>
+    public void ResetMeasureBoundary() => _confirmableBoundary = true;
 
     /// <summary>
     /// Declares the current (in-progress) measure a pickup of <paramref name="length"/>:
@@ -250,7 +253,7 @@ internal sealed class MeasureBuilder
         }
 
         _currentItems.Add(item);
-        _autoBoundary = false; // content now fills this span; a barline closes IT, not an empty measure
+        _confirmableBoundary = false; // content now fills this span; a barline closes IT, not an empty measure
 
         // Track duration
         var itemDuration = GetItemDuration(item);
@@ -270,7 +273,7 @@ internal sealed class MeasureBuilder
     public void AddItemWithoutDuration(MusicItem item)
     {
         _currentItems.Add(item);
-        _autoBoundary = false;
+        _confirmableBoundary = false;
     }
 
     /// <summary>
@@ -340,9 +343,10 @@ internal sealed class MeasureBuilder
             isPickup: _partialRestore != null));
 
         // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
-        // just confirms it); a written-barline close is already confirmed, so a following
-        // bare barline opens a placeholder measure. See HandleBarline.
-        ResetPerMeasureState(sourceEnd, autoBoundary: !explicitBar);
+        // just confirms it); a written-barline close consumed the boundary, so a following
+        // bare barline is the second of a `| |` pair and opens a placeholder measure. See
+        // HandleBarline.
+        ResetPerMeasureState(sourceEnd, confirmableBoundary: !explicitBar);
     }
 
     /// <summary>
@@ -359,9 +363,9 @@ internal sealed class MeasureBuilder
     /// tie <c>c4 d e f4~ | f4 …</c>), drawn as written with the beat counter reset so the
     /// following bars stay aligned — the excess is not carried into a tied continuation.
     /// </remarks>
-    private void ResetPerMeasureState(int sourceEnd, bool autoBoundary)
+    private void ResetPerMeasureState(int sourceEnd, bool confirmableBoundary)
     {
-        _autoBoundary = autoBoundary;
+        _confirmableBoundary = confirmableBoundary;
         _currentItems.Clear();
         _sectionLabel = null;
         _sectionLabelPosition = 0;
@@ -436,21 +440,22 @@ internal sealed class MeasureBuilder
             // final / double-bar / repeat-end case, incl. a phrase that already ended
             // with a plain `|` before the form's ":|").
             _measures[^1] = _measures[^1] with { EndBarline = endType };
-            _autoBoundary = false;
+            _confirmableBoundary = false;
         }
-        else if (_autoBoundary)
+        else if (_confirmableBoundary)
         {
-            // A bare `|` merely CONFIRMS a measure that auto-fill just closed — no new
-            // measure. It consumes the confirmation (a FURTHER bare `|` would open a
-            // placeholder).
-            _autoBoundary = false;
+            // A bare `|` merely CONFIRMS the boundary it sits on — the section start
+            // (a leading `|`) or a measure auto-fill just closed. No new measure; it
+            // consumes the confirmation (a FURTHER bare `|` would be a `| |` pair).
+            _confirmableBoundary = false;
         }
         else
         {
-            // A bare `|` on an unconfirmed boundary — a leading `|`, a `| |` gap, or a
-            // trailing `| |` — opens a real placeholder measure: it holds a slot so other
-            // parts stay aligned, renders as an empty bar, and is flagged
+            // The second barline of a `| |` PAIR (nothing between two written bars) —
+            // mid-piece or trailing — opens a real placeholder measure: it holds a slot
+            // so other parts stay aligned, renders as an empty bar, and is flagged
             // shorter-than-the-meter until the author fills it (EmptyMeasureValidator).
+            // An empty measure is thus always VISIBLE in the source as `| |`.
             EmitEmptyMeasure(position, endType);
         }
     }
@@ -484,8 +489,9 @@ internal sealed class MeasureBuilder
         });
 
         OnEmptyPlaceholder?.Invoke(sourceEnd);
-        // Closed by a written barline, so a further bare barline opens ANOTHER placeholder.
-        ResetPerMeasureState(sourceEnd, autoBoundary: false);
+        // Closed by a written barline, so a further bare barline opens ANOTHER placeholder
+        // (`| | |` = two empty measures).
+        ResetPerMeasureState(sourceEnd, confirmableBoundary: false);
     }
 
     /// <summary>

@@ -447,6 +447,17 @@ Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ Dur
 Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
 
+(* BARE-BARLINE SEMANTICS (music): a bare '|' after music closes that bar. On an empty
+   span a SINGLE bare '|' merely anchors the boundary it sits on — the section start
+   (a leading '|'), the section end (a trailing '|'), or a just-auto-filled bar — and
+   creates nothing, so `{ | c1 | c1 | }` == `{ c1 | c1 }`. An EMPTY MEASURE is always
+   an explicit `| |` PAIR: two written barlines with nothing between (leading, mid, or
+   trailing; `| | |` is two). It holds a slot to keep parts aligned, renders as an
+   empty bar, and warns (LYS2008) until filled — an empty measure is thus always
+   visible in the source. A TYPED barline on an empty span decorates the previous
+   bar's end. LYRICS differ BY DESIGN: they carry no durations, so their barlines ARE
+   the structure — a lone leading '|' there means "bar 1 has no syllables". *)
+
 (* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is a
    volta; otherwise '[' … ']' is a manual beam group. The '[' is REQUIRED; the closing
    ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)

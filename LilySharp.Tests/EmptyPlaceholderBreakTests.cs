@@ -41,8 +41,10 @@ public class EmptyPlaceholderBreakTests
     [Fact]
     public void BreakBeforeLeadingPlaceholder_BreaksAfterThePlaceholder()
     {
+        // A leading placeholder is an explicit `| |` pair (a single leading `|`
+        // just anchors the section start and holds no measure).
         var measures = PrimaryMeasures(
-            "part m { section A { break | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
+            "part m { section A { break | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.True(measures[0].HasBreakAfter);   // the break lands on the placeholder
         Assert.False(measures[1].HasBreakAfter);  // NOT deferred onto the content bar
@@ -52,7 +54,7 @@ public class EmptyPlaceholderBreakTests
     public void NoBreakBeforeLeadingPlaceholder_ForbidsBreakAfterThePlaceholder()
     {
         var measures = PrimaryMeasures(
-            "part m { section A { nobreak | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
+            "part m { section A { nobreak | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.Equal(BreakPermission.Forbid, measures[0].LineBreakPermission);
         Assert.Equal(BreakPermission.Allow, measures[1].LineBreakPermission);

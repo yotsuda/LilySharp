@@ -138,9 +138,9 @@ public sealed partial class MeasureCollector
         _octave.ResetForSection();
         _defaultDuration = Fraction.Quarter;
 
-        // A section is self-contained: clear the auto-fill boundary flag so a section that
-        // OPENS with a bare `|` gets a leading placeholder measure rather than silently
-        // confirming the previous section's auto-filled last bar.
+        // A section is self-contained: re-arm the confirmable boundary so a section that
+        // OPENS with a bare `|` anchors its OWN start (no empty measure, no leak into the
+        // previous section) — an empty measure is always an explicit `| |` pair.
         builder.ResetMeasureBoundary();
 
         // The phrase auto-transpose baseline reverts with the key: a mid-section
@@ -482,9 +482,14 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Bar count of a music scope (a part block or a part-major section cell): one per
-    /// written barline, plus a trailing partial bar when music follows the last
-    /// barline — the same segmentation as <see cref="ChordNameCollector.CountBars"/>.
+    /// Bar count of a music scope (a part block or a part-major section cell),
+    /// mirroring <see cref="MeasureBuilder.HandleBarline"/>'s bare-barline rules: a
+    /// barline after music closes a bar; a single bare <c>|</c> on an empty span
+    /// anchors the boundary it sits on (the scope start) and counts NOTHING; only the
+    /// second of a <c>| |</c> pair is an empty measure; a TYPED barline on an empty
+    /// span is a decoration. A trailing partial bar (music after the last barline)
+    /// counts. (Chords/lyrics tracks keep their own slot-style counting — see
+    /// <see cref="ChordNameCollector.CountBars"/> — their barlines ARE the structure.)
     /// A <c>&lt;&lt; \\ &gt;&gt;</c> polyphonic span counts as ONLY its first voice's
     /// bars: the main stream advances by that voice while the others overlay the same
     /// measures, so counting every voice's barlines would multiply the bar count.
@@ -493,11 +498,12 @@ public sealed partial class MeasureCollector
     {
         int bars = 0;
         bool pendingMusic = false;
-        WalkBars(scope, ref bars, ref pendingMusic);
+        bool confirmable = true; // the scope-start boundary absorbs one bare `|`
+        WalkBars(scope, ref bars, ref pendingMusic, ref confirmable);
         return bars + (pendingMusic ? 1 : 0);
     }
 
-    private static void WalkBars(SyntaxNode node, ref int bars, ref bool pendingMusic)
+    private static void WalkBars(SyntaxNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -506,9 +512,25 @@ public sealed partial class MeasureCollector
             {
                 case null:
                     break;
-                case BarlineSyntax:
-                    bars++;
-                    pendingMusic = false;
+                case BarlineSyntax bar:
+                    if (pendingMusic)
+                    {
+                        bars++; // closes the bar of music before it
+                        pendingMusic = false;
+                        confirmable = false;
+                    }
+                    else if (bar.BarToken.Text != "|")
+                    {
+                        confirmable = false; // a typed bar decorates the boundary
+                    }
+                    else if (confirmable)
+                    {
+                        confirmable = false; // a lone `|` anchors the boundary
+                    }
+                    else
+                    {
+                        bars++; // the second of a `| |` pair: an empty measure
+                    }
                     break;
                 case NoteSyntax:
                 case RestSyntax:
@@ -519,10 +541,10 @@ public sealed partial class MeasureCollector
                 case ParallelExpressionSyntax parallel:
                     var first = parallel.Voices.FirstOrDefault();
                     if (first != null)
-                        WalkBars(first, ref bars, ref pendingMusic);
+                        WalkBars(first, ref bars, ref pendingMusic, ref confirmable);
                     break;
                 default:
-                    WalkBars(child, ref bars, ref pendingMusic);
+                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable);
                     break;
             }
         }
