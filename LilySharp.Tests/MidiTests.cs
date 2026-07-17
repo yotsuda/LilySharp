@@ -102,12 +102,33 @@ public class MidiTests
         // Extra marks add whole octaves: ''(3) = an octave plus a third.
         Assert.Equal(new[] { 76, 79, 83 }, P("phrase M { c e g }\n{ M''(3) }"));
 
-        // The identity holds AFTER the phrase too: the running frame hands off
-        // at the SOUNDED end (a note after Melody'(8) continues where Melody'
-        // would), and only the anchoring moves — the following note still
-        // sounds as written.
+        // The identity holds AFTER the phrase too: the reference hands its
+        // ANCHOR to the relative chain (the chord rule — the first note's bare
+        // letter, shifted with the reference; the interior never leaks), so a
+        // note after Melody'(8) continues where Melody' would, and only the
+        // anchoring moves — the following note still sounds as written.
         Assert.Equal(P("phrase M { c e g }\n{ M' c }"), P("phrase M { c e g }\n{ M'(8) c }"));
-        Assert.Equal(new[] { 64, 67, 71, 72 }, P("phrase M { c e g }\n{ M'(3) c }")); // c nearest the sounded b
+        Assert.Equal(new[] { 64, 67, 71, 60 }, P("phrase M { c e g }\n{ M'(3) c }")); // c nearest the shifted anchor e
+    }
+
+    [Fact]
+    public void PhraseReference_HandsOffItsAnchor_NotItsLastNote()
+    {
+        // A reference is ONE item, the `<c e g>` chord rule: what flows to the
+        // next note is the phrase's ANCHOR (its first note's bare letter), never
+        // its interior — no special treatment for the body's last note.
+        static int[] P(string src) => new MidiExporter().Export(SyntaxTree.Parse(src))
+            .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
+
+        // The body climbs to G4, but the following c resolves against the
+        // anchor c (C4) — not nearest the last note (which would give C5).
+        Assert.Equal(60, P("phrase M { c d e f g }\n{ M c }").Last());
+        // Reference marks shift the anchor with the phrase: M, anchors at C3.
+        Assert.Equal(48, P("phrase M { c d e f g }\n{ M, c }").Last());
+        // Editing the TAIL of a phrase body never moves what follows.
+        Assert.Equal(
+            P("phrase M { c d e }\n{ M f }").Last(),
+            P("phrase M { c g' e' }\n{ M f }").Last());
     }
 
     [Fact]

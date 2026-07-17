@@ -69,15 +69,18 @@ public class PhraseExtractorTests
     {
         // Measure 2 (`g a b c'`) sits high because the RELATIVE chain climbed
         // there; a fresh phrase frame would drop its g near C4. The extractor
-        // corrects the first pitch's marks by measurement.
+        // corrects the body's first pitch by measurement — and the first pitch
+        // AFTER the reference too: the reference hands off its ANCHOR (bare g),
+        // not the inline chunk's last note, so measure 3's d needs its own marks
+        // to stay put.
         var src = "part m { section A { c'4 d e f | g a b c' | d4 e f g } }\n"
                 + "form main { A }\nscore main { staff m }";
         int selStart = src.IndexOf("g a b");
         var newText = ExtractOk(src, selStart, selStart + 1, "climb");
-        Assert.Contains("phrase climb {", newText);
-        // Measures 1 and 3 stay put in the section; only measure 2 is replaced.
+        Assert.Contains("phrase climb { g''4 a b c' |}", newText);
+        // Measure 1 stays put; measure 3 keeps its sound via the tail knob.
         Assert.Contains("c'4 d e f |", newText);
-        Assert.Contains("d4 e f g", newText);
+        Assert.Contains("d''''4 e f g", newText);
     }
 
     [Fact]

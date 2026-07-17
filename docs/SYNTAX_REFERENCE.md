@@ -66,9 +66,11 @@ c' c,              % C6 C5 — marks shift from the nearest octave
 ```
 
 Each **phrase body** evaluates in a fresh frame — the default octave, pitch
-and duration — regardless of where the `$phrase` is referenced, so a phrase
-always means the same notes at every call site. State flows out normally:
-a note written after `$phrase` is relative to the phrase's last note.
+and duration — regardless of where the phrase is referenced, so a phrase
+always means the same notes at every call site. What flows out is the
+phrase's **anchor** — its first note's bare letter, shifted with the
+reference's own marks — exactly like a chord: a note written after the
+reference is relative to that anchor, never to how the body ends.
 **Section boundaries** also reset the frame.
 
 ## Durations

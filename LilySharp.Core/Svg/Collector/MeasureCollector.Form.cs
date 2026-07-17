@@ -587,13 +587,17 @@ public sealed partial class MeasureCollector
         // Each phrase reference evaluates its body in a FRESH relative frame
         // (default octave / pitch / duration): a phrase's pitches must not
         // depend on what happened to be played before the reference, or the
-        // same $phrase would render differently at every call site. This is
+        // same phrase would render differently at every call site. This is
         // the moral equivalent of LilyPond variables carrying their own
-        // \relative block. State flows OUT of the phrase normally, so a note
-        // following $phrase is relative to the phrase's last note. Trailing marks
-        // on the reference (Chorus' / Chorus,) shift that fresh frame; a glued
-        // interval argument (Chorus'(3)) shifts the body by scale steps.
-        musicNodes.Add(RelativeResetMarker.For(octaveOffset, diatonicSteps));
+        // \relative block. What flows OUT is the phrase's ANCHOR — its first
+        // note's bare letter, the `<c e g>` chord rule — never its interior,
+        // so a note after the reference does not depend on how the body ends.
+        // Trailing marks on the reference (Chorus' / Chorus,) shift that fresh
+        // frame; a glued interval argument (Chorus'(3)) shifts the body by
+        // scale steps. Both shift the outgoing anchor with them.
+        musicNodes.Add(RelativeResetMarker.For(octaveOffset, diatonicSteps,
+            Music.PhraseAnchor.AnchorStep(expression,
+                n => _variables.TryGetValue(n, out var nested) ? nested : null)));
 
         // Include the expression itself if it is a music node.
         if (IsCollectableMusicNode(expression))

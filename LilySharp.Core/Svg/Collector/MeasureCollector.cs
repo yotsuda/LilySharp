@@ -750,6 +750,10 @@ public sealed partial class MeasureCollector
     private readonly Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
     // Saved diatonic-shift values, pushed/popped alongside _phraseTransposeSaves.
     private readonly Stack<int> _phraseDiatonicSaves = new();
+    // Each open reference's outgoing anchor (bare letter + octave, resolved in
+    // the phrase's own frame at entry), handed to the relative chain at exit —
+    // the chord rule; null = pitchless body. Pushed/popped alongside the above.
+    private readonly Stack<(char Name, int Octave)?> _phraseAnchorSaves = new();
 
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
@@ -1827,7 +1831,7 @@ public sealed partial class MeasureCollector
     /// it. The phrase shift composes UNDER any part/score transpose (the written
     /// pitch moves home→ambient first, then the instrument transpose applies).
     /// </summary>
-    private void EnterPhraseTranspose(int diatonicSteps = 0)
+    private void EnterPhraseTranspose(int diatonicSteps = 0, int? anchorStep = null)
     {
         var saved = _octave.GetTranspose();
         _phraseTransposeSaves.Push(saved);
@@ -1837,9 +1841,34 @@ public sealed partial class MeasureCollector
         // by scale steps; nested references compose additively.
         _phraseDiatonicSaves.Push(_octave.DiatonicShiftSteps);
         _octave.DiatonicShiftSteps += diatonicSteps;
+        // Resolve the phrase's outgoing ANCHOR now, in the just-reset frame
+        // (EnterDefaultFrame ran first at every call site): the bare-letter
+        // resolution of the body's first pitched element — or the AMBIENT tonic
+        // for a degree-opened body — exactly what a chord root would propagate.
+        (char Name, int Octave)? anchor = null;
+        if (anchorStep is { } astep)
+        {
+            int step = astep == Music.PhraseAnchor.Tonic
+                ? (_ambientTonicValid ? _ambientTonicStep : 0)
+                : astep;
+            // Passing the frame's own letter back keeps Resolve's LastPitchName
+            // write a no-op — the body's first note must still resolve against
+            // the untouched reset frame.
+            anchor = ("cdefgab"[step], _octave.Resolve(step, 0, _octave.LastPitchName));
+        }
+        _phraseAnchorSaves.Push(anchor);
     }
 
-    /// <summary>Restores the transpose saved by <see cref="EnterPhraseTranspose"/>.</summary>
+    /// <summary>
+    /// Restores the transpose saved by <see cref="EnterPhraseTranspose"/> and
+    /// hands the relative frame off at the phrase's ANCHOR — the chord rule: a
+    /// reference is ONE item whose interior never leaks, so the note after
+    /// <c>Melody'(3)</c> is relative to the phrase's shifted anchor ('(8) == ',
+    /// after the phrase included) and editing the tail of a phrase body never
+    /// moves the music that follows a reference. A pitchless body (rests only)
+    /// hands nothing off. Only the anchoring moves; following notes still sound
+    /// as written.
+    /// </summary>
     private void ExitPhraseTranspose()
     {
         if (_phraseTransposeSaves.Count > 0)
@@ -1849,15 +1878,13 @@ public sealed partial class MeasureCollector
             int restored = _phraseDiatonicSaves.Pop();
             int delta = _octave.DiatonicShiftSteps - restored;
             _octave.DiatonicShiftSteps = restored;
-            // Hand the running frame off at the phrase's SOUNDED end: the next
-            // note is relative to the phrase's last note as heard, so '(8) is
-            // exactly ' — after the phrase included. Only the anchoring moves;
-            // following notes still sound as written.
-            if (delta != 0)
+            if (_phraseAnchorSaves.Count > 0 && _phraseAnchorSaves.Pop() is { } anchor)
             {
-                var (s, _, o) = Music.DiatonicShift.Apply(
-                    GetPitchIndex(_octave.LastPitchName), 0, _octave.CurrentOctave,
-                    delta, _meta.KeySharps - _octave.TransposeKeySharps(0));
+                int s = GetPitchIndex(anchor.Name);
+                int o = anchor.Octave;
+                if (delta != 0)
+                    (s, _, o) = Music.DiatonicShift.Apply(s, 0, o,
+                        delta, _meta.KeySharps - _octave.TransposeKeySharps(0));
                 _octave.LastPitchName = "cdefgab"[s];
                 _octave.CurrentOctave = o;
             }
@@ -2310,6 +2337,7 @@ public sealed partial class MeasureCollector
         ResetAmbientTonicToHome();
         _phraseTransposeSaves.Clear();
         _phraseDiatonicSaves.Clear();
+        _phraseAnchorSaves.Clear();
         _octave.DiatonicShiftSteps = 0;
 
         var builder = new MeasureBuilder(TimeSignatureFraction);
@@ -2333,7 +2361,7 @@ public sealed partial class MeasureCollector
                 if (node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.DiatonicSteps);
+                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
                     continue;
                 }
 

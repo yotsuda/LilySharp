@@ -477,7 +477,14 @@ PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
                     sequences and parallel-third harmonies in one token. 1-based
                     like a degree, so '(8) == ' and '(1) is a unison; extra marks
                     add octaves (''(3) = an octave plus a third). The adjacency is
-                    what separates it from a slur: a SPACED ' (' still opens one. *)
+                    what separates it from a slur: a SPACED ' (' still opens one.
+                    A reference is ONE item to the relative chain — the chord rule:
+                    the note that follows is relative to the phrase's ANCHOR (its
+                    first note's bare letter, shifted with the reference's marks
+                    and '(N)'), never to its interior, so how the body ends — or is
+                    later edited — cannot move the music after a reference, and
+                    '(8) == ' holds after the phrase too. A body evaluates in the
+                    default frame; a pitchless body (rests only) hands nothing off. *)
 
 ### 8.3 Ties, Slurs, Beams
 

@@ -33,11 +33,14 @@ namespace LilySharp.Core.Editing;
 /// Extraction is SEMANTICS-PRESERVING or refused: a phrase body evaluates in a
 /// fresh frame (default octave, quarter default duration), so the extractor
 /// stamps the running duration onto the chunk's first undurated note and
-/// corrects the first pitch's octave marks by MEASUREMENT — it compares the
-/// MIDI of the document before and after, nudges the marks by the observed
-/// octave delta, and refuses outright (no changes) if the results still differ.
-/// The measure is the extraction unit: barlines are the only boundaries where
-/// the frame hand-off is fully compensatable.
+/// corrects octave marks by MEASUREMENT — it compares the MIDI of the document
+/// before and after, nudges marks by the observed octave delta, and refuses
+/// outright (no changes) if the results still differ. There are TWO independent
+/// mark knobs: the body's first pitch (fixes the phrase's own register) and the
+/// first pitch AFTER the reference (fixes the relative chain downstream — the
+/// reference hands off its ANCHOR, the first note's BARE letter, so body marks
+/// never leak out). The measure is the extraction unit: barlines are the only
+/// boundaries where the frame hand-off is fully compensatable.
 /// </remarks>
 public static class PhraseExtractor
 {
@@ -115,13 +118,21 @@ public static class PhraseExtractor
             .OrderBy(p => p.Span.Start)
             .FirstOrDefault();
 
+        // Compensation 3: the first pitch AFTER the reference. The reference
+        // hands its ANCHOR off (the body's first BARE letter), so the downstream
+        // chain no longer sees the inline chunk's last note — and since marks on
+        // the body's first pitch never leak out, the two knobs are INDEPENDENT.
+        var tailPitch = container.DescendantNodes().OfType<PitchSyntax>()
+            .Where(p => p.Span.Start >= chunkEnd)
+            .OrderBy(p => p.Span.Start)
+            .FirstOrDefault();
+
         var baseline = MidiSignature(tree);
-        string? candidate = null;
-        int delta = 0;
-        for (int attempt = 0; attempt < 4; attempt++)
+        int bodyDelta = 0, tailDelta = 0;
+        for (int attempt = 0; attempt < 6; attempt++)
         {
-            candidate = Build(text, name, container, chunkStart, chunkEnd,
-                durationStamp, durationInsertAt, firstPitch, delta);
+            var candidate = Build(text, name, container, chunkStart, chunkEnd,
+                durationStamp, durationInsertAt, firstPitch, bodyDelta, tailPitch, tailDelta);
             var newTree = SyntaxTree.Parse(candidate);
             if (newTree.HasErrors)
             {
@@ -133,16 +144,32 @@ public static class PhraseExtractor
             int diff = FirstDifference(baseline, sig);
             if (diff < 0)
                 return new(candidate, null); // provably identical music
-            // A wrong first-pitch anchor shifts the tail by whole octaves; read
-            // the delta off the first differing note and retry.
-            if (firstPitch != null && diff < baseline.Count && diff < sig.Count
-                && (baseline[diff].Pitch - sig[diff].Pitch) % 12 == 0
-                && baseline[diff].Pitch != sig[diff].Pitch)
+            if (diff >= baseline.Count || diff >= sig.Count)
+                break;
+            int gap = baseline[diff].Pitch - sig[diff].Pitch;
+            if (gap == 0 || gap % 12 != 0)
+                break; // not a whole-octave miss — nothing these knobs can fix
+            int step = gap / 12;
+            // Body knob first; keep the turn only when it moves the first diff
+            // LATER (the differing note was in the body). Knob independence
+            // makes each accepted turn strict progress, so this terminates.
+            if (firstPitch != null)
             {
-                delta += (baseline[diff].Pitch - sig[diff].Pitch) / 12;
-                continue;
+                bodyDelta += step;
+                var probe = SyntaxTree.Parse(Build(text, name, container, chunkStart, chunkEnd,
+                    durationStamp, durationInsertAt, firstPitch, bodyDelta, tailPitch, tailDelta));
+                if (!probe.HasErrors)
+                {
+                    int probeDiff = FirstDifference(baseline, MidiSignature(probe));
+                    if (probeDiff < 0 || probeDiff > diff)
+                        continue;
+                }
+                bodyDelta -= step;
             }
-            break;
+            // The diff sits past the reference — turn the tail knob.
+            if (tailPitch is null)
+                break;
+            tailDelta += step;
         }
         return new(null, "Extraction here would change the music (a construct this "
             + "refactoring cannot compensate spans the boundary) - no changes made.");
@@ -150,21 +177,33 @@ public static class PhraseExtractor
 
     private static string Build(string text, string name, SyntaxNode container,
         int chunkStart, int chunkEnd, string? durationStamp, int durationInsertAt,
-        PitchSyntax? firstPitch, int octaveDelta)
+        PitchSyntax? firstPitch, int bodyDelta, PitchSyntax? tailPitch, int tailDelta)
     {
         // Patch the chunk text (offsets descending so they don't shift).
         var chunk = text[chunkStart..chunkEnd];
         var patches = new List<(int Start, int End, string Text)>();
         if (durationStamp != null && durationInsertAt >= 0)
             patches.Add((durationInsertAt, durationInsertAt, durationStamp));
-        if (firstPitch != null && octaveDelta != 0)
+        if (firstPitch != null && bodyDelta != 0)
         {
             var (mStart, mEnd, net) = PitchMarks(firstPitch);
-            int n = net + octaveDelta;
+            int n = net + bodyDelta;
             patches.Add((mStart, mEnd, n >= 0 ? new string('\'', n) : new string(',', -n)));
         }
         foreach (var (s, e, t) in patches.OrderByDescending(p => p.Start))
             chunk = chunk[..(s - chunkStart)] + t + chunk[(e - chunkStart)..];
+
+        // The tail patch lands AFTER the chunk, so its offsets are relative to
+        // chunkEnd and survive the reference substitution below.
+        string tail = text[chunkEnd..];
+        if (tailPitch != null && tailDelta != 0)
+        {
+            var (mStart, mEnd, net) = PitchMarks(tailPitch);
+            int n = net + tailDelta;
+            tail = tail[..(mStart - chunkEnd)]
+                 + (n >= 0 ? new string('\'', n) : new string(',', -n))
+                 + tail[(mEnd - chunkEnd)..];
+        }
 
         // The declaration goes at line start before the container's top-level
         // ancestor (the enclosing `part …` / `section …`).
@@ -176,7 +215,7 @@ public static class PhraseExtractor
             insertPos--;
 
         string decl = $"phrase {name} {{{chunk}}}\n\n";
-        string result = text[..chunkStart] + " " + name + " " + text[chunkEnd..];
+        string result = text[..chunkStart] + " " + name + " " + tail;
         return result[..insertPos] + decl + result[insertPos..];
     }
 

@@ -394,19 +394,32 @@ public sealed class MidiExporter
                     int savedDiatonic = _diatonicShiftSteps;
                     _currentTransposeSemitones += PhraseTransposeSemitones();
                     _diatonicShiftSteps += varRef.DiatonicShiftSteps;
+                    // The phrase's outgoing ANCHOR — its first note's bare
+                    // letter resolved in the fresh frame above, the ambient
+                    // tonic for a degree-opened body — captured before the
+                    // body runs (a mid-body key change must not move it).
+                    int? anchorStep = LilySharp.Core.Music.PhraseAnchor.AnchorStep(phraseBody,
+                        n => _phraseBodies!.TryGetValue(n, out var b) ? b : null);
+                    if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Tonic)
+                        anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
                     ProcessNode(phraseBody, track, conductorTrack);
                     _currentTransposeSemitones = savedTranspose;
                     _diatonicShiftSteps = savedDiatonic;
-                    // Frame hand-off at the phrase's SOUNDED end (matches the
-                    // collector's ExitPhraseTranspose): a note after Melody'(3)
-                    // is relative to the shifted last note, so '(8) == '.
-                    if (varRef.DiatonicShiftSteps != 0)
+                    // Frame hand-off at the phrase's ANCHOR (matches the
+                    // collector's ExitPhraseTranspose): the reference is ONE
+                    // item, the chord rule — its interior never leaks, and its
+                    // own marks ('(N) included) shift what propagates, so a
+                    // note after Melody'(3) is relative to the shifted anchor
+                    // and '(8) == '. A pitchless body hands nothing off.
+                    if (anchorStep is { } astep)
                     {
-                        var (s, _, o) = LilySharp.Core.Music.DiatonicShift.Apply(
-                            _currentNoteName, 0, _currentOctave,
-                            varRef.DiatonicShiftSteps, _keySharps);
-                        _currentNoteName = s;
-                        _currentOctave = o;
+                        int oct = RelativeOctave.Resolve(
+                            0, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
+                        if (varRef.DiatonicShiftSteps != 0)
+                            (astep, _, oct) = LilySharp.Core.Music.DiatonicShift.Apply(
+                                astep, 0, oct, varRef.DiatonicShiftSteps, _keySharps);
+                        _currentNoteName = astep;
+                        _currentOctave = oct;
                     }
                     _activePhrases.Remove(phName);
                 }

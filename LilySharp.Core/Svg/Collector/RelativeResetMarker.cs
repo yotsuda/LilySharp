@@ -29,8 +29,8 @@ namespace LilySharp.Core.Svg.Collector;
 /// </summary>
 internal sealed class RelativeResetMarker : SyntaxNode
 {
-    /// <summary>The offset-free reset used by the overwhelming common case.</summary>
-    public static readonly RelativeResetMarker Instance = new(0, 0);
+    /// <summary>The anchorless offset-free reset (a parallel span's fresh frame).</summary>
+    public static readonly RelativeResetMarker Instance = new(0, 0, null);
 
     /// <summary>Net octave shift applied to the reset frame (' = +1, , = -1).</summary>
     public int OctaveOffset { get; }
@@ -40,17 +40,27 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// relative resolution (see <see cref="OctaveContext.DiatonicShiftSteps"/>).</summary>
     public int DiatonicSteps { get; }
 
-    /// <summary>Reuses <see cref="Instance"/> for the (common) unmarked case.</summary>
-    public static RelativeResetMarker For(int octaveOffset, int diatonicSteps = 0)
-        => octaveOffset == 0 && diatonicSteps == 0
-            ? Instance
-            : new RelativeResetMarker(octaveOffset, diatonicSteps);
+    /// <summary>The phrase's anchor step (see <see cref="Music.PhraseAnchor"/>):
+    /// the written step the paired <see cref="PhraseEndMarker"/> hands back to
+    /// the relative chain — the chord rule, so a reference propagates its first
+    /// note's bare letter, never its interior. <see cref="Music.PhraseAnchor.Tonic"/>
+    /// marks a degree-opened body (resolved to the AMBIENT tonic at the
+    /// reference); null = pitchless body, nothing to hand off.</summary>
+    public int? AnchorStep { get; }
 
-    private RelativeResetMarker(int octaveOffset, int diatonicSteps)
+    /// <summary>Reuses <see cref="Instance"/> for the (common) bare anchorless case.</summary>
+    public static RelativeResetMarker For(int octaveOffset, int diatonicSteps = 0,
+        int? anchorStep = null)
+        => octaveOffset == 0 && diatonicSteps == 0 && anchorStep == null
+            ? Instance
+            : new RelativeResetMarker(octaveOffset, diatonicSteps, anchorStep);
+
+    private RelativeResetMarker(int octaveOffset, int diatonicSteps, int? anchorStep)
         : base(MarkerGreen.Shared, parent: null, position: 0)
     {
         OctaveOffset = octaveOffset;
         DiatonicSteps = diatonicSteps;
+        AnchorStep = anchorStep;
     }
 
     private sealed class MarkerGreen : GreenNode

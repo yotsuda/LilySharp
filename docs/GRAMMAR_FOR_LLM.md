@@ -315,8 +315,10 @@ c4 d e f |
 ## Rules and gotchas
 
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
-  phrase means the same notes at every `$call`. **Section boundaries also reset the frame.**
-  After `$phrase`, the next note is relative to the phrase's last note.
+  phrase means the same notes at every call. **Section boundaries also reset the frame.**
+  A reference is ONE item to the relative chain (the chord rule): the next note is
+  relative to the phrase's ANCHOR — its first note's bare letter, shifted with the
+  reference's marks — never to how the body ends.
 - A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`); a GLUED `'(N)`
   is a DIATONIC interval — `Melody'(3)` plays the phrase a third up in the ambient key
   (the quality follows the scale), `Motif,(2)` a second down; `'(8)` == `'`. Spaced,

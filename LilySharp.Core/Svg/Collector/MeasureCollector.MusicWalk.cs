@@ -61,7 +61,7 @@ public sealed partial class MeasureCollector
             if (node is RelativeResetMarker reset)
             {
                 EnterDefaultFrame(reset.OctaveOffset);
-                EnterPhraseTranspose(reset.DiatonicSteps);
+                EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
                 continue;
             }
 
