@@ -478,8 +478,13 @@ internal sealed class MeasureBuilder
             // (a leading `|`) or a measure auto-fill just closed. No new measure; it
             // consumes the confirmation (a FURTHER bare `|` would be a `| |` pair).
             // On an auto-fill close, retarget the measure's boundary to the written `|`
-            // so its click/highlight points at the barline, not the bar-filling note.
-            if (_boundaryRetargetable && _measures.Count > 0)
+            // so its click/highlight points at the barline, not the bar-filling note —
+            // BUT only when the closed bar's end is a PLAIN `|`. A TYPED end (`:|`, `||`,
+            // `|.`) is a meaningful barline the plain `|` cannot stand in for, so it keeps
+            // its own offset (e.g. a phrase's trailing `:|` highlights at every call site,
+            // not only where a section `|` happens to follow the last copy).
+            if (_boundaryRetargetable && _measures.Count > 0
+                && _measures[^1].EndBarline == BarlineType.Single)
             {
                 _measures[^1] = _measures[^1] with { SourceEnd = position };
                 _measureSourceStart = position;

@@ -123,6 +123,24 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void PhraseTrailingRepeatEnd_HighlightsEveryCallSite_NotJustTheLast()
+    {
+        // A phrase's trailing `:|` is a MEANINGFUL barline (not a plain bar the section's
+        // `|` can stand in for), so it keeps its own offset at every call site. In
+        // `section A { x | x | x }` all three drawn `:|` share the phrase's `:|` offset,
+        // so a caret on it lights all three (before this the plain-`|` retarget scattered
+        // them onto the section bars, leaving only the last copy).
+        const string src = "phrase x { |: c1 | c1 :| }\n"
+                         + "part m { clef treble section A { x | x | x } }\n"
+                         + "form main { A }\nscore main \"s\" { staff m }";
+        int repeatEnd = src.IndexOf(":|");
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
+        int copies = Regex.Matches(svg,
+            "<rect class=\"nh-hit\"[^>]* pointer-events=\"all\" data-pos=\"" + repeatEnd + "\"/>").Count;
+        Assert.Equal(3, copies);
+    }
+
+    [Fact]
     public void RepeatStartBarlineCarriesItsOwnOffset()
     {
         // A `|:` opens the next measure; the drawn start barline must carry the `|:`
