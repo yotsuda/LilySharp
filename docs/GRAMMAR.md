@@ -43,6 +43,9 @@ String         = '"' , { StringChar } , '"' ;
 Identifier     = IdentStart , { IdentCont } ;
 IdentStart     = UnicodeLetter | '_' ;          (* any Unicode letter, e.g. 動機 *)
 IdentCont      = IdentStart | Digit | '-' ;
+(* A name may CONTAIN or END with digits (melody2, foo2bar) but must not START
+   with one: a leading digit is a duration (c4) or scale degree (<1 3 5>), so
+   'phrase 2foo { }' is rejected with LYS0017 "a name cannot start with a digit". *)
 
 ### Pitch Names
 

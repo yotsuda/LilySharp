@@ -92,6 +92,43 @@ public class ParserTests
     }
 
     [Fact]
+    public void NameStartingWithDigit_ReportsOneClearError_NotACascade()
+    {
+        // `phrase 2foo {}` lexes the leading digit off as an IntegerLiteral glued
+        // to the name — the root cause is a digit-leading name, not the four
+        // unrelated errors the stray tokens used to cascade into.
+        var tree = SyntaxTree.Parse("phrase 2ほえほえ {}");
+        var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.Single(errors);
+        Assert.Equal(DiagnosticCodes.NameStartsWithDigit, errors[0].Code);
+        Assert.Contains("2ほえほえ", errors[0].Message);
+        // Recovery merged `2ほえほえ` into one name, so the body parsed and the
+        // source round-trips verbatim.
+        Assert.Equal("phrase 2ほえほえ {}", tree.Root.ToFullString());
+    }
+
+    [Theory]
+    [InlineData("phrase foo2bar {}")]   // a digit in the middle is fine
+    [InlineData("phrase melody2 {}")]   // a trailing digit is fine
+    [InlineData("phrase ほえ2 {}")]      // …in any script
+    public void NamesContainingOrEndingWithDigits_AreAccepted(string src)
+    {
+        // Only a LEADING digit is rejected; the name starts with a letter, so the
+        // lexer keeps it as one identifier and it parses clean.
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public void NameStartingWithDigit_AppliesToSectionsToo()
+    {
+        // ExpectPartName is the shared name-parse, so the rule covers every
+        // declaration position (part / section / phrase / form / …).
+        var tree = SyntaxTree.Parse("section 3A { c1 }");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.NameStartsWithDigit);
+    }
+
+    [Fact]
     public void ParseBarline()
     {
         var tree = SyntaxTree.Parse("c d | e f");

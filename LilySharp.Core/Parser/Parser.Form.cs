@@ -405,6 +405,31 @@ internal sealed partial class Parser
         if (IsPartNameStart())
             return Advance();
 
+        // A name written with a leading digit — `phrase 2foo { … }` — lexes as an
+        // IntegerLiteral GLUED to the name token (numbers are durations / scale
+        // degrees, so the digit run splits off first). Report the real cause once
+        // and RECOVER by consuming the whole `2foo` as the name: without this the
+        // stray digit and identifier cascade into three more unrelated errors
+        // ("expected {", "detached duration", "undefined variable 'foo'").
+        if (Check(SyntaxKind.IntegerLiteral)
+            && IsPartNameKind(Peek(1).Kind)
+            && Current.TrailingTriviaWidth == 0 && Peek(1).LeadingTriviaWidth == 0)
+        {
+            // Span the combined ink `2foo` (skip the digit's leading trivia).
+            int inkStart = _textPosition + Current.LeadingTriviaWidth;
+            var digits = Advance();          // "2"
+            var rest = Advance();            // "foo" (glued)
+            var name = digits.Text + rest.Text;
+            _diagnostics.Error(new TextSpan(inkStart, name.Length),
+                DiagnosticCodes.NameStartsWithDigit,
+                $"A name cannot start with a digit: '{name}' — a leading number is a "
+                + "duration or scale degree in Lily#; start the name with a letter.");
+            // Merge into one Identifier so the rest of the declaration parses cleanly
+            // (leading trivia from the digit, trailing from the name — round-trips).
+            return new SyntaxToken(SyntaxKind.Identifier, name,
+                digits.LeadingTrivia, rest.TrailingTrivia);
+        }
+
         // Report error. If a reserved word (segno/coda/time/…) was written where a
         // name belongs, name the actual word and flag it as reserved — clearer than
         // the internal token kind.

@@ -385,6 +385,10 @@ public static class DiagnosticCodes
     /// duration. A duration must be glued to what it lengthens (<c>c4</c>,
     /// <c>&lt;c e g&gt;4</c>); separated by a space it means nothing.</summary>
     public const string DetachedDuration = "LYS0016";
+    /// <summary>Parse error: a declaration name (part/section/phrase/…) starts with
+    /// a digit. Numbers are already durations (<c>c4</c>) and scale degrees
+    /// (<c>&lt;1 3 5&gt;</c>) in Lily#, so a name must start with a letter.</summary>
+    public const string NameStartsWithDigit = "LYS0017";
 
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)
