@@ -157,20 +157,43 @@ public sealed class ChordDegreeTests
             .Any(d => d.Code == DiagnosticCodes.ChordMixesPitchesAndDegrees);
 
     [Theory]
-    [InlineData("<c e 5>")]   // a second named pitch alongside a degree
-    [InlineData("<c 3 e>")]   // a named pitch after a degree
-    [InlineData("<3 c>")]     // omitted root, then a stray pitch
-    [InlineData("<c e 3 5>")]
-    public void MixingPitchesAndDegrees_IsDiagnosed(string chord) =>
+    [InlineData("<3 c>")]     // tonic-anchored, then a stray pitch
+    [InlineData("<1 3 g>")]   // the letter would not move with the key
+    [InlineData("<2 4 6 c>")]
+    public void PitchInDegreeAnchoredChord_IsDiagnosed(string chord) =>
         Assert.True(MixDiagnosed(chord));
 
     [Theory]
     [InlineData("<c e g>")]   // all pitches (classic chord)
     [InlineData("<d 3 5>")]   // one root + degrees
+    [InlineData("<c 3 g>")]   // letter-anchored chords mix freely
+    [InlineData("<c e 5>")]
+    [InlineData("<c 3 e>")]
+    [InlineData("<c e 3 5>")]
     [InlineData("<3 5>")]     // degrees only (omitted root)
     [InlineData("<1 3 5>")]
     [InlineData("<c>")]
     [InlineData("<d 3>")]
     public void ValidChords_AreNotDiagnosedAsMixed(string chord) =>
         Assert.False(MixDiagnosed(chord));
+
+    [Fact]
+    public void LetterAnchoredMix_ResolvesDegreesFromTheAnchor()
+    {
+        // Every degree measures from the ANCHOR (the first pitch), not from the
+        // nearest preceding member: <c 3 g> == <c e 5> == <c e g> = C4 E4 G4.
+        int[] Sorted(string body) => Midis(body).OrderBy(p => p).ToArray();
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c 3 g>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c e 5>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c e g>2"));
+    }
+
+    [Fact]
+    public void LetterAnchoredMix_DegreesFollowTheKey()
+    {
+        // The degree keeps following the key while the letters stay put:
+        // <d 3 a> is D F A in C major but D F# A in D major.
+        Assert.Equal(new[] { 62, 65, 69 }, Midis("<d 3 a>2", key: "c major").OrderBy(p => p).ToArray());
+        Assert.Equal(new[] { 62, 66, 69 }, Midis("<d 3 a>2", key: "d major").OrderBy(p => p).ToArray());
+    }
 }

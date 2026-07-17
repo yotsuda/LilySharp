@@ -284,8 +284,11 @@ public static class DiagnosticCodes
     /// clef/instrument/tuning value); symbols are case-sensitive.</summary>
     public const string UnknownSymbolCase = "LYS1014";
 
-    /// <summary>Syntax error: a chord mixes named pitches and scale degrees — write
-    /// either all pitches (<c>&lt;c e g&gt;</c>) or a root and degrees (<c>&lt;c 3 5&gt;</c>).</summary>
+    /// <summary>Syntax error: a DEGREE-anchored chord (opening with a number, so it
+    /// measures from the key tonic and moves with the key) holds a named pitch —
+    /// which would not move, half-transposing the chord. Anchor it on a pitch
+    /// (<c>&lt;c 3 g&gt;</c> — a letter-anchored chord mixes freely) or write degrees
+    /// only (<c>&lt;1 3 5&gt;</c>).</summary>
     public const string ChordMixesPitchesAndDegrees = "LYS1019";
 
     /// <summary>Warning: a bare <c>@chord</c> can't name its chord — the notes match

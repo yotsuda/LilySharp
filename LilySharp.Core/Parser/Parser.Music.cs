@@ -310,12 +310,14 @@ internal sealed partial class Parser
         var openAngle = Expect(SyntaxKind.OpenAngle);
         var pitches = new List<GreenNode?>();
 
-        // A chord is EITHER all named pitches (<c e g>) or an optional root pitch
-        // followed by scale degrees (<c 3 5>). Mixing the two — a second named
-        // pitch alongside degrees, or a pitch after a degree — is ambiguous, so
-        // flag it once (best-effort parse continues).
-        int pitchCount = 0;
-        bool sawDegree = false;
+        // A LETTER-anchored chord (first member is a pitch) mixes pitches and
+        // scale degrees freely — every degree measures from the ANCHOR, so
+        // <c 3 g> == <c e 5> == <c e g>. A DEGREE-anchored chord (first member
+        // is a number) measures from the KEY TONIC and is fully key-movable; a
+        // named pitch inside it would half-transpose with the key, so that mix
+        // is flagged once (best-effort parse continues).
+        bool degreeAnchored = false;
+        bool first = true;
         bool reportedMix = false;
         void ReportMixOnce()
         {
@@ -323,27 +325,28 @@ internal sealed partial class Parser
             reportedMix = true;
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.ChordMixesPitchesAndDegrees,
-                "A chord can't mix named pitches and scale degrees — write all pitches "
-                + "(<c e g>) or a root and degrees (<c 3 5>).");
+                "A degree-anchored chord (opening with a number) can't hold named pitches "
+                + "- it moves with the key, a letter would not. Anchor it on a pitch "
+                + "(<c 3 g>) or write degrees only (<1 3 5>).");
         }
 
         while (true)
         {
             if (IsPitchStart())
             {
-                if (sawDegree) ReportMixOnce(); // a named pitch after a degree
+                if (degreeAnchored) ReportMixOnce(); // a letter in a tonic-anchored chord
                 // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
                 pitches.Add(ParsePitch(inChord: true));
-                pitchCount++;
+                first = false;
                 continue;
             }
-            // Degree-chord member: after the root pitch, a bare number (or a
-            // number with a glued accidental) is a scale degree stacked on the
-            // root — <d 3 5 7,> = root d + the 3rd/5th/7th of the current key.
+            // Scale-degree member: a bare number (or a number with a glued
+            // accidental) measured from the chord's anchor — <d 3 5 7,> = root d
+            // + the 3rd/5th/7th of the current key.
             if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.ScaleDegree)
             {
-                if (pitchCount > 1) ReportMixOnce(); // degrees stack on ONE root
-                sawDegree = true;
+                degreeAnchored |= first; // an opening number anchors on the tonic
+                first = false;
                 pitches.Add(ParseScaleDegree());
                 continue;
             }

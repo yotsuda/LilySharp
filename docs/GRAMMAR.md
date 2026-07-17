@@ -389,10 +389,13 @@ MidMusicCommand = 'clef' , ClefName
 Note           = PitchToken , [ DurationToken ] , { Annotation } ;
 Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
-(* A chord is EITHER letter mode — all named pitches, or ONE root pitch followed by scale
-   degrees ('<c e g>', '<c 3 5>') — or degree mode: degrees only, anchored on the key
-   TONIC ('<1 3 5>', '<2 4 6>'). Any other mix is an error (LYS1019). Octave marks may
-   follow the closing '>', BEFORE the duration: <c e g>'4 . *)
+(* A chord is EITHER letter mode — a pitch anchor followed by any mix of pitches and
+   scale degrees ('<c e g>', '<c 3 5>', '<c 3 g>'; every degree measures from the
+   ANCHOR, so '<c e 5>' == '<c e g>') — or degree mode: degrees only, anchored on the
+   key TONIC ('<1 3 5>', '<2 4 6>'). A named pitch inside a DEGREE-anchored chord is an
+   error (LYS1019): the degrees move with the key, the letter would not, so the chord
+   would half-transpose. Octave marks may follow the closing '>', BEFORE the duration:
+   <c e g>'4 . *)
 Chord          = '<' , ( ChordNote , { ChordNote | ScaleDegree }
                        | ScaleDegree , { ScaleDegree } )
                , '>' , { "'" | ',' } , [ DurationToken ] , { Annotation } ;
