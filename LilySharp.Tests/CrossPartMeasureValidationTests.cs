@@ -206,4 +206,38 @@ public class CrossPartMeasureValidationTests
         // The bare quarter-note pickup additionally gets the declare-it nudge.
         Assert.Single(diags.Where(d => d.Code == DiagnosticCodes.PickupWithoutPartial));
     }
+
+    [Fact]
+    public void EmptyPlaceholderBars_CountLikeRealBars_NoFalseMismatch()
+    {
+        // `| | | |` is three explicit empty measures (the bare-barline rule),
+        // matching melody2's three bars — so the cross-part pass must be silent:
+        // no bar-count mismatch, and an empty placeholder must not read as
+        // "0 beats, misaligned" (the collector's own underfull LYS2001 owns that).
+        var diags = Validate("""
+            section B {
+              melody {| | | |}
+              melody2 { c1 | c1 | c1 | }
+            }
+            form main { B }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
+    }
+
+    [Fact]
+    public void EmptyPlaceholderBars_ShorterThanSibling_StillWarnsCount()
+    {
+        // Two empty measures (`| | |`) against melody2's three: a genuine count
+        // mismatch survives the empty-measure fix — proving the empties are being
+        // counted (2 != 3), not silently swallowed to 0.
+        var diags = Validate("""
+            section B {
+              melody {| | |}
+              melody2 { c1 | c1 | c1 | }
+            }
+            form main { B }
+            """);
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
 }

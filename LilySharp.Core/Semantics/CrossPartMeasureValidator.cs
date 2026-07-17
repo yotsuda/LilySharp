@@ -56,7 +56,7 @@ internal sealed class CrossPartMeasureValidator
         public static readonly DurationResetMarker Instance = new();
     }
 
-    private readonly record struct PartMeasure(Fraction Duration, TextSpan Span);
+    private readonly record struct PartMeasure(Fraction Duration, TextSpan Span, bool IsEmpty = false);
 
     public void Validate(SyntaxNode root)
     {
@@ -181,7 +181,12 @@ internal sealed class CrossPartMeasureValidator
         int maxLen = parts.Max(p => p.Measures.Count);
         for (int i = 0; i < maxLen; i++)
         {
-            var present = parts.Where(p => i < p.Measures.Count).ToList();
+            // An explicit empty placeholder (`| |`) is the author padding a
+            // tacet bar themselves — it holds a slot but owns no duration, so it
+            // must not be read as "0 beats, misaligned". The per-block fullness
+            // pass already flags it underfull (LYS2001); skip it here so the
+            // cross-part duration check doesn't pile a second, wronger message on.
+            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty).ToList();
             if (present.Count < 2)
                 continue;
 
@@ -242,14 +247,19 @@ internal sealed class CrossPartMeasureValidator
         var current = new List<SyntaxNode>();
         var defaultDuration = Fraction.Quarter;
         var total = Fraction.Zero;
+        // The scope-start boundary absorbs one bare `|`; mirrors
+        // MeasureBuilder.HandleBarline / MeasureCollector.WalkBars so the three
+        // bar counters cannot drift (an empty `| |` pair IS a measure).
+        bool confirmable = true;
 
-        void Flush()
+        void FlushMusic()
         {
             if (current.Count == 0)
                 return;
             measures.Add(new PartMeasure(total, MeasureDurations.GetSpan(current)));
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
+            confirmable = false;
         }
 
         foreach (var entry in stream)
@@ -260,15 +270,23 @@ internal sealed class CrossPartMeasureValidator
                 continue;
             }
             var node = (SyntaxNode)entry;
-            if (node is BarlineSyntax)
+            if (node is BarlineSyntax bar)
             {
-                Flush();
+                if (current.Count > 0)
+                    FlushMusic(); // the barline closes the bar of music before it
+                else if (bar.BarToken.Text != "|")
+                    confirmable = false; // a typed bar decorates the boundary
+                else if (confirmable)
+                    confirmable = false; // a lone `|` anchors the boundary — no measure
+                else
+                    // the second of a `| |` pair: an empty placeholder measure
+                    measures.Add(new PartMeasure(Fraction.Zero, bar.Span, IsEmpty: true));
                 continue;
             }
             total += MeasureDurations.ItemDuration(node, ref defaultDuration);
             current.Add(node);
         }
-        Flush();
+        FlushMusic(); // a trailing partial bar (music after the last barline) counts
         return measures;
     }
 

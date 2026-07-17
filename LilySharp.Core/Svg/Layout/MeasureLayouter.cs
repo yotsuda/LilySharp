@@ -163,22 +163,33 @@ internal sealed class MeasureLayouter
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
 
-        // Calculate total duration of the measure
-        var totalDuration = Fraction.Zero;
-        foreach (var item in measure.Items)
-        {
-            totalDuration += item.Duration;
-        }
-
-        if (totalDuration == Fraction.Zero)
-            return ImmutableArray<Spring>.Empty;
-
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
         // Build a map from timing → items for skyline-based rod calculation.
         // Each column's minimum distance must account for collisions between
         // items at adjacent timing points across ALL voices (e.g., accidentals, noteheads).
         // LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves
         var measuresToScan = allMeasures ?? new[] { measure };
+
+        // Total duration measured across ALL staves at this column — the `timings`
+        // are the UNION, so the spring count must match them. When the PRIMARY
+        // measure is an empty placeholder (`| |`) but a sibling staff plays real
+        // notes here, the primary's own duration is 0 while the union is not; a
+        // duration read from the primary alone would return no springs (spring
+        // count != timings.Count + 1) and LayoutColumns would index past the
+        // solved positions. The measure is only truly empty — and collapses to
+        // its rigid placeholder spring upstream — when EVERY staff is empty here.
+        var totalDuration = Fraction.Zero;
+        foreach (var m in measuresToScan)
+        {
+            var d = Fraction.Zero;
+            foreach (var item in m.Items)
+                d += item.Duration;
+            if (d > totalDuration)
+                totalDuration = d;
+        }
+
+        if (totalDuration == Fraction.Zero)
+            return ImmutableArray<Spring>.Empty;
         var timingToItems = BuildTimingToItemsMap(measuresToScan);
 
         // Full-measure rests get compact rods, not proportional whole-note

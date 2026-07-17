@@ -18,6 +18,7 @@ using System.Linq;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -58,5 +59,26 @@ public class EmptyPlaceholderBreakTests
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.Equal(BreakPermission.Forbid, measures[0].LineBreakPermission);
         Assert.Equal(BreakPermission.Allow, measures[1].LineBreakPermission);
+    }
+
+    [Fact]
+    public void EmptyPlaceholderStaff_AlignedWithAContentStaff_Renders()
+    {
+        // A staff whose bar is an empty placeholder, sitting beside a staff that
+        // plays real notes at the same index, must render. The shared timing
+        // columns come from the SIBLING (the union), so the placeholder's springs
+        // have to match that column count — reading the duration off the empty
+        // primary alone returned no springs and LayoutColumns indexed past the
+        // solved positions (an IndexOutOfRange crash on the user's exact input).
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse("""
+            section B {
+              melody {| | | |}
+              melody2 { c1 | c1 | c1 | }
+            }
+            form main { B }
+            score main { staff melody  staff melody2 }
+            """), new SvgRenderOptions { EmbedFont = false });
+        Assert.False(string.IsNullOrWhiteSpace(svg));
+        Assert.Contains("<svg", svg);
     }
 }
