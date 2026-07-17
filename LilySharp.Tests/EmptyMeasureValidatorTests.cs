@@ -87,12 +87,55 @@ public class EmptyMeasureValidatorTests
     }
 
     [Fact]
+    public void PhraseTrailingBarline_DoesNotPairWithAnOuterBarline()
+    {
+        // `phrase x { … | }` closes its own last bar; `x | x` then adds a separator.
+        // The phrase's trailing `|` and that separator must NOT read as a `| |` empty
+        // pair — a reference is ONE item, its boundary re-arms like a section start.
+        var src = "phrase x { c d e f | } part melody { section A { x | x } } "
+                + "form main { A } score main { staff melody }";
+        Assert.Equal(0, PlaceholderCountIn(src));
+    }
+
+    [Fact]
+    public void ExplicitEmptyBarAfterPhrase_StillWarns()
+    {
+        // `x | | x` — an EXPLICIT `| |` pair after the phrase is still an empty bar
+        // (the boundary re-arm absorbs ONE barline, not a written pair).
+        var src = "phrase x { c d e f | } part melody { section A { x | | x } } "
+                + "form main { A } score main { staff melody }";
+        Assert.Equal(1, PlaceholderCountIn(src));
+    }
+
+    [Fact]
+    public void EmptyMeasureInsidePhraseBody_IsPreserved()
+    {
+        // A `| |` pair WITHIN the phrase body is a real empty measure and still warns.
+        var src = "phrase x { c d e f | | g a b c' } part melody { section A { x } } "
+                + "form main { A } score main { staff melody }";
+        Assert.Equal(1, PlaceholderCountIn(src));
+    }
+
+    [Fact]
     public void LeadingSingleBar_CreatesNoMeasure()
     {
         // `{ | c1 | c1 | }` is exactly `{ c1 | c1 }` — two measures, edges anchored.
         var src = "part m { section A { | c1 | c1 | } } form main { A } score main { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
+        Assert.Equal(2, score.Voice.Measures.Length);
+        Assert.All(score.Voice.Measures, m => Assert.False(m.IsEmptyPlaceholder));
+    }
+
+    [Fact]
+    public void PhraseBoundary_RendersTwoBars_NoEmptyPlaceholder()
+    {
+        // The render agrees with the validator: `phrase x { c d e f | }` used as
+        // `x | x` is two content bars, with no empty placeholder between them.
+        var src = "phrase x { c d e f | } part melody { section A { x | x } } "
+                + "form main { A } score main { staff melody }";
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse(src), "melody");
         Assert.Equal(2, score.Voice.Measures.Length);
         Assert.All(score.Voice.Measures, m => Assert.False(m.IsEmptyPlaceholder));
     }

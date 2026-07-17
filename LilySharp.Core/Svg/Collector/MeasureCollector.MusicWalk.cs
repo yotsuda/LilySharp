@@ -62,6 +62,11 @@ public sealed partial class MeasureCollector
             {
                 EnterDefaultFrame(reset.OctaveOffset);
                 EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                // A phrase reference is ONE item; its boundary re-arms the confirmable
+                // boundary like a section start, so a barline at the edge of the phrase
+                // body does not pair with an adjacent outer barline into an empty measure
+                // (phrase x { … | } then `x | x` is two bars, not two bars + a gap).
+                builder.ResetMeasureBoundary();
                 continue;
             }
 
@@ -70,6 +75,7 @@ public sealed partial class MeasureCollector
             if (node is PhraseEndMarker)
             {
                 ExitPhraseTranspose();
+                builder.ResetMeasureBoundary();
                 continue;
             }
 

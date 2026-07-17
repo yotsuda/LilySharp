@@ -2340,17 +2340,21 @@ public sealed partial class MeasureCollector
                 var node = nodeList[i];
 
                 // Phrase-reference boundary: evaluate the body in the default
-                // frame (same handling as ProcessMusicNodeSequence).
+                // frame (same handling as ProcessMusicNodeSequence). The boundary
+                // re-arms the confirmable boundary so an edge barline of the phrase
+                // body does not pair with an adjacent outer barline into an empty bar.
                 if (node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
                     EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                    builder.ResetMeasureBoundary();
                     continue;
                 }
 
                 if (node is PhraseEndMarker)
                 {
                     ExitPhraseTranspose();
+                    builder.ResetMeasureBoundary();
                     continue;
                 }
 

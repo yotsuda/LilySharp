@@ -468,7 +468,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    empty full-width bar, and carries the ordinary underfull warning (LYS2001,
    "duration 0", squiggled between the barlines) until filled — an empty measure is
    thus always visible in the source. A TYPED barline on an empty span decorates the previous
-   bar's end. LYRICS follow the SAME rule: a lone leading '|' merely anchors the
+   bar's end. A PHRASE REFERENCE is one item whose boundary re-arms this rule like a section
+   start: a barline at the edge of the phrase body does not pair with an adjacent outer
+   barline, so 'phrase x { c d e f | }' used as 'x | x' is two content bars, not two + a gap
+   (an EXPLICIT '| |' after the reference still makes an empty bar). LYRICS follow the SAME rule: a lone leading '|' merely anchors the
    run's start ('| きら | ひかる |' == 'きら | ひかる'), so the fenced style aligns
    with the melody above instead of shifting the verse; "bar 1 has no syllables"
    is the explicit leading '| |' pair, and a mid-run '| |' is an empty bar. *)

@@ -79,6 +79,14 @@ internal static class MeasureModel
                 defaultDuration = Fraction.Quarter;
                 continue;
             }
+            if (entry is BoundaryMarker)
+            {
+                // A phrase reference is ONE item; its boundary re-arms the confirmable
+                // boundary (like a section start), so a barline at the edge of the phrase
+                // body does not pair with an adjacent outer barline into an empty measure.
+                confirmable = true;
+                continue;
+            }
             var node = (SyntaxNode)entry;
             if (node is BarlineSyntax bar)
             {
@@ -114,6 +122,14 @@ internal static class MeasureModel
     private sealed class DurationResetMarker
     {
         public static readonly DurationResetMarker Instance = new();
+    }
+
+    /// <summary>Marks a phrase-reference boundary (enter / exit) — re-arms the confirmable
+    /// boundary so an edge barline of the phrase body does not pair with an adjacent outer
+    /// barline. Mirrors the collector's <c>ResetMeasureBoundary</c> at those markers.</summary>
+    private sealed class BoundaryMarker
+    {
+        public static readonly BoundaryMarker Instance = new();
     }
 
     private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
@@ -175,7 +191,9 @@ internal static class MeasureModel
                     if (phraseBodies.TryGetValue(name, out var body) && activeRefs.Add(name))
                     {
                         output.Add(DurationResetMarker.Instance);
+                        output.Add(BoundaryMarker.Instance); // enter
                         Flatten(body, output, activeRefs, phraseBodies);
+                        output.Add(BoundaryMarker.Instance); // exit
                         activeRefs.Remove(name);
                     }
                     break;
