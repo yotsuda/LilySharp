@@ -185,35 +185,58 @@ internal sealed class LyricEngraver
         double staffBottom,
         ImmutableArray<SystemLayout> systems = default,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        IReadOnlyDictionary<int, double>? staffYByIndex = null)
+        IReadOnlyDictionary<int, double>? staffYByIndex = null,
+        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
 
         var layouts = new List<LyricLayout>();
 
-        // Group by (row, verse): ordinary lyrics (row = -1) sit below the first
-        // staff; an independent lyrics row (row = its staff index) sits in its own
-        // band at that staff's Y. Verses stack within each.
+        // Note-bound lyrics attached to a staff in a NON-LAST staff group sit directly
+        // below that GROUP (the anchor Y is the group's bottom staff), in the inter-group
+        // gap — so `staff melody with lyrics …` / `staff back` puts the words between the
+        // two staves. `noteBoundAnchorY` holds those staves (present ⇒ this placement).
+        // A staff in the LAST group is absent, so its lyrics keep the legacy "below the
+        // whole system" placement AND its skyline drop — this deliberately includes a
+        // grand staff's top staff (the last group), so an SATB chorale's lyrics still sit
+        // below the whole grand staff. LILYPOND-REF: a Lyrics context lives at a fixed
+        // position under its associated Staff in the vertical hierarchy.
+        bool IsUpperNoteBound(LyricItem l) =>
+            !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
+
+        // Group by (anchor staff, kind, verse): a lyrics ROW and an upper note-bound
+        // line each anchor to their own staff index; the bottom-staff/single-staff
+        // note-bound lyrics lump at -1 (legacy placement). Verses stack within each.
         // F3/B: carry each syllable's ORIGINAL index in `lyrics` (== score.Lyrics order)
         // through the grouping so the emitted layout can re-derive its data-pos later.
         var verseGroups = lyrics
             .Select((l, i) => (Lyric: l, Index: i))
-            .GroupBy(x => (Row: x.Lyric.IsLyricsRow ? x.Lyric.StaffIndex : -1, Verse: x.Lyric.VerseNumber))
+            .GroupBy(x => (
+                Row: x.Lyric.IsLyricsRow || IsUpperNoteBound(x.Lyric) ? x.Lyric.StaffIndex : -1,
+                IsRow: x.Lyric.IsLyricsRow,
+                Verse: x.Lyric.VerseNumber))
             .OrderBy(g => g.Key.Row).ThenBy(g => g.Key.Verse);
 
         foreach (var verseGroup in verseGroups)
         {
             int verseNumber = verseGroup.Key.Verse;
             int rowKey = verseGroup.Key.Row;
+            bool isRow = verseGroup.Key.IsRow;
             var verseLyrics = verseGroup.ToList();
 
             // Calculate Y position for this verse
             // LILYPOND-REF: lily/lyric-engraver.cc:85-95 vertical positioning
-            double verseY = rowKey >= 0 && staffYByIndex != null
-                            && staffYByIndex.TryGetValue(rowKey, out var rowY)
-                ? rowY + LyricRowBaseline + (verseNumber - 1) * _params.VerseSpacing
-                : staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
+            double verseY;
+            if (isRow && rowKey >= 0 && staffYByIndex != null && staffYByIndex.TryGetValue(rowKey, out var rowAnchor))
+                // An independent row sits IN its own band at that staff's Y.
+                verseY = rowAnchor + LyricRowBaseline + (verseNumber - 1) * _params.VerseSpacing;
+            else if (!isRow && rowKey >= 0 && noteBoundAnchorY != null
+                     && noteBoundAnchorY.TryGetValue(rowKey, out var groupBottomY))
+                // A non-last-group note-bound line sits just BELOW that group's bottom staff.
+                verseY = groupBottomY + staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
+            else
+                verseY = staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
 
             var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
@@ -238,7 +261,7 @@ internal sealed class LyricEngraver
         // Lower each system's lyric line so the TEXT clears notes/ledger lines
         // poking below the staff (LilyPond's max(basic-distance, skyline)).
         if (systemSkylines != null && !systems.IsDefaultOrEmpty)
-            layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom);
+            layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom, noteBoundAnchorY);
 
         return layouts.ToImmutableArray();
     }
@@ -257,11 +280,18 @@ internal sealed class LyricEngraver
     private List<LyricLayout> ApplySkylineDrop(
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
-        double staffBottom)
+        double staffBottom,
+        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         double basic = staffBottom + _params.StaffPadding;
+
+        // A non-last-group note-bound line is anchored below its own group (not the
+        // system bottom); the system-wide drop, which clears the LOWEST staff's notes,
+        // must not pull it down there. It sits in its inter-group gap already.
+        bool SkipDrop(LyricItem l) =>
+            !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 
         // Build each system's lyric UP-skyline from the verse-1 syllable boxes,
         // self-relative to the line's anchor (anchor at y=0; text top at -topExtent
@@ -269,7 +299,7 @@ internal sealed class LyricEngraver
         var lyricUp = new Dictionary<int, VerticalSkyline>();
         foreach (var lay in layouts)
         {
-            if (lay.Item.IsLyricsRow) continue; // a row sits in its own band, not below this staff
+            if (lay.Item.IsLyricsRow || SkipDrop(lay.Item)) continue; // a row / upper line sits in its own band
             if (lay.Item.VerseNumber > 1) continue; // verse 1 is the line's top edge
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
                 continue;
@@ -289,7 +319,7 @@ internal sealed class LyricEngraver
         var shifted = new List<LyricLayout>(layouts.Count);
         foreach (var lay in layouts)
         {
-            double drop = !lay.Item.IsLyricsRow
+            double drop = !lay.Item.IsLyricsRow && !SkipDrop(lay.Item)
                 && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
                 && systemDrop.TryGetValue(s, out var d) ? d : 0;
             shifted.Add(drop > 0 ? lay with { Y = lay.Y + drop } : lay);

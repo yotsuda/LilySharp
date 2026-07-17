@@ -346,6 +346,25 @@ internal sealed class LayoutEngine
                 foreach (var st in sg.Staves)
                     staffYByIndex[st.StaffIndex] = st.Y;
 
+        // Anchor Y for note-bound lyrics attached to a staff in a NON-LAST staff group:
+        // the group's BOTTOM staff Y (Y-down ⇒ max), so `staff X with lyrics …` followed
+        // by another staff sits in the inter-group gap below its group. Staves in the LAST
+        // group are omitted ⇒ their lyrics keep the legacy below-the-whole-system
+        // placement — which deliberately includes a grand staff's staves (one group), so
+        // an SATB chorale's lyrics still sit below the whole grand staff.
+        var noteBoundAnchorY = new Dictionary<int, double>();
+        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
+        {
+            var groups = systemsArray[0].StaffGroups;
+            for (int gi = 0; gi < groups.Length - 1; gi++)
+            {
+                if (groups[gi].Staves.IsDefaultOrEmpty) continue;
+                double bottomY = groups[gi].Staves.Max(s => s.Y);
+                foreach (var st in groups[gi].Staves)
+                    noteBoundAnchorY[st.StaffIndex] = bottomY;
+            }
+        }
+
         var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = primaryScore,
@@ -377,6 +396,7 @@ internal sealed class LayoutEngine
             VoicesByStaff = voicesByStaff,
             MeasuresByStaff = measuresByStaff,
             StaffYByIndex = staffYByIndex,
+            NoteBoundAnchorY = noteBoundAnchorY,
             StaffByIndex = staffByIndex,
         });
 
@@ -1162,6 +1182,7 @@ internal sealed class LayoutEngine
         public Dictionary<int, ImmutableArray<Voice>>? VoicesByStaff { get; init; }
         public Dictionary<int, ImmutableArray<Measure>>? MeasuresByStaff { get; init; }
         public Dictionary<int, double>? StaffYByIndex { get; init; }
+        public Dictionary<int, double>? NoteBoundAnchorY { get; init; }
         public Dictionary<int, Staff>? StaffByIndex { get; init; }
     }
 
@@ -1248,7 +1269,7 @@ internal sealed class LayoutEngine
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex);
+            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex, ctx.NoteBoundAnchorY);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
