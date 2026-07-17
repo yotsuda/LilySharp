@@ -576,7 +576,16 @@ internal sealed class MeasureBuilder
                 is BarlineType.RepeatStart or BarlineType.RepeatBoth;
             if (endsRepeat && startsRepeat)
             {
-                _measures[i] = _measures[i] with { EndBarline = BarlineType.RepeatBoth };
+                _measures[i] = _measures[i] with
+                {
+                    EndBarline = BarlineType.RepeatBoth,
+                    // Keep the absorbed `|:`'s offset so its half of the combined glyph
+                    // stays highlightable (its click/highlight source, distinct from the
+                    // `:|` end). A RepeatBoth start carries no leading `|:` of its own.
+                    MergedRepeatStartSource = _measures[i + 1].StartBarline == BarlineType.RepeatStart
+                        ? _measures[i + 1].SourceStart
+                        : _measures[i].MergedRepeatStartSource,
+                };
                 _measures[i + 1] = _measures[i + 1] with { StartBarline = BarlineType.None };
             }
         }

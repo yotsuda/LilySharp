@@ -137,6 +137,14 @@ public sealed record Measure
     /// <summary>Source end position for caching and incremental updates.</summary>
     public int SourceEnd { get; init; }
 
+    /// <summary>When this measure's <see cref="EndBarline"/> is a MERGED back-to-back
+    /// repeat (a <c>:|</c> that absorbed the next measure's <c>|:</c> into one <c>:|:</c>),
+    /// the source offset of that absorbed <c>|:</c>. The renderer draws the combined
+    /// glyph's START half (right bar + dots) on THIS offset while the END half stays on
+    /// <see cref="SourceEnd"/>, so a caret on either the <c>:|</c> or the <c>|:</c>
+    /// highlights its own side. Null when the end barline is not a merged repeat.</summary>
+    public int? MergedRepeatStartSource { get; init; }
+
     /// <summary>Source offset of this measure's section-label declaration (0 = none),
     /// so the section mark can carry a data-pos that jumps to <c>section X</c>
     /// instead of the measure's music. Falls back to SourceStart when unset.</summary>

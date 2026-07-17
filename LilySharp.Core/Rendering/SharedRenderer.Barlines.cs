@@ -91,10 +91,16 @@ internal static partial class SharedRenderer
             // point just after the bar's last note — still the boundary).
             using (gc.Source(measure.SourceEnd))
             {
-                DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+                DrawBarline(measure.EndBarline, endX - width, staffY, height, gc,
+                    mergedStartSource: measure.MergedRepeatStartSource);
                 gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
                     width + 2 * BarlineHitPad, height);
             }
+            // A merged `:|:` also gives its absorbed `|:` a click target on the right half,
+            // so a click there jumps to the `|:` (its highlight already draws on that source).
+            if (measure.MergedRepeatStartSource is { } mergedStart)
+                using (gc.Source(mergedStart))
+                    gc.DrawHitRect(endX - width / 2, staffY, width / 2 + BarlineHitPad, height);
         }
     }
 
@@ -136,7 +142,8 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/bar-line.cc — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,
-        IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null)
+        IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null,
+        int? mergedStartSource = null)
     {
         if (type == BarlineType.None) return;
 
@@ -188,12 +195,23 @@ internal static partial class SharedRenderer
                 break;
 
             case BarlineType.RepeatBoth:
+                // LEFT half = the `:|` end (return dots + thin + thick), on the caller's
+                // source; RIGHT half = the `|:` start (thin + forward dots). On a MERGED
+                // back-to-back repeat the right half draws on the absorbed `|:`'s source,
+                // so a caret on either the `:|` or the `|:` highlights only its own side.
                 if (withDots) DrawRepeatDots(x, staffY, gc, tabDots);
                 double pos = x + dotsOffset;
                 gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
-                gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc, tabDots);
+                void DrawStartHalf()
+                {
+                    gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
+                    if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc, tabDots);
+                }
+                if (mergedStartSource is { } startSrc)
+                    using (gc.Source(startSrc)) DrawStartHalf();
+                else
+                    DrawStartHalf();
                 break;
         }
     }

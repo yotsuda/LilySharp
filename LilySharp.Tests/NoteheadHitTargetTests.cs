@@ -123,6 +123,27 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void MergedRepeat_KeepsBothTheEndAndStartHighlightable()
+    {
+        // `phrase x { |: … :| }` used as `x | x :|: x` merges the trailing `:|` with the
+        // next `|:` into one `:|:`. Both source offsets must stay highlightable: the `|:`
+        // (leading + the start half of each merge) at THREE spots, the `:|` (trailing +
+        // the end half of each merge) at THREE spots.
+        const string src = "phrase x { |: c1 | d1 :| }\n"
+                         + "part m { clef treble section A { x | x :|: x } }\n"
+                         + "form main { A }\nscore main \"s\" { staff m }";
+        int repeatStart = src.IndexOf("|:");
+        int repeatEnd = src.IndexOf(":|");
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
+        int Copies(int pos) => Regex.Matches(svg,
+            "data-pos=\"" + pos + "\"").Count;
+        // Each drawn instance paints the glyph AND its hit rect on the offset, so both
+        // sides appear at least three times (once per call site).
+        Assert.True(Copies(repeatStart) >= 3, $"|: copies = {Copies(repeatStart)}");
+        Assert.True(Copies(repeatEnd) >= 3, $":| copies = {Copies(repeatEnd)}");
+    }
+
+    [Fact]
     public void PhraseTrailingRepeatEnd_HighlightsEveryCallSite_NotJustTheLast()
     {
         // A phrase's trailing `:|` is a MEANINGFUL barline (not a plain bar the section's
