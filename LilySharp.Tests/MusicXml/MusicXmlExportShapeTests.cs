@@ -85,6 +85,43 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void PartMajorSection_ExportsItsInlineNotes_NotAnEmptyPart()
+    {
+        // A part-major `part m { section A { … } }` cell holds its music INLINE.
+        // The inline notes used to hit ProcessNode's skip-declarations case, so the
+        // part exported empty; now they emit under the enclosing part's name and clef.
+        var doc = Export("""
+            part m { clef bass
+              section A { c d e f | }
+            }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.Equal(4, doc.Descendants("note").Count());
+        Assert.Equal("m", doc.Descendants("part-name").Single().Value);
+        // The enclosing part's clef (bass = F/4) is applied.
+        var clef = doc.Descendants("clef").First();
+        Assert.Equal("F", clef.Element("sign")!.Value);
+        Assert.Equal("4", clef.Element("line")!.Value);
+    }
+
+    [Fact]
+    public void PartMajorPart_WithSeveralSections_ConcatenatesThem()
+    {
+        // Two sections of the same part flow into one continuous part.
+        var doc = Export("""
+            part m { clef treble
+              section A { c d e f | }
+              section B { g a b c' | }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(8, doc.Descendants("note").Count());
+        Assert.Single(doc.Descendants("score-part"));
+    }
+
+    [Fact]
     public void TiedChord_TiesEveryChordMember()
     {
         // Regression: <c e g>~ <c e g> tied only the first note; all members tie.

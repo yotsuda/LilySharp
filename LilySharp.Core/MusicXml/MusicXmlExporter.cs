@@ -295,17 +295,10 @@ public sealed class MusicXmlExporter
         }
         else
         {
-            // Section without named parts → treat as default part; its
-            // lyrics blocks map onto the notes just emitted.
-            EnsurePart("Part 1");
-            int before = _currentPart!.Measures.Count;
-            var blocks = new List<LyricsBlockSyntax>();
-            for (int i = 0; i < section.SlotCount; i++)
-                if (section.GetChild(i) is LyricsBlockSyntax lb2)
-                    blocks.Add(lb2);
-            ProcessNode(section);
-            FlushCurrentMeasure();
-            AttachLyrics(_currentPart!, before, blocks);
+            // No nested part blocks: the section holds its music INLINE — a part-major
+            // `part m { section A { … } }` cell, or a standalone section (default part).
+            // Emit it under the enclosing part's name; its lyrics map onto those notes.
+            EmitPartMajorSection(section);
         }
     }
 
@@ -557,8 +550,40 @@ public sealed class MusicXmlExporter
     }
 
     private void ProcessPartBlock(PartBlockSyntax partBlock)
+        => EmitPartMusic(partBlock.Name, DirectChildren(partBlock));
+
+    /// <summary>A part-major section (<c>part m { section A { … } }</c>) holds its music
+    /// INLINE — not in a nested part block — so it is emitted here under the ENCLOSING
+    /// part's name (and clef/transpose), exactly like the section-major
+    /// <c>section A { m { … } }</c> form. Without this the inline notes hit
+    /// <see cref="ProcessNode"/>'s skip-declarations case and the part exported EMPTY.</summary>
+    private void EmitPartMajorSection(SectionDeclarationSyntax section)
+        => EmitPartMusic(EnclosingPartName(section) ?? "Part 1", DirectChildren(section));
+
+    /// <summary>The non-token child nodes of a container, in order.</summary>
+    private static IEnumerable<SyntaxNode> DirectChildren(SyntaxNode node)
     {
-        var partName = partBlock.Name;
+        for (int i = 0; i < node.SlotCount; i++)
+            if (node.GetChild(i) is { } child && child is not SyntaxTokenNode)
+                yield return child;
+    }
+
+    /// <summary>The name of the <c>part</c> declaration a node sits inside, or null when it
+    /// is not part-major (a standalone section maps to the default "Part 1").</summary>
+    private static string? EnclosingPartName(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax pd)
+                return pd.Name.Text;
+        return null;
+    }
+
+    /// <summary>Emits one span of a part's music (a section-major part block, or a
+    /// part-major section's inline body) under <paramref name="partName"/>: sets up the
+    /// part (clef / transpose / fresh frame), processes the music children, and maps any
+    /// lyrics onto the notes just emitted.</summary>
+    private void EmitPartMusic(string partName, IEnumerable<SyntaxNode> children)
+    {
         EnsurePart(partName);
         _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
         ApplyPartHeaderClef(partName);
@@ -577,19 +602,15 @@ public sealed class MusicXmlExporter
         bool isFirst = _currentPart!.Measures.Count == 0;
         StartNewMeasure(addAttributes: isFirst);
 
-        // Process the content inside the part block; lyrics blocks are
-        // collected and mapped onto the emitted notes afterwards.
+        // Process the music; lyrics blocks are collected and mapped onto the emitted
+        // notes afterwards.
         int measuresBefore = _currentPart!.Measures.Count;
         var lyricsBlocks = new List<LyricsBlockSyntax>();
-        for (int i = 0; i < partBlock.SlotCount; i++)
+        foreach (var child in children)
         {
-            var child = partBlock.GetChild(i);
             if (child is LyricsBlockSyntax lb)
-            {
                 lyricsBlocks.Add(lb);
-                continue;
-            }
-            if (child != null && child is not SyntaxTokenNode)
+            else
                 ProcessNode(child);
         }
 
