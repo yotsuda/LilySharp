@@ -453,8 +453,9 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    creates nothing, so `{ | c1 | c1 | }` == `{ c1 | c1 }`. An EMPTY MEASURE is always
    an explicit `| |` PAIR: two written barlines with nothing between (leading, mid, or
    trailing; `| | |` is two). It holds a slot to keep parts aligned, renders as an
-   empty bar, and warns (LYS2008) until filled — an empty measure is thus always
-   visible in the source. A TYPED barline on an empty span decorates the previous
+   empty full-width bar, and carries the ordinary underfull warning (LYS2001,
+   "duration 0", squiggled between the barlines) until filled — an empty measure is
+   thus always visible in the source. A TYPED barline on an empty span decorates the previous
    bar's end. LYRICS differ BY DESIGN: they carry no durations, so their barlines ARE
    the structure — a lone leading '|' there means "bar 1 has no syllables". *)
 

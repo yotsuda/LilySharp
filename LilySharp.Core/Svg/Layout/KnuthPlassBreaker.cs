@@ -172,6 +172,16 @@ internal sealed class KnuthPlassBreaker
                 inverseStretch += spring.InverseStretchStrength;
                 minWidth += spring.MinDistance;
             }
+            // An empty placeholder has no springs; give it its full-bar space (a
+            // LilyPond MMR-style ROD, so it holds under compression too) — matching
+            // CalculateMeasureIdealWidth. Absent-voice filler measures stay at zero:
+            // they inherit their width from the sibling staves' same measure.
+            if (m.Items.Length == 0 && m.IsEmptyPlaceholder)
+            {
+                double slot = SpacingRules.EmptyPlaceholderContentWidth();
+                idealWidth += slot;
+                minWidth += slot;
+            }
 
             // LILYPOND-REF: lily/constrained-breaking.cc:112-113 — break_penalty_ propagation
             data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch,

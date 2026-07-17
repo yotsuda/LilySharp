@@ -818,6 +818,17 @@ internal sealed class MultiStaffLayouter
 
             var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
 
+            // An empty placeholder measure (`| |`) has no timing springs at all —
+            // without a floor it collapses to its barlines and reads as a double
+            // barline. Give it one RIGID spring at the empty-bar slot width, so it
+            // renders as a visible measure (matching the ideal-width floor the line
+            // breaker uses — see SpacingRules.EmptyPlaceholderContentWidth).
+            if (springs.Length == 0 && primaryMeasure.IsEmptyPlaceholder)
+            {
+                double slot = SpacingRules.EmptyPlaceholderContentWidth();
+                springs = ImmutableArray.Create(new Spring(slot, slot, 0));
+            }
+
             // Reserve room for lyric syllables so they don't collide. Only acts
             // on single-voice measures (timing columns == note items); a no-lyric
             // score leaves the chain untouched. Applied before the FirstNoteSpring

@@ -130,10 +130,12 @@ internal sealed class MeasureBuilder
     /// </summary>
     public Action? MeasureCompleted;
 
-    /// <summary>Fires with the source position of a bare-barline empty placeholder
-    /// measure as it is emitted, so the collector can surface a shorter-than-the-meter
-    /// warning. See <see cref="EmitEmptyMeasure"/> and <see cref="Measure.IsEmptyPlaceholder"/>.</summary>
-    public Action<int>? OnEmptyPlaceholder;
+    /// <summary>Fires with the source span (start, end) of an empty placeholder
+    /// measure as it is emitted — from just after the previous close to the closing
+    /// barline, i.e. the region between the <c>| |</c> pair — so the collector can
+    /// surface an underfull-duration warning ON the empty region. See
+    /// <see cref="EmitEmptyMeasure"/> and <see cref="Measure.IsEmptyPlaceholder"/>.</summary>
+    public Action<int, int>? OnEmptyPlaceholder;
 
     public MeasureBuilder(Fraction timeSignature, int sourceStart = 0)
     {
@@ -488,7 +490,7 @@ internal sealed class MeasureBuilder
             IsEmptyPlaceholder = true,
         });
 
-        OnEmptyPlaceholder?.Invoke(sourceEnd);
+        OnEmptyPlaceholder?.Invoke(_measureSourceStart, sourceEnd);
         // Closed by a written barline, so a further bare barline opens ANOTHER placeholder
         // (`| | |` = two empty measures).
         ResetPerMeasureState(sourceEnd, confirmableBoundary: false);
@@ -642,13 +644,13 @@ public sealed partial class MeasureCollector
     /// <summary>Navigation marks written mid-measure instead of at a barline boundary.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<NavigationMarkPlacementWarning> NavigationPlacementWarnings => _navPlacementWarnings;
-    // Source positions of empty placeholder measures (bare `|` gaps). A set so a section
+    // Source spans of empty placeholder measures (`| |` pairs). A set so a section
     // replayed by the form reports each spot once. Surfaced by EmptyMeasureValidator.
-    private readonly SortedSet<int> _emptyPlaceholderWarnings = new();
-    /// <summary>Barline positions where a bare-barline empty placeholder measure was
-    /// emitted (leading `|`, `| |` gap, trailing `| |`). Populated as a side effect of
-    /// Collect; each is flagged shorter-than-the-meter.</summary>
-    public IReadOnlyList<int> EmptyPlaceholderWarnings => _emptyPlaceholderWarnings.ToList();
+    private readonly SortedSet<(int Start, int End)> _emptyPlaceholderWarnings = new();
+    /// <summary>Source spans of the empty placeholder measures that were emitted
+    /// (the region between each <c>| |</c> pair). Populated as a side effect of
+    /// Collect; each is flagged as an underfull (zero-duration) measure.</summary>
+    public IReadOnlyList<(int Start, int End)> EmptyPlaceholderWarnings => _emptyPlaceholderWarnings.ToList();
     // Tablature post-pass (tie-string reconciliation + per-tuning string assignment),
     // extracted as a self-contained collaborator. Its warnings are surfaced below.
     private readonly TabResolver _tabResolver = new();
@@ -1702,7 +1704,7 @@ public sealed partial class MeasureCollector
             builder.SetPartial(subPickup);
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
-        builder.OnEmptyPlaceholder = pos => _emptyPlaceholderWarnings.Add(pos);
+        builder.OnEmptyPlaceholder = (start, end) => _emptyPlaceholderWarnings.Add((start, end));
 
         _pendingInlineVoltas.Clear();
 
@@ -2289,7 +2291,7 @@ public sealed partial class MeasureCollector
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
-        builder.OnEmptyPlaceholder = pos => _emptyPlaceholderWarnings.Add(pos);
+        builder.OnEmptyPlaceholder = (start, end) => _emptyPlaceholderWarnings.Add((start, end));
 
         _pendingInlineVoltas.Clear();
 

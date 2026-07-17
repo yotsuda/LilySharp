@@ -47,16 +47,21 @@ internal sealed class EmptyMeasureValidator : ISharedCollectValidator
     public void ValidateWith(System.Lazy<MeasureCollector?> sharedCollect)
     {
         // A malformed score (null collector) surfaces its real error elsewhere.
-        var positions = sharedCollect.Value?.EmptyPlaceholderWarnings;
-        if (positions == null)
+        var spans = sharedCollect.Value?.EmptyPlaceholderWarnings;
+        if (spans == null)
             return;
 
-        foreach (var pos in positions)
+        foreach (var (start, end) in spans)
         {
+            // The ordinary underfull-measure warning (LYS2001), squiggled over the
+            // region BETWEEN the barlines — an empty measure is just the zero case
+            // of underfull, and the warning stays the same kind as the user fills
+            // it (`| |` -> `| c4 |` -> full).
             // ASCII punctuation only: this string reaches legacy-codepage consoles via the CLI.
-            _diagnostics.Warning(new TextSpan(pos, 1), DiagnosticCodes.EmptyPlaceholderMeasure,
-                "empty measure (a '| |' pair with no music between); it holds a slot to keep " +
-                "parts aligned but is shorter than the meter until you fill it");
+            _diagnostics.Warning(new TextSpan(start, System.Math.Max(1, end - start + 1)),
+                DiagnosticCodes.MeasureIncomplete,
+                "Measure duration 0 is less than the meter - an empty measure; " +
+                "fill it (or keep it as a slot that aligns the parts)");
         }
     }
 }

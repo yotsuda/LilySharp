@@ -72,9 +72,28 @@ internal static class SpacingRules
                 width += spring.IdealDistance;
             }
         }
+        else if (measure.IsEmptyPlaceholder)
+        {
+            width += EmptyPlaceholderContentWidth();
+        }
 
         return width;
     }
+
+    /// <summary>
+    /// Content width of an empty placeholder measure (a <c>| |</c> pair): the space
+    /// an empty full bar gets in LilyPond's multi-measure-rest spacing rod — the
+    /// duration space of a nominal whole measure plus the bound padding on each
+    /// side — so the empty bar reads as a MEASURE instead of collapsing into what
+    /// looks like a double barline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc calculate_spacing_rods — length +=
+    /// get_duration_space(measure-length) + 2 * bound-padding;
+    /// scm/define-grobs.scm MultiMeasureRest bound-padding = 0.5.
+    /// </remarks>
+    public static double EmptyPlaceholderContentWidth()
+        => CalculateDurationSpace(new Fraction(1, 1)) + 1.0;
 
     /// <summary>
     /// Calculates the width of system prefix (clef + key + optional time signature).

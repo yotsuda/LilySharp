@@ -38,7 +38,7 @@ public class EmptyMeasureValidatorTests
         var source = $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
         var validator = new EmptyMeasureValidator();
         validator.Validate(SyntaxTree.Parse(source));
-        return validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.EmptyPlaceholderMeasure
+        return validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.MeasureIncomplete
             && d.Severity == DiagnosticSeverity.Warning);
     }
 
