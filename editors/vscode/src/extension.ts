@@ -1834,13 +1834,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 //    box would show), and
                 //  - the white OCCLUDER behind a tab fret digit (it hides the
                 //    string line). A genuine boxed label (section/rehearsal) is
-                //    STROKED; the occluder is fill-only, so a strokeless rect is
-                //    the occluder. Leaving it in made hasBox true, which coloured
-                //    the box and suppressed the notehead's own highlight — so a
-                //    clicked note lit its tab digit's box but not the note itself.
+                //    STROKED; the occluder is fill-only. Match it by its EXPLICIT
+                //    fill: a barline is a strokeless rect too, but it is drawn in
+                //    the black default (no fill attribute), so an unstroked rect
+                //    WITHOUT a fill attribute is real ink (a barline) and must
+                //    still highlight — only an unstroked rect that carries a fill
+                //    (the white mask) is the occluder to skip. Leaving the mask in
+                //    made hasBox true, which coloured the box and suppressed the
+                //    notehead's own highlight.
                 let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'))
                     .filter(el => !el.classList.contains('nh-hit'))
-                    .filter(el => !(el.tagName.toLowerCase() === 'rect' && !el.getAttribute('stroke')));
+                    .filter(el => !(el.tagName.toLowerCase() === 'rect'
+                        && !el.getAttribute('stroke') && el.getAttribute('fill')));
                 if (occ >= 0 && matches.length > 1) {
                     // Pick the occ-th printed INSTANCE — a chord's every head
                     // (plus dots/accidentals) shares one data-pos, so slicing
