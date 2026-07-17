@@ -1268,8 +1268,35 @@ internal sealed class LayoutEngine
             : ImmutableArray<ArticulationLayout>.Empty;
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
+        // Per-(system, staff) DOWN-skyline for a note-bound lyric line that sits under an
+        // UPPER staff, so it clears THAT staff's own notes and real (font-metric) glyph
+        // height instead of the whole system's lowest staff. Mirrors lowerStaffUpSkyline
+        // (chord names on a non-top staff); built lazily and only when such a line
+        // exists, so single-/bottom-staff lyrics do no extra work and stay byte-identical.
+        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null;
+        var nbAnchor = ctx.NoteBoundAnchorY;
+        if (nbAnchor is { Count: > 0 } && staffByIndex != null
+            && lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex)))
+        {
+            var downCache = new Dictionary<(int, int), VerticalSkyline?>();
+            noteBoundStaffDownSkyline = (sysIdx, staffIndex) =>
+            {
+                if (sysIdx < 0 || sysIdx >= systems.Length
+                    || !staffByIndex.TryGetValue(staffIndex, out var staff))
+                    return null;
+                var key = (sysIdx, staffIndex);
+                if (!downCache.TryGetValue(key, out var sky))
+                {
+                    sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Down;
+                    downCache[key] = sky;
+                }
+                return sky;
+            };
+        }
+
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex, ctx.NoteBoundAnchorY);
+            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
+            ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).

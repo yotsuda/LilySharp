@@ -186,7 +186,8 @@ internal sealed class LyricEngraver
         ImmutableArray<SystemLayout> systems = default,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         IReadOnlyDictionary<int, double>? staffYByIndex = null,
-        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null)
+        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
+        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -233,7 +234,10 @@ internal sealed class LyricEngraver
                 verseY = rowAnchor + LyricRowBaseline + (verseNumber - 1) * _params.VerseSpacing;
             else if (!isRow && rowKey >= 0 && noteBoundAnchorY != null
                      && noteBoundAnchorY.TryGetValue(rowKey, out var groupBottomY))
-                // A non-last-group note-bound line sits just BELOW that group's bottom staff.
+                // A non-last-group note-bound line sits just BELOW that group's bottom
+                // staff. This is the BASIC floor; ApplySkylineDrop then lowers it — using
+                // the attached staff's own down-skyline — so it clears that staff's notes
+                // and the line's real (font-metric) glyph height.
                 verseY = groupBottomY + staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
             else
                 verseY = staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
@@ -261,7 +265,8 @@ internal sealed class LyricEngraver
         // Lower each system's lyric line so the TEXT clears notes/ledger lines
         // poking below the staff (LilyPond's max(basic-distance, skyline)).
         if (systemSkylines != null && !systems.IsDefaultOrEmpty)
-            layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom, noteBoundAnchorY);
+            layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom,
+                noteBoundAnchorY, noteBoundStaffDownSkyline);
 
         return layouts.ToImmutableArray();
     }
@@ -281,47 +286,85 @@ internal sealed class LyricEngraver
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
         double staffBottom,
-        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null)
+        IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
+        Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         double basic = staffBottom + _params.StaffPadding;
 
-        // A non-last-group note-bound line is anchored below its own group (not the
-        // system bottom); the system-wide drop, which clears the LOWEST staff's notes,
-        // must not pull it down there. It sits in its inter-group gap already.
-        bool SkipDrop(LyricItem l) =>
+        // A non-last-group note-bound line is anchored below its OWN group, so the
+        // system-wide drop (which clears the LOWEST staff) must not touch it. It gets a
+        // separate per-staff drop below, against that staff's own down-skyline.
+        bool IsUpper(LyricItem l) =>
             !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 
-        // Build each system's lyric UP-skyline from the verse-1 syllable boxes,
-        // self-relative to the line's anchor (anchor at y=0; text top at -topExtent
-        // above it, so the UP-skyline height there is +topExtent).
+        // The verse-1 UP-skyline box of a syllable, self-relative to the line's anchor
+        // (anchor at y=0; text top at -topExtent above it — a font-metric height, so the
+        // clearance reflects a tall CJK glyph as well as a low note).
+        VerticalSkyline Box(LyricLayout lay)
+        {
+            double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
+            return VerticalSkyline.FromBox(
+                lay.X - halfW, lay.X + halfW, 0, -LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
+        }
+
+        // System-wide drop for the bottom-/single-staff note-bound lines (unchanged).
         var lyricUp = new Dictionary<int, VerticalSkyline>();
         foreach (var lay in layouts)
         {
-            if (lay.Item.IsLyricsRow || SkipDrop(lay.Item)) continue; // a row / upper line sits in its own band
+            if (lay.Item.IsLyricsRow || IsUpper(lay.Item)) continue;
             if (lay.Item.VerseNumber > 1) continue; // verse 1 is the line's top edge
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
-                continue;
-            double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
-            var box = VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, -LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            var box = Box(lay);
             if (lyricUp.TryGetValue(s, out var sky)) sky.Merge(box);
             else lyricUp[s] = box;
         }
-
-        // Lyrics share ONE basic-distance floor across systems (the line baseline).
         var systemDrop = SkylineDrop.Compute(lyricUp, _ => basic, systemSkylines);
 
-        if (systemDrop.Count == 0)
+        // Per-(system, staff) drop for the UPPER note-bound lines: clear the ATTACHED
+        // staff's OWN down-skyline (its notes + staff lines), so the line drops for that
+        // staff's low notes / its own tall glyphs but never falls to a lower staff.
+        var upperDrop = new Dictionary<(int System, int Staff), double>();
+        if (noteBoundStaffDownSkyline != null)
+        {
+            foreach (var byStaff in layouts.Where(l => IsUpper(l.Item)).GroupBy(l => l.Item.StaffIndex))
+            {
+                int staffIndex = byStaff.Key;
+                var up = new Dictionary<int, VerticalSkyline>();
+                foreach (var lay in byStaff)
+                {
+                    if (lay.Item.VerseNumber > 1) continue;
+                    if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+                    var box = Box(lay);
+                    if (up.TryGetValue(s, out var sky)) sky.Merge(box);
+                    else up[s] = box;
+                }
+                if (up.Count == 0) continue;
+                // One (empty-up, staff-down) pair per system for SkylineDrop.Compute.
+                var staffSky = new List<(VerticalSkyline up, VerticalSkyline down)>(systems.Length);
+                for (int s = 0; s < systems.Length; s++)
+                    staffSky.Add((new VerticalSkyline(VerticalDirection.Up),
+                        noteBoundStaffDownSkyline(s, staffIndex) ?? new VerticalSkyline(VerticalDirection.Down)));
+                foreach (var (s, d) in SkylineDrop.Compute(up, _ => basic, staffSky))
+                    upperDrop[(s, staffIndex)] = d;
+            }
+        }
+
+        if (systemDrop.Count == 0 && upperDrop.Count == 0)
             return layouts;
 
         var shifted = new List<LyricLayout>(layouts.Count);
         foreach (var lay in layouts)
         {
-            double drop = !lay.Item.IsLyricsRow && !SkipDrop(lay.Item)
-                && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
-                && systemDrop.TryGetValue(s, out var d) ? d : 0;
+            double drop = 0;
+            if (measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
+            {
+                if (IsUpper(lay.Item))
+                    upperDrop.TryGetValue((s, lay.Item.StaffIndex), out drop);
+                else if (!lay.Item.IsLyricsRow)
+                    systemDrop.TryGetValue(s, out drop);
+            }
             shifted.Add(drop > 0 ? lay with { Y = lay.Y + drop } : lay);
         }
         return shifted;

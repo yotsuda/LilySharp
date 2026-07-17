@@ -67,6 +67,26 @@ public class LyricStaffOrderTests
     }
 
     [Fact]
+    public void UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin()
+    {
+        // The upper-staff line clears the attached staff via its OWN down-skyline built
+        // from real font metrics: a full-em CJK glyph is taller than Latin x/ascender
+        // height, so it must drop further to stay clear of the staff. This proves the
+        // clearance is dynamic (font height), not a fixed padding.
+        const string head =
+            "part melody { section A { c4 d e f } }\n" +
+            "part back { section A { e4 f g a } }\n";
+        const string tail =
+            "\nform main { A }\n" +
+            "score main {\n  staff melody with lyrics w\n  staff back\n}\n";
+        var (latin, _) = LayoutOf(head + "lyrics w { section A { la le li lo } }" + tail);
+        var (cjk, _) = LayoutOf(head + "lyrics w { section A { か え る の } }" + tail);
+
+        Assert.True(cjk[0] > latin[0] + 0.1,
+            $"CJK line ({cjk[0]:F2}) should sit lower than Latin ({latin[0]:F2}) to clear the staff");
+    }
+
+    [Fact]
     public void SecondVerseOnUpperStaff_PushesTheLowerStaffDown()
     {
         // Verse 1 fits the ordinary staff-staff gap (so a single verse leaves the
