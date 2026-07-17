@@ -38,11 +38,11 @@
   <text class="music" x="74.44" y="17.11" font-size="4.00" data-pos="219"></text>
   <line x1="74.51" y1="17.26" x2="74.51" y2="20.61" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="82.29" y="18.61" font-size="4.00" data-pos="223"></text>
-  <rect x="37.58" y="15.61" width="0.19" height="4.00"/>
-  <rect x="54.50" y="15.61" width="0.19" height="4.00"/>
-  <rect x="78.05" y="15.61" width="0.19" height="4.00"/>
-  <rect x="88.45" y="15.61" width="0.19" height="4.00"/>
-  <rect x="88.94" y="15.61" width="0.60" height="4.00"/>
+  <rect x="37.58" y="15.61" width="0.19" height="4.00" data-pos="199"/>
+  <rect x="54.50" y="15.61" width="0.19" height="4.00" data-pos="209"/>
+  <rect x="78.05" y="15.61" width="0.19" height="4.00" data-pos="220"/>
+  <rect x="88.45" y="15.61" width="0.19" height="4.00" data-pos="224"/>
+  <rect x="88.94" y="15.61" width="0.60" height="4.00" data-pos="224"/>
   <text x="9.67" y="23.23" font-size="3.20" text-anchor="middle" data-pos="247">A</text>
   <text x="17.60" y="23.23" font-size="3.20" text-anchor="middle" data-pos="250">ma</text>
   <text x="24.81" y="23.23" font-size="3.20" text-anchor="middle" data-pos="254">zing</text>

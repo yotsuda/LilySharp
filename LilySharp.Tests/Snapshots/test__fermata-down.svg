@@ -22,8 +22,8 @@
   <text class="music" x="28.78" y="12.87" font-size="4.00" data-pos="372"></text>
   <text class="music" x="31.29" y="12.37" font-size="4.00" data-pos="374"></text>
   <text class="music" x="33.79" y="11.87" font-size="4.00" data-pos="376"></text>
-  <rect x="36.41" y="11.37" width="0.19" height="4.00"/>
-  <rect x="36.90" y="11.37" width="0.60" height="4.00"/>
+  <rect x="36.41" y="11.37" width="0.19" height="4.00" data-pos="377"/>
+  <rect x="36.90" y="11.37" width="0.60" height="4.00" data-pos="377"/>
   <line x1="17.47" y1="9.17" x2="24.87" y2="10.57" stroke="#000000" stroke-width="0.480"/>
   <line x1="17.54" y1="11.72" x2="17.54" y2="9.18" stroke="#000000" stroke-width="0.130"/>
   <line x1="19.79" y1="14.72" x2="19.79" y2="9.61" stroke="#000000" stroke-width="0.130"/>

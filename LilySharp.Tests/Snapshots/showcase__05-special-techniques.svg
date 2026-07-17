@@ -80,10 +80,10 @@
   <line x1="89.82" y1="17.26" x2="89.82" y2="20.61" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="95.50" y="17.61" font-size="4.00" data-pos="597"></text>
   <line x1="95.57" y1="17.76" x2="95.57" y2="21.11" stroke="#000000" stroke-width="0.130"/>
-  <rect x="27.54" y="15.61" width="0.19" height="4.00"/>
-  <rect x="49.09" y="15.61" width="0.19" height="4.00"/>
-  <rect x="75.44" y="15.61" width="0.19" height="4.00"/>
-  <rect x="101.86" y="15.61" width="0.19" height="4.00"/>
+  <rect x="27.54" y="15.61" width="0.19" height="4.00" data-pos="311"/>
+  <rect x="49.09" y="15.61" width="0.19" height="4.00" data-pos="424"/>
+  <rect x="75.44" y="15.61" width="0.19" height="4.00" data-pos="548"/>
+  <rect x="101.86" y="15.61" width="0.19" height="4.00" data-pos="599"/>
   <line x1="8.97" y1="16.62" x2="16.16" y2="15.80" stroke="#000000" stroke-width="0.480"/>
   <line x1="8.97" y1="17.43" x2="11.39" y2="17.15" stroke="#000000" stroke-width="0.480"/>
   <line x1="11.39" y1="17.15" x2="13.74" y2="16.88" stroke="#000000" stroke-width="0.480"/>
@@ -176,11 +176,11 @@
   <text class="music" x="91.73" y="28.81" font-size="4.00" data-pos="812"></text>
   <text class="music" x="94.52" y="32.31" font-size="4.00" data-pos="816"></text>
   <text class="music" x="97.81" y="25.31" font-size="4.00" data-pos="819"></text>
-  <rect x="28.38" y="34.31" width="0.19" height="4.00"/>
-  <rect x="51.35" y="34.31" width="0.19" height="4.00"/>
-  <rect x="74.31" y="34.31" width="0.19" height="4.00"/>
-  <rect x="100.96" y="34.31" width="0.19" height="4.00"/>
-  <rect x="101.45" y="34.31" width="0.60" height="4.00"/>
+  <rect x="28.38" y="34.31" width="0.19" height="4.00" data-pos="705"/>
+  <rect x="51.35" y="34.31" width="0.19" height="4.00" data-pos="705"/>
+  <rect x="74.31" y="34.31" width="0.19" height="4.00" data-pos="720"/>
+  <rect x="100.96" y="34.31" width="0.19" height="4.00" data-pos="820"/>
+  <rect x="101.45" y="34.31" width="0.60" height="4.00" data-pos="820"/>
   <line x1="77.63" y1="36.12" x2="85.78" y2="35.49" stroke="#000000" stroke-width="0.480"/>
   <line x1="77.69" y1="39.16" x2="77.69" y2="36.12" stroke="#000000" stroke-width="0.130"/>
   <line x1="80.73" y1="39.16" x2="80.73" y2="35.88" stroke="#000000" stroke-width="0.130"/>

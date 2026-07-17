@@ -70,10 +70,10 @@
   <text class="music" x="44.77" y="10.47" font-size="4.00" data-pos="526"></text>
   <line x1="44.84" y1="10.62" x2="44.84" y2="25.97" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="47.77" y="25.97" font-size="4.00" data-pos="529"></text>
-  <rect x="23.07" y="23.97" width="0.19" height="4.00"/>
-  <rect x="38.08" y="23.97" width="0.19" height="4.00"/>
-  <rect x="52.28" y="23.97" width="0.19" height="4.00"/>
-  <rect x="52.77" y="23.97" width="0.60" height="4.00"/>
+  <rect x="23.07" y="23.97" width="0.19" height="4.00" data-pos="505"/>
+  <rect x="38.08" y="23.97" width="0.19" height="4.00" data-pos="516"/>
+  <rect x="52.28" y="23.97" width="0.19" height="4.00" data-pos="530"/>
+  <rect x="52.77" y="23.97" width="0.60" height="4.00" data-pos="530"/>
   <rect x="0.30" y="19.13" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
   <text x="3.01" y="21.34" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="466">Main</text>
   </g>

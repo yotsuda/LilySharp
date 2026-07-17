@@ -23,15 +23,15 @@
   <line x1="23.54" y1="14.72" x2="23.54" y2="11.37" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.31" y="14.87" font-size="4.00" data-pos="371"></text>
   <line x1="26.55" y1="14.72" x2="26.55" y2="11.37" stroke="#000000" stroke-width="0.130"/>
-  <rect x="28.42" y="11.37" width="0.19" height="4.00"/>
-  <rect x="28.91" y="11.37" width="0.60" height="4.00"/>
+  <rect x="28.42" y="11.37" width="0.19" height="4.00" data-pos="372"/>
+  <rect x="28.91" y="11.37" width="0.60" height="4.00" data-pos="372"/>
   <line x1="8.50" y1="21.87" x2="29.51" y2="21.87" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="23.37" x2="29.51" y2="23.37" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="24.87" x2="29.51" y2="24.87" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="26.37" x2="29.51" y2="26.37" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="8.50" y="24.12" font-size="3.11"></text>
-  <rect x="28.42" y="21.87" width="0.19" height="4.50"/>
-  <rect x="28.91" y="21.87" width="0.60" height="4.50"/>
+  <rect x="28.42" y="21.87" width="0.19" height="4.50" data-pos="372"/>
+  <rect x="28.91" y="21.87" width="0.60" height="4.50" data-pos="372"/>
   <rect x="16.14" y="23.97" width="1.62" height="1.79" fill="#FFFFFF" data-pos="339"/>
   <text x="16.95" y="25.70" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="339">0</text>
   <line x1="17.54" y1="23.67" x2="17.54" y2="19.17" stroke="#000000" stroke-width="0.130"/>

@@ -40,17 +40,17 @@
   <line x1="52.57" y1="12.29" x2="52.57" y2="15.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="55.82" y="11.64" font-size="4.00" data-pos="334"></text>
   <line x1="55.88" y1="11.79" x2="55.88" y2="15.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="21.34" y="11.64" width="0.19" height="4.00"/>
-  <rect x="21.53" y="11.64" width="0.60" height="4.00"/>
-  <rect x="22.43" y="11.64" width="0.19" height="4.00"/>
-  <circle cx="23.12" cy="13.14" r="0.20"/>
-  <circle cx="23.12" cy="14.14" r="0.20"/>
-  <circle cx="42.35" cy="13.14" r="0.20"/>
-  <circle cx="42.35" cy="14.14" r="0.20"/>
-  <rect x="42.85" y="11.64" width="0.19" height="4.00"/>
-  <rect x="43.34" y="11.64" width="0.60" height="4.00"/>
-  <rect x="58.93" y="11.64" width="0.19" height="4.00"/>
-  <rect x="59.42" y="11.64" width="0.60" height="4.00"/>
+  <rect x="21.34" y="11.64" width="0.19" height="4.00" data-pos="335"/>
+  <rect x="21.53" y="11.64" width="0.60" height="4.00" data-pos="335"/>
+  <rect x="22.43" y="11.64" width="0.19" height="4.00" data-pos="335"/>
+  <circle cx="23.12" cy="13.14" r="0.20" data-pos="335"/>
+  <circle cx="23.12" cy="14.14" r="0.20" data-pos="335"/>
+  <circle cx="42.35" cy="13.14" r="0.20" data-pos="366"/>
+  <circle cx="42.35" cy="14.14" r="0.20" data-pos="366"/>
+  <rect x="42.85" y="11.64" width="0.19" height="4.00" data-pos="366"/>
+  <rect x="43.34" y="11.64" width="0.60" height="4.00" data-pos="366"/>
+  <rect x="58.93" y="11.64" width="0.19" height="4.00" data-pos="335"/>
+  <rect x="59.42" y="11.64" width="0.60" height="4.00" data-pos="335"/>
   <text x="7.80" y="19.25" font-size="3.20" text-anchor="middle" data-pos="404">la</text>
   <text x="11.11" y="19.25" font-size="3.20" text-anchor="middle" data-pos="407">la</text>
   <text x="14.42" y="19.25" font-size="3.20" text-anchor="middle" data-pos="410">la</text>

@@ -45,11 +45,11 @@
   <line x1="78.31" y1="21.78" x2="78.31" y2="18.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="81.62" y="22.43" font-size="4.00" data-pos="609"></text>
   <line x1="82.86" y1="22.43" x2="82.86" y2="18.93" stroke="#000000" stroke-width="0.130"/>
-  <rect x="27.75" y="17.43" width="0.19" height="4.00"/>
-  <rect x="48.82" y="17.43" width="0.19" height="4.00"/>
-  <rect x="69.43" y="17.43" width="0.19" height="4.00"/>
-  <rect x="86.01" y="17.43" width="0.19" height="4.00"/>
-  <rect x="86.50" y="17.43" width="0.60" height="4.00"/>
+  <rect x="27.75" y="17.43" width="0.19" height="4.00" data-pos="544"/>
+  <rect x="48.82" y="17.43" width="0.19" height="4.00" data-pos="566"/>
+  <rect x="69.43" y="17.43" width="0.19" height="4.00" data-pos="590"/>
+  <rect x="86.01" y="17.43" width="0.19" height="4.00" data-pos="610"/>
+  <rect x="86.50" y="17.43" width="0.60" height="4.00" data-pos="610"/>
   <text x="8.42" y="25.55" font-size="3.20" text-anchor="middle" data-pos="635">Mu</text>
   <text x="13.42" y="25.55" font-size="3.20" text-anchor="middle" data-pos="639">sic</text>
   <text x="18.69" y="25.55" font-size="3.20" text-anchor="middle" data-pos="643">fills</text>

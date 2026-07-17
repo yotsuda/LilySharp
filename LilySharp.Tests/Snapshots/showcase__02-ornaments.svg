@@ -68,11 +68,11 @@
   <line x1="94.01" y1="20.46" x2="94.01" y2="17.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="97.01" y="20.11" font-size="4.00" data-pos="466"></text>
   <line x1="98.25" y1="19.96" x2="98.25" y2="16.61" stroke="#000000" stroke-width="0.130"/>
-  <rect x="26.33" y="15.61" width="0.19" height="4.00"/>
-  <rect x="44.14" y="15.61" width="0.19" height="4.00"/>
-  <rect x="63.86" y="15.61" width="0.19" height="4.00"/>
-  <rect x="81.18" y="15.61" width="0.19" height="4.00"/>
-  <rect x="101.86" y="15.61" width="0.19" height="4.00"/>
+  <rect x="26.33" y="15.61" width="0.19" height="4.00" data-pos="293"/>
+  <rect x="44.14" y="15.61" width="0.19" height="4.00" data-pos="329"/>
+  <rect x="63.86" y="15.61" width="0.19" height="4.00" data-pos="384"/>
+  <rect x="81.18" y="15.61" width="0.19" height="4.00" data-pos="399"/>
+  <rect x="101.86" y="15.61" width="0.19" height="4.00" data-pos="467"/>
   <line x1="0.00" y1="30.61" x2="102.05" y2="30.61" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="31.61" x2="102.05" y2="31.61" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="32.61" x2="102.05" y2="32.61" stroke="#000000" stroke-width="0.100"/>
@@ -136,12 +136,12 @@
   <text class="music" x="93.89" y="36.11" font-size="4.00" data-pos="705"></text>
   <text class="music" x="93.89" y="31.61" font-size="4.00" data-pos="707"></text>
   <line x1="95.13" y1="37.11" x2="95.13" y2="28.86" stroke="#000000" stroke-width="0.130"/>
-  <rect x="26.93" y="30.61" width="0.19" height="4.00"/>
-  <rect x="45.66" y="30.61" width="0.19" height="4.00"/>
-  <rect x="64.38" y="30.61" width="0.19" height="4.00"/>
-  <rect x="84.76" y="30.61" width="0.19" height="4.00"/>
-  <rect x="100.96" y="30.61" width="0.19" height="4.00"/>
-  <rect x="101.45" y="30.61" width="0.60" height="4.00"/>
+  <rect x="26.93" y="30.61" width="0.19" height="4.00" data-pos="498"/>
+  <rect x="45.66" y="30.61" width="0.19" height="4.00" data-pos="556"/>
+  <rect x="64.38" y="30.61" width="0.19" height="4.00" data-pos="579"/>
+  <rect x="84.76" y="30.61" width="0.19" height="4.00" data-pos="675"/>
+  <rect x="100.96" y="30.61" width="0.19" height="4.00" data-pos="703"/>
+  <rect x="101.45" y="30.61" width="0.60" height="4.00" data-pos="703"/>
   <path d="M 67.61,24.36 C 68.46,25.24 71.37,25.24 72.22,24.36 C 71.37,25.02 68.46,25.02 67.61,24.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 46.59,23.01 C 48.58,24.42 56.75,23.41 58.71,21.51 C 56.71,23.14 48.55,24.15 46.59,23.01 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="84.50" y1="14.26" x2="84.50" y2="14.96" stroke="#000000" stroke-width="0.130" data-pos="425"/>

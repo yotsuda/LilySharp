@@ -61,6 +61,29 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void PreviewBarlinesAreClickable()
+    {
+        // A barline carries the measure boundary's source position for
+        // click-to-source and caret highlighting, plus a widened transparent hit
+        // rect (the ink alone is ~0.2 ss — too thin to click). Two measures, so a
+        // mid-line SINGLE barline exists (the shared Doc has only its final bar).
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse("""
+            part m { clef treble section A { c'1 | d'1 } }
+            form main { A }
+            score main "s" { staff m }
+            """), SvgRenderOptions.Preview());
+        var hits = Regex.Matches(svg,
+            "<rect class=\"nh-hit\" x=\"(-?[\\d.]+)\" y=\"[-\\d.]+\" width=\"([\\d.]+)\" height=\"[\\d.]+\" fill=\"none\" pointer-events=\"all\" data-pos=\"(\\d+)\"/>");
+        // Notehead hits are ~1.3 ss wide; the barline hit is the ink + 0.8 ss.
+        var barHits = hits.Cast<Match>()
+            .Where(h => double.Parse(h.Groups[2].Value) < 1.2).ToList();
+        Assert.NotEmpty(barHits);
+        // The visible barline rect right before it shares the same data-pos.
+        foreach (var h in barHits)
+            Assert.Contains($"data-pos=\"{h.Groups[3].Value}\"", svg);
+    }
+
+    [Fact]
     public void StaticSvgHasNoHitRectsAndNoPointerEvents()
     {
         var svg = Render(SvgRenderOptions.Default);

@@ -62,10 +62,10 @@
   <line x1="22.66" y1="24.97" x2="22.66" y2="27.47" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.87" y="24.47" font-size="4.00" data-pos="418"></text>
   <line x1="26.94" y1="24.47" x2="26.94" y2="26.97" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.42" y="19.97" width="0.19" height="4.00"/>
-  <rect x="31.75" y="19.97" width="0.19" height="4.00"/>
-  <rect x="44.28" y="19.97" width="0.19" height="4.00"/>
-  <rect x="44.77" y="19.97" width="0.60" height="4.00"/>
+  <rect x="20.42" y="19.97" width="0.19" height="4.00" data-pos="384"/>
+  <rect x="31.75" y="19.97" width="0.19" height="4.00" data-pos="402"/>
+  <rect x="44.28" y="19.97" width="0.19" height="4.00" data-pos="432"/>
+  <rect x="44.77" y="19.97" width="0.60" height="4.00" data-pos="432"/>
   <text x="22.60" y="30.27" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">f</text>
   <text x="22.60" y="32.27" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="415">p</text>
   <rect x="0.30" y="15.13" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="354"/>

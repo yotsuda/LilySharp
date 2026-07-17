@@ -57,13 +57,13 @@
   <text class="music" x="76.06" y="16.14" font-size="4.00" data-pos="496"></text>
   <line x1="76.12" y1="16.14" x2="76.12" y2="18.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="77.88" y="16.14" font-size="4.00"></text>
-  <rect x="20.42" y="11.64" width="0.19" height="4.00"/>
-  <rect x="35.25" y="11.64" width="0.19" height="4.00"/>
-  <rect x="49.94" y="11.64" width="0.19" height="4.00"/>
-  <rect x="61.77" y="11.64" width="0.19" height="4.00"/>
-  <rect x="70.91" y="11.64" width="0.19" height="4.00"/>
-  <rect x="81.07" y="11.64" width="0.19" height="4.00"/>
-  <rect x="81.56" y="11.64" width="0.60" height="4.00"/>
+  <rect x="20.42" y="11.64" width="0.19" height="4.00" data-pos="276"/>
+  <rect x="35.25" y="11.64" width="0.19" height="4.00" data-pos="329"/>
+  <rect x="49.94" y="11.64" width="0.19" height="4.00" data-pos="390"/>
+  <rect x="61.77" y="11.64" width="0.19" height="4.00" data-pos="419"/>
+  <rect x="70.91" y="11.64" width="0.19" height="4.00" data-pos="439"/>
+  <rect x="81.07" y="11.64" width="0.19" height="4.00" data-pos="480"/>
+  <rect x="81.56" y="11.64" width="0.60" height="4.00" data-pos="480"/>
   <text x="7.80" y="18.94" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
   <text x="10.80" y="18.44" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
   <text x="13.80" y="17.94" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>

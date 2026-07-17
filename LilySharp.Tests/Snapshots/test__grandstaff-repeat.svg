@@ -38,17 +38,17 @@
   <line x1="39.19" y1="15.64" x2="39.19" y2="12.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="41.98" y="16.64" font-size="4.00" data-pos="392"></text>
   <line x1="43.21" y1="16.64" x2="43.21" y2="13.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="6.95" y="11.64" width="0.60" height="4.00"/>
-  <rect x="7.85" y="11.64" width="0.19" height="4.00"/>
-  <circle cx="8.54" cy="13.14" r="0.20"/>
-  <circle cx="8.54" cy="14.14" r="0.20"/>
-  <rect x="22.96" y="11.64" width="0.19" height="4.00"/>
-  <circle cx="34.37" cy="13.14" r="0.20"/>
-  <circle cx="34.37" cy="14.14" r="0.20"/>
-  <rect x="34.87" y="11.64" width="0.19" height="4.00"/>
-  <rect x="35.36" y="11.64" width="0.60" height="4.00"/>
-  <rect x="46.36" y="11.64" width="0.19" height="4.00"/>
-  <rect x="46.85" y="11.64" width="0.60" height="4.00"/>
+  <rect x="6.95" y="11.64" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="7.85" y="11.64" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="8.54" cy="13.14" r="0.20" data-pos="0"/>
+  <circle cx="8.54" cy="14.14" r="0.20" data-pos="0"/>
+  <rect x="22.96" y="11.64" width="0.19" height="4.00" data-pos="366"/>
+  <circle cx="34.37" cy="13.14" r="0.20" data-pos="377"/>
+  <circle cx="34.37" cy="14.14" r="0.20" data-pos="377"/>
+  <rect x="34.87" y="11.64" width="0.19" height="4.00" data-pos="377"/>
+  <rect x="35.36" y="11.64" width="0.60" height="4.00" data-pos="377"/>
+  <rect x="46.36" y="11.64" width="0.19" height="4.00" data-pos="393"/>
+  <rect x="46.85" y="11.64" width="0.60" height="4.00" data-pos="393"/>
   <line x1="0.00" y1="20.64" x2="47.45" y2="20.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="21.64" x2="47.45" y2="21.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="22.64" x2="47.45" y2="22.64" stroke="#000000" stroke-width="0.100"/>
@@ -68,17 +68,17 @@
   <line x1="39.19" y1="23.14" x2="39.19" y2="19.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="41.98" y="24.64" font-size="4.00" data-pos="434"></text>
   <line x1="43.21" y1="24.64" x2="43.21" y2="21.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="6.95" y="20.64" width="0.60" height="4.00"/>
-  <rect x="7.85" y="20.64" width="0.19" height="4.00"/>
-  <circle cx="8.54" cy="22.14" r="0.20"/>
-  <circle cx="8.54" cy="23.14" r="0.20"/>
-  <rect x="22.96" y="20.64" width="0.19" height="4.00"/>
-  <circle cx="34.37" cy="22.14" r="0.20"/>
-  <circle cx="34.37" cy="23.14" r="0.20"/>
-  <rect x="34.87" y="20.64" width="0.19" height="4.00"/>
-  <rect x="35.36" y="20.64" width="0.60" height="4.00"/>
-  <rect x="46.36" y="20.64" width="0.19" height="4.00"/>
-  <rect x="46.85" y="20.64" width="0.60" height="4.00"/>
+  <rect x="6.95" y="20.64" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="7.85" y="20.64" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="8.54" cy="22.14" r="0.20" data-pos="0"/>
+  <circle cx="8.54" cy="23.14" r="0.20" data-pos="0"/>
+  <rect x="22.96" y="20.64" width="0.19" height="4.00" data-pos="423"/>
+  <circle cx="34.37" cy="22.14" r="0.20" data-pos="429"/>
+  <circle cx="34.37" cy="23.14" r="0.20" data-pos="429"/>
+  <rect x="34.87" y="20.64" width="0.19" height="4.00" data-pos="429"/>
+  <rect x="35.36" y="20.64" width="0.60" height="4.00" data-pos="429"/>
+  <rect x="46.36" y="20.64" width="0.19" height="4.00" data-pos="435"/>
+  <rect x="46.85" y="20.64" width="0.60" height="4.00" data-pos="435"/>
   <rect x="6.95" y="11.64" width="0.60" height="13.00"/>
   <rect x="7.85" y="11.64" width="0.19" height="13.00"/>
   <rect x="22.96" y="11.64" width="0.19" height="13.00"/>

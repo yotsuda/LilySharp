@@ -57,12 +57,12 @@
   <line x1="74.23" y1="19.46" x2="74.23" y2="16.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="75.99" y="19.11" font-size="4.00" data-pos="402"></text>
   <line x1="77.23" y1="18.96" x2="77.23" y2="15.61" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.42" y="15.61" width="0.19" height="4.00"/>
-  <rect x="35.25" y="15.61" width="0.19" height="4.00"/>
-  <rect x="50.01" y="15.61" width="0.19" height="4.00"/>
-  <rect x="64.84" y="15.61" width="0.19" height="4.00"/>
-  <rect x="79.10" y="15.61" width="0.19" height="4.00"/>
-  <rect x="79.59" y="15.61" width="0.60" height="4.00"/>
+  <rect x="20.42" y="15.61" width="0.19" height="4.00" data-pos="161"/>
+  <rect x="35.25" y="15.61" width="0.19" height="4.00" data-pos="186"/>
+  <rect x="50.01" y="15.61" width="0.19" height="4.00" data-pos="264"/>
+  <rect x="64.84" y="15.61" width="0.19" height="4.00" data-pos="289"/>
+  <rect x="79.10" y="15.61" width="0.19" height="4.00" data-pos="403"/>
+  <rect x="79.59" y="15.61" width="0.60" height="4.00" data-pos="403"/>
   <text x="7.80" y="22.91" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="147">p</text>
   <text x="10.80" y="22.41" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="151">mp</text>
   <text x="13.80" y="21.91" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="156">mf</text>

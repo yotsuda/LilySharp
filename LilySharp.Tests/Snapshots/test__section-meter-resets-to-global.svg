@@ -166,10 +166,10 @@
   <line x1="89.44" y1="31.92" x2="89.44" y2="36.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="95.44" y="28.77" font-size="4.00" data-pos="488"></text>
   <line x1="95.50" y1="28.92" x2="95.50" y2="36.77" stroke="#000000" stroke-width="0.130"/>
-  <rect x="26.35" y="34.77" width="0.19" height="4.00"/>
-  <rect x="53.75" y="34.77" width="0.19" height="4.00"/>
-  <rect x="74.93" y="34.77" width="0.19" height="4.00"/>
-  <rect x="101.86" y="34.77" width="0.19" height="4.00"/>
+  <rect x="26.35" y="34.77" width="0.19" height="4.00" data-pos="427"/>
+  <rect x="53.75" y="34.77" width="0.19" height="4.00" data-pos="451"/>
+  <rect x="74.93" y="34.77" width="0.19" height="4.00" data-pos="460"/>
+  <rect x="101.86" y="34.77" width="0.19" height="4.00" data-pos="489"/>
   <line x1="0.00" y1="70.77" x2="102.05" y2="70.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="71.77" x2="102.05" y2="71.77" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="72.77" x2="102.05" y2="72.77" stroke="#000000" stroke-width="0.100"/>
@@ -323,11 +323,11 @@
   <line x1="79.72" y1="47.27" x2="79.72" y2="72.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="90.38" y="43.27" font-size="4.00" data-pos="459"></text>
   <line x1="90.44" y1="43.27" x2="90.44" y2="72.77" stroke="#000000" stroke-width="0.130"/>
-  <rect x="23.00" y="70.77" width="0.19" height="4.00"/>
-  <rect x="46.80" y="70.77" width="0.19" height="4.00"/>
-  <rect x="77.48" y="70.77" width="0.19" height="4.00"/>
-  <rect x="100.96" y="70.77" width="0.19" height="4.00"/>
-  <rect x="101.45" y="70.77" width="0.60" height="4.00"/>
+  <rect x="23.00" y="70.77" width="0.19" height="4.00" data-pos="494"/>
+  <rect x="46.80" y="70.77" width="0.19" height="4.00" data-pos="427"/>
+  <rect x="77.48" y="70.77" width="0.19" height="4.00" data-pos="451"/>
+  <rect x="100.96" y="70.77" width="0.19" height="4.00" data-pos="460"/>
+  <rect x="101.45" y="70.77" width="0.60" height="4.00" data-pos="460"/>
   <text x="0.05" y="68.53" font-size="1.75" font-weight="bold">5</text>
   <rect x="0.30" y="29.93" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="398"/>
   <text x="1.29" y="32.13" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="398">A</text>

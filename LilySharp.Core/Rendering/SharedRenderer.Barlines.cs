@@ -55,8 +55,19 @@ internal static partial class SharedRenderer
             // the clef. LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
             // (clef/key-signature/time-signature . (extra-space . 1.15)).
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline,
-                    atLineStart ? ml.X + LineStartBarClearance : ml.X, staffY, height, gc);
+            {
+                double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
+                // The barline is clickable/highlightable in the preview: it carries
+                // the measure boundary's source position (the written `|:` token's
+                // spot). The transparent hit rect widens the thin ink to a
+                // comfortable click target.
+                using (gc.Source(measure.SourceStart))
+                {
+                    DrawBarline(measure.StartBarline, sx, staffY, height, gc);
+                    gc.DrawHitRect(sx - BarlineHitPad, staffY,
+                        GetVisualBarlineWidth(measure.StartBarline) + 2 * BarlineHitPad, height);
+                }
+            }
 
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
@@ -70,11 +81,26 @@ internal static partial class SharedRenderer
                 && IsMmrInnerEndBarline(layout, ml.MeasureIndex))
                 continue;
 
+            if (measure.EndBarline == BarlineType.None)
+                continue;
+
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+            // Clickable/highlightable like the start barline: SourceEnd is the
+            // written `|` token's position (or, for an auto-filled close, the
+            // point just after the bar's last note — still the boundary).
+            using (gc.Source(measure.SourceEnd))
+            {
+                DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+                gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
+                    width + 2 * BarlineHitPad, height);
+            }
         }
     }
+
+    /// <summary>Extra clickable margin on each side of a barline's ink (staff
+    /// spaces) — the interactive hit rect only; the drawn ink is unchanged.</summary>
+    private const double BarlineHitPad = 0.4;
 
     /// <summary>True iff the measure lies inside a multi-measure-rest run.</summary>
     private static bool IsMmrCovered(ScoreLayout layout, int measureIndex)

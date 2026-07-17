@@ -56,9 +56,9 @@
   <text class="music" x="59.26" y="11.91" font-size="4.00" data-pos="414"></text>
   <text class="music" x="59.26" y="10.91" font-size="4.00" data-pos="416"></text>
   <text class="music" x="62.96" y="14.41" font-size="4.00" data-pos="419"></text>
-  <rect x="41.51" y="12.41" width="0.19" height="4.00"/>
-  <rect x="69.37" y="12.41" width="0.19" height="4.00"/>
-  <rect x="69.86" y="12.41" width="0.60" height="4.00"/>
+  <rect x="41.51" y="12.41" width="0.19" height="4.00" data-pos="368"/>
+  <rect x="69.37" y="12.41" width="0.19" height="4.00" data-pos="420"/>
+  <rect x="69.86" y="12.41" width="0.60" height="4.00" data-pos="420"/>
   <line x1="10.23" y1="13.91" x2="18.32" y2="13.40" stroke="#000000" stroke-width="0.480"/>
   <line x1="10.23" y1="14.72" x2="12.80" y2="14.56" stroke="#000000" stroke-width="0.480"/>
   <line x1="12.80" y1="14.56" x2="15.75" y2="14.37" stroke="#000000" stroke-width="0.480"/>

@@ -11,8 +11,8 @@
   <line x1="0.00" y1="15.41" x2="18.22" y2="15.41" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.91" x2="18.22" y2="16.91" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.00" y="14.66" font-size="3.11"></text>
-  <rect x="17.13" y="12.41" width="0.19" height="4.50"/>
-  <rect x="17.62" y="12.41" width="0.60" height="4.50"/>
+  <rect x="17.13" y="12.41" width="0.19" height="4.50" data-pos="148"/>
+  <rect x="17.62" y="12.41" width="0.60" height="4.50" data-pos="148"/>
   <rect x="4.36" y="11.51" width="1.62" height="1.79" fill="#FFFFFF" data-pos="108"/>
   <text x="5.17" y="13.24" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="108">0</text>
   <line x1="4.58" y1="13.60" x2="4.58" y2="18.10" stroke="#000000" stroke-width="0.130"/>

@@ -150,6 +150,14 @@ public interface IDrawingContext
     IDisposable Source(int sourcePosition);
 
     /// <summary>
+    /// In interactive SVG, draws a transparent click target over the given
+    /// rectangle, carrying the current <see cref="Source"/> position — used to
+    /// give thin ink (a barline) a comfortably clickable area. Static backends
+    /// (exported SVG, PDF, PNG) draw nothing.
+    /// </summary>
+    void DrawHitRect(double x, double y, double width, double height) { }
+
+    /// <summary>
     /// Begins a transformed group scope. Subsequent draw operations have the
     /// transform applied (in document order, after any enclosing groups).
     /// Dispose the returned token to end the scope.

@@ -79,11 +79,11 @@
   <text class="music" x="75.23" y="8.41" font-size="4.00" data-pos="431"></text>
   <text class="music" x="77.73" y="7.91" font-size="4.00" data-pos="433"></text>
   <text class="music" x="80.23" y="7.41" font-size="4.00" data-pos="435"></text>
-  <rect x="24.98" y="12.41" width="0.19" height="4.00"/>
-  <rect x="43.34" y="12.41" width="0.19" height="4.00"/>
-  <rect x="54.91" y="12.41" width="0.19" height="4.00"/>
-  <rect x="82.85" y="12.41" width="0.19" height="4.00"/>
-  <rect x="83.34" y="12.41" width="0.60" height="4.00"/>
+  <rect x="24.98" y="12.41" width="0.19" height="4.00" data-pos="352"/>
+  <rect x="43.34" y="12.41" width="0.19" height="4.00" data-pos="384"/>
+  <rect x="54.91" y="12.41" width="0.19" height="4.00" data-pos="392"/>
+  <rect x="82.85" y="12.41" width="0.19" height="4.00" data-pos="436"/>
+  <rect x="83.34" y="12.41" width="0.60" height="4.00" data-pos="436"/>
   <line x1="10.52" y1="14.22" x2="23.17" y2="13.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="10.59" y1="18.76" x2="10.59" y2="14.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.09" y1="18.26" x2="13.09" y2="14.09" stroke="#000000" stroke-width="0.130"/>

@@ -109,12 +109,12 @@
   <line x1="95.91" y1="25.28" x2="95.91" y2="21.93" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="97.96" y="24.93" font-size="4.00" data-pos="634"></text>
   <line x1="99.20" y1="24.78" x2="99.20" y2="21.43" stroke="#000000" stroke-width="0.130"/>
-  <rect x="22.07" y="19.93" width="0.19" height="4.00"/>
-  <rect x="37.99" y="19.93" width="0.19" height="4.00"/>
-  <rect x="53.90" y="19.93" width="0.19" height="4.00"/>
-  <rect x="70.03" y="19.93" width="0.19" height="4.00"/>
-  <rect x="85.95" y="19.93" width="0.19" height="4.00"/>
-  <rect x="101.86" y="19.93" width="0.19" height="4.00"/>
+  <rect x="22.07" y="19.93" width="0.19" height="4.00" data-pos="277"/>
+  <rect x="37.99" y="19.93" width="0.19" height="4.00" data-pos="357"/>
+  <rect x="53.90" y="19.93" width="0.19" height="4.00" data-pos="460"/>
+  <rect x="70.03" y="19.93" width="0.19" height="4.00" data-pos="505"/>
+  <rect x="85.95" y="19.93" width="0.19" height="4.00" data-pos="601"/>
+  <rect x="101.86" y="19.93" width="0.19" height="4.00" data-pos="635"/>
   <line x1="0.00" y1="42.55" x2="102.05" y2="42.55" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="43.55" x2="102.05" y2="43.55" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="44.55" x2="102.05" y2="44.55" stroke="#000000" stroke-width="0.100"/>
@@ -154,20 +154,20 @@
   <text class="music" x="85.42" y="45.55" font-size="4.00" data-pos="740"></text>
   <line x1="86.66" y1="45.40" x2="86.66" y2="42.05" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="92.47" y="44.05" font-size="4.00" data-pos="744"></text>
-  <rect x="3.71" y="42.55" width="0.60" height="4.00"/>
-  <rect x="4.61" y="42.55" width="0.19" height="4.00"/>
-  <circle cx="5.30" cy="44.05" r="0.20"/>
-  <circle cx="5.30" cy="45.05" r="0.20"/>
-  <rect x="26.44" y="42.55" width="0.19" height="4.00"/>
-  <rect x="39.77" y="42.55" width="0.19" height="4.00"/>
-  <rect x="58.38" y="42.55" width="0.19" height="4.00"/>
-  <circle cx="70.05" cy="44.05" r="0.20"/>
-  <circle cx="70.05" cy="45.05" r="0.20"/>
-  <rect x="70.55" y="42.55" width="0.19" height="4.00"/>
-  <rect x="71.04" y="42.55" width="0.60" height="4.00"/>
-  <rect x="89.99" y="42.55" width="0.19" height="4.00"/>
-  <rect x="100.96" y="42.55" width="0.19" height="4.00"/>
-  <rect x="101.45" y="42.55" width="0.60" height="4.00"/>
+  <rect x="3.71" y="42.55" width="0.60" height="4.00" data-pos="635"/>
+  <rect x="4.61" y="42.55" width="0.19" height="4.00" data-pos="635"/>
+  <circle cx="5.30" cy="44.05" r="0.20" data-pos="635"/>
+  <circle cx="5.30" cy="45.05" r="0.20" data-pos="635"/>
+  <rect x="26.44" y="42.55" width="0.19" height="4.00" data-pos="665"/>
+  <rect x="39.77" y="42.55" width="0.19" height="4.00" data-pos="673"/>
+  <rect x="58.38" y="42.55" width="0.19" height="4.00" data-pos="704"/>
+  <circle cx="70.05" cy="44.05" r="0.20" data-pos="708"/>
+  <circle cx="70.05" cy="45.05" r="0.20" data-pos="708"/>
+  <rect x="70.55" y="42.55" width="0.19" height="4.00" data-pos="708"/>
+  <rect x="71.04" y="42.55" width="0.60" height="4.00" data-pos="708"/>
+  <rect x="89.99" y="42.55" width="0.19" height="4.00" data-pos="741"/>
+  <rect x="100.96" y="42.55" width="0.19" height="4.00" data-pos="745"/>
+  <rect x="101.45" y="42.55" width="0.60" height="4.00" data-pos="745"/>
   <line x1="40.26" y1="37.49" x2="40.26" y2="39.49" stroke="#000000" stroke-width="0.130" data-pos="945"/>
   <line x1="40.26" y1="37.49" x2="71.34" y2="37.49" stroke="#000000" stroke-width="0.130" data-pos="945"/>
   <line x1="71.34" y1="37.49" x2="71.34" y2="39.49" stroke="#000000" stroke-width="0.130" data-pos="945"/>

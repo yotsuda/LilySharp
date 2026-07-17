@@ -43,10 +43,10 @@
   <line x1="90.89" y1="19.46" x2="90.89" y2="16.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="95.45" y="19.11" font-size="4.00" data-pos="283"></text>
   <line x1="96.69" y1="18.96" x2="96.69" y2="15.61" stroke="#000000" stroke-width="0.130"/>
-  <rect x="29.06" y="15.61" width="0.19" height="4.00"/>
-  <rect x="49.95" y="15.61" width="0.19" height="4.00"/>
-  <rect x="75.91" y="15.61" width="0.19" height="4.00"/>
-  <rect x="101.86" y="15.61" width="0.19" height="4.00"/>
+  <rect x="29.06" y="15.61" width="0.19" height="4.00" data-pos="189"/>
+  <rect x="49.95" y="15.61" width="0.19" height="4.00" data-pos="223"/>
+  <rect x="75.91" y="15.61" width="0.19" height="4.00" data-pos="236"/>
+  <rect x="101.86" y="15.61" width="0.19" height="4.00" data-pos="284"/>
   <line x1="0.00" y1="27.61" x2="102.05" y2="27.61" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="28.61" x2="102.05" y2="28.61" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="29.61" x2="102.05" y2="29.61" stroke="#000000" stroke-width="0.100"/>
@@ -77,11 +77,11 @@
   <text class="music" x="85.51" y="29.61" font-size="4.00" data-pos="461"></text>
   <line x1="85.57" y1="29.76" x2="85.57" y2="33.11" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="91.44" y="29.61" font-size="4.00" data-pos="464"></text>
-  <rect x="31.92" y="27.61" width="0.19" height="4.00"/>
-  <rect x="53.40" y="27.61" width="0.19" height="4.00"/>
-  <rect x="77.43" y="27.61" width="0.19" height="4.00"/>
-  <rect x="100.96" y="27.61" width="0.19" height="4.00"/>
-  <rect x="101.45" y="27.61" width="0.60" height="4.00"/>
+  <rect x="31.92" y="27.61" width="0.19" height="4.00" data-pos="320"/>
+  <rect x="53.40" y="27.61" width="0.19" height="4.00" data-pos="326"/>
+  <rect x="77.43" y="27.61" width="0.19" height="4.00" data-pos="407"/>
+  <rect x="100.96" y="27.61" width="0.19" height="4.00" data-pos="465"/>
+  <rect x="101.45" y="27.61" width="0.60" height="4.00" data-pos="465"/>
   <path d="M 9.30,21.36 C 10.10,22.22 12.60,22.22 13.40,21.36 C 12.60,21.99 10.10,21.99 9.30,21.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 41.87,20.36 C 43.10,21.36 50.66,21.36 51.89,20.36 C 50.66,21.14 43.10,21.14 41.87,20.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 57.04,33.36 C 57.85,34.23 60.46,34.23 61.28,33.36 C 60.46,34.00 57.85,34.00 57.04,33.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>

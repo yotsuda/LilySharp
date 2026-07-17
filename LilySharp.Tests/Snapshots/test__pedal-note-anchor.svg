@@ -30,9 +30,9 @@
   <line x1="28.70" y1="11.02" x2="28.70" y2="14.37" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.64" y="10.37" font-size="4.00" data-pos="436"></text>
   <line x1="31.70" y1="10.52" x2="31.70" y2="13.87" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.49" y="11.37" width="0.19" height="4.00"/>
-  <rect x="34.75" y="11.37" width="0.19" height="4.00"/>
-  <rect x="35.24" y="11.37" width="0.60" height="4.00"/>
+  <rect x="20.49" y="11.37" width="0.19" height="4.00" data-pos="417"/>
+  <rect x="34.75" y="11.37" width="0.19" height="4.00" data-pos="437"/>
+  <rect x="35.24" y="11.37" width="0.60" height="4.00" data-pos="437"/>
   <text x="13.88" y="17.37" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="411">Ped.</text>
   <text x="28.64" y="17.37" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="426">*</text>
   <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="383"/>

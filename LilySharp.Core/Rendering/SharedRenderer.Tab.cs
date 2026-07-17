@@ -87,12 +87,28 @@ internal static partial class SharedRenderer
             bool atLineStart = lineStart;
             lineStart = false;
             // Line-start start barline clears the redrawn tab clef (see DrawBarlines).
+            // Both ends are clickable/highlightable, like the notation staff's.
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline,
-                    atLineStart ? ml.X + LineStartBarClearance : ml.X, staffY, tabHeight, gc, tabDots: tabDots);
+            {
+                double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
+                using (gc.Source(measure.SourceStart))
+                {
+                    DrawBarline(measure.StartBarline, sx, staffY, tabHeight, gc, tabDots: tabDots);
+                    gc.DrawHitRect(sx - BarlineHitPad, staffY,
+                        GetVisualBarlineWidth(measure.StartBarline) + 2 * BarlineHitPad, tabHeight);
+                }
+            }
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
+            if (measure.EndBarline != BarlineType.None)
+            {
+                using (gc.Source(measure.SourceEnd))
+                {
+                    DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
+                    gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
+                        width + 2 * BarlineHitPad, tabHeight);
+                }
+            }
         }
 
         foreach (var ml in system.Measures)

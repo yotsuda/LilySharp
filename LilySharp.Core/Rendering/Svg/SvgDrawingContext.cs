@@ -156,6 +156,16 @@ internal sealed class SvgDrawingContext : IDrawingContext
             x, y - inkHeight / 2, inkWidth, inkHeight, SourceAttr()));
     }
 
+    public void DrawHitRect(double x, double y, double width, double height)
+    {
+        // Interactive preview only: a transparent click target (the nh-hit class
+        // keeps it out of the webview's highlight recolor, like the notehead's).
+        if (!_interactive) return;
+        _sb.AppendLine(string.Format(Inv,
+            "  <rect class=\"nh-hit\" x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\" fill=\"none\" pointer-events=\"all\"{4}/>",
+            x, y, width, height, SourceAttr()));
+    }
+
     public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         // Static output: identical to DrawGlyph.
