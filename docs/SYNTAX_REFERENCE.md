@@ -597,6 +597,11 @@ form main { Main }
 score main { staff melody with lyrics words }
 ```
 
+Barlines in a lyrics block follow the music rule: a lone leading `|` only
+anchors the start — `| きら | ひかる |` equals `きら | ひかる` — and a bar with
+no syllables is written as an explicit `| |` pair (a leading `| |` skips the
+melody's opening rest bar).
+
 ## Music Marks
 
 ### Rehearsal Marks

@@ -236,7 +236,10 @@ voice { c'2 d } voice { e2 f }     // each voice { } is a simultaneous voice
 
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
 attaches it under a staff with `staff X with lyrics NAME`. Syllables are separated by
-spaces; `-` joins syllables of one word; `|` mirrors the music's barlines.
+spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines
+follow the music rule: a lone leading `|` only anchors the start (`| きら | ひかる |`
+== `きら | ひかる`), a bar with no syllables is the explicit `| |` pair (e.g. a
+leading `| |` skips the melody's opening rest bar).
 
 ```
 part melody

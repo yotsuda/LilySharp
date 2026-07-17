@@ -350,8 +350,18 @@ internal sealed class LyricsCollector
         int PlaceRun(IEnumerable<SyntaxNode> barNodes, int startMeasure, int wrapBars, int verseBase)
         {
             int j = 0; // run-local bar index
+            bool atRunStart = true;
             foreach (var measureNode in barNodes)
             {
+                // A lone bare '|' OPENING the run anchors its start (the music
+                // rule) and creates no bar — skip exactly that one; an empty
+                // leading bar is the explicit '| |' pair whose second survives.
+                if (atRunStart)
+                {
+                    atRunStart = false;
+                    if (LyricSyllableReader.IsLeadingAnchor(measureNode))
+                        continue;
+                }
                 // Wrap a long run: bar j belongs to verse (j / wrapBars) and maps back
                 // onto bar (j % wrapBars). wrapBars <= 0 → no wrap (one verse).
                 int barInVerse = wrapBars > 0 ? j % wrapBars : j;

@@ -460,8 +460,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    empty full-width bar, and carries the ordinary underfull warning (LYS2001,
    "duration 0", squiggled between the barlines) until filled — an empty measure is
    thus always visible in the source. A TYPED barline on an empty span decorates the previous
-   bar's end. LYRICS differ BY DESIGN: they carry no durations, so their barlines ARE
-   the structure — a lone leading '|' there means "bar 1 has no syllables". *)
+   bar's end. LYRICS follow the SAME rule: a lone leading '|' merely anchors the
+   run's start ('| きら | ひかる |' == 'きら | ひかる'), so the fenced style aligns
+   with the melody above instead of shifting the verse; "bar 1 has no syllables"
+   is the explicit leading '| |' pair, and a mid-run '| |' is an empty bar. *)
 
 (* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is a
    volta; otherwise '[' … ']' is a manual beam group. The '[' is REQUIRED; the closing

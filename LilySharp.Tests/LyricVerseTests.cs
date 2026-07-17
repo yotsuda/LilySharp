@@ -208,17 +208,17 @@ score main ""x"" { staff melody  lyrics verse }
     }
 
     [Fact]
-    public void RestBarBeforeLyrics_LeadingBarlineAlignsToTheRest_NotTheFirstNote()
+    public void RestBarBeforeLyrics_ExplicitEmptyPairSkipsTheRestBar()
     {
-        // The melody opens with a whole-rest bar (r1); in a lyrics block that bar is
-        // skipped with a bare leading "| " (no s1). It must line up with the REST bar, so
-        // "Twin" lands on the first NOTE bar (index 1), not shifted a bar past it — a
-        // rest-only bar used to be dropped from the count and slid the whole verse over.
+        // The melody opens with a whole-rest bar (r1); the lyrics skip it with an
+        // EXPLICIT empty bar — the leading "| |" pair (the bare-barline rule: an
+        // empty measure is always a visible pair). "Twin" lands on the first NOTE
+        // bar (index 1); nothing lands on the rest bar.
         var score = Collect(@"
 time 4/4
 section Main {
   melody { r1 | c'4 d' e' f' | g'4 a' b' c'' | }
-  lyrics melody { | Twin- kle twin- kle | lit- tle star | }
+  lyrics melody { | | Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
 score main ""x"" { staff melody with lyrics melody }
@@ -227,6 +227,39 @@ score main ""x"" { staff melody with lyrics melody }
         Assert.Equal(2, score.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
         // Nothing lands on the rest bar (index 0).
         Assert.DoesNotContain(score.Lyrics, l => l.MeasureIndex == 0);
+    }
+
+    [Fact]
+    public void LeadingBareBarline_AnchorsOnly_NoEmptyBar()
+    {
+        // A lone leading '|' merely anchors the run's start — the music rule now
+        // holds in lyrics too, so the fenced style `| きら | ひかる |` aligns with
+        // the melody above instead of silently shifting the verse one bar over.
+        var fenced = Collect(@"
+time 4/4
+section Main {
+  melody { c'4 d' e' f' | g'4 a' b' c'' | }
+  lyrics melody { | Twin- kle twin- kle | lit- tle star | }
+}
+form main { Main }
+score main ""x"" { staff melody with lyrics melody }
+");
+        Assert.Equal(0, fenced.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
+        Assert.Equal(1, fenced.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
+
+        // …and it is exactly equivalent to the unfenced spelling.
+        var plain = Collect(@"
+time 4/4
+section Main {
+  melody { c'4 d' e' f' | g'4 a' b' c'' | }
+  lyrics melody { Twin- kle twin- kle | lit- tle star | }
+}
+form main { Main }
+score main ""x"" { staff melody with lyrics melody }
+");
+        Assert.Equal(
+            plain.Lyrics.Select(l => (l.Text, l.MeasureIndex, l.ItemIndex)),
+            fenced.Lyrics.Select(l => (l.Text, l.MeasureIndex, l.ItemIndex)));
     }
 
     [Fact]

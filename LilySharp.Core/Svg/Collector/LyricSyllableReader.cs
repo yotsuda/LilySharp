@@ -107,4 +107,35 @@ internal static class LyricSyllableReader
         }
         return sawBar;
     }
+
+    /// <summary>
+    /// True for a lyric measure that is nothing but a lone bare <c>|</c> — the
+    /// parse of a run that OPENS with a barline. Under the bare-barline rule
+    /// (GRAMMAR.md "BARE-BARLINE SEMANTICS", the same rule music follows) that
+    /// leading bar only ANCHORS the run's start and creates NO measure, so both
+    /// lyric paths skip exactly one: <c>| きら | ひかる |</c> == <c>きら | ひかる</c>.
+    /// An EMPTY leading bar is the explicit <c>| |</c> pair, whose second parsed
+    /// measure survives the skip. A typed leading bar (<c>||</c>, <c>|:</c>) or a
+    /// marker-only bar (<c>| ~ |</c>) is NOT an anchor.
+    /// </summary>
+    public static bool IsLeadingAnchor(SyntaxNode measure)
+    {
+        if (measure.Kind != SyntaxKind.LyricMeasure)
+            return false;
+        bool sawBar = false;
+        for (int i = 0; i < measure.SlotCount; i++)
+        {
+            var child = measure.GetChild(i);
+            if (child == null)
+                continue;
+            var (text, _) = ReadToken(child);
+            if (string.IsNullOrEmpty(text))
+                continue;
+            if (text == "|" && !sawBar)
+                sawBar = true;
+            else
+                return false; // a syllable, a marker, or a typed/second bar
+        }
+        return sawBar;
+    }
 }
