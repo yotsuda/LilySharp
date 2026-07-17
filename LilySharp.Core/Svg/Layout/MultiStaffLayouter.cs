@@ -81,6 +81,7 @@ internal sealed class MultiStaffLayouter
         double height = 0;
         double staffHeight = _options.StaffHeight;
         var sp = _options.StaffSpacing;
+        int globalStaffIndex = 0;
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -136,7 +137,10 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
+                height += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
+
+            globalStaffIndex += group.StaffCount;
         }
 
         return height;
@@ -232,6 +236,25 @@ internal sealed class MultiStaffLayouter
     /// names above a staff — not a whole staff-distance away.</summary>
     private const double TextRowPairGap = 0.6;
 
+    /// <summary>
+    /// Extra inter-group gap so a note-bound (<c>with lyrics</c>) line's SECOND-and-later
+    /// verses, which sit below a non-last group, clear the staff beneath. Verse 1 fits
+    /// in the ordinary staff-staff distance (so single-verse layouts are unchanged); each
+    /// further verse adds one <see cref="TextRowVerseSpacing"/> — the same step the
+    /// LyricEngraver stacks verses by. 0 when the group's staves carry no such lyrics.
+    /// LILYPOND-REF: axis-group-interface.cc skyline_spacing grows the gap by the
+    /// outside-staff line's extent.
+    /// </summary>
+    private static double NoteBoundLyricExtraGap(MultiStaffScore score, int firstStaffIndex, int endStaffIndex)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty) return 0;
+        int maxVerse = 0;
+        foreach (var ly in score.Lyrics)
+            if (!ly.IsLyricsRow && ly.StaffIndex >= firstStaffIndex && ly.StaffIndex < endStaffIndex)
+                maxVerse = Math.Max(maxVerse, ly.VerseNumber);
+        return maxVerse <= 1 ? 0 : (maxVerse - 1) * TextRowVerseSpacing;
+    }
+
     /// <summary>How far left of the staff a system-start BRACE sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBrace (padding . 0.3)</remarks>
     private const double SystemStartBracePadding = 0.3;
@@ -296,6 +319,8 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY += interGroupGap;
+                // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
+                currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -398,6 +423,8 @@ internal sealed class MultiStaffLayouter
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
                     currentY += interGroupGap;
+                    // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
+                    currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
                 }
             }
 
@@ -1146,6 +1173,7 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
+                height += NoteBoundLyricExtraGap(score, globalStaffIdx, globalStaffIdx + staffCount);
             }
 
             globalStaffIdx += staffCount;
@@ -1222,6 +1250,8 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY += interGroupGap;
+                // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
+                currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
