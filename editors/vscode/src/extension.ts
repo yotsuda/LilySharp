@@ -779,7 +779,7 @@ async function updatePreviewContent(
             // shows — this is what spares a rapid edit/toggle/save burst from
             // re-shipping the same large SVG. A different render selection
             // compiles to a different SVG, so equality already implies the render.
-            const key = response.Svg + ' ' + (response.Error ?? '');
+            const key = response.Svg + '\n\n' + (response.Error ?? '');
             if (lastPostedSvg.get(uri) === key) {
                 outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
             } else {
