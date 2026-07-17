@@ -54,10 +54,10 @@
   <text class="music" x="93.51" y="17.61" font-size="4.00" data-pos="176"></text>
   <rect x="31.52" y="15.61" width="0.19" height="4.00" data-pos="135"/>
   <rect x="52.32" y="15.61" width="0.19" height="4.00" data-pos="142"/>
-  <rect x="52.51" y="15.61" width="0.60" height="4.00" data-pos="142"/>
-  <rect x="53.41" y="15.61" width="0.19" height="4.00" data-pos="142"/>
-  <circle cx="54.10" cy="17.11" r="0.20" data-pos="142"/>
-  <circle cx="54.10" cy="18.11" r="0.20" data-pos="142"/>
+  <rect x="52.51" y="15.61" width="0.60" height="4.00" data-pos="337"/>
+  <rect x="53.41" y="15.61" width="0.19" height="4.00" data-pos="337"/>
+  <circle cx="54.10" cy="17.11" r="0.20" data-pos="337"/>
+  <circle cx="54.10" cy="18.11" r="0.20" data-pos="337"/>
   <rect x="80.58" y="15.61" width="0.19" height="4.00" data-pos="170"/>
   <rect x="99.56" y="15.61" width="0.19" height="4.00" data-pos="179"/>
   <text class="music" x="100.55" y="15.61" font-size="4.00"></text>

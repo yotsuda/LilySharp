@@ -123,6 +123,25 @@ public class NoteheadHitTargetTests
     }
 
     [Fact]
+    public void RepeatStartBarlineCarriesItsOwnOffset()
+    {
+        // A `|:` opens the next measure; the drawn start barline must carry the `|:`
+        // offset (so a caret on it highlights), not the previous measure's close, which
+        // is what SourceStart otherwise holds.
+        const string src = "phrase x { |: c1 :| }\n"
+                         + "part m { clef treble section A { x } }\n"
+                         + "form main { A }\nscore main \"s\" { staff m }";
+        int repeatStart = src.IndexOf("|:");
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
+        // The `|:` hit rect carries the repeat-start offset (its ink is wider than a
+        // plain bar, so match any hit — a notehead never shares this offset).
+        var offsets = Regex.Matches(svg,
+                "<rect class=\"nh-hit\"[^>]* pointer-events=\"all\" data-pos=\"(\\d+)\"/>")
+            .Cast<Match>().Select(h => int.Parse(h.Groups[1].Value)).ToList();
+        Assert.Contains(repeatStart, offsets);
+    }
+
+    [Fact]
     public void StaticSvgHasNoHitRectsAndNoPointerEvents()
     {
         var svg = Render(SvgRenderOptions.Default);

@@ -443,6 +443,10 @@ internal sealed class MeasureBuilder
             if (_currentItems.Count > 0)
                 CompleteMeasure(position, BarlineType.Single);
             _pendingStartBarline = BarlineType.RepeatStart;
+            // The `|:` IS the next measure's start boundary — record its offset so the
+            // drawn start barline's click/highlight lands on the written `|:`, not on
+            // the previous close (SourceStart otherwise carries the last SourceEnd).
+            _measureSourceStart = position;
             return;
         }
 
