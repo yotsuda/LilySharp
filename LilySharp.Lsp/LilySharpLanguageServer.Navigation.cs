@@ -84,8 +84,15 @@ public sealed partial class LilySharpLanguageServer
             return FindSectionDefinition(root, sectionTok.Text);
 
         // A score's form name: `score main …` → `form main { … }`.
-        if (FormNameReferenceAt(root, offset) is { } formTok)
+        if (TokenAt(FormNameTokens(root), offset) is { } formTok)
             return FindFormDefinition(root, formTok.Text);
+
+        // A `with lyrics NAME` attachment / `lyrics NAME` row → the `lyrics NAME { … }`
+        // block; the chord analog → the `chords NAME { … }` block.
+        if (TokenAt(LyricsNameTokens(root), offset) is { } lyrTok)
+            return FindLyricsDefinition(root, lyrTok.Text);
+        if (TokenAt(ChordNameTokens(root), offset) is { } chordTok)
+            return FindChordPartDefinition(root, chordTok.Text);
 
         // Bare music-block reference: a phrase (or legacy `name = …` variable).
         var node = doc.Tree.FindNode(offset);
@@ -156,14 +163,118 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
-    /// <summary>The form-name reference token of a <c>score NAME …</c> header whose
-    /// span contains <paramref name="offset"/> (end inclusive), or null. This is the
-    /// bare identifier right after <c>score</c>, never the quoted basename.</summary>
-    private static SyntaxTokenNode? FormNameReferenceAt(SyntaxNode root, int offset)
+    // ── name-token streams: the declaration NAME token plus every reference token,
+    // in document order. Shared by Go to Definition (TokenAt → declaration) and
+    // Rename (Occurrences → rewrite all), so the two agree on what a name means at a
+    // position. Part and section names use the Core *ReferenceFinder classes.
+
+    /// <summary>The first token in <paramref name="tokens"/> whose span contains
+    /// <paramref name="offset"/> (end inclusive), or null.</summary>
+    private static SyntaxTokenNode? TokenAt(IEnumerable<SyntaxTokenNode> tokens, int offset)
     {
-        foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
-            if (render.FormName is { } fn && offset >= fn.Span.Start && offset <= fn.Span.End)
-                return fn;
+        foreach (var t in tokens)
+            if (offset >= t.Span.Start && offset <= t.Span.End)
+                return t;
+        return null;
+    }
+
+    /// <summary>Every <c>lyrics NAME</c> name token — the block declaration plus each
+    /// reference (<c>staff … with lyrics NAME</c> clauses and independent
+    /// <c>lyrics NAME</c> rows) — in document order.</summary>
+    private static IEnumerable<SyntaxTokenNode> LyricsNameTokens(SyntaxNode root)
+    {
+        foreach (var node in root.DescendantNodes())
+        {
+            switch (node)
+            {
+                case LyricsBlockSyntax block when block.VoiceName is { Length: > 0 }
+                    && block.GetChild(1) is SyntaxTokenNode dt:
+                    yield return dt;
+                    break;
+                case LyricsRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
+                    yield return rt;
+                    break;
+                case StaffRenderSyntax staff:
+                    foreach (var t in WithClauseNameTokens(staff, SyntaxKind.LyricsKeyword))
+                        yield return t;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Every <c>chords NAME</c> name token — the named chord-part block
+    /// declaration plus each reference (<c>with chords NAME</c> clauses and
+    /// <c>chords NAME</c> rows). An unnamed <c>chords { … }</c> (the chord-symbols
+    /// form that aligns above a co-written staff) has no name and is skipped.</summary>
+    private static IEnumerable<SyntaxTokenNode> ChordNameTokens(SyntaxNode root)
+    {
+        foreach (var node in root.DescendantNodes())
+        {
+            switch (node)
+            {
+                case ChordPartBlockSyntax block when block.PartName is { Length: > 0 }
+                    && block.GetChild(1) is SyntaxTokenNode dt:
+                    yield return dt;
+                    break;
+                case ChordRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
+                    yield return rt;
+                    break;
+                case StaffRenderSyntax staff:
+                    foreach (var t in WithClauseNameTokens(staff, SyntaxKind.ChordsKeyword))
+                        yield return t;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Every <c>form NAME</c> name token — the <c>form NAME { … }</c>
+    /// declaration plus each <c>score NAME …</c> reference.</summary>
+    private static IEnumerable<SyntaxTokenNode> FormNameTokens(SyntaxNode root)
+    {
+        foreach (var node in root.DescendantNodes())
+        {
+            switch (node)
+            {
+                case FormDeclarationSyntax form when form.Name is { } n && n.Text.Length > 0:
+                    yield return n;
+                    break;
+                case RenderDeclarationSyntax render when render.FormName is { } fn && fn.Text.Length > 0:
+                    yield return fn;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>The NAME tokens of every <c>with lyrics</c> / <c>with chords</c> clause
+    /// (per <paramref name="attachKind"/>) in a staff render item. Mirrors
+    /// <c>RenderSpecParser.ParseStaff</c>: the name is two slots past <c>with</c>; a
+    /// trailing <c>as roman|both|names</c> selector sits after it and is untouched.</summary>
+    private static IEnumerable<SyntaxTokenNode> WithClauseNameTokens(StaffRenderSyntax staff, SyntaxKind attachKind)
+    {
+        for (int i = 0; i + 2 < staff.SlotCount; i++)
+            if (staff.GetChild(i) is SyntaxTokenNode w && w.Kind == SyntaxKind.WithKeyword
+                && staff.GetChild(i + 1) is SyntaxTokenNode k && k.Kind == attachKind
+                && staff.GetChild(i + 2) is SyntaxTokenNode n && n.Text.Length > 0)
+                yield return n;
+    }
+
+    /// <summary>The <c>lyrics NAME { … }</c> block's NAME token for
+    /// <paramref name="name"/>, or null. A block's name is its voice-binding name.</summary>
+    private static SyntaxTokenNode? FindLyricsDefinition(SyntaxNode root, string name)
+    {
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
+            if (block.VoiceName == name && block.GetChild(1) is SyntaxTokenNode n)
+                return n;
+        return null;
+    }
+
+    /// <summary>The <c>chords NAME { … }</c> block's NAME token for
+    /// <paramref name="name"/>, or null.</summary>
+    private static SyntaxTokenNode? FindChordPartDefinition(SyntaxNode root, string name)
+    {
+        foreach (var block in root.DescendantNodes<ChordPartBlockSyntax>())
+            if (block.PartName == name && block.GetChild(1) is SyntaxTokenNode n)
+                return n;
         return null;
     }
 
@@ -175,10 +286,12 @@ public sealed partial class LilySharpLanguageServer
     {
         VariableReferenceSyntax r => r.Name.Text,
         VariableDeclarationSyntax d => d.Name.Text,
+        PhraseDeclarationSyntax p => p.Name.Text,
         _ => node.Parent switch
         {
             VariableReferenceSyntax r => r.Name.Text,
             VariableDeclarationSyntax d => d.Name.Text,
+            PhraseDeclarationSyntax p => p.Name.Text,
             _ => null,
         },
     };
@@ -191,6 +304,11 @@ public sealed partial class LilySharpLanguageServer
     {
         foreach (var decl in root.DescendantNodes<VariableDeclarationSyntax>())
             if (decl.Name.Text == name) onOccurrence(decl.Name, true);
+        // A phrase is declared with `phrase NAME { … }` (not `NAME = …`), and a bare
+        // reference to it parses as a VariableReferenceSyntax — so its declaration must
+        // be included here too, else rename/highlight would miss the `phrase NAME` site.
+        foreach (var phrase in root.DescendantNodes<PhraseDeclarationSyntax>())
+            if (phrase.Name.Text == name) onOccurrence(phrase.Name, true);
         foreach (var reference in root.DescendantNodes<VariableReferenceSyntax>())
             if (reference.Name.Text == name) onOccurrence(reference.Name, false);
     }

@@ -127,4 +127,32 @@ public class GoToDefinitionTests
         int inNote = Source.IndexOf("c4");   // a pitch, not a symbol reference
         Assert.Null(DefinitionAt(Source, inNote));
     }
+
+    // A score that names a lyrics block (via `with lyrics`) and a chord part (via a
+    // `chords` row) — the score-attachment reference namespaces.
+    private const string WithSource =
+        "part melody { section A { c4 d e f } }\n" +
+        "lyrics verse { section A { la la la la } }\n" +   // lyrics block `verse`
+        "chords harmony { section A { c1 } }\n" +          // chord part `harmony`
+        "form main { A }\n" +
+        "score main {\n" +
+        "  staff melody with lyrics verse\n" +             // attaches lyrics `verse`
+        "  chords harmony\n" +                             // chord row -> `harmony`
+        "}\n";
+
+    [Fact]
+    public void LyricsNameInWithClause_JumpsToLyricsBlock()
+    {
+        int declName = WithSource.IndexOf("verse");                 // lyrics verse
+        int reference = WithSource.IndexOf("verse", declName + 1);  // with lyrics verse
+        AssertJumps(WithSource, reference, declName, "verse".Length);
+    }
+
+    [Fact]
+    public void ChordPartNameInRow_JumpsToChordBlock()
+    {
+        int declName = WithSource.IndexOf("harmony");                 // chords harmony
+        int reference = WithSource.IndexOf("harmony", declName + 1);  // chords harmony (row)
+        AssertJumps(WithSource, reference, declName, "harmony".Length);
+    }
 }

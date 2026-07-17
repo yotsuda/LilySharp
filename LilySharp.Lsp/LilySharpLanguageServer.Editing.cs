@@ -45,81 +45,81 @@ public sealed partial class LilySharpLanguageServer
 
         var position = @params.Position;
         var newName = @params.NewName;
-
-        // Find the node at position
         int offset = GetOffset(doc.Text, position.Line, position.Character);
 
-        // Part-name rename: from the caret on any `part NAME` declaration or one
-        // of its references (section-body part blocks, score staff/ossia/tab
-        // targets, midi part renders), rewrite every occurrence at once.
-        var partToken = LilySharp.Core.Editing.PartReferenceFinder.PartNameTokenAt(doc.Tree.GetRoot(), offset);
-        if (partToken != null)
-        {
-            var partEdits = LilySharp.Core.Editing.PartReferenceFinder
-                .Occurrences(doc.Tree.GetRoot(), partToken.Text)
-                .Select(t => TokenTextEdit(doc.Text, t, newName))
-                .ToArray();
-            if (partEdits.Length == 0) return null;
-            return new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] = partEdits
-                }
-            };
-        }
+        // Every occurrence (declaration + references) of the symbol the caret sits
+        // on, across all named namespaces. Empty when the caret is not on a rename-
+        // able name — return null so the client shows "cannot rename" rather than a
+        // no-op edit.
+        var occurrences = RenameOccurrences(doc, offset);
+        if (occurrences.Count == 0) return null;
 
-        // Section-name rename: from the caret on any `section NAME` declaration or
-        // one of its structure references (plain `NAME`, silent `~NAME`, volta
-        // `[1. NAME]`), rewrite every occurrence at once.
-        var sectionToken = LilySharp.Core.Editing.SectionReferenceFinder.SectionNameTokenAt(doc.Tree.GetRoot(), offset);
-        if (sectionToken != null)
-        {
-            var sectionEdits = LilySharp.Core.Editing.SectionReferenceFinder
-                .Occurrences(doc.Tree.GetRoot(), sectionToken.Text)
-                .Select(t => TokenTextEdit(doc.Text, t, newName))
-                .ToArray();
-            if (sectionEdits.Length == 0) return null;
-            return new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] = sectionEdits
-                }
-            };
-        }
-
-        var node = doc.Tree.FindNode(offset);
-        if (node == null) return null;
-
-        // Find variable name at position (declaration + all references)
-        string? variableName = FindVariableNameAt(node);
-        if (variableName == null) return null;
-
-        var edits = new List<TextEdit>();
-        ForEachOccurrence(doc.Tree.GetRoot(), variableName, (nameNode, _) =>
-        {
-            var (line, character) = GetLineAndCharacter(doc.Text, nameNode.Span.Start);
-            edits.Add(new TextEdit
-            {
-                Range = new LspRange
-                {
-                    Start = new Position { Line = line, Character = character },
-                    End = new Position { Line = line, Character = character + nameNode.Width }
-                },
-                NewText = newName
-            });
-        });
-
-        if (edits.Count == 0) return null;
-
+        var edits = occurrences.Select(t => TokenTextEdit(doc.Text, t, newName)).ToArray();
         return new WorkspaceEdit
         {
             Changes = new Dictionary<string, TextEdit[]>
             {
-                [uri.ToString()] = edits.ToArray()
+                [uri.ToString()] = edits
             }
         };
+    }
+
+    /// <summary>
+    /// Every occurrence token (declaration + references) of the symbol at
+    /// <paramref name="offset"/>, so Rename can rewrite them all at once. The
+    /// namespace dispatch and its reference model mirror Go to Definition's
+    /// <see cref="ResolveDefinitionTarget"/>, so rename and navigation never disagree
+    /// about what a name means at a position:
+    /// <list type="bullet">
+    /// <item><c>part</c> (declaration + section-body part blocks + score staff/ossia/
+    /// tab/midi targets) — via <see cref="PartReferenceFinder"/>;</item>
+    /// <item><c>section</c> (declaration + structure/form references, silent + volta)
+    /// — via <see cref="SectionReferenceFinder"/>;</item>
+    /// <item><c>form</c> (declaration + <c>score NAME</c> references);</item>
+    /// <item><c>lyrics</c> / <c>chords</c> block (declaration + <c>with …</c> clauses
+    /// and rows);</item>
+    /// <item><c>phrase</c> / legacy variable (declaration + bare references).</item>
+    /// </list>
+    /// </summary>
+    private static IReadOnlyList<SyntaxNode> RenameOccurrences(Document doc, int offset)
+    {
+        var root = doc.Tree.GetRoot();
+
+        if (PartReferenceFinder.PartNameTokenAt(root, offset) is { } partTok)
+            return PartReferenceFinder.Occurrences(root, partTok.Text);
+
+        if (SectionReferenceFinder.SectionNameTokenAt(root, offset) is { } sectionTok)
+            return SectionReferenceFinder.Occurrences(root, sectionTok.Text);
+
+        if (OccurrencesAmong(FormNameTokens(root), offset) is { Count: > 0 } forms)
+            return forms;
+        if (OccurrencesAmong(LyricsNameTokens(root), offset) is { Count: > 0 } lyrics)
+            return lyrics;
+        if (OccurrencesAmong(ChordNameTokens(root), offset) is { Count: > 0 } chords)
+            return chords;
+
+        // Phrase / legacy variable: declaration + every bare reference.
+        var node = doc.Tree.FindNode(offset);
+        if (node != null && FindVariableNameAt(node) is { } variableName)
+        {
+            var toks = new List<SyntaxNode>();
+            ForEachOccurrence(root, variableName, (nameNode, _) => toks.Add(nameNode));
+            return toks;
+        }
+
+        return Array.Empty<SyntaxNode>();
+    }
+
+    /// <summary>If <paramref name="offset"/> lands on a token in
+    /// <paramref name="tokens"/>, every token there sharing its text; else empty.
+    /// <paramref name="tokens"/> is enumerated once.</summary>
+    private static IReadOnlyList<SyntaxNode> OccurrencesAmong(IEnumerable<SyntaxTokenNode> tokens, int offset)
+    {
+        var all = tokens.ToList();
+        var hit = all.FirstOrDefault(t => offset >= t.Span.Start && offset <= t.Span.End);
+        return hit == null
+            ? Array.Empty<SyntaxNode>()
+            : all.Where(t => t.Text == hit.Text).ToArray();
     }
 
     /// <summary>A single-token replacement edit: covers the bare token span
