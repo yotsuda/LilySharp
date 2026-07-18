@@ -31,7 +31,9 @@ public readonly record struct VoltaBracketLayout(
     int EndMeasureIndex,        // Last measure of this volta
     double StartX,              // X position of bracket start
     double EndX,                // X position of bracket end
-    double Y,                   // Y position (above staff)
+    double YUp,                 // Y-up (frame B): staff-spaces ABOVE the system top,
+                                // up-positive. The renderer reflects it to device via
+                                // StaffFrame.ToDevice against the segment's system top.
     string VoltaText,           // Text to display (e.g., "1.")
     bool IsClosed,              // Has right hook
     int SourcePosition,         // For click-to-source mapping
@@ -114,7 +116,10 @@ internal static class VoltaBracketEngraver
                     segment.EndMeasureIndex,
                     segStartMeasure.X + StartPadding,
                     segEndMeasure.X + segEndMeasure.Width - EndPadding,
-                    YOffset,
+                    // Y-up from the system top: YOffset is a device offset BELOW the
+                    // system top (negative = above it), so the Y-up value is its
+                    // negation. The renderer resolves the segment's system top.
+                    StaffFrame.ToUp(YOffset, 0.0),
                     segText,
                     segClosed,
                     bracket.SourcePosition,

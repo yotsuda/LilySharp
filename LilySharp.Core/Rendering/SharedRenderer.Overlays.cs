@@ -450,7 +450,9 @@ internal static partial class SharedRenderer
         foreach (var v in layout.VoltaBracketLayouts)
         {
             if (!sysY.TryGetValue(v.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = sy + v.Y;
+            // Frame B -> device: reflect the Y-up value against this segment's own
+            // system top (sy resolved per segment from StartMeasureIndex).
+            double absY = StaffFrame.ToDevice(v.YUp, sy);
             bool hasText = !string.IsNullOrEmpty(v.VoltaText);
             using (gc.Source(v.SourcePosition))
             {

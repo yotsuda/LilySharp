@@ -838,7 +838,12 @@ internal sealed class LayoutEngine
             Add(t.MeasureIndex, hi - (t.IsStemUp ? 1.6 : 0.1), lo + (t.IsStemUp ? 0.7 : 1.7));
         }
         foreach (var v in ann.VoltaBrackets)
-            Add(v.StartMeasureIndex, v.Y - 0.1, v.Y + 1.6);
+        {
+            // YUp is Y-up from the system top; this extent pass is system-relative
+            // device (down+), which is exactly -YUp.
+            double vY = -v.YUp;
+            Add(v.StartMeasureIndex, vY - 0.1, vY + 1.6);
+        }
         foreach (var m in ann.MusicMarks)
         {
             if (MusicMarkItem.IsSpannerHandled(m.MarkType))
@@ -1068,10 +1073,13 @@ internal sealed class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int s))
                 continue;
+            // YUp is Y-up from the system top; this skyline is system-relative
+            // device (down+), which is exactly -YUp.
+            double vY = -v.YUp;
             var up = new VerticalSkyline(VerticalDirection.Up);
             up.Merge(result[s].up);
             up.Merge(VerticalSkyline.FromBox(
-                v.StartX, v.EndX, v.Y + 1.6, v.Y - 0.1, VerticalDirection.Up));
+                v.StartX, v.EndX, vY + 1.6, vY - 0.1, VerticalDirection.Up));
             result[s] = (result[s].up, result[s].down);
             result[s] = (up, result[s].down);
         }

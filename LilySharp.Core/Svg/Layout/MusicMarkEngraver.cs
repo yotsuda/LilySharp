@@ -147,9 +147,11 @@ internal static class MusicMarkEngraver
             {
                 for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
                     voltaMeasures.Add(mi);
-                // Track the highest (most negative) volta Y
-                if (vb.Y < voltaTopY)
-                    voltaTopY = vb.Y;
+                // Track the highest (most negative) volta Y. vb.YUp is Y-up from the
+                // system top; this tracker is system-relative device (down+) = -YUp.
+                double vbY = -vb.YUp;
+                if (vbY < voltaTopY)
+                    voltaTopY = vbY;
             }
         }
         return (voltaMeasures, voltaTopY);

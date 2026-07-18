@@ -645,13 +645,16 @@ internal static class OutsideStaffStacker
                 var v = b[i];
                 double required = trackers[sysIdx].Frontier(v.StartX, v.EndX)
                     - OutsideStaffPadding - VoltaBottom(v);
-                anchor = Math.Min(anchor, Math.Min(sy + v.Y, required));
+                // v.YUp is Y-up from the system top; the tracker works in absolute
+                // device, so reflect against sy (this segment's system top).
+                anchor = Math.Min(anchor, Math.Min(StaffFrame.ToDevice(v.YUp, sy), required));
             }
 
             foreach (int i in sysGroup)
             {
                 var v = b[i];
-                b[i] = v with { Y = anchor - sy };
+                // Write back the placed anchor as Y-up from the system top.
+                b[i] = v with { YUp = StaffFrame.ToUp(anchor - sy, 0.0) };
                 trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
             }
         }
