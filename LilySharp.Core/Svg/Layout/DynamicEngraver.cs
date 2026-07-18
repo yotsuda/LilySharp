@@ -63,9 +63,6 @@ public readonly record struct DynamicLayout(
 /// </remarks>
 internal static class DynamicEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:1405 direction = DOWN
-    private const int Direction = 1;  // DOWN = 1 (positive Y = down in our coordinate system)
-
     // LILYPOND-REF: define-grobs.scm:1408 padding = 0.6
     private const double Padding = 0.6;
 

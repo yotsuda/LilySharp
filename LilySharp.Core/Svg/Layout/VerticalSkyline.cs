@@ -21,7 +21,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Direction for vertical skylines.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/direction.hh — UP = +1, DOWN = -1.
+/// LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.
 /// Matches LilyPond's Y-up convention where heights are stored as sky * y_up
 /// (skyline.cc:107 <c>height = sky * b[other_axis][sky]</c>).
 /// </remarks>

@@ -398,7 +398,7 @@ internal static partial class SharedRenderer
             double boxH = fs + pad * 2;
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
             gc.DrawRectangle(m.X - boxW / 2, absY + boxH / 2, boxW, boxH,
-                fill: Color.White, stroke: Color.Black, strokeWidth: 0.10);
+                fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
             gc.DrawText(m.Text, m.X, absY - fs / 2 + pad, fs, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
@@ -787,7 +787,7 @@ internal static partial class SharedRenderer
     {
         if (beamCount <= 0) return;
         double beamWidth = (stemUp && hasFlag) ? 1.0 : 1.5;
-        const double beamThickness = 0.48;
+        const double beamThickness = EngravingDefaults.BeamThickness;
         const double beamGap = 0.8;
         double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
 

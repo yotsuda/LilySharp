@@ -315,7 +315,7 @@ internal static class EngravingDefaults
     /// the preceding column). Keeping both on this one method prevents the two from
     /// drifting apart, which is what let a whole rest collide with a `:|`.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/bar-line.cc — a bar line's own stencil X-extent
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm — a bar line's own stencil X-extent
     /// feeds the spacing; the printed width and the reserved width are the same
     /// quantity.</remarks>
     public static double BarlineDrawnWidth(BarlineType type) => type switch

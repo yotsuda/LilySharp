@@ -139,7 +139,7 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Draws a barline of the given type. Mirrors <c>SvgRenderer.DrawBarline</c>.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/bar-line.cc — bar-line glyph composition.</remarks>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,
         IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null)
     {
@@ -164,7 +164,7 @@ internal static partial class SharedRenderer
 
             case BarlineType.Dashed:
             {
-                // LILYPOND-REF: lily/bar-line.cc make_dashed_bar_line — dash
+                // LILYPOND-REF: scm/bar-line.scm (dashed bar glyph) — dash
                 // length tuned so segments straddle the staff lines evenly
                 // (~⅔ dash, ⅓ gap per staff space).
                 const double dash = 0.67, gap = 0.33;
