@@ -64,7 +64,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print()
     /// LILYPOND-REF: scm/define-grobs.scm:352 BassFigure defaults
     /// </remarks>
-    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.75;
@@ -92,7 +93,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/percent-repeat-interface.cc — x_percent() rendering
     /// LILYPOND-REF: scm/define-grobs.scm:2788-2807 — slope=1.0, thickness=0.48
     /// </remarks>
-    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
         const double slope = 1.0;
@@ -219,7 +221,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
-    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
         foreach (var m in layout.MusicMarkLayouts)
@@ -423,7 +426,8 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws free-form text annotations (e.g. "molto rit.", "a tempo").</summary>
     /// <remarks>LILYPOND-REF: lily/text-interface.cc — text rendering</remarks>
-    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
         foreach (var t in layout.CustomTextLayouts)

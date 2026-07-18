@@ -31,7 +31,8 @@ public readonly record struct PercentRepeatLayout(
     double Y,                // Y center of the percent symbol (staff spaces from system top)
     double Width,            // Measure width for proportional sizing
     int SourcePosition,
-    int SourceIndex = -1     // F3/B: index into score.PercentRepeats (data-pos resolved at render)
+    int SourceIndex = -1,    // F3/B: index into score.PercentRepeats (data-pos resolved at render)
+    int StaffIndex = -1       // owning staff, so the draw can resolve its staff middle
 );
 
 /// <summary>
@@ -86,7 +87,8 @@ internal static class PercentRepeatEngraver
             double y = staffOffset + 2.0;
 
             results.Add(new PercentRepeatLayout(
-                item.MeasureIndex, x, y, ml.Width, item.SourcePosition, i));
+                item.MeasureIndex, x, y, ml.Width, item.SourcePosition, i,
+                StaffIndex: item.StaffIndex));
         }
 
         return results.ToImmutable();

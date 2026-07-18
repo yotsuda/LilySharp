@@ -33,7 +33,8 @@ public readonly record struct CustomTextLayout(
     double Y,               // Y position (staff spaces from staff top, positive = down)
     string Text,            // Display text
     int SourcePosition,     // For click-to-source mapping
-    int SourceIndex = -1    // F3/B: index into score.CustomTexts (data-pos resolved at render)
+    int SourceIndex = -1,   // F3/B: index into score.CustomTexts (data-pos resolved at render)
+    int StaffIndex = -1      // owning staff (-1 = top staff); the draw resolves its middle
 );
 
 /// <summary>

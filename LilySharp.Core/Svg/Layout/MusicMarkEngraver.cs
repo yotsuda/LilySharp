@@ -41,7 +41,8 @@ public readonly record struct MusicMarkLayout(
     int SwingSubdivision = 0, // Tempo marks only: note value to swing (0/8/16) for the feel equation.
     string? TempoText = null, // Tempo marks only: bold marking text ("Grave").
     int TempoBeatUnit = 4,    // Tempo marks only: metronome beat unit.
-    int TempoDots = 0         // Tempo marks only: dots on the beat unit.
+    int TempoDots = 0,        // Tempo marks only: dots on the beat unit.
+    int StaffIndex = -1       // owning staff (-1 = top staff); the draw resolves its middle
 );
 
 /// <summary>

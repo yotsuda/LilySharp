@@ -33,7 +33,8 @@ public readonly record struct FiguredBassLayout(
     double Y,                                         // Y position of topmost figure (staff spaces)
     ImmutableArray<string> FigureTexts,               // Text for each figure, top to bottom
     int SourcePosition,
-    int SourceIndex = -1                              // F3/B: index into score.FiguredBasses
+    int SourceIndex = -1,                             // F3/B: index into score.FiguredBasses
+    int StaffIndex = -1                               // owning staff, so the draw resolves its middle
 );
 
 /// <summary>
@@ -117,7 +118,8 @@ internal static class FiguredBassEngraver
                 y,
                 figureTexts,
                 fb.SourcePosition,
-                fbi));
+                fbi,
+                StaffIndex: fb.StaffIndex));
         }
 
         var result = layouts.ToImmutable();

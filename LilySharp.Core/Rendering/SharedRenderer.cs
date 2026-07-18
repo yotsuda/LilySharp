@@ -140,13 +140,13 @@ internal static partial class SharedRenderer
                 DrawArpeggios(layout, measureToSystemY, os, gc);
                 DrawGraceNotes(layout, measureToSystemY, os, gc);
                 DrawChordNames(layout, measureToSystemY, gc);
-                DrawFiguredBass(layout, measureToSystemY, gc);
-                DrawPercentRepeats(layout, measureToSystemY, gc);
+                DrawFiguredBass(layout, measureToSystemY, os, gc);
+                DrawPercentRepeats(layout, measureToSystemY, os, gc);
                 DrawBarNumbers(layout, measureToSystemY, gc);
                 DrawStanzaNumbers(layout, measureToSystemY, gc);
                 DrawFingerings(layout, measureToSystemY, os, gc);
-                DrawMusicMarks(layout, measureToSystemY, gc);
-                DrawCustomTexts(layout, measureToSystemY, gc);
+                DrawMusicMarks(layout, measureToSystemY, os, gc);
+                DrawCustomTexts(layout, measureToSystemY, os, gc);
                 DrawTextSpanners(layout, measureToSystemY, os, gc);
                 DrawPedalBrackets(layout, measureToSystemY, gc);
                 DrawMultiMeasureRests(layout, measureToSystemY, gc);
