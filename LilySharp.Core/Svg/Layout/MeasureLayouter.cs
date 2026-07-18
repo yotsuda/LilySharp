@@ -470,6 +470,16 @@ internal sealed class MeasureLayouter
                     maxSkyDist,
                     endSpring.InverseStretchStrength);
             }
+
+            // Full-measure-extra-space: a single note/chord onset (the union has ONE timing
+            // column) filling the measure widens the note->barline spring, matching
+            // SpacingRules.FillsMeasure on the breaking side. LILYPOND-REF: spacing-spanner.cc
+            // fills_measure; scm/define-grobs.scm NonMusicalPaperColumn full-measure-extra-space 1.0.
+            if (timings.Count == 1 && lastItems.Any(it => it is NoteItem or ChordItem))
+                endSpring = new Spring(
+                    endSpring.IdealDistance + SpacingRules.FullMeasureExtraSpace,
+                    endSpring.MinDistance,
+                    endSpring.InverseStretchStrength);
         }
         return endSpring;
     }

@@ -248,8 +248,6 @@ internal sealed class BeamDetector
 
         // Build per-member metadata mirroring CreateBeamGroup but with explicit measure index.
         var members = new List<BeamMember>(allEntries.Count);
-        int totalPosition = 0;
-        int noteCount = 0;
         for (int i = 0; i < allEntries.Count; i++)
         {
             var (item, itemIdx, _, mi) = allEntries[i];
@@ -272,12 +270,10 @@ internal sealed class BeamDetector
                 headPositionMin: headRange.Min,
                 headPositionMax: headRange.Max));
 
-            totalPosition += staffPosition;
-            noteCount++;
         }
 
-        // A polyphonic voice forces its direction; otherwise average position decides.
-        bool stemUp = forceStemUp ?? (noteCount > 0 && (double)totalPosition / noteCount < 0);
+        // A polyphonic voice forces its direction; otherwise the farthest head decides.
+        bool stemUp = forceStemUp ?? DefaultBeamStemUp(members);
         for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
@@ -533,17 +529,12 @@ internal sealed class BeamDetector
         int voiceIndex = 0, bool? forceStemUp = null)
     {
         var members = new List<BeamMember>();
-        int totalPosition = 0;
-        int noteCount = 0;
 
         for (int i = 0; i < group.Count; i++)
         {
             var (item, itemIndex, _) = group[i];
             int beamCount = GetBeamCount(item);
             int staffPosition = GetStaffPosition(item);
-
-            totalPosition += staffPosition;
-            noteCount++;
 
             // Calculate beam counts for left and right sides
             int beamCountLeft, beamCountRight;
@@ -586,8 +577,8 @@ internal sealed class BeamDetector
         }
 
         // A polyphonic voice forces its direction (voice 1 up / voice 2 down);
-        // otherwise stem up if the notes sit, on average, below the middle line.
-        bool stemUp = forceStemUp ?? (noteCount > 0 && (double)totalPosition / noteCount < 0);
+        // otherwise the head farthest from the middle line decides (LP get_default_dir).
+        bool stemUp = forceStemUp ?? DefaultBeamStemUp(members);
 
         // Check if first note has feathered beam direction
         // LILYPOND-REF: beam.cc:1039-1082 grow-direction
@@ -756,6 +747,43 @@ internal sealed class BeamDetector
             (chord.Notes.Min(n => n.StaffPosition), chord.Notes.Max(n => n.StaffPosition)),
         _ => (4, 4)
     };
+
+    /// <summary>
+    /// Default beam stem direction for a NEUTRAL (non-polyphonic) beam.
+    /// LILYPOND-REF: lily/beam.cc:876-940 Beam::get_default_dir — the head FARTHEST
+    /// from the middle line decides, exactly as for a single chord: a head far above
+    /// the centre puts stems DOWN, far below puts them UP. Only when the two extremes
+    /// tie does a per-stem majority vote (then total distance) break it. Positions are
+    /// staff positions with 0 = middle line, positive = above (matching LP).
+    /// (Was previously the arithmetic MEAN of positions, which flips whole beams that
+    /// straddle the line with an outlier, e.g. [+1,+1,+1,-2]: LP=up, mean=down.)
+    /// </summary>
+    private static bool DefaultBeamStemUp(IReadOnlyList<BeamMember> members)
+    {
+        int extremeUp = 0, extremeDown = 0;
+        foreach (var m in members)
+        {
+            if (m.HeadPositionMax > 0) extremeUp = Math.Max(extremeUp, m.HeadPositionMax);
+            if (m.HeadPositionMin < 0) extremeDown = Math.Min(extremeDown, m.HeadPositionMin);
+        }
+
+        // The farther extreme wins (beam.cc:920-923).
+        if (Math.Abs(extremeUp) > -extremeDown) return false; // DOWN
+        if (extremeUp < -extremeDown) return true;            // UP
+
+        // Tie: per-stem majority vote by each stem's own natural direction (beam.cc:928).
+        int upVotes = 0, downVotes = 0, total = 0;
+        foreach (var m in members)
+        {
+            int mUp = Math.Max(0, m.HeadPositionMax);
+            int mDown = Math.Min(0, m.HeadPositionMin);
+            if (Math.Abs(mUp) > -mDown) downVotes++; else upVotes++;
+            total += m.StaffPosition;
+        }
+        if (upVotes != downVotes) return upVotes > downVotes;
+        // Fully tied: fall back to summed position (below the line -> up), then UP.
+        return total <= 0;
+    }
 
     /// <summary>
     /// Detects manual beam groups from HasBeamStart/HasBeamEnd flags on notes/chords.

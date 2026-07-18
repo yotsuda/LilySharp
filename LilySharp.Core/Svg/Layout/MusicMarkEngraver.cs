@@ -811,18 +811,19 @@ internal static class MusicMarkEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: define-grobs.scm
-    /// - SectionLabel: outside-staff-priority = 1450
-    /// - RehearsalMark: outside-staff-priority = 1500
-    /// - SegnoMark/CodaMark: outside-staff-priority = 1500
+    /// - SectionLabel: outside-staff-priority = 1450 (:3053)
+    /// - RehearsalMark: outside-staff-priority = 1500 (:2888)
+    /// - SegnoMark/CodaMark: outside-staff-priority = 1400 (:3095 / :1014, "inside RehearsalMark")
     /// </remarks>
     private static int GetOutsideStaffPriority(MusicMarkType type) => type switch
     {
         // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority = 1300
         MusicMarkType.Tempo => 1300,
+        // Segno/Coda sit CLOSEST to the staff (below SectionLabel 1450 < RehearsalMark 1500).
+        MusicMarkType.Segno => 1400,
+        MusicMarkType.Coda => 1400,
         MusicMarkType.SectionLabel => 1450,
         MusicMarkType.Rehearsal => 1500,
-        MusicMarkType.Segno => 1500,
-        MusicMarkType.Coda => 1500,
         _ => 1500
     };
 

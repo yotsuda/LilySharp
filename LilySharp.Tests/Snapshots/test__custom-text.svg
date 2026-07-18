@@ -5,11 +5,11 @@
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.22" x2="56.24" y2="13.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.22" x2="56.24" y2="14.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.22" x2="56.24" y2="15.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.22" x2="56.24" y2="16.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.22" x2="56.24" y2="17.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.22" x2="57.24" y2="13.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.22" x2="57.24" y2="14.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.22" x2="57.24" y2="15.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.22" x2="57.24" y2="16.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.22" x2="57.24" y2="17.22" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="16.22" font-size="4.00" data-pos="240"></text>
   <text class="music" x="3.30" y="15.22" font-size="4.00"></text>
   <line x1="7.47" y1="18.22" x2="9.43" y2="18.22" stroke="#000000" stroke-width="0.200"/>
@@ -44,8 +44,8 @@
   <rect x="20.42" y="13.22" width="0.19" height="4.00" data-pos="285"/>
   <rect x="31.75" y="13.22" width="0.19" height="4.00" data-pos="292"/>
   <rect x="46.51" y="13.22" width="0.19" height="4.00" data-pos="328"/>
-  <rect x="55.15" y="13.22" width="0.19" height="4.00" data-pos="333"/>
-  <rect x="55.64" y="13.22" width="0.60" height="4.00" data-pos="333"/>
+  <rect x="56.15" y="13.22" width="0.19" height="4.00" data-pos="333"/>
+  <rect x="56.64" y="13.22" width="0.60" height="4.00" data-pos="333"/>
   <rect x="0.30" y="8.38" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
   <text x="1.29" y="10.58" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
   <rect x="31.94" y="6.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>

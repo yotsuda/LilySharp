@@ -7,11 +7,11 @@
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="89">Lyrics Test</text>
   <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="112">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="15.61" x2="73.95" y2="15.61" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.61" x2="73.95" y2="16.61" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.61" x2="73.95" y2="17.61" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.61" x2="73.95" y2="18.61" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.61" x2="73.95" y2="19.61" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.61" x2="74.95" y2="15.61" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.61" x2="74.95" y2="16.61" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.61" x2="74.95" y2="17.61" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.61" x2="74.95" y2="18.61" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.61" x2="74.95" y2="19.61" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="18.61" font-size="4.00"></text>
   <text class="music" x="3.30" y="17.61" font-size="4.00" data-pos="131"></text>
   <line x1="9.25" y1="20.61" x2="11.21" y2="20.61" stroke="#000000" stroke-width="0.200"/>
@@ -39,8 +39,8 @@
   <rect x="31.12" y="15.61" width="0.19" height="4.00" data-pos="193"/>
   <rect x="42.46" y="15.61" width="0.19" height="4.00" data-pos="204"/>
   <rect x="63.79" y="15.61" width="0.19" height="4.00" data-pos="219"/>
-  <rect x="72.86" y="15.61" width="0.19" height="4.00" data-pos="228"/>
-  <rect x="73.35" y="15.61" width="0.60" height="4.00" data-pos="228"/>
+  <rect x="73.86" y="15.61" width="0.19" height="4.00" data-pos="228"/>
+  <rect x="74.35" y="15.61" width="0.60" height="4.00" data-pos="228"/>
   <text x="9.58" y="23.73" font-size="3.20" text-anchor="middle" data-pos="255">Twin</text>
   <text x="15.91" y="23.73" font-size="3.20" text-anchor="middle" data-pos="261">kle</text>
   <text x="21.71" y="23.73" font-size="3.20" text-anchor="middle" data-pos="265">twin</text>

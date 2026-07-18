@@ -145,7 +145,11 @@ public static class StemCalculator
         if (unnaturalDirection && d.StemShorten.Length > 0)
         {
             int shortenIndex = Math.Clamp(durationLog - 2, 0, d.StemShorten.Length - 1);
-            double shortenProperty = d.StemShorten[shortenIndex];
+            // LP computes the whole shortening in HALF-spaces: length=2·lengths, and
+            // shorten-property=2·(stem-shorten) (stem.cc:516,530). Our `length` above is in
+            // whole staff-spaces, so we run the transition in LP's half-space frame and
+            // convert the result back (÷2) at the subtraction.
+            double shortenProperty = 2 * d.StemShorten[shortenIndex]; // half-spaces (LP ×2)
 
             // Smooth shortening transition
             // LILYPOND-REF: stem.cc:541-554
@@ -153,9 +157,9 @@ public static class StemCalculator
             double staffRadius = 2.0; // half-staff height in half-spaces
             double shorteningStep = Math.Clamp(shortenProperty / 6.0, 0.25, 0.5);
             double whichStep = Math.Min(1.0, quarterStemLength - 2 * staffRadius - 2)
-                               + Math.Abs(staffPosition);
-            double shorten = Math.Clamp(shorteningStep * whichStep, 0, shortenProperty);
-            length -= shorten;
+                               + Math.Abs(staffPosition); // staffPosition already in half-spaces
+            double shorten = Math.Clamp(shorteningStep * whichStep, 0, shortenProperty); // half-spaces
+            length -= shorten / 2.0; // half-spaces -> staff-spaces
         }
 
         // --- Length fraction ---

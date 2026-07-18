@@ -47,8 +47,14 @@ internal static class OutsideStaffStacker
     // Staff geometry
     private const double StaffBottom = 4.0;
 
-    // LILYPOND-REF: scm/define-grobs.scm outside-staff-padding = 0.46
+    // LILYPOND-REF: scm/define-grobs.scm outside-staff-padding = 0.46 — governs stacking a
+    // grob against OTHER outside-staff grobs.
     private const double OutsideStaffPadding = 0.46;
+
+    // The gap from the note/staff skyline to a below-staff dynamic or hairpin is the
+    // DynamicLineSpanner's own side-position padding, NOT outside-staff-padding.
+    // LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner (padding . 0.6).
+    private const double DynamicLineSpannerPadding = 0.6;
 
     // Element height estimates (staff spaces)
     // LILYPOND-REF: define-grobs.scm:1450 DynamicText Y-offset = (scale-by-font-size -0.6)
@@ -185,7 +191,7 @@ internal static class OutsideStaffStacker
                 double xEnd = dyn.X + DynamicHalfWidth;
                 var tracker = Track(sysIdx, dyn.StaffIndex);
                 double occupied = tracker.Frontier(xStart, xEnd);
-                double requiredY = occupied + OutsideStaffPadding + DynamicTextAscent;
+                double requiredY = occupied + DynamicLineSpannerPadding + DynamicTextAscent;
                 if (requiredY > dyn.Y)
                     dynBuilder[i] = dyn with { Y = requiredY };
 
@@ -208,7 +214,7 @@ internal static class OutsideStaffStacker
 
                 var tracker = Track(sysIdx, hp.StaffIndex);
                 double occupiedBottom = tracker.Frontier(hp.StartX, hp.EndX);
-                double requiredY = occupiedBottom + OutsideStaffPadding + HairpinHalfHeight;
+                double requiredY = occupiedBottom + DynamicLineSpannerPadding + HairpinHalfHeight;
                 double newY = Math.Max(hp.Y, requiredY);
 
                 if (Math.Abs(newY - hp.Y) > 0.01)
