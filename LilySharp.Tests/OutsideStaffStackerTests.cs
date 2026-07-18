@@ -50,22 +50,22 @@ public class OutsideStaffStackerTests
         var dynamics = ImmutableArray.Create(
             new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -4.0, Text: "f", SourcePosition: 0));
 
-        // Hairpin spanning X=[18, 25], initially at BaseY=5.2
+        // Hairpin spanning X=[18, 25], initially at device BaseY=5.2 (YUp = -5.2).
         var hairpins = ImmutableArray.Create(
             new HairpinLayout(StartMeasureIndex: 0, StartX: 18, EndX: 25,
-                Y: 5.2, StartOpening: 0, EndOpening: 0.333,
+                YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
         var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
             systems, dynamics, hairpins);
 
-        // Hairpin should be pushed below the dynamic's bottom extent
-        // Dynamic bottom = 6.0 + 0.3 (descent) = 6.3
-        // Required Y = 6.3 + 0.46 (padding) + 0.333 (half height) ≈ 7.09
-        Assert.True(adjHairpins[0].Y > 5.2,
-            $"Hairpin Y ({adjHairpins[0].Y:F2}) should be pushed below original 5.2");
-        Assert.True(adjHairpins[0].Y >= 7.0,
-            $"Hairpin Y ({adjHairpins[0].Y:F2}) should clear dynamic bottom + padding");
+        // Hairpin should be pushed below the dynamic's bottom extent (down = smaller
+        // YUp). Dynamic bottom = 6.0 + 0.3 (descent) = 6.3; required device Y =
+        // 6.3 + 0.46 (padding) + 0.333 (half height) ≈ 7.09 → YUp ≈ -7.09.
+        Assert.True(adjHairpins[0].YUp < -5.2,
+            $"Hairpin YUp ({adjHairpins[0].YUp:F2}) should be pushed below original -5.2");
+        Assert.True(adjHairpins[0].YUp <= -7.0,
+            $"Hairpin YUp ({adjHairpins[0].YUp:F2}) should clear dynamic bottom + padding");
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class OutsideStaffStackerTests
         // Hairpin at X=[40, 55] — far from dynamic
         var hairpins = ImmutableArray.Create(
             new HairpinLayout(StartMeasureIndex: 1, StartX: 40, EndX: 55,
-                Y: 5.2, StartOpening: 0, EndOpening: 0.333,
+                YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
         var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
@@ -89,8 +89,8 @@ public class OutsideStaffStackerTests
 
         // No X overlap, so hairpin Y should stay at StaffBottom + padding + halfHeight
         // (or its original value if that's larger)
-        Assert.True(adjHairpins[0].Y <= 5.2 + 0.5,
-            $"Hairpin Y ({adjHairpins[0].Y:F2}) should not be significantly pushed when no overlap");
+        Assert.True(adjHairpins[0].YUp >= -5.2 - 0.5,
+            $"Hairpin YUp ({adjHairpins[0].YUp:F2}) should not be significantly pushed when no overlap");
     }
 
     // (Former TextSpannerStacksBelowDynamicAndHairpin removed: text spanners now
@@ -129,14 +129,14 @@ public class OutsideStaffStackerTests
         // Hairpin in system 1 at X=[20, 30] — same X but different system
         var hairpins = ImmutableArray.Create(
             new HairpinLayout(StartMeasureIndex: 1, StartX: 20, EndX: 30,
-                Y: 5.2, StartOpening: 0, EndOpening: 0.333,
+                YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
         var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
             systems, dynamics, hairpins);
 
         // Hairpin in system 1 should NOT be affected by dynamic in system 0
-        Assert.True(adjHairpins[0].Y <= 5.2 + 0.5,
-            $"Hairpin in different system should not be pushed: Y={adjHairpins[0].Y:F2}");
+        Assert.True(adjHairpins[0].YUp >= -5.2 - 0.5,
+            $"Hairpin in different system should not be pushed: YUp={adjHairpins[0].YUp:F2}");
     }
 }

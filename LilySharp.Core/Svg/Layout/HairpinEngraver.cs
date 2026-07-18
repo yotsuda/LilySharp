@@ -33,8 +33,10 @@ public readonly record struct HairpinLayout(
     double StartX,
     // End X position.
     double EndX,
-    // Y position (center line of the wedge, staff spaces from staff top).
-    double Y,
+    // Y of the wedge centre line in the Y-up frame: staff-spaces ABOVE the system
+    // top, up-positive (frame B). The renderer reflects it to device via
+    // StaffFrame.ToDevice against the segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    double YUp,
     // Opening at the start (left) end (half-height, in staff spaces).
     // LILYPOND-REF: lily/hairpin.cc:300-313 — continued/continuing height fractions
     // For crescendo: 0 (point). For decrescendo: full or fractional opening.
@@ -153,7 +155,9 @@ internal static class HairpinEngraver
             // staff 1. Staff 0 (or a single staff) has offset 0 -> unchanged. The
             // per-staff stacker then keeps it clear of that staff's dynamics only.
             double staffOffset = staffYAt?.Invoke(hairpin.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
-            double hairpinY = BaseY + staffOffset;
+            // Y-up from the system top: the old device centre (BaseY + staffOffset,
+            // below the system top) negated.
+            double hairpinYUp = StaffFrame.ToUp(BaseY + staffOffset, 0.0);
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
             // reattached to the system edges.
@@ -181,7 +185,7 @@ internal static class HairpinEngraver
                 }
 
                 layouts.Add(new HairpinLayout(
-                    segment.StartMeasureIndex, segStartX, segEndX, hairpinY,
+                    segment.StartMeasureIndex, segStartX, segEndX, hairpinYUp,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
                     hairpin.SourceIndex, hairpin.StaffIndex));
             }

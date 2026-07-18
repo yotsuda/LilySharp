@@ -231,13 +231,16 @@ internal static class OutsideStaffStacker
                 var tracker = Track(sysIdx, hp.StaffIndex);
                 double occupiedBottom = tracker.Frontier(hp.StartX, hp.EndX);
                 double requiredY = occupiedBottom + DynamicLineSpannerPadding + HairpinHalfHeight;
-                double newY = Math.Max(hp.Y, requiredY);
+                // hp.YUp is Y-up from the system top; this tracker works in the
+                // system-relative device frame (old hp.Y = -YUp).
+                double hpY = -hp.YUp;
+                double newY = Math.Max(hpY, requiredY);
 
-                if (Math.Abs(newY - hp.Y) > 0.01)
-                    builder[i] = hp with { Y = newY };
+                if (Math.Abs(newY - hpY) > 0.01)
+                    builder[i] = hp with { YUp = -newY };
 
                 // Register hairpin in tracker
-                double finalBottom = builder[i].Y + HairpinHalfHeight;
+                double finalBottom = -builder[i].YUp + HairpinHalfHeight;
                 tracker.AddRegion(hp.StartX, hp.EndX, finalBottom);
             }
             adjHairpins = builder.ToImmutable();

@@ -32,10 +32,11 @@ public class HairpinTests
     {
         // LILYPOND-REF: scm/define-grobs.scm:1655 (height . 0.6666)
         // Opening = Height / 2 = 0.6666 / 2 = 0.3333
-        var layout = new HairpinLayout(0, 0, 10, 5.2, 0, 0.3333, HairpinDirection.Crescendo, 0);
+        // YUp is Y-up from the system top; device 5.2 below the top = -5.2 up.
+        var layout = new HairpinLayout(0, 0, 10, -5.2, 0, 0.3333, HairpinDirection.Crescendo, 0);
         Assert.Equal(0.0, layout.StartOpening);   // Crescendo: point at start
         Assert.Equal(0.3333, layout.EndOpening);   // Crescendo: open at end
-        Assert.Equal(5.2, layout.Y);
+        Assert.Equal(-5.2, layout.YUp);
     }
 
     // --- DetectHairpins ---
@@ -261,7 +262,8 @@ public class HairpinTests
 
         var result = HairpinEngraver.Calculate(hairpins, systems, measures);
 
-        Assert.Equal(5.2, result[0].Y);
+        // Y-up from the system top: device baseline 5.2 below the top = -5.2 up.
+        Assert.Equal(-5.2, result[0].YUp);
     }
 
     // --- Broken hairpin (cross-system) tests ---

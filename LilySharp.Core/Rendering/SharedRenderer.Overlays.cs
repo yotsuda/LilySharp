@@ -369,7 +369,8 @@ internal static partial class SharedRenderer
         foreach (var h in layout.HairpinLayouts)
         {
             if (!sysY.TryGetValue(h.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = os.Y(sy + h.Y, h.StaffIndex, h.StartMeasureIndex);
+            // Frame B -> device: reflect the Y-up value against the segment's system top.
+            double absY = os.Y(StaffFrame.ToDevice(h.YUp, sy), h.StaffIndex, h.StartMeasureIndex);
             double startOpening = os.Size(h.StartOpening, h.StaffIndex);
             double endOpening = os.Size(h.EndOpening, h.StaffIndex);
             double leftTop = absY - startOpening;
