@@ -881,7 +881,11 @@ internal sealed class LayoutEngine
             Add(lyLay.Item.MeasureIndex, lyY - 2.11, lyY + 0.9);
         }
         foreach (var tr in ann.TrillSpanners)
-            Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
+        {
+            // tr.YUp is Y-up from the system top; this pass is system-relative device.
+            double trY = -tr.YUp;
+            Add(tr.StartMeasureIndex, trY - GlyphMetrics.OrnTrillGlyph.Top, trY + 0.25);
+        }
         // Figured-bass rows hang below the staff; a skyline-dropped row must
         // widen the gap to the NEXT system, or its digits print through that
         // system's volta boxes / high notes (showcase/04).

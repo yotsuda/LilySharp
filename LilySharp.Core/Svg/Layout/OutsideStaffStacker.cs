@@ -458,10 +458,10 @@ internal static class OutsideStaffStacker
             // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
             double newAbs = Place(trackers[sysIdx],
                 t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
-                sy + t.Y,
+                StaffFrame.ToDevice(t.YUp, sy),
                 topOffset: -GlyphMetrics.OrnTrillGlyph.Top,
                 bottomOffset: 0.25);
-            b[i] = t with { Y = newAbs - sy };
+            b[i] = t with { YUp = StaffFrame.ToUp(newAbs, sy) };
         }
         return b.ToImmutable();
     }

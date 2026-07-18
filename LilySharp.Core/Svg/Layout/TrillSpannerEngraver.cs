@@ -35,8 +35,10 @@ public readonly record struct TrillSpannerLayout(
     double LineStartX,
     // X position where the wavy line ends.
     double LineEndX,
-    // Y position (staff spaces from staff top, negative = above staff).
-    double Y,
+    // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE the system top,
+    // up-positive (frame B). The renderer reflects it to device via
+    // StaffFrame.ToDevice against the segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    double YUp,
     // Source position for click-to-source mapping.
     int SourcePosition,
     // Global staff index this spanner belongs to (multi-staff). The
@@ -120,10 +122,12 @@ internal static class TrillSpannerEngraver
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // Y position: above staff with padding, offset to this spanner's OWN
-            // staff (multi-staff). LILYPOND-REF: scm/define-grobs.scm:4080
+            // Y-up from the system top: above the staff with padding, lowered by
+            // this spanner's OWN staff offset (multi-staff). The old device value
+            // was -StaffPadding - TrillGlyphHeight + staffOffset; Y-up is its
+            // negation. LILYPOND-REF: scm/define-grobs.scm:4080
             double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
-            double y = -StaffPadding - TrillGlyphHeight + staffOffset;
+            double yUp = StaffPadding + TrillGlyphHeight - staffOffset;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
             if (spanner.StartItemIndex >= startMeasure.Items.Length)
@@ -164,7 +168,7 @@ internal static class TrillSpannerEngraver
                     continue;
 
                 layouts.Add(new TrillSpannerLayout(
-                    segment.StartMeasureIndex, glyphX, lineStartX, endX, y,
+                    segment.StartMeasureIndex, glyphX, lineStartX, endX, yUp,
                     spanner.SourcePosition, spanner.StaffIndex, ti));
             }
         }

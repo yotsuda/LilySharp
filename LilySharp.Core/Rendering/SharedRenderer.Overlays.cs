@@ -557,7 +557,8 @@ internal static partial class SharedRenderer
         foreach (var s in layout.TrillSpannerLayouts)
         {
             if (!sysY.TryGetValue(s.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = os.Y(sy + s.Y, s.StaffIndex, s.StartMeasureIndex);
+            // Frame B -> device: reflect the Y-up value against the segment's system top.
+            double absY = os.Y(StaffFrame.ToDevice(s.YUp, sy), s.StaffIndex, s.StartMeasureIndex);
             double waveAmplitude = os.Size(0.2, s.StaffIndex);
             using (gc.Source(s.SourcePosition))
             {
