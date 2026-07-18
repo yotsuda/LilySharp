@@ -503,8 +503,9 @@ internal static partial class SharedRenderer
         {
             if (!sysY.TryGetValue(b.MeasureIndex, out var sy)) continue; // other page
             double edgeHeight = os.Size(TupletBracketEngraver.GetEdgeHeight(), b.StaffIndex);
-            double startY = os.Y(sy + b.StartY, b.StaffIndex, b.MeasureIndex);
-            double endY = os.Y(sy + b.EndY, b.StaffIndex, b.MeasureIndex);
+            // Frame B -> device: reflect the Y-up endpoints against the system top.
+            double startY = os.Y(StaffFrame.ToDevice(b.StartYUp, sy), b.StaffIndex, b.MeasureIndex);
+            double endY = os.Y(StaffFrame.ToDevice(b.EndYUp, sy), b.StaffIndex, b.MeasureIndex);
             double midX = (b.StartX + b.EndX) / 2;
             double midY = (startY + endY) / 2;
             double hookDir = b.IsStemUp ? 1 : -1;

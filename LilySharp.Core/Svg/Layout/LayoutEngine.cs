@@ -833,8 +833,11 @@ internal sealed class LayoutEngine
 
         foreach (var t in ann.TupletBrackets)
         {
-            double hi = Math.Min(t.StartY, t.EndY);
-            double lo = Math.Max(t.StartY, t.EndY);
+            // t.*YUp is Y-up from the system top; this pass is system-relative device.
+            double startY = -t.StartYUp;
+            double endY = -t.EndYUp;
+            double hi = Math.Min(startY, endY);
+            double lo = Math.Max(startY, endY);
             Add(t.MeasureIndex, hi - (t.IsStemUp ? 1.6 : 0.1), lo + (t.IsStemUp ? 0.7 : 1.7));
         }
         foreach (var v in ann.VoltaBrackets)

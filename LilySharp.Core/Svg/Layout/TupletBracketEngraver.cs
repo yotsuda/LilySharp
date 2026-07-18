@@ -36,8 +36,10 @@ public readonly record struct TupletBracketLayout(
     int MeasureIndex,           // Measure containing this tuplet
     double StartX,              // X position of bracket start
     double EndX,                // X position of bracket end
-    double StartY,              // Y position at bracket start (supports slope)
-    double EndY,                // Y position at bracket end (supports slope)
+    double StartYUp,            // Y-up (frame B): staff-spaces ABOVE the system top at
+                                // the bracket start (supports slope). Reflected to device
+                                // via StaffFrame.ToDevice against the system top (sy + old-Y).
+    double EndYUp,              // Y-up at the bracket end (supports slope).
     string NumberText,          // Text to display (e.g., "3")
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
     bool ShowBracket,           // False = all notes beamed, show number only
@@ -55,9 +57,9 @@ public readonly record struct TupletBracketLayout(
     public double NumberX => (StartX + EndX) / 2.0;
 
     /// <summary>
-    /// Y coordinate of the tuplet number's visual center (LP TupletNumber Y).
+    /// Y-up of the tuplet number's visual center (LP TupletNumber Y, frame B).
     /// </summary>
-    public double NumberY => (StartY + EndY) / 2.0;
+    public double NumberYUp => (StartYUp + EndYUp) / 2.0;
 }
 
 /// <summary>
@@ -321,12 +323,14 @@ internal static class TupletBracketEngraver
                 startY += staffOffset;
                 endY += staffOffset;
             }
+            // Store Y-up from the system top; the placement above stays in the
+            // device staff-top frame (system.Y is added at draw), so negate here.
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,
                 startX,
                 endX,
-                startY,
-                endY,
+                StaffFrame.ToUp(startY, 0.0),
+                StaffFrame.ToUp(endY, 0.0),
                 tuplet.DisplayText,
                 isStemUp,
                 showBracket,

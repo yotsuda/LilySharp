@@ -429,8 +429,10 @@ internal static class OutsideStaffStacker
                     continue;
                 double sy = systems[sysIdx].Y;
                 // Bracket line + the centered number's upper half
-                // (number font = 0.6 x 4sp, cap height ~0.71em).
-                double top = sy + Math.Min(tb.StartY, tb.EndY) - CapHeightEm * 2.4 / 2 - 0.1;
+                // (number font = 0.6 x 4sp, cap height ~0.71em). tb.*YUp is Y-up from
+                // the system top; the highest (most-above) endpoint is the max YUp,
+                // whose device value is sy - that max.
+                double top = sy - Math.Max(tb.StartYUp, tb.EndYUp) - CapHeightEm * 2.4 / 2 - 0.1;
                 trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
             }
         }

@@ -60,7 +60,7 @@ public class TupletNumberTests
         var bracket = layout.TupletBracketLayouts[0];
         // NumberX/Y should be midway between the bracket's start and end.
         Assert.Equal((bracket.StartX + bracket.EndX) / 2.0, bracket.NumberX, precision: 4);
-        Assert.Equal((bracket.StartY + bracket.EndY) / 2.0, bracket.NumberY, precision: 4);
+        Assert.Equal((bracket.StartYUp + bracket.EndYUp) / 2.0, bracket.NumberYUp, precision: 4);
     }
 
     [Fact]
@@ -69,9 +69,9 @@ public class TupletNumberTests
         // Even on a flat bracket the midpoint formula returns the average Y.
         var layout = BuildLayout("tuplet 3/2 { c8 d e } |");
         var bracket = layout.TupletBracketLayouts[0];
-        // For a flat bracket StartY == EndY ⇒ NumberY equals StartY.
-        if (System.Math.Abs(bracket.StartY - bracket.EndY) < 1e-9)
-            Assert.Equal(bracket.StartY, bracket.NumberY, precision: 4);
+        // For a flat bracket StartYUp == EndYUp ⇒ NumberYUp equals StartYUp.
+        if (System.Math.Abs(bracket.StartYUp - bracket.EndYUp) < 1e-9)
+            Assert.Equal(bracket.StartYUp, bracket.NumberYUp, precision: 4);
     }
 
     [Fact]
