@@ -1486,7 +1486,7 @@ internal sealed class MultiStaffLayouter
         // Note ink already in the skyline sets where the shared-baseline row floats;
         // the symbol top clears the top line by padding + that protrusion + cap.
         double protrusion = up.MaxProtrusionInRange(xLeft, xRight);
-        double bandTop = -(ChordRowStaffPadding + protrusion + ChordSymbolCapHeight);
+        double bandTop = ChordRowStaffPadding + protrusion + ChordSymbolCapHeight; // Y-up above the top line
         up.Merge(VerticalSkyline.FromBox(xLeft, xRight, 0.0, bandTop, VerticalDirection.Up));
     }
 

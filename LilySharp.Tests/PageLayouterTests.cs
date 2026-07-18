@@ -295,18 +295,19 @@ public class PageLayouterTests
             (upExtent: 8.0, downExtent: 1.0));
 
         // Skylines: the tall parts are at different X positions, so they don't collide.
-        // FromBox's height comes from yBottom for a DOWN building and from -yTop for an
-        // UP building, so the extent must go in THAT slot — passing it in the other one
-        // collapses every building to height 0 and makes this test vacuous.
+        // FromBox's internal height comes from -yBottom for a DOWN building and from
+        // +yTop for an UP building, so the extent must go in THAT slot (a DOWN protrusion
+        // is a NEGATIVE Y-up bottom, an UP protrusion a POSITIVE Y-up top) — putting it in
+        // the other one collapses every building to height 0 and makes this test vacuous.
         // System 0 DOWN: tall protrusion at X=[0,10], short elsewhere
         var sys0Down = new VerticalSkyline(VerticalDirection.Down);
-        sys0Down.Merge(VerticalSkyline.FromBox(0, 10, 8.0, 0, VerticalDirection.Down));   // tall (h=8) at left
-        sys0Down.Merge(VerticalSkyline.FromBox(10, 70, 2.0, 0, VerticalDirection.Down));  // short (h=2) at right
+        sys0Down.Merge(VerticalSkyline.FromBox(0, 10, -8.0, 0, VerticalDirection.Down));   // tall (h=8) at left
+        sys0Down.Merge(VerticalSkyline.FromBox(10, 70, -2.0, 0, VerticalDirection.Down));  // short (h=2) at right
 
         // System 1 UP: tall protrusion at X=[60,70], short elsewhere
         var sys1Up = new VerticalSkyline(VerticalDirection.Up);
-        sys1Up.Merge(VerticalSkyline.FromBox(0, 60, 0, -2.0, VerticalDirection.Up));      // short (h=2) at left
-        sys1Up.Merge(VerticalSkyline.FromBox(60, 70, 0, -8.0, VerticalDirection.Up));     // tall (h=8) at right
+        sys1Up.Merge(VerticalSkyline.FromBox(0, 60, 0, 2.0, VerticalDirection.Up));      // short (h=2) at left
+        sys1Up.Merge(VerticalSkyline.FromBox(60, 70, 0, 8.0, VerticalDirection.Up));     // tall (h=8) at right
 
         var skylines = ImmutableArray.Create(
             (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),

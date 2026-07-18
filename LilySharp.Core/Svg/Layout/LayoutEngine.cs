@@ -1015,14 +1015,14 @@ internal sealed class LayoutEngine
             if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
-            // this skyline is system-local device (Y down). Reflect against this
-            // staff's system-local middle (staff.Y + StaffMiddle) so the existing
-            // Ink composition (BBox Top up-positive) is unchanged.
+            // this skyline is Y-up too (system-top origin). Translate against this
+            // staff's system-local middle (staff.Y + StaffMiddle). Ink Top/Bottom stay
+            // up-positive, so they ADD.
             var sys = systems[sysIdx];
             double staffMidLocal = LayoutUtilities.FindStaffYInSystem(sys, a.StaffIndex) - sys.Y + 2.0;
-            double aY = StaffFrame.ToDevice(a.YUp, staffMidLocal);
-            double inkTop = aY - a.Ink.Top;
-            double inkBottom = aY - a.Ink.Bottom;
+            double aY = a.YUp - staffMidLocal;
+            double inkTop = aY + a.Ink.Top;
+            double inkBottom = aY + a.Ink.Bottom;
             if (a.IsAbove)
             {
                 var up = new VerticalSkyline(VerticalDirection.Up);
@@ -1080,13 +1080,14 @@ internal sealed class LayoutEngine
             if (!measureToSystem.TryGetValue(fb.MeasureIndex, out int s))
                 continue;
             double half = FiguredBassEngraver.MinFigureBoxWidth;
-            // YUp is Y-up; this inter-system skyline is system-relative device, so
-            // reconstruct against this figure's own staff offset.
+            // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin),
+            // so translate against this figure's own staff offset (staff middle at
+            // offset + 2.0). The figure column extends downward (smaller Y-up).
             double fbStaffOffset = LayoutUtilities.FindStaffYInSystem(systems[s], fb.StaffIndex) - systems[s].Y;
-            double fbY = fbStaffOffset + StaffFrame.ToDevice(fb.YUp, 2.0);
-            double top = fbY - FiguredBassEngraver.FigureTopExtent;
+            double fbY = fb.YUp - 2.0 - fbStaffOffset;
+            double top = fbY + FiguredBassEngraver.FigureTopExtent;
             double bottom = fbY
-                + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5;
+                - ((fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
             var down = new VerticalSkyline(VerticalDirection.Down);
             down.Merge(result[s].down);
             down.Merge(VerticalSkyline.FromBox(
@@ -1101,13 +1102,12 @@ internal sealed class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int s))
                 continue;
-            // YUp is Y-up from the system top; this skyline is system-relative
-            // device (down+), which is exactly -YUp.
-            double vY = -v.YUp;
+            // YUp is Y-up from the system top; this skyline is Y-up too, so use it directly.
+            double vY = v.YUp;
             var up = new VerticalSkyline(VerticalDirection.Up);
             up.Merge(result[s].up);
             up.Merge(VerticalSkyline.FromBox(
-                v.StartX, v.EndX, vY + 1.6, vY - 0.1, VerticalDirection.Up));
+                v.StartX, v.EndX, vY - 1.6, vY + 0.1, VerticalDirection.Up));
             result[s] = (result[s].up, result[s].down);
             result[s] = (up, result[s].down);
         }
@@ -1141,9 +1141,9 @@ internal sealed class LayoutEngine
                 double halfW = m.IsSymbol
                     ? 1.0
                     : Rendering.SerifTextMetrics.MeasureBold(m.Text, 2.4) / 2 + 0.4;
-                // YUp is Y-up; music marks are top-staff / system-relative device.
-                double mY = StaffFrame.ToDevice(m.YUp, 2.0);
-                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY - 2.1, mY + 0.7);
+                // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
+                double mY = m.YUp - 2.0;
+                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY + 2.1, mY - 0.7);
             }
         }
         if (!customTexts.IsDefaultOrEmpty)
@@ -1151,9 +1151,9 @@ internal sealed class LayoutEngine
             foreach (var ct in customTexts)
             {
                 double halfW = Rendering.SerifTextMetrics.MeasureBold(ct.Text, 2.0) / 2 + 0.2;
-                // YUp is Y-up; this mark box is staff-local device (top staff).
-                double ctY = StaffFrame.ToDevice(ct.YUp, 2.0);
-                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY - 1.8, ctY + 0.6);
+                // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
+                double ctY = ct.YUp - 2.0;
+                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);
             }
         }
         // Inline chord symbols: their scalar height joins the up-extents, but
@@ -1166,8 +1166,8 @@ internal sealed class LayoutEngine
             foreach (var cn in chordNames)
             {
                 double halfW = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
-                double cnY = -cn.YUp; // cn.YUp is Y-up from the system top
-                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY - 1.9, cnY + 0.3);
+                double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
+                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }
         }
         // Line-start bar numbers sit in the band above the staff start where
@@ -1183,16 +1183,15 @@ internal sealed class LayoutEngine
             {
                 if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))
                     continue;
-                // bn.YUp is Y-up from the system top; the system-relative device
-                // value (old bn.Y - system.Y) is -YUp.
-                double rel = -bn.YUp;
+                // bn.YUp is Y-up from the system top; the skyline is Y-up too.
+                double rel = bn.YUp;
                 double w = Rendering.SerifTextMetrics.MeasureBold(
                     bn.Text, BarNumberEngraver.FontSize);
                 double x0 = bn.RightAligned ? bn.X - w : bn.X;
                 var up = new VerticalSkyline(VerticalDirection.Up);
                 up.Merge(result[s].up);
                 up.Merge(VerticalSkyline.FromBox(
-                    x0, x0 + w, rel, rel - 1.3, VerticalDirection.Up));
+                    x0, x0 + w, rel, rel + 1.3, VerticalDirection.Up));
                 result[s] = (up, result[s].down);
             }
         }

@@ -125,12 +125,14 @@ internal sealed class SkylineBuilder
         if (xRight <= systemLeft)
             return;
 
+        // Staff lines are given in device Y from the system top; translate to the
+        // skyline's Y-up frame by negating.
         if (seedTop)
             upSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, topLineY, topLineY, VerticalDirection.Up));
+                systemLeft, xRight, -topLineY, -topLineY, VerticalDirection.Up));
         if (seedBottom)
             downSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, bottomLineY, bottomLineY, VerticalDirection.Down));
+                systemLeft, xRight, -bottomLineY, -bottomLineY, VerticalDirection.Down));
     }
 
     private void AddStaffToSkylines(
@@ -241,11 +243,11 @@ internal sealed class SkylineBuilder
         foreach (var a in articulationLayouts)
         {
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
-            // reflect it to this staff's device middle. The existing Ink composition
-            // (BBox Top up-positive) is unchanged.
-            double y = StaffFrame.ToDevice(a.YUp, staffMiddleY);
-            double inkTop = y - a.Ink.Top;
-            double inkBottom = y - a.Ink.Bottom;
+            // translate it to this skyline's Y-up frame (its origin is the staff top).
+            // Ink.Top/Bottom stay up-positive, so they ADD in Y-up.
+            double y = a.YUp - staffMiddleY;
+            double inkTop = y + a.Ink.Top;
+            double inkBottom = y + a.Ink.Bottom;
             var box = VerticalSkyline.FromBox(
                 a.X + a.Ink.Left, a.X + a.Ink.Right, inkBottom, inkTop,
                 a.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
@@ -276,8 +278,10 @@ internal sealed class SkylineBuilder
             return;
 
         double half = _staffHeight / 2.0;
-        double staffTop = staffMiddleY - half;     // device Y of the top line
-        double staffBottom = staffMiddleY + half;   // device Y of the bottom line
+        // Translate the device-frame staff lines to this skyline's Y-up frame (negate):
+        // the top line sits above the origin, the bottom line below.
+        double staffTop = half - staffMiddleY;      // Y-up of the top line
+        double staffBottom = -half - staffMiddleY;  // Y-up of the bottom line
 
         // UP skyline takes the top line; DOWN skyline takes the bottom line.
         upSkyline.Merge(VerticalSkyline.FromBox(
@@ -338,9 +342,10 @@ internal sealed class SkylineBuilder
                 double baseline = DynamicEngraver.ColumnAboveBaselineY(
                     voices, dyn.MeasureIndex, dyn.ItemIndex) - depth * DynamicEngraver.StackStep;
                 double deviceTop = staffTopDevice + baseline - DynamicEngraver.DynamicAboveAscent;
+                double topUp = -deviceTop;   // translate device baseline to the skyline Y-up frame
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
-                    deviceTop + 0.5, deviceTop, VerticalDirection.Up);
+                    topUp - 0.5, topUp, VerticalDirection.Up);
                 upSkyline.Merge(box);
             }
             else
@@ -348,9 +353,10 @@ internal sealed class SkylineBuilder
                 double baseline = DynamicEngraver.ColumnBaselineY(
                     voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
                 double deviceBottom = staffTopDevice + baseline + dynamicDescent;
+                double bottomUp = -deviceBottom;   // translate device baseline to the skyline Y-up frame
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
-                    deviceBottom, deviceBottom - 0.5, VerticalDirection.Down);
+                    bottomUp, bottomUp + 0.5, VerticalDirection.Down);
                 downSkyline.Merge(box);
             }
         }
@@ -377,7 +383,7 @@ internal sealed class SkylineBuilder
                     stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
-                        StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY), upSkyline, downSkyline);
+                        -StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY), upSkyline, downSkyline);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -403,10 +409,11 @@ internal sealed class SkylineBuilder
                     ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
                 {
                     var accBox = GlyphMetrics.GetAccidentalBBox(al.Accidental);
-                    double accHeadY = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
+                    // Head Y in the skyline's Y-up frame (BBox Top/Bottom up-positive → ADD).
+                    double accHeadY = -StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
                     MergeAccidentalInk(
                         x + al.XOffset, x + al.XOffset + accBox.Width,
-                        accHeadY - accBox.Top, accHeadY - accBox.Bottom,
+                        accHeadY + accBox.Top, accHeadY + accBox.Bottom,
                         upSkyline, downSkyline);
                 }
                 break;
@@ -415,10 +422,10 @@ internal sealed class SkylineBuilder
                 // Rests are centered on the staff middle line
                 double restHeight = EngravingDefaults.RestHeight;
                 double restWidth = EngravingDefaults.RestWidth;
-                // Rests are centered on the staff middle line — Y-up 0 — and span
-                // ±restHeight/2; reflect to device via staffMiddleY - up.
-                double restTop = staffMiddleY - restHeight / 2;     // up frame: +restHeight/2
-                double restBottom = staffMiddleY + restHeight / 2;  // up frame: -restHeight/2
+                // Rests are centered on the staff middle line and span ±restHeight/2;
+                // translate to this skyline's Y-up frame (staff middle → -staffMiddleY).
+                double restTop = restHeight / 2 - staffMiddleY;     // Y-up top edge
+                double restBottom = -restHeight / 2 - staffMiddleY; // Y-up bottom edge
                 var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
                 var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
                 upSkyline.Merge(restUp);
@@ -444,8 +451,9 @@ internal sealed class SkylineBuilder
     {
         var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
         double right = headX - GlyphMetrics.AccidentalNoteGap;
+        // headY is Y-up; BBox Top/Bottom are up-positive so they ADD.
         MergeAccidentalInk(right - bbox.Width, right,
-            headY - bbox.Top, headY - bbox.Bottom, upSkyline, downSkyline);
+            headY + bbox.Top, headY + bbox.Bottom, upSkyline, downSkyline);
     }
 
     /// <summary>Placement machinery shared with the renderer, for chord
@@ -511,9 +519,10 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        // Reflect a Y-up coordinate (staff-spaces above the middle line) to device
-        // through the single chokepoint.
-        double ToDevice(double up) => StaffFrame.ToDevice(up, staffMiddleY);
+        // Translate a Y-up coordinate (staff-spaces above THIS staff's middle line)
+        // into the shared skyline Y-up frame (whose origin is the system/staff top).
+        // No reflection — the skyline now stores Y-up sign-for-sign with skyline.cc.
+        double ToSystemUp(double up) => up - staffMiddleY;
 
         double noteUp = staffPosition * 0.5;   // staff-spaces above middle, up+
         double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
@@ -525,8 +534,8 @@ internal sealed class SkylineBuilder
         double headTopUp = noteUp + halfNoteheadHeight;
         double headBottomUp = noteUp - halfNoteheadHeight;
 
-        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, ToDevice(headBottomUp), ToDevice(headTopUp), VerticalDirection.Up);
-        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, ToDevice(headBottomUp), ToDevice(headTopUp), VerticalDirection.Down);
+        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Up);
+        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Down);
         upSkyline.Merge(noteheadUp);
         downSkyline.Merge(noteheadDown);
 
@@ -546,7 +555,7 @@ internal sealed class SkylineBuilder
                 double ledgerUp = pos * 0.5;
                 double ledgerTopUp = ledgerUp + ledgerThickness / 2;
                 double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
-                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToDevice(ledgerBottomUp), ToDevice(ledgerTopUp), VerticalDirection.Up);
+                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp), VerticalDirection.Up);
                 upSkyline.Merge(ledger);
             }
         }
@@ -559,7 +568,7 @@ internal sealed class SkylineBuilder
                 double ledgerUp = pos * 0.5;
                 double ledgerTopUp = ledgerUp + ledgerThickness / 2;
                 double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
-                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToDevice(ledgerBottomUp), ToDevice(ledgerTopUp), VerticalDirection.Down);
+                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp), VerticalDirection.Down);
                 downSkyline.Merge(ledger);
             }
         }
@@ -570,7 +579,7 @@ internal sealed class SkylineBuilder
             // Stem extends UPWARD from the head: tip = noteUp + stemLength.
             double stemTipUp = noteUp + stemLength;
             double stemBaseUp = noteUp;
-            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, ToDevice(stemBaseUp), ToDevice(stemTipUp), VerticalDirection.Up);
+            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, ToSystemUp(stemBaseUp), ToSystemUp(stemTipUp), VerticalDirection.Up);
             upSkyline.Merge(stemSkyline);
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
@@ -583,7 +592,7 @@ internal sealed class SkylineBuilder
                 double flagRight = x + EngravingDefaults.FlagWidth;
                 double flagTopUp = stemTipUp;
                 double flagBottomUp = stemTipUp - flagHeight;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToDevice(flagBottomUp), ToDevice(flagTopUp), VerticalDirection.Up);
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp), VerticalDirection.Up);
                 upSkyline.Merge(flagSkyline);
             }
         }
@@ -592,7 +601,7 @@ internal sealed class SkylineBuilder
             // Stem extends DOWNWARD from the head: tip = noteUp - stemLength.
             double stemTipUp = noteUp - stemLength;
             double stemBaseUp = noteUp;
-            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, ToDevice(stemTipUp), ToDevice(stemBaseUp), VerticalDirection.Down);
+            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp), VerticalDirection.Down);
             downSkyline.Merge(stemSkyline);
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
@@ -604,7 +613,7 @@ internal sealed class SkylineBuilder
                 double flagRight = x + EngravingDefaults.FlagWidth;
                 double flagTopUp = stemTipUp + flagHeight;
                 double flagBottomUp = stemTipUp;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToDevice(flagBottomUp), ToDevice(flagTopUp), VerticalDirection.Down);
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp), VerticalDirection.Down);
                 downSkyline.Merge(flagSkyline);
             }
         }

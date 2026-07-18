@@ -104,8 +104,8 @@ public class SlopedBuildingTests
         Assert.Equal(0, b.Start, Epsilon);
         Assert.Equal(100, b.End, Epsilon);
 
-        // SkylineBuilding.Height() returns internal representation (negative for UP skyline)
-        // VerticalSkyline.Height() returns real Y coordinate
+        // SkylineBuilding.Height() returns the internal representation (+y_up for UP skyline)
+        // VerticalSkyline.Height() returns the real Y-up coordinate
         Assert.Equal(10, skyline.Height(0), Epsilon);
         Assert.Equal(20, skyline.Height(100), Epsilon);
     }
@@ -113,25 +113,24 @@ public class SlopedBuildingTests
     [Fact]
     public void VerticalSkyline_Merge_HorizontalBuildings()
     {
-        // Two horizontal UP skylines at different yTop values
-        // s1: yTop=10 (internal height = -10)
-        // s2: yTop=15 (internal height = -15)
+        // Two horizontal UP skylines at different top edges
+        // s1: top y_up=10 (internal height = +10)
+        // s2: top y_up=15 (internal height = +15)
         var s1 = VerticalSkyline.FromBox(0, 50, 0, 10, VerticalDirection.Up);
         var s2 = VerticalSkyline.FromBox(25, 75, 0, 15, VerticalDirection.Up);
 
         s1.Merge(s2);
 
-        // For UP skyline, we keep the minimum Y (topmost, most negative internal)
-        // s1 has yTop=10 (more negative = -10), s2 has yTop=15 (-15)
-        // -15 < -10, so s2 is "higher" in UP skyline terms
+        // For UP skyline, we keep the topmost (largest Y-up)
+        // s2 (15) is higher than s1 (10).
 
-        // At x=30 (overlap): keep yTop=10 (smaller Y = topmost)
-        Assert.Equal(10, s1.Height(30), Epsilon);
+        // At x=30 (overlap): keep y_up=15 (larger Y-up = topmost)
+        Assert.Equal(15, s1.Height(30), Epsilon);
 
-        // At x=10: only s1, yTop=10
+        // At x=10: only s1, y_up=10
         Assert.Equal(10, s1.Height(10), Epsilon);
 
-        // At x=60: only s2, yTop=15
+        // At x=60: only s2, y_up=15
         Assert.Equal(15, s1.Height(60), Epsilon);
     }
 
@@ -139,36 +138,35 @@ public class SlopedBuildingTests
     public void VerticalSkyline_Merge_SlopedBuildings()
     {
         // Create two crossing sloped UP skylines
-        // s1: rises from y=0 to y=10 (internal: -0 to -10)
-        // s2: falls from y=10 to y=0 (internal: -10 to -0)
+        // s1: rises from y_up=0 to y_up=10 (internal: 0 to 10)
+        // s2: falls from y_up=10 to y_up=0 (internal: 10 to 0)
         var s1 = VerticalSkyline.FromSlope(0, 0, 10, 10, 0, VerticalDirection.Up);
         var s2 = VerticalSkyline.FromSlope(0, 10, 10, 0, 0, VerticalDirection.Up);
 
         s1.Merge(s2);
 
-        // At x=5 (intersection), both have real height 5
-        // For UP skyline, "higher" means smaller Y (more negative internal)
-        // At x=2: s1=2, s2=8 -> s2 is higher (smaller Y) -> result should be 2
-        // At x=8: s1=8, s2=2 -> s1 is higher (smaller Y) -> result should be 2
-        // Wait, for UP skyline we keep the MINIMUM Y (topmost)
-        Assert.True(s1.Height(2) <= 2.1, $"At x=2, expected ~2 (min of 2,8), got {s1.Height(2)}");
-        Assert.True(s1.Height(8) <= 2.1, $"At x=8, expected ~2 (min of 8,2), got {s1.Height(8)}");
+        // At x=5 (intersection), both have real height 5.
+        // For UP skyline, "higher" means larger Y-up.
+        // At x=2: s1=2, s2=8 -> s2 is higher -> result should be 8
+        // At x=8: s1=8, s2=2 -> s1 is higher -> result should be 8
+        Assert.True(s1.Height(2) >= 7.9, $"At x=2, expected ~8 (max of 2,8), got {s1.Height(2)}");
+        Assert.True(s1.Height(8) >= 7.9, $"At x=8, expected ~8 (max of 8,2), got {s1.Height(8)}");
     }
 
     [Fact]
     public void VerticalSkyline_Distance_WithSlopedBuildings()
     {
-        // UP skyline with sloped roof at y=10 to y=20
-        var up = VerticalSkyline.FromSlope(0, 10, 100, 20, 0, VerticalDirection.Up);
+        // UP skyline with a sloped roof from y_up=-10 to y_up=-20
+        var up = VerticalSkyline.FromSlope(0, -10, 100, -20, 0, VerticalDirection.Up);
 
-        // DOWN skyline at y=50 to y=60
-        var down = VerticalSkyline.FromBox(0, 100, 50, 60, VerticalDirection.Down);
+        // DOWN skyline with its floor at y_up=-50 (below the UP skyline)
+        var down = VerticalSkyline.FromBox(0, 100, -50, -40, VerticalDirection.Down);
 
         // Distance = gap between the two skylines
-        // UP skyline top edge: y=10 to y=20
-        // DOWN skyline bottom edge: y=50
-        // Gap at x=0: 50 - 10 = 40
-        // Gap at x=100: 50 - 20 = 30
+        // UP skyline top edge: y_up=-10 to y_up=-20
+        // DOWN skyline bottom edge: y_up=-50
+        // Gap at x=0: -10 - (-50) = 40
+        // Gap at x=100: -20 - (-50) = 30
         // LilyPond distance = UP.internalHeight + DOWN.internalHeight
         //   = (-10 to -20) + 50 = 40 to 30
         double dist = up.Distance(down);

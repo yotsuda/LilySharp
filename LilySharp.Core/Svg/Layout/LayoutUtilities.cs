@@ -106,12 +106,12 @@ internal static class LayoutUtilities
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:622-626
-    /// MaxHeight() returns topmost Y in relative coords (negative for notes above staff).
-    /// Convert to positive extent above staff top.
+    /// MaxHeight() returns the topmost Y-up (positive for notes above the staff top).
+    /// It is already the positive extent above the staff top.
     /// </remarks>
     public static double CalculateUpExtent(VerticalSkyline upSkyline)
     {
-        return upSkyline.IsEmpty ? 0 : Math.Max(0, -upSkyline.MaxHeight());
+        return upSkyline.IsEmpty ? 0 : Math.Max(0, upSkyline.MaxHeight());
     }
 
     /// <summary>
@@ -119,11 +119,13 @@ internal static class LayoutUtilities
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
-    /// DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates.
+    /// DOWN skyline's MaxHeight() returns the bottommost Y-up (negative below the
+    /// staff top). The staff bottom line sits at Y-up = -staffHeight, so the extent
+    /// below it is (-MaxHeight) - staffHeight.
     /// </remarks>
     public static double CalculateDownExtent(VerticalSkyline downSkyline, double staffHeight)
     {
-        return downSkyline.IsEmpty ? 0 : Math.Max(0, downSkyline.MaxHeight() - staffHeight);
+        return downSkyline.IsEmpty ? 0 : Math.Max(0, -downSkyline.MaxHeight() - staffHeight);
     }
 
     /// <summary>

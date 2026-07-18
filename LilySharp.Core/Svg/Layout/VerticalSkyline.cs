@@ -21,15 +21,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// Direction for vertical skylines.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: Uses sky = -1 for UP, +1 for DOWN
-/// This matches LilyPond's convention where heights are stored as sky * y.
+/// LILYPOND-REF: lily/direction.hh — UP = +1, DOWN = -1.
+/// Matches LilyPond's Y-up convention where heights are stored as sky * y_up
+/// (skyline.cc:107 <c>height = sky * b[other_axis][sky]</c>).
 /// </remarks>
 public enum VerticalDirection
 {
-    /// <summary>Upward skyline (sky = -1): heights stored as <c>-y</c>, keeping the highest roof at each X.</summary>
-    Up = -1,
-    /// <summary>Downward skyline (sky = +1): heights stored as <c>+y</c>, keeping the lowest floor at each X.</summary>
-    Down = 1
+    /// <summary>Upward skyline (sky = +1): heights stored as <c>+y_up</c>, keeping the highest roof (largest Y-up) at each X.</summary>
+    Up = 1,
+    /// <summary>Downward skyline (sky = -1): heights stored as <c>-y_up</c>, keeping the lowest floor (smallest Y-up) at each X.</summary>
+    Down = -1
 }
 
 /// <summary>
@@ -80,9 +81,13 @@ internal sealed class VerticalSkyline
     /// </summary>
     public static VerticalSkyline FromBox(double xLeft, double xRight, double yBottom, double yTop, VerticalDirection direction)
     {
-        // LilyPond sign convention (skyline.cc:107-113): height = sky * y.
-        // UP (sky=-1) stores -yTop; DOWN (sky=+1) stores +yBottom.
-        double height = direction == VerticalDirection.Up ? -yTop : yBottom;
+        // LILYPOND-REF: lily/skyline.cc:104-110 Building::Building(Box, axis, sky) —
+        //   Real height = sky * b[other_axis (horizon_axis)][sky].
+        // In the native Y-up frame (yBottom < yTop, up-positive), sky picks the box
+        // edge on its own side: UP (sky=+1) stores +yTop; DOWN (sky=-1) stores
+        // -yBottom. Read sign-for-sign against skyline.cc.
+        double edge = direction == VerticalDirection.Up ? yTop : yBottom;
+        double height = (int)direction * edge;
         var building = new SkylineBuilding(xLeft, xRight, height);
         var skyline = new VerticalSkyline(direction);
         skyline.AddBuilding(building);
@@ -93,27 +98,29 @@ internal sealed class VerticalSkyline
     /// Creates a skyline from a sloped region (e.g., beam).
     /// </summary>
     /// <remarks>
-    /// Uses LilyPond sign convention: UP heights are negative, DOWN heights are positive.
+    /// Native Y-up frame (matching <see cref="FromBox"/>): the stored internal
+    /// height is sky * edge — UP (sky=+1) keeps the top edge <c>+y</c>, DOWN
+    /// (sky=-1) keeps the bottom edge (top edge lowered by <paramref name="thickness"/>)
+    /// as <c>-(y + thickness)</c>. Currently exercised only by unit tests (no
+    /// production caller builds sloped vertical skylines).
     /// </remarks>
     public static VerticalSkyline FromSlope(double xLeft, double yLeft, double xRight, double yRight,
         double thickness, VerticalDirection direction)
     {
         if (direction == VerticalDirection.Up)
         {
-            // UP skyline: top edge with negative heights (LilyPond convention)
+            // UP skyline (sky=+1): top edge stored as +y_up.
             return new VerticalSkyline(new List<SkylineBuilding>
             {
-                new SkylineBuilding(xLeft, -yLeft, -yRight, xRight)
+                new SkylineBuilding(xLeft, yLeft, yRight, xRight)
             }, direction);
         }
         else
         {
-            // DOWN skyline: bottom edge with positive heights (LilyPond convention)
-            double bottomLeft = yLeft + thickness;
-            double bottomRight = yRight + thickness;
+            // DOWN skyline (sky=-1): bottom edge (y lowered by thickness) stored as -y_up.
             return new VerticalSkyline(new List<SkylineBuilding>
             {
-                new SkylineBuilding(xLeft, bottomLeft, bottomRight, xRight)
+                new SkylineBuilding(xLeft, -(yLeft + thickness), -(yRight + thickness), xRight)
             }, direction);
         }
     }
@@ -405,11 +412,11 @@ internal sealed class VerticalSkyline
     /// Returns true if height h1 is "better" than h2 for this skyline direction.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/skyline.cc:170-176 SkylineBuilding::above()
-    /// With LilyPond sign convention (UP stores negative, DOWN stores positive),
-    /// "better" is always the larger internal height for both directions:
-    /// - UP: -10 > -20 means y=10 is "above" y=20 (closer to top)
-    /// - DOWN: 70 > 50 means y=70 is "below" y=50 (closer to bottom)
+    /// LILYPOND-REF: lily/skyline.cc:166-173 Building::above()
+    /// In the native Y-up frame (UP stores +y_up, DOWN stores -y_up), "better" is
+    /// always the larger internal height for both directions:
+    /// - UP: +20 > +10 means y_up=20 is "above" y_up=10 (closer to top)
+    /// - DOWN: -50 > -70 means y_up=50 is "below" y_up=70 (closer to bottom)
     /// </remarks>
     private bool IsBetterHeight(double h1, double h2)
     {
@@ -576,15 +583,15 @@ internal sealed class VerticalSkyline
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
-    /// Returns sky_ * max(building heights), converting internal representation
-    /// back to real coordinates:
-    /// - UP skyline: returns the smallest Y (topmost point, negative internally)
-    /// - DOWN skyline: returns the largest Y (bottommost point, positive internally)
+    /// Returns sky_ * max(building heights), converting the internal representation
+    /// back to real Y-up coordinates:
+    /// - UP skyline: returns the largest Y-up (topmost point)
+    /// - DOWN skyline: returns the smallest Y-up (bottommost point)
     /// </remarks>
     public double MaxHeight()
     {
         if (IsEmpty)
-            return _direction == VerticalDirection.Up ? PositiveInfinity : NegativeInfinity;
+            return _direction == VerticalDirection.Up ? NegativeInfinity : PositiveInfinity;
 
         // Find maximum internal height across all buildings
         double maxInternalHeight = NegativeInfinity;
@@ -599,10 +606,10 @@ internal sealed class VerticalSkyline
                 maxInternalHeight = Math.Max(maxInternalHeight, hRight);
         }
 
-        // Convert to real Y coordinate: sky * internal_height
-        // UP (sky=-1): negative internal -> positive real Y (but we want smallest Y)
-        // DOWN (sky=+1): positive internal -> positive real Y
-        int sky = (int)_direction;  // UP=-1, DOWN=+1
+        // Convert to real Y-up coordinate: sky * internal_height
+        // UP (sky=+1): +internal -> largest Y-up (topmost)
+        // DOWN (sky=-1): -internal -> smallest Y-up (bottommost)
+        int sky = (int)_direction;  // UP=+1, DOWN=-1
         return sky * maxInternalHeight;
     }
 
@@ -617,7 +624,7 @@ internal sealed class VerticalSkyline
     {
         if (xRight <= xLeft || IsEmpty)
             return 0;
-        int sky = (int)_direction; // UP=-1
+        int sky = (int)_direction; // UP=+1
         double max = 0;
         foreach (var b in _buildings)
         {
@@ -625,9 +632,9 @@ internal sealed class VerticalSkyline
             double r = Math.Min(b.End, xRight);
             if (l >= r)
                 continue;
-            // protrusion above Y=0 = -realY, realY = sky * internalHeight.
-            double pL = -sky * b.ValueAt(l);
-            double pR = -sky * b.ValueAt(r);
+            // protrusion above Y=0 = realY (Y-up), realY = sky * internalHeight.
+            double pL = sky * b.ValueAt(l);
+            double pR = sky * b.ValueAt(r);
             if (!double.IsInfinity(pL)) max = Math.Max(max, pL);
             if (!double.IsInfinity(pR)) max = Math.Max(max, pR);
         }
@@ -639,7 +646,7 @@ internal sealed class VerticalSkyline
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/skyline.cc:657-665 Skyline::height()
-    /// Returns sky * building.height(x), converting internal to real coordinates.
+    /// Returns sky * building.height(x), converting internal to real Y-up coordinates.
     /// </remarks>
     public double Height(double x)
     {
@@ -647,11 +654,11 @@ internal sealed class VerticalSkyline
         {
             if (x >= b.Start && x <= b.End)
             {
-                int sky = (int)_direction;  // UP=-1, DOWN=+1
+                int sky = (int)_direction;  // UP=+1, DOWN=-1
                 return sky * b.ValueAt(x);
             }
         }
 
-        return _direction == VerticalDirection.Up ? PositiveInfinity : NegativeInfinity;
+        return _direction == VerticalDirection.Up ? NegativeInfinity : PositiveInfinity;
     }
 }

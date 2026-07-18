@@ -343,7 +343,7 @@ internal static class OutsideStaffStacker
             trackers[i] = new DirectionalOccupancy(systems[i].Y, dir: -1);
             // Seed with the system's up-skyline (staff content protrusions).
             // VerticalSkyline.Height converts the internal sky-relative value
-            // to real coordinates (negative = above the staff top); raw
+            // to real Y-up coordinates (positive = above the staff top); raw
             // SkylineBuilding.ValueAt must NOT be used here.
             if (systemSkylines != null && i < systemSkylines.Count
                 && !systemSkylines[i].up.IsEmpty)
@@ -357,7 +357,7 @@ internal static class OutsideStaffStacker
                     double h = up.Height(mid);
                     if (double.IsInfinity(h) || double.IsNaN(h))
                         continue;
-                    double protrusion = Math.Max(0, -h);
+                    double protrusion = Math.Max(0, h);
                     if (protrusion > 0)
                         trackers[i].AddRegion(b.Start, b.End, systems[i].Y - protrusion);
                 }

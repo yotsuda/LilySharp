@@ -145,7 +145,7 @@ internal static class FiguredBassEngraver
             if (!measureToSystem.TryGetValue(lay.MeasureIndex, out int s)) continue;
             double halfW = MinFigureBoxWidth / 2.0;
             var box = VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, -FigureTopExtent, VerticalDirection.Up);
+                lay.X - halfW, lay.X + halfW, 0, FigureTopExtent, VerticalDirection.Up);
             if (fbUp.TryGetValue(s, out var sky)) sky.Merge(box);
             else fbUp[s] = box;
             // basicY is the system-relative device floor (the old lay.Y). Reconstruct

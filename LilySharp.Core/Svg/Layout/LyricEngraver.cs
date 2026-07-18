@@ -300,13 +300,13 @@ internal sealed class LyricEngraver
             !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 
         // The verse-1 UP-skyline box of a syllable, self-relative to the line's anchor
-        // (anchor at y=0; text top at -topExtent above it — a font-metric height, so the
-        // clearance reflects a tall CJK glyph as well as a low note).
+        // (anchor at y=0; text top at +topExtent above it in the Y-up frame — a font-metric
+        // height, so the clearance reflects a tall CJK glyph as well as a low note).
         VerticalSkyline Box(LyricLayout lay)
         {
             double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
             return VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, -LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
+                lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
         }
 
         // System-wide drop for the bottom-/single-staff note-bound lines (unchanged).

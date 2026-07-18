@@ -42,9 +42,10 @@ public class SkylineMergeTests
     [Fact]
     public void MaxProtrusionInRange_PeakWithinWindowOnly()
     {
-        // A 3-sp protrusion over [20,30] and a taller 5-sp one over [40,50].
-        var sky = VerticalSkyline.FromBox(20, 30, -3, -3, VerticalDirection.Up);
-        sky.Merge(VerticalSkyline.FromBox(40, 50, -5, -5, VerticalDirection.Up));
+        // A 3-sp protrusion over [20,30] and a taller 5-sp one over [40,50]
+        // (Y-up above the top line).
+        var sky = VerticalSkyline.FromBox(20, 30, 3, 3, VerticalDirection.Up);
+        sky.Merge(VerticalSkyline.FromBox(40, 50, 5, 5, VerticalDirection.Up));
 
         Assert.Equal(3.0, sky.MaxProtrusionInRange(15, 35), 3);  // first box only
         Assert.Equal(5.0, sky.MaxProtrusionInRange(15, 55), 3);  // both → taller wins
@@ -93,22 +94,23 @@ public class SkylineMergeTests
     }
 
     /// <summary>
-    /// Overlapping buildings at different heights - UP skyline keeps minimum Y.
+    /// Overlapping buildings at different heights - UP skyline keeps the topmost
+    /// point (largest Y-up).
     /// </summary>
     [Fact]
-    public void Merge_DifferentHeights_UpKeepsMinimumY()
+    public void Merge_DifferentHeights_UpKeepsTopmostYUp()
     {
-        // UP skyline: keeps the topmost point (smallest Y in real coordinates)
-        var skyline = VerticalSkyline.FromBox(0, 100, 0, 20, VerticalDirection.Up);  // yTop=20
-        var other = VerticalSkyline.FromBox(30, 70, 0, 10, VerticalDirection.Up);    // yTop=10 (higher)
+        // UP skyline: keeps the topmost point (largest Y-up)
+        var skyline = VerticalSkyline.FromBox(0, 100, 0, 20, VerticalDirection.Up);  // top y_up=20
+        var other = VerticalSkyline.FromBox(30, 70, 0, 30, VerticalDirection.Up);    // top y_up=30 (higher)
 
         skyline.Merge(other);
 
-        // In overlap region [30,70], should keep yTop=10 (smaller Y = topmost)
+        // In overlap region [30,70], should keep y_up=30 (larger Y-up = topmost)
         double heightAt50 = skyline.Height(50);
         _output.WriteLine($"Height at x=50: {heightAt50}");
 
-        Assert.Equal(10, heightAt50, Epsilon);
+        Assert.Equal(30, heightAt50, Epsilon);
 
         // Outside overlap, should be 20
         Assert.Equal(20, skyline.Height(10), Epsilon);
@@ -116,26 +118,26 @@ public class SkylineMergeTests
     }
 
     /// <summary>
-    /// DOWN skyline keeps maximum Y (bottommost point).
+    /// DOWN skyline keeps the bottommost point (smallest Y-up).
     /// </summary>
     [Fact]
-    public void Merge_DifferentHeights_DownKeepsMaximumY()
+    public void Merge_DifferentHeights_DownKeepsBottommostYUp()
     {
-        // DOWN skyline: keeps the bottommost point (largest Y in real coordinates)
-        var skyline = VerticalSkyline.FromBox(0, 100, 50, 60, VerticalDirection.Down);  // yBottom=50
-        var other = VerticalSkyline.FromBox(30, 70, 70, 80, VerticalDirection.Down);    // yBottom=70 (lower)
+        // DOWN skyline: keeps the bottommost point (smallest Y-up)
+        var skyline = VerticalSkyline.FromBox(0, 100, -50, -40, VerticalDirection.Down);  // bottom y_up=-50
+        var other = VerticalSkyline.FromBox(30, 70, -70, -60, VerticalDirection.Down);    // bottom y_up=-70 (lower)
 
         skyline.Merge(other);
 
-        // In overlap region [30,70], should keep yBottom=70 (larger Y = bottommost)
+        // In overlap region [30,70], should keep y_up=-70 (smaller Y-up = bottommost)
         double heightAt50 = skyline.Height(50);
         _output.WriteLine($"Height at x=50: {heightAt50}");
 
-        Assert.Equal(70, heightAt50, Epsilon);
+        Assert.Equal(-70, heightAt50, Epsilon);
 
-        // Outside overlap, should be 50
-        Assert.Equal(50, skyline.Height(10), Epsilon);
-        Assert.Equal(50, skyline.Height(90), Epsilon);
+        // Outside overlap, should be -50
+        Assert.Equal(-50, skyline.Height(10), Epsilon);
+        Assert.Equal(-50, skyline.Height(90), Epsilon);
     }
 
     /// <summary>
@@ -144,13 +146,13 @@ public class SkylineMergeTests
     [Fact]
     public void Distance_UpAndDown_ReturnsGap()
     {
-        // UP skyline at yTop=20
-        var up = VerticalSkyline.FromBox(0, 100, 0, 20, VerticalDirection.Up);
+        // UP skyline with its top edge at y_up=-20
+        var up = VerticalSkyline.FromBox(0, 100, -40, -20, VerticalDirection.Up);
 
-        // DOWN skyline at yBottom=50
-        var down = VerticalSkyline.FromBox(0, 100, 50, 60, VerticalDirection.Down);
+        // DOWN skyline with its bottom edge at y_up=-50 (below the UP skyline)
+        var down = VerticalSkyline.FromBox(0, 100, -50, -40, VerticalDirection.Down);
 
-        // Gap = 50 - 20 = 30
+        // Gap = -20 - (-50) = 30
         double distance = up.Distance(down);
 
         _output.WriteLine($"UP maxHeight: {up.MaxHeight()}");
@@ -166,7 +168,7 @@ public class SkylineMergeTests
     [Fact]
     public void Padded_ExtendsBuildingsWithSlopes()
     {
-        // A single building at x=[20,80], yTop=10 (UP skyline, internal height = -10)
+        // A single building at x=[20,80], top y_up=10 (UP skyline, internal height = +10)
         var skyline = VerticalSkyline.FromBox(20, 80, 0, 10, VerticalDirection.Up);
 
         double padding = 5.0;
@@ -181,16 +183,16 @@ public class SkylineMergeTests
         Assert.Equal(10, padded.Height(82), Epsilon);  // Right flat padding
 
         // Sloped region: [20-2P, 20-P] = [10, 15] and [80+P, 80+2P] = [85, 90]
-        // At outer tip (x=10 for left, x=90 for right), height decreases by P
-        // For UP skyline: real height at tip = 10 + 5 = 15 (less extreme, farther from top)
+        // At outer tip (x=10 for left, x=90 for right), the Y-up height DROPS by P
+        // For UP skyline: real height at tip = 10 - 5 = 5 (less protrusion, roof lowered)
         double leftTipHeight = padded.Height(10);
         double rightTipHeight = padded.Height(90);
         _output.WriteLine($"Left tip height: {leftTipHeight}, Right tip height: {rightTipHeight}");
 
-        // The 45° slope means for each unit of X from the flat zone edge, height increases by 1
+        // The 45° slope lowers the roof by 1 per unit of X from the flat zone edge
         // (less "extreme" = worse for collision detection)
-        Assert.True(leftTipHeight > 10, $"Left tip {leftTipHeight} should be > 10 (slope reduces effectiveness)");
-        Assert.True(rightTipHeight > 10, $"Right tip {rightTipHeight} should be > 10 (slope reduces effectiveness)");
+        Assert.True(leftTipHeight < 10, $"Left tip {leftTipHeight} should be < 10 (slope lowers the roof)");
+        Assert.True(rightTipHeight < 10, $"Right tip {rightTipHeight} should be < 10 (slope lowers the roof)");
     }
 
     /// <summary>
@@ -263,14 +265,14 @@ public class SkylineMergeTests
         var skyline = new VerticalSkyline(VerticalDirection.Up);
 
         // Add three buildings at different positions and heights
-        skyline.Merge(VerticalSkyline.FromBox(0, 40, 0, 30, VerticalDirection.Up));    // yTop=30
-        skyline.Merge(VerticalSkyline.FromBox(20, 60, 0, 10, VerticalDirection.Up));   // yTop=10 (highest)
-        skyline.Merge(VerticalSkyline.FromBox(50, 100, 0, 25, VerticalDirection.Up));  // yTop=25
+        skyline.Merge(VerticalSkyline.FromBox(0, 40, 0, 10, VerticalDirection.Up));    // top y_up=10
+        skyline.Merge(VerticalSkyline.FromBox(20, 60, 0, 30, VerticalDirection.Up));   // top y_up=30 (highest)
+        skyline.Merge(VerticalSkyline.FromBox(50, 100, 0, 25, VerticalDirection.Up));  // top y_up=25
 
-        // Check heights at various points
-        Assert.Equal(30, skyline.Height(10), Epsilon);  // Only first
-        Assert.Equal(10, skyline.Height(30), Epsilon);  // First and second overlap, keep 10
-        Assert.Equal(10, skyline.Height(55), Epsilon);  // Second and third overlap, keep 10
+        // Check heights at various points (UP keeps the largest Y-up)
+        Assert.Equal(10, skyline.Height(10), Epsilon);  // Only first
+        Assert.Equal(30, skyline.Height(30), Epsilon);  // First and second overlap, keep 30
+        Assert.Equal(30, skyline.Height(55), Epsilon);  // Second and third overlap, keep 30
         Assert.Equal(25, skyline.Height(80), Epsilon);  // Only third
     }
 
