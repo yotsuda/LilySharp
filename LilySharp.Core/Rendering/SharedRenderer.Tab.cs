@@ -45,7 +45,7 @@ internal static partial class SharedRenderer
     private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
         double staffY, double staffRight, double systemStartX,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems,
-        HashSet<int> percentCovered, IDrawingContext gc)
+        HashSet<int> percentCovered, IDrawingContext gc, double pageHeight)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
@@ -59,7 +59,7 @@ internal static partial class SharedRenderer
         // system indent (systemStartX), like the notation staff — not the page
         // margin, or on the first (indented) system they overrun to the left.
         for (int i = 0; i < stringCount; i++)
-            gc.DrawLine(systemStartX, staffY + i * stringSpace, staffRight, staffY + i * stringSpace,
+            gc.DrawLine(systemStartX, staffY - i * stringSpace, staffRight, staffY - i * stringSpace,
                 Color.Black, EngravingDefaults.StaffLineThickness);
 
         // Per-measure barlines at the tab staff height.
@@ -75,7 +75,7 @@ internal static partial class SharedRenderer
 
         // TAB clef (clefs.tab), sized to span the actual staff height (the glyph's
         // designed span is ~5.78 font units) and centered on it.
-        double tabCenterY = staffY + tabHeight / 2.0;
+        double tabCenterY = staffY - tabHeight / 2.0;
         gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
             FontSize * tabHeight / 5.78);
         bool lineStart = true;
@@ -124,7 +124,7 @@ internal static partial class SharedRenderer
                 var voice = staff.Voices[vi];
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
-                        tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems, gc);
+                        tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems, gc, pageHeight);
             }
         }
     }
@@ -132,7 +132,8 @@ internal static partial class SharedRenderer
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
         double staffY, int[] tuning, int stringCount, int octaveShift,
         Staff staff, int staffIndex, int voiceNumber,
-        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
+        double pageHeight)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
@@ -175,13 +176,13 @@ internal static partial class SharedRenderer
                             numbersOnly ? 0 : note.Dots, gc, note.IsDead);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
-                            columnX, staffY, staff, isBeamed, gc);
+                            columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case ChordItem chord:
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
-                            columnX, staffY, staff, isBeamed, gc);
+                            columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case RestItem rest when !numbersOnly:
                     // In \tabFullNotation whole and half rests ATTACH to a staff line, just
@@ -191,17 +192,20 @@ internal static partial class SharedRenderer
                     // (body below). Shorter rests (glyphs that span a line) stay centred on
                     // the tab's vertical middle. `staffY + k*stringSpace` is the k-th line.
                     int restValue = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    double lowerCentralLineY = staffY + (stringCount / 2) * stringSpace;
-                    if (restValue == 2)      // half: DrawRest puts the origin (its bottom) at staffY+2
-                        DrawRest(rest, itemX, lowerCentralLineY - 2.0, gc);
-                    else if (restValue == 1) // whole: DrawRest puts the origin (its top) at staffY+1
-                        DrawRest(rest, itemX, lowerCentralLineY - stringSpace - 1.0, gc);
+                    // staffY is Y-up; lines below it are at smaller Y-up, and DrawRest's
+                    // own +1/+2 origin offsets are now −1/−2, so the synthetic origins
+                    // passed here flip sign to match.
+                    double lowerCentralLineY = staffY - (stringCount / 2) * stringSpace;
+                    if (restValue == 2)      // half: DrawRest origin (its bottom) at staffY−2
+                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, gc);
+                    else if (restValue == 1) // whole: DrawRest origin (its top) at staffY−1
+                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, gc);
                     else
                     {
                         var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
-                        double tabMiddle = staffY + (stringCount - 1) * stringSpace / 2.0;
-                        double restOriginY = tabMiddle + (restBBox.Top + restBBox.Bottom) / 2.0;
-                        DrawRest(rest, itemX, restOriginY - 2.0, gc);
+                        double tabMiddle = staffY - (stringCount - 1) * stringSpace / 2.0;
+                        double restOriginY = tabMiddle - (restBBox.Top + restBBox.Bottom) / 2.0;
+                        DrawRest(rest, itemX, restOriginY + 2.0, gc);
                     }
                     break;
             }
@@ -219,7 +223,7 @@ internal static partial class SharedRenderer
     /// </summary>
     private static void DrawUnbeamedTabStem(MusicItem item, Fraction baseDuration,
         bool stemUp, double columnX, double staffY, Staff staff,
-        bool isBeamed, IDrawingContext gc)
+        bool isBeamed, IDrawingContext gc, double pageHeight)
     {
         int noteValue = baseDuration.Denominator;
         if (baseDuration.Numerator != 1) noteValue = 1;
@@ -236,8 +240,12 @@ internal static partial class SharedRenderer
             Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
         double stemLength = 3.0 * stringSpace;
         double stemX = columnX + (stemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
-        double nearY = TabStemHeadY(item, stemUp, staffY, staff);
-        double farY = nearY + (stemUp ? -stemLength : stemLength);
+        // TabStemHeadY works in device coordinates; round-trip through it, then lift
+        // both stem ends to the page Y-up frame.
+        double nearYDev = TabStemHeadY(item, stemUp, pageHeight - staffY, staff);
+        double farYDev = nearYDev + (stemUp ? -stemLength : stemLength);
+        double nearY = pageHeight - nearYDev;
+        double farY = pageHeight - farYDev;
 
         if (noteValue == 2)
         {
@@ -325,7 +333,7 @@ internal static partial class SharedRenderer
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
         DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, isDead);
-        double noteY = staffY + (stringNum - 1) * stringSpace;
+        double noteY = staffY - (stringNum - 1) * stringSpace;
         double digitWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
@@ -349,8 +357,8 @@ internal static partial class SharedRenderer
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
         double dotStartX = digitCenterX + digitWidth / 2 + dotWidth;
         // One position off the line = half a staff space; on a tab the staff space is
-        // the string gap. UP is smaller device Y.
-        double dotY = noteY - stringSpace / 2;
+        // the string gap. UP is larger Y-up.
+        double dotY = noteY + stringSpace / 2;
         using (gc.Source(sourcePosition))
             for (int d = 0; d < dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
@@ -364,8 +372,9 @@ internal static partial class SharedRenderer
     private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)
     {
-        // String 1 (highest pitch) is the TOP tab line; string N the bottom.
-        double noteY = staffY + (stringNum - 1) * stringSpace;
+        // String 1 (highest pitch) is the TOP tab line; string N the bottom
+        // (device down = smaller Y-up).
+        double noteY = staffY - (stringNum - 1) * stringSpace;
         // A dead (muted) note shows an "×" in place of the fret number.
         string fretText = isDead ? "×" : fret.ToString();
         double bgWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
@@ -373,11 +382,12 @@ internal static partial class SharedRenderer
 
         using (gc.Source(sourcePosition))
         {
-            // White background occludes the string line behind the number.
-            gc.DrawRectangle(x - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
+            // White background occludes the string line behind the number; the rect's
+            // visual-top edge is above the line (larger Y-up).
+            gc.DrawRectangle(x - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
                 fill: Color.White);
             // Bold so the fret numbers read clearly over the string lines.
-            gc.DrawText(fretText, x, noteY + TabFretFontSize * 0.32, TabFretFontSize, "serif",
+            gc.DrawText(fretText, x, noteY - TabFretFontSize * 0.32, TabFretFontSize, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
         }
     }
@@ -419,7 +429,7 @@ internal static partial class SharedRenderer
             double alignWidth = 2 * (rightEdge - itemX);
             foreach (var (str, _) in notes)
                 DrawTabAugmentationDots(chord.Dots, itemX, alignWidth,
-                    staffY + (str - 1) * stringSpace, stringSpace, chord.SourcePosition, gc);
+                    staffY - (str - 1) * stringSpace, stringSpace, chord.SourcePosition, gc);
         }
     }
 

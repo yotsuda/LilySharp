@@ -35,7 +35,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm ChordName: font-family=sans, font-size=1.5
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — chord-name formatting
     /// </remarks>
-    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;
@@ -44,14 +45,14 @@ internal static partial class SharedRenderer
         foreach (var c in layout.ChordNameLayouts)
         {
             if (!sysY.TryGetValue(c.MeasureIndex, out var sy)) continue;
-            // Frame B -> device: reflect the Y-up value against the measure's system top.
-            double cy = StaffFrame.ToDevice(c.YUp, sy);
+            // Page Y-up: lift the measure's system top and add the stored offset.
+            double cy = (pageHeight - sy) + c.YUp;
             using (gc.Source(c.SourcePosition))
             {
                 gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
                 if (c.AboveLine != null)
-                    gc.DrawText(c.AboveLine, c.X, cy - stackLineHeight, size, "sans-serif",
+                    gc.DrawText(c.AboveLine, c.X, cy + stackLineHeight, size, "sans-serif",
                         FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }
@@ -75,14 +76,13 @@ internal static partial class SharedRenderer
         foreach (var fb in layout.FiguredBassLayouts)
         {
             if (!sysY.ContainsKey(fb.MeasureIndex)) continue;
-            // Frame B -> device against this figure's own staff middle; figures then
-            // stack downward from the topmost baseline exactly as before.
-            double baseY = StaffFrame.ToDevice(fb.YUp,
-                os.StaffMiddleDeviceY(fb.StaffIndex, fb.MeasureIndex, StaffHeight));
+            // Page Y-up against this figure's own staff middle; figures then stack
+            // downward from the topmost baseline (device down = smaller Y-up).
+            double baseY = os.StaffMiddleYUp(fb.StaffIndex, fb.MeasureIndex, StaffHeight) + fb.YUp;
             using (gc.Source(fb.SourcePosition))
             {
                 for (int i = 0; i < fb.FigureTexts.Length; i++)
-                    gc.DrawText(fb.FigureTexts[i], fb.X, baseY + i * figureSpacing,
+                    gc.DrawText(fb.FigureTexts[i], fb.X, baseY - i * figureSpacing,
                         size, "serif", FontStyle.Regular, TextAnchor.Middle, Color.Black);
             }
         }
@@ -119,18 +119,17 @@ internal static partial class SharedRenderer
         {
             if (!sysY.ContainsKey(pr.MeasureIndex)) continue;
             double cx = pr.X;
-            // Frame B -> device against this sign's own staff middle.
-            double cy = StaffFrame.ToDevice(pr.YUp,
-                os.StaffMiddleDeviceY(pr.StaffIndex, pr.MeasureIndex, StaffHeight));
+            // Page Y-up against this sign's own staff middle.
+            double cy = os.StaffMiddleYUp(pr.StaffIndex, pr.MeasureIndex, StaffHeight) + pr.YUp;
             using (gc.Source(pr.SourcePosition))
             {
                 // Slash from bottom-left to top-right, with a dot in each pocket it
                 // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph.
-                gc.DrawLine(cx - slashWidth / 2, cy + slashHeight / 2,
-                    cx + slashWidth / 2, cy - slashHeight / 2,
+                gc.DrawLine(cx - slashWidth / 2, cy - slashHeight / 2,
+                    cx + slashWidth / 2, cy + slashHeight / 2,
                     Color.Black, thickness);
-                gc.DrawCircle(cx - dotDx, cy - dotDy, dotRadius, Color.Black);
-                gc.DrawCircle(cx + dotDx, cy + dotDy, dotRadius, Color.Black);
+                gc.DrawCircle(cx - dotDx, cy + dotDy, dotRadius, Color.Black);
+                gc.DrawCircle(cx + dotDx, cy - dotDy, dotRadius, Color.Black);
             }
         }
     }
@@ -145,7 +144,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size = -2)
     /// </remarks>
-    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2) —
@@ -157,9 +157,8 @@ internal static partial class SharedRenderer
         {
             if (!sysY.TryGetValue(bn.MeasureIndex, out var sy))
                 continue; // other page
-            // Frame B -> device: reflect the Y-up baseline against this measure's
-            // system top.
-            double y = StaffFrame.ToDevice(bn.YUp, sy);
+            // Page Y-up: lift this measure's system top and add the stored offset.
+            double y = (pageHeight - sy) + bn.YUp;
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
@@ -175,17 +174,19 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm StanzaNumber (font-size=-1, bold)
     /// </remarks>
-    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
         const double fontSize = 2.4;
         foreach (var sn in layout.StanzaNumberLayouts)
         {
-            // sn.YUp is Y-up from the system top (the verse's lyric baseline);
-            // reflect it to device against the system top like DrawLyrics, so the
-            // number sits next to its verse line rather than at the page top.
+            // sn.YUp is Y-up from the system top (the verse's lyric baseline); lift
+            // the system top to the page Y-up frame and add it, like DrawLyrics.
             if (!sysY.TryGetValue(sn.MeasureIndex, out var s)) continue; // other page
-            double y = StaffFrame.ToDevice(sn.YUp, s);
+            // Device value first, then a single flip — byte-exact at F2 midpoints
+            // (a plain (H − s) + YUp recombination can round the other way).
+            double y = pageHeight - (s - sn.YUp);
             gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
@@ -210,8 +211,8 @@ internal static partial class SharedRenderer
             if (!sysY.ContainsKey(f.MeasureIndex)) continue; // other page
             // Frame B -> device: reflect the Y-up baseline against this fingering's
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
-            double staffMiddleY = os.StaffMiddleDeviceY(f.StaffIndex, f.MeasureIndex, StaffHeight);
-            double y = os.Y(StaffFrame.ToDevice(f.YUp, staffMiddleY), f.StaffIndex, f.MeasureIndex);
+            double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
+            double y = os.YUp(midYup + f.YUp, f.StaffIndex, f.MeasureIndex);
             using (gc.Source(f.SourcePosition))
                 gc.DrawText(f.Number.ToString(), f.X, y,
                     os.Size(size, f.StaffIndex), "serif",
@@ -231,18 +232,19 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
     private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
         foreach (var m in layout.MusicMarkLayouts)
         {
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
             if (!sysY.ContainsKey(m.MeasureIndex)) continue; // other page
-            // Frame B -> device against the (top) staff middle this mark resolves.
-            double y = StaffFrame.ToDevice(m.YUp,
-                os.StaffMiddleDeviceY(m.StaffIndex, m.MeasureIndex, StaffHeight));
+            // The mark's DEVICE anchor (staff middle − YUp). DrawSingleMusicMark
+            // computes its many offsets in device and flips each at the draw, so the
+            // former device geometry — and every F2 boundary — is reproduced exactly.
+            double deviceY = os.StaffMiddleDeviceY(m.StaffIndex, m.MeasureIndex, StaffHeight) - m.YUp;
             using (gc.Source(m.SourcePosition))
-                DrawSingleMusicMark(m, y, gc);
+                DrawSingleMusicMark(m, deviceY, gc, pageHeight);
         }
     }
 
@@ -279,22 +281,22 @@ internal static partial class SharedRenderer
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, h1 + ns * 0.6, baselineY, ns);
             double s1 = h1 + stemDx;
             double s2 = h2 + stemDx;
-            double beamY = baselineY - stemUp;
+            double beamY = baselineY + stemUp;
             gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, stemW);
             gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, stemW);
             for (int b = 0; b < beams; b++)   // 1 thin beam (8th) or 2 (16th)
-                gc.DrawLine(s1, beamY + b * beamGap, s2, beamY + b * beamGap, Color.Black, beamW);
+                gc.DrawLine(s1, beamY - b * beamGap, s2, beamY - b * beamGap, Color.Black, beamW);
             if (withThree)
             {
                 // Triplet bracket "3" above the beam (as on shuffle charts).
                 double midX = (s1 + s2) / 2;
-                double brkY = beamY - 0.55;
+                double brkY = beamY + 0.55;
                 const double hook = 0.22, halfGap = 0.3;
-                gc.DrawLine(s1, brkY, s1, brkY + hook, Color.Black, 0.07);
+                gc.DrawLine(s1, brkY, s1, brkY - hook, Color.Black, 0.07);
                 gc.DrawLine(s1, brkY, midX - halfGap, brkY, Color.Black, 0.07);
                 gc.DrawLine(midX + halfGap, brkY, s2, brkY, Color.Black, 0.07);
-                gc.DrawLine(s2, brkY, s2, brkY + hook, Color.Black, 0.07);
-                gc.DrawText("3", midX, brkY + 0.35, threeSize, "serif",
+                gc.DrawLine(s2, brkY, s2, brkY - hook, Color.Black, 0.07);
+                gc.DrawText("3", midX, brkY - 0.35, threeSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
             return s2 + ns * 0.35;
@@ -307,8 +309,13 @@ internal static partial class SharedRenderer
         DrawPair(x, dotted: true, withThree: true);
     }
 
-    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc)
+    // absY is DEVICE here: this method keeps LilyPond's device offset arithmetic and
+    // flips each drawn Y once via F() (the page context is Y-up). Computing device
+    // offsets first, then a single flip, keeps every coordinate byte-identical to the
+    // former device output even on an F2 rounding midpoint.
+    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc, double pageHeight)
     {
+        double F(double y) => pageHeight - y;
         if (m.IsSymbol)
         {
             // Segno (U+E062) / Coda (U+E064) in this Emmentaler cmap.
@@ -317,7 +324,7 @@ internal static partial class SharedRenderer
             char glyph = m.MarkType == MusicMarkType.Segno
                 ? EmmentalerGlyphs.MarkSegno
                 : EmmentalerGlyphs.MarkCoda;
-            gc.DrawGlyph(glyph, m.X, absY, FontSize, Color.Black);
+            gc.DrawGlyph(glyph, m.X, F(absY), FontSize, Color.Black);
             return;
         }
         if (m.MarkType == MusicMarkType.Tempo)
@@ -333,12 +340,12 @@ internal static partial class SharedRenderer
             if (m.TempoText != null)
             {
                 const double markingSize = 2.2;
-                gc.DrawText(m.TempoText, x, absY, markingSize,
+                gc.DrawText(m.TempoText, x, F(absY), markingSize,
                     "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
                 x += SerifTextMetrics.MeasureBold(m.TempoText, markingSize) + 0.8;
-                gc.DrawText("(", x, absY, textSize,
+                gc.DrawText("(", x, F(absY), textSize,
                     "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
                 x += SerifTextMetrics.Measure("(", textSize) + 0.1;
             }
@@ -353,32 +360,33 @@ internal static partial class SharedRenderer
             // lines up with the equation text the way the stemmed units do
             // (their stem carries the visual weight upward).
             double headY = m.TempoBeatUnit <= 1 ? absY - 0.5 : absY;
-            gc.DrawGlyph(head, x, headY, noteSize);
+            gc.DrawGlyph(head, x, F(headY), noteSize);
             double headW = m.TempoBeatUnit <= 1 ? noteSize * 0.62 : noteSize * 0.5;
             if (m.TempoBeatUnit >= 2)
             {
                 double stemX = x + noteSize * 0.32;
                 double stemTop = absY - 3.5 * (noteSize / FontSize);
-                gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
+                gc.DrawLine(stemX, F(absY), stemX, F(stemTop), Color.Black, 0.10);
                 if (m.TempoBeatUnit >= 8)
-                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
+                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, F(stemTop), noteSize);
             }
             double dotX = x + headW + 0.15;
             for (int d = 0; d < m.TempoDots; d++)
             {
                 // Beside the head at ITS center (ly:dots::print puts the dot
                 // on the head's line) — absY-0.5 floated it above the head.
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, headY, noteSize);
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, F(headY), noteSize);
                 dotX += 0.55;
             }
             double tempoTextX = Math.Max(x + headW + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
             string equation = "= " + m.Text + (m.TempoText != null ? ")" : "");
-            gc.DrawText(equation, tempoTextX, absY,
+            gc.DrawText(equation, tempoTextX, F(absY),
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
                 double textEnd = tempoTextX + SerifTextMetrics.MeasureBold(equation, textSize);
-                DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
+                // DrawSwingEquation draws in the page Y-up frame; hand it the flipped baseline.
+                DrawSwingEquation(gc, textEnd + 0.8, F(absY), m.SwingSubdivision);
             }
             return;
         }
@@ -389,9 +397,9 @@ internal static partial class SharedRenderer
             double textWidth = SerifTextMetrics.MeasureBold(m.Text, fs);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;
-            gc.DrawRectangle(m.X - boxW / 2, absY - boxH / 2, boxW, boxH,
+            gc.DrawRectangle(m.X - boxW / 2, F(absY - boxH / 2), boxW, boxH,
                 fill: Color.White, stroke: Color.Black, strokeWidth: 0.10);
-            gc.DrawText(m.Text, m.X, absY + fs / 2 - pad, fs, "serif",
+            gc.DrawText(m.Text, m.X, F(absY + fs / 2 - pad), fs, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -399,7 +407,7 @@ internal static partial class SharedRenderer
         {
             bool italic = m.MarkType is MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
                 or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
-            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+            gc.DrawText(m.Text, m.X, F(absY), FontSize * 0.7, "serif",
                 italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -413,15 +421,15 @@ internal static partial class SharedRenderer
             double textW = SerifTextMetrics.MeasureBold(prefix, ts);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
-            gc.DrawText(prefix, left, absY, ts, "serif",
+            gc.DrawText(prefix, left, F(absY), ts, "serif",
                 FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
             // The coda glyph's baseline sits low; lift it so its centre aligns with
             // the cap height of "To".
-            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, absY - gs * 0.30, gs, Color.Black);
+            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, F(absY - gs * 0.30), gs, Color.Black);
             return;
         }
         // Default text marks (D.S./D.C./Fine/etc.)
-        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+        gc.DrawText(m.Text, m.X, F(absY), FontSize * 0.7, "serif",
             FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
     }
 
@@ -444,9 +452,8 @@ internal static partial class SharedRenderer
         foreach (var t in layout.CustomTextLayouts)
         {
             if (!sysY.ContainsKey(t.MeasureIndex)) continue; // other page
-            // Frame B -> device against the (top) staff middle this text resolves.
-            double y = StaffFrame.ToDevice(t.YUp,
-                os.StaffMiddleDeviceY(t.StaffIndex, t.MeasureIndex, StaffHeight));
+            // Page Y-up against the (top) staff middle this text resolves.
+            double y = os.StaffMiddleYUp(t.StaffIndex, t.MeasureIndex, StaffHeight) + t.YUp;
             using (gc.Source(t.SourcePosition))
                 gc.DrawText(t.Text, t.X, y, FontSize * 0.6, "serif",
                     FontStyle.Italic, TextAnchor.Middle, Color.Black);
@@ -464,7 +471,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:3835 TextSpanner grob
     /// </remarks>
     private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
         double textSize = FontSize * 0.5;
@@ -472,8 +479,8 @@ internal static partial class SharedRenderer
         foreach (var s in layout.TextSpannerLayouts)
         {
             if (!sysY.TryGetValue(s.StartMeasureIndex, out var y)) continue; // other page
-            // Frame B -> device: reflect the Y-up value against the segment's system top.
-            double absY = os.Y(StaffFrame.ToDevice(s.YUp, y), s.StaffIndex, s.StartMeasureIndex);
+            // Page Y-up: lift the system top, add the stored offset, then ossia.
+            double absY = os.YUp((pageHeight - y) + s.YUp, s.StaffIndex, s.StartMeasureIndex);
             using (gc.Source(s.SourcePosition))
             {
                 gc.DrawText(s.Text, s.StartX, absY,
@@ -500,18 +507,20 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/pedal-bracket.cc — PianoPedalBracket grob
     /// </remarks>
-    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.PedalBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.PedalBracketLayouts)
         {
             if (!sysY.TryGetValue(b.StartMeasureIndex, out var y)) continue; // other page
-            double absY = y + b.Y;
+            // Page Y-up: lift the system top and drop by the stored device offset.
+            double absY = (pageHeight - y) - b.Y;
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawLine(b.StartX, absY, b.EndX, absY, Color.Black, thickness);
-                gc.DrawLine(b.EndX, absY - b.EdgeHeight, b.EndX, absY, Color.Black, thickness);
+                gc.DrawLine(b.EndX, absY + b.EdgeHeight, b.EndX, absY, Color.Black, thickness);
             }
         }
     }
@@ -527,7 +536,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
     /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
     /// </remarks>
-    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
@@ -535,16 +545,16 @@ internal static partial class SharedRenderer
             if (!sysY.ContainsKey(mmr.StartMeasureIndex))
                 continue; // other page
             if (mmr.UseChurchRest)
-                DrawChurchRest(mmr, gc);
+                DrawChurchRest(mmr, gc, pageHeight);
             else
-                DrawBigRest(mmr, gc);
+                DrawBigRest(mmr, gc, pageHeight);
         }
     }
 
-    private static void DrawChurchRest(MultiMeasureRestLayout mmr, IDrawingContext gc)
+    private static void DrawChurchRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
     {
         double cx = (mmr.StartX + mmr.EndX) / 2.0;
-        double cy = mmr.Y;
+        double cy = pageHeight - mmr.Y;
 
         // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
         // Use each rest glyph's REAL ink width (from the extracted font metrics) so
@@ -577,7 +587,8 @@ internal static partial class SharedRenderer
         {
             while (remaining >= span)
             {
-                pieces.Add((span, glyph, width, cy + dy));
+                // dy is a device offset from cy; flip its sign into the Y-up frame.
+                pieces.Add((span, glyph, width, cy - dy));
                 remaining -= span;
             }
         }
@@ -621,7 +632,8 @@ internal static partial class SharedRenderer
         foreach (var ch in digits)
             totalAdvance += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
         double x = cx - totalAdvance / 2;
-        double baseline = cy - 2.4;
+        // The number sits above the staff (device up = larger Y-up).
+        double baseline = cy + 2.4;
         foreach (var ch in digits)
         {
             gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'), x, baseline, FontSize);
@@ -629,7 +641,7 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc)
+    private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
     {
         const double thickness = 0.5;
         const double endCapHeight = 0.8;
@@ -639,12 +651,14 @@ internal static partial class SharedRenderer
         double left = mmr.StartX + padding;
         double right = mmr.EndX - padding;
         if (right <= left) return;
-        double cy = mmr.Y;
+        double cy = pageHeight - mmr.Y;
 
-        gc.DrawRectangle(left, cy - thickness / 2, right - left, thickness, fill: Color.Black);
-        gc.DrawRectangle(left - capThickness / 2, cy - endCapHeight,
+        // Rectangles: the y arg is the visual-top edge (device up = larger Y-up),
+        // heights stay positive.
+        gc.DrawRectangle(left, cy + thickness / 2, right - left, thickness, fill: Color.Black);
+        gc.DrawRectangle(left - capThickness / 2, cy + endCapHeight,
             capThickness, 2 * endCapHeight, fill: Color.Black);
-        gc.DrawRectangle(right - capThickness / 2, cy - endCapHeight,
+        gc.DrawRectangle(right - capThickness / 2, cy + endCapHeight,
             capThickness, 2 * endCapHeight, fill: Color.Black);
 
         DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, gc);
@@ -662,7 +676,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
     /// </remarks>
     private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
         // Tie variants use staff-relative Y already in the layout — no system offset needed
@@ -677,7 +691,7 @@ internal static partial class SharedRenderer
             DrawBow(v.StartX, -v.Y, v.EndX, -v.Y,
                 (v.Control1.X, -v.Control1.Y), (v.Control2.X, -v.Control2.Y), v.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                v.StaffIndex, v.MeasureIndex, os, gc);
+                v.StaffIndex, v.MeasureIndex, os, gc, pageHeight);
         }
     }
 
@@ -691,7 +705,8 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/lyric-hyphen.cc:60-100 LyricHyphen grob
     /// </remarks>
-    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.16;
@@ -703,7 +718,8 @@ internal static partial class SharedRenderer
                 {
                     var src = layout.LyricLayouts[h.LyricIndex];
                     if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
-                    gc.DrawLine(dash.X1, sy + dash.Y, dash.X2, sy + dash.Y,
+                    double dashY = (pageHeight - sy) - dash.Y;
+                    gc.DrawLine(dash.X1, dashY, dash.X2, dashY,
                         Color.Black, thickness);
                 }
             }
@@ -711,17 +727,18 @@ internal static partial class SharedRenderer
             {
                 var src = layout.LyricLayouts[h.LyricIndex];
                 if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
+                double extY = (pageHeight - sy) - h.ExtenderY;
                 if (h.CrossesSystemBreak)
                 {
-                    gc.DrawLine(h.ExtenderStartX, sy + h.ExtenderY,
-                        h.FirstSegmentEndX, sy + h.ExtenderY, Color.Black, 0.1);
-                    gc.DrawLine(h.SecondSegmentStartX, sy + h.ExtenderY,
-                        h.ExtenderEndX, sy + h.ExtenderY, Color.Black, 0.1);
+                    gc.DrawLine(h.ExtenderStartX, extY,
+                        h.FirstSegmentEndX, extY, Color.Black, 0.1);
+                    gc.DrawLine(h.SecondSegmentStartX, extY,
+                        h.ExtenderEndX, extY, Color.Black, 0.1);
                 }
                 else
                 {
-                    gc.DrawLine(h.ExtenderStartX, sy + h.ExtenderY,
-                        h.ExtenderEndX, sy + h.ExtenderY, Color.Black, 0.1);
+                    gc.DrawLine(h.ExtenderStartX, extY,
+                        h.ExtenderEndX, extY, Color.Black, 0.1);
                 }
             }
         }
@@ -731,15 +748,16 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
     /// <remarks>LILYPOND-REF: scm/part-combiner.scm — CombineTextScript</remarks>
-    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+        double pageHeight)
     {
         if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;
         foreach (var pc in layout.PartCombineLayouts)
         {
             if (!sysY.TryGetValue(pc.MeasureIndex, out var s)) continue; // other page
-            // Frame B -> device: reflect the Y-up value against the system top.
-            double y = StaffFrame.ToDevice(pc.YUp, s);
+            // Page Y-up: lift the system top and add the stored offset.
+            double y = (pageHeight - s) + pc.YUp;
             gc.DrawText(pc.Text, pc.X, y, size, "serif",
                 FontStyle.Italic, TextAnchor.Start, Color.Black);
         }
@@ -775,15 +793,16 @@ internal static partial class SharedRenderer
 
         double stemMidY = (stemAttachY + stemEndY) / 2;
         double totalHeight = beamCount * beamThickness + (beamCount - 1) * beamGap;
-        double startY = stemMidY - totalHeight / 2 + beamThickness / 2;
+        // Offsets from the stem midpoint flip into the Y-up frame.
+        double startY = stemMidY + totalHeight / 2 - beamThickness / 2;
 
         for (int i = 0; i < beamCount; i++)
         {
-            double y = startY + i * (beamThickness + beamGap);
+            double y = startY - i * (beamThickness + beamGap);
             double halfW = beamWidth / 2;
             double dy = halfW * slope;
-            double y1 = stemUp ? y + dy : y - dy;
-            double y2 = stemUp ? y - dy : y + dy;
+            double y1 = stemUp ? y - dy : y + dy;
+            double y2 = stemUp ? y + dy : y - dy;
             gc.DrawLine(stemX - halfW, y1, stemX + halfW, y2,
                 Color.Black, beamThickness);
         }

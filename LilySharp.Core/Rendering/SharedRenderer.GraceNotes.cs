@@ -38,25 +38,32 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing grob
     /// </remarks>
     private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty) return;
         foreach (var g in layout.GraceNoteLayouts)
         {
             if (!sysY.TryGetValue(g.MeasureIndex, out var sy)) continue; // other page
+            double syUp = pageHeight - sy;
 
             // Tab staff: grace notes are small fret numbers on the string lines,
             // not noteheads. No stems/beam/slur/ledger — tab grace is just the
             // shrunken digit before the main fret.
             if (g.Tuning is { } graceTuning)
             {
-                DrawTabGraceNotes(g, sy, graceTuning, g.TabClef, g.TabTransposition, gc);
+                DrawTabGraceNotes(g, syUp, graceTuning, g.TabClef, g.TabTransposition, gc);
                 continue;
             }
 
             // StaffYOffset places the grace over its OWN staff in a multi-staff
-            // score (0 for the first staff / single-staff).
-            double staffMiddleY = sy + g.StaffYOffset + StaffHeight / 2;
+            // score (0 for the first staff / single-staff). Y-up: below the system
+            // top is smaller Y-up.
+            double staffMiddleY = syUp - g.StaffYOffset - StaffHeight / 2;
+            // Exact DEVICE staff middle (from the device system top sy) — for the
+            // stem geometry, which is emitted device-then-flipped so its ends stay
+            // byte-identical (a Y-up head + stemLen recombination can perturb an F2
+            // boundary).
+            double deviceStaffMid = sy + g.StaffYOffset + StaffHeight / 2;
             // On an ossia staff the whole group shrinks again: head Ys go
             // through the staff-top affine and the grace's own scale compounds
             // with the ossia scale (a grace on a magnified staff is scaled
@@ -70,12 +77,13 @@ internal static partial class SharedRenderer
             // the whole group's positions are known.
             var headX = new List<double>(g.Notes.Length);
             var headY = new List<double>(g.Notes.Length);
+            var headYDev = new List<double>(g.Notes.Length);
             var beamCounts = new List<int>(g.Notes.Length);
             using (gc.Source(g.SourcePosition))
             {
                 foreach (var note in g.Notes)
                 {
-                    double y = os.Y(StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY),
+                    double y = os.YUp(staffMiddleY + note.StaffPosition / 2.0,
                         g.StaffIndex, g.MeasureIndex);
                     // Ledgers under the head — layer 0 with the staff lines.
                     // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
@@ -83,7 +91,7 @@ internal static partial class SharedRenderer
                     // per-step offsets shrink via `unit`, matching the heads.
                     if (note.NeedsLedger)
                         DrawLedgerLines(note.StaffPosition, currentX,
-                            os.Y(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
+                            os.YUp(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
                             EngravingDefaults.NoteheadBlackWidth * eff,
                             unit: os.Size(1.0, g.StaffIndex));
                     if (note.Accidental is { } acc)
@@ -94,6 +102,8 @@ internal static partial class SharedRenderer
                         GlyphMetrics.NoteheadBlack.Height * eff);
                     headX.Add(currentX);
                     headY.Add(y);
+                    headYDev.Add(os.Y(deviceStaffMid - note.StaffPosition / 2.0,
+                        g.StaffIndex, g.MeasureIndex));
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
                     lastNoteY = y;
@@ -111,8 +121,8 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
-                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff,
-                    g.Type == GraceNoteType.Acciaccatura, gc);
+                DrawGraceStemsAndBeam(headX, headY, headYDev, beamCounts, eff,
+                    g.Type == GraceNoteType.Acciaccatura, gc, pageHeight);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -120,8 +130,8 @@ internal static partial class SharedRenderer
                 if (g.Notes.Length > 0 &&
                     g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
                 {
-                    double mainY = os.Y(
-                        StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY),
+                    double mainY = os.YUp(
+                        staffMiddleY + g.MainNoteStaffPosition / 2.0,
                         g.StaffIndex, g.MeasureIndex);
                     // A main note below the middle line is stem-up (stem on the head's
                     // RIGHT); the slur can then run to the head centre. A stem-down note
@@ -129,7 +139,7 @@ internal static partial class SharedRenderer
                     bool mainStemUp = g.MainNoteStaffPosition < 0;
                     DrawGraceSlur(lastNoteX, lastNoteY, lastGraceStaffPos,
                         g.MainNoteX, mainY, g.MainNoteStaffPosition, mainStemUp,
-                        g.MeasureIndex, eff, gc);
+                        g.MeasureIndex, eff, gc, pageHeight);
                 }
             }
         }
@@ -141,10 +151,10 @@ internal static partial class SharedRenderer
     /// scaled by the grace scale. No stems, beams, slurs, or ledger lines — tab
     /// grace notes are just the shrunken digits ahead of the main fret.
     /// </summary>
-    private static void DrawTabGraceNotes(GraceNoteLayout g, double sy, TuningType tuning,
+    private static void DrawTabGraceNotes(GraceNoteLayout g, double syUp, TuningType tuning,
         ClefType clef, int transposition, IDrawingContext gc)
     {
-        double tabTopY = sy + g.StaffYOffset;
+        double tabTopY = syUp - g.StaffYOffset;
         int[] tuningArray = Tunings.GetTuning(tuning);
         int octaveShift = Tunings.SoundingShift(clef, transposition);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
@@ -160,14 +170,15 @@ internal static partial class SharedRenderer
             foreach (var note in g.Notes)
             {
                 var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
-                double noteY = tabTopY + (stringNum - 1) * stringSpace;
+                double noteY = tabTopY - (stringNum - 1) * stringSpace;
                 string fretText = fret.ToString();
                 double bgWidth = (fretText.Length == 1 ? 0.625 : 1.0) * fontSize;
                 double bgHeight = 0.6875 * fontSize;
-                // White background occludes the string line behind the digit.
-                gc.DrawRectangle(currentX - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
+                // White background occludes the string line behind the digit. The
+                // rect's visual-top edge is above the string line (larger Y-up).
+                gc.DrawRectangle(currentX - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
                     fill: Color.White);
-                gc.DrawText(fretText, currentX, noteY + fontSize * 0.32, fontSize, "serif",
+                gc.DrawText(fretText, currentX, noteY - fontSize * 0.32, fontSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
                 currentX += 1.2 * g.Scale;
             }
@@ -200,8 +211,8 @@ internal static partial class SharedRenderer
     /// flags rather than a partial beam.
     /// </remarks>
     private static void DrawGraceStemsAndBeam(
-        List<double> xs, List<double> ys, List<int> beamCounts, double scale,
-        bool acciaccatura, IDrawingContext gc)
+        List<double> xs, List<double> ys, List<double> ysDev, List<int> beamCounts, double scale,
+        bool acciaccatura, IDrawingContext gc, double pageHeight)
     {
         int n = xs.Count;
         if (n == 0) return;
@@ -211,7 +222,9 @@ internal static partial class SharedRenderer
         // Stem-up attaches at the right edge of the (scaled) notehead.
         double upAttach = EngravingDefaults.NoteheadBlackWidth * scale - stemThick / 2;
         double StemX(int i) => xs[i] + upAttach;
-        double StemEndY(int i) => ys[i] - stemLen;   // up = smaller device Y
+        // Device stem end (device head − stemLen, up), flipped once to page Y-up so
+        // the value is byte-identical even on an F2 boundary.
+        double StemEndY(int i) => pageHeight - (ysDev[i] - stemLen);
 
         int maxBeams = 0;
         foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);
@@ -266,15 +279,19 @@ internal static partial class SharedRenderer
         {
             double xL = StemX(a) - halfStem, xR = StemX(b) + halfStem;
             double yL = BeamY(xL) + off, yR = BeamY(xR) + off;
+            // Quad corner offsets flip with the Y-up frame so each vertex keeps its
+            // original device Y (and emit slot).
             gc.DrawFilledQuad(
-                (xL, yL - beamHalf), (xR, yR - beamHalf),
-                (xR, yR + beamHalf), (xL, yL + beamHalf), Color.Black);
+                (xL, yL + beamHalf), (xR, yR + beamHalf),
+                (xR, yR - beamHalf), (xL, yL - beamHalf), Color.Black);
         }
 
         Beam(0, n - 1, 0);                    // primary across the whole group
         for (int level = 1; level < maxBeams; level++)
         {
-            double off = level * beamTrans;   // secondaries stack toward the heads
+            // Secondaries stack toward the heads (below the up-stem beam), which is
+            // the negative direction in the page Y-up frame.
+            double off = -(level * beamTrans);
             int i = 0;
             while (i < n - 1)
             {
@@ -315,12 +332,12 @@ internal static partial class SharedRenderer
         double hipThickness = EngravingDefaults.LineThickness + 0.069;
         double hipWidth = upflagWidth - hipThickness / 2;
 
-        // feta y is up; device y is down, so a feta y of -k is k staff-spaces below
-        // the stem top (= +k in device).
+        // feta y is up; the page frame is now Y-up too, so a feta y of -k is k
+        // staff-spaces below the stem top (= −k in Y-up).
         double x1 = stemX - hipWidth * hipDepthRatio * scale;
-        double y1 = stemTopY + footDepth * hipDepthRatio * scale;   // lower-left
+        double y1 = stemTopY - footDepth * hipDepthRatio * scale;   // lower-left
         double x2 = stemX + hipWidth * scale;
-        double y2 = stemTopY + flare * scale;                       // upper-right
+        double y2 = stemTopY - flare * scale;                       // upper-right
         gc.DrawLine(x1, y1, x2, y2, Color.Black, 1.5 * EngravingDefaults.StemThickness * scale);
     }
 
@@ -343,8 +360,13 @@ internal static partial class SharedRenderer
 
     private static void DrawGraceSlur(double graceX, double graceY, int graceStaffPos,
         double mainX, double mainY, int mainStaffPos, bool mainStemUp,
-        int measureIndex, double scale, IDrawingContext gc)
+        int measureIndex, double scale, IDrawingContext gc, double pageHeight)
     {
+        // The slur scorer reasons in device coordinates (its result is layout Y-up =
+        // -device); convert the Y-up head anchors to device, solve, then flip the
+        // final curve back to page Y-up for the flipping context.
+        graceY = pageHeight - graceY;
+        mainY = pageHeight - mainY;
         double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
         double startY = graceY + 0.5 + GraceSlurStartClearance;
         // A stem-DOWN main note carries its stem on the head's LEFT, so end the slur
@@ -403,7 +425,9 @@ internal static partial class SharedRenderer
         var c1 = (X: sx + perpX * height + ux * indent, Y: sy + perpY * height + uy * indent);
         var c2 = (X: ex + perpX * height - ux * indent, Y: ey + perpY * height - uy * indent);
 
-        DrawCurve(sx, sy, ex, ey, c1, c2,
+        // Flip the device-space curve back to page Y-up for the flipping context.
+        DrawCurve(sx, pageHeight - sy, ex, pageHeight - ey,
+            (c1.X, pageHeight - c1.Y), (c2.X, pageHeight - c2.Y),
             curveUp: false, EngravingDefaults.SlurMidThickness * scale, gc);
     }
 

@@ -49,13 +49,15 @@ internal static partial class SharedRenderer
     ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level
     ///   translate group, so this method uses indent / 2 directly).
     /// </remarks>
-    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
+    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc,
+        double pageHeight)
     {
         if (system.Indent <= 0) return;
 
         const double NameFontScale = 0.75;
         double actualFontSize = FontSize * NameFontScale;
         double nameX = system.Indent / 2.0;
+        double systemYUp = pageHeight - system.Y;
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
         // at the system Y with the standard staff height.
@@ -65,7 +67,7 @@ internal static partial class SharedRenderer
             {
                 if (string.IsNullOrEmpty(st.InstrumentName) || st.IsTab)
                     continue;
-                gc.DrawText(st.InstrumentName, nameX, system.Y + StaffHeight / 2.0,
+                gc.DrawText(st.InstrumentName, nameX, systemYUp - StaffHeight / 2.0,
                     actualFontSize, "serif", FontStyle.Regular,
                     TextAnchor.Middle, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
@@ -97,7 +99,7 @@ internal static partial class SharedRenderer
                 }
                 if (namedCount == 1 && onlyNamed is { })
                 {
-                    double centerY = system.Y + (gs.BraceTop + gs.BraceBottom) / 2.0;
+                    double centerY = systemYUp - (gs.BraceTop + gs.BraceBottom) / 2.0;
                     gc.DrawText(onlyNamed.InstrumentName!, nameX, centerY,
                         actualFontSize, "serif", FontStyle.Regular,
                         TextAnchor.Middle, fill: null,
@@ -111,8 +113,8 @@ internal static partial class SharedRenderer
             {
                 if (string.IsNullOrEmpty(staffLayout.InstrumentName) || staffLayout.IsHidden)
                     continue;
-                double staffY = system.Y + staffLayout.Y;
-                double centerY = staffY + staffLayout.Height / 2.0;
+                double staffY = systemYUp - staffLayout.Y;
+                double centerY = staffY - staffLayout.Height / 2.0;
                 gc.DrawText(staffLayout.InstrumentName, nameX, centerY,
                     actualFontSize, "serif", FontStyle.Regular,
                     TextAnchor.Middle, fill: null,
@@ -138,10 +140,11 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawStaffConnectors(
         MultiStaffScore score, ScoreLayout layout, SystemLayout system,
-        double systemStartX, IDrawingContext gc)
+        double systemStartX, IDrawingContext gc, double pageHeight)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
+        double systemYUp = pageHeight - system.Y;
 
         // SystemStartBar across ALL visible staves of the system — EXCLUDING
         // independent text rows (chords / lyrics), which LilyPond's ChordNames /
@@ -157,8 +160,8 @@ internal static partial class SharedRenderer
             .ToList();
         if (allStaves.Count >= 2)
         {
-            double top = system.Y + allStaves[0].Y;
-            double bottom = system.Y + allStaves[^1].Y + allStaves[^1].Height;
+            double top = systemYUp - allStaves[0].Y;
+            double bottom = systemYUp - (allStaves[^1].Y + allStaves[^1].Height);
             DrawSystemStartBarLine(systemStartX, top, bottom, gc);
         }
 
@@ -194,9 +197,9 @@ internal static partial class SharedRenderer
 
                 for (int i = 0; i + 1 < staves.Count; i++)
                 {
-                    double gapTop = system.Y + staves[i].Y + staves[i].Height;
-                    double gapBottom = system.Y + staves[i + 1].Y;
-                    double gapHeight = gapBottom - gapTop;
+                    double gapTop = systemYUp - (staves[i].Y + staves[i].Height);
+                    double gapBottom = systemYUp - staves[i + 1].Y;
+                    double gapHeight = gapTop - gapBottom;
                     if (gapHeight <= 0)
                         continue;
 
@@ -211,15 +214,16 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
+    private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc, double pageHeight)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
+        double systemYUp = pageHeight - system.Y;
         foreach (var group in system.StaffGroups)
         {
             if (group.GrandStaffLayout is not { } delim) continue;
-            double top = system.Y + delim.BraceTop;
-            double bottom = system.Y + delim.BraceBottom;
-            double height = bottom - top;
+            double top = systemYUp - delim.BraceTop;
+            double bottom = systemYUp - delim.BraceBottom;
+            double height = top - bottom;
             switch (delim.DelimiterType)
             {
                 case SystemStartDelimiterType.Bracket:
@@ -247,15 +251,16 @@ internal static partial class SharedRenderer
         double thickness = 0.45;
         double serifH = 0.4, serifW = 0.6;
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
-        // Top serif (right-pointing triangle filled)
+        // Top serif (right-pointing triangle filled); serif tip drops toward the
+        // staff (device down = smaller Y-up).
         gc.DrawClosedBezier(
             (x, top), (x + serifW, top), (x + serifW, top),
-            (x + serifW * 0.3, top + serifH), (x + serifW * 0.3, top + serifH), (x + serifW * 0.3, top + serifH),
+            (x + serifW * 0.3, top - serifH), (x + serifW * 0.3, top - serifH), (x + serifW * 0.3, top - serifH),
             Color.Black);
         // Bottom serif
         gc.DrawClosedBezier(
             (x, bottom), (x + serifW, bottom), (x + serifW, bottom),
-            (x + serifW * 0.3, bottom - serifH), (x + serifW * 0.3, bottom - serifH), (x + serifW * 0.3, bottom - serifH),
+            (x + serifW * 0.3, bottom + serifH), (x + serifW * 0.3, bottom + serifH), (x + serifW * 0.3, bottom + serifH),
             Color.Black);
     }
 
@@ -294,13 +299,13 @@ internal static partial class SharedRenderer
         };
         double clefY = clefChange.NewClef switch
         {
-            ClefType.Bass or ClefType.Bass8Below => staffY + 1,
-            ClefType.Alto or ClefType.Percussion => staffY + 2,
-            ClefType.Tenor => staffY + 1,
-            ClefType.Soprano => staffY + 4,
-            ClefType.MezzoSoprano => staffY + 3,
-            ClefType.Baritone => staffY + 0,
-            _ => staffY + 3,
+            ClefType.Bass or ClefType.Bass8Below => staffY - 1,
+            ClefType.Alto or ClefType.Percussion => staffY - 2,
+            ClefType.Tenor => staffY - 1,
+            ClefType.Soprano => staffY - 4,
+            ClefType.MezzoSoprano => staffY - 3,
+            ClefType.Baritone => staffY - 0,
+            _ => staffY - 3,
         };
         using (gc.Source(clefChange.SourcePosition))
         {
@@ -350,7 +355,7 @@ internal static partial class SharedRenderer
                 if (anyNatural)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNaturalPos, staffPosition);
-                double ny = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
+                double ny = (staffY - StaffHeight / 2) + staffPosition / 2.0;
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, ny, FontSize);
                 prevNaturalPos = staffPosition;
@@ -390,7 +395,7 @@ internal static partial class SharedRenderer
                 if (i > 0)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNatPos, staffPosition);
-                double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
+                double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
                 prevNatPos = staffPosition;
@@ -427,7 +432,7 @@ internal static partial class SharedRenderer
     // brace). LILYPOND-REF: scm/define-markup-commands.scm (left-brace).
     private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)
     {
-        double height = bottom - top;
+        double height = top - bottom;
         double yMid = (top + bottom) / 2;
 
         const int braceGlyphStart = 0xE000;

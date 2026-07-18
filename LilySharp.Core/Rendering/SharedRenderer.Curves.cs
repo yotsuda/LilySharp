@@ -29,7 +29,7 @@ internal static partial class SharedRenderer
     // ---------- Ties & slurs ----------
 
     private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         foreach (var tie in layout.TieLayouts)
         {
@@ -43,12 +43,12 @@ internal static partial class SharedRenderer
             DrawBow(tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp,
                 tie.Control1, tie.Control2, tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                tie.StaffIndex, mi, os, gc);
+                tie.StaffIndex, mi, os, gc, pageHeight);
         }
     }
 
     private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         foreach (var slur in layout.SlurLayouts)
         {
@@ -62,7 +62,7 @@ internal static partial class SharedRenderer
             DrawBow(slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp,
                 slur.Control1, slur.Control2, slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
-                slur.StaffIndex, mi, os, gc);
+                slur.StaffIndex, mi, os, gc, pageHeight);
         }
     }
 
@@ -80,14 +80,16 @@ internal static partial class SharedRenderer
         (double X, double Y) c1, (double X, double Y) c2,
         bool curveUp, double midThickness,
         int staffIndex, int startMeasureIndex,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
-        // The bow's Y coordinates arrive in the page Y-up frame (up-positive =
-        // -device); this is the single flip back to device, before the ossia affine.
-        double startY = os.Y(-startYUp, staffIndex, startMeasureIndex);
-        double endY = os.Y(-endYUp, staffIndex, startMeasureIndex);
-        c1 = (c1.X, os.Y(-c1.Y, staffIndex, startMeasureIndex));
-        c2 = (c2.X, os.Y(-c2.Y, staffIndex, startMeasureIndex));
+        // The bow's Y coordinates arrive in the layout Y-up frame (up-positive =
+        // -device). The page context is now Y-flipped (page-bottom origin), so
+        // convert to that page Y-up (H − device = H + layoutYUp) and apply the
+        // ossia affine in the same frame (os.YUp).
+        double startY = os.YUp(pageHeight + startYUp, staffIndex, startMeasureIndex);
+        double endY = os.YUp(pageHeight + endYUp, staffIndex, startMeasureIndex);
+        c1 = (c1.X, os.YUp(pageHeight + c1.Y, staffIndex, startMeasureIndex));
+        c2 = (c2.X, os.YUp(pageHeight + c2.Y, staffIndex, startMeasureIndex));
         midThickness = os.Size(midThickness, staffIndex);
         DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
     }
@@ -125,7 +127,13 @@ internal static partial class SharedRenderer
         double dx = endX - startX, dy = endY - startY;
         double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
         double half = 0.5 * midThickness; // LP lookup.cc:405 perp = 0.5 * curvethick
-        double perpX = -dy / len * half, perpY = dx / len * half;
+        // The page context is Y-flipped (page-bottom Y-up). Under that flip the
+        // chord's perpendicular direction reflects, which would swap the two
+        // half-curves of the bezier sandwich into different emit slots (and change
+        // the SVG path bytes). Negating the perpendicular keeps each control point
+        // in its original slot so the flipped output is byte-identical to the
+        // former device-space curve.
+        double perpX = dy / len * half, perpY = -dx / len * half;
         var c1a = (X: c1.X + perpX, Y: c1.Y + perpY);
         var c2a = (X: c2.X + perpX, Y: c2.Y + perpY);
         var c1b = (X: c1.X - perpX, Y: c1.Y - perpY);

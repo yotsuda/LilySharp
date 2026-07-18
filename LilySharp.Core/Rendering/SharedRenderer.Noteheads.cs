@@ -33,10 +33,13 @@ internal static partial class SharedRenderer
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
+        double pageHeight, double deviceStaffMiddleY,
         int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue,
         HashSet<int>? percentCovered = null)
     {
-        double staffMiddleY = staffY + StaffHeight / 2;
+        // staffY is the top-line Y-up; the middle line is below it (device down =
+        // smaller Y-up).
+        double staffMiddleY = staffY - StaffHeight / 2;
 
         // Ledger pre-pass: requests are collected across the whole system so
         // adjacent columns can shorten each other's ledgers
@@ -79,7 +82,7 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc);
+                        forcedStemUp, headWiped, gc, pageHeight, deviceStaffMiddleY);
                     break;
                 case RestItem rest:
                     // A spacer rest ('s') reserves its column width but is never
@@ -94,7 +97,7 @@ internal static partial class SharedRenderer
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc);
+                        forcedStemUp, headWiped, gc, pageHeight, deviceStaffMiddleY);
                     break;
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
@@ -339,10 +342,10 @@ internal static partial class SharedRenderer
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc)
+        IDrawingContext gc, double pageHeight, double deviceStaffMiddleY)
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
-        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
+        double noteY = staffMiddleY + note.StaffPosition / 2.0;
         // Cue notes scale to ~0.66× (LP CueVoice fontSize = -4 → magstep(-4)).
         // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
         double noteFontSize = note.IsCue ? FontSize * 0.66 : FontSize;
@@ -406,10 +409,14 @@ internal static partial class SharedRenderer
             // extend-to-center-line rule, faithfully following LilyPond's
             // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
             int durLog = StemCalculator.GetDurationLog(noteValue);
-            double staffTopY = staffMiddleY - StaffHeight / 2.0;
-            double stemEndY = StemCalculator.CalculateStemEndY(
-                noteY, stemUp, staffTopY, durLog, note.StaffPosition);
-            gc.DrawLine(stemX, noteY + StemAttachYOffset(note.Notehead, stemUp, noteValue),
+            // StemCalculator works in device coordinates. Feed it the device positions
+            // computed directly (deviceMiddle − offset), matching the former device
+            // order exactly so the calculator's output — hence the flipped stem end —
+            // is byte-identical (a pageHeight − noteY reconstruction can perturb the
+            // calculator input by 1 ULP and flip an F2 boundary).
+            double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
+                deviceStaffMiddleY - note.StaffPosition / 2.0, stemUp, deviceStaffMiddleY - StaffHeight / 2.0, durLog, note.StaffPosition);
+            gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
                 stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
@@ -442,7 +449,7 @@ internal static partial class SharedRenderer
             // Same Dot_configuration machinery as chords (for a single dot
             // this reduces to "line notes move to the space above").
             int dotPos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
-            double dotY = StaffFrame.PositionToDevice(dotPos, staffMiddleY);
+            double dotY = staffMiddleY + dotPos / 2.0;
             for (int d = 0; d < note.Dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
                     dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
@@ -451,7 +458,7 @@ internal static partial class SharedRenderer
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc)
+        IDrawingContext gc, double pageHeight, double deviceStaffMiddleY)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
@@ -480,7 +487,7 @@ internal static partial class SharedRenderer
         var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets, headScale);
         foreach (var al in accLayouts)
         {
-            double ay = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
+            double ay = staffMiddleY + al.StaffPosition / 2.0;
             // Anchor the accidental to its own member's pitch offset so it
             // highlights together with that head (fall back to the chord).
             int accSource = chord.SourcePosition;
@@ -490,12 +497,14 @@ internal static partial class SharedRenderer
                 x + al.XOffset, ay, accSource, gc, headScale);
         }
 
-        double topY = double.MaxValue, bottomY = double.MinValue;
+        // topY/bottomY are the visually top/bottom heads. In the Y-up frame the top
+        // head has the LARGER Y, so topY tracks the max and bottomY the min.
+        double topY = double.MinValue, bottomY = double.MaxValue;
         int maxPos = int.MinValue, minPos = int.MaxValue;
         for (int i = 0; i < chord.Notes.Length; i++)
         {
             var n = chord.Notes[i];
-            double y = StaffFrame.PositionToDevice(n.StaffPosition, staffMiddleY);
+            double y = staffMiddleY + n.StaffPosition / 2.0;
             // A drum chord mixes heads per member (bd default, hh cross).
             char memberHead = n.Notehead != NoteheadStyle.Default
                 ? EmmentalerGlyphs.GetNotehead(n.Notehead, noteValue)
@@ -509,8 +518,8 @@ internal static partial class SharedRenderer
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale,
                         GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);
-            if (y < topY) topY = y;
-            if (y > bottomY) bottomY = y;
+            if (y > topY) topY = y;
+            if (y < bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
             if (n.StaffPosition < minPos) minPos = n.StaffPosition;
         }
@@ -534,7 +543,7 @@ internal static partial class SharedRenderer
                 chord.Notes.Select(n => n.StaffPosition).ToArray());
             foreach (int p in resolved)
             {
-                double dotY = StaffFrame.PositionToDevice(p, staffMiddleY);
+                double dotY = staffMiddleY + p / 2.0;
                 for (int d = 0; d < chord.Dots; d++)
                     using (gc.Source(chord.SourcePosition))
                         gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
@@ -557,13 +566,12 @@ internal static partial class SharedRenderer
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
             // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).
             double stemStartY = (stemUp ? bottomY : topY)
-                + StemAttachYOffset(chord.Notehead, stemUp, noteValue);
+                - StemAttachYOffset(chord.Notehead, stemUp, noteValue);
             int stemTipPos = stemUp ? maxPos : minPos;
-            double stemTipNoteY = stemUp ? topY : bottomY;
             int durLog = StemCalculator.GetDurationLog(noteValue);
-            double staffTopY = staffMiddleY - StaffHeight / 2.0;
-            double stemEndY = StemCalculator.CalculateStemEndY(
-                stemTipNoteY, stemUp, staffTopY, durLog, stemTipPos);
+            // Device-exact calculator inputs (deviceMiddle − offset), as in DrawNote.
+            double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
+                deviceStaffMiddleY - stemTipPos / 2.0, stemUp, deviceStaffMiddleY - StaffHeight / 2.0, durLog, stemTipPos);
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
         }
@@ -688,7 +696,7 @@ internal static partial class SharedRenderer
                 if (left >= req.LedgerRight)
                     continue;
 
-                double y = StaffFrame.PositionToDevice(pos, req.StaffMiddleY);
+                double y = req.StaffMiddleY + pos / 2.0;
                 gc.DrawLine(left, y, req.LedgerRight, y, Color.Black, thickness);
             }
         }
@@ -712,7 +720,7 @@ internal static partial class SharedRenderer
         // staff middle — used by ossia grace groups, whose Ys go through the
         // staff-top affine while this helper computes offsets itself.
         double YOf(int pos) => staffMiddleY
-            + (StaffFrame.PositionToDevice(pos, staffMiddleY) - staffMiddleY) * unit;
+            + ((staffMiddleY + pos / 2.0) - staffMiddleY) * unit;
 
         // Ledger lines above staff (staff position > 4 = above top line)
         for (int pos = 6; pos <= staffPosition; pos += 2)
@@ -732,7 +740,9 @@ internal static partial class SharedRenderer
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
         char glyph = EmmentalerGlyphs.GetRest(noteValue);
-        double y = noteValue == 1 ? staffY + 1 : staffY + 2;  // whole rests hang from 4th line
+        // staffY is the top-line Y-up; rest origins sit below it (device down =
+        // smaller Y-up).
+        double y = noteValue == 1 ? staffY - 1 : staffY - 2;  // whole rests hang from 4th line
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
 
@@ -744,7 +754,7 @@ internal static partial class SharedRenderer
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + dotWidth;
-            double dotY = staffY + 2 - 0.5; // staff position +1 (3rd space)
+            double dotY = staffY - 2 + 0.5; // staff position +1 (3rd space)
             for (int d = 0; d < rest.Dots; d++)
                 using (gc.Source(rest.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,

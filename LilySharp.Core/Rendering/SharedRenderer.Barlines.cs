@@ -169,7 +169,7 @@ internal static partial class SharedRenderer
                 // (~⅔ dash, ⅓ gap per staff space).
                 const double dash = 0.67, gap = 0.33;
                 for (double dy = 0; dy < height; dy += dash + gap)
-                    gc.DrawRectangle(x, staffY + dy, thin,
+                    gc.DrawRectangle(x, staffY - dy, thin,
                         Math.Min(dash, height - dy), fill: Color.Black);
                 break;
             }
@@ -211,8 +211,10 @@ internal static partial class SharedRenderer
         // space (passed in); otherwise the notation 2nd/3rd-space positions.
         double y1 = tabDots?.Y1 ?? EngravingDefaults.RepeatDotPosition1;
         double y2 = tabDots?.Y2 ?? EngravingDefaults.RepeatDotPosition2;
-        gc.DrawCircle(x + r, staffY + y1, r, Color.Black);
-        gc.DrawCircle(x + r, staffY + y2, r, Color.Black);
+        // staffY is the Y-up top edge; the dot rows sit below it (device down =
+        // smaller Y-up).
+        gc.DrawCircle(x + r, staffY - y1, r, Color.Black);
+        gc.DrawCircle(x + r, staffY - y2, r, Color.Black);
     }
 
     /// <summary>Total horizontal extent of a barline glyph (for right-edge alignment).</summary>

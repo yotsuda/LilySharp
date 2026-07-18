@@ -247,13 +247,13 @@ internal static partial class SharedRenderer
         // it names (G / F / C); percussion centres on the middle line.
         double clefY = clef switch
         {
-            ClefType.Bass or ClefType.Bass8Below => staffY + 1,
-            ClefType.Alto or ClefType.Percussion => staffY + 2,
-            ClefType.Tenor => staffY + 1,
-            ClefType.Soprano => staffY + 4,       // C4 on the bottom line
-            ClefType.MezzoSoprano => staffY + 3,  // C4 on line 2
-            ClefType.Baritone => staffY + 0,      // C4 on the top line
-            _ => staffY + 3,
+            ClefType.Bass or ClefType.Bass8Below => staffY - 1,
+            ClefType.Alto or ClefType.Percussion => staffY - 2,
+            ClefType.Tenor => staffY - 1,
+            ClefType.Soprano => staffY - 4,       // C4 on the bottom line
+            ClefType.MezzoSoprano => staffY - 3,  // C4 on line 2
+            ClefType.Baritone => staffY - 0,      // C4 on the top line
+            _ => staffY - 3,
         };
         gc.DrawGlyph(glyph, x + 0.3, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
@@ -285,7 +285,7 @@ internal static partial class SharedRenderer
         double centerX = clefGlyphX + 1.1 * scale; // under the clef's descender (slightly left of the stem)
         // Below: clears the clef's lower curl. Above (treble^8): clears the
         // G clef's upper hook symmetrically.
-        double centerY = above ? staffY - 3.2 : staffY + 5.6;
+        double centerY = above ? staffY + 3.2 : staffY - 5.6;
         double size = FontSize * 0.80 * scale;     // digit ~2 ss tall, matching LP
         gc.DrawText("8", centerX, centerY, size, "serif",
             FontStyle.Italic, TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
@@ -300,12 +300,12 @@ internal static partial class SharedRenderer
             return x;
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY + 2, FontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - 2, FontSize);
             return x + 2.0;
         }
         if (ts.Beats == 2 && ts.BeatType == 2)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY + 2, FontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - 2, FontSize);
             return x + 2.0;
         }
         // Stack numerator over denominator, each centered on the staff like
@@ -336,14 +336,14 @@ internal static partial class SharedRenderer
         {
             if (ch == '+')
             {
-                gc.DrawText("+", nx + plusW / 2, staffY + 1 + digitHalfHeight - 0.55,
+                gc.DrawText("+", nx + plusW / 2, staffY - 1 - digitHalfHeight + 0.55,
                     2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
                 nx += plusW;
             }
             else
             {
                 gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
-                    nx, staffY + 1 + digitHalfHeight, FontSize);
+                    nx, staffY - 1 - digitHalfHeight, FontSize);
                 nx += digitW;
             }
         }
@@ -351,7 +351,7 @@ internal static partial class SharedRenderer
         foreach (var ch in den)
         {
             gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
-                dnx, staffY + 3 + digitHalfHeight, FontSize);
+                dnx, staffY - 3 - digitHalfHeight, FontSize);
             dnx += digitW;
         }
         return x + total + 0.4;
@@ -388,7 +388,7 @@ internal static partial class SharedRenderer
                     _ => "natural",
                 };
                 int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
-                double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
+                double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
                 x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
             }
@@ -408,7 +408,7 @@ internal static partial class SharedRenderer
         for (int i = 0; i < n; i++)
         {
             int staffPosition = KeySigStaffPosition(clef, isSharps, i);
-            double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
+            double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
             gc.DrawGlyph(glyph, x, y, FontSize);
             x += accidentalWidth;
         }

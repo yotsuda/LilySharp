@@ -28,7 +28,8 @@ internal static partial class SharedRenderer
 {
     // ---------- Beams ----------
 
-    private static void DrawBeams(MultiStaffScore score, ScoreLayout layout, SystemLayout system, IDrawingContext gc)
+    private static void DrawBeams(MultiStaffScore score, ScoreLayout layout, SystemLayout system, IDrawingContext gc,
+        double pageHeight)
     {
         var staffByIndex = score.EnumerateStaves().ToDictionary(s => s.GlobalStaffIndex, s => s.Staff);
         // Beams whose notes are hidden under a percent sign are hidden too.
@@ -54,9 +55,10 @@ internal static partial class SharedRenderer
             // The quanter's Y positions are staff positions relative to the
             // beam's OWN staff middle — resolve that staff in this system
             // (multi-staff scores; -1 = single staff = the system's first).
-            double staffY = beam.StaffIndex >= 0
+            // Top-line Y-up of the beam's own staff (page-bottom origin).
+            double staffY = pageHeight - (beam.StaffIndex >= 0
                 ? LayoutUtilities.FindStaffYInSystem(system, beam.StaffIndex)
-                : system.Y;
+                : system.Y);
 
             // Ossia beams get the same treatment as the ossia staff pass: a
             // uniform-scale group anchored at the staff's Y with X compensated
@@ -70,11 +72,16 @@ internal static partial class SharedRenderer
             IDrawingContext bgc = gc;
             if (ossiaBeam)
             {
-                ossiaScope = gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale));
+                // See DrawSystem's ossia group: the flip decorator conjugates this
+                // transform and re-flips the content by the page height, so the group
+                // translate absorbs the scaled page height (staffY is the top-line
+                // Y-up here, = H − deviceTop) and the content's local refpoint is
+                // pageHeight to stay byte-identical.
+                ossiaScope = gc.BeginGroup(new DrawingTransform(0, staffY - OssiaScale * pageHeight, OssiaScale, OssiaScale));
                 bgc = new UnscaledXDrawingContext(gc, OssiaScale);
-                staffY = 0;
+                staffY = pageHeight;
             }
-            double staffMiddleY = staffY + StaffHeight / 2;
+            double staffMiddleY = staffY - StaffHeight / 2;
             try
             {
 
@@ -123,8 +130,8 @@ internal static partial class SharedRenderer
             double StemAttachX(int i) => beam.MemberXPositions[i]
                 + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
 
-            double leftBeamY = StaffFrame.PositionToDevice(beam.LeftY, staffMiddleY);
-            double rightBeamY = StaffFrame.PositionToDevice(beam.RightY, staffMiddleY);
+            double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
+            double rightBeamY = staffMiddleY + beam.RightY / 2.0;
 
             // A tab beam's height can't come from the notation quanter — its Y is in
             // staff positions, not string lines. Lay it out from the STRING contour so
@@ -140,8 +147,10 @@ internal static partial class SharedRenderer
                 var xs = new double[n];
                 for (int i = 0; i < n; i++) xs[i] = StemAttachX(i);
                 var line = TabBeamQuant.Compute(grp, xs, tabDirGeom.Value, tabDir);
-                leftBeamY = TabBeamMath.At(line, leftStemX);
-                rightBeamY = TabBeamMath.At(line, rightStemX);
+                // The tab quanter returns device Y; lift to page Y-up (tab beams are
+                // never ossia, so this is the absolute page frame).
+                leftBeamY = pageHeight - TabBeamMath.At(line, leftStemX);
+                rightBeamY = pageHeight - TabBeamMath.At(line, rightStemX);
             }
 
             // Extend each beam END outward by half the stem thickness so the beam
@@ -165,7 +174,10 @@ internal static partial class SharedRenderer
             int maxBeamCount = grp.Members.Max(m => m.BeamCount);
             for (int level = 1; level < maxBeamCount; level++)
             {
-                double offset = level * EngravingDefaults.BeamTranslation;
+                // Secondary beams stack toward the heads. In device that is +offset
+                // for an up-stem beam (heads below); in the page Y-up frame that
+                // direction is negative, so start from the negated offset.
+                double offset = -(level * EngravingDefaults.BeamTranslation);
                 if (!(tabDirGeom.HasValue ? tabDir : grp.StemUp)) offset = -offset;
                 double beamSpanX = rightStemX - leftStemX;
                 double BeamYAt(double x) => leftBeamY + offset +
@@ -231,7 +243,9 @@ internal static partial class SharedRenderer
                     // stem's X aligned with the notation staff's stem; only the
                     // near end moves to the digit, with a small gap so the stem
                     // never overlaps the number.
-                    headY = TabStemHeadY(member.Item, up,
+                    // TabStemHeadY returns device Y; lift to page Y-up (tab beams
+                    // are never ossia).
+                    headY = pageHeight - TabStemHeadY(member.Item, up,
                         LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
                 }
                 else
@@ -239,10 +253,10 @@ internal static partial class SharedRenderer
                     // Ossia beams never cross staves: every member sits on the
                     // ossia's own (local) frame.
                     double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
-                        ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) + StaffHeight / 2
+                        ? pageHeight - LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
                         : staffMiddleY;
-                    headY = StaffFrame.PositionToDevice(GetMemberStaffPosition(member, up), memberStaffMiddleY)
-                        + StemAttachYOffset(member.Item switch
+                    headY = memberStaffMiddleY + GetMemberStaffPosition(member, up) / 2.0
+                        - StemAttachYOffset(member.Item switch
                         {
                             NoteItem n => n.Notehead,
                             ChordItem ch => ch.Notehead,

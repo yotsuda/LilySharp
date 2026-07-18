@@ -95,7 +95,11 @@ internal static partial class SharedRenderer
         bool firstPage = true;
         foreach (var page in layout.Pages)
         {
-            var gc = doc.BeginPage(page.Width, page.Height);
+            // Internal layout/geometry is device Y-down; the single conversion to the
+            // device output happens here, in the Y-flip decorator wrapping the page
+            // context. Every primitive Y handed to `gc` below is page Y-up
+            // (page-bottom origin) and the decorator maps it to device.
+            IDrawingContext gc = new YFlipDrawingContext(doc.BeginPage(page.Width, page.Height), page.Height);
             // `font "NAME"` header directive: remap every generic text family to the
             // configured face for the header AND the body (music glyphs pass through).
             // Wrap before DrawHeader and the margin group so both are covered.
@@ -115,7 +119,7 @@ internal static partial class SharedRenderer
             try
             {
                 foreach (var system in page.Systems)
-                    DrawSystem(score, layout, system, resolver, beamedItems, gc);
+                    DrawSystem(score, layout, system, resolver, beamedItems, gc, page.Height);
                 // Page-level overlays that span systems. The Y-anchor map is
                 // built from THIS page's systems only: system Y is page-local
                 // (each page restarts at MarginTop), so every overlay whose
@@ -126,33 +130,33 @@ internal static partial class SharedRenderer
                 var measureToSystemY = BuildMeasureToSystemY(page);
                 var measureToSystem = BuildMeasureToSystem(page);
                 var os = new OssiaShrink(ossiaStaves, measureToSystem, page.Height);
-                DrawTies(layout, measureToSystemY, os, gc);
-                DrawSlurs(layout, measureToSystemY, os, gc);
+                DrawTies(layout, measureToSystemY, os, gc, page.Height);
+                DrawSlurs(layout, measureToSystemY, os, gc, page.Height);
                 DrawDynamics(layout, measureToSystemY, os, gc);
                 DrawArticulations(layout, measureToSystemY, os, gc);
-                DrawLyrics(layout, measureToSystemY, gc);
-                DrawHairpins(layout, measureToSystemY, os, gc);
-                DrawOttavaBrackets(layout, measureToSystemY, os, gc);
-                DrawVoltaBrackets(layout, measureToSystemY, gc);
-                DrawTupletBrackets(layout, measureToSystemY, os, gc);
-                DrawTrillSpanners(layout, measureToSystemY, os, gc);
+                DrawLyrics(layout, measureToSystemY, gc, page.Height);
+                DrawHairpins(layout, measureToSystemY, os, gc, page.Height);
+                DrawOttavaBrackets(layout, measureToSystemY, os, gc, page.Height);
+                DrawVoltaBrackets(layout, measureToSystemY, gc, page.Height);
+                DrawTupletBrackets(layout, measureToSystemY, os, gc, page.Height);
+                DrawTrillSpanners(layout, measureToSystemY, os, gc, page.Height);
                 DrawGlissandos(layout, measureToSystemY, os, gc);
-                DrawArpeggios(layout, measureToSystemY, os, gc);
-                DrawGraceNotes(layout, measureToSystemY, os, gc);
-                DrawChordNames(layout, measureToSystemY, gc);
+                DrawArpeggios(layout, measureToSystemY, os, gc, page.Height);
+                DrawGraceNotes(layout, measureToSystemY, os, gc, page.Height);
+                DrawChordNames(layout, measureToSystemY, gc, page.Height);
                 DrawFiguredBass(layout, measureToSystemY, os, gc);
                 DrawPercentRepeats(layout, measureToSystemY, os, gc);
-                DrawBarNumbers(layout, measureToSystemY, gc);
-                DrawStanzaNumbers(layout, measureToSystemY, gc);
+                DrawBarNumbers(layout, measureToSystemY, gc, page.Height);
+                DrawStanzaNumbers(layout, measureToSystemY, gc, page.Height);
                 DrawFingerings(layout, measureToSystemY, os, gc);
-                DrawMusicMarks(layout, measureToSystemY, os, gc);
+                DrawMusicMarks(layout, measureToSystemY, os, gc, page.Height);
                 DrawCustomTexts(layout, measureToSystemY, os, gc);
-                DrawTextSpanners(layout, measureToSystemY, os, gc);
-                DrawPedalBrackets(layout, measureToSystemY, gc);
-                DrawMultiMeasureRests(layout, measureToSystemY, gc);
-                DrawTieVariants(layout, measureToSystemY, os, gc);
-                DrawLyricHyphens(layout, measureToSystemY, gc);
-                DrawPartCombine(layout, measureToSystemY, gc);
+                DrawTextSpanners(layout, measureToSystemY, os, gc, page.Height);
+                DrawPedalBrackets(layout, measureToSystemY, gc, page.Height);
+                DrawMultiMeasureRests(layout, measureToSystemY, gc, page.Height);
+                DrawTieVariants(layout, measureToSystemY, os, gc, page.Height);
+                DrawLyricHyphens(layout, measureToSystemY, gc, page.Height);
+                DrawPartCombine(layout, measureToSystemY, gc, page.Height);
             }
             finally
             {
@@ -172,12 +176,15 @@ internal static partial class SharedRenderer
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
+        // Keep the device-Y downward accumulation, but emit each baseline in the
+        // page's Y-up frame (page-bottom origin): the flipping context turns
+        // page.Height − y back into the device y.
         double y = options.MarginTop;
         if (score.Title is { } title)
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Title))
-                gc.DrawText(title, centerX, y, TitleFontSize, "serif",
+                gc.DrawText(title, centerX, page.Height - y, TitleFontSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle);
             y += TitleFontSize;
         }
@@ -185,7 +192,7 @@ internal static partial class SharedRenderer
         {
             double rightX = page.Width - options.MarginLeft;
             using (SourceScope(gc, score.Header.Composer))
-                gc.DrawText(composer, rightX, y, ComposerFontSize, "serif",
+                gc.DrawText(composer, rightX, page.Height - y, ComposerFontSize, "serif",
                     FontStyle.Italic, TextAnchor.End);
         }
     }
@@ -224,17 +231,18 @@ internal static partial class SharedRenderer
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,
         SystemLayout system, GrobPropertyResolver resolver,
-        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
+        double pageHeight)
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
 
         // System-start delimiters (brackets / bar lines connecting staves in a group).
-        DrawSystemStartDelimiters(system, gc);
+        DrawSystemStartDelimiters(system, gc, pageHeight);
 
         // Instrument names within the indent area (drawn before staves so glyphs
         // overlap correctly when names are wider than the indent).
-        DrawInstrumentNames(score, system, gc);
+        DrawInstrumentNames(score, system, gc, pageHeight);
 
         // Staff lines end exactly at the final barline (the last measure's right
         // edge), so the staff never overshoots a ragged system nor falls short of a
@@ -255,7 +263,7 @@ internal static partial class SharedRenderer
         }
 
         // Left-edge system bar + span bars through grand-staff gaps.
-        DrawStaffConnectors(score, layout, system, systemStartX, gc);
+        DrawStaffConnectors(score, layout, system, systemStartX, gc, pageHeight);
 
         // Lead-sheet score: every row is a text row (chords and/or lyrics, no
         // notation staff). Then there are no staff barlines, so draw the measure
@@ -311,7 +319,7 @@ internal static partial class SharedRenderer
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
                     double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
-                    DrawBarlines(system, staff, staffY, layout, gc, barHeight: h);
+                    DrawBarlines(system, staff, pageHeight - staffY, layout, gc, barHeight: h);
                 }
                 continue;
             }
@@ -323,8 +331,17 @@ internal static partial class SharedRenderer
             // staff in LP (one paper column per moment spans every staff).
             // LILYPOND-REF: lily/paper-column.cc, lily/spacing-spanner.cc;
             // ly/music-functions-init.ly magnifyStaff.
+            // The flip decorator conjugates this group transform AND re-flips the
+            // group's content by the page height. To keep BOTH the emitted <g>
+            // transform and the content's local coordinates byte-identical to the
+            // former device output, the group translate absorbs the scaled page
+            // height and the content's local refpoint is pageHeight (so localStaffY −
+            // offset flips back to the original local device offset). Deriving from
+            // the decorator's conjugation: emitted device translate =
+            // H − ty − scale·H must equal the original device staffY, giving
+            // ty = H(1 − scale) − staffY.
             IDisposable? groupScope = isOssia
-                ? gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale))
+                ? gc.BeginGroup(new DrawingTransform(0, pageHeight * (1 - OssiaScale) - staffY, OssiaScale, OssiaScale))
                 : null;
             IDrawingContext sgc = isOssia ? new UnscaledXDrawingContext(gc, OssiaScale) : gc;
 
@@ -355,7 +372,17 @@ internal static partial class SharedRenderer
 
             try
             {
-                double localStaffY = isOssia ? 0 : staffY;
+                // Non-ossia: the staff's top-line Y-up (page-bottom origin). Ossia:
+                // pageHeight — the content is inside the flip-conjugated group, so its
+                // local refpoint is the page height (localStaffY − offset then flips,
+                // via the decorator, back to the original local device offset).
+                double localStaffY = isOssia ? pageHeight : pageHeight - staffY;
+                // The EXACT device staff-middle for stem calculators (which reason in
+                // device Y). Reconstructing it from the Y-up localStaffY would round-trip
+                // through pageHeight and can perturb a calculator input by 1 ULP; take it
+                // straight from the device staffY (ossia works in its local device frame,
+                // top at 0).
+                double deviceStaffMiddleY = isOssia ? StaffHeight / 2.0 : staffY + StaffHeight / 2.0;
 
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
@@ -367,7 +394,7 @@ internal static partial class SharedRenderer
                         if (prItem.StaffIndex == globalIdx)
                             tabPercentCovered.Add(prItem.MeasureIndex);
                     DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX,
-                        beamedItems, tabPercentCovered, sgc);
+                        beamedItems, tabPercentCovered, sgc, pageHeight);
                     continue;
                 }
 
@@ -466,7 +493,7 @@ internal static partial class SharedRenderer
                         : resolver;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
                         system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
-                        fragFrom, fragTo, percentCovered);
+                        pageHeight, deviceStaffMiddleY, fragFrom, fragTo, percentCovered);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
@@ -495,10 +522,10 @@ internal static partial class SharedRenderer
 
         // Beams (use system-wide coordinates; ossia beams are rare and
         // outside the Phase 2-A scope so we draw at full scale)
-        DrawBeams(score, layout, system, gc);
+        DrawBeams(score, layout, system, gc, pageHeight);
 
         // SpanBars: connect barlines across the staves of each multi-staff group.
-        DrawSpanBars(score, system, gc);
+        DrawSpanBars(score, system, gc, pageHeight);
     }
 
     /// <summary>
@@ -507,16 +534,18 @@ internal static partial class SharedRenderer
     /// Repeat dots stay per-staff (drawn by <see cref="DrawBarlines"/>).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/span-bar.cc — SpanBar across a connected group.</remarks>
-    private static void DrawSpanBars(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
+    private static void DrawSpanBars(MultiStaffScore score, SystemLayout system, IDrawingContext gc,
+        double pageHeight)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
+        double systemYUp = pageHeight - system.Y;
 
         for (int gi = 0; gi < system.StaffGroups.Length && gi < score.StaffGroups.Length; gi++)
         {
             // Only connected, multi-staff groups (those with a delimiter) get a span bar.
             if (system.StaffGroups[gi].GrandStaffLayout is not { } delim) continue;
 
-            double top = system.Y + delim.BraceTop;
+            double top = systemYUp - delim.BraceTop;
             double height = delim.BraceBottom - delim.BraceTop;
             if (height <= StaffHeight + 0.001) continue; // single staff — nothing to span
 
@@ -559,7 +588,9 @@ internal static partial class SharedRenderer
         };
         foreach (int i in rows)
         {
-            double y = staffY + i;
+            // staffY is the top line's Y-up; successive lines run downward (device),
+            // i.e. toward smaller Y-up.
+            double y = staffY - i;
             gc.DrawLine(startX, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);
         }
     }
