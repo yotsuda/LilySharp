@@ -142,6 +142,20 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>
     public const double TupletBracketThickness = 1.6 * LineThickness;
 
+    /// <summary>Multi-measure-rest block bar thickness: thick-thickness 6.6 ×
+    /// line-thickness = 0.66 staff space.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest
+    /// (thick-thickness . 6.6); lily/multi-measure-rest.cc:203 big_rest
+    /// <c>y = line-thickness·thick-thickness·ss / 2</c> (full height = 2y).</remarks>
+    public const double MultiMeasureRestThickThickness = 6.6 * LineThickness;
+
+    /// <summary>Multi-measure-rest end serifs: hair-thickness 2.0 ×
+    /// line-thickness = 0.2 staff space.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest
+    /// (hair-thickness . 2.0); lily/multi-measure-rest.cc:204
+    /// <c>ythick = hair-thickness·line-thickness·ss</c>.</remarks>
+    public const double MultiMeasureRestHairThickness = 2.0 * LineThickness;
+
     /// <summary>
     /// Ossia staff scale: magstep(-3) = 2^(-3/6) ≈ 0.707 — the LP ossia
     /// convention (fontSize = -3 with StaffSymbol.staff-space = magstep -3,

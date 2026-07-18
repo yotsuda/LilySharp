@@ -73,6 +73,9 @@ public class SvgSnapshotTests
     public static IEnumerable<object[]> TestSamples()
     {
         yield return new object[] { "test/notes" };
+        // A run past the church-rest expand-limit (10) prints the big_rest H-bar —
+        // the only fixture exercising DrawBigRest (bar/serif thickness vs LP).
+        yield return new object[] { "test/multi-measure-rest-long" };
         yield return new object[] { "test/part-header-key" };
         yield return new object[] { "test/part-header-key-per-part" };
         yield return new object[] { "test/chords" };

@@ -1,0 +1,19 @@
+// A multi-measure rest longer than the church-rest expand-limit (10) prints the
+// big_rest H-bar: a thick horizontal block bar with vertical end serifs and a
+// bold count above. Regression coverage for DrawBigRest — previously no fixture
+// exercised the big_rest path, which let its bar/serif thickness drift from LP
+// (thick-thickness 6.6 x line-thickness, hair-thickness 2.0 x line-thickness).
+// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest.
+title "Multi-measure rest (long / H-bar)"
+
+time 4/4
+
+part melody
+
+section Main {
+  melody {
+    c'4 e g e |
+    R1*12 |
+    c'4 e g e |
+  }
+}

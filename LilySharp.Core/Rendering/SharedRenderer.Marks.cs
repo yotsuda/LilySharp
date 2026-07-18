@@ -643,10 +643,10 @@ internal static partial class SharedRenderer
 
     private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
     {
-        const double thickness = 0.5;
+        const double thickness = EngravingDefaults.MultiMeasureRestThickThickness;
         const double endCapHeight = 0.8;
         const double padding = 1.0;
-        const double capThickness = 0.18;
+        const double capThickness = EngravingDefaults.MultiMeasureRestHairThickness;
 
         double left = mmr.StartX + padding;
         double right = mmr.EndX - padding;

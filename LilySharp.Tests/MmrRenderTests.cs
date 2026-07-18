@@ -99,18 +99,19 @@ public class MmrRenderTests
     public void Render_R1Star4_UsesChurchRestNoHbar()
     {
         // 4 measures should render via church_rest (a single long rest glyph),
-        // NOT the H-bar (which has a thick rect of height ~0.5 ss).
+        // NOT the H-bar (whose block bar has height = thick-thickness 6.6*lt = 0.66 ss).
         var svg = Render("R1*4 |");
         Assert.Contains(CountDigit(4), svg);
-        // H-bar rectangles use height="0.50" — should NOT appear for church_rest.
-        Assert.DoesNotContain("height=\"0.50\"", svg);
+        // H-bar rectangles use height="0.66" — should NOT appear for church_rest.
+        Assert.DoesNotContain("height=\"0.66\"", svg);
     }
 
     [Fact]
     public void Render_R1Star12_UsesBigRestHbar()
     {
-        // 12 measures (> ExpandLimit=10) uses big_rest (H-bar with height 0.50).
+        // 12 measures (> ExpandLimit=10) uses big_rest (H-bar block bar height =
+        // thick-thickness 6.6*lt = 0.66 ss). LILYPOND-REF: multi-measure-rest.cc:203.
         var svg = Render("R1*12 |");
-        Assert.Contains("height=\"0.50\"", svg);
+        Assert.Contains("height=\"0.66\"", svg);
     }
 }
