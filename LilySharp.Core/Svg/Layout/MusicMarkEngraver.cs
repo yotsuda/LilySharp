@@ -300,12 +300,12 @@ internal static class MusicMarkEngraver
                     var (mx0, mx1) = MarkXExtent(e.Mark, e.X);
                     foreach (var cn in chordNames)
                     {
-                        if (cn.Y >= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
+                        if (-cn.YUp >= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
                             continue;
                         double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
-                        double chordTop = cn.Y - ChordAscent(cn);
+                        double chordTop = -cn.YUp - ChordAscent(cn);
                         markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
                     }
                 }
@@ -332,13 +332,13 @@ internal static class MusicMarkEngraver
                 {
                     foreach (var cn in chordNames)
                     {
-                        if (cn.Y >= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
+                        if (-cn.YUp >= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
                             continue;
                         double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                         bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
                         bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
                         if (overLabel || overTempo)
-                            ceiling = Math.Min(ceiling, cn.Y - ChordAscent(cn) - OutsideStaffPadding);
+                            ceiling = Math.Min(ceiling, -cn.YUp - ChordAscent(cn) - OutsideStaffPadding);
                     }
                 }
 
@@ -602,14 +602,14 @@ internal static class MusicMarkEngraver
             {
                 foreach (var cn in chordNames)
                 {
-                    if (cn.Y >= 0)
+                    if (-cn.YUp >= 0)
                         continue;
                     if (measureToSystemIdx.TryGetValue(cn.MeasureIndex, out int cs)
                         && measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int ts2)
                         && cs != ts2)
                         continue;
                     double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
-                    double chordTop = cn.Y - ChordAscent(cn) - OutsideStaffPadding;
+                    double chordTop = -cn.YUp - ChordAscent(cn) - OutsideStaffPadding;
                     bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
                     bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);
                     // Tempo ink: stem to ~2.1 above the baseline, digits ~0.5 below.

@@ -249,7 +249,8 @@ public class RehearsalMarkTests
         // its ink certainly overlaps the mark horizontally.
         double markX = MusicMarkEngraver.Calculate(null, mark, systems, ml)[0].X;
         ChordNameLayout Chord(string? above) =>
-            new ChordNameLayout(0, markX, -3.0, "Cmaj7", 0, AboveLine: above);
+            // YUp = +3.0: the chord sits 3 ss ABOVE the system top (old device Y = -3.0).
+            new ChordNameLayout(0, markX, 3.0, "Cmaj7", 0, AboveLine: above);
 
         double oneRowY = MusicMarkEngraver
             .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].YUp;

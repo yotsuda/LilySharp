@@ -28,7 +28,11 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct ChordNameLayout(
     int MeasureIndex,
     double X,                // X position (staff spaces from page left)
-    double Y,                // Y position (staff spaces from page top, above staff)
+    // Y-up (frame B): staff-spaces above the SYSTEM top, up-positive. (The symbol
+    // sits above its staff / in its row band, both system-relative — NOT page-top;
+    // the renderer reflects it to device via StaffFrame.ToDevice against the
+    // measure's system top, sy + old-Y == ToDevice(YUp, sy).)
+    double YUp,
     string ChordText,        // Display text (e.g., "Cm7", "B♭7", or "IIm7" in Roman mode)
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.ChordNames (data-pos resolved at render)
@@ -230,8 +234,10 @@ internal static class ChordNameEngraver
             {
                 double rowBaseline = chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
                 var (rowText, rowAbove) = DisplayText(p.chord);
+                // Store Y-up from the system top (= negation of the system-relative
+                // device baseline); no staff offset is baked.
                 results.Add(new ChordNameLayout(
-                    p.chord.MeasureIndex, p.x, p.staffOffset + rowBaseline,
+                    p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline),
                     rowText, p.chord.SourcePosition, p.idx, AboveLine: rowAbove));
                 continue;
             }
@@ -248,8 +254,9 @@ internal static class ChordNameEngraver
             double y = -(StaffPadding + protrusion) + p.staffOffset;
 
             var (text, above) = DisplayText(p.chord);
+            // Store Y-up from the system top (= -y); no staff offset is baked.
             results.Add(new ChordNameLayout(
-                p.chord.MeasureIndex, p.x, y, text, p.chord.SourcePosition, p.idx, AboveLine: above));
+                p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx, AboveLine: above));
         }
 
         return results.ToImmutable();

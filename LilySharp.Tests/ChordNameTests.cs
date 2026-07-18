@@ -199,7 +199,8 @@ public class ChordNameTests
             ImmutableArray.Create(measureLayout));
 
         Assert.Single(result);
-        Assert.True(result[0].Y < 0, "Y should be negative (above staff)");
+        // Y-up (frame B): above the system top means a positive value.
+        Assert.True(result[0].YUp > 0, "YUp should be positive (above the staff/system top)");
     }
 
     // --- MeasureCollector integration ---

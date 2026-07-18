@@ -864,7 +864,12 @@ internal sealed class LayoutEngine
         // (≈2.6 ss), Middle-anchored, so the glyph top is cap-height/2 ≈ 0.9 above
         // the anchor and the descent ≈ 0.3 below.
         foreach (var cn in ann.ChordNames)
-            Add(cn.MeasureIndex, cn.Y - 1.9, cn.Y + 0.3);
+        {
+            // cn.YUp is Y-up from the system top; the system-relative device Y (old
+            // cn.Y) is its negation.
+            double cnY = -cn.YUp;
+            Add(cn.MeasureIndex, cnY - 1.9, cnY + 0.3);
+        }
         // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above
         // the baseline at the 3.2 ss lyric font — without it, a first system
         // whose top content is a lyrics/chord ROW grazes the title ink.
@@ -1145,7 +1150,8 @@ internal sealed class LayoutEngine
             foreach (var cn in chordNames)
             {
                 double halfW = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
-                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cn.Y - 1.9, cn.Y + 0.3);
+                double cnY = -cn.YUp; // cn.YUp is Y-up from the system top
+                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY - 1.9, cnY + 0.3);
             }
         }
         // Line-start bar numbers sit in the band above the staff start where

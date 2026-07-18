@@ -44,12 +44,14 @@ internal static partial class SharedRenderer
         foreach (var c in layout.ChordNameLayouts)
         {
             if (!sysY.TryGetValue(c.MeasureIndex, out var sy)) continue;
+            // Frame B -> device: reflect the Y-up value against the measure's system top.
+            double cy = StaffFrame.ToDevice(c.YUp, sy);
             using (gc.Source(c.SourcePosition))
             {
-                gc.DrawText(c.ChordText, c.X, sy + c.Y, size, "sans-serif",
+                gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
                 if (c.AboveLine != null)
-                    gc.DrawText(c.AboveLine, c.X, sy + c.Y - stackLineHeight, size, "sans-serif",
+                    gc.DrawText(c.AboveLine, c.X, cy - stackLineHeight, size, "sans-serif",
                         FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }
