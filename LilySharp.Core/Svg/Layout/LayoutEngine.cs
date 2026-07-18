@@ -869,9 +869,17 @@ internal sealed class LayoutEngine
         // widen the gap to the NEXT system, or its digits print through that
         // system's volta boxes / high notes (showcase/04).
         foreach (var fb in ann.FiguredBasses)
+        {
+            // YUp is Y-up; this extent pass is system-relative device, so reconstruct
+            // against this figure's own staff offset (0 for a single/top staff).
+            double fbOff = measureToSystem.TryGetValue(fb.MeasureIndex, out int fbSys)
+                ? LayoutUtilities.FindStaffYInSystem(systems[fbSys], fb.StaffIndex) - systems[fbSys].Y
+                : 0;
+            double fbY = fbOff + StaffFrame.ToDevice(fb.YUp, 2.0);
             Add(fb.MeasureIndex,
-                fb.Y - FiguredBassEngraver.FigureTopExtent,
-                fb.Y + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
+                fbY - FiguredBassEngraver.FigureTopExtent,
+                fbY + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
+        }
         // Note-bound scripts (a fermata over the top staff, a staccatissimo
         // under the bottom) extend the system silhouette like any other
         // annotation; Ink is the glyph's real box about its anchor (Y-up).
@@ -1037,8 +1045,12 @@ internal sealed class LayoutEngine
             if (!measureToSystem.TryGetValue(fb.MeasureIndex, out int s))
                 continue;
             double half = FiguredBassEngraver.MinFigureBoxWidth;
-            double top = fb.Y - FiguredBassEngraver.FigureTopExtent;
-            double bottom = fb.Y
+            // YUp is Y-up; this inter-system skyline is system-relative device, so
+            // reconstruct against this figure's own staff offset.
+            double fbStaffOffset = LayoutUtilities.FindStaffYInSystem(systems[s], fb.StaffIndex) - systems[s].Y;
+            double fbY = fbStaffOffset + StaffFrame.ToDevice(fb.YUp, 2.0);
+            double top = fbY - FiguredBassEngraver.FigureTopExtent;
+            double bottom = fbY
                 + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5;
             var down = new VerticalSkyline(VerticalDirection.Down);
             down.Merge(result[s].down);

@@ -72,8 +72,11 @@ internal static partial class SharedRenderer
         const double figureSpacing = 1.5;
         foreach (var fb in layout.FiguredBassLayouts)
         {
-            if (!sysY.TryGetValue(fb.MeasureIndex, out var sy)) continue;
-            double baseY = sy + fb.Y;
+            if (!sysY.ContainsKey(fb.MeasureIndex)) continue;
+            // Frame B -> device against this figure's own staff middle; figures then
+            // stack downward from the topmost baseline exactly as before.
+            double baseY = StaffFrame.ToDevice(fb.YUp,
+                os.StaffMiddleDeviceY(fb.StaffIndex, fb.MeasureIndex, StaffHeight));
             using (gc.Source(fb.SourcePosition))
             {
                 for (int i = 0; i < fb.FigureTexts.Length; i++)

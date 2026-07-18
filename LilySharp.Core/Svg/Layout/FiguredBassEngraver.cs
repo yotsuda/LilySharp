@@ -30,7 +30,8 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct FiguredBassLayout(
     int MeasureIndex,
     double X,                                         // X position (staff spaces)
-    double Y,                                         // Y position of topmost figure (staff spaces)
+    double YUp,                                       // Y-up (frame B): staff-spaces above
+                                                      // the staff middle, up+ (topmost figure)
     ImmutableArray<string> FigureTexts,               // Text for each figure, top to bottom
     int SourcePosition,
     int SourceIndex = -1,                             // F3/B: index into score.FiguredBasses
@@ -99,14 +100,17 @@ internal static class FiguredBassEngraver
                 && fb.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            // Resolve this figure's OWN staff (multi-staff): its measures (X) and
-            // the staff's vertical offset, so it sits below its own staff.
+            // Resolve this figure's OWN staff (multi-staff) measures for the item X.
+            // The staff offset is no longer baked: the Y is stored relative to the
+            // staff middle (frame B) and resolved to the right staff at each consumer.
             var fbMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, fb.StaffIndex, measures);
-            double staffOffset = staffYAt?.Invoke(fb.MeasureIndex, fb.StaffIndex) ?? 0;
 
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
-            double y = BelowStaffY + StaffPadding + staffOffset;
+            // Y-up (frame B): the topmost figure sits below the staff (device
+            // BelowStaffY+StaffPadding from the staff top, middle = 2) reflected to
+            // staff-spaces above the middle.
+            double yUp = StaffFrame.ToUp(BelowStaffY + StaffPadding, 2.0);
 
             var figureTexts = fb.Figures
                 .Select(f => f.DisplayText)
@@ -115,7 +119,7 @@ internal static class FiguredBassEngraver
             layouts.Add(new FiguredBassLayout(
                 fb.MeasureIndex,
                 x,
-                y,
+                yUp,
                 figureTexts,
                 fb.SourcePosition,
                 fbi,
@@ -144,7 +148,11 @@ internal static class FiguredBassEngraver
                 lay.X - halfW, lay.X + halfW, 0, -FigureTopExtent, VerticalDirection.Up);
             if (fbUp.TryGetValue(s, out var sky)) sky.Merge(box);
             else fbUp[s] = box;
-            basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, lay.Y) : lay.Y;
+            // basicY is the system-relative device floor (the old lay.Y). Reconstruct
+            // it from Y-up against this figure's own staff offset.
+            double staffOffset = LayoutUtilities.FindStaffYInSystem(systems[s], lay.StaffIndex) - systems[s].Y;
+            double layY = staffOffset + StaffFrame.ToDevice(lay.YUp, 2.0);
+            basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, layY) : layY;
         }
 
         // Figured bass uses each system's own lowest figure as the basic-distance floor.
@@ -153,10 +161,11 @@ internal static class FiguredBassEngraver
         if (systemDrop.Count == 0)
             return layouts;
 
+        // The drop d is a downward (device) shift; in Y-up that is a decrease.
         return System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(layouts, lay =>
             measureToSystem.TryGetValue(lay.MeasureIndex, out int s)
             && systemDrop.TryGetValue(s, out var d) && d > 0
-                ? lay with { Y = lay.Y + d }
+                ? lay with { YUp = lay.YUp - d }
                 : lay)).ToImmutableArray();
     }
 }
