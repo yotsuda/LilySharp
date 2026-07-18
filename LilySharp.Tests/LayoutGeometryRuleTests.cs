@@ -84,9 +84,9 @@ public class LayoutGeometryRuleTests
             .ToArray();
         Assert.Equal(3, ties.Length);
         for (int i = 1; i < ties.Length; i++)
-            Assert.True(ties[i].StartY < ties[i - 1].StartY,
+            Assert.True(ties[i].StartYUp > ties[i - 1].StartYUp,
                 $"tie above staff position {ties[i - 1].Tie.StaffPosition} must sit higher " +
-                $"(smaller device Y) than the one below: {ties[i].StartY} vs {ties[i - 1].StartY}");
+                $"(larger page Y-up) than the one below: {ties[i].StartYUp} vs {ties[i - 1].StartYUp}");
     }
 
     // --- Ossia stacking: LILYPOND-REF lily/vertical-align-engraver.cc:150-190 ---

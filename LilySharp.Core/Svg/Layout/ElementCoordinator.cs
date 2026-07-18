@@ -1288,7 +1288,10 @@ internal sealed class ElementCoordinator
             slur.StartStaffPosition, slur.EndStaffPosition, curveUp: true,
             slur.StartMeasureIndex, slur.EndMeasureIndex,
             slur.StartItemIndex, slur.EndItemIndex, slur.VoiceIndex);
-        return new SlurLayout(tabSlur, startX, startY, endX, endY, c1, c2,
+        // The geometry above is device Y; BowLayout stores page Y-up (= -device),
+        // so reflect the endpoints and control points on the way in.
+        return new SlurLayout(tabSlur, startX, -startY, endX, -endY,
+            (c1.X, -c1.Y), (c2.X, -c2.Y),
             isBrokenLeft: !isFirst, isBrokenRight: !isLast) { StaffIndex = staffIndex };
 
         static MusicItem? EdgeItem(Voice v, int mi, int ii)

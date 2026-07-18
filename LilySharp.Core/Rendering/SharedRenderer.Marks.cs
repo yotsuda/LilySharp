@@ -671,8 +671,11 @@ internal static partial class SharedRenderer
         {
             if (!sysY.ContainsKey(v.MeasureIndex))
                 continue; // other page
-            DrawBow(v.StartX, v.Y, v.EndX, v.Y,
-                v.Control1, v.Control2, v.CurveUp,
+            // TieVariantLayout is still device-Y; DrawBow now takes page Y-up
+            // (= -device) like the migrated Tie/Slur, so reflect this caller's
+            // device Y and control points up.
+            DrawBow(v.StartX, -v.Y, v.EndX, -v.Y,
+                (v.Control1.X, -v.Control1.Y), (v.Control2.X, -v.Control2.Y), v.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 v.StaffIndex, v.MeasureIndex, os, gc);
         }

@@ -493,8 +493,9 @@ internal sealed class SlurScoringProblem
                 if (!xOverlap)
                     continue;
 
-                // Existing slurs are device-Y; reflect into the Y-up frame.
-                double existingPeakY = -((existing.Control1.Y + existing.Control2.Y) / 2);
+                // Existing slurs are now stored in the same page Y-up frame this
+                // scorer works in, so use their control Y directly (no reflection).
+                double existingPeakY = (existing.Control1.Y + existing.Control2.Y) / 2;
                 double dist = Math.Abs(peakY - existingPeakY);
 
                 demerit += _parameters.ExtraObjectCollisionPenalty
@@ -674,15 +675,17 @@ internal sealed class SlurScoringProblem
         var control1 = (X: config.StartX + indent, Y: config.StartY + cpT1 * (config.EndY - config.StartY) + directedHeight);
         var control2 = (X: config.EndX - indent, Y: config.StartY + cpT2 * (config.EndY - config.StartY) + directedHeight);
 
-        // Negate Y back to device coordinates (inverse of the entry flip).
+        // Store the scored Y verbatim in the page Y-up frame — no exit negation.
+        // The scorer already reasons in Y-up (slur-scoring.cc), and BowLayout keeps
+        // that frame; DrawBow flips to device once (os.Y(-YUp, …)).
         return new SlurLayout(
             _slur,
             config.StartX,
-            -config.StartY,
+            config.StartY,
             config.EndX,
-            -config.EndY,
-            (control1.X, -control1.Y),
-            (control2.X, -control2.Y),
+            config.EndY,
+            (control1.X, control1.Y),
+            (control2.X, control2.Y),
             isBrokenLeft: _isBrokenLeft,
             isBrokenRight: _isBrokenRight);
     }

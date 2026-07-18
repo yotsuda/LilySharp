@@ -61,10 +61,11 @@ public class SlurScoringProblemTests
         var layout = problem.Solve();
 
         // Assert
-        // For curve up, control points should have smaller Y (above baseline in SVG coords)
-        double midY = (layout.StartY + layout.EndY) / 2;
-        Assert.True(layout.Control1.Y < midY, "Control point 1 should be above baseline for curve up");
-        Assert.True(layout.Control2.Y < midY, "Control point 2 should be above baseline for curve up");
+        // For curve up, control points sit ABOVE the baseline = LARGER value in the
+        // page Y-up frame the layout now stores.
+        double midY = (layout.StartYUp + layout.EndYUp) / 2;
+        Assert.True(layout.Control1.Y > midY, "Control point 1 should be above baseline for curve up");
+        Assert.True(layout.Control2.Y > midY, "Control point 2 should be above baseline for curve up");
     }
 
     [Fact]
@@ -81,10 +82,11 @@ public class SlurScoringProblemTests
         var layout = problem.Solve();
 
         // Assert
-        // For curve down, control points should have larger Y (below baseline in SVG coords)
-        double midY = (layout.StartY + layout.EndY) / 2;
-        Assert.True(layout.Control1.Y > midY, "Control point 1 should be below baseline for curve down");
-        Assert.True(layout.Control2.Y > midY, "Control point 2 should be below baseline for curve down");
+        // For curve down, control points sit BELOW the baseline = SMALLER value in
+        // the page Y-up frame the layout now stores.
+        double midY = (layout.StartYUp + layout.EndYUp) / 2;
+        Assert.True(layout.Control1.Y < midY, "Control point 1 should be below baseline for curve down");
+        Assert.True(layout.Control2.Y < midY, "Control point 2 should be below baseline for curve down");
     }
 
     [Fact]
@@ -102,8 +104,8 @@ public class SlurScoringProblemTests
         var layout2 = problem2.Solve();
 
         // Assert
-        double height1 = Math.Abs(layout1.Control1.Y - layout1.StartY);
-        double height2 = Math.Abs(layout2.Control1.Y - layout2.StartY);
+        double height1 = Math.Abs(layout1.Control1.Y - layout1.StartYUp);
+        double height2 = Math.Abs(layout2.Control1.Y - layout2.StartYUp);
         Assert.True(height2 > height1, "Wider slur should have higher arc");
     }
 
@@ -232,8 +234,8 @@ public class SlurScoringProblemTests
 
         Assert.NotNull(layout);
         Assert.True(layout.EndX > layout.StartX);
-        // Control points should be on the curve-up side
-        double midY = (layout.StartY + layout.EndY) / 2;
-        Assert.True(layout.Control1.Y < midY);
+        // Control points should be on the curve-up side (ABOVE = larger in page Y-up).
+        double midY = (layout.StartYUp + layout.EndYUp) / 2;
+        Assert.True(layout.Control1.Y > midY);
     }
 }

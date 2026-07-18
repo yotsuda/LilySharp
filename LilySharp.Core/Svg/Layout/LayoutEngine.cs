@@ -963,12 +963,13 @@ internal sealed class LayoutEngine
             // its END, or its low Y leaks onto the start system and forces a huge
             // inter-system gap.
             int mi = t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex;
-            AddCurve(mi, t.StartY, t.EndY, t.Control1.Y, t.Control2.Y);
+            // Bow Y is now page Y-up (= -device); reflect back for this device extent pass.
+            AddCurve(mi, -t.StartYUp, -t.EndYUp, -t.Control1.Y, -t.Control2.Y);
         }
         foreach (var sl in slurs)
         {
             int mi = sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex;
-            AddCurve(mi, sl.StartY, sl.EndY, sl.Control1.Y, sl.Control2.Y);
+            AddCurve(mi, -sl.StartYUp, -sl.EndYUp, -sl.Control1.Y, -sl.Control2.Y);
         }
 
         for (int i = 0; i < n; i++)

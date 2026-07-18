@@ -57,9 +57,10 @@ public class TieFormattingProblemTests
 
         var layout = problem.Solve();
 
-        // Curve up means control points should be above (lower Y in SVG coordinates)
-        Assert.True(layout.Control1.Y < layout.StartY);
-        Assert.True(layout.Control2.Y < layout.EndY);
+        // Curve up: control points sit ABOVE the baseline = LARGER value in the page
+        // Y-up frame the layout now stores.
+        Assert.True(layout.Control1.Y > layout.StartYUp);
+        Assert.True(layout.Control2.Y > layout.EndYUp);
     }
 
     [Fact]
@@ -70,9 +71,10 @@ public class TieFormattingProblemTests
 
         var layout = problem.Solve();
 
-        // Curve down means control points should be below (higher Y in SVG coordinates)
-        Assert.True(layout.Control1.Y > layout.StartY);
-        Assert.True(layout.Control2.Y > layout.EndY);
+        // Curve down: control points sit BELOW the baseline = SMALLER value in the
+        // page Y-up frame the layout now stores.
+        Assert.True(layout.Control1.Y < layout.StartYUp);
+        Assert.True(layout.Control2.Y < layout.EndYUp);
     }
 
     [Fact]
@@ -102,8 +104,8 @@ public class TieFormattingProblemTests
         var shortLayout = shortProblem.Solve();
         var longLayout = longProblem.Solve();
 
-        double shortHeight = Math.Abs(shortLayout.Control1.Y - shortLayout.StartY);
-        double longHeight = Math.Abs(longLayout.Control1.Y - longLayout.StartY);
+        double shortHeight = Math.Abs(shortLayout.Control1.Y - shortLayout.StartYUp);
+        double longHeight = Math.Abs(longLayout.Control1.Y - longLayout.StartYUp);
         Assert.True(shortHeight < longHeight);
     }
 

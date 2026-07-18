@@ -380,9 +380,10 @@ internal static partial class SharedRenderer
         // width; keep the base attachments then so the bow stays visible.
         bool degenerate = solved.EndX - solved.StartX < 1.0;
         double sx = degenerate ? startX : solved.StartX;
-        double sy = degenerate ? startY : solved.StartY;
+        // solved's Y is page Y-up (= -device); reflect back to the device startY/endY.
+        double sy = degenerate ? startY : -solved.StartYUp;
         double ex = degenerate ? endX : solved.EndX;
-        double ey = degenerate ? endY : solved.EndY;
+        double ey = degenerate ? endY : -solved.EndYUp;
 
         // Draw the optimised endpoints with LilyPond's slur_shape base curve: both
         // inner control points sit `height` off the chord PERPENDICULAR, indented

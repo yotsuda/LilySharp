@@ -458,8 +458,13 @@ internal sealed class TieFormattingProblem
             if (!xOverlap)
                 continue;
 
-            double existingEdgeY = existing.StartY;
-            double existingCenterY = (existing.Control1.Y + existing.Control2.Y) / 2;
+            // Existing ties are now stored page Y-up (up-positive); this scorer's
+            // config side is still device (GenerateConfiguration), so reflect the
+            // existing tie back to device (= -YUp) to compare in one frame. Byte-
+            // for-byte the old device value; a full Y-up de-islanding of this scorer
+            // (so the monotonicity reads LP's <=) is a later step.
+            double existingEdgeY = -existing.StartYUp;
+            double existingCenterY = -(existing.Control1.Y + existing.Control2.Y) / 2;
 
             // Center-center collision
             // LILYPOND-REF: tie-formatting-problem.cc:875-880
@@ -503,18 +508,22 @@ internal sealed class TieFormattingProblem
         double width = config.EndX - config.StartX;
         double indent = CalculateIndent(width);
 
-        double directedHeight = config.CurveUp ? -config.Height : config.Height;
-        double baseY = config.AttachmentY;
+        // Store in the page Y-up frame (up-positive = -device), the frame BowLayout
+        // keeps. baseYUp = -AttachmentY; an up curve's control sits ABOVE (larger
+        // Y-up), so directedHeight is +Height up / -Height down (the negation of the
+        // device convention). DrawBow flips to device once.
+        double baseYUp = -config.AttachmentY;
+        double directedHeightUp = config.CurveUp ? config.Height : -config.Height;
 
-        var control1 = (X: config.StartX + indent, Y: baseY + directedHeight);
-        var control2 = (X: config.EndX - indent, Y: baseY + directedHeight);
+        var control1 = (X: config.StartX + indent, Y: baseYUp + directedHeightUp);
+        var control2 = (X: config.EndX - indent, Y: baseYUp + directedHeightUp);
 
         return new TieLayout(
             _tie,
             config.StartX,
-            baseY,
+            baseYUp,
             config.EndX,
-            baseY,
+            baseYUp,
             control1,
             control2,
             isBrokenLeft: _isBrokenLeft,

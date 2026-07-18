@@ -40,7 +40,7 @@ internal static partial class SharedRenderer
             int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
             if (!sysY.ContainsKey(mi))
                 continue; // not on this page (geometry is page-local)
-            DrawBow(tie.StartX, tie.StartY, tie.EndX, tie.EndY,
+            DrawBow(tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp,
                 tie.Control1, tie.Control2, tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 tie.StaffIndex, mi, os, gc);
@@ -59,7 +59,7 @@ internal static partial class SharedRenderer
             int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
             if (!sysY.ContainsKey(mi))
                 continue; // not on this page (geometry is page-local)
-            DrawBow(slur.StartX, slur.StartY, slur.EndX, slur.EndY,
+            DrawBow(slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp,
                 slur.Control1, slur.Control2, slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
                 slur.StaffIndex, mi, os, gc);
@@ -76,16 +76,18 @@ internal static partial class SharedRenderer
     /// of a magnified staff scales with it).
     /// </summary>
     private static void DrawBow(
-        double startX, double startY, double endX, double endY,
+        double startX, double startYUp, double endX, double endYUp,
         (double X, double Y) c1, (double X, double Y) c2,
         bool curveUp, double midThickness,
         int staffIndex, int startMeasureIndex,
         in OssiaShrink os, IDrawingContext gc)
     {
-        startY = os.Y(startY, staffIndex, startMeasureIndex);
-        endY = os.Y(endY, staffIndex, startMeasureIndex);
-        c1 = (c1.X, os.Y(c1.Y, staffIndex, startMeasureIndex));
-        c2 = (c2.X, os.Y(c2.Y, staffIndex, startMeasureIndex));
+        // The bow's Y coordinates arrive in the page Y-up frame (up-positive =
+        // -device); this is the single flip back to device, before the ossia affine.
+        double startY = os.Y(-startYUp, staffIndex, startMeasureIndex);
+        double endY = os.Y(-endYUp, staffIndex, startMeasureIndex);
+        c1 = (c1.X, os.Y(-c1.Y, staffIndex, startMeasureIndex));
+        c2 = (c2.X, os.Y(-c2.Y, staffIndex, startMeasureIndex));
         midThickness = os.Size(midThickness, staffIndex);
         DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
     }

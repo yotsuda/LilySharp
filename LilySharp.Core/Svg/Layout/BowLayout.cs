@@ -37,22 +37,30 @@ internal abstract record BowLayout
     /// model's own start measure (single-system bows).</summary>
     public int RenderMeasureIndex { get; init; } = -1;
 
+    // COORDINATE FRAME: every Y here is stored in the LilyPond-native PAGE Y-up
+    // frame — up-positive, the exact negation of the shared absolute device Y
+    // (yUp = -yDevice). This is the frame SlurScoringProblem already scores in
+    // (slur-scoring.cc, sign-for-sign), so its CreateLayout stores the scored Y
+    // verbatim with no exit negation; TieFormattingProblem stores -attachmentY.
+    // DrawBow performs the single flip back to device (os.Y(-YUp, …)). The
+    // Control1/Control2 tuples' .Y members are page Y-up too.
+
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
 
-    /// <summary>Y coordinate of the start point.</summary>
-    public double StartY { get; }
+    /// <summary>Y of the start point in the page Y-up frame (up-positive = -device).</summary>
+    public double StartYUp { get; }
 
     /// <summary>X coordinate of the end point.</summary>
     public double EndX { get; }
 
-    /// <summary>Y coordinate of the end point.</summary>
-    public double EndY { get; }
+    /// <summary>Y of the end point in the page Y-up frame (up-positive = -device).</summary>
+    public double EndYUp { get; }
 
-    /// <summary>First control point (near start).</summary>
+    /// <summary>First control point (near start); .Y is page Y-up.</summary>
     public (double X, double Y) Control1 { get; }
 
-    /// <summary>Second control point (near end).</summary>
+    /// <summary>Second control point (near end); .Y is page Y-up.</summary>
     public (double X, double Y) Control2 { get; }
 
     /// <summary>Direction: true = curve up, false = curve down.</summary>
@@ -74,18 +82,18 @@ internal abstract record BowLayout
 
     protected BowLayout(
         double startX,
-        double startY,
+        double startYUp,
         double endX,
-        double endY,
+        double endYUp,
         (double X, double Y) control1,
         (double X, double Y) control2,
         bool isBrokenLeft,
         bool isBrokenRight)
     {
         StartX = startX;
-        StartY = startY;
+        StartYUp = startYUp;
         EndX = endX;
-        EndY = endY;
+        EndYUp = endYUp;
         Control1 = control1;
         Control2 = control2;
         IsBrokenLeft = isBrokenLeft;
