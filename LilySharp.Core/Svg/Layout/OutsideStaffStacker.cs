@@ -574,10 +574,10 @@ internal static class OutsideStaffStacker
             // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
             // ~0.75em ascent; the end hook drops EdgeHeight below.
             double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
-                sy + o.Y,
+                StaffFrame.ToDevice(o.YUp, sy),
                 topOffset: -TextAscentEm * (0.45 * 4.0),
                 bottomOffset: Math.Max(0.1, o.EdgeHeight));
-            b[i] = o with { Y = newAbs - sy };
+            b[i] = o with { YUp = StaffFrame.ToUp(newAbs, sy) };
         }
         return b.ToImmutable();
     }

@@ -207,7 +207,7 @@ public class OttavaBracketTests
         Assert.Single(result);
         var layout = result[0];
         Assert.True(layout.IsAbove);
-        Assert.True(layout.Y < 0, "8va should be above staff (negative Y)");
+        Assert.True(layout.YUp > 0, "8va should be above staff (positive Y-up)");
         Assert.Equal("8va", layout.Text);
         Assert.Equal(42, layout.SourcePosition);
     }
@@ -224,7 +224,7 @@ public class OttavaBracketTests
 
         Assert.Single(result);
         Assert.False(result[0].IsAbove);
-        Assert.True(result[0].Y > 4, "8vb should be below staff (Y > staff height)");
+        Assert.True(result[0].YUp < -4, "8vb should be below staff (Y-up < -staff height)");
         Assert.Equal("8vb", result[0].Text);
     }
 
@@ -327,7 +327,8 @@ public class OttavaBracketTests
 
         Assert.Equal(1, lowLayout.StaffIndex);
         // Lower staff's 8va is 12 staff-spaces below the top staff's 8va.
-        Assert.Equal(topLayout.Y + 12.0, lowLayout.Y, 3);
+        // Y-up: a 12-ss-lower staff has a 12-smaller Y-up.
+        Assert.Equal(topLayout.YUp - 12.0, lowLayout.YUp, 3);
     }
 
     [Fact]
@@ -345,7 +346,7 @@ public class OttavaBracketTests
 
         Assert.False(lowLayout.IsAbove);
         // Below-staff Y (staff bottom + padding) shifted down to the lower staff.
-        Assert.True(lowLayout.Y > 12.0, "8vb on staff 1 should be below that staff");
+        Assert.True(lowLayout.YUp < -12.0, "8vb on staff 1 should be below that staff");
     }
 
     [Fact]
@@ -384,6 +385,7 @@ public class OttavaBracketTests
         var lateLayout = OttavaBracketEngraver.Calculate(late, systems, measures, staffYAt)[0];
 
         // Same staff, but the later bracket's measure resolves to the +20 offset.
-        Assert.Equal(earlyLayout.Y + 20.0, lateLayout.Y, 3);
+        // Y-up: a 20-ss-lower system has a 20-smaller Y-up.
+        Assert.Equal(earlyLayout.YUp - 20.0, lateLayout.YUp, 3);
     }
 }

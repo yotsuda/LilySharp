@@ -34,8 +34,10 @@ public readonly record struct OttavaBracketLayout(
     double StartX,
     // End X position.
     double EndX,
-    // Y position (staff spaces from staff top).
-    double Y,
+    // Y in the Y-up frame: staff-spaces ABOVE the system top, up-positive (frame B).
+    // The renderer reflects it to device via StaffFrame.ToDevice against the
+    // segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    double YUp,
     // Display text (e.g., "8va", "8vb", "15ma", "15mb").
     string Text,
     // Whether the bracket is above the staff (true) or below (false).
@@ -159,7 +161,8 @@ internal static class OttavaBracketEngraver
             // the lower staff sits above THAT staff, not the top one. Single-staff
             // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
             double staffOffset = staffYAt?.Invoke(bracket.StartMeasureIndex, bracket.StaffIndex) ?? 0;
-            double y = (isAbove ? AboveStaffY : BelowStaffY) + staffOffset;
+            // Y-up from the system top: the old device value negated.
+            double yUp = StaffFrame.ToUp((isAbove ? AboveStaffY : BelowStaffY) + staffOffset, 0.0);
 
             string text = bracket.Type switch
             {
@@ -192,7 +195,7 @@ internal static class OttavaBracketEngraver
                     StartMeasureIndex: segment.StartMeasureIndex,
                     StartX: startX,
                     EndX: endX,
-                    Y: y,
+                    YUp: yUp,
                     Text: segText,
                     IsAbove: isAbove,
                     EdgeHeight: segEdgeHeight,

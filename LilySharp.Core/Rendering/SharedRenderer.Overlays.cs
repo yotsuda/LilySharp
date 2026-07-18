@@ -407,7 +407,8 @@ internal static partial class SharedRenderer
         foreach (var b in layout.OttavaBracketLayouts)
         {
             if (!sysY.TryGetValue(b.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = os.Y(sy + b.Y, b.StaffIndex, b.StartMeasureIndex);
+            // Frame B -> device: reflect the Y-up value against the segment's system top.
+            double absY = os.Y(StaffFrame.ToDevice(b.YUp, sy), b.StaffIndex, b.StartMeasureIndex);
             double textFontSize = os.Size(FontSize * 0.45, b.StaffIndex);
             using (gc.Source(b.SourcePosition))
             {
