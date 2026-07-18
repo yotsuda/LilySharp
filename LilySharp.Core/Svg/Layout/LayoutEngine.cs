@@ -925,7 +925,11 @@ internal sealed class LayoutEngine
             Add(h.StartMeasureIndex, hY - 0.34, hY + 0.34);
         }
         foreach (var sp in ann.TextSpanners)
-            Add(sp.StartMeasureIndex, sp.Y - 1.2, sp.Y + 0.3);
+        {
+            // sp.YUp is Y-up from the system top; this pass is system-relative device.
+            double spY = -sp.YUp;
+            Add(sp.StartMeasureIndex, spY - 1.2, spY + 0.3);
+        }
         foreach (var bn in ann.BarNumbers)
         {
             if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))

@@ -544,9 +544,10 @@ internal static class OutsideStaffStacker
             if (ts.StaffIndex != 0) continue; // top staff only, like trills
             if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
             double sy = systems[sysIdx].Y;
-            double newAbs = Place(trackers[sysIdx], ts.StartX, ts.EndX, sy + ts.Y,
+            double newAbs = Place(trackers[sysIdx], ts.StartX, ts.EndX,
+                StaffFrame.ToDevice(ts.YUp, sy),
                 topOffset: -TextSpannerAscent, bottomOffset: TextSpannerDescent);
-            b[i] = ts with { Y = newAbs - sy };
+            b[i] = ts with { YUp = StaffFrame.ToUp(newAbs, sy) };
         }
         return b.ToImmutable();
     }

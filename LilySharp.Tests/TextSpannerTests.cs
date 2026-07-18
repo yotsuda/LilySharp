@@ -193,8 +193,8 @@ public class TextSpannerTests
 
         Assert.Single(result);
         // LILYPOND-REF: TextSpanner staff-padding = 0.8
-        // Y = StaffBottom(4.0) + StaffPadding(0.8) + TextAscent(1.0) = 5.8
-        Assert.Equal(5.8, result[0].Y);
+        // device Y = StaffBottom(4.0) + StaffPadding(0.8) + TextAscent(1.0) = 5.8 → YUp = -5.8
+        Assert.Equal(-5.8, result[0].YUp);
     }
 
     [Fact]
@@ -243,9 +243,9 @@ public class TextSpannerTests
         Assert.Single(result);
         // dynamicBottom = 6.8 + 0.6(DynamicTextDescent) = 7.4
         // requiredY = 7.4 + 0.46(BetweenLayerPadding) + 1.0(TextAscent) = 8.86
-        Assert.True(result[0].Y > 6.8,
-            $"Text spanner Y ({result[0].Y}) should be below dynamic Y (6.8)");
-        Assert.Equal(8.86, result[0].Y, 2);
+        Assert.True(result[0].YUp < -6.8,
+            $"Text spanner YUp ({result[0].YUp}) should be below dynamic (YUp < -6.8)");
+        Assert.Equal(-8.86, result[0].YUp, 2);
     }
 
     [Fact]
@@ -272,9 +272,9 @@ public class TextSpannerTests
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, dynamics);
 
         Assert.Single(result);
-        Assert.True(result[0].Y > 6.8,
-            $"Text spanner Y ({result[0].Y}) should be below dynamic Y (6.8) in multi-system layout");
-        Assert.Equal(8.86, result[0].Y, 2);
+        Assert.True(result[0].YUp < -6.8,
+            $"Text spanner YUp ({result[0].YUp}) should be below dynamic (YUp < -6.8) in multi-system layout");
+        Assert.Equal(-8.86, result[0].YUp, 2);
     }
 
     [Fact]
@@ -301,7 +301,7 @@ public class TextSpannerTests
 
         Assert.Single(result);
         // Should be at base Y since no overlapping dynamic in same system
-        Assert.Equal(5.8, result[0].Y, 2);
+        Assert.Equal(-5.8, result[0].YUp, 2);
     }
 
     [Fact]

@@ -35,8 +35,10 @@ public readonly record struct TextSpannerLayout(
     double EndX,
     // X position where the text ends and the line begins.
     double LineStartX,
-    // Y position (staff spaces from staff top, positive = down).
-    double Y,
+    // Y in the Y-up frame: staff-spaces ABOVE the system top, up-positive (frame B).
+    // The renderer reflects it to device via StaffFrame.ToDevice against the
+    // segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    double YUp,
     // Display text (e.g., "rit.", "accel.").
     string Text,
     // Line style.
@@ -240,7 +242,9 @@ internal static class TextSpannerEngraver
                     StartX: startX,
                     EndX: endX,
                     LineStartX: lineStartX,
-                    Y: y,
+                    // Store Y-up from the system top; the internal placement still
+                    // computes device y (it reads the device dynamics band).
+                    YUp: StaffFrame.ToUp(y, 0.0),
                     Text: segText,
                     Style: spanner.Style,
                     DashPeriod: DashPeriod,

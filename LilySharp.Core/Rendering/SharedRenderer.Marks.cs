@@ -472,7 +472,8 @@ internal static partial class SharedRenderer
         foreach (var s in layout.TextSpannerLayouts)
         {
             if (!sysY.TryGetValue(s.StartMeasureIndex, out var y)) continue; // other page
-            double absY = os.Y(y + s.Y, s.StaffIndex, s.StartMeasureIndex);
+            // Frame B -> device: reflect the Y-up value against the segment's system top.
+            double absY = os.Y(StaffFrame.ToDevice(s.YUp, y), s.StaffIndex, s.StartMeasureIndex);
             using (gc.Source(s.SourcePosition))
             {
                 gc.DrawText(s.Text, s.StartX, absY,
