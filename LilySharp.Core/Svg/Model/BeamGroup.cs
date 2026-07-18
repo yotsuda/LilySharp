@@ -300,4 +300,26 @@ public sealed record BeamLayout
 
     /// <summary>Gets the Y position at a given X position.</summary>
     public double GetYAtX(double x) => LeftY + Slope * (x - LeftX);
+
+    /// <summary>
+    /// Staff-space Y (Y-UP from the middle line — frame B) of the beam stack's OUTER edge at
+    /// <paramref name="x"/>, on the given stem side. This is the single canonical "where a stem
+    /// tip reaches" line: the outermost beam's far face = beam centre ± (thickness/2 +
+    /// (beamCount-1)·translation). Slur endpoints, scripts, and tuplet brackets that must clear
+    /// a beam all measure to THIS line, so they share this one computation instead of each
+    /// re-deriving the beam-thickness math. LeftY/RightY are half-space staff positions, so the
+    /// centre is halved to staff spaces here.
+    /// LILYPOND-REF: lily/stem.cc — a beamed stem ends at the beam it joins (its outer face).
+    /// </summary>
+    public double OuterEdgeStaffSpaceAtX(double x, bool stemUp)
+    {
+        double centerPos = x < LeftX ? LeftY : x > RightX ? RightY : GetYAtX(x); // half-space
+        double centerSs = centerPos / 2.0;                                       // → staff-space Y-up
+        int beamCount = 1;
+        foreach (var m in Group.Members)
+            beamCount = System.Math.Max(beamCount, m.BeamCount);
+        double halfStack = Svg.EngravingDefaults.BeamThickness / 2.0
+            + (beamCount - 1) * Svg.EngravingDefaults.BeamTranslation;           // staff-space
+        return centerSs + (stemUp ? halfStack : -halfStack);
+    }
 }

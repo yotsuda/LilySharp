@@ -857,19 +857,12 @@ internal static class ArticulationEngraver
             for (int i = 0; i < group.Members.Length && i < beam.MemberXPositions.Length; i++)
             {
                 var member = group.Members[i];
-                // Beam Y at this member's X: LeftY/RightY are staff positions
-                // (half-spaces, up-positive from the middle line).
-                double t = beam.RightX > beam.LeftX
-                    ? (beam.MemberXPositions[i] - beam.LeftX) / (beam.RightX - beam.LeftX)
-                    : 0;
-                double positionAtX = beam.LeftY + t * (beam.RightY - beam.LeftY);
-                double tipY = StaffMiddle - positionAtX * 0.5;
-                // The beam has thickness; a script on the beam's side must clear its
-                // OUTER edge, not the stem end (= beam centre). Push the tip out by
-                // half the beam thickness so side-position sees the whole beam.
-                // LILYPOND-REF: the Beam grob's stencil joins the script's support skyline.
-                tipY += member.MemberStemUp
-                    ? -EngravingDefaults.BeamThickness / 2 : EngravingDefaults.BeamThickness / 2;
+                // A script on the beam's side must clear the beam stack's OUTER edge (the
+                // outermost beam's far face, not the single-beam centre) — the same canonical
+                // line the slur/tuplet use. BeamLayout.OuterEdgeStaffSpaceAtX gives it in
+                // staff-space Y-up; convert to this engraver's staff-local device frame once.
+                double outerSs = beam.OuterEdgeStaffSpaceAtX(beam.MemberXPositions[i], member.MemberStemUp);
+                double tipY = StaffFrame.ToDevice(outerSs, StaffMiddle);
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);

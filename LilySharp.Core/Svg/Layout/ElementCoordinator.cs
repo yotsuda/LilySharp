@@ -957,10 +957,9 @@ internal sealed class ElementCoordinator
 
     /// <summary>
     /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
-    /// stem_extent_[Y][dir_] (slur-scoring.cc:554). Returns the OUTER edge of the beam stack
-    /// on the slur side. NOTE: BeamLayout Y is in staff POSITIONS (0 = middle, + = up), so it
-    /// is converted to the device frame here; the beam half-height is in staff-spaces, which
-    /// equal device units. False when the note is not in any supplied beam layout.
+    /// stem_extent_[Y][dir_] (slur-scoring.cc:554) = the beam stack's outer edge on the slur
+    /// side. Uses the canonical <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/> (frame B) and
+    /// converts to device once. False when the note is not in any supplied beam layout.
     /// </summary>
     private static bool TryGetBeamedStemTipDeviceY(
         ImmutableArray<BeamLayout> beamLayouts, int measureIndex, int itemIndex, double noteX,
@@ -971,23 +970,13 @@ internal sealed class ElementCoordinator
         foreach (var bl in beamLayouts)
         {
             bool hit = false;
-            int beamCount = 1;
             foreach (var m in bl.Group.Members)
-            {
-                beamCount = Math.Max(beamCount, m.BeamCount);
                 if (m.ItemIndex == itemIndex && m.ResolveMeasureIndex(bl.Group.MeasureIndex) == measureIndex)
                     hit = true;
-            }
             if (!hit) continue;
 
-            double beamPos = noteX < bl.LeftX ? bl.LeftY
-                           : noteX > bl.RightX ? bl.RightY
-                           : bl.GetYAtX(noteX); // staff position of the beam reference line
-            double beamCenterDevice = StaffFrame.PositionToDevice(beamPos, staffMiddleY);
-            double beamHalf = EngravingDefaults.BeamThickness / 2
-                              + (beamCount - 1) * EngravingDefaults.BeamTranslation; // staff-spaces == device units
-            // Outer edge of the beam stack on the slur side (device: up = smaller Y).
-            stemTipDeviceY = beamCenterDevice + (curveUp ? -beamHalf : beamHalf);
+            // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
+            stemTipDeviceY = StaffFrame.ToDevice(bl.OuterEdgeStaffSpaceAtX(noteX, curveUp), staffMiddleY);
             return true;
         }
         return false;
