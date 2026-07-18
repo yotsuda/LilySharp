@@ -45,13 +45,13 @@
   <text x="29.11" y="25.73" font-size="3.20" text-anchor="middle" data-pos="707">song</text>
   <text x="36.75" y="25.73" font-size="3.20" text-anchor="middle" data-pos="714">soft</text>
   <text x="43.53" y="25.73" font-size="3.20" text-anchor="middle" data-pos="719">now</text>
-  <text x="9.13" y="28.93" font-size="3.20" text-anchor="middle" data-pos="742">Low</text>
-  <text x="22.07" y="28.93" font-size="3.20" text-anchor="middle" data-pos="746">part</text>
-  <text x="29.11" y="28.93" font-size="3.20" text-anchor="middle" data-pos="751">deep</text>
-  <text x="36.75" y="28.93" font-size="3.20" text-anchor="middle" data-pos="760">slow</text>
-  <text x="43.53" y="28.93" font-size="3.20" text-anchor="middle" data-pos="765">now</text>
+  <text x="9.13" y="28.92" font-size="3.20" text-anchor="middle" data-pos="742">Low</text>
+  <text x="22.07" y="28.92" font-size="3.20" text-anchor="middle" data-pos="746">part</text>
+  <text x="29.11" y="28.92" font-size="3.20" text-anchor="middle" data-pos="751">deep</text>
+  <text x="36.75" y="28.92" font-size="3.20" text-anchor="middle" data-pos="760">slow</text>
+  <text x="43.53" y="28.92" font-size="3.20" text-anchor="middle" data-pos="765">now</text>
   <text x="1.80" y="25.73" font-size="2.40" font-weight="bold">1.</text>
-  <text x="1.80" y="28.93" font-size="2.40" font-weight="bold">2.</text>
+  <text x="1.80" y="28.92" font-size="2.40" font-weight="bold">2.</text>
   <rect x="0.30" y="10.77" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="570"/>
   <text x="3.01" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="570">Main</text>
   </g>

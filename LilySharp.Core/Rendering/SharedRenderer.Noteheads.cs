@@ -33,7 +33,7 @@ internal static partial class SharedRenderer
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
-        double pageHeight, double deviceStaffMiddleY,
+        double pageHeight,
         int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue,
         HashSet<int>? percentCovered = null)
     {
@@ -82,7 +82,7 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, deviceStaffMiddleY);
+                        forcedStemUp, headWiped, gc, pageHeight);
                     break;
                 case RestItem rest:
                     // A spacer rest ('s') reserves its column width but is never
@@ -97,7 +97,7 @@ internal static partial class SharedRenderer
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, deviceStaffMiddleY);
+                        forcedStemUp, headWiped, gc, pageHeight);
                     break;
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
@@ -342,7 +342,7 @@ internal static partial class SharedRenderer
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, double deviceStaffMiddleY)
+        IDrawingContext gc, double pageHeight)
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
@@ -409,13 +409,14 @@ internal static partial class SharedRenderer
             // extend-to-center-line rule, faithfully following LilyPond's
             // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
             int durLog = StemCalculator.GetDurationLog(noteValue);
-            // StemCalculator works in device coordinates. Feed it the device positions
-            // computed directly (deviceMiddle − offset), matching the former device
-            // order exactly so the calculator's output — hence the flipped stem end —
-            // is byte-identical (a pageHeight − noteY reconstruction can perturb the
-            // calculator input by 1 ULP and flip an F2 boundary).
+            // StemCalculator is device (Y-down); convert at its boundary. Derive its
+            // device inputs from the Y-up locals in scope — device note Y = pageHeight −
+            // noteY, device staff top = pageHeight − (staff middle + half the staff) —
+            // then flip its device result back to page Y-up.
+            double deviceNoteY = pageHeight - noteY;
+            double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
-                deviceStaffMiddleY - note.StaffPosition / 2.0, stemUp, deviceStaffMiddleY - StaffHeight / 2.0, durLog, note.StaffPosition);
+                deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition);
             gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
                 stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
@@ -458,7 +459,7 @@ internal static partial class SharedRenderer
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, double deviceStaffMiddleY)
+        IDrawingContext gc, double pageHeight)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
@@ -569,9 +570,14 @@ internal static partial class SharedRenderer
                 - StemAttachYOffset(chord.Notehead, stemUp, noteValue);
             int stemTipPos = stemUp ? maxPos : minPos;
             int durLog = StemCalculator.GetDurationLog(noteValue);
-            // Device-exact calculator inputs (deviceMiddle − offset), as in DrawNote.
+            // StemCalculator is device; convert at its boundary. Derive device inputs
+            // from the Y-up locals — device tip Y = pageHeight − (staff middle + tip
+            // pos/2), device staff top = pageHeight − (staff middle + half staff) — as
+            // in DrawNote, then flip its device result back to page Y-up.
+            double deviceTipY = pageHeight - (staffMiddleY + stemTipPos / 2.0);
+            double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
-                deviceStaffMiddleY - stemTipPos / 2.0, stemUp, deviceStaffMiddleY - StaffHeight / 2.0, durLog, stemTipPos);
+                deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos);
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
         }

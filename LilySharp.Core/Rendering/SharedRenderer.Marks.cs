@@ -184,9 +184,8 @@ internal static partial class SharedRenderer
             // sn.YUp is Y-up from the system top (the verse's lyric baseline); lift
             // the system top to the page Y-up frame and add it, like DrawLyrics.
             if (!sysY.TryGetValue(sn.MeasureIndex, out var s)) continue; // other page
-            // Device value first, then a single flip — byte-exact at F2 midpoints
-            // (a plain (H − s) + YUp recombination can round the other way).
-            double y = pageHeight - (s - sn.YUp);
+            // Page Y-up: lift the system top and add the stored offset, like DrawLyrics.
+            double y = (pageHeight - s) + sn.YUp;
             gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
@@ -239,12 +238,12 @@ internal static partial class SharedRenderer
         {
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
             if (!sysY.ContainsKey(m.MeasureIndex)) continue; // other page
-            // The mark's DEVICE anchor (staff middle − YUp). DrawSingleMusicMark
-            // computes its many offsets in device and flips each at the draw, so the
-            // former device geometry — and every F2 boundary — is reproduced exactly.
-            double deviceY = os.StaffMiddleDeviceY(m.StaffIndex, m.MeasureIndex, StaffHeight) - m.YUp;
+            // The mark's page Y-up anchor: the staff middle's Y-up refpoint plus the
+            // stored offset. Marks do not shrink on an ossia staff (the former code
+            // used StaffMiddleDeviceY, not os.Y), so no ossia affine is applied here.
+            double yUp = os.StaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight) + m.YUp;
             using (gc.Source(m.SourcePosition))
-                DrawSingleMusicMark(m, deviceY, gc, pageHeight);
+                DrawSingleMusicMark(m, yUp, gc);
         }
     }
 
@@ -309,13 +308,12 @@ internal static partial class SharedRenderer
         DrawPair(x, dotted: true, withThree: true);
     }
 
-    // absY is DEVICE here: this method keeps LilyPond's device offset arithmetic and
-    // flips each drawn Y once via F() (the page context is Y-up). Computing device
-    // offsets first, then a single flip, keeps every coordinate byte-identical to the
-    // former device output even on an F2 rounding midpoint.
-    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc, double pageHeight)
+    // absY is the mark's anchor in the page Y-up frame (page-bottom origin, up
+    // positive), matching LilyPond's native sign convention: offsets that move a
+    // sub-element visually UP the page ADD, device-downward offsets SUBTRACT. The
+    // page context is Y-up, so every coordinate is emitted directly.
+    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc)
     {
-        double F(double y) => pageHeight - y;
         if (m.IsSymbol)
         {
             // Segno (U+E062) / Coda (U+E064) in this Emmentaler cmap.
@@ -324,7 +322,7 @@ internal static partial class SharedRenderer
             char glyph = m.MarkType == MusicMarkType.Segno
                 ? EmmentalerGlyphs.MarkSegno
                 : EmmentalerGlyphs.MarkCoda;
-            gc.DrawGlyph(glyph, m.X, F(absY), FontSize, Color.Black);
+            gc.DrawGlyph(glyph, m.X, absY, FontSize, Color.Black);
             return;
         }
         if (m.MarkType == MusicMarkType.Tempo)
@@ -340,12 +338,12 @@ internal static partial class SharedRenderer
             if (m.TempoText != null)
             {
                 const double markingSize = 2.2;
-                gc.DrawText(m.TempoText, x, F(absY), markingSize,
+                gc.DrawText(m.TempoText, x, absY, markingSize,
                     "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
                 x += SerifTextMetrics.MeasureBold(m.TempoText, markingSize) + 0.8;
-                gc.DrawText("(", x, F(absY), textSize,
+                gc.DrawText("(", x, absY, textSize,
                     "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
                 x += SerifTextMetrics.Measure("(", textSize) + 0.1;
             }
@@ -358,35 +356,36 @@ internal static partial class SharedRenderer
                     : EmmentalerGlyphs.NoteheadBlack;
             // The stemless whole note sits a touch higher so its center
             // lines up with the equation text the way the stemmed units do
-            // (their stem carries the visual weight upward).
-            double headY = m.TempoBeatUnit <= 1 ? absY - 0.5 : absY;
-            gc.DrawGlyph(head, x, F(headY), noteSize);
+            // (their stem carries the visual weight upward). Up = larger Y-up.
+            double headY = m.TempoBeatUnit <= 1 ? absY + 0.5 : absY;
+            gc.DrawGlyph(head, x, headY, noteSize);
             double headW = m.TempoBeatUnit <= 1 ? noteSize * 0.62 : noteSize * 0.5;
             if (m.TempoBeatUnit >= 2)
             {
                 double stemX = x + noteSize * 0.32;
-                double stemTop = absY - 3.5 * (noteSize / FontSize);
-                gc.DrawLine(stemX, F(absY), stemX, F(stemTop), Color.Black, 0.10);
+                // The stem rises from the head (up = larger Y-up).
+                double stemTop = absY + 3.5 * (noteSize / FontSize);
+                gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
                 if (m.TempoBeatUnit >= 8)
-                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, F(stemTop), noteSize);
+                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
             }
             double dotX = x + headW + 0.15;
             for (int d = 0; d < m.TempoDots; d++)
             {
                 // Beside the head at ITS center (ly:dots::print puts the dot
-                // on the head's line) — absY-0.5 floated it above the head.
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, F(headY), noteSize);
+                // on the head's line).
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, headY, noteSize);
                 dotX += 0.55;
             }
             double tempoTextX = Math.Max(x + headW + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
             string equation = "= " + m.Text + (m.TempoText != null ? ")" : "");
-            gc.DrawText(equation, tempoTextX, F(absY),
+            gc.DrawText(equation, tempoTextX, absY,
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
                 double textEnd = tempoTextX + SerifTextMetrics.MeasureBold(equation, textSize);
-                // DrawSwingEquation draws in the page Y-up frame; hand it the flipped baseline.
-                DrawSwingEquation(gc, textEnd + 0.8, F(absY), m.SwingSubdivision);
+                // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
+                DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
             return;
         }
@@ -397,9 +396,10 @@ internal static partial class SharedRenderer
             double textWidth = SerifTextMetrics.MeasureBold(m.Text, fs);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;
-            gc.DrawRectangle(m.X - boxW / 2, F(absY - boxH / 2), boxW, boxH,
+            // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
+            gc.DrawRectangle(m.X - boxW / 2, absY + boxH / 2, boxW, boxH,
                 fill: Color.White, stroke: Color.Black, strokeWidth: 0.10);
-            gc.DrawText(m.Text, m.X, F(absY + fs / 2 - pad), fs, "serif",
+            gc.DrawText(m.Text, m.X, absY - fs / 2 + pad, fs, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -407,7 +407,7 @@ internal static partial class SharedRenderer
         {
             bool italic = m.MarkType is MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
                 or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
-            gc.DrawText(m.Text, m.X, F(absY), FontSize * 0.7, "serif",
+            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
                 italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -421,15 +421,15 @@ internal static partial class SharedRenderer
             double textW = SerifTextMetrics.MeasureBold(prefix, ts);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
-            gc.DrawText(prefix, left, F(absY), ts, "serif",
+            gc.DrawText(prefix, left, absY, ts, "serif",
                 FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
-            // The coda glyph's baseline sits low; lift it so its centre aligns with
-            // the cap height of "To".
-            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, F(absY - gs * 0.30), gs, Color.Black);
+            // The coda glyph's baseline sits low; lift it (up = larger Y-up) so its
+            // centre aligns with the cap height of "To".
+            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, absY + gs * 0.30, gs, Color.Black);
             return;
         }
         // Default text marks (D.S./D.C./Fine/etc.)
-        gc.DrawText(m.Text, m.X, F(absY), FontSize * 0.7, "serif",
+        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
             FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
     }
 

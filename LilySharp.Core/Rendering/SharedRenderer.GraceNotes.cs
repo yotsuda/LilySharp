@@ -59,11 +59,6 @@ internal static partial class SharedRenderer
             // score (0 for the first staff / single-staff). Y-up: below the system
             // top is smaller Y-up.
             double staffMiddleY = syUp - g.StaffYOffset - StaffHeight / 2;
-            // Exact DEVICE staff middle (from the device system top sy) — for the
-            // stem geometry, which is emitted device-then-flipped so its ends stay
-            // byte-identical (a Y-up head + stemLen recombination can perturb an F2
-            // boundary).
-            double deviceStaffMid = sy + g.StaffYOffset + StaffHeight / 2;
             // On an ossia staff the whole group shrinks again: head Ys go
             // through the staff-top affine and the grace's own scale compounds
             // with the ossia scale (a grace on a magnified staff is scaled
@@ -77,7 +72,6 @@ internal static partial class SharedRenderer
             // the whole group's positions are known.
             var headX = new List<double>(g.Notes.Length);
             var headY = new List<double>(g.Notes.Length);
-            var headYDev = new List<double>(g.Notes.Length);
             var beamCounts = new List<int>(g.Notes.Length);
             using (gc.Source(g.SourcePosition))
             {
@@ -102,8 +96,6 @@ internal static partial class SharedRenderer
                         GlyphMetrics.NoteheadBlack.Height * eff);
                     headX.Add(currentX);
                     headY.Add(y);
-                    headYDev.Add(os.Y(deviceStaffMid - note.StaffPosition / 2.0,
-                        g.StaffIndex, g.MeasureIndex));
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
                     lastNoteY = y;
@@ -121,8 +113,8 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
-                DrawGraceStemsAndBeam(headX, headY, headYDev, beamCounts, eff,
-                    g.Type == GraceNoteType.Acciaccatura, gc, pageHeight);
+                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff,
+                    g.Type == GraceNoteType.Acciaccatura, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -211,8 +203,8 @@ internal static partial class SharedRenderer
     /// flags rather than a partial beam.
     /// </remarks>
     private static void DrawGraceStemsAndBeam(
-        List<double> xs, List<double> ys, List<double> ysDev, List<int> beamCounts, double scale,
-        bool acciaccatura, IDrawingContext gc, double pageHeight)
+        List<double> xs, List<double> ys, List<int> beamCounts, double scale,
+        bool acciaccatura, IDrawingContext gc)
     {
         int n = xs.Count;
         if (n == 0) return;
@@ -222,9 +214,9 @@ internal static partial class SharedRenderer
         // Stem-up attaches at the right edge of the (scaled) notehead.
         double upAttach = EngravingDefaults.NoteheadBlackWidth * scale - stemThick / 2;
         double StemX(int i) => xs[i] + upAttach;
-        // Device stem end (device head − stemLen, up), flipped once to page Y-up so
-        // the value is byte-identical even on an F2 boundary.
-        double StemEndY(int i) => pageHeight - (ysDev[i] - stemLen);
+        // Stem end: the up-stem runs from the head to stemLen above it — up is larger
+        // Y-up, so add in the native page Y-up frame.
+        double StemEndY(int i) => ys[i] + stemLen;
 
         int maxBeams = 0;
         foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);

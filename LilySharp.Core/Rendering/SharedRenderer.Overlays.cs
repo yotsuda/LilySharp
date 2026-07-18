@@ -334,11 +334,8 @@ internal static partial class SharedRenderer
         foreach (var l in layout.LyricLayouts)
         {
             if (!sysY.TryGetValue(l.Item.MeasureIndex, out var sy)) continue; // other page
-            // Page Y-up baseline. Compute the former device value (sy − YUp) first,
-            // then flip once: this keeps the flip Sterbenz-exact and byte-identical
-            // even when the value sits on an F2 rounding midpoint (a plain
-            // (H − sy) + YUp recombination can round the other way there).
-            double y = pageHeight - (sy - l.YUp);
+            // Page Y-up baseline: lift the system top and add the stored offset.
+            double y = (pageHeight - sy) + l.YUp;
             // Tag the syllable with its source offset (data-pos) so the preview can
             // click-to-jump and editor-highlight it like a note. SourcePosition 0
             // means "unknown" (would clash with the bar-0 section mark), so only
@@ -651,15 +648,21 @@ internal static partial class SharedRenderer
             // draw unconditionally.
             if (a.MeasureIndex >= 0 && !sysY.ContainsKey(a.MeasureIndex))
                 continue; // other page
-            // Computed in device internally: the wave's half-wave COUNT floors on the
-            // vertical `length`, so any float recombination there can shift the count
-            // by one. Reproduce the former device geometry exactly, then flip each
-            // drawn Y to page Y-up (pageHeight − deviceY) for the flipping context.
-            double staffMiddleY = os.StaffMiddleDeviceY(a.StaffIndex, a.MeasureIndex, StaffHeight);
-            double topY = os.Y(StaffFrame.ToDevice(a.TopYUp, staffMiddleY), a.StaffIndex, a.MeasureIndex);
-            double bottomY = os.Y(StaffFrame.ToDevice(a.BottomYUp, staffMiddleY), a.StaffIndex, a.MeasureIndex);
+            // Native page Y-up: the staff middle's Y-up refpoint, plus the stored
+            // Y-up offsets (higher position = larger Y-up), through the ossia affine.
+            // topY is now the visually top (larger Y-up); the wave runs DOWNWARD from
+            // it. `length` is frame-invariant, so the half-wave count (floored on it)
+            // is unchanged.
+            double midYUp = os.StaffMiddleYUp(a.StaffIndex, a.MeasureIndex, StaffHeight);
+            double topY = os.YUp(midYUp + a.TopYUp, a.StaffIndex, a.MeasureIndex);
+            double bottomY = os.YUp(midYUp + a.BottomYUp, a.StaffIndex, a.MeasureIndex);
             double waveAmplitude = os.Size(0.2, a.StaffIndex);
-            double length = bottomY - topY;
+            // The wave length is the offset span (scaled on an ossia staff). Derive it
+            // from the offsets directly rather than topY − bottomY: those both carry
+            // the large staff-middle refpoint, and the cancellation there can drop a
+            // ULP and flip the floored half-wave count when the span sits exactly on a
+            // wavePeriod boundary. The offset difference is refpoint-free and exact.
+            double length = os.Size(a.TopYUp - a.BottomYUp, a.StaffIndex);
             if (length <= 0) continue;
             // Non-arpeggiate: a straight vertical bracket with end ticks —
             // the chord is NOT rolled. LILYPOND-REF: \arpeggioBracket.
@@ -667,9 +670,9 @@ internal static partial class SharedRenderer
             {
                 using (gc.Source(a.SourcePosition))
                 {
-                    gc.DrawLine(a.X, pageHeight - topY, a.X, pageHeight - bottomY, Color.Black, thickness * 1.6);
-                    gc.DrawLine(a.X, pageHeight - topY, a.X + 0.7, pageHeight - topY, Color.Black, thickness * 1.6);
-                    gc.DrawLine(a.X, pageHeight - bottomY, a.X + 0.7, pageHeight - bottomY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, topY, a.X, bottomY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, topY, a.X + 0.7, topY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, bottomY, a.X + 0.7, bottomY, Color.Black, thickness * 1.6);
                 }
                 continue;
             }
@@ -681,14 +684,15 @@ internal static partial class SharedRenderer
             {
                 for (int i = 0; i < halfWaves; i++)
                 {
-                    double startY = topY + i * seg;
+                    // Accumulate downward from the top (subtract in the Y-up frame).
+                    double startY = topY - i * seg;
                     double sign = (i % 2 == 0) ? -1 : 1;
                     for (int j = 1; j <= subdivisions; j++)
                     {
                         double t = (double)j / subdivisions;
-                        double y = startY + t * seg;
+                        double y = startY - t * seg;
                         double x = a.X + sign * waveAmplitude * 4 * t * (1 - t);
-                        gc.DrawLine(prevX, pageHeight - prevY, x, pageHeight - y, Color.Black, thickness);
+                        gc.DrawLine(prevX, prevY, x, y, Color.Black, thickness);
                         prevX = x; prevY = y;
                     }
                 }

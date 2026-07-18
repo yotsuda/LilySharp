@@ -377,12 +377,6 @@ internal static partial class SharedRenderer
                 // local refpoint is the page height (localStaffY − offset then flips,
                 // via the decorator, back to the original local device offset).
                 double localStaffY = isOssia ? pageHeight : pageHeight - staffY;
-                // The EXACT device staff-middle for stem calculators (which reason in
-                // device Y). Reconstructing it from the Y-up localStaffY would round-trip
-                // through pageHeight and can perturb a calculator input by 1 ULP; take it
-                // straight from the device staffY (ossia works in its local device frame,
-                // top at 0).
-                double deviceStaffMiddleY = isOssia ? StaffHeight / 2.0 : staffY + StaffHeight / 2.0;
 
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
@@ -493,7 +487,7 @@ internal static partial class SharedRenderer
                         : resolver;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
                         system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
-                        pageHeight, deviceStaffMiddleY, fragFrom, fragTo, percentCovered);
+                        pageHeight, fragFrom, fragTo, percentCovered);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
