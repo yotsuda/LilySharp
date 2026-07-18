@@ -272,7 +272,7 @@ internal sealed class TieFormattingProblem
         }
 
         double curveYFromMiddle = y + deltaY;        // sp, up+
-        double attachmentY = staffMiddleY - curveYFromMiddle; // page Y, down+
+        double attachmentY = StaffFrame.ToDevice(curveYFromMiddle, staffMiddleY); // page Y, down+
 
         return new TieCandidate
         {

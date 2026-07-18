@@ -375,7 +375,7 @@ internal sealed class SkylineBuilder
                     stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
-                        staffMiddleY - note.StaffPosition * 0.5, upSkyline, downSkyline);
+                        StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY), upSkyline, downSkyline);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -401,7 +401,7 @@ internal sealed class SkylineBuilder
                     ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
                 {
                     var accBox = GlyphMetrics.GetAccidentalBBox(al.Accidental);
-                    double accHeadY = staffMiddleY - al.StaffPosition * 0.5;
+                    double accHeadY = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
                     MergeAccidentalInk(
                         x + al.XOffset, x + al.XOffset + accBox.Width,
                         accHeadY - accBox.Top, accHeadY - accBox.Bottom,
@@ -494,8 +494,8 @@ internal sealed class SkylineBuilder
     /// length (matching <c>stem.cc</c>) and ledgers/flags read sign-for-sign against
     /// <c>grob.cc</c>. They are reflected to the shared device frame (Y-down) only
     /// at the <see cref="VerticalSkyline.FromBox"/> boundary via
-    /// <c>staffMiddleY - up</c> (the local <c>ToDevice</c>), the single chokepoint
-    /// that stands in for LilyPond's stencil-time flip. The note center's Y-up
+    /// <see cref="StaffFrame.ToDevice"/> (the single chokepoint that stands in for
+    /// LilyPond's stencil-time flip). The note center's Y-up
     /// coordinate is just its staff position in staff-spaces (<c>staffPosition/2</c>).
     /// </remarks>
     private void AddNoteBoxToSkylines(
@@ -509,8 +509,9 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        // Reflect a Y-up coordinate (staff-spaces above the middle line) to device.
-        double ToDevice(double up) => staffMiddleY - up;
+        // Reflect a Y-up coordinate (staff-spaces above the middle line) to device
+        // through the single chokepoint.
+        double ToDevice(double up) => StaffFrame.ToDevice(up, staffMiddleY);
 
         double noteUp = staffPosition * 0.5;   // staff-spaces above middle, up+
         double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;

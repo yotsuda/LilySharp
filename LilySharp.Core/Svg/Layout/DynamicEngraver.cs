@@ -333,7 +333,7 @@ internal static class DynamicEngraver
                 // StaffPosition convention: 0 = middle line, positive = up, negative = down.
                 // Canonical formula: Y = StaffMiddle - StaffPosition * 0.5
                 // LILYPOND-REF: staff-symbol-referencer.cc:76-89 get_position
-                double noteY = StaffMiddle - note.StaffPosition * 0.5;
+                double noteY = StaffFrame.PositionToDevice(note.StaffPosition, StaffMiddle);
 
                 // If stem down, add stem length below the notehead. forcedStemUp
                 // (multi-voice) overrides the note's pitch-default direction.
@@ -348,7 +348,7 @@ internal static class DynamicEngraver
             case ChordItem chord:
                 // Find lowest note in chord (most negative StaffPosition = lowest on staff)
                 int lowestPos = chord.Notes.Min(n => n.StaffPosition);
-                double lowestNoteY = StaffMiddle - lowestPos * 0.5;
+                double lowestNoteY = StaffFrame.PositionToDevice(lowestPos, StaffMiddle);
 
                 // If stem down, add stem length from lowest note
                 if (!(forcedStemUp ?? chord.StemUp))
@@ -405,7 +405,7 @@ internal static class DynamicEngraver
         {
             case NoteItem note:
             {
-                double noteY = StaffMiddle - note.StaffPosition * 0.5;
+                double noteY = StaffFrame.PositionToDevice(note.StaffPosition, StaffMiddle);
                 // Stem up: the stem extends UP (smaller Y) above the notehead.
                 if (forcedStemUp ?? note.StemUp)
                     return noteY - EngravingDefaults.DefaultStemLength;
@@ -414,7 +414,7 @@ internal static class DynamicEngraver
             case ChordItem chord:
             {
                 int highestPos = chord.Notes.Max(n => n.StaffPosition);
-                double highestNoteY = StaffMiddle - highestPos * 0.5;
+                double highestNoteY = StaffFrame.PositionToDevice(highestPos, StaffMiddle);
                 if (forcedStemUp ?? chord.StemUp)
                     return highestNoteY - EngravingDefaults.DefaultStemLength;
                 return highestNoteY - EngravingDefaults.NoteheadHalfHeight;

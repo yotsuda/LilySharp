@@ -350,7 +350,7 @@ internal static partial class SharedRenderer
                 if (anyNatural)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNaturalPos, staffPosition);
-                double ny = staffY + StaffHeight / 2 - staffPosition * 0.5;
+                double ny = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, ny, FontSize);
                 prevNaturalPos = staffPosition;
@@ -390,7 +390,7 @@ internal static partial class SharedRenderer
                 if (i > 0)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNatPos, staffPosition);
-                double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+                double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
                 prevNatPos = staffPosition;

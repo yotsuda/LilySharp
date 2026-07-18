@@ -388,7 +388,7 @@ internal static partial class SharedRenderer
                     _ => "natural",
                 };
                 int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
-                double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+                double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
                 x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
             }
@@ -408,7 +408,7 @@ internal static partial class SharedRenderer
         for (int i = 0; i < n; i++)
         {
             int staffPosition = KeySigStaffPosition(clef, isSharps, i);
-            double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+            double y = StaffFrame.PositionToDevice(staffPosition, staffY + StaffHeight / 2);
             gc.DrawGlyph(glyph, x, y, FontSize);
             x += accidentalWidth;
         }

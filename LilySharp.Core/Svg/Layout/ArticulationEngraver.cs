@@ -229,7 +229,7 @@ internal static class ArticulationEngraver
                 else
                 {
                     fx = noteX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;
-                    fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
+                    fy = StaffFrame.PositionToDevice(GetStaffPosition(item), StaffMiddle) + staffOffset;
                 }
                 bool approach = articulation.Type
                     is ArticulationType.Scoop or ArticulationType.Plop;
@@ -949,7 +949,7 @@ internal static class ArticulationEngraver
         // StaffPosition: 0 = middle line, positive = up, negative = down.
         // Canonical formula used by note rendering: Y = StaffMiddle - StaffPosition * 0.5
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
-        double noteY = StaffMiddle - anchorPosition * 0.5;
+        double noteY = StaffFrame.PositionToDevice(anchorPosition, StaffMiddle);
 
         // Use quantize-position for staccato, marcato, tenuto
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
@@ -1128,7 +1128,8 @@ internal static class ArticulationEngraver
 
         // Convert to LP staff position
         // LP: 0 = middle line (our Y=2.0), positive = up, negative = down
-        double lpPosition = (StaffMiddle - targetY) * 2.0;
+        // Device Y -> Y-up staff-spaces (StaffFrame.ToUp), then x2 for half-spaces.
+        double lpPosition = StaffFrame.ToUp(targetY, StaffMiddle) * 2.0;
 
         // Directed round (away from the note)
         // LILYPOND-REF: misc.cc directed_round(): ceil for UP, floor for DOWN
@@ -1150,7 +1151,7 @@ internal static class ArticulationEngraver
             // LILYPOND-REF: side-position-interface.cc:420
             // total_off += (rounded - position) * 0.5 * ss;
             // Equivalent: snap targetY to the rounded LP position
-            targetY = StaffMiddle - rounded / 2.0;
+            targetY = StaffFrame.PositionToDevice(rounded, StaffMiddle);
 
             // LILYPOND-REF: side-position-interface.cc:421-422
             // if (Staff_symbol_referencer::on_line(me, int(rounded)))

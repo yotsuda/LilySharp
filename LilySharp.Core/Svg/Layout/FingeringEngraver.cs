@@ -223,7 +223,7 @@ internal static class FingeringEngraver
         // LILYPOND-REF: lily/side-position-interface.cc; scm/define-grobs.scm Fingering.
         const double StaffMiddle = 2.0;        // middle line, staff spaces from staff top
         const double NoteheadHalfHeight = 0.5; // notehead half-height (staff spaces)
-        double noteheadY = staffY + StaffMiddle - note.StaffPosition * 0.5;
+        double noteheadY = StaffFrame.PositionToDevice(note.StaffPosition, staffY + StaffMiddle);
         double y = isAbove
             ? System.Math.Min(staffY - StaffPadding,
                 noteheadY - NoteheadHalfHeight - StaffPadding)

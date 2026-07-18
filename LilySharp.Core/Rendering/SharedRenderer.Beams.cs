@@ -241,7 +241,7 @@ internal static partial class SharedRenderer
                     double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
                         ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) + StaffHeight / 2
                         : staffMiddleY;
-                    headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5
+                    headY = StaffFrame.PositionToDevice(GetMemberStaffPosition(member, up), memberStaffMiddleY)
                         + StemAttachYOffset(member.Item switch
                         {
                             NoteItem n => n.Notehead,
