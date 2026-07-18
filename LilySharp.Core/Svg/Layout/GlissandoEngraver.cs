@@ -25,9 +25,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 public readonly record struct GlissandoLayout(
     double StartX,
-    double StartY,
+    // Y of the line's start/end in the LilyPond-native Y-up frame: staff-spaces
+    // ABOVE this glissando's staff middle line, up-positive (frame B). The renderer
+    // reflects each back to device via StaffFrame.ToDevice against the staff middle
+    // it resolves from StaffIndex/MeasureIndex.
+    double StartYUp,
     double EndX,
-    double EndY,
+    double EndYUp,
     GlissandoStyle Style,
     int SourcePosition,
     // F3/B: locator of the START note this glissando hangs on, so a reused (cached)
@@ -143,14 +147,23 @@ internal static class GlissandoEngraver
                     }
                 }
 
+                // Store Y-up (frame B) relative to this segment's staff middle; the
+                // segment/gap geometry above stayed in device (frame-invariant line
+                // math), so reflect only at the store boundary.
                 layouts.Add(new GlissandoLayout(
                     StartX: segStartX,
-                    StartY: segStartY,
+                    StartYUp: StaffFrame.ToUp(segStartY, staffMiddleY),
                     EndX: segEndX,
-                    EndY: segEndY,
+                    EndYUp: StaffFrame.ToUp(segEndY, staffMiddleY),
                     Style: gliss.Style,
                     SourcePosition: gliss.SourcePosition,
                     StaffIndex: staffIndex,
+                    // MeasureIndex is the START-note data-pos locator, shared by ALL
+                    // broken segments. The draw resolves the staff middle from it, so a
+                    // glissando broken across a SYSTEM would resolve later segments
+                    // against the first system's staff middle. No such case is in
+                    // coverage today; a proper fix needs a separate per-segment system
+                    // reference (MeasureIndex can't move — it drives click-to-source).
                     MeasureIndex: gliss.StartMeasureIndex,
                     ItemIndex: gliss.StartItemIndex,
                     VoiceIndex: gliss.VoiceIndex));

@@ -614,10 +614,13 @@ internal static partial class SharedRenderer
             // draw unconditionally.
             if (g.MeasureIndex >= 0 && !sysY.ContainsKey(g.MeasureIndex))
                 continue; // other page
+            // Frame B -> device: reflect each endpoint against this glissando's own
+            // staff middle (the shared per-grob draw boundary), then apply ossia.
+            double staffMiddleY = os.StaffMiddleDeviceY(g.StaffIndex, g.MeasureIndex, StaffHeight);
             using (gc.Source(g.SourcePosition))
                 gc.DrawLine(
-                    g.StartX, os.Y(g.StartY, g.StaffIndex, g.MeasureIndex),
-                    g.EndX, os.Y(g.EndY, g.StaffIndex, g.MeasureIndex),
+                    g.StartX, os.Y(StaffFrame.ToDevice(g.StartYUp, staffMiddleY), g.StaffIndex, g.MeasureIndex),
+                    g.EndX, os.Y(StaffFrame.ToDevice(g.EndYUp, staffMiddleY), g.StaffIndex, g.MeasureIndex),
                     Color.Black, thickness);
         }
     }

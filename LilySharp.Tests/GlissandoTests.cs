@@ -259,7 +259,7 @@ public class GlissandoTests
     }
 
     [Fact]
-    public void Calculate_AscendingGlissando_StartY_GreaterThan_EndY()
+    public void Calculate_AscendingGlissando_StartYUp_LessThan_EndYUp()
     {
         // Staff position 0 (middle) to 4 (above) = ascending
         // Y is inverted: higher staff position = lower Y value
@@ -277,12 +277,13 @@ public class GlissandoTests
         var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
 
         Assert.Single(result);
-        Assert.True(result[0].StartY > result[0].EndY,
-            $"Ascending glissando: startY ({result[0].StartY:F2}) should be > endY ({result[0].EndY:F2})");
+        // Y-up (frame B): ascending means the start sits LOWER (smaller YUp) than the end.
+        Assert.True(result[0].StartYUp < result[0].EndYUp,
+            $"Ascending glissando: startYUp ({result[0].StartYUp:F2}) should be < endYUp ({result[0].EndYUp:F2})");
     }
 
     [Fact]
-    public void Calculate_DescendingGlissando_StartY_LessThan_EndY()
+    public void Calculate_DescendingGlissando_StartYUp_GreaterThan_EndYUp()
     {
         // Staff position 4 (above) to 0 (middle) = descending
         var systems = CreateSingleSystem(2);
@@ -299,8 +300,9 @@ public class GlissandoTests
         var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
 
         Assert.Single(result);
-        Assert.True(result[0].StartY < result[0].EndY,
-            $"Descending glissando: startY ({result[0].StartY:F2}) should be < endY ({result[0].EndY:F2})");
+        // Y-up (frame B): descending means the start sits HIGHER (larger YUp) than the end.
+        Assert.True(result[0].StartYUp > result[0].EndYUp,
+            $"Descending glissando: startYUp ({result[0].StartYUp:F2}) should be > endYUp ({result[0].EndYUp:F2})");
     }
 
     [Fact]
@@ -375,20 +377,17 @@ public class GlissandoTests
         var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
 
         Assert.Single(result);
-        // System Y = 10.0, staffHeight = 4.0, staffMiddleY = 12.0
-        // For ascending glissando: startY > endY (Y increases downward)
-        // Gap should make startY decrease (move up slightly) and endY increase (move down slightly)
-        double systemY = 10.0;
-        double staffMiddleY = systemY + 4.0 / 2.0; // = 12.0
-        double rawStartY = staffMiddleY - (-4) / 2.0; // = 14.0 (low note = high Y)
-        double rawEndY = staffMiddleY - 8 / 2.0;       // = 8.0 (high note = low Y)
+        // Y-up (frame B): a staff position p is p/2 spaces above the staff middle.
+        // For an ascending glissando the start sits LOWER (smaller YUp) than the end;
+        // the gap shortens the line, pulling the start UP (toward the end, YUp
+        // increases) and the end DOWN (toward the start, YUp decreases).
+        double rawStartYUp = -4 * 0.5; // = -2.0 (low note, below the middle)
+        double rawEndYUp = 8 * 0.5;    // = 4.0 (high note, above the middle)
 
-        // After gap along line direction, start Y should move toward end (decrease)
-        Assert.True(result[0].StartY < rawStartY,
-            $"Start Y ({result[0].StartY:F2}) should be < raw ({rawStartY:F2}) — gap moves along line");
-        // After gap, end Y should move toward start (increase)
-        Assert.True(result[0].EndY > rawEndY,
-            $"End Y ({result[0].EndY:F2}) should be > raw ({rawEndY:F2}) — gap moves along line");
+        Assert.True(result[0].StartYUp > rawStartYUp,
+            $"Start YUp ({result[0].StartYUp:F2}) should be > raw ({rawStartYUp:F2}) — gap moves along line");
+        Assert.True(result[0].EndYUp < rawEndYUp,
+            $"End YUp ({result[0].EndYUp:F2}) should be < raw ({rawEndYUp:F2}) — gap moves along line");
     }
 
     [Fact]
