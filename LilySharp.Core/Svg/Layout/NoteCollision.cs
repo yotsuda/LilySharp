@@ -114,22 +114,25 @@ internal sealed record NoteCollisionInfo
 /// Parameters for note collision handling.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/note-collision.cc:299-350 check_meshing_chords()
-/// LILYPOND-REF: scm/define-grobs.scm:2537 NoteCollision
+/// LILYPOND-REF: lily/note-collision.cc:40-401 check_meshing_chords()
+/// LILYPOND-REF: scm/define-grobs.scm:2548 NoteCollision
+///
+/// (The class name is Note_collision_interface, but its implementation lives in
+/// lily/note-collision.cc — there is no note-collision-interface.cc file.)
 ///
 /// IMPLEMENTED — shift multipliers now match LilyPond:
 ///   stem_to_stem = 0.65, close_half = 0.52,
 ///   full_collide = 0.5, distant_half = 0.4
 /// IMPLEMENTED — meshing multipliers:
 ///   meshing_dotted = 0.1, meshing_general = 0.17
-/// IMPLEMENTED — head wipe (note-collision-interface.cc:381-407): hide overlapping notehead in merge
-/// IMPLEMENTED — width-based shift normalization (note-collision-interface.cc:309-312)
-/// IMPLEMENTED — half+eighth merge formula (note-collision-interface.cc:252-261)
-/// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision-interface.cc:270-280)
-/// IMPLEMENTED — dot direction adjustment (note-collision-interface.cc:411-448)
-/// IMPLEMENTED — force-hshift manual override (note-collision-interface.cc:486-502)
+/// IMPLEMENTED — head wipe (note-collision.cc:254-312: merge hides the overlapping notehead)
+/// IMPLEMENTED — width-based shift normalization (note-collision.cc:505-605 automatic_shift)
+/// IMPLEMENTED — half+eighth merge formula (note-collision.cc:91-176 check_meshing_chords)
+/// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision.cc:237-252 fa_styles)
+/// IMPLEMENTED — dot direction adjustment (note-collision.cc:263-337 dot_wipe_head)
+/// IMPLEMENTED — force-hshift manual override (note-collision.cc:608-624 forced_shift)
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
-/// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision-interface.cc:420-480)
+/// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision.cc:505-605 automatic_shift)
 /// </remarks>
 internal sealed record NoteCollisionParameters
 {

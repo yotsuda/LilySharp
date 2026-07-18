@@ -68,12 +68,6 @@ internal static class FingeringEngraver
     private const double StaffPadding = 0.5;
 
     /// <summary>
-    /// LILYPOND-REF: scm/define-grobs.scm Fingering — padding default 0.3.
-    /// Distance between stacked fingerings on the same column.
-    /// </summary>
-    private const double InterFingeringPadding = 0.3;
-
-    /// <summary>
     /// Approximate digit height for fingering at LP's font-size = -5.
     /// </summary>
     /// <remarks>

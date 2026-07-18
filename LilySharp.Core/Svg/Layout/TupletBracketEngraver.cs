@@ -95,8 +95,6 @@ internal static class TupletBracketEngraver
     // absolute value (lily/tuplet-bracket.cc:570 max_dy = max_slope_factor * last_x).
     private const double MaxSlopeFactor = 0.5;
 
-    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
-    private const double DefaultStemLength = 3.5;
 
     /// <summary>
     /// Y offset per nesting depth level for stacked nested tuplet brackets.
@@ -562,7 +560,7 @@ internal static class TupletBracketEngraver
             // calc_position_and_height — points from
             // Note_column::cross_staff_extent[dir] and staff.widen(pad);
             // *offset += padding * dir.
-            double tipY = StaffMiddleY - (highestPos!.Value * 0.5) - DefaultStemLength;
+            double tipY = StaffMiddleY - (highestPos!.Value * 0.5) - EngravingDefaults.DefaultStemLength;
             double edge = Math.Min(tipY, -StaffPaddingLP)
                 - BracketPadding - nestingOffset;
             double mid = edge;
@@ -574,7 +572,7 @@ internal static class TupletBracketEngraver
         }
         else
         {
-            double tipY = StaffMiddleY - (lowestPos!.Value * 0.5) + DefaultStemLength;
+            double tipY = StaffMiddleY - (lowestPos!.Value * 0.5) + EngravingDefaults.DefaultStemLength;
             double edge = Math.Max(tipY, 4.0 + StaffPaddingLP)
                 + BracketPadding + nestingOffset;
             double mid = edge;

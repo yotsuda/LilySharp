@@ -61,7 +61,7 @@ public sealed partial class MeasureCollector
     /// Collects chord name annotations (@chord.TEXT) from a note or chord's articulations.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/scheme-engravers.scm:1309 - Current_chord_text_engraver
+    /// LILYPOND-REF: scm/scheme-engravers.scm:1513 - Current_chord_text_engraver
     /// Syntax: @chord.Cm7, @chord.Bb7, @chord.Am
     /// </remarks>
     private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
@@ -238,7 +238,7 @@ public sealed partial class MeasureCollector
     /// Detects @cross annotation on a note or chord for cross-staff rendering.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam.cc:1451-1459 - cross-staff detection
+    /// LILYPOND-REF: lily/beam.cc:1497 Beam::is_cross_staff (calc_cross_staff @ 1509)
     /// Syntax: @cross marks a note for rendering on the other staff in a grand staff.
     ///
     /// In a grand staff context:
@@ -302,7 +302,8 @@ public sealed partial class MeasureCollector
     /// Returns 0 (none), 1 (right/accel), or -1 (left/rit).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: beam.cc:1039-1082 grow-direction
+    /// LILYPOND-REF: lily/beam.cc:773 grow-direction property read (calc_stem_y);
+    ///   Beam grow-direction property @ define-grobs.scm; feather doc @ beam.cc:1597
     /// Syntax: @feather.right (accelerando) or @feather.left (ritardando)
     /// </remarks>
     private static int GetFeatherDirection(SyntaxNode node)
@@ -353,8 +354,9 @@ public sealed partial class MeasureCollector
                     bool isAbove = !stemUp;
 
                     // Fermata and ornaments always go above
-                    // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
-                    // LILYPOND-REF: define-grobs.scm:2175 ornaments: direction = UP
+                    // LILYPOND-REF: scm/script.scm:128 fermata (direction . UP);
+                    // ornaments (trill/prall/mordent/turn) carry their own direction in
+                    // the same script-alist (scm/script.scm).
                     if (type == ArticulationType.Fermata ||
                         type == ArticulationType.Trill ||
                         type == ArticulationType.Mordent ||
@@ -583,7 +585,7 @@ public sealed partial class MeasureCollector
     /// Pairs trill spanner start/stop events into TrillSpannerItems.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/scheme-engravers.scm:47-85 start/stop pairing
+    /// LILYPOND-REF: scm/scheme-engravers.scm:1798 Trill_spanner_engraver
     /// </remarks>
     private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents()
     {

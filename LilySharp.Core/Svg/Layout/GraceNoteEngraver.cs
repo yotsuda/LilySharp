@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: define-grobs.scm:1358-1402 GraceSpacing grob
-/// LILYPOND-REF: grace-spacing.cc positioning logic
+/// LILYPOND-REF: lily/grace-spacing-engraver.cc:46 Grace_spacing_engraver::process_music
 /// </remarks>
 public readonly record struct GraceNoteLayout(
     int MeasureIndex,                    // Measure containing this grace
@@ -64,8 +64,10 @@ public readonly record struct GraceNoteLayout(
 /// Implements LilyPond's grace note positioning algorithm.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: grace-engraver.cc:92-125 Grace_engraver::process_music
-/// LILYPOND-REF: grace-spacing.cc:36-80 Grace_spacing::calc_springs
+/// LILYPOND-REF: lily/grace-engraver.cc:81 Grace_engraver::process_music
+/// LILYPOND-REF: lily/grace-spacing-engraver.cc:46 Grace_spacing_engraver::process_music
+///   (there is no grace-spacing.cc / Grace_spacing::calc_springs; the spring logic
+///   lives in Grace_spacing_engraver)
 ///
 /// Grace notes are placed immediately before their main note with:
 /// - Smaller size (65% of normal)
@@ -142,7 +144,7 @@ internal static class GraceNoteEngraver
             double mainNoteX = LayoutUtilities.GetItemXOffset(
                 graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
 
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — spring-based grace group width
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc:46 process_music — spring-based grace group width
             double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
                                    - SpacingRules.GraceToMainRod;  // Exclude junction rod (added separately below)
 
@@ -150,7 +152,7 @@ internal static class GraceNoteEngraver
             // clears it. For a CHORD this is the STAGGERED accidental stack's leftmost
             // extent, not one accidental — a chord main note reserved nothing before,
             // so a grace collided with the chord's flats/sharps.
-            // LILYPOND-REF: grace-spacing.cc:65-80 positioning before main note;
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc:46 positioning before main note;
             //   lily/accidental-placement.cc for the staggered stack.
             double accidentalExtent = 0;
             var measure = graceMeasures[grace.MeasureIndex];
@@ -314,7 +316,7 @@ internal static class GraceNoteEngraver
     /// Gets the total width required for a grace note group using spring-based calculation.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:46 Grace_spacing_engraver::process_music
     /// Uses per-group common shortest duration for LP-compliant spacing.
     /// </remarks>
     public static double GetGraceGroupWidth(ImmutableArray<GraceNoteInfo> notes)
