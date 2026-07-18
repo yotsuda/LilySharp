@@ -74,6 +74,14 @@ internal enum SlurObstacleType
 /// LILYPOND-REF: lily/slur-configuration.cc:1-558 Slur_configuration class
 /// LILYPOND-REF: lily/misc.cc:39-46 peak_around()
 /// </remarks>
+/// <summary>
+/// The slur-edge note facts the scorer needs, per endpoint.
+/// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state — extremes_[d].stem_ / stem_dir_,
+/// edge_has_beams_, and Stem::get_beaming(stem, -d) (beamed on the INNER side, toward the
+/// other endpoint).
+/// </summary>
+internal readonly record struct SlurEdgeInfo(bool HasStem, bool StemUp, bool BeamedInner, bool Beamed);
+
 internal sealed class SlurScoringProblem
 {
     private readonly SlurItem _slur;
@@ -86,6 +94,9 @@ internal sealed class SlurScoringProblem
     private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
+    private readonly SlurEdgeInfo _leftEdge;
+    private readonly SlurEdgeInfo _rightEdge;
+    private readonly bool _edgeHasBeams;
 
     // Musical dy: pitch difference in staff spaces
     private readonly double _musicalDy;
@@ -104,7 +115,9 @@ internal sealed class SlurScoringProblem
         IReadOnlyList<SlurObstacle>? obstacles = null,
         IReadOnlyList<SlurLayout>? existingSlurs = null,
         bool isBrokenLeft = false,
-        bool isBrokenRight = false)
+        bool isBrokenRight = false,
+        SlurEdgeInfo leftEdge = default,
+        SlurEdgeInfo rightEdge = default)
     {
         // Internal vertical frame: LilyPond's native Y-up. We obtain it from
         // the device frame (Y-down) by exact negation (yUp = -yDevice), so the
@@ -121,6 +134,10 @@ internal sealed class SlurScoringProblem
         _existingSlurs = existingSlurs;
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
+        // A broken edge is an artificial break point — no real stem/beam there.
+        _leftEdge = isBrokenLeft ? default : leftEdge;
+        _rightEdge = isBrokenRight ? default : rightEdge;
+        _edgeHasBeams = _leftEdge.Beamed || _rightEdge.Beamed;
 
         // Reflect obstacle extents into the Y-up frame (negate both edges; the
         // TopY field stays the visual top edge, now the numerically larger one).
@@ -336,6 +353,10 @@ internal sealed class SlurScoringProblem
         // Steeper than musical indication
         // LILYPOND-REF: slur-configuration.cc:501-507
         double maxDy = Math.Abs(_musicalDy) + 0.2; // 0.2: account for staffline offset
+        // LILYPOND-REF: slur-configuration.cc:502-503 — a beamed edge lets the slur be one
+        // more staff-space steeper before the steepness penalty bites.
+        if (_edgeHasBeams)
+            maxDy += 1.0;
         if (!isBroken)
             demerit += _parameters.SteeperSlopeFactor
                        * Math.Max(Math.Abs(slurDy) - maxDy, 0.0);
@@ -351,11 +372,14 @@ internal sealed class SlurScoringProblem
             demerit += _parameters.NonHorizontalPenalty;
 
         // Same direction penalty: slur slopes opposite to note movement
-        // LILYPOND-REF: slur-configuration.cc:520-524
+        // LILYPOND-REF: slur-configuration.cc:519-523 — a beamed edge softens this to 1/10
+        // (the beam already constrains the endpoint, so the slope is largely forced).
         if (Math.Abs(_musicalDy) > 0.01 && Math.Abs(slurDy) > 0.01 && !isBroken
             && Math.Sign(slurDy) != Math.Sign(_musicalDy))
         {
-            demerit += _parameters.SameSlopePenalty;
+            demerit += _edgeHasBeams
+                ? _parameters.SameSlopePenalty / 10.0
+                : _parameters.SameSlopePenalty;
         }
 
         config.Demerits += demerit;
@@ -386,6 +410,11 @@ internal sealed class SlurScoringProblem
         {
             double dy = Math.Abs(config.StartY - _startY);
             double demerit = factor * dy;
+            // LILYPOND-REF: slur-configuration.cc:473-477 — when the edge note's stem points
+            // the SAME way as the slur and is not beamed on its inner side, the endpoint can
+            // slide freely along the stem, so the attraction penalty is 5x weaker.
+            if (_leftEdge.HasStem && _leftEdge.StemUp == config.CurveUp && !_leftEdge.BeamedInner)
+                demerit /= 5.0;
             // Exponential slope factor
             // LILYPOND-REF: slur-configuration.cc:478-479
             demerit *= Math.Exp(dir * (-1) * slope * _parameters.EdgeSlopeExponent);
@@ -396,6 +425,9 @@ internal sealed class SlurScoringProblem
         {
             double dy = Math.Abs(config.EndY - _endY);
             double demerit = factor * dy;
+            // LILYPOND-REF: slur-configuration.cc:473-477 (stem slurward, not inner-beamed).
+            if (_rightEdge.HasStem && _rightEdge.StemUp == config.CurveUp && !_rightEdge.BeamedInner)
+                demerit /= 5.0;
             demerit *= Math.Exp(dir * 1 * slope * _parameters.EdgeSlopeExponent);
             config.Demerits += demerit;
         }

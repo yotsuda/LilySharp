@@ -44,10 +44,10 @@
   <rect x="19.91" y="27.18" width="2.60" height="1.79" fill="#FFFFFF" data-pos="540"/>
   <text x="21.21" y="28.91" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="540">12</text>
   <line x1="21.80" y1="26.88" x2="21.80" y2="22.38" stroke="#000000" stroke-width="0.130"/>
-  <path d="M 8.10,16.17 C 9.15,15.10 11.34,14.58 12.32,15.17 C 11.28,14.32 9.09,14.84 8.10,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 15.93,14.67 C 16.99,13.59 19.25,13.07 20.26,13.67 C 19.19,12.80 16.93,13.32 15.93,14.67 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 8.45,28.54 C 9.94,24.92 11.87,24.92 13.28,27.04 C 11.79,24.66 9.86,24.66 8.45,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 16.28,28.54 C 17.80,22.92 19.77,22.92 21.21,27.04 C 19.69,22.66 17.72,22.66 16.28,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.75,16.17 C 9.78,15.03 11.97,14.51 12.98,15.17 C 11.95,14.39 9.75,14.91 8.75,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.58,14.67 C 17.63,13.51 19.89,12.99 20.91,13.67 C 19.86,12.88 17.60,13.40 16.58,14.67 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.45,28.54 C 9.92,24.85 11.85,24.85 13.28,27.04 C 11.81,24.73 9.88,24.73 8.45,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.28,28.54 C 17.78,22.85 19.75,22.85 21.21,27.04 C 19.71,22.73 17.74,22.73 16.28,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="10.94" y="16.57" font-size="2.60" data-pos="500"></text>
   <line x1="11.75" y1="16.57" x2="11.75" y2="14.30" stroke="#000000" stroke-width="0.085" data-pos="500"/>
   <text class="music" x="11.75" y="14.30" font-size="2.60" data-pos="500"></text>

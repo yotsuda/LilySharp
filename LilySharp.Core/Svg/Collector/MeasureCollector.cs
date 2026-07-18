@@ -1580,8 +1580,8 @@ public sealed partial class MeasureCollector
 
                 MusicItem? updated = measure.Items[member.ItemIndex] switch
                 {
-                    NoteItem n => n with { StemUpOverride = member.MemberStemUp },
-                    ChordItem c => c with { StemUpOverride = member.MemberStemUp },
+                    NoteItem n => n with { StemUpOverride = member.MemberStemUp, IsBeamed = true },
+                    ChordItem c => c with { StemUpOverride = member.MemberStemUp, IsBeamed = true },
                     _ => null,
                 };
                 if (updated == null)

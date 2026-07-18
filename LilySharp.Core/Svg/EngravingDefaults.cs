@@ -331,21 +331,25 @@ internal static class EngravingDefaults
         _ => ThinBarlineThickness
     };
 
-    // LilyPond-style variable thickness parameters
-    // Reference: LilyPond's 'thickness' property (distance between arcs at thickest point)
-    // and 'line-thickness' property (diameter of virtual pen at endpoints)
+    // Bow (slur/tie) thickness — LilyPond's bezier sandwich (lily/lookup.cc:395-405
+    // Lookup::slur): the two arcs are offset by ±0.5·curvethick and the outline is stroked
+    // with a linethick round-cap pen. curvethick = the grob's `thickness` property, linethick
+    // = its `line-thickness` property, both in line-thickness units. Slur and Tie share the
+    // same defaults (define-grobs.scm:3175-3180 / 3898-3902): thickness 1.2, line-thickness 0.8.
 
-    /// <summary>Maximum thickness of tie at the middle (in staff spaces). Endpoints are thin.</summary>
-    public const double TieMidThickness = 0.25;
+    /// <summary>Bow middle thickness (arc separation) = Tie/Slur thickness 1.2 × line-thickness.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3902 Tie (thickness . 1.2).</remarks>
+    public const double TieMidThickness = 1.2 * LineThickness;
 
-    /// <summary>Maximum thickness of slur at the middle (in staff spaces). Endpoints are thin.</summary>
-    public const double SlurMidThickness = 0.30;
+    /// <summary>Bow middle thickness (arc separation) = Slur thickness 1.2 × line-thickness.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3180 Slur (thickness . 1.2).</remarks>
+    public const double SlurMidThickness = 1.2 * LineThickness;
 
-    /// <summary>Width of the round-cap pen that strokes a slur/tie bow so its
-    /// tapered ends read as rounded rather than sharp points. LilyPond strokes its
-    /// slur/tie stencil with a line-thickness pen for the same reason.
-    /// LILYPOND-REF: lily/slur.cc / lily/tie.cc — filled + round-stroked stencil.</summary>
-    public const double BowEndRounding = 0.08;
+    /// <summary>Round-cap pen that strokes the bow outline (its tapered ends read as rounded,
+    /// and it is the bow's thickness at the endpoints) = Slur/Tie line-thickness 0.8 × line-thickness.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3175/3898 (line-thickness . 0.8);
+    /// lily/lookup.cc:415 bezier_sandwich(back, curve, linethick).</remarks>
+    public const double BowEndRounding = 0.8 * LineThickness;
 
 
     // === Conversion helpers ===

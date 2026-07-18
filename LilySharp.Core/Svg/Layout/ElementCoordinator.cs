@@ -893,6 +893,107 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// Resolves the slur-edge note facts (stem presence/direction, inner-side beaming)
+    /// the scorer needs. Returns default (no stem) for a rest, an out-of-range index, or a
+    /// whole/breve note. <paramref name="leftEdge"/> selects which side is "inner": the left
+    /// edge's inner side is the RIGHT (a beam continues right unless it ends here); the right
+    /// edge's inner side is the LEFT.
+    /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state extremes_ / edge_has_beams_.
+    /// </summary>
+    private static SlurEdgeInfo ResolveSlurEdge(
+        Voice voice, int measureIndex, int itemIndex, bool leftEdge)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return default;
+        var items = voice.Measures[measureIndex].Items;
+        if (itemIndex < 0 || itemIndex >= items.Length)
+            return default;
+
+        bool stemUp, beamed, hasBeamStart, hasBeamEnd;
+        Fraction baseDuration;
+        switch (items[itemIndex])
+        {
+            case NoteItem n:
+                stemUp = n.StemUp; beamed = n.IsBeamed;
+                hasBeamStart = n.HasBeamStart; hasBeamEnd = n.HasBeamEnd;
+                baseDuration = n.BaseDuration;
+                break;
+            case ChordItem c:
+                stemUp = c.StemUp; beamed = c.IsBeamed;
+                hasBeamStart = c.HasBeamStart; hasBeamEnd = c.HasBeamEnd;
+                baseDuration = c.BaseDuration;
+                break;
+            default:
+                return default; // rest / spacer / barline — no stem
+        }
+
+        // Whole notes (value 1) and breves have no stem.
+        bool hasStem = GlyphMetrics.NoteValueOf(baseDuration) >= 2;
+        // Beamed on the INNER side (toward the other endpoint).
+        bool beamedInner = beamed && (leftEdge ? !hasBeamEnd : !hasBeamStart);
+        return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed);
+    }
+
+    /// <summary>
+    /// Half the endpoint note's notehead width, in staff-spaces (device X units). Lily#'s
+    /// segStartX/segEndX are the head's LEFT-edge column X; LP attaches at the head CENTER
+    /// (slur-scoring.cc:562 fh->extent(X).center()), so this is added to shift right. 0 for a
+    /// rest / out-of-range index.
+    /// </summary>
+    private static double EndpointHeadHalfWidth(Voice voice, int measureIndex, int itemIndex)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length) return 0;
+        var items = voice.Measures[measureIndex].Items;
+        if (itemIndex < 0 || itemIndex >= items.Length) return 0;
+        Fraction dur;
+        switch (items[itemIndex])
+        {
+            case NoteItem n: dur = n.BaseDuration; break;
+            case ChordItem c: dur = c.BaseDuration; break;
+            default: return 0;
+        }
+        return GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(dur)).Width / 2.0;
+    }
+
+    /// <summary>
+    /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
+    /// stem_extent_[Y][dir_] (slur-scoring.cc:554). Returns the OUTER edge of the beam stack
+    /// on the slur side. NOTE: BeamLayout Y is in staff POSITIONS (0 = middle, + = up), so it
+    /// is converted to the device frame here; the beam half-height is in staff-spaces, which
+    /// equal device units. False when the note is not in any supplied beam layout.
+    /// </summary>
+    private static bool TryGetBeamedStemTipDeviceY(
+        ImmutableArray<BeamLayout> beamLayouts, int measureIndex, int itemIndex, double noteX,
+        double staffMiddleY, bool curveUp, out double stemTipDeviceY)
+    {
+        stemTipDeviceY = 0;
+        if (beamLayouts.IsDefaultOrEmpty) return false;
+        foreach (var bl in beamLayouts)
+        {
+            bool hit = false;
+            int beamCount = 1;
+            foreach (var m in bl.Group.Members)
+            {
+                beamCount = Math.Max(beamCount, m.BeamCount);
+                if (m.ItemIndex == itemIndex && m.ResolveMeasureIndex(bl.Group.MeasureIndex) == measureIndex)
+                    hit = true;
+            }
+            if (!hit) continue;
+
+            double beamPos = noteX < bl.LeftX ? bl.LeftY
+                           : noteX > bl.RightX ? bl.RightY
+                           : bl.GetYAtX(noteX); // staff position of the beam reference line
+            double beamCenterDevice = StaffFrame.PositionToDevice(beamPos, staffMiddleY);
+            double beamHalf = EngravingDefaults.BeamThickness / 2
+                              + (beamCount - 1) * EngravingDefaults.BeamTranslation; // staff-spaces == device units
+            // Outer edge of the beam stack on the slur side (device: up = smaller Y).
+            stemTipDeviceY = beamCenterDevice + (curveUp ? -beamHalf : beamHalf);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Note-head obstacles the slur encompasses within this broken segment, in
     /// device coordinates and sorted by X. The scorer treats the first and last
     /// columns as the slur's edges and scores head encompass over the interior,
@@ -947,7 +1048,7 @@ internal sealed class ElementCoordinator
         return obstacles;
     }
 
-    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default)
+    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default)
     {
         var slurs = _slurDetector.DetectSlurs(score);
 
@@ -1024,6 +1125,14 @@ internal sealed class ElementCoordinator
                     continue;
                 }
 
+                // LILYPOND-REF: slur-scoring.cc:562 get_base_attachments — the base
+                // attachment X is the NOTEHEAD CENTER; segStartX/segEndX are the head's
+                // left-edge column X, so shift each real endpoint right by half a head.
+                if (segment.IsFirst)
+                    segStartX += EndpointHeadHalfWidth(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex);
+                if (segment.IsLast)
+                    segEndX += EndpointHeadHalfWidth(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex);
+
                 // Y at a broken edge anchors at the NEAREST covered note in
                 // this system, not at the slur's far endpoint — anchoring the
                 // continuation at the global end note's pitch ran the curve
@@ -1042,19 +1151,36 @@ internal sealed class ElementCoordinator
                         ?? slur.StartStaffPosition;
 
                 double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(segSystem, staffIndex, _options.StaffHeight);
-                double segStartY = StaffFrame.PositionToDevice(startStaffPos, staffMiddleY);
-                double segEndY = StaffFrame.PositionToDevice(endStaffPos, staffMiddleY);
 
-                if (slur.CurveUp)
-                {
-                    segStartY -= slurOffset;
-                    segEndY -= slurOffset;
-                }
+                // LILYPOND-REF: slur-scoring.cc:549-557 get_base_attachments — the endpoint
+                // attaches to the STEM TIP (the beam it joins), 0.5 ss beyond it, when the
+                // note's stem points the same way as the slur AND is beamed on the inner side;
+                // otherwise to the notehead (slurOffset). This lifts the slur clear of the beam.
+                var leftEdgeInfo = segment.IsFirst
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true)
+                    : default;
+                var rightEdgeInfo = segment.IsLast
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false)
+                    : default;
+                const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
+
+                double segStartY;
+                if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
+                    && TryGetBeamedStemTipDeviceY(beamLayouts, slur.StartMeasureIndex, slur.StartItemIndex,
+                        segStartX, staffMiddleY, slur.CurveUp, out double startTip))
+                    segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
-                {
-                    segStartY += slurOffset;
-                    segEndY += slurOffset;
-                }
+                    segStartY = StaffFrame.PositionToDevice(startStaffPos, staffMiddleY)
+                        + (slur.CurveUp ? -slurOffset : slurOffset);
+
+                double segEndY;
+                if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
+                    && TryGetBeamedStemTipDeviceY(beamLayouts, slur.EndMeasureIndex, slur.EndItemIndex,
+                        segEndX, staffMiddleY, slur.CurveUp, out double endTip))
+                    segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
+                else
+                    segEndY = StaffFrame.PositionToDevice(endStaffPos, staffMiddleY)
+                        + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleY, segStartX, segEndX);
@@ -1064,7 +1190,9 @@ internal sealed class ElementCoordinator
                     obstacles: obstacles,
                     existingSlurs: slurLayouts,
                     isBrokenLeft: !segment.IsFirst,
-                    isBrokenRight: !segment.IsLast);
+                    isBrokenRight: !segment.IsLast,
+                    leftEdge: leftEdgeInfo,
+                    rightEdge: rightEdgeInfo);
                 slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }

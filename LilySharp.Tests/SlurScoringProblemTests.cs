@@ -108,6 +108,24 @@ public class SlurScoringProblemTests
     }
 
     [Fact]
+    public void Solve_AcceptsEdgeInfo_ReturnsValidLayout()
+    {
+        // The score_edges (/=5) and score_slopes (edge_has_beams) refinements consume
+        // per-edge stem/beam facts (LILYPOND-REF: slur-configuration.cc:473-477,502-503,
+        // 519-523). This pins the plumbing: providing edge info is accepted and yields a
+        // valid curve. (These terms rarely flip the argmin against the dominant encompass
+        // scorer, so they seldom move an existing fixture — like LP, they matter at margins.)
+        var slur = CreateSlur(0, 4, curveUp: true);
+        var layout = new SlurScoringProblem(slur, 10, 2, 50, 6,
+            leftEdge: new SlurEdgeInfo(HasStem: true, StemUp: true, BeamedInner: false, Beamed: true),
+            rightEdge: new SlurEdgeInfo(HasStem: true, StemUp: false, BeamedInner: true, Beamed: true))
+            .Solve();
+
+        Assert.NotNull(layout);
+        Assert.Equal(slur, layout.Slur);
+    }
+
+    [Fact]
     public void Solve_WithExistingSlurs_AvoidsCollision()
     {
         // Arrange

@@ -28,7 +28,7 @@
   <line x1="7.41" y1="13.14" x2="7.41" y2="10.86" stroke="#000000" stroke-width="0.085" data-pos="382"/>
   <text class="music" x="7.41" y="10.86" font-size="2.60" data-pos="382"></text>
   <line x1="7.02" y1="12.27" x2="7.94" y2="11.51" stroke="#000000" stroke-width="0.127" data-pos="382"/>
-  <path d="M 7.32,14.44 C 8.44,15.11 10.33,14.68 11.04,13.59 C 10.29,14.51 8.40,14.94 7.32,14.44 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="382"/>
+  <path d="M 7.32,14.44 C 8.43,15.07 10.32,14.63 11.04,13.59 C 10.30,14.56 8.41,14.99 7.32,14.44 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="382"/>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="364"/>
   <text x="1.29" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="364">A</text>
   </g>

@@ -122,7 +122,7 @@ internal static partial class SharedRenderer
         _ = curveUp;
         double dx = endX - startX, dy = endY - startY;
         double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
-        double half = 0.5 * midThickness * 0.9; // keep the previous total ribbon width
+        double half = 0.5 * midThickness; // LP lookup.cc:405 perp = 0.5 * curvethick
         double perpX = -dy / len * half, perpY = dx / len * half;
         var c1a = (X: c1.X + perpX, Y: c1.Y + perpY);
         var c2a = (X: c2.X + perpX, Y: c2.Y + perpY);

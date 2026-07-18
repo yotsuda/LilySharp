@@ -112,6 +112,10 @@ public sealed record NoteItem : MusicItem
     public bool HasBeamStart { get; init; }
     /// <summary>Whether this note ends a manual beam group.</summary>
     public bool HasBeamEnd { get; init; }
+    /// <summary>Whether this note belongs to a beam group (set by BeamDetector once the
+    /// group is resolved). Unlike <see cref="HasBeamStart"/>/<see cref="HasBeamEnd"/> this
+    /// is true for a mid-beam note too, so slur edge scoring can ask "is this note beamed".</summary>
+    public bool IsBeamed { get; init; }
     /// <summary>Whether this note has a glissando to the next note.</summary>
     public bool HasGlissando { get; }
     /// <summary>Feathered beam direction: 0=none, 1=right (accel), -1=left (rit).</summary>
@@ -365,6 +369,9 @@ public sealed record ChordItem : MusicItem
     public bool HasBeamStart { get; }
     /// <summary>Whether this chord ends a manual beam group.</summary>
     public bool HasBeamEnd { get; }
+    /// <summary>Whether this chord belongs to a beam group (set by BeamDetector; true for a
+    /// mid-beam chord too). See <see cref="NoteItem.IsBeamed"/>.</summary>
+    public bool IsBeamed { get; init; }
     /// <summary>Whether this chord has an arpeggio marking.</summary>
     public bool HasArpeggio { get; }
     /// <summary>Whether this chord is a cue chord (drawn at reduced size).</summary>

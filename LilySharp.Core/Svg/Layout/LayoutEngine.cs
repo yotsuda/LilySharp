@@ -255,9 +255,10 @@ internal sealed class LayoutEngine
                         ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                         tupletBrackets: staffTuplets)
                     : staffScore;
-                prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex));
+                var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
+                prelimBeams.AddRange(staffPrelimBeams);
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
-                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes));
+                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams));
             }
             var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
             {
@@ -449,9 +450,10 @@ internal sealed class LayoutEngine
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                     tupletBrackets: staffTuplets)
                 : staffScore;
-            allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
+            var staffFinalBeams = _elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex);
+            allBeamLayouts.AddRange(staffFinalBeams);
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes));
+            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
         return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts);
