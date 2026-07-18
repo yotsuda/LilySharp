@@ -213,8 +213,8 @@ public class RehearsalMarkTests
         var result = MusicMarkEngraver.Calculate(null, marks, systems, ml);
 
         Assert.Single(result);
-        // Y should be negative (above staff)
-        Assert.True(result[0].Y < 0, $"Y ({result[0].Y:F2}) should be above staff (negative)");
+        // Y-up (frame B): above the staff top line means YUp > 2 (top line = +2).
+        Assert.True(result[0].YUp > 2.0, $"YUp ({result[0].YUp:F2}) should be above the staff (> 2)");
     }
 
     [Fact]
@@ -252,13 +252,13 @@ public class RehearsalMarkTests
             new ChordNameLayout(0, markX, -3.0, "Cmaj7", 0, AboveLine: above);
 
         double oneRowY = MusicMarkEngraver
-            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].Y;
+            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].YUp;
         double twoRowY = MusicMarkEngraver
-            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].Y;
+            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].YUp;
 
-        // The stacked degree row lifts the mark higher (more negative) by the
-        // row height, so it clears the top line instead of overprinting it.
-        Assert.True(twoRowY < oneRowY - 2.0,
-            $"two-row mark Y ({twoRowY:F2}) should sit well above one-row ({oneRowY:F2})");
+        // Y-up (frame B): the stacked degree row lifts the mark higher (larger YUp)
+        // by the row height, so it clears the top line instead of overprinting it.
+        Assert.True(twoRowY > oneRowY + 2.0,
+            $"two-row mark YUp ({twoRowY:F2}) should sit well above one-row ({oneRowY:F2})");
     }
 }

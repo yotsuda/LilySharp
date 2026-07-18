@@ -30,7 +30,9 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct MusicMarkLayout(
     int MeasureIndex,       // Measure containing this mark
     double X,               // Absolute X position (staff spaces from score start)
-    double Y,               // Y position (staff spaces from staff top, positive = down)
+    double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
+                            // the (top) staff middle, up-positive (frame B). The draw
+                            // reflects it to device via StaffFrame.ToDevice.
     MusicMarkType MarkType, // Type of mark
     string Text,            // Display text or glyph
     bool IsSymbol,          // True if should use symbol glyph, false for text
@@ -341,11 +343,13 @@ internal static class MusicMarkEngraver
                 if (!double.IsPositiveInfinity(ceiling))
                     pairY = Math.Min(pairY, ceiling - halfLabel);
 
+                // Store Y-up: the device baseline (from the staff top, middle = 2)
+                // reflects to staff-spaces above the (top) staff middle.
                 layouts.Add(new MusicMarkLayout(
-                    labelMark.MeasureIndex, labelX, pairY, labelMark.Type, labelMark.Text,
+                    labelMark.MeasureIndex, labelX, StaffFrame.ToUp(pairY, 2.0), labelMark.Type, labelMark.Text,
                     labelMark.IsSymbol, labelMark.SourcePosition, labelSi));
                 layouts.Add(new MusicMarkLayout(
-                    tempoMark.MeasureIndex, tempoX, pairY + 0.9, tempoMark.Type, tempoMark.Text,
+                    tempoMark.MeasureIndex, tempoX, StaffFrame.ToUp(pairY + 0.9, 2.0), tempoMark.Type, tempoMark.Text,
                     tempoMark.IsSymbol, tempoMark.SourcePosition, tempoSi, tempoMark.SwingSubdivision,
                     tempoMark.TempoText, tempoMark.TempoBeatUnit, tempoMark.TempoDots));
                 stackTopY = pairY - halfLabel;
@@ -373,7 +377,7 @@ internal static class MusicMarkEngraver
                 }
 
                 layouts.Add(new MusicMarkLayout(
-                    mark.MeasureIndex, x, y, mark.Type, mark.Text,
+                    mark.MeasureIndex, x, StaffFrame.ToUp(y, 2.0), mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
@@ -477,7 +481,7 @@ internal static class MusicMarkEngraver
                 }
 
                 layouts.Add(new MusicMarkLayout(
-                    mark.MeasureIndex, x, y, mark.Type, mark.Text,
+                    mark.MeasureIndex, x, StaffFrame.ToUp(y, 2.0), mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
@@ -554,7 +558,7 @@ internal static class MusicMarkEngraver
                     uw += Rendering.SerifTextMetrics.MeasureBold(tempo.TempoText, 2.2) + 1.5;
                 if (tempo.SwingSubdivision != 0)
                     uw += 5.0;
-                double uLine = tempo.Y - drop;
+                double uLine = StaffFrame.ToDevice(tempo.YUp, 2.0) - drop;
                 int uSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int us) ? us : -1;
                 foreach (var placed in placedPairs)
                 {
@@ -566,7 +570,7 @@ internal static class MusicMarkEngraver
                         uLine = Math.Min(uLine, placed.LineY - 3.6);
                 }
                 placedPairs.Add((uSys, tempo.X, tempo.X + uw, uLine));
-                result[i] = tempo with { Y = uLine + drop };
+                result[i] = tempo with { YUp = StaffFrame.ToUp(uLine + drop, 2.0) };
                 continue;
             }
 
@@ -588,7 +592,8 @@ internal static class MusicMarkEngraver
             if (tempo.SwingSubdivision != 0)
                 tempoW += 5.0;
 
-            double lineY = Math.Max(lab.Y, tempo.Y - baselineDrop);
+            double lineY = Math.Max(StaffFrame.ToDevice(lab.YUp, 2.0),
+                StaffFrame.ToDevice(tempo.YUp, 2.0) - baselineDrop);
             if (!chordNames.IsDefaultOrEmpty)
             {
                 foreach (var cn in chordNames)
@@ -629,11 +634,11 @@ internal static class MusicMarkEngraver
             }
             placedPairs.Add((tempoSys, pairX0, pairX1, lineY));
 
-            result[bestJ] = lab with { Y = lineY };
+            result[bestJ] = lab with { YUp = StaffFrame.ToUp(lineY, 2.0) };
             result[i] = tempo with
             {
                 X = tempoX,
-                Y = lineY + baselineDrop,
+                YUp = StaffFrame.ToUp(lineY + baselineDrop, 2.0),
             };
         }
         return result.ToImmutable();
@@ -656,7 +661,8 @@ internal static class MusicMarkEngraver
         // The common rehearsal line: the labels closest to the staff (largest Y),
         // i.e. those NOT raised to clear something. An un-raised label sits at the
         // same staff-relative Y in every system, so this is system-agnostic.
-        double commonY = labelIdx.Max(j => result[j].Y);
+        // commonY is a device baseline (top-staff frame); bridge from Y-up.
+        double commonY = labelIdx.Max(j => StaffFrame.ToDevice(result[j].YUp, 2.0));
 
         for (int i = 0; i < result.Count; i++)
         {
@@ -677,11 +683,11 @@ internal static class MusicMarkEngraver
                 // sit the sign just to its left and LOW enough that its baseline
                 // meets the label box's bottom edge (the box extends half its
                 // height below the shared centre line).
-                var lab = result[bestJ] with { Y = commonY };
+                var lab = result[bestJ] with { YUp = StaffFrame.ToUp(commonY, 2.0) };
                 result[bestJ] = lab;
                 double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
                 double boxHalf = (labelFs + 2 * 0.2) / 2; // box height = fs + 2*pad(0.2)
-                result[i] = tc with { Y = commonY + boxHalf, X = lab.X - ToCodaLabelGap };
+                result[i] = tc with { YUp = StaffFrame.ToUp(commonY + boxHalf, 2.0), X = lab.X - ToCodaLabelGap };
             }
         }
         return result.ToImmutable();

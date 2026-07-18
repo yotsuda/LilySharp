@@ -675,13 +675,15 @@ internal static class OutsideStaffStacker
             // drawn by DrawMusicMarks — registering them would reserve
             // PHANTOM space and push real marks above thin air. Marks
             // placed below the staff don't belong to the above pass.
-            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.Y > 0)
+            // m.YUp is Y-up; a mark below the staff top (device Y > 0) is not part
+            // of this above pass.
+            double mid = LayoutUtilities.ResolveStaffMiddleY(systems[sysIdx], m.StaffIndex, 4.0);
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || StaffFrame.ToDevice(m.YUp, 2.0) > 0)
                 continue;
-            double sy = systems[sysIdx].Y;
             var (x0, x1, top, bottom) = MusicMarkExtents(m);
             double newAbs = Place(trackers[sysIdx], m.X + x0, m.X + x1,
-                sy + m.Y, topOffset: top, bottomOffset: bottom);
-            b[i] = m with { Y = newAbs - sy };
+                StaffFrame.ToDevice(m.YUp, mid), topOffset: top, bottomOffset: bottom);
+            b[i] = m with { YUp = StaffFrame.ToUp(newAbs, mid) };
         }
         return b.ToImmutable();
     }

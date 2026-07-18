@@ -843,7 +843,9 @@ internal sealed class LayoutEngine
         {
             if (MusicMarkItem.IsSpannerHandled(m.MarkType))
                 continue;
-            Add(m.MeasureIndex, m.Y - 2.1, m.Y + 0.7);
+            // YUp is Y-up; music marks are top-staff / system-relative device.
+            double mY = StaffFrame.ToDevice(m.YUp, 2.0);
+            Add(m.MeasureIndex, mY - 2.1, mY + 0.7);
         }
         foreach (var ct in ann.CustomTexts)
         {
@@ -1103,7 +1105,9 @@ internal sealed class LayoutEngine
                 double halfW = m.IsSymbol
                     ? 1.0
                     : Rendering.SerifTextMetrics.MeasureBold(m.Text, 2.4) / 2 + 0.4;
-                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, m.Y - 2.1, m.Y + 0.7);
+                // YUp is Y-up; music marks are top-staff / system-relative device.
+                double mY = StaffFrame.ToDevice(m.YUp, 2.0);
+                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY - 2.1, mY + 0.7);
             }
         }
         if (!customTexts.IsDefaultOrEmpty)

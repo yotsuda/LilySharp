@@ -231,8 +231,10 @@ internal static partial class SharedRenderer
         foreach (var m in layout.MusicMarkLayouts)
         {
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
-            if (!sysY.TryGetValue(m.MeasureIndex, out var s)) continue; // other page
-            double y = s + m.Y;
+            if (!sysY.ContainsKey(m.MeasureIndex)) continue; // other page
+            // Frame B -> device against the (top) staff middle this mark resolves.
+            double y = StaffFrame.ToDevice(m.YUp,
+                os.StaffMiddleDeviceY(m.StaffIndex, m.MeasureIndex, StaffHeight));
             using (gc.Source(m.SourcePosition))
                 DrawSingleMusicMark(m, y, gc);
         }

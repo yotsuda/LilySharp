@@ -125,20 +125,23 @@ public class FormNavigationTests
         // same barline (close X); label C was raised to clear the sign, while B
         // sits on the common line. Co-placement drops C back to the common line,
         // keeps the sign in its own measure, and tucks it to C's left.
+        // Y-up (frame B): device baselines -2.50 / -6.36 -> 4.50 / 8.36 above the
+        // (top) staff middle.
         var marks = System.Collections.Immutable.ImmutableArray.Create(
-            new MusicMarkLayout(1, 39.65, -2.50, MusicMarkType.ToCoda, "To Coda", false, 0),
-            new MusicMarkLayout(2, 41.15, -6.36, MusicMarkType.SectionLabel, "C", false, 0),
-            new MusicMarkLayout(1, 23.93, -2.50, MusicMarkType.SectionLabel, "B", false, 0));
+            new MusicMarkLayout(1, 39.65, 4.50, MusicMarkType.ToCoda, "To Coda", false, 0),
+            new MusicMarkLayout(2, 41.15, 8.36, MusicMarkType.SectionLabel, "C", false, 0),
+            new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
 
         var result = MusicMarkEngraver.CoPlaceToCodaWithLabels(marks);
         var tc = result.First(m => m.MarkType == MusicMarkType.ToCoda);
         var cLabel = result.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
 
         Assert.Equal(1, tc.MeasureIndex);   // keeps its own (prev-section) measure
-        Assert.Equal(-2.50, cLabel.Y, 3);   // C drops to the common (B) line
-        // Sign baseline meets the box bottom: commonY + boxHalf, boxHalf =
-        // (4.0*0.55 + 0.4)/2 = 1.3, so -2.50 + 1.3 = -1.20.
-        Assert.Equal(-1.20, tc.Y, 3);
+        // Y-up (frame B): device -2.50 -> 4.50 above the (top) staff middle.
+        Assert.Equal(4.50, cLabel.YUp, 3);  // C drops to the common (B) line
+        // Sign baseline meets the box bottom: device commonY + boxHalf, boxHalf =
+        // (4.0*0.55 + 0.4)/2 = 1.3, so device -1.20 -> Y-up 3.20.
+        Assert.Equal(3.20, tc.YUp, 3);
         Assert.True(tc.X < cLabel.X, "To Coda should sit left of the label");
     }
 }
