@@ -69,19 +69,27 @@ public readonly record struct TieVariantLayout(
 internal static class TieVariantEngraver
 {
     /// <summary>
-    /// Length of the half-tie in staff spaces (the curve extends this far from the host note).
+    /// Visual length of the half-tie in staff spaces (how far the curve extends from the
+    /// host note). LilyPond has NO fixed length for these grobs — Semi_tie_column places
+    /// them from the note-head extent and gap (lily/semi-tie-column.cc); this is a Lily#
+    /// fixed approximation of that short span. (The earlier "minimum-length 1.5" reference
+    /// was incorrect — the grob has no minimum-length property.)
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm LaissezVibrerTie minimum-length default 1.5.
-    /// We use a slightly shorter visual length matching engraving convention.
-    /// </remarks>
     private const double TieLength = 1.0;
 
-    /// <summary>Arc height (peak above the baseline) for the half-tie.</summary>
-    /// <remarks>LILYPOND-REF: lily/bezier-bow.cc — short ties use a small arc.</remarks>
-    private const double ArcHeight = 0.35;
+    /// <summary>The half-tie's bow parameters, from its grob details. The arc height is
+    /// LilyPond's bezier-bow shape: <c>min(height-limit, ratio × width)</c>.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm LaissezVibrerTie / RepeatTie
+    /// (details . ((height-limit . 1.0) (ratio . 0.333))).</remarks>
+    private const double BowRatio = 0.333;
+    private const double BowHeightLimit = 1.0;
 
-    /// <summary>Y offset from notehead center to the tie's flat baseline.</summary>
+    /// <summary>Arc height (peak above the baseline): ratio × width, capped at the
+    /// height-limit — the height LilyPond's bezier bow gives a tie of this width.</summary>
+    private static readonly double ArcHeight = Math.Min(BowHeightLimit, BowRatio * TieLength);
+
+    /// <summary>Y offset from notehead center to the tie's flat baseline. Lily# placement;
+    /// LP anchors the semi-tie at the note-head edge via Semi_tie_column.</summary>
     private const double NoteOffset = 0.4;
 
     /// <summary>

@@ -759,7 +759,7 @@ internal static class MusicMarkEngraver
     /// Adds a tempo marking to the mark list if the score has a tempo.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
+    /// LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark outside-staff-priority = 1300
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
         ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
@@ -817,8 +817,8 @@ internal static class MusicMarkEngraver
     /// </remarks>
     private static int GetOutsideStaffPriority(MusicMarkType type) => type switch
     {
-        // LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
-        MusicMarkType.Tempo => 1000,
+        // LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark outside-staff-priority = 1300
+        MusicMarkType.Tempo => 1300,
         MusicMarkType.SectionLabel => 1450,
         MusicMarkType.Rehearsal => 1500,
         MusicMarkType.Segno => 1500,

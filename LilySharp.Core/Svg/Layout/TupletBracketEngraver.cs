@@ -90,8 +90,10 @@ internal static class TupletBracketEngraver
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff
 
-    // LILYPOND-REF: scm/define-grobs.scm TupletBracket.max-slope
-    private const double MaxSlope = 0.5;
+    // LILYPOND-REF: scm/define-grobs.scm TupletBracket (max-slope-factor . 0.5). The
+    // endpoint height difference is limited to max-slope-factor × bracket width, NOT an
+    // absolute value (lily/tuplet-bracket.cc:570 max_dy = max_slope_factor * last_x).
+    private const double MaxSlopeFactor = 0.5;
 
     // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
     private const double DefaultStemLength = 3.5;
@@ -215,7 +217,7 @@ internal static class TupletBracketEngraver
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
             // Calculate slope based on first/last note staff positions
-            var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp);
+            var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -486,7 +488,7 @@ internal static class TupletBracketEngraver
     }
 
     private static (double startY, double endY) CalculateSlope(
-        TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp)
+        TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -530,11 +532,13 @@ internal static class TupletBracketEngraver
         // Convert staff position difference to slope (half staff spaces)
         double positionDiff = (lastPos.Value - firstPos.Value) * 0.5;
 
-        // Limit slope to MaxSlope staff spaces per bracket width
-        // LILYPOND-REF: scm/define-grobs.scm TupletBracket.max-slope = 0.5
+        // Limit the endpoint height difference to max-slope-factor × bracket width
+        // (width-proportional, not an absolute cap).
+        // LILYPOND-REF: lily/tuplet-bracket.cc:570,620 — max_dy = max_slope_factor * last_x.
+        double maxDy = MaxSlopeFactor * bracketWidth;
         double slope = positionDiff;
-        if (Math.Abs(slope) > MaxSlope)
-            slope = Math.Sign(slope) * MaxSlope;
+        if (Math.Abs(slope) > maxDy)
+            slope = Math.Sign(slope) * maxDy;
 
         // The bracket follows the pitch contour on EITHER side: ascending
         // notes raise the right end. In the down-positive staff frame that

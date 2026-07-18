@@ -256,13 +256,15 @@ internal static class BreakAlignSpacing
     /// Calculates the effective distance for a spacing entry, considering item extents.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:108-150
-    /// The interpretation depends on the spacing style:
-    /// - ExtraSpace: rightExtent + value
-    /// - MinimumSpace: max(value, rightExtent + minPad)
-    /// - FixedSpace: leftItemRightExtent + value
-    /// - MinimumFixedSpace: max(leftItemRightExtent + value, value from left edge)
-    /// - SemiFixedSpace: (leftItemRightExtent + value) / 2 + naturalDistance / 2
+    /// LILYPOND-REF: lily/staff-spacing.cc:166-198 Staff_spacing::get_spacing — the
+    /// break-align style set (fixed / extra / semi-fixed / minimum / minimum-fixed /
+    /// shrink / semi-shrink). LP builds a SPRING (ideal, min=fixed, stretchability); this
+    /// returns the IDEAL distance only, so the shrink/stretch distinctions collapse.
+    /// With <c>fixed = last_ext[RIGHT]</c> (= leftItemRightExtent) and distance = value:
+    /// - ExtraSpace / FixedSpace / SemiFixedSpace / SemiShrinkSpace: ideal = leftRight + value
+    /// - MinimumSpace / MinimumFixedSpace: LP is last_ext[LEFT] + max(item length, value);
+    ///   approximated here as max(value, leftRight + minPad) — the left item's LEFT edge and
+    ///   length are not threaded through this signature.
     /// </remarks>
     public static double CalculateDistance(SpacingEntry entry,
         double leftItemRightExtent, double rightItemLeftExtent)
@@ -288,14 +290,17 @@ internal static class BreakAlignSpacing
             SpacingStyle.MinimumFixedSpace =>
                 Math.Max(entry.Value, leftItemRightExtent + minPad),
 
-            // LILYPOND-REF: semi-fixed-space: half natural, half fixed
+            // semi-fixed-space (staff-spacing.cc:176-179): fixed = leftRight + distance/2,
+            // ideal = fixed + distance/2 = leftRight + distance. (The distinction from
+            // extra-space is the SPRING min/stretch, which this fixed-distance model drops.)
             SpacingStyle.SemiFixedSpace =>
-                (leftItemRightExtent + entry.Value) / 2.0 +
-                (leftItemRightExtent + rightItemLeftExtent + minPad) / 2.0,
+                leftItemRightExtent + entry.Value,
 
-            // LILYPOND-REF: semi-shrink-space: mostly fixed, slightly compressible
+            // semi-shrink-space (staff-spacing.cc:193-197): same ideal as semi-fixed
+            // (leftRight + distance); differs only by being non-stretchable, which this
+            // single-distance model does not represent.
             SpacingStyle.SemiShrinkSpace =>
-                Math.Max(leftItemRightExtent + entry.Value * 0.8, entry.Value * 0.6),
+                leftItemRightExtent + entry.Value,
 
             _ => leftItemRightExtent + entry.Value
         };

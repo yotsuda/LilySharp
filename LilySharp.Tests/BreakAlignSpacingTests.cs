@@ -132,6 +132,30 @@ public class BreakAlignSpacingTests
         Assert.Equal(4.1, distance, 2);
     }
 
+    [Fact]
+    public void SemiFixedSpace_IsLeftExtentPlusValue()
+    {
+        // LILYPOND-REF: staff-spacing.cc:176-179 — ideal = leftRight + distance.
+        // Independent of the RIGHT item's left extent (the old half-half formula used it).
+        double distance = BreakAlignSpacing.CalculateDistance(
+            new SpacingEntry(SpacingStyle.SemiFixedSpace, 1.3),
+            leftItemRightExtent: 2.0, rightItemLeftExtent: 0.5);
+
+        Assert.Equal(3.3, distance, 2);
+    }
+
+    [Fact]
+    public void SemiShrinkSpace_IsLeftExtentPlusValue()
+    {
+        // LILYPOND-REF: staff-spacing.cc:193-196 — same ideal as semi-fixed
+        // (leftRight + distance); the old 0.8/0.6 factors were ungrounded.
+        double distance = BreakAlignSpacing.CalculateDistance(
+            new SpacingEntry(SpacingStyle.SemiShrinkSpace, 1.3),
+            leftItemRightExtent: 2.0, rightItemLeftExtent: 0.5);
+
+        Assert.Equal(3.3, distance, 2);
+    }
+
     // === CalculatePrefixWidth integration tests ===
 
     [Fact]

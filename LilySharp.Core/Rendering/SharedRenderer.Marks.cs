@@ -727,16 +727,21 @@ internal static partial class SharedRenderer
     /// midpoint. Number of slashes corresponds to the tremolo subdivision.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem-tremolo.cc:129-150 raw_stencil
-    /// LILYPOND-REF: lily/stem-tremolo.cc:81-94 width depends on flag
-    /// LILYPOND-REF: lily/stem-tremolo.cc:45-79 calc-slope
+    /// LILYPOND-REF: lily/stem-tremolo.cc:127-150 raw_stencil.
+    /// Width — calc_width (stem-tremolo.cc:84-93): <c>((dir==UP &amp;&amp; flag) || beam) ? 1.0 :
+    /// 1.5</c>. Only an UP-stem flag (or a beam) gets the shorter 1.0; a DOWN-stem flag
+    /// keeps 1.5. This path draws UNBEAMED stems (<paramref name="hasFlag"/> ⇒ a flag was
+    /// drawn), so the beam branch does not apply here; a beamed-stem tremolo would take the
+    /// beam's own width/slope (not handled — see note).
+    /// Slope — calc_slope's non-beam branch (stem-tremolo.cc:75-78): a DOWN-stem flag gets
+    /// the steeper 0.40 (avoids flag/stem collision), else 0.25.
     /// </remarks>
     private static void DrawTremolo(
         double stemX, double stemAttachY, double stemEndY,
         bool stemUp, int beamCount, bool hasFlag, IDrawingContext gc)
     {
         if (beamCount <= 0) return;
-        double beamWidth = hasFlag ? 1.0 : 1.5;
+        double beamWidth = (stemUp && hasFlag) ? 1.0 : 1.5;
         const double beamThickness = 0.48;
         const double beamGap = 0.8;
         double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
