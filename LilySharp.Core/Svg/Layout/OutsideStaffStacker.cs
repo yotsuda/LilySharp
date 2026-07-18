@@ -162,8 +162,14 @@ internal static class OutsideStaffStacker
             {
                 if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
+                // YUp is Y-up (above the staff middle). The tracker frame is device
+                // with the SAME staff offset the tracker baseline uses (0 unless
+                // applyStaffOffsets), so reflect against off + staff middle.
+                double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
+                    && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var sso) ? sso : 0;
+                double aY = off + StaffFrame.ToDevice(a.YUp, 2.0);
                 // Glyph roughly centered on its anchor; half-extent ~0.6sp.
-                Track(sysIdx, a.StaffIndex).AddRegion(a.X - 0.6, a.X + 0.6, a.Y + 0.6);
+                Track(sysIdx, a.StaffIndex).AddRegion(a.X - 0.6, a.X + 0.6, aY + 0.6);
             }
         }
 
@@ -388,7 +394,10 @@ internal static class OutsideStaffStacker
             {
                 if (!a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
-                double absY = systems[sysIdx].Y + a.Y;
+                // YUp is Y-up (above the staff middle); reflect to absolute device
+                // against this staff's page-absolute middle.
+                double absY = StaffFrame.ToDevice(
+                    a.YUp, LayoutUtilities.ResolveStaffMiddleY(systems[sysIdx], a.StaffIndex, 4.0));
                 double inkTop = absY - a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop >= systems[sysIdx].Y)
                     continue; // entirely inside the staff — the up-skyline covers it

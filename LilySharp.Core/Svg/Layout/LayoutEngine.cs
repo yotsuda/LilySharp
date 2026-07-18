@@ -872,7 +872,12 @@ internal sealed class LayoutEngine
         // under the bottom) extend the system silhouette like any other
         // annotation; Ink is the glyph's real box about its anchor (Y-up).
         foreach (var a in ann.Articulations)
-            Add(a.MeasureIndex, a.Y - a.Ink.Top, a.Y - a.Ink.Bottom);
+        {
+            // YUp is Y-up (above the staff middle); this prelim extent pass is
+            // staff-local device, so reflect against the staff middle (StaffMiddle=2).
+            double aY = StaffFrame.ToDevice(a.YUp, 2.0);
+            Add(a.MeasureIndex, aY - a.Ink.Top, aY - a.Ink.Bottom);
+        }
         foreach (var d in ann.Dynamics)
             Add(d.MeasureIndex, d.Y - 1.2, d.Y + 0.3);
         foreach (var h in ann.Hairpins)
@@ -957,9 +962,15 @@ internal sealed class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
-            // Ink box in system-local device Y (BBox Top is up-positive).
-            double inkTop = a.Y - a.Ink.Top;
-            double inkBottom = a.Y - a.Ink.Bottom;
+            // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
+            // this skyline is system-local device (Y down). Reflect against this
+            // staff's system-local middle (staff.Y + StaffMiddle) so the existing
+            // Ink composition (BBox Top up-positive) is unchanged.
+            var sys = systems[sysIdx];
+            double staffMidLocal = LayoutUtilities.FindStaffYInSystem(sys, a.StaffIndex) - sys.Y + 2.0;
+            double aY = StaffFrame.ToDevice(a.YUp, staffMidLocal);
+            double inkTop = aY - a.Ink.Top;
+            double inkBottom = aY - a.Ink.Bottom;
             if (a.IsAbove)
             {
                 var up = new VerticalSkyline(VerticalDirection.Up);
@@ -1478,28 +1489,30 @@ internal sealed class LayoutEngine
             // Outermost articulation anchor per note & side (min Y above / max Y below).
             // StaffIndex is -1 for single-staff fingerings and 0 for their articulations,
             // so normalise a negative staff to 0 on both sides before matching.
+            // Outermost articulation anchor per note & side, in Y-up: "outermost"
+            // is the MOST above (max YUp) or MOST below (min YUp).
             var artOuter = new Dictionary<(int, int, int, bool), double>();
             foreach (var a in articulationLayouts)
             {
                 var key = (a.StaffIndex < 0 ? 0 : a.StaffIndex, a.MeasureIndex, a.ItemIndex, a.IsAbove);
                 artOuter[key] = artOuter.TryGetValue(key, out var cur)
-                    ? (a.IsAbove ? System.Math.Min(cur, a.Y) : System.Math.Max(cur, a.Y))
-                    : a.Y;
+                    ? (a.IsAbove ? System.Math.Max(cur, a.YUp) : System.Math.Min(cur, a.YUp))
+                    : a.YUp;
             }
             var fb2 = fingeringLayouts.ToBuilder();
             for (int i = 0; i < fb2.Count; i++)
             {
                 var fg = fb2[i];
                 var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
-                if (artOuter.TryGetValue(key, out var artY))
+                if (artOuter.TryGetValue(key, out var artYUp))
                 {
-                    // artY is still device (ArticulationLayout is not yet on the Y-up
-                    // frame), so bridge the fingering to device against its staff
-                    // middle in the same system-relative frame, clamp, and reflect
-                    // back to Y-up. Once ArticulationLayout migrates this collapses.
+                    // Both are Y-up now; do the gap clamp in device against the shared
+                    // staff middle (fingering & its articulation are the same note/staff),
+                    // then reflect back to Y-up.
                     double staffMid = (staffYAt?.Invoke(fg.MeasureIndex, fg.StaffIndex) ?? 0)
                         + _options.StaffHeight / 2.0;
-                    double fgY = staffMid - fg.YUp; // ToDevice (system-relative)
+                    double artY = staffMid - artYUp; // ToDevice
+                    double fgY = staffMid - fg.YUp;  // ToDevice
                     double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
                     double newY = fg.IsAbove ? System.Math.Min(fgY, target) : System.Math.Max(fgY, target);
                     fb2[i] = fg with { YUp = staffMid - newY }; // ToUp

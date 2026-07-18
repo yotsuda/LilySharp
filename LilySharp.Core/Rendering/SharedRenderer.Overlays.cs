@@ -89,10 +89,13 @@ internal static partial class SharedRenderer
         foreach (var a in layout.ArticulationLayouts)
         {
             if (string.IsNullOrEmpty(a.Glyph)) continue;
-            if (!sysY.TryGetValue(a.MeasureIndex, out var sy)) continue; // other page
+            if (!sysY.ContainsKey(a.MeasureIndex)) continue; // other page
             // A script on an ossia staff shrinks with its staff's notation —
             // both the glyph and its distance from the small staff.
-            double y = os.Y(sy + a.Y, a.StaffIndex, a.MeasureIndex);
+            // Frame B -> device: reflect the Y-up value against this script's own
+            // staff middle (the shared per-grob draw boundary), then apply ossia.
+            double staffMiddleY = os.StaffMiddleDeviceY(a.StaffIndex, a.MeasureIndex, StaffHeight);
+            double y = os.Y(StaffFrame.ToDevice(a.YUp, staffMiddleY), a.StaffIndex, a.MeasureIndex);
             double scale = os.Size(a.Scale, a.StaffIndex);
             // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
             if (a.Glyph is "bendFall" or "bendDoit")

@@ -34,7 +34,10 @@ internal readonly record struct ArticulationLayout(
     int MeasureIndex,       // Measure containing this articulation
     int ItemIndex,          // Item index within measure (for X alignment)
     double X,               // Absolute X position (staff spaces from score start)
-    double Y,               // Y position (staff spaces from staff top, positive = down)
+    double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
+                            // this script's staff middle line, up-positive (frame B).
+                            // The renderer/skyline reflect it to device via
+                            // StaffFrame.ToDevice against the staff middle they resolve.
     string Glyph,           // SMuFL glyph to render
     bool IsAbove,           // Whether placed above the note
     int SourcePosition,     // For click-to-source mapping
@@ -204,7 +207,7 @@ internal static class ArticulationEngraver
             {
                 double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
-                double fx, fy;
+                double fx, fyUp;
                 Staff? tabBendStaff = null;
                 if (staffByIndex != null
                     && staffByIndex.TryGetValue(articulation.StaffIndex, out var ts)
@@ -224,12 +227,15 @@ internal static class ArticulationEngraver
                         midi + Tunings.SoundingShift(tabBendStaff.TabSourceClef, tabBendStaff.Transposition),
                         Tunings.GetTuning(tt), sn ?? 0);
                     fx = noteX + BendTabXOffset;
-                    fy = staffOffset + (strNum - 1) * space;
+                    // Y-up: the string row sits (strNum−1)·space below the (notation)
+                    // staff middle. No staff offset — resolved at draw time.
+                    fyUp = StaffMiddle - (strNum - 1) * space;
                 }
                 else
                 {
                     fx = noteX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;
-                    fy = StaffFrame.PositionToDevice(GetStaffPosition(item), StaffMiddle) + staffOffset;
+                    // Y-up: the gesture hangs at the note's own staff position (pos/2).
+                    fyUp = GetStaffPosition(item) * 0.5;
                 }
                 bool approach = articulation.Type
                     is ArticulationType.Scoop or ArticulationType.Plop;
@@ -246,7 +252,7 @@ internal static class ArticulationEngraver
                     _ => $"bendUp:{articulation.BendSemitones}",
                 };
                 layouts.Add(new ArticulationLayout(
-                    articulation.MeasureIndex, articulation.ItemIndex, fx, fy,
+                    articulation.MeasureIndex, articulation.ItemIndex, fx, fyUp,
                     bendGlyph, true, articulation.SourcePosition, 1.0, SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
@@ -264,12 +270,14 @@ internal static class ArticulationEngraver
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                     + 2.0 * NoteheadHalfWidth(item)  // full notehead advance → right edge
                     + BreathGap;
-                double by = BreathStaffY + staffOffset;
+                // Y-up: BreathStaffY is a device staff-top offset; reflect to Y-up
+                // about the staff middle. No staff offset — resolved at draw time.
+                double byUp = StaffFrame.ToUp(BreathStaffY, StaffMiddle);
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex,
                     articulation.ItemIndex,
                     bx,
-                    by,
+                    byUp,
                     articulation.GetGlyph(),
                     true,
                     articulation.SourcePosition,
@@ -421,8 +429,12 @@ internal static class ArticulationEngraver
                         (tabAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
                     _ => articulation.GetGlyph(),
                 };
+                // tabY is device with the staff offset baked in (topLine/bottomLine/
+                // geom all carry it); reflect to Y-up about that staff's middle so the
+                // stored value is offset-free (StaffMiddle + staffOffset as the mirror).
+                double tabYUp = StaffFrame.ToUp(tabY, StaffMiddle + staffOffset);
                 layouts.Add(new ArticulationLayout(
-                    articulation.MeasureIndex, articulation.ItemIndex, colX, tabY,
+                    articulation.MeasureIndex, articulation.ItemIndex, colX, tabYUp,
                     tabGlyph, tabAbove, articulation.SourcePosition, 1.0,
                     GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
@@ -464,18 +476,18 @@ internal static class ArticulationEngraver
             var effArt = effectiveAbove == articulation.IsAbove
                 ? articulation : articulation with { IsAbove = effectiveAbove };
 
-            // Calculate Y position based on note position and direction, then bake
-            // the staff's within-system offset (multi-staff) so the page-level
-            // renderer's system-top + Y lands under THIS staff.
+            // Y-up placement (staff-spaces above the staff middle). No staff offset:
+            // the renderer/skyline resolve the staff middle at their own boundary.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double y = CalculateYPosition(effArt, staffPosition, stemUp, item, beamedStemTipY) + staffOffset;
+            double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item, beamedStemTipY);
 
-            // Stack multiple scripts on the same note & side outward (past the
-            // previous glyph + a small padding) instead of overprinting them.
+            // Stack multiple scripts on the same note & side OUTWARD (past the
+            // previous glyph + a small padding) instead of overprinting them —
+            // outward is up (+) for above, down (−) for below in the Y-up frame.
             var stackKey = (effArt.StaffIndex, effArt.MeasureIndex,
                 effArt.ItemIndex, effArt.IsAbove);
             double stackDelta = stackOffset.GetValueOrDefault(stackKey, 0.0);
-            y += effArt.IsAbove ? -stackDelta : stackDelta;
+            yUp += effArt.IsAbove ? stackDelta : -stackDelta;
             var seedBBox = GetSeedBBoxFor(effArt);
             stackOffset[stackKey] = stackDelta + seedBBox.Height + ScriptStackPadding;
 
@@ -483,7 +495,7 @@ internal static class ArticulationEngraver
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
                 x,
-                y,
+                yUp,
                 effArt.GetGlyph(),
                 effArt.IsAbove,
                 effArt.SourcePosition,
@@ -554,12 +566,15 @@ internal static class ArticulationEngraver
             double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
                 measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx])
                 + EngravingDefaults.TabHeadCenterOffset;
-            double y = above
-                ? -fretHalf - tabGap
-                : (strings - 1) * space + fretHalf + tabGap;
+            // Staff-local device (staff top = 0, Y down) → Y-up about the staff middle.
+            double yUp = StaffFrame.ToUp(
+                above
+                    ? -fretHalf - tabGap
+                    : (strings - 1) * space + fretHalf + tabGap,
+                StaffMiddle);
 
             result.Add(new ArticulationLayout(
-                art.MeasureIndex, art.ItemIndex, colX, y, string.Empty, above,
+                art.MeasureIndex, art.ItemIndex, colX, yUp, string.Empty, above,
                 art.SourcePosition, 1.0, GetSeedBBoxFor(art), StaffIndex: staffIndex));
         }
         return result.ToImmutable();
@@ -903,11 +918,13 @@ internal static class ArticulationEngraver
         // unless an explicit .down overrides), so the glyph box matches the side.
         bool isAbove = articulation.DirectionForced ? articulation.IsAbove : true;
 
-        double anchorEng = CalculateYPosition(articulation, staffPosition, stemUp, item,
+        double anchorUp = CalculateYPosition(articulation, staffPosition, stemUp, item,
             beamedStemTipY: null);
-        // Engraver Y is measured from the staff top (middle line at StaffMiddle);
-        // shift into the skyline's middle-line-at-staffY frame.
-        double anchorSky = anchorEng - StaffMiddle + staffY;
+        // CalculateYPosition now returns Y-up (staff-spaces above the middle line).
+        // This spacing skyline has its middle line at staffY with Y increasing DOWN,
+        // so the device value there is staffY − up. (ArticulationLayout is not built
+        // here — this box stays device for its GraceNote/SpacingRules consumers.)
+        double anchorSky = staffY - anchorUp;
 
         // Glyph ink box (font frame, Y up); map about the anchor into Y-down.
         var bbox = GetSeedBBox(articulation.Type, isAbove);
@@ -945,17 +962,20 @@ internal static class ArticulationEngraver
                 : anchorChord.Notes.Min(n => n.StaffPosition))
             : staffPosition;
 
-        // Convert staff position to Y coordinate (staff spaces from top).
-        // StaffPosition: 0 = middle line, positive = up, negative = down.
-        // Canonical formula used by note rendering: Y = StaffMiddle - StaffPosition * 0.5
+        // Convert staff position to the LilyPond-native Y-up frame: staff-spaces
+        // ABOVE the staff middle line, up-positive. StaffPosition 0 = middle,
+        // positive = up, so noteUp = pos/2. The device noteY (middle at StaffMiddle)
+        // is kept only for the stem-length support term, which is a frame-invariant
+        // DISTANCE computed by the device-based StemCalculator.
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
+        double noteUp = anchorPosition * 0.5;
         double noteY = StaffFrame.PositionToDevice(anchorPosition, StaffMiddle);
 
         // Use quantize-position for staccato, marcato, tenuto
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
         if (ShouldQuantize(articulation.Type))
         {
-            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type, item, anchorPosition,
+            return QuantizedYPosition(noteUp, noteY, isAbove, stemUp, articulation.Type, item, anchorPosition,
                 beamedStemTipY);
         }
 
@@ -966,33 +986,37 @@ internal static class ArticulationEngraver
         // include_staff = true (staff-padding exists AND quantize-position = false)
         // The staff is included in the support skyline, then staff-padding is applied.
 
+        // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
+        const double StaffHalf = 2.0;
         double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
         double supportExtent = isAbove
             ? (stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true, beamedStemTipY) : NoteheadHalfHeight)
             : (!stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false, beamedStemTipY) : NoteheadHalfHeight);
 
-        // dist = skyline distance; total_off = dist + padding
+        // dist = skyline distance; total_off = dist + padding. In Y-up an above
+        // script sits ABOVE the note (+) and a below script BELOW (−).
         double totalOff = supportExtent + glyphNearExtent + PaddingFor(articulation.Type);
-        double targetY = isAbove ? noteY - totalOff : noteY + totalOff;
+        double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
 
         if (isAbove)
         {
             // LILYPOND-REF: side-position-interface.cc:426-445 staff-padding clamp
-            // Ensure the glyph's bottom edge clears the staff top by staff-padding
-            double glyphBottom = targetY + glyphNearExtent; // glyph's edge toward staff
-            double staffEdge = StaffTop - StaffPadding;
-            if (glyphBottom > staffEdge)
-                targetY = staffEdge - glyphNearExtent;
-            return targetY;
+            // Ensure the glyph's staff-facing (bottom) edge clears the top staff line
+            // by staff-padding — in Y-up the bottom edge is the smaller value.
+            double glyphEdgeUp = targetUp - glyphNearExtent;
+            double staffEdgeUp = StaffHalf + StaffPadding;
+            if (glyphEdgeUp < staffEdgeUp)
+                targetUp = staffEdgeUp + glyphNearExtent;
+            return targetUp;
         }
         else
         {
-            // Ensure the glyph's top edge clears the staff bottom by staff-padding
-            double glyphTop = targetY - glyphNearExtent; // glyph's edge toward staff
-            double staffEdge = StaffBottom + StaffPadding;
-            if (glyphTop < staffEdge)
-                targetY = staffEdge + glyphNearExtent;
-            return targetY;
+            // Ensure the glyph's staff-facing (top) edge clears the bottom staff line.
+            double glyphEdgeUp = targetUp + glyphNearExtent;
+            double staffEdgeUp = -StaffHalf - StaffPadding;
+            if (glyphEdgeUp > staffEdgeUp)
+                targetUp = staffEdgeUp - glyphNearExtent;
+            return targetUp;
         }
     }
 
@@ -1065,9 +1089,11 @@ internal static class ArticulationEngraver
         return Math.Abs(anchorY - tipY);
     }
 
-    private static double QuantizedYPosition(double noteY, bool isAbove, bool stemUp, ArticulationType type,
-        MusicItem? item = null, int anchorPosition = 0, double? beamedStemTipY = null)
+    private static double QuantizedYPosition(double noteUp, double noteY, bool isAbove, bool stemUp,
+        ArticulationType type, MusicItem? item = null, int anchorPosition = 0, double? beamedStemTipY = null)
     {
+        // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
+        const double StaffHalf = 2.0;
         // ── Stage 4-5 (aligned_side): Calculate total_off ──
         //
         // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
@@ -1117,8 +1143,8 @@ internal static class ArticulationEngraver
         // (ss = staff_space = 1.0 in our coordinate system)
         double totalOff = dist + PaddingFor(type);
 
-        // Convert total_off to target Y position
-        double targetY = isAbove ? noteY - totalOff : noteY + totalOff;
+        // Convert total_off to target Y in the Y-up frame (above = +, below = −).
+        double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
 
         // ── Stage 7 (aligned_side): Apply quantize-position ──
         //
@@ -1126,10 +1152,9 @@ internal static class ArticulationEngraver
         // Note: include_staff = false when quantize-position = true (line 222-226)
         // So staff-padding is NOT applied before quantization.
 
-        // Convert to LP staff position
-        // LP: 0 = middle line (our Y=2.0), positive = up, negative = down
-        // Device Y -> Y-up staff-spaces (StaffFrame.ToUp), then x2 for half-spaces.
-        double lpPosition = StaffFrame.ToUp(targetY, StaffMiddle) * 2.0;
+        // Convert to LP staff position (half-spaces): Y-up staff-spaces × 2.
+        // LP: 0 = middle line, positive = up, negative = down.
+        double lpPosition = targetUp * 2.0;
 
         // Directed round (away from the note)
         // LILYPOND-REF: misc.cc directed_round(): ceil for UP, floor for DOWN
@@ -1150,17 +1175,18 @@ internal static class ArticulationEngraver
         {
             // LILYPOND-REF: side-position-interface.cc:420
             // total_off += (rounded - position) * 0.5 * ss;
-            // Equivalent: snap targetY to the rounded LP position
-            targetY = StaffFrame.PositionToDevice(rounded, StaffMiddle);
+            // Equivalent: snap targetUp to the rounded LP position (half-spaces × 0.5).
+            targetUp = rounded * 0.5;
 
             // LILYPOND-REF: side-position-interface.cc:421-422
             // if (Staff_symbol_referencer::on_line(me, int(rounded)))
             //     total_off += dir * 0.5 * ss;
-            // Even LP positions within staff lines [−4, 4] are on lines
+            // Even LP positions within staff lines [−4, 4] are on lines; push a
+            // half-space further OUT (up for above, down for below) — Y-up signs.
             int roundedInt = (int)rounded;
             if (roundedInt >= -4 && roundedInt <= 4 && roundedInt % 2 == 0)
             {
-                targetY += isAbove ? -0.5 : 0.5;
+                targetUp += isAbove ? 0.5 : -0.5;
             }
         }
 
@@ -1179,12 +1205,12 @@ internal static class ArticulationEngraver
         if (GetGlyphBBox(type, isAbove).Height > 1.0)
         {
             double gap = PaddingFor(type);      // the script's own padding, as in LP
-            if (isAbove && targetY > StaffTop && targetY <= StaffBottom)
-                targetY = StaffTop - gap;        // glyph bottom clears the top line by a gap
-            else if (!isAbove && targetY >= StaffTop && targetY < StaffBottom)
-                targetY = StaffBottom + gap;     // glyph top clears the bottom line by a gap
+            if (isAbove && targetUp < StaffHalf && targetUp >= -StaffHalf)
+                targetUp = StaffHalf + gap;      // glyph bottom clears the top line by a gap
+            else if (!isAbove && targetUp <= StaffHalf && targetUp > -StaffHalf)
+                targetUp = -StaffHalf - gap;     // glyph top clears the bottom line by a gap
         }
 
-        return targetY;
+        return targetUp;
     }
 }

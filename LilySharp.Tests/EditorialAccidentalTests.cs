@@ -107,7 +107,8 @@ public class EditorialAccidentalTests
         // c (C4? — relative anchor) sits below the middle line; the suggestion
         // must end up above the staff top minus padding, i.e. y < noteY.
         var measure = layout.Systems[0].Measures[0];
-        Assert.True(editorial.Y < 2.0,
-            $"Editorial accidental should sit above the note (Y={editorial.Y:F2})");
+        // Y-up (frame B): above the middle line means a positive value.
+        Assert.True(editorial.YUp > 0.0,
+            $"Editorial accidental should sit above the note (YUp={editorial.YUp:F2})");
     }
 }

@@ -238,10 +238,12 @@ internal sealed class SkylineBuilder
     {
         if (articulationLayouts.IsDefaultOrEmpty)
             return;
-        double staffTopDevice = staffMiddleY - _staffHeight / 2;
         foreach (var a in articulationLayouts)
         {
-            double y = staffTopDevice + a.Y;
+            // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
+            // reflect it to this staff's device middle. The existing Ink composition
+            // (BBox Top up-positive) is unchanged.
+            double y = StaffFrame.ToDevice(a.YUp, staffMiddleY);
             double inkTop = y - a.Ink.Top;
             double inkBottom = y - a.Ink.Bottom;
             var box = VerticalSkyline.FromBox(
