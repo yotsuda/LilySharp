@@ -292,13 +292,23 @@ internal static class TupletBracketEngraver
                     }
                     else
                     {
-                        const double clearance = 0.7;
+                        // Clear the beam's OUTER edge (where the stems end), not its
+                        // centre — so a multi-line beam pushes the number out by its
+                        // full thickness. LP measures the number from the stem tip and
+                        // pads by TupletNumber.padding (0.5).
+                        // LILYPOND-REF: lily/tuplet-number.cc:369-377 calc_y_offset —
+                        //   number offset from ref_stem tip by (padding + num_height/2).
+                        // LILYPOND-REF: scm/define-grobs.scm TupletNumber (padding . 0.5).
+                        const double clearance = 0.5;
                         double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
-                        // Beam Y is in staff positions from the middle line;
-                        // bracket Y is staff spaces from the staff top. The
-                        // renderer adds its own -0.3/+0.8 text offset on top.
-                        startY = 2.0 - beam.LeftY * 0.5 + offset;
-                        endY = 2.0 - beam.RightY * 0.5 + offset;
+                        // OuterEdgeStaffSpaceAtX is Y-up staff-space from the middle
+                        // line (frame B); reflect it to the bracket's device top frame
+                        // (middle = 2.0) through the single chokepoint. The renderer
+                        // adds its own -0.3/+0.8 text offset on top.
+                        startY = StaffFrame.ToDevice(
+                            beam.OuterEdgeStaffSpaceAtX(beam.LeftX, isStemUp), 2.0) + offset;
+                        endY = StaffFrame.ToDevice(
+                            beam.OuterEdgeStaffSpaceAtX(beam.RightX, isStemUp), 2.0) + offset;
                     }
                 }
             }

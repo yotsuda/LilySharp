@@ -191,13 +191,13 @@
   <line x1="91.79" y1="29.52" x2="91.79" y2="38.45" stroke="#000000" stroke-width="0.130"/>
   <line x1="94.58" y1="33.02" x2="94.58" y2="38.10" stroke="#000000" stroke-width="0.130"/>
   <line x1="97.87" y1="26.02" x2="97.87" y2="37.68" stroke="#000000" stroke-width="0.130"/>
-  <text x="57.41" y="16.17" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="517">3</text>
+  <text x="57.41" y="16.13" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="517">3</text>
   <line x1="52.41" y1="14.57" x2="52.41" y2="15.27" stroke="#000000" stroke-width="0.130" data-pos="451"/>
   <line x1="52.41" y1="14.57" x2="56.18" y2="13.78" stroke="#000000" stroke-width="0.130" data-pos="451"/>
   <line x1="58.18" y1="13.36" x2="61.94" y2="12.57" stroke="#000000" stroke-width="0.130" data-pos="451"/>
   <line x1="61.94" y1="12.57" x2="61.94" y2="13.27" stroke="#000000" stroke-width="0.130" data-pos="451"/>
   <text x="57.18" y="13.27" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="451">3</text>
-  <text x="83.76" y="15.17" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="568">3</text>
+  <text x="83.76" y="15.13" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="568">3</text>
   <line x1="78.76" y1="13.57" x2="78.76" y2="14.27" stroke="#000000" stroke-width="0.130" data-pos="550"/>
   <line x1="78.76" y1="13.57" x2="82.56" y2="12.78" stroke="#000000" stroke-width="0.130" data-pos="550"/>
   <line x1="84.56" y1="12.37" x2="88.36" y2="11.57" stroke="#000000" stroke-width="0.130" data-pos="550"/>

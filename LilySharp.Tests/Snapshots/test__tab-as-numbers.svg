@@ -80,7 +80,7 @@
   <line x1="43.30" y1="9.75" x2="43.30" y2="12.79" stroke="#000000" stroke-width="0.130"/>
   <line x1="46.56" y1="8.75" x2="46.56" y2="12.70" stroke="#000000" stroke-width="0.130"/>
   <line x1="49.81" y1="7.75" x2="49.81" y2="12.60" stroke="#000000" stroke-width="0.130"/>
-  <text x="46.56" y="15.10" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="455">3</text>
+  <text x="46.56" y="15.14" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="455">3</text>
   <rect x="8.80" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="422"/>
   <text x="9.79" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="422">A</text>
   </g>
