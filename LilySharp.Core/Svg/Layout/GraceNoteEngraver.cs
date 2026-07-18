@@ -33,7 +33,6 @@ public readonly record struct GraceNoteLayout(
     int MeasureIndex,                    // Measure containing this grace
     int MainNoteItemIndex,               // Item index of the main note
     double X,                            // X position (left edge of grace group)
-    double Y,                            // Y position of first grace note
     ImmutableArray<GraceNoteInfo> Notes, // Notes in the grace group
     GraceNoteType Type,                  // Grace type (for slash rendering)
     double Scale,                        // Scale factor (0.65 for grace notes)
@@ -184,15 +183,6 @@ internal static class GraceNoteEngraver
             double x = measureLayout.X + mainNoteX - accidentalExtent - graceGroupWidth
                      - GraceToMainSpacing - scriptOverhang;
 
-            // Y position based on first note's staff position
-            double y = 0;
-            if (grace.Notes.Length > 0)
-            {
-                // Convert staff position to Y coordinate
-                // Staff position 0 = top line (B5 in treble), each step = 0.5 staff spaces
-                y = grace.Notes[0].StaffPosition * 0.5;
-            }
-
             // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
             int mainStaffPosition = grace.MainNoteItemIndex < measure.Items.Length
                 ? measure.Items[grace.MainNoteItemIndex] switch
@@ -207,7 +197,6 @@ internal static class GraceNoteEngraver
                 grace.MeasureIndex,
                 grace.MainNoteItemIndex,
                 x,
-                y,
                 grace.Notes,
                 grace.Type,
                 GraceScale,
