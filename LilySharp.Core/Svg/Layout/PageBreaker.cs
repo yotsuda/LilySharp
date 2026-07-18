@@ -293,8 +293,8 @@ internal sealed class PageBreaker
     /// <summary>
     /// Penalty for bad spacing (overflow or extreme stretch).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45 BAD_SPACING_PENALTY = 1e4</remarks>
-    private const double BadSpacingPenalty = 1e4;
+    /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45 BAD_SPACING_PENALTY = 1e6</remarks>
+    private const double BadSpacingPenalty = 1e6;
 
     /// <summary>
     /// Penalty for terrible spacing (ignoring user constraints).

@@ -37,22 +37,9 @@ internal sealed class SpringSolver
 {
     private readonly ImmutableArray<Spring> _springs;
 
-    /// <summary>
-    /// Maximum compression force (negative value). Forces more negative than this are clamped.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/simple-spacer.cc:250-275 force_limit</remarks>
-    private readonly double _forceLimit;
-
-    /// <summary>
-    /// Default force limit: allow substantial but not unlimited compression.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/simple-spacer.cc — default force_limit</remarks>
-    private const double DefaultForceLimit = -1e6;
-
-    public SpringSolver(ImmutableArray<Spring> springs, double forceLimit = DefaultForceLimit)
+    public SpringSolver(ImmutableArray<Spring> springs)
     {
         _springs = springs;
-        _forceLimit = forceLimit;
     }
 
     // LILYPOND-REF: lily/simple-spacer.cc:159-162 Simple_spacer::configuration_length()
@@ -171,7 +158,9 @@ internal sealed class SpringSolver
     /// Calculates force when compressing the line (target &lt; max_block_force_len).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc:250-275 — force_limit clamps maximum compression
+    /// LILYPOND-REF: lily/simple-spacer.cc:232-287 Simple_spacer::compress_line. LP applies
+    /// NO force clamp — it returns the force that reaches the target (fits), or the last
+    /// spring's blocking force with fits=false when the line cannot compress far enough.
     /// </remarks>
     private (double Force, bool Fits) CompressLine(double targetLen, double maxBlockForceLen, double maxBlockForce)
     {
@@ -211,16 +200,9 @@ internal sealed class SpringSolver
             // Check if we reach target before this spring blocks
             if (curLen - blockDist < targetLen)
             {
+                // LILYPOND-REF: lily/simple-spacer.cc:274-276 — reached the target; the
+                // line fits. Return the force unclamped (LP has no compression limit).
                 curForce += (targetLen - curLen) / invHooke;
-
-                // LILYPOND-REF: lily/simple-spacer.cc:250-275
-                // Clamp force to maximum compression limit
-                if (curForce < _forceLimit)
-                {
-                    curForce = _forceLimit;
-                    return (curForce, false);
-                }
-
                 return (curForce, true);
             }
 
@@ -230,11 +212,8 @@ internal sealed class SpringSolver
             curForce = sp.BlockingForce;
         }
 
-        // Couldn't fit — clamp to force limit
-        // LILYPOND-REF: lily/simple-spacer.cc:250-275
-        if (curForce < _forceLimit)
-            curForce = _forceLimit;
-
+        // Couldn't fit: LP returns the last spring's blocking force with fits=false
+        // (no clamp). LILYPOND-REF: lily/simple-spacer.cc:285-286.
         return (curForce, false);
     }
 

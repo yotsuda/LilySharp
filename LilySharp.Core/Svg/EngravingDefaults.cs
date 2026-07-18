@@ -239,8 +239,6 @@ internal static class EngravingDefaults
     public const double SpacingIncrement = 1.2;
     // === Element spacing (from scm/define-grobs.scm) ===
     // Clef space-alist
-    /// <summary>Space from clef to time-signature.</summary>
-    public const double ClefToTimeSignatureSpace = 4.2;
     /// <summary>Space from clef to first-note.</summary>
     public const double ClefToFirstNoteSpace = 5.0;
     /// <summary>Space from clef to next-note.</summary>

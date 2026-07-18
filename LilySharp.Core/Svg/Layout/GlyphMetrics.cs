@@ -147,10 +147,6 @@ internal static partial class GlyphMetrics
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))</remarks>
     public const double ClefToKeySignatureSpace = 3.5;
 
-    /// <summary>Minimum space from clef to time signature.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:816 (time-signature . (minimum-space . 4.2))</remarks>
-    public const double ClefToTimeSignatureSpace = 4.2;
-
     /// <summary>Minimum space from clef to first note.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:817 (first-note . (minimum-fixed-space . 5.0))</remarks>
     public const double ClefToFirstNoteSpace = 5.0;
