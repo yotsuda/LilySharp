@@ -132,9 +132,29 @@ public class NoteCollisionTests
         Assert.Equal(0.52, p.CloseHalfShift);     // close_half_collide :326
         Assert.Equal(0.4, p.DistantHalfShift);    // distant_half_collide :329
         Assert.Equal(0.5, p.FullCollideShift);     // full_collide :327
-        Assert.Equal(0.5, p.TouchShift);           // touch :324 (not stem_to_stem 0.65)
+        Assert.Equal(0.5, p.TouchShift);           // touch :324
+        Assert.Equal(0.65, p.StemToStemShift);     // stem_to_stem :322
         Assert.Equal(0.17, p.MeshingGeneralShift); // meshing_general :337
         Assert.Equal(0.1, p.MeshingDottedShift);   // meshing_dotted :335
+    }
+
+    [Fact]
+    public void StemToStem_DottedDownStem_ForcedRight_Uses065()
+    {
+        // LILYPOND-REF: lily/note-collision.cc:207-210,321-322 — a full collision whose
+        // DOWN-stem note carries MORE dots (up.dots < down.dots) pushes the down-stem to
+        // the right and clears the stems with the 0.65 stem_to_stem multiplier, NOT the
+        // 0.5 full-collide value. Reachable at default params (half vs dotted-quarter at
+        // the same pitch in two voices).
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(new[] { 4 }, new[] { 4 },
+            upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 1);
+
+        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.False(result.ShouldMerge);
+        // Down-stem (dotted) shifts RIGHT by the stem_to_stem 0.65; up-stem left.
+        Assert.Equal(0.65, result.DownStemXOffset, 2);
+        Assert.Equal(-0.65, result.UpStemXOffset, 2);
     }
 
     [Fact]

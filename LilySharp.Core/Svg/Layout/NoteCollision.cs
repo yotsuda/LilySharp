@@ -182,10 +182,21 @@ internal sealed record NoteCollisionParameters
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:324 touch — multiplier 0.5.
-    /// (0.65 is the separate stem_to_stem case at :322, which Lily# does not
-    /// detect; the old 0.65 here was that wrong value.)
+    /// (0.65 is the separate stem_to_stem case at :322 — see StemToStemShift.)
     /// </remarks>
     public double TouchShift { get; init; } = 0.5;
+
+    /// <summary>
+    /// Horizontal shift when a dotted down-stem chord is forced to the right
+    /// (prefer-dotted-right) and the stems must clear each other.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:321-322 stem_to_stem — multiplier 0.65.
+    /// Set (note-collision.cc:207-210) when a full/half collide with up.dots &lt; down.dots
+    /// pushes the down-stem right and it is not a touch; takes precedence over the
+    /// full/close/distant multipliers.
+    /// </remarks>
+    public double StemToStemShift { get; init; } = 0.65;
 
     /// <summary>
     /// Horizontal shift for meshing seconds (general case, no dots involved).
@@ -288,13 +299,16 @@ internal sealed class NoteCollision
 
         if (touch && !fullCollide && !closeHalf && !distantHalf)
         {
-            // LILYPOND-REF: lily/note-collision.cc:323-324 touch (0.5) and
-            // automatic_shift (d*offset): the two columns shift symmetrically
-            // (+inner up / -inner down); calc_positioning_done pins the leftmost
-            // group to the slot, so the 2-voice separation is 2*inner.
+            // LILYPOND-REF: lily/note-collision.cc:212-227 — for a pure touch LP shifts the
+            // DOWN-stem right (shift_amount = -1). The one exception (touch = false, up-stem
+            // right) is an up-stem note OFF a staff line carrying MORE dots than the down-stem
+            // under prefer-dotted-right. Symmetric offsets; calc_positioning_done pins the
+            // leftmost group, so the 2-voice separation is 2*inner. (:323-324 multiplier 0.5.)
+            bool upOnLine = ups[0] % 2 == 0;
+            bool touchUpRight = !upOnLine && _params.PreferDottedRight && upDots > downDots;
             double inner = _params.TouchShift;
-            double upOffset = shiftUpRight ? inner : -inner;
-            double downOffset = shiftUpRight ? -inner : inner;
+            double upOffset = touchUpRight ? inner : -inner;
+            double downOffset = touchUpRight ? -inner : inner;
             return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset,
                 downDotForceDown: downDotForceDown);
         }
@@ -402,6 +416,12 @@ internal sealed class NoteCollision
             shiftAmount = _params.DistantHalfShift;
             type = CollisionType.CloseHalf;
         }
+
+        // LILYPOND-REF: lily/note-collision.cc:321-322 — when a dotted down-stem is forced
+        // to the right (here shiftUpRight==false ⟺ LP's stem_to_stem: Branch A fired and it
+        // is not a touch), the 0.65 stem-to-stem clearance replaces the per-collision value.
+        if (!shiftUpRight)
+            shiftAmount = _params.StemToStemShift;
 
         // Symmetric shift (+inner up / -inner down); the consumer pins the
         // leftmost group, so the 2-voice separation is 2*inner.
