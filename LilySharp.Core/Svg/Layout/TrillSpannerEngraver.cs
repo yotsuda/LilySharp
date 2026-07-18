@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob
+/// LILYPOND-REF: scm/define-grobs.scm:4048-4094 TrillSpanner grob
 /// </remarks>
 public readonly record struct TrillSpannerLayout(
     // Start measure index (for system Y lookup).
@@ -52,7 +52,7 @@ public readonly record struct TrillSpannerLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver class
-/// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob defaults
+/// LILYPOND-REF: scm/define-grobs.scm:4048-4094 TrillSpanner grob defaults
 ///
 /// TrillSpanner parameters from LilyPond:
 /// - direction: UP (always above staff)
@@ -66,13 +66,13 @@ internal static class TrillSpannerEngraver
     /// <summary>
     /// Horizontal padding from bound objects.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2189 (padding . 0.5)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4078 (padding . 0.5)</remarks>
     private const double BoundPadding = 0.5;
 
     /// <summary>
     /// Staff padding for trill spanners.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2213 (staff-padding . 1.0)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4080 (staff-padding . 1.0)</remarks>
     private const double StaffPadding = 1.0;
 
     /// <summary>
@@ -99,7 +99,7 @@ internal static class TrillSpannerEngraver
     /// Handles cross-system spanners by extending the wavy line to the system edge.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/scheme-engravers.scm:92-125 positioning
+    /// LILYPOND-REF: scm/scheme-engravers.scm:1798-1868 positioning
     /// LILYPOND-REF: lily/line-spanner.cc:526-648 cross-system spanner handling
     /// </remarks>
     public static ImmutableArray<TrillSpannerLayout> Calculate(
@@ -121,7 +121,7 @@ internal static class TrillSpannerEngraver
                 continue;
 
             // Y position: above staff with padding, offset to this spanner's OWN
-            // staff (multi-staff). LILYPOND-REF: scm/define-grobs.scm:2213
+            // staff (multi-staff). LILYPOND-REF: scm/define-grobs.scm:4080
             double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
             double y = -StaffPadding - TrillGlyphHeight + staffOffset;
 

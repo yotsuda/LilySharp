@@ -36,7 +36,7 @@ public readonly record struct HairpinLayout(
     // Y position (center line of the wedge, staff spaces from staff top).
     double Y,
     // Opening at the start (left) end (half-height, in staff spaces).
-    // LILYPOND-REF: lily/hairpin.cc:180-220 — continued/continuing height fractions
+    // LILYPOND-REF: lily/hairpin.cc:300-313 — continued/continuing height fractions
     // For crescendo: 0 (point). For decrescendo: full or fractional opening.
     double StartOpening,
     // Opening at the end (right) end (half-height, in staff spaces).
@@ -58,7 +58,7 @@ public readonly record struct HairpinLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/hairpin.cc:110-358 print()
-/// LILYPOND-REF: scm/define-grobs.scm:1641-1666 Hairpin grob
+/// LILYPOND-REF: scm/define-grobs.scm:1777-1803 Hairpin grob
 ///
 /// Hairpin parameters from LilyPond:
 /// - height: 0.6666 staff spaces (maximum opening)
@@ -71,19 +71,19 @@ internal static class HairpinEngraver
     /// <summary>
     /// Maximum opening of the wedge (half-height).
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1655 (height . 0.6666)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1785 (height . 0.6666)</remarks>
     private const double Height = 0.6666;
 
     /// <summary>
     /// Horizontal padding from note/dynamic to hairpin endpoint.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1643 (bound-padding . 1.0)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1780 (bound-padding . 1.0)</remarks>
     private const double BoundPadding = 1.0;
 
     /// <summary>
     /// Minimum hairpin length.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1659 (minimum-length . 2.0)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1786 (minimum-length . 2.0)</remarks>
     private const double MinimumLength = 2.0;
 
     /// <summary>
@@ -99,13 +99,13 @@ internal static class HairpinEngraver
     /// <summary>
     /// Height fraction for the broken end of a continued hairpin (right edge at line break).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions</remarks>
+    /// <remarks>LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height fractions</remarks>
     private const double ContinuedFraction = 2.0 / 3.0;
 
     /// <summary>
     /// Height fraction for the broken end of a continuing hairpin (left edge at line start).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions</remarks>
+    /// <remarks>LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height fractions</remarks>
     private const double ContinuingFraction = 1.0 / 3.0;
 
     /// <summary>
@@ -113,7 +113,7 @@ internal static class HairpinEngraver
     /// Handles broken hairpins across system breaks with correct height fractions.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height calculation
+    /// LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height calculation
     /// When a hairpin crosses a system break:
     /// - continued (end of first system): opening = height * 2/3
     /// - continuing (start of next system): opening = height * 1/3

@@ -51,11 +51,11 @@ internal static class OutsideStaffStacker
     private const double OutsideStaffPadding = 0.46;
 
     // Element height estimates (staff spaces)
-    // LILYPOND-REF: define-grobs.scm:1317 DynamicText Y-offset = (scale-by-font-size -0.6)
+    // LILYPOND-REF: define-grobs.scm:1450 DynamicText Y-offset = (scale-by-font-size -0.6)
     private const double DynamicTextAscent = 1.2;
     private const double DynamicTextDescent = 0.3;
 
-    // LILYPOND-REF: scm/define-grobs.scm:1655 Hairpin height = 0.6666
+    // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin height = 0.6666
     private const double HairpinHalfHeight = 0.6666 / 2.0;
 
     // Text spanner text dimensions
@@ -162,7 +162,7 @@ internal static class OutsideStaffStacker
         }
 
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
-        // LILYPOND-REF: scm/define-grobs.scm:1270 DynamicLineSpanner.outside-staff-priority = 250
+        // LILYPOND-REF: scm/define-grobs.scm:1407 DynamicLineSpanner.outside-staff-priority = 250
 
         // Dynamics: push below anything already occupying their X range
         // (below-staff scripts), then record their own extent.

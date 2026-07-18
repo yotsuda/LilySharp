@@ -136,32 +136,15 @@ internal static partial class GlyphMetrics
 
     /// <summary>
     /// Padding before and after a mid-measure clef change.
-    /// LILYPOND-REF: scm/define-grobs.scm:800-834 — Clef space-alist
+    /// LILYPOND-REF: scm/define-grobs.scm:914-925 — Clef space-alist
     /// </summary>
     public const double ClefChangePadding = 0.5;
 
     // ========== LP grob spacing defaults ==========
-    // LILYPOND-REF: scm/define-grobs.scm — Clef / KeySignature / TimeSignature space-alist
-
-    /// <summary>Minimum space from clef to key signature.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))</remarks>
-    public const double ClefToKeySignatureSpace = 3.5;
-
-    /// <summary>Minimum space from clef to first note.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:817 (first-note . (minimum-fixed-space . 5.0))</remarks>
-    public const double ClefToFirstNoteSpace = 5.0;
-
-    /// <summary>Extra space from key signature to time signature.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1834 (time-signature . (extra-space . 1.15))</remarks>
-    public const double KeySignatureToTimeSignatureSpace = 1.15;
-
-    /// <summary>Fixed space from key signature to first note.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1839 (first-note . (fixed-space . 2.5))</remarks>
-    public const double KeySignatureToFirstNoteSpace = 2.5;
-
-    /// <summary>Fixed space from time signature to first note.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3599 (first-note . (fixed-space . 2.0))</remarks>
-    public const double TimeSignatureToFirstNoteSpace = 2.0;
+    // The Clef/KeySignature/TimeSignature space-alist values (clef->key 3.5,
+    // clef->first-note 5.0, key->time 1.15, key->first-note 2.5, time->first-note 2.0)
+    // are owned by BreakAlignSpacing (the canonical, unit-tested space-alist home). The
+    // copies that were here were dead duplicates and have been removed.
 
     // ========== Key signature accidental widths ==========
     // LP key-signature-interface.cc uses add_at_edge(padding=0) which places

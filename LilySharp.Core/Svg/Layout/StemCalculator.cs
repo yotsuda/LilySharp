@@ -20,8 +20,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// Parameters for stem length calculation.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:3121-3141 Stem.details
-/// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position
+/// LILYPOND-REF: scm/define-grobs.scm:3435-3452 Stem.details
+/// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position
 /// </remarks>
 public sealed record StemDetails
 {
@@ -31,31 +31,31 @@ public sealed record StemDetails
     /// <summary>
     /// Base stem lengths by duration log (index = durationLog - 2).
     /// Quarter=3.5, eighth=3.5, 16th=3.5, 32nd=4.25, 64th=5.0, 128th=6.0, 256th=7.0, 512th=8.0, 1024th=9.0.
-    /// LILYPOND-REF: define-grobs.scm:3121 (lengths . (3.5 3.5 3.5 4.25 5.0 6.0 7.0 8.0 9.0))
+    /// LILYPOND-REF: define-grobs.scm:3448 (lengths . (3.5 3.5 3.5 4.25 5.0 6.0 7.0 8.0 9.0))
     /// </summary>
     public double[] Lengths { get; init; } = [3.5, 3.5, 3.5, 4.25, 5.0, 6.0, 7.0, 8.0, 9.0];
 
     /// <summary>
     /// Ideal stem lengths for beamed stems by beam count (index = beamCount - 1).
-    /// LILYPOND-REF: define-grobs.scm:3129 (beamed-lengths . (3.26 3.5 3.6))
+    /// LILYPOND-REF: define-grobs.scm:3442 (beamed-lengths . (3.26 3.5 3.6))
     /// </summary>
     public double[] BeamedLengths { get; init; } = [3.26, 3.5, 3.6];
 
     /// <summary>
     /// Minimum free stem lengths for beamed stems (clearance from chord).
-    /// LILYPOND-REF: define-grobs.scm:3132 (beamed-minimum-free-lengths . (1.83 1.5 1.25))
+    /// LILYPOND-REF: define-grobs.scm:3444 (beamed-minimum-free-lengths . (1.83 1.5 1.25))
     /// </summary>
     public double[] BeamedMinimumFreeLengths { get; init; } = [1.83, 1.5, 1.25];
 
     /// <summary>
     /// Absolute minimum free stem lengths for beamed stems.
-    /// LILYPOND-REF: define-grobs.scm:3136 (beamed-extreme-minimum-free-lengths . (2.0 1.25))
+    /// LILYPOND-REF: define-grobs.scm:3436 (beamed-extreme-minimum-free-lengths . (2.0 1.25))
     /// </summary>
     public double[] BeamedExtremeMinimumFreeLengths { get; init; } = [2.0, 1.25];
 
     /// <summary>
     /// Shortening amounts for unnatural stem direction by duration.
-    /// LILYPOND-REF: define-grobs.scm:3141 (stem-shorten . (1.0 0.5 0.25))
+    /// LILYPOND-REF: define-grobs.scm:3452 (stem-shorten . (1.0 0.5 0.25))
     /// </summary>
     public double[] StemShorten { get; init; } = [1.0, 0.5, 0.25];
 
@@ -70,7 +70,7 @@ public sealed record StemDetails
 /// Stem length and position information for beam quantization.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/stem.cc:1012-1022 Stem_info struct
+/// LILYPOND-REF: lily/include/stem-info.hh:30-37 Stem_info struct
 /// </remarks>
 public readonly record struct StemInfo(
     // Ideal stem end Y position (staff spaces from staff top).
@@ -86,8 +86,8 @@ public readonly record struct StemInfo(
 /// staff extension rules, and beamed stem info calculation.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position
-/// LILYPOND-REF: lily/stem.cc:1024-1155 calc_stem_info
+/// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position
+/// LILYPOND-REF: lily/stem.cc:1135-1266 calc_stem_info
 /// </remarks>
 public static class StemCalculator
 {
@@ -112,7 +112,7 @@ public static class StemCalculator
     /// <param name="details">Stem details parameters.</param>
     /// <returns>Stem end Y position in device coordinates (staff spaces, Y-down).</returns>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position
+    /// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position
     /// </remarks>
     public static double CalculateStemEndY(
         double stemAttachY,
@@ -131,12 +131,12 @@ public static class StemCalculator
         double attachUp = StaffFrame.ToUp(stemAttachY, staffMiddleY);
 
         // --- Base length from duration ---
-        // LILYPOND-REF: stem.cc:441-443
+        // LILYPOND-REF: stem.cc:506-517
         int lengthIndex = Math.Clamp(durationLog - 2, 0, d.Lengths.Length - 1);
         double length = d.Lengths[lengthIndex]; // in staff spaces
 
         // --- Unnatural direction shortening ---
-        // LILYPOND-REF: stem.cc:446-482
+        // LILYPOND-REF: stem.cc:519-555
         // If stem direction matches head position direction (both above or both below middle),
         // this is the "unnatural" direction and the stem should be shortened.
         int dir = stemUp ? 1 : -1; // 1=up, -1=down
@@ -148,7 +148,7 @@ public static class StemCalculator
             double shortenProperty = d.StemShorten[shortenIndex];
 
             // Smooth shortening transition
-            // LILYPOND-REF: stem.cc:460-472
+            // LILYPOND-REF: stem.cc:541-554
             double quarterStemLength = 2 * d.Lengths[0]; // in half-spaces
             double staffRadius = 2.0; // half-staff height in half-spaces
             double shorteningStep = Math.Clamp(shortenProperty / 6.0, 0.25, 0.5);
@@ -159,7 +159,7 @@ public static class StemCalculator
         }
 
         // --- Length fraction ---
-        // LILYPOND-REF: stem.cc:484
+        // LILYPOND-REF: stem.cc:557
         length *= d.LengthFraction;
 
         // --- Calculate stem end (Y-up) ---
@@ -167,7 +167,7 @@ public static class StemCalculator
         double stemEndUp = attachUp + dir * length;
 
         // --- Staff extension: stems should reach at least the middle line ---
-        // LILYPOND-REF: stem.cc:517-520 — an up stem must not end below the
+        // LILYPOND-REF: stem.cc:591-593 — an up stem must not end below the
         // middle line (up < 0); a down stem must not end above it (up > 0).
         if (stemUp && stemEndUp < 0)
             stemEndUp = 0;
@@ -215,24 +215,24 @@ public static class StemCalculator
         int dir = stemUp ? 1 : -1; // staff positions: positive = up
 
         // --- Ideal length from beamed-lengths ---
-        // LILYPOND-REF: stem.cc:1051-1064
+        // LILYPOND-REF: stem.cc:1164-1175
         int beamIdx = Math.Clamp(beamCount - 1, 0, d.BeamedLengths.Length - 1);
         double idealLength = d.BeamedLengths[beamIdx] * d.LengthFraction
                              - 0.5 * beamThickness; // stem extends to center of beam
 
         // --- Minimum free length ---
-        // LILYPOND-REF: stem.cc:1066-1074
+        // LILYPOND-REF: stem.cc:1178-1185
         int minFreeIdx = Math.Clamp(beamCount - 1, 0, d.BeamedMinimumFreeLengths.Length - 1);
         double idealMinimumFree = d.BeamedMinimumFreeLengths[minFreeIdx] * d.LengthFraction;
 
         // --- Height of beams ---
-        // LILYPOND-REF: stem.cc:1085-1098
+        // LILYPOND-REF: stem.cc:1203-1211
         double heightOfMyBeams = beamThickness + (beamCount - 1) * beamTranslation;
         double idealMinimumLength = idealMinimumFree + heightOfMyBeams - 0.5 * beamThickness;
         idealLength = Math.Max(idealLength, idealMinimumLength);
 
         // --- Note start position (in staff spaces) ---
-        // LILYPOND-REF: stem.cc:1102-1105
+        // LILYPOND-REF: stem.cc:1213-1216
         double noteStart = headPosition * 0.5 * dir; // convert to staff spaces in stem direction
         double idealY = noteStart + idealLength;
 
@@ -249,7 +249,7 @@ public static class StemCalculator
         }
 
         // --- Extreme minimum ---
-        // LILYPOND-REF: stem.cc:1136-1152
+        // LILYPOND-REF: stem.cc:1247-1259
         int extremeMinIdx = Math.Clamp(beamCount - 1, 0, d.BeamedExtremeMinimumFreeLengths.Length - 1);
         double minimumFree = d.BeamedExtremeMinimumFreeLengths[extremeMinIdx];
         double minimumLength = minimumFree + heightOfMyBeams - 0.5 * beamThickness;

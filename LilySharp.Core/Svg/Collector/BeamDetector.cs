@@ -596,7 +596,7 @@ internal sealed class BeamDetector
         // Auto-knee detection: knee when the union of (widened) head extents
         // leaves an interior gap larger than auto-knee-gap + the beam stack.
         // LILYPOND-REF: beam.cc:968-1056 consider_auto_knees
-        // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
+        // LILYPOND-REF: define-grobs.scm:476 auto-knee-gap = 5.5
         // A forced-direction (polyphonic) voice never knees — every stem stays on
         // the voice's side, so auto-knee only runs in a neutral single voice.
         double? kneeGapCenter = forceStemUp is null ? AutoKneeGapCenter(members) : null;
@@ -626,7 +626,7 @@ internal sealed class BeamDetector
     }
 
     /// <summary>auto-knee-gap, in staff spaces.</summary>
-    /// <remarks>LILYPOND-REF: define-grobs.scm:437 (auto-knee-gap . 5.5)</remarks>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:476 (auto-knee-gap . 5.5)</remarks>
     private const double AutoKneeGap = 5.5;
 
     /// <summary>

@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Parameters for lyric layout calculation.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:3020-3060 LyricText grob
+/// LILYPOND-REF: scm/define-grobs.scm:2213-2239 LyricText grob
 /// LILYPOND-REF: lily/lyric-engraver.cc:20-30 default parameters
 /// </remarks>
 internal sealed record LyricParameters
@@ -65,7 +65,7 @@ internal sealed record LyricParameters
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/lyric-engraver.cc:60-150 process_music, stop_translation_timestep
+/// LILYPOND-REF: lily/lyric-engraver.cc:64-175 process_music, stop_translation_timestep
 /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:100-200 note-lyric association
 ///
 /// Lyrics are positioned:

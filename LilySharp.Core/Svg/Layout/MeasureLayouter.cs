@@ -337,7 +337,7 @@ internal sealed class MeasureLayouter
             // The grace is now the FIRST musical column after the barline, so the
             // barline→grace gap uses tight GRACE spacing (spacing-increment). The
             // whole front block is rigid (grace columns don't stretch).
-            // LILYPOND-REF: scm/define-grobs.scm:1592 GraceSpacing
+            // LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
             //   (spacing-increment . 0.8) — grace columns space tighter than notes.
             // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
             //   column → … → main column.

@@ -245,23 +245,11 @@ internal static class EngravingDefaults
     /// </summary>
     public const double SpacingIncrement = 1.2;
     // === Element spacing (from scm/define-grobs.scm) ===
-    // Clef space-alist
-    /// <summary>Space from clef to first-note.</summary>
-    public const double ClefToFirstNoteSpace = 5.0;
-    /// <summary>Space from clef to next-note.</summary>
-    public const double ClefToNextNoteSpace = 1.0;
-
-    // TimeSignature space-alist
-    /// <summary>Space from time-signature to first-note.</summary>
-    public const double TimeSignatureToFirstNoteSpace = 2.0;
-    /// <summary>Space from time-signature to right-edge.</summary>
-    public const double TimeSignatureToRightEdgeSpace = 0.5;
-
-    // BarLine space-alist
+    // BarLine space-alist. (The Clef and TimeSignature space-alist entries live in
+    // BreakAlignSpacing, the canonical space-alist home; the copies that were here were
+    // dead duplicates and have been removed.)
     /// <summary>Space from bar-line to first-note.</summary>
     public const double BarLineToFirstNoteSpace = 1.3;
-    /// <summary>Space from bar-line to clef.</summary>
-    public const double BarLineToClefSpace = 1.0;
 
     // === Staff spacing (from scm/define-grobs.scm StaffGrouper) ===
     /// <summary>Basic distance between staves in a group (center to center).</summary>

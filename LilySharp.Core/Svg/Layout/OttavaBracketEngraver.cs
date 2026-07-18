@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()
-/// LILYPOND-REF: scm/define-grobs.scm:2445-2468 OttavaBracket grob defaults
+/// LILYPOND-REF: scm/define-grobs.scm:2708-2731 OttavaBracket grob defaults
 /// </remarks>
 public readonly record struct OttavaBracketLayout(
     // Start measure index (for system Y lookup).
@@ -61,7 +61,7 @@ public readonly record struct OttavaBracketLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()
-/// LILYPOND-REF: scm/define-grobs.scm:2445-2468 OttavaBracket grob defaults
+/// LILYPOND-REF: scm/define-grobs.scm:2708-2731 OttavaBracket grob defaults
 ///
 /// OttavaBracket parameters from LilyPond:
 /// - dash-fraction: 0.3
@@ -78,7 +78,7 @@ internal static class OttavaBracketEngraver
     /// <summary>
     /// Dash fraction for the dashed line.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2449 (dash-fraction . 0.3)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2710 (dash-fraction . 0.3)</remarks>
     private const double DashFraction = 0.3;
 
     /// <summary>
@@ -89,13 +89,13 @@ internal static class OttavaBracketEngraver
     /// <summary>
     /// Edge height at the end (right hook).
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2451 (edge-height . (0 . 0.8))</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2711 (edge-height . (0 . 0.8))</remarks>
     private const double EndEdgeHeight = 0.8;
 
     /// <summary>
     /// Staff padding — minimum distance from staff.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2462 (staff-padding . 2.0)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2718 (staff-padding . 2.0)</remarks>
     private const double StaffPadding = 2.0;
 
     /// <summary>
@@ -112,7 +112,7 @@ internal static class OttavaBracketEngraver
     /// <summary>
     /// Left shorten (extends bracket slightly left).
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2460 (shorten-pair . (-0.8 . -0.6))</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2717 (shorten-pair . (-0.8 . -0.6))</remarks>
     private const double LeftShorten = -0.8;
 
     /// <summary>

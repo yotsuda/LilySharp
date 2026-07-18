@@ -146,7 +146,7 @@ internal static class BreakAlignSpacing
     /// Clef.space-alist from LilyPond.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:800-834 Clef
+    /// LILYPOND-REF: scm/define-grobs.scm:902-942 Clef
     /// </remarks>
     private static SpacingEntry GetClefSpacing(BreakAlignSymbol right) => right switch
     {
@@ -175,7 +175,7 @@ internal static class BreakAlignSpacing
     /// KeyCancellation.space-alist from LilyPond.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:1800-1825 KeyCancellation
+    /// LILYPOND-REF: scm/define-grobs.scm:1930-1970 KeyCancellation
     /// </remarks>
     private static SpacingEntry GetKeyCancellationSpacing(BreakAlignSymbol right) => right switch
     {
@@ -198,7 +198,7 @@ internal static class BreakAlignSpacing
     /// KeySignature.space-alist from LilyPond.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:1830-1845 KeySignature
+    /// LILYPOND-REF: scm/define-grobs.scm:1972-2014 KeySignature
     /// </remarks>
     private static SpacingEntry GetKeySignatureSpacing(BreakAlignSymbol right) => right switch
     {
@@ -221,7 +221,7 @@ internal static class BreakAlignSpacing
     /// TimeSignature.space-alist from LilyPond.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3595-3610 TimeSignature
+    /// LILYPOND-REF: scm/define-grobs.scm:3922-3966 TimeSignature
     /// </remarks>
     private static SpacingEntry GetTimeSignatureSpacing(BreakAlignSymbol right) => right switch
     {

@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: define-grobs.scm:2586-2605 PianoPedalBracket grob
+/// LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob
 /// </remarks>
 public readonly record struct PedalBracketLayout(
     double StartX,           // Start X position (at "Ped." text)
@@ -41,8 +41,8 @@ public readonly record struct PedalBracketLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: piano-pedal-engraver.cc:216-400 Pedal event processing
-/// LILYPOND-REF: define-grobs.scm:2586-2605 PianoPedalBracket parameters
-/// LILYPOND-REF: define-grobs.scm:3255-3296 SustainPedal/SustainPedalLineSpanner
+/// LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket parameters
+/// LILYPOND-REF: define-grobs.scm:3573-3619 SustainPedal/SustainPedalLineSpanner
 ///
 /// NOTE: the DEFAULT pedalSustainStyle is 'text — just "Ped." at sustain-on and
 /// "*" at sustain-off, with NO connecting line or hook. The horizontal line +
@@ -53,17 +53,17 @@ public readonly record struct PedalBracketLayout(
 /// </remarks>
 internal static class PedalEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:2590 bound-padding = 1.0
+    // LILYPOND-REF: define-grobs.scm:2857 bound-padding = 1.0
     private const double BoundPadding = 1.0;
 
-    // LILYPOND-REF: define-grobs.scm:2594 edge-height = (1.0 . 1.0)
+    // LILYPOND-REF: define-grobs.scm:2860 edge-height = (1.0 . 1.0)
     private const double EdgeHeight = 1.0;
 
-    // LILYPOND-REF: define-grobs.scm:3283 padding = 1.2
+    // LILYPOND-REF: define-grobs.scm:3599 padding = 1.2
     private const double StaffPadding = 1.2;
 
     // Y position below staff (staff bottom = 4.0, plus padding)
-    // LILYPOND-REF: define-grobs.scm:3280 direction = DOWN
+    // LILYPOND-REF: define-grobs.scm:3596 direction = DOWN
     private const double BracketY = 6.5;
 
     /// <summary>

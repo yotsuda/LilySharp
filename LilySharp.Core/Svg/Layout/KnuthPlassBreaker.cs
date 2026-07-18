@@ -194,7 +194,7 @@ internal sealed class KnuthPlassBreaker
     /// Calculates the force for a line containing the given spring data.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc:267-300 solve()
+    /// LILYPOND-REF: lily/simple-spacer.cc:174-178 solve()
     /// force = (available_width - ideal_sum) / inverse_stretch_sum
     /// Positive force = stretch, negative = compress.
     /// </remarks>
@@ -254,7 +254,7 @@ internal sealed class KnuthPlassBreaker
             for (int i = 0; i < j; i++)
             {
                 // 1-4: Check break permission — skip if Forbid at break point i (except start)
-                // LILYPOND-REF: lily/include/constrained-breaking.hh:74 break_permission_
+                // LILYPOND-REF: lily/include/constrained-breaking.hh:73 break_permission_
                 if (i > 0 && springData[i - 1].BreakPermission == BreakPermission.Forbid)
                     continue;
 
@@ -296,7 +296,7 @@ internal sealed class KnuthPlassBreaker
                     && !hasForceAtJ && !hasForceAtI)
                     continue;
 
-                // LILYPOND-REF: lily/simple-spacer.cc:267-300
+                // LILYPOND-REF: lily/simple-spacer.cc:174-178
                 // Use max(idealSum, minSum) as effective width for force calculation.
                 double effectiveWidth = Math.Max(idealSum, minSum);
                 double force = CalculateLineForce(availableWidth, effectiveWidth, invStretchSum);

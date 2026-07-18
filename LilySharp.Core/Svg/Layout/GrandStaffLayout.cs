@@ -68,7 +68,7 @@ public enum SystemStartDelimiterType
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/system-start-delimiter.cc — brace/bracket/bar-line/line-bracket rendering
-/// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+/// LILYPOND-REF: scm/define-grobs.scm:3352-3355 staff-staff-spacing
 ///
 /// IMPLEMENTED — bracket/brace collapse-height check (system-start-delimiter.cc:127-129)
 /// IMPLEMENTED — bracket, line-bracket, and bar-line delimiter types

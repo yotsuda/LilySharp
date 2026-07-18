@@ -1641,7 +1641,7 @@ internal sealed class LayoutEngine
     /// <remarks>
     /// LILYPOND-REF: lily/pango-font.cc — LilyPond uses exact Pango font metrics.
     /// We approximate with average character width ≈ 0.5 × font-size for serif fonts.
-    /// LILYPOND-REF: scm/define-grobs.scm:1711-1728 InstrumentName padding = 0.3
+    /// LILYPOND-REF: scm/define-grobs.scm:1851-1868 InstrumentName padding = 0.3
     /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
     /// </remarks>
     private static double CalculateIndentFromInstrumentNames(MultiStaffScore score)

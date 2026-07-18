@@ -59,8 +59,8 @@ internal sealed class ElementCoordinator
     /// Calculates X offsets and head wipe flags for notes that collide in multi-voice contexts.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
-    /// LILYPOND-REF: lily/note-collision.cc:486-502 — force-hshift manual override
+    /// LILYPOND-REF: lily/note-collision.cc:254-317 — head wipe
+    /// LILYPOND-REF: lily/note-collision.cc:607-622 — force-hshift manual override
     /// Returns both voice offsets and head wipe entries (noteheads to hide on merge).
     /// </remarks>
     public (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
@@ -89,12 +89,12 @@ internal sealed class ElementCoordinator
             if (column.Entries.Length <= 1)
                 continue;
 
-            // LILYPOND-REF: lily/note-collision.cc:309-312
+            // LILYPOND-REF: lily/note-collision.cc:427-438
             // Width-based shift normalization: use the widest notehead width
             // in the column so shifts scale correctly for whole/breve noteheads.
             double noteheadWidth = GetColumnNoteheadWidth(column);
 
-            // LILYPOND-REF: lily/note-collision.cc:486-502
+            // LILYPOND-REF: lily/note-collision.cc:607-622
             // Check for force-hshift manual override before auto-calculation.
             // When active, force-hshift replaces the auto-calculated offset.
             // (Disabled for the initial release — see ForceHshiftEnabled.)
@@ -113,7 +113,7 @@ internal sealed class ElementCoordinator
             {
                 var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
 
-                // LILYPOND-REF: lily/note-collision.cc:486-502
+                // LILYPOND-REF: lily/note-collision.cc:607-622
                 // force-hshift overrides auto-calculated offsets for all columns at this position.
                 double effectiveOffset = forceHshift.HasValue
                     ? forceHshift.Value * noteheadWidth
@@ -143,7 +143,7 @@ internal sealed class ElementCoordinator
     /// Determines the widest notehead width in a voice column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:309-312
+    /// LILYPOND-REF: lily/note-collision.cc:427-438
     /// LilyPond normalizes collision shifts by the first head's width.
     /// We use the widest notehead to ensure sufficient displacement.
     /// Whole notes (1.688) are wider than half/quarter (1.18).

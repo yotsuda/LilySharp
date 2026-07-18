@@ -25,8 +25,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: define-grobs.scm:1298-1327 DynamicText grob
-/// LILYPOND-REF: define-grobs.scm:1270-1297 DynamicLineSpanner grob
+/// LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob
+/// LILYPOND-REF: define-grobs.scm:1401-1431 DynamicLineSpanner grob
 /// </remarks>
 public readonly record struct DynamicLayout(
     int MeasureIndex,       // Measure containing this dynamic
@@ -60,13 +60,13 @@ public readonly record struct DynamicLayout(
 /// </remarks>
 internal static class DynamicEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:1274 direction = DOWN
+    // LILYPOND-REF: define-grobs.scm:1405 direction = DOWN
     private const int Direction = 1;  // DOWN = 1 (positive Y = down in our coordinate system)
 
-    // LILYPOND-REF: define-grobs.scm:1277 padding = 0.6
+    // LILYPOND-REF: define-grobs.scm:1408 padding = 0.6
     private const double Padding = 0.6;
 
-    // LILYPOND-REF: define-grobs.scm:1280 staff-padding = 0.1
+    // LILYPOND-REF: define-grobs.scm:1411 staff-padding = 0.1
     private const double StaffPadding = 0.1;
 
     // Staff geometry (5 lines = 4 staff spaces)
@@ -75,7 +75,7 @@ internal static class DynamicEngraver
 
     // Text ascent above baseline for dynamic text (font-size 2.0, bold italic serif).
     // Approximate cap-height ratio ~0.6 × font-size.
-    // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
+    // LILYPOND-REF: define-grobs.scm:1450 Y-offset = (scale-by-font-size -0.6)
     private const double TextAscent = 1.2;
 
     // Text descent BELOW the baseline for dynamic glyphs (the f / p swashes reach
@@ -158,7 +158,7 @@ internal static class DynamicEngraver
             double staffOffset = staffYAt?.Invoke(dynamic.MeasureIndex, dynamic.StaffIndex) ?? 0;
 
             // Calculate X position (centered on the note)
-            // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
+            // LILYPOND-REF: define-grobs.scm:1444 self-alignment-X = CENTER
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
 
@@ -321,7 +321,7 @@ internal static class DynamicEngraver
     /// Gets the lowest Y extent of a music item (in staff spaces from top).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: stem.cc:876-920 calc_stem_end_position
+    /// LILYPOND-REF: stem.cc:461-468 calc_stem_end_position
     /// Accounts for note position and stem direction.
     /// </remarks>
     private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null)

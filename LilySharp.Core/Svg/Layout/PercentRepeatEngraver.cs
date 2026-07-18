@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Layout result for a percent repeat symbol.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:2520-2539 - PercentRepeat grob
+/// LILYPOND-REF: scm/define-grobs.scm:2788-2807 - PercentRepeat grob
 /// </remarks>
 public readonly record struct PercentRepeatLayout(
     int MeasureIndex,
@@ -39,7 +39,7 @@ public readonly record struct PercentRepeatLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/percent-repeat-interface.cc - x_percent() rendering
-/// LILYPOND-REF: scm/define-grobs.scm:2520-2539 - self-alignment-X = CENTER
+/// LILYPOND-REF: scm/define-grobs.scm:2788-2807 - self-alignment-X = CENTER
 ///
 /// The percent symbol is centered horizontally and vertically within the measure.
 /// </remarks>

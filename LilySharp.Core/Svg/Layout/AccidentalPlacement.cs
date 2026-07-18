@@ -70,7 +70,7 @@ internal sealed record AccidentalPlacementParameters
 /// 2. Sort by alteration priority (naturals rightmost, flats leftmost)
 ///    LILYPOND-REF: accidental-placement.cc:164-184 acc_less
 /// 3. Build reference LeftSkyline from noteheads
-///    LILYPOND-REF: accidental-placement.cc:355-370
+///    LILYPOND-REF: accidental-placement.cc:375-385
 /// 4. Position right-to-left: each accidental placed as close to notes
 ///    as possible without colliding with the reference skyline
 ///    LILYPOND-REF: accidental-placement.cc:393-439 position_apes
@@ -113,7 +113,7 @@ internal sealed class AccidentalPlacement
     /// (parallel to <paramref name="notes"/>) from
     /// <see cref="ChordHeadPositioning"/> — reversed heads of seconds shift
     /// the note-column ink the accidentals must clear.
-    /// LILYPOND-REF: lily/accidental-placement.cc:355-370 — the reference
+    /// LILYPOND-REF: lily/accidental-placement.cc:375-385 — the reference
     /// skyline is built from the heads' real (shifted) extents.</param>
     /// <param name="scale">Font-size scale for cue chords (LP CueVoice fontSize
     /// = -4). All dimensional quantities — glyph widths, paddings and the glyphs'
@@ -226,7 +226,7 @@ internal sealed class AccidentalPlacement
             return a.Priority.CompareTo(b.Priority);
         });
 
-        // LILYPOND-REF: accidental-placement.cc:261-336 stagger_apes
+        // LILYPOND-REF: accidental-placement.cc:192-235 stagger_apes
         // Reorder entries: group by vertical proximity, sort groups by size (larger first),
         // zigzag within same-size groups. This ensures dense clusters stay close to noteheads.
         if (entries.Count > 2)
@@ -343,7 +343,7 @@ internal sealed class AccidentalPlacement
     /// and applies zigzag within same-size groups.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/accidental-placement.cc:261-336 stagger_apes
+    /// LILYPOND-REF: lily/accidental-placement.cc:192-235 stagger_apes
     ///
     /// The algorithm ensures that:
     /// - Clusters of close accidentals (e.g., seconds in a chord) are placed as one group

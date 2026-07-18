@@ -164,8 +164,8 @@ internal static partial class SharedRenderer
 
     // ---------- Header ----------
 
-    // LILYPOND-REF: ly/titling-init.ly:79-108 — \huge \larger \larger \bold ≈ 3.49 ss
-    // LILYPOND-REF: ly/titling-init.ly:100 — composer baseline ≈ 2.2 ss
+    // LILYPOND-REF: ly/titling-init.ly:75 — \huge \larger \larger \bold ≈ 3.49 ss
+    // LILYPOND-REF: ly/titling-init.ly:89 — composer baseline ≈ 2.2 ss
     private const double TitleFontSize = 3.49;
     private const double ComposerFontSize = 2.2;
 

@@ -100,7 +100,7 @@ internal static class MusicMarkEngraver
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
 
-    // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
+    // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double OutsideStaffPadding = 0.46;
 
     // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
@@ -120,7 +120,7 @@ internal static class MusicMarkEngraver
     private const double TempoLabelGap = 0.8;
 
     // Gap between stacked marks
-    // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
+    // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double StackGap = 0.46;
 
     /// <summary>
@@ -132,7 +132,7 @@ internal static class MusicMarkEngraver
     /// Measure indices covered by an above-staff volta bracket, and the highest
     /// (most negative) volta Y across all brackets.
     /// </summary>
-    /// <remarks>LILYPOND-REF: define-grobs.scm:3943 VoltaBracketSpanner outside-staff-priority=600</remarks>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:4325 VoltaBracketSpanner outside-staff-priority=600</remarks>
     private static (HashSet<int> Measures, double TopY) BuildVoltaCoverage(
         ImmutableArray<VoltaBracketLayout> voltaBrackets)
     {
@@ -759,7 +759,7 @@ internal static class MusicMarkEngraver
     /// Adds a tempo marking to the mark list if the score has a tempo.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark outside-staff-priority = 1300
+    /// LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority = 1300
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
         ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
@@ -817,7 +817,7 @@ internal static class MusicMarkEngraver
     /// </remarks>
     private static int GetOutsideStaffPriority(MusicMarkType type) => type switch
     {
-        // LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark outside-staff-priority = 1300
+        // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority = 1300
         MusicMarkType.Tempo => 1300,
         MusicMarkType.SectionLabel => 1450,
         MusicMarkType.Rehearsal => 1500,
@@ -878,7 +878,7 @@ internal static class MusicMarkEngraver
 
     private static double GetMarkHalfExtent(MusicMarkType type) => type switch
     {
-        // LILYPOND-REF: define-grobs.scm:1835 MetronomeMark — notehead + stem + text
+        // LILYPOND-REF: define-grobs.scm:2335 MetronomeMark — notehead + stem + text
         MusicMarkType.Tempo => 1.8,           // notehead height + stem extends ~1.4 above
         MusicMarkType.Rehearsal => 1.4,       // (FontSize*0.6 + 0.2*2) / 2 = (2.4+0.4)/2
         MusicMarkType.SectionLabel => 1.3,    // (FontSize*0.55 + 0.2*2) / 2 = (2.2+0.4)/2

@@ -46,7 +46,7 @@ internal sealed record LayoutOptions
     public double MarginRight { get; init; } = 8.5;
 
     /// <summary>Top margin in staff spaces.</summary>
-    /// <remarks>LILYPOND-REF: scm/paper.scm:49 top-margin</remarks>
+    /// <remarks>LILYPOND-REF: scm/paper.scm:50 top-margin</remarks>
     public double MarginTop { get; init; } = 5;
 
     /// <summary>Bottom margin in staff spaces.</summary>
@@ -129,7 +129,7 @@ internal sealed record LayoutOptions
     /// <summary>
     /// Parameters for spacing between staves within a system.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3350-3362 StaffGrouper</remarks>
     public StaffSpacingParameters StaffSpacing { get; init; } = StaffSpacingParameters.Default;
 
     // === Spacing Parameters ===
@@ -138,7 +138,7 @@ internal sealed record LayoutOptions
     /// Spacing increment, approximately notehead width.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:1550-1580 SpacingSpanner.spacing-increment
+    /// LILYPOND-REF: scm/define-grobs.scm:3239-3256 SpacingSpanner.spacing-increment
     /// Configurable per-score. Default 1.2 staff spaces matches LilyPond.
     /// When set, overrides EngravingDefaults.SpacingIncrement for all spacing calculations.
     /// </remarks>

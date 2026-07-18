@@ -43,7 +43,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/instrument-name-engraver.cc — InstrumentName grob
-    /// LILYPOND-REF: scm/define-grobs.scm:1711-1728 InstrumentName
+    /// LILYPOND-REF: scm/define-grobs.scm:1851 InstrumentName
     ///   font: serif, padding 0.3, self-alignment-X = CENTER, self-alignment-Y = CENTER
     /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
     ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level

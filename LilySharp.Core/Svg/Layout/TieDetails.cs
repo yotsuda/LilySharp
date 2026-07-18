@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/tie-details.cc:37-93 Tie_details::from_grob()
-/// LILYPOND-REF: scm/define-grobs.scm:3537-3575 Tie grob definition
+/// LILYPOND-REF: scm/define-grobs.scm:3866-3909 Tie grob definition
 /// </remarks>
 public sealed record TieDetails
 {

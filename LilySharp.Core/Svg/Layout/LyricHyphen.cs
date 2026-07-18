@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/lyric-hyphen.cc:20-50 default parameters
-/// LILYPOND-REF: scm/define-grobs.scm:3080-3120 LyricHyphen grob
+/// LILYPOND-REF: scm/define-grobs.scm:2149-2167 LyricHyphen grob
 /// </remarks>
 internal sealed record LyricHyphenParameters
 {

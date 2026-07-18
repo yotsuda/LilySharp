@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/lyric-engraver.cc:32-52
-/// LILYPOND-REF: scm/define-grobs.scm:3020-3060 LyricText grob
+/// LILYPOND-REF: scm/define-grobs.scm:2213-2239 LyricText grob
 /// </remarks>
 public sealed record LyricLayout(
     // The original lyric item.

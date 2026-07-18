@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob
+/// LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob
 /// </remarks>
 public readonly record struct TextSpannerLayout(
     // Start measure index (for system Y lookup).
@@ -60,7 +60,7 @@ public readonly record struct TextSpannerLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/line-spanner.cc:526-648 Line_spanner::print()
-/// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob defaults
+/// LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob defaults
 /// LILYPOND-REF: lily/axis-group-interface.cc:864-989 skyline_spacing()
 ///
 /// TextSpanner (outside-staff-priority = 350) is placed BELOW
@@ -81,19 +81,19 @@ internal static class TextSpannerEngraver
     /// <summary>
     /// Dash period: length of one dash+gap cycle.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3514 (dash-period . 3.0)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3845 (dash-period . 3.0)</remarks>
     private const double DashPeriod = 3.0;
 
     /// <summary>
     /// Dash fraction: proportion of the period that is visible line.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3513 (dash-fraction . 0.2)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3844 (dash-fraction . 0.2)</remarks>
     private const double DashFraction = 0.2;
 
     /// <summary>
     /// Horizontal padding from bound objects.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3506 (padding . 0.25)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3837 (padding . 0.25)</remarks>
     private const double BoundPadding = 0.25;
 
     /// <summary>
@@ -117,7 +117,7 @@ internal static class TextSpannerEngraver
     /// <summary>
     /// Staff padding for text spanners.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3521 (staff-padding . 0.8)</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3852 (staff-padding . 0.8)</remarks>
     private const double StaffPadding = 0.8;
 
     /// <summary>

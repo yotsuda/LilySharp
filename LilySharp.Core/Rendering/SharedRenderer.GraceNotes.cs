@@ -35,7 +35,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/grace-engraver.cc:36-80 Grace_engraver
-    /// LILYPOND-REF: scm/define-grobs.scm:1358-1402 GraceSpacing grob
+    /// LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing grob
     /// </remarks>
     private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)

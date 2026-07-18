@@ -30,7 +30,7 @@ internal static class BezierBow
     /// <summary>
     /// peak_around: 1 at x=0, falling to 0 at x=threshold, 0 beyond.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/misc.cc:48-55 peak_around()</remarks>
+    /// <remarks>LILYPOND-REF: lily/misc.cc:39-46 peak_around()</remarks>
     public static double PeakAround(double epsilon, double threshold, double x)
     {
         if (x < 0)
@@ -41,7 +41,7 @@ internal static class BezierBow
     /// <summary>
     /// convex_amplifier: 0 at x=0, 1 at x=standardX, growing exponentially beyond.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/misc.cc:60-65 convex_amplifier()</remarks>
+    /// <remarks>LILYPOND-REF: lily/misc.cc:51-56 convex_amplifier()</remarks>
     public static double ConvexAmplifier(double standardX, double increaseFactor, double x)
     {
         return (Math.Exp(increaseFactor * x / standardX) - 1.0)

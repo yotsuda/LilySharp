@@ -270,7 +270,7 @@ internal sealed record ScoreLayout(
     /// Checks if a notehead should be hidden due to head wipe (merge collision).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:254-318
     /// Head wipe hides the down-stem notehead when two voices merge at the same pitch.
     /// </remarks>
     public bool IsHeadWiped(int measureIndex, int voiceId, int itemIndex)

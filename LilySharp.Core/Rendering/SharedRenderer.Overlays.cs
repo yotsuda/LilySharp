@@ -39,8 +39,8 @@ internal static partial class SharedRenderer
     /// serif bold-italic text (matching LP's DynamicText grob font).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:1298-1327 DynamicText grob
-    /// LILYPOND-REF: scm/define-grobs.scm:1311 self-alignment-X = CENTER
+    /// LILYPOND-REF: scm/define-grobs.scm:1433 DynamicText grob
+    /// LILYPOND-REF: scm/define-grobs.scm:1444 self-alignment-X = CENTER
     /// </remarks>
     private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)
@@ -79,7 +79,7 @@ internal static partial class SharedRenderer
     /// using their precomputed Emmentaler glyphs.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:2268-2310 Script grob
+    /// LILYPOND-REF: scm/define-grobs.scm:2992 Script grob
     /// LILYPOND-REF: lily/script-engraver.cc:92-125 acknowledge_note_head
     /// </remarks>
     private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY,
@@ -351,7 +351,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/hairpin.cc:110-358 print()
-    /// LILYPOND-REF: scm/define-grobs.scm:1641-1666 Hairpin grob (thickness = 1.0)
+    /// LILYPOND-REF: scm/define-grobs.scm:1777 Hairpin grob (thickness = 1.0)
     /// </remarks>
     private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)
@@ -536,7 +536,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
-    /// LILYPOND-REF: scm/define-grobs.scm:2228 (style . trill)
+    /// LILYPOND-REF: scm/define-grobs.scm:4082 (style . trill)
     /// </remarks>
     private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)

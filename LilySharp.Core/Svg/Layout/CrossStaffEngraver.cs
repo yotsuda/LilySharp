@@ -24,8 +24,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// on a different staff than its voice.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/beam.cc:1451-1459 - cross-staff detection
-/// LILYPOND-REF: lily/stem.cc:1168-1179 - cross-staff stem handling
+/// LILYPOND-REF: lily/beam.cc:1496-1507 - cross-staff detection
+/// LILYPOND-REF: lily/stem.cc:1278-1283 - cross-staff stem handling
 /// </remarks>
 public readonly record struct CrossStaffLayout(
     // Measure index containing the cross-staff note.
@@ -45,9 +45,9 @@ public readonly record struct CrossStaffLayout(
 /// Resolves cross-staff note assignments for grand staff rendering.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/beam.cc:1451-1459 - Beam::is_cross_staff
-/// LILYPOND-REF: lily/stem.cc:1168-1179 - Stem::is_cross_staff
-/// LILYPOND-REF: scm/music-functions.scm:2372-2458 - Span_stem_engraver
+/// LILYPOND-REF: lily/beam.cc:1496-1507 - Beam::is_cross_staff
+/// LILYPOND-REF: lily/stem.cc:1278-1283 - Stem::is_cross_staff
+/// LILYPOND-REF: scm/music-functions.scm:2508-2519 - Span_stem_engraver
 ///
 /// In a grand staff context, @cross annotation moves a note to the "other" staff:
 /// - Staff 0 (treble) notes with @cross → rendered on staff 1 (bass)

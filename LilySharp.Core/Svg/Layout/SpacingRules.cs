@@ -453,7 +453,7 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
-    /// LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction()
+    /// LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction()
     /// - ideal_distance = get_duration_space(duration)
     /// - min_distance = max(increment, skyline_collision_distance)
     /// - inverse_stretch_strength = max(0.1, ideal - min)
@@ -479,7 +479,7 @@ internal static class SpacingRules
             baseShortestDuration ?? EngravingDefaults.BaseShortestDuration);
 
         // --- Stem direction optical correction ---
-        // LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
+        // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
         idealDistance += CalculateStemCorrection(prevItem, nextItem, np);
 
         // LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
@@ -708,7 +708,7 @@ internal static class SpacingRules
         // Ratio of this duration to base shortest
         double ratio = durationValue / baseShortestDuration;
 
-        // LILYPOND-REF: lily/spacing-options.cc:65-70 get_duration_space()
+        // LILYPOND-REF: lily/spacing-options.cc:72-106 get_duration_space()
         double spaceFactor;
         if (ratio < 1.0)
         {
@@ -800,8 +800,8 @@ internal static class SpacingRules
     /// Creates a spring for grace note spacing with tighter parameters.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-basic.cc:140-155 grace note spring
-    /// LILYPOND-REF: scm/define-grobs.scm:1585-1598 GraceSpacing
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 grace note spring
+    /// LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
     /// Grace notes use: spacing-increment=0.8, shortest-duration-space=1.6,
     /// inverse_stretch_strength = increment / 2.0
     /// </remarks>
@@ -827,7 +827,7 @@ internal static class SpacingRules
         double idealDistance = spaceFactor * gp.SpacingIncrement;
         double minDistance = gp.SpacingIncrement;
 
-        // LILYPOND-REF: spacing-basic.cc:153
+        // LILYPOND-REF: spacing-basic.cc:174
         // inverse_stretch_strength = increment / 2.0 (more rigid than normal)
         double inverseStretchStrength = gp.SpacingIncrement / 2.0;
 

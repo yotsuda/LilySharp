@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: define-grobs.scm:2268-2310 Script grob
+/// LILYPOND-REF: define-grobs.scm:2992-3024 Script grob
 /// LILYPOND-REF: script-interface.cc positioning logic
 /// </remarks>
 internal readonly record struct ArticulationLayout(
@@ -49,7 +49,7 @@ internal readonly record struct ArticulationLayout(
 /// Implements LilyPond's articulation positioning algorithm.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: script-engraver.cc:92-125 Script_engraver::acknowledge_note_head
+/// LILYPOND-REF: script-engraver.cc:235-250 Script_engraver::acknowledge_rhythmic_head
 /// LILYPOND-REF: side-position-interface.cc:92-111 axis_aligned_side_helper
 ///
 /// LilyPond places articulations with:
@@ -65,7 +65,7 @@ internal static class ArticulationEngraver
     private static double PaddingFor(ArticulationType type) =>
         ArticulationSpacing.VerticalPadding(type);
 
-    // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
+    // LILYPOND-REF: define-grobs.scm:3004 staff-padding = 0.25
     private const double StaffPadding = 0.25;
 
     // Bend/fall glyph X placement (staff-spaces; Lily#'s own tuning, no direct
@@ -190,7 +190,7 @@ internal static class ArticulationEngraver
                 continue;
 
             // Get the music item to determine staff position
-            // LILYPOND-REF: script-engraver.cc:92-125 acknowledge_note_head
+            // LILYPOND-REF: script-engraver.cc:235-250 acknowledge_rhythmic_head
             var measure = artMeasures[articulation.MeasureIndex];
             if (articulation.ItemIndex >= measure.Items.Length)
                 continue;
@@ -432,7 +432,7 @@ internal static class ArticulationEngraver
             // The item X is the notehead's LEFT edge and articulation glyphs are
             // origin-centred (symmetric BBox), so add the notehead's half-width to
             // land the glyph centre on the notehead centre rather than its left edge.
-            // LILYPOND-REF: define-grobs.scm:2289 self-alignment-X = CENTER
+            // LILYPOND-REF: define-grobs.scm:3001 self-alignment-X = CENTER
             double x = measureLayout.X
                 + LayoutUtilities.GetItemXOffset(artMeasures,
                     articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
@@ -927,7 +927,7 @@ internal static class ArticulationEngraver
         MusicItem? item = null, double? beamedStemTipY = null)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
-        // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
+        // LILYPOND-REF: define-grobs.scm:4075 TrillSpanner: direction = UP
         // LILYPOND-REF: define-grobs.scm:100 AccidentalSuggestion: direction = UP
         // LILYPOND-REF: scm/script.scm — upbow/downbow/flageolet: direction = UP
         bool forceAbove = IsForcedAbove(articulation);

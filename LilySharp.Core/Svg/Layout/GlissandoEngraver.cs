@@ -45,15 +45,15 @@ public readonly record struct GlissandoLayout(
 /// Calculates glissando layouts from detected glissando items.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm:1557-1577
+/// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm:1692-1719
 /// Parameters: style=line, gap=0.5, padding=0.5, zigzag-width=0.75
 /// </remarks>
 internal static class GlissandoEngraver
 {
-    // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
+    // LILYPOND-REF: scm/define-grobs.scm:1705 (gap . 0.5)
     private const double Gap = 0.5;
 
-    // LILYPOND-REF: scm/define-grobs.scm:1562,1565 (padding . 0.5)
+    // LILYPOND-REF: scm/define-grobs.scm:1697,1700 (padding . 0.5)
     private const double Padding = 0.5;
 
     /// <summary>
@@ -89,8 +89,8 @@ internal static class GlissandoEngraver
             var (_, endMeasure) = endInfo;
 
             // Real start/end X derived from note attachment.
-            // LILYPOND-REF: scm/define-grobs.scm:1560 left attach-dir = RIGHT
-            // LILYPOND-REF: scm/define-grobs.scm:1563 right attach-dir = LEFT
+            // LILYPOND-REF: scm/define-grobs.scm:1699 left attach-dir = RIGHT
+            // LILYPOND-REF: scm/define-grobs.scm:1695 right attach-dir = LEFT
             double realStartX = startMeasure.X + LayoutUtilities.GetItemXOffset(
                 measures, gliss.StartMeasureIndex, gliss.StartItemIndex, startMeasure);
             double realEndX = endMeasure.X + LayoutUtilities.GetItemXOffset(
@@ -122,8 +122,8 @@ internal static class GlissandoEngraver
                 }
 
                 // Apply gap: shorten along the line direction.
-                // LILYPOND-REF: lily/line-spanner.cc:457 span_points[d] += -d * gaps[d] * magstep * dz.direction()
-                // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
+                // LILYPOND-REF: lily/line-spanner.cc:599 span_points[d] += -d * gaps[d] * magstep * dz.direction()
+                // LILYPOND-REF: scm/define-grobs.scm:1705 (gap . 0.5)
                 // Gap is applied only at real-note bounds (not at system-edge cuts).
                 double dx = segEndX - segStartX;
                 double dy = segEndY - segStartY;

@@ -601,7 +601,7 @@ internal sealed class MultiStaffLayouter
     /// Layouts a grand staff group (piano/organ style with brace).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+    /// LILYPOND-REF: scm/define-grobs.scm:3352-3355 staff-staff-spacing
     /// </remarks>
     private StaffGroupLayout LayoutGrandStaffGroup(
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
@@ -647,7 +647,7 @@ internal sealed class MultiStaffLayouter
     /// Layouts a single staff or bracket group.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+    /// LILYPOND-REF: scm/define-grobs.scm:3352-3355 staff-staff-spacing
     /// </remarks>
     private StaffGroupLayout LayoutSingleStaffGroup(
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)

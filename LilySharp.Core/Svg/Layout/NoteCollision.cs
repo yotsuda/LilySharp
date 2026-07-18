@@ -69,7 +69,7 @@ internal sealed record NoteCollisionInfo
     /// Whether the up-stem notehead should be hidden (head wipe).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:254-318
     /// Head wipe hides overlapping noteheads in merged multi-voice contexts.
     /// </remarks>
     public bool UpHeadTransparent { get; }
@@ -78,7 +78,7 @@ internal sealed record NoteCollisionInfo
     /// Whether the down-stem notehead should be hidden (head wipe).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:254-318
     /// In standard merge cases, the down-stem notehead is wiped.
     /// </remarks>
     public bool DownHeadTransparent { get; }
@@ -142,22 +142,22 @@ internal sealed record NoteCollisionParameters
     public int CollisionThreshold { get; init; } = 1;
 
     /// <summary>Whether to merge differently dotted notes.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 merge-differently-dotted</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grob-properties.scm:754 merge-differently-dotted</remarks>
     public bool MergeDifferentlyDotted { get; init; } = false;
 
     /// <summary>Whether to merge differently headed notes (half vs quarter).</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 merge-differently-headed</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grob-properties.scm:760 merge-differently-headed</remarks>
     public bool MergeDifferentlyHeaded { get; init; } = false;
 
     /// <summary>Whether to prefer dotted notes on the right side.</summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 prefer-dotted-right</remarks>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2554 prefer-dotted-right</remarks>
     public bool PreferDottedRight { get; init; } = true;
 
     /// <summary>
     /// Horizontal shift amount for close half collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:323 close_half_collide
+    /// LILYPOND-REF: lily/note-collision.cc:325-326 close_half_collide
     /// </remarks>
     public double CloseHalfShift { get; init; } = 0.52;
 
@@ -165,7 +165,7 @@ internal sealed record NoteCollisionParameters
     /// Horizontal shift amount for distant half collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:325 distant_half_collide
+    /// LILYPOND-REF: lily/note-collision.cc:329-330 distant_half_collide
     /// </remarks>
     public double DistantHalfShift { get; init; } = 0.4;
 
@@ -173,7 +173,7 @@ internal sealed record NoteCollisionParameters
     /// Horizontal shift amount for full collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:321 full_collide
+    /// LILYPOND-REF: lily/note-collision.cc:327-328 full_collide
     /// </remarks>
     public double FullCollideShift { get; init; } = 0.5;
 
@@ -336,7 +336,7 @@ internal sealed class NoteCollision
     /// (half + quarter/eighth) hides the FILLED head and keeps the open (half)
     /// head visible.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/note-collision.cc:252-261, 381-407</remarks>
+    /// <remarks>LILYPOND-REF: lily/note-collision.cc:254-318</remarks>
     private static NoteCollisionInfo ComputeMergeInfo(int upNoteValue, int downNoteValue)
     {
         bool upIsOpen = upNoteValue <= 2; // whole(1) or half(2) = open notehead
@@ -441,7 +441,7 @@ internal sealed class NoteCollision
         if (upNoteValue <= 0 || downNoteValue <= 0)
             return false;
 
-        // LILYPOND-REF: lily/note-collision.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:116-126
         // Whole+half cannot merge (both open noteheads, only stem distinguishes)
         if ((upNoteValue == 1 && downNoteValue == 2) ||
             (upNoteValue == 2 && downNoteValue == 1))
@@ -451,7 +451,7 @@ internal sealed class NoteCollision
         if (upDots != downDots && !_params.MergeDifferentlyDotted)
             return false;
 
-        // LILYPOND-REF: lily/note-collision.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:111-114
         // Half+quarter/eighth merges: when merge-differently-headed is true,
         // notes with different noteheads (open vs filled) can merge.
         // The open notehead (half) is kept visible.
@@ -516,8 +516,8 @@ internal sealed class NoteCollision
     /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
-    /// LILYPOND-REF: lily/note-collision.cc:420-480 — multi-voice cascading
+    /// LILYPOND-REF: lily/note-collision.cc:254-318 — head wipe
+    /// LILYPOND-REF: lily/note-collision.cc:539-581 — multi-voice cascading
     /// For 3+ voices, each additional voice in the same stem direction gets a
     /// cumulative shift of 1 notehead width beyond the base collision offset.
     /// </remarks>
@@ -556,7 +556,7 @@ internal sealed class NoteCollision
         // Analyze collision between primary up and down voices
         var collision = AnalyzeCollision(upPositions, downPositions, upNoteValue, downNoteValue, upDots, downDots);
 
-        // LILYPOND-REF: lily/note-collision.cc:420-480
+        // LILYPOND-REF: lily/note-collision.cc:539-581
         // Apply cascading offsets for 3+ voices.
         // Voice priority order within each direction:
         //   Up-stem:  Voice 1 (base), Voice 3 (+1 notehead), Voice 5 (+2 noteheads), ...

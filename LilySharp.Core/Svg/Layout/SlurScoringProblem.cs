@@ -72,7 +72,7 @@ internal enum SlurObstacleType
 /// <remarks>
 /// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
 /// LILYPOND-REF: lily/slur-configuration.cc:1-558 Slur_configuration class
-/// LILYPOND-REF: lily/misc.cc:48-55 peak_around()
+/// LILYPOND-REF: lily/misc.cc:39-46 peak_around()
 /// </remarks>
 internal sealed class SlurScoringProblem
 {
@@ -195,7 +195,7 @@ internal sealed class SlurScoringProblem
     /// SLOPE → EDGES → EXTRA_ENCOMPASS → ENCOMPASS.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/slur-configuration.cc:531-558 run_next_scorer()
+    /// LILYPOND-REF: lily/slur-configuration.cc:531-549 run_next_scorer()
     /// LILYPOND-REF: lily/include/slur-configuration.hh:43-51 Slur_scorers enum
     /// Order: INITIAL_SCORE, SLOPE, EDGES, EXTRA_ENCOMPASS, ENCOMPASS
     /// </remarks>

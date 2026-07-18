@@ -21,7 +21,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Controls both intra-group (staff-staff) and inter-group (staffgroup-staff) spacing.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper
+/// LILYPOND-REF: scm/define-grobs.scm:3350-3364 StaffGrouper
 /// LILYPOND-REF: lily/staff-grouper-interface.cc
 /// </remarks>
 internal sealed record StaffSpacingParameters
@@ -32,7 +32,7 @@ internal sealed record StaffSpacingParameters
     /// Spacing between consecutive staves within the same group (e.g., piano grand staff).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3042-3045
+    /// LILYPOND-REF: scm/define-grobs.scm:3352-3355
     /// (staff-staff-spacing . ((basic-distance . 9)
     ///                         (minimum-distance . 7)
     ///                         (padding . 1)
@@ -51,7 +51,7 @@ internal sealed record StaffSpacingParameters
     /// Larger gap to visually separate groups.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3046-3049
+    /// LILYPOND-REF: scm/define-grobs.scm:3356-3359
     /// (staffgroup-staff-spacing . ((basic-distance . 10.5)
     ///                              (minimum-distance . 8)
     ///                              (padding . 1)

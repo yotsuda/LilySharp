@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print method
-/// LILYPOND-REF: scm/define-grobs.scm:362-380 BassFigure defaults
+/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure defaults
 /// </remarks>
 public readonly record struct FiguredBassLayout(
     int MeasureIndex,
@@ -42,7 +42,7 @@ public readonly record struct FiguredBassLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/figured-bass-engraver.cc - Figured_bass_engraver
 /// LILYPOND-REF: lily/figured-bass-position-engraver.cc - positioning
-/// LILYPOND-REF: scm/define-grobs.scm:362-380 BassFigure defaults
+/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure defaults
 ///
 /// Figured bass appears below the staff, with figures stacked vertically.
 /// Each figure occupies ~1.6 staff spaces of vertical height (an approximation of

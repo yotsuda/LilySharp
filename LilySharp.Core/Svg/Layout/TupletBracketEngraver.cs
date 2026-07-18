@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print method
+/// LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method
 /// LILYPOND-REF: lily/tuplet-number.cc — TupletNumber grob (LP keeps it as its
 /// own grob, but the rendered stencil is always centered on the bracket).
 /// LilySharp combines bracket + number into one Layout record; the number's
@@ -65,7 +65,7 @@ public readonly record struct TupletBracketLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/tuplet-bracket.cc:1-400 Tuplet_bracket_interface
-/// LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
+/// LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir
 /// LILYPOND-REF: lily/tuplet-engraver.cc:1-200 Tuplet_engraver
 ///
 /// LilyPond tuplet brackets:
@@ -109,8 +109,8 @@ internal static class TupletBracketEngraver
     /// Calculates layout for all tuplet brackets.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 calc_position_and_height (slope)
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:444 calc_position_and_height (slope)
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
     ///
     /// Direction is determined by counting stem directions:
@@ -184,7 +184,7 @@ internal static class TupletBracketEngraver
             double endOffset = LayoutUtilities.GetItemXOffset(
                 tupMeasures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
-            // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
+            // LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir
             // In a polyphonic staff each voice's stems are FORCED by voice (voice 1
             // up / voice 2 down, VoiceDefaults), and the bracket sits on that
             // voice's stem side. Drive the direction from the tuplet's OWN voice —
@@ -213,7 +213,7 @@ internal static class TupletBracketEngraver
             // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
             bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups, tupMeasures);
 
-            // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
+            // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
             // Calculate slope based on first/last note staff positions
             var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX);
 
@@ -345,7 +345,7 @@ internal static class TupletBracketEngraver
     /// Calculates the bracket direction based on stem directions of notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:597-629 get_default_dir implementation
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir implementation
     /// Counts stem directions and returns majority direction.
     /// If equal, returns UP (bracket above).
     /// </remarks>
@@ -363,7 +363,7 @@ internal static class TupletBracketEngraver
         {
             var item = measure.Items[i];
             
-            // LILYPOND-REF: lily/tuplet-bracket.cc:605-615
+            // LILYPOND-REF: lily/tuplet-bracket.cc:786
             // Skip rests when counting directions
             if (item is NoteItem note)
             {
@@ -381,7 +381,7 @@ internal static class TupletBracketEngraver
             }
         }
 
-        // LILYPOND-REF: lily/tuplet-bracket.cc:627-629
+        // LILYPOND-REF: lily/tuplet-bracket.cc:793-816
         // Return majority direction, or UP if equal
         return stemsUp >= stemsDown;
     }
@@ -392,7 +392,7 @@ internal static class TupletBracketEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:79-95 bracket visibility check
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:98-146 bracket visibility check
     /// </remarks>
     private static bool AreAllNotesBeamed(TupletBracketItem tuplet,
         ImmutableArray<BeamGroup> beamGroups, ImmutableArray<Measure> tupMeasures)
@@ -419,7 +419,7 @@ internal static class TupletBracketEngraver
     /// range could hide this voice's bracket.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:79-95 — the if-no-beam visibility
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:107-112 — the if-no-beam visibility
     /// check consults the bracket's OWN beam (the beam of the stems it
     /// encompasses), never a different voice's.
     /// </remarks>
@@ -459,7 +459,7 @@ internal static class TupletBracketEngraver
     /// based on the staff positions of the first and last notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 calc_position_and_height
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:444 calc_position_and_height
     /// The bracket follows the contour of the notes. The slope is limited
     /// to avoid excessively tilted brackets.
     /// </remarks>
@@ -526,7 +526,7 @@ internal static class TupletBracketEngraver
         if (firstPos == null || lastPos == null)
             return (baseY, baseY);
 
-        // LILYPOND-REF: lily/tuplet-bracket.cc:270-310 slope calculation
+        // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
         // Convert staff position difference to slope (half staff spaces)
         double positionDiff = (lastPos.Value - firstPos.Value) * 0.5;
 

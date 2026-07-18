@@ -52,7 +52,7 @@ internal sealed class BeamScoringProblem
     private readonly int _maxBeamCount;
     private readonly IReadOnlyList<BeamCollision> _collisions;
 
-    // LILYPOND-REF: lily/beam-quanting.cc:236 beam_thickness_, line_thickness_
+    // LILYPOND-REF: lily/beam-quanting.cc:232-234 beam_thickness_, line_thickness_
     // All calculations are in staff-space units (not staff positions)
     private readonly double _beamThickness;
     private readonly double _lineThickness;
@@ -65,7 +65,7 @@ internal sealed class BeamScoringProblem
     // Direction
     private readonly int _beamDir; // +1 for stem up, -1 for stem down
 
-    // LILYPOND-REF: beam-quanting.cc:338 is_knee_
+    // LILYPOND-REF: beam-quanting.cc:333 is_knee_
     private readonly bool _isKnee;
 
     // Per-member stem directions (needed for kneed beams)
@@ -87,7 +87,7 @@ internal sealed class BeamScoringProblem
     private const double BeamGapFudgeFactor = 2.2;   // beam-edge inset when testing gaps
     private const double BeamGapFixedDemerit = 0.39; // baseline demerit for a line in the gap
 
-    // Max-slope damping factor. LILYPOND-REF: lily/beam-quanting.cc:770.
+    // Max-slope damping factor. LILYPOND-REF: lily/beam-quanting.cc:766.
     private const double BeamSlopeDampingFactor = 0.6;
 
     // Musical dy (least-squares slope * xSpan, used by scorers)
@@ -152,7 +152,7 @@ internal sealed class BeamScoringProblem
 
         _beamDir = group.StemUp ? 1 : -1;
 
-        // LILYPOND-REF: beam-quanting.cc:338 is_knee_
+        // LILYPOND-REF: beam-quanting.cc:333 is_knee_
         _isKnee = group.IsKnee;
 
         // Per-member beam directions for kneed beams
@@ -170,7 +170,7 @@ internal sealed class BeamScoringProblem
             ? new[] { _memberBeamDirs[0], _memberBeamDirs[^1] }
             : new[] { _beamDir, _beamDir };
 
-        // LILYPOND-REF: lily/beam-quanting.cc:236-238
+        // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
         _beamThickness = EngravingDefaults.BeamThickness;  // 0.48 staff spaces
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
@@ -243,7 +243,7 @@ internal sealed class BeamScoringProblem
         // NOT a flat 3.5-space length: it shortens stems near the staff and extends
         // far-from-staff stems toward the centre line, so the seed already matches
         // what ScoreStemLengths optimises against.
-        // LILYPOND-REF: lily/stem.cc:1024-1155 calc_stem_info.
+        // LILYPOND-REF: lily/stem.cc:1137-1266 calc_stem_info.
         var ideals = new List<(double x, double y)>();
         for (int i = 0; i < _staffPositions.Length; i++)
         {
@@ -382,7 +382,7 @@ internal sealed class BeamScoringProblem
         if (concaveness >= 10000 || damping >= 10000)
         {
             // Make beam horizontal
-            // LILYPOND-REF: lily/beam-quanting.cc:757-762
+            // LILYPOND-REF: lily/beam-quanting.cc:755-757
             _unquantedRightY = _unquantedLeftY;
             _musicalDy = 0;
             return;
@@ -393,17 +393,17 @@ internal sealed class BeamScoringProblem
             double dy = _unquantedRightY - _unquantedLeftY;
             double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
 
-            // LILYPOND-REF: lily/beam-quanting.cc:770
+            // LILYPOND-REF: lily/beam-quanting.cc:766
             slope = BeamSlopeDampingFactor * Math.Tanh(slope) / (damping + concaveness);
 
             double dampedDy = slope * _xSpan;
 
             // Don't let damping flatten the beam below the smallest quant step.
-            // LILYPOND-REF: lily/beam-quanting.cc:771 (set_minimum_dy).
+            // LILYPOND-REF: lily/beam-quanting.cc:770 (set_minimum_dy).
             if (Math.Abs(dampedDy) > 0.001)
                 dampedDy = MinimumDy(dampedDy);
 
-            // LILYPOND-REF: lily/beam-quanting.cc:776-777
+            // LILYPOND-REF: lily/beam-quanting.cc:772-773
             _unquantedLeftY += (dy - dampedDy) / 2;
             _unquantedRightY -= (dy - dampedDy) / 2;
         }
@@ -585,19 +585,24 @@ internal sealed class BeamScoringProblem
     // Quant Generation
     // ========================================
 
+    // The 4 base beam quant positions (staff spaces, relative to a staff line), single-homed
+    // so the candidate generator and the forbidden-quant check derive them identically.
+    // LILYPOND-REF: lily/beam-quanting.cc:908-912
+    //   straddle: beam center on the staff line;  sit: beam edge touches the line from above;
+    //   inter: beam center between lines;          hang: beam edge touches the line from below.
+    private double QuantStraddle => 0.0;
+    private double QuantSit => (_beamThickness - _lineThickness) / 2;
+    private double QuantInter => 0.5;
+    private double QuantHang => 1.0 - (_beamThickness - _lineThickness) / 2;
+
     /// <summary>
     /// Generates quantized beam position candidates.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/beam-quanting.cc:896-958 generate_quants()
     ///
-    /// LilyPond uses 4 base quant positions per half-space:
-    /// - straddle (0.0): beam center on staff line
-    /// - sit: beam edge just touches staff line from above
-    /// - inter (0.5): beam center between staff lines
-    /// - hang: beam edge just touches staff line from below
-    ///
-    /// These ensure beams relate properly to staff lines.
+    /// Uses the 4 base quant positions (<see cref="QuantStraddle"/>, <see cref="QuantSit"/>,
+    /// <see cref="QuantInter"/>, <see cref="QuantHang"/>) so beams relate properly to staff lines.
     /// </remarks>
     private List<BeamConfiguration> GenerateQuantCandidates()
     {
@@ -610,13 +615,8 @@ internal sealed class BeamScoringProblem
         if (_collisions.Count > 0)
             regionSize += 2;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:908-912
-        // The 4 base quant positions (in staff spaces, relative to staff line)
-        double straddle = 0.0;
-        double sit = (_beamThickness - _lineThickness) / 2;
-        double inter = 0.5;
-        double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
-        double[] baseQuants = { straddle, sit, inter, hang };
+        // LILYPOND-REF: lily/beam-quanting.cc:908-912 — the 4 base quant positions
+        double[] baseQuants = { QuantStraddle, QuantSit, QuantInter, QuantHang };
 
         // LILYPOND-REF: lily/beam-quanting.cc:911-918 — with more than 4 beams
         // the outer beam (used for quanting) never meets the staff lines, but
@@ -675,7 +675,7 @@ internal sealed class BeamScoringProblem
                 }
 
                 // New config: truncate to integer + add quant offset
-                // LILYPOND-REF: lily/beam-quanting.cc:161
+                // LILYPOND-REF: lily/beam-quanting.cc:157-158
                 double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i] - corrLeft;
                 double rightYSS = (int)unquantedRightSS + unshiftedQuants[j] - corrRight;
 
@@ -690,7 +690,7 @@ internal sealed class BeamScoringProblem
                 double leftY = leftYSS * 2.0;
                 double rightY = rightYSS * 2.0;
 
-                // LILYPOND-REF: lily/beam-quanting.cc:166-167
+                // LILYPOND-REF: lily/beam-quanting.cc:162-163
                 // Initial demerit based on distance from ideal (closer = better)
                 double startScore = Math.Abs(unshiftedQuants[j]) + Math.Abs(unshiftedQuants[i]);
                 var config = new BeamConfiguration(leftY, rightY)
@@ -813,7 +813,7 @@ internal sealed class BeamScoringProblem
     {
         double dy = config.RightY - config.LeftY;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1210-1211
+        // LILYPOND-REF: lily/beam-quanting.cc:1207-1208
         double dem = _parameters.MusicalDirectionFactor
                      * Math.Max(0.0, Math.Abs(dy) - Math.Abs(_musicalDy));
 
@@ -910,9 +910,9 @@ internal sealed class BeamScoringProblem
         dem = 0.0;
         if (Math.Max(_edgeBeamCounts[0], _edgeBeamCounts[1]) >= 2)
         {
-            double straddle = 0.0;
-            double sit = (_beamThickness - _lineThickness) / 2;
-            double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
+            double straddle = QuantStraddle;
+            double sit = QuantSit;
+            double hang = QuantHang;
             double dy = config.RightY - config.LeftY;
 
             for (int e = 0; e < 2; e++)
@@ -1118,7 +1118,7 @@ internal sealed class BeamScoringProblem
     /// <summary>
     /// Asymmetric weight function: |x| if x >= 0, |x| * fac if x &lt; 0.
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:128-132 shrink_extra_weight()
+    // LILYPOND-REF: lily/beam-quanting.cc:123-127 shrink_extra_weight()
     private static double ShrinkExtraWeight(double x, double fac)
     {
         return Math.Abs(x) * (x < 0 ? fac : 1.0);

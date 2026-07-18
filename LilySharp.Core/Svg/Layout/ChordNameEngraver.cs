@@ -41,7 +41,7 @@ public readonly record struct ChordNameLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/chord-name.cc - ChordName::after_line_breaking
 /// LILYPOND-REF: scm/define-grobs.scm - ChordName: font-family=sans, font-size=1.5
-/// LILYPOND-REF: ly/engraver-init.ly:571-592 - ChordNames context
+/// LILYPOND-REF: ly/engraver-init.ly:703-725 - ChordNames context
 ///
 /// Chord names are positioned above the staff with padding.
 /// In LilyPond, ChordNames is a separate context above the staff.

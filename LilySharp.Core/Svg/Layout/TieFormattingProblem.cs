@@ -54,7 +54,7 @@ internal sealed class TieCandidate
 /// <remarks>
 /// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1285 Tie_formatting_problem class
 /// LILYPOND-REF: lily/tie-configuration.cc Tie_configuration class
-/// LILYPOND-REF: lily/misc.cc:48-65 peak_around(), convex_amplifier()
+/// LILYPOND-REF: lily/misc.cc:39-56 peak_around(), convex_amplifier()
 /// </remarks>
 internal sealed class TieFormattingProblem
 {

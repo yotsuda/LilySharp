@@ -631,7 +631,7 @@ internal static partial class SharedRenderer
     /// Shortens neighbouring ledger extents against each other, then draws.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/ledger-line-spanner.cc:251-296 — for adjacent
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:279-326 — for adjacent
     /// out-of-staff columns in the same direction, each side's ledger is
     /// clamped to the midpoint between the facing head edges; when BOTH
     /// columns are beyond the first space outside the staff (|pos| ≥ 6, i.e.

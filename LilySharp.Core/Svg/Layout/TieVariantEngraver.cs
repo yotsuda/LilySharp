@@ -88,8 +88,9 @@ internal static class TieVariantEngraver
     /// height-limit — the height LilyPond's bezier bow gives a tie of this width.</summary>
     private static readonly double ArcHeight = Math.Min(BowHeightLimit, BowRatio * TieLength);
 
-    /// <summary>Y offset from notehead center to the tie's flat baseline. Lily# placement;
-    /// LP anchors the semi-tie at the note-head edge via Semi_tie_column.</summary>
+    /// <summary>Y offset from notehead center to the tie's flat baseline. Lily# placement
+    /// approximation (~notehead half-height, no single LP constant); LP anchors the semi-tie
+    /// at the note-head edge via Semi_tie_column.</summary>
     private const double NoteOffset = 0.4;
 
     /// <summary>
@@ -169,6 +170,9 @@ internal static class TieVariantEngraver
         double endX = Math.Max(anchorX, freeX);
 
         double directedHeight = curveUp ? -ArcHeight : ArcHeight;
+        // Cubic-bezier control points inset from each end by 0.3 of the tie length — a
+        // bow-shape approximation (LP builds the tie bezier from tie-details rather than a
+        // single inset fraction; 0.3 reproduces the near-circular arc well enough here).
         double indent = TieLength * 0.3;
         var control1 = (X: startX + indent, Y: baseY + directedHeight);
         var control2 = (X: endX - indent, Y: baseY + directedHeight);

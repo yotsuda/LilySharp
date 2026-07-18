@@ -91,25 +91,25 @@ internal sealed record SystemDetails
     /// <summary>
     /// Page break permission after this system.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:75 page_permission_</remarks>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:74 page_permission_</remarks>
     public BreakPermission PagePermission { get; init; } = BreakPermission.Allow;
 
     /// <summary>
     /// Whether this is a title/header line (uses title-specific spacing).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:81 title_</remarks>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:80 title_</remarks>
     public bool IsTitle { get; init; }
 
     /// <summary>
     /// Minimum distance from refpoint to next system's refpoint.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:64 min_distance_</remarks>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:66 min_distance_</remarks>
     public double MinDistance { get; init; }
 
     /// <summary>
     /// Extra padding when this is the last system on a page.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:67 bottom_padding_</remarks>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:68 bottom_padding_</remarks>
     public double BottomPadding { get; init; }
 
     /// <summary>
@@ -512,16 +512,16 @@ internal sealed class PageBreaker
         if (isRagged)
         {
             // LILYPOND-REF: lily/page-spacing.cc:345-355
-            // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+            // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061 fixed_force_solution
             //
             // For ragged pages, use fixed_force_solution (force=0):
             // - Overfull but systems fit at minimum distances: allow with penalty
-            //   (lily/page-layout-problem.cc:808-823 — fixed_force attempts placement)
+            //   (lily/page-layout-problem.cc:1057-1061 — fixed_force attempts placement)
             // - Underfull (force >= 0): no spacing penalty; systems placed at natural
             //   spring positions with remaining space at the bottom.
             if (force < 0)
             {
-                // LILYPOND-REF: lily/page-layout-problem.cc:808-823
+                // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061
                 // fixed_force_solution: even when force<0, if the rod height fits,
                 // the page is feasible — just with systems at minimum distances.
                 // Use force² as penalty rather than immediately rejecting.
@@ -542,7 +542,7 @@ internal sealed class PageBreaker
         }
         else
         {
-            // LILYPOND-REF: lily/page-spacing.cc:358, lily/page-breaking.cc:1506
+            // LILYPOND-REF: lily/page-spacing.cc:358, lily/page-breaking.cc:1360-1362
             // demerits = force² × page_spacing_weight
             demerits = force * force * _params.PageSpacingWeight;
             demerits = Math.Min(demerits, BadSpacingPenalty);
@@ -574,7 +574,7 @@ internal sealed class PageBreaker
     /// Calculates penalty for having too few or too many systems on a page.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-spacing.cc:269-293 line_count_penalty()
+    /// LILYPOND-REF: lily/page-breaking.cc:407 line_count_penalty()
     /// </remarks>
     private double CalculateLineCountPenalty(int systemCount)
     {

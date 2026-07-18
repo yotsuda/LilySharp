@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: define-grobs.scm:1358-1402 GraceSpacing grob
+/// LILYPOND-REF: define-grobs.scm:1721-1732 GraceSpacing grob
 /// LILYPOND-REF: lily/grace-spacing-engraver.cc:46 Grace_spacing_engraver::process_music
 /// </remarks>
 public readonly record struct GraceNoteLayout(

@@ -162,7 +162,7 @@ internal sealed class PageLayouter
             bool isRagged = _options.PageBreaking.RaggedBottom
                 || (isLastPage && _options.PageBreaking.RaggedLastBottom);
 
-            // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+            // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061 fixed_force_solution
             // For ragged pages: force=0 (systems at natural spring positions, space at bottom).
             // For justified pages: use the calculated force to stretch systems to fill the page.
             double force = pageSpacing.Force;

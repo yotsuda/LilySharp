@@ -29,7 +29,7 @@ internal static class LayoutUtilities
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:274 Stem::duration_log
+    /// LILYPOND-REF: lily/stem.cc:600 Stem::duration_log
     /// Duration log: 0=whole, 1=half, 2=quarter, 3=eighth, etc.
     /// Note value: 1=whole, 2=half, 4=quarter, 8=eighth, etc.
     /// </remarks>
@@ -142,7 +142,7 @@ internal static class LayoutUtilities
     /// Calculates the actual header height based on title and composer presence.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:434
+    /// LILYPOND-REF: lily/page-layout-problem.cc:435
     /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
     ///
     /// SVG text coordinates specify the baseline, which is approximately

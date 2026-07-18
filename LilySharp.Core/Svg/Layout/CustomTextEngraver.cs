@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: text-interface.cc Text rendering
-/// LILYPOND-REF: define-grobs.scm:3900-3950 TextScript grob
+/// LILYPOND-REF: define-grobs.scm:3800-3833 TextScript grob
 /// </remarks>
 public readonly record struct CustomTextLayout(
     int MeasureIndex,       // Measure containing this text

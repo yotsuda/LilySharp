@@ -104,7 +104,7 @@ internal enum BeamScorer
 /// Represents a potential collision object for beam scoring.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/beam-quanting.cc:69-77 Beam_collision struct
+/// LILYPOND-REF: lily/include/beam-scoring-problem.hh:101-109 Beam_collision struct
 /// </remarks>
 public readonly record struct BeamCollision(
     // X position relative to beam start (in staff spaces).

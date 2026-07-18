@@ -62,7 +62,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print()
-    /// LILYPOND-REF: scm/define-grobs.scm:362-380 BassFigure defaults
+    /// LILYPOND-REF: scm/define-grobs.scm:352 BassFigure defaults
     /// </remarks>
     private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
@@ -90,7 +90,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/percent-repeat-interface.cc — x_percent() rendering
-    /// LILYPOND-REF: scm/define-grobs.scm:2520-2539 — slope=1.0, thickness=0.48
+    /// LILYPOND-REF: scm/define-grobs.scm:2788-2807 — slope=1.0, thickness=0.48
     /// </remarks>
     private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
@@ -214,7 +214,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
-    /// LILYPOND-REF: scm/define-grobs.scm:3650-3710 Segno, Coda
+    /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
     private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
@@ -305,7 +305,7 @@ internal static partial class SharedRenderer
         }
         if (m.MarkType == MusicMarkType.Tempo)
         {
-            // LILYPOND-REF: scm/define-grobs.scm:1835 MetronomeMark
+            // LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark
             // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN";
             // a textual marking prints bold with the equation parenthesized after
             // it: Grave (♩ = 54). Text-only tempo prints just the bold marking.
@@ -441,7 +441,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/text-spanner-engraver.cc TextSpanner engraver
-    /// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob
+    /// LILYPOND-REF: scm/define-grobs.scm:3835 TextSpanner grob
     /// </remarks>
     private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)
@@ -729,10 +729,12 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/stem-tremolo.cc:127-150 raw_stencil.
     /// Width — calc_width (stem-tremolo.cc:84-93): <c>((dir==UP &amp;&amp; flag) || beam) ? 1.0 :
-    /// 1.5</c>. Only an UP-stem flag (or a beam) gets the shorter 1.0; a DOWN-stem flag
-    /// keeps 1.5. This path draws UNBEAMED stems (<paramref name="hasFlag"/> ⇒ a flag was
-    /// drawn), so the beam branch does not apply here; a beamed-stem tremolo would take the
-    /// beam's own width/slope (not handled — see note).
+    /// 1.5</c>. This method is reached ONLY for unbeamed stems (the caller in DrawNote guards
+    /// the whole stem/flag/tremolo block with <c>!isBeamed</c>; beamed stems are drawn by
+    /// DrawBeams), so the <c>beam</c> branch is unreachable and the width reduces to
+    /// <c>(stemUp &amp;&amp; hasFlag) ? 1.0 : 1.5</c> — an UP-stem flag gets 1.0, a DOWN-stem
+    /// flag keeps 1.5. (Tremolo slashes on a BEAMED stem are a separate unimplemented case:
+    /// DrawBeams renders the beamed stem but not its tremolo.)
     /// Slope — calc_slope's non-beam branch (stem-tremolo.cc:75-78): a DOWN-stem flag gets
     /// the steeper 0.40 (avoids flag/stem collision), else 0.25.
     /// </remarks>
