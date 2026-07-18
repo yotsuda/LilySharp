@@ -130,20 +130,4 @@ public class MultiVoiceRenderingTests
         // Should detect close collision and shift
         Assert.NotEqual(CollisionType.None, result.Type);
     }
-
-    [Fact]
-    public void StemDirection_VoiceOverride()
-    {
-        // Middle line note - normally would have stem down
-        int middleLinePosition = 4;
-
-        // Without voice number - auto direction
-        Assert.False(StemDirection.GetStemUp(middleLinePosition, null));
-
-        // With voice 1 - always up
-        Assert.True(StemDirection.GetStemUp(middleLinePosition, 1));
-
-        // With voice 2 - always down
-        Assert.False(StemDirection.GetStemUp(middleLinePosition, 2));
-    }
 }

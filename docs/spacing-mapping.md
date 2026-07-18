@@ -34,7 +34,7 @@ Show-TextFile C:\MyProj\lilypond-src\lily\spacing-*.cc, C:\MyProj\lilypond-src\l
 | BeamEngraver.cs | lily/beam.cc Beam class |
 | NoteCollision.cs | lily/note-collision.cc Note_collision_interface |
 | AccidentalPlacement.cs | lily/accidental-placement.cc Accidental_placement |
-| StemDirection.cs | lily/stem.cc Stem::calc_default_direction() |
+| MusicItem.cs (StemUp) / BeamDetector.cs | lily/stem.cc Stem::calc_default_direction() |
 | TieEngraver.cs | lily/tie-formatting-problem.cc, lily/bezier-bow.cc |
 | SlurEngraver.cs | lily/slur-scoring.cc, lily/bezier-bow.cc |
 | LayoutEngine.cs | lily/spacing-spanner.cc, lily/paper-column.cc |
