@@ -767,22 +767,32 @@ internal sealed class BeamDetector
             if (m.HeadPositionMin < 0) extremeDown = Math.Min(extremeDown, m.HeadPositionMin);
         }
 
-        // The farther extreme wins (beam.cc:920-923).
+        // The farther extreme wins.
+        // LILYPOND-REF: lily/beam.cc:918-924 Beam::get_default_dir (extremes check).
         if (Math.Abs(extremeUp) > -extremeDown) return false; // DOWN
         if (extremeUp < -extremeDown) return true;            // UP
 
-        // Tie: per-stem majority vote by each stem's own natural direction (beam.cc:928).
+        // Tie: per-stem majority vote by each stem's own natural direction.
+        // A stem whose head is exactly on (or symmetric about) the middle line has no
+        // natural direction, so LP counts it with neutral-direction = DOWN: its
+        // Stem::calc_default_direction is CENTER, and get_default_dir falls back to
+        // neutral-direction before tallying. Counting it UP flipped whole beams centred
+        // on the line (e.g. g'..d'' straddling the middle equally: LP=down, us=up), so
+        // the test is `>=`, not `>`.
+        // LILYPOND-REF: lily/beam.cc:895-916 (per-stem default/neutral direction tally),
+        // LILYPOND-REF: lily/beam.cc:928 (count[UP] - count[DOWN] majority vote).
         int upVotes = 0, downVotes = 0, total = 0;
         foreach (var m in members)
         {
             int mUp = Math.Max(0, m.HeadPositionMax);
             int mDown = Math.Min(0, m.HeadPositionMin);
-            if (Math.Abs(mUp) > -mDown) downVotes++; else upVotes++;
+            if (Math.Abs(mUp) >= -mDown) downVotes++; else upVotes++;
             total += m.StaffPosition;
         }
         if (upVotes != downVotes) return upVotes > downVotes;
-        // Fully tied: fall back to summed position (below the line -> up), then UP.
-        return total <= 0;
+        // Fully balanced: below the line -> up, otherwise LP's neutral-direction = DOWN.
+        // LILYPOND-REF: lily/beam.cc:937 get_default_dir final neutral-direction fallback.
+        return total < 0;
     }
 
     /// <summary>
