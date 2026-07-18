@@ -58,12 +58,13 @@ public sealed record PartCombineItem(
 /// </summary>
 /// <param name="Text">Display text</param>
 /// <param name="X">X position in staff spaces</param>
-/// <param name="Y">Y position in staff spaces (above staff)</param>
+/// <param name="YUp">Y in the Y-up frame (frame B): staff-spaces ABOVE the system
+/// top, up-positive. The renderer reflects it to device against the system top.</param>
 /// <param name="MeasureIndex">Measure index</param>
 public sealed record PartCombineLayout(
     string Text,
     double X,
-    double Y,
+    double YUp,
     int MeasureIndex);
 
 /// <summary>
@@ -215,7 +216,9 @@ internal static class PartCombineAnalyzer
             return ImmutableArray<PartCombineLayout>.Empty;
 
         var layouts = ImmutableArray.CreateBuilder<PartCombineLayout>();
-        const double aboveStaffY = -1.5; // Above the staff
+        // Y-up from the system top: 1.5 staff-spaces above it (the old device
+        // offset -1.5 negated). The system top is resolved at draw time.
+        const double aboveStaffYUp = 1.5;
 
         foreach (var item in combineItems)
         {
@@ -239,7 +242,7 @@ internal static class PartCombineAnalyzer
                     measures, item.MeasureIndex, item.ItemIndex, ml);
             }
 
-            layouts.Add(new PartCombineLayout(text, x, aboveStaffY, item.MeasureIndex));
+            layouts.Add(new PartCombineLayout(text, x, aboveStaffYUp, item.MeasureIndex));
         }
 
         return layouts.ToImmutable();

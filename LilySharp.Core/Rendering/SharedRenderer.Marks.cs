@@ -732,7 +732,8 @@ internal static partial class SharedRenderer
         foreach (var pc in layout.PartCombineLayouts)
         {
             if (!sysY.TryGetValue(pc.MeasureIndex, out var s)) continue; // other page
-            double y = s + pc.Y;
+            // Frame B -> device: reflect the Y-up value against the system top.
+            double y = StaffFrame.ToDevice(pc.YUp, s);
             gc.DrawText(pc.Text, pc.X, y, size, "serif",
                 FontStyle.Italic, TextAnchor.Start, Color.Black);
         }
