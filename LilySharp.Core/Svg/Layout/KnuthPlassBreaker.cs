@@ -301,7 +301,10 @@ internal sealed class KnuthPlassBreaker
                 double effectiveWidth = Math.Max(idealSum, minSum);
                 double force = CalculateLineForce(availableWidth, effectiveWidth, invStretchSum);
 
-                // Handle degenerate case: springs have zero flexibility
+                // Degenerate case: springs have zero flexibility, so CalculateLineForce
+                // returns -inf. Substitute a large finite force proportional to the overflow
+                // (×1000 is an implementation scale with no LP equivalent — big enough that a
+                // rigid overfull line always loses to any flexible alternative).
                 if (double.IsNegativeInfinity(force))
                     force = -(effectiveWidth - availableWidth) * 1000;
 

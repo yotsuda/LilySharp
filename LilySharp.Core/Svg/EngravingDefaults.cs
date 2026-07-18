@@ -88,7 +88,11 @@ internal static class EngravingDefaults
     /// <summary>Stem thickness: 1.3 × line-thickness = 0.13 staff space.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm (Stem (thickness . 1.3)).</remarks>
     public const double StemThickness = 1.3 * LineThickness;
+    // LILYPOND-REF: scm/define-grobs.scm:3448 Stem (lengths . (3.5 3.5 3.5 4.25 5.0 ...)) —
+    // the first three entries (whole/half/quarter) are 3.5, LP's ideal single-note stem.
     public const double IdealStemLength = 3.5;
+    // Conventional 5-half-space floor for a shortened stem (LP never lets a lone stem
+    // drop below this via the details minima); no single named LP constant.
     public const double MinStemLength = 2.5;
     public const double DefaultStemLength = 3.5;
 
@@ -181,6 +185,9 @@ internal static class EngravingDefaults
     // edge. Without this the half-thickness pokes outside the notehead.
     // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head
     //   (r += -d * rule_thick * 0.5).
+    // The ±0.168 Y is the black notehead's stem-attachment vertical offset, from the
+    // feta font metrics that back ly:note-head::calc-stem-attachment (define-grobs.scm:2490
+    // NoteHead.stem-attachment); an up-stem attaches slightly above centre, a down-stem below.
     public const double StemUpAttachX = NoteheadBlackWidth - StemThickness / 2;
     public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = StemThickness / 2;

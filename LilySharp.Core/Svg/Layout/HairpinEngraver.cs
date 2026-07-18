@@ -88,6 +88,11 @@ internal static class HairpinEngraver
 
     /// <summary>
     /// Y position below staff for hairpins (same level as dynamics).
+    /// Staff bottom sits at 4.0 ss; DynamicLineSpanner reserves ~1.2 ss below it
+    /// (staff-padding 0.2 + padding 0.6 + text/glyph ascent), so the resting level is
+    /// ~5.2. This is a fixed resting position; the per-staff stacker (staffYAt) then
+    /// lifts it clear of that staff's own dynamics. Not a single named LP constant.
+    /// LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner (staff-padding . 0.2).
     /// </summary>
     private const double BaseY = 5.2;
 
