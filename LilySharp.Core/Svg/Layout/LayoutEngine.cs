@@ -912,7 +912,9 @@ internal sealed class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))
                 continue;
-            double rel = bn.Y - systems[s].Y;
+            // bn.YUp is Y-up from the system top; the system-relative device value
+            // (the old bn.Y - system.Y) is just -YUp.
+            double rel = -bn.YUp;
             up[s] = Math.Max(up[s], -(rel - 1.3));
         }
 
@@ -1154,8 +1156,9 @@ internal sealed class LayoutEngine
             {
                 if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))
                     continue;
-                // Bar numbers carry ABSOLUTE page Y — relativize via their system.
-                double rel = bn.Y - systems[s].Y;
+                // bn.YUp is Y-up from the system top; the system-relative device
+                // value (old bn.Y - system.Y) is -YUp.
+                double rel = -bn.YUp;
                 double w = Rendering.SerifTextMetrics.MeasureBold(
                     bn.Text, BarNumberEngraver.FontSize);
                 double x0 = bn.RightAligned ? bn.X - w : bn.X;

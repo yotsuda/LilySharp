@@ -307,7 +307,7 @@ internal static class OutsideStaffStacker
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem, systems);
-        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem);
+        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem, systems);
         var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem, systems);
@@ -469,7 +469,7 @@ internal static class OutsideStaffStacker
     // ---- 100: BarNumber (absolute page Y) ----
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
         ImmutableArray<BarNumberLayout> barNumbers, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem)
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (barNumbers.IsDefaultOrEmpty)
             return barNumbers;
@@ -484,9 +484,13 @@ internal static class OutsideStaffStacker
             double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
             double x0 = bn.RightAligned ? bn.X - width : bn.X;
             double x1 = bn.RightAligned ? bn.X : bn.X + width;
+            // Tracker works in absolute device: reflect YUp against this bar
+            // number's system top, place, then reflect the placed Y back to Y-up.
+            double sy = systems[sysIdx].Y;
             double newY = Place(trackers[sysIdx], x0, x1,
-                bn.Y, topOffset: -CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
-            b[i] = bn with { Y = newY };
+                StaffFrame.ToDevice(bn.YUp, sy),
+                topOffset: -CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
+            b[i] = bn with { YUp = StaffFrame.ToUp(newY, sy) };
         }
         return b.ToImmutable();
     }

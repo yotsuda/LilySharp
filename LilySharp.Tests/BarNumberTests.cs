@@ -97,8 +97,8 @@ public class BarNumberTests
     {
         var layout = BuildLayout("c4 d e f | break g4 a b c |");
         var bn = layout.BarNumberLayouts[0];
-        var system = layout.AllSystems[1];
-        Assert.True(bn.Y < system.Y,
-            $"BarNumber Y ({bn.Y}) should be ABOVE system top ({system.Y}).");
+        // Y-up (frame B): sitting ABOVE the system top means a positive value.
+        Assert.True(bn.YUp > 0.0,
+            $"BarNumber YUp ({bn.YUp}) should be ABOVE the system top (positive).");
     }
 }

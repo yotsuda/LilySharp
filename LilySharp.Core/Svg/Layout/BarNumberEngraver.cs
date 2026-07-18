@@ -33,8 +33,10 @@ public readonly record struct BarNumberLayout(
     string Text,
     // X coordinate of the text anchor.
     double X,
-    // Y coordinate of the text baseline (above the staff).
-    double Y,
+    // Y of the text baseline in the Y-up frame (frame B): staff-spaces ABOVE the
+    // system top, up-positive. The renderer reflects it to device via
+    // StaffFrame.ToDevice against the measure's system top.
+    double YUp,
     // When true the text right-aligns to X (TextAnchor.End).
     // Line-start and mid-line bar numbers LEFT-align (false) per BarNumber's
     // self-alignment-X = LEFT, so the number sits above the staff start and
@@ -134,17 +136,19 @@ internal static class BarNumberEngraver
                     : ml.X;
 
                 // Baseline = digit bottom, padding 1.0sp above the staff
-                // top. Collisions with protruding staff content and other
+                // top (= 1.0 sp above the system top in the Y-up frame).
+                // Collisions with protruding staff content and other
                 // outside-staff grobs are resolved afterwards by the unified
-                // OutsideStaffStacker.StackAboveStaff pass.
+                // OutsideStaffStacker.StackAboveStaff pass. The system top is
+                // resolved at draw time, so no system.Y is baked here.
                 // LILYPOND-REF: scm/define-grobs.scm BarNumber — padding 1.0.
-                double y = system.Y - 1.0;
+                const double yUp = 1.0;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,
                     Text: displayedNumber.ToString(),
                     X: x,
-                    Y: y,
+                    YUp: yUp,
                     RightAligned: false));
             }
         }

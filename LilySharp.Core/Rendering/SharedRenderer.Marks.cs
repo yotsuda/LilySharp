@@ -153,9 +153,11 @@ internal static partial class SharedRenderer
         // outside-staff stacking pass (OutsideStaffStacker.StackAboveStaff).
         foreach (var bn in layout.BarNumberLayouts)
         {
-            if (!sysY.ContainsKey(bn.MeasureIndex))
+            if (!sysY.TryGetValue(bn.MeasureIndex, out var sy))
                 continue; // other page
-            double y = bn.Y;
+            // Frame B -> device: reflect the Y-up baseline against this measure's
+            // system top.
+            double y = StaffFrame.ToDevice(bn.YUp, sy);
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
