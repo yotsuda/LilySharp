@@ -115,9 +115,11 @@ internal static partial class SharedRenderer
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
-            if (!sysY.TryGetValue(pr.MeasureIndex, out var sy)) continue;
+            if (!sysY.ContainsKey(pr.MeasureIndex)) continue;
             double cx = pr.X;
-            double cy = sy + pr.Y;
+            // Frame B -> device against this sign's own staff middle.
+            double cy = StaffFrame.ToDevice(pr.YUp,
+                os.StaffMiddleDeviceY(pr.StaffIndex, pr.MeasureIndex, StaffHeight));
             using (gc.Source(pr.SourcePosition))
             {
                 // Slash from bottom-left to top-right, with a dot in each pocket it

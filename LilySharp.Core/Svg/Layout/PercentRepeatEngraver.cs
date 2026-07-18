@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct PercentRepeatLayout(
     int MeasureIndex,
     double X,                // X center of the percent symbol (staff spaces)
-    double Y,                // Y center of the percent symbol (staff spaces from system top)
+    double YUp,              // Y-up (frame B): staff-spaces above the staff middle (0 = middle)
     double Width,            // Measure width for proportional sizing
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.PercentRepeats (data-pos resolved at render)
@@ -58,12 +58,11 @@ internal static class PercentRepeatEngraver
         if (percentRepeats.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<PercentRepeatLayout>.Empty;
 
-        // The sign belongs to the staff the repeat was WRITTEN on; a cello
-        // percent must not print its ％ over the flute.
+        // The sign belongs to the staff the repeat was WRITTEN on (StaffIndex); a
+        // cello percent must not print its ％ over the flute. Its own staff middle
+        // is resolved at draw time.
         // LILYPOND-REF: lily/percent-repeat-engraver.cc — the engraver lives
         // in the Voice context of its own staff.
-        var measureToSystem = LayoutUtilities.BuildMeasureMap(systems);
-
         var results = ImmutableArray.CreateBuilder<PercentRepeatLayout>(percentRepeats.Length);
 
         for (int i = 0; i < percentRepeats.Length; i++)
@@ -77,17 +76,11 @@ internal static class PercentRepeatEngraver
             // Center of the measure
             double x = ml.X + ml.Width / 2;
 
-            // Y = middle line of the OWN staff (2 ss below its top line).
-            double staffOffset = 0;
-            if (staffYAt != null
-                && measureToSystem.TryGetValue(item.MeasureIndex, out var info))
-            {
-                staffOffset = staffYAt(info.System.SystemIndex, item.StaffIndex);
-            }
-            double y = staffOffset + 2.0;
-
+            // Y-up (frame B): the percent sign is centred on the OWN staff's middle
+            // line = 0 staff-spaces above the middle. The staff (and thus its device
+            // middle) is resolved at draw time from StaffIndex.
             results.Add(new PercentRepeatLayout(
-                item.MeasureIndex, x, y, ml.Width, item.SourcePosition, i,
+                item.MeasureIndex, x, 0.0, ml.Width, item.SourcePosition, i,
                 StaffIndex: item.StaffIndex));
         }
 

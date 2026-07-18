@@ -78,7 +78,7 @@ public class PercentRepeatTests
             ImmutableArray.Create(ml));
 
         Assert.Single(result);
-        Assert.Equal(2.0, result[0].Y, 1);  // Center of 4-line staff
+        Assert.Equal(0.0, result[0].YUp, 1);  // Y-up: centred on the staff middle
     }
 
     // --- MeasureCollector integration ---
