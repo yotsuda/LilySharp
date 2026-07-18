@@ -30,7 +30,9 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct CustomTextLayout(
     int MeasureIndex,       // Measure containing this text
     double X,               // Absolute X position (staff spaces from score start)
-    double Y,               // Y position (staff spaces from staff top, positive = down)
+    double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
+                            // the staff middle line, up-positive (frame B). The draw
+                            // reflects it to device via StaffFrame.ToDevice.
     string Text,            // Display text
     int SourcePosition,     // For click-to-source mapping
     int SourceIndex = -1,   // F3/B: index into score.CustomTexts (data-pos resolved at render)
@@ -80,13 +82,16 @@ internal static class CustomTextEngraver
             // LILYPOND-REF: text-interface.cc:75-80 self-alignment-X
             double x = measureLayout.X + measureLayout.Width - 1.0;
 
-            // Calculate Y position (below staff)
-            double y = BelowStaffOffset + Padding;
+            // Calculate Y position (below staff), stored in the Y-up frame: the
+            // device baseline (StaffMiddle=2 from the staff top) reflects to
+            // staff-spaces above the middle. No staff offset — the draw resolves
+            // the (top) staff middle.
+            double yUp = StaffFrame.ToUp(BelowStaffOffset + Padding, 2.0);
 
             layouts.Add(new CustomTextLayout(
                 customText.MeasureIndex,
                 x,
-                y,
+                yUp,
                 customText.Text,
                 customText.SourcePosition,
                 ci

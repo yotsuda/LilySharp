@@ -588,15 +588,18 @@ internal static class OutsideStaffStacker
             var ct = b[i];
             if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
                 continue;
-            double sy = systems[sysIdx].Y;
             // Centered italic text at 0.6 x 4sp; measured width (bold
             // table, a slight overestimate for italic), ~0.75em ascent
             // and ~0.25em descent around the baseline anchor.
             const double ctFs = 0.6 * 4.0;
             double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
+            // Stack in absolute device: reflect ct.YUp against its (top) staff middle,
+            // place, then reflect the new absolute Y back to Y-up.
+            double mid = LayoutUtilities.ResolveStaffMiddleY(systems[sysIdx], ct.StaffIndex, 4.0);
             double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                sy + ct.Y, topOffset: -TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
-            b[i] = ct with { Y = newAbs - sy };
+                StaffFrame.ToDevice(ct.YUp, mid),
+                topOffset: -TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
+            b[i] = ct with { YUp = StaffFrame.ToUp(newAbs, mid) };
         }
         return b.ToImmutable();
     }

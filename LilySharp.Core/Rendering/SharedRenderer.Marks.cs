@@ -432,8 +432,10 @@ internal static partial class SharedRenderer
         if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
         foreach (var t in layout.CustomTextLayouts)
         {
-            if (!sysY.TryGetValue(t.MeasureIndex, out var s)) continue; // other page
-            double y = s + t.Y;
+            if (!sysY.ContainsKey(t.MeasureIndex)) continue; // other page
+            // Frame B -> device against the (top) staff middle this text resolves.
+            double y = StaffFrame.ToDevice(t.YUp,
+                os.StaffMiddleDeviceY(t.StaffIndex, t.MeasureIndex, StaffHeight));
             using (gc.Source(t.SourcePosition))
                 gc.DrawText(t.Text, t.X, y, FontSize * 0.6, "serif",
                     FontStyle.Italic, TextAnchor.Middle, Color.Black);

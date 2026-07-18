@@ -846,7 +846,11 @@ internal sealed class LayoutEngine
             Add(m.MeasureIndex, m.Y - 2.1, m.Y + 0.7);
         }
         foreach (var ct in ann.CustomTexts)
-            Add(ct.MeasureIndex, ct.Y - 1.8, ct.Y + 0.6);
+        {
+            // YUp is Y-up; this prelim extent pass is staff-local device (top staff).
+            double ctY = StaffFrame.ToDevice(ct.YUp, 2.0);
+            Add(ct.MeasureIndex, ctY - 1.8, ctY + 0.6);
+        }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
         // clear high notes; their REAL text top must join the system up-extent or a
         // lifted chord line pokes into the header/title. Chord font = FontSize*0.65
@@ -1095,7 +1099,9 @@ internal sealed class LayoutEngine
             foreach (var ct in customTexts)
             {
                 double halfW = Rendering.SerifTextMetrics.MeasureBold(ct.Text, 2.0) / 2 + 0.2;
-                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ct.Y - 1.8, ct.Y + 0.6);
+                // YUp is Y-up; this mark box is staff-local device (top staff).
+                double ctY = StaffFrame.ToDevice(ct.YUp, 2.0);
+                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY - 1.8, ctY + 0.6);
             }
         }
         // Inline chord symbols: their scalar height joins the up-extents, but
