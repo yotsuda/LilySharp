@@ -260,6 +260,21 @@ internal static partial class SharedRenderer
         /// <summary>Scales a size/offset/amplitude; identity off-ossia.</summary>
         public double Size(double v, int staffIndex)
             => Contains(staffIndex) ? v * OssiaScale : v;
+
+        /// <summary>
+        /// Device Y of a staff's middle line, for the system carrying
+        /// <paramref name="measureIndex"/>. This is the anchor a relative Y-up
+        /// (frame B) layout reflects against at draw time via
+        /// <see cref="StaffFrame.ToDevice"/> — the single per-grob draw boundary
+        /// that stands in for LilyPond's stencil-time flip, mirroring how staff
+        /// content already resolves its middle line. Callers reach this only after
+        /// the per-drawer page-membership guard, so the system is present; returns
+        /// NaN if it is not (degenerate/test path).
+        /// </summary>
+        public double StaffMiddleDeviceY(int staffIndex, int measureIndex, double staffHeight)
+            => _systems.TryGetValue(measureIndex, out var system)
+                ? LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
+                : double.NaN;
     }
 
     // ---------- F3/B: data-pos resolution ----------

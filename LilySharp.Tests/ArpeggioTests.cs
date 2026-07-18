@@ -150,7 +150,7 @@ public class ArpeggioTests
     }
 
     [Fact]
-    public void Calculate_TopY_LessThan_BottomY()
+    public void Calculate_TopYUp_GreaterThan_BottomYUp()
     {
         var systems = CreateSingleSystem(2);
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
@@ -160,8 +160,9 @@ public class ArpeggioTests
         var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
 
         Assert.Single(result);
-        Assert.True(result[0].TopY < result[0].BottomY,
-            $"TopY ({result[0].TopY:F2}) should be less than BottomY ({result[0].BottomY:F2})");
+        // Y-up (frame B): the top extent sits ABOVE the bottom, so its value is larger.
+        Assert.True(result[0].TopYUp > result[0].BottomYUp,
+            $"TopYUp ({result[0].TopYUp:F2}) should be greater than BottomYUp ({result[0].BottomYUp:F2})");
     }
 
     [Fact]
@@ -176,8 +177,9 @@ public class ArpeggioTests
         var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
 
         Assert.Single(result);
-        double height = result[0].BottomY - result[0].TopY;
-        // Note range is 8 staff positions = 4 staff spaces + 0.6 extension
+        // Y-up (frame B): height = top extent minus bottom extent.
+        double height = result[0].TopYUp - result[0].BottomYUp;
+        // Note range is 8 staff positions = 4 staff spaces + 0.8 protrusion
         Assert.True(height > 4.0, $"Height ({height:F2}) should span at least the note range");
     }
 

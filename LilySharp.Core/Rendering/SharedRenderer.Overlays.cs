@@ -629,8 +629,12 @@ internal static partial class SharedRenderer
             // draw unconditionally.
             if (a.MeasureIndex >= 0 && !sysY.ContainsKey(a.MeasureIndex))
                 continue; // other page
-            double topY = os.Y(a.TopY, a.StaffIndex, a.MeasureIndex);
-            double bottomY = os.Y(a.BottomY, a.StaffIndex, a.MeasureIndex);
+            // Frame B -> device: reflect the stored Y-up extents against this
+            // arpeggio's own staff middle (the single per-grob draw boundary),
+            // then apply the ossia affine exactly as before.
+            double staffMiddleY = os.StaffMiddleDeviceY(a.StaffIndex, a.MeasureIndex, StaffHeight);
+            double topY = os.Y(StaffFrame.ToDevice(a.TopYUp, staffMiddleY), a.StaffIndex, a.MeasureIndex);
+            double bottomY = os.Y(StaffFrame.ToDevice(a.BottomYUp, staffMiddleY), a.StaffIndex, a.MeasureIndex);
             double waveAmplitude = os.Size(0.2, a.StaffIndex);
             double length = bottomY - topY;
             if (length <= 0) continue;

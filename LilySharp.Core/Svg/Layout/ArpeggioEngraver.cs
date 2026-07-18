@@ -20,13 +20,16 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
-/// Layout for a single arpeggio marking.
-/// All coordinates are in staff spaces.
+/// Layout for a single arpeggio marking. Vertical coordinates are stored in the
+/// LilyPond-native <b>Y-up</b> frame (staff-spaces above THIS arpeggio's staff
+/// middle line, up-positive — frame B), and reflected to device Y only at draw
+/// time via <see cref="StaffFrame.ToDevice"/> against the staff middle the
+/// renderer resolves. X is in staff spaces as before.
 /// </summary>
 public readonly record struct ArpeggioLayout(
     double X,
-    double TopY,
-    double BottomY,
+    double TopYUp,
+    double BottomYUp,
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.Arpeggios (data-pos resolved at render)
     int MeasureIndex = -1,   // page membership for multi-page rendering (-1 = draw on every page)
@@ -91,10 +94,11 @@ internal static class ArpeggioEngraver
 
             var (system, measure) = info;
 
-            // Resolve this arpeggio's OWN staff (multi-staff): its measures (for
-            // the item X) and the staff's vertical offset within the system.
+            // Resolve this arpeggio's OWN staff (multi-staff) measures for the item X.
+            // The staff's vertical offset is no longer needed here: the Y is stored
+            // relative to the staff middle (frame B) and resolved to the right staff
+            // at draw time.
             var arpMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, arp.StaffIndex, measures);
-            double staffOffset = staffYAt?.Invoke(arp.MeasureIndex, arp.StaffIndex) ?? 0;
 
             // Get X position of the chord item, then place arpeggio to the left
             // LILYPOND-REF: scm/define-grobs.scm:206 (direction . ,LEFT)
@@ -128,21 +132,20 @@ internal static class ArpeggioEngraver
             }
             double arpeggioX = itemX + minHeadOffset - noteheadCenterX - Padding - WaveAmplitude;
 
-            // Calculate Y positions from staff positions. The arpeggio's Y is
-            // absolute (system.Y based), so add the staff's within-system offset
-            // so it lands over its OWN staff, not the first.
-            double staffMiddleY = system.Y + staffOffset + staffHeight / 2;
-            double topY = StaffFrame.PositionToDevice(arp.MaxStaffPosition, staffMiddleY);
-            double bottomY = StaffFrame.PositionToDevice(arp.MinStaffPosition, staffMiddleY);
-
+            // Y-up staff-space from the staff middle line (frame B): a head at
+            // staff-position p sits p/2 spaces above the middle, and the protrusion
+            // extends the wavy line OUTWARD past the outer heads — up past the top,
+            // down past the bottom. This reads sign-for-sign with LP's up-positive
+            // frame; the renderer reflects it to device at draw time against the
+            // staff middle it resolves, so no system.Y / staff offset is baked here.
             // LILYPOND-REF: scm/define-grobs.scm:212 (protrusion . 0.4)
-            topY -= Protrusion;
-            bottomY += Protrusion;
+            double topYUp = arp.MaxStaffPosition * 0.5 + Protrusion;
+            double bottomYUp = arp.MinStaffPosition * 0.5 - Protrusion;
 
             layouts.Add(new ArpeggioLayout(
                 X: arpeggioX,
-                TopY: topY,
-                BottomY: bottomY,
+                TopYUp: topYUp,
+                BottomYUp: bottomYUp,
                 SourcePosition: arp.SourcePosition,
                 SourceIndex: ai,
                 MeasureIndex: arp.MeasureIndex,
