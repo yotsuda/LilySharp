@@ -431,6 +431,15 @@ internal sealed class TieFormattingProblem
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:875-886
+    ///
+    /// FRAME: this scorer is a device-frame (Y-down) island inside an otherwise
+    /// Y-up problem — its inputs arrive in device Y (TieCandidate.AttachmentY was
+    /// reflected in GenerateConfiguration, and _existingTies carry device-Y control
+    /// points), which is why the monotonicity tests below read <c>&gt;=</c> where LP
+    /// reads <c>&lt;=</c>. The collision distances are <c>Abs</c>, so only the two
+    /// ordering tests carry the sign. When Phase 2 stores tie geometry Y-up and
+    /// flips to device once at draw time, these values arrive Y-up and the tests
+    /// become LP's <c>&lt;=</c> verbatim — no conversion belongs here in the interim.
     /// </remarks>
     private void ScoreTieTieCollision(TieCandidate config)
     {
