@@ -33,8 +33,11 @@ public sealed record LyricLayout(
     // X position (center of syllable, in staff spaces).
     double X,
 
-    // Y position (baseline of text, in staff spaces).
-    double Y,
+    // Y of the text baseline in the LilyPond-native Y-up frame: staff-spaces ABOVE
+    // this line's system top, up-positive (frame B). Lyrics sit below the system,
+    // so this is negative. The renderer reflects it to device via
+    // StaffFrame.ToDevice against the measure's system top.
+    double YUp,
 
     // Width of the syllable text (in staff spaces).
     double Width,

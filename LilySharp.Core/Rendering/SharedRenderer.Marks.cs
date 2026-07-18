@@ -179,11 +179,11 @@ internal static partial class SharedRenderer
         const double fontSize = 2.4;
         foreach (var sn in layout.StanzaNumberLayouts)
         {
-            // sn.Y is relative to the system top (the verse's lyric baseline);
-            // add the system Y like DrawLyrics, so the number sits next to its
-            // verse line rather than at the page top.
+            // sn.YUp is Y-up from the system top (the verse's lyric baseline);
+            // reflect it to device against the system top like DrawLyrics, so the
+            // number sits next to its verse line rather than at the page top.
             if (!sysY.TryGetValue(sn.MeasureIndex, out var s)) continue; // other page
-            double y = s + sn.Y;
+            double y = StaffFrame.ToDevice(sn.YUp, s);
             gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }

@@ -365,7 +365,8 @@ internal sealed class LyricEngraver
                 else if (!lay.Item.IsLyricsRow)
                     systemDrop.TryGetValue(s, out drop);
             }
-            shifted.Add(drop > 0 ? lay with { Y = lay.Y + drop } : lay);
+            // drop is a downward (device) shift; in the Y-up store it is a decrease.
+            shifted.Add(drop > 0 ? lay with { YUp = lay.YUp - drop } : lay);
         }
         return shifted;
     }
@@ -466,10 +467,12 @@ internal sealed class LyricEngraver
         // its own extender line, double-drawing every connector.
         double syllableX = noteX;
 
+        // y is the verse baseline in system-relative device (down+ from the system
+        // top); store it Y-up from the system top (= its negation), offset-free.
         return new LyricLayout(
             lyric,
             syllableX,
-            y,
+            -y,
             textWidth);
     }
 

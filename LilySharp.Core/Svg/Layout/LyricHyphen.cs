@@ -228,12 +228,17 @@ internal sealed class LyricHyphenEngraver
         double startX = current.X + current.Width / 2 + _params.HyphenPadding;
         double endX = next.X - next.Width / 2 - _params.HyphenPadding;
 
+        // Lyric baselines are stored Y-up from the system top; the hyphen layout is
+        // still system-relative device, so reflect back (= -YUp) for the dash Y.
+        double currentBaselineY = -current.YUp;
+        double nextBaselineY = -next.YUp;
+
         if (crossesSystem)
         {
             // Hyphen at end of current system, hyphen at start of next system
             var dashes = ImmutableArray.Create(
-                new HyphenDash(startX, systemEndX - 0.5, current.Y + _params.HyphenYOffset),
-                new HyphenDash(nextSystemStartX + 0.5, endX, next.Y + _params.HyphenYOffset)
+                new HyphenDash(startX, systemEndX - 0.5, currentBaselineY + _params.HyphenYOffset),
+                new HyphenDash(nextSystemStartX + 0.5, endX, nextBaselineY + _params.HyphenYOffset)
             );
 
             return new LyricHyphenLayout(
@@ -260,10 +265,10 @@ internal sealed class LyricHyphenEngraver
                 ImmutableArray.Create(new HyphenDash(
                     (startX + endX) / 2 - squeezed / 2,
                     (startX + endX) / 2 + squeezed / 2,
-                    current.Y + _params.HyphenYOffset)));
+                    currentBaselineY + _params.HyphenYOffset)));
         }
 
-        double y = current.Y + _params.HyphenYOffset;
+        double y = currentBaselineY + _params.HyphenYOffset;
         var dashList = new List<HyphenDash>();
 
         // Calculate number of hyphens needed
@@ -316,7 +321,9 @@ internal sealed class LyricHyphenEngraver
     {
         double startX = current.X + current.Width / 2 + _params.ExtenderPadding;
         double endX = next.X - next.Width / 2 - _params.ExtenderPadding;
-        double y = current.Y + _params.ExtenderYOffset;
+        // Lyric baseline is stored Y-up from the system top; reflect back for the
+        // still-device extender layout.
+        double y = -current.YUp + _params.ExtenderYOffset;
 
         if (crossesSystem)
         {

@@ -45,7 +45,9 @@ public class LyricStaffOrderTests
             foreach (var sg in sys.StaffGroups)
                 foreach (var st in sg.Staves)
                     staffY[st.StaffIndex] = st.Y;
-        var lyricYs = layout.LyricLayouts.Where(l => !l.Item.IsLyricsRow).Select(l => l.Y).ToList();
+        // LyricLayout stores Y-up from the system top; this test reasons in the
+        // system-relative device frame (comparing to staff.Y), so reflect back (= -YUp).
+        var lyricYs = layout.LyricLayouts.Where(l => !l.Item.IsLyricsRow).Select(l => -l.YUp).ToList();
         return (lyricYs, staffY);
     }
 

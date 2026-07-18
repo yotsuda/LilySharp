@@ -43,7 +43,8 @@ public class StanzaNumberTests
 
     private static LyricLayout MakeLyricLayout(string text, int measure, int verse, double x, double y,
         bool hideStanza = false) =>
-        new(MakeLyric(text, measure, verse, hideStanza), X: x, Y: y, Width: 1.0,
+        // LyricLayout stores Y-up from the system top; y here is a device baseline.
+        new(MakeLyric(text, measure, verse, hideStanza), X: x, YUp: -y, Width: 1.0,
             SourceIndex: -1);
 
     [Fact]
@@ -139,7 +140,8 @@ public class StanzaNumberTests
             MakeLyricLayout("li", measure: 0, verse: 2, x: 12, y: 25));
 
         var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
-        Assert.Equal(20, stanza.First(s => s.VerseNumber == 1).Y, precision: 4);
-        Assert.Equal(25, stanza.First(s => s.VerseNumber == 2).Y, precision: 4);
+        // Stanza YUp matches its verse's lyric YUp (Y-up from the system top = -device).
+        Assert.Equal(-20, stanza.First(s => s.VerseNumber == 1).YUp, precision: 4);
+        Assert.Equal(-25, stanza.First(s => s.VerseNumber == 2).YUp, precision: 4);
     }
 }

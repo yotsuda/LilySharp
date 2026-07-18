@@ -38,7 +38,9 @@ public class LyricHyphenTests
         int verseNumber = 1)
     {
         var item = new LyricItem(text, measureIndex, itemIndex, connectorType, 0, verseNumber);
-        return new LyricLayout(item, x, y, width);
+        // LyricLayout stores Y-up from the system top; the helper's y is a device
+        // baseline, so store its negation.
+        return new LyricLayout(item, x, -y, width);
     }
 
     private static ImmutableArray<SystemLayout> CreateSingleSystem(params (int measureIndex, double x, double width)[] measures)

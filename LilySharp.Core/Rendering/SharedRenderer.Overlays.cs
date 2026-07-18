@@ -332,7 +332,9 @@ internal static partial class SharedRenderer
         foreach (var l in layout.LyricLayouts)
         {
             if (!sysY.TryGetValue(l.Item.MeasureIndex, out var sy)) continue; // other page
-            double y = sy + l.Y;
+            // Frame B -> device: reflect the Y-up baseline against the measure's
+            // system top (the lyric's refpoint).
+            double y = StaffFrame.ToDevice(l.YUp, sy);
             // Tag the syllable with its source offset (data-pos) so the preview can
             // click-to-jump and editor-highlight it like a note. SourcePosition 0
             // means "unknown" (would clash with the bar-0 section mark), so only

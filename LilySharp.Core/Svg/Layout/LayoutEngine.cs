@@ -869,7 +869,12 @@ internal sealed class LayoutEngine
         // the baseline at the 3.2 ss lyric font — without it, a first system
         // whose top content is a lyrics/chord ROW grazes the title ink.
         foreach (var lyLay in ann.Lyrics)
-            Add(lyLay.Item.MeasureIndex, lyLay.Y - 2.11, lyLay.Y + 0.9);
+        {
+            // lyLay.YUp is Y-up from the system top; the system-relative device
+            // baseline (old lyLay.Y) is its negation.
+            double lyY = -lyLay.YUp;
+            Add(lyLay.Item.MeasureIndex, lyY - 2.11, lyY + 0.9);
+        }
         foreach (var tr in ann.TrillSpanners)
             Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
         // Figured-bass rows hang below the staff; a skyline-dropped row must

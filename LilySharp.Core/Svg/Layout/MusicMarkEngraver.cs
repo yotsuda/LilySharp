@@ -247,9 +247,11 @@ internal static class MusicMarkEngraver
         var systemLyricBottom = new Dictionary<int, double>();
         if (!lyrics.IsDefaultOrEmpty)
             foreach (var ly in lyrics)
+                // ly.YUp is Y-up from the system top; this pass works in system-relative
+                // device (the lyric bottom = the largest device Y), so reflect back.
                 if (measureToSystemIdx.TryGetValue(ly.Item.MeasureIndex, out int lySys)
-                    && (!systemLyricBottom.TryGetValue(lySys, out double cur) || ly.Y > cur))
-                    systemLyricBottom[lySys] = ly.Y;
+                    && (!systemLyricBottom.TryGetValue(lySys, out double cur) || -ly.YUp > cur))
+                    systemLyricBottom[lySys] = -ly.YUp;
 
         var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
 
@@ -475,7 +477,7 @@ internal static class MusicMarkEngraver
                         double lyHalf = ly.Width / 2 + 0.3;
                         if (mx1 < ly.X - lyHalf || mx0 > ly.X + lyHalf)
                             continue;
-                        double lyricBottom = ly.Y + 0.9;
+                        double lyricBottom = -ly.YUp + 0.9; // ly.YUp is Y-up from system top
                         if (y - halfExtent < lyricBottom + OutsideStaffPadding)
                             y = lyricBottom + OutsideStaffPadding + halfExtent;
                     }

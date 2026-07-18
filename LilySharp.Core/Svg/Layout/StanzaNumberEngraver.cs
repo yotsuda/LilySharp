@@ -35,8 +35,10 @@ public readonly record struct StanzaNumberLayout(
     int MeasureIndex,
     // X coordinate at the system's left edge (start of staff lines).
     double X,
-    // Y coordinate (relative to the system top, matching the verse's lyric baseline).
-    double Y,
+    // Y-up (frame B): staff-spaces above the system top, up-positive, matching the
+    // verse's lyric baseline. The renderer reflects it to device against the
+    // system top.
+    double YUp,
     // Display text (e.g., "1.", "2.").
     string Text);
 
@@ -126,7 +128,7 @@ internal static class StanzaNumberEngraver
                 SystemIndex: sysIdx,
                 MeasureIndex: lyric.Item.MeasureIndex,
                 X: x,
-                Y: lyric.Y,
+                YUp: lyric.YUp,
                 Text: $"{verseNumber}."));
         }
 
