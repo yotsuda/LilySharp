@@ -395,8 +395,15 @@ public sealed record ChordItem : MusicItem
     /// <see cref="NoteItem.LeadingGrace"/>.</summary>
     public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
 
-    /// <summary>Stem direction: beam-resolved if beamed, else by average staff position.</summary>
-    public bool StemUp => StemUpOverride ?? (Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 0);
+    /// <summary>Stem direction: beam-resolved if beamed, else down unless the
+    /// midpoint of the EXTREME heads lies below the middle line. LilyPond weighs
+    /// the notes farthest from centre (top and bottom of the chord), not the
+    /// mean of all heads, so a lopsided chord straddling the middle line takes
+    /// its stem from the side with the more distant note.</summary>
+    /// <remarks>LILYPOND-REF: lily/stem.cc:800-805 calc_default_direction —
+    /// dir = sign(ddistance − udistance) = sign(−(hp[UP] + hp[DOWN])).</remarks>
+    public bool StemUp => StemUpOverride ?? (Notes.Length > 0
+        && Notes.Max(n => n.StaffPosition) + Notes.Min(n => n.StaffPosition) < 0);
 
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
