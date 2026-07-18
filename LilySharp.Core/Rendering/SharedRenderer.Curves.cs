@@ -239,11 +239,13 @@ internal static partial class SharedRenderer
     {
         private readonly HashSet<int> _ossiaStaves;
         private readonly Dictionary<int, SystemLayout> _systems;
+        private readonly double _height;
 
-        public OssiaShrink(HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems)
+        public OssiaShrink(HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, double height)
         {
             _ossiaStaves = ossiaStaves;
             _systems = systems;
+            _height = height;
         }
 
         public bool Contains(int staffIndex)
@@ -277,6 +279,37 @@ internal static partial class SharedRenderer
             => _systems.TryGetValue(measureIndex, out var system)
                 ? LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
                 : double.NaN;
+
+        /// <summary>
+        /// Y-up of a staff's middle line (page-bottom origin): <c>H − device
+        /// middle</c>. This is the refpoint a relative-Y-up (frame B) grob ADDS
+        /// its stored offset to at draw time — the Y-up-native counterpart of
+        /// reflecting against <see cref="StaffMiddleDeviceY"/> with
+        /// <see cref="StaffFrame.ToDevice"/>. Once the page's context is wrapped
+        /// in <see cref="YFlipDrawingContext"/>, emitting
+        /// <c>StaffMiddleYUp(...) + offsetUp</c> flips back to the former
+        /// <c>middle − offsetUp</c>, folding the per-grob reflection into the one
+        /// output flip. NaN propagates from <see cref="StaffMiddleDeviceY"/>.
+        /// </summary>
+        public double StaffMiddleYUp(int staffIndex, int measureIndex, double staffHeight)
+            => _height - StaffMiddleDeviceY(staffIndex, measureIndex, staffHeight);
+
+        /// <summary>
+        /// The ossia affine (<see cref="Y"/>) expressed in the Y-up frame: the
+        /// conjugate of <see cref="Y"/> under the output flip, an affine of the
+        /// same shape but contracting toward the staff top's <em>Y-up</em>
+        /// position. For a page-Y-up input <paramref name="yUp"/> this yields the
+        /// Y-up value that flips (<c>H − ·</c>) to what <see cref="Y"/> produced
+        /// for the corresponding device input, so bow/page-anchored grobs draw
+        /// natively under <see cref="YFlipDrawingContext"/>. Identity off-ossia.
+        /// </summary>
+        public double YUp(double yUp, int staffIndex, int measureIndex)
+        {
+            if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))
+                return yUp;
+            double topUp = _height - LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+            return topUp + (yUp - topUp) * OssiaScale;
+        }
     }
 
     // ---------- F3/B: data-pos resolution ----------

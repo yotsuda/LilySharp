@@ -125,7 +125,7 @@ internal static partial class SharedRenderer
                 // key as "not on this page".
                 var measureToSystemY = BuildMeasureToSystemY(page);
                 var measureToSystem = BuildMeasureToSystem(page);
-                var os = new OssiaShrink(ossiaStaves, measureToSystem);
+                var os = new OssiaShrink(ossiaStaves, measureToSystem, page.Height);
                 DrawTies(layout, measureToSystemY, os, gc);
                 DrawSlurs(layout, measureToSystemY, os, gc);
                 DrawDynamics(layout, measureToSystemY, os, gc);
