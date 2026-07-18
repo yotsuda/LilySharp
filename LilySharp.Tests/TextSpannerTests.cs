@@ -234,8 +234,9 @@ public class TextSpannerTests
 
         // Dynamic at measure 0 item 0 — overlaps with text spanner's X range
         // X = measures[0].X + items[0].X = 0 + 1.0 = 1.0
+        // 4th arg is YUp now: device 6.8 below the staff → ToUp(6.8, 2) = −4.8.
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(0, 0, 1.0, 6.8, "mf", 0));
+            new DynamicLayout(0, 0, 1.0, -4.8, "mf", 0));
 
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, dynamics);
 
@@ -263,10 +264,10 @@ public class TextSpannerTests
         var spanners = ImmutableArray.Create(new TextSpannerItem(
             "rit.", 4, 0, 6, 0, TextSpannerStyle.DashedLine, 0));
 
-        // Dynamic in same system (measure 4), with Y=6.8
+        // Dynamic in same system (measure 4), device Y=6.8 → YUp = ToUp(6.8, 2) = −4.8.
         double dynX = measures[4].X + measures[4].Items[0].X;
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(4, 0, dynX, 6.8, "mf", 0));
+            new DynamicLayout(4, 0, dynX, -4.8, "mf", 0));
 
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, dynamics);
 
@@ -291,9 +292,10 @@ public class TextSpannerTests
         var spanners = ImmutableArray.Create(new TextSpannerItem(
             "rit.", 4, 0, 6, 0, TextSpannerStyle.DashedLine, 0));
 
-        // Dynamic in system 0 (measure 0) — different system, should not affect
+        // Dynamic in system 0 (measure 0) — different system, should not affect.
+        // Device Y=9.0 → YUp = ToUp(9.0, 2) = −7.0.
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(0, 0, 1.0, 9.0, "ff", 0));
+            new DynamicLayout(0, 0, 1.0, -7.0, "ff", 0));
 
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, dynamics);
 

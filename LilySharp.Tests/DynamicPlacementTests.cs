@@ -84,9 +84,9 @@ public class DynamicPlacementTests
         var above = layout.DynamicLayouts.Single(d => d.IsAbove);
         var below = layout.DynamicLayouts.Single(d => !d.IsAbove);
 
-        // Smaller Y = higher on the page.
-        Assert.True(above.Y < below.Y,
-            $"above dynamic (Y={above.Y}) should sit higher than below (Y={below.Y})");
+        // Y-up (frame B): larger YUp = higher on the page.
+        Assert.True(above.YUp > below.YUp,
+            $"above dynamic (YUp={above.YUp}) should sit higher than below (YUp={below.YUp})");
     }
 
     // Lower-staff Y in a treble-over-bass score; the lower staff carries a high chord
@@ -149,10 +149,10 @@ public class DynamicPlacementTests
         var score = Collect("c''4@f.up@text(\"cresc\").up");
         var layout = new LayoutEngine().Layout(score);
 
-        var above = layout.DynamicLayouts.Where(d => d.IsAbove).OrderBy(d => d.Y).ToList();
+        var above = layout.DynamicLayouts.Where(d => d.IsAbove).OrderBy(d => d.YUp).ToList();
         Assert.Equal(2, above.Count);
         Assert.Equal(above[0].X, above[1].X, 3); // genuinely the same column
-        Assert.True(above[1].Y - above[0].Y >= 1.5,
-            $"stacked above-staff grobs must be separated (got {above[0].Y} and {above[1].Y})");
+        Assert.True(above[1].YUp - above[0].YUp >= 1.5,
+            $"stacked above-staff grobs must be separated (got {above[0].YUp} and {above[1].YUp})");
     }
 }

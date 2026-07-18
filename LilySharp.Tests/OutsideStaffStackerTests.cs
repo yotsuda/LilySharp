@@ -46,9 +46,9 @@ public class OutsideStaffStackerTests
         // Dynamic and hairpin share priority 250; hairpin should avoid overlapping dynamic
         var systems = CreateSingleSystem();
 
-        // Dynamic at X=20, Y=6.0 (below staff)
+        // Dynamic at X=20, device Y=6.0 below staff → YUp = ToUp(6, 2) = −4.0.
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, Y: 6.0, Text: "f", SourcePosition: 0));
+            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -4.0, Text: "f", SourcePosition: 0));
 
         // Hairpin spanning X=[18, 25], initially at BaseY=5.2
         var hairpins = ImmutableArray.Create(
@@ -74,9 +74,9 @@ public class OutsideStaffStackerTests
         // Hairpin and dynamic at different X positions should not interact
         var systems = CreateSingleSystem();
 
-        // Dynamic at X=10
+        // Dynamic at X=10, device Y=6.0 → YUp = ToUp(6, 2) = −4.0.
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 10, Y: 6.0, Text: "p", SourcePosition: 0));
+            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 10, YUp: -4.0, Text: "p", SourcePosition: 0));
 
         // Hairpin at X=[40, 55] — far from dynamic
         var hairpins = ImmutableArray.Create(
@@ -122,9 +122,9 @@ public class OutsideStaffStackerTests
             new SystemLayout(SystemIndex: 0, Y: 10, Width: 70, PrefixWidth: 5, Measures: measures0),
             new SystemLayout(SystemIndex: 1, Y: 30, Width: 70, PrefixWidth: 5, Measures: measures1));
 
-        // Dynamic in system 0 at X=20
+        // Dynamic in system 0 at X=20, device Y=8.0 → YUp = ToUp(8, 2) = −6.0.
         var dynamics = ImmutableArray.Create(
-            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, Y: 8.0, Text: "ff", SourcePosition: 0));
+            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -6.0, Text: "ff", SourcePosition: 0));
 
         // Hairpin in system 1 at X=[20, 30] — same X but different system
         var hairpins = ImmutableArray.Create(

@@ -294,7 +294,11 @@ internal static class TextSpannerEngraver
             if (dyn.X + HorizontalOverlapTolerance > startX &&
                 dyn.X - HorizontalOverlapTolerance < endX)
             {
-                maxDynamicY = Math.Max(maxDynamicY, dyn.Y);
+                // dyn.YUp is Y-up; the caller passes only SAME-staff dynamics, so this
+                // staff's offset (staffOffset) reflects it into the system-relative
+                // device frame this method (and minY) works in.
+                double dynY = staffOffset + StaffFrame.ToDevice(dyn.YUp, 2.0);
+                maxDynamicY = Math.Max(maxDynamicY, dynY);
             }
         }
 

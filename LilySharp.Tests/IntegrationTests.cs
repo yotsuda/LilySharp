@@ -174,9 +174,10 @@ score main ""test"" {
             .ToList();
 
         Assert.NotEmpty(overlappingDynamics);
-        var maxDynY = overlappingDynamics.Max(d => d.Y);
-        // Y grows downward: an above-staff spanner sits at a SMALLER Y than the
-        // below-staff dynamics.
+        // Dynamics store Y-up now; reflect to device (single-staff → middle at 2.0)
+        // to compare against the still-device TextSpanner Y. Y grows downward: an
+        // above-staff spanner sits at a SMALLER Y than the below-staff dynamics.
+        var maxDynY = overlappingDynamics.Max(d => StaffFrame.ToDevice(d.YUp, 2.0));
         Assert.True(ritSpanner.Y < maxDynY,
             $"rit. Y ({ritSpanner.Y:F2}) should be above (smaller Y than) max overlapping dynamic Y ({maxDynY:F2})");
     }

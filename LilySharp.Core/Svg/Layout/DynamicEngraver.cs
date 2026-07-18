@@ -32,7 +32,10 @@ public readonly record struct DynamicLayout(
     int MeasureIndex,       // Measure containing this dynamic
     int ItemIndex,          // Item index within measure (for X alignment)
     double X,               // Absolute X position (staff spaces from score start)
-    double Y,               // Y position (staff spaces from staff top, positive = down)
+    double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
+                            // this dynamic's staff middle line, up-positive (frame B).
+                            // The renderer/stacker reflect it to device via
+                            // StaffFrame.ToDevice against the staff middle they resolve.
     string Text,            // Dynamic text ("p", "ff", etc.)
     int SourcePosition,     // For click-to-source mapping (re-derived at render from SourceIndex)
     int SourceIndex = -1,   // F3/B: index into score.Dynamics — the position-independent
@@ -155,7 +158,6 @@ internal static class DynamicEngraver
             var dynVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
             var dynMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, dynamic.StaffIndex, score.Voice.Measures);
-            double staffOffset = staffYAt?.Invoke(dynamic.MeasureIndex, dynamic.StaffIndex) ?? 0;
 
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1444 self-alignment-X = CENTER
@@ -184,19 +186,21 @@ internal static class DynamicEngraver
             int depth = stackAt.GetValueOrDefault(key, 0);
             stackAt[key] = depth + 1;
             // Stack each successive same-column dynamic AWAY from the staff (down when
-            // below, up when above).
+            // below, up when above). In the Y-up store below this becomes up (+) for
+            // above and down (−) for below; here y is still device (down+).
             y += (dynamic.IsAbove ? -depth : depth) * StackStep;
 
-            // Bake the staff's within-system offset so the page-level renderer's
-            // system-top + Y lands under THIS staff. (Offsets are uniform across
-            // systems, so a single value is correct everywhere this measure falls.)
-            y += staffOffset;
+            // Store in the LilyPond-native Y-up frame (staff-spaces above the staff
+            // middle). The device y is in the staff-top frame (middle = StaffMiddle),
+            // so reflect it; no staff offset is baked — the renderer/stacker resolve
+            // the staff middle at their own boundary.
+            double yUp = StaffFrame.ToUp(y, StaffMiddle);
 
             layouts.Add(new DynamicLayout(
                 dynamic.MeasureIndex,
                 dynamic.ItemIndex,
                 x,
-                y,
+                yUp,
                 dynamic.Text,
                 dynamic.SourcePosition,
                 di,

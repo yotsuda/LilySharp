@@ -198,10 +198,20 @@ internal static class OutsideStaffStacker
                 var tracker = Track(sysIdx, dyn.StaffIndex);
                 double occupied = tracker.Frontier(xStart, xEnd);
                 double requiredY = occupied + DynamicLineSpannerPadding + DynamicTextAscent;
-                if (requiredY > dyn.Y)
-                    dynBuilder[i] = dyn with { Y = requiredY };
+                // The tracker is device with the SAME staff offset the baseline uses
+                // (0 unless applyStaffOffsets); reflect dyn.YUp into it, clamp, and
+                // (if pushed) reflect the new device Y back to Y-up.
+                double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
+                    && staffYBySystem[sysIdx].TryGetValue(dyn.StaffIndex, out var so) ? so : 0;
+                double dynY = off + StaffFrame.ToDevice(dyn.YUp, 2.0);
+                double curDynY = dynY;
+                if (requiredY > dynY)
+                {
+                    curDynY = requiredY;
+                    dynBuilder[i] = dyn with { YUp = StaffFrame.ToUp(requiredY - off, 2.0) };
+                }
 
-                double bottom = dynBuilder[i].Y + DynamicTextDescent;
+                double bottom = curDynY + DynamicTextDescent;
                 tracker.AddRegion(xStart, xEnd, bottom);
             }
             adjDynamics = dynBuilder.ToImmutable();
@@ -498,11 +508,14 @@ internal static class OutsideStaffStacker
             var dyn = b[i];
             if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                 continue;
+            // Stack in absolute device: reflect dyn.YUp against its page-absolute staff
+            // middle, place, then reflect the new absolute Y back to Y-up.
+            double mid = LayoutUtilities.ResolveStaffMiddleY(systems[sysIdx], dyn.StaffIndex, 4.0);
             double newAbs = Place(trackers[sysIdx],
                 dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                systems[sysIdx].Y + dyn.Y,
+                StaffFrame.ToDevice(dyn.YUp, mid),
                 topOffset: -DynamicTextAscent, bottomOffset: 0.0);
-            b[i] = dyn with { Y = newAbs - systems[sysIdx].Y };
+            b[i] = dyn with { YUp = StaffFrame.ToUp(newAbs, mid) };
         }
         return b.ToImmutable();
     }

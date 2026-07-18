@@ -50,10 +50,13 @@ internal static partial class SharedRenderer
         foreach (var d in layout.DynamicLayouts)
         {
             string text = NormalizeDynamicText(d.Text);
-            if (!sysY.TryGetValue(d.MeasureIndex, out var sy)) continue; // other page
+            if (!sysY.ContainsKey(d.MeasureIndex)) continue; // other page
             // A dynamic on an ossia staff shrinks with its staff's notation —
             // both the glyph and its distance from the small staff.
-            double y = os.Y(sy + d.Y, d.StaffIndex, d.MeasureIndex);
+            // Frame B -> device: reflect the Y-up value against this dynamic's own
+            // staff middle (the shared per-grob draw boundary), then apply ossia.
+            double staffMiddleY = os.StaffMiddleDeviceY(d.StaffIndex, d.MeasureIndex, StaffHeight);
+            double y = os.Y(StaffFrame.ToDevice(d.YUp, staffMiddleY), d.StaffIndex, d.MeasureIndex);
             double size = os.Size(fontSize, d.StaffIndex);
             // Free expressive text (@text) prints plain italic; dynamic levels
             // keep LP's bold-italic DynamicText face.

@@ -879,7 +879,12 @@ internal sealed class LayoutEngine
             Add(a.MeasureIndex, aY - a.Ink.Top, aY - a.Ink.Bottom);
         }
         foreach (var d in ann.Dynamics)
-            Add(d.MeasureIndex, d.Y - 1.2, d.Y + 0.3);
+        {
+            // YUp is Y-up; this prelim extent pass is staff-local device, so reflect
+            // against the staff middle (StaffMiddle=2) before the ±ascent/descent box.
+            double dY = StaffFrame.ToDevice(d.YUp, 2.0);
+            Add(d.MeasureIndex, dY - 1.2, dY + 0.3);
+        }
         foreach (var h in ann.Hairpins)
             Add(h.StartMeasureIndex, h.Y - 0.34, h.Y + 0.34);
         foreach (var sp in ann.TextSpanners)

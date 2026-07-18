@@ -117,7 +117,10 @@ public class HaraKiriVisualTests
         // OWN staff table — it must sit at/below the bass staff, well past the
         // treble staff's bottom (the defect put it at the system-0 table's Y).
         var f = layout.DynamicLayouts.Single(d => d.Text == "f");
-        double fAbsY = systems[1].Y + f.Y;
+        // YUp is Y-up (frame B); reflect to absolute device against the bass staff's
+        // page-absolute middle to get the drawn Y.
+        double fAbsY = StaffFrame.ToDevice(
+            f.YUp, LayoutUtilities.ResolveStaffMiddleY(systems[1], f.StaffIndex, 4.0));
         double trebleBottom = LayoutUtilities.FindStaffYInSystem(systems[1], 0) + 4.0;
         double bassTop = LayoutUtilities.FindStaffYInSystem(systems[1], 1);
         Assert.True(bassTop > trebleBottom,
