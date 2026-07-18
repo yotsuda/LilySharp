@@ -196,8 +196,11 @@ internal static partial class SharedRenderer
         double size = FontSize * 0.56;  // magstep(-5)
         foreach (var f in layout.FingeringLayouts)
         {
-            if (!sysY.TryGetValue(f.MeasureIndex, out var sy)) continue; // other page
-            double y = os.Y(sy + f.Y, f.StaffIndex, f.MeasureIndex);
+            if (!sysY.ContainsKey(f.MeasureIndex)) continue; // other page
+            // Frame B -> device: reflect the Y-up baseline against this fingering's
+            // own staff middle (the shared per-grob draw boundary), then apply ossia.
+            double staffMiddleY = os.StaffMiddleDeviceY(f.StaffIndex, f.MeasureIndex, StaffHeight);
+            double y = os.Y(StaffFrame.ToDevice(f.YUp, staffMiddleY), f.StaffIndex, f.MeasureIndex);
             using (gc.Source(f.SourcePosition))
                 gc.DrawText(f.Number.ToString(), f.X, y,
                     os.Size(size, f.StaffIndex), "serif",

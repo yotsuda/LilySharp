@@ -94,7 +94,7 @@ public class ChordFingeringTests
     {
         // Each pitch sits at a different staff position so its finger Y differs.
         var (_, layout) = BuildLayout("<c@finger(1) e@finger(3) g@finger(5)>4 |");
-        var distinctYs = layout.FingeringLayouts.Select(f => f.Y).Distinct().ToList();
+        var distinctYs = layout.FingeringLayouts.Select(f => f.YUp).Distinct().ToList();
         Assert.Equal(3, distinctYs.Count);
     }
 

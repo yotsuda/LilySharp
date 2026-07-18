@@ -36,8 +36,10 @@ public readonly record struct FingeringLayout(
     int Number,
     // X coordinate of the digit center (staff spaces from score start).
     double X,
-    // Y coordinate of the digit baseline (staff spaces from staff top, positive=down).
-    double Y,
+    // Y of the digit baseline in the LilyPond-native Y-up frame: staff-spaces
+    // above THIS fingering's staff middle line, up-positive (frame B). The
+    // renderer reflects it to device against the staff middle it resolves.
+    double YUp,
     // True = above the staff, false = below.
     bool IsAbove,
     // Source position for click-to-source mapping.
@@ -152,27 +154,23 @@ internal static class FingeringEngraver
                 chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1) / 2.0;
 
         bool isAbove = !chord.StemUp;
-        // Within-system staff offset (0 for the top/only staff). The renderer
-        // adds the system's page Y, so Y must NOT include system.Y here.
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex) - system.Y;
-        const double StaffHeight = 4.0;
-        double staffMiddle = staffY + StaffHeight / 2.0;
 
         foreach (var note in chord.Notes)
         {
             if (!note.Fingering.HasValue)
                 continue;
 
-            // Y position: align with the note's own staff position, matching the
-            // visual convention of putting each finger next to its note.
-            double y = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddle);
+            // Y-up (frame B): align with the note's own staff position — a head at
+            // staff-position p sits p/2 spaces above the staff middle. No staff
+            // offset here; the renderer resolves the staff middle at draw time.
+            double yUp = note.StaffPosition * 0.5;
 
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,
                 ItemIndex: itemIndex,
                 Number: note.Fingering.Value,
                 X: centerX,
-                Y: y,
+                YUp: yUp,
                 IsAbove: isAbove,
                 SourcePosition: chord.SourcePosition,
                 StaffIndex: staffIndex));
@@ -208,34 +206,30 @@ internal static class FingeringEngraver
         //   lily/new-fingering-engraver.cc:182,210,360 position_scripts (up/down buckets).
         bool isAbove = true;
 
-        // Within-system staff offset (0 for the top/only staff). The renderer
-        // adds the system's page Y, so Y must NOT include system.Y here.
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex) - system.Y;
-        // Default staff height = 4 staff spaces (5 lines).
-        const double StaffHeight = 4.0;
-
-        // Y baseline: place the digit just outside the staff on the appropriate side,
-        // but also clear of the NOTEHEAD. A fingering on a note above the top line
-        // (or below the bottom) must sit outside the notehead, else it overprints it.
-        // Take whichever is farther out — the staff edge or the note. This mirrors
-        // LilyPond's side-position (the notehead is a support) while honouring the
-        // Fingering staff-padding.
+        // Y baseline in Y-up (frame B): place the digit just outside the staff on
+        // the appropriate side, but also clear of the NOTEHEAD. A fingering on a
+        // note above the top line (or below the bottom) must sit outside the
+        // notehead, else it overprints it. Take whichever is farther OUT — the
+        // staff edge or the note — which in Y-up is the max above / min below.
+        // This mirrors LilyPond's side-position (the notehead is a support) while
+        // honouring the Fingering staff-padding. No staff offset: the renderer
+        // resolves the staff middle at draw time.
         // LILYPOND-REF: lily/side-position-interface.cc; scm/define-grobs.scm Fingering.
-        const double StaffMiddle = 2.0;        // middle line, staff spaces from staff top
+        const double StaffHalf = 2.0;          // outer staff line, staff-spaces above/below middle
         const double NoteheadHalfHeight = 0.5; // notehead half-height (staff spaces)
-        double noteheadY = StaffFrame.PositionToDevice(note.StaffPosition, staffY + StaffMiddle);
-        double y = isAbove
-            ? System.Math.Min(staffY - StaffPadding,
-                noteheadY - NoteheadHalfHeight - StaffPadding)
-            : System.Math.Max(staffY + StaffHeight + StaffPadding + DigitHeight,
-                noteheadY + NoteheadHalfHeight + StaffPadding + DigitHeight);
+        double noteUp = note.StaffPosition * 0.5;
+        double yUp = isAbove
+            ? System.Math.Max(StaffHalf + StaffPadding,
+                noteUp + NoteheadHalfHeight + StaffPadding)
+            : System.Math.Min(-StaffHalf - StaffPadding - DigitHeight,
+                noteUp - NoteheadHalfHeight - StaffPadding - DigitHeight);
 
         return new FingeringLayout(
             MeasureIndex: measureIndex,
             ItemIndex: itemIndex,
             Number: note.Fingering!.Value,
             X: centerX,
-            Y: y,
+            YUp: yUp,
             IsAbove: isAbove,
             SourcePosition: note.SourcePosition,
             StaffIndex: staffIndex);

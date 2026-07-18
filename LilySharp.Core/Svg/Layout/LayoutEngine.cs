@@ -1493,9 +1493,16 @@ internal sealed class LayoutEngine
                 var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
                 if (artOuter.TryGetValue(key, out var artY))
                 {
+                    // artY is still device (ArticulationLayout is not yet on the Y-up
+                    // frame), so bridge the fingering to device against its staff
+                    // middle in the same system-relative frame, clamp, and reflect
+                    // back to Y-up. Once ArticulationLayout migrates this collapses.
+                    double staffMid = (staffYAt?.Invoke(fg.MeasureIndex, fg.StaffIndex) ?? 0)
+                        + _options.StaffHeight / 2.0;
+                    double fgY = staffMid - fg.YUp; // ToDevice (system-relative)
                     double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
-                    double newY = fg.IsAbove ? System.Math.Min(fg.Y, target) : System.Math.Max(fg.Y, target);
-                    fb2[i] = fg with { Y = newY };
+                    double newY = fg.IsAbove ? System.Math.Min(fgY, target) : System.Math.Max(fgY, target);
+                    fb2[i] = fg with { YUp = staffMid - newY }; // ToUp
                 }
             }
             fingeringLayouts = fb2.ToImmutable();
