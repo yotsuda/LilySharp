@@ -134,13 +134,12 @@ internal static partial class SharedRenderer
         double dx = endX - startX, dy = endY - startY;
         double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
         double half = 0.5 * midThickness; // LP lookup.cc:405 perp = 0.5 * curvethick
-        // The page context is Y-flipped (page-bottom Y-up). Under that flip the
-        // chord's perpendicular direction reflects, which would swap the two
-        // half-curves of the bezier sandwich into different emit slots (and change
-        // the SVG path bytes). Negating the perpendicular keeps each control point
-        // in its original slot so the flipped output is byte-identical to the
-        // former device-space curve.
-        double perpX = dy / len * half, perpY = -dx / len * half;
+        // Perpendicular to the chord, LP-native (lily/lookup.cc Lookup::slur:
+        //   perp = 0.5*curvethick*Offset(-dir[Y], dir[X]), dir = end - start).
+        // The two half-curves of the bezier sandwich sit at ±perp; which one is
+        // emitted first is a symmetric convention that leaves the filled+stroked
+        // shape unchanged, so this reads sign-for-sign with LP.
+        double perpX = -dy / len * half, perpY = dx / len * half;
         var c1a = (X: c1.X + perpX, Y: c1.Y + perpY);
         var c2a = (X: c2.X + perpX, Y: c2.Y + perpY);
         var c1b = (X: c1.X - perpX, Y: c1.Y - perpY);

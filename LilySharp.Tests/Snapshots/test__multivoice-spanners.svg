@@ -76,8 +76,8 @@
   <rect x="20.30" y="15.77" width="0.19" height="4.00" data-pos="636"/>
   <rect x="34.56" y="15.77" width="0.19" height="4.00" data-pos="656"/>
   <rect x="35.05" y="15.77" width="0.60" height="4.00" data-pos="656"/>
-  <path d="M 26.95,15.99 C 27.30,16.52 27.90,16.52 28.25,15.99 C 27.90,16.40 27.30,16.40 26.95,15.99 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 14.77,16.17 C 15.36,17.15 16.40,17.60 17.04,17.17 C 16.45,17.50 15.41,17.04 14.77,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 26.95,15.99 C 27.30,16.40 27.90,16.40 28.25,15.99 C 27.90,16.52 27.30,16.52 26.95,15.99 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 14.77,16.17 C 15.41,17.04 16.45,17.50 17.04,17.17 C 16.40,17.60 15.36,17.15 14.77,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="8.64" y1="16.06" x2="9.86" y2="15.48" stroke="#000000" stroke-width="0.100" data-pos="672"/>
   <rect x="0.30" y="10.93" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="587"/>
   <text x="1.11" y="13.13" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="587">S</text>

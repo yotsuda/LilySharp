@@ -23,8 +23,8 @@
   <line x1="18.91" y1="13.45" x2="18.91" y2="8.95" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.91" y1="13.45" x2="21.91" y2="8.95" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="24.33" y="14.64" font-size="4.00" data-pos="239"></text>
-  <path d="M 6.67,17.67 C 7.02,18.20 7.62,18.20 7.97,17.67 C 7.62,18.08 7.02,18.08 6.67,17.67 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 19.83,13.38 C 20.17,12.98 20.78,12.98 21.12,13.38 C 20.78,12.86 20.17,12.86 19.83,13.38 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 6.67,17.67 C 7.02,18.08 7.62,18.08 7.97,17.67 C 7.62,18.20 7.02,18.20 6.67,17.67 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 19.83,13.38 C 20.17,12.86 20.78,12.86 21.12,13.38 C 20.78,12.98 20.17,12.98 19.83,13.38 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="197"/>
   <text x="1.29" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="197">A</text>
   </g>
