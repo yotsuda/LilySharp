@@ -22,10 +22,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 internal sealed class BeamConfiguration : IScorableConfig
 {
-    /// <summary>Y position at left end (in staff positions, i.e. half staff spaces).</summary>
+    /// <summary>Y position at left end, in staff-spaces (LilyPond's quanting frame).</summary>
     public double LeftY { get; set; }
 
-    /// <summary>Y position at right end (in staff positions, i.e. half staff spaces).</summary>
+    /// <summary>Y position at right end, in staff-spaces (LilyPond's quanting frame).</summary>
     public double RightY { get; set; }
 
     /// <summary>Total demerit score (lower is better).</summary>
