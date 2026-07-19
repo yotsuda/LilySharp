@@ -56,13 +56,6 @@ internal static class LedgerLineSpannerEngraver
     public const double MergeThreshold = 1.5;
 
     /// <summary>
-    /// Notehead extension on each side of the head (matches the renderer's
-    /// per-note ledger drawing).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner length-fraction = 0.25</remarks>
-    public const double LedgerExtension = 0.25;
-
-    /// <summary>
     /// Calculates ledger-line spans for a single-staff score.
     /// </summary>
     public static ImmutableArray<LedgerLineSpan> Calculate(
@@ -101,8 +94,13 @@ internal static class LedgerLineSpannerEngraver
                 double centerX = measureLayout.X
                     + LayoutUtilities.GetItemXOffset(voice.Measures, mi, ii, measureLayout);
                 double headWidth = EngravingDefaults.NoteheadBlackWidth;
-                double left = centerX - LedgerExtension;
-                double right = centerX + headWidth + LedgerExtension;
+                // LP widens each side by length_fraction * head width (NOT an absolute
+                // 0.25 ss). This matches the renderer / skyline, which already use
+                // LedgerLengthFraction * headWidth.
+                // LILYPOND-REF: lily/ledger-line-spanner.cc:228-230 ledger_extent.widen.
+                double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
+                double left = centerX - ext;
+                double right = centerX + headWidth + ext;
 
                 // For each ledger position the note crosses, accumulate the entry.
                 // Above staff (positions >= 6 even values).
