@@ -71,7 +71,6 @@ internal static class GlissandoEngraver
     public static ImmutableArray<GlissandoLayout> Calculate(
         ImmutableArray<GlissandoItem> glissandos,
         ImmutableArray<SystemLayout> systems,
-        double staffHeight,
         int staffIndex = -1,
         ImmutableArray<Measure> measures = default)
     {
@@ -105,9 +104,12 @@ internal static class GlissandoEngraver
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 gliss.StartMeasureIndex, gliss.EndMeasureIndex, systems, measureToSystemIdx))
             {
-                double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight);
-                double startStaffYAbs = StaffFrame.PositionToDevice(gliss.StartStaffPosition, staffMiddleY);
-                double endStaffYAbs = StaffFrame.PositionToDevice(gliss.EndStaffPosition, staffMiddleY);
+                // Native Y-up (staff-spaces above this glissando's staff middle):
+                // a staff position p sits p/2 spaces above the middle line. The former
+                // ResolveStaffMiddleY round-trip (PositionToDevice, then ToUp at store)
+                // cancelled exactly, so no staff-middle resolution is needed here.
+                double startStaffY = gliss.StartStaffPosition * 0.5;
+                double endStaffY = gliss.EndStaffPosition * 0.5;
 
                 // Resolve segment-local X bounds against the system's measure layouts.
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.
@@ -116,11 +118,11 @@ internal static class GlissandoEngraver
 
                 // Y at the broken edge "freezes" at the destination pitch — visual cue
                 // that the slide continues on the adjacent system.
-                double segStartY = segment.IsFirst ? startStaffYAbs : endStaffYAbs;
-                double segEndY = segment.IsLast ? endStaffYAbs : startStaffYAbs;
+                double segStartY = segment.IsFirst ? startStaffY : endStaffY;
+                double segEndY = segment.IsLast ? endStaffY : startStaffY;
                 if (segment.IsMiddle)
                 {
-                    double mid = (startStaffYAbs + endStaffYAbs) / 2.0;
+                    double mid = (startStaffY + endStaffY) / 2.0;
                     segStartY = mid;
                     segEndY = mid;
                 }
@@ -147,14 +149,14 @@ internal static class GlissandoEngraver
                     }
                 }
 
-                // Store Y-up (frame B) relative to this segment's staff middle; the
-                // segment/gap geometry above stayed in device (frame-invariant line
-                // math), so reflect only at the store boundary.
+                // The segment/gap geometry above ran directly in the native Y-up frame
+                // (line math is frame-invariant — dy just carries its Y-up sign), so
+                // the Y-up store is a direct assignment; no reflection.
                 layouts.Add(new GlissandoLayout(
                     StartX: segStartX,
-                    StartYUp: StaffFrame.ToUp(segStartY, staffMiddleY),
+                    StartYUp: segStartY,
                     EndX: segEndX,
-                    EndYUp: StaffFrame.ToUp(segEndY, staffMiddleY),
+                    EndYUp: segEndY,
                     Style: gliss.Style,
                     SourcePosition: gliss.SourcePosition,
                     StaffIndex: staffIndex,

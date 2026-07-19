@@ -1320,7 +1320,7 @@ internal sealed class ElementCoordinator
         var layouts = ImmutableArray.CreateBuilder<GlissandoLayout>();
         foreach (var group in glissandos.GroupBy(g => g.VoiceIndex))
             layouts.AddRange(GlissandoEngraver.Calculate(
-                group.ToImmutableArray(), systems, _options.StaffHeight, staffIndex,
+                group.ToImmutableArray(), systems, staffIndex,
                 score.Voices[group.Key].Measures));
         return layouts.ToImmutable();
     }

@@ -231,7 +231,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 42));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].SourcePosition);
@@ -252,7 +252,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         Assert.True(result[0].StartX < result[0].EndX, "Start X should be less than End X");
@@ -274,7 +274,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         // Y-up (frame B): ascending means the start sits LOWER (smaller YUp) than the end.
@@ -297,7 +297,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         // Y-up (frame B): descending means the start sits HIGHER (larger YUp) than the end.
@@ -311,7 +311,7 @@ public class GlissandoTests
         var systems = CreateSingleSystem(2);
 
         var result = GlissandoEngraver.Calculate(
-            ImmutableArray<GlissandoItem>.Empty, systems, 4.0);
+            ImmutableArray<GlissandoItem>.Empty, systems);
 
         Assert.True(result.IsEmpty);
     }
@@ -330,7 +330,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.True(result.IsEmpty);
     }
@@ -350,7 +350,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         // startX should be > raw startX (1.0 + padding), endX should be < raw endX (9.0 - padding)
@@ -374,7 +374,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         // Y-up (frame B): a staff position p is p/2 spaces above the staff middle.
@@ -405,7 +405,7 @@ public class GlissandoTests
             Style: GlissandoStyle.Line,
             SourcePosition: 0));
 
-        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+        var result = GlissandoEngraver.Calculate(glissandos, systems);
 
         Assert.Single(result);
         // Measure 0: X=0, item 1: X=5.0. Measure 1: X=20, item 0: X=1.0
