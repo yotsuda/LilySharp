@@ -292,10 +292,10 @@ internal static partial class SharedRenderer
         /// <summary>
         /// Device Y of a staff's middle line, for the system carrying
         /// <paramref name="measureIndex"/>. This is the anchor a relative Y-up
-        /// (frame B) layout reflects against at draw time via
-        /// <see cref="StaffFrame.ToDevice"/> — the single per-grob draw boundary
-        /// that stands in for LilyPond's stencil-time flip, mirroring how staff
-        /// content already resolves its middle line. Callers reach this only after
+        /// (frame B) layout reflects against at draw time (device = middle − Y-up)
+        /// — the single per-grob draw boundary that stands in for LilyPond's
+        /// stencil-time flip, mirroring how staff content already resolves its
+        /// middle line. Callers reach this only after
         /// the per-drawer page-membership guard, so the system is present; returns
         /// NaN if it is not (degenerate/test path).
         /// </summary>
@@ -309,8 +309,8 @@ internal static partial class SharedRenderer
         /// Y-up of a staff's middle line (page-bottom origin): <c>H − device
         /// middle</c>. This is the refpoint a relative-Y-up (frame B) grob ADDS
         /// its stored offset to at draw time — the Y-up-native counterpart of
-        /// reflecting against <see cref="StaffMiddleDeviceY"/> with
-        /// <see cref="StaffFrame.ToDevice"/>. Once the page's context is wrapped
+        /// reflecting against <see cref="StaffMiddleDeviceY"/> (device = middle −
+        /// Y-up). Once the page's context is wrapped
         /// in <see cref="YFlipDrawingContext"/>, emitting
         /// <c>StaffMiddleYUp(...) + offsetUp</c> flips back to the former
         /// <c>middle − offsetUp</c>, folding the per-grob reflection into the one

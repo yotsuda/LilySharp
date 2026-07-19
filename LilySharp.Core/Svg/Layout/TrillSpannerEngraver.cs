@@ -36,8 +36,8 @@ public readonly record struct TrillSpannerLayout(
     // X position where the wavy line ends.
     double LineEndX,
     // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE the system top,
-    // up-positive (frame B). The renderer reflects it to device via
-    // StaffFrame.ToDevice against the segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    // up-positive (frame B). The renderer reflects it to device against the
+    // segment's system top (sy + old-Y == sy − YUp).
     double YUp,
     // Source position for click-to-source mapping.
     int SourcePosition,

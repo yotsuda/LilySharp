@@ -61,7 +61,7 @@ internal static class ItemSkylineFactory
             for (int i = 0; i < chord.Notes.Length; i++)
             {
                 var noteInfo = chord.Notes[i];
-                double noteY = StaffFrame.PositionToDevice(noteInfo.StaffPosition, staffY);
+                double noteY = staffY - noteInfo.StaffPosition / 2.0;
                 double noteheadYBottom = noteY - noteheadBBox.Top;
                 double noteheadYTop = noteY - noteheadBBox.Bottom;
 
@@ -83,7 +83,7 @@ internal static class ItemSkylineFactory
                 foreach (var noteInfo in chord.Notes)
                 {
                     double dotYOffset = (noteInfo.StaffPosition % 2 == 0) ? -0.5 : 0;
-                    double noteY = StaffFrame.PositionToDevice(noteInfo.StaffPosition, staffY);
+                    double noteY = staffY - noteInfo.StaffPosition / 2.0;
                     for (int d = 0; d < chordDots; d++)
                     {
                         double dotX = maxNoteheadRightX + dotGap + d * (dotWidth + dotGap);
@@ -99,7 +99,7 @@ internal static class ItemSkylineFactory
             // Get note Y position
             double noteY = item switch
             {
-                NoteItem note => StaffFrame.PositionToDevice(note.StaffPosition, staffY),
+                NoteItem note => staffY - note.StaffPosition / 2.0,
                 _ => staffY
             };
 
@@ -207,7 +207,7 @@ internal static class ItemSkylineFactory
             // Add all noteheads from the chord (at their real, shifted X)
             for (int i = 0; i < chord.Notes.Length; i++)
             {
-                double noteY = StaffFrame.PositionToDevice(chord.Notes[i].StaffPosition, staffY);
+                double noteY = staffY - chord.Notes[i].StaffPosition / 2.0;
                 double noteheadYBottom = noteY - noteheadBBox.Top;
                 double noteheadYTop = noteY - noteheadBBox.Bottom;
                 double hx = noteheadLeftX + headOffsets[i];
@@ -225,7 +225,7 @@ internal static class ItemSkylineFactory
                 // XOffset is negative (left of notehead), relative to notehead left edge
                 double accX = noteheadLeftX + layout.XOffset;
 
-                double noteY = StaffFrame.PositionToDevice(layout.StaffPosition, staffY);
+                double noteY = staffY - layout.StaffPosition / 2.0;
                 double accYBottom = noteY - accBBox.Top;
                 double accYTop = noteY - accBBox.Bottom;
                 boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
@@ -243,15 +243,15 @@ internal static class ItemSkylineFactory
                 double arpLeft = arpRight - 2 * ArpeggioEngraver.WaveAmplitude;
                 int maxPos = chord.Notes.Max(n => n.StaffPosition);
                 int minPos = chord.Notes.Min(n => n.StaffPosition);
-                double arpYBottom = StaffFrame.PositionToDevice(maxPos, staffY) - ArpeggioEngraver.Protrusion;
-                double arpYTop = StaffFrame.PositionToDevice(minPos, staffY) + ArpeggioEngraver.Protrusion;
+                double arpYBottom = (staffY - maxPos / 2.0) - ArpeggioEngraver.Protrusion;
+                double arpYTop = (staffY - minPos / 2.0) + ArpeggioEngraver.Protrusion;
                 boxes.Add((arpYBottom, arpYTop, arpLeft, arpRight));
             }
         }
         else if (item is NoteItem note)
         {
             // Single note
-            double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffY);
+            double noteY = staffY - note.StaffPosition / 2.0;
             double noteheadYBottom = noteY - noteheadBBox.Top;
             double noteheadYTop = noteY - noteheadBBox.Bottom;
             boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));

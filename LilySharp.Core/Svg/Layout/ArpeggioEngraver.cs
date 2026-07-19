@@ -23,8 +23,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// Layout for a single arpeggio marking. Vertical coordinates are stored in the
 /// LilyPond-native <b>Y-up</b> frame (staff-spaces above THIS arpeggio's staff
 /// middle line, up-positive — frame B), and reflected to device Y only at draw
-/// time via <see cref="StaffFrame.ToDevice"/> against the staff middle the
-/// renderer resolves. X is in staff spaces as before.
+/// time (device = middle − Y-up) against the staff middle the renderer resolves.
+/// X is in staff spaces as before.
 /// </summary>
 public readonly record struct ArpeggioLayout(
     double X,

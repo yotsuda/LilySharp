@@ -830,7 +830,7 @@ internal sealed class ElementCoordinator
                 else
                 {
                     double staffMiddleY = staffY + _options.StaffHeight / 2;
-                    y = StaffFrame.PositionToDevice(tie.StaffPosition, staffMiddleY);
+                    y = staffMiddleY - tie.StaffPosition / 2.0;
                 }
 
                 var problem = new TieFormattingProblem(
@@ -983,7 +983,7 @@ internal sealed class ElementCoordinator
             if (!hit) continue;
 
             // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
-            stemTipDeviceY = StaffFrame.ToDevice(bl.OuterEdgeStaffSpaceAtX(noteX, curveUp), staffMiddleY);
+            stemTipDeviceY = staffMiddleY - bl.OuterEdgeStaffSpaceAtX(noteX, curveUp);
             return true;
         }
         return false;
@@ -1034,8 +1034,8 @@ internal sealed class ElementCoordinator
 
                 // Visual top edge = highest pitch (smallest device Y) minus half a
                 // head; visual bottom edge = lowest pitch plus half a head.
-                double topY = StaffFrame.PositionToDevice(topPos.Value, staffMiddleY) - headHalfHeight;
-                double bottomY = StaffFrame.PositionToDevice(bottomPos.Value, staffMiddleY) + headHalfHeight;
+                double topY = (staffMiddleY - topPos.Value / 2.0) - headHalfHeight;
+                double bottomY = (staffMiddleY - bottomPos.Value / 2.0) + headHalfHeight;
                 obstacles.Add(new SlurObstacle(x, topY, bottomY, SlurObstacleType.NoteHead));
             }
         }
@@ -1175,7 +1175,7 @@ internal sealed class ElementCoordinator
                         segStartX, staffMiddleY, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
-                    segStartY = StaffFrame.PositionToDevice(startStaffPos, staffMiddleY)
+                    segStartY = (staffMiddleY - startStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 double segEndY;
@@ -1184,7 +1184,7 @@ internal sealed class ElementCoordinator
                         segEndX, staffMiddleY, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
-                    segEndY = StaffFrame.PositionToDevice(endStaffPos, staffMiddleY)
+                    segEndY = (staffMiddleY - endStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 var obstacles = BuildSlurObstacles(

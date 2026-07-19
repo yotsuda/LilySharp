@@ -34,8 +34,8 @@ public readonly record struct DynamicLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
                             // this dynamic's staff middle line, up-positive (frame B).
-                            // The renderer/stacker reflect it to device via
-                            // StaffFrame.ToDevice against the staff middle they resolve.
+                            // The renderer/stacker reflect it to device (middle − Y-up)
+                            // against the staff middle they resolve.
     string Text,            // Dynamic text ("p", "ff", etc.)
     int SourcePosition,     // For click-to-source mapping (re-derived at render from SourceIndex)
     int SourceIndex = -1,   // F3/B: index into score.Dynamics — the position-independent

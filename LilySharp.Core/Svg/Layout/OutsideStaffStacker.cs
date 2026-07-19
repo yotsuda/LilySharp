@@ -420,8 +420,7 @@ internal static class OutsideStaffStacker
                     continue;
                 // YUp is Y-up (above the staff middle); reflect to system-relative
                 // device against this staff's WITHIN-SYSTEM middle (staff.Y + H/2).
-                double relY = StaffFrame.ToDevice(
-                    a.YUp, LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], a.StaffIndex) + 2.0);
+                double relY = (LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], a.StaffIndex) + 2.0) - a.YUp;
                 double inkTop = relY - a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop >= 0)
                     continue; // entirely inside the staff — the up-skyline covers it
@@ -531,9 +530,9 @@ internal static class OutsideStaffStacker
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], dyn.StaffIndex) + 2.0;
             double newRel = Place(trackers[sysIdx],
                 dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                StaffFrame.ToDevice(dyn.YUp, mid),
+                mid - dyn.YUp,
                 topOffset: -DynamicTextAscent, bottomOffset: 0.0);
-            b[i] = dyn with { YUp = StaffFrame.ToUp(newRel, mid) };
+            b[i] = dyn with { YUp = mid - newRel };
         }
         return b.ToImmutable();
     }
@@ -616,9 +615,9 @@ internal static class OutsideStaffStacker
             // staff middle (staff.Y + H/2), place, then reflect back to Y-up.
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], ct.StaffIndex) + 2.0;
             double newRel = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                StaffFrame.ToDevice(ct.YUp, mid),
+                mid - ct.YUp,
                 topOffset: -TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
-            b[i] = ct with { YUp = StaffFrame.ToUp(newRel, mid) };
+            b[i] = ct with { YUp = mid - newRel };
         }
         return b.ToImmutable();
     }
@@ -671,7 +670,7 @@ internal static class OutsideStaffStacker
             {
                 var v = b[i];
                 // Write back the placed anchor as Y-up from the system top (= -anchor).
-                b[i] = v with { YUp = StaffFrame.ToUp(anchor, 0.0) };
+                b[i] = v with { YUp = 0.0 - anchor };
                 trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
             }
         }
@@ -699,12 +698,12 @@ internal static class OutsideStaffStacker
             // not part of this above pass. The stacker frame is system-relative device,
             // so reflect against the WITHIN-SYSTEM staff middle (staff.Y + H/2).
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], m.StaffIndex) + 2.0;
-            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || StaffFrame.ToDevice(m.YUp, 2.0) > 0)
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || 2.0 - m.YUp > 0)
                 continue;
             var (x0, x1, top, bottom) = MusicMarkExtents(m);
             double newRel = Place(trackers[sysIdx], m.X + x0, m.X + x1,
-                StaffFrame.ToDevice(m.YUp, mid), topOffset: top, bottomOffset: bottom);
-            b[i] = m with { YUp = StaffFrame.ToUp(newRel, mid) };
+                mid - m.YUp, topOffset: top, bottomOffset: bottom);
+            b[i] = m with { YUp = mid - newRel };
         }
         return b.ToImmutable();
     }

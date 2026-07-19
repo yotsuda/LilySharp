@@ -151,7 +151,7 @@ internal static class FiguredBassEngraver
             // basicY is the system-relative device floor (the old lay.Y). Reconstruct
             // it from Y-up against this figure's own staff offset.
             double staffOffset = LayoutUtilities.StaffOffsetInSystem(systems[s], lay.StaffIndex);
-            double layY = staffOffset + StaffFrame.ToDevice(lay.YUp, 2.0);
+            double layY = staffOffset + (2.0 - lay.YUp);
             basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, layY) : layY;
         }
 

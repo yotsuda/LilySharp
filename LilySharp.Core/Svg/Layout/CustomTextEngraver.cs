@@ -32,7 +32,7 @@ public readonly record struct CustomTextLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
                             // the staff middle line, up-positive (frame B). The draw
-                            // reflects it to device via StaffFrame.ToDevice.
+                            // reflects it to device (middle − Y-up).
     string Text,            // Display text
     int SourcePosition,     // For click-to-source mapping
     int SourceIndex = -1,   // F3/B: index into score.CustomTexts (data-pos resolved at render)

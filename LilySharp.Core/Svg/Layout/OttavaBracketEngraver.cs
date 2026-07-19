@@ -35,8 +35,8 @@ public readonly record struct OttavaBracketLayout(
     // End X position.
     double EndX,
     // Y in the Y-up frame: staff-spaces ABOVE the system top, up-positive (frame B).
-    // The renderer reflects it to device via StaffFrame.ToDevice against the
-    // segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    // The renderer reflects it to device against the segment's system top
+    // (sy + old-Y == sy − YUp).
     double YUp,
     // Display text (e.g., "8va", "8vb", "15ma", "15mb").
     string Text,

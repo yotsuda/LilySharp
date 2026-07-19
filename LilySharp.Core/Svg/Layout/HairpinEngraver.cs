@@ -34,8 +34,8 @@ public readonly record struct HairpinLayout(
     // End X position.
     double EndX,
     // Y of the wedge centre line in the Y-up frame: staff-spaces ABOVE the system
-    // top, up-positive (frame B). The renderer reflects it to device via
-    // StaffFrame.ToDevice against the segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    // top, up-positive (frame B). The renderer reflects it to device against the
+    // segment's system top (sy + old-Y == sy − YUp).
     double YUp,
     // Opening at the start (left) end (half-height, in staff spaces).
     // LILYPOND-REF: lily/hairpin.cc:300-313 — continued/continuing height fractions

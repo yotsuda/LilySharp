@@ -27,7 +27,7 @@ public readonly record struct GlissandoLayout(
     double StartX,
     // Y of the line's start/end in the LilyPond-native Y-up frame: staff-spaces
     // ABOVE this glissando's staff middle line, up-positive (frame B). The renderer
-    // reflects each back to device via StaffFrame.ToDevice against the staff middle
+    // reflects each back to device (middle − Y-up) against the staff middle
     // it resolves from StaffIndex/MeasureIndex.
     double StartYUp,
     double EndX,

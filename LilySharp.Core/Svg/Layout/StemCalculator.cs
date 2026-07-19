@@ -127,8 +127,8 @@ public static class StemCalculator
         double staffMiddleY = staffTopY + staffHeight / 2;
 
         // Convert the device-Y attach point into LilyPond's Y-up frame
-        // (staff-spaces above the middle line).
-        double attachUp = StaffFrame.ToUp(stemAttachY, staffMiddleY);
+        // (staff-spaces above the middle line): middle − device.
+        double attachUp = staffMiddleY - stemAttachY;
 
         // --- Base length from duration ---
         // LILYPOND-REF: stem.cc:506-517
@@ -186,8 +186,8 @@ public static class StemCalculator
             stemEndUp = attachUp + dir * minLength;
         }
 
-        // Reflect back to device coordinates (Y-down).
-        return StaffFrame.ToDevice(stemEndUp, staffMiddleY);
+        // Reflect back to device coordinates (Y-down): middle − Y-up.
+        return staffMiddleY - stemEndUp;
     }
 
     /// <summary>

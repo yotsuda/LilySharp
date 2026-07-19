@@ -36,8 +36,8 @@ public readonly record struct TextSpannerLayout(
     // X position where the text ends and the line begins.
     double LineStartX,
     // Y in the Y-up frame: staff-spaces ABOVE the system top, up-positive (frame B).
-    // The renderer reflects it to device via StaffFrame.ToDevice against the
-    // segment's system top (sy + old-Y == ToDevice(YUp, sy)).
+    // The renderer reflects it to device against the segment's system top
+    // (sy + old-Y == sy − YUp).
     double YUp,
     // Display text (e.g., "rit.", "accel.").
     string Text,
@@ -242,9 +242,9 @@ internal static class TextSpannerEngraver
                     StartX: startX,
                     EndX: endX,
                     LineStartX: lineStartX,
-                    // Store Y-up from the system top; the internal placement still
-                    // computes device y (it reads the device dynamics band).
-                    YUp: StaffFrame.ToUp(y, 0.0),
+                    // Store Y-up from the system top (= −device y); the internal
+                    // placement still computes device y (it reads the device dynamics band).
+                    YUp: 0.0 - y,
                     Text: segText,
                     Style: spanner.Style,
                     DashPeriod: DashPeriod,
@@ -301,7 +301,7 @@ internal static class TextSpannerEngraver
                 // dyn.YUp is Y-up; the caller passes only SAME-staff dynamics, so this
                 // staff's offset (staffOffset) reflects it into the system-relative
                 // device frame this method (and minY) works in.
-                double dynY = staffOffset + StaffFrame.ToDevice(dyn.YUp, 2.0);
+                double dynY = staffOffset + (2.0 - dyn.YUp);
                 maxDynamicY = Math.Max(maxDynamicY, dynY);
             }
         }

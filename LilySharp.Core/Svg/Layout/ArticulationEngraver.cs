@@ -36,8 +36,8 @@ internal readonly record struct ArticulationLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
                             // this script's staff middle line, up-positive (frame B).
-                            // The renderer/skyline reflect it to device via
-                            // StaffFrame.ToDevice against the staff middle they resolve.
+                            // The renderer/skyline reflect it to device (middle − Y-up)
+                            // against the staff middle they resolve.
     string Glyph,           // SMuFL glyph to render
     bool IsAbove,           // Whether placed above the note
     int SourcePosition,     // For click-to-source mapping
@@ -272,7 +272,7 @@ internal static class ArticulationEngraver
                     + BreathGap;
                 // Y-up: BreathStaffY is a device staff-top offset; reflect to Y-up
                 // about the staff middle. No staff offset — resolved at draw time.
-                double byUp = StaffFrame.ToUp(BreathStaffY, StaffMiddle);
+                double byUp = StaffMiddle - BreathStaffY;
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex,
                     articulation.ItemIndex,
@@ -432,7 +432,7 @@ internal static class ArticulationEngraver
                 // tabY is device with the staff offset baked in (topLine/bottomLine/
                 // geom all carry it); reflect to Y-up about that staff's middle so the
                 // stored value is offset-free (StaffMiddle + staffOffset as the mirror).
-                double tabYUp = StaffFrame.ToUp(tabY, StaffMiddle + staffOffset);
+                double tabYUp = (StaffMiddle + staffOffset) - tabY;
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabYUp,
                     tabGlyph, tabAbove, articulation.SourcePosition, 1.0,
@@ -567,11 +567,10 @@ internal static class ArticulationEngraver
                 measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx])
                 + EngravingDefaults.TabHeadCenterOffset;
             // Staff-local device (staff top = 0, Y down) → Y-up about the staff middle.
-            double yUp = StaffFrame.ToUp(
+            double yUp = StaffMiddle - (
                 above
                     ? -fretHalf - tabGap
-                    : (strings - 1) * space + fretHalf + tabGap,
-                StaffMiddle);
+                    : (strings - 1) * space + fretHalf + tabGap);
 
             result.Add(new ArticulationLayout(
                 art.MeasureIndex, art.ItemIndex, colX, yUp, string.Empty, above,
@@ -877,7 +876,7 @@ internal static class ArticulationEngraver
                 // line the slur/tuplet use. BeamLayout.OuterEdgeStaffSpaceAtX gives it in
                 // staff-space Y-up; convert to this engraver's staff-local device frame once.
                 double outerSs = beam.OuterEdgeStaffSpaceAtX(beam.MemberXPositions[i], member.MemberStemUp);
-                double tipY = StaffFrame.ToDevice(outerSs, StaffMiddle);
+                double tipY = StaffMiddle - outerSs;
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
@@ -969,7 +968,7 @@ internal static class ArticulationEngraver
         // DISTANCE computed by the device-based StemCalculator.
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
         double noteUp = anchorPosition * 0.5;
-        double noteY = StaffFrame.PositionToDevice(anchorPosition, StaffMiddle);
+        double noteY = StaffMiddle - anchorPosition / 2.0;
 
         // Use quantize-position for staccato, marcato, tenuto
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)

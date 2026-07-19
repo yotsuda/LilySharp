@@ -38,7 +38,7 @@ public readonly record struct TupletBracketLayout(
     double EndX,                // X position of bracket end
     double StartYUp,            // Y-up (frame B): staff-spaces ABOVE the system top at
                                 // the bracket start (supports slope). Reflected to device
-                                // via StaffFrame.ToDevice against the system top (sy + old-Y).
+                                // against the system top (sy + old-Y == sy − YUp).
     double EndYUp,              // Y-up at the bracket end (supports slope).
     string NumberText,          // Text to display (e.g., "3")
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
@@ -305,12 +305,10 @@ internal static class TupletBracketEngraver
                         double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
                         // OuterEdgeStaffSpaceAtX is Y-up staff-space from the middle
                         // line (frame B); reflect it to the bracket's device top frame
-                        // (middle = 2.0) through the single chokepoint. The renderer
-                        // adds its own -0.3/+0.8 text offset on top.
-                        startY = StaffFrame.ToDevice(
-                            beam.OuterEdgeStaffSpaceAtX(beam.LeftX, isStemUp), 2.0) + offset;
-                        endY = StaffFrame.ToDevice(
-                            beam.OuterEdgeStaffSpaceAtX(beam.RightX, isStemUp), 2.0) + offset;
+                        // (device = middle 2.0 − Y-up). The renderer adds its own
+                        // -0.3/+0.8 text offset on top.
+                        startY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.LeftX, isStemUp)) + offset;
+                        endY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.RightX, isStemUp)) + offset;
                     }
                 }
             }
@@ -329,8 +327,8 @@ internal static class TupletBracketEngraver
                 tuplet.MeasureIndex,
                 startX,
                 endX,
-                StaffFrame.ToUp(startY, 0.0),
-                StaffFrame.ToUp(endY, 0.0),
+                0.0 - startY,
+                0.0 - endY,
                 tuplet.DisplayText,
                 isStemUp,
                 showBracket,

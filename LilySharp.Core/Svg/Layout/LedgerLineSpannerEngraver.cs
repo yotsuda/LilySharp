@@ -177,7 +177,7 @@ internal static class LedgerLineSpannerEngraver
         // byte-invariant.)
         double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystem(system, staffIndex)
             + staffHeight / 2.0;
-        double y = StaffFrame.PositionToDevice(staffPos, staffMiddleOffset);
+        double y = staffMiddleOffset - staffPos / 2.0;
         builder.Add(new LedgerLineSpan(
             SystemIndex: sysIdx,
             StaffPosition: staffPos,

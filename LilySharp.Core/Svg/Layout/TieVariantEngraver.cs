@@ -164,7 +164,7 @@ internal static class TieVariantEngraver
         // internal arc geometry stays device-frame (intentional-device island 2).
         double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystem(system, staffIndex)
             + StaffHeight / 2.0;
-        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleOffset);
+        double noteY = staffMiddleOffset - note.StaffPosition / 2.0;
         double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;
 
         // Half-tie geometry: starts at the note edge, extends TieLength away.

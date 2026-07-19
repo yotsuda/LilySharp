@@ -220,8 +220,8 @@ internal static class LayoutUtilities
         => system.Y - StaffOffsetInSystem(system, staffIndex);
 
     /// <summary>
-    /// Absolute page-Y-up of a staff's middle line, the anchor that
-    /// <see cref="StaffFrame.PositionToDevice"/> measures staff positions from.
+    /// Absolute page-Y-up of a staff's middle line, the anchor that staff-position
+    /// reflections (device = middle − pos/2) measure staff positions from.
     /// Equivalent to <see cref="FindStaffYInSystem"/> LESS half the staff height
     /// (the middle sits half a staff below the top, so in the Y-up frame it
     /// subtracts). Engravers that route an element to its own staff (ties, slurs,

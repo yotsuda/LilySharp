@@ -858,14 +858,15 @@ internal sealed class LayoutEngine
         {
             if (MusicMarkItem.IsSpannerHandled(m.MarkType))
                 continue;
-            // YUp is Y-up; music marks are top-staff / system-relative device.
-            double mY = StaffFrame.ToDevice(m.YUp, 2.0);
+            // m.YUp is Y-up above the top-staff middle; system-relative device
+            // (down+ from the system top) is 2 − YUp (the middle sits at device 2).
+            double mY = 2.0 - m.YUp;
             Add(m.MeasureIndex, mY - 2.1, mY + 0.7);
         }
         foreach (var ct in ann.CustomTexts)
         {
-            // YUp is Y-up; this prelim extent pass is staff-local device (top staff).
-            double ctY = StaffFrame.ToDevice(ct.YUp, 2.0);
+            // ct.YUp is Y-up above the top-staff middle; system-relative device is 2 − YUp.
+            double ctY = 2.0 - ct.YUp;
             Add(ct.MeasureIndex, ctY - 1.8, ctY + 0.6);
         }
         // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
@@ -906,7 +907,7 @@ internal sealed class LayoutEngine
             double fbOff = measureToSystem.TryGetValue(fb.MeasureIndex, out int fbSys)
                 ? LayoutUtilities.StaffOffsetInSystem(systems[fbSys], fb.StaffIndex)
                 : 0;
-            double fbY = fbOff + StaffFrame.ToDevice(fb.YUp, 2.0);
+            double fbY = fbOff + (2.0 - fb.YUp);
             Add(fb.MeasureIndex,
                 fbY - FiguredBassEngraver.FigureTopExtent,
                 fbY + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
@@ -916,16 +917,14 @@ internal sealed class LayoutEngine
         // annotation; Ink is the glyph's real box about its anchor (Y-up).
         foreach (var a in ann.Articulations)
         {
-            // YUp is Y-up (above the staff middle); this prelim extent pass is
-            // staff-local device, so reflect against the staff middle (StaffMiddle=2).
-            double aY = StaffFrame.ToDevice(a.YUp, 2.0);
+            // a.YUp is Y-up above the staff middle; system-relative device is 2 − YUp.
+            double aY = 2.0 - a.YUp;
             Add(a.MeasureIndex, aY - a.Ink.Top, aY - a.Ink.Bottom);
         }
         foreach (var d in ann.Dynamics)
         {
-            // YUp is Y-up; this prelim extent pass is staff-local device, so reflect
-            // against the staff middle (StaffMiddle=2) before the ±ascent/descent box.
-            double dY = StaffFrame.ToDevice(d.YUp, 2.0);
+            // d.YUp is Y-up above the staff middle; system-relative device is 2 − YUp.
+            double dY = 2.0 - d.YUp;
             Add(d.MeasureIndex, dY - 1.2, dY + 0.3);
         }
         foreach (var h in ann.Hairpins)

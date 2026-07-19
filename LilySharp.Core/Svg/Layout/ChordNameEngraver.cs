@@ -30,8 +30,8 @@ public readonly record struct ChordNameLayout(
     double X,                // X position (staff spaces from page left)
     // Y-up (frame B): staff-spaces above the SYSTEM top, up-positive. (The symbol
     // sits above its staff / in its row band, both system-relative — NOT page-top;
-    // the renderer reflects it to device via StaffFrame.ToDevice against the
-    // measure's system top, sy + old-Y == ToDevice(YUp, sy).)
+    // the renderer reflects it to device against the measure's system top,
+    // sy + old-Y == sy − YUp.)
     double YUp,
     string ChordText,        // Display text (e.g., "Cm7", "B♭7", or "IIm7" in Roman mode)
     int SourcePosition,

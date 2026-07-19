@@ -34,8 +34,8 @@ public readonly record struct BarNumberLayout(
     // X coordinate of the text anchor.
     double X,
     // Y of the text baseline in the Y-up frame (frame B): staff-spaces ABOVE the
-    // system top, up-positive. The renderer reflects it to device via
-    // StaffFrame.ToDevice against the measure's system top.
+    // system top, up-positive. The renderer reflects it to device
+    // (system top − Y-up) against the measure's system top.
     double YUp,
     // When true the text right-aligns to X (TextAnchor.End).
     // Line-start and mid-line bar numbers LEFT-align (false) per BarNumber's

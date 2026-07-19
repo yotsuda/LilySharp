@@ -32,8 +32,8 @@ public readonly record struct VoltaBracketLayout(
     double StartX,              // X position of bracket start
     double EndX,                // X position of bracket end
     double YUp,                 // Y-up (frame B): staff-spaces ABOVE the system top,
-                                // up-positive. The renderer reflects it to device via
-                                // StaffFrame.ToDevice against the segment's system top.
+                                // up-positive. The renderer reflects it to device
+                                // against the segment's system top (sy − YUp).
     string VoltaText,           // Text to display (e.g., "1.")
     bool IsClosed,              // Has right hook
     int SourcePosition,         // For click-to-source mapping

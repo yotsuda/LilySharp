@@ -177,7 +177,7 @@ score main ""test"" {
         // Dynamics store Y-up now; reflect to device (single-staff → middle at 2.0)
         // to compare against the still-device TextSpanner Y. Y grows downward: an
         // above-staff spanner sits at a SMALLER Y than the below-staff dynamics.
-        var maxDynY = overlappingDynamics.Max(d => StaffFrame.ToDevice(d.YUp, 2.0));
+        var maxDynY = overlappingDynamics.Max(d => 2.0 - d.YUp);
         // The text spanner now stores Y-up from the system top; its device value is -YUp.
         double ritY = -ritSpanner.YUp;
         Assert.True(ritY < maxDynY,
