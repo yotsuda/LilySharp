@@ -101,15 +101,15 @@ internal static class OttavaBracketEngraver
     private const double StaffPadding = 2.0;
 
     /// <summary>
-    /// Y position above staff for 8va/15ma brackets.
+    /// Y-up (above the system top) for 8va/15ma brackets — the padding above the staff.
     /// </summary>
-    private const double AboveStaffY = -StaffPadding;
+    private const double AboveStaffYUp = StaffPadding;
 
     /// <summary>
-    /// Y position below staff for 8vb/15mb brackets.
-    /// StaffHeight (4) + padding.
+    /// Y-up (below the system top, so negative) for 8vb/15mb brackets:
+    /// StaffHeight (4) + padding below the staff.
     /// </summary>
-    private const double BelowStaffY = 4.0 + StaffPadding;
+    private const double BelowStaffYUp = -(4.0 + StaffPadding);
 
     /// <summary>
     /// Left shorten (extends bracket slightly left).
@@ -161,8 +161,9 @@ internal static class OttavaBracketEngraver
             // the lower staff sits above THAT staff, not the top one. Single-staff
             // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
             double staffOffset = staffYAt?.Invoke(bracket.StartMeasureIndex, bracket.StaffIndex) ?? 0;
-            // Y-up from the system top: the old device value negated.
-            double yUp = StaffFrame.ToUp((isAbove ? AboveStaffY : BelowStaffY) + staffOffset, 0.0);
+            // Y-up from the system top; staffOffset is a within-system downward offset,
+            // so it SUBTRACTS.
+            double yUp = (isAbove ? AboveStaffYUp : BelowStaffYUp) - staffOffset;
 
             string text = bracket.Type switch
             {

@@ -62,7 +62,7 @@ internal static class VoltaBracketEngraver
     // outside-staff-priority in LP (no single literal — see VoltaBracket grob
     // properties at scm/define-grobs.scm:4292-4317). LilySharp uses a fixed
     // hand-tuned offset above the staff that matches typical LP output.
-    private const double YOffset = -3.0;
+    private const double YOffsetYUp = 3.0; // Y-up: 3 above the system top
     
     // Padding from barline
     private const double StartPadding = 0.3;
@@ -116,10 +116,8 @@ internal static class VoltaBracketEngraver
                     segment.EndMeasureIndex,
                     segStartMeasure.X + StartPadding,
                     segEndMeasure.X + segEndMeasure.Width - EndPadding,
-                    // Y-up from the system top: YOffset is a device offset BELOW the
-                    // system top (negative = above it), so the Y-up value is its
-                    // negation. The renderer resolves the segment's system top.
-                    StaffFrame.ToUp(YOffset, 0.0),
+                    // Y-up from the system top (the renderer resolves the segment's system top).
+                    YOffsetYUp,
                     segText,
                     segClosed,
                     bracket.SourcePosition,

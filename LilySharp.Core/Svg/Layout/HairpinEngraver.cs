@@ -96,7 +96,7 @@ internal static class HairpinEngraver
     /// lifts it clear of that staff's own dynamics. Not a single named LP constant.
     /// LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner (staff-padding . 0.2).
     /// </summary>
-    private const double BaseY = 5.2;
+    private const double BaseYUp = -5.2; // Y-up: 5.2 below the system top
 
     /// <summary>
     /// Height fraction for the broken end of a continued hairpin (right edge at line break).
@@ -155,9 +155,9 @@ internal static class HairpinEngraver
             // staff 1. Staff 0 (or a single staff) has offset 0 -> unchanged. The
             // per-staff stacker then keeps it clear of that staff's dynamics only.
             double staffOffset = staffYAt?.Invoke(hairpin.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
-            // Y-up from the system top: the old device centre (BaseY + staffOffset,
-            // below the system top) negated.
-            double hairpinYUp = StaffFrame.ToUp(BaseY + staffOffset, 0.0);
+            // Y-up from the system top; staffOffset is a within-system downward offset,
+            // so it SUBTRACTS.
+            double hairpinYUp = BaseYUp - staffOffset;
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
             // reattached to the system edges.

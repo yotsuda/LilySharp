@@ -54,8 +54,9 @@ internal static class CustomTextEngraver
     // LILYPOND-REF: define-grobs.scm:3925 padding = 0.5
     private const double Padding = 0.5;
 
-    // Y offset below staff for custom text
-    private const double BelowStaffOffset = 5.5;
+    // Below-staff custom-text baseline, Y-up from the staff middle: 5.5 below the
+    // staff top is 3.5 below the middle (the staff top sits 2 above the middle).
+    private const double BelowStaffBaselineYUp = 2.0 - 5.5;
 
     /// <summary>
     /// Calculates layout for all custom text items in a score.
@@ -82,11 +83,10 @@ internal static class CustomTextEngraver
             // LILYPOND-REF: text-interface.cc:75-80 self-alignment-X
             double x = measureLayout.X + measureLayout.Width - 1.0;
 
-            // Calculate Y position (below staff), stored in the Y-up frame: the
-            // device baseline (StaffMiddle=2 from the staff top) reflects to
-            // staff-spaces above the middle. No staff offset — the draw resolves
-            // the (top) staff middle.
-            double yUp = StaffFrame.ToUp(BelowStaffOffset + Padding, 2.0);
+            // Y position below the staff, in the Y-up frame (staff-spaces above the
+            // top-staff middle). No staff offset — the draw resolves the (top) staff
+            // middle.
+            double yUp = BelowStaffBaselineYUp - Padding;
 
             layouts.Add(new CustomTextLayout(
                 customText.MeasureIndex,

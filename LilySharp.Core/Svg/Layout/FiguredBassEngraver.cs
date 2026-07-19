@@ -107,10 +107,10 @@ internal static class FiguredBassEngraver
 
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
-            // Y-up (frame B): the topmost figure sits below the staff (device
-            // BelowStaffY+StaffPadding from the staff top, middle = 2) reflected to
-            // staff-spaces above the middle.
-            double yUp = StaffFrame.ToUp(BelowStaffY + StaffPadding, 2.0);
+            // Y-up (frame B): the topmost figure sits below the staff, in staff-spaces
+            // above the staff middle (BelowStaffY+StaffPadding below the staff top,
+            // reflected through the middle at 2).
+            double yUp = 2.0 - (BelowStaffY + StaffPadding);
 
             var figureTexts = fb.Figures
                 .Select(f => f.DisplayText)
