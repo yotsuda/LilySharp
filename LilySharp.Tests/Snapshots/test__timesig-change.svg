@@ -56,10 +56,10 @@
   <line x1="35.54" y1="14.76" x2="35.54" y2="17.80" stroke="#000000" stroke-width="0.130"/>
   <line x1="37.83" y1="15.26" x2="37.83" y2="18.13" stroke="#000000" stroke-width="0.130"/>
   <line x1="39.93" y1="15.76" x2="39.93" y2="18.42" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="41.97,19.18 46.31,19.57 46.31,20.05 41.97,19.66"/>
-  <line x1="42.04" y1="16.26" x2="42.04" y2="19.42" stroke="#000000" stroke-width="0.130"/>
-  <line x1="44.14" y1="16.76" x2="44.14" y2="19.61" stroke="#000000" stroke-width="0.130"/>
-  <line x1="46.24" y1="17.26" x2="46.24" y2="19.80" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="41.97,19.55 46.31,20.19 46.31,20.67 41.97,20.03"/>
+  <line x1="42.04" y1="16.26" x2="42.04" y2="19.80" stroke="#000000" stroke-width="0.130"/>
+  <line x1="44.14" y1="16.76" x2="44.14" y2="20.11" stroke="#000000" stroke-width="0.130"/>
+  <line x1="46.24" y1="17.26" x2="46.24" y2="20.42" stroke="#000000" stroke-width="0.130"/>
   <rect x="0.30" y="10.77" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="613"/>
   <text x="3.01" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="613">Main</text>
   <text class="music" x="6.51" y="12.97" font-size="1.60" data-pos="0"></text>

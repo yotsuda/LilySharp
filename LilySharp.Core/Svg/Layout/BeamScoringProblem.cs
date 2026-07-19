@@ -94,8 +94,9 @@ internal sealed class BeamScoringProblem
     private double _musicalDy;
 
     // Unquanted Y positions (modified by damping and shift). Staff-spaces —
-    // matching LilyPond's beam-quanting.cc frame. Boundary code (Solve return,
-    // scorers' half-space demerit tuning) converts explicitly.
+    // matching LilyPond's beam-quanting.cc frame. The Solve() return converts to
+    // staff positions for the caller; the collision scorer (a half-space island)
+    // converts locally. Everything else stays in staff-spaces.
     private double _unquantedLeftY;
     private double _unquantedRightY;
 
@@ -398,25 +399,22 @@ internal sealed class BeamScoringProblem
 
         if (damping > 0 && (damping + concaveness) > 0)
         {
-            double dy = _unquantedRightY - _unquantedLeftY; // staff-spaces
+            // LILYPOND-REF: lily/beam-quanting.cc:762-773 — all staff-spaces.
+            double dy = _unquantedRightY - _unquantedLeftY;
 
-            // STEP-1 unit marker: the true geometric slope is dy/_xSpan (ss/ss).
-            // The ×2 reproduces the pre-unification behaviour, where dy was stored
-            // in half-spaces against an ss _xSpan, so tanh saw twice the real
-            // slope. This ×2 is the unit bug — kept explicit; STEP-2 removes it.
-            double slope = (_xSpan > 0.001) ? dy * 2.0 / _xSpan : 0;
+            // The geometric beam slope (ss/ss). Feeding tanh the true slope is
+            // the whole point of the unit unification: pre-unification this saw
+            // twice the slope (half-space dy over ss x_span) and over-damped.
+            double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
 
             // LILYPOND-REF: lily/beam-quanting.cc:766
             slope = BeamSlopeDampingFactor * Math.Tanh(slope) / (damping + concaveness);
 
-            // slope is a (half-space Y)/(ss X) quantity here; ×_xSpan → half-space
-            // dy, ×0.5 → staff-spaces. STEP-2 collapses this to slope * _xSpan.
-            double dampedDy = slope * _xSpan * 0.5;
+            double dampedDy = slope * _xSpan;
 
             // Don't let damping flatten the beam below the smallest quant step.
             // LILYPOND-REF: lily/beam-quanting.cc:770 (set_minimum_dy).
-            // Guard compares in the old half-space frame (×2) to stay byte-exact.
-            if (Math.Abs(dampedDy * 2.0) > 0.001)
+            if (Math.Abs(dampedDy) > 0.001)
                 dampedDy = MinimumDy(dampedDy);
 
             // LILYPOND-REF: lily/beam-quanting.cc:772-773
@@ -771,11 +769,9 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ScoreSlopeIdeal(BeamConfiguration config)
     {
-        // STEP-1 unit marker: IdealSlopeFactor was calibrated against half-space
-        // Y, so reconstruct it here (×2). STEP-2 drops the ×2 and applies the
-        // factor to the ss frame like LilyPond.
-        double dy = (config.RightY - config.LeftY) * 2.0;
-        double dampedDy = (_unquantedRightY - _unquantedLeftY) * 2.0;
+        // LILYPOND-REF: lily/beam-quanting.cc:1216-1229 — staff-spaces.
+        double dy = config.RightY - config.LeftY;
+        double dampedDy = _unquantedRightY - _unquantedLeftY;
 
         double slopePenalty = _parameters.IdealSlopeFactor;
 
@@ -799,11 +795,11 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ScoreSlopeDirection(BeamConfiguration config)
     {
-        // STEP-1 unit marker: RoundToZeroSlope threshold below compares a
-        // half-space slope, so reconstruct dy/dampedDy in half-spaces (×2).
-        // STEP-2 drops the ×2 (the sign-only tests are unaffected either way).
-        double dy = (config.RightY - config.LeftY) * 2.0;
-        double dampedDy = (_unquantedRightY - _unquantedLeftY) * 2.0;
+        // LILYPOND-REF: lily/beam-quanting.cc:1176-1197 — staff-spaces. The
+        // damped_dy/x_span slope below is now the true (ss/ss) slope compared
+        // against ROUND_TO_ZERO_SLOPE; the sign tests are frame-invariant.
+        double dy = config.RightY - config.LeftY;
+        double dampedDy = _unquantedRightY - _unquantedLeftY;
         double dem = 0.0;
 
         // LILYPOND-REF: lily/beam-quanting.cc:1189-1200
@@ -833,15 +829,11 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ScoreSlopeMusical(BeamConfiguration config)
     {
-        // STEP-1 unit marker: MusicalDirectionFactor was calibrated against
-        // half-space Y, so reconstruct dy and _musicalDy in half-spaces (×2).
-        // STEP-2 drops the ×2 and applies the factor to the ss frame.
-        double dy = (config.RightY - config.LeftY) * 2.0;
-        double musicalDy = _musicalDy * 2.0;
+        // LILYPOND-REF: lily/beam-quanting.cc:1206-1209 — staff-spaces.
+        double dy = config.RightY - config.LeftY;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1207-1208
         double dem = _parameters.MusicalDirectionFactor
-                     * Math.Max(0.0, Math.Abs(dy) - Math.Abs(musicalDy));
+                     * Math.Max(0.0, Math.Abs(dy) - Math.Abs(_musicalDy));
 
         config.AddDemerit(dem, "Sm");
     }
@@ -857,20 +849,15 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ScoreHorizontalInter(BeamConfiguration config)
     {
-        // STEP-1 unit marker: reconstruct the half-space Y this scorer was
-        // written against (leftYHalf). The staff-radius test and the between-
-        // lines test are identical in either frame; STEP-2 rewrites in ss.
-        double leftYHalf = config.LeftY * 2.0;
-        double dy = (config.RightY - config.LeftY) * 2.0;
+        // LILYPOND-REF: lily/beam-quanting.cc:1247-1252 — staff-spaces
+        // (staff_space_ = 1). Only penalize horizontal beams within the staff.
+        double dy = config.RightY - config.LeftY;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1250-1251
-        // Only penalize horizontal beams within staff
-        if (Math.Abs(dy) < 0.001 && Math.Abs(leftYHalf) < StaffRadius * 2)
+        if (Math.Abs(dy) < 0.001 && Math.Abs(config.LeftY) < StaffRadius)
         {
-            // leftYHalf is in staff positions. Staff lines at even positions.
-            // Check if beam is at half-integer position (between lines) = 0.5 staff spaces
-            double yInStaffSpaces = leftYHalf / 2.0;
-            double yShifted = yInStaffSpaces - 0.5;
+            // config.LeftY is in staff-spaces; staff lines at integer positions.
+            // Penalize a beam sitting exactly between two lines (half-integer).
+            double yShifted = config.LeftY - 0.5;
             double rounded = Math.Round(yShifted);
             if (Math.Abs(rounded - yShifted) < 0.01)
             {
@@ -943,9 +930,9 @@ internal sealed class BeamScoringProblem
             double straddle = QuantStraddle;
             double sit = QuantSit;
             double hang = QuantHang;
-            // STEP-1 unit marker: dy is only sign/eps-tested against slope; keep
-            // the old half-space value (×2) so the eps boundary is unchanged.
-            double dy = (config.RightY - config.LeftY) * 2.0;
+            // Staff-spaces; only sign/eps-tested against slope. LILYPOND-REF:
+            // lily/beam-quanting.cc:1327-1366.
+            double dy = config.RightY - config.LeftY;
 
             for (int e = 0; e < 2; e++)
             {
@@ -996,20 +983,13 @@ internal sealed class BeamScoringProblem
         double[] score = { 0, 0 }; // [DOWN=0, UP=1]
         int[] count = { 0, 0 };
 
-        // STEP-1 unit marker: the stem-length demerits (limit/length penalties)
-        // were calibrated against half-space Y — and the knee Pow(x,1.1) below is
-        // non-linear, so the half-space frame must be reconstructed exactly (×2),
-        // not factored out. STEP-2 rewrites the whole scorer in the ss frame.
-        double leftYHalf = config.LeftY * 2.0;
-        double rightYHalf = config.RightY * 2.0;
-
         for (int i = 0; i < _stemXPositions.Length; i++)
         {
             double x = _stemXPositions[i];
-            // LILYPOND-REF: lily/beam-quanting.cc:1130-1133
+            // LILYPOND-REF: lily/beam-quanting.cc:1127-1129 — all staff-spaces.
             double beamY = _xSpan > 0.001
-                ? rightYHalf * x / _xSpan + leftYHalf * (_xSpan - x) / _xSpan
-                : (rightYHalf + leftYHalf) / 2;
+                ? config.RightY * x / _xSpan + config.LeftY * (_xSpan - x) / _xSpan
+                : (config.RightY + config.LeftY) / 2;
 
             double currentY = beamY;  // beam Y at this stem
 
@@ -1019,15 +999,15 @@ internal sealed class BeamScoringProblem
 
             // Per-stem ideal/shortest beam Y, varying with beam count (16th/32nd
             // stems are longer) — LilyPond's Stem_info, not a flat constant.
-            // CalculateBeamedStemInfo returns staff-SPACE Y; ×2 converts to the
-            // staff-position (half-space) frame the quanter uses.
+            // CalculateBeamedStemInfo returns staff-space Y, matching the ss
+            // config frame directly (no conversion).
             // LILYPOND-REF: lily/stem.cc:1137 calc_stem_info;
-            //               lily/beam-quanting.cc score_stem_lengths.
+            //               lily/beam-quanting.cc:1133-1137 score_stem_lengths.
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], memberDir > 0, _memberBeamCounts[i],
                 _beamThickness, _beamTranslation, isKnee: _isKnee);
-            double idealY = info.IdealY * 2.0;
-            double shortestY = info.ShortestY * 2.0;
+            double idealY = info.IdealY;
+            double shortestY = info.ShortestY;
 
             // LILYPOND-REF: lily/beam-quanting.cc:1139-1140
             // Penalty for stems shorter than minimum
@@ -1093,10 +1073,13 @@ internal sealed class BeamScoringProblem
                 continue;
 
             // LILYPOND-REF: lily/beam-quanting.cc:1378-1380
-            // STEP-1 unit marker: collision.MinY/MaxY and the stackInner/padding
-            // terms below are still in the half-space frame, so reconstruct the
-            // beam centre in half-spaces (×2). STEP-2 moves the whole collision
-            // path (and its inputs in ElementCoordinator) to the ss frame.
+            // HALF-SPACE ISLAND: this collision scorer is a coarse approximation
+            // of LilyPond's segment-based add_collision (beam_y_ from beam
+            // segments). Its inputs (collision.MinY/MaxY from ElementCoordinator)
+            // and the stackInner/padding terms below are still half-space, so the
+            // ss config centre is converted back (×2) to keep the frame internally
+            // consistent. A faithful ss rewrite driven by BeamSubdivision segments
+            // is deferred; until then this island is unchanged (no regression).
             double centerBeamY = config.GetYAt(collision.X + _leftX, _leftX, _xSpan) * 2.0;
 
             // Beam stack extent at this X: inner beams extend from the quanted
