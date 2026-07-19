@@ -341,17 +341,17 @@ internal static class OutsideStaffStacker
         ImmutableArray<TupletBracketLayout> tupletBrackets,
         Dictionary<int, int> measureToSystem)
     {
-        // UP trackers: smaller page Y = further above the staff. Occupancy
+        // UP trackers: larger Y-up = further above the staff. Occupancy
         // records the TOP edge of everything placed so far.
-        // FRAME: system-relative device (down-positive, the SYSTEM TOP = 0), NOT
-        // absolute page device. Every seed/region/grob Y below is measured from the
-        // system top, and every grob writes back its unchanged system-relative YUp,
-        // so the stacker reads no absolute SystemLayout.Y — decoupled for the
-        // Stage-4 W2 stacking-origin flip (step 2e).
+        // FRAME: system-relative Y-up (up-positive, the SYSTEM TOP = 0), the native
+        // LP frame the grobs store — above the staff is positive Y-up. Every
+        // seed/region/grob Y below is measured from the system top, and every grob
+        // writes back its unchanged system-relative YUp, so the stacker reads no
+        // absolute SystemLayout.Y — decoupled for the Stage-4 W2 stacking-origin flip.
         var trackers = new DirectionalOccupancy[systems.Length];
         for (int i = 0; i < systems.Length; i++)
         {
-            trackers[i] = new DirectionalOccupancy(0.0, dir: -1);
+            trackers[i] = new DirectionalOccupancy(0.0, dir: +1);
             // Seed with the system's up-skyline (staff content protrusions).
             // VerticalSkyline.Height converts the internal sky-relative value
             // to real Y-up coordinates (positive = above the staff top); raw
@@ -370,7 +370,7 @@ internal static class OutsideStaffStacker
                         continue;
                     double protrusion = Math.Max(0, h);
                     if (protrusion > 0)
-                        trackers[i].AddRegion(b.Start, b.End, -protrusion);
+                        trackers[i].AddRegion(b.Start, b.End, protrusion);
                 }
             }
 
@@ -401,7 +401,7 @@ internal static class OutsideStaffStacker
                     double clefX = systems[i].Indent + 0.3;
                     trackers[i].AddRegion(
                         clefX + clefBox.Left, clefX + clefBox.Right,
-                        firstStaff.Y - clefProtrusion);
+                        clefProtrusion - firstStaff.Y);
                 }
             }
         }
@@ -418,11 +418,11 @@ internal static class OutsideStaffStacker
             {
                 if (!a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
-                // YUp is Y-up (above the staff middle); reflect to system-relative
-                // device against this staff's WITHIN-SYSTEM middle (staff.Y + H/2).
-                double relY = (LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], a.StaffIndex) + 2.0) - a.YUp;
-                double inkTop = relY - a.Ink.Top;     // BBox Top is up-positive
-                if (inkTop >= 0)
+                // a.YUp is Y-up above the staff middle; reflect to system-relative
+                // Y-up against this staff's WITHIN-SYSTEM middle (staff.Y + H/2).
+                double relY = a.YUp - (LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], a.StaffIndex) + 2.0);
+                double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
+                if (inkTop <= 0)
                     continue; // entirely inside the staff — the up-skyline covers it
                 trackers[sysIdx].AddRegion(a.X + a.Ink.Left, a.X + a.Ink.Right, inkTop);
             }
@@ -440,8 +440,8 @@ internal static class OutsideStaffStacker
                 // Bracket line + the centered number's upper half
                 // (number font = 0.6 x 4sp, cap height ~0.71em). tb.*YUp is Y-up from
                 // the system top; the highest (most-above) endpoint is the max YUp,
-                // whose system-relative device value is -that max.
-                double top = -Math.Max(tb.StartYUp, tb.EndYUp) - CapHeightEm * 2.4 / 2 - 0.1;
+                // and the top of the number's ink sits above it.
+                double top = Math.Max(tb.StartYUp, tb.EndYUp) + CapHeightEm * 2.4 / 2 + 0.1;
                 trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
             }
         }
@@ -467,16 +467,16 @@ internal static class OutsideStaffStacker
                 continue;
             if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
                 continue;
-            // System-relative device: t.YUp is Y-up from the system top, so its
-            // device value below the top is just -YUp; the placed anchor reflects back.
+            // System-relative Y-up: t.YUp is Y-up from the system top, entering the
+            // tracker directly; the placed anchor writes back unchanged.
             // anchor = "tr" glyph baseline; ink extent from the font bbox
             // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
             double newRel = Place(trackers[sysIdx],
                 t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
-                -t.YUp,
-                topOffset: -GlyphMetrics.OrnTrillGlyph.Top,
+                t.YUp,
+                topOffset: GlyphMetrics.OrnTrillGlyph.Top,
                 bottomOffset: 0.25);
-            b[i] = t with { YUp = -newRel };
+            b[i] = t with { YUp = newRel };
         }
         return b.ToImmutable();
     }
@@ -499,11 +499,11 @@ internal static class OutsideStaffStacker
             double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
             double x0 = bn.RightAligned ? bn.X - width : bn.X;
             double x1 = bn.RightAligned ? bn.X : bn.X + width;
-            // System-relative device: bn.YUp is Y-up from the system top, device = -YUp.
+            // System-relative Y-up: bn.YUp is Y-up from the system top, entering directly.
             double newRel = Place(trackers[sysIdx], x0, x1,
-                -bn.YUp,
-                topOffset: -CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
-            b[i] = bn with { YUp = -newRel };
+                bn.YUp,
+                topOffset: CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
+            b[i] = bn with { YUp = newRel };
         }
         return b.ToImmutable();
     }
@@ -525,14 +525,14 @@ internal static class OutsideStaffStacker
             var dyn = b[i];
             if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                 continue;
-            // Stack in system-relative device: reflect dyn.YUp against its WITHIN-SYSTEM
-            // staff middle (staff.Y + H/2), place, then reflect back to Y-up.
+            // Stack in system-relative Y-up: dyn.YUp relative to this staff's WITHIN-
+            // SYSTEM middle (staff.Y + H/2) is dyn.YUp - mid; place, then shift back.
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], dyn.StaffIndex) + 2.0;
             double newRel = Place(trackers[sysIdx],
                 dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                mid - dyn.YUp,
-                topOffset: -DynamicTextAscent, bottomOffset: 0.0);
-            b[i] = dyn with { YUp = mid - newRel };
+                dyn.YUp - mid,
+                topOffset: DynamicTextAscent, bottomOffset: 0.0);
+            b[i] = dyn with { YUp = mid + newRel };
         }
         return b.ToImmutable();
     }
@@ -553,11 +553,11 @@ internal static class OutsideStaffStacker
             var ts = b[i];
             if (ts.StaffIndex != 0) continue; // top staff only, like trills
             if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
-            // System-relative device: ts.YUp is Y-up from the system top, device = -YUp.
+            // System-relative Y-up: ts.YUp is Y-up from the system top, entering directly.
             double newRel = Place(trackers[sysIdx], ts.StartX, ts.EndX,
-                -ts.YUp,
-                topOffset: -TextSpannerAscent, bottomOffset: TextSpannerDescent);
-            b[i] = ts with { YUp = -newRel };
+                ts.YUp,
+                topOffset: TextSpannerAscent, bottomOffset: TextSpannerDescent);
+            b[i] = ts with { YUp = newRel };
         }
         return b.ToImmutable();
     }
@@ -581,14 +581,14 @@ internal static class OutsideStaffStacker
             // treatment as lower-staff trills above.
             if (o.StaffIndex != 0)
                 continue;
-            // System-relative device: o.YUp is Y-up from the system top, device = -YUp.
+            // System-relative Y-up: o.YUp is Y-up from the system top, entering directly.
             // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
             // ~0.75em ascent; the end hook drops EdgeHeight below.
             double newRel = Place(trackers[sysIdx], o.StartX, o.EndX,
-                -o.YUp,
-                topOffset: -TextAscentEm * (0.45 * 4.0),
+                o.YUp,
+                topOffset: TextAscentEm * (0.45 * 4.0),
                 bottomOffset: Math.Max(0.1, o.EdgeHeight));
-            b[i] = o with { YUp = -newRel };
+            b[i] = o with { YUp = newRel };
         }
         return b.ToImmutable();
     }
@@ -611,13 +611,13 @@ internal static class OutsideStaffStacker
             // and ~0.25em descent around the baseline anchor.
             const double ctFs = 0.6 * 4.0;
             double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
-            // Stack in system-relative device: reflect ct.YUp against its WITHIN-SYSTEM
-            // staff middle (staff.Y + H/2), place, then reflect back to Y-up.
+            // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
+            // SYSTEM middle (staff.Y + H/2) is ct.YUp - mid; place, then shift back.
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], ct.StaffIndex) + 2.0;
             double newRel = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                mid - ct.YUp,
-                topOffset: -TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
-            b[i] = ct with { YUp = mid - newRel };
+                ct.YUp - mid,
+                topOffset: TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
+            b[i] = ct with { YUp = mid + newRel };
         }
         return b.ToImmutable();
     }
@@ -653,25 +653,25 @@ internal static class OutsideStaffStacker
         {
             int sysIdx = sysGroup.Key;
 
-            // One required anchor for the whole spanner: the highest
-            // (smallest device Y) the occupancy demands across all of the
-            // system's brackets. Frame = system-relative device (system top = 0).
-            double anchor = double.MaxValue;
+            // One required anchor for the whole spanner: the highest (largest Y-up)
+            // the occupancy demands across all of the system's brackets.
+            // Frame = system-relative Y-up (system top = 0).
+            double anchor = double.MinValue;
             foreach (int i in sysGroup)
             {
                 var v = b[i];
                 double required = trackers[sysIdx].Frontier(v.StartX, v.EndX)
-                    - OutsideStaffPadding - VoltaBottom(v);
-                // v.YUp is Y-up from the system top; its system-relative device is -YUp.
-                anchor = Math.Min(anchor, Math.Min(-v.YUp, required));
+                    + OutsideStaffPadding + VoltaBottom(v);
+                // v.YUp is Y-up from the system top — the tracker frame — so it enters directly.
+                anchor = Math.Max(anchor, Math.Max(v.YUp, required));
             }
 
             foreach (int i in sysGroup)
             {
                 var v = b[i];
-                // Write back the placed anchor as Y-up from the system top (= -anchor).
-                b[i] = v with { YUp = 0.0 - anchor };
-                trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
+                // Write back the placed anchor as Y-up from the system top.
+                b[i] = v with { YUp = anchor };
+                trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor + 0.1);
             }
         }
         return b.ToImmutable();
@@ -694,16 +694,17 @@ internal static class OutsideStaffStacker
             // drawn by DrawMusicMarks — registering them would reserve
             // PHANTOM space and push real marks above thin air. Marks
             // placed below the staff don't belong to the above pass.
-            // m.YUp is Y-up; a mark below the staff top (staff-local device Y > 0) is
-            // not part of this above pass. The stacker frame is system-relative device,
-            // so reflect against the WITHIN-SYSTEM staff middle (staff.Y + H/2).
+            // m.YUp is Y-up; a mark below the staff-top line (m.YUp < 2.0, the top line
+            // sits 2 above the middle) is not part of this above pass. The stacker frame
+            // is system-relative Y-up, so shift against the WITHIN-SYSTEM staff middle
+            // (staff.Y + H/2).
             double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], m.StaffIndex) + 2.0;
-            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || 2.0 - m.YUp > 0)
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
                 continue;
             var (x0, x1, top, bottom) = MusicMarkExtents(m);
             double newRel = Place(trackers[sysIdx], m.X + x0, m.X + x1,
-                mid - m.YUp, topOffset: top, bottomOffset: bottom);
-            b[i] = m with { YUp = mid - newRel };
+                m.YUp - mid, topOffset: top, bottomOffset: bottom);
+            b[i] = m with { YUp = mid + newRel };
         }
         return b.ToImmutable();
     }
@@ -729,7 +730,7 @@ internal static class OutsideStaffStacker
                 ? GlyphMetrics.MarkSegno
                 : GlyphMetrics.MarkCoda;
             double h = Math.Max(-box.Left, box.Right);
-            return (-h, h, -box.Top, -box.Bottom);
+            return (-h, h, box.Top, -box.Bottom);
         }
 
         switch (m.MarkType)
@@ -744,7 +745,7 @@ internal static class OutsideStaffStacker
                 const double pad = 0.2;
                 double halfW = (SerifTextMetrics.MeasureBold(m.Text, fs) + 2 * pad) / 2;
                 double halfH = (fs + 2 * pad) / 2;
-                return (-halfW, halfW, -halfH, halfH);
+                return (-halfW, halfW, halfH, halfH);
             }
             case MusicMarkType.Tempo:
             {
@@ -756,7 +757,7 @@ internal static class OutsideStaffStacker
                     // width clears the line-start clef and reproduces every
                     // existing snapshot, so it is kept as-is.
                     double halfW = (1.1 + textW) / 2 + 0.6;
-                    return (-halfW, halfW, -1.5, 0.5);
+                    return (-halfW, halfW, 1.5, 0.5);
                 }
                 // Swing: the feel-equation ("♫ = ♩. ♪" under a triplet 3) is drawn
                 // to the RIGHT of "= NNN", so the real ink reaches far past the
@@ -768,29 +769,31 @@ internal static class OutsideStaffStacker
                 if (m.TempoText != null)
                     sw += SerifTextMetrics.MeasureBold(m.TempoText, 2.2) + 1.5;
                 sw += 5.0;
-                return (-0.2, sw, -2.0, 0.5);
+                return (-0.2, sw, 2.0, 0.5);
             }
             default:
             {
                 // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
                 double fs = fontSize * 0.7;
                 double halfW = SerifTextMetrics.MeasureBold(m.Text, fs) / 2;
-                return (-halfW, halfW, -TextAscentEm * fs, TextDescentEm * fs);
+                return (-halfW, halfW, TextAscentEm * fs, TextDescentEm * fs);
             }
         }
     }
 
     /// <summary>
-    /// Places one element: its BOTTOM edge must clear the current occupancy
-    /// top by outside-staff-padding; the element only ever moves AWAY from
-    /// the staff. Registers the element's extent and returns the new anchor.
+    /// Places one element: its edge nearest the staff must clear the current
+    /// occupancy frontier by outside-staff-padding; the element only ever moves
+    /// AWAY from the staff (larger Y-up above). <paramref name="topOffset"/> is the
+    /// ascent above the anchor, <paramref name="bottomOffset"/> the descent below.
+    /// Registers the element's extent and returns the new anchor.
     /// </summary>
     private static double Place(DirectionalOccupancy tracker, double x0, double x1,
         double anchorY, double topOffset, double bottomOffset)
     {
         double occupiedTop = tracker.Frontier(x0, x1);
-        double required = occupiedTop - OutsideStaffPadding - bottomOffset;
-        double newAnchor = Math.Min(anchorY, required);
+        double required = occupiedTop + OutsideStaffPadding + bottomOffset;
+        double newAnchor = Math.Max(anchorY, required);
         tracker.AddRegion(x0, x1, newAnchor + topOffset);
         return newAnchor;
     }
@@ -804,10 +807,10 @@ internal static class OutsideStaffStacker
     /// side-positioned against ONE accumulated skyline, parameterized by the
     /// stacking direction, rather than two hand-mirrored implementations.
     ///
-    /// Coordinates here are device Y (Y-down). <c>_dir</c> = +1
-    /// stacks DOWN (below the staff: the frontier is the largest device Y, the
-    /// edge furthest below); <c>_dir</c> = -1 stacks UP (above the
-    /// staff: the frontier is the smallest device Y, the edge furthest above).
+    /// Coordinates here are system-relative Y-up (up-positive, the system top as
+    /// origin). <c>_dir</c> = +1 stacks UP (above the staff: the frontier is the
+    /// largest Y-up, the edge furthest above); <c>_dir</c> = -1 stacks DOWN (below
+    /// the staff: the frontier is the smallest Y-up, the edge furthest below).
     /// <see cref="Frontier"/> returns the staff edge when no region overlaps.
     /// </remarks>
     private sealed class DirectionalOccupancy
@@ -823,8 +826,8 @@ internal static class OutsideStaffStacker
         }
 
         /// <summary>
-        /// Returns the occupied frontier device-Y in the stacking direction
-        /// over the given X range (max for down, min for up), or the staff
+        /// Returns the occupied frontier Y-up in the stacking direction
+        /// over the given X range (max for up, min for down), or the staff
         /// edge if no region overlaps.
         /// </summary>
         public double Frontier(double startX, double endX)
