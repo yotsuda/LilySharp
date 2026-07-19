@@ -212,43 +212,36 @@ internal static class DynamicEngraver
     }
 
     /// <summary>
-    /// Baseline Y (staff spaces from staff top, positive = down) the dynamic at a
-    /// given note column occupies, BEFORE same-column stacking. Exposed so the
-    /// inter-staff skyline can widen the gap by the dynamic's downward reach
-    /// (otherwise a low lower-voice's dynamic overlaps the staff below).
+    /// Baseline Y in the native Y-up frame (staff-spaces above the staff middle,
+    /// up-positive; a below-staff dynamic is negative) the dynamic at a given note
+    /// column occupies, BEFORE same-column stacking. Exposed so the inter-staff
+    /// skyline can widen the gap by the dynamic's downward reach (otherwise a low
+    /// lower-voice's dynamic overlaps the staff below).
     /// </summary>
     internal static double ColumnBaselineY(
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         double baseYUp = -StaffMiddle - StaffPadding - Padding - TextAscent;
-        double up = vs.IsEmpty
+        return vs.IsEmpty
             ? baseYUp
             : CalculateYPositionAcrossVoices(vs, measureIndex, itemIndex, baseYUp);
-        // Boundary shim: SkylineBuilder still consumes this in the device (staff-top,
-        // +down) frame, so reflect the native Y-up result back. Folds to a direct
-        // return once SkylineBuilder is moved to native Y-up.
-        return StaffMiddle - up;
     }
 
     /// <summary>
     /// ABOVE-staff mirror of <see cref="ColumnBaselineY"/>: the baseline Y a forced-above
-    /// dynamic occupies (negative = above the staff top), BEFORE same-column stacking.
-    /// Exposed so the inter-staff skyline widens the gap to the staff ABOVE by the
-    /// dynamic's upward reach.
+    /// dynamic occupies in the native Y-up frame (positive, above the staff middle),
+    /// BEFORE same-column stacking. Exposed so the inter-staff skyline widens the gap
+    /// to the staff ABOVE by the dynamic's upward reach.
     /// </summary>
     internal static double ColumnAboveBaselineY(
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         double aboveBaseYUp = StaffMiddle + StaffPadding + Padding + TextDescent;
-        double up = vs.IsEmpty
+        return vs.IsEmpty
             ? aboveBaseYUp
             : CalculateYPositionAboveVoices(vs, measureIndex, itemIndex, aboveBaseYUp);
-        // Boundary shim: SkylineBuilder still consumes this in the device (staff-top,
-        // +down) frame, so reflect the native Y-up result back. Folds to a direct
-        // return once SkylineBuilder is moved to native Y-up.
-        return StaffMiddle - up;
     }
 
     /// <summary>Upward ink reach of a dynamic above its baseline (text ascends up).</summary>

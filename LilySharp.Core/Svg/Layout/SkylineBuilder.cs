@@ -306,7 +306,6 @@ internal sealed class SkylineBuilder
 
         var voices = staff.Voices;
         var primaryMeasures = staff.PrimaryVoice.Measures;
-        double staffTopDevice = staffMiddleY - _staffHeight / 2;
         const double dynamicWidth = 1.3;    // approx width of a dynamic glyph
         const double dynamicDescent = 0.3;  // text reaches a little below baseline
 
@@ -338,11 +337,13 @@ internal sealed class SkylineBuilder
             if (dyn.IsAbove)
             {
                 // Upward reach (text ascends from the above baseline); reserve room
-                // toward the staff above.
-                double baseline = DynamicEngraver.ColumnAboveBaselineY(
-                    voices, dyn.MeasureIndex, dyn.ItemIndex) - depth * DynamicEngraver.StackStep;
-                double deviceTop = staffTopDevice + baseline - DynamicEngraver.DynamicAboveAscent;
-                double topUp = -deviceTop;   // translate device baseline to the skyline Y-up frame
+                // toward the staff above. DynamicEngraver gives the baseline in the
+                // native Y-up frame (above the staff middle); stacking pushes it
+                // further UP (+). Ink top = baseline + ascent, mapped to the skyline
+                // Y-up frame (origin at the staff top) by ToSystemUp.
+                double baselineUp = DynamicEngraver.ColumnAboveBaselineY(
+                    voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
+                double topUp = baselineUp + DynamicEngraver.DynamicAboveAscent - staffMiddleY;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     topUp - 0.5, topUp, VerticalDirection.Up);
@@ -350,10 +351,11 @@ internal sealed class SkylineBuilder
             }
             else
             {
-                double baseline = DynamicEngraver.ColumnBaselineY(
-                    voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
-                double deviceBottom = staffTopDevice + baseline + dynamicDescent;
-                double bottomUp = -deviceBottom;   // translate device baseline to the skyline Y-up frame
+                // Below baseline (negative Y-up); stacking pushes it further DOWN (−).
+                // Ink bottom = baseline − descent, mapped to the skyline Y-up frame.
+                double baselineUp = DynamicEngraver.ColumnBaselineY(
+                    voices, dyn.MeasureIndex, dyn.ItemIndex) - depth * DynamicEngraver.StackStep;
+                double bottomUp = baselineUp - dynamicDescent - staffMiddleY;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     bottomUp, bottomUp + 0.5, VerticalDirection.Down);
@@ -383,7 +385,7 @@ internal sealed class SkylineBuilder
                     stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
-                        -StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY), upSkyline, downSkyline);
+                        note.StaffPosition * 0.5 - staffMiddleY, upSkyline, downSkyline);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -409,8 +411,9 @@ internal sealed class SkylineBuilder
                     ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
                 {
                     var accBox = GlyphMetrics.GetAccidentalBBox(al.Accidental);
-                    // Head Y in the skyline's Y-up frame (BBox Top/Bottom up-positive → ADD).
-                    double accHeadY = -StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
+                    // Head Y in the skyline's Y-up frame: staff-position → staff-spaces
+                    // above the middle (pos*0.5), then to the skyline origin (staff top).
+                    double accHeadY = al.StaffPosition * 0.5 - staffMiddleY;
                     MergeAccidentalInk(
                         x + al.XOffset, x + al.XOffset + accBox.Width,
                         accHeadY + accBox.Top, accHeadY + accBox.Bottom,
@@ -502,11 +505,10 @@ internal sealed class SkylineBuilder
     /// extents below are reasoned in LilyPond's native <b>Y-up</b> frame — staff-
     /// spaces above the staff middle line, up-positive — so a stem-up box ADDS its
     /// length (matching <c>stem.cc</c>) and ledgers/flags read sign-for-sign against
-    /// <c>grob.cc</c>. They are reflected to the shared device frame (Y-down) only
-    /// at the <see cref="VerticalSkyline.FromBox"/> boundary via
-    /// <see cref="StaffFrame.ToDevice"/> (the single chokepoint that stands in for
-    /// LilyPond's stencil-time flip). The note center's Y-up
-    /// coordinate is just its staff position in staff-spaces (<c>staffPosition/2</c>).
+    /// <c>grob.cc</c>. The skyline itself stores Y-up too (origin at the system/staff
+    /// top): the local <c>ToSystemUp</c> only re-bases from the staff middle to that
+    /// origin (no reflection), sign-for-sign with <c>skyline.cc</c>. The note center's
+    /// Y-up coordinate is just its staff position in staff-spaces (<c>staffPosition/2</c>).
     /// </remarks>
     private void AddNoteBoxToSkylines(
         int staffPosition,

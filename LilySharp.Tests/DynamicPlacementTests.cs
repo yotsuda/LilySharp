@@ -128,9 +128,12 @@ public class DynamicPlacementTests
         // baseline — is the edge facing the staff, so a pure ascent-mirror (0.7) would let
         // the f/p swash nearly touch the top line. ColumnAboveBaselineY with no voices
         // returns the staff-governed baseline.
+        // ColumnAboveBaselineY now returns the native Y-up frame (staff-spaces above the
+        // staff MIDDLE): the staff top is +StaffMiddle (2.0), so 1.34 above the top reads
+        // as 2.0 + 1.34 = 3.34 above the middle. Same physical clearance, up-positive.
         double aboveBaseline = DynamicEngraver.ColumnAboveBaselineY(
             ImmutableArray<Voice>.Empty, 0, 0);
-        Assert.Equal(-1.34, aboveBaseline, 2);  // LP measured -1.342 above the staff top
+        Assert.Equal(3.34, aboveBaseline, 2);  // 2.0 (staff top) + 1.342 measured clearance
     }
 
     [Fact]
