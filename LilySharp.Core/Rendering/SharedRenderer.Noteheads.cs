@@ -362,7 +362,7 @@ internal static partial class SharedRenderer
 
         // Notehead — skipped when this head merges with another voice's (head wipe)
         // or when NoteHead.transparent is overridden.
-        // LILYPOND-REF: lily/note-collision.cc:381-407
+        // LILYPOND-REF: lily/note-collision.cc:403-406 (calc_positioning_done)
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
@@ -589,7 +589,7 @@ internal static partial class SharedRenderer
     /// "no override" to keep drawing helpers using their default fill).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/output-lib.scm — x11-color mapping
+    /// LILYPOND-REF: scm/color.scm — x11-color-list / x11-color mapping
     /// Accepts named colors and #rgb / #rrggbb hex codes.
     /// </remarks>
     private static Color? ResolveColor(GrobPropertyResolver resolver, string grobType)
@@ -621,7 +621,7 @@ internal static partial class SharedRenderer
     /// outside the staff (|pos| == 5) carry no ledgers themselves but still
     /// participate, shortening their neighbours' ledgers.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:236-248.</remarks>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226.</remarks>
     private static void CollectLedgerRequest(List<LedgerRequest> plan, int extremePos,
         double x, double headWidth, double staffMiddleY, bool hasAccidental)
     {
@@ -651,7 +651,7 @@ internal static partial class SharedRenderer
     /// columns are beyond the first space outside the staff (|pos| ≥ 6, i.e.
     /// both actually carry ledgers) a gap of 0.1 staff spaces is kept between
     /// them so the ledgers never read as one line.
-    /// LILYPOND-REF: lily/ledger-line-spanner.cc:330-343 — ledgers of a note
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:359-369 — ledgers of a note
     /// with an accidental are shortened on the LEFT to midway between the
     /// accidental's right edge and the head's left edge. (LilyPond limits
     /// this to the glyph's font-provided vertical shortening range; we

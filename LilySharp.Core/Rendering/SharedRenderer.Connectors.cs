@@ -135,7 +135,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/span-bar-engraver.cc + ly/engraver-init.ly —
     ///   Span_bar_engraver lives in GrandStaff/PianoStaff/StaffGroup, so
     ///   ungrouped staves do NOT span their barlines.
-    /// LILYPOND-REF: lily/span-bar.cc print() — the spanned segment redraws
+    /// LILYPOND-REF: lily/span-bar-engraver.cc — the spanned segment redraws
     ///   the bar glyph without the dots.
     /// </remarks>
     private static void DrawStaffConnectors(
@@ -373,7 +373,7 @@ internal static partial class SharedRenderer
         // THIS staff's clef — the old treble-only table drew bass-staff
         // naturals a third off.
         // LILYPOND-REF: lily/key-engraver.cc — cancellation from key_signature;
-        // scm/music-functions.scm key-signature-interface positions.
+        // scm/output-lib.scm key-signature-interface::alteration-positions.
         bool needNaturals = (prev != 0 && next == 0) ||
                             (prev > 0 && next < 0) || (prev < 0 && next > 0) ||
                             (Math.Sign(prev) == Math.Sign(next) && Math.Abs(next) < Math.Abs(prev));

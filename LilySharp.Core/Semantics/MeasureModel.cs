@@ -170,7 +170,7 @@ internal static class MeasureModel
                 // collector expands them into that many real measures), a tremolo is
                 // one metric item folded by ItemDuration.
                 // LILYPOND-REF: lily/percent-repeat-iterator.cc,
-                //   lily/chord-tremolo-iterator.cc.
+                //   lily/chord-tremolo-engraver.cc.
                 case RepeatExpressionSyntax rep:
                     if (rep.RepeatType.Text == "tremolo")
                     {

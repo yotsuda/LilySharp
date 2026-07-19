@@ -104,7 +104,7 @@ internal static partial class SharedRenderer
                     // SAME per-note step the layout reserves; the old width-only step
                     // left the heads short of their reserved room and read as cramped.
                     // LILYPOND-REF: GraceNoteEngraver GraceNoteWidth (1.2) +
-                    //   GraceNoteSpacing (0.3); grace-spacing.cc.
+                    //   GraceNoteSpacing (0.3); lily/grace-spacing-engraver.cc.
                     currentX += (1.2 + 0.3) * eff;
                 }
 
@@ -377,7 +377,7 @@ internal static partial class SharedRenderer
         // configuration that best encompasses the heads and flattens the slope. This is
         // what pulls the grace-side start down when the main note is far below it,
         // instead of a fixed clearance. The heads are fed as obstacles to encompass.
-        // LILYPOND-REF: lily/slur-scoring.cc Slur_score_state::solve / get_best_curve.
+        // LILYPOND-REF: lily/slur-scoring.cc:436 Slur_score_state::get_best_curve.
         var slurItem = new SlurItem(graceStaffPos, mainStaffPos, curveUp: false,
             measureIndex, measureIndex, startItemIndex: 0, endItemIndex: 0);
         double graceHalf = 0.5 * scale, mainHalf = 0.5;

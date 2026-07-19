@@ -830,7 +830,7 @@ public sealed class MidiExporter
     /// inline <c>|: … :|</c> actually repeats in playback, not just visually.
     /// Each pass restarts from the same relative-octave/duration/dynamic context.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/volta-repeat — repeated music is performed N times.</remarks>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm (unfold-repeats); lily/volta-repeat-iterator.cc — repeated music is performed N times.</remarks>
     private void ProcessSequence(List<SyntaxNode> items, MidiTrack track, MidiTrack conductorTrack)
     {
         for (int i = 0; i < items.Count; i++)
@@ -856,7 +856,7 @@ public sealed class MidiExporter
     /// Returns the index of the last item consumed (the <c>:|</c> or the last
     /// trailing ending) so the caller resumes after it.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/volta-repeat — body performed N times, i-th ending per pass.</remarks>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm (unfold-repeats); lily/volta-repeat-iterator.cc — body performed N times, i-th ending per pass.</remarks>
     private int ProcessRepeatSpan(List<SyntaxNode> items, int start, int end,
         MidiTrack track, MidiTrack conductorTrack)
     {

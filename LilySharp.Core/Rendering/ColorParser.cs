@@ -24,7 +24,7 @@ namespace LilySharp.Core.Rendering;
 /// black). Accepts <c>#rgb</c> / <c>#rrggbb</c> hex and a subset of CSS/X11 names.
 /// Extracted from SharedRenderer so color handling is one small, testable unit.
 /// </summary>
-/// <remarks>LILYPOND-REF: scm/output-lib.scm — x11-color mapping.</remarks>
+/// <remarks>LILYPOND-REF: scm/color.scm — x11-color-list / x11-color mapping.</remarks>
 internal static class ColorParser
 {
     /// <summary>

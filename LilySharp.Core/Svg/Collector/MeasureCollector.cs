@@ -3188,7 +3188,7 @@ public sealed partial class MeasureCollector
             // Two-note (chord) tremolo: both notes are WRITTEN with the
             // pair's total duration, sound half of it each, and are joined
             // by the subdivision's beams between the stems.
-            // LILYPOND-REF: lily/chord-tremolo-engraver.cc / chord-tremolo-iterator.cc.
+            // LILYPOND-REF: lily/chord-tremolo-engraver.cc.
             _tremoloPairShape = pairShape;
             _tremoloPairFirst = true;
             ProcessBodyOnce();
@@ -3198,7 +3198,7 @@ public sealed partial class MeasureCollector
             && bodyNodes[0] is NoteSyntax or ChordSyntax
             && TremoloTotalIsPrintable(count, bodyNodes[0]))
         {
-            // LILYPOND-REF: lily/chord-tremolo-iterator.cc +
+            // LILYPOND-REF: lily/chord-tremolo-engraver.cc +
             // lily/stem-tremolo.cc — `\repeat tremolo 8 { c32 }` engraves ONE
             // quarter note whose stem carries the 32nd's three slashes (the
             // same drawing as the c4:32 suffix); the repetition is aural.

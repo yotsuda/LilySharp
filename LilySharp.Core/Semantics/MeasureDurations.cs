@@ -91,7 +91,7 @@ internal static class MeasureDurations
                 when rep.RepeatType.Text == "tremolo"
                   && int.TryParse(rep.Count.Text, out int tremCount):
             {
-                // LILYPOND-REF: lily/chord-tremolo-iterator.cc — the tremolo
+                // LILYPOND-REF: lily/chord-tremolo-engraver.cc — the tremolo
                 // repeat's metric length is count × body (8 × c32 = a quarter).
                 var body = Fraction.Zero;
                 foreach (var bodyItem in rep.Body.Items)

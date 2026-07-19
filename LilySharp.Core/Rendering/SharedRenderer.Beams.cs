@@ -117,7 +117,7 @@ internal static partial class SharedRenderer
             }
 
             // Per-member stem direction: kneed beams mix up- and down-stems
-            // within one group (LILYPOND-REF: beam.cc:894-982 consider_auto_knees),
+            // within one group (LILYPOND-REF: beam.cc:971 consider_auto_knees),
             // which flips the stem's notehead attachment side. A tab beam ignores the
             // knee and uses its string-based direction.
             bool MemberUp(int i) => tabDirGeom.HasValue ? tabDir

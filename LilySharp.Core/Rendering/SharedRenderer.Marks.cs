@@ -64,7 +64,7 @@ internal static partial class SharedRenderer
     /// Draws figured-bass numerals stacked vertically below the staff.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print()
+    /// LILYPOND-REF: lily/figured-bass-engraver.cc:269 process_music / :157 stop_translation_timestep
     /// LILYPOND-REF: scm/define-grobs.scm:352 BassFigure defaults
     /// </remarks>
     private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY,
@@ -142,7 +142,6 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
-    /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size = -2)
     /// </remarks>
     private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
@@ -172,7 +171,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
-    /// LILYPOND-REF: scm/define-grobs.scm StanzaNumber (font-size=-1, bold)
+    /// LILYPOND-REF: scm/define-grobs.scm:3412 StanzaNumber (font-series bold)
     /// </remarks>
     private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
@@ -505,7 +504,7 @@ internal static partial class SharedRenderer
     /// vertical hook at the release point.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/pedal-bracket.cc — PianoPedalBracket grob
+    /// LILYPOND-REF: lily/piano-pedal-bracket.cc — PianoPedalBracket grob
     /// </remarks>
     private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
@@ -703,7 +702,7 @@ internal static partial class SharedRenderer
     /// the multi-dash sequence layouts that span wider gaps).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lyric-hyphen.cc:60-100 LyricHyphen grob
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:37 Lyric_hyphen::print (LyricHyphen grob)
     /// </remarks>
     private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
@@ -747,7 +746,7 @@ internal static partial class SharedRenderer
     // ---------- Part combine annotations ----------
 
     /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
-    /// <remarks>LILYPOND-REF: scm/part-combiner.scm — CombineTextScript</remarks>
+    /// <remarks>LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript (grob in scm/define-grobs.scm)</remarks>
     private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
     {

@@ -51,7 +51,7 @@ public static class KeySpelling
             return null;
         // Church-mode offsets from the major (ionian) signature on the same
         // tonic: each step down the circle of fifths removes one sharp.
-        // LILYPOND-REF: ly/declarations-init.ly — major/minor/ionian…locrian.
+        // LILYPOND-REF: ly/scale-definitions-init.ly — major/minor/ionian…locrian.
         sharps += mode.ToLowerInvariant() switch
         {
             "lydian" => 1,

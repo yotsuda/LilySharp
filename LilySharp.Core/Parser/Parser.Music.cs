@@ -191,7 +191,7 @@ internal sealed partial class Parser
             octaveMarks.Add(Advance());
         }
 
-        // LILYPOND-REF: lily/lily-parser.yy — chord_body grammar accepts post-event
+        // LILYPOND-REF: lily/parser.yy — chord_body grammar accepts post-event
         // articulations on each pitch (e.g., <c@finger.1 e@finger.3>). Outside of
         // chord brackets, articulations belong to the surrounding NoteSyntax and
         // are consumed by ParseNote's own ParseArticulations call — we must NOT
@@ -260,7 +260,7 @@ internal sealed partial class Parser
     /// the music sequence in source order via the pending queue.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lily-parser.yy post_events — an unordered list of
+    /// LILYPOND-REF: lily/parser.yy post_events — an unordered list of
     /// post-events following the note.
     /// </remarks>
     private GreenNode?[] ParsePostEvents()
@@ -311,7 +311,7 @@ internal sealed partial class Parser
         var restToken = Advance();
         var duration = ParseOptionalDuration();
 
-        // LILYPOND-REF: lily/lily-parser.yy — R<dur>*N grammar.
+        // LILYPOND-REF: lily/parser.yy — R<dur>*N grammar.
         // Only valid for full-measure rests (R), but we accept the syntax for any
         // rest token and let semantic analysis enforce the constraint if needed.
         SyntaxToken? asterisk = null;
@@ -332,7 +332,7 @@ internal sealed partial class Parser
         }
 
         // Post-events on rests (r4@fermata, r2@coda, ...) — standard notation;
-        // LILYPOND-REF: lily/lily-parser.yy — post-events attach to rests
+        // LILYPOND-REF: lily/parser.yy — post-events attach to rests
         // (r4\fermata).
         var articulations = ParseArticulations();
 
@@ -369,7 +369,7 @@ internal sealed partial class Parser
             if (IsPitchStart())
             {
                 if (degreeAnchored) ReportMixOnce(); // a letter in a tonic-anchored chord
-                // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
+                // LILYPOND-REF: lily/parser.yy chord_body — per-pitch articulations.
                 pitches.Add(ParsePitch(inChord: true));
                 first = false;
                 continue;

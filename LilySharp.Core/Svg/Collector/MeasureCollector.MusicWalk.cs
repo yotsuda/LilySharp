@@ -460,7 +460,7 @@ public sealed partial class MeasureCollector
                     }
                     else
                     {
-                        // LILYPOND-REF: lily/lily-parser.yy — R<dur>*N expands to N
+                        // LILYPOND-REF: lily/parser.yy — R<dur>*N expands to N
                         // consecutive measure-rests semantically. The MeasureBuilder
                         // auto-completes each measure when its duration reaches the
                         // time signature.

@@ -83,7 +83,7 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:2992 Script grob
-    /// LILYPOND-REF: lily/script-engraver.cc:92-125 acknowledge_note_head
+    /// LILYPOND-REF: lily/script-engraver.cc:235 acknowledge_rhythmic_head / :253 acknowledge_note_column
     /// </remarks>
     private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY,
         in OssiaShrink os, IDrawingContext gc)
@@ -174,7 +174,7 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Draws a jazz "fall" (drops away) or "doit" (rises away) — a short curved
     /// line trailing off to the right of a note, approximated by a polyline along
-    /// a quadratic Bézier. LILYPOND-REF: lily/bend-after.cc BendAfter (curved fall).
+    /// a quadratic Bézier. LILYPOND-REF: scm/output-lib.scm:1343 bend::print + BendAfter grob in scm/define-grobs.scm:551 (curved fall).
     /// </summary>
     /// <summary>
     /// Draws a jazz scoop (rises into the note) or plop (falls into it) — the
@@ -324,7 +324,8 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/lyric-engraver.cc:32-52 LyricText grob
-    /// LILYPOND-REF: scm/define-grobs.scm:3025 font-size = -1
+    /// LILYPOND-REF: scm/define-grobs.scm:2213 LyricText (font-size 1.0 in LP;
+    /// this port instead uses a 0.8x reduced size below).
     /// </remarks>
     private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
         double pageHeight)
@@ -492,7 +493,7 @@ internal static partial class SharedRenderer
     /// is suppressed (number-only).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print()
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:290 Tuplet_bracket::print
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     /// </remarks>
     private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysY,

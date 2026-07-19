@@ -360,7 +360,7 @@ internal static partial class SharedRenderer
     // ---------- Key signature ----------
 
     // LilyPond key-signature placement tables (indexed by (c0-position mod 7)).
-    // LILYPOND-REF: scm/output-lib.scm key-signature-interface::alteration-position;
+    // LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions;
     // scm/define-grobs.scm sharp-positions / flat-positions.
     private static readonly int[] KeySigSharpPositions = [4, 5, 4, 2, 3, 2, 3];
     private static readonly int[] KeySigFlatPositions = [2, 3, 4, 2, 1, 2, 1];
@@ -435,12 +435,12 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// Staff position of the i-th key-signature accidental for a clef.
-    /// LILYPOND-REF: scm/music-functions.scm key-signature-interface —
+    /// LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions —
     /// staffPosition = hi − modulo(hi − (c0 + step), 7).
     /// </summary>
     /// <summary>Key-signature staff position for an ARBITRARY step (custom
     /// signatures) — same octave-choice tables, indexed by step instead of the
-    /// standard order. LILYPOND-REF: key-signature-interface alteration-position.</summary>
+    /// standard order. LILYPOND-REF: key-signature-interface alteration-positions.</summary>
     /// <summary>The (step, alter) pairs of a STANDARD key signature in print
     /// order (sharps F C G D A E B / flats B E A D G C F).</summary>
     private static List<(int Step, int Alter)> StandardKeySteps(int sharps)

@@ -141,7 +141,7 @@ public sealed class PitchSyntax : SyntaxNode
     /// Returns the syntax-level articulation nodes after the octave marks.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lily-parser.yy chord_body grammar — post-event articulations.
+    /// LILYPOND-REF: lily/parser.yy chord_body grammar — post-event articulations.
     /// </remarks>
     public IEnumerable<SyntaxNode> Articulations
     {
@@ -399,7 +399,7 @@ public sealed class RestSyntax : SyntaxNode
     /// Articulations / marks / dynamics attached to the rest (e.g.
     /// <c>r4@fermata</c> — a fermata over a rest is standard notation).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/lily-parser.yy — post-events attach to rests too
+    /// <remarks>LILYPOND-REF: lily/parser.yy — post-events attach to rests too
     /// (<c>r4\fermata</c>).</remarks>
     public IEnumerable<SyntaxNode> Articulations
     {

@@ -336,7 +336,7 @@ internal sealed partial class Parser
     /// Parse a single lyric measure: syllable syllable ... |
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lyric-engraver.cc:90-120 stop_translation_timestep
+    /// LILYPOND-REF: lily/lyric-engraver.cc:167 stop_translation_timestep
     /// </remarks>
     private LyricMeasureGreen? ParseLyricMeasure()
     {

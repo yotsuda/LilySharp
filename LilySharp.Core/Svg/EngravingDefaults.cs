@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg;
 /// All values are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/spacing-options.cc:52-63 Spacing_options constructor (defaults)
+/// LILYPOND-REF: lily/spacing-options.cc:55-66 Spacing_options constructor (defaults)
 /// LILYPOND-REF: scm/define-grobs.scm (space-alist for Clef, BarLine, TimeSignature, StaffGrouper)
 /// </remarks>
 internal static class EngravingDefaults
@@ -200,8 +200,8 @@ internal static class EngravingDefaults
     // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head
     //   (r += -d * rule_thick * 0.5).
     // The ±0.168 Y is the black notehead's stem-attachment vertical offset, from the
-    // feta font metrics that back ly:note-head::calc-stem-attachment (define-grobs.scm:2490
-    // NoteHead.stem-attachment); an up-stem attaches slightly above centre, a down-stem below.
+    // feta font metrics that back ly:note-head::calc-stem-attachment (define-grobs.scm:2608
+    // NoteHead.stem-attachment; NoteHead grob @2595); an up-stem attaches slightly above centre, a down-stem below.
     public const double StemUpAttachX = NoteheadBlackWidth - StemThickness / 2;
     public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = StemThickness / 2;

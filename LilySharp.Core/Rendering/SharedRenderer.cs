@@ -527,7 +527,7 @@ internal static partial class SharedRenderer
     /// per-staff barlines read as one continuous barline across the group.
     /// Repeat dots stay per-staff (drawn by <see cref="DrawBarlines"/>).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/span-bar.cc — SpanBar across a connected group.</remarks>
+    /// <remarks>LILYPOND-REF: lily/span-bar-engraver.cc — SpanBar across a connected group.</remarks>
     private static void DrawSpanBars(MultiStaffScore score, SystemLayout system, IDrawingContext gc,
         double pageHeight)
     {
