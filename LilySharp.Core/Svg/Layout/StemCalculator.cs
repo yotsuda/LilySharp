@@ -179,7 +179,7 @@ public static class StemCalculator
             stemEndUp = 0;
 
         // --- Minimum stem length ---
-        double minLength = EngravingRules.MinimumStemLength;
+        double minLength = EngravingDefaults.MinStemLength;
         double actualLength = Math.Abs(stemEndUp - attachUp);
         if (actualLength < minLength)
         {
