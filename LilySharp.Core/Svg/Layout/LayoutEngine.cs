@@ -943,15 +943,15 @@ internal sealed class LayoutEngine
             up[s] = Math.Max(up[s], -(rel - 1.3));
         }
 
-        // Ties and slurs carry ABSOLUTE page Y — relativize via their system.
+        // Ties and slurs now store WITHIN-SYSTEM device Y (step 2d), so the negated
+        // bow Y each caller passes is already system-relative — no system.Y subtraction.
         void AddCurve(int measureIndex, double y0, double y1, double c1, double c2)
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
                 return;
-            double sy = systems[s].Y;
             // Curve extreme ~ 3/4 of the way from endpoints to controls.
-            double topRel = Math.Min(Math.Min(y0, y1), Math.Min(y0, y1) * 0.25 + Math.Min(c1, c2) * 0.75) - sy;
-            double botRel = Math.Max(Math.Max(y0, y1), Math.Max(y0, y1) * 0.25 + Math.Max(c1, c2) * 0.75) - sy;
+            double topRel = Math.Min(Math.Min(y0, y1), Math.Min(y0, y1) * 0.25 + Math.Min(c1, c2) * 0.75);
+            double botRel = Math.Max(Math.Max(y0, y1), Math.Max(y0, y1) * 0.25 + Math.Max(c1, c2) * 0.75);
             up[s] = Math.Max(up[s], -topRel);
             down[s] = Math.Max(down[s], botRel - bottoms[s]);
         }

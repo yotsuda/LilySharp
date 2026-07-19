@@ -781,7 +781,14 @@ internal sealed class ElementCoordinator
                 }
 
                 // Tie Y position is uniform (same pitch on both ends).
-                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
+                // Within-system staff-top offset (device, down from system top), NOT an
+                // absolute page Y — so the scored tie (and the tab-digit geometry below)
+                // is system-independent. TieFormattingProblem reasons over Y DIFFERENCES,
+                // so feeding the relative base shifts every output Y by exactly system.Y,
+                // undone once in DrawTies (byte-identical to the former absolute origin).
+                // Decouples the tie from SystemLayout.Y for the W2 stacking-origin flip
+                // (step 2d, shared with slurs).
+                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex) - segSystem.Y;
                 double y;
                 var tieForProblem = tie;
                 if (staff is { IsTab: true })
@@ -1139,7 +1146,16 @@ internal sealed class ElementCoordinator
                     : EdgeNoteStaffPosition(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false)
                         ?? slur.StartStaffPosition;
 
-                double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(segSystem, staffIndex, _options.StaffHeight);
+                // Within-system Y offset (device, down from the system top) of the staff
+                // middle, NOT an absolute page Y. Every Y the scorer sees (segStartY/
+                // segEndY via PositionToDevice, obstacles, beamed stem tips) is derived
+                // from this, and LP slur-scoring reasons over note-position DIFFERENCES,
+                // so feeding the relative middle shifts every scored output Y by exactly
+                // system.Y — undone once in DrawSlurs (byte-identical to the former
+                // absolute origin). Decouples the scored slur from SystemLayout.Y for the
+                // Stage-4 W2 stacking-origin flip (step 2d).
+                double staffMiddleY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex)
+                    - segSystem.Y + _options.StaffHeight / 2.0;
 
                 // LILYPOND-REF: slur-scoring.cc:549-557 get_base_attachments — the endpoint
                 // attaches to the STEM TIP (the beam it joins), 0.5 ss beyond it, when the
@@ -1219,7 +1235,12 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes)
     {
         var voice = score.Voices[slur.VoiceIndex];
-        double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
+        // Within-system staff-top offset (device, down from system top), NOT absolute —
+        // so the tab slur's digit/string geometry is system-independent and DrawSlurs
+        // (shared with the notation slur) can add the system-top Y-up back uniformly.
+        // TabStaffGeometry is additive in staffY (StringY = StaffY + n·space), so this is
+        // a pure origin shift that leaves the device string frame intact (island 2).
+        double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex) - segSystem.Y;
         var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
 
         // The fret digits sit a TabHeadCenterOffset right of their note columns

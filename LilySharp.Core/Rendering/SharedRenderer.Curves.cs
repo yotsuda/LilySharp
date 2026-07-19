@@ -38,10 +38,14 @@ internal static partial class SharedRenderer
             // start measure — otherwise a page-crossing tie draws its far piece on the
             // start's page at the wrong spot and never on its real page.
             int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
-            if (!sysY.ContainsKey(mi))
+            if (!sysY.TryGetValue(mi, out double sy))
                 continue; // not on this page (geometry is page-local)
-            DrawBow(tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp,
-                tie.Control1, tie.Control2, tie.CurveUp,
+            // The layout stores WITHIN-SYSTEM Y offsets (the engraver no longer bakes in
+            // the system-top Y-up); subtract system.Y here to restore the absolute
+            // page-Y-up the bow frame expects (byte-identical to the former absolute
+            // StartYUp). See ElementCoordinator step 2d.
+            DrawBow(tie.StartX, tie.StartYUp - sy, tie.EndX, tie.EndYUp - sy,
+                (tie.Control1.X, tie.Control1.Y - sy), (tie.Control2.X, tie.Control2.Y - sy), tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 tie.StaffIndex, mi, os, gc, pageHeight);
         }
@@ -57,10 +61,15 @@ internal static partial class SharedRenderer
             // start measure — otherwise a page-crossing slur draws its far piece on the
             // start's page (e.g. the first system's top-left) and never on its real page.
             int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
-            if (!sysY.ContainsKey(mi))
+            if (!sysY.TryGetValue(mi, out double sy))
                 continue; // not on this page (geometry is page-local)
-            DrawBow(slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp,
-                slur.Control1, slur.Control2, slur.CurveUp,
+            // The layout stores WITHIN-SYSTEM Y offsets (page Y-up minus the system-top
+            // Y-up the engraver no longer bakes in). system.Y is the device drop of the
+            // system top, so subtract it here to restore the absolute page-Y-up the bow
+            // frame expects (byte-identical to the former absolute StartYUp). See
+            // ElementCoordinator step 2d.
+            DrawBow(slur.StartX, slur.StartYUp - sy, slur.EndX, slur.EndYUp - sy,
+                (slur.Control1.X, slur.Control1.Y - sy), (slur.Control2.X, slur.Control2.Y - sy), slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
                 slur.StaffIndex, mi, os, gc, pageHeight);
         }
