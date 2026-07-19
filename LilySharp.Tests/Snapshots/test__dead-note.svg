@@ -74,22 +74,22 @@
   <text x="41.19" y="24.93" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="257">3</text>
   <rect x="42.78" y="23.21" width="1.82" height="1.79" fill="#FFFFFF" data-pos="259"/>
   <text x="43.69" y="24.93" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="259">×</text>
-  <line x1="26.68" y1="10.41" x2="34.33" y2="10.41" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="26.68,10.17 34.33,10.17 34.33,10.65 26.68,10.65"/>
   <line x1="26.75" y1="12.95" x2="26.75" y2="10.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="29.25" y1="12.95" x2="29.25" y2="10.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="31.51" y1="14.45" x2="31.51" y2="10.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="34.26" y1="12.95" x2="34.26" y2="10.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="36.45" y1="11.42" x2="44.34" y2="10.40" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="36.45,11.18 44.34,10.16 44.34,10.64 36.45,11.66"/>
   <line x1="36.52" y1="14.45" x2="36.52" y2="11.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="39.02" y1="14.45" x2="39.02" y2="11.09" stroke="#000000" stroke-width="0.130"/>
   <line x1="41.77" y1="12.95" x2="41.77" y2="10.73" stroke="#000000" stroke-width="0.130"/>
   <line x1="44.28" y1="12.95" x2="44.28" y2="10.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="26.68" y1="20.81" x2="34.33" y2="20.81" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="26.68,20.57 34.33,20.57 34.33,21.05 26.68,21.05"/>
   <line x1="26.75" y1="22.91" x2="26.75" y2="20.81" stroke="#000000" stroke-width="0.130"/>
   <line x1="29.25" y1="22.91" x2="29.25" y2="20.81" stroke="#000000" stroke-width="0.130"/>
   <line x1="31.51" y1="24.41" x2="31.51" y2="20.81" stroke="#000000" stroke-width="0.130"/>
   <line x1="34.26" y1="22.91" x2="34.26" y2="20.81" stroke="#000000" stroke-width="0.130"/>
-  <line x1="36.45" y1="21.10" x2="44.34" y2="20.20" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="36.45,20.86 44.34,19.96 44.34,20.44 36.45,21.34"/>
   <line x1="36.52" y1="24.41" x2="36.52" y2="21.09" stroke="#000000" stroke-width="0.130"/>
   <line x1="39.02" y1="24.41" x2="39.02" y2="20.81" stroke="#000000" stroke-width="0.130"/>
   <line x1="41.77" y1="22.91" x2="41.77" y2="20.49" stroke="#000000" stroke-width="0.130"/>

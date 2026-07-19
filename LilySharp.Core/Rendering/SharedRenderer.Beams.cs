@@ -158,62 +158,32 @@ internal static partial class SharedRenderer
             // centre and reads a stem-width short when the preview is zoomed in.
             // LILYPOND-REF: lily/beam.cc:631 horizontal_[dir] += dir * stem_width/2.
             double halfStem = EngravingDefaults.StemThickness / 2;
-            double beamSlope = rightStemX > leftStemX + 0.001
-                ? (rightBeamY - leftBeamY) / (rightStemX - leftStemX) : 0.0;
+            double beamSpanX = rightStemX - leftStemX;
+            // The quanted PRIMARY beam line (rank 0) at x — every rank is drawn relative
+            // to this: Y = primary + BeamTranslation × rank (LP: positions + beam_dy·rank).
+            double PrimaryBeamYAt(double x) => leftBeamY +
+                (beamSpanX > 0.001 ? (x - leftStemX) / beamSpanX : 0) * (rightBeamY - leftBeamY);
 
-            // Primary beam — drawn as a thick filled rectangle (sloped by polygon)
-            DrawBeamSegment(leftStemX - halfStem, leftBeamY - beamSlope * halfStem,
-                rightStemX + halfStem, rightBeamY + beamSlope * halfStem, bgc);
-
-            // Secondary beams (16th+) stack toward the noteheads of the beam's
-            // overall direction. Each level draws full segments between adjacent
-            // members that both carry the beam, plus short partial beams (beamlets)
-            // for members that carry it in isolation — e.g. the 16th in a
-            // dotted-8th + 16th pair, whose second beam is a left-pointing stub.
-            // LILYPOND-REF: lily/beam.cc Beam::print / fractional (stub) beams.
-            int maxBeamCount = grp.Members.Max(m => m.BeamCount);
-            for (int level = 1; level < maxBeamCount; level++)
+            // Beam lines via LilyPond's subdivision maths: assign each beam a vertical
+            // rank per stem, then collect the ranks into drawable spans. Rank 0 is the
+            // primary line; +1 sits BeamTranslation above it, −1 below. This is what
+            // keeps a beam through a knee two straight parallel lines, places the beam
+            // corners and beamlets, and (via each stem's extreme rank) lets every stem
+            // reach the outermost beam on its own side.
+            // LILYPOND-REF: lily/beam.cc:294 calc_beaming, :457 calc_beam_segments, :783 print.
+            var beamingInput = new BeamSubdivision.StemBeaming[grp.Members.Length];
+            for (int i = 0; i < grp.Members.Length; i++)
+                beamingInput[i] = new BeamSubdivision.StemBeaming(
+                    grp.Members[i].BeamCountLeft, grp.Members[i].BeamCountRight,
+                    MemberUp(i) ? 1 : -1, StemAttachX(i));
+            var beamRanks = BeamSubdivision.CalcBeaming(beamingInput);
+            foreach (var seg in BeamSubdivision.CalcBeamSegments(
+                         beamingInput, beamRanks,
+                         EngravingDefaults.BeamletLength, 0.75, halfStem))
             {
-                // Secondary beams stack toward the heads. In device that is +offset
-                // for an up-stem beam (heads below); in the page Y-up frame that
-                // direction is negative, so start from the negated offset.
-                double offset = -(level * EngravingDefaults.BeamTranslation);
-                if (!(tabDirGeom.HasValue ? tabDir : grp.StemUp)) offset = -offset;
-                double beamSpanX = rightStemX - leftStemX;
-                double BeamYAt(double x) => leftBeamY + offset +
-                    (beamSpanX > 0.001 ? (x - leftStemX) / beamSpanX : 0) * (rightBeamY - leftBeamY);
-
-                for (int i = 0; i < grp.Members.Length; i++)
-                {
-                    if (grp.Members[i].BeamCount <= level) continue;
-                    bool rightFull = i < grp.Members.Length - 1 && grp.Members[i + 1].BeamCount > level;
-                    bool leftFull = i > 0 && grp.Members[i - 1].BeamCount > level;
-
-                    if (rightFull)
-                    {
-                        // Full segment i -> i+1 (drawn once, from its left member).
-                        double xa = StemAttachX(i);
-                        double xb = StemAttachX(i + 1);
-                        // Flush the whole-beam ends with the terminal stems (as above).
-                        if (i == 0) xa -= halfStem;
-                        if (i + 1 == grp.Members.Length - 1) xb += halfStem;
-                        DrawBeamSegment(xa, BeamYAt(xa), xb, BeamYAt(xb), bgc);
-                    }
-                    else if (!leftFull)
-                    {
-                        // Isolated at this level: a beamlet (fractional beam) stub.
-                        // It points back toward the previous note; the first note of
-                        // the group points forward instead.
-                        double x0 = StemAttachX(i);
-                        double x1 = x0 + (i > 0 ? -EngravingDefaults.BeamletLength : EngravingDefaults.BeamletLength);
-                        // Flush the stub's outer end (at a terminal stem) with the stem.
-                        if (i == 0) x0 -= halfStem;
-                        else if (i == grp.Members.Length - 1) x0 += halfStem;
-                        DrawBeamSegment(x0, BeamYAt(x0), x1, BeamYAt(x1), bgc);
-                    }
-                    // else (leftFull && !rightFull): this member is the right end of a
-                    // full segment already drawn from i-1; nothing more to do.
-                }
+                double yOff = EngravingDefaults.BeamTranslation * seg.Rank;
+                DrawBeamSegment(seg.XLeft, PrimaryBeamYAt(seg.XLeft) + yOff,
+                    seg.XRight, PrimaryBeamYAt(seg.XRight) + yOff, bgc);
             }
 
             // Stems for beam members (replace any individual stems). For knees
@@ -230,7 +200,7 @@ internal static partial class SharedRenderer
                     continue;
                 bool up = MemberUp(i);
                 double stemX = StemAttachX(i);
-                double beamY = leftBeamY + slope * (stemX - leftStemX);
+                double primaryBeamY = leftBeamY + slope * (stemX - leftStemX);
 
                 int memberStaffIdx = MemberStaffIdx(i);
                 Staff? memberStaff = MemberStaffOf(i);
@@ -263,6 +233,17 @@ internal static partial class SharedRenderer
                             _ => NoteheadStyle.Default,
                         }, up, noteValue: 8); // beamed heads are always filled (8th or shorter)
                 }
+                // The stem ends at the OUTERMOST beam rank on its own side — the extreme
+                // of this stem's ranks in its direction (up ⇒ max rank, down ⇒ min), so
+                // it runs through every beam line that crosses it. For an ordinary beam
+                // that extreme is the primary (rank 0) and this is a no-op; in a knee
+                // with two straight parallel beams the down-stem reaches the lower line
+                // and the up-stem note the upper.
+                // LILYPOND-REF: lily/beam.cc:1113-1157 Beam::calc_stem_y —
+                //   stem_y = beam_line + beam_translation × beam_multiplicity[stem_dir]
+                //   (lily/stem.cc:1269 unites the stem's left+right ranks, indexed by dir).
+                int stemRank = beamRanks[i].Multiplicity(up ? 1 : -1);
+                double beamY = primaryBeamY + EngravingDefaults.BeamTranslation * stemRank;
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
             }
@@ -342,9 +323,21 @@ internal static partial class SharedRenderer
 
     private static void DrawBeamSegment(double x1, double y1, double x2, double y2, IDrawingContext gc)
     {
-        // Sloped beam as a filled polygon would be ideal; simple thick line is a
-        // good Phase 2-A approximation (LP uses precise quad polygons).
-        gc.DrawLine(x1, y1, x2, y2, Color.Black, EngravingDefaults.BeamThickness);
+        // A beam is a PARALLELOGRAM with VERTICAL ends, not a sloped thick line: a
+        // butt-capped thick line caps its ends perpendicular to the slope, leaving a
+        // triangle poking past each terminal stem. The endpoints (x1,y1)/(x2,y2) are
+        // the beam centreline at the (already stem-extended) left/right x, so the four
+        // corners are those ends at ±half the (vertical) beam thickness. This mirrors
+        // the grace-beam path (SharedRenderer.GraceNotes.cs — the `Beam` local), so
+        // both beam kinds share one geometry. (LP's blot-rounded corners are not
+        // reproduced — the grace path omits them too.)
+        // LILYPOND-REF: lily/lookup.cc Lookup::beam — parallelogram of width `w`,
+        //   thickness `thick`, sloped by `slope`, corners offset so the ends stay
+        //   vertical; called from lily/beam.cc:794 Beam::print.
+        double beamHalf = EngravingDefaults.BeamThickness / 2;
+        gc.DrawFilledQuad(
+            (x1, y1 + beamHalf), (x2, y2 + beamHalf),
+            (x2, y2 - beamHalf), (x1, y1 - beamHalf), Color.Black);
     }
 
     // ---------- Accidentals ----------

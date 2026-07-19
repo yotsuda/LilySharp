@@ -29,7 +29,7 @@
   <text class="music" x="17.62" y="9.91" font-size="4.00" data-pos="574"></text>
   <rect x="20.24" y="12.41" width="0.19" height="4.00" data-pos="0"/>
   <rect x="20.73" y="12.41" width="0.60" height="4.00" data-pos="0"/>
-  <line x1="8.86" y1="14.60" x2="17.75" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="8.86,14.36 17.75,14.17 17.75,14.65 8.86,14.84"/>
   <line x1="8.93" y1="11.56" x2="8.93" y2="14.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="12.16" y1="11.06" x2="12.16" y2="14.53" stroke="#000000" stroke-width="0.130"/>
   <line x1="14.93" y1="10.56" x2="14.93" y2="14.47" stroke="#000000" stroke-width="0.130"/>

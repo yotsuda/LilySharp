@@ -72,12 +72,12 @@
   <text class="music" x="26.20" y="17.91" font-size="4.00" data-pos="747"></text>
   <rect x="28.81" y="22.41" width="0.19" height="4.00" data-pos="750"/>
   <rect x="29.30" y="22.41" width="0.60" height="4.00" data-pos="750"/>
-  <line x1="7.80" y1="24.60" x2="16.24" y2="24.41" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="7.80,24.36 16.24,24.17 16.24,24.65 7.80,24.84"/>
   <line x1="7.87" y1="21.56" x2="7.87" y2="24.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.37" y1="21.06" x2="10.37" y2="24.54" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.27" y1="20.56" x2="13.27" y2="24.47" stroke="#000000" stroke-width="0.130"/>
   <line x1="16.18" y1="20.06" x2="16.18" y2="24.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="18.62" y1="24.41" x2="26.33" y2="24.41" stroke="#000000" stroke-width="0.480"/>
+  <polygon points="18.62,24.17 26.33,24.17 26.33,24.65 18.62,24.65"/>
   <line x1="18.68" y1="19.56" x2="18.68" y2="24.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.26" y1="19.06" x2="21.26" y2="24.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="23.76" y1="18.56" x2="23.76" y2="24.41" stroke="#000000" stroke-width="0.130"/>
