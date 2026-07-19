@@ -63,6 +63,10 @@ internal static partial class SharedRenderer
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
+            // Multi-voice collision: this down voice's on-line augmentation dot is
+            // forced below the line (instead of the default up) to clear the up
+            // voice's dot. LILYPOND-REF: lily/note-collision.cc:411-448.
+            bool dotForceDown = layout.IsDotForcedDown(ml.MeasureIndex, voiceNumber, itemIdx);
 
             // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
             // Each voice/staff pass restarts at its first measure; the resolver detects the
@@ -82,7 +86,7 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight);
+                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown);
                     break;
                 case RestItem rest:
                     // A spacer rest ('s') reserves its column width but is never
@@ -97,7 +101,7 @@ internal static partial class SharedRenderer
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight);
+                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown);
                     break;
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
@@ -342,7 +346,7 @@ internal static partial class SharedRenderer
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight)
+        IDrawingContext gc, double pageHeight, bool dotForceDown = false)
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
@@ -448,8 +452,11 @@ internal static partial class SharedRenderer
         if (note.Dots > 0)
         {
             // Same Dot_configuration machinery as chords (for a single dot
-            // this reduces to "line notes move to the space above").
-            int dotPos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
+            // this reduces to "line notes move to the space above", unless the
+            // multi-voice collision forces this down voice's dot below).
+            int dotPos = DotConfiguration.Resolve(
+                new[] { note.StaffPosition },
+                dotForceDown ? new[] { -1 } : null)[0];
             double dotY = staffMiddleY + dotPos / 2.0;
             for (int d = 0; d < note.Dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
@@ -459,7 +466,7 @@ internal static partial class SharedRenderer
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight)
+        IDrawingContext gc, double pageHeight, bool dotForceDown = false)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
@@ -541,7 +548,8 @@ internal static partial class SharedRenderer
             double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale
                 + Math.Max(0, headOffsets.Max()) + dotWidth;
             var resolved = DotConfiguration.Resolve(
-                chord.Notes.Select(n => n.StaffPosition).ToArray());
+                chord.Notes.Select(n => n.StaffPosition).ToArray(),
+                dotForceDown ? Enumerable.Repeat(-1, chord.Notes.Length).ToArray() : null);
             foreach (int p in resolved)
             {
                 double dotY = staffMiddleY + p / 2.0;

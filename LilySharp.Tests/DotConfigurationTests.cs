@@ -51,6 +51,20 @@ public class DotConfigurationTests
         Assert.Equal(expected, DotConfiguration.Resolve(input));
     }
 
+    [Theory]
+    // With dir = -1 (a multi-voice DOWN voice) an on-line dot is forced into
+    // the space BELOW the line instead of the default above: badness prefers
+    // the hinted direction (down 2·1²+1=3 vs up 2·1²+2=4).
+    // LILYPOND-REF: lily/note-collision.cc:411-448 forces Dots.direction=DOWN.
+    [InlineData(new[] { 0 }, new[] { -1 }, new[] { -1 })]
+    [InlineData(new[] { -2 }, new[] { -1 }, new[] { -3 })]
+    // A dot already in a SPACE is unaffected by the direction hint.
+    [InlineData(new[] { 1 }, new[] { -1 }, new[] { 1 })]
+    public void Resolve_ForceDown_MovesOnLineDotBelowTheLine(int[] input, int[] directions, int[] expected)
+    {
+        Assert.Equal(expected, DotConfiguration.Resolve(input, directions));
+    }
+
     [Fact]
     public void Resolve_NeverLeavesADotOnALine()
     {

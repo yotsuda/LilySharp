@@ -140,8 +140,14 @@ internal sealed class DotConfiguration
     /// LILYPOND-REF: lily/dot-column.cc:194-224 — dots processed in ascending
     /// position order; each insertion first frees its slot, and ON-LINE dots
     /// trigger a second remove_collision so they end up in a space.
+    ///
+    /// <paramref name="directions"/> supplies each dot's preferred displacement
+    /// (LP Dots.direction): 0 = none (default, on-line dots move UP), -1 = force
+    /// DOWN. In multi-voice music the down voice's on-line dots are forced below
+    /// the line so they don't collide with the up voice's dots.
+    /// LILYPOND-REF: lily/note-collision.cc:411-448 forces Dots.direction = DOWN.
     /// </remarks>
-    public static int[] Resolve(IReadOnlyList<int> notePositions)
+    public static int[] Resolve(IReadOnlyList<int> notePositions, IReadOnlyList<int>? directions = null)
     {
         var cfg = new DotConfiguration();
         var order = Enumerable.Range(0, notePositions.Count)
@@ -152,7 +158,7 @@ internal sealed class DotConfiguration
         {
             int p = notePositions[i];
             cfg.RemoveCollision(p);
-            cfg._entries[p] = new Entry(p, i, dir: 0);
+            cfg._entries[p] = new Entry(p, i, dir: directions?[i] ?? 0);
             if (IsOnLine(p))
                 cfg.RemoveCollision(p);
         }
