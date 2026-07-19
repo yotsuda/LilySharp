@@ -244,7 +244,7 @@ internal static class TextSpannerEngraver
                     LineStartX: lineStartX,
                     // Store Y-up from the system top (= −device y); the internal
                     // placement still computes device y (it reads the device dynamics band).
-                    YUp: 0.0 - y,
+                    YUp: -y,
                     Text: segText,
                     Style: spanner.Style,
                     DashPeriod: DashPeriod,
