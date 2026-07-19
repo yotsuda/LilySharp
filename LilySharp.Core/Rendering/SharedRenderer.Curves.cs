@@ -45,7 +45,7 @@ internal static partial class SharedRenderer
             // the absolute page-Y-up the bow frame expects (byte-identical to the former
             // absolute StartYUp). See ElementCoordinator step 2d.
             DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
-                (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y), tie.CurveUp,
+                (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y),
                 EngravingDefaults.TieMidThickness,
                 tie.StaffIndex, mi, os, gc);
         }
@@ -68,7 +68,7 @@ internal static partial class SharedRenderer
             // the absolute page-Y-up the bow frame expects (byte-identical to the former
             // absolute StartYUp). See ElementCoordinator step 2d.
             DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
-                (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y), slur.CurveUp,
+                (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y),
                 EngravingDefaults.SlurMidThickness,
                 slur.StaffIndex, mi, os, gc);
         }
@@ -86,7 +86,7 @@ internal static partial class SharedRenderer
     private static void DrawBow(
         double startX, double startYUp, double endX, double endYUp,
         (double X, double Y) c1, (double X, double Y) c2,
-        bool curveUp, double midThickness,
+        double midThickness,
         int staffIndex, int startMeasureIndex,
         in OssiaShrink os, IDrawingContext gc)
     {
@@ -98,7 +98,7 @@ internal static partial class SharedRenderer
         c1 = (c1.X, os.YUp(c1.Y, staffIndex, startMeasureIndex));
         c2 = (c2.X, os.YUp(c2.Y, staffIndex, startMeasureIndex));
         midThickness = os.Size(midThickness, staffIndex);
-        DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
+        DrawCurve(startX, startY, endX, endY, c1, c2, midThickness, gc);
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ internal static partial class SharedRenderer
     private static void DrawCurve(
         double startX, double startY, double endX, double endY,
         (double X, double Y) c1, (double X, double Y) c2,
-        bool curveUp, double midThickness, IDrawingContext gc)
+        double midThickness, IDrawingContext gc)
     {
         // Port of LilyPond's slur/tie stencil (lily/lookup.cc Lookup::slur): the
         // computed control points (c1,c2) are the CENTRELINE of a "bezier sandwich" —
@@ -124,13 +124,12 @@ internal static partial class SharedRenderer
         // control_[0]). Splitting the thickness symmetrically about the reference
         // curve — rather than growing one edge off it — makes both ends taper to clean
         // points and keeps the ribbon thickest at the middle even on a slanted bow (a
-        // grace slur runs diagonally down to the main note). `curveUp` no longer enters
-        // the thickness: LP's ±perp is symmetric, so the bow direction only shapes the
-        // control points, which the caller already set.
+        // grace slur runs diagonally down to the main note). LP's ±perp is symmetric,
+        // so the bow direction only shapes the control points (already set by the
+        // caller), not this stencil.
         // LILYPOND-REF: lily/lookup.cc Lookup::slur —
         //   perp = 0.5*curvethick*Offset(-dir[Y],dir[X]);
         //   back.control_[1,2] += perp; curve.control_[1,2] -= perp; bezier_sandwich(…).
-        _ = curveUp;
         double dx = endX - startX, dy = endY - startY;
         double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
         double half = 0.5 * midThickness; // LP lookup.cc:405 perp = 0.5 * curvethick
@@ -270,51 +269,22 @@ internal static partial class SharedRenderer
         public bool Contains(int staffIndex)
             => staffIndex >= 0 && _ossiaStaves.Contains(staffIndex);
 
-        /// <summary>Absolute-Y affine around the staff top; identity off-ossia
-        /// (or when the measure has no system on this page).</summary>
-        public double Y(double y, int staffIndex, int measureIndex)
-        {
-            if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))
-                return y;
-            // Device affine: FindStaffYInSystem is now page Y-up (W2-core), reflect
-            // to device so this contracts toward the DEVICE staff top.
-            double top = _height - LayoutUtilities.FindStaffYInSystem(system, staffIndex);
-            return top + (y - top) * OssiaScale;
-        }
-
         /// <summary>Scales a size/offset/amplitude; identity off-ossia.</summary>
         public double Size(double v, int staffIndex)
             => Contains(staffIndex) ? v * OssiaScale : v;
 
         /// <summary>
-        /// Device Y of a staff's middle line, for the system carrying
-        /// <paramref name="measureIndex"/>. This is the anchor a relative Y-up
-        /// (frame B) layout reflects against at draw time (device = middle − Y-up)
-        /// — the single per-grob draw boundary that stands in for LilyPond's
-        /// stencil-time flip, mirroring how staff content already resolves its
-        /// middle line. Callers reach this only after
-        /// the per-drawer page-membership guard, so the system is present; returns
-        /// NaN if it is not (degenerate/test path).
-        /// </summary>
-        public double StaffMiddleDeviceY(int staffIndex, int measureIndex, double staffHeight)
-            => _systems.TryGetValue(measureIndex, out var system)
-                // ResolveStaffMiddleY is now page Y-up (W2-core); reflect to device.
-                ? _height - LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
-                : double.NaN;
-
-        /// <summary>
-        /// Y-up of a staff's middle line (page-bottom origin): <c>H − device
-        /// middle</c>. This is the refpoint a relative-Y-up (frame B) grob ADDS
-        /// its stored offset to at draw time — the Y-up-native counterpart of
-        /// reflecting against <see cref="StaffMiddleDeviceY"/> (device = middle −
-        /// Y-up). Once the page's context is wrapped
-        /// in <see cref="YFlipDrawingContext"/>, emitting
-        /// <c>StaffMiddleYUp(...) + offsetUp</c> flips back to the former
-        /// <c>middle − offsetUp</c>, folding the per-grob reflection into the one
-        /// output flip. NaN propagates from <see cref="StaffMiddleDeviceY"/>.
+        /// Page Y-up of a staff's middle line — the refpoint a relative-Y-up
+        /// (frame B) grob ADDS its stored offset to at draw time. Since
+        /// <see cref="LayoutUtilities.ResolveStaffMiddleY"/> is itself page Y-up
+        /// (W2-core), this returns it directly, per the drawer's page-membership
+        /// guard; returns NaN when the measure is not on this page
+        /// (degenerate/test path).
         /// </summary>
         public double StaffMiddleYUp(int staffIndex, int measureIndex, double staffHeight)
-            => _height - StaffMiddleDeviceY(staffIndex, measureIndex, staffHeight);
+            => _systems.TryGetValue(measureIndex, out var system)
+                ? LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
+                : double.NaN;
 
         /// <summary>
         /// The ossia affine (<see cref="Y"/>) expressed in the Y-up frame: the

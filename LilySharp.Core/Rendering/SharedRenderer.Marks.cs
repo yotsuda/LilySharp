@@ -235,8 +235,8 @@ internal static partial class SharedRenderer
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
             if (!sysTopYUp.ContainsKey(m.MeasureIndex)) continue; // other page
             // The mark's page Y-up anchor: the staff middle's Y-up refpoint plus the
-            // stored offset. Marks do not shrink on an ossia staff (the former code
-            // used StaffMiddleDeviceY, not os.Y), so no ossia affine is applied here.
+            // stored offset. Marks do not shrink on an ossia staff (StaffMiddleYUp is
+            // not run through the ossia affine), so no ossia affine is applied here.
             double yUp = os.StaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight) + m.YUp;
             using (gc.Source(m.SourcePosition))
                 DrawSingleMusicMark(m, yUp, gc);
@@ -688,7 +688,7 @@ internal static partial class SharedRenderer
             // -(system.Y + offset) reflection DrawBow used to lift by pageHeight. The
             // arc geometry itself stays device-frame (intentional-device island 2).
             DrawBow(v.StartX, syUp - v.Y, v.EndX, syUp - v.Y,
-                (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y), v.CurveUp,
+                (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y),
                 EngravingDefaults.TieMidThickness,
                 v.StaffIndex, v.MeasureIndex, os, gc);
         }

@@ -689,7 +689,7 @@ internal sealed class SlurScoringProblem
 
         // Store the scored Y verbatim in the page Y-up frame — no exit negation.
         // The scorer already reasons in Y-up (slur-scoring.cc), and BowLayout keeps
-        // that frame; DrawBow flips to device once (os.Y(-YUp, …)).
+        // that frame; the renderer's YFlipDrawingContext performs the single device flip.
         return new SlurLayout(
             _slur,
             config.StartX,

@@ -427,7 +427,7 @@ internal static partial class SharedRenderer
         // Flip the device-space curve back to page Y-up for the flipping context.
         DrawCurve(sx, pageHeight - sy, ex, pageHeight - ey,
             (c1.X, pageHeight - c1.Y), (c2.X, pageHeight - c2.Y),
-            curveUp: false, EngravingDefaults.SlurMidThickness * scale, gc);
+            EngravingDefaults.SlurMidThickness * scale, gc);
     }
 
 }

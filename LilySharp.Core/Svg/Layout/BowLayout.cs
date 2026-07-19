@@ -42,9 +42,9 @@ internal abstract record BowLayout
     // (yUp = -yDevice). This is the frame both bow scorers already reason in
     // (SlurScoringProblem/slur-scoring.cc and TieFormattingProblem/
     // tie-formatting-problem.cc, sign-for-sign), so each CreateLayout stores the
-    // scored Y verbatim with no exit negation. DrawBow performs the single flip
-    // back to device (os.Y(-YUp, …)). The Control1/Control2 tuples' .Y members
-    // are page Y-up too.
+    // scored Y verbatim with no exit negation; the renderer emits these page-Y-up
+    // and its YFlipDrawingContext performs the single device flip. The
+    // Control1/Control2 tuples' .Y members are page Y-up too.
 
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
