@@ -101,9 +101,13 @@ internal sealed class SlurScoringProblem
     // Musical dy: pitch difference in staff spaces
     private readonly double _musicalDy;
 
-    // Staff line positions (staff spaces), in the internal Y-up frame
-    // (yUp = -yDevice), so they are negated relative to the device 0..4.
-    private static readonly double[] StaffLinePositions = { 0, -1, -2, -3, -4 };
+    // The five staff lines in this scorer's Y-up frame (yUp = -yDevice, absolute
+    // page). LilyPond avoids staff lines in STAFF-RELATIVE positions
+    // (slur-configuration.cc on_staff_line); our config Y is absolute-page, so the
+    // lines must be placed absolutely too — a fixed {0,-1,-2,-3,-4} was only right
+    // for a staff whose middle sits at device Y=2 (single top staff), silently
+    // disabling the penalty on every other staff. Built from staffMiddleY below.
+    private readonly double[] _staffLinePositions;
 
     public SlurScoringProblem(
         SlurItem slur,
@@ -111,6 +115,7 @@ internal sealed class SlurScoringProblem
         double startY,
         double endX,
         double endY,
+        double staffMiddleY,
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
         IReadOnlyList<SlurLayout>? existingSlurs = null,
@@ -154,8 +159,15 @@ internal sealed class SlurScoringProblem
         }
 
         // Musical dy in the Y-up frame: higher pitch = larger Y.
-        // LILYPOND-REF: lily/slur-scoring.cc:180-190
+        // LILYPOND-REF: lily/slur-scoring.cc:334-341
         _musicalDy = (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
+
+        // The 5 staff lines in this scorer's frame (yUp = -yDevice). A line at
+        // staff position p sits at device staffMiddleY - p/2, i.e. at -(that) here.
+        // Lines are at p in {4,2,0,-2,-4} -> offsets {2,1,0,-1,-2} ss above middle.
+        _staffLinePositions = new double[5];
+        for (int i = 0; i < 5; i++)
+            _staffLinePositions[i] = -staffMiddleY + (2.0 - i);
     }
 
     // ---------------------------------------------------------------
@@ -453,7 +465,7 @@ internal sealed class SlurScoringProblem
         double gapOutside = _parameters.GapToStafflineOutside;
 
         // Check endpoints against staff lines
-        foreach (double lineY in StaffLinePositions)
+        foreach (double lineY in _staffLinePositions)
         {
             double startDist = Math.Abs(config.StartY - lineY);
             if (startDist < gapInside)
@@ -474,7 +486,7 @@ internal sealed class SlurScoringProblem
         double midY = (config.StartY + config.EndY) / 2;
         double peakY = config.CurveUp ? midY + config.Height : midY - config.Height;
 
-        foreach (double lineY in StaffLinePositions)
+        foreach (double lineY in _staffLinePositions)
         {
             double peakDist = Math.Abs(peakY - lineY);
             if (peakDist < gapOutside)

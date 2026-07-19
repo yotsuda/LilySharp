@@ -131,7 +131,7 @@ internal static partial class SharedRenderer
                     bool mainStemUp = g.MainNoteStaffPosition < 0;
                     DrawGraceSlur(lastNoteX, lastNoteY, lastGraceStaffPos,
                         g.MainNoteX, mainY, g.MainNoteStaffPosition, mainStemUp,
-                        g.MeasureIndex, eff, gc, pageHeight);
+                        g.MeasureIndex, eff, gc, pageHeight, staffMiddleY);
                 }
             }
         }
@@ -355,13 +355,17 @@ internal static partial class SharedRenderer
 
     private static void DrawGraceSlur(double graceX, double graceY, int graceStaffPos,
         double mainX, double mainY, int mainStaffPos, bool mainStemUp,
-        int measureIndex, double scale, IDrawingContext gc, double pageHeight)
+        int measureIndex, double scale, IDrawingContext gc, double pageHeight,
+        double staffMiddleY)
     {
         // The slur scorer reasons in device coordinates (its result is layout Y-up =
         // -device); convert the Y-up head anchors to device, solve, then flip the
         // final curve back to page Y-up for the flipping context.
         graceY = pageHeight - graceY;
         mainY = pageHeight - mainY;
+        // staffMiddleY arrives page-Y-up (same as the head anchors did); the scorer
+        // needs it in the device frame so its staff-line avoidance lands correctly.
+        double staffMiddleYDevice = pageHeight - staffMiddleY;
         double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
         double startY = graceY + 0.5 + GraceSlurStartClearance;
         // A stem-DOWN main note carries its stem on the head's LEFT, so end the slur
@@ -390,7 +394,8 @@ internal static partial class SharedRenderer
             new(endX, mainY - mainHalf, mainY + mainHalf, SlurObstacleType.NoteHead),
         };
         var solved = new SlurScoringProblem(
-            slurItem, startX, startY, endX, endY, obstacles: obstacles).Solve();
+            slurItem, startX, startY, endX, endY, staffMiddleYDevice,
+            obstacles: obstacles).Solve();
 
         // For a short grace→main span (a beamed grace run sits right against the main
         // note) the scorer's free-head inset can drop every candidate, collapsing the

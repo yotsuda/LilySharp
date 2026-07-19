@@ -1175,7 +1175,7 @@ internal sealed class ElementCoordinator
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleY, segStartX, segEndX);
 
                 var problem = new SlurScoringProblem(
-                    slur, segStartX, segStartY, segEndX, segEndY,
+                    slur, segStartX, segStartY, segEndX, segEndY, staffMiddleY,
                     obstacles: obstacles,
                     existingSlurs: slurLayouts,
                     isBrokenLeft: !segment.IsFirst,
