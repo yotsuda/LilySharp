@@ -38,7 +38,9 @@ public readonly record struct MultiMeasureRestLayout(
     double StartX,
     // X coordinate of the rightmost measure's end.
     double EndX,
-    // Y coordinate of the rest's vertical center (staff middle).
+    // Within-system Y offset (device, down from the system top) of the rest's
+    // vertical centre = the staff middle. The draw resolves the system-top Y-up
+    // (pageHeight - system.Y) and subtracts this. NOT an absolute page Y.
     double Y,
     // True ⇒ church_rest (1..ExpandLimit), false ⇒ big_rest (H-bar).
     bool UseChurchRest);
@@ -170,7 +172,13 @@ internal static class MultiMeasureRestEngraver
                     + EngravingDefaults.BarlineDrawnWidth(voice.Measures[runStart].StartBarline);
                 double endX = endMeasure.X + endMeasure.Width
                     - EngravingDefaults.BarlineDrawnWidth(voice.Measures[runEnd].EndBarline);
-                double y = LayoutUtilities.ResolveStaffMiddleY(startSystem, staffIndex, staffHeight);
+                // Within-system Y offset (device, down from the system top) of the
+                // staff middle, NOT an absolute page Y — so it is independent of where
+                // paging places the system. The draw resolves the system-top Y-up and
+                // subtracts this, which decouples the MMR from SystemLayout.Y for the
+                // Stage-4 W2 stacking-origin flip.
+                double y = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex)
+                    - startSystem.Y + staffHeight / 2.0;
 
                 builder.Add(new MultiMeasureRestLayout(
                     StartMeasureIndex: runStart,

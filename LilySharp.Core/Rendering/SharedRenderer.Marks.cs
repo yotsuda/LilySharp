@@ -541,19 +541,22 @@ internal static partial class SharedRenderer
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
         {
-            if (!sysY.ContainsKey(mmr.StartMeasureIndex))
+            if (!sysY.TryGetValue(mmr.StartMeasureIndex, out double sy))
                 continue; // other page
+            // mmr.Y is the within-system offset of the staff middle; the system-top
+            // Y-up is pageHeight - system.Y, so the middle's page Y-up is that minus
+            // the offset (byte-identical to the former pageHeight - absoluteMiddle).
+            double cy = (pageHeight - sy) - mmr.Y;
             if (mmr.UseChurchRest)
-                DrawChurchRest(mmr, gc, pageHeight);
+                DrawChurchRest(mmr, cy, gc);
             else
-                DrawBigRest(mmr, gc, pageHeight);
+                DrawBigRest(mmr, cy, gc);
         }
     }
 
-    private static void DrawChurchRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
+    private static void DrawChurchRest(MultiMeasureRestLayout mmr, double cy, IDrawingContext gc)
     {
         double cx = (mmr.StartX + mmr.EndX) / 2.0;
-        double cy = pageHeight - mmr.Y;
 
         // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
         // Use each rest glyph's REAL ink width (from the extracted font metrics) so
@@ -643,7 +646,7 @@ internal static partial class SharedRenderer
     // LILYPOND-REF: lily/multi-measure-rest.cc:195-220 Multi_measure_rest::big_rest —
     // thick horizontal bar (half-height = thick-thickness x line-thickness x ss/2) capped
     // by hair-thickness vertical end caps of full staff-space height.
-    private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
+    private static void DrawBigRest(MultiMeasureRestLayout mmr, double cy, IDrawingContext gc)
     {
         const double thickness = EngravingDefaults.MultiMeasureRestThickThickness;
         const double endCapHeight = 0.8;
@@ -653,7 +656,6 @@ internal static partial class SharedRenderer
         double left = mmr.StartX + padding;
         double right = mmr.EndX - padding;
         if (right <= left) return;
-        double cy = pageHeight - mmr.Y;
 
         // Rectangles: the y arg is the visual-top edge (device up = larger Y-up),
         // heights stay positive.
