@@ -33,6 +33,10 @@ public readonly record struct LedgerLineSpan(
     int StaffPosition,
     double LeftX,
     double RightX,
+    // Within-system Y offset (device, down from the system top) of the ledger
+    // line. NOT an absolute page Y: a consumer resolves the system-top Y-up
+    // (pageHeight - system.Y) and subtracts this. Independent of where paging
+    // places the system, so the Stage-4 W2 stacking-origin flip won't touch it.
     double Y);
 
 /// <summary>
@@ -164,8 +168,16 @@ internal static class LedgerLineSpannerEngraver
         if (sysIdx >= systems.Length)
             return;
         var system = systems[sysIdx];
-        double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight);
-        double y = StaffFrame.PositionToDevice(staffPos, staffMiddleY);
+        // Within-system Y offset (device, down from the system top) of the staff
+        // middle, NOT an absolute page Y — so it is independent of where paging
+        // places the system. This decouples the span from SystemLayout.Y for the
+        // Stage-4 W2 stacking-origin flip, mirroring the MultiMeasureRest change.
+        // (LedgerLineSpans are additive metadata that no renderer draws — the
+        // notehead path draws the actual ledger lines independently — so this is
+        // byte-invariant.)
+        double staffMiddleOffset = LayoutUtilities.FindStaffYInSystem(system, staffIndex)
+            - system.Y + staffHeight / 2.0;
+        double y = StaffFrame.PositionToDevice(staffPos, staffMiddleOffset);
         builder.Add(new LedgerLineSpan(
             SystemIndex: sysIdx,
             StaffPosition: staffPos,
