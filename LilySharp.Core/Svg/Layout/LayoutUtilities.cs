@@ -175,10 +175,24 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// Finds the absolute Y position of a staff within a specific system.
-    /// Returns system.Y if no matching staff is found (single-staff fallback).
+    /// A staff's WITHIN-SYSTEM vertical offset: the downward distance
+    /// (staff-spaces) from the system top to this staff's top line, i.e.
+    /// <c>staff.Y</c>. Returns 0 when the staff is not found (single-staff
+    /// fallback), so this is exactly <see cref="FindStaffYInSystem"/> minus
+    /// <see cref="SystemLayout.Y"/>.
     /// </summary>
-    public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
+    /// <remarks>
+    /// This is the frame-INVARIANT part of the staff's vertical position: it is
+    /// the offset within the system, independent of where paging places the
+    /// system. Engravers that lay an element out relative to its own staff
+    /// (ties, slurs, ledger spans, multi-measure rests, outside-staff stacking,
+    /// figured bass) resolve against THIS rather than the absolute
+    /// <see cref="FindStaffYInSystem"/>, so they stay decoupled from
+    /// <see cref="SystemLayout.Y"/> across the Stage-4 W2 origin flip (which
+    /// changes <c>system.Y</c> from device Y-down to page Y-up but leaves
+    /// <c>staff.Y</c> a downward within-system offset either way).
+    /// </remarks>
+    public static double StaffOffsetInSystem(SystemLayout system, int staffIndex)
     {
         if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)
         {
@@ -187,12 +201,19 @@ internal static class LayoutUtilities
                 foreach (var staff in staffGroup.Staves)
                 {
                     if (staff.StaffIndex == staffIndex)
-                        return system.Y + staff.Y;
+                        return staff.Y;
                 }
             }
         }
-        return system.Y;
+        return 0;
     }
+
+    /// <summary>
+    /// Finds the absolute Y position of a staff within a specific system.
+    /// Returns system.Y if no matching staff is found (single-staff fallback).
+    /// </summary>
+    public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
+        => system.Y + StaffOffsetInSystem(system, staffIndex);
 
     /// <summary>
     /// Absolute Y of a staff's middle line, the anchor that

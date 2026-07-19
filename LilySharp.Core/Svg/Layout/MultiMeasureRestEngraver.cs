@@ -177,8 +177,8 @@ internal static class MultiMeasureRestEngraver
                 // paging places the system. The draw resolves the system-top Y-up and
                 // subtracts this, which decouples the MMR from SystemLayout.Y for the
                 // Stage-4 W2 stacking-origin flip.
-                double y = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex)
-                    - startSystem.Y + staffHeight / 2.0;
+                double y = LayoutUtilities.StaffOffsetInSystem(startSystem, staffIndex)
+                    + staffHeight / 2.0;
 
                 builder.Add(new MultiMeasureRestLayout(
                     StartMeasureIndex: runStart,

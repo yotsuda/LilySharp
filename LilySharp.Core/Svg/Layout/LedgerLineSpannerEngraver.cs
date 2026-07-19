@@ -175,8 +175,8 @@ internal static class LedgerLineSpannerEngraver
         // (LedgerLineSpans are additive metadata that no renderer draws — the
         // notehead path draws the actual ledger lines independently — so this is
         // byte-invariant.)
-        double staffMiddleOffset = LayoutUtilities.FindStaffYInSystem(system, staffIndex)
-            - system.Y + staffHeight / 2.0;
+        double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystem(system, staffIndex)
+            + staffHeight / 2.0;
         double y = StaffFrame.PositionToDevice(staffPos, staffMiddleOffset);
         builder.Add(new LedgerLineSpan(
             SystemIndex: sysIdx,

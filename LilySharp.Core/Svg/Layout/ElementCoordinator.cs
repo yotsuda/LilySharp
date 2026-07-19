@@ -788,7 +788,7 @@ internal sealed class ElementCoordinator
                 // undone once in DrawTies (byte-identical to the former absolute origin).
                 // Decouples the tie from SystemLayout.Y for the W2 stacking-origin flip
                 // (step 2d, shared with slurs).
-                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex) - segSystem.Y;
+                double staffY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex);
                 double y;
                 var tieForProblem = tie;
                 if (staff is { IsTab: true })
@@ -1154,8 +1154,8 @@ internal sealed class ElementCoordinator
                 // system.Y — undone once in DrawSlurs (byte-identical to the former
                 // absolute origin). Decouples the scored slur from SystemLayout.Y for the
                 // Stage-4 W2 stacking-origin flip (step 2d).
-                double staffMiddleY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex)
-                    - segSystem.Y + _options.StaffHeight / 2.0;
+                double staffMiddleY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex)
+                    + _options.StaffHeight / 2.0;
 
                 // LILYPOND-REF: slur-scoring.cc:549-557 get_base_attachments — the endpoint
                 // attaches to the STEM TIP (the beam it joins), 0.5 ss beyond it, when the
@@ -1240,7 +1240,7 @@ internal sealed class ElementCoordinator
         // (shared with the notation slur) can add the system-top Y-up back uniformly.
         // TabStaffGeometry is additive in staffY (StringY = StaffY + n·space), so this is
         // a pure origin shift that leaves the device string frame intact (island 2).
-        double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex) - segSystem.Y;
+        double staffY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex);
         var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
 
         // The fret digits sit a TabHeadCenterOffset right of their note columns

@@ -897,7 +897,7 @@ internal sealed class LayoutEngine
             // YUp is Y-up; this extent pass is system-relative device, so reconstruct
             // against this figure's own staff offset (0 for a single/top staff).
             double fbOff = measureToSystem.TryGetValue(fb.MeasureIndex, out int fbSys)
-                ? LayoutUtilities.FindStaffYInSystem(systems[fbSys], fb.StaffIndex) - systems[fbSys].Y
+                ? LayoutUtilities.StaffOffsetInSystem(systems[fbSys], fb.StaffIndex)
                 : 0;
             double fbY = fbOff + StaffFrame.ToDevice(fb.YUp, 2.0);
             Add(fb.MeasureIndex,
@@ -1019,7 +1019,7 @@ internal sealed class LayoutEngine
             // staff's system-local middle (staff.Y + StaffMiddle). Ink Top/Bottom stay
             // up-positive, so they ADD.
             var sys = systems[sysIdx];
-            double staffMidLocal = LayoutUtilities.FindStaffYInSystem(sys, a.StaffIndex) - sys.Y + 2.0;
+            double staffMidLocal = LayoutUtilities.StaffOffsetInSystem(sys, a.StaffIndex) + 2.0;
             double aY = a.YUp - staffMidLocal;
             double inkTop = aY + a.Ink.Top;
             double inkBottom = aY + a.Ink.Bottom;
@@ -1083,7 +1083,7 @@ internal sealed class LayoutEngine
             // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin),
             // so translate against this figure's own staff offset (staff middle at
             // offset + 2.0). The figure column extends downward (smaller Y-up).
-            double fbStaffOffset = LayoutUtilities.FindStaffYInSystem(systems[s], fb.StaffIndex) - systems[s].Y;
+            double fbStaffOffset = LayoutUtilities.StaffOffsetInSystem(systems[s], fb.StaffIndex);
             double fbY = fb.YUp - 2.0 - fbStaffOffset;
             double top = fbY + FiguredBassEngraver.FigureTopExtent;
             double bottom = fbY
