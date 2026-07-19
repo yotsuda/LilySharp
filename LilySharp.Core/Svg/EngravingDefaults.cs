@@ -106,8 +106,7 @@ internal static class EngravingDefaults
     public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
-    // LP's value is 1.1; Lily# uses 1.0 (a known small divergence).
-    public const double BeamletLength = 1.0;
+    public const double BeamletLength = 1.1;
 
     // === Barlines ===
     // All barline metrics scale with line-thickness, mirroring LilyPond.
