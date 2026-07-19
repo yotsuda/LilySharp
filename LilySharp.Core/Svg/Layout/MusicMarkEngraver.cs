@@ -32,7 +32,7 @@ public readonly record struct MusicMarkLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double YUp,             // Y in the LilyPond-native Y-up frame: staff-spaces ABOVE
                             // the (top) staff middle, up-positive (frame B). The draw
-                            // reflects it to device via StaffFrame.ToDevice.
+                            // adds it to the staff-middle Y-up (os.StaffMiddleYUp).
     MusicMarkType MarkType, // Type of mark
     string Text,            // Display text or glyph
     bool IsSymbol,          // True if should use symbol glyph, false for text
@@ -136,25 +136,26 @@ internal static class MusicMarkEngraver
     /// (most negative) volta Y across all brackets.
     /// </summary>
     /// <remarks>LILYPOND-REF: define-grobs.scm:4325 VoltaBracketSpanner outside-staff-priority=600</remarks>
-    private static (HashSet<int> Measures, double TopY) BuildVoltaCoverage(
+    private static (HashSet<int> Measures, double TopYUp) BuildVoltaCoverage(
         ImmutableArray<VoltaBracketLayout> voltaBrackets)
     {
         var voltaMeasures = new HashSet<int>();
-        double voltaTopY = 0;
+        // Highest volta position in the mark frame (Y-up above the top-staff middle).
+        // vb.YUp is Y-up from the system top, so its mark-frame Y-up is 2.0 + vb.YUp.
+        // Start at the top-staff top line (Y-up 2.0) and keep the largest (highest).
+        double voltaTopYUp = 2.0;
         if (!voltaBrackets.IsDefaultOrEmpty)
         {
             foreach (var vb in voltaBrackets)
             {
                 for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
                     voltaMeasures.Add(mi);
-                // Track the highest (most negative) volta Y. vb.YUp is Y-up from the
-                // system top; this tracker is system-relative device (down+) = -YUp.
-                double vbY = -vb.YUp;
-                if (vbY < voltaTopY)
-                    voltaTopY = vbY;
+                double vbYUp = 2.0 + vb.YUp;
+                if (vbYUp > voltaTopYUp)
+                    voltaTopYUp = vbYUp;
             }
         }
-        return (voltaMeasures, voltaTopY);
+        return (voltaMeasures, voltaTopYUp);
     }
 
     public static ImmutableArray<MusicMarkLayout> Calculate(
@@ -196,7 +197,7 @@ internal static class MusicMarkEngraver
         // and stacked outward from the staff.
 
         // Build volta bracket coverage: measure indices that have a volta bracket above.
-        var (voltaMeasures, voltaTopY) = BuildVoltaCoverage(voltaBrackets);
+        var (voltaMeasures, voltaTopYUp) = BuildVoltaCoverage(voltaBrackets);
 
         // Group by measure + position + ANCHOR TIMING so only marks that share a
         // horizontal column stack vertically. Without the timing, a mid-measure
@@ -244,14 +245,15 @@ internal static class MusicMarkEngraver
         // Lowest lyric baseline per system — a below-staff mark (D.C./D.S./Fine)
         // must drop past the lyrics, which occupy the same band under the staff, or
         // it overprints them.
-        var systemLyricBottom = new Dictionary<int, double>();
+        var systemLyricBottomUp = new Dictionary<int, double>();
         if (!lyrics.IsDefaultOrEmpty)
             foreach (var ly in lyrics)
-                // ly.YUp is Y-up from the system top; this pass works in system-relative
-                // device (the lyric bottom = the largest device Y), so reflect back.
+                // ly.YUp is Y-up from the system top; its mark-frame Y-up (from the
+                // top-staff middle) is 2.0 + ly.YUp. Track the LOWEST lyric baseline =
+                // the smallest mark-frame Y-up per system.
                 if (measureToSystemIdx.TryGetValue(ly.Item.MeasureIndex, out int lySys)
-                    && (!systemLyricBottom.TryGetValue(lySys, out double cur) || -ly.YUp > cur))
-                    systemLyricBottom[lySys] = -ly.YUp;
+                    && (!systemLyricBottomUp.TryGetValue(lySys, out double cur) || 2.0 + ly.YUp < cur))
+                    systemLyricBottomUp[lySys] = 2.0 + ly.YUp;
 
         var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
 
@@ -274,11 +276,13 @@ internal static class MusicMarkEngraver
             // LILYPOND-REF: axis-group-interface.cc:652-681 avoid_outside_staff_collisions
             // Marks with priority > 600 (VoltaBracketSpanner) must be placed above volta.
             // Base Y for above-staff stacking: if volta present, start above volta top.
-            double baseAboveY = AboveStaffOffset;
+            // Base Y-up for above-staff stacking (from the top-staff middle, up+).
+            // AboveStaffOffset is a device (down+) offset, so its Y-up value is 2 − it.
+            double baseAboveYUp = 2.0 - AboveStaffOffset;
             if (hasVoltaOverlap)
             {
-                // Place marks above volta bracket with outside-staff padding
-                baseAboveY = voltaTopY - OutsideStaffPadding;
+                // Place marks above the volta bracket with outside-staff padding.
+                baseAboveYUp = voltaTopYUp + OutsideStaffPadding;
             }
 
             // Chord symbols are the line CLOSEST to the staff (LP: the marks'
@@ -292,7 +296,9 @@ internal static class MusicMarkEngraver
             // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing.
             // Only inline top-staff chords have negative Y here; chord ROWS and
             // lower staves don't share the marks' band.
-            double markCeiling = double.PositiveInfinity; // constraint on box BOTTOM
+            // Constraint on the box BOTTOM in Y-up: a mark's bottom must clear the
+            // highest chord top it overlaps. Init −inf, keep the largest (highest).
+            double markCeilingUp = double.NegativeInfinity;
             if (!chordNames.IsDefaultOrEmpty && aboveMarks.Count > 0)
             {
                 foreach (var e in aboveMarks)
@@ -300,13 +306,15 @@ internal static class MusicMarkEngraver
                     var (mx0, mx1) = MarkXExtent(e.Mark, e.X);
                     foreach (var cn in chordNames)
                     {
-                        if (-cn.YUp >= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
+                        // Only inline chords ABOVE the top staff (mark-frame Y-up > 2.0,
+                        // i.e. cn.YUp > 0) share the marks' band.
+                        if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
                             continue;
                         double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
-                        double chordTop = -cn.YUp - ChordAscent(cn);
-                        markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
+                        double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn);
+                        markCeilingUp = Math.Max(markCeilingUp, chordTopUp + OutsideStaffPadding);
                     }
                 }
             }
@@ -315,7 +323,7 @@ internal static class MusicMarkEngraver
             // SIDE BY SIDE (label box, tempo just right of it) so the initial
             // stack is ONE level high; CoPlaceTempoWithLabels re-aligns the
             // pair after the outside-staff stacker has run.
-            double stackTopY = baseAboveY;
+            double stackTopYUp = baseAboveYUp;
             bool sideBySide = aboveMarks.Count == 2
                 && aboveMarks[0].Mark.Type == MusicMarkType.Tempo
                 && (aboveMarks[1].Mark.Type is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal);
@@ -327,36 +335,38 @@ internal static class MusicMarkEngraver
                 double tempoX = lx1 + TempoLabelGap;
                 var (tx0, tx1) = MarkXExtent(tempoMark, tempoX);
 
-                double ceiling = double.PositiveInfinity;
+                // Ceiling on the pair's box BOTTOM in Y-up: init −inf, keep the highest
+                // overlapping chord top.
+                double ceilingUp = double.NegativeInfinity;
                 if (!chordNames.IsDefaultOrEmpty)
                 {
                     foreach (var cn in chordNames)
                     {
-                        if (-cn.YUp >= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
+                        if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
                             continue;
                         double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                         bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
                         bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
                         if (overLabel || overTempo)
-                            ceiling = Math.Min(ceiling, -cn.YUp - ChordAscent(cn) - OutsideStaffPadding);
+                            ceilingUp = Math.Max(ceilingUp, (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding);
                     }
                 }
 
                 double halfLabel = GetMarkHalfExtent(labelMark.Type);
-                double pairY = baseAboveY - Padding;
-                if (!double.IsPositiveInfinity(ceiling))
-                    pairY = Math.Min(pairY, ceiling - halfLabel);
+                double pairYUp = baseAboveYUp + Padding;
+                if (!double.IsNegativeInfinity(ceilingUp))
+                    pairYUp = Math.Max(pairYUp, ceilingUp + halfLabel);
 
-                // Store Y-up: the device baseline (from the staff top, middle = 2)
-                // reflects to staff-spaces above the (top) staff middle.
+                // Store the mark-frame Y-up directly (staff-spaces above the top-staff
+                // middle). The tempo baseline sits 0.9 BELOW the label centre (= −0.9 Y-up).
                 layouts.Add(new MusicMarkLayout(
-                    labelMark.MeasureIndex, labelX, StaffFrame.ToUp(pairY, 2.0), labelMark.Type, labelMark.Text,
+                    labelMark.MeasureIndex, labelX, pairYUp, labelMark.Type, labelMark.Text,
                     labelMark.IsSymbol, labelMark.SourcePosition, labelSi));
                 layouts.Add(new MusicMarkLayout(
-                    tempoMark.MeasureIndex, tempoX, StaffFrame.ToUp(pairY + 0.9, 2.0), tempoMark.Type, tempoMark.Text,
+                    tempoMark.MeasureIndex, tempoX, pairYUp - 0.9, tempoMark.Type, tempoMark.Text,
                     tempoMark.IsSymbol, tempoMark.SourcePosition, tempoSi, tempoMark.SwingSubdivision,
                     tempoMark.TempoText, tempoMark.TempoBeatUnit, tempoMark.TempoDots));
-                stackTopY = pairY - halfLabel;
+                stackTopYUp = pairYUp + halfLabel;
                 aboveMarks.Clear();
             }
 
@@ -365,23 +375,23 @@ internal static class MusicMarkEngraver
                 var (mark, x, si) = aboveMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
-                double y;
+                double yUp;
                 if (i == 0)
                 {
-                    y = baseAboveY - Padding;
-                    if (!double.IsPositiveInfinity(markCeiling))
-                        y = Math.Min(y, markCeiling - halfExtent); // box bottom clears the chord
-                    stackTopY = y - halfExtent;
+                    yUp = baseAboveYUp + Padding;
+                    if (!double.IsNegativeInfinity(markCeilingUp))
+                        yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
+                    stackTopYUp = yUp + halfExtent;
                 }
                 else
                 {
                     // Subsequent marks: stack above previous
-                    y = stackTopY - StackGap - halfExtent;
-                    stackTopY = y - halfExtent;
+                    yUp = stackTopYUp + StackGap + halfExtent;
+                    stackTopYUp = yUp + halfExtent;
                 }
 
                 layouts.Add(new MusicMarkLayout(
-                    mark.MeasureIndex, x, StaffFrame.ToUp(y, 2.0), mark.Type, mark.Text,
+                    mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
@@ -389,23 +399,26 @@ internal static class MusicMarkEngraver
             // Stack below-staff marks (lower priority = closer to staff).
             // Base = the system's LAST staff bottom + 1.5 (equals the old
             // 5.5 constant for a single 4sp staff — multi-staff changes only).
-            double belowBase = BelowMarkBaseline(4.0) - Padding;
+            // Below-staff baseline reflected to the mark frame (Y-up above the top-staff
+            // middle). BelowMarkBaseline stays DEVICE (PedalEngraver consumes it), so
+            // reflect its result to Y-up here (2 − device).
+            double belowBaseUp = 2.0 - (BelowMarkBaseline(4.0) - Padding);
             if (belowMarks.Count > 0
                 && measureToSystemBottom.TryGetValue(belowMarks[0].Mark.MeasureIndex, out double sysBottom))
             {
-                belowBase = BelowMarkBaseline(sysBottom) - Padding;
+                belowBaseUp = 2.0 - (BelowMarkBaseline(sysBottom) - Padding);
             }
             // A jump/other below-staff mark must drop past the lyric line it shares
             // the band with (LyricClearance). Pedal text is EXEMPT — classic notation
             // keeps "Ped."/"*" on its staff-relative baseline, never pushed under the
             // words — so the floor lifts only the non-pedal stacking base, NOT
-            // `belowBase`, which the pedal branch below reads directly.
-            double stackBase = belowBase;
+            // `belowBaseUp`, which the pedal branch below reads directly.
+            double stackBaseUp = belowBaseUp;
             if (belowMarks.Count > 0
                 && measureToSystemIdx.TryGetValue(belowMarks[0].Mark.MeasureIndex, out int belowSys)
-                && systemLyricBottom.TryGetValue(belowSys, out double lyricY))
+                && systemLyricBottomUp.TryGetValue(belowSys, out double lyricYUp))
             {
-                stackBase = Math.Max(belowBase, lyricY + LyricClearance);
+                stackBaseUp = Math.Min(belowBaseUp, lyricYUp - LyricClearance);
             }
             // Pedal CHANGES put the previous release "*" and the next
             // "Ped." in the same group; classic notation writes them SIDE BY
@@ -421,18 +434,18 @@ internal static class MusicMarkEngraver
                 belowMarks.Any(e => IsPedalRelease(e.Mark.Type))
                 && belowMarks.Any(e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type));
 
-            double stackBottomY = belowBase;
+            double stackBottomYUp = belowBaseUp;
             bool firstStacked = true;
             for (int i = 0; i < belowMarks.Count; i++)
             {
                 var (mark, x, si) = belowMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
-                double y;
+                double yUp;
                 if (IsPedal(mark.Type))
                 {
-                    // All pedal text shares the pedal baseline.
-                    y = belowBase + Padding;
+                    // All pedal text shares the pedal baseline (Padding below it = −Padding Y-up).
+                    yUp = belowBaseUp - Padding;
                     if (groupHasPedalChange && IsPedalRelease(mark.Type))
                     {
                         // "*" just left of the new "Ped." — both centered
@@ -444,22 +457,22 @@ internal static class MusicMarkEngraver
                 }
                 else if (firstStacked)
                 {
-                    y = stackBase + Padding;
-                    stackBottomY = y + halfExtent;
+                    yUp = stackBaseUp - Padding;
+                    stackBottomYUp = yUp - halfExtent;
                     firstStacked = false;
                 }
                 else
                 {
-                    y = stackBottomY + StackGap + halfExtent;
-                    stackBottomY = y + halfExtent;
+                    yUp = stackBottomYUp - StackGap - halfExtent;
+                    stackBottomYUp = yUp - halfExtent;
                 }
 
                 // Jump-from instructions (D.S./D.C.) hang a little lower than the
                 // pedal baseline so they clear low notes under the staff.
                 if (IsJumpInstruction(mark.Type))
                 {
-                    y += JumpInstructionDrop;
-                    stackBottomY = Math.Max(stackBottomY, y + halfExtent);
+                    yUp -= JumpInstructionDrop;
+                    stackBottomYUp = Math.Min(stackBottomYUp, yUp - halfExtent);
                 }
 
                 // Below-staff text must clear the LYRIC lines: lyrics hang under
@@ -477,15 +490,17 @@ internal static class MusicMarkEngraver
                         double lyHalf = ly.Width / 2 + 0.3;
                         if (mx1 < ly.X - lyHalf || mx0 > ly.X + lyHalf)
                             continue;
-                        double lyricBottom = -ly.YUp + 0.9; // ly.YUp is Y-up from system top
-                        if (y - halfExtent < lyricBottom + OutsideStaffPadding)
-                            y = lyricBottom + OutsideStaffPadding + halfExtent;
+                        // ly.YUp is Y-up from the system top; its mark-frame Y-up is
+                        // 2 + ly.YUp, and the lyric BOTTOM hangs 0.9 below that baseline.
+                        double lyricBottomUp = (2.0 + ly.YUp) - 0.9;
+                        if (yUp + halfExtent > lyricBottomUp - OutsideStaffPadding)
+                            yUp = lyricBottomUp - OutsideStaffPadding - halfExtent;
                     }
-                    stackBottomY = Math.Max(stackBottomY, y + halfExtent);
+                    stackBottomYUp = Math.Min(stackBottomYUp, yUp - halfExtent);
                 }
 
                 layouts.Add(new MusicMarkLayout(
-                    mark.MeasureIndex, x, StaffFrame.ToUp(y, 2.0), mark.Type, mark.Text,
+                    mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
@@ -533,7 +548,7 @@ internal static class MusicMarkEngraver
         // under an earlier one (adjacent one-bar sections with long tempo
         // texts) must stack ABOVE it — each pair alone only solves against
         // the chord symbols.
-        var placedPairs = new List<(int Sys, double X0, double X1, double LineY)>();
+        var placedPairs = new List<(int Sys, double X0, double X1, double LineYUp)>();
         for (int i = 0; i < result.Count; i++)
         {
             if (result[i].MarkType != MusicMarkType.Tempo)
@@ -562,7 +577,9 @@ internal static class MusicMarkEngraver
                     uw += Rendering.SerifTextMetrics.MeasureBold(tempo.TempoText, 2.2) + 1.5;
                 if (tempo.SwingSubdivision != 0)
                     uw += 5.0;
-                double uLine = StaffFrame.ToDevice(tempo.YUp, 2.0) - drop;
+                // The tempo baseline sits `drop` below the pair line, so the line's
+                // mark-frame Y-up is tempo.YUp + drop.
+                double uLineUp = tempo.YUp + drop;
                 int uSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int us) ? us : -1;
                 foreach (var placed in placedPairs)
                 {
@@ -570,11 +587,11 @@ internal static class MusicMarkEngraver
                         continue;
                     if (tempo.X + uw < placed.X0 - 1.0 || tempo.X > placed.X1 + 1.0)
                         continue;
-                    if (Math.Abs(uLine - placed.LineY) < 3.0)
-                        uLine = Math.Min(uLine, placed.LineY - 3.6);
+                    if (Math.Abs(uLineUp - placed.LineYUp) < 3.0)
+                        uLineUp = Math.Max(uLineUp, placed.LineYUp + 3.6);
                 }
-                placedPairs.Add((uSys, tempo.X, tempo.X + uw, uLine));
-                result[i] = tempo with { YUp = StaffFrame.ToUp(uLine + drop, 2.0) };
+                placedPairs.Add((uSys, tempo.X, tempo.X + uw, uLineUp));
+                result[i] = tempo with { YUp = uLineUp - drop };
                 continue;
             }
 
@@ -596,27 +613,28 @@ internal static class MusicMarkEngraver
             if (tempo.SwingSubdivision != 0)
                 tempoW += 5.0;
 
-            double lineY = Math.Max(StaffFrame.ToDevice(lab.YUp, 2.0),
-                StaffFrame.ToDevice(tempo.YUp, 2.0) - baselineDrop);
+            // Shared pair line in Y-up: start at the LOWER (smaller Y-up) of the label
+            // centre and the tempo baseline lifted by baselineDrop.
+            double lineYUp = Math.Min(lab.YUp, tempo.YUp + baselineDrop);
             if (!chordNames.IsDefaultOrEmpty)
             {
                 foreach (var cn in chordNames)
                 {
-                    if (-cn.YUp >= 0)
+                    if (cn.YUp <= 0)
                         continue;
                     if (measureToSystemIdx.TryGetValue(cn.MeasureIndex, out int cs)
                         && measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int ts2)
                         && cs != ts2)
                         continue;
                     double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
-                    double chordTop = -cn.YUp - ChordAscent(cn) - OutsideStaffPadding;
+                    double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding;
                     bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
                     bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);
                     // Tempo ink: stem to ~2.1 above the baseline, digits ~0.5 below.
                     if (overTempo)
-                        lineY = Math.Min(lineY, chordTop - 0.5 - baselineDrop);
+                        lineYUp = Math.Max(lineYUp, chordTopUp + 0.5 + baselineDrop);
                     if (overLabel)
-                        lineY = Math.Min(lineY, chordTop - boxHalf);
+                        lineYUp = Math.Max(lineYUp, chordTopUp + boxHalf);
                 }
             }
 
@@ -633,16 +651,16 @@ internal static class MusicMarkEngraver
                 // plus padding above the one it would run into — but only
                 // when the bands actually meet (an X-overlapping mark two
                 // levels up leaves this line free).
-                if (Math.Abs(lineY - placed.LineY) < 3.0)
-                    lineY = Math.Min(lineY, placed.LineY - 3.6);
+                if (Math.Abs(lineYUp - placed.LineYUp) < 3.0)
+                    lineYUp = Math.Max(lineYUp, placed.LineYUp + 3.6);
             }
-            placedPairs.Add((tempoSys, pairX0, pairX1, lineY));
+            placedPairs.Add((tempoSys, pairX0, pairX1, lineYUp));
 
-            result[bestJ] = lab with { YUp = StaffFrame.ToUp(lineY, 2.0) };
+            result[bestJ] = lab with { YUp = lineYUp };
             result[i] = tempo with
             {
                 X = tempoX,
-                YUp = StaffFrame.ToUp(lineY + baselineDrop, 2.0),
+                YUp = lineYUp - baselineDrop,
             };
         }
         return result.ToImmutable();
@@ -662,11 +680,10 @@ internal static class MusicMarkEngraver
         if (labelIdx.Count == 0)
             return marks;
 
-        // The common rehearsal line: the labels closest to the staff (largest Y),
+        // The common rehearsal line: the labels closest to the staff (smallest Y-up),
         // i.e. those NOT raised to clear something. An un-raised label sits at the
         // same staff-relative Y in every system, so this is system-agnostic.
-        // commonY is a device baseline (top-staff frame); bridge from Y-up.
-        double commonY = labelIdx.Max(j => StaffFrame.ToDevice(result[j].YUp, 2.0));
+        double commonYUp = labelIdx.Min(j => result[j].YUp);
 
         for (int i = 0; i < result.Count; i++)
         {
@@ -687,11 +704,11 @@ internal static class MusicMarkEngraver
                 // sit the sign just to its left and LOW enough that its baseline
                 // meets the label box's bottom edge (the box extends half its
                 // height below the shared centre line).
-                var lab = result[bestJ] with { YUp = StaffFrame.ToUp(commonY, 2.0) };
+                var lab = result[bestJ] with { YUp = commonYUp };
                 result[bestJ] = lab;
                 double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
                 double boxHalf = (labelFs + 2 * 0.2) / 2; // box height = fs + 2*pad(0.2)
-                result[i] = tc with { YUp = StaffFrame.ToUp(commonY + boxHalf, 2.0), X = lab.X - ToCodaLabelGap };
+                result[i] = tc with { YUp = commonYUp - boxHalf, X = lab.X - ToCodaLabelGap };
             }
         }
         return result.ToImmutable();
