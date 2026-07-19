@@ -89,8 +89,9 @@ internal static class OutsideStaffStacker
     ///    adjusted to avoid overlap with dynamics at the same X range.
     /// 2. Priority 350 (TextSpanner): adjusted to avoid all priority-250 elements.
     ///
-    /// Uses Math.Max to ensure the stacker never moves elements closer to the staff
-    /// than the individual engraver already calculated.
+    /// The stacker only ever moves an element AWAY from the staff (never closer than
+    /// the individual engraver already calculated) — a Y-up clamp toward smaller Y-up
+    /// below the staff, larger Y-up above.
     /// </remarks>
     public static (ImmutableArray<DynamicLayout> Dynamics,
                     ImmutableArray<HairpinLayout> Hairpins)
@@ -131,9 +132,12 @@ internal static class OutsideStaffStacker
         // Occupancy tracker PER (system, staff): each staff's below-staff column
         // stacks down from ITS OWN bottom, so a hairpin under staff 2 is not pushed
         // by staff 1's dynamics (they share the single Dynamics/Hairpin tables but
-        // occupy different vertical bands). Seeded lazily at StaffBottom + the
-        // staff's within-system Y offset. A single staff (offset 0) reproduces the
-        // former per-system tracker exactly, so single-staff output is unchanged.
+        // occupy different vertical bands).
+        // FRAME: system-relative Y-up (up-positive, the SYSTEM TOP = 0), the native
+        // LP frame the grobs store — below the staff is negative Y-up. Seeded lazily
+        // at the staff bottom's Y-up = -(StaffBottom + within-system offset); dir=-1
+        // stacks DOWNWARD (the frontier is the SMALLEST Y-up, furthest below). A single
+        // staff (offset 0) reproduces the former per-system tracker exactly.
         var trackers = new Dictionary<(int Sys, int Staff), DirectionalOccupancy>();
         DirectionalOccupancy Track(int sys, int staff)
         {
@@ -144,7 +148,7 @@ internal static class OutsideStaffStacker
                 // baseline, so gating on this keeps their extent estimate unchanged).
                 double off = applyStaffOffsets && sys >= 0 && sys < staffYBySystem.Count
                     && staffYBySystem[sys].TryGetValue(staff, out var so) ? so : 0;
-                t = new DirectionalOccupancy(StaffBottom + off, dir: +1);
+                t = new DirectionalOccupancy(-(StaffBottom + off), dir: -1);
                 trackers[(sys, staff)] = t;
             }
             return t;
@@ -162,14 +166,15 @@ internal static class OutsideStaffStacker
             {
                 if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
-                // YUp is Y-up (above the staff middle). The tracker frame is device
-                // with the SAME staff offset the tracker baseline uses (0 unless
-                // applyStaffOffsets), so reflect against off + staff middle.
+                // a.YUp is Y-up above the staff middle; the tracker frame is
+                // system-relative Y-up, where the staff middle sits at -(off + 2) (staff
+                // top is off below the system top, its middle 2 further down), so the
+                // grob's system-relative Y-up is a.YUp - off - 2.
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var sso) ? sso : 0;
-                double aY = off + StaffFrame.ToDevice(a.YUp, 2.0);
-                // Glyph roughly centered on its anchor; half-extent ~0.6sp.
-                Track(sysIdx, a.StaffIndex).AddRegion(a.X - 0.6, a.X + 0.6, aY + 0.6);
+                double aYup = a.YUp - off - 2.0;
+                // Glyph roughly centered on its anchor; half-extent ~0.6sp below.
+                Track(sysIdx, a.StaffIndex).AddRegion(a.X - 0.6, a.X + 0.6, aYup - 0.6);
             }
         }
 
@@ -197,21 +202,22 @@ internal static class OutsideStaffStacker
                 double xEnd = dyn.X + DynamicHalfWidth;
                 var tracker = Track(sysIdx, dyn.StaffIndex);
                 double occupied = tracker.Frontier(xStart, xEnd);
-                double requiredY = occupied + DynamicLineSpannerPadding + DynamicTextAscent;
-                // The tracker is device with the SAME staff offset the baseline uses
-                // (0 unless applyStaffOffsets); reflect dyn.YUp into it, clamp, and
-                // (if pushed) reflect the new device Y back to Y-up.
+                double requiredYup = occupied - DynamicLineSpannerPadding - DynamicTextAscent;
+                // System-relative Y-up: the grob's dyn.YUp (above the staff middle) sits
+                // at dyn.YUp - off - 2; clamp it no closer to the staff than the frontier
+                // demands (further below = smaller Y-up), and reflect any push back to the
+                // staff-middle frame the grob stores in (+ off + 2).
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(dyn.StaffIndex, out var so) ? so : 0;
-                double dynY = off + StaffFrame.ToDevice(dyn.YUp, 2.0);
-                double curDynY = dynY;
-                if (requiredY > dynY)
+                double dynYup = dyn.YUp - off - 2.0;
+                double curDynYup = dynYup;
+                if (requiredYup < dynYup)
                 {
-                    curDynY = requiredY;
-                    dynBuilder[i] = dyn with { YUp = StaffFrame.ToUp(requiredY - off, 2.0) };
+                    curDynYup = requiredYup;
+                    dynBuilder[i] = dyn with { YUp = requiredYup + off + 2.0 };
                 }
 
-                double bottom = curDynY + DynamicTextDescent;
+                double bottom = curDynYup - DynamicTextDescent;
                 tracker.AddRegion(xStart, xEnd, bottom);
             }
             adjDynamics = dynBuilder.ToImmutable();
@@ -230,17 +236,17 @@ internal static class OutsideStaffStacker
 
                 var tracker = Track(sysIdx, hp.StaffIndex);
                 double occupiedBottom = tracker.Frontier(hp.StartX, hp.EndX);
-                double requiredY = occupiedBottom + DynamicLineSpannerPadding + HairpinHalfHeight;
-                // hp.YUp is Y-up from the system top; this tracker works in the
-                // system-relative device frame (old hp.Y = -YUp).
-                double hpY = -hp.YUp;
-                double newY = Math.Max(hpY, requiredY);
+                double requiredYup = occupiedBottom - DynamicLineSpannerPadding - HairpinHalfHeight;
+                // hp.YUp is already Y-up from the system top — the tracker frame — so it
+                // enters directly. Clamp no closer to the staff than the frontier demands
+                // (further below = smaller Y-up).
+                double newYup = Math.Min(hp.YUp, requiredYup);
 
-                if (Math.Abs(newY - hpY) > 0.01)
-                    builder[i] = hp with { YUp = -newY };
+                if (Math.Abs(newYup - hp.YUp) > 0.01)
+                    builder[i] = hp with { YUp = newYup };
 
-                // Register hairpin in tracker
-                double finalBottom = -builder[i].YUp + HairpinHalfHeight;
+                // Register hairpin in tracker (its bottom edge = centre - half height)
+                double finalBottom = builder[i].YUp - HairpinHalfHeight;
                 tracker.AddRegion(hp.StartX, hp.EndX, finalBottom);
             }
             adjHairpins = builder.ToImmutable();
