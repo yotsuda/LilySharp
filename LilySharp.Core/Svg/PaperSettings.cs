@@ -40,9 +40,6 @@ public enum PaperSize
 /// </summary>
 internal class PaperSettings
 {
-    // Unit conversion constants
-    public const double MmPerPoint = 0.3528; // 1 pt = 0.3528 mm
-
     // Reference paper size for scaling (A4)
     private const double ReferenceWidth = 210.0;  // A4 width in mm
     private const double ReferenceHeight = 297.0; // A4 height in mm
@@ -216,14 +213,4 @@ internal class PaperSettings
     {
         return PaperHeight - TopMargin - BottomMargin - headerHeight - footerHeight;
     }
-
-    /// <summary>
-    /// Converts millimeters to points.
-    /// </summary>
-    public static double MmToPoints(double mm) => mm / MmPerPoint;
-
-    /// <summary>
-    /// Converts points to millimeters.
-    /// </summary>
-    public static double PointsToMm(double pt) => pt * MmPerPoint;
 }
