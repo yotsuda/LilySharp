@@ -180,8 +180,12 @@ internal static class HairpinEngraver
                 }
                 else
                 {
-                    startOpening = segment.IsFirst ? fullOpening : continuingOpening;
-                    endOpening = segment.IsLast ? 0 : continuedOpening;
+                    // Decrescendo: LP hairpin.cc:305-309 — starth = continuing ? 2h/3 : h,
+                    // endh = continued ? h/3 : 0. The interior fractions are the MIRROR of
+                    // the crescendo case: a non-first left mouth is 2h/3 (continuedOpening),
+                    // a non-last right mouth is h/3 (continuingOpening).
+                    startOpening = segment.IsFirst ? fullOpening : continuedOpening;
+                    endOpening = segment.IsLast ? 0 : continuingOpening;
                 }
 
                 layouts.Add(new HairpinLayout(

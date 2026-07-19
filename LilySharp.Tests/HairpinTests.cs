@@ -314,9 +314,12 @@ public class HairpinTests
     }
 
     [Fact]
-    public void Calculate_BrokenDecrescendo_ContinuedHasTwoThirdsOpening()
+    public void Calculate_BrokenDecrescendo_MirrorsCrescendoFractions()
     {
-        // LILYPOND-REF: lily/hairpin.cc:180-220 — continued = 2/3 height
+        // LILYPOND-REF: lily/hairpin.cc:305-309 — decrescendo (SMALLER):
+        //   starth = continuing ? 2h/3 : h ;  endh = continued ? h/3 : 0.
+        // So the interior fractions are the MIRROR of the crescendo case: the
+        // leftmost piece tapers full -> h/3, the rightmost piece 2h/3 -> point.
         var (measures, systems) = CreateTwoSystemLayout();
         var hairpins = ImmutableArray.Create(new HairpinItem(
             HairpinDirection.Decrescendo, 0, 0, 3, 0, 0));
@@ -326,12 +329,12 @@ public class HairpinTests
         Assert.Equal(2, result.Length);
 
         double fullOpening = 0.6666;
-        // First segment (continued): full opening at left, 2/3 at right
+        // First segment (leftmost): full opening at left, 1/3 at the break (right).
         Assert.Equal(fullOpening, result[0].StartOpening, 4);
-        Assert.Equal(fullOpening * 2.0 / 3.0, result[0].EndOpening, 4);
+        Assert.Equal(fullOpening * 1.0 / 3.0, result[0].EndOpening, 4);
 
-        // Second segment (continuing): 1/3 at left, point at right
-        Assert.Equal(fullOpening * 1.0 / 3.0, result[1].StartOpening, 4);
+        // Second segment (rightmost): 2/3 at the break (left), point at right.
+        Assert.Equal(fullOpening * 2.0 / 3.0, result[1].StartOpening, 4);
         Assert.Equal(0.0, result[1].EndOpening, 4);
     }
 
