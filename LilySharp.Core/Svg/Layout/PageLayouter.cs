@@ -352,7 +352,11 @@ internal sealed class PageLayouter
         double currentY = firstY;
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
-            pageSystems.Add(allSystems[sysIdx] with { Y = currentY });
+            // Stage-4 W2-core multi-page producer seam: currentY accumulates the
+            // system top DOWNWARD (device) within the page; store it as page Y-up
+            // (UP from the page bottom) against this page's fixed height, matching
+            // the PageLayout.Height (= _options.PageHeight) built above.
+            pageSystems.Add(allSystems[sysIdx] with { Y = _options.PageHeight - currentY });
             if (sysIdx < endIdx - 1)
                 currentY += gapNatural[sysIdx - startIdx];
         }

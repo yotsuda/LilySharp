@@ -594,7 +594,14 @@ internal sealed class LayoutEngine
         if (_options.PageHeight > 0 && totalHeight > _options.PageHeight)
             return OptimalPages();
 
-        var systemsArray = updatedSystems.ToImmutableArray();
+        // Stage-4 W2-core: the loop above accumulated each system's top DOWNWARD
+        // (device) to size the page; store the final origins as page Y-up (UP from
+        // the page bottom) by reflecting through the now-known totalHeight. This is
+        // the single-page producer seam — after it, SystemLayout.Y is Y-up and the
+        // renderer's YFlip is the only device conversion left.
+        var systemsArray = updatedSystems
+            .Select(s => s with { Y = totalHeight - s.Y })
+            .ToImmutableArray();
         var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systemsArray);
         return (ImmutableArray.Create(page), systemsArray);
     }

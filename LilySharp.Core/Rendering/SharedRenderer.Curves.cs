@@ -220,9 +220,10 @@ internal static partial class SharedRenderer
 
     // ---------- Helpers for system-Y lookup ----------
 
-    // Each measure → its system TOP in the page Y-up frame (page-bottom origin):
-    // page.Height − system.Y. This is the refpoint a system-anchored overlay adds
-    // its stored Y-up offset to (the renderer emits page-Y-up primitives; the single
+    // Each measure → its system TOP in the page Y-up frame (page-bottom origin).
+    // SystemLayout.Y now stores page Y-up natively (Stage-4 W2-core), so this is
+    // system.Y directly. This is the refpoint a system-anchored overlay adds its
+    // stored Y-up offset to (the renderer emits page-Y-up primitives; the single
     // device flip is the YFlipDrawingContext). Page-scoped on purpose: the map
     // doubles as the page-membership test for every overlay drawer (missing key =
     // the measure is on another page).
@@ -231,7 +232,7 @@ internal static partial class SharedRenderer
         var map = new Dictionary<int, double>();
         foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
-                map[ml.MeasureIndex] = page.Height - system.Y;
+                map[ml.MeasureIndex] = system.Y;
         return map;
     }
 
@@ -278,7 +279,9 @@ internal static partial class SharedRenderer
         {
             if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))
                 return y;
-            double top = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+            // Device affine: FindStaffYInSystem is now page Y-up (W2-core), reflect
+            // to device so this contracts toward the DEVICE staff top.
+            double top = _height - LayoutUtilities.FindStaffYInSystem(system, staffIndex);
             return top + (y - top) * OssiaScale;
         }
 
@@ -298,7 +301,8 @@ internal static partial class SharedRenderer
         /// </summary>
         public double StaffMiddleDeviceY(int staffIndex, int measureIndex, double staffHeight)
             => _systems.TryGetValue(measureIndex, out var system)
-                ? LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
+                // ResolveStaffMiddleY is now page Y-up (W2-core); reflect to device.
+                ? _height - LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight)
                 : double.NaN;
 
         /// <summary>
@@ -328,7 +332,9 @@ internal static partial class SharedRenderer
         {
             if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))
                 return yUp;
-            double topUp = _height - LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+            // FindStaffYInSystem is now page Y-up natively (W2-core) = the staff-top
+            // Y-up this affine contracts toward.
+            double topUp = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
             return topUp + (yUp - topUp) * OssiaScale;
         }
     }

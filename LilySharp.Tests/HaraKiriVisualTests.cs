@@ -108,8 +108,10 @@ public class HaraKiriVisualTests
 
         // M2 Defect B: page spacing is per system — the two-staff system
         // occupies visibly more room than the single-staff ones around it.
-        double gap01 = systems[1].Y - systems[0].Y; // spans system 1 (1 staff)
-        double gap12 = systems[2].Y - systems[1].Y; // spans system 2 (2 staves)
+        // system.Y is page Y-up (W2-core): the earlier (upper) system has the LARGER
+        // Y, so the space a system occupies is the previous-minus-next difference.
+        double gap01 = systems[0].Y - systems[1].Y; // spans system 1 (1 staff)
+        double gap12 = systems[1].Y - systems[2].Y; // spans system 2 (2 staves)
         Assert.True(gap12 > gap01 + 1.0,
             $"the two-staff system must need more room: gap01={gap01:F2}, gap12={gap12:F2}");
 
@@ -117,15 +119,15 @@ public class HaraKiriVisualTests
         // OWN staff table — it must sit at/below the bass staff, well past the
         // treble staff's bottom (the defect put it at the system-0 table's Y).
         var f = layout.DynamicLayouts.Single(d => d.Text == "f");
-        // YUp is Y-up (frame B); reflect to absolute device against the bass staff's
-        // page-absolute middle to get the drawn Y.
-        double fAbsY = StaffFrame.ToDevice(
-            f.YUp, LayoutUtilities.ResolveStaffMiddleY(systems[1], f.StaffIndex, 4.0));
-        double trebleBottom = LayoutUtilities.FindStaffYInSystem(systems[1], 0) + 4.0;
+        // Everything is page Y-up now (W2-core). The dynamic's drawn page Y-up is its
+        // bass staff's middle Y-up plus its stored Y-up offset (as DrawDynamics emits).
+        // Lower on the page = SMALLER Y-up, so "below" comparisons use <.
+        double fAbsY = LayoutUtilities.ResolveStaffMiddleY(systems[1], f.StaffIndex, 4.0) + f.YUp;
+        double trebleBottom = LayoutUtilities.FindStaffYInSystem(systems[1], 0) - 4.0;
         double bassTop = LayoutUtilities.FindStaffYInSystem(systems[1], 1);
-        Assert.True(bassTop > trebleBottom,
+        Assert.True(bassTop < trebleBottom,
             $"fixture must show both staves in system 2 (bassTop={bassTop:F2}, trebleBottom={trebleBottom:F2})");
-        Assert.True(fAbsY > trebleBottom,
+        Assert.True(fAbsY < trebleBottom,
             $"the bass-staff dynamic must be below the treble staff: fY={fAbsY:F2}, trebleBottom={trebleBottom:F2}");
     }
 

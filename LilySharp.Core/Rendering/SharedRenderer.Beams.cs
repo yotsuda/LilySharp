@@ -56,9 +56,9 @@ internal static partial class SharedRenderer
             // beam's OWN staff middle — resolve that staff in this system
             // (multi-staff scores; -1 = single staff = the system's first).
             // Top-line Y-up of the beam's own staff (page-bottom origin).
-            double staffY = pageHeight - (beam.StaffIndex >= 0
+            double staffY = beam.StaffIndex >= 0
                 ? LayoutUtilities.FindStaffYInSystem(system, beam.StaffIndex)
-                : system.Y);
+                : system.Y;
 
             // Ossia beams get the same treatment as the ossia staff pass: a
             // uniform-scale group anchored at the staff's Y with X compensated
@@ -110,7 +110,7 @@ internal static partial class SharedRenderer
             if (allTab && MemberStaffOf(0) is { } tabDirStaff)
             {
                 var g = new TabStaffGeometry(tabDirStaff.Tuning ?? TuningType.Guitar,
-                    LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
+                    pageHeight - LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
                     tabDirStaff.TabSourceClef, tabDirStaff.Transposition);
                 tabDirGeom = g;
                 tabDir = g.GroupStemUp(grp.Members.Select(m => m.Item));
@@ -216,14 +216,14 @@ internal static partial class SharedRenderer
                     // TabStemHeadY returns device Y; lift to page Y-up (tab beams
                     // are never ossia).
                     headY = pageHeight - TabStemHeadY(member.Item, up,
-                        LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
+                        pageHeight - LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
                 }
                 else
                 {
                     // Ossia beams never cross staves: every member sits on the
                     // ossia's own (local) frame.
                     double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
-                        ? pageHeight - LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
+                        ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
                         : staffMiddleY;
                     headY = memberStaffMiddleY + GetMemberStaffPosition(member, up) / 2.0
                         - StemAttachYOffset(member.Item switch

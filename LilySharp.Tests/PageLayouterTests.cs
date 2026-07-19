@@ -82,8 +82,10 @@ public class PageLayouterTests
 
         // Gap between system 0 and 1 should differ from gap between system 1 and 2
         // because extents differ
-        double gap01 = pageSystems[1].Y - pageSystems[0].Y;
-        double gap12 = pageSystems[2].Y - pageSystems[1].Y;
+        // system.Y is page Y-up (W2-core): the earlier (upper) system has the LARGER
+        // Y, so the inter-system distance is the previous-minus-next difference.
+        double gap01 = pageSystems[0].Y - pageSystems[1].Y;
+        double gap12 = pageSystems[1].Y - pageSystems[2].Y;
 
         // System 0 has small downExtent (1), system 1 has small upExtent (1)
         // System 1 has large downExtent (5), system 2 has large upExtent (4)
@@ -112,7 +114,7 @@ public class PageLayouterTests
 
         Assert.Single(pages);
         var pageSystems = pages[0].Systems;
-        double gap = pageSystems[1].Y - pageSystems[0].Y;
+        double gap = pageSystems[0].Y - pageSystems[1].Y; // Y-up (W2-core): upper system has larger Y
 
         // Minimum distance: skyline + padding
         // skylineDist = staffHeight + bottomExtent + nextTopExtent = 4 + 1 + 1 = 6
@@ -143,7 +145,7 @@ public class PageLayouterTests
 
         Assert.Single(pages);
         var pageSystems = pages[0].Systems;
-        double gap = pageSystems[1].Y - pageSystems[0].Y;
+        double gap = pageSystems[0].Y - pageSystems[1].Y; // Y-up (W2-core): upper system has larger Y
 
         // Minimum gap: skylineDistance + padding
         // skylineDistance = staffHeight + bottomExtent + nextTopExtent = 10 + 6 + 3 = 19
@@ -316,8 +318,9 @@ public class PageLayouterTests
         var pagesWithSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
         var pagesWithoutSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
 
-        double gapWithSkylines = pagesWithSkylines[0].Systems[1].Y - pagesWithSkylines[0].Systems[0].Y;
-        double gapWithoutSkylines = pagesWithoutSkylines[0].Systems[1].Y - pagesWithoutSkylines[0].Systems[0].Y;
+        // Y-up (W2-core): upper system has the larger Y, so distance = prev − next.
+        double gapWithSkylines = pagesWithSkylines[0].Systems[0].Y - pagesWithSkylines[0].Systems[1].Y;
+        double gapWithoutSkylines = pagesWithoutSkylines[0].Systems[0].Y - pagesWithoutSkylines[0].Systems[1].Y;
 
         // The tall parts don't overlap in X, so the per-X skyline distance is STRICTLY
         // smaller than the scalar worst case (which stacks max-down against max-up), and
@@ -395,7 +398,7 @@ public class PageLayouterTests
 
         var pages = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
 
-        double gap = pages[0].Systems[1].Y - pages[0].Systems[0].Y;
+        double gap = pages[0].Systems[0].Y - pages[0].Systems[1].Y; // Y-up (W2-core): upper system has larger Y
         var spec = options.VerticalSpacing.SystemSystem;
         double minGap = Math.Max(5.0 + 5.0, spec.MinimumDistance) + spec.Padding;
 
@@ -442,8 +445,9 @@ public class PageLayouterTests
         var customPages = layouterCustom.CreatePagesWithOptimalBreaking(systems, 0, extents);
         var defaultPages = layouterDefault.CreatePagesWithOptimalBreaking(systems, 0, extents);
 
-        double customGap = customPages[0].Systems[1].Y - customPages[0].Systems[0].Y;
-        double defaultGap = defaultPages[0].Systems[1].Y - defaultPages[0].Systems[0].Y;
+        // Y-up (W2-core): upper system has the larger Y, so distance = prev − next.
+        double customGap = customPages[0].Systems[0].Y - customPages[0].Systems[1].Y;
+        double defaultGap = defaultPages[0].Systems[0].Y - defaultPages[0].Systems[1].Y;
 
         // Custom has smaller basic-distance (8 vs 12), so gap should be smaller
         Assert.True(customGap < defaultGap,

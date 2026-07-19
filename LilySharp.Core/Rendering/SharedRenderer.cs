@@ -299,7 +299,11 @@ internal static partial class SharedRenderer
             if (!StaffPresentInSystem(system, globalIdx))
                 continue;
 
-            double staffY = LayoutUtilities.FindStaffYInSystem(system, globalIdx);
+            // Device staff-top Y for the ossia group transform below (an inherently
+            // device-frame affine): FindStaffYInSystem is now page Y-up (W2-core), so
+            // reflect it back to device here. The non-ossia content path uses the Y-up
+            // StaffTopYUp (localStaffY) further down.
+            double staffY = pageHeight - LayoutUtilities.FindStaffYInSystem(system, globalIdx);
             bool isOssia = staff.IsOssia;
 
             // Independent text rows (chords / lyrics) draw no staff lines / clef /

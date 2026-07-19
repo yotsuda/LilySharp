@@ -209,41 +209,48 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// Finds the absolute Y position of a staff within a specific system.
-    /// Returns system.Y if no matching staff is found (single-staff fallback).
+    /// Finds the absolute page-Y-up position of a staff's TOP line within a
+    /// specific system (staff-spaces UP from the page bottom). Returns system.Y —
+    /// the system top's Y-up — if no matching staff is found (single-staff
+    /// fallback). Since <see cref="SystemLayout.Y"/> now stores page Y-up
+    /// natively (Stage-4 W2-core) and the staff top sits its within-system
+    /// downward offset BELOW the system top, that offset SUBTRACTS.
     /// </summary>
     public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
-        => system.Y + StaffOffsetInSystem(system, staffIndex);
+        => system.Y - StaffOffsetInSystem(system, staffIndex);
 
     /// <summary>
-    /// Absolute Y of a staff's middle line, the anchor that
+    /// Absolute page-Y-up of a staff's middle line, the anchor that
     /// <see cref="StaffFrame.PositionToDevice"/> measures staff positions from.
-    /// Equivalent to <see cref="FindStaffYInSystem"/> plus half the staff height.
-    /// Engravers that route an element to its own staff (ties, slurs, glissandi,
-    /// multi-measure rests, ledger-line spanners) share this resolution.
+    /// Equivalent to <see cref="FindStaffYInSystem"/> LESS half the staff height
+    /// (the middle sits half a staff below the top, so in the Y-up frame it
+    /// subtracts). Engravers that route an element to its own staff (ties, slurs,
+    /// glissandi, multi-measure rests, ledger-line spanners) share this resolution.
     /// </summary>
     public static double ResolveStaffMiddleY(SystemLayout system, int staffIndex, double staffHeight)
-        => FindStaffYInSystem(system, staffIndex) + staffHeight / 2.0;
+        => FindStaffYInSystem(system, staffIndex) - staffHeight / 2.0;
 
     /// <summary>
     /// Page Y-up of a system's top line — staff-spaces measured UP from the page
     /// bottom. The renderer emits page-Y-up primitives (the single device flip is
     /// the <see cref="Rendering.YFlipDrawingContext"/>), so this is the origin a
-    /// system-anchored draw adds its relative Y-up to. Centralises the
-    /// <c>pageHeight - system.Y</c> reflection: when <see cref="SystemLayout.Y"/>
-    /// moves to native Y-up storage (Stage-4 W2), only this body changes, not the
-    /// call sites.
+    /// system-anchored draw adds its relative Y-up to. Since <see
+    /// cref="SystemLayout.Y"/> now stores page Y-up natively (Stage-4 W2-core),
+    /// this returns it directly; the <paramref name="pageHeight"/> parameter is
+    /// retained for call-site compatibility (it is no longer needed).
     /// </summary>
     public static double SystemTopYUp(SystemLayout system, double pageHeight)
-        => pageHeight - system.Y;
+        => system.Y;
 
     /// <summary>
-    /// Page Y-up of a staff's top line within a system — <see cref="SystemTopYUp"/>
-    /// less the staff's within-system downward offset. The Y-up counterpart of
-    /// <see cref="FindStaffYInSystem"/>, sharing the same single reflection point.
+    /// Page Y-up of a staff's top line within a system. Now that
+    /// <see cref="SystemLayout.Y"/> stores page Y-up natively (Stage-4 W2-core),
+    /// this is identical to <see cref="FindStaffYInSystem"/>; the
+    /// <paramref name="pageHeight"/> parameter is retained for call-site
+    /// compatibility (it is no longer needed).
     /// </summary>
     public static double StaffTopYUp(SystemLayout system, int staffIndex, double pageHeight)
-        => pageHeight - FindStaffYInSystem(system, staffIndex);
+        => FindStaffYInSystem(system, staffIndex);
 
     /// <summary>
     /// Resolves an item's X offset within a measure layout. Single-staff
