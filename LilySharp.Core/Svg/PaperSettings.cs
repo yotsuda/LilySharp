@@ -42,8 +42,6 @@ internal class PaperSettings
 {
     // Unit conversion constants
     public const double MmPerPoint = 0.3528; // 1 pt = 0.3528 mm
-    public const double MmPerInch = 25.4;
-    public const double PointsPerInch = 72.0;
 
     // Reference paper size for scaling (A4)
     private const double ReferenceWidth = 210.0;  // A4 width in mm

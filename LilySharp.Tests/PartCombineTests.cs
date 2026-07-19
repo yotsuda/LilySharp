@@ -25,8 +25,6 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class PartCombineTests
 {
-    private static readonly TimeSignature FourFour = new(4, 4);
-
     // Helper to create a NoteItem
     private static NoteItem Note(int staffPosition, Fraction duration) =>
         new(staffPosition, duration, 0, null, false, 0);
