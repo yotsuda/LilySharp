@@ -69,9 +69,9 @@
   <line x1="43.18" y1="12.86" x2="43.18" y2="10.36" stroke="#000000" stroke-width="0.130"/>
   <line x1="45.68" y1="12.86" x2="45.68" y2="10.36" stroke="#000000" stroke-width="0.130"/>
   <line x1="48.18" y1="12.86" x2="48.18" y2="10.36" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="34.41,18.09 36.92,19.15 36.92,19.63 34.41,18.57"/>
-  <line x1="34.47" y1="14.51" x2="34.47" y2="18.36" stroke="#000000" stroke-width="0.130"/>
-  <line x1="36.85" y1="16.51" x2="36.85" y2="19.36" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="34.41,18.12 36.92,19.12 36.92,19.60 34.41,18.60"/>
+  <line x1="34.47" y1="14.51" x2="34.47" y2="18.39" stroke="#000000" stroke-width="0.130"/>
+  <line x1="36.85" y1="16.51" x2="36.85" y2="19.33" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="45.09" y="9.52" font-size="4.00" data-pos="112"></text>
   <text class="music" x="47.60" y="9.42" font-size="4.00" data-pos="116"></text>
   <rect x="0.30" y="6.80" width="7.37" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="29"/>

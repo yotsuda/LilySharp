@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="241.7" viewBox="0 0 119.05 24.17" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="241.6" viewBox="0 0 119.05 24.16" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -30,22 +30,22 @@
   <text class="music" x="35.48" y="12.64" font-size="4.00" data-pos="473"></text>
   <rect x="38.09" y="11.64" width="0.19" height="4.00" data-pos="474"/>
   <rect x="38.58" y="11.64" width="0.60" height="4.00" data-pos="474"/>
-  <polygon points="7.68,15.60 13.32,14.38 13.32,14.86 7.68,16.08"/>
-  <line x1="7.75" y1="13.29" x2="7.75" y2="15.83" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="7.68,15.59 13.32,14.40 13.32,14.88 7.68,16.07"/>
+  <line x1="7.75" y1="13.29" x2="7.75" y2="15.82" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.50" y1="12.29" x2="10.50" y2="15.23" stroke="#000000" stroke-width="0.130"/>
-  <line x1="13.26" y1="11.29" x2="13.26" y2="14.64" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="15.95,13.58 20.58,14.41 20.58,14.89 15.95,14.06"/>
-  <line x1="16.01" y1="9.79" x2="16.01" y2="13.83" stroke="#000000" stroke-width="0.130"/>
+  <line x1="13.26" y1="11.29" x2="13.26" y2="14.65" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="15.95,13.59 20.58,14.40 20.58,14.88 15.95,14.07"/>
+  <line x1="16.01" y1="9.79" x2="16.01" y2="13.84" stroke="#000000" stroke-width="0.130"/>
   <line x1="18.26" y1="11.29" x2="18.26" y2="14.23" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.52" y1="12.29" x2="20.52" y2="14.64" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="22.96,15.41 28.60,14.19 28.60,14.67 22.96,15.89"/>
-  <line x1="23.02" y1="12.79" x2="23.02" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.52" y1="12.29" x2="20.52" y2="14.63" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="22.96,15.40 28.60,14.21 28.60,14.69 22.96,15.88"/>
+  <line x1="23.02" y1="12.79" x2="23.02" y2="15.63" stroke="#000000" stroke-width="0.130"/>
   <line x1="25.78" y1="11.79" x2="25.78" y2="15.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="28.53" y1="10.79" x2="28.53" y2="14.45" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="30.97,14.19 35.61,15.42 35.61,15.90 30.97,14.67"/>
-  <line x1="31.03" y1="10.29" x2="31.03" y2="14.45" stroke="#000000" stroke-width="0.130"/>
+  <line x1="28.53" y1="10.79" x2="28.53" y2="14.46" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="30.97,14.21 35.61,15.40 35.61,15.88 30.97,14.69"/>
+  <line x1="31.03" y1="10.29" x2="31.03" y2="14.47" stroke="#000000" stroke-width="0.130"/>
   <line x1="33.29" y1="11.29" x2="33.29" y2="15.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.54" y1="12.79" x2="35.54" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.54" y1="12.79" x2="35.54" y2="15.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="8.34" y="12.14" font-size="4.00" data-pos="361"></text>
   <text class="music" x="16.60" y="8.52" font-size="4.00" data-pos="395"></text>
   <text class="music" x="23.61" y="11.14" font-size="4.00" data-pos="430"></text>

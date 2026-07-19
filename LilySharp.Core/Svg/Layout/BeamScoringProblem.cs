@@ -118,14 +118,23 @@ internal sealed class BeamScoringProblem
         _parameters = parameters ?? BeamQuantParameters.Default;
         _collisions = collisions ?? Array.Empty<BeamCollision>();
 
-        // Compute basic values
+        // Compute basic values. LILYPOND-REF: lily/beam-quanting.cc:419 x_span_ =
+        // beams[i]->spanner_length() — the quanter's x-span is the beam's whole drawn
+        // length (edge to edge), NOT the stem-to-stem span. The beam extends half a
+        // stem thickness past each outer stem (lily/beam.cc:631 horizontal_[dir] +=
+        // dir*stem_width/2), so the endpoints sit beyond the notes and the least-squares
+        // seed dy = slope * x_span is a touch larger than the stem-to-stem dy. That
+        // small difference is what lets LP land on a slightly steeper quant for gentle
+        // beams; measuring stem-to-stem instead flattened them by ~one quant step.
         var firstMember = group.Members[0];
         var lastMember = group.Members[^1];
         _leftX = itemXPositions[firstMember.ItemIndex];
         _rightX = itemXPositions[lastMember.ItemIndex];
-        _xSpan = _rightX - _leftX;
+        double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
+        _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 
-        // Extract stem positions (in staff positions)
+        // Extract stem positions (in staff positions), inset half the overhang from each
+        // beam edge so the outer stems sit at [halfOverhang, _xSpan - halfOverhang].
         _stemXPositions = new double[group.Members.Length];
         _staffPositions = new int[group.Members.Length];
         _headMin = new int[group.Members.Length];
@@ -136,7 +145,7 @@ internal sealed class BeamScoringProblem
         for (int i = 0; i < group.Members.Length; i++)
         {
             var member = group.Members[i];
-            _stemXPositions[i] = itemXPositions[member.ItemIndex] - _leftX; // relative to left
+            _stemXPositions[i] = (itemXPositions[member.ItemIndex] - _leftX) + halfBeamOverhang;
             if (stemPositions != null)
             {
                 // Tab: the note's STRING line is its stem position; a single digit
@@ -208,16 +217,29 @@ internal sealed class BeamScoringProblem
         var candidates = GenerateQuantCandidates();
 
         if (candidates.Count == 0)
-            // Internal Y is in staff-spaces; the caller contract (BeamLayout →
-            // renderer beam.LeftY/2.0) is staff positions, so ×2 at the boundary.
-            return (_unquantedLeftY * 2.0, _unquantedRightY * 2.0);
+            return AtOuterStems(_unquantedLeftY, _unquantedRightY);
 
         // Phase 5: Score using priority queue (lazy evaluation)
         // LILYPOND-REF: lily/beam-quanting.cc:1050-1083
         var best = BestFirstScorer.Solve(candidates, OneScorer);
 
-        // Convert staff-spaces (internal frame) → staff positions (caller contract).
-        return (best.LeftY * 2.0, best.RightY * 2.0);
+        return AtOuterStems(best.LeftY, best.RightY);
+    }
+
+    /// <summary>
+    /// Maps a beam line, given by its Y at the two beam EDGES (x = 0 and x = _xSpan),
+    /// to the Y at the outer STEMS (first and last members, inset by half the beam
+    /// overhang), then to staff positions for the caller. The internal quanter works
+    /// in the beam-edge (spanner) frame; the renderer draws from the outer stems and
+    /// re-adds the overhang, so it wants the Y at those stems, not at the edges.
+    /// </summary>
+    private (double leftY, double rightY) AtOuterStems(double leftEdgeY, double rightEdgeY)
+    {
+        double dy = rightEdgeY - leftEdgeY;
+        double leftY = leftEdgeY + _stemXPositions[0] / _xSpan * dy;
+        double rightY = leftEdgeY + _stemXPositions[^1] / _xSpan * dy;
+        // Staff-spaces (internal) → staff positions (caller contract: renderer beam.LeftY/2).
+        return (leftY * 2.0, rightY * 2.0);
     }
 
     // ========================================

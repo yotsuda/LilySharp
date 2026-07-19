@@ -46,14 +46,14 @@
   <rect x="46.24" y="19.31" width="0.19" height="4.00" data-pos="460"/>
   <rect x="68.52" y="19.31" width="0.19" height="4.00" data-pos="528"/>
   <rect x="69.01" y="19.31" width="0.60" height="4.00" data-pos="528"/>
-  <polygon points="49.55,20.89 57.20,20.07 57.20,20.55 49.55,21.37"/>
-  <line x1="49.62" y1="24.16" x2="49.62" y2="21.12" stroke="#000000" stroke-width="0.130"/>
-  <line x1="52.12" y1="23.66" x2="52.12" y2="20.85" stroke="#000000" stroke-width="0.130"/>
-  <line x1="54.63" y1="23.16" x2="54.63" y2="20.58" stroke="#000000" stroke-width="0.130"/>
-  <line x1="57.13" y1="22.66" x2="57.13" y2="20.31" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="59.57,19.26 67.21,20.08 67.21,20.56 59.57,19.74"/>
-  <line x1="59.63" y1="22.16" x2="59.63" y2="19.50" stroke="#000000" stroke-width="0.130"/>
-  <line x1="62.14" y1="22.66" x2="62.14" y2="19.77" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="49.55,20.88 57.20,19.88 57.20,20.36 49.55,21.36"/>
+  <line x1="49.62" y1="24.16" x2="49.62" y2="21.11" stroke="#000000" stroke-width="0.130"/>
+  <line x1="52.12" y1="23.66" x2="52.12" y2="20.79" stroke="#000000" stroke-width="0.130"/>
+  <line x1="54.63" y1="23.16" x2="54.63" y2="20.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="57.13" y1="22.66" x2="57.13" y2="20.13" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="59.57,19.26 67.21,20.07 67.21,20.55 59.57,19.74"/>
+  <line x1="59.63" y1="22.16" x2="59.63" y2="19.51" stroke="#000000" stroke-width="0.130"/>
+  <line x1="62.14" y1="22.66" x2="62.14" y2="19.78" stroke="#000000" stroke-width="0.130"/>
   <line x1="64.64" y1="23.16" x2="64.64" y2="20.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="67.15" y1="23.66" x2="67.15" y2="20.31" stroke="#000000" stroke-width="0.130"/>
   <text x="3.09" y="16.57" font-size="2.20" font-weight="bold" data-pos="313">Grave</text>
