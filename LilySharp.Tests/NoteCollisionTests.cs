@@ -341,7 +341,7 @@ public class NoteCollisionTests
             new VoiceEntry(2, MakeNoteWithDuration(6, Fraction.Whole), 0, forcedStemUp: false)
         ), measureIndex: 0);
 
-        var offsets = collision.CalculateVoiceOffsets(column, w);
+        var offsets = collision.CalculateVoiceOffsets(column);
 
         double up = offsets.First(o => o.VoiceId == 1).XOffset;
         double down = offsets.First(o => o.VoiceId == 2).XOffset;
@@ -507,15 +507,13 @@ public class NoteCollisionTests
         // Voice 1 (up), Voice 2 (down), Voice 3 (up)
         // Voice 3 should get a larger offset than Voice 1
         var collision = new NoteCollision();
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-
         var column = new VoiceColumn(ImmutableArray.Create(
             new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
             new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false),
             new VoiceEntry(3, MakeNote(4), 0, forcedStemUp: true)
         ), measureIndex: 0);
 
-        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+        var offsets = collision.CalculateVoiceOffsets(column);
 
         var v1Offset = offsets.First(o => o.VoiceId == 1).XOffset;
         var v2Offset = offsets.First(o => o.VoiceId == 2).XOffset;
@@ -532,8 +530,6 @@ public class NoteCollisionTests
         // LILYPOND-REF: lily/note-collision-interface.cc:420-480
         // Voice 1 (up), Voice 2 (down), Voice 3 (up), Voice 4 (down)
         var collision = new NoteCollision();
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-
         var column = new VoiceColumn(ImmutableArray.Create(
             new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
             new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false),
@@ -541,7 +537,7 @@ public class NoteCollisionTests
             new VoiceEntry(4, MakeNote(4), 0, forcedStemUp: false)
         ), measureIndex: 0);
 
-        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+        var offsets = collision.CalculateVoiceOffsets(column);
 
         var v1Offset = offsets.First(o => o.VoiceId == 1).XOffset;
         var v2Offset = offsets.First(o => o.VoiceId == 2).XOffset;
@@ -560,14 +556,12 @@ public class NoteCollisionTests
     {
         // Two voices should work as before (no cascading needed)
         var collision = new NoteCollision();
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-
         var column = new VoiceColumn(ImmutableArray.Create(
             new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
             new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false)
         ), measureIndex: 0);
 
-        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+        var offsets = collision.CalculateVoiceOffsets(column);
 
         Assert.Equal(2, offsets.Length);
         // Both voices should have entries
@@ -580,32 +574,28 @@ public class NoteCollisionTests
     [Fact]
     public void WidthNormalization_WholeNoteWidth_ProducesLargerShifts()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:309-312
-        // Shifts are multiplied by notehead width, so wider noteheads
-        // (whole notes = 1.688) produce larger absolute shifts than
-        // quarter noteheads (1.18)
+        // LILYPOND-REF: lily/note-collision.cc:339-340 — the shift is scaled by the
+        // DOWN-stem note's width, so a whole-note lower voice shifts further than a
+        // quarter-note one against the same (half-note) upper voice.
         var collision = new NoteCollision();
-
-        // Use half vs quarter at same position → Full collision (can't merge)
         var upHalf = MakeNoteWithDuration(4, Fraction.Half);
-        var downQuarter = MakeNoteWithDuration(4, Fraction.Quarter);
 
-        var column = new VoiceColumn(ImmutableArray.Create(
+        var colWhole = new VoiceColumn(ImmutableArray.Create(
             new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, downQuarter, 0, forcedStemUp: false)
+            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Whole), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+        var colQuarter = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Quarter), 0, forcedStemUp: false)
         ), measureIndex: 0);
 
-        var offsetsBlack = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadBlackWidth);
-        var offsetsWhole = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadWholeWidth);
+        double upWhole = collision.CalculateVoiceOffsets(colWhole).First(o => o.VoiceId == 1).XOffset;
+        double upQuarter = collision.CalculateVoiceOffsets(colQuarter).First(o => o.VoiceId == 1).XOffset;
 
-        double upBlack = offsetsBlack.First(o => o.VoiceId == 1).XOffset;
-        double upWhole = offsetsWhole.First(o => o.VoiceId == 1).XOffset;
-
-        // Both should have non-zero shifts (full collision, non-mergeable)
-        Assert.True(Math.Abs(upBlack) > 0.001,
-            $"Black width shift ({upBlack:F3}) should be non-zero");
-        Assert.True(Math.Abs(upWhole) > Math.Abs(upBlack),
-            $"Whole note offset ({upWhole:F3}) should be > black ({upBlack:F3})");
+        Assert.True(Math.Abs(upQuarter) > 0.001,
+            $"Quarter-down shift ({upQuarter:F3}) should be non-zero");
+        Assert.True(Math.Abs(upWhole) > Math.Abs(upQuarter),
+            $"Whole-down shift ({upWhole:F3}) should exceed quarter-down ({upQuarter:F3})");
     }
 
     private static NoteItem MakeNoteWithDuration(int staffPosition, Fraction duration) =>
@@ -744,26 +734,26 @@ public class NoteCollisionTests
     [Fact]
     public void WidthNormalization_WholeVsQuarterCollision_ScalesCorrectly()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:309-312
-        // The ratio of whole to black shift should match the ratio of widths
+        // LILYPOND-REF: lily/note-collision.cc:339-340 — the shift scales by the
+        // DOWN-stem note's width, so the whole-down / quarter-down shift ratio equals
+        // the whole/black notehead width ratio (up-note held constant, up shifts right
+        // so the extent ratio is 1.0 in both).
         var collision = new NoteCollision();
-
-        // Use half vs quarter at same position → Full collision (non-mergeable)
         var upHalf = MakeNoteWithDuration(4, Fraction.Half);
-        var downQuarter = MakeNoteWithDuration(4, Fraction.Quarter);
 
-        var column = new VoiceColumn(ImmutableArray.Create(
+        var colWhole = new VoiceColumn(ImmutableArray.Create(
             new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, downQuarter, 0, forcedStemUp: false)
+            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Whole), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+        var colQuarter = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Quarter), 0, forcedStemUp: false)
         ), measureIndex: 0);
 
-        var offsetsBlack = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadBlackWidth);
-        var offsetsWhole = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadWholeWidth);
+        double wholeShift = collision.CalculateVoiceOffsets(colWhole).First(o => o.VoiceId == 1).XOffset;
+        double quarterShift = collision.CalculateVoiceOffsets(colQuarter).First(o => o.VoiceId == 1).XOffset;
 
-        double blackShift = offsetsBlack.First(o => o.VoiceId == 1).XOffset;
-        double wholeShift = offsetsWhole.First(o => o.VoiceId == 1).XOffset;
-
-        double ratio = wholeShift / blackShift;
+        double ratio = wholeShift / quarterShift;
         double expectedRatio = EngravingDefaults.NoteheadWholeWidth / EngravingDefaults.NoteheadBlackWidth;
         Assert.Equal(expectedRatio, ratio, 2);
     }

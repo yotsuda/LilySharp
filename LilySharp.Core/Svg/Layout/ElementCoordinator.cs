@@ -107,7 +107,7 @@ internal sealed class ElementCoordinator
                 forceHshift = resolver.GetDouble("NoteColumn", "force-hshift");
             }
 
-            var offsets = _noteCollision.CalculateVoiceOffsets(column, noteheadWidth);
+            var offsets = _noteCollision.CalculateVoiceOffsets(column);
 
             foreach (var (voiceId, itemIndex, xOffset, headTransparent, dotForceDown) in offsets)
             {

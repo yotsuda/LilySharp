@@ -423,6 +423,20 @@ internal sealed class NoteCollision
         if (!shiftUpRight)
             shiftAmount = _params.StemToStemShift;
 
+        // LILYPOND-REF: lily/note-collision.cc:339-348 — LP scales the shift by the signed
+        // head-extent ratio, because the displacement to clear a collision depends on the
+        // widths of the heads on the interfering sides:
+        //   up-stem shifts right:   (extent_down[RIGHT] - extent_up[LEFT]) / extent_down.length()
+        //   down-stem shifts right: (extent_up[RIGHT]   - extent_down[LEFT]) / extent_down.length()
+        // Our heads anchor at their own left edge, so extent_up = [0, upW], extent_down =
+        // [0, downW]. The ratio is therefore 1.0 when the up-head shifts right and upW/downW
+        // when the down-head shifts right. Together with the down-note-width scaling in
+        // CalculateVoiceOffsets this reproduces LP's "displacement = shift × cleared-head width".
+        double upW = HeadWidth(upNoteValue);
+        double downW = HeadWidth(downNoteValue);
+        double extentFactor = shiftUpRight ? 1.0 : (downW > 1e-6 ? upW / downW : 1.0);
+        shiftAmount *= extentFactor;
+
         // Symmetric shift (+inner up / -inner down); the consumer pins the
         // leftmost group, so the 2-voice separation is 2*inner.
         double upOffset = shiftUpRight ? shiftAmount : -shiftAmount;
@@ -431,6 +445,19 @@ internal sealed class NoteCollision
         return new NoteCollisionInfo(type, upOffset, downOffset,
             downDotForceDown: downDotForceDown);
     }
+
+    /// <summary>
+    /// Notehead X-width in staff-spaces for a note value (whole/breve are wider
+    /// than half/quarter). Mirrors LilyPond's per-duration notehead extents.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-collision.cc:339-340 — the shift is scaled by
+    /// the down-stem note's width; the extent ratio above supplies the up/down difference.</remarks>
+    private static double HeadWidth(int noteValue) => noteValue switch
+    {
+        <= 0 => EngravingDefaults.NoteheadDoubleWholeWidth, // breve or longer
+        1 => EngravingDefaults.NoteheadWholeWidth,          // whole note
+        _ => EngravingDefaults.NoteheadBlackWidth           // half, quarter, ...
+    };
 
     private bool CheckTouch(List<int> ups, List<int> downs, int threshold)
     {
@@ -542,8 +569,7 @@ internal sealed class NoteCollision
     /// cumulative shift of 1 notehead width beyond the base collision offset.
     /// </remarks>
     public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)> CalculateVoiceOffsets(
-        VoiceColumn column,
-        double noteheadWidth)
+        VoiceColumn column)
     {
         var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)>();
 
@@ -619,9 +645,13 @@ internal sealed class NoteCollision
             : collision.Type == CollisionType.Meshing
                 ? raw.Max(r => r.Offset)
                 : raw.Min(r => r.Offset);
+        // LILYPOND-REF: lily/note-collision.cc:339-340 — the offsets are multiplied by the
+        // width of the DOWN-stem note (not the column's widest head); the per-collision
+        // extent ratio (ComputeShiftInfo) already carries the up/down width difference.
+        double downWidth = HeadWidth(downNoteValue);
         foreach (var r in raw)
             offsets.Add((r.VoiceId, r.ItemIndex,
-                (r.Offset - pin) * noteheadWidth, r.Hide, r.Dot));
+                (r.Offset - pin) * downWidth, r.Hide, r.Dot));
 
         return offsets.ToImmutableArray();
     }
