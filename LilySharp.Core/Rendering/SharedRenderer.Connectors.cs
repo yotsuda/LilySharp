@@ -246,6 +246,9 @@ internal static partial class SharedRenderer
         }
     }
 
+    // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::staff_bracket —
+    // vertical filled box (thickness default 0.25) capped by brackettips.down/up serif
+    // glyphs, with overlap = 0.1 x thickness where the tips join the line.
     private static void DrawSystemStartBracket(double x, double top, double bottom, IDrawingContext gc)
     {
         double thickness = 0.45;
@@ -264,6 +267,9 @@ internal static partial class SharedRenderer
             Color.Black);
     }
 
+    // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::line_bracket —
+    // vertical line with a horizontal hook of width w at each end (LP uses w=0.8;
+    // Lily# uses 0.5).
     private static void DrawSystemStartLineBracket(double x, double top, double bottom, IDrawingContext gc)
     {
         double thickness = EngravingDefaults.StaffLineThickness;
@@ -273,6 +279,8 @@ internal static partial class SharedRenderer
         gc.DrawLine(x, bottom, x + hookWidth, bottom, Color.Black, thickness);
     }
 
+    // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::simple_bar —
+    // a single vertical line of width = line-thickness x thickness.
     private static void DrawSystemStartBarLine(double x, double top, double bottom, IDrawingContext gc)
     {
         double thickness = EngravingDefaults.StaffLineThickness * 1.6;
@@ -297,6 +305,9 @@ internal static partial class SharedRenderer
             ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
             _ => EmmentalerGlyphs.GClefChange,
         };
+        // LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle
+        // integer is the staff position of the named line (treble G=-2, bass F=2,
+        // alto C=0); the glyph anchors on the line it names.
         double clefY = clefChange.NewClef switch
         {
             ClefType.Bass or ClefType.Bass8Below => staffY - 1,

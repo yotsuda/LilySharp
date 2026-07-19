@@ -203,6 +203,8 @@ internal static partial class SharedRenderer
         }
     }
 
+    // LILYPOND-REF: scm/bar-line.scm make-colon-bar-line — two repeat dots centred on
+    // the middle of the staff, one falling into each space adjacent to the centre line.
     private static void DrawRepeatDots(double x, double staffY, IDrawingContext gc,
         (double Y1, double Y2)? tabDots = null)
     {

@@ -25,6 +25,10 @@ namespace LilySharp.Core.Tablature;
 /// </summary>
 public static class Tunings
 {
+    // LILYPOND-REF: ly/string-tunings-init.ly — open-string pitches per tuning:
+    // guitar-tuning <e, a, d g b e'>, bass-tuning <e,, a,, d, g,>,
+    // bass-five-string-tuning <b,,, e,, a,, d, g,>,
+    // bass-six-string-tuning <b,,, e,, a,, d, g, c>, ukulele-tuning <g' c' e' a'>.
     // Guitar: E2=40, A2=45, D3=50, G3=55, B3=59, E4=64 (6弦→1弦)
     /// <summary>Standard 6-string guitar tuning (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Guitar = [40, 45, 50, 55, 59, 64];

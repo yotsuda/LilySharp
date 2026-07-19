@@ -274,6 +274,9 @@ internal static partial class SharedRenderer
         }
     }
 
+    // LILYPOND-REF: lily/stem.cc Stem::extremal_heads — the stem attaches at the
+    // extremal head: lowest (Min) staff position for a stem-up chord, highest (Max)
+    // for stem-down.
     /// <summary>
     /// Staff position of the stem's notehead attachment: for chords the head
     /// on the far side from the beam (stem-up beams attach at the bottom head).

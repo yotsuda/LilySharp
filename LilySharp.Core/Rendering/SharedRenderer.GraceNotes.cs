@@ -262,6 +262,9 @@ internal static partial class SharedRenderer
         double beamTrans = EngravingDefaults.BeamTranslation * scale;
         double halfStem = stemThick / 2;
 
+        // LILYPOND-REF: lily/lookup.cc Lookup::beam — the beam quad is a parallelogram
+        // (sloped by `slope` over `width`, thickness `thick`) whose corners are offset
+        // by the blot so the ends stay vertical.
         // A beam is a PARALLELOGRAM with vertical ends (LP Lookup::beam): a plain
         // sloped thick line caps its ends perpendicular to the slope and leaves a
         // triangle poking past the vertical stem. Corners are the left/right ends

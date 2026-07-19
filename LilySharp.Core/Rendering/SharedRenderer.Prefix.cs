@@ -243,8 +243,10 @@ internal static partial class SharedRenderer
             ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
             _ => EmmentalerGlyphs.GClef,
         };
-        // Y baseline matches LP positioning: the clef glyph anchors on the line
-        // it names (G / F / C); percussion centres on the middle line.
+        // LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle
+        // integer is the staff position of the named line (treble G=-2, bass F=2,
+        // alto C=0). Y baseline matches LP positioning: the clef glyph anchors on the
+        // line it names (G / F / C); percussion centres on the middle line.
         double clefY = clef switch
         {
             ClefType.Bass or ClefType.Bass8Below => staffY - 1,

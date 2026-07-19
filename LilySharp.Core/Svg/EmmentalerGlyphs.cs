@@ -210,6 +210,7 @@ internal static class EmmentalerGlyphs
         _ => TimeSig0
     };
 
+    // LILYPOND-REF: lily/rest.cc Rest::glyph_name — "rests." + duration-log.
     /// <summary>Gets the rest glyph for a given note value.</summary>
     public static char GetRest(int noteValue) => noteValue switch
     {
@@ -243,12 +244,15 @@ internal static class EmmentalerGlyphs
         _ => GetNotehead(noteValue),
     };
 
+    // LILYPOND-REF: lily/note-head.cc internal_print — glyph = "noteheads.s" +
+    // min(duration-log, 2) (so quarter and shorter all share the s2 filled head).
     /// <summary>Gets the notehead glyph for a given note value.</summary>
     public static char GetNotehead(int noteValue) => noteValue switch
     {
         0 => NoteheadDoubleWhole, 1 => NoteheadWhole, 2 => NoteheadHalf, _ => NoteheadBlack
     };
 
+    // LILYPOND-REF: lily/flag.cc Flag::glyph_name — "flags." + (up ? 'u' : 'd') + duration-log.
     /// <summary>Gets the flag glyph for a given note value and stem direction.</summary>
     public static char? GetFlag(int noteValue, bool stemUp) => noteValue switch
     {

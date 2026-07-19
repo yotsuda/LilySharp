@@ -640,6 +640,9 @@ internal static partial class SharedRenderer
         }
     }
 
+    // LILYPOND-REF: lily/multi-measure-rest.cc:195-220 Multi_measure_rest::big_rest —
+    // thick horizontal bar (half-height = thick-thickness x line-thickness x ss/2) capped
+    // by hair-thickness vertical end caps of full staff-space height.
     private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc, double pageHeight)
     {
         const double thickness = EngravingDefaults.MultiMeasureRestThickThickness;

@@ -1545,6 +1545,9 @@ public sealed class MidiExporter
         return steal;
     }
 
+    // LILYPOND-REF: ly/articulate.ly — duration factors: ac:staccatoFactor (1 . 2) = 50%,
+    // ac:portatoFactor (3 . 4) = 75%, ac:tenutoFactor (1 . 1) = 100%,
+    // ac:staccatissimoFactor (1 . 4) = 25% (LP); Lily# uses 30% here.
     private (int velocity, int durationPercent) ApplyArticulationType(
         ArticulationType type, int velocity, int durationPercent)
     {

@@ -97,11 +97,16 @@ internal static class EngravingDefaults
     public const double DefaultStemLength = 3.5;
 
     // === Beams ===
+    // LILYPOND-REF: scm/define-grobs.scm Beam (beam-thickness . 0.48) — in staff-space.
     public const double BeamThickness = 0.48;
     public const double BeamSpacing = 0.25;
     /// <summary>Distance between beam centers for multiple beams.</summary>
+    // LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — for <4 beams,
+    // (2·ss + line − beam-thickness)/2 (ss = staff-space = 1.0 here).
     public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
     /// <summary>Length of a beamlet (partial beam).</summary>
+    // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
+    // LP's value is 1.1; Lily# uses 1.0 (a known small divergence).
     public const double BeamletLength = 1.0;
 
     // === Barlines ===
@@ -156,6 +161,7 @@ internal static class EngravingDefaults
     /// <c>ythick = hair-thickness·line-thickness·ss</c>.</remarks>
     public const double MultiMeasureRestHairThickness = 2.0 * LineThickness;
 
+    // LILYPOND-REF: scm/lily-library.scm (magstep s) = 2^(s/6); magstep(-3) = 2^(-1/2) ≈ 0.7071.
     /// <summary>
     /// Ossia staff scale: magstep(-3) = 2^(-3/6) ≈ 0.707 — the LP ossia
     /// convention (fontSize = -3 with StaffSymbol.staff-space = magstep -3,
@@ -257,6 +263,7 @@ internal static class EngravingDefaults
     /// Spacing increment, approximately notehead width.
     /// Lilypond default: 1.2 staff spaces.
     /// </summary>
+    // LILYPOND-REF: scm/define-grobs.scm SpacingSpanner (spacing-increment . 1.2).
     public const double SpacingIncrement = 1.2;
     // === Element spacing (from scm/define-grobs.scm) ===
     // BarLine space-alist. (The Clef and TimeSignature space-alist entries live in
@@ -278,6 +285,7 @@ internal static class EngravingDefaults
     /// Space for shortest duration.
     /// Lilypond default: 2.0 (so shortest note gets 2.0 * increment space).
     /// </summary>
+    // LILYPOND-REF: scm/define-grobs.scm SpacingSpanner (shortest-duration-space . 2.0).
     public const double ShortestDurationSpace = 2.0;
 
     /// <summary>

@@ -748,6 +748,9 @@ internal static partial class SharedRenderer
         char glyph = EmmentalerGlyphs.GetRest(noteValue);
         // staffY is the top-line Y-up; rest origins sit below it (device down =
         // smaller Y-up).
+        // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal — the semibreve
+        // (whole) rest is raised one staff line (duration_log==0 returns pos+2)
+        // relative to half-note and shorter rests.
         double y = noteValue == 1 ? staffY - 1 : staffY - 2;  // whole rests hang from 4th line
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
