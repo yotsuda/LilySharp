@@ -319,7 +319,7 @@ internal static partial class SharedRenderer
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
                     double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
-                    DrawBarlines(system, staff, pageHeight - staffY, layout, gc, barHeight: h);
+                    DrawBarlines(system, staff, LayoutUtilities.StaffTopYUp(system, globalIdx, pageHeight), layout, gc, barHeight: h);
                 }
                 continue;
             }
@@ -376,7 +376,7 @@ internal static partial class SharedRenderer
                 // pageHeight — the content is inside the flip-conjugated group, so its
                 // local refpoint is the page height (localStaffY − offset then flips,
                 // via the decorator, back to the original local device offset).
-                double localStaffY = isOssia ? pageHeight : pageHeight - staffY;
+                double localStaffY = isOssia ? pageHeight : LayoutUtilities.StaffTopYUp(system, globalIdx, pageHeight);
 
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
@@ -532,7 +532,7 @@ internal static partial class SharedRenderer
         double pageHeight)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
-        double systemYUp = pageHeight - system.Y;
+        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
 
         for (int gi = 0; gi < system.StaffGroups.Length && gi < score.StaffGroups.Length; gi++)
         {

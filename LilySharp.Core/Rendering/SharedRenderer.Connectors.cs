@@ -57,7 +57,7 @@ internal static partial class SharedRenderer
         const double NameFontScale = 0.75;
         double actualFontSize = FontSize * NameFontScale;
         double nameX = system.Indent / 2.0;
-        double systemYUp = pageHeight - system.Y;
+        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
         // at the system Y with the standard staff height.
@@ -144,7 +144,7 @@ internal static partial class SharedRenderer
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
-        double systemYUp = pageHeight - system.Y;
+        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
 
         // SystemStartBar across ALL visible staves of the system — EXCLUDING
         // independent text rows (chords / lyrics), which LilyPond's ChordNames /
@@ -217,7 +217,7 @@ internal static partial class SharedRenderer
     private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc, double pageHeight)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
-        double systemYUp = pageHeight - system.Y;
+        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
         foreach (var group in system.StaffGroups)
         {
             if (group.GrandStaffLayout is not { } delim) continue;

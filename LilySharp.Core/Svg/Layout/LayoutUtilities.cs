@@ -205,6 +205,26 @@ internal static class LayoutUtilities
         => FindStaffYInSystem(system, staffIndex) + staffHeight / 2.0;
 
     /// <summary>
+    /// Page Y-up of a system's top line — staff-spaces measured UP from the page
+    /// bottom. The renderer emits page-Y-up primitives (the single device flip is
+    /// the <see cref="Rendering.YFlipDrawingContext"/>), so this is the origin a
+    /// system-anchored draw adds its relative Y-up to. Centralises the
+    /// <c>pageHeight - system.Y</c> reflection: when <see cref="SystemLayout.Y"/>
+    /// moves to native Y-up storage (Stage-4 W2), only this body changes, not the
+    /// call sites.
+    /// </summary>
+    public static double SystemTopYUp(SystemLayout system, double pageHeight)
+        => pageHeight - system.Y;
+
+    /// <summary>
+    /// Page Y-up of a staff's top line within a system — <see cref="SystemTopYUp"/>
+    /// less the staff's within-system downward offset. The Y-up counterpart of
+    /// <see cref="FindStaffYInSystem"/>, sharing the same single reflection point.
+    /// </summary>
+    public static double StaffTopYUp(SystemLayout system, int staffIndex, double pageHeight)
+        => pageHeight - FindStaffYInSystem(system, staffIndex);
+
+    /// <summary>
     /// Resolves an item's X offset within a measure layout. Single-staff
     /// layouts index <see cref="MeasureLayout.Items"/> directly; multi-staff
     /// layouts use timing-aligned COLUMNS, so the item's timing is computed
