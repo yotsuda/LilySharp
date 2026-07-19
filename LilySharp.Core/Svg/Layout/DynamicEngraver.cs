@@ -114,14 +114,17 @@ internal static class DynamicEngraver
         var layouts = ImmutableArray.CreateBuilder<DynamicLayout>(dynamics.Length);
 
         // LILYPOND-REF: side-position-interface.cc:323-337 staff padding
-        // Base Y position: dynamic text baseline must be low enough that the
-        // visual top of the text (baseline - TextAscent) clears the staff bottom.
-        double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
+        // Native Y-up (staff-spaces above the staff middle, up-positive): the
+        // baseline sits below the staff bottom (staff bottom is StaffMiddle ss
+        // BELOW the middle line, i.e. -StaffMiddle) by staff-padding + padding, and
+        // one ascent further down so the ink top (baseline + TextAscent) clears the
+        // staff bottom by staff-padding + padding.
+        double baseYUp = -StaffMiddle - StaffPadding - Padding - TextAscent;
         // ABOVE baseline: the glyph's DESCENDER (the edge facing the staff) must clear
-        // the staff top (Y = 0) by staff-padding + padding, and the baseline sits one
-        // descent further up. Matches LilyPond's forced-up dynamic (baseline 1.34 ss
-        // above the staff top).
-        double aboveBaseY = -(StaffPadding + Padding + TextDescent);
+        // the staff top (+StaffMiddle) by staff-padding + padding, and the baseline
+        // sits one descent further up. Matches LilyPond's forced-up dynamic (baseline
+        // 1.34 ss above the staff top).
+        double aboveBaseYUp = StaffMiddle + StaffPadding + Padding + TextDescent;
 
         var fallbackVoices = voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices;
 
@@ -167,9 +170,9 @@ internal static class DynamicEngraver
             // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
             double y = dynamic.IsAbove
                 ? CalculateYPositionAboveVoices(
-                    dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, aboveBaseY)
+                    dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, aboveBaseYUp)
                 : CalculateYPositionAcrossVoices(
-                    dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, baseY);
+                    dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, baseYUp);
 
             // A wide (or CJK, full-em) label centred on this note also covers its
             // neighbours' columns; clear those noteheads too so the label never
@@ -182,16 +185,14 @@ internal static class DynamicEngraver
             var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
             int depth = stackAt.GetValueOrDefault(key, 0);
             stackAt[key] = depth + 1;
-            // Stack each successive same-column dynamic AWAY from the staff (down when
-            // below, up when above). In the Y-up store below this becomes up (+) for
-            // above and down (−) for below; here y is still device (down+).
-            y += (dynamic.IsAbove ? -depth : depth) * StackStep;
+            // Stack each successive same-column dynamic AWAY from the staff. In the
+            // native Y-up frame that is up (+) for above and down (−) for below.
+            y += (dynamic.IsAbove ? depth : -depth) * StackStep;
 
-            // Store in the LilyPond-native Y-up frame (staff-spaces above the staff
-            // middle). The device y is in the staff-top frame (middle = StaffMiddle),
-            // so reflect it; no staff offset is baked — the renderer/stacker resolve
+            // y is already in the LilyPond-native Y-up frame (staff-spaces above the
+            // staff middle); no staff offset is baked — the renderer/stacker resolve
             // the staff middle at their own boundary.
-            double yUp = StaffFrame.ToUp(y, StaffMiddle);
+            double yUp = y;
 
             layouts.Add(new DynamicLayout(
                 dynamic.MeasureIndex,
@@ -220,10 +221,14 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
-        double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
-        if (vs.IsEmpty)
-            return baseY;
-        return CalculateYPositionAcrossVoices(vs, measureIndex, itemIndex, baseY);
+        double baseYUp = -StaffMiddle - StaffPadding - Padding - TextAscent;
+        double up = vs.IsEmpty
+            ? baseYUp
+            : CalculateYPositionAcrossVoices(vs, measureIndex, itemIndex, baseYUp);
+        // Boundary shim: SkylineBuilder still consumes this in the device (staff-top,
+        // +down) frame, so reflect the native Y-up result back. Folds to a direct
+        // return once SkylineBuilder is moved to native Y-up.
+        return StaffMiddle - up;
     }
 
     /// <summary>
@@ -236,10 +241,14 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
-        double aboveBaseY = -(StaffPadding + Padding + TextDescent);
-        if (vs.IsEmpty)
-            return aboveBaseY;
-        return CalculateYPositionAboveVoices(vs, measureIndex, itemIndex, aboveBaseY);
+        double aboveBaseYUp = StaffMiddle + StaffPadding + Padding + TextDescent;
+        double up = vs.IsEmpty
+            ? aboveBaseYUp
+            : CalculateYPositionAboveVoices(vs, measureIndex, itemIndex, aboveBaseYUp);
+        // Boundary shim: SkylineBuilder still consumes this in the device (staff-top,
+        // +down) frame, so reflect the native Y-up result back. Folds to a direct
+        // return once SkylineBuilder is moved to native Y-up.
+        return StaffMiddle - up;
     }
 
     /// <summary>Upward ink reach of a dynamic above its baseline (text ascends up).</summary>
@@ -268,7 +277,9 @@ internal static class DynamicEngraver
             // low note in the lower voice still has a long DOWN stem to clear.
             bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
             double lowest = GetLowestExtent(items[itemIndex], forcedStemUp);
-            y = Math.Max(y, lowest + Padding + TextAscent);
+            // Native Y-up: push the baseline BELOW (smaller Y-up than) the note's
+            // lowest extent, clearing it by padding + ascent — the min, not the max.
+            y = Math.Min(y, lowest - Padding - TextAscent);
         }
         return y;
     }
@@ -313,13 +324,15 @@ internal static class DynamicEngraver
             // The note's head lies (even partly) under the label's horizontal span.
             if (Math.Abs(itemX - labelX) > halfWidth + EngravingDefaults.NoteheadHalfWidth)
                 continue;
-            y = Math.Max(y, GetLowestExtent(items[j]) + Padding + TextAscent);
+            // Native Y-up: push below the neighbour's lowest extent (the min).
+            y = Math.Min(y, GetLowestExtent(items[j]) - Padding - TextAscent);
         }
         return y;
     }
 
     /// <summary>
-    /// Gets the lowest Y extent of a music item (in staff spaces from top).
+    /// Gets the lowest Y extent of a music item in the native Y-up frame
+    /// (staff-spaces above the staff middle, up-positive; lowest = smallest).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: stem.cc:461-468 calc_stem_end_position
@@ -330,41 +343,40 @@ internal static class DynamicEngraver
         switch (item)
         {
             case NoteItem note:
-                // Convert StaffPosition to Y in staff spaces from top.
-                // StaffPosition convention: 0 = middle line, positive = up, negative = down.
-                // Canonical formula: Y = StaffMiddle - StaffPosition * 0.5
+                // StaffPosition (half-spaces, positive = up) → Y-up staff-spaces above
+                // the middle line: Y = StaffPosition * 0.5.
                 // LILYPOND-REF: staff-symbol-referencer.cc:76-89 get_position
-                double noteY = StaffFrame.PositionToDevice(note.StaffPosition, StaffMiddle);
+                double noteY = note.StaffPosition * 0.5;
 
-                // If stem down, add stem length below the notehead. forcedStemUp
-                // (multi-voice) overrides the note's pitch-default direction.
+                // If stem down, subtract stem length below the notehead (lower = smaller
+                // Y-up). forcedStemUp (multi-voice) overrides the pitch-default direction.
                 if (!(forcedStemUp ?? note.StemUp))
                 {
-                    return noteY + EngravingDefaults.DefaultStemLength;
+                    return noteY - EngravingDefaults.DefaultStemLength;
                 }
 
                 // Half a notehead height below center
-                return noteY + EngravingDefaults.NoteheadHalfHeight;
+                return noteY - EngravingDefaults.NoteheadHalfHeight;
 
             case ChordItem chord:
                 // Find lowest note in chord (most negative StaffPosition = lowest on staff)
                 int lowestPos = chord.Notes.Min(n => n.StaffPosition);
-                double lowestNoteY = StaffFrame.PositionToDevice(lowestPos, StaffMiddle);
+                double lowestNoteY = lowestPos * 0.5;
 
-                // If stem down, add stem length from lowest note
+                // If stem down, subtract stem length from lowest note
                 if (!(forcedStemUp ?? chord.StemUp))
                 {
-                    return lowestNoteY + EngravingDefaults.DefaultStemLength;
+                    return lowestNoteY - EngravingDefaults.DefaultStemLength;
                 }
 
-                return lowestNoteY + EngravingDefaults.NoteheadHalfHeight;
+                return lowestNoteY - EngravingDefaults.NoteheadHalfHeight;
 
             case RestItem:
-                // Rest is typically around middle of staff
-                return StaffMiddle + 1.0;
+                // Rest is typically around middle of staff (1 ss below the middle line)
+                return -1.0;
 
             default:
-                return StaffBottom;
+                return -StaffMiddle;
         }
     }
 
@@ -389,16 +401,18 @@ internal static class DynamicEngraver
                 continue;
             bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
             double highest = GetHighestExtent(items[itemIndex], forcedStemUp);
-            // The glyph descender (baseline + descent) is what faces the note, so the
-            // baseline must sit a further TextDescent above the note-clearance point.
-            y = Math.Min(y, highest - Padding - TextDescent);
+            // Native Y-up: push the baseline ABOVE (larger Y-up than) the note's
+            // highest extent. The glyph descender (baseline − descent) is what faces
+            // the note, so the baseline sits a further TextDescent above it — the max.
+            y = Math.Max(y, highest + Padding + TextDescent);
         }
         return y;
     }
 
     /// <summary>
-    /// Highest Y extent (most-above = smallest Y, in staff spaces from top) of a music
-    /// item — the mirror of <see cref="GetLowestExtent"/>, accounting for an up-stem.
+    /// Highest Y extent (most-above = largest Y-up, staff-spaces above the staff
+    /// middle) of a music item — the mirror of <see cref="GetLowestExtent"/>,
+    /// accounting for an up-stem.
     /// </summary>
     private static double GetHighestExtent(MusicItem item, bool? forcedStemUp = null)
     {
@@ -406,25 +420,25 @@ internal static class DynamicEngraver
         {
             case NoteItem note:
             {
-                double noteY = StaffFrame.PositionToDevice(note.StaffPosition, StaffMiddle);
-                // Stem up: the stem extends UP (smaller Y) above the notehead.
+                double noteY = note.StaffPosition * 0.5;
+                // Stem up: the stem extends UP (larger Y-up) above the notehead.
                 if (forcedStemUp ?? note.StemUp)
-                    return noteY - EngravingDefaults.DefaultStemLength;
-                return noteY - EngravingDefaults.NoteheadHalfHeight;
+                    return noteY + EngravingDefaults.DefaultStemLength;
+                return noteY + EngravingDefaults.NoteheadHalfHeight;
             }
             case ChordItem chord:
             {
                 int highestPos = chord.Notes.Max(n => n.StaffPosition);
-                double highestNoteY = StaffFrame.PositionToDevice(highestPos, StaffMiddle);
+                double highestNoteY = highestPos * 0.5;
                 if (forcedStemUp ?? chord.StemUp)
-                    return highestNoteY - EngravingDefaults.DefaultStemLength;
-                return highestNoteY - EngravingDefaults.NoteheadHalfHeight;
+                    return highestNoteY + EngravingDefaults.DefaultStemLength;
+                return highestNoteY + EngravingDefaults.NoteheadHalfHeight;
             }
             case RestItem:
-                return StaffMiddle - 1.0;
+                return 1.0; // 1 ss above the middle line
 
             default:
-                return 0.0; // staff top
+                return StaffMiddle; // staff top
         }
     }
 }
