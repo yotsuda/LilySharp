@@ -49,15 +49,14 @@ internal static partial class SharedRenderer
     ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level
     ///   translate group, so this method uses indent / 2 directly).
     /// </remarks>
-    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
     {
         if (system.Indent <= 0) return;
 
         const double NameFontScale = 0.75;
         double actualFontSize = FontSize * NameFontScale;
         double nameX = system.Indent / 2.0;
-        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
+        double systemYUp = LayoutUtilities.SystemTopYUp(system);
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
         // at the system Y with the standard staff height.
@@ -140,11 +139,11 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawStaffConnectors(
         MultiStaffScore score, ScoreLayout layout, SystemLayout system,
-        double systemStartX, IDrawingContext gc, double pageHeight)
+        double systemStartX, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
-        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
+        double systemYUp = LayoutUtilities.SystemTopYUp(system);
 
         // SystemStartBar across ALL visible staves of the system — EXCLUDING
         // independent text rows (chords / lyrics), which LilyPond's ChordNames /
@@ -214,10 +213,10 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc, double pageHeight)
+    private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
-        double systemYUp = LayoutUtilities.SystemTopYUp(system, pageHeight);
+        double systemYUp = LayoutUtilities.SystemTopYUp(system);
         foreach (var group in system.StaffGroups)
         {
             if (group.GrandStaffLayout is not { } delim) continue;

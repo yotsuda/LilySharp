@@ -236,20 +236,18 @@ internal static class LayoutUtilities
     /// the <see cref="Rendering.YFlipDrawingContext"/>), so this is the origin a
     /// system-anchored draw adds its relative Y-up to. Since <see
     /// cref="SystemLayout.Y"/> now stores page Y-up natively (Stage-4 W2-core),
-    /// this returns it directly; the <paramref name="pageHeight"/> parameter is
-    /// retained for call-site compatibility (it is no longer needed).
+    /// this returns it directly (kept as a named alias at the render seam).
     /// </summary>
-    public static double SystemTopYUp(SystemLayout system, double pageHeight)
+    public static double SystemTopYUp(SystemLayout system)
         => system.Y;
 
     /// <summary>
     /// Page Y-up of a staff's top line within a system. Now that
     /// <see cref="SystemLayout.Y"/> stores page Y-up natively (Stage-4 W2-core),
-    /// this is identical to <see cref="FindStaffYInSystem"/>; the
-    /// <paramref name="pageHeight"/> parameter is retained for call-site
-    /// compatibility (it is no longer needed).
+    /// this is identical to <see cref="FindStaffYInSystem"/> (kept as a named
+    /// alias at the render seam).
     /// </summary>
-    public static double StaffTopYUp(SystemLayout system, int staffIndex, double pageHeight)
+    public static double StaffTopYUp(SystemLayout system, int staffIndex)
         => FindStaffYInSystem(system, staffIndex);
 
     /// <summary>

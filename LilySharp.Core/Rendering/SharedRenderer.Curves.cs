@@ -29,7 +29,7 @@ internal static partial class SharedRenderer
     // ---------- Ties & slurs ----------
 
     private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var tie in layout.TieLayouts)
         {
@@ -47,12 +47,12 @@ internal static partial class SharedRenderer
             DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
                 (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y), tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                tie.StaffIndex, mi, os, gc, pageHeight);
+                tie.StaffIndex, mi, os, gc);
         }
     }
 
     private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var slur in layout.SlurLayouts)
         {
@@ -70,7 +70,7 @@ internal static partial class SharedRenderer
             DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
                 (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y), slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
-                slur.StaffIndex, mi, os, gc, pageHeight);
+                slur.StaffIndex, mi, os, gc);
         }
     }
 
@@ -88,13 +88,11 @@ internal static partial class SharedRenderer
         (double X, double Y) c1, (double X, double Y) c2,
         bool curveUp, double midThickness,
         int staffIndex, int startMeasureIndex,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
-        // The bow's Y coordinates now arrive already in the page Y-up frame
-        // (page-bottom origin; the callers add the system-top Y-up before calling).
-        // Apply the ossia affine in that same frame (os.YUp). pageHeight is retained
-        // in the signature for symmetry with the other draw seams but is unused here.
-        _ = pageHeight;
+        // The bow's Y coordinates arrive already in the page Y-up frame (page-bottom
+        // origin; the callers add the system-top Y-up before calling). Apply the ossia
+        // affine in that same frame (os.YUp).
         double startY = os.YUp(startYUp, staffIndex, startMeasureIndex);
         double endY = os.YUp(endYUp, staffIndex, startMeasureIndex);
         c1 = (c1.X, os.YUp(c1.Y, staffIndex, startMeasureIndex));

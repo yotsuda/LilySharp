@@ -35,8 +35,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm ChordName: font-family=sans, font-size=1.5
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — chord-name formatting
     /// </remarks>
-    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;
@@ -143,8 +142,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// </remarks>
-    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2) —
@@ -173,8 +171,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3412 StanzaNumber (font-series bold)
     /// </remarks>
-    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
         const double fontSize = 2.4;
@@ -230,7 +227,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
     private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
         foreach (var m in layout.MusicMarkLayouts)
@@ -470,7 +467,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:3835 TextSpanner grob
     /// </remarks>
     private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
         double textSize = FontSize * 0.5;
@@ -506,8 +503,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/piano-pedal-bracket.cc — PianoPedalBracket grob
     /// </remarks>
-    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.PedalBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
@@ -535,8 +531,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
     /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
     /// </remarks>
-    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
@@ -680,7 +675,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
     /// </remarks>
     private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
         foreach (var v in layout.TieVariantLayouts)
@@ -695,7 +690,7 @@ internal static partial class SharedRenderer
             DrawBow(v.StartX, syUp - v.Y, v.EndX, syUp - v.Y,
                 (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y), v.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                v.StaffIndex, v.MeasureIndex, os, gc, pageHeight);
+                v.StaffIndex, v.MeasureIndex, os, gc);
         }
     }
 
@@ -709,8 +704,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/lyric-hyphen.cc:37 Lyric_hyphen::print (LyricHyphen grob)
     /// </remarks>
-    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.16;
@@ -752,8 +746,7 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
     /// <remarks>LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript (grob in scm/define-grobs.scm)</remarks>
-    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;

@@ -327,8 +327,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2213 LyricText (font-size 1.0 in LP;
     /// this port instead uses a 0.8x reduced size below).
     /// </remarks>
-    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.LyricLayouts.IsDefaultOrEmpty) return;
         double lyricFontSize = FontSize * 0.8;
@@ -364,7 +363,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1777 Hairpin grob (thickness = 1.0)
     /// </remarks>
     private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.HairpinLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
@@ -403,7 +402,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/ottava-bracket.cc — Ottava_bracket
     /// </remarks>
     private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.OttavaBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
@@ -448,8 +447,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
     /// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
     /// </remarks>
-    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
-        double pageHeight)
+    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.13;
@@ -497,7 +495,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     /// </remarks>
     private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.13;
@@ -555,7 +553,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:4082 (style . trill)
     /// </remarks>
     private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
         const double wavePeriod = 0.8;
@@ -638,7 +636,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
     /// </remarks>
     private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
-        in OssiaShrink os, IDrawingContext gc, double pageHeight)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
         const double wavePeriod = 0.8;
