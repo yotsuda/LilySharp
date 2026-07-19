@@ -251,9 +251,14 @@ internal sealed class TieFormattingProblem
                     }
                     else if (withinStaff)
                     {
-                        // center_tie_vertically: untransformed curve spans
-                        // 0..height, center = height/2.
-                        deltaY = -dir * height / 2;
+                        // center_tie_vertically: center = (edge + middle)/2 where
+                        // edge = curve_point(0) = 0 and middle = curve_point(0.5).
+                        // Our control points sit at ±height (slur_shape control_[1..2]),
+                        // so the bezier midpoint is 0.75*height, NOT height itself.
+                        // LILYPOND-REF: lily/tie-configuration.cc:37-44 center_tie_vertically;
+                        //               lily/bezier-bow.cc:127-130 slur_shape.
+                        double middleY = 0.75 * height;
+                        deltaY = -dir * middleY / 2.0;
                     }
                 }
                 else
@@ -453,12 +458,14 @@ internal sealed class TieFormattingProblem
         if (_existingTies == null || _existingTies.Count == 0)
             return;
 
-        // Edge = attachment; center = bezier midpoint (LP curve_point(0.5)), which
-        // for an UP tie is ABOVE the edge (larger Y-up) → +Height, DOWN → -Height.
+        // Edge = attachment; center = bezier midpoint = LP curve_point(0.5). With
+        // control points at ±Height (slur_shape), the midpoint is 0.75*Height off
+        // the edge — using the full Height overstated the center whenever stacked
+        // ties differ in height. LILYPOND-REF: lily/tie-formatting-problem.cc:860.
         double configEdgeY = config.AttachmentY;
         double configCenterY = config.CurveUp
-            ? config.AttachmentY + config.Height
-            : config.AttachmentY - config.Height;
+            ? config.AttachmentY + 0.75 * config.Height
+            : config.AttachmentY - 0.75 * config.Height;
 
         foreach (var existing in _existingTies)
         {
@@ -470,7 +477,10 @@ internal sealed class TieFormattingProblem
             // Existing ties are stored page Y-up (up-positive), the same frame this
             // scorer works in, so read their edge/center directly (no reflection).
             double existingEdgeY = existing.StartYUp;
-            double existingCenterY = (existing.Control1.Y + existing.Control2.Y) / 2;
+            // Bezier midpoint of the existing tie (curve_point(0.5)): the edge plus
+            // 0.75 of its control-point height, matching configCenterY's frame.
+            double existingCenterY = existing.StartYUp
+                + 0.75 * (existing.Control1.Y - existing.StartYUp);
 
             // Center-center collision
             // LILYPOND-REF: tie-formatting-problem.cc:872-877
