@@ -367,7 +367,7 @@ native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界
 |---|---|---|
 | 1 | Slur staff-line frame 不一致 | ✅**修正**（staffMiddleY 導入で絶対-page frame へ・commit `1c902285`） |
 | 2 | BreakAlignSpacing clef/key/time 値 | ✅**LP 値採用**（extra-space 0.82/1.52/0.7 等・目視で LP 一致確認・171 snapshot 再ベース・`9c76abf9`） |
-| 3 | NoteCollision 混在幅残差 | ⏸**繰延**（=LP_COORDINATE_MODEL Stage-1 stem 相対 head X。architectural・等幅は忠実で混在幅のみ残差。partial hack は左端描画と非整合でリスク大） |
+| 3 | NoteCollision 混在幅残差 | ✅**LP式化（②局所修正）**: extent 比 `(extent_down[R]−extent_up[L])/downW`＋down-note 幅 scaling を literal 移植（`note-collision.cc:339-348`）。等幅は identity、up>down 幅の稀ケースのみ LP 通り tighten。全 177 snapshot 不変。実測で混在幅は既に LP 近似と判明したため、フル stem-anchor 移行(Stage-1)でなく局所修正を採用（保守性優先）。 |
 | 4 | Tie center 係数 | ✅**修正**（0.375·h / 0.75·h・`d81d379d`） |
 | 5 | Hairpin decrescendo 分数 | ✅**修正**（`1342012b`） |
 | 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`9c76abf9` に含む） |
