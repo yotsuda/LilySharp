@@ -1,5 +1,10 @@
 # LilySharp 座標系ガイドライン
 
+> **現況の正は [`COORDINATE_AUDIT.md`](COORDINATE_AUDIT.md)**（2026-07 の LILYPOND-REF 座標監査）。
+> 本書は単位の入門ガイド。Stage-4 で layout/renderer は **native Y-up**（LP 同様）へ移行し、device
+> Y-down への反転は描画境界（共有 `StaffFrame` ヘルパ）で行う。`YFlipDrawingContext`（単一ラッパ集約）は
+> 実装済だが**未配線**。beam quanter は staff-space に統一済（旧「BeamScoringProblem=Staff positions」は解消）。
+
 ## 概要
 
 LilySharp では3つの座標単位を使用します。レイヤー間で一貫した変換ルールに従うことで、混乱を防ぎます。
@@ -87,12 +92,15 @@ double svgY = staffMiddleY - (staffPos * SpaceHeight / 2);
 | レイヤー | 使用単位 | 理由 |
 |----------|----------|------|
 | LayoutOptions | Staff spaces | 設定値の一貫性 |
-| LayoutEngine | Staff spaces | LilyPond 互換 |
+| LayoutEngine | Staff spaces（垂直積みは Y-down・§COORDINATE_AUDIT 3.D） | LilyPond 互換 |
 | SpacingRules | Staff spaces | LilyPond 互換 |
-| BeamScoringProblem | Staff positions | 音符位置計算 |
-| Skyline | Staff spaces | LilyPond 互換 |
-| TieEngraver/SlurEngraver | Staff spaces | LilyPond 互換 |
-| SvgRenderer | Pixels | SVG 出力 |
+| BeamScoringProblem | Staff spaces（Y-up、2026-07 統一） | LP `beam-quanting.cc` 字面 |
+| Skyline | Staff spaces（native Y-up） | LilyPond 互換 |
+| TieEngraver/SlurEngraver | Staff spaces（Y-up） | LilyPond 互換 |
+| SvgRenderer | Pixels（Y-down、描画境界で反転） | SVG 出力 |
+
+> 音符の縦位置など「整数の staff position（half-space）」は音高表現として引き続き使用し、幾何へ入る時 `×0.5`
+> で ss 化する（LP と同じ）。詳細と全サブシステムの方向・単位は `COORDINATE_AUDIT.md` を参照。
 
 ## 定数の定義場所
 

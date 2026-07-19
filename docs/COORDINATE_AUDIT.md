@@ -249,11 +249,13 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
   Glissando（`√(dx²+dy²)` は 2 ss 軸で単位混在なし）, Arpeggio（`pos·0.5±protrusion` 符号正）。
 ### 3.G Renderers & Marks
 
-**Y フリップは単一（`YFlipDrawingContext`）に集約＝確認済。** 全 renderer は native page-Y-up
-（page-bottom 原点、`pageHeight − systemY + YUp`、正=上）を emit し、device 反転は `IDrawingContext`
-境界下の `YFlipDrawingContext` の**1回だけ**。layout engraver は `StaffFrame.ToUp/ToDevice`
-（involution `staffMiddleY − x`）で Y-up("frame B")格納。**これらのファイルに ss→pixel/spaceHeight
-演算は出現しない**（SVG backend 側・フリップ下）。全 `÷2`/`×2` は staff-position↔ss の正当変換。
+**renderer/layout は native Y-up で計算し、device Y-down への反転は描画境界で行う。**
+（訂正: 監査エージェントは「`YFlipDrawingContext` に単一集約」と報告したが、実コードでは
+`YFlipDrawingContext` は**未配線**〔同ファイル L49 "currently UNWIRED"〕。反転は draw 直前に
+per-call で共有 `StaffFrame.ToDevice`（involution `staffMiddleY − x`）／`pageHeight − y` により実施され、
+`SvgDrawingContext` は座標を素通し出力する＝**`IDrawingContext` は device Y-down を受け取る**。）
+layout engraver は `StaffFrame.ToUp/ToDevice` で Y-up("frame B")格納。**これらのファイルに
+ss→pixel/spaceHeight 演算は出現しない**（SVG backend 側）。全 `÷2`/`×2` は staff-position↔ss の正当変換。
 
 | File | 量 | 軸 | 方向 | 単位 | 根拠 |
 |---|---|---|---|---|---|
@@ -266,11 +268,10 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
 | Connectors.cs | brace glyph 選択（unitsPerEm 1000, pow0.8） | — | n-a | font-design-unit/無次元 | :448-459 |
 
 #### 忠実性所見
-- **[med・stale] IDrawingContext.cs:37-39** — contract doc が「Origin top-left, **Y axis points downward**
-  (SVG/PDF)」と記すが、Stage-4 後は**全 caller が native Y-up を渡す**（rect は top-edge・正 height、
-  Barlines:157 `y=staffY` top-edge 等）。フリップは `YFlipDrawingContext`。→ **stale doc（load-bearing）**:
-  新 backend 実装者が読むと Y を反転してしまう。`DrawGlyph`/`DrawRectangle` の per-param doc も up-positive/
-  top-edge 規約を欠く。**要修正**（コードは正、doc が矛盾）。
+- **[取消・false-positive] IDrawingContext.cs:37-39** — 監査で「contract doc『Y downward』は stale」と
+  したが**誤り**。`YFlipDrawingContext` が未配線のため renderer は draw 境界で per-call に device Y-down へ
+  変換して `IDrawingContext` に渡す（`SvgDrawingContext` は素通し）。→ **doc『Y downward』は現状正しい**。
+  将来 `YFlipDrawingContext` を配線し renderer が Y-up を直接渡すようになった時点で doc 更新が必要。
 - **[low] Marks.cs:650-664（DrawBigRest）** — LP `multi-measure-rest.cc:203-212` の end cap は **2.0ss** 高
   （`Interval(−ss,ss)`）だが Lily# は `2*0.8=1.6ss`（0.4ss 短）＋ ref コメント「full staff-space height」も不正確。
   軸/方向/単位は正、定数のみドリフト。
@@ -330,7 +331,9 @@ layout に pixel は出ない）。残る **half-space(staff-position)** は概�
 
 ### 4.2 方向（direction）
 **LP は Y-up 一貫＋device で単一フリップ。Lily# は Stage-4 で renderer / skyline(vertical) / 大半の engraver を
-native Y-up 化し、単一 `YFlipDrawingContext` に集約＝忠実。** ただし**残存 Y-down フレームが2系統**:
+native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界で共有 `StaffFrame.ToDevice`／`pageHeight−y`；
+単一集約の `YFlipDrawingContext` は実装済だが**未配線**＝`IDrawingContext` は現状 device Y-down を受ける）。
+残存 Y-down フレームが2系統:
 - **(a) 譜間/system 縦積み**（`MultiStaffLayouter`/`LayoutEngine`）が **Y-down page-absolute**。単位 ss で
   大きさは LP `align-interface` と一致するが**方向のみ設計反転**。全 annotation touchpoint で `-YUp`/`ToDevice`
   の単一フォールド反射を要する＝**最大の非-native フレーム**（一貫変換ゆえ数値は正、frame 忠実性としては未完）。
@@ -352,13 +355,26 @@ native Y-up 化し、単一 `YFlipDrawingContext` に集約＝忠実。** ただ
 | — | (既知) | BeamScoringProblem collision island / tab beam quanter | frame island | §3.A 記載・別 follow-up |
 
 ### 4.4 doc/label のみ修正（コードは正）
-- **IDrawingContext.cs:37-39** — contract doc「Y downward」が Stage-4 後は逆（**load-bearing**: 新 backend 実装者が
-  反転する）。up-positive/top-edge 規約に修正すべき。
-- **StemCalculator.cs:205,262-265** / **BeamScoringProblem StemInfo** — 戻り値「staff positions/half-spaces」
-  ラベルが実際は ss（統一で常に stale）。
-- **COORDINATE_SYSTEM.md** 自体が陳腐化（`BeamScoringProblem=Staff positions`、Layout=Y-down 等 Stage-4/beam 統一
-  前の記述）。**本書 `COORDINATE_AUDIT.md` が現況の正**として置換または相互リンクすべき。
+- **IDrawingContext.cs:37-39** — 「Y downward」は**現状正しい**（YFlip 未配線・§3.G の訂正）。監査の当初指摘は
+  false-positive。将来 YFlip 配線時に更新。
+- **StemCalculator.cs:205,262-265** / **StemInfo** — 戻り値「staff positions/half-spaces」ラベルが実際は ss。
+  → **修正済**（ss と明記）。
+- **COORDINATE_SYSTEM.md** 陳腐化 → **修正済**（本書へのポインタ＋layer 表更新）。
 - 多数の LILYPOND-REF 行番号ドリフト（cosmetic、関数は正しく指す）— 一括再採番は別途。
+
+### 4.6 対処状況（2026-07-19）
+| # | 項目 | 状況 |
+|---|---|---|
+| 1 | Slur staff-line frame 不一致 | ✅**修正**（staffMiddleY 導入で絶対-page frame へ・commit `1c902285`） |
+| 2 | BreakAlignSpacing clef/key/time 値 | ✅**LP 値採用**（extra-space 0.82/1.52/0.7 等・目視で LP 一致確認・171 snapshot 再ベース・`9c76abf9`） |
+| 3 | NoteCollision 混在幅残差 | ⏸**繰延**（=LP_COORDINATE_MODEL Stage-1 stem 相対 head X。architectural・等幅は忠実で混在幅のみ残差。partial hack は左端描画と非整合でリスク大） |
+| 4 | Tie center 係数 | ✅**修正**（0.375·h / 0.75·h・`d81d379d`） |
+| 5 | Hairpin decrescendo 分数 | ✅**修正**（`1342012b`） |
+| 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`9c76abf9` に含む） |
+| 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
+| 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
+| doc | IDrawingContext / StemCalculator / COORDINATE_SYSTEM | ✅（IDraw=false-positive、他2件 doc 修正済） |
+| 島 | 譜間縦積み Y-down / device 島群 / YFlip 配線 / LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正） |
 
 ### 4.5 結論
 **方向・単位の忠実移植は大部分達成**（Stage-4 Y-up 集約＋ss 統一＋単一フリップ）。ユーザー懸念の

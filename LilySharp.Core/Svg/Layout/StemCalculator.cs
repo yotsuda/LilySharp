@@ -73,9 +73,9 @@ public sealed record StemDetails
 /// LILYPOND-REF: lily/include/stem-info.hh:30-37 Stem_info struct
 /// </remarks>
 public readonly record struct StemInfo(
-    // Ideal stem end Y position (staff spaces from staff top).
+    // Ideal beam Y position, in staff-spaces measured up from the staff middle line.
     double IdealY,
-    // Minimum (shortest) stem end Y position.
+    // Minimum (shortest) beam Y position, staff-spaces from the staff middle (Y-up).
     double ShortestY,
     // Stem direction: true = up.
     bool StemUp);
@@ -202,7 +202,9 @@ public static class StemCalculator
     /// <param name="details">Stem details parameters.</param>
     /// <param name="isKnee">True when the owning beam is kneed — LilyPond skips
     /// the staff-extension clamps for knees (<c>knee</c> beam property).</param>
-    /// <returns>Stem info with ideal and shortest Y positions (in staff positions/half-spaces).</returns>
+    /// <returns>Stem info with absolute ideal and shortest beam Y positions, in
+    /// staff-spaces (LilyPond's frame: noteStart = headPosition*0.5, lengths in ss).
+    /// NOT half-spaces — the beam quanter reads these directly.</returns>
     /// <remarks>
     /// LILYPOND-REF: lily/stem.cc:1135-1266 calc_stem_info
     /// </remarks>
@@ -259,9 +261,10 @@ public static class StemCalculator
         double minimumLength = minimumFree + heightOfMyBeams - 0.5 * beamThickness;
         double shortestY = (noteStart + minimumLength) * dir;
 
-        // Convert back to staff-space Y coordinates
-        // idealY and shortestY are in "stem direction distance from staff center"
-        // Convert: positive idealY means further from notehead
+        // Return absolute beam Y in staff-spaces (Y-up). idealY/shortestY above are
+        // "stem-direction distance from the note", so ×dir gives the absolute beam Y
+        // measured up from the staff middle line (higher = larger). Already ss — no
+        // half-space conversion.
         return new StemInfo(idealY * dir, shortestY, stemUp);
     }
 
