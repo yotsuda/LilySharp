@@ -46,10 +46,12 @@ namespace LilySharp.Core.Rendering;
 /// inner context keep the inner's backend behaviour (e.g. interactive SVG hit
 /// rects), which a bare <c>DrawGlyph</c> fallback would lose.
 ///
-/// NOTE: currently UNWIRED (no caller constructs it). It is the arrival point of
-/// the internal-Y-up migration; it is wired in only once every grob computes in
-/// a relative Y-up frame and the layout Y origins are Y-up, at which point the
-/// per-grob device reflections fold into this one flip.
+/// This is WIRED: <see cref="SharedRenderer"/> wraps each page's
+/// <see cref="IDrawingContext"/> in it (see <c>RenderTo</c>), so every primitive
+/// Y the renderer emits is page Y-up and this decorator performs the one device
+/// flip. The internal-Y-up migration is complete for grob geometry and the render
+/// path; the remaining device islands — the staff/system stacking origins and the
+/// shared collision/skyline substrate — are being folded into this same flip.
 /// </remarks>
 internal sealed class YFlipDrawingContext : IDrawingContext
 {

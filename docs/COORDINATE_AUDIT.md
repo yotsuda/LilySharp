@@ -374,7 +374,7 @@ native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界
 | 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
 | doc | IDrawingContext / StemCalculator / COORDINATE_SYSTEM | ✅（IDraw=false-positive、他2件 doc 修正済） |
-| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔜**次セッション着手**（引継ぎ `HANDOFF-stage4-vertical-yup.md`）。精査済＝StaffFrame 折り返し104箇所/~25ファイル・実質 Stage-4。byte 不変で移行可・完遂で fold 消滅（保守性向上）。出力は既に正 |
+| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔄**進行中**（正確な現状は `HANDOFF-stage4-vertical-yup.md`）。**YFlip 配線＋全 grob レイアウト Y-up 化は Phase 2i〜2z で既完了**（`e09d4e72`ほか。旧「未配線」記述は stale だった）。残＝共有 device stacking/skyline substrate の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b` 済／OutsideStaffStacker・MusicMarkEngraver 等 残）＋ system.Y/staff.Y の Y-up 格納（W2）。各島は boundary-shim で独立に byte 不変移行可。出力は既に正 |
 | 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正。島1完了後に整理） |
 
 ### 4.5 結論
