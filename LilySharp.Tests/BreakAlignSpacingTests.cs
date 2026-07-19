@@ -30,21 +30,21 @@ public class BreakAlignSpacingTests
     // === Space-alist lookup tests ===
 
     [Fact]
-    public void ClefToKeySignature_MinimumSpace_3_5()
+    public void ClefToKeySignature_ExtraSpace_0_82()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))
+        // LILYPOND-REF: scm/define-grobs.scm:918 (key-signature . (extra-space . 0.82))
         var entry = BreakAlignSpacing.GetSpacing(BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature);
-        Assert.Equal(SpacingStyle.MinimumSpace, entry.Style);
-        Assert.Equal(3.5, entry.Value, 2);
+        Assert.Equal(SpacingStyle.ExtraSpace, entry.Style);
+        Assert.Equal(0.82, entry.Value, 2);
     }
 
     [Fact]
-    public void ClefToTimeSignature_MinimumSpace_4_2()
+    public void ClefToTimeSignature_ExtraSpace_1_52()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:816 (time-signature . (minimum-space . 4.2))
+        // LILYPOND-REF: scm/define-grobs.scm:920 (time-signature . (extra-space . 1.52))
         var entry = BreakAlignSpacing.GetSpacing(BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature);
-        Assert.Equal(SpacingStyle.MinimumSpace, entry.Style);
-        Assert.Equal(4.2, entry.Value, 2);
+        Assert.Equal(SpacingStyle.ExtraSpace, entry.Style);
+        Assert.Equal(1.52, entry.Value, 2);
     }
 
     [Fact]
@@ -168,7 +168,8 @@ public class BreakAlignSpacingTests
             GlyphMetrics.GClefWidth, 0, false, true, 4, 4);
 
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
-        double expected = 4.2 + timeSigWidth;
+        // Clef→TimeSignature is extra-space 1.52 (measured off the clef ink).
+        double expected = GlyphMetrics.GClefWidth + 1.52 + timeSigWidth;
         Assert.Equal(expected, width, 1);
         Assert.Equal((2.0, 1.0), BreakAlignSpacing.FirstNoteSpring(0, includeTimeSignature: true));
     }
@@ -182,7 +183,8 @@ public class BreakAlignSpacingTests
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
-        double expected = 3.5 + keyWidth + 1.15 + timeSigWidth;
+        // Clef→KeySig extra-space 0.82 (off clef ink), KeySig→TimeSig extra-space 1.15.
+        double expected = GlyphMetrics.GClefWidth + 0.82 + keyWidth + 1.15 + timeSigWidth;
         Assert.Equal(expected, width, 1);
     }
 
@@ -209,7 +211,8 @@ public class BreakAlignSpacingTests
             GlyphMetrics.GClefWidth, 2, true, false);
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
-        double expected = 3.5 + keyWidth;
+        // Clef→KeySignature is extra-space 0.82 (measured off the clef ink).
+        double expected = GlyphMetrics.GClefWidth + 0.82 + keyWidth;
         Assert.Equal(expected, width, 1);
         Assert.Equal((2.5, 1.25), BreakAlignSpacing.FirstNoteSpring(2, includeTimeSignature: false));
     }

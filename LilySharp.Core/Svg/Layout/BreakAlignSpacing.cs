@@ -146,28 +146,35 @@ internal static class BreakAlignSpacing
     /// Clef.space-alist from LilyPond.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:902-942 Clef
+    /// LILYPOND-REF: scm/define-grobs.scm:914-925 Clef.space-alist (current LP).
+    ///
+    /// These are the current LP extra-space values. The old minimum-space 3.5/4.2/3.7
+    /// values (from an older LP / the small-clef variant at :1120-1130) produced almost
+    /// identical output here only because extra-space is measured from the clef's right
+    /// extent (~2.7 ss) so 2.7+0.82 ≈ 3.5 for a standard clef; the extra-space form is
+    /// LP-faithful AND adapts to clef width (bass / cue / small clefs). Verified against
+    /// LilyPond 2.24.4 line-start clef→key→time spacing. COORDINATE_AUDIT.md §4.3 #2.
     /// </remarks>
     private static SpacingEntry GetClefSpacing(BreakAlignSymbol right) => right switch
     {
-        // (key-cancellation . (minimum-space . 3.5))
+        // (key-cancellation . (extra-space . 0.82))
         BreakAlignSymbol.KeyCancellation =>
-            new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-        // (key-signature . (minimum-space . 3.5))
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.82),
+        // (key-signature . (extra-space . 0.82))
         BreakAlignSymbol.KeySignature =>
-            new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-        // (time-signature . (minimum-space . 4.2))
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.82),
+        // (time-signature . (extra-space . 1.52))
         BreakAlignSymbol.TimeSignature =>
-            new SpacingEntry(SpacingStyle.MinimumSpace, 4.2),
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.52),
         // (first-note . (minimum-fixed-space . 5.0))
         BreakAlignSymbol.FirstNote =>
             new SpacingEntry(SpacingStyle.MinimumFixedSpace, 5.0),
         // (right-edge . (extra-space . 0.5))
         BreakAlignSymbol.RightEdge =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.5),
-        // (staff-bar . (minimum-space . 3.7))
+        // (staff-bar . (extra-space . 0.7))
         BreakAlignSymbol.StaffBar =>
-            new SpacingEntry(SpacingStyle.MinimumSpace, 3.7),
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.7),
         _ => new SpacingEntry(SpacingStyle.ExtraSpace, 1.0)
     };
 
@@ -179,12 +186,12 @@ internal static class BreakAlignSpacing
     /// </remarks>
     private static SpacingEntry GetKeyCancellationSpacing(BreakAlignSymbol right) => right switch
     {
-        // (key-signature . (extra-space . 0.3))
+        // (key-signature . (extra-space . 0.5))
         BreakAlignSymbol.KeySignature =>
-            new SpacingEntry(SpacingStyle.ExtraSpace, 0.3),
-        // (time-signature . (extra-space . 1.15))
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.5),
+        // (time-signature . (extra-space . 1.25))
         BreakAlignSymbol.TimeSignature =>
-            new SpacingEntry(SpacingStyle.ExtraSpace, 1.15),
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.25),
         // (first-note . (fixed-space . 2.5))
         BreakAlignSymbol.FirstNote =>
             new SpacingEntry(SpacingStyle.FixedSpace, 2.5),
@@ -231,9 +238,9 @@ internal static class BreakAlignSpacing
         // (right-edge . (extra-space . 0.5))
         BreakAlignSymbol.RightEdge =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.5),
-        // (staff-bar . (minimum-space . 2.0))
+        // (staff-bar . (extra-space . 1.0))
         BreakAlignSymbol.StaffBar =>
-            new SpacingEntry(SpacingStyle.MinimumSpace, 2.0),
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.0),
         _ => new SpacingEntry(SpacingStyle.ExtraSpace, 1.0)
     };
 
