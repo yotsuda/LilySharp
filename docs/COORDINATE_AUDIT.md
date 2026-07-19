@@ -374,7 +374,8 @@ native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界
 | 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
 | doc | IDrawingContext / StemCalculator / COORDINATE_SYSTEM | ✅（IDraw=false-positive、他2件 doc 修正済） |
-| 島 | 譜間縦積み Y-down / device 島群 / YFlip 配線 / LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正） |
+| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔜**次セッション着手**（引継ぎ `HANDOFF-stage4-vertical-yup.md`）。精査済＝StaffFrame 折り返し104箇所/~25ファイル・実質 Stage-4。byte 不変で移行可・完遂で fold 消滅（保守性向上）。出力は既に正 |
+| 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正。島1完了後に整理） |
 
 ### 4.5 結論
 **方向・単位の忠実移植は大部分達成**（Stage-4 Y-up 集約＋ss 統一＋単一フリップ）。ユーザー懸念の
