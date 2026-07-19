@@ -313,8 +313,8 @@ public sealed class MidiExporter
                 ProcessTempo(tempo, conductorTrack);
                 break;
 
-            case MetadataDeclarationSyntax metadata:
-                ProcessMetadata(metadata, conductorTrack);
+            case MetadataDeclarationSyntax:
+                // title/composer only; nothing that affects MIDI
                 break;
 
             case RepeatExpressionSyntax repeat:
@@ -1391,12 +1391,6 @@ public sealed class MidiExporter
             _tempo = bpm;
             conductorTrack.TempoChanges.Add(new TempoChange(_currentTick, BpmToMicroseconds(bpm)));
         }
-    }
-
-    private void ProcessMetadata(MetadataDeclarationSyntax metadata, MidiTrack conductorTrack)
-    {
-        // MetadataDeclarationSyntax now only handles title/composer which don't affect MIDI
-        // Tempo and time signatures have their own syntax nodes
     }
 
     private void ProcessRepeat(RepeatExpressionSyntax repeat, MidiTrack track, MidiTrack conductorTrack)

@@ -80,7 +80,6 @@ internal static class FiguredBassEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Func<int, int, double>? staffYAt = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)

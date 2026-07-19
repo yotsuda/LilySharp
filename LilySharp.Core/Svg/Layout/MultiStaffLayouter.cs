@@ -270,7 +270,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
     /// Uses StaffSpacingParameters for intra-group and inter-group spacing.
     /// </remarks>
-    public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(MultiStaffScore score, double systemY)
+    public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(MultiStaffScore score)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
@@ -341,7 +341,7 @@ internal sealed class MultiStaffLayouter
     /// Hidden staves contribute no height or inter-group spacing.
     /// </remarks>
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
-        MultiStaffScore score, double systemY,
+        MultiStaffScore score,
         int startMeasure, int endMeasure, bool isFirstSystem)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
@@ -1189,7 +1189,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
     /// </remarks>
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
-        MultiStaffScore score, double systemY,
+        MultiStaffScore score,
         SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
@@ -1215,7 +1215,7 @@ internal sealed class MultiStaffLayouter
             else if (group.HasDelimiter)
             {
                 var layout = LayoutBracketGroupWithSkylines(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    group, currentY, sp.StaffStaff, globalStaffIndex,
                     staffSkylines);
                 builder.Add(layout);
                 currentY += layout.Height;
@@ -1223,7 +1223,7 @@ internal sealed class MultiStaffLayouter
             else
             {
                 var layout = LayoutSingleStaffGroupWithSkylines(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    group, currentY, sp.StaffStaff, globalStaffIndex,
                     staffSkylines);
                 builder.Add(layout);
                 currentY += layout.Height;
@@ -1311,7 +1311,7 @@ internal sealed class MultiStaffLayouter
     /// Layouts a single staff group using skyline-based spacing.
     /// </summary>
     private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec,
         int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
@@ -1358,7 +1358,7 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering
     /// </remarks>
     private StaffGroupLayout LayoutBracketGroupWithSkylines(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec,
         int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();

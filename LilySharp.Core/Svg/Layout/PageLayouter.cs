@@ -106,7 +106,6 @@ internal sealed class PageLayouter
             {
                 spec = vs.SelectSpec(
                     isFirstOnPage: false,
-                    isLastOnPage: false,
                     prevIsTitle: false,
                     currentIsTitle: false,
                     currentIsNewScore: false);
@@ -236,7 +235,6 @@ internal sealed class PageLayouter
                 // Select spacing spec for this pair
                 var spec = vs.SelectSpec(
                     isFirstOnPage: false, // Not first — we already placed first
-                    isLastOnPage: false,
                     prevIsTitle: systemDetails[sysIdx].IsTitle,
                     currentIsTitle: systemDetails[sysIdx + 1].IsTitle,
                     currentIsNewScore: false);

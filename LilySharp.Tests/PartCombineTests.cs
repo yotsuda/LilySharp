@@ -51,7 +51,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Rest(Fraction.Quarter), Rest(Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Rest(Fraction.Quarter), Rest(Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Silence, result[0].State);
@@ -63,7 +63,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Quarter), Note(2, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(0, Fraction.Quarter), Note(2, Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Unison, result[0].State);
@@ -75,7 +75,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(4, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(-2, Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Apart, result[0].State);
@@ -87,7 +87,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Rest(Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Solo1, result[0].State);
@@ -99,7 +99,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Rest(Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(0, Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Solo2, result[0].State);
@@ -112,7 +112,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Quarter), Note(2, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(0, Fraction.Quarter), Rest(Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Equal(2, result.Length);
         Assert.Equal(PartCombineState.Unison, result[0].State);
@@ -126,7 +126,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Quarter), Note(0, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(0, Fraction.Quarter), Note(0, Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Unison, result[0].State);
@@ -139,7 +139,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Quarter)));
         var v2 = MakeVoice("2", MakeMeasure(Note(0, Fraction.Half)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Apart, result[0].State);
@@ -156,7 +156,7 @@ public class PartCombineTests
             MakeMeasure(Note(0, Fraction.Quarter)),
             MakeMeasure(Note(-2, Fraction.Quarter)));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Equal(2, result.Length);
         Assert.Equal(PartCombineState.Unison, result[0].State);
@@ -171,7 +171,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1");
         var v2 = MakeVoice("2");
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.True(result.IsEmpty);
     }
@@ -287,7 +287,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(chord1));
         var v2 = MakeVoice("2", MakeMeasure(chord2));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Unison, result[0].State);
@@ -306,7 +306,7 @@ public class PartCombineTests
         var v1 = MakeVoice("1", MakeMeasure(chord1));
         var v2 = MakeVoice("2", MakeMeasure(chord2));
 
-        var result = PartCombineAnalyzer.Analyze(v1, v2, FourFour);
+        var result = PartCombineAnalyzer.Analyze(v1, v2);
 
         Assert.Single(result);
         Assert.Equal(PartCombineState.Apart, result[0].State);

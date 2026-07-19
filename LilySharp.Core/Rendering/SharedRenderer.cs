@@ -403,7 +403,7 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: lily/break-align-engraver.cc — Clef + KeySignature
                 // are break-aligned at every line start; TimeSignature is not.
                 double prefixEndX = systemStartX;
-                var clef = ResolveClef(staff, system, score);
+                var clef = ResolveClef(staff, system);
                 // Ossia prefix, per the LP ossia conventions (NR "Ossia staves"):
                 // no time signature at all (\remove Time_signature_engraver), no
                 // clef on the ossia's FIRST appearance (firstClef = ##f —

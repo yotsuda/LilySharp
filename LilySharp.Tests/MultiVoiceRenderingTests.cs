@@ -90,7 +90,7 @@ public class MultiVoiceRenderingTests
         var voice2 = new Voice("lower", ImmutableArray.Create(measure2));
 
         var collector = new VoiceCollector();
-        var columns = collector.Collect(ImmutableArray.Create(voice1, voice2), new TimeSignature(4, 4));
+        var columns = collector.Collect(ImmutableArray.Create(voice1, voice2));
 
         Assert.Single(columns);
         Assert.Equal(2, columns[0].Entries.Length);

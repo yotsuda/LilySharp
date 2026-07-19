@@ -249,8 +249,7 @@ internal sealed class LyricEngraver
                 var layout = CalculateSyllableLayout(
                     lyric,
                     measureLayouts,
-                    verseY,
-                    i + 1 < verseLyrics.Count ? verseLyrics[i + 1].Lyric : null);
+                    verseY);
 
                 if (layout != null)
                     verseLayouts.Add(layout with { SourceIndex = srcIndex });
@@ -440,8 +439,7 @@ internal sealed class LyricEngraver
     private LyricLayout? CalculateSyllableLayout(
         LyricItem lyric,
         IReadOnlyList<MeasureLayout> measureLayouts,
-        double y,
-        LyricItem? nextLyric)
+        double y)
     {
         // Find the note position for this syllable
         if (lyric.MeasureIndex < 0 || lyric.MeasureIndex >= measureLayouts.Count)

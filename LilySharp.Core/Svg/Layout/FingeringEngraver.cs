@@ -101,9 +101,8 @@ internal static class FingeringEngraver
             var measure = voice.Measures[mi];
             if (!measureMap.TryGetValue(mi, out var measureLayout))
                 continue;
-            if (!systemMap.TryGetValue(mi, out var info))
+            if (!systemMap.ContainsKey(mi))
                 continue;
-            var (system, _) = info;
 
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
@@ -111,7 +110,7 @@ internal static class FingeringEngraver
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     var layout = BuildLayout(
-                        note, mi, ii, measureLayout, system, staffIndex, voice.Measures);
+                        note, mi, ii, measureLayout, staffIndex, voice.Measures);
                     if (layout.HasValue)
                         layouts.Add(layout.Value);
                 }
@@ -119,7 +118,7 @@ internal static class FingeringEngraver
                 {
                     // LILYPOND-REF: lily/fingering-column.cc — stack chord fingerings.
                     BuildChordFingerings(
-                        chord, mi, ii, measureLayout, system, staffIndex, layouts, voice.Measures);
+                        chord, mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
                 }
             }
         }
@@ -141,7 +140,7 @@ internal static class FingeringEngraver
     /// </remarks>
     private static void BuildChordFingerings(
         ChordItem chord, int measureIndex, int itemIndex,
-        MeasureLayout measureLayout, SystemLayout system, int staffIndex,
+        MeasureLayout measureLayout, int staffIndex,
         ImmutableArray<FingeringLayout>.Builder layouts,
         ImmutableArray<Measure> measures)
     {
@@ -179,7 +178,7 @@ internal static class FingeringEngraver
 
     private static FingeringLayout? BuildLayout(
         NoteItem note, int measureIndex, int itemIndex,
-        MeasureLayout measureLayout, SystemLayout system, int staffIndex,
+        MeasureLayout measureLayout, int staffIndex,
         ImmutableArray<Measure> measures)
     {
         if (measureLayout.Columns.IsDefaultOrEmpty

@@ -160,7 +160,7 @@ internal sealed record VerticalSpacingParameters
     /// LILYPOND-REF: lily/page-layout-problem.cc:488-535 spacing spec selection logic
     /// </remarks>
     public VerticalSpacingSpec SelectSpec(
-        bool isFirstOnPage, bool isLastOnPage,
+        bool isFirstOnPage,
         bool prevIsTitle, bool currentIsTitle,
         bool currentIsNewScore)
     {

@@ -94,12 +94,10 @@ internal static class PartCombineAnalyzer
     /// </summary>
     /// <param name="voice1">First voice (stems up by default)</param>
     /// <param name="voice2">Second voice (stems down by default)</param>
-    /// <param name="timeSignature">Time signature for time position calculation</param>
     /// <returns>Array of state changes (only emitted when state changes)</returns>
     public static ImmutableArray<PartCombineItem> Analyze(
         Voice voice1,
-        Voice voice2,
-        TimeSignature timeSignature)
+        Voice voice2)
     {
         var items = ImmutableArray.CreateBuilder<PartCombineItem>();
         var prevState = (PartCombineState?)null;

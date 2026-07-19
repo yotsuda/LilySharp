@@ -127,7 +127,7 @@ public class ArpeggioTests
         var arpeggios = ImmutableArray.Create(new ArpeggioItem(
             MeasureIndex: 0, ItemIndex: 0, MinStaffPosition: -2, MaxStaffPosition: 4, SourcePosition: 42));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].SourcePosition);
@@ -142,7 +142,7 @@ public class ArpeggioTests
         var arpeggios = ImmutableArray.Create(new ArpeggioItem(
             MeasureIndex: 0, ItemIndex: 1, MinStaffPosition: -2, MaxStaffPosition: 4, SourcePosition: 0));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.Single(result);
         // X should be to the left of the chord (item X=5.0 - padding)
@@ -157,7 +157,7 @@ public class ArpeggioTests
         var arpeggios = ImmutableArray.Create(new ArpeggioItem(
             MeasureIndex: 0, ItemIndex: 0, MinStaffPosition: -4, MaxStaffPosition: 4, SourcePosition: 0));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.Single(result);
         // Y-up (frame B): the top extent sits ABOVE the bottom, so its value is larger.
@@ -174,7 +174,7 @@ public class ArpeggioTests
         var arpeggios = ImmutableArray.Create(new ArpeggioItem(
             MeasureIndex: 0, ItemIndex: 0, MinStaffPosition: -4, MaxStaffPosition: 4, SourcePosition: 0));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.Single(result);
         // Y-up (frame B): height = top extent minus bottom extent.
@@ -190,7 +190,7 @@ public class ArpeggioTests
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
 
         var result = ArpeggioEngraver.Calculate(
-            ImmutableArray<ArpeggioItem>.Empty, systems, ml, 4.0);
+            ImmutableArray<ArpeggioItem>.Empty, systems);
 
         Assert.True(result.IsEmpty);
     }
@@ -203,7 +203,7 @@ public class ArpeggioTests
         var arpeggios = ImmutableArray.Create(new ArpeggioItem(
             MeasureIndex: 10, ItemIndex: 0, MinStaffPosition: 0, MaxStaffPosition: 4, SourcePosition: 0));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.True(result.IsEmpty);
     }
@@ -217,7 +217,7 @@ public class ArpeggioTests
             new ArpeggioItem(0, 0, -2, 4, 10),
             new ArpeggioItem(1, 1, 0, 6, 20));
 
-        var result = ArpeggioEngraver.Calculate(arpeggios, systems, ml, 4.0);
+        var result = ArpeggioEngraver.Calculate(arpeggios, systems);
 
         Assert.Equal(2, result.Length);
         Assert.Equal(10, result[0].SourcePosition);

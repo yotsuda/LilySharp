@@ -100,12 +100,10 @@ internal static class DynamicEngraver
     public static ImmutableArray<DynamicLayout> Calculate(
         Score score,
         ImmutableArray<DynamicItem> dynamics,
-        ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Voice> voices = default,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Func<int, int, double>? staffYAt = null)
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;

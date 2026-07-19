@@ -93,7 +93,6 @@ internal static class GraceNoteEngraver
     public static ImmutableArray<GraceNoteLayout> Calculate(
         Score score,
         ImmutableArray<GraceNoteItem> graceNotes,
-        ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, double>? staffYByIndex = null,

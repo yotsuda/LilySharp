@@ -315,13 +315,13 @@ internal static class OutsideStaffStacker
 
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
-        var adjTrills = PlaceTrills(trills, trackers, measureToSystem, systems);
-        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem, systems);
+        var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
+        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem);
         var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
-        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem, systems);
-        var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem, systems);
+        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem);
+        var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem);
         var adjCustomTexts = PlaceCustomTexts(customTexts, trackers, measureToSystem, systems);
-        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem, systems);
+        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem);
         var adjMarks = PlaceMusicMarks(musicMarks, trackers, measureToSystem, systems);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics, adjTextSpanners);
@@ -452,7 +452,7 @@ internal static class OutsideStaffStacker
     // ---- 50: TrillSpanner ----
     private static ImmutableArray<TrillSpannerLayout> PlaceTrills(
         ImmutableArray<TrillSpannerLayout> trills, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem)
     {
         if (trills.IsDefaultOrEmpty)
             return trills;
@@ -484,7 +484,7 @@ internal static class OutsideStaffStacker
     // ---- 100: BarNumber (absolute page Y) ----
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
         ImmutableArray<BarNumberLayout> barNumbers, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem)
     {
         if (barNumbers.IsDefaultOrEmpty)
             return barNumbers;
@@ -543,7 +543,7 @@ internal static class OutsideStaffStacker
     //   staff, clearing the up-skyline, instead of below where it hit low notes.
     private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
         ImmutableArray<TextSpannerLayout> textSpanners, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return textSpanners;
@@ -565,7 +565,7 @@ internal static class OutsideStaffStacker
     // ---- 400: OttavaBracket (above-staff only) ----
     private static ImmutableArray<OttavaBracketLayout> PlaceOttavas(
         ImmutableArray<OttavaBracketLayout> ottavas, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem)
     {
         if (ottavas.IsDefaultOrEmpty)
             return ottavas;
@@ -631,7 +631,7 @@ internal static class OutsideStaffStacker
     //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
     private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
         ImmutableArray<VoltaBracketLayout> voltas, DirectionalOccupancy[] trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        Dictionary<int, int> measureToSystem)
     {
         if (voltas.IsDefaultOrEmpty)
             return voltas;

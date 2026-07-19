@@ -271,10 +271,10 @@ internal static class BreakAlignSpacing
     /// - ExtraSpace / FixedSpace / SemiFixedSpace / SemiShrinkSpace: ideal = leftRight + value
     /// - MinimumSpace / MinimumFixedSpace: LP is last_ext[LEFT] + max(item length, value);
     ///   approximated here as max(value, leftRight + minPad) — the left item's LEFT edge and
-    ///   length are not threaded through this signature.
+    ///   length, and the right item's own extent, are not threaded through this signature.
     /// </remarks>
     public static double CalculateDistance(SpacingEntry entry,
-        double leftItemRightExtent, double rightItemLeftExtent)
+        double leftItemRightExtent)
     {
         const double minPad = 0.1;  // minimum padding between items
 
@@ -338,8 +338,7 @@ internal static class BreakAlignSpacing
         if (keyAccidentalCount > 0)
         {
             var entry = GetSpacing(currentSymbol, BreakAlignSymbol.KeySignature);
-            double keyLeftExtent = 0;  // key signature starts at left edge
-            distance += CalculateDistance(entry, currentRightExtent, keyLeftExtent);
+            distance += CalculateDistance(entry, currentRightExtent);
 
             // Key signature width
             double accWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(keySharps);
@@ -351,8 +350,7 @@ internal static class BreakAlignSpacing
         if (includeTimeSignature)
         {
             var entry = GetSpacing(currentSymbol, BreakAlignSymbol.TimeSignature);
-            double timeSigLeftExtent = 0;
-            distance += CalculateDistance(entry, currentRightExtent, timeSigLeftExtent);
+            distance += CalculateDistance(entry, currentRightExtent);
 
             double timeSigWidth = GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType);
             currentRightExtent = timeSigWidth;

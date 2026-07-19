@@ -91,8 +91,7 @@ public class BreakAlignSpacingTests
         // Clef width (2.564) < minimum-space value (3.5)
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-            leftItemRightExtent: GlyphMetrics.GClefWidth,
-            rightItemLeftExtent: 0);
+            leftItemRightExtent: GlyphMetrics.GClefWidth);
 
         Assert.Equal(3.5, distance, 2);
     }
@@ -103,8 +102,7 @@ public class BreakAlignSpacingTests
         // Wide item (4.0) > minimum-space value (3.5)
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-            leftItemRightExtent: 4.0,
-            rightItemLeftExtent: 0);
+            leftItemRightExtent: 4.0);
 
         Assert.True(distance > 3.5,
             $"MinimumSpace with wide item ({distance:F2}) should exceed value (3.5)");
@@ -115,8 +113,7 @@ public class BreakAlignSpacingTests
     {
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.ExtraSpace, 1.15),
-            leftItemRightExtent: 2.2,
-            rightItemLeftExtent: 0);
+            leftItemRightExtent: 2.2);
 
         Assert.Equal(3.35, distance, 2);
     }
@@ -126,8 +123,7 @@ public class BreakAlignSpacingTests
     {
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.FixedSpace, 2.0),
-            leftItemRightExtent: 2.1,
-            rightItemLeftExtent: 0);
+            leftItemRightExtent: 2.1);
 
         Assert.Equal(4.1, distance, 2);
     }
@@ -139,7 +135,7 @@ public class BreakAlignSpacingTests
         // Independent of the RIGHT item's left extent (the old half-half formula used it).
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.SemiFixedSpace, 1.3),
-            leftItemRightExtent: 2.0, rightItemLeftExtent: 0.5);
+            leftItemRightExtent: 2.0);
 
         Assert.Equal(3.3, distance, 2);
     }
@@ -151,7 +147,7 @@ public class BreakAlignSpacingTests
         // (leftRight + distance); the old 0.8/0.6 factors were ungrounded.
         double distance = BreakAlignSpacing.CalculateDistance(
             new SpacingEntry(SpacingStyle.SemiShrinkSpace, 1.3),
-            leftItemRightExtent: 2.0, rightItemLeftExtent: 0.5);
+            leftItemRightExtent: 2.0);
 
         Assert.Equal(3.3, distance, 2);
     }

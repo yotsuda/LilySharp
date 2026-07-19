@@ -96,7 +96,7 @@ public class SystemStartDelimiterTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0);
+        var groups = layouter.LayoutStaffGroups(score);
 
         Assert.Single(groups);
         var layout = groups[0];
@@ -121,7 +121,7 @@ public class SystemStartDelimiterTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0);
+        var groups = layouter.LayoutStaffGroups(score);
 
         Assert.Single(groups);
         var layout = groups[0];
@@ -145,7 +145,7 @@ public class SystemStartDelimiterTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0);
+        var groups = layouter.LayoutStaffGroups(score);
 
         var layout = groups[0];
         Assert.Equal(SystemStartDelimiterType.Brace, layout.GrandStaffLayout!.DelimiterType);
@@ -166,7 +166,7 @@ public class SystemStartDelimiterTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0);
+        var groups = layouter.LayoutStaffGroups(score);
 
         var layout = groups[0];
         var delim = layout.GrandStaffLayout!;
@@ -194,7 +194,7 @@ public class SystemStartDelimiterTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: false);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
 
         var layout = groups[0];
         Assert.True(layout.Staves[1].IsHidden); // Middle staff hidden

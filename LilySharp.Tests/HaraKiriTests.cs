@@ -202,7 +202,7 @@ public class HaraKiriTests
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
 
         // Non-first system, measures [0,2)
-        var staffGroups = layouter.LayoutStaffGroups(score, 0, 0, 2, isFirstSystem: false);
+        var staffGroups = layouter.LayoutStaffGroups(score, 0, 2, isFirstSystem: false);
 
         // Alto staff should be hidden
         Assert.Equal(3, staffGroups.Length);
@@ -236,7 +236,7 @@ public class HaraKiriTests
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
 
         // First system — should NOT hide even though empty
-        var staffGroups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: true);
+        var staffGroups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
 
         Assert.False(staffGroups[1].Staves[0].IsHidden); // alto: visible in first system
         Assert.True(staffGroups[1].Height > 0);
@@ -272,8 +272,8 @@ public class HaraKiriTests
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
 
-        var groupsWithHidden = layouter.LayoutStaffGroups(scoreWithHidden, 0, 0, 1, isFirstSystem: false);
-        var groupsWithout = layouter.LayoutStaffGroups(scoreWithoutMiddle, 0, 0, 1, isFirstSystem: false);
+        var groupsWithHidden = layouter.LayoutStaffGroups(scoreWithHidden, 0, 1, isFirstSystem: false);
+        var groupsWithout = layouter.LayoutStaffGroups(scoreWithoutMiddle, 0, 1, isFirstSystem: false);
 
         // The bass staff Y should be similar (hidden staff contributes no height/gap)
         double bassYWithHidden = groupsWithHidden[2].Y;
@@ -301,7 +301,7 @@ public class HaraKiriTests
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
 
-        var staffGroups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: true);
+        var staffGroups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
 
         Assert.True(staffGroups[0].Staves[0].IsHidden);
         Assert.True(staffGroups[1].Staves[0].IsHidden);

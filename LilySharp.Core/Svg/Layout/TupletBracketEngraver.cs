@@ -127,7 +127,6 @@ internal static class TupletBracketEngraver
     /// </remarks>
     public static ImmutableArray<TupletBracketLayout> Calculate(
         ImmutableArray<TupletBracketItem> tuplets,
-        ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures,
         ImmutableArray<BeamGroup> beamGroups = default,
@@ -346,11 +345,10 @@ internal static class TupletBracketEngraver
     /// </summary>
     public static ImmutableArray<TupletBracketLayout> Calculate(
         ImmutableArray<TupletBracketItem> tuplets,
-        ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures)
     {
-        return Calculate(tuplets, systems, measureLayouts, measures, default);
+        return Calculate(tuplets, measureLayouts, measures, default);
     }
 
     /// <summary>

@@ -74,7 +74,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: false);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
 
         Assert.Single(groups);
         var group = groups[0];
@@ -108,7 +108,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: false);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
 
         var group = groups[0];
         double braceHeight = group.GrandStaffLayout!.TotalHeight;
@@ -134,7 +134,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: false);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
 
         var group = groups[0];
         Assert.True(group.Staves[1].IsHidden);   // middle: hidden
@@ -163,7 +163,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: true);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
 
         var group = groups[0];
         Assert.True(group.Staves[0].IsHidden);
@@ -190,7 +190,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 0, 1, isFirstSystem: false);
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
 
         var group = groups[0];
         var gs = group.GrandStaffLayout!;

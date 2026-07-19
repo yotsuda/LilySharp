@@ -66,11 +66,8 @@ internal static class ArpeggioEngraver
     public static ImmutableArray<ArpeggioLayout> Calculate(
         ImmutableArray<ArpeggioItem> arpeggios,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        double staffHeight,
         ImmutableArray<Measure> measures = default,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Func<int, int, double>? staffYAt = null)
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;

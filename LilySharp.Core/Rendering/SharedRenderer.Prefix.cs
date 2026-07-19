@@ -41,7 +41,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change.
     /// </remarks>
-    private static ClefType ResolveClef(Staff staff, SystemLayout system, MultiStaffScore score)
+    private static ClefType ResolveClef(Staff staff, SystemLayout system)
     {
         if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
             return staff.Clef;

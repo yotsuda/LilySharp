@@ -116,12 +116,12 @@ internal sealed class LayoutEngine
         double systemHeight = multiStaffLayouter.CalculateSystemHeight(
             score, _skylineBuilder, firstSystemMeasureLayouts);
         var firstStaffGroupLayouts = multiStaffLayouter.LayoutStaffGroups(
-            score, 0, _skylineBuilder, firstSystemMeasureLayouts);
+            score, _skylineBuilder, firstSystemMeasureLayouts);
 
         // Pre-compute staff group layouts for subsequent systems (shortIndent)
         multiStaffLayouter.CurrentIndent = shortIndent;
         var defaultStaffGroupLayouts = indent != shortIndent
-            ? multiStaffLayouter.LayoutStaffGroups(score, 0, _skylineBuilder, firstSystemMeasureLayouts)
+            ? multiStaffLayouter.LayoutStaffGroups(score, _skylineBuilder, firstSystemMeasureLayouts)
             : firstStaffGroupLayouts;
 
         // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — check if any staff uses remove-empty
@@ -161,7 +161,7 @@ internal sealed class LayoutEngine
             // so empty staves are hidden only in systems where they have no content.
             var sysStaffGroups = hasHaraKiri
                 ? multiStaffLayouter.LayoutStaffGroups(
-                    score, 0, firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
+                    score, firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
                 : (isFirstSystem ? firstStaffGroupLayouts : defaultStaffGroupLayouts);
 
             // Use per-system height when hara-kiri is active (different staves may be visible per system)
@@ -1346,7 +1346,7 @@ internal sealed class LayoutEngine
         // augmented DOWN skyline a marcato hanging under a low note overprints the
         // syllable beneath it. LILYPOND-REF: lily/axis-group-interface.cc:359-474.
         var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex,
+            ? ArticulationEngraver.Calculate(score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
                 beamLayouts ?? default)
             : ImmutableArray<ArticulationLayout>.Empty;
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
@@ -1387,7 +1387,7 @@ internal sealed class LayoutEngine
         // so text spanners can be placed below dynamics.
 
         // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml, staffVoices, voicesByStaff, measuresByStaff, staffYAt) : ImmutableArray<DynamicLayout>.Empty;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff) : ImmutableArray<DynamicLayout>.Empty;
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
@@ -1403,7 +1403,7 @@ internal sealed class LayoutEngine
         var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYAt);
 
         // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYAt);
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
 
         // Pedal rendering uses the default TEXT style: "Ped." at the engage note
         // and "*" at the release note, with NO connecting line or hook (those
@@ -1419,7 +1419,7 @@ internal sealed class LayoutEngine
         // script-augmented DOWN skylines)
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYAt, scriptedSkylines);
+            measuresByStaff, scriptedSkylines);
 
         // Layout chord names (skyline-spaced above high notes when skylines available).
         // A chords-ONLY sheet (chord rows, no lyric rows) is a measure grid: its
@@ -1468,7 +1468,7 @@ internal sealed class LayoutEngine
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
-            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml, staffYAt);
+            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
 
         // Layout trill spanners (tr + wavy line)
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
@@ -1493,7 +1493,7 @@ internal sealed class LayoutEngine
         // Replaces the old pairwise hacks (bar-number-vs-volta in the
         // renderer; music-mark-vs-volta inside MusicMarkEngraver).
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
-            tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default,
+            tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
             staffByIndex: staffByIndex);
@@ -1594,7 +1594,7 @@ internal sealed class LayoutEngine
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: articulationLayouts,
-            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
+            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
             MusicMarks: stackedMarks,
@@ -1668,7 +1668,7 @@ internal sealed class LayoutEngine
             {
                 var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
                 var combineItems = PartCombineAnalyzer.Analyze(
-                    staff.Voices[0], staff.Voices[1], score.TimeSignature);
+                    staff.Voices[0], staff.Voices[1]);
                 partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, staff.Voices[0].Measures);
             }
         }

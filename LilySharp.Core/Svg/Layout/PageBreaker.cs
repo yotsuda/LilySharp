@@ -126,7 +126,7 @@ internal sealed record SystemDetails
     /// Gets the natural distance to the next system.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/constrained-breaking.cc:657-667 spring_length()</remarks>
-    public double GetSpringLength(SystemDetails next)
+    public double GetSpringLength()
     {
         // Natural distance is padding plus spring length
         return Padding + SpringLength;
@@ -213,7 +213,7 @@ internal sealed class PageSpacing
             // LILYPOND-REF: lily/page-spacing.cc:55 rod_height_ += line.tallness_
             //   (tallness includes the current line's top skyline; page-breaking.cc:1136).
             _rodHeight += system.Height;
-            _springLength += _lastSystem!.GetSpringLength(system);
+            _springLength += _lastSystem!.GetSpringLength();
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:186-310 footnote_height

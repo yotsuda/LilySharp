@@ -118,7 +118,7 @@ public static class SvgGenerator
             movements.Add((title, svg, layout.Width, layout.Height));
         }
 
-        return CombineMovements(movements, options);
+        return CombineMovements(movements);
     }
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
@@ -197,8 +197,7 @@ public static class SvgGenerator
     /// Extracts content from each SVG and places them vertically with spacing.
     /// </summary>
     private static string CombineMovements(
-        List<(string Title, string SvgContent, double Width, double Height)> movements,
-        SvgRenderOptions options)
+        List<(string Title, string SvgContent, double Width, double Height)> movements)
     {
         // Movement separator spacing (staff spaces)
         const double movementSpacing = 6.0;

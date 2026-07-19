@@ -52,8 +52,7 @@ internal static class PercentRepeatEngraver
     public static ImmutableArray<PercentRepeatLayout> Calculate(
         ImmutableArray<PercentRepeatItem> percentRepeats,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        Func<int, int, double>? staffYAt = null)
+        ImmutableArray<MeasureLayout> measureLayouts)
     {
         if (percentRepeats.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<PercentRepeatLayout>.Empty;

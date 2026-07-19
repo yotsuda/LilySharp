@@ -147,7 +147,6 @@ internal static class ArticulationEngraver
     public static ImmutableArray<ArticulationLayout> Calculate(
         Score score,
         ImmutableArray<ArticulationItem> articulations,
-        ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Func<int, int, double>? staffYAt = null,

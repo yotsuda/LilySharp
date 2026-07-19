@@ -314,8 +314,8 @@ internal sealed class NoteCollision
         }
 
         if (fullCollide || closeHalf || distantHalf)
-            return ComputeShiftInfo(upStaffPositions, downStaffPositions,
-                upNoteValue, downNoteValue, upDots, downDots,
+            return ComputeShiftInfo(
+                upNoteValue, downNoteValue,
                 fullCollide, closeHalf, distantHalf, shiftUpRight, downDotForceDown);
 
         // LILYPOND-REF: lily/note-collision.cc:332-337 — the "we're meshing" fallback.
@@ -385,8 +385,7 @@ internal sealed class NoteCollision
     ///   symmetric shift pinned by the consumer, so the 2-voice separation is 2*inner.
     /// </remarks>
     private NoteCollisionInfo ComputeShiftInfo(
-        IReadOnlyList<int> upStaffPositions, IReadOnlyList<int> downStaffPositions,
-        int upNoteValue, int downNoteValue, int upDots, int downDots,
+        int upNoteValue, int downNoteValue,
         bool fullCollide, bool closeHalf, bool distantHalf,
         bool shiftUpRight, bool downDotForceDown)
     {

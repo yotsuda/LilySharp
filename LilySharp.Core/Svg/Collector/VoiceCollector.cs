@@ -38,13 +38,13 @@ internal sealed class VoiceCollector
     /// </summary>
     public ImmutableArray<VoiceColumn> Collect(Score score)
     {
-        return Collect(score.Voices, score.TimeSignature);
+        return Collect(score.Voices);
     }
 
     /// <summary>
     /// Collects voice columns from multiple voices.
     /// </summary>
-    public ImmutableArray<VoiceColumn> Collect(ImmutableArray<Voice> voices, TimeSignature timeSignature)
+    public ImmutableArray<VoiceColumn> Collect(ImmutableArray<Voice> voices)
     {
         if (voices.Length == 0)
             return ImmutableArray<VoiceColumn>.Empty;
@@ -52,7 +52,7 @@ internal sealed class VoiceCollector
         if (voices.Length == 1)
             return CollectSingleVoice(voices[0]);
 
-        return CollectMultipleVoices(voices, timeSignature);
+        return CollectMultipleVoices(voices);
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ internal sealed class VoiceCollector
     /// <summary>
     /// Collects voice columns from multiple voices, aligning by time position.
     /// </summary>
-    private ImmutableArray<VoiceColumn> CollectMultipleVoices(ImmutableArray<Voice> voices, TimeSignature timeSignature)
+    private ImmutableArray<VoiceColumn> CollectMultipleVoices(ImmutableArray<Voice> voices)
     {
         // Build a timeline: map from (measureIndex, timeWithinMeasure) to entries
         var timeline = new SortedDictionary<TimelineKey, List<VoiceEntry>>();

@@ -202,7 +202,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: true, isLastOnPage: false,
+            isFirstOnPage: true,
             prevIsTitle: false, currentIsTitle: false,
             currentIsNewScore: false);
 
@@ -215,7 +215,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: false, isLastOnPage: false,
+            isFirstOnPage: false,
             prevIsTitle: true, currentIsTitle: false,
             currentIsNewScore: false);
 
@@ -228,7 +228,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: false, isLastOnPage: false,
+            isFirstOnPage: false,
             prevIsTitle: false, currentIsTitle: false,
             currentIsNewScore: true);
 
@@ -241,7 +241,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: false, isLastOnPage: false,
+            isFirstOnPage: false,
             prevIsTitle: false, currentIsTitle: false,
             currentIsNewScore: false);
 
@@ -254,7 +254,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: false, isLastOnPage: false,
+            isFirstOnPage: false,
             prevIsTitle: false, currentIsTitle: true,
             currentIsNewScore: false);
 
@@ -267,7 +267,7 @@ public class PageLayouterTests
         var p = VerticalSpacingParameters.Default;
 
         var spec = p.SelectSpec(
-            isFirstOnPage: false, isLastOnPage: false,
+            isFirstOnPage: false,
             prevIsTitle: true, currentIsTitle: true,
             currentIsNewScore: false);
 

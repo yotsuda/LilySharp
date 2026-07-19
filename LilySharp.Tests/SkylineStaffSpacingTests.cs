@@ -132,7 +132,7 @@ public class SkylineStaffSpacingTests
         var measureLayouts = CreateSimpleMeasureLayouts(1);
 
         var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-        var groups = layouter.LayoutStaffGroups(score, 0, skylineBuilder, measureLayouts);
+        var groups = layouter.LayoutStaffGroups(score, skylineBuilder, measureLayouts);
 
         Assert.Single(groups);
         var grandStaff = groups[0];
