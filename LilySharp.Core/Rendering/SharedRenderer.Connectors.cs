@@ -251,7 +251,7 @@ internal static partial class SharedRenderer
     // glyphs, with overlap = 0.1 x thickness where the tips join the line.
     private static void DrawSystemStartBracket(double x, double top, double bottom, IDrawingContext gc)
     {
-        double thickness = 0.45;
+        double thickness = 0.25; // LP staff_bracket thickness default (in staff-space)
         double serifH = 0.4, serifW = 0.6;
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
         // Top serif (right-pointing triangle filled); serif tip drops toward the
@@ -268,12 +268,11 @@ internal static partial class SharedRenderer
     }
 
     // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::line_bracket —
-    // vertical line with a horizontal hook of width w at each end (LP uses w=0.8;
-    // Lily# uses 0.5).
+    // vertical line with a horizontal hook of width w=0.8 at each end.
     private static void DrawSystemStartLineBracket(double x, double top, double bottom, IDrawingContext gc)
     {
         double thickness = EngravingDefaults.StaffLineThickness;
-        const double hookWidth = 0.5;
+        const double hookWidth = 0.8;
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
         gc.DrawLine(x, top, x + hookWidth, top, Color.Black, thickness);
         gc.DrawLine(x, bottom, x + hookWidth, bottom, Color.Black, thickness);
