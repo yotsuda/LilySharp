@@ -39,11 +39,12 @@ internal abstract record BowLayout
 
     // COORDINATE FRAME: every Y here is stored in the LilyPond-native PAGE Y-up
     // frame — up-positive, the exact negation of the shared absolute device Y
-    // (yUp = -yDevice). This is the frame SlurScoringProblem already scores in
-    // (slur-scoring.cc, sign-for-sign), so its CreateLayout stores the scored Y
-    // verbatim with no exit negation; TieFormattingProblem stores -attachmentY.
-    // DrawBow performs the single flip back to device (os.Y(-YUp, …)). The
-    // Control1/Control2 tuples' .Y members are page Y-up too.
+    // (yUp = -yDevice). This is the frame both bow scorers already reason in
+    // (SlurScoringProblem/slur-scoring.cc and TieFormattingProblem/
+    // tie-formatting-problem.cc, sign-for-sign), so each CreateLayout stores the
+    // scored Y verbatim with no exit negation. DrawBow performs the single flip
+    // back to device (os.Y(-YUp, …)). The Control1/Control2 tuples' .Y members
+    // are page Y-up too.
 
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }

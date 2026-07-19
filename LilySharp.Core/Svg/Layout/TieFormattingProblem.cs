@@ -30,8 +30,9 @@ internal sealed class TieCandidate
     public bool CurveUp { get; set; }
 
     /// <summary>
-    /// Y position of the tie attachment in staff spaces.
-    /// For CurveUp, this is above the note; for CurveDown, below.
+    /// Y position of the tie attachment in the page Y-up frame (up-positive =
+    /// -device), staff spaces. For CurveUp this is above the note (larger Y-up);
+    /// for CurveDown, below.
     /// </summary>
     public double AttachmentY { get; set; }
 
@@ -189,7 +190,8 @@ internal sealed class TieFormattingProblem
     /// Builds one tie configuration: nominal Y from the staff position plus
     /// the delta-y tuning LilyPond applies before scoring. All math is in
     /// LilyPond convention (staff positions / staff spaces, UP positive,
-    /// relative to the middle line); the result converts to page Y at the end.
+    /// relative to the middle line); the result is expressed in the native page
+    /// Y-up frame at the end (a single subtraction from the middle line).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:476-611
@@ -271,8 +273,14 @@ internal sealed class TieFormattingProblem
             }
         }
 
-        double curveYFromMiddle = y + deltaY;        // sp, up+
-        double attachmentY = StaffFrame.ToDevice(curveYFromMiddle, staffMiddleY); // page Y, down+
+        double curveYFromMiddle = y + deltaY;        // sp, up+ from the middle line
+        // Native page Y-up attachment. The whole vertical model is Y-up (= -device);
+        // the middle line sits at page-Y-up -staffMiddleY (staffMiddleY is the middle
+        // line's device Y, reconstructed from the caller's device anchor), and the
+        // attachment is curveYFromMiddle staff-spaces ABOVE it. So page-Y-up =
+        // curveYFromMiddle - staffMiddleY. Written as one subtraction rather than
+        // negating a device value; DrawBow performs the lone flip to device downstream.
+        double attachmentY = curveYFromMiddle - staffMiddleY; // page Y, up+
 
         return new TieCandidate
         {
@@ -304,7 +312,6 @@ internal sealed class TieFormattingProblem
         if (config.IsScored)
             return;
 
-        double attachmentY = config.AttachmentY;
         double length = config.EndX - config.StartX;
 
         // --- Minimum length penalty ---
@@ -430,26 +437,28 @@ internal sealed class TieFormattingProblem
     /// Checks both center and edge distances.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:875-886
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:854-888 score_ties_configuration()
     ///
-    /// FRAME: this scorer is a device-frame (Y-down) island inside an otherwise
-    /// Y-up problem — its inputs arrive in device Y (TieCandidate.AttachmentY was
-    /// reflected in GenerateConfiguration, and _existingTies carry device-Y control
-    /// points), which is why the monotonicity tests below read <c>&gt;=</c> where LP
-    /// reads <c>&lt;=</c>. The collision distances are <c>Abs</c>, so only the two
-    /// ordering tests carry the sign. When Phase 2 stores tie geometry Y-up and
-    /// flips to device once at draw time, these values arrive Y-up and the tests
-    /// become LP's <c>&lt;=</c> verbatim — no conversion belongs here in the interim.
+    /// FRAME: native page Y-up (up-positive), sign-for-sign with LP. The config's
+    /// edge is its attachment; its center (the transformed bezier's midpoint,
+    /// LP <c>curve_point(0.5)</c>) sits ABOVE the edge for an UP tie (+Height) and
+    /// below for a DOWN tie (-Height). Existing ties are already stored page Y-up
+    /// (<see cref="BowLayout"/>), so their edge/center are read directly — no
+    /// reflection. The monotonicity tests then read LP's <c>&lt;=</c> verbatim: ties
+    /// are emitted bottom→top, so each new tie must sit strictly ABOVE (larger Y-up
+    /// than) the previous one, and <c>edge &lt;= last_edge</c> is the violation.
     /// </remarks>
     private void ScoreTieTieCollision(TieCandidate config)
     {
         if (_existingTies == null || _existingTies.Count == 0)
             return;
 
+        // Edge = attachment; center = bezier midpoint (LP curve_point(0.5)), which
+        // for an UP tie is ABOVE the edge (larger Y-up) → +Height, DOWN → -Height.
         double configEdgeY = config.AttachmentY;
         double configCenterY = config.CurveUp
-            ? config.AttachmentY - config.Height
-            : config.AttachmentY + config.Height;
+            ? config.AttachmentY + config.Height
+            : config.AttachmentY - config.Height;
 
         foreach (var existing in _existingTies)
         {
@@ -458,16 +467,13 @@ internal sealed class TieFormattingProblem
             if (!xOverlap)
                 continue;
 
-            // Existing ties are now stored page Y-up (up-positive); this scorer's
-            // config side is still device (GenerateConfiguration), so reflect the
-            // existing tie back to device (= -YUp) to compare in one frame. Byte-
-            // for-byte the old device value; a full Y-up de-islanding of this scorer
-            // (so the monotonicity reads LP's <=) is a later step.
-            double existingEdgeY = -existing.StartYUp;
-            double existingCenterY = -(existing.Control1.Y + existing.Control2.Y) / 2;
+            // Existing ties are stored page Y-up (up-positive), the same frame this
+            // scorer works in, so read their edge/center directly (no reflection).
+            double existingEdgeY = existing.StartYUp;
+            double existingCenterY = (existing.Control1.Y + existing.Control2.Y) / 2;
 
             // Center-center collision
-            // LILYPOND-REF: tie-formatting-problem.cc:875-880
+            // LILYPOND-REF: tie-formatting-problem.cc:872-877
             config.Demerits += _details.TieTieCollisionPenalty
                 * BezierBow.PeakAround(
                     0.1 * _details.TieTieCollisionDistance,
@@ -475,7 +481,7 @@ internal sealed class TieFormattingProblem
                     Math.Abs(configCenterY - existingCenterY));
 
             // Edge-edge collision
-            // LILYPOND-REF: tie-formatting-problem.cc:881-886
+            // LILYPOND-REF: tie-formatting-problem.cc:878-883
             config.Demerits += _details.TieTieCollisionPenalty
                 * BezierBow.PeakAround(
                     0.1 * _details.TieTieCollisionDistance,
@@ -483,15 +489,13 @@ internal sealed class TieFormattingProblem
                     Math.Abs(configEdgeY - existingEdgeY));
 
             // Monotonicity: edges and centers must be ordered. Ties are emitted
-            // bottom→top, so each new tie must sit strictly ABOVE the previous
-            // one. LP (Y-up) penalizes `edge <= last_edge`; our Y is device
-            // (down-positive), where "above" is the SMALLER value — so the
-            // violated order here is >=, not <= (<= penalized exactly the
-            // correct stacking and rewarded the inverted one).
-            // LILYPOND-REF: tie-formatting-problem.cc:868-873
-            if (configEdgeY >= existingEdgeY)
+            // bottom→top, so each new tie must sit strictly ABOVE the previous one
+            // = LARGER Y-up. LP penalizes `edge <= last_edge` in its native Y-up
+            // frame, which we now read verbatim.
+            // LILYPOND-REF: tie-formatting-problem.cc:865-870
+            if (configEdgeY <= existingEdgeY)
                 config.Demerits += _details.TieColumnMonotonicityPenalty;
-            if (configCenterY >= existingCenterY)
+            if (configCenterY <= existingCenterY)
                 config.Demerits += _details.TieColumnMonotonicityPenalty;
         }
     }
@@ -508,11 +512,11 @@ internal sealed class TieFormattingProblem
         double width = config.EndX - config.StartX;
         double indent = CalculateIndent(width);
 
-        // Store in the page Y-up frame (up-positive = -device), the frame BowLayout
-        // keeps. baseYUp = -AttachmentY; an up curve's control sits ABOVE (larger
-        // Y-up), so directedHeight is +Height up / -Height down (the negation of the
-        // device convention). DrawBow flips to device once.
-        double baseYUp = -config.AttachmentY;
+        // The config is already in the page Y-up frame (up-positive = -device), the
+        // frame BowLayout keeps, so its values pass straight through — no exit
+        // negation. An up curve's control sits ABOVE the attachment (larger Y-up),
+        // so directedHeight is +Height up / -Height down. DrawBow flips to device once.
+        double baseYUp = config.AttachmentY;
         double directedHeightUp = config.CurveUp ? config.Height : -config.Height;
 
         var control1 = (X: config.StartX + indent, Y: baseYUp + directedHeightUp);
