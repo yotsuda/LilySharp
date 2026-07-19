@@ -683,17 +683,17 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
-        // Tie variants use staff-relative Y already in the layout — no system offset needed
-        // (TieVariantEngraver computes absolute Y).
         foreach (var v in layout.TieVariantLayouts)
         {
-            if (!sysY.ContainsKey(v.MeasureIndex))
+            if (!sysY.TryGetValue(v.MeasureIndex, out double sy))
                 continue; // other page
-            // TieVariantLayout is still device-Y; DrawBow now takes page Y-up
-            // (= -device) like the migrated Tie/Slur, so reflect this caller's
-            // device Y and control points up.
-            DrawBow(v.StartX, -v.Y, v.EndX, -v.Y,
-                (v.Control1.X, -v.Control1.Y), (v.Control2.X, -v.Control2.Y), v.CurveUp,
+            // TieVariantLayout stores WITHIN-SYSTEM device offsets (down from the
+            // system top). Reconstruct the absolute device Y (sy + offset), then
+            // reflect to the layout Y-up frame (= -device) DrawBow expects — this is
+            // byte-identical to the former absolute-Y reflection. The arc geometry
+            // itself stays device-frame (intentional-device island 2).
+            DrawBow(v.StartX, -(sy + v.Y), v.EndX, -(sy + v.Y),
+                (v.Control1.X, -(sy + v.Control1.Y)), (v.Control2.X, -(sy + v.Control2.Y)), v.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 v.StaffIndex, v.MeasureIndex, os, gc, pageHeight);
         }

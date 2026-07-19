@@ -155,8 +155,16 @@ internal static class TieVariantEngraver
         bool curveUp = !note.StemUp;
 
         const double StaffHeight = 4.0;
-        double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, StaffHeight);
-        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
+        // Within-system Y offset (device, down from the system top) of the staff
+        // middle, NOT an absolute page Y — so the tie's Y/control points are
+        // independent of where paging places the system. DrawTieVariants resolves
+        // the system-top Y-up and subtracts these, keeping the output byte-identical
+        // to the former absolute origin while decoupling from SystemLayout.Y for the
+        // Stage-4 W2 stacking-origin flip (step 2a MMR / step 2b Ledger). The
+        // internal arc geometry stays device-frame (intentional-device island 2).
+        double staffMiddleOffset = LayoutUtilities.FindStaffYInSystem(system, staffIndex)
+            - system.Y + StaffHeight / 2.0;
+        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleOffset);
         double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;
 
         // Half-tie geometry: starts at the note edge, extends TieLength away.
