@@ -58,9 +58,6 @@ internal static partial class SharedRenderer
     // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — clef /
     // key-signature / time-signature all reserve (extra-space . 1.15).
     private const double LineStartBarClearance = 1.15;
-    // Height of the short measure-divider barlines on a lead-sheet text row
-    // (no staff, so the bar is just a tick the chord row hangs on).
-    private const double LeadSheetBarlineHeight = 2.0;
     // Mirror of LyricEngraver's VerseSpacing (baseline step between stacked verses).
     private const double LyricVerseSpacing = 3.2;
     private const double FontSize = 4.0;
@@ -129,7 +126,7 @@ internal static partial class SharedRenderer
                 // key as "not on this page".
                 var measureToSystemTopYUp = BuildMeasureToSystemTopYUp(page);
                 var measureToSystem = BuildMeasureToSystem(page);
-                var os = new OssiaShrink(ossiaStaves, measureToSystem, page.Height);
+                var os = new OssiaShrink(ossiaStaves, measureToSystem);
                 DrawTies(layout, measureToSystemTopYUp, os, gc);
                 DrawSlurs(layout, measureToSystemTopYUp, os, gc);
                 DrawDynamics(layout, measureToSystemTopYUp, os, gc);

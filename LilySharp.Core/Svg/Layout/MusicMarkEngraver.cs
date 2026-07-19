@@ -80,11 +80,6 @@ internal static class MusicMarkEngraver
     public static double BelowMarkBaseline(double systemBottom)
         => systemBottom + 1.5 + Padding;
 
-    // Y offset above staff for marks (when no volta brackets present)
-    // A mark and a chord symbol share a column when their centres are within
-    // this X window (label box half-width ~3 ss + chord half-width ~1 ss).
-    private const double MarkChordXWindow = 4.0;
-
     // Cap-height ascent of the chord-name text above its baseline
     // (chord font = 4.0 * 0.65 = 2.6 ss; cap height ≈ 0.72 em).
     private const double ChordTextAscent = 1.9;

@@ -93,9 +93,8 @@ internal static class ArticulationEngraver
     // Staff middle line position (see EngravingDefaults.StaffMiddle).
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;
 
-    // Staff top and bottom
+    // Staff top
     private const double StaffTop = 0.0;
-    private const double StaffBottom = 4.0;
 
     // Breathing-sign placement: gap to the RIGHT of the note's right edge, and the
     // Y at the top of the staff (the comma straddles the top line). Tuned to
@@ -710,7 +709,7 @@ internal static class ArticulationEngraver
     /// audit/scripts/Extract-EmmentalerMetrics.py), which are much wider/taller
     /// than the 0.5×0.5 positioning fallback — e.g. prall-prall spans ~2.85sp
     /// wide. The ornaments' own POSITIONING still uses the simplified extents
-    /// (GetGlyphBBox / GetArticulationExtent), exactly as the trill does; only
+    /// (GetGlyphBBox), exactly as the trill does; only
     /// the occupancy a mark must clear changes. Other types fall back.
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
     /// </summary>
@@ -741,24 +740,6 @@ internal static class ArticulationEngraver
         ArticulationType.PrallTriller => GlyphMetrics.OrnPrallPrallGlyph,
         _ => GetGlyphBBox(type, isAbove)
     };
-
-    /// <summary>
-    /// Gets the full vertical extent (total height) of an articulation glyph.
-    /// Used for non-quantized articulations in the extent+padding positioning model.
-    /// </summary>
-    private static double GetArticulationExtent(ArticulationType type)
-    {
-        var bbox = GetGlyphBBox(type);
-        return type switch
-        {
-            // Fermata and ornaments: use larger values since glyph BBox not defined
-            ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => 1.5,
-            ArticulationType.Trill or ArticulationType.Mordent or ArticulationType.Prall
-                or ArticulationType.Turn or ArticulationType.InvertedTurn
-                or ArticulationType.PrallTriller => 1.0,
-            _ => bbox.Height
-        };
-    }
 
     /// <summary>
     /// Gets the vertical extent of the glyph in the direction toward the note

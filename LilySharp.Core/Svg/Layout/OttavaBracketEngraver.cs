@@ -123,16 +123,6 @@ internal static class OttavaBracketEngraver
     private const double RightShorten = -0.6;
 
     /// <summary>
-    /// Estimated text width per character for bold italic (staff spaces).
-    /// </summary>
-    private const double CharWidth = 0.65;
-
-    /// <summary>
-    /// Padding between text and line start.
-    /// </summary>
-    private const double TextLinePadding = 0.5;
-
-    /// <summary>
     /// Calculates layout for all ottava brackets.
     /// </summary>
     public static ImmutableArray<OttavaBracketLayout> Calculate(

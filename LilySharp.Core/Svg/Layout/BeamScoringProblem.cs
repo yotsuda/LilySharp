@@ -38,7 +38,6 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed class BeamScoringProblem
 {
     private readonly BeamGroup _group;
-    private readonly IReadOnlyList<double> _itemXPositions;
     private readonly BeamQuantParameters _parameters;
 
     // Computed values
@@ -114,7 +113,6 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions = null)
     {
         _group = group;
-        _itemXPositions = itemXPositions;
         _parameters = parameters ?? BeamQuantParameters.Default;
         _collisions = collisions ?? Array.Empty<BeamCollision>();
 

@@ -181,13 +181,6 @@ internal sealed partial class Parser
         return new SyntaxToken(kinds[0], "", null, null);
     }
 
-    private SyntaxToken? TryConsume(SyntaxKind kind)
-    {
-        if (Check(kind))
-            return Advance();
-        return null;
-    }
-
     /// <summary>
     /// Parse the entire source into a compilation unit.
     /// </summary>

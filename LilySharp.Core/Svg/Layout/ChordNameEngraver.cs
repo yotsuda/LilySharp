@@ -83,12 +83,6 @@ internal static class ChordNameEngraver
     /// (2.0), baseline ≈ 2.0 + 1.87/2.</summary>
     private const double GridChordBaseline = 2.9;
 
-    /// <summary>How far left of the first chord symbol the protrusion scan starts —
-    /// enough for a centred symbol's left half, but short of the system-start clef.</summary>
-    private const double ChordRowLeftMargin = 2.0;
-
-
-
     /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>

@@ -257,13 +257,11 @@ internal static partial class SharedRenderer
     {
         private readonly HashSet<int> _ossiaStaves;
         private readonly Dictionary<int, SystemLayout> _systems;
-        private readonly double _height;
 
-        public OssiaShrink(HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, double height)
+        public OssiaShrink(HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems)
         {
             _ossiaStaves = ossiaStaves;
             _systems = systems;
-            _height = height;
         }
 
         public bool Contains(int staffIndex)

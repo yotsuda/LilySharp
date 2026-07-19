@@ -59,13 +59,6 @@ internal static class PedalEngraver
     // LILYPOND-REF: define-grobs.scm:2860 edge-height = (1.0 . 1.0)
     private const double EdgeHeight = 1.0;
 
-    // LILYPOND-REF: define-grobs.scm:3599 padding = 1.2
-    private const double StaffPadding = 1.2;
-
-    // Y position below staff (staff bottom = 4.0, plus padding)
-    // LILYPOND-REF: define-grobs.scm:3596 direction = DOWN
-    private const double BracketY = 6.5;
-
     /// <summary>
     /// Detects pedal bracket spans from music marks.
     /// Pairs pedal-on marks with their corresponding pedal-off marks.

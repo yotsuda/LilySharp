@@ -70,8 +70,7 @@ internal static class DynamicEngraver
     private const double StaffPadding = 0.1;
 
     // Staff geometry (5 lines = 4 staff spaces)
-    private const double StaffBottom = 4.0;
-    private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // StaffBottom / 2
+    private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // staff bottom (4.0) / 2
 
     // Text ascent above baseline for dynamic text (font-size 2.0, bold italic serif).
     // Approximate cap-height ratio ~0.6 × font-size.
