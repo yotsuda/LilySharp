@@ -127,36 +127,36 @@ internal static partial class SharedRenderer
                 // drawing it here would overprint this page's music at the
                 // other page's local Y. Each drawer treats a missing measure
                 // key as "not on this page".
-                var measureToSystemY = BuildMeasureToSystemY(page);
+                var measureToSystemTopYUp = BuildMeasureToSystemTopYUp(page);
                 var measureToSystem = BuildMeasureToSystem(page);
                 var os = new OssiaShrink(ossiaStaves, measureToSystem, page.Height);
-                DrawTies(layout, measureToSystemY, os, gc, page.Height);
-                DrawSlurs(layout, measureToSystemY, os, gc, page.Height);
-                DrawDynamics(layout, measureToSystemY, os, gc);
-                DrawArticulations(layout, measureToSystemY, os, gc);
-                DrawLyrics(layout, measureToSystemY, gc, page.Height);
-                DrawHairpins(layout, measureToSystemY, os, gc, page.Height);
-                DrawOttavaBrackets(layout, measureToSystemY, os, gc, page.Height);
-                DrawVoltaBrackets(layout, measureToSystemY, gc, page.Height);
-                DrawTupletBrackets(layout, measureToSystemY, os, gc, page.Height);
-                DrawTrillSpanners(layout, measureToSystemY, os, gc, page.Height);
-                DrawGlissandos(layout, measureToSystemY, os, gc);
-                DrawArpeggios(layout, measureToSystemY, os, gc, page.Height);
-                DrawGraceNotes(layout, measureToSystemY, os, gc, page.Height);
-                DrawChordNames(layout, measureToSystemY, gc, page.Height);
-                DrawFiguredBass(layout, measureToSystemY, os, gc);
-                DrawPercentRepeats(layout, measureToSystemY, os, gc);
-                DrawBarNumbers(layout, measureToSystemY, gc, page.Height);
-                DrawStanzaNumbers(layout, measureToSystemY, gc, page.Height);
-                DrawFingerings(layout, measureToSystemY, os, gc);
-                DrawMusicMarks(layout, measureToSystemY, os, gc, page.Height);
-                DrawCustomTexts(layout, measureToSystemY, os, gc);
-                DrawTextSpanners(layout, measureToSystemY, os, gc, page.Height);
-                DrawPedalBrackets(layout, measureToSystemY, gc, page.Height);
-                DrawMultiMeasureRests(layout, measureToSystemY, gc, page.Height);
-                DrawTieVariants(layout, measureToSystemY, os, gc, page.Height);
-                DrawLyricHyphens(layout, measureToSystemY, gc, page.Height);
-                DrawPartCombine(layout, measureToSystemY, gc, page.Height);
+                DrawTies(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawSlurs(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawDynamics(layout, measureToSystemTopYUp, os, gc);
+                DrawArticulations(layout, measureToSystemTopYUp, os, gc);
+                DrawLyrics(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawHairpins(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawOttavaBrackets(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawVoltaBrackets(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawTupletBrackets(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawTrillSpanners(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawGlissandos(layout, measureToSystemTopYUp, os, gc);
+                DrawArpeggios(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawGraceNotes(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawChordNames(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawFiguredBass(layout, measureToSystemTopYUp, os, gc);
+                DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
+                DrawBarNumbers(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawStanzaNumbers(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawFingerings(layout, measureToSystemTopYUp, os, gc);
+                DrawMusicMarks(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawCustomTexts(layout, measureToSystemTopYUp, os, gc);
+                DrawTextSpanners(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawPedalBrackets(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawMultiMeasureRests(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawTieVariants(layout, measureToSystemTopYUp, os, gc, page.Height);
+                DrawLyricHyphens(layout, measureToSystemTopYUp, gc, page.Height);
+                DrawPartCombine(layout, measureToSystemTopYUp, gc, page.Height);
             }
             finally
             {

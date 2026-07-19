@@ -42,7 +42,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1433 DynamicText grob
     /// LILYPOND-REF: scm/define-grobs.scm:1444 self-alignment-X = CENTER
     /// </remarks>
-    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
@@ -50,7 +50,7 @@ internal static partial class SharedRenderer
         foreach (var d in layout.DynamicLayouts)
         {
             string text = NormalizeDynamicText(d.Text);
-            if (!sysY.ContainsKey(d.MeasureIndex)) continue; // other page
+            if (!sysTopYUp.ContainsKey(d.MeasureIndex)) continue; // other page
             // A dynamic on an ossia staff shrinks with its staff's notation —
             // both the glyph and its distance from the small staff.
             // Frame B -> device: reflect the Y-up value against this dynamic's own
@@ -85,14 +85,14 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2992 Script grob
     /// LILYPOND-REF: lily/script-engraver.cc:235 acknowledge_rhythmic_head / :253 acknowledge_note_column
     /// </remarks>
-    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArticulationLayouts)
         {
             if (string.IsNullOrEmpty(a.Glyph)) continue;
-            if (!sysY.ContainsKey(a.MeasureIndex)) continue; // other page
+            if (!sysTopYUp.ContainsKey(a.MeasureIndex)) continue; // other page
             // A script on an ossia staff shrinks with its staff's notation —
             // both the glyph and its distance from the small staff.
             // Frame B -> device: reflect the Y-up value against this script's own
@@ -327,16 +327,16 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2213 LyricText (font-size 1.0 in LP;
     /// this port instead uses a 0.8x reduced size below).
     /// </remarks>
-    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.LyricLayouts.IsDefaultOrEmpty) return;
         double lyricFontSize = FontSize * 0.8;
         foreach (var l in layout.LyricLayouts)
         {
-            if (!sysY.TryGetValue(l.Item.MeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(l.Item.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up baseline: lift the system top and add the stored offset.
-            double y = (pageHeight - sy) + l.YUp;
+            double y = syUp + l.YUp;
             // Tag the syllable with its source offset (data-pos) so the preview can
             // click-to-jump and editor-highlight it like a note. SourcePosition 0
             // means "unknown" (would clash with the bar-0 section mark), so only
@@ -363,17 +363,17 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/hairpin.cc:110-358 print()
     /// LILYPOND-REF: scm/define-grobs.scm:1777 Hairpin grob (thickness = 1.0)
     /// </remarks>
-    private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.HairpinLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var h in layout.HairpinLayouts)
         {
-            if (!sysY.TryGetValue(h.StartMeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(h.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top (H − sy), add the stored offset, then
             // apply the ossia affine in the same frame.
-            double absY = os.YUp((pageHeight - sy) + h.YUp, h.StaffIndex, h.StartMeasureIndex);
+            double absY = os.YUp(syUp + h.YUp, h.StaffIndex, h.StartMeasureIndex);
             double startOpening = os.Size(h.StartOpening, h.StaffIndex);
             double endOpening = os.Size(h.EndOpening, h.StaffIndex);
             double leftTop = absY + startOpening;
@@ -402,16 +402,16 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm OttavaBracket grob
     /// LILYPOND-REF: lily/ottava-bracket.cc — Ottava_bracket
     /// </remarks>
-    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.OttavaBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.OttavaBracketLayouts)
         {
-            if (!sysY.TryGetValue(b.StartMeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(b.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top and add the stored offset, then ossia.
-            double absY = os.YUp((pageHeight - sy) + b.YUp, b.StaffIndex, b.StartMeasureIndex);
+            double absY = os.YUp(syUp + b.YUp, b.StaffIndex, b.StartMeasureIndex);
             double textFontSize = os.Size(FontSize * 0.45, b.StaffIndex);
             using (gc.Source(b.SourcePosition))
             {
@@ -448,7 +448,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
     /// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
     /// </remarks>
-    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
@@ -457,9 +457,9 @@ internal static partial class SharedRenderer
 
         foreach (var v in layout.VoltaBracketLayouts)
         {
-            if (!sysY.TryGetValue(v.StartMeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(v.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift this segment's own system top and add the stored offset.
-            double absY = (pageHeight - sy) + v.YUp;
+            double absY = syUp + v.YUp;
             bool hasText = !string.IsNullOrEmpty(v.VoltaText);
             using (gc.Source(v.SourcePosition))
             {
@@ -496,7 +496,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/tuplet-bracket.cc:290 Tuplet_bracket::print
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     /// </remarks>
-    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
@@ -504,11 +504,11 @@ internal static partial class SharedRenderer
 
         foreach (var b in layout.TupletBracketLayouts)
         {
-            if (!sysY.TryGetValue(b.MeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(b.MeasureIndex, out var syUp)) continue; // other page
             double edgeHeight = os.Size(TupletBracketEngraver.GetEdgeHeight(), b.StaffIndex);
             // Page Y-up: lift the system top, add the stored offsets, then ossia.
-            double startY = os.YUp((pageHeight - sy) + b.StartYUp, b.StaffIndex, b.MeasureIndex);
-            double endY = os.YUp((pageHeight - sy) + b.EndYUp, b.StaffIndex, b.MeasureIndex);
+            double startY = os.YUp(syUp + b.StartYUp, b.StaffIndex, b.MeasureIndex);
+            double endY = os.YUp(syUp + b.EndYUp, b.StaffIndex, b.MeasureIndex);
             double midX = (b.StartX + b.EndX) / 2;
             double midY = (startY + endY) / 2;
             double hookDir = b.IsStemUp ? 1 : -1;
@@ -554,7 +554,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:4082 (style . trill)
     /// </remarks>
-    private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
@@ -562,9 +562,9 @@ internal static partial class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TrillSpannerLayouts)
         {
-            if (!sysY.TryGetValue(s.StartMeasureIndex, out var sy)) continue; // other page
+            if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top, add the stored offset, then ossia.
-            double absY = os.YUp((pageHeight - sy) + s.YUp, s.StaffIndex, s.StartMeasureIndex);
+            double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
             double waveAmplitude = os.Size(0.2, s.StaffIndex);
             using (gc.Source(s.SourcePosition))
             {
@@ -606,7 +606,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
     /// </remarks>
-    private static void DrawGlissandos(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawGlissandos(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.GlissandoLayouts.IsDefaultOrEmpty) return;
@@ -615,7 +615,7 @@ internal static partial class SharedRenderer
         {
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
-            if (g.MeasureIndex >= 0 && !sysY.ContainsKey(g.MeasureIndex))
+            if (g.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(g.MeasureIndex))
                 continue; // other page
             // Frame B -> device: reflect each endpoint against this glissando's own
             // staff middle (the shared per-grob draw boundary), then apply ossia.
@@ -637,7 +637,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
     /// </remarks>
-    private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
@@ -647,7 +647,7 @@ internal static partial class SharedRenderer
         {
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
-            if (a.MeasureIndex >= 0 && !sysY.ContainsKey(a.MeasureIndex))
+            if (a.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(a.MeasureIndex))
                 continue; // other page
             // Native page Y-up: the staff middle's Y-up refpoint, plus the stored
             // Y-up offsets (higher position = larger Y-up), through the ossia affine.

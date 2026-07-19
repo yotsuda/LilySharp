@@ -28,7 +28,7 @@ internal static partial class SharedRenderer
 {
     // ---------- Ties & slurs ----------
 
-    private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         foreach (var tie in layout.TieLayouts)
@@ -38,20 +38,20 @@ internal static partial class SharedRenderer
             // start measure — otherwise a page-crossing tie draws its far piece on the
             // start's page at the wrong spot and never on its real page.
             int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
-            if (!sysY.TryGetValue(mi, out double sy))
+            if (!sysTopYUp.TryGetValue(mi, out double syUp))
                 continue; // not on this page (geometry is page-local)
-            // The layout stores WITHIN-SYSTEM Y offsets (the engraver no longer bakes in
-            // the system-top Y-up); subtract system.Y here to restore the absolute
-            // page-Y-up the bow frame expects (byte-identical to the former absolute
-            // StartYUp). See ElementCoordinator step 2d.
-            DrawBow(tie.StartX, tie.StartYUp - sy, tie.EndX, tie.EndYUp - sy,
-                (tie.Control1.X, tie.Control1.Y - sy), (tie.Control2.X, tie.Control2.Y - sy), tie.CurveUp,
+            // The layout stores WITHIN-SYSTEM Y-up offsets (the engraver no longer bakes
+            // in the system-top Y-up); add this measure's system-top Y-up here to restore
+            // the absolute page-Y-up the bow frame expects (byte-identical to the former
+            // absolute StartYUp). See ElementCoordinator step 2d.
+            DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
+                (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y), tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 tie.StaffIndex, mi, os, gc, pageHeight);
         }
     }
 
-    private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         foreach (var slur in layout.SlurLayouts)
@@ -61,15 +61,14 @@ internal static partial class SharedRenderer
             // start measure — otherwise a page-crossing slur draws its far piece on the
             // start's page (e.g. the first system's top-left) and never on its real page.
             int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
-            if (!sysY.TryGetValue(mi, out double sy))
+            if (!sysTopYUp.TryGetValue(mi, out double syUp))
                 continue; // not on this page (geometry is page-local)
-            // The layout stores WITHIN-SYSTEM Y offsets (page Y-up minus the system-top
-            // Y-up the engraver no longer bakes in). system.Y is the device drop of the
-            // system top, so subtract it here to restore the absolute page-Y-up the bow
-            // frame expects (byte-identical to the former absolute StartYUp). See
-            // ElementCoordinator step 2d.
-            DrawBow(slur.StartX, slur.StartYUp - sy, slur.EndX, slur.EndYUp - sy,
-                (slur.Control1.X, slur.Control1.Y - sy), (slur.Control2.X, slur.Control2.Y - sy), slur.CurveUp,
+            // The layout stores WITHIN-SYSTEM Y-up offsets (the engraver no longer bakes
+            // in the system-top Y-up); add this measure's system-top Y-up here to restore
+            // the absolute page-Y-up the bow frame expects (byte-identical to the former
+            // absolute StartYUp). See ElementCoordinator step 2d.
+            DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
+                (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y), slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
                 slur.StaffIndex, mi, os, gc, pageHeight);
         }
@@ -91,14 +90,15 @@ internal static partial class SharedRenderer
         int staffIndex, int startMeasureIndex,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
-        // The bow's Y coordinates arrive in the layout Y-up frame (up-positive =
-        // -device). The page context is now Y-flipped (page-bottom origin), so
-        // convert to that page Y-up (H − device = H + layoutYUp) and apply the
-        // ossia affine in the same frame (os.YUp).
-        double startY = os.YUp(pageHeight + startYUp, staffIndex, startMeasureIndex);
-        double endY = os.YUp(pageHeight + endYUp, staffIndex, startMeasureIndex);
-        c1 = (c1.X, os.YUp(pageHeight + c1.Y, staffIndex, startMeasureIndex));
-        c2 = (c2.X, os.YUp(pageHeight + c2.Y, staffIndex, startMeasureIndex));
+        // The bow's Y coordinates now arrive already in the page Y-up frame
+        // (page-bottom origin; the callers add the system-top Y-up before calling).
+        // Apply the ossia affine in that same frame (os.YUp). pageHeight is retained
+        // in the signature for symmetry with the other draw seams but is unused here.
+        _ = pageHeight;
+        double startY = os.YUp(startYUp, staffIndex, startMeasureIndex);
+        double endY = os.YUp(endYUp, staffIndex, startMeasureIndex);
+        c1 = (c1.X, os.YUp(c1.Y, staffIndex, startMeasureIndex));
+        c2 = (c2.X, os.YUp(c2.Y, staffIndex, startMeasureIndex));
         midThickness = os.Size(midThickness, staffIndex);
         DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
     }
@@ -220,14 +220,18 @@ internal static partial class SharedRenderer
 
     // ---------- Helpers for system-Y lookup ----------
 
-    // Page-scoped on purpose: the map doubles as the page-membership test for
-    // every overlay drawer (missing key = the measure is on another page).
-    private static Dictionary<int, double> BuildMeasureToSystemY(PageLayout page)
+    // Each measure → its system TOP in the page Y-up frame (page-bottom origin):
+    // page.Height − system.Y. This is the refpoint a system-anchored overlay adds
+    // its stored Y-up offset to (the renderer emits page-Y-up primitives; the single
+    // device flip is the YFlipDrawingContext). Page-scoped on purpose: the map
+    // doubles as the page-membership test for every overlay drawer (missing key =
+    // the measure is on another page).
+    private static Dictionary<int, double> BuildMeasureToSystemTopYUp(PageLayout page)
     {
         var map = new Dictionary<int, double>();
         foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
-                map[ml.MeasureIndex] = system.Y;
+                map[ml.MeasureIndex] = page.Height - system.Y;
         return map;
     }
 

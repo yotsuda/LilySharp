@@ -35,7 +35,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm ChordName: font-family=sans, font-size=1.5
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — chord-name formatting
     /// </remarks>
-    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
@@ -44,9 +44,9 @@ internal static partial class SharedRenderer
         const double stackLineHeight = 2.2;
         foreach (var c in layout.ChordNameLayouts)
         {
-            if (!sysY.TryGetValue(c.MeasureIndex, out var sy)) continue;
-            // Page Y-up: lift the measure's system top and add the stored offset.
-            double cy = (pageHeight - sy) + c.YUp;
+            if (!sysTopYUp.TryGetValue(c.MeasureIndex, out var syUp)) continue;
+            // Page Y-up: this measure's system top plus the stored offset.
+            double cy = syUp + c.YUp;
             using (gc.Source(c.SourcePosition))
             {
                 gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
@@ -67,7 +67,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/figured-bass-engraver.cc:269 process_music / :157 stop_translation_timestep
     /// LILYPOND-REF: scm/define-grobs.scm:352 BassFigure defaults
     /// </remarks>
-    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
@@ -75,7 +75,7 @@ internal static partial class SharedRenderer
         const double figureSpacing = 1.5;
         foreach (var fb in layout.FiguredBassLayouts)
         {
-            if (!sysY.ContainsKey(fb.MeasureIndex)) continue;
+            if (!sysTopYUp.ContainsKey(fb.MeasureIndex)) continue;
             // Page Y-up against this figure's own staff middle; figures then stack
             // downward from the topmost baseline (device down = smaller Y-up).
             double baseY = os.StaffMiddleYUp(fb.StaffIndex, fb.MeasureIndex, StaffHeight) + fb.YUp;
@@ -98,7 +98,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/percent-repeat-interface.cc — x_percent() rendering
     /// LILYPOND-REF: scm/define-grobs.scm:2788-2807 — slope=1.0, thickness=0.48
     /// </remarks>
-    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
@@ -117,7 +117,7 @@ internal static partial class SharedRenderer
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
-            if (!sysY.ContainsKey(pr.MeasureIndex)) continue;
+            if (!sysTopYUp.ContainsKey(pr.MeasureIndex)) continue;
             double cx = pr.X;
             // Page Y-up against this sign's own staff middle.
             double cy = os.StaffMiddleYUp(pr.StaffIndex, pr.MeasureIndex, StaffHeight) + pr.YUp;
@@ -143,7 +143,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// </remarks>
-    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
@@ -154,10 +154,10 @@ internal static partial class SharedRenderer
         // outside-staff stacking pass (OutsideStaffStacker.StackAboveStaff).
         foreach (var bn in layout.BarNumberLayouts)
         {
-            if (!sysY.TryGetValue(bn.MeasureIndex, out var sy))
+            if (!sysTopYUp.TryGetValue(bn.MeasureIndex, out var syUp))
                 continue; // other page
-            // Page Y-up: lift this measure's system top and add the stored offset.
-            double y = (pageHeight - sy) + bn.YUp;
+            // Page Y-up: this measure's system top plus the stored offset.
+            double y = syUp + bn.YUp;
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
@@ -173,7 +173,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3412 StanzaNumber (font-series bold)
     /// </remarks>
-    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
@@ -182,9 +182,9 @@ internal static partial class SharedRenderer
         {
             // sn.YUp is Y-up from the system top (the verse's lyric baseline); lift
             // the system top to the page Y-up frame and add it, like DrawLyrics.
-            if (!sysY.TryGetValue(sn.MeasureIndex, out var s)) continue; // other page
+            if (!sysTopYUp.TryGetValue(sn.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top and add the stored offset, like DrawLyrics.
-            double y = (pageHeight - s) + sn.YUp;
+            double y = syUp + sn.YUp;
             gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
@@ -199,14 +199,14 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob
     /// LILYPOND-REF: scm/define-grobs.scm Fingering (font-size = -5 → ~0.56×)
     /// </remarks>
-    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.56;  // magstep(-5)
         foreach (var f in layout.FingeringLayouts)
         {
-            if (!sysY.ContainsKey(f.MeasureIndex)) continue; // other page
+            if (!sysTopYUp.ContainsKey(f.MeasureIndex)) continue; // other page
             // Frame B -> device: reflect the Y-up baseline against this fingering's
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
@@ -229,14 +229,14 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
-    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
         foreach (var m in layout.MusicMarkLayouts)
         {
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
-            if (!sysY.ContainsKey(m.MeasureIndex)) continue; // other page
+            if (!sysTopYUp.ContainsKey(m.MeasureIndex)) continue; // other page
             // The mark's page Y-up anchor: the staff middle's Y-up refpoint plus the
             // stored offset. Marks do not shrink on an ossia staff (the former code
             // used StaffMiddleDeviceY, not os.Y), so no ossia affine is applied here.
@@ -444,13 +444,13 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws free-form text annotations (e.g. "molto rit.", "a tempo").</summary>
     /// <remarks>LILYPOND-REF: lily/text-interface.cc — text rendering</remarks>
-    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
         foreach (var t in layout.CustomTextLayouts)
         {
-            if (!sysY.ContainsKey(t.MeasureIndex)) continue; // other page
+            if (!sysTopYUp.ContainsKey(t.MeasureIndex)) continue; // other page
             // Page Y-up against the (top) staff middle this text resolves.
             double y = os.StaffMiddleYUp(t.StaffIndex, t.MeasureIndex, StaffHeight) + t.YUp;
             using (gc.Source(t.SourcePosition))
@@ -469,7 +469,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/text-spanner-engraver.cc TextSpanner engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3835 TextSpanner grob
     /// </remarks>
-    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
@@ -477,9 +477,9 @@ internal static partial class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TextSpannerLayouts)
         {
-            if (!sysY.TryGetValue(s.StartMeasureIndex, out var y)) continue; // other page
-            // Page Y-up: lift the system top, add the stored offset, then ossia.
-            double absY = os.YUp((pageHeight - y) + s.YUp, s.StaffIndex, s.StartMeasureIndex);
+            if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
+            // Page Y-up: system top plus the stored offset, then ossia.
+            double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
             using (gc.Source(s.SourcePosition))
             {
                 gc.DrawText(s.Text, s.StartX, absY,
@@ -506,16 +506,16 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/piano-pedal-bracket.cc — PianoPedalBracket grob
     /// </remarks>
-    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.PedalBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.PedalBracketLayouts)
         {
-            if (!sysY.TryGetValue(b.StartMeasureIndex, out var y)) continue; // other page
-            // Page Y-up: lift the system top and drop by the stored device offset.
-            double absY = (pageHeight - y) - b.Y;
+            if (!sysTopYUp.TryGetValue(b.StartMeasureIndex, out var syUp)) continue; // other page
+            // Page Y-up: system top less the stored device offset.
+            double absY = syUp - b.Y;
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawLine(b.StartX, absY, b.EndX, absY, Color.Black, thickness);
@@ -535,18 +535,18 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
     /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
     /// </remarks>
-    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
         {
-            if (!sysY.TryGetValue(mmr.StartMeasureIndex, out double sy))
+            if (!sysTopYUp.TryGetValue(mmr.StartMeasureIndex, out double syUp))
                 continue; // other page
-            // mmr.Y is the within-system offset of the staff middle; the system-top
-            // Y-up is pageHeight - system.Y, so the middle's page Y-up is that minus
+            // mmr.Y is the within-system offset of the staff middle; syUp is this
+            // measure's system-top page Y-up, so the middle's page Y-up is that minus
             // the offset (byte-identical to the former pageHeight - absoluteMiddle).
-            double cy = (pageHeight - sy) - mmr.Y;
+            double cy = syUp - mmr.Y;
             if (mmr.UseChurchRest)
                 DrawChurchRest(mmr, cy, gc);
             else
@@ -679,21 +679,21 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc — LaissezVibrerTie grob
     /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
     /// </remarks>
-    private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
         foreach (var v in layout.TieVariantLayouts)
         {
-            if (!sysY.TryGetValue(v.MeasureIndex, out double sy))
+            if (!sysTopYUp.TryGetValue(v.MeasureIndex, out double syUp))
                 continue; // other page
             // TieVariantLayout stores WITHIN-SYSTEM device offsets (down from the
-            // system top). Reconstruct the absolute device Y (sy + offset), then
-            // reflect to the layout Y-up frame (= -device) DrawBow expects — this is
-            // byte-identical to the former absolute-Y reflection. The arc geometry
-            // itself stays device-frame (intentional-device island 2).
-            DrawBow(v.StartX, -(sy + v.Y), v.EndX, -(sy + v.Y),
-                (v.Control1.X, -(sy + v.Control1.Y)), (v.Control2.X, -(sy + v.Control2.Y)), v.CurveUp,
+            // system top). syUp is this measure's system-top page Y-up, so the arc's
+            // page Y-up is syUp minus each device offset — byte-identical to the former
+            // -(system.Y + offset) reflection DrawBow used to lift by pageHeight. The
+            // arc geometry itself stays device-frame (intentional-device island 2).
+            DrawBow(v.StartX, syUp - v.Y, v.EndX, syUp - v.Y,
+                (v.Control1.X, syUp - v.Control1.Y), (v.Control2.X, syUp - v.Control2.Y), v.CurveUp,
                 EngravingDefaults.TieMidThickness,
                 v.StaffIndex, v.MeasureIndex, os, gc, pageHeight);
         }
@@ -709,7 +709,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/lyric-hyphen.cc:37 Lyric_hyphen::print (LyricHyphen grob)
     /// </remarks>
-    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
@@ -721,8 +721,8 @@ internal static partial class SharedRenderer
                 foreach (var dash in h.Dashes)
                 {
                     var src = layout.LyricLayouts[h.LyricIndex];
-                    if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
-                    double dashY = (pageHeight - sy) - dash.Y;
+                    if (!sysTopYUp.TryGetValue(src.Item.MeasureIndex, out var syUp)) continue; // other page
+                    double dashY = syUp - dash.Y;
                     gc.DrawLine(dash.X1, dashY, dash.X2, dashY,
                         Color.Black, thickness);
                 }
@@ -730,8 +730,8 @@ internal static partial class SharedRenderer
             else if (h.Type == LyricConnectorType.Extender)
             {
                 var src = layout.LyricLayouts[h.LyricIndex];
-                if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
-                double extY = (pageHeight - sy) - h.ExtenderY;
+                if (!sysTopYUp.TryGetValue(src.Item.MeasureIndex, out var syUp)) continue; // other page
+                double extY = syUp - h.ExtenderY;
                 if (h.CrossesSystemBreak)
                 {
                     gc.DrawLine(h.ExtenderStartX, extY,
@@ -752,16 +752,16 @@ internal static partial class SharedRenderer
 
     /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
     /// <remarks>LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript (grob in scm/define-grobs.scm)</remarks>
-    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc,
+    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc,
         double pageHeight)
     {
         if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;
         foreach (var pc in layout.PartCombineLayouts)
         {
-            if (!sysY.TryGetValue(pc.MeasureIndex, out var s)) continue; // other page
-            // Page Y-up: lift the system top and add the stored offset.
-            double y = (pageHeight - s) + pc.YUp;
+            if (!sysTopYUp.TryGetValue(pc.MeasureIndex, out var syUp)) continue; // other page
+            // Page Y-up: system top plus the stored offset.
+            double y = syUp + pc.YUp;
             gc.DrawText(pc.Text, pc.X, y, size, "serif",
                 FontStyle.Italic, TextAnchor.Start, Color.Black);
         }

@@ -37,14 +37,13 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/grace-engraver.cc:36-80 Grace_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing grob
     /// </remarks>
-    private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY,
+    private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc, double pageHeight)
     {
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty) return;
         foreach (var g in layout.GraceNoteLayouts)
         {
-            if (!sysY.TryGetValue(g.MeasureIndex, out var sy)) continue; // other page
-            double syUp = pageHeight - sy;
+            if (!sysTopYUp.TryGetValue(g.MeasureIndex, out var syUp)) continue; // other page
 
             // Tab staff: grace notes are small fret numbers on the string lines,
             // not noteheads. No stems/beam/slur/ledger — tab grace is just the
