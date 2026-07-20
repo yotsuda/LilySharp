@@ -503,6 +503,7 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | 7 | low | LedgerLineSpannerEngraver.cs:63 | wrong-unit | 0.25 を符頭幅比率でなく絶対 ss で適用（加線が各側 ~0.08ss 短い） |
 | 8 | low | ScoreLayout.cs:259-267 | unit-mix-flag | `GetRestShift` が唯一 half-space（consumer 検証要） |
 | 9 | **high** | `ColumnLayout`/`MeasureLayout`（§3.I） | **frame 欠落** | LP の `NonMusicalPaperColumn`（小節境界に立つ breakable 列）に対応する型が無い。境界が「左小節 EndBarline＋右小節先頭 items」に分割され、同じ列が4か所で部分再発明。**現行出力は正**だが境界の LP 移植は毎回フレーム変換を要する |
+| 10 | **high** | `SpacingRules` の extent ヘルパ3種（§4.7） | **frame-mixed** | 列原点の基準が「左端」と「中心」で混在。**同じ box の左右が別 frame**。0.8 という非 LP 定数が差を埋めていたため値の辻褄は合っており露見しなかった（2026-07-21 発見） |
 | — | (既知) | BeamScoringProblem collision island / tab beam quanter | frame island | §3.A 記載・別 follow-up |
 
 ### 4.4 doc/label のみ修正（コードは正）
@@ -544,3 +545,40 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 
 beam quanter で確立した「**方向 AND 単位を LP と揃えてから字面移植**」の原則は、③では
 「**まず必要な座標系（列）を導入し、その上にロジックを移植**」という形を取る。
+
+### 4.7 ④X 軸の「基準点」未統一（2026-07-21 新規・§4.3 #10）
+
+③が「型の欠落」なのに対し、こちらは**同じ軸内で列原点の基準が2種類混在**という別種。
+**LP は列原点＝grob の左端**（`Separation_item::boxes` の box は `il->extent(pc, X_AXIS)`＝
+paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
+`ly:grob-relative-coordinate` が同値であることを実測確認）。
+
+実 frame の棚卸し（**実測ベース**。doc コメントは信用しない — 下表のとおり stale がある）:
+
+| ヘルパ | 音符/休符 | 変更 item | production 呼び出し元 |
+|---|---|---|---|
+| `CalculateLeftExtent`（public） | **左端基準**（変換済・符頭で 0） | 中心基準 `width/2` | Grace / `ChangeItemPrefixWidth` / `CalculateSkylineDistance` |
+| `CalculateRightExtent`（public） | **中心基準** `W−CenterX` | 中心基準 `width/2` | **無し**（`SvgTests.cs` のみ） |
+| `CalculateNoteheadRightExtent`（private） | **左端基準**（`836be0ba` で変換） | 中心基準 `width/2` | `CalculateSkylineDistance` |
+
+**発見の経緯**: 音符の左が左端基準・右が中心基準という**同じ box の左右不一致**があり、
+`GetItemToBarlineSpace = 0.8`（非 LP 値）がその差を埋めていたため値としては辻褄が合っていた。
+`836be0ba` で音符/休符側を左端基準へそろえ、0.8 を LP の `esw+esw = 0.2` へ置換。
+
+**残り（本項目の作業内容）**:
+1. **変更 item（clef/key/time）が3ヘルパとも中心基準** — 内部的には一貫しているが LP と異なる。
+   そのため `GetItemToBarlineSpace` の変更 item エントリ 1.0 も据え置いた。**frame と定数は同時に直す**。
+2. **`CalculateRightExtent` が中心基準のまま production 未使用** — `SvgTests.cs:166-167` が
+   左（左端基準）と右（中心基準）を**ペアで**使っており、テスト自体が2 frame で box を測っている。
+   §3.11 の手順（横断 grep →`<see cref>` →承認）を経てから統廃合すること。
+3. **`CalculateLeftExtent` の XML doc が stale** — 本体は左端基準に変換済なのに summary/remarks が
+   「reference point ... notehead center」のまま（§3.2 の「doc を疑う」実例がまた1件）。
+4. **`BarlineToFirstColumnSpring` の min frame 未検証** — min が `next-note 0.9` をそのまま最小値に
+   使用。LP の `semi-fixed-space` は fixed 分が半分。LP 実測（`c'4 d' e' f' \clef bass g4 a b c'`）:
+   bar line 原点→次の音符列 = **1.279365**、min（skyline）= 境界列の右到達 0.29 + 次列の左到達 0.1
+   = **0.39**。Lily# の 0.9 は 2倍過大で、`merge_springs` の floor を掛けると全小節頭が +0.3 太るため
+   `836be0ba` では floor 適用を**意図的に見送った**。
+
+**なぜ③より先か**: `BoundaryColumn`（③）を入れても、その中身を測る extent ヘルパが別 frame だと
+境界ロジックを字面移植するたびに変換が要る。`836be0ba` で実際にそれが起き、2か所で移植を
+見送らざるを得なかった。**④は③の下層**。
