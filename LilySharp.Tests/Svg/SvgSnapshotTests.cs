@@ -440,6 +440,13 @@ public class SvgSnapshotTests
         // Lily# used to eject the bar, printing a whole rest + a 4-bar rest. Verified
         // against LilyPond 2.24.4.
         yield return new object[] { "test/mmr-key-change-bound" };
+        // The clef counterpart. Same grouping (one 5-bar church rest), but the clef is
+        // drawn BEFORE the bar line — break-align-orders puts clef ahead of staff-bar —
+        // so unlike the key case the run does NOT get wider: bar line to bar line stays
+        // 14.13 against LilyPond's 14.133856, with or without the clef. Guards the
+        // drawing side (BoundaryColumn / BoundaryClefX) together with the grouping.
+        // Verified against LilyPond 2.24.4.
+        yield return new object[] { "test/mmr-clef-change-bound" };
         // Multi-measure rests outside 4/4 (3/4 R2.*3, 2/4 R2*3) collapse like R1*3 does:
         // the rest fills the PREVAILING METER, not a whole note. The second run also opens
         // on a time change, which rides its left bound. Verified against LilyPond 2.24.4

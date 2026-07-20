@@ -1,0 +1,44 @@
+// A clef change at a multi-measure-rest run's LEFT bound. Two LilyPond behaviours meet
+// here, and this is the pair to test/mmr-key-change-bound — a clef differs from a key or
+// time change in WHERE IT IS DRAWN, while grouping the same way:
+//
+//  1. RUN GROUPING — identical to key/time. The change does NOT break the bar out of the
+//     run: LilyPond hangs it on the run's opening NonMusicalPaperColumn, so
+//     `\clef bass R1*5` stays ONE 5-bar church rest. Lily# used to eject the bar and
+//     print an individual whole rest plus a 4-bar church rest.
+//
+//  2. DRAWING — a clef is engraved BEFORE the bar line, where a key or time change goes
+//     after it. LilyPond's unbroken break-align order is `clef, cue-clef, staff-bar,
+//     key-cancellation, key-signature, time-signature`, so the clef's right edge sits
+//     Clef.space-alist (staff-bar . (extra-space . 0.7)) = 0.700 left of the bar line.
+//     Its width is charged to the PRECEDING measure's closing gap, not to the run.
+//
+// Consequence, and the reason this fixture is worth its snapshot: the run itself does not
+// get wider. Verified on LilyPond 2.24.4 — bar line to bar line across `R1*5` is
+// 14.133856 both with and without the leading clef. Only the paper column's ORIGIN moves.
+//
+// LILYPOND-REF: scm/define-grobs.scm:650-664 BreakAlignment.break-align-orders (unbroken),
+// :291-302 BarLine.space-alist, :914-925 Clef.space-alist,
+// lily/multi-measure-rest-engraver.cc process_music, lily/note-spacing.cc:77-108.
+title "MMR run with a clef change at its bound"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f |
+    clef bass R1*5 |
+    g4 a b c |
+  }
+}
+
+form main { Main }
+
+score main "mmr-clef-change-bound" {
+  staff melody
+}
