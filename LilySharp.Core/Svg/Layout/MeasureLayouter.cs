@@ -258,87 +258,30 @@ internal sealed class MeasureLayouter
     }
 
     /// <summary>
-    /// Spring 0: barline → first column. BREAKABLE spacing, not musical: the gap
-    /// after a barline is governed by the BarLine space-alist, NOT the first
-    /// note's duration, and it must never stretch under justification.
+    /// Spring 0: barline → first column. BREAKABLE spacing, not musical — the shape
+    /// lives in <see cref="SpacingRules.BarlineToFirstColumnSpring"/>, shared with the
+    /// item spring system so the two cannot drift. This side only supplies the
+    /// column's items and decides full-measure-extra-space.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm BarLine space-alist —
-    ///   (first-note . (semi-shrink-space . 1.3))
-    /// LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
-    ///   semi-shrink-space: fixed = d/2, ideal = d, is_stretchable = false
-    ///   → inverse stretch strength 0; compressible only down to fixed.
-    /// LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing —
-    ///   full-measure-extra-space is `situational_space`, added to THIS spring
-    ///   (barline → the following musical column), NOT to the note → barline
-    ///   spring that precedes the barline. It is keyed on the measure AFTER the
-    ///   barline (fills_measure(me, l, r) inspects the column r to its right).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 fills_measure — the single
+    /// musical column after this barline is followed straight by the next breakable
+    /// column (timings.Count == 1), spanning the measure.
+    /// NOTE: LP's fills_measure tests column MUSICALITY only, so LP also counts a
+    /// full-measure REST column; this keeps the narrower note/chord predicate that
+    /// SpacingRules.FillsMeasure uses on the line-breaking side, because the two
+    /// spring gates must price identically and the rest case is owned by the MMR
+    /// rod path. Widening both to match LP is a separate, output-changing step.
     /// </remarks>
     private static Spring CreateBarlineToFirstSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
     {
-        // next-note, not first-note: this spring starts at an ordinary mid-line bar
-        // line (break_status_dir == CENTER). semi-fixed-space gives fixed = d/2 and
-        // ideal = d. The system-start case is BreakAlignSpacing.FirstNoteSpring.
-        double firstNoteSpace = EngravingDefaults.BarLineToNextNoteSpace;
-        double firstNoteMin = firstNoteSpace / 2;
-
-        // LILYPOND-REF: lily/spacing-spanner.cc:446-472 fills_measure — the single
-        // musical column after this barline is followed straight by the next
-        // breakable column (timings.Count == 1), spanning the measure.
-        // NOTE: LP's fills_measure tests column MUSICALITY only, so LP also counts a
-        // full-measure REST column; this keeps the narrower note/chord predicate that
-        // SpacingRules.FillsMeasure uses on the line-breaking side, because the two
-        // spring gates must price identically and the rest case is owned by the MMR
-        // rod path. Widening both to match LP is a separate, output-changing step.
-        double fullMeasureSpace =
+        timingToItems.TryGetValue(timings[0], out var firstItems);
+        bool fillsMeasure =
             timings.Count == 1
-            && timingToItems.TryGetValue(timings[0], out var fillItems)
-            && fillItems.Any(it => it is NoteItem or ChordItem)
-                ? SpacingRules.FullMeasureExtraSpace
-                : 0;
-
-        // Apply skyline rod: barline → first item (max across all voices)
-        double startLeadGrace = 0;
-        if (timingToItems.TryGetValue(timings[0], out var firstItems))
-        {
-            foreach (var item in firstItems)
-            {
-                double skyDist = SpacingRules.CalculateSkylineDistance(null, item, staffY: 0);
-                firstNoteMin = Math.Max(firstNoteMin, skyDist);
-            }
-
-            // A zero-duration clef/key/time change at the MEASURE START shares
-            // the first note's column and is drawn hanging LEFT of it. Reserve
-            // that hung width so the change doesn't jam against the barline.
-            // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
-            // column precedes the musical column of the same moment.
-            double startPrefix = ChangeItemPrefixWidth(firstItems);
-            firstNoteMin = Math.Max(firstNoteMin, startPrefix);
-
-            // Leading grace notes on the first note hang left of its column, after
-            // the barline (LilyPond gives the grace its own column between the
-            // barline and the main note).
-            startLeadGrace = LeadingGracePrefixWidth(firstItems, includeMainAccidental: true);
-        }
-
-        if (startLeadGrace > 0)
-        {
-            // The grace is now the FIRST musical column after the barline, so the
-            // barline→grace gap uses tight GRACE spacing (spacing-increment). The
-            // whole front block is rigid (grace columns don't stretch).
-            // LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
-            //   (spacing-increment . 0.8) — grace columns space tighter than notes.
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
-            //   column → … → main column.
-            double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
-            double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
-            return new Spring(front + fullMeasureSpace, front, inverseStretchStrength: 0);
-        }
-        return new Spring(
-            Math.Max(firstNoteSpace, firstNoteMin) + fullMeasureSpace,
-            firstNoteMin,
-            inverseStretchStrength: 0);
+            && firstItems != null
+            && firstItems.Any(it => it is NoteItem or ChordItem);
+        return SpacingRules.BarlineToFirstColumnSpring(firstItems, fillsMeasure);
     }
 
     /// <summary>
@@ -417,8 +360,8 @@ internal sealed class MeasureLayouter
         // leading grace on the next note hang left of that column; reserve their
         // width here so the renderer's hung glyph has room.
         // LILYPOND-REF: lily/paper-column.cc — breakable columns precede the musical column.
-        double prefixWidth = ChangeItemPrefixWidth(nextItems);
-        prefixWidth += LeadingGracePrefixWidth(nextItems);
+        double prefixWidth = SpacingRules.ChangeItemPrefixWidth(nextItems);
+        prefixWidth += SpacingRules.LeadingGracePrefixWidth(nextItems);
         if (prefixWidth > 0)
             spring = new Spring(
                 spring.IdealDistance + prefixWidth,
@@ -482,83 +425,6 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/spacing-spanner.cc:484-489.
         }
         return endSpring;
-    }
-
-    /// <summary>
-    /// Width a zero-duration clef/key-signature change at a timing column
-    /// needs in FRONT of that column (glyph + padding on both sides). Several
-    /// changes sharing a column are drawn side by side, so their widths SUM
-    /// (see the inline note on the accumulation below).
-    /// </summary>
-    private static double ChangeItemPrefixWidth(IEnumerable<MusicItem>? items)
-    {
-        if (items == null) return 0;
-        double w = 0;
-        foreach (var item in items)
-        {
-            double itemW = item switch
-            {
-                ClefChangeItem cc =>
-                    SpacingRules.GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
-                KeySignatureChangeItem kc =>
-                    SpacingRules.GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
-                TimeSignatureChangeItem tc =>
-                    SpacingRules.GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
-                _ => 0
-            };
-            // SUM, not max: clef/key/time changes sharing a column are drawn side by
-            // side (the renderer sequences them), so they need their combined width.
-            // A lone change (the common case) sums to its own width — unchanged.
-            w += itemW;
-        }
-        return w;
-    }
-
-    /// <summary>
-    /// Width that leading grace notes need in FRONT of their main note's column.
-    /// Grace notes hang to the left of the note (like a mid-measure clef change),
-    /// so the spring into the column reserves their group width. When several
-    /// voices have grace at the same moment the groups align, so the MAX is taken.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — grace columns precede
-    ///   the main note's musical column; their span is reserved before it.
-    /// The width equals SpacingRules.CalculateGraceGroupSpringWidth (grace springs
-    /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
-    /// the group, so reserved space and drawn space agree.
-    /// </remarks>
-    private static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items,
-        bool includeMainAccidental = false)
-    {
-        if (items == null) return 0;
-        double w = 0;
-        foreach (var item in items)
-        {
-            var grace = item switch
-            {
-                NoteItem n => n.LeadingGrace,
-                ChordItem c => c.LeadingGrace,
-                _ => ImmutableArray<GraceNoteInfo>.Empty
-            };
-            if (grace.IsDefaultOrEmpty)
-                continue;
-            double hang = SpacingRules.CalculateGraceGroupSpringWidth(grace);
-            // At a LINE START the grace hangs left of the main item's OWN left ink
-            // (its accidental) with nothing before it, so the front spring must
-            // reserve grace + accidental, not their max — otherwise the grace
-            // overflows into the clef/key/time prefix. (Mid-line the previous note
-            // already provides that room, so the accidental is left out there.)
-            bool hasAccidental = item switch
-            {
-                NoteItem n => n.Accidental != null,
-                ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
-                _ => false
-            };
-            if (includeMainAccidental && hasAccidental)
-                hang += SpacingRules.CalculateLeftExtent(item);
-            w = Math.Max(w, hang);
-        }
-        return w;
     }
 
     /// <summary>

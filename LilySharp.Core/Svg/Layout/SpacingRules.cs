@@ -1275,6 +1275,154 @@ internal static class SpacingRules
     };
 
     /// <summary>
+    /// Width a zero-duration clef/key-signature change at a timing column
+    /// needs in FRONT of that column (glyph + padding on both sides). Several
+    /// changes sharing a column are drawn side by side, so their widths SUM
+    /// (see the inline note on the accumulation below).
+    /// </summary>
+    internal static double ChangeItemPrefixWidth(IEnumerable<MusicItem>? items)
+    {
+        if (items == null) return 0;
+        double w = 0;
+        foreach (var item in items)
+        {
+            double itemW = item switch
+            {
+                ClefChangeItem cc =>
+                    GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
+                KeySignatureChangeItem kc =>
+                    GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
+                TimeSignatureChangeItem tc =>
+                    GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
+                _ => 0
+            };
+            // SUM, not max: clef/key/time changes sharing a column are drawn side by
+            // side (the renderer sequences them), so they need their combined width.
+            // A lone change (the common case) sums to its own width — unchanged.
+            w += itemW;
+        }
+        return w;
+    }
+
+    /// <summary>
+    /// Width that leading grace notes need in FRONT of their main note's column.
+    /// Grace notes hang to the left of the note (like a mid-measure clef change),
+    /// so the spring into the column reserves their group width. When several
+    /// voices have grace at the same moment the groups align, so the MAX is taken.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — grace columns precede
+    ///   the main note's musical column; their span is reserved before it.
+    /// The width equals <see cref="CalculateGraceGroupSpringWidth"/> (grace springs
+    /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
+    /// the group, so reserved space and drawn space agree.
+    /// </remarks>
+    internal static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items,
+        bool includeMainAccidental = false)
+    {
+        if (items == null) return 0;
+        double w = 0;
+        foreach (var item in items)
+        {
+            var grace = item switch
+            {
+                NoteItem n => n.LeadingGrace,
+                ChordItem c => c.LeadingGrace,
+                _ => ImmutableArray<GraceNoteInfo>.Empty
+            };
+            if (grace.IsDefaultOrEmpty)
+                continue;
+            double hang = CalculateGraceGroupSpringWidth(grace);
+            // At a LINE START the grace hangs left of the main item's OWN left ink
+            // (its accidental) with nothing before it, so the front spring must
+            // reserve grace + accidental, not their max — otherwise the grace
+            // overflows into the clef/key/time prefix. (Mid-line the previous note
+            // already provides that room, so the accidental is left out there.)
+            bool hasAccidental = item switch
+            {
+                NoteItem n => n.Accidental != null,
+                ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
+                _ => false
+            };
+            if (includeMainAccidental && hasAccidental)
+                hang += CalculateLeftExtent(item);
+            w = Math.Max(w, hang);
+        }
+        return w;
+    }
+
+    /// <summary>
+    /// The spring from a mid-line bar line to the first musical column after it —
+    /// the SINGLE implementation shared by both spring systems.
+    /// </summary>
+    /// <remarks>
+    /// The gap after a bar line is governed by the BarLine space-alist, NOT by the
+    /// first note's duration: LilyPond reaches this pair through Staff_spacing, not
+    /// Note_spacing, so duration space never enters. A mid-line bar line always has
+    /// <c>break_status_dir () == CENTER</c>, which selects `next-note`
+    /// (semi-fixed-space 0.9 → fixed = d/2, ideal = d) and never `first-note`; the
+    /// system-start case is BreakAlignSpacing.FirstNoteSpring. semi-fixed is not
+    /// stretchable, hence inverse stretch strength 0.
+    ///
+    /// This lived only in MeasureLayouter, so the item system priced the same gap as
+    /// a quarter note's duration space — 3.6 against the correct 0.9, ~2.7 ss too
+    /// wide on every measure it estimated.
+    ///
+    /// LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist
+    ///   (next-note . (semi-fixed-space . 0.9)); lily/staff-spacing.cc:147-153
+    ///   (alist selection) and :176-198 (semi-fixed / semi-shrink).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing —
+    ///   full-measure-extra-space is `situational_space` on THIS spring, keyed on the
+    ///   measure AFTER the bar line, so the caller decides and passes it in.
+    /// </remarks>
+    internal static Spring BarlineToFirstColumnSpring(
+        IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
+    {
+        double firstNoteSpace = EngravingDefaults.BarLineToNextNoteSpace;
+        double firstNoteMin = firstNoteSpace / 2;
+        double fullMeasureSpace = fillsMeasure ? FullMeasureExtraSpace : 0;
+
+        double startLeadGrace = 0;
+        if (firstItems != null)
+        {
+            // Skyline rod: bar line → first item (max across all voices).
+            foreach (var item in firstItems)
+                firstNoteMin = Math.Max(firstNoteMin,
+                    CalculateSkylineDistance(null, item, staffY: 0));
+
+            // A zero-duration clef/key/time change at the MEASURE START shares the
+            // first note's column and is drawn hanging LEFT of it. Reserve that hung
+            // width so the change doesn't jam against the bar line.
+            // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
+            // column precedes the musical column of the same moment.
+            firstNoteMin = Math.Max(firstNoteMin, ChangeItemPrefixWidth(firstItems));
+
+            // Leading grace notes on the first note hang left of its column, after
+            // the bar line (LilyPond gives the grace its own column between the
+            // bar line and the main note).
+            startLeadGrace = LeadingGracePrefixWidth(firstItems, includeMainAccidental: true);
+        }
+
+        if (startLeadGrace > 0)
+        {
+            // The grace is now the FIRST musical column after the bar line, so the
+            // barline→grace gap uses tight GRACE spacing (spacing-increment). The
+            // whole front block is rigid (grace columns don't stretch).
+            // LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
+            //   (spacing-increment . 0.8) — grace columns space tighter than notes.
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
+            //   column → … → main column.
+            double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
+            double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
+            return new Spring(front + fullMeasureSpace, front, inverseStretchStrength: 0);
+        }
+        return new Spring(
+            Math.Max(firstNoteSpace, firstNoteMin) + fullMeasureSpace,
+            firstNoteMin,
+            inverseStretchStrength: 0);
+    }
+
+    /// <summary>
     /// If <paramref name="prevItem"/> is a mid-measure clef/key/time change, widens
     /// the following spring by its glyph width so the width ESTIMATE matches the
     /// timing-column layout (which reserves the same via
@@ -1533,24 +1681,19 @@ internal static class SpacingRules
 
         var springs = new List<Spring>();
 
-        // Spring from start barline to first item. Leading grace on the first item
-        // hangs left of its column (after the barline), so reserve its width here
-        // too — otherwise this width estimate disagrees with the timing-column
-        // layout (which reserves it in MeasureLayouter), and line breaking would
-        // under-estimate grace measures.
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the note.
+        // Spring from start barline to first item — the SAME builder the timing-column
+        // system uses, so the leading grace / change-glyph / skyline reservations and
+        // the BarLine space-alist value cannot drift between the two. This used to
+        // price the gap as the first note's duration space (3.6 for a quarter against
+        // the correct 0.9): LilyPond reaches a bar line → note pair through
+        // Staff_spacing, where duration never enters.
         // A measure filled by a single note/chord gets LP's full-measure-extra-space
         // on THIS spring (barline → first column), not on the note → barline spring:
         // LP passes it as `situational_space` to Staff_spacing::get_spacing, keyed on
         // the measure that FOLLOWS the barline.
         // LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing.
         var firstItem = spacingItems[0];
-        var firstSpring = CreateSpring(null, firstItem, Fraction.Quarter,
-            baseShortestDuration: baseShortestDuration);
-        firstSpring = AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem));
-        if (FillsMeasure(measure))
-            firstSpring = new Spring(firstSpring.IdealDistance + FullMeasureExtraSpace,
-                firstSpring.MinDistance, firstSpring.InverseStretchStrength);
+        var firstSpring = BarlineToFirstColumnSpring(new[] { firstItem }, FillsMeasure(measure));
         springs.Add(firstSpring);
 
         // Springs between items (the spring into a grace-bearing note reserves its

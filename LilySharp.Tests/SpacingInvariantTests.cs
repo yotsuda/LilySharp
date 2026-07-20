@@ -76,16 +76,17 @@ public class SpacingInvariantTests
 
         Assert.Equal(columnSprings.Length, itemSprings.Length);
 
-        // Spring 0 (bar line → first column) is KNOWINGLY excluded: the column
-        // system models it as LilyPond does — BarLine's space-alist `next-note`
-        // (0.9, rigid, staff-spacing.cc) — while the item system still prices it as
-        // a note's duration space (3.6 for a quarter). LilyPond never uses duration
-        // space across a bar line, so the item system is wrong there and the two
-        // disagree by ~2.7 ss. Porting it needs the skyline / grace / change-prefix
-        // minimums too, so it is left as a separate step; this bound documents the
-        // remaining gap instead of hiding it.
-        for (int i = 1; i < itemSprings.Length; i++)
+        // EVERY spring, spring 0 included: the bar line → first column gap is built
+        // by the one shared SpacingRules.BarlineToFirstColumnSpring.
+        for (int i = 0; i < itemSprings.Length; i++)
             Assert.Equal(columnSprings[i].IdealDistance, itemSprings[i].IdealDistance, 9);
+
+        // Spring 0 is the BarLine space-alist value (next-note 0.9), not the first
+        // note's duration space — LilyPond reaches a bar line → note pair through
+        // Staff_spacing, where duration never enters. Pin the shape so a regression
+        // back to duration spacing (which read 3.6 here) is caught.
+        Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace, itemSprings[0].IdealDistance, 9);
+        Assert.Equal(0, itemSprings[0].InverseStretchStrength);
 
         // And both corrections are actually LIVE here, so the equality above is not
         // two zeroes agreeing: `e` is a stemmed quarter, so the spring into the bar
