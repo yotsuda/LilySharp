@@ -595,7 +595,6 @@ internal static partial class SharedRenderer
         double LongWidth = GlyphMetrics.RestLonga.Width;
         double BreveWidth = GlyphMetrics.RestDoubleWhole.Width;
         double WholeWidth = GlyphMetrics.RestWhole.Width;
-        const double Gap = 0.4;
         // Vertical placement (dy, in staff spaces below the staff middle cy — device
         // +Y is down). Each church-rest glyph sits at its own natural staff position
         // spi = Rest::staff_position_internal(me, dl, CENTER). For a normal 5-line staff
@@ -629,7 +628,24 @@ internal static partial class SharedRenderer
         }
         if (pieces.Count == 0) return;
 
-        double totalWidth = pieces.Sum(p => p.Width) + Gap * (pieces.Count - 1);
+        // Gap between symbols: LilyPond DERIVES it from the space actually available
+        // between the bounding bar lines, so a long run's glyphs spread out instead of
+        // huddling in the middle. mmr.StartX/EndX are those bar lines' inner edges,
+        // i.e. exactly LilyPond's bar_width interval, so their difference is its `space`.
+        // A fixed 0.4 ss here drew every church rest far too tight (an R1*9 row spanned
+        // 3.7 ss where LilyPond spans 6.685).
+        // LILYPOND-REF: lily/multi-measure-rest.cc:307-323 church_rest.
+        const double OuterPaddingFactor = 1.5;
+        const double MaxSymbolSeparation = 8.0;   // scm/define-grobs.scm MultiMeasureRest
+        double symbolsWidth = pieces.Sum(p => p.Width);
+        double space = mmr.EndX - mmr.StartX;
+        double gap = (space - symbolsWidth)
+                     / (2 * OuterPaddingFactor + (pieces.Count - 1));
+        if (gap < 0)
+            gap = 1.0;
+        gap = Math.Min(gap, Math.Max(MaxSymbolSeparation, 1.0));
+
+        double totalWidth = symbolsWidth + gap * (pieces.Count - 1);
         // Centre the row of rest glyphs on cx. DrawGlyph anchors at the glyph's
         // LEFT edge (SVG text-anchor="start"; these rest glyphs have bbox Left=0),
         // so each glyph's left edge is laid at the running x — NOT at x+Width/2,
@@ -642,7 +658,7 @@ internal static partial class SharedRenderer
         foreach (var p in pieces)
         {
             gc.DrawGlyph(p.Glyph, x, p.Y, FontSize);
-            x += p.Width + Gap;
+            x += p.Width + gap;
         }
         if (mmr.MeasureCount > 1)
             DrawMmrNumber(mmr.MeasureCount, cx, cy, gc);
