@@ -1196,7 +1196,8 @@ internal static class SpacingRules
     /// global minimum this method used previously.
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.MultiStaffScore score)
-        => CommonShortestDuration(score.AllVoices.Select(v => v.Measures));
+        => CommonShortestDuration(score.AllVoices.Select(v => v.Measures),
+            score.TimeSignature.MeasureDuration);
 
     /// <summary>
     /// Calculates the common shortest duration across all voices in a single-staff score.
@@ -1205,12 +1206,20 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
-        => CommonShortestDuration(score.Voices.Select(v => v.Measures));
+        => CommonShortestDuration(score.Voices.Select(v => v.Measures),
+            score.TimeSignature.MeasureDuration);
 
-    private static double CommonShortestDuration(IEnumerable<ImmutableArray<Model.Measure>> voiceMeasures)
+    private static double CommonShortestDuration(
+        IEnumerable<ImmutableArray<Model.Measure>> voiceMeasures,
+        Fraction initialMeasureDuration)
     {
         var voices = voiceMeasures.ToList();
         int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Length);
+
+        // A full-measure rest is measured against the PREVAILING meter, so a 2/4 bar's
+        // half rest is dropped from the vote just like a 4/4 bar's whole rest.
+        var meters = MultiMeasureRestEngraver.PrevailingMeters(
+            voices, measureCount, initialMeasureDuration);
 
         // Per-measure shortest across all voices, then count occurrences.
         var counts = new Dictionary<double, int>();
@@ -1224,7 +1233,7 @@ internal static class SpacingRules
 
                 // Full-measure rests create no musical columns in LilyPond and
                 // therefore never contribute to the common shortest duration.
-                if (MultiMeasureRestEngraver.IsFullMeasureRest(measures[m]))
+                if (MultiMeasureRestEngraver.IsFullMeasureRest(measures[m], meters[m]))
                     continue;
 
                 foreach (var item in measures[m].Items)

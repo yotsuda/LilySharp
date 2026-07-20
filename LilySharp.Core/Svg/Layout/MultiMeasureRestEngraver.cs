@@ -274,20 +274,8 @@ internal static class MultiMeasureRestEngraver
         if (primaryMeasures.IsDefaultOrEmpty)
             return ImmutableArray<MmrRun>.Empty;
 
-        // A multi-measure rest fills its bar, and "its bar" is the PREVAILING METER, not
-        // a whole note: `R2*3` in 2/4 and `R2.*3` in 3/4 collapse exactly like `R1*3` in
-        // 4/4 (verified on LilyPond 2.24.4 — each renders one "3" church rest). Walk the
-        // bars carrying the meter forward, applying any time change the bar itself holds,
-        // since a change at the head of a bar governs that bar.
-        var meters = new Fraction[primaryMeasures.Length];
-        var meter = initialMeasureDuration;
-        for (int m = 0; m < primaryMeasures.Length; m++)
-        {
-            foreach (var item in primaryMeasures[m].Items)
-                if (item is TimeSignatureChangeItem tc)
-                    meter = tc.NewTime.MeasureDuration;
-            meters[m] = meter;
-        }
+        var meters = PrevailingMeters(new[] { primaryMeasures }, primaryMeasures.Length,
+            initialMeasureDuration);
 
         // A measure collapses into a multi-measure rest only when EVERY staff
         // rests it. LilyPond keeps the measures (and their barlines) separate when
@@ -387,10 +375,39 @@ internal static class MultiMeasureRestEngraver
     }
 
     /// <summary>
-    /// True iff the measure contains exactly one <see cref="RestItem"/> filling
-    /// (or longer than) the time signature — the canonical "rest the whole measure".
+    /// The meter in force at each bar index: the score's time signature carried forward,
+    /// updated by any time change a bar itself holds (a change at the head of a bar
+    /// governs that bar). A change may sit in any voice, so all of them are scanned.
     /// </summary>
-    internal static bool IsFullMeasureRest(Measure measure)
+    internal static Fraction[] PrevailingMeters(
+        IReadOnlyList<ImmutableArray<Measure>> voices, int barCount, Fraction initial)
+    {
+        var meters = new Fraction[barCount];
+        var meter = initial;
+        for (int m = 0; m < barCount; m++)
+        {
+            foreach (var measures in voices)
+                if (m < measures.Length)
+                    foreach (var item in measures[m].Items)
+                        if (item is TimeSignatureChangeItem tc)
+                            meter = tc.NewTime.MeasureDuration;
+            meters[m] = meter;
+        }
+        return meters;
+    }
+
+    /// <summary>
+    /// True iff the measure contains exactly one <see cref="RestItem"/> filling
+    /// (or longer than) the bar — the canonical "rest the whole measure".
+    /// </summary>
+    /// <remarks>
+    /// The bar is <paramref name="meter"/>, the prevailing time signature — NOT a whole
+    /// note. A full-measure rest creates no musical column in LilyPond, and that is just
+    /// as true of a 2/4 bar's half rest as of a 4/4 bar's whole rest; flooring at a whole
+    /// note counted the former and dropped the latter. Use <see cref="PrevailingMeters"/>
+    /// to obtain the per-bar meter.
+    /// </remarks>
+    internal static bool IsFullMeasureRest(Measure measure, Fraction meter)
     {
         if (measure.Items.Length != 1)
             return false;
@@ -398,9 +415,6 @@ internal static class MultiMeasureRestEngraver
             return false;
         if (rest.IsSpacer)
             return false; // invisible chord-row filler — not a real rest
-        // Whole-note rest covers any time signature up to 4/4. Anything dotted /
-        // longer also qualifies (LP's `R1` is a full-measure rest regardless of
-        // actual time signature).
-        return rest.BaseDuration >= new Fraction(1, 1);
+        return rest.Duration >= meter;
     }
 }

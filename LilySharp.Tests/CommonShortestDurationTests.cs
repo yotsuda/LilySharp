@@ -74,6 +74,35 @@ public class CommonShortestDurationTests
     }
 
     [Fact]
+    public void FullMeasureRests_DoNotContribute_OutsideCommonTime()
+    {
+        // A full-measure rest is measured against the PREVAILING meter, not a whole note:
+        // in 2/4 the bar IS a half rest, so `R2` creates no musical column just as `R1`
+        // does not in 4/4. This used to floor at a whole note, so every 2/4 rest bar voted
+        // its half into the mode.
+        //
+        // One bar of eighths plus three rest bars: with the rest bars excluded the mode is
+        // the eighth (0.125). Counting them would make the half the mode, and the 3/16 cap
+        // would then report 0.1875 — so this value is what distinguishes the two.
+        // LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration.
+        var source = """
+            time 2/4
+            key c major
+            part melody
+            section Main { melody { c8 d e f | R2*3 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+
+        double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
+
+        Assert.Equal(0.125, shortest, 4);
+    }
+
+    [Fact]
     public void MixedDurations_ShortestIsSmallest()
     {
         // Score with half, quarter, and eighth notes → shortest is eighth (0.125)
