@@ -6,11 +6,11 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="532">Script stacking</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.41" x2="20.56" y2="12.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.41" x2="20.56" y2="13.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.41" x2="20.56" y2="14.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.41" x2="20.56" y2="15.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.41" x2="20.56" y2="16.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.41" x2="20.45" y2="12.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.41" x2="20.45" y2="13.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.41" x2="20.45" y2="14.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.41" x2="20.45" y2="15.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.41" x2="20.45" y2="16.41" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="15.41" font-size="4.00"></text>
   <text class="music" x="3.30" y="14.41" font-size="4.00" data-pos="566"></text>
   <line x1="10.61" y1="11.41" x2="12.57" y2="11.41" stroke="#000000" stroke-width="0.200"/>
@@ -22,8 +22,8 @@
   <text class="music" x="13.69" y="12.91" font-size="4.00" data-pos="675"></text>
   <line x1="13.75" y1="13.06" x2="13.75" y2="16.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="16.69" y="14.41" font-size="4.00" data-pos="695"></text>
-  <rect x="19.47" y="12.41" width="0.19" height="4.00" data-pos="698"/>
-  <rect x="19.96" y="12.41" width="0.60" height="4.00" data-pos="698"/>
+  <rect x="19.36" y="12.41" width="0.19" height="4.00" data-pos="698"/>
+  <rect x="19.85" y="12.41" width="0.60" height="4.00" data-pos="698"/>
   <text class="music" x="8.34" y="11.01" font-size="4.00" data-pos="621"></text>
   <text class="music" x="8.34" y="10.19" font-size="4.00" data-pos="630"></text>
   <text class="music" x="8.34" y="9.57" font-size="4.00" data-pos="637"></text>

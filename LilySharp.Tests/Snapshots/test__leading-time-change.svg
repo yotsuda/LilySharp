@@ -6,11 +6,11 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="314">Leading time change</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.41" x2="31.20" y2="12.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.41" x2="31.20" y2="13.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.41" x2="31.20" y2="14.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.41" x2="31.20" y2="15.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.41" x2="31.20" y2="16.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.41" x2="29.82" y2="12.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.41" x2="29.82" y2="13.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.41" x2="29.82" y2="14.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.41" x2="29.82" y2="15.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.41" x2="29.82" y2="16.41" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="15.41" font-size="4.00" data-pos="357"></text>
   <text class="music" x="3.30" y="12.41" font-size="4.00" data-pos="336"></text>
   <text class="music" x="4.80" y="14.41" font-size="4.00"></text>
@@ -20,22 +20,22 @@
   <line x1="11.91" y1="17.41" x2="13.87" y2="17.41" stroke="#000000" stroke-width="0.200"/>
   <line x1="11.91" y1="18.41" x2="13.87" y2="18.41" stroke="#000000" stroke-width="0.200"/>
   <line x1="14.91" y1="17.41" x2="16.87" y2="17.41" stroke="#000000" stroke-width="0.200"/>
-  <line x1="20.67" y1="17.41" x2="22.62" y2="17.41" stroke="#000000" stroke-width="0.200"/>
+  <line x1="19.15" y1="17.41" x2="21.10" y2="17.41" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="9.23" y="18.91" font-size="4.00" data-pos="405"></text>
   <line x1="10.47" y1="18.76" x2="10.47" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="12.24" y="18.41" font-size="4.00" data-pos="412"></text>
   <line x1="13.48" y1="18.26" x2="13.48" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="15.24" y="17.91" font-size="4.00" data-pos="414"></text>
   <line x1="16.48" y1="17.76" x2="16.48" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.99" y="17.41" font-size="4.00" data-pos="418"></text>
-  <line x1="22.23" y1="17.26" x2="22.23" y2="13.91" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.99" y="16.91" font-size="4.00" data-pos="421"></text>
-  <line x1="25.23" y1="16.76" x2="25.23" y2="13.41" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.00" y="16.41" font-size="4.00" data-pos="423"></text>
-  <line x1="28.24" y1="16.26" x2="28.24" y2="12.91" stroke="#000000" stroke-width="0.130"/>
-  <rect x="18.85" y="12.41" width="0.19" height="4.00" data-pos="416"/>
-  <rect x="30.11" y="12.41" width="0.19" height="4.00" data-pos="425"/>
-  <rect x="30.60" y="12.41" width="0.60" height="4.00" data-pos="425"/>
+  <text class="music" x="19.47" y="17.41" font-size="4.00" data-pos="418"></text>
+  <line x1="20.71" y1="17.26" x2="20.71" y2="13.91" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="22.48" y="16.91" font-size="4.00" data-pos="421"></text>
+  <line x1="23.71" y1="16.76" x2="23.71" y2="13.41" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="25.48" y="16.41" font-size="4.00" data-pos="423"></text>
+  <line x1="26.72" y1="16.26" x2="26.72" y2="12.91" stroke="#000000" stroke-width="0.130"/>
+  <rect x="18.38" y="12.41" width="0.19" height="4.00" data-pos="416"/>
+  <rect x="28.73" y="12.41" width="0.19" height="4.00" data-pos="425"/>
+  <rect x="29.22" y="12.41" width="0.60" height="4.00" data-pos="425"/>
   <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="371"/>
   <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="371">Main</text>
   </g>
