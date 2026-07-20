@@ -197,7 +197,16 @@ internal sealed partial class Parser
             // to the line end / comment close), so position math alone is not
             // safe; this mirrors why Roslyn's Blender compares tokens. On any
             // mismatch we fall back to ordinary parsing of that item.
-            if (_reuse != null && _reuse.TryGet(_textPosition, out var reused)
+            //
+            // Only when the parser is in its DEFAULT state: a top-level note whose
+            // post-events queued markers (`c4( @staccato`) leaves
+            // _pendingPostEventMarkers non-empty, and those must be REPLAYED as the
+            // next items (a full parse does) before any adoption. Adoption advances
+            // tokens without running ParseMusicItem, so it would strand them. The
+            // music-block loops already drain the queue first in their while-condition;
+            // do the same here so the top level is not the one place that skips it.
+            if (_pendingPostEventMarkers.Count == 0
+                && _reuse != null && _reuse.TryGet(_textPosition, out var reused)
                 && TryAdoptTokens(reused))
             {
                 members.Add(reused);

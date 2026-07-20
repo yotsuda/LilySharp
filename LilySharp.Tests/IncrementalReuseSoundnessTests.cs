@@ -128,6 +128,75 @@ public class IncrementalReuseSoundnessTests
         score main "x" { staff melody }
         """;
 
+    [Fact]
+    public void TopLevelPendingPostEvent_ReusedAcrossEarlierEdit_MatchesFull()
+    {
+        // A top-level note whose post-events queue a pending marker
+        // (`c4( @staccato` — the slur '(' is consumed by ParsePostEvents and queued
+        // to replay as the next item). An edit BEFORE it makes the following node
+        // reusable. ParseCompilationUnit must drain the pending queue before adopting
+        // a reused node — adoption only advances tokens, so it would strand the queued
+        // marker and drop it from the tree (a data-pos / geometry divergence with no
+        // visible symptom). Regression for the `_pendingPostEventMarkers.Count == 0`
+        // guard in Parser.ParseCompilationUnit.
+        static string Dump(SyntaxNode r)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int k = 0; k < r.SlotCount; k++)
+                if (r.GetChild(k) is { } c) sb.Append($"[{c.Kind}+{c.FullWidth}]");
+            return sb.ToString();
+        }
+        foreach (var (before, after) in new[]
+        {
+            ("c4( @staccato d4 e4 f4", "c8( @staccato d4 e4 f4"),
+            ("c4~ @staccato d4 e4",    "c8~ @staccato d4 e4"),
+        })
+        {
+            // Same-length edit ('4'->'8' in the first note), well before the marker.
+            var inc = SyntaxTree.Parse(before).WithChange(new TextChange(new TextSpan(1, 1), "8"));
+            var full = SyntaxTree.Parse(after);
+            Assert.Equal(after, inc.Text);
+            Assert.Equal(Dump(full.GetRoot()), Dump(inc.GetRoot()));
+        }
+    }
+
+    // KNOWN RESIDUAL — deliberately Skipped, not deleted. Incremental parse still
+    // diverges from a full parse on malformed input mixing `@`-attachments with
+    // unbalanced braces: a single edit on a clean tree yields a reuse where the map
+    // offers the correct node (Note+13 'a @finger(1) ') yet the incremental tree
+    // carries Note+2, dropping 2 chars — a data-pos shift with identical geometry.
+    // The top-level pending-marker guard (fixed) does NOT cover it; the mechanism is
+    // a separate reuse-vs-reparse determinism gap under error recovery. To resume:
+    // un-skip (it fails at fuzz step 33) and instrument TryAdoptTokens to see whether
+    // adoption is declined or never attempted at the divergent position.
+    // See HANDOFF-2026-07-20-spring-systems.md §1.
+    [Fact(Skip = "known residual: incremental reuse diverges on malformed @-attachment + unbalanced braces (see HANDOFF)")]
+    public void KnownResidual_MalformedAttachmentReuse_DivergesFromFull()
+    {
+        var rng = new Random(20260702 + Polyphonic.Length);
+        string[] snippets =
+        {
+            "c4 ", "d8 e ", "|", "", " ", "r4 ", "g'2 ", "\n", "<c e>4 ", ".",
+            "@staccato ", "@finger(1) ", "f4 g a b ", "e", "cresc ", "// x\n",
+            "voice { c4 d } ", "}", "{",
+        };
+        var session = new IncrementalCompiler(SyntaxTree.Parse(Polyphonic), Opt);
+        session.Render();
+        for (int i = 0; i < 60; i++)
+        {
+            string current = session.Tree.Text;
+            int start = rng.Next(current.Length + 1);
+            int length = Math.Min(rng.Next(6), current.Length - start);
+            var change = new TextChange(new TextSpan(start, length), snippets[rng.Next(snippets.Length)]);
+            string edited = current[..start] + change.NewText + current[(start + length)..];
+            string? inc = null, full = null;
+            try { inc = Norm(session.Edit(change)); } catch { }
+            try { full = Full(edited); } catch { }
+            if (session.Tree.Text == edited && inc != null && full != null)
+                Assert.Equal(full, inc);
+        }
+    }
+
     [Theory]
     [InlineData(Plain)]
     [InlineData(Header)]
