@@ -245,15 +245,40 @@ internal static class BreakAlignSpacing
     };
 
     /// <summary>
-    /// StaffBar (barline at break) space-alist.
+    /// BarLine.space-alist from LilyPond (the <c>staff-bar</c> break-align symbol).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm BarLine.space-alist (used at break points)
+    /// LILYPOND-REF: scm/define-grobs.scm:291-302 BarLine.space-alist.
+    /// Transcribed entry for entry. These matter INSIDE a break-align group, where the
+    /// unbroken order is <c>clef, staff-bar, key-cancellation, key-signature,
+    /// time-signature</c> (:650-664), so the bar line is the LEFT symbol of every pair
+    /// that follows it.
+    /// <c>next-note (semi-fixed-space . 0.9)</c> has no <see cref="BreakAlignSymbol"/> of
+    /// its own; it is owned by <c>SpacingRules.GetBarlineToItemSpace</c>, which cites the
+    /// same alist entry.
     /// </remarks>
     private static SpacingEntry GetStaffBarSpacing(BreakAlignSymbol right) => right switch
     {
+        // (time-signature . (extra-space . 0.75)) — was falling through to the 1.0
+        // default, which is NOT what LilyPond spaces a bar line to a time signature by.
+        BreakAlignSymbol.TimeSignature =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.75),
+        // (clef . (extra-space . 1.0))
+        BreakAlignSymbol.Clef =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.0),
+        // (key-signature . (extra-space . 1.0))
+        BreakAlignSymbol.KeySignature =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.0),
+        // (key-cancellation . (extra-space . 1.0))
+        BreakAlignSymbol.KeyCancellation =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.0),
+        // (ambitus . (extra-space . 1.0))
+        BreakAlignSymbol.Ambitus =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 1.0),
+        // (first-note . (semi-shrink-space . 1.3))
         BreakAlignSymbol.FirstNote =>
-            new SpacingEntry(SpacingStyle.SemiFixedSpace, 1.3),
+            new SpacingEntry(SpacingStyle.SemiShrinkSpace, 1.3),
+        // (right-edge . (extra-space . 0.0))
         BreakAlignSymbol.RightEdge =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.0),
         _ => new SpacingEntry(SpacingStyle.ExtraSpace, 1.0)

@@ -1035,7 +1035,8 @@ internal static class SpacingRules
     /// </remarks>
     internal static double MmrRodMinimumDistance(BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
     {
-        HorizontalSkyline leftColumnRight = BuildBoundColumnRightSkyline(leftBound, runStartItems);
+        HorizontalSkyline leftColumnRight =
+            BoundaryColumn.Build(leftBound, runStartItems).RightSkylineFromBarLine();
         // The right bounding column carries only its bar line: whatever sits there, the
         // column origin coincides with the leftmost grob's left edge and that grob's
         // default extra-spacing-width left is −0.1, so the column's left reach is −0.1.
@@ -1044,71 +1045,6 @@ internal static class SpacingRules
             StaffYBottom, StaffYTop, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
 
         return Math.Max(0.0, leftColumnRight.Distance(rightColumnLeft));
-    }
-
-    /// <summary>
-    /// Builds the RIGHT horizontal skyline of a multi-measure-rest run's LEFT bounding
-    /// column: the bar line plus any leading key / time change on that column, each as a
-    /// Box widened by its extra-spacing-width. See <see cref="MmrRodMinimumDistance"/> for
-    /// the measured LilyPond geometry and the (documented) exclusions.
-    /// </summary>
-    private static HorizontalSkyline BuildBoundColumnRightSkyline(
-        BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
-    {
-        // separation-item.cc:167 default extra-spacing-width, used by grobs (BarLine)
-        // that define none of their own.
-        const double eswDefaultLeft = -0.1, eswDefaultRight = 0.1;
-        // scm/define-grobs.scm extra-spacing-width of the change grobs.
-        const double keyEswRight = 1.0;
-        const double timeEswRight = 0.8;
-        // Break-alignment edge gaps, measured on LilyPond 2.24.4 (see remarks above).
-        const double barlineToKeyGap = 1.0;
-        const double barlineToTimeGap = 0.75;
-        const double keyToTimeGap = 1.15;
-
-        double bw = EngravingDefaults.BarlineDrawnWidth(leftBound);
-        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>
-        {
-            // Bar line at the column origin.
-            (StaffYBottom, StaffYTop, 0.0 + eswDefaultLeft, bw + eswDefaultRight),
-        };
-
-        // Leading break-aligned changes on this column (they precede the first sounding
-        // item — a rest, in a multi-measure-rest run). LilyPond draws key/time changes
-        // AFTER the bar line.
-        KeySignatureChangeItem? key = null;
-        TimeSignatureChangeItem? time = null;
-        if (runStartItems != null)
-        {
-            foreach (var item in runStartItems)
-            {
-                if (item is KeySignatureChangeItem k) key = k;
-                else if (item is TimeSignatureChangeItem t) time = t;
-                // A clef sits BEFORE the bar line, i.e. outside the bar-line-to-bar-line
-                // span this rod expresses — it is skipped, not forgotten. See remarks.
-                else if (item is ClefChangeItem) { }
-                else if (item.Duration > Fraction.Zero) break; // reached the music
-            }
-        }
-
-        double cursor = bw; // bar line's right edge, column-internal
-        bool keyPresent = false;
-        if (key != null)
-        {
-            double left = cursor + barlineToKeyGap;
-            double right = left + GetKeySignatureChangeWidth(key);
-            boxes.Add((StaffYBottom, StaffYTop, left /* esw left 0 */, right + keyEswRight));
-            cursor = right;
-            keyPresent = true;
-        }
-        if (time != null)
-        {
-            double left = cursor + (keyPresent ? keyToTimeGap : barlineToTimeGap);
-            double right = left + GetTimeSignatureChangeWidth(time);
-            boxes.Add((StaffYBottom, StaffYTop, left /* esw left 0 */, right + timeEswRight));
-        }
-
-        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
     }
 
     /// <summary>
