@@ -71,10 +71,20 @@ public class BarlineSpacingTests
     }
 
     [Fact]
-    public void ItemToBarline_NormalNote_UsesBarlinePadding()
+    public void ItemToBarline_NormalNote_IsTwoDefaultExtraSpacingWidths()
     {
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring MINIMUM for a musical →
+        // breakable pair is the PADDING-FREE skyline distance between the two columns'
+        // boxes; lily/separation-item.cc:166-167 — each box is widened by the default
+        // extra-spacing-width Interval (-0.1, 0.1). So beyond the note's own ink the
+        // minimum is the left column's +0.1 plus the boundary column's -0.1.
+        //
+        // The expectation is written from LilyPond, NOT from the implementation: this
+        // test used to assert `Assert.Equal(SpacingRules.BarlinePadding, space)`, which
+        // compared the code to itself and so pinned 0.8 — a value with no LilyPond
+        // basis — while guarding nothing.
         double space = SpacingRules.GetItemToBarlineSpace(CreateNote());
-        Assert.Equal(SpacingRules.BarlinePadding, space, 2);
+        Assert.Equal(0.2, space, 6);
     }
 
     [Fact]

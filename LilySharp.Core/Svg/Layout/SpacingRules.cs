@@ -240,6 +240,59 @@ internal static class SpacingRules
     /// <summary>Padding between barline and first/last item in staff spaces.</summary>
     public static double BarlinePadding => GlyphMetrics.BarlinePadding;
 
+    /// <summary>
+    /// One side of LilyPond's default <c>extra-spacing-width</c>, the amount every grob
+    /// widens its spacing box by unless it declares its own.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/separation-item.cc:166-167 — <c>Interval (-0.1, 0.1)</c>.</remarks>
+    internal const double DefaultExtraSpacingWidth = 0.1;
+
+    /// <summary>
+    /// The headroom <c>merge_springs</c> leaves above a spring's minimum distance.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:104-129 <c>merge_springs</c>, :122
+    /// <c>avg_distance = std::max (min_distance + 0.3, avg_distance);</c> — "leave a little
+    /// headroom above the largest minimum distance so that things don't get too cramped".
+    /// </remarks>
+    internal const double SpringHeadroom = 0.3;
+
+    /// <summary>
+    /// Applies <c>merge_springs</c>' headroom: a spring never sits at its bare minimum,
+    /// but at least <see cref="SpringHeadroom"/> above it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond routes EVERY spring through <c>merge_springs</c> — even the single-wish
+    /// case, which is why this is not a polyphony-only concern
+    /// (lily/spacing-spanner.cc:380-393, :514-517).
+    /// </para>
+    /// <para>
+    /// This is a distinct constraint from the column ROD. The rod is
+    /// <c>padding (0.1) + skyline distance</c> (lily/separation-item.cc:48-68); this floor
+    /// is <c>skyline distance + 0.3</c>, where the spring's minimum is the PADDING-FREE
+    /// skyline distance (lily/note-spacing.cc:78-83). The floor is therefore always the
+    /// larger of the two, so at force &gt;= 0 — ragged-right, the default — it is what
+    /// binds, and the rod only surfaces when the line is compressed below it. Measured on
+    /// 2.24.4 with <c>c'2 c'2 \clef bass c'1</c>: ragged-right 1.877346 (= skyline
+    /// 1.577346 + 0.3), justified at 40mm 1.677346 (= skyline + padding).
+    /// </para>
+    /// <para>
+    /// Where the duration-based ideal already exceeds the floor — every ordinary
+    /// note-to-note spring, where the ideal is ~3.0 against a floor of ~1.8 — this is a
+    /// no-op. It bites exactly where the ideal is driven small, above all at a measure
+    /// boundary carrying a clef change, whose ideal is measured to the bar line and so
+    /// discounts the clef's whole width.
+    /// </para>
+    /// </remarks>
+    internal static Spring ApplyMergeSpringsHeadroom(Spring spring)
+    {
+        double floor = spring.MinDistance + SpringHeadroom;
+        return spring.IdealDistance >= floor
+            ? spring
+            : new Spring(floor, spring.MinDistance, spring.InverseStretchStrength);
+    }
+
     /// <summary>Gap between accidental and notehead in staff spaces.</summary>
     public static double AccidentalNoteGap => GlyphMetrics.AccidentalNoteGap;
 
@@ -1881,6 +1934,9 @@ internal static class SpacingRules
             spring = ApplyLeftHeadWidth(spring, One(prevItem));
             spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
             spring = WidenForChangeItem(spring, prevItem);
+            // Mirror of MeasureLayouter.CreateInterColumnSpring.
+            // LILYPOND-REF: lily/spacing-spanner.cc:380-393 -> lily/spring.cc:122.
+            spring = ApplyMergeSpringsHeadroom(spring);
             springs.Add(spring);
         }
 
@@ -1908,13 +1964,21 @@ internal static class SpacingRules
 
         // Mirror of MeasureLayouter.CreateLastToBarlineSpring: a clef change opening the
         // NEXT measure is drawn before this bar line, so it widens the MINIMUM here. The
-        // ideal is already bar-line framed and stays put.
+        // duration-based ideal is already bar-line framed and stays put.
         double clefAllowance = BoundaryClefAllowance(measure.EndBarline, nextMeasure);
         if (clefAllowance > 0)
             lastSpring = new Spring(
                 lastSpring.IdealDistance,
                 lastSpring.MinDistance + clefAllowance,
                 lastSpring.InverseStretchStrength);
+
+        // ...and merge_springs' headroom then lifts the ideal off that minimum, which is
+        // what places the bar line when a clef precedes it. Mirror of
+        // MeasureLayouter.CreateLastToBarlineSpring — the two systems must agree
+        // (SpacingInvariantTests.BothSpringSystems_AgreeOnEveryMusicalSpring).
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-393 -> lily/spring.cc:122;
+        //   lily/note-spacing.cc:78-83 for the padding-free minimum it floors from.
+        lastSpring = ApplyMergeSpringsHeadroom(lastSpring);
 
         springs.Add(lastSpring);
 
@@ -2244,10 +2308,24 @@ internal static class SpacingRules
     {
         return prevItem switch
         {
+            // Change items are still measured on the CENTRE basis here (their branch of
+            // CalculateNoteheadRightExtent returns width/2), so they keep their own
+            // constant rather than the box-derived one below, which assumes the
+            // left-edge frame. Converting that frame is a separate step.
             ClefChangeItem => 1.0,
             KeySignatureChangeItem => 1.0,
             TimeSignatureChangeItem => 1.0,
-            _ => BarlinePadding
+            // LilyPond's item → boundary minimum is a pure skyline distance between the
+            // two columns' boxes, with NO padding term: the left column reaches its ink
+            // right edge + extra-spacing-width 0.1, the boundary column's leftmost grob
+            // reaches its ink left edge - 0.1. So the gap beyond the item's own ink is
+            // exactly 0.1 + 0.1. (The rod adds a further `padding` 0.1, but the rod is
+            // not what binds at force >= 0 — see BoundaryClefAllowance / the merge_springs
+            // headroom in ApplyMergeSpringsHeadroom.)
+            // LILYPOND-REF: lily/separation-item.cc:166-167 default extra-spacing-width
+            //   Interval (-0.1, 0.1); lily/note-spacing.cc:78-83 sets the spring minimum
+            //   to the padding-free skyline distance.
+            _ => 2 * DefaultExtraSpacingWidth
         };
     }
 
@@ -2307,8 +2385,17 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Calculates the right extent from notehead center, excluding stems and flags.
+    /// Calculates the item's RIGHTward ink reach from its column, excluding stems and flags.
     /// </summary>
+    /// <remarks>
+    /// The reference point is the column, which coincides with the note head's LEFT edge —
+    /// the same convention <see cref="CalculateLeftExtent"/> documents and LilyPond uses
+    /// (dumping <c>ly:grob-relative-coordinate</c> for a PaperColumn and its NoteHead in
+    /// 2.24.4 gives the same X). So a plain head reaches its FULL ink width to the right.
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — the spacing box is
+    /// <c>il-&gt;extent (pc, X_AXIS)</c>, the grob's extent in its PAPER COLUMN's frame.
+    /// LILYPOND-REF: lily/rest.cc Rest::width — the rest branch below uses the same frame.
+    /// </remarks>
     private static double CalculateNoteheadRightExtent(MusicItem item)
     {
         if (item is ClefChangeItem clefChange)
@@ -2345,8 +2432,14 @@ internal static class SpacingRules
         else
         {
             var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
-            // Right extent from center = width - centerX
-            extent = noteheadBBox.Width - noteheadBBox.CenterX;
+            // The column sits at the head's LEFT edge (see the remarks above and
+            // CalculateLeftExtent, which returns 0 leftward for the same reason), so the
+            // rightward reach is the head's own right edge — mirroring the rest branch.
+            // Seeding this with `Width - CenterX` treated the column as if it were at the
+            // head's CENTRE, which under-charged a black head by ~0.65 ss; paired with a
+            // LEFT extent that had already been converted to the left-edge basis, the two
+            // sides of the same box were being measured in different frames.
+            extent = noteheadBBox.Right;
         }
 
         // Add dots if present

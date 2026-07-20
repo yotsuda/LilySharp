@@ -375,7 +375,12 @@ internal sealed class MeasureLayouter
                 spring.MinDistance + prefixWidth,
                 spring.InverseStretchStrength);
 
-        return spring;
+        // LilyPond merges every wish through merge_springs, which floors the ideal at
+        // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor).
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-393 note_spacing — `merge_springs`
+        //   is taken whenever the wish list is non-empty, i.e. also for a single wish.
+        // LILYPOND-REF: lily/spring.cc:122 — avg_distance = max (min_distance + 0.3, …).
+        return SpacingRules.ApplyMergeSpringsHeadroom(spring);
     }
 
     /// <summary>
@@ -434,17 +439,29 @@ internal sealed class MeasureLayouter
         }
 
         // A clef change opening the NEXT measure is drawn before this bar line, so its
-        // width belongs to this closing gap. Only the MINIMUM moves: LilyPond keeps the
-        // ideal measured to the bar line itself (note-spacing.cc:99-100 subtracts the
-        // bar line's column-internal offset), which is the frame this spring is already
-        // in. LILYPOND-REF: SpacingRules.BoundaryClefAllowance.
+        // width belongs to this closing gap. It enters the MINIMUM: LilyPond keeps the
+        // duration-based ideal measured to the bar line itself (note-spacing.cc:99-100
+        // subtracts the bar line's column-internal offset), which is the frame this
+        // spring is already in. LILYPOND-REF: SpacingRules.BoundaryClefAllowance.
         if (boundaryClefAllowance > 0)
             endSpring = new Spring(
                 endSpring.IdealDistance,
                 endSpring.MinDistance + boundaryClefAllowance,
                 endSpring.InverseStretchStrength);
 
-        return endSpring;
+        // ...and then merge_springs' headroom lifts the IDEAL off that minimum, which is
+        // what actually places the bar line when a clef sits before it: the ideal above
+        // discounts the clef's whole width, so without this floor the clef is drawn back
+        // over the preceding note.
+        //   note -> bar line = max (clef-less ideal, skyline + 0.3 + clef allowance)
+        // Measured on 2.24.4 (`c'4 d' e' f' \clef bass g4 a b c'`):
+        //   max (1.934752, 1.504212 + 0.3 + 2.84668) = 4.650892, and the dumped grobs
+        //   give 22.357657 - 17.706765 = 4.650892.
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-393 note_spacing -> merge_springs;
+        //   lily/spring.cc:122 avg_distance = max (min_distance + 0.3, avg_distance).
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring MINIMUM is the
+        //   padding-free skyline distance, which is what the 0.3 is measured from.
+        return SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
     }
 
     /// <summary>
