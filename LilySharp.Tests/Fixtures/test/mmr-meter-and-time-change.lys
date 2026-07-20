@@ -1,0 +1,42 @@
+// Multi-measure rests outside 4/4, and a time change at a run's bound.
+//
+// A multi-measure rest fills its bar, and "its bar" is the PREVAILING METER — not a
+// whole note. `R2.*3` in 3/4 and `R2*3` in 2/4 collapse into one church rest exactly
+// like `R1*3` does in 4/4. Lily# used to require a whole-note rest, so every non-4/4
+// run stayed a row of individual rests with all its bar lines.
+//
+// The second run additionally opens on a `time 2/4` change, which LilyPond hangs on the
+// run's opening column as a break-aligned grob: the bar stays IN the run and the time
+// signature reserves its own width on the bound.
+//
+// Verified against LilyPond 2.24.4, bar line to bar line:
+//   3/4 R2.*3  12.25 (LP 12.245)      4/4 R1*3 is 12.66, 2/4 R2*3 is 11.66
+//   2/4 R2*3 opening on the time change — the signature buys +3.06 over the same run
+//   with no change at its bound (LP +3.055).
+//
+// LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music (one spanner per run),
+// lily/paper-column.cc:144-164 minimum_distance, lily/separation-item.cc:120-190 boxes.
+title "MMR in 3/4 and 2/4, with a time change at a bound"
+composer "Lily#"
+
+tempo 120
+time 3/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e |
+    R2.*3 |
+    f4 g a |
+    time 2/4 R2*3 |
+    g4 a |
+  }
+}
+
+form main { Main }
+
+score main "mmr-meter-and-time-change" {
+  staff melody
+}

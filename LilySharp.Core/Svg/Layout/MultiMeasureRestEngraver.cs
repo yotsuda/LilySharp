@@ -234,7 +234,8 @@ internal static class MultiMeasureRestEngraver
             if (!cn.IsChordRow)
                 chordMeasures.Add(cn.MeasureIndex);
 
-        return FindRuns(score.Voice.Measures, allStaffMeasures, chordMeasures);
+        return FindRuns(score.Voice.Measures, allStaffMeasures, chordMeasures,
+            score.TimeSignature.MeasureDuration);
     }
 
     /// <summary>
@@ -256,7 +257,8 @@ internal static class MultiMeasureRestEngraver
             if (!cn.IsChordRow)
                 chordMeasures.Add(cn.MeasureIndex);
 
-        return FindRuns(staffMeasures[0], staffMeasures, chordMeasures);
+        return FindRuns(staffMeasures[0], staffMeasures, chordMeasures,
+            score.TimeSignature.MeasureDuration);
     }
 
     /// <summary>
@@ -266,10 +268,26 @@ internal static class MultiMeasureRestEngraver
     internal static ImmutableArray<MmrRun> FindRuns(
         ImmutableArray<Measure> primaryMeasures,
         IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures,
-        IReadOnlySet<int> chordMeasures)
+        IReadOnlySet<int> chordMeasures,
+        Fraction initialMeasureDuration)
     {
         if (primaryMeasures.IsDefaultOrEmpty)
             return ImmutableArray<MmrRun>.Empty;
+
+        // A multi-measure rest fills its bar, and "its bar" is the PREVAILING METER, not
+        // a whole note: `R2*3` in 2/4 and `R2.*3` in 3/4 collapse exactly like `R1*3` in
+        // 4/4 (verified on LilyPond 2.24.4 — each renders one "3" church rest). Walk the
+        // bars carrying the meter forward, applying any time change the bar itself holds,
+        // since a change at the head of a bar governs that bar.
+        var meters = new Fraction[primaryMeasures.Length];
+        var meter = initialMeasureDuration;
+        for (int m = 0; m < primaryMeasures.Length; m++)
+        {
+            foreach (var item in primaryMeasures[m].Items)
+                if (item is TimeSignatureChangeItem tc)
+                    meter = tc.NewTime.MeasureDuration;
+            meters[m] = meter;
+        }
 
         // A measure collapses into a multi-measure rest only when EVERY staff
         // rests it. LilyPond keeps the measures (and their barlines) separate when
@@ -300,23 +318,23 @@ internal static class MultiMeasureRestEngraver
         // The bar rests the whole measure with an EXPLICIT multi-measure rest, optionally
         // preceded by break-aligned changes that ride the run's opening column. This is
         // what a run swallows; the leading changes stay on the run's left bound.
-        static bool IsMmrMeasure(Measure m)
+        static bool IsMmrMeasure(Measure m, Fraction meter)
         {
             int i = 0;
             while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
                 i++;
             return i == m.Items.Length - 1
                 && m.Items[i] is RestItem { IsMultiMeasure: true, IsSpacer: false } rest
-                && rest.BaseDuration >= new Fraction(1, 1);
+                && rest.Duration >= meter;
         }
 
         bool RestsEverywhere(int m)
         {
-            if (m >= primaryMeasures.Length || !IsMmrMeasure(primaryMeasures[m]))
+            if (m >= primaryMeasures.Length || !IsMmrMeasure(primaryMeasures[m], meters[m]))
                 return false;
             if (allStaffMeasures != null)
                 foreach (var sm in allStaffMeasures)
-                    if (m >= sm.Length || !IsMmrMeasure(sm[m]))
+                    if (m >= sm.Length || !IsMmrMeasure(sm[m], meters[m]))
                         return false;
             return true;
         }

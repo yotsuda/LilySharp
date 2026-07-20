@@ -440,6 +440,11 @@ public class SvgSnapshotTests
         // Lily# used to eject the bar, printing a whole rest + a 4-bar rest. Verified
         // against LilyPond 2.24.4.
         yield return new object[] { "test/mmr-key-change-bound" };
+        // Multi-measure rests outside 4/4 (3/4 R2.*3, 2/4 R2*3) collapse like R1*3 does:
+        // the rest fills the PREVAILING METER, not a whole note. The second run also opens
+        // on a time change, which rides its left bound. Verified against LilyPond 2.24.4
+        // (3/4 run spans 12.25 vs LP 12.245; the time signature buys +3.06 vs LP +3.055).
+        yield return new object[] { "test/mmr-meter-and-time-change" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
         // BOTH staves keep their barlines — no merged MMR symbol (that only

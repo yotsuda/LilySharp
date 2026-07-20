@@ -126,4 +126,65 @@ public class MultiMeasureRestLayoutTests
         Assert.True(mmr.EndX > mmr.StartX,
             $"MMR span EndX must be greater than StartX, got {mmr.StartX}/{mmr.EndX}");
     }
+
+    /// <summary>Run grouping straight from the engraver, over a full score document.</summary>
+    private static System.Collections.Immutable.ImmutableArray<MmrRun> Runs(string body)
+    {
+        var tree = SyntaxTree.Parse(body);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        return MultiMeasureRestEngraver.FindRuns(multi);
+    }
+
+    private static string Document(string meter, string music) => $$"""
+        time {{meter}}
+        key c major
+        part melody
+        section Main { melody { {{music}} } }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
+    [Theory]
+    [InlineData("4/4", "c4 d e f", "R1*3")]
+    [InlineData("3/4", "c4 d e", "R2.*3")]
+    [InlineData("2/4", "c4 d", "R2*3")]
+    public void FullMeasureRest_CollapsesInAnyMeter(string meter, string filler, string run)
+    {
+        // A multi-measure rest fills its BAR, and the bar is the prevailing meter — not a
+        // whole note. LilyPond 2.24.4 renders each of these as one "3" church rest; Lily#
+        // used to demand a whole-note rest, leaving every non-4/4 run as individual rests.
+        // LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music.
+        var runs = Runs(Document(meter, $"{filler} | {run} | {filler} |"));
+        var only = Assert.Single(runs);
+        Assert.Equal(1, only.StartMeasureIndex);
+        Assert.Equal(3, only.Count);
+    }
+
+    [Fact]
+    public void TimeChangeAtBound_OpensTheRunAndStaysInIt()
+    {
+        // LilyPond hangs a time change on the run's opening column as a break-aligned grob,
+        // so the bar carrying it stays IN the run (count includes it) rather than being
+        // ejected as a lone rest. Verified on 2.24.4: `\time 2/4 R2*3` after a 4/4 bar
+        // renders one "3" church rest with the signature on its left bound.
+        var runs = Runs(Document("4/4", "c4 d e f | time 2/4 R2*3 | g4 a |"));
+        var only = Assert.Single(runs);
+        Assert.Equal(1, only.StartMeasureIndex);
+        Assert.Equal(3, only.Count);
+    }
+
+    [Fact]
+    public void ChangePartwayThroughRests_SplitsTheRun()
+    {
+        // A change PART WAY through a rest sequence starts a fresh run instead of riding an
+        // existing one's bound. Verified on LilyPond 2.24.4: `R1*2 \key g\major R1*3`
+        // renders "2" then "3", the signature on the between-column.
+        var runs = Runs(Document("4/4", "c4 d e f | R1*2 | key g major R1*3 | g4 a b c |"));
+        Assert.Equal(2, runs.Length);
+        Assert.Equal(1, runs[0].StartMeasureIndex);
+        Assert.Equal(2, runs[0].Count);
+        Assert.Equal(3, runs[1].StartMeasureIndex);
+        Assert.Equal(3, runs[1].Count);
+    }
 }
