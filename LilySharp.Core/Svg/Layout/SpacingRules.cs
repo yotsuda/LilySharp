@@ -667,6 +667,59 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// Merges the per-voice stem-direction spacing wishes for the pair
+    /// (last note column at <paramref name="tLeft"/> → the bar line) into a single
+    /// spring — the bar-line counterpart of <see cref="MergeVoiceStemWishes"/>.
+    /// Every voice sounding a note/chord column at that moment contributes one wish:
+    /// the base spring refined by that voice's correction against the bar line's
+    /// virtual stem.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond runs the note → bar-line pair through the SAME per-voice merge as a
+    /// note → note pair: spacing-spanner.cc:183-199 generate_pair_spacing dispatches on
+    /// the LEFT column being musical, so a musical → breakable pair also goes to
+    /// musical_column_spacing (:322-393), which collects one Note_spacing wish per voice
+    /// and ends in <c>merge_springs</c>. The wish itself carries the bar-line branch of
+    /// the stem correction (note-spacing.cc:243-264), ported as
+    /// <see cref="CalculateStemCorrectionToBarline"/>.
+    ///
+    /// Verified on LilyPond 2.24.4, last-column → bar-line-column distance over one 4/4
+    /// bar of quarters: stems up throughout 3.393249, stems down throughout 3.192257,
+    /// and the two as simultaneous voices 3.292753 — exactly their average, which is
+    /// what merge_springs does when the wishes share a min distance.
+    ///
+    /// This depends on the voice-forced stem directions being resolved into the model
+    /// before spacing (MeasureCollector.ResolveVoiceStemDirections); with the
+    /// pitch-derived directions it saw previously, the merge moved the spring the wrong
+    /// way in polyphony.
+    ///
+    /// LILYPOND-REF: lily/note-spacing.cc:113 — the corrected ideal is clamped at 0.0
+    /// (not at the min distance), matching the single-voice path this replaces.
+    /// </remarks>
+    internal static Spring MergeVoiceStemWishesToBarline(
+        Spring baseSpring, IReadOnlyList<Measure> voices,
+        Fraction tLeft, NoteSpacingParameters noteParams)
+    {
+        Spring? merged = null;
+        foreach (var voice in voices)
+        {
+            if (NoteColumnAt(voice, tLeft) is not { } left)
+                continue;
+
+            double corr = CalculateStemCorrectionToBarline(left, noteParams);
+            Spring wish = corr != 0
+                ? new Spring(
+                    Math.Max(0, baseSpring.IdealDistance + corr),
+                    baseSpring.MinDistance,
+                    baseSpring.InverseStretchStrength)
+                : baseSpring;
+
+            merged = merged is null ? wish : Spring.Merge(merged, wish);
+        }
+        return merged ?? baseSpring;
+    }
+
+    /// <summary>
     /// The note or chord column starting exactly at moment <paramref name="t"/> in
     /// <paramref name="measure"/>, or null if that voice rests (or has no column)
     /// there. Zero-duration change items sharing the moment are skipped.
