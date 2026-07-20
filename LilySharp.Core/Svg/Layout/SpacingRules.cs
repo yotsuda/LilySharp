@@ -1019,9 +1019,19 @@ internal static class SpacingRules
     /// pure new key, or a pure cancellation to C); a key TYPE change (flats↔sharps) at the
     /// bound is slightly under-reserved by the inter-grob gap LilyPond puts between the
     /// cancellation and the new signature — rare enough to leave documented.
-    /// A leading CLEF change is intentionally NOT modeled: Lily# draws it AFTER the bar line
-    /// (SharedRenderer open-change) where LilyPond draws it before, so reserving LilyPond's
-    /// before-bar geometry would disagree with what Lily# actually draws.
+    /// A leading CLEF change contributes NOTHING here, and that is LilyPond's own answer,
+    /// not an omission. LilyPond orders an unbroken break-align group
+    /// <c>clef, cue-clef, staff-bar, key-cancellation, key-signature, time-signature</c>
+    /// (scm/define-grobs.scm:650-664), so the clef is the only one of the three that sits
+    /// BEFORE the bar line. LilyPond's <c>minimum_distance</c> is measured column ORIGIN to
+    /// column origin, and the origin is the leftmost break-aligned grob — so a clef moves
+    /// the ORIGIN left without moving the bar line. This rod is expressed in Lily#'s frame,
+    /// where the bar line sits at the origin (see the box built for it below), i.e. bar line
+    /// to bar line. Measured on 2.24.4, bar line to bar line across `R1*5` is 14.133856 both
+    /// with and without a leading `\clef bass` (and with a sparse or a dense preceding bar);
+    /// only the column origin moves, by the clef's width + its
+    /// <c>Clef.space-alist (staff-bar . (extra-space . 0.7))</c>. Adding a clef box here
+    /// would therefore widen the run by ~2.847 ss that LilyPond does not spend.
     /// </remarks>
     internal static double MmrRodMinimumDistance(BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
     {
@@ -1074,7 +1084,9 @@ internal static class SpacingRules
             {
                 if (item is KeySignatureChangeItem k) key = k;
                 else if (item is TimeSignatureChangeItem t) time = t;
-                else if (item is ClefChangeItem) { /* not modeled — see remarks */ }
+                // A clef sits BEFORE the bar line, i.e. outside the bar-line-to-bar-line
+                // span this rod expresses — it is skipped, not forgotten. See remarks.
+                else if (item is ClefChangeItem) { }
                 else if (item.Duration > Fraction.Zero) break; // reached the music
             }
         }

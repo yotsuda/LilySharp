@@ -213,6 +213,37 @@ public class MultiMeasureRestLayoutTests
     }
 
     [Fact]
+    public void ClefChangeAtBound_OpensTheRunAndStaysInIt()
+    {
+        // A clef change is break-aligned exactly like key and time, so the bar carrying it
+        // stays IN the run. Verified on LilyPond 2.24.4: `\clef bass R1*5` after a 4/4 bar
+        // renders a single "5" church rest. Lily# used to eject that bar, printing a lone
+        // whole rest plus a "4" church rest.
+        // The clef GLYPH is drawn on the other side of the bar line from key/time
+        // (scm/define-grobs.scm:650-664 puts clef before staff-bar); that is a separate,
+        // still-open drawing divergence and does not affect the grouping asserted here.
+        var runs = Runs(Document("4/4", "c4 d e f | clef bass R1*5 | g4 a b c |"));
+        var only = Assert.Single(runs);
+        Assert.Equal(1, only.StartMeasureIndex);
+        Assert.Equal(5, only.Count);
+    }
+
+    [Fact]
+    public void ClefChangePartwayThroughRests_SplitsTheRun()
+    {
+        // The other half of the rule: a clef change PART WAY through a rest sequence starts
+        // a fresh run rather than riding an existing bound. Verified on LilyPond 2.24.4:
+        // `R1*2 \clef bass R1*3` renders "2" then "3", the bass clef drawn just before the
+        // bar line between them — the same split key and time produce.
+        var runs = Runs(Document("4/4", "c4 d e f | R1*2 | clef bass R1*3 | g4 a b c |"));
+        Assert.Equal(2, runs.Length);
+        Assert.Equal(1, runs[0].StartMeasureIndex);
+        Assert.Equal(2, runs[0].Count);
+        Assert.Equal(3, runs[1].StartMeasureIndex);
+        Assert.Equal(3, runs[1].Count);
+    }
+
+    [Fact]
     public void ChangePartwayThroughRests_SplitsTheRun()
     {
         // A change PART WAY through a rest sequence starts a fresh run instead of riding an

@@ -299,16 +299,18 @@ internal static class MultiMeasureRestEngraver
         // Rest drawn at beat 1 (it must NOT centre, and must hang from the 4th line via
         // the normal rest renderer). LILYPOND-REF: scm/define-grobs.scm Rest vs
         // MultiMeasureRest; lily/multi-measure-rest.cc (only the MMR spanner centres).
-        // A key / time change LilyPond hangs on the run's opening NonMusicalPaperColumn
-        // (a break-aligned grob), NOT on the rest as measure content — so it does not
-        // disqualify the bar from the run: it rides the run's LEFT bound. A change PART
-        // WAY through a rest sequence instead starts a fresh run there (see OpensNewRun).
-        // Clef changes are deliberately excluded — Lily# draws a clef change AFTER the bar
-        // line where LilyPond draws it before, so its width is not reserved on the bound
-        // (MmrRodMinimumDistance skips it too); a clef-led rest bar therefore stays out of
-        // the run, matching that documented spacing exclusion.
+        // A clef / key / time change LilyPond hangs on the run's opening
+        // NonMusicalPaperColumn (a break-aligned grob), NOT on the rest as measure
+        // content — so it does not disqualify the bar from the run: it rides the run's
+        // LEFT bound. A change PART WAY through a rest sequence instead starts a fresh
+        // run there (see OpensNewRun). All three behave alike; verified on 2.24.4:
+        // `\clef bass R1*5` renders one "5" church rest, and `R1*2 \clef bass R1*3`
+        // renders "2" then "3" — the same pair of outcomes key and time give.
+        // Where the clef GLYPH sits differs from key/time (LP puts clef BEFORE the bar
+        // line, key/time after — scm/define-grobs.scm:650-664 break-align-orders), but
+        // that is a drawing question and does not change the run grouping.
         static bool IsBreakAlignedChange(MusicItem it)
-            => it is KeySignatureChangeItem or TimeSignatureChangeItem;
+            => it is KeySignatureChangeItem or TimeSignatureChangeItem or ClefChangeItem;
 
         static bool HasLeadingBreakAlignedChange(Measure m)
             => m.Items.Length > 0 && IsBreakAlignedChange(m.Items[0]);
