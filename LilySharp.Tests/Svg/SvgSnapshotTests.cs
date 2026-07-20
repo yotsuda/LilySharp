@@ -78,6 +78,12 @@ public class SvgSnapshotTests
         yield return new object[] { "test/dot-force-down" };
         // Beamed rests are pushed clear of the beam (Beam::rest_collision_callback).
         yield return new object[] { "test/beamed-rest" };
+        // Piano pedal styles (part property `pedal`: text and mixed; the default
+        // bracket is exercised by test/pedal-note-anchor).
+        yield return new object[] { "test/pedal-text" };
+        yield return new object[] { "test/pedal-mixed" };
+        // A pedal change renders a "/\" notch (bracket-flare) at the shared note.
+        yield return new object[] { "test/pedal-change" };
         // A run past the church-rest expand-limit (10) prints the big_rest H-bar —
         // the only fixture exercising DrawBigRest (bar/serif thickness vs LP).
         yield return new object[] { "test/multi-measure-rest-long" };

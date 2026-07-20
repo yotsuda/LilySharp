@@ -496,9 +496,13 @@ internal static partial class SharedRenderer
 
     // ---------- Pedal brackets ----------
 
+    // Mixed style: how far past the note column the bracket line starts, clearing
+    // the centred "Ped." text (its right half ≈ 1.9 ss) plus bound-padding (1.0).
+    private const double MixedPedalTextClearance = 2.9;
+
     /// <summary>
-    /// Draws piano pedal brackets: horizontal line below staff with a
-    /// vertical hook at the release point.
+    /// Draws piano pedal brackets: a below-staff line with an up hook at each end
+    /// (bracket style) or a right hook only after the "Ped." text (mixed style).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/piano-pedal-bracket.cc — PianoPedalBracket grob
@@ -506,16 +510,41 @@ internal static partial class SharedRenderer
     private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.PedalBracketLayouts.IsDefaultOrEmpty) return;
+        // LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket thickness = 1.0
+        // (× line-thickness); edge-height (1.0 . 1.0), direction DOWN — the hooks
+        // rise from the below-staff line back toward the staff.
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.PedalBracketLayouts)
         {
             if (!sysTopYUp.TryGetValue(b.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top less the stored device offset.
             double absY = syUp - b.Y;
+            // A pedal-change end is a flared edge (the "/\" notch); the horizontal
+            // line stops PedalBracketFlare short of the note and the edge slants to
+            // the note at edge height. An outer end is a straight vertical hook.
+            // Mixed style keeps the leading "Ped." text, so its left end has no edge
+            // and the line starts past the text. LILYPOND-REF: piano-pedal-bracket.cc.
+            const double flare = EngravingDefaults.PedalBracketFlare;
+            double top = absY + b.EdgeHeight; // hooks/notch rise toward the staff
+            double lineStartX = b.IsMixed ? b.StartX + MixedPedalTextClearance
+                              : b.StartChange ? b.StartX + flare : b.StartX;
+            double lineEndX = b.EndChange ? b.EndX - flare : b.EndX;
             using (gc.Source(b.SourcePosition))
             {
-                gc.DrawLine(b.StartX, absY, b.EndX, absY, Color.Black, thickness);
-                gc.DrawLine(b.EndX, absY + b.EdgeHeight, b.EndX, absY, Color.Black, thickness);
+                gc.DrawLine(lineStartX, absY, lineEndX, absY, Color.Black, thickness);
+                // Right end: flared notch toward b.EndX (change) or vertical hook.
+                if (b.EndChange)
+                    gc.DrawLine(lineEndX, absY, b.EndX, top, Color.Black, thickness);
+                else
+                    gc.DrawLine(b.EndX, absY, b.EndX, top, Color.Black, thickness);
+                // Left end: mixed has none; a change flares to b.StartX; else vertical.
+                if (!b.IsMixed)
+                {
+                    if (b.StartChange)
+                        gc.DrawLine(lineStartX, absY, b.StartX, top, Color.Black, thickness);
+                    else
+                        gc.DrawLine(lineStartX, absY, lineStartX, top, Color.Black, thickness);
+                }
             }
         }
     }

@@ -161,7 +161,11 @@ internal static class MusicMarkEngraver
         ImmutableArray<Measure> measures = default,
         ImmutableArray<VoltaBracketLayout> voltaBrackets = default,
         ImmutableArray<ChordNameLayout> chordNames = default,
-        ImmutableArray<LyricLayout> lyrics = default)
+        ImmutableArray<LyricLayout> lyrics = default,
+        // Optional per-mark gate: a mark for which this returns false reserves its
+        // SourceIndex but draws no text (used to hide the "Ped." / "*" a bracket or
+        // mixed pedal style replaces). Null keeps every mark.
+        Func<MusicMarkItem, bool>? keepMarkText = null)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -434,6 +438,10 @@ internal static class MusicMarkEngraver
             for (int i = 0; i < belowMarks.Count; i++)
             {
                 var (mark, x, si) = belowMarks[i];
+                // A bracket/mixed pedal style draws the "Ped." / "*" as a bracket
+                // instead; skip the text layout (its SourceIndex si is already fixed).
+                if (keepMarkText != null && !keepMarkText(mark))
+                    continue;
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double yUp;

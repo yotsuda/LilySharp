@@ -33,7 +33,17 @@ public readonly record struct PedalBracketLayout(
     double Y,                // Y position below staff (relative to system top)
     double EdgeHeight,       // Height of the end hook (vertical line at release)
     int StartMeasureIndex,   // For system Y lookup in renderer
-    int SourcePosition       // For click-to-source mapping
+    int SourcePosition,      // For click-to-source mapping
+    // Mixed style ("Ped." text then a line): the LEFT hook is omitted and the
+    // line starts after the text. LILYPOND-REF: piano-pedal-bracket.cc:80-88.
+    bool IsMixed = false,
+    // A pedal CHANGE (release + re-engage on the same note) abuts the previous /
+    // next bracket. LilyPond draws the shared end not as a vertical hook but as a
+    // flared edge; two abutting flares form the "/\" notch at the change, while
+    // the outer ends stay vertical. LILYPOND-REF: scm/define-grobs.scm
+    // PianoPedalBracket bracket-flare = (0.5 . 0.5).
+    bool StartChange = false,
+    bool EndChange = false
 );
 
 /// <summary>
@@ -44,12 +54,10 @@ public readonly record struct PedalBracketLayout(
 /// LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket parameters
 /// LILYPOND-REF: define-grobs.scm:3573-3619 SustainPedal/SustainPedalLineSpanner
 ///
-/// NOTE: the DEFAULT pedalSustainStyle is 'text — just "Ped." at sustain-on and
-/// "*" at sustain-off, with NO connecting line or hook. The horizontal line +
-/// release hook belong to the 'bracket / 'mixed styles. Lily# currently emits
-/// only the text style (the "Ped." / "*" music marks), so these bracket layouts
-/// are not wired into the layout pipeline; this class is retained as the basis
-/// for a future bracket style.
+/// Style selection is per-part (Staff.PedalStyle, from the `pedal` part
+/// property). LayoutEngine runs this engraver for staves whose style is
+/// Bracket (Lily# default) or Mixed and suppresses the corresponding "Ped." /
+/// "*" text marks; the Text style keeps the marks and emits no bracket.
 /// </remarks>
 internal static class PedalEngraver
 {
@@ -142,7 +150,8 @@ internal static class PedalEngraver
     public static ImmutableArray<PedalBracketLayout> Calculate(
         ImmutableArray<PedalBracketItem> brackets,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        bool isMixed = false)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -196,8 +205,23 @@ internal static class PedalEngraver
                 bracketY,
                 EdgeHeight,
                 bracket.StartMeasureIndex,
-                bracket.SourcePosition));
+                bracket.SourcePosition,
+                isMixed));
         }
+
+        // Mark abutting ends as pedal CHANGES: where one bracket ends exactly where
+        // the next begins (a release + re-engage on the same note), both shared ends
+        // render as flared edges (the "/\" notch) instead of vertical hooks.
+        for (int a = 0; a < layouts.Count; a++)
+            for (int b = 0; b < layouts.Count; b++)
+            {
+                if (a == b) continue;
+                if (Math.Abs(layouts[a].EndX - layouts[b].StartX) < 0.01)
+                {
+                    layouts[a] = layouts[a] with { EndChange = true };
+                    layouts[b] = layouts[b] with { StartChange = true };
+                }
+            }
 
         return layouts.ToImmutable();
     }

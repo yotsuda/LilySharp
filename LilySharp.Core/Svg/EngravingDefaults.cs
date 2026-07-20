@@ -180,6 +180,11 @@ internal static class EngravingDefaults
     /// <summary>Threshold for applying rest shift (in staff positions).</summary>
     public const double RestShiftThreshold = 0.1;
 
+    /// <summary>Horizontal flare (staff spaces) of a piano-pedal bracket's edge at a
+    /// pedal change; two abutting flares form the "/\" notch.
+    /// LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket bracket-flare = (0.5 . 0.5).</summary>
+    public const double PedalBracketFlare = 0.5;
+
     // === Flags ===
     /// <summary>Width of a flag glyph (in staff spaces).</summary>
     public const double FlagWidth = 1.2;

@@ -1,0 +1,20 @@
+// Pedal MIXED style (part property `pedal mixed`): the leading "Ped." text, then
+// a bracket line to the release with an up hook there (no left hook) — LilyPond's
+// pedalSustainStyle = 'mixed. LILYPOND-REF: lily/piano-pedal-bracket.cc:80-88.
+title "Pedal mixed"
+time 4/4
+
+part lh {
+  clef bass
+  pedal mixed
+}
+
+section Main {
+  lh { c4 d e@ped f | g4 a b@ped(off) c | }
+}
+
+form main { Main }
+
+score main "pedal-mixed" {
+  staff lh
+}

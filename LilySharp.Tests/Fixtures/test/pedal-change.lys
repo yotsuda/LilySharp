@@ -1,0 +1,20 @@
+// A pedal CHANGE (release + immediate re-engage on the same note) draws a "/\"
+// notch at the change instead of a full release/re-press, while the outer ends
+// stay as vertical hooks: |‾‾‾/\‾‾‾/\‾‾‾|. Default bracket style.
+// LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket bracket-flare = (0.5 . 0.5).
+title "Pedal change"
+time 4/4
+
+part rh {
+  clef treble
+}
+
+section Main {
+  rh { c'1@ped | d'1@ped(off)@ped | e'1@ped(off) | }
+}
+
+form main { Main }
+
+score main "pedal-change" {
+  staff rh
+}

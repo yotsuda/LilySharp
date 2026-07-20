@@ -46,7 +46,9 @@ public sealed record StaffSpec(
     ChordDisplayMode ChordDisplay = ChordDisplayMode.Names,
     // Named lyrics parts aligned note-by-note BELOW this staff
     // (staff NAME with lyrics L [with lyrics L2 ...]); multiple stack as verses.
-    ImmutableArray<string> WithLyrics = default
+    ImmutableArray<string> WithLyrics = default,
+    // How piano pedal marks render (part property `pedal`: bracket | text | mixed).
+    PedalStyle PedalStyle = PedalStyle.Bracket
 );
 
 /// <summary>
@@ -253,6 +255,7 @@ public sealed record RenderSpec(
                         RemoveEmpty = single.Staff.RemoveEmpty,
                         RemoveFirst = single.Staff.RemoveFirst,
                         Lines = single.Staff.Lines,
+                        PedalStyle = single.Staff.PedalStyle,
                     };
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
@@ -267,6 +270,7 @@ public sealed record RenderSpec(
                             RemoveEmpty = s.RemoveEmpty,
                             RemoveFirst = s.RemoveFirst,
                             Lines = s.Lines,
+                            PedalStyle = s.PedalStyle,
                         })
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);

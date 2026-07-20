@@ -38,7 +38,12 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "removeEmpty", "lines",
+        "octave", "removeEmpty", "lines", "pedal",
+    };
+
+    private static readonly HashSet<string> PedalValues = new(StringComparer.Ordinal)
+    {
+        "bracket", "text", "mixed",
     };
 
     private static readonly HashSet<string> ClefValues = new(StringComparer.Ordinal)
@@ -83,6 +88,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 break;
             case "tuning":
                 CheckValue(valueTokens, TuningValues, "tuning");
+                break;
+            case "pedal":
+                CheckValue(valueTokens, PedalValues, "pedal");
                 break;
             case "instrument":
                 // A quoted "…" label is free-text; only a bare preset is a symbol.

@@ -1421,15 +1421,36 @@ internal sealed class LayoutEngine
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
 
-        // Pedal rendering uses the default TEXT style: "Ped." at the engage note
-        // and "*" at the release note, with NO connecting line or hook (those
-        // belong to the bracket / mixed styles, which Lily# does not emit). The
-        // "Ped." / "*" text is drawn from the SustainOn/Off music marks, so here
-        // we emit no bracket layout.
-        // LILYPOND-REF: scm/define-grobs.scm SustainPedal — default
-        //   pedalSustainStyle = 'text ("Ped." … "*"); 'bracket / 'mixed add the
-        //   line+hook and are separate styles.
-        var pedalBracketLayouts = ImmutableArray<PedalBracketLayout>.Empty;
+        // Piano pedal marks render per the part's `pedal` style (Staff.PedalStyle):
+        //   bracket (Lily# default) / mixed  -> a spanning bracket, and the "Ped." /
+        //                                        "*" text is suppressed (mixed keeps
+        //                                        the leading "Ped." only);
+        //   text                             -> keep "Ped." / "*", no bracket.
+        // LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle.
+        PedalStyle StaffPedalStyle(int staffIndex) =>
+            staffByIndex != null && staffByIndex.TryGetValue(staffIndex, out var st)
+                ? st.PedalStyle : PedalStyle.Text; // no staff info -> plain text
+        var pedalBracketBuilder = ImmutableArray.CreateBuilder<PedalBracketLayout>();
+        if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
+        {
+            foreach (var staffIndex in musicMarks
+                .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
+            {
+                var style = StaffPedalStyle(staffIndex);
+                if (style == PedalStyle.Text)
+                    continue;
+                var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
+                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks);
+                pedalBracketBuilder.AddRange(
+                    PedalEngraver.Calculate(brackets, systems, ml, isMixed: style == PedalStyle.Mixed));
+            }
+        }
+        var pedalBracketLayouts = pedalBracketBuilder.ToImmutable();
+        // A bracket/mixed style suppresses the "Ped." / "*" text a mark would draw.
+        // The predicate is applied when the mark LAYOUT is built (below), so the raw
+        // mark list — and every mark's SourceIndex into it — stays intact for the
+        // incremental-reuse data-pos path (SharedRenderer.ResolveDataPos).
+        Func<MusicMarkItem, bool> keepMarkText = m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex));
 
         // Layout figured bass (drops below below-staff scripts via the
         // script-augmented DOWN skylines)
@@ -1515,7 +1536,7 @@ internal sealed class LayoutEngine
             staffByIndex: staffByIndex);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
-            chordNames: chordNameLayouts, lyrics: lyricLayouts);
+            chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
@@ -1710,6 +1731,31 @@ internal sealed class LayoutEngine
             };
         }
         return result;
+    }
+
+    // Piano pedal sustain / sostenuto / una-corda marks.
+    private static bool IsPedalMark(MusicMarkType type) =>
+        type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+             or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+             or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+
+    // A pedal RELEASE mark ("*"): the mixed style has no star (Ped._____| ).
+    private static bool IsPedalOffMark(MusicMarkType type) =>
+        type is MusicMarkType.SustainOff or MusicMarkType.SostenutoOff
+             or MusicMarkType.UnaCordaOff;
+
+    // Whether a mark's "Ped." / "*" text is still drawn under the given style.
+    // LILYPOND-REF: lily/piano-pedal-engraver.cc — text keeps both, bracket keeps
+    // neither, mixed keeps the leading "Ped." only.
+    private static bool KeepPedalTextMark(MusicMarkItem m, PedalStyle style)
+    {
+        if (!IsPedalMark(m.Type)) return true;
+        return style switch
+        {
+            PedalStyle.Text => true,
+            PedalStyle.Mixed => !IsPedalOffMark(m.Type),
+            _ => false,
+        };
     }
 
     private static ScoreLayout BuildScoreLayout(

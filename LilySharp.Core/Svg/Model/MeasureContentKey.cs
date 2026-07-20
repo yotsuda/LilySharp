@@ -229,6 +229,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.Transposition);
         hc.Add(staff.TabNumbersOnly);
         hc.Add(staff.Lines);
+        hc.Add((int)staff.PedalStyle);
     }
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---

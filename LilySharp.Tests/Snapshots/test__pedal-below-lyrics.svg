@@ -65,9 +65,10 @@
   <text x="19.49" y="25.38" font-size="3.20" text-anchor="middle" data-pos="532">la</text>
   <text x="22.80" y="25.38" font-size="3.20" text-anchor="middle" data-pos="535">la</text>
   <text x="26.12" y="25.38" font-size="3.20" text-anchor="middle" data-pos="538">la</text>
-  <text x="19.49" y="34.27" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="557">Ped.</text>
-  <text x="26.12" y="34.27" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="565">*</text>
   <rect x="8.80" y="12.93" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="475"/>
   <text x="9.79" y="15.13" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="475">A</text>
+  <line x1="19.49" y1="34.27" x2="26.12" y2="34.27" stroke="#000000" stroke-width="0.100" data-pos="557"/>
+  <line x1="26.12" y1="34.27" x2="26.12" y2="33.27" stroke="#000000" stroke-width="0.100" data-pos="557"/>
+  <line x1="19.49" y1="34.27" x2="19.49" y2="33.27" stroke="#000000" stroke-width="0.100" data-pos="557"/>
   </g>
 </svg>

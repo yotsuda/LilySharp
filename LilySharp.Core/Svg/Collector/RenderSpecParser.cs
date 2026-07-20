@@ -350,6 +350,9 @@ public static class RenderSpecParser
         string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
         int lines = int.TryParse(GetPartProperty(staff, voiceName, "lines"), out int ln)
             && ln is >= 1 and <= 5 ? ln : 5;
+        // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
+        var pedalStyle = Staff.ParsePedalStyle(
+            GetPartProperty(staff, voiceName, "pedal")?.ToLowerInvariant());
         return new StaffSpec(clef, voiceName, instrumentName,
             RemoveEmpty: removeEmpty is "true" or "all",
             RemoveFirst: removeEmpty is "all",
@@ -357,7 +360,8 @@ public static class RenderSpecParser
             WithChords: withChords,
             NameSuppressed: nameSuppressed,
             ChordDisplay: chordDisplay,
-            WithLyrics: withLyrics.ToImmutable());
+            WithLyrics: withLyrics.ToImmutable(),
+            PedalStyle: pedalStyle);
     }
 
     /// <summary>Maps the `as roman | both | names` selector text to its mode.</summary>

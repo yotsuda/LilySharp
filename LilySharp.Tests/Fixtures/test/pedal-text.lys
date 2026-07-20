@@ -1,0 +1,20 @@
+// Pedal TEXT style (part property `pedal text`): "Ped." at the engage note and
+// "*" at the release, with no bracket — LilyPond's pedalSustainStyle = 'text.
+// LILYPOND-REF: lily/piano-pedal-engraver.cc — create_text_grobs.
+title "Pedal text"
+time 4/4
+
+part lh {
+  clef bass
+  pedal text
+}
+
+section Main {
+  lh { c4 d e@ped f | g4 a b@ped(off) c | }
+}
+
+form main { Main }
+
+score main "pedal-text" {
+  staff lh
+}

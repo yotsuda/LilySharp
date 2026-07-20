@@ -51,6 +51,27 @@ public enum ClefType
 }
 
 /// <summary>
+/// How piano pedal marks (sustain/sostenuto/una-corda) are drawn for a part.
+/// LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle; the three
+/// LilyPond styles render as:
+///   bracket: |_________/\____|   (a spanning bracket; the default here)
+///   text:       Ped.        *    ("Ped." at engage, "*" at release)
+///   mixed:      Ped. ______/\____|  ("Ped." text then a bracket line)
+/// LilyPond defaults to 'text; Lily# defaults to Bracket because the bracket
+/// shows the pedalled SPAN unambiguously (a language choice — every style still
+/// renders layout-identically to the corresponding LilyPond style).
+/// </summary>
+public enum PedalStyle
+{
+    /// <summary>A spanning bracket with a hook at each end. Lily# default.</summary>
+    Bracket,
+    /// <summary>"Ped." at engage and "*" at release, with no bracket.</summary>
+    Text,
+    /// <summary>"Ped." text followed by a bracket line and a release hook.</summary>
+    Mixed
+}
+
+/// <summary>
 /// A single staff with its own clef and voices.
 /// </summary>
 /// <remarks>
@@ -122,6 +143,13 @@ public sealed record Staff(
     /// LILYPOND-REF: StaffSymbol line-positions (percussion/timbales styles).</summary>
     public int Lines { get; init; } = 5;
 
+    /// <summary>
+    /// How this part's piano pedal marks render (part property <c>pedal</c>:
+    /// <c>bracket</c> | <c>text</c> | <c>mixed</c>). Default <see cref="PedalStyle.Bracket"/>.
+    /// LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle.
+    /// </summary>
+    public PedalStyle PedalStyle { get; init; } = PedalStyle.Bracket;
+
     /// <summary>Creates a single-voice staff.</summary>
     public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName);
@@ -184,6 +212,14 @@ public sealed record Staff(
     /// </summary>
     public static Staff CreateTextRow(Voice voice)
         => new(ClefType.Treble, ImmutableArray.Create(voice), IsTextRow: true);
+
+    /// <summary>Parses a pedal-style string; unknown/empty falls back to the default Bracket.</summary>
+    public static PedalStyle ParsePedalStyle(string? style) => style switch
+    {
+        "text" => PedalStyle.Text,
+        "mixed" => PedalStyle.Mixed,
+        _ => PedalStyle.Bracket
+    };
 
     /// <summary>
     /// Parses a clef string to ClefType.

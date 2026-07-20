@@ -219,13 +219,14 @@ public sealed record MultiStaffScore
     /// <summary>
     /// Creates a MultiStaffScore from a single-voice Score (for backward compatibility).
     /// </summary>
-    public static MultiStaffScore FromScore(Score score, string? instrumentName = null, int lines = 5)
+    public static MultiStaffScore FromScore(Score score, string? instrumentName = null, int lines = 5,
+        PedalStyle pedalStyle = PedalStyle.Bracket)
     {
         var clef = Staff.ParseClef(score.Clef);
         // Preserve ALL voices (polyphony), not just the primary, so the renderer
         // can draw every voice. (Voice collision offsets in the multi-staff layout
         // path remain a separate refinement.)
-        var staff = Staff.Create(clef, score.Voices, instrumentName) with { Lines = lines };
+        var staff = Staff.Create(clef, score.Voices, instrumentName) with { Lines = lines, PedalStyle = pedalStyle };
         var staffGroup = StaffGroup.CreateSingle(staff);
 
         return new MultiStaffScore(
