@@ -1,6 +1,7 @@
 # LilyPond 座標系 忠実移植 監査 (LILYPOND-REF coordinate-fidelity audit)
 
-2026-07-19。全 `LILYPOND-REF`(1757件/~170ファイル)のうち**幾何(座標)に関わるもの**を対象に、
+2026-07-19 起票 / **2026-07-21 更新**（YFlip 配線状況の訂正・解決済み指摘のマーク・§3.I 追加）。
+全 `LILYPOND-REF`(1757件/~170ファイル)のうち**幾何(座標)に関わるもの**を対象に、
 LP の座標系（**方向** Y-up/Y-down と**単位** staff-space/staff-position…）を Lily# が
 **字面通り**同じ形で導入できているかを監査。目的は出力の正しさ以上に**アーキテクチャ忠実性**
 （[[LP_COORDINATE_MODEL.md]] の投資理由と同じ）。既存 `COORDINATE_SYSTEM.md` は Stage-4 Y-up
@@ -21,7 +22,7 @@ LP は**単一座標系でなく grob 親子チェーンの相対参照点の木
 | **L2** | Staff-position（音高） | 中央線=0 | **Y-up** | **half-staff-space**（音高は整数） | notehead/rest の縦位置。`staff-symbol-referencer.cc:130` `y = pos*ss/2`。幾何へは `*0.5` |
 | **L3** | フォント設計単位 | glyph 原点 | Y-up | 設計単位 → `output-scale`(≈×0.04) → ss | Emmentaler/SMuFL glyph metrics・stencil |
 | **L4** | Device / page 出力 | page 左上 | **Y-DOWN** | device (big-point / output-scale) | **出力時のみ** `framework-ps.scm:109`, cairo。L1→L4 は**単一フリップ** |
-| **L5** | X スペーシング格子 | PaperColumn | X-right | ss | 水平スペーシング spring |
+| **L5** | X スペーシング格子 | PaperColumn（**musical / non-musical の2種**） | X-right | ss | 水平スペーシング spring。非音楽列は `BreakAlignment` で clef→staff-bar→key→time を順序付け |
 
 要点: **内部は例外なく L1(ss, Y-up)**。L2 は音高の整数表現で、幾何に入る時 `*0.5` で L1 化。
 Y の反転は L4（出力）で**一度だけ**。per-grob 反転は存在しない。
@@ -36,7 +37,7 @@ Y の反転は L4（出力）で**一度だけ**。per-grob 反転は存在し�
 | **LS2** | Staff-position | Y-up | half-space（整数） | L2 | 音高/notehead Y。幾何へ `*0.5` |
 | **LS3** | Glyph metrics | Y-up | ss（`GlyphMetricsGenerated`） | L3 | ※agent H |
 | **LS4** | Render device | **Y-down** | pixel（`×SpaceHeight`） | L4 | **単一 `YFlipDrawingContext`** フリップ（[[STAGE4_YUP_INVERSION.md]]） |
-| **LS5** | X スペーシング | X-right | ss | L5 | ※agent H |
+| **LS5** | X スペーシング | X-right | ss | L5 | 単位/方向 faithful。ただし **non-musical 列の型が無い**（§3.I） |
 
 歴史的経緯: かつて layout が **page-absolute Y-down + notehead 左端アンカー**、一部 Y に
 **half-space** を使用。Stage-4 で render を native Y-up 化・単一フリップに集約。beam quanter は
@@ -74,8 +75,8 @@ Y の反転は L4（出力）で**一度だけ**。per-grob 反転は存在し�
 - **[med] SharedRenderer.Beams.cs:152-153** — **tab** beam は `TabBeamQuant` が **device Y** を返し
   `pageHeight - y` で page Y-up へ**その場フリップ**。notation beam（native Y-up）と非対称 → **hack**。
   tab quanter を native Y-up 化すれば解消。
-- **[low] StemCalculator.cs:205（XML doc）** — 戻り値を「in staff positions/half-spaces」と記すが
-  実際は **ss**（統一前から `*2` して使っていた＝コメントが常に stale）→ **stale**。doc 修正のみ。
+- **[✅解消] StemCalculator.cs:205（XML doc）** — 戻り値を「in staff positions/half-spaces」と記すが
+  実際は **ss** → doc 修正のみ。**対処済**: 現行 :205-207 は "in staff-spaces … NOT half-spaces" と明記。
 - それ以外（BeamScoringProblem の seed/damping/quant/scorer 群、BeamConfiguration、
   BeamQuantParameters、BeamSubdivision）は **ss + Y-up で faithful**（本セッションで LP 逐一照合）。
 
@@ -209,10 +210,9 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
   `(1−extent_up[RIGHT]/extent_down[RIGHT])·0.5` 未移植（merge/wipe は透明化のみ）。X 軸・軽微。
 - **[low・stale] NoteCollision.cs:206-219** — meshing 0.1/0.17 の ref を `check_meshing_chords():180-230` と
   するが実乗算は `:332-337`。値は正・ポインタのみ stale。
-- **[low・stale] StemCalculator.cs:205,262-265** — doc「staff positions/half-spaces を返す」＋「Convert back
-  to staff-space」コメントに反し実際は**絶対 ss** を返す（`stem.cc:1213-1265` と一致確認）。統一で常に stale。
-  → **doc の単位ラベル修正のみ**（§3.A と同一指摘）。
-- **[faithful] StemCalculator.CalculateStemEndY**（`stem.cc:480-596`）— LP は half-space 计算
+- **[✅解消] StemCalculator.cs:205,262-265** — doc「staff positions/half-spaces を返す」に反し実際は
+  **絶対 ss**（`stem.cc:1213-1265` と一致確認）→ doc の単位ラベル修正のみ（§3.A と同一指摘）。**対処済**。
+- **[faithful] StemCalculator.CalculateStemEndY**（`stem.cc:480-596`）— LP は half-space 計算
   (":501 WARNING: IN HALF SPACES") で、Lily# も half-space frame を保持し単一の `shorten/2.0`(÷2) で橋渡し。
   方向・単位橋渡し正。`MinStemLength` clamp は Lily# 追加(ss・benign)。
 - **[faithful] ChordHeadPositioning**（`stem.cc:606-765`）— 閾値/`ell`/reverse_overlap/shift 一致。
@@ -249,11 +249,11 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
   Glissando（`√(dx²+dy²)` は 2 ss 軸で単位混在なし）, Arpeggio（`pos·0.5±protrusion` 符号正）。
 ### 3.G Renderers & Marks
 
-**renderer/layout は native Y-up で計算し、device Y-down への反転は描画境界で行う。**
-（訂正: 監査エージェントは「`YFlipDrawingContext` に単一集約」と報告したが、実コードでは
-`YFlipDrawingContext` は**未配線**〔同ファイル L49 "currently UNWIRED"〕。反転は draw 直前に
-per-call で共有 `StaffFrame.ToDevice`（involution `staffMiddleY − x`）／`pageHeight − y` により実施され、
-`SvgDrawingContext` は座標を素通し出力する＝**`IDrawingContext` は device Y-down を受け取る**。）
+**renderer/layout は native Y-up で計算し、device Y-down への反転は単一の `YFlipDrawingContext` が行う。**
+（⚠️ 2026-07-21 更新: 本節はかつて「`YFlipDrawingContext` は**未配線**、反転は draw 直前に per-call」と
+記していたが、**その記述自体が stale だった**。実コードは `SharedRenderer.cs:99` で page context を
+`new YFlipDrawingContext(doc.BeginPage(...), page.Height)` に包んでおり、**配線済み・単一集約**。
+§4.6 島1 が先に訂正していた内容を本節にも反映した。監査エージェントの当初報告の方が正しかった。）
 layout engraver は `StaffFrame.ToUp/ToDevice` で Y-up("frame B")格納。**これらのファイルに
 ss→pixel/spaceHeight 演算は出現しない**（SVG backend 側）。全 `÷2`/`×2` は staff-position↔ss の正当変換。
 
@@ -268,10 +268,15 @@ ss→pixel/spaceHeight 演算は出現しない**（SVG backend 側）。全 `÷
 | Connectors.cs | brace glyph 選択（unitsPerEm 1000, pow0.8） | — | n-a | font-design-unit/無次元 | :448-459 |
 
 #### 忠実性所見
-- **[取消・false-positive] IDrawingContext.cs:37-39** — 監査で「contract doc『Y downward』は stale」と
-  したが**誤り**。`YFlipDrawingContext` が未配線のため renderer は draw 境界で per-call に device Y-down へ
-  変換して `IDrawingContext` に渡す（`SvgDrawingContext` は素通し）。→ **doc『Y downward』は現状正しい**。
-  将来 `YFlipDrawingContext` を配線し renderer が Y-up を直接渡すようになった時点で doc 更新が必要。
+- **[low・contract 曖昧] IDrawingContext.cs:37-39** — remark は「Origin is top-left, Y axis points
+  downward」の**1フレームしか書いていない**が、この interface は**2つのフレームで使われる**:
+  renderer → `YFlipDrawingContext` は **page Y-up**、`YFlipDrawingContext` → `SvgDrawingContext` は
+  **device Y-down**。つまり doc は「後段」だけを述べており、前段の呼び出し側には当てはまらない。
+  実害はない（各実装は一貫）が、**同じ型が2フレームを運ぶ**のは符号ミス誘発 smell → contract に
+  「装飾前=Y-up / 装飾後=Y-down」を明記するのが望ましい。
+  ⚠️ 経緯: 本監査は当初「doc は stale」と指摘 →「YFlip 未配線につき false-positive」と取消 →
+  **その取消の前提（未配線）が誤り**（`SharedRenderer.cs:99` で配線済み、`YFlipDrawingContext.cs:49`
+  自身が "This is WIRED" と明記）。doc を実コードで裏取りせずに書き換えた失敗例として残す。
 - **[low] Marks.cs:650-664（DrawBigRest）** — LP `multi-measure-rest.cc:203-212` の end cap は **2.0ss** 高
   （`Interval(−ss,ss)`）だが Lily# は `2*0.8=1.6ss`（0.4ss 短）＋ ref コメント「full staff-space height」も不正確。
   軸/方向/単位は正、定数のみドリフト。
@@ -300,14 +305,13 @@ renderer-local staff frame（`EngravingDefaults.StaffMiddle`/Rest 位置）と `
 | TabStaffGeometry.cs | StaffY/StringY(device), StringSpace(ss) | X+Y | **device Y-down** | ss | :157-175 |
 
 #### 忠実性所見（座標=単位/方向は全 faithful。以下は**値/スタイルの staleness**）
-- **[high・value-stale] BreakAlignSpacing.cs:151-172 GetClefSpacing** — LP `define-grobs.scm:914-925` は
-  Clef space-alist `key-signature (extra-space 0.82)/time-signature 1.52/staff-bar 0.7` だが Lily# は
-  `minimum-space 3.5/3.5/4.2/3.7`（**旧 LP 値＋別スタイル**）。**単位は正(ss)**だが値もスタイルも現行 LP と乖離
-  → 行頭 clef→key/time/bar が現行 LP より数 ss 広い。collapsed spring モデルへの意図的補償の可能性あるが
-  参照元の値ではない。
-- **[med・value-stale] :182-187 GetKeyCancellationSpacing** — key-sig `0.3`(LP0.5)/time-sig`1.15`(LP1.25) stale
-  （staff-bar 0.6 は一致）。prefix 幅の軽微ドリフト。
-- **[med・value-stale] :234-236 GetTimeSignatureSpacing→StaffBar** — `2.0` vs LP `1.0`(`:3952`) stale。
+- **[✅解消] BreakAlignSpacing.cs GetClefSpacing** — 監査時は `minimum-space 3.5/3.5/4.2/3.7`（旧 LP 値＋
+  別スタイル）で行頭 clef→key/time/bar が数 ss 広かった。**対処済**（`9c76abf9`）: 現行は LP
+  `define-grobs.scm:914-925` の extra-space をそのまま持つ — key-cancellation 0.82 / key-signature 0.82 /
+  time-signature 1.52 / first-note `minimum-fixed-space` 5.0 / right-edge 0.5 / **staff-bar 0.7**。
+  （2026-07-21 再確認。この staff-bar 0.7 は clef が bar line の**前**に立つときの間隙で、実測一致 → §3.I。）
+- **[✅解消] GetKeyCancellationSpacing / GetTimeSignatureSpacing→StaffBar** — key-sig `0.3`(LP0.5)/
+  time-sig `1.15`(LP1.25)/`2.0`(LP1.0) が stale だった。**対処済**（`9c76abf9` に含む）。
 - **[low・line-stale] EngravingDefaults.cs:359-373** — tie/slur 太さ**値は faithful**（1.2/0.8, LP `:2039/2841`）だが
   引用行番号 `:3175/:3898` が旧レイアウト（行ドリフト）。
 - **[low] TabStaffGeometry.cs:84** — TabBeamQuant が `0.6*tanh` のみで LP `:766` の `/(damping+concaveness)`
@@ -316,6 +320,41 @@ renderer-local staff frame（`EngravingDefaults.StaffMiddle`/Rest 位置）と `
   （`define-grobs.scm` と値一致）、SpacingRules/Spring/SpringSolver/StaffSpacing/NoteSpacing（spring・duration
   space 式一致、無次元 force+ss）、EmmentalerGlyphs（code point のみ）。`MinItemGap0.4 vs LP horizontal-padding0.1`
   は**文書化された意図的補償**。
+
+### 3.I X スペーシング格子（L5/LS5）— 2026-07-21 追加
+
+§3.H は水平スペーシングの**単位**（全 ss・リークなし）を監査したが、**格子そのものの構造**は
+未監査のまま「※agent H」で残っていた。本節がそれを埋める。**単位・方向は faithful だが、
+LP の格子の半分が型として存在しない。**
+
+| LP | Lily# | 状態 |
+|---|---|---|
+| `PaperColumn`（musical） | `ColumnLayout(Fraction Timing, double X, double Width)` | 対応あり |
+| **`NonMusicalPaperColumn`**（breakable） | **型が存在しない** | ❌**欠落** |
+| **`BreakAlignment` group**（clef→staff-bar→key-cancel→key-sig→time-sig） | `BreakAlignSpacing`（順序・space-alist は完備）だが**行頭にしか配線されていない** | ⚠️**部分** |
+
+#### 忠実性所見
+- **[high・frame 欠落] 小節境界に列が無い** — `ColumnLayout` は `Fraction Timing` で鍵付けされ、
+  かつ `MeasureLayout` の**内側**（`ScoreLayout.cs:38-42`「X offset from measure start」）にある。
+  LP の `NonMusicalPaperColumn` は「同じ moment に musical 列とは**別に**立つ、小節をまたぐ列」
+  なので、**Lily# の型では構造的に表現できない**。`NonMusicalPaperColumn` はコード中コメントにしか
+  出現しない。
+- **帰結: 同じ「境界の列」が4か所で部分的に再発明されている** —
+  `SpacingRules.BuildBoundColumnRightSkyline`（MMR 専用に列の右スカイラインをその場で組む）／
+  `GetBarlineToItemSpace`・`GetItemToBarlineSpace`（列を空間定数に畳んだ形）／
+  `ChangeItemPrefixWidth`（列内 change grob 幅）。境界は「左小節の `EndBarline`」＋
+  「右小節の先頭 change items」に**分割して**保持される。
+- **帰結: 境界に関わる LP 移植は毎回フレーム変換を要する** — 実例（2026-07-21 実測）:
+  LP `note-spacing.cc:77-108` は ideal も min も**列→列**で計算し、最後に
+  `ideal -= staff_bar_group->extent(right_col, X)[LEFT]` で ideal だけ bar line 基準へ落とす。
+  Lily# の終端 spring は**最初からその減算後のフレーム**（item→bar line）にあるため、
+  この行は no-op になる一方、**列→列である min には clef が入る**ので、そこだけ変換が要る。
+  `break-align-orders` の unbroken 順（`define-grobs.scm:650-664`）で clef だけが staff-bar の
+  **前**に立つことが原因。実測: `R1*5` の bar line 間 span は clef 有無で **14.133856 と不変**、
+  動くのは列原点のみ（clef 幅＋`Clef.space-alist staff-bar 0.7` = 2.84668）。
+- **§4.2(a) と同じクラスの未完** — (a) が「方向は逆だが型はある」なのに対し、こちらは
+  **型そのものが無い**。単位・方向由来の数値バグは出ていない（現行出力は LP 一致）が、
+  「字面通り移植」を境界で行う限り毎回変換が挟まる。
 
 ---
 
@@ -331,15 +370,18 @@ layout に pixel は出ない）。残る **half-space(staff-position)** は概�
 
 ### 4.2 方向（direction）
 **LP は Y-up 一貫＋device で単一フリップ。Lily# は Stage-4 で renderer / skyline(vertical) / 大半の engraver を
-native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界で共有 `StaffFrame.ToDevice`／`pageHeight−y`；
-単一集約の `YFlipDrawingContext` は実装済だが**未配線**＝`IDrawingContext` は現状 device Y-down を受ける）。
-残存 Y-down フレームが2系統:
+native Y-up 化。** device 反転は **`YFlipDrawingContext` に単一集約済み**（`SharedRenderer.cs:99` で page
+context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-21 訂正: 本節はかつて「未配線・per-call」と
+記していたが stale だった。§3.G 参照。〕残存 Y-down フレームが2系統:
 - **(a) 譜間/system 縦積み**（`MultiStaffLayouter`/`LayoutEngine`）が **Y-down page-absolute**。単位 ss で
   大きさは LP `align-interface` と一致するが**方向のみ設計反転**。全 annotation touchpoint で `-YUp`/`ToDevice`
   の単一フォールド反射を要する＝**最大の非-native フレーム**（一貫変換ゆえ数値は正、frame 忠実性としては未完）。
 - **(b) 個別 device 島**（TieVariant, Pedal[dead], MusicMarkEngraver 内部, 水平 skyline の Y horizon,
   TabStaffGeometry, beam collision island, tab beam quanter）— device Y-down で動き境界で反射。faithful だが
   frame 非統一（将来の符号ミス誘発 smell）。
+
+なお **X 側にも1系統の未完がある**（方向でなく**型の欠落**）: LP の non-musical PaperColumn に
+対応する型が無く、小節境界の列が2小節に分割保持されている → §3.I / §4.3 #9。
 
 ### 4.3 要修正（座標モデル/値の実バグ、severity 順）
 | # | Sev | 箇所 | 種別 | 内容 |
@@ -352,17 +394,18 @@ native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界
 | 6 | med | BreakAlignSpacing.cs:182-236 | value-stale | KeyCancellation/TimeSig→StaffBar が旧値（0.3/1.15/2.0 vs 0.5/1.25/1.0） |
 | 7 | low | LedgerLineSpannerEngraver.cs:63 | wrong-unit | 0.25 を符頭幅比率でなく絶対 ss で適用（加線が各側 ~0.08ss 短い） |
 | 8 | low | ScoreLayout.cs:259-267 | unit-mix-flag | `GetRestShift` が唯一 half-space（consumer 検証要） |
+| 9 | **high** | `ColumnLayout`/`MeasureLayout`（§3.I） | **frame 欠落** | LP の `NonMusicalPaperColumn`（小節境界に立つ breakable 列）に対応する型が無い。境界が「左小節 EndBarline＋右小節先頭 items」に分割され、同じ列が4か所で部分再発明。**現行出力は正**だが境界の LP 移植は毎回フレーム変換を要する |
 | — | (既知) | BeamScoringProblem collision island / tab beam quanter | frame island | §3.A 記載・別 follow-up |
 
 ### 4.4 doc/label のみ修正（コードは正）
-- **IDrawingContext.cs:37-39** — 「Y downward」は**現状正しい**（YFlip 未配線・§3.G の訂正）。監査の当初指摘は
-  false-positive。将来 YFlip 配線時に更新。
+- **IDrawingContext.cs:37-39** — 🔲**未対処**。YFlip は配線済みなので、この interface は装飾前=Y-up /
+  装飾後=Y-down の**2フレームを運ぶ**。remark は後段のみ記述 → 両フレームを明記する更新が要る（§3.G）。
 - **StemCalculator.cs:205,262-265** / **StemInfo** — 戻り値「staff positions/half-spaces」ラベルが実際は ss。
   → **修正済**（ss と明記）。
 - **COORDINATE_SYSTEM.md** 陳腐化 → **修正済**（本書へのポインタ＋layer 表更新）。
 - 多数の LILYPOND-REF 行番号ドリフト（cosmetic、関数は正しく指す）— 一括再採番は別途。
 
-### 4.6 対処状況（2026-07-19）
+### 4.5 対処状況（2026-07-19 起票／2026-07-21 更新）
 | # | 項目 | 状況 |
 |---|---|---|
 | 1 | Slur staff-line frame 不一致 | ✅**修正**（staffMiddleY 導入で絶対-page frame へ・commit `1c902285`） |
@@ -373,13 +416,23 @@ native Y-up 化。** ただし device 反転は**まだ per-call**（draw 境界
 | 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`9c76abf9` に含む） |
 | 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
-| doc | IDrawingContext / StemCalculator / COORDINATE_SYSTEM | ✅（IDraw=false-positive、他2件 doc 修正済） |
+| 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔲**未着手**。単位/方向は正・現行出力も LP 一致だが、LP の breakable 列が型として無いため境界の移植に毎回フレーム変換が要る。着手順は「①LP 境界幾何を導出しきる → ②列を出力中立の純リファクタとして導入 → ③clef/key/time を載せ替え（出力変化・要承認）」 |
+| doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
+| doc | IDrawingContext.cs:37-39 | 🔲**未対処**。YFlip 配線済につき装飾前=Y-up/装飾後=Y-down の2フレームを運ぶ。remark は後段のみ記述（§3.G）。当初「false-positive」としたのは**誤り**だった |
 | 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔄**進行中**（正確な現状は `HANDOFF-stage4-vertical-yup.md`）。**YFlip 配線＋全 grob レイアウト Y-up 化は Phase 2i〜2z で既完了**（`e09d4e72`ほか。旧「未配線」記述は stale だった）。残＝共有 device stacking/skyline substrate の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b` 済／OutsideStaffStacker・MusicMarkEngraver 等 残）＋ system.Y/staff.Y の Y-up 格納（W2）。各島は boundary-shim で独立に byte 不変移行可。出力は既に正 |
 | 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正。島1完了後に整理） |
 
-### 4.5 結論
-**方向・単位の忠実移植は大部分達成**（Stage-4 Y-up 集約＋ss 統一＋単一フリップ）。ユーザー懸念の
-「LP 座標系を同形で導入できていない箇所」は**局所的に残存**し、最重要は **①slur の staff-line 回避 frame 不一致
-（実害あり silent no-op）**と **②譜間縦積みの Y-down 設計残存（数値は正・frame 忠実性のみ未完）**。それ以外は
-値 staleness・doc ラベル・device 島の非統一で、いずれも局所修正可能。beam quanter で行った「方向 AND 単位を LP と
-揃えてから字面移植」の原則を、上記 §4.3 各所へ順次適用するのが次段。
+### 4.6 結論（2026-07-21 更新）
+**方向・単位の忠実移植は大部分達成**（Stage-4 Y-up 集約＋ss 統一＋`YFlipDrawingContext` による単一フリップ）。
+起票時の実バグ8件は**すべて対処済**（§4.5）。残るのは「数値は正だが frame 忠実性が未完」の3系統:
+
+- **①譜間/system 縦積みの Y-down 設計残存** — 型はあるが方向が LP と逆（§4.2(a)・島1で進行中）
+- **②device 島群** — 各々一貫・境界で反射（§4.2(b)・繰延）
+- **③non-musical PaperColumn の欠落** — **型そのものが無い**（§3.I・新規）
+
+①②は Y（縦）側、③は X（横）側。**③は本監査で唯一「LP にある型が Lily# に無い」ケース**で、
+他2件（方向差・島化）より深い。境界に関わる LP 移植を「字面通り」で行いたい限り、先に型を入れる
+必要がある。
+
+beam quanter で確立した「**方向 AND 単位を LP と揃えてから字面移植**」の原則は、③では
+「**まず必要な座標系（列）を導入し、その上にロジックを移植**」という形を取る。
