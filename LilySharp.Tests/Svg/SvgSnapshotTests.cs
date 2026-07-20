@@ -73,6 +73,9 @@ public class SvgSnapshotTests
     public static IEnumerable<object[]> TestSamples()
     {
         yield return new object[] { "test/notes" };
+        // Multi-voice collision forces the DOWN voice's on-line augmentation dot
+        // BELOW the line (DotConfiguration dir = -1) instead of the default up.
+        yield return new object[] { "test/dot-force-down" };
         // A run past the church-rest expand-limit (10) prints the big_rest H-bar —
         // the only fixture exercising DrawBigRest (bar/serif thickness vs LP).
         yield return new object[] { "test/multi-measure-rest-long" };
