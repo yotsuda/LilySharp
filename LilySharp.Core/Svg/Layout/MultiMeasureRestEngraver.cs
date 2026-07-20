@@ -183,21 +183,31 @@ internal static class MultiMeasureRestEngraver
                     + EngravingDefaults.BarlineDrawnWidth(voice.Measures[runStart].StartBarline);
                 double endX = endMeasure.X + endMeasure.Width
                     - EngravingDefaults.BarlineDrawnWidth(voice.Measures[runEnd].EndBarline);
-                // Within-system Y offset (device, down from the system top) of the
-                // staff middle, NOT an absolute page Y — so it is independent of where
-                // paging places the system. The draw resolves the system-top Y-up and
-                // subtracts this, which decouples the MMR from SystemLayout.Y for the
-                // Stage-4 W2 stacking-origin flip.
-                double y = LayoutUtilities.StaffOffsetInSystem(startSystem, staffIndex)
-                    + staffHeight / 2.0;
+                // EVERY resting staff gets its own symbol: in LilyPond the engraver lives
+                // in the Staff context, so a run (which only forms when all staves rest)
+                // prints one Multi_measure_rest per staff, each with its own count above
+                // it. Verified on 2.24.4 with a PianoStaff resting R1*4 in both staves.
+                // Lily# suppresses the per-bar rest glyphs for the whole run across all
+                // staves, so emitting only one symbol left every staff below the first
+                // blank. LILYPOND-REF: lily/multi-measure-rest-engraver.cc (Staff context).
+                foreach (int si in StaffIndicesIn(startSystem, staffIndex))
+                {
+                    // Within-system Y offset (device, down from the system top) of the
+                    // staff middle, NOT an absolute page Y — so it is independent of where
+                    // paging places the system. The draw resolves the system-top Y-up and
+                    // subtracts this, which decouples the MMR from SystemLayout.Y for the
+                    // Stage-4 W2 stacking-origin flip.
+                    double y = LayoutUtilities.StaffOffsetInSystem(startSystem, si)
+                        + staffHeight / 2.0;
 
-                builder.Add(new MultiMeasureRestLayout(
-                    StartMeasureIndex: runStart,
-                    MeasureCount: count,
-                    StartX: startX,
-                    EndX: endX,
-                    Y: y,
-                    UseChurchRest: count <= ExpandLimit));
+                    builder.Add(new MultiMeasureRestLayout(
+                        StartMeasureIndex: runStart,
+                        MeasureCount: count,
+                        StartX: startX,
+                        EndX: endX,
+                        Y: y,
+                        UseChurchRest: count <= ExpandLimit));
+                }
             }
         }
 
@@ -372,6 +382,31 @@ internal static class MultiMeasureRestEngraver
         }
 
         return runs.ToImmutable();
+    }
+
+    /// <summary>
+    /// The staves a run's symbol is drawn on. An explicit <paramref name="requested"/>
+    /// index yields just that staff; the default (-1) yields every staff the system
+    /// carries, or the single unindexed staff when the system has no groups — which is
+    /// the single-staff path, where this keeps the previous behaviour exactly.
+    /// </summary>
+    private static IEnumerable<int> StaffIndicesIn(SystemLayout system, int requested)
+    {
+        if (requested >= 0 || system.StaffGroups.IsDefaultOrEmpty)
+        {
+            yield return requested;
+            yield break;
+        }
+
+        bool any = false;
+        foreach (var group in system.StaffGroups)
+            foreach (var staff in group.Staves)
+            {
+                any = true;
+                yield return staff.StaffIndex;
+            }
+        if (!any)
+            yield return requested;
     }
 
     /// <summary>

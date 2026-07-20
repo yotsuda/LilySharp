@@ -451,6 +451,12 @@ public class SvgSnapshotTests
         // happens via \compressMMRests over all-resting measures). Regression
         // for the dropped-barline bug. Verified against LilyPond 2.24.4.
         yield return new object[] { "test/multi-measure-rest-grandstaff" };
+        // The opposite case to the one above: when BOTH staves rest the same bars the run
+        // DOES collapse, and every staff prints its own church rest with its own count —
+        // LilyPond runs the engraver per Staff context. Lily# used to emit a single symbol
+        // on the top staff while suppressing the rest glyphs on all of them, leaving the
+        // lower staff blank. Verified against LilyPond 2.24.4.
+        yield return new object[] { "test/mmr-grandstaff-both-rest" };
         // Covers a stacked-digit time signature (3/8) AND a grand staff whose
         // secondary (bass) staff out-counts the primary in a measure — both
         // were uncovered and both had rendering bugs (time-sig digits too high;

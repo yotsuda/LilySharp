@@ -175,6 +175,44 @@ public class MultiMeasureRestLayoutTests
     }
 
     [Fact]
+    public void AllStavesResting_EachStaffGetsItsOwnSymbol()
+    {
+        // LilyPond's multi-measure-rest engraver runs in the Staff context, so a run —
+        // which only forms when EVERY staff rests — prints one Multi_measure_rest per
+        // staff. Verified on 2.24.4 (PianoStaff resting R1*4 in both staves: two church
+        // rests, two counts). Lily# emitted one symbol for the whole system while
+        // suppressing the per-bar rest glyphs on all staves, blanking the lower one.
+        // LILYPOND-REF: lily/multi-measure-rest-engraver.cc.
+        var src = """
+            time 4/4
+            key c major
+            part melody
+            part lh { clef bass }
+            section Main {
+              melody { c4 d e f | R1*4 | g4 a b c | }
+              lh { c2 c | R1*4 | c2 c | }
+            }
+            form main { Main }
+            score main "x" { staff melody staff lh }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+
+        // One run, two staves — and the two symbols sit at DIFFERENT heights, so this
+        // cannot pass by emitting the same layout twice.
+        Assert.Equal(2, layout.MultiMeasureRestLayouts.Length);
+        Assert.All(layout.MultiMeasureRestLayouts, m =>
+        {
+            Assert.Equal(1, m.StartMeasureIndex);
+            Assert.Equal(4, m.MeasureCount);
+        });
+        Assert.NotEqual(layout.MultiMeasureRestLayouts[0].Y,
+                        layout.MultiMeasureRestLayouts[1].Y);
+    }
+
+    [Fact]
     public void ChangePartwayThroughRests_SplitsTheRun()
     {
         // A change PART WAY through a rest sequence starts a fresh run instead of riding an
