@@ -6,11 +6,11 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="456">Arpeggio over chord seconds</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.41" x2="23.47" y2="12.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.41" x2="23.47" y2="13.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.41" x2="23.47" y2="14.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.41" x2="23.47" y2="15.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.41" x2="23.47" y2="16.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.41" x2="23.48" y2="12.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.41" x2="23.48" y2="13.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.41" x2="23.48" y2="14.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.41" x2="23.48" y2="15.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.41" x2="23.48" y2="16.41" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="15.41" font-size="4.00"></text>
   <text class="music" x="3.30" y="14.41" font-size="4.00" data-pos="486"></text>
   <line x1="7.36" y1="17.41" x2="9.31" y2="17.41" stroke="#000000" stroke-width="0.200"/>
@@ -26,8 +26,8 @@
   <text class="music" x="18.31" y="14.41" font-size="4.00" data-pos="586"></text>
   <text class="music" x="19.55" y="13.91" font-size="4.00" data-pos="588"></text>
   <line x1="19.62" y1="14.06" x2="19.62" y2="17.91" stroke="#000000" stroke-width="0.130"/>
-  <rect x="22.38" y="12.41" width="0.19" height="4.00" data-pos="601"/>
-  <rect x="22.87" y="12.41" width="0.60" height="4.00" data-pos="601"/>
+  <rect x="22.39" y="12.41" width="0.19" height="4.00" data-pos="601"/>
+  <rect x="22.88" y="12.41" width="0.60" height="4.00" data-pos="601"/>
   <line x1="6.33" y1="16.51" x2="6.18" y2="16.62" stroke="#000000" stroke-width="0.100" data-pos="535"/>
   <line x1="6.18" y1="16.62" x2="6.13" y2="16.72" stroke="#000000" stroke-width="0.100" data-pos="535"/>
   <line x1="6.13" y1="16.72" x2="6.18" y2="16.83" stroke="#000000" stroke-width="0.100" data-pos="535"/>

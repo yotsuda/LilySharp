@@ -753,9 +753,13 @@ internal static class SpacingRules
                 if (n.BaseDuration.Numerator != 1) noteValue = 1;
                 if (noteValue < 2)
                     return null; // whole notes have no stem (Stem::is_invisible)
+                // The stem's y-extent runs from where it MEETS THE HEAD (not the head
+                // centre) to the tip; the head-side end sits a stem-attachment offset
+                // off centre. LILYPOND-REF: lily/stem.cc:934-963.
+                double beginPos = StemBeginPosition(n.StaffPosition, n.StemUp, noteValue);
                 double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition);
                 return (n.StemUp,
-                    Math.Min(n.StaffPosition, endPos), Math.Max(n.StaffPosition, endPos),
+                    Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     n.StaffPosition, n.StaffPosition);
             }
             case ChordItem c when c.Notes.Length > 0:
@@ -767,14 +771,54 @@ internal static class SpacingRules
                 int minPos = c.Notes.Min(x => x.StaffPosition);
                 int maxPos = c.Notes.Max(x => x.StaffPosition);
                 int tipPos = c.StemUp ? maxPos : minPos;
+                // Head-side end: the reference head is the one the stem starts from
+                // (lowest for an up stem, highest for a down stem), offset by the
+                // stem attachment. LILYPOND-REF: lily/stem.cc:934-963.
+                double beginPos = StemBeginPosition(c.StemUp ? minPos : maxPos, c.StemUp, noteValue);
                 double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos);
                 return (c.StemUp,
-                    Math.Min(minPos, endPos), Math.Max(maxPos, endPos),
+                    Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     minPos, maxPos);
             }
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// Stem-attachment Y coordinate on the notehead, in LilyPond's −1..1 scale
+    /// (−1 = bottom edge, +1 = top edge of the head's bounding box). Font metric of
+    /// Emmentaler, dumped from <c>NoteHead.stem-attachment</c> on LilyPond 2.24.4;
+    /// the value for a down stem is the negation. Black head (s2) 0.34147639,
+    /// half/open head (s1) 0.47524055.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:150-196 get_stem_attachment;
+    /// scm/define-grobs.scm NoteHead.stem-attachment (ly:note-head::calc-stem-attachment).</remarks>
+    private const double BlackHeadStemAttachY = 0.34147639283381404;
+    private const double HalfHeadStemAttachY = 0.4752405486932206;
+
+    /// <summary>
+    /// Where the stem MEETS THE HEAD, in staff positions (+up) — the head-side end of
+    /// the stem's y-extent. Not the head centre: the stem attaches a fraction of the
+    /// head height off centre (up-stem above, down-stem below).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position —
+    ///   <c>pos = head_position + head_height.linear_combination (stem_attachment_Y) * 2 / ss</c>.
+    /// The notehead's own bounding box (GlyphMetricsGenerated) supplies head_height;
+    /// staff space is 1 here. Verified on LilyPond 2.24.4: a G4 (position −2) up-stem
+    /// quarter begins at −1.6285 (LP dumps the Stem Y-extent as −1.627788), which makes
+    /// the note → bar-line stem correction 0.20102 against LilyPond's 0.200992 — the
+    /// prior head-centre approximation (−2.0) gave 0.214286.
+    /// </remarks>
+    private static double StemBeginPosition(int headPosition, bool stemUp, int noteValue)
+    {
+        double attachY = (stemUp ? 1.0 : -1.0)
+            * (noteValue == 2 ? HalfHeadStemAttachY : BlackHeadStemAttachY);
+        var head = GlyphMetrics.GetNoteheadBBox(noteValue);
+        // Interval::linear_combination(w): w=−1 → Bottom, +1 → Top.
+        double lc = head.Bottom + (attachY + 1.0) / 2.0 * (head.Top - head.Bottom);
+        return headPosition + lc * 2.0; // * 2 / ss, ss = 1
     }
 
     /// <summary>
