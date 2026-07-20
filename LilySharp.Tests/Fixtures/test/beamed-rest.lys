@@ -1,0 +1,23 @@
+// Rests that sit UNDER a beam are pushed clear of it, a faithful port of
+// LilyPond's Beam::rest_collision_callback (lily/beam.cc:1331). Each measure
+// beams two equal-pitch eighths across an eighth rest. Low pitches beam upward
+// (stem-up) and push the rest DOWN; high pitches beam downward and push it UP.
+// As the beam moves away from the centred rest the push shrinks to nothing.
+// Reference LilyPond 2.24.4 rest Y-offsets (staff-spaces, up-positive):
+//   C4 -2, E4 -1, G4 0, C5 0, G5 +1, A5 +2.
+// NB: Lily# `octave absolute` is one octave above LilyPond, so Lily# c = LP c'.
+octave absolute
+time 3/8
+part p { clef treble }
+section Main {
+  p {
+    c8[ r8 c8 ] |
+    e8[ r8 e8 ] |
+    g8[ r8 g8 ] |
+    c'8[ r8 c'8 ] |
+    g'8[ r8 g'8 ] |
+    a'8[ r8 a'8 ] |
+  }
+}
+form main { Main }
+score main "beamed-rest" { staff p }

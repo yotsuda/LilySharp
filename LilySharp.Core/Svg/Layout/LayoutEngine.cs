@@ -298,7 +298,7 @@ internal sealed class LayoutEngine
             pagingSkylines, perSystemHeights, perSystemBands);
 
         // Calculate beams/ties/slurs/glissandos per staff
-        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts) =
+        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray);
 
         // Resolve cross-staff layouts per voice
@@ -411,7 +411,7 @@ internal sealed class LayoutEngine
             voiceOffsets,
             headWipes,
             dotForceDown,
-            ImmutableDictionary<RestShiftKey, double>.Empty,
+            restShifts,
             partCombineLayouts);
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }
@@ -421,13 +421,21 @@ internal sealed class LayoutEngine
     /// per voice, so a polyphonic staff exposes all its voices). Extracted verbatim
     /// from the multi-staff <c>Layout</c> body.
     /// </summary>
-    private (List<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos)
+    private (List<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos,
+             ImmutableDictionary<RestShiftKey, double> RestShifts)
         LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
     {
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
         var allSlurLayouts = new List<SlurLayout>();
         var allGlissandoLayouts = new List<GlissandoLayout>();
+        // Rest shifts are keyed by (measure, item) only, so they are computed for
+        // each staff's PRIMARY voice — enough for the single-voice scores where
+        // beamed rests occur in practice. A polyphonic beamed rest in a
+        // non-primary voice, or the same (measure, item) slot across staves, would
+        // share one entry; this matches the granularity the codebase already
+        // accepts for HeadWipe/DotForceDown (VoiceItemKey, no staff axis).
+        var restShiftsBuilder = ImmutableDictionary.CreateBuilder<RestShiftKey, double>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             // Beam detection breaks at tuplet boundaries by note index, so scope
@@ -452,11 +460,19 @@ internal sealed class LayoutEngine
                 : staffScore;
             var staffFinalBeams = _elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex);
             allBeamLayouts.AddRange(staffFinalBeams);
+            // Push beamed rests clear of their beam (Beam::rest_collision_callback).
+            var staffRestShifts = _elementCoordinator.CalculateRestShifts(
+                staffScore, systemsArray, staffFinalBeams.ToImmutableArray());
+            foreach (var kv in staffRestShifts)
+                if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
+                    || Math.Abs(kv.Value) > Math.Abs(existing))
+                    restShiftsBuilder[kv.Key] = kv.Value;
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
-        return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts);
+        return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts,
+                restShiftsBuilder.ToImmutable());
     }
 
     // F3/S5-3a: route a system's measure layout through the session cache when one

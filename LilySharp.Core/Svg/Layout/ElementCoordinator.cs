@@ -453,8 +453,10 @@ internal sealed class ElementCoordinator
         var collisions = new List<BeamCollision>();
         var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
 
-        double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
-        double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
+        int firstMemberIndex = group.Members[0].ItemIndex;
+        int lastMemberIndex = group.Members[^1].ItemIndex;
+        double beamLeftX = itemXPositions[firstMemberIndex];
+        double beamRightX = itemXPositions[lastMemberIndex];
 
         for (int i = 0; i < measure.Items.Length; i++)
         {
@@ -462,6 +464,17 @@ internal sealed class ElementCoordinator
                 continue;
 
             var item = measure.Items[i];
+
+            // A rest sitting BETWEEN the beam's outer members belongs to the beam
+            // (rest -> stem -> beam in LilyPond) and is moved clear of it by
+            // rest_collision_callback (see CalculateRestShifts) — the beam itself
+            // is quanted as if the rest were not there. LilyPond's beam quanter
+            // likewise ignores such rests (verified: `c'8[ r8 c'8]` and
+            // `c'8[ c'8]` quant to identical positions). Treating the rest as a
+            // collision object would instead lift the BEAM to clear it, which LP
+            // never does. LILYPOND-REF: lily/beam.cc:1331 rest_collision_callback.
+            if (item is RestItem && i > firstMemberIndex && i < lastMemberIndex)
+                continue;
             double itemX = itemXPositions[i];
 
             double xPadding = _options.CollisionXPadding;

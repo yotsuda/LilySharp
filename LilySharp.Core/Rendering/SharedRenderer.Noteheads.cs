@@ -96,7 +96,14 @@ internal static partial class SharedRenderer
                     // LILYPOND-REF: lily/multi-measure-rest.cc — the MMR spanner
                     // replaces the individual rests.
                     if (!rest.IsSpacer && !IsMmrCovered(layout, ml.MeasureIndex))
-                        DrawRest(rest, itemX, staffY, gc);
+                    {
+                        // A rest under a beam is pushed clear of it. GetRestShift is
+                        // in staff positions (up-positive); staffY is Y-up, so add
+                        // half a staff-space per position to move the whole rest
+                        // (glyph + dots) together. LILYPOND-REF: lily/beam.cc:1331.
+                        double restShiftY = layout.GetRestShift(ml.MeasureIndex, itemIdx) * 0.5;
+                        DrawRest(rest, itemX, staffY + restShiftY, gc);
+                    }
                     break;
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
