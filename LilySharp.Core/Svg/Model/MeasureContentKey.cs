@@ -170,6 +170,20 @@ public readonly record struct MeasureContentKey(long Hash)
             }
         }
 
+        // A measure's WIDTH depends on its multi-measure-rest run membership: a run
+        // collapses to ONE bar carrying a count-dependent rod, so the measures it
+        // swallows go to zero width. That membership is decided by the NEIGHBOURING
+        // measures, not by this measure's own content, so it cannot be recovered from
+        // the intrinsic hash and has to be folded in explicitly — otherwise incremental
+        // reuse could hand a rested bar a width computed for a different run.
+        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 calculate_spacing_rods.
+        var runMap = Layout.MmrRunMap.Build(Layout.MultiMeasureRestEngraver.FindRuns(score));
+        for (int i = 0; i < n; i++)
+        {
+            acc[i].Add(runMap.IsInterior(i));
+            acc[i].Add(runMap.TryGetRunStartingAt(i, out var run) ? run.Count : 0);
+        }
+
         var sideTables = BucketSideTables(score, n);
         for (int i = 0; i < n; i++)
             foreach (long itemHash in sideTables[i])
