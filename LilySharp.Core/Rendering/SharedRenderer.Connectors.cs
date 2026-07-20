@@ -169,7 +169,10 @@ internal static partial class SharedRenderer
         var voice = score.PrimaryContentStaff.PrimaryVoice;
         foreach (var group in system.StaffGroups)
         {
-            if (!group.HasDelimiter)
+            // A ChoirStaff is bracketed but its barlines are NOT spanned across the
+            // gap — each staff keeps its own. LILYPOND-REF: ly/engraver-init.ly —
+            // ChoirStaff has no Span_bar_engraver (unlike GrandStaff/StaffGroup).
+            if (!group.HasDelimiter || group.Type == StaffGroupType.ChoirStaff)
                 continue;
             var staves = group.Staves
                 .Where(s => !s.IsHidden && !s.IsOssia)

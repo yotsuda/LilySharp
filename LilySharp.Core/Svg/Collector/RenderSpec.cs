@@ -52,10 +52,13 @@ public sealed record StaffSpec(
 );
 
 /// <summary>
-/// Specification for a grand staff (brace-connected staves).
+/// Specification for a bracketed/braced staff group. The group Type distinguishes
+/// grandStaff (brace, spanning barlines), staffGroup (bracket, spanning barlines)
+/// and choirStaff (bracket, disconnected barlines).
 /// </summary>
 public sealed record GrandStaffSpec(
-    ImmutableArray<StaffSpec> Staves
+    ImmutableArray<StaffSpec> Staves,
+    StaffGroupType Type = StaffGroupType.GrandStaff
 )
 {
     /// <summary>Number of staves in this grand staff.</summary>
@@ -273,7 +276,12 @@ public sealed record RenderSpec(
                             PedalStyle = s.PedalStyle,
                         })
                         .ToArray();
-                    yield return StaffGroup.CreateGrandStaff(staves);
+                    yield return grand.GrandStaff.Type switch
+                    {
+                        StaffGroupType.StaffGroup => StaffGroup.CreateBracketGroup(staves),
+                        StaffGroupType.ChoirStaff => StaffGroup.CreateChoirStaff(staves),
+                        _ => StaffGroup.CreateGrandStaff(staves),
+                    };
                     break;
 
                 // Tab / ossia staves don't support intra-staff polyphony; they

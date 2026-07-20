@@ -478,6 +478,8 @@ internal sealed partial class Parser
             SyntaxKind.ChordsKeyword => ParseChordRowRender(),
             SyntaxKind.LyricsKeyword => ParseLyricsRowRender(),
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
+            SyntaxKind.StaffGroupKeyword => ParseGrandStaffRender(),
+            SyntaxKind.ChoirStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
@@ -571,11 +573,13 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse grand staff render: grandStaff { staff staff ... }
+    /// Parse a bracket/brace staff-group render: grandStaff / staffGroup /
+    /// choirStaff { staff staff ... }. The leading keyword (already the current
+    /// token) is kept on the green node so the collector can pick the group type.
     /// </summary>
     private GrandStaffRenderGreen ParseGrandStaffRender()
     {
-        var grandStaffKeyword = Expect(SyntaxKind.GrandStaffKeyword);
+        var grandStaffKeyword = Advance(); // grandStaff | staffGroup | choirStaff
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var staves = new List<StaffRenderGreen>();

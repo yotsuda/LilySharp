@@ -1,0 +1,22 @@
+// A staffGroup brackets its staves (orchestral sections) and SPANS the barlines
+// across the gap (unlike choirStaff). LILYPOND-REF: ly/engraver-init.ly —
+// StaffGroup uses SystemStartBracket with a Span_bar_engraver.
+title "Staff group"
+time 4/4
+
+part vln { clef treble }
+part vla { clef alto }
+
+section Main {
+  vln { c'4 b a b | c'1 | }
+  vla { f4 g a g | f1 | }
+}
+
+form main { Main }
+
+score main "staff-group" {
+  staffGroup {
+    staff vln
+    staff vla
+  }
+}

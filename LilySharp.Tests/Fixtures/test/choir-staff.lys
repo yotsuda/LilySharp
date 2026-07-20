@@ -1,0 +1,24 @@
+// A choirStaff groups its staves with a BRACKET but does NOT span the barlines
+// across the gap — each staff keeps its own barline (choral scores). Contrast
+// staff-group (bracket + spanning barlines) and grandStaff (brace + spanning).
+// LILYPOND-REF: ly/engraver-init.ly — ChoirStaff uses SystemStartBracket and has
+// no Span_bar_engraver.
+title "Choir staff"
+time 4/4
+
+part sop { clef treble }
+part alt { clef treble }
+
+section Main {
+  sop { c'4 b a b | c'1 | }
+  alt { g4 a g f | g1 | }
+}
+
+form main { Main }
+
+score main "choir-staff" {
+  choirStaff {
+    staff sop
+    staff alt
+  }
+}

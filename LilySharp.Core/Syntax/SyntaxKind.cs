@@ -89,6 +89,10 @@ public enum SyntaxKind : ushort
     StaffKeyword,
     /// <summary>The <c>grandStaff</c> keyword.</summary>
     GrandStaffKeyword,
+    /// <summary>The <c>staffGroup</c> keyword (bracket, spanning barlines).</summary>
+    StaffGroupKeyword,
+    /// <summary>The <c>choirStaff</c> keyword (bracket, disconnected barlines).</summary>
+    ChoirStaffKeyword,
     /// <summary>The <c>tab</c> keyword.</summary>
     TabKeyword,
     /// <summary>The <c>ossia</c> keyword.</summary>

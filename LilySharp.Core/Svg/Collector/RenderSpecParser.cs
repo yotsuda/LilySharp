@@ -214,9 +214,15 @@ public static class RenderSpecParser
         }
 
         if (staves.Count < 2)
-            return null; // Grand staff requires at least 2 staves
+            return null; // a staff group requires at least 2 staves
 
-        return new GrandStaffSpec([.. staves]);
+        var type = grandStaff.GrandStaffKeyword.Kind switch
+        {
+            SyntaxKind.StaffGroupKeyword => StaffGroupType.StaffGroup,
+            SyntaxKind.ChoirStaffKeyword => StaffGroupType.ChoirStaff,
+            _ => StaffGroupType.GrandStaff,
+        };
+        return new GrandStaffSpec([.. staves], type);
     }
 
     /// <summary>The non-keyword, non-brace tokens of a render item, in order:
