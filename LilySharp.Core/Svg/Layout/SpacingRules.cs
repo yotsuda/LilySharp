@@ -1356,10 +1356,19 @@ internal static class SpacingRules
         // layout (which reserves it in MeasureLayouter), and line breaking would
         // under-estimate grace measures.
         // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the note.
+        // A measure filled by a single note/chord gets LP's full-measure-extra-space
+        // on THIS spring (barline → first column), not on the note → barline spring:
+        // LP passes it as `situational_space` to Staff_spacing::get_spacing, keyed on
+        // the measure that FOLLOWS the barline.
+        // LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing.
         var firstItem = spacingItems[0];
         var firstSpring = CreateSpring(null, firstItem, Fraction.Quarter,
             baseShortestDuration: baseShortestDuration);
-        springs.Add(AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem)));
+        firstSpring = AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem));
+        if (FillsMeasure(measure))
+            firstSpring = new Spring(firstSpring.IdealDistance + FullMeasureExtraSpace,
+                firstSpring.MinDistance, firstSpring.InverseStretchStrength);
+        springs.Add(firstSpring);
 
         // Springs between items (the spring into a grace-bearing note reserves its
         // grace; the spring after a mid-measure clef/key/time change reserves the
@@ -1377,14 +1386,11 @@ internal static class SpacingRules
             springs.Add(spring);
         }
 
-        // Spring from last item to end barline. A measure filled by a single note/chord
-        // gets LP's full-measure-extra-space added to this spring's ideal (see FillsMeasure).
+        // Spring from last item to end barline. full-measure-extra-space is charged to
+        // the LEADING spring above, mirroring LilyPond's attribution.
         var lastItem = spacingItems[^1];
         var lastSpring = CreateSpring(lastItem, null, lastItem.Duration,
             baseShortestDuration: baseShortestDuration);
-        if (FillsMeasure(measure))
-            lastSpring = new Spring(lastSpring.IdealDistance + FullMeasureExtraSpace,
-                lastSpring.MinDistance, lastSpring.InverseStretchStrength);
         springs.Add(lastSpring);
 
         return springs.ToImmutableArray();

@@ -268,12 +268,32 @@ internal sealed class MeasureLayouter
     /// LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
     ///   semi-shrink-space: fixed = d/2, ideal = d, is_stretchable = false
     ///   → inverse stretch strength 0; compressible only down to fixed.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing —
+    ///   full-measure-extra-space is `situational_space`, added to THIS spring
+    ///   (barline → the following musical column), NOT to the note → barline
+    ///   spring that precedes the barline. It is keyed on the measure AFTER the
+    ///   barline (fills_measure(me, l, r) inspects the column r to its right).
     /// </remarks>
     private static Spring CreateBarlineToFirstSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
     {
         double firstNoteSpace = EngravingDefaults.BarLineToFirstNoteSpace;
         double firstNoteMin = firstNoteSpace / 2;
+
+        // LILYPOND-REF: lily/spacing-spanner.cc:446-472 fills_measure — the single
+        // musical column after this barline is followed straight by the next
+        // breakable column (timings.Count == 1), spanning the measure.
+        // NOTE: LP's fills_measure tests column MUSICALITY only, so LP also counts a
+        // full-measure REST column; this keeps the narrower note/chord predicate that
+        // SpacingRules.FillsMeasure uses on the line-breaking side, because the two
+        // spring gates must price identically and the rest case is owned by the MMR
+        // rod path. Widening both to match LP is a separate, output-changing step.
+        double fullMeasureSpace =
+            timings.Count == 1
+            && timingToItems.TryGetValue(timings[0], out var fillItems)
+            && fillItems.Any(it => it is NoteItem or ChordItem)
+                ? SpacingRules.FullMeasureExtraSpace
+                : 0;
 
         // Apply skyline rod: barline → first item (max across all voices)
         double startLeadGrace = 0;
@@ -310,10 +330,10 @@ internal sealed class MeasureLayouter
             //   column → … → main column.
             double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
             double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
-            return new Spring(front, front, inverseStretchStrength: 0);
+            return new Spring(front + fullMeasureSpace, front, inverseStretchStrength: 0);
         }
         return new Spring(
-            Math.Max(firstNoteSpace, firstNoteMin),
+            Math.Max(firstNoteSpace, firstNoteMin) + fullMeasureSpace,
             firstNoteMin,
             inverseStretchStrength: 0);
     }
@@ -438,15 +458,13 @@ internal sealed class MeasureLayouter
                     endSpring.InverseStretchStrength);
             }
 
-            // Full-measure-extra-space: a single note/chord onset (the union has ONE timing
-            // column) filling the measure widens the note->barline spring, matching
-            // SpacingRules.FillsMeasure on the breaking side. LILYPOND-REF: spacing-spanner.cc
-            // fills_measure; scm/define-grobs.scm NonMusicalPaperColumn full-measure-extra-space 1.0.
-            if (timings.Count == 1 && lastItems.Any(it => it is NoteItem or ChordItem))
-                endSpring = new Spring(
-                    endSpring.IdealDistance + SpacingRules.FullMeasureExtraSpace,
-                    endSpring.MinDistance,
-                    endSpring.InverseStretchStrength);
+            // NOTE: full-measure-extra-space is NOT applied here. LilyPond passes it
+            // as `situational_space` to Staff_spacing::get_spacing, i.e. to the
+            // barline → NEXT column spring, keyed on the measure that FOLLOWS the
+            // barline — see CreateBarlineToFirstSpring. Adding it here charged it to
+            // the wrong spring (and to the preceding measure), which mis-attributed
+            // 1.0 ss when comparing measure-by-measure against LilyPond.
+            // LILYPOND-REF: lily/spacing-spanner.cc:484-489.
         }
         return endSpring;
     }
