@@ -957,58 +957,146 @@ internal static class SpacingRules
         return symbolsWidth + (symbolCount - 1);
     }
 
+    // Staff-line Y-extent (positions -4..4 -> -2..2 ss). Every break-aligned grob
+    // below carries extra-spacing-height that reaches the staff, so giving each box
+    // this same Y makes them all overlap — see MmrRodMinimumDistance's remarks.
+    private const double StaffYBottom = -2.0;
+    private const double StaffYTop = 2.0;
+
+    /// <summary>
+    /// The bar line drawn at a multi-measure-rest run's LEFT bound. Lily# owns an internal
+    /// boundary's bar line on the LEFT measure's <see cref="Measure.EndBarline"/> (the right
+    /// measure's <see cref="Measure.StartBarline"/> is <see cref="BarlineType.None"/> to
+    /// avoid double-drawing), so fall back to the previous measure's end when the run
+    /// measure declares no start bar line of its own. This is the width LilyPond's left
+    /// bounding <c>NonMusicalPaperColumn</c> reaches with (see <see cref="MmrRodMinimumDistance"/>).
+    /// </summary>
+    internal static BarlineType RunLeftBoundBarline(
+        IReadOnlyList<Measure> measures, int runStart)
+    {
+        BarlineType start = measures[runStart].StartBarline;
+        if (start != BarlineType.None)
+            return start;
+        return runStart > 0 ? measures[runStart - 1].EndBarline : BarlineType.None;
+    }
+
     /// <summary>
     /// <c>Paper_column::minimum_distance</c> between the two paper columns bounding a
-    /// multi-measure-rest run: the geometric distance between the left column's right
-    /// horizontal skyline and the right column's left one.
+    /// multi-measure-rest run: a genuine <see cref="HorizontalSkyline"/> distance over
+    /// the break-aligned grobs on each bounding column, so a key / time change sitting
+    /// at the bound reserves its own width.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/paper-column.cc:144-164 Paper_column::minimum_distance
-    /// (<c>max (0.0, skys[LEFT].distance (skys[RIGHT]))</c>), over the skylines built by
-    /// lily/separation-item.cc:88-105 calc_skylines and :113-190 boxes.
+    /// LILYPOND-REF: lily/paper-column.cc:144-164 Paper_column::minimum_distance —
+    /// <c>max (0.0, skys[LEFT].distance (skys[RIGHT]))</c>, where <c>skys[LEFT]</c> is the
+    /// LEFT column's RIGHT skyline and <c>skys[RIGHT]</c> the RIGHT column's LEFT skyline.
+    /// Each skyline is built by lily/separation-item.cc:120-190 boxes(): every grob adds a
+    /// Box whose X is <c>extent + extra-spacing-width</c> and whose Y is
+    /// <c>pure_y_extent + extra-spacing-height</c> (defaults <c>(-0.1 . 0.1)</c> /
+    /// <c>(0 . 0)</c>, separation-item.cc:166-169).
     ///
-    /// A column's skyline is built from its items' boxes, and every box is WIDENED by that
-    /// item's <c>extra-spacing-width</c> (separation-item.cc:166-167). BarLine defines no
-    /// such property (scm/define-grobs.scm:260-316), so it falls back to separation-item's
-    /// OWN default of <c>(-0.1 . 0.1)</c> — this is the term that was missing, and it is
-    /// why passing the bare drawn width left every run exactly 0.200 ss too narrow.
+    /// Every break-aligned grob here carries an extra-spacing-height that INCLUDES the
+    /// staff (pure-from-neighbor-interface::extra-spacing-height-including-staff,
+    /// scm/define-grobs.scm) and the bar line spans the staff, so every box on one column
+    /// overlaps every box on the other in Y. The distance therefore equals the horizontal
+    /// reach difference; it is still expressed as boxes + a real
+    /// <see cref="HorizontalSkyline.Distance"/> so the mechanism — and any future
+    /// non-overlapping case — is exactly LilyPond's. For the same reason the box Y is set
+    /// to the staff extent (the exact esh magnitude never changes which pairs overlap).
     ///
-    /// A bar line's extent runs from its column's origin rightwards, so the left column
-    /// reaches to <c>width + 0.1</c> while the right column reaches back only to
-    /// <c>-0.1</c>: the RIGHT bounding bar line's width does not enter at all.
-    ///
-    /// Verified on LilyPond 2.24.4 with an <c>R1*5</c> run (span measured column-to-column
-    /// between the bounding bar lines, baseline 14.134):
-    ///   BarLine.extra-spacing-width (0 . 0)      -> -0.200 (lands on the bare drawn width)
-    ///   BarLine.extra-spacing-width (-0.5 . 0.5) -> +0.800
-    ///   LEFT bound  `|.` (0.19 -> 1.09)          -> +0.900
-    ///   RIGHT bound `|.`                         ->  0.000
-    ///
-    /// KNOWN INCOMPLETE — this is a closed form, not a skyline. LilyPond's
-    /// minimum_distance is a Skyline::distance over the boxes of EVERY grob in each
-    /// bounding column, so a clef / key / time change sitting at the run's bound
-    /// enters it too; this reduction is exact only when the bound carries nothing but
-    /// the bar line. Measured on the same R1*5 run with `\key g \major` at the left
-    /// bound, LilyPond's min_dist is 3.390 where this returns 0.390 — the run comes
-    /// out ~3.0 ss narrow. (The rod is confirmed binding there: bound-padding
-    /// 0.5 -> 2.5 moves the span by exactly +4.0. KeySignature's own
-    /// extra-spacing-width drives the difference: overriding it to (0 . 0) gives
-    /// -1.000 and to (-2 . 2) gives +1.000 against its (0.0 . 1.0) default,
-    /// define-grobs.scm:1982.) Closing this means reserving the whole bounding
-    /// column's width, not just the bar line's.
+    /// Column-internal geometry, measured on LilyPond 2.24.4 (bar line left edge at the
+    /// column origin, drawn width bw; break-alignment places changes AFTER it,
+    /// lily/break-alignment-interface.cc: placed-left = prev.right + space):
+    ///   KeySignature: left = bw + 1.0 (space-alist key←staff-bar 1.1, observed edge gap
+    ///     1.0), extra-spacing-width (0.0 . 1.0). A `\key g \major` R1*5 run then reaches
+    ///     0.19 + 1.0 + 1.1 + 1.0 = 3.29, min_dist 3.29 − (−0.1) = 3.390 — matching LilyPond,
+    ///     where the old bw + 0.2 closed form returned 0.390 (the run came out ~3.0 ss narrow).
+    ///   TimeSignature: left = bw + 0.75 (space-alist 1.0, observed 0.75), or, when a key
+    ///     change precedes it on the same column, keysig.right + 1.15; esw (0.0 . 0.8).
+    /// The bar line itself reaches bw + 0.1 (its default esw right, separation-item.cc:167).
+    /// A leading key change folds any cancellation into <see cref="GetKeySignatureChangeWidth"/>,
+    /// which matches LilyPond's KeyCancellation+KeySignature pair for the common cases (a
+    /// pure new key, or a pure cancellation to C); a key TYPE change (flats↔sharps) at the
+    /// bound is slightly under-reserved by the inter-grob gap LilyPond puts between the
+    /// cancellation and the new signature — rare enough to leave documented.
+    /// A leading CLEF change is intentionally NOT modeled: Lily# draws it AFTER the bar line
+    /// (SharedRenderer open-change) where LilyPond draws it before, so reserving LilyPond's
+    /// before-bar geometry would disagree with what Lily# actually draws.
     /// </remarks>
-    internal static double MmrRodMinimumDistance(BarlineType leftBound)
+    internal static double MmrRodMinimumDistance(BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
     {
-        // separation-item.cc:167 — the fallback used when a grob carries no
-        // extra-spacing-width of its own, which is BarLine's case.
-        const double extraSpacingWidthLeft = -0.1;
-        const double extraSpacingWidthRight = 0.1;
+        HorizontalSkyline leftColumnRight = BuildBoundColumnRightSkyline(leftBound, runStartItems);
+        // The right bounding column carries only its bar line: whatever sits there, the
+        // column origin coincides with the leftmost grob's left edge and that grob's
+        // default extra-spacing-width left is −0.1, so the column's left reach is −0.1.
+        // LILYPOND-REF: lily/separation-item.cc:167.
+        HorizontalSkyline rightColumnLeft = HorizontalSkyline.FromBox(
+            StaffYBottom, StaffYTop, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
 
-        double leftColumnReach =
-            EngravingDefaults.BarlineDrawnWidth(leftBound) + extraSpacingWidthRight;
-        double rightColumnReach = extraSpacingWidthLeft;
+        return Math.Max(0.0, leftColumnRight.Distance(rightColumnLeft));
+    }
 
-        return Math.Max(0.0, leftColumnReach - rightColumnReach);
+    /// <summary>
+    /// Builds the RIGHT horizontal skyline of a multi-measure-rest run's LEFT bounding
+    /// column: the bar line plus any leading key / time change on that column, each as a
+    /// Box widened by its extra-spacing-width. See <see cref="MmrRodMinimumDistance"/> for
+    /// the measured LilyPond geometry and the (documented) exclusions.
+    /// </summary>
+    private static HorizontalSkyline BuildBoundColumnRightSkyline(
+        BarlineType leftBound, IEnumerable<MusicItem>? runStartItems)
+    {
+        // separation-item.cc:167 default extra-spacing-width, used by grobs (BarLine)
+        // that define none of their own.
+        const double eswDefaultLeft = -0.1, eswDefaultRight = 0.1;
+        // scm/define-grobs.scm extra-spacing-width of the change grobs.
+        const double keyEswRight = 1.0;
+        const double timeEswRight = 0.8;
+        // Break-alignment edge gaps, measured on LilyPond 2.24.4 (see remarks above).
+        const double barlineToKeyGap = 1.0;
+        const double barlineToTimeGap = 0.75;
+        const double keyToTimeGap = 1.15;
+
+        double bw = EngravingDefaults.BarlineDrawnWidth(leftBound);
+        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>
+        {
+            // Bar line at the column origin.
+            (StaffYBottom, StaffYTop, 0.0 + eswDefaultLeft, bw + eswDefaultRight),
+        };
+
+        // Leading break-aligned changes on this column (they precede the first sounding
+        // item — a rest, in a multi-measure-rest run). LilyPond draws key/time changes
+        // AFTER the bar line.
+        KeySignatureChangeItem? key = null;
+        TimeSignatureChangeItem? time = null;
+        if (runStartItems != null)
+        {
+            foreach (var item in runStartItems)
+            {
+                if (item is KeySignatureChangeItem k) key = k;
+                else if (item is TimeSignatureChangeItem t) time = t;
+                else if (item is ClefChangeItem) { /* not modeled — see remarks */ }
+                else if (item.Duration > Fraction.Zero) break; // reached the music
+            }
+        }
+
+        double cursor = bw; // bar line's right edge, column-internal
+        bool keyPresent = false;
+        if (key != null)
+        {
+            double left = cursor + barlineToKeyGap;
+            double right = left + GetKeySignatureChangeWidth(key);
+            boxes.Add((StaffYBottom, StaffYTop, left /* esw left 0 */, right + keyEswRight));
+            cursor = right;
+            keyPresent = true;
+        }
+        if (time != null)
+        {
+            double left = cursor + (keyPresent ? keyToTimeGap : barlineToTimeGap);
+            double right = left + GetTimeSignatureChangeWidth(time);
+            boxes.Add((StaffYBottom, StaffYTop, left /* esw left 0 */, right + timeEswRight));
+        }
+
+        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
     }
 
     /// <summary>
@@ -1052,7 +1140,8 @@ internal static class SpacingRules
     internal static double MmrRodDistance(
         int measureCount,
         Fraction measureLength,
-        double minimumDistance)
+        double minimumDistance,
+        double runBarlineWidth)
     {
         double length = MmrSymbolWidth(measureCount);
         length += FullMeasureExtraSpace
@@ -1061,7 +1150,18 @@ internal static class SpacingRules
         length += 2 * MmrBoundPadding;
 
         const double minlen = 0.0;
-        return Math.Max(minimumDistance + length, minlen);
+        // LilyPond's rod is the whole li->ri COLUMN distance, with the bounding bar
+        // lines living INSIDE those columns (bar-line extent runs from the column
+        // origin). Lily#'s layout instead prices each measure as CONTENT + its own
+        // bar-line glyph widths (GetBarlineWidth(start)+(end), added by the layouter
+        // and the break gate alike), so the run measure would otherwise draw its
+        // bounding bar lines twice: once folded into minimum_distance, once as measure
+        // width. Subtract that run bar-line width here so the rod is the run's CONTENT
+        // span; the layout then re-adds the bar lines to reach LilyPond's column
+        // distance. (This is exactly what the old bw+0.2 form did implicitly by feeding
+        // a None start bar line — now made explicit, since minimum_distance carries the
+        // real left bar line and any break-aligned change.)
+        return Math.Max(minimumDistance + length - runBarlineWidth, minlen);
     }
 
     /// <summary>

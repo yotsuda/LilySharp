@@ -991,21 +991,30 @@ internal sealed class MultiStaffLayouter
             if (springCount > 0 && runMap.TryGetRunStartingAt(measureIndex, out var run))
             {
                 // LP's Paper_column::minimum_distance (li, ri) between the bounding
-                // bar-line columns: a plain skyline distance over the LEFT column's own
-                // reach. This used to sum the run measure's spring MinDistances, which has
-                // no LilyPond counterpart: it is an accumulation of spacing minima, not a
-                // geometric column distance, and it inflated every run (an R1*5 run by
-                // ~3.4 ss). See MmrRodMinimumDistance for the extra-spacing-width term
-                // that the bar line's bare drawn width was still missing.
+                // bar-line columns: a skyline distance over the LEFT column's break-aligned
+                // grobs (bar line + any leading key/time change). This used to sum the run
+                // measure's spring MinDistances, which has no LilyPond counterpart: it is an
+                // accumulation of spacing minima, not a geometric column distance, and it
+                // inflated every run (an R1*5 run by ~3.4 ss).
+                var runStartMeasure = primaryVoice.Measures[measureIndex];
                 double minimumDistance = SpacingRules.MmrRodMinimumDistance(
-                    primaryVoice.Measures[measureIndex].StartBarline);
+                    SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, measureIndex),
+                    runStartMeasure.Items);
 
                 var measureLength = Fraction.Zero;
-                foreach (var item in primaryVoice.Measures[measureIndex].Items)
+                foreach (var item in runStartMeasure.Items)
                     measureLength += item.Duration;
 
+                // Bar lines this measure adds to its width below — subtracted from the
+                // rod so the run's CONTENT span, plus these bar lines, equals LilyPond's
+                // li->ri column distance. See MmrRodDistance.
+                double runBarlineWidth =
+                    SpacingRules.GetBarlineWidth(runStartMeasure.StartBarline)
+                    + SpacingRules.GetBarlineWidth(runStartMeasure.EndBarline);
+
                 mmrRods.Add((springOffset, springOffset + springCount,
-                    SpacingRules.MmrRodDistance(run.Count, measureLength, minimumDistance)));
+                    SpacingRules.MmrRodDistance(
+                        run.Count, measureLength, minimumDistance, runBarlineWidth)));
             }
             springOffset += springCount;
         }

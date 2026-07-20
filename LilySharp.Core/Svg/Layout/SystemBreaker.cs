@@ -187,11 +187,19 @@ internal sealed class SystemBreaker
                 foreach (var item in primaryMeasure.Items)
                     measureLength += item.Duration;
                 // Same minimum-distance quantity the layouter uses: LP's
-                // Paper_column::minimum_distance is the LEFT bounding bar-line column's
-                // skyline reach, NOT the accumulated spring minima this used to pass.
+                // Paper_column::minimum_distance is the LEFT bounding column's skyline reach
+                // over its break-aligned grobs, NOT the accumulated spring minima this used
+                // to pass. The run measure's own bar-line widths (re-added at `barlines`
+                // below) are subtracted from the rod so the rod is the run's content span.
+                double runBarlineWidth =
+                    SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
+                    + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
                 double rod = SpacingRules.MmrRodDistance(
                     run.Count, measureLength,
-                    SpacingRules.MmrRodMinimumDistance(primaryMeasure.StartBarline));
+                    SpacingRules.MmrRodMinimumDistance(
+                        SpacingRules.RunLeftBoundBarline(measures, i),
+                        primaryMeasure.Items),
+                    runBarlineWidth);
                 ideal = Math.Max(ideal, rod);
                 min = Math.Max(min, rod);
             }
