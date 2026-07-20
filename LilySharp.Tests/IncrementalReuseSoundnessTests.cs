@@ -160,27 +160,18 @@ public class IncrementalReuseSoundnessTests
         }
     }
 
-    // KNOWN RESIDUAL — deliberately Skipped, not deleted. Incremental parse still
-    // diverges from a full parse on malformed input mixing `@`-attachments with
-    // unbalanced braces: a single edit yields a reuse where a FRESH map (from a full
-    // parse of the pre-edit text) offers the correct node (Note+13 'a @finger(1) ')
-    // yet the incremental tree carries Note+2 — a 2-char data-pos shift with identical
-    // geometry. The top-level pending-marker guard (fixed) does NOT cover it.
-    //
-    // Narrowed this session (see HANDOFF-2026-07-20-spring-systems.md §1):
-    //   - token streams identical (lexer splice is sound);
-    //   - diagnostics identical at every step where the text round-trips;
-    //   - no node divergence at any step before the failing one (step 33);
-    //   - the parse trees DO differ at step 33: a full parse absorbs the trailing
-    //     `@finger(1)` into the note (Note@192+13 with a MusicMark post-event), while
-    //     the incremental parse leaves Note@192+2 and orphans the `@finger(1)` as a
-    //     separate VariableReference — a 2-char width loss that shifts data-pos.
-    //   - the top-level loop STATE (voice-body depth, pending markers) is identical
-    //     between the two parses, so this is a note-level reuse-vs-reparse gap under
-    //     error recovery, not top-level parser state. Nailing the exact adoption
-    //     decision at position 192 needs a debugger / TTD watch, not printf.
-    [Fact(Skip = "known residual: incremental reuse diverges on malformed @-attachment + unbalanced braces (see HANDOFF §1)")]
-    public void KnownResidual_MalformedAttachmentReuse_DivergesFromFull()
+    // Regression for the note-absorbs-trailing-attachment reuse bug. On malformed
+    // input mixing `@`-attachments with unbalanced braces, an incremental parse used
+    // to adopt a reused Note node whose FOLLOWING token had become an `@`-articulation
+    // (or a post-event marker). A fresh parse folds that attachment into the note;
+    // adoption consumed only the note's own tokens and orphaned the attachment, so the
+    // tree lost 2 chars of width — a data-pos shift with byte-identical geometry that
+    // nothing else caught. TryAdoptTokens now rejects such an adoption (following token
+    // could still extend the item) and re-parses. Found via TTD-recorded repro; the
+    // exact trigger is `!! ADOPTED Note+2 ... NEXT is At '@' -> orphan`.
+    // See HANDOFF-2026-07-20-spring-systems.md §1.
+    [Fact]
+    public void MalformedAttachmentReuse_MatchesFullParse()
     {
         var rng = new Random(20260702 + Polyphonic.Length);
         string[] snippets =

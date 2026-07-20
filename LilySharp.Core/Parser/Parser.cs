@@ -293,6 +293,22 @@ internal sealed partial class Parser
             return false;
         }
 
+        // The node's own tokens match, but a top-level production can GROW to the
+        // right: a note/chord/rest absorbs a trailing `@`-articulation or post-event
+        // marker (`( ) ~ [ ]`) as a post-event. If the edit left one of those glued
+        // to the node's end, a fresh parse would fold it in, but adoption consumed
+        // only the node's tokens and would strand it as an orphaned item — the tree
+        // then loses that width (a data-pos shift with identical geometry). Reject the
+        // adoption and re-parse when the following token could still extend the node.
+        // (Symmetric to the item-immediately-before-damage rule in IncrementalReuseMap:
+        // both guard against a top-level item greedily consuming following tokens.)
+        if (Current.Kind == SyntaxKind.At || IsPostEventMarkerKind(Current.Kind))
+        {
+            _position = savePosition;
+            _textPosition = saveTextPosition;
+            return false;
+        }
+
         return true;
     }
 
