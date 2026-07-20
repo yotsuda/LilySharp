@@ -123,8 +123,11 @@ internal sealed class SystemBreaker
 
             var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
             var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
+            // Mirror of MultiStaffLayouter: a clef change opening the next measure is
+            // drawn before this bar line, so the break gate must price it here too.
             var springs = layouter.CreateTimingSprings(
-                primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+                primaryMeasure, allTimings, baseShortestDuration, allMeasures,
+                i + 1 < measures.Length ? measures[i + 1] : null);
 
             // Price lyric syllables into the break gate exactly as the system
             // layout does (MultiStaffLayouter), so a syllable that widens a measure

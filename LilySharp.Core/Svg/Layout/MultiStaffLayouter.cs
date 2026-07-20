@@ -857,7 +857,13 @@ internal sealed class MultiStaffLayouter
                 continue;
             }
 
-            var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+            // The next measure is passed so a clef change opening it can be charged to
+            // THIS measure's closing spring — LilyPond draws it before the shared bar
+            // line. SystemBreaker mirrors this; the two must agree (SpacingInvariantTests).
+            var nextMeasure = i + 1 < primaryVoice.Measures.Length
+                ? primaryVoice.Measures[i + 1] : null;
+            var springs = _measureLayouter.CreateTimingSprings(
+                primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure);
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
             // without a floor it collapses to its barlines and reads as a double

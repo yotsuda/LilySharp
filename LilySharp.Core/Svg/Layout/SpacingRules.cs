@@ -981,6 +981,34 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// Room a clef change at the START of <paramref name="nextMeasure"/> needs to the
+    /// LEFT of the bar line separating it from the measure before — zero when that
+    /// measure opens with no clef change.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond engraves a mid-line clef change BEFORE the bar line: the unbroken
+    /// break-align order is <c>… clef, cue-clef, staff-bar, key-cancellation,
+    /// key-signature, time-signature …</c> (scm/define-grobs.scm:650-664). A key or time
+    /// change therefore rides the spring AFTER the bar line, but a clef takes space
+    /// BEFORE it — which is the preceding measure's last-item → bar line minimum.
+    ///
+    /// The amount is the boundary column's own geometry, so it is read off
+    /// <see cref="BoundaryColumn.BarLineLeft"/> rather than recomputed: the clef's width
+    /// plus its <c>Clef.space-alist (staff-bar . (extra-space . 0.7))</c>. Measured
+    /// 2.84668 for a bass change clef on LilyPond 2.24.4.
+    ///
+    /// This is added to the EXISTING item → bar line minimum rather than replacing it.
+    /// LilyPond's own minimum is <c>padding + skyline distance</c> (spacing-spanner.cc:315
+    /// → separation-item.cc:48-68), which Lily# does not yet use for that pair; swapping
+    /// it in moves every measure and is a separate step. Adding the clef's allowance
+    /// leaves every clef-less boundary untouched.
+    /// </remarks>
+    internal static double BoundaryClefAllowance(BarlineType barline, Measure? nextMeasure)
+        => nextMeasure == null
+            ? 0
+            : BoundaryColumn.Build(barline, nextMeasure.Items).BarLineLeft ?? 0;
+
+    /// <summary>
     /// <c>Paper_column::minimum_distance</c> between the two paper columns bounding a
     /// multi-measure-rest run: a genuine <see cref="HorizontalSkyline"/> distance over
     /// the break-aligned grobs on each bounding column, so a key / time change sitting
@@ -1394,7 +1422,16 @@ internal static class SpacingRules
     /// changes sharing a column are drawn side by side, so their widths SUM
     /// (see the inline note on the accumulation below).
     /// </summary>
-    internal static double ChangeItemPrefixWidth(IEnumerable<MusicItem>? items)
+    /// <param name="excludeClef">
+    /// Set at a MEASURE-OPENING column. A clef change there is engraved before the bar
+    /// line (scm/define-grobs.scm:650-664 break-align-orders), so it takes no room after
+    /// it; its width is charged to the previous measure instead, via
+    /// <see cref="BoundaryClefAllowance"/>. Reserving it here as well would pay for the
+    /// same glyph twice. A MID-measure clef change still hangs left of its own note
+    /// column and must keep its reservation, which is why this is opt-in.
+    /// </param>
+    internal static double ChangeItemPrefixWidth(
+        IEnumerable<MusicItem>? items, bool excludeClef = false)
     {
         if (items == null) return 0;
         double w = 0;
@@ -1402,6 +1439,7 @@ internal static class SpacingRules
         {
             double itemW = item switch
             {
+                ClefChangeItem when excludeClef => 0,
                 ClefChangeItem cc =>
                     GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
                 KeySignatureChangeItem kc =>
@@ -1499,17 +1537,27 @@ internal static class SpacingRules
         double startLeadGrace = 0;
         if (firstItems != null)
         {
-            // Skyline rod: bar line → first item (max across all voices).
+            // Skyline rod: bar line → first item (max across all voices). A clef change
+            // opening the measure is NOT on this side of the bar line (break-align-orders
+            // puts clef before staff-bar), so it raises no rod here — see the note on
+            // ChangeItemPrefixWidth's excludeClef just below.
             foreach (var item in firstItems)
+            {
+                if (item is ClefChangeItem)
+                    continue;
                 firstNoteMin = Math.Max(firstNoteMin,
                     CalculateSkylineDistance(null, item, staffY: 0));
+            }
 
-            // A zero-duration clef/key/time change at the MEASURE START shares the
-            // first note's column and is drawn hanging LEFT of it. Reserve that hung
-            // width so the change doesn't jam against the bar line.
+            // A zero-duration key/time change at the MEASURE START shares the first
+            // note's column and is drawn hanging LEFT of it. Reserve that hung width so
+            // the change doesn't jam against the bar line. A CLEF change is excluded:
+            // LilyPond puts it before the bar line, so it is paid for by the preceding
+            // measure (BoundaryClefAllowance) and must not be charged again here.
             // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
             // column precedes the musical column of the same moment.
-            firstNoteMin = Math.Max(firstNoteMin, ChangeItemPrefixWidth(firstItems));
+            firstNoteMin = Math.Max(firstNoteMin,
+                ChangeItemPrefixWidth(firstItems, excludeClef: true));
 
             // Leading grace notes on the first note hang left of its column, after
             // the bar line (LilyPond gives the grace its own column between the
@@ -1762,9 +1810,14 @@ internal static class SpacingRules
     /// <param name="measure">The measure to create springs for</param>
     /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override;
     /// null uses the score default.</param>
+    /// <param name="nextMeasure">The measure FOLLOWING this one, when known — a clef change
+    /// opening it is drawn before the shared bar line, so its width is charged to this
+    /// measure's closing spring (<see cref="BoundaryClefAllowance"/>). Must mirror
+    /// MeasureLayouter.CreateTimingSprings, which does the same on the column side.</param>
     /// <returns>Array of springs (one between each pair of adjacent reference points)</returns>
     public static ImmutableArray<Spring> CreateSpringsForMeasure(Measure measure,
-                                                                 double? baseShortestDuration = null)
+                                                                 double? baseShortestDuration = null,
+                                                                 Measure? nextMeasure = null)
     {
         if (measure.Items.Length == 0)
             return ImmutableArray<Spring>.Empty;
@@ -1852,6 +1905,17 @@ internal static class SpacingRules
                 + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)),
             lastSpring.MinDistance,
             lastSpring.InverseStretchStrength);
+
+        // Mirror of MeasureLayouter.CreateLastToBarlineSpring: a clef change opening the
+        // NEXT measure is drawn before this bar line, so it widens the MINIMUM here. The
+        // ideal is already bar-line framed and stays put.
+        double clefAllowance = BoundaryClefAllowance(measure.EndBarline, nextMeasure);
+        if (clefAllowance > 0)
+            lastSpring = new Spring(
+                lastSpring.IdealDistance,
+                lastSpring.MinDistance + clefAllowance,
+                lastSpring.InverseStretchStrength);
+
         springs.Add(lastSpring);
 
         return springs.ToImmutableArray();

@@ -208,7 +208,23 @@ internal static partial class SharedRenderer
                 // non-musical columns precede the musical column of the same
                 // moment, and the accidentals sit between them and the heads.
                 bool isChange = item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
-                if (useColumnTiming && isChange && currentTiming == Fraction.Zero)
+                if (useColumnTiming && item is ClefChangeItem
+                    && currentTiming == Fraction.Zero
+                    && ml.MeasureIndex > 0
+                    && ml.MeasureIndex != system.Measures[0].MeasureIndex
+                    && BoundaryClefX(voice, ml, measure) is { } clefX)
+                {
+                    // A clef change OPENING the measure is engraved BEFORE the bar line,
+                    // unlike a key or time change: LilyPond's unbroken break-align order is
+                    // `… clef, cue-clef, staff-bar, key-cancellation, key-signature,
+                    // time-signature …` (scm/define-grobs.scm:650-664). It therefore hangs
+                    // back into the previous measure's closing gap, which reserves exactly
+                    // this much room (SpacingRules.BoundaryClefAllowance).
+                    // Skipped at a system start, where the clef is drawn in the prefix
+                    // instead (see ResolveClef) and there is no bar line to precede.
+                    itemX = clefX;
+                }
+                else if (useColumnTiming && isChange && currentTiming == Fraction.Zero)
                 {
                     // A change that OPENS the measure (a section-boundary revert, or
                     // an authored key/time at the bar) anchors just after the barline
@@ -254,6 +270,39 @@ internal static partial class SharedRenderer
                 yield return (item, ml, itemIdx, itemX);
             }
         }
+    }
+
+    /// <summary>
+    /// X at which to draw a clef change that OPENS <paramref name="measure"/>: read off
+    /// the boundary column, so the drawn position and the reserved width come from one
+    /// place and cannot drift. Null when the boundary has no bar line to sit before.
+    /// </summary>
+    /// <remarks>
+    /// The boundary bar line is drawn with its RIGHT edge on the column boundary
+    /// (SharedRenderer.Barlines: <c>endX - width</c> where <c>endX</c> is the previous
+    /// measure's right edge), so its LEFT edge is <c>ml.X - width</c>. The column's origin
+    /// sits <see cref="BoundaryColumn.BarLineLeft"/> further left, and the clef's own ink
+    /// starts at its column-internal <c>Left</c>.
+    /// </remarks>
+    private static double? BoundaryClefX(Voice voice, MeasureLayout ml, Measure measure)
+    {
+        var prev = voice.Measures[ml.MeasureIndex - 1];
+        if (prev.EndBarline == BarlineType.None)
+            return null;
+
+        var column = BoundaryColumn.Build(prev.EndBarline, measure.Items);
+        if (column.BarLineLeft is not { } barLineLeft)
+            return null;
+
+        BoundaryColumnGrob? clef = null;
+        foreach (var g in column.Grobs)
+            if (g.Symbol == BreakAlignSymbol.Clef)
+                clef = g;
+        if (clef is not { } clefGrob)
+            return null;
+
+        double barLineLeftX = ml.X - GetVisualBarlineWidth(prev.EndBarline);
+        return barLineLeftX - barLineLeft + clefGrob.Left;
     }
 
     /// <summary>

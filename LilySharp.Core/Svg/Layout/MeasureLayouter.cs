@@ -155,10 +155,16 @@ internal sealed class MeasureLayouter
     /// Spring chain: [barline] → [col₀] → [col₁] → ... → [colₙ] → [end barline]
     /// Each spring's minimum distance (rod) accounts for skyline collisions from ALL voices.
     /// </remarks>
+    /// <param name="nextMeasure">
+    /// The measure FOLLOWING this one, when known. Needed because a clef change opening
+    /// it is engraved before the shared bar line, so its width is charged to THIS
+    /// measure's closing spring — see <see cref="SpacingRules.BoundaryClefAllowance"/>.
+    /// </param>
     public ImmutableArray<Spring> CreateTimingSprings(
         Measure measure, List<Fraction> timings,
         double? baseShortestDuration = null,
-        IReadOnlyList<Measure>? allMeasures = null)
+        IReadOnlyList<Measure>? allMeasures = null,
+        Measure? nextMeasure = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -207,7 +213,8 @@ internal sealed class MeasureLayouter
             springs.Add(CreateInterColumnSpring(i, timings, timingToItems, measuresToScan, baseShortestDuration));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
-        springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration, baseShortestDuration));
+        springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration,
+            baseShortestDuration, SpacingRules.BoundaryClefAllowance(measure.EndBarline, nextMeasure)));
 
         return springs.ToImmutableArray();
     }
@@ -378,7 +385,8 @@ internal sealed class MeasureLayouter
     /// <remarks>LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:77.</remarks>
     private static Spring CreateLastToBarlineSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
-        IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration)
+        IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, double? baseShortestDuration,
+        double boundaryClefAllowance = 0)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
@@ -424,6 +432,18 @@ internal sealed class MeasureLayouter
             // 1.0 ss when comparing measure-by-measure against LilyPond.
             // LILYPOND-REF: lily/spacing-spanner.cc:484-489.
         }
+
+        // A clef change opening the NEXT measure is drawn before this bar line, so its
+        // width belongs to this closing gap. Only the MINIMUM moves: LilyPond keeps the
+        // ideal measured to the bar line itself (note-spacing.cc:99-100 subtracts the
+        // bar line's column-internal offset), which is the frame this spring is already
+        // in. LILYPOND-REF: SpacingRules.BoundaryClefAllowance.
+        if (boundaryClefAllowance > 0)
+            endSpring = new Spring(
+                endSpring.IdealDistance,
+                endSpring.MinDistance + boundaryClefAllowance,
+                endSpring.InverseStretchStrength);
+
         return endSpring;
     }
 

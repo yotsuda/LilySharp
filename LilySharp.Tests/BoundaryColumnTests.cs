@@ -124,6 +124,33 @@ public class BoundaryColumnTests
     }
 
     [Fact]
+    public void BoundaryClefAllowance_ChargesTheClefToThePrecedingMeasure()
+    {
+        // A clef change opening a measure is drawn BEFORE the shared bar line, so the
+        // room it needs belongs to the PREVIOUS measure's closing gap, not to the spring
+        // after the bar line. The amount is the boundary column's own geometry: the
+        // clef's width plus Clef.space-alist (staff-bar . (extra-space . 0.7)).
+        var opensWithClef = MeasureOf(Clef(), Rest());
+        var opensWithKey = MeasureOf(Key(), Rest());
+
+        Assert.Equal(
+            SpacingRules.GetClefChangeWidth(ClefType.Bass) + 0.7,
+            SpacingRules.BoundaryClefAllowance(BarlineType.Single, opensWithClef), 6);
+
+        // A key change rides the spring AFTER the bar line, so it costs nothing here.
+        Assert.Equal(0.0,
+            SpacingRules.BoundaryClefAllowance(BarlineType.Single, opensWithKey), 6);
+        Assert.Equal(0.0,
+            SpacingRules.BoundaryClefAllowance(BarlineType.Single, null), 6);
+    }
+
+    private static RestItem Rest() => new(new Fraction(1, 1), dots: 0, sourcePosition: 0);
+
+    private static Measure MeasureOf(params MusicItem[] items)
+        => new(System.Collections.Immutable.ImmutableArray.Create(items),
+            BarlineType.None, BarlineType.Single, null, 0, 0);
+
+    [Fact]
     public void ScanStopsAtTheMusic_SoALaterChangeIsNotOnThisColumn()
     {
         // Only the LEADING zero-duration changes ride the boundary column; a change
