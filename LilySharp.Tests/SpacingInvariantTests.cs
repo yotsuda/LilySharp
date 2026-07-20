@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -99,6 +100,61 @@ public class SpacingInvariantTests
         Assert.True(itemSprings[^2].IdealDistance > bare,
             $"an inner spring must carry the left-head refinement: "
             + $"bare={bare}, inner={itemSprings[^2].IdealDistance}");
+    }
+
+    [Fact]
+    public void MmrRodMinimumDistance_ReservesBreakAlignedChangeAtRunBound()
+    {
+        // LP's Paper_column::minimum_distance across a multi-measure-rest run's bounding
+        // columns is a Skyline::distance over the LEFT column's break-aligned grobs, so a
+        // key / time change sitting at the run's bound reserves ITS OWN width, not just the
+        // bar line's. This guards the skyline math directly.
+        //
+        // Reached by the live pipeline: MultiMeasureRestEngraver's run detection keeps a bar
+        // whose only sounding content is the MMR rest IN the run even when break-aligned
+        // changes precede it, so the run opens on that bar and the change rides its left
+        // bound. End-to-end on `c'1 | key g major R1*5 | c'1`, Lily# renders one 5-bar church
+        // rest spanning 17.14 bar-line to bar-line against LP 2.24.4's 17.134 (14.13 without
+        // the key change, so the signature buys exactly the +3.0 this pins).
+        //
+        // Values pinned to LilyPond 2.24.4, read off the bounding NonMusicalPaperColumn's
+        // grobs (ly:grob-relative-coordinate + X-extent + extra-spacing-width):
+        //   bar line only : reach 0.19 + esw 0.1 = 0.29         -> 0.29 - (-0.1) = 0.390
+        //   \key g \major : keysig box 1.19..2.29, esw 1.0      -> reach 3.29  -> 3.390
+        //   \time 2/4     : timesig box 0.94..2.545, esw 0.8    -> reach 3.345 -> 3.445
+        // LILYPOND-REF: lily/paper-column.cc:144-164 minimum_distance,
+        // lily/separation-item.cc:120-190 boxes (extent + extra-spacing-width).
+        static double RunBoundMinDist(string runMeasure)
+        {
+            string src = $$"""
+                time 4/4
+                key c major
+                octave absolute
+                part melody
+                section Main { melody { c'1 | {{runMeasure}} | c'1 | } }
+                form main { Main }
+                score main "x" { staff melody }
+                """;
+            var tree = SyntaxTree.Parse(src);
+            var spec = RenderSpecParser.FindFirst(tree);
+            var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+            var measures = multi.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures.ToList();
+            int runIdx = measures.FindIndex(
+                m => m.Items.Any(it => it is RestItem { IsMultiMeasure: true }));
+            Assert.True(runIdx > 0, "fixture must open with a note bar before the run");
+            var leftBound = SpacingRules.RunLeftBoundBarline(measures, runIdx);
+            return SpacingRules.MmrRodMinimumDistance(leftBound, measures[runIdx].Items);
+        }
+
+        // Bar-line-only bound is unchanged from the old closed form (the plain-run path).
+        Assert.Equal(0.390, RunBoundMinDist("R1*5"), 3);
+        // A key change at the bound reserves the whole key signature: +3.0 ss over the bar
+        // line alone. Lily# reproduces LP's 3.390 to the third decimal.
+        Assert.Equal(3.390, RunBoundMinDist("key g major R1*5"), 3);
+        // A time change likewise. LP grob geometry gives 3.445; Lily# lands at 3.440, the
+        // ~0.005 gap being the time-signature glyph-metric residual (GetTimeSigWidth 1.60
+        // vs LP's 1.6047), well under the visual threshold — see §3.7, recorded not fudged.
+        Assert.InRange(RunBoundMinDist("time 2/4 R2*5"), 3.43, 3.45);
     }
 
     [Fact]

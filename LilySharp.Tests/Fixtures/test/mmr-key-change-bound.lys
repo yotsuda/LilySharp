@@ -1,0 +1,38 @@
+// A key change at a multi-measure-rest run's LEFT bound. Two LilyPond behaviours meet
+// here, and Lily# got BOTH wrong before this fixture existed:
+//
+//  1. RUN GROUPING — the change does NOT break the bar out of the run. LilyPond hangs a
+//     key/time change on the run's opening NonMusicalPaperColumn as a break-aligned grob,
+//     so `\key g \major R1*5` stays ONE 5-bar church rest with the signature on its left
+//     bound. Lily# used to require a run bar to hold nothing but the rest, which ejected
+//     this bar and printed an individual whole rest + a 4-bar church rest (with a stray
+//     bar line between them).
+//  2. SPACING — the run's bounding-column distance is a skyline over that column's
+//     break-aligned grobs, so the key signature reserves its own width. Verified on
+//     LilyPond 2.24.4: bar line to bar line the run spans 17.13 here, against 14.13 with
+//     no key change — the signature buys exactly +3.0 ss.
+//
+// LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music (one spanner per run),
+// lily/paper-column.cc:144-164 minimum_distance, lily/separation-item.cc:120-190 boxes.
+title "MMR run with a key change at its bound"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f |
+    key g major R1*5 |
+    g4 a b c |
+  }
+}
+
+form main { Main }
+
+score main "mmr-key-change-bound" {
+  staff melody
+}

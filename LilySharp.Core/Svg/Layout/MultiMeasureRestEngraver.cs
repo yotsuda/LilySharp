@@ -283,8 +283,32 @@ internal static class MultiMeasureRestEngraver
         // Rest drawn at beat 1 (it must NOT centre, and must hang from the 4th line via
         // the normal rest renderer). LILYPOND-REF: scm/define-grobs.scm Rest vs
         // MultiMeasureRest; lily/multi-measure-rest.cc (only the MMR spanner centres).
+        // A key / time change LilyPond hangs on the run's opening NonMusicalPaperColumn
+        // (a break-aligned grob), NOT on the rest as measure content — so it does not
+        // disqualify the bar from the run: it rides the run's LEFT bound. A change PART
+        // WAY through a rest sequence instead starts a fresh run there (see OpensNewRun).
+        // Clef changes are deliberately excluded — Lily# draws a clef change AFTER the bar
+        // line where LilyPond draws it before, so its width is not reserved on the bound
+        // (MmrRodMinimumDistance skips it too); a clef-led rest bar therefore stays out of
+        // the run, matching that documented spacing exclusion.
+        static bool IsBreakAlignedChange(MusicItem it)
+            => it is KeySignatureChangeItem or TimeSignatureChangeItem;
+
+        static bool HasLeadingBreakAlignedChange(Measure m)
+            => m.Items.Length > 0 && IsBreakAlignedChange(m.Items[0]);
+
+        // The bar rests the whole measure with an EXPLICIT multi-measure rest, optionally
+        // preceded by break-aligned changes that ride the run's opening column. This is
+        // what a run swallows; the leading changes stay on the run's left bound.
         static bool IsMmrMeasure(Measure m)
-            => IsFullMeasureRest(m) && m.Items[0] is RestItem { IsMultiMeasure: true };
+        {
+            int i = 0;
+            while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
+                i++;
+            return i == m.Items.Length - 1
+                && m.Items[i] is RestItem { IsMultiMeasure: true, IsSpacer: false } rest
+                && rest.BaseDuration >= new Fraction(1, 1);
+        }
 
         bool RestsEverywhere(int m)
         {
@@ -295,6 +319,22 @@ internal static class MultiMeasureRestEngraver
                     if (m >= sm.Length || !IsMmrMeasure(sm[m]))
                         return false;
             return true;
+        }
+
+        // A break-aligned change at the START of a rest bar forces a run boundary there:
+        // LilyPond splits the compressed rest at the change and hangs it on the new run's
+        // left bound (verified on 2.24.4 — `R1*2 \key g\major R1*3` renders "2" then "3",
+        // the key sig on the between-column). A run may OPEN on such a bar, never SWALLOW
+        // one. The change may sit in any staff, so a boundary in one splits the run in all.
+        bool OpensNewRun(int m)
+        {
+            if (m < primaryMeasures.Length && HasLeadingBreakAlignedChange(primaryMeasures[m]))
+                return true;
+            if (allStaffMeasures != null)
+                foreach (var sm in allStaffMeasures)
+                    if (m < sm.Length && HasLeadingBreakAlignedChange(sm[m]))
+                        return true;
+            return false;
         }
 
         var runs = ImmutableArray.CreateBuilder<MmrRun>();
@@ -311,10 +351,12 @@ internal static class MultiMeasureRestEngraver
             int runEnd = mi;
             // A chord-bearing rest measure stays a ONE-bar MMR: it neither
             // extends into a run nor lets a run swallow it (see chordMeasures).
+            // A break-aligned change opens a fresh run, so it ends the current one.
             while (runEnd + 1 < primaryMeasures.Length &&
                    RestsEverywhere(runEnd + 1) &&
                    !chordMeasures.Contains(runStart) &&
-                   !chordMeasures.Contains(runEnd + 1))
+                   !chordMeasures.Contains(runEnd + 1) &&
+                   !OpensNewRun(runEnd + 1))
             {
                 runEnd++;
             }

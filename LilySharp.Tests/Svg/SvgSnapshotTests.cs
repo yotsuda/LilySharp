@@ -433,6 +433,13 @@ public class SvgSnapshotTests
         yield return new object[] { "test/named-voice-lyrics" };
         yield return new object[] { "test/multi-measure-rest" };
         yield return new object[] { "test/multi-measure-rest-single" };
+        // A key change at a run's LEFT bound stays IN the run (LilyPond hangs it on the
+        // run's opening column) and reserves its own width there: one 5-bar church rest
+        // with the signature before it, spanning 17.13 bar-to-bar vs 14.13 without the
+        // change. Regression for both the run-grouping and the skyline MMR-rod paths —
+        // Lily# used to eject the bar, printing a whole rest + a 4-bar rest. Verified
+        // against LilyPond 2.24.4.
+        yield return new object[] { "test/mmr-key-change-bound" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
         // BOTH staves keep their barlines — no merged MMR symbol (that only
