@@ -162,15 +162,24 @@ public class IncrementalReuseSoundnessTests
 
     // KNOWN RESIDUAL — deliberately Skipped, not deleted. Incremental parse still
     // diverges from a full parse on malformed input mixing `@`-attachments with
-    // unbalanced braces: a single edit on a clean tree yields a reuse where the map
-    // offers the correct node (Note+13 'a @finger(1) ') yet the incremental tree
-    // carries Note+2, dropping 2 chars — a data-pos shift with identical geometry.
-    // The top-level pending-marker guard (fixed) does NOT cover it; the mechanism is
-    // a separate reuse-vs-reparse determinism gap under error recovery. To resume:
-    // un-skip (it fails at fuzz step 33) and instrument TryAdoptTokens to see whether
-    // adoption is declined or never attempted at the divergent position.
-    // See HANDOFF-2026-07-20-spring-systems.md §1.
-    [Fact(Skip = "known residual: incremental reuse diverges on malformed @-attachment + unbalanced braces (see HANDOFF)")]
+    // unbalanced braces: a single edit yields a reuse where a FRESH map (from a full
+    // parse of the pre-edit text) offers the correct node (Note+13 'a @finger(1) ')
+    // yet the incremental tree carries Note+2 — a 2-char data-pos shift with identical
+    // geometry. The top-level pending-marker guard (fixed) does NOT cover it.
+    //
+    // Narrowed this session (see HANDOFF-2026-07-20-spring-systems.md §1):
+    //   - token streams identical (lexer splice is sound);
+    //   - diagnostics identical at every step where the text round-trips;
+    //   - no node divergence at any step before the failing one (step 33);
+    //   - the parse trees DO differ at step 33: a full parse absorbs the trailing
+    //     `@finger(1)` into the note (Note@192+13 with a MusicMark post-event), while
+    //     the incremental parse leaves Note@192+2 and orphans the `@finger(1)` as a
+    //     separate VariableReference — a 2-char width loss that shifts data-pos.
+    //   - the top-level loop STATE (voice-body depth, pending markers) is identical
+    //     between the two parses, so this is a note-level reuse-vs-reparse gap under
+    //     error recovery, not top-level parser state. Nailing the exact adoption
+    //     decision at position 192 needs a debugger / TTD watch, not printf.
+    [Fact(Skip = "known residual: incremental reuse diverges on malformed @-attachment + unbalanced braces (see HANDOFF §1)")]
     public void KnownResidual_MalformedAttachmentReuse_DivergesFromFull()
     {
         var rng = new Random(20260702 + Polyphonic.Length);
