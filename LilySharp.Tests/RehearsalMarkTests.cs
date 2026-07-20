@@ -136,17 +136,6 @@ public class RehearsalMarkTests
         Assert.Equal(MusicMarkVertical.Above, item.Vertical);
     }
 
-    // --- ParseMarkParts ---
-
-    [Fact]
-    public void ParseMarkParts_RehearsalMark()
-    {
-        var parts = ImmutableArray.Create("mark", "A");
-        var result = MusicMarkItem.ParseMarkParts(parts);
-        Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.Rehearsal, result.Value);
-    }
-
     // --- MusicMarkEngraver.Calculate for Rehearsal ---
 
     private static ImmutableArray<MeasureLayout> CreateMeasureLayouts(int count, double measureWidth = 20.0)

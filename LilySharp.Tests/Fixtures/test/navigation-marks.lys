@@ -1,0 +1,24 @@
+// Structure navigation marks, including COMPOSITE (multi-word) forms parsed from
+// bare tokens: `to coda`, `ds al coda`, `dc al fine`. Segno/Coda targets and
+// "To Coda" sit above; the jump-FROM instructions ("D.S. al Coda", "D.C. al
+// Fine", "Fine") sit below the staff, right-aligned at the barline (Gould,
+// Behind Bars). LILYPOND-REF: lily/mark-engraver.cc; scm/output-lib.scm.
+title "Navigation marks"
+time 4/4
+
+part rh { clef treble }
+
+section Main {
+  rh {
+    segno g4 a b c' |
+    to coda g4 a b c' |
+    ds al coda g1 |
+    coda g4 a b c' |
+    dc al fine g1 |
+    fine g1 |
+  }
+}
+
+form main { Main }
+
+score main "navigation-marks" { staff rh }

@@ -305,17 +305,6 @@ public sealed record MusicMarkItem
         return name;
     }
 
-    /// <summary>
-    /// Parses a multi-part mark name (e.g., ["ds", "al", "fine"]) into a MusicMarkType.
-    /// </summary>
-    public static MusicMarkType? ParseMarkParts(ImmutableArray<string> parts)
-    {
-        if (parts.Length == 0) return null;
-        
-        var combined = string.Join(".", parts.Select(p => p.ToLowerInvariant()));
-        return ParseMarkName(combined);
-    }
-
     private static string GetMarkText(MusicMarkType type) => type switch
     {
         MusicMarkType.Segno => "𝄋",        // SMuFL will use glyph

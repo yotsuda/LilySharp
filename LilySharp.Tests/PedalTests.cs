@@ -355,42 +355,4 @@ public class PedalTests
         Assert.Equal(10, result[0].SourcePosition);
         Assert.Equal(20, result[1].SourcePosition);
     }
-
-    // --- ParseMarkParts for pedal ---
-
-    [Fact]
-    public void ParseMarkParts_PedOff()
-    {
-        var parts = ImmutableArray.Create("ped", "off");
-        var result = MusicMarkItem.ParseMarkParts(parts);
-        Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.SustainOff, result.Value);
-    }
-
-    [Fact]
-    public void ParseMarkParts_SostOff()
-    {
-        var parts = ImmutableArray.Create("sost", "off");
-        var result = MusicMarkItem.ParseMarkParts(parts);
-        Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.SostenutoOff, result.Value);
-    }
-
-    [Fact]
-    public void ParseMarkParts_UnaCorda()
-    {
-        var parts = ImmutableArray.Create("una", "corda");
-        var result = MusicMarkItem.ParseMarkParts(parts);
-        Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.UnaCordaOn, result.Value);
-    }
-
-    [Fact]
-    public void ParseMarkParts_TreCorde()
-    {
-        var parts = ImmutableArray.Create("tre", "corde");
-        var result = MusicMarkItem.ParseMarkParts(parts);
-        Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.UnaCordaOff, result.Value);
-    }
 }

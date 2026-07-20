@@ -84,6 +84,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/pedal-mixed" };
         // A pedal change renders a "/\" notch (bracket-flare) at the shared note.
         yield return new object[] { "test/pedal-change" };
+        // Structure navigation marks incl. composite forms (to coda, ds al coda…).
+        yield return new object[] { "test/navigation-marks" };
         // A run past the church-rest expand-limit (10) prints the big_rest H-bar —
         // the only fixture exercising DrawBigRest (bar/serif thickness vs LP).
         yield return new object[] { "test/multi-measure-rest-long" };
