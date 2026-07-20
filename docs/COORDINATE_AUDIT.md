@@ -621,6 +621,26 @@ ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
 min を 0.39 側へ直せば floor は no-op（0.39+0.3=0.69 < 1.09）になり、全 spring に floor を
 掛けられるようになる。**min・stretch・0.3 補正・floor は同時に入れる**こと。
 
+**⚠️ frame 変換（実装時に必須）**: LP の spring は**列原点→列原点**、Lily# の spring は
+**bar line の ink 右端→次の item 列**。差は `last_ext[RIGHT]`＝clef 無しなら bar line 幅 0.19
+（Lily# はこの 0.19 を描画側で別に持つ）。**Lily# フレームに直した目標値**:
+
+| 量 | LP（列原点） | **Lily#（ink 右端）** | Lily# 現状 |
+|---|---|---|---|
+| `fixed` | 0.19+0.45 = 0.64 | **0.45**（= distance/2） | 暗黙 0.45 |
+| `ideal` | 1.09 | **0.9** | 0.9 ✓ |
+| `min_dist` | 0.29+0.1 = 0.39 | **0.2 + `CalculateLeftExtent`**（= esw 0.1 + esw 0.1） | **0.9** ✗ |
+| `stretch` | ideal−fixed = 0.45（:200、**0.3 補正の前**に確定） | **0.45** | **0** ✗ |
+| 0.3 補正 | `fixed = max(fixed, 0.3+min_dist)` → 0.50 | 同 | 無し ✗ |
+
+min が `0.2 + 左到達` になるのは②で `GetItemToBarlineSpace` を `esw+esw = 0.2` にしたのと同じ根拠
+（`Paper_column::minimum_distance` は純 skyline）。**`GetBarlineToItemSpace` の 0.9 は ideal 用の
+space-alist 値であって min ではない** — `CalculateSkylineDistance(null, item)` がそれを
+min として使っているのが不具合の実体。
+
+**最大のリスクは `stretch` 0 → 0.45**。現状 `inverseStretchStrength: 0` の剛体なので、
+LP 化すると**均等割り時の力配分が全体で変わる**（snapshot 再ベース必須・要 LP 照合）。
+
 **なぜ③より先か**: `BoundaryColumn`（③）を入れても、その中身を測る extent ヘルパが別 frame だと
 境界ロジックを字面移植するたびに変換が要る。`836be0ba` で実際にそれが起き、2か所で移植を
 見送らざるを得なかった。**④は③の下層**。
