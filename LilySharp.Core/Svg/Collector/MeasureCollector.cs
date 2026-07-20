@@ -2262,8 +2262,18 @@ public sealed partial class MeasureCollector
                     break;
 
                 case ClefDeclarationSyntax clef:
-                    _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
-                    _meta.ClefPosition = clef.ClefName.Span.Start;
+                    // Only a TOP-LEVEL `clef` declares the file default. A `clef` written
+                    // inside a phrase / section is a mid-music change, engraved from its
+                    // own position by the music walk (MeasureCollector.MusicWalk) — letting
+                    // it land here made it the file default too, so a part that declared no
+                    // clef of its own started in the CHANGED clef (wrong system-start glyph
+                    // and wrong default octave, since Phase 1.5 derives both from _meta.Clef).
+                    // The neighbouring key / octave / partial cases already guard this way.
+                    if (!IsInsideMusicContent(clef))
+                    {
+                        _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
+                        _meta.ClefPosition = clef.ClefName.Span.Start;
+                    }
                     break;
 
                 case OctaveDirectiveSyntax octaveDir:

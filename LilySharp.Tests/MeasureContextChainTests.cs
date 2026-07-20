@@ -126,6 +126,39 @@ public class MeasureContextChainTests
         Assert.All(chain.Exit, c => Assert.Equal(initial, c));
     }
 
+    [Fact]
+    public void PartWithoutItsOwnClef_StartsInTheDefault_NotInAMidPieceChange()
+    {
+        // A `clef` written INSIDE the music is a mid-piece change engraved from its own
+        // position — it must NOT also become the file default. CollectDefinitions folded
+        // it into _meta.Clef with no IsInsideMusicContent guard (its key / octave / partial
+        // neighbours all have one), so a part declaring no clef of its own started in the
+        // CHANGED clef: bass glyph at the system head, and — since Phase 1.5 derives the
+        // default octave from _meta.Clef too — a bare `c` landing at C3 instead of C4.
+        // Every existing fixture declares a part clef, which masked this completely.
+        const string source = """
+            time 4/4
+            key c major
+            part melody
+            section Main { melody { c4 d e f | clef bass g,4 a, b, c | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var score = Collect(source);
+
+        // Bar 1 is still treble, and a bare `c` is still C4 (position -6 from the
+        // middle line), not the bass-clef default octave's C3 (-1).
+        Assert.Equal("treble", score.Clef);
+        Assert.Equal(ClefType.Treble, MeasureContextChain.InitialContextOf(score).Clef);
+        var firstNote = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
+        Assert.Equal(-6, firstNote.StaffPosition);
+
+        // ...and the change itself still lands, from its own bar onwards.
+        var chain = MeasureContextChain.Compute(score);
+        Assert.Equal(ClefType.Treble, chain.Entry[0].Clef);
+        Assert.Equal(ClefType.Bass, chain.Exit[1].Clef);
+    }
+
     [Theory]
     // Real single-staff fixtures: Compute must run cleanly and the chain stay
     // continuous and aligned to the measure list, whatever changes occur inside.
