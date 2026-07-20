@@ -356,6 +356,48 @@ LP の格子の半分が型として存在しない。**
   **型そのものが無い**。単位・方向由来の数値バグは出ていない（現行出力は LP 一致）が、
   「字面通り移植」を境界で行う限り毎回変換が挟まる。
 
+#### Phase 0: 境界幾何の導出済みモデル（2026-07-21・LP 2.24.4 で検証）
+
+列を型として入れる前提となる LP 側のモデル。**推定を含まない**（各項に出典行、末尾に実測照合）。
+
+**① 列の中身と順序** — `BreakAlignment` group。unbroken 順は
+`… breathing-sign, clef, cue-clef, staff-bar, key-cancellation, key-signature, time-signature …`
+（`scm/define-grobs.scm:650-664`）。**clef だけが staff-bar の前**、key/time は後。
+
+**② 列内の配置** — 隣接する break-align group 間は、左 grob の `space-alist` の右シンボル向けエントリ。
+`Clef.space-alist (staff-bar . (extra-space . 0.7))`（`define-grobs.scm:916`）。
+
+**③ 列のスカイライン** — `Separation_item::boxes`（`separation-item.cc:120-190`）: grob ごとに
+`Box(X-extent + extra-spacing-width, pure_y_extent + extra-spacing-height)`。
+**既定 esw = `Interval(-0.1, 0.1)`、既定 esh = `(0, 0)`**（`:166-169`）。`Axis_group_interface` の
+group は skip し、内包 grob を個別に box 化（`:160-161`）。
+
+**④ 列間の rod（最小距離）** — spring とは**別系統**。`Spacing_spanner::set_column_rods`
+（`spacing-spanner.cc:228-290`）→ `Separation_item::set_distance`（`separation-item.cc:48-68`）:
+```
+dist = padding + lines[LEFT][RIGHT].distance (right)
+```
+`padding` は `spacing-spanner.cc:315` の `get_property (prev, "padding")` で、**`PaperColumn` にも
+`NonMusicalPaperColumn` にも定義が無いため常に既定 0.1**。
+
+**⑤ spring の ideal** — `Note_spacing::get_spacing`（`note-spacing.cc:77-108`）。duration ベース＋
+`left_head_end` 補正のあと、右が非音楽列かつ `space-to-barline` なら
+`ideal -= staff_bar_group->extent (right_col, X)[LEFT]` ＝ **ideal だけ bar line 基準へ落とす**。
+
+**⑥ 境界での spring 合流** — `Spacing_spanner::breakable_column_spacing`（`:478-536`）が
+`Staff_spacing::get_spacing` の wish を集めて `merge_springs`。`full-measure-extra-space` は
+**ここで、後続小節を鍵に**入る（`:484-488`、`r` が musical かつ `l->break_status_dir()==CENTER` のとき）。
+
+**検証**（`c'2 c'2 \clef bass c'1`、2つ目の符頭の列 → 境界列原点=clef 左端）:
+- ④の予測 `0.1 + (1.377346 + 0.1) − (−0.1)` = **1.677346**
+- 実測 `12.443359 − 10.766013` = **1.677346** ✓ 6桁一致
+
+**⚠️ 測り方の落とし穴**（本 Phase で一度誤診）: 「行幅を詰めれば min が出る」は**誤り**。
+`ragged-right = ##f` は均等割りなので spring は ideal 側に居ることが多く、実測 1.0956 を rod と
+誤読しかけた（真の rod 下限は 0.300 = esw 0.1 + esw 0.1 + padding 0.1）。逆に改行禁止＋極小行幅は
+**grob が重なる不正レイアウト**になり値が無意味になる。rod を測るなら「予測値と一致するか」を
+④の式から立てて照合するのが確実。
+
 ---
 
 ## 4. 総括
