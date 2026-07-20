@@ -213,7 +213,7 @@ internal static class MultiMeasureRestEngraver
     /// Multi_measure_rest spanner over the run BEFORE spacing runs, so the run is a
     /// property of the music. Keeping this break-independent is what lets the spring
     /// builders collapse the run to a single column pair and apply LilyPond's
-    /// run-level rod (lily/multi-measure-rest.cc:340-391) instead of the old
+    /// run-level rod (lily/multi-measure-rest.cc:341-391) instead of the old
     /// per-measure approximation — and it is the same grouping the post-break
     /// drawing pass consumes, so spacing and drawing cannot disagree.
     /// </remarks>

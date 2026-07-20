@@ -743,7 +743,7 @@ internal static class SpacingRules
     /// Calculates the duration-based space using the global default base shortest duration.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-options.cc:68-104 get_duration_space()
+    /// LILYPOND-REF: lily/spacing-options.cc:72-107 get_duration_space()
     /// Uses EngravingDefaults.BaseShortestDuration (3/16). For score-specific spacing,
     /// use the overload that accepts a baseShortestDuration parameter from
     /// CalculateCommonShortestDuration().
@@ -757,7 +757,7 @@ internal static class SpacingRules
     /// Calculates the duration-based space with a specific base shortest duration.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-options.cc:68-104 get_duration_space()
+    /// LILYPOND-REF: lily/spacing-options.cc:72-107 get_duration_space()
     /// LILYPOND-REF: lily/spacing-spanner.cc
     /// - ratio = duration / base_shortest_duration
     /// - if ratio less than 1: space = (shortest_duration_space + ratio - 1) * increment
@@ -776,7 +776,7 @@ internal static class SpacingRules
         // Ratio of this duration to base shortest
         double ratio = durationValue / baseShortestDuration;
 
-        // LILYPOND-REF: lily/spacing-options.cc:72-106 get_duration_space()
+        // LILYPOND-REF: lily/spacing-options.cc:72-107 get_duration_space()
         double spaceFactor;
         if (ratio < 1.0)
         {
@@ -865,7 +865,7 @@ internal static class SpacingRules
     /// rest run — the rod that replaces per-measure springs for the whole run.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/multi-measure-rest.cc:340-391
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:341-391
     /// Multi_measure_rest::calculate_spacing_rods, transcribed:
     /// <code>
     ///   length += full-measure-extra-space

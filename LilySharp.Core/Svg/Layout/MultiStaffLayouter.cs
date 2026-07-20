@@ -979,7 +979,7 @@ internal sealed class MultiStaffLayouter
 
         // Multi-measure rest runs: add LilyPond's run-level rod across the springs of
         // the run-opening measure (the run's single column pair) and re-propagate.
-        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 calculate_spacing_rods →
+        // LILYPOND-REF: lily/multi-measure-rest.cc:341-391 calculate_spacing_rods →
         // Rod::add_to_cols → lily/simple-spacer.cc:90-128 Simple_spacer::add_rod,
         // which SpringSolver.ApplyRods mirrors (blocking-force propagation included).
         var mmrRods = new List<(int Left, int Right, double Distance)>();
