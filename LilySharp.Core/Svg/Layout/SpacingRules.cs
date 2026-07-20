@@ -874,21 +874,58 @@ internal static class SpacingRules
     /// <c>symbol_stencil (me, 0.0)</c>). MultiMeasureRest leaves <c>minimum-length</c>
     /// unset, so LilyPond's <c>minlen</c> is 0 and the max() is inert; it is kept here
     /// to match the source line for line.
+    ///
+    /// The <c>options.get_duration_space</c> above is NOT the score's note spacing.
+    /// <c>calculate_spacing_rods</c> does <c>options.init_from_grob (me)</c> with
+    /// <c>me</c> = the MULTI-MEASURE REST grob, and init_from_grob reads
+    /// <c>spacing-increment</c>, <c>shortest-duration-space</c> and
+    /// <c>common-shortest-duration</c> off that grob — none of which MultiMeasureRest
+    /// carries. So all three fall back to init_from_grob's OWN defaults, which are not
+    /// the Spacing_options constructor's 1.2 / 2.0 / (1/8) but
+    /// <c>1</c>, <c>1</c> and <c>Moment (1/8, 1/16)</c>:
+    ///   increment = 1, shortest-duration-space = 1, global-shortest = 1/8.
+    /// The rod's duration space is therefore SCORE-INDEPENDENT — a 4/4 bar always
+    /// contributes <c>(1 + log2 ((1/1) / (1/8))) * 1 = 4.0</c>, whatever the music's
+    /// own shortest note is. Feeding it the score's base shortest duration (which gave
+    /// 5.298 for a 4/4 bar) made every run 1.298 ss too wide.
+    /// Verified on LilyPond 2.24.4: overriding SpacingSpanner's shortest-duration-space
+    /// (2.0 -> 4.0) or spacing-increment (1.2 -> 2.4) moves the run width by exactly
+    /// 0.000, because the rod never reads them.
+    /// LILYPOND-REF: lily/spacing-options.cc:33-56 Spacing_options::init_from_grob,
+    ///               lily/spacing-options.cc:71-107 get_duration_space.
     /// </remarks>
     internal static double MmrRodDistance(
         int measureCount,
         Fraction measureLength,
-        double baseShortestDuration,
         double minimumDistance)
     {
         double length = MmrSymbolWidth(measureCount);
         length += FullMeasureExtraSpace
-                  + CalculateDurationSpace(measureLength, baseShortestDuration)
+                  + MmrRodDurationSpace(measureLength)
                   + MmrSpaceIncrement * Math.Log2(measureCount);
         length += 2 * MmrBoundPadding;
 
         const double minlen = 0.0;
         return Math.Max(minimumDistance + length, minlen);
+    }
+
+    /// <summary>
+    /// <c>get_duration_space</c> as the multi-measure-rest rod sees it: with the
+    /// Spacing_options that init_from_grob leaves behind for a grob carrying no
+    /// spacing properties. See the note on <see cref="MmrRodDistance"/>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spacing-options.cc:71-107.</remarks>
+    private static double MmrRodDurationSpace(Fraction measureLength)
+    {
+        // init_from_grob's fallbacks, NOT the Spacing_options constructor's values.
+        const double increment = 1.0;
+        const double shortestDurationSpace = 1.0;
+        const double globalShortest = 0.125; // Moment (1/8, 1/16).main_part_
+
+        double ratio = measureLength.ToDouble() / globalShortest;
+        return ratio < 1.0
+            ? (shortestDurationSpace + ratio - 1) * increment
+            : (shortestDurationSpace + Math.Log2(ratio)) * increment;
     }
 
     /// <summary>
