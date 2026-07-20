@@ -895,8 +895,8 @@ internal static class SpacingRules
     /// Verified on LilyPond 2.24.4: overriding SpacingSpanner's shortest-duration-space
     /// (2.0 -> 4.0) or spacing-increment (1.2 -> 2.4) moves the run width by exactly
     /// 0.000, because the rod never reads them.
-    /// LILYPOND-REF: lily/spacing-options.cc:33-56 Spacing_options::init_from_grob,
-    ///               lily/spacing-options.cc:71-107 get_duration_space.
+    /// LILYPOND-REF: lily/spacing-options.cc:31-53 Spacing_options::init_from_grob,
+    ///               lily/spacing-options.cc:72-107 get_duration_space.
     /// </remarks>
     internal static double MmrRodDistance(
         int measureCount,
@@ -918,7 +918,7 @@ internal static class SpacingRules
     /// Spacing_options that init_from_grob leaves behind for a grob carrying no
     /// spacing properties. See the note on <see cref="MmrRodDistance"/>.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/spacing-options.cc:71-107.</remarks>
+    /// <remarks>LILYPOND-REF: lily/spacing-options.cc:72-107.</remarks>
     private static double MmrRodDurationSpace(Fraction measureLength)
     {
         // init_from_grob's fallbacks, NOT the Spacing_options constructor's values.
