@@ -559,8 +559,21 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Calculates Y shifts for rests to avoid beam collisions.
+    /// Calculates Y shifts (in staff positions) for rests that sit UNDER a beam,
+    /// pushing them clear of it. A faithful port of LilyPond's
+    /// Beam::rest_collision_callback.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:1331-1415 Beam::rest_collision_callback.
+    /// LP only shifts a rest that is a MEMBER of a beam (rest -> stem -> beam),
+    /// i.e. a rest sitting BETWEEN the beam's outer stems (e.g. <c>c8[ r e]</c>);
+    /// a rest not spanned by a beam is left alone. Beam members here are notes,
+    /// so we model that membership by item-index containment: a rest whose
+    /// itemIndex lies strictly between the beam's first and last member is under
+    /// that beam. (The previous port clamped the beam Y to the beam's endpoints
+    /// and so shifted EVERY rest in the measure against EVERY beam — including
+    /// rests nowhere near a beam, which LP never touches.)
+    /// </remarks>
     public ImmutableDictionary<RestShiftKey, double> CalculateRestShifts(
         Score score,
         ImmutableArray<SystemLayout> systems,
@@ -572,72 +585,82 @@ internal sealed class ElementCoordinator
         var shifts = new Dictionary<RestShiftKey, double>();
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
 
-        var beamsByMeasure = beamLayouts
-            .GroupBy(bl => bl.Group.MeasureIndex)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        // LILYPOND-REF: beam.cc:2860 StaffSymbol has 5 lines -> positions [-4, 4].
+        var staffSpan = (Low: -4.0, High: 4.0);
 
-        foreach (var kvp in beamsByMeasure)
+        foreach (var beamLayout in beamLayouts)
         {
-            int measureIndex = kvp.Key;
-            var measureBeams = kvp.Value;
+            var members = beamLayout.Group.Members;
+            if (members.Length < 2)
+                continue;
 
+            int measureIndex = beamLayout.Group.MeasureIndex;
             if (!measureMap.TryGetValue(measureIndex, out var measureLayout))
                 continue;
 
             var measure = score.Voice.Measures[measureIndex];
+            int firstItem = members[0].ItemIndex;
+            int lastItem = members[^1].ItemIndex;
 
-            var itemXPositions = measureLayout.Items
-                .Select(item => measureLayout.X + item.X)
-                .ToList();
+            // LILYPOND-REF: beam.cc:1372 d = get_grob_direction(stem) — UP = +1,
+            // DOWN = -1. Lily# beam Y is staff-positions-from-middle, up-positive,
+            // the same sign convention LP uses for positions.
+            int d = beamLayout.Group.StemUp ? 1 : -1;
 
-            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            // LILYPOND-REF: beam.cc:1376-1385 height_of_my_beams = beam_thickness/2
+            // + (beam_count - 1) * beam_translation.
+            double beamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
+            double beamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
+            int beamCount = members.Max(m => m.BeamCount);
+            double heightOfBeams = beamThickness / 2 + (beamCount - 1) * beamTranslation;
+
+            for (int itemIdx = firstItem + 1; itemIdx < lastItem; itemIdx++)
             {
-                if (measure.Items[itemIdx] is not RestItem)
+                if (itemIdx >= measure.Items.Length || measure.Items[itemIdx] is not RestItem)
+                    continue;
+                if (itemIdx >= measureLayout.Items.Length)
                     continue;
 
-                double restX = itemXPositions[itemIdx];
+                double restX = measureLayout.X + measureLayout.Items[itemIdx].X;
 
-                foreach (var beamLayout in measureBeams)
-                {
-                    double beamY;
-                    if (restX < beamLayout.LeftX)
-                        beamY = beamLayout.LeftY;
-                    else if (restX > beamLayout.RightX)
-                        beamY = beamLayout.RightY;
-                    else
-                        beamY = beamLayout.GetYAtX(restX);
+                // LILYPOND-REF: beam.cc:1373-1386 stem_y is the beam Y interpolated at
+                // the rest's stem X; beam_y = stem_y - d*height is the beam edge facing
+                // the rest. The rest is within the beam's x-span, so no clamp is needed.
+                double stemY = beamLayout.GetYAtX(restX);
+                double beamY = stemY - d * heightOfBeams;
 
-                    int d = beamLayout.Group.StemUp ? -1 : 1;
+                // LILYPOND-REF: beam.cc:1389-1392 rest_dim = rest_extent[d] — the rest
+                // edge facing the beam. (LP uses the glyph's real extent; we use the
+                // symmetric approximation RestCenterPosition +- RestExtent.)
+                double restCenterY = EngravingDefaults.RestCenterPosition;
+                double restExtent = EngravingDefaults.RestExtent;
+                double restDim = restCenterY + d * restExtent;
 
-                    double beamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
-                    double beamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
-                    int beamCount = beamLayout.Group.Members.Max(m => m.BeamCount);
+                // LILYPOND-REF: beam.cc:1393-1399 shift = d*min(d*(beam_y - d*min - rest_dim), 0).
+                double minimumDistance = EngravingDefaults.RestBeamMinDistance;
+                double shift = d * Math.Min(d * (beamY - d * minimumDistance - restDim), 0.0);
 
-                    double heightOfBeams = beamThickness / 2 + (beamCount - 1) * beamTranslation;
-                    double beamEdgeY = beamY + d * heightOfBeams;
+                if (Math.Abs(shift) <= EngravingDefaults.RestShiftThreshold)
+                    continue;
 
-                    double restCenterY = EngravingDefaults.RestCenterPosition;
-                    double restExtent = EngravingDefaults.RestExtent;
-                    double restEdgeY = restCenterY - d * restExtent;
+                // LILYPOND-REF: beam.cc:1403-1404 always move by discrete half-spaces
+                // (= whole staff positions).
+                shift = Math.Ceiling(Math.Abs(shift)) * Math.Sign(shift);
 
-                    double minimumDistance = EngravingDefaults.RestBeamMinDistance;
+                // LILYPOND-REF: beam.cc:1406-1412 if the shifted rest is still inside
+                // the staff, move by whole spaces (= even staff positions) instead.
+                double nearEdge = restDim + shift;
+                double farEdge = (restCenterY - d * restExtent) + shift;
+                bool insideStaff =
+                    (nearEdge >= staffSpan.Low && nearEdge <= staffSpan.High) ||
+                    (farEdge >= staffSpan.Low && farEdge <= staffSpan.High);
+                if (insideStaff)
+                    shift = Math.Ceiling(Math.Abs(shift) / 2.0) * 2.0 * Math.Sign(shift);
 
-                    double gap = d * (beamEdgeY - d * minimumDistance - restEdgeY);
-                    double shift = d * Math.Min(gap, 0.0);
-
-                    if (Math.Abs(shift) > EngravingDefaults.RestShiftThreshold)
-                    {
-                        shift = Math.Ceiling(Math.Abs(shift) * 2) / 2.0 * Math.Sign(shift);
-                        var key = new RestShiftKey(measureIndex, itemIdx);
-                        // Several beams can cross the same rest: keep the shift
-                        // with the greatest clearance need. Last-writer-wins let
-                        // whichever beam was iterated last move the rest back
-                        // toward a beam it had already been shifted away from.
-                        if (!shifts.TryGetValue(key, out var existing)
-                            || Math.Abs(shift) > Math.Abs(existing))
-                            shifts[key] = shift;
-                    }
-                }
+                var key = new RestShiftKey(measureIndex, itemIdx);
+                if (!shifts.TryGetValue(key, out var existing)
+                    || Math.Abs(shift) > Math.Abs(existing))
+                    shifts[key] = shift;
             }
         }
 
