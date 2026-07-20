@@ -345,12 +345,24 @@ internal static class SpacingRules
         GlyphMetrics.GetTimeSigWidth(timeChange.NewTime.Beats, timeChange.NewTime.BeatType);
 
     /// <summary>
-    /// Calculates the left extent of an item from its reference point (notehead center).
+    /// Calculates the item's LEFTward ink reach from its column, as a positive amount.
     /// This includes accidentals which are drawn to the left of the notehead.
     /// </summary>
     /// <remarks>
-    /// Reference point is at the horizontal center of the notehead.
-    /// Left extent = half notehead + accidental width + gap (if accidental present)
+    /// The reference point is the COLUMN, which coincides with the note head's LEFT edge
+    /// (see the note on the base extent in the body, and
+    /// <see cref="CalculateNoteheadRightExtent"/> for the matching right-hand side). So a
+    /// plain head reaches nothing leftward and the base extent is 0; only ink that
+    /// genuinely hangs left of the head — accidentals, heads reversed left of the stem —
+    /// contributes. Change items are the one branch still measured from their CENTRE
+    /// (width/2); see COORDINATE_AUDIT §4.7.
+    ///
+    /// This summary previously read "from its reference point (notehead center)", which
+    /// had been true before the base extent was converted to the left-edge basis but was
+    /// stale afterwards — the frame it named was the opposite of the one it computed.
+    ///
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — the spacing box is
+    /// <c>il-&gt;extent (pc, X_AXIS)</c>, i.e. taken in the PAPER COLUMN's frame.
     ///
     /// LILYPOND-REF: lily/accidental-placement.cc
     /// For chords with multiple accidentals, uses AccidentalPlacement to calculate

@@ -573,11 +573,53 @@ paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
    §3.11 の手順（横断 grep →`<see cref>` →承認）を経てから統廃合すること。
 3. **`CalculateLeftExtent` の XML doc が stale** — 本体は左端基準に変換済なのに summary/remarks が
    「reference point ... notehead center」のまま（§3.2 の「doc を疑う」実例がまた1件）。
-4. **`BarlineToFirstColumnSpring` の min frame 未検証** — min が `next-note 0.9` をそのまま最小値に
-   使用。LP の `semi-fixed-space` は fixed 分が半分。LP 実測（`c'4 d' e' f' \clef bass g4 a b c'`）:
-   bar line 原点→次の音符列 = **1.279365**、min（skyline）= 境界列の右到達 0.29 + 次列の左到達 0.1
-   = **0.39**。Lily# の 0.9 は 2倍過大で、`merge_springs` の floor を掛けると全小節頭が +0.3 太るため
-   `836be0ba` では floor 適用を**意図的に見送った**。
+4. **`BarlineToFirstColumnSpring` を `Staff_spacing::get_spacing` の字面移植へ**（式は導出済・下記）。
+
+#### 4.7.1 `Staff_spacing::get_spacing` の導出済みモデル（`lily/staff-spacing.cc:118-221`）
+
+```c
+last_grob = Spacing_interface::extremal_break_aligned_grob (me, LEFT, break_dir, &last_ext);
+//   ext = break_item->extent (col, X_AXIS)   ← 列原点フレーム（spacing-interface.cc:217）
+//   d==LEFT の選択条件は「右端が最大」＝最右の break-align grob ＝ staff-bar
+space_def = (break_status_dir()==CENTER) ? alist['next-note] : alist['first-note]
+Real fixed = last_ext[RIGHT];                      // :166  ★列原点から見た bar line の右端
+// semi-fixed-space:
+fixed += distance / 2;  ideal = fixed + distance / 2;   // :176-179
+Real stretchability = is_stretchable ? ideal - fixed : 0;   // :200
+ideal += situational_space;                                  // :204  full-measure-extra-space
+Real optical = next_notes_correction (me, last_grob);        // :206
+fixed += optical;  ideal += optical;
+Real min_dist = Paper_column::minimum_distance (left_col, right_col);   // :210
+// ★ merge_springs とは別の、2つ目のハードコード 0.3
+Real min_dist_correction = std::max (0.0, 0.3 + min_dist - fixed);      // :213
+fixed += min_dist_correction;  ideal = std::max (ideal, fixed);         // :214-215
+Spring ret (ideal, min_dist);
+ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
+```
+
+**実測照合**（`BarLine.space-alist (next-note . (semi-fixed-space . 0.9))`、ragged-right）:
+
+| | last_ext[RIGHT] | 予測 ideal | 実測（列原点→次の音符列） |
+|---|---|---|---|
+| clef 無し | 0.19（bar line のみ） | `0.19+0.45+0.45` = **1.09** | **1.090000** ✓ |
+| clef 有り | 3.03668（clef+0.7+bar line） | `3.03668+0.9` = 3.93668 ＋optical 0.189365 | **4.126045** ✓ |
+
+→ **clef 有無の非対称は `last_ext[RIGHT]` が列原点基準だから**。bar line 幅ではなく
+`next_notes_correction`（光学補正）が残差 0.189365 の正体。
+
+**Lily# との差分**（`BarlineToFirstColumnSpring`）:
+
+| | LP | Lily# 現状 |
+|---|---|---|
+| ideal | `last_ext[RIGHT] + 0.9`（＋optical＋situational） | 1.09 相当で**既に一致**（実測 plain.lys 21.02−19.93=1.09） |
+| **min** | `Paper_column::minimum_distance` = skyline = **0.39** | **0.9**（`next-note` 値をそのまま最小値に）＝**2倍過大** |
+| **stretch** | `ideal − fixed` = **0.45** | **0**（`inverseStretchStrength: 0` の剛体） |
+| 0.3 補正 | `max(0, 0.3 + min_dist − fixed)` | 無し |
+
+**ideal は既に LP 一致なので位置は合っている**が、min と stretch が違うため
+`merge_springs` の floor を掛けると全小節頭が +0.3 太る（`836be0ba` で floor 適用を見送った理由）。
+min を 0.39 側へ直せば floor は no-op（0.39+0.3=0.69 < 1.09）になり、全 spring に floor を
+掛けられるようになる。**min・stretch・0.3 補正・floor は同時に入れる**こと。
 
 **なぜ③より先か**: `BoundaryColumn`（③）を入れても、その中身を測る extent ヘルパが別 frame だと
 境界ロジックを字面移植するたびに変換が要る。`836be0ba` で実際にそれが起き、2か所で移植を
