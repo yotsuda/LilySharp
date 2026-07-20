@@ -53,7 +53,7 @@ public class BoundaryColumnTests
 
         // Clef.space-alist (staff-bar . (extra-space . 0.7)) — measured 0.700 on 2.24.4.
         double clefWidth = SpacingRules.GetClefChangeWidth(ClefType.Bass);
-        Assert.Equal(clefWidth + 0.7, col.BarLineLeft, 6);
+        Assert.Equal(clefWidth + 0.7, Assert.NotNull(col.BarLineLeft), 6);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class BoundaryColumnTests
     {
         var col = BoundaryColumn.Build(BarlineType.Single, new MusicItem[] { Key() });
         Assert.Equal(BreakAlignSymbol.StaffBar, col.Grobs[0].Symbol);
-        Assert.Equal(0.0, col.BarLineLeft, 6);
+        Assert.Equal(0.0, Assert.NotNull(col.BarLineLeft), 6);
     }
 
     [Fact]
@@ -89,6 +89,21 @@ public class BoundaryColumnTests
         var col = BoundaryColumn.Build(BarlineType.Single, new MusicItem[] { Time() });
         double bw = EngravingDefaults.BarlineDrawnWidth(BarlineType.Single);
         Assert.Equal(bw + 0.75, Grob(col, BreakAlignSymbol.TimeSignature).Left, 6);
+    }
+
+    [Fact]
+    public void ABarLineThatDrawsNothing_IsSkipped_LikeAnEmptyBreakAlignGroup()
+    {
+        // break-alignment-interface.cc:145-146 and :155-156 walk PAST break-align groups
+        // whose extent is empty, and find_nonempty_break_align_group (:96-107) returns
+        // null for them — so a bar line that draws nothing must neither consume a
+        // space-alist gap nor anchor the grob after it. Placing it anyway put the key
+        // signature a full staff-bar->key 1.0 further right than LilyPond does.
+        var col = BoundaryColumn.Build(BarlineType.None, new MusicItem[] { Key() });
+
+        Assert.DoesNotContain(col.Grobs, g => g.Symbol == BreakAlignSymbol.StaffBar);
+        Assert.Null(col.BarLineLeft);
+        Assert.Equal(0.0, Grob(col, BreakAlignSymbol.KeySignature).Left, 6);
     }
 
     [Fact]

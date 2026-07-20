@@ -114,17 +114,43 @@ internal sealed class BoundaryColumn
         }
 
         var grobs = ImmutableArray.CreateBuilder<BoundaryColumnGrob>();
-        double cursor = 0;
         BreakAlignSymbol? prev = null;
+        double prevLeft = 0, prevRight = 0;
 
+        // LILYPOND-REF: lily/break-alignment-interface.cc:239-247 calc_positioning_done.
+        //   extra-space:   offsets[r] = extents[l][RIGHT] + distance - extents[r][LEFT]
+        //   minimum-space: offsets[r] = max (extents[l][RIGHT], distance)
+        // offsets[r] translates the RIGHT grob's ORIGIN relative to the left grob's.
+        // Every grob's ink here starts at its own origin (extents[..][LEFT] == 0), so the
+        // extra-space case collapses to "previous ink right edge + distance" — which is
+        // why the space-alist values read as plain edge gaps when measured. minimum-space
+        // does NOT collapse that way, so it is transcribed rather than folded in.
         void Place(BreakAlignSymbol symbol, double width, double eswLeft, double eswRight)
         {
-            double left = prev is { } p
-                ? cursor + BreakAlignSpacing.GetSpacing(p, symbol).Value
-                : 0;
+            // LilyPond skips break-align groups whose extent is empty
+            // (break-alignment-interface.cc:145-146 and :155-156), so a grob that draws
+            // nothing must not consume a space-alist gap or anchor its neighbour.
+            if (width <= 0)
+                return;
+
+            double left;
+            if (prev is { } p)
+            {
+                var entry = BreakAlignSpacing.GetSpacing(p, symbol);
+                double offset = entry.Style == SpacingStyle.MinimumSpace
+                    ? System.Math.Max(prevRight - prevLeft, entry.Value)
+                    : prevRight - prevLeft + entry.Value;
+                left = prevLeft + offset;
+            }
+            else
+            {
+                left = 0;
+            }
+
             double right = left + width;
             grobs.Add(new BoundaryColumnGrob(symbol, left, right, eswLeft, eswRight));
-            cursor = right;
+            prevLeft = left;
+            prevRight = right;
             prev = symbol;
         }
 
@@ -133,9 +159,6 @@ internal sealed class BoundaryColumn
             Place(BreakAlignSymbol.Clef, SpacingRules.GetClefChangeWidth(clef.NewClef),
                 EswDefaultLeft, EswDefaultRight);
 
-        // The bar line is always on the column, even as BarlineType.None: LilyPond's
-        // staff-bar group is what the ideal distance is measured to, and a zero-width
-        // bar line still anchors everything that follows it.
         Place(BreakAlignSymbol.StaffBar, EngravingDefaults.BarlineDrawnWidth(barline),
             EswDefaultLeft, EswDefaultRight);
 
@@ -163,14 +186,22 @@ internal sealed class BoundaryColumn
     /// (lily/note-spacing.cc:99-100, reached when the right column is non-musical and
     /// NoteSpacing's <c>space-to-barline</c> is set — scm/define-grobs.scm:2655).
     /// </remarks>
-    public double BarLineLeft
+    /// <remarks>
+    /// Null when this boundary draws no bar line at all — LilyPond has no staff-bar group
+    /// then (<c>find_nonempty_break_align_group</c> returns null for an empty extent,
+    /// break-alignment-interface.cc:96-107) and note-spacing.cc:99-107 takes its OTHER
+    /// branch, measuring to the column's right side instead. Reached in Lily# only when a
+    /// run opens the piece, where the real left bound is the system prefix rather than a
+    /// bar line — a case this column does not yet model.
+    /// </remarks>
+    public double? BarLineLeft
     {
         get
         {
             foreach (var g in Grobs)
                 if (g.Symbol == BreakAlignSymbol.StaffBar)
                     return g.Left;
-            return 0;
+            return null;
         }
     }
 
@@ -187,7 +218,8 @@ internal sealed class BoundaryColumn
     /// </remarks>
     public HorizontalSkyline RightSkylineFromBarLine()
     {
-        double origin = BarLineLeft;
+        // No bar line: nothing to frame against, so the column's own origin is the frame.
+        double origin = BarLineLeft ?? 0;
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
         foreach (var g in Grobs)
         {
