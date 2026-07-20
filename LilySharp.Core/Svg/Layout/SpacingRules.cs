@@ -939,6 +939,19 @@ internal static class SpacingRules
     ///   BarLine.extra-spacing-width (-0.5 . 0.5) -> +0.800
     ///   LEFT bound  `|.` (0.19 -> 1.09)          -> +0.900
     ///   RIGHT bound `|.`                         ->  0.000
+    ///
+    /// KNOWN INCOMPLETE — this is a closed form, not a skyline. LilyPond's
+    /// minimum_distance is a Skyline::distance over the boxes of EVERY grob in each
+    /// bounding column, so a clef / key / time change sitting at the run's bound
+    /// enters it too; this reduction is exact only when the bound carries nothing but
+    /// the bar line. Measured on the same R1*5 run with `\key g \major` at the left
+    /// bound, LilyPond's min_dist is 3.390 where this returns 0.390 — the run comes
+    /// out ~3.0 ss narrow. (The rod is confirmed binding there: bound-padding
+    /// 0.5 -> 2.5 moves the span by exactly +4.0. KeySignature's own
+    /// extra-spacing-width drives the difference: overriding it to (0 . 0) gives
+    /// -1.000 and to (-2 . 2) gives +1.000 against its (0.0 . 1.0) default,
+    /// define-grobs.scm:1982.) Closing this means reserving the whole bounding
+    /// column's width, not just the bar line's.
     /// </remarks>
     internal static double MmrRodMinimumDistance(BarlineType leftBound)
     {
