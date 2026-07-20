@@ -409,9 +409,54 @@ dist = padding + lines[LEFT][RIGHT].distance (right)
 `Staff_spacing::get_spacing` の wish を集めて `merge_springs`。`full-measure-extra-space` は
 **ここで、後続小節を鍵に**入る（`:484-488`、`r` が musical かつ `l->break_status_dir()==CENTER` のとき）。
 
-**検証**（`c'2 c'2 \clef bass c'1`、2つ目の符頭の列 → 境界列原点=clef 左端）:
-- ④の予測 `0.1 + (1.377346 + 0.1) − (−0.1)` = **1.677346**
-- 実測 `12.443359 − 10.766013` = **1.677346** ✓ 6桁一致
+**⑦ spring の min と `merge_springs` の 0.3 ヘッドルーム**（2026-07-21 追加・§1.2 の +0.2 の正体）
+— `Note_spacing::get_spacing`（`note-spacing.cc:78-83`）が spring の min を
+`max (0, skys[LEFT].distance (skys[RIGHT]))` で置く。**この min に padding は入らない**（④の rod とは別物）。
+そのうえで `Spacing_spanner::note_spacing` は wish が1つでも必ず `merge_springs` を通す
+（`spacing-spanner.cc:380-393`）。そこに**ハードコードされた 0.3**がある:
+
+```c
+// lily/spring.cc:104-129 merge_springs
+//   "leave a little headroom above the largest minimum distance
+//    so that things don't get too cramped"
+avg_distance = std::max (min_distance + 0.3, avg_distance);   // :122
+```
+
+→ **列間距離 = `max (ideal, skyline距離 + 0.3)`**。④の rod は `skyline距離 + padding(0.1)` なので
+**常に spring 側の床（+0.3）の方が大きい**。force ≥ 0（ragged-right = Lily# の既定）では
+必ず spring の床が効き、rod は行を圧縮したときにだけ顔を出す。
+
+**検証**（`c'2 c'2 \clef bass c'1`、2つ目の符頭の列 → 境界列原点=clef 左端。
+符頭 ink 1.377346 ＋ esw 0.1、clef の esw 左 0.1 ⇒ skyline 距離 1.577346）:
+
+| 条件 | 予測 | 実測 |
+|---|---|---|
+| `ragged-right = ##t`（force 0） | ⑦ `1.577346 + 0.3` = **1.877346** | **1.877346** ✓ |
+| `ragged-right = ##f` ＋ `line-width = 40\mm`（圧縮） | ④ `1.577346 + 0.1` = **1.677346** | **1.677346** ✓ |
+
+⚠️ **本 doc の旧記述は下段（圧縮）だけを測って④を「検証済」としていた**。式④自体は正しいが、
+**既定の ragged-right で実際に効くのは⑦**。片方の regime だけで検証すると、もう片方で 0.2 ずれる。
+
+⑦の独立検証（`c'4 d' e' f' \clef bass g4 a b c'`、符頭 ink 右端 → clef ink 左端の gap）:
+
+| 摂動 | 予測 gap | 実測 gap |
+|---|---|---|
+| 素（既定 esw） | 0.1 + 0.1 + 0.3 = **0.500** | **0.500000** |
+| `Clef.extra-spacing-width = (0 . 0)` | 0.1 + 0 + 0.3 = **0.400** | **0.400000** |
+| `Clef.extra-spacing-width = (-0.5 . 0.1)` | 0.1 + 0.5 + 0.3 = **0.900** | **0.900000** |
+| `Clef.extra-spacing-width = (-1.0 . 0.1)` | 0.1 + 1.0 + 0.3 = **1.400** | **1.400000** |
+| `Stem.extra-spacing-width = (-0.1 . 0.5)` | 0.5 + 0.1 + 0.3 = **0.900** | **0.900000** |
+| `padding = 0.0` | 変化なし（padding は⑦に入らない） | **0.500000** |
+| `SpacingSpanner.shortest-duration-space = 4.0` | ideal 2.555577 が床を上回る → gap **1.251365** | **1.251365** |
+
+**gap が音価（4分/8分/2分）にも clef 幅にも依らず 0.500 で一定**なのが「床が効いている」証拠。
+`shortest-duration-space` を上げて ideal が床を超えた最後の行だけ gap が動く。
+
+**潰した候補**（再調査不要）: `Stem` は `extra-spacing-width` を**持たない**（`define-grobs.scm` で esw を
+宣言する 28 grob に Stem は無い）。上向き符尾の box 右端は符頭 ink 右端と**一致**する（実測
+stem `rel+0.065` = head `rel+1.304212`）ので寄与ゼロ。境界列は loose column でもない
+（`between-cols` / `maybe-loose` とも未設定を実測）。rod も実測でダンプ済で
+`skyline + padding` ちょうど（`minimum-distances` を直接ダンプ）。
 
 **⚠️ 測り方の落とし穴**（本 Phase で一度誤診）: 「行幅を詰めれば min が出る」は**誤り**。
 `ragged-right = ##f` は均等割りなので spring は ideal 側に居ることが多く、実測 1.0956 を rod と
