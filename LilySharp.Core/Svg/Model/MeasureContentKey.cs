@@ -167,6 +167,21 @@ public readonly record struct MeasureContentKey(long Hash)
                 AddStaffIdentity(ref acc[i], staff);    // per-staff (indent/name/tuning/…)
                 AddIntrinsic(ref acc[i], measures[i]);
                 acc[i].Add(chain.Entry[i]);
+
+                // A clef change opening measure i+1 is engraved BEFORE the bar line the
+                // two measures share, so its width is charged to measure i's CLOSING
+                // spring (SpacingRules.BoundaryClefAllowance — applied by both spring
+                // systems and by the break gate). Exactly like the run membership folded
+                // below, that width is decided by the NEIGHBOURING measure and so cannot
+                // be recovered from measure i's own intrinsic hash: without folding it,
+                // a system ENDING at measure i keeps its whole key slice when i+1 gains
+                // or loses a clef, and the per-system cache hands back a layout with no
+                // room reserved for that clef.
+                // LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders — the
+                // unbroken order puts `clef` before `staff-bar`.
+                acc[i].Add(Layout.SpacingRules.BoundaryClefAllowance(
+                    measures[i].EndBarline,
+                    i + 1 < measures.Length ? measures[i + 1] : null));
             }
 
             // SECONDARY voices (polyphony within the staff). They occupy the same

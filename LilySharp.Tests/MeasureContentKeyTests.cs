@@ -187,6 +187,34 @@ public class MeasureContentKeyTests
         Assert.Equal(before[3], after[3]);
     }
 
+    // The complete MULTI-STAFF key — the one the incremental engine actually uses
+    // (IncrementalCompiler feeds Compute(MultiStaffScore) to SystemLayoutCache).
+    private static ImmutableArray<MeasureContentKey> MultiStaffKeys(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        return MeasureContentKey.Compute(new MeasureCollector().CollectMultiStaff(tree, spec));
+    }
+
+    [Fact]
+    public void MultiStaffKey_FoldsTheNextMeasuresOpeningClef_IntoThePrecedingMeasure()
+    {
+        // A clef change opening measure N is engraved BEFORE the bar line N shares with
+        // measure N-1, so it widens N-1's closing spring
+        // (SpacingRules.BoundaryClefAllowance). Like multi-measure-rest run membership,
+        // that width is decided by the NEIGHBOURING measure and so cannot be recovered
+        // from N-1's own intrinsic hash — it has to be folded in explicitly. Without the
+        // fold, a system ENDING at N-1 keeps its whole key slice when N gains a clef, and
+        // the per-system cache hands back a layout with no room reserved for that clef.
+        var before = MultiStaffKeys(FourBars("g4 a b c"));
+        var after = MultiStaffKeys(FourBars("clef bass g4 a b c"));
+
+        Assert.Equal(4, before.Length);
+        Assert.Equal(4, after.Length);
+        Assert.NotEqual(before[0], after[0]); // the cross-measure dependency
+        Assert.NotEqual(before[1], after[1]); // the measure that gained the clef
+    }
+
     [Theory]
     [InlineData("test/notes")]
     [InlineData("test/keysig-change")]

@@ -374,6 +374,56 @@ public class IncrementalReuseSoundnessTests
         Assert.Equal(Full(session.Tree.Text), incRemove);
     }
 
+    private const string SixteenBars = """
+        time 4/4
+        key c major
+        part melody { clef treble }
+        phrase p {
+          c4 d e f | g4 a b c | d4 e f g | a4 b c d |
+          c4 d e f | g4 a b c | d4 e f g | a4 b c d |
+          c4 d e f | g4 a b c | d4 e f g | a4 b c d |
+          c4 d e f | g4 a b c | d4 e f g | a4 b c d |
+        }
+        section Main { melody { $p } }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
+    // Offset of the first character of bar `bar` inside the phrase body.
+    private static int BarStart(string source, int bar)
+    {
+        int at = source.IndexOf('{', source.IndexOf("phrase p", StringComparison.Ordinal)) + 1;
+        for (int i = 0; i < bar; i++)
+            at = source.IndexOf('|', at) + 1;
+        while (at < source.Length && char.IsWhiteSpace(source[at]))
+            at++;
+        return at;
+    }
+
+    [Fact]
+    public void ClefOpeningAMeasure_DoesNotLeaveThePrecedingSystemStale()
+    {
+        // A clef change opening measure N is engraved BEFORE the bar line it shares
+        // with measure N-1, so it widens N-1's closing spring
+        // (SpacingRules.BoundaryClefAllowance). When N-1 and N straddle a SYSTEM BREAK,
+        // N-1's system keeps every one of its own measure keys — so unless
+        // MeasureContentKey folds the neighbour's opening clef, the per-system cache
+        // hands that system back a layout with no room reserved for the clef and the
+        // reuse path diverges from a full recompile.
+        //
+        // The sweep is deliberate: which bar starts a system depends on the line
+        // breaker, so aiming at one index would silently stop testing anything if the
+        // break moved. When this was written the divergence appeared at bar 6.
+        for (int bar = 0; bar < 16; bar++)
+        {
+            var change = new TextChange(new TextSpan(BarStart(SixteenBars, bar), 0), "clef bass ");
+            var session = new IncrementalCompiler(SyntaxTree.Parse(SixteenBars), Opt);
+            session.Render(); // warm the cache
+            string inc = Norm(session.Edit(change));
+            Assert.Equal(Full(session.Tree.Text), inc);
+        }
+    }
+
     // ---------------------------------------------------------------------
     // 3. DRIFT canary: every stateful Staff field must be accounted for.
     // ---------------------------------------------------------------------
