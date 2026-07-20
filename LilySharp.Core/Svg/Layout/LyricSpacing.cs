@@ -24,18 +24,17 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Lyric-driven horizontal spacing: syllable text-width estimation and the spring
 /// adjustments that keep adjacent lyric syllables from colliding. Extracted from
-/// <see cref="SpacingRules"/>; the spring-core builder
-/// <see cref="SpacingRules.CreateSpringsForMeasureWithLyrics"/> stays there and
-/// calls into these helpers.
+/// <see cref="SpacingRules"/>.
 /// </summary>
 internal static class LyricSpacing
 {
     /// <summary>
-    /// Widens an EXISTING spring chain so adjacent syllables don't collide.
-    /// Unlike <see cref="SpacingRules.CreateSpringsForMeasureWithLyrics"/> (which builds item
-    /// springs from scratch for the single-staff path), this post-processes the
-    /// timing-column springs used by the multi-staff layouter, so a promoted
-    /// single-staff score gets the same lyric-driven spacing.
+    /// Widens an EXISTING spring chain so adjacent syllables don't collide: this
+    /// post-processes the timing-column springs used by the multi-staff layouter,
+    /// which is how every score gets its lyric-driven spacing (a single-staff score
+    /// is promoted to a MultiStaffScore). SpacingRules used to carry a second,
+    /// from-scratch builder for a single-staff path that no longer exists; it was
+    /// removed rather than kept in step with the timing-column springs.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-spacing.cc:80-85 skyline-based min_distance.
