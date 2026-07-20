@@ -100,9 +100,27 @@ internal sealed class SystemBreaker
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var layouter = new MeasureLayouter();
         var springData = new MeasureSpringData[measures.Length];
+
+        // Mirror the system layout: a multi-measure rest run is ONE bar, so the
+        // measures it swallows are priced at zero and the run-opening measure carries
+        // the run rod. A run must also not be split by a line break — LilyPond's
+        // compressed MMR is a single spanner between two bar-line columns and cannot
+        // span systems — so the interior forbids breaking.
+        var runMap = MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(score));
+
         for (int i = 0; i < measures.Length; i++)
         {
             var primaryMeasure = measures[i];
+
+            if (runMap.IsInterior(i))
+            {
+                springData[i] = new MeasureSpringData(0, 0, 0,
+                    primaryMeasure.BreakPenalty,
+                    runMap.ForbidsBreakAfter(i)
+                        ? BreakPermission.Forbid : primaryMeasure.LineBreakPermission);
+                continue;
+            }
+
             var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
             var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
             var springs = layouter.CreateTimingSprings(
@@ -161,10 +179,26 @@ internal sealed class SystemBreaker
                 min += s.MinDistance;
                 invStretch += s.InverseStretchStrength;
             }
+            // The run rod, priced exactly as the layouter prices it, so the break gate
+            // and the layout agree on how wide a multi-measure rest bar really is.
+            if (runMap.TryGetRunStartingAt(i, out var run))
+            {
+                var measureLength = Fraction.Zero;
+                foreach (var item in primaryMeasure.Items)
+                    measureLength += item.Duration;
+                double rod = SpacingRules.MmrRodDistance(
+                    run.Count, measureLength,
+                    baseShortestDuration ?? EngravingDefaults.BaseShortestDuration, min);
+                ideal = Math.Max(ideal, rod);
+                min = Math.Max(min, rod);
+            }
+
             double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
                             + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
-                primaryMeasure.BreakPenalty, primaryMeasure.LineBreakPermission);
+                primaryMeasure.BreakPenalty,
+                runMap.ForbidsBreakAfter(i)
+                    ? BreakPermission.Forbid : primaryMeasure.LineBreakPermission);
         }
         return springData;
     }

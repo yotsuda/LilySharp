@@ -837,11 +837,25 @@ internal sealed class MultiStaffLayouter
         var measureBarlineWidths = new List<double>();
         double totalBarlineWidth = 0;
 
+        // A compressed multi-measure rest is ONE bar between two bar-line columns,
+        // so the measures a run swallows contribute neither springs nor bar lines;
+        // the run-opening measure carries the whole bar and takes the run rod below.
+        var runMap = MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(score));
+
         for (int i = startMeasureIndex; i < endMeasureIndex; i++)
         {
             var primaryMeasure = primaryVoice.Measures[i];
             var allTimings = CollectAllTimingsForMeasure(score, i);
             var allMeasures = CollectAllMeasuresAtIndex(score, i);
+
+            if (runMap.IsInterior(i))
+            {
+                measureSprings.Add(ImmutableArray<Spring>.Empty);
+                measureTimings.Add(allTimings);
+                measureAllMeasures.Add(allMeasures);
+                measureBarlineWidths.Add(0);
+                continue;
+            }
 
             var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
 
@@ -962,6 +976,55 @@ internal sealed class MultiStaffLayouter
 
         // Concatenate all springs and solve for a single force across the system
         var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
+
+        // Multi-measure rest runs: add LilyPond's run-level rod across the springs of
+        // the run-opening measure (the run's single column pair) and re-propagate.
+        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 calculate_spacing_rods →
+        // Rod::add_to_cols → lily/simple-spacer.cc:90-128 Simple_spacer::add_rod,
+        // which SpringSolver.ApplyRods mirrors (blocking-force propagation included).
+        var mmrRods = new List<(int Left, int Right, double Distance)>();
+        int springOffset = 0;
+        for (int i = 0; i < measureSprings.Count; i++)
+        {
+            int measureIndex = startMeasureIndex + i;
+            int springCount = measureSprings[i].Length;
+            if (springCount > 0 && runMap.TryGetRunStartingAt(measureIndex, out var run))
+            {
+                // LP's Paper_column::minimum_distance (li, ri) between the bounding
+                // bar-line columns — here the floor the run's own springs already
+                // impose, which is the same quantity expressed as springs.
+                double minimumDistance = 0;
+                foreach (var s in measureSprings[i])
+                    minimumDistance += s.MinDistance;
+
+                var measureLength = Fraction.Zero;
+                foreach (var item in primaryVoice.Measures[measureIndex].Items)
+                    measureLength += item.Duration;
+
+                mmrRods.Add((springOffset, springOffset + springCount,
+                    SpacingRules.MmrRodDistance(
+                        run.Count, measureLength,
+                        baseShortestDuration ?? EngravingDefaults.BaseShortestDuration,
+                        minimumDistance)));
+            }
+            springOffset += springCount;
+        }
+
+        if (mmrRods.Count > 0)
+        {
+            allSprings = SpringSolver.ApplyRods(allSprings, mmrRods);
+            // ApplyRods preserves order and count, so slice the adjusted springs back
+            // into their measures — per-measure widths below read from these lists.
+            int offset = 0;
+            for (int i = 0; i < measureSprings.Count; i++)
+            {
+                int n = measureSprings[i].Length;
+                if (n > 0)
+                    measureSprings[i] = ImmutableArray.Create(allSprings.AsSpan(offset, n).ToArray());
+                offset += n;
+            }
+        }
+
         double springTargetWidth = availableWidth - totalBarlineWidth;
 
         double force = 0;

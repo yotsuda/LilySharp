@@ -192,10 +192,10 @@ internal sealed class MeasureLayouter
             return ImmutableArray<Spring>.Empty;
         var timingToItems = BuildTimingToItemsMap(measuresToScan);
 
-        // Full-measure rests get compact rods, not proportional whole-note
-        // spacing (see TryCreateAllRestSprings for the LilyPond reasoning).
-        if (TryCreateAllRestSprings(measure, measuresToScan) is { } restSprings)
-            return restSprings;
+        // NOTE: full-measure rests get ORDINARY springs, mirroring LilyPond — the
+        // compaction of a multi-measure rest comes from the run-level rod applied
+        // across the collapsed run (SpacingRules.MmrRodDistance), not from shrinking
+        // each rested measure. See the note in SpacingRules.CreateSpringsForMeasure.
 
         var springs = new List<Spring>();
 
@@ -253,39 +253,6 @@ internal sealed class MeasureLayouter
             if (acc == t) return item;
             if (acc > t) break;
             acc += item.Duration;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// When EVERY voice rests the whole measure, returns two compact rod springs
-    /// (not proportional whole-note spacing); otherwise null. The combined-timing
-    /// path must compact exactly like the single-voice path, or line breaking and
-    /// layout disagree about the measure's width and multi-measure-rest runs split
-    /// or stretch.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods</remarks>
-    private static ImmutableArray<Spring>? TryCreateAllRestSprings(
-        Measure measure, IReadOnlyList<Measure> measuresToScan)
-    {
-        bool allFullMeasureRests = true;
-        foreach (var m in measuresToScan)
-        {
-            if (!MultiMeasureRestEngraver.IsFullMeasureRest(m))
-            {
-                allFullMeasureRests = false;
-                break;
-            }
-        }
-        if (allFullMeasureRests && measure.Items.Length > 0)
-        {
-            var rest = measure.Items[0];
-            double inc = EngravingDefaults.SpacingIncrement;
-            double startMin = Math.Max(inc, SpacingRules.CalculateSkylineDistance(null, rest, staffY: 0));
-            double endMin = Math.Max(inc, SpacingRules.CalculateSkylineDistance(rest, null, staffY: 0));
-            return ImmutableArray.Create(
-                new Spring(Math.Max(1.25 * inc, startMin), startMin, Math.Max(0.1, 0.25 * inc)),
-                new Spring(Math.Max(2.0 * inc, endMin), endMin, Math.Max(0.1, inc)));
         }
         return null;
     }

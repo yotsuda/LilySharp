@@ -46,6 +46,63 @@ public readonly record struct MultiMeasureRestLayout(
     bool UseChurchRest);
 
 /// <summary>
+/// A run of consecutive measures that EVERY staff rests with an explicit
+/// multi-measure rest, identified WITHOUT reference to the system assignment.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/multi-measure-rest-engraver.cc — process_music builds ONE
+/// Multi_measure_rest spanner before spacing runs, so the run is a property of
+/// the music, not of where the line happens to break.
+/// </remarks>
+internal readonly record struct MmrRun(int StartMeasureIndex, int Count);
+
+/// <summary>
+/// Measure-index lookup over <see cref="MmrRun"/>s: which measure OPENS a run (and
+/// so carries the run's springs and its rod) and which measures are swallowed by one.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/multi-measure-rest.cc — a compressed multi-measure rest is ONE
+/// spanner between two bar-line columns, so the run occupies a single column pair.
+/// Collapsing the interior measures here is what reproduces that: their springs and
+/// bar lines drop out (the bar lines are already suppressed for drawing in
+/// SharedRenderer.Barlines), leaving the run-opening measure to carry the whole bar.
+/// </remarks>
+internal sealed class MmrRunMap
+{
+    private readonly Dictionary<int, MmrRun> _starts = new();
+    private readonly HashSet<int> _interior = new();
+    private readonly HashSet<int> _forbidAfter = new();
+
+    public static readonly MmrRunMap Empty = new();
+
+    public static MmrRunMap Build(ImmutableArray<MmrRun> runs)
+    {
+        var map = new MmrRunMap();
+        foreach (var run in runs)
+        {
+            map._starts[run.StartMeasureIndex] = run;
+            for (int m = run.StartMeasureIndex + 1; m < run.StartMeasureIndex + run.Count; m++)
+                map._interior.Add(m);
+            // Breaking AFTER measures [start, start+count-2] would fall inside the run;
+            // breaking after the LAST measure of the run is where a break belongs.
+            for (int m = run.StartMeasureIndex; m < run.StartMeasureIndex + run.Count - 1; m++)
+                map._forbidAfter.Add(m);
+        }
+        return map;
+    }
+
+    /// <summary>True when this measure is swallowed by a run that opened earlier.</summary>
+    public bool IsInterior(int measureIndex) => _interior.Contains(measureIndex);
+
+    /// <summary>True when a line break directly AFTER this measure would split a run.</summary>
+    public bool ForbidsBreakAfter(int measureIndex) => _forbidAfter.Contains(measureIndex);
+
+    /// <summary>True when a run OPENS at this measure; <paramref name="run"/> is that run.</summary>
+    public bool TryGetRunStartingAt(int measureIndex, out MmrRun run)
+        => _starts.TryGetValue(measureIndex, out run);
+}
+
+/// <summary>
 /// Detects runs of consecutive measures that contain a single full-measure rest
 /// and groups them into <see cref="MultiMeasureRestLayout"/> entries.
 /// </summary>
@@ -80,84 +137,38 @@ internal static class MultiMeasureRestEngraver
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
 
-        // A rest measure that carries a CHORD SYMBOL stays its own bar (a
-        // one-bar MMR with a centred rest): merging it into a run stacked
-        // every chord of the run onto the combined bar's single anchor
-        // column, overprinting them. Chord ROWS live on their own row staff
-        // and do not constrain the music staff.
-        var chordMeasures = new HashSet<int>();
-        foreach (var cn in score.ChordNames)
-            if (!cn.IsChordRow)
-                chordMeasures.Add(cn.MeasureIndex);
-
-        // A measure collapses into a multi-measure rest only when EVERY staff
-        // rests it. LilyPond keeps the measures (and their barlines) separate when
-        // another staff has content — the resting staff then shows individual
-        // whole rests, not a merged MMR symbol. Verified against LilyPond 2.24
-        // (single staff R1*4 → individual rests + barlines; only \compressMMRests
-        // over all-resting measures merges them). LILYPOND-REF: lily/bar-engraver.cc
-        // (barlines from Timing, independent of MMR) + lily/multi-measure-rest.cc.
-        // Only an EXPLICIT multi-measure rest (capital `R`) collapses into a centred
-        // MMR symbol. A plain lowercase `r1` that fills the measure stays an ordinary
-        // Rest drawn at beat 1 (it must NOT centre, and must hang from the 4th line via
-        // the normal rest renderer). LILYPOND-REF: scm/define-grobs.scm Rest vs
-        // MultiMeasureRest; lily/multi-measure-rest.cc (only the MMR spanner centres).
-        static bool IsMmrMeasure(Measure m)
-            => IsFullMeasureRest(m) && m.Items[0] is RestItem { IsMultiMeasure: true };
-
-        bool RestsEverywhere(int m)
+        foreach (var run in FindRuns(score, allStaffMeasures))
         {
-            if (m >= voice.Measures.Length || !IsMmrMeasure(voice.Measures[m]))
-                return false;
-            if (allStaffMeasures != null)
-                foreach (var sm in allStaffMeasures)
-                    if (m >= sm.Length || !IsMmrMeasure(sm[m]))
-                        return false;
-            return true;
-        }
+            int runLast = run.StartMeasureIndex + run.Count - 1;
+            int pieceStart = run.StartMeasureIndex;
 
-        int mi = 0;
-        while (mi < voice.Measures.Length)
-        {
-            // Skip measures not resting across the whole staff group.
-            if (!RestsEverywhere(mi))
+            // Spacing forbids a line break inside a run (the breaker gets
+            // BreakPermission.Forbid for a run's interior), so a run normally lives
+            // in ONE system and this loop runs once. It stays a safety net: one MMR
+            // symbol cannot span a system boundary, so should a break ever land
+            // inside, emit one symbol per system rather than stretching or dropping.
+            while (pieceStart <= runLast)
             {
-                mi++;
-                continue;
-            }
-
-            // Greedily extend the run while measures stay in the SAME system AND
-            // continue to be full-measure rests. Cross-system MMRs are LP-faithful
-            // to break at the system boundary (the symbol can't span systems).
-            if (!measureMap.TryGetValue(mi, out var startInfo))
-            {
-                mi++;
-                continue;
-            }
-            var (startSystem, startMeasure) = startInfo;
-
-            int runStart = mi;
-            int runEnd = mi;
-            // A chord-bearing rest measure stays a ONE-bar MMR: it neither
-            // extends into a run nor lets a run swallow it (see chordMeasures).
-            while (runEnd + 1 < voice.Measures.Length &&
-                   RestsEverywhere(runEnd + 1) &&
-                   !chordMeasures.Contains(runStart) &&
-                   !chordMeasures.Contains(runEnd + 1) &&
-                   measureMap.TryGetValue(runEnd + 1, out var nextInfo) &&
-                   nextInfo.System.SystemIndex == startSystem.SystemIndex)
-            {
-                runEnd++;
-            }
-
-            int count = runEnd - runStart + 1;
-            if (count >= 1)
-            {
-                if (!measureMap.TryGetValue(runEnd, out var endInfo))
+                if (!measureMap.TryGetValue(pieceStart, out var startInfo))
                 {
-                    mi = runEnd + 1;
+                    pieceStart++;
                     continue;
                 }
+                var (startSystem, startMeasure) = startInfo;
+
+                int runStart = pieceStart;
+                int runEnd = pieceStart;
+                while (runEnd + 1 <= runLast &&
+                       measureMap.TryGetValue(runEnd + 1, out var next) &&
+                       next.System.SystemIndex == startSystem.SystemIndex)
+                {
+                    runEnd++;
+                }
+                pieceStart = runEnd + 1;
+
+                int count = runEnd - runStart + 1;
+                if (!measureMap.TryGetValue(runEnd, out var endInfo))
+                    continue;
                 var (_, endMeasure) = endInfo;
 
                 // Centre the rest between the INNER edges of the bounding bar lines,
@@ -188,11 +199,131 @@ internal static class MultiMeasureRestEngraver
                     Y: y,
                     UseChurchRest: count <= ExpandLimit));
             }
-
-            mi = runEnd + 1;
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Groups consecutive measures that EVERY staff rests with an explicit
+    /// multi-measure rest into runs, WITHOUT consulting the system assignment.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc — process_music creates ONE
+    /// Multi_measure_rest spanner over the run BEFORE spacing runs, so the run is a
+    /// property of the music. Keeping this break-independent is what lets the spring
+    /// builders collapse the run to a single column pair and apply LilyPond's
+    /// run-level rod (lily/multi-measure-rest.cc:340-391) instead of the old
+    /// per-measure approximation — and it is the same grouping the post-break
+    /// drawing pass consumes, so spacing and drawing cannot disagree.
+    /// </remarks>
+    internal static ImmutableArray<MmrRun> FindRuns(
+        Score score,
+        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures = null)
+    {
+        if (score.Voices.IsDefaultOrEmpty)
+            return ImmutableArray<MmrRun>.Empty;
+
+        // A rest measure that carries a CHORD SYMBOL stays its own bar (a
+        // one-bar MMR with a centred rest): merging it into a run stacked
+        // every chord of the run onto the combined bar's single anchor
+        // column, overprinting them. Chord ROWS live on their own row staff
+        // and do not constrain the music staff.
+        var chordMeasures = new HashSet<int>();
+        foreach (var cn in score.ChordNames)
+            if (!cn.IsChordRow)
+                chordMeasures.Add(cn.MeasureIndex);
+
+        return FindRuns(score.Voice.Measures, allStaffMeasures, chordMeasures);
+    }
+
+    /// <summary>
+    /// Run grouping for the multi-staff spacing path (line breaker and layouter),
+    /// which must agree with the drawing pass measure for measure.
+    /// </summary>
+    internal static ImmutableArray<MmrRun> FindRuns(MultiStaffScore score)
+    {
+        var staffMeasures = new List<ImmutableArray<Measure>>();
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+                staffMeasures.Add(staff.PrimaryVoice.Measures);
+
+        if (staffMeasures.Count == 0)
+            return ImmutableArray<MmrRun>.Empty;
+
+        var chordMeasures = new HashSet<int>();
+        foreach (var cn in score.ChordNames)
+            if (!cn.IsChordRow)
+                chordMeasures.Add(cn.MeasureIndex);
+
+        return FindRuns(staffMeasures[0], staffMeasures, chordMeasures);
+    }
+
+    /// <summary>
+    /// Run grouping from raw measures — the form the spacing path uses, where only
+    /// the staves' measures and the chord-bearing measure indices are on hand.
+    /// </summary>
+    internal static ImmutableArray<MmrRun> FindRuns(
+        ImmutableArray<Measure> primaryMeasures,
+        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures,
+        IReadOnlySet<int> chordMeasures)
+    {
+        if (primaryMeasures.IsDefaultOrEmpty)
+            return ImmutableArray<MmrRun>.Empty;
+
+        // A measure collapses into a multi-measure rest only when EVERY staff
+        // rests it. LilyPond keeps the measures (and their barlines) separate when
+        // another staff has content — the resting staff then shows individual
+        // whole rests, not a merged MMR symbol. Verified against LilyPond 2.24
+        // (single staff R1*4 → individual rests + barlines; only \compressMMRests
+        // over all-resting measures merges them). LILYPOND-REF: lily/bar-engraver.cc
+        // (barlines from Timing, independent of MMR) + lily/multi-measure-rest.cc.
+        // Only an EXPLICIT multi-measure rest (capital `R`) collapses into a centred
+        // MMR symbol. A plain lowercase `r1` that fills the measure stays an ordinary
+        // Rest drawn at beat 1 (it must NOT centre, and must hang from the 4th line via
+        // the normal rest renderer). LILYPOND-REF: scm/define-grobs.scm Rest vs
+        // MultiMeasureRest; lily/multi-measure-rest.cc (only the MMR spanner centres).
+        static bool IsMmrMeasure(Measure m)
+            => IsFullMeasureRest(m) && m.Items[0] is RestItem { IsMultiMeasure: true };
+
+        bool RestsEverywhere(int m)
+        {
+            if (m >= primaryMeasures.Length || !IsMmrMeasure(primaryMeasures[m]))
+                return false;
+            if (allStaffMeasures != null)
+                foreach (var sm in allStaffMeasures)
+                    if (m >= sm.Length || !IsMmrMeasure(sm[m]))
+                        return false;
+            return true;
+        }
+
+        var runs = ImmutableArray.CreateBuilder<MmrRun>();
+        int mi = 0;
+        while (mi < primaryMeasures.Length)
+        {
+            if (!RestsEverywhere(mi))
+            {
+                mi++;
+                continue;
+            }
+
+            int runStart = mi;
+            int runEnd = mi;
+            // A chord-bearing rest measure stays a ONE-bar MMR: it neither
+            // extends into a run nor lets a run swallow it (see chordMeasures).
+            while (runEnd + 1 < primaryMeasures.Length &&
+                   RestsEverywhere(runEnd + 1) &&
+                   !chordMeasures.Contains(runStart) &&
+                   !chordMeasures.Contains(runEnd + 1))
+            {
+                runEnd++;
+            }
+
+            runs.Add(new MmrRun(runStart, runEnd - runStart + 1));
+            mi = runEnd + 1;
+        }
+
+        return runs.ToImmutable();
     }
 
     /// <summary>

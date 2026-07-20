@@ -752,6 +752,104 @@ internal static class SpacingRules
         return spaceFactor * EngravingDefaults.SpacingIncrement;
     }
 
+    // ---------- Multi-measure rest: LilyPond's run-level spacing rod ----------
+
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2375 MultiMeasureRest (space-increment . 2.0).</remarks>
+    private const double MmrSpaceIncrement = 2.0;
+
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2370 MultiMeasureRest (bound-padding . 0.5).</remarks>
+    private const double MmrBoundPadding = 0.5;
+
+    /// <summary>
+    /// Width of the multi-measure rest symbol at zero available space — LilyPond's
+    /// <c>symbol_stencil (me, 0.0)</c>, the value its spacing rod is built from.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:166-189 Multi_measure_rest::symbol_stencil
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:226-329 Multi_measure_rest::church_rest
+    ///
+    /// church_rest with <c>space == 0</c>: <c>inner_padding = (space - symbols_width) /
+    /// (2*1.5 + (symbol_count-1))</c> goes negative, so the guard resets it to 1.0 (and
+    /// min() against max-symbol-separation 8.0 leaves it at 1.0). The stencil is then
+    /// <c>symbols_width + inner_padding * (symbol_count - 1)</c>; left_offset only
+    /// translates. Verified against LP: measure-count 2 → one breve rest, 0.600.
+    ///
+    /// The greedy decomposition mirrors <see cref="Rendering.SharedRenderer"/>'s
+    /// church rest (longa 4 / breve 2 / whole 1) so rod and drawing agree. LilyPond
+    /// also admits a maxima (duration-log -3, i.e. 8 measures) via usable-duration-logs;
+    /// Emmentaler's maxima rest has no extracted metrics here, so counts >= 8 decompose
+    /// into longas exactly as this renderer draws them.
+    /// </remarks>
+    internal static double MmrSymbolWidth(int measureCount)
+    {
+        if (measureCount <= 0)
+            return 0;
+
+        if (measureCount > MultiMeasureRestEngraver.ExpandLimit)
+        {
+            // LILYPOND-REF: lily/multi-measure-rest.cc:194-215 big_rest (me, 0.0) —
+            // the filled box collapses to zero width and only the two hair-thickness
+            // end caps remain.
+            return 2 * EngravingDefaults.MultiMeasureRestHairThickness;
+        }
+
+        double symbolsWidth = 0;
+        int symbolCount = 0;
+        int remaining = measureCount;
+        foreach (var (span, width) in new[]
+        {
+            (4, GlyphMetrics.RestLonga.Width),
+            (2, GlyphMetrics.RestDoubleWhole.Width),
+            (1, GlyphMetrics.RestWhole.Width),
+        })
+        {
+            while (remaining >= span)
+            {
+                symbolsWidth += width;
+                symbolCount++;
+                remaining -= span;
+            }
+        }
+
+        // inner_padding == 1.0 at space == 0 (see remarks).
+        return symbolsWidth + (symbolCount - 1);
+    }
+
+    /// <summary>
+    /// LilyPond's minimum distance between the bar lines bounding a multi-measure
+    /// rest run — the rod that replaces per-measure springs for the whole run.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:340-391
+    /// Multi_measure_rest::calculate_spacing_rods, transcribed:
+    /// <code>
+    ///   length += full-measure-extra-space
+    ///           + options.get_duration_space (mlen.main_part_)
+    ///           + space-increment * log2 (measure-count);
+    ///   length += 2 * bound-padding;
+    ///   rod.distance_ = max (Paper_column::minimum_distance (li, ri) + length, minlen);
+    /// </code>
+    /// <paramref name="length"/> enters as the symbol width (set_spacing_rods passes
+    /// <c>symbol_stencil (me, 0.0)</c>). MultiMeasureRest leaves <c>minimum-length</c>
+    /// unset, so LilyPond's <c>minlen</c> is 0 and the max() is inert; it is kept here
+    /// to match the source line for line.
+    /// </remarks>
+    internal static double MmrRodDistance(
+        int measureCount,
+        Fraction measureLength,
+        double baseShortestDuration,
+        double minimumDistance)
+    {
+        double length = MmrSymbolWidth(measureCount);
+        length += FullMeasureExtraSpace
+                  + CalculateDurationSpace(measureLength, baseShortestDuration)
+                  + MmrSpaceIncrement * Math.Log2(measureCount);
+        length += 2 * MmrBoundPadding;
+
+        const double minlen = 0.0;
+        return Math.Max(minimumDistance + length, minlen);
+    }
+
     /// <summary>
     /// Calculates the common shortest duration across all voices in a multi-staff score.
     /// </summary>
@@ -1239,22 +1337,16 @@ internal static class SpacingRules
         if (spacingItems.Count == 0)
             return ImmutableArray<Spring>.Empty;
 
-        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods /
-        // calculate_spacing_rods — full-measure rests are spaced by a compact
-        // rod for the whole run (symbol width + ONE duration space +
-        // space-increment·log2(count)), NOT proportionally to the notated
-        // whole notes. Per-measure approximation: canonical column widths on
-        // both sides of the rest, independent of the global shortest duration.
-        if (MultiMeasureRestEngraver.IsFullMeasureRest(measure))
-        {
-            var rest = spacingItems[0];
-            double inc = EngravingDefaults.SpacingIncrement;
-            double startMin = Math.Max(inc, CalculateSkylineDistance(null, rest, staffY: 0));
-            double endMin = Math.Max(inc, CalculateSkylineDistance(rest, null, staffY: 0));
-            return ImmutableArray.Create(
-                new Spring(Math.Max(1.25 * inc, startMin), startMin, Math.Max(0.1, 0.25 * inc)),
-                new Spring(Math.Max(2.0 * inc, endMin), endMin, Math.Max(0.1, inc)));
-        }
+        // NOTE: a full-measure rest gets ORDINARY springs here. LilyPond does the
+        // same — a rested bar is spaced like any other bar, and the compaction of a
+        // multi-measure rest comes from the run-level ROD
+        // (Multi_measure_rest::calculate_spacing_rods, ported as MmrRodDistance)
+        // applied across the collapsed run, NOT from shrinking each measure. The
+        // earlier per-measure approximation here was wrong in BOTH directions:
+        // measured against LP 2.24.4 it made an `R1*9` run ~108% too wide (the
+        // approximation is linear in the count where LP's rod grows ~2·log2(count))
+        // and a lowercase `r1` bar ~25% too narrow (LP spaces it as a normal bar:
+        // `r1`×3 spans 31.214 ss with or without \compressMMRests, vs `R1*3` 20.810).
 
         var springs = new List<Spring>();
 
