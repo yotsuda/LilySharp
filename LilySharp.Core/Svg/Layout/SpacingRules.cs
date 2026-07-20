@@ -1405,6 +1405,13 @@ internal static class SpacingRules
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
 
+    /// <summary>A one-item sequence, for the single-voice callers of
+    /// <see cref="ApplyLeftHeadWidth"/> (which takes the simultaneous left column).</summary>
+    private static IEnumerable<MusicItem> One(MusicItem item)
+    {
+        yield return item;
+    }
+
     /// <summary>
     /// Refines a duration-based ideal to the LEFT note column's actual head width.
     /// </summary>
@@ -1557,6 +1564,11 @@ internal static class SpacingRules
             var nextItem = spacingItems[i + 1];
             var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
                 baseShortestDuration: baseShortestDuration);
+            // Swap the generic spacing-increment for the LEFT column's real head
+            // width, exactly as the timing-column system does (MeasureLayouter) —
+            // this is LilyPond's ideal, and leaving it out made every spring here
+            // ~0.104 ss narrow for a black head.
+            spring = ApplyLeftHeadWidth(spring, One(prevItem));
             spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
             spring = WidenForChangeItem(spring, prevItem);
             springs.Add(spring);
@@ -1567,6 +1579,22 @@ internal static class SpacingRules
         var lastItem = spacingItems[^1];
         var lastSpring = CreateSpring(lastItem, null, lastItem.Duration,
             baseShortestDuration: baseShortestDuration);
+        lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem));
+
+        // The bar line stands in for the right-hand stem, so LilyPond runs
+        // stem_dir_correction on THIS spring too. CreateSpring's own
+        // CalculateStemCorrection sees no RIGHT item here and contributes nothing,
+        // so without this the two spring systems disagreed on every stemmed measure:
+        // the timing-column system (MeasureLayouter.CreateLastToBarlineSpring) has
+        // carried the correction since the bar-line spring was ported, this one never
+        // did. A measure has one voice, so this is the single-wish case of
+        // MergeVoiceStemWishesToBarline — merging one wish returns it unchanged.
+        // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264; :113 clamps at 0.0.
+        lastSpring = new Spring(
+            Math.Max(0, lastSpring.IdealDistance
+                + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)),
+            lastSpring.MinDistance,
+            lastSpring.InverseStretchStrength);
         springs.Add(lastSpring);
 
         return springs.ToImmutableArray();

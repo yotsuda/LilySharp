@@ -53,6 +53,54 @@ public class SpacingInvariantTests
         """;
 
     [Fact]
+    public void BothSpringSystems_AgreeOnEveryMusicalSpring()
+    {
+        // Lily# builds springs two ways and they must not drift: the timing-column
+        // system (MeasureLayouter.CreateTimingSprings — union columns, drives the
+        // real layout and the multi-staff break gate) and the item system
+        // (SpacingRules.CreateSpringsForMeasure — single measure, feeds
+        // CalculateMeasureIdealWidth / the greedy breaker / KnuthPlassBreaker's
+        // own spring data).
+        //
+        // The bar line stands in for the right-hand stem on the last spring, so both
+        // must carry stem_dir_correction there. CreateSpring only corrects between
+        // two items, so the item system silently lost it until the correction was
+        // applied explicitly; a monophonic measure is the single-wish case, where
+        // merging one wish returns it unchanged and the two must land on the SAME
+        // number.
+        // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264.
+        var (timings, allMeasures, primary, _) = Collect(OneMeasure);
+        var columnSprings = new MeasureLayouter()
+            .CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(primary, 0.125);
+
+        Assert.Equal(columnSprings.Length, itemSprings.Length);
+
+        // Spring 0 (bar line → first column) is KNOWINGLY excluded: the column
+        // system models it as LilyPond does — BarLine's space-alist `next-note`
+        // (0.9, rigid, staff-spacing.cc) — while the item system still prices it as
+        // a note's duration space (3.6 for a quarter). LilyPond never uses duration
+        // space across a bar line, so the item system is wrong there and the two
+        // disagree by ~2.7 ss. Porting it needs the skyline / grace / change-prefix
+        // minimums too, so it is left as a separate step; this bound documents the
+        // remaining gap instead of hiding it.
+        for (int i = 1; i < itemSprings.Length; i++)
+            Assert.Equal(columnSprings[i].IdealDistance, itemSprings[i].IdealDistance, 9);
+
+        // And both corrections are actually LIVE here, so the equality above is not
+        // two zeroes agreeing: `e` is a stemmed quarter, so the spring into the bar
+        // line must exceed the bare duration space (stem correction), and an inner
+        // spring must exceed it too (left head width, +0.104 for a black head).
+        double bare = SpacingRules.CalculateDurationSpace(Fraction.Quarter, 0.125);
+        Assert.True(itemSprings[^1].IdealDistance > bare,
+            $"the bar-line spring must carry the stem correction: "
+            + $"bare={bare}, toBarline={itemSprings[^1].IdealDistance}");
+        Assert.True(itemSprings[^2].IdealDistance > bare,
+            $"an inner spring must carry the left-head refinement: "
+            + $"bare={bare}, inner={itemSprings[^2].IdealDistance}");
+    }
+
+    [Fact]
     public void SpringDurations_FollowGetDurationSpace()
     {
         // LILYPOND-REF: lily/spacing-options.cc get_duration_space — doubling
