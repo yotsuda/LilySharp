@@ -187,11 +187,11 @@ internal sealed class SystemBreaker
                 foreach (var item in primaryMeasure.Items)
                     measureLength += item.Duration;
                 // Same minimum-distance quantity the layouter uses: LP's
-                // Paper_column::minimum_distance is the bounding bar line's own stencil
-                // reach, NOT the accumulated spring minima this used to pass.
+                // Paper_column::minimum_distance is the LEFT bounding bar-line column's
+                // skyline reach, NOT the accumulated spring minima this used to pass.
                 double rod = SpacingRules.MmrRodDistance(
                     run.Count, measureLength,
-                    SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline));
+                    SpacingRules.MmrRodMinimumDistance(primaryMeasure.StartBarline));
                 ideal = Math.Max(ideal, rod);
                 min = Math.Max(min, rod);
             }

@@ -861,6 +861,47 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// <c>Paper_column::minimum_distance</c> between the two paper columns bounding a
+    /// multi-measure-rest run: the geometric distance between the left column's right
+    /// horizontal skyline and the right column's left one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc:144-164 Paper_column::minimum_distance
+    /// (<c>max (0.0, skys[LEFT].distance (skys[RIGHT]))</c>), over the skylines built by
+    /// lily/separation-item.cc:88-105 calc_skylines and :113-190 boxes.
+    ///
+    /// A column's skyline is built from its items' boxes, and every box is WIDENED by that
+    /// item's <c>extra-spacing-width</c> (separation-item.cc:166-167). BarLine defines no
+    /// such property (scm/define-grobs.scm:260-316), so it falls back to separation-item's
+    /// OWN default of <c>(-0.1 . 0.1)</c> — this is the term that was missing, and it is
+    /// why passing the bare drawn width left every run exactly 0.200 ss too narrow.
+    ///
+    /// A bar line's extent runs from its column's origin rightwards, so the left column
+    /// reaches to <c>width + 0.1</c> while the right column reaches back only to
+    /// <c>-0.1</c>: the RIGHT bounding bar line's width does not enter at all.
+    ///
+    /// Verified on LilyPond 2.24.4 with an <c>R1*5</c> run (span measured column-to-column
+    /// between the bounding bar lines, baseline 14.134):
+    ///   BarLine.extra-spacing-width (0 . 0)      -> -0.200 (lands on the bare drawn width)
+    ///   BarLine.extra-spacing-width (-0.5 . 0.5) -> +0.800
+    ///   LEFT bound  `|.` (0.19 -> 1.09)          -> +0.900
+    ///   RIGHT bound `|.`                         ->  0.000
+    /// </remarks>
+    internal static double MmrRodMinimumDistance(BarlineType leftBound)
+    {
+        // separation-item.cc:167 — the fallback used when a grob carries no
+        // extra-spacing-width of its own, which is BarLine's case.
+        const double extraSpacingWidthLeft = -0.1;
+        const double extraSpacingWidthRight = 0.1;
+
+        double leftColumnReach =
+            EngravingDefaults.BarlineDrawnWidth(leftBound) + extraSpacingWidthRight;
+        double rightColumnReach = extraSpacingWidthLeft;
+
+        return Math.Max(0.0, leftColumnReach - rightColumnReach);
+    }
+
+    /// <summary>
     /// LilyPond's minimum distance between the bar lines bounding a multi-measure
     /// rest run — the rod that replaces per-measure springs for the whole run.
     /// </summary>

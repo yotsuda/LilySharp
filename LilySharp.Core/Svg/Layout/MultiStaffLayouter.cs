@@ -991,13 +991,13 @@ internal sealed class MultiStaffLayouter
             if (springCount > 0 && runMap.TryGetRunStartingAt(measureIndex, out var run))
             {
                 // LP's Paper_column::minimum_distance (li, ri) between the bounding
-                // bar-line columns: a plain skyline distance (paper-column.cc takes no
-                // padding and clamps at >= 0), so it is the LEFT column's own stencil
-                // reach — the bar line's drawn width. This used to sum the run measure's
-                // spring MinDistances, which has no LilyPond counterpart: it is an
-                // accumulation of spacing minima, not a geometric column distance, and
-                // it inflated every run (an R1*5 run by ~3.4 ss).
-                double minimumDistance = SpacingRules.GetBarlineWidth(
+                // bar-line columns: a plain skyline distance over the LEFT column's own
+                // reach. This used to sum the run measure's spring MinDistances, which has
+                // no LilyPond counterpart: it is an accumulation of spacing minima, not a
+                // geometric column distance, and it inflated every run (an R1*5 run by
+                // ~3.4 ss). See MmrRodMinimumDistance for the extra-spacing-width term
+                // that the bar line's bare drawn width was still missing.
+                double minimumDistance = SpacingRules.MmrRodMinimumDistance(
                     primaryVoice.Measures[measureIndex].StartBarline);
 
                 var measureLength = Fraction.Zero;
