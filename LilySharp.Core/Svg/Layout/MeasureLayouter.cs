@@ -446,6 +446,23 @@ internal sealed class MeasureLayouter
         {
             endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems);
 
+            // Stem-direction optical correction, with the bar line standing in for the
+            // right-hand stem. LilyPond runs stem_dir_correction on THIS spring too,
+            // not only between musical columns; omitting it left a stemmed note ~0.24 ss
+            // too close to the bar line.
+            // Applied only for a single sounding column: LilyPond merges one Note_spacing
+            // wish per voice, and this path has no per-voice merge (the inter-column
+            // spring gets that via MergeVoiceStemWishes). A polyphonic column keeps the
+            // uncorrected spring rather than picking one voice's wish arbitrarily.
+            // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264.
+            if (lastItems.Count == 1)
+                endSpring = new Spring(
+                    Math.Max(0, endSpring.IdealDistance
+                        + SpacingRules.CalculateStemCorrectionToBarline(
+                            lastItems[0], NoteSpacingParameters.Default)),
+                    endSpring.MinDistance,
+                    endSpring.InverseStretchStrength);
+
             double maxSkyDist = 0;
             foreach (var item in lastItems)
             {

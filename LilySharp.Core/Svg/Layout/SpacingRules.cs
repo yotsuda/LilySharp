@@ -576,6 +576,55 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// Stem-direction optical correction for the spring that runs from a note column
+    /// INTO a bar line, where the bar line stands in for the right-hand stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:243-248 stem_dir_correction — when the right
+    /// column carries a bar line, LilyPond synthesises the right-hand stem from the bar:
+    /// <code>
+    ///   stem_dirs[RIGHT] = -stem_dirs[LEFT];
+    ///   stem_posns[RIGHT] = bar_yextent;
+    ///   stem_posns[RIGHT] *= 2;
+    /// </code>
+    /// so the directions are opposite BY CONSTRUCTION and
+    /// different_directions_correction always runs, then is HALVED (:263-264).
+    /// LILYPOND-REF: lily/staff-spacing.cc bar_y_positions — the bar's Y extent divided
+    /// by the staff space, i.e. staff-spaces; the <c>*= 2</c> above converts it to staff
+    /// POSITIONS (half-spaces), the unit StemSpacingInfo already reports.
+    ///
+    /// A plain bar line spans the staff, so on a normal five-line staff that extent is
+    /// ±2 staff-spaces → ±4 staff positions. (LilyPond takes this from the bar grob and
+    /// only for glyphs beginning "|" or "."; this path is the ordinary staff bar, and
+    /// like the item→bar-line skyline beside it, it assumes the standard staff.)
+    ///
+    /// Returns 0 when the left column has no visible stem — a whole note or a rest —
+    /// which is LilyPond's `if (!stem || Stem::is_invisible (stem)) return;` (:200-201)
+    /// and is why `c'1 c'1` needs no correction at all.
+    /// </remarks>
+    internal static double CalculateStemCorrectionToBarline(
+        MusicItem? prevItem, NoteSpacingParameters noteParams)
+    {
+        if (StemSpacingInfo(prevItem) is not { } l)
+            return 0;
+
+        // The bar line's Y extent in staff positions: the staff's own half-height.
+        const double barHalfHeightPositions = 4.0;
+
+        int leftDir = l.StemUp ? 1 : -1;
+        double lo = Math.Max(l.StemMin, -barHalfHeightPositions);
+        double hi = Math.Min(l.StemMax, barHalfHeightPositions);
+        if (hi <= lo)
+            return 0;
+
+        double correction =
+            Math.Min((hi - lo) / 7.0, 1.0) * leftDir * noteParams.StemSpacingCorrection;
+
+        // LILYPOND-REF: note-spacing.cc:263-264 — halved when the right side is a bar.
+        return correction * 0.5;
+    }
+
+    /// <summary>
     /// Merges the per-voice stem-direction spacing wishes for the column pair
     /// (<paramref name="tLeft"/> → <paramref name="tRight"/>) into a single spring.
     /// Each voice with a note/chord column at BOTH moments contributes one wish:

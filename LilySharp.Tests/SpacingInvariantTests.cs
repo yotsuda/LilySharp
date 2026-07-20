@@ -77,7 +77,18 @@ public class SpacingInvariantTests
         double expectedDelta = durationDelta + headDelta;
         Assert.True(halfGap > quarterGap, $"half {halfGap} must exceed quarter {quarterGap}");
         Assert.Equal(expectedDelta, halfGap - quarterGap, precision: 6);
-        Assert.Equal(springs[2].IdealDistance, springs[3].IdealDistance, precision: 6);
+        // The spring INTO the bar line is NOT the plain quarter gap: LilyPond runs
+        // stem_dir_correction there too, with the bar line standing in for the
+        // right-hand stem, so the directions are opposite by construction and the
+        // correction (halved for a bar) widens the gap.
+        // Measured on LilyPond 2.24.4, `c'2 d'4 e' | c'2 d'4 e'`, column to column:
+        //   c'2 -> d'4      4.275
+        //   d'4 -> e'4      3.002
+        //   e'4 -> bar     3.239   (+0.237)
+        // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264.
+        Assert.True(springs[3].IdealDistance > springs[2].IdealDistance,
+            $"the spring into the bar line must carry the stem correction: "
+            + $"quarter={springs[2].IdealDistance}, toBarline={springs[3].IdealDistance}");
     }
 
     [Fact]
