@@ -214,30 +214,30 @@ public class SystemLayoutCacheTests
     }
 
     [Fact]
-    public void MultiVoice_FallsBackToFullLayout_AndStaysByteIdentical()
+    public void MultiVoice_EditToSecondVoice_DeclinesReuse_AndStaysByteIdentical()
     {
         // grammar-tour has a staff with two simultaneous voices (voice { } voice { }).
-        // The per-measure content key and the spring gate fold only each staff's
-        // PRIMARY voice, so an edit to a SECONDARY voice would not be localized by
-        // them — reuse could emit stale voice-2 geometry. The incremental compiler
-        // must therefore disable reuse for any polyphonic score and fall back to a
-        // full layout every edit, which is byte-identical with a full recompile.
+        // A polyphonic score is no longer gated out of reuse wholesale: the per-measure
+        // content key folds every voice, and the spring gate always saw them. So the
+        // per-system cache IS installed here — and an edit that changes voice 2 moves
+        // the key, declines whole-layout reuse, and stays byte-identical with a full
+        // recompile. (Detecting the edit is what makes reuse safe, rather than
+        // refusing to reuse at all.)
         var source = LoadFixture("showcase/grammar-tour");
         var session = new IncrementalCompiler(SyntaxTree.Parse(source));
         session.Render();
 
-        // No per-system cache is installed for a multi-voice score.
-        Assert.Null(session.SystemCache);
+        // The per-system cache is now installed for a multi-voice score.
+        Assert.NotNull(session.SystemCache);
 
         // Editing the SECOND voice's first pitch (b' -> c') must stay byte-identical
-        // to a full recompile, and must NOT reuse the cached layout.
+        // to a full recompile, and must NOT reuse the cached whole layout.
         int at = source.IndexOf("voice { b'2", StringComparison.Ordinal) + "voice { ".Length;
         Assert.True(at > "voice { ".Length, "expected a 'voice { b'2' second voice in the fixture");
         string edited = source.Remove(at, 1).Insert(at, "c");
         var incremental = session.Edit(new TextChange(new TextSpan(at, 1), "c"));
 
         Assert.False(session.LastEditReusedLayout);
-        Assert.Null(session.SystemCache);
         var full = new IncrementalCompiler(SyntaxTree.Parse(edited)).Render();
         Assert.Equal(full, incremental);
     }

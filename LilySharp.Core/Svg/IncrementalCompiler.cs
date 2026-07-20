@@ -135,14 +135,18 @@ public sealed class IncrementalCompiler
         // — are memoized; Compute(MultiStaffScore) gives the sound all-staff key.
         bool overrideFree = score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty;
-        // Secondary voices (polyphony within a staff) are captured by NEITHER the
-        // per-measure content key NOR the spring gate — both fold only each staff's
-        // PRIMARY voice (MeasureContentKey.Compute, ComputeMultiStaffSpringData). A
-        // secondary-voice edit would therefore leave the key/gate unchanged and wrongly
-        // trip reuse, emitting stale voice-2 geometry. Gate every reuse path (content
-        // key, per-system cache, whole-layout reuse) on single-voice staves so
-        // polyphonic scores fall back to full layout, which is byte-identical.
-        bool reuseEligible = overrideFree && !score.HasSecondaryVoices;
+        // Polyphony is no longer disqualifying. BOTH gates now see every voice:
+        //   - the SPRING gate always did — ComputeMultiStaffSpringData passes
+        //     `primaryMeasure` only as the anchor and builds the springs from
+        //     CollectAllMeasuresAtIndex / CollectAllTimingsForMeasure, i.e. all staves
+        //     AND all their voices (SystemBreaker.cs:124-127);
+        //   - the CONTENT KEY now folds each staff's secondary voices too
+        //     (MeasureContentKey.Compute, discriminated by voice index).
+        // So an edit confined to voice 2 moves the key and correctly declines reuse,
+        // while an edit that leaves every voice's content alone can reuse. Previously
+        // this was gated off wholesale with !score.HasSecondaryVoices, which cost the
+        // fast path on essentially all real repertoire (piano, choral, any `voice {}`).
+        bool reuseEligible = overrideFree;
         var contentKeys = reuseEligible
             ? MeasureContentKey.Compute(score)
             : default;

@@ -113,11 +113,27 @@ public class IncrementalReuseSoundnessTests
     // 1. SESSION FUZZ: reuse path == full recompile, every step.
     // ---------------------------------------------------------------------
 
+    // Polyphony is a fuzz seed in its own right: since the content key started folding
+    // secondary voices, a polyphonic score takes the REUSE path instead of being gated
+    // out, so this is the seed that would actually expose a stale-voice-2 bug. `voice`
+    // is in the snippet alphabet below so edits can also create and destroy voices.
+    private const string Polyphonic = """
+        time 4/4
+        key c major
+        part melody
+        section Main {
+          melody { voice { c'2 d | e2 f | } voice { a2 g | b2 a | } }
+        }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
     [Theory]
     [InlineData(Plain)]
     [InlineData(Header)]
     [InlineData(Lyrics)]
     [InlineData(GrandStaff)]
+    [InlineData(Polyphonic)]
     public void SessionFuzz_RandomizedEdits_AlwaysMatchFull(string seed)
     {
         // Deterministic per-seed RNG so a failure reproduces exactly.
@@ -172,12 +188,14 @@ public class IncrementalReuseSoundnessTests
         """;
 
     [Fact]
-    public void SecondaryVoice_ContentUnchangedEdit_DoesNotReuse_ButMatchesFull()
+    public void SecondaryVoice_ContentUnchangedEdit_Reuses_AndMatchesFull()
     {
-        // A leading newline changes no content, so on a SINGLE-voice score whole-layout
-        // reuse would fire. Here the score is polyphonic: the primary-voice-only content
-        // key/spring gate cannot see voice 2, so reuse MUST be declined wholesale
-        // (HasSecondaryVoices gate) — else a later voice-2 edit would render stale.
+        // A leading newline changes no content, so whole-layout reuse fires — and it
+        // now fires on a POLYPHONIC score too, since MeasureContentKey folds every
+        // voice (discriminated by voice index) rather than the primary alone.
+        // Polyphony used to be gated out wholesale via HasSecondaryVoices, which cost
+        // the fast path on essentially all real repertoire.
+        // The byte-identity half is the invariant that must never weaken.
         var tree = SyntaxTree.Parse(Poly);
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
@@ -185,15 +203,17 @@ public class IncrementalReuseSoundnessTests
         var change = new TextChange(new TextSpan(0, 0), "\n");
         var inc = Norm(session.Edit(change));
 
-        Assert.False(session.LastEditReusedLayout);
+        Assert.True(session.LastEditReusedLayout);
         Assert.Equal(Full(tree.WithChange(change).Text), inc);
     }
 
     [Fact]
-    public void SecondaryVoice_Voice2Edit_MatchesFull()
+    public void SecondaryVoice_Voice2Edit_DeclinesReuse_AndMatchesFull()
     {
-        // Editing ONLY the second voice must still match a full recompile (this is the
-        // exact staleness the HasSecondaryVoices gate exists to prevent).
+        // The counterpart: an edit that DOES change voice 2's content must move the
+        // content key and decline reuse. This is the staleness the old
+        // HasSecondaryVoices gate existed to prevent; it is now prevented by the key
+        // actually seeing the edit, which is what lets the test above reuse safely.
         var tree = SyntaxTree.Parse(Poly);
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();

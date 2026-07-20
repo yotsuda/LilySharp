@@ -168,6 +168,29 @@ public readonly record struct MeasureContentKey(long Hash)
                 AddIntrinsic(ref acc[i], measures[i]);
                 acc[i].Add(chain.Entry[i]);
             }
+
+            // SECONDARY voices (polyphony within the staff). They occupy the same
+            // measure indices and feed the same union columns the spring solve is
+            // built from (SystemBreaker.ComputeMultiStaffSpringData collects every
+            // voice), so their content belongs in the per-measure key just as the
+            // primary's does — otherwise an edit confined to voice 2 leaves the key
+            // unchanged and reuse hands back stale voice-2 geometry.
+            //
+            // The ENTRY CONTEXT is deliberately not recomputed per voice: clef / key /
+            // time are staff-level, established by the primary stream, and the chain
+            // above already folds them. Only the voice's own measure content is added,
+            // discriminated by voice index so two voices holding identical measures
+            // cannot cancel out.
+            for (int v = 1; v < staff.Voices.Length; v++)
+            {
+                var voiceMeasures = staff.Voices[v].Measures;
+                int mv = Math.Min(n, voiceMeasures.Length);
+                for (int i = 0; i < mv; i++)
+                {
+                    acc[i].Add(v);                      // discriminate which voice
+                    AddIntrinsic(ref acc[i], voiceMeasures[i]);
+                }
+            }
         }
 
         // A measure's WIDTH depends on its multi-measure-rest run membership: a run
@@ -227,8 +250,8 @@ public readonly record struct MeasureContentKey(long Hash)
         // across its measures: the instrument name (drives the system indent and the
         // drawn label), tab tuning, ossia scaling, hara-kiri visibility, staff
         // affinity, per-staff key signature, and the text-row band. Clef and the
-        // primary voice's measures are already captured (entry context + AddIntrinsic);
-        // secondary voices defeat reuse upstream via MultiStaffScore.HasSecondaryVoices.
+        // measures of EVERY voice are already captured by the caller (entry context +
+        // AddIntrinsic per voice), so nothing voice-related belongs here.
         hc.Add(staff.InstrumentName);
         hc.Add(staff.Tuning);
         hc.Add(staff.IsOssia);

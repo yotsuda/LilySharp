@@ -153,11 +153,11 @@ public sealed record MultiStaffScore
     /// <summary>Total number of individual staves.</summary>
     public int TotalStaffCount => StaffGroups.Sum(g => g.StaffCount);
 
-    /// <summary>Whether any staff carries more than one voice (polyphony). The
-    /// incremental content key and the spring gate fold only each staff's PRIMARY
-    /// voice, so a secondary-voice edit is not localized by them; the incremental
-    /// compiler must fall back to full layout when this is true to stay
-    /// byte-identical with a full recompile.</summary>
+    /// <summary>Whether any staff carries more than one voice (polyphony).
+    /// NOTE: this no longer gates incremental reuse — both the content key
+    /// (MeasureContentKey.Compute) and the spring gate
+    /// (SystemBreaker.ComputeMultiStaffSpringData) fold every voice, so a
+    /// secondary-voice edit is localized like any other.</summary>
     public bool HasSecondaryVoices => EnumerateStaves().Any(s => s.Staff.Voices.Length > 1);
 
     /// <summary>Creates a multi-staff score from its staff groups and score-level tables.</summary>
