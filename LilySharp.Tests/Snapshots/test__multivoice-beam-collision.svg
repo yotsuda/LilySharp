@@ -6,11 +6,11 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="722">Cross-voice beam collision</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.41" x2="29.28" y2="12.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.41" x2="29.28" y2="13.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.41" x2="29.28" y2="14.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.41" x2="29.28" y2="15.41" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.41" x2="29.28" y2="16.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.41" x2="29.57" y2="12.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.41" x2="29.57" y2="13.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.41" x2="29.57" y2="14.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.41" x2="29.57" y2="15.41" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.41" x2="29.57" y2="16.41" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="15.41" font-size="4.00" data-pos="762"></text>
   <text class="music" x="3.30" y="14.41" font-size="4.00"></text>
   <text class="music" x="7.68" y="13.91" font-size="4.00" data-pos="808"></text>
@@ -23,8 +23,8 @@
   <text class="music" x="25.87" y="13.91" font-size="4.00" data-pos="830"></text>
   <line x1="6.53" y1="11.41" x2="9.47" y2="11.41" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="7.02" y="11.41" font-size="4.00" data-pos="849"></text>
-  <rect x="28.19" y="12.41" width="0.19" height="4.00" data-pos="833"/>
-  <rect x="28.68" y="12.41" width="0.60" height="4.00" data-pos="833"/>
+  <rect x="28.48" y="12.41" width="0.19" height="4.00" data-pos="833"/>
+  <rect x="28.97" y="12.41" width="0.60" height="4.00" data-pos="833"/>
   <polygon points="8.86,10.17 17.16,10.17 17.16,10.65 8.86,10.65"/>
   <line x1="8.92" y1="13.76" x2="8.92" y2="10.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="12.08" y1="13.76" x2="12.08" y2="10.41" stroke="#000000" stroke-width="0.130"/>

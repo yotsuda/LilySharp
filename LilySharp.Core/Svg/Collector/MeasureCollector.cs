@@ -1546,6 +1546,88 @@ public sealed partial class MeasureCollector
         or MusicMarkType.Rehearsal;
 
     /// <summary>
+    /// Bakes the VOICE-forced stem directions into a polyphonic staff's items
+    /// (voice 1 up, voice 2 down, …), for the same reason
+    /// <see cref="ResolveBeamStemDirections"/> bakes the beam-resolved ones:
+    /// LilyPond's <c>\voiceOne</c>/<c>\voiceTwo</c> set Stem.direction in the
+    /// engravers, BEFORE spacing runs, so everything downstream must see the
+    /// direction that actually gets printed.
+    /// </summary>
+    /// <remarks>
+    /// The renderer already forces these when it draws — SharedRenderer.cs
+    /// <c>forcedStemUp ?? note.StemUp</c>, with <c>forcedStemUp</c> from
+    /// <see cref="VoiceDefaults.GetDefaultStemUp"/> — but nothing wrote them back
+    /// into the model, so an UNBEAMED note in a second voice reached the spacing
+    /// engine claiming its pitch-derived direction while the renderer drew the
+    /// opposite one. (Beamed notes were already correct, because a beam bakes its
+    /// own direction into the same slot.) That broke the stem-direction spacing
+    /// corrections in exactly the polyphonic case they exist for: measured against
+    /// LilyPond 2.24.4, merging the per-voice wishes with pitch-derived directions
+    /// moved a bar's last-column → bar-line distance the WRONG WAY (+0.036 where
+    /// LilyPond has −0.100 relative to the same bar set monophonically).
+    ///
+    /// Applied last, and unconditionally, to match the renderer's precedence: the
+    /// voice default wins over a beam-resolved or explicitly annotated direction.
+    /// Voices 5+ get <c>null</c> from GetDefaultStemUp and keep their own.
+    /// LILYPOND-REF: ly/engraver-init.ly — \voiceOne/\voiceTwo force stem direction.
+    /// </remarks>
+    private static ImmutableArray<Voice> ResolveVoiceStemDirections(ImmutableArray<Voice> voices)
+    {
+        if (voices.Length <= 1)
+            return voices;
+
+        var rebuilt = voices.ToBuilder();
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+            if (VoiceDefaults.GetDefaultStemUp(vi + 1) is not { } forced)
+                continue;
+
+            var measures = voices[vi].Measures.ToBuilder();
+            bool changed = false;
+            for (int mi = 0; mi < measures.Count; mi++)
+            {
+                var measure = measures[mi];
+                var items = measure.Items.ToBuilder();
+                bool measureChanged = false;
+                for (int ii = 0; ii < items.Count; ii++)
+                {
+                    MusicItem? updated = items[ii] switch
+                    {
+                        NoteItem n when n.StemUpOverride != forced
+                            => n with { StemUpOverride = forced },
+                        ChordItem c when c.StemUpOverride != forced
+                            => c with { StemUpOverride = forced },
+                        _ => null,
+                    };
+                    if (updated == null)
+                        continue;
+                    items[ii] = updated;
+                    measureChanged = true;
+                }
+                if (!measureChanged)
+                    continue;
+
+                measures[mi] = new Measure(
+                    items.ToImmutable(),
+                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
+                    measure.SourceStart, measure.SourceEnd,
+                    hasBreakAfter: measure.HasBreakAfter,
+                    lineBreakPermission: measure.LineBreakPermission,
+                    breakPenalty: measure.BreakPenalty,
+                    pageBreakPermission: measure.PageBreakPermission,
+                    pageTurnPermission: measure.PageTurnPermission,
+                    sectionLabelPosition: measure.SectionLabelPosition,
+                    isPickup: measure.IsPickup);
+                changed = true;
+            }
+
+            if (changed)
+                rebuilt[vi] = voices[vi] with { Measures = measures.ToImmutable() };
+        }
+        return rebuilt.ToImmutable();
+    }
+
+    /// <summary>
     /// Bakes beam-resolved stem directions into the collected items, IN
     /// PLACE. A beam forces one direction onto all members, and LilyPond
     /// resolves directions in the engravers BEFORE spacing — skyline rods and
@@ -1687,7 +1769,8 @@ public sealed partial class MeasureCollector
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord
         // names / percent repeats, which the old construction here silently dropped.
-        return ScoreAssembler.BuildScore(voices.ToImmutableArray(), CaptureScoreContent());
+        return ScoreAssembler.BuildScore(
+            ResolveVoiceStemDirections(voices.ToImmutableArray()), CaptureScoreContent());
     }
 
     /// <summary>
@@ -1774,7 +1857,7 @@ public sealed partial class MeasureCollector
         // Tie sanity scan per staff voice, BEFORE any display-only transform.
         foreach (var v in voices)
             TieTargetScanner.Scan(v, _tieTargetWarnings);
-        return voices.ToImmutable();
+        return ResolveVoiceStemDirections(voices.ToImmutable());
     }
 
     /// <summary>An empty placeholder measure (no items) that mirrors the
