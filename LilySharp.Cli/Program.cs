@@ -149,6 +149,7 @@ static int RunSvg(string[] args)
         .Value("score", "--score requires a score name", "--score")
         .Flag("no-embed-font", "--no-embed-font", "-n")
         .Flag("all", "--all")
+        .Flag("combined", "--combined")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "svg");
 
@@ -156,6 +157,10 @@ static int RunSvg(string[] args)
     if (ioError != null) return OptionError(ioError, "svg");
 
     bool embedFont = !r.Has("no-embed-font");
+    if (r.Has("all") && r.Has("combined"))
+        return OptionError("--all and --combined are mutually exclusive.", "svg");
+    if (r.Has("combined"))
+        return ExecuteSvgCombined(inputPath!, outputPath!, embedFont);
     if (r.Has("all"))
         return ExecuteSvgAll(inputPath!, embedFont);
     return ExecuteSvg(inputPath!, outputPath!, embedFont, r.Get("score"));
@@ -176,6 +181,7 @@ static void ShowSvgHelp()
           -o, --output <file>    Output file path
           -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
           --all                  Generate all render blocks as separate SVG files
+          --combined             Stack all render blocks into ONE SVG (like a \book)
           --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
@@ -223,6 +229,16 @@ static bool ValidateScoreName(LilySharp.Core.Syntax.SyntaxTree tree, string? sco
         Console.Error.WriteLine($"Available scores: {string.Join(", ", names)}");
     return false;
 }
+
+// LILYPOND-REF: lily/book.cc — a \book stacks every \score into one document.
+static int ExecuteSvgCombined(string inputPath, string outputPath, bool embedFont) =>
+    RunOutputCommand(inputPath, null, tree =>
+    {
+        var svg = LilySharp.Core.Svg.SvgGenerator.GenerateMultiMovement(tree, MakeSvgOptions(embedFont));
+        File.WriteAllText(outputPath, svg);
+        Console.WriteLine($"Created: {outputPath}");
+        return 0;
+    });
 
 static int ExecuteSvgAll(string inputPath, bool embedFont) =>
     RunOutputCommand(inputPath, null, tree =>
