@@ -333,15 +333,26 @@ LP の格子の半分が型として存在しない。**
 | **`NonMusicalPaperColumn`**（breakable） | `BoundaryColumn`（**Phase 1 で導入**・`04f493a5`） | 🔄**型は入った/載せ替え途中** |
 | **`BreakAlignment` group**（clef→staff-bar→key-cancel→key-sig→time-sig） | `BreakAlignSpacing`（順序・space-alist 完備）＋ `BoundaryColumn` が行内境界で参照 | 🔄**行頭専用ではなくなった** |
 
-> **Phase 1 完了（`04f493a5`）**: `BoundaryColumn` が LP の unbroken break-align 順で
+> **Phase 1 完了（`04f493a5`, `fbcde525`）**: `BoundaryColumn` が LP の unbroken break-align 順で
 > clef/staff-bar/key/time を列内 X に配置し、間隔は `BreakAlignSpacing` の space-alist を引く。
 > `MmrRodMinimumDistance` はこの列の `RightSkylineFromBarLine()` を使う形に載せ替え済み。
 > **出力は1バイトも変えていない**（snapshot 移動ゼロが合格条件）。
 > 副産物として `GetStaffBarSpacing` の値誤り（staff-bar→time-signature が既定 1.0 に落ちていた。
 > LP は `0.75`）を修正。`CalculatePrefixWidth` が staff-bar を左シンボルとして歩かないため
-> 本番未到達で露見していなかった。
-> **残**: 下記「4か所の再発明」のうち `GetBarlineToItemSpace` / `GetItemToBarlineSpace` /
-> `ChangeItemPrefixWidth` の3つと、clef の描画位置（Phase 2・出力が変わるため要承認）。
+> 本番未到達で露見していなかった。`fbcde525` で自己レビューし、`space-alist` の `SpacingStyle`
+> 無視（`minimum-space` を黙って誤配置する）と空 extent grob の非スキップを字面移植に直した。
+>
+> **Phase 2 完了（`9ecbcb33`, `6a328a45`）**: clef の描画を bar line の**前**へ。幅は
+> `BoundaryClefAllowance` で**前の小節の終端 spring の min** に加算し（ideal は LP が
+> `note-spacing.cc:99-100` で bar line 基準に落としているため不変）、`BarlineToFirstColumnSpring`
+> 側の二重予約を撤回。描画も同じ `BoundaryColumn` から位置を読むので定数の二重持ちが無い。
+> 両 spring 系統＋`SystemBreaker` にミラー。**動いた既存 snapshot は `test/clef-change` の1件のみ**
+> （LP 照合済み・承認済み）。`test/mmr-clef-change-bound` を新規追加。
+>
+> **残**: 「4か所の再発明」のうち `GetBarlineToItemSpace` / `GetItemToBarlineSpace` /
+> `ChangeItemPrefixWidth` の3つ。および item→bar line の**最小値そのもの**が Lily# 独自形式で、
+> LP の `padding + skyline 距離` になっていない（clef 分は既存最小値への**加算**で入れてあるので、
+> clef の無い境界は不変）。置き換えると全小節が動くため別段階。
 
 #### 忠実性所見
 - **[high・frame 欠落] 小節境界に列が無い** — `ColumnLayout` は `Fraction Timing` で鍵付けされ、
@@ -468,7 +479,7 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | 6 | BreakAlign KeyCancel/TimeSig 値 | ✅**LP 値採用**（`9c76abf9` に含む） |
 | 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
-| 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`d2020af6`・§3.I Phase 0、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`04f493a5`・`BoundaryColumn`、出力中立で snapshot 移動ゼロ、`GetStaffBarSpacing` の値誤りも修正）／③clef/key/time の載せ替え＝**未着手**（出力が変わるため要承認） |
+| 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`d2020af6`、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`04f493a5`+`fbcde525`、出力中立・`GetStaffBarSpacing` の値誤りも修正）／③clef を bar line の前へ＝**完了**（`9ecbcb33`+`6a328a45`、既存 snapshot 1件のみ変更・LP 照合済）／④残る3ヘルパの吸収と item→bar line 最小値の LP 式化＝**未着手**（全小節が動くため要承認） |
 | doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
 | doc | IDrawingContext.cs:37-39 | 🔲**未対処**。YFlip 配線済につき装飾前=Y-up/装飾後=Y-down の2フレームを運ぶ。remark は後段のみ記述（§3.G）。当初「false-positive」としたのは**誤り**だった |
 | 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔄**進行中**（正確な現状は `HANDOFF-stage4-vertical-yup.md`）。**YFlip 配線＋全 grob レイアウト Y-up 化は Phase 2i〜2z で既完了**（`e09d4e72`ほか。旧「未配線」記述は stale だった）。残＝共有 device stacking/skyline substrate の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b` 済／OutsideStaffStacker・MusicMarkEngraver 等 残）＋ system.Y/staff.Y の Y-up 格納（W2）。各島は boundary-shim で独立に byte 不変移行可。出力は既に正 |
