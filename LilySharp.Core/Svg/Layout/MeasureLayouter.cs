@@ -277,7 +277,10 @@ internal sealed class MeasureLayouter
     private static Spring CreateBarlineToFirstSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
     {
-        double firstNoteSpace = EngravingDefaults.BarLineToFirstNoteSpace;
+        // next-note, not first-note: this spring starts at an ordinary mid-line bar
+        // line (break_status_dir == CENTER). semi-fixed-space gives fixed = d/2 and
+        // ideal = d. The system-start case is BreakAlignSpacing.FirstNoteSpring.
+        double firstNoteSpace = EngravingDefaults.BarLineToNextNoteSpace;
         double firstNoteMin = firstNoteSpace / 2;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:446-472 fills_measure — the single

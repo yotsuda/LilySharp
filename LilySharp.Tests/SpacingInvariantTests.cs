@@ -83,13 +83,17 @@ public class SpacingInvariantTests
     [Fact]
     public void BarlineToFirstNoteSpring_IsRigid()
     {
-        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist —
-        // (first-note . (semi-shrink-space . 1.3)): the gap after a barline
-        // NEVER stretches under line justification.
+        // LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist —
+        // (next-note . (semi-fixed-space . 0.9)): the gap after a bar line NEVER
+        // stretches under line justification.
+        // This spring starts at a MID-LINE bar line, so LilyPond reads `next-note`,
+        // not `first-note` — Staff_spacing::get_spacing only reaches for `first-note`
+        // when break_status_dir != CENTER (start of a system).
+        // LILYPOND-REF: lily/staff-spacing.cc:147-153.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
         Assert.Equal(0, springs[0].InverseStretchStrength, precision: 9);
-        Assert.True(springs[0].IdealDistance >= EngravingDefaults.BarLineToFirstNoteSpace - 1e-9);
+        Assert.True(springs[0].IdealDistance >= EngravingDefaults.BarLineToNextNoteSpace - 1e-9);
     }
 
     [Fact]

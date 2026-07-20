@@ -40,18 +40,17 @@ public class BarlineSpacingTests
         new(new KeySignature(2), new KeySignature(0), sourcePosition: 0);
 
     [Fact]
-    public void BarlineToFirstNote_SemiShrinkSpace()
+    public void BarlineToNote_UsesNextNote_NotFirstNote()
     {
-        // LILYPOND-REF: (first-note . (semi-shrink-space . 1.3))
-        double space = SpacingRules.GetBarlineToItemSpace(CreateNote(), isFirstInMeasure: true);
-        Assert.Equal(1.3, space, 2);
-    }
-
-    [Fact]
-    public void BarlineToNextNote_SemiFixedSpace()
-    {
-        // LILYPOND-REF: (next-note . (semi-fixed-space . 0.9))
-        double space = SpacingRules.GetBarlineToItemSpace(CreateNote(), isFirstInMeasure: false);
+        // LILYPOND-REF: (next-note . (semi-fixed-space . 0.9)) — scm/define-grobs.scm:301.
+        // Every bar line inside a system has break_status_dir == CENTER, and
+        // Staff_spacing::get_spacing reaches for `first-note` ONLY when that dir is not
+        // CENTER (a system start). So a note after a bar line gets 0.9, never the
+        // 1.3 of `first-note` — including the first note of a measure.
+        // Verified on LilyPond 2.24.4: overriding BarLine's `first-note` from 0.0 to
+        // 5.0 leaves every grob X in `c'1 c'1` bit-identical, because it is never read.
+        // LILYPOND-REF: lily/staff-spacing.cc:147-153.
+        double space = SpacingRules.GetBarlineToItemSpace(CreateNote());
         Assert.Equal(0.9, space, 2);
     }
 

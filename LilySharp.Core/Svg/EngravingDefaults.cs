@@ -273,8 +273,25 @@ internal static class EngravingDefaults
     // BarLine space-alist. (The Clef and TimeSignature space-alist entries live in
     // BreakAlignSpacing, the canonical space-alist home; the copies that were here were
     // dead duplicates and have been removed.)
-    /// <summary>Space from bar-line to first-note.</summary>
+    /// <summary>
+    /// BarLine <c>(first-note . (semi-shrink-space . 1.3))</c>. LilyPond reads this
+    /// entry ONLY when the bar line's break_status_dir is not CENTER — i.e. at the
+    /// start of a system. An ordinary mid-line bar line uses
+    /// <see cref="BarLineToNextNoteSpace"/> instead.
+    /// LILYPOND-REF: scm/define-grobs.scm:300 BarLine space-alist;
+    ///               lily/staff-spacing.cc:147-153.
+    /// </summary>
     public const double BarLineToFirstNoteSpace = 1.3;
+
+    /// <summary>
+    /// BarLine <c>(next-note . (semi-fixed-space . 0.9))</c> — the entry that governs
+    /// every bar line inside a system, and therefore the one that sets the gap from a
+    /// bar line to the first note of the following measure.
+    /// semi-fixed-space: <c>fixed = d/2</c>, <c>ideal = fixed + d/2 = d</c>.
+    /// LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist;
+    ///               lily/staff-spacing.cc:176-180.
+    /// </summary>
+    public const double BarLineToNextNoteSpace = 0.9;
 
     // === Staff spacing (from scm/define-grobs.scm StaffGrouper) ===
     /// <summary>Basic distance between staves in a group (center to center).</summary>

@@ -29,23 +29,6 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class SpacingRules
 {
-    /// <summary>Width of a single barline in staff spaces.</summary>
-    public const double BarlineWidth = 0.8;
-
-    /// <summary>The clearance a bar line reserves to its neighbour OVER its own drawn
-    /// stencil. A plain barline reserves <see cref="BarlineWidth"/> (0.8) for a
-    /// stencil that is only <see cref="EngravingDefaults.ThinBarlineThickness"/>
-    /// (0.19) wide, i.e. ~0.61 of breathing room. Repeat barlines reuse the SAME
-    /// clearance, measured from their actual (wider, leftward-dotted) stencil — so
-    /// the reservation tracks the glyph instead of a hand-tuned constant, and a
-    /// whole rest before a `:|` always clears the dots.
-    /// LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — the padding to a
-    /// neighbouring note is applied uniformly over the bar line's own X-extent.</summary>
-    public const double BarlineClearance = BarlineWidth - EngravingDefaults.ThinBarlineThickness;
-
-    /// <summary>Width of a double or final barline in staff spaces.</summary>
-    public const double DoubleBarlineWidth = 1.2;
-
     /// <summary>
     /// Calculates the ideal width for a measure (includes duration-based spacing).
     /// </summary>
@@ -200,20 +183,17 @@ internal static class SpacingRules
     /// <summary>
     /// Gets the width of a barline type.
     /// </summary>
-    public static double GetBarlineWidth(BarlineType type) => type switch
-    {
-        BarlineType.None => 0,
-        BarlineType.Single => BarlineWidth,
-        BarlineType.Dashed => BarlineWidth,
-        BarlineType.Double => DoubleBarlineWidth,
-        BarlineType.Final => DoubleBarlineWidth,
-        // Repeat barlines reserve their actual drawn stencil plus the same
-        // clearance a plain barline gets — the reservation tracks the glyph.
-        BarlineType.RepeatStart => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
-        BarlineType.RepeatEnd => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
-        BarlineType.RepeatBoth => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
-        _ => BarlineWidth
-    };
+    /// <remarks>
+    /// A bar line reserves EXACTLY its drawn stencil, nothing more. In LilyPond the
+    /// bar line column's contribution is `last_ext[RIGHT]` — the break-aligned grob's
+    /// own X-extent — and every bit of breathing room to the neighbouring note comes
+    /// from the space-alist entry applied on top of it (see GetBarlineToItemSpace).
+    /// The former 0.61 ss of extra "clearance" folded into this reservation had no
+    /// counterpart in LilyPond and double-charged that padding.
+    /// LILYPOND-REF: lily/staff-spacing.cc:166-167 (`Real fixed = last_ext[RIGHT]`).
+    /// </remarks>
+    public static double GetBarlineWidth(BarlineType type) =>
+        EngravingDefaults.BarlineDrawnWidth(type);
 
     private static bool HasAccidental(MusicItem? item)
     {
@@ -351,8 +331,17 @@ internal static class SpacingRules
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
 
-        // Base extent: from center to left edge of notehead
-        double extent = noteheadBBox.CenterX;
+        // A notehead is drawn glyph-left-aligned at its column (the same convention the
+        // rest branch below relies on, and the one LilyPond uses — a note column's
+        // reference point coincides with the note head's LEFT edge: dumping
+        // ly:grob-relative-coordinate for a PaperColumn and its NoteHead in 2.24.4
+        // gives the same X). So a plain note reaches NOTHING to the left of its column,
+        // and the base extent is 0; only ink that genuinely hangs left of the head —
+        // accidentals, and heads reversed to the left of the stem — adds to it below.
+        // Seeding this with the head's half-width (CenterX) treated the column as if it
+        // were at the head's CENTRE, charging ~1 ss of phantom leftward reach for a
+        // whole note; that is exactly the bug already called out for rests just below.
+        double extent = 0;
 
         // A rest is drawn glyph-left-aligned at its column (DrawRest: DrawGlyph at x),
         // so its LEFTward reach from the column is the rest glyph's own left edge — NOT
@@ -375,8 +364,11 @@ internal static class SpacingRules
             double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
                 chord.Notes, chord.StemUp, noteValue);
             double minHeadOffset = headOffsets.Min();
+            // The reversed head sits `minHeadOffset` (negative) from the column, so its
+            // leftward reach is that offset's magnitude — measured from the column, not
+            // from the head's centre (see the base-extent note above).
             if (minHeadOffset < 0)
-                extent = Math.Max(extent, noteheadBBox.CenterX - minHeadOffset);
+                extent = Math.Max(extent, -minHeadOffset);
 
             // For chords, use AccidentalPlacement to calculate staggered positions
             var placement = new AccidentalPlacement();
@@ -1784,13 +1776,14 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/separation-item.cc:49-70 set_distance()
     ///
     /// Different item types get different amounts of space after a barline:
-    ///   first-note:     semi-shrink-space 1.3 (can shrink slightly)
     ///   next-note:      semi-fixed-space  0.9 (mostly fixed)
     ///   clef:           extra-space       1.0
     ///   key-signature:  extra-space       1.0
     ///   time-signature: extra-space       0.75
+    /// `first-note` (semi-shrink-space 1.3) is deliberately absent: LilyPond reads it
+    /// only at a system start, which is not this path — see the note on the note arm.
     /// </remarks>
-    public static double GetBarlineToItemSpace(MusicItem? nextItem, bool isFirstInMeasure = true)
+    public static double GetBarlineToItemSpace(MusicItem? nextItem)
     {
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
         return nextItem switch
@@ -1798,8 +1791,16 @@ internal static class SpacingRules
             ClefChangeItem => 1.0,             // (clef . (extra-space . 1.0))
             KeySignatureChangeItem => 1.0,     // (key-signature . (extra-space . 1.0))
             TimeSignatureChangeItem => 0.75,   // (time-signature . (extra-space . 0.75))
-            _ when isFirstInMeasure => 1.3,    // (first-note . (semi-shrink-space . 1.3))
-            _ => 0.9                         // (next-note . (semi-fixed-space . 0.9))
+            // (next-note . (semi-fixed-space . 0.9)). NOT first-note: LilyPond picks
+            // `first-note` only when the bar line's break_status_dir differs from
+            // CENTER, i.e. at the START OF A SYSTEM — never at an ordinary mid-line
+            // bar line, which every measure start inside a system is. Measured on
+            // LilyPond 2.24.4: overriding BarLine's `first-note` from 0.0 to 5.0 does
+            // not move a single grob in `c'1 c'1`, because that entry is never read
+            // there. The system-start case is handled separately, and correctly, by
+            // BreakAlignSpacing.FirstNoteSpring (prefix -> first note).
+            // LILYPOND-REF: lily/staff-spacing.cc:147-153.
+            _ => 0.9
         };
     }
 
