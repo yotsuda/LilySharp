@@ -815,11 +815,14 @@ internal static class SpacingRules
     /// <c>symbols_width + inner_padding * (symbol_count - 1)</c>; left_offset only
     /// translates. Verified against LP: measure-count 2 → one breve rest, 0.600.
     ///
-    /// The greedy decomposition mirrors <see cref="Rendering.SharedRenderer"/>'s
-    /// church rest (longa 4 / breve 2 / whole 1) so rod and drawing agree. LilyPond
-    /// also admits a maxima (duration-log -3, i.e. 8 measures) via usable-duration-logs;
-    /// Emmentaler's maxima rest has no extracted metrics here, so counts >= 8 decompose
-    /// into longas exactly as this renderer draws them.
+    /// The decomposition mirrors <see cref="Rendering.SharedRenderer"/>'s church rest
+    /// so rod and drawing agree. It walks maxima 8 / longa 4 / breve 2 / whole 1,
+    /// which is church_rest's loop: <c>dl</c> starts at -3 and only ever increases,
+    /// emitting <c>2^-dl</c> measures while the remainder still covers it. With
+    /// expand-limit 10 the maxima can only appear at counts 8, 9 and 10 —
+    /// 8 = maxima, 9 = maxima + whole, 10 = maxima + breve. Decomposing those into
+    /// longas instead (4+4, 4+4+1, 4+4+2) spent one glyph too many and made the rod
+    /// 0.4 ss too wide.
     /// </remarks>
     internal static double MmrSymbolWidth(int measureCount)
     {
@@ -839,6 +842,7 @@ internal static class SpacingRules
         int remaining = measureCount;
         foreach (var (span, width) in new[]
         {
+            (8, GlyphMetrics.RestMaximaWidth),
             (4, GlyphMetrics.RestLonga.Width),
             (2, GlyphMetrics.RestDoubleWhole.Width),
             (1, GlyphMetrics.RestWhole.Width),

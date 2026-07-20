@@ -81,6 +81,22 @@ internal static partial class GlyphMetrics
     public static double AccidentalParensInkWidth =>
         AccidentalLeftParen.Width + AccidentalRightParen.Width;
 
+    /// <summary>
+    /// Maxima (8-measure) rest ink width, in staff spaces — the church-rest glyph for
+    /// duration-log -3 (<see cref="EmmentalerGlyphs.RestMaxima"/>, rests.M3).
+    /// </summary>
+    /// <remarks>
+    /// This is a font metric and belongs in GlyphMetricsGenerated.cs, but the extractor
+    /// does not yet emit rests.M3; move it there when it does. The value is not guessed:
+    /// LilyPond 2.24.4 renders `R1*8` as a SINGLE maxima glyph, so the multi-measure
+    /// rest's own X-extent is that glyph's width — dumped via ly:grob-extent it is
+    /// exactly 1.800. It cross-checks against the run-width model on two further
+    /// independent points: N=8 gives 14.190 and N=10 (maxima + breve) gives 16.434,
+    /// both matching LilyPond to the last digit.
+    /// LILYPOND-REF: mf/feta-rests.mf — rests.M3.
+    /// </remarks>
+    public const double RestMaximaWidth = 1.8;
+
     // ========== Engraving line/stroke thicknesses ==========
     // Line-family thicknesses live in EngravingDefaults, derived from
     // LilyPond's line-thickness (scm/paper.scm). The SMuFL/Bravura duplicates

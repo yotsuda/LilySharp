@@ -582,12 +582,16 @@ internal static partial class SharedRenderer
     {
         double cx = (mmr.StartX + mmr.EndX) / 2.0;
 
-        // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
+        // Decomposition: 8 (maxima), 4 (longa), 2 (breve), 1 (whole) — church_rest's
+        // loop starts at duration-log -3 and only ever increases it, emitting 2^-dl
+        // measures while the remainder still covers it. With expand-limit 10 the maxima
+        // appears only at counts 8, 9 and 10.
         // Use each rest glyph's REAL ink width (from the extracted font metrics) so
         // the centred row matches LilyPond's church_rest, which sums r.extent(X) for
         // each symbol. The block longa/breve rests are only ~0.6 ss wide; the whole
         // rest is 1.5 ss. LILYPOND-REF: lily/multi-measure-rest.cc church_rest.
         var pieces = new List<(int Span, char Glyph, double Width, double Y)>();
+        double MaximaWidth = GlyphMetrics.RestMaximaWidth;
         double LongWidth = GlyphMetrics.RestLonga.Width;
         double BreveWidth = GlyphMetrics.RestDoubleWhole.Width;
         double WholeWidth = GlyphMetrics.RestWhole.Width;
@@ -597,15 +601,20 @@ internal static partial class SharedRenderer
         // spi = Rest::staff_position_internal(me, dl, CENTER). For a normal 5-line staff
         // (line-positions {-4,-2,0,2,4}, neutral direction, default font-size 0 so the
         // dl<0 "(ss - fs)" term vanishes) that resolves to:
-        //   whole (dl= 0): spi = +2  → hangs from the 4th line (one line above middle)
-        //   breve (dl=-1): spi =  0  → sits on the middle line (ink fills the space above it)
-        //   longa (dl=-2): spi =  0  → centred on the middle line (ink spans ±1 space)
+        //   whole  (dl= 0): spi = +2  → hangs from the 4th line (one line above middle)
+        //   breve  (dl=-1): spi =  0  → sits on the middle line (ink fills the space above it)
+        //   longa  (dl=-2): spi =  0  → centred on the middle line (ink spans ±1 space)
+        //   maxima (dl=-3): spi =  0  → same as longa/breve. For duration_log < 0 the
+        //     staff_position_internal else-branch snaps pos (0) to the nearest line at
+        //     or below it, which is the middle line, with NO dependence on which
+        //     negative duration log it is.
         // dy = -0.5 * spi converts a staff position to a device offset from cy.
         // Matches LilyPond 2.24 with \compressMMRests (verified by juxtaposition).
         // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal; lily/multi-measure-rest.cc church_rest.
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
+            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, 0.0),     // spi 0  → dy 0
             (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),       // spi 0  → dy 0
             (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0), // spi 0  → dy 0
             (1, EmmentalerGlyphs.RestWhole, WholeWidth, -1.0),      // spi +2 → dy -1.0
