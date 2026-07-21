@@ -157,7 +157,7 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 `SpacingRules.BoundaryChangePrefix` ＋ `BarlineToFirstColumnSpring` の `last_grob` 切替。
 両者の統合は未着手。
 
-### ④' 臨時記号 → 符頭の距離（**次の一手**・未着手）
+### ④' 臨時記号 → 符頭の距離 — **測定完了・実装待ち**
 
 **残る残差 4 点のうち 3 点・0.334252 ss を1つの欠陥が持っている。**
 
@@ -167,16 +167,45 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 | `midmeasure.key-cancel.key-to-next-note` | −0.149990 | `min_dist` 経由（`:213` 補正） |
 | `barline.next.key-change-to-notehead` | −0.034272 | 同上（補正が binding しなくなる分だけ小さい） |
 
-Lily# は `CalculateLeftExtent` で `accBBox.Width + AccidentalNoteGap(0.2)`。実測:
+#### 導出済みモデル（`lily/accidental-placement.cc:395-421`）
 
-| | LP の距離 | グリフ幅 | 差 |
-|---|---|---|---|
-| ♯（probe X） | 1.450000 | 1.100010 | **0.349990** |
-| ♮（score K） | 1.034272 | 0.666666 | **0.367606** |
+```c
+Real padding = get_property (me, "padding");            // :397  既定 0.2
+Skyline left_skyline = heads_skyline;
+left_skyline.raise (-right_padding);                    // :399-400 既定 0.15
+offset = -ape->horizontal_skylines_[RIGHT].distance (left_skyline, 0.1);  // :412
+offset -= padding;                                      // :416
+```
 
-⚠️ **差が一定でない**（0.349990 vs 0.367606）ので、**単なる定数 0.2→0.35 ではない。**
-`Accidental_placement` の別の式（`right-padding` ＋ グリフごとの何か）を疑うこと。
-**着手前に摂動法で LP を割ること**（§5.3）。
+→ **`臨時記号 ink 右 → 符頭 ink 左 = 0.2 + 0.15 + スカイライン項(グリフ依存)`**
+
+**摂動法で裏取り済**（`padding` と `right-padding` を各 +0.3 → gap も +0.3、**係数1**）。
+**両方 0 にして残った値がスカイライン項**:
+
+| | 既定での距離 | **skyline 項** |
+|---|---|---|
+| ♯ | 0.349990 | **−0.000010** |
+| ♭ | 0.349996 | −0.000004 |
+| ♮ | 0.367606 | **+0.017606** |
+| ♯♯ | 0.397704 | +0.047704 |
+| ♭♭ | 0.348004 | −0.001996 |
+
+**定数部は 0.35 ちょうど。** ♮ と ♯♯ だけスカイライン項が効く（縦に細いグリフなので、
+符頭の Y 帯に対する水平スカイライン距離が box 距離より大きく出る）。
+
+#### 実装（`GlyphMetrics.AccidentalNoteGap = 0.2` → **0.35**）と予測
+
+**スカイライン項は移植しない**（Lily# は水平スカイラインを持たない）。定数だけ LP に合わせる:
+
+| 台帳キー | 現在 | **予測** |
+|---|---|---|
+| `barline.next.accidental-to-notehead`（♯） | −0.149990 | **−0.000010** |
+| `midmeasure.key-cancel.key-to-next-note`（♯） | −0.149990 | **−0.000010** |
+| `barline.next.key-change-to-notehead`（♮） | −0.034272 | **−0.017606** |
+
+**0.334252 → 0.017626 ss。** 残りはすべて**スカイライン項**という単一の名前のついた原因。
+⚠️ tolerance 1e-6 なので **exact 数は増えない**見込み（−0.00001 は 1e-5）。
+**臨時記号は至る所にあるので snapshot は広範囲。**
 
 ### ④ ✅ 完了（`9de790a2`）— グリフメトリクスを LILC 由来に
 
