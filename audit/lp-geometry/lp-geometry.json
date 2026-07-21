@@ -1,0 +1,128 @@
+{
+  "$comment": [
+    "LP FIDELITY LEDGER. Each entry is a geometric quantity measured on real LilyPond,",
+    "paired with the difference Lily# currently shows. See README.md for how to add or",
+    "regenerate an entry. The 'lilypond' numbers are DATA: they change only by re-running",
+    "the probes in probes/ against lilypond.exe and pasting what it prints.",
+    "",
+    "residual = lilysharp - lilypond, in staff-spaces. A non-zero residual MUST carry a",
+    "'why'. Naming the defect is the goal; where it is not yet isolated, say so with an",
+    "'OPEN:' prefix and state exactly what is unexplained. What is forbidden is a silent",
+    "baseline. Both directions of change are failures: a residual that grows is a",
+    "regression, and a residual that shrinks is progress that must be recorded on purpose",
+    "so it appears in the diff rather than being absorbed.",
+    "",
+    "The count of exact entries and the total |residual| are the headline fidelity numbers.",
+    "They should only ever improve."
+  ],
+  "lilypondVersion": "2.24.4",
+  "units": "staff-spaces",
+  "tolerance": 1e-6,
+  "entries": {
+    "barline.next.up-stems": {
+      "probe": "barline-spacing.ly",
+      "score": "A",
+      "lilypond": 0.900000,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.up-stems-after-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "D",
+      "lilypond": 0.900000,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.down-stems": {
+      "probe": "barline-spacing.ly",
+      "score": "C",
+      "lilypond": 1.042857,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.down-stems-after-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "B",
+      "lilypond": 1.089365,
+      "residual": 0.000019962,
+      "why": "Lily#'s stem-attachment inset (where the stem meets the notehead) differs from LilyPond's by ~7e-4 staff positions, and next_notes_correction divides the stem/bar-line overlap by 7. The sibling entry barline.next.down-stems is EXACT because there the bar line clips the stem's far end, so the attachment offset never enters the overlap — which localises this difference to that one metric rather than to the correction formula."
+    },
+    "barline.next.full-measure-note": {
+      "probe": "barline-spacing.ly",
+      "score": "E",
+      "lilypond": 1.900000,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.half-notes": {
+      "probe": "barline-spacing.ly",
+      "score": "G",
+      "lilypond": 0.900000,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.accidental": {
+      "probe": "barline-spacing.ly",
+      "score": "X",
+      "lilypond": 0.600000,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.next.accidental-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "X",
+      "lilypond": 2.050000,
+      "residual": -0.150000000,
+      "why": "Lily# spaces an accidental 1.300 from its notehead where LilyPond spaces it 1.450. The bar-line side of this same measure start is exact (barline.next.accidental), so the whole 0.150 is that accidental-to-head distance. Separate defect, not owned by Staff_spacing."
+    },
+    "barline.next.key-change-glyph": {
+      "probe": "barline-spacing.ly",
+      "score": "K",
+      "lilypond": 1.000000,
+      "residual": -0.500000000,
+      "why": "LilyPond break-aligns a mid-line key change into the boundary column and spaces bar-line to key-signature by BarLine.space-alist (key-signature . (extra-space . 1.0)). Lily# has no such column and hangs the key signature off the following note column instead. COORDINATE_AUDIT.md 3.I / 4.3 #9."
+    },
+    "barline.next.key-change-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "K",
+      "lilypond": 6.834302,
+      "residual": -2.234302000,
+      "why": "Same missing boundary column as barline.next.key-change-glyph: the whole prefix between bar line and note is priced by a different model. COORDINATE_AUDIT.md 3.I."
+    },
+    "barline.next.time-change-glyph": {
+      "probe": "barline-spacing.ly",
+      "score": "T",
+      "lilypond": 0.750000,
+      "residual": -0.250000000,
+      "why": "Same missing boundary column: LilyPond spaces bar-line to time-signature by BarLine.space-alist (time-signature . (extra-space . 0.75)). COORDINATE_AUDIT.md 3.I."
+    },
+    "barline.next.time-change-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "T",
+      "lilypond": 4.354735,
+      "residual": -1.454735000,
+      "why": "Same missing boundary column as barline.next.time-change-glyph. COORDINATE_AUDIT.md 3.I."
+    },
+    "barline.prev.whole-note": {
+      "probe": "barline-spacing.ly",
+      "score": "E",
+      "lilypond": 6.060047,
+      "residual": -0.002002001,
+      "why": "OPEN: not yet attributed. The closing gap of a whole-note measure is 0.002 narrow. A whole note has no stem, so no optical correction is involved; the suspects are the duration-space formula and the notehead-advance metric. Too small to see in SVG output, which rounds to two decimals — this entry exists precisely because that rounding hid it (the earlier note was 'LP 4.098045 vs Lily# 4.10')."
+    },
+    "barline.prev.whole-rest": {
+      "probe": "barline-spacing.ly",
+      "score": "F",
+      "lilypond": 5.598045,
+      "residual": 0.0,
+      "why": ""
+    },
+    "barline.prev.half-note": {
+      "probe": "barline-spacing.ly",
+      "score": "G",
+      "lilypond": 4.453962,
+      "residual": -0.001345572,
+      "why": "OPEN: not yet attributed, and probably the same cause as barline.prev.whole-note — both are closing gaps that are ~0.001-0.002 narrow while every opening gap in this corpus is exact. Note this one DOES carry a stem correction, so if the two share a cause it is not the optical term."
+    }
+  }
+}
