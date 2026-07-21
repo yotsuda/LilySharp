@@ -107,29 +107,43 @@
       "probe": "barline-spacing.ly",
       "score": "MC",
       "lilypond": 2.253234,
-      "residual": 1.755766,
-      "why": "LilyPond gives a mid-measure clef its OWN non-musical column and prices the two gaps around it separately: left = (duration ideal + skyline min)/2 from Note_spacing (note-spacing.cc:105-107, the no-staff-bar branch), right = the clef's ink width + 1.0 from Clef.space-alist (next-note . (extra-space . 1.0)). Lily# has no such column; it adds ChangeItemPrefixWidth (glyph + 2 x ClefChangePadding) to the ONE note-to-note spring and then hangs the glyph left of the next column by glyph + ClefChangePadding. Both gaps therefore come out of one lump, which is why this side and its sibling midmeasure.clef.clef-to-next-note are wrong in OPPOSITE directions. Derived and verified to six digits in COORDINATE_AUDIT.md 4.7.2 — note that converting the extent helpers to the left-edge frame (4.7 item 1) does NOT close this: it moves the total from +1.119 to +0.612 and leaves the split untouched."
+      "residual": -0.0002115,
+      "why": "Lily#'s black note head is 1.3040 against LilyPond's ink 1.304212, and this gap is the mean of the duration ideal and the rod (note-spacing.cc:105), both of which carry that head width once — so the 0.000212 arrives undivided. A generated-metric rounding (GlyphMetricsGenerated.cs keeps 4 decimals), not a spacing defect. Was +1.755766 before the change column was priced the way LilyPond prices it; see COORDINATE_AUDIT.md 4.7.2."
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",
       "lilypond": 3.146680,
-      "residual": -0.636680,
-      "why": "Other side of midmeasure.clef.prev-note-to-clef; see the note there. LilyPond puts exactly 1.0 between the clef's ink right edge and the next note (Clef.space-alist next-note extra-space 1.0, define-grobs.scm:924); Lily# puts ClefChangePadding = 0.5 there, and its change-clef width is FClefAdvance * 0.75 = 2.010 against LilyPond's clefs.F_change ink 2.146680. The note-to-note total is also 1.119 too wide, so this is not purely a placement-within-the-gap problem."
+      "residual": 0.0,
+      "why": ""
     },
     "midmeasure.key.prev-note-to-key": {
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 2.203234,
-      "residual": 2.450766,
-      "why": "Same missing change column as midmeasure.clef.prev-note-to-clef. The left gap is LilyPond's (duration ideal + skyline min)/2, and the skyline min differs from the clef case by exactly 0.1 because KeySignature declares extra-spacing-width (0.0 . 1.0) rather than the default (-0.1 . 0.1) — define-grobs.scm:1936. COORDINATE_AUDIT.md 4.7.2."
+      "residual": -0.0002115,
+      "why": "Same note-head metric as midmeasure.clef.prev-note-to-clef, and the same size, which is the point: the clef and key cases differ by 0.05 in LilyPond (KeySignature's extra-spacing-width is (0.0 . 1.0), not the default, define-grobs.scm:1936) and Lily# now reproduces that difference exactly, leaving only the shared rounding. Was +2.450766."
     },
     "midmeasure.key.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 5.800030,
-      "residual": -2.000030,
-      "why": "Other side of midmeasure.key.prev-note-to-key. LilyPond puts 2.5 between the signature's ink right edge and the next note, and — surprisingly — reaches that through the `first-note` entry: KeySignature.space-alist has NO `next-note`, so Staff_spacing::get_spacing:147 keeps its default (first-note . (shrink-space . 2.5)), define-grobs.scm:1947. Lily# puts ClefChangePadding = 0.5 there. Here the note-to-note total is only 0.451 too wide while the change glyph is 2.45 out of place, so for a key change the error is almost entirely WHERE the glyph sits in the gap rather than how wide the gap is."
+      "residual": -0.00003,
+      "why": "The 2.5 is exact (KeySignature has no `next-note` entry, so Staff_spacing::get_spacing:147 keeps `first-note` — shrink-space 2.5, define-grobs.scm:1947). What is left is the signature's own width: three sharps at Lily#'s 1.1000 each against LilyPond's 3.300030, i.e. 0.00001 per accidental of generated-metric rounding. Was -2.000030."
+    },
+    "midmeasure.key-cancel.prev-note-to-key": {
+      "probe": "barline-spacing.ly",
+      "score": "MKA",
+      "lilypond": 2.335591,
+      "residual": 0.002454,
+      "why": "This is the only probe that reaches Note_spacing's SUBTRACTION arm (note-spacing.cc:106): a lone cancellation natural is narrow enough that ideal - column width beats the (ideal + rod)/2 floor that MC and MK land on. The residual is the cancellation's own width, Lily#'s AccidentalNaturalAdvance 0.6640 against LilyPond's 0.666666, less the 0.000212 note-head rounding that pulls the other way. Both are generated-metric roundings."
+    },
+    "midmeasure.key-cancel.key-to-next-note": {
+      "probe": "barline-spacing.ly",
+      "score": "MKA",
+      "lilypond": 3.616666,
+      "residual": -0.152666,
+      "why": "The formula is exact: the accidental on the next note makes Paper_column::minimum_distance exceed the space-alist ideal, so staff-spacing.cc:213 decides this gap as 0.3 + rod, and the arithmetic agrees to six digits once Lily#'s metrics are substituted. 0.150 of the residual is the SAME accidental-to-notehead defect barline.next.accidental-to-notehead records (Lily# 1.300, LilyPond 1.450) reaching this gap through the rod, and 0.002666 is the cancellation's width. Fixing that one entry fixes most of this one; nothing here is owned by the change column."
     },
     "barline.prev.whole-note": {
       "probe": "barline-spacing.ly",

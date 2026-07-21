@@ -66,8 +66,17 @@ try {
               ((Get-Content $err -ErrorAction SilentlyContinue) -join "`n  ")
     }
 
+    # An EMPTY extent is LilyPond's `(+inf.0 . -inf.0)`, not a number: a grob with no ink,
+    # e.g. the KeySignature left behind when a change to C major engraves its naturals as a
+    # KeyCancellation instead. It has no position to measure, so it is dropped — but LOUDLY,
+    # because "no ink" and "not dumped" must stay distinguishable.
+    $empty = @()
     $rows = $lines | ForEach-Object {
         $null = $_ -match '^PROBE (\S+) (\S+) x=(\S+) ext=\((\S+) \. (\S+)\)$'
+        if ($Matches[4] -eq '+inf.0') {
+            $script:empty += "{0} {1}" -f $Matches[1], $Matches[2]
+            return
+        }
         [pscustomobject]@{
             Score = $Matches[1]
             Kind  = $Matches[2]
@@ -75,6 +84,9 @@ try {
             InkL  = [double]$Matches[3] + [double]$Matches[4]
             InkR  = [double]$Matches[3] + [double]$Matches[5]
         }
+    }
+    if ($empty) {
+        Write-Host ("skipped {0} grob(s) with an empty extent: {1}" -f $empty.Count, ($empty -join ', ')) -ForegroundColor DarkYellow
     }
 
     if (-not $rows) { throw "no PROBE lines in $out — check the probe and the LilyPond version" }

@@ -251,18 +251,16 @@ internal static partial class SharedRenderer
                 }
                 else if (useColumnTiming && isChange)
                 {
-                    double nextAcc = itemIdx + 1 < measure.Items.Length
-                        ? FollowingAccidentalLeftExtent(measure.Items[itemIdx + 1])
-                        : 0;
-                    if (item is ClefChangeItem cc)
-                        itemX -= SpacingRules.GetClefChangeWidth(cc.NewClef)
-                            + GlyphMetrics.ClefChangePadding + nextAcc;
-                    else if (item is KeySignatureChangeItem kc)
-                        itemX -= SpacingRules.GetKeySignatureChangeWidth(kc)
-                            + GlyphMetrics.ClefChangePadding + nextAcc;
-                    else if (item is TimeSignatureChangeItem tc)
-                        itemX -= GlyphMetrics.GetTimeSigWidth(tc.NewTime.Beats, tc.NewTime.BeatType)
-                            + GlyphMetrics.ClefChangePadding + nextAcc;
+                    // The change column's ORIGIN, hung back from the musical column by the
+                    // same gap MeasureLayouter reserved — SpacingRules.MidMeasureChangeGaps
+                    // and this call share one implementation, so the drawn glyph cannot
+                    // drift from the space paid for it. Several changes at one moment sit in
+                    // ONE column and are sequenced left to right from that origin; they used
+                    // to be hung independently from the note column and so overprinted.
+                    // LILYPOND-REF: lily/staff-spacing.cc:166-215.
+                    var columnItems = ChangeColumnItems(measure, itemIdx);
+                    itemX -= SpacingRules.MidMeasureChangeRightGap(columnItems);
+                    itemX += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, item);
                 }
 
                 // Horizontal collision offset for multi-voice columns.
@@ -303,6 +301,35 @@ internal static partial class SharedRenderer
 
         double barLineLeftX = ml.X - GetVisualBarlineWidth(prev.EndBarline);
         return barLineLeftX - barLineLeft + clefGrob.Left;
+    }
+
+    /// <summary>
+    /// The items sharing the change column at <paramref name="itemIdx"/>: the whole run of
+    /// zero-duration changes it belongs to, plus the musical item that shares their moment.
+    /// </summary>
+    /// <remarks>
+    /// SpacingRules prices the column from exactly this list — the changes give it its width
+    /// and its space-alist, the musical item gives the rod its left-hand reach (a wide
+    /// accidental pushes the column further left). Passing anything narrower would let the
+    /// drawn position disagree with the reserved space.
+    /// </remarks>
+    private static List<MusicItem> ChangeColumnItems(Measure measure, int itemIdx)
+    {
+        int start = itemIdx;
+        while (start > 0 && IsChangeItem(measure.Items[start - 1]))
+            start--;
+
+        var items = new List<MusicItem>();
+        for (int k = start; k < measure.Items.Length; k++)
+        {
+            items.Add(measure.Items[k]);
+            if (!IsChangeItem(measure.Items[k]))
+                break;      // the musical item that closes the moment
+        }
+        return items;
+
+        static bool IsChangeItem(MusicItem item) =>
+            item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
     }
 
     /// <summary>

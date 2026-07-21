@@ -1596,18 +1596,24 @@ internal static class SpacingRules
     };
 
     /// <summary>
-    /// Width a zero-duration clef/key-signature change at a timing column
-    /// needs in FRONT of that column (glyph + padding on both sides). Several
-    /// changes sharing a column are drawn side by side, so their widths SUM
-    /// (see the inline note on the accumulation below).
+    /// Width a zero-duration clef/key-signature change opening a MEASURE needs in front of
+    /// the first note's column (glyph + padding on both sides). Several changes sharing a
+    /// column are drawn side by side, so their widths SUM (see the inline note below).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ Only the measure-OPENING path still uses this. A mid-measure change is priced by
+    /// <see cref="MidMeasureChangeGaps"/>, which follows LilyPond in giving it its own
+    /// column and two differently-computed gaps rather than one lumped reservation with a
+    /// padding that is the same on both sides. This lump survives here because the opening
+    /// case still lacks its boundary column — COORDINATE_AUDIT.md §3.I, roadmap item 3 — and
+    /// it should go the same way when that lands.
+    /// </remarks>
     /// <param name="excludeClef">
     /// Set at a MEASURE-OPENING column. A clef change there is engraved before the bar
     /// line (scm/define-grobs.scm:650-664 break-align-orders), so it takes no room after
     /// it; its width is charged to the previous measure instead, via
     /// <see cref="BoundaryClefAllowance"/>. Reserving it here as well would pay for the
-    /// same glyph twice. A MID-measure clef change still hangs left of its own note
-    /// column and must keep its reservation, which is why this is opt-in.
+    /// same glyph twice.
     /// </param>
     internal static double ChangeItemPrefixWidth(
         IEnumerable<MusicItem>? items, bool excludeClef = false)
@@ -1634,6 +1640,292 @@ internal static class SpacingRules
         }
         return w;
     }
+
+    // ========================================
+    // Mid-measure change items (the missing non-musical column)
+    // ========================================
+
+    /// <summary>
+    /// The two gaps LilyPond puts around a MID-MEASURE clef / key / time change, plus the
+    /// pair's minimum. Distances are column origin to column origin.
+    /// </summary>
+    /// <param name="LeftGap">Previous musical column → the change column's origin.</param>
+    /// <param name="RightGap">The change column's origin → the next musical column.</param>
+    /// <param name="MinDistance">Minimum for the two together (the rods, summed).</param>
+    internal readonly record struct MidMeasureChangeSpacing(
+        double LeftGap, double RightGap, double MinDistance)
+    {
+        /// <summary>Previous musical column → the next one, i.e. what one spring must span.</summary>
+        public double TotalIdeal => LeftGap + RightGap;
+    }
+
+    /// <summary>
+    /// The change column's own extent right — <c>last_ext[RIGHT]</c> in
+    /// <c>Staff_spacing::get_spacing</c>. Zero for anything that is not a change item.
+    /// </summary>
+    /// <remarks>
+    /// The column's origin is the glyph's INK LEFT edge (measured on 2.24.4: a mid-measure
+    /// bass clef's anchor plus its ink width plus 1.0 lands exactly on the next note head),
+    /// so this is simply the glyph's width.
+    /// LILYPOND-REF: lily/spacing-interface.cc:217 — <c>ext = break_item->extent (col, X_AXIS)</c>.
+    /// </remarks>
+    private static double ChangeItemColumnWidth(MusicItem item) => item switch
+    {
+        ClefChangeItem cc => GetClefChangeWidth(cc.NewClef),
+        KeySignatureChangeItem kc => GetKeySignatureChangeWidth(kc),
+        TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(tc),
+        _ => 0
+    };
+
+    private static bool IsChangeItem(MusicItem item) =>
+        item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+
+    /// <summary>
+    /// Whether this item stands in the non-musical change column rather than the musical
+    /// one — i.e. whether <see cref="MidMeasureChangeGaps"/> owns its spacing.
+    /// </summary>
+    internal static bool IsMidMeasureChangeColumn(MusicItem item) => IsChangeItem(item);
+
+    /// <summary>
+    /// The <c>space-alist</c> distance from a change item to the following note.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <c>Staff_spacing::get_spacing</c> looks up <c>first-note</c> and only replaces it
+    /// with <c>next-note</c> when that entry EXISTS (staff-spacing.cc:147-153). Clef is the
+    /// only one of the three that has a <c>next-note</c> entry, so a MID-LINE key or time
+    /// change — where nothing is starting a line — is nevertheless priced by
+    /// <c>first-note</c>. Counter-intuitive, and confirmed by measurement: probes MK and MC
+    /// land on 2.5 and 1.0 to six digits (COORDINATE_AUDIT.md §4.7.2).
+    /// <para>
+    /// All three of the alist types involved (extra-space, shrink-space, semi-shrink-space)
+    /// put the IDEAL at <c>last_ext[RIGHT] + distance</c>; they differ only in what becomes
+    /// `fixed` and whether the spring stretches, neither of which this single-spring model
+    /// carries yet. LILYPOND-REF: lily/staff-spacing.cc:174-198.
+    /// </para>
+    /// </remarks>
+    private static double ChangeItemSpaceToNextNote(MusicItem item) => item switch
+    {
+        // (next-note . (extra-space . 1.0))            scm/define-grobs.scm:924
+        ClefChangeItem => 1.0,
+        // (first-note . (shrink-space . 2.5))          scm/define-grobs.scm:1947
+        KeySignatureChangeItem => 2.5,
+        // (first-note . (semi-shrink-space . 2.0))     scm/define-grobs.scm:3948
+        TimeSignatureChangeItem => 2.0,
+        _ => 0
+    };
+
+    /// <summary>
+    /// A change grob's own <c>extra-spacing-width</c>, as (leftward, rightward) reach.
+    /// </summary>
+    /// <remarks>
+    /// These are NOT the default <c>(-0.1 . 0.1)</c>: KeySignature and KeyCancellation
+    /// declare <c>(0.0 . 1.0)</c> (scm/define-grobs.scm:1936, :1982) and TimeSignature
+    /// <c>(0.0 . 0.8)</c> (:3933); Clef declares nothing and keeps the default
+    /// (lily/separation-item.cc:167). The zero on the left is measurable: it is exactly why
+    /// the mid-measure key and clef probes' left gaps differ by 0.05 — half of the 0.1.
+    /// </remarks>
+    private static (double Left, double Right) ChangeItemExtraSpacingWidth(MusicItem item) =>
+        item switch
+        {
+            KeySignatureChangeItem => (0.0, 1.0),
+            TimeSignatureChangeItem => (0.0, 0.8),
+            _ => (DefaultExtraSpacingWidth, DefaultExtraSpacingWidth)
+        };
+
+    /// <summary>
+    /// The gap between two change items sharing one column, from the LEFT one's space-alist
+    /// keyed on the right one's <c>break-align-symbol</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:922-923 Clef (key-signature 0.82, time-signature
+    /// 1.52); :1945 KeySignature (time-signature 1.15). Only these orders occur, because
+    /// break-align-orders fixes the sequence clef → key-signature → time-signature
+    /// (scm/define-grobs.scm:650-664).
+    /// </remarks>
+    private static double BetweenChangeItemsSpace(MusicItem left, MusicItem right) =>
+        (left, right) switch
+        {
+            (ClefChangeItem, KeySignatureChangeItem) => 0.82,
+            (ClefChangeItem, TimeSignatureChangeItem) => 1.52,
+            (KeySignatureChangeItem, TimeSignatureChangeItem) => 1.15,
+            _ => 0
+        };
+
+    /// <summary>
+    /// How far the leftmost ink of a MUSICAL column reaches left of that column's origin,
+    /// including the grob's own <c>extra-spacing-width</c> — the right-hand term of
+    /// <c>Paper_column::minimum_distance</c>.
+    /// </summary>
+    private static double MusicalColumnLeftReach(MusicItem item) =>
+        CalculateLeftExtent(item)
+        + (HasAccidental(item) ? AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth);
+
+    /// <summary>
+    /// Prices a mid-measure clef / key / time change the way LilyPond does: as its own
+    /// non-musical column between two musical ones, with the two gaps around it computed by
+    /// DIFFERENT formulas. Returns null when <paramref name="columnItems"/> holds no change.
+    /// </summary>
+    /// <param name="columnItems">Everything starting at this timing — the change items and
+    /// the note(s) that share their moment.</param>
+    /// <param name="prevItems">Everything at the previous column, across voices and staves;
+    /// the rod takes the furthest-reaching of them, as a paper column aggregates all staves.</param>
+    /// <param name="durationIdeal">The plain note-to-note ideal for this pair, i.e. what the
+    /// spring would be with no change item in the way.</param>
+    /// <remarks>
+    /// <para>
+    /// LEFT — lily/note-spacing.cc:87-108. The right column is NonMusical and, mid-measure,
+    /// has no staff-bar group, so the :103-108 branch is taken: the whole change column's
+    /// width is subtracted from the ideal, and the result is floored at half way between the
+    /// ideal and the rod. In practice the floor is what binds; the subtraction can only win
+    /// when the duration ideal exceeds <c>2 × width + rod</c>, e.g. a whole note before a
+    /// clef change. Both are implemented because LilyPond implements both.
+    /// </para>
+    /// <para>
+    /// RIGHT — lily/staff-spacing.cc:166-215. The ideal is the change column's own width plus
+    /// the space-alist distance, then lifted to <c>0.3 + min_dist</c> by the :213 correction
+    /// when a wide accidental on the next note would otherwise collide.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT modelled: LilyPond has TWO springs here and Lily# still has one, so the split
+    /// is exact only at force 0 (which is where the corpus measures). Under justification
+    /// LilyPond stretches the two independently, and for a key or time change the right one
+    /// does not stretch at all (shrink-space / semi-shrink-space set
+    /// <c>is_stretchable = false</c>, staff-spacing.cc:191, :197). Fixing that needs the real
+    /// second column — the same work roadmap item 3 needs at a bar line.
+    /// </para>
+    /// </remarks>
+    internal static MidMeasureChangeSpacing? MidMeasureChangeGaps(
+        IReadOnlyList<MusicItem>? columnItems, IReadOnlyList<MusicItem>? prevItems,
+        double durationIdeal)
+    {
+        var (columnWidth, firstChange, lastChange) = MeasureChangeColumn(columnItems);
+        if (firstChange == null)
+            return null;
+
+        // --- LEFT: note-spacing.cc:79-82 rod, then :105-107 ---
+        // The rod is the pure skyline distance between the previous column and this one:
+        // the previous item's own ink reach plus each side's extra-spacing-width.
+        double prevReach = 0;
+        if (prevItems != null)
+            foreach (var item in prevItems)
+                if (!IsChangeItem(item))
+                    prevReach = Math.Max(prevReach, CalculateNoteheadRightExtent(item));
+        double leftRod = prevReach
+                         + DefaultExtraSpacingWidth
+                         + ChangeItemExtraSpacingWidth(firstChange).Left;
+        double leftGap = Math.Max(durationIdeal - columnWidth,
+                                  (durationIdeal + leftRod) / 2.0);
+
+        // --- RIGHT: staff-spacing.cc:166-215 ---
+        double rightRod = RightRod(columnItems!, columnWidth, lastChange!);
+        double rightGap = RightGap(columnWidth, lastChange!, rightRod);
+
+        return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod + rightRod);
+    }
+
+    /// <summary>
+    /// The change column's origin → the next musical column: the SAME quantity
+    /// <see cref="MidMeasureChangeGaps"/> puts in the spring, so the drawn glyph and the
+    /// reserved space come from one place and cannot drift. Zero when there is no change.
+    /// </summary>
+    /// <remarks>
+    /// This depends only on the items, never on the solved force, so the renderer may
+    /// position the change column by hanging it back from the next musical column. That is
+    /// also what keeps a change glyph clear of a wide accidental at any line width — the
+    /// accidental enters through the rod, exactly as in LilyPond.
+    /// </remarks>
+    internal static double MidMeasureChangeRightGap(IReadOnlyList<MusicItem>? columnItems)
+    {
+        var (columnWidth, first, last) = MeasureChangeColumn(columnItems);
+        if (first == null)
+            return 0;
+        return RightGap(columnWidth, last!, RightRod(columnItems!, columnWidth, last!));
+    }
+
+    /// <summary>
+    /// Where <paramref name="change"/> sits inside its change column, measured from the
+    /// column's origin. Zero for the first change; later ones follow their predecessors'
+    /// widths and the break-align gap between them.
+    /// </summary>
+    internal static double MidMeasureChangeOffsetWithin(
+        IReadOnlyList<MusicItem>? columnItems, MusicItem change)
+    {
+        if (columnItems == null)
+            return 0;
+
+        double offset = 0;
+        MusicItem? previous = null;
+        foreach (var item in columnItems)
+        {
+            if (!IsChangeItem(item))
+                continue;
+            if (previous != null)
+                offset += BetweenChangeItemsSpace(previous, item);
+            if (ReferenceEquals(item, change))
+                return offset;
+            offset += ChangeItemColumnWidth(item);
+            previous = item;
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// Walks a column's items and returns the change column's total extent right together
+    /// with its leftmost and rightmost change grobs. Changes sharing a column are drawn side
+    /// by side in break-align order (clef → key-signature → time-signature), separated by
+    /// the LEFT one's space-alist entry for the right one's break-align-symbol.
+    /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders.
+    /// </summary>
+    private static (double Width, MusicItem? First, MusicItem? Last) MeasureChangeColumn(
+        IReadOnlyList<MusicItem>? columnItems)
+    {
+        if (columnItems == null)
+            return (0, null, null);
+
+        double width = 0;
+        MusicItem? first = null, last = null;
+        foreach (var item in columnItems)
+        {
+            if (!IsChangeItem(item))
+                continue;
+            if (first == null)
+                first = item;
+            else
+                width += BetweenChangeItemsSpace(last!, item);
+            last = item;
+            width += ChangeItemColumnWidth(item);
+        }
+        return (width, first, last);
+    }
+
+    /// <summary>
+    /// <c>Paper_column::minimum_distance</c> from the change column to the musical one: the
+    /// change column's own reach plus whatever the next column's leftmost ink hangs left.
+    /// </summary>
+    private static double RightRod(
+        IReadOnlyList<MusicItem> columnItems, double columnWidth, MusicItem lastChange)
+    {
+        double reach = 0;
+        foreach (var item in columnItems)
+            if (!IsChangeItem(item))
+                reach = Math.Max(reach, MusicalColumnLeftReach(item));
+        return columnWidth + ChangeItemExtraSpacingWidth(lastChange).Right + reach;
+    }
+
+    /// <summary>
+    /// <c>Staff_spacing::get_spacing</c>'s ideal for the change column → next note, with the
+    /// :213 minimum-distance correction.
+    /// </summary>
+    /// <remarks>
+    /// The space-alist consulted belongs to the RIGHTMOST break-aligned grob in the column
+    /// (<c>Spacing_interface::extremal_break_aligned_grob</c> with <c>d == LEFT</c> picks the
+    /// one whose right edge is largest), which under break-align-orders is the last of
+    /// clef / key / time present.
+    /// LILYPOND-REF: lily/staff-spacing.cc:166-175 (ideal), :213-215 (the 0.3 correction).
+    /// </remarks>
+    private static double RightGap(double columnWidth, MusicItem lastChange, double rightRod) =>
+        Math.Max(columnWidth + ChangeItemSpaceToNextNote(lastChange),
+                 SpringHeadroom + rightRod);
 
     /// <summary>
     /// Width that leading grace notes need in FRONT of their main note's column.
@@ -1826,25 +2118,76 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// If <paramref name="prevItem"/> is a mid-measure clef/key/time change, widens
-    /// the following spring by its glyph width so the width ESTIMATE matches the
-    /// timing-column layout (which reserves the same via
-    /// MeasureLayouter.ChangeItemPrefixWidth). Otherwise returns the spring unchanged.
+    /// The ITEM spring system's share of a mid-measure change column, or null when this pair
+    /// does not touch one. Its total across the pair matches the timing-column system's
+    /// single spring, which is what keeps line-break width estimates honest.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/paper-column.cc — the breakable change column
-    /// precedes the musical column of the same moment.</remarks>
-    private static Spring WidenForChangeItem(Spring spring, MusicItem prevItem)
+    /// <param name="spacingItems">The measure's spacing items, in order.</param>
+    /// <param name="leftIndex">Index of the LEFT item of the pair being sprung.</param>
+    /// <param name="durationIdeal">The pair's plain duration ideal, used only when this is
+    /// the note → change-column gap.</param>
+    /// <remarks>
+    /// The item system gives a change item its own slot, so it already has the two springs
+    /// LilyPond has and can carry the split directly, where the timing-column system has to
+    /// lump both into one (a change shares the next note's timing). The three cases are the
+    /// column's LEFT gap, an internal gap between two changes sharing the column, and the
+    /// remainder of the RIGHT gap from the last change to the note.
+    /// <para>
+    /// These come back rigid. The item system feeds width ESTIMATES
+    /// (<see cref="CalculateMeasureIdealWidth"/>) and the break gate, where what matters is
+    /// that the ideals sum to the same total the layout will produce; modelling how the two
+    /// LilyPond springs share a stretch needs the real column (roadmap item 3).
+    /// </para>
+    /// </remarks>
+    private static Spring? ChangeColumnItemSpring(
+        IReadOnlyList<MusicItem> spacingItems, int leftIndex, double durationIdeal)
     {
-        double w = prevItem switch
+        var left = spacingItems[leftIndex];
+        var right = spacingItems[leftIndex + 1];
+        bool leftIsChange = IsChangeItem(left);
+        bool rightIsChange = IsChangeItem(right);
+        if (!leftIsChange && !rightIsChange)
+            return null;
+
+        // change → change: the left one's own width plus their break-align gap.
+        if (leftIsChange && rightIsChange)
+            return Rigid(ChangeItemColumnWidth(left) + BetweenChangeItemsSpace(left, right));
+
+        var columnItems = ChangeColumnAt(spacingItems, leftIsChange ? leftIndex : leftIndex + 1);
+
+        // note → the column's origin.
+        if (!leftIsChange)
         {
-            ClefChangeItem cc => GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
-            KeySignatureChangeItem kc => GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
-            TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
-            _ => 0
-        };
-        return w > 0
-            ? new Spring(spring.IdealDistance + w, spring.MinDistance + w, spring.InverseStretchStrength)
-            : spring;
+            var gaps = MidMeasureChangeGaps(columnItems, new[] { left }, durationIdeal);
+            return gaps is { } g ? Rigid(g.LeftGap) : null;
+        }
+
+        // last change → the note: what is left of the right gap once the column's own
+        // glyphs are subtracted, since the right gap is measured from the column ORIGIN.
+        return Rigid(MidMeasureChangeRightGap(columnItems)
+                     - MidMeasureChangeOffsetWithin(columnItems, left));
+
+        static Spring Rigid(double d) => new(Math.Max(0, d), Math.Max(0, d), 0);
+    }
+
+    /// <summary>
+    /// The change column containing <paramref name="index"/>: the whole run of changes it
+    /// belongs to, plus the musical item that shares their moment.
+    /// </summary>
+    private static List<MusicItem> ChangeColumnAt(IReadOnlyList<MusicItem> items, int index)
+    {
+        int start = index;
+        while (start > 0 && IsChangeItem(items[start - 1]))
+            start--;
+
+        var column = new List<MusicItem>();
+        for (int k = start; k < items.Count; k++)
+        {
+            column.Add(items[k]);
+            if (!IsChangeItem(items[k]))
+                break;
+        }
+        return column;
     }
 
     /// <summary>
@@ -2104,11 +2447,11 @@ internal static class SpacingRules
         var firstSpring = BarlineToFirstColumnSpring(new[] { firstItem }, FillsMeasure(measure));
         springs.Add(firstSpring);
 
-        // Springs between items (the spring into a grace-bearing note reserves its
-        // grace; the spring after a mid-measure clef/key/time change reserves the
-        // change glyph, so this estimate agrees with the timing-column layout —
-        // which reserves it via MeasureLayouter.ChangeItemPrefixWidth — and line
-        // breaking does not under-estimate change measures).
+        // Springs between items (the spring into a grace-bearing note reserves its grace;
+        // a pair touching a mid-measure clef/key/time change is priced by that change's
+        // column, so this estimate totals what the timing-column layout will produce and
+        // line breaking does not mis-measure change measures — pinned by
+        // SpacingInvariantTests.BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn).
         for (int i = 0; i < spacingItems.Count - 1; i++)
         {
             var prevItem = spacingItems[i];
@@ -2121,7 +2464,14 @@ internal static class SpacingRules
             // ~0.104 ss narrow for a black head.
             spring = ApplyLeftHeadWidth(spring, One(prevItem));
             spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
-            spring = WidenForChangeItem(spring, prevItem);
+            // A pair touching a mid-measure change column is priced by the change column,
+            // not by duration — and NOT by merge_springs' headroom afterwards, which would
+            // add 0.3 to a gap LilyPond has already fixed.
+            if (ChangeColumnItemSpring(spacingItems, i, spring.IdealDistance) is { } changeSpring)
+            {
+                springs.Add(changeSpring);
+                continue;
+            }
             // Mirror of MeasureLayouter.CreateInterColumnSpring.
             // LILYPOND-REF: lily/spacing-spanner.cc:380-393 -> lily/spring.cc:122.
             spring = ApplyMergeSpringsHeadroom(spring);

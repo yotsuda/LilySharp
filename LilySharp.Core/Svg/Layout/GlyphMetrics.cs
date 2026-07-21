@@ -138,22 +138,43 @@ internal static partial class GlyphMetrics
     /// <summary>C clef advance width (alias for CClefAdvance).</summary>
     public const double CClefWidth = CClefAdvance;
 
-    /// <summary>G clef change width (approximately 75% of full G clef).</summary>
-    public const double GClefChangeWidth = GClefWidth * 0.75;
+    // A change clef is its OWN glyph — clefs.G_change / F_change / C_change — not the full
+    // clef scaled down, so `full * 0.75` was an approximation of a metric that is available
+    // exactly. It ran 4-7% narrow (F: 2.010 against 2.146680), and since the mid-measure
+    // gap after a clef is measured from the glyph's right edge, that error landed straight
+    // in the spacing. LILYPOND-REF: lily/clef.cc — Clef::calc_glyph_name appends "_change".
+    //
+    // Measured on LilyPond 2.24.4 / Emmentaler as `ly:grob-extent` of the Clef grob for a
+    // mid-measure \clef change: these are the glyph's INK right edge from its own origin,
+    // which is what Staff_spacing reads as last_ext[RIGHT]. They belong in
+    // GlyphMetricsGenerated.cs, but that file is produced by a generator that does not yet
+    // emit the _change glyphs; move them there when it does.
 
-    /// <summary>F clef change width (approximately 75% of full F clef).</summary>
-    public const double FClefChangeWidth = FClefWidth * 0.75;
+    /// <summary>G clef change width — <c>clefs.G_change</c> ink right edge.</summary>
+    public const double GClefChangeWidth = 2.052024;
+
+    /// <summary>F clef change width — <c>clefs.F_change</c> ink right edge.</summary>
+    public const double FClefChangeWidth = 2.146680;
+
+    /// <summary>C clef change width — <c>clefs.C_change</c> ink right edge.</summary>
+    public const double CClefChangeWidth = 2.196012;
 
     /// <summary>
-    /// C clef change width (approximately 75% of full C clef).
-    /// LILYPOND-REF: C clef has no separate _change glyph in Emmentaler; drawn at reduced font-size.
+    /// Padding before and after a change item drawn at a MEASURE START.
     /// </summary>
-    public const double CClefChangeWidth = CClefWidth * 0.75;
-
-    /// <summary>
-    /// Padding before and after a mid-measure clef change.
-    /// LILYPOND-REF: scm/define-grobs.scm:914-925 — Clef space-alist
-    /// </summary>
+    /// <remarks>
+    /// ⚠️ This is NOT a LilyPond quantity. The old remark cited Clef.space-alist, but 0.5 is
+    /// that alist's <c>right-edge</c> entry — the gap to the END of a line — and LilyPond has
+    /// no single padding that applies to both sides of a change item at all: it prices the
+    /// left gap through Note_spacing and the right gap through the space-alist entry keyed
+    /// on what follows (clef 1.0, key 2.5, time 2.0). See COORDINATE_AUDIT.md §4.7.2.
+    /// <para>
+    /// The MID-measure path no longer uses this — it uses
+    /// <see cref="SpacingRules.MidMeasureChangeGaps"/>. What is left here is the
+    /// measure-OPENING path, which still lacks its boundary column (§3.I / roadmap item 3);
+    /// this constant goes away with it.
+    /// </para>
+    /// </remarks>
     public const double ClefChangePadding = 0.5;
 
     // ========== LP grob spacing defaults ==========

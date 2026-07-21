@@ -43,16 +43,18 @@ internal sealed record LpProbe(string Id, string Source, Func<RenderedGeometry, 
 /// </remarks>
 internal static class LpGeometryProbes
 {
-    private const string Preamble = """
+    private static string Preamble(string key) => $"""
         octave absolute
         time 4/4
-        key c major
+        key {key}
 
         part melody
 
+
         """;
 
-    private static string Score(string music, string name) => Preamble + $$"""
+    private static string Score(string music, string name, string key = "c major") =>
+        Preamble(key) + $$"""
         section Main {
           melody { {{music}} }
         }
@@ -104,6 +106,14 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
+    // LilyPond twin: \key g \major c'4 d' \key c \major fis'4 g'4
+    // The note after the change carries an accidental, so the musical column's leftmost ink
+    // is that accidental rather than a note head. Two branches only this probe reaches:
+    // the change column is narrow enough that Note_spacing takes its SUBTRACTION arm (MC and
+    // MK take the floor), and the accidental drags the rod above the space-alist ideal so
+    // Staff_spacing's :213 correction decides the right-hand gap.
+    private static readonly string MKA = Score("c4 d key c major fis g |", "MKA", "g major");
+
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
@@ -149,6 +159,14 @@ internal static class LpGeometryProbes
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+
+        // The change glyph here is the CANCELLATION natural. LilyPond engraves it as a
+        // KeyCancellation grob and leaves the KeySignature itself empty (C major has no
+        // accidentals), which is why the .ly probe dumps both and drops the empty one.
+        new("midmeasure.key-cancel.prev-note-to-key", MKA,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.key-cancel.key-to-next-note", MKA,
             g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
 
         // --- the column before a bar line -> that bar line (the closing side) ---

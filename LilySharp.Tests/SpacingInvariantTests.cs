@@ -105,6 +105,45 @@ public class SpacingInvariantTests
     }
 
     [Fact]
+    public void BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn()
+    {
+        // The measure in BothSpringSystems_AgreeOnEveryMusicalSpring has no change item, so
+        // it could not see this: the two systems model a mid-measure change with DIFFERENT
+        // topologies. The timing-column system has ONE spring (a zero-duration change shares
+        // the next note's timing), the item system has TWO (a change gets its own slot). The
+        // totals must still agree, or CalculateMeasureIdealWidth under-estimates exactly the
+        // measures whose spacing is hardest and the line breaker packs them too tight.
+        //
+        // They did NOT agree before the change column was priced the way LilyPond prices it:
+        // the column system reserved glyph + 2 x 0.5 on one spring while the item system put
+        // a full duration space before the change AND the same reservation after it.
+        var (timings, allMeasures, primary, _) = Collect("""
+            time 4/4
+            octave absolute
+            part melody
+            section Main { melody { c'4 d' clef bass e4 f4 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """);
+        var columnSprings = new MeasureLayouter()
+            .CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(primary, 0.125);
+
+        // One extra item slot for the clef, and no extra column for it.
+        Assert.Equal(columnSprings.Length + 1, itemSprings.Length);
+        Assert.Equal(columnSprings.Sum(s => s.IdealDistance),
+                     itemSprings.Sum(s => s.IdealDistance), 9);
+
+        // And the split itself is LilyPond's, not an arbitrary halving: the gap from the
+        // clef's own column origin to the next note is its ink width plus Clef.space-alist
+        // (next-note . (extra-space . 1.0)). Measured on 2.24.4 as 3.146680 for clefs.F_change
+        // — see audit/lp-geometry midmeasure.clef.clef-to-next-note.
+        var clefColumn = primary.Items.Skip(2).ToList();
+        Assert.Equal(GlyphMetrics.FClefChangeWidth + 1.0,
+                     SpacingRules.MidMeasureChangeRightGap(clefColumn), 9);
+    }
+
+    [Fact]
     public void MmrRodMinimumDistance_ReservesBreakAlignedChangeAtRunBound()
     {
         // LP's Paper_column::minimum_distance across a multi-measure-rest run's bounding

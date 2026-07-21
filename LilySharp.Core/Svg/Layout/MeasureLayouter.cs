@@ -335,11 +335,24 @@ internal sealed class MeasureLayouter
         if (prevItems != null)
             spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems);
 
+        // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
+        // column's timing) gets its own non-musical column in LilyPond, and the gaps
+        // around it are priced from the ideal as it stands HERE — before the stem
+        // correction, which LilyPond applies afterwards (note-spacing.cc:87-109 then
+        // :111) and which contributes nothing when the right column is non-musical:
+        // stem_dir_correction only looks at grobs with the Note_column interface
+        // (:235-238), and a change column has none. Taking the correction first put the
+        // mid-measure clef of probe MC 0.188 too far right, because the low notes after
+        // it earn a correction that LilyPond charges to a pair this one is not.
+        var changeGaps = SpacingRules.MidMeasureChangeGaps(
+            nextItems, prevItems, spring.IdealDistance);
+
         // Stem-direction optical correction ([Wanske]), merged across simultaneous
         // voices' wishes (single voice = its own wish; polyphony = averaged).
-        spring = SpacingRules.MergeVoiceStemWishes(
-            spring, measuresToScan, timings[i - 1], timings[i],
-            NoteSpacingParameters.Default);
+        if (changeGaps is null)
+            spring = SpacingRules.MergeVoiceStemWishes(
+                spring, measuresToScan, timings[i - 1], timings[i],
+                NoteSpacingParameters.Default);
         // Collision rods are PER VOICE: two noteheads force a horizontal minimum only when the
         // SAME voice puts one at each of these adjacent columns. Pairing items across voices/staves
         // (as the aggregated prev/nextItems do, all at staffY 0) made a triplet note in ONE staff
@@ -356,6 +369,14 @@ internal sealed class MeasureLayouter
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
+            // A change item at the right column is NOT what this rod measures: it belongs
+            // to its own non-musical column, whose rod MidMeasureChangeGaps owns below.
+            // Measuring to it here went through CalculateSkylineDistance's extent fallback,
+            // where change items are still on the CENTRE basis, and that mis-framed rod is
+            // what used to decide the gap (it beat the ideal, so merge_springs' floor
+            // placed the column at min + 0.3).
+            if (SpacingRules.IsMidMeasureChangeColumn(next))
+                continue;
             bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
             maxSkyDist = Math.Max(maxSkyDist,
                 SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0, prevBeamed: prevBeamed));
@@ -363,16 +384,27 @@ internal sealed class MeasureLayouter
         if (maxSkyDist > spring.MinDistance)
             spring = new Spring(spring.IdealDistance, maxSkyDist, spring.InverseStretchStrength);
 
-        // Mid-measure clef/key change (zero duration, shares the next timing) and
-        // leading grace on the next note hang left of that column; reserve their
-        // width here so the renderer's hung glyph has room.
-        // LILYPOND-REF: lily/paper-column.cc — breakable columns precede the musical column.
-        double prefixWidth = SpacingRules.ChangeItemPrefixWidth(nextItems);
-        prefixWidth += SpacingRules.LeadingGracePrefixWidth(nextItems);
-        if (prefixWidth > 0)
+        // The change column's two gaps, computed above, become this one spring — see
+        // SpacingRules.MidMeasureChangeGaps for the derivation, the measurements, and what
+        // a single spring cannot carry.
+        // LILYPOND-REF: lily/note-spacing.cc:103-108 (left) + lily/staff-spacing.cc:166-215
+        //   (right); lily/paper-column.cc — the non-musical column precedes the musical
+        //   column of the same moment.
+        if (changeGaps is { } gaps)
+        {
             spring = new Spring(
-                spring.IdealDistance + prefixWidth,
-                spring.MinDistance + prefixWidth,
+                gaps.TotalIdeal,
+                Math.Max(spring.MinDistance, gaps.MinDistance),
+                spring.InverseStretchStrength);
+        }
+
+        // Leading grace on the next note hangs left of that column; reserve its width
+        // here so the renderer's hung glyphs have room.
+        double gracePrefix = SpacingRules.LeadingGracePrefixWidth(nextItems);
+        if (gracePrefix > 0)
+            spring = new Spring(
+                spring.IdealDistance + gracePrefix,
+                spring.MinDistance + gracePrefix,
                 spring.InverseStretchStrength);
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at

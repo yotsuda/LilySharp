@@ -46,6 +46,12 @@ lay =
          \override Rest.after-line-breaking            = #(gd tag "REST")
          \override Accidental.after-line-breaking      = #(gd tag "ACC")
          \override KeySignature.after-line-breaking    = #(gd tag "KEY")
+         %% A change to a key with FEWER accidentals engraves the naturals as a separate
+         %% KeyCancellation grob, and leaves the KeySignature itself empty. Dumping only
+         %% KeySignature would measure to a grob with no ink (extent +inf.0 . -inf.0) while
+         %% the glyphs the eye sees belong to the cancellation. Both are dumped; the empty
+         %% one is dropped by the script, which says so.
+         \override KeyCancellation.after-line-breaking = #(gd tag "KEY")
          \override TimeSignature.after-line-breaking   = #(gd tag "TIME")
        }
      }
@@ -94,6 +100,12 @@ lay =
 
 %% MK — mid-measure key change.
 \score { \new Staff { \time 4/4 c'4 d' \key a \major e'4 f'4 } \lay "MK" }
+
+%% MKA — mid-measure key change whose FOLLOWING note carries an accidental. The accidental
+%%       is the musical column's leftmost ink, so it enters Paper_column::minimum_distance
+%%       and the staff-spacing.cc:213 correction lifts the gap ABOVE the space-alist ideal.
+%%       MK cannot see that branch: its next note is a bare head, so the ideal wins there.
+\score { \new Staff { \key g \major \time 4/4 c'4 d' \key c \major fis'4 g'4 } \lay "MKA" }
 
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
