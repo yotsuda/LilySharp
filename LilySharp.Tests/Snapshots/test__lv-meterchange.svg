@@ -5,11 +5,11 @@
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="11.64" x2="32.90" y2="11.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="12.64" x2="32.90" y2="12.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.64" x2="32.90" y2="13.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.64" x2="32.90" y2="14.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.64" x2="32.90" y2="15.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.64" x2="33.20" y2="11.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.64" x2="33.20" y2="12.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.64" x2="33.20" y2="13.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.64" x2="33.20" y2="14.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.64" x2="33.20" y2="15.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="14.64" font-size="4.00" data-pos="9"></text>
   <text class="music" x="3.30" y="13.64" font-size="4.00"></text>
   <text class="music" x="3.30" y="15.64" font-size="4.00"></text>
@@ -25,19 +25,19 @@
   <text class="music" x="13.69" y="17.14" font-size="4.00" data-pos="49"></text>
   <line x1="14.93" y1="16.99" x2="14.93" y2="13.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.52" y="13.64" font-size="4.00" data-pos="53"></text>
-  <text class="music" x="19.62" y="13.14" font-size="4.00" data-pos="62"></text>
-  <line x1="19.69" y1="13.29" x2="19.69" y2="16.64" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.63" y="13.64" font-size="4.00" data-pos="79"></text>
-  <line x1="22.69" y1="13.79" x2="22.69" y2="17.14" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="25.61" y="14.14" font-size="4.00" data-pos="81"></text>
-  <line x1="26.85" y1="13.99" x2="26.85" y2="10.64" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="28.61" y="14.64" font-size="4.00" data-pos="83"></text>
-  <line x1="29.85" y1="14.49" x2="29.85" y2="11.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="19.92" y="13.14" font-size="4.00" data-pos="62"></text>
+  <line x1="19.99" y1="13.29" x2="19.99" y2="16.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="22.93" y="13.64" font-size="4.00" data-pos="79"></text>
+  <line x1="22.99" y1="13.79" x2="22.99" y2="17.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="25.91" y="14.14" font-size="4.00" data-pos="81"></text>
+  <line x1="27.15" y1="13.99" x2="27.15" y2="10.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="28.91" y="14.64" font-size="4.00" data-pos="83"></text>
+  <line x1="30.15" y1="14.49" x2="30.15" y2="11.14" stroke="#000000" stroke-width="0.130"/>
   <rect x="16.83" y="11.64" width="0.19" height="4.00" data-pos="51"/>
-  <rect x="31.81" y="11.64" width="0.19" height="4.00" data-pos="85"/>
-  <rect x="32.30" y="11.64" width="0.60" height="4.00" data-pos="85"/>
+  <rect x="32.11" y="11.64" width="0.19" height="4.00" data-pos="85"/>
+  <rect x="32.60" y="11.64" width="0.60" height="4.00" data-pos="85"/>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="23"/>
   <text x="1.29" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="23">A</text>
-  <path d="M 22.63,12.74 C 22.93,12.35 23.33,12.35 23.63,12.74 C 23.33,12.47 22.93,12.47 22.63,12.74 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 22.93,12.74 C 23.23,12.35 23.63,12.35 23.93,12.74 C 23.63,12.47 23.23,12.47 22.93,12.74 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

@@ -87,7 +87,9 @@ public class SpacingInvariantTests
         // Staff_spacing, where duration never enters. Pin the shape so a regression
         // back to duration spacing (which read 3.6 here) is caught.
         Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace, itemSprings[0].IdealDistance, 9);
-        Assert.Equal(0, itemSprings[0].InverseStretchStrength);
+        // semi-fixed-space IS stretchable — see BarlineToFirstNoteSpring_StretchesByHalfTheSpaceAlistDistance.
+        Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace / 2,
+                     itemSprings[0].InverseStretchStrength, 9);
 
         // And both corrections are actually LIVE here, so the equality above is not
         // two zeroes agreeing: `e` is a stemmed quarter, so the spring into the bar
@@ -197,32 +199,57 @@ public class SpacingInvariantTests
     }
 
     [Fact]
-    public void BarlineToFirstNoteSpring_IsRigid()
+    public void BarlineToFirstNoteSpring_StretchesByHalfTheSpaceAlistDistance()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist —
-        // (next-note . (semi-fixed-space . 0.9)): the gap after a bar line NEVER
-        // stretches under line justification.
         // This spring starts at a MID-LINE bar line, so LilyPond reads `next-note`,
         // not `first-note` — Staff_spacing::get_spacing only reaches for `first-note`
         // when break_status_dir != CENTER (start of a system).
-        // LILYPOND-REF: lily/staff-spacing.cc:147-153.
+        // LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist
+        //   (next-note . (semi-fixed-space . 0.9)); lily/staff-spacing.cc:147-153.
+        //
+        // semi-fixed-space splits that 0.9 into fixed = d/2 and ideal = fixed + d/2, and
+        // leaves `is_stretchable` TRUE — only shrink-space and semi-shrink-space clear it —
+        // so the spring's inverse stretch strength is ideal - fixed = 0.45. This test used
+        // to assert 0, on the strength of a comment claiming the gap after a bar line never
+        // stretches. It does. Measured on 2.24.4 with `c'4 d' e' f' | g'4 a' b' c''`,
+        // bar-line ink right edge -> next notehead ink left edge:
+        //   ragged-right          0.900000   (force 0, the natural length)
+        //   justified, 120mm      1.996558
+        //   justified, 180mm      3.091335
+        // Solving force from those with strength 0.45 gives 2.43680 and 4.86963, and
+        // feeding those forces back into the FIRST MUSICAL spring (natural 3.002257,
+        // stretched to 7.140047 and 11.271114) yields the same 1.69805 both times — so
+        // 0.45 is confirmed against an independent spring, not fitted to one measurement.
+        // LILYPOND-REF: lily/staff-spacing.cc:164-180 (semi-fixed-space) and :200
+        //   (stretchability = ideal - fixed), :218 set_inverse_stretch_strength.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
-        Assert.Equal(0, springs[0].InverseStretchStrength, precision: 9);
-        Assert.True(springs[0].IdealDistance >= EngravingDefaults.BarLineToNextNoteSpace - 1e-9);
+        Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace / 2,
+                     springs[0].InverseStretchStrength, precision: 9);
+        Assert.Equal(EngravingDefaults.BarLineToNextNoteSpace, springs[0].IdealDistance, precision: 9);
     }
 
     [Fact]
-    public void FirstColumn_DoesNotMoveWhenMeasureStretches()
+    public void FirstColumn_MovesLessThanMusicalColumnsWhenMeasureStretches()
     {
-        // Corollary of the rigid barline spring: solving the same measure at
-        // 1x and 2x width must keep the first column's X identical.
+        // Corollary of the semi-fixed bar-line spring: it is stretchable, so the first
+        // column DOES move when the measure is stretched — but by much less than the
+        // musical columns, because 0.45 is a far weaker stretch strength than a musical
+        // spring's (1.69805 on the measured line above, i.e. ~3.8x stiffer here).
+        // The former version of this test asserted the first column did not move at all,
+        // which followed from the rigidity that BarlineToFirstNoteSpring_Stretches... has
+        // now disproved against LilyPond.
         var (timings, allMeasures, primary, _) = Collect(OneMeasure);
         var layouter = new MeasureLayouter();
         var narrow = layouter.LayoutColumns(primary, 16, timings, 0.125, allMeasures);
         var wide = layouter.LayoutColumns(primary, 32, timings, 0.125, allMeasures);
-        Assert.Equal(narrow[0].X, wide[0].X, precision: 6);
-        Assert.True(wide[1].X > narrow[1].X, "musical springs must absorb ALL the stretch");
+        double firstShift = wide[0].X - narrow[0].X;
+        double secondShift = wide[1].X - narrow[1].X;
+        Assert.True(firstShift > 0,
+            $"the semi-fixed bar-line spring is stretchable, so the first column must move: {firstShift}");
+        Assert.True(secondShift > firstShift,
+            $"musical springs must absorb MORE of the stretch than the bar-line spring: "
+            + $"first={firstShift}, second={secondShift}");
     }
 
     [Fact]

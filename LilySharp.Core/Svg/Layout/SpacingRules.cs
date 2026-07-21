@@ -248,6 +248,22 @@ internal static class SpacingRules
     internal const double DefaultExtraSpacingWidth = 0.1;
 
     /// <summary>
+    /// The LEFTward <c>extra-spacing-width</c> an Accidental declares for itself — twice the
+    /// default, and asymmetric: an accidental reserves 0.2 to its left and 0.0 to its right.
+    /// </summary>
+    /// <remarks>
+    /// This is the box that enters the skyline when an accidental is the leftmost ink of a
+    /// column, so it is what a bar line's minimum distance is measured against. Verified on
+    /// 2.24.4 with `c'4 d' e' f' | cis'4 d' e' f'`: the dumped rod is 2.04, i.e. min_dist
+    /// 1.94 + padding 0.1, and 1.94 = bar ink 0.19 + bar esw 0.1 + accidental reach 1.45 +
+    /// 0.2; the accidental is then placed at min_dist + 0.3 = 2.24 from the column origin,
+    /// which is exactly the measured 23.185729 - 20.945729.
+    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental
+    ///   <c>(extra-spacing-width . (-0.2 . 0.0))</c>; :62 AccidentalCautionary likewise.
+    /// </remarks>
+    internal const double AccidentalExtraSpacingWidthLeft = 0.2;
+
+    /// <summary>
     /// The headroom <c>merge_springs</c> leaves above a spring's minimum distance.
     /// </summary>
     /// <remarks>
@@ -256,6 +272,23 @@ internal static class SpacingRules
     /// headroom above the largest minimum distance so that things don't get too cramped".
     /// </remarks>
     internal const double SpringHeadroom = 0.3;
+
+    /// <summary>
+    /// The gap <c>Staff_spacing::get_spacing</c> guarantees above the minimum distance
+    /// when it corrects its FIXED distance — a SECOND hard-coded 0.3, distinct from
+    /// <see cref="SpringHeadroom"/>.
+    /// </summary>
+    /// <remarks>
+    /// Both are 0.3 and both floor a distance at <c>min + 0.3</c>, but they are separate
+    /// mechanisms and both fire on this spring: <c>breakable_column_spacing</c> hands the
+    /// Staff_spacing wish on to <c>merge_springs</c>, so the value is corrected here and
+    /// then merged there. This one moves <c>fixed</c> (and hence the inverse COMPRESS
+    /// strength), <see cref="SpringHeadroom"/> moves the ideal.
+    /// LILYPOND-REF: lily/staff-spacing.cc:212-215 — "ensure that the 'fixed' distance
+    ///   will leave a gap of at least 0.3 ss";
+    ///   lily/spacing-spanner.cc:478-536 breakable_column_spacing.
+    /// </remarks>
+    internal const double StaffSpacingFixedHeadroom = 0.3;
 
     /// <summary>
     /// Applies <c>merge_springs</c>' headroom: a spring never sits at its bare minimum,
@@ -1573,21 +1606,41 @@ internal static class SpacingRules
     /// the SINGLE implementation shared by both spring systems.
     /// </summary>
     /// <remarks>
-    /// The gap after a bar line is governed by the BarLine space-alist, NOT by the
-    /// first note's duration: LilyPond reaches this pair through Staff_spacing, not
-    /// Note_spacing, so duration space never enters. A mid-line bar line always has
-    /// <c>break_status_dir () == CENTER</c>, which selects `next-note`
-    /// (semi-fixed-space 0.9 → fixed = d/2, ideal = d) and never `first-note`; the
-    /// system-start case is BreakAlignSpacing.FirstNoteSpring. semi-fixed is not
-    /// stretchable, hence inverse stretch strength 0.
-    ///
+    /// <para>
+    /// A transcription of <c>Staff_spacing::get_spacing</c>. The gap after a bar line is
+    /// governed by the BarLine space-alist, NOT by the first note's duration: LilyPond
+    /// reaches this pair through Staff_spacing, not Note_spacing, so duration space never
+    /// enters. A mid-line bar line always has <c>break_status_dir () == CENTER</c>, which
+    /// selects `next-note` (semi-fixed-space 0.9) and never `first-note`; the system-start
+    /// case is BreakAlignSpacing.FirstNoteSpring.
+    /// </para>
+    /// <para>
+    /// FRAME: LilyPond measures column origin → column origin, so its <c>fixed</c> opens at
+    /// <c>last_ext[RIGHT]</c> — the bar line's right edge expressed in the boundary column's
+    /// frame, which is why a clef sitting before the bar line makes that term jump from 0.19
+    /// to ~3.04. This spring starts AT the bar line's ink right edge, so that term is
+    /// identically 0 here and every quantity below is LilyPond's minus <c>last_ext[RIGHT]</c>.
+    /// Measured on 2.24.4, bar-line ink right edge → next notehead ink left edge is
+    /// 0.900000 both with and without a clef change at the bar line.
+    /// </para>
+    /// <para>
+    /// NOT PORTED — <c>next_notes_correction</c> (staff-spacing.cc:206-208), the optical
+    /// correction for a DOWN stem standing just after the bar line. Measured on 2.24.4 with
+    /// `c'4 d' e' f'` in the first measure, the same bar-line ink right → notehead ink left
+    /// gap is 0.900000 for `g'4 a' b' c''` (up stems) but 1.042857 for `a''4 b'' c''' d'''`
+    /// (down stems, no clef) and 1.089365 for `\clef bass g4 a b c'` (down stems + clef);
+    /// with a clef but UP stems (`\clef bass c,4 d, e, f,`) it is 0.900000 again. So the
+    /// residual tracks the stem, not the clef. Porting it needs the stem's Y extent
+    /// intersected with the bar line's, which this spring does not currently receive.
+    /// </para>
+    /// <para>
     /// This lived only in MeasureLayouter, so the item system priced the same gap as
     /// a quarter note's duration space — 3.6 against the correct 0.9, ~2.7 ss too
     /// wide on every measure it estimated.
-    ///
-    /// LILYPOND-REF: scm/define-grobs.scm:301 BarLine space-alist
-    ///   (next-note . (semi-fixed-space . 0.9)); lily/staff-spacing.cc:147-153
-    ///   (alist selection) and :176-198 (semi-fixed / semi-shrink).
+    /// </para>
+    /// LILYPOND-REF: lily/staff-spacing.cc:118-221 Staff_spacing::get_spacing;
+    ///   scm/define-grobs.scm:301 BarLine space-alist
+    ///   (next-note . (semi-fixed-space . 0.9)).
     /// LILYPOND-REF: lily/spacing-spanner.cc:484-489 breakable_column_spacing —
     ///   full-measure-extra-space is `situational_space` on THIS spring, keyed on the
     ///   measure AFTER the bar line, so the caller decides and passes it in.
@@ -1595,22 +1648,46 @@ internal static class SpacingRules
     internal static Spring BarlineToFirstColumnSpring(
         IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
     {
-        double firstNoteSpace = EngravingDefaults.BarLineToNextNoteSpace;
-        double firstNoteMin = firstNoteSpace / 2;
-        double fullMeasureSpace = fillsMeasure ? FullMeasureExtraSpace : 0;
+        double distance = EngravingDefaults.BarLineToNextNoteSpace;
+
+        // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
+        // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting
+        // spring is NOT rigid. (LilySharp used to pass inverseStretchStrength 0 here on
+        // the strength of a comment claiming semi-fixed was unstretchable; the source
+        // says otherwise.)
+        // LILYPOND-REF: lily/staff-spacing.cc:164-180.
+        double fixedDistance = distance / 2;
+        double ideal = fixedDistance + distance / 2;
+        const bool isStretchable = true;
+
+        // Fixed BEFORE situational_space and before the min-distance correction — the
+        // order matters, both of those move `ideal` away from `fixed` without making the
+        // spring any more stretchable.
+        // LILYPOND-REF: lily/staff-spacing.cc:200.
+        double stretchability = isStretchable ? ideal - fixedDistance : 0;
+
+        // LILYPOND-REF: lily/staff-spacing.cc:202-204 — 'situational_space' passed by the
+        //   caller could include full-measure-extra-space.
+        double situationalSpace = fillsMeasure ? FullMeasureExtraSpace : 0;
+        ideal += situationalSpace;
+
+        // min_dist = Paper_column::minimum_distance — a PURE skyline distance between the
+        // two columns, with no space-alist value in it. See GetBarlineToItemMinimum.
+        // LILYPOND-REF: lily/staff-spacing.cc:210.
+        double minDistance = 0;
 
         double startLeadGrace = 0;
         if (firstItems != null)
         {
-            // Skyline rod: bar line → first item (max across all voices). A clef change
+            // Skyline reach: bar line → first item (max across all voices). A clef change
             // opening the measure is NOT on this side of the bar line (break-align-orders
-            // puts clef before staff-bar), so it raises no rod here — see the note on
+            // puts clef before staff-bar), so it raises nothing here — see the note on
             // ChangeItemPrefixWidth's excludeClef just below.
             foreach (var item in firstItems)
             {
                 if (item is ClefChangeItem)
                     continue;
-                firstNoteMin = Math.Max(firstNoteMin,
+                minDistance = Math.Max(minDistance,
                     CalculateSkylineDistance(null, item, staffY: 0));
             }
 
@@ -1621,7 +1698,7 @@ internal static class SpacingRules
             // measure (BoundaryClefAllowance) and must not be charged again here.
             // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
             // column precedes the musical column of the same moment.
-            firstNoteMin = Math.Max(firstNoteMin,
+            minDistance = Math.Max(minDistance,
                 ChangeItemPrefixWidth(firstItems, excludeClef: true));
 
             // Leading grace notes on the first note hang left of its column, after
@@ -1634,19 +1711,34 @@ internal static class SpacingRules
         {
             // The grace is now the FIRST musical column after the bar line, so the
             // barline→grace gap uses tight GRACE spacing (spacing-increment). The
-            // whole front block is rigid (grace columns don't stretch).
+            // whole front block is rigid (grace columns don't stretch), so this branch
+            // does NOT take the semi-fixed spring above.
             // LILYPOND-REF: scm/define-grobs.scm:1721 GraceSpacing
             //   (spacing-increment . 0.8) — grace columns space tighter than notes.
             // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
             //   column → … → main column.
             double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
-            double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
-            return new Spring(front + fullMeasureSpace, front, inverseStretchStrength: 0);
+            double front = Math.Max(Math.Max(distance, minDistance),
+                                    graceApproach + startLeadGrace);
+            return new Spring(front + situationalSpace, front, inverseStretchStrength: 0);
         }
-        return new Spring(
-            Math.Max(firstNoteSpace, firstNoteMin) + fullMeasureSpace,
-            firstNoteMin,
-            inverseStretchStrength: 0);
+
+        // "Ensure that the 'fixed' distance will leave a gap of at least 0.3 ss."
+        // LILYPOND-REF: lily/staff-spacing.cc:212-215.
+        double minDistanceCorrection =
+            Math.Max(0.0, StaffSpacingFixedHeadroom + minDistance - fixedDistance);
+        fixedDistance += minDistanceCorrection;
+        ideal = Math.Max(ideal, fixedDistance);
+
+        // LILYPOND-REF: lily/staff-spacing.cc:217-220 — the compress strength is measured
+        //   against `fixed`, not against the minimum, so it is NOT the Spring 3-argument
+        //   constructor's default.
+        // No ApplyMergeSpringsHeadroom call follows: breakable_column_spacing does hand this
+        // wish on to merge_springs, but the correction just above already guarantees
+        // ideal >= fixed >= 0.3 + min_distance, so the headroom is provably a no-op here.
+        return new Spring(ideal, minDistance,
+                          Math.Max(0.0, stretchability),
+                          Math.Max(0.0, ideal - fixedDistance));
     }
 
     /// <summary>
@@ -2286,6 +2378,16 @@ internal static class SpacingRules
     ///   time-signature: extra-space       0.75
     /// `first-note` (semi-shrink-space 1.3) is deliberately absent: LilyPond reads it
     /// only at a system start, which is not this path — see the note on the note arm.
+    ///
+    /// These are IDEALS, never minimums — see <see cref="GetBarlineToItemMinimum"/> for the
+    /// minimum, which used to be taken from here. The `next-note` arm reaches the spring
+    /// through EngravingDefaults.BarLineToNextNoteSpace
+    /// (<see cref="BarlineToFirstColumnSpring"/>); the clef / key-signature /
+    /// time-signature arms belong to break-align spacing, because
+    /// Staff_spacing::get_spacing consults only `first-note` and `next-note`
+    /// (lily/staff-spacing.cc:147-153) and never keys on the right column's content. Those
+    /// arms therefore have no production caller of their own yet — folding them into
+    /// BreakAlignSpacing is part of the §3.I role-overlap cleanup in COORDINATE_AUDIT.md.
     /// </remarks>
     public static double GetBarlineToItemSpace(MusicItem? nextItem)
     {
@@ -2305,6 +2407,51 @@ internal static class SpacingRules
             // BreakAlignSpacing.FirstNoteSpring (prefix -> first note).
             // LILYPOND-REF: lily/staff-spacing.cc:147-153.
             _ => 0.9
+        };
+    }
+
+    /// <summary>
+    /// Gets the MINIMUM distance from a bar line to the next item — the mirror of
+    /// <see cref="GetItemToBarlineSpace"/>, and NOT <see cref="GetBarlineToItemSpace"/>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's bar line → column minimum is <c>Paper_column::minimum_distance</c>, a
+    /// PURE skyline distance: the bar line reaches its ink right edge + extra-spacing-width
+    /// 0.1, the next column's leftmost grob reaches its ink left edge - 0.1, so the gap
+    /// beyond the item's own ink is exactly 0.1 + 0.1. No space-alist value enters.
+    /// <para>
+    /// LilySharp used to feed <see cref="GetBarlineToItemSpace"/>'s 0.9 in here. That is the
+    /// `next-note` semi-fixed-space entry, i.e. the IDEAL, and using it as the minimum made
+    /// this spring rigid at its ideal and 0.7 ss over-constrained — which in turn is why
+    /// merge_springs' headroom could not be applied to it (it would have floored the ideal
+    /// at 0.9 + 0.3 and fattened every measure start by 0.3). With the minimum corrected the
+    /// headroom is a no-op here: 0.2 + 0.3 &lt; 0.9.
+    /// </para>
+    /// Change items keep their space-alist value for now: their branch of
+    /// <see cref="CalculateLeftExtent"/> is still measured on the CENTRE basis, so the
+    /// box-derived value below — which assumes the left-edge frame — does not apply to
+    /// them. Converting that frame is a separate step, exactly as for
+    /// <see cref="GetItemToBarlineSpace"/>.
+    /// LILYPOND-REF: lily/staff-spacing.cc:210 <c>Paper_column::minimum_distance</c>;
+    ///   lily/separation-item.cc:166-167 default extra-spacing-width
+    ///   <c>Interval (-0.1, 0.1)</c>; lily/note-spacing.cc:78-83 sets the spring minimum to
+    ///   the padding-free skyline distance.
+    /// </remarks>
+    public static double GetBarlineToItemMinimum(MusicItem? nextItem)
+    {
+        return nextItem switch
+        {
+            ClefChangeItem => 1.0,
+            KeySignatureChangeItem => 1.0,
+            TimeSignatureChangeItem => 0.75,
+            // Bar line's own extra-spacing-width (the default 0.1) plus the LEFTmost grob's.
+            // That grob is an accidental whenever the column carries one, and an accidental
+            // declares 0.2 rather than the default — see AccidentalExtraSpacingWidthLeft.
+            // A head reversed left of the stem is still an ordinary NoteHead and keeps 0.1.
+            _ => DefaultExtraSpacingWidth
+                 + (HasAccidental(nextItem)
+                        ? AccidentalExtraSpacingWidthLeft
+                        : DefaultExtraSpacingWidth)
         };
     }
 
@@ -2358,8 +2505,9 @@ internal static class SpacingRules
         {
             if (prevItem == null && nextItem != null)
             {
-                // Barline → item: use space-alist padding based on item type
-                double barlinePad = GetBarlineToItemSpace(nextItem);
+                // Barline → item: the padding-free skyline minimum, NOT the space-alist
+                // ideal. LILYPOND-REF: lily/staff-spacing.cc:210.
+                double barlinePad = GetBarlineToItemMinimum(nextItem);
                 double itemExtent = CalculateLeftExtent(nextItem);
                 return barlinePad + itemExtent;
             }
