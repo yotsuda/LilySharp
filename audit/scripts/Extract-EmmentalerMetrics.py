@@ -9,11 +9,20 @@ The generated file holds every glyph metric (BBox / advance width) that can
 be derived directly from the font binary. Hand-tuned constants — engraving
 thicknesses, spacing heuristics, LP grob defaults — stay in GlyphMetrics.cs.
 
+BBoxes come from the font's embedded LILC table, which is where LilyPond itself
+reads them (lily/open-type-font.cc:288 load_scheme_table("LILC"), :389-407
+get_indexed_char_dimensions); the raw outline is a fallback for fonts without one.
+The two differ: the outline is what the curves happen to enclose, LILC is the
+dimension METAFONT designed. For noteheads.s0 that is 1.9640 against 1.962002, and
+1.962002 is what LilyPond lays out with — so taking the outline made Lily# miss
+LilyPond by ~0.002 ss on every measure, in a way no formula could account for.
+
 Run after Emmentaler font is updated. CI should re-run this and assert the
 output is unchanged (else the font drifted).
 """
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,6 +95,12 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ClefG", 0xE085, "G (treble) clef", "mf/feta-clefs.mf — clefs.G"),
     GlyphSpec("ClefF", 0xE083, "F (bass) clef", "mf/feta-clefs.mf — clefs.F"),
     GlyphSpec("ClefC", 0xE07F, "C (alto/tenor) clef", "mf/feta-clefs.mf — clefs.C"),
+    # Change clefs are their OWN glyphs, not the full clef scaled — see Clef::calc_glyph_name
+    # appending "_change". Their width sets the gap after a mid-measure clef change, so it
+    # has to be a real metric rather than a fraction of the full clef's.
+    GlyphSpec("ClefGChange", 0xE086, "G (treble) change clef", "mf/feta-clefs.mf — clefs.G_change"),
+    GlyphSpec("ClefFChange", 0xE084, "F (bass) change clef", "mf/feta-clefs.mf — clefs.F_change"),
+    GlyphSpec("ClefCChange", 0xE080, "C (alto/tenor) change clef", "mf/feta-clefs.mf — clefs.C_change"),
     # Rests (ink extents; used to place augmentation dots after the glyph
     # and to centre the church-rest combination of a multi-measure rest)
     GlyphSpec("RestLonga",       0xE005, "Longa (4-measure) rest",      "mf/feta-rests.mf — rests.M2"),
@@ -134,11 +149,27 @@ ADVANCE_GLYPHS: list[GlyphSpec] = [
 ]
 
 
-def get_bbox(glyphSet, hmtx, codepoint: int) -> tuple[float, float, float, float, float] | None:
-    """Return (left, bottom, right, top, advance) in staff spaces, or None if missing."""
-    cmap = glyphSet.glyfTable.font.getBestCmap() if hasattr(glyphSet, "glyfTable") else None
-    # cmap fallback via the font passed in via glyphSet doesn't exist; resolve in caller.
-    raise NotImplementedError
+def load_lilc_bboxes(font) -> tuple[dict[str, tuple[float, float, float, float]], float]:
+    """Parse the font's LILC table into {glyph_name: (left, bottom, right, top)} in staff
+    spaces. This is the SAME per-glyph metric LilyPond itself reads — see
+    lily/open-type-font.cc:288 load_scheme_table("LILC") and :389-407
+    get_indexed_char_dimensions, which returns this stored bbox in preference to the raw
+    glyph outline. The LILC values are in the feta design unit; the LILY table's staff_space
+    (5 for emmentaler-20 = design_size/4) converts them to staff spaces. Empty if no LILC."""
+    keys = font.reader.keys()
+    if "LILC" not in keys or "LILY" not in keys:
+        return {}, 0.0
+    lily = font.getTableData("LILY").decode("latin-1")
+    m = re.search(r"staff_space\s*\.\s*([0-9]+(?:\.[0-9]+)?)", lily)
+    staff_space = float(m.group(1)) if m else 5.0
+    lilc = font.getTableData("LILC").decode("latin-1")
+    pat = re.compile(r"\(([^\s()]+)\s*\.\s*\(\(bbox\s*\.\s*\(([-0-9.eE ]+)\)", re.S)
+    out: dict[str, tuple[float, float, float, float]] = {}
+    for gm in pat.finditer(lilc):
+        vals = [float(x) / staff_space for x in gm.group(2).split()]
+        if len(vals) == 4:
+            out[gm.group(1)] = (vals[0], vals[1], vals[2], vals[3])
+    return out, staff_space
 
 
 def main() -> int:
@@ -157,10 +188,19 @@ def main() -> int:
     cmap = font.getBestCmap()
     glyphSet = font.getGlyphSet()
     hmtx = font["hmtx"]
+    # LP reads glyph bboxes from the font's LILC table, not the raw outline.
+    lilc_bboxes, _staff_space = load_lilc_bboxes(font)
+    if not lilc_bboxes:
+        sys.stderr.write("WARNING: font has no LILC table; falling back to glyph outlines\n")
 
     def fmt(v: float) -> str:
-        # Round to 4 decimal places to keep diffs small without losing precision.
-        return f"{v:.4f}"
+        # SIX decimals. Four was enough while these values were only ever compared with each
+        # other, but the LP fidelity corpus holds them against LilyPond, which speaks in six
+        # (a note head is 1.304212, not 1.3040) — and rounding to four put a residual of
+        # 2e-4..2e-3 under several ledger entries with no defect behind it.
+        # `+ 0.0` folds LILC's signed zero: it stores -0.000000 for a left edge on the
+        # origin, which is the same number but reads like a defect in the output.
+        return f"{v + 0.0:.6f}"
 
     lines: list[str] = []
     lines.append("// Lily# - Music notation compiler")
@@ -169,36 +209,50 @@ def main() -> int:
     lines.append("// Source font: editors/vscode/server/Fonts/emmentaler-20.otf")
     lines.append(f"// 1 staff space = unitsPerEm / 4 = {STAFF_SPACE_UNITS:.0f} font units")
     lines.append("//")
+    lines.append("// BBoxes come from the font's LILC table, which is what LilyPond reads")
+    lines.append("// (lily/open-type-font.cc:288, :389-407); advances come from hmtx.")
+    lines.append("//")
     lines.append("// Hand-tuned constants (engraving thicknesses, spacing heuristics, LP grob")
     lines.append("// defaults) live in GlyphMetrics.cs — this file holds only values that can")
     lines.append("// be derived directly from the font binary.")
     lines.append("")
     lines.append("namespace LilySharp.Core.Svg.Layout;")
     lines.append("")
-    lines.append("public static partial class GlyphMetrics")
+    # Must match GlyphMetrics.cs's own declaration — partial parts cannot disagree on
+    # accessibility, and this file said `public` while that one says `internal`, so a plain
+    # re-run did not compile.
+    lines.append("internal static partial class GlyphMetrics")
     lines.append("{")
 
     # BBox glyphs (also emit advance width as a separate constant)
-    lines.append("    // ========== BBox glyphs (extracted from font outlines) ==========")
-    lines.append("    // BBox = true visual extent (use for collision / skyline). For horizontal")
-    lines.append("    // positioning of the next glyph use the corresponding ...Advance constant —")
-    lines.append("    // notehead glyphs have decorative serifs that overhang the advance width.")
+    lines.append("    // ========== BBox glyphs (from the font's LILC table) ==========")
+    lines.append("    // BBox = the glyph's designed extent, read from LILC — the same per-glyph")
+    lines.append("    // dimension LilyPond lays out with (lily/open-type-font.cc:389-407). It is NOT")
+    lines.append("    // the outline's bounding box, which differs by ~0.002 ss on a note head.")
+    lines.append("    // For horizontal positioning of the next glyph use the corresponding")
+    lines.append("    // ...Advance constant, taken from hmtx as LilyPond takes it.")
     lines.append("")
     for spec in BBOX_GLYPHS:
         if spec.codepoint not in cmap:
             sys.stderr.write(f"ERROR: U+{spec.codepoint:04X} ({spec.csharp_name}) not in cmap\n")
             return 1
         gname = cmap[spec.codepoint]
-        pen = BoundsPen(glyphSet)
-        glyphSet[gname].draw(pen)
-        if pen.bounds is None:
-            sys.stderr.write(f"ERROR: glyph {gname} has empty outline\n")
-            return 1
-        xMin, yMin, xMax, yMax = pen.bounds
-        L = xMin / STAFF_SPACE_UNITS
-        B = yMin / STAFF_SPACE_UNITS
-        R = xMax / STAFF_SPACE_UNITS
-        T = yMax / STAFF_SPACE_UNITS
+        if gname in lilc_bboxes:
+            L, B, R, T = lilc_bboxes[gname]
+        else:
+            # No LILC entry (a font without the table, or a glyph feta never sized).
+            # Fall back to the outline and say so, rather than silently mixing sources.
+            sys.stderr.write(f"note: {gname} has no LILC bbox; using the outline\n")
+            pen = BoundsPen(glyphSet)
+            glyphSet[gname].draw(pen)
+            if pen.bounds is None:
+                sys.stderr.write(f"ERROR: glyph {gname} has empty outline\n")
+                return 1
+            xMin, yMin, xMax, yMax = pen.bounds
+            L = xMin / STAFF_SPACE_UNITS
+            B = yMin / STAFF_SPACE_UNITS
+            R = xMax / STAFF_SPACE_UNITS
+            T = yMax / STAFF_SPACE_UNITS
         adv, _ = hmtx[gname]
         adv_ss = adv / STAFF_SPACE_UNITS
         lines.append(f"    /// <summary>{spec.summary} — BBox.</summary>")

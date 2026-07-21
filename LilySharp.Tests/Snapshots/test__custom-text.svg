@@ -5,21 +5,21 @@
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.22" x2="52.24" y2="13.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.22" x2="52.24" y2="14.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.22" x2="52.24" y2="15.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.22" x2="52.24" y2="16.22" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.22" x2="52.24" y2="17.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.22" x2="52.25" y2="13.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.22" x2="52.25" y2="14.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.22" x2="52.25" y2="15.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.22" x2="52.25" y2="16.22" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.22" x2="52.25" y2="17.22" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="16.22" font-size="4.00" data-pos="240"></text>
   <text class="music" x="3.30" y="15.22" font-size="4.00"></text>
   <line x1="7.36" y1="18.22" x2="9.31" y2="18.22" stroke="#000000" stroke-width="0.200"/>
-  <line x1="30.53" y1="18.22" x2="32.48" y2="18.22" stroke="#000000" stroke-width="0.200"/>
-  <line x1="33.53" y1="18.22" x2="35.48" y2="18.22" stroke="#000000" stroke-width="0.200"/>
+  <line x1="30.53" y1="18.22" x2="32.49" y2="18.22" stroke="#000000" stroke-width="0.200"/>
+  <line x1="33.53" y1="18.22" x2="35.49" y2="18.22" stroke="#000000" stroke-width="0.200"/>
   <line x1="36.53" y1="18.22" x2="38.49" y2="18.22" stroke="#000000" stroke-width="0.200"/>
   <line x1="36.53" y1="19.22" x2="38.49" y2="19.22" stroke="#000000" stroke-width="0.200"/>
-  <line x1="39.53" y1="18.22" x2="41.49" y2="18.22" stroke="#000000" stroke-width="0.200"/>
-  <line x1="39.53" y1="19.22" x2="41.49" y2="19.22" stroke="#000000" stroke-width="0.200"/>
-  <line x1="44.60" y1="18.22" x2="47.54" y2="18.22" stroke="#000000" stroke-width="0.200"/>
+  <line x1="39.54" y1="18.22" x2="41.49" y2="18.22" stroke="#000000" stroke-width="0.200"/>
+  <line x1="39.54" y1="19.22" x2="41.49" y2="19.22" stroke="#000000" stroke-width="0.200"/>
+  <line x1="44.61" y1="18.22" x2="47.55" y2="18.22" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="7.68" y="18.22" font-size="4.00" data-pos="276"></text>
   <line x1="8.92" y1="18.07" x2="8.92" y2="14.72" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="10.69" y="17.72" font-size="4.00" data-pos="279"></text>
@@ -30,26 +30,26 @@
   <line x1="17.93" y1="16.57" x2="17.93" y2="13.22" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.02" y="16.22" font-size="4.00" data-pos="287"></text>
   <line x1="22.26" y1="16.22" x2="22.26" y2="12.72" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="25.29" y="16.22" font-size="4.00" data-pos="290"></text>
+  <text class="music" x="25.30" y="16.22" font-size="4.00" data-pos="290"></text>
   <line x1="26.53" y1="16.22" x2="26.53" y2="12.72" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="30.85" y="18.22" font-size="4.00" data-pos="319"></text>
-  <line x1="32.09" y1="18.07" x2="32.09" y2="14.72" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="33.85" y="18.72" font-size="4.00" data-pos="322"></text>
-  <line x1="35.09" y1="18.57" x2="35.09" y2="15.22" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="30.86" y="18.22" font-size="4.00" data-pos="319"></text>
+  <line x1="32.10" y1="18.07" x2="32.10" y2="14.72" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="33.86" y="18.72" font-size="4.00" data-pos="322"></text>
+  <line x1="35.10" y1="18.57" x2="35.10" y2="15.22" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="36.86" y="19.22" font-size="4.00" data-pos="324"></text>
   <line x1="38.10" y1="19.07" x2="38.10" y2="15.22" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="39.86" y="19.72" font-size="4.00" data-pos="326"></text>
   <line x1="41.10" y1="19.57" x2="41.10" y2="15.22" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="45.09" y="18.22" font-size="4.00" data-pos="330"></text>
+  <text class="music" x="45.10" y="18.22" font-size="4.00" data-pos="330"></text>
   <rect x="19.93" y="13.22" width="0.19" height="4.00" data-pos="285"/>
-  <rect x="29.76" y="13.22" width="0.19" height="4.00" data-pos="292"/>
-  <rect x="43.00" y="13.22" width="0.19" height="4.00" data-pos="328"/>
-  <rect x="51.15" y="13.22" width="0.19" height="4.00" data-pos="333"/>
-  <rect x="51.64" y="13.22" width="0.60" height="4.00" data-pos="333"/>
-  <rect x="0.30" y="8.38" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
-  <text x="1.29" y="10.58" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
-  <rect x="29.95" y="6.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
+  <rect x="29.77" y="13.22" width="0.19" height="4.00" data-pos="292"/>
+  <rect x="43.01" y="13.22" width="0.19" height="4.00" data-pos="328"/>
+  <rect x="51.16" y="13.22" width="0.19" height="4.00" data-pos="333"/>
+  <rect x="51.65" y="13.22" width="0.60" height="4.00" data-pos="333"/>
+  <rect x="0.30" y="8.36" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
+  <text x="1.29" y="10.56" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
+  <rect x="29.96" y="6.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
   <text x="30.89" y="9.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="298">B</text>
-  <text x="28.95" y="11.66" font-size="2.40" font-style="italic" text-anchor="middle" data-pos="354">poco a poco dim.</text>
+  <text x="28.96" y="11.66" font-size="2.40" font-style="italic" text-anchor="middle" data-pos="354">poco a poco dim.</text>
   </g>
 </svg>

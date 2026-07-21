@@ -110,7 +110,7 @@
   <rect x="101.86" y="39.00" width="0.19" height="4.00" data-pos="0"/>
   <text x="56.45" y="32.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="0">f</text>
   <text x="7.56" y="46.30" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="0">p</text>
-  <text x="0.05" y="15.76" font-size="1.75" font-weight="bold">3</text>
-  <text x="0.05" y="36.76" font-size="1.75" font-weight="bold">5</text>
+  <text x="0.05" y="15.74" font-size="1.75" font-weight="bold">3</text>
+  <text x="0.05" y="36.74" font-size="1.75" font-weight="bold">5</text>
   </g>
 </svg>

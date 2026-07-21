@@ -52,7 +52,7 @@
   <rect x="28.35" y="14.27" width="0.60" height="4.00" data-pos="591"/>
   <path d="M 9.19,15.49 C 9.53,15.90 10.14,15.90 10.49,15.49 C 10.14,16.02 9.53,16.02 9.19,15.49 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.19,14.27 C 9.53,14.67 10.14,14.67 10.49,14.27 C 10.14,14.79 9.53,14.79 9.19,14.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="0.30" y="9.43" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="539"/>
-  <text x="1.11" y="11.63" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="539">S</text>
+  <rect x="0.30" y="9.41" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="539"/>
+  <text x="1.11" y="11.61" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="539">S</text>
   </g>
 </svg>

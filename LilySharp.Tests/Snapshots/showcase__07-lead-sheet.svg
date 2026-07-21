@@ -46,7 +46,7 @@
   <text class="music" x="80.29" y="22.43" font-size="4.00" data-pos="609"></text>
   <line x1="81.53" y1="22.43" x2="81.53" y2="18.93" stroke="#000000" stroke-width="0.130"/>
   <rect x="27.22" y="17.43" width="0.19" height="4.00" data-pos="545"/>
-  <rect x="47.89" y="17.43" width="0.19" height="4.00" data-pos="567"/>
+  <rect x="47.90" y="17.43" width="0.19" height="4.00" data-pos="567"/>
   <rect x="68.10" y="17.43" width="0.19" height="4.00" data-pos="591"/>
   <rect x="84.74" y="17.43" width="0.19" height="4.00" data-pos="612"/>
   <rect x="85.23" y="17.43" width="0.60" height="4.00" data-pos="612"/>

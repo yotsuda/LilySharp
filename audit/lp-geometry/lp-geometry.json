@@ -44,8 +44,8 @@
       "probe": "barline-spacing.ly",
       "score": "B",
       "lilypond": 1.089365,
-      "residual": 0.000019962,
-      "why": "Lily#'s stem-attachment inset (where the stem meets the notehead) differs from LilyPond's by ~7e-4 staff positions, and next_notes_correction divides the stem/bar-line overlap by 7. The sibling entry barline.next.down-stems is EXACT because there the bar line clips the stem's far end, so the attachment offset never enters the overlap — which localises this difference to that one metric rather than to the correction formula."
+      "residual": 0.0,
+      "why": ""
     },
     "barline.next.full-measure-note": {
       "probe": "barline-spacing.ly",
@@ -72,8 +72,8 @@
       "probe": "barline-spacing.ly",
       "score": "X",
       "lilypond": 2.050000,
-      "residual": -0.150000000,
-      "why": "Lily# spaces an accidental 1.300 from its notehead where LilyPond spaces it 1.450. The bar-line side of this same measure start is exact (barline.next.accidental), so the whole 0.150 is that accidental-to-head distance. Separate defect, not owned by Staff_spacing."
+      "residual": -0.149990,
+      "why": "The PADDING between an accidental and its note head: LilyPond's 1.450 is the sharp's own 1.100010 plus 0.349990, Lily#'s is that same 1.100010 plus GlyphMetrics.AccidentalNoteGap = 0.2. Now that the glyph width comes from LILC the split is unambiguous and the whole residual is that one constant. The bar-line side of this measure start is exact (barline.next.accidental), so nothing here is owned by Staff_spacing. Was -0.150000 while the glyph was 1.1000."
     },
     "barline.next.key-change-glyph": {
       "probe": "barline-spacing.ly",
@@ -86,8 +86,8 @@
       "probe": "barline-spacing.ly",
       "score": "K",
       "lilypond": 6.834302,
-      "residual": -2.234302000,
-      "why": "Same missing boundary column as barline.next.key-change-glyph: the whole prefix between bar line and note is priced by a different model. COORDINATE_AUDIT.md 3.I."
+      "residual": -2.234272,
+      "why": "Same missing boundary column as barline.next.key-change-glyph: the whole prefix between bar line and note is priced by a different model. COORDINATE_AUDIT.md 3.I. (Was -2.234302; the 0.00003 it moved is the key signature's width becoming its LILC value.)"
     },
     "barline.next.time-change-glyph": {
       "probe": "barline-spacing.ly",
@@ -107,8 +107,8 @@
       "probe": "barline-spacing.ly",
       "score": "MC",
       "lilypond": 2.253234,
-      "residual": -0.0002115,
-      "why": "Lily#'s black note head is 1.3040 against LilyPond's ink 1.304212, and this gap is the mean of the duration ideal and the rod (note-spacing.cc:105), both of which carry that head width once — so the 0.000212 arrives undivided. A generated-metric rounding (GlyphMetricsGenerated.cs keeps 4 decimals), not a spacing defect. Was +1.755766 before the change column was priced the way LilyPond prices it; see COORDINATE_AUDIT.md 4.7.2."
+      "residual": 0.0,
+      "why": ""
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
@@ -121,36 +121,36 @@
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 2.203234,
-      "residual": -0.0002115,
-      "why": "Same note-head metric as midmeasure.clef.prev-note-to-clef, and the same size, which is the point: the clef and key cases differ by 0.05 in LilyPond (KeySignature's extra-spacing-width is (0.0 . 1.0), not the default, define-grobs.scm:1936) and Lily# now reproduces that difference exactly, leaving only the shared rounding. Was +2.450766."
+      "residual": 0.0,
+      "why": ""
     },
     "midmeasure.key.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 5.800030,
-      "residual": -0.00003,
-      "why": "The 2.5 is exact (KeySignature has no `next-note` entry, so Staff_spacing::get_spacing:147 keeps `first-note` — shrink-space 2.5, define-grobs.scm:1947). What is left is the signature's own width: three sharps at Lily#'s 1.1000 each against LilyPond's 3.300030, i.e. 0.00001 per accidental of generated-metric rounding. Was -2.000030."
+      "residual": 0.0,
+      "why": ""
     },
     "midmeasure.key-cancel.prev-note-to-key": {
       "probe": "barline-spacing.ly",
       "score": "MKA",
       "lilypond": 2.335591,
-      "residual": 0.002454,
-      "why": "This is the only probe that reaches Note_spacing's SUBTRACTION arm (note-spacing.cc:106): a lone cancellation natural is narrow enough that ideal - column width beats the (ideal + rod)/2 floor that MC and MK land on. The residual is the cancellation's own width, Lily#'s AccidentalNaturalAdvance 0.6640 against LilyPond's 0.666666, less the 0.000212 note-head rounding that pulls the other way. Both are generated-metric roundings."
+      "residual": 0.0,
+      "why": ""
     },
     "midmeasure.key-cancel.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MKA",
       "lilypond": 3.616666,
-      "residual": -0.152666,
-      "why": "The formula is exact: the accidental on the next note makes Paper_column::minimum_distance exceed the space-alist ideal, so staff-spacing.cc:213 decides this gap as 0.3 + rod, and the arithmetic agrees to six digits once Lily#'s metrics are substituted. 0.150 of the residual is the SAME accidental-to-notehead defect barline.next.accidental-to-notehead records (Lily# 1.300, LilyPond 1.450) reaching this gap through the rod, and 0.002666 is the cancellation's width. Fixing that one entry fixes most of this one; nothing here is owned by the change column."
+      "residual": -0.149990,
+      "why": "Now EXACTLY the accidental-to-head padding that barline.next.accidental-to-notehead records, reaching this gap through Paper_column::minimum_distance: the accidental on the next note lifts the rod above the space-alist ideal, so staff-spacing.cc:213 decides the gap as 0.3 + rod and the 0.149990 rides in with it. Nothing here is owned by the change column, and the two entries now agree to the digit — which is what identifies them as one defect. Was -0.152666, the extra 0.002676 being metrics that LILC has since corrected."
     },
     "barline.prev.whole-note": {
       "probe": "barline-spacing.ly",
       "score": "E",
       "lilypond": 6.060047,
-      "residual": -0.002002001,
-      "why": "ATTRIBUTED (was OPEN): the note head's right edge, which note-spacing.cc:68 reads as g->extent(col, X_AXIS)[RIGHT]. TWO defects stack. (1) SpacingRules.ApplyLeftHeadWidth feeds the ADVANCE where LilyPond feeds the INK extent. (2) Lily#'s ink extent is itself the wrong number: GlyphMetricsGenerated.cs takes it from the glyph OUTLINE, while LilyPond reads the font's embedded LILC table (open-type-font.cc:288, :389-407) and only falls back to the outline. Read from the bundled emmentaler-20.otf, LILC gives noteheads.s0 = 1.962002 against the outline's 1.9640 and the advance's 1.9600 — and 1.962002 is exactly what LilyPond rendered. So switching to the outline bbox alone would NOT fix this: it would flip the residual to +0.001998. Both halves are needed, and the LILC half is the migration audit/scripts/Extract-EmmentalerMetrics.py is mid-way through."
+      "residual": 0.0,
+      "why": ""
     },
     "barline.prev.whole-rest": {
       "probe": "barline-spacing.ly",
@@ -163,8 +163,8 @@
       "probe": "barline-spacing.ly",
       "score": "G",
       "lilypond": 4.453962,
-      "residual": -0.001345572,
-      "why": "ATTRIBUTED (was OPEN): the same head-right-edge defect as barline.prev.whole-note. Here the outline and the advance agree (both 1.3760), so ONLY the LILC half is missing: the table gives noteheads.s1 = 1.377346, which is what LilyPond rendered. That this entry carries a stem correction and its sibling does not, yet both land exactly on their own head's margin, is what rules the optical term out."
+      "residual": 0.0,
+      "why": ""
     }
   }
 }

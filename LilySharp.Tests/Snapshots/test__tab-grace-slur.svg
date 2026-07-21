@@ -22,7 +22,7 @@
   <text class="music" x="15.46" y="15.57" font-size="4.00" data-pos="520"></text>
   <line x1="15.52" y1="15.72" x2="15.52" y2="19.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.39" y="14.57" font-size="4.00" data-pos="540"></text>
-  <line x1="20.45" y1="14.72" x2="20.45" y2="18.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.46" y1="14.72" x2="20.46" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <rect x="23.16" y="14.57" width="0.19" height="4.00" data-pos="546"/>
   <rect x="23.65" y="14.57" width="0.60" height="4.00" data-pos="546"/>
   <line x1="0.00" y1="25.07" x2="24.25" y2="25.07" stroke="#000000" stroke-width="0.100"/>
@@ -44,10 +44,10 @@
   <rect x="19.74" y="27.18" width="2.60" height="1.79" fill="#FFFFFF" data-pos="540"/>
   <text x="21.04" y="28.91" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="540">12</text>
   <line x1="21.63" y1="26.88" x2="21.63" y2="22.38" stroke="#000000" stroke-width="0.130"/>
-  <path d="M 8.64,16.17 C 9.63,14.92 11.79,14.40 12.81,15.17 C 11.81,14.52 9.66,15.03 8.64,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.64,16.17 C 9.63,14.92 11.79,14.40 12.81,15.17 C 11.82,14.52 9.66,15.03 8.64,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 16.41,14.17 C 17.44,13.02 19.70,12.75 20.74,13.67 C 19.71,12.87 17.45,13.13 16.41,14.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 8.34,28.54 C 9.75,24.73 11.66,24.73 13.11,27.04 C 11.69,24.85 9.79,24.85 8.34,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 16.11,28.54 C 17.57,22.73 19.54,22.73 21.04,27.04 C 19.58,22.85 17.61,22.85 16.11,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.11,28.54 C 17.57,22.73 19.55,22.73 21.04,27.04 C 19.58,22.85 17.61,22.85 16.11,28.54 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="10.78" y="16.57" font-size="2.60" data-pos="500"></text>
   <line x1="11.58" y1="16.57" x2="11.58" y2="14.30" stroke="#000000" stroke-width="0.085" data-pos="500"/>
   <text class="music" x="11.58" y="14.30" font-size="2.60" data-pos="500"></text>

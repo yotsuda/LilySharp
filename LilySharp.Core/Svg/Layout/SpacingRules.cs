@@ -2332,7 +2332,12 @@ internal static class SpacingRules
         {
             double w = p switch
             {
-                NoteItem or ChordItem => GlyphMetrics.GetNoteheadAdvance(GetNoteValue(p)),
+                // The head's INK right edge, not its advance. LilyPond reads
+                // g->extent (col, X_AXIS)[RIGHT] — a stencil extent — and the two differ:
+                // a whole head advances 1.960000 but its stencil reaches 1.962002. Feeding
+                // the advance made every closing gap 0.002 narrow than LilyPond's, which is
+                // the whole of barline.prev.whole-note's former residual.
+                NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right
                 // extent from the column origin is the rest stencil's right edge.
                 RestItem => GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,

@@ -140,24 +140,26 @@ internal static partial class GlyphMetrics
 
     // A change clef is its OWN glyph — clefs.G_change / F_change / C_change — not the full
     // clef scaled down, so `full * 0.75` was an approximation of a metric that is available
-    // exactly. It ran 4-7% narrow (F: 2.010 against 2.146680), and since the mid-measure
-    // gap after a clef is measured from the glyph's right edge, that error landed straight
-    // in the spacing. LILYPOND-REF: lily/clef.cc — Clef::calc_glyph_name appends "_change".
+    // exactly. It ran 4-7% narrow (F: 2.010 against 2.146680), and since the mid-measure gap
+    // after a clef is measured from the glyph's right edge, that error landed straight in the
+    // spacing. LILYPOND-REF: lily/clef.cc — Clef::calc_glyph_name appends "_change".
     //
-    // Measured on LilyPond 2.24.4 / Emmentaler as `ly:grob-extent` of the Clef grob for a
-    // mid-measure \clef change: these are the glyph's INK right edge from its own origin,
-    // which is what Staff_spacing reads as last_ext[RIGHT]. They belong in
-    // GlyphMetricsGenerated.cs, but that file is produced by a generator that does not yet
-    // emit the _change glyphs; move them there when it does.
+    // The right edge, not the advance: Staff_spacing reads last_ext[RIGHT], a stencil extent.
+
+    // ⚠️ PROPERTIES, not `static readonly` fields. These read a BBox declared in the OTHER
+    // half of this partial class (GlyphMetricsGenerated.cs), and C# does not define the
+    // initialisation order of static fields ACROSS partial parts — as fields these read a
+    // default-constructed BBox and came out 0, which silently deleted every change glyph's
+    // width from the spacing. A property is evaluated on use, so the order cannot bite.
 
     /// <summary>G clef change width — <c>clefs.G_change</c> ink right edge.</summary>
-    public const double GClefChangeWidth = 2.052024;
+    public static double GClefChangeWidth => ClefGChange.Right;
 
     /// <summary>F clef change width — <c>clefs.F_change</c> ink right edge.</summary>
-    public const double FClefChangeWidth = 2.146680;
+    public static double FClefChangeWidth => ClefFChange.Right;
 
     /// <summary>C clef change width — <c>clefs.C_change</c> ink right edge.</summary>
-    public const double CClefChangeWidth = 2.196012;
+    public static double CClefChangeWidth => ClefCChange.Right;
 
     /// <summary>
     /// Padding before and after a change item drawn at a MEASURE START.
@@ -184,17 +186,23 @@ internal static partial class GlyphMetrics
     // copies that were here were dead duplicates and have been removed.
 
     // ========== Key signature accidental widths ==========
-    // LP key-signature-interface.cc uses add_at_edge(padding=0) which places
-    // accidentals edge-to-edge based on stencil (=advance) width.
+    // LP key-signature-interface.cc uses add_at_edge(padding=0), which butts one STENCIL
+    // against the next — so the per-accidental step is the glyph's ink width, not its
+    // advance. The old note here called the stencil width "(=advance)"; they are different
+    // numbers (a sharp inks 1.100010 and advances 1.100000, a natural inks 0.666666 and
+    // advances 0.664000), and LilyPond's A-major signature measures 3.300030 = 3 x 1.100010.
+
+    // Properties for the same reason as the change-clef widths above: cross-partial static
+    // field initialisation order is undefined.
 
     /// <summary>Width of a sharp accidental in key signature.</summary>
-    public const double KeySignatureSharpWidth = AccidentalSharpAdvance;
+    public static double KeySignatureSharpWidth => AccidentalSharp.Width;
 
     /// <summary>Width of a flat accidental in key signature.</summary>
-    public const double KeySignatureFlatWidth = AccidentalFlatAdvance;
+    public static double KeySignatureFlatWidth => AccidentalFlat.Width;
 
     /// <summary>Width of a natural accidental in key signature (used for cancellation).</summary>
-    public const double KeySignatureNaturalWidth = AccidentalNaturalAdvance;
+    public static double KeySignatureNaturalWidth => AccidentalNatural.Width;
 
     /// <summary>Gets the per-accidental width for a key signature based on accidental type.</summary>
     public static double GetKeySignatureAccidentalWidth(bool isSharps) =>

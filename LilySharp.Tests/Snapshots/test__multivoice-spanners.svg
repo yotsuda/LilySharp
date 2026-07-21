@@ -52,7 +52,7 @@
   <text class="music" x="20.85" y="11.77" font-size="4.00" data-pos="638"></text>
   <line x1="22.09" y1="11.62" x2="22.09" y2="9.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.86" y="11.27" font-size="4.00" data-pos="643"></text>
-  <line x1="25.09" y1="11.12" x2="25.09" y2="8.77" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.10" y1="11.12" x2="25.10" y2="8.77" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.86" y="10.77" font-size="4.00" data-pos="647"></text>
   <line x1="28.10" y1="10.62" x2="28.10" y2="8.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.86" y="10.27" font-size="4.00" data-pos="651"></text>
@@ -72,14 +72,14 @@
   <text class="music" x="26.86" y="15.77" font-size="4.00" data-pos="707"></text>
   <line x1="26.92" y1="15.92" x2="26.92" y2="19.27" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.86" y="15.77" font-size="4.00" data-pos="710"></text>
-  <line x1="29.92" y1="15.92" x2="29.92" y2="19.27" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.93" y1="15.92" x2="29.93" y2="19.27" stroke="#000000" stroke-width="0.130"/>
   <rect x="19.57" y="15.77" width="0.19" height="4.00" data-pos="636"/>
   <rect x="32.74" y="15.77" width="0.19" height="4.00" data-pos="656"/>
   <rect x="33.23" y="15.77" width="0.60" height="4.00" data-pos="656"/>
   <path d="M 25.36,15.99 C 25.71,16.40 26.31,16.40 26.66,15.99 C 26.31,16.52 25.71,16.52 25.36,15.99 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 14.77,16.17 C 15.41,17.04 16.45,17.50 17.04,17.17 C 16.40,17.60 15.36,17.15 14.77,16.17 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="8.64" y1="16.06" x2="9.86" y2="15.48" stroke="#000000" stroke-width="0.100" data-pos="672"/>
-  <rect x="0.30" y="10.93" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="587"/>
-  <text x="1.11" y="13.13" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="587">S</text>
+  <rect x="0.30" y="10.91" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="587"/>
+  <text x="1.11" y="13.11" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="587">S</text>
   </g>
 </svg>

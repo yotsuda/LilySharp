@@ -214,12 +214,17 @@ public class SpacingInvariantTests
         double halfGap = springs[1].IdealDistance;
         double quarterGap = springs[2].IdealDistance;
         // The ideal also carries the LEFT column's head width (note-spacing.cc:77):
-        // a half note's open head (1.376) is wider than a quarter's (1.304), so the
+        // a half note's open head (1.377346) is wider than a quarter's (1.304212), so the
         // half gap exceeds the quarter gap by the duration increment PLUS that
         // head-width difference.
+        //
+        // The head's INK extent, not its advance — that is what note-spacing.cc:68 reads
+        // (g->extent (col, X_AXIS)[RIGHT]). The two differ, and this expectation used the
+        // advance while the implementation used it too, so the pair agreed without either
+        // being LilyPond's number.
         double durationDelta = SpacingRules.CalculateDurationSpace(new Fraction(1, 2), bsd)
                              - SpacingRules.CalculateDurationSpace(new Fraction(1, 4), bsd);
-        double headDelta = GlyphMetrics.GetNoteheadAdvance(2) - GlyphMetrics.GetNoteheadAdvance(4);
+        double headDelta = GlyphMetrics.GetNoteheadBBox(2).Right - GlyphMetrics.GetNoteheadBBox(4).Right;
         double expectedDelta = durationDelta + headDelta;
         Assert.True(halfGap > quarterGap, $"half {halfGap} must exceed quarter {quarterGap}");
         Assert.Equal(expectedDelta, halfGap - quarterGap, precision: 6);

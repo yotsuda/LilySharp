@@ -860,8 +860,8 @@
   <text class="music" x="0.00" y="115.85" font-size="3.11"></text>
   <rect x="54.00" y="113.60" width="0.19" height="4.50" data-pos="415"/>
   <rect x="101.86" y="113.60" width="0.19" height="4.50" data-pos="485"/>
-  <text class="music" x="16.88" y="115.74" font-size="4.00" data-pos="377"></text>
-  <text class="music" x="64.74" y="115.74" font-size="4.00" data-pos="447"></text>
+  <text class="music" x="16.88" y="115.73" font-size="4.00" data-pos="377"></text>
+  <text class="music" x="64.74" y="115.73" font-size="4.00" data-pos="447"></text>
   <polygon points="23.22,13.17 26.82,13.17 26.82,13.65 23.22,13.65"/>
   <polygon points="23.22,12.36 26.82,12.36 26.82,12.84 23.22,12.84"/>
   <line x1="23.29" y1="28.45" x2="23.29" y2="12.60" stroke="#000000" stroke-width="0.130"/>

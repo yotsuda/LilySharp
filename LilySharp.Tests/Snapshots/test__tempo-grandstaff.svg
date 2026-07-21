@@ -20,7 +20,7 @@
   <text class="music" x="7.68" y="17.37" font-size="4.00" data-pos="537"></text>
   <line x1="7.75" y1="17.37" x2="7.75" y2="20.87" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.10" y="15.37" font-size="4.00" data-pos="541"></text>
-  <line x1="14.16" y1="15.37" x2="14.16" y2="18.87" stroke="#000000" stroke-width="0.130"/>
+  <line x1="14.17" y1="15.37" x2="14.17" y2="18.87" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.25" y="15.87" width="0.19" height="4.00" data-pos="544"/>
   <rect x="20.74" y="15.87" width="0.60" height="4.00" data-pos="544"/>
   <line x1="0.00" y1="24.87" x2="21.34" y2="24.87" stroke="#000000" stroke-width="0.100"/>
@@ -30,14 +30,14 @@
   <line x1="0.00" y1="28.87" x2="21.34" y2="28.87" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="25.87" font-size="4.00"></text>
   <text class="music" x="3.30" y="26.87" font-size="4.00" data-pos="433"></text>
-  <line x1="17.10" y1="23.87" x2="19.05" y2="23.87" stroke="#000000" stroke-width="0.200"/>
+  <line x1="17.10" y1="23.87" x2="19.06" y2="23.87" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="7.68" y="27.37" font-size="4.00" data-pos="562"></text>
   <line x1="8.92" y1="27.22" x2="8.92" y2="23.87" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="10.85" y="26.37" font-size="4.00" data-pos="574"></text>
   <line x1="10.91" y1="26.52" x2="10.91" y2="29.87" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.10" y="25.37" font-size="4.00" data-pos="576"></text>
-  <line x1="14.16" y1="25.52" x2="14.16" y2="28.87" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="17.42" y="23.87" font-size="4.00" data-pos="578"></text>
+  <line x1="14.17" y1="25.52" x2="14.17" y2="28.87" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="17.43" y="23.87" font-size="4.00" data-pos="578"></text>
   <line x1="17.49" y1="24.02" x2="17.49" y2="27.37" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.25" y="24.87" width="0.19" height="4.00" data-pos="580"/>
   <rect x="20.74" y="24.87" width="0.60" height="4.00" data-pos="580"/>
