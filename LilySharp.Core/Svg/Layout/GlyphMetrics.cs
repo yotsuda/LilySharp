@@ -108,10 +108,27 @@ internal static partial class GlyphMetrics
     // ========== Spacing heuristics ==========
 
     /// <summary>
-    /// Minimum gap between accidental and notehead, in staff spaces.
-    /// This is the optical separation, not edge-to-edge distance.
+    /// Gap between an accidental's ink right edge and its note head's ink left edge.
     /// </summary>
-    public const double AccidentalNoteGap = 0.2;
+    /// <remarks>
+    /// LilyPond's two constants, summed: <c>AccidentalPlacement.padding</c> 0.20 and
+    /// <c>right-padding</c> 0.15 (scm/define-grobs.scm AccidentalPlacement;
+    /// lily/accidental-placement.cc:397 and :400, applied at :412-416).
+    /// <para>
+    /// LilyPond adds one more term Lily# does not compute: :412 measures the accidental's
+    /// right SKYLINE against the heads' skyline, not their boxes, so a vertically thin glyph
+    /// ends up slightly further out. Zeroing both paddings on 2.24.4 leaves exactly that
+    /// term — sharp −0.000010, flat −0.000004, double-flat −0.001996, but natural +0.017606
+    /// and double-sharp +0.047704. Perturbing each padding by +0.3 moves the gap by +0.3, so
+    /// the two are additive and this constant is the whole of the non-skyline part.
+    /// </para>
+    /// <para>
+    /// It was 0.2 — LilyPond's `padding` alone, with `right-padding` missing — which put
+    /// every accidental 0.15 too close to its head. See the ledger's
+    /// barline.next.accidental-to-notehead.
+    /// </para>
+    /// </remarks>
+    public const double AccidentalNoteGap = 0.35;
 
     /// <summary>
     /// Minimum gap between adjacent items (note-to-note), in staff spaces.

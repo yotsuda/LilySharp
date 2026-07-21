@@ -72,8 +72,8 @@
       "probe": "barline-spacing.ly",
       "score": "X",
       "lilypond": 2.050000,
-      "residual": -0.149990,
-      "why": "The PADDING between an accidental and its note head: LilyPond's 1.450 is the sharp's own 1.100010 plus 0.349990, Lily#'s is that same 1.100010 plus GlyphMetrics.AccidentalNoteGap = 0.2. Now that the glyph width comes from LILC the split is unambiguous and the whole residual is that one constant. The bar-line side of this measure start is exact (barline.next.accidental), so nothing here is owned by Staff_spacing. Was -0.150000 while the glyph was 1.1000."
+      "residual": 0.00001,
+      "why": "LilyPond measures the accidental's right SKYLINE against the note heads' skyline (accidental-placement.cc:412), not their boxes, so the gap is padding 0.2 + right-padding 0.15 plus a per-glyph skyline term. Lily# ports the 0.35 and not the skyline, and for a sharp that term is -0.000010 — measured by zeroing both paddings on 2.24.4, which leaves the skyline alone. This is the whole residual. Was -0.149990 while AccidentalNoteGap was LilyPond's `padding` alone with `right-padding` missing."
     },
     "barline.next.key-change-glyph": {
       "probe": "barline-spacing.ly",
@@ -86,8 +86,8 @@
       "probe": "barline-spacing.ly",
       "score": "K",
       "lilypond": 6.834302,
-      "residual": -0.034272,
-      "why": "The boundary column is right; what is left is the accidental. The note opening this measure is a c' under A major, so it carries a natural, and that natural's reach is the musical column's leftmost ink — it enters Paper_column::minimum_distance, and here the 0.3 + min_dist correction (staff-spacing.cc:213) is what decides the gap rather than the space-alist ideal. LilyPond's natural stands 1.034272 from its head, Lily#'s 0.866666, and the whole residual is that 0.167606 minus the 0.133334 by which the correction then stops binding. Same defect as barline.next.accidental-to-notehead, arriving through the rod. Was -2.234272 before the column existed."
+      "residual": -0.017606,
+      "why": "The NATURAL's skyline term, arriving through Paper_column::minimum_distance exactly as the sharp's does in the two entries above — the note opening this measure is a c' under A major, so it carries one, and its reach is the musical column's leftmost ink. A natural is vertically thin, so its right skyline stands 0.017606 further out than its box (measured by zeroing AccidentalPlacement's two paddings on 2.24.4); a sharp's term is 0.000010, which is why this entry is the largest of the three. Same single cause. Was -2.234272 before the boundary column, -0.034272 before the padding."
     },
     "barline.next.time-change-glyph": {
       "probe": "barline-spacing.ly",
@@ -142,8 +142,8 @@
       "probe": "barline-spacing.ly",
       "score": "MKA",
       "lilypond": 3.616666,
-      "residual": -0.149990,
-      "why": "Now EXACTLY the accidental-to-head padding that barline.next.accidental-to-notehead records, reaching this gap through Paper_column::minimum_distance: the accidental on the next note lifts the rod above the space-alist ideal, so staff-spacing.cc:213 decides the gap as 0.3 + rod and the 0.149990 rides in with it. Nothing here is owned by the change column, and the two entries now agree to the digit — which is what identifies them as one defect. Was -0.152666, the extra 0.002676 being metrics that LILC has since corrected."
+      "residual": 0.00001,
+      "why": "The same sharp's skyline term as barline.next.accidental-to-notehead, reaching this gap through Paper_column::minimum_distance: the accidental on the next note lifts the rod above the space-alist ideal, so staff-spacing.cc:213 decides the gap as 0.3 + rod and the term rides in with it. That the two entries agree to the digit is what identifies them as one cause. Was -0.149990."
     },
     "barline.prev.whole-note": {
       "probe": "barline-spacing.ly",
