@@ -192,9 +192,12 @@ public class SpacingInvariantTests
         // A key change at the bound reserves the whole key signature: +3.0 ss over the bar
         // line alone. Lily# reproduces LP's 3.390 to the third decimal.
         Assert.Equal(3.390, RunBoundMinDist("key g major R1*5"), 3);
-        // A time change likewise. LP grob geometry gives 3.445; Lily# lands at 3.440, the
-        // ~0.005 gap being the time-signature glyph-metric residual (GetTimeSigWidth 1.60
-        // vs LP's 1.6047), well under the visual threshold — see §3.7, recorded not fudged.
+        // A time change likewise. LP grob geometry gives 3.445; Lily# lands at 3.440. The
+        // ~0.005 gap is the TimeSignature grob width, and it is not a wrong constant:
+        // ly:time-signature::print builds a MARKUP, so LilyPond measures the digits with
+        // the text layout engine (1.604735) while its own music-font path reports exactly
+        // Lily#'s 1.600000 for the same glyph. Recorded, not fudged — see the ledger's
+        // barline.next.time-change-to-notehead for what has been ruled out.
         Assert.InRange(RunBoundMinDist("time 2/4 R2*5"), 3.43, 3.45);
     }
 

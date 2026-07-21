@@ -87,7 +87,7 @@ justify された行では binding する制約が変わる**（ragged では sp
 | residual | 点数 | 原因 |
 |---|---|---|
 | −0.017606 / +0.000010 ×2 | 3 | **水平スカイライン項**（未移植）。LP は臨時記号の右スカイラインを符頭のスカイラインと測る（`accidental-placement.cc:412`）が Lily# は box で測る。グリフ依存 |
-| −0.004735 | 1 | **OPEN** — TimeSignature grob 幅が Lily# 1.600000 / LP 1.604735 |
+| −0.004735 | 1 | **TimeSignature grob 幅**（Lily# 1.600000 / LP 1.604735）。原因特定済＝`ly:time-signature::print` は markup を組むので幅を**テキストレイアウト経路**が決める。Lily# の 1.600000 は LP 自身の音楽フォント経路の値と一致しており、定数の誤りではない |
 
 このコーパスが潰してきたもの:
 
