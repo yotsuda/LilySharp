@@ -27,12 +27,12 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**HEAD `4adfd704`、origin より 44 ahead で未 push**（push はユーザー判断。コミットは可）。
-**テスト 0 failed / 3126 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 17/21 exact, total |residual| = 0.022361 ss。**
+**HEAD `9f69f806`、origin より 47 ahead で未 push**（push はユーザー判断。コミットは可）。
+**テスト 0 failed / 3127 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
+**LP 忠実度 18/22 exact, total |residual| = 0.022361 ss。**
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 15個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
 
-### 残る残差は **4点 0.022361 ss、原因は2つだけ**
+### 残る残差は **22点中4点 0.022361 ss、原因は2つだけ**
 
 | 残差 | 点数 | 原因 |
 |---|---|---|
@@ -40,7 +40,8 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | −0.004735 | 1 | **OPEN** — TimeSignature grob 幅 1.600000 / LP 1.604735 |
 
 **X 軸の「定数を1つ直せば閉じる」ネタは尽きた。** 残る 3 点は水平スカイラインの基盤が要り、
-1 点は原因未特定。次の一手は**ユーザー判断待ち**（候補は §2⑥ / §3A 中期のコーパス縦展開）。
+1 点は原因未特定。次の一手は**ユーザー判断待ち**（候補は下の TimeSignature 見立て /
+§3A 中期のコーパス縦展開）。
 
 ⚠️ **TimeSignature 幅 −0.004735 の見立て**（未検証）: `GlyphMetrics.GetTimeSigWidth` は
 `max(digit ADVANCE, digit ADVANCE)`（`GlyphMetrics.cs:221`）で、**advance のまま**＝§2④ で
@@ -49,14 +50,16 @@ digit stencil の ink extent。着手時はまず実測で裏取りすること�
 
 ### 直近セッション（2026-07-22）でやったこと
 
-**§2④' を完了。** 前セッションで測定・予測まで置いてあったものを実装し、予測が全点的中した。
+**§2④' と §2⑥ を完了。§2⑤ は既に完遂済みと判明。** どちらも予測が全点的中した。
 
 | commit | 内容 |
 |---|---|
 | `4adfd704` | **§2④' 実装**。`AccidentalNoteGap` 0.2 → **0.35**（LP の `padding` 0.2 ＋ `right-padding` 0.15）。**3点とも予測が桁まで的中**。snapshot 22件（全て `test/*`、showcase はゼロ） |
+| `4e37938c` | §2⑤ は `1e91ebe6`＋`836be0ba`＋`6a328a45` で完遂済みと判明。元 handoff を回収して §2⑤⑥⑦ に整理 |
+| `9f69f806` | **§2⑥ 実装**。`fills_measure` を LP の musicality 判定へ。**変更前に点を足して予測 −1.000000 を記録 → 実測 −1.000000000 → 修正後 0**。snapshot 2件 |
 
-**0.338987 → 0.022361 ss。** exact 数は予測どおり動かない（−0.000010 は tolerance 1e-6 より大きい）。
-snapshot の差分は一様＝臨時記号が 0.15 sp 左へ、加線がそれに追随、ragged-right で行幅が同量伸びる。
+**0.338987 → 0.022361 ss、17/21 → 18/22 exact。** ④' の exact 数は予測どおり動かない
+（−0.000010 は tolerance 1e-6 より大きい）。⑥ で足した点が exact で着地して +1。
 
 参考: この前の 2026-07-21 セッションは §2①③④ と §2② の掃除を入れた
 （`f168ac57` 計測ハーネスの stderr 混入修正 / `a374317f` 行中変更 item の LP モデル導出 /
@@ -220,22 +223,33 @@ clef は列の**原点**を左へ動かすだけで bar line は動かさない�
 **元資料 `handoff-2026-07-21-mmr-runs.md` は本項をもって回収完了**（§8）。残っていた未解決は
 下の ⑥⑦ に移した。
 
-### ⑥ `fills_measure` の述語が LP より狭い — 未着手
+### ⑥ ✅ 完了（`9f69f806`）— `fills_measure` の述語を LP に合わせた
 
-`spacing-spanner.cc:446-472` の `fills_measure` は**列の musicality しか見ない**。
-Lily# は2箇所とも `NoteItem or ChordItem` に絞っているので、**全休符の列に
-`full-measure-extra-space` 1.0 が付かない**。
+`spacing-spanner.cc:446-472` は**列の musicality しか見ない**のに、Lily# は2箇所とも
+`NoteItem or ChordItem` に絞っていた＝**全休符の小節に `full-measure-extra-space` 1.0 が
+付かなかった**。2箇所を同時に `SpacingRules.IsMusicalColumn` へ。
 
-| 場所 | 述語 |
-|---|---|
-| `MeasureLayouter.CreateBarlineToFirstSpring` | `timings.Count == 1 && firstItems.Any(NoteItem or ChordItem)` |
-| `SpacingRules.FillsMeasure` | 唯一の非 loose item が `NoteItem or ChordItem` |
+⚠️ **ここで推論が外れた。** 「musical＝duration を持つ」ではない。`Paper_column::is_musical` は
+`shortest-starter-duration` を読む＝**engrave された grob が決める**ので、**skip は非 musical**。
+摂動実測（`full-measure-extra-space` → 0、LP 2.24.4）:
 
-**「唯一の musical 列」という部分は LP と一致している**（LP も `next` が非 musical であることを
-要求するので `col` は小節唯一の musical 列。`dt > len/2` は pickup 対策で、唯一列なら常に真）。
-**乖離は rest を弾いている点だけ。** 字面移植なら両方から `NoteItem or ChordItem` を外す。
-⚠️ **2箇所を必ず同時に**（§5.4 の spring 2系統）。出力が変わるので承認が要る。
-現状は `MeasureLayouter.cs:289-293` に「意図的」と明記してある。
+| 列 | 差 | |
+|---|---|---|
+| `r1` | **−1.000000** | 効く |
+| `R1` | **−1.000000** | 効く |
+| `s1` | 0 | **効かない** |
+| 四分音符×4 | 0 | 効かない |
+
+**コーパスは構造的に盲目だった**: スコア F は閉じ側（`barline.prev.whole-rest`）しか測っておらず、
+fmes が乗るのは開き側。`barline.next.whole-rest` を足し、**`residual: null` ＋ 予測 −1.000000 を
+先に書いてから**実装 → 変更前 −1.000000000 → 変更後 **0**（LP 1.900000 = Lily# 1.900000000）。
+
+**副産物**: `SpacingInvariantTests.FullMeasureRest_CompactsOnCombinedPath` の
+`< noteWidth / 2` は**LP 自身が満たしていない**主張だった（LP の `R1` 小節 7.890000 :
+四分音符4つ 13.525735 ＝ 0.583）。`* 0.6` に緩め、**移植定数ではなく粗い gate** だと明記。
+
+**残った未了**: `R1` は幅を MMR rod 経由で決めるので、この spring は rod が binding しない
+場面でしか効かない。LP の `max()` と全ケースで一致するかは未測定。
 
 ### ⑦ MMR まわりの小さい未解決（記録のみ）
 
