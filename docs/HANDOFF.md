@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-21 / master `27a5b23e`
+最終更新: 2026-07-21 / master `HEAD`（§1 で裏取りすること）
 
 ---
 
@@ -27,8 +27,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**master `27a5b23e`、origin より 26 ahead で未 push**（push はユーザー判断。コミットは可）。
-**テスト 0 failed / 3119 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
+**origin より 28 ahead で未 push**（push はユーザー判断。コミットは可）。
+**テスト 0 failed / 3123 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
+**LP 忠実度 7/19 exact, total |residual| = 11.435647 ss。**
 
 未コミットの `audit/scripts/Extract-EmmentalerMetrics.py` は別作業（LILC フォントメトリクス）
 の WIP。**触らない・コミットに巻き込まない。**
@@ -41,10 +42,16 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | `1307fe5c` | `next_notes_correction`（bar line 直後の下向き符尾の光学補正）を移植。snapshot 59件 |
 | `d5e65eda` | `COORDINATE_AUDIT.md` §4.7/§4.7.1 を実装後の状態に更新＋光学補正の誤帰属を訂正 |
 | `27a5b23e` | **LP 忠実度コーパス**（残差台帳）を新設。`audit/lp-geometry/` ＋ `LilySharp.Tests/LpFidelity/` |
+| `0bbc5449` | 引継ぎを本ファイル1本に集約 ＋ `CLAUDE.md` 追加 |
+| （次） | コーパスに**行中 clef/key 変更**の4点を追加（§2① の計測対象） |
 
 ### 進行中で中断しているものは無い
 
-X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2 の先頭から。
+X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2① から。
+
+⚠️ **total |residual| が 4.59 → 11.44 に増えたのは悪化ではない。**
+行中 clef/key 変更という**それまで測っていなかった発散**を可視化した結果。
+コーパスに点を足すと数字は増えうる。**比較は同じ点集合の中でのみ意味を持つ。**
 
 ---
 
@@ -61,8 +68,27 @@ X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2 の先頭か�
 - `GetItemToBarlineSpace` の変更 item エントリ `1.0`
 - `GetBarlineToItemMinimum` の `1.0 / 1.0 / 0.75`
 
-⚠️ **これだけでは LP に一致しない。** 台帳の `key-change-*` / `time-change-*` 4点
-（残差合計 −4.44 ss ＝ 全残差の 97%）の真因は③の型欠落。①は前提条件であって解決ではない。
+**計測対象は台帳の `midmeasure.*` 4点**（着手前に測定済み）:
+
+| 台帳キー | LP | Lily# | residual |
+|---|---|---|---|
+| `midmeasure.clef.prev-note-to-clef` | 2.253234 | 4.009000 | **+1.755766** |
+| `midmeasure.clef.clef-to-next-note` | 3.146680 | 2.510000 | **−0.636680** |
+| `midmeasure.key.prev-note-to-key` | 2.203234 | 4.654000 | **+2.450766** |
+| `midmeasure.key.key-to-next-note` | 5.800030 | 3.800000 | **−2.000030** |
+
+**同じグリフの左右が逆符号**なのがポイント。定数が間違っているなら両側とも同じ向きにずれる。
+逆符号は**frame の誤り**の徴候で、まさに中心基準 vs 左端基準の差。
+→ ①が正しければこの4点が 0 に向かう。**向かわなければ診断が違う。**
+
+⚠️ **行頭（小節境界）の key/time は①では直らない。** 台帳の `barline.next.key-change-*` /
+`time-change-*`（合計 −4.44 ss）の真因は③の型欠落。①は前提条件であって解決ではない。
+
+⚠️ 実装前に確認済みの事実: 変更 item が extent ヘルパに到達する production 経路は
+**`CalculateSkylineDistance` の3箇所のみ**（null-prev / null-next / skyline fallback）。
+小節頭では `ChangeItemPrefixWidth`（= W + 2×0.5）が
+`GetBarlineToItemMinimum + CalculateLeftExtent`（= W/2 + 1.5）を **W ≥ 1.0 で常に上回る**ので、
+小節頭側は frame を直しても出力中立になるはず。**予測なので実測で確認すること。**
 
 ### ② `CalculateRightExtent` の統廃合
 

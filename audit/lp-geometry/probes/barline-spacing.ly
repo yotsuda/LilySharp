@@ -74,3 +74,21 @@ lay =
 
 %% T — mid-line time change (likewise break-aligned).
 \score { \new Staff { \time 4/4 c'4 d' e' f' \time 3/4 c'4 d' e' } \lay "T" }
+
+%% --- MID-MEASURE changes -------------------------------------------------------------
+%% These sit INSIDE a measure rather than at a bar line, so they are not break-aligned at
+%% all: LilyPond gives the change its own musical column between two notes. This is the
+%% case COORDINATE_AUDIT.md 4.7 item 1 governs (the change-item branch of the extent
+%% helpers), and it is measured NOTE-to-GLYPH rather than from a bar line.
+
+%% MC — mid-measure clef change. The common case by far.
+\score { \new Staff { \time 4/4 c'4 d' \clef bass e4 f4 } \lay "MC" }
+
+%% MK — mid-measure key change.
+\score { \new Staff { \time 4/4 c'4 d' \key a \major e'4 f'4 } \lay "MK" }
+
+%% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
+%% measures rather than engrave a change column, and the resulting dump is not the thing we
+%% would be comparing against. An uninterpretable probe is worse than no probe: it would
+%% look like coverage. If a mid-measure time change ever needs a number, engrave it with
+%% \partial / explicit bar checks so both sides agree on where the bars are.

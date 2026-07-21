@@ -168,6 +168,39 @@ internal sealed class RenderedGeometry
             $"no notehead is drawn after bar line {barIndex}.\nDrawn geometry:\n" + Describe());
     }
 
+    /// <summary>Notehead anchors, left to right.</summary>
+    public IReadOnlyList<DrawnGlyph> Noteheads =>
+        Glyphs.Where(g => IsNotehead(g.Glyph)).ToList();
+
+    /// <summary>The <paramref name="index"/>-th notehead's anchor, 0-based, left to right.</summary>
+    public double NoteheadAnchor(int index)
+    {
+        var heads = Noteheads;
+        if (index < 0 || index >= heads.Count)
+            throw new InvalidOperationException(
+                $"wanted notehead #{index} but the probe drew {heads.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        return heads[index].X;
+    }
+
+    /// <summary>
+    /// The anchor of the first NON-notehead music glyph right of <paramref name="x"/> — the
+    /// change glyph of a mid-measure clef or key change.
+    /// </summary>
+    /// <remarks>
+    /// For a key change this is the FIRST accidental of the signature, which is where
+    /// LilyPond's KeySignature grob begins too, so the two sides line up without either
+    /// having to know how many accidentals the signature contains.
+    /// </remarks>
+    public double FirstNonNoteheadAfter(double x)
+    {
+        foreach (var g in Glyphs)
+            if (g.X > x + 1e-9 && !IsNotehead(g.Glyph))
+                return g.X;
+        throw new InvalidOperationException(
+            $"no non-notehead glyph is drawn right of x={x:F6}.\nDrawn geometry:\n" + Describe());
+    }
+
     /// <summary>
     /// The last music glyph's anchor before bar line <paramref name="barIndex"/> → that bar
     /// line's LEFT edge. The closing side of a measure, in the same anchor frame.

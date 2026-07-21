@@ -94,6 +94,16 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' e' f' \time 3/4 c'4 d' e'
     private static readonly string T = Score("c4 d e f | time 3/4 c4 d e |", "T");
 
+    // --- mid-measure changes: the case COORDINATE_AUDIT 4.7 item 1 governs ---
+    // These are NOT break-aligned; LilyPond gives the change its own musical column between
+    // two notes, so they are measured note-to-glyph rather than from a bar line.
+
+    // LilyPond twin: c'4 d' \clef bass e4 f4   — ONE 4/4 measure, change in the middle.
+    private static readonly string MC = Score("c4 d clef bass e, f, |", "MC");
+
+    // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
+    private static readonly string MK = Score("c4 d key a major e f |", "MK");
+
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
@@ -127,6 +137,19 @@ internal static class LpGeometryProbes
         new("barline.next.key-change-to-notehead", K, g => g.BarlineRightToNextNotehead(MidLineBarline)),
         new("barline.next.time-change-glyph", T, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.time-change-to-notehead", T, g => g.BarlineRightToNextNotehead(MidLineBarline)),
+
+        // --- mid-measure change items (COORDINATE_AUDIT 4.7 item 1) ---
+        // Notehead 1 is the note BEFORE the change, notehead 2 the note after it. Measuring
+        // BOTH sides of the change glyph is the point: the change's own frame shows up as
+        // the two gaps trading against each other, which a single gap would hide.
+        new("midmeasure.clef.prev-note-to-clef", MC,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.clef.clef-to-next-note", MC,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.key.prev-note-to-key", MK,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.key.key-to-next-note", MK,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
 
         // --- the column before a bar line -> that bar line (the closing side) ---
         // Section 3.3 of the working notes: a grob's position is fixed by BOTH gaps, so a
