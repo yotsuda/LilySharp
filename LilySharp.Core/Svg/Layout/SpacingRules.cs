@@ -291,6 +291,18 @@ internal static class SpacingRules
     internal const double StaffSpacingFixedHeadroom = 0.3;
 
     /// <summary>
+    /// StaffSpacing's own <c>stem-spacing-correction</c> — 0.4, and deliberately NOT
+    /// NoteSpacing's 0.5 (<see cref="NoteSpacingParameters.StemSpacingCorrection"/>).
+    /// </summary>
+    /// <remarks>
+    /// Two different grobs declare a property of the same name with different values, and
+    /// the bar-line → note optical correction reads StaffSpacing's.
+    /// LILYPOND-REF: scm/define-grobs.scm:3369 StaffSpacing
+    ///   <c>(stem-spacing-correction . 0.4)</c>; :2656 NoteSpacing has 0.5.
+    /// </remarks>
+    internal const double StaffSpacingStemCorrection = 0.4;
+
+    /// <summary>
     /// Applies <c>merge_springs</c>' headroom: a spring never sits at its bare minimum,
     /// but at least <see cref="SpringHeadroom"/> above it.
     /// </summary>
@@ -815,6 +827,75 @@ internal static class SpacingRules
             merged = merged is null ? wish : Spring.Merge(merged, wish);
         }
         return merged ?? baseSpring;
+    }
+
+    /// <summary>
+    /// The optical correction a DOWN stem standing just after a bar line earns, taken as
+    /// the maximum over the columns at that moment.
+    /// </summary>
+    /// <remarks>
+    /// "A stem following a bar-line creates an optical illusion similar to the one
+    /// mentioned in note-spacing.cc. We correct for it here." The correction is the length
+    /// of the overlap between the stem and the bar line, over 7, clamped to 1, times
+    /// StaffSpacing's stem-spacing-correction — and it applies ONLY to a down stem, so an
+    /// up stem after a bar line earns nothing.
+    /// <para>
+    /// UNITS: staff-spacing works in staff-SPACES here (it divides the bar's Y extent by
+    /// the staff space, giving ±2), whereas note-spacing.cc multiplies that same extent by
+    /// 2 and works in staff POSITIONS. Both then divide by 7, so the two are NOT
+    /// interchangeable — see CalculateStemCorrectionToBarline, which is the positions one.
+    /// StemSpacingInfo reports positions, hence the halving below.
+    /// </para>
+    /// <para>
+    /// Verified on 2.24.4, bar-line ink right edge → next notehead ink left edge with
+    /// `c'4 d' e' f'` before the bar line:
+    ///   `g'4 a' b' c''`            up stems            0.900000  (correction 0)
+    ///   `\clef bass c,4 d, e, f,`  up stems, clef      0.900000  (correction 0)
+    ///   `a''4 b'' c''' d'''`       down, head pos 6    1.042857  (correction 0.142857)
+    ///   `\clef bass g4 a b c'`     down, head pos 3    1.089365  (correction 0.189365)
+    /// The last two reproduce exactly: pos 6 gives a stem spanning (-0.5, 2.813894) ss,
+    /// clipped by the bar to (-0.5, 2.0), length 2.5 → 2.5/7 × 0.4 = 0.14285714; pos 3
+    /// gives (-2.0, 1.313894), already inside the bar, length 3.313894 → 0.18936537.
+    /// This also disproves the reading that the residual came from the CLEF: a clef with
+    /// up stems earns nothing, and a down stem with no clef earns a third value.
+    /// </para>
+    /// LILYPOND-REF: lily/staff-spacing.cc:36-67 optical_correction, :69-93
+    ///   bar_y_positions, :95-110 next_notes_correction, :206-208 (applied to BOTH
+    ///   fixed and ideal).
+    /// </remarks>
+    internal static double BarlineToNextNotesCorrection(IReadOnlyList<MusicItem>? nextItems)
+    {
+        if (nextItems == null)
+            return 0;
+        double maxOptical = 0;
+        foreach (var item in nextItems)
+            maxOptical = Math.Max(maxOptical, BarlineToStemOpticalCorrection(item));
+        return maxOptical;
+    }
+
+    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>
+    private static double BarlineToStemOpticalCorrection(MusicItem? item)
+    {
+        if (StemSpacingInfo(item) is not { } s)
+            return 0;
+
+        // LILYPOND-REF: lily/staff-spacing.cc:55 — `d == DOWN` only.
+        if (s.StemUp)
+            return 0;
+
+        // A plain bar line spans the staff: ±2 staff-spaces, i.e. ±4 staff positions.
+        // LILYPOND-REF: lily/staff-spacing.cc:78-90 bar_y_positions — only for glyphs
+        //   beginning "|" or "."; an empty interval yields no correction at all.
+        const double barHalfHeightPositions = 4.0;
+
+        double lo = Math.Max(s.StemMin, -barHalfHeightPositions);
+        double hi = Math.Min(s.StemMax, barHalfHeightPositions);
+        if (hi <= lo)
+            return 0;
+
+        // Positions → staff-spaces, because this formula is the staff-spacing one.
+        double overlapStaffSpaces = (hi - lo) / 2.0;
+        return Math.Min(Math.Abs(overlapStaffSpaces / 7.0), 1.0) * StaffSpacingStemCorrection;
     }
 
     /// <summary>
@@ -1624,14 +1705,9 @@ internal static class SpacingRules
     /// 0.900000 both with and without a clef change at the bar line.
     /// </para>
     /// <para>
-    /// NOT PORTED — <c>next_notes_correction</c> (staff-spacing.cc:206-208), the optical
-    /// correction for a DOWN stem standing just after the bar line. Measured on 2.24.4 with
-    /// `c'4 d' e' f'` in the first measure, the same bar-line ink right → notehead ink left
-    /// gap is 0.900000 for `g'4 a' b' c''` (up stems) but 1.042857 for `a''4 b'' c''' d'''`
-    /// (down stems, no clef) and 1.089365 for `\clef bass g4 a b c'` (down stems + clef);
-    /// with a clef but UP stems (`\clef bass c,4 d, e, f,`) it is 0.900000 again. So the
-    /// residual tracks the stem, not the clef. Porting it needs the stem's Y extent
-    /// intersected with the bar line's, which this spring does not currently receive.
+    /// The optical correction for a DOWN stem just after the bar line is
+    /// <see cref="BarlineToNextNotesCorrection"/>; the measured 2x2 that identifies it as a
+    /// STEM effect rather than a clef one is recorded there.
     /// </para>
     /// <para>
     /// This lived only in MeasureLayouter, so the item system priced the same gap as
@@ -1722,6 +1798,14 @@ internal static class SpacingRules
                                     graceApproach + startLeadGrace);
             return new Spring(front + situationalSpace, front, inverseStretchStrength: 0);
         }
+
+        // The optical correction for a DOWN stem standing just after the bar line, applied
+        // to BOTH fixed and ideal — and AFTER stretchability was taken, so it widens the
+        // gap without making the spring any more stretchable.
+        // LILYPOND-REF: lily/staff-spacing.cc:206-208.
+        double opticalCorrection = BarlineToNextNotesCorrection(firstItems);
+        fixedDistance += opticalCorrection;
+        ideal += opticalCorrection;
 
         // "Ensure that the 'fixed' distance will leave a gap of at least 0.3 ss."
         // LILYPOND-REF: lily/staff-spacing.cc:212-215.
