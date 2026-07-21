@@ -108,28 +108,28 @@
       "score": "MC",
       "lilypond": 2.253234,
       "residual": 1.755766,
-      "why": "Change items are measured from their CENTRE (width/2 + ClefChangePadding) in all three extent helpers, so a mid-measure clef sits too far right inside the gap it shares. COORDINATE_AUDIT.md 4.7 item 1. Note the SIGN against its sibling midmeasure.clef.clef-to-next-note: the two sides of the same glyph are wrong in OPPOSITE directions, which is the signature of a frame error rather than of a wrong constant — a wrong constant would push both the same way."
+      "why": "LilyPond gives a mid-measure clef its OWN non-musical column and prices the two gaps around it separately: left = (duration ideal + skyline min)/2 from Note_spacing (note-spacing.cc:105-107, the no-staff-bar branch), right = the clef's ink width + 1.0 from Clef.space-alist (next-note . (extra-space . 1.0)). Lily# has no such column; it adds ChangeItemPrefixWidth (glyph + 2 x ClefChangePadding) to the ONE note-to-note spring and then hangs the glyph left of the next column by glyph + ClefChangePadding. Both gaps therefore come out of one lump, which is why this side and its sibling midmeasure.clef.clef-to-next-note are wrong in OPPOSITE directions. Derived and verified to six digits in COORDINATE_AUDIT.md 4.7.2 — note that converting the extent helpers to the left-edge frame (4.7 item 1) does NOT close this: it moves the total from +1.119 to +0.612 and leaves the split untouched."
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",
       "lilypond": 3.146680,
       "residual": -0.636680,
-      "why": "Other side of midmeasure.clef.prev-note-to-clef; see the note there. The note-to-note total is also 1.119 too wide, so this is not purely a placement-within-the-gap problem."
+      "why": "Other side of midmeasure.clef.prev-note-to-clef; see the note there. LilyPond puts exactly 1.0 between the clef's ink right edge and the next note (Clef.space-alist next-note extra-space 1.0, define-grobs.scm:924); Lily# puts ClefChangePadding = 0.5 there, and its change-clef width is FClefAdvance * 0.75 = 2.010 against LilyPond's clefs.F_change ink 2.146680. The note-to-note total is also 1.119 too wide, so this is not purely a placement-within-the-gap problem."
     },
     "midmeasure.key.prev-note-to-key": {
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 2.203234,
       "residual": 2.450766,
-      "why": "Same centre-basis frame as midmeasure.clef.prev-note-to-clef. COORDINATE_AUDIT.md 4.7 item 1."
+      "why": "Same missing change column as midmeasure.clef.prev-note-to-clef. The left gap is LilyPond's (duration ideal + skyline min)/2, and the skyline min differs from the clef case by exactly 0.1 because KeySignature declares extra-spacing-width (0.0 . 1.0) rather than the default (-0.1 . 0.1) — define-grobs.scm:1936. COORDINATE_AUDIT.md 4.7.2."
     },
     "midmeasure.key.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MK",
       "lilypond": 5.800030,
       "residual": -2.000030,
-      "why": "Other side of midmeasure.key.prev-note-to-key. Here the note-to-note total is only 0.451 too wide while the change glyph is 2.45 out of place, so for a key change the error is almost entirely WHERE the glyph sits in the gap rather than how wide the gap is."
+      "why": "Other side of midmeasure.key.prev-note-to-key. LilyPond puts 2.5 between the signature's ink right edge and the next note, and — surprisingly — reaches that through the `first-note` entry: KeySignature.space-alist has NO `next-note`, so Staff_spacing::get_spacing:147 keeps its default (first-note . (shrink-space . 2.5)), define-grobs.scm:1947. Lily# puts ClefChangePadding = 0.5 there. Here the note-to-note total is only 0.451 too wide while the change glyph is 2.45 out of place, so for a key change the error is almost entirely WHERE the glyph sits in the gap rather than how wide the gap is."
     },
     "barline.prev.whole-note": {
       "probe": "barline-spacing.ly",

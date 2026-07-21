@@ -570,6 +570,10 @@ paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
 1. 🔲**未着手**. **変更 item（clef/key/time）が3ヘルパとも中心基準** — 内部的には一貫しているが LP と異なる。
    そのため `GetItemToBarlineSpace` の変更 item エントリ 1.0 も、`GetBarlineToItemMinimum` の
    1.0/1.0/0.75 も据え置いてある。**frame と定数は同時に直す**。
+   ⚠️ **ただしこれだけでは行中 clef/key の残差は 0 にならない**（**§4.7.2** で実測確定）。
+   行中変更の幾何は extent ヘルパではなく `ChangeItemPrefixWidth` ＋ 描画側のぶら下げ式が
+   決めており、LP は**専用の non-musical 列＋左右で別の式**で価格付けしている。
+   frame 修正で残差は +1.119 → +0.612 に減るが**逆符号は残る**。実体は③と同型の**列の欠落**。
 2. 🔲**未着手**. **`CalculateRightExtent` が中心基準のまま production 未使用** — `SvgTests.cs:166-167` が
    左（左端基準）と右（中心基準）を**ペアで**使っており、テスト自体が2 frame で box を測っている。
    §3.11 の手順（横断 grep →`<see cref>` →承認）を経てから統廃合すること。
@@ -675,3 +679,107 @@ LP 化すると**均等割り時の力配分が全体で変わる**（snapshot �
 **なぜ③より先か**: `BoundaryColumn`（③）を入れても、その中身を測る extent ヘルパが別 frame だと
 境界ロジックを字面移植するたびに変換が要る。`836be0ba` で実際にそれが起き、2か所で移植を
 見送らざるを得なかった。**④は③の下層**。
+
+#### 4.7.2 行中（mid-measure）変更 item の導出済みモデル（2026-07-21・LP 2.24.4 で実測確定）
+
+**LP は行中の clef/key 変更に「専用の non-musical 列」を1本立てる。** 音符列と音符列の間に
+列が1本挟まり、gap は**2本の spring** で決まる。Lily# には列が無く、**1本の spring に
+`ChangeItemPrefixWidth`（＝ W ＋ 2×0.5）を丸ごと足す**だけなので、構造が違う。
+
+列原点は**変更グリフの ink 左端**（実測: MC の clef anchor 13.955485 を原点とすると
+右 gap が `ink幅 2.146680 ＋ 1.0` で 6 桁一致する）。
+
+**左 gap（前の音符列原点 → 変更列原点）** — `Note_spacing::get_spacing`:
+
+```c
+Real ideal = base.ideal_distance () - increment + left_head_end;      // :77
+Real min_dist = skys[LEFT].distance (skys[RIGHT], ...);               // :79-82
+if (!Paper_column::is_musical (right_col) && ... && !staff_bar_group) // :87-102
+  {
+    Real min_desired_space = (ideal + min_dist) / 2.0;                // :105 ★
+    ideal -= right_col->extent (right_col, X_AXIS)[RIGHT];            // :106
+    ideal = std::max (ideal, min_desired_space);                      // :107
+  }
+```
+
+行中変更列には bar line が無いので `staff_bar_group` は null、**:105-107 の枝**に入る。
+変更列の幅を丸ごと引くので `ideal` は負にもなり、**実際に効くのは常に `(ideal + min_dist)/2` の床**。
+
+**右 gap（変更列原点 → 次の音符列原点）** — `Staff_spacing::get_spacing`:
+
+```c
+SCM space_def = scm_sloppy_assq ("first-note", alist);                // :147
+if (break_status_dir () == CENTER)                                    // :148  行中は常に CENTER
+  { nndef = scm_sloppy_assq ("next-note", alist);
+    if (pair) space_def = nndef; }                                    // :150-152
+Real fixed = last_ext[RIGHT];                                         // :166  ＝グリフ ink 幅
+  extra-space:       ideal = fixed + distance                         // :174-175
+  shrink-space:      ideal = fixed + distance;  is_stretchable=false  // :188-192
+  semi-shrink-space: fixed += d/2; ideal = fixed + d/2; 同上          // :193-198
+```
+
+⚠️ **`next-note` を持つのは Clef だけ。** KeySignature / TimeSignature の `space-alist` に
+`next-note` は**無い**ので、:147 の既定である **`first-note` に落ちる**。行中なのに
+`first-note` が使われるのは直感に反するが、これが LP の実挙動（実測で確定）。
+
+| grob | 使われるエントリ | 出典 | 右 gap |
+|---|---|---|---|
+| `Clef` | `(next-note . (extra-space . 1.0))` | `define-grobs.scm:924` | `ink幅 + 1.0` |
+| `KeySignature` | `(first-note . (shrink-space . 2.5))` | `define-grobs.scm:1947` | `ink幅 + 2.5`（伸びない） |
+| `KeyCancellation` | `(first-note . (shrink-space . 2.5))` | `define-grobs.scm:1996` | 同上 |
+| `TimeSignature` | `(first-note . (semi-shrink-space . 2.0))` | `define-grobs.scm:3948` | `ink幅 + 2.0`（伸びない） |
+
+**`min_dist` の左 esw は grob ごとに違う**（`separation-item.cc:167` の既定は `(-0.1 . 0.1)`）:
+
+| grob | `extra-spacing-width` | 出典 |
+|---|---|---|
+| `Clef` | 宣言なし＝既定 `(-0.1 . 0.1)` | — |
+| `KeySignature` / `KeyCancellation` | **`(0.0 . 1.0)`** | `define-grobs.scm:1936` / `:1982` |
+| `TimeSignature` | **`(0.0 . 0.8)`** | `define-grobs.scm:3933` |
+| `Accidental` | `(-0.2 . 0.0)` | `define-grobs.scm:40` |
+
+**実測照合**（probe `MC` / `MK`、ragged-right、符頭 ink 幅 1.304212、四分音符の ideal 3.002257）:
+
+| | `min_dist` の内訳 | 予測 左 gap | 実測 | 予測 右 gap | 実測 |
+|---|---|---|---|---|---|
+| MC (clef) | `1.304212+0.1+0.1` = 1.504212 | `(3.002257+1.504212)/2` = **2.253234** | **2.253234** ✓ | `2.146680+1.0` = **3.146680** | **3.146680** ✓ |
+| MK (key) | `1.304212+0.1+0.0` = 1.404212 | `(3.002257+1.404212)/2` = **2.203234** | **2.203234** ✓ | `3.300030+2.5` = **5.800030** | **5.800030** ✓ |
+
+**両側・両ケースとも 6 桁一致。モデルは確定。**（`min_dist` の 0.1 と 0.0 の差＝KeySignature の
+左 esw が 0 であること、が MC と MK の左 gap の 0.05 差をちょうど説明する。）
+
+##### これが §4.7 項目1（＝ HANDOFF §2①）に意味すること
+
+**「3つの extent ヘルパの frame ＋ 定数2つ」では `midmeasure.*` の4点は 0 にならない。**
+Lily# の行中変更の幾何を実際に決めているのは:
+
+1. `SpacingRules.ChangeItemPrefixWidth` ＝ `W + 2×ClefChangePadding` を**1本の spring に加算**
+2. `SharedRenderer.EnumerateStaffItems` の**ぶら下げ式** `itemX = 列X − (W + ClefChangePadding + 次の臨時記号)`
+
+extent ヘルパは `CalculateSkylineDistance` の skyline フォールバック経由でしか効かない。
+実測で分解すると Lily# の MC は
+
+```
+head2→head3 = min + 0.3
+            = (符頭右 1.304 + CalculateLeftExtent(clef) 1.505 + MinItemGap 0.4) + prefix 3.010 + 0.3
+            = 6.519000        ← 実測 6.519000
+```
+
+なので frame を左端基準にすると `CalculateLeftExtent(clef)` が 1.505 → 0 になり
+`6.519 → 6.012`（＝ ideal 3.002 + prefix 3.010 が勝つ）。LP は 5.399914 なので
+**残差 +1.119 → +0.612 に減るだけで 0 にはならない**。しかも**分配は直らない**:
+ぶら下げ式は変わらないので右 gap は 2.510 のまま（LP 3.146680）、左 gap が 3.502（LP 2.253234）で
+**逆符号のまま残る**。
+
+⚠️ したがって「①が正しければ4点が 0 に向かう」という予測は**外れる**。
+§5.3 の「変更する前に測る」に従って着手前に測っておいたので、これが**着手前に**分かった。
+
+**正しい切り分け**: 行中変更の残差は frame 単独の問題ではなく、**列が1本足りない**問題
+（＝③と同じ型の欠落）。`ClefChangePadding = 0.5` が両側に使われているのも誤りで、LP は
+**左右で別の式**（左＝`(ideal+min_dist)/2`、右＝grob ごとの space-alist 1.0 / 2.5 / 2.0）。
+`GlyphMetrics.ClefChangePadding` の `LILYPOND-REF: scm/define-grobs.scm:914-925 — Clef space-alist`
+も**エントリの取り違え**（0.5 は `right-edge`、行中で効くのは `next-note` の 1.0）。
+
+**もうひとつ独立した差**: 変更 clef の幅を Lily# は `FClefAdvance × 0.75 = 2.010` と近似しているが、
+LP の `clefs.F_change` の ink 幅は **2.146680**。`_change` グリフは実在するので 0.75 倍の
+近似をやめて実メトリクスを引くべき（`GlyphMetrics.cs:141-151`）。これは frame とも列とも独立。
