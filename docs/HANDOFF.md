@@ -112,23 +112,29 @@ Lily# 側は列が無く、`ChangeItemPrefixWidth`（= W + 2×0.5）を**1本の
 **同時に直したもの**: 変更 clef の幅 `FClefAdvance × 0.75 = 2.010` → LP の `clefs.F_change`
 ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 
-### ② 中心基準のまま取り残された extent ヘルパの掃除 — **未着手・要承認**
+### ② ✅ 完了 — extent ヘルパの中心基準と、①③が殺したシンボルの掃除
 
-①③は extent ヘルパを**直さずに迂回**した（列モデルを別関数で入れた）ので、
-`CalculateLeftExtent` / `CalculateRightExtent` / `CalculateNoteheadRightExtent` の
-**変更 item 分岐（`width/2 + ClefChangePadding`）は中心基準のまま残っている**。
-`GlyphMetrics.ClefChangePadding = 0.5` が生き残っているのもこの3箇所だけ
-（＋下記の死んだ関数）。
+**出力は完全に中立**（snapshot 0件、LP 忠実度 17/21・0.338987 のまま）。削除したもの:
 
-**このセッションで死んだ／死にかけたもの**（削除は §5.1 の手順＝横断 grep →`<see cref>`
-→**ユーザー承認**を経ること。**まだ消していない**）:
+| シンボル | 経緯 |
+|---|---|
+| `SpacingRules.ChangeItemPrefixWidth` | ③が最後の呼び出し元を外した |
+| `SharedRenderer.FollowingAccidentalLeftExtent` | ①で臨時記号が rod 経由になった |
+| `SpacingRules.CalculateRightExtent` | 元からの②。テストを `CalculateNoteheadRightExtent`（左端基準）へ寄せた |
+| `GlyphMetrics.ClefChangePadding` | 上の掃除で参照ゼロに。**そもそも LP の量ではなかった**（0.5 は `right-edge`） |
 
-| シンボル | 状態 | 経緯 |
-|---|---|---|
-| `SpacingRules.ChangeItemPrefixWidth` | **完全に死んだ**（定義のみ） | 最後の呼び出し元を③が外した。**doc コメントが「行頭パスで使う」と嘘をついている** |
-| `SharedRenderer.FollowingAccidentalLeftExtent` | **完全に死んだ**（定義のみ） | ①で臨時記号が rod 経由になった |
-| `SpacingRules.CalculateRightExtent` | production ゼロ・`SvgTests.cs:167,186` のみ | 元からの②。テストが左（左端基準）と右（中心基準）を**ペアで**使い、同じ box を2フレームで測っている |
-| 3ヘルパの変更 item 分岐 | 到達経路が**ごく狭くなった**が非ゼロ | `CalculateSkylineDistance(prev=変更item, next)` の経路が残る。**要実測** |
+`CalculateLeftExtent` / `CalculateNoteheadRightExtent` の変更 item 分岐は
+**左端基準（0 / 全幅）**へ。
+
+⚠️ **副産物で本物のバグが1つ出た**: `MeasureLayouter.ItemStartingAt` が zero-duration の
+変更 item を返しており、**音符列同士の rod が変更グリフから測られていた**。
+音符を返すよう直したところ、分岐が到達不能になり、かつ出力が中立に戻った
+（つまり従来は rod が binding していなかっただけで、式は間違っていた）。
+
+⚠️ **未検証で残したもの**: `GetItemToBarlineSpace` / `GetBarlineToItemMinimum` の
+変更 item エントリ（`1.0 / 1.0 / 0.75`）。「中心基準だから」という根拠は消えたが、
+**LP と照合し直していない**。到達経路は「変更 item が小節の最後の timing を共有する」
+という **LP に存在しない構図**だけで、fixture も踏まない。
 
 ### ③ ✅ 完了（`0aae1016`）— 行頭 key/time の境界列
 

@@ -161,23 +161,13 @@ internal static partial class GlyphMetrics
     /// <summary>C clef change width — <c>clefs.C_change</c> ink right edge.</summary>
     public static double CClefChangeWidth => ClefCChange.Right;
 
-    /// <summary>
-    /// Padding before and after a change item drawn at a MEASURE START.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ This is NOT a LilyPond quantity. The old remark cited Clef.space-alist, but 0.5 is
-    /// that alist's <c>right-edge</c> entry — the gap to the END of a line — and LilyPond has
-    /// no single padding that applies to both sides of a change item at all: it prices the
-    /// left gap through Note_spacing and the right gap through the space-alist entry keyed
-    /// on what follows (clef 1.0, key 2.5, time 2.0). See COORDINATE_AUDIT.md §4.7.2.
-    /// <para>
-    /// The MID-measure path no longer uses this — it uses
-    /// <see cref="SpacingRules.MidMeasureChangeGaps"/>. What is left here is the
-    /// measure-OPENING path, which still lacks its boundary column (§3.I / roadmap item 3);
-    /// this constant goes away with it.
-    /// </para>
-    /// </remarks>
-    public const double ClefChangePadding = 0.5;
+    // ClefChangePadding (0.5) lived here as "the padding before and after a change item".
+    // It was never a LilyPond quantity: 0.5 is Clef.space-alist's `right-edge` entry, the gap
+    // to the END of a line, and LilyPond has no single padding that applies to both sides of
+    // a change item at all — it prices the left gap through Note_spacing or break alignment
+    // and the right gap through the space-alist entry keyed on what follows (clef 1.0, key
+    // 2.5, time 2.0). Every caller now goes through SpacingRules.MidMeasureChangeGaps or
+    // BoundaryChangePrefix. COORDINATE_AUDIT.md §4.7.2 / §4.7.3.
 
     // ========== LP grob spacing defaults ==========
     // The Clef/KeySignature/TimeSignature space-alist values (clef->key 3.5,

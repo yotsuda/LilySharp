@@ -350,31 +350,6 @@ internal static partial class SharedRenderer
             item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
     }
 
-    /// <summary>
-    /// How far the item's accidental(s) reach to the LEFT of its notehead
-    /// origin (accidental glyph width + the head gap), or 0 when it has none.
-    /// Used to hang a preceding mid-measure clef/key/time change past the
-    /// accidental so the two do not overprint.
-    /// </summary>
-    private static double FollowingAccidentalLeftExtent(MusicItem item)
-    {
-        static double Ext(string? acc) => acc == null
-            ? 0
-            : GlyphMetrics.GetAccidentalBBox(acc).Width + GlyphMetrics.AccidentalNoteGap;
-
-        switch (item)
-        {
-            case NoteItem note:
-                return Ext(note.Accidental);
-            case ChordItem chord:
-                double max = 0;
-                foreach (var n in chord.Notes)
-                    max = Math.Max(max, Ext(n.Accidental));
-                return max;
-            default:
-                return 0;
-        }
-    }
 
     /// <summary>
     /// Registers the ledger requests one item (note or chord) needs. Chords

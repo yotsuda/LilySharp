@@ -415,27 +415,13 @@ internal static class SpacingRules
     /// </remarks>
     public static double CalculateLeftExtent(MusicItem item)
     {
-        // Clef change items use their own width calculation
-        // LILYPOND-REF: lily/clef.cc — change clefs are smaller variants
-        if (item is ClefChangeItem clefChange)
-        {
-            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
-            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        // Key signature change items
-        if (item is KeySignatureChangeItem keyChange)
-        {
-            double keyWidth = GetKeySignatureChangeWidth(keyChange);
-            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        // Time signature change items
-        if (item is TimeSignatureChangeItem timeChange)
-        {
-            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
-            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
+        // A change grob's column origin is its ink LEFT edge — the same convention as a note
+        // head's, verified against LilyPond in COORDINATE_AUDIT.md §4.7.2 — so it reaches
+        // NOTHING to the left. These branches used to return `width/2 + ClefChangePadding`,
+        // measuring the change from its CENTRE while every other grob was measured from its
+        // left edge, and 0.5 of padding that is not a LilyPond quantity at all.
+        if (IsChangeItem(item))
+            return 0;
 
         // Get notehead metrics (note value determines which notehead glyph)
         int noteValue = GetNoteValue(item);
@@ -499,68 +485,6 @@ internal static class SpacingRules
             // Single note with accidental
             var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
             extent += accBBox.Width + AccidentalNoteGap;
-        }
-
-        return extent;
-    }
-
-    /// <summary>
-    /// Calculates the right extent of an item from its reference point (notehead center).
-    /// This includes the notehead and any dots.
-    /// </summary>
-    /// <remarks>
-    /// Reference point is at the horizontal center of the notehead.
-    /// Right extent = half notehead + dots (if present)
-    /// </remarks>
-    public static double CalculateRightExtent(MusicItem item)
-    {
-        // Clef change items use their own width calculation
-        if (item is ClefChangeItem clefChange)
-        {
-            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
-            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        // Key signature change items
-        if (item is KeySignatureChangeItem keyChange)
-        {
-            double keyWidth = GetKeySignatureChangeWidth(keyChange);
-            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        // Time signature change items
-        if (item is TimeSignatureChangeItem timeChange)
-        {
-            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
-            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        // Get notehead metrics
-        int noteValue = GetNoteValue(item);
-        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
-
-        // Base extent: from center to right edge of notehead
-        double extent = noteheadBBox.Width - noteheadBBox.CenterX;
-
-        // Within-chord seconds: a head reversed to the RIGHT of the stem
-        // (stem up) extends the column's right ink by its shift amount.
-        // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
-        if (item is ChordItem chord)
-        {
-            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue);
-            double maxHeadOffset = headOffsets.Length > 0 ? headOffsets.Max() : 0;
-            if (maxHeadOffset > 0)
-                extent += maxHeadOffset;
-        }
-
-        // Add dot width
-        int dots = GetDots(item);
-        if (dots > 0)
-        {
-            var dotBBox = GlyphMetrics.AugmentationDot;
-            // Each dot plus a small gap
-            extent += dots * dotBBox.Width + EngravingDefaults.DotGap;
         }
 
         return extent;
@@ -1594,53 +1518,6 @@ internal static class SpacingRules
         ChordItem c => c.LeadingGrace,
         _ => ImmutableArray<GraceNoteInfo>.Empty
     };
-
-    /// <summary>
-    /// Width a zero-duration clef/key-signature change opening a MEASURE needs in front of
-    /// the first note's column (glyph + padding on both sides). Several changes sharing a
-    /// column are drawn side by side, so their widths SUM (see the inline note below).
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ NOTHING CALLS THIS ANY MORE. A mid-measure change is priced by
-    /// <see cref="MidMeasureChangeGaps"/> and one opening a measure by
-    /// <see cref="BoundaryChangePrefix"/>, both of which follow LilyPond in giving the change
-    /// its own column with two differently-computed gaps rather than one lumped reservation
-    /// with the same padding on either side. Kept only because removing it goes through the
-    /// deletion procedure (cross-grep, <c>see cref</c> sweep, sign-off) — see the roadmap's
-    /// dead-symbol table.
-    /// </remarks>
-    /// <param name="excludeClef">
-    /// Set at a MEASURE-OPENING column. A clef change there is engraved before the bar
-    /// line (scm/define-grobs.scm:650-664 break-align-orders), so it takes no room after
-    /// it; its width is charged to the previous measure instead, via
-    /// <see cref="BoundaryClefAllowance"/>. Reserving it here as well would pay for the
-    /// same glyph twice.
-    /// </param>
-    internal static double ChangeItemPrefixWidth(
-        IEnumerable<MusicItem>? items, bool excludeClef = false)
-    {
-        if (items == null) return 0;
-        double w = 0;
-        foreach (var item in items)
-        {
-            double itemW = item switch
-            {
-                ClefChangeItem when excludeClef => 0,
-                ClefChangeItem cc =>
-                    GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
-                KeySignatureChangeItem kc =>
-                    GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
-                TimeSignatureChangeItem tc =>
-                    GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
-                _ => 0
-            };
-            // SUM, not max: clef/key/time changes sharing a column are drawn side by
-            // side (the renderer sequences them), so they need their combined width.
-            // A lone change (the common case) sums to its own width — unchanged.
-            w += itemW;
-        }
-        return w;
-    }
 
     // ========================================
     // Mid-measure change items (the missing non-musical column)
@@ -2966,11 +2843,13 @@ internal static class SpacingRules
     /// at 0.9 + 0.3 and fattened every measure start by 0.3). With the minimum corrected the
     /// headroom is a no-op here: 0.2 + 0.3 &lt; 0.9.
     /// </para>
-    /// Change items keep their space-alist value for now: their branch of
-    /// <see cref="CalculateLeftExtent"/> is still measured on the CENTRE basis, so the
-    /// box-derived value below — which assumes the left-edge frame — does not apply to
-    /// them. Converting that frame is a separate step, exactly as for
-    /// <see cref="GetItemToBarlineSpace"/>.
+    /// ⚠️ The change-item arms below kept their space-alist value because
+    /// <see cref="CalculateLeftExtent"/>'s change branch used to be on the CENTRE basis. That
+    /// justification is GONE — the branch now returns 0, like any other grob whose origin is
+    /// its ink left edge — and these arms have not been re-derived against LilyPond since. A
+    /// change item reaches them only through a path LilyPond does not have (a change sharing
+    /// the LAST timing of a measure, so Lily# measures it toward the closing bar line); no
+    /// fixture exercises it. Recorded in the roadmap rather than guessed at.
     /// LILYPOND-REF: lily/staff-spacing.cc:210 <c>Paper_column::minimum_distance</c>;
     ///   lily/separation-item.cc:166-167 default extra-spacing-width
     ///   <c>Interval (-0.1, 0.1)</c>; lily/note-spacing.cc:78-83 sets the spring minimum to
@@ -3006,10 +2885,11 @@ internal static class SpacingRules
     {
         return prevItem switch
         {
-            // Change items are still measured on the CENTRE basis here (their branch of
-            // CalculateNoteheadRightExtent returns width/2), so they keep their own
-            // constant rather than the box-derived one below, which assumes the
-            // left-edge frame. Converting that frame is a separate step.
+            // ⚠️ These kept their own constant because CalculateNoteheadRightExtent's change
+            // branch returned width/2 — the CENTRE basis. It now returns the glyph's full
+            // width, so that justification no longer holds and these three have not been
+            // re-derived. See the matching note on GetBarlineToItemMinimum: LilyPond has no
+            // change-item-to-bar-line pair at all, and no fixture reaches this.
             ClefChangeItem => 1.0,
             KeySignatureChangeItem => 1.0,
             TimeSignatureChangeItem => 1.0,
@@ -3095,25 +2975,12 @@ internal static class SpacingRules
     /// <c>il-&gt;extent (pc, X_AXIS)</c>, the grob's extent in its PAPER COLUMN's frame.
     /// LILYPOND-REF: lily/rest.cc Rest::width — the rest branch below uses the same frame.
     /// </remarks>
-    private static double CalculateNoteheadRightExtent(MusicItem item)
+    internal static double CalculateNoteheadRightExtent(MusicItem item)
     {
-        if (item is ClefChangeItem clefChange)
-        {
-            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
-            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        if (item is KeySignatureChangeItem keyChange)
-        {
-            double keyWidth = GetKeySignatureChangeWidth(keyChange);
-            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
-
-        if (item is TimeSignatureChangeItem timeChange)
-        {
-            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
-            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
-        }
+        // Mirror of CalculateLeftExtent: the origin is the change glyph's ink left edge, so
+        // its rightward reach is its full width — not half of it plus a padding.
+        if (IsChangeItem(item))
+            return ChangeItemColumnWidth(item);
 
         int noteValue = GetNoteValue(item);
 

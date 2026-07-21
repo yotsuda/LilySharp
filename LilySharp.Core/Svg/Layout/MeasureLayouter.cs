@@ -249,15 +249,27 @@ internal sealed class MeasureLayouter
         return timingToItems;
     }
 
-    /// <summary>The item in <paramref name="m"/> (one voice's sequential items) that STARTS exactly
-    /// at <paramref name="t"/>, or null when this voice has no notehead at that column — so a
-    /// separation rod is only raised between two columns the SAME voice occupies.</summary>
+    /// <summary>The MUSICAL item in <paramref name="m"/> (one voice's sequential items) that
+    /// STARTS exactly at <paramref name="t"/>, or null when this voice has no notehead at that
+    /// column — so a separation rod is only raised between two columns the SAME voice
+    /// occupies.</summary>
+    /// <remarks>
+    /// A zero-duration clef/key/time change shares the following note's timing but belongs to
+    /// the NON-musical column, so it is skipped: the rod this feeds is between two musical
+    /// columns, and the change column's own rod is
+    /// <see cref="SpacingRules.MidMeasureChangeGaps"/>'s (mid-measure) or
+    /// <see cref="SpacingRules.BarlineToFirstColumnSpring"/>'s (at a bar line). Returning the
+    /// change item here measured the gap from a glyph that is not in either column being
+    /// spaced — and through the change-item branch of the extent helpers, which was still on
+    /// the centre basis.
+    /// </remarks>
     private static MusicItem? ItemStartingAt(Measure m, Fraction t)
     {
         var acc = Fraction.Zero;
         foreach (var item in m.Items)
         {
-            if (acc == t) return item;
+            if (acc == t && !SpacingRules.IsMidMeasureChangeColumn(item))
+                return item;
             if (acc > t) break;
             acc += item.Duration;
         }
@@ -368,14 +380,6 @@ internal sealed class MeasureLayouter
             var prev = ItemStartingAt(vm, timings[i - 1]);
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
-                continue;
-            // A change item at the right column is NOT what this rod measures: it belongs
-            // to its own non-musical column, whose rod MidMeasureChangeGaps owns below.
-            // Measuring to it here went through CalculateSkylineDistance's extent fallback,
-            // where change items are still on the CENTRE basis, and that mis-framed rod is
-            // what used to decide the gap (it beat the ideal, so merge_springs' floor
-            // placed the column at min + 0.3).
-            if (SpacingRules.IsMidMeasureChangeColumn(next))
                 continue;
             bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
             maxSkyDist = Math.Max(maxSkyDist,

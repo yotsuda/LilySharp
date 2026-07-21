@@ -163,8 +163,13 @@ form main {
         {
             var item = measure.Items[i];
             var musicItem = score.Voice.Measures[0].Items[i];
+            // BOTH sides in the column's frame. This used to pair CalculateLeftExtent
+            // (left-edge basis) with CalculateRightExtent (centre basis), so it measured one
+            // box against two different origins and under-reported every right edge by half
+            // a note head — a collision test that cannot see half the collisions.
+            // CalculateRightExtent had no other caller and is gone.
             var leftExtent = SpacingRules.CalculateLeftExtent(musicItem);
-            var rightExtent = SpacingRules.CalculateRightExtent(musicItem);
+            var rightExtent = SpacingRules.CalculateNoteheadRightExtent(musicItem);
 
             string accidental = musicItem switch
             {
@@ -183,7 +188,7 @@ form main {
             {
                 var prevItem = measure.Items[i - 1];
                 var prevMusicItem = score.Voice.Measures[0].Items[i - 1];
-                var prevRightExtent = SpacingRules.CalculateRightExtent(prevMusicItem);
+                var prevRightExtent = SpacingRules.CalculateNoteheadRightExtent(prevMusicItem);
                 double prevRightEdge = prevItem.X + prevRightExtent;
                 double gap = leftEdge - prevRightEdge;
                 Console.WriteLine($"          Gap from prev: {gap:F1}");
