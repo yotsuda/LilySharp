@@ -40,7 +40,12 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | −0.004735 | 1 | **OPEN** — TimeSignature grob 幅 1.600000 / LP 1.604735 |
 
 **X 軸の「定数を1つ直せば閉じる」ネタは尽きた。** 残る 3 点は水平スカイラインの基盤が要り、
-1 点は原因未特定。次の一手は**ユーザー判断待ち**（候補は §2⑤ / §3A 中期のコーパス縦展開）。
+1 点は原因未特定。次の一手は**ユーザー判断待ち**（候補は §2⑥ / §3A 中期のコーパス縦展開）。
+
+⚠️ **TimeSignature 幅 −0.004735 の見立て**（未検証）: `GlyphMetrics.GetTimeSigWidth` は
+`max(digit ADVANCE, digit ADVANCE)`（`GlyphMetrics.cs:221`）で、**advance のまま**＝§2④ で
+key/notehead を advance→ink に直したときに**取り残された**唯一の系統。LP の TimeSignature は
+digit stencil の ink extent。着手時はまず実測で裏取りすること。
 
 ### 直近セッション（2026-07-22）でやったこと
 
@@ -197,10 +202,49 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 ⚠️ `down-stems-after-clef` が閉じたのは**予測外**。残差 +0.00002 は「符尾の符頭接続オフセット差」
 と帰属されていたが、実際は符頭メトリクスだった。**帰属は閉じてみるまで確定しない**例。
 
-### ⑤ MMR run のグルーピング
+### ⑤ ✅ 完了 — MMR run のグルーピング
 
-**LP は clef があっても run を保つが Lily# は弾く。** 詳細は `handoff-2026-07-21-mmr-runs.md`
-（§8 で棚卸し対象）。
+**「LP は clef があっても run を保つが Lily# は弾く」は既に解消済み。** 3層とも入っている:
+
+| 層 | commit |
+|---|---|
+| run グルーピング（`IsBreakAlignedChange` に `ClefChangeItem`） | `1e91ebe6` |
+| 描画（clef を bar line の**前**へ＝`BoundaryColumn` / `BoundaryClefAllowance`） | `836be0ba` |
+| 視覚フィクスチャ `test/mmr-clef-change-bound` | `6a328a45` |
+
+2026-07-22 に LP 2.24.4 と PNG を並べて再確認済み（単一 "5" ＝ longa 4 ＋ whole 1、bass clef は
+bar line の前）。旧 handoff が「描画位置の方針をユーザーに仰げ」としていた論点は**測定で解決済み**:
+clef は列の**原点**を左へ動かすだけで bar line は動かさない（bar line 間は clef の有無によらず
+14.133856）。だから rod には足さず、`BoundaryClefAllowance` として**前の小節の閉じ側**に付ける。
+
+**元資料 `handoff-2026-07-21-mmr-runs.md` は本項をもって回収完了**（§8）。残っていた未解決は
+下の ⑥⑦ に移した。
+
+### ⑥ `fills_measure` の述語が LP より狭い — 未着手
+
+`spacing-spanner.cc:446-472` の `fills_measure` は**列の musicality しか見ない**。
+Lily# は2箇所とも `NoteItem or ChordItem` に絞っているので、**全休符の列に
+`full-measure-extra-space` 1.0 が付かない**。
+
+| 場所 | 述語 |
+|---|---|
+| `MeasureLayouter.CreateBarlineToFirstSpring` | `timings.Count == 1 && firstItems.Any(NoteItem or ChordItem)` |
+| `SpacingRules.FillsMeasure` | 唯一の非 loose item が `NoteItem or ChordItem` |
+
+**「唯一の musical 列」という部分は LP と一致している**（LP も `next` が非 musical であることを
+要求するので `col` は小節唯一の musical 列。`dt > len/2` は pickup 対策で、唯一列なら常に真）。
+**乖離は rest を弾いている点だけ。** 字面移植なら両方から `NoteItem or ChordItem` を外す。
+⚠️ **2箇所を必ず同時に**（§5.4 の spring 2系統）。出力が変わるので承認が要る。
+現状は `MeasureLayouter.cs:289-293` に「意図的」と明記してある。
+
+### ⑦ MMR まわりの小さい未解決（記録のみ）
+
+- **`GlyphMetrics.RestMaximaWidth = 1.8` が手動側**。フォントメトリクスなので生成器が `rests.M3` を
+  出すようになったら `GlyphMetricsGenerated.cs` へ（`GlyphMetrics.cs:89-96` に記録済）
+- **`SystemBreaker.BreakIntoSystemsGreedy` は MMR run 非対応**。ただし
+  `LayoutOptions.UseOptimalLineBreaking` が既定 `true`（`LayoutOptions.cs:100`）なので**既定出力に
+  影響しない**。かつ greedy は LP のアルゴリズムではない（LP = `constrained-breaking.cc` = optimal）
+  ので**忠実度は上がらない**。優先度低
 
 ---
 
@@ -435,7 +479,7 @@ root に **15 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.
 |---|---|
 | `handoff-2026-07-21-x-frame-unification.md` | ✅ 内容は完了・`COORDINATE_AUDIT.md` §4.7 と本ファイルに吸収済。**光学補正を clef のせいとする誤記あり**（訂正済） |
 | `handoff-2026-07-21-boundary-column.md` | §2③ 着手時に。LP 事実の記録として有用 |
-| `handoff-2026-07-21-mmr-runs.md` | §2⑤ 着手時に |
+| `handoff-2026-07-21-mmr-runs.md` | ✅ **回収完了（2026-07-22）**。§1.1 は §2⑤ で解決済、§1.2/§1.3 の未解決は §2⑥⑦ へ、LP 実測は `MmrRodMinimumDistance` / `MultiMeasureRestEngraver` の remarks に既出。**削除してよい**（ユーザー承認待ち） |
 | `HANDOFF-stage4-vertical-yup.md` | §3B 島1 着手時に。**Stage-4 の正確な現状はここ** |
 | `HANDOFF-lp-calc-incorporation.md` | §3C 着手時に |
 | `HANDOFF-dead-code-audit.md` | §3D 着手時に |
