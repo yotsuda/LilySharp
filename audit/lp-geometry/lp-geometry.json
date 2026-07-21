@@ -54,6 +54,13 @@
       "residual": 0.0,
       "why": ""
     },
+    "barline.next.whole-rest": {
+      "probe": "barline-spacing.ly",
+      "score": "F",
+      "lilypond": 1.900000,
+      "residual": 0.0,
+      "why": ""
+    },
     "barline.next.half-notes": {
       "probe": "barline-spacing.ly",
       "score": "G",

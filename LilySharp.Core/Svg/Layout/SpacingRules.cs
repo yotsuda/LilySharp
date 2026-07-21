@@ -89,10 +89,45 @@ internal static class SpacingRules
     public const double FullMeasureExtraSpace = 1.0;
 
     /// <summary>
-    /// True when a single sounding note/chord fills the whole measure (whole note in 4/4,
-    /// dotted half in 3/4, a lone note in its bar). Conservative: only ONE note/chord onset
-    /// with no other spacing column qualifies (a full-measure rest uses the MMR rod path).
+    /// Whether an item stands in a MUSICAL paper column — LilyPond's
+    /// <c>Paper_column::is_musical</c>.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc Paper_column::is_musical —
+    /// <c>get_property (me, "shortest-starter-duration")</c> read as a boolean. The column
+    /// is musical when something that STARTS A DURATION is engraved in it, so what matters
+    /// is neither the glyph's kind nor the item's duration on its own: a note, a chord and
+    /// a rest all set it, and a SKIP sets nothing because it engraves no grob.
+    /// <para>
+    /// Measured on 2.24.4 by perturbing <c>full-measure-extra-space</c> to 0 over
+    /// <c>c'4 d' e' f' | s1 | r1 | c'4 d' e' f'</c>: the <c>r1</c> bar narrows by exactly
+    /// 1.000000 and the <c>s1</c> bar does not move. Reading "musical" as "has a duration"
+    /// would have got the skip wrong.
+    /// </para>
+    /// </remarks>
+    internal static bool IsMusicalColumn(MusicItem? item) =>
+        item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+
+    /// <summary>
+    /// True when a single musical column fills the whole measure (whole note in 4/4,
+    /// dotted half in 3/4, a lone note or rest in its bar).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure. The
+    /// source tests column MUSICALITY and nothing else — it never asks what is drawn — so a
+    /// full-measure REST earns <see cref="FullMeasureExtraSpace"/> just as a whole note
+    /// does. LilyPond reaches "the measure's only musical column" the long way round, by
+    /// requiring the NEXT column to be non-musical (which can only be the closing bar line)
+    /// and then <c>dt &gt; measure-length / 2</c>; that second test is a pickup guard, and a
+    /// sole column passes it for free. This side keeps the direct form.
+    /// <para>
+    /// This used to end at <c>NoteItem or ChordItem</c>, on the grounds that a full-measure
+    /// rest is priced by the multi-measure-rest rod instead. That holds for <c>R1</c>, which
+    /// never reaches this spring, but not for a lowercase <c>r1</c>: LilyPond spaces it as an
+    /// ordinary bar, and bar line to whole rest measures 1.900000 — the same 0.9 + 1.0 it
+    /// gives a whole note. See the ledger's barline.next.whole-rest.
+    /// </para>
+    /// </remarks>
     public static bool FillsMeasure(Measure measure)
     {
         MusicItem? sole = null;
@@ -102,7 +137,7 @@ internal static class SpacingRules
             if (sole != null) return false;
             sole = item;
         }
-        return sole is NoteItem or ChordItem;
+        return IsMusicalColumn(sole);
     }
 
     /// <summary>

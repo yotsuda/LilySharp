@@ -303,6 +303,20 @@ public class SpacingInvariantTests
         // measure rests use a compact rod. The combined-timings path (used by
         // BOTH the line breaker and the multi-staff layout) must apply it,
         // or breaking and layout disagree about measure widths.
+        //
+        // The bound was noteWidth / 2 until the fills_measure predicate was widened to
+        // LilyPond's (SpacingRules.IsMusicalColumn), which hands an R1 bar the same
+        // full-measure-extra-space 1.0 a whole note gets. That is LilyPond's own
+        // behaviour, measured on 2.24.4 by overriding
+        // NonMusicalPaperColumn.full-measure-extra-space to 0 over
+        // `c'4 d' e' f' | R1 | r1 | c'4 d' e' f'`: the R1 bar narrows by exactly
+        // 1.000000, as does the r1 bar. So "under half" was never LilyPond's claim —
+        // LilyPond's own R1 bar is 7.890000 against 13.525735 for four quarters, a
+        // ratio of 0.583. What follows is a coarse guard on the compact rod still
+        // being applied — remove the rod and the rest bar prices like an ordinary
+        // one, far above either bound — and NOT a pin: the quantity here is a spring
+        // sum while LilyPond's figure is a bar width, so the two are not the same
+        // measurement and the threshold must not be read as a ported constant.
         var src = """
             time 4/4
             section Main { melody { R1 | c4 d e f | } }
@@ -316,7 +330,7 @@ public class SpacingInvariantTests
 
         double restWidth = springs.Sum(s => s.IdealDistance);
         double noteWidth = noteSprings.Sum(s => s.IdealDistance);
-        Assert.True(restWidth < noteWidth / 2,
+        Assert.True(restWidth < noteWidth * 0.6,
             $"compact MMR measure ({restWidth:F2}) must be far narrower than a 4-note measure ({noteWidth:F2})");
     }
 

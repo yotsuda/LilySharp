@@ -131,6 +131,11 @@ internal static class LpGeometryProbes
         new("barline.next.down-stems", C, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.down-stems-after-clef", B, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.full-measure-note", E, g => g.BarlineRightToNextGlyph(MidLineBarline)),
+        // The rest twin of the line above. Probe F measured only its CLOSING side, and
+        // full-measure-extra-space lives on the OPENING one, so the corpus could not see
+        // whether Lily# spends it on a rest column at all. LilyPond does — 1.900000 for
+        // both, the same 0.9 + 1.0.
+        new("barline.next.whole-rest", F, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.half-notes", G, g => g.BarlineRightToNextGlyph(MidLineBarline)),
 
         // The accidental is the first glyph after the bar line; the notehead is the second.

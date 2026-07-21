@@ -286,11 +286,10 @@ internal sealed class MeasureLayouter
     /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 fills_measure — the single
     /// musical column after this barline is followed straight by the next breakable
     /// column (timings.Count == 1), spanning the measure.
-    /// NOTE: LP's fills_measure tests column MUSICALITY only, so LP also counts a
-    /// full-measure REST column; this keeps the narrower note/chord predicate that
-    /// SpacingRules.FillsMeasure uses on the line-breaking side, because the two
-    /// spring gates must price identically and the rest case is owned by the MMR
-    /// rod path. Widening both to match LP is a separate, output-changing step.
+    /// The column test is SpacingRules.IsMusicalColumn, LilyPond's
+    /// Paper_column::is_musical, so a full-measure REST counts exactly as a whole note
+    /// does — the same predicate SpacingRules.FillsMeasure applies on the line-breaking
+    /// side, because the two spring gates must price identically.
     /// </remarks>
     private static Spring CreateBarlineToFirstSpring(
         List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems)
@@ -299,7 +298,7 @@ internal sealed class MeasureLayouter
         bool fillsMeasure =
             timings.Count == 1
             && firstItems != null
-            && firstItems.Any(it => it is NoteItem or ChordItem);
+            && firstItems.Any(SpacingRules.IsMusicalColumn);
         return SpacingRules.BarlineToFirstColumnSpring(firstItems, fillsMeasure);
     }
 
