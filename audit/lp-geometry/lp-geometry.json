@@ -150,7 +150,7 @@
       "score": "E",
       "lilypond": 6.060047,
       "residual": -0.002002001,
-      "why": "ATTRIBUTED (was OPEN): SpacingRules.ApplyLeftHeadWidth feeds the note head's ADVANCE width where LilyPond's note-spacing.cc:68 uses the head's INK extent — g->extent(col, X_AXIS)[RIGHT]. Emmentaler's whole head advances 1.9600 but inks 1.962002, so the gap comes out 0.002002 narrow, which is this residual to six digits. Its sibling barline.prev.half-note is the same defect at the half head's own margin (1.3760 against 1.377346 = 0.001346), and the two agreeing is what identifies the metric rather than the formula. Fixing it means switching that one call to the bbox right edge; it moves every measure slightly, so it is its own change."
+      "why": "ATTRIBUTED (was OPEN): the note head's right edge, which note-spacing.cc:68 reads as g->extent(col, X_AXIS)[RIGHT]. TWO defects stack. (1) SpacingRules.ApplyLeftHeadWidth feeds the ADVANCE where LilyPond feeds the INK extent. (2) Lily#'s ink extent is itself the wrong number: GlyphMetricsGenerated.cs takes it from the glyph OUTLINE, while LilyPond reads the font's embedded LILC table (open-type-font.cc:288, :389-407) and only falls back to the outline. Read from the bundled emmentaler-20.otf, LILC gives noteheads.s0 = 1.962002 against the outline's 1.9640 and the advance's 1.9600 — and 1.962002 is exactly what LilyPond rendered. So switching to the outline bbox alone would NOT fix this: it would flip the residual to +0.001998. Both halves are needed, and the LILC half is the migration audit/scripts/Extract-EmmentalerMetrics.py is mid-way through."
     },
     "barline.prev.whole-rest": {
       "probe": "barline-spacing.ly",
@@ -164,7 +164,7 @@
       "score": "G",
       "lilypond": 4.453962,
       "residual": -0.001345572,
-      "why": "ATTRIBUTED (was OPEN): the same advance-for-ink substitution as barline.prev.whole-note, here at the half head — Lily#'s NoteheadHalfAdvance 1.3760 against LilyPond's ink 1.377346, i.e. 0.001346. That this one carries a stem correction and its sibling does not, yet both land exactly on their head's own margin, is what rules the optical term out."
+      "why": "ATTRIBUTED (was OPEN): the same head-right-edge defect as barline.prev.whole-note. Here the outline and the advance agree (both 1.3760), so ONLY the LILC half is missing: the table gives noteheads.s1 = 1.377346, which is what LilyPond rendered. That this entry carries a stem correction and its sibling does not, yet both land exactly on their own head's margin, is what rules the optical term out."
     }
   }
 }

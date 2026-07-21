@@ -146,22 +146,47 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 行頭は staff-bar group があるので `note-spacing.cc:99-100`（bar line の列内オフセットを引く）、
 行中は `:103-108`。**着手前に score K/T を6桁まで分解しておくこと**（①でそうしたように）。
 
-### ④ 符頭幅の advance→ink 置換（旧「OPEN 2 件」— **原因特定済み**）
+### ④ グリフメトリクスを LILC 由来にする（旧「OPEN 2 件」— **原因確定・要判断**）
 
-`barline.prev.whole-note` −0.002002 / `barline.prev.half-note` −0.001346 は、
-**`SpacingRules.ApplyLeftHeadWidth` が符頭の advance を使っている**のが原因
-（LP の `note-spacing.cc:68` は **ink extent** `g->extent(col, X_AXIS)[RIGHT]`）。
+**台帳に残る 1e-4〜1e-3 級の残差は全部これ1つ。** 実測で確定（2026-07-21）:
 
-| | Lily# advance | LP ink | 差 | 台帳 residual |
+**LP はグリフ bbox を、フォント埋込の `LILC` テーブルから読む**
+（`lily/open-type-font.cc:288` `load_scheme_table("LILC")` ＋ `:389-407`。生アウトラインは fallback）。
+`GlyphMetricsGenerated.cs` はアウトライン（`BoundsPen`）から取っている＝**非 LP 方式**。
+
+`emmentaler-20.otf` の `LILC` を読むと（Lily# 同梱・LP 2.24.4 同梱の**両方で同値**）:
+
+| glyph | Lily# アウトライン | Lily# advance | **LILC** | LP 実測 |
 |---|---|---|---|---|
-| 全音符 | 1.9600 | 1.962002 | −0.002002 | **−0.002002** |
-| 二分音符 | 1.3760 | 1.377346 | −0.001346 | **−0.001346** |
-| 黒符頭 | 1.3040 | 1.304212 | −0.000212 | 行中4点の残差と一致 |
+| `noteheads.s0` | 1.9640 | 1.9600 | **1.962002** | 1.962002 |
+| `noteheads.s1` | 1.3760 | 1.3760 | **1.377346** | 1.377346 |
+| `noteheads.s2` | 1.3040 | 1.3040 | **1.304212** | 1.304212 |
+| `accidentals.sharp` | 1.1000 | 1.1000 | **1.100010** | 3個で 3.300030 |
+| `accidentals.natural` | 0.6960 | 0.6640 | **0.666666** | 0.666666 |
+| `clefs.F_change` | — | — | **2.146680** | 2.146680 |
 
-**3値とも6桁で一致**するので式ではなくメトリクスの取り違え。修正は
-`ApplyLeftHeadWidth` の1呼び出しを bbox の右端に変えるだけだが、**全小節が動く**ので単独の変更に。
-（`GlyphMetricsGenerated.cs` は4桁丸めなので、6桁一致まで詰めるなら生成側の桁数も要検討。
-生成器 `audit/scripts/Extract-EmmentalerMetrics.py` は別作業の WIP＝**触らない**。）
+**このセッションで LP から実測した値は、例外なく LILC の値だった。**（`clefs.*_change` 3種も、
+`timesig.C44` 1.699994 も、全休符 1.5 も。`1970b830` で手で入れた 2.146680 も LILC 由来。）
+
+**必要な変更は2つ。片方だけでは直らない**:
+
+1. **生成側を LILC に**（`Extract-EmmentalerMetrics.py`）— ⚠️ **これが別作業の WIP と同一**。
+   memory によれば `load_lilc_bboxes` の配線まで着手済・未実行。**Claude は触らない指示**
+2. **消費側を advance → ink に** — `SpacingRules.ApplyLeftHeadWidth` が符頭の **advance** を使っている
+   （LP の `note-spacing.cc:68` は ink extent）。同様に `GetKeySignatureAccidentalWidth` も
+   advance を合計している（LP は stencil＝LILC bbox を `add_at_edge(padding=0)`）
+
+⚠️ **2 だけを入れても無意味**（全音符 −0.002002 → **+0.001998** に符号が変わるだけ、二分音符は不変）。
+**1 が入って初めて 0 になる。** したがって④は 1 の判断待ち。
+
+**1+2 が入ると閉じる台帳エントリ**（予測）: `barline.prev.whole-note` / `.half-note` /
+`midmeasure.clef.prev-note-to-clef` / `midmeasure.key.prev-note-to-key` /
+`midmeasure.key.key-to-next-note` / `midmeasure.key-cancel.prev-note-to-key`
+＝ **6点・合計 0.006 ss**。**exact 数は 8/21 → 14/21 になる見込み。**
+
+⚠️ `barline.next.accidental-to-notehead` の −0.150 は**これとは別**。
+LP の内訳は `1.100010`（sharp）＋`0.349990`（padding）で、Lily# は `1.1000 + AccidentalNoteGap 0.2`。
+**padding 定数 0.2 が LP の 0.35 と違う**のが本体（LILC では 0.00001 しか動かない）。
 
 ### ⑤ MMR run のグルーピング
 
