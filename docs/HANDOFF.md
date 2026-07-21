@@ -142,15 +142,25 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 
 ### ③ non-musical PaperColumn（`BoundaryColumn`）の完成 — §3.I / §4.3 #9
 
-**LP にある型が Lily# に無い**ケース。**行頭**の key/time 変更が break-align 列に入らず、
-次の音符列にぶら下がっているため、台帳の 4 点（`barline.next.key-change-*` /
-`time-change-*`、合計 −4.44 ss）が大きく外れている。
+**測定フェーズ完了。モデルは `COORDINATE_AUDIT.md` §4.7.3 に 6 桁一致で確定済み。次は実装。**
 
-⚠️ **①と③は同型**（列の欠落。行中 vs 行頭）。**①は `1970b830` で完了済み**なので、
-そこで書いた `SpacingRules.MidMeasureChangeGaps` / `MeasureChangeColumn` /
-`ChangeColumnItemSpring` が**そのまま雛形になる**。違いは `Note_spacing` の分岐だけ:
-行頭は staff-bar group があるので `note-spacing.cc:99-100`（bar line の列内オフセットを引く）、
-行中は `:103-108`。**着手前に score K/T を6桁まで分解しておくこと**（①でそうしたように）。
+**行頭**の key/time 変更が break-align 列に入らず、次の音符列にぶら下がっているため、
+台帳の 4 点（`barline.next.key-change-*` / `time-change-*`、合計 **4.439007 ss**）が外れている。
+
+| 要素 | LP | Lily# 現状 |
+|---|---|---|
+| 列の中（bar line → key/time） | `BarLine.space-alist` **1.0 / 0.75** | 描画側 `openChangeX` の **0.5** 固定 |
+| 列 → 次の音符列 | `Staff_spacing::get_spacing`（§4.7.2 と同じ関数）| `ChangeItemPrefixWidth + 0.3` |
+| 列原点 | bar line の ink 左端 | 列そのものが無い |
+
+**①（`1970b830`）の `MidMeasureChangeGaps` / `MeasureChangeColumn` / `ChangeColumnItemSpring`
+がそのまま雛形になる。** 右 gap は**同じ `Staff_spacing` の式**で、違いは左側だけ:
+行頭は列の中が break alignment（1.0/0.75）、行中は `Note_spacing` の `:103-108`。
+
+**実装後の予測（反証可能・§4.7.3 の表）**: `*-glyph` 2点は **0**、
+`key-change-to-notehead` は **−0.034272**（臨時記号 padding が `min_dist` 経由で入る＝④'の欠陥）、
+`time-change-to-notehead` は **−0.004735**（TimeSignature grob 幅、**OPEN**）。
+**合計 4.439007 → 0.039007 ss、exact 15/21 → 17/21。**
 
 ### ④ ✅ 完了（`9de790a2`）— グリフメトリクスを LILC 由来に
 

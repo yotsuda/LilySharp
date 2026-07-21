@@ -748,6 +748,71 @@ Real fixed = last_ext[RIGHT];                                         // :166  �
 **両側・両ケースとも 6 桁一致。モデルは確定。**（`min_dist` の 0.1 と 0.0 の差＝KeySignature の
 左 esw が 0 であること、が MC と MK の左 gap の 0.05 差をちょうど説明する。）
 
+#### 4.7.3 行頭（小節境界）変更 item の導出済みモデル（2026-07-21・LP 2.24.4 で実測確定）
+
+§4.7.2 の行中版に対する**行頭版**。§3.I／ロードマップ③の実装仕様。**probe K/T の4点すべて 6 桁一致。**
+
+行頭では変更 item は bar line と**同じ non-musical 列**に入り、列の中は **break alignment** で並ぶ。
+
+**列原点 ＝ bar line の ink 左端**（＝その anchor）。§4.7.1 の `last_ext[RIGHT]`＝0.19 がこの前提。
+
+**(a) 列の中**（break alignment）: 各 break-align group の左端 ＝ 直前 group の ink 右端
+＋ **左側 group の `space-alist` の、右側 group の `break-align-symbol` エントリ**。
+
+| | 出典 | 予測 | 実測 |
+|---|---|---|---|
+| bar line ink 右 → key signature | `BarLine.space-alist (key-signature . (extra-space . 1.0))` | 1.000000 | **1.000000** ✓ |
+| bar line ink 右 → time signature | 同 `(time-signature . (extra-space . 0.75))` | 0.750000 | **0.750000** ✓ |
+
+順序は `clef, cue-clef, staff-bar, key-cancellation, key-signature, time-signature`
+（`define-grobs.scm:650-664`）。**clef だけ bar line の前**に来るのはこの順序が理由。
+
+**(b) 列 → 次の音符列**: `Staff_spacing::get_spacing`（§4.7.2 と**同じ関数**）。
+`last_grob` は列内の**最右**の break-align grob なので、key/time があればそれ。
+
+```c
+fixed = last_ext[RIGHT]                    // 列原点(bar line ink 左)からの右端
+  KeySignature : first-note shrink-space 2.5      → ideal = fixed + 2.5
+  TimeSignature: first-note semi-shrink-space 2.0 → fixed += 1.0; ideal = fixed + 1.0
+min_dist = (fixed + esw_right) + (次列の最左 ink 到達 + その esw_left)
+fixed = max(fixed, 0.3 + min_dist);  ideal = max(ideal, fixed)      // :213-215
+```
+
+**実測照合**（列原点 = 20.945729）:
+
+| | `fixed` | ideal（space-alist） | `min_dist` | `0.3+min_dist` | 採用 | 実測（列原点→符頭） |
+|---|---|---|---|---|---|---|
+| K（key、次の音符に♮） | 4.490030 | 6.990030 | 5.490030+1.234272 = 6.724302 | **7.024302** | 7.024302 | **7.024302** ✓ |
+| T（time、次の音符は素） | 3.544735 | 4.544735 | 3.344735+0.1 = 3.444735 | 3.744735 | **4.544735** | **4.544735** ✓ |
+
+→ **K は :213 の補正が binding、T は space-alist の ideal が binding。両方の枝を1組の probe で踏んでいる。**
+（K の `1.234272` は♮が符頭より左に届く量 1.034272 ＋ Accidental の esw 0.2。）
+
+##### Lily# の現状（実測分解）
+
+行頭は列を持たず、次の2つが決めている:
+
+1. `SharedRenderer.EnumerateStaffItems` の `openChangeX = ml.X + afterBar + ClefChangePadding`
+   → 変更グリフは **bar line ink 右 + 0.5**（LP は key 1.0 / time 0.75）
+   → 台帳の `-0.500000` / `-0.250000` は**ちょうどこの差**
+2. `BarlineToFirstColumnSpring` の min に `ChangeItemPrefixWidth(firstItems, excludeClef:true)`
+   ＝ `W + 2×0.5` を入れ、`ApplyMergeSpringsHeadroom` が `min + 0.3` に持ち上げる
+   → K: `(3.300030+1.0) + 0.3 = 4.600030`（LP 6.834302）＝ 台帳の `-2.234272`
+
+##### 実装後の予測（反証可能）
+
+上のモデルを入れると:
+
+| 台帳キー | 現在 | **予測** | 予測残差の帰属 |
+|---|---|---|---|
+| `barline.next.key-change-glyph` | −0.500000 | **0** | — |
+| `barline.next.time-change-glyph` | −0.250000 | **0** | — |
+| `barline.next.key-change-to-notehead` | −2.234272 | **−0.034272** | 臨時記号→符頭の距離（Lily# 0.866666 / LP 1.034272）が `min_dist` 経由で入る。**③ではなく padding 側の欠陥** |
+| `barline.next.time-change-to-notehead` | −1.454735 | **−0.004735** | TimeSignature grob 幅 Lily# 1.600000 / LP 1.604735。**OPEN**（`fattened.four` の LILC は 1.600000 ちょうどなので、LP がどこで 0.004735 を足しているか未特定） |
+
+**合計 4.439007 → 0.039007 ss。exact は 15/21 → 17/21 の見込み。**
+**外れたら診断が違う。**
+
 ##### これが §4.7 項目1（＝ HANDOFF §2①）に意味すること
 
 **「3つの extent ヘルパの frame ＋ 定数2つ」では `midmeasure.*` の4点は 0 にならない。**
