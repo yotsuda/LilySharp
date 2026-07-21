@@ -526,6 +526,7 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | 7 | LedgerLine 単位 | ✅**修正**（比率×head幅・`f5a4f89d`） |
 | 8 | GetRestShift half-space | ✅**問題なし**（consumer 無し＝vestigial・単位混在の実害なし） |
 | 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`d2020af6`、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`04f493a5`+`fbcde525`、出力中立・`GetStaffBarSpacing` の値誤りも修正）／③clef を bar line の前へ＝**完了**（`9ecbcb33`+`6a328a45`、既存 snapshot 1件のみ変更・LP 照合済）／④残る3ヘルパの吸収と item→bar line 最小値の LP 式化＝**未着手**（全小節が動くため要承認） |
+| 10 | **X 基準点未統一**（§4.7） | 🔄**進行中**。①音符/休符を左端基準へ＋`GetItemToBarlineSpace`=0.2＝**完了**（`836be0ba`）／③`CalculateLeftExtent` の stale doc＝**完了**（`b24d2085`）／④`BarlineToFirstColumnSpring` の `Staff_spacing::get_spacing` 字面移植（min/stretch/0.3補正/compress/optical）＝**完了**（`01c3da38`+`1307fe5c`、snapshot 43+59 再ベース・LP 実測照合済）／①変更 item の frame＋定数と②`CalculateRightExtent` の統廃合＝**未着手** |
 | doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
 | doc | IDrawingContext.cs:37-39 | 🔲**未対処**。YFlip 配線済につき装飾前=Y-up/装飾後=Y-down の2フレームを運ぶ。remark は後段のみ記述（§3.G）。当初「false-positive」としたのは**誤り**だった |
 | 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔄**進行中**（正確な現状は `HANDOFF-stage4-vertical-yup.md`）。**YFlip 配線＋全 grob レイアウト Y-up 化は Phase 2i〜2z で既完了**（`e09d4e72`ほか。旧「未配線」記述は stale だった）。残＝共有 device stacking/skyline substrate の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b` 済／OutsideStaffStacker・MusicMarkEngraver 等 残）＋ system.Y/staff.Y の Y-up 格納（W2）。各島は boundary-shim で独立に byte 不変移行可。出力は既に正 |
@@ -566,14 +567,15 @@ paper column フレームでの extent。2.24.4 で PaperColumn と NoteHead の
 `836be0ba` で音符/休符側を左端基準へそろえ、0.8 を LP の `esw+esw = 0.2` へ置換。
 
 **残り（本項目の作業内容）**:
-1. **変更 item（clef/key/time）が3ヘルパとも中心基準** — 内部的には一貫しているが LP と異なる。
-   そのため `GetItemToBarlineSpace` の変更 item エントリ 1.0 も据え置いた。**frame と定数は同時に直す**。
-2. **`CalculateRightExtent` が中心基準のまま production 未使用** — `SvgTests.cs:166-167` が
+1. 🔲**未着手**. **変更 item（clef/key/time）が3ヘルパとも中心基準** — 内部的には一貫しているが LP と異なる。
+   そのため `GetItemToBarlineSpace` の変更 item エントリ 1.0 も、`GetBarlineToItemMinimum` の
+   1.0/1.0/0.75 も据え置いてある。**frame と定数は同時に直す**。
+2. 🔲**未着手**. **`CalculateRightExtent` が中心基準のまま production 未使用** — `SvgTests.cs:166-167` が
    左（左端基準）と右（中心基準）を**ペアで**使っており、テスト自体が2 frame で box を測っている。
    §3.11 の手順（横断 grep →`<see cref>` →承認）を経てから統廃合すること。
-3. **`CalculateLeftExtent` の XML doc が stale** — 本体は左端基準に変換済なのに summary/remarks が
-   「reference point ... notehead center」のまま（§3.2 の「doc を疑う」実例がまた1件）。
-4. **`BarlineToFirstColumnSpring` を `Staff_spacing::get_spacing` の字面移植へ**（式は導出済・下記）。
+3. ✅**完了**（`b24d2085`）. `CalculateLeftExtent` の XML doc が stale だった。
+4. ✅**完了**（`01c3da38` ＋ `1307fe5c`）. `BarlineToFirstColumnSpring` を
+   `Staff_spacing::get_spacing` の字面移植へ。**§4.7.1 参照**。
 
 #### 4.7.1 `Staff_spacing::get_spacing` の導出済みモデル（`lily/staff-spacing.cc:118-221`）
 
@@ -604,8 +606,20 @@ ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
 | clef 無し | 0.19（bar line のみ） | `0.19+0.45+0.45` = **1.09** | **1.090000** ✓ |
 | clef 有り | 3.03668（clef+0.7+bar line） | `3.03668+0.9` = 3.93668 ＋optical 0.189365 | **4.126045** ✓ |
 
-→ **clef 有無の非対称は `last_ext[RIGHT]` が列原点基準だから**。bar line 幅ではなく
-`next_notes_correction`（光学補正）が残差 0.189365 の正体。
+→ **clef 有無で `last_ext[RIGHT]` が変わるのは、それが列原点基準だから。**
+
+> ⚠️ **訂正（2026-07-21・実測）**: この表の残差 0.189365 を「clef 有りのときの optical」と読むのは**誤り**。
+> `next_notes_correction` は **clef ではなく下向き符尾**に反応する。bar line ink 右端 → 次の符頭 ink 左端で
+> 2×2 を測ると:
+>
+> | | 上向き符尾 | 下向き符尾 |
+> |---|---|---|
+> | clef 無し | **0.900000** | **1.042857** |
+> | clef 有り | **0.900000** | **1.089365** |
+>
+> **clef 有り＋上向きは補正ゼロ**（0.900000）で、**clef 無し＋下向きが第3の値**（1.042857）を出す。
+> clef を変数にしたモデルではこの3値を説明できない。移植は `1307fe5c`、
+> `SpacingRules.BarlineToNextNotesCorrection` に 2×2 ごと記録してある。
 
 **Lily# との差分**（`BarlineToFirstColumnSpring`）:
 
@@ -621,17 +635,34 @@ ret.set_inverse_stretch_strength (max (0.0, stretchability));           // :218
 min を 0.39 側へ直せば floor は no-op（0.39+0.3=0.69 < 1.09）になり、全 spring に floor を
 掛けられるようになる。**min・stretch・0.3 補正・floor は同時に入れる**こと。
 
+> **実装後の追記**: 実際には `ApplyMergeSpringsHeadroom` の呼び出しは**足していない**。
+> :213 の補正が `ideal ≥ fixed ≥ 0.3 + min_dist` を保証するので、floor は**証明可能に no-op**。
+> 「両方効く」（§2.2 相当の記述）は機構としては正しいが、この spring では結果が同じになる。
+
 **⚠️ frame 変換（実装時に必須）**: LP の spring は**列原点→列原点**、Lily# の spring は
 **bar line の ink 右端→次の item 列**。差は `last_ext[RIGHT]`＝clef 無しなら bar line 幅 0.19
 （Lily# はこの 0.19 を描画側で別に持つ）。**Lily# フレームに直した目標値**:
 
 | 量 | LP（列原点） | **Lily#（ink 右端）** | Lily# 現状 |
 |---|---|---|---|
-| `fixed` | 0.19+0.45 = 0.64 | **0.45**（= distance/2） | 暗黙 0.45 |
-| `ideal` | 1.09 | **0.9** | 0.9 ✓ |
-| `min_dist` | 0.29+0.1 = 0.39 | **0.2 + `CalculateLeftExtent`**（= esw 0.1 + esw 0.1） | **0.9** ✗ |
-| `stretch` | ideal−fixed = 0.45（:200、**0.3 補正の前**に確定） | **0.45** | **0** ✗ |
-| 0.3 補正 | `fixed = max(fixed, 0.3+min_dist)` → 0.50 | 同 | 無し ✗ |
+| `fixed` | 0.19+0.45 = 0.64 | **0.45**（= distance/2） | ✅ |
+| `ideal` | 1.09 | **0.9** | ✅ |
+| `min_dist` | 0.29+0.1 = 0.39 | **0.1 + `CalculateLeftExtent` + 左端 grob の esw** | ✅（旧: 0.9） |
+| `stretch` | ideal−fixed = 0.45（:200、**0.3 補正の前**に確定） | **0.45** | ✅（旧: 0＝剛体） |
+| 0.3 補正 | `fixed = max(fixed, 0.3+min_dist)` → 0.50 | 同 | ✅（旧: 無し） |
+| optical | `next_notes_correction`（:206-208） | 同（下向き符尾のみ） | ✅ `1307fe5c` |
+| compress | `ideal − fixed`（:219） | 同 | ✅（旧: `ideal − min`） |
+
+**`min_dist` の esw は grob 依存**: 既定は 0.1 だが **Accidental は `(-0.2 . 0.0)`**
+（`define-grobs.scm:40`）。列の最左 ink が臨時記号なら左側は 0.2。実測で確定（`c'4 d' e' f' | cis'4 …`）:
+dump した rod 2.04 ＝ min_dist 1.94 ＋ padding 0.1、`1.94 = 0.19 + 0.1 + 1.45 + 0.2`、
+配置は `min_dist + 0.3 = 2.240` ＝ 実測 `23.185729 − 20.945729`。
+なお `AccidentalPlacement.left-padding` は**摂動しても動かない**ので犯人ではない（0/0.5 で不変を確認）。
+
+**`stretch` は実測で裏取り済**（源典読みだけではない）。`c'4 d' e' f' | g'4 a' b' c''` を
+justify すると当該 gap は 0.900000 → 1.996558（120mm）→ 3.091335（180mm）。
+strength 0.45 として force を解くと 2.43680 / 4.86963、その force を**別の musical spring**
+（natural 3.002257 → 7.140047 / 11.271114）に入れると両方 1.69805 で一致する。
 
 min が `0.2 + 左到達` になるのは②で `GetItemToBarlineSpace` を `esw+esw = 0.2` にしたのと同じ根拠
 （`Paper_column::minimum_distance` は純 skyline）。**`GetBarlineToItemSpace` の 0.9 は ideal 用の
