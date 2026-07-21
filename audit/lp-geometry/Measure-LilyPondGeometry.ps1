@@ -21,6 +21,9 @@
     detached via `cmd /c "... < NUL"`. LilyPond exits with code 1 even on a clean run here
     (there is no output file with -dbackend=null); the dump on stdout is still complete.
 
+    stdout and stderr are kept on SEPARATE files. Merged, LilyPond's diagnostics land in
+    the middle of a dump line and the parser drops it — see the comment at the run itself.
+
 .EXAMPLE
     pwsh audit/lp-geometry/Measure-LilyPondGeometry.ps1
 #>
@@ -41,21 +44,38 @@ $work = Join-Path ([System.IO.Path]::GetTempPath()) ("lp-geometry-" + [System.IO
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
     $out = Join-Path $work 'out.txt'
-    cmd /c "`"$LilyPond`" -dbackend=null -o `"$work\o`" `"$probePath`" > `"$out`" 2>&1 < NUL" | Out-Null
+    $err = Join-Path $work 'err.txt'
+    # stderr goes to its OWN file. Merging it into stdout (`2>&1`) splices LilyPond's
+    # diagnostics into the middle of a dump line — stderr is unbuffered and stdout is not.
+    # Under -dbackend=null LilyPond always reports "Unbound variable: output-stencils", and
+    # that once landed inside score MC's third note head, cutting `PROBE MC HEAD
+    # x=17.102165 ext=(...)` in two. The parser dropped both halves and the probe still
+    # looked complete, so `midmeasure.clef.clef-to-next-note` was being read to the FOURTH
+    # head.
+    cmd /c "`"$LilyPond`" -dbackend=null -o `"$work\o`" `"$probePath`" > `"$out`" 2> `"$err`" < NUL" | Out-Null
 
-    $rows = Get-Content $out |
-        Where-Object { $_ -match '^PROBE (\S+) (\S+) x=(\S+) ext=\((\S+) \. (\S+)\)' } |
-        ForEach-Object {
-            if ($_ -match '^PROBE (\S+) (\S+) x=(\S+) ext=\((\S+) \. (\S+)\)') {
-                [pscustomobject]@{
-                    Score = $Matches[1]
-                    Kind  = $Matches[2]
-                    Anchor = [double]$Matches[3]
-                    InkL  = [double]$Matches[3] + [double]$Matches[4]
-                    InkR  = [double]$Matches[3] + [double]$Matches[5]
-                }
-            }
+    $lines = @(Get-Content $out | Where-Object { $_ -match '^PROBE ' })
+
+    # A PROBE line that does not parse is an ERROR, never a line to skip: a dump with a
+    # hole in it silently re-indexes every "next glyph" quantity onto the wrong grob.
+    $bad = @($lines | Where-Object { $_ -notmatch '^PROBE (\S+) (\S+) x=(\S+) ext=\((\S+) \. (\S+)\)$' })
+    if ($bad) {
+        throw ("LilyPond printed {0} unparsable PROBE line(s) — the dump is INCOMPLETE, " -f $bad.Count) +
+              "so any number taken from it would be measuring the wrong grob:`n  " +
+              ($bad -join "`n  ") + "`nLilyPond's stderr was:`n  " +
+              ((Get-Content $err -ErrorAction SilentlyContinue) -join "`n  ")
+    }
+
+    $rows = $lines | ForEach-Object {
+        $null = $_ -match '^PROBE (\S+) (\S+) x=(\S+) ext=\((\S+) \. (\S+)\)$'
+        [pscustomobject]@{
+            Score = $Matches[1]
+            Kind  = $Matches[2]
+            Anchor = [double]$Matches[3]
+            InkL  = [double]$Matches[3] + [double]$Matches[4]
+            InkR  = [double]$Matches[3] + [double]$Matches[5]
         }
+    }
 
     if (-not $rows) { throw "no PROBE lines in $out — check the probe and the LilyPond version" }
 
@@ -84,6 +104,24 @@ try {
                 $last = $before[-1]
                 "     barline.prev  (last anchor -> bar ink left)     = {0:F6}  [{1}]" -f ($bar.InkL - $last.Anchor), $last.Kind
             }
+        }
+
+        # A MID-MEASURE change item sits between two note heads with no bar line involved,
+        # so the bar-line block above never reports it. Print both of its gaps: the change's
+        # own frame shows up as the two trading against each other, and a single gap hides it.
+        $heads = @($s | Where-Object Kind -in 'HEAD', 'REST')
+        foreach ($ch in @($s | Where-Object Kind -in 'CLEF', 'KEY', 'TIME')) {
+            $prev = @($heads | Where-Object { $_.Anchor -lt $ch.Anchor })
+            $next = @($heads | Where-Object { $_.Anchor -gt $ch.Anchor })
+            if ($prev.Count -lt 1 -or $next.Count -lt 1) { continue }   # prefatory, not mid-measure
+            # A change at a measure BOUNDARY is break-aligned into the boundary column and
+            # priced by a different model (the barline.next.* block above). Test for a bar
+            # line anywhere between the two heads, not just left of the change: a clef
+            # change at a bar line is engraved BEFORE that bar line, so it has no bar to its
+            # left yet is still break-aligned (probe scores B and D).
+            if ($s | Where-Object { $_.Kind -eq 'BAR' -and $_.Anchor -gt $prev[-1].Anchor -and $_.Anchor -lt $next[0].Anchor }) { continue }
+            "     midmeasure    (prev head -> {0,-4} anchor)          = {1:F6}" -f $ch.Kind, ($ch.Anchor - $prev[-1].Anchor)
+            "     midmeasure    ({0,-4} anchor -> next head)          = {1:F6}" -f $ch.Kind, ($next[0].Anchor - $ch.Anchor)
         }
     }
     Write-Host ""

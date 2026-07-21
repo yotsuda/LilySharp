@@ -18,6 +18,14 @@
 
 \header { tagline = ##f }
 
+%% These dumps go to STDOUT. Keep LilyPond's stderr on its own stream when running this
+%% (Measure-LilyPondGeometry.ps1 does): merging the two splices LilyPond's own diagnostics
+%% into the MIDDLE of a dump line. Under -dbackend=null it always reports "Unbound
+%% variable: output-stencils" at book-handling time, and that once landed inside score MC's
+%% third note head, leaving a truncated `PROBE MC HEAD x=` that the parser then discarded —
+%% so the probe looked complete while `clef -> next note` was actually being measured to the
+%% FOURTH head. The value was never missing; the line was cut in half.
+
 #(define ((gd tag name) g)
    (format #t "\nPROBE ~a ~a x=~a ext=~a\n" tag name
            (ly:grob-relative-coordinate g (ly:grob-system g) X)
