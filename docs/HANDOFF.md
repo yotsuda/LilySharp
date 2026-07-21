@@ -27,13 +27,22 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 37 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
+**origin より 40 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
 **テスト 0 failed / 3126 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 15/21 exact, total |residual| = 4.738987 ss。**
+**LP 忠実度 17/21 exact, total |residual| = 0.338987 ss。**
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 15個を除く。§8）。
 
 `audit/scripts/Extract-EmmentalerMetrics.py` の WIP（LILC 移行）は**ユーザー解禁のうえ完遂・
 コミット済み**（`9de790a2`）。もう「触らない」対象ではない。
+
+### 残る残差は **4点 0.338987 ss、原因は2つだけ**
+
+| 残差 | 点数 | 原因 |
+|---|---|---|
+| −0.149990 ×2、−0.034272 | **3** | **臨時記号→符頭の距離**（Lily# 0.866666〜1.300 / LP 1.034272〜1.450）。1点は `min_dist` 経由 |
+| −0.004735 | 1 | **OPEN** — TimeSignature grob 幅 1.600000 / LP 1.604735 |
+
+**次の一手はこの臨時記号 padding**（§2④'）。3点・0.334252 ss を1つの欠陥が持っている。
 
 ### 直近セッション（2026-07-21・後半）でやったこと
 
@@ -47,24 +56,18 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | `1970b830` | **§2① 実装**。行中変更を LP の専用列として価格付け（左右で別の式）。snapshot 3件 |
 | `d6ace8b9` | ④の帰属訂正（`3b322821` で書いた修正手段が誤りだった） |
 | `9de790a2` | **§2④ 実装**。グリフ bbox を LILC 由来に＋ advance→ink。snapshot 184件 |
+| `28bcd106` | §2③ の測定フェーズ（`COORDINATE_AUDIT.md` §4.7.3、予測を先に置いた） |
+| `0aae1016` | **§2③ 実装**。行頭 key/time の境界列。**予測が4点とも桁まで的中**。snapshot 14件 |
 
 **重要**: 台帳の値自体は全部正しかった（19点すべて再現）。壊れていたのは**再現手段**のほう。
 
 ### 進行中で中断しているものは無い
 
-**残る残差は 2 原因だけ**になった:
-
-| 残差 | 点数 | 原因 |
-|---|---|---|
-| 4.439007 | 4 | **境界列の欠落**（§2③） |
-| 0.299980 | 2 | **臨時記号→符頭の padding** が 0.2、LP は **0.349990** |
-
-後者は③にブロックされない小さな題材。`GlyphMetrics.AccidentalNoteGap` が本体だが、
-**着手前に LP 側を摂動法で裏取りすること**（固定 0.35 なのか別の式の結果なのか未確認）。
+**X 軸の変更 item は行中・行頭とも完結。** 次は §2④'（臨時記号 padding）。
 
 ⚠️ **`total |residual|` の履歴は点集合が違う。同じ集合の中でだけ比較すること。**
 15点 4.592405 → 19点 11.435647（`84dc3a79` が行中4点を追加＝それまで測っていなかった発散の可視化）
-→ 21点 4.747978（`1970b830`＋MKA 2点）→ 21点 **4.738987**（`9de790a2`）。
+→ 21点 4.747978（`1970b830`＋MKA 2点）→ 4.738987（`9de790a2`）→ 21点 **0.338987**（`0aae1016`）。
 
 ---
 
@@ -140,27 +143,47 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 右（中心基準）を**ペアで**使い、同じ box を2フレームで測っている。
 §5.1 の削除手順（横断 grep →`<see cref>` →**ユーザー承認**）を経ること。
 
-### ③ non-musical PaperColumn（`BoundaryColumn`）の完成 — §3.I / §4.3 #9
+### ③ ✅ 完了（`0aae1016`）— 行頭 key/time の境界列
 
-**測定フェーズ完了。モデルは `COORDINATE_AUDIT.md` §4.7.3 に 6 桁一致で確定済み。次は実装。**
+モデルは `COORDINATE_AUDIT.md` §4.7.3。**着手前の予測が4点とも桁まで的中**した:
 
-**行頭**の key/time 変更が break-align 列に入らず、次の音符列にぶら下がっているため、
-台帳の 4 点（`barline.next.key-change-*` / `time-change-*`、合計 **4.439007 ss**）が外れている。
+| 台帳キー | 実装前 | 予測 | 実測 |
+|---|---|---|---|
+| `barline.next.key-change-glyph` | −0.500000 | 0 | **0** |
+| `barline.next.time-change-glyph` | −0.250000 | 0 | **0** |
+| `barline.next.key-change-to-notehead` | −2.234272 | −0.034272 | **−0.034272** |
+| `barline.next.time-change-to-notehead` | −1.454735 | −0.004735 | **−0.004735** |
 
-| 要素 | LP | Lily# 現状 |
+**4.439007 → 0.039007 ss、exact 15/21 → 17/21。** snapshot 14件。
+
+**未モデル化（意図的）**: LP は key 変更を `KeyCancellation` と `KeySignature` の**2 grob**に分け
+間に 0.5 を置くが、Lily# は1つの `KeySignatureChangeItem` に畳んでいる。コーパスは踏まない
+（probe K は 0→3 個で cancellation が出ない）。`BoundaryChangePrefix` に記録。
+
+⚠️ **`BoundaryColumn.cs`（clef を bar line の前に置く既存の型）とは別物**。今回入れたのは
+`SpacingRules.BoundaryChangePrefix` ＋ `BarlineToFirstColumnSpring` の `last_grob` 切替。
+両者の統合は未着手。
+
+### ④' 臨時記号 → 符頭の距離（**次の一手**・未着手）
+
+**残る残差 4 点のうち 3 点・0.334252 ss を1つの欠陥が持っている。**
+
+| 台帳キー | residual | 経路 |
 |---|---|---|
-| 列の中（bar line → key/time） | `BarLine.space-alist` **1.0 / 0.75** | 描画側 `openChangeX` の **0.5** 固定 |
-| 列 → 次の音符列 | `Staff_spacing::get_spacing`（§4.7.2 と同じ関数）| `ChangeItemPrefixWidth + 0.3` |
-| 列原点 | bar line の ink 左端 | 列そのものが無い |
+| `barline.next.accidental-to-notehead` | −0.149990 | 直接 |
+| `midmeasure.key-cancel.key-to-next-note` | −0.149990 | `min_dist` 経由（`:213` 補正） |
+| `barline.next.key-change-to-notehead` | −0.034272 | 同上（補正が binding しなくなる分だけ小さい） |
 
-**①（`1970b830`）の `MidMeasureChangeGaps` / `MeasureChangeColumn` / `ChangeColumnItemSpring`
-がそのまま雛形になる。** 右 gap は**同じ `Staff_spacing` の式**で、違いは左側だけ:
-行頭は列の中が break alignment（1.0/0.75）、行中は `Note_spacing` の `:103-108`。
+Lily# は `CalculateLeftExtent` で `accBBox.Width + AccidentalNoteGap(0.2)`。実測:
 
-**実装後の予測（反証可能・§4.7.3 の表）**: `*-glyph` 2点は **0**、
-`key-change-to-notehead` は **−0.034272**（臨時記号 padding が `min_dist` 経由で入る＝④'の欠陥）、
-`time-change-to-notehead` は **−0.004735**（TimeSignature grob 幅、**OPEN**）。
-**合計 4.439007 → 0.039007 ss、exact 15/21 → 17/21。**
+| | LP の距離 | グリフ幅 | 差 |
+|---|---|---|---|
+| ♯（probe X） | 1.450000 | 1.100010 | **0.349990** |
+| ♮（score K） | 1.034272 | 0.666666 | **0.367606** |
+
+⚠️ **差が一定でない**（0.349990 vs 0.367606）ので、**単なる定数 0.2→0.35 ではない。**
+`Accidental_placement` の別の式（`right-padding` ＋ グリフごとの何か）を疑うこと。
+**着手前に摂動法で LP を割ること**（§5.3）。
 
 ### ④ ✅ 完了（`9de790a2`）— グリフメトリクスを LILC 由来に
 
