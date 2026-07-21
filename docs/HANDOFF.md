@@ -43,7 +43,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | `d5e65eda` | `COORDINATE_AUDIT.md` §4.7/§4.7.1 を実装後の状態に更新＋光学補正の誤帰属を訂正 |
 | `27a5b23e` | **LP 忠実度コーパス**（残差台帳）を新設。`audit/lp-geometry/` ＋ `LilySharp.Tests/LpFidelity/` |
 | `0bbc5449` | 引継ぎを本ファイル1本に集約 ＋ `CLAUDE.md` 追加 |
-| （次） | コーパスに**行中 clef/key 変更**の4点を追加（§2① の計測対象） |
+| `84dc3a79` | コーパスに**行中 clef/key 変更**の4点を追加（§2① の計測対象を先に確定） |
 
 ### 進行中で中断しているものは無い
 
@@ -128,6 +128,15 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 - 中期: **コーパスを縦（Y）にも広げる** — 現在は bar line 周りの X のみ。
   譜間距離・スラー/タイ・ビーム・臨時記号配置に点を足す
 - 原則: **snapshot を再ベースするたびに、LP 照合済みの点が増えているべき**
+
+⚠️ **既知の穴**: 以下2つの LP 検証は**数値がコメントに残っているだけで、プローブが未 commit**
+（scratchpad に置いたまま消える）。コーパスの「再実行可能」原則から外れているので、
+次に触るとき `audit/lp-geometry/probes/` に移すこと。
+- **stretch strength 0.45 の検証**（同じ音楽を 120mm / 180mm で justify し、force を解いて
+  独立な spring で交差検証）→ 数値は
+  `SpacingInvariantTests.BarlineToFirstNoteSpring_StretchesByHalfTheSpaceAlistDistance` に
+- **符尾 Y extent のダンプ**（光学補正の 2×2 の裏取り）→ 数値は
+  `SpacingRules.BarlineToNextNotesCorrection` の remarks に
 
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 
@@ -235,6 +244,13 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
   binding する。**どちらで測ったか必ず記録する**
 - **配置は「両側」を測る。** ある grob の位置は前後2つの間隙で決まる。
   さらに**同じ box の左右が同じ基準点か**を確かめる
+- ★ **残差の符号で原因を切り分ける。** あるグリフの**左右の残差が逆符号**なら
+  **frame（基準点）の誤り**、**同符号**なら**定数の誤り**。定数が違えば両側とも同じ向きに
+  ずれるが、基準点がずれていると片側が広がった分だけ反対側が狭まるため。
+  行中 clef/key 変更でこれを使って診断した（`midmeasure.*` の4点。§2①）
+- ★ **変更する前に測る。** 変更後に測ると「LP に近づいたか」を判定できない。
+  着手前にコーパスへ点を足しておけば、**反証可能な予測**（この4点が揃って 0 に向かうはず）
+  になり、外れたときに診断が違うと分かる
 - **「悪化した」＝「変更が間違い」ではない。** 間違った定数が別の欠陥を隠している構図は実在する
 - ⚠️ **SVG から精密測定をしない。** 座標は `F2`（`SvgGenerator.cs:229`）で2桁に丸められる。
   6桁の LP 値と比べるなら `LpFidelity/RecordingDocumentContext` を使う
