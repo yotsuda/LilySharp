@@ -27,30 +27,32 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 28 ahead で未 push**（push はユーザー判断。コミットは可）。
+**origin より 32 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
 **テスト 0 failed / 3123 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 7/19 exact, total |residual| = 11.435647 ss。**
+**LP 忠実度 7/19 exact, total |residual| = 11.435647 ss。**（このセッションで出力は変えていない）
 
 未コミットの `audit/scripts/Extract-EmmentalerMetrics.py` は別作業（LILC フォントメトリクス）
 の WIP。**触らない・コミットに巻き込まない。**
 
-### 直近セッション（2026-07-21）でやったこと
+### 直近セッション（2026-07-21・後半）でやったこと
+
+**§2① に着手 → 着手前の計測でスコープが誤りと判明したので、実装せず設計をやり直した。**
 
 | commit | 内容 |
 |---|---|
-| `01c3da38` | `BarlineToFirstColumnSpring` を `Staff_spacing::get_spacing` の字面移植へ（min/stretch/0.3補正/compress）。snapshot 43件 |
-| `1307fe5c` | `next_notes_correction`（bar line 直後の下向き符尾の光学補正）を移植。snapshot 59件 |
-| `d5e65eda` | `COORDINATE_AUDIT.md` §4.7/§4.7.1 を実装後の状態に更新＋光学補正の誤帰属を訂正 |
-| `27a5b23e` | **LP 忠実度コーパス**（残差台帳）を新設。`audit/lp-geometry/` ＋ `LilySharp.Tests/LpFidelity/` |
-| `0bbc5449` | 引継ぎを本ファイル1本に集約 ＋ `CLAUDE.md` 追加 |
-| `84dc3a79` | コーパスに**行中 clef/key 変更**の4点を追加（§2① の計測対象を先に確定） |
+| `f168ac57` | 計測ハーネスの穴を塞いだ。`2>&1` で LP の stderr が**dump 行の途中に割り込み**、MC の3番目の符頭が真っ二つになって黙って捨てられていた（`clef→次の音符`が**4番目**の符頭で測られる状態）。stream 分離＋パース失敗を throw に＋行中 gap も印字 |
+| `a374317f` | **行中変更 item の LP モデルを導出**（`COORDINATE_AUDIT.md` §4.7.2、両側・両ケース 6 桁一致）。台帳4点の `why` を正しい原因に差し替え、README の stale な現状を更新 |
+| （HEAD） | §2①/③ を再スコープ（本ファイル） |
+
+**重要**: 台帳の値自体は全部正しかった（19点すべて再現）。壊れていたのは**再現手段**のほう。
 
 ### 進行中で中断しているものは無い
 
-X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2① から。
+**次の一手は §2① の実装だが、設計方針が未合意**（①と③を一体で設計するか）。
+出力が変わる（snapshot 再ベース必須）ので**着手前にユーザー判断**が要る。
 
 ⚠️ **total |residual| が 4.59 → 11.44 に増えたのは悪化ではない。**
-行中 clef/key 変更という**それまで測っていなかった発散**を可視化した結果。
+行中 clef/key 変更という**それまで測っていなかった発散**を可視化した結果（`84dc3a79`）。
 コーパスに点を足すと数字は増えうる。**比較は同じ点集合の中でのみ意味を持つ。**
 
 ---
@@ -59,14 +61,39 @@ X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2① から。
 
 優先順。**①②は COORDINATE_AUDIT §4.7 の残り**で、ユーザー合意済みの順序。
 
-### ① 変更 item（clef/key/time）の frame を左端基準へ ＋ 定数を同時に直す
+### ① 行中（mid-measure）の変更 item に**専用列**を入れる — frame 修正はその一部
 
-`CalculateLeftExtent` / `CalculateRightExtent` / `CalculateNoteheadRightExtent` の3つとも、
-変更 item だけ `width/2 + ClefChangePadding` ＝**中心基準**のまま。LP は列原点＝左端。
-そのため以下の定数も据え置いてある。**frame と定数は同時に直す**（片方だけだと値が破綻する）。
+> **2026-07-21 に再スコープ。** 旧①は「3つの extent ヘルパの frame ＋ 定数2つ」だった。
+> **着手前に測った結果、それでは 4 点は 0 にならないと分かった**（§5.3「変更する前に測る」が
+> 効いた例）。導出済みモデルと実測は `COORDINATE_AUDIT.md` **§4.7.2**。
 
-- `GetItemToBarlineSpace` の変更 item エントリ `1.0`
-- `GetBarlineToItemMinimum` の `1.0 / 1.0 / 0.75`
+**LP は行中の clef/key 変更に non-musical 列を1本立て、左右を別の式で価格付けする**:
+
+| | 式 | 出典 |
+|---|---|---|
+| 列原点 | 変更グリフの **ink 左端** | 実測 |
+| 左 gap | `max(ideal − 列幅, (ideal + min_dist)/2)` ＝実際は常に床側 | `note-spacing.cc:105-107` |
+| 右 gap | `ink幅 + space-alist 距離` | `staff-spacing.cc:147-198` |
+| 　clef | `next-note` **1.0** | `define-grobs.scm:924` |
+| 　key | `next-note` が**無い**ので `first-note` **2.5**（shrink） | `define-grobs.scm:1947` |
+| 　time | 同じく `first-note` **2.0**（semi-shrink） | `define-grobs.scm:3948` |
+| `min_dist` の左 esw | Clef=既定 0.1 / Key=**0.0** / Time=**0.0** | `define-grobs.scm:1936` / `:3933` |
+
+**MC/MK の左右4点すべて 6 桁一致でモデル確定済み。**
+
+Lily# 側は列が無く、`ChangeItemPrefixWidth`（= W + 2×0.5）を**1本の spring に丸ごと加算**し、
+描画側が `列X − (W + 0.5 + 次の臨時記号)` で**ぶら下げる**。実測分解:
+`head2→head3 = (1.304 + CalculateLeftExtent(clef) 1.505 + 0.4) + 3.010 + 0.3 = 6.519000`（実測一致）。
+
+→ **frame だけ直すと `+1.119 → +0.612` に減るが、左右の分配は変わらず逆符号のまま。**
+
+**同時に直すもの**（片方だけだと値が破綻する）:
+
+- `GlyphMetrics.ClefChangePadding = 0.5` は **space-alist のエントリ取り違え**
+  （0.5 は `right-edge`。行中で効くのは `next-note` の 1.0）。**しかも左右で別の値**
+- `GetItemToBarlineSpace` の変更 item エントリ `1.0` / `GetBarlineToItemMinimum` の `1.0/1.0/0.75`
+- 変更 clef の幅 `FClefAdvance × 0.75 = 2.010` → LP の `clefs.F_change` ink は **2.146680**。
+  `_change` グリフは実在し Lily# も描いている（`GlyphMetrics.cs:141-151`）。**これは独立した差**
 
 **計測対象は台帳の `midmeasure.*` 4点**（着手前に測定済み）:
 
@@ -77,14 +104,11 @@ X 軸の `Staff_spacing::get_spacing` 移植は完結。次は §2① から。
 | `midmeasure.key.prev-note-to-key` | 2.203234 | 4.654000 | **+2.450766** |
 | `midmeasure.key.key-to-next-note` | 5.800030 | 3.800000 | **−2.000030** |
 
-**同じグリフの左右が逆符号**なのがポイント。定数が間違っているなら両側とも同じ向きにずれる。
-逆符号は**frame の誤り**の徴候で、まさに中心基準 vs 左端基準の差。
-→ ①が正しければこの4点が 0 に向かう。**向かわなければ診断が違う。**
-
 ⚠️ **行頭（小節境界）の key/time は①では直らない。** 台帳の `barline.next.key-change-*` /
-`time-change-*`（合計 −4.44 ss）の真因は③の型欠落。①は前提条件であって解決ではない。
+`time-change-*`（合計 −4.44 ss）の真因は③の型欠落。**①と③は同じ「列の欠落」**で、
+行中か行頭かが違うだけ。**まとめて設計したほうがよい**（未合意・要判断）。
 
-⚠️ 実装前に確認済みの事実: 変更 item が extent ヘルパに到達する production 経路は
+⚠️ 変更 item が extent ヘルパに到達する production 経路は
 **`CalculateSkylineDistance` の3箇所のみ**（null-prev / null-next / skyline fallback）。
 小節頭では `ChangeItemPrefixWidth`（= W + 2×0.5）が
 `GetBarlineToItemMinimum + CalculateLeftExtent`（= W/2 + 1.5）を **W ≥ 1.0 で常に上回る**ので、
@@ -98,9 +122,13 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 
 ### ③ non-musical PaperColumn（`BoundaryColumn`）の完成 — §3.I / §4.3 #9
 
-**LP にある型が Lily# に無い**唯一のケース。行中の key/time 変更が break-align 列に入らず、
-次の音符列にぶら下がっているため、台帳の 4 点が大きく外れている。
-①③が入れば **total |residual| が 4.59 → 0.15 前後まで落ちる見込み**。
+**LP にある型が Lily# に無い**ケース。**行頭**の key/time 変更が break-align 列に入らず、
+次の音符列にぶら下がっているため、台帳の 4 点（`barline.next.key-change-*` /
+`time-change-*`、合計 −4.44 ss）が大きく外れている。
+
+⚠️ **①と③は同型**（列の欠落。行中 vs 行頭）。①③が入れば台帳の 8 点・合計 **11.28 ss** が
+対象になる。旧記述の「4.59 → 0.15 前後」は**①を frame 修正だと誤解していた頃の見積り**なので破棄。
+新しい見積りは設計を決めてから出す。
 
 ### ④ 台帳の OPEN 2 件を潰す
 
@@ -119,7 +147,7 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 7/15 exact, total |residual| = 4.592405 ss**（`audit/lp-geometry/`）。
+**現状 7/19 exact, total |residual| = 11.435647 ss**（`audit/lp-geometry/`）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
