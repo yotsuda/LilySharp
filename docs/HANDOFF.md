@@ -27,16 +27,13 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 34 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
+**origin より 37 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
 **テスト 0 failed / 3126 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 8/21 exact, total |residual| = 4.747978 ss。**
+**LP 忠実度 15/21 exact, total |residual| = 4.738987 ss。**
+**作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 15個を除く。§8）。
 
-未コミットの `audit/scripts/Extract-EmmentalerMetrics.py` は別作業（LILC フォントメトリクス）
-の WIP。**触らない・コミットに巻き込まない。**
-
-⚠️ `samples/amazing-grace.lys` も未コミットで dirty（`partial 4` を `section Verse` の中へ移動）。
-**Claude の作業ではない**（2026-07-21 22:24 に書き換わった。エディタか LSP の quick-fix と思われる）。
-出所が不明なので**巻き込まず放置した**。要ユーザー判断。
+`audit/scripts/Extract-EmmentalerMetrics.py` の WIP（LILC 移行）は**ユーザー解禁のうえ完遂・
+コミット済み**（`9de790a2`）。もう「触らない」対象ではない。
 
 ### 直近セッション（2026-07-21・後半）でやったこと
 
@@ -47,18 +44,27 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | `f168ac57` | 計測ハーネスの穴を塞いだ。`2>&1` で LP の stderr が**dump 行の途中に割り込み**、MC の3番目の符頭が真っ二つになって黙って捨てられていた（`clef→次の音符`が**4番目**の符頭で測られる状態）。stream 分離＋パース失敗を throw に＋行中 gap も印字 |
 | `a374317f` | **行中変更 item の LP モデルを導出**（`COORDINATE_AUDIT.md` §4.7.2、両側・両ケース 6 桁一致）。台帳4点の `why` を正しい原因に差し替え、README の stale な現状を更新 |
 | `e3685efb` | §2①/③ を再スコープ（frame 修正だけでは 0 にならないと実測で確定したため） |
-| `1970b830` | **実装**。行中変更を LP の専用列として価格付け（左右で別の式）。snapshot 3件・LP 照合のうえ承認済み |
+| `1970b830` | **§2① 実装**。行中変更を LP の専用列として価格付け（左右で別の式）。snapshot 3件 |
+| `d6ace8b9` | ④の帰属訂正（`3b322821` で書いた修正手段が誤りだった） |
+| `9de790a2` | **§2④ 実装**。グリフ bbox を LILC 由来に＋ advance→ink。snapshot 184件 |
 
 **重要**: 台帳の値自体は全部正しかった（19点すべて再現）。壊れていたのは**再現手段**のほう。
 
 ### 進行中で中断しているものは無い
 
-X 軸の**行中**変更は完結。残差は全て `GlyphMetricsGenerated.cs` の4桁丸め。次は §2③（行頭＝境界列）。
+**残る残差は 2 原因だけ**になった:
+
+| 残差 | 点数 | 原因 |
+|---|---|---|
+| 4.439007 | 4 | **境界列の欠落**（§2③） |
+| 0.299980 | 2 | **臨時記号→符頭の padding** が 0.2、LP は **0.349990** |
+
+後者は③にブロックされない小さな題材。`GlyphMetrics.AccidentalNoteGap` が本体だが、
+**着手前に LP 側を摂動法で裏取りすること**（固定 0.35 なのか別の式の結果なのか未確認）。
 
 ⚠️ **`total |residual|` の履歴は点集合が違う。同じ集合の中でだけ比較すること。**
 15点 4.592405 → 19点 11.435647（`84dc3a79` が行中4点を追加＝それまで測っていなかった発散の可視化）
-→ 21点 4.747978（`1970b830` が行中を潰し、MKA の2点を追加）。
-**同一の19点集合で見ると 11.435647 → 4.592858。**
+→ 21点 4.747978（`1970b830`＋MKA 2点）→ 21点 **4.738987**（`9de790a2`）。
 
 ---
 
@@ -146,47 +152,27 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 行頭は staff-bar group があるので `note-spacing.cc:99-100`（bar line の列内オフセットを引く）、
 行中は `:103-108`。**着手前に score K/T を6桁まで分解しておくこと**（①でそうしたように）。
 
-### ④ グリフメトリクスを LILC 由来にする（旧「OPEN 2 件」— **原因確定・要判断**）
-
-**台帳に残る 1e-4〜1e-3 級の残差は全部これ1つ。** 実測で確定（2026-07-21）:
+### ④ ✅ 完了（`9de790a2`）— グリフメトリクスを LILC 由来に
 
 **LP はグリフ bbox を、フォント埋込の `LILC` テーブルから読む**
 （`lily/open-type-font.cc:288` `load_scheme_table("LILC")` ＋ `:389-407`。生アウトラインは fallback）。
-`GlyphMetricsGenerated.cs` はアウトライン（`BoundsPen`）から取っている＝**非 LP 方式**。
+`GlyphMetricsGenerated.cs` はアウトライン（`BoundsPen`）から取っていた＝**非 LP 方式**で、
+これが台帳に残っていた 1e-4〜1e-3 級の残差の**唯一の原因**だった。
 
-`emmentaler-20.otf` の `LILC` を読むと（Lily# 同梱・LP 2.24.4 同梱の**両方で同値**）:
+入れたもの: 生成器を LILC 優先に／出力を **6桁**に／`ApplyLeftHeadWidth` と
+`GetKeySignatureAccidentalWidth` を **advance → ink extent** に／変更 clef も生成器から。
 
-| glyph | Lily# アウトライン | Lily# advance | **LILC** | LP 実測 |
-|---|---|---|---|---|
-| `noteheads.s0` | 1.9640 | 1.9600 | **1.962002** | 1.962002 |
-| `noteheads.s1` | 1.3760 | 1.3760 | **1.377346** | 1.377346 |
-| `noteheads.s2` | 1.3040 | 1.3040 | **1.304212** | 1.304212 |
-| `accidentals.sharp` | 1.1000 | 1.1000 | **1.100010** | 3個で 3.300030 |
-| `accidentals.natural` | 0.6960 | 0.6640 | **0.666666** | 0.666666 |
-| `clefs.F_change` | — | — | **2.146680** | 2.146680 |
+**7点が 0 に**（`barline.prev.whole-note` `.half-note` `barline.next.down-stems-after-clef`
+`midmeasure.clef.prev-note-to-clef` `midmeasure.key.prev-note-to-key`
+`midmeasure.key.key-to-next-note` `midmeasure.key-cancel.prev-note-to-key`）。
+**8/21 → 15/21 exact。** snapshot 184件・承認のうえ再ベース。
 
-**このセッションで LP から実測した値は、例外なく LILC の値だった。**（`clefs.*_change` 3種も、
-`timesig.C44` 1.699994 も、全休符 1.5 も。`1970b830` で手で入れた 2.146680 も LILC 由来。）
+⚠️ **踏んだ罠（再発しやすい）**: 生成 bbox から派生する定数を `static readonly` にすると、
+**partial クラス間の静的初期化順序は C# で未定義**なので既定値の `BBox`（=0）を読む。
+変更グリフの幅が全部 0 になり clef が自分の gap から消えた。**プロパティにすること。**
 
-**必要な変更は2つ。片方だけでは直らない**:
-
-1. **生成側を LILC に**（`Extract-EmmentalerMetrics.py`）— ⚠️ **これが別作業の WIP と同一**。
-   memory によれば `load_lilc_bboxes` の配線まで着手済・未実行。**Claude は触らない指示**
-2. **消費側を advance → ink に** — `SpacingRules.ApplyLeftHeadWidth` が符頭の **advance** を使っている
-   （LP の `note-spacing.cc:68` は ink extent）。同様に `GetKeySignatureAccidentalWidth` も
-   advance を合計している（LP は stencil＝LILC bbox を `add_at_edge(padding=0)`）
-
-⚠️ **2 だけを入れても無意味**（全音符 −0.002002 → **+0.001998** に符号が変わるだけ、二分音符は不変）。
-**1 が入って初めて 0 になる。** したがって④は 1 の判断待ち。
-
-**1+2 が入ると閉じる台帳エントリ**（予測）: `barline.prev.whole-note` / `.half-note` /
-`midmeasure.clef.prev-note-to-clef` / `midmeasure.key.prev-note-to-key` /
-`midmeasure.key.key-to-next-note` / `midmeasure.key-cancel.prev-note-to-key`
-＝ **6点・合計 0.006 ss**。**exact 数は 8/21 → 14/21 になる見込み。**
-
-⚠️ `barline.next.accidental-to-notehead` の −0.150 は**これとは別**。
-LP の内訳は `1.100010`（sharp）＋`0.349990`（padding）で、Lily# は `1.1000 + AccidentalNoteGap 0.2`。
-**padding 定数 0.2 が LP の 0.35 と違う**のが本体（LILC では 0.00001 しか動かない）。
+⚠️ `down-stems-after-clef` が閉じたのは**予測外**。残差 +0.00002 は「符尾の符頭接続オフセット差」
+と帰属されていたが、実際は符頭メトリクスだった。**帰属は閉じてみるまで確定しない**例。
 
 ### ⑤ MMR run のグルーピング
 
@@ -199,7 +185,7 @@ LP の内訳は `1.100010`（sharp）＋`0.349990`（padding）で、Lily# は `
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 8/21 exact, total |residual| = 4.747978 ss**（`audit/lp-geometry/`）。
+**現状 15/21 exact, total |residual| = 4.738987 ss**（`audit/lp-geometry/`）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
