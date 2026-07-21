@@ -79,29 +79,29 @@
       "probe": "barline-spacing.ly",
       "score": "K",
       "lilypond": 1.000000,
-      "residual": -0.500000000,
-      "why": "LilyPond break-aligns a mid-line key change into the boundary column and spaces bar-line to key-signature by BarLine.space-alist (key-signature . (extra-space . 1.0)). Lily# has no such column and hangs the key signature off the following note column instead. COORDINATE_AUDIT.md 3.I / 4.3 #9."
+      "residual": 0.0,
+      "why": ""
     },
     "barline.next.key-change-to-notehead": {
       "probe": "barline-spacing.ly",
       "score": "K",
       "lilypond": 6.834302,
-      "residual": -2.234272,
-      "why": "Same missing boundary column as barline.next.key-change-glyph: the whole prefix between bar line and note is priced by a different model. COORDINATE_AUDIT.md 3.I. (Was -2.234302; the 0.00003 it moved is the key signature's width becoming its LILC value.)"
+      "residual": -0.034272,
+      "why": "The boundary column is right; what is left is the accidental. The note opening this measure is a c' under A major, so it carries a natural, and that natural's reach is the musical column's leftmost ink — it enters Paper_column::minimum_distance, and here the 0.3 + min_dist correction (staff-spacing.cc:213) is what decides the gap rather than the space-alist ideal. LilyPond's natural stands 1.034272 from its head, Lily#'s 0.866666, and the whole residual is that 0.167606 minus the 0.133334 by which the correction then stops binding. Same defect as barline.next.accidental-to-notehead, arriving through the rod. Was -2.234272 before the column existed."
     },
     "barline.next.time-change-glyph": {
       "probe": "barline-spacing.ly",
       "score": "T",
       "lilypond": 0.750000,
-      "residual": -0.250000000,
-      "why": "Same missing boundary column: LilyPond spaces bar-line to time-signature by BarLine.space-alist (time-signature . (extra-space . 0.75)). COORDINATE_AUDIT.md 3.I."
+      "residual": 0.0,
+      "why": ""
     },
     "barline.next.time-change-to-notehead": {
       "probe": "barline-spacing.ly",
       "score": "T",
       "lilypond": 4.354735,
-      "residual": -1.454735000,
-      "why": "Same missing boundary column as barline.next.time-change-glyph. COORDINATE_AUDIT.md 3.I."
+      "residual": -0.004735,
+      "why": "OPEN: the TimeSignature grob's own width. Lily# takes the wider of the two digit advances and gets 1.600000; LilyPond's grob measures 1.604735. It is not the digits' LILC bboxes — fattened.four's is exactly 1.600000 and fattened.three's 1.333334 — so LilyPond adds 0.004735 somewhere in ly:time-signature::print that has not been located. The 1.600000 rides through Staff_spacing untouched (the space-alist ideal binds here, not the 0.3 + min_dist correction), so the residual is exactly the width error. Was -1.454735 before the boundary column existed."
     },
     "midmeasure.clef.prev-note-to-clef": {
       "probe": "barline-spacing.ly",

@@ -1703,16 +1703,77 @@ internal static class SpacingRules
     /// carries yet. LILYPOND-REF: lily/staff-spacing.cc:174-198.
     /// </para>
     /// </remarks>
-    private static double ChangeItemSpaceToNextNote(MusicItem item) => item switch
+    private static double ChangeItemSpaceToNextNote(MusicItem item) =>
+        ChangeItemSpaceDef(item).Distance;
+
+    /// <summary>
+    /// The whole space-alist entry a change grob offers the following note: the distance and
+    /// which of <c>Staff_spacing</c>'s arms consumes it.
+    /// </summary>
+    /// <param name="SplitsFixed">semi-shrink-space, which puts HALF the distance into
+    /// <c>fixed</c> before the ideal (staff-spacing.cc:193-198). extra-space and shrink-space
+    /// leave <c>fixed</c> alone, so they differ from it under compression even though all
+    /// three put the ideal at <c>last_ext[RIGHT] + distance</c>.</param>
+    /// <param name="Stretchable">shrink-space and semi-shrink-space clear
+    /// <c>is_stretchable</c> (:191, :197); extra-space does not.</param>
+    private static (double Distance, bool SplitsFixed, bool Stretchable)
+        ChangeItemSpaceDef(MusicItem item) => item switch
+        {
+            // (next-note . (extra-space . 1.0))            scm/define-grobs.scm:924
+            ClefChangeItem => (1.0, false, true),
+            // (first-note . (shrink-space . 2.5))          scm/define-grobs.scm:1947
+            KeySignatureChangeItem => (2.5, false, false),
+            // (first-note . (semi-shrink-space . 2.0))     scm/define-grobs.scm:3948
+            TimeSignatureChangeItem => (2.0, true, false),
+            _ => (0, false, true)
+        };
+
+    /// <summary>
+    /// A key or time change opening a measure shares the bar line's non-musical column. This
+    /// returns how far its ink right edge sits from the bar line's ink RIGHT edge — the frame
+    /// <see cref="BarlineToFirstColumnSpring"/> works in — and which grob ends the column.
+    /// Null when nothing break-aligned opens the measure.
+    /// </summary>
+    /// <remarks>
+    /// Inside the column, break alignment puts each group's left edge at the previous group's
+    /// ink right plus the LEFT group's space-alist entry keyed on the RIGHT group's
+    /// break-align-symbol: BarLine gives key-signature 1.0 and time-signature 0.75
+    /// (scm/define-grobs.scm BarLine.space-alist, transcribed in
+    /// <see cref="GetBarlineToItemSpace"/>). Measured on 2.24.4: bar-line ink right to the
+    /// signature's anchor is exactly 1.000000 and 0.750000 — COORDINATE_AUDIT.md §4.7.3.
+    /// <para>
+    /// A CLEF change opening a measure is excluded: break-align-orders engraves it BEFORE the
+    /// bar line (scm/define-grobs.scm:650-664), so it is paid for by the preceding measure's
+    /// closing gap via <see cref="BoundaryClefAllowance"/> and contributes nothing here.
+    /// </para>
+    /// <para>
+    /// ⚠️ SIMPLIFICATION: LilyPond splits a key change into a KeyCancellation grob and a
+    /// KeySignature grob with 0.5 between them (KeyCancellation.space-alist), where Lily#
+    /// carries both in one KeySignatureChangeItem whose width already sums the naturals. The
+    /// corpus does not reach that case — probe K goes from no accidentals to three, so no
+    /// cancellation is engraved — and it is a separate defect from this one.
+    /// </para>
+    /// </remarks>
+    internal static (double Prefix, MusicItem LastChange)? BoundaryChangePrefix(
+        IReadOnlyList<MusicItem>? firstItems)
     {
-        // (next-note . (extra-space . 1.0))            scm/define-grobs.scm:924
-        ClefChangeItem => 1.0,
-        // (first-note . (shrink-space . 2.5))          scm/define-grobs.scm:1947
-        KeySignatureChangeItem => 2.5,
-        // (first-note . (semi-shrink-space . 2.0))     scm/define-grobs.scm:3948
-        TimeSignatureChangeItem => 2.0,
-        _ => 0
-    };
+        if (firstItems == null)
+            return null;
+
+        double prefix = 0;
+        MusicItem? last = null;
+        foreach (var item in firstItems)
+        {
+            if (item is ClefChangeItem || !IsChangeItem(item))
+                continue;
+            prefix += last == null
+                ? GetBarlineToItemSpace(item)
+                : BetweenChangeItemsSpace(last, item);
+            prefix += ChangeItemColumnWidth(item);
+            last = item;
+        }
+        return last == null ? null : (prefix, last);
+    }
 
     /// <summary>
     /// A change grob's own <c>extra-spacing-width</c>, as (leftward, rightward) reach.
@@ -1841,6 +1902,14 @@ internal static class SpacingRules
             return 0;
         return RightGap(columnWidth, last!, RightRod(columnItems!, columnWidth, last!));
     }
+
+    /// <summary>
+    /// How far the next change grob in the same column sits from this one's origin: this
+    /// glyph's own width plus the break-align gap to <paramref name="next"/>.
+    /// </summary>
+    internal static double ChangeColumnGlyphAdvance(MusicItem change, MusicItem? next) =>
+        ChangeItemColumnWidth(change)
+        + (next != null ? BetweenChangeItemsSpace(change, next) : 0);
 
     /// <summary>
     /// Where <paramref name="change"/> sits inside its change column, measured from the
@@ -2016,17 +2085,42 @@ internal static class SpacingRules
     internal static Spring BarlineToFirstColumnSpring(
         IReadOnlyList<MusicItem>? firstItems, bool fillsMeasure)
     {
-        double distance = EngravingDefaults.BarLineToNextNoteSpace;
+        // `last_grob` is the RIGHTMOST break-aligned grob in the boundary column, which is
+        // the bar line only when nothing else opens the measure. A key or time change shares
+        // that column, so IT owns the space-alist consulted here and `fixed` opens at its ink
+        // right edge instead of the bar line's — COORDINATE_AUDIT.md §4.7.3.
+        // LILYPOND-REF: lily/staff-spacing.cc:125-126
+        //   Spacing_interface::extremal_break_aligned_grob (me, LEFT, ...).
+        var boundary = BoundaryChangePrefix(firstItems);
 
-        // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
-        // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting
-        // spring is NOT rigid. (LilySharp used to pass inverseStretchStrength 0 here on
-        // the strength of a comment claiming semi-fixed was unstretchable; the source
-        // says otherwise.)
-        // LILYPOND-REF: lily/staff-spacing.cc:164-180.
-        double fixedDistance = distance / 2;
-        double ideal = fixedDistance + distance / 2;
-        const bool isStretchable = true;
+        double distance;
+        double fixedDistance;
+        bool isStretchable;
+        if (boundary is var (prefix, lastChange) && boundary.HasValue)
+        {
+            var def = ChangeItemSpaceDef(lastChange);
+            distance = def.Distance;
+            // fixed opens at last_ext[RIGHT] — in this spring's frame, the bar line's own
+            // width is already behind us, so that is the prefix.
+            // LILYPOND-REF: lily/staff-spacing.cc:166.
+            fixedDistance = prefix + (def.SplitsFixed ? distance / 2 : 0);
+            isStretchable = def.Stretchable;
+        }
+        else
+        {
+            distance = EngravingDefaults.BarLineToNextNoteSpace;
+            // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
+            // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting
+            // spring is NOT rigid. (LilySharp used to pass inverseStretchStrength 0 here on
+            // the strength of a comment claiming semi-fixed was unstretchable; the source
+            // says otherwise.)
+            // LILYPOND-REF: lily/staff-spacing.cc:164-180.
+            fixedDistance = distance / 2;
+            isStretchable = true;
+        }
+        // Every arm involved puts the IDEAL at last_ext[RIGHT] + distance; they differ only
+        // in what lands in `fixed`. LILYPOND-REF: lily/staff-spacing.cc:169-198.
+        double ideal = (boundary?.Prefix ?? 0) + distance;
 
         // Fixed BEFORE situational_space and before the min-distance correction — the
         // order matters, both of those move `ideal` away from `fixed` without making the
@@ -2047,27 +2141,32 @@ internal static class SpacingRules
         double startLeadGrace = 0;
         if (firstItems != null)
         {
-            // Skyline reach: bar line → first item (max across all voices). A clef change
-            // opening the measure is NOT on this side of the bar line (break-align-orders
-            // puts clef before staff-bar), so it raises nothing here — see the note on
-            // ChangeItemPrefixWidth's excludeClef just below.
-            foreach (var item in firstItems)
+            if (boundary is var (bPrefix, bLast) && boundary.HasValue)
             {
-                if (item is ClefChangeItem)
-                    continue;
-                minDistance = Math.Max(minDistance,
-                    CalculateSkylineDistance(null, item, staffY: 0));
+                // The boundary column reaches to the change's ink right edge plus ITS
+                // extra-spacing-width (KeySignature declares (0.0 . 1.0), TimeSignature
+                // (0.0 . 0.8) — not the default), and the musical column reaches back by its
+                // leftmost ink plus that grob's own. This is the only term that carries an
+                // opening accidental into the gap, and it is what decides probe K.
+                double reach = 0;
+                foreach (var item in firstItems)
+                    if (!IsChangeItem(item))
+                        reach = Math.Max(reach, MusicalColumnLeftReach(item));
+                minDistance = bPrefix + ChangeItemExtraSpacingWidth(bLast).Right + reach;
             }
-
-            // A zero-duration key/time change at the MEASURE START shares the first
-            // note's column and is drawn hanging LEFT of it. Reserve that hung width so
-            // the change doesn't jam against the bar line. A CLEF change is excluded:
-            // LilyPond puts it before the bar line, so it is paid for by the preceding
-            // measure (BoundaryClefAllowance) and must not be charged again here.
-            // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
-            // column precedes the musical column of the same moment.
-            minDistance = Math.Max(minDistance,
-                ChangeItemPrefixWidth(firstItems, excludeClef: true));
+            else
+            {
+                // Skyline reach: bar line → first item (max across all voices). A clef change
+                // opening the measure is NOT on this side of the bar line (break-align-orders
+                // puts clef before staff-bar), so it raises nothing here.
+                foreach (var item in firstItems)
+                {
+                    if (item is ClefChangeItem)
+                        continue;
+                    minDistance = Math.Max(minDistance,
+                        CalculateSkylineDistance(null, item, staffY: 0));
+                }
+            }
 
             // Leading grace notes on the first note hang left of its column, after
             // the bar line (LilyPond gives the grace its own column between the

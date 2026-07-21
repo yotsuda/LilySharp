@@ -233,21 +233,23 @@ internal static partial class SharedRenderer
                     // signature floating in the middle of the bar. Several opening
                     // changes (key + time) sequence left-to-right so they don't
                     // overprint each other.
+                    // Break alignment inside the boundary column: the change's ink left edge
+                    // sits the bar line's own space-alist distance past the bar line's ink
+                    // right edge — key-signature 1.0, time-signature 0.75, NOT one padding
+                    // for both. Measured on 2.24.4 as exactly those two numbers
+                    // (COORDINATE_AUDIT.md §4.7.3). Several changes then follow each other by
+                    // the LEFT one's entry for the right one's break-align-symbol, which is
+                    // the same rule one level down.
+                    // LILYPOND-REF: scm/define-grobs.scm BarLine.space-alist, :650-664
+                    //   break-align-orders; lily/break-alignment-interface.cc.
                     if (double.IsNaN(openChangeX))
                     {
                         double afterBar = measure.StartBarline != BarlineType.None
                             ? GetVisualBarlineWidth(measure.StartBarline) : 0;
-                        openChangeX = ml.X + afterBar + GlyphMetrics.ClefChangePadding;
+                        openChangeX = ml.X + afterBar + SpacingRules.GetBarlineToItemSpace(item);
                     }
                     itemX = openChangeX;
-                    double glyphW = item switch
-                    {
-                        ClefChangeItem cc2 => SpacingRules.GetClefChangeWidth(cc2.NewClef),
-                        KeySignatureChangeItem kc2 => SpacingRules.GetKeySignatureChangeWidth(kc2),
-                        TimeSignatureChangeItem tc2 => GlyphMetrics.GetTimeSigWidth(tc2.NewTime.Beats, tc2.NewTime.BeatType),
-                        _ => 0
-                    };
-                    openChangeX += glyphW + GlyphMetrics.ClefChangePadding;
+                    openChangeX += SpacingRules.ChangeColumnGlyphAdvance(item, NextChangeIn(measure, itemIdx));
                 }
                 else if (useColumnTiming && isChange)
                 {
@@ -301,6 +303,22 @@ internal static partial class SharedRenderer
 
         double barLineLeftX = ml.X - GetVisualBarlineWidth(prev.EndBarline);
         return barLineLeftX - barLineLeft + clefGrob.Left;
+    }
+
+    /// <summary>
+    /// The next change item in <paramref name="measure"/> after <paramref name="itemIdx"/>,
+    /// or null when the change column ends there. Only the immediately following item can be
+    /// in the same column — anything else has a duration and opens the musical one.
+    /// </summary>
+    private static MusicItem? NextChangeIn(Measure measure, int itemIdx)
+    {
+        int next = itemIdx + 1;
+        if (next >= measure.Items.Length)
+            return null;
+        return measure.Items[next] is ClefChangeItem or KeySignatureChangeItem
+                                    or TimeSignatureChangeItem
+            ? measure.Items[next]
+            : null;
     }
 
     /// <summary>
