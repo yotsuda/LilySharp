@@ -150,7 +150,7 @@
       "score": "E",
       "lilypond": 6.060047,
       "residual": -0.002002001,
-      "why": "OPEN: not yet attributed. The closing gap of a whole-note measure is 0.002 narrow. A whole note has no stem, so no optical correction is involved; the suspects are the duration-space formula and the notehead-advance metric. Too small to see in SVG output, which rounds to two decimals — this entry exists precisely because that rounding hid it (the earlier note was 'LP 4.098045 vs Lily# 4.10')."
+      "why": "ATTRIBUTED (was OPEN): SpacingRules.ApplyLeftHeadWidth feeds the note head's ADVANCE width where LilyPond's note-spacing.cc:68 uses the head's INK extent — g->extent(col, X_AXIS)[RIGHT]. Emmentaler's whole head advances 1.9600 but inks 1.962002, so the gap comes out 0.002002 narrow, which is this residual to six digits. Its sibling barline.prev.half-note is the same defect at the half head's own margin (1.3760 against 1.377346 = 0.001346), and the two agreeing is what identifies the metric rather than the formula. Fixing it means switching that one call to the bbox right edge; it moves every measure slightly, so it is its own change."
     },
     "barline.prev.whole-rest": {
       "probe": "barline-spacing.ly",
@@ -164,7 +164,7 @@
       "score": "G",
       "lilypond": 4.453962,
       "residual": -0.001345572,
-      "why": "OPEN: not yet attributed, and probably the same cause as barline.prev.whole-note — both are closing gaps that are ~0.001-0.002 narrow while every opening gap in this corpus is exact. Note this one DOES carry a stem correction, so if the two share a cause it is not the optical term."
+      "why": "ATTRIBUTED (was OPEN): the same advance-for-ink substitution as barline.prev.whole-note, here at the half head — Lily#'s NoteheadHalfAdvance 1.3760 against LilyPond's ink 1.377346, i.e. 0.001346. That this one carries a stem correction and its sibling does not, yet both land exactly on their head's own margin, is what rules the optical term out."
     }
   }
 }

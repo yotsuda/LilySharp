@@ -27,33 +27,38 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 32 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
-**テスト 0 failed / 3123 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 7/19 exact, total |residual| = 11.435647 ss。**（このセッションで出力は変えていない）
+**origin より 34 ahead で未 push**（push はユーザー判断。コミットは可）。HEAD は §0 で裏取り。
+**テスト 0 failed / 3126 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
+**LP 忠実度 8/21 exact, total |residual| = 4.747978 ss。**
 
 未コミットの `audit/scripts/Extract-EmmentalerMetrics.py` は別作業（LILC フォントメトリクス）
 の WIP。**触らない・コミットに巻き込まない。**
 
+⚠️ `samples/amazing-grace.lys` も未コミットで dirty（`partial 4` を `section Verse` の中へ移動）。
+**Claude の作業ではない**（2026-07-21 22:24 に書き換わった。エディタか LSP の quick-fix と思われる）。
+出所が不明なので**巻き込まず放置した**。要ユーザー判断。
+
 ### 直近セッション（2026-07-21・後半）でやったこと
 
-**§2① に着手 → 着手前の計測でスコープが誤りと判明したので、実装せず設計をやり直した。**
+**§2① を完了。ただし着手前の計測で旧スコープが誤りと判明したので、設計をやり直してから実装した。**
 
 | commit | 内容 |
 |---|---|
 | `f168ac57` | 計測ハーネスの穴を塞いだ。`2>&1` で LP の stderr が**dump 行の途中に割り込み**、MC の3番目の符頭が真っ二つになって黙って捨てられていた（`clef→次の音符`が**4番目**の符頭で測られる状態）。stream 分離＋パース失敗を throw に＋行中 gap も印字 |
 | `a374317f` | **行中変更 item の LP モデルを導出**（`COORDINATE_AUDIT.md` §4.7.2、両側・両ケース 6 桁一致）。台帳4点の `why` を正しい原因に差し替え、README の stale な現状を更新 |
-| （HEAD） | §2①/③ を再スコープ（本ファイル） |
+| `e3685efb` | §2①/③ を再スコープ（frame 修正だけでは 0 にならないと実測で確定したため） |
+| `1970b830` | **実装**。行中変更を LP の専用列として価格付け（左右で別の式）。snapshot 3件・LP 照合のうえ承認済み |
 
 **重要**: 台帳の値自体は全部正しかった（19点すべて再現）。壊れていたのは**再現手段**のほう。
 
 ### 進行中で中断しているものは無い
 
-**次の一手は §2① の実装だが、設計方針が未合意**（①と③を一体で設計するか）。
-出力が変わる（snapshot 再ベース必須）ので**着手前にユーザー判断**が要る。
+X 軸の**行中**変更は完結。残差は全て `GlyphMetricsGenerated.cs` の4桁丸め。次は §2③（行頭＝境界列）。
 
-⚠️ **total |residual| が 4.59 → 11.44 に増えたのは悪化ではない。**
-行中 clef/key 変更という**それまで測っていなかった発散**を可視化した結果（`84dc3a79`）。
-コーパスに点を足すと数字は増えうる。**比較は同じ点集合の中でのみ意味を持つ。**
+⚠️ **`total |residual|` の履歴は点集合が違う。同じ集合の中でだけ比較すること。**
+15点 4.592405 → 19点 11.435647（`84dc3a79` が行中4点を追加＝それまで測っていなかった発散の可視化）
+→ 21点 4.747978（`1970b830` が行中を潰し、MKA の2点を追加）。
+**同一の19点集合で見ると 11.435647 → 4.592858。**
 
 ---
 
@@ -61,11 +66,20 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 優先順。**①②は COORDINATE_AUDIT §4.7 の残り**で、ユーザー合意済みの順序。
 
-### ① 行中（mid-measure）の変更 item に**専用列**を入れる — frame 修正はその一部
+### ① ✅ 完了（`1970b830`）— 行中（mid-measure）の変更 item を LP の専用列として価格付け
 
-> **2026-07-21 に再スコープ。** 旧①は「3つの extent ヘルパの frame ＋ 定数2つ」だった。
+> **2026-07-21 に再スコープ → 実装。** 旧①は「3つの extent ヘルパの frame ＋ 定数2つ」だった。
 > **着手前に測った結果、それでは 4 点は 0 にならないと分かった**（§5.3「変更する前に測る」が
 > 効いた例）。導出済みモデルと実測は `COORDINATE_AUDIT.md` **§4.7.2**。
+>
+> **結果**: 行中4点 6.843242 → 0.000453 ss（`clef→次の音符`は**厳密一致**）。
+> 残差は全て `GlyphMetricsGenerated.cs` の4桁丸め（符頭 1.3040 vs LP ink 1.304212 等）。
+> **残った未了**: 分配が正しいのは force 0 のみ。LP は2本の spring を独立に伸ばし、
+> key/time の右側は**伸びない**（`shrink-space`/`semi-shrink-space`）。これは本物の
+> 第2列が要るので③と同じ仕事。`SpacingRules.MidMeasureChangeGaps` に記録してある。
+>
+> 以下は③のために残す記録（**行頭側は未着手**。`ChangeItemPrefixWidth` と
+> `ClefChangePadding` は行頭パスにまだ残っている）。
 
 **LP は行中の clef/key 変更に non-musical 列を1本立て、左右を別の式で価格付けする**:
 
@@ -126,15 +140,28 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 次の音符列にぶら下がっているため、台帳の 4 点（`barline.next.key-change-*` /
 `time-change-*`、合計 −4.44 ss）が大きく外れている。
 
-⚠️ **①と③は同型**（列の欠落。行中 vs 行頭）。①③が入れば台帳の 8 点・合計 **11.28 ss** が
-対象になる。旧記述の「4.59 → 0.15 前後」は**①を frame 修正だと誤解していた頃の見積り**なので破棄。
-新しい見積りは設計を決めてから出す。
+⚠️ **①と③は同型**（列の欠落。行中 vs 行頭）。**①は `1970b830` で完了済み**なので、
+そこで書いた `SpacingRules.MidMeasureChangeGaps` / `MeasureChangeColumn` /
+`ChangeColumnItemSpring` が**そのまま雛形になる**。違いは `Note_spacing` の分岐だけ:
+行頭は staff-bar group があるので `note-spacing.cc:99-100`（bar line の列内オフセットを引く）、
+行中は `:103-108`。**着手前に score K/T を6桁まで分解しておくこと**（①でそうしたように）。
 
-### ④ 台帳の OPEN 2 件を潰す
+### ④ 符頭幅の advance→ink 置換（旧「OPEN 2 件」— **原因特定済み**）
 
-`barline.prev.whole-note` −0.002002 / `barline.prev.half-note` −0.001346。
-**閉じ側の gap だけが僅かに狭い**（開き側は全部一致）。SVG の 2 桁丸めに隠れていた差で、
-小さく切り分けやすい題材。`audit/lp-geometry/README.md` 参照。
+`barline.prev.whole-note` −0.002002 / `barline.prev.half-note` −0.001346 は、
+**`SpacingRules.ApplyLeftHeadWidth` が符頭の advance を使っている**のが原因
+（LP の `note-spacing.cc:68` は **ink extent** `g->extent(col, X_AXIS)[RIGHT]`）。
+
+| | Lily# advance | LP ink | 差 | 台帳 residual |
+|---|---|---|---|---|
+| 全音符 | 1.9600 | 1.962002 | −0.002002 | **−0.002002** |
+| 二分音符 | 1.3760 | 1.377346 | −0.001346 | **−0.001346** |
+| 黒符頭 | 1.3040 | 1.304212 | −0.000212 | 行中4点の残差と一致 |
+
+**3値とも6桁で一致**するので式ではなくメトリクスの取り違え。修正は
+`ApplyLeftHeadWidth` の1呼び出しを bbox の右端に変えるだけだが、**全小節が動く**ので単独の変更に。
+（`GlyphMetricsGenerated.cs` は4桁丸めなので、6桁一致まで詰めるなら生成側の桁数も要検討。
+生成器 `audit/scripts/Extract-EmmentalerMetrics.py` は別作業の WIP＝**触らない**。）
 
 ### ⑤ MMR run のグルーピング
 
@@ -147,7 +174,7 @@ production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそ�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 7/19 exact, total |residual| = 11.435647 ss**（`audit/lp-geometry/`）。
+**現状 8/21 exact, total |residual| = 4.747978 ss**（`audit/lp-geometry/`）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
