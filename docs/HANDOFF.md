@@ -87,8 +87,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 > key/time の右側は**伸びない**（`shrink-space`/`semi-shrink-space`）。これは本物の
 > 第2列が要るので③と同じ仕事。`SpacingRules.MidMeasureChangeGaps` に記録してある。
 >
-> 以下は③のために残す記録（**行頭側は未着手**。`ChangeItemPrefixWidth` と
-> `ClefChangePadding` は行頭パスにまだ残っている）。
+> 以下はモデルの記録（③も `0aae1016` で完了済み）。
 
 **LP は行中の clef/key 変更に non-musical 列を1本立て、左右を別の式で価格付けする**:
 
@@ -110,38 +109,26 @@ Lily# 側は列が無く、`ChangeItemPrefixWidth`（= W + 2×0.5）を**1本の
 
 → **frame だけ直すと `+1.119 → +0.612` に減るが、左右の分配は変わらず逆符号のまま。**
 
-**同時に直すもの**（片方だけだと値が破綻する）:
+**同時に直したもの**: 変更 clef の幅 `FClefAdvance × 0.75 = 2.010` → LP の `clefs.F_change`
+ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 
-- `GlyphMetrics.ClefChangePadding = 0.5` は **space-alist のエントリ取り違え**
-  （0.5 は `right-edge`。行中で効くのは `next-note` の 1.0）。**しかも左右で別の値**
-- `GetItemToBarlineSpace` の変更 item エントリ `1.0` / `GetBarlineToItemMinimum` の `1.0/1.0/0.75`
-- 変更 clef の幅 `FClefAdvance × 0.75 = 2.010` → LP の `clefs.F_change` ink は **2.146680**。
-  `_change` グリフは実在し Lily# も描いている（`GlyphMetrics.cs:141-151`）。**これは独立した差**
+### ② 中心基準のまま取り残された extent ヘルパの掃除 — **未着手・要承認**
 
-**計測対象は台帳の `midmeasure.*` 4点**（着手前に測定済み）:
+①③は extent ヘルパを**直さずに迂回**した（列モデルを別関数で入れた）ので、
+`CalculateLeftExtent` / `CalculateRightExtent` / `CalculateNoteheadRightExtent` の
+**変更 item 分岐（`width/2 + ClefChangePadding`）は中心基準のまま残っている**。
+`GlyphMetrics.ClefChangePadding = 0.5` が生き残っているのもこの3箇所だけ
+（＋下記の死んだ関数）。
 
-| 台帳キー | LP | Lily# | residual |
-|---|---|---|---|
-| `midmeasure.clef.prev-note-to-clef` | 2.253234 | 4.009000 | **+1.755766** |
-| `midmeasure.clef.clef-to-next-note` | 3.146680 | 2.510000 | **−0.636680** |
-| `midmeasure.key.prev-note-to-key` | 2.203234 | 4.654000 | **+2.450766** |
-| `midmeasure.key.key-to-next-note` | 5.800030 | 3.800000 | **−2.000030** |
+**このセッションで死んだ／死にかけたもの**（削除は §5.1 の手順＝横断 grep →`<see cref>`
+→**ユーザー承認**を経ること。**まだ消していない**）:
 
-⚠️ **行頭（小節境界）の key/time は①では直らない。** 台帳の `barline.next.key-change-*` /
-`time-change-*`（合計 −4.44 ss）の真因は③の型欠落。**①と③は同じ「列の欠落」**で、
-行中か行頭かが違うだけ。**まとめて設計したほうがよい**（未合意・要判断）。
-
-⚠️ 変更 item が extent ヘルパに到達する production 経路は
-**`CalculateSkylineDistance` の3箇所のみ**（null-prev / null-next / skyline fallback）。
-小節頭では `ChangeItemPrefixWidth`（= W + 2×0.5）が
-`GetBarlineToItemMinimum + CalculateLeftExtent`（= W/2 + 1.5）を **W ≥ 1.0 で常に上回る**ので、
-小節頭側は frame を直しても出力中立になるはず。**予測なので実測で確認すること。**
-
-### ② `CalculateRightExtent` の統廃合
-
-production 呼び出し元ゼロ、`SvgTests.cs:166-167` のみ。しかもそのテストは左（左端基準）と
-右（中心基準）を**ペアで**使い、同じ box を2フレームで測っている。
-§5.1 の削除手順（横断 grep →`<see cref>` →**ユーザー承認**）を経ること。
+| シンボル | 状態 | 経緯 |
+|---|---|---|
+| `SpacingRules.ChangeItemPrefixWidth` | **完全に死んだ**（定義のみ） | 最後の呼び出し元を③が外した。**doc コメントが「行頭パスで使う」と嘘をついている** |
+| `SharedRenderer.FollowingAccidentalLeftExtent` | **完全に死んだ**（定義のみ） | ①で臨時記号が rod 経由になった |
+| `SpacingRules.CalculateRightExtent` | production ゼロ・`SvgTests.cs:167,186` のみ | 元からの②。テストが左（左端基準）と右（中心基準）を**ペアで**使い、同じ box を2フレームで測っている |
+| 3ヘルパの変更 item 分岐 | 到達経路が**ごく狭くなった**が非ゼロ | `CalculateSkylineDistance(prev=変更item, next)` の経路が残る。**要実測** |
 
 ### ③ ✅ 完了（`0aae1016`）— 行頭 key/time の境界列
 

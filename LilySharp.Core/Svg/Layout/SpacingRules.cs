@@ -1601,12 +1601,13 @@ internal static class SpacingRules
     /// column are drawn side by side, so their widths SUM (see the inline note below).
     /// </summary>
     /// <remarks>
-    /// ⚠️ Only the measure-OPENING path still uses this. A mid-measure change is priced by
-    /// <see cref="MidMeasureChangeGaps"/>, which follows LilyPond in giving it its own
-    /// column and two differently-computed gaps rather than one lumped reservation with a
-    /// padding that is the same on both sides. This lump survives here because the opening
-    /// case still lacks its boundary column — COORDINATE_AUDIT.md §3.I, roadmap item 3 — and
-    /// it should go the same way when that lands.
+    /// ⚠️ NOTHING CALLS THIS ANY MORE. A mid-measure change is priced by
+    /// <see cref="MidMeasureChangeGaps"/> and one opening a measure by
+    /// <see cref="BoundaryChangePrefix"/>, both of which follow LilyPond in giving the change
+    /// its own column with two differently-computed gaps rather than one lumped reservation
+    /// with the same padding on either side. Kept only because removing it goes through the
+    /// deletion procedure (cross-grep, <c>see cref</c> sweep, sign-off) — see the roadmap's
+    /// dead-symbol table.
     /// </remarks>
     /// <param name="excludeClef">
     /// Set at a MEASURE-OPENING column. A clef change there is engraved before the bar
