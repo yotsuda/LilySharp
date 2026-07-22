@@ -156,19 +156,62 @@ internal static class LayoutUtilities
     public static double CalculateFirstStaffRefpoint(
         double topMargin, double headerHeight, double systemUpExtent,
         double halfStaff, VerticalSpacingSpec topSpec)
+        // LILYPOND-REF: lily/simple-spacer.cc:295-305 spring_positions — a system's
+        // position is the running sum of its springs' lengths, and for the FIRST system
+        // that sum is the top spring alone. At force 0 Spring::length is
+        // max(min_distance_, ideal_distance_) (spring.cc:219-237), which is why a system
+        // whose ink is smaller than top-system-spacing's basic-distance is not measured by
+        // its ink at all.
+        => topMargin + CreateTopSystemSpring(headerHeight, systemUpExtent, halfStaff, topSpec)
+                       .Length(0);
+
+    /// <summary>
+    /// The spring from the top of the printable area down to the first system's staff
+    /// refpoint — <c>top-system-spacing</c>, floored by the ink that system carries above
+    /// its refpoint.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:511-518 — the first system's spring comes
+    /// from top_system_spacing, and :625-633 floors it with the system's own ink through
+    /// <c>Spring::ensure_min_distance</c>.
+    /// The header is part of that FLOOR, not of the anchor: the problem is built with
+    /// <c>bottom_skyline_</c> set header_height_ below the top of the printable area
+    /// (:441-444), which is what the comment at :471-473 means by anchoring the spring at
+    /// the top of the header.
+    /// </remarks>
+    public static Spring CreateTopSystemSpring(
+        double headerHeight, double systemUpExtent, double halfStaff, VerticalSpacingSpec topSpec)
     {
+        // Lily#'s up extent is the ink above the top staff LINE; LilyPond's up_skyline is
+        // measured from the staff REFPOINT and always contains the staff symbol itself, so
+        // the same quantity is halfStaff more there.
         double inkAboveRefpoint = systemUpExtent + halfStaff;
+        return CreateSpring(topSpec, headerHeight + inkAboveRefpoint + topSpec.Padding);
+    }
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:625-629 + spring.cc:156-159 —
-        // ensure_min_distance takes the larger of the spec's own minimum and the ink.
-        double minimumDistance =
-            Math.Max(topSpec.MinimumDistance, headerHeight + inkAboveRefpoint + topSpec.Padding);
-
-        // LILYPOND-REF: lily/spring.cc:219-237 Spring::length — at force 0 a spring is
-        // max(min_distance_, ideal_distance_), so a system whose ink is SMALLER than
-        // top-system-spacing's basic-distance is not measured by its ink at all. Lily#
-        // returned the floor alone, which put every header-less score 3.000000 too high.
-        return topMargin + Math.Max(topSpec.BasicDistance, minimumDistance);
+    /// <summary>
+    /// Builds one of LilyPond's vertical springs from a spacing spec and the minimum
+    /// distance the geometry imposes on it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1345-1358 alter_spring_from_spacing_spec —
+    /// basic-distance is the IDEAL and minimum-distance the MIN, then
+    /// <c>set_default_strength()</c> makes the inverse stretch equal the ideal
+    /// (spring.cc:213-216) and only a <c>stretchability</c> entry overrides it. Lily#'s
+    /// spec cannot say "absent", so a Stretchability of 0 is read as LilyPond's absent —
+    /// which is what top-system-spacing actually is in ly/paper-defaults-init.ly:78-80.
+    ///
+    /// The compress strength is fixed at <c>ideal - minimum-distance</c> from the SPEC
+    /// (spring.cc:205-210), because <c>ensure_min_distance</c> raises the minimum
+    /// afterwards and deliberately does not restrengthen the spring (spring.cc:156-159).
+    /// Passing the raised minimum here instead would quietly change every blocking force.
+    /// </remarks>
+    public static Spring CreateSpring(VerticalSpacingSpec spec, double ensureMinDistance)
+    {
+        double inverseStretch = spec.Stretchability > 0 ? spec.Stretchability : spec.BasicDistance;
+        double inverseCompress = Math.Max(0, spec.BasicDistance - spec.MinimumDistance);
+        double minDistance = Math.Max(spec.MinimumDistance, ensureMinDistance);
+        return new Spring(spec.BasicDistance, minDistance, inverseStretch, inverseCompress);
     }
 
     /// <summary>

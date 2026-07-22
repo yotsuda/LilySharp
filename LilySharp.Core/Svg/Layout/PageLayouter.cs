@@ -254,19 +254,23 @@ internal sealed class PageLayouter
         out double pageForce)
     {
         var pageSystems = new List<SystemLayout>();
+        double halfStaff = _options.StaffHeight / 2.0;
 
-        // First system Y position. LilyPond builds a Page_layout_problem per PAGE, so
-        // top-system-spacing governs the first system of EVERY page; only the header is
-        // first-page-only.
-        double firstY = LayoutUtilities.CalculateFirstSystemY(
-            _options.MarginTop, isFirstPage ? headerHeight : 0,
-            systemExtents[startIdx].upExtent, _options.StaffHeight / 2.0, vs.TopSystem);
+        // THE CHAIN. LilyPond builds one Page_layout_problem per PAGE and pushes one
+        // spring per boundary: top-system-spacing first (:511-518), then one spring per
+        // system pair (the loop at :489-533), then last-bottom-spacing (:538-545). It
+        // solves that whole chain at once, so every spring on the page carries the SAME
+        // force — the top and bottom springs stretch with the middle.
+        // LILYPOND-REF: lily/page-layout-problem.cc:406-545 Page_layout_problem::Page_layout_problem
+        var springs = ImmutableArray.CreateBuilder<Spring>();
 
-        // PASS 1 — the natural gap for each system pair, from the REAL
-        // (X-aware skyline) distances placement uses.
+        // Spring 0 — down to the first system's staff refpoint. Only the first page
+        // carries a header, and the header enters this spring's FLOOR, not the anchor.
+        springs.Add(LayoutUtilities.CreateTopSystemSpring(
+            isFirstPage ? headerHeight : 0,
+            systemExtents[startIdx].upExtent, halfStaff, vs.TopSystem));
+
         int count = endIdx - startIdx;
-        var gapNatural = new double[Math.Max(0, count - 1)];
-        var gapInvHooke = new double[Math.Max(0, count - 1)];
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
             if (sysIdx < endIdx - 1)
@@ -343,83 +347,73 @@ internal sealed class PageLayouter
 
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system —
                 // the inter-system minimum distance is the skyline distance plus
-                // the spec's padding, floored by the spec's minimum-distance.
+                // the spec's padding, and it reaches the spring as a FLOOR through
+                // ensure_min_distance rather than as the distance itself.
                 // (LP's in-note-system-padding folds into the skyline only when a
                 // system carries an in-note stencil, which Lily# never renders, so
                 // it can never contribute to a plain system-to-system spring.)
-                double minDistance = Math.Max(spec.MinimumDistance, skylineDistance + padding);
-
-                // Spring-based ideal (natural) distance
-                double springDistance = Math.Max(basicDist, minDistance);
-
-                gapNatural[sysIdx - startIdx] = Math.Max(springDistance, minDistance);
-                gapInvHooke[sysIdx - startIdx] =
-                    spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1;
+                springs.Add(LayoutUtilities.CreateSpring(
+                    spec with { BasicDistance = basicDist, Padding = padding },
+                    skylineDistance + padding));
             }
         }
 
-        // PASS 2 — justification. The page breaker's force is solved on
-        // SCALAR system heights, but placement packs tighter via the X-aware
-        // skyline distances, so that force under-fills real pages. Re-solve
-        // here against the actual gaps: stretch the springs (weighted by
-        // their stretchability) until the last system's ink reaches the
-        // bottom margin.
-        //
-        // A spring's length is its ideal plus force times its inverse Hooke
-        // constant, so the force this page runs at is just the leftover space
-        // divided by the total inverse Hooke — and stating it that way is what
-        // lets the LAST page be given the force of the page before it rather
-        // than a natural spacing of its own (see draw_page at the caller).
-        // LILYPOND-REF: lily/page-layout-problem.cc solve() — springs are
-        // solved against the real rods; ly/paper-defaults-init.ly
-        // ragged-bottom = ##f, ragged-last-bottom = ##t.
-        pageForce = 0;
-        if (count > 1)
+        // The last spring — down from the last system's staff refpoint to the foot.
+        // LILYPOND-REF: lily/page-layout-problem.cc:538-545 — last-bottom-spacing,
+        // floored by `last_padding - bottom_skyline_.max_height () + footer_height_`.
+        // bottom_skyline_ is the last system's DOWN skyline about its own refpoint, so
+        // -max_height() is the ink hanging below that refpoint. Lily# has no footer.
+        // Lily# used to have NO spring here at all: it stretched the inter-system gaps
+        // until the last system's INK touched the bottom margin, which drops both this
+        // spring's padding and its stretchability out of the force calculation.
         {
-            double naturalSum = 0, invSum = 0;
-            for (int i = 0; i < gapNatural.Length; i++)
-            {
-                naturalSum += gapNatural[i];
-                invSum += gapInvHooke[i];
-            }
-
-            if (useFixedForce)
-            {
-                // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061
-                // fixed_force_solution — solve at the force handed in, not at zero.
-                pageForce = fixedForce;
-            }
-            else if (!isRagged && invSum > 0)
-            {
-                var last = systemDetails[endIdx - 1];
-                double lastBottom = firstY + naturalSum + last.StaffHeight + last.BottomExtent;
-                double leftover = _options.PageHeight - _options.MarginBottom - lastBottom;
-                // Stretch only. A negative force would have to be solved against the rods
-                // to keep systems from colliding, and this pass has none — the natural gaps
-                // it starts from are already the rod-floored ones. Replacing the whole pass
-                // with a two-sided spring solve was tried and moved neither a probe nor a
-                // snapshot byte, because the breaker never hands this code a page it has to
-                // compress; leaving the branch out keeps it from shipping unreached.
-                pageForce = leftover > 0 ? leftover / invSum : 0;
-            }
-
-            if (pageForce != 0)
-            {
-                for (int i = 0; i < gapNatural.Length; i++)
-                    gapNatural[i] += pageForce * gapInvHooke[i];
-            }
+            var lastDetails = systemDetails[endIdx - 1];
+            double inkBelowLastRefpoint =
+                (lastDetails.StaffHeight - halfStaff) + systemExtents[endIdx - 1].downExtent;
+            springs.Add(LayoutUtilities.CreateSpring(
+                vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
         }
 
-        double currentY = firstY;
+        // LILYPOND-REF: lily/page-layout-problem.cc:471-476 — page_height_ deliberately
+        // does NOT reserve the header: the top spring is anchored at the top of it.
+        double pageHeight = _options.PageHeight - _options.MarginTop - _options.MarginBottom;
+        var solver = new SpringSolver(springs.ToImmutable());
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:780-804 solve_rod_spring_problem
+        ImmutableArray<double> positions;
+        if (useFixedForce)
+        {
+            // fixed_force_solution (:1057-1061) — solve_rod_spring_problem (true, force).
+            // The spacer is told it is NOT ragged, "otherwise it will refuse to stretch",
+            // and the handed-in force is used only if the page still fits at it.
+            var sol = solver.Solve(pageHeight, ragged: false);
+            pageForce = solver.TotalLength(fixedForce) <= pageHeight ? fixedForce : sol.Force;
+            positions = solver.GetPositions(pageForce);
+        }
+        else
+        {
+            var sol = solver.Solve(pageHeight, isRagged);
+            pageForce = sol.Force;
+            // LILYPOND-REF: lily/simple-spacer.cc:301-303 — a ragged configuration is laid
+            // out at force 0 even when the solve reported a positive one.
+            positions = solver.GetPositions(isRagged && pageForce > 0 ? 0.0 : pageForce);
+        }
+
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
-            // Stage-4 W2-core multi-page producer seam: currentY accumulates the
-            // system top DOWNWARD (device) within the page; store it as page Y-up
-            // (UP from the page bottom) against this page's fixed height, matching
-            // the PageLayout.Height (= _options.PageHeight) built above.
-            pageSystems.Add(allSystems[sysIdx] with { Y = _options.PageHeight - currentY });
-            if (sysIdx < endIdx - 1)
-                currentY += gapNatural[sysIdx - startIdx];
+            // positions[] is the running sum of the chain, measured DOWN from the top of
+            // the printable area, and entry k+1 is system k's STAFF REFPOINT
+            // (LILYPOND-REF: page-layout-problem.cc:896-901 — solution_[spring_idx] is the
+            // first staff's position and the system origin is that plus min_offsets[0]).
+            // Lily# stacks systems by their origin, which is halfStaff above the refpoint.
+            double refpoint = _options.MarginTop + positions[sysIdx - startIdx + 1];
+            double origin = refpoint - halfStaff;
+
+            // Stage-4 W2-core multi-page producer seam: origin is the system top measured
+            // DOWNWARD (device) within the page; store it as page Y-up (UP from the page
+            // bottom) against this page's fixed height, matching the PageLayout.Height
+            // (= _options.PageHeight) built above.
+            pageSystems.Add(allSystems[sysIdx] with { Y = _options.PageHeight - origin });
         }
 
         return pageSystems.ToImmutableArray();

@@ -528,13 +528,24 @@ internal sealed class SkylineBuilder
 
         double noteUp = staffPosition * 0.5;   // staff-spaces above middle, up+
         double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-        double halfNoteheadHeight = noteheadHeight / 2;
 
-        // Notehead bounding box (head spans noteUp ± half in the up frame).
+        // The head's VERTICAL extent is the glyph's own ink, from the font's LILC table
+        // (GlyphMetricsGenerated), not a nominal staff space. LilyPond builds a grob's
+        // skyline from its stencil, so a notehead contributes 0.545 above and below its
+        // centre, not 0.5 — measured against 2.26.0 on audit/lp-geometry probe W, where
+        // the ink below the last system's refpoint is 3.545000 (= 3.0 + 0.545) and Lily#
+        // read 3.500000. That 0.045 propagated into last-bottom-spacing's floor and from
+        // there into the page's whole force.
+        // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents —
+        //   the extents are the stencil's, and lily/open-type-font.cc:288,389-407 takes
+        //   those from LILC. ec7a2254 moved the X axis onto the same table.
+        var headBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+
+        // Notehead bounding box (head spans noteUp + the glyph's ink in the up frame).
         double noteLeft = x - noteheadWidth / 2;
         double noteRight = x + noteheadWidth / 2;
-        double headTopUp = noteUp + halfNoteheadHeight;
-        double headBottomUp = noteUp - halfNoteheadHeight;
+        double headTopUp = noteUp + headBox.Top;
+        double headBottomUp = noteUp + headBox.Bottom;
 
         var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Up);
         var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Down);

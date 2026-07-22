@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="328.3" viewBox="0 0 119.50 32.83" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="328.7" viewBox="0 0 119.50 32.87" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -50,21 +50,21 @@
   <rect x="68.10" y="18.12" width="0.19" height="4.00" data-pos="591"/>
   <rect x="84.74" y="18.12" width="0.19" height="4.00" data-pos="612"/>
   <rect x="85.23" y="18.12" width="0.60" height="4.00" data-pos="612"/>
-  <text x="8.31" y="26.24" font-size="3.20" text-anchor="middle" data-pos="635">Mu</text>
-  <text x="13.31" y="26.24" font-size="3.20" text-anchor="middle" data-pos="639">sic</text>
-  <text x="18.57" y="26.24" font-size="3.20" text-anchor="middle" data-pos="643">fills</text>
-  <text x="24.02" y="26.24" font-size="3.20" text-anchor="middle" data-pos="649">the</text>
-  <text x="29.50" y="26.24" font-size="3.20" text-anchor="middle" data-pos="655">air</text>
-  <text x="33.43" y="26.24" font-size="3.20" text-anchor="middle" data-pos="659">to</text>
-  <text x="38.97" y="26.24" font-size="3.20" text-anchor="middle" data-pos="663">night</text>
-  <text x="44.68" y="26.24" font-size="3.20" text-anchor="middle" data-pos="669">so</text>
-  <text x="50.00" y="26.24" font-size="3.20" text-anchor="middle" data-pos="674">ev</text>
-  <text x="54.13" y="26.24" font-size="3.20" text-anchor="middle" data-pos="678">'ry</text>
-  <text x="59.06" y="26.24" font-size="3.20" text-anchor="middle" data-pos="683">one</text>
-  <text x="64.86" y="26.24" font-size="3.20" text-anchor="middle" data-pos="687">will</text>
-  <text x="71.35" y="26.24" font-size="3.20" text-anchor="middle" data-pos="694">sing</text>
-  <text x="75.73" y="26.24" font-size="3.20" text-anchor="middle" data-pos="699">a</text>
-  <text x="80.29" y="26.24" font-size="3.20" text-anchor="middle" data-pos="702">long</text>
+  <text x="8.31" y="26.28" font-size="3.20" text-anchor="middle" data-pos="635">Mu</text>
+  <text x="13.31" y="26.28" font-size="3.20" text-anchor="middle" data-pos="639">sic</text>
+  <text x="18.57" y="26.28" font-size="3.20" text-anchor="middle" data-pos="643">fills</text>
+  <text x="24.02" y="26.28" font-size="3.20" text-anchor="middle" data-pos="649">the</text>
+  <text x="29.50" y="26.28" font-size="3.20" text-anchor="middle" data-pos="655">air</text>
+  <text x="33.43" y="26.28" font-size="3.20" text-anchor="middle" data-pos="659">to</text>
+  <text x="38.97" y="26.28" font-size="3.20" text-anchor="middle" data-pos="663">night</text>
+  <text x="44.68" y="26.28" font-size="3.20" text-anchor="middle" data-pos="669">so</text>
+  <text x="50.00" y="26.28" font-size="3.20" text-anchor="middle" data-pos="674">ev</text>
+  <text x="54.13" y="26.28" font-size="3.20" text-anchor="middle" data-pos="678">'ry</text>
+  <text x="59.06" y="26.28" font-size="3.20" text-anchor="middle" data-pos="683">one</text>
+  <text x="64.86" y="26.28" font-size="3.20" text-anchor="middle" data-pos="687">will</text>
+  <text x="71.35" y="26.28" font-size="3.20" text-anchor="middle" data-pos="694">sing</text>
+  <text x="75.73" y="26.28" font-size="3.20" text-anchor="middle" data-pos="699">a</text>
+  <text x="80.29" y="26.28" font-size="3.20" text-anchor="middle" data-pos="702">long</text>
   <text x="8.31" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="529">C</text>
   <text x="29.50" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="549">Am</text>
   <text x="50.00" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="575">F</text>
@@ -74,10 +74,10 @@
   <text class="music" x="3.09" y="13.66" font-size="1.60" data-pos="0"></text>
   <line x1="3.60" y1="13.66" x2="3.60" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="4.19" y="13.66" font-size="1.80" data-pos="0">= 120</text>
-  <line x1="10.88" y1="25.74" x2="11.18" y2="25.74" stroke="#000000" stroke-width="0.160"/>
-  <line x1="35.03" y1="25.74" x2="35.33" y2="25.74" stroke="#000000" stroke-width="0.160"/>
-  <line x1="51.86" y1="25.74" x2="52.16" y2="25.74" stroke="#000000" stroke-width="0.160"/>
-  <line x1="56.10" y1="25.74" x2="56.40" y2="25.74" stroke="#000000" stroke-width="0.160"/>
-  <line x1="76.79" y1="25.74" x2="77.09" y2="25.74" stroke="#000000" stroke-width="0.160"/>
+  <line x1="10.88" y1="25.78" x2="11.18" y2="25.78" stroke="#000000" stroke-width="0.160"/>
+  <line x1="35.03" y1="25.78" x2="35.33" y2="25.78" stroke="#000000" stroke-width="0.160"/>
+  <line x1="51.86" y1="25.78" x2="52.16" y2="25.78" stroke="#000000" stroke-width="0.160"/>
+  <line x1="56.10" y1="25.78" x2="56.40" y2="25.78" stroke="#000000" stroke-width="0.160"/>
+  <line x1="76.79" y1="25.78" x2="77.09" y2="25.78" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

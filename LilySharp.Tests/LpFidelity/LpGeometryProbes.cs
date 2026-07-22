@@ -167,6 +167,38 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The STRETCHED twin of <see cref="V"/> — the mirror of book J in page-vertical.ly.
+    /// </summary>
+    /// <remarks>
+    /// Same music, 150 measures instead of 24, so the first page FILLS and its springs are
+    /// solved to the breaker's force rather than sitting at their natural length. Nothing
+    /// else differs, which is the point: V and W measure the same two quantities in the two
+    /// regimes HANDOFF 5.3 insists on keeping apart, and a change that moves one and not the
+    /// other is telling you which regime it belongs to.
+    ///
+    /// 150 was chosen because it is what the .ly twin uses; on LilyPond 2.26.0 it lands 13
+    /// systems on page 1 and 8 on page 2, so page 1 is genuinely full (its last page is a
+    /// separate, ragged-last regime and is NOT what these entries read).
+    /// </remarks>
+    private static readonly string W = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 150)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "W" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -260,5 +292,15 @@ internal static class LpGeometryProbes
         // reads 11.690551 (= top-margin + 6.000000) and 12.000000 on this exact score.
         new("page.first-staff-refpoint", V, g => g.FirstStaffRefpoint()),
         new("system.natural-distance", V, g => g.StaffGap()),
+
+        // The same two quantities in the STRETCHED regime (book J / probe W). LilyPond
+        // solves one chain per page -- top-system-spacing, one spring per system pair, and
+        // last-bottom-spacing -- against page_height_, so on a full page EVERY spring in
+        // that chain carries the same force. These two entries read the two ends of it:
+        // the top spring (6.000000 natural -> 6.025482 stretched) and a system spring
+        // (12.000000 -> 12.254816). A port that stretches only the middle of the chain can
+        // match neither, which is why both are here rather than just the gap.
+        new("page.stretched.first-staff-refpoint", W, g => g.FirstStaffRefpoint()),
+        new("system.stretched-distance", W, g => g.StaffGap()),
     };
 }

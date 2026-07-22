@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="313.2" viewBox="0 0 119.50 31.32" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="313.7" viewBox="0 0 119.50 31.37" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -66,18 +66,18 @@
   <rect x="47.06" y="13.12" width="0.19" height="4.00" data-pos="484"/>
   <rect x="64.99" y="13.12" width="0.19" height="4.00" data-pos="500"/>
   <rect x="65.48" y="13.12" width="0.60" height="4.00" data-pos="500"/>
-  <text x="7.68" y="24.73" font-size="3.20" text-anchor="middle" data-pos="527">up</text>
-  <text x="11.88" y="24.73" font-size="3.20" text-anchor="middle" data-pos="530">up</text>
-  <text x="16.08" y="24.73" font-size="3.20" text-anchor="middle" data-pos="533">up</text>
-  <text x="20.28" y="24.73" font-size="3.20" text-anchor="middle" data-pos="536">up</text>
-  <text x="26.51" y="24.73" font-size="3.20" text-anchor="middle" data-pos="545">low</text>
-  <text x="32.31" y="24.73" font-size="3.20" text-anchor="middle" data-pos="549">low</text>
-  <text x="38.11" y="24.73" font-size="3.20" text-anchor="middle" data-pos="553">low</text>
-  <text x="43.91" y="24.73" font-size="3.20" text-anchor="middle" data-pos="557">low</text>
-  <text x="49.25" y="24.73" font-size="3.20" text-anchor="middle" data-pos="567">up</text>
-  <text x="53.45" y="24.73" font-size="3.20" text-anchor="middle" data-pos="570">up</text>
-  <text x="57.65" y="24.73" font-size="3.20" text-anchor="middle" data-pos="573">up</text>
-  <text x="61.85" y="24.73" font-size="3.20" text-anchor="middle" data-pos="576">up</text>
+  <text x="7.68" y="24.78" font-size="3.20" text-anchor="middle" data-pos="527">up</text>
+  <text x="11.88" y="24.78" font-size="3.20" text-anchor="middle" data-pos="530">up</text>
+  <text x="16.08" y="24.78" font-size="3.20" text-anchor="middle" data-pos="533">up</text>
+  <text x="20.28" y="24.78" font-size="3.20" text-anchor="middle" data-pos="536">up</text>
+  <text x="26.51" y="24.78" font-size="3.20" text-anchor="middle" data-pos="545">low</text>
+  <text x="32.31" y="24.78" font-size="3.20" text-anchor="middle" data-pos="549">low</text>
+  <text x="38.11" y="24.78" font-size="3.20" text-anchor="middle" data-pos="553">low</text>
+  <text x="43.91" y="24.78" font-size="3.20" text-anchor="middle" data-pos="557">low</text>
+  <text x="49.25" y="24.78" font-size="3.20" text-anchor="middle" data-pos="567">up</text>
+  <text x="53.45" y="24.78" font-size="3.20" text-anchor="middle" data-pos="570">up</text>
+  <text x="57.65" y="24.78" font-size="3.20" text-anchor="middle" data-pos="573">up</text>
+  <text x="61.85" y="24.78" font-size="3.20" text-anchor="middle" data-pos="576">up</text>
   <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="428"/>
   <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="428">Main</text>
   </g>
