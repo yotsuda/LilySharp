@@ -662,6 +662,15 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 - Dead-code 監査 — アナライザ検出分は完了、手動分が残
 - `LILYPOND-REF` 行番号の一括再採番（cosmetic・繰延）
 - `IDrawingContext.cs:37-39` の remark が装飾前後2フレームを記述していない（§4.4）
+- **対応の取れないスラーが無警告で消える** — `SlurDetector.cs:49-56` は開きスタックが
+  空のまま `)` を読むと黙って捨て、開いたまま終わった `(` も捨てる。`(e c4 d)` のように
+  `(` の前に音符が無い形（`MusicWalk.cs:103-108` の通り `(` は直前の音符に結び付く）は
+  スラーが1本消えるのに診断が出ない。タイの LYS4007 に相当する警告を足す。
+  LilyPond も unterminated slur を警告する。**未着手・別ブランチでやる**（2026-07-22 記録）
+- **`editors/vscode/src/smartBrackets.ts` を `smartTyping.ts` に改名** — 角括弧
+  （`<`/`>` の和音・アルペジオ）だけでなくスラー `(`/`)` とオクターブ記号 `'`/`,` も
+  扱うようになり、名前が実態から離れた。`registerSmartBrackets` も同様。変更は
+  `extension.ts` の import 1 箇所。**未着手・競合を避けて後で**（2026-07-22 記録）
 
 ### E. 保守性の負債（このセッションで見つけたもの）
 

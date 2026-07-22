@@ -644,6 +644,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     while (offset < text.length && (text[offset] === ' ' || text[offset] === '\t')) {
                         offset++;
                     }
+                    // A text grob (title / composer / ...) carries its STRING token's
+                    // start, which is the opening quote. Step over it so the caret
+                    // lands on the text that was clicked, not on the delimiter.
+                    if (text[offset] === '"') {
+                        offset++;
+                    }
                     const position = doc.positionAt(offset);
                     targetEditor.selection = new vscode.Selection(position, position);
                     targetEditor.revealRange(
