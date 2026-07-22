@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `113fdeda`（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `7817c543` の次（§0 で裏取りすること）
 
 ---
 
@@ -27,51 +27,161 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **LP は「ページが行分割を選ぶ」— この構造差をどうするか**
+### ▶ 次のセッションの最初の一手 ＝ **タプレット括弧の幻の符尾に、先に点を届かせる**
 
-ブレーカーの LP 乖離は **4 点とも閉じた**（`113fdeda` で 3 点＋`850c7d98` で orphan penalty）。
-台帳の `page.tight.*` は 2 点とも exact＝**ページ数も切れ目も LP と一致**。
+`TupletBracketEngraver.cs:573,585` は今も `DefaultStemLength` を**音価によらず**足している。
+`89aaa29f`（`SkylineBuilder`）・`26afa9fe`（`DynamicEngraver`）と**同じ欠陥の 3 つ目**で、
+**台帳の点が 1 つも届いていない**。⚠️ **推測で直さない。順序を守ること。**
 
-⚠️ **残りは「閾値の 1〜2 ss」ではなかった。測り直したら構造差だった**（2026-07-22 訂正）:
+**この順序は今セッションで実証済み**（probe D → 予測 → 実装で桁まで一致）。
+
+1. **点を起票する**（コード変更ゼロ・出力不変）。`audit/lp-geometry/probes/page-vertical.ly` に
+   **全音符のタプレット＋括弧**の book を足し、`staff.staff.*` に登録する。
+   作り方は probe P/Q/D と同じ＝**片側だけが突出物になる 2 段譜**にすること
+   （両側とも五線だと basic-distance 9 が勝って括弧の extent が出力に出ない。§1 の「2 段譜の点は
+   素の 2 段譜では作れない」を読む）。⚠️ **上下 2 方向あるので両側を足す**——今回もそれで
+   2 つ目の欠陥が出た。`residual: null` ＋ **予測を先に `why` へ書く**。
+2. **測って予測と突き合わせる。** 予測は「全音符 1 つにつき 3.5 − 0.545 ≒ 2.955 ぶん括弧が遠い」。
+   ⚠️ **magnitude が外れたら、その差が 2 つ目の欠陥**（§1 の教訓）。
+3. **実装。** ⚠️ **門を足すだけでは済まない**: `CalculateSlope` は `highestPos`/`lowestPos` に
+   **staff position だけ**を集約してから一律に `DefaultStemLength` を足しているので、
+   **「位置の極値」→「符尾先端の極値」への作り替え**が要る（音価は列ごとに違う）。
+   `GetLowestExtent`/`GetHighestExtent`（`DynamicEngraver`）が同じ形の参考実装。
+   LILYPOND-REF は `lily/tuplet-bracket.cc calc_position_and_height`
+   （points は `Note_column::cross_staff_extent[dir]`）と `lily/stem.cc Stem::is_normal_stem`。
+
+⚠️ **snapshot はタプレットのフィクスチャが動く見込み。分類 → 承認 → 実行**（§5.1）。
+
+**これが終わると幻の符尾は 3 箇所とも閉じる。** 以降の候補は §3A の「コーパスの穴」
+（スラー/タイ・ビーム・臨時記号配置）と、下の**描画フォントの乖離**（ユーザー判断待ち）。
+
+---
+
+### ✅ このセッション（2026-07-22）でやったこと — **強弱記号の縦インクを閉じた**（`26afa9fe`）
+
+分類 → 承認 → 実行の順で snapshot 16 件を再ベース済み（承認取得済み・**未 push**）。
+
+| commit | 内容 |
+|---|---|
+| `26afa9fe` | **強弱の縦インクをフォントから読む＋幻の符尾＋符頭インク＋五線 frame**。`+1.866924 → −0.000076`。**snapshot 16 件再ベース**（分類・承認済） |
+| `773db20f` | §1 書き換え＋**恒久ルール 2 件**（実測に基づく修正の禁止・リネームはユーザーが MSVS で） |
+
+`staff.staff.dynamic-under-whole-note` は **+1.866924 → −0.000076**。
+**着手前に書いた予測 −0.000076 と桁まで一致。**
+LP 忠実度 **1.890701 → 0.023853 ss**（28/36 exact。exact 数は予測どおり不変＝
+−7.6e-5 は tolerance 1e-6 より大きい）。テスト **3167 passed / 0 failed / 3 skipped**。
+
+#### 1 つの数字に**欠陥が 3 つ**入っていた（符号が違うので同時にしか直せない）
+
+| | 直した内容 | 寄与 |
+|---|---|---|
+| ① 幻の符尾 | `DynamicEngraver.GetLowestExtent` が**音価を見ずに** `noteY − DefaultStemLength` を返していた。`GetNoteValueFromFraction(...) >= 2` で門を付けた（LILYPOND-REF: `lily/stem.cc Stem::is_normal_stem`） | **−3.000000** |
+| ② 符頭の名目箱 | この engraver だけ `NoteheadHalfHeight` 0.5 のまま。スカイラインは `22120764` で LILC の 0.545 に移っていた。`GetNoteheadBBox` へ | **+0.045000** |
+| ③ 強弱の縦インク | `0.6 + 1.2 + 0.3 = 2.1` ＝ グリフを 1.5 の高さと見なしていた。LP は **3.188076** | **+1.088076** |
+
+#### ★ ③ の答え: **LILC ではなく「アウトライン」**（`ec7a2254` と逆で、理由は同じ）
+
+`DynamicText` は**グリフ引きではなくテキスト**（`define-grobs.scm:1438` `font-encoding
+fetaText` ＋ `:1445` `ly:text-interface::print`）。だから
+`Modified_font_metric::text_stencil`（`modified-font-metric.cc:125-143`）→ Pango →
+FreeType アウトライン、という経路で測られ、**LILC を読む
+`get_indexed_char_dimensions`（`open-type-font.cc:372-409`）は通らない**。
+両者は丸め誤差の域ではなく違う: **LILC `f` = (−0.5834 . 2.0066) / アウトライン
+= (−0.692 . 1.896)**。⚠️ **`ec7a2254` が「LILC が正」と決めたのは grob 経路の話**で、
+**テキスト経路では逆になる。どちらの経路かを先に確かめること。**
+
+裏取り（導出ではなく照合）は 3 組: `\p` → (−0.584004 . 1.168008)、
+`\mp` → (−0.584004 . 1.196016) ＝ **アウトラインの p と m の和集合で、LILC からは到達不能**。
+グリフ名は `dynamics.*` ではなく**素の ASCII 名 `f m n p r s z`**（fetaText 符号化）。
+
+残る **−0.000076 は Pango の量子化**（LP のスカイラインは 2.588076、アウトラインは 2.588000）。
+clef の LILC-vs-skyline sliver と同型の**名前付き残差**。埋めない。
+
+#### ★ 4 つ目の欠陥が同じ式にあった — **打ち消し合っていた**
+
+probe D では音符が binding するので**この数字には出ない**が、同時に直した:
+
+| | Lily# 旧 | LP |
+|---|---|---|
+| 五線の寄与 | 線の**中心** 2.0 | `dim.set_minimum_height(staff_extents[dir])`＝**インク 2.05**（`side-position-interface.cc:323-330`） |
+| `staff-padding` 0.1 | padding に**加算**していた | **refpoint の床**（`:433-453`）。加算ではない |
+
+`2.0 + 0.1 + 0.6 + 名目 descent 0.64 = 3.34` と `2.05 + 0.6 + 実インク 0.692002 = 3.342002`。
+**LP 実測 1.342 に固定していたテストが 2 桁では区別できず、何年も通っていた。**
+`DynamicPlacementTests` は **3 桁**に上げてある（再ピン止めではなく、式が合ったので締めた）。
+⚠️ **これが「実測に合わせて定数を選ぶ」の代表的な失敗形。§5.2 の枠に追記した。**
+
+#### snapshot 16 件の分類（**X は 1 件も動いていない・要素数も全件一致＝改行不変**）
+
+`page 高さ` は最大 +1.09。Y の移動量は全部この 5 つの和で説明できる:
+
+| Δ | 正体 |
+|---|---|
+| **+0.696** | `f` を含む語のインク上端 1.2 → 1.896 |
+| **+0.045** | 符頭インク 0.5 → 0.545（②。上向き符尾の音符に付いた強弱だけ） |
+| **−0.050** | 五線の寄与 2.0+0.1 → 2.05（④。五線が binding する強弱だけ） |
+| **−0.004 〜 −0.132** | 先頭が `p`(1.168)/`m`(1.196)/`s`(1.168)/`z`(1.068) の語＝**1.2 より低いので上がる** |
+| 系の伸び | 上向き強弱が高く届くようになった分だけ system/page が伸び、その下が一律に動く |
+
+代表例（`test/scripts-dynamics`、page 不変・動いたのは強弱 5 個だけ）:
+`sfz fp sf` が **+0.74**（音符 binding＝0.696+0.045）、`rfz fz` が **+0.65**（五線 binding＝0.696−0.05）。
+
+⚠️ **`test/dynamics` と `test/above-dynamics` は PNG で目視済み**（`--crop --scale 4.0`）。
+衝突なし・上向きの積み上げも健全。
+
+#### ⚠️ この変更で**見えるようになった**既存の乖離（未着手・別件）
+
+**Lily# は強弱を serif の太字イタリックで描いている**（`SharedRenderer.Overlays.cs:65`
+`gc.DrawText(..., "serif", ...)`）が、**LP は Emmentaler の fetaText グリフ**。
+つまり**確保する幅・高さは LP のグリフ、描くのは別のフォント**という状態になった。
+serif の `f` は上 ~1.5 なので、LP なら音符の 0.6 下に来るインク上端が **~1.0 下**になる
+＝ **0.4 ss ほど余白が増えて見える**。⚠️ **これはこの変更が作った乖離ではなく、
+この変更が可視化した乖離**（旧コードは名目 1.2 が偶然 serif に近かった）。
+**直すなら描画側を feta グリフへ**——グリフは ASCII コードポイント（`f` = U+0066）に
+入っているので、Emmentaler で `f` と描けばそのまま出る。X も同時に閉じられる
+（`DynamicHalfWidth = 0.75` / `dynamicWidth = 1.3` も名目のまま）。**判断待ち。**
+
+#### ⚠️ 残した同型の欠陥: `TupletBracketEngraver`
+
+`TupletBracketEngraver.cs:573,585` は今も `DefaultStemLength` を**音価によらず**足している
+（①と同じ形）。**直さなかったのは台帳の点が 1 つも届かないから**（§5.2.1③）。
+しかも `highestPos`/`lowestPos` が**位置だけ**を集約しているので、
+**「位置の極値」から「符尾先端の極値」への作り替え**が要る（単なる門の追加では済まない）。
+**先に点を作ること**——全音符のタプレット＋括弧、probe P/Q と同じ作り方。
+
+---
+
+### ✅ 決定: **`SystemBreaker` の再入可能化は入れない**（2026-07-22・蒸し返さないこと）
+
+ページブレーカーの LP 乖離は **5 点とも閉じた**（`113fdeda` で 3 点／`850c7d98` で orphan
+penalty／`fc0feb20` で overfull の却下）。台帳の `page.tight.*` は 2 点とも exact。
+
+**残るのは構造差だけで、それは入れないと決めた。**
+LP は `Optimal_page_breaking::solve` が**システム数を理想値から下へ掃引**し、各 count の全
+line-division 構成でページ配置を解いて **demerit の argmin** を取る
+（LILYPOND-REF: `lily/optimal-page-breaking.cc:139-173`、設計は `page-breaking.cc:75-101` に明記）。
+つまり **LP ではページブレーカーが行分割を選ぶ**。実測（40 小節・6 システム、単位 ss）:
 
 | 紙面 | LP | Lily# |
 |---|---|---|
-| 〜75 | 2 ページ 5+1（**6 システム**） | 2 ページ 5+1（6 システム）※〜76 |
+| 〜75 | 2 ページ 5+1（6 システム） | 2 ページ 5+1（〜76） |
 | 76・77 | **1 ページ 5 システム**＝行分割を組み直した | （到達不能） |
-| 78〜 | 1 ページ 6 システム | 1 ページ 6 システム ※77〜 |
+| 78〜 | 1 ページ 6 システム | 1 ページ 6 システム（77〜） |
 
-★ **LILYPOND-REF: `lily/optimal-page-breaking.cc:139-173`** —
-`Optimal_page_breaking::solve` は**システム数を理想値から下へ掃引**し、各 count の全
-line-division 構成でページ配置を解いて **demerit の argmin** を取る。つまり
-**LP ではページブレーカーが行分割を選ぶ**（`page-breaking.cc:75-101` の "HOW TO WRITE A
-PAGE BREAKING ALGORITHM" が設計として明記）。
-Lily# は**行を先に確定してからページを割る**ので、この答えは間隔の精度に関係なく出せない。
-
-**したがって「閾値を合わせる」作業は存在しない。**
-⚠️ **既存の 4 式は全部 `LILYPOND-REF` 付きの字面移植。触らないこと。**
-
-#### ✅ 決定: **`SystemBreaker` の再入可能化は入れない**（2026-07-22・蒸し返さないこと）
-
-検討して**見送った**。理由は性能ではなく**F3 の健全性論拠が壊れる**こと:
-
-`IncrementalCompiler.cs:37-42` は tier-1 skip の健全性を
+**見送った理由は性能ではなく F3 の健全性論拠が壊れること。**
+`IncrementalCompiler.cs:37-42` は tier-1 skip を
 「break 解は **per-measure spring ベクタ＋行頭 prefix 幅＋紙面の幅** の純関数」と根拠づけている。
-**全部が横方向**。ページが行分割を選ぶようにすると break 解は**縦の関数**にもなる
-（紙面高さ・余白・各 system のスカイライン/extent・hara-kiri 可視性・縦 spacing spec）——
-そしてそれらは **break の下流で計算される**。gate を計算するのに gate が守る結果が要る＝**循環**。
-実害として、今日は「行分割を変えないと証明できる」編集（高い音符・臨時記号・強弱・スラー＝
-縦 extent だけ動かす編集）が、**行分割を変えうる**ようになる。
+**全部が横方向**。ページが行分割を選ぶと break 解は**縦の関数**にもなり
+（紙面高さ・余白・スカイライン・hara-kiri 可視性・縦 spacing spec）、
+それらは **break の下流で計算される**＝gate を計算するのに gate が守る結果が要る＝**循環**。
+実害: 今日は「行分割を変えないと証明できる」編集（縦 extent だけ動かす＝高い音符・臨時記号・
+強弱・スラー）が、**行分割を変えうる**ようになる。
 
 ⚠️ **緑ノードは無傷**（幾何を持たない設計は変わらない）。壊れるのは**レイアウト層の gate**。混同しない。
 
-性能: 候補ごとに system 境界が動くので `SystemLayoutCache` がほぼ全滅し、実質「数回のフルレイアウト」。
-LP は掃引を `optimal-page-breaking.cc:120-127` で
-`min_sys_count = ideal − 最終ページ本数 −（最後から2番目のページ本数, >1 なら）` に抑えているが、
-それでもプレビューには逆方向。
-
-**安い部分は既にある**: `KnuthPlassBreaker.FindBreaksByLineCount` は
-`dp[j,k] = min demerits ... in exactly k lines` を持ち `constrained-breaking.cc` に REF 付き
-（今は `looseness` 専用）。**LP の `Constrained_breaking` と同じ形**なので、やるなら行分割側はタダ。
+性能面: 候補ごとに system 境界が動くので `SystemLayoutCache` がほぼ全滅＝実質「数回のフルレイアウト」。
+**安い部分は既にある**（`KnuthPlassBreaker.FindBreaksByLineCount` ＝ LP の `Constrained_breaking`
+と同じ `dp[j,k]`。今は `looseness` 専用）ので、高いのは常に下流の再実行。
 
 **判断し直すときの順序**（この順でないと始めないこと）:
 1. **先に頻度を測る**（コード変更ゼロ）。既存 fixture ＋ showcase を LP に通し、
@@ -79,58 +189,37 @@ LP は掃引を `optimal-page-breaking.cc:120-127` で
 2. 有意なら**オプション分離**（CLI/PDF は LP 忠実・プレビューは 1-pass）。
    ⚠️ 二重実装＝§5.2.1② の罠そのものなので、**「両者が一致する」不変条件テストとセットでのみ**
 
-⚠️ **測定の罠（実際に踏んだ）**: `page-vertical.ly` の dump は **1 ページ 1 行**で、
-**行が落ちることがある**。「2 ページなのに PAGE 1 の行しか出ない」形で落ち、そこから
-「LP は 77 まで 2 ページ・79 で 1 ページ」という**誤った結論**を一度出した。
-**book ごとに 1 行**（ページ数＋各ページ本数を 1 回の format で）にすると構造的に防げる。
-
-✅ **「分割不能なら単一ページ」フォールバックは `fc0feb20` で閉じた**（LP は overfull を却下せず
-`BAD_SPACING_PENALTY` にクランプし、「その行 1 本だけのページ」は overfull でも必ず考慮する＝
-`page-spacing.cc:339-349`・`:362-365`）。⚠️ **これは「小さい紙面のフィクスチャでしか到達しない」
-という当初の見立てが誤りで、`test/tab-percent-repeat` が実際に踏んでいた**——
-旧 snapshot は viewBox 169.01 に対し Y=325.58 まで描き、**楽譜の半分以上が紙面外**だった。
-`bestPages < 0` は到達不能になったが**ガードとして残置**（静かに全曲を1ページへ潰す失敗は
-改行ミスよりはるかに悪い）。
-
-### ▶ 次の一手の候補
-
-⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
-（`DynamicEngraver.cs:345,359,416,424`・`TupletBracketEngraver.cs:573,585`）。
-`89aaa29f` で潰した「幻の符尾」と**同じ形**だが、**台帳の点が 1 つも届かないので測っていない。
-推測で直さないこと。先に点を作る**。
-
-**実コードで裏取り済み（2026-07-22）**: `DynamicEngraver.GetLowestExtent` は
-`if (!(forcedStemUp ?? note.StemUp)) return noteY - DefaultStemLength;` を
-**音価に関係なく**返す（`ChordItem` も同型）。`SkylineBuilder` は
-`GetNoteValueFromFraction(...) >= 2`（`stem.cc Stem::is_normal_stem`）で分岐しているので、
-**同じ述語を当てれば直る形**。欠けているのは点だけ。
-
-⚠️ **probe 設計には相反する条件がある（未解決・ここから始めること）**: 幻の符尾は
-**下向き符尾のときだけ**発火する＝符頭が中央線以上＝浅い。ところが `staff.staff.*` を
-binding させるには基本距離 9 を超える深さが要り、そのためには符頭を下げる必要があるが、
-下げると**上向き符尾になって発火しない**。probe P/Q と同じ作り方では届かない。
-案: 声部で符尾方向を強制する（`voice` ブロック＝ LP の `\voiceTwo`）、
-または和音で最低音を下げつつ下向きに保つ。**どちらも未検証。**
-
-**島1（`StaffLayout.Y` の Y-up 格納）は `ff64f38e` で完遂した。** §3B ① を参照。
+**島1（`StaffLayout.Y` の Y-up 格納）も `ff64f38e` で完遂した。** §3B ① を参照。
 
 ---
 
-### ✅ このセッション（2026-07-22）でやったこと — **島1 を閉じ、ブレーカーを測れるようにした**
+### 同日の前セッション（2026-07-22）— **島1 とページブレーカーを閉じ、強弱に点を届かせた**
+
+⚠️ **docs コミット（`51f229db` `26e44606` `453776a0` `dc28098c` `5f82aaf5` `ba728f31`
+`3371d4e8`）は §1 の書き換えと訂正。下表は実質のあるものだけを挙げる。**
 
 | commit | 内容 |
 |---|---|
 | `ff64f38e` | **`StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop`/`BraceBottom` を Y-up 格納へ**（島1 の atomic flip）。3 ディスパッチャ＋7 積み上げ地点＋15 消費側。**byte 不変・snapshot 0 件**。フレームを直接固定する単体テスト 6 件を新設 |
-| `51f229db` | §1 書き換え＋島1 の作業マップを削除。`COORDINATE_AUDIT` §2.1/§4.5/§4.6 を実態へ |
 | `920cf4dc` | **ページブレーカーの点を 4 つ起票**。A4 では捕まらないと判明し、**紙面を縮めた probe T** を新設。出力不変 |
 | `113fdeda` | **ブレーカーの LP 乖離 3 点を字面移植**。`page.tight.page-count` −1 → 0。**snapshot 1 件再ベース**（分類済） |
 | `850c7d98` | **orphan penalty を LP の条件へ**（第4の乖離）。`page.tight.systems-on-first-page` −1 → 0。**snapshot 0 件** |
-| `dc28098c` | **引継ぎの訂正**。LP は 76・77 で**行分割を組み直す**＝差は構造。dump の行落ちで誤読していた |
-| `5f82aaf5` | **決定: `SystemBreaker` 再入可能化は入れない**（F3 の健全性論拠が壊れる）。docs のみ |
 | `fc0feb20` | **overfull を却下せずクランプ**（LP 準拠）。`test/tab-percent-repeat` が**紙面外描画から 2 ページへ**。**snapshot 1 件再ベース**（分類・承認済） |
+| `19e06be1` | **DynamicEngraver に届く点を起票**（probe D、第2声部で符尾方向を強制）。**符号が逆の欠陥 2 つ**を検出。出力不変 |
+| `7817c543` | **LP の dynamic 実測**（`glyph-skyline.ly` に book 追加）。descent 2 つの答えは「どちらでもない」と確定。出力不変 |
 
-**テスト 3155 → 3166 passed、0 failed / 3 skipped。** Core 0 warn / 0 err。
-**LP 忠実度 28/35 exact, total |residual| = 0.023777 ss（31 distances・不変）＋ counts 4/4。**
+**テスト 3155 → 3167 passed、0 failed / 3 skipped。** Core 0 warn / 0 err。
+**LP 忠実度 28/36 exact, total |residual| = 1.890701 ss（32 distances）＋ counts 4/4。**
+⚠️ **ss 合計が 0.023777 → 1.890701 に増えたのは悪化ではない**——probe D が
+**誰も測っていなかった 1.87 ss の乖離**を可視化した分。§5.2.1④ と同じ形（点集合が違う）。
+
+#### ★ 教訓: **予測が外れたときこそ、その差が 2 つ目の欠陥**
+
+probe D の予測 +2.955 に対し実測 +1.866924。**符号は的中して magnitude が外れた**とき、
+差の 1.088076 は誤差ではなく**符号が逆の別の欠陥**だった。
+⚠️ **もし予測を書かずに測っていたら、幻の符尾を直して residual −1.088 を見て
+「絶対値が減った＝改善」と読んでいた。** 予測は当てるためではなく、
+**外れ方から2つ目を見つけるため**にある。
 
 #### ★ 教訓: **「到達しない」と書いた見立ては、フィクスチャで裏取りする**
 
@@ -153,11 +242,6 @@ LP の実際の規則は **markup 段落の泣き別れ**（`page-spacing.cc:375
 ⚠️ **§5.2.1① の「REF があっても式が一致しているとは限らない」の実例。REF を見たら、
 その行が『値』なのか『式』なのかを確かめる。**
 
-**成果は seam に出た**: `FindStaffYInSystem` が `system.Y - offsetDown` から
-**`system.Y + staff.Y`**（LP 自身がやる素の和）になり、system 原点と staff 原点の間から
-反射が消えた。`LayoutUtilities` では **`StaffOffsetInSystemUp` が primitive**（`staff.Y` を
-そのまま返す）で `Down` がその否定＝**否定が「もう格納の姿ではない側」へ移った**。
-
 #### ★ 教訓: **A4 では見えない量がある——regime を開くのはコーパスの仕事**
 
 ページあたり本数の点を A4（book J）に足したら**最初から exact だった**。原因を測ったら、
@@ -172,9 +256,14 @@ LP は 13 のまま。ブレーカーは各候補ページが解く **force** �
 LP のブレーカーは stretchability を使わない（`inverse_hooke_ = full_height() + space`）。
 §5.2.1② が言う「複製は移植が半分しか当たらない場所」の実例が、まさにその警告の対象で起きていた。
 
-#### ★ 教訓: **byte 不変はこの種の移行の証拠にならない**
+#### ★ 教訓: **byte 不変はこの種の移行の証拠にならない**（島1）
 
-生産側と消費側が**一緒に符号を反転すると打ち消し合う**ので、snapshot オラクルは
+島1 の**成果は seam に出た**: `FindStaffYInSystem` が `system.Y - offsetDown` から
+**`system.Y + staff.Y`**（LP 自身がやる素の和）になり、system 原点と staff 原点の間から
+反射が消えた。`LayoutUtilities` では **`StaffOffsetInSystemUp` が primitive**（`staff.Y` を
+そのまま返す）で `Down` がその否定＝**否定が「もう格納の姿ではない側」へ移った**。
+
+その移行の検証について——生産側と消費側が**一緒に符号を反転すると打ち消し合う**ので、snapshot オラクルは
 「緑だがフレームが逆」を素通しする。だから `StaffLayoutFrameTests` は**格納値そのもの**を
 主張する — `staves[0].Y == 0` / `staves[i].Y < 0` かつ上の譜の下端をクリア /
 `BraceTop > BraceBottom` / `TotalHeight > 0` / `Height >= 0`（長さは正のまま）/
@@ -300,20 +389,23 @@ ink が 9.110000（clef の下 5.550 と次 system の小節番号 3.560 が同�
 
 ---
 
-**origin より 74 ahead で未 push**（HEAD = `fc0feb20` の次）。push はユーザー判断・コミットは可。
+**origin より 80 ahead で未 push**（HEAD = `773db20f`）。push はユーザー判断・コミットは可。
 ⚠️ **push は明示的に「まだしないで」と言われている**（2026-07-22）。解除まで push しないこと。
-⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 10 回**
-（186・192・2・2・80・82・3・14 件 ＋ `programmatic/hara-kiri-paged` 1 件 ＋ `test/tab-percent-repeat` 1 件）**が含まれる。**
+⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 11 回**
+（186・192・2・2・80・82・3・14 件 ＋ `programmatic/hara-kiri-paged` 1 件 ＋ `test/tab-percent-repeat` 1 件
+＋ 強弱 **16 件**）**が含まれる。**
 別ブランチ `fix/vscode-extension`（`7291531a` から）と `fix/note-bang-diagnostic` は
 **どちらも master に取り込み済み**（ユーザー）。**走っている別ブランチはもう無い。**
-**テスト 0 failed / 3166 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度 28/35 exact, total |residual| = 0.023777 ss over 31 distances ＋ counts 4/4**
-（**2.26.0 基準**。X 22点＋Y 7点＋譜間 2点＋**ページ本数 4点**）。
+**テスト 0 failed / 3167 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度 28/36 exact, total |residual| = 0.023853 ss over 32 distances ＋ counts 4/4**
+（**2.26.0 基準**。X 22点＋Y 7点＋譜間 **3点**＋**ページ本数 4点**）。
 ⚠️ **本数の点は距離ではないので ss の総和に入れない**（`unit` フィールドで分離。`page.height` を
-台帳から落としたのと同じ理由——1 system を 0.023777 ss に足すと指標が意味を失う）。
-**譜間 2 点は両方 exact**（`854a0e95`）。**縦 7 点の合計は 0.001365**（4 点が上記の skyline sliver、3 点は exact）。
+台帳から落としたのと同じ理由——1 system を 0.023853 ss に足すと指標が意味を失う）。
+**譜間 3 点のうち 2 点は exact**（`854a0e95`）、**残り 1 点が −0.000076**（`26afa9fe`。Pango 量子化）。
+**縦 7 点の合計は 0.001365**（4 点が上記の skyline sliver、3 点は exact）。
 X 3 点は `e38a76bf` から不変。
-**作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
+**作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys`
+＋ `audit/scripts/__pycache__/` を除く。§8・§7-8）。
 
 ⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
 本ファイル・`COORDINATE_AUDIT.md`・`audit/lp-geometry/README.md` の参照は張り替え済み（28件、到達性を検証）。
@@ -371,7 +463,9 @@ exact 化したのは「直った」からではない。** 2.26.0 で `accident
 要り（水平スカイライン1点／テキストレイアウト1点）、1点は `OPEN:`（5.4e-6）。
 §2⑧ の余白4定数は `e38a76bf` で、Y 台帳の起票は `0c0d8f38` で、
 `page.first-staff-refpoint` の −3.000000 は `b94487ad`＋`1dfb62d7` で閉じた。
-**次の一手は 伸長 regime（LP book J）の点。**
+（**伸長 regime の点も済み**——`6ffbe7bd` で起票、`cfdf85b4` で鎖として移植。現在
+`page.stretched.first-staff-refpoint` −0.000042 / `system.stretched-distance` −0.000414。
+**次の一手は §1 の冒頭を見ること。**）
 
 ⚠️ **TimeSignature 幅 −0.004735 は「定数を直す」問題ではない**（2026-07-22 に実測で確定）。
 `ly:time-signature::print` は **markup を組んで `grob-interpret-markup` に渡す**
@@ -884,12 +978,14 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 28/35 exact, total |residual| = 0.023777 ss over 31 distances ＋ counts 4/4**
+**現状 28/36 exact, total |residual| = 0.023853 ss over 32 distances ＋ counts 4/4**
 （`audit/lp-geometry/`・**LP 2.26.0 基準**）。
-**X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 2 点は 2 exact / 0、
-ページ本数 4 点は全て exact**（`920cf4dc` で起票、`113fdeda`＋`850c7d98` で閉じた）
+**X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 3 点は 2 exact、
+ページ本数 4 点は全て exact**（`920cf4dc` で起票、`113fdeda`＋`850c7d98` で閉じた）。
+**譜間の残 1 点＝ probe D の −0.000076**（`26afa9fe` で 1.866924 から。残りは Pango の量子化で、
+Lily# に Pango が無いので**閉じる予定は無い名前付き残差**）
 （`0c0d8f38` で Y に開き、`1dfb62d7` で自然長、`cfdf85b4` で伸長、`22120764` でインク、
-`90efec02` で clef、`b3cfb119`＋`854a0e95` で譜間を閉じた）。
+`90efec02` で clef、`b3cfb119`＋`854a0e95` で譜間を、`26afa9fe` で強弱を閉じた）。
 **Y の残り 4 点は同一原因**（clef の LILC bbox 3.550 vs LP の skyline 3.540〜3.545）。
 X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイライン／テキストレイアウト）が要る。
 
@@ -911,12 +1007,12 @@ X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイラ
 - **符尾 Y extent のダンプ**（光学補正の 2×2 の裏取り）→ 数値は
   `SpacingRules.BarlineToNextNotesCorrection` の remarks に
 
-⚠️ **未測定の疑い（2026-07-22 記録）**: `DynamicEngraver`（`:345,359,416,424`）と
-`TupletBracketEngraver`（`:573,585`）が `DefaultStemLength` を**音価によらず**足している。
-`89aaa29f` で潰した `SkylineBuilder` の幻の符尾と**同じ形**だが、**台帳の点が 1 つも届かない**。
-LP は `Stem::is_normal_stem`（duration-log >= 1）でしか符尾を持たないので、全音符に
-強弱記号やタプレット括弧が付く形は乖離している**はず**——**推測で直さないこと。先に点を作る**
-（全音符＋強弱の 2 段譜。probe P/Q と同じ作り方で `staff.staff.*` に足せる）。
+⚠️ **未測定の疑い（残り 1 箇所）**: `TupletBracketEngraver`（`:573,585`）が
+`DefaultStemLength` を**音価によらず**足している。`89aaa29f`（`SkylineBuilder`）と
+`26afa9fe`（`DynamicEngraver`）で潰した幻の符尾と**同じ形**だが、**台帳の点が届かない**。
+LP は `Stem::is_normal_stem`（duration-log >= 1）でしか符尾を持たない。
+**推測で直さないこと。先に点を作る。** 着手手順は §1 の「次の一手」。
+（`DynamicEngraver` 側はこの手順どおりに probe D → 実装で閉じた＝**型が実証済み**。）
 
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 
@@ -1066,7 +1162,52 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 - **「未使用に見える」≠「消してよい」。** 削除前に `.cs` 以外も横断 grep →`<see cref>` 確認
   → 削除後にヘルパが孤立しないか再 grep →**ユーザー承認**
 
+#### ★ シンボルのリネームは**ユーザーが MSVS で行う**（Claude は自分で改名しない）
+
+クラス・メソッド・プロパティ・フィールドなど**名前を変えたくなったら、ユーザーに依頼する**。
+ユーザーが Visual Studio のリファクタ機能（F2）で実施する。**Claude が自分で置換しない**
+（grep 不可視の消費者 — `<see cref>`・XML doc・テスト・文字列 — を取りこぼすため）。
+
+**依頼するときに伝える 4 点**:
+
+| | |
+|---|---|
+| ファイルパス | `C:\MyProj\LilySharp\...\Foo.cs` |
+| 行番号 | `123` |
+| 現在の名前 | `OldName` |
+| 新しい名前 | `NewName` |
+
+⚠️ **オカレンスは 1 箇所だけ伝えればよい。** そこから全オカレンスが一括で改名される。
+複数箇所を列挙する必要はない。複数シンボルを頼むときは上の 4 点を 1 行ずつ並べる。
+
+⚠️ **MSVS のリファクタは「コメント内のシンボル名」を取りこぼすことがある。**
+改名後に Claude 側で `grep -r '<旧名>'` を掛け、コメント・XML doc（`<see cref>` は追随するが
+`<c>Foo</c>` や地の文は追随しない）・`.md`・`.ly` プローブのヘッダ・
+コミットメッセージ用のメモに残った旧名を拾って直すこと。**改名依頼とセットで必ず行う。**
+
+⚠️ 新規シンボルの追加・不要になったシンボルの削除は対象外（通常どおり Claude が行う。
+削除は上の「未使用に見える ≠ 消してよい」に従う）。ローカル変数も対象外。
+
 ### 5.2 LP 移植の原則
+
+> ## ★★ 実測値に基づいてコードを直すことは**禁止**（ユーザー指示・2026-07-22 再確認）
+>
+> **コードに入るのは LP の `lily/*.cc` / `scm/*.scm` の式だけ。**
+> LilyPond の出力から読んだ数値でコードを書いてはならない。可能な限り**字面通りに移植**する。
+>
+> 実測の役割は 2 つだけ:
+> 1. **欠陥を見つけるヒント**（どこがズレているかを知る）
+> 2. **移植の照合**（LP の式から導いた値が実測と一致するかを確かめる）
+>
+> ⚠️ **「実測に合う定数を選ぶ」は 1 も 2 も満たさない。** 合ってしまうので気づきにくい。
+> ⚠️ **判定法**: その値を **LP のどの関数のどの行から導いたか**をコメントに書けるか。
+> 書けないなら実測を貼っただけ。`LILYSHARP-OWN:` を付けて独自と明示するか、式を探しに戻る。
+> ⚠️ **偶然一致に注意**: 2026-07-22 の強弱記号では、誤った frame（五線の中心 2.0 ＋
+> staff-padding 0.1）と誤った定数（名目 descent 0.64）が**打ち消し合って** LP 実測の
+> 1.342 を 0.002 以内で再現していた。実測に合わせて選んだ定数は、こういう形で
+> **2 つの欠陥を固定する**。
+>
+> ★ **これは何度も繰り返されている指摘。破ったら差し戻し。**
 
 - レイアウト/描画は `C:\MyProj\lilypond-src` の `lily/*.cc` を**符号一致で字面移植**。
   関数名・変数名・符号・丸めまで揃える。**独自の近似・辻褄合わせを入れない**

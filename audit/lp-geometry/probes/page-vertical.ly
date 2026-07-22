@@ -230,6 +230,39 @@ probeTag =
   }
 }
 
+%% D — a WHOLE NOTE with a FORCED-DOWN stem, carrying a dynamic, and the quantity is again
+%%     the staff-to-staff distance. This exists to measure one specific suspicion:
+%%     Lily#'s DynamicEngraver.GetLowestExtent subtracts a full stem length from any
+%%     down-stemmed note WITHOUT checking the duration, so a whole note — which has no stem
+%%     at all — reserves one. Same defect 89aaa29f removed from SkylineBuilder, at a site no
+%%     ledger entry reached.
+%%
+%%     Why the two voices. The defect only fires on a DOWN stem, which by the default
+%%     direction rule means a notehead at or above the middle line — too shallow for the
+%%     dynamic below it to beat StaffGrouper's basic-distance of 9, so the gap would sit on
+%%     that floor and measure nothing. \voiceTwo forces the stem down on a note placed as
+%%     LOW as we like, which is what makes the two requirements (down stem, and deep enough
+%%     to bind) satisfiable at once. Voice one holds the middle line so the staff has an
+%%     ordinary upper voice and the pair is a normal two-voice texture.
+%%
+%%     LilyPond draws no stem here either way (lily/stem.cc Stem::is_normal_stem — duration
+%%     log >= 1), so `a` reaches only its notehead's 0.545 below its centre at -4.0, i.e.
+%%     4.545 below the staff refpoint. Lily# reserves 3.5, reaching 7.5. The dynamic hangs
+%%     from whichever it is, so the difference should arrive at the staff gap nearly intact.
+%%
+%%     ragged-bottom, so the page's own springs stay natural and the number read here is
+%%     Align_interface's.
+\book {
+  \probeTag "D"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff << { \voiceOne b'1 } \\ { \voiceTwo a1\f } >>
+      \new Staff { \clef bass d1 }
+    >>
+  }
+}
+
 %% Q — P with the protrusion on the OTHER side, and it is not redundant. P binds the LOWER
 %%     staff's TOP line against ink coming down; Q binds the UPPER staff's BOTTOM line
 %%     against ink going up. Those are two different edges of the staff symbol reached

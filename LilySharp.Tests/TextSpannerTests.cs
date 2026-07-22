@@ -241,11 +241,15 @@ public class TextSpannerTests
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, dynamics);
 
         Assert.Single(result);
-        // dynamicBottom = 6.8 + 0.6(DynamicTextDescent) = 7.4
-        // requiredY = 7.4 + 0.46(BetweenLayerPadding) + 1.0(TextAscent) = 8.86
+        // The dynamic's bottom is its own GLYPH INK below the baseline, not a nominal
+        // constant: "mf" is the union of the fetaText m and f, and f descends 0.692000.
+        // dynamicBottom = 6.8 + 0.692000 = 7.492000
+        // requiredY = 7.492000 + 0.46(BetweenLayerPadding) + 1.0(TextAscent) = 8.952000
+        // (The 0.6 this used to assert was TextSpannerEngraver's own unsourced descent —
+        // one of three different numbers Lily# kept for that single quantity.)
         Assert.True(result[0].YUp < -6.8,
             $"Text spanner YUp ({result[0].YUp}) should be below dynamic (YUp < -6.8)");
-        Assert.Equal(-8.86, result[0].YUp, 2);
+        Assert.Equal(-8.952, result[0].YUp, 3);
     }
 
     [Fact]
@@ -274,7 +278,9 @@ public class TextSpannerTests
         Assert.Single(result);
         Assert.True(result[0].YUp < -6.8,
             $"Text spanner YUp ({result[0].YUp}) should be below dynamic (YUp < -6.8) in multi-system layout");
-        Assert.Equal(-8.86, result[0].YUp, 2);
+        // Same arithmetic as Calculate_Y_PushedBelowOverlappingDynamics: the "mf" ink
+        // descends 0.692000, so 6.8 + 0.692 + 0.46 + 1.0 = 8.952000.
+        Assert.Equal(-8.952, result[0].YUp, 3);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="456.2" viewBox="0 0 119.50 45.62" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="463.7" viewBox="0 0 119.50 46.37" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -109,21 +109,21 @@
   <rect x="76.05" y="32.83" width="0.19" height="4.00" data-pos="632"/>
   <rect x="101.34" y="32.83" width="0.19" height="4.00" data-pos="655"/>
   <rect x="101.83" y="32.83" width="0.60" height="4.00" data-pos="655"/>
-  <text x="10.33" y="25.62" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="285">p</text>
-  <text x="50.09" y="25.12" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
-  <text x="57.02" y="26.84" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="380">ff</text>
-  <text x="96.70" y="29.12" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="448">pp</text>
-  <text x="8.08" y="39.63" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="529">mf</text>
-  <text x="13.99" y="39.13" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="534">p</text>
+  <text x="10.33" y="25.64" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="285">p</text>
+  <text x="50.09" y="25.82" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
+  <text x="57.02" y="27.54" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="380">ff</text>
+  <text x="96.70" y="29.14" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="448">pp</text>
+  <text x="8.08" y="40.38" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="529">mf</text>
+  <text x="13.99" y="39.15" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="534">p</text>
   <text class="music" x="57.67" y="24.44" font-size="4.00" data-pos="383"></text>
   <text class="music" x="63.07" y="24.72" font-size="4.00" data-pos="394"></text>
   <text class="music" x="68.47" y="25.22" font-size="4.00" data-pos="405"></text>
   <text class="music" x="73.87" y="25.72" font-size="4.00" data-pos="416"></text>
   <text class="music" x="96.29" y="32.51" font-size="4.00" data-pos="646"></text>
-  <line x1="39.79" y1="26.36" x2="49.59" y2="25.69" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="39.79" y1="26.36" x2="49.59" y2="27.02" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="86.39" y1="29.69" x2="96.20" y2="30.36" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
-  <line x1="86.39" y1="31.02" x2="96.20" y2="30.36" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="39.79" y1="27.45" x2="49.59" y2="26.78" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="39.79" y1="27.45" x2="49.59" y2="28.11" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="86.39" y1="29.99" x2="96.20" y2="30.65" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="86.39" y1="31.32" x2="96.20" y2="30.65" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <text x="0.05" y="30.57" font-size="1.75" font-weight="bold">5</text>
   <text class="music" x="3.23" y="16.06" font-size="1.60" data-pos="0"></text>
   <line x1="3.74" y1="16.06" x2="3.74" y2="14.66" stroke="#000000" stroke-width="0.100" data-pos="0"/>

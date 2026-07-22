@@ -313,4 +313,63 @@ internal static partial class GlyphMetrics
         (>= 32, false) => Flag16thDown,
         _ => default
     };
+
+    /// <summary>The bounding box of one fetaText dynamic letter, or default if the
+    /// character is not one of the seven the encoding draws dynamics from.</summary>
+    private static BBox GetDynamicLetterBBox(char c) => c switch
+    {
+        'f' => DynamicLetterF,
+        'm' => DynamicLetterM,
+        'n' => DynamicLetterN,
+        'p' => DynamicLetterP,
+        'r' => DynamicLetterR,
+        's' => DynamicLetterS,
+        'z' => DynamicLetterZ,
+        _ => default
+    };
+
+    /// <summary>
+    /// Vertical ink of a dynamic label, in staff spaces from its baseline — the union of
+    /// its letters' bounding boxes. False when the label is not spelled from the fetaText
+    /// dynamic letters (free <c>@text</c>, the <c>cresc.</c>/<c>dim.</c> words), which
+    /// LilyPond sets in a text font and Lily# draws in a serif face.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1438,1445,1449 DynamicText — (font-encoding .
+    ///   fetaText), (stencil . ly:text-interface::print), (Y-extent .
+    ///   grob::always-Y-extent-from-stencil). The grob's extent IS the drawn glyphs' ink,
+    ///   which is why it differs per dynamic — <c>p</c> descends below the baseline and
+    ///   <c>m</c> does not — and why no single nominal constant can be right for all of
+    ///   them. Lily# had three of them (1.2 / 0.64 / 0.3) and none matched.
+    ///
+    /// The letter boxes come from the OUTLINE, not from LILC, and that follows from the
+    /// call path rather than from a fitted number: LILC is read only by
+    /// <c>get_indexed_char_dimensions</c> (lily/open-type-font.cc:372-409), which the
+    /// GLYPH path uses; a text stencil goes through Modified_font_metric::text_stencil
+    /// (lily/modified-font-metric.cc:125-143) to Pango, which measures the FreeType
+    /// outline and never consults LILC. Confirmed rather than derived: asked of the grob
+    /// on 2.26.0, <c>\p</c> reports (-0.584004 . 1.168008) where LILC holds
+    /// (-0.5834 . 1.1666), and <c>\mp</c> reports (-0.584004 . 1.196016) — the union of
+    /// the two OUTLINE boxes, unreachable from LILC.
+    /// The leftover ~2e-5 is Pango's own quantisation of that outline; Lily# has no Pango,
+    /// so it stays a named residual rather than being fitted away.
+    /// </remarks>
+    public static bool TryGetDynamicInk(string? text, out double bottom, out double top)
+    {
+        bottom = 0;
+        top = 0;
+        if (string.IsNullOrEmpty(text))
+            return false;
+        bool any = false;
+        foreach (char c in text)
+        {
+            var box = GetDynamicLetterBBox(c);
+            if (box == default)
+                return false;   // not a fetaText dynamic letter — caller falls back
+            bottom = any ? System.Math.Min(bottom, box.Bottom) : box.Bottom;
+            top = any ? System.Math.Max(top, box.Top) : box.Top;
+            any = true;
+        }
+        return any;
+    }
 }

@@ -356,6 +356,54 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A WHOLE NOTE with a FORCED-DOWN stem carrying a dynamic — the mirror of book D.
+    /// Measures the staff-to-staff distance again, but shaped to reach one specific site.
+    /// </summary>
+    /// <remarks>
+    /// <c>DynamicEngraver.GetLowestExtent</c> subtracts <c>DefaultStemLength</c> from any
+    /// down-stemmed note without checking its duration, so a whole note — which has no stem
+    /// — reserves one. It is the same defect <c>89aaa29f</c> removed from
+    /// <c>SkylineBuilder</c>, which branches on
+    /// <c>GetNoteValueFromFraction(...) &gt;= 2</c> citing <c>Stem::is_normal_stem</c>. This
+    /// entry is the ledger point that site never had.
+    /// <para>
+    /// Why two voices, and why the obvious probe cannot work: the defect fires only on a
+    /// DOWN stem, which under the default direction rule means a notehead at or above the
+    /// middle line — far too shallow for a dynamic beneath it to beat StaffGrouper's
+    /// basic-distance of 9, so the gap would rest on that floor and measure nothing at all.
+    /// Reaching past 9 needs a LOW notehead, which takes an UP stem and does not fire. The
+    /// two requirements are contradictory under the default rule; a second voice
+    /// (LilyPond's <c>\voiceTwo</c>) forces the direction independently of the pitch and
+    /// dissolves the contradiction. Voice one holds the middle line so the staff is an
+    /// ordinary two-voice texture rather than a lone forced note.
+    /// </para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff &lt;&lt; { \voiceOne b'1 } \\
+    /// { \voiceTwo a1\f } &gt;&gt; \new Staff { \clef bass d1 } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string DY = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b1 } voice { a,1@f } | }
+          lh { d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "DY" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// <see cref="P"/> with the protrusion on the other side — the mirror of book Q.
     /// </summary>
     /// <remarks>
@@ -522,5 +570,9 @@ internal static class LpGeometryProbes
         // symbol -- see the remarks on P and Q for why one of them is not enough.
         new("staff.staff.upper-note-to-lower-lines", P, g => g.StaffGap()),
         new("staff.staff.lower-note-to-upper-lines", Q, g => g.StaffGap()),
+
+        // The same gap again, shaped so a DYNAMIC under a stemless whole note is what binds
+        // it — the first ledger point that reaches DynamicEngraver. See probe DY.
+        new("staff.staff.dynamic-under-whole-note", DY, g => g.StaffGap()),
     };
 }

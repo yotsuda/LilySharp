@@ -56,10 +56,12 @@ internal static class OutsideStaffStacker
     // LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner (padding . 0.6).
     private const double DynamicLineSpannerPadding = 0.6;
 
-    // Element height estimates (staff spaces)
-    // LILYPOND-REF: define-grobs.scm:1450 DynamicText Y-offset = (scale-by-font-size -0.6)
-    private const double DynamicTextAscent = 1.2;
-    private const double DynamicTextDescent = 0.3;
+    // A dynamic's own ink comes from the font, per label — DynamicEngraver.InkOf. There is
+    // no constant here any more: LilyPond's DynamicText extent IS the drawn glyphs' ink,
+    // so `p` descends below its baseline and `m` does not. The 1.2 / 0.3 pair that used to
+    // live here was a nominal box for a glyph 2.588 tall, and cited
+    // define-grobs.scm:1450 — which is the Y-offset (-0.6) inside the line spanner, not an
+    // ascent. A LILYPOND-REF beside a number is not evidence that the number came from it.
 
     // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin height = 0.6666
     private const double HairpinHalfHeight = 0.6666 / 2.0;
@@ -200,9 +202,10 @@ internal static class OutsideStaffStacker
 
                 double xStart = dyn.X - DynamicHalfWidth;
                 double xEnd = dyn.X + DynamicHalfWidth;
+                var (ascent, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
                 var tracker = Track(sysIdx, dyn.StaffIndex);
                 double occupied = tracker.Frontier(xStart, xEnd);
-                double requiredYup = occupied - DynamicLineSpannerPadding - DynamicTextAscent;
+                double requiredYup = occupied - DynamicLineSpannerPadding - ascent;
                 // System-relative Y-up: the grob's dyn.YUp (above the staff middle) sits
                 // at dyn.YUp - off - 2; clamp it no closer to the staff than the frontier
                 // demands (further below = smaller Y-up), and reflect any push back to the
@@ -217,7 +220,7 @@ internal static class OutsideStaffStacker
                     dynBuilder[i] = dyn with { YUp = requiredYup + off + 2.0 };
                 }
 
-                double bottom = curDynYup - DynamicTextDescent;
+                double bottom = curDynYup - descent;
                 tracker.AddRegion(xStart, xEnd, bottom);
             }
             adjDynamics = dynBuilder.ToImmutable();
@@ -530,10 +533,11 @@ internal static class OutsideStaffStacker
             // Stack in system-relative Y-up: dyn.YUp relative to this staff's WITHIN-
             // SYSTEM middle is dyn.YUp + midUp; place, then shift back.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
+            var (ascent, _) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
             double newRel = Place(trackers[sysIdx],
                 dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
                 dyn.YUp + midUp,
-                topOffset: DynamicTextAscent, bottomOffset: 0.0);
+                topOffset: ascent, bottomOffset: 0.0);
             b[i] = dyn with { YUp = newRel - midUp };
         }
         return b.ToImmutable();

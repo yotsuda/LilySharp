@@ -40,3 +40,37 @@
     { c'1 }
   }
 }
+
+%% THE DYNAMIC, on exactly the music of book D in page-vertical.ly. That entry measures the
+%% staff-to-staff distance and lands at residual +1.866924, which decomposes into TWO
+%% divergences of opposite sign — a phantom stem worth +2.955 and the dynamic's own vertical
+%% footprint worth -1.088076 (Lily# spends 2.100000 below the note's claimed bottom,
+%% LilyPond 3.188076). That second number was INFERRED by subtracting the first from the
+%% total; this book measures it instead.
+%%
+%% Both grobs are asked because the footprint is split between them: DynamicLineSpanner
+%% carries the padding that holds the pair off the staff (scm/define-grobs.scm:1408
+%% (padding . 0.6)) and DynamicText carries the glyph's own ink. Lily# had THREE different
+%% descents for that glyph, none traced to a LilyPond line, and this book was written to
+%% decide between them.
+%%
+%% ANSWERED: none of them. DynamicText reports ext (-0.692002 . 1.896021) — the `f`
+%% GLYPH's own ink, so the quantity is per-dynamic and no constant can be right (p
+%% descends, m does not). Lily# now reads it from the font, from the OUTLINE rather than
+%% from LILC because DynamicText is text (font-encoding fetaText + ly:text-interface::print
+%% -> Modified_font_metric::text_stencil -> Pango over the outline), which is the opposite
+%% source from ec7a2254 for exactly the reason ec7a2254 chose LILC. The entry closed to
+%% -0.000076, that remainder being Pango's quantisation of the outline.
+%%
+%% Y-offset is printed for both, because the footprint below the note is
+%% -(Y-offset) + the down skyline's height, in the staff's own frame.
+\book {
+  \score {
+    \new Staff \with {
+      \override DynamicText.after-line-breaking = #(probe-glyph "DYNAMIC-TEXT")
+      \override DynamicLineSpanner.after-line-breaking = #(probe-glyph "DYNAMIC-SPANNER")
+      \override NoteHead.after-line-breaking = #(probe-glyph "NOTEHEAD-A")
+    }
+    << { \voiceOne b'1 } \\ { \voiceTwo a1\f } >>
+  }
+}

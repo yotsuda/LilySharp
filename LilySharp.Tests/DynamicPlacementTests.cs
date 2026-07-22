@@ -123,18 +123,25 @@ public class DynamicPlacementTests
     [Fact]
     public void AboveDynamic_StaffClearance_MatchesLilyPond()
     {
-        // Ground truth (LilyPond 2.24.4, \dynamicUp on an on-staff note): the forced-up
-        // dynamic's baseline sits 1.34 staff-spaces above the staff top
-        // (staff-padding 0.1 + padding 0.6 + glyph descent 0.64). The DESCENDER — not the
-        // baseline — is the edge facing the staff, so a pure ascent-mirror (0.7) would let
-        // the f/p swash nearly touch the top line. ColumnAboveBaselineY with no voices
-        // returns the staff-governed baseline.
-        // ColumnAboveBaselineY now returns the native Y-up frame (staff-spaces above the
-        // staff MIDDLE): the staff top is +StaffMiddle (2.0), so 1.34 above the top reads
-        // as 2.0 + 1.34 = 3.34 above the middle. Same physical clearance, up-positive.
+        // Ground truth (LilyPond, \dynamicUp on an on-staff note): the forced-up dynamic's
+        // baseline sits 1.342 staff-spaces above the staff top. The DESCENDER — not the
+        // baseline — is the edge facing the staff, so a pure ascent-mirror would let the
+        // f/p swash nearly touch the top line. ColumnAboveBaselineY with no voices returns
+        // the staff-governed baseline, in the native Y-up frame (staff-spaces above the
+        // staff MIDDLE), so 1.342 above the top line reads as 3.342 above the middle.
+        //
+        // The value decomposes ONLY under the ported formula: the staff enters as its
+        // EXTENT 2.05 (side-position-interface.cc:323-330), padding 0.6 is spent once, and
+        // the descent is the `f` glyph's own ink 0.692002 — 2.05 + 0.6 + 0.692 = 3.342.
+        // The reading it replaced (staff line centre 2.0 + staff-padding 0.1 + padding 0.6
+        // + a nominal descent 0.64 = 3.34) reached the same total by cancelling two
+        // errors, which is why this test could not tell them apart at 2 decimals. It is
+        // asserted at 3 now: the port's 3.342000 against LilyPond's 3.342002, the residual
+        // being Pango's quantisation of the outline.
+        var (ascent, descent) = DynamicEngraver.InkOf("f", expressive: false);
         double aboveBaseline = DynamicEngraver.ColumnAboveBaselineY(
-            ImmutableArray<Voice>.Empty, 0, 0);
-        Assert.Equal(3.34, aboveBaseline, 2);  // 2.0 (staff top) + 1.342 measured clearance
+            ImmutableArray<Voice>.Empty, 0, 0, ascent, descent);
+        Assert.Equal(3.342, aboveBaseline, 3);
     }
 
     [Fact]

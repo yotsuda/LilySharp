@@ -4,8 +4,10 @@
 // ledger-lined notes are note-governed and rise with the pitch (measure 2); and
 // two voices' @p.up / @f.up on the SAME column stack outward, away from the staff
 // (measure 3). The above baseline clears the staff/notes by the glyph DESCENDER,
-// matching LilyPond's \dynamicUp (see DynamicEngraver.TextDescent). Absolute octave
-// mode keeps the pitches explicit.
+// matching LilyPond's \dynamicUp — and that descent is now the GLYPH'S OWN ink, read
+// from the font per dynamic (DynamicEngraver.InkOf), so `p` and `f` do not sit at the
+// same height here: p descends 0.584 and f 0.692. Absolute octave mode keeps the
+// pitches explicit.
 octave absolute
 title "Above-staff dynamics"
 part m { clef treble }

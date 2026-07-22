@@ -51,12 +51,17 @@ class GlyphSpec:
     glyph:       feta glyph name in the font (e.g. "noteheads.s2")
     summary:     XML doc <summary>
     feta_ref:    LILYPOND-REF citation pointing into mf/feta-*.mf
+    source:      which dimension LilyPond reads for THIS glyph — "lilc" (the default,
+                 the METAFONT-designed bbox that ly:font-get-glyph lays out with) or
+                 "outline" (the curves' own bounds, which is what the TEXT path
+                 measures). See the dynamics block below for why the two differ.
     """
 
     csharp_name: str
     glyph: str
     summary: str
     feta_ref: str
+    source: str = "lilc"
 
 
 # --- BBox glyphs (full bounds extracted) ---
@@ -130,6 +135,36 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ArticDownBowAboveGlyph", "scripts.udownbow", "Down-bow above (frog)", "mf/feta-scripts.mf — scripts.udownbow"),
     GlyphSpec("ArticDownBowBelowGlyph", "scripts.ddownbow", "Down-bow below (frog)", "mf/feta-scripts.mf — scripts.ddownbow"),
     GlyphSpec("ArticFlageoletGlyph", "scripts.flageolet", "Flageolet / harmonic circle",    "mf/feta-scripts.mf — scripts.flageolet"),
+    # --- Dynamic letters (fetaText encoding) ---
+    # A DynamicText grob is TEXT, not a glyph lookup: scm/define-grobs.scm:1438 gives it
+    # (font-encoding . fetaText) and :1445 (stencil . ly:text-interface::print), so its
+    # stencil is built by Modified_font_metric::text_stencil (lily/modified-font-metric.cc
+    # :125-143) and measured by Pango over the FreeType outline. LILC is read ONLY by
+    # get_indexed_char_dimensions (lily/open-type-font.cc:372-409), which is the GLYPH
+    # path; the text path never calls it. So the source here follows from which function
+    # LilyPond runs, not from which number happens to fit — and the two differ far past
+    # rounding:
+    #
+    #     glyph   LILC bbox Y          outline bbox Y      LilyPond 2.26.0 reports
+    #     f       (-0.5834 . 2.0066)   (-0.692 . 1.896)    (-0.692002 . 1.896021)
+    #     p       (-0.5834 . 1.1666)   (-0.584 . 1.168)    (-0.584004 . 1.168008)
+    #     m       ( 0.0    . 1.1666)   (-0.028 . 1.196)    (see mp below)
+    #
+    # Confirmed (not derived) by asking the grob itself on three independent letter sets:
+    # \mp reports (-0.584004 . 1.196016), the union of the OUTLINE p and m, unreachable
+    # from LILC. A multi-letter dynamic is the union of its letters' boxes.
+    # The residual +2e-5 is Pango's own quantisation of the outline and stays named rather
+    # than fitted (HANDOFF 5.2.1 (5)); Lily# has no Pango.
+    #
+    # These are the seven letters the fetaText encoding draws dynamics from; they are
+    # addressed by the bare ASCII name, not a "dynamics." prefix.
+    GlyphSpec("DynamicLetterF", "f", "Dynamic letter 'f' (fetaText)", "mf/feta-dynamics.mf — f", source="outline"),
+    GlyphSpec("DynamicLetterM", "m", "Dynamic letter 'm' (fetaText)", "mf/feta-dynamics.mf — m", source="outline"),
+    GlyphSpec("DynamicLetterN", "n", "Dynamic letter 'n' (fetaText)", "mf/feta-dynamics.mf — n", source="outline"),
+    GlyphSpec("DynamicLetterP", "p", "Dynamic letter 'p' (fetaText)", "mf/feta-dynamics.mf — p", source="outline"),
+    GlyphSpec("DynamicLetterR", "r", "Dynamic letter 'r' (fetaText)", "mf/feta-dynamics.mf — r", source="outline"),
+    GlyphSpec("DynamicLetterS", "s", "Dynamic letter 's' (fetaText)", "mf/feta-dynamics.mf — s", source="outline"),
+    GlyphSpec("DynamicLetterZ", "z", "Dynamic letter 'z' (fetaText)", "mf/feta-dynamics.mf — z", source="outline"),
 ]
 
 # --- Advance-only glyphs (just the horizontal advance width) ---
@@ -260,29 +295,45 @@ def main() -> int:
     lines.append("    // BBox = the glyph's designed extent, read from LILC — the same per-glyph")
     lines.append("    // dimension LilyPond lays out with (lily/open-type-font.cc:390-408). It is NOT")
     lines.append("    // the outline's bounding box, which differs by ~0.002 ss on a note head.")
+    lines.append("    // EXCEPTION: entries marked 'outline bbox' below are grobs LilyPond measures")
+    lines.append("    // through the TEXT path (Pango over the outline), where LILC is never read.")
     lines.append("    // For horizontal positioning of the next glyph use the corresponding")
     lines.append("    // ...Advance constant, taken from hmtx as LilyPond takes it.")
     lines.append("")
+    def outline_bbox(glyph: str):
+        pen = BoundsPen(glyphSet)
+        glyphSet[glyph].draw(pen)
+        if pen.bounds is None:
+            return None
+        xMin, yMin, xMax, yMax = pen.bounds
+        return (xMin / STAFF_SPACE_UNITS, yMin / STAFF_SPACE_UNITS,
+                xMax / STAFF_SPACE_UNITS, yMax / STAFF_SPACE_UNITS)
+
     for spec in BBOX_GLYPHS:
-        if spec.glyph in lilc_bboxes:
+        if spec.source == "outline":
+            # Asked for explicitly: LilyPond measures THIS glyph through the text path,
+            # so its LILC entry — if it even has one — is the wrong number. See the
+            # dynamics block in BBOX_GLYPHS.
+            box = outline_bbox(spec.glyph)
+            if box is None:
+                sys.stderr.write(f"ERROR: glyph {spec.glyph} has empty outline\n")
+                return 1
+            L, B, R, T = box
+        elif spec.glyph in lilc_bboxes:
             L, B, R, T = lilc_bboxes[spec.glyph]
         else:
             # No LILC entry (a font without the table, or a glyph feta never sized).
             # Fall back to the outline and say so, rather than silently mixing sources.
             sys.stderr.write(f"note: {spec.glyph} has no LILC bbox; using the outline\n")
-            pen = BoundsPen(glyphSet)
-            glyphSet[spec.glyph].draw(pen)
-            if pen.bounds is None:
+            box = outline_bbox(spec.glyph)
+            if box is None:
                 sys.stderr.write(f"ERROR: glyph {spec.glyph} has empty outline\n")
                 return 1
-            xMin, yMin, xMax, yMax = pen.bounds
-            L = xMin / STAFF_SPACE_UNITS
-            B = yMin / STAFF_SPACE_UNITS
-            R = xMax / STAFF_SPACE_UNITS
-            T = yMax / STAFF_SPACE_UNITS
+            L, B, R, T = box
         adv, _ = hmtx[spec.glyph]
         adv_ss = adv / STAFF_SPACE_UNITS
-        lines.append(f"    /// <summary>{spec.summary} — BBox.</summary>")
+        kind = "outline bbox" if spec.source == "outline" else "LILC bbox"
+        lines.append(f"    /// <summary>{spec.summary} — BBox ({kind}).</summary>")
         lines.append(f"    /// <remarks>LILYPOND-REF: {cite(spec)}</remarks>")
         lines.append(f"    public static readonly BBox {spec.csharp_name} = new({fmt(L)}, {fmt(B)}, {fmt(R)}, {fmt(T)});")
         lines.append(f"    /// <summary>{spec.summary} — advance width (next-glyph horizontal feed).</summary>")

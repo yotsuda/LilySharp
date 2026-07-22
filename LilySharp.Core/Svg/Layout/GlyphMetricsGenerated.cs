@@ -20,326 +20,370 @@ internal static partial class GlyphMetrics
     // BBox = the glyph's designed extent, read from LILC — the same per-glyph
     // dimension LilyPond lays out with (lily/open-type-font.cc:390-408). It is NOT
     // the outline's bounding box, which differs by ~0.002 ss on a note head.
+    // EXCEPTION: entries marked 'outline bbox' below are grobs LilyPond measures
+    // through the TEXT path (Pango over the outline), where LILC is never read.
     // For horizontal positioning of the next glyph use the corresponding
     // ...Advance constant, taken from hmtx as LilyPond takes it.
 
-    /// <summary>Whole notehead — BBox.</summary>
+    /// <summary>Whole notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0 (noteheads.s0 = U+E0FC in this build)</remarks>
     public static readonly BBox NoteheadWhole = new(0.000000, -0.545000, 1.962000, 0.545000);
     /// <summary>Whole notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadWholeAdvance = 1.960000;
 
-    /// <summary>Half (hollow) notehead — BBox.</summary>
+    /// <summary>Half (hollow) notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1 (noteheads.s1 = U+E0FD in this build)</remarks>
     public static readonly BBox NoteheadHalf = new(0.000000, -0.545000, 1.377400, 0.545000);
     /// <summary>Half (hollow) notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadHalfAdvance = 1.376000;
 
-    /// <summary>Black (filled) notehead — BBox.</summary>
+    /// <summary>Black (filled) notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2 (noteheads.s2 = U+E0FE in this build)</remarks>
     public static readonly BBox NoteheadBlack = new(0.000000, -0.545000, 1.304200, 0.545000);
     /// <summary>Black (filled) notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadBlackAdvance = 1.304000;
 
-    /// <summary>Sharp accidental — BBox.</summary>
+    /// <summary>Sharp accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.sharp (accidentals.sharp = U+E013 in this build)</remarks>
     public static readonly BBox AccidentalSharp = new(0.000000, -1.500000, 1.100000, 1.500000);
     /// <summary>Sharp accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalSharpAdvance = 1.100000;
 
-    /// <summary>Flat accidental — BBox.</summary>
+    /// <summary>Flat accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.flat (accidentals.flat = U+E021 in this build)</remarks>
     public static readonly BBox AccidentalFlat = new(-0.120000, -0.630000, 0.800000, 1.830000);
     /// <summary>Flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalFlatAdvance = 0.800000;
 
-    /// <summary>Natural accidental — BBox.</summary>
+    /// <summary>Natural accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.natural (accidentals.natural = U+E01D in this build)</remarks>
     public static readonly BBox AccidentalNatural = new(0.000000, -1.500000, 0.666600, 1.500000);
     /// <summary>Natural accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalNaturalAdvance = 0.664000;
 
-    /// <summary>Double sharp accidental — BBox.</summary>
+    /// <summary>Double sharp accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.doublesharp (accidentals.doublesharp = U+E01C in this build)</remarks>
     public static readonly BBox AccidentalDoubleSharp = new(0.000000, -0.500000, 1.000000, 0.500000);
     /// <summary>Double sharp accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleSharpAdvance = 1.000000;
 
-    /// <summary>Double flat accidental — BBox.</summary>
+    /// <summary>Double flat accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.flatflat (accidentals.flatflat = U+E02A in this build)</remarks>
     public static readonly BBox AccidentalDoubleFlat = new(-0.120000, -0.630000, 1.450000, 1.830000);
     /// <summary>Double flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleFlatAdvance = 1.448000;
 
-    /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox.</summary>
+    /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen (accidentals.leftparen = U+E02F in this build)</remarks>
     public static readonly BBox AccidentalLeftParen = new(-0.600000, -1.000000, 0.000000, 1.000000);
     /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalLeftParenAdvance = 0.000000;
 
-    /// <summary>Right accidental parenthesis — BBox.</summary>
+    /// <summary>Right accidental parenthesis — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.rightparen (accidentals.rightparen = U+E02E in this build)</remarks>
     public static readonly BBox AccidentalRightParen = new(0.000000, -1.000000, 0.600000, 1.000000);
     /// <summary>Right accidental parenthesis — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalRightParenAdvance = 0.600000;
 
-    /// <summary>8th note flag (upward stem) — BBox.</summary>
+    /// <summary>8th note flag (upward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.u3 (flags.u3 = U+E0D6 in this build)</remarks>
     public static readonly BBox Flag8thUp = new(0.000000, -3.050200, 0.828200, 0.065000);
     /// <summary>8th note flag (upward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag8thUpAdvance = 0.828000;
 
-    /// <summary>8th note flag (downward stem) — BBox.</summary>
+    /// <summary>8th note flag (downward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.d3 (flags.d3 = U+E0DE in this build)</remarks>
     public static readonly BBox Flag8thDown = new(0.000000, -0.065000, 1.066800, 2.840200);
     /// <summary>8th note flag (downward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag8thDownAdvance = 1.064000;
 
-    /// <summary>16th note flag (upward stem) — BBox.</summary>
+    /// <summary>16th note flag (upward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.u4 (flags.u4 = U+E0D7 in this build)</remarks>
     public static readonly BBox Flag16thUp = new(0.000000, -3.550200, 0.828200, 0.065000);
     /// <summary>16th note flag (upward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag16thUpAdvance = 0.828000;
 
-    /// <summary>16th note flag (downward stem) — BBox.</summary>
+    /// <summary>16th note flag (downward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.d4 (flags.d4 = U+E0DF in this build)</remarks>
     public static readonly BBox Flag16thDown = new(0.000000, -0.065000, 1.066800, 3.050200);
     /// <summary>16th note flag (downward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag16thDownAdvance = 1.064000;
 
-    /// <summary>Augmentation dot — BBox.</summary>
+    /// <summary>Augmentation dot — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — dots.dot (dots.dot = U+E038 in this build)</remarks>
     public static readonly BBox AugmentationDot = new(0.000000, -0.225000, 0.450000, 0.225000);
     /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
     public const double AugmentationDotAdvance = 0.448000;
 
-    /// <summary>Trill ornament — BBox.</summary>
+    /// <summary>Trill ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.trill (scripts.trill = U+E05E in this build)</remarks>
     public static readonly BBox OrnTrillGlyph = new(-0.850000, 0.000000, 0.850000, 2.100000);
     /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTrillGlyphAdvance = 0.848000;
 
-    /// <summary>Turn ornament — BBox.</summary>
+    /// <summary>Turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.turn (scripts.turn = U+E05B in this build)</remarks>
     public static readonly BBox OrnTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);
     /// <summary>Turn ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTurnGlyphAdvance = 1.092000;
 
-    /// <summary>Inverted (reverse) turn ornament — BBox.</summary>
+    /// <summary>Inverted (reverse) turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.reverseturn (scripts.reverseturn = U+E05A in this build)</remarks>
     public static readonly BBox OrnReverseTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);
     /// <summary>Inverted (reverse) turn ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnReverseTurnGlyphAdvance = 1.092000;
 
-    /// <summary>Prall (upper mordent) ornament — BBox.</summary>
+    /// <summary>Prall (upper mordent) ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prall (scripts.prall = U+E073 in this build)</remarks>
     public static readonly BBox OrnPrallGlyph = new(-0.833400, -0.500000, 0.833400, 0.500000);
     /// <summary>Prall (upper mordent) ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnPrallGlyphAdvance = 0.832000;
 
-    /// <summary>Mordent (lower mordent) ornament — BBox.</summary>
+    /// <summary>Mordent (lower mordent) ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.mordent (scripts.mordent = U+E074 in this build)</remarks>
     public static readonly BBox OrnMordentGlyph = new(-0.833400, -0.666600, 0.833400, 0.666600);
     /// <summary>Mordent (lower mordent) ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnMordentGlyphAdvance = 0.832000;
 
-    /// <summary>Prall-prall / prall-triller ornament — BBox.</summary>
+    /// <summary>Prall-prall / prall-triller ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prallprall (scripts.prallprall = U+E075 in this build)</remarks>
     public static readonly BBox OrnPrallPrallGlyph = new(-1.250000, -0.500000, 1.250000, 0.500000);
     /// <summary>Prall-prall / prall-triller ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnPrallPrallGlyphAdvance = 1.248000;
 
-    /// <summary>Segno mark — BBox.</summary>
+    /// <summary>Segno mark — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.segno (scripts.segno = U+E065 in this build)</remarks>
     public static readonly BBox MarkSegno = new(-1.000000, -1.500000, 1.000000, 1.500000);
     /// <summary>Segno mark — advance width (next-glyph horizontal feed).</summary>
     public const double MarkSegnoAdvance = 1.000000;
 
-    /// <summary>Coda mark — BBox.</summary>
+    /// <summary>Coda mark — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.coda (scripts.coda = U+E067 in this build)</remarks>
     public static readonly BBox MarkCoda = new(-1.016600, -1.350000, 1.016600, 1.350000);
     /// <summary>Coda mark — advance width (next-glyph horizontal feed).</summary>
     public const double MarkCodaAdvance = 1.016000;
 
-    /// <summary>G (treble) clef — BBox.</summary>
+    /// <summary>G (treble) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G (clefs.G = U+E089 in this build)</remarks>
     public static readonly BBox ClefG = new(0.000000, -2.550000, 2.565000, 4.800000);
     /// <summary>G (treble) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefGAdvance = 2.564000;
 
-    /// <summary>F (bass) clef — BBox.</summary>
+    /// <summary>F (bass) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.F (clefs.F = U+E087 in this build)</remarks>
     public static readonly BBox ClefF = new(0.000000, -2.500000, 2.683400, 1.000000);
     /// <summary>F (bass) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefFAdvance = 2.680000;
 
-    /// <summary>C (alto/tenor) clef — BBox.</summary>
+    /// <summary>C (alto/tenor) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.C (clefs.C = U+E083 in this build)</remarks>
     public static readonly BBox ClefC = new(0.000000, -2.000000, 2.720000, 2.000000);
     /// <summary>C (alto/tenor) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCAdvance = 2.720000;
 
-    /// <summary>G (treble) change clef — BBox.</summary>
+    /// <summary>G (treble) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G_change (clefs.G_change = U+E08A in this build)</remarks>
     public static readonly BBox ClefGChange = new(0.000000, -2.040000, 2.052000, 3.966800);
     /// <summary>G (treble) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefGChangeAdvance = 2.052000;
 
-    /// <summary>F (bass) change clef — BBox.</summary>
+    /// <summary>F (bass) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.F_change (clefs.F_change = U+E088 in this build)</remarks>
     public static readonly BBox ClefFChange = new(0.000000, -2.000000, 2.146600, 0.800000);
     /// <summary>F (bass) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefFChangeAdvance = 2.144000;
 
-    /// <summary>C (alto/tenor) change clef — BBox.</summary>
+    /// <summary>C (alto/tenor) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.C_change (clefs.C_change = U+E084 in this build)</remarks>
     public static readonly BBox ClefCChange = new(0.000000, -1.600000, 2.196000, 1.600000);
     /// <summary>C (alto/tenor) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCChangeAdvance = 2.196000;
 
-    /// <summary>Longa (4-measure) rest — BBox.</summary>
+    /// <summary>Longa (4-measure) rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M2 (rests.M2 = U+E005 in this build)</remarks>
     public static readonly BBox RestLonga = new(0.000000, -1.000000, 0.600000, 1.000000);
     /// <summary>Longa (4-measure) rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestLongaAdvance = 0.600000;
 
-    /// <summary>Double-whole (breve) rest — BBox.</summary>
+    /// <summary>Double-whole (breve) rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M1 (rests.M1 = U+E006 in this build)</remarks>
     public static readonly BBox RestDoubleWhole = new(0.000000, 0.000000, 0.600000, 1.000000);
     /// <summary>Double-whole (breve) rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestDoubleWholeAdvance = 0.600000;
 
-    /// <summary>Whole rest — BBox.</summary>
+    /// <summary>Whole rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (rests.0 = U+E000 in this build)</remarks>
     public static readonly BBox RestWhole = new(0.000000, -0.625000, 1.500000, 0.000000);
     /// <summary>Whole rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestWholeAdvance = 1.500000;
 
-    /// <summary>Half rest — BBox.</summary>
+    /// <summary>Half rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.1 (rests.1 = U+E001 in this build)</remarks>
     public static readonly BBox RestHalf = new(0.000000, 0.000000, 1.500000, 0.625000);
     /// <summary>Half rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestHalfAdvance = 1.500000;
 
-    /// <summary>Quarter rest — BBox.</summary>
+    /// <summary>Quarter rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.2 (rests.2 = U+E008 in this build)</remarks>
     public static readonly BBox RestQuarter = new(0.000000, -1.250000, 0.950000, 1.562400);
     /// <summary>Quarter rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestQuarterAdvance = 0.948000;
 
-    /// <summary>8th rest — BBox.</summary>
+    /// <summary>8th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.3 (rests.3 = U+E00B in this build)</remarks>
     public static readonly BBox Rest8th = new(0.000000, -1.050000, 1.000000, 0.820000);
     /// <summary>8th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest8thAdvance = 1.000000;
 
-    /// <summary>16th rest — BBox.</summary>
+    /// <summary>16th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.4 (rests.4 = U+E00C in this build)</remarks>
     public static readonly BBox Rest16th = new(0.000000, -2.050000, 1.200000, 0.820000);
     /// <summary>16th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest16thAdvance = 1.196000;
 
-    /// <summary>32nd rest — BBox.</summary>
+    /// <summary>32nd rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.5 (rests.5 = U+E00D in this build)</remarks>
     public static readonly BBox Rest32nd = new(0.000000, -2.050000, 1.300000, 1.820000);
     /// <summary>32nd rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest32ndAdvance = 1.300000;
 
-    /// <summary>64th rest — BBox.</summary>
+    /// <summary>64th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.6 (rests.6 = U+E00E in this build)</remarks>
     public static readonly BBox Rest64th = new(0.000000, -3.050000, 1.400000, 1.820000);
     /// <summary>64th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest64thAdvance = 1.396000;
 
-    /// <summary>128th rest — BBox.</summary>
+    /// <summary>128th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.7 (rests.7 = U+E00F in this build)</remarks>
     public static readonly BBox Rest128th = new(0.000000, -3.050000, 1.500000, 2.820000);
     /// <summary>128th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest128thAdvance = 1.500000;
 
-    /// <summary>Staccato dot articulation — BBox.</summary>
+    /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.staccato (scripts.staccato = U+E04A in this build)</remarks>
     public static readonly BBox ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000);
     /// <summary>Staccato dot articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatoAdvance = 0.196000;
 
-    /// <summary>Accent / sforzato articulation — BBox.</summary>
+    /// <summary>Accent / sforzato articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.sforzato (scripts.sforzato = U+E048 in this build)</remarks>
     public static readonly BBox ArticAccent = new(-0.750000, -0.420000, 0.750000, 0.420000);
     /// <summary>Accent / sforzato articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticAccentAdvance = 0.748000;
 
-    /// <summary>Tenuto articulation — BBox.</summary>
+    /// <summary>Tenuto articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.tenuto (scripts.tenuto = U+E04D in this build)</remarks>
     public static readonly BBox ArticTenuto = new(-0.600000, -0.080000, 0.600000, 0.080000);
     /// <summary>Tenuto articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticTenutoAdvance = 0.600000;
 
-    /// <summary>Marcato above (upward V) — BBox.</summary>
+    /// <summary>Marcato above (upward V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.umarcato (scripts.umarcato = U+E050 in this build)</remarks>
     public static readonly BBox ArticMarcatoAbove = new(-0.500000, 0.000000, 0.500000, 1.100000);
     /// <summary>Marcato above (upward V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticMarcatoAboveAdvance = 0.500000;
 
-    /// <summary>Marcato below (downward V) — BBox.</summary>
+    /// <summary>Marcato below (downward V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dmarcato (scripts.dmarcato = U+E051 in this build)</remarks>
     public static readonly BBox ArticMarcatoBelow = new(-0.500000, -1.100000, 0.500000, 0.000000);
     /// <summary>Marcato below (downward V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticMarcatoBelowAdvance = 0.500000;
 
-    /// <summary>Fermata above — BBox.</summary>
+    /// <summary>Fermata above — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ufermata (scripts.ufermata = U+E039 in this build)</remarks>
     public static readonly BBox FermataAboveGlyph = new(-1.325000, -0.075000, 1.325000, 1.450000);
     /// <summary>Fermata above — advance width (next-glyph horizontal feed).</summary>
     public const double FermataAboveGlyphAdvance = 1.324000;
 
-    /// <summary>Fermata below — BBox.</summary>
+    /// <summary>Fermata below — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dfermata (scripts.dfermata = U+E03A in this build)</remarks>
     public static readonly BBox FermataBelowGlyph = new(-1.325000, -1.450000, 1.325000, 0.075000);
     /// <summary>Fermata below — advance width (next-glyph horizontal feed).</summary>
     public const double FermataBelowGlyphAdvance = 1.324000;
 
-    /// <summary>Staccatissimo above (dagger) — BBox.</summary>
+    /// <summary>Staccatissimo above (dagger) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ustaccatissimo (scripts.ustaccatissimo = U+E04B in this build)</remarks>
     public static readonly BBox ArticStaccatissimoAboveGlyph = new(-0.200000, -0.040000, 0.200000, 1.000000);
     /// <summary>Staccatissimo above (dagger) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatissimoAboveGlyphAdvance = 0.200000;
 
-    /// <summary>Staccatissimo below (dagger) — BBox.</summary>
+    /// <summary>Staccatissimo below (dagger) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dstaccatissimo (scripts.dstaccatissimo = U+E04C in this build)</remarks>
     public static readonly BBox ArticStaccatissimoBelowGlyph = new(-0.200000, -1.000000, 0.200000, 0.040000);
     /// <summary>Staccatissimo below (dagger) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatissimoBelowGlyphAdvance = 0.200000;
 
-    /// <summary>Up-bow above (V) — BBox.</summary>
+    /// <summary>Up-bow above (V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.uupbow (scripts.uupbow = U+E056 in this build)</remarks>
     public static readonly BBox ArticUpBowAboveGlyph = new(-0.650000, 0.000000, 0.650000, 2.080000);
     /// <summary>Up-bow above (V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticUpBowAboveGlyphAdvance = 0.648000;
 
-    /// <summary>Up-bow below (V) — BBox.</summary>
+    /// <summary>Up-bow below (V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dupbow (scripts.dupbow = U+E057 in this build)</remarks>
     public static readonly BBox ArticUpBowBelowGlyph = new(-0.650000, -2.080000, 0.650000, 0.000000);
     /// <summary>Up-bow below (V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticUpBowBelowGlyphAdvance = 0.648000;
 
-    /// <summary>Down-bow above (frog) — BBox.</summary>
+    /// <summary>Down-bow above (frog) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.udownbow (scripts.udownbow = U+E058 in this build)</remarks>
     public static readonly BBox ArticDownBowAboveGlyph = new(-0.750000, 0.000000, 0.750000, 1.333400);
     /// <summary>Down-bow above (frog) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticDownBowAboveGlyphAdvance = 0.748000;
 
-    /// <summary>Down-bow below (frog) — BBox.</summary>
+    /// <summary>Down-bow below (frog) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ddownbow (scripts.ddownbow = U+E059 in this build)</remarks>
     public static readonly BBox ArticDownBowBelowGlyph = new(-0.750000, -1.333400, 0.750000, 0.000000);
     /// <summary>Down-bow below (frog) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticDownBowBelowGlyphAdvance = 0.748000;
 
-    /// <summary>Flageolet / harmonic circle — BBox.</summary>
+    /// <summary>Flageolet / harmonic circle — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.flageolet (scripts.flageolet = U+E064 in this build)</remarks>
     public static readonly BBox ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000);
     /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
     public const double ArticFlageoletGlyphAdvance = 0.400000;
+
+    /// <summary>Dynamic letter 'f' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — f (f = U+0066 in this build)</remarks>
+    public static readonly BBox DynamicLetterF = new(-0.408000, -0.692000, 1.748000, 1.896000);
+    /// <summary>Dynamic letter 'f' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterFAdvance = 1.280000;
+
+    /// <summary>Dynamic letter 'm' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — m (m = U+006D in this build)</remarks>
+    public static readonly BBox DynamicLetterM = new(-0.172000, -0.028000, 1.816000, 1.196000);
+    /// <summary>Dynamic letter 'm' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterMAdvance = 1.748000;
+
+    /// <summary>Dynamic letter 'n' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — n (n = U+006E in this build)</remarks>
+    public static readonly BBox DynamicLetterN = new(-0.172000, -0.028000, 1.364000, 1.196000);
+    /// <summary>Dynamic letter 'n' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterNAdvance = 1.292000;
+
+    /// <summary>Dynamic letter 'p' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — p (p = U+0070 in this build)</remarks>
+    public static readonly BBox DynamicLetterP = new(-0.532000, -0.584000, 1.428000, 1.168000);
+    /// <summary>Dynamic letter 'p' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterPAdvance = 1.456000;
+
+    /// <summary>Dynamic letter 'r' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — r (r = U+0072 in this build)</remarks>
+    public static readonly BBox DynamicLetterR = new(-0.120000, 0.000000, 1.148000, 1.224000);
+    /// <summary>Dynamic letter 'r' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterRAdvance = 0.872000;
+
+    /// <summary>Dynamic letter 's' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — s (s = U+0073 in this build)</remarks>
+    public static readonly BBox DynamicLetterS = new(0.088000, 0.000000, 0.964000, 1.168000);
+    /// <summary>Dynamic letter 's' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterSAdvance = 0.824000;
+
+    /// <summary>Dynamic letter 'z' (fetaText) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — z (z = U+007A in this build)</remarks>
+    public static readonly BBox DynamicLetterZ = new(0.000000, -0.112000, 1.144000, 1.068000);
+    /// <summary>Dynamic letter 'z' (fetaText) — advance width (next-glyph horizontal feed).</summary>
+    public const double DynamicLetterZAdvance = 1.140000;
 
     // ========== Advance widths (extracted from hmtx table) ==========
 

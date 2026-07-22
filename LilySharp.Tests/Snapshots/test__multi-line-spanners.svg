@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="663.9" viewBox="0 0 119.50 66.39" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="674.8" viewBox="0 0 119.50 67.48" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -108,12 +108,12 @@
   <path d="M 2.76,45.07 C 3.62,45.78 6.51,45.78 7.36,45.07 C 6.51,45.90 3.62,45.90 2.76,45.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 8.64,19.92 C 12.17,17.82 98.60,15.05 102.13,16.92 C 98.60,15.17 12.17,17.94 8.64,19.92 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 2.86,27.92 C 5.67,26.28 28.95,27.89 31.75,29.92 C 28.94,28.01 5.66,26.40 2.86,27.92 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="56.52" y="47.62" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
-  <text x="78.02" y="59.12" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
+  <text x="56.52" y="47.64" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
+  <text x="78.02" y="59.82" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
   <line x1="68.39" y1="45.52" x2="102.43" y2="45.08" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <line x1="68.39" y1="45.52" x2="102.43" y2="45.97" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="2.56" y1="60.14" x2="77.52" y2="59.69" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="2.56" y1="60.58" x2="77.52" y2="61.02" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="2.56" y1="61.22" x2="77.52" y2="60.78" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="2.56" y1="61.67" x2="77.52" y2="62.11" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <text x="0.05" y="26.06" font-size="1.75" font-weight="bold">3</text>
   <text x="0.05" y="38.06" font-size="1.75" font-weight="bold">6</text>
   <text x="0.05" y="50.06" font-size="1.75" font-weight="bold">8</text>

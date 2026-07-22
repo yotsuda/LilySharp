@@ -390,7 +390,6 @@ internal sealed class SkylineBuilder
         var voices = staff.Voices;
         var primaryMeasures = staff.PrimaryVoice.Measures;
         const double dynamicWidth = 1.3;    // approx width of a dynamic glyph
-        const double dynamicDescent = 0.3;  // text reaches a little below baseline
 
         // Same-column dynamics stack AWAY from the staff (see DynamicEngraver); track
         // depth per side so the box reflects the outermost stacked glyph.
@@ -417,6 +416,10 @@ internal sealed class SkylineBuilder
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 primaryMeasures, dyn.MeasureIndex, dyn.ItemIndex, measureLayout);
 
+            // This label's own ink, from the font. LilyPond's DynamicText extent IS the
+            // drawn glyph's ink, so it differs per dynamic — see DynamicEngraver.InkOf.
+            var (ascent, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
+
             if (dyn.IsAbove)
             {
                 // Upward reach (text ascends from the above baseline); reserve room
@@ -425,8 +428,9 @@ internal sealed class SkylineBuilder
                 // further UP (+). Ink top = baseline + ascent, mapped to the skyline
                 // Y-up frame (origin at the staff top) by ToSystemUp.
                 double baselineUp = DynamicEngraver.ColumnAboveBaselineY(
-                    voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
-                double topUp = baselineUp + DynamicEngraver.DynamicAboveAscent + staffMiddleUp;
+                    voices, dyn.MeasureIndex, dyn.ItemIndex, ascent, descent)
+                    + depth * DynamicEngraver.StackStep;
+                double topUp = baselineUp + ascent + staffMiddleUp;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     topUp - 0.5, topUp, VerticalDirection.Up);
@@ -437,8 +441,9 @@ internal sealed class SkylineBuilder
                 // Below baseline (negative Y-up); stacking pushes it further DOWN (−).
                 // Ink bottom = baseline − descent, mapped to the skyline Y-up frame.
                 double baselineUp = DynamicEngraver.ColumnBaselineY(
-                    voices, dyn.MeasureIndex, dyn.ItemIndex) - depth * DynamicEngraver.StackStep;
-                double bottomUp = baselineUp - dynamicDescent + staffMiddleUp;
+                    voices, dyn.MeasureIndex, dyn.ItemIndex, ascent, descent)
+                    - depth * DynamicEngraver.StackStep;
+                double bottomUp = baselineUp - descent + staffMiddleUp;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     bottomUp, bottomUp + 0.5, VerticalDirection.Down);

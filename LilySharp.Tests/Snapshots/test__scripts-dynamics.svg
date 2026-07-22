@@ -64,11 +64,11 @@
   <rect x="64.37" y="12.35" width="0.19" height="4.00" data-pos="453"/>
   <rect x="73.37" y="12.35" width="0.19" height="4.00" data-pos="502"/>
   <rect x="73.86" y="12.35" width="0.60" height="4.00" data-pos="502"/>
-  <text x="7.68" y="19.65" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
-  <text x="10.69" y="19.15" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
-  <text x="13.69" y="18.65" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>
-  <text x="16.69" y="18.25" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
-  <text x="43.22" y="18.25" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
+  <text x="7.68" y="20.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
+  <text x="10.69" y="19.89" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
+  <text x="13.69" y="19.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>
+  <text x="16.69" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
+  <text x="43.22" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
   <text class="music" x="21.67" y="16.64" font-size="4.00" data-pos="289"></text>
   <text class="music" x="24.67" y="16.64" font-size="4.00" data-pos="305"></text>
   <text class="music" x="27.68" y="10.65" font-size="4.00" data-pos="321"></text>

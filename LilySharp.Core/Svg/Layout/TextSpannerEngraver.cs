@@ -128,11 +128,6 @@ internal static class TextSpannerEngraver
     private const double TextAscent = 1.0;
 
     /// <summary>
-    /// Descent of dynamic text below baseline (for "p", "g" etc. descenders).
-    /// </summary>
-    private const double DynamicTextDescent = 0.6;
-
-    /// <summary>
     /// Vertical padding between outside-staff layers.
     /// </summary>
     /// <remarks>
@@ -285,8 +280,11 @@ internal static class TextSpannerEngraver
         if (!measureToSystem.TryGetValue(startMeasureIndex, out int spannerSystem))
             return minY;
 
-        // Find the lowest (maximum Y) dynamic that overlaps horizontally in the same system
-        double maxDynamicY = double.MinValue;
+        // Find the lowest (maximum Y) dynamic BOTTOM that overlaps horizontally in the same
+        // system. The bottom, not the baseline: each dynamic's descent is its own glyph's
+        // ink (DynamicEngraver.InkOf), so the deepest baseline is not always the deepest
+        // ink — `p` hangs 0.584 under its baseline where `m` hangs 0.028.
+        double maxDynamicBottom = double.MinValue;
         foreach (var dyn in dynamicLayouts)
         {
             // Must be in the same system
@@ -302,19 +300,19 @@ internal static class TextSpannerEngraver
                 // staff's offset (staffOffset) reflects it into the system-relative
                 // device frame this method (and minY) works in.
                 double dynY = staffOffset + (2.0 - dyn.YUp);
-                maxDynamicY = Math.Max(maxDynamicY, dynY);
+                var (_, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
+                // Device-down frame: the glyph's bottom is BELOW its baseline, i.e. +.
+                maxDynamicBottom = Math.Max(maxDynamicBottom, dynY + descent);
             }
         }
 
-        if (maxDynamicY > double.MinValue)
+        if (maxDynamicBottom > double.MinValue)
         {
             // Place text spanner below the lowest overlapping dynamic.
-            // The dynamic's visual bottom = baseline + text descent.
             // The text spanner's visual top = baseline - text ascent.
             // Constraint: spanner_top >= dynamic_bottom + padding
             // => spanner_baseline >= dynamic_bottom + padding + text_ascent
-            double dynamicBottom = maxDynamicY + DynamicTextDescent;
-            double requiredY = dynamicBottom + BetweenLayerPadding + TextAscent;
+            double requiredY = maxDynamicBottom + BetweenLayerPadding + TextAscent;
             return Math.Max(requiredY, minY);
         }
 
