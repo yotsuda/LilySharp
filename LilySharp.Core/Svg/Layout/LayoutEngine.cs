@@ -553,7 +553,14 @@ internal sealed class LayoutEngine
             updatedSystems.Add(systems[i] with { Y = skylineY });
             if (i < systems.Length - 1)
             {
-                double padding = _options.SystemSpacing * 0.5;
+                // LILYPOND-REF: ly/paper-defaults-init.ly:62-65 system-system-spacing —
+                // the pair's padding is 1, its minimum-distance 8 and its basic-distance
+                // 12, and page-layout-problem.cc:625-632 uses exactly those. This path
+                // used to invent `SystemSpacing * 0.5` (= 4) instead, four times
+                // LilyPond's padding, which made the skyline term bind on scores where
+                // LilyPond's does not — it was invisible while the skylines were thin,
+                // and surfaced the moment the clef joined them.
+                var pairSpec = _options.VerticalSpacing.SystemSystem;
 
                 // Reference-to-reference distance to the next system. Prefer the
                 // X-dependent skyline distance (the same measure the optimal page
@@ -595,9 +602,13 @@ internal sealed class LayoutEngine
                     }
                 }
 
+                // LILYPOND-REF: lily/page-layout-problem.cc:625-632 + spring.cc:219-237 —
+                // the ink is a FLOOR under the spring, and at force 0 (which is what an
+                // unjustified single page runs at) the spring is
+                // max(min_distance, ideal_distance). Same shape as PageLayouter's chain.
                 double minDistance = Math.Max(
-                    SysHeight(i) + _options.SystemSpacing, skylineDistance + padding);
-                skylineY += minDistance;
+                    pairSpec.MinimumDistance, skylineDistance + pairSpec.Padding);
+                skylineY += Math.Max(pairSpec.BasicDistance, minDistance);
             }
         }
         double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
@@ -921,7 +932,7 @@ internal sealed class LayoutEngine
             // YUp is Y-up; this extent pass is system-relative device, so reconstruct
             // against this figure's own staff offset (0 for a single/top staff).
             double fbOff = measureToSystem.TryGetValue(fb.MeasureIndex, out int fbSys)
-                ? LayoutUtilities.StaffOffsetInSystem(systems[fbSys], fb.StaffIndex)
+                ? LayoutUtilities.StaffOffsetInSystemDown(systems[fbSys], fb.StaffIndex)
                 : 0;
             double fbY = fbOff + (2.0 - fb.YUp);
             Add(fb.MeasureIndex,
@@ -1038,11 +1049,14 @@ internal sealed class LayoutEngine
                 continue;
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
             // this skyline is Y-up too (system-top origin). Translate against this
-            // staff's system-local middle (staff.Y + StaffMiddle). Ink Top/Bottom stay
-            // up-positive, so they ADD.
+            // staff's system-local middle, and take the offset in the SAME frame so the
+            // whole line adds — the middle sits half a staff BELOW the staff top, which
+            // in Y-up subtracts. Ink Top/Bottom stay up-positive, so they ADD.
+            // This is now the same expression as OutsideStaffStacker's articulation
+            // branch; the two used to be one Y-up and one Y-down spelling of it.
             var sys = systems[sysIdx];
-            double staffMidLocal = LayoutUtilities.StaffOffsetInSystem(sys, a.StaffIndex) + 2.0;
-            double aY = a.YUp - staffMidLocal;
+            double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
+            double aY = a.YUp + staffMidUp;
             double inkTop = aY + a.Ink.Top;
             double inkBottom = aY + a.Ink.Bottom;
             if (a.IsAbove)
@@ -1102,11 +1116,12 @@ internal sealed class LayoutEngine
             if (!measureToSystem.TryGetValue(fb.MeasureIndex, out int s))
                 continue;
             double half = FiguredBassEngraver.MinFigureBoxWidth;
-            // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin),
-            // so translate against this figure's own staff offset (staff middle at
-            // offset + 2.0). The figure column extends downward (smaller Y-up).
-            double fbStaffOffset = LayoutUtilities.StaffOffsetInSystem(systems[s], fb.StaffIndex);
-            double fbY = fb.YUp - 2.0 - fbStaffOffset;
+            // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin), so
+            // take the figure's own staff offset in that frame as well and the line adds.
+            // The staff middle is half a staff below the staff top, hence the -2.0; the
+            // figure column then extends downward (smaller Y-up).
+            double fbStaffOffsetUp = LayoutUtilities.StaffOffsetInSystemUp(systems[s], fb.StaffIndex);
+            double fbY = fb.YUp - 2.0 + fbStaffOffsetUp;
             double top = fbY + FiguredBassEngraver.FigureTopExtent;
             double bottom = fbY
                 - ((fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);

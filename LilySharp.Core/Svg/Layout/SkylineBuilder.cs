@@ -66,8 +66,9 @@ internal sealed class SkylineBuilder
 
         // Process topmost staff for UP skyline (elements above the system)
         var firstStaff = score.StaffGroups[0].PrimaryStaff;
-        double firstStaffMiddleY = _staffHeight / 2;
-        AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleY,
+        // Y-up from the system top: the first staff's middle is half a staff BELOW it.
+        double firstStaffMiddleUp = -_staffHeight / 2;
+        AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
             stemLength, noteheadHeight, upSkyline, downSkyline);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
@@ -78,8 +79,8 @@ internal sealed class SkylineBuilder
         if (lastStaff != firstStaff && systemHeight > 0)
         {
             // Bottom staff's top line is at systemHeight - staffHeight from system reference
-            double lastStaffMiddleY = systemHeight - _staffHeight / 2;
-            AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleY,
+            double lastStaffMiddleUp = _staffHeight / 2 - systemHeight;
+            AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleUp,
                 stemLength, noteheadHeight, upSkyline, downSkyline);
         }
 
@@ -90,6 +91,14 @@ internal sealed class SkylineBuilder
             seedTop: !firstStaff.IsTextRow, topLineY: 0.0,
             seedBottom: !lastStaff.IsTextRow, bottomLineY: bottomLineY,
             upSkyline, downSkyline);
+
+        // The clef opens every system and, on a plain score, is the extreme ink in both
+        // directions — further out than any note that stays inside the staff — so it is
+        // what the page's springs are floored by. Seeded for the same two staves the
+        // notes are.
+        SeedClef(firstStaff, firstStaffMiddleUp, systemLeft, upSkyline, downSkyline);
+        if (lastStaff != firstStaff && systemHeight > 0)
+            SeedClef(lastStaff, _staffHeight / 2 - systemHeight, systemLeft, upSkyline, downSkyline);
 
         upSkyline.EndBatch();
         downSkyline.EndBatch();
@@ -126,18 +135,86 @@ internal sealed class SkylineBuilder
             return;
 
         // Staff lines are given in device Y from the system top; translate to the
-        // skyline's Y-up frame by negating.
+        // skyline's Y-up frame by negating. The caller names the line's CENTRE, and what
+        // belongs in a skyline is its INK, so each outer line reaches half its own
+        // thickness further out — the same fact SeedStaffSymbol carries, seen from the
+        // system's frame instead of the staff's.
+        double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
         if (seedTop)
             upSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, -topLineY, -topLineY, VerticalDirection.Up));
+                systemLeft, xRight, -topLineY + halfLine, -topLineY + halfLine,
+                VerticalDirection.Up));
         if (seedBottom)
             downSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, -bottomLineY, -bottomLineY, VerticalDirection.Down));
+                systemLeft, xRight, -bottomLineY - halfLine, -bottomLineY - halfLine,
+                VerticalDirection.Down));
     }
+
+    // The clef's X comes from EngravingDefaults, not from a literal copied out of the
+    // renderer. It was written here as `0.3` first, which took a number that is already
+    // Lily#'s own invention and made a SECOND home for it — exactly the habit that let
+    // `SystemSpacing * 0.5` sit next to a LILYPOND-REF for years. One home, marked as
+    // ours, or the next reader cannot tell which of the two is the real one.
+
+    /// <summary>
+    /// Seeds a staff's opening clef into both skylines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
+    /// inside_staff_skylines carry every inside-staff grob, and a Clef is one, so it
+    /// joins the staff's vertical skyline exactly as a notehead does.
+    ///
+    /// The anchor mirrors <c>SharedRenderer.DrawClef</c>: the glyph sits on the line it
+    /// names, which is that clef's middle integer in
+    /// LILYPOND-REF: scm/parser-clef.scm supported-clefs (treble G = staff position -2,
+    /// bass F = +2, alto C = 0). Keeping the two in one shape is the point — a skyline
+    /// that anchors the clef anywhere else reserves space where no ink is.
+    /// </remarks>
+    private void SeedClef(
+        Staff staff, double staffMiddleUp, double systemLeft,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        // NaN means the caller only wants the scalar extents (same contract as
+        // SeedSystemStaffSymbol); a text row prints no clef.
+        if (double.IsNaN(systemLeft) || staff.IsTextRow)
+            return;
+
+        var (box, aboveMiddle) = ClefInk(staff.Clef);
+        double x = systemLeft + EngravingDefaults.ClefGlyphXOffset;
+        double bottomUp = aboveMiddle + box.Bottom + staffMiddleUp;
+        double topUp = aboveMiddle + box.Top + staffMiddleUp;
+        upSkyline.Merge(VerticalSkyline.FromBox(
+            x, x + box.Right, bottomUp, topUp, VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(
+            x, x + box.Right, bottomUp, topUp, VerticalDirection.Down));
+    }
+
+    /// <summary>
+    /// A clef's ink box and the staff-spaces above the MIDDLE line its glyph origin sits
+    /// at — <c>SharedRenderer.DrawClef</c>'s <c>staffY - n</c> read in this frame, where
+    /// the top line is 2 above the middle, so it is <c>2 - n</c>.
+    /// </summary>
+    /// <remarks>
+    /// The percussion clef has no entry in the extracted metrics, so it borrows the C
+    /// clef's box. Both are centred on the middle line and the C clef is the taller, so
+    /// this over-reserves rather than under-reserves — a KNOWN approximation, and the one
+    /// clef here whose extent is not the font's own.
+    /// </remarks>
+    private static (GlyphMetrics.BBox Box, double AboveMiddle) ClefInk(ClefType clef) => clef switch
+    {
+        ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefF, 1.0),
+        ClefType.Alto => (GlyphMetrics.ClefC, 0.0),
+        ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
+        ClefType.Soprano => (GlyphMetrics.ClefC, -2.0),
+        ClefType.MezzoSoprano => (GlyphMetrics.ClefC, -1.0),
+        ClefType.Baritone => (GlyphMetrics.ClefC, 2.0),
+        ClefType.Percussion => (GlyphMetrics.ClefC, 0.0),
+        _ => (GlyphMetrics.ClefG, -1.0),
+    };
 
     private void AddStaffToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
-        double staffMiddleY, double stemLength, double noteheadHeight,
+        double staffMiddleUp, double stemLength, double noteheadHeight,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         bool multiVoice = staff.Voices.Length > 1;
@@ -173,7 +250,7 @@ internal sealed class SkylineBuilder
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
-                    AddMusicItemToSkylines(item, itemX, staffMiddleY,
+                    AddMusicItemToSkylines(item, itemX, staffMiddleUp,
                         stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 }
             }
@@ -196,7 +273,7 @@ internal sealed class SkylineBuilder
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double staffMiddleY = _staffHeight / 2;
+        double staffMiddleUp = -_staffHeight / 2;
         double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
@@ -206,9 +283,9 @@ internal sealed class SkylineBuilder
         // first as the baseline; notes/ledgers then extend it outward.
         // LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
         //   inside_staff_skylines include the StaffSymbol grob.
-        SeedStaffSymbol(measureLayouts, staffMiddleY, upSkyline, downSkyline);
+        SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
-        AddStaffToSkylines(staff, measureLayouts, staffMiddleY,
+        AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
             stemLength, noteheadHeight, upSkyline, downSkyline);
 
         // Dynamics hang below the lowest stem of any voice (or rise above for @f.up);
@@ -217,13 +294,13 @@ internal sealed class SkylineBuilder
         // passes them only for that staff.)
         // LILYPOND-REF: lily/align-interface.cc:217-268 — outside-staff grobs join
         // the staff's skyline used for spacing.
-        AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleY, upSkyline, downSkyline);
+        AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         // A tab staff's above/below Scripts (fermata, flageolet, accent, …) are
         // engraved only after spacing, so they were absent from this skyline and a
         // forced-above fermata dropped into the gap onto the staff above's low
         // noteheads. Their staff-local extent is spacing-independent, so seed it now.
-        AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleY, upSkyline, downSkyline);
+        AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         return (upSkyline, downSkyline);
     }
@@ -236,7 +313,7 @@ internal sealed class SkylineBuilder
     /// </summary>
     private void AddArticulationLayoutsToSkyline(
         ImmutableArray<ArticulationLayout> articulationLayouts,
-        double staffMiddleY, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        double staffMiddleUp, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (articulationLayouts.IsDefaultOrEmpty)
             return;
@@ -245,7 +322,7 @@ internal sealed class SkylineBuilder
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
             // translate it to this skyline's Y-up frame (its origin is the staff top).
             // Ink.Top/Bottom stay up-positive, so they ADD in Y-up.
-            double y = a.YUp - staffMiddleY;
+            double y = a.YUp + staffMiddleUp;
             double inkTop = y + a.Ink.Top;
             double inkBottom = y + a.Ink.Bottom;
             var box = VerticalSkyline.FromBox(
@@ -263,7 +340,7 @@ internal sealed class SkylineBuilder
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/axis-group-interface.cc:914-940.</remarks>
     private void SeedStaffSymbol(
-        ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleY,
+        ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (measureLayouts.IsDefaultOrEmpty)
@@ -277,11 +354,17 @@ internal sealed class SkylineBuilder
         if (xRight <= xLeft)
             return;
 
-        double half = _staffHeight / 2.0;
+        // Half the staff PLUS half a line's thickness: a staff line is ink, and a
+        // skyline carries a grob's ink, not the path its centre follows. Measured on the
+        // grob itself — probes/glyph-skyline.ly asks StaffSymbol for its extent and its
+        // vertical-skylines and gets (-2.05 . 2.05) for both, where the outermost line
+        // CENTRES are at 2.0. Written as the derivation rather than as 2.05 so that a
+        // staff of a different size or line weight still gets its own ink.
+        double half = _staffHeight / 2.0 + EngravingDefaults.StaffLineThickness / 2.0;
         // Translate the device-frame staff lines to this skyline's Y-up frame (negate):
         // the top line sits above the origin, the bottom line below.
-        double staffTop = half - staffMiddleY;      // Y-up of the top line
-        double staffBottom = -half - staffMiddleY;  // Y-up of the bottom line
+        double staffTop = half + staffMiddleUp;      // Y-up of the top line's ink
+        double staffBottom = -half + staffMiddleUp;  // Y-up of the bottom line's ink
 
         // UP skyline takes the top line; DOWN skyline takes the bottom line.
         upSkyline.Merge(VerticalSkyline.FromBox(
@@ -299,7 +382,7 @@ internal sealed class SkylineBuilder
     private void AddDynamicsToSkyline(
         Staff staff, ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<MeasureLayout> measureLayouts,
-        double staffMiddleY, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        double staffMiddleUp, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (dynamics.IsDefaultOrEmpty)
             return;
@@ -343,7 +426,7 @@ internal sealed class SkylineBuilder
                 // Y-up frame (origin at the staff top) by ToSystemUp.
                 double baselineUp = DynamicEngraver.ColumnAboveBaselineY(
                     voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
-                double topUp = baselineUp + DynamicEngraver.DynamicAboveAscent - staffMiddleY;
+                double topUp = baselineUp + DynamicEngraver.DynamicAboveAscent + staffMiddleUp;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     topUp - 0.5, topUp, VerticalDirection.Up);
@@ -355,7 +438,7 @@ internal sealed class SkylineBuilder
                 // Ink bottom = baseline − descent, mapped to the skyline Y-up frame.
                 double baselineUp = DynamicEngraver.ColumnBaselineY(
                     voices, dyn.MeasureIndex, dyn.ItemIndex) - depth * DynamicEngraver.StackStep;
-                double bottomUp = baselineUp - dynamicDescent - staffMiddleY;
+                double bottomUp = baselineUp - dynamicDescent + staffMiddleUp;
                 var box = VerticalSkyline.FromBox(
                     x - dynamicWidth / 2, x + dynamicWidth / 2,
                     bottomUp, bottomUp + 0.5, VerticalDirection.Down);
@@ -371,7 +454,7 @@ internal sealed class SkylineBuilder
     private void AddMusicItemToSkylines(
         MusicItem item,
         double x,
-        double staffMiddleY,
+        double staffMiddleUp,
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
@@ -381,11 +464,11 @@ internal sealed class SkylineBuilder
         switch (item)
         {
             case NoteItem note:
-                AddNoteToSkylines(note, x, staffMiddleY,
+                AddNoteToSkylines(note, x, staffMiddleUp,
                     stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
-                        note.StaffPosition * 0.5 - staffMiddleY, upSkyline, downSkyline);
+                        note.StaffPosition * 0.5 + staffMiddleUp, upSkyline, downSkyline);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -397,7 +480,7 @@ internal sealed class SkylineBuilder
                 bool chordStemUp = forcedStemUp ?? chord.StemUp;
                 foreach (var chordNote in chord.Notes)
                 {
-                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleY,
+                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp,
                         stemLength, noteheadHeight, chordStemUp, chordNoteValue,
                         upSkyline, downSkyline);
                 }
@@ -413,7 +496,7 @@ internal sealed class SkylineBuilder
                     var accBox = GlyphMetrics.GetAccidentalBBox(al.Accidental);
                     // Head Y in the skyline's Y-up frame: staff-position → staff-spaces
                     // above the middle (pos*0.5), then to the skyline origin (staff top).
-                    double accHeadY = al.StaffPosition * 0.5 - staffMiddleY;
+                    double accHeadY = al.StaffPosition * 0.5 + staffMiddleUp;
                     MergeAccidentalInk(
                         x + al.XOffset, x + al.XOffset + accBox.Width,
                         accHeadY + accBox.Top, accHeadY + accBox.Bottom,
@@ -426,9 +509,9 @@ internal sealed class SkylineBuilder
                 double restHeight = EngravingDefaults.RestHeight;
                 double restWidth = EngravingDefaults.RestWidth;
                 // Rests are centered on the staff middle line and span ±restHeight/2;
-                // translate to this skyline's Y-up frame (staff middle → -staffMiddleY).
-                double restTop = restHeight / 2 - staffMiddleY;     // Y-up top edge
-                double restBottom = -restHeight / 2 - staffMiddleY; // Y-up bottom edge
+                // translate to this skyline's Y-up frame (add the middle's own Y-up).
+                double restTop = restHeight / 2 + staffMiddleUp;     // Y-up top edge
+                double restBottom = -restHeight / 2 + staffMiddleUp; // Y-up bottom edge
                 var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
                 var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
                 upSkyline.Merge(restUp);
@@ -478,7 +561,7 @@ internal sealed class SkylineBuilder
     private void AddNoteToSkylines(
         NoteItem note,
         double x,
-        double staffMiddleY,
+        double staffMiddleUp,
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
@@ -488,7 +571,7 @@ internal sealed class SkylineBuilder
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
         bool stemUp = forcedStemUp ?? note.StemUp;
 
-        AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleY,
+        AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp,
             stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
     }
 
@@ -513,7 +596,7 @@ internal sealed class SkylineBuilder
     private void AddNoteBoxToSkylines(
         int staffPosition,
         double x,
-        double staffMiddleY,
+        double staffMiddleUp,
         double stemLength,
         double noteheadHeight,
         bool stemUp,
@@ -524,7 +607,7 @@ internal sealed class SkylineBuilder
         // Translate a Y-up coordinate (staff-spaces above THIS staff's middle line)
         // into the shared skyline Y-up frame (whose origin is the system/staff top).
         // No reflection — the skyline now stores Y-up sign-for-sign with skyline.cc.
-        double ToSystemUp(double up) => up - staffMiddleY;
+        double ToSystemUp(double up) => up + staffMiddleUp;
 
         double noteUp = staffPosition * 0.5;   // staff-spaces above middle, up+
         double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
@@ -586,7 +669,20 @@ internal sealed class SkylineBuilder
             }
         }
 
-        // Stem bounding box (quarter notes and shorter; half/whole have no stem).
+        // Stem bounding box. A whole note or a breve has NO stem, so it must not reserve
+        // one: the head is the outermost ink and the staff's own line is what a neighbour
+        // clears. LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — a stem exists only for
+        // duration-log >= 1, i.e. half notes and shorter, which is noteValue >= 2 here.
+        //
+        // The renderer has always had this test (SharedRenderer.Noteheads.cs, noteValue >= 2)
+        // and this side never did, so a whole note was DRAWN stemless and SPACED as though
+        // it carried 3.5 of stem. Nothing could see it until the ledger grew a two-staff
+        // point: on a single staff the clef reaches further than any of this, and between
+        // systems basic-distance wins. audit/lp-geometry staff.staff.lower-note-to-upper-lines
+        // measured it as +1.450000 against LilyPond, the whole of which is this stem.
+        if (noteValue < 2)
+            return;
+
         if (stemUp)
         {
             // Stem extends UPWARD from the head: tip = noteUp + stemLength.

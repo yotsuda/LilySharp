@@ -193,6 +193,18 @@ internal static class EngravingDefaults
     /// <summary>Additional height per beam level (in staff spaces).</summary>
     public const double FlagHeightIncrement = 0.5;
 
+    /// <summary>
+    /// The nudge between a system's left edge and the clef glyph's drawing origin.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no such quantity. There the clef's X falls out of
+    /// break-alignment against Clef.space-alist; Lily# draws the prefix by walking left to
+    /// right and this is the gap it opens first. It lives here because the SKYLINE has to
+    /// place the clef's ink exactly where SharedRenderer.DrawClef draws it, and the two
+    /// agreeing by both saying `0.3` is how a constant quietly becomes two constants.
+    /// </remarks>
+    public const double ClefGlyphXOffset = 0.3;
+
     // === Notehead dimensions ===
     // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).
     // Existing call sites use these names; new code should prefer GlyphMetrics directly.

@@ -106,7 +106,7 @@ internal sealed class SlurScoringProblem
     // (slur-configuration.cc on_staff_line); our config Y is absolute-page, so the
     // lines must be placed absolutely too — a fixed {0,-1,-2,-3,-4} was only right
     // for a staff whose middle sits at device Y=2 (single top staff), silently
-    // disabling the penalty on every other staff. Built from staffMiddleY below.
+    // disabling the penalty on every other staff. Built from staffMiddleDown below.
     private readonly double[] _staffLinePositions;
 
     public SlurScoringProblem(
@@ -115,7 +115,7 @@ internal sealed class SlurScoringProblem
         double startY,
         double endX,
         double endY,
-        double staffMiddleY,
+        double staffMiddleDown,
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
         IReadOnlyList<SlurLayout>? existingSlurs = null,
@@ -163,11 +163,11 @@ internal sealed class SlurScoringProblem
         _musicalDy = (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
 
         // The 5 staff lines in this scorer's frame (yUp = -yDevice). A line at
-        // staff position p sits at device staffMiddleY - p/2, i.e. at -(that) here.
+        // staff position p sits at device staffMiddleDown - p/2, i.e. at -(that) here.
         // Lines are at p in {4,2,0,-2,-4} -> offsets {2,1,0,-1,-2} ss above middle.
         _staffLinePositions = new double[5];
         for (int i = 0; i < 5; i++)
-            _staffLinePositions[i] = -staffMiddleY + (2.0 - i);
+            _staffLinePositions[i] = -staffMiddleDown + (2.0 - i);
     }
 
     // ---------------------------------------------------------------

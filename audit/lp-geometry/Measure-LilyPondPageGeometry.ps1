@@ -138,6 +138,18 @@ try {
             "     first ink top below paper edge   = {0:F6}   (top-margin {1:F6} + {2:F6})" -f $inkTop, $p.TopMargin, ($inkTop - $p.TopMargin)
             "     first STAFF refpoint below edge  = {0:F6}   (top-margin + {1:F6})" -f $staff[0], ($staff[0] - $p.TopMargin)
             "     last  ink bottom below edge      = {0:F6}   foot slack = {1:F6}" -f $inkBottom, ($p.PaperHeight - $inkBottom)
+            # The refpoint extent is an INTERVAL over the system's spaceable staves
+            # (lily/system.cc:705-717), so its width is the staff-to-staff distance inside
+            # the system -- zero on a one-staff score, and on a two-staff one the number
+            # Align_interface solved for. Printed only when it exists, so the single-staff
+            # books stay as terse as they were.
+            $inside = @(
+                for ($i = 0; $i -lt $sys.Count; $i++) { $sys[$i].StaffUp - $sys[$i].StaffDown }
+            ) | Where-Object { $_ -gt 1e-9 }
+            if ($inside) {
+                $insideUniq = @($inside | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
+                "     staff-to-staff INSIDE a system = {0}" -f ($insideUniq -join ', ')
+            }
             if ($sys.Count -ge 2) {
                 $gaps = for ($i = 1; $i -lt $sys.Count; $i++) { $staff[$i] - $staff[$i - 1] }
                 $uniq = @($gaps | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)

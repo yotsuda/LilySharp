@@ -257,7 +257,7 @@ internal static partial class SharedRenderer
             ClefType.Baritone => staffY - 0,      // C4 on the top line
             _ => staffY - 3,
         };
-        gc.DrawGlyph(glyph, x + 0.3, clefY, FontSize);
+        gc.DrawGlyph(glyph, x + EngravingDefaults.ClefGlyphXOffset, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
             DrawClefModifier8(x + 0.3, staffY, change: false, gc);
         else if (clef == ClefType.Treble8Above)

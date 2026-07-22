@@ -239,6 +239,89 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// TWO STAVES, one system — the mirror of book P in page-vertical.ly.
+    /// </summary>
+    /// <remarks>
+    /// Everything above measures the PAGE. This pair measures what Align_interface decides:
+    /// how far apart two staves of one system sit, which is
+    /// <c>max(skyline-distance + padding, minimum-distance, basic-distance)</c> over
+    /// StaffGrouper's 9 / 7 / 1 (align-interface.cc:228-238, define-grobs.scm:3352-3355).
+    ///
+    /// The staff LINES join that skyline like any other ink, and this probe is shaped so
+    /// they are the BINDING side: <c>d,</c> (LilyPond <c>d</c>) hangs 6 staff spaces below
+    /// the treble staff's middle line, its head reaching 0.545 further, while the same
+    /// written pitch is the bass staff's own middle line — so at that x nothing on the
+    /// lower staff rises above its top line. 6.545 + 2.05 + 1 = 9.595 beats basic-distance
+    /// 9, and the 2.05 is the line's INK: half of its 0.1 thickness past the centre at 2.0.
+    ///
+    /// Why the shape matters: with nothing protruding, both sides of the gap are staff
+    /// lines and 2.05 + 2.05 + 1 = 5.1 loses to basic-distance 9. A plain two-staff score
+    /// therefore cannot see the staff symbol's extent AT ALL — measured 2026-07-22, moving
+    /// it to 2.05 changed 14 multi-staff fixtures and not one ledger point, which is why
+    /// the fix was reverted until this entry existed.
+    ///
+    /// LilyPond twin: \new PianoStaff &lt;&lt; \new Staff { \clef treble d1 }
+    /// \new Staff { \clef bass d1 } &gt;&gt;.
+    /// </remarks>
+    private static readonly string P = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { d,1 | }
+          lh { d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "P" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="P"/> with the protrusion on the other side — the mirror of book Q.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="P"/>. P binds the LOWER staff's TOP line against ink
+    /// coming down; Q binds the UPPER staff's BOTTOM line against ink going up. Two edges
+    /// of the staff symbol, reached through two different skylines — the place a sign or a
+    /// frame goes wrong with nothing else noticing. <c>b</c> (LilyPond <c>b'</c>) is the
+    /// treble staff's middle line and sits 6 spaces ABOVE the bass staff's, so the
+    /// arithmetic mirrors P and both must read 9.595000. A difference between them is a
+    /// defect in its own right, whatever the value.
+    /// </remarks>
+    private static readonly string Q = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { b1 | }
+          lh { b1 | }
+        }
+
+        form main { ~Main }
+
+        score main "Q" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -349,5 +432,13 @@ internal static class LpGeometryProbes
         // its lowest notehead happens to reach 0.005 further down than the clef does.
         new("page.clef.first-staff-refpoint", S, g => g.FirstStaffRefpoint()),
         new("system.clef-bounded-distance", S, g => g.StaffGap()),
+
+        // --- the STAFF-TO-STAFF distance inside one system (Align_interface) ---
+        // One system with two staves, so the same StaffGap() that reads system-to-system
+        // above reads staff-to-staff here: it returns one refpoint per STAFF, and there is
+        // exactly one gap either way. The two entries are the two sides of the same staff
+        // symbol -- see the remarks on P and Q for why one of them is not enough.
+        new("staff.staff.upper-note-to-lower-lines", P, g => g.StaffGap()),
+        new("staff.staff.lower-note-to-upper-lines", Q, g => g.StaffGap()),
     };
 }

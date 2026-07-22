@@ -121,10 +121,14 @@ internal sealed class RenderedGeometry
     /// measured from the top paper edge.
     /// </summary>
     /// <remarks>
-    /// Single-staff probes only. With two staves per system this returns one entry per
-    /// STAFF, not per system, and a caller measuring "the gap between systems" would get
-    /// the brace's inner gap instead. Any probe that grows a second staff has to teach this
-    /// how to group them.
+    /// One entry per STAFF, top of the page down — not per system. That is what makes the
+    /// same method serve both regimes, and it is also the trap: on a one-staff score the
+    /// consecutive difference is the SYSTEM distance the page's springs decide, while on a
+    /// one-system two-staff score it is the STAFF distance Align_interface decides. The
+    /// probes are written so that only one of the two is present (probes V/W/S are one
+    /// staff and many systems; P/Q are one system and two staves), because a score with
+    /// both would need grouping this does not do — and would silently return a brace's
+    /// inner gap where the caller asked for a system's.
     /// </remarks>
     public IReadOnlyList<double> StaffRefpoints(int page = 0)
     {
@@ -141,8 +145,8 @@ internal sealed class RenderedGeometry
         {
             throw new InvalidOperationException(
                 $"page {page}: found {ys.Count} staff lines, which is not a whole number of "
-                + "5-line staves. The probe is not the single-staff score this assumes, or "
-                + "the staff-line predicate no longer selects what it used to.");
+                + "5-line staves. Either the probe draws a staff with some other line count, "
+                + "or the staff-line predicate no longer selects what it used to.");
         }
 
         var refpoints = new List<double>();
@@ -176,6 +180,11 @@ internal sealed class RenderedGeometry
     /// The single staff-to-staff distance on <paramref name="page"/>.
     /// </summary>
     /// <remarks>
+    /// Refpoint to refpoint, which is the frame both LilyPond spacings work in: between
+    /// systems that is <c>system-system-spacing</c>, between two staves of one system it is
+    /// <c>Align_interface</c>'s translation. Which one a probe reads follows from its shape
+    /// — see <see cref="StaffRefpoints"/>.
+    ///
     /// Throws when the gaps are not all equal rather than averaging them: a probe that
     /// stretches unevenly is not measuring one spring, and silently returning a mean would
     /// hide exactly the defect the corpus exists to catch.
@@ -186,7 +195,7 @@ internal sealed class RenderedGeometry
         if (refs.Count < 2)
         {
             throw new InvalidOperationException(
-                $"page {page}: {refs.Count} system(s) — a staff-to-staff gap needs two.");
+                $"page {page}: {refs.Count} staff/staves — a staff-to-staff gap needs two.");
         }
         var gaps = Enumerable.Range(0, refs.Count - 1).Select(i => refs[i + 1] - refs[i]).ToList();
         if (gaps.Max() - gaps.Min() > 1e-6)

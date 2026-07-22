@@ -99,14 +99,14 @@ public static class StemCalculator
     /// measured in staff-spaces from the staff middle line (position 0), exactly
     /// like <c>lily/stem.cc</c>. Inputs are device coordinates (Y-down, the
     /// shared layout/render space), converted to the up frame on entry and
-    /// reflected back to device Y on return via <c>staffMiddleY - up</c>. This
+    /// reflected back to device Y on return via <c>staffMiddleDown - up</c>. This
     /// mirrors LilyPond, which reasons in Y-up and flips to device Y only at
     /// stencil/output time, so the formulae below read sign-for-sign against
     /// <c>stem.cc</c> (stem-up ADDS length, as in <c>stem.cc:588</c>).
     /// </remarks>
     /// <param name="stemAttachY">Device Y where stem attaches to notehead.</param>
     /// <param name="stemUp">True if stem points up.</param>
-    /// <param name="staffTopY">Device Y of the top staff line.</param>
+    /// <param name="staffTopDown">Device Y of the top staff line.</param>
     /// <param name="durationLog">Duration log (2=quarter, 3=eighth, 4=16th...).</param>
     /// <param name="staffPosition">Staff position of the note (half-spaces from middle line, positive=up).</param>
     /// <param name="details">Stem details parameters.</param>
@@ -117,18 +117,18 @@ public static class StemCalculator
     public static double CalculateStemEndY(
         double stemAttachY,
         bool stemUp,
-        double staffTopY,
+        double staffTopDown,
         int durationLog = 2,
         int staffPosition = 0,
         StemDetails? details = null)
     {
         var d = details ?? StemDetails.Default;
         double staffHeight = 4.0; // staff spaces
-        double staffMiddleY = staffTopY + staffHeight / 2;
+        double staffMiddleDown = staffTopDown + staffHeight / 2;
 
         // Convert the device-Y attach point into LilyPond's Y-up frame
         // (staff-spaces above the middle line): middle − device.
-        double attachUp = staffMiddleY - stemAttachY;
+        double attachUp = staffMiddleDown - stemAttachY;
 
         // --- Base length from duration ---
         // LILYPOND-REF: stem.cc:506-517
@@ -187,7 +187,7 @@ public static class StemCalculator
         }
 
         // Reflect back to device coordinates (Y-down): middle − Y-up.
-        return staffMiddleY - stemEndUp;
+        return staffMiddleDown - stemEndUp;
     }
 
     /// <summary>

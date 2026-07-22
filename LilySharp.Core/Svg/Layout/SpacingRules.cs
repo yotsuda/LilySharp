@@ -966,10 +966,10 @@ internal static class SpacingRules
     private static double StemEndPosition(int attachPos, bool stemUp, int noteValue, int staffPosition)
     {
         // StemCalculator works in the renderer's Y-down staff-space frame with
-        // the staff middle at staffTopY + 2; use middle = 0 → staffTopY = −2.
+        // the staff middle at staffTopDown + 2; use middle = 0 → staffTopDown = −2.
         double attachY = -attachPos * 0.5;
         double endY = StemCalculator.CalculateStemEndY(
-            attachY, stemUp, staffTopY: -2.0,
+            attachY, stemUp, staffTopDown: -2.0,
             StemCalculator.GetDurationLog(noteValue), staffPosition);
         return -endY * 2.0;
     }

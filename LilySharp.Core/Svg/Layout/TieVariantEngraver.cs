@@ -162,7 +162,7 @@ internal static class TieVariantEngraver
         // to the former absolute origin while decoupling from SystemLayout.Y for the
         // Stage-4 W2 stacking-origin flip (step 2a MMR / step 2b Ledger). The
         // internal arc geometry stays device-frame (intentional-device island 2).
-        double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystem(system, staffIndex)
+        double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
             + StaffHeight / 2.0;
         double noteY = staffMiddleOffset - note.StaffPosition / 2.0;
         double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;

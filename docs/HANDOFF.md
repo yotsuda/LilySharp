@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `cfdf85b4`（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `500627c9` の次（§0 で裏取りすること）
 
 ---
 
@@ -27,46 +27,111 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手
+### ▶ 次のセッションの最初の一手 ＝ **島1 の atomic flip（`StaffLayout.Y` を Y-up 格納へ）**
 
-**`SkylineBuilder` は clef を一度も種にしていない。** 起票済み（`769529ed`）・**未修正**。
+**⚠️ これは「専用セッションで一気に完遂する」と決めてある作業。**
+`HANDOFF-stage4-vertical-yup.md` §3.5 の「途中停止＝全崩れ。半端なら revert して緑で締める／
+fresh context の専用セッションで一気に」がそのまま当てはまる。**この項目から着手すること。**
+文脈を他の作業で消費してから始めないこと（前セッションはそれを理由に着手を見送った）。
 
-LP の clef は staff の VerticalAxisGroup スカイラインに入る**内部 grob** で、素のスコアでは
-**上下ともインクの極値**（refpoint から下 **3.540**・上 **3.800**）。だから last-bottom spring の
-床を決め、鎖を通じてページ全体の force を決めている。Lily# は staff 線・音符・休符・臨時記号・
-加線・強弱・アーティキュレーションだけを種にしており、**clef が入っていない**。
+**地図・変換レシピ・消費側の一覧・落とし穴は §3B の「島1 の再スコープ」に全部ある。**
+実測済みなので調査からやり直す必要は無い（ただし着手時に実コードで再確認＝§5.2）。
 
-| 台帳キー（probe S） | LP | Lily# | 残差 |
+その次: **PageBreaker が鎖と食い違っている**（§2⑧ の ⚠️）。「1ページに何本」は今も別モデル。
+
+⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
+（`DynamicEngraver.cs:345,359,416,424`）。下の「幻の符尾」と**同じ形**だが、
+**台帳の点が 1 つも届かないので測っていない。推測で直さないこと。**
+着手するなら**先に点を作る**（全音符に強弱を付けた 2 段譜）。短いので、①の前の
+肩慣らしには向かない——①は fresh な文脈を丸ごと使う前提。
+
+⚠️ **別ブランチが 1 本走っている**: `fix/note-bang-diagnostic`（ワークツリー
+`C:\MyProj\LilySharp-wt2`、指示書は同ツリーの `scratch/TASK-note-bang-diagnostic.md`）。
+`Parser`/`Syntax`/`Tests` しか触らない柵つきなので**①とは 1 ファイルも衝突しない**
+（①は byte 不変なので snapshot も動かない）。master にマージするのはユーザー。
+
+---
+
+### ✅ このセッション（2026-07-22）でやったこと — **譜間を測れるようにして、2 つ閉じた**
+
+| commit | 内容 |
+|---|---|
+| `b3cfb119` | **2 段譜の台帳点を 2 つ起票**（probe P/Q）。出力不変。**予測を先に書いた** |
+| `89aaa29f` | **幻の符尾を止めた**。`+1.450000 → −0.050000`。snapshot 3 件 |
+| `854a0e95` | **五線をインクで種にした**（±2.0 → `staffHeight/2 + StaffLineThickness/2`）。`−0.050000 → 0` ×2。snapshot 14 件 |
+| `28048fd8` | §1 書き換え |
+| `7f2f8ff8` | **`StaffOffsetInSystemDown` 10 箇所を全数調査**。本物の移行は 2 箇所だけと判明し、それを実施（byte 不変・snapshot 0 件）。残り 8 箇所は**意図的な device 境界**＝`Down` は消さないのが正解、と shim の remark に記録 |
+| `500627c9` | **決定 2 件を記録**（糖衣 `c?`/`c??` 不採用＋記号ルール、島1 の再スコープ）。docs のみ |
+
+**台帳 22/29 → 24/31 exact、total |residual| = 0.023777 ss（不変）。** 新しい 2 点が両方 exact。
+
+#### ★ 教訓: **対で足したから 2 つ目の欠陥が出た**
+
+P（上の譜から下向きに出っ張る）と Q（下の譜から上向きに出っ張る）は**同じ算術の鏡像**なので
+LP はどちらも `9.595000` を返し、**残差も同じ値になるはずだった**。ならなかった
+（−0.050000 と **+1.450000**）。その差が**幻の符尾**:
+
+- `SkylineBuilder.AddNoteBoxToSkylines` が**全ての符頭に** 3.5 の符尾を生やしていた。
+  **コメントは「全音符には符尾が無い」と書いてあるのに、コードに音価の判定が無かった。**
+- 描画側は `noteValue >= 2` で正しく分岐している（`SharedRenderer.Noteheads.cs`）。
+  だから**全音符は符尾なしで描かれ、符尾があるものとして間隔が取られていた**。
+- LILYPOND-REF: `lily/stem.cc` `Stem::is_normal_stem`（duration-log >= 1 のみ）。
+
+⚠️ **片側だけ足していたら、−0.050000 が「予測どおり」に見えて終わっていた。**
+README §「片側しか測っていない点は…」の縦版。**両側を足す。**
+
+#### ★ 2 段譜の点は「素の 2 段譜」では作れない（設計の肝・再掲用）
+
+LP は隣接する譜を `max(skyline距離 + padding, minimum, basic)` に置く
+（`align-interface.cc:228-238`、StaffGrouper の 9 / 7 / 1）。**両側とも五線なら
+2.05 + 2.05 + 1 = 5.1 で basic 9 が勝ち、五線の extent は出力に一切現れない。**
+だから probe は **binding する X で片側だけが突出物**である必要がある
+（P = 高音部譜の `d` が中央線の 6 下＋符頭 0.545 ↔ 低音部譜は自分の中央線）。
+`staff-refpoint-extent` は system 内の全 staff refpoint の区間（`lily/system.cc:705-717`）
+なので、**2 段 1 system なら `StaffGap()` がそのまま譜間距離**。実装追加は不要だった。
+
+#### 参考: 縦の残差 4 点（合計 0.001365 ss）は原因を測って確定済み
+
+`probes/glyph-skyline.ly` で grob に stencil と skyline を同時に聞いた結果:
+
+| grob | `ext`（stencil） | `vertical-skylines` | Lily# |
 |---|---|---|---|
-| `page.clef.first-staff-refpoint` | 11.716074 | 11.728801149 | **+0.012727149** |
-| `system.clef-bounded-distance` | 12.255229 | 12.382501488 | **+0.127272488** |
+| Clef G | (−2.550 . 4.800) | **(−2.540 . 4.776)** | bbox の −2.550 を使用＝**0.010 深い** |
+| NoteHead | (−0.545 . 0.545) | (−0.545 . 0.545) | 一致（`22120764` が桁まで閉じた理由） |
+| StaffSymbol | (−2.05 . 2.05) | (−2.05 . 2.05) | ✅ 一致（`854a0e95` で線のインクへ） |
 
-**着手前の予測は桁まで的中**（Lily# の下インクが五線の 2.000000 で止まる前提で 11.728801 /
-12.382500 を計算 → 実測一致）。
+**LP はグリフの skyline を stencil の描画プリミティブから作る**（`stencil-integral.cc`）ので、
+輪郭が bbox の角から離れるグリフ（clef）だけ skyline が浅くなる。符頭は輪郭が bbox に接する
+ので一致する。⚠️ **閉じるには輪郭ベースの skyline 生成が要り、C# 側に OTF パーサは無い**
+（`ec7a2254` が LILC を選んだのと同じ制約）。**実測値を定数で埋めない**こと。
 
-#### ⛔ 一度実装して差し戻した（2026-07-22）。**再挑戦の前に `VerticalSkyline.Distance` を測ること**
+#### ✅ `StaffSymbol` の ±2.05 は閉じた（`854a0e95`）— **保留した判断が正しかった**
 
-`SeedClef` を `BuildSystemSkylines` に足した（`DrawClef` を写して treble は中央線の 1 下＝
-`aboveMiddle = -1`、箱は `GlyphMetrics.ClefG` = 下 −2.550 / 上 +4.800、X は `systemLeft + 0.3`）。
-**狙った 2 点は閉じた**（`page.clef.first-staff-refpoint` +0.012727 → **−0.0000828**、
-`system.clef-bounded-distance` +0.127272 → **−0.000827**）が、
-**`system.natural-distance` が 12.000000 → 13.110000（+1.110000）と後退**したので戻した。
+前セッションで一度直して**出荷せず戻した**のは「14 fixture が動くのに台帳点が 1 つも動かない」
+＝改善かどうかを誰も判定できないため。**先に点を作る**という判断が正しく、作ってみたら
+**2 つ目の欠陥（幻の符尾）まで出た**（§1 冒頭）。前セッションの実測「14 件・構造保存・
+Y は −0.05〜+0.15」は今回の実測（14 件・X 完全不動・Y +0.03〜+0.15 と −0.05 が 1 件）と一致。
 
-**逆算した事実**（ここから再開すること）:
-- 単一ページ経路の gap は `max(SysHeight + SystemSpacing, skylineDistance + SystemSpacing*0.5)`。
-  13.110000 → **skylineDistance = 9.110000**。
-- 箱から期待される値は **7.35**（下 5.55 ＋ 上 1.8、いずれも system 原点基準）。
-  scalar 経路 `StaffHeight + downExtent + upExtent` でも 4 + 1.55 + 1.8 = 7.35。
-- 9.11 − 4 − 1.8 = **downExtent 3.31**。つまり **down 側が想定より 1.76 深い**。
-- ⚠️ **LP は同じ音楽で 12.000000 のまま**（LP の床は 5.55+1.8+padding 1 = 8.35 < basic 12）。
-  だから「clef を入れると縦が広がる」のは**移植の正しさではなく Lily# 側の計算の問題**。
+定数ではなく**導出形**で入れた: `_staffHeight / 2 + StaffLineThickness / 2`（§5.2.1⑤）。
+`SeedStaffSymbol`（譜間用）と `SeedSystemStaffSymbol`（ページ用）の**両方**。
 
-⚠️ **次にやること: 箱を足す前に `VerticalSkyline.Distance` と `FromBox` の規約を実測で確かめる**
-（既存の種＝符頭・加線で `Distance` が箱どおりの値を返すかを単体で測る）。1.76 の出どころが
-判るまで再着手しないこと。⚠️ 併せて **`BuildStaffSkylines`（譜間用）は systemLeft を受け取らない**
-ので clef の X 起点が無い。system 側と同時に設計すること。
+#### ✅ clef をスカイラインに入れた（`90efec02`）— **本体は padding 4 倍の方だった**
 
-その次: **PageBreaker が鎖と食い違っている**（下の ⚠️）。「1ページに何本」は今も別モデル。
+LP の clef は staff の VerticalAxisGroup スカイラインに入る**内部 grob**（`axis-group-interface.cc:914-940`）で、
+素のスコアでは**上下ともインクの極値**（refpoint から下 3.550・上 3.800）。Lily# は種にしていなかった。
+
+⚠️ **ただし clef 単独では直らず、一度差し戻した**（`c83a0551`）。狙った 2 点は閉じるのに
+`system.natural-distance` が **+1.110000** に後退したため。**真因は別の欠陥**だった:
+
+**`LayoutEngine` の単一ページ経路が system 間 padding に `SystemSpacing * 0.5 = 4` を使っていた。
+LP は 1**（`paper-defaults-init.ly:62-65`・`page-layout-problem.cc:625-632`）。**4 倍。**
+スカイラインが薄いうちは ink 項が basic-distance 12 に届かず**見えなかった**。clef が入って
+ink が 9.110000（clef の下 5.550 と次 system の小節番号 3.560 が同じ左端で向き合う）に達した
+瞬間に `9.11 + 4` が binding して露見した（LP なら `9.11 + 1` で効かない）。
+同経路を `PageLayouter` の鎖と同じ `max(basic, max(minimum, ink + padding))` に揃えて解決。
+
+⚠️ **教訓: 「新しい種を入れたら縦が広がった」を種のせいにしない。** 種は既存の欠陥を
+**可視化しただけ**だった。LP が同じ音楽で動かないなら、動いた側が間違っている。
 
 #### ✅ 決着: 休符の実インク化は**やらなくてよい**（測って否定した）
 
@@ -83,18 +148,22 @@ LP の clef は staff の VerticalAxisGroup スカイラインに入る**内部 
   これは**丸めた gap から算術した私の誤り**。probe は元から**全 system の生データ**を出しており
   （要約しているのは測定スクリプトの方）、直読みすれば 3.550000000 だった。
 - **stencil の extent と skyline は別物。** LP の spring の床が使うのは **skyline**
-  （= LILC のインク 3.545）で、system stencil の extent（3.550）ではない。
+  （3.540〜3.545）で、stencil の extent（3.550）ではない。
   この2つを突き合わせて「未知の 0.005」を作り出していた。**どちらの量かを必ず言うこと。**
+- **probe が何を測っているか確かめてから信じる。** 休符 probe は休符を測っておらず、
+  中央線上の音符 probe は**下向き符尾**が clef を隠していた。`a`（中央線の1段下）で初めて
+  clef が単離できた。**両方とも罠として probe のヘッダに書いてある。**
 
 ---
 
-**origin より 29 ahead で未 push**（HEAD `769529ed`）。push はユーザー判断・コミットは可。
-⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 5 回（186・192・2・2・80 件）が含まれる。**
-別ブランチ `fix/vscode-extension` が `7291531a` から切られている（VS Code 拡張作業・ユーザー）。
-**テスト 0 failed / 3136 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度 24/29 exact, total |residual| = 0.162412 ss**（**2.26.0 基準**。X 22点＋**Y 7点**）。
-⚠️ **0.022412 → 0.162412 は悪化ではない。** `769529ed` で clef の発散が**測れるようになった**分
-（`5c4126d6`・`6ffbe7bd` と同じ現象）。既存の点は 1 つも動いていない。
+**origin より 60 ahead で未 push**（HEAD はこのコミット）。push はユーザー判断・コミットは可。
+⚠️ **push は明示的に「まだしないで」と言われている**（2026-07-22）。解除まで push しないこと。
+⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 8 回（186・192・2・2・80・82・3・14 件）が含まれる。**
+別ブランチ `fix/vscode-extension` が `7291531a` から切られ、**master に取り込み済み**（VS Code 拡張作業・ユーザー）。
+**テスト 0 failed / 3142 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度 24/31 exact, total |residual| = 0.023777 ss**（**2.26.0 基準**。X 22点＋Y 7点＋**譜間 2点**）。
+**譜間 2 点は両方 exact**（`854a0e95`）。**縦 7 点の合計は 0.001365**（4 点が上記の skyline sliver、3 点は exact）。
+X 3 点は `e38a76bf` から不変。
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
 
 ⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
@@ -180,6 +249,12 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 | `a7b96569` | 生 dump を直読みして**残差の原因の記述を訂正**（コード変更なし）。要約からの逆算が誤りだった |
 | `22120764` | **縦スカイラインを符頭の実インク（LILC ±0.545）へ** — `ec7a2254` の縦版。**0.004090 → 0**、**縦は 5/5 exact**。**snapshot 80 件再ベース**（全件で行数・グリフ数一致＝構造保存、Y は −0.05〜+1.80） |
 | `769529ed` | **clef がスカイラインに無いことを測れる probe S を起票**（出力不変）。予測を先に書いて桁まで的中。休符案は実測で棄却（上記） |
+| `058ab13a` | `VerticalSkyline.Distance` の契約を単体テストで固定（**スカイライン算術は無罪**と確定） |
+| `0b30f53d` | **座標系監査**を `COORDINATE_AUDIT.md` §2.1 へ。`staffMiddleY` が 9 ファイルで逆向きの 2 意味だった |
+| `a8c75679` | **19 シンボルを `Down` 付きへ改名**（ユーザーが MSVS で実施）。純リネーム |
+| `39da7084` | **Y-up shim を開設**（`StaffOffsetInSystemUp`）＋ `OutsideStaffStacker` を移設。**snapshot 0 件** |
+| `511ab68c` | **`SkylineBuilder` を Y-up へ**（`ToSystemUp` が単なる加算に）。**snapshot 0 件** |
+| `90efec02` | **clef を種に＋単一ページ経路の padding を LP の 1 へ**。0.162412 → **0.023777 ss**。**snapshot 82 件再ベース**（構造保存・縦のみ最大 −6.88） |
 | `b94487ad` | **先頭 system の配置を refpoint フレームへ**（§2⑧ の順序①）。`CalculateFirstStaffRefpoint` を新設し、`CalculateFirstSystemY` を **halfStaff 変換の唯一の seam** に。3 呼び出し元とも spec を渡す。**出力不変・snapshot 0 件** |
 | `1dfb62d7` | **先頭 system を top-system spring に載せた**（順序②）。`max(basic-distance, ink + padding)`。**`page.first-staff-refpoint` −3.000000 → 0**、22/25 exact・0.022412 ss。**snapshot 2 件再ベース**（`programmatic/hara-kiri{,-paged}`、全て +3.00） |
 | `99baed0f` | **`Deploy-Lsp.ps1` が `media/` を配っていなかった**のを修正。プレビューの符頭が三角になっていた原因（下記） |
@@ -650,11 +725,12 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 24/27 exact, total |residual| = 0.022412 ss**（`audit/lp-geometry/`・**LP 2.26.0 基準**）。
-**X 22 点は 19 exact / 0.022412、Y 5 点は 5 exact / 0**
-（`0c0d8f38` で Y に開き、`1dfb62d7` で自然長、`cfdf85b4` で伸長、`22120764` でインクを閉じた）。
-**残差を持つのは X の 3 点だけ**で、うち 2 点は Lily# に無いパイプライン（水平スカイライン／
-テキストレイアウト）が要る。
+**現状 24/31 exact, total |residual| = 0.023777 ss**（`audit/lp-geometry/`・**LP 2.26.0 基準**）。
+**X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 2 点は 2 exact / 0**
+（`0c0d8f38` で Y に開き、`1dfb62d7` で自然長、`cfdf85b4` で伸長、`22120764` でインク、
+`90efec02` で clef、`b3cfb119`＋`854a0e95` で譜間を閉じた）。
+**Y の残り 4 点は同一原因**（clef の LILC bbox 3.550 vs LP の skyline 3.540〜3.545）。
+X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイライン／テキストレイアウト）が要る。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
@@ -674,17 +750,92 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 - **符尾 Y extent のダンプ**（光学補正の 2×2 の裏取り）→ 数値は
   `SpacingRules.BarlineToNextNotesCorrection` の remarks に
 
+⚠️ **未測定の疑い（2026-07-22 記録）**: `DynamicEngraver`（`:345,359,416,424`）と
+`TupletBracketEngraver`（`:573,585`）が `DefaultStemLength` を**音価によらず**足している。
+`89aaa29f` で潰した `SkylineBuilder` の幻の符尾と**同じ形**だが、**台帳の点が 1 つも届かない**。
+LP は `Stem::is_normal_stem`（duration-log >= 1）でしか符尾を持たないので、全音符に
+強弱記号やタプレット括弧が付く形は乖離している**はず**——**推測で直さないこと。先に点を作る**
+（全音符＋強弱の 2 段譜。probe P/Q と同じ作り方で `staff.staff.*` に足せる）。
+
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 
 起票時の実バグ8件は全て対処済み。残るのは「数値は正だが frame 忠実性が未完」の3系統:
 
 | | 内容 | 状況 |
 |---|---|---|
-| ① | 譜間/system 縦積みの Y-down 残存（**島1**） | 🔄 YFlip 配線と全 grob の Y-up 化は完了。残＝共有 device stacking の de-island（`OutsideStaffStacker` 等）＋ `system.Y`/`staff.Y` の Y-up 格納（W2） |
+| ① | 譜間/system 縦積みの Y-down 残存（**島1**） | 🔄 **残るは `StaffLayout.Y` の格納だけ**（下記で再スコープ） |
 | ② | device 島群（**島2**） | ⏸ 繰延。TieVariant / 水平 skyline の Y horizon / TabStaffGeometry / beam collision island |
 | ③ | non-musical PaperColumn の欠落 | 🔄 §2 ③ |
 
 **X（③）と Y（①）は独立に進められる。** 島1 は boundary-shim で byte 不変移行できることが実証済。
+
+#### 島1 の再スコープ（2026-07-22・実コードで裏取り）
+
+⚠️ **旧記述「残＝共有 device stacking の de-island（`OutsideStaffStacker` 等）＋
+`system.Y`/`staff.Y` の Y-up 格納」は 3 分の 2 が既に済んでいた。**
+
+- `StaffFrame` は**参照ゼロ**（削除済み）
+- `OutsideStaffStacker` は `StaffOffsetInSystemUp` へ移行済み（`39da7084`）
+- `system.Y` は page Y-up 格納済み（`477c5452`）
+
+**`StaffOffsetInSystemDown` の残り 10 箇所も、実は移行対象ではなかった。** 全件を調べた結果
+（`7f2f8ff8`）、本物の移行は **`LayoutEngine` の Y-up スカイライン 2 パスだけ**で、これは
+同コミットで完了。残る 8 箇所は**意図的に device な計算の境界**（`TabStaffGeometry` の
+タブ/弧の幾何 2 件・スラー scorer・TieVariant scorer・ページング extent パス・`SkylineDrop`
+の床・ledger span と MMR の格納 device Y）で、`HANDOFF-stage4-vertical-yup.md` §0 が
+「内部アルゴリズムの自然な device frame＝共有 chokepoint 不要」と明記している通り。
+**device 島には端で反射が要り、この accessor がその反射そのもの**なので、`Down` は残すのが正解。
+
+**したがって島1に残っているのは `StaffLayout.Y` の Y-up 格納 1 点のみ。**
+⚠️ ただしこれは**単独では終わらない**——同じフレームを `StaffGroupLayout.Y` と
+`GrandStaffLayout.BraceTop/BraceBottom` が共有している。**着手するなら専用セッションを 1 本
+これに当てること**（`HANDOFF-stage4-vertical-yup.md` §3.5：途中停止＝全崩れ）。
+
+#### 島1 atomic flip の作業マップ（2026-07-22 実測。着手時に実コードで再確認すること）
+
+**スコープ**
+
+| 対象 | 数 | 中身 |
+|---|---|---|
+| ディスパッチャ | 3 | `LayoutStaffGroups` の 3 系統（素 `:273` ／ hara-kiri `:343` ／ skyline `:1269`） |
+| グループ構築 | 9 | grand/bracket/single × 3 系統（`:504,:537,:568` `:606,:652,:696` `:1344,:1391,:1438`） |
+| 消費側 | 15 | `SharedRenderer.Connectors` 7（`:101,:115,:158,:162,:163,:179,:202,:203,:226,:227` のうち）／`SharedRenderer` 2（`:542,:543`）／`LayoutEngine` 3（`:348,:856,:1351`）／`MusicMarkEngraver:238`／`OutsideStaffStacker:128`／`PedalEngraver:180` |
+| テスト | 8 | `BraceCollapseTests`（`:88,:114,:144,:202,:206`）／`SystemStartDelimiterTests`（`:175,:178,:204`） |
+
+**変換レシピ**（各構築メソッドで 3 箇所）
+
+```
+currentY += staffHeight + gap;              →  currentY -= staffHeight + gap;
+double totalHeight = currentY + staffHeight - y;  →  double totalHeight = y - currentY + staffHeight;
+BraceBottom: y + totalHeight                →  BraceBottom: y - totalHeight
+```
+
+ディスパッチャ側は `currentY += layout.Height` / `+= interGroupGap` /
+`+= NoteBoundLyricExtraGap(...)` をすべて `-=` へ。
+
+★ **これは近似ではなく字面移植**: LP の `Align_interface` は
+`where += stacking_dir * dy`（`align-interface.cc:274`）で `stacking_dir = DOWN = -1`、
+つまり**LP のアキュムレータは元から負に歩いている**。`translates` もそのまま格納される。
+
+**型と派生プロパティ**
+
+- `StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop` / `BraceBottom` が Y-up（下ほど小さい・
+  先頭 staff が 0）。`Height` は**長さなので正のまま**
+- `GrandStaffLayout.TotalHeight => BraceBottom - BraceTop` → **`BraceTop - BraceBottom`**
+- 譜の下端は `Y + Height` → **`Y - Height`**（`LayoutEngine:856` `MusicMark:238` `Pedal:180`）
+- `OrderBy(s => s.Y)`（`Connectors:158,:179`）は**降順**へ
+- `LayoutUtilities`: `StaffOffsetInSystemUp` が素の `staff.Y`、`Down` が `-staff.Y`、
+  **`FindStaffYInSystem` が引き算から足し算になる**（`system.Y + staff.Y`）＝これが本来の狙い
+
+**やらないこと**
+
+`StaffOffsetInSystemDown` の残り 8 呼び出しは**移行しない**（上記のとおり意図的な device 境界。
+`Down` は消さない）。詳細は `LayoutUtilities.StaffOffsetInSystemUp` の remark に書いてある。
+
+⚠️ **byte 不変だけでは足りない。** 生産側と消費側が**打ち消し合う符号ミス**は出力を変えないので、
+オラクルをすり抜ける。**フレームを直接固定する単体テストを同時に足すこと**——2 段譜で
+`staves[0].Y == 0` かつ `staves[1].Y < 0`、および `BraceTop > BraceBottom`。
+これが無いと「緑だがフレームが逆」で着地しうる。
 
 ### C. 未移植 LP 計算の取り込み
 
@@ -697,7 +848,10 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 
 - MusicXML インポート — ほぼ完遂、実ファイル検証が残
 - AI 協調編集 M1–5（Ctrl+I / 譜面選択 / 補完 / BYO-key）— 実機 E2E 未検証
-- 文法改善 5 件 — 糖衣 `c?` / `c!` 未実装。0.3.0 リリースは GO 待ち
+- 文法改善 5 件 — **完了。糖衣は入れないと決定した**（2026-07-22、下記）。0.3.0 リリースは GO 待ち
+- **`note!` 密着の診断 — 別ブランチで進行中**（`fix/note-bang-diagnostic`／ワークツリー
+  `C:\MyProj\LilySharp-wt2`）。指示書は同ワークツリーの
+  `scratch/TASK-note-bang-diagnostic.md`（`scratch/` は gitignore なので master に混ざらない）
 - Dead-code 監査 — アナライザ検出分は完了、手動分が残
 - `LILYPOND-REF` 行番号の一括再採番（cosmetic・繰延）
 - `IDrawingContext.cs:37-39` の remark が装飾前後2フレームを記述していない（§4.4）
@@ -710,6 +864,35 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
   （`<`/`>` の和音・アルペジオ）だけでなくスラー `(`/`)` とオクターブ記号 `'`/`,` も
   扱うようになり、名前が実態から離れた。`registerSmartBrackets` も同様。変更は
   `extension.ts` の import 1 箇所。**未着手・競合を避けて後で**（2026-07-22 記録）
+
+#### ✅ 決定: 臨時記号の糖衣 `c?` / `c??` は**入れない**（2026-07-22・蒸し返さないこと）
+
+⚠️ 旧記述は「糖衣 `c?` / `c!` 未実装」で、**却下済みと未着手を同じ「未実装」に潰していた**。
+`c!` は検討して**撤回した**もの（`3e4188b`）で、未着手ではない。
+
+| | 状態 |
+|---|---|
+| `c!`（LP の強制臨時記号） | **却下**。`!` は点線小節線トークン（`Lexer.cs:192`、LP `\bar "!"`）。密着判定は空白に意味を持たせ、`c4! d` と詰めた既存の点線小節線の意味を黙って変える |
+| `c?`（LP の cautionary） | **不採用**。痛み自体は既に解消済み（`Parser.cs:70-72` が `@courtesy`/`@editorial` を案内する専用エラーを出す）。残りはキーストローク節約だけ |
+| `c??`（`@editorial` の糖衣） | **不採用**。LP に無い記号の発明 |
+
+`c?` を落とした決め手は**単独では `!` の罠を悪化させること**: LP の `?`/`!` は対なので、
+片方だけ通すと「LP の書き方が効く」と学習させ、`c!` を試す導線をこちらから作る。そして
+`c!` は今**黙って小節を割り**、LYS2006（「弱起なら partial を宣言しろ」）という見当違いの
+助言しか返さない。さらに和音では LP に無い配置設計が要る（LP は `<cis? e g>` の**音符単位**で、
+和音全体に付ける `<c e g>?` は存在しない）。
+
+**→ 代わりに `note!` 密着の診断をやる**（上記・別ブランチ）。静かな誤動作を名指しの説明に
+変える方が価値が高く、言語の表面積を増やさない。
+
+★ **ここから出た線引き（今後の記号追加はこれで判断する）**:
+> **記号（sigil）は LilyPond が既に記号で綴っているものにだけ使う。
+> Lily# 固有のものは全部 `@name` で書く。**
+
+この一本で、`?` を入れない理由・`!` を点線小節線のまま残す理由・将来「括弧なし強制」を
+足すなら `@force`（記号ではない）にする理由が、すべて同じ根拠で説明できる。
+なお**「強制」自体は既に可能**——`@courtesy` は規則上出ない臨時記号を強制的に出したうえで
+括弧を付ける（`MeasureCollector.ItemFactory.cs:73-79`）。無いのは「括弧なしの強制」だけ。
 
 ### E. 保守性の負債（このセッションで見つけたもの）
 
@@ -779,6 +962,55 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 - ⚠️ **同名プロパティが grob ごとに別の値**を持つ（`stem-spacing-correction` は
   StaffSpacing 0.4 / NoteSpacing 0.5）。**単位も別**（staff-spacing.cc は staff-space、
   note-spacing.cc は staff position。どちらも /7 するので2倍ずれる）
+
+### 5.2.1 発明を機械に見つけさせる（3 つの仕組み）
+
+**このセッションで見つけた欠陥は 1 件の例外もなく「Lily# が発明した箇所」だった**
+（padding 4 倍・`/60`・名目 1.0 の箱・鎖の欠落・clef の欠落）。
+「LP の式を正しく移植したが合わなかった」は**ゼロ**。だから方針は正しい。
+問題は**発明が何年も気づかれない**ことで、散文の警告では防げなかった。以下は機械が落とす形。
+
+**① 出典の無い定数はテストが落とす** — `LpProvenanceTests`（`UnsourcedBaseline`）。
+`EngravingDefaults` / `LayoutOptions` / `VerticalSpacingParameters` の数値定数は
+**`LILYPOND-REF:`（LP の式の出典）か `LILYSHARP-OWN:`（Lily# 独自である理由）を必ず持つ**。
+台帳と同じラチェットで、**下げるのは可・上げるのは不可**。
+⚠️ **初期値 13 は実在の負債**。`NoteheadHeight` `NoteheadHalfHeight` `RestHeight` `RestWidth`
+——**今回噛まれた名目の箱がそのまま並んでいる**。1 つ潰すたびに baseline を下げること。
+⚠️ **`LILYPOND-REF` が付いていても式が一致しているとは限らない**（§5.2）。
+このテストは「出典を書け」までしか強制できない。**REF の隣の式が別物だった実例が
+`LayoutEngine` の padding 4 倍**（`page-layout-problem.cc:1070-1127` の真下にあった）。
+
+**② 二重実装は「一致する」不変条件テストで縛る** — spring 2 系統＋改行 gate は既に §5.4 で
+縛ってある。**縦も同じ扱いにする**。⚠️ **padding 4 倍のバグは「複製された側」（単一ページ経路）に
+住んでいた。** 重複は美観ではなく**移植が半分しか当たらない場所**。新しい経路を足すときは
+「既存の経路と同じ答えを出す」テストを同時に足すか、**そもそも足さず統合する**。
+
+**③ 再ベースは台帳点とセットにする** — snapshot を再ベースするコミットは、
+**その差分を正当化する台帳キーを message に名指しする**。名指せないなら、
+**先に台帳点を作る**（`StaffSymbol` の ±2.05 を保留したのがこの適用例。§1）。
+⚠️ 190 snapshot に対し台帳は 29 点。**snapshot は「前回の自分」との比較**なので、
+再ベースのたびに誤りを承認する機会が生まれる。網は見た目より薄い。
+
+**⑤ 実測値をコードに書かない。書くのは LP の式。** ★このセッションで指摘された癖
+実測は**不具合を見つけるヒントと、移植の照合**にだけ使う。**コードに入るのは LP の
+`lily/*.cc` / `scm/*.scm` の式**であって、LilyPond の出力から読んだ数値ではない。
+- ⚠️ **判定法**: その定数を**LP のどの行から導いたか**を書けるか。書けないなら、それは
+  実測を貼っただけ。`LILYSHARP-OWN:` を付けて**独自と明示する**か、式を探しに戻る。
+- ⚠️ **導出形で書く**。`2.05` ではなく `staffHeight/2 + StaffLineThickness/2`。
+  数値が同じでも、**前者は測定の写しで、後者は式**。フォントや設定が変われば差が出る。
+- ⚠️ **既にある独自定数を別ファイルにコピーしない。** 実例: clef のスカイラインを入れたとき
+  `ClefGlyphXOffset = 0.3` を `SkylineBuilder` に**書き足した**。0.3 は LP の量ではなく
+  `DrawClef` の独自値で、**発明の家が 1 つから 2 つに増えた**。`EngravingDefaults` に
+  1 つだけ置き `LILYSHARP-OWN:` を付けて解消済み。**`SystemSpacing * 0.5` が何年も
+  生き延びたのと同じ形**。
+
+**④ コーパスの穴を数える** — 台帳が薄いのは~~多段譜~~・**ページ跨ぎ・伸長**
+（多段譜は `b3cfb119` で 2 点入った）。過去の最大級の欠陥 2 つ（padding 4 倍・clef 欠落）は
+**長期間コーパスから見えず**、clef が padding を偶然あぶり出して初めて露見した。
+**新しい点を足すときは、既存の点が測っていない regime を優先する。**
+⚠️ **2026-07-22 に同じことがもう一度起きた**: 多段譜の regime を開いた瞬間、
+狙っていた欠陥（五線 0.05）と**一緒に、狙っていなかった欠陥（幻の符尾 1.45）が落ちた**。
+**穴を開けると、そこに何が溜まっていたかは開けるまで分からない。**
 
 ### 5.3 測定の原則
 
@@ -884,7 +1116,10 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
       （LP 実測値 → `audit/lp-geometry/`、LP の式 → コード内 REF、座標系の状態 →
       `COORDINATE_AUDIT.md`）
 5. [ ] **新しい `handoff-*.md` を作っていないことを確認**
-6. [ ] `git status` で意図しないファイルが混ざっていないか確認
+6. [ ] **snapshot を再ベースしたなら、それを正当化する台帳キーを message に名指したか**（§5.2.1③）
+7. [ ] **定数を足したなら `LILYPOND-REF:` か `LILYSHARP-OWN:` を付けたか**
+      （`LpProvenanceTests` が落ちる。baseline を上げて通すのは禁止・§5.2.1①）
+8. [ ] `git status` で意図しないファイルが混ざっていないか確認
       （特に `audit/scripts/__pycache__/` — 生成器を走らせると必ず出る。commit しない）
 
 ---

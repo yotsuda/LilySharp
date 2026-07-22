@@ -6,6 +6,14 @@
 %% systems sit, and how many of them the breaker puts on a page. Those are the quantities
 %% HANDOFF.md 2-8 is about.
 %%
+%% Books P and Q at the bottom measure a DIFFERENT owner with the same dump: the distance
+%% between two staves INSIDE one system, which Align_interface decides, not the page's
+%% springs. They ride here rather than in a file of their own because the quantity is
+%% already in the dump — `staff-refpoint-extent` is the interval over every spaceable
+%% staff's refpoint (lily/system.cc:705-717), so on a two-staff system its WIDTH is the
+%% staff-to-staff distance, exactly as the distance between two systems is the difference
+%% of two such refpoints.
+%%
 %% Run it with ../Measure-LilyPondPageGeometry.ps1.
 %%
 %% WHY A DEDICATED PROBE, AND WHY NO MARKUP
@@ -138,4 +146,61 @@ probeTag =
 \book {
   \probeTag "L"
   \score { \new Staff { \repeat unfold 24 { c'4 d' e' f' } } }
+}
+
+%% P — TWO STAVES, and the quantity is INSIDE the system. Align_interface puts adjacent
+%%     staves at
+%%
+%%         max (skyline-distance + padding, minimum-distance, basic-distance)
+%%
+%%     (lily/align-interface.cc:228-238) with StaffGrouper's 9 / 7 / 1
+%%     (scm/define-grobs.scm:3352-3355). The staff LINES are ordinary ink in that skyline,
+%%     and making them the binding side is the whole purpose of this book:
+%%
+%%       * `d` in the TREBLE staff hangs 6 staff spaces below the middle line (position
+%%         -12) and its head reaches 0.545 further, so the upper staff's down-skyline is
+%%         6.545 there;
+%%       * the SAME written pitch in the bass staff is that staff's MIDDLE LINE, so at
+%%         that x nothing on the lower staff rises above its own top line.
+%%
+%%     6.545 + 2.05 + 1 = 9.595, which beats basic-distance 9 — and the 2.05 is a staff
+%%     line's INK (half of its 0.1 thickness past the line's centre at 2.0). That 0.05 is
+%%     what this book exists to see.
+%%
+%%     A plain two-staff score cannot see it. With nothing protruding, both sides are
+%%     staff lines: 2.05 + 2.05 + 1 = 5.1, basic-distance 9 wins, and the staff symbol's
+%%     extent leaves no trace in the output at all.
+%%
+%%     ragged-bottom, so the page's own springs stay at their natural length and the
+%%     number read here is Align_interface's, not a force the page breaker solved for.
+\book {
+  \probeTag "P"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \clef treble d1 }
+      \new Staff { \clef bass d1 }
+    >>
+  }
+}
+
+%% Q — P with the protrusion on the OTHER side, and it is not redundant. P binds the LOWER
+%%     staff's TOP line against ink coming down; Q binds the UPPER staff's BOTTOM line
+%%     against ink going up. Those are two different edges of the staff symbol reached
+%%     through two different skylines, which is precisely where a sign or a frame goes
+%%     wrong without anything else noticing.
+%%
+%%     `b'` is the treble staff's middle line and, in the bass staff, sits 6 spaces ABOVE
+%%     the middle line (position +12). So the arithmetic mirrors P exactly —
+%%     2.05 + 6.545 + 1 = 9.595 — and the two books must print the SAME number. A
+%%     difference between them is a defect on its own, independent of the value.
+\book {
+  \probeTag "Q"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \clef treble b'1 }
+      \new Staff { \clef bass b'1 }
+    >>
+  }
 }

@@ -88,7 +88,7 @@ internal static class TupletBracketEngraver
     // the bracket never enters the staff even over low notes.
     private const double StaffPaddingLP = 0.25;
     private const double EdgeHeight = 0.7;
-    private const double StaffMiddleY = 2.0;    // staff-top frame: middle line = StaffHeight/2
+    private const double StaffMiddleDown = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff
 
@@ -570,7 +570,7 @@ internal static class TupletBracketEngraver
             // calc_position_and_height — points from
             // Note_column::cross_staff_extent[dir] and staff.widen(pad);
             // *offset += padding * dir.
-            double tipY = StaffMiddleY - (highestPos!.Value * 0.5) - EngravingDefaults.DefaultStemLength;
+            double tipY = StaffMiddleDown - (highestPos!.Value * 0.5) - EngravingDefaults.DefaultStemLength;
             double edge = Math.Min(tipY, -StaffPaddingLP)
                 - BracketPadding - nestingOffset;
             double mid = edge;
@@ -582,7 +582,7 @@ internal static class TupletBracketEngraver
         }
         else
         {
-            double tipY = StaffMiddleY - (lowestPos!.Value * 0.5) + EngravingDefaults.DefaultStemLength;
+            double tipY = StaffMiddleDown - (lowestPos!.Value * 0.5) + EngravingDefaults.DefaultStemLength;
             double edge = Math.Max(tipY, 4.0 + StaffPaddingLP)
                 + BracketPadding + nestingOffset;
             double mid = edge;

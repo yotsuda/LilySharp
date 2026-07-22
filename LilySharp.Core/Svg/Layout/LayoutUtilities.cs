@@ -281,7 +281,7 @@ internal static class LayoutUtilities
     /// changes <c>system.Y</c> from device Y-down to page Y-up but leaves
     /// <c>staff.Y</c> a downward within-system offset either way).
     /// </remarks>
-    public static double StaffOffsetInSystem(SystemLayout system, int staffIndex)
+    public static double StaffOffsetInSystemDown(SystemLayout system, int staffIndex)
     {
         if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)
         {
@@ -298,6 +298,38 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
+    /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces
+    /// <b>UP</b> from the system top to this staff's top line, so it is NEGATIVE for
+    /// every staff below the first and 0 for the first. Exactly
+    /// <c>-<see cref="StaffOffsetInSystemDown"/></c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — a system's staves are placed
+    /// from <c>min_offsets</c>, which <c>Align_interface::get_minimum_translations</c>
+    /// produces Y-up (negative going down); :915-917 calls the sign out explicitly
+    /// ("this is relative to the system: negative numbers are down").
+    ///
+    /// This is the boundary shim for the frame move recorded in COORDINATE_AUDIT 2.1.
+    /// Callers migrate one island at a time — each migration is arithmetically the
+    /// identity (every <c>- offsetDown</c> becomes <c>+ offsetUp</c>), so output must
+    /// stay byte-identical and any snapshot that moves is a sign error, not progress.
+    ///
+    /// ⚠️ <see cref="StaffOffsetInSystemDown"/> does NOT "go away when the last caller is
+    /// gone", which an earlier version of this remark predicted. Surveyed 2026-07-22: of
+    /// its callers, only the two Y-up skyline passes in <c>LayoutEngine</c> were
+    /// migrations; the rest are the boundaries of computations that are DELIBERATELY
+    /// device (the tab/arc geometry behind <c>TabStaffGeometry</c>, the slur and
+    /// tie-variant scorers, the paging extent pass, <c>SkylineDrop</c>'s floor, and the
+    /// stored device Y of ledger spans and multi-measure rests). A device island needs a
+    /// reflection at its edge, and this accessor IS that reflection — rewriting those
+    /// callers as <c>-StaffOffsetInSystemUp(...)</c> would move the negation inward and
+    /// read worse. Down survives on purpose; what remains of the frame work is the
+    /// storage flip of <c>StaffLayout.Y</c> itself (see docs/HANDOFF.md 3B).
+    /// </remarks>
+    public static double StaffOffsetInSystemUp(SystemLayout system, int staffIndex)
+        => -StaffOffsetInSystemDown(system, staffIndex);
+
+    /// <summary>
     /// Finds the absolute page-Y-up position of a staff's TOP line within a
     /// specific system (staff-spaces UP from the page bottom). Returns system.Y —
     /// the system top's Y-up — if no matching staff is found (single-staff
@@ -306,7 +338,7 @@ internal static class LayoutUtilities
     /// downward offset BELOW the system top, that offset SUBTRACTS.
     /// </summary>
     public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
-        => system.Y - StaffOffsetInSystem(system, staffIndex);
+        => system.Y - StaffOffsetInSystemDown(system, staffIndex);
 
     /// <summary>
     /// Absolute page-Y-up of a staff's middle line, the anchor that staff-position

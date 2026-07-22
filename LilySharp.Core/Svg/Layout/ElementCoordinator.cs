@@ -824,7 +824,7 @@ internal sealed class ElementCoordinator
                 // undone once in DrawTies (byte-identical to the former absolute origin).
                 // Decouples the tie from SystemLayout.Y for the W2 stacking-origin flip
                 // (step 2d, shared with slurs).
-                double staffY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex);
+                double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
                 double y;
                 var tieForProblem = tie;
                 if (staff is { IsTab: true })
@@ -865,8 +865,8 @@ internal sealed class ElementCoordinator
                 }
                 else
                 {
-                    double staffMiddleY = staffY + _options.StaffHeight / 2;
-                    y = staffMiddleY - tie.StaffPosition / 2.0;
+                    double staffMiddleDown = staffY + _options.StaffHeight / 2;
+                    y = staffMiddleDown - tie.StaffPosition / 2.0;
                 }
 
                 var problem = new TieFormattingProblem(
@@ -1006,7 +1006,7 @@ internal sealed class ElementCoordinator
     /// </summary>
     private static bool TryGetBeamedStemTipDeviceY(
         ImmutableArray<BeamLayout> beamLayouts, int measureIndex, int itemIndex, double noteX,
-        double staffMiddleY, bool curveUp, out double stemTipDeviceY)
+        double staffMiddleDown, bool curveUp, out double stemTipDeviceY)
     {
         stemTipDeviceY = 0;
         if (beamLayouts.IsDefaultOrEmpty) return false;
@@ -1019,7 +1019,7 @@ internal sealed class ElementCoordinator
             if (!hit) continue;
 
             // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
-            stemTipDeviceY = staffMiddleY - bl.OuterEdgeStaffSpaceAtX(noteX, curveUp);
+            stemTipDeviceY = staffMiddleDown - bl.OuterEdgeStaffSpaceAtX(noteX, curveUp);
             return true;
         }
         return false;
@@ -1038,7 +1038,7 @@ internal sealed class ElementCoordinator
     /// </remarks>
     private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
         Voice voice, SystemLayout segSystem, SlurItem slur,
-        double staffMiddleY, double segStartX, double segEndX)
+        double staffMiddleDown, double segStartX, double segEndX)
     {
         const double headHalfHeight = 0.5; // staff spaces, half a notehead
         const double eps = 0.001;
@@ -1070,8 +1070,8 @@ internal sealed class ElementCoordinator
 
                 // Visual top edge = highest pitch (smallest device Y) minus half a
                 // head; visual bottom edge = lowest pitch plus half a head.
-                double topY = (staffMiddleY - topPos.Value / 2.0) - headHalfHeight;
-                double bottomY = (staffMiddleY - bottomPos.Value / 2.0) + headHalfHeight;
+                double topY = (staffMiddleDown - topPos.Value / 2.0) - headHalfHeight;
+                double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) + headHalfHeight;
                 obstacles.Add(new SlurObstacle(x, topY, bottomY, SlurObstacleType.NoteHead));
             }
         }
@@ -1190,7 +1190,7 @@ internal sealed class ElementCoordinator
                 // system.Y — undone once in DrawSlurs (byte-identical to the former
                 // absolute origin). Decouples the scored slur from SystemLayout.Y for the
                 // Stage-4 W2 stacking-origin flip (step 2d).
-                double staffMiddleY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex)
+                double staffMiddleDown = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex)
                     + _options.StaffHeight / 2.0;
 
                 // LILYPOND-REF: slur-scoring.cc:549-557 get_base_attachments — the endpoint
@@ -1208,26 +1208,26 @@ internal sealed class ElementCoordinator
                 double segStartY;
                 if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.StartMeasureIndex, slur.StartItemIndex,
-                        segStartX, staffMiddleY, slur.CurveUp, out double startTip))
+                        segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
-                    segStartY = (staffMiddleY - startStaffPos / 2.0)
+                    segStartY = (staffMiddleDown - startStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 double segEndY;
                 if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.EndMeasureIndex, slur.EndItemIndex,
-                        segEndX, staffMiddleY, slur.CurveUp, out double endTip))
+                        segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
-                    segEndY = (staffMiddleY - endStaffPos / 2.0)
+                    segEndY = (staffMiddleDown - endStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 var obstacles = BuildSlurObstacles(
-                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleY, segStartX, segEndX);
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, segStartX, segEndX);
 
                 var problem = new SlurScoringProblem(
-                    slur, segStartX, segStartY, segEndX, segEndY, staffMiddleY,
+                    slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,
                     obstacles: obstacles,
                     existingSlurs: slurLayouts,
                     isBrokenLeft: !segment.IsFirst,
@@ -1276,7 +1276,7 @@ internal sealed class ElementCoordinator
         // (shared with the notation slur) can add the system-top Y-up back uniformly.
         // TabStaffGeometry is additive in staffY (StringY = StaffY + n·space), so this is
         // a pure origin shift that leaves the device string frame intact (island 2).
-        double staffY = LayoutUtilities.StaffOffsetInSystem(segSystem, staffIndex);
+        double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
         var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
 
         // The fret digits sit a TabHeadCenterOffset right of their note columns

@@ -35,7 +35,7 @@ public class SlurScoringProblemTests
         var problem = new SlurScoringProblem(
             slur,
             startX: 10, startY: 2,
-            endX: 50, endY: 2, staffMiddleY: 2.0);
+            endX: 50, endY: 2, staffMiddleDown: 2.0);
 
         // Act
         var layout = problem.Solve();
@@ -55,7 +55,7 @@ public class SlurScoringProblemTests
         var problem = new SlurScoringProblem(
             slur,
             startX: 10, startY: 2,
-            endX: 50, endY: 2, staffMiddleY: 2.0);
+            endX: 50, endY: 2, staffMiddleDown: 2.0);
 
         // Act
         var layout = problem.Solve();
@@ -76,7 +76,7 @@ public class SlurScoringProblemTests
         var problem = new SlurScoringProblem(
             slur,
             startX: 10, startY: 2,
-            endX: 50, endY: 2, staffMiddleY: 2.0);
+            endX: 50, endY: 2, staffMiddleDown: 2.0);
 
         // Act
         var layout = problem.Solve();
@@ -96,8 +96,8 @@ public class SlurScoringProblemTests
         var slur1 = CreateSlur(0, 0);
         var slur2 = CreateSlur(0, 0);
 
-        var problem1 = new SlurScoringProblem(slur1, 10, 2, 30, 2, staffMiddleY: 2.0);
-        var problem2 = new SlurScoringProblem(slur2, 10, 2, 100, 2, staffMiddleY: 2.0);
+        var problem1 = new SlurScoringProblem(slur1, 10, 2, 30, 2, staffMiddleDown: 2.0);
+        var problem2 = new SlurScoringProblem(slur2, 10, 2, 100, 2, staffMiddleDown: 2.0);
 
         // Act
         var layout1 = problem1.Solve();
@@ -118,7 +118,7 @@ public class SlurScoringProblemTests
         // valid curve. (These terms rarely flip the argmin against the dominant encompass
         // scorer, so they seldom move an existing fixture — like LP, they matter at margins.)
         var slur = CreateSlur(0, 4, curveUp: true);
-        var layout = new SlurScoringProblem(slur, 10, 2, 50, 6, staffMiddleY: 2.0,
+        var layout = new SlurScoringProblem(slur, 10, 2, 50, 6, staffMiddleDown: 2.0,
             leftEdge: new SlurEdgeInfo(HasStem: true, StemUp: true, BeamedInner: false, Beamed: true),
             rightEdge: new SlurEdgeInfo(HasStem: true, StemUp: false, BeamedInner: true, Beamed: true))
             .Solve();
@@ -132,12 +132,12 @@ public class SlurScoringProblemTests
     {
         // Arrange
         var slur1 = CreateSlur(0, 0);
-        var problem1 = new SlurScoringProblem(slur1, 10, 2, 50, 2, staffMiddleY: 2.0);
+        var problem1 = new SlurScoringProblem(slur1, 10, 2, 50, 2, staffMiddleDown: 2.0);
         var layout1 = problem1.Solve();
 
         var slur2 = CreateSlur(2, 2);
         var problem2 = new SlurScoringProblem(
-            slur2, 10, 2, 50, 2, staffMiddleY: 2.0,
+            slur2, 10, 2, 50, 2, staffMiddleDown: 2.0,
             existingSlurs: new[] { layout1 });
 
         // Act
@@ -162,11 +162,11 @@ public class SlurScoringProblemTests
         };
 
         var problemWithObstacle = new SlurScoringProblem(
-            slur, 10, 2, 50, 2, staffMiddleY: 2.0,
+            slur, 10, 2, 50, 2, staffMiddleDown: 2.0,
             obstacles: obstacles);
 
         var problemWithoutObstacle = new SlurScoringProblem(
-            slur, 10, 2, 50, 2, staffMiddleY: 2.0);
+            slur, 10, 2, 50, 2, staffMiddleDown: 2.0);
 
         // Act
         var layoutWith = problemWithObstacle.Solve();
@@ -228,7 +228,7 @@ public class SlurScoringProblemTests
         // Verify the solver works with priority-queue lazy evaluation
         var slur = CreateSlur(0, 4);
         var problem = new SlurScoringProblem(
-            slur, 10, 2, 50, 2, staffMiddleY: 2.0);
+            slur, 10, 2, 50, 2, staffMiddleDown: 2.0);
 
         var layout = problem.Solve();
 

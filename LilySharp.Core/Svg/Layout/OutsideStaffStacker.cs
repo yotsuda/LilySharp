@@ -419,8 +419,9 @@ internal static class OutsideStaffStacker
                 if (!a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 // a.YUp is Y-up above the staff middle; reflect to system-relative
-                // Y-up against this staff's WITHIN-SYSTEM middle (staff.Y + H/2).
-                double relY = a.YUp - (LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], a.StaffIndex) + 2.0);
+                // Y-up against this staff's WITHIN-SYSTEM middle, which in that frame
+                // is the staff's own Y-up offset less half a staff.
+                double relY = a.YUp + (LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex) - 2.0);
                 double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop <= 0)
                     continue; // entirely inside the staff — the up-skyline covers it
@@ -526,13 +527,13 @@ internal static class OutsideStaffStacker
             if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                 continue;
             // Stack in system-relative Y-up: dyn.YUp relative to this staff's WITHIN-
-            // SYSTEM middle (staff.Y + H/2) is dyn.YUp - mid; place, then shift back.
-            double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], dyn.StaffIndex) + 2.0;
+            // SYSTEM middle is dyn.YUp + midUp; place, then shift back.
+            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
             double newRel = Place(trackers[sysIdx],
                 dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                dyn.YUp - mid,
+                dyn.YUp + midUp,
                 topOffset: DynamicTextAscent, bottomOffset: 0.0);
-            b[i] = dyn with { YUp = mid + newRel };
+            b[i] = dyn with { YUp = newRel - midUp };
         }
         return b.ToImmutable();
     }
@@ -612,12 +613,12 @@ internal static class OutsideStaffStacker
             const double ctFs = 0.6 * 4.0;
             double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
-            // SYSTEM middle (staff.Y + H/2) is ct.YUp - mid; place, then shift back.
-            double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], ct.StaffIndex) + 2.0;
+            // SYSTEM middle is ct.YUp + midUp; place, then shift back.
+            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ct.StaffIndex) - 2.0;
             double newRel = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                ct.YUp - mid,
+                ct.YUp + midUp,
                 topOffset: TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
-            b[i] = ct with { YUp = mid + newRel };
+            b[i] = ct with { YUp = newRel - midUp };
         }
         return b.ToImmutable();
     }
@@ -696,15 +697,14 @@ internal static class OutsideStaffStacker
             // placed below the staff don't belong to the above pass.
             // m.YUp is Y-up; a mark below the staff-top line (m.YUp < 2.0, the top line
             // sits 2 above the middle) is not part of this above pass. The stacker frame
-            // is system-relative Y-up, so shift against the WITHIN-SYSTEM staff middle
-            // (staff.Y + H/2).
-            double mid = LayoutUtilities.StaffOffsetInSystem(systems[sysIdx], m.StaffIndex) + 2.0;
+            // is system-relative Y-up, so shift against the WITHIN-SYSTEM staff middle.
+            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], m.StaffIndex) - 2.0;
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
                 continue;
             var (x0, x1, top, bottom) = MusicMarkExtents(m);
             double newRel = Place(trackers[sysIdx], m.X + x0, m.X + x1,
-                m.YUp - mid, topOffset: top, bottomOffset: bottom);
-            b[i] = m with { YUp = mid + newRel };
+                m.YUp + midUp, topOffset: top, bottomOffset: bottom);
+            b[i] = m with { YUp = newRel - midUp };
         }
         return b.ToImmutable();
     }

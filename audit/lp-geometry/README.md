@@ -82,13 +82,20 @@ justify された行では binding する制約が変わる**（ragged では sp
 
 ## 現状（2026-07-22 時点）
 
-22 点中 **18 点が LP と厳密一致**、total |residual| = **0.022361 ss**。
-残る4点は**たった2原因**:
+31 点中 **22 点が LP と厳密一致**、total |residual| = **1.523777 ss**
+（X 22 点 = 19 exact / 0.022412、Y 7 点 = 3 exact / 0.001365、**譜間 2 点 = 0 exact / 1.500000**）。
+
+⚠️ **total が跳ねたのは悪化ではない。** 譜間 2 点は「LP と食い違っていることが今まで
+一度も測られていなかった量」で、足した瞬間に 1.5 が可視化されただけ。**比較は同じ点集合の
+中でだけ意味を持つ**（この節の末尾の履歴を参照）。
 
 | residual | 点数 | 原因 |
 |---|---|---|
+| +1.450000 | 1 | **幻の符尾**。`SkylineBuilder.AddNoteBoxToSkylines` が**全ての符頭に** 3.5 の符尾を生やす。コメントは「全音符には符尾が無い」と書いてあるが**コードに音価の判定が無い**。描画側は `noteValue >= 2` で正しく分岐している（`SharedRenderer.Noteheads.cs:473`）ので、**全音符は符尾なしで描かれ、符尾があるものとして間隔が取られる**。LILYPOND-REF: `lily/stem.cc` `Stem::is_normal_stem`（duration-log >= 1 のみ符尾を持つ） |
+| −0.050000 | 1 | **StaffSymbol の extent**。Lily# は五線を**線の中心** ±2.0 で種にするが、LP のスカイラインは**線のインク** ±2.05（線幅 0.1 の半分）。`probes/glyph-skyline.ly` が grob 自身に聞いて ext・`vertical-skylines` とも (−2.05 . 2.05) を返している |
 | −0.017606 / +0.000010 ×2 | 3 | **水平スカイライン項**（未移植）。LP は臨時記号の右スカイラインを符頭のスカイラインと測る（`accidental-placement.cc:412`）が Lily# は box で測る。グリフ依存 |
 | −0.004735 | 1 | **TimeSignature grob 幅**（Lily# 1.600000 / LP 1.604735）。原因特定済＝`ly:time-signature::print` は markup を組むので幅を**テキストレイアウト経路**が決める。Lily# の 1.600000 は LP 自身の音楽フォント経路の値と一致しており、定数の誤りではない |
+| clef の sliver 4 点 | 4 | `system.clef-bounded-distance` の `why` にまとめてある（LILC bbox 3.550 vs LP の skyline 3.540） |
 
 このコーパスが潰してきたもの:
 
@@ -106,6 +113,22 @@ justify された行では binding する制約が変わる**（ragged では sp
 Lily# が全休符に 1.0 を払っていないことをコーパスは**見ることができなかった**。
 `barline.next.whole-rest` を足した瞬間に −1.000000 が出た。
 **点を足すときは両側を足す。**「その量は緑だから大丈夫」は片側だけ見ている証拠かもしれない。
+
+**2026-07-22 に同じ教訓をもう一度**: 譜間の 2 点（`staff.staff.*`）は「上の譜から下向きに
+出っ張る」形と「下の譜から上向きに出っ張る」形の**対**で足した。同じ音楽・同じ算術なので
+LP はどちらも 9.595000 を返し、残差も**同じ値になるはずだった**。ならなかった
+（−0.050000 と +1.450000）。**その差が幻の符尾**で、片方だけ足していたら見えていない。
+
+## 譜間（staff-to-staff）の測定 — `probes/page-vertical.ly` book P / Q
+
+`staff-refpoint-extent` は system 内の**全 spaceable staff の refpoint の区間**
+（`lily/system.cc:705-717`）なので、**2 段譜の system ではその幅がそのまま譜間距離**になる。
+つまり page プローブのダンプが既に持っていて、測定スクリプトが印字していなかっただけ。
+
+⚠️ **素の 2 段譜では何も測れない。** LP は隣接する譜を
+`max(skyline距離 + padding, minimum, basic)` に置く（`align-interface.cc:228-238`、
+StaffGrouper の 9 / 7 / 1）ので、両側とも五線なら 2.05 + 2.05 + 1 = 5.1 で **basic 9 が勝ち、
+五線の extent は出力に一切現れない**。**binding する X で片側だけが突出物**である必要がある。
 
 ## 縦（Y）の測定 — `probes/page-vertical.ly`
 
