@@ -686,8 +686,10 @@ internal static class ArticulationEngraver
                 ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph,
             ArticulationType.Staccatissimo => isAbove
                 ? GlyphMetrics.ArticStaccatissimoAboveGlyph : GlyphMetrics.ArticStaccatissimoBelowGlyph,
-            ArticulationType.UpBow => GlyphMetrics.ArticUpBowGlyph,
-            ArticulationType.DownBow => GlyphMetrics.ArticDownBowGlyph,
+            ArticulationType.UpBow => isAbove
+                ? GlyphMetrics.ArticUpBowAboveGlyph : GlyphMetrics.ArticUpBowBelowGlyph,
+            ArticulationType.DownBow => isAbove
+                ? GlyphMetrics.ArticDownBowAboveGlyph : GlyphMetrics.ArticDownBowBelowGlyph,
             ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
             // Chord diagram: anchored at the grid bottom, ink rises 2.7.
             ArticulationType.FretFrame => new GlyphMetrics.BBox(-1.7, 0, 2.9, 2.7),

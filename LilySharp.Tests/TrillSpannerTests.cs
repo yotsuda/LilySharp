@@ -138,7 +138,7 @@ score main ""test"" { staff melody }
         _output.WriteLine(svg);
 
         // Should contain trill glyph (U+E05C = OrnTrill / scripts.trill)
-        Assert.Contains("\uE05C", svg);
+        Assert.Contains(EmmentalerGlyphs.OrnTrill.ToString(), svg);
         // SharedRenderer emits the wavy line as a chain of <line> segments
         // rather than a single classed <path>. The SvgRenderer-era
         // "trill-spanner-line" class no longer exists post Phase 3-B; verify

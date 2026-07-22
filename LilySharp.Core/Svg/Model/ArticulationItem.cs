@@ -104,8 +104,11 @@ public sealed record ArticulationItem
         // Portato box in ArticulationEngraver.GetGlyphBBox.
         ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoBelow : EmmentalerGlyphs.ArticPortatoAbove).ToString(),
         ArticulationType.Staccatissimo => (IsAbove ? EmmentalerGlyphs.ArticStaccatissimoAbove : EmmentalerGlyphs.ArticStaccatissimoBelow).ToString(),
-        ArticulationType.UpBow => EmmentalerGlyphs.ArticUpBow.ToString(),
-        ArticulationType.DownBow => EmmentalerGlyphs.ArticDownBow.ToString(),
+        // LilyPond 2.26.0 gives the bowing marks a direction pair — scm/script.scm:453
+        // (dupbow . uupbow) and :88 (ddownbow . udownbow) — where 2.24.4 drew the one
+        // glyph both ways.
+        ArticulationType.UpBow => (IsAbove ? EmmentalerGlyphs.ArticUpBowAbove : EmmentalerGlyphs.ArticUpBowBelow).ToString(),
+        ArticulationType.DownBow => (IsAbove ? EmmentalerGlyphs.ArticDownBowAbove : EmmentalerGlyphs.ArticDownBowBelow).ToString(),
         ArticulationType.Flageolet => EmmentalerGlyphs.ArticFlageolet.ToString(),
         // Fall/Doit carry no font glyph — the layout emits a bend sentinel that the
         // renderer draws as a trailing curve (see ArticulationEngraver), so GetGlyph

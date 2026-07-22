@@ -152,7 +152,7 @@ score main ""test"" { staff melody }
         _output.WriteLine(svg);
 
         // Should contain sharp glyphs for D major key signature (U+E013 = AccidentalSharp)
-        Assert.Contains("\uE013", svg);
+        Assert.Contains(EmmentalerGlyphs.AccidentalSharp.ToString(), svg);
     }
 
     [Fact]
@@ -174,9 +174,9 @@ score main ""test"" { staff melody }
         _output.WriteLine(svg);
 
         // Should contain natural glyphs (U+E01D = AccidentalNatural) for cancellation
-        Assert.Contains("\uE01D", svg);
+        Assert.Contains(EmmentalerGlyphs.AccidentalNatural.ToString(), svg);
         // Should contain flat glyphs (U+E021 = AccidentalFlat) for new F major key
-        Assert.Contains("\uE021", svg);
+        Assert.Contains(EmmentalerGlyphs.AccidentalFlat.ToString(), svg);
     }
 
     [Fact]
@@ -233,6 +233,6 @@ score main ""test"" { staff melody }
         _output.WriteLine(svg);
 
         // Should contain natural for the cancelled C#
-        Assert.Contains("\uE01D", svg);
+        Assert.Contains(EmmentalerGlyphs.AccidentalNatural.ToString(), svg);
     }
 }

@@ -15,7 +15,7 @@
     "The count of exact entries and the total |residual| are the headline fidelity numbers.",
     "They should only ever improve."
   ],
-  "lilypondVersion": "2.24.4",
+  "lilypondVersion": "2.26.0",
   "units": "staff-spaces",
   "tolerance": 1e-6,
   "entries": {
@@ -43,9 +43,9 @@
     "barline.next.down-stems-after-clef": {
       "probe": "barline-spacing.ly",
       "score": "B",
-      "lilypond": 1.089365,
-      "residual": 0.0,
-      "why": ""
+      "lilypond": 1.089360,
+      "residual": 5.449e-06,
+      "why": "OPEN: appeared with the 2.26.0 font, and only its scale is accounted for. The quantity is 0.9 (next-note) plus the optical correction, and LilyPond's correction moved 0.189365 -> 0.189360 with that font's LILC rounding while Lily#'s stayed at 0.189365449. So the cause is the same rounding that moved the other nine measured values -- it is bounded by that rounding (<= 7e-5) and it arrived on the same commit -- but WHICH glyph metric carries the 5.4e-6 through Staff_spacing's /7 has not been isolated. Smallest residual in the corpus. The attribution is not settled."
     },
     "barline.next.full-measure-note": {
       "probe": "barline-spacing.ly",
@@ -79,8 +79,8 @@
       "probe": "barline-spacing.ly",
       "score": "X",
       "lilypond": 2.050000,
-      "residual": 0.00001,
-      "why": "LilyPond measures the accidental's right SKYLINE against the note heads' skyline (accidental-placement.cc:412), not their boxes, so the gap is padding 0.2 + right-padding 0.15 plus a per-glyph skyline term. Lily# ports the 0.35 and not the skyline, and for a sharp that term is -0.000010 — measured by zeroing both paddings on 2.24.4, which leaves the skyline alone. This is the whole residual. Was -0.149990 while AccidentalNoteGap was LilyPond's `padding` alone with `right-padding` missing."
+      "residual": 0.0,
+      "why": "EXACT since LilyPond 2.26.0, and NOT because anything in Lily# changed. 2.26.0 rebuilt Emmentaler with the LILC bboxes rounded to three decimals in the design unit, which put accidentals.sharp's right edge on exactly 1.100000 (2.24.4: 1.100010). The skyline term that separated LilyPond's measurement from Lily#'s box measurement was -0.000010 and is now zero. The horizontal skyline is still not ported (accidental-placement.cc:412) -- this entry merely stopped being able to see it. barline.next.key-change-to-notehead is now the only entry that still measures it."
     },
     "barline.next.key-change-glyph": {
       "probe": "barline-spacing.ly",
@@ -92,8 +92,8 @@
     "barline.next.key-change-to-notehead": {
       "probe": "barline-spacing.ly",
       "score": "K",
-      "lilypond": 6.834302,
-      "residual": -0.017606,
+      "lilypond": 6.834272,
+      "residual": -0.017672,
       "why": "The NATURAL's skyline term, arriving through Paper_column::minimum_distance exactly as the sharp's does in the two entries above — the note opening this measure is a c' under A major, so it carries one, and its reach is the musical column's leftmost ink. A natural is vertically thin, so its right skyline stands 0.017606 further out than its box (measured by zeroing AccidentalPlacement's two paddings on 2.24.4); a sharp's term is 0.000010, which is why this entry is the largest of the three. Same single cause. Was -2.234272 before the boundary column, -0.034272 before the padding."
     },
     "barline.next.time-change-glyph": {
@@ -113,49 +113,49 @@
     "midmeasure.clef.prev-note-to-clef": {
       "probe": "barline-spacing.ly",
       "score": "MC",
-      "lilypond": 2.253234,
+      "lilypond": 2.253222,
       "residual": 0.0,
       "why": ""
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",
-      "lilypond": 3.146680,
+      "lilypond": 3.146600,
       "residual": 0.0,
       "why": ""
     },
     "midmeasure.key.prev-note-to-key": {
       "probe": "barline-spacing.ly",
       "score": "MK",
-      "lilypond": 2.203234,
+      "lilypond": 2.203222,
       "residual": 0.0,
       "why": ""
     },
     "midmeasure.key.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MK",
-      "lilypond": 5.800030,
+      "lilypond": 5.800000,
       "residual": 0.0,
       "why": ""
     },
     "midmeasure.key-cancel.prev-note-to-key": {
       "probe": "barline-spacing.ly",
       "score": "MKA",
-      "lilypond": 2.335591,
+      "lilypond": 2.335645,
       "residual": 0.0,
       "why": ""
     },
     "midmeasure.key-cancel.key-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MKA",
-      "lilypond": 3.616666,
-      "residual": 0.00001,
-      "why": "The same sharp's skyline term as barline.next.accidental-to-notehead, reaching this gap through Paper_column::minimum_distance: the accidental on the next note lifts the rod above the space-alist ideal, so staff-spacing.cc:213 decides the gap as 0.3 + rod and the term rides in with it. That the two entries agree to the digit is what identifies them as one cause. Was -0.149990."
+      "lilypond": 3.616600,
+      "residual": 0.0,
+      "why": "EXACT since LilyPond 2.26.0, by the same rounding that closed barline.next.accidental-to-notehead: the sharp's skyline term went to zero. That the two closed together, both having read 0.000010, is what confirms the earlier reading that they were one cause and not two."
     },
     "barline.prev.whole-note": {
       "probe": "barline-spacing.ly",
       "score": "E",
-      "lilypond": 6.060047,
+      "lilypond": 6.060045,
       "residual": 0.0,
       "why": ""
     },
@@ -169,7 +169,7 @@
     "barline.prev.half-note": {
       "probe": "barline-spacing.ly",
       "score": "G",
-      "lilypond": 4.453962,
+      "lilypond": 4.454016,
       "residual": 0.0,
       "why": ""
     }

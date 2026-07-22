@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `4ac3df8e`（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `7291531a`（§0 で裏取りすること）
 
 ---
 
@@ -27,9 +27,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 6 ahead で未 push**（HEAD `4ac3df8e`）。push はユーザー判断・コミットは可。
-**テスト 0 failed / 3130 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度（X）18/22 exact, total |residual| = 0.022361 ss** — このセッションでは触っていない。
+**origin より 10 ahead で未 push**（HEAD `7291531a`）。push はユーザー判断・コミットは可。
+**テスト 0 failed / 3131 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度（X）19/22 exact, total |residual| = 0.022412 ss**（**2.26.0 基準**）。
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
 
 ⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
@@ -38,34 +38,56 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 は書き換え後も dangling オブジェクトとして引けるので、そこから `git log --format='%h %s' master` を検索する。
 ⚠️ `git cat-file -t` では判定できない（旧コミットは gc されるまで残る）。**`git merge-base --is-ancestor` を使う。**
 
-### ⚠️ LP の「正」は **2.25.35（`C:\MyProj\lilypond-src`）** とユーザーが決定（2026-07-22）
+### ✅ LP の「正」は **2.26.0** に確定（2026-07-22・版分岐は解決済み）
 
-**ただし手元の LilyPond binary は 2.24.4 しかなく、2.25.x のビルドも無い。**
-両者は `ly/paper-defaults-init.ly` の既定値が食い違う:
+src・binary とも 2.26.0 で揃った。**もう版の混成は無い。**
 
-| | src 2.25.35（正） | 2.24.4（実測に使っている binary） |
-|---|---|---|
-| `top-margin-default` | 10 mm | 5 mm |
-| `bottom-margin-default` | 10 mm | 6 mm |
-| `left/right-margin-default` | 15 mm | 10 mm |
-| `top-system-spacing` basic-distance | 6 | 1 |
-| `top-markup-spacing` basic-distance | 4 | 0 |
+- `C:\MyProj\lilypond-src` は **`v2.26.0`（`3596756be0`）を detached HEAD で checkout**。
+  旧 HEAD `bc68038f76`（2.25.35 devel）はその直接の祖先で 128 commit 前だった
+- 実測 binary は **`C:\bin\lilypond-2.26.0\bin\lilypond.exe`**（`audit/lp-geometry/*.ps1` の既定値も更新済）
+- ⚠️ **PATH 上の `python` は今も 2.24.4 同梱のもの**で pip も fontTools も無い。
+  `audit/scripts/*.py` は **`py -3.13`** で起動すること
+- ⚠️ `C:\bin\lilypond-2.24.4` は残っている。**比較目的以外で使わない**
 
-**このままだと紙面・縦間隔の点は台帳の residual を構造的にゼロにできない。**
-次のセッションの最初の分岐は「2.25.x の binary を用意する / 当面 2.24.4 実測のまま進めて
-版差のある量に印を付ける」。**未解決・ユーザー判断待ち。**
+`ly/paper-defaults-init.ly` と `scm/define-grobs.scm` の 2.25.35→2.26.0 差分は**著作権年のみ**なので、
+旧記述の「src 2.25.35（正）」列の値がそのまま 2.26.0 の値。**2.24.4 との差は下の §2⑧ の表に集約した。**
 
-### 残る残差は **22点中4点 0.022361 ss、原因は2つだけ**
+### ⚠️ 2.26.0 は Emmentaler を作り直している（**このセッションの最大の発見**）
+
+**① PUA コードポイントは版をまたいで安定しない。** 2.26.0 はグリフを 34 個挿入したため、
+Lily# がハードコードしていた 115 定数のうち **73 個の割り当てがずれた**
+（`U+E085` は `clefs.G` でなく `clefs.varC`、`U+E0EA` は `noteheads.s2` でなく `flags.stackedu7`）。
+LP は常に feta **名**で引く（`lily/clef.cc:29-52`、`lily/note-head.cc`）。
+→ `EmmentalerGlyphs.Generated.cs` を **名前引きで生成**するようにした（`a2ceb2f0`）。
+**名前がフォントに無ければ生成器が exit 1 で落ちる**のが唯一のガード。C# 側に OTF パーサは無いので
+テストでは固定できていない。**生成器を CI で回して差分ゼロを assert するのが残件。**
+
+**② LILC テーブルが zlib 圧縮になった**（114580 → 6175 バイト。otf が半分になる主因）。
+`lily/open-type-font.cc:78-123` が透過的に inflate し、非圧縮ならそのまま読む。
+⚠️ **`Extract-EmmentalerMetrics.py` が inflate しないと LILC を 0 件と判定してアウトライン
+fallback に落ちる** — それは `ec7a2254` が「非 LP 方式」として捨てた経路。対応済み。
+
+**③ LILC の bbox が design 単位で小数3桁に丸められた**（`noteheads.s2` 6.52106 → 6.521）。
+共有 628 グリフ中 566 個が最大 7e-5 ss 動く。**台帳 22 点中 10 点の LP 実測値がこれで動いた。**
+
+### 残る残差は **22点中3点 0.022412 ss**
 
 | 残差 | 点数 | 原因 |
 |---|---|---|
-| −0.017606、+0.000010 ×2 | **3** | **水平スカイライン項**（未移植）。LP は臨時記号の右スカイラインを符頭のスカイラインと測る（`accidental-placement.cc:412`）が、Lily# は box で測る。グリフ依存＝♮ +0.017606 / ♯ −0.000010 |
+| −0.017672 | 1 | **水平スカイライン項**（未移植）。`barline.next.key-change-to-notehead`（♮）。LP は臨時記号の右スカイラインを符頭のスカイラインと測る（`accidental-placement.cc:412`）が Lily# は box で測る |
 | −0.004735 | 1 | **TimeSignature grob 幅** 1.600000 / LP 1.604735。原因特定済＝LP は markup を組むので**テキストレイアウト経路**が幅を決める（下の ⚠️）。もう OPEN ではない |
+| +0.000005449 | 1 | `barline.next.down-stems-after-clef`。**2.26.0 のフォントで新規発生・`OPEN:`**。LP の光学補正が 0.189365 → 0.189360 と動いたのに Lily# は 0.189365449 のまま。丸めのスケール内だが、どのメトリクスが `/7` を通って 5.4e-6 を運ぶかは**未特定** |
 
-**X 軸の「定数を1つ直せば閉じる」ネタは尽きた。原因未特定の点はもう無い。** 残る4点は
-どちらも**Lily# に無いパイプライン**が要る（水平スカイライン3点／テキストレイアウト1点）ので、
-次の一手は**ユーザー判断待ち**。X をこれ以上詰めるより **§3A 中期のコーパス縦（Y）展開**が
-費用対効果で勝つ見込み（残り合計 0.022361 ss に対し、Y 軸は一度も測っていない）。
+⚠️ **♯ の 2 点（`barline.next.accidental-to-notehead` / `midmeasure.key-cancel.key-to-next-note`）が
+exact 化したのは「直った」からではない。** 2.26.0 で `accidentals.sharp` の右端が 1.100000
+ちょうどになり、スカイライン項（−0.000010）が**見えなくなった**だけ。水平スカイラインは今も未移植で、
+**それを測っている点は ♮ の 1 点だけになった**。台帳の `why` にも同じことを書いてある。
+（2 点が同時に、どちらも 0.000010 で閉じたことは「同一原因」という以前の読みの裏取りにはなった。）
+
+**X 軸の「定数を1つ直せば閉じる」ネタは尽きた。** 残る3点のうち2点は**Lily# に無いパイプライン**が
+要り（水平スカイライン1点／テキストレイアウト1点）、1点は `OPEN:`（5.4e-6）。
+X をこれ以上詰めるより、**§2⑧ の余白4定数（縦 0.77 ss・横 0.38 ss）を閉じるほうが桁で大きい。**
+複数ページ fixture も入ったので、**次の一手はそれ**。
 
 ⚠️ **TimeSignature 幅 −0.004735 は「定数を直す」問題ではない**（2026-07-22 に実測で確定）。
 `ly:time-signature::print` は **markup を組んで `grob-interpret-markup` に渡す**
@@ -83,12 +105,33 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 2桁文字列も1桁幅の和にならない（±0.102430）。**閉じるにはテキスト経路の metric が要る。**
 ⚠️ 以前ここに書いた「advance のまま＝§2④ の取りこぼし」という見立ては**誤りなので採用しない**。
 
-### 直近セッション（2026-07-22 後半）でやったこと — **Y 軸**
+### 直近セッション（2026-07-22 最終）でやったこと — **2.26.0 への移行**
 
 | commit | 内容 |
 |---|---|
-| `d57defcd` | **LP のページ縦プローブを commit**（`audit/lp-geometry/probes/page-vertical.ly` ＋ `Measure-LilyPondPageGeometry.ps1`）。scratchpad で消えていた測定を再実行可能にした。出力不変 |
-| `4ac3df8e` | **§2⑧ 最終ページの force 継承**を LP から移植。予測どおり最終ページ 12.000000 → 12.450000（page 1 と一致）。snapshot 0 件 |
+| `a2ceb2f0` | **グリフ表を feta 名引きに**（`EmmentalerGlyphs.Generated.cs` ＋ `Extract-EmmentalerGlyphs.py`）。**出力不変・snapshot 0 件**。副産物で既存の誤りを 5 件発見して修正（下記） |
+| `070f1e21` | **フォントと台帳を 2.26.0 へ**。otf 2 個＋派生 woff/woff2 4 個を差し替え、生成器2本を zlib＋名前引きに、弓記号の方向ペアを移植、`lp-geometry.json` を 2.26.0 実測へ、テスト7ファイルの旧 codepoint 直書き 31 箇所を定数参照へ。**snapshot 186 件再ベース** |
+| `7291531a` | **3 ページのフィクスチャ `test/multi-page-vertical`**。§2⑧ が警告していた「複数ページを踏む fixture がゼロ」を埋めた |
+
+**`a2ceb2f0` で見つかった既存バグ 5 件**（現行フォントに対しても誤っていた）:
+
+| 定数 | 実際に描かれていたもの | 修正後 |
+|---|---|---|
+| `Fermata{Short,Long}{Above,Below}` | **Henze フェルマータ** | 通常の `scripts.u/dshortfermata`・`u/dlongfermata` |
+| `ArticThumb` | **`scripts.snappizzicato`** | `scripts.thumb` |
+
+LP は両者を別の articulation として持つ（`scm/script.scm:356` shortfermata ↔ `:183`
+henzeshortfermata、`:220` ↔ `:174`）。**どのフィクスチャも踏んでいないので snapshot は動かない**
+＝コーパスはこの修正を見ていない。articulation を次に触るとき fixture を足すこと。
+
+**弓記号は本物の LP 挙動変更**: 2.24.4 は `("downbow" . "downbow")` と上下で同一グリフだったが、
+2.26.0 は `(ddownbow . udownbow)` / `(dupbow . uupbow)` に分割（`scm/script.scm:88`・`:453`）。
+旧グリフはフォントから消えている。`ArticulationItem` / `ArticulationEngraver` を方向選択に移植した。
+
+⚠️ **snapshot 186 件の再ベースは全行分類してから承認を取った**: 3277 行がコードポイントのみ、
+26 行がコードポイント＋座標、108 行が座標のみ、**座標の最大変化は 0.01＝`F2` 丸め 1 単位**。
+36 種のコードポイント移動のうち **35 種が両フォントで同一 feta 名**、残る 1 種が上の弓記号の分割。
+**記号の同一性は変わっておらず、レイアウトも丸め以上には動いていない。**
 
 **判明した2つの訂正**（どちらも過去の記述が誤り）:
 
@@ -132,7 +175,13 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 ⚠️ **`total |residual|` の履歴は点集合が違う。同じ集合の中でだけ比較すること。**
 15点 4.592405 → 19点 11.435647（`5c4126d6` が行中4点を追加＝それまで測っていなかった発散の可視化）
 → 21点 4.747978（`4eb8cf16`＋MKA 2点）→ 4.738987（`ec7a2254`）→ 0.338987（`d056b5e5`）
-→ 21点 **0.022361**（`94e8996c`）。
+→ 21点 0.022361（`94e8996c`）→ 22点 **0.022412**（`070f1e21`）。
+
+⚠️ **`070f1e21` で比較の基準そのものが 2.24.4 → 2.26.0 に変わった。**
+点集合は同じ 22 点だが LP 側の実測値が 10 点動いているので、**0.022361 と 0.022412 は
+厳密には別物差**（悪化ではない。exact は 18 → 19 に増えている）。
+**この行より上の日付が古い記述に出てくる LP 実測値は全部 2.24.4 のもの**なので、
+数値を引き写すときは版を確認すること。
 
 ---
 
@@ -337,28 +386,30 @@ LP 2.24.4 実測（`ragged-bottom` ＋ `systems-per-page` を絞り、伸長も�
 
 #### 残っているのは **紙面・余白の定数**（LP 実測で全額説明できた）
 
-`Measure-LilyPondPageGeometry.ps1`（LP **2.24.4** 実測、A4、markup 無し、単位 ss）:
+`Measure-LilyPondPageGeometry.ps1`（LP **2.26.0** 実測、A4、markup 無し、単位 ss）:
 
-| | Lily# 現状 | LP 2.24.4 |
-|---|---|---|
-| `PageHeight` | 168.4 | **169.009370** |
-| `MarginTop` | 5 | **2.845276**（5 mm） |
-| `MarginBottom` | 5 | **3.414331**（6 mm） |
-| 縦の使用可能帯 | 158.4 | **162.749764** |
-| `MarginLeft` / `MarginRight` | 8.5 / 8.5 | **5.690551**（10 mm） |
-| `PageWidth` | 119.05 | **119.501575** |
-| system 間の自然距離 | 12.000000 | **12.000000**（一致） |
+| | Lily# 現状 | **LP 2.26.0（正）** | 参考: 2.24.4 |
+|---|---|---|---|
+| `PageHeight` | 168.4 | **169.009370** | 169.009370 |
+| `MarginTop` | 5 | **5.690551**（10 mm） | 2.845276（5 mm） |
+| `MarginBottom` | 5 | **5.690551**（10 mm） | 3.414331（6 mm） |
+| 縦の使用可能帯 | 158.4 | **157.628268** | 162.749764 |
+| `MarginLeft` / `MarginRight` | 8.5 / 8.5 | **8.535827**（15 mm） | 5.690551（10 mm） |
+| `ContentWidth` | 102.05 | **102.429921** | 108.120472 |
+| `PageWidth` | 119.05 | **119.501575** | 119.501575 |
+| system 間の自然距離 | 12.000000 | **12.000000**（一致） | 12.000000 |
 
-**差 4.349764 ss ＝ 旧記述の「約 4.4 ss」の全額。原因未特定の分は無い。**
+✅ **2.26.0 を「正」にしたことで Lily# は LP に近づいた。** 縦の差は 4.35 → **0.77 ss**、
+横は `ContentWidth` 102.05 → 102.43 の **0.38 ss** しかない。
+
+⚠️ **旧記述の「横を動かすと `ContentWidth` が 108.120472 になり snapshot ほぼ全件再ベース」
+という警告は 2.26.0 では成立しない。** 動くのは 0.38 ss。ただし**改行位置は動きうる**ので、
+実際の再ベース件数は測ってから承認を取ること。
+
 （旧記述の「LP 5.68 / Lily# 8.93」はプローブの `section Main` マーク由来の交絡で、
 markup 無しで測り直すと LP の先頭インク上端は **3.824272**。）
 
-⚠️ **ただし上の値は 2.24.4 実測**で、ユーザーが決めた「正」は **2.25.35**。§1 の表のとおり
-余白既定が版で違う（2.25.35 は top/bottom 10 mm・left/right 15 mm）。**この4定数を動かす前に
-§1 のバージョン分岐を決めること。**
-
-⚠️ 横（`MarginLeft/Right` / `PageWidth`）を動かすと `ContentWidth` 102.05 → 108.120472 で
-**改行位置が全面的に動く＝ snapshot ほぼ全件再ベース**。縦だけ先に動かす選択肢がある。
+**版分岐は解決済み（§1）なので、この4定数はもう動かせる。次の一手はこれ。**
 
 #### 圧縮は**まだ入れない**（旧記述の訂正は維持）
 
@@ -369,22 +420,28 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 ＋ `GetPositions`、PASS 1 で `gapMinimum[]` を拾う必要あり。
 **入れるときは圧縮が実際に走るケース（`SystemsPerPage` 強制など）を同時に用意すること。**
 
-⚠️ **複数ページを踏む committed フィクスチャが1つも無い。** `PageBreakerTests` に
-`LastPage_IsSpacedWithTheForceOfThePageBefore` / `SinglePageScore_KeepsTheNaturalDistance` /
-`FirstPage_HoldsWhatTheNaturalDistanceFits` を置いたが、**実 `.lys` の縦を固定する snapshot は
-まだ無い**。余白を動かす前にこれを作らないと、変更が無害に見えてしまう。
+✅ **複数ページ fixture は入った**（`7291531a`）。`test/multi-page-vertical` は **3 ページ**で、
+ページ1（埋まったページ）・中間ページ（ヘッダ無し）・**最終ページ（前ページの force を継承）**の
+3 ケースを分離する。2 ページだと最終ページ規則と単ページ規則が区別できないので 3 が最小。
+全音符なのは、ページ分割が価格付けるのは **system** であり、1 小節 1 グリフなら同じ 37 system を
+88 KB で買えるから（四分音符だと 210 KB でツリー最大を超える）。最初の system だけ小節番号が
+無いので `staff-refpoint-extent` が system ごとに違う＝ §5.3 の取り違えを検出できる。
+
+**これで余白 4 定数を動かす準備は整った。**
 
 **Y コーパスの起こし方（未着手）**: `audit/lp-geometry` の台帳は X 専用のまま。LP 側の
 プローブと測定スクリプトは `d57defcd` で入ったので、あとは `lp-geometry.json` に点を足すだけ。
 候補は `page.top-margin` / `page.bottom-margin` / `page.height` / `system.natural-distance`
 （現状 exact）/ `page.last-page-gap`。⚠️ 版差のある量には印を付けること（§1）。
 
-#### 潜在バグ: `VerticalSpacingParameters.TopSystem.BasicDistance`
+#### ✅ 解決: `VerticalSpacingParameters.TopSystem.BasicDistance` は **6 で正しい**
 
-現在 **6**（2.25.35 の値）。2.24.4 は **1**。コメントに「1 は `last-bottom-spacing` からの
-転記ミス」とあるが、**2.24.4 基準ならその「訂正」のほうが誤り**。
+2.26.0 実測で **最初の staff refpoint が `top-margin + 6.000000` ちょうど**に来ることを確認した
+（`Measure-LilyPondPageGeometry.ps1`、book N）。**「1 は `last-bottom-spacing` からの転記ミス」と
+書いたコメントのほうが誤り**（1 は 2.24.4 の値）。潜在バグではない。
 ただし `PageLayouter` は `i == 0` で `vs.SystemSystem` を使い、配置側も `topSpec.Padding` しか
-読まないので **現状 6 は出力に効いていない**（死んでいる）。版の決着後に直す。
+読まないので **6 は今のところ出力に効いていない**（死んでいる）点は変わらない。
+余白 4 定数を動かすときに配線ごと見直すこと。
 
 ### ⑦ MMR まわりの小さい未解決（記録のみ）
 
@@ -401,7 +458,7 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 18/22 exact, total |residual| = 0.022361 ss**（`audit/lp-geometry/`。X のみ）。
+**現状 19/22 exact, total |residual| = 0.022412 ss**（`audit/lp-geometry/`。X のみ・**LP 2.26.0 基準**）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
@@ -585,8 +642,15 @@ dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q 2>&1 | Select
 dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build `
   --filter 'FullyQualifiedName~Corpus_ReportsTotalDivergence' --logger 'console;verbosity=detailed'
 
-# LP 実測（プローブを LilyPond に通す）
-pwsh audit\lp-geometry\Measure-LilyPondGeometry.ps1
+# LP 実測（プローブを LilyPond に通す。既定 exe は 2.26.0）
+pwsh audit\lp-geometry\Measure-LilyPondGeometry.ps1        # X（小節線まわり）
+pwsh audit\lp-geometry\Measure-LilyPondPageGeometry.ps1    # Y（ページ縦）
+
+# フォント由来の生成物（フォント更新後は必ず両方。py -3.13 必須 — PATH の python は
+# LilyPond 2.24.4 同梱で fontTools も pip も無い）
+py -3.13 audit\scripts\Extract-EmmentalerGlyphs.py     # → Svg\EmmentalerGlyphs.Generated.cs
+py -3.13 audit\scripts\Extract-EmmentalerMetrics.py    # → Svg\Layout\GlyphMetricsGenerated.cs
+# どちらも「feta 名がフォントに無ければ exit 1」。差分が出たらフォントが変わった証拠
 
 # snapshot 再ベース（LP 照合＋ユーザー承認の後のみ・フィルタを掛けない）
 $env:LILYSHARP_UPDATE_SNAPSHOTS = "1"
@@ -616,7 +680,7 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
       `COORDINATE_AUDIT.md`）
 5. [ ] **新しい `handoff-*.md` を作っていないことを確認**
 6. [ ] `git status` で意図しないファイルが混ざっていないか確認
-      （特に `audit/scripts/Extract-EmmentalerMetrics.py`）
+      （特に `audit/scripts/__pycache__/` — 生成器を走らせると必ず出る。commit しない）
 
 ---
 

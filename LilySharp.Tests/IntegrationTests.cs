@@ -38,7 +38,7 @@ public class IntegrationTests
         var source = "{ c4 d e f | g a b c' | }";
         var svg = LiveRender.Svg(source);
 
-        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0EA").Count;
+        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, EmmentalerGlyphs.NoteheadBlack.ToString()).Count;
         Assert.True(noteheadCount >= 8,
             $"Should have at least 8 noteheads (one per note), but has {noteheadCount}");
     }

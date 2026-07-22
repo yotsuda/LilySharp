@@ -44,8 +44,8 @@ public class SvgTests
     {
         var svg = RenderSvg("{ cis4 }");
 
-        // Emmentaler sharp accidental (U+E013)
-        Assert.Contains("\uE013", svg);
+        // Emmentaler accidentals.sharp
+        Assert.Contains(EmmentalerGlyphs.AccidentalSharp.ToString(), svg);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class SvgTests
         var svg = RenderSvg("{ r4 }");
 
         // Emmentaler quarter rest (U+E008)
-        Assert.Contains("\uE008", svg);
+        Assert.Contains(EmmentalerGlyphs.RestQuarter.ToString(), svg);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class SvgTests
         var svg = RenderSvg("clef treble { c4 }");
 
         // Emmentaler G clef (U+E085)
-        Assert.Contains("\uE085", svg);
+        Assert.Contains(EmmentalerGlyphs.GClef.ToString(), svg);
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class SvgTests
     {
         // 3/4 is drawn with digit glyphs (Emmentaler time sig 3, U+E0B7)
         var svg = RenderSvg("time 3/4 { c4 }");
-        Assert.Contains("\uE0B7", svg);
+        Assert.Contains(EmmentalerGlyphs.TimeSig3.ToString(), svg);
 
         // 4/4 is drawn as the common-time C symbol (U+E091), as in LilyPond
         var svgCommon = RenderSvg("time 4/4 { c4 }");
-        Assert.Contains("\uE091", svgCommon);
+        Assert.Contains(EmmentalerGlyphs.TimeSigCommon.ToString(), svgCommon);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class SvgTests
         var svg = RenderSvg("{ <c e g>4 }");
 
         // Emmentaler black notehead (U+E0EA)
-        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0EA").Count;
+        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, EmmentalerGlyphs.NoteheadBlack.ToString()).Count;
         Assert.True(noteheadCount >= 3);
     }
 
@@ -100,28 +100,28 @@ public class SvgTests
     [Fact]
     public void EmmentalerGlyphs_GetNotehead()
     {
-        Assert.Equal('\uE0E8', EmmentalerGlyphs.GetNotehead(1)); // Whole
-        Assert.Equal('\uE0E9', EmmentalerGlyphs.GetNotehead(2)); // Half
-        Assert.Equal('\uE0EA', EmmentalerGlyphs.GetNotehead(4)); // Quarter
-        Assert.Equal('\uE0EA', EmmentalerGlyphs.GetNotehead(8)); // Eighth
+        Assert.Equal(EmmentalerGlyphs.NoteheadWhole, EmmentalerGlyphs.GetNotehead(1)); // Whole
+        Assert.Equal(EmmentalerGlyphs.NoteheadHalf, EmmentalerGlyphs.GetNotehead(2)); // Half
+        Assert.Equal(EmmentalerGlyphs.NoteheadBlack, EmmentalerGlyphs.GetNotehead(4)); // Quarter
+        Assert.Equal(EmmentalerGlyphs.NoteheadBlack, EmmentalerGlyphs.GetNotehead(8)); // Eighth
     }
 
     [Fact]
     public void EmmentalerGlyphs_GetRest()
     {
-        Assert.Equal('\uE000', EmmentalerGlyphs.GetRest(1));  // Whole
-        Assert.Equal('\uE001', EmmentalerGlyphs.GetRest(2));  // Half
-        Assert.Equal('\uE008', EmmentalerGlyphs.GetRest(4));  // Quarter
-        Assert.Equal('\uE00B', EmmentalerGlyphs.GetRest(8));  // Eighth
-        Assert.Equal('\uE00C', EmmentalerGlyphs.GetRest(16)); // 16th
+        Assert.Equal(EmmentalerGlyphs.RestWhole, EmmentalerGlyphs.GetRest(1));  // Whole
+        Assert.Equal(EmmentalerGlyphs.RestHalf, EmmentalerGlyphs.GetRest(2));  // Half
+        Assert.Equal(EmmentalerGlyphs.RestQuarter, EmmentalerGlyphs.GetRest(4));  // Quarter
+        Assert.Equal(EmmentalerGlyphs.Rest8th, EmmentalerGlyphs.GetRest(8));  // Eighth
+        Assert.Equal(EmmentalerGlyphs.Rest16th, EmmentalerGlyphs.GetRest(16)); // 16th
     }
 
     [Fact]
     public void EmmentalerGlyphs_GetFlag()
     {
-        Assert.Equal('\uE0D2', EmmentalerGlyphs.GetFlag(8, true));   // 8th up
-        Assert.Equal('\uE0DA', EmmentalerGlyphs.GetFlag(8, false));  // 8th down
-        Assert.Equal('\uE0D3', EmmentalerGlyphs.GetFlag(16, true));  // 16th up
+        Assert.Equal(EmmentalerGlyphs.Flag8thUp, EmmentalerGlyphs.GetFlag(8, true));   // 8th up
+        Assert.Equal(EmmentalerGlyphs.Flag8thDown, EmmentalerGlyphs.GetFlag(8, false));  // 8th down
+        Assert.Equal(EmmentalerGlyphs.Flag16thUp, EmmentalerGlyphs.GetFlag(16, true));  // 16th up
         Assert.Null(EmmentalerGlyphs.GetFlag(4, true));              // No flag for quarter
     }
 

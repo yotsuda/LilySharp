@@ -21,73 +21,25 @@ namespace LilySharp.Core.Svg;
 /// Based on LilyPond's Emmentaler font (SIL OFL licensed).
 /// </summary>
 /// <remarks>
-/// Barlines are NOT glyphs in Emmentaler - they are drawn as shapes.
+/// The code points themselves live in <c>EmmentalerGlyphs.Generated.cs</c>, resolved
+/// from each glyph's feta NAME by audit/scripts/Extract-EmmentalerGlyphs.py. They are
+/// private-use assignments and move between font builds, so a glyph is identified here
+/// the way LilyPond identifies one — by name. This file holds only what a font cannot
+/// answer: the note-value and style dispatch.
+/// <para>Barlines are NOT glyphs in Emmentaler — they are drawn as shapes.</para>
+/// <para>Clef modifiers ("8" above/below a clef) are NOT glyphs either; they are
+/// rendered as italic text — see SharedRenderer.DrawClefModifier8.
+/// LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)</para>
 /// </remarks>
-internal static class EmmentalerGlyphs
+internal static partial class EmmentalerGlyphs
 {
-    // === Clefs ===
-    // Note: treble_8 "8" is NOT a glyph - it's rendered as italic text by the
-    // clef modifier (see SharedRenderer.DrawClefModifier8).
-    // LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)
-    // _change variants are smaller glyphs for mid-staff clef changes (base + 1).
-    // LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
-    public const char GClef = '\uE085';           // clefs.G
-    public const char GClefChange = '\uE086';     // clefs.G_change (smaller, for clef changes)
-    public const char GClef8va = '\uE085';        // same as GClef
-    public const char FClef = '\uE083';           // clefs.F
-    public const char FClefChange = '\uE084';     // clefs.F_change (smaller, for clef changes)
-    public const char FClef8va = '\uE083';        // same as FClef
-    public const char CClef = '\uE07F';           // clefs.C
-    public const char CClefChange = '\uE080';     // clefs.C_change (smaller, for clef changes)
-    public const char PercussionClef = '\uE08B';   // clefs.percussion
-    public const char PercussionClefChange = '\uE08C'; // clefs.percussion_change
-    public const char TabClef = '\uE08F';          // clefs.tab (6-string TAB)
-    public const char TabClefChange = '\uE090';    // clefs.tab_change (smaller)
-
-    // === Note heads ===
-    public const char NoteheadWhole = '\uE0E8';       // noteheads.s0
-    public const char NoteheadHalf = '\uE0E9';        // noteheads.s1
-    public const char NoteheadBlack = '\uE0EA';       // noteheads.s2
-    public const char NoteheadDoubleWhole = '\uE0E6'; // noteheads.sM1
-    // Styled noteheads (verified visually against the font cmap strip):
-    public const char NoteheadDiamondWhole = '\uE0EB';  // noteheads.s0diamond
-    public const char NoteheadDiamondHalf = '\uE0EC';   // noteheads.s1diamond
-    public const char NoteheadDiamondBlack = '\uE0ED';  // noteheads.s2diamond
-    public const char NoteheadTriangleWhole = '\uE0EE'; // noteheads.s0do
-    public const char NoteheadTriangleHalf = '\uE0EF';  // noteheads.s1do
-    public const char NoteheadTriangleBlack = '\uE0F0'; // noteheads.s2do
-    public const char NoteheadSlashWhole = '\uE0F1';    // noteheads.s0slash
-    public const char NoteheadSlashHalf = '\uE0F2';     // noteheads.s1slash
-    public const char NoteheadSlashBlack = '\uE0F3';    // noteheads.s2slash
-    public const char NoteheadCrossWhole = '\uE0F4';    // noteheads.s0cross
-    public const char NoteheadCrossHalf = '\uE0F5';     // noteheads.s1cross
-    public const char NoteheadCrossBlack = '\uE0F6';    // noteheads.s2cross
-    public const char NoteheadXCircle = '\uE0F7';       // noteheads.s2xcircle
-
-    // === Rests ===
-    public const char RestMaxima = '\uE004';      // rests.M3
-    public const char RestLonga = '\uE005';       // rests.M2
-    public const char RestDoubleWhole = '\uE006'; // rests.M1
-    public const char RestWhole = '\uE000';       // rests.0
-    public const char RestHalf = '\uE001';        // rests.1
-    public const char RestQuarter = '\uE008';     // rests.2
-    public const char Rest8th = '\uE00B';         // rests.3
-    public const char Rest16th = '\uE00C';        // rests.4
-    public const char Rest32nd = '\uE00D';        // rests.5
-    public const char Rest64th = '\uE00E';        // rests.6
-    public const char Rest128th = '\uE00F';       // rests.7
-
-    // === Accidentals ===
-    public const char AccidentalFlat = '\uE021';         // accidentals.flat
-    public const char AccidentalNatural = '\uE01D';      // accidentals.natural
-    public const char AccidentalSharp = '\uE013';        // accidentals.sharp
-    public const char AccidentalDoubleSharp = '\uE01C';  // accidentals.doublesharp
-    public const char AccidentalDoubleFlat = '\uE02A';   // accidentals.flatflat
-    // Quarter-tone accidentals (verified on the rendered cmap strip):
-    public const char AccidentalQuarterSharp = '\uE017';       // accidentals.sharp.slashslash.stem (\u00BC\u266F)
-    public const char AccidentalThreeQuarterSharp = '\uE018';  // accidentals.sharp.slashslashslash.stemstem (\u00BE\u266F)
-    public const char AccidentalQuarterFlat = '\uE025';        // accidentals.flat.slash (\u00BC\u266D)
-    public const char AccidentalThreeQuarterFlat = '\uE02B';   // accidentals.flatflat.slash (\u00BE\u266D)
+    // === Dynamics (text-based in Emmentaler: plain ASCII, not private-use glyphs) ===
+    public const char DynamicPiano = 'p';
+    public const char DynamicMezzo = 'm';
+    public const char DynamicForte = 'f';
+    public const char DynamicRinforzando = 'r';
+    public const char DynamicSforzando = 's';
+    public const char DynamicZ = 'z';
 
     /// <summary>The glyph for a resolved accidental kind ("sharp", "flat",
     /// "doubleSharp", "doubleFlat"); anything else (incl. "natural") maps to the
@@ -104,103 +56,6 @@ internal static class EmmentalerGlyphs
         "threeQuarterFlat" => AccidentalThreeQuarterFlat,
         _ => AccidentalNatural,
     };
-
-    // === Accidental Parentheses (for courtesy/cautionary accidentals) ===
-    // LILYPOND-REF: lily/accidental.cc:35-46 parenthesize() uses these glyphs
-    // LILYPOND-REF: mf/feta-parenthesis.mf — leftparen/rightparen glyph definitions
-    public const char AccidentalLeftParen = '\uE02F';    // accidentals.leftparen
-    public const char AccidentalRightParen = '\uE02E';   // accidentals.rightparen
-
-    // === Flags ===
-    public const char Flag8thUp = '\uE0D2';       // flags.u3
-    public const char Flag8thDown = '\uE0DA';     // flags.d3
-    public const char Flag16thUp = '\uE0D3';      // flags.u4
-    public const char Flag16thDown = '\uE0DB';    // flags.d4
-    public const char Flag32ndUp = '\uE0D4';      // flags.u5
-    public const char Flag32ndDown = '\uE0DC';    // flags.d5
-    public const char Flag64thUp = '\uE0D5';      // flags.u6
-    public const char Flag64thDown = '\uE0DD';    // flags.d6
-    public const char Flag128thUp = '\uE0D6';     // flags.u7
-    public const char Flag128thDown = '\uE0DE';   // flags.d7
-
-    // === Augmentation dot ===
-    public const char AugmentationDot = '\uE038'; // dots.dot
-
-    // === Time signatures (fattened digits) ===
-    public const char TimeSig0 = '\uE0B4';        // fattened.zero
-    public const char TimeSig1 = '\uE0B5';        // fattened.one
-    public const char TimeSig2 = '\uE0B6';        // fattened.two
-    public const char TimeSig3 = '\uE0B7';        // fattened.three
-    public const char TimeSig4 = '\uE0B8';        // fattened.four
-    public const char TimeSig5 = '\uE0BA';        // fattened.five
-    public const char TimeSig6 = '\uE0BB';        // fattened.six
-    public const char TimeSig7 = '\uE0BC';        // fattened.seven
-    public const char TimeSig8 = '\uE0BE';        // fattened.eight
-    public const char TimeSig9 = '\uE0BF';        // fattened.nine
-    public const char TimeSigCommon = '\uE091';   // timesig.C44
-    public const char TimeSigCutCommon = '\uE092'; // timesig.C22
-
-    // === Dynamics (text-based in Emmentaler) ===
-    public const char DynamicPiano = 'p';
-    public const char DynamicMezzo = 'm';
-    public const char DynamicForte = 'f';
-    public const char DynamicRinforzando = 'r';
-    public const char DynamicSforzando = 's';
-    public const char DynamicZ = 'z';
-
-    // === Articulations (verified against emmentaler-20.woff2 cmap) ===
-    public const char FermataAbove = '\uE039';         // scripts.ufermata
-    public const char FermataBelow = '\uE03A';         // scripts.dfermata
-    public const char FermataShortAbove = '\uE03B';    // scripts.ushortfermata (angled)
-    public const char FermataShortBelow = '\uE03C';    // scripts.dshortfermata
-    public const char FermataLongAbove = '\uE03D';     // scripts.ulongfermata (square)
-    public const char FermataLongBelow = '\uE03E';     // scripts.dlongfermata
-    public const char ArticAccentAbove = '\uE048';     // scripts.sforzato
-    public const char ArticStaccatoAbove = '\uE04A';   // scripts.staccato
-    public const char ArticTenutoAbove = '\uE04D';     // scripts.tenuto
-    public const char ArticPortatoAbove = '\uE04E';    // scripts.uportato
-    public const char ArticPortatoBelow = '\uE04F';    // scripts.dportato
-    public const char ArticStaccatissimoAbove = '\uE04B'; // scripts.ustaccatissimo
-    public const char ArticStaccatissimoBelow = '\uE04C'; // scripts.dstaccatissimo
-    public const char ArticUpBow = '\uE056';             // scripts.upbow (V)
-    public const char ArticDownBow = '\uE057';           // scripts.downbow (frog)
-    public const char ArticFlageolet = '\uE061';         // scripts.flageolet (harmonic circle)
-    // (The five above were verified visually against emmentaler-20.otf via a
-    // rendered contact sheet of the U+E039..E078 range - the anchors E048/E04A/
-    // E04D/E050/E05C/E062/E064/E066 all matched the existing constants.)
-    public const char ArticMarcatoAbove = '\uE050';    // scripts.umarcato
-    public const char ArticMarcatoBelow = '\uE051';    // scripts.dmarcato
-    public const char ArticStopped = '';         // scripts.stopped (+)
-    public const char PedalHeelUp = '';          // scripts.upedalheel (U)
-    public const char PedalHeelDown = '';        // scripts.dpedalheel
-    public const char PedalToeUp = '';           // scripts.upedaltoe (V)
-    public const char PedalToeDown = '';         // scripts.dpedaltoe
-    public const char ArticThumb = '';           // scripts.thumb (cello thumb position)
-
-    // === Ornaments (verified against emmentaler-20.woff2 cmap) ===
-    public const char OrnReverseTurn = '\uE058';       // scripts.reverseturn
-    public const char OrnTurn = '\uE059';              // scripts.turn
-    public const char OrnTrill = '\uE05C';             // scripts.trill
-    public const char MarkSegno = '\uE062';            // scripts.segno
-    public const char MarkCoda = '\uE064';             // scripts.coda
-    public const char OrnPrall = '\uE070';             // scripts.prall
-    public const char OrnMordent = '\uE071';           // scripts.mordent
-    public const char OrnPrallPrall = '\uE072';        // scripts.prallprall
-
-    // === Breathing signs (verified against emmentaler-20.woff2 cmap) ===
-    public const char BreathComma = '\uE066';          // scripts.rcomma (\breathe)
-    public const char CaesuraStraight = '\uE07C';      // scripts.caesura.straight (\caesura)
-
-    // === Metronome (use regular noteheads) ===
-    public const char MetNoteDoubleWhole = '\uE0E6';
-    public const char MetNoteWhole = '\uE0E8';
-    public const char MetNoteHalfUp = '\uE0E9';
-    public const char MetNoteQuarterUp = '\uE0EA';
-    public const char MetNote8thUp = '\uE0EA';
-    public const char MetNote16thUp = '\uE0EA';
-
-    // === Repeat dots ===
-    public const char RepeatDots = '\uE038';
 
     /// <summary>Gets the time signature digit glyph.</summary>
     public static char GetTimeSigDigit(int digit) => digit switch

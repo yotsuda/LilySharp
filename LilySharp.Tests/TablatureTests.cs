@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
@@ -137,7 +138,7 @@ public class TablatureTests
         var svg = LiveRender.SvgFromRenderSpec(source);
 
         // Should contain TAB clef glyph (Emmentaler clefs.tab = U+E08F)
-        Assert.Contains("\uE08F", svg);
+        Assert.Contains(EmmentalerGlyphs.TabClef.ToString(), svg);
 
         // Should contain serif fret-number text
         Assert.Contains("font-family=\"serif\"", svg);
@@ -220,7 +221,7 @@ public class TablatureTests
 
         // Tab-specific elements: TAB clef glyph + the white fret-number
         // background that occludes the string line.
-        Assert.Contains("\uE08F", svg);
+        Assert.Contains(EmmentalerGlyphs.TabClef.ToString(), svg);
         Assert.Contains("fill=\"#FFFFFF\"", svg);
     }
 }

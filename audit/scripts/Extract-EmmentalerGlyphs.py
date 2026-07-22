@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""Resolve Emmentaler glyph code points by feta NAME and emit a C# partial class.
+
+Reads:  LilySharp.Core/Fonts/emmentaler-20.otf
+Writes: LilySharp.Core/Svg/EmmentalerGlyphs.Generated.cs
+
+WHY THIS EXISTS. Emmentaler's glyphs live in the Unicode private use area, and the
+PUA assignment is NOT stable across font builds -- it is just the order feta happened
+to emit them in. LilyPond never depends on it: it asks for glyphs by their feta name
+("clefs.G", "noteheads.s2"), which lily/clef.cc:29-52 and lily/note-head.cc build as
+strings. Lily# used to hard-code the code points with the feta name only in a trailing
+comment, so a font update silently repointed every constant at whatever glyph had
+drifted into that slot.
+
+That is not hypothetical. LilyPond 2.26.0 inserts 34 glyphs into the range, which moves
+73 of the 115 constants below -- U+E085 stops being clefs.G and becomes clefs.varC,
+U+E0EA stops being noteheads.s2 and becomes flags.stackedu7. Nothing would have failed
+to compile and nothing would have thrown; the score would just have been drawn with the
+wrong glyphs. Keying on the name makes that class of bug impossible: an absent name is
+an error here, before it can reach a rendered page.
+
+Run after the bundled Emmentaler font is updated. CI should re-run this and assert the
+output is unchanged (else the font drifted).
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+try:
+    from fontTools.ttLib import TTFont
+except ImportError:
+    sys.stderr.write("fontTools not installed. Run: pip install fonttools\n")
+    sys.exit(2)
+
+
+# (C# constant, feta glyph name, parenthetical note for the comment).
+# ("#", "Section heading") starts a new section in the generated file.
+#
+# The feta name is the SOURCE OF TRUTH. Where a constant's old code point and its old
+# comment disagreed, the font was consulted and the name chosen deliberately -- see the
+# CORRECTED markers, which are the four fermatas and the thumb.
+GLYPHS: list[tuple[str, str, str]] = [
+    ("#", "Clefs", ""),
+    ("GClef", "clefs.G", ""),
+    ("GClefChange", "clefs.G_change", "smaller, for clef changes"),
+    ("GClef8va", "clefs.G", "same glyph as GClef; the 8 is italic text"),
+    ("FClef", "clefs.F", ""),
+    ("FClefChange", "clefs.F_change", "smaller, for clef changes"),
+    ("FClef8va", "clefs.F", "same glyph as FClef"),
+    ("CClef", "clefs.C", ""),
+    ("CClefChange", "clefs.C_change", "smaller, for clef changes"),
+    ("PercussionClef", "clefs.percussion", ""),
+    ("PercussionClefChange", "clefs.percussion_change", ""),
+    ("TabClef", "clefs.tab", "6-string TAB"),
+    ("TabClefChange", "clefs.tab_change", "smaller"),
+
+    ("#", "Note heads", ""),
+    ("NoteheadWhole", "noteheads.s0", ""),
+    ("NoteheadHalf", "noteheads.s1", ""),
+    ("NoteheadBlack", "noteheads.s2", ""),
+    ("NoteheadDoubleWhole", "noteheads.sM1", ""),
+    ("NoteheadDiamondWhole", "noteheads.s0diamond", ""),
+    ("NoteheadDiamondHalf", "noteheads.s1diamond", ""),
+    ("NoteheadDiamondBlack", "noteheads.s2diamond", ""),
+    # The old comments said noteheads.s0do -- the Aiken/sacred-harp "do" head, which is
+    # a real and DIFFERENT glyph (it sits elsewhere in the font). The code points were
+    # always the .triangle family, which is what NoteheadStyle.Triangle means, so the
+    # names are corrected to match the drawing rather than the other way round.
+    ("NoteheadTriangleWhole", "noteheads.s0triangle", ""),
+    ("NoteheadTriangleHalf", "noteheads.s1triangle", ""),
+    ("NoteheadTriangleBlack", "noteheads.s2triangle", ""),
+    ("NoteheadSlashWhole", "noteheads.s0slash", ""),
+    ("NoteheadSlashHalf", "noteheads.s1slash", ""),
+    ("NoteheadSlashBlack", "noteheads.s2slash", ""),
+    ("NoteheadCrossWhole", "noteheads.s0cross", ""),
+    ("NoteheadCrossHalf", "noteheads.s1cross", ""),
+    ("NoteheadCrossBlack", "noteheads.s2cross", ""),
+    ("NoteheadXCircle", "noteheads.s2xcircle", ""),
+
+    ("#", "Rests", ""),
+    ("RestMaxima", "rests.M3", ""),
+    ("RestLonga", "rests.M2", ""),
+    ("RestDoubleWhole", "rests.M1", ""),
+    ("RestWhole", "rests.0", ""),
+    ("RestHalf", "rests.1", ""),
+    ("RestQuarter", "rests.2", ""),
+    ("Rest8th", "rests.3", ""),
+    ("Rest16th", "rests.4", ""),
+    ("Rest32nd", "rests.5", ""),
+    ("Rest64th", "rests.6", ""),
+    ("Rest128th", "rests.7", ""),
+
+    ("#", "Accidentals", ""),
+    ("AccidentalFlat", "accidentals.flat", ""),
+    ("AccidentalNatural", "accidentals.natural", ""),
+    ("AccidentalSharp", "accidentals.sharp", ""),
+    ("AccidentalDoubleSharp", "accidentals.doublesharp", ""),
+    ("AccidentalDoubleFlat", "accidentals.flatflat", ""),
+    ("AccidentalQuarterSharp", "accidentals.sharp.slashslash.stem", "quarter sharp"),
+    ("AccidentalThreeQuarterSharp", "accidentals.sharp.slashslashslash.stemstem", "three-quarter sharp"),
+    ("AccidentalQuarterFlat", "accidentals.flat.slash", "quarter flat"),
+    ("AccidentalThreeQuarterFlat", "accidentals.flatflat.slash", "three-quarter flat"),
+
+    ("#", "Accidental parentheses (for courtesy/cautionary accidentals)", ""),
+    ("AccidentalLeftParen", "accidentals.leftparen", "ink left of origin, advance 0"),
+    ("AccidentalRightParen", "accidentals.rightparen", ""),
+
+    ("#", "Flags", ""),
+    ("Flag8thUp", "flags.u3", ""),
+    ("Flag8thDown", "flags.d3", ""),
+    ("Flag16thUp", "flags.u4", ""),
+    ("Flag16thDown", "flags.d4", ""),
+    ("Flag32ndUp", "flags.u5", ""),
+    ("Flag32ndDown", "flags.d5", ""),
+    ("Flag64thUp", "flags.u6", ""),
+    ("Flag64thDown", "flags.d6", ""),
+    ("Flag128thUp", "flags.u7", ""),
+    ("Flag128thDown", "flags.d7", ""),
+
+    ("#", "Augmentation dot", ""),
+    ("AugmentationDot", "dots.dot", ""),
+
+    ("#", "Time signatures (fattened digits)", ""),
+    ("TimeSig0", "fattened.zero", ""),
+    ("TimeSig1", "fattened.one", ""),
+    ("TimeSig2", "fattened.two", ""),
+    ("TimeSig3", "fattened.three", ""),
+    ("TimeSig4", "fattened.four", ""),
+    ("TimeSig5", "fattened.five", ""),
+    ("TimeSig6", "fattened.six", ""),
+    ("TimeSig7", "fattened.seven", ""),
+    ("TimeSig8", "fattened.eight", ""),
+    ("TimeSig9", "fattened.nine", ""),
+    ("TimeSigCommon", "timesig.C44", ""),
+    ("TimeSigCutCommon", "timesig.C22", ""),
+
+    ("#", "Articulations", ""),
+    ("FermataAbove", "scripts.ufermata", ""),
+    ("FermataBelow", "scripts.dfermata", ""),
+    # CORRECTED. These four pointed at the HENZE fermatas while their comments claimed
+    # the ordinary short/long ones. LilyPond keeps them as separate articulations --
+    # scm/script.scm:356 (shortfermata) and :183 (henzeshortfermata), :220 and :174 for
+    # the long pair -- and the font carries both families. Lily# means the ordinary one.
+    ("FermataShortAbove", "scripts.ushortfermata", "angled"),
+    ("FermataShortBelow", "scripts.dshortfermata", ""),
+    ("FermataLongAbove", "scripts.ulongfermata", "square"),
+    ("FermataLongBelow", "scripts.dlongfermata", ""),
+    ("ArticAccentAbove", "scripts.sforzato", ""),
+    ("ArticStaccatoAbove", "scripts.staccato", ""),
+    ("ArticTenutoAbove", "scripts.tenuto", ""),
+    ("ArticPortatoAbove", "scripts.uportato", ""),
+    ("ArticPortatoBelow", "scripts.dportato", ""),
+    ("ArticStaccatissimoAbove", "scripts.ustaccatissimo", ""),
+    ("ArticStaccatissimoBelow", "scripts.dstaccatissimo", ""),
+    # LilyPond 2.26.0 gave the bowing marks a direction pair where 2.24.4 drew one glyph
+    # both ways: scm/script.scm:453 is (dupbow . uupbow) and :88 is (ddownbow . udownbow),
+    # against 2.24.4's ("upbow" . "upbow") / ("downbow" . "downbow"). The old single glyph
+    # is gone from the font, which is what makes this a port rather than a rename.
+    ("ArticUpBowAbove", "scripts.uupbow", "V"),
+    ("ArticUpBowBelow", "scripts.dupbow", "V, below the staff"),
+    ("ArticDownBowAbove", "scripts.udownbow", "frog"),
+    ("ArticDownBowBelow", "scripts.ddownbow", "frog, below the staff"),
+    ("ArticFlageolet", "scripts.flageolet", "harmonic circle"),
+    ("ArticMarcatoAbove", "scripts.umarcato", ""),
+    ("ArticMarcatoBelow", "scripts.dmarcato", ""),
+    ("ArticStopped", "scripts.stopped", "+"),
+    ("PedalHeelUp", "scripts.upedalheel", "U"),
+    ("PedalHeelDown", "scripts.dpedalheel", ""),
+    ("PedalToeUp", "scripts.upedaltoe", "V"),
+    ("PedalToeDown", "scripts.dpedaltoe", ""),
+    # CORRECTED. This drew scripts.snappizzicato -- a different articulation entirely --
+    # while its comment said thumb. scripts.thumb is its own glyph in the font.
+    ("ArticThumb", "scripts.thumb", "cello thumb position"),
+
+    ("#", "Ornaments", ""),
+    ("OrnReverseTurn", "scripts.reverseturn", ""),
+    ("OrnTurn", "scripts.turn", ""),
+    ("OrnTrill", "scripts.trill", ""),
+    ("MarkSegno", "scripts.segno", ""),
+    ("MarkCoda", "scripts.coda", ""),
+    ("OrnPrall", "scripts.prall", ""),
+    ("OrnMordent", "scripts.mordent", ""),
+    ("OrnPrallPrall", "scripts.prallprall", ""),
+
+    ("#", "Breathing signs", ""),
+    ("BreathComma", "scripts.rcomma", "\\breathe"),
+    ("CaesuraStraight", "scripts.caesura.straight", "\\caesura"),
+
+    ("#", "Metronome (regular noteheads)", ""),
+    ("MetNoteDoubleWhole", "noteheads.sM1", ""),
+    ("MetNoteWhole", "noteheads.s0", ""),
+    ("MetNoteHalfUp", "noteheads.s1", ""),
+    ("MetNoteQuarterUp", "noteheads.s2", ""),
+    ("MetNote8thUp", "noteheads.s2", ""),
+    ("MetNote16thUp", "noteheads.s2", ""),
+
+    ("#", "Repeat dots", ""),
+    ("RepeatDots", "dots.dot", ""),
+]
+
+
+def main() -> int:
+    repo = Path(__file__).resolve().parents[2]
+    font_path = repo / "LilySharp.Core" / "Fonts" / "emmentaler-20.otf"
+    out_path = repo / "LilySharp.Core" / "Svg" / "EmmentalerGlyphs.Generated.cs"
+
+    if not font_path.exists():
+        sys.stderr.write(f"Font not found: {font_path}\n")
+        return 2
+
+    font = TTFont(str(font_path))
+    by_name: dict[str, int] = {}
+    for codepoint, glyph in font.getBestCmap().items():
+        # First mapping wins; feta names are unique in this font.
+        by_name.setdefault(glyph, codepoint)
+
+    missing = [feta for name, feta, _ in GLYPHS if name != "#" and feta not in by_name]
+    if missing:
+        # An absent name is fatal. This is the guard the old code-point table lacked:
+        # it stops a font swap before it can silently repoint a constant.
+        for feta in missing:
+            sys.stderr.write(f"ERROR: glyph name not in font: {feta}\n")
+        return 1
+
+    lines: list[str] = []
+    lines.append("// Lily# - Music notation compiler")
+    lines.append("// AUTO-GENERATED by audit/scripts/Extract-EmmentalerGlyphs.py — DO NOT EDIT MANUALLY.")
+    lines.append("// Re-run the script after the bundled Emmentaler font is updated.")
+    lines.append("// Source font: LilySharp.Core/Fonts/emmentaler-20.otf")
+    lines.append("//")
+    lines.append("// Every constant is resolved from the glyph's feta NAME, the way LilyPond asks")
+    lines.append("// for glyphs (lily/clef.cc:29-52, lily/note-head.cc). The code points themselves")
+    lines.append("// are private-use and NOT stable across font builds — LilyPond 2.26.0 moves 73 of")
+    lines.append("// them — so the name is what carries meaning and the number is just today's slot.")
+    lines.append("")
+    lines.append("namespace LilySharp.Core.Svg;")
+    lines.append("")
+    lines.append("internal static partial class EmmentalerGlyphs")
+    lines.append("{")
+
+    first = True
+    for name, feta, note in GLYPHS:
+        if name == "#":
+            if not first:
+                lines.append("")
+            lines.append(f"    // === {feta} ===")
+            first = False
+            continue
+        codepoint = by_name[feta]
+        suffix = f" ({note})" if note else ""
+        lines.append(f"    /// <summary>{feta}{suffix}</summary>")
+        lines.append(f"    public const char {name} = '\\u{codepoint:04X}';")
+        first = False
+
+    lines.append("}")
+    lines.append("")
+
+    out_path.write_text("\n".join(lines), encoding="utf-8")
+    count = sum(1 for n, _, _ in GLYPHS if n != "#")
+    print(f"Wrote {out_path} ({count} glyph constants)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

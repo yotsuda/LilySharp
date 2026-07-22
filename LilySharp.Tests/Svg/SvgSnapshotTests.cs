@@ -548,6 +548,12 @@ public class SvgSnapshotTests
         // shared columns so the columns don't overprint.
         yield return new object[] { "test/tab-chord-spacing" };
         yield return new object[] { "test/drum-groove" };
+        // Three pages. The only fixture that pins the VERTICAL across page boundaries:
+        // page breaking, the stretched gaps on a filled page, and the last page taking
+        // the force of the page before it (lily/page-breaking.cc:570-573). Without it a
+        // change to the page constants moves every gap on every page and every other
+        // snapshot stays green. See the header of the .lys for why three and not two.
+        yield return new object[] { "test/multi-page-vertical" };
     }
 
     /// <summary>

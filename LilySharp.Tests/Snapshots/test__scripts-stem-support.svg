@@ -10,20 +10,20 @@
   <line x1="0.00" y1="13.66" x2="63.76" y2="13.66" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="14.66" x2="63.76" y2="14.66" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.66" x2="63.76" y2="15.66" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="14.66" font-size="4.00"></text>
-  <text class="music" x="3.30" y="13.66" font-size="4.00"></text>
-  <text class="music" x="7.68" y="14.16" font-size="4.00" data-pos="295"></text>
+  <text class="music" x="0.30" y="14.66" font-size="4.00"></text>
+  <text class="music" x="3.30" y="13.66" font-size="4.00"></text>
+  <text class="music" x="7.68" y="14.16" font-size="4.00" data-pos="295"></text>
   <line x1="8.92" y1="14.01" x2="8.92" y2="9.91" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="8.92" y="9.91" font-size="4.00"></text>
+  <text class="music" x="8.92" y="9.91" font-size="4.00"></text>
   <text class="music" x="10.52" y="13.66" font-size="4.00" data-pos="312"></text>
   <text class="music" x="13.02" y="13.66" font-size="4.00" data-pos="316"></text>
   <text class="music" x="16.62" y="13.66" font-size="4.00" data-pos="320"></text>
   <text class="music" x="21.22" y="13.66" font-size="4.00" data-pos="323"></text>
   <text class="music" x="26.97" y="13.66" font-size="4.00" data-pos="326"></text>
-  <text class="music" x="35.56" y="14.16" font-size="4.00" data-pos="331"></text>
-  <text class="music" x="40.46" y="14.66" font-size="4.00" data-pos="493"></text>
-  <text class="music" x="45.36" y="15.16" font-size="4.00" data-pos="495"></text>
-  <text class="music" x="50.27" y="15.66" font-size="4.00" data-pos="497"></text>
+  <text class="music" x="35.56" y="14.16" font-size="4.00" data-pos="331"></text>
+  <text class="music" x="40.46" y="14.66" font-size="4.00" data-pos="493"></text>
+  <text class="music" x="45.36" y="15.16" font-size="4.00" data-pos="495"></text>
+  <text class="music" x="50.27" y="15.66" font-size="4.00" data-pos="497"></text>
   <text class="music" x="55.17" y="13.66" font-size="4.00" data-pos="499"></text>
   <rect x="34.47" y="11.66" width="0.19" height="4.00" data-pos="329"/>
   <rect x="62.67" y="11.66" width="0.19" height="4.00" data-pos="502"/>

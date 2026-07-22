@@ -212,7 +212,7 @@ score main ""test"" { staff melody }
         _output.WriteLine(svg);
 
         // Should contain the bass clef change glyph (U+E084 = FClefChange)
-        Assert.Contains("\uE084", svg);  // FClefChange glyph
+        Assert.Contains(EmmentalerGlyphs.FClefChange.ToString(), svg);  // FClefChange glyph
     }
 
     [Fact]
@@ -245,9 +245,9 @@ score main ""test"" { staff melody }
             {
                 foreach (char c in line)
                 {
-                    if (c == '\uE085') systemClefs.Add("Treble");
-                    else if (c == '\uE083') systemClefs.Add("Bass");
-                    else if (c == '\uE07F') systemClefs.Add("Alto");
+                    if (c == EmmentalerGlyphs.GClef) systemClefs.Add("Treble");
+                    else if (c == EmmentalerGlyphs.FClef) systemClefs.Add("Bass");
+                    else if (c == EmmentalerGlyphs.CClef) systemClefs.Add("Alto");
                 }
             }
         }

@@ -115,17 +115,24 @@ X の台帳とは別枠で、**ページ縦**を測る手段がある（点は�
 pwsh audit\lp-geometry\Measure-LilyPondPageGeometry.ps1
 ```
 
-LP 2.24.4・A4・markup 無しでの実測（すべて staff-space）:
+**LP 2.26.0**・A4・markup 無しでの実測（すべて staff-space）:
 
-| 量 | LP 2.24.4 |
-|---|---|
-| `paper-height` / `paper-width` | 169.009370 / 119.501575 |
-| `top-margin` / `bottom-margin` | **2.845276**（5 mm）/ **3.414331**（6 mm） |
-| `line-width`（左右余白 10 mm 各） | 108.120472 |
-| 縦の使用可能帯 | 162.749764 |
-| system 間の**自然**距離 | **12.000000**（= `system-system-spacing` basic-distance） |
-| 満杯ページでの圧縮後距離（本プローブ） | 11.801982（13 gap すべて同値） |
-| 上余白 → 先頭 staff refpoint | 4.779000 |
+| 量 | **LP 2.26.0** | 参考: 2.24.4 |
+|---|---|---|
+| `paper-height` / `paper-width` | 169.009370 / 119.501575 | 同じ |
+| `top-margin` / `bottom-margin` | **5.690551 / 5.690551**（各 10 mm） | 2.845276（5mm）/ 3.414331（6mm） |
+| `line-width`（左右余白 15 mm 各） | **102.429921** | 108.120472（10 mm 各） |
+| 縦の使用可能帯 | **157.628268** | 162.749764 |
+| system 間の**自然**距離 | **12.000000**（= `system-system-spacing` basic-distance） | 12.000000 |
+| 満杯ページでの伸長後距離（本プローブ book J） | **12.254816**（12 gap すべて同値） | 11.801982 |
+| 上余白 → 先頭 staff refpoint | **6.000000**（= `top-system-spacing` basic-distance ちょうど） | 4.779000 |
+
+⚠️ **余白の既定は版で違う**（2.24.4 は top 5mm / bottom 6mm / 左右 10mm、2.26.0 は
+top/bottom 10mm・左右 15mm）。上の 2.24.4 列は**過去の記述との突き合わせ用**で、
+正は 2.26.0 列。プローブの既定 exe も 2.26.0 を指している。
+
+✅ 先頭 staff refpoint が **`top-margin + 6.000000` ちょうど**に来ることは、
+`VerticalSpacingParameters.TopSystem.BasicDistance = 6` が 2.26.0 基準で正しいことの実測裏取り。
 
 ### ★ 縦は **staff refpoint 間**で測る。system 原点間で測ると嘘の値が出る
 
@@ -155,19 +162,22 @@ lily/page-breaking.cc:570-573
 プローブの book N/J/L がこの 3 者を分離している（J は page1・page2 とも 11.801982、
 L は単ページで 12.000000）。
 
-⚠️ **`C:\MyProj\lilypond-src` は 2.25.35（devel）で、実測に使う binary は 2.24.4。**
-`ly/paper-defaults-init.ly` の既定値が両者で違う（下表）。**紙面・縦間隔の定数を
-src から引き写すと 2.24.4 と合わない。**
+✅ **src と binary は 2.26.0 で揃っている**（`C:\MyProj\lilypond-src` は tag `v2.26.0`、
+実測 exe は `C:\bin\lilypond-2.26.0`）。以前ここにあった「src 2.25.35 / binary 2.24.4 で
+既定値が食い違う」という警告は**解消済み**。src から定数を引き写してよい。
 
-| | src 2.25.35 | 2.24.4（実測対象） |
-|---|---|---|
-| `top-margin-default` | 10 mm | **5 mm** |
-| `bottom-margin-default` | 10 mm | **6 mm** |
-| `left/right-margin-default` | 15 mm | **10 mm** |
-| `top-system-spacing` basic-distance | 6 | **1** |
-| `top-markup-spacing` basic-distance | 4 | **0** |
+⚠️ **ただしフォントは版で作り直されている。** 2.26.0 の Emmentaler は
+(a) LILC テーブルが **zlib 圧縮**（`lily/open-type-font.cc:78-123` が透過的に inflate）、
+(b) LILC の bbox が **design 単位で小数3桁に丸め**（`noteheads.s2` 6.52106 → 6.521）。
+**この丸めが台帳 22 点中 10 点の LP 実測値を最大 7e-5 ss 動かした**（`070f1e21` で反映済み）。
+グリフの private-use コードポイントも版をまたいで安定しないので、
+`audit/scripts/Extract-Emmentaler*.py` は**必ず feta 名で引く**こと。
 
 ⚠️ **点を足すと total は増えうるので、比較は同じ点集合の中でのみ意味を持つ。**
 15点 4.592405 → 19点 11.435647（`5c4126d6` が**それまで測っていなかった**行中の発散を可視化）
 → 21点 4.747978（`4eb8cf16`＋MKA 2点）→ 4.738987（`ec7a2254`）→ 0.338987（`d056b5e5`）
-→ 0.022361（`94e8996c`）→ 22点 **0.022361**（`a64ffc16`、足した点が exact で着地）。
+→ 0.022361（`94e8996c`）→ 22点 0.022361（`a64ffc16`、足した点が exact で着地）
+→ 22点 **0.022412 / 19 exact**（`070f1e21`）。
+
+⚠️ **最後の一手で基準そのものが 2.24.4 → 2.26.0 に変わった**ので、0.022361 と 0.022412 は
+厳密には別物差。exact は 18 → 19 に増えている。**この行より前の LP 実測値は 2.24.4 のもの。**

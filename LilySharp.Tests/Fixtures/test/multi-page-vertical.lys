@@ -1,0 +1,83 @@
+// THREE PAGES. The point of this fixture is the VERTICAL, which no other committed
+// fixture pins: until it existed, a change to page breaking or to the page constants
+// could move every gap on every page and no snapshot would notice (HANDOFF 2-8).
+//
+// Three is the smallest count that separates the three cases the page breaker treats
+// differently:
+//   page 1      -- filled by the breaker, gaps stretched to the force it solved for
+//   page 2      -- a middle page, same force, but no header reserved above it
+//   page 3      -- the LAST page, which ragged-last-bottom hands the force of the page
+//                  BEFORE it rather than the natural distance
+//                  (LILYPOND-REF: lily/page-breaking.cc:570-573 fixed_force_solution,
+//                  ported in 4ac3df8e). With two pages the last-page rule and the
+//                  single-page rule cannot be told apart.
+//
+// Whole notes, deliberately: the systems are what page breaking prices, and one glyph
+// per measure keeps the snapshot a third of the size that quarter notes would make it.
+//
+// The bar numbers matter too. Every system except the very first one carries one above
+// its staff, so staff-refpoint-extent is NOT the same on every system -- which is the
+// asymmetry that made an earlier session read 11.528583 as a compression when the
+// spacing was in fact uniform (HANDOFF 5.3: measure the vertical between staff
+// refpoints, not between system origins). A fixture without that mix would be blind to
+// a regression that went back to measuring from the wrong reference point.
+title "Multi-page vertical spacing"
+
+time 4/4
+
+part melody
+
+section Main {
+  melody {
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+  }
+}

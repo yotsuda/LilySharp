@@ -30,7 +30,7 @@
 [CmdletBinding()]
 param(
     [string] $Probe = 'barline-spacing.ly',
-    [string] $LilyPond = 'C:\bin\lilypond-2.24.4\bin\lilypond.exe'
+    [string] $LilyPond = 'C:\bin\lilypond-2.26.0\bin\lilypond.exe'
 )
 
 $ErrorActionPreference = 'Stop'

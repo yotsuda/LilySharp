@@ -218,8 +218,8 @@ score main { staff melody }
         _output.WriteLine(svg);
 
         // Should contain the parenthesis glyphs (U+E02F = leftparen, U+E02E = rightparen)
-        Assert.Contains("\uE02F", svg);  // AccidentalLeftParen
-        Assert.Contains("\uE02E", svg);  // AccidentalRightParen
+        Assert.Contains(EmmentalerGlyphs.AccidentalLeftParen.ToString(), svg);  // AccidentalLeftParen
+        Assert.Contains(EmmentalerGlyphs.AccidentalRightParen.ToString(), svg);  // AccidentalRightParen
     }
 
     [Fact]
