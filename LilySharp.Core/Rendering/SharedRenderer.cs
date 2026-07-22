@@ -539,8 +539,8 @@ internal static partial class SharedRenderer
             // Only connected, multi-staff groups (those with a delimiter) get a span bar.
             if (system.StaffGroups[gi].GrandStaffLayout is not { } delim) continue;
 
-            double top = systemYUp - delim.BraceTop;
-            double height = delim.BraceBottom - delim.BraceTop;
+            double top = systemYUp + delim.BraceTop;
+            double height = delim.TotalHeight;
             if (height <= StaffHeight + 0.001) continue; // single staff — nothing to span
 
             // Barline types are a measure property shared by all staves in the group.

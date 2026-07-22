@@ -139,11 +139,12 @@ public class SkylineStaffSpacingTests
         Assert.NotNull(grandStaff.GrandStaffLayout);
         Assert.Equal(2, grandStaff.GrandStaffLayout!.Staves.Length);
 
-        // Second staff Y should be > first staff Y + staffHeight
+        // staff.Y is Y-up: the second staff sits BELOW the first, i.e. at least a full
+        // staff height further down ⇒ its Y is SMALLER by more than staffHeight.
         double firstY = grandStaff.GrandStaffLayout.Staves[0].Y;
         double secondY = grandStaff.GrandStaffLayout.Staves[1].Y;
-        Assert.True(secondY > firstY + StaffHeight,
-            $"Second staff Y ({secondY:F2}) should be > first staff Y ({firstY:F2}) + staffHeight ({StaffHeight})");
+        Assert.True(secondY < firstY - StaffHeight,
+            $"Second staff Y ({secondY:F2}) should be < first staff Y ({firstY:F2}) − staffHeight ({StaffHeight})");
     }
 
     [Fact]

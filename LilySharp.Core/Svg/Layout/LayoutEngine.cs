@@ -341,14 +341,18 @@ internal sealed class LayoutEngine
             measuresByStaff[idx] = st.PrimaryVoice.Measures;
             staffByIndex[idx] = st;
         }
+        // Device-DOWN offsets: the annotation engravers downstream (grace notes,
+        // lyrics, ottava, chord names) all measure downward from the system top, so
+        // this table reflects staff.Y's Y-up storage once, here at the island edge.
         var staffYByIndex = new Dictionary<int, double>();
         if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
             foreach (var sg in systemsArray[0].StaffGroups)
                 foreach (var st in sg.Staves)
-                    staffYByIndex[st.StaffIndex] = st.Y;
+                    staffYByIndex[st.StaffIndex] = -st.Y;
 
         // Anchor Y for note-bound lyrics attached to a staff in a NON-LAST staff group:
-        // the group's BOTTOM staff Y (Y-down ⇒ max), so `staff X with lyrics …` followed
+        // the group's BOTTOM staff Y (Y-up ⇒ min, reflected to device-down like
+        // staffYByIndex above), so `staff X with lyrics …` followed
         // by another staff sits in the inter-group gap below its group. Staves in the LAST
         // group are omitted ⇒ their lyrics keep the legacy below-the-whole-system
         // placement — which deliberately includes a grand staff's staves (one group), so
@@ -360,7 +364,7 @@ internal sealed class LayoutEngine
             for (int gi = 0; gi < groups.Length - 1; gi++)
             {
                 if (groups[gi].Staves.IsDefaultOrEmpty) continue;
-                double bottomY = groups[gi].Staves.Max(s => s.Y);
+                double bottomY = -groups[gi].Staves.Min(s => s.Y);
                 foreach (var st in groups[gi].Staves)
                     noteBoundAnchorY[st.StaffIndex] = bottomY;
             }
@@ -853,7 +857,7 @@ internal sealed class LayoutEngine
                 foreach (var g in systems[i].StaffGroups)
                     foreach (var st in g.Staves)
                         if (!st.IsHidden)
-                            bottoms[i] = Math.Max(bottoms[i], st.Y + st.Height);
+                            bottoms[i] = Math.Max(bottoms[i], st.Height - st.Y);
             }
         }
 
@@ -1352,7 +1356,7 @@ internal sealed class LayoutEngine
                 if (!systems[s].StaffGroups.IsDefaultOrEmpty)
                     foreach (var sg in systems[s].StaffGroups)
                         foreach (var st in sg.Staves)
-                            map[st.StaffIndex] = st.Y;
+                            map[st.StaffIndex] = -st.Y;   // Y-up storage → device-down offset
                 staffYBySystem.Add(map);
                 foreach (var m in systems[s].Measures)
                     measureToSystem[m.MeasureIndex] = s;

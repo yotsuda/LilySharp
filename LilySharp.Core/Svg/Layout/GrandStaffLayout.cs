@@ -23,11 +23,22 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Layout information for a single staff within a system.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/align-interface.cc:274 — <c>where += stacking_dir * dy</c> with
+/// <c>stacking_dir = DOWN = -1</c>: LilyPond's stacking accumulator walks NEGATIVE and
+/// stores the result as-is, so a staff's within-system offset is Y-UP throughout.
+/// LILYPOND-REF: lily/page-layout-problem.cc:915-917 — "this is relative to the system:
+/// negative numbers are down".
+/// </remarks>
 public sealed record StaffLayout(
     int StaffIndex,
     ClefType Clef,
-    double Y,           // Y position relative to system top
-    double Height,      // Staff height (typically 4 * staffSpace)
+    // Y-UP offset from the system top: 0 for the first staff, NEGATIVE for every
+    // staff below it. The staff's BOTTOM is Y - Height (Height is a length, so it
+    // stays positive). Computations that are deliberately device-framed reflect at
+    // their edge via LayoutUtilities.StaffOffsetInSystemDown.
+    double Y,
+    double Height,      // Staff height (typically 4 * staffSpace), a LENGTH — always positive
     TuningType? Tuning = null,  // Tuning for tablature staves
     string? InstrumentName = null,  // Display name for this staff
     // Whether this staff is an ossia (rendered at reduced size).
@@ -76,8 +87,9 @@ public enum SystemStartDelimiterType
 public sealed record GrandStaffLayout(
     ImmutableArray<StaffLayout> Staves,
     double BraceX,      // X position of the delimiter
-    double BraceTop,    // Top Y of the delimiter
-    double BraceBottom, // Bottom Y of the delimiter
+    // Both ends share StaffLayout.Y's Y-UP frame, so BraceTop is the GREATER value.
+    double BraceTop,    // Top Y of the delimiter (Y-up)
+    double BraceBottom, // Bottom Y of the delimiter (Y-up, below the top ⇒ smaller)
     SystemStartDelimiterType DelimiterType = SystemStartDelimiterType.Brace
 )
 {
@@ -85,7 +97,7 @@ public sealed record GrandStaffLayout(
     public int StaffCount => Staves.Length;
 
     /// <summary>Total height from top of first staff to bottom of last staff.</summary>
-    public double TotalHeight => BraceBottom - BraceTop;
+    public double TotalHeight => BraceTop - BraceBottom;
 
     /// <summary>The upper staff (typically treble).</summary>
     public StaffLayout UpperStaff => Staves[0];
@@ -104,8 +116,8 @@ public sealed record GrandStaffLayout(
 public sealed record StaffGroupLayout(
     StaffGroupType Type,
     ImmutableArray<StaffLayout> Staves,
-    double Y,           // Y position of the group
-    double Height,      // Total height of the group
+    double Y,           // Y-up position of the group's top (same frame as StaffLayout.Y)
+    double Height,      // Total height of the group, a LENGTH — always positive
     GrandStaffLayout? GrandStaffLayout  // Multi-staff delimiter layout (brace, bracket, etc.)
 )
 {

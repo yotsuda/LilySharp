@@ -89,10 +89,11 @@ public class DynamicPlacementTests
             $"above dynamic (YUp={above.YUp}) should sit higher than below (YUp={below.YUp})");
     }
 
-    // Lower-staff Y in a treble-over-bass score; the lower staff carries a high chord
-    // (so the inter-staff gap is skyline-driven, not pinned at the basic-distance floor),
-    // then the dynamic under test rides on it.
-    private static double LowerStaffYWithDynamic(string dynamic)
+    // How far the lower staff hangs BELOW the system top in a treble-over-bass score;
+    // the lower staff carries a high chord (so the inter-staff gap is skyline-driven,
+    // not pinned at the basic-distance floor), then the dynamic under test rides on it.
+    // StaffGroupLayout.Y is Y-up, so the downward depth is its negation.
+    private static double LowerStaffDepthWithDynamic(string dynamic)
     {
         var src =
             "part top { clef treble }\npart bot { clef bass }\n" +
@@ -103,7 +104,7 @@ public class DynamicPlacementTests
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         var layout = new LayoutEngine().Layout(score);
-        return layout.Systems[0].StaffGroups[1].Y;
+        return -layout.Systems[0].StaffGroups[1].Y;
     }
 
     [Fact]
@@ -112,11 +113,11 @@ public class DynamicPlacementTests
         // A forced-above dynamic on the LOWER staff rises into the inter-staff gap and
         // must push the lower staff further down. A below dynamic on the same note hangs
         // under the lower staff and leaves the gap above untouched.
-        double above = LowerStaffYWithDynamic("@f.up");
-        double below = LowerStaffYWithDynamic("@f");
+        double above = LowerStaffDepthWithDynamic("@f.up");
+        double below = LowerStaffDepthWithDynamic("@f");
 
         Assert.True(above > below,
-            $"@f.up lower staff (Y={above}) should sit lower than @f-below (Y={below})");
+            $"@f.up lower staff (depth={above}) should sit lower than @f-below (depth={below})");
     }
 
     [Fact]

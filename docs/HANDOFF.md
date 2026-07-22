@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `500627c9` の次（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `ff64f38e`（§0 で裏取りすること）
 
 ---
 
@@ -27,32 +27,64 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **島1 の atomic flip（`StaffLayout.Y` を Y-up 格納へ）**
+### ▶ 次のセッションの最初の一手 ＝ **PageBreaker を鎖と揃える**（§2⑧ の ⚠️）
 
-**⚠️ これは「専用セッションで一気に完遂する」と決めてある作業。**
-`HANDOFF-stage4-vertical-yup.md` §3.5 の「途中停止＝全崩れ。半端なら revert して緑で締める／
-fresh context の専用セッションで一気に」がそのまま当てはまる。**この項目から着手すること。**
-文脈を他の作業で消費してから始めないこと（前セッションはそれを理由に着手を見送った）。
+「1ページに何本入るか」は今も `SystemDetails` ＋ `constrained-breaking.cc` 系の
+`spring_length`/`tallness` が決めており、**top spring と last-bottom spring を知らない**。
+加えて `PageLayouter` は `systemDetails[0]` を **`vs.SystemSystem`** から作るのに
+配置側は `vs.TopSystem` を使う＝**ブレーカーと配置で spec が食い違っている**。
+committed フィクスチャでは本数が偶然一致していて誰も落ちない。
+⚠️ **着手前に点を作ること**（§5.3「変更する前に測る」）。伸長 regime の点は
+`6ffbe7bd` で起票済みなので、そこに「ページあたり本数」を測る点を足すのが素直。
 
-**地図・変換レシピ・消費側の一覧・落とし穴は §3B の「島1 の再スコープ」に全部ある。**
-実測済みなので調査からやり直す必要は無い（ただし着手時に実コードで再確認＝§5.2）。
+もう1つの候補: ⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
+（`DynamicEngraver.cs:345,359,416,424`・`TupletBracketEngraver.cs:573,585`）。
+`89aaa29f` で潰した「幻の符尾」と**同じ形**だが、**台帳の点が 1 つも届かないので測っていない。
+推測で直さないこと。先に点を作る**（全音符に強弱を付けた 2 段譜。probe P/Q と同じ作り方）。
 
-その次: **PageBreaker が鎖と食い違っている**（§2⑧ の ⚠️）。「1ページに何本」は今も別モデル。
-
-⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
-（`DynamicEngraver.cs:345,359,416,424`）。下の「幻の符尾」と**同じ形**だが、
-**台帳の点が 1 つも届かないので測っていない。推測で直さないこと。**
-着手するなら**先に点を作る**（全音符に強弱を付けた 2 段譜）。短いので、①の前の
-肩慣らしには向かない——①は fresh な文脈を丸ごと使う前提。
-
-⚠️ **別ブランチが 1 本走っている**: `fix/note-bang-diagnostic`（ワークツリー
-`C:\MyProj\LilySharp-wt2`、指示書は同ツリーの `scratch/TASK-note-bang-diagnostic.md`）。
-`Parser`/`Syntax`/`Tests` しか触らない柵つきなので**①とは 1 ファイルも衝突しない**
-（①は byte 不変なので snapshot も動かない）。master にマージするのはユーザー。
+**島1（`StaffLayout.Y` の Y-up 格納）は `ff64f38e` で完遂した。** §3B ① を参照。
 
 ---
 
-### ✅ このセッション（2026-07-22）でやったこと — **譜間を測れるようにして、2 つ閉じた**
+### ✅ このセッション（2026-07-22）でやったこと — **島1 の atomic flip を完遂した**
+
+| commit | 内容 |
+|---|---|
+| `ff64f38e` | **`StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop`/`BraceBottom` を Y-up 格納へ**。3 ディスパッチャ＋7 積み上げ地点＋15 消費側。**byte 不変・snapshot 0 件**。フレームを直接固定する単体テスト 6 件を新設 |
+
+**テスト 3155 → 3161 passed（+6 ＝ 新設分のみ）、0 failed / 3 skipped。**
+**LP 忠実度 24/31 exact, total |residual| = 0.023777 ss（不変）。** Core 0 warn / 0 err。
+
+**成果は seam に出た**: `FindStaffYInSystem` が `system.Y - offsetDown` から
+**`system.Y + staff.Y`**（LP 自身がやる素の和）になり、system 原点と staff 原点の間から
+反射が消えた。`LayoutUtilities` では **`StaffOffsetInSystemUp` が primitive**（`staff.Y` を
+そのまま返す）で `Down` がその否定＝**否定が「もう格納の姿ではない側」へ移った**。
+
+#### ★ 教訓: **byte 不変はこの種の移行の証拠にならない**
+
+生産側と消費側が**一緒に符号を反転すると打ち消し合う**ので、snapshot オラクルは
+「緑だがフレームが逆」を素通しする。だから `StaffLayoutFrameTests` は**格納値そのもの**を
+主張する — `staves[0].Y == 0` / `staves[i].Y < 0` かつ上の譜の下端をクリア /
+`BraceTop > BraceBottom` / `TotalHeight > 0` / `Height >= 0`（長さは正のまま）/
+2 つの accessor が厳密な反射で `system.Y + staff.Y` に合成される。
+**3 つの overload（素・hara-kiri・skyline）は独立に積むので別々に固定した。**
+⚠️ **「修正前なら落ちる」は実証済み**（`LilySharp.Core` だけ stash して 6/6 fail）。
+§5.4 の原則をこの形で満たすこと——**先に測れないなら、格納値を主張するテストで代替する。**
+
+#### ★ device 島の縁では「1 回だけ反射する」
+
+`staffYByIndex`（`LayoutEngine`）と `staffYBySystem`（`LayoutEngine` / `OutsideStaffStacker`）は
+下流の注釈エングレーバが**下向き offset を期待している**テーブルなので、島の縁で `-st.Y` と
+**1 回だけ**反射させ、flip を下流へ伝播させなかった。`StaffOffsetInSystemDown` を残したのと
+同じ理屈（§3B）。**反射を内側へ押し込まない。**
+
+⚠️ **セッション中にユーザーが `fix/note-bang-diagnostic` を master に取り込んだ**
+（`a994f418` `1ff10e45` `7d5255cb`）。**テスト数の基準が 3142 → 3155 に動いた**ので、
+開始時に読んだ数と突き合わせるときは注意。予告どおり**1 ファイルも衝突しなかった**。
+
+---
+
+### 前セッション（2026-07-22）でやったこと — **譜間を測れるようにして、2 つ閉じた**
 
 | commit | 内容 |
 |---|---|
@@ -156,11 +188,12 @@ ink が 9.110000（clef の下 5.550 と次 system の小節番号 3.560 が同�
 
 ---
 
-**origin より 60 ahead で未 push**（HEAD はこのコミット）。push はユーザー判断・コミットは可。
+**origin より 64 ahead で未 push**（HEAD = `ff64f38e`）。push はユーザー判断・コミットは可。
 ⚠️ **push は明示的に「まだしないで」と言われている**（2026-07-22）。解除まで push しないこと。
 ⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 8 回（186・192・2・2・80・82・3・14 件）が含まれる。**
-別ブランチ `fix/vscode-extension` が `7291531a` から切られ、**master に取り込み済み**（VS Code 拡張作業・ユーザー）。
-**テスト 0 failed / 3142 passed / 3 skipped。** Core build 0 warn / 0 err。
+別ブランチ `fix/vscode-extension`（`7291531a` から）と `fix/note-bang-diagnostic` は
+**どちらも master に取り込み済み**（ユーザー）。**走っている別ブランチはもう無い。**
+**テスト 0 failed / 3161 passed / 3 skipped。** Core build 0 warn / 0 err。
 **LP 忠実度 24/31 exact, total |residual| = 0.023777 ss**（**2.26.0 基準**。X 22点＋Y 7点＋**譜間 2点**）。
 **譜間 2 点は両方 exact**（`854a0e95`）。**縦 7 点の合計は 0.001365**（4 点が上記の skyline sliver、3 点は exact）。
 X 3 点は `e38a76bf` から不変。
@@ -763,79 +796,30 @@ LP は `Stem::is_normal_stem`（duration-log >= 1）でしか符尾を持たな�
 
 | | 内容 | 状況 |
 |---|---|---|
-| ① | 譜間/system 縦積みの Y-down 残存（**島1**） | 🔄 **残るは `StaffLayout.Y` の格納だけ**（下記で再スコープ） |
+| ① | 譜間/system 縦積みの Y-down 残存（**島1**） | ✅ **完了**（`ff64f38e`。下記） |
 | ② | device 島群（**島2**） | ⏸ 繰延。TieVariant / 水平 skyline の Y horizon / TabStaffGeometry / beam collision island |
 | ③ | non-musical PaperColumn の欠落 | 🔄 §2 ③ |
 
-**X（③）と Y（①）は独立に進められる。** 島1 は boundary-shim で byte 不変移行できることが実証済。
+#### ✅ 島1 は閉じた（`ff64f38e`）— **byte 不変・snapshot 0 件**
 
-#### 島1 の再スコープ（2026-07-22・実コードで裏取り）
+`StaffLayout.Y` / `StaffGroupLayout.Y` / `GrandStaffLayout.BraceTop`・`BraceBottom` が
+Y-up 格納（先頭 staff が 0・下ほど負）。**LP の `Align_interface` は
+`where += stacking_dir * dy`（`align-interface.cc:274`）で `stacking_dir = DOWN = -1`＝
+元から負に歩いて `translates` をそのまま格納する**ので、これは近似ではなく字面移植。
+3 ディスパッチャ・7 積み上げ地点・15 消費側。`Height` は長さなので正のまま。
 
-⚠️ **旧記述「残＝共有 device stacking の de-island（`OutsideStaffStacker` 等）＋
-`system.Y`/`staff.Y` の Y-up 格納」は 3 分の 2 が既に済んでいた。**
+**副産物**: `FindStaffYInSystem` が `system.Y + staff.Y` になり、`StaffOffsetInSystemUp` が
+primitive・`Down` がその否定（＝反射が device 島の縁だけに残った）。詳細は §1 の教訓 2 件。
 
-- `StaffFrame` は**参照ゼロ**（削除済み）
-- `OutsideStaffStacker` は `StaffOffsetInSystemUp` へ移行済み（`39da7084`）
-- `system.Y` は page Y-up 格納済み（`477c5452`）
+⚠️ **`StaffOffsetInSystemDown` の残り 8 呼び出しは移行していない**（意図的な device 境界＝島2。
+`Down` は消さない）。理由は `LayoutUtilities.StaffOffsetInSystemDown` の remark にある。
 
-**`StaffOffsetInSystemDown` の残り 10 箇所も、実は移行対象ではなかった。** 全件を調べた結果
-（`7f2f8ff8`）、本物の移行は **`LayoutEngine` の Y-up スカイライン 2 パスだけ**で、これは
-同コミットで完了。残る 8 箇所は**意図的に device な計算の境界**（`TabStaffGeometry` の
-タブ/弧の幾何 2 件・スラー scorer・TieVariant scorer・ページング extent パス・`SkylineDrop`
-の床・ledger span と MMR の格納 device Y）で、`HANDOFF-stage4-vertical-yup.md` §0 が
-「内部アルゴリズムの自然な device frame＝共有 chokepoint 不要」と明記している通り。
-**device 島には端で反射が要り、この accessor がその反射そのもの**なので、`Down` は残すのが正解。
+**X（③）と Y（①）は独立に進められる。** 島1 は boundary-shim で byte 不変移行できると実証された。
 
-**したがって島1に残っているのは `StaffLayout.Y` の Y-up 格納 1 点のみ。**
-⚠️ ただしこれは**単独では終わらない**——同じフレームを `StaffGroupLayout.Y` と
-`GrandStaffLayout.BraceTop/BraceBottom` が共有している。**着手するなら専用セッションを 1 本
-これに当てること**（`HANDOFF-stage4-vertical-yup.md` §3.5：途中停止＝全崩れ）。
-
-#### 島1 atomic flip の作業マップ（2026-07-22 実測。着手時に実コードで再確認すること）
-
-**スコープ**
-
-| 対象 | 数 | 中身 |
-|---|---|---|
-| ディスパッチャ | 3 | `LayoutStaffGroups` の 3 系統（素 `:273` ／ hara-kiri `:343` ／ skyline `:1269`） |
-| グループ構築 | 9 | grand/bracket/single × 3 系統（`:504,:537,:568` `:606,:652,:696` `:1344,:1391,:1438`） |
-| 消費側 | 15 | `SharedRenderer.Connectors` 7（`:101,:115,:158,:162,:163,:179,:202,:203,:226,:227` のうち）／`SharedRenderer` 2（`:542,:543`）／`LayoutEngine` 3（`:348,:856,:1351`）／`MusicMarkEngraver:238`／`OutsideStaffStacker:128`／`PedalEngraver:180` |
-| テスト | 8 | `BraceCollapseTests`（`:88,:114,:144,:202,:206`）／`SystemStartDelimiterTests`（`:175,:178,:204`） |
-
-**変換レシピ**（各構築メソッドで 3 箇所）
-
-```
-currentY += staffHeight + gap;              →  currentY -= staffHeight + gap;
-double totalHeight = currentY + staffHeight - y;  →  double totalHeight = y - currentY + staffHeight;
-BraceBottom: y + totalHeight                →  BraceBottom: y - totalHeight
-```
-
-ディスパッチャ側は `currentY += layout.Height` / `+= interGroupGap` /
-`+= NoteBoundLyricExtraGap(...)` をすべて `-=` へ。
-
-★ **これは近似ではなく字面移植**: LP の `Align_interface` は
-`where += stacking_dir * dy`（`align-interface.cc:274`）で `stacking_dir = DOWN = -1`、
-つまり**LP のアキュムレータは元から負に歩いている**。`translates` もそのまま格納される。
-
-**型と派生プロパティ**
-
-- `StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop` / `BraceBottom` が Y-up（下ほど小さい・
-  先頭 staff が 0）。`Height` は**長さなので正のまま**
-- `GrandStaffLayout.TotalHeight => BraceBottom - BraceTop` → **`BraceTop - BraceBottom`**
-- 譜の下端は `Y + Height` → **`Y - Height`**（`LayoutEngine:856` `MusicMark:238` `Pedal:180`）
-- `OrderBy(s => s.Y)`（`Connectors:158,:179`）は**降順**へ
-- `LayoutUtilities`: `StaffOffsetInSystemUp` が素の `staff.Y`、`Down` が `-staff.Y`、
-  **`FindStaffYInSystem` が引き算から足し算になる**（`system.Y + staff.Y`）＝これが本来の狙い
-
-**やらないこと**
-
-`StaffOffsetInSystemDown` の残り 8 呼び出しは**移行しない**（上記のとおり意図的な device 境界。
-`Down` は消さない）。詳細は `LayoutUtilities.StaffOffsetInSystemUp` の remark に書いてある。
-
-⚠️ **byte 不変だけでは足りない。** 生産側と消費側が**打ち消し合う符号ミス**は出力を変えないので、
-オラクルをすり抜ける。**フレームを直接固定する単体テストを同時に足すこと**——2 段譜で
-`staves[0].Y == 0` かつ `staves[1].Y < 0`、および `BraceTop > BraceBottom`。
-これが無いと「緑だがフレームが逆」で着地しうる。
+★ **島1 が残した再利用可能な型**（島2 に着手するときの手順）:
+1. **格納を反転する前に、格納値を主張するテストを書く**（オラクルが打ち消しを見逃すため）
+2. **生産側を全部同時に**（半端＝全崩れ）。消費側は grep で網羅してから
+3. **device 島の縁では 1 回だけ反射する**。反射を島の内側へ押し込まない
 
 ### C. 未移植 LP 計算の取り込み
 
@@ -849,9 +833,8 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 - MusicXML インポート — ほぼ完遂、実ファイル検証が残
 - AI 協調編集 M1–5（Ctrl+I / 譜面選択 / 補完 / BYO-key）— 実機 E2E 未検証
 - 文法改善 5 件 — **完了。糖衣は入れないと決定した**（2026-07-22、下記）。0.3.0 リリースは GO 待ち
-- **`note!` 密着の診断 — 別ブランチで進行中**（`fix/note-bang-diagnostic`／ワークツリー
-  `C:\MyProj\LilySharp-wt2`）。指示書は同ワークツリーの
-  `scratch/TASK-note-bang-diagnostic.md`（`scratch/` は gitignore なので master に混ざらない）
+- **`note!` 密着の診断 — ✅ master に取り込み済み**（`a994f418` `1ff10e45` `7d5255cb`。
+  LYS4009 ＋ 点線小節線のフィクスチャ）。ユーザーがマージ済み・ブランチは残っていない
 - Dead-code 監査 — アナライザ検出分は完了、手動分が残
 - `LILYPOND-REF` 行番号の一括再採番（cosmetic・繰延）
 - `IDrawingContext.cs:37-39` の remark が装飾前後2フレームを記述していない（§4.4）
@@ -1138,7 +1121,7 @@ root に **14 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.
 |---|---|
 | `handoff-2026-07-21-x-frame-unification.md` | ✅ 内容は完了・`COORDINATE_AUDIT.md` §4.7 と本ファイルに吸収済。**光学補正を clef のせいとする誤記あり**（訂正済） |
 | `handoff-2026-07-21-boundary-column.md` | §2③ 着手時に。LP 事実の記録として有用 |
-| `HANDOFF-stage4-vertical-yup.md` | §3B 島1 着手時に。**Stage-4 の正確な現状はここ** |
+| `HANDOFF-stage4-vertical-yup.md` | **島1 は `ff64f38e` で完了したので、この用途は消えた。** 残る価値は §3B ②（島2 = device 島群）の記述だけ。⚠️ 島1 に関する記述は全部 stale。**次に島2 へ着手する人が回収して削除する候補**（削除はユーザー承認） |
 | `HANDOFF-lp-calc-incorporation.md` | §3C 着手時に |
 | `HANDOFF-dead-code-audit.md` | §3D 着手時に |
 | `HANDOFF-2026-07-20-*.md`（5本） | 過去セッションの記録。LP 事実は概ね吸収済 |

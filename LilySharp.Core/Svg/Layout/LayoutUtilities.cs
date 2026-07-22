@@ -264,24 +264,32 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// A staff's WITHIN-SYSTEM vertical offset: the downward distance
-    /// (staff-spaces) from the system top to this staff's top line, i.e.
-    /// <c>staff.Y</c>. Returns 0 when the staff is not found (single-staff
-    /// fallback), so this is exactly <see cref="FindStaffYInSystem"/> minus
-    /// <see cref="SystemLayout.Y"/>.
+    /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces
+    /// <b>UP</b> from the system top to this staff's top line, so it is NEGATIVE for
+    /// every staff below the first and 0 for the first. Now that
+    /// <see cref="StaffLayout.Y"/> stores that frame natively (island 1's atomic
+    /// flip), this reads <c>staff.Y</c> straight out. Returns 0 when the staff is not
+    /// found (single-staff fallback), so this is exactly
+    /// <see cref="FindStaffYInSystem"/> minus <see cref="SystemLayout.Y"/>.
     /// </summary>
     /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:274 — <c>where += stacking_dir * dy</c>
+    /// with <c>stacking_dir = DOWN = -1</c>; the accumulator walks negative and the
+    /// translates are stored as-is.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — a system's staves are placed
+    /// from <c>min_offsets</c>, which <c>Align_interface::get_minimum_translations</c>
+    /// produces Y-up (negative going down); :915-917 calls the sign out explicitly
+    /// ("this is relative to the system: negative numbers are down").
+    ///
     /// This is the frame-INVARIANT part of the staff's vertical position: it is
     /// the offset within the system, independent of where paging places the
     /// system. Engravers that lay an element out relative to its own staff
     /// (ties, slurs, ledger spans, multi-measure rests, outside-staff stacking,
-    /// figured bass) resolve against THIS rather than the absolute
-    /// <see cref="FindStaffYInSystem"/>, so they stay decoupled from
-    /// <see cref="SystemLayout.Y"/> across the Stage-4 W2 origin flip (which
-    /// changes <c>system.Y</c> from device Y-down to page Y-up but leaves
-    /// <c>staff.Y</c> a downward within-system offset either way).
+    /// figured bass) resolve against THIS or its <see cref="StaffOffsetInSystemDown"/>
+    /// reflection rather than the absolute <see cref="FindStaffYInSystem"/>, so they
+    /// stay decoupled from <see cref="SystemLayout.Y"/>.
     /// </remarks>
-    public static double StaffOffsetInSystemDown(SystemLayout system, int staffIndex)
+    public static double StaffOffsetInSystemUp(SystemLayout system, int staffIndex)
     {
         if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)
         {
@@ -298,47 +306,35 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces
-    /// <b>UP</b> from the system top to this staff's top line, so it is NEGATIVE for
-    /// every staff below the first and 0 for the first. Exactly
-    /// <c>-<see cref="StaffOffsetInSystemDown"/></c>.
+    /// A staff's WITHIN-SYSTEM vertical offset as a DOWNWARD (device) distance from
+    /// the system top to this staff's top line — positive for every staff below the
+    /// first. Exactly <c>-<see cref="StaffOffsetInSystemUp"/></c>.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — a system's staves are placed
-    /// from <c>min_offsets</c>, which <c>Align_interface::get_minimum_translations</c>
-    /// produces Y-up (negative going down); :915-917 calls the sign out explicitly
-    /// ("this is relative to the system: negative numbers are down").
-    ///
-    /// This is the boundary shim for the frame move recorded in COORDINATE_AUDIT 2.1.
-    /// Callers migrate one island at a time — each migration is arithmetically the
-    /// identity (every <c>- offsetDown</c> becomes <c>+ offsetUp</c>), so output must
-    /// stay byte-identical and any snapshot that moves is a sign error, not progress.
-    ///
-    /// ⚠️ <see cref="StaffOffsetInSystemDown"/> does NOT "go away when the last caller is
-    /// gone", which an earlier version of this remark predicted. Surveyed 2026-07-22: of
-    /// its callers, only the two Y-up skyline passes in <c>LayoutEngine</c> were
-    /// migrations; the rest are the boundaries of computations that are DELIBERATELY
-    /// device (the tab/arc geometry behind <c>TabStaffGeometry</c>, the slur and
-    /// tie-variant scorers, the paging extent pass, <c>SkylineDrop</c>'s floor, and the
-    /// stored device Y of ledger spans and multi-measure rests). A device island needs a
-    /// reflection at its edge, and this accessor IS that reflection — rewriting those
-    /// callers as <c>-StaffOffsetInSystemUp(...)</c> would move the negation inward and
-    /// read worse. Down survives on purpose; what remains of the frame work is the
-    /// storage flip of <c>StaffLayout.Y</c> itself (see docs/HANDOFF.md 3B).
+    /// ⚠️ This does NOT "go away when the last caller is gone", which an earlier
+    /// version of this remark predicted. Surveyed 2026-07-22: of its callers, only the
+    /// two Y-up skyline passes in <c>LayoutEngine</c> were migrations; the rest are the
+    /// boundaries of computations that are DELIBERATELY device (the tab/arc geometry
+    /// behind <c>TabStaffGeometry</c>, the slur and tie-variant scorers, the paging
+    /// extent pass, <c>SkylineDrop</c>'s floor, and the stored device Y of ledger spans
+    /// and multi-measure rests). A device island needs a reflection at its edge, and
+    /// this accessor IS that reflection. It survives on purpose — the negation now
+    /// lives here rather than in <see cref="StaffOffsetInSystemUp"/> because storage
+    /// itself is Y-up (island 1's atomic flip, docs/HANDOFF.md 3B).
     /// </remarks>
-    public static double StaffOffsetInSystemUp(SystemLayout system, int staffIndex)
-        => -StaffOffsetInSystemDown(system, staffIndex);
+    public static double StaffOffsetInSystemDown(SystemLayout system, int staffIndex)
+        => -StaffOffsetInSystemUp(system, staffIndex);
 
     /// <summary>
     /// Finds the absolute page-Y-up position of a staff's TOP line within a
     /// specific system (staff-spaces UP from the page bottom). Returns system.Y —
     /// the system top's Y-up — if no matching staff is found (single-staff
-    /// fallback). Since <see cref="SystemLayout.Y"/> now stores page Y-up
-    /// natively (Stage-4 W2-core) and the staff top sits its within-system
-    /// downward offset BELOW the system top, that offset SUBTRACTS.
+    /// fallback). Both <see cref="SystemLayout.Y"/> (Stage-4 W2-core) and
+    /// <see cref="StaffLayout.Y"/> (island 1) now store page/system Y-up natively,
+    /// so this is a plain SUM — the composition LilyPond itself performs.
     /// </summary>
     public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
-        => system.Y - StaffOffsetInSystemDown(system, staffIndex);
+        => system.Y + StaffOffsetInSystemUp(system, staffIndex);
 
     /// <summary>
     /// Absolute page-Y-up of a staff's middle line, the anchor that staff-position

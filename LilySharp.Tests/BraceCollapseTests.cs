@@ -201,8 +201,8 @@ public class BraceCollapseTests
         var firstVisible = group.Staves[1]; // middle
         Assert.Equal(firstVisible.Y, gs.BraceTop);
 
-        // Last visible staff bottom = BraceBottom
+        // Last visible staff bottom = BraceBottom (staff.Y is Y-up ⇒ bottom = Y - Height)
         var lastVisible = group.Staves[2]; // pedal
-        Assert.Equal(lastVisible.Y + lastVisible.Height, gs.BraceBottom);
+        Assert.Equal(lastVisible.Y - lastVisible.Height, gs.BraceBottom);
     }
 }

@@ -125,7 +125,7 @@ internal static class OutsideStaffStacker
             if (!systems[s].StaffGroups.IsDefaultOrEmpty)
                 foreach (var sg in systems[s].StaffGroups)
                     foreach (var st in sg.Staves)
-                        map[st.StaffIndex] = st.Y;
+                        map[st.StaffIndex] = -st.Y;   // Y-up storage → device-down offset
             staffYBySystem.Add(map);
         }
 
@@ -384,7 +384,8 @@ internal static class OutsideStaffStacker
                 : systems[i].StaffGroups
                     .SelectMany(g => g.Staves)
                     .Where(s => !s.IsHidden)
-                    .OrderBy(s => s.Y)
+                    // staff.Y is Y-up ⇒ the TOP staff is the LARGEST.
+                    .OrderByDescending(s => s.Y)
                     .FirstOrDefault();
             if (firstStaff != null)
             {
@@ -401,7 +402,7 @@ internal static class OutsideStaffStacker
                     double clefX = systems[i].Indent + 0.3;
                     trackers[i].AddRegion(
                         clefX + clefBox.Left, clefX + clefBox.Right,
-                        clefProtrusion - firstStaff.Y);
+                        clefProtrusion + firstStaff.Y);
                 }
             }
         }

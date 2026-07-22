@@ -173,9 +173,9 @@ public class SystemStartDelimiterTests
 
         // Bracket top should be at first staff Y
         Assert.Equal(layout.Staves[0].Y, delim.BraceTop);
-        // Bracket bottom should be at last staff Y + height
+        // Bracket bottom should be at the last staff's bottom (Y-up ⇒ Y - height)
         var lastStaff = layout.Staves[^1];
-        Assert.Equal(lastStaff.Y + lastStaff.Height, delim.BraceBottom);
+        Assert.Equal(lastStaff.Y - lastStaff.Height, delim.BraceBottom);
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public class SystemStartDelimiterTests
 
         // Bracket should still span visible staves
         var delim = layout.GrandStaffLayout!;
-        double bracketHeight = delim.BraceBottom - delim.BraceTop;
+        double bracketHeight = delim.TotalHeight;   // Y-up: BraceTop - BraceBottom
         Assert.True(bracketHeight > 0, "Bracket height should be positive");
         Assert.True(bracketHeight >= options.StaffHeight * 2,
             $"Bracket height ({bracketHeight:F2}) should span at least 2 visible staves");

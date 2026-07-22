@@ -177,7 +177,7 @@ internal static class PedalEngraver
             foreach (var group in systems[0].StaffGroups)
                 foreach (var st in group.Staves)
                     if (!st.IsHidden)
-                        systemBottom = Math.Max(systemBottom, st.Y + st.Height);
+                        systemBottom = Math.Max(systemBottom, st.Height - st.Y);
         }
         double bracketY = MusicMarkEngraver.BelowMarkBaseline(systemBottom);
 

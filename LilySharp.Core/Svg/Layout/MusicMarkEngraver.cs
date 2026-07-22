@@ -235,7 +235,7 @@ internal static class MusicMarkEngraver
                 foreach (var g in system.StaffGroups)
                     foreach (var st in g.Staves)
                         if (!st.IsHidden)
-                            bottom = Math.Max(bottom, st.Y + st.Height);
+                            bottom = Math.Max(bottom, st.Height - st.Y);
             }
             foreach (var ml in system.Measures)
                 measureToSystemBottom[ml.MeasureIndex] = bottom;

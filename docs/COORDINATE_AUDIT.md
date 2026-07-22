@@ -43,7 +43,7 @@ Y の反転は L4（出力）で**一度だけ**。per-grob 反転は存在し�
 **half-space** を使用。Stage-4 で render を native Y-up 化・単一フリップに集約。beam quanter は
 本セッションで half-space→ss 統一。**残る half-space/Y-down/pixel-leak/代償係数が本監査の標的**。
 
-### 2.1 ⚠️ `staffMiddleY` は**同じ名前で逆向き**（2026-07-22 監査・**未修正**）
+### 2.1 ⚠️ `staffMiddleY` は**同じ名前で逆向き**（2026-07-22 監査・**供給源は修正済／消費側は島2**）
 
 LP の内部は `Page_layout_problem` の**ページ配置だけ Y-down**で、それ以外は全部 Y-up
 （`page-layout-problem.cc:886-892` が自ら「configuration と `solution_` は紙面上端が 0 で下が正、
@@ -65,8 +65,16 @@ LP の内部は `Page_layout_problem` の**ページ配置だけ Y-down**で、�
 | `ElementCoordinator.cs`(2) | `StaffOffsetInSystem(...)` | **Y-down** |
 
 **符号を見ないと frame が判らない**＝ §5.2 の「符号一致で字面移植」が成立しない層。
-`LayoutUtilities.StaffOffsetInSystem`（8 ファイル・16 参照）が Y-down 側の供給源で、
+`LayoutUtilities.StaffOffsetInSystemDown` が Y-down 側の供給源で、
 `FindStaffYInSystem` / `ResolveStaffMiddleY` / `StaffTopYUp` / `SystemTopYUp` は既に Y-up。
+
+✅ **供給源そのものは `ff64f38e` で反転した**（島1 の atomic flip）。`StaffLayout.Y` /
+`StaffGroupLayout.Y` / `GrandStaffLayout.BraceTop`・`BraceBottom` が Y-up 格納になり、
+**`StaffOffsetInSystemUp` が primitive（`staff.Y` をそのまま返す）／`Down` がその否定**へ。
+`FindStaffYInSystem` は `system.Y + staff.Y` ＝ LP が実際にやる素の和になった。
+LILYPOND-REF: `align-interface.cc:274`（`where += stacking_dir * dy`, `stacking_dir = DOWN = -1`）。
+⚠️ **上表の Y-down 行が消えたわけではない**——それらは意図的な device 島（島2）で、
+`Down` はその**縁の反射**として残す。島2 に着手するときの入口がこの表。
 
 ⚠️ **clef をスカイラインに入れたときの `+1.110000`（HANDOFF §1）はこの層にある。**
 `VerticalSkyline` 自体は正しいことを `SkylineMergeTests.Distance_BetweenFacingSystems_IsTheirInkAndNoMore`
@@ -562,14 +570,16 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | 10 | **X 基準点未統一**（§4.7） | 🔄**進行中**。①音符/休符を左端基準へ＋`GetItemToBarlineSpace`=0.2＝**完了**（`8448749a`）／③`CalculateLeftExtent` の stale doc＝**完了**（`86dbb093`）／④`BarlineToFirstColumnSpring` の `Staff_spacing::get_spacing` 字面移植（min/stretch/0.3補正/compress/optical）＝**完了**（`9b31c2ba`+`9ffeef8f`、snapshot 43+59 再ベース・LP 実測照合済）／①変更 item の frame＋定数と②`CalculateRightExtent` の統廃合＝**未着手** |
 | doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
 | doc | IDrawingContext.cs:37-39 | 🔲**未対処**。YFlip 配線済につき装飾前=Y-up/装飾後=Y-down の2フレームを運ぶ。remark は後段のみ記述（§3.G）。当初「false-positive」としたのは**誤り**だった |
-| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | 🔄**進行中**（正確な現状は `HANDOFF-stage4-vertical-yup.md`）。**YFlip 配線＋全 grob レイアウト Y-up 化は Phase 2i〜2z で既完了**（`e09d4e72`ほか。旧「未配線」記述は stale だった）。残＝共有 device stacking/skyline substrate の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b` 済／OutsideStaffStacker・MusicMarkEngraver 等 残）＋ system.Y/staff.Y の Y-up 格納（W2）。各島は boundary-shim で独立に byte 不変移行可。出力は既に正 |
-| 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正。島1完了後に整理） |
+| 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | ✅**完了**。YFlip 配線＋全 grob レイアウト Y-up 化（Phase 2i〜2z、`e09d4e72`ほか）→ `system.Y` の page Y-up 格納（`477c5452`）→ 共有 device stacking の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b`・OutsideStaffStacker `39da7084`・Y-up skyline 2 パス `7f2f8ff8`）→ **`staff.Y` の Y-up 格納（`ff64f38e`）で締めた**。全段階が boundary-shim で byte 不変。詳細は §2.1 |
+| 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正）。島1 が完了したので次はここ |
 
 ### 4.6 結論（2026-07-21 更新）
 **方向・単位の忠実移植は大部分達成**（Stage-4 Y-up 集約＋ss 統一＋`YFlipDrawingContext` による単一フリップ）。
 起票時の実バグ8件は**すべて対処済**（§4.5）。残るのは「数値は正だが frame 忠実性が未完」の3系統:
 
-- **①譜間/system 縦積みの Y-down 設計残存** — 型はあるが方向が LP と逆（§4.2(a)・島1で進行中）
+- ~~**①譜間/system 縦積みの Y-down 設計残存**~~ — ✅**解消**（`ff64f38e`。§4.2(a)・島1）。
+  `StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop`・`BraceBottom` が Y-up 格納になり、
+  `FindStaffYInSystem` が `system.Y + staff.Y`（LP の素の和）へ
 - **②device 島群** — 各々一貫・境界で反射（§4.2(b)・繰延）
 - **③non-musical PaperColumn の欠落** — **型そのものが無い**（§3.I・新規）
 

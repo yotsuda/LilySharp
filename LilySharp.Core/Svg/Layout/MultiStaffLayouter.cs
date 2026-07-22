@@ -286,19 +286,19 @@ internal sealed class MultiStaffLayouter
             {
                 var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
             else if (group.HasDelimiter)
             {
                 var layout = LayoutBracketGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
             else
             {
                 var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
 
             if (i < score.StaffGroups.Length - 1)
@@ -318,9 +318,9 @@ internal sealed class MultiStaffLayouter
                     : spec.BasicDistance - staffHeight;
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
-                currentY += interGroupGap;
+                currentY -= interGroupGap;
                 // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -382,7 +382,7 @@ internal sealed class MultiStaffLayouter
             bool groupIsHidden = layout.Staves.All(s => s.IsHidden);
             if (!groupIsHidden)
             {
-                currentY += layout.Height;
+                currentY -= layout.Height;
                 lastVisibleGroupIndex = i;
             }
 
@@ -422,9 +422,9 @@ internal sealed class MultiStaffLayouter
                         : spec.BasicDistance - staffHeight;
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
-                    currentY += interGroupGap;
+                    currentY -= interGroupGap;
                     // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                    currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                    currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
                 }
             }
 
@@ -472,7 +472,7 @@ internal sealed class MultiStaffLayouter
             else
             {
                 if (anyVisible)
-                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+                    currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
 
                 staffLayouts.Add(new StaffLayout(
                     StaffIndex: startIndex + i,
@@ -518,14 +518,14 @@ internal sealed class MultiStaffLayouter
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
         }
 
-        double totalHeight = currentY + LastVisibleStaffHeight(staffLayouts) - y;
+        double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
         double braceX = CurrentIndent - SystemStartBracePadding;
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: braceX,
             BraceTop: y,
-            BraceBottom: y + totalHeight);
+            BraceBottom: y - totalHeight);
 
         return StaffGroupLayout.CreateGrandStaff(
             staffLayouts.ToImmutable(), y, totalHeight, grandStaffLayout);
@@ -553,7 +553,7 @@ internal sealed class MultiStaffLayouter
         double lastVisibleHeight = LastVisibleStaffHeight(staffLayouts);
         double totalHeight = group.StaffCount == 1
             ? lastVisibleHeight
-            : currentY + lastVisibleHeight - y;
+            : y - currentY + lastVisibleHeight;
 
         return StaffGroupLayout.CreateSingle(
             staffLayouts[0], y, totalHeight);
@@ -582,14 +582,14 @@ internal sealed class MultiStaffLayouter
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0, SystemStartDelimiterType.Bracket));
         }
 
-        double totalHeight = currentY + LastVisibleStaffHeight(staffLayouts) - y;
+        double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
         double bracketX = CurrentIndent - SystemStartBracketPadding;
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: bracketX,
             BraceTop: y,
-            BraceBottom: y + totalHeight,
+            BraceBottom: y - totalHeight,
             DelimiterType: SystemStartDelimiterType.Bracket);
 
         return StaffGroupLayout.CreateBracketGroup(
@@ -624,17 +624,17 @@ internal sealed class MultiStaffLayouter
                 InstrumentName: staff.InstrumentName));
 
             if (i < group.Staves.Length - 1)
-                currentY += staffHeight + Math.Max(0, staffSpacing);
+                currentY -= staffHeight + Math.Max(0, staffSpacing);
         }
 
-        double totalHeight = currentY + staffHeight - y;
+        double totalHeight = y - currentY + staffHeight;
         double braceX = CurrentIndent - SystemStartBracePadding;
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: braceX,
             BraceTop: y,
-            BraceBottom: y + totalHeight);
+            BraceBottom: y - totalHeight);
 
         return StaffGroupLayout.CreateGrandStaff(
             staffLayouts.ToImmutable(),
@@ -672,13 +672,13 @@ internal sealed class MultiStaffLayouter
                 IsOssia: staff.IsOssia));
 
             if (i < group.Staves.Length - 1)
-                currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+                currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
         }
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = group.StaffCount == 1
             ? lastStaffHeight
-            : currentY + lastStaffHeight - y;
+            : y - currentY + lastStaffHeight;
 
         return StaffGroupLayout.CreateSingle(
             staffLayouts[0],
@@ -714,18 +714,18 @@ internal sealed class MultiStaffLayouter
                 IsOssia: staff.IsOssia));
 
             if (i < group.Staves.Length - 1)
-                currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+                currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
         }
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
-        double totalHeight = currentY + lastStaffHeight - y;
+        double totalHeight = y - currentY + lastStaffHeight;
         double bracketX = CurrentIndent - SystemStartBracketPadding;
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: bracketX,
             BraceTop: y,
-            BraceBottom: y + totalHeight,
+            BraceBottom: y - totalHeight,
             DelimiterType: SystemStartDelimiterType.Bracket);
 
         return StaffGroupLayout.CreateBracketGroup(
@@ -1288,7 +1288,7 @@ internal sealed class MultiStaffLayouter
                     group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
                     staffSkylines);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
             else if (group.HasDelimiter)
             {
@@ -1296,7 +1296,7 @@ internal sealed class MultiStaffLayouter
                     group, currentY, sp.StaffStaff, globalStaffIndex,
                     staffSkylines);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
             else
             {
@@ -1304,7 +1304,7 @@ internal sealed class MultiStaffLayouter
                     group, currentY, sp.StaffStaff, globalStaffIndex,
                     staffSkylines);
                 builder.Add(layout);
-                currentY += layout.Height;
+                currentY -= layout.Height;
             }
 
             if (i < score.StaffGroups.Length - 1)
@@ -1327,9 +1327,9 @@ internal sealed class MultiStaffLayouter
                     spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
-                currentY += interGroupGap;
+                currentY -= interGroupGap;
                 // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                currentY += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -1365,18 +1365,18 @@ internal sealed class MultiStaffLayouter
                 int lowerIdx = startIndex + i + 1;
                 double gap = CalculateStaffGapWithSkylines(
                     staffSpec, staffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY += staffHeight + gap;
+                currentY -= staffHeight + gap;
             }
         }
 
-        double totalHeight = currentY + staffHeight - y;
+        double totalHeight = y - currentY + staffHeight;
         double braceX = CurrentIndent - SystemStartBracePadding;
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: braceX,
             BraceTop: y,
-            BraceBottom: y + totalHeight);
+            BraceBottom: y - totalHeight);
 
         return StaffGroupLayout.CreateGrandStaff(
             staffLayouts.ToImmutable(),
@@ -1414,14 +1414,14 @@ internal sealed class MultiStaffLayouter
                 int lowerIdx = startIndex + i + 1;
                 double gap = CalculateStaffGapWithSkylines(
                     staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY += thisStaffHeight + gap;
+                currentY -= thisStaffHeight + gap;
             }
         }
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = group.StaffCount == 1
             ? lastStaffHeight
-            : currentY + lastStaffHeight - y;
+            : y - currentY + lastStaffHeight;
 
         return StaffGroupLayout.CreateSingle(
             staffLayouts[0],
@@ -1461,19 +1461,19 @@ internal sealed class MultiStaffLayouter
                 int lowerIdx = startIndex + i + 1;
                 double gap = CalculateStaffGapWithSkylines(
                     staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY += thisStaffHeight + gap;
+                currentY -= thisStaffHeight + gap;
             }
         }
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
-        double totalHeight = currentY + lastStaffHeight - y;
+        double totalHeight = y - currentY + lastStaffHeight;
         double bracketX = CurrentIndent - SystemStartBracketPadding;
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
             BraceX: bracketX,
             BraceTop: y,
-            BraceBottom: y + totalHeight,
+            BraceBottom: y - totalHeight,
             DelimiterType: SystemStartDelimiterType.Bracket);
 
         return StaffGroupLayout.CreateBracketGroup(

@@ -98,7 +98,7 @@ internal static partial class SharedRenderer
                 }
                 if (namedCount == 1 && onlyNamed is { })
                 {
-                    double centerY = systemYUp - (gs.BraceTop + gs.BraceBottom) / 2.0;
+                    double centerY = systemYUp + (gs.BraceTop + gs.BraceBottom) / 2.0;
                     gc.DrawText(onlyNamed.InstrumentName!, nameX, centerY,
                         actualFontSize, "serif", FontStyle.Regular,
                         TextAnchor.Middle, fill: null,
@@ -112,7 +112,7 @@ internal static partial class SharedRenderer
             {
                 if (string.IsNullOrEmpty(staffLayout.InstrumentName) || staffLayout.IsHidden)
                     continue;
-                double staffY = systemYUp - staffLayout.Y;
+                double staffY = systemYUp + staffLayout.Y;
                 double centerY = staffY - staffLayout.Height / 2.0;
                 gc.DrawText(staffLayout.InstrumentName, nameX, centerY,
                     actualFontSize, "serif", FontStyle.Regular,
@@ -155,12 +155,13 @@ internal static partial class SharedRenderer
         var allStaves = system.StaffGroups
             .SelectMany(g => g.Staves)
             .Where(s => !s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
-            .OrderBy(s => s.Y)
+            // staff.Y is Y-up, so top-to-bottom order is DESCENDING.
+            .OrderByDescending(s => s.Y)
             .ToList();
         if (allStaves.Count >= 2)
         {
-            double top = systemYUp - allStaves[0].Y;
-            double bottom = systemYUp - (allStaves[^1].Y + allStaves[^1].Height);
+            double top = systemYUp + allStaves[0].Y;
+            double bottom = systemYUp + allStaves[^1].Y - allStaves[^1].Height;
             DrawSystemStartBarLine(systemStartX, top, bottom, gc);
         }
 
@@ -176,7 +177,8 @@ internal static partial class SharedRenderer
                 continue;
             var staves = group.Staves
                 .Where(s => !s.IsHidden && !s.IsOssia)
-                .OrderBy(s => s.Y)
+                // staff.Y is Y-up, so top-to-bottom order is DESCENDING.
+                .OrderByDescending(s => s.Y)
                 .ToList();
             if (staves.Count < 2)
                 continue;
@@ -199,8 +201,8 @@ internal static partial class SharedRenderer
 
                 for (int i = 0; i + 1 < staves.Count; i++)
                 {
-                    double gapTop = systemYUp - (staves[i].Y + staves[i].Height);
-                    double gapBottom = systemYUp - staves[i + 1].Y;
+                    double gapTop = systemYUp + staves[i].Y - staves[i].Height;
+                    double gapBottom = systemYUp + staves[i + 1].Y;
                     double gapHeight = gapTop - gapBottom;
                     if (gapHeight <= 0)
                         continue;
@@ -223,8 +225,8 @@ internal static partial class SharedRenderer
         foreach (var group in system.StaffGroups)
         {
             if (group.GrandStaffLayout is not { } delim) continue;
-            double top = systemYUp - delim.BraceTop;
-            double bottom = systemYUp - delim.BraceBottom;
+            double top = systemYUp + delim.BraceTop;
+            double bottom = systemYUp + delim.BraceBottom;
             double height = top - bottom;
             switch (delim.DelimiterType)
             {
