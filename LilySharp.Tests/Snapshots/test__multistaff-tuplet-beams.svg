@@ -84,10 +84,10 @@
   <line x1="26.15" y1="18.86" x2="26.15" y2="25.21" stroke="#000000" stroke-width="0.130"/>
   <rect x="28.45" y="13.12" width="0.19" height="14.09"/>
   <rect x="28.94" y="13.12" width="0.60" height="14.09"/>
-  <line x1="7.68" y1="18.47" x2="7.68" y2="17.77" stroke="#000000" stroke-width="0.130" data-pos="688"/>
-  <line x1="7.68" y1="18.47" x2="10.31" y2="18.47" stroke="#000000" stroke-width="0.130" data-pos="688"/>
-  <line x1="12.31" y1="18.47" x2="14.93" y2="18.47" stroke="#000000" stroke-width="0.130" data-pos="688"/>
-  <line x1="14.93" y1="18.47" x2="14.93" y2="17.77" stroke="#000000" stroke-width="0.130" data-pos="688"/>
+  <line x1="7.68" y1="18.47" x2="7.68" y2="17.77" stroke="#000000" stroke-width="0.160" data-pos="688"/>
+  <line x1="7.68" y1="18.47" x2="10.31" y2="18.47" stroke="#000000" stroke-width="0.160" data-pos="688"/>
+  <line x1="12.31" y1="18.47" x2="14.93" y2="18.47" stroke="#000000" stroke-width="0.160" data-pos="688"/>
+  <line x1="14.93" y1="18.47" x2="14.93" y2="17.77" stroke="#000000" stroke-width="0.160" data-pos="688"/>
   <text x="11.31" y="19.27" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="688">3</text>
   <rect x="0.30" y="8.26" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="669"/>
   <text x="1.11" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="669">S</text>

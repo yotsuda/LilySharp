@@ -1,0 +1,41 @@
+// Regression: a tuplet bracket must be RESERVED in the inter-staff gap, and a bracket
+// over STEMLESS whole notes must not reserve a stem those notes have not got.
+//
+// Before this fixture existed the corpus saw neither. Nothing seeded a TupletBracket into
+// any vertical skyline — not the staff gap (MultiStaffLayouter.BuildAllStaffSkylines) and
+// not the page (LayoutEngine.AugmentSkylinesForPaging) — so the lower staff's bracket was
+// drawn straight ACROSS the upper staff's five lines. And TupletBracketEngraver added
+// DefaultStemLength 3.5 to the extreme note without testing its duration, so a whole note
+// pushed the bracket 3.5 - 0.545 = 2.955 further out than LilyPond puts it.
+// LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — a stem exists only for duration-log
+// >= 1, i.e. a half note or shorter.
+//
+// The shape is the corpus books TU and TD (audit/lp-geometry/probes/page-vertical.ly),
+// which pin the same geometry against real LilyPond to six digits: staff.staff.tuplet-
+// bracket-up and -down. Two voices on each staff because a bracket sits on its voice's
+// stem side, so only a forced voice puts it on the side FACING the gap; and the tuplet
+// notes are far enough out that the bracket beats StaffGrouper's basic-distance of 9 — on
+// shallower notes the gap rests on that floor and this fixture would prove nothing.
+//
+// Bar 1 hangs a DOWN bracket off the upper staff into the gap; bar 2 raises an UP bracket
+// out of the lower staff into it. They are in DIFFERENT bars on purpose: both brackets
+// span their whole bar, so in one bar the two tuplet numbers would land on the same x and
+// overprint each other — a collision this fixture would then enshrine as correct.
+octave absolute
+time 8/4
+key c major
+title "Whole-note tuplet brackets reserve their room"
+part rh { clef treble }
+part lh { clef bass }
+section S {
+  rh {
+    voice { b1 b1 | b1 b1 | }
+    voice { tuplet 3/2 { d,1 d,1 d,1 } | d,1 d,1 | }
+  }
+  lh {
+    voice { d,1 d,1 | tuplet 3/2 { a1 a1 a1 } | }
+    voice { d,,1 d,,1 | d,,1 d,,1 | }
+  }
+}
+form main { S }
+score main "tuplet-bracket-whole-notes" { grandStaff { staff rh staff lh } }

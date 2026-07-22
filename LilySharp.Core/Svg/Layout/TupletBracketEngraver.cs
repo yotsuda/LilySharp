@@ -495,6 +495,40 @@ internal static class TupletBracketEngraver
         return null;
     }
 
+    /// <summary>
+    /// How far a note column reaches on the bracket's side, in the staff-top device
+    /// frame (down-positive): the stem TIP when the duration has a stem, and the
+    /// notehead's own glyph ink when it has not.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc <c>Stem::is_normal_stem</c> — a stem exists only for
+    ///   duration-log &gt;= 1, i.e. a half note or shorter. Note value 2 = half, so the
+    ///   test is <c>&gt;= 2</c>; the same guard <c>89aaa29f</c> put in
+    ///   <see cref="SkylineBuilder"/> and <c>26afa9fe</c> in <see cref="DynamicEngraver"/>,
+    ///   at the third site neither of those copies reached. A whole note was reserving
+    ///   3.5 staff spaces of stem it does not have and does not draw
+    ///   (<c>SharedRenderer.Noteheads.cs</c> branches on the same note value).
+    /// <para>
+    /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents with
+    ///   lily/open-type-font.cc:288,389-407 — a stemless head reaches its LILC bbox
+    ///   (±0.545), not a nominal half staff space. Reached through the SAME note-value
+    ///   mapping SkylineBuilder and DynamicEngraver use, so the three cannot drift apart.
+    /// </para>
+    /// <para>
+    /// A duration that cannot be read (an item type with none) keeps the stem, which is
+    /// the pre-existing behaviour: this guard removes a reservation, it must not add one.
+    /// </para>
+    /// </remarks>
+    private static double OutwardTip(int staffPosition, Semantics.Fraction? baseDuration, bool isStemUp)
+    {
+        double noteY = StaffMiddleDown - (staffPosition * 0.5);
+        int noteValue = baseDuration is { } d ? LayoutUtilities.GetNoteValueFromFraction(d) : int.MaxValue;
+        double reach = noteValue >= 2
+            ? EngravingDefaults.DefaultStemLength
+            : GlyphMetrics.GetNoteheadBBox(noteValue).Top;
+        return isStemUp ? noteY - reach : noteY + reach;
+    }
+
     private static (double startY, double endY) CalculateSlope(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth)
     {
@@ -510,13 +544,22 @@ internal static class TupletBracketEngraver
 
         var measure = measures[tuplet.MeasureIndex];
 
-        // Get staff positions of first and last notes
+        // Get staff positions of first and last notes, and — separately — the most
+        // OUTWARD point any of them reaches on the bracket's side.
         int? firstPos = null, lastPos = null;
-        int? highestPos = null, lowestPos = null;
+        // The extreme ENCOMPASS POINT in the staff-top device frame (down-positive),
+        // not the extreme staff POSITION. Those are different aggregates the moment the
+        // tuplet's members differ in duration: a stemless whole note reaches only its own
+        // notehead ink while a half note reaches a full stem, so the note that is highest
+        // on the staff need not be the one the bracket has to clear.
+        // LILYPOND-REF: lily/tuplet-bracket.cc calc_position_and_height — the points are
+        //   the note columns' own extents (Note_column::cross_staff_extent[dir]).
+        double? extremeTip = null;
 
         for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < measure.Items.Length; i++)
         {
-            int? pos = measure.Items[i] switch
+            var item = measure.Items[i];
+            int? pos = item switch
             {
                 NoteItem note => note.StaffPosition,
                 ChordItem chord when chord.Notes.Length > 0 =>
@@ -529,11 +572,20 @@ internal static class TupletBracketEngraver
 
             firstPos ??= pos;
             lastPos = pos;
-            highestPos = highestPos == null ? pos : Math.Max(highestPos.Value, pos.Value);
-            lowestPos = lowestPos == null ? pos : Math.Min(lowestPos.Value, pos.Value);
+
+            var duration = item switch
+            {
+                NoteItem note => note.BaseDuration,
+                ChordItem chord => chord.BaseDuration,
+                _ => (Semantics.Fraction?)null
+            };
+            double tip = OutwardTip(pos.Value, duration, isStemUp);
+            extremeTip = extremeTip == null
+                ? tip
+                : (isStemUp ? Math.Min(extremeTip.Value, tip) : Math.Max(extremeTip.Value, tip));
         }
 
-        if (firstPos == null || lastPos == null)
+        if (firstPos == null || lastPos == null || extremeTip == null)
             return (baseY, baseY);
 
         // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
@@ -570,7 +622,7 @@ internal static class TupletBracketEngraver
             // calc_position_and_height — points from
             // Note_column::cross_staff_extent[dir] and staff.widen(pad);
             // *offset += padding * dir.
-            double tipY = StaffMiddleDown - (highestPos!.Value * 0.5) - EngravingDefaults.DefaultStemLength;
+            double tipY = extremeTip!.Value;
             double edge = Math.Min(tipY, -StaffPaddingLP)
                 - BracketPadding - nestingOffset;
             double mid = edge;
@@ -582,7 +634,7 @@ internal static class TupletBracketEngraver
         }
         else
         {
-            double tipY = StaffMiddleDown - (lowestPos!.Value * 0.5) + EngravingDefaults.DefaultStemLength;
+            double tipY = extremeTip!.Value;
             double edge = Math.Max(tipY, 4.0 + StaffPaddingLP)
                 + BracketPadding + nestingOffset;
             double mid = edge;

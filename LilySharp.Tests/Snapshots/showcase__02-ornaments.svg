@@ -144,15 +144,15 @@
   <rect x="101.83" y="28.37" width="0.60" height="4.00" data-pos="720"/>
   <path d="M 67.56,25.07 C 68.47,25.80 71.75,25.80 72.65,25.07 C 71.75,25.92 68.47,25.92 67.56,25.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 47.20,23.72 C 49.24,24.97 58.10,23.94 60.15,22.22 C 58.12,24.06 49.25,25.09 47.20,23.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="84.20" y1="14.97" x2="84.20" y2="15.67" stroke="#000000" stroke-width="0.130" data-pos="425"/>
-  <line x1="84.20" y1="14.97" x2="86.58" y2="14.62" stroke="#000000" stroke-width="0.130" data-pos="425"/>
-  <line x1="88.58" y1="14.33" x2="90.97" y2="13.97" stroke="#000000" stroke-width="0.130" data-pos="425"/>
-  <line x1="90.97" y1="13.97" x2="90.97" y2="14.67" stroke="#000000" stroke-width="0.130" data-pos="425"/>
+  <line x1="84.20" y1="14.97" x2="84.20" y2="15.67" stroke="#000000" stroke-width="0.160" data-pos="425"/>
+  <line x1="84.20" y1="14.97" x2="86.58" y2="14.62" stroke="#000000" stroke-width="0.160" data-pos="425"/>
+  <line x1="88.58" y1="14.33" x2="90.97" y2="13.97" stroke="#000000" stroke-width="0.160" data-pos="425"/>
+  <line x1="90.97" y1="13.97" x2="90.97" y2="14.67" stroke="#000000" stroke-width="0.160" data-pos="425"/>
   <text x="87.58" y="14.17" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="425">3</text>
-  <line x1="8.16" y1="26.02" x2="8.16" y2="26.72" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <line x1="8.16" y1="26.02" x2="10.74" y2="26.38" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <line x1="12.74" y1="26.66" x2="15.32" y2="27.02" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <line x1="15.32" y1="27.02" x2="15.32" y2="27.72" stroke="#000000" stroke-width="0.130" data-pos="470"/>
+  <line x1="8.16" y1="26.02" x2="8.16" y2="26.72" stroke="#000000" stroke-width="0.160" data-pos="470"/>
+  <line x1="8.16" y1="26.02" x2="10.74" y2="26.38" stroke="#000000" stroke-width="0.160" data-pos="470"/>
+  <line x1="12.74" y1="26.66" x2="15.32" y2="27.02" stroke="#000000" stroke-width="0.160" data-pos="470"/>
+  <line x1="15.32" y1="27.02" x2="15.32" y2="27.72" stroke="#000000" stroke-width="0.160" data-pos="470"/>
   <text x="11.74" y="26.22" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="470">3</text>
   <line x1="29.87" y1="35.06" x2="32.52" y2="36.18" stroke="#000000" stroke-width="0.100" data-pos="523"/>
   <line x1="48.35" y1="32.56" x2="51.01" y2="33.68" stroke="#000000" stroke-width="0.100" data-pos="560"/>

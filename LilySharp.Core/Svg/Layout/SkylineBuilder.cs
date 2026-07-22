@@ -268,7 +268,8 @@ internal sealed class SkylineBuilder
     public (VerticalSkyline Up, VerticalSkyline Down) BuildStaffSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<DynamicItem> dynamics = default,
-        ImmutableArray<ArticulationLayout> articulationLayouts = default)
+        ImmutableArray<ArticulationLayout> articulationLayouts = default,
+        ImmutableArray<TupletBracketLayout> tupletBrackets = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -302,7 +303,84 @@ internal sealed class SkylineBuilder
         // noteheads. Their staff-local extent is spacing-independent, so seed it now.
         AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp, upSkyline, downSkyline);
 
+        // A tuplet bracket is ordinary ink INSIDE the staff's own axis group in LilyPond,
+        // so the staff below must clear it exactly as it clears the clef. Nothing seeded
+        // it here before, and the consequence was visible rather than theoretical: a
+        // bracket over notes reaching towards the neighbour was drawn straight across that
+        // neighbour's staff lines.
+        AddTupletBracketsToSkyline(tupletBrackets, upSkyline, downSkyline);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds the drawn tuplet bracket lines into the per-staff skylines, so the
+    /// inter-staff gap reserves the room they occupy.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket — it carries
+    /// <c>vertical-skylines</c> built from its own stencil and, although it lists
+    /// <c>outside-staff-interface</c>, it sets NO <c>outside-staff-priority</c>, so
+    /// <c>lily/axis-group-interface.cc</c> never pushes it out and it joins the staff's
+    /// INSIDE skyline like the clef and the staff symbol do.
+    /// <para>
+    /// The layouts arrive in this skyline's own frame: <c>TupletBracketLayout.*YUp</c> is
+    /// Y-up from the staff top line whenever the engraver is run without a staff offset,
+    /// which is how the caller runs it here. Only the bracket LINE is seeded — the edge
+    /// hooks point INWARD, towards the notes, and never reach the outward side (LilyPond's
+    /// own grob reports extent (4.365 . 5.225) about positions 5.145: 0.08 out, 0.78 in).
+    /// </para>
+    /// <para>
+    /// NOT SEEDED, and it is the outermost ink LilyPond has here: the TupletNumber.
+    /// <c>lily/tuplet-number.cc:342</c> gives it the bracket's own midpoint as its
+    /// Y-offset and <c>:227-228</c> centres its stencil, so the digit straddles the line
+    /// and reaches half its height past it — 0.600225 in the corpus books. That height is
+    /// a TEXT metric of an italic, font-size -2 digit in the ordinary text font, which
+    /// Lily# cannot measure; seeding the digit Lily# draws instead (bold, font-size 2.4,
+    /// baseline-anchored above the line) would reserve a different quantity and bury the
+    /// thing these ledger points exist to measure. Left out deliberately and recorded as
+    /// the residual under <c>staff.staff.tuplet-bracket-up</c>: with the bracket's own
+    /// 0.08 reserved against LilyPond's 0.600225 of digit, that residual is -0.520225.
+    /// </para>
+    /// </remarks>
+    /// <remarks>
+    /// Also called by <c>LayoutEngine.AugmentSkylinesForPaging</c> for the PAGE's skyline.
+    /// It works in either frame because it does nothing but translate the layouts it is
+    /// given: the caller decides whether <c>*YUp</c> was produced with a staff offset
+    /// (system frame) or without one (staff frame), and both are Y-up.
+    /// </remarks>
+    internal static void AddTupletBracketsToSkyline(
+        ImmutableArray<TupletBracketLayout> tupletBrackets,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (tupletBrackets.IsDefaultOrEmpty)
+            return;
+
+        double half = EngravingDefaults.TupletBracketThickness / 2.0;
+        foreach (var b in tupletBrackets)
+        {
+            // A fully beamed tuplet draws no bracket at all (bracket-visibility =
+            // if-no-beam), so there is nothing to reserve; its number rides the beam.
+            if (!b.ShowBracket)
+                continue;
+
+            double dir = b.IsStemUp ? 1.0 : -1.0;
+            bool leftFirst = b.StartX <= b.EndX;
+            double xLeft = leftFirst ? b.StartX : b.EndX;
+            double xRight = leftFirst ? b.EndX : b.StartX;
+            if (xRight <= xLeft)
+                continue;
+            // The OUTWARD edge of the line, computed here rather than handed to
+            // FromSlope's thickness parameter: that parameter's DOWN arm is unexercised
+            // by any production caller and its sign is not pinned by a test, while
+            // thickness 0 means "store exactly this edge" in both arms.
+            double yLeft = (leftFirst ? b.StartYUp : b.EndYUp) + dir * half;
+            double yRight = (leftFirst ? b.EndYUp : b.StartYUp) + dir * half;
+
+            var direction = b.IsStemUp ? VerticalDirection.Up : VerticalDirection.Down;
+            (b.IsStemUp ? upSkyline : downSkyline).Merge(
+                VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+        }
     }
 
     /// <summary>

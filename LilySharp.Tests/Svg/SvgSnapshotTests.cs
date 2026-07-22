@@ -348,6 +348,13 @@ public class SvgSnapshotTests
         // Multi-staff: a tuplet bracket on the SECOND (bass) staff sits over that
         // staff's notes, not the first (TupletBracketItem.StaffIndex).
         yield return new object[] { "test/tuplet-lower-staff" };
+        // Multi-staff: a tuplet bracket over STEMLESS whole notes is RESERVED in the
+        // inter-staff gap and does not reserve a stem the notes have not got. Neither
+        // was true before: nothing seeded a TupletBracket into any vertical skyline, so
+        // the lower staff's bracket was drawn across the upper staff's lines, and the
+        // engraver added a full stem length regardless of duration. Pinned against real
+        // LilyPond by staff.staff.tuplet-bracket-{up,down} in the LP-fidelity corpus.
+        yield return new object[] { "test/tuplet-bracket-whole-notes" };
         // Multi-staff: an arpeggio on a SECOND (bass) staff chord draws to the
         // left of that chord, not the first staff (ArpeggioItem.StaffIndex).
         yield return new object[] { "test/arpeggio-lower-staff" };

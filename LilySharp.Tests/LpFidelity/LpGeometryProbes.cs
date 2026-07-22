@@ -439,6 +439,194 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A TUPLET BRACKET over STEMLESS whole notes, reaching UP into the staff gap from the
+    /// lower staff — the mirror of book TU. Measures the staff-to-staff distance again,
+    /// shaped to reach the one site the corpus has never touched.
+    /// </summary>
+    /// <remarks>
+    /// TWO divergences live here and they push the gap in OPPOSITE directions, so neither
+    /// can be judged without the other.
+    /// <para>
+    /// (1) NOTHING RESERVES THE BRACKET. <c>SkylineBuilder</c> does not know the word
+    /// "tuplet": neither <c>MultiStaffLayouter.BuildAllStaffSkylines</c> (the staff gap) nor
+    /// <c>LayoutEngine.AugmentSkylinesForPaging</c> (the page) seeds a
+    /// <c>TupletBracketLayout</c>. LilyPond's TupletBracket is an ordinary inside-staff grob
+    /// of the VerticalAxisGroup — <c>scm/define-grobs.scm</c> gives it
+    /// <c>vertical-skylines</c> from its stencil and, although it lists
+    /// <c>outside-staff-interface</c>, it sets NO <c>outside-staff-priority</c>, so it is
+    /// never pushed out and joins the staff's own skyline exactly as the clef does.
+    /// Measured: Lily# draws the LOWER staff's bracket across the UPPER staff's lines.
+    /// </para>
+    /// <para>
+    /// (2) A PHANTOM STEM. <c>TupletBracketEngraver.cs:573,585</c> adds
+    /// <c>DefaultStemLength</c> 3.5 to the extreme note with no test of the duration, so a
+    /// whole note gets a stem it has not got — the third instance of the defect
+    /// <c>89aaa29f</c> removed from <c>SkylineBuilder</c> and <c>26afa9fe</c> from
+    /// <c>DynamicEngraver</c>. LILYPOND-REF: <c>lily/stem.cc Stem::is_normal_stem</c>
+    /// (duration-log &gt;= 1). Measured on 2.26.0: LilyPond puts the bracket at the
+    /// notehead's INK plus <c>TupletBracket.padding</c> 1.1 and nothing else, while Lily#
+    /// draws it 3.5 - 0.545 = 2.955 further out.
+    /// </para>
+    /// <para>
+    /// Why the pitch is not free: on <c>d'</c> in the bass staff the bracket reaches 5.225
+    /// above the refpoint and 5.225 + 2.05 + 1 = 8.275 LOSES to StaffGrouper's
+    /// basic-distance 9 — measured, that book prints 9.000000 on BOTH sides and measures
+    /// nothing. The notes are raised until the bracket beats the floor with room to spare.
+    /// Why two voices: the bracket sits on its voice's stem side, so a forced voice is what
+    /// makes "bracket facing the gap" and "deep enough to beat the floor" satisfiable at
+    /// once — the same contradiction <see cref="DY"/> dissolves the same way. Lily# takes
+    /// the side from <c>VoiceDefaults</c> only when the staff has more than one voice, so
+    /// the twin must be polyphonic too.
+    /// </para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 b'1 b'1 }
+    /// \new Staff { \clef bass \time 8/4 &lt;&lt; { \voiceOne \tuplet 3/2 { a'1 a'1 a'1 } }
+    /// \\ { \voiceTwo d1 d1 } &gt;&gt; } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string TU = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { b1 b1 | }
+          lh { voice { tuplet 3/2 { a1 a1 a1 } } voice { d,1 d,1 } | }
+        }
+
+        form main { ~Main }
+
+        score main "TU" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="TU"/> with the bracket on the other side — the mirror of book TD.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="TU"/>, for the same reason Q is not redundant with P:
+    /// TU binds the UPPER staff's bottom line against a bracket coming up, TD binds the
+    /// LOWER staff's top line against one going down. Two edges, two skylines, and a sign
+    /// error shows up in exactly one of them. <c>d,</c> (LilyPond <c>d</c>) sits 6 spaces
+    /// below the treble staff's middle line — the pitch <see cref="P"/> already uses.
+    /// <para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 &lt;&lt;
+    /// { \voiceOne b'1 b'1 } \\ { \voiceTwo \tuplet 3/2 { d1 d1 d1 } } &gt;&gt; }
+    /// \new Staff { \clef bass \time 8/4 d1 d1 } &gt;&gt;</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string TD = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b1 b1 } voice { tuplet 3/2 { d,1 d,1 d,1 } } | }
+          lh { d,1 d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "TD" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// The same tuplet bracket as <see cref="TU"/>, measured BETWEEN SYSTEMS instead of
+    /// between staves — the mirror of book TSD.
+    /// </summary>
+    /// <remarks>
+    /// TU and TD reach <c>MultiStaffLayouter.BuildAllStaffSkylines</c>. Nothing in the
+    /// corpus reaches <c>LayoutEngine.AugmentSkylinesForPaging</c>, the OTHER place Lily#
+    /// builds a vertical skyline, and it does not seed a <c>TupletBracketLayout</c> either.
+    /// (<c>EnrichExtentsWithAnnotationProtrusions</c> does see tuplets, but it feeds the
+    /// scalar fallback that the skyline path beats whenever a skyline exists, so it never
+    /// decides anything.) One staff over several systems, so the same <c>StaffGap()</c>
+    /// reads system-system-spacing here.
+    /// <para>
+    /// THE FLOOR IS MUCH HIGHER THAN BETWEEN STAVES. There the bracket has to beat
+    /// StaffGrouper's basic-distance of 9; here it has to beat system-system-spacing's
+    /// TWELVE. The notes sit 8 staff spaces outside the middle line so the bracket clears
+    /// that with room: 8 + 0.545 + 1.1 + 0.600225 + 2.05 + 1 = 13.295225. And the notes
+    /// alone must NOT bind, or the entry stops being about the bracket — 8.545 + 2.05 + 1
+    /// = 11.595 is under 12, so a Lily# that reserves the notes and not the bracket sits
+    /// exactly on the floor and the residual reads the whole bracket stack.
+    /// </para>
+    /// <para>
+    /// ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE and that is not decoration. Written as a
+    /// bar-filling tuplet the bracket starts right after the clef, and measured that way
+    /// this book read 14.785225 rather than 13.295225: at that x the other system's
+    /// deepest ink is not its staff line at 2.05 but its CLEF at 3.540. Hiding the clef at
+    /// line starts moved the number and nothing else did. That would have folded the
+    /// clef's own LILC-versus-skyline sliver — the residual
+    /// <c>system.clef-bounded-distance</c> carries — into a tuplet entry.
+    /// </para>
+    /// LilyPond twin: <c>\new Staff { \time 12/4 \repeat unfold 6 { &lt;&lt; { \voiceOne
+    /// a'1 \tuplet 3/2 { d''''1 d''''1 d''''1 } } \\ { \voiceTwo b'1 b'1 b'1 } &gt;&gt; } }</c>.
+    /// </remarks>
+    private static readonly string TSU = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { {{string.Concat(Enumerable.Repeat("a1 tuplet 3/2 { d'''1 d'''1 d'''1 } | ", 6)).Trim()}} }
+            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "TSU" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="TSU"/> with the bracket on the other side — the mirror of book TSD.
+    /// </summary>
+    /// <remarks>
+    /// The two are one gap seen from its two edges, and the notes are the same distance
+    /// out on each side, so LilyPond prints 13.295225 for both. A difference between them
+    /// is a defect in its own right — the property P/Q and TU/TD are built around.
+    /// </remarks>
+    private static readonly string TSD = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+            voice { {{string.Concat(Enumerable.Repeat("a1 tuplet 3/2 { g,,1 g,,1 g,,1 } | ", 6)).Trim()}} }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "TSD" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -574,5 +762,20 @@ internal static class LpGeometryProbes
         // The same gap again, shaped so a DYNAMIC under a stemless whole note is what binds
         // it — the first ledger point that reaches DynamicEngraver. See probe DY.
         new("staff.staff.dynamic-under-whole-note", DY, g => g.StaffGap()),
+
+        // ...and again, shaped so a TUPLET BRACKET over stemless whole notes is what binds
+        // it — the first ledger points that reach TupletBracketEngraver. Both sides, because
+        // the two carry OPPOSITE-signed divergences (nothing reserves the bracket; the
+        // bracket that is drawn sits a phantom stem too far out) and a single side cannot
+        // separate them. See probes TU and TD.
+        new("staff.staff.tuplet-bracket-up", TU, g => g.StaffGap()),
+        new("staff.staff.tuplet-bracket-down", TD, g => g.StaffGap()),
+
+        // The same bracket again, one staff over several systems, so StaffGap() reads
+        // system-system-spacing instead of Align_interface. TU/TD reach
+        // MultiStaffLayouter.BuildAllStaffSkylines; these are the only points that reach
+        // LayoutEngine.AugmentSkylinesForPaging. See probes TSU and TSD.
+        new("system.tuplet-bracket-up", TSU, g => g.StaffGap()),
+        new("system.tuplet-bracket-down", TSD, g => g.StaffGap()),
     };
 }

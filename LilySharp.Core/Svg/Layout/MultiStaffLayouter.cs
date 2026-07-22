@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Tablature;
 
@@ -1511,7 +1512,9 @@ internal sealed class MultiStaffLayouter
                 // staff-local extent so the inter-staff gap widens to clear them.
                 var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
                     staff, thisStaff, score.Articulations, measureLayouts);
-                var sky = skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics, tabArticulations);
+                var tupletBrackets = StaffTupletBracketLayouts(score, staff, thisStaff, measureLayouts);
+                var sky = skylineBuilder.BuildStaffSkylines(
+                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline
@@ -1529,6 +1532,60 @@ internal sealed class MultiStaffLayouter
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// This staff's own tuplet brackets, positioned in the staff's own frame, so the
+    /// skyline can reserve them.
+    /// </summary>
+    /// <remarks>
+    /// The engraver is the SAME one the annotation pass runs; it is not re-implemented
+    /// here. Two arguments make its answer staff-local rather than system-relative:
+    /// <c>staffYAt</c> is null, so no staff offset is baked in and <c>*YUp</c> comes back
+    /// measured from this staff's top line — exactly the skyline's own origin — and the
+    /// per-staff dictionaries scope it to this staff's voices and measures.
+    /// <para>
+    /// The beam groups matter and cannot be skipped: a fully beamed tuplet draws no
+    /// bracket (<c>bracket-visibility = if-no-beam</c>), and without them every beamed
+    /// tuplet in the corpus would reserve a bracket that is never drawn. They are detected
+    /// from the model alone (<see cref="BeamDetector"/> reads voices, time signature and
+    /// tuplet spans), so they are available this early; the beam LAYOUTS are not, which
+    /// only affects where a suppressed tuplet's NUMBER sits, and the number is not seeded.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<TupletBracketLayout> StaffTupletBracketLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (score.TupletBrackets.IsDefaultOrEmpty)
+            return ImmutableArray<TupletBracketLayout>.Empty;
+        var staffTuplets = score.TupletBrackets
+            .Where(t => t.StaffIndex == staffIndex)
+            .ToImmutableArray();
+        if (staffTuplets.IsEmpty)
+            return ImmutableArray<TupletBracketLayout>.Empty;
+
+        var detector = new BeamDetector();
+        var beamGroups = ImmutableArray.CreateBuilder<BeamGroup>();
+        for (int v = 0; v < staff.Voices.Length; v++)
+        {
+            // A tuplet bounds beaming only inside its OWN voice — the same filter
+            // BeamDetector.DetectBeamGroups(Score) applies, for the same reason.
+            var voiceTuplets = staffTuplets.Where(t => t.VoiceIndex == v).ToImmutableArray();
+            beamGroups.AddRange(detector.DetectBeamGroups(
+                staff.Voices[v], score.TimeSignature, voiceTuplets,
+                voiceIndex: v, forceStemUp: VoiceDefaults.GetDefaultStemUp(v + 1)));
+        }
+
+        return TupletBracketEngraver.Calculate(
+            staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
+            beamGroups.ToImmutable(), beamLayouts: default,
+            forceStemUp: staff.IsMultiVoice,
+            measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                { [staffIndex] = staff.PrimaryVoice.Measures },
+            voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
+            staffYAt: null,
+            staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff });
     }
 
     /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its

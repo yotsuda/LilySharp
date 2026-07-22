@@ -498,7 +498,11 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
-        const double thickness = 0.13;
+        // Was a bare 0.13 here, shadowing EngravingDefaults.TupletBracketThickness — which
+        // has carried LilyPond's own 1.6 x line-thickness = 0.16, with its LILYPOND-REF,
+        // all along and simply had no reader. Drawing and reserving must come from ONE
+        // constant or they drift, so both now read that one.
+        const double thickness = EngravingDefaults.TupletBracketThickness;
 
         foreach (var b in layout.TupletBracketLayouts)
         {

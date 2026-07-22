@@ -283,3 +283,153 @@ probeTag =
     >>
   }
 }
+
+%% TU / TD — a TUPLET BRACKET over STEMLESS whole notes, reaching into the staff gap from
+%%     below (TU) and from above (TD). Same quantity as P/Q/D: Align_interface's
+%%     staff-to-staff distance. Two suspicions are measured at once here, and the pair is
+%%     built so that they can be told apart by SIGN.
+%%
+%%     (1) Lily#'s SkylineBuilder does not know the word "tuplet". Neither
+%%         BuildAllStaffSkylines (the staff gap) nor AugmentSkylinesForPaging (the page)
+%%         seeds a TupletBracket, so the bracket is reserved NOWHERE. LilyPond's is an
+%%         ordinary inside-staff grob of the VerticalAxisGroup — scm/define-grobs.scm
+%%         TupletBracket carries `vertical-skylines` from its stencil and, although it
+%%         lists outside-staff-interface, it sets NO outside-staff-priority, so it is not
+%%         pushed out and joins the staff's own skyline like the clef does.
+%%
+%%     (2) TupletBracketEngraver.cs:573,585 adds DefaultStemLength 3.5 to the extreme note
+%%         WITHOUT testing the duration, so a whole note gets a stem it has not got. Third
+%%         instance of the defect 89aaa29f removed from SkylineBuilder and 26afa9fe from
+%%         DynamicEngraver. LILYPOND-REF: lily/stem.cc Stem::is_normal_stem (duration-log
+%%         >= 1); the bracket's own encompass points are the note columns' extents,
+%%         lily/tuplet-bracket.cc calc_position_and_height.
+%%
+%%     MEASURED on 2.26.0, unperturbed: LilyPond puts the bracket at the notehead's INK
+%%     plus TupletBracket's padding 1.1 and nothing else — a whole-note tuplet on `d'` in
+%%     the bass staff (3.5 spaces above the middle line) reports positions (5.145 . 5.145)
+%%     = 3.5 + 0.545 + 1.1, and the drawn line sits exactly 5.145 above the refpoint. The
+%%     same music in Lily# draws it 8.100 above, i.e. 3.5 - 0.545 = 2.955 too far.
+%%
+%%     ⚠️ THE OUTERMOST INK IS THE NUMBER, NOT THE BRACKET. lily/tuplet-number.cc:342
+%%     returns `to_bracket` — the midpoint of the bracket's own positions — as the
+%%     TupletNumber's Y-offset for every tuplet that is not a knee against a beam, and
+%%     :227-228 aligns its stencil to CENTER on both axes. So the digit straddles the
+%%     bracket line and reaches num_height/2 = 0.600225 past it. Both books' gaps close to
+%%     six digits on `notehead ink + 1.1 + 0.600225 + 2.05 + 1`. Do not attribute that
+%%     0.600225 to the bracket's own half-thickness: the bracket is 0.16 thick and its
+%%     0.08 never reaches the outside.  So the
+%%     two defects push the GAP in OPPOSITE directions: (1) makes Lily# too small, (2)
+%%     makes it too large once (1) is fixed. Seeding the bracket without guarding the stem
+%%     lands the entry on roughly +2.94 rather than 0, and because it would cross zero it
+%%     must not be read as "nearly there".
+%%
+%%     ⚠️ THE PITCH IS NOT FREE. On `d'` the bracket reaches 5.225 above the lower
+%%     refpoint and 5.225 + 2.05 + 1 = 8.275 LOSES to StaffGrouper's basic-distance 9 — so
+%%     that book prints 9.000000 on BOTH sides and measures nothing at all. Measured, not
+%%     assumed: it does print 9.000000. The notes are raised until the bracket beats the
+%%     floor with room to spare, which is the same requirement P and Q are built around.
+%%
+%%     ⚠️ TWO VOICES, as in book D, and for the same reason: the bracket sits on its
+%%     voice's stem side, so \voiceOne / \voiceTwo is what makes "bracket on the side
+%%     facing the other staff" and "notes deep enough to beat the floor" satisfiable at
+%%     once. Left to the default direction rule the bracket always ends up on the side
+%%     AWAY from the gap. The .lys twins are polyphonic for the same reason — Lily# takes
+%%     the bracket's side from VoiceDefaults only when the staff has more than one voice.
+%%
+%%     ⚠️ DO NOT interrogate these grobs with an after-line-breaking callback that reads a
+%%     SYSTEM-relative coordinate. Doing so forces the vertical alignment early and MOVES
+%%     the answer: measured that way this same music reported a staff gap of 18.000000
+%%     against the 9.000000 it actually has. The numbers below come from the drawn output.
+\book {
+  \probeTag "TU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4 b'1 b'1 }
+      \new Staff { \clef bass \time 8/4
+        << { \voiceOne \tuplet 3/2 { a'1 a'1 a'1 } } \\ { \voiceTwo d1 d1 } >> }
+    >>
+  }
+}
+
+%% TSD / TSU — the SAME tuplet bracket, measured BETWEEN SYSTEMS instead of between staves.
+%%     TU and TD reach MultiStaffLayouter.BuildAllStaffSkylines; nothing in the corpus
+%%     reaches LayoutEngine.AugmentSkylinesForPaging, which is the other place Lily# builds
+%%     a vertical skyline and which still does not seed a TupletBracket. (Lily#'s
+%%     EnrichExtentsWithAnnotationProtrusions DOES see tuplets, but it feeds the scalar
+%%     fallback that the skyline path beats whenever a skyline exists — so it never
+%%     decides anything.) One staff, several systems, so the same StaffGap() that reads
+%%     Align_interface in TU/TD reads system-system-spacing here.
+%%
+%%     ragged-bottom and short enough for one page, so the gap is the spring's own natural
+%%     length — the regime of books N and L, NOT the solved force of J. Mixing them is what
+%%     HANDOFF 5.3 exists to prevent.
+%%
+%%     ⚠️ THE PITCH IS NOT FREE, AND THE FLOOR IS MUCH HIGHER HERE. Between staves the
+%%     bracket only has to beat StaffGrouper's 9; between systems it has to beat
+%%     system-system-spacing's basic-distance of TWELVE. The notes are put 8 staff spaces
+%%     outside the middle line so the bracket clears that by more than a staff space:
+%%     8 + 0.545 (notehead ink) + 1.1 (padding) + 0.600225 (half the tuplet NUMBER, which
+%%     straddles the line — see TU) + 2.05 (the other system's staff line ink) + 1
+%%     (padding) = 13.295225. On book P's `d` it would come to 11.295225 and LOSE to 12,
+%%     printing a number that measures nothing.
+%%
+%%     ⚠️ AND THE NOTES ALONE MUST NOT BIND, or the entry stops being about the bracket:
+%%     8.545 + 2.05 + 1 = 11.595 is under 12, so a Lily# that reserves the notes and not
+%%     the bracket sits exactly on the floor. That is what makes the seeded residual read
+%%     the whole bracket stack rather than part of it.
+%%
+%%     Two voices for the reason book D needs them: the bracket sits on its voice's stem
+%%     side, and under the default rule that is always the side AWAY from the gap.
+%%
+%%     ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE, and that is not decoration. Written as a
+%%     bar-filling tuplet the bracket starts right after the clef, and measured that way
+%%     the UP book read 14.785225 instead of 13.295225: at that x the OTHER system's
+%%     deepest ink is not its staff line at 2.05 but its CLEF at 3.540, and the entry was
+%%     silently measuring clef-against-bracket. Confirmed by hiding the clef at line
+%%     starts, which moved the number and nothing else did (ledgers and the time signature
+%%     were ruled out the same way). That would have folded the clef's own LILC-vs-skyline
+%%     sliver — the residual system.clef-bounded-distance carries — into a tuplet entry.
+%%     The leading whole note pushes the bracket clear of both system edges, so the ink it
+%%     meets is the plain staff line. HANDOFF 5.3: do not mix regimes.
+%%
+%%     TSD and TSU must print the SAME number — they are the two edges of one gap, and the
+%%     notes are the same distance out on each side. A difference between them is a defect
+%%     on its own, exactly as for P/Q and TU/TD.
+\book {
+  \probeTag "TSD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff { \time 12/4
+      \repeat unfold 6 {
+        << { \voiceOne b'1 b'1 b'1 } \\ { \voiceTwo a'1 \tuplet 3/2 { g,1 g,1 g,1 } } >> } }
+  }
+}
+
+\book {
+  \probeTag "TSU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff { \time 12/4
+      \repeat unfold 6 {
+        << { \voiceOne a'1 \tuplet 3/2 { d''''1 d''''1 d''''1 } } \\ { \voiceTwo b'1 b'1 b'1 } >> } }
+  }
+}
+
+%% TD — the mirror. TU binds the UPPER staff's bottom line against a bracket coming up;
+%%     TD binds the LOWER staff's top line against one going down. P/Q are the same pair
+%%     for the staff symbol, and the reason is unchanged: an up bracket and a down bracket
+%%     are two different edges reached through two different skylines, and a sign error
+%%     shows up in exactly one of them. `d` in the treble staff is 6 spaces below the
+%%     middle line — the pitch book P already uses for the same purpose.
+\book {
+  \probeTag "TD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4
+        << { \voiceOne b'1 b'1 } \\ { \voiceTwo \tuplet 3/2 { d1 d1 d1 } } >> }
+      \new Staff { \clef bass \time 8/4 d1 d1 }
+    >>
+  }
+}

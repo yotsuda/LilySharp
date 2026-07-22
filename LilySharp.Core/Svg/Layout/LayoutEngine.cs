@@ -260,6 +260,32 @@ internal sealed class LayoutEngine
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
                 prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams));
             }
+            // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
+            // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
+            // every tuplet, so a voice-two tuplet is positioned from voice one's notes and a
+            // lower staff's tuplet from the top staff's — silently, because the FINAL pass
+            // does have the lookups and draws the bracket correctly. Only the spacing pass
+            // was wrong, which is exactly the kind of divergence a snapshot cannot see.
+            // Caught by system.tuplet-bracket-down staying put while its mirror -up moved.
+            var prelimVoicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
+            var prelimMeasuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+            var prelimStaffByIndex = new Dictionary<int, Staff>();
+            foreach (var (_, st, idx) in score.EnumerateStaves())
+            {
+                prelimVoicesByStaff[idx] = st.Voices;
+                prelimMeasuresByStaff[idx] = st.PrimaryVoice.Measures;
+                prelimStaffByIndex[idx] = st;
+            }
+            // Device-DOWN staff offsets, built the same way the final pass builds its own.
+            // Read from the PRELIMINARY systems on purpose: a staff's offset INSIDE a system
+            // is fixed by the staff layout and paging only moves the system's own Y, so this
+            // is the same table — and it has to exist before paging, which is what needs it.
+            var prelimStaffYByIndex = new Dictionary<int, double>();
+            if (prelimSystems.Length > 0 && !prelimSystems[0].StaffGroups.IsDefaultOrEmpty)
+                foreach (var sg in prelimSystems[0].StaffGroups)
+                    foreach (var st in sg.Staves)
+                        prelimStaffYByIndex[st.StaffIndex] = -st.Y;
+
             var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
             {
                 Score = prelimScore,
@@ -283,6 +309,10 @@ internal sealed class LayoutEngine
                 SystemSkylines = perSystemSkylines,
                 TupletForceStemUp = prelimStaff.IsMultiVoice,
                 StaffVoices = prelimStaff.Voices,
+                VoicesByStaff = prelimVoicesByStaff,
+                MeasuresByStaff = prelimMeasuresByStaff,
+                StaffYByIndex = prelimStaffYByIndex,
+                StaffByIndex = prelimStaffByIndex,
             });
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -290,7 +320,7 @@ internal sealed class LayoutEngine
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.BarNumbers);
+                prelimAnn.BarNumbers, prelimAnn.TupletBrackets);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -1104,7 +1134,8 @@ internal sealed class LayoutEngine
         ImmutableArray<MusicMarkLayout> musicMarks = default,
         ImmutableArray<CustomTextLayout> customTexts = default,
         ImmutableArray<ChordNameLayout> chordNames = default,
-        ImmutableArray<BarNumberLayout> barNumbers = default)
+        ImmutableArray<BarNumberLayout> barNumbers = default,
+        ImmutableArray<TupletBracketLayout> tupletBrackets = default)
     {
         if (skylines == null)
             return null;
@@ -1114,6 +1145,35 @@ internal sealed class LayoutEngine
         for (int s = 0; s < systems.Length && s < result.Count; s++)
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
+
+        // A tuplet bracket is ordinary ink inside its staff's axis group in LilyPond, so
+        // the next system has to clear it exactly as it clears the notes. This skyline is
+        // the one the PAGE spaces systems by; MultiStaffLayouter seeds the other one, the
+        // per-staff skyline Align_interface reads, and seeding only that left the bracket
+        // reserved between staves and not between systems.
+        // (EnrichExtentsWithAnnotationProtrusions does add tuplets to the scalar extents,
+        // but those are only the fallback for an EMPTY skyline — see CreatePages — so they
+        // never decide anything here.)
+        // LILYPOND-REF: scm/define-grobs.scm TupletBracket carries vertical-skylines from
+        //   its stencil and sets no outside-staff-priority, so axis-group-interface keeps
+        //   it inside; lily/page-layout-problem.cc:1070-1127 build_system_skyline spaces
+        //   pages by the COMPLETE system stencil.
+        if (!tupletBrackets.IsDefaultOrEmpty)
+        {
+            foreach (var group in tupletBrackets.GroupBy(t => t.MeasureIndex))
+            {
+                if (!measureToSystem.TryGetValue(group.Key, out int s))
+                    continue;
+                // *YUp here IS the system frame (the annotation pass baked the staff
+                // offset in through staffYAt), which is this skyline's own frame.
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(result[s].up);
+                var down = new VerticalSkyline(VerticalDirection.Down);
+                down.Merge(result[s].down);
+                SkylineBuilder.AddTupletBracketsToSkyline(group.ToImmutableArray(), up, down);
+                result[s] = (up, down);
+            }
+        }
 
         foreach (var fb in figuredBasses)
         {

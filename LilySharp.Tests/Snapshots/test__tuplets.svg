@@ -61,25 +61,25 @@
   <rect x="51.96" y="16.32" width="0.19" height="4.00" data-pos="361"/>
   <rect x="67.19" y="16.32" width="0.19" height="4.00" data-pos="393"/>
   <rect x="67.68" y="16.32" width="0.60" height="4.00" data-pos="393"/>
-  <line x1="8.86" y1="14.97" x2="8.86" y2="15.67" stroke="#000000" stroke-width="0.130" data-pos="112"/>
-  <line x1="8.86" y1="14.97" x2="10.43" y2="14.67" stroke="#000000" stroke-width="0.130" data-pos="112"/>
-  <line x1="12.43" y1="14.28" x2="14.00" y2="13.97" stroke="#000000" stroke-width="0.130" data-pos="112"/>
-  <line x1="14.00" y1="13.97" x2="14.00" y2="14.67" stroke="#000000" stroke-width="0.130" data-pos="112"/>
+  <line x1="8.86" y1="14.97" x2="8.86" y2="15.67" stroke="#000000" stroke-width="0.160" data-pos="112"/>
+  <line x1="8.86" y1="14.97" x2="10.43" y2="14.67" stroke="#000000" stroke-width="0.160" data-pos="112"/>
+  <line x1="12.43" y1="14.28" x2="14.00" y2="13.97" stroke="#000000" stroke-width="0.160" data-pos="112"/>
+  <line x1="14.00" y1="13.97" x2="14.00" y2="14.67" stroke="#000000" stroke-width="0.160" data-pos="112"/>
   <text x="11.43" y="14.17" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="112">3</text>
-  <line x1="23.03" y1="23.42" x2="23.03" y2="22.72" stroke="#000000" stroke-width="0.130" data-pos="217"/>
-  <line x1="23.03" y1="23.42" x2="24.60" y2="23.12" stroke="#000000" stroke-width="0.130" data-pos="217"/>
-  <line x1="26.60" y1="22.73" x2="28.17" y2="22.42" stroke="#000000" stroke-width="0.130" data-pos="217"/>
-  <line x1="28.17" y1="22.42" x2="28.17" y2="21.72" stroke="#000000" stroke-width="0.130" data-pos="217"/>
+  <line x1="23.03" y1="23.42" x2="23.03" y2="22.72" stroke="#000000" stroke-width="0.160" data-pos="217"/>
+  <line x1="23.03" y1="23.42" x2="24.60" y2="23.12" stroke="#000000" stroke-width="0.160" data-pos="217"/>
+  <line x1="26.60" y1="22.73" x2="28.17" y2="22.42" stroke="#000000" stroke-width="0.160" data-pos="217"/>
+  <line x1="28.17" y1="22.42" x2="28.17" y2="21.72" stroke="#000000" stroke-width="0.160" data-pos="217"/>
   <text x="25.60" y="23.72" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="217">3</text>
-  <line x1="39.01" y1="14.97" x2="39.01" y2="15.67" stroke="#000000" stroke-width="0.130" data-pos="302"/>
-  <line x1="39.01" y1="14.97" x2="40.58" y2="14.67" stroke="#000000" stroke-width="0.130" data-pos="302"/>
-  <line x1="42.58" y1="14.28" x2="44.15" y2="13.97" stroke="#000000" stroke-width="0.130" data-pos="302"/>
-  <line x1="44.15" y1="13.97" x2="44.15" y2="14.67" stroke="#000000" stroke-width="0.130" data-pos="302"/>
+  <line x1="39.01" y1="14.97" x2="39.01" y2="15.67" stroke="#000000" stroke-width="0.160" data-pos="302"/>
+  <line x1="39.01" y1="14.97" x2="40.58" y2="14.67" stroke="#000000" stroke-width="0.160" data-pos="302"/>
+  <line x1="42.58" y1="14.28" x2="44.15" y2="13.97" stroke="#000000" stroke-width="0.160" data-pos="302"/>
+  <line x1="44.15" y1="13.97" x2="44.15" y2="14.67" stroke="#000000" stroke-width="0.160" data-pos="302"/>
   <text x="41.58" y="14.17" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="302">3</text>
-  <line x1="54.22" y1="13.22" x2="54.22" y2="13.92" stroke="#000000" stroke-width="0.130" data-pos="363"/>
-  <line x1="54.22" y1="13.22" x2="55.79" y2="13.53" stroke="#000000" stroke-width="0.130" data-pos="363"/>
-  <line x1="57.79" y1="13.92" x2="59.36" y2="14.22" stroke="#000000" stroke-width="0.130" data-pos="363"/>
-  <line x1="59.36" y1="14.22" x2="59.36" y2="14.92" stroke="#000000" stroke-width="0.130" data-pos="363"/>
+  <line x1="54.22" y1="13.22" x2="54.22" y2="13.92" stroke="#000000" stroke-width="0.160" data-pos="363"/>
+  <line x1="54.22" y1="13.22" x2="55.79" y2="13.53" stroke="#000000" stroke-width="0.160" data-pos="363"/>
+  <line x1="57.79" y1="13.92" x2="59.36" y2="14.22" stroke="#000000" stroke-width="0.160" data-pos="363"/>
+  <line x1="59.36" y1="14.22" x2="59.36" y2="14.92" stroke="#000000" stroke-width="0.160" data-pos="363"/>
   <text x="56.79" y="13.42" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="363">3</text>
   <rect x="0.30" y="11.46" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="398"/>
   <text x="3.01" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="398">Main</text>
