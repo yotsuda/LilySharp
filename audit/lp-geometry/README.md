@@ -19,7 +19,8 @@
 | 場所 | 役割 |
 |---|---|
 | `probes/*.ly` | **LP 側のプローブ**。committed・再実行可能。値の出所がここにある |
-| `Measure-LilyPondGeometry.ps1` | プローブを LilyPond に通して台帳用の数値を印字する |
+| `Measure-LilyPondGeometry.ps1` | **X**（system 内の anchor 間距離）のプローブを通す |
+| `Measure-LilyPondPageGeometry.ps1` | **Y**（ページ縦）のプローブを通す。`probes/page-vertical.ly` 用 |
 | `lp-geometry.json` | **台帳**。LP 実測値 ＋ 現在の residual ＋ その原因 |
 | `LilySharp.Tests/LpFidelity/LpGeometryProbes.cs` | **Lily# 側のプローブ**（同じ音楽を .lys で書いたもの）と測る量の定義 |
 | `LilySharp.Tests/LpFidelity/RenderedGeometry.cs` | 描画結果を LP と同じ語彙（anchor 間距離）で問い合わせる |
@@ -91,22 +92,82 @@ justify された行では binding する制約が変わる**（ragged では sp
 
 このコーパスが潰してきたもの:
 
-- **行中の clef/key 変更**（4点・6.843242 ss）→ `1970b830`
-- **グリフメトリクス**（7点）→ `9de790a2`。LP と同じく `LILC` テーブルから読むようにした
-- **行頭の key/time 変更**（4点・4.439007 ss）→ `0aae1016`。
+- **行中の clef/key 変更**（4点・6.843242 ss）→ `4eb8cf16`
+- **グリフメトリクス**（7点）→ `ec7a2254`。LP と同じく `LILC` テーブルから読むようにした
+- **行頭の key/time 変更**（4点・4.439007 ss）→ `d056b5e5`。
   **着手前に置いた4点の予測が桁まで的中**した（`COORDINATE_AUDIT.md` §4.7.3）
-- **臨時記号 padding**（3点・0.334252 ss）→ `4adfd704`。LP の `right-padding` 0.15 が抜けていた
-- **`fills_measure` が rest を弾いていた**（1点・1.000000 ss）→ `9f69f806`
+- **臨時記号 padding**（3点・0.334252 ss）→ `94e8996c`。LP の `right-padding` 0.15 が抜けていた
+- **`fills_measure` が rest を弾いていた**（1点・1.000000 ss）→ `a64ffc16`
 
 ### ★ 片側しか測っていない点は、欠陥に構造的に盲目になる
 
-`9f69f806` の教訓。スコア F（`r1 | r1`）は**閉じ側** `barline.prev.whole-rest` だけを持っていて
+`a64ffc16` の教訓。スコア F（`r1 | r1`）は**閉じ側** `barline.prev.whole-rest` だけを持っていて
 **厳密一致で緑**だった。しかし `full-measure-extra-space` が乗るのは**開き側**なので、
 Lily# が全休符に 1.0 を払っていないことをコーパスは**見ることができなかった**。
 `barline.next.whole-rest` を足した瞬間に −1.000000 が出た。
 **点を足すときは両側を足す。**「その量は緑だから大丈夫」は片側だけ見ている証拠かもしれない。
 
+## 縦（Y）の測定 — `probes/page-vertical.ly`
+
+X の台帳とは別枠で、**ページ縦**を測る手段がある（点はまだ台帳に入れていない）。
+
+```powershell
+pwsh audit\lp-geometry\Measure-LilyPondPageGeometry.ps1
+```
+
+LP 2.24.4・A4・markup 無しでの実測（すべて staff-space）:
+
+| 量 | LP 2.24.4 |
+|---|---|
+| `paper-height` / `paper-width` | 169.009370 / 119.501575 |
+| `top-margin` / `bottom-margin` | **2.845276**（5 mm）/ **3.414331**（6 mm） |
+| `line-width`（左右余白 10 mm 各） | 108.120472 |
+| 縦の使用可能帯 | 162.749764 |
+| system 間の**自然**距離 | **12.000000**（= `system-system-spacing` basic-distance） |
+| 満杯ページでの圧縮後距離（本プローブ） | 11.801982（13 gap すべて同値） |
+| 上余白 → 先頭 staff refpoint | 4.779000 |
+
+### ★ 縦は **staff refpoint 間**で測る。system 原点間で測ると嘘の値が出る
+
+`staff-refpoint-extent` は system 原点からの staff の位置で、**system ごとに違う**
+（小節番号を頭上に持つ system は原点がその分だけ上に伸びる）。そのため原点間距離は
+間隔が一様でも system ごとに変わる。同じダンプを
+
+- **原点間**で測ると: 最初のペア 11.528583、次 12.000000 —「圧縮されている」ように見える
+- **staff refpoint 間**で測ると: どちらも **12.000000** ちょうど
+
+`HANDOFF.md` に「LP は 11.528 に圧縮する」として残っていた数値はこの取り違えで、
+圧縮ではなかった。§5.3 の「同じ box の左右が同じ基準点か」の縦版。
+
+### ★ 最終ページは自然長で放置されない
+
+`ragged-last-bottom = ##t` は「伸ばさない」ではなく、**直前ページと同じ force で解く**:
+
+```
+lily/page-breaking.cc:570-573
+  else if (rag && !ragged ())
+    // If we're ragged-last but not ragged, make the last page
+    // have the same force as the previous page.
+    config = layout.fixed_force_solution (last_page_force);
+```
+
+`last_page_force` の初期値は 0（`:643`）なので**単ページの書籍だけ**自然長になる。
+プローブの book N/J/L がこの 3 者を分離している（J は page1・page2 とも 11.801982、
+L は単ページで 12.000000）。
+
+⚠️ **`C:\MyProj\lilypond-src` は 2.25.35（devel）で、実測に使う binary は 2.24.4。**
+`ly/paper-defaults-init.ly` の既定値が両者で違う（下表）。**紙面・縦間隔の定数を
+src から引き写すと 2.24.4 と合わない。**
+
+| | src 2.25.35 | 2.24.4（実測対象） |
+|---|---|---|
+| `top-margin-default` | 10 mm | **5 mm** |
+| `bottom-margin-default` | 10 mm | **6 mm** |
+| `left/right-margin-default` | 15 mm | **10 mm** |
+| `top-system-spacing` basic-distance | 6 | **1** |
+| `top-markup-spacing` basic-distance | 4 | **0** |
+
 ⚠️ **点を足すと total は増えうるので、比較は同じ点集合の中でのみ意味を持つ。**
-15点 4.592405 → 19点 11.435647（`84dc3a79` が**それまで測っていなかった**行中の発散を可視化）
-→ 21点 4.747978（`1970b830`＋MKA 2点）→ 4.738987（`9de790a2`）→ 0.338987（`0aae1016`）
-→ 0.022361（`4adfd704`）→ 22点 **0.022361**（`9f69f806`、足した点が exact で着地）。
+15点 4.592405 → 19点 11.435647（`5c4126d6` が**それまで測っていなかった**行中の発散を可視化）
+→ 21点 4.747978（`4eb8cf16`＋MKA 2点）→ 4.738987（`ec7a2254`）→ 0.338987（`d056b5e5`）
+→ 0.022361（`94e8996c`）→ 22点 **0.022361**（`a64ffc16`、足した点が exact で着地）。

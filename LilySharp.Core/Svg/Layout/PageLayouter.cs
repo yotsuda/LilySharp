@@ -32,7 +32,8 @@ namespace LilySharp.Core.Svg.Layout;
 ///   in LayoutEngine.AugmentExtentsWithLooseLines() before page breaking
 /// build_system_skyline (page-layout-problem.cc:1070-1127):
 ///   per-system UP/DOWN skylines are passed to PositionSystemsOnPage for inter-system collision avoidance
-/// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:808-823)
+/// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:1057-1061,
+///   applied with the previous page's force as page-breaking.cc:570-573 does)
 /// PARTIAL — footnote heights via SystemDetails.FootnoteHeight (page-layout-problem.cc:186-310)
 /// IMPLEMENTED — in-note-system-padding (page-layout-problem.cc:483)
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (MultiStaffLayouter + LayoutEngine)
@@ -111,9 +112,12 @@ internal sealed class PageLayouter
                     currentIsNewScore: false);
             }
 
-            // Skyline-based minimum distance
-            double skylineDistance = staffHeight + bottomExtent;
-            double minDistance = Math.Max(skylineDistance, spec.MinimumDistance);
+            // The staff refpoint is the staff's CENTRE, and this system's origin is its
+            // top staff's TOP LINE, so the first staff's refpoint sits half a single
+            // staff below the origin and the last staff's half a single staff above the
+            // body's bottom. LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
+            // refpoint_extent_ (LilyPond reads the real grobs; see SystemDetails).
+            double halfStaff = _options.StaffHeight / 2.0;
 
             systemDetails.Add(new SystemDetails
             {
@@ -122,10 +126,21 @@ internal sealed class PageLayouter
                 BottomExtent = bottomExtent,
                 StaffHeight = staffHeight,
                 Padding = spec.Padding,
-                SpringLength = Math.Max(0, spec.BasicDistance - minDistance),
+                // LILYPOND-REF: constrained-breaking.hh:66,69 min_distance_ / space_ —
+                // both are refpoint-to-refpoint and both go in RAW. Subtracting the
+                // minimum from the ideal here is what Line_details::spring_length does
+                // later, against the rod that tallness_ actually spends; doing it twice
+                // is what made the breaker under-fill pages.
+                MinDistance = spec.MinimumDistance,
+                SpringLength = spec.BasicDistance,
+                RefpointExtentUp = -halfStaff,
+                RefpointExtentDown = -(staffHeight - halfStaff),
                 InverseHooke = Math.Max(0.1, spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1),
             });
         }
+
+        // Tallness is filled in by the breaker itself, as LilyPond does it
+        // (page-breaking.cc:1037, at the end of cache_line_details).
 
         // Run page breaker
         var breaker = new PageBreaker(
@@ -141,43 +156,64 @@ internal sealed class PageLayouter
         var pages = new List<PageLayout>();
         int systemStart = 0;
 
+        // LILYPOND-REF: lily/page-breaking.cc:643 — Page_breaking::make_pages opens with
+        // `Real last_page_force = 0` and threads it through every draw_page call, so the
+        // force a page solved to is what the NEXT page may be asked to reuse.
+        double lastPageForce = 0;
+
         for (int pageIdx = 0; pageIdx < breakPoints.Count; pageIdx++)
         {
             int systemEnd = breakPoints[pageIdx];
             bool isFirstPage = pageIdx == 0;
             bool isLastPage = pageIdx == breakPoints.Count - 1;
 
-            // Reconstruct PageSpacing for this page to get the force
-            double topMargin = isFirstPage
-                ? _options.MarginTop + headerHeight
-                : _options.MarginTop;
-            var pageSpacing = new PageSpacing(_options.PageHeight, topMargin, _options.MarginBottom);
-            for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
-                pageSpacing.AppendSystem(systemDetails[sysIdx]);
+            // The page's force used to be re-derived here from a PageSpacing rebuilt out of
+            // the SCALAR system heights, and then thrown away by PASS 2 below, which solves
+            // its own against the X-aware skyline gaps placement actually uses. Two answers
+            // to one question, of which only the second reached the page.
 
             // Determine if this page uses ragged spacing
             // LILYPOND-REF: ly/paper-defaults-init.ly — ragged-bottom / ragged-last-bottom
             // 4 combinations: both false (justify all), last-only, all ragged, both true (≡ ragged-bottom)
-            bool isRagged = _options.PageBreaking.RaggedBottom
+            bool raggedAll = _options.PageBreaking.RaggedBottom;
+            bool isRagged = raggedAll
                 || (isLastPage && _options.PageBreaking.RaggedLastBottom);
 
-            // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061 fixed_force_solution
-            // For ragged pages: force=0 (systems at natural spring positions, space at bottom).
-            // For justified pages: use the calculated force to stretch systems to fill the page.
-            double force = pageSpacing.Force;
-            if (double.IsNegativeInfinity(force) || double.IsNaN(force))
-                force = 0;
-            else if (isRagged)
-                force = 0; // fixed_force_solution: no stretching, remaining space at bottom
-            else
-                force = Math.Max(0, force); // Justified: stretch but don't compress
+            // LILYPOND-REF: lily/page-breaking.cc:565-575 draw_page
+            //   bool rag = ragged () || (last && ragged_last ());
+            //   ...
+            //   else if (rag && !ragged ())
+            //     // If we're ragged-last but not ragged, make the last page
+            //     // have the same force as the previous page.
+            //     config = layout.fixed_force_solution (last_page_force);
+            //   else
+            //     config = layout.solution (rag);
+            //
+            // fixed_force_solution takes a force ARGUMENT (page-layout-problem.cc:1057-1061
+            // hands it straight to solve_rod_spring_problem); it is not a synonym for zero.
+            // Lily# used to pin every ragged page to 0, which left the last page of a book
+            // at its natural spacing while every page before it was justified — the one page
+            // that looked different. Measured on 18 plain systems at A4: page 1 came out at
+            // 12.450000 between systems and the last page at 12.000000.
+            //
+            // Only a book that is ONE page long still comes out natural, because
+            // lastPageForce is then still its initial 0. LilyPond 2.24.4 measures 12.000000
+            // there and 11.801982 on both pages of a two-page book
+            // (audit/lp-geometry/probes/page-vertical.ly, books L and J).
+            bool useFixedForce = isRagged && !raggedAll;
 
             // Position systems using context-aware spacing specs
             // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
             // When skylines are available, use Distance() for X-dependent collision detection
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
-                isFirstPage, headerHeight, isRagged, vs, systemSkylines, systemBands);
+                isFirstPage, headerHeight, isRagged, useFixedForce, lastPageForce,
+                vs, systemSkylines, systemBands, out double pageForce);
+
+            // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
+            // after every page, so "the previous page" always means the immediately
+            // preceding one rather than the first.
+            lastPageForce = pageForce;
 
             pages.Add(new PageLayout(
                 PageIndex: pageIdx,
@@ -211,9 +247,11 @@ internal sealed class PageLayouter
         List<SystemDetails> systemDetails,
         int startIdx, int endIdx,
         bool isFirstPage, double headerHeight,
-        bool isRagged, VerticalSpacingParameters vs,
-        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null)
+        bool isRagged, bool useFixedForce, double fixedForce,
+        VerticalSpacingParameters vs,
+        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+        ImmutableArray<(double bandUp, double bandDown)>? systemBands,
+        out double pageForce)
     {
         var pageSystems = new List<SystemLayout>();
 
@@ -324,12 +362,18 @@ internal sealed class PageLayouter
         // skyline distances, so that force under-fills real pages. Re-solve
         // here against the actual gaps: stretch the springs (weighted by
         // their stretchability) until the last system's ink reaches the
-        // bottom margin. Ragged pages (and the LP-default ragged LAST page)
-        // keep the natural gaps.
+        // bottom margin.
+        //
+        // A spring's length is its ideal plus force times its inverse Hooke
+        // constant, so the force this page runs at is just the leftover space
+        // divided by the total inverse Hooke — and stating it that way is what
+        // lets the LAST page be given the force of the page before it rather
+        // than a natural spacing of its own (see draw_page at the caller).
         // LILYPOND-REF: lily/page-layout-problem.cc solve() — springs are
         // solved against the real rods; ly/paper-defaults-init.ly
         // ragged-bottom = ##f, ragged-last-bottom = ##t.
-        if (!isRagged && count > 1)
+        pageForce = 0;
+        if (count > 1)
         {
             double naturalSum = 0, invSum = 0;
             for (int i = 0; i < gapNatural.Length; i++)
@@ -337,13 +381,31 @@ internal sealed class PageLayouter
                 naturalSum += gapNatural[i];
                 invSum += gapInvHooke[i];
             }
-            var last = systemDetails[endIdx - 1];
-            double lastBottom = firstY + naturalSum + last.StaffHeight + last.BottomExtent;
-            double leftover = _options.PageHeight - _options.MarginBottom - lastBottom;
-            if (leftover > 0 && invSum > 0)
+
+            if (useFixedForce)
+            {
+                // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061
+                // fixed_force_solution — solve at the force handed in, not at zero.
+                pageForce = fixedForce;
+            }
+            else if (!isRagged && invSum > 0)
+            {
+                var last = systemDetails[endIdx - 1];
+                double lastBottom = firstY + naturalSum + last.StaffHeight + last.BottomExtent;
+                double leftover = _options.PageHeight - _options.MarginBottom - lastBottom;
+                // Stretch only. A negative force would have to be solved against the rods
+                // to keep systems from colliding, and this pass has none — the natural gaps
+                // it starts from are already the rod-floored ones. Replacing the whole pass
+                // with a two-sided spring solve was tried and moved neither a probe nor a
+                // snapshot byte, because the breaker never hands this code a page it has to
+                // compress; leaving the branch out keeps it from shipping unreached.
+                pageForce = leftover > 0 ? leftover / invSum : 0;
+            }
+
+            if (pageForce != 0)
             {
                 for (int i = 0; i < gapNatural.Length; i++)
-                    gapNatural[i] += leftover * gapInvHooke[i] / invSum;
+                    gapNatural[i] += pageForce * gapInvHooke[i];
             }
         }
 

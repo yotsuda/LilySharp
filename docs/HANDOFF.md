@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `HEAD`（§1 で裏取りすること）
+最終更新: 2026-07-22 / master `4ac3df8e`（§0 で裏取りすること）
 
 ---
 
@@ -27,10 +27,33 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**HEAD `9f69f806`、origin より 47 ahead で未 push**（push はユーザー判断。コミットは可）。
-**テスト 0 failed / 3127 passed / 3 skipped。** Core・Cli とも build 0 warn / 0 err。
-**LP 忠実度 18/22 exact, total |residual| = 0.022361 ss。**
-**作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 15個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
+**origin より 6 ahead で未 push**（HEAD `4ac3df8e`）。push はユーザー判断・コミットは可。
+**テスト 0 failed / 3130 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度（X）18/22 exact, total |residual| = 0.022361 ss** — このセッションでは触っていない。
+**作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
+
+⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
+本ファイル・`COORDINATE_AUDIT.md`・`audit/lp-geometry/README.md` の参照は張り替え済み（28件、到達性を検証）。
+**同じことが起きたら、subject で新旧を突き合わせて張り替えること** — `git log -1 --format=%s <旧SHA>`
+は書き換え後も dangling オブジェクトとして引けるので、そこから `git log --format='%h %s' master` を検索する。
+⚠️ `git cat-file -t` では判定できない（旧コミットは gc されるまで残る）。**`git merge-base --is-ancestor` を使う。**
+
+### ⚠️ LP の「正」は **2.25.35（`C:\MyProj\lilypond-src`）** とユーザーが決定（2026-07-22）
+
+**ただし手元の LilyPond binary は 2.24.4 しかなく、2.25.x のビルドも無い。**
+両者は `ly/paper-defaults-init.ly` の既定値が食い違う:
+
+| | src 2.25.35（正） | 2.24.4（実測に使っている binary） |
+|---|---|---|
+| `top-margin-default` | 10 mm | 5 mm |
+| `bottom-margin-default` | 10 mm | 6 mm |
+| `left/right-margin-default` | 15 mm | 10 mm |
+| `top-system-spacing` basic-distance | 6 | 1 |
+| `top-markup-spacing` basic-distance | 4 | 0 |
+
+**このままだと紙面・縦間隔の点は台帳の residual を構造的にゼロにできない。**
+次のセッションの最初の分岐は「2.25.x の binary を用意する / 当面 2.24.4 実測のまま進めて
+版差のある量に印を付ける」。**未解決・ユーザー判断待ち。**
 
 ### 残る残差は **22点中4点 0.022361 ss、原因は2つだけ**
 
@@ -60,22 +83,46 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 2桁文字列も1桁幅の和にならない（±0.102430）。**閉じるにはテキスト経路の metric が要る。**
 ⚠️ 以前ここに書いた「advance のまま＝§2④ の取りこぼし」という見立ては**誤りなので採用しない**。
 
-### 直近セッション（2026-07-22）でやったこと
+### 直近セッション（2026-07-22 後半）でやったこと — **Y 軸**
+
+| commit | 内容 |
+|---|---|
+| `d57defcd` | **LP のページ縦プローブを commit**（`audit/lp-geometry/probes/page-vertical.ly` ＋ `Measure-LilyPondPageGeometry.ps1`）。scratchpad で消えていた測定を再実行可能にした。出力不変 |
+| `4ac3df8e` | **§2⑧ 最終ページの force 継承**を LP から移植。予測どおり最終ページ 12.000000 → 12.450000（page 1 と一致）。snapshot 0 件 |
+
+**判明した2つの訂正**（どちらも過去の記述が誤り）:
+
+1. **`11.528` は圧縮ではなく基準点の取り違えだった。** `staff-refpoint-extent` は system ごとに
+   違う（小節番号を頭上に持つ system は原点がその分上に伸びる）ので、**system 原点間**で
+   測ると間隔が一様でも値がばらつく。同じダンプが原点間で 11.528583 / 12.000000、
+   **staff refpoint 間では 12.000000 / 12.000000**。LP はそこで圧縮していなかった。
+   → **縦は staff refpoint 間で測ること**（§5.3 に追記済）。
+2. **`ragged-last-bottom` は「伸ばさない」ではない。** `page-breaking.cc:570-573` は最終ページに
+   **直前ページと同じ force** を渡す（`fixed_force_solution(last_page_force)`）。
+   `last_page_force` の初期値 0（`:643`）なので**単ページ書籍だけ**自然長。
+   Lily# は無条件に force 0 を入れていた＝**最終ページだけ違って見える**というユーザー報告の
+   直接原因。`c353bc85` は「1ページに何本入るか」を直したが「最終ページをどう詰めるか」は
+   残っていた。
+
+⚠️ **snapshot が 1 件も動かないのは、複数ページを踏む committed フィクスチャが1つも無いから。**
+「変更が無害」の証拠ではなく**フィクスチャの穴**。
+
+### その前のセッション（2026-07-22 前半）でやったこと
 
 **§2④' と §2⑥ を完了。§2⑤ は既に完遂済みと判明。** どちらも予測が全点的中した。
 
 | commit | 内容 |
 |---|---|
-| `4adfd704` | **§2④' 実装**。`AccidentalNoteGap` 0.2 → **0.35**（LP の `padding` 0.2 ＋ `right-padding` 0.15）。**3点とも予測が桁まで的中**。snapshot 22件（全て `test/*`、showcase はゼロ） |
-| `4e37938c` | §2⑤ は `1e91ebe6`＋`836be0ba`＋`6a328a45` で完遂済みと判明。元 handoff を回収して §2⑤⑥⑦ に整理 |
-| `9f69f806` | **§2⑥ 実装**。`fills_measure` を LP の musicality 判定へ。**変更前に点を足して予測 −1.000000 を記録 → 実測 −1.000000000 → 修正後 0**。snapshot 2件 |
+| `94e8996c` | **§2④' 実装**。`AccidentalNoteGap` 0.2 → **0.35**（LP の `padding` 0.2 ＋ `right-padding` 0.15）。**3点とも予測が桁まで的中**。snapshot 22件（全て `test/*`、showcase はゼロ） |
+| `8bc90025` | §2⑤ は `098f5279`＋`8448749a`＋`94656b84` で完遂済みと判明。元 handoff を回収して §2⑤⑥⑦ に整理 |
+| `a64ffc16` | **§2⑥ 実装**。`fills_measure` を LP の musicality 判定へ。**変更前に点を足して予測 −1.000000 を記録 → 実測 −1.000000000 → 修正後 0**。snapshot 2件 |
 
 **0.338987 → 0.022361 ss、17/21 → 18/22 exact。** ④' の exact 数は予測どおり動かない
 （−0.000010 は tolerance 1e-6 より大きい）。⑥ で足した点が exact で着地して +1。
 
 参考: この前の 2026-07-21 セッションは §2①③④ と §2② の掃除を入れた
-（`f168ac57` 計測ハーネスの stderr 混入修正 / `a374317f` 行中変更 item の LP モデル導出 /
-`1970b830` §2① / `9de790a2` §2④ LILC / `0aae1016` §2③ 境界列 / `d5529fb1` §2② 掃除）。
+（`ec10fd4b` 計測ハーネスの stderr 混入修正 / `f4b94f64` 行中変更 item の LP モデル導出 /
+`4eb8cf16` §2① / `ec7a2254` §2④ LILC / `d056b5e5` §2③ 境界列 / `2745d603` §2② 掃除）。
 **台帳の値自体は全部正しく、壊れていたのは再現手段のほうだった。**
 
 ### 進行中で中断しているものは無い
@@ -83,9 +130,9 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 **X 軸は行中・行頭・臨時記号とも完結。**
 
 ⚠️ **`total |residual|` の履歴は点集合が違う。同じ集合の中でだけ比較すること。**
-15点 4.592405 → 19点 11.435647（`84dc3a79` が行中4点を追加＝それまで測っていなかった発散の可視化）
-→ 21点 4.747978（`1970b830`＋MKA 2点）→ 4.738987（`9de790a2`）→ 0.338987（`0aae1016`）
-→ 21点 **0.022361**（`4adfd704`）。
+15点 4.592405 → 19点 11.435647（`5c4126d6` が行中4点を追加＝それまで測っていなかった発散の可視化）
+→ 21点 4.747978（`4eb8cf16`＋MKA 2点）→ 4.738987（`ec7a2254`）→ 0.338987（`d056b5e5`）
+→ 21点 **0.022361**（`94e8996c`）。
 
 ---
 
@@ -93,7 +140,7 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 
 優先順。**①②は COORDINATE_AUDIT §4.7 の残り**で、ユーザー合意済みの順序。
 
-### ① ✅ 完了（`1970b830`）— 行中（mid-measure）の変更 item を LP の専用列として価格付け
+### ① ✅ 完了（`4eb8cf16`）— 行中（mid-measure）の変更 item を LP の専用列として価格付け
 
 > **2026-07-21 に再スコープ → 実装。** 旧①は「3つの extent ヘルパの frame ＋ 定数2つ」だった。
 > **着手前に測った結果、それでは 4 点は 0 にならないと分かった**（§5.3「変更する前に測る」が
@@ -105,7 +152,7 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 > key/time の右側は**伸びない**（`shrink-space`/`semi-shrink-space`）。これは本物の
 > 第2列が要るので③と同じ仕事。`SpacingRules.MidMeasureChangeGaps` に記録してある。
 >
-> 以下はモデルの記録（③も `0aae1016` で完了済み）。
+> 以下はモデルの記録（③も `d056b5e5` で完了済み）。
 
 **LP は行中の clef/key 変更に non-musical 列を1本立て、左右を別の式で価格付けする**:
 
@@ -128,7 +175,7 @@ Lily# 側は列が無く、`ChangeItemPrefixWidth`（= W + 2×0.5）を**1本の
 → **frame だけ直すと `+1.119 → +0.612` に減るが、左右の分配は変わらず逆符号のまま。**
 
 **同時に直したもの**: 変更 clef の幅 `FClefAdvance × 0.75 = 2.010` → LP の `clefs.F_change`
-ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
+ink **2.146680**（現在は `ec7a2254` で生成器から LILC 由来）。
 
 ### ② ✅ 完了 — extent ヘルパの中心基準と、①③が殺したシンボルの掃除
 
@@ -154,7 +201,7 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 **LP と照合し直していない**。到達経路は「変更 item が小節の最後の timing を共有する」
 という **LP に存在しない構図**だけで、fixture も踏まない。
 
-### ③ ✅ 完了（`0aae1016`）— 行頭 key/time の境界列
+### ③ ✅ 完了（`d056b5e5`）— 行頭 key/time の境界列
 
 モデルは `COORDINATE_AUDIT.md` §4.7.3。**着手前の予測が4点とも桁まで的中**した:
 
@@ -175,7 +222,7 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 `SpacingRules.BoundaryChangePrefix` ＋ `BarlineToFirstColumnSpring` の `last_grob` 切替。
 両者の統合は未着手。
 
-### ④' ✅ 完了（`4adfd704`）— 臨時記号 → 符頭の距離
+### ④' ✅ 完了（`94e8996c`）— 臨時記号 → 符頭の距離
 
 `GlyphMetrics.AccidentalNoteGap` は LP の `padding` 0.2 **だけ**で、`right-padding` 0.15 が
 抜けていた（`accidental-placement.cc:397` / `:400`、適用は `:412-416`）。**0.35 に。**
@@ -195,7 +242,7 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 （♮ +0.017606 / ♯♯ +0.047704 / ♯ −0.000010 / ♭ −0.000004 / ♭♭ −0.001996）。
 移植には**水平スカイラインの基盤**が要る（§3B②の島に接続）。
 
-### ④ ✅ 完了（`9de790a2`）— グリフメトリクスを LILC 由来に
+### ④ ✅ 完了（`ec7a2254`）— グリフメトリクスを LILC 由来に
 
 **LP はグリフ bbox を、フォント埋込の `LILC` テーブルから読む**
 （`lily/open-type-font.cc:288` `load_scheme_table("LILC")` ＋ `:389-407`。生アウトラインは fallback）。
@@ -223,9 +270,9 @@ ink **2.146680**（現在は `9de790a2` で生成器から LILC 由来）。
 
 | 層 | commit |
 |---|---|
-| run グルーピング（`IsBreakAlignedChange` に `ClefChangeItem`） | `1e91ebe6` |
-| 描画（clef を bar line の**前**へ＝`BoundaryColumn` / `BoundaryClefAllowance`） | `836be0ba` |
-| 視覚フィクスチャ `test/mmr-clef-change-bound` | `6a328a45` |
+| run グルーピング（`IsBreakAlignedChange` に `ClefChangeItem`） | `098f5279` |
+| 描画（clef を bar line の**前**へ＝`BoundaryColumn` / `BoundaryClefAllowance`） | `8448749a` |
+| 視覚フィクスチャ `test/mmr-clef-change-bound` | `94656b84` |
 
 2026-07-22 に LP 2.24.4 と PNG を並べて再確認済み（単一 "5" ＝ longa 4 ＋ whole 1、bass clef は
 bar line の前）。旧 handoff が「描画位置の方針をユーザーに仰げ」としていた論点は**測定で解決済み**:
@@ -235,7 +282,7 @@ clef は列の**原点**を左へ動かすだけで bar line は動かさない�
 **元資料 `handoff-2026-07-21-mmr-runs.md` は本項をもって回収完了**（§8）。残っていた未解決は
 下の ⑥⑦ に移した。
 
-### ⑥ ✅ 完了（`9f69f806`）— `fills_measure` の述語を LP に合わせた
+### ⑥ ✅ 完了（`a64ffc16`）— `fills_measure` の述語を LP に合わせた
 
 `spacing-spanner.cc:446-472` は**列の musicality しか見ない**のに、Lily# は2箇所とも
 `NoteItem or ChordItem` に絞っていた＝**全休符の小節に `full-measure-extra-space` 1.0 が
@@ -263,6 +310,82 @@ fmes が乗るのは開き側。`barline.next.whole-rest` を足し、**`residua
 **残った未了**: `R1` は幅を MMR rod 経由で決めるので、この spring は rod が binding しない
 場面でしか効かない。LP の `max()` と全ケースで一致するかは未測定。
 
+### ⑧ Y 軸（ページ縦方向）— 着手済み。**残りは「Lily# は圧縮できない」**
+
+**ユーザー報告「複数ページで最終ページだけ改行幅が狭い」を実測 → 原因はページブレーカーだった。**
+
+LP 2.24.4 実測（`ragged-bottom` ＋ `systems-per-page` を絞り、伸長も圧縮も起きない条件）:
+**自然 system 間距離 = 12.000 ちょうど。Lily# の最終ページも 12.000 で厳密一致。**
+つまり**最終ページが正しく、それ以外のページが伸びすぎていた**。
+
+`c353bc85` で `tallness_` / `spring_length` / `refpoint_extent_` を字面移植（§2⑥ と同じく
+「rod と spring の二重計上」だった）。A4・30 反復のプローブで:
+
+| | 変更前 | 変更後 | LP |
+|---|---|---|---|
+| ページ1 のシステム数 | 11 | **13** | 14 |
+| ページ1 の gap | 14.55 | **12.12** | 11.528 |
+| 最終ページの gap | 12.00 | 12.00 | 12.000 |
+
+ページ間の見た目の差 **2.55 ss → 0.12 ss**。
+
+#### ✅ 最終ページの force 継承は完了（`4ac3df8e`）
+
+`page-breaking.cc:570-573` — `ragged-last-bottom` は「伸ばさない」ではなく、最終ページに
+**直前ページと同じ force** を渡す。移植して予測どおり **12.000000 → 12.450000**（page 1 と一致）。
+単ページ書籍は `lastPageForce` 初期値 0 のまま＝ 12.000000 で不変。両方テストで固定済み。
+
+#### 残っているのは **紙面・余白の定数**（LP 実測で全額説明できた）
+
+`Measure-LilyPondPageGeometry.ps1`（LP **2.24.4** 実測、A4、markup 無し、単位 ss）:
+
+| | Lily# 現状 | LP 2.24.4 |
+|---|---|---|
+| `PageHeight` | 168.4 | **169.009370** |
+| `MarginTop` | 5 | **2.845276**（5 mm） |
+| `MarginBottom` | 5 | **3.414331**（6 mm） |
+| 縦の使用可能帯 | 158.4 | **162.749764** |
+| `MarginLeft` / `MarginRight` | 8.5 / 8.5 | **5.690551**（10 mm） |
+| `PageWidth` | 119.05 | **119.501575** |
+| system 間の自然距離 | 12.000000 | **12.000000**（一致） |
+
+**差 4.349764 ss ＝ 旧記述の「約 4.4 ss」の全額。原因未特定の分は無い。**
+（旧記述の「LP 5.68 / Lily# 8.93」はプローブの `section Main` マーク由来の交絡で、
+markup 無しで測り直すと LP の先頭インク上端は **3.824272**。）
+
+⚠️ **ただし上の値は 2.24.4 実測**で、ユーザーが決めた「正」は **2.25.35**。§1 の表のとおり
+余白既定が版で違う（2.25.35 は top/bottom 10 mm・left/right 15 mm）。**この4定数を動かす前に
+§1 のバージョン分岐を決めること。**
+
+⚠️ 横（`MarginLeft/Right` / `PageWidth`）を動かすと `ContentWidth` 102.05 → 108.120472 で
+**改行位置が全面的に動く＝ snapshot ほぼ全件再ベース**。縦だけ先に動かす選択肢がある。
+
+#### 圧縮は**まだ入れない**（旧記述の訂正は維持）
+
+PASS 2 を `SpringSolver` による両方向 solve に置き換えて測ったところ、**プローブも snapshot も
+1 バイトも動かなかった**（§3.4 に従い revert 済み）。理由は Lily# の使用可能帯が狭く、
+ブレーカーが伸ばす側の本数しか選ばないため。**上の余白を LP に寄せると圧縮側に入る見込み**
+なので、順序は「余白 → 圧縮」。置換箇所は `PageLayouter` PASS 2 → `SpringSolver.SolveForWidth`
+＋ `GetPositions`、PASS 1 で `gapMinimum[]` を拾う必要あり。
+**入れるときは圧縮が実際に走るケース（`SystemsPerPage` 強制など）を同時に用意すること。**
+
+⚠️ **複数ページを踏む committed フィクスチャが1つも無い。** `PageBreakerTests` に
+`LastPage_IsSpacedWithTheForceOfThePageBefore` / `SinglePageScore_KeepsTheNaturalDistance` /
+`FirstPage_HoldsWhatTheNaturalDistanceFits` を置いたが、**実 `.lys` の縦を固定する snapshot は
+まだ無い**。余白を動かす前にこれを作らないと、変更が無害に見えてしまう。
+
+**Y コーパスの起こし方（未着手）**: `audit/lp-geometry` の台帳は X 専用のまま。LP 側の
+プローブと測定スクリプトは `d57defcd` で入ったので、あとは `lp-geometry.json` に点を足すだけ。
+候補は `page.top-margin` / `page.bottom-margin` / `page.height` / `system.natural-distance`
+（現状 exact）/ `page.last-page-gap`。⚠️ 版差のある量には印を付けること（§1）。
+
+#### 潜在バグ: `VerticalSpacingParameters.TopSystem.BasicDistance`
+
+現在 **6**（2.25.35 の値）。2.24.4 は **1**。コメントに「1 は `last-bottom-spacing` からの
+転記ミス」とあるが、**2.24.4 基準ならその「訂正」のほうが誤り**。
+ただし `PageLayouter` は `i == 0` で `vs.SystemSystem` を使い、配置側も `topSpec.Padding` しか
+読まないので **現状 6 は出力に効いていない**（死んでいる）。版の決着後に直す。
+
 ### ⑦ MMR まわりの小さい未解決（記録のみ）
 
 - **`GlyphMetrics.RestMaximaWidth = 1.8` が手動側**。フォントメトリクスなので生成器が `rests.M3` を
@@ -278,14 +401,15 @@ fmes が乗るのは開き側。`barline.next.whole-rest` を足し、**`residua
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 17/21 exact, total |residual| = 0.022361 ss**（`audit/lp-geometry/`）。
+**現状 18/22 exact, total |residual| = 0.022361 ss**（`audit/lp-geometry/`。X のみ）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。
 
 - 短期: ✅ X 軸（§2 ①③④④'）は完結。**定数1つで閉じる残差はもう無い**
 - 中期: **コーパスを縦（Y）にも広げる** — 現在は bar line 周りの X のみ。
-  譜間距離・スラー/タイ・ビーム・臨時記号配置に点を足す
+  ページ縦は LP 側のプローブと測定スクリプトが `d57defcd` で入った（§2⑧）ので、
+  次は `lp-geometry.json` に点を足す番。ほかに譜間距離・スラー/タイ・ビーム・臨時記号配置
 - 原則: **snapshot を再ベースするたびに、LP 照合済みの点が増えているべき**
 
 ⚠️ **既知の穴**: 以下2つの LP 検証は**数値がコメントに残っているだけで、プローブが未 commit**
@@ -403,6 +527,11 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
   binding する。**どちらで測ったか必ず記録する**
 - **配置は「両側」を測る。** ある grob の位置は前後2つの間隙で決まる。
   さらに**同じ box の左右が同じ基準点か**を確かめる
+- ★ **縦は staff refpoint 間で測る。system 原点間で測ると嘘の値が出る。**
+  `staff-refpoint-extent` は system ごとに違う（小節番号を頭上に持つ system は原点が
+  その分だけ上に伸びる）ので、**間隔が一様でも原点間距離はばらつく**。同じ LP ダンプが
+  原点間で 11.528583 / 12.000000、staff refpoint 間で 12.000000 / 12.000000。
+  前者が「LP は圧縮している」という誤った結論として引き継がれていた（§2⑧）
 - ★ **残差の符号で原因を切り分ける。** あるグリフの**左右の残差が逆符号**なら
   **frame（基準点）の誤り**、**同符号**なら**定数の誤り**。定数が違えば両側とも同じ向きに
   ずれるが、基準点がずれていると片側が広がった分だけ反対側が狭まるため。
@@ -493,8 +622,8 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
 
 ## 8. 旧 handoff ファイルの棚卸し
 
-root に **15 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.md`（計 364 KB）**が
-残っている。
+root に **14 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.md`** が残っている
+（`handoff-2026-07-21-mmr-runs.md` は回収完了ののち削除済み）。
 各ファイルが「原則・手順」を丸ごと重複コピーしており、これが増殖の主因だった。
 **本ファイルがそれらを置き換える。**
 
@@ -505,7 +634,6 @@ root に **15 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.
 |---|---|
 | `handoff-2026-07-21-x-frame-unification.md` | ✅ 内容は完了・`COORDINATE_AUDIT.md` §4.7 と本ファイルに吸収済。**光学補正を clef のせいとする誤記あり**（訂正済） |
 | `handoff-2026-07-21-boundary-column.md` | §2③ 着手時に。LP 事実の記録として有用 |
-| `handoff-2026-07-21-mmr-runs.md` | ✅ **回収完了（2026-07-22）**。§1.1 は §2⑤ で解決済、§1.2/§1.3 の未解決は §2⑥⑦ へ、LP 実測は `MmrRodMinimumDistance` / `MultiMeasureRestEngraver` の remarks に既出。**削除してよい**（ユーザー承認待ち） |
 | `HANDOFF-stage4-vertical-yup.md` | §3B 島1 着手時に。**Stage-4 の正確な現状はここ** |
 | `HANDOFF-lp-calc-incorporation.md` | §3C 着手時に |
 | `HANDOFF-dead-code-audit.md` | §3D 着手時に |

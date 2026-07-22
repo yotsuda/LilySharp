@@ -123,13 +123,69 @@ internal sealed record SystemDetails
     public double FootnoteHeight { get; init; }
 
     /// <summary>
-    /// Gets the natural distance to the next system.
+    /// How much the stacked page GROWS when this system is added below the previous one
+    /// at minimum spacing — not this system's own height.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/constrained-breaking.cc:657-667 spring_length()</remarks>
-    public double GetSpringLength()
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:61 tallness_, filled in by
+    /// lily/page-breaking.cc:1099-1142 Page_breaking::calc_line_heights.
+    /// Only the FIRST system on a page contributes its full height; every one after it
+    /// contributes this (lily/page-spacing.cc:53-62).
+    /// </remarks>
+    public double Tallness { get; init; }
+
+    /// <summary>
+    /// The refpoint of this system's FIRST spaceable staff, as an offset UP from the
+    /// system's origin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:56-60 refpoint_extent_ —
+    /// "the refpoints of the first and last spaceable staff in this line; min-distance
+    /// should be measured from the bottom refpoint_extent of one line to the top
+    /// refpoint_extent of the next".
+    /// <para>
+    /// LilyPond reads the real grobs. Lily# has no per-staff refpoints in this model, so
+    /// they are derived from the geometry it does have: every Lily# staff is a five-line
+    /// staff whose refpoint is its centre, so the first staff's refpoint sits half a
+    /// staff height below the body's top and the last staff's the same distance above its
+    /// bottom. That is exact for the staves Lily# engraves; it would NOT be for a staff
+    /// with a different line count, and this is the one place in the port that assumes
+    /// something LilyPond looks up.
+    /// </para>
+    /// </remarks>
+    public double RefpointExtentUp { get; init; }
+
+    /// <summary>
+    /// The refpoint of this system's LAST spaceable staff, as an offset (negative) DOWN
+    /// from the system's origin. See <see cref="RefpointExtentUp"/>.
+    /// </summary>
+    public double RefpointExtentDown { get; init; }
+
+    /// <summary>
+    /// The stretchable space between the bottom of this system's extent and the top of
+    /// <paramref name="next"/>'s — the part of the ideal distance that
+    /// <see cref="Tallness"/> has NOT already accounted for.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:657-667 Line_details::spring_length,
+    /// transcribed:
+    /// <code>
+    ///   Real refpoint_dist
+    ///     = tallness_ + refpoint_extent_[DOWN] - next_line.refpoint_extent_[UP];
+    ///   Real space = next_line.title_ ? title_space_ : space_;
+    ///   return std::max (0.0, space - refpoint_dist);
+    /// </code>
+    /// The subtraction is the point. This used to be <c>Padding + SpringLength</c>, which
+    /// added the whole ideal on top of a rod that already covered the minimum, so the
+    /// breaker priced every system about 1 ss more than the layout actually spends and
+    /// packed fewer of them per page. What was then left over got stretched back out by
+    /// PageLayouter's justification pass, which is why non-last pages came out looser
+    /// than the (ragged, unstretched) last one.
+    /// </remarks>
+    public double SpringLengthTo(SystemDetails next)
     {
-        // Natural distance is padding plus spring length
-        return Padding + SpringLength;
+        double refpointDist = Tallness + RefpointExtentDown - next.RefpointExtentUp;
+        return Math.Max(0.0, SpringLength - refpointDist);
     }
 }
 
@@ -203,17 +259,14 @@ internal sealed class PageSpacing
         }
         else
         {
-            // Add spring between previous and current system. The rod (minimum)
-            // must include this system's FULL height — TopExtent + StaffHeight +
-            // BottomExtent — because its top skyline is what clears the previous
-            // system's bottom. Omitting TopExtent under-counts the page minimum, so
-            // the breaker crams more systems than PositionSystemsOnPage actually
-            // places (it spaces by the next system's up-extent, PageLayouter.cs:248/254),
-            // pushing lower systems past the bottom margin.
-            // LILYPOND-REF: lily/page-spacing.cc:55 rod_height_ += line.tallness_
-            //   (tallness includes the current line's top skyline; page-breaking.cc:1136).
-            _rodHeight += system.Height;
-            _springLength += _lastSystem!.GetSpringLength();
+            // LILYPOND-REF: lily/page-spacing.cc:53-57 — only the FIRST system on a page
+            // contributes full_height(); every one after it contributes tallness_, the
+            // amount the stack GROWS when it is added at minimum spacing
+            // (page-breaking.cc:1136). Adding the full height here instead counted each
+            // system's own extents a second time, on top of a spring that already spanned
+            // them, so the page looked about 1 ss per system fuller than it is.
+            _rodHeight += system.Tallness;
+            _springLength += _lastSystem!.SpringLengthTo(system);
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:186-310 footnote_height
@@ -325,6 +378,12 @@ internal sealed class PageBreaker
         // Single system always fits on one page
         if (systems.Count == 1)
             return new List<int> { 1 };
+
+        // LILYPOND-REF: lily/page-breaking.cc:1037 — cache_line_details ends by calling
+        // calc_line_heights, so every line's tallness is known before any page is priced.
+        // Doing it here rather than in the caller keeps that ordering, and means no caller
+        // can hand the breaker details whose tallness was never computed.
+        systems = CalcLineHeights(systems);
 
         // Use dynamic programming to find optimal breaks
         return FindOptimalBreaks(systems);
@@ -619,5 +678,74 @@ internal sealed class PageBreaker
             SpringLength = springLength,
             ForceBreakAfter = forceBreakAfter
         };
+    }
+
+    /// <summary>
+    /// Fills in every system's <see cref="SystemDetails.Tallness"/> — how much the stack
+    /// grows when it is added below its predecessor at minimum spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1099-1142 Page_breaking::calc_line_heights,
+    /// transcribed. Note it runs over the WHOLE sequence of systems, not per page: a
+    /// system's tallness depends only on its predecessor, so the page breaker can then
+    /// price any candidate page by summing them.
+    /// <para>
+    /// Lily#'s system origin is the top staff's TOP LINE, so the Line_shape LilyPond
+    /// carries becomes <c>begin_ = rest_ = (-(StaffHeight + BottomExtent) . TopExtent)</c>.
+    /// LilyPond distinguishes the shape at the START of a line from the rest of it (a
+    /// line's first column can be taller); Lily# has one extent per system, so the two
+    /// are the same interval here and the max() over them is inert. It is kept so the
+    /// transcription matches the source line for line and so a future begin/rest split
+    /// has somewhere to land.
+    /// </para>
+    /// <para>
+    /// <c>tight_spacing_</c> has no Lily# counterpart, so the padding is never dropped
+    /// (page-breaking.cc:1123-1124 takes the padding unless the line is tight).
+    /// </para>
+    /// </remarks>
+    internal static IReadOnlyList<SystemDetails> CalcLineHeights(
+        IReadOnlyList<SystemDetails> lines)
+    {
+        double prevHanging = 0;
+        double prevHangingBegin = 0;
+        double prevHangingRest = 0;
+
+        // refpoint_hanging is the y coordinate of the origin of this system. It may not
+        // be the same as RefpointExtentUp, which is the refpoint of the first spaceable
+        // staff in this system. LILYPOND-REF: page-breaking.cc:1105-1107.
+        double prevRefpointHanging = 0;
+
+        var result = new List<SystemDetails>(lines.Count);
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var cur = lines[i];
+            double a = cur.TopExtent;                                   // shape.begin_[UP]
+            double b = cur.TopExtent;                                   // shape.rest_[UP]
+            double refpointHanging = Math.Max(prevHangingBegin + a, prevHangingRest + b);
+
+            if (i > 0)
+            {
+                var prev = lines[i - 1];
+                double padding = prev.Padding;
+                double minDist = prev.MinDistance;
+                refpointHanging = Math.Max(
+                    refpointHanging + padding,
+                    prevRefpointHanging - prev.RefpointExtentDown
+                        + cur.RefpointExtentUp + minDist);
+            }
+
+            double shapeDown = -(cur.StaffHeight + cur.BottomExtent);   // shape.*_[DOWN]
+            double hangingBegin = refpointHanging - shapeDown;
+            double hangingRest = refpointHanging - shapeDown;
+            double hanging = Math.Max(hangingBegin, hangingRest);
+
+            result.Add(cur with { Tallness = hanging - prevHanging });
+
+            prevHanging = hanging;
+            prevHangingBegin = hangingBegin;
+            prevHangingRest = hangingRest;
+            prevRefpointHanging = refpointHanging;
+        }
+        return result;
     }
 }

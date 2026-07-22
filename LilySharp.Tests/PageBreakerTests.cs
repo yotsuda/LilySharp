@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using Xunit;
 using LilySharp.Core.Svg.Layout;
 
@@ -154,18 +155,37 @@ public class PageBreakerTests
             topMargin: 10,
             bottomMargin: 10);
 
-        var system1 = CreateSystem(height: 20, staffHeight: 10, bottomExtent: 5);
-        var system2 = CreateSystem(height: 20, staffHeight: 10, topExtent: 5);
+        // Go through CalcLineHeights, as BreakIntoPages does — tallness is not a property
+        // of a system on its own, it is how much the stack grows when the system is added
+        // below its predecessor, so hand-built details have none.
+        // LILYPOND-REF: lily/page-breaking.cc:1037 (cache_line_details calls it).
+        var systems = PageBreaker.CalcLineHeights(new[]
+        {
+            CreateSystem(height: 20, staffHeight: 10, bottomExtent: 5),
+            CreateSystem(height: 20, staffHeight: 10, topExtent: 5),
+        });
 
-        spacing.AppendSystem(system1);
-        spacing.AppendSystem(system2);
+        spacing.AppendSystem(systems[0]);
+        spacing.AppendSystem(systems[1]);
 
-        // Every system contributes its FULL height to the rod (its top skyline is
-        // what clears the previous system's bottom), matching LilyPond's
-        // rod_height_ += line.tallness_ (page-spacing.cc:55). Omitting system2's
-        // TopExtent would under-count the rod as 35 (20 + staff 10 + bottom 5).
-        // First system full height (20) + second system full height (20) = 40.
-        Assert.Equal(40, spacing.RodHeight);
+        // LILYPOND-REF: lily/page-spacing.cc:53-62 — the FIRST system contributes
+        // full_height(), every one after it contributes tallness_.
+        //   first  : full height                                    = 20
+        //   second : origin drops by its top extent 5, then padding 2, then its
+        //            staff 10 + bottom extent 5 hangs below           = 22
+        // so the rod is 42.
+        //
+        // This asserted 40 (two full heights) until the tallness port. That number
+        // contradicted the very line it cited: with full heights on both, each system's
+        // own extents were counted once in the rod and again inside the spring that
+        // spanned them, which priced pages fuller than they are and left the breaker
+        // packing about two systems too few onto every page.
+        Assert.Equal(42, spacing.RodHeight);
+
+        // The spring is now only what the rod has NOT already spent: the ideal 3 against
+        // a refpoint distance of 20, i.e. nothing.
+        // LILYPOND-REF: lily/constrained-breaking.cc:657-667 spring_length.
+        Assert.Equal(0, spacing.SpringLength);
     }
 
     [Fact]
@@ -523,6 +543,153 @@ public class PageBreakerTests
                 $"RaggedBottom={combo.RaggedBottom}, RaggedLastBottom={combo.RaggedLastBottom} failed");
             Assert.Equal(systems.Length, result[^1]);
         }
+    }
+
+    [Fact]
+    public void FirstPage_HoldsWhatTheNaturalDistanceFits()
+    {
+        // The geometry of a plain one-staff system of quarter notes, measured off the
+        // probe used to diagnose this: 4 ss of staff, stems reaching 3.5 above it, half a
+        // space below, LilyPond's system-system-spacing (basic-distance 12,
+        // minimum-distance 8, padding 1).
+        //
+        // Natural system-to-system distance is therefore 12, confirmed against LilyPond
+        // 2.24.4 by forcing few systems per page under ragged-bottom so that nothing is
+        // stretched or compressed: the gaps come out at 12.000 exactly.
+        //
+        // A system costs the page its tallness 9 plus a spring of 3 — twelve, the natural
+        // distance, which is the whole point of the tallness/spring split. Before that
+        // port it was priced at its full height 8 PLUS padding 1 and a spring 4, i.e. 13
+        // (arithmetic, not a measurement — the old code cannot be run against this test,
+        // which needs fields it did not have). What WAS measured is the effect on a real
+        // A4 page: the diagnosis probe went from 11 systems per page to 13, against
+        // LilyPond's 14, and its non-last-page gaps from 14.55 to 12.12 while the ragged
+        // last page stayed at 12.00. Over-pricing left space the breaker would not spend,
+        // and PageLayouter's justification pass then stretched the survivors to fill it —
+        // which is exactly why every non-last page came out looser than the last one.
+        var systems = new List<SystemDetails>();
+        for (int i = 0; i < 24; i++)
+        {
+            systems.Add(new SystemDetails
+            {
+                Height = 3.5 + 4 + 0.5,
+                TopExtent = 3.5,
+                BottomExtent = 0.5,
+                StaffHeight = 4,
+                Padding = 1,
+                MinDistance = 8,
+                SpringLength = 12,
+                RefpointExtentUp = -2,
+                RefpointExtentDown = -2,
+                InverseHooke = 1,
+            });
+        }
+
+        var breaker = new PageBreaker(
+            pageHeight: 100, topMargin: 5, bottomMargin: 5, headerHeight: 0);
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // 90 ss of usable height: the first system spends its full height 8 and every one
+        // after it 12, so eight fit with 10 to spare and nine would overrun by 2.
+        Assert.True(result.Count >= 2, $"expected several pages, got {result.Count}");
+        Assert.Equal(8, result[0]);
+    }
+
+    // --- ragged-last-bottom: what LilyPond actually does with the last page ---------------
+    //
+    // Measured against LilyPond 2.24.4 by audit/lp-geometry/probes/page-vertical.ly, whose
+    // three books separate the three regimes. Book J (the shipping default over 150 bars)
+    // comes out at 11.801982 between staff refpoints on page 1 -- and at 11.801982 on
+    // page 2 as well, its LAST page, which has 108 ss of unused paper below it. Book L is
+    // the same music short enough to fit one page, and that page sits at 12.000000, the
+    // natural system-system-spacing basic-distance.
+    //
+    // The two together say ragged-last-bottom does not mean "space the last page freely":
+    //
+    //   lily/page-breaking.cc:570-573
+    //     else if (rag && !ragged ())
+    //       // If we're ragged-last but not ragged, make the last page
+    //       // have the same force as the previous page.
+    //       config = layout.fixed_force_solution (last_page_force);
+    //
+    // last_page_force starts at 0 (:643), so a one-page book is the only one that comes out
+    // natural. Every other page of a book is spaced to match the page before it -- which is
+    // the whole reason LilyPond's pages look alike, and why a Lily# last page pinned to
+    // force 0 was the one page that did not.
+
+    [Fact]
+    public void LastPage_IsSpacedWithTheForceOfThePageBefore()
+    {
+        // 18 plain one-staff systems on A4: 13 fit the first page, 5 fall to the second.
+        var (systems, extents) = PlainSystems(18);
+
+        var pages = new PageLayouter(LayoutOptions.Default)
+            .CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+
+        Assert.Equal(2, pages.Length);
+        double firstPageGap = UniformGap(pages[0]);
+        double lastPageGap = UniformGap(pages[1]);
+
+        // The first page is justified, so it is stretched past the natural 12.
+        Assert.True(firstPageGap > 12.0,
+            $"page 1 should be stretched to fill the page, got {firstPageGap:F6}");
+
+        // ...and the last page takes that same force rather than falling back to natural.
+        Assert.Equal(firstPageGap, lastPageGap, 6);
+    }
+
+    [Fact]
+    public void SinglePageScore_KeepsTheNaturalDistance()
+    {
+        // The one case LilyPond DOES leave natural: last_page_force is still its initial 0
+        // when the only page is drawn. Book L of the probe measures 12.000000 here.
+        var (systems, extents) = PlainSystems(5);
+
+        var pages = new PageLayouter(LayoutOptions.Default)
+            .CreatePagesWithOptimalBreaking(systems, headerHeight: 0, extents);
+
+        Assert.Single(pages);
+        Assert.Equal(12.0, UniformGap(pages[0]), 6);
+    }
+
+    /// <summary>
+    /// The distance between consecutive systems on a page, asserting they are all equal.
+    /// </summary>
+    /// <remarks>
+    /// SystemLayout.Y is stored page Y-UP, so a later system has the SMALLER Y.
+    /// </remarks>
+    private static double UniformGap(PageLayout page)
+    {
+        Assert.True(page.Systems.Length >= 2,
+            $"a gap needs two systems, page has {page.Systems.Length}");
+        double first = page.Systems[0].Y - page.Systems[1].Y;
+        for (int i = 1; i < page.Systems.Length - 1; i++)
+        {
+            double gap = page.Systems[i].Y - page.Systems[i + 1].Y;
+            Assert.Equal(first, gap, 6);
+        }
+        return first;
+    }
+
+    /// <summary>
+    /// N identical one-staff systems of quarter notes: 4 ss of staff, stems 3.5 above it,
+    /// half a space below. The same geometry
+    /// <see cref="FirstPage_HoldsWhatTheNaturalDistanceFits"/> uses, and the same music
+    /// audit/lp-geometry/probes/page-vertical.ly engraves.
+    /// </summary>
+    private static (ImmutableArray<SystemLayout> Systems,
+                    ImmutableArray<(double upExtent, double downExtent)> Extents)
+        PlainSystems(int count)
+    {
+        var systems = ImmutableArray.CreateBuilder<SystemLayout>(count);
+        var extents = ImmutableArray.CreateBuilder<(double, double)>(count);
+        for (int i = 0; i < count; i++)
+        {
+            systems.Add(new SystemLayout(i, 0, 100, 0, ImmutableArray<MeasureLayout>.Empty));
+            extents.Add((3.5, 0.5));
+        }
+        return (systems.ToImmutable(), extents.ToImmutable());
     }
 
     private static SystemDetails CreateSystem(
