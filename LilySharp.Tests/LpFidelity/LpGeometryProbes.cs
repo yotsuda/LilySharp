@@ -199,6 +199,46 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The CLEF-bounded twin of <see cref="W"/> — the mirror of book S in page-vertical.ly.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as W, but the note is chosen so that the deepest ink on every system is
+    /// the CLEF and nothing else. `a` sits one step BELOW the middle line, which is what
+    /// makes its stem point UP: the head reaches 1.045 below the middle, the stem goes the
+    /// other way, and the staff's own bottom line at 2.0 is all that is left under it.
+    /// LilyPond's clef reaches 3.540, so it decides the extent by a wide margin.
+    ///
+    /// Do NOT write this on the middle line. `b` looks like the natural choice and is a
+    /// trap: a note ON the middle line takes a DOWN stem, which reaches 3.5 below it and
+    /// shadows the clef's 3.540 to within 0.04. Measured that way first, and the seeded
+    /// prediction missed because of it.
+    ///
+    /// W cannot catch a missing clef: there a c' notehead reaches 3.545, five thousandths
+    /// past the clef, so the number comes out right for the wrong reason. Confirmed by
+    /// measuring book S on 2.26.0 three ways — these notes, notes on the middle line, and
+    /// a bar of rests down to a 128th (glyph bottom 3.05 below the middle) — all giving
+    /// the identical 12.255229 and 11.716074, which is only possible if a grob none of
+    /// them contains is what sets them.
+    /// </remarks>
+    private static readonly string S = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 150)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "S" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -302,5 +342,12 @@ internal static class LpGeometryProbes
         // match neither, which is why both are here rather than just the gap.
         new("page.stretched.first-staff-refpoint", W, g => g.FirstStaffRefpoint()),
         new("system.stretched-distance", W, g => g.StaffGap()),
+
+        // The same two quantities again, on music that stays inside the staff so that the
+        // CLEF is the extreme ink rather than a notehead. See the remarks on probe S: W
+        // reads correct even when the clef is missing from the skyline entirely, because
+        // its lowest notehead happens to reach 0.005 further down than the clef does.
+        new("page.clef.first-staff-refpoint", S, g => g.FirstStaffRefpoint()),
+        new("system.clef-bounded-distance", S, g => g.StaffGap()),
     };
 }

@@ -108,6 +108,27 @@ probeTag =
   \score { \new Staff { \repeat unfold 150 { c'4 d' e' f' } } }
 }
 
+%% S — the same JUSTIFIED shape as J, but with music chosen so the deepest ink on every
+%%     system is the CLEF and nothing else. a' sits one step BELOW the middle line, which
+%%     is what makes its stem point UP: the head reaches only 1.045 below the middle, the
+%%     stem goes the other way, and the staff's own bottom line at 2.0 is the only thing
+%%     left under it. The clef reaches 3.540, so it decides the extent by a wide margin.
+%%
+%%     Do NOT write this on the middle line. b' looks like the natural choice and is a
+%%     trap: a note ON the middle line takes a DOWN stem, which reaches 3.5 below it and
+%%     shadows the clef's 3.540 to within 0.04. Measured that way first, and the probe
+%%     nearly failed to show anything.
+%%
+%%     Why the book is worth having: LilyPond's clef is an ordinary inside-staff grob and
+%%     joins the staff's vertical skyline, so it — not the notes — sets last-bottom-spacing's
+%%     floor and through it the page's force. Book J cannot catch a port that leaves the
+%%     clef out: there a c' notehead reaches 3.545, five thousandths PAST the clef, and the
+%%     number comes out right for the wrong reason.
+\book {
+  \probeTag "S"
+  \score { \new Staff { \repeat unfold 150 { a'4 a' a' a' } } }
+}
+
 %% L — the SAME short music as N but on the shipping default paper, so the one page it
 %%     produces is also the LAST page and `ragged-last-bottom = ##t` governs it. N and L
 %%     differ only in which flag is doing the work, which is what makes the pair able to

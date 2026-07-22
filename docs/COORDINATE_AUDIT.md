@@ -43,6 +43,39 @@ Y の反転は L4（出力）で**一度だけ**。per-grob 反転は存在し�
 **half-space** を使用。Stage-4 で render を native Y-up 化・単一フリップに集約。beam quanter は
 本セッションで half-space→ss 統一。**残る half-space/Y-down/pixel-leak/代償係数が本監査の標的**。
 
+### 2.1 ⚠️ `staffMiddleY` は**同じ名前で逆向き**（2026-07-22 監査・**未修正**）
+
+LP の内部は `Page_layout_problem` の**ページ配置だけ Y-down**で、それ以外は全部 Y-up
+（`page-layout-problem.cc:886-892` が自ら「configuration と `solution_` は紙面上端が 0 で下が正、
+ただし譜内は上が正」と書き、TODO で「紛らわしい」と認めている）。
+**したがって Lily# のページ積み上げ Y-down は LP 忠実**であり、直すべきは**譜内**の Y-down。
+
+その譜内で、`staffMiddleY` という**1 つの名前が 9 ファイルで 2 つの意味**を持っている:
+
+| ファイル | 定義 | フレーム |
+|---|---|---|
+| `SharedRenderer.Noteheads.cs` | `staffY - StaffHeight/2` | **Y-up** |
+| `SharedRenderer.Beams.cs` | `staffY - StaffHeight/2` | **Y-up** |
+| `SharedRenderer.GraceNotes.cs` | `syUp - g.StaffYOffset - StaffHeight/2` | **Y-up** |
+| `TieFormattingProblem.cs` | `_y + notePos * 0.5`（page Y） | Y-up（`_y` 依存） |
+| `ElementCoordinator.cs` | `staffY **+** StaffHeight/2` | **Y-down** |
+| `StemCalculator.cs` | `staffTopY **+** staffHeight/2` | **Y-down** |
+| `SkylineBuilder.cs` | `_staffHeight / 2` | **Y-down** |
+| `TupletBracketEngraver.cs` | `const StaffMiddleY = 2.0` | **Y-down** |
+| `ElementCoordinator.cs`(2) | `StaffOffsetInSystem(...)` | **Y-down** |
+
+**符号を見ないと frame が判らない**＝ §5.2 の「符号一致で字面移植」が成立しない層。
+`LayoutUtilities.StaffOffsetInSystem`（8 ファイル・16 参照）が Y-down 側の供給源で、
+`FindStaffYInSystem` / `ResolveStaffMiddleY` / `StaffTopYUp` / `SystemTopYUp` は既に Y-up。
+
+⚠️ **clef をスカイラインに入れたときの `+1.110000`（HANDOFF §1）はこの層にある。**
+`VerticalSkyline` 自体は正しいことを `SkylineMergeTests.Distance_BetweenFacingSystems_IsTheirInkAndNoMore`
+で固定済み（`MaxHeight` ±一致・`Distance` 7.350000）。**残差は消費側＝この表の混在。**
+
+**着手順序**: ①名前で frame を明示（改名は**ユーザーが MSVS のリファクタで**実施）→
+②譜内を Y-up に統一 → ③そのうえで clef を再投入。**ページ配置（`solution_` 相当）は
+LP と同じ Y-down のまま残す。**
+
 ---
 
 ## 3. サブシステム別 監査

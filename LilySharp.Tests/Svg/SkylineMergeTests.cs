@@ -53,6 +53,49 @@ public class SkylineMergeTests
     }
 
     /// <summary>
+    /// Two systems' facing skylines are exactly as far apart as their ink, and no
+    /// further — the contract everything that seeds a box into a system skyline relies on.
+    /// </summary>
+    /// <remarks>
+    /// Written to settle a specific question rather than for coverage. Seeding the opening
+    /// CLEF into the system skylines (it is the extreme ink on a plain score, and LilyPond
+    /// carries it) moved system.natural-distance from exact to +1.110000, which works back
+    /// to an inter-system distance of 9.110000 where the boxes say 7.350000. Either the
+    /// skyline arithmetic disagrees with the boxes or its consumer does, and only one of
+    /// those is worth debugging at a time.
+    ///
+    /// The geometry is the real one, in the system frame the builder uses (Y-up, origin at
+    /// the system's top staff line): a staff whose bottom line is 4 below the origin, and a
+    /// treble clef anchored one staff-space below the middle line, its ink spanning
+    /// GlyphMetrics.ClefG = (-2.550 .. +4.800) about that anchor, i.e. -5.550 .. +1.800
+    /// here. Facing systems are that far apart: 5.550 of hanging ink plus 1.800 of rising.
+    /// </remarks>
+    [Fact]
+    public void Distance_BetweenFacingSystems_IsTheirInkAndNoMore()
+    {
+        const double clefLeft = 0.3, clefRight = 2.865;
+        const double clefBottomUp = -5.55, clefTopUp = 1.8;
+
+        // The system ABOVE: its floor is the staff's bottom line, plus the clef's ink.
+        var down = VerticalSkyline.FromBox(0, 100, -4, -4, VerticalDirection.Down);
+        down.Merge(VerticalSkyline.FromBox(
+            clefLeft, clefRight, clefBottomUp, clefTopUp, VerticalDirection.Down));
+
+        // The system BELOW: its roof is its top staff line, plus the same clef.
+        var up = VerticalSkyline.FromBox(0, 100, 0, 0, VerticalDirection.Up);
+        up.Merge(VerticalSkyline.FromBox(
+            clefLeft, clefRight, clefBottomUp, clefTopUp, VerticalDirection.Up));
+
+        _output.WriteLine($"down.MaxHeight = {down.MaxHeight():F6}  (expect -5.550000)");
+        _output.WriteLine($"up.MaxHeight   = {up.MaxHeight():F6}  (expect  1.800000)");
+        _output.WriteLine($"distance       = {up.Distance(down, 1.0):F6}  (expect  7.350000)");
+
+        Assert.Equal(-5.55, down.MaxHeight(), 6);
+        Assert.Equal(1.8, up.MaxHeight(), 6);
+        Assert.Equal(7.35, up.Distance(down, 1.0), 6);
+    }
+
+    /// <summary>
     /// Two non-overlapping buildings should remain separate.
     /// </summary>
     [Fact]

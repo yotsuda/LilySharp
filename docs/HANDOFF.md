@@ -29,14 +29,51 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ### ▶ 次のセッションの最初の一手
 
-**縦は台帳の 5 点すべて exact になった。** 残る 3 点は全部 X（`e38a76bf` から不変）。
-次の候補は 2 つ、どちらも**測れる点が先に要る**:
+**`SkylineBuilder` は clef を一度も種にしていない。** 起票済み（`769529ed`）・**未修正**。
 
-1. **休符も実インクへ。** `22120764` で符頭だけを LILC 由来にした。同じ `SkylineBuilder` の
-   休符は今も `EngravingDefaults.RestHeight/RestWidth = 1.0` の名目値で、
-   **`GlyphMetrics.GetRestBBox` は既にある**（1グリフ隣の同一修正）。⚠️ **今の台帳では検出できない**
-   （probe V/W に休符が無い）ので、**休符を踏む probe を足してから**直すこと。
-2. **PageBreaker が鎖と食い違っている**（下の ⚠️）。「1ページに何本」は今も別モデル。
+LP の clef は staff の VerticalAxisGroup スカイラインに入る**内部 grob** で、素のスコアでは
+**上下ともインクの極値**（refpoint から下 **3.540**・上 **3.800**）。だから last-bottom spring の
+床を決め、鎖を通じてページ全体の force を決めている。Lily# は staff 線・音符・休符・臨時記号・
+加線・強弱・アーティキュレーションだけを種にしており、**clef が入っていない**。
+
+| 台帳キー（probe S） | LP | Lily# | 残差 |
+|---|---|---|---|
+| `page.clef.first-staff-refpoint` | 11.716074 | 11.728801149 | **+0.012727149** |
+| `system.clef-bounded-distance` | 12.255229 | 12.382501488 | **+0.127272488** |
+
+**着手前の予測は桁まで的中**（Lily# の下インクが五線の 2.000000 で止まる前提で 11.728801 /
+12.382500 を計算 → 実測一致）。
+
+#### ⛔ 一度実装して差し戻した（2026-07-22）。**再挑戦の前に `VerticalSkyline.Distance` を測ること**
+
+`SeedClef` を `BuildSystemSkylines` に足した（`DrawClef` を写して treble は中央線の 1 下＝
+`aboveMiddle = -1`、箱は `GlyphMetrics.ClefG` = 下 −2.550 / 上 +4.800、X は `systemLeft + 0.3`）。
+**狙った 2 点は閉じた**（`page.clef.first-staff-refpoint` +0.012727 → **−0.0000828**、
+`system.clef-bounded-distance` +0.127272 → **−0.000827**）が、
+**`system.natural-distance` が 12.000000 → 13.110000（+1.110000）と後退**したので戻した。
+
+**逆算した事実**（ここから再開すること）:
+- 単一ページ経路の gap は `max(SysHeight + SystemSpacing, skylineDistance + SystemSpacing*0.5)`。
+  13.110000 → **skylineDistance = 9.110000**。
+- 箱から期待される値は **7.35**（下 5.55 ＋ 上 1.8、いずれも system 原点基準）。
+  scalar 経路 `StaffHeight + downExtent + upExtent` でも 4 + 1.55 + 1.8 = 7.35。
+- 9.11 − 4 − 1.8 = **downExtent 3.31**。つまり **down 側が想定より 1.76 深い**。
+- ⚠️ **LP は同じ音楽で 12.000000 のまま**（LP の床は 5.55+1.8+padding 1 = 8.35 < basic 12）。
+  だから「clef を入れると縦が広がる」のは**移植の正しさではなく Lily# 側の計算の問題**。
+
+⚠️ **次にやること: 箱を足す前に `VerticalSkyline.Distance` と `FromBox` の規約を実測で確かめる**
+（既存の種＝符頭・加線で `Distance` が箱どおりの値を返すかを単体で測る）。1.76 の出どころが
+判るまで再着手しないこと。⚠️ 併せて **`BuildStaffSkylines`（譜間用）は systemLeft を受け取らない**
+ので clef の X 起点が無い。system 側と同時に設計すること。
+
+その次: **PageBreaker が鎖と食い違っている**（下の ⚠️）。「1ページに何本」は今も別モデル。
+
+#### ✅ 決着: 休符の実インク化は**やらなくてよい**（測って否定した）
+
+`22120764` の続きとして「休符も名目 1.0 → `GetRestBBox`」を予定していたが、**実測で棄却**。
+128分休符（グリフ下端は中央線の 3.05 下）を敷き詰めた probe と、素の音符の probe が
+**LP で 1 ビット違わぬ同じ値**（11.716074 / 12.255229）を返した。休符は中央線に座るので
+**縦インクが極値になることが無く**、スペーシングに効かない。箱が名目なのは事実だが**不活性**。
 
 ---
 
@@ -51,12 +88,13 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ---
 
-**origin より 26 ahead で未 push**（HEAD `22120764`）。push はユーザー判断・コミットは可。
+**origin より 29 ahead で未 push**（HEAD `769529ed`）。push はユーザー判断・コミットは可。
 ⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 5 回（186・192・2・2・80 件）が含まれる。**
 別ブランチ `fix/vscode-extension` が `7291531a` から切られている（VS Code 拡張作業・ユーザー）。
 **テスト 0 failed / 3136 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度 24/27 exact, total |residual| = 0.022412 ss**（**2.26.0 基準**。X 22点＋**Y 5点**）。
-**Y は 5/5 exact。** X 3 点は `e38a76bf` から値が不変。
+**LP 忠実度 24/29 exact, total |residual| = 0.162412 ss**（**2.26.0 基準**。X 22点＋**Y 7点**）。
+⚠️ **0.022412 → 0.162412 は悪化ではない。** `769529ed` で clef の発散が**測れるようになった**分
+（`5c4126d6`・`6ffbe7bd` と同じ現象）。既存の点は 1 つも動いていない。
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
 
 ⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
@@ -141,6 +179,7 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 | `cfdf85b4` | **ページを LP の spring 鎖として解く**（`Page_layout_problem` ＋ `Simple_spacer` の字面移植）。**0.114688 → 0.004090**。転記誤り2件を同時に廃止（下記）。**snapshot 2 件再ベース** |
 | `a7b96569` | 生 dump を直読みして**残差の原因の記述を訂正**（コード変更なし）。要約からの逆算が誤りだった |
 | `22120764` | **縦スカイラインを符頭の実インク（LILC ±0.545）へ** — `ec7a2254` の縦版。**0.004090 → 0**、**縦は 5/5 exact**。**snapshot 80 件再ベース**（全件で行数・グリフ数一致＝構造保存、Y は −0.05〜+1.80） |
+| `769529ed` | **clef がスカイラインに無いことを測れる probe S を起票**（出力不変）。予測を先に書いて桁まで的中。休符案は実測で棄却（上記） |
 | `b94487ad` | **先頭 system の配置を refpoint フレームへ**（§2⑧ の順序①）。`CalculateFirstStaffRefpoint` を新設し、`CalculateFirstSystemY` を **halfStaff 変換の唯一の seam** に。3 呼び出し元とも spec を渡す。**出力不変・snapshot 0 件** |
 | `1dfb62d7` | **先頭 system を top-system spring に載せた**（順序②）。`max(basic-distance, ink + padding)`。**`page.first-staff-refpoint` −3.000000 → 0**、22/25 exact・0.022412 ss。**snapshot 2 件再ベース**（`programmatic/hara-kiri{,-paged}`、全て +3.00） |
 | `99baed0f` | **`Deploy-Lsp.ps1` が `media/` を配っていなかった**のを修正。プレビューの符頭が三角になっていた原因（下記） |
