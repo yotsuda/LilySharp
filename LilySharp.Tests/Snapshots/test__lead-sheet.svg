@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="248.3" viewBox="0 0 119.05 24.83" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="262.1" viewBox="0 0 119.50 26.21" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="405">Lead sheet</text>
-  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <rect x="26.67" y="15.53" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="43.07" y="15.53" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="64.01" y="15.53" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="74.80" y="15.53" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="75.29" y="15.53" width="0.60" height="4.00" data-pos="0"/>
-  <text x="9.46" y="18.13" font-size="3.20" text-anchor="middle" data-pos="511">Twin</text>
-  <text x="15.79" y="18.13" font-size="3.20" text-anchor="middle" data-pos="517">kle</text>
-  <text x="20.08" y="18.13" font-size="3.20" text-anchor="middle" data-pos="521">lit</text>
-  <text x="24.02" y="18.13" font-size="3.20" text-anchor="middle" data-pos="526">tle</text>
-  <text x="29.57" y="18.13" font-size="3.20" text-anchor="middle" data-pos="532">star</text>
-  <text x="35.63" y="18.13" font-size="3.20" text-anchor="middle" data-pos="537">how</text>
-  <text x="39.92" y="18.13" font-size="3.20" text-anchor="middle" data-pos="541">I</text>
-  <text x="46.41" y="18.13" font-size="3.20" text-anchor="middle" data-pos="545">won</text>
-  <text x="52.21" y="18.13" font-size="3.20" text-anchor="middle" data-pos="550">der</text>
-  <text x="60.50" y="18.13" font-size="3.20" text-anchor="middle" data-pos="554">what</text>
-  <text x="69.20" y="18.13" font-size="3.20" text-anchor="middle" data-pos="561">you</text>
-  <text x="9.46" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="458">C</text>
-  <text x="20.08" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="461">G7</text>
-  <text x="29.57" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="467">Am</text>
-  <text x="46.41" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="476">F</text>
-  <text x="54.94" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="479">G7</text>
-  <text x="69.20" y="14.03" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="485">C</text>
-  <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
-  <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
-  <line x1="13.19" y1="17.63" x2="13.49" y2="17.63" stroke="#000000" stroke-width="0.160"/>
-  <line x1="21.77" y1="17.63" x2="22.07" y2="17.63" stroke="#000000" stroke-width="0.160"/>
-  <line x1="49.52" y1="17.63" x2="49.82" y2="17.63" stroke="#000000" stroke-width="0.160"/>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="405">Lead sheet</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <rect x="26.67" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="43.07" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="64.01" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="74.80" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="75.29" y="16.22" width="0.60" height="4.00" data-pos="0"/>
+  <text x="9.46" y="18.82" font-size="3.20" text-anchor="middle" data-pos="511">Twin</text>
+  <text x="15.79" y="18.82" font-size="3.20" text-anchor="middle" data-pos="517">kle</text>
+  <text x="20.08" y="18.82" font-size="3.20" text-anchor="middle" data-pos="521">lit</text>
+  <text x="24.02" y="18.82" font-size="3.20" text-anchor="middle" data-pos="526">tle</text>
+  <text x="29.57" y="18.82" font-size="3.20" text-anchor="middle" data-pos="532">star</text>
+  <text x="35.63" y="18.82" font-size="3.20" text-anchor="middle" data-pos="537">how</text>
+  <text x="39.92" y="18.82" font-size="3.20" text-anchor="middle" data-pos="541">I</text>
+  <text x="46.41" y="18.82" font-size="3.20" text-anchor="middle" data-pos="545">won</text>
+  <text x="52.21" y="18.82" font-size="3.20" text-anchor="middle" data-pos="550">der</text>
+  <text x="60.50" y="18.82" font-size="3.20" text-anchor="middle" data-pos="554">what</text>
+  <text x="69.20" y="18.82" font-size="3.20" text-anchor="middle" data-pos="561">you</text>
+  <text x="9.46" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="458">C</text>
+  <text x="20.08" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="461">G7</text>
+  <text x="29.57" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="467">Am</text>
+  <text x="46.41" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="476">F</text>
+  <text x="54.94" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="479">G7</text>
+  <text x="69.20" y="14.72" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="485">C</text>
+  <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
+  <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
+  <line x1="13.19" y1="18.32" x2="13.49" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="21.77" y1="18.32" x2="22.07" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="49.52" y1="18.32" x2="49.82" y2="18.32" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

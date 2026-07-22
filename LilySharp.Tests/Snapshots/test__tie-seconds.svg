@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="268.6" viewBox="0 0 119.05 26.86" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="282.4" viewBox="0 0 119.50 28.24" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="456">Ties on seconds</text>
-  <text x="110.55" y="8.49" font-size="2.20" font-style="italic" text-anchor="end" data-pos="483">Lily#</text>
-  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="15.63" x2="27.43" y2="15.63" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.63" x2="27.43" y2="16.63" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.63" x2="27.43" y2="17.63" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.63" x2="27.43" y2="18.63" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.63" x2="27.43" y2="19.63" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="18.63" font-size="4.00" data-pos="530"></text>
-  <text class="music" x="3.30" y="17.63" font-size="4.00" data-pos="491"></text>
-  <line x1="7.34" y1="20.63" x2="9.40" y2="20.63" stroke="#000000" stroke-width="0.200"/>
-  <line x1="11.62" y1="20.63" x2="13.68" y2="20.63" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="7.68" y="20.63" font-size="4.00" data-pos="560"></text>
-  <text class="music" x="9.00" y="20.13" font-size="4.00" data-pos="562"></text>
-  <line x1="8.92" y1="20.63" x2="8.92" y2="16.63" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="11.96" y="20.63" font-size="4.00" data-pos="569"></text>
-  <text class="music" x="13.27" y="20.13" font-size="4.00" data-pos="571"></text>
-  <line x1="13.20" y1="20.63" x2="13.20" y2="16.63" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="17.54" y="20.13" font-size="4.00" data-pos="578"></text>
-  <text class="music" x="18.85" y="19.63" font-size="4.00" data-pos="580"></text>
-  <line x1="18.78" y1="20.13" x2="18.78" y2="16.13" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.81" y="20.13" font-size="4.00" data-pos="587"></text>
-  <text class="music" x="23.13" y="19.63" font-size="4.00" data-pos="589"></text>
-  <line x1="23.05" y1="20.13" x2="23.05" y2="16.13" stroke="#000000" stroke-width="0.130"/>
-  <rect x="16.45" y="15.63" width="0.19" height="4.00" data-pos="575"/>
-  <rect x="26.34" y="15.63" width="0.19" height="4.00" data-pos="593"/>
-  <rect x="26.83" y="15.63" width="0.60" height="4.00" data-pos="593"/>
-  <path d="M 9.26,21.38 C 9.83,21.95 11.18,21.95 11.76,21.38 C 11.18,22.07 9.83,22.07 9.26,21.38 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 10.57,19.96 C 11.15,19.27 12.50,19.27 13.07,19.96 C 12.50,19.39 11.15,19.39 10.57,19.96 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 19.12,20.63 C 19.69,21.20 21.04,21.20 21.61,20.63 C 21.04,21.32 19.69,21.32 19.12,20.63 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 20.43,18.88 C 21.00,18.20 22.35,18.20 22.93,18.88 C 22.35,18.32 21.00,18.32 20.43,18.88 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="0.30" y="10.77" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="544"/>
-  <text x="3.01" y="12.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="544">Main</text>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="456">Ties on seconds</text>
+  <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="483">Lily#</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="16.32" x2="27.43" y2="16.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.32" x2="27.43" y2="17.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.32" x2="27.43" y2="18.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.32" x2="27.43" y2="19.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.32" x2="27.43" y2="20.32" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="19.32" font-size="4.00" data-pos="530"></text>
+  <text class="music" x="3.30" y="18.32" font-size="4.00" data-pos="491"></text>
+  <line x1="7.34" y1="21.32" x2="9.40" y2="21.32" stroke="#000000" stroke-width="0.200"/>
+  <line x1="11.62" y1="21.32" x2="13.68" y2="21.32" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="7.68" y="21.32" font-size="4.00" data-pos="560"></text>
+  <text class="music" x="9.00" y="20.82" font-size="4.00" data-pos="562"></text>
+  <line x1="8.92" y1="21.32" x2="8.92" y2="17.32" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="11.96" y="21.32" font-size="4.00" data-pos="569"></text>
+  <text class="music" x="13.27" y="20.82" font-size="4.00" data-pos="571"></text>
+  <line x1="13.20" y1="21.32" x2="13.20" y2="17.32" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="17.54" y="20.82" font-size="4.00" data-pos="578"></text>
+  <text class="music" x="18.85" y="20.32" font-size="4.00" data-pos="580"></text>
+  <line x1="18.78" y1="20.82" x2="18.78" y2="16.82" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.81" y="20.82" font-size="4.00" data-pos="587"></text>
+  <text class="music" x="23.13" y="20.32" font-size="4.00" data-pos="589"></text>
+  <line x1="23.05" y1="20.82" x2="23.05" y2="16.82" stroke="#000000" stroke-width="0.130"/>
+  <rect x="16.45" y="16.32" width="0.19" height="4.00" data-pos="575"/>
+  <rect x="26.34" y="16.32" width="0.19" height="4.00" data-pos="593"/>
+  <rect x="26.83" y="16.32" width="0.60" height="4.00" data-pos="593"/>
+  <path d="M 9.26,22.07 C 9.83,22.64 11.18,22.64 11.76,22.07 C 11.18,22.76 9.83,22.76 9.26,22.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 10.57,20.65 C 11.15,19.96 12.50,19.96 13.07,20.65 C 12.50,20.08 11.15,20.08 10.57,20.65 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 19.12,21.32 C 19.69,21.89 21.04,21.89 21.61,21.32 C 21.04,22.01 19.69,22.01 19.12,21.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 20.43,19.57 C 21.00,18.89 22.35,18.89 22.93,19.57 C 22.35,19.01 21.00,19.01 20.43,19.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="0.30" y="11.46" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="544"/>
+  <text x="3.01" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="544">Main</text>
   </g>
 </svg>

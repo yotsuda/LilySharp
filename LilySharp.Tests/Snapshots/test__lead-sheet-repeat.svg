@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="199.3" viewBox="0 0 119.05 19.93" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="213.1" viewBox="0 0 119.50 21.31" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="250">Repeat</text>
-  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <rect x="16.84" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="17.03" y="12.43" width="0.60" height="4.00" data-pos="0"/>
-  <rect x="17.93" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="18.62" cy="13.93" r="0.20" data-pos="0"/>
-  <circle cx="18.62" cy="14.93" r="0.20" data-pos="0"/>
-  <rect x="30.01" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="40.86" cy="13.93" r="0.20" data-pos="0"/>
-  <circle cx="40.86" cy="14.93" r="0.20" data-pos="0"/>
-  <rect x="41.36" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="41.85" y="12.43" width="0.60" height="4.00" data-pos="0"/>
-  <text x="7.77" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
-  <text x="12.44" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
-  <text x="21.10" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
-  <text x="25.61" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
-  <text x="35.07" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
-  <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="268"/>
-  <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="268">Main</text>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="250">Repeat</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <rect x="16.84" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="17.03" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="17.93" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="18.62" cy="14.62" r="0.20" data-pos="0"/>
+  <circle cx="18.62" cy="15.62" r="0.20" data-pos="0"/>
+  <rect x="30.01" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="40.86" cy="14.62" r="0.20" data-pos="0"/>
+  <circle cx="40.86" cy="15.62" r="0.20" data-pos="0"/>
+  <rect x="41.36" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="41.85" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <text x="7.77" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
+  <text x="12.44" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
+  <text x="21.10" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
+  <text x="25.61" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
+  <text x="35.07" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
+  <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="268"/>
+  <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="268">Main</text>
   </g>
 </svg>

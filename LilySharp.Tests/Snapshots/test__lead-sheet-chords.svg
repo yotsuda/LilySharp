@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="199.3" viewBox="0 0 119.05 19.93" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="213.1" viewBox="0 0 119.50 21.31" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="259">Chords only</text>
-  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <rect x="16.84" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="28.22" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="38.87" y="12.43" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="39.36" y="12.43" width="0.60" height="4.00" data-pos="0"/>
-  <text x="7.77" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="313">C</text>
-  <text x="12.44" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="316">Am</text>
-  <text x="19.31" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="322">F</text>
-  <text x="23.82" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="325">G7</text>
-  <text x="33.28" y="15.33" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="331">C</text>
-  <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="282"/>
-  <text x="3.01" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="282">Main</text>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="259">Chords only</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <rect x="16.84" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="28.22" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="38.87" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="39.36" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <text x="7.77" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="313">C</text>
+  <text x="12.44" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="316">Am</text>
+  <text x="19.31" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="322">F</text>
+  <text x="23.82" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="325">G7</text>
+  <text x="33.28" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="331">C</text>
+  <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="282"/>
+  <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="282">Main</text>
   </g>
 </svg>

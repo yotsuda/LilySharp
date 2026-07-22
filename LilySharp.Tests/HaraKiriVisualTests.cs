@@ -144,9 +144,19 @@ public class HaraKiriVisualTests
         // The same score paged: exercises the per-system heights in the page
         // breaker (incl. the TopExtent continuation rod) with a hidden-staff
         // system on each page boundary.
+        // The VERTICAL band is pinned here, not inherited. This test is about the page
+        // breaker, so it has to own the page it breaks: it used to set PageHeight alone and
+        // take whatever margins the product defaulted to, and when those moved from 5 to
+        // LilyPond's real 10mm (5.690551 ss) the usable band shrank from 20 to 18.62 and the
+        // score stopped paginating — the assert below caught it, but as a mystery rather
+        // than as "someone changed the paper". Fixing the band keeps this measuring the
+        // breaker. The horizontal is deliberately left to the product: this is not a
+        // line-breaking test, and nothing here depends on the width.
         var (_, layout, svg) = Build(new LayoutOptions
         {
             PageHeight = 30,
+            MarginTop = 5,
+            MarginBottom = 5,
             UseOptimalPageBreaking = true,
         });
         Xunit.Assert.True(layout.Pages.Length >= 2,

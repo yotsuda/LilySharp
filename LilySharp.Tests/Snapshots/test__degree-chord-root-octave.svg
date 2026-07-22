@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="219.3" viewBox="0 0 119.05 21.93" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="233.1" viewBox="0 0 119.50 23.31" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.52" y="5.00" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="16">degree chord order independence</text>
-  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.43" x2="17.57" y2="12.43" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.43" x2="17.57" y2="13.43" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.43" x2="17.57" y2="14.43" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.43" x2="17.57" y2="15.43" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.43" x2="17.57" y2="16.43" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="15.43" font-size="4.00" data-pos="80"></text>
-  <text class="music" x="3.30" y="14.43" font-size="4.00" data-pos="50"></text>
-  <text class="music" x="7.68" y="13.93" font-size="4.00" data-pos="113"></text>
-  <text class="music" x="7.68" y="16.43" font-size="4.00" data-pos="116"></text>
-  <text class="music" x="7.68" y="15.43" font-size="4.00" data-pos="118"></text>
-  <line x1="8.92" y1="16.43" x2="8.92" y2="10.76" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="11.96" y="16.43" font-size="4.00" data-pos="123"></text>
-  <text class="music" x="11.96" y="15.43" font-size="4.00" data-pos="125"></text>
-  <text class="music" x="11.96" y="13.93" font-size="4.00" data-pos="127"></text>
-  <line x1="13.20" y1="16.43" x2="13.20" y2="10.76" stroke="#000000" stroke-width="0.130"/>
-  <rect x="16.48" y="12.43" width="0.19" height="4.00" data-pos="131"/>
-  <rect x="16.97" y="12.43" width="0.60" height="4.00" data-pos="131"/>
-  <rect x="0.30" y="7.57" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="94"/>
-  <text x="1.29" y="9.77" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="94">A</text>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="16">degree chord order independence</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="13.12" x2="17.57" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.12" x2="17.57" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.12" x2="17.57" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="17.57" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.12" x2="17.57" y2="17.12" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="16.12" font-size="4.00" data-pos="80"></text>
+  <text class="music" x="3.30" y="15.12" font-size="4.00" data-pos="50"></text>
+  <text class="music" x="7.68" y="14.62" font-size="4.00" data-pos="113"></text>
+  <text class="music" x="7.68" y="17.12" font-size="4.00" data-pos="116"></text>
+  <text class="music" x="7.68" y="16.12" font-size="4.00" data-pos="118"></text>
+  <line x1="8.92" y1="17.12" x2="8.92" y2="11.45" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="11.96" y="17.12" font-size="4.00" data-pos="123"></text>
+  <text class="music" x="11.96" y="16.12" font-size="4.00" data-pos="125"></text>
+  <text class="music" x="11.96" y="14.62" font-size="4.00" data-pos="127"></text>
+  <line x1="13.20" y1="17.12" x2="13.20" y2="11.45" stroke="#000000" stroke-width="0.130"/>
+  <rect x="16.48" y="13.12" width="0.19" height="4.00" data-pos="131"/>
+  <rect x="16.97" y="13.12" width="0.60" height="4.00" data-pos="131"/>
+  <rect x="0.30" y="8.26" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="94"/>
+  <text x="1.29" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="94">A</text>
   </g>
 </svg>

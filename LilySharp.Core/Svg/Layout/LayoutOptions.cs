@@ -28,40 +28,69 @@ internal sealed record LayoutOptions
 {
     // === Page Dimensions (in staff spaces) ===
 
+    // ONE conversion underlies every page constant below, and it is the thing that used to
+    // be wrong: LilyPond's "point" is the TEX point of 1/72.27 inch, NOT the PostScript big
+    // point of 1/72 (LILYPOND-REF: lily/include/dimensions.hh:27 INCH_TO_PT = 72.270, with
+    // INCH_TO_BP = 72 kept separately on :31 for the cases that really do mean big points).
+    // The default staff is 20pt tall (ly/paper-defaults-init.ly staff-height), so
+    //
+    //     1 staff space = staff-height / 4 = 5 pt = 5 x 25.4 / 72.27 mm = 127 / 72.27 mm
+    //                   = 1.757299 mm       (and mm -> ss is therefore x 72.27 / 127)
+    //
+    // Reading that 5 pt as PostScript points gives 1.763889 mm and is where the old 168.4
+    // and 119.05 came from. Every value below is <millimetres> * 72.27 / 127, and each one
+    // agrees to six decimals with what audit/lp-geometry/Measure-LilyPondPageGeometry.ps1
+    // reads out of LilyPond 2.26.0.
+
     /// <summary>Page width in staff spaces.</summary>
     /// <remarks>
-    /// A4 (210mm) at the default 20pt staff: staff-space = 5pt = 1.764mm, so
-    /// 210 / 1.764 = 119 staff spaces. Earlier this was an arbitrary 80, which
-    /// made line breaking pack ~25% fewer measures per line than LilyPond on the
-    /// same A4 paper. ContentWidth now equals LP's 180mm line-width (102 ss).
+    /// A4 is 210 mm wide: 210 * 72.27 / 127 = 119.501575 ss. Was 119.05, the same paper
+    /// measured in PostScript points. Earlier still it was an arbitrary 80, which made line
+    /// breaking pack ~25% fewer measures per line than LilyPond on the same A4 paper.
     /// </remarks>
-    public double PageWidth { get; init; } = 119.05;
+    public double PageWidth { get; init; } = 119.501575;
 
     /// <summary>Left margin in staff spaces.</summary>
-    /// <remarks>LilyPond A4 default left-margin 15mm = 8.5 staff spaces at 20pt.</remarks>
-    public double MarginLeft { get; init; } = 8.5;
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:93 left-margin-default = 15\mm.
+    /// 15 * 72.27 / 127 = 8.535827 ss. Was 8.5 — the right millimetres, rounded.
+    /// </remarks>
+    public double MarginLeft { get; init; } = 8.535827;
 
     /// <summary>Right margin in staff spaces.</summary>
-    /// <remarks>LilyPond A4 default right-margin 15mm = 8.5 staff spaces at 20pt.</remarks>
-    public double MarginRight { get; init; } = 8.5;
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:94 right-margin-default = 15\mm.
+    /// 15 * 72.27 / 127 = 8.535827 ss.
+    /// </remarks>
+    public double MarginRight { get; init; } = 8.535827;
 
     /// <summary>Top margin in staff spaces.</summary>
-    /// <remarks>LILYPOND-REF: scm/paper.scm:50 top-margin</remarks>
-    public double MarginTop { get; init; } = 5;
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:53 top-margin-default = 10\mm.
+    /// 10 * 72.27 / 127 = 5.690551 ss. Was 5. NOTE that 2.24.4 defaulted this to 5 mm and
+    /// the bottom to 6 mm; 2.26.0 made both 10 mm, so a figure copied from an older
+    /// measurement will not agree.
+    /// </remarks>
+    public double MarginTop { get; init; } = 5.690551;
 
     /// <summary>Bottom margin in staff spaces.</summary>
-    /// <remarks>LILYPOND-REF: scm/paper.scm:22 bottom-margin</remarks>
-    public double MarginBottom { get; init; } = 5;
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:54 bottom-margin-default = 10\mm.
+    /// 10 * 72.27 / 127 = 5.690551 ss. Was 5.
+    /// </remarks>
+    public double MarginBottom { get; init; } = 5.690551;
 
     /// <summary>
-    /// Page height in staff spaces. Defaults to A4 at the same scale as
-    /// <see cref="PageWidth"/> (595×842 pt at ~5 pt per staff space:
-    /// width 119.05, height 168.4) — LilyPond always engraves onto a real
-    /// paper size, so long pieces paginate instead of producing one
-    /// endless page. Set to 0 or negative for a single content-driven page.
+    /// Page height in staff spaces. A4 is 297 mm tall: 297 * 72.27 / 127 = 169.009370 ss,
+    /// the same scale as <see cref="PageWidth"/> — LilyPond always engraves onto a real
+    /// paper size, so long pieces paginate instead of producing one endless page.
+    /// Set to 0 or negative for a single content-driven page.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/paper.scm — a4 paper-height</remarks>
-    public double PageHeight { get; init; } = 168.4;
+    /// <remarks>
+    /// LILYPOND-REF: scm/paper.scm — a4 paper-height. Was 168.4, which is A4 read in
+    /// PostScript points (297 / 1.763889) rather than LilyPond's TeX points.
+    /// </remarks>
+    public double PageHeight { get; init; } = 169.009370;
 
     // === Staff Dimensions (in staff spaces) ===
 
