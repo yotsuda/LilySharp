@@ -47,7 +47,13 @@ const windows = new Map<string, { base: number, text: string }>();
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
 // paste never pays for a full getText().
-const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '~']);
+const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '~', '[', '[]', ']']);
+
+// The durations that carry a flag, and so can be beamed. A note that spells no
+// duration inherits the running one — `c8 d e f` beams all four and only the
+// first says '8' — so a beam run can only be read with the measure's running
+// value carried along.
+const BEAMABLE = new Set([8, 16, 32, 64, 128]);
 const isSmartInsert = (t: string) => SMART_INSERTS.has(t) || /^[0-9]$/.test(t);
 
 /** Remembers the text around `at` as the document stands NOW, for the next
@@ -125,6 +131,19 @@ let applyingFix = false;
  *    so '~' typed anywhere ON a note moves to that note's end (`|c2` + '~' →
  *    `c2~`). Which note it ties TO is whatever follows, and whether the pitch
  *    repeats is the compiler's business (LYS4007), not the editor's.
+ *
+ * 20. A manual beam opens the same way and closes on MUSIC rather than on a
+ *    count: '[' typed on a note runs to the last note in the SAME MEASURE that
+ *    can still be beamed (`c8|` + '[' → `c8[ d e f]`), because a beam cannot
+ *    cross a barline and cannot hold a quarter, a longer note or a rest. The
+ *    run is read with the running duration carried along, so the `d e f` of
+ *    `c8 d e f` count as eighths even though only the first says so. A rest is
+ *    SPANNED (`c8[ r8 d]`) but never ends a beam.
+ * 21. ']' mirrors it backwards: it reaches for the first note of the beamable
+ *    run that ends where it was typed, and puts the '[' there.
+ * 22. A note that cannot carry a beam, or one with nothing beamable beside it,
+ *    is left as typed — as is a '[' that is not on a note, which is what an
+ *    inline volta's `[1.` is.
  *
  * Smart octave marks, on the same reading of the caret:
  *
@@ -259,6 +278,12 @@ export function registerSmartBrackets(
                 onInsertSlurClose(editor, text, offset, log);
             } else if (change.text === '~') {
                 onInsertTie(editor, text, offset, log);
+            } else if (change.text === '[') {
+                onInsertBeamOpen(editor, text, offset, false, log);
+            } else if (change.text === '[]') {
+                onInsertBeamOpen(editor, text, offset, true, log);
+            } else if (change.text === ']') {
+                onInsertBeamClose(editor, text, offset, log);
             } else if (change.text === "'" || change.text === ',') {
                 onInsertOctaveMark(editor, text, offset, change.text, log);
             } else if (/^[0-9]$/.test(change.text)) {
@@ -290,13 +315,18 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
         hi = Math.max(hi, e.at + (e.del ?? 0));
     }
     // The span [lo, hi) rebuilt with every edit applied — one replacement, so
-    // the edits can never half-land or overlap.
+    // the edits can never half-land or overlap. Where a delete and an insert
+    // share an offset — which is every keystroke replaced in place — the INSERT
+    // goes first: taking the deletion first would step the cursor past the text
+    // the insert then copies again, emitting it twice.
+    const ordered = [...edits].sort((a, b) =>
+        a.at - b.at || (a.ins ? 0 : 1) - (b.ins ? 0 : 1));
     let out = '';
     let i = lo;
-    for (const e of [...edits].sort((a, b) => a.at - b.at)) {
+    for (const e of ordered) {
         out += text.slice(i, e.at);
         if (e.ins) { out += e.ins; }
-        i = e.at + (e.del ?? 0);
+        i = Math.max(i, e.at + (e.del ?? 0));
     }
     out += text.slice(i, hi);
 
@@ -683,6 +713,139 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
         + (extend ? 'extended the slur starting there'
             : paired ? 'paired with the unresolved ) ahead'
                 : ') placed after the following note'));
+}
+
+/** The note events of the measure around `at`, each with the duration it
+ * actually sounds — the running value carried from the measure's start, because
+ * only the first note of `c8 d e f` spells the eighth out. Bounded by the
+ * MEASURE and not by the block, which is what separates a beam from a slur: a
+ * beam cannot cross a barline. A barrier ends what can be read. */
+function measureEvents(text: string, at: number)
+    : { start: number, end: number, duration: number, rest: boolean }[] {
+    const [mStart, mEnd] = measureBounds(text, at);
+    const events: { start: number, end: number, duration: number, rest: boolean }[] = [];
+    let running = 0;
+    for (const event of musicEvents(text, mStart, mEnd)) {
+        if (!event.note) {
+            if (events.length > 0) { break; }
+            continue;
+        }
+        const slots = noteSlots(text, event.start, event.end);
+        if (!slots) { break; }
+        const digits = text.slice(slots.marksEnd, slots.digitsEnd);
+        running = digits ? parseInt(digits, 10) : running;
+        events.push({
+            start: event.start, end: event.end,
+            duration: running, rest: slots.octave === null,
+        });
+    }
+    return events;
+}
+
+/** Walks the beamable run from `i` in `step` direction and returns the offset
+ * just after the LAST NOTE it reaches, or -1 when fewer than two notes line up.
+ * A rest is spanned — `c8[ r8 d8]` is a beam over a rest — but never ends one,
+ * so a trailing rest is not what the bracket lands after. A duration that
+ * carries no flag ends the run, rest or not. */
+function beamRun(events: { end: number, duration: number, rest: boolean }[],
+    i: number, step: 1 | -1): number {
+    if (i < 0 || !events[i] || events[i].rest || !BEAMABLE.has(events[i].duration)) { return -1; }
+    let notes = 0;
+    let lastNoteEnd = -1;
+    for (let k = i; k >= 0 && k < events.length; k += step) {
+        if (!BEAMABLE.has(events[k].duration)) { break; }
+        if (!events[k].rest) {
+            notes++;
+            lastNoteEnd = events[k].end;
+        }
+    }
+    return notes >= 2 ? lastNoteEnd : -1;
+}
+
+/** True when [from, end) holds a ']' that no '[' inside the span opens — an
+ * existing beam end a just-typed '[' pairs with. */
+function hasUnresolvedBeamClose(text: string, from: number, end: number): boolean {
+    let depth = 0;
+    for (let i = from; i < end; i++) {
+        if (text[i] === '[') { depth++; }
+        else if (text[i] === ']') {
+            if (depth === 0) { return true; }
+            depth--;
+        }
+    }
+    return false;
+}
+
+/** True when [start, at) holds a '[' that no ']' inside the span closes — the
+ * beam a just-typed ']' is there to close. */
+function hasUnresolvedBeamOpen(text: string, start: number, at: number): boolean {
+    let depth = 0;
+    for (let i = at - 1; i >= start; i--) {
+        if (text[i] === ']') { depth++; }
+        else if (text[i] === '[') {
+            if (depth === 0) { return true; }
+            depth--;
+        }
+    }
+    return false;
+}
+
+/** '[' typed in music: a manual beam opens after the note it starts on, exactly
+ * as a slur and a tie do, and closes on the last note that can still be beamed
+ * in the same measure (`c8|` + '[' → `c8[ d e f]`). A note that cannot carry a
+ * beam, or one with nothing beamable behind it, is left as typed — as is a '['
+ * that is not on a note at all, which is what an inline volta's `[1.` is. */
+function onInsertBeamOpen(editor: vscode.TextEditor, text: string, offset: number,
+    autoClosed: boolean, log: (msg: string) => void) {
+    if (inStringOrComment(text, offset)) { return; }
+    const typedLen = autoClosed ? 2 : 1;
+    const before = text.slice(0, offset) + text.slice(offset + typedLen);
+    const anchor = slurAnchorAt(before, offset);
+    if (!anchor || anchor === 'member') { return; }
+    const events = measureEvents(before, anchor.start);
+    const runEnd = beamRun(events, events.findIndex(e => e.start === anchor.start), 1);
+    if (runEnd < 0) { return; } // not beamable, or nothing to group with
+
+    const [, mEnd] = measureBounds(before, anchor.end);
+    const paired = hasUnresolvedBeamClose(before, anchor.end, mEnd);
+    const insertAt = (p: number) => (p <= offset ? p : p + typedLen);
+    const edits: { at: number, del?: number, ins?: string }[] = [
+        { at: offset, del: typedLen },
+        { at: insertAt(anchor.end), ins: '[' },
+    ];
+    if (!paired) { edits.push({ at: insertAt(runEnd), ins: ']' }); }
+    applyFixWithCaret(editor, text, edits, anchor.end + 1);
+    log(`smartBrackets: [ typed -> beam ${paired ? 'opened against the ] ahead' : 'closed on its run'}`);
+}
+
+/** ']' typed in music: the end of a beam is written after its note like every
+ * other mark here, so one typed inside a note moves to that note's end — and it
+ * reaches BACK for the note the beam started on, the mirror of what '[' does
+ * forwards: the first note of the beamable run that ends here. An unresolved '['
+ * already in the measure means the ']' simply closes that, and only moves. */
+function onInsertBeamClose(editor: vscode.TextEditor, text: string, offset: number,
+    log: (msg: string) => void) {
+    if (inStringOrComment(text, offset)) { return; }
+    const before = text.slice(0, offset) + text.slice(offset + 1);
+    const anchor = slurAnchorAt(before, offset);
+    if (!anchor || anchor === 'member') { return; }
+
+    const [mStart] = measureBounds(before, anchor.start);
+    const events = measureEvents(before, anchor.start);
+    const runStart = hasUnresolvedBeamOpen(before, mStart, anchor.start)
+        ? -1 // already open — this ']' is its close
+        : beamRun(events, events.findIndex(e => e.start === anchor.start), -1);
+    if (runStart < 0 && anchor.end === offset) { return; } // nothing to do at all
+
+    const insertAt = (p: number) => (p <= offset ? p : p + 1);
+    const edits: { at: number, del?: number, ins?: string }[] = [
+        { at: offset, del: 1 },
+        { at: insertAt(anchor.end), ins: ']' },
+    ];
+    if (runStart >= 0) { edits.push({ at: insertAt(runStart), ins: '[' }); }
+    // Past the ']' — which the '[' inserted before it has pushed along by one.
+    applyFixWithCaret(editor, text, edits, anchor.end + (runStart >= 0 ? 2 : 1));
+    log(`smartBrackets: ] typed -> ${runStart >= 0 ? '[ placed on its run' : 'moved to the end of its note'}`);
 }
 
 /** '~' typed in music: a tie is written after the note it starts from, exactly
