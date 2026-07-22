@@ -100,7 +100,8 @@ score main ""test"" { grandStaff { staff rh staff lh } }
 
         // Should contain "Piano" text
         Assert.Contains("Piano", svg);
-        Assert.Contains("font-family=\"serif\"", svg);
+        // The root font-family names the bundled face with the generic as its fallback.
+        Assert.Contains(", serif\"", svg);
         // LILYPOND-REF: scm/define-grobs.scm:1711 — self-alignment-X = CENTER
         Assert.Contains("text-anchor=\"middle\"", svg);
     }

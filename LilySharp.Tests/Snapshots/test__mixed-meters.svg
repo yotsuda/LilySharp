@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="258.5" viewBox="0 0 119.50 25.85" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="258.5" viewBox="0 0 119.50 25.85" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -114,7 +114,7 @@
   <polygon points="78.35,14.88 80.98,14.88 80.98,15.36 78.35,15.36"/>
   <line x1="78.41" y1="8.77" x2="78.41" y2="15.12" stroke="#000000" stroke-width="0.130"/>
   <line x1="80.92" y1="8.27" x2="80.92" y2="15.12" stroke="#000000" stroke-width="0.130"/>
-  <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="302"/>
-  <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="302">Main</text>
+  <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="302"/>
+  <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="302">Main</text>
   </g>
 </svg>

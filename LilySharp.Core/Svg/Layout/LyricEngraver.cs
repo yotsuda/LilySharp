@@ -485,5 +485,5 @@ internal sealed class LyricEngraver
     /// Width classes are grouped by similar advance widths in standard serif fonts.
     /// </remarks>
     private double EstimateTextWidth(string text)
-        => Rendering.SerifTextMetrics.Measure(text, LyricFontSize);
+        => Rendering.TextFontMetrics.Serif(text, LyricFontSize);
 }

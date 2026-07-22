@@ -29,12 +29,22 @@ public class EmmentalerFontResolverTests
 {
     private const string BogusFont = "ZzNoSuchFont1234567890";
 
+    /// <summary>
+    /// The generic families resolve to the BUNDLED TeX Gyre faces — the same files
+    /// <c>TextFontMetrics</c> measures, so the PDF draws the font the layout reserved for.
+    /// Was Liberation Serif, which is Times-metric and 9% narrower than what the engine
+    /// now spaces.
+    /// </summary>
     [Fact]
-    public void Serif_ResolvesToBundledLiberation()
+    public void GenericFamilies_ResolveToTheBundledTexGyreFaces()
     {
         var r = new EmmentalerFontResolver();
-        Assert.Equal("LiberationSerif#", r.ResolveTypeface("serif", false, false)?.FaceName);
-        Assert.Equal("LiberationSerif-Bold#", r.ResolveTypeface("serif", true, false)?.FaceName);
+        Assert.Equal("Schola#", r.ResolveTypeface("serif", false, false)?.FaceName);
+        Assert.Equal("ScholaBold#", r.ResolveTypeface("serif", true, false)?.FaceName);
+        Assert.Equal("ScholaItalic#", r.ResolveTypeface("serif", false, true)?.FaceName);
+        // Chord symbols are sans; PdfSharpCore has no generic for it either.
+        Assert.Equal("Heros#", r.ResolveTypeface("sans", false, false)?.FaceName);
+        Assert.Equal("HerosBold#", r.ResolveTypeface("sans-serif", true, false)?.FaceName);
     }
 
     [Fact]
@@ -48,7 +58,7 @@ public class EmmentalerFontResolverTests
         // bundled serif so nothing proprietary is embedded without asking.
         var r = new EmmentalerFontResolver();
         r.SetTextFont(BogusFont, embed: false);
-        Assert.Equal("LiberationSerif#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
     }
 
     [Fact]
@@ -58,6 +68,6 @@ public class EmmentalerFontResolverTests
         // still resolves to the bundled serif (never "LysEmbed#").
         var r = new EmmentalerFontResolver();
         r.SetTextFont(BogusFont, embed: true);
-        Assert.Equal("LiberationSerif#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
     }
 }

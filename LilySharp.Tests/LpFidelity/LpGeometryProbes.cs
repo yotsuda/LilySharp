@@ -559,7 +559,7 @@ internal static class LpGeometryProbes
     /// THE FLOOR IS MUCH HIGHER THAN BETWEEN STAVES. There the bracket has to beat
     /// StaffGrouper's basic-distance of 9; here it has to beat system-system-spacing's
     /// TWELVE. The notes sit 8 staff spaces outside the middle line so the bracket clears
-    /// that with room: 8 + 0.545 + 1.1 + 0.600225 + 2.05 + 1 = 13.295225. And the notes
+    /// that with room: 8 + 0.545 + 1.1 + 0.627717 + 2.05 + 1 = 13.322717. And the notes
     /// alone must NOT bind, or the entry stops being about the bracket — 8.545 + 2.05 + 1
     /// = 11.595 is under 12, so a Lily# that reserves the notes and not the bracket sits
     /// exactly on the floor and the residual reads the whole bracket stack.
@@ -567,7 +567,7 @@ internal static class LpGeometryProbes
     /// <para>
     /// ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE and that is not decoration. Written as a
     /// bar-filling tuplet the bracket starts right after the clef, and measured that way
-    /// this book read 14.785225 rather than 13.295225: at that x the other system's
+    /// this book read 14.785225 rather than 13.322717: at that x the other system's
     /// deepest ink is not its staff line at 2.05 but its CLEF at 3.540. Hiding the clef at
     /// line starts moved the number and nothing else did. That would have folded the
     /// clef's own LILC-versus-skyline sliver — the residual
@@ -602,7 +602,7 @@ internal static class LpGeometryProbes
     /// </summary>
     /// <remarks>
     /// The two are one gap seen from its two edges, and the notes are the same distance
-    /// out on each side, so LilyPond prints 13.295225 for both. A difference between them
+    /// out on each side, so LilyPond prints 13.322717 for both. A difference between them
     /// is a defect in its own right — the property P/Q and TU/TD are built around.
     /// </remarks>
     private static readonly string TSD = $$"""

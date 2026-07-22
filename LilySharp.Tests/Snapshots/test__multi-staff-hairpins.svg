@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="372.2" viewBox="0 0 119.50 37.22" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="372.2" viewBox="0 0 119.50 37.22" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -55,7 +55,7 @@
   <line x1="20.96" y1="22.24" x2="25.30" y2="22.91" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="583"/>
   <line x1="20.96" y1="30.52" x2="25.30" y2="31.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="620"/>
   <line x1="20.96" y1="31.85" x2="25.30" y2="31.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="620"/>
-  <rect x="8.80" y="8.26" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="560"/>
-  <text x="9.61" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="560">S</text>
+  <rect x="8.80" y="8.26" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="560"/>
+  <text x="9.73" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="560">S</text>
   </g>
 </svg>

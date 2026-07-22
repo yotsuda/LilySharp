@@ -43,7 +43,7 @@ namespace LilySharp.Core.Rendering;
 /// Barline types (double / final / repeat / repeat-dots), SpanBars across
 /// staff groups, multiple voices per staff (with stem-direction defaults and
 /// collision offsets), tablature staves, grace slurs, ossia staves, and
-/// measured serif text (SerifTextMetrics) are implemented here as well.
+/// measured serif text (TextFontMetrics) are implemented here as well.
 ///
 /// The legacy <c>SvgRenderer</c> was retired and DELETED once parity was
 /// reached (recoverable from git history). Beam drawing is staff- and

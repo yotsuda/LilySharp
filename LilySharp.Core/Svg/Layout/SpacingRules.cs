@@ -2574,7 +2574,7 @@ internal static class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     half[t] = Math.Max(half[t],
-                        Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2);
+                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
                     any = true;
                     break;
                 }

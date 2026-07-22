@@ -18,12 +18,21 @@ Dual-licensed: GNU GPL v3 or later, or the SIL Open Font License.
 Lily# redistributes it under the GPL v3-or-later branch — see
 `Fonts/Emmentaler-LICENSE.txt` alongside the font files.
 
-### Liberation Serif (PDF text)
+### TeX Gyre Schola and TeX Gyre Heros (all non-music text)
 
-Copyright (C) 2012 Red Hat, Inc.
+Copyright (C) 2007-2009 by GUST e-Foundry, based on the URW++ fonts
+released for Ghostscript.
 
-Licensed under the SIL Open Font License, Version 1.1 — the full text
-ships next to the font files as `Fonts/LiberationSerif-LICENSE.OFL.txt`.
+Licensed under the GUST Font License, which places the fonts under the
+LaTeX Project Public License 1.3c — the full text ships next to the font
+files as `Fonts/TeXGyre-LICENSE.GUST.txt`. Redistributed unmodified; the
+licence's request to rename applies to derived works.
+
+These are the faces LilyPond itself sets text in: its `LilyPond Serif`
+alias prefers URW's C059, and C059 and TeX Gyre Schola agree on every
+advance measured, so Lily# reserves and draws the same metrics LilyPond
+does without taking on C059's AGPL terms. Heros stands in for Nimbus Sans
+on the same footing.
 
 ## .NET libraries (bundled as DLLs)
 

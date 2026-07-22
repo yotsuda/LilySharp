@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -501,7 +501,7 @@ internal static class OutsideStaffStacker
                 continue;
             // Measured digit width; digits have no descenders, cap
             // height ~0.71em above the baseline anchor.
-            double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
+            double width = TextFontMetrics.SerifBold(bn.Text, BarNumberEngraver.FontSize);
             double x0 = bn.RightAligned ? bn.X - width : bn.X;
             double x1 = bn.RightAligned ? bn.X : bn.X + width;
             // System-relative Y-up: bn.YUp is Y-up from the system top, entering directly.
@@ -616,7 +616,7 @@ internal static class OutsideStaffStacker
             // table, a slight overestimate for italic), ~0.75em ascent
             // and ~0.25em descent around the baseline anchor.
             const double ctFs = 0.6 * 4.0;
-            double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
+            double halfWidth = TextFontMetrics.SerifBold(ct.Text, ctFs) / 2;
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ct.StaffIndex) - 2.0;
@@ -748,13 +748,13 @@ internal static class OutsideStaffStacker
                     ? fontSize * 0.6
                     : fontSize * 0.55;
                 const double pad = 0.2;
-                double halfW = (SerifTextMetrics.MeasureBold(m.Text, fs) + 2 * pad) / 2;
+                double halfW = (TextFontMetrics.SerifBold(m.Text, fs) + 2 * pad) / 2;
                 double halfH = (fs + 2 * pad) / 2;
                 return (-halfW, halfW, halfH, halfH);
             }
             case MusicMarkType.Tempo:
             {
-                double textW = SerifTextMetrics.MeasureBold("= " + m.Text, 1.8);
+                double textW = TextFontMetrics.SerifBold("= " + m.Text, 1.8);
                 if (m.SwingSubdivision == 0)
                 {
                     // Non-swing metronome: the historical CENTERED estimate.
@@ -772,7 +772,7 @@ internal static class OutsideStaffStacker
                 // the triplet bracket reaches a touch higher (~2sp) than the stem.
                 double sw = 2.3 + textW;
                 if (m.TempoText != null)
-                    sw += SerifTextMetrics.MeasureBold(m.TempoText, 2.2) + 1.5;
+                    sw += TextFontMetrics.SerifBold(m.TempoText, 2.2) + 1.5;
                 sw += 5.0;
                 return (-0.2, sw, 2.0, 0.5);
             }
@@ -780,7 +780,7 @@ internal static class OutsideStaffStacker
             {
                 // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
                 double fs = fontSize * 0.7;
-                double halfW = SerifTextMetrics.MeasureBold(m.Text, fs) / 2;
+                double halfW = TextFontMetrics.SerifBold(m.Text, fs) / 2;
                 return (-halfW, halfW, TextAscentEm * fs, TextDescentEm * fs);
             }
         }

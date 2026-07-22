@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="449.3" viewBox="0 0 119.50 44.93" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="449.3" viewBox="0 0 119.50 44.93" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -116,16 +116,16 @@
   <line x1="102.13" y1="27.83" x2="102.13" y2="29.83" stroke="#000000" stroke-width="0.130" data-pos="363"/>
   <text x="54.04" y="28.13" font-size="2.40" font-weight="bold" dominant-baseline="hanging" data-pos="363">2.</text>
   <text x="0.05" y="29.93" font-size="1.75" font-weight="bold">5</text>
-  <rect x="0.30" y="11.46" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
-  <text x="2.94" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
-  <text class="music" x="6.39" y="13.66" font-size="1.60" data-pos="0"></text>
-  <line x1="6.90" y1="13.66" x2="6.90" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="7.49" y="13.66" font-size="1.80" data-pos="0">= 120</text>
-  <rect x="53.25" y="12.52" width="5.77" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
-  <text x="56.14" y="14.72" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
-  <rect x="0.30" y="24.67" width="7.37" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
-  <text x="3.98" y="26.87" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
-  <rect x="53.24" y="24.67" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
-  <text x="55.89" y="26.87" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
+  <rect x="0.30" y="11.46" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="3.45" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
+  <text class="music" x="7.41" y="13.66" font-size="1.60" data-pos="0"></text>
+  <line x1="7.92" y1="13.66" x2="7.92" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <text x="8.51" y="13.66" font-size="1.80" data-pos="0">= 120</text>
+  <rect x="53.25" y="12.52" width="6.84" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
+  <text x="56.67" y="14.72" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
+  <rect x="0.30" y="24.67" width="8.71" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
+  <text x="4.66" y="26.87" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
+  <rect x="53.24" y="24.67" width="6.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="56.40" y="26.87" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
   </g>
 </svg>

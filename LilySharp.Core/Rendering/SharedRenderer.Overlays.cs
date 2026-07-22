@@ -417,7 +417,7 @@ internal static partial class SharedRenderer
                 gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
                     FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
 
-                double textWidth = SerifTextMetrics.MeasureBold(b.Text, textFontSize);
+                double textWidth = TextFontMetrics.SerifBold(b.Text, textFontSize);
                 double lineStartX = b.StartX + textWidth + 0.5;
                 if (lineStartX < b.EndX)
                 {
@@ -537,10 +537,18 @@ internal static partial class SharedRenderer
                         Color.Black, thickness);
                 }
 
-                double textY = b.IsStemUp ? midY + 0.3 : midY - 0.8;
-                gc.DrawText(b.NumberText, midX, textY,
-                    os.Size(FontSize * 0.6, b.StaffIndex), "serif",
-                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                // CENTRED ON THE BRACKET LINE, both axes — LilyPond's own placement, and
+                // the reason the number rather than the bracket is a tuplet's outermost
+                // ink. lily/tuplet-number.cc:342 returns the midpoint of the bracket's
+                // positions as the number's Y-offset for every tuplet that is not a knee
+                // against a beam, and :227-228 aligns its stencil to CENTER on X and Y.
+                // Lily# used to hang it off the line by a bare +0.3 / -0.8 at 2.4 units
+                // bold-upright; it is now LilyPond's size and face, and SkylineBuilder
+                // reserves exactly this ink.
+                gc.DrawText(b.NumberText, midX, midY,
+                    os.Size(TupletBracketEngraver.NumberFontSize, b.StaffIndex), "serif",
+                    TupletBracketEngraver.NumberFontStyle, TextAnchor.Middle, Color.Black,
+                    VerticalAnchor.Middle);
             }
         }
     }

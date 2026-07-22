@@ -331,16 +331,14 @@ internal sealed class SkylineBuilder
     /// own grob reports extent (4.365 . 5.225) about positions 5.145: 0.08 out, 0.78 in).
     /// </para>
     /// <para>
-    /// NOT SEEDED, and it is the outermost ink LilyPond has here: the TupletNumber.
-    /// <c>lily/tuplet-number.cc:342</c> gives it the bracket's own midpoint as its
-    /// Y-offset and <c>:227-228</c> centres its stencil, so the digit straddles the line
-    /// and reaches half its height past it — 0.600225 in the corpus books. That height is
-    /// a TEXT metric of an italic, font-size -2 digit in the ordinary text font, which
-    /// Lily# cannot measure; seeding the digit Lily# draws instead (bold, font-size 2.4,
-    /// baseline-anchored above the line) would reserve a different quantity and bury the
-    /// thing these ledger points exist to measure. Left out deliberately and recorded as
-    /// the residual under <c>staff.staff.tuplet-bracket-up</c>: with the bracket's own
-    /// 0.08 reserved against LilyPond's 0.600225 of digit, that residual is -0.520225.
+    /// THE NUMBER IS THE OUTERMOST INK, not the bracket, and it is seeded too.
+    /// <c>lily/tuplet-number.cc:342</c> gives the TupletNumber the bracket's own midpoint
+    /// as its Y-offset for any tuplet that is not a knee against a beam, and <c>:227-228</c>
+    /// aligns its stencil to CENTER on both axes — so the digit STRADDLES the bracket line
+    /// and reaches half its own height past it, further out than the bracket's 0.08. The
+    /// height comes from the font, per string, exactly as LilyPond's does
+    /// (<see cref="Rendering.TextFontMetrics"/>); it was a named residual of -0.547717 on
+    /// all four tuplet ledger entries for as long as Lily# had no way to measure text.
     /// </para>
     /// </remarks>
     /// <remarks>
@@ -378,8 +376,26 @@ internal sealed class SkylineBuilder
             double yRight = (leftFirst ? b.EndYUp : b.StartYUp) + dir * half;
 
             var direction = b.IsStemUp ? VerticalDirection.Up : VerticalDirection.Down;
-            (b.IsStemUp ? upSkyline : downSkyline).Merge(
-                VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+            var sky = b.IsStemUp ? upSkyline : downSkyline;
+            sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+
+            // THE NUMBER, which reaches further out than the line it straddles. Centred on
+            // the bracket's midpoint on both axes (tuplet-number.cc:342 and :227-228), so
+            // half its own ink stands proud on the outward side. Measured from the font,
+            // per string, because that is what LilyPond measures — a "3" and a "12" are
+            // not the same width and an italic digit is not a nominal box.
+            if (!string.IsNullOrEmpty(b.NumberText))
+            {
+                double size = TupletBracketEngraver.NumberFontSize;
+                double halfW = Rendering.TextFontMetrics.Advance(
+                    b.NumberText, size, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                double halfH = Rendering.TextFontMetrics.InkHeight(
+                    b.NumberText, size, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                double midYUp = b.NumberYUp;
+                sky.Merge(VerticalSkyline.FromBox(
+                    b.NumberX - halfW, b.NumberX + halfW,
+                    midYUp - halfH, midYUp + halfH, direction));
+            }
         }
     }
 

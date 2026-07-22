@@ -273,10 +273,11 @@ internal static class LyricSpacing
         return maxExtent;
     }
 
-    // Real serif-regular advances (SerifTextMetrics) at the 3.2 ss lyric font —
+    // Real serif-regular advances (TextFontMetrics, from the bundled face's own outlines)
+    // at the 3.2 ss lyric font —
     // this used to be a crude 3-bucket table that under-measured capitals
     // ("Up" by ~0.7 ss), so the springs reserved too little and wide syllables
     // overlapped their neighbours in lyric rows.
     private static double EstimateLyricTextWidth(string text)
-        => Rendering.SerifTextMetrics.Measure(text, 3.2);
+        => Rendering.TextFontMetrics.Serif(text, 3.2);
 }

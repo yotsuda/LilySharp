@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="312.6" viewBox="0 0 119.50 31.26" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="312.6" viewBox="0 0 119.50 31.26" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -148,15 +148,15 @@
   <line x1="49.57" y1="11.42" x2="62.04" y2="11.42" stroke="#000000" stroke-width="0.130" data-pos="617"/>
   <line x1="62.04" y1="11.42" x2="62.04" y2="13.42" stroke="#000000" stroke-width="0.130" data-pos="617"/>
   <text x="50.07" y="11.72" font-size="2.40" font-weight="bold" dominant-baseline="hanging" data-pos="617">2.</text>
-  <rect x="0.30" y="15.16" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
-  <text x="1.29" y="17.36" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A</text>
-  <rect x="19.74" y="12.86" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="20.67" y="15.06" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
-  <rect x="34.60" y="8.26" width="4.31" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="36.76" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
-  <rect x="49.27" y="8.26" width="6.76" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="52.65" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
-  <rect x="62.34" y="14.42" width="3.09" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
-  <text x="63.89" y="16.62" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
+  <rect x="0.30" y="15.16" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
+  <text x="1.33" y="17.36" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A</text>
+  <rect x="19.74" y="12.86" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="20.80" y="15.06" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
+  <rect x="34.60" y="8.26" width="5.25" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="37.22" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
+  <rect x="49.27" y="8.26" width="8.30" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="53.42" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
+  <rect x="62.34" y="14.42" width="3.33" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
+  <text x="64.01" y="16.62" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
   </g>
 </svg>

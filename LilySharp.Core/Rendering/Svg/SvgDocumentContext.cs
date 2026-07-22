@@ -152,13 +152,24 @@ internal sealed class SvgDocumentContext : IDocumentContext
         double heightPx = heightSpaces * _options.PixelsPerSpace;
 
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        // font-family="serif" is inherited by every text: non-music text (title, lyrics,
-        // fret digits, …) omits its own serif attribute and picks this up, while the
-        // ".music" CSS class overrides it for glyphs and a custom `font "NAME"` overrides
-        // it per element. Saves repeating font-family="serif" on hundreds of texts.
+        // The root font-family is inherited by every text: non-music text (title, lyrics,
+        // fret digits, …) omits its own attribute and picks this up, while the ".music"
+        // CSS class overrides it for glyphs and a custom `font "NAME"` overrides it per
+        // element. Saves repeating it on hundreds of texts.
+        //
+        // It NAMES THE BUNDLED FACE, with the generic left as the fallback. The engine
+        // reserves space with TextFontMetrics, which measures TeX Gyre Schola — LilyPond's
+        // own text face by metrics — so a viewer holding that font now draws exactly what
+        // was spaced for. ⚠️ The bare generic used to be a silent mismatch: measured on a
+        // stock Windows box the CSS generic "serif" resolves to Segoe UI, a SANS face.
+        // ⚠️ REMAINING GAP: unlike Emmentaler the text faces are NOT embedded here, so a
+        // viewer without Schola still falls back. Embedding them would add ~185 KB of
+        // base64 PER FACE to every SVG, which needs the used-face tracking this context
+        // does not have (the header is written before any text is drawn). PNG and PDF are
+        // exact today; SVG records the intent and degrades to the generic.
         sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\" font-family=\"serif\">",
-            widthPx, heightPx, widthSpaces, heightSpaces));
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\" font-family=\"{4}, serif\">",
+            widthPx, heightPx, widthSpaces, heightSpaces, TextFontMetrics.SerifFamily));
         sb.AppendLine("<style>");
         var fontFaceRule = GetFontFaceRule();
         if (!string.IsNullOrEmpty(fontFaceRule))

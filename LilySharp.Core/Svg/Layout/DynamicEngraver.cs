@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -359,15 +359,16 @@ internal static class DynamicEngraver
 
     // The dynamic/expressive label is drawn at FontSize*0.5 = 2.0 with
     // TextAnchor.Middle (see DrawDynamics), so it extends this far to each side of
-    // the note. SerifTextMetrics counts a CJK glyph as a full em, so a "これ" label
+    // the note. TextFontMetrics gives a CJK glyph a full em — the bundled Latin face has
+    // no glyph for it and the renderer draws it from a system fallback — so a "これ" label
     // reports its true (wide) extent.
     private const double DynamicFontSize = 2.0;
 
     private static double LabelHalfWidth(string text, bool expressive)
     {
         double w = expressive
-            ? LilySharp.Core.Rendering.SerifTextMetrics.Measure(text, DynamicFontSize)
-            : LilySharp.Core.Rendering.SerifTextMetrics.MeasureBold(text, DynamicFontSize);
+            ? LilySharp.Core.Rendering.TextFontMetrics.Serif(text, DynamicFontSize)
+            : LilySharp.Core.Rendering.TextFontMetrics.SerifBold(text, DynamicFontSize);
         return w / 2.0;
     }
 

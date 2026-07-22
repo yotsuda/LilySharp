@@ -68,15 +68,30 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         _embedBytes = FontEmbedInfo.TryGetFontBytes(_textFamily);
     }
 
-    // The bundled Liberation Serif (SIL OFL 1.1) face for a weight/slant — the PDF
-    // stand-in for the CSS-generic "serif" and for any non-embedded text font.
+    // The bundled TeX Gyre Schola (GUST Font License / LPPL 1.3c) face for a weight/slant
+    // — the PDF stand-in for the CSS-generic "serif" and for any non-embedded text font.
+    // It is LilyPond's own text face by metrics: "LilyPond Serif" prefers URW's C059, and
+    // C059 and Schola agree on every advance measured, so this is what the layout reserved
+    // for through TextFontMetrics. Was Liberation Serif, which is Times-metric and 9%
+    // narrower — the PDF then disagreed with what the engine had spaced.
     private static FontResolverInfo SerifFace(bool isBold, bool isItalic) =>
         new((isBold, isItalic) switch
         {
-            (true, true) => "LiberationSerif-BoldItalic#",
-            (true, false) => "LiberationSerif-Bold#",
-            (false, true) => "LiberationSerif-Italic#",
-            _ => "LiberationSerif#",
+            (true, true) => "ScholaBoldItalic#",
+            (true, false) => "ScholaBold#",
+            (false, true) => "ScholaItalic#",
+            _ => "Schola#",
+        });
+
+    // The sans stand-in, likewise metric-identical to the Nimbus Sans that LilyPond's
+    // "LilyPond Sans Serif" alias prefers. Chord symbols are the caller.
+    private static FontResolverInfo SansFace(bool isBold, bool isItalic) =>
+        new((isBold, isItalic) switch
+        {
+            (true, true) => "HerosBoldItalic#",
+            (true, false) => "HerosBold#",
+            (false, true) => "HerosItalic#",
+            _ => "Heros#",
         });
 
     public string DefaultFontName => "Emmentaler";
@@ -88,15 +103,16 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             return new FontResolverInfo("Emmentaler#");
         if (name == "emmentaler-brace")
             return new FontResolverInfo("EmmentalerBrace#");
-        // SharedRenderer asks for the CSS-generic "serif" for titles/lyrics/
-        // dynamics. SVG/PNG let the viewer/Skia map that to a real serif, but
-        // PdfSharpCore's fallback has no "serif" face and substitutes an
-        // arbitrary installed font (e.g. the sans-serif "Agency"), so PDFs looked
-        // nothing like the SVG — and embedded a proprietary system font. Resolve
-        // it to the bundled Liberation Serif (metric-compatible with Times),
-        // which is licensed for both embedding and redistribution.
+        // SharedRenderer asks for the CSS generics for titles/lyrics/dynamics/chord
+        // symbols. PdfSharpCore has no face for them and would substitute an arbitrary
+        // installed font (e.g. the sans-serif "Agency"), so PDFs looked nothing like the
+        // rest — and embedded a proprietary system font. They resolve to the bundled
+        // TeX Gyre faces, which is also what TextFontMetrics measured when the engine
+        // spaced this score, and which are licensed for embedding and redistribution.
         if (name is "serif")
             return SerifFace(isBold, isItalic);
+        if (name is "sans" or "sans-serif")
+            return SansFace(isBold, isItalic);
         // The document's configured text font (`font "X"`, which the renderer maps
         // every generic family onto). With `embedded` and a permitted licence we
         // serve X's own bytes so PdfSharpCore subsets and embeds them (a portable
@@ -118,10 +134,14 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         {
             "Emmentaler#" => "emmentaler-20.otf",
             "EmmentalerBrace#" => "emmentaler-brace.otf",
-            "LiberationSerif#" => "LiberationSerif-Regular.ttf",
-            "LiberationSerif-Bold#" => "LiberationSerif-Bold.ttf",
-            "LiberationSerif-Italic#" => "LiberationSerif-Italic.ttf",
-            "LiberationSerif-BoldItalic#" => "LiberationSerif-BoldItalic.ttf",
+            "Schola#" => "texgyreschola-regular.otf",
+            "ScholaBold#" => "texgyreschola-bold.otf",
+            "ScholaItalic#" => "texgyreschola-italic.otf",
+            "ScholaBoldItalic#" => "texgyreschola-bolditalic.otf",
+            "Heros#" => "texgyreheros-regular.otf",
+            "HerosBold#" => "texgyreheros-bold.otf",
+            "HerosItalic#" => "texgyreheros-italic.otf",
+            "HerosBoldItalic#" => "texgyreheros-bolditalic.otf",
             _ => null
         };
         if (fileName != null)

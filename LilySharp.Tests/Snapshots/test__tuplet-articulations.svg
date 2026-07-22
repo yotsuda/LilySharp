@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="255.6" viewBox="0 0 119.50 25.56" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="255.6" viewBox="0 0 119.50 25.56" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -50,11 +50,11 @@
   <text class="music" x="16.60" y="9.23" font-size="4.00" data-pos="395"></text>
   <text class="music" x="23.61" y="11.85" font-size="4.00" data-pos="430"></text>
   <text class="music" x="31.62" y="10.15" font-size="4.00" data-pos="461"></text>
-  <text x="10.50" y="18.39" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="341">3</text>
-  <text x="18.27" y="17.39" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="379">3</text>
-  <text x="25.78" y="18.20" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="411">3</text>
-  <text x="33.29" y="18.20" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="446">3</text>
-  <rect x="0.30" y="7.49" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="323"/>
-  <text x="1.29" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="323">A</text>
+  <text x="10.50" y="17.59" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="341">3</text>
+  <text x="18.27" y="16.59" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="379">3</text>
+  <text x="25.78" y="17.40" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="411">3</text>
+  <text x="33.29" y="17.40" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="446">3</text>
+  <rect x="0.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="323"/>
+  <text x="1.33" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="323">A</text>
   </g>
 </svg>

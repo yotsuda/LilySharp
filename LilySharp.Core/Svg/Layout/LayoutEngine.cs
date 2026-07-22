@@ -1241,7 +1241,7 @@ internal sealed class LayoutEngine
                 // (boxed labels get the box padding, symbols a 2 ss square).
                 double halfW = m.IsSymbol
                     ? 1.0
-                    : Rendering.SerifTextMetrics.MeasureBold(m.Text, 2.4) / 2 + 0.4;
+                    : Rendering.TextFontMetrics.SerifBold(m.Text, 2.4) / 2 + 0.4;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double mY = m.YUp - 2.0;
                 AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY + 2.1, mY - 0.7);
@@ -1251,7 +1251,7 @@ internal sealed class LayoutEngine
         {
             foreach (var ct in customTexts)
             {
-                double halfW = Rendering.SerifTextMetrics.MeasureBold(ct.Text, 2.0) / 2 + 0.2;
+                double halfW = Rendering.TextFontMetrics.SerifBold(ct.Text, 2.0) / 2 + 0.2;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double ctY = ct.YUp - 2.0;
                 AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);
@@ -1266,7 +1266,7 @@ internal sealed class LayoutEngine
         {
             foreach (var cn in chordNames)
             {
-                double halfW = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                double halfW = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
                 double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }
@@ -1286,7 +1286,7 @@ internal sealed class LayoutEngine
                     continue;
                 // bn.YUp is Y-up from the system top; the skyline is Y-up too.
                 double rel = bn.YUp;
-                double w = Rendering.SerifTextMetrics.MeasureBold(
+                double w = Rendering.TextFontMetrics.SerifBold(
                     bn.Text, BarNumberEngraver.FontSize);
                 double x0 = bn.RightAligned ? bn.X - w : bn.X;
                 var up = new VerticalSkyline(VerticalDirection.Up);

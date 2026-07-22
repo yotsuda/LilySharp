@@ -88,6 +88,29 @@ internal static class TupletBracketEngraver
     // the bracket never enters the staff even over low notes.
     private const double StaffPaddingLP = 0.25;
     private const double EdgeHeight = 0.7;
+
+    /// <summary>
+    /// The tuplet number's font size, in staff spaces, from LilyPond's own scale.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: <c>scm/define-grobs.scm</c> TupletNumber <c>(font-size . -2)</c> —
+    /// magnification steps of 2^(1/6) — applied to <c>scm/paper.scm:78</c>'s
+    /// <c>text-font-size</c> of 11 pt, with one staff space = 5 pt at the default 20 pt
+    /// staff. Written as the derivation rather than as 1.746141 so a different staff size
+    /// still gets LilyPond's own answer. Lily# drew this digit at <c>FontSize * 0.6</c> =
+    /// 2.4, an unsourced 37% larger.
+    /// <para>
+    /// A PROPERTY, not a <c>static readonly</c>: static initialisation order between
+    /// partial classes is undefined in C#, and reading a not-yet-initialised default is
+    /// how <c>ec7a2254</c> silently zeroed every change-clef width.
+    /// </para>
+    /// </remarks>
+    internal static double NumberFontSize => 11.0 * Math.Pow(2.0, -2.0 / 6.0) / 5.0;
+
+    /// <summary>The number's face: italic, and NOT bold.</summary>
+    /// <remarks>LILYPOND-REF: <c>scm/define-grobs.scm</c> TupletNumber
+    /// <c>(font-shape . italic)</c>, with no weight override.</remarks>
+    internal const Rendering.FontStyle NumberFontStyle = Rendering.FontStyle.Italic;
     private const double StaffMiddleDown = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff

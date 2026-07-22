@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="362.5" viewBox="0 0 119.50 36.25" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="362.5" viewBox="0 0 119.50 36.25" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -43,13 +43,13 @@
   <rect x="20.74" y="25.56" width="0.60" height="4.00" data-pos="580"/>
   <rect x="20.25" y="16.56" width="0.19" height="13.00"/>
   <rect x="20.74" y="16.56" width="0.60" height="13.00"/>
-  <text class="music" x="6.51" y="14.06" font-size="1.60" data-pos="565"></text>
-  <line x1="7.02" y1="14.06" x2="7.02" y2="12.66" stroke="#000000" stroke-width="0.100" data-pos="565"/>
-  <text x="7.61" y="14.06" font-size="1.80" data-pos="565">= 90</text>
-  <rect x="0.30" y="8.26" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="508"/>
-  <text x="3.01" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="508">Main</text>
-  <text class="music" x="6.51" y="10.46" font-size="1.60" data-pos="0"></text>
-  <line x1="7.02" y1="10.46" x2="7.02" y2="9.06" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="7.61" y="10.46" font-size="1.80" data-pos="0">= 120</text>
+  <text class="music" x="7.32" y="14.06" font-size="1.60" data-pos="565"></text>
+  <line x1="7.84" y1="14.06" x2="7.84" y2="12.66" stroke="#000000" stroke-width="0.100" data-pos="565"/>
+  <text x="8.42" y="14.06" font-size="1.80" data-pos="565">= 90</text>
+  <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="508"/>
+  <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="508">Main</text>
+  <text class="music" x="7.32" y="10.46" font-size="1.60" data-pos="0"></text>
+  <line x1="7.84" y1="10.46" x2="7.84" y2="9.06" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <text x="8.42" y="10.46" font-size="1.80" data-pos="0">= 120</text>
   </g>
 </svg>

@@ -300,7 +300,7 @@ internal static partial class SharedRenderer
         double x = DrawPair(startX, dotted: false, withThree: false);
         x += 0.35;
         gc.DrawText("=", x, baselineY, eqSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
-        x += SerifTextMetrics.MeasureBold("=", eqSize) + 0.45;
+        x += TextFontMetrics.SerifBold("=", eqSize) + 0.45;
         DrawPair(x, dotted: true, withThree: true);
     }
 
@@ -338,10 +338,10 @@ internal static partial class SharedRenderer
                     "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
-                x += SerifTextMetrics.MeasureBold(m.TempoText, markingSize) + 0.8;
+                x += TextFontMetrics.SerifBold(m.TempoText, markingSize) + 0.8;
                 gc.DrawText("(", x, absY, textSize,
                     "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
-                x += SerifTextMetrics.Measure("(", textSize) + 0.1;
+                x += TextFontMetrics.Serif("(", textSize) + 0.1;
             }
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
             // half with stem; 4+ = black head, stem, flags from the 8th up.
@@ -379,7 +379,7 @@ internal static partial class SharedRenderer
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
-                double textEnd = tempoTextX + SerifTextMetrics.MeasureBold(equation, textSize);
+                double textEnd = tempoTextX + TextFontMetrics.SerifBold(equation, textSize);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
                 DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
@@ -389,7 +389,7 @@ internal static partial class SharedRenderer
         {
             double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
             const double pad = 0.2;
-            double textWidth = SerifTextMetrics.MeasureBold(m.Text, fs);
+            double textWidth = TextFontMetrics.SerifBold(m.Text, fs);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
@@ -414,7 +414,7 @@ internal static partial class SharedRenderer
             double ts = FontSize * 0.7;
             double gs = FontSize * 0.8;
             const string prefix = "To ";
-            double textW = SerifTextMetrics.MeasureBold(prefix, ts);
+            double textW = TextFontMetrics.SerifBold(prefix, ts);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, "serif",

@@ -86,9 +86,22 @@
 %% Tag each book so the parser can keep the regimes apart. Mixing them is exactly the
 %% mistake HANDOFF 5.3 warns about: a stretched page and an unstretched one do not measure
 %% the same spring.
+%% ⚠️ THE SERIF FONT IS PINNED, and it is not cosmetic. ly/paper-defaults-init.ly:170-173
+%% sets `fonts.serif` to "LilyPond Serif" for every backend EXCEPT svg, where it falls back
+%% to the bare name "serif" — i.e. to whatever fontconfig happens to resolve on this
+%% machine. The measuring script runs -dbackend=svg (it needs realized pages), so any
+%% quantity with TEXT in its binding ink was being measured against the wrong font and
+%% against a machine-dependent one.
+%%
+%% Measured, not assumed: with the pin removed, the eight books whose binding ink is glyphs
+%% or staff lines (N J S L T P D Q) print IDENTICAL numbers on both backends, and the four
+%% tuplet books differ by exactly 0.027492 — the TupletNumber is the only text in any
+%% binding pair in this file. Pinning here rather than per-book so that the next book with
+%% text in it cannot inherit the bug.
 probeTag =
 #(define-scheme-function (tag) (string?)
-   #{ \paper { page-post-process = #(lambda (layout pages)
+   #{ \paper { property-defaults.fonts.serif = "LilyPond Serif"
+               page-post-process = #(lambda (layout pages)
                                       (format #t "\nPROBEV BOOK ~a\n" tag)
                                       (probe-dump-pages layout pages)) } #})
 
@@ -314,9 +327,9 @@ probeTag =
 %%     returns `to_bracket` — the midpoint of the bracket's own positions — as the
 %%     TupletNumber's Y-offset for every tuplet that is not a knee against a beam, and
 %%     :227-228 aligns its stencil to CENTER on both axes. So the digit straddles the
-%%     bracket line and reaches num_height/2 = 0.600225 past it. Both books' gaps close to
-%%     six digits on `notehead ink + 1.1 + 0.600225 + 2.05 + 1`. Do not attribute that
-%%     0.600225 to the bracket's own half-thickness: the bracket is 0.16 thick and its
+%%     bracket line and reaches num_height/2 = 0.627717 past it. Both books' gaps close to
+%%     six digits on `notehead ink + 1.1 + 0.627717 + 2.05 + 1`. Do not attribute that
+%%     0.627717 to the bracket's own half-thickness: the bracket is 0.16 thick and its
 %%     0.08 never reaches the outside.  So the
 %%     two defects push the GAP in OPPOSITE directions: (1) makes Lily# too small, (2)
 %%     makes it too large once (1) is fixed. Seeding the bracket without guarding the stem
@@ -369,9 +382,9 @@ probeTag =
 %%     bracket only has to beat StaffGrouper's 9; between systems it has to beat
 %%     system-system-spacing's basic-distance of TWELVE. The notes are put 8 staff spaces
 %%     outside the middle line so the bracket clears that by more than a staff space:
-%%     8 + 0.545 (notehead ink) + 1.1 (padding) + 0.600225 (half the tuplet NUMBER, which
+%%     8 + 0.545 (notehead ink) + 1.1 (padding) + 0.627717 (half the tuplet NUMBER, which
 %%     straddles the line — see TU) + 2.05 (the other system's staff line ink) + 1
-%%     (padding) = 13.295225. On book P's `d` it would come to 11.295225 and LOSE to 12,
+%%     (padding) = 13.322717. On book P's `d` it would come to 11.322717 and LOSE to 12,
 %%     printing a number that measures nothing.
 %%
 %%     ⚠️ AND THE NOTES ALONE MUST NOT BIND, or the entry stops being about the bracket:
@@ -384,7 +397,7 @@ probeTag =
 %%
 %%     ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE, and that is not decoration. Written as a
 %%     bar-filling tuplet the bracket starts right after the clef, and measured that way
-%%     the UP book read 14.785225 instead of 13.295225: at that x the OTHER system's
+%%     the UP book read 14.785225 instead of 13.322717: at that x the OTHER system's
 %%     deepest ink is not its staff line at 2.05 but its CLEF at 3.540, and the entry was
 %%     silently measuring clef-against-bracket. Confirmed by hiding the clef at line
 %%     starts, which moved the number and nothing else did (ledgers and the time signature

@@ -152,7 +152,7 @@ internal static class ChordNameEngraver
         // the renderer's chord font size (FontSize 4.0 × 0.65 = 2.6), measured with
         // SANS bold advances — the face the names render in.
         double HalfWidth(ChordNameItem c) =>
-            Math.Max(1.0, Rendering.SansTextMetrics.MeasureBold(DisplayText(c).Text, 2.6) / 2);
+            Math.Max(1.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, 2.6) / 2);
 
         // Resolve horizontal overlaps between adjacent TIMING-placed symbols ON THE
         // SAME LINE (same system + staff). Proportional timing X can pack two names —

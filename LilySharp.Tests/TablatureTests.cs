@@ -140,8 +140,10 @@ public class TablatureTests
         // Should contain TAB clef glyph (Emmentaler clefs.tab = U+E08F)
         Assert.Contains(EmmentalerGlyphs.TabClef.ToString(), svg);
 
-        // Should contain serif fret-number text
-        Assert.Contains("font-family=\"serif\"", svg);
+        // Should contain serif fret-number text. The root font-family now NAMES the
+        // bundled face the engine measured with and keeps the generic as the fallback,
+        // so assert on the fallback rather than on the whole attribute.
+        Assert.Contains(", serif\"", svg);
 
         // Should contain 6 staff lines for guitar tab (in addition to 5 for treble):
         // live staff/string lines are full-width horizontals at line thickness.

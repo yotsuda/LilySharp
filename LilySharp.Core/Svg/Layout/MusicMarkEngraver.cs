@@ -309,7 +309,7 @@ internal static class MusicMarkEngraver
                         // i.e. cn.YUp > 0) share the marks' band.
                         if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
                             continue;
-                        double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                        double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
                         double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn);
@@ -343,7 +343,7 @@ internal static class MusicMarkEngraver
                     {
                         if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
                             continue;
-                        double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                        double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
                         bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
                         bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
                         if (overLabel || overTempo)
@@ -453,8 +453,8 @@ internal static class MusicMarkEngraver
                     {
                         // "*" just left of the new "Ped." — both centered
                         // texts, so clear half of each measured width + gap.
-                        double pedHalf = Rendering.SerifTextMetrics.MeasureBold("Ped.", 2.8) / 2;
-                        double starHalf = Rendering.SerifTextMetrics.MeasureBold(mark.Text, 2.8) / 2;
+                        double pedHalf = Rendering.TextFontMetrics.SerifBold("Ped.", 2.8) / 2;
+                        double starHalf = Rendering.TextFontMetrics.SerifBold(mark.Text, 2.8) / 2;
                         x -= pedHalf + starHalf + 0.4;
                     }
                 }
@@ -575,9 +575,9 @@ internal static class MusicMarkEngraver
                 // overprinted on the grand-staff fixture. Same band model:
                 // its "line" is the label-center height it would pair at.
                 const double drop = 0.9; // = section-label fs/2 − pad
-                double uw = 2.3 + Rendering.SerifTextMetrics.MeasureBold("= " + tempo.Text, 1.8);
+                double uw = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + tempo.Text, 1.8);
                 if (tempo.TempoText != null)
-                    uw += Rendering.SerifTextMetrics.MeasureBold(tempo.TempoText, 2.2) + 1.5;
+                    uw += Rendering.TextFontMetrics.SerifBold(tempo.TempoText, 2.2) + 1.5;
                 if (tempo.SwingSubdivision != 0)
                     uw += 5.0;
                 // The tempo baseline sits `drop` below the pair line, so the line's
@@ -601,7 +601,7 @@ internal static class MusicMarkEngraver
             var lab = result[bestJ];
             double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
             const double pad = 0.2;
-            double halfW = (Rendering.SerifTextMetrics.MeasureBold(lab.Text, labelFs) + 2 * pad) / 2;
+            double halfW = (Rendering.TextFontMetrics.SerifBold(lab.Text, labelFs) + 2 * pad) / 2;
             double baselineDrop = labelFs / 2 - pad;
             double boxHalf = labelFs / 2 + pad;
 
@@ -610,9 +610,9 @@ internal static class MusicMarkEngraver
             // directly — inheriting the higher line would drag the pair up by
             // whatever stacking step the other mark once needed.
             double tempoX = lab.X + halfW + TempoLabelGap;
-            double tempoW = 2.3 + Rendering.SerifTextMetrics.MeasureBold("= " + tempo.Text, 1.8);
+            double tempoW = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + tempo.Text, 1.8);
             if (tempo.TempoText != null)
-                tempoW += Rendering.SerifTextMetrics.MeasureBold(tempo.TempoText, 2.2) + 1.5;
+                tempoW += Rendering.TextFontMetrics.SerifBold(tempo.TempoText, 2.2) + 1.5;
             if (tempo.SwingSubdivision != 0)
                 tempoW += 5.0;
 
@@ -629,7 +629,7 @@ internal static class MusicMarkEngraver
                         && measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int ts2)
                         && cs != ts2)
                         continue;
-                    double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                    double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
                     double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding;
                     bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
                     bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);
@@ -881,9 +881,9 @@ internal static class MusicMarkEngraver
         {
             case MusicMarkType.Tempo:
             {
-                double w = 2.3 + Rendering.SerifTextMetrics.MeasureBold("= " + mark.Text, 1.8);
+                double w = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + mark.Text, 1.8);
                 if (mark.TempoText != null)
-                    w += Rendering.SerifTextMetrics.MeasureBold(mark.TempoText, 2.2) + 1.5;
+                    w += Rendering.TextFontMetrics.SerifBold(mark.TempoText, 2.2) + 1.5;
                 if (mark.SwingSubdivision != 0)
                     w += 5.0;
                 return (x, x + w);
@@ -892,7 +892,7 @@ internal static class MusicMarkEngraver
             case MusicMarkType.SectionLabel:
             {
                 double fs = mark.Type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
-                double half = Rendering.SerifTextMetrics.MeasureBold(mark.Text, fs) / 2 + 0.2;
+                double half = Rendering.TextFontMetrics.SerifBold(mark.Text, fs) / 2 + 0.2;
                 return (x - half, x + half);
             }
             case MusicMarkType.Segno:
@@ -900,7 +900,7 @@ internal static class MusicMarkEngraver
                 return (x - 1.2, x + 1.2);
             default:
             {
-                double w = Rendering.SerifTextMetrics.MeasureBold(mark.Text, 2.2);
+                double w = Rendering.TextFontMetrics.SerifBold(mark.Text, 2.2);
                 return mark.Position == MusicMarkPosition.End
                     ? (x - w, x)
                     : (x - w / 2, x + w / 2);
@@ -1009,7 +1009,7 @@ internal static class MusicMarkEngraver
         {
             // LEFT edge on the anchor: returned X is the box center.
             double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
-            double boxWidth = Rendering.SerifTextMetrics.MeasureBold(mark.Text, fs) + 0.4;
+            double boxWidth = Rendering.TextFontMetrics.SerifBold(mark.Text, fs) + 0.4;
             return anchor + boxWidth / 2;
         }
 

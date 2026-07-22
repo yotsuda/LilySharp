@@ -253,6 +253,10 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     {
         private readonly string? _fontDirectory;
         private readonly Dictionary<string, SKTypeface> _typefaces = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Faces owned by <see cref="TextFontMetrics"/>'s shared cache — held here
+        /// but NOT disposed with this page's own handles.</summary>
+        private readonly HashSet<SKTypeface> _borrowed = new();
         private readonly Dictionary<string, SKFont> _fonts = new();
 
         public FontCache(string? fontDirectory)
@@ -281,7 +285,17 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             if (_typefaces.TryGetValue(key, out var cached))
                 return cached;
 
-            SKTypeface? tf = TryLoadEmmentaler(family) ?? TryLoadSystem(family, style);
+            // The bundled text faces come BEFORE the system lookup: the engine reserves
+            // space with TextFontMetrics, which reads those files, so drawing anything else
+            // would print a font the layout never measured. TryLoadSystem stays for an
+            // explicitly named family the document asked for by `font "X"`.
+            SKTypeface? tf = TryLoadEmmentaler(family);
+            if (tf == null && (tf = TryLoadBundledText(family, style)) != null)
+                // BORROWED, not owned: TextFontMetrics caches one instance per face and
+                // measures with it. Disposing it here would leave the shared cache holding
+                // a dead handle and the NEXT page would draw with it.
+                _borrowed.Add(tf);
+            tf ??= TryLoadSystem(family, style);
             tf ??= SKTypeface.Default;
             _typefaces[key] = tf;
             return tf;
@@ -299,6 +313,16 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             string? path = ResolveFontPath(fileName);
             return path != null ? SKTypeface.FromFile(path) : null;
         }
+
+        /// <summary>
+        /// The generic families (<c>serif</c> / <c>sans</c>) resolved to the BUNDLED
+        /// TeX Gyre faces — LilyPond's own text fonts by metrics — through the very loader
+        /// <see cref="TextFontMetrics"/> measures with.
+        /// </summary>
+        private static SKTypeface? TryLoadBundledText(string family, FontStyle style)
+            => TextFontMetrics.IsGenericTextFamily(family, out bool sans)
+                ? TextFontMetrics.Typeface(sans, style)
+                : null;
 
         private static SKTypeface? TryLoadSystem(string family, FontStyle style)
         {
@@ -379,7 +403,8 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         public void Dispose()
         {
             foreach (var f in _fonts.Values) f.Dispose();
-            foreach (var t in _typefaces.Values) t.Dispose();
+            foreach (var t in _typefaces.Values)
+                if (!_borrowed.Contains(t)) t.Dispose();
         }
     }
 }
