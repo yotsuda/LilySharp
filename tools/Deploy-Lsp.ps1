@@ -79,6 +79,15 @@ Copy-Item "$repoExt\syntaxes\*" (Join-Path $extDir.FullName 'syntaxes') -Recurse
 if (Test-Path "$repoExt\out") {
     Copy-Item "$repoExt\out\*" (Join-Path $extDir.FullName 'out') -Recurse -Force -ErrorAction SilentlyContinue
 }
+# media/ carries the WEBVIEW's own copy of Emmentaler. It was missing here, and
+# that is not cosmetic: the preview resolves the codepoints the server emits
+# against THIS font, so a stale copy draws the right layout with the wrong
+# glyphs. After the 2.26.0 font swap the installed preview kept the 2.24.4
+# woff2 and rendered noteheads as triangles, because 73 of the 115 PUA
+# assignments moved between the two fonts (LilyPond always looks glyphs up by
+# feta NAME; the codepoints are not stable across versions).
+Copy-Item "$repoExt\media\*" (Join-Path $extDir.FullName 'media') -Recurse -Force -ErrorAction SilentlyContinue
+
 # The manifest too, so contributed settings / labels / commands (e.g. a new
 # config enum or its enumItemLabels) deploy. VS Code re-reads package.json on the
 # next window reload.

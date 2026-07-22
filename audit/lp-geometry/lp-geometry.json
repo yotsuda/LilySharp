@@ -172,6 +172,27 @@
       "lilypond": 4.454016,
       "residual": 0.0,
       "why": ""
+    },
+    "page.width": {
+      "probe": "page-vertical.ly",
+      "score": "L",
+      "lilypond": 119.501575,
+      "residual": 0.0,
+      "why": ""
+    },
+    "page.first-staff-refpoint": {
+      "probe": "page-vertical.ly",
+      "score": "L",
+      "lilypond": 11.690551,
+      "residual": 0.0,
+      "why": "EXACT. LilyPond seats the first system with top-system-spacing's SPRING, and at force 0 a spring is max(min_distance, ideal_distance) (lily/spring.cc:219-237), so basic-distance 6 beats the ink floor -- ink above the refpoint (2.000000, the staff's own half height on this probe) plus padding 1 -- and the staff lands at top-margin + 6.000000 exactly. Lily# returned the floor alone and sat 3.000000 too high. Closing it took two steps IN ORDER, and the order is the finding: the placement had to move into the refpoint frame FIRST, because top-system-spacing aims at the staff's MIDDLE line while Lily# stacks systems by the top staff's TOP LINE. Porting the max() onto the unconverted anchor lands the top line on the value LilyPond puts the refpoint at -- measured 2026-07-22, that moves the residual -3.000000 -> +2.000000 rather than to 0. What this does NOT cover: the top spring's STRETCH under page justification (set_default_stretch_strength = ideal_distance, spring.cc:213-216). Lily# pins the first system and stretches only the inter-system springs; this probe is a natural-length page, so that difference cannot show here."
+    },
+    "system.natural-distance": {
+      "probe": "page-vertical.ly",
+      "score": "L",
+      "lilypond": 12.000000,
+      "residual": 0.0,
+      "why": "EXACT. system-system-spacing's basic-distance, 12, and the first Y quantity in this corpus to be confirmed rather than assumed: HANDOFF had it as 'a match' from an SVG reading at two decimals, which cannot tell 12.00 from 12.004. Measured through RecordingDocumentContext it is 12.000000 on both sides. Note what this does NOT cover: the probe is the LAST page of a score that fits one page, so the gap is the spring's natural length. The STRETCHED regime (LilyPond's book J, 12.254816 against Lily#'s 12.29) has no entry yet and is where the remaining vertical error lives."
     }
   }
 }

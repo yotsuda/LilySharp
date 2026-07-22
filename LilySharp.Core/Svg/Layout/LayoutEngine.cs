@@ -62,7 +62,6 @@ internal sealed class LayoutEngine
         SystemLayoutCache? systemCache = null)
     {
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
-        double headerBottom = _options.MarginTop + headerHeight;
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout
@@ -131,7 +130,8 @@ internal sealed class LayoutEngine
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
             score, firstSystemMeasureLayouts, systemHeight, indent);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
-            headerBottom, LayoutUtilities.CalculateUpExtent(firstUpSkyline), _options.TopSystemPadding);
+            _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
+            _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
 
         // Layout each system with skyline extents
         var systems = new List<SystemLayout>();
@@ -544,9 +544,9 @@ internal sealed class LayoutEngine
             return OptimalPages();
 
         // Recalculate Y positions using skyline extents to avoid overlaps
-        double headerBottom = _options.MarginTop + headerHeight;
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
-            headerBottom, perSystemExtents[0].upExtent, _options.TopSystemPadding);
+            _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
+            _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
         var updatedSystems = new List<SystemLayout>();
         for (int i = 0; i < systems.Length; i++)
         {

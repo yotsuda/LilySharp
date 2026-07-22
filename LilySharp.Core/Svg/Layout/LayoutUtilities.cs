@@ -129,16 +129,62 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// Calculates the initial Y position for the first system.
+    /// Distance DOWN from the paper's top edge to the FIRST system's staff refpoint —
+    /// its top staff's MIDDLE line, which is the anchor <c>top-system-spacing</c> is
+    /// written against.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
-    /// The staff Y is positioned to leave room for: header + system extent + padding.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:441-444 — the problem opens with
+    /// <c>bottom_skyline_</c> AT the top of the printable area, set header_height_ below
+    /// it, so the top spring is anchored at the TOP of the header (:471-473 says so in
+    /// as many words). The header therefore enters the FLOOR, not the anchor.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:625-633 — that floor is the ink the
+    /// system carries above its refpoint plus the spec's padding, and it reaches the
+    /// spring through <c>Spring::ensure_min_distance</c> (lily/spring.cc:156-159), which
+    /// raises the MINIMUM and leaves the ideal alone.
+    ///
+    /// Two frames meet here and must not be confused (they differ by exactly halfStaff):
+    /// <list type="bullet">
+    /// <item>Lily#'s system origin and <paramref name="systemUpExtent"/> are the top
+    /// staff's TOP LINE and the ink above it.</item>
+    /// <item>LilyPond's <c>up_skyline.distance()</c> is measured from the staff REFPOINT
+    /// and always contains the staff symbol itself.</item>
+    /// </list>
+    /// Placing the first system is done in the refpoint frame here and converted back to
+    /// the origin frame ONCE, in <see cref="CalculateFirstSystemY"/>.
     /// </remarks>
-    public static double CalculateFirstSystemY(double headerBottom, double systemUpExtent, double topSystemPadding)
+    public static double CalculateFirstStaffRefpoint(
+        double topMargin, double headerHeight, double systemUpExtent,
+        double halfStaff, VerticalSpacingSpec topSpec)
     {
-        return headerBottom + systemUpExtent + topSystemPadding;
+        double inkAboveRefpoint = systemUpExtent + halfStaff;
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:625-629 + spring.cc:156-159 —
+        // ensure_min_distance takes the larger of the spec's own minimum and the ink.
+        double minimumDistance =
+            Math.Max(topSpec.MinimumDistance, headerHeight + inkAboveRefpoint + topSpec.Padding);
+
+        // LILYPOND-REF: lily/spring.cc:219-237 Spring::length — at force 0 a spring is
+        // max(min_distance_, ideal_distance_), so a system whose ink is SMALLER than
+        // top-system-spacing's basic-distance is not measured by its ink at all. Lily#
+        // returned the floor alone, which put every header-less score 3.000000 too high.
+        return topMargin + Math.Max(topSpec.BasicDistance, minimumDistance);
     }
+
+    /// <summary>
+    /// Distance DOWN from the paper's top edge to the FIRST system's ORIGIN (its top
+    /// staff's TOP LINE) — the frame <see cref="SystemLayout.Y"/> is stacked in.
+    /// </summary>
+    /// <remarks>
+    /// The sole seam between the refpoint frame LilyPond's page spacing is written in and
+    /// the origin frame Lily# stacks systems in; every caller placing a first system goes
+    /// through here so the halfStaff conversion exists in exactly one place.
+    /// </remarks>
+    public static double CalculateFirstSystemY(
+        double topMargin, double headerHeight, double systemUpExtent,
+        double halfStaff, VerticalSpacingSpec topSpec)
+        => CalculateFirstStaffRefpoint(topMargin, headerHeight, systemUpExtent, halfStaff, topSpec)
+           - halfStaff;
 
     /// <summary>
     /// Calculates the actual header height based on title and composer presence.

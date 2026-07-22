@@ -50,9 +50,22 @@ internal sealed class RenderedGeometry
     /// explicitly rather than widening this predicate.</remarks>
     private const double ThinBarlineMaxWidth = 0.35;
 
-    private readonly RecordingDrawingContext _page;
+    /// <summary>
+    /// Staff lines are horizontal rules of exactly this thickness. Ledger lines are drawn
+    /// 0.1 thicker (EngravingDefaults.LegerLineThickness), so the thickness alone separates
+    /// them; the span check below is a second, independent guard.
+    /// </summary>
+    private const double StaffLineThickness = EngravingDefaults.StaffLineThickness;
 
-    private RenderedGeometry(RecordingDrawingContext page) => _page = page;
+    /// <summary>A horizontal rule must reach at least this far to count as a staff line.</summary>
+    private const double MinStaffLineSpan = 10.0;
+
+    private readonly IReadOnlyList<RecordingDrawingContext> _pages;
+
+    /// <summary>The first page, which is all the X probes look at.</summary>
+    private RecordingDrawingContext _page => _pages[0];
+
+    private RenderedGeometry(IReadOnlyList<RecordingDrawingContext> pages) => _pages = pages;
 
     /// <summary>Parses and lays out <paramref name="source"/>, recording what gets drawn.</summary>
     public static RenderedGeometry Render(string source)
@@ -75,7 +88,114 @@ internal sealed class RenderedGeometry
 
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);
-        return new RenderedGeometry(doc.Page);
+        return new RenderedGeometry(doc.Pages);
+    }
+
+    // ===================== PAGE VERTICAL =====================
+    //
+    // Y is DEVICE y-down measured from that page's top paper edge: SharedRenderer.cs:99
+    // wraps each page's context in a YFlipDrawingContext, so what the recorder sees has
+    // already been mapped out of page-Y-up. That is the same origin the LilyPond probe
+    // reports against (scm/page.scm:184-192 places a system at -(Y-offset + top-margin)
+    // from the top edge), so the two sides need no further reconciliation.
+    //
+    // Systems are located by their STAFF LINES, and the quantity taken from each is the
+    // MIDDLE line — LilyPond position 0, which is the staff's refpoint and what
+    // system-system-spacing actually works against. HANDOFF 5.3: measuring between system
+    // ORIGINS instead produces distances that vary system to system even when the spacing
+    // is uniform, because staff-refpoint-extent differs (a system carrying a bar number
+    // above its staff reaches further up). That mistake is what put "LilyPond compresses to
+    // 11.528583" into the handoff for several sessions.
+
+    /// <summary>Number of pages the score paginated onto.</summary>
+    public int PageCount => _pages.Count;
+
+    /// <summary>Page height in staff spaces, as the renderer was told to draw it.</summary>
+    public double PageHeight(int page = 0) => _pages[page].HeightSpaces;
+
+    /// <summary>Page width in staff spaces, as the renderer was told to draw it.</summary>
+    public double PageWidth(int page = 0) => _pages[page].WidthSpaces;
+
+    /// <summary>
+    /// Each system's staff refpoint on <paramref name="page"/>, top of the page downwards,
+    /// measured from the top paper edge.
+    /// </summary>
+    /// <remarks>
+    /// Single-staff probes only. With two staves per system this returns one entry per
+    /// STAFF, not per system, and a caller measuring "the gap between systems" would get
+    /// the brace's inner gap instead. Any probe that grows a second staff has to teach this
+    /// how to group them.
+    /// </remarks>
+    public IReadOnlyList<double> StaffRefpoints(int page = 0)
+    {
+        var ys = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
+            .Select(l => l.Y1)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToList();
+
+        if (ys.Count % 5 != 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff lines, which is not a whole number of "
+                + "5-line staves. The probe is not the single-staff score this assumes, or "
+                + "the staff-line predicate no longer selects what it used to.");
+        }
+
+        var refpoints = new List<double>();
+        for (int i = 0; i < ys.Count; i += 5)
+        {
+            // 1 staff space apart, by definition of a staff space.
+            for (int k = 0; k < 4; k++)
+            {
+                if (Math.Abs(ys[i + k + 1] - ys[i + k] - 1.0) > 1e-6)
+                {
+                    throw new InvalidOperationException(
+                        $"page {page}: staff lines at {ys[i]:F6}.. are not 1 apart, so they "
+                        + "are not one staff and the grouping into staves is wrong.");
+                }
+            }
+            refpoints.Add(ys[i + 2]);   // middle line = LilyPond position 0
+        }
+        return refpoints;
+    }
+
+    /// <summary>
+    /// Distance from the top paper edge down to the first system's staff refpoint.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond puts this at <c>top-margin + top-system-spacing</c>'s basic-distance when
+    /// nothing pushes it further (measured on 2.26.0: 5.690551 + 6.000000).
+    /// </remarks>
+    public double FirstStaffRefpoint(int page = 0) => StaffRefpoints(page)[0];
+
+    /// <summary>
+    /// The single staff-to-staff distance on <paramref name="page"/>.
+    /// </summary>
+    /// <remarks>
+    /// Throws when the gaps are not all equal rather than averaging them: a probe that
+    /// stretches unevenly is not measuring one spring, and silently returning a mean would
+    /// hide exactly the defect the corpus exists to catch.
+    /// </remarks>
+    public double StaffGap(int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (refs.Count < 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: {refs.Count} system(s) — a staff-to-staff gap needs two.");
+        }
+        var gaps = Enumerable.Range(0, refs.Count - 1).Select(i => refs[i + 1] - refs[i]).ToList();
+        if (gaps.Max() - gaps.Min() > 1e-6)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: gaps are not uniform ({string.Join(", ", gaps.Select(g => g.ToString("F6")))}). "
+                + "Measuring one of them would misrepresent the page.");
+        }
+        return gaps[0];
     }
 
     /// <summary>Music glyphs in drawing order, left to right.</summary>

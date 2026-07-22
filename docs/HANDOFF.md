@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `e38a76bf`（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `f0e7caac`（§0 で裏取りすること）
 
 ---
 
@@ -27,9 +27,23 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-**origin より 12 ahead で未 push**（HEAD `e38a76bf`）。push はユーザー判断・コミットは可。
-**テスト 0 failed / 3131 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度（X）19/22 exact, total |residual| = 0.022412 ss**（**2.26.0 基準**）。
+### ▶ 次のセッションの最初の一手
+
+**`page.first-staff-refpoint` の −3.000000 を閉じる。ただし順序が決まっている:**
+**① staff refpoint へのアンカー統一 → ② `max(basic-distance, ink + padding)` の字面移植。**
+①を飛ばして②だけ入れると残差が **−3.000000 → +2.000000** になって閉じないことは
+2026-07-22 に実測して差し戻し済み（`f0e7caac`）。**詳細と着手順序は §2⑧ の ⛔ 節。**
+**全 snapshot が動く**ので、再ベースは実測を出してユーザー承認を取ってから。
+
+---
+
+**origin より 16 ahead で未 push**（HEAD `f0e7caac`）。push はユーザー判断・コミットは可。
+⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 2 回（186 件・192 件）が含まれる。**
+別ブランチ `fix/vscode-extension` が `7291531a` から切られている（VS Code 拡張作業・ユーザー）。
+**テスト 0 failed / 3134 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度 21/25 exact, total |residual| = 3.022412 ss**（**2.26.0 基準**。X 22点＋**Y 3点**）。
+うち **3.000000 は Y の 1 点** `page.first-staff-refpoint` が単独で持っている（下記）。
+X だけなら 19/22・0.022412 で `e38a76bf` から不変。
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
 
 ⚠️ **2026-07-22 に履歴が書き換えられた（コミット日時の変更）。** メッセージは不変だが **SHA は全部変わった**。
@@ -86,9 +100,10 @@ exact 化したのは「直った」からではない。** 2.26.0 で `accident
 
 **X 軸の「定数を1つ直せば閉じる」ネタは尽きた。** 残る3点のうち2点は**Lily# に無いパイプライン**が
 要り（水平スカイライン1点／テキストレイアウト1点）、1点は `OPEN:`（5.4e-6）。
-§2⑧ の余白4定数は `e38a76bf` で閉じた。**次の一手は `audit/lp-geometry` の Y 展開**
-（§2⑧ の「Y コーパスの起こし方」）。縦は現在 SVG の 2 桁でしか比べられておらず、
-**LP との残差を 6 桁で持てていない唯一の軸**になっている。
+§2⑧ の余白4定数は `e38a76bf` で、Y 台帳の起票は `0c0d8f38` で閉じた。
+**次の一手は `page.first-staff-refpoint` の −3.000000。ただし §2⑧ のとおり
+「先に staff refpoint へのアンカー統一、そのあと字面移植」の順序**（素直に式を直すと
++2.000000 になって閉じないことを実測済み）。その次が **伸長 regime（LP book J）の点**。
 
 ⚠️ **TimeSignature 幅 −0.004735 は「定数を直す」問題ではない**（2026-07-22 に実測で確定）。
 `ly:time-signature::print` は **markup を組んで `grob-interpret-markup` に渡す**
@@ -114,6 +129,7 @@ markup 値は 0,2,8 / 3,5,7 / 6,9 が同値になるが、**フォント内の�
 | `070f1e21` | **フォントと台帳を 2.26.0 へ**。otf 2 個＋派生 woff/woff2 4 個を差し替え、生成器2本を zlib＋名前引きに、弓記号の方向ペアを移植、`lp-geometry.json` を 2.26.0 実測へ、テスト7ファイルの旧 codepoint 直書き 31 箇所を定数参照へ。**snapshot 186 件再ベース** |
 | `7291531a` | **3 ページのフィクスチャ `test/multi-page-vertical`**。§2⑧ が警告していた「複数ページを踏む fixture がゼロ」を埋めた |
 | `e38a76bf` | **紙面 5 定数を LP の単位で読み直した**（§2⑧ 完了）。**snapshot 192 件再ベース** |
+| `0c0d8f38` | **台帳を Y に開いた**（3 点）。`RenderedGeometry` を全ページ対応に。出力不変 |
 
 **`a2ceb2f0` で見つかった既存バグ 5 件**（現行フォントに対しても誤っていた）:
 
@@ -405,18 +421,78 @@ LP 2.24.4 実測（`ragged-bottom` ＋ `systems-per-page` を絞り、伸長も�
 **ページブレーカーのテストは自分が割るページを所有すべき**なので、上下余白を明示させて直した
 （再ピン止めではない）。横は幅に依存しないので製品既定のままにしてある。
 
-#### 残っているのは **縦の spring/force モデル**（紙面ではない）
+#### ✅ Y の台帳を開いた（`0c0d8f38`）— 6 桁で 3 点
 
-SVG 読み（`F2` なので 2 桁精度・§5.3 に従い残差としては扱わない）:
+LP 2.26.0 の `page-vertical.ly` **book L**（短いスコア＋既定用紙＝そのページが最終ページで、
+gap は伸長後でなく **spring の自然長**）に対して:
 
-| | 変更前 | 変更後 | LP 2.26.0 |
+| 台帳キー | Lily# | LP | 残差 |
 |---|---|---|---|
-| staff-to-staff gap | 12.36 | **12.29** | 12.254816 |
-| 先頭 staff refpoint | 11.56 | **12.25** | 12.431170 |
+| `page.width` | 119.501575 | 119.501575 | **0** |
+| `system.natural-distance` | 12.000000 | 12.000000 | **0** |
+| `page.first-staff-refpoint` | 8.690551 | 11.690551 | **−3.000000** |
 
-**近づいたが閉じていない。** 6 桁で詰めるには `audit/lp-geometry` に **Y の点**が要る
-（下の「Y コーパスの起こし方」）。⚠️ `RenderedGeometry` は現在 **1 ページ目しか記録しない**
-X 専用構造なので、Y の点を足すには `RecordingDocumentContext` の複数ページ対応から。
+⚠️ **gap が exact なのは形式ではなく実結果。** 旧記述は SVG 2 桁読みで「一致」としていたが、
+それでは 12.00 と 12.004 を区別できない。6 桁で 12.000000 だった。
+
+**−3.000000 は「死んだ定数」の正体。** `LayoutUtilities.CalculateFirstSystemY` は
+`headerBottom + systemUpExtent + TopSystemPadding` を返すだけ。LP はインクが小さいとき
+先頭 system をインクで測らない: `top-system-spacing` は spring で、インクはその**床**でしかない
+（`lily/page-layout-problem.cc:625-633`）:
+
+```cpp
+Real minimum_distance = up_skyline.distance (bottom_skyline_, ...) + padding;
+Spring spring_copy = spring;
+spring_copy.ensure_min_distance (minimum_distance);
+```
+
+圧縮が無ければ距離は **`max(basic-distance, ink + padding)`**。`TopSystem.BasicDistance` は
+既に 6 を持ち `e38a76bf` で 2.26.0 に対し正しいと確認済みだが、**誰も読んでいない**。
+
+#### ⛔ ただし字面移植は **座標系のアンカー統一が先**（2026-07-22 に着手して差し戻した）
+
+`max(...)` をそのまま入れてみたところ、残差は **−3.000000 → +2.000000** になり閉じなかった。
+**実測で原因が判明**（probe V の五線 y = 11.69 / 12.69 / 13.69 / 14.69 / 15.69）:
+
+| | Lily# | LP |
+|---|---|---|
+| `firstY` / `SystemLayout.Y` が指すもの | **五線の最上線**（system 原点） | — |
+| `top-system-spacing` が狙うもの | — | **staff refpoint＝中央線** |
+
+**ずれは `halfStaff` = 2 ss ちょうど。単位も向きも同じで、アンカーだけが違う。**
+素直に `max()` を入れると *最上線* が LP の *refpoint* の値に着地するので、
+数字が偶然近づいて見えるだけで意味は合っていない。
+
+⚠️ **frame は PageLayouter の内部ですら一貫していない**: `PageLayouter.cs:115-120` は
+「staff refpoint は五線の中心、system 原点は最上線」と正しく書いて
+`RefpointExtentUp = -halfStaff` をブレーカーに渡しているのに、**配置側の `firstY`
+（`PageLayouter.cs:259-262`）はその変換を適用していない**。
+
+**着手順序**（§5.2「勝手に変換して押し込まず報告する」に従いここで止めてある）:
+
+1. **先に**先頭 system の配置を refpoint 空間で行うようにする（`halfStaff` の変換を
+   式に散らさず、`SystemLayout.Y` へ書く一箇所の seam に寄せる）
+2. **そのうえで** `max(basic-distance, ink + padding)` を字面移植する
+3. 影響は `LayoutUtilities.CalculateFirstSystemY`（`LayoutEngine.cs:134`・`:549` の 2 呼び出し）と
+   `PageLayouter.cs:259-262` の計 2 経路。**全 snapshot が動く**（内容が下へ約 3 ss）
+
+⚠️ Lily# の `upExtent` は**五線最上線より上のインク**（probe V では 0）で、LP の
+`up_skyline.distance()` は **refpoint からのインク**（同 3.8）。**この 2 つを取り違えると
+また閉じない。** 1. の統一はここも含めて行うこと。
+
+#### ⚠️ 意図的な乖離: 単一ページは紙面サイズにならない
+
+`page.height` を台帳に入れようとして落とした。**Lily# は 1 ページに収まるスコアを内容サイズの
+ページで出し、溢れて初めて紙面に切り替える**（`LayoutEngine.cs:606-611`、明示的な設計）。
+LP は常に紙面に組む。この probe では **−109.468268**。実在し理解もできているが閉じる予定が無く、
+台帳に載せると `total |residual|` が ~109.5 になり指標が壊れるのでここに書く。
+**ページ分割される経路は紙面をそのまま使う**（`test/multi-page-vertical` は 3 × 169.009370）。
+
+#### 残っているのは **伸長された regime**
+
+book L（自然長）は閉じた。**LP の book J（満杯ページ＝伸長）は未着手**で、
+そこが縦の残り誤差の在り処: LP 12.254816 に対し Lily# は約 12.29。
+ページを埋める probe が要る（複数ページ測定の配管は `0c0d8f38` で入った）。
 
 #### 参考: 旧記述の紙面比較表
 
@@ -487,7 +563,8 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 19/22 exact, total |residual| = 0.022412 ss**（`audit/lp-geometry/`。X のみ・**LP 2.26.0 基準**）。
+**現状 21/25 exact, total |residual| = 3.022412 ss**（`audit/lp-geometry/`・**LP 2.26.0 基準**）。
+**X 22 点は 19 exact / 0.022412、Y 3 点は 2 exact / 3.000000**（`0c0d8f38` で Y に開いた）。
 
 これがこのプロジェクトの品質指標。snapshot は「前回の自分」との比較なので、一度承認した誤りは
 永久に緑のまま。台帳は **LP との距離**を数値で持ち、増減どちらでもテストが落ちる。

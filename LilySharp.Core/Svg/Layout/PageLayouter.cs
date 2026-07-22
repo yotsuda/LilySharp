@@ -255,11 +255,12 @@ internal sealed class PageLayouter
     {
         var pageSystems = new List<SystemLayout>();
 
-        // First system Y position
-        var topSpec = vs.TopSystem;
-        double firstY = isFirstPage
-            ? _options.MarginTop + headerHeight + systemExtents[startIdx].upExtent + topSpec.Padding
-            : _options.MarginTop + systemExtents[startIdx].upExtent + topSpec.Padding;
+        // First system Y position. LilyPond builds a Page_layout_problem per PAGE, so
+        // top-system-spacing governs the first system of EVERY page; only the header is
+        // first-page-only.
+        double firstY = LayoutUtilities.CalculateFirstSystemY(
+            _options.MarginTop, isFirstPage ? headerHeight : 0,
+            systemExtents[startIdx].upExtent, _options.StaffHeight / 2.0, vs.TopSystem);
 
         // PASS 1 — the natural gap for each system pair, from the REAL
         // (X-aware skyline) distances placement uses.

@@ -114,6 +114,58 @@ internal static class LpGeometryProbes
     // Staff_spacing's :213 correction decides the right-hand gap.
     private static readonly string MKA = Score("c4 d key c major fis g |", "MKA", "g major");
 
+    // --- the PAGE vertical (probes/page-vertical.ly) ---
+    //
+    // LilyPond twin: book L — \repeat unfold 24 { c'4 d' e' f' } on the SHIPPING DEFAULT
+    // paper, with no \header, no title and no markup. Every one of those absences is load
+    // bearing:
+    //
+    //   * No markup, so the first thing on the page is a SYSTEM. scm/page.scm:67-87 chooses
+    //     between top-system-spacing and top-markup-spacing on paper-system-title?, and a
+    //     title would silently move this measurement onto the other spring. An earlier
+    //     attempt at this comparison carried a `section` mark on the Lily# side and nowhere
+    //     else, which put ~3.2 ss of header into a number that was being read as margin.
+    //
+    //   * Short enough to fit one page, so the page is also the LAST page and no stretching
+    //     happens. That is what makes the gap the spring's own natural length rather than
+    //     whatever force a full page was solved for. Book J in the same .ly measures the
+    //     stretched regime and is deliberately NOT mirrored here yet — mixing the two is
+    //     the mistake HANDOFF 5.3 exists to prevent.
+    //
+    // 24 measures land on 3 systems on both sides, which is what makes the gap measurable
+    // at all (two gaps, and StaffGap insists they agree).
+    //
+    // NOTE THE `~`. Every other probe goes through Score(), whose `form main { Main }` prints
+    // the section's rehearsal MARK above the first system. That mark is ~3.86 ss of ink, it
+    // lands exactly where this measurement looks, and Lily# seats the first system by
+    // skyline — so the first draft of this probe read 14.350551 against LilyPond's 11.690551
+    // and the mark was the whole of the difference. That is precisely the confound the .ly
+    // twin's header warns about ("a `section` mark on the Lily# side with no counterpart
+    // here"), met again from the other direction. `~Main` is a silent section reference
+    // (Parser.Form.cs): the section still governs the music, its label is not drawn.
+    //
+    // Writing the music inline as `part melody { ... }` also removes the mark, and was tried
+    // first — but it renders NOTHING AT ALL (no staff lines, no glyphs) while still exiting
+    // 0, so "the mark is gone" and "the score is gone" look identical from the outside. Any
+    // probe shape has to be checked for ink before it is trusted.
+    private static readonly string V = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 24)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "V" {
+          staff melody
+        }
+        """;
+
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
@@ -180,5 +232,33 @@ internal static class LpGeometryProbes
         new("barline.prev.whole-note", E, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
         new("barline.prev.whole-rest", F, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
         new("barline.prev.half-note", G, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
+
+        // --- the PAGE vertical ---
+        // The first Y entries in a corpus that was X-only. The paper pair are constants and
+        // will read exact until someone edits them, which is the point: they are the two
+        // numbers that were wrong for the whole life of the project (A4 in PostScript points
+        // instead of LilyPond's TeX points) and nothing would have caught it.
+        // Two entries were drafted here and dropped, both for reasons worth keeping:
+        //
+        //   page.top-margin  — nothing DRAWS the top margin, so the only way to measure it
+        //     from recorded output is first-refpoint minus an assumed 6.0. That hardcodes
+        //     the very spacing the entry below exists to check, and would read exact
+        //     whenever that one did.
+        //
+        //   page.height      — Lily# sizes a SINGLE page to its content and only switches to
+        //     the paper once the content overflows (LayoutEngine.cs:606-611, a deliberate
+        //     choice), while LilyPond always engraves onto the paper. On this probe that is
+        //     a residual of -109.468268: real, understood, and not going to close. Carrying
+        //     it would have taken total |residual| from 0.022412 to ~109.5 and made the
+        //     headline number meaningless. It is recorded in HANDOFF instead. (The
+        //     paginated path does use the paper height exactly — test/multi-page-vertical
+        //     renders 3 x 169.009370.)
+        new("page.width", V, g => g.PageWidth()),
+
+        // These two are the live ones. The refpoint is where top-system-spacing puts the
+        // first staff, and the gap is system-system-spacing's basic-distance — LilyPond
+        // reads 11.690551 (= top-margin + 6.000000) and 12.000000 on this exact score.
+        new("page.first-staff-refpoint", V, g => g.FirstStaffRefpoint()),
+        new("system.natural-distance", V, g => g.StaffGap()),
     };
 }

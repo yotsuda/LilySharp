@@ -6,31 +6,31 @@
 </style>
 <g class="page" data-page-top="0.00" data-page-height="30.00" transform="translate(0, 0.00)">
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="6.00" x2="102.43" y2="6.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="7.00" x2="102.43" y2="7.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="8.00" x2="102.43" y2="8.00" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="9.00" x2="102.43" y2="9.00" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="10.00" x2="102.43" y2="10.00" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="9.00" font-size="4.00"></text>
-  <text class="music" x="3.30" y="8.00" font-size="4.00"></text>
-  <text class="music" x="7.68" y="8.00" font-size="4.00" data-pos="0"></text>
-  <line x1="7.75" y1="8.15" x2="7.75" y2="11.50" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="19.12" y="7.50" font-size="4.00" data-pos="0"></text>
-  <line x1="19.18" y1="7.65" x2="19.18" y2="11.00" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="30.55" y="7.00" font-size="4.00" data-pos="0"></text>
-  <line x1="30.61" y1="7.15" x2="30.61" y2="10.50" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="41.98" y="7.50" font-size="4.00" data-pos="0"></text>
-  <line x1="42.05" y1="7.65" x2="42.05" y2="11.00" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="56.68" y="8.00" font-size="4.00" data-pos="0"></text>
-  <line x1="56.74" y1="8.15" x2="56.74" y2="11.50" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="68.11" y="7.50" font-size="4.00" data-pos="0"></text>
-  <line x1="68.17" y1="7.65" x2="68.17" y2="11.00" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="79.54" y="7.00" font-size="4.00" data-pos="0"></text>
-  <line x1="79.61" y1="7.15" x2="79.61" y2="10.50" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="90.97" y="7.50" font-size="4.00" data-pos="0"></text>
-  <line x1="91.04" y1="7.65" x2="91.04" y2="11.00" stroke="#000000" stroke-width="0.130"/>
-  <rect x="53.25" y="6.00" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="102.24" y="6.00" width="0.19" height="4.00" data-pos="0"/>
+  <line x1="0.00" y1="11.00" x2="102.43" y2="11.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.00" x2="102.43" y2="12.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.00" x2="102.43" y2="13.00" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="12.00" font-size="4.00"></text>
+  <text class="music" x="3.30" y="11.00" font-size="4.00"></text>
+  <text class="music" x="7.68" y="11.00" font-size="4.00" data-pos="0"></text>
+  <line x1="7.75" y1="11.15" x2="7.75" y2="14.50" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="19.12" y="10.50" font-size="4.00" data-pos="0"></text>
+  <line x1="19.18" y1="10.65" x2="19.18" y2="14.00" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="30.55" y="10.00" font-size="4.00" data-pos="0"></text>
+  <line x1="30.61" y1="10.15" x2="30.61" y2="13.50" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="41.98" y="10.50" font-size="4.00" data-pos="0"></text>
+  <line x1="42.05" y1="10.65" x2="42.05" y2="14.00" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="56.68" y="11.00" font-size="4.00" data-pos="0"></text>
+  <line x1="56.74" y1="11.15" x2="56.74" y2="14.50" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="68.11" y="10.50" font-size="4.00" data-pos="0"></text>
+  <line x1="68.17" y1="10.65" x2="68.17" y2="14.00" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="79.54" y="10.00" font-size="4.00" data-pos="0"></text>
+  <line x1="79.61" y1="10.15" x2="79.61" y2="13.50" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="90.97" y="10.50" font-size="4.00" data-pos="0"></text>
+  <line x1="91.04" y1="10.65" x2="91.04" y2="14.00" stroke="#000000" stroke-width="0.130"/>
+  <rect x="53.25" y="9.00" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="102.24" y="9.00" width="0.19" height="4.00" data-pos="0"/>
   </g>
 </g>
 <g class="page" data-page-top="30.00" data-page-height="30.00" transform="translate(0, 30.00)">
