@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-22 / master `ff64f38e`（§0 で裏取りすること）
+最終更新: 2026-07-22 / master `113fdeda`（§0 で裏取りすること）
 
 ---
 
@@ -27,38 +27,150 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **PageBreaker を鎖と揃える**（§2⑧ の ⚠️）
+### ▶ 次のセッションの最初の一手 ＝ **LP は「ページが行分割を選ぶ」— この構造差をどうするか**
 
-「1ページに何本入るか」は今も `SystemDetails` ＋ `constrained-breaking.cc` 系の
-`spring_length`/`tallness` が決めており、**top spring と last-bottom spring を知らない**。
-加えて `PageLayouter` は `systemDetails[0]` を **`vs.SystemSystem`** から作るのに
-配置側は `vs.TopSystem` を使う＝**ブレーカーと配置で spec が食い違っている**。
-committed フィクスチャでは本数が偶然一致していて誰も落ちない。
-⚠️ **着手前に点を作ること**（§5.3「変更する前に測る」）。伸長 regime の点は
-`6ffbe7bd` で起票済みなので、そこに「ページあたり本数」を測る点を足すのが素直。
+ブレーカーの LP 乖離は **4 点とも閉じた**（`113fdeda` で 3 点＋`850c7d98` で orphan penalty）。
+台帳の `page.tight.*` は 2 点とも exact＝**ページ数も切れ目も LP と一致**。
 
-もう1つの候補: ⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
+⚠️ **残りは「閾値の 1〜2 ss」ではなかった。測り直したら構造差だった**（2026-07-22 訂正）:
+
+| 紙面 | LP | Lily# |
+|---|---|---|
+| 〜75 | 2 ページ 5+1（**6 システム**） | 2 ページ 5+1（6 システム）※〜76 |
+| 76・77 | **1 ページ 5 システム**＝行分割を組み直した | （到達不能） |
+| 78〜 | 1 ページ 6 システム | 1 ページ 6 システム ※77〜 |
+
+★ **LILYPOND-REF: `lily/optimal-page-breaking.cc:139-173`** —
+`Optimal_page_breaking::solve` は**システム数を理想値から下へ掃引**し、各 count の全
+line-division 構成でページ配置を解いて **demerit の argmin** を取る。つまり
+**LP ではページブレーカーが行分割を選ぶ**（`page-breaking.cc:75-101` の "HOW TO WRITE A
+PAGE BREAKING ALGORITHM" が設計として明記）。
+Lily# は**行を先に確定してからページを割る**ので、この答えは間隔の精度に関係なく出せない。
+
+**したがって「閾値を合わせる」作業は存在しない。**
+⚠️ **既存の 4 式は全部 `LILYPOND-REF` 付きの字面移植。触らないこと。**
+
+#### ✅ 決定: **`SystemBreaker` の再入可能化は入れない**（2026-07-22・蒸し返さないこと）
+
+検討して**見送った**。理由は性能ではなく**F3 の健全性論拠が壊れる**こと:
+
+`IncrementalCompiler.cs:37-42` は tier-1 skip の健全性を
+「break 解は **per-measure spring ベクタ＋行頭 prefix 幅＋紙面の幅** の純関数」と根拠づけている。
+**全部が横方向**。ページが行分割を選ぶようにすると break 解は**縦の関数**にもなる
+（紙面高さ・余白・各 system のスカイライン/extent・hara-kiri 可視性・縦 spacing spec）——
+そしてそれらは **break の下流で計算される**。gate を計算するのに gate が守る結果が要る＝**循環**。
+実害として、今日は「行分割を変えないと証明できる」編集（高い音符・臨時記号・強弱・スラー＝
+縦 extent だけ動かす編集）が、**行分割を変えうる**ようになる。
+
+⚠️ **緑ノードは無傷**（幾何を持たない設計は変わらない）。壊れるのは**レイアウト層の gate**。混同しない。
+
+性能: 候補ごとに system 境界が動くので `SystemLayoutCache` がほぼ全滅し、実質「数回のフルレイアウト」。
+LP は掃引を `optimal-page-breaking.cc:120-127` で
+`min_sys_count = ideal − 最終ページ本数 −（最後から2番目のページ本数, >1 なら）` に抑えているが、
+それでもプレビューには逆方向。
+
+**安い部分は既にある**: `KnuthPlassBreaker.FindBreaksByLineCount` は
+`dp[j,k] = min demerits ... in exactly k lines` を持ち `constrained-breaking.cc` に REF 付き
+（今は `looseness` 専用）。**LP の `Constrained_breaking` と同じ形**なので、やるなら行分割側はタダ。
+
+**判断し直すときの順序**（この順でないと始めないこと）:
+1. **先に頻度を測る**（コード変更ゼロ）。既存 fixture ＋ showcase を LP に通し、
+   **LP が選んだシステム数が Lily# と食い違う譜面を数える**。ゼロに近ければ議論は終わり
+2. 有意なら**オプション分離**（CLI/PDF は LP 忠実・プレビューは 1-pass）。
+   ⚠️ 二重実装＝§5.2.1② の罠そのものなので、**「両者が一致する」不変条件テストとセットでのみ**
+
+⚠️ **測定の罠（実際に踏んだ）**: `page-vertical.ly` の dump は **1 ページ 1 行**で、
+**行が落ちることがある**。「2 ページなのに PAGE 1 の行しか出ない」形で落ち、そこから
+「LP は 77 まで 2 ページ・79 で 1 ページ」という**誤った結論**を一度出した。
+**book ごとに 1 行**（ページ数＋各ページ本数を 1 回の format で）にすると構造的に防げる。
+
+✅ **「分割不能なら単一ページ」フォールバックは `fc0feb20` で閉じた**（LP は overfull を却下せず
+`BAD_SPACING_PENALTY` にクランプし、「その行 1 本だけのページ」は overfull でも必ず考慮する＝
+`page-spacing.cc:339-349`・`:362-365`）。⚠️ **これは「小さい紙面のフィクスチャでしか到達しない」
+という当初の見立てが誤りで、`test/tab-percent-repeat` が実際に踏んでいた**——
+旧 snapshot は viewBox 169.01 に対し Y=325.58 まで描き、**楽譜の半分以上が紙面外**だった。
+`bestPages < 0` は到達不能になったが**ガードとして残置**（静かに全曲を1ページへ潰す失敗は
+改行ミスよりはるかに悪い）。
+
+### ▶ 次の一手の候補
+
+⚠️ **`DynamicEngraver` / `TupletBracketEngraver` が符尾長を無条件に仮定している**
 （`DynamicEngraver.cs:345,359,416,424`・`TupletBracketEngraver.cs:573,585`）。
 `89aaa29f` で潰した「幻の符尾」と**同じ形**だが、**台帳の点が 1 つも届かないので測っていない。
-推測で直さないこと。先に点を作る**（全音符に強弱を付けた 2 段譜。probe P/Q と同じ作り方）。
+推測で直さないこと。先に点を作る**。
+
+**実コードで裏取り済み（2026-07-22）**: `DynamicEngraver.GetLowestExtent` は
+`if (!(forcedStemUp ?? note.StemUp)) return noteY - DefaultStemLength;` を
+**音価に関係なく**返す（`ChordItem` も同型）。`SkylineBuilder` は
+`GetNoteValueFromFraction(...) >= 2`（`stem.cc Stem::is_normal_stem`）で分岐しているので、
+**同じ述語を当てれば直る形**。欠けているのは点だけ。
+
+⚠️ **probe 設計には相反する条件がある（未解決・ここから始めること）**: 幻の符尾は
+**下向き符尾のときだけ**発火する＝符頭が中央線以上＝浅い。ところが `staff.staff.*` を
+binding させるには基本距離 9 を超える深さが要り、そのためには符頭を下げる必要があるが、
+下げると**上向き符尾になって発火しない**。probe P/Q と同じ作り方では届かない。
+案: 声部で符尾方向を強制する（`voice` ブロック＝ LP の `\voiceTwo`）、
+または和音で最低音を下げつつ下向きに保つ。**どちらも未検証。**
 
 **島1（`StaffLayout.Y` の Y-up 格納）は `ff64f38e` で完遂した。** §3B ① を参照。
 
 ---
 
-### ✅ このセッション（2026-07-22）でやったこと — **島1 の atomic flip を完遂した**
+### ✅ このセッション（2026-07-22）でやったこと — **島1 を閉じ、ブレーカーを測れるようにした**
 
 | commit | 内容 |
 |---|---|
-| `ff64f38e` | **`StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop`/`BraceBottom` を Y-up 格納へ**。3 ディスパッチャ＋7 積み上げ地点＋15 消費側。**byte 不変・snapshot 0 件**。フレームを直接固定する単体テスト 6 件を新設 |
+| `ff64f38e` | **`StaffLayout.Y` / `StaffGroupLayout.Y` / `BraceTop`/`BraceBottom` を Y-up 格納へ**（島1 の atomic flip）。3 ディスパッチャ＋7 積み上げ地点＋15 消費側。**byte 不変・snapshot 0 件**。フレームを直接固定する単体テスト 6 件を新設 |
+| `51f229db` | §1 書き換え＋島1 の作業マップを削除。`COORDINATE_AUDIT` §2.1/§4.5/§4.6 を実態へ |
+| `920cf4dc` | **ページブレーカーの点を 4 つ起票**。A4 では捕まらないと判明し、**紙面を縮めた probe T** を新設。出力不変 |
+| `113fdeda` | **ブレーカーの LP 乖離 3 点を字面移植**。`page.tight.page-count` −1 → 0。**snapshot 1 件再ベース**（分類済） |
+| `850c7d98` | **orphan penalty を LP の条件へ**（第4の乖離）。`page.tight.systems-on-first-page` −1 → 0。**snapshot 0 件** |
+| `dc28098c` | **引継ぎの訂正**。LP は 76・77 で**行分割を組み直す**＝差は構造。dump の行落ちで誤読していた |
+| `5f82aaf5` | **決定: `SystemBreaker` 再入可能化は入れない**（F3 の健全性論拠が壊れる）。docs のみ |
+| `fc0feb20` | **overfull を却下せずクランプ**（LP 準拠）。`test/tab-percent-repeat` が**紙面外描画から 2 ページへ**。**snapshot 1 件再ベース**（分類・承認済） |
 
-**テスト 3155 → 3161 passed（+6 ＝ 新設分のみ）、0 failed / 3 skipped。**
-**LP 忠実度 24/31 exact, total |residual| = 0.023777 ss（不変）。** Core 0 warn / 0 err。
+**テスト 3155 → 3166 passed、0 failed / 3 skipped。** Core 0 warn / 0 err。
+**LP 忠実度 28/35 exact, total |residual| = 0.023777 ss（31 distances・不変）＋ counts 4/4。**
+
+#### ★ 教訓: **「到達しない」と書いた見立ては、フィクスチャで裏取りする**
+
+`fc0feb20` の欠陥を最初に見つけたとき「小さい紙面を所有するフィクスチャでしか到達しない」と
+**書いて残した**。直してみたら `test/tab-percent-repeat` が実際に踏んでおり、
+**楽譜の半分以上が紙面外に描かれたまま出荷されていた**（viewBox 169.01 に対し Y=325.58）。
+⚠️ **snapshot は「前回の自分」との比較なので、紙面外への描画を何度でも承認できる。**
+到達性を主張するなら、コーパスを実際に走らせて数えること。
+
+#### ★ 教訓: **`LILYPOND-REF` は「値の出典」であって「式の出典」とは限らない**
+
+第4の乖離は算術ではなかった。**orphan penalty (100000) を LP に無い条件で課していた**——
+Lily# は「最終ページが 1 システム」に課しており、それは**LP 自身の答え（5+1）そのものの形**。
+force² の demerit が約 0.001 なので、この 1 つが全ページ分割を単独で決めていた。
+
+LP の実際の規則は **markup 段落の泣き別れ**（`page-spacing.cc:375-383`、
+`last_markup_line_`/`first_markup_line_` は markup の Prob 由来で、音楽システムの
+`Line_details` は false 固定＝**音楽では絶対に発火しない**）。
+旧コードは `page-breaking.cc:269` を引いていたが、そこは**値を読む行**で適用箇所ではない。
+⚠️ **§5.2.1① の「REF があっても式が一致しているとは限らない」の実例。REF を見たら、
+その行が『値』なのか『式』なのかを確かめる。**
 
 **成果は seam に出た**: `FindStaffYInSystem` が `system.Y - offsetDown` から
 **`system.Y + staff.Y`**（LP 自身がやる素の和）になり、system 原点と staff 原点の間から
 反射が消えた。`LayoutUtilities` では **`StaffOffsetInSystemUp` が primitive**（`staff.Y` を
 そのまま返す）で `Down` がその否定＝**否定が「もう格納の姿ではない側」へ移った**。
+
+#### ★ 教訓: **A4 では見えない量がある——regime を開くのはコーパスの仕事**
+
+ページあたり本数の点を A4（book J）に足したら**最初から exact だった**。原因を測ったら、
+**A4 では本数を容量が決めていない**——第1システムを 4 オクターブ（8 ledger 段）高くしても
+LP は 13 のまま。ブレーカーは各候補ページが解く **force** から選んでおり、rod が天井に
+当たっているのではない。**紙面を 70 ss に縮めて初めて force が効き**、LP 5+1 vs Lily# 4+2 が出た。
+⚠️ **点が exact でも「その量が正しい」とは限らない。その regime に入っていないだけのことがある。**
+
+#### ★ 教訓: **二重実装は、片方だけ直ると生き残る**
+
+`cfdf85b4` が鎖から廃止した `Stretchability/60` は**ブレーカーに生き残っていた**——しかも
+LP のブレーカーは stretchability を使わない（`inverse_hooke_ = full_height() + space`）。
+§5.2.1② が言う「複製は移植が半分しか当たらない場所」の実例が、まさにその警告の対象で起きていた。
 
 #### ★ 教訓: **byte 不変はこの種の移行の証拠にならない**
 
@@ -188,13 +300,17 @@ ink が 9.110000（clef の下 5.550 と次 system の小節番号 3.560 が同�
 
 ---
 
-**origin より 64 ahead で未 push**（HEAD = `ff64f38e`）。push はユーザー判断・コミットは可。
+**origin より 74 ahead で未 push**（HEAD = `fc0feb20` の次）。push はユーザー判断・コミットは可。
 ⚠️ **push は明示的に「まだしないで」と言われている**（2026-07-22）。解除まで push しないこと。
-⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 8 回（186・192・2・2・80・82・3・14 件）が含まれる。**
+⚠️ **未 push にはフォント差し替えと紙面定数、snapshot 再ベース 10 回**
+（186・192・2・2・80・82・3・14 件 ＋ `programmatic/hara-kiri-paged` 1 件 ＋ `test/tab-percent-repeat` 1 件）**が含まれる。**
 別ブランチ `fix/vscode-extension`（`7291531a` から）と `fix/note-bang-diagnostic` は
 **どちらも master に取り込み済み**（ユーザー）。**走っている別ブランチはもう無い。**
-**テスト 0 failed / 3161 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度 24/31 exact, total |residual| = 0.023777 ss**（**2.26.0 基準**。X 22点＋Y 7点＋**譜間 2点**）。
+**テスト 0 failed / 3166 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度 28/35 exact, total |residual| = 0.023777 ss over 31 distances ＋ counts 4/4**
+（**2.26.0 基準**。X 22点＋Y 7点＋譜間 2点＋**ページ本数 4点**）。
+⚠️ **本数の点は距離ではないので ss の総和に入れない**（`unit` フィールドで分離。`page.height` を
+台帳から落としたのと同じ理由——1 system を 0.023777 ss に足すと指標が意味を失う）。
 **譜間 2 点は両方 exact**（`854a0e95`）。**縦 7 点の合計は 0.001365**（4 点が上記の skyline sliver、3 点は exact）。
 X 3 点は `e38a76bf` から不変。
 **作業ツリーはクリーン**（未追跡の旧 `HANDOFF-*.md` 14個 ＋ `demo-lp-compat-features.lys` を除く。§8）。
@@ -681,10 +797,16 @@ Lily# は鎖を持たず、先頭を固定し、足に spring を置かず、**�
 最小値を上げるが**強度を張り直さない** — `spring.cc:156-159`）。上げた後の min を渡すと
 全 blocking force が静かに変わる。
 
-⚠️ **PageBreaker は鎖と食い違ったまま**: 「1ページに何本入るか」は今も `SystemDetails` と
-`constrained-breaking.cc` 系の `spring_length`/`tallness` が決めており、**top spring と
-last-bottom spring を知らない**。committed フィクスチャでは本数が偶然一致していて誰も落ちない。
-加えて `PageLayouter` は `systemDetails[0]` を **`vs.SystemSystem`** から作る（配置側は `vs.TopSystem`）。
+✅ **PageBreaker は 4 点とも閉じた**（`113fdeda`: `inverse_hooke_` ／ `min_whitespace_at_top/bottom_of_page`
+／ 死んでいる `bottom_padding_`。`850c7d98`: orphan penalty を markup 段落の規則へ）。top spring と last-bottom spring は、ブレーカーには
+**バネとしてではなく「最小空白の予約」として入る**のが LP の設計。
+
+⚠️ **旧記述「`systemDetails[0]` が `vs.SystemSystem`、配置側は `vs.TopSystem` ＝食い違い」は誤診だった。**
+LP は**先頭を含む全 line に system-system-spacing を与える**（`constrained-breaking.cc:548-555`）。
+top-system-spacing がブレーカーに届く経路は `min_whitespace_at_top_of_page` **だけ**。
+`i == 0` 分岐は元から正しい。訂正はコード側（`PageBreaker._vs` の remark）にも書いた。
+
+⚠️ **残っているのは構造差（LP はページが行分割を選ぶ）と、単一ページ・フォールバック**。§1 冒頭を見ること。
 
 ⚠️ **`LayoutEngine` の単一ページ経路は今も自前で積んでいる**（force 0 なので鎖と一致するが**二重実装**）。
 
@@ -747,6 +869,10 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 - **`GlyphMetrics.RestMaximaWidth = 1.8` が手動側**。フォントメトリクスなので生成器が `rests.M3` を
   出すようになったら `GlyphMetricsGenerated.cs` へ（`GlyphMetrics.cs:89-96` に記録済）
+- ⚠️ **`SystemBreaker` は 1 回しか呼ばれない**（＝レイアウトは 1-pass）。LP はページブレーカーから
+  システム数を指定して行分割を**やり直させる**（`optimal-page-breaking.cc:139-173`＋
+  `page-breaking.cc:75-101`）。**再入可能化は検討のうえ見送りと決定済み**——§1 の決定記録を読むこと。
+  蒸し返す前に「頻度の測定」が先
 - **`SystemBreaker.BreakIntoSystemsGreedy` は MMR run 非対応**。ただし
   `LayoutOptions.UseOptimalLineBreaking` が既定 `true`（`LayoutOptions.cs:100`）なので**既定出力に
   影響しない**。かつ greedy は LP のアルゴリズムではない（LP = `constrained-breaking.cc` = optimal）
@@ -758,8 +884,10 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 24/31 exact, total |residual| = 0.023777 ss**（`audit/lp-geometry/`・**LP 2.26.0 基準**）。
-**X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 2 点は 2 exact / 0**
+**現状 28/35 exact, total |residual| = 0.023777 ss over 31 distances ＋ counts 4/4**
+（`audit/lp-geometry/`・**LP 2.26.0 基準**）。
+**X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 2 点は 2 exact / 0、
+ページ本数 4 点は全て exact**（`920cf4dc` で起票、`113fdeda`＋`850c7d98` で閉じた）
 （`0c0d8f38` で Y に開き、`1dfb62d7` で自然長、`cfdf85b4` で伸長、`22120764` でインク、
 `90efec02` で clef、`b3cfb119`＋`854a0e95` で譜間を閉じた）。
 **Y の残り 4 点は同一原因**（clef の LILC bbox 3.550 vs LP の skyline 3.540〜3.545）。
@@ -835,6 +963,13 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
 - 文法改善 5 件 — **完了。糖衣は入れないと決定した**（2026-07-22、下記）。0.3.0 リリースは GO 待ち
 - **`note!` 密着の診断 — ✅ master に取り込み済み**（`a994f418` `1ff10e45` `7d5255cb`。
   LYS4009 ＋ 点線小節線のフィクスチャ）。ユーザーがマージ済み・ブランチは残っていない
+- **`override` の消費側は 4 つだけ**（`NoteHead.transparent` / `<grob>.color` / `NoteColumn.force-hshift`）。
+  **文法側は元から開いている**（grob 名・プロパティ名とも任意の識別子・ハイフン連結可・許可リスト無し）
+  ので、増やす作業は配線だけ。⚠️ ただし**値に小数リテラルが書けない**（整数/識別子/文字列/負整数のみ）。
+  §5.3 の摂動法を Lily# 側でも使うなら `StaffGrouper.staff-staff-spacing` 等の配線＋小数が要る。
+  ⚠️ **page 系（`paper-height` / `top-system-spacing` / `systems-per-page`）を `override` に載せないこと**——
+  LP ではそれらは `\paper` 変数であって grob プロパティではない。**コーパスは
+  `RenderedGeometry.Render(source, LayoutOptions)` というハーネス引数で解決した**（2026-07-22 決定）
 - Dead-code 監査 — アナライザ検出分は完了、手動分が残
 - `LILYPOND-REF` 行番号の一括再採番（cosmetic・繰延）
 - `IDrawingContext.cs:37-39` の remark が装飾前後2フレームを記述していない（§4.4）
@@ -987,8 +1122,12 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
   1 つだけ置き `LILYSHARP-OWN:` を付けて解消済み。**`SystemSpacing * 0.5` が何年も
   生き延びたのと同じ形**。
 
-**④ コーパスの穴を数える** — 台帳が薄いのは~~多段譜~~・**ページ跨ぎ・伸長**
-（多段譜は `b3cfb119` で 2 点入った）。過去の最大級の欠陥 2 つ（padding 4 倍・clef 欠落）は
+**④ コーパスの穴を数える** — 台帳が薄いのは~~多段譜~~・~~ページ跨ぎ~~・**伸長**
+（多段譜は `b3cfb119`、ページ本数は `920cf4dc` で入った）。
+⚠️ **2026-07-22 に「点が exact でも regime に入っていないだけ」という新しい形が出た**:
+ページ本数の点を A4 に足したら最初から exact で、測ってみると**A4 では本数を容量が決めていない**
+（第1システムを 4 オクターブ上げても LP は 13 のまま）。**紙面を縮めて初めて binding した。**
+**exact は「正しい」ではなく「その regime では動かない」かもしれない。**過去の最大級の欠陥 2 つ（padding 4 倍・clef 欠落）は
 **長期間コーパスから見えず**、clef が padding を偶然あぶり出して初めて露見した。
 **新しい点を足すときは、既存の点が測っていない regime を優先する。**
 ⚠️ **2026-07-22 に同じことがもう一度起きた**: 多段譜の regime を開いた瞬間、
@@ -1002,6 +1141,10 @@ tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord / I
   **全部ゼロにして残った定数**がハードコード値
 - **測定 regime を混ぜない。** ragged-right（force 0）では spring の床、圧縮時は rod が
   binding する。**どちらで測ったか必ず記録する**
+- ★ **ダンプは「1 レコード 1 行」にする。** 行を分けると**落ちる**（LilyPond の stdout に
+  診断が割り込む）。2026-07-22 に「2 ページなのに PAGE 1 の行しか出ない」形で落ち、
+  そこから誤った結論を出した。**内訳は 1 回の format にまとめ、合計が既知の総数と
+  一致するかを必ず突き合わせる**（本数の和 ≠ システム総数なら、その読みは捨てる）
 - **配置は「両側」を測る。** ある grob の位置は前後2つの間隙で決まる。
   さらに**同じ box の左右が同じ基準点か**を確かめる
 - ★ **縦は staff refpoint 間で測る。system 原点間で測ると嘘の値が出る。**

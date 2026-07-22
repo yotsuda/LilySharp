@@ -51,7 +51,16 @@ public class LpGeometryLedgerTests
 
     public LpGeometryLedgerTests(Xunit.Abstractions.ITestOutputHelper output) => _output = output;
 
-    private sealed record LedgerEntry(double LilyPond, double? Residual, string Why, string Probe, string Score);
+    /// <param name="Unit">
+    /// What the numbers are measured in. Defaults to <c>"ss"</c> (staff spaces); an entry
+    /// that counts things says so, and is kept OUT of the staff-space headline total.
+    /// Adding a count of 1 to a total of 0.023777 staff spaces would not be a worse number,
+    /// it would be a meaningless one — the same reason page.height was left out entirely
+    /// (see the remarks in LpGeometryProbes).
+    /// </param>
+    private sealed record LedgerEntry(
+        double LilyPond, double? Residual, string Why, string Probe, string Score,
+        string Unit = "ss");
 
     private static readonly Lazy<(IReadOnlyDictionary<string, LedgerEntry> Entries, double Tolerance)> Ledger =
         new(LoadLedger);
@@ -87,7 +96,8 @@ public class LpGeometryLedgerTests
                 residual,
                 v.TryGetProperty("why", out var w) ? (w.GetString() ?? "") : "",
                 v.TryGetProperty("probe", out var p) ? (p.GetString() ?? "") : "",
-                v.TryGetProperty("score", out var s) ? (s.GetString() ?? "") : "");
+                v.TryGetProperty("score", out var s) ? (s.GetString() ?? "") : "",
+                v.TryGetProperty("unit", out var u) ? (u.GetString() ?? "ss") : "ss");
         }
         return (entries, tolerance);
     }
@@ -113,7 +123,7 @@ public class LpGeometryLedgerTests
             + "letting the probe assert nothing.");
         var entry = entries[id];
 
-        var geometry = RenderedGeometry.Render(probe.Source);
+        var geometry = RenderedGeometry.Render(probe.Source, probe.Options);
         double actual = probe.Measure(geometry);
         double actualResidual = actual - entry.LilyPond;
 
@@ -173,18 +183,29 @@ public class LpGeometryLedgerTests
         var (entries, tolerance) = Ledger.Value;
         var report = new StringBuilder();
         double total = 0;
-        int exact = 0, seeded = 0;
+        int exact = 0, seeded = 0, counts = 0, countsOff = 0;
 
         foreach (var probe in LpGeometryProbes.All)
         {
             if (!entries.TryGetValue(probe.Id, out var entry) || entry.Residual is not { } residual)
                 continue;
             seeded++;
-            total += Math.Abs(residual);
+            bool isDistance = entry.Unit == "ss";
+            // Distances sum; counts are tallied separately. Mixing them would put a
+            // "1 system" into a staff-space total and make the headline unreadable.
+            if (isDistance)
+                total += Math.Abs(residual);
+            else
+                counts++;
             if (Math.Abs(residual) <= tolerance)
                 exact++;
             else
-                report.AppendLine($"  {residual,10:F6}   {probe.Id}");
+            {
+                if (!isDistance)
+                    countsOff++;
+                report.AppendLine($"  {residual,10:F6}   {probe.Id}"
+                    + (isDistance ? "" : $"   [{entry.Unit}]"));
+            }
         }
 
         Assert.True(seeded > 0, "the LP fidelity corpus is empty");
@@ -192,7 +213,8 @@ public class LpGeometryLedgerTests
         // Written to test output, NOT asserted. Assert.True(true, msg) prints nothing —
         // a headline number nobody can read is not a headline number.
         // Visible with: dotnet test --logger 'console;verbosity=detailed'
-        _output.WriteLine($"LP fidelity: {exact}/{seeded} exact, total |residual| = {total:F6} ss");
+        _output.WriteLine($"LP fidelity: {exact}/{seeded} exact, total |residual| = {total:F6} ss"
+            + (counts > 0 ? $" over {seeded - counts} distances; {counts - countsOff}/{counts} counts match" : ""));
         if (report.Length > 0)
         {
             _output.WriteLine("divergent entries (residual, id):");

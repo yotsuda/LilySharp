@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="1690.1" viewBox="0 0 119.50 169.01" font-family="serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="3380.2" viewBox="0 0 119.50 338.02" font-family="serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
+<g class="page" data-page-top="0.00" data-page-height="169.01" transform="translate(0, 0.00)">
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.29" x2="0.00" y2="118.89" stroke="#000000" stroke-width="0.160"/>
   <line x1="0.00" y1="11.29" x2="102.43" y2="11.29" stroke="#000000" stroke-width="0.100"/>
@@ -886,38 +887,43 @@
   <polygon points="91.22,13.05 97.25,13.05 97.25,13.53 91.22,13.53"/>
   <line x1="91.28" y1="106.14" x2="91.28" y2="13.29" stroke="#000000" stroke-width="0.130"/>
   <line x1="97.18" y1="112.64" x2="97.18" y2="13.29" stroke="#000000" stroke-width="0.130"/>
-  <line x1="0.00" y1="217.98" x2="0.00" y2="325.58" stroke="#000000" stroke-width="0.160"/>
-  <line x1="0.00" y1="217.98" x2="102.43" y2="217.98" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="218.98" x2="102.43" y2="218.98" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="219.98" x2="102.43" y2="219.98" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="220.98" x2="102.43" y2="220.98" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="221.98" x2="102.43" y2="221.98" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="218.98" font-size="4.00"></text>
-  <rect x="53.68" y="217.98" width="0.19" height="4.00" data-pos="485"/>
-  <rect x="101.34" y="217.98" width="0.19" height="4.00" data-pos="485"/>
-  <rect x="101.83" y="217.98" width="0.60" height="4.00" data-pos="485"/>
-  <line x1="0.00" y1="321.08" x2="102.43" y2="321.08" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="322.58" x2="102.43" y2="322.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="324.08" x2="102.43" y2="324.08" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="325.58" x2="102.43" y2="325.58" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.00" y="323.33" font-size="3.11"></text>
-  <rect x="53.68" y="321.08" width="0.19" height="4.50" data-pos="485"/>
-  <rect x="101.34" y="321.08" width="0.19" height="4.50" data-pos="485"/>
-  <rect x="101.83" y="321.08" width="0.60" height="4.50" data-pos="485"/>
-  <line x1="27.22" y1="220.98" x2="29.22" y2="218.98" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="27.72" cy="219.48" r="0.25" data-pos="417"/>
-  <circle cx="28.72" cy="220.48" r="0.25" data-pos="417"/>
-  <line x1="77.15" y1="220.98" x2="79.15" y2="218.98" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="77.65" cy="219.48" r="0.25" data-pos="417"/>
-  <circle cx="78.65" cy="220.48" r="0.25" data-pos="417"/>
-  <line x1="27.22" y1="324.08" x2="29.22" y2="322.08" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="27.72" cy="322.58" r="0.25" data-pos="417"/>
-  <circle cx="28.72" cy="323.58" r="0.25" data-pos="417"/>
-  <line x1="77.15" y1="324.08" x2="79.15" y2="322.08" stroke="#000000" stroke-width="0.480" data-pos="417"/>
-  <circle cx="77.65" cy="322.58" r="0.25" data-pos="417"/>
-  <circle cx="78.65" cy="323.58" r="0.25" data-pos="417"/>
-  <text x="0.05" y="216.98" font-size="1.75" font-weight="bold">3</text>
   <rect x="0.30" y="7.49" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="354"/>
   <text x="1.29" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="354">A</text>
   </g>
+</g>
+<g class="page" data-page-top="169.01" data-page-height="169.01" transform="translate(0, 169.01)">
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="8.99" x2="0.00" y2="116.59" stroke="#000000" stroke-width="0.160"/>
+  <line x1="0.00" y1="8.99" x2="102.43" y2="8.99" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="9.99" x2="102.43" y2="9.99" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="10.99" x2="102.43" y2="10.99" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.99" x2="102.43" y2="11.99" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.99" x2="102.43" y2="12.99" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="9.99" font-size="4.00"></text>
+  <rect x="53.68" y="8.99" width="0.19" height="4.00" data-pos="485"/>
+  <rect x="101.34" y="8.99" width="0.19" height="4.00" data-pos="485"/>
+  <rect x="101.83" y="8.99" width="0.60" height="4.00" data-pos="485"/>
+  <line x1="0.00" y1="112.09" x2="102.43" y2="112.09" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="113.59" x2="102.43" y2="113.59" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="115.09" x2="102.43" y2="115.09" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="116.59" x2="102.43" y2="116.59" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.00" y="114.34" font-size="3.11"></text>
+  <rect x="53.68" y="112.09" width="0.19" height="4.50" data-pos="485"/>
+  <rect x="101.34" y="112.09" width="0.19" height="4.50" data-pos="485"/>
+  <rect x="101.83" y="112.09" width="0.60" height="4.50" data-pos="485"/>
+  <line x1="27.22" y1="11.99" x2="29.22" y2="9.99" stroke="#000000" stroke-width="0.480" data-pos="417"/>
+  <circle cx="27.72" cy="10.49" r="0.25" data-pos="417"/>
+  <circle cx="28.72" cy="11.49" r="0.25" data-pos="417"/>
+  <line x1="77.15" y1="11.99" x2="79.15" y2="9.99" stroke="#000000" stroke-width="0.480" data-pos="417"/>
+  <circle cx="77.65" cy="10.49" r="0.25" data-pos="417"/>
+  <circle cx="78.65" cy="11.49" r="0.25" data-pos="417"/>
+  <line x1="27.22" y1="115.09" x2="29.22" y2="113.09" stroke="#000000" stroke-width="0.480" data-pos="417"/>
+  <circle cx="27.72" cy="113.59" r="0.25" data-pos="417"/>
+  <circle cx="28.72" cy="114.59" r="0.25" data-pos="417"/>
+  <line x1="77.15" y1="115.09" x2="79.15" y2="113.09" stroke="#000000" stroke-width="0.480" data-pos="417"/>
+  <circle cx="77.65" cy="113.59" r="0.25" data-pos="417"/>
+  <circle cx="78.65" cy="114.59" r="0.25" data-pos="417"/>
+  <text x="0.05" y="7.99" font-size="1.75" font-weight="bold">3</text>
+  </g>
+</g>
 </svg>

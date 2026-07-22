@@ -154,7 +154,7 @@ public class HaraKiriVisualTests
         // line-breaking test, and nothing here depends on the width.
         var (_, layout, svg) = Build(new LayoutOptions
         {
-            PageHeight = 30,
+            PageHeight = 32,
             MarginTop = 5,
             MarginBottom = 5,
             UseOptimalPageBreaking = true,

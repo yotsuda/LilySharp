@@ -202,6 +202,8 @@ internal sealed class PageSpacing
     private readonly double _pageHeight;
     private readonly double _topMargin;
     private readonly double _bottomMargin;
+    private readonly VerticalSpacingSpec _topSystem;
+    private readonly VerticalSpacingSpec _lastBottom;
 
     private double _rodHeight;
     private double _springLength;
@@ -224,12 +226,51 @@ internal sealed class PageSpacing
     /// </summary>
     public double SpringLength => _springLength;
 
-    public PageSpacing(double pageHeight, double topMargin, double bottomMargin)
+    public PageSpacing(double pageHeight, double topMargin, double bottomMargin,
+        VerticalSpacingSpec topSystem, VerticalSpacingSpec lastBottom)
     {
         _pageHeight = pageHeight;
         _topMargin = topMargin;
         _bottomMargin = bottomMargin;
+        _topSystem = topSystem;
+        _lastBottom = lastBottom;
         Clear();
+    }
+
+    /// <summary>
+    /// The whitespace <c>top-system-spacing</c> forces above the FIRST system on a page.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1785-1802 min_whitespace_at_top_of_page —
+    /// <c>translate = max (shape.begin_[UP], shape.rest_[UP])</c> and the result is
+    /// <c>max (0, max (padding, minimum-distance - translate))</c>. Lily# carries one
+    /// extent per system, so the two shape halves coincide and the max over them is inert
+    /// (the same inertness CalcLineHeights transcribes).
+    ///
+    /// This and its bottom twin are the page breaker's ONLY knowledge of the top-system
+    /// and last-bottom springs. Leaving them out let the breaker price a page against a
+    /// band 2.000000 ss taller than the one PositionSystemsOnPage then has to fit the
+    /// chain into. LILYPOND-REF: lily/page-layout-problem.cc:511-518, :538-545 (the two
+    /// springs) — the breaker does not build them, it reserves their minimum here.
+    /// </remarks>
+    private double MinWhitespaceAtTopOfPage(SystemDetails line)
+        => Math.Max(0.0, Math.Max(_topSystem.Padding, _topSystem.MinimumDistance - line.TopExtent));
+
+    /// <summary>
+    /// The whitespace <c>last-bottom-spacing</c> forces below the LAST system on a page.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1805-1823 min_whitespace_at_bottom_of_page —
+    /// <c>translate = min (shape.begin_[DOWN], shape.rest_[DOWN])</c>, a NEGATIVE reach in
+    /// the system's own Y-up frame, and the result is
+    /// <c>max (0, max (padding, minimum-distance + translate))</c>. The sign is the whole
+    /// point: ink hanging below the origin REDUCES what minimum-distance still demands,
+    /// which is why the term is added rather than subtracted.
+    /// </remarks>
+    private double MinWhitespaceAtBottomOfPage(SystemDetails line)
+    {
+        double translate = -(line.StaffHeight + line.BottomExtent);   // shape.*_[DOWN]
+        return Math.Max(0.0, Math.Max(_lastBottom.Padding, _lastBottom.MinimumDistance + translate));
     }
 
     /// <summary>
@@ -282,13 +323,45 @@ internal sealed class PageSpacing
     /// <summary>
     /// Calculates the force needed to fit systems on page.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/page-spacing.cc:32-43 calc_force()</remarks>
+    /// <summary>
+    /// The height a page actually offers its systems: the printable band LESS the
+    /// whitespace the top-system and last-bottom springs reserve at its two ends.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:30-34 —
+    /// <c>page_height_ - min_whitespace_at_top_of_page (first_line_)
+    /// - min_whitespace_at_bottom_of_page (last_line_)</c>.
+    /// LilyPond's <c>page_height_</c> is Page::calc_printable_height, i.e. the paper less
+    /// its margins, which is the subtraction Lily# does inline here.
+    /// </remarks>
+    public double AvailableHeight
+    {
+        get
+        {
+            double band = _pageHeight - _topMargin - _bottomMargin;
+            if (_firstSystem is null || _lastSystem is null)
+                return band;
+            return band - MinWhitespaceAtTopOfPage(_firstSystem)
+                        - MinWhitespaceAtBottomOfPage(_lastSystem);
+        }
+    }
+
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:29-41 calc_force().
+    ///
+    /// ⚠️ <c>last_line_.bottom_padding_</c> is dead weight in LilyPond: the only two
+    /// assignments to it are 0 (constrained-breaking.cc:621 and its header's initializer),
+    /// so the term is inert there. Lily# used to put the system's own PADDING (1.000000)
+    /// in its place, which is a different quantity and made every page 1 ss tighter than
+    /// LilyPond prices it. Kept as an explicit zero rather than deleted so the
+    /// transcription still lines up with the source.
+    /// </remarks>
     private void CalcForce()
     {
-        double availableHeight = _pageHeight - _topMargin - _bottomMargin;
-        double lastPadding = _lastSystem?.Padding ?? 0;
+        double availableHeight = AvailableHeight;
+        const double bottomPadding = 0.0;   // LILYPOND-REF: bottom_padding_, never set nonzero
 
-        if (_rodHeight + lastPadding >= availableHeight)
+        if (_rodHeight + bottomPadding >= availableHeight)
         {
             // Overfull page
             Force = double.NegativeInfinity;
@@ -296,7 +369,7 @@ internal sealed class PageSpacing
         else
         {
             // Force = (available - rod - spring) / flexibility
-            Force = (availableHeight - _rodHeight - lastPadding - _springLength)
+            Force = (availableHeight - _rodHeight - bottomPadding - _springLength)
                     / Math.Max(0.1, _inverseSpringK);
         }
     }
@@ -344,6 +417,21 @@ internal sealed class PageBreaker
     private readonly PageBreakingParameters _params;
 
     /// <summary>
+    /// The vertical specs the breaker needs, which are exactly the two page-END springs:
+    /// <c>top-system-spacing</c> and <c>last-bottom-spacing</c>. It reserves their minimum
+    /// whitespace (PageSpacing.MinWhitespaceAtTopOfPage / …AtBottomOfPage) rather than
+    /// building the springs, which is what PositionSystemsOnPage does afterwards.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The breaker deliberately does NOT use top-system-spacing as line 0's per-line
+    /// spec. LilyPond gives every line system-system-spacing, first one included
+    /// (lily/constrained-breaking.cc:548-555); top-system-spacing reaches the breaker only
+    /// through the whitespace term. An earlier reading of this as "breaker and placement
+    /// disagree about systemDetails[0]" was a misdiagnosis.
+    /// </remarks>
+    private readonly VerticalSpacingParameters _vs;
+
+    /// <summary>
     /// Penalty for bad spacing (overflow or extreme stretch).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45 BAD_SPACING_PENALTY = 1e6</remarks>
@@ -356,13 +444,14 @@ internal sealed class PageBreaker
     private const double TerribleSpacingPenalty = 1e8;
 
     public PageBreaker(double pageHeight, double topMargin, double bottomMargin, double headerHeight,
-        PageBreakingParameters? parameters = null)
+        PageBreakingParameters? parameters = null, VerticalSpacingParameters? verticalSpacing = null)
     {
         _pageHeight = pageHeight;
         _topMargin = topMargin;
         _bottomMargin = bottomMargin;
         _headerHeight = headerHeight;
         _params = parameters ?? PageBreakingParameters.Default;
+        _vs = verticalSpacing ?? new VerticalSpacingParameters();
     }
 
     /// <summary>
@@ -481,6 +570,12 @@ internal sealed class PageBreaker
             }
         }
 
+        // ⚠️ Now unreachable for any non-empty score, and deliberately kept: every line has
+        // at least the page-holding-it-alone candidate, which CalculatePagePenalty never
+        // rejects (LILYPOND-REF: lily/page-spacing.cc:339-349). It survives as the guard
+        // for a state that should not arise — silently putting a whole score on one page is
+        // a much worse failure than a wrong break, and it went unnoticed for as long as it
+        // did precisely because it is silent.
         if (bestPages < 0)
         {
             // Fallback: single page
@@ -550,7 +645,8 @@ internal sealed class PageBreaker
 
         // Calculate available height
         double topMargin = isFirstPage ? _topMargin + _headerHeight : _topMargin;
-        var spacing = new PageSpacing(_pageHeight, topMargin, _bottomMargin);
+        var spacing = new PageSpacing(_pageHeight, topMargin, _bottomMargin,
+            _vs.TopSystem, _vs.LastBottom);
 
         // Add systems to page
         for (int i = startIdx; i < endIdx; i++)
@@ -559,16 +655,39 @@ internal sealed class PageBreaker
         }
 
         double force = spacing.Force;
+        bool overfull = double.IsNegativeInfinity(force);
 
-        // Check for overfull page
-        if (double.IsNegativeInfinity(force))
+        // LILYPOND-REF: lily/page-spacing.cc:339-349 — an overfull configuration is dropped
+        //   if (!breaker_->too_few_lines (line_count) && page_start < line && overfull) break;
+        // The loop it guards starts at `page_start = line` and walks BACKWARDS, so the first
+        // configuration tried for any line is the page holding that line ALONE, and
+        // `page_start < line` deliberately exempts it. A single system is therefore never
+        // rejected for failing to fit — which is what guarantees the search always has an
+        // answer. Only a page of two or more systems can be thrown out for overflowing.
+        if (overfull && systemCount > 1)
         {
             return double.MaxValue;
         }
 
         double demerits;
 
-        if (isRagged)
+        if (overfull)
+        {
+            // LILYPOND-REF: lily/page-spacing.cc:362-365 — "Clamp the demerits at
+            // BAD_SPACING_PENALTY, even if the page is overfull. This ensures that
+            // TERRIBLE_SPACING_PENALTY takes precedence over overfull pages."
+            //
+            // ⚠️ Lily# returned double.MaxValue here, for ANY overfull page. That is a
+            // rejection, and LilyPond never rejects: it prices the page badly and keeps it.
+            // The difference is not academic — it is the whole reason BreakIntoPages could
+            // reach its `bestPages < 0` state and silently put a whole score on one page.
+            // When no page could hold even one system (a fixture owning very small paper),
+            // every candidate was MaxValue, the DP found nothing, and the fallback collapsed
+            // the book. LilyPond emits overfull pages instead. Caught by
+            // HaraKiriVisualTests.PagedRendering when the breaker's band was corrected.
+            demerits = BadSpacingPenalty;
+        }
+        else if (isRagged)
         {
             // LILYPOND-REF: lily/page-spacing.cc:345-355
             // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061 fixed_force_solution
@@ -581,18 +700,18 @@ internal sealed class PageBreaker
             if (force < 0)
             {
                 // LILYPOND-REF: lily/page-layout-problem.cc:1057-1061
-                // fixed_force_solution: even when force<0, if the rod height fits,
-                // the page is feasible — just with systems at minimum distances.
-                // Use force² as penalty rather than immediately rejecting.
-                if (spacing.RodHeight <= _pageHeight - topMargin - _bottomMargin)
-                {
-                    demerits = force * force * _params.PageSpacingWeight;
-                    demerits = Math.Min(demerits, BadSpacingPenalty);
-                }
-                else
-                {
-                    return double.MaxValue;
-                }
+                // fixed_force_solution: even when force<0 the page is feasible — just
+                // with its systems at minimum distances. Charge force² rather than
+                // rejecting.
+                //
+                // The rod-fits test that used to guard this is gone because it could
+                // never fail here: CalcForce already returns -infinity exactly when
+                // RodHeight >= AvailableHeight, so a finite force means the rod fits.
+                // Keeping it implied a second, stricter feasibility rule that did not
+                // exist, and its `else` was the second of the two MaxValue rejections
+                // LilyPond does not have.
+                demerits = force * force * _params.PageSpacingWeight;
+                demerits = Math.Min(demerits, BadSpacingPenalty);
             }
             else
             {
@@ -619,12 +738,32 @@ internal sealed class PageBreaker
         // Line count penalty (min/max systems per page)
         demerits += CalculateLineCountPenalty(systemCount);
 
-        // Orphan penalty: single system on the last page
-        // LILYPOND-REF: lily/page-spacing.cc:380-386
-        if (isLastPage && systemCount == 1 && startIdx > 0)
-        {
-            demerits += _params.OrphanPenalty;
-        }
+        // NO orphan penalty here, and that is the LilyPond behaviour.
+        //
+        // LILYPOND-REF: lily/page-spacing.cc:375-383 — the widow/orphan rule reads
+        //   if (page_start > 0 && page_start < lines_.size ()
+        //       && lines_[page_start].last_markup_line_)      penalty += orphan_penalty ();
+        //   if (page_start > 0 && page_start < lines_.size ()
+        //       && lines_[page_start - 1].first_markup_line_) penalty += orphan_penalty ();
+        // Those two flags come from a MARKUP line's Prob properties `last-markup-line` and
+        // `first-markup-line` (constrained-breaking.cc:633-636); the Line_details a music
+        // system gets initialises both to false (constrained-breaking.hh:115-116) and
+        // nothing ever sets them. So in LilyPond the penalty fires only when a multi-line
+        // markup PARAGRAPH — a title or text block — is split across a page boundary, and
+        // it can never fire for a system of music.
+        //
+        // ⚠️ This used to read `isLastPage && systemCount == 1 && startIdx > 0` — "a lone
+        // system on the last page" — which is a different rule, invented here, citing
+        // page-breaking.cc:269 (where the VALUE is read from \paper, not where it is
+        // applied). At 100000 against force-squared demerits of about 0.001 it decided
+        // every page break by itself: it is why Lily# split six systems 4 + 2 where
+        // LilyPond splits them 5 + 1, LilyPond's choice being an "orphan" under the
+        // invented rule and unremarkable under the real one.
+        //
+        // Lily# has no markup-paragraph model in the breaker (SystemDetails.IsTitle marks a
+        // title line but there is no first/last-line-of-paragraph notion), so the real rule
+        // has nothing to fire on and OrphanPenalty stays carried but unreachable. Modelling
+        // it needs multi-line markup in the page breaker first.
 
         return demerits;
     }

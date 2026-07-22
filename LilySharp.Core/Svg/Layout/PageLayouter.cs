@@ -135,7 +135,22 @@ internal sealed class PageLayouter
                 SpringLength = spec.BasicDistance,
                 RefpointExtentUp = -halfStaff,
                 RefpointExtentDown = -(staffHeight - halfStaff),
-                InverseHooke = Math.Max(0.1, spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1),
+                // LILYPOND-REF: lily/constrained-breaking.cc:555 —
+                //   out->inverse_hooke_ = out->full_height () + system_system_space_;
+                // where system_system_space_ is system-system-spacing's BASIC-DISTANCE
+                // (:426-430, with page-breaking-system-system-spacing allowed to override
+                // it; Lily# models no such variable). full_height() is the line's own
+                // extent-to-extent height, which is exactly SystemDetails.Height.
+                //
+                // ⚠️ The breaker does NOT use stretchability. This read
+                // `max(0.1, Stretchability / 60)` — the same /60 invention cfdf85b4 struck
+                // out of the placement chain, which survived here because the breaker is a
+                // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2): a
+                // duplicate is where a port lands only half the time). On the shipping
+                // specs the two differ by a factor of ~19 (1.0 against 7.35 + 12), so the
+                // force the breaker solved for was nothing like the one the chain then
+                // solved, and the page count came from the wrong one.
+                InverseHooke = topExtent + staffHeight + bottomExtent + vs.SystemSystem.BasicDistance,
             });
         }
 
@@ -148,7 +163,8 @@ internal sealed class PageLayouter
             topMargin: _options.MarginTop,
             bottomMargin: _options.MarginBottom,
             headerHeight: headerHeight,
-            parameters: _options.PageBreaking);
+            parameters: _options.PageBreaking,
+            verticalSpacing: vs);
 
         var breakPoints = breaker.BreakIntoPages(systemDetails);
 

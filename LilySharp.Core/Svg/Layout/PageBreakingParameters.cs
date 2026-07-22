@@ -117,9 +117,29 @@ internal sealed record PageBreakingParameters
     public int MinSystemsPerPage { get; init; } = 0;
 
     /// <summary>
-    /// Penalty for orphan (widow) systems: a single system on the last page.
+    /// Penalty for splitting a multi-line markup PARAGRAPH across a page boundary — a
+    /// widow or orphan line of a title/text block. NOT "a lone system on the last page".
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:269 orphan_penalty_ = 100000</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:269-270 — the value, read from
+    /// <c>\paper orphan-penalty</c> with default 100000.
+    /// LILYPOND-REF: lily/page-spacing.cc:375-383 — where it is APPLIED, gated on
+    /// <c>last_markup_line_</c> / <c>first_markup_line_</c>. Those come from a markup
+    /// line's Prob (constrained-breaking.cc:633-636); a music system's Line_details leaves
+    /// both false (constrained-breaking.hh:115-116), so music never triggers it.
+    ///
+    /// ⚠️ CURRENTLY UNREACHABLE, on purpose. Lily#'s breaker has no markup-paragraph model
+    /// (<see cref="SystemDetails.IsTitle"/> marks a title line, but there is no
+    /// first/last-line-of-paragraph notion), so nothing can satisfy the real condition. It
+    /// is kept rather than deleted because it is a genuine LilyPond paper variable and the
+    /// value is right; what is missing is multi-line markup in the page breaker.
+    ///
+    /// ⚠️ It was applied to an INVENTED condition until 2026-07-22 — a lone system on the
+    /// last page — where at 100000 it swamped the force-squared demerits (~0.001) and
+    /// decided page breaks on its own. The old remark cited :269 for a rule that lives at
+    /// page-spacing.cc:375; a LILYPOND-REF next to a formula is not evidence that the
+    /// formula matches it.
+    /// </remarks>
     public double OrphanPenalty { get; init; } = 100000;
 
     /// <summary>

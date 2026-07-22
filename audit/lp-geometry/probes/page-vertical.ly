@@ -148,6 +148,52 @@ probeTag =
   \score { \new Staff { \repeat unfold 24 { c'4 d' e' f' } } }
 }
 
+%% T — TIGHT PAPER, and the quantity is the PAGE BREAKER's own: how many systems it decides
+%%     to put on a page, and how many pages that takes. Everything above reads a page that
+%%     ALREADY holds N systems and would stay green if N were wrong.
+%%
+%%     Why the paper is shrunk rather than the music lengthened: measured 2026-07-22, book
+%%     J's page-1 count of 13 is NOT set by the page's capacity. Raising the first system by
+%%     up to four octaves (eight ledger steps) leaves it at 13 every time, because on A4 the
+%%     count is chosen by the breaker's DEMERITS — the force each candidate page solves to —
+%%     and not by a rod hitting the ceiling. A probe on default paper therefore cannot see
+%%     the breaker's arithmetic at all. Shrinking the paper until a page holds a handful of
+%%     systems puts the force where a small error in it changes the answer.
+%%
+%%     40 bars is six systems at this line width. On 2.26.0 LilyPond splits them 5 + 1 across
+%%     two pages for every paper height up to 75 staff spaces; Lily# does so up to 76. So 70
+%%     sits five or six staff spaces inside BOTH plateaus — deliberately not on either
+%%     side's boundary, so the entry reads the model rather than a rounding.
+%%
+%%     ⚠️ Do NOT raise this book's paper looking for a sharper reading. Above 75 the two
+%%     sides stop measuring the same thing: at 76 and 77 LilyPond does not fit six systems
+%%     onto one page, it RE-BREAKS the music into FIVE systems and puts those on one page.
+%%     LILYPOND-REF: lily/optimal-page-breaking.cc:139-173 — Optimal_page_breaking::solve
+%%     sweeps sys_count downward from the line breaker's ideal and keeps the global argmin
+%%     of demerits, so in LilyPond the PAGE breaker chooses the LINE breaking. Lily# breaks
+%%     lines once and pages afterwards and cannot produce that answer at all.
+%%
+%%     ⚠️ This dump prints one line per PAGE and was observed to lose lines (a book showing
+%%     only "PAGE 1 systems=5" for a two-page result). If a book's pages do not add up to
+%%     the score's systems, re-measure with a one-line-per-BOOK dump before believing it —
+%%     that mistake is what produced the since-corrected claim that LilyPond held two pages
+%%     through 77 and flipped at 79.
+%%
+%%     paper-height is written in mm because that is what \paper takes; 123.0109mm is 70
+%%     staff spaces at the default 20pt staff (output-scale 1.757299 mm/ss). The dump prints
+%%     it back as 69.99998, and the 1.7e-5 is the mm rounding, not a disagreement — these two
+%%     entries are integer counts and cannot be moved by it.
+%%
+%%     The Lily# twin passes the same height through the harness (RenderedGeometry.Render's
+%%     LayoutOptions parameter) rather than in its source: paper-height is a \paper variable
+%%     in LilyPond, not a grob property, so .lys has no faithful spelling for it and one was
+%%     deliberately not invented.
+\book {
+  \probeTag "T"
+  \paper { paper-height = 123.0109\mm }
+  \score { \new Staff { \repeat unfold 40 { c'4 d' e' f' } } }
+}
+
 %% P — TWO STAVES, and the quantity is INSIDE the system. Align_interface puts adjacent
 %%     staves at
 %%

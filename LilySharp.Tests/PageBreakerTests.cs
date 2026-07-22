@@ -132,15 +132,14 @@ public class PageBreakerTests
     [Fact]
     public void PageSpacing_SingleSystem_CalculatesForce()
     {
-        var spacing = new PageSpacing(
-            pageHeight: 100,
-            topMargin: 10,
-            bottomMargin: 10);
+        var spacing = NewSpacing(pageHeight: 100, topMargin: 10, bottomMargin: 10);
 
         var system = CreateSystem(height: 30);
         spacing.AppendSystem(system);
 
-        // Available: 100 - 10 - 10 = 80
+        // Available: 100 - 10 - 10 = 80, LESS the whitespace the two page-end springs
+        // reserve — 1 + 1 on the shipping specs — so 78. See NewSpacing.
+        Assert.Equal(78, spacing.AvailableHeight);
         // Rod: 30
         // Force should be positive (stretch to fill)
         Assert.True(spacing.Force > 0, $"Expected positive force, got {spacing.Force}");
@@ -150,10 +149,7 @@ public class PageBreakerTests
     [Fact]
     public void PageSpacing_MultipleSystems_AccumulatesHeight()
     {
-        var spacing = new PageSpacing(
-            pageHeight: 100,
-            topMargin: 10,
-            bottomMargin: 10);
+        var spacing = NewSpacing(pageHeight: 100, topMargin: 10, bottomMargin: 10);
 
         // Go through CalcLineHeights, as BreakIntoPages does — tallness is not a property
         // of a system on its own, it is how much the stack grows when the system is added
@@ -191,12 +187,9 @@ public class PageBreakerTests
     [Fact]
     public void PageSpacing_OverfullPage_ReturnsNegativeInfinity()
     {
-        var spacing = new PageSpacing(
-            pageHeight: 50,
-            topMargin: 10,
-            bottomMargin: 10);
+        var spacing = NewSpacing(pageHeight: 50, topMargin: 10, bottomMargin: 10);
 
-        // Available: 50 - 10 - 10 = 30
+        // Available: 50 - 10 - 10 - (1 + 1 reserved by the page-end springs) = 28
         // System: 40 (overfull)
         var system = CreateSystem(height: 40);
         spacing.AppendSystem(system);
@@ -247,10 +240,53 @@ public class PageBreakerTests
     // --- Orphan penalty tests ---
 
     [Fact]
-    public void OrphanPenalty_SingleSystemOnLastPage_Penalized()
+    public void PageTooSmallForOneSystem_StillPaginates_RatherThanCollapsing()
     {
-        // 3 systems: 2 fit on first page, 1 orphan on second
-        // vs 1 on first, 2 on second — second should be preferred
+        // LILYPOND-REF: lily/page-spacing.cc:339-349 — the overfull guard is
+        //   if (!too_few_lines (line_count) && page_start < line && overfull) break;
+        // and the loop starts at page_start == line, so the page holding a single line is
+        // ALWAYS considered, overfull or not.
+        // LILYPOND-REF: lily/page-spacing.cc:362-365 — "Clamp the demerits at
+        // BAD_SPACING_PENALTY, even if the page is overfull." LilyPond prices an
+        // impossible page badly; it never rejects it.
+        //
+        // So when nothing fits, the answer is one system per page — overfull pages — not
+        // one page holding everything. Lily# returned MaxValue for every candidate, the DP
+        // found no solution at all, and BreakIntoPages' `bestPages < 0` fallback silently
+        // put the whole score on a single page. Before this fix the assert below reads 1.
+        var systems = new[]
+        {
+            CreateSystem(height: 40),
+            CreateSystem(height: 40),
+            CreateSystem(height: 40)
+        };
+
+        // A band of 30 - 5 - 5 = 20, less the 2 the page-end springs reserve: 18. No
+        // single 40-tall system comes close to fitting.
+        var pages = new PageBreaker(
+            pageHeight: 30, topMargin: 5, bottomMargin: 5, headerHeight: 0)
+            .BreakIntoPages(systems);
+
+        Assert.Equal(3, pages.Count);
+        Assert.Equal(new[] { 1, 2, 3 }, pages);
+    }
+
+    [Fact]
+    public void OrphanPenalty_DoesNotReachMusicSystems()
+    {
+        // LILYPOND-REF: lily/page-spacing.cc:375-383 — orphan_penalty() is charged only
+        // when lines_[page_start].last_markup_line_ or lines_[page_start - 1].first_markup_line_
+        // is set, i.e. when a multi-line markup PARAGRAPH is split across a page boundary.
+        // LILYPOND-REF: lily/constrained-breaking.cc:633-636 — those flags are read from a
+        // markup line's Prob; lily/include/constrained-breaking.hh:115-116 — a music
+        // system's Line_details leaves both false and nothing ever sets them.
+        //
+        // So the penalty's VALUE must make no difference to a break made of music, and
+        // that is what this asserts. It replaces a test that claimed the opposite
+        // ("a single system on the last page is penalised") and then asserted only
+        // `lastPageSystems >= 1`, which is true of any page — so the invented rule it
+        // documented was never actually checked. Before the fix this fails: at 100000
+        // against force-squared demerits of ~0.001 the penalty moved the break.
         var systems = new[]
         {
             CreateSystem(height: 25),
@@ -258,30 +294,17 @@ public class PageBreakerTests
             CreateSystem(height: 25)
         };
 
-        // With orphan penalty (default)
-        var breakerWithPenalty = new PageBreaker(
+        var withPenalty = new PageBreaker(
             pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
-            parameters: new PageBreakingParameters { OrphanPenalty = 100000 });
-        var resultWithPenalty = breakerWithPenalty.BreakIntoPages(systems);
+            parameters: new PageBreakingParameters { OrphanPenalty = 100000 })
+            .BreakIntoPages(systems);
 
-        // Without orphan penalty
-        var breakerNoPenalty = new PageBreaker(
+        var withoutPenalty = new PageBreaker(
             pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
-            parameters: new PageBreakingParameters { OrphanPenalty = 0 });
-        var resultNoPenalty = breakerNoPenalty.BreakIntoPages(systems);
+            parameters: new PageBreakingParameters { OrphanPenalty = 0 })
+            .BreakIntoPages(systems);
 
-        // Both should produce valid results
-        Assert.True(resultWithPenalty.Count >= 1);
-        Assert.True(resultNoPenalty.Count >= 1);
-
-        // With orphan penalty, the breaker should try to avoid 1 system on last page
-        if (resultWithPenalty.Count >= 2)
-        {
-            int lastPageSystems = resultWithPenalty[^1] -
-                (resultWithPenalty.Count >= 2 ? resultWithPenalty[^2] : 0);
-            Assert.True(lastPageSystems >= 1,
-                "Last page should have at least 1 system");
-        }
+        Assert.Equal(withoutPenalty, withPenalty);
     }
 
     // --- Ragged bottom tests ---
@@ -690,6 +713,25 @@ public class PageBreakerTests
             extents.Add((3.5, 0.5));
         }
         return (systems.ToImmutable(), extents.ToImmutable());
+    }
+
+    /// <summary>
+    /// A <see cref="PageSpacing"/> carrying the PRODUCT's page-end specs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:30-34 — a page is priced against its printable
+    /// height LESS <c>min_whitespace_at_top_of_page</c> and
+    /// <c>min_whitespace_at_bottom_of_page</c>, which are the breaker's only knowledge of
+    /// the top-system and last-bottom springs. Both come to 1 on the shipping specs
+    /// (padding 1 beats minimum-distance 0 minus a non-negative reach), so every
+    /// available height in this file is the band minus 2. Passing the real specs rather
+    /// than neutral ones is deliberate: a test that zeroed them would still pass with the
+    /// term deleted from the product.
+    /// </remarks>
+    private static PageSpacing NewSpacing(double pageHeight, double topMargin, double bottomMargin)
+    {
+        var vs = new VerticalSpacingParameters();
+        return new PageSpacing(pageHeight, topMargin, bottomMargin, vs.TopSystem, vs.LastBottom);
     }
 
     private static SystemDetails CreateSystem(

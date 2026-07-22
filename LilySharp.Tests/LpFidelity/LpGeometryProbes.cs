@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg.Layout;
+
 namespace LilySharp.Tests.LpFidelity;
 
 /// <summary>
@@ -24,7 +26,13 @@ namespace LilySharp.Tests.LpFidelity;
 /// <param name="Source">The .lys probe. Kept inline so the score being measured is readable
 /// next to the measurement, and so it cannot drift from a separate fixture file.</param>
 /// <param name="Measure">Extracts the quantity from the rendered geometry.</param>
-internal sealed record LpProbe(string Id, string Source, Func<RenderedGeometry, double> Measure);
+/// <param name="Options">Paper to engrave onto; null uses the product default. Only probes
+/// that must reach a paper regime the default page never enters set this — see
+/// <see cref="RenderedGeometry.Render"/> for why the paper is a harness parameter and not
+/// something the .lys source can say.</param>
+internal sealed record LpProbe(
+    string Id, string Source, Func<RenderedGeometry, double> Measure,
+    LayoutOptions? Options = null);
 
 /// <summary>
 /// The Lily# half of the LP fidelity corpus.
@@ -239,6 +247,67 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// TIGHT PAPER — the mirror of book T in page-vertical.ly. The page BREAKER's own
+    /// quantity: how many systems it puts on a page, and how many pages that takes.
+    /// </summary>
+    /// <remarks>
+    /// 40 bars is six systems at this line width. The paper is shrunk (see
+    /// <see cref="TightPaper"/>) because on the default page the count is not decided by
+    /// capacity at all: measured on 2.26.0, raising book J's first system by up to four
+    /// octaves leaves page 1 at 13 systems every time. The breaker picks the count from the
+    /// force each candidate page solves to, so only a page small enough for that force to
+    /// matter can see its arithmetic.
+    /// </remarks>
+    private static readonly string TP = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 40)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "TP" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// 70 staff spaces tall, everything else the product default — the paper book T engraves
+    /// onto (123.0109mm at the default 20pt staff).
+    /// </summary>
+    /// <remarks>
+    /// Chosen to sit clear of BOTH sides' boundaries, which is what makes the reading a
+    /// property of the model rather than of a rounding. Measured on 2.26.0, LilyPond splits
+    /// this score 5 + 1 across two pages for every height up to 75 and Lily# up to 76, so
+    /// 70 is five or six staff spaces inside both plateaus.
+    /// <para>
+    /// 72 was tried first and rejected: after the three breaker ports, Lily# flips to one
+    /// page at exactly 72, so the entry would have swung between residual -1 and 0 on
+    /// changes that had nothing to do with the model.
+    /// </para>
+    /// <para>
+    /// ⚠️ Do not raise it looking for a sharper reading. Above 75 the two sides stop
+    /// measuring the same thing: at 76 and 77 LilyPond does not fit six systems onto one
+    /// page, it RE-BREAKS the music into five systems and puts those on one page.
+    /// LILYPOND-REF: lily/optimal-page-breaking.cc:139-173 — Optimal_page_breaking::solve
+    /// sweeps sys_count downward from the line breaker's ideal, spaces every line-division
+    /// configuration at each count, and keeps the global argmin of demerits, so the PAGE
+    /// breaker chooses the LINE breaking. Lily# breaks lines once and pages afterwards, so
+    /// no amount of spacing accuracy reaches that answer.
+    /// </para>
+    /// Set here rather than in the .lys source because paper-height is a LilyPond
+    /// <c>\paper</c> variable, not a grob property — see
+    /// <see cref="RenderedGeometry.Render"/>.
+    /// </remarks>
+    private static readonly LayoutOptions TightPaper =
+        LayoutOptions.Default with { PageHeight = 70.0 };
+
+    /// <summary>
     /// TWO STAVES, one system — the mirror of book P in page-vertical.ly.
     /// </summary>
     /// <remarks>
@@ -425,6 +494,19 @@ internal static class LpGeometryProbes
         // match neither, which is why both are here rather than just the gap.
         new("page.stretched.first-staff-refpoint", W, g => g.FirstStaffRefpoint()),
         new("system.stretched-distance", W, g => g.StaffGap()),
+
+        // HOW MANY systems the breaker put there — the one quantity on this page that the
+        // two entries above cannot see. They read a page that already holds N systems; both
+        // stay green when N is wrong, because a differently-filled page still solves its own
+        // chain to a uniform gap. The corpus has been blind to the page breaker for its whole
+        // life, and the committed fixtures agree with it only by coincidence.
+        new("page.stretched.systems-on-first-page", W, g => g.SystemsOnPage(0)),
+        new("page.stretched.page-count", W, g => g.PageCount),
+
+        // The same two counts on TIGHT paper, where the breaker's force actually decides
+        // them. These are the entries that bind — see probe T and book T.
+        new("page.tight.page-count", TP, g => g.PageCount, TightPaper),
+        new("page.tight.systems-on-first-page", TP, g => g.SystemsOnPage(0), TightPaper),
 
         // The same two quantities again, on music that stays inside the staff so that the
         // CLEF is the extreme ink rather than a notehead. See the remarks on probe S: W

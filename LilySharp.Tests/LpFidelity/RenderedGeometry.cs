@@ -67,8 +67,23 @@ internal sealed class RenderedGeometry
 
     private RenderedGeometry(IReadOnlyList<RecordingDrawingContext> pages) => _pages = pages;
 
-    /// <summary>Parses and lays out <paramref name="source"/>, recording what gets drawn.</summary>
-    public static RenderedGeometry Render(string source)
+    /// <summary>
+    /// Parses and lays out <paramref name="source"/>, recording what gets drawn.
+    /// </summary>
+    /// <param name="options">
+    /// Paper to engrave onto; defaults to the product's own <see cref="LayoutOptions.Default"/>.
+    /// </param>
+    /// <remarks>
+    /// The paper is a HARNESS parameter, not a language one, and deliberately so. In
+    /// LilyPond the quantities it carries — <c>paper-height</c>, <c>top-system-spacing</c>,
+    /// <c>systems-per-page</c> — are <c>\paper</c> variables, NOT grob properties, so a
+    /// Lily# probe cannot reach them through <c>override</c> without inventing a spelling
+    /// LilyPond does not have. The .ly twin says <c>\paper { … }</c> and the .lys twin says
+    /// it here; that is the same kind of documented asymmetry as the octave spelling
+    /// (Lily# <c>c</c> = LilyPond <c>c'</c>), and it keeps the corpus able to reach paper
+    /// regimes the default page never enters.
+    /// </remarks>
+    public static RenderedGeometry Render(string source, LayoutOptions? options = null)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
@@ -84,7 +99,9 @@ internal sealed class RenderedGeometry
         // beside it.
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);
-        var layout = new LayoutEngine().Layout(score);
+        var layout = options is null
+            ? new LayoutEngine().Layout(score)
+            : new LayoutEngine(options).Layout(score);
 
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);
@@ -166,6 +183,25 @@ internal sealed class RenderedGeometry
         }
         return refpoints;
     }
+
+    /// <summary>
+    /// How many systems the page breaker put on <paramref name="page"/>.
+    /// </summary>
+    /// <remarks>
+    /// ONE-STAFF probes only — this counts STAVES, which is the same thing only when each
+    /// system has exactly one (see <see cref="StaffRefpoints"/> for why that restriction is
+    /// the same one every other page reading here lives under).
+    ///
+    /// This is the quantity <c>Page_breaking</c> decides, and it is deliberately separate
+    /// from the refpoint and gap readings: those describe how a page that ALREADY holds N
+    /// systems is spaced, and they stay green while N itself is wrong. LilyPond prices a
+    /// page against
+    /// <c>page_height_ - min_whitespace_at_top_of_page - min_whitespace_at_bottom_of_page</c>
+    /// (lily/page-spacing.cc:30-41), so a breaker that knows nothing of the top and
+    /// last-bottom springs can fit a different number of systems than the placement chain
+    /// that follows it — with no committed fixture obliged to notice.
+    /// </remarks>
+    public int SystemsOnPage(int page = 0) => StaffRefpoints(page).Count;
 
     /// <summary>
     /// Distance from the top paper edge down to the first system's staff refpoint.
