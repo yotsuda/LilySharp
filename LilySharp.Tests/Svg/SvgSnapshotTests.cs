@@ -286,6 +286,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/treble8" };
         yield return new object[] { "test/ledger-lines" };
         yield return new object[] { "test/barcheck" };
+        // The dashed barline (LilyPond \bar "!"). The ONLY fixture that uses '!'
+        // at all — before it, DrawBarline's BarlineType.Dashed arm was pinned by
+        // nothing, in a corpus of 190 snapshots. Written spaced, which is the
+        // form LYS4009 leaves silent.
+        yield return new object[] { "test/dashed-barline" };
         // A 'partial 4' pickup: the opening measure auto-closes after one quarter
         // (no written barline needed), then 4/4 resumes for the full bars.
         // Verified against LilyPond \partial 4.

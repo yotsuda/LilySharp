@@ -519,6 +519,93 @@ key g major
             d => d.Code == DiagnosticCodes.UnexpectedCharacter && d.Message.Contains("@courtesy"));
     }
 
+    // ---- '!' glued to a note (LYS4009) ------------------------------------
+    // '!' is the dashed barline (LilyPond \bar "!"), but a LilyPond author
+    // writes `cis!` meaning a forced accidental. The measure then ends there
+    // and the only complaint was about its length — the '!' was named nowhere.
+    // These pin the diagnostic; the BEHAVIOR is deliberately untouched.
+
+    private static IEnumerable<Diagnostic> BangWarnings(string src) =>
+        SyntaxTree.Parse(src).Diagnostics
+            .Where(d => d.Code == DiagnosticCodes.DashedBarGluedToNote);
+
+    [Fact]
+    public void BangGluedToNote_IsNamedAsTheDashedBarline()
+    {
+        // The reported case: `c4 cis! d e` silently became two measures and the
+        // only diagnostic was "first measure is shorter than the meter".
+        var warning = Assert.Single(BangWarnings("c4 cis! d e"));
+        Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
+        Assert.Contains("dashed barline", warning.Message);
+        Assert.Contains("@courtesy", warning.Message);
+        Assert.Contains("@editorial", warning.Message);
+        Assert.Equal(new TextSpan("c4 cis".Length, 1), warning.Span);
+    }
+
+    [Theory]
+    // Every tail a note can end with: the pitch itself (the accidental is part
+    // of that token), an octave mark, a duration, a dot — and a member pitch
+    // inside a chord, which is where LilyPond's `!` actually lives.
+    [InlineData("c4 cis! d e")]
+    [InlineData("c4 cis'! d e")]
+    [InlineData("c4 cis,! d e")]
+    [InlineData("c4 cis4! d e")]
+    [InlineData("c4 cis4.! d e")]
+    [InlineData("c4 <cis! e g>4 d")]
+    public void BangGluedToAnyNoteTail_Warns(string src)
+        => Assert.Single(BangWarnings(src));
+
+    [Theory]
+    // A dashed barline written the ordinary way — with a space in front of it —
+    // is unambiguous and says nothing. Nor does one after a barline or at the
+    // start of a line, where no note precedes it.
+    [InlineData("c4 cis ! d e")]
+    [InlineData("c4 d e f |! g4 a b c")]
+    [InlineData("! c4 d e f")]
+    public void BangNotGluedToANote_IsSilent(string src)
+        => Assert.Empty(BangWarnings(src));
+
+    [Fact]
+    public void BangGluedToNote_StillMeansADashedBarline()
+    {
+        // The point of the whole change: the warning is ADDITIVE. `cis!` parses
+        // to the SAME TREE as `cis !` — whitespace decides whether we say
+        // something, never what the '!' means. If this ever fails, the rejected
+        // "glued ! is a forced accidental" design has crept back in.
+        static void Walk(GreenNode node, System.Text.StringBuilder sb)
+        {
+            sb.Append(node.Kind).Append(node.IsToken ? $"('{node.Text}') " : " ");
+            for (int i = 0; i < node.SlotCount; i++)
+                if (node.GetSlot(i) is { } child)
+                    Walk(child, sb);
+        }
+        static string Shape(string src)
+        {
+            var sb = new System.Text.StringBuilder();
+            Walk(SyntaxTree.Parse(src).Root, sb);
+            return sb.ToString();
+        }
+
+        Assert.Equal(Shape("c4 cis ! d e"), Shape("c4 cis! d e"));
+        Assert.Contains("DashedBar('!')", Shape("c4 cis! d e"));
+    }
+
+    [Fact]
+    public void UnexpectedCharacter_SpanCoversTheCharacterItself()
+    {
+        // The span must be the offending character, whether or not a space
+        // follows it. The token scan used FullWidth - Text.Length as the
+        // leading-trivia width, but that is leading PLUS TRAILING trivia, so a
+        // flagged character followed by a space was reported one column late.
+        foreach (var src in new[] { "c4 ? d4", "c4 ?d4" })
+        {
+            var flagged = Assert.Single(SyntaxTree.Parse(src).Diagnostics,
+                x => x.Code == DiagnosticCodes.UnexpectedCharacter);
+            Assert.Equal(src.IndexOf('?'), flagged.Span.Start);
+            Assert.Equal(1, flagged.Span.Length);
+        }
+    }
+
     [Fact]
     public void BackToBackRepeatBarline_Inline_ParsesCleanly()
     {

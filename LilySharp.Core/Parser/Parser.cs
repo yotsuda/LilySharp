@@ -59,8 +59,23 @@ internal sealed partial class Parser
         int scanPos = 0;
         int argDepth = 0;  // paren depth inside a @chord/@fig argument (0 = outside)
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@fig' name
+        SyntaxToken? previous = null;
+        bool afterNote = false;  // the previous token was the tail of a note
         foreach (var t in _tokens)
         {
+            // GLUED = nothing at all between this token and the previous one. The
+            // lexer hands an inter-token space run to the PREVIOUS token as
+            // TRAILING trivia, so both sides have to be checked — the same test
+            // CurrentGluedToPrevious makes for the parse rules.
+            bool glued = previous is not null
+                && previous.TrailingTriviaWidth == 0 && t.LeadingTriviaWidth == 0;
+
+            // Start of the token's own text. FullWidth - Text.Length is NOT this
+            // offset: it is leading PLUS trailing trivia, so a flagged token that
+            // happens to be followed by a space was reported one column too far
+            // right (`d? e` pointed at the space, not the '?').
+            int inkPos = scanPos + t.LeadingTriviaWidth;
+
             bool inChordFigArg = argDepth > 0;
             if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#"))
             {
@@ -72,10 +87,45 @@ internal sealed partial class Parser
                       + "write @courtesy (cautionary) or @editorial after the note."
                     : $"Unexpected character '{t.Text}' — it has no meaning here and is ignored";
                 _diagnostics.Error(
-                    new TextSpan(scanPos + (t.FullWidth - t.Text.Length), t.Text.Length),
+                    new TextSpan(inkPos, t.Text.Length),
                     DiagnosticCodes.UnexpectedCharacter,
                     message);
             }
+
+            // '!' is the DASHED BARLINE (LilyPond's \bar "!"), so `cis!` closes the
+            // measure right there. In LilyPond '!' on a note is the forced
+            // accidental, so that is what a LilyPond author means by it — and what
+            // came back was a bar-length complaint about a measure they never wrote,
+            // with the '!' mentioned nowhere. Silently doing the wrong thing is worse
+            // than erroring, so name it.
+            //
+            // The '!' keeps its meaning: this is a diagnostic ONLY. That is exactly
+            // why keying it on adjacency is safe here, where making adjacency CHANGE
+            // the meaning was rejected (3e4188b) — spacing decides nothing, it only
+            // decides whether we say something.
+            if (t.Kind == SyntaxKind.DashedBar && glued && afterNote)
+            {
+                _diagnostics.Warning(
+                    new TextSpan(inkPos, t.Text.Length),
+                    DiagnosticCodes.DashedBarGluedToNote,
+                    "This '!' is a dashed barline (LilyPond's \\bar \"!\"), so the measure "
+                    + "ends here. Lily# has no forced-accidental shorthand: write "
+                    + "@courtesy after the note for a parenthesized accidental, or "
+                    + "@editorial for a small one above the head. If a dashed barline is "
+                    + "what you meant, put a space before it and this warning goes away.");
+            }
+
+            // Is `t` the tail of a note, i.e. could a '!' glued AFTER it have been
+            // meant as an accidental? A note is a pitch token (the accidental is
+            // part of it: `cis` is one token) followed by octave marks, a duration
+            // and dots — each GLUED to the one before, which is what makes them
+            // part of the note rather than separate music. Anything else — a
+            // barline, a bracket, the start of a line — resets it, so `| !` and a
+            // '!' opening a line say nothing.
+            afterNote =
+                SyntaxFacts.IsPitchKind(t.Kind)
+                || (afterNote && glued && t.Kind is SyntaxKind.Apostrophe
+                    or SyntaxKind.Comma or SyntaxKind.IntegerLiteral or SyntaxKind.Dot);
 
             if (inChordFigArg)
             {
@@ -97,6 +147,7 @@ internal sealed partial class Parser
                 stage = 0;
 
             scanPos += t.FullWidth;
+            previous = t;
         }
     }
 

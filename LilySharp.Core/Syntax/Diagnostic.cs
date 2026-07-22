@@ -348,6 +348,13 @@ public static class DiagnosticCodes
     /// pitch (a different note, a chord with no matching pitch, or a rest). A tie
     /// joins two notes of the SAME pitch; different pitches connect with a slur.</summary>
     public const string TieTargetMismatch = "LYS4007";
+    /// <summary>Warning: a <c>!</c> written GLUED to a note (<c>cis!</c>). <c>!</c> is
+    /// the dashed barline (LilyPond's <c>\bar "!"</c>), so it ends the measure there —
+    /// but someone arriving from LilyPond writes it meaning a forced accidental and
+    /// gets a bar-length complaint that never mentions the <c>!</c>. The behavior is
+    /// unchanged (it stays a barline); this only names what happened. Written with a
+    /// space before it, the barline is unambiguous and nothing is reported.</summary>
+    public const string DashedBarGluedToNote = "LYS4009";
     /// <summary>Warning: an annotation on a broken-chord group
     /// (<c>&lt;&lt; … &gt;&gt;@staccato</c>) or on one of its bare pitch members is
     /// not applied — only a dynamic (<c>@f</c>) and a chord name (<c>@chord</c>)

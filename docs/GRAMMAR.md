@@ -464,8 +464,14 @@ ScaleDegree    = Integer , [ 'is' | 'isis' | 'es' | 'eses' ] , { "'" | ',' } ;
                  (* anchor-relative degree: 1 = root/tonic, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
 Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ DurationToken ] ;
 
-Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
+Barline        = '|' | '||' | '|.' | '|:' | '!' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
+
+(* '!' is the DASHED barline (LilyPond's \bar "!"), and like every other barline it
+   CLOSES THE BAR it follows. Write it spaced ('c4 d e f ! g4 …'). Glued to a note
+   ('cis!') it is still the dashed barline, but LilyPond spells the FORCED ACCIDENTAL
+   that way, so that form is warned about (LYS4009): Lily# has no forced-accidental
+   shorthand — use '@courtesy' (parenthesized) or '@editorial' (small, above the head). *)
 
 (* BARE-BARLINE SEMANTICS (music): a bare '|' after music closes that bar. On an empty
    span a SINGLE bare '|' merely anchors the boundary it sits on — the section start

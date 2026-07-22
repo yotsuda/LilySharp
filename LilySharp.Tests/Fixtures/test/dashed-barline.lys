@@ -1,0 +1,40 @@
+// Dashed Barline Test
+// The ONLY fixture that draws '!' (LilyPond's \bar "!"). Until this file the
+// dashed barline was pinned by nothing at all — no fixture and no test used
+// the character — so DrawBarline's BarlineType.Dashed arm could have been
+// broken at any point and every snapshot would have stayed green.
+//
+// Written the ordinary way, with a space in front of it: that is the form
+// LYS4009 leaves silent. Glued to a note (`c4!`) it is the same barline, but
+// warned about — a LilyPond author means the forced accidental by that.
+//
+// The dashes straddle the staff lines (~2/3 dash, 1/3 gap per staff space),
+// and unlike LilyPond the bar COUNT restarts here, so both halves are whole
+// 4/4 measures rather than one measure with a subdivision mark.
+title "Dashed Barline"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase dashedBetweenMeasures {
+  c4 d e f ! g4 a b c' |
+}
+
+phrase dashedThenOrdinary {
+  d'4 c b a ! g4 f e d |
+  c4 e g c' |
+}
+
+section Main {
+  melody { dashedBetweenMeasures dashedThenOrdinary }
+}
+
+form main { Main }
+
+score main "dashed-barline" {
+  staff melody
+}
