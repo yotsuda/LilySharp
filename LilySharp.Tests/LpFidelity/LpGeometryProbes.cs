@@ -1012,6 +1012,95 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A TIE measured BETWEEN SYSTEMS instead of between staves — the tie's version of
+    /// <see cref="SSD"/>/<see cref="SSU"/>, and one grob over from them. Drooping DOWN out of
+    /// one system toward the next.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TID"/>/<see cref="TIU"/> reach <c>SkylineBuilder.BuildStaffSkylines</c>, the
+    /// per-staff skyline. Nothing in the corpus reaches <c>AugmentSkylinesForPaging</c> — the
+    /// skyline the PAGE spaces systems by — with a tie: that pass now seeds tuplet brackets and
+    /// slurs (<see cref="SSD"/>) but NOT ties, so between systems a tie is reserved NOWHERE,
+    /// exactly the hole the slur had before <c>3ac143e7</c>. One staff over several systems, so
+    /// <c>StaffGapAt(1)</c> reads system-system-spacing here (an INTERIOR gap, since a
+    /// span-dependent bow makes the first system's time signature and the last's final bar line
+    /// space theirs a hair off; the interior systems are plain).
+    /// <para>
+    /// THE PITCH RUNS DEEPER THAN SSD/SSU, and it is the TID design, not the SSD one. A tie is
+    /// FLATTER than a slur (<c>height-limit 1.0 / ratio 0.333</c> vs the slur's <c>2.0 / 0.25</c>),
+    /// so its bow protrudes far less. Rather than perch the notes UNDER the floor and read the
+    /// tie's clearance past 12 (which a flat tie barely reaches), it takes TID's route: put the
+    /// NOTEHEADS past the floor and read the WHOLE tie droop on top. <c>e,,</c> (LilyPond
+    /// <c>e,</c>, E2) is 9 staff spaces below the middle line, so notehead-alone is
+    /// 9.0 + 0.545 + 2.05 + 1 = 12.595, already ABOVE 12 — a Lily# that reserves the notes and
+    /// not the tie sits on the NOTES, and the residual is exactly the tie's own droop, the same
+    /// shape as <see cref="TID"/>'s -0.560901 (larger here, ~-0.9176, because the justified
+    /// span widens the arc). LilyPond droops the tie to a gap of 13.512560327518213.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: <c>\new Staff \with { \omit TimeSignature } { \time 12/4
+    /// \repeat unfold 4 { b'1 e,1~ e,1 } \break \repeat unfold 4 { b'1 e,1~ e,1 } }</c> under
+    /// <c>\paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string TSID = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 e,,1~ e,,1 | ", 16)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "TSID" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="TSID"/> with the tie on the other side — an up-tie reaching UP out of the
+    /// lower system toward the one above it, the mirror of book TSIU. <c>f'''</c> (LilyPond
+    /// <c>f''''</c>, F7) sits +18 above the middle line, the exact reflection of <c>e,,</c>'s
+    /// -18 below it, so LilyPond prints the same 13.512560327518213 and the two must agree.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="TSID"/>, for the reason <see cref="SSU"/> is not redundant
+    /// with <see cref="SSD"/>: TSID binds the lower system's top ink against a bow coming down,
+    /// TSIU the upper system's bottom ink against one going up. Two edges of one gap through two
+    /// different skylines.
+    /// <para>
+    /// LilyPond twin: <c>\new Staff \with { \omit TimeSignature } { \time 12/4
+    /// \repeat unfold 4 { b'1 f''''1~ f''''1 } \break \repeat unfold 4 { b'1 f''''1~ f''''1 } }</c>
+    /// under <c>\paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string TSIU = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 f'''1~ f'''1 | ", 16)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "TSIU" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -1209,5 +1298,14 @@ internal static class LpGeometryProbes
         // non-uniform page. See StaffGapAt.
         new("system.slur-under-notes", SSD, g => g.StaffGapAt(1)),
         new("system.slur-over-notes", SSU, g => g.StaffGapAt(1)),
+
+        // The tie one grob over from the slur, one staff over two systems: TID/TIU reach
+        // SkylineBuilder.BuildStaffSkylines; these are the only tie points that reach
+        // LayoutEngine.AugmentSkylinesForPaging, which now seeds tuplet brackets and slurs but
+        // still not ties. Both sides because TSID binds the lower system's top against a bow
+        // coming down and TSIU the upper system's bottom against one going up. See probes TSID
+        // and TSIU. Same INTERIOR gap (index 1) as the slur pair, for the same span-dependence.
+        new("system.tie-under-notes", TSID, g => g.StaffGapAt(1)),
+        new("system.tie-over-notes", TSIU, g => g.StaffGapAt(1)),
     };
 }

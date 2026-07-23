@@ -320,7 +320,8 @@ internal sealed class LayoutEngine
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray());
+                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
+                prelimTies.ToImmutableArray());
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -1136,7 +1137,8 @@ internal sealed class LayoutEngine
         ImmutableArray<ChordNameLayout> chordNames = default,
         ImmutableArray<BarNumberLayout> barNumbers = default,
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
-        ImmutableArray<SlurLayout> slurs = default)
+        ImmutableArray<SlurLayout> slurs = default,
+        ImmutableArray<TieLayout> ties = default)
     {
         if (skylines == null)
             return null;
@@ -1202,6 +1204,34 @@ internal sealed class LayoutEngine
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
                 SkylineBuilder.AddSlursToSkyline(group.ToImmutableArray(), up, down);
+                result[s] = (up, down);
+            }
+        }
+
+        // A tie is the same inside-staff grob as the slur one line up -- vertical-skylines from
+        // its stencil, no outside-staff-priority (scm/define-grobs.scm Tie) -- so the next
+        // system must clear its bow exactly as it clears the notes. SkylineBuilder.BuildStaffSkylines
+        // seeds the tie into the OTHER skyline (the per-staff one Align_interface reads, which
+        // staff.staff.tie-{under,over}-notes measure); this is the one the PAGE spaces systems
+        // by, and until now it reserved the bow nowhere between systems -- the hole the slur had
+        // before it was seeded here. Unlike the slur, the tie carries no cross-system collision
+        // term (TieFormattingProblem scores each bow against its own notes, with no existingSlurs
+        // analogue), so no LayoutTies fix is needed first. Attribution to a system mirrors the
+        // slur: a broken continuation piece belongs to the system holding its END.
+        // audit/lp-geometry system.tie-{under,over}-notes.
+        if (!ties.IsDefaultOrEmpty)
+        {
+            foreach (var group in ties.GroupBy(t => measureToSystem.TryGetValue(
+                t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex, out int s) ? s : -1))
+            {
+                int s = group.Key;
+                if (s < 0 || s >= result.Count)
+                    continue;
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(result[s].up);
+                var down = new VerticalSkyline(VerticalDirection.Down);
+                down.Merge(result[s].down);
+                SkylineBuilder.AddTiesToSkyline(group.ToImmutableArray(), up, down);
                 result[s] = (up, down);
             }
         }

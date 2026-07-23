@@ -50,7 +50,7 @@
   <text x="11.70" y="26.28" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="476">5</text>
   <line x1="12.03" y1="26.64" x2="12.03" y2="30.54" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="15.62" y="26.26" font-size="4.00" data-pos="488"></text>
-  <path d="M 9.26,14.58 C 9.84,15.10 11.19,15.10 11.76,14.58 C 11.19,15.22 9.84,15.22 9.26,14.58 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.58,14.58 C 9.34,15.22 11.65,15.22 12.42,14.58 C 11.65,15.34 9.34,15.34 8.58,14.58 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.26,12.35 C 9.84,11.71 11.19,11.71 11.76,12.35 C 11.19,11.83 9.84,11.83 9.26,12.35 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.26,11.35 C 9.84,10.71 11.19,10.71 11.76,11.35 C 11.19,10.83 9.84,10.83 9.26,11.35 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.92,23.69 C 10.49,23.05 11.84,23.05 12.42,23.69 C 11.84,23.17 10.49,23.17 9.92,23.69 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>

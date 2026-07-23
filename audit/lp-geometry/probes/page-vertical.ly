@@ -668,3 +668,58 @@ probeTag =
       \repeat unfold 4 { b'1 d''''1( d''''1) } }
   }
 }
+
+%% TSID / TSIU — the TIE pair (TID/TIU) measured BETWEEN SYSTEMS instead of between staves, the
+%%     tie's version of SSD/SSU, and one grob over from them. AddTiesToSkyline reaches
+%%     SkylineBuilder.BuildStaffSkylines (the per-staff skyline TID/TIU read); nothing in the
+%%     corpus reaches LayoutEngine.AugmentSkylinesForPaging with a tie. That pass — the one the
+%%     PAGE spaces systems by — now seeds tuplet brackets AND slurs (SSD/SSU) but still NOT
+%%     ties, so between systems a tie is reserved NOWHERE, exactly the hole the slur had before
+%%     it was seeded there. One staff over several systems, so the same StaffGap() that reads
+%%     Align_interface in TID/TIU reads system-system-spacing here.
+%%
+%%     ragged-bottom and short enough for one page, so the gap is the spring's natural length
+%%     — the regime of books N, L, TSD/TSU and SSD/SSU, NOT the solved force of J. HANDOFF 5.3.
+%%
+%%     ⚠️ THE PITCH RUNS DEEPER THAN SSD/SSU, and it is the TID design, not the SSD one. A tie
+%%     is FLATTER than a slur (details height-limit 1.0 / ratio 0.333 vs the slur's 2.0 / 0.25),
+%%     so its bow protrudes far less — a slur clears the floor of 12 by more than a staff space
+%%     from 8 ss out (SSD), a tie from that depth would barely reach it. So the tie takes TID's
+%%     route instead: put the NOTEHEADS themselves past the floor and let the residual read the
+%%     WHOLE tie protrusion on top of them, the way TID reads -0.560901 rather than a
+%%     floor-clipped fraction. e, (E2) sits 9 staff spaces below the middle line, so
+%%     notehead-alone is 9.0 + 0.545 + 2.05 + 1 = 12.595, already ABOVE 12 — a Lily# that
+%%     reserves the notes and not the tie sits on the NOTES, and the residual is exactly the
+%%     tie's own droop, the same shape as staff.staff.tie-under-notes' -0.560901.
+%%
+%%     ⚠️ SINGLE VOICE, NO \tieDown, like SSD/SSU and unlike TSD/TSU. A tie curves by position
+%%     (Tie::calc_direction), so a low note ties DOWN and a high one ties UP with no override —
+%%     the default TID/TIU rely on. Whole notes carry no stems, so nothing competes with it.
+%%
+%%     ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE on the middle line — the SSD/SSU correction.
+%%     A bar-filling tie would start right after the clef, and at that x the other system's
+%%     binding ink is its CLEF, not its staff line; the leading whole note pushes the bow clear
+%%     of both system edges so the entry measures tie-against-staff-line. HANDOFF 5.3.
+%%
+%%     TSID and TSIU must print the SAME number: e, at -18 and f'''' at +18 are exact mirrors
+%%     about the middle line and the tie is symmetric about its attachment, so a difference
+%%     between them is a defect on its own — the property P/Q, SD/SU, TSD/TSU and SSD/SSU share.
+\book {
+  \probeTag "TSID"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new Staff \with { \omit TimeSignature } { \time 12/4
+      \repeat unfold 4 { b'1 e,1~ e,1 } \break
+      \repeat unfold 4 { b'1 e,1~ e,1 } }
+  }
+}
+
+\book {
+  \probeTag "TSIU"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new Staff \with { \omit TimeSignature } { \time 12/4
+      \repeat unfold 4 { b'1 f''''1~ f''''1 } \break
+      \repeat unfold 4 { b'1 f''''1~ f''''1 } }
+  }
+}

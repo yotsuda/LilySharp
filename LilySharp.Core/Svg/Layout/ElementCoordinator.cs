@@ -766,54 +766,62 @@ internal sealed class ElementCoordinator
                 var segSystem = systems[segment.SystemIndex];
 
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges for broken pieces.
+                // TieFormattingProblem attaches the bow to the head's inner EDGE (seg*X) when the
+                // scored endpoint stays within the head box and to the head CENTRE (seg*CenterX)
+                // when it clears the box — LilyPond reads the chord-outline skyline at the tie's Y.
+                // We supply both anchors; the scorer picks per candidate. See TieFormattingProblem.GetAttachment.
                 double segStartX;
+                double segStartCenterX;
                 if (segment.IsFirst)
                 {
-                    segStartX = startMeasure.X
+                    // The item X is the head's LEFT edge; seconds displacement follows the head.
+                    double startBase = startMeasure.X
                         + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
-                        // Follow the tied head's within-chord displacement (seconds).
                         + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
 
-                    // The tie attaches at the RIGHT edge of the left note's
-                    // outline (head + augmentation dots) — the item X is the
-                    // head's LEFT edge. TieFormattingProblem then insets by
-                    // x-gap on top, matching attachment_x_.widen(-x_gap_).
-                    // LILYPOND-REF: lily/tie-formatting-problem.cc:560-581 —
-                    // attachments come from the chord outline at the tie's Y.
                     int noteValue = tie.StartNote.BaseDuration.Numerator != 1
                         ? 1
                         : tie.StartNote.BaseDuration.Denominator;
-                    double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
+                    double advance = GlyphMetrics.GetNoteheadAdvance(noteValue);
+
+                    // Inner edge = right edge of the head plus its augmentation dots.
+                    // LILYPOND-REF: scm/define-grobs.scm DotColumn padding; scm/output-lib.scm ly:dots::print.
+                    double outlineRight = advance;
                     if (startDots > 0)
                     {
-                        // Dot column geometry (matches SharedRenderer): the
-                        // first dot starts one dot-width right of the head,
-                        // each dot advances two dot-widths; the outline ends
-                        // at the last dot's right edge = head + 2n·dotWidth.
-                        // LILYPOND-REF: scm/define-grobs.scm DotColumn padding;
-                        //   scm/output-lib.scm ly:dots::print.
                         double dotWidth = GlyphMetrics.AugmentationDot.Width;
                         outlineRight += 2 * startDots * dotWidth;
                     }
-                    segStartX += outlineRight;
+                    segStartX = startBase + outlineRight;
+                    // Head centre — dots are NOT subtracted (they sit on the note line, off the
+                    // cleared tie Y, so LilyPond's outline recedes past them to the head centre).
+                    segStartCenterX = startBase + advance / 2.0;
                 }
                 else
                 {
+                    // Broken piece: the bound is the system edge — no head, so centre == edge.
                     segStartX = segSystem.Measures[0].X;
+                    segStartCenterX = segStartX;
                 }
 
                 double segEndX;
+                double segEndCenterX;
                 if (segment.IsLast)
                 {
-                    segEndX = endMeasure.X
+                    double endBase = endMeasure.X
                         + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
-                        // Follow the tied head's within-chord displacement (seconds).
                         + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
+                    int endNoteValue = tie.EndNote.BaseDuration.Numerator != 1
+                        ? 1
+                        : tie.EndNote.BaseDuration.Denominator;
+                    segEndX = endBase;                                                      // inner (left) edge of the right head
+                    segEndCenterX = endBase + GlyphMetrics.GetNoteheadAdvance(endNoteValue) / 2.0; // right head centre
                 }
                 else
                 {
                     var lastMeasure = segSystem.Measures[^1];
                     segEndX = lastMeasure.X + lastMeasure.Width;
+                    segEndCenterX = segEndX;
                 }
 
                 // Tie Y position is uniform (same pitch on both ends).
@@ -834,6 +842,10 @@ internal sealed class ElementCoordinator
                     // attachments to match — otherwise the tie detaches to the left.
                     if (segment.IsFirst) segStartX += EngravingDefaults.TabHeadCenterOffset;
                     if (segment.IsLast) segEndX += EngravingDefaults.TabHeadCenterOffset;
+                    // Tab ties hug the digit at a fixed edge (the notehead edge/centre skyline
+                    // does not apply to fret digits), so keep the edge/centre rule a no-op here.
+                    segStartCenterX = segStartX;
+                    segEndCenterX = segEndX;
                     // On a tab the tie connects two fret digits on ONE string, so it
                     // belongs on that string's line — NOT at the notation pitch height.
                     // It curves OPPOSITE the stem: below the digits when the stem
@@ -869,9 +881,29 @@ internal sealed class ElementCoordinator
                     y = staffMiddleDown - tie.StaffPosition / 2.0;
                 }
 
+                // The tie-tie collision term (ScoreTieTieCollision) is scored WITHIN one tie
+                // column. LilyPond builds one Tie_formatting_problem per Tie_column and feeds it
+                // only that column's ties (lily/tie-column.cc:81-93 Tie_column::calc_positioning_done
+                // -> problem.from_ties (ties)), so a tie is scored against the OTHER ties of its
+                // OWN chord and never against a tie in another bar, another voice, or -- after
+                // line-breaking -- an identically-placed one on another system whose bars share a
+                // local X. A column is the ties of one chord, so its members share the start chord:
+                // same voice, same start measure and item (the ties differ only by staff position).
+                // Grouping on that column anchor -- not on the drawn X the collision term uses --
+                // is what keeps a tie on one system from flipping to avoid a coincidental
+                // X-overlap on another; the broken pieces of THIS tie (same TieItem) are dropped
+                // too, as LilyPond scores the column once, unbroken.
+                // audit/lp-geometry system.tie-{under,over}-notes.
+                var columnTies = tieLayouts
+                    .Where(tl => !ReferenceEquals(tl.Tie, tie)
+                        && tl.Tie.VoiceIndex == tie.VoiceIndex
+                        && tl.Tie.StartMeasureIndex == tie.StartMeasureIndex
+                        && tl.Tie.StartItemIndex == tie.StartItemIndex)
+                    .ToList();
+
                 var problem = new TieFormattingProblem(
-                    tieForProblem, segStartX, segEndX, y,
-                    existingTies: tieLayouts,
+                    tieForProblem, segStartX, segEndX, segStartCenterX, segEndCenterX, y,
+                    existingTies: columnTies,
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);

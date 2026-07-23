@@ -60,8 +60,14 @@ internal sealed class TieCandidate
 internal sealed class TieFormattingProblem
 {
     private readonly TieItem _tie;
+    // Left/right attachment X at the head's INNER EDGE (right edge of the left head past
+    // its dots / left edge of the right head) and at the head CENTRE (dots ignored). Which
+    // one the tie attaches to depends on whether its scored endpoint Y clears the head's
+    // one-staff-space box — LilyPond reads the chord-outline skyline at that Y. See GetAttachment.
     private readonly double _startX;
     private readonly double _endX;
+    private readonly double _startCenterX;
+    private readonly double _endCenterX;
     // A tie has a single vertical anchor (its endpoints share one Y — the page Y
     // of the staff's middle line); the scorer walks half-spaces out from there.
     private readonly double _y;
@@ -75,6 +81,8 @@ internal sealed class TieFormattingProblem
         TieItem tie,
         double startX,
         double endX,
+        double startCenterX,
+        double endCenterX,
         double y,
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
@@ -87,6 +95,8 @@ internal sealed class TieFormattingProblem
         _tie = tie;
         _startX = startX;
         _endX = endX;
+        _startCenterX = startCenterX;
+        _endCenterX = endCenterX;
         _y = y;
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
@@ -109,6 +119,48 @@ internal sealed class TieFormattingProblem
     private double CalculateIndent(double width) =>
         BezierBow.Indent(_details.HeightLimit, width);
 
+    /// <summary>
+    /// The tie's attachment interval — the drawn endpoints — for a candidate whose scored
+    /// endpoint sits at <paramref name="curveYFromMiddle"/> staff spaces above the middle line.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond builds a per-column chord-outline skyline and reads the attachment X off it at
+    /// the tie's Y (get_attachment(y + delta_y)), then insets each end by the note-head gap
+    /// (attachment_x_.widen(-x_gap)). Within the head's one-staff-space box the outline stands
+    /// at the head's inner EDGE; beyond the box the up/down boxes recede it to the head CENTRE —
+    /// x[-dir] = b[X].linear_combination(-dir/2), where -dir/2 is INTEGER division on the ±1
+    /// Direction, so the argument is 0 and the interval collapses to its midpoint (not the
+    /// three-quarter point). Measured across whole/half/quarter/dotted notes: within the box the
+    /// span is c2c - headW - 2*x_gap, beyond it c2c - 2*x_gap, the step falling exactly at the
+    /// head-box edge (|delta| = 0.5). Both bounds share one anchor Y (the tie's pitch), so the
+    /// two ends switch together.
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:96-287 set_column_chord_outline
+    ///   (:243-258 updowndir boxes, :251 linear_combination(-dir/2)), :73-87 get_attachment,
+    ///   :563-581 attachment_x_ = get_attachment(...) then widen(-x_gap);
+    ///   lily/skyline.cc:104-110 Building(Box, ...); lily/interval.hh linear_combination.
+    /// </remarks>
+    private (double StartX, double EndX) GetAttachment(double curveYFromMiddle)
+    {
+        // The head box is one staff space tall, centred on the tied note's staff position.
+        double noteCenterY = _tie.StaffPosition * 0.5;
+        bool clearsHead = Math.Abs(curveYFromMiddle - noteCenterY) > 0.5;
+        double leftAttach = clearsHead ? _startCenterX : _startX;
+        double rightAttach = clearsHead ? _endCenterX : _endX;
+        return (leftAttach + _details.XGap, rightAttach - _details.XGap);
+    }
+
+    /// <summary>
+    /// The width fed to the arc-height / min-length math for a candidate at
+    /// <paramref name="curveYFromMiddle"/>: the attachment span (post widen), floored at
+    /// the minimum tie length. LILYPOND-REF: tie-formatting-problem.cc:747-757.
+    /// </summary>
+    private double WidthAt(double curveYFromMiddle)
+    {
+        var (startX, endX) = GetAttachment(curveYFromMiddle);
+        double width = endX - startX;
+        return width < _details.MinLength ? _details.MinLength : width;
+    }
+
     // ---------------------------------------------------------------
     // Solving
     // ---------------------------------------------------------------
@@ -121,20 +173,11 @@ internal sealed class TieFormattingProblem
     /// </remarks>
     public TieLayout Solve()
     {
-        // The arc height and the min-length test are measured on the ATTACHMENT width — the
-        // span between the endpoints AFTER they are pulled in by the note-head gap (XGap) on
-        // each side, which is what the bow is actually drawn across. LilyPond computes the
-        // height from attachment_x_.length() after attachment_x_.widen(-x_gap); using the raw
-        // note-to-note span here made every tie's arc a touch too tall (staff.staff.tie-*-notes
-        // read +0.020776 with the endpoints already matching LilyPond).
-        // LILYPOND-REF: lily/tie-formatting-problem.cc:581 attachment_x_.widen(-x_gap) and
-        // :747-757 length()/height(details_); the drawn endpoints below inset by XGap to match.
-        double width = (_endX - _startX) - 2 * _details.XGap;
-        if (width < _details.MinLength)
-            width = _details.MinLength;
-
-        // Generate candidate configurations at quantized positions
-        var candidates = GenerateCandidates(width);
+        // Generate candidate configurations at quantized positions. Each candidate computes its
+        // own attachment (and hence width/height) from its scored endpoint Y, the way LilyPond
+        // recomputes attachment_x_ per configuration — the attachment is Y-dependent, so it
+        // cannot be a single width fixed up front.
+        var candidates = GenerateCandidates();
 
         // Score all candidates
         foreach (var config in candidates)
@@ -161,7 +204,7 @@ internal sealed class TieFormattingProblem
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:1123-1153 generate_single_tie_variations()
     /// </remarks>
-    private List<TieCandidate> GenerateCandidates(double width)
+    private List<TieCandidate> GenerateCandidates()
     {
         // LILYPOND-REF: lily/tie-formatting-problem.cc:1120-1151
         // generate_single_tie_variations — the base configuration sits AT the
@@ -174,7 +217,7 @@ internal sealed class TieFormattingProblem
 
         var candidates = new List<TieCandidate>
         {
-            GenerateConfiguration(notePos, defaultDir, notePos, staffMiddleY, width),
+            GenerateConfiguration(notePos, defaultDir, notePos, staffMiddleY),
         };
 
         int regionSize = (_existingTies != null && _existingTies.Count > 0)
@@ -187,7 +230,7 @@ internal sealed class TieFormattingProblem
             {
                 if (i == 0 && d == defaultDir)
                     continue;
-                candidates.Add(GenerateConfiguration(notePos + i * d, d, notePos, staffMiddleY, width));
+                candidates.Add(GenerateConfiguration(notePos + i * d, d, notePos, staffMiddleY));
             }
         }
 
@@ -214,11 +257,10 @@ internal sealed class TieFormattingProblem
     /// - tall ties: keep the curve TOP clear of real staff lines (:544-560,
     ///   note LilyPond ASSIGNS delta_y there rather than adding)
     /// </remarks>
-    private TieCandidate GenerateConfiguration(int pos, int dir, int notePos, double staffMiddleY, double width)
+    private TieCandidate GenerateConfiguration(int pos, int dir, int notePos, double staffMiddleY)
     {
         double y = pos * 0.5;   // sp from middle line, up+
         double deltaY = 0;      // sp, up+
-        double height = CalculateTieHeight(width);
         bool yTune = true;
 
         // Dot avoidance.
@@ -243,6 +285,13 @@ internal sealed class TieFormattingProblem
 
         if (yTune)
         {
+            // Provisional attachment/height at the post-hug endpoint drives the small-vs-tall
+            // branch below, the way LilyPond computes attachment_x_ = get_attachment(y+delta_y)
+            // and h = height() before the staff-line tuning. The attachment is Y-dependent
+            // (edge vs centre — see GetAttachment), so this must be read at the current delta_y,
+            // not from a width fixed up front. LILYPOND-REF: tie-formatting-problem.cc:507-511.
+            double height = CalculateTieHeight(WidthAt(y + deltaY));
+
             // staff_span widened by -1: positions -3..3; head positions at
             // the columns reduce to the note position for single notes.
             bool withinStaff = Math.Abs(pos) <= 3;
@@ -286,7 +335,12 @@ internal sealed class TieFormattingProblem
             }
         }
 
+        // Final attachment (and hence width/height) at the tuned endpoint Y — LilyPond
+        // recomputes attachment_x_ = get_attachment(y + delta_y) here, after the tuning.
+        // LILYPOND-REF: tie-formatting-problem.cc:563-581.
         double curveYFromMiddle = y + deltaY;        // sp, up+ from the middle line
+        var (attachStartX, attachEndX) = GetAttachment(curveYFromMiddle);
+        double finalHeight = CalculateTieHeight(WidthAt(curveYFromMiddle));
         // Native page Y-up attachment. The whole vertical model is Y-up (= -device);
         // the middle line sits at page-Y-up -staffMiddleY (staffMiddleY is the middle
         // line's device Y, reconstructed from the caller's device anchor), and the
@@ -297,9 +351,9 @@ internal sealed class TieFormattingProblem
 
         return new TieCandidate
         {
-            StartX = _startX + _details.XGap,
-            EndX = _endX - _details.XGap,
-            Height = height,
+            StartX = attachStartX,
+            EndX = attachEndX,
+            Height = finalHeight,
             CurveUp = dir > 0,
             AttachmentY = attachmentY,
             Position = pos,

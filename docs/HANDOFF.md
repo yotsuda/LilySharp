@@ -4,8 +4,9 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-25 / master `ed026319`・origin より 51 ahead・未 push（§0 で必ず裏取り——この冒頭更新のコミット 1 件分だけ HEAD は先・ahead は 52 になる）。実質コミットは `0385b1fb`（ページ跨ぎスラー SSD/SSU 起票）→ `3ac143e7`（種＋衝突修正で閉じた）→ `6f572c29`（衝突修正を LP 字面へ＝時間重なり populate）。`6230137e` は probe の `\version` を 2.26.0 cosmetic。以降 `38a78d4f`/`f4df18a6` は docs のみ（残差 −0.0077 を「受容せず・OPEN」に framing 修正＋原因を実測で X 軸の全音符スペーシング差 0.14ss と特定）。テスト 3220 passed / 0 failed / 3 skipped・作業ツリークリーン（未追跡は旧 `HANDOFF-*.md` 14 個＋`demo-lp-compat-features.lys` のみ・§8）。
-このセッションで **ページ跨ぎスラーの対（SSD/SSU）を起票し、種を入れて閉じた**（`0385b1fb`→`3ac143e7`・下記 ▶ の ✅）。起票は出力不変（predict −1.122500648479451 が桁まで的中・対も一致）。種は `AugmentSkylinesForPaging` に配線（tuplet と同形・`AddSlursToSkyline`/`SeedBowInk` 共有）＝**−1.122500648479451 → −0.007708667**（対は両ステージ 13.114791981 で 15 桁一致）。種の前に **prelim slur の cross-system 衝突回避を修正**（`ElementCoordinator.LayoutSlurs` が別 system の弓を同一障害物と誤認して 0.5/system ドリフト）。最初 same-system フィルタで対処したが（`3ac143e7`）、それは LP の機構でないので **`6f572c29` で字面移植**——LP は `Slur::auxiliary_acknowledge_extra_object`（`slur.cc:364-387`）で **engrave 時にアクティブ（時間重なり）なスラーだけ**を `encompass-objects` に populate する。だから衝突対象を「描画 X の重なり」でなく **音符レンジ（時間）の重なり**（`SlurSpansOverlap`）で決めた＝別小節の弓は互いの set に入らない＝cross-system 偽重なりが構造的に消える。**corpus では出力不変**（same-system 版と挙動同一・snapshot 不動）。残 **−0.007708667 は OPEN（受容していない）。原因は当セッションで実測**：interior system で Lily# はスラー対象の全音符間を **7.575ss**、LP は **7.718628ss** で置く＝**約 0.14ss の全音符スペーシング差**（逆算の「0.031」は誤り）。両者とも小節内は一様だが、Lily# は最初の符頭が x=7.56（LP は 5.8）で末尾は同じ ~94.5 に揃うので**音符が狭い領域に圧縮**（clef/prefix が約 1.76ss 広い or 全音符ばね差）。弓の **arc が飽和型**なのでこの 0.14 が 0.0077 に減衰（局所感度 ~0.05・ratio 0.25 でない＝cap 実験が半減止まりだった理由）。**正体は X 軸**（広い拍子の全音符スペーシング／clef prefix・4分音符の bar-line corpus は未監査）が弓経由で Y に出た分。slur モデルは exact（SD/SU が 0）。**修正は横スペーシング側・後で 0.14 を詰める**。**interior gap で測る**（`StaffGapAt(1)`・4 system twin）——span 依存の弓は先頭 system の時値記号・末尾 system の終止線で微妙にずれるので、plain な中間 system 同士の gap を測る。テスト 3220 passed / 0 failed / 3 skipped。LP 忠実度 **38/52 exact・total |residual| 0.019730 ss**（起票時 2.249314 から種で −2.23。§5.2.1④・点集合が違うので過去値と直接比べない）。
+最終更新: 2026-07-24 / master `4c8cb54a`（今セッション＝**タイ横アタッチの Y 依存移植**・下記 ▶✅）・未 push。ahead は §0 で必ず裏取り。前セッションの実装は `2ca9cf69`（TSID/TSIU 種で −0.045）→ `ff2a08fc`（tie-column 訂正・下記）。前セッションまでの実質コミットは `0385b1fb`（ページ跨ぎスラー SSD/SSU 起票）→ `3ac143e7`（種）→ `6f572c29`（衝突修正を LP 字面へ）→ docs（`38a78d4f`/`f4df18a6`）。
+このセッションで **ページ跨ぎタイの対（TSID/TSIU）を起票し、種を入れ、そのとき露呈した cross-system 衝突バグを修正して −0.9176 → −0.045 まで詰めた**（`2ca9cf69`・下記 ▶ の ✅）。**変更 6 ファイル**：`ElementCoordinator.cs`（cross-system 衝突修正＝**tie-column グルーピング**）・`LayoutEngine.cs`（`AugmentSkylinesForPaging` にタイ種）・`LpGeometryProbes.cs`（TSID/TSIU twin）・`lp-geometry.json`（2 点）・`page-vertical.ly`（2 book）・`showcase__02-ornaments.svg`（再ベース +0.69）。
+**起票は出力不変・予測が桁まで的中**（notehead-alone 12.595・residual −0.917560328・対一致）。種は `AddTiesToSkyline` を `AugmentSkylinesForPaging` に配線（スラー種ブロックの真下・`SeedBowInk` 共有）。**種を入れた瞬間、対が食い違った**（TSID −0.9176 のまま／TSIU +0.2047）＝第2欠陥。TIEDBG で実データを見ると interior system の下タイの制御点が**音符中心で鏡映**＝**勝者候補の向きが up に化けていた**（`TieItem.CurveUp` は down のまま・`SeedBowInk` は geometry で向き判定するので down タイが up skyline に誤送→予約ゼロ）。真因は **`TieFormattingProblem` の `ScoreTieTieCollision`**：`LayoutTies` が `existingTies` に**全 system のタイを累積**して渡し、改行後は各 system の小節が local X を共有するので、interior 下タイが上の同位置タイと衝突判定され monotonicity で向きが反転。**スラーの cross-system 衝突と完全に同型**——HANDOFF の「タイは衝突回避を持たない…はず（要確認）」の予測が外れ、その外れが真因を指した。修正＝`LayoutTies` が `existingTies` を時間スパン重なり（`TieSpansOverlap`＝`SlurSpansOverlap` の字面）で絞る＝チョード列の実スタックタイだけ残る。以後 TSID==TSIU が **13.467245850 で桁一致**。残 **−0.045314478 は OPEN（受容せず）。原因は LP の Tie.control-points を after-line-breaking で実測して分解済**：縦モデルは exact、発散は横。**LP のタイ端点 span 7.319ss / Lily# 5.206ss**（端点 Y は −9.75 で一致）＝**~2.1ss 狭いアタッチ幅**を `BezierBow.Height(1.0,0.333,width)` が忠実に 0.061 浅い制御点に変換（Lily# 弧 0.776 / LP 0.837337・width=7.2 で 0.837 再現）→ 予約 ink が 0.045 浅い。**スラーの −0.0077 と同じ X 軸族**（広い 12/4 justified の全音符スペーシング／横アタッチ・4分音符 bar-line corpus 未監査）で、タイのアタッチ幅発散(2.1ss)がスラーの中心間発散(0.14ss)より大きい分だけ大きい。**タイ arc は slur より鈍感**（感度 0.019 vs 0.076）なので 0.045 は arc の 0.14ss 漏れでは説明できない＝**横アタッチ幅**が正体。テスト 3222 passed / 0 failed / 3 skipped。LP 忠実度 **38/54 exact・total |residual| 0.110359 ss**（前 0.019730＋タイ 2 点 ×0.045。点集合が違うので過去値と直接比べない）。
 
 ---
 
@@ -28,22 +29,51 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **ページ跨ぎタイ（TSID/TSIU 相当）を対で起票する**
+### ▶ 次のセッションの最初の一手 ＝ **X 軸：広い justified 拍子での全音符スペーシング（sub-question ①）** — タイの横アタッチ（②）は閉じた
 
-**ページ跨ぎスラー SSD/SSU は種で −0.0077 まで詰めた**（`3ac143e7` 種＋`6f572c29` 衝突修正の LP 字面移植・下記 ✅）。残 −0.0077 は **OPEN（受容せず・原因は X 軸の全音符スペーシング 0.14ss と実測済み・下記 ⚠️）**。残る真の未測領域は**ページ跨ぎタイ**——`AugmentSkylinesForPaging` は今スラーは種にするが**タイはまだ**（`AddTiesToSkyline` は staff skyline 専用）。手順はスラーと同型：SD/SU→TID/TIU の staff 版があるように、SSD/SSU の page 版の次は **TSID/TSIU（tie system down/up）を対で起票→種**。
+**ページ跨ぎの弓は縦もタイの横アタッチも閉じた**：tuplet（`eb8315f8`）→ スラー SSD/SSU（−0.0077）→ タイ TSID/TSIU を種で −0.045 まで（`2ca9cf69`）→ **今セッション、タイの横アタッチを LP の Y 依存モデルで字面移植して閉じた（−0.045 → −0.0019・`4c8cb54a`・下記 ✅）**。残るのは **① 全音符スペーシングだけ**：slur −0.0077 と tie −0.0019 が**同じ 0.14ss の中心間差**を指す（Lily# c2c 7.575 vs LP 7.718628）。縦モデル（`SeedBowInk`・arc 式）は exact。
 
-**タイ起票の勘所**（スラーで確立した型）:
-1. **probe は 4 補正込み**（`\break` で偶数分割・`ragged-right=##f`・`indent=0`・`\omit TimeSignature`）で 2 system を厳密同一に＝対（TSID==TSIU）が LP 側で成立。タイは平坦（`height-limit 1.0`/`ratio 0.333` vs スラー 2.0/0.25）なので**床 12 を超えるには SSD/SSU の 8ss より深い音符**が要る（TID が e/-11 だったので、system 版はさらに深く）。
-2. Lily# twin は **16 小節・4 system・`StaffGapAt(1)` で interior gap** を測る（先頭 system の時値記号・末尾の終止線を避ける＝スラーと同じ）。
-3. 種は `AugmentSkylinesForPaging` に `AddTiesToSkyline` を配線（`LayoutEngine.cs` のスラー種ブロックの真下に同型で足す＝`prelimTies.ToImmutableArray()` を引数追加）。**タイは衝突回避を持たない**（`TieFormattingProblem` は `existingSlurs` 相当を使わない）ので cross-system ドリフトは出ないはず（要確認）。
-4. **予測: SSD/SSU と同様の OPEN 残差に着地**——タイのインク近似 `+0.001391`（TID/TIU 参照）＋X 軸スペーシングが arc 経由で漏れる分（SSD/SSU で実測した 0.14ss 全音符スペーシング差と同根）。0 exact は望み薄。受容せず OPEN で。
+**② の正体は「横アタッチ幅」ではなく「LP の Y 依存アタッチ」だった**。LP は chord-outline スカイラインをタイの**端点 Y で読む**：端点が符頭の 1ss 箱の**内**なら内側エッジ、**外**なら符頭**中心**（`-dir/2` が整数除算で 0＝`linear_combination(0)`＝中点）。切替は `|delta|=0.5` の階段（whole/half/quarter/dotted+pitch sweep で実測）。**素朴な「常に中心」は TID を +0.0736 に悪化させた**——対の食い違いが真のモデルを出した。移植後 TSID/TSIU −0.045→−0.0019、TID/TIU（delta −0.5・箱の縁）は edge のまま **+0.001391 不変**。
 
-⚠️ **残った −0.007708667（SSD/SSU）は OPEN＝ユーザーは受容していない。原因は当セッションで実測済み**（§5.3 に従い逆算をやめて実測）：**Lily# の全音符スペーシングが LP より約 0.14ss 狭い**（interior system の slur 対象間 Lily# 7.575 vs LP 7.718628）。両者小節内一様だが Lily# は最初の符頭 x=7.56（LP 5.8）で末尾は同じ ~94.5＝**clef/prefix が約 1.76ss 広く音符を圧縮**。弓 arc が飽和型なので 0.14→0.0077 に減衰（感度 ~0.05）。**正体は X 軸**（広い拍子の全音符スペーシング・4分音符 corpus 未監査）。slur モデルは exact。**次の詰め所＝この 0.14 の X スペーシング差**（clef prefix 1.76 幅 or 全音符ばね）。**今はコード/残差そのまま**（ユーザー判断）＝OPEN のまま X 軸修正の機会に回す。
+⚠️ **残 ① は横スペーシングの問題**（縦の弓コードは触らない）。詰め方：なぜ Lily# の全音符 c2c が LP より 0.14ss 狭いか（clef/prefix が ~1.76ss 広い or 全音符ばね差）。4 分音符 4/4 の bar-line X-corpus は未監査。**今はコード/残差そのまま**（ユーザー判断）＝OPEN のまま X 軸修正の機会に回す。
 
-★ **今回の教訓 3 つ**:
-- **span 依存 grob（スラー/タイ）を page で測るには 4 補正 ＋ interior gap**。tuplet bracket は固定 padding でクリアするので TSD/TSU は素の 6 小節でよかったが、弓の arc は横 span 依存なので先頭/末尾 system が微妙にずれる＝`StaffGapAt(1)` で中間 gap を測る。
-- **種は degenerate twin で第2欠陥を出す**（§5.2.1④）：スラー種を入れた瞬間、prelim slur の **cross-system 衝突回避が 0.5/system ドリフト**を露呈した。同一小節反復＋左揃えで別 system の弓が局所 X で重なり、scorer が同一障害物と誤認。**字面移植で解決**（`6f572c29`）＝LP は `Slur::auxiliary_acknowledge_extra_object`（`slur.cc:364-387`）で時間重なりのスラーだけを `encompass-objects` に入れるので、衝突対象を音符レンジ重なり（`SlurSpansOverlap`）で決める。⚠️ **最初 same-system フィルタで「効くが字面でない」対処をしかけた——ユーザーの「字面移植できたか」で気付いて直した。§5.2 の「効くが LP でない」を残さない。**
-- **Corpus_ReportsTotalDivergence は台帳の stored residual を読むだけ**——種の効果を測るには theory（`Geometry_MatchesLilyPondWithinTheRecordedResidual`）を回す。種を入れた直後に Corpus で −1.1225 が変わらず「効いてない」と誤読しかけた。
+#### ✅ このセッション（2026-07-24）＝ **タイの横アタッチを LP の Y 依存モデルで字面移植（−0.045 → −0.0019・`4c8cb54a`・9 ファイル）**
+
+| ファイル | 内容 |
+|---|---|
+| `TieFormattingProblem.cs` | **`GetAttachment` 新設**＝端点 Y で edge/center を選ぶ（`set_column_chord_outline`+`get_attachment`+`widen(-x_gap)` の字面）。width/height を**候補ごと**に再計算（LP の provisional→tune→final 順）。`Solve` の固定 width 廃止 |
+| `ElementCoordinator.cs` | タイに **inner-edge と head-centre の両アンカーを渡す**（dots は centre で無視・tab は edge 固定の no-op） |
+| `lp-geometry.json` | `system.tie-{under,over}-notes` −0.045314478 → **−0.001882534**（why 追記）。TID/TIU は不変 |
+| snapshot 5 件 | ties-slurs / multivoice-chord-tie / tab-chord-tie / multi-line-spanners / showcase__02-ornaments。譜面タイが中心アタッチへ拡幅（**X 不変・tab tie 不変**・showcase は譜間タイで Y +0.1 reflow） |
+| `TieFormattingProblemTests.cs` | ctor に centre 2 引数（合成 fixture は center==edge） |
+
+##### ★★ 教訓: **測定は「横アタッチ幅」と言ったが、真相は「Y 依存アタッチ」だった**
+起票時測定（TSID span 7.319 vs 5.206）は「タイが頭から ~1ss/side 内側」と読め、**素朴な「常に中心」**を試すと TSID は −0.0019 に改善したが **TID が +0.0014→+0.0736 に悪化**（対の食い違い＝§1 の型）。LP 実測（4 音価+pitch sweep）で、アタッチは**端点が符頭箱をクリアするか**で edge↔center 切替＝**|delta|=0.5 の階段**と判明。§5.3「逆算でなく実測」。
+
+##### ★ 教訓: **`-dir/2` は整数除算＝中点**
+`set_column_chord_outline` の updowndir 箱は `x[-dir]=linear_combination(-dir/2)`。`dir` は ±1 Direction ＝**整数除算で 0**＝`linear_combination(0)`＝区間の**中点**（¾点でない）。ソース読みで ¾点と誤読し測定と食い違ったのはこれ。字面移植は**整数型を確認**する。
+
+#### ✅ このセッション（2026-07-24）＝ **ページ跨ぎタイ TSID/TSIU を起票→種→cross-system 衝突修正で −0.9176 → −0.045（`2ca9cf69`・6 ファイル）**
+
+| ファイル | 内容 |
+|---|---|
+| `page-vertical.ly` | **TSID/TSIU book**（SSD/SSU 4 補正を踏襲・`e,`=E2 / `f''''`=F7 の**鏡像対**・notes-above-floor 設計）。LP gap **13.512560327518213**（対は 15 桁一致） |
+| `LpGeometryProbes.cs` | **TSID/TSIU twin**（16 小節 4 system・`StaffGapAt(1)`）＋登録 |
+| `lp-geometry.json` | **`system.tie-{under,over}-notes` 2 点**。起票 −0.917560328（予測が桁まで的中）→ 種 **−0.045314478**（対一致） |
+| `LayoutEngine.cs` | **タイ種を `AugmentSkylinesForPaging` に配線**（スラー種ブロックの真下・`AddTiesToSkyline`／`SeedBowInk` 共有・`ties` 引数＋`prelimTies`） |
+| `ElementCoordinator.cs` | **cross-system 衝突修正**（下記 ★）＝`LayoutTies` が `existingTies` を **tie-column**（同一 voice・同一 start chord＝measure+item）で絞る＝LP `tie-column.cc:81-93` の字面 |
+| `showcase__02-ornaments.svg` | **再ベース +0.69**（唯一の譜間タイ fixture＝`d,2~ d4` が種で新規予約＝予約漏れ修正。全 Y 剛体シフト・X 不変・path 形状不変・ページ拡大でviewBox外なし） |
+
+##### ★★ 教訓: **「タイは衝突回避を持たない」の予測が外れ、その外れが真因を指した**（§1 の「予測が外れたときこそ2つ目」の実例）
+種を入れた瞬間**対が食い違った**（TSID −0.9176 のまま／TSIU +0.2047）。`LayoutEngine` の種ブロックに一時 TIEDBG を挿して実データを見ると、interior system の下タイの制御点が**音符中心で鏡映**＝勝者候補の向きが up に化けていた（`TieItem.CurveUp` は down のまま・`SeedBowInk` は geometry で向き判定するので **down タイが up skyline に誤送→予約ゼロ**）。真因は **`TieFormattingProblem.ScoreTieTieCollision`**：`LayoutTies` が `existingTies` に全 system のタイを累積して渡し、改行後は各 system の小節が local X を共有するので interior 下タイが**上の同位置タイと衝突判定**され monotonicity で向きが反転。**スラーの cross-system 衝突と完全に同型**。修正＝`LayoutTies` が `existingTies` を **tie-column**（同一 voice・同一 start chord＝measure+item・自分の broken segment は除外）で絞る＝LP `tie-column.cc:81-93`（`calc_positioning_done`→`problem.from_ties(ties)` を **Tie_column ごとに1つ**）の字面移植。以後 TSID==TSIU が **13.467245850** で桁一致（tie-column 版でも corpus 出力は完全同一・3222 緑・snapshot 不動）。
+
+⚠️ **字面移植の訂正**（§5.2 の「効くが LP でない」）：最初 `TieSpansOverlap`（スラーの `SlurSpansOverlap` を写した time-overlap）で対処したが、それは**スラーの機構**（`auxiliary_acknowledge_extra_object`＝time-overlap）であって**タイの機構ではない**。タイは `Tie_column` で列ごとに problem を作る（time-overlap でなく列メンバーシップ）＝span-overlap は単一声部では一致するが**別声部の同時タイで乖離する proxy**。ユーザーの「字面移植できたか」で気付き、`tie-column.cc` を実読して**列アンカー（voice+start chord）に直した**。スラーで一度踏んだ罠をタイでまた踏み、同じ問いで捕まった。
+
+##### ★ 教訓: **対が食い違うまで欠陥は見えない**（3 度目の X 版）
+片側（TSIU）だけ動いていたら「効いた」と誤読して出荷していた。TSID が動かなかったことだけが衝突バグを出した。§5.2.1④「穴を開けるまで分からない」。
+
+##### ★ 教訓: **OPEN 残差の原因は逆算でなく実測**（§5.3）
+−0.045 を「slur と同じ 0.14ss 漏れ」で片付けかけたが、`BezierBow.Height` の微分で**タイ arc 感度は 0.019**（slur 0.076）と分かり 0.14ss では 0.003 にしかならない＝**説明にならない**。after-line-breaking で LP の Tie.control-points を dump して初めて **span 2.1ss 差**が正体と判明。予測（arc 漏れ）が外れたのでもう一段掘った。
 
 ⚠️ **島2 の残（focused session で拾う候補）**:
 - ★ **単音/グレースの臨時記号 DRAW が第2の配置モデル**（§5.2.1②）。和音は `AccidentalColumn.CalculatePositions`（position_apes）→`DrawAccidentalAtInkLeft` だが、**単音 `NoteItem`（`SharedRenderer.Noteheads.cs:440`）とグレース（`SharedRenderer.GraceNotes.cs:91`）は `DrawAccidental` の固定 `AccidentalNoteGap 0.35`**。sharp/flat は一致するが、**♮ は実スカイラインと 0.0176 ss ずれる**（sub-visual。符頭間隔は `SpacingRules`/`ItemSkylineFactory` が `CalculateSinglePosition` で LP-exact なので台帳は緑）。単音描画も `CalculateSinglePosition` の XOffset で描けば一元化＝ずれ消滅。**バグでなく重複モデルの掃除**。
