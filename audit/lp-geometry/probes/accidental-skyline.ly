@@ -1,4 +1,4 @@
-\version "2.24.4"
+\version "2.26.0"
 %% LP FIDELITY PROBE — the accidental horizontal-skylines and column packing that
 %% Extract-EmmentalerSkylines.py -> GlyphSkylinesGenerated.cs reproduce, plus the
 %% note-to-accidental and column gaps position_apes produces.

@@ -499,7 +499,14 @@ internal sealed class SlurScoringProblem
             }
         }
 
-        // Slur-slur collision
+        // Slur-slur collision. LilyPond scores a slur against the other slurs in its
+        // `encompass-objects` and pushes it clear of them (the same extra-encompass term that
+        // clears accidentals and scripts). The SET is populated at engrave time by
+        // Slur::auxiliary_acknowledge_extra_object, so it holds only slurs whose spans
+        // OVERLAP THIS ONE IN TIME -- the caller (ElementCoordinator.LayoutSlurs) supplies
+        // exactly that set, so no slur outside this one's musical span reaches here.
+        // LILYPOND-REF: lily/slur-scoring.cc:679-682 (Slur members of encompass-objects) and
+        //   lily/slur-configuration.cc:349 score_extra_encompass.
         if (_existingSlurs != null)
         {
             foreach (var existing in _existingSlurs)

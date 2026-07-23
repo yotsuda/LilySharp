@@ -1232,10 +1232,26 @@ internal sealed class ElementCoordinator
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, segStartX, segEndX);
 
+                // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond
+                // populates a slur's encompass-objects at ENGRAVE time: an acknowledged slur
+                // (or tie, or avoid-slur=inside object) is added to every slur that is still
+                // OPEN at that moment, so a slur in a later bar -- closed before the next one
+                // opens -- never enters this one's set. Matching that by musical span, rather
+                // than by the drawn X the collision term itself uses, is what keeps a slur on
+                // one system from avoiding an identically-placed one on ANOTHER: after
+                // line-breaking their bars share a local X, but never a span.
+                // LILYPOND-REF: lily/slur.cc:364-387 Slur::auxiliary_acknowledge_extra_object
+                //   adds e to `slurs`/`end_slurs` (the currently-OPEN slurs); read back in
+                //   scoring at lily/slur-scoring.cc:679-682. audit/lp-geometry
+                //   system.slur-{under,over}-notes.
+                var overlappingSlurs = slurLayouts
+                    .Where(sl => SlurSpansOverlap(slur, sl.Slur))
+                    .ToList();
+
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,
                     obstacles: obstacles,
-                    existingSlurs: slurLayouts,
+                    existingSlurs: overlappingSlurs,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast,
                     leftEdge: leftEdgeInfo,
@@ -1246,6 +1262,27 @@ internal sealed class ElementCoordinator
 
         return slurLayouts.ToImmutableArray();
     }
+
+    /// <summary>
+    /// Whether two slur spans overlap in musical time — the condition under which LilyPond
+    /// makes them avoid one another.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc:364-387 Slur::auxiliary_acknowledge_extra_object adds an
+    /// acknowledged slur to another's <c>encompass-objects</c> only while the other is still
+    /// OPEN, i.e. when their <c>[start, end]</c> spans overlap. Two disjoint spans (one bar's
+    /// slur closing before the next opens) never reference each other, which is exactly why a
+    /// slur repeated on a later system does not avoid the one above it.
+    /// </remarks>
+    private static bool SlurSpansOverlap(SlurItem a, SlurItem b) =>
+        !(SpanBefore(a.EndMeasureIndex, a.EndItemIndex, b.StartMeasureIndex, b.StartItemIndex)
+          || SpanBefore(b.EndMeasureIndex, b.EndItemIndex, a.StartMeasureIndex, a.StartItemIndex));
+
+    /// <summary>Whether position (<paramref name="m1"/>, <paramref name="i1"/>) strictly
+    /// precedes (<paramref name="m2"/>, <paramref name="i2"/>) — so a span touching another at
+    /// a shared column still counts as overlapping, as LilyPond's end_slurs branch does.</summary>
+    private static bool SpanBefore(int m1, int i1, int m2, int i2) =>
+        m1 < m2 || (m1 == m2 && i1 < i2);
 
     /// <summary>
     /// Device-Y of an item's TOP fret-digit row (smallest string number = highest

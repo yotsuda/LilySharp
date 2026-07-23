@@ -4,8 +4,8 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-24 / master `d23390e8`・origin より 38 ahead・未 push（§0 で必ず裏取り——この冒頭更新のコミット 1 件分だけ HEAD は先・ahead は 39 になる）。実質コミットは `e08f5e12`（島2 実装）、`9fa5be5f`/`d23390e8` は記録・校正プローブ。
-このセッションで **島2（実 glyph 水平スカイライン基盤）を建てて臨時記号スタッキングを閉じた**（`e08f5e12`）。`chord.accidental.{sharp,flat}-column-gap` の **4 点とも exact**（sharp 1.284000 / flat 0.964561。旧 +0.016 / +0.155）。おまけに `barline.next.key-change-to-notehead` も **exact**（旧 −0.017672＝♮ のスカイライン項——単音の左予約が取りこぼしていた・下記 ▶）。テスト 3218 passed / 0 failed / 3 skipped。LP 忠実度 **38/50 exact・total |residual| 0.004313 ss**（0.364863 から）。snapshot 18 件再ベース（純粋な臨時記号の再配置・693/693・出力外描画なし・承認済）。
+最終更新: 2026-07-25 / master `ed026319`・origin より 51 ahead・未 push（§0 で必ず裏取り——この冒頭更新のコミット 1 件分だけ HEAD は先・ahead は 52 になる）。実質コミットは `0385b1fb`（ページ跨ぎスラー SSD/SSU 起票）→ `3ac143e7`（種＋衝突修正で閉じた）→ `6f572c29`（衝突修正を LP 字面へ＝時間重なり populate）。`6230137e` は probe の `\version` を 2.26.0 cosmetic。以降 `38a78d4f`/`f4df18a6` は docs のみ（残差 −0.0077 を「受容せず・OPEN」に framing 修正＋原因を実測で X 軸の全音符スペーシング差 0.14ss と特定）。テスト 3220 passed / 0 failed / 3 skipped・作業ツリークリーン（未追跡は旧 `HANDOFF-*.md` 14 個＋`demo-lp-compat-features.lys` のみ・§8）。
+このセッションで **ページ跨ぎスラーの対（SSD/SSU）を起票し、種を入れて閉じた**（`0385b1fb`→`3ac143e7`・下記 ▶ の ✅）。起票は出力不変（predict −1.122500648479451 が桁まで的中・対も一致）。種は `AugmentSkylinesForPaging` に配線（tuplet と同形・`AddSlursToSkyline`/`SeedBowInk` 共有）＝**−1.122500648479451 → −0.007708667**（対は両ステージ 13.114791981 で 15 桁一致）。種の前に **prelim slur の cross-system 衝突回避を修正**（`ElementCoordinator.LayoutSlurs` が別 system の弓を同一障害物と誤認して 0.5/system ドリフト）。最初 same-system フィルタで対処したが（`3ac143e7`）、それは LP の機構でないので **`6f572c29` で字面移植**——LP は `Slur::auxiliary_acknowledge_extra_object`（`slur.cc:364-387`）で **engrave 時にアクティブ（時間重なり）なスラーだけ**を `encompass-objects` に populate する。だから衝突対象を「描画 X の重なり」でなく **音符レンジ（時間）の重なり**（`SlurSpansOverlap`）で決めた＝別小節の弓は互いの set に入らない＝cross-system 偽重なりが構造的に消える。**corpus では出力不変**（same-system 版と挙動同一・snapshot 不動）。残 **−0.007708667 は OPEN（受容していない）。原因は当セッションで実測**：interior system で Lily# はスラー対象の全音符間を **7.575ss**、LP は **7.718628ss** で置く＝**約 0.14ss の全音符スペーシング差**（逆算の「0.031」は誤り）。両者とも小節内は一様だが、Lily# は最初の符頭が x=7.56（LP は 5.8）で末尾は同じ ~94.5 に揃うので**音符が狭い領域に圧縮**（clef/prefix が約 1.76ss 広い or 全音符ばね差）。弓の **arc が飽和型**なのでこの 0.14 が 0.0077 に減衰（局所感度 ~0.05・ratio 0.25 でない＝cap 実験が半減止まりだった理由）。**正体は X 軸**（広い拍子の全音符スペーシング／clef prefix・4分音符の bar-line corpus は未監査）が弓経由で Y に出た分。slur モデルは exact（SD/SU が 0）。**修正は横スペーシング側・後で 0.14 を詰める**。**interior gap で測る**（`StaffGapAt(1)`・4 system twin）——span 依存の弓は先頭 system の時値記号・末尾 system の終止線で微妙にずれるので、plain な中間 system 同士の gap を測る。テスト 3220 passed / 0 failed / 3 skipped。LP 忠実度 **38/52 exact・total |residual| 0.019730 ss**（起票時 2.249314 から種で −2.23。§5.2.1④・点集合が違うので過去値と直接比べない）。
 
 ---
 
@@ -28,10 +28,22 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **ページ跨ぎスラー/タイ（SSU/SSD）を対で起票する**
+### ▶ 次のセッションの最初の一手 ＝ **ページ跨ぎタイ（TSID/TSIU 相当）を対で起票する**
 
-**島2 は建った**（`e08f5e12`・下記 ✅）。臨時記号スタッキングの 4 点は **exact**（実 glyph outline スカイラインを bake→`position_apes` へ字面移植）。**残る真の未測領域はページ跨ぎスラー/タイだけ**——`AugmentSkylinesForPaging` にスラー/タイをまだ種として入れていない（§3A）。
-手順は §1 末尾の「4 回連続で成立した型」（対で起票→予測を先に書く→種）。**SSU/SSD の対を先に起票**してから種を入れる（台帳点の無い snapshot を動かさないため。タプレットが TU/TD の後に TSU/TSD で page を閉じたのと同じ順序）。
+**ページ跨ぎスラー SSD/SSU は種で −0.0077 まで詰めた**（`3ac143e7` 種＋`6f572c29` 衝突修正の LP 字面移植・下記 ✅）。残 −0.0077 は **OPEN（受容せず・原因は X 軸の全音符スペーシング 0.14ss と実測済み・下記 ⚠️）**。残る真の未測領域は**ページ跨ぎタイ**——`AugmentSkylinesForPaging` は今スラーは種にするが**タイはまだ**（`AddTiesToSkyline` は staff skyline 専用）。手順はスラーと同型：SD/SU→TID/TIU の staff 版があるように、SSD/SSU の page 版の次は **TSID/TSIU（tie system down/up）を対で起票→種**。
+
+**タイ起票の勘所**（スラーで確立した型）:
+1. **probe は 4 補正込み**（`\break` で偶数分割・`ragged-right=##f`・`indent=0`・`\omit TimeSignature`）で 2 system を厳密同一に＝対（TSID==TSIU）が LP 側で成立。タイは平坦（`height-limit 1.0`/`ratio 0.333` vs スラー 2.0/0.25）なので**床 12 を超えるには SSD/SSU の 8ss より深い音符**が要る（TID が e/-11 だったので、system 版はさらに深く）。
+2. Lily# twin は **16 小節・4 system・`StaffGapAt(1)` で interior gap** を測る（先頭 system の時値記号・末尾の終止線を避ける＝スラーと同じ）。
+3. 種は `AugmentSkylinesForPaging` に `AddTiesToSkyline` を配線（`LayoutEngine.cs` のスラー種ブロックの真下に同型で足す＝`prelimTies.ToImmutableArray()` を引数追加）。**タイは衝突回避を持たない**（`TieFormattingProblem` は `existingSlurs` 相当を使わない）ので cross-system ドリフトは出ないはず（要確認）。
+4. **予測: SSD/SSU と同様の OPEN 残差に着地**——タイのインク近似 `+0.001391`（TID/TIU 参照）＋X 軸スペーシングが arc 経由で漏れる分（SSD/SSU で実測した 0.14ss 全音符スペーシング差と同根）。0 exact は望み薄。受容せず OPEN で。
+
+⚠️ **残った −0.007708667（SSD/SSU）は OPEN＝ユーザーは受容していない。原因は当セッションで実測済み**（§5.3 に従い逆算をやめて実測）：**Lily# の全音符スペーシングが LP より約 0.14ss 狭い**（interior system の slur 対象間 Lily# 7.575 vs LP 7.718628）。両者小節内一様だが Lily# は最初の符頭 x=7.56（LP 5.8）で末尾は同じ ~94.5＝**clef/prefix が約 1.76ss 広く音符を圧縮**。弓 arc が飽和型なので 0.14→0.0077 に減衰（感度 ~0.05）。**正体は X 軸**（広い拍子の全音符スペーシング・4分音符 corpus 未監査）。slur モデルは exact。**次の詰め所＝この 0.14 の X スペーシング差**（clef prefix 1.76 幅 or 全音符ばね）。**今はコード/残差そのまま**（ユーザー判断）＝OPEN のまま X 軸修正の機会に回す。
+
+★ **今回の教訓 3 つ**:
+- **span 依存 grob（スラー/タイ）を page で測るには 4 補正 ＋ interior gap**。tuplet bracket は固定 padding でクリアするので TSD/TSU は素の 6 小節でよかったが、弓の arc は横 span 依存なので先頭/末尾 system が微妙にずれる＝`StaffGapAt(1)` で中間 gap を測る。
+- **種は degenerate twin で第2欠陥を出す**（§5.2.1④）：スラー種を入れた瞬間、prelim slur の **cross-system 衝突回避が 0.5/system ドリフト**を露呈した。同一小節反復＋左揃えで別 system の弓が局所 X で重なり、scorer が同一障害物と誤認。**字面移植で解決**（`6f572c29`）＝LP は `Slur::auxiliary_acknowledge_extra_object`（`slur.cc:364-387`）で時間重なりのスラーだけを `encompass-objects` に入れるので、衝突対象を音符レンジ重なり（`SlurSpansOverlap`）で決める。⚠️ **最初 same-system フィルタで「効くが字面でない」対処をしかけた——ユーザーの「字面移植できたか」で気付いて直した。§5.2 の「効くが LP でない」を残さない。**
+- **Corpus_ReportsTotalDivergence は台帳の stored residual を読むだけ**——種の効果を測るには theory（`Geometry_MatchesLilyPondWithinTheRecordedResidual`）を回す。種を入れた直後に Corpus で −1.1225 が変わらず「効いてない」と誤読しかけた。
 
 ⚠️ **島2 の残（focused session で拾う候補）**:
 - ★ **単音/グレースの臨時記号 DRAW が第2の配置モデル**（§5.2.1②）。和音は `AccidentalColumn.CalculatePositions`（position_apes）→`DrawAccidentalAtInkLeft` だが、**単音 `NoteItem`（`SharedRenderer.Noteheads.cs:440`）とグレース（`SharedRenderer.GraceNotes.cs:91`）は `DrawAccidental` の固定 `AccidentalNoteGap 0.35`**。sharp/flat は一致するが、**♮ は実スカイラインと 0.0176 ss ずれる**（sub-visual。符頭間隔は `SpacingRules`/`ItemSkylineFactory` が `CalculateSinglePosition` で LP-exact なので台帳は緑）。単音描画も `CalculateSinglePosition` の XOffset で描けば一元化＝ずれ消滅。**バグでなく重複モデルの掃除**。
@@ -1366,7 +1378,7 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 33/46 exact, total |residual| = 0.021985 ss over 42 distances ＋ counts 4/4**
+**現状 38/52 exact, total |residual| = 0.019730 ss over 48 distances ＋ counts 4/4**
 （`audit/lp-geometry/`・**LP 2.26.0 基準**。beam 2 点は `1a002706`/`0138e5c0` で開き＋種（各 +0.95→+0.69）、
 前セッションで **forced-direction stem shortening（beam `shorten`）を移植して各 +0.69 → 0**（exact）＝§1 冒頭。
 合計は 0.021985 → 1.921985 → 1.401985 → **0.021985**（スラー/タイを閉じた地点に戻った）。この合計を過去値と直接比べない——点集合が違う）。
@@ -1413,8 +1425,9 @@ X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイラ
 スラー/タイ/ビームも対で開き済みで閉じた——スラー `87bcde22`＋`f093583e`→`d11ede43`、タイ `c182d4d0`→`b0fe9c42`、
 ビーム `1a002706`／`0138e5c0`→`81d5740d`（+0.95→+0.69→0 exact・§1 冒頭）。
 閉じ方＝**実 glyph 水平スカイラインを bake→`position_apes` 字面移植**（島2＝実スカイライン基盤・§1 ▶）。
-おまけに **♮ の `barline.next.key-change-to-notehead` −0.017672 も閉じた**（単音の左予約が同じスカイライン項を取りこぼしていた）。**残る真の未測領域はページ跨ぎスラー/タイ（SSU/SSD）だけ。**
-⚠️ タプレットで点を開いたら**欠陥が 4 つ**出た教訓は健在——**新しい点は必ず対で作ること。**
+おまけに **♮ の `barline.next.key-change-to-notehead` −0.017672 も閉じた**（単音の左予約が同じスカイライン項を取りこぼしていた）。
+✅ **ページ跨ぎスラーの対 SSD/SSU は閉じた**（`0385b1fb` 起票→`3ac143e7` 種＋衝突修正。`system.slur-{under,over}-notes` −1.122500648479451 → **−0.007708667**・両側 13.114791981 で 15 桁一致）。残 −0.0077 は **OPEN（原因未特定・受容せず）**＝arc の音符間隔追従と推測だが未実測（§1 ▶）。**残る真の未測領域はページ跨ぎタイ（未起票・§1 ▶）だけ。**
+⚠️ タプレットで点を開いたら**欠陥が 4 つ**出た教訓は健在——**新しい点は必ず対で作ること。** スラーはさらに span 依存なので probe に 4 補正＋interior gap が要り、種が cross-system 衝突ドリフトを露呈した（§1 ▶ の教訓）。
 
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 

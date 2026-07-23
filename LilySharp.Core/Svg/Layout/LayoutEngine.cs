@@ -320,7 +320,7 @@ internal sealed class LayoutEngine
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.BarNumbers, prelimAnn.TupletBrackets);
+                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray());
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -1135,7 +1135,8 @@ internal sealed class LayoutEngine
         ImmutableArray<CustomTextLayout> customTexts = default,
         ImmutableArray<ChordNameLayout> chordNames = default,
         ImmutableArray<BarNumberLayout> barNumbers = default,
-        ImmutableArray<TupletBracketLayout> tupletBrackets = default)
+        ImmutableArray<TupletBracketLayout> tupletBrackets = default,
+        ImmutableArray<SlurLayout> slurs = default)
     {
         if (skylines == null)
             return null;
@@ -1171,6 +1172,36 @@ internal sealed class LayoutEngine
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
                 SkylineBuilder.AddTupletBracketsToSkyline(group.ToImmutableArray(), up, down);
+                result[s] = (up, down);
+            }
+        }
+
+        // A slur is the same kind of inside-staff grob as the tuplet bracket -- it carries
+        // vertical-skylines from its stencil and sets no outside-staff-priority
+        // (scm/define-grobs.scm Slur), so the next system must clear its bow exactly as it
+        // clears the notes. MultiStaffLayouter.BuildAllStaffSkylines seeds the OTHER skyline
+        // (the per-staff one Align_interface reads); this is the one the PAGE spaces systems
+        // by, and until now it reserved the bow nowhere between systems. The bow's *YUp is the
+        // WITHIN-SYSTEM Y-up the prelim scorer produced (staffMiddleDown is the within-system
+        // staff offset), the same frame AddTupletBracketsToSkyline arrives in, so it seeds
+        // without a further offset -- once ElementCoordinator.LayoutSlurs stopped letting a
+        // slur on one system collide with one on another (which had drifted each system's bow
+        // deeper). Attribution to a system mirrors EnrichExtentsWithAnnotationProtrusions: a
+        // broken continuation piece belongs to the system holding its END.
+        // audit/lp-geometry system.slur-{under,over}-notes.
+        if (!slurs.IsDefaultOrEmpty)
+        {
+            foreach (var group in slurs.GroupBy(sl => measureToSystem.TryGetValue(
+                sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex, out int s) ? s : -1))
+            {
+                int s = group.Key;
+                if (s < 0 || s >= result.Count)
+                    continue;
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(result[s].up);
+                var down = new VerticalSkyline(VerticalDirection.Down);
+                down.Merge(result[s].down);
+                SkylineBuilder.AddSlursToSkyline(group.ToImmutableArray(), up, down);
                 result[s] = (up, down);
             }
         }

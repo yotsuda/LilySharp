@@ -1,4 +1,4 @@
-\version "2.24.4"
+\version "2.26.0"
 %% LP FIDELITY PROBE — a glyph's SKYLINE against its own stencil extent.
 %%
 %% Why this exists. The vertical ledger's last four residuals are all one number: Lily#

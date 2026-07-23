@@ -243,6 +243,33 @@ internal sealed class RenderedGeometry
         return gaps[0];
     }
 
+    /// <summary>
+    /// The gap between system <paramref name="index"/> and the next, on
+    /// <paramref name="page"/> — for probes whose FIRST or LAST system differs from the
+    /// interior ones so the gaps are deliberately NOT uniform and <see cref="StaffGap"/>
+    /// would refuse to pick one.
+    /// </summary>
+    /// <remarks>
+    /// A slur's arc depends on the horizontal span (unlike a tuplet bracket, which clears the
+    /// notes by a fixed padding), so a system carrying a time signature or a final bar line
+    /// spaces its notes — and thus its bow — a hair differently from a plain interior system.
+    /// The page-crossing slur probes (system.slur-{under,over}-notes) name an INTERIOR gap,
+    /// both of whose systems are plain, so the measured gap is the one the LilyPond probe's
+    /// deliberately-uniform systems produce. Reads a single named gap and does not check
+    /// uniformity — the caller has asserted, by index, which gap is the meaningful one.
+    /// </remarks>
+    public double StaffGapAt(int index, int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (index < 0 || index + 1 >= refs.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: gap {index} needs systems {index} and {index + 1}, "
+                + $"but only {refs.Count} exist.");
+        }
+        return refs[index + 1] - refs[index];
+    }
+
     /// <summary>Music glyphs in drawing order, left to right.</summary>
     public IReadOnlyList<DrawnGlyph> Glyphs =>
         _page.Glyphs.OrderBy(g => g.X).ToList();

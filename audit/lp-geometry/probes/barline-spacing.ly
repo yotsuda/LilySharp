@@ -1,4 +1,4 @@
-\version "2.24.4"
+\version "2.26.0"
 %% LP FIDELITY PROBE — bar-line spacing (Staff_spacing::get_spacing and its neighbours).
 %%
 %% Produces the numbers in ../lp-geometry.json under the "barline.*" keys. Run it with

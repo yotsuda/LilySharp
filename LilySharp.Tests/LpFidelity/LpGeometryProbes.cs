@@ -916,6 +916,102 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A SLUR measured BETWEEN SYSTEMS instead of between staves — the slur's version of
+    /// <see cref="TSD"/>/<see cref="TSU"/>, drooping DOWN out of one system toward the next.
+    /// The first ledger point to reach <c>LayoutEngine.AugmentSkylinesForPaging</c> with a
+    /// slur.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="SD"/>/<see cref="SU"/> reach <c>MultiStaffLayouter.BuildAllStaffSkylines</c>,
+    /// the per-staff skyline <c>Align_interface</c> reads. Nothing in the corpus reaches
+    /// <c>AugmentSkylinesForPaging</c> — the OTHER skyline, the one the PAGE spaces systems by
+    /// — with a slur: it seeds tuplet brackets, figured basses and scripts but NOT slurs
+    /// (nor ties), so between systems a slur is reserved NOWHERE, exactly as the tuplet
+    /// bracket was before <c>075277ff</c>. One staff over several systems, so
+    /// <c>StaffGapAt(1)</c> reads system-system-spacing here (an INTERIOR gap, since a
+    /// span-dependent bow makes the first system's time signature and the last's final bar
+    /// line space theirs a hair off; the interior systems are plain, like the probe's).
+    /// <para>
+    /// THE FLOOR IS TWELVE, not StaffGrouper's nine. The slur must clear it and the noteheads
+    /// alone must NOT: <c>g,,</c> (LilyPond <c>g,</c>, G2) is 8 staff spaces below the middle
+    /// line, so notehead-alone is 8.545 + 2.05 + 1 = 11.595, UNDER 12 — a Lily# that reserves
+    /// the notes and not the slur sits on the floor and the residual reads the WHOLE slur
+    /// protrusion past it. LilyPond droops the bow to 10.072501 below the refpoint, for a gap
+    /// of 13.122501 that clears 12 with more than a staff space to spare.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE TWO SYSTEMS MUST BE IDENTICAL, because a slur's arc — unlike a tuplet bracket's
+    /// fixed padding — depends on the horizontal SPAN, so SSD binds the top system's slur and
+    /// SSU the bottom's, and any spacing difference between them makes the pair disagree. The
+    /// probe forces this: <c>\break</c> for an even 4+4 split, <c>ragged-right = ##f</c> so the
+    /// last system is justified too, <c>indent = 0</c> so the first system is not narrowed, and
+    /// <c>\omit TimeSignature</c> so neither head carries a meter glyph the other lacks. With
+    /// all four, LilyPond prints the IDENTICAL bow depth on both systems and SSD == SSU to
+    /// full precision. Each bar still opens with a plain middle-line whole note, the correction
+    /// <see cref="TSD"/> documents, so the bow meets the next system's staff line rather than
+    /// its clef.
+    /// </para>
+    /// LilyPond twin: <c>\new Staff \with { \omit TimeSignature } { \time 12/4
+    /// \repeat unfold 4 { b'1 g,1( g,1) } \break \repeat unfold 4 { b'1 g,1( g,1) } }</c>
+    /// under <c>\paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }</c>.
+    /// </remarks>
+    private static readonly string SSD = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 g,,1( g,,1) | ", 16)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "SSD" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="SSD"/> with the slur on the other side — an up-slur reaching UP out of the
+    /// lower system toward the one above it, the mirror of book SSU. <c>d'''</c> (LilyPond
+    /// <c>d''''</c>, D7) sits +16 above the middle line, the exact reflection of <c>g,,</c>'s
+    /// -16 below it, so LilyPond prints the same 13.122501 and the two must agree.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="SSD"/>, for the reason Q is not redundant with P: SSD
+    /// binds the lower system's top ink against a bow coming down, SSU the upper system's
+    /// bottom ink against one going up. Two edges of one gap through two different skylines.
+    /// <para>
+    /// LilyPond twin: <c>\new Staff \with { \omit TimeSignature } { \time 12/4
+    /// \repeat unfold 4 { b'1 d''''1( d''''1) } \break \repeat unfold 4 { b'1 d''''1( d''''1) } }</c>
+    /// under <c>\paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string SSU = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 d'''1( d'''1) | ", 16)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "SSU" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -1100,5 +1196,18 @@ internal static class LpGeometryProbes
         // LayoutEngine.AugmentSkylinesForPaging. See probes TSU and TSD.
         new("system.tuplet-bracket-up", TSU, g => g.StaffGap()),
         new("system.tuplet-bracket-down", TSD, g => g.StaffGap()),
+
+        // The slur once more, one staff over two systems, so StaffGap() reads
+        // system-system-spacing instead of Align_interface. SD/SU reach
+        // MultiStaffLayouter.BuildAllStaffSkylines; these are the only slur points that reach
+        // LayoutEngine.AugmentSkylinesForPaging, which seeds tuplet brackets but not slurs.
+        // Both sides because SSD binds the lower system's top against a bow coming down and SSU
+        // the upper system's bottom against one going up. See probes SSD and SSU.
+        // An INTERIOR gap (index 1, between two plain middle systems): a slur's arc is
+        // span-dependent, so the first system's time signature and the last system's final
+        // bar line space their bows a hair differently, and StaffGap() would refuse a
+        // non-uniform page. See StaffGapAt.
+        new("system.slur-under-notes", SSD, g => g.StaffGapAt(1)),
+        new("system.slur-over-notes", SSU, g => g.StaffGapAt(1)),
     };
 }

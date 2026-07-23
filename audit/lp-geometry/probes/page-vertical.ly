@@ -1,4 +1,4 @@
-\version "2.24.4"
+\version "2.26.0"
 %% LP FIDELITY PROBE — page VERTICAL geometry (Page_layout_problem / the page breaker).
 %%
 %% The X probe (barline-spacing.ly) measures inside one system. This one measures the page:
@@ -604,5 +604,67 @@ probeTag =
       \new Staff { \clef bass \time 4/4
         << { \voiceOne f'8 f' f' f' f' f' f' f' } \\ { \voiceTwo d1 } >> }
     >>
+  }
+}
+
+%% SSD / SSU — the SLUR pair (SD/SU) measured BETWEEN SYSTEMS instead of between staves, the
+%%     slur's version of TSD/TSU. SD and SU reach MultiStaffLayouter.BuildAllStaffSkylines;
+%%     nothing in the corpus reaches LayoutEngine.AugmentSkylinesForPaging with a slur, and
+%%     that pass — the one whose skyline the PAGE spaces systems by — seeds tuplet brackets,
+%%     figured basses and scripts but NOT slurs (nor ties). So between systems a slur is
+%%     reserved NOWHERE, exactly as the tuplet bracket was before it was seeded there. One
+%%     staff over several systems, so the same StaffGap() that reads Align_interface in SD/SU
+%%     reads system-system-spacing here.
+%%
+%%     ragged-bottom and short enough for one page, so the gap is the spring's own natural
+%%     length — the regime of books N, L and TSD/TSU, NOT the solved force of J. Mixing them
+%%     is what HANDOFF 5.3 exists to prevent.
+%%
+%%     ⚠️ THE PITCH IS NOT FREE, AND THE FLOOR IS TWELVE HERE, not StaffGrouper's nine. The
+%%     slur must clear system-system-spacing's basic-distance of TWELVE, and the noteheads
+%%     alone must NOT — the same two requirements TSD/TSU are built around. The notes sit 8
+%%     staff spaces outside the middle line (the tuplet's proven depth): a whole note at that
+%%     pitch reaches 8.545 below the refpoint, so notehead-alone is 8.545 + 2.05 + 1 = 11.595,
+%%     UNDER 12 — a Lily# that reserves the notes and not the slur sits exactly on the floor
+%%     and the residual reads the WHOLE slur protrusion past it. LilyPond droops the slur to
+%%     roughly 9.96 below the refpoint (centre 8.0 + head edge 0.545 + lift 0.5 + arc + ink),
+%%     for a gap around 13.0 that clears 12 with more than a staff space to spare. The exact
+%%     number is measured, not computed — the arc height follows from the slur span.
+%%
+%%     ⚠️ SINGLE VOICE, NO \slurDown, unlike TSD/TSU. A tuplet bracket sits on its voice's
+%%     stem side and needs a forced voice to face the gap; a slur curves OPPOSITE the stems
+%%     (Slur::calc_direction), so a low note (up stem) slurs DOWN and a high note (down stem)
+%%     slurs UP with no override — the same default SD/SU rely on. LP and Lily# must decide
+%%     the side by the same rule or the pair is not comparable.
+%%
+%%     ⚠️ EACH BAR OPENS WITH A PLAIN WHOLE NOTE on the middle line, and that is not
+%%     decoration — it is the correction TSD/TSU document. Written as a bar-filling slur the
+%%     bow would start right after the clef, and at that x the OTHER system's binding ink is
+%%     not its staff line at 2.05 but its CLEF (down-skyline 3.540 for the up book, up-skyline
+%%     4.776 for the down one), so the entry would silently measure clef-against-slur and fold
+%%     the clef's own LILC-vs-skyline sliver (system.clef-bounded-distance) into a slur entry.
+%%     The leading whole note pushes the bow clear of both system edges. HANDOFF 5.3.
+%%
+%%     SSD and SSU must print the SAME number: the notes are the exact mirror (g,, at -16 is
+%%     g -9's continuation, d''' at +16 its reflection) and the slur is symmetric about the
+%%     attachment, so a difference between them is a defect on its own — the property P/Q,
+%%     TU/TD, SD/SU and TSD/TSU are all built on.
+\book {
+  \probeTag "SSD"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new Staff \with { \omit TimeSignature } { \time 12/4
+      \repeat unfold 4 { b'1 g,1( g,1) } \break
+      \repeat unfold 4 { b'1 g,1( g,1) } }
+  }
+}
+
+\book {
+  \probeTag "SSU"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new Staff \with { \omit TimeSignature } { \time 12/4
+      \repeat unfold 4 { b'1 d''''1( d''''1) } \break
+      \repeat unfold 4 { b'1 d''''1( d''''1) } }
   }
 }
