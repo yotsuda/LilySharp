@@ -142,8 +142,8 @@
   <rect x="84.74" y="28.37" width="0.19" height="4.00" data-pos="676"/>
   <rect x="101.34" y="28.37" width="0.19" height="4.00" data-pos="720"/>
   <rect x="101.83" y="28.37" width="0.60" height="4.00" data-pos="720"/>
-  <path d="M 67.57,25.07 C 68.47,25.80 71.75,25.80 72.65,25.07 C 71.75,25.92 68.47,25.92 67.57,25.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 47.20,23.72 C 49.24,24.97 58.10,23.94 60.16,22.22 C 58.12,24.06 49.25,25.09 47.20,23.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 67.57,25.07 C 68.47,25.79 71.75,25.79 72.65,25.07 C 71.75,25.91 68.47,25.91 67.57,25.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 47.20,23.87 C 49.24,25.12 58.10,24.09 60.16,22.37 C 58.12,24.21 49.25,25.23 47.20,23.87 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="84.20" y1="14.97" x2="84.20" y2="15.67" stroke="#000000" stroke-width="0.160" data-pos="425"/>
   <line x1="84.20" y1="14.97" x2="86.58" y2="14.62" stroke="#000000" stroke-width="0.160" data-pos="425"/>
   <line x1="88.58" y1="14.33" x2="90.97" y2="13.97" stroke="#000000" stroke-width="0.160" data-pos="425"/>
@@ -402,7 +402,7 @@
   <line x1="9.82" y1="19.32" x2="9.82" y2="17.05" stroke="#000000" stroke-width="0.085" data-pos="227"/>
   <polygon points="8.80,17.42 9.86,16.87 9.86,17.18 8.80,17.73" data-pos="227"/>
   <polygon points="8.80,17.94 9.86,17.40 9.86,17.71 8.80,18.25" data-pos="227"/>
-  <path d="M 9.74,21.12 C 10.27,21.38 10.97,21.23 11.35,20.77 C 10.98,21.30 10.29,21.45 9.74,21.12 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
+  <path d="M 9.74,20.82 C 10.27,21.08 10.97,20.93 11.35,20.47 C 10.98,21.00 10.29,21.15 9.74,20.82 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
   <text class="music" x="27.54" y="16.82" font-size="2.60" data-pos="297"></text>
   <line x1="28.34" y1="16.82" x2="28.34" y2="14.55" stroke="#000000" stroke-width="0.085" data-pos="297"/>
   <text class="music" x="28.34" y="14.55" font-size="2.60" data-pos="297"></text>

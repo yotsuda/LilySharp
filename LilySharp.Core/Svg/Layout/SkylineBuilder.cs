@@ -269,7 +269,9 @@ internal sealed class SkylineBuilder
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<DynamicItem> dynamics = default,
         ImmutableArray<ArticulationLayout> articulationLayouts = default,
-        ImmutableArray<TupletBracketLayout> tupletBrackets = default)
+        ImmutableArray<TupletBracketLayout> tupletBrackets = default,
+        ImmutableArray<SlurLayout> slurs = default,
+        ImmutableArray<TieLayout> ties = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -309,6 +311,20 @@ internal sealed class SkylineBuilder
         // bracket over notes reaching towards the neighbour was drawn straight across that
         // neighbour's staff lines.
         AddTupletBracketsToSkyline(tupletBrackets, upSkyline, downSkyline);
+
+        // A slur is an ordinary inside-staff grob in LilyPond too (no
+        // outside-staff-priority), so it joins the staff's vertical skyline like the
+        // clef and the tuplet bracket, and the staff below must clear its bow. Nothing
+        // seeded it here before; the gap rested on the notes and a slur drooping into it
+        // was reserved nowhere. audit/lp-geometry staff.staff.slur-{under,over}-notes.
+        AddSlursToSkyline(slurs, upSkyline, downSkyline);
+
+        // A tie is the same kind of grob as the slur — vertical-skylines from its stencil,
+        // no outside-staff-priority (scm/define-grobs.scm Tie) — so it joins the staff's own
+        // skyline too, and a staff below must clear its bow. Ties were reserved nowhere;
+        // audit/lp-geometry staff.staff.tie-{under,over}-notes measured the gap resting on
+        // the notes alone (-0.560901).
+        AddTiesToSkyline(ties, upSkyline, downSkyline);
 
         return (upSkyline, downSkyline);
     }
@@ -396,6 +412,127 @@ internal sealed class SkylineBuilder
                     b.NumberX - halfW, b.NumberX + halfW,
                     midYUp - halfH, midYUp + halfH, direction));
             }
+        }
+    }
+
+    /// <summary>
+    /// Seeds the drawn slur bows into the per-staff skylines so the inter-staff gap
+    /// reserves the room they occupy — the analogue of <see cref="AddTupletBracketsToSkyline"/>
+    /// for slurs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Slur carries <c>vertical-skylines</c> from its
+    /// stencil and sets NO <c>outside-staff-priority</c>, so lily/axis-group-interface.cc
+    /// keeps it inside the staff's own axis group like the clef and the tuplet bracket.
+    /// <para>
+    /// The bow's control points are the CENTRELINE of a bezier sandwich (see
+    /// <c>SharedRenderer.DrawBow</c> / lily/lookup.cc Lookup::slur): the drawn ink stands
+    /// half the middle thickness plus half the round-cap stroke proud of it on the OUTWARD
+    /// side. So the cubic is flattened into segments — as LilyPond flattens its own bezier
+    /// for the skyline (lily/stencil-integral.cc add_draw_bezier_segments) — and each
+    /// sample is pushed out by that half-extent before it is stored. The <c>*YUp</c> here
+    /// is measured from the staff's top line (the caller runs the slur scorer with no staff
+    /// offset), exactly this skyline's origin, the same frame the tuplet bracket arrives in.
+    /// </para>
+    /// </remarks>
+    internal static void AddSlursToSkyline(
+        ImmutableArray<SlurLayout> slurs,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (slurs.IsDefaultOrEmpty)
+            return;
+        foreach (var s in slurs)
+            SeedBowInk(s.StartX, s.StartYUp, s.Control1, s.Control2, s.EndX, s.EndYUp,
+                upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds the drawn tie bows into the per-staff skylines. A Tie is the same kind of grob
+    /// as the Slur — <c>vertical-skylines</c> from its stencil, no <c>outside-staff-priority</c>
+    /// (scm/define-grobs.scm Tie), same bezier-sandwich ink (<c>thickness 1.2</c> /
+    /// <c>line-thickness 0.8</c>) — so it reserves its bow exactly as the slur does. See
+    /// <see cref="SeedBowInk"/>. audit/lp-geometry staff.staff.tie-{under,over}-notes.
+    /// </summary>
+    internal static void AddTiesToSkyline(
+        ImmutableArray<TieLayout> ties,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (ties.IsDefaultOrEmpty)
+            return;
+        foreach (var t in ties)
+            SeedBowInk(t.StartX, t.StartYUp, t.Control1, t.Control2, t.EndX, t.EndYUp,
+                upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds one bow (slur or tie) into the per-staff skylines so the inter-staff gap
+    /// reserves the ink it occupies — the analogue of <see cref="AddTupletBracketsToSkyline"/>
+    /// for the curved spanners. Shared by <see cref="AddSlursToSkyline"/> and
+    /// <see cref="AddTiesToSkyline"/> so the drawn bow and its reservation come from ONE model.
+    /// </summary>
+    /// <remarks>
+    /// The control points are the CENTRELINE of a bezier sandwich (lily/lookup.cc:395-415
+    /// Lookup::slur, used for the tie too): the two INTERIOR control points are pushed out by
+    /// half the mid thickness, normal to the chord, to form the outer edge, and the whole
+    /// outline is stroked with a round pen of the line thickness. The bow ENDS (control_[0]/[3])
+    /// do NOT move, so the ink stands only half the pen proud at the ends and bulges to
+    /// +0.375·curvethick at the peak — a taper, not a flat half-extent. The cubic is flattened
+    /// into segments as LilyPond flattens its own bezier for the skyline
+    /// (lily/stencil-integral.cc add_draw_bezier_segments). The <c>*YUp</c> is measured from
+    /// the staff's top line (the caller runs the scorer with no staff offset), exactly this
+    /// skyline's origin. LILYPOND-REF: lily/lookup.cc:403-407 (back.control_[1,2] +=
+    /// 0.5·curvethick·perp) and :484-515 bezier_sandwich (stroked with line_thick).
+    /// <para>
+    /// The bow direction is read from the geometry — the control points sit above the chord
+    /// for an up bow, below for a down one — so a Slur (which knows its CurveUp) and a Tie
+    /// (which does not carry one) are handled identically. Slur and tie share the mid/line
+    /// thickness (both 1.2 / 0.8 × line-thickness), so a single half-extent serves both.
+    /// </para>
+    /// </remarks>
+    private static void SeedBowInk(
+        double p0x, double p0y, (double X, double Y) c1, (double X, double Y) c2,
+        double p3x, double p3y, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        const int samples = 16;
+        double halfCurve = 0.5 * EngravingDefaults.SlurMidThickness; // 0.5·curvethick perp shift
+        double halfPen = 0.5 * EngravingDefaults.BowEndRounding;     // half the round stroke pen
+
+        // Up bow if the controls sit above the chord midline (Y-up), else down.
+        bool curveUp = (c1.Y + c2.Y) >= (p0y + p3y);
+        double dir = curveUp ? 1.0 : -1.0;
+        var sky = curveUp ? upSkyline : downSkyline;
+        var direction = curveUp ? VerticalDirection.Up : VerticalDirection.Down;
+
+        // Shift the interior control points onto the outer edge. Only the Y component of the
+        // chord normal matters to this vertical skyline: |perp_Y| of a unit normal is
+        // |chord_x|/|chord|, so a flat bow shifts the full halfCurve and a steep one less.
+        double cdx = p3x - p0x, cdy = p3y - p0y;
+        double clen = System.Math.Sqrt(cdx * cdx + cdy * cdy);
+        double ctrlOutY = dir * halfCurve * (clen > 1e-9 ? System.Math.Abs(cdx) / clen : 1.0);
+        double p1x = c1.X, p1y = c1.Y + ctrlOutY;
+        double p2x = c2.X, p2y = c2.Y + ctrlOutY;
+
+        double prevX = 0, prevY = 0;
+        for (int i = 0; i <= samples; i++)
+        {
+            double t = (double)i / samples;
+            double mt = 1 - t;
+            double b0 = mt * mt * mt, b1 = 3 * mt * mt * t, b2 = 3 * mt * t * t, b3 = t * t * t;
+            double x = b0 * p0x + b1 * p1x + b2 * p2x + b3 * p3x;
+            double y = b0 * p0y + b1 * p1y + b2 * p2y + b3 * p3y + dir * halfPen;
+            if (i > 0)
+            {
+                double xl = System.Math.Min(prevX, x), xr = System.Math.Max(prevX, x);
+                if (xr > xl)
+                {
+                    bool leftFirst = prevX <= x;
+                    double yl = leftFirst ? prevY : y;
+                    double yr = leftFirst ? y : prevY;
+                    sky.Merge(VerticalSkyline.FromSlope(xl, yl, xr, yr, thickness: 0, direction));
+                }
+            }
+            prevX = x;
+            prevY = y;
         }
     }
 

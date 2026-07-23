@@ -510,3 +510,34 @@ probeTag =
     >>
   }
 }
+
+%% TID / TIU — the SLUR pair (SD/SU) again with a TIE, the adjacent inside-staff grob.
+%%     LilyPond's Tie carries vertical-skylines from its stencil and sets NO
+%%     outside-staff-priority (define-grobs.scm Tie), so like the slur and the clef it
+%%     joins the staff's own vertical skyline and a staff below must clear its bow. A tie
+%%     is FLATTER than a slur (details height-limit 1.0 / ratio 0.333 vs the slur's 2.0 /
+%%     0.25), so the tied notes are pushed further out than SD/SU's g/f' to keep the bow
+%%     off the basic-distance-9 floor -- e (E3) is -11 below the treble middle line, a'
+%%     +11 above the bass one. Measured 2026-07-24: both bind at 9.655901 (margin 0.66
+%%     above the floor), and they print the IDENTICAL number, the pair's cross-check.
+\book {
+  \probeTag "TID"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4 e1~ e1 }
+      \new Staff { \clef bass \time 8/4 d1 d1 }
+    >>
+  }
+}
+
+\book {
+  \probeTag "TIU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4 b'1 b'1 }
+      \new Staff { \clef bass \time 8/4 a'1~ a'1 }
+    >>
+  }
+}

@@ -269,10 +269,13 @@ internal sealed class SlurScoringProblem
         // Y-up: an up slur sits ABOVE its notes, so attachments move to larger Y.
         int dir = preferUp ? 1 : -1;
 
-        // Base attachment offset from notes
-        double offset = 0.3; // staff spaces
-        double baseStartY = preferUp ? _startY + offset : _startY - offset;
-        double baseEndY = preferUp ? _endY + offset : _endY - offset;
+        // The caller (ElementCoordinator.LayoutSlurs) already supplies LilyPond's base
+        // attachment, lifted off the note (head edge + 0.5 ss, or the beam tip + 0.5 ss),
+        // so the enumeration begins AT that base and grids outward — it must not add a
+        // second lift of its own, which used to push every slur 0.3 ss too far out.
+        // LILYPOND-REF: lily/slur-scoring.cc:727 os[LEFT] = base_attachments_[LEFT].
+        double baseStartY = _startY;
+        double baseEndY = _endY;
 
         // Generate grid: regionSize steps at 0.5 staff-space intervals
         // LILYPOND-REF: lily/slur-scoring.cc:739-740

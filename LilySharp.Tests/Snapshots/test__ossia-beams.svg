@@ -83,8 +83,8 @@
   <line x1="55.51" y1="0.65" x2="55.51" y2="3.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="59.05" y1="0.65" x2="59.05" y2="3.80" stroke="#000000" stroke-width="0.130"/>
   </g>
-  <path d="M 40.69,12.35 C 40.92,12.06 41.26,12.06 41.49,12.35 C 41.26,12.14 40.92,12.14 40.69,12.35 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 25.11,12.77 C 26.54,11.64 30.59,11.01 32.02,11.71 C 30.60,11.10 26.55,11.72 25.11,12.77 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 40.69,12.35 C 40.92,12.09 41.26,12.09 41.49,12.35 C 41.26,12.18 40.92,12.18 40.69,12.35 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 25.11,12.67 C 26.54,11.53 30.59,10.91 32.02,11.61 C 30.60,11.00 26.55,11.62 25.11,12.67 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="24.16" y="17.14" font-size="1.41" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="339">p</text>
   <line x1="45.22" y1="16.13" x2="45.22" y2="15.64" stroke="#000000" stroke-width="0.160" data-pos="361"/>
   <line x1="45.22" y1="16.13" x2="47.34" y2="16.37" stroke="#000000" stroke-width="0.160" data-pos="361"/>

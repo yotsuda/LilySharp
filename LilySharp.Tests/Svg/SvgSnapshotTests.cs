@@ -355,6 +355,10 @@ public class SvgSnapshotTests
         // engraver added a full stem length regardless of duration. Pinned against real
         // LilyPond by staff.staff.tuplet-bracket-{up,down} in the LP-fidelity corpus.
         yield return new object[] { "test/tuplet-bracket-whole-notes" };
+        // Multi-staff: a slur drooping into the inter-staff gap must be RESERVED there, so
+        // the staff below clears its bow — SkylineBuilder had no slur in it. Pinned against
+        // real LilyPond by staff.staff.slur-{under,over}-notes in the LP-fidelity corpus.
+        yield return new object[] { "test/slur-under-whole-notes" };
         // Multi-staff: an arpeggio on a SECOND (bass) staff chord draws to the
         // left of that chord, not the first staff (ArpeggioItem.StaffIndex).
         yield return new object[] { "test/arpeggio-lower-staff" };

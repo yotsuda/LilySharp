@@ -1933,7 +1933,7 @@ internal sealed class LayoutEngine
         return set.Contains;
     }
 
-    private static string ClefToString(ClefType clef) => clef switch
+    internal static string ClefToString(ClefType clef) => clef switch
     {
         ClefType.Treble => "treble",
         ClefType.Bass => "bass",

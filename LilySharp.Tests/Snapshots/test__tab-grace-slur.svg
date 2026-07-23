@@ -44,8 +44,8 @@
   <rect x="19.75" y="27.87" width="2.60" height="1.79" fill="#FFFFFF" data-pos="540"/>
   <text x="21.05" y="29.60" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="540">12</text>
   <line x1="21.63" y1="27.57" x2="21.63" y2="23.07" stroke="#000000" stroke-width="0.130"/>
-  <path d="M 8.64,16.86 C 9.63,15.61 11.79,15.09 12.81,15.86 C 11.82,15.21 9.66,15.72 8.64,16.86 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 16.42,14.86 C 17.44,13.71 19.70,13.44 20.75,14.36 C 19.72,13.56 17.46,13.83 16.42,14.86 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 8.64,15.72 C 9.65,14.70 11.81,14.70 12.81,15.72 C 11.81,14.82 9.65,14.82 8.64,15.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 16.42,14.72 C 17.44,13.56 19.70,13.30 20.75,14.22 C 19.72,13.42 17.46,13.68 16.42,14.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 8.34,29.23 C 9.75,25.42 11.66,25.42 13.11,27.73 C 11.70,25.54 9.79,25.54 8.34,29.23 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 16.11,29.23 C 17.58,23.42 19.55,23.42 21.05,27.73 C 19.58,23.54 17.61,23.54 16.11,29.23 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="10.78" y="17.26" font-size="2.60" data-pos="500"></text>

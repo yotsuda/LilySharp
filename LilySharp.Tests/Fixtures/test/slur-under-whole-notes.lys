@@ -1,0 +1,33 @@
+// Regression: a slur must be RESERVED in the inter-staff gap. LilyPond's Slur is an
+// ordinary inside-staff grob (no outside-staff-priority), so it joins the staff's vertical
+// skyline like the clef and the tuplet bracket, and the staff below must clear its bow.
+//
+// Before this fixture existed the corpus saw it nowhere: SkylineBuilder had no "slur" in
+// it, so a slur drooping into the gap was reserved nowhere and the staff below could settle
+// onto it. SkylineBuilder.AddSlursToSkyline now seeds the flattened bow, from a staff-frame
+// SlurLayout (MultiStaffLayouter.StaffSlurLayouts).
+//
+// The shape is the corpus books SD and SU (audit/lp-geometry/probes/page-vertical.ly),
+// which pin the same geometry against real LilyPond: staff.staff.slur-under-notes and
+// -over-notes. The pitches put the notes UNDER StaffGrouper's basic-distance of 9 while the
+// slur's droop beats it, so the gap reads the slur and not the floor. Default slur
+// direction: a low note takes an up stem so its slur curves down, and vice versa.
+//
+// Bar 1 hangs a DOWN slur off the upper staff into the gap; bar 2 raises an UP slur out of
+// the lower staff into it — in different bars so the two bows never share an x.
+octave absolute
+time 8/4
+key c major
+title "Slurs reserve their room in the staff gap"
+part rh { clef treble }
+part lh { clef bass }
+section S {
+  rh {
+    g,1( g,1) | b1 b1 |
+  }
+  lh {
+    d,1 d,1 | f1( f1) |
+  }
+}
+form main { S }
+score main "slur-under-whole-notes" { grandStaff { staff rh staff lh } }

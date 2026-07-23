@@ -84,7 +84,7 @@
   <rect x="63.15" y="26.82" width="0.19" height="4.00" data-pos="834"/>
   <rect x="76.27" y="26.82" width="0.19" height="4.00" data-pos="845"/>
   <rect x="76.76" y="26.82" width="0.60" height="4.00" data-pos="845"/>
-  <path d="M 44.43,31.57 C 45.03,32.16 46.46,32.16 47.05,31.57 C 46.46,32.28 45.03,32.28 44.43,31.57 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 44.43,31.05 C 45.03,31.59 46.46,31.59 47.05,31.05 C 46.46,31.71 45.03,31.71 44.43,31.05 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="10.80" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="733"/>
   <text x="13.91" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="733">Main</text>
   </g>

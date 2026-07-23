@@ -1091,8 +1091,14 @@ internal sealed class ElementCoordinator
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var slurLayouts = new List<SlurLayout>();
 
-        // Offset slur endpoints to the opposite side of the stem.
-        const double slurOffset = 0.6; // staff spaces
+        // The slur end attaches to the note-head EDGE, then lifts 0.5 staff-space
+        // beyond it (the beamed stem-tip path below lifts the same 0.5 off the beam).
+        // Every standard notehead shares the LILC Y half-extent, so the head edge is
+        // the note centre ± that half-height; the enumeration in SlurScoringProblem now
+        // starts AT this base with no further lift of its own.
+        // LILYPOND-REF: lily/slur-scoring.cc:556-557 get_base_attachments —
+        //   y = head->extent(Y)[dir]; y += dir * 0.5 * staff_space.
+        double slurOffset = GlyphMetrics.NoteheadBlack.Top + 0.5; // 0.545 + 0.5 = 1.045 ss
 
         foreach (var slur in slurs)
         {

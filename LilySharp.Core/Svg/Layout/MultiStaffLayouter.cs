@@ -46,6 +46,9 @@ internal sealed class MultiStaffLayouter
 {
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;
+    // Lays slurs out in the staff's own frame for the per-staff skyline (see
+    // StaffSlurLayouts); cheap to construct (options only) and stateless per call.
+    private readonly ElementCoordinator _elementCoordinator;
 
     /// <summary>Clef→first-note gap (staff spaces) on an ALL-TAB line. The compact "TAB"
     /// clef does not warrant the wide 5.0 space-alist gap an engraved clef reserves
@@ -68,6 +71,7 @@ internal sealed class MultiStaffLayouter
     {
         _options = options;
         _measureLayouter = measureLayouter;
+        _elementCoordinator = new ElementCoordinator(options);
     }
 
     /// <summary>
@@ -1513,8 +1517,10 @@ internal sealed class MultiStaffLayouter
                 var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
                     staff, thisStaff, score.Articulations, measureLayouts);
                 var tupletBrackets = StaffTupletBracketLayouts(score, staff, thisStaff, measureLayouts);
+                var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
+                var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
                 var sky = skylineBuilder.BuildStaffSkylines(
-                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets);
+                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline
@@ -1586,6 +1592,74 @@ internal sealed class MultiStaffLayouter
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
             staffYAt: null,
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff });
+    }
+
+    /// <summary>
+    /// This staff's own slurs, laid out in the staff's own frame so the skyline can
+    /// reserve their bows. The mirror of <see cref="StaffTupletBracketLayouts"/>.
+    /// </summary>
+    /// <remarks>
+    /// Slurs are scored against <see cref="SystemLayout"/>s, which do not exist yet when
+    /// staves are being spaced — so build a TRIVIAL one-staff system with this staff at
+    /// offset 0. The slur scorer's <c>staffMiddleDown</c> then carries no system offset
+    /// (<c>StaffOffsetInSystemDown</c> of the sole staff is 0), and every returned
+    /// <c>*YUp</c> is measured from the staff's top line, exactly the per-staff skyline's
+    /// own origin — the same frame <see cref="StaffTupletBracketLayouts"/> produces. This
+    /// reuses <see cref="ElementCoordinator.LayoutSlurs"/> whole rather than a second copy
+    /// of its scoring. Slur geometry is independent of inter-staff spacing (it is fixed by
+    /// note X and pitch), so computing it before the spacing is decided is sound.
+    /// <para>
+    /// Beams are not passed (default): they only shift a slur's ENDPOINT attachment to a
+    /// beamed stem tip, never the peak that binds the gap, and the beam layouts are not
+    /// available this early — the same trade <see cref="StaffTupletBracketLayouts"/> makes
+    /// for the tuplet number.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<SlurLayout> StaffSlurLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(group),
+            Indent: 0);
+        var staffScore = new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        return _elementCoordinator.LayoutSlurs(
+            staffScore, ImmutableArray.Create(system), staffIndex: 0, staff, score.GraceNotes);
+    }
+
+    /// <summary>
+    /// This staff's own ties, laid out in the staff's own frame so the skyline can reserve
+    /// their bows — the tie analogue of <see cref="StaffSlurLayouts"/>. Same trivial
+    /// one-staff-at-offset-0 system, reusing <see cref="ElementCoordinator.LayoutTies"/>
+    /// whole; tie geometry is fixed by note X and pitch, so it is sound to compute before
+    /// the inter-staff spacing is decided.
+    /// </summary>
+    private ImmutableArray<TieLayout> StaffTieLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(group),
+            Indent: 0);
+        var staffScore = new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        return _elementCoordinator.LayoutTies(
+            staffScore, ImmutableArray.Create(system), staffIndex: 0, staff);
     }
 
     /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its

@@ -630,6 +630,87 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The slur pair (<see cref="SD"/>/<see cref="SU"/>) again with a TIE — the adjacent
+    /// inside-staff grob, drooping DOWN into the staff gap from the upper staff.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's Tie, like its Slur, carries <c>vertical-skylines</c> from its stencil and
+    /// sets NO <c>outside-staff-priority</c> (measured on 2.26.0), so it joins the staff's own
+    /// vertical skyline and a staff below must clear its bow. Lily#'s <c>SkylineBuilder</c>
+    /// seeds tuplet brackets and slurs but NOT ties, so between two staves a tie is reserved
+    /// NOWHERE and the gap rests on the notes alone — the same defect the slur had before
+    /// <c>d11ede43</c>, one grob over.
+    /// <para>
+    /// A tie is flatter than a slur (details <c>height-limit 1.0 / ratio 0.333</c> vs the
+    /// slur's <c>2.0 / 0.25</c>), so the tied notes sit further out than SD/SU's g/f' to keep
+    /// the bow off the basic-distance-9 floor: <c>e,</c> (LilyPond <c>e</c>, E3) is -11 below
+    /// the treble middle line. LilyPond droops the tie to a gap of 9.655901202802955; a Lily#
+    /// that reserves the notes and not the tie rests on the note head (E3 centre 5.5 + 0.545
+    /// = 6.045 below the middle, + 3.05 = 9.095), so the predicted residual is about -0.56,
+    /// the same shape as the slur's pre-seed -0.512596.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 e1~ e1 }
+    /// \new Staff { \clef bass \time 8/4 d1 d1 } &gt;&gt;</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string TID = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { e,1~ e,1 | }
+          lh { d,1 d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "TID" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="TID"/> with the tie on the other side — a tie reaching UP into the gap from
+    /// the lower staff, the mirror of book TIU. <c>a</c> (LilyPond <c>a'</c>, A4) sits +11
+    /// above the bass staff's middle line, so LilyPond prints the same 9.655901202802955 and
+    /// the two must agree (the pair's cross-check, as for SD/SU and P/Q).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 b'1 b'1 }
+    /// \new Staff { \clef bass \time 8/4 a'1~ a'1 } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string TIU = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { b1 b1 | }
+          lh { a1~ a1 | }
+        }
+
+        form main { ~Main }
+
+        score main "TIU" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// The same tuplet bracket as <see cref="TU"/>, measured BETWEEN SYSTEMS instead of
     /// between staves — the mirror of book TSD.
     /// </summary>
@@ -864,6 +945,13 @@ internal static class LpGeometryProbes
         // probes SD and SU.
         new("staff.staff.slur-under-notes", SD, g => g.StaffGap()),
         new("staff.staff.slur-over-notes", SU, g => g.StaffGap()),
+
+        // The slur pair once more with a TIE -- the adjacent inside-staff grob, which Lily#
+        // seeds NOWHERE in its skyline (SkylineBuilder has tuplets and slurs, not ties). Both
+        // sides because TID binds the lower staff's top line against a tie coming down and TIU
+        // the upper staff's bottom line against one going up. See probes TID and TIU.
+        new("staff.staff.tie-under-notes", TID, g => g.StaffGap()),
+        new("staff.staff.tie-over-notes", TIU, g => g.StaffGap()),
 
         // The same bracket again, one staff over several systems, so StaffGap() reads
         // system-system-spacing instead of Align_interface. TU/TD reach

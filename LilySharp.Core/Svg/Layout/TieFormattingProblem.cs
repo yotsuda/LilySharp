@@ -121,7 +121,15 @@ internal sealed class TieFormattingProblem
     /// </remarks>
     public TieLayout Solve()
     {
-        double width = _endX - _startX;
+        // The arc height and the min-length test are measured on the ATTACHMENT width — the
+        // span between the endpoints AFTER they are pulled in by the note-head gap (XGap) on
+        // each side, which is what the bow is actually drawn across. LilyPond computes the
+        // height from attachment_x_.length() after attachment_x_.widen(-x_gap); using the raw
+        // note-to-note span here made every tie's arc a touch too tall (staff.staff.tie-*-notes
+        // read +0.020776 with the endpoints already matching LilyPond).
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:581 attachment_x_.widen(-x_gap) and
+        // :747-757 length()/height(details_); the drawn endpoints below inset by XGap to match.
+        double width = (_endX - _startX) - 2 * _details.XGap;
         if (width < _details.MinLength)
             width = _details.MinLength;
 

@@ -330,7 +330,14 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     }
     out += text.slice(i, hi);
 
-    const caretIn = Math.max(0, Math.min(out.length, caret - lo));
+    // A tabstop can only be placed INSIDE the replaced span, and the caret is
+    // often outside it — an inserted '(' three notes back leaves a one-character
+    // span and a caret at the far end. Grow the span until it reaches, copying
+    // the text on the way; unchanged text costs nothing to replace with itself.
+    let caretIn = caret - lo;
+    while (caretIn > out.length && hi < text.length) { out += text[hi]; hi++; }
+    while (caretIn < 0 && lo > 0) { lo--; out = text[lo] + out; caretIn++; }
+    caretIn = Math.max(0, Math.min(out.length, caretIn));
     const snippet = new vscode.SnippetString();
     snippet.appendText(out.slice(0, caretIn));
     // BRACED, and appendTabstop() is not usable here: it writes a bare `$0`, and
@@ -444,21 +451,25 @@ function blockBounds(text: string, at: number): [number, number] {
     return [start, end];
 }
 
-/** True when [from, end) holds a ')' that no '(' inside the span opens — the
- * existing slur end a just-typed '(' pairs with. An annotation's `(args)` is
+/** The offset of the first ')' in [from, end) that no '(' inside the span opens
+ * — the end of the slur that is already open at `from`, and the one a just-typed
+ * '(' would pair with. -1 when there is none. An annotation's `(args)` is
  * balanced, so it neither hides nor fakes one. */
-function hasUnresolvedSlurClose(text: string, from: number, end: number): boolean {
+function unresolvedSlurClose(text: string, from: number, end: number): number {
     let depth = 0;
     for (let i = from; i < end; i++) {
         const c = text[i];
         if (c === '(') { depth++; }
         else if (c === ')') {
-            if (depth === 0) { return true; }
+            if (depth === 0) { return i; }
             depth--;
         }
     }
-    return false;
+    return -1;
 }
+
+const hasUnresolvedSlurClose = (text: string, from: number, end: number) =>
+    unresolvedSlurClose(text, from, end) >= 0;
 
 /** Past the `@annotation`s glued to the note ending at `i` — name, any
  * `(args)`, and a `.up` / `.down` placement suffix — so a ')' lands after the
@@ -642,10 +653,14 @@ function slurAnchorAt(text: string, offset: number)
     for (const event of musicEvents(text, blockStart, blockEnd)) {
         if (!event.note || event.end < offset) { continue; }
         if (event.start > offset) { return null; } // between events
-        if (text[event.start] === '<') {
-            const slots = noteSlots(text, event.start, event.end);
-            if (slots && offset > event.start && offset < slots.marksEnd) { return 'member'; }
-        }
+        const slots = noteSlots(text, event.start, event.end);
+        if (slots && text[event.start] === '<'
+            && offset > event.start && offset < slots.marksEnd) { return 'member'; }
+        // Past the core the caret is among the note's annotations, and an
+        // unclosed '(' there is an argument list being typed (`@fig(6| 4)`) —
+        // the parens are the annotation's, not the music's.
+        if (slots && offset > slots.coreEnd
+            && hasUnresolvedSlurOpen(text, slots.coreEnd, offset)) { return 'member'; }
         return { start: event.start, end: event.end };
     }
     return null;
@@ -875,25 +890,57 @@ function onInsertTie(editor: vscode.TextEditor, text: string, offset: number,
 function onInsertSlurClose(editor: vscode.TextEditor, text: string, offset: number,
     log: (msg: string) => void) {
     if (inStringOrComment(text, offset)) { return; }
-    const [start] = blockBounds(text, offset);
-    if (hasUnresolvedSlurOpen(text, start, offset)) { return; }
-    const anchor = precedingNoteEnd(text, start, offset);
-    if (anchor < 0) { return; } // nothing to open on — leave the ')' as typed
-    // A slur ALREADY ends where the '(' would go: the user is EXTENDING that
-    // slur over one more note, so its old close gives way to the typed one
-    // (`c4( d) e` + ')' → `c4( d e)`). Opening a second slur there instead
-    // would nest an empty one inside the first.
-    let old = anchor;
-    while (text[old] === ' ' || text[old] === '\t') { old++; }
-    if (text[old] === ')' && hasUnresolvedSlurOpen(text, start, old)) {
-        applyFix(editor, b => b.delete(new vscode.Range(
-            editor.document.positionAt(old), editor.document.positionAt(old + 1))));
-        log('smartBrackets: ) typed -> extended the slur ending on the previous note');
-        return;
+    const before = text.slice(0, offset) + text.slice(offset + 1);
+    const [blockStart, blockEnd] = blockBounds(before, offset);
+
+    // WHERE it belongs: after the note the caret is on, like every other mark.
+    const anchor = slurAnchorAt(before, offset);
+    if (anchor === 'member') { return; }
+    const closeAt = anchor ? anchor.end : offset;
+
+    const insertAt = (p: number) => (p <= offset ? p : p + 1);
+    const charAt = (p: number) => (p < offset ? p : p + 1);
+    const edits: { at: number, del?: number, ins?: string }[] = [];
+    if (closeAt !== offset) {
+        edits.push({ at: offset, del: 1 }, { at: insertAt(closeAt), ins: ')' });
     }
-    // The insert lands BEFORE the caret, which VS Code shifts along with it.
-    applyFix(editor, b => b.insert(editor.document.positionAt(anchor), '('));
-    log('smartBrackets: ) typed -> ( placed after the preceding note');
+    let caret = closeAt + 1;
+    let what: string;
+
+    if (hasUnresolvedSlurOpen(before, blockStart, closeAt)) {
+        // INSIDE an open slur, so this ')' is that slur's end now and the end it
+        // used to have — necessarily ahead — gives way: `(c d| e)` becomes
+        // `(c d) e`. Slurs nest, and both searches count depth, so the pair that
+        // moves is the INNERMOST one the caret sits in.
+        const oldClose = unresolvedSlurClose(before, closeAt, blockEnd);
+        if (oldClose < 0 && edits.length === 0) { return; } // nothing to do
+        if (oldClose >= 0) { edits.push({ at: charAt(oldClose), del: 1 }); }
+        what = oldClose >= 0 ? 'moved the slur end here' : 'closed the open slur';
+    } else {
+        // Not inside one: the ')' needs a slur to belong to, so it reaches back
+        // for the note BEFORE the one it closes on.
+        const openOn = precedingNoteEnd(before, blockStart, anchor ? anchor.end : offset);
+        let old = openOn;
+        while (before[old] === ' ' || before[old] === '\t') { old++; }
+        if (openOn >= 0 && before[old] === ')'
+            && hasUnresolvedSlurOpen(before, blockStart, old)) {
+            // A slur already ends on that note: EXTEND it by one rather than
+            // opening a second one beside it.
+            edits.push({ at: charAt(old), del: 1 });
+            caret -= 1;
+            what = 'extended the slur ending on the previous note';
+        } else if (openOn >= 0) {
+            edits.push({ at: insertAt(openOn), ins: '(' });
+            caret += 1;
+            what = '( placed after the preceding note';
+        } else if (edits.length === 0) {
+            return; // nothing to open on — leave the ')' as typed
+        } else {
+            what = 'moved to the end of its note';
+        }
+    }
+    applyFixWithCaret(editor, text, edits, caret);
+    log(`smartBrackets: ) typed -> ${what}`);
 }
 
 /** The written slots of the note event at [start, end): where its octave marks

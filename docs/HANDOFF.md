@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-23 / master `87bcde22`（§0 で裏取りすること。origin より 4 ahead・未 push）
+最終更新: 2026-07-24 / master `aa49357a` 付近（§0 で必ず裏取り——この docs 更新の分だけ HEAD/ahead は先へ進む）。origin より約 18 ahead・未 push
 
 ---
 
@@ -27,20 +27,46 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **スラー点の FIX を入れる（出力が変わる＝承認ゲート）**
+### ▶ 次のセッションの最初の一手 ＝ **beam 点を対で開く（LP 実測済み・欠陥確定）**
 
-`87bcde22` で **スラーの最初の台帳点を対で開いた**（`staff.staff.slur-under-notes` /
-`slur-over-notes`、SD/SU）。**予測 −0.512596 が桁まで的中**し、SD/SU は同値
-（＝二つ目の欠陥は無い）。欠陥は確定した: **Lily# の `SkylineBuilder` に `slur` の語が無く、
-スラーは `EnrichExtentsWithAnnotationProtrusions`（スカイラインが勝つ scalar fallback）にしか
-届かない**＝タプレット括弧を隠していたのと同じ配線。LP のスラーは inside-staff grob
-（`outside-staff-priority #f` 実測）で staff スカイラインに入る。
+このセッションで **スラーの 0.13 を閉じ（`d11ede43`）、タイを開いて種を入れて閉じた**（`c182d4d0`→`93ae87d1`→`b0fe9c42`、下記 ✅）。
+タイ残 **+0.001391 は追わない**（インク taper 近似＋ratio 0.333 vs 1/3。スラーの −0.000076 Pango と同類）。
+スラー・タイの縦は**もう「定数 1 つで閉じる」ネタは無い**。
 
-**FIX の場所**: `MultiStaffLayouter.BuildAllStaffSkylines`（譜間）と
-`LayoutEngine.AugmentSkylinesForPaging`（ページ）に、`SlurLayout` の bow から**スラーを種として
-入れる**——タプレット括弧を `AddTupletBracketsToSkyline` で入れたのと同型。全音符スラーには幻の
-符尾が無いので、タプレットと違い**符号逆の第二欠陥は予想されない**（SD/SU が既に一致）。
-⚠️ **これは出力を変える**（snapshot 再ベース）＝ **LP 照合 → 承認 → 実行**。承認を取ってから。
+⚠️⚠️ **beam を実測して欠陥を確定した**（このセッション末・probe は起票せず revert 済）。
+**per-note のスカイライン箱（`SkylineBuilder.AddNoteBoxToSkylines`）は符尾を固定 3.5**（`DefaultStemLength`）で
+予約し、**beam quanter の実際の符尾長を無視している**。同音の beam 群では LP の符尾は**短い**——
+`\stemDown g8[g g g]`（G3・中線下 4.5ss）を LP は beam を **positions −6.81ss**（符尾 2.31ss）に量子化し、
+beam 底＝−6.81−0.24（beam-thickness 0.48 の半分）＝ **−7.05ss**、gap ＝ 7.05+3.05 ＝ **10.100000**
+（BMD＝BMU で 14 桁一致）。Lily# は固定 3.5 で予約＝**約 0.95ss 過剰予約**（描画は quanter で正しいのに予約だけ古い＝§5.2.1② の二重モデル）。
+→ **修正の筋**: beam layout を staff スカイラインへ渡し（slur/tie の `StaffSlurLayouts`/`SeedBowInk` と同型）、
+固定 3.5 でなく**実 beam ジオメトリ**（符尾先端＋beam 厚）を予約する。
+⚠️ **twin の壁**: Lily# は `@stemdown`（単音）では beam 群の符尾を下向きに強制**できない**（実測：beam が上に出た）。
+`voice { … }` の**第2声部**が確実（`test/multivoice-beams.lys`）。だが LP twin も `\voiceTwo` に替えると
+量子化が変わり得る＝**LP を再実測**してから対で起票すること。
+
+手順は 7 回連続で成立した型（§5.2.1④）: 1.**点を対で起票**（コード変更ゼロ・予測先書き）。2.**床に座らせない**。3.**probe が何を測るか確認**。
+**穴を開けるまで何が溜まっているかは分からない**（タイも種を入れた瞬間に +0.02＝arc 高さが出た）。
+
+⚠️ **LP の実測は scheme dump が速い**: `\once \override <Grob>.after-line-breaking = #(lambda (g) (format (current-error-port) "…~s…" (ly:grob-property g 'positions/'control-points)) '())`
+で staff 相対（中線=0・up+）に吐ける。タイ arc 高さ・beam positions ともこれで LP と桁照合（SVG 精密測定＝§5.3 禁止 を回避）。
+
+⚠️ **スラーの残・その1: ページ（system 間）スラー/タイは未種**。`AugmentSkylinesForPaging` にはまだ
+入れていない（TSU/TSD に相当する **SSU/SSD の対を先に起票**してから。台帳点の無い snapshot を動かさないため）。
+
+⚠️ **スラーの残・その2: `move_away_from_staffline` は未移植**（`slur-scoring.cc:640-658`）。端点が
+五線の線上（±0.2 以内）に落ちると LP は `0.15ss` 外へ弾く。SD/SU では発火しない＝**別の名前付き点**。
+⚠️ **端点も grace/ossia head はスケールする**——今回は full-size head half（0.545）で全スラーを弾いた（grace は僅かに深い・目視健全）。
+
+⚠️ **スラーの残・その1: ページ（system 間）スラーは未種**。`AugmentSkylinesForPaging` にはまだ
+スラーを入れていない（TSU/TSD に相当する **SSU/SSD の対を先に起票**してから。台帳点の無い
+snapshot を動かさないため）。タプレットが TU/TD の後に TSU/TSD で page を閉じたのと同じ順序。
+
+⚠️ **スラーの残・その2: `move_away_from_staffline` は未移植**（`slur-scoring.cc:640-658`）。端点が
+五線の線上（±0.2 以内）に落ちると LP は `1.5·staff_space·dir/10 = 0.15ss` 外へ弾く。SD/SU では
+発火しない（端点は五線の遥か下）ので今回の残差には無関係＝**別の名前付き点**。開くなら端点が
+線に載る fixture を対で。⚠️ **端点も grace/ossia head はスケールする**——今回は full-size head
+half（0.545）で全スラーを弾いたので、grace スラーは head スケール分だけ僅かに深い（目視では健全）。
 
 ### ▶ 保留になった一手 ＝ **clef の LILC-vs-skyline sliver（Y 4 点）は SKPath だけでは閉じない**
 
@@ -58,15 +84,32 @@ magnification 0.5690551 の相互作用**由来で、Skia からは出せない�
 
 ### ▶ その次 ＝ **さらに未測の領域（ビーム・タイ・臨時記号配置）に点を開く**
 
-#### ✅ このセッション（2026-07-23 後半）＝ **スラー点を対で開いた＋clef sliver を実測で保留した**
+#### ✅ このセッション（2026-07-24）＝ **スラー 0.13 を閉じ、タイを開いて種を入れて閉じた（縦の bow は完了）**
 
 | commit | 内容 |
 |---|---|
-| `87bcde22`（**未 push**） | **スラーの最初の台帳点を対で起票**（SD/SU、`staff.staff.slur-{under,over}-notes`）。出力不変（probe 2 book＋台帳 2 点＋.lys twin のみ）。**予測 −0.512596 が桁まで的中**・SD/SU 同値。欠陥確定＝スラーは skyline に未予約。**FIX は未実施**（出力変更＝承認待ち） |
+| `d11ede43`（**未 push**） | **スラーの端点アタッチを LP 化＋インクを tapering に**。SD/SU **−0.130000 → 0.000000**（両 exact・対の一致）。**発明を 2 つ落とした**: ① 端点＝note 中心+0.9（`slurOffset 0.6`＋候補 `offset 0.3`）を LP の **head 端+0.5ss=1.045** へ（`slur-scoring.cc:556-557,727`）。② `AddSlursToSkyline` の平坦インク 0.1 を LP の bezier sandwich（内側制御点を 0.5·curvethick 外へ＋round pen）へ＝峰で **0.085**・端で pen のみ（`lookup.cc:395-415,484-515`）。net 0.145−0.015=0.13。**ratio 0.25／height-limit 2.0 は既に桁一致**＝arc は無関係（旧 handoff の 3 候補を実測で否定）。**snapshot 12 件再ベース**（描画スラー端点が head で 0.145 深く・beam tip で 0.3 浅く、両方 LP 方向。PNG 目視で衝突なし） |
+| `c182d4d0`（**未 push**） | **タイの台帳点を対で起票**（TID/TIU、`staff.staff.tie-{under,over}-notes`）。スラーの隣の grob＝LP の Tie も vertical-skylines/no outside-staff-priority で staff skyline に入るが Lily# は未種。**予測を先に書き桁まで的中**: Lily# は note 床 9.095 に座り LP は 9.655901 に垂れる＝**−0.560901**（TID/TIU 同値）。タイは平坦なので e/a'（−11/+11）まで出して床9を超えさせた。コード変更ゼロ（probe+twin+台帳） |
+| `93ae87d1`（**未 push**） | **タイの bow を staff skyline に種**（`AddTiesToSkyline`＝スラーと `SeedBowInk` を共有＝描画と予約が1モデル）。**−0.560901 → +0.020776**（対の一致・**snapshot 0 件**＝譜間タイ fixture が無い＝スラーと同じ穴）。残 **+0.020776 は第2欠陥**＝描画タイが LP より 0.0208 深い |
+| `b0fe9c42`（**未 push**） | **タイの arc 高さを attachment 幅で測る**（LP `attachment_x_.widen(-x_gap)`）。**+0.020776 → +0.001391**（対の一致）。LP の control-points を scheme dump で照合＝**端点は既に一致**（中心−0.5=−6.0）で、差は arc 高さのみ＝`Solve` が height を **note 間の生幅**（2·XGap=0.4 広い）で計算していた。inset して解消。残 +0.001391 は インク taper 近似＝**追わない**。**snapshot 10 件再ベース**（描画 arc 0.026 浅く・LP 方向・viewBox 縮み外描画なし・PNG 健全） |
 
-**テスト 3199 passed / 0 failed / 3 skipped。** Core 0 warn / 0 err。
-**LP 忠実度 29/42 exact, total |residual| = 1.044394 ss over 38 distances ＋ counts 4/4**
-（+1.025 は新規可視化＝タプレット点追加と同型。§3A・§5.2.1④）。
+**テスト 3202 passed / 0 failed / 3 skipped。** Core 0 warn / 0 err。
+**LP 忠実度 31/44 exact, total |residual| = 0.021985 ss over 40 distances ＋ counts 4/4**
+（スラー 2 点 → 0、タイ 2 点 → +0.001391。タイ全体で 1.141004 → 0.021985）。
+
+##### ★ 教訓（3 度確認された）: **種を入れると狙っていなかった第2欠陥が出る**
+スラーの 0.13 は「単一定数」に見えて **端点 +0.145 ＋ インク −0.015** の合成だった（§5.2 の縦版）。
+**タイも種を入れた瞬間 +0.02 が出て、それは arc 高さ**（幅の取り違え）だった——**予約でもインクでもなく描画自身**。
+§5.2.1④「穴を開けるまで分からない」が 7 回目。⚠️ `StemThickness = 0.13` とスラー残差の一致は**偶然**。
+⚠️ **タイの arc は attachment 幅**（端点を XGap で inset した後）で測る。生の note 間幅は 2·XGap 広く、arc が高くなる。
+
+#### ✅ 前セッション（2026-07-23 後半）＝ **スラー点を対で開いた＋clef sliver を実測で保留した**
+
+| commit | 内容 |
+|---|---|
+| `87bcde22`（**未 push**） | **スラーの最初の台帳点を対で起票**（SD/SU、`staff.staff.slur-{under,over}-notes`）。出力不変（probe 2 book＋台帳 2 点＋.lys twin のみ）。**予測 −0.512596 が桁まで的中**・SD/SU 同値。欠陥確定＝スラーは skyline に未予約 |
+| `f093583e`（**未 push**） | **スラーを staff スカイラインに種として入れた**（`AddSlursToSkyline`＝bezier を LP と同じく平坦化＋bow 半幅で外へ／`StaffSlurLayouts`＝offset 0 の 1 譜 system で `LayoutSlurs` を丸ごと再利用）。SD/SU **−0.512596 → −0.130000**（両同値）。**committed snapshot は 0 件動かず**（譜間スラーの fixture が無い＝穴）＝corpus では出力不変。視覚 fixture `test/slur-under-whole-notes` を新設（PNG 目視）。`ClefToString` を internal 化 |
+
 clef sliver は **SKPath 直読みでは閉じないと実測で判明**（上の「保留になった一手」）＝コード変更ゼロ・investigation の test/probe は削除済み。
 
 
@@ -667,18 +710,20 @@ ink が 9.110000（clef の下 5.550 と次 system の小節番号 3.560 が同�
 
 ---
 
-**HEAD = `87bcde22`・origin より未 push**（`git rev-list --count origin/master..master` で裏取り＝
-このセッション開始時 3、`87bcde22` を足して 4。旧記述の「100 ahead」は `git rev-list` と食い違う
-stale 値だったので撤去）。push はユーザー判断・コミットは可。
+**HEAD は docs コミット・origin より 8 ahead で未 push**（`git rev-list --count origin/master..master`
+で裏取り＝開始時 3 ＋ 当セッションの `87bcde22`/`5ecabdff`/`f093583e`＋docs 2 件、
+及びユーザーが並行投入した `b9837fcf`「editor: ')' 打鍵でスラー終端移動」）。旧記述の「100 ahead」は
+`git rev-list` と食い違う stale 値だったので撤去。push はユーザー判断・コミットは可。
 ⚠️ **push は明示的に「まだしないで」と言われている**（2026-07-22）。解除まで push しないこと。
 ⚠️ **未 push には大規模 snapshot 再ベースが多数**（フォント移行 **194 件**・TimeSignature **188 件**
-・フォント差し替え 186/192・タプレット 9/14 件・強弱 16 件ほか）**が含まれる**（`87bcde22` は出力不変）。
+・フォント差し替え 186/192・タプレット 9/14 件・強弱 16 件ほか）**が含まれる**（`87bcde22`・`f093583e`
+は出力不変＝新規 snapshot 1 件のみ追加）。
 別ブランチ `fix/vscode-extension`（`7291531a` から）と `fix/note-bang-diagnostic` は
 **どちらも master に取り込み済み**（ユーザー）。**走っている別ブランチはもう無い。**
-**テスト 0 failed / 3199 passed / 3 skipped。** Core build 0 warn / 0 err。
-**LP 忠実度 29/42 exact, total |residual| = 1.044394 ss over 38 distances ＋ counts 4/4**
+**テスト 0 failed / 3200 passed / 3 skipped。** Core build 0 warn / 0 err。
+**LP 忠実度 29/42 exact, total |residual| = 0.279202 ss over 38 distances ＋ counts 4/4**
 （**2.26.0 基準**。X 22点＋Y 7点＋譜間 **5点**＋**スラー譜間 2点**＋**system 間タプレット 2点**＋
-**ページ本数 4点**。スラー 2 点 −0.512596 ×2＝新規可視化・未 fix。§3A）。
+**ページ本数 4点**。スラー 2 点は **−0.130000**＝峰高/端点の定数 1 つ・§1 冒頭）。
 ⚠️ **本数の点は距離ではないので ss の総和に入れない**（`unit` フィールドで分離。`page.height` を
 台帳から落としたのと同じ理由——1 system を 0.019202 ss に足すと指標が意味を失う）。
 **タプレット 4 点は全て +0.0000208**（`caa0f239` `075277ff` `b36db266`。Pango 量子化の半分）。
@@ -1262,8 +1307,8 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 29/42 exact, total |residual| = 1.044394 ss over 38 distances ＋ counts 4/4**
-（`audit/lp-geometry/`・**LP 2.26.0 基準**。1.025 の増分はスラー 2 点の新規可視化＝未 fix）。
+**現状 29/42 exact, total |residual| = 0.279202 ss over 38 distances ＋ counts 4/4**
+（`audit/lp-geometry/`・**LP 2.26.0 基準**。スラー予約で 1.044394 → 0.279202、残スラー 2 点 −0.130000）。
 **X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 5 点は 2 exact、
 system 間タプレット 2 点、ページ本数 4 点は全て exact**
 （`920cf4dc` で起票、`113fdeda`＋`850c7d98` で閉じた）。
@@ -1303,8 +1348,8 @@ X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイラ
 
 ✅ **タプレット括弧は 2 つのスカイラインとも閉じた**（`caa0f239` 譜間 / `075277ff` ページ）。
 
-⚠️ **未測定の疑い**: **ビーム・タイ・臨時記号配置には台帳の点が 1 つも無い**（スラーは `87bcde22` で
-対で開いた＝SD/SU、−0.512596 ×2・**skyline 未予約が確定・fix 未実施**。§1 冒頭）。
+⚠️ **未測定の疑い**: **ビーム・タイ・臨時記号配置には台帳の点が 1 つも無い**（スラーは `87bcde22`＋
+`f093583e` で対で開いて予約まで実施＝SD/SU、−0.512596 → **−0.130000**。残る 0.13 は峰高定数・§1 冒頭）。
 タプレットで点を開いたら**欠陥が 4 つ**出た（うち 1 つは snapshot に構造的に現れない種類だった）。
 着手手順は §1 の「その次」。**必ず対で作ること。**
 
