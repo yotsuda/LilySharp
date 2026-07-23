@@ -446,3 +446,67 @@ probeTag =
     >>
   }
 }
+
+%% SD / SU — a SLUR over stemless whole notes, drooping into the staff gap from ABOVE (SD,
+%%     on the upper staff) and reaching up into it from BELOW (SU, on the lower staff). Same
+%%     quantity as P/Q and TU/TD: Align_interface's staff-to-staff distance, ragged-bottom so
+%%     the springs stay at their natural length.
+%%
+%%     The suspicion, and the first ledger point ever to reach a SLUR. LilyPond's Slur is an
+%%     ordinary inside-staff grob: measured on 2.26.0 it carries `outside-staff-priority` #f
+%%     (NONE), so lily/axis-group-interface.cc never pushes it out and it joins the staff's
+%%     own vertical skyline exactly as the clef and the tuplet bracket do. Lily#'s
+%%     SkylineBuilder does not contain the word "slur"; slurs reach only
+%%     EnrichExtentsWithAnnotationProtrusions, which feeds the SCALAR fallback the skyline
+%%     path beats wherever a skyline exists (the same architecture that hid the tuplet
+%%     bracket until eb8315f8). So between two staves — where note skylines always exist —
+%%     the slur should be reserved NOWHERE, and the gap should rest on the notes alone.
+%%
+%%     MEASURED unperturbed on 2.26.0: this down-slur's own vertical skyline reaches 6.462596
+%%     below the upper refpoint (interrogated with probe-glyph on the Slur grob: ext bottom
+%%     -6.46..., skyline-down -6.462596, the same LILC-vs-skyline sliver the clef shows). So
+%%     LilyPond's gap is 6.462596 + 2.05 (the lower staff's line INK) + 1 (StaffGrouper
+%%     padding) = 9.512596. A Lily# that reserves the notes but not the slur reads the g
+%%     noteheads instead: bottom 5.045 below the refpoint, and 5.045 + 2.05 + 1 = 8.095 LOSES
+%%     to StaffGrouper's basic-distance 9, so it sits on that floor at 9.000000 and this
+%%     residual reads floor-minus-LilyPond, -0.512596, the WHOLE slur protrusion past the
+%%     floor rather than part of it.
+%%
+%%     ⚠️ THE PITCH IS NOT FREE, for the reason TU/TD's is not: on a higher note the slur
+%%     would not beat 9 and the book would print 9.000000 on both sides and measure nothing;
+%%     on a much lower one the NOTES alone would beat 9 and the residual would read only the
+%%     slur's protrusion past the noteheads, not the whole thing. `g` (G3, six spaces below
+%%     the treble middle line) puts the noteheads under the floor and the slur's droop over
+%%     it — measured, not assumed.
+%%
+%%     ⚠️ DEFAULT DIRECTION, NO \slurDown. Both books rely on Slur::calc_direction: a slur
+%%     over notes whose columns point stem-UP (a low note takes an up stem) curves DOWN, and
+%%     vice versa. So the treble `g` slurs down and the bass `f'` slurs up with no override,
+%%     which is what the .lys twins do too (Lily# has no forced-direction token here) — LP
+%%     and Lily# must decide the side by the same rule or the pair is not comparable.
+%%
+%%     SD and SU must print the SAME number: two edges of one gap reached through two
+%%     different skylines (`f'` sits +9 above the bass middle line, the mirror of `g`'s -9
+%%     below the treble one), so a difference between them is a defect on its own — the
+%%     relationship P/Q and TU/TD are built on.
+\book {
+  \probeTag "SD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4 g1( g1) }
+      \new Staff { \clef bass \time 8/4 d1 d1 }
+    >>
+  }
+}
+
+\book {
+  \probeTag "SU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 8/4 b'1 b'1 }
+      \new Staff { \clef bass \time 8/4 f'1( f'1) }
+    >>
+  }
+}

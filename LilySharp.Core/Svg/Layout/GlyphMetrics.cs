@@ -217,12 +217,67 @@ internal static partial class GlyphMetrics
 
     // ========== Time signature widths ==========
 
+    /// <summary>
+    /// Pango's device-pixel quantum, in staff spaces — the grid a digit's width is snapped
+    /// to when LilyPond lays the time signature out as text.
+    /// </summary>
+    /// <remarks>
+    /// A default TimeSignature is NOT a music glyph: ly:time-signature::print builds a
+    /// markup and interprets it (scm/time-signature.scm:31-41), the markup is
+    /// <c>(markup #:number "N")</c> (scm/time-signature-settings.scm:923), and
+    /// <c>\number</c> sets font-encoding fetaText (scm/define-markup-commands.scm:3980-3981)
+    /// — so the digit goes through Pango over the FreeType outline, exactly as DynamicText
+    /// does, and its advance is hinted to a whole device pixel.
+    /// <para>
+    /// Pango scales a logical width (an integer count of device pixels × PANGO_SCALE) by
+    /// <c>scale_ = INCH_TO_BP / (PANGO_SCALE · PANGO_RESOLUTION · output_scale)</c>
+    /// (lily/pango-font.cc:109-112), so one device pixel measures
+    /// <c>PANGO_SCALE · scale_ = INCH_TO_BP / (PANGO_RESOLUTION · output_scale)</c> staff
+    /// spaces. This is that value DERIVED FROM LILYPOND'S OWN CONSTANTS, not fitted:
+    /// INCH_TO_BP 72 and INCH_TO_PT 72.27 (lily/include/dimensions.hh:31,27),
+    /// PANGO_RESOLUTION 1200 (lily/include/pango-font.hh:75), and
+    /// <c>output_scale = staff-space · MM_PER_INCH / INCH_TO_PT</c> with the default 5 pt
+    /// staff space. It comes to 0.034143 ss and reproduces LilyPond's measured digit widths
+    /// to 1e-15 across all ten digits — the -0.004735 on the 4/4 signature was this
+    /// quantisation, not a wrong glyph metric. Same phenomenon as DynamicText's -0.000076,
+    /// which is the ink height quantised by the same PANGO_RESOLUTION; that one is left open
+    /// because a skyline needs the whole quantised OUTLINE, while a width needs only this
+    /// single snap.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: lily/pango-font.cc:109-112; lily/include/pango-font.hh:75;
+    //   lily/include/dimensions.hh:27,31.
+    private const double PangoQuantumStaffSpaces =
+        72.0 * 72.27 / (1200.0 * 5.0 * 25.4); // INCH_TO_BP·INCH_TO_PT / (RES·staff_pt·mm_per_inch)
+
+    /// <summary>Snaps a text width to Pango's device-pixel grid, as LilyPond's layout does.</summary>
+    /// <remarks>Pango rounds a logical width to a whole device pixel; the width in staff
+    /// spaces is therefore an integer multiple of <see cref="PangoQuantumStaffSpaces"/>.</remarks>
+    private static double PangoQuantise(double widthStaffSpaces) =>
+        System.Math.Round(widthStaffSpaces / PangoQuantumStaffSpaces,
+            System.MidpointRounding.AwayFromZero) * PangoQuantumStaffSpaces;
+
     /// <summary>Gets the width of a time signature based on its digit widths.</summary>
     public static double GetTimeSigWidth(int beats, int beatType) =>
         System.Math.Max(GetTimeSigDigitWidth(beats), GetTimeSigDigitWidth(beatType));
 
-    /// <summary>Gets the advance width of a single time signature digit.</summary>
-    public static double GetTimeSigDigitWidth(int digit) => digit switch
+    /// <summary>
+    /// Gets the advance width of a single time signature digit, snapped to Pango's grid the
+    /// way LilyPond's <c>\number</c> markup is.
+    /// </summary>
+    /// <remarks>
+    /// The unquantised advances are the fattened-digit metrics, which agree with the ASCII
+    /// fetaText digits LilyPond actually sets for the digit 4 (both 1.600000) — see the note
+    /// on <see cref="PangoQuantumStaffSpaces"/>. ⚠️ THEY DO NOT AGREE FOR EVERY DIGIT: the
+    /// fattened '1' is 1.292 where the ASCII '1' is 1.268, so a signature like 1/4 would
+    /// quantise the wrong base width. No ledger point measures a non-4 time-signature digit
+    /// yet, so that divergence is unmeasured and left for a probe to seed first rather than
+    /// guessed at here.
+    /// </remarks>
+    public static double GetTimeSigDigitWidth(int digit) =>
+        PangoQuantise(UnquantisedTimeSigDigitWidth(digit));
+
+    private static double UnquantisedTimeSigDigitWidth(int digit) => digit switch
     {
         0 => TimeSigDigit0Advance,
         1 => TimeSigDigit1Advance,

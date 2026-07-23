@@ -544,6 +544,92 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A SLUR over stemless whole notes, drooping DOWN into the staff gap from the upper
+    /// staff — the first ledger point ever to reach a slur. Measures the staff-to-staff
+    /// distance, shaped like <see cref="P"/> and <see cref="TU"/>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's Slur is an ordinary inside-staff grob — measured on 2.26.0 it carries NO
+    /// <c>outside-staff-priority</c>, so it joins the staff's own vertical skyline like the
+    /// clef and the tuplet bracket. Lily#'s <c>SkylineBuilder</c> does not contain the word
+    /// "slur"; slurs reach only <c>EnrichExtentsWithAnnotationProtrusions</c>, which feeds
+    /// the scalar fallback the skyline path beats wherever a skyline exists — the same
+    /// architecture that hid the tuplet bracket. So between two staves the slur should be
+    /// reserved NOWHERE and the gap should rest on the notes alone.
+    /// <para>
+    /// The pitch is chosen so the notes lose to the floor and the slur beats it: the <c>g,</c>
+    /// (LilyPond <c>g</c>, G3) noteheads reach 5.045 below the refpoint, and 5.045 + 2.05 + 1
+    /// = 8.095 LOSES to StaffGrouper's basic-distance 9, so a Lily# that reserves the notes
+    /// and not the slur sits on that floor at 9.000000, while LilyPond's slur droops to
+    /// 6.462596 below the refpoint for a gap of 9.512596. Default slur direction, no override
+    /// — a low note takes an up stem so its slur curves down, which is what LilyPond does too.
+    /// </para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 g1( g1) }
+    /// \new Staff { \clef bass \time 8/4 d1 d1 } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string SD = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { g,1( g,1) | }
+          lh { d,1 d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "SD" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="SD"/> with the slur on the other side — a slur reaching UP into the gap
+    /// from the lower staff, the mirror of book SU.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="SD"/>, for the reason Q is not redundant with P: SD
+    /// binds the LOWER staff's top line against a slur coming down, SU binds the UPPER
+    /// staff's bottom line against one going up. Two edges of one gap through two different
+    /// skylines. <c>f</c> (LilyPond <c>f'</c>, F4) sits +9 above the bass staff's middle
+    /// line, the mirror of <c>g,</c>'s -9 below the treble one, so LilyPond prints the same
+    /// 9.512596 and the two must agree.
+    /// <para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 8/4 b'1 b'1 }
+    /// \new Staff { \clef bass \time 8/4 f'1( f'1) } &gt;&gt;</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string SU = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { b1 b1 | }
+          lh { f1( f1) | }
+        }
+
+        form main { ~Main }
+
+        score main "SU" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// The same tuplet bracket as <see cref="TU"/>, measured BETWEEN SYSTEMS instead of
     /// between staves — the mirror of book TSD.
     /// </summary>
@@ -770,6 +856,14 @@ internal static class LpGeometryProbes
         // separate them. See probes TU and TD.
         new("staff.staff.tuplet-bracket-up", TU, g => g.StaffGap()),
         new("staff.staff.tuplet-bracket-down", TD, g => g.StaffGap()),
+
+        // ...and again, shaped so a SLUR over stemless whole notes is what binds it -- the
+        // first ledger points that reach a slur. Both sides, because SD binds the lower
+        // staff's top line against a slur coming down and SU the upper staff's bottom line
+        // against one going up, and a difference between them is a defect on its own. See
+        // probes SD and SU.
+        new("staff.staff.slur-under-notes", SD, g => g.StaffGap()),
+        new("staff.staff.slur-over-notes", SU, g => g.StaffGap()),
 
         // The same bracket again, one staff over several systems, so StaffGap() reads
         // system-system-spacing instead of Align_interface. TU/TD reach

@@ -12,23 +12,23 @@
   <line x1="0.00" y1="16.35" x2="20.14" y2="16.35" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="15.35" font-size="4.00" data-pos="349"></text>
   <text class="music" x="3.30" y="14.35" font-size="4.00"></text>
-  <line x1="11.32" y1="11.35" x2="13.13" y2="11.35" stroke="#000000" stroke-width="0.200"/>
+  <line x1="11.33" y1="11.35" x2="13.13" y2="11.35" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="10.35" y="11.85" font-size="4.00" data-pos="409"></text>
   <text class="music" x="9.23" y="10.85" font-size="4.00" data-pos="414"></text>
   <text class="music" x="11.50" y="12.85" font-size="4.00" data-pos="406"></text>
   <text class="music" x="11.50" y="11.85" font-size="4.00" data-pos="409"></text>
   <text class="music" x="11.50" y="10.85" font-size="4.00" data-pos="414"></text>
-  <line x1="11.56" y1="11.00" x2="11.56" y2="16.35" stroke="#000000" stroke-width="0.130"/>
+  <line x1="11.57" y1="11.00" x2="11.57" y2="16.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.50" y="14.35" font-size="4.00" data-pos="421"></text>
   <text class="music" x="16.45" y="13.85" font-size="4.00" data-pos="421"></text>
   <rect x="19.05" y="12.35" width="0.19" height="4.00" data-pos="422"/>
   <rect x="19.54" y="12.35" width="0.60" height="4.00" data-pos="422"/>
-  <text class="music" x="5.54" y="13.85" font-size="2.60" data-pos="382"></text>
-  <text class="music" x="6.48" y="13.85" font-size="2.60" data-pos="382"></text>
+  <text class="music" x="5.55" y="13.85" font-size="2.60" data-pos="382"></text>
+  <text class="music" x="6.49" y="13.85" font-size="2.60" data-pos="382"></text>
   <line x1="7.29" y1="13.85" x2="7.29" y2="11.58" stroke="#000000" stroke-width="0.085" data-pos="382"/>
   <text class="music" x="7.29" y="11.58" font-size="2.60" data-pos="382"></text>
-  <line x1="6.90" y1="12.98" x2="7.83" y2="12.23" stroke="#000000" stroke-width="0.127" data-pos="382"/>
-  <path d="M 7.21,15.15 C 8.22,15.85 10.17,15.67 11.05,14.80 C 10.18,15.75 8.23,15.92 7.21,15.15 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="382"/>
+  <line x1="6.91" y1="12.98" x2="7.83" y2="12.23" stroke="#000000" stroke-width="0.127" data-pos="382"/>
+  <path d="M 7.21,15.15 C 8.23,15.85 10.18,15.67 11.05,14.80 C 10.19,15.75 8.24,15.92 7.21,15.15 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="382"/>
   <rect x="0.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="364"/>
   <text x="1.33" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="364">A</text>
   </g>
