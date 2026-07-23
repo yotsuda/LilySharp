@@ -223,8 +223,14 @@ public class AccidentalPlacementTests
         var layout = placement.CalculateSinglePosition(note);
 
         Assert.NotNull(layout);
-        // Sharp width from GlyphMetrics: 0.996, RightPadding: 0.15
-        double expected = -(GlyphMetrics.AccidentalSharp.Width + 0.15);
+        // A lone accidental runs through position_apes too, so it clears the note by
+        // right-padding (0.15) PLUS the inter-column padding (0.2) = 0.35 of ink gap — NOT
+        // 0.15 alone. Measured against LilyPond 2.26.0: a single sharp's ink-right sits 0.35
+        // ss left of the note-head left edge. The sharp's right skyline reaches its full width
+        // (1.10) across the note's Y, so ink-left = -(1.10 + 0.15 + 0.20).
+        // LILYPOND-REF: accidental-placement.cc:398-416 (raise -right-padding, then -padding);
+        // scm/define-grobs.scm:85 right-padding 0.15.
+        double expected = -(GlyphMetrics.AccidentalSharp.Width + 0.15 + 0.20);
         Assert.Equal(expected, layout.Value.XOffset, 3);
     }
 

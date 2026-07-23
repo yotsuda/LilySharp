@@ -517,9 +517,14 @@ internal static class SpacingRules
         }
         else if (item is NoteItem note && note.Accidental != null)
         {
-            // Single note with accidental
-            var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
-            extent += accBBox.Width + AccidentalNoteGap;
+            // Single note with accidental: reserve what the placement/drawing actually uses
+            // (position_apes clears the note by right-padding + padding = 0.35, and a courtesy
+            // adds its parenthesis ink), NOT a bare glyph width — otherwise the accidental,
+            // and especially a courtesy's left parenthesis, spills left over the bar line.
+            var placement = new AccidentalPlacement();
+            var layout = placement.CalculateSinglePosition(note);
+            if (layout.HasValue)
+                extent = Math.Max(extent, Math.Abs(layout.Value.XOffset));
         }
 
         return extent;

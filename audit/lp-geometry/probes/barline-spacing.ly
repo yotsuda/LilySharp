@@ -83,6 +83,43 @@ lay =
 %%     declares extra-spacing-width (-0.2 . 0.0) rather than the default 0.1.
 \score { \new Staff { \time 4/4 c'4 d' e' f' | cis'4 d' e' f' } \lay "X" }
 
+%% CSB/CSA, CFB/CFA — the first probes to reach Accidental_placement's CHORD stacking
+%%     (calc_positioning_done -> position_apes). Score X above measures a SINGLE accidental;
+%%     these carry a cluster whose two accidentals' glyphs OVERLAP vertically and so are
+%%     forced into TWO columns. Both accidentals are dumped as ACC grobs, so the raw per-grob
+%%     anchors printed by Measure-LilyPondGeometry.ps1 give the ACC-to-ACC COLUMN GAP — the
+%%     quantity that measures the stacking itself. That gap is measured between two accidentals
+%%     of the SAME glyph, so whatever left-bearing the glyph's anchor carries cancels in the
+%%     difference (the flat's anchor sits 0.12 right of its ink; the sharp's coincides).
+%%
+%%     THE PAIRS ARE VERTICAL MIRRORS, the P/Q discipline: the accidentals are always placed
+%%     to the LEFT of the note column, right-to-left against the heads' LEFT skyline, and the
+%%     stems never protrude past the head boxes on that side, so the column gap is independent
+%%     of stem direction. A chord below the middle line (stems up) and its exact reflection
+%%     above it (stems down) must therefore print the SAME gap; a difference is a
+%%     direction-dependence defect on its own, whatever the value.
+%%
+%%     A THIRD (two staff positions) is used, not a second: a third does NOT reverse a head
+%%     across the stem, so the heads share one column and the heads skyline is clean, while an
+%%     accidental glyph (~2.6 ss tall) still overlaps its neighbour 1 ss away and must stack.
+%%     Trailing notes are a' b' c'' (letters A/B/C) so none of the four chords' altered letters
+%%     (D/F, E/G) recurs in the bar and no cancellation natural is engraved as a third ACC.
+%%
+%% CSB — two SHARPS a third apart BELOW the middle line (dis' -5, fis' -3), stems up.
+\score { \new Staff { \time 4/4 c'4 d' e' f' | <dis' fis'>4 a' b' c'' } \lay "CSB" }
+
+%% CSA — the mirror ABOVE the middle line (eis'' +3, gis'' +5), stems down. Must equal CSB.
+\score { \new Staff { \time 4/4 c'4 d' e' f' | <eis'' gis''>4 a' b' c'' } \lay "CSA" }
+
+%% CFB — two FLATS a third apart BELOW the middle line (ees' -4, ges' -2), stems up. Flats take
+%%     the merge-overlap that sharps do not — the site of Lily#'s invented 0.375 constant, which
+%%     accidental-placement.cc does NOT contain (LP's flats interlock via their real glyph
+%%     skylines). This pair is where that invention is measured against LP.
+\score { \new Staff { \time 4/4 c'4 d' e' f' | <ees' ges'>4 a' b' c'' } \lay "CFB" }
+
+%% CFA — the mirror ABOVE the middle line (des'' +2, fes'' +4), stems down. Must equal CFB.
+\score { \new Staff { \time 4/4 c'4 d' e' f' | <des'' fes''>4 a' b' c'' } \lay "CFA" }
+
 %% K — mid-line key change (break-aligned into the boundary column by LilyPond).
 \score { \new Staff { \time 4/4 c'4 d' e' f' \key a \major c'4 d' e' f' } \lay "K" }
 

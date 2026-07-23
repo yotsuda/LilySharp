@@ -82,6 +82,34 @@
       "residual": 0.0,
       "why": "EXACT since LilyPond 2.26.0, and NOT because anything in Lily# changed. 2.26.0 rebuilt Emmentaler with the LILC bboxes rounded to three decimals in the design unit, which put accidentals.sharp's right edge on exactly 1.100000 (2.24.4: 1.100010). The skyline term that separated LilyPond's measurement from Lily#'s box measurement was -0.000010 and is now zero. The horizontal skyline is still not ported (accidental-placement.cc:412) -- this entry merely stopped being able to see it. barline.next.key-change-to-notehead is now the only entry that still measures it."
     },
+    "chord.accidental.sharp-column-gap-below": {
+      "probe": "barline-spacing.ly",
+      "score": "CSB",
+      "lilypond": 1.284000,
+      "residual": 0.0,
+      "why": "CLOSED (island 2). The real accidental glyph horizontal-skyline is now baked from Emmentaler (GlyphSkylinesGenerated.cs, extractor Extract-EmmentalerSkylines.py) and the column packer is position_apes: -ape->horizontal_skylines_[RIGHT].distance(left_skyline, 0.1) - padding (accidental-placement.cc:411-416), nesting the sharps' real outlines. Two sharps a third apart interlock to 1.284000 EXACTLY (the notch on each # right stroke lets the neighbour tuck 0.016 past the box). The box model and the inert 0.375 flat-merge branch are gone. PREDICTED +0.016 held; the port took it to 0. Mirror cross-check HELD: chord.accidental.sharp-column-gap-above reads the identical 1.284000."
+    },
+    "chord.accidental.sharp-column-gap-above": {
+      "probe": "barline-spacing.ly",
+      "score": "CSA",
+      "lilypond": 1.284000,
+      "residual": 0.0,
+      "why": "CLOSED (island 2) -- the IDENTICAL 1.284000 its mirror now reads, the cross-check this pair exists for. Vertical reflection of chord.accidental.sharp-column-gap-below (eis''/gis'' above the middle line, stems down); direction-independence held through the port. Full account on chord.accidental.sharp-column-gap-below."
+    },
+    "chord.accidental.flat-column-gap-below": {
+      "probe": "barline-spacing.ly",
+      "score": "CFB",
+      "lilypond": 0.964561,
+      "residual": 0.0,
+      "why": "CLOSED (island 2), the larger half of the same defect as the sharps. Two flats a third apart now interlock to 0.964561 (residual 4e-7, below tolerance, from bezier flattening quantization). The real flat outline nests its narrow lower-left past the neighbour, and the 0.375 is now where LilyPond puts it -- accidental.cc:76 fattens the flat's OWN right skyline to stencil.right*0.375 over the stencil Y-extent, verified against a live 2.26.0 horizontal-skylines dump (a flat's RIGHT skyline floors at x=0.30 = 0.80*0.375). The old flat-merge branch (overlap = min(width)*0.375), which measurement had shown inert, is removed. PREDICTED that the constant was mislocated, not misvalued -- confirmed. Mirror cross-check HELD: chord.accidental.flat-column-gap-above reads the identical 0.964561."
+    },
+    "chord.accidental.flat-column-gap-above": {
+      "probe": "barline-spacing.ly",
+      "score": "CFA",
+      "lilypond": 0.964561,
+      "residual": 0.0,
+      "why": "CLOSED (island 2) -- the IDENTICAL 0.964561 its mirror now reads. Vertical reflection of chord.accidental.flat-column-gap-below (des''/fes'' above the middle line, stems down); direction-independence held through the port. Full account on chord.accidental.flat-column-gap-below."
+    },
     "barline.next.key-change-glyph": {
       "probe": "barline-spacing.ly",
       "score": "K",
@@ -93,8 +121,8 @@
       "probe": "barline-spacing.ly",
       "score": "K",
       "lilypond": 6.834272,
-      "residual": -0.017672,
-      "why": "The NATURAL's skyline term, arriving through Paper_column::minimum_distance exactly as the sharp's does in the two entries above — the note opening this measure is a c' under A major, so it carries one, and its reach is the musical column's leftmost ink. A natural is vertically thin, so its right skyline stands 0.017606 further out than its box (measured by zeroing AccidentalPlacement's two paddings on 2.24.4); a sharp's term is 0.000010, which is why this entry is the largest of the three. Same single cause. Was -2.234272 before the boundary column, -0.034272 before the padding."
+      "residual": 0.0,
+      "why": "CLOSED (island 2). The note opening this measure is a c' under A major carrying a NATURAL, and the barline-to-note reach is that accidental's leftmost ink. The natural is vertically thin, so its real right skyline stands 0.017606 further out than its box; the old single-note reservation (SpacingRules: bbox.Width + gap) missed that AND the position_apes padding, so this sat at -0.017672. Now the single-note left extent comes from AccidentalPlacement.CalculateSinglePosition (the same skyline placement the drawing uses), so the reservation matches LilyPond exactly (residual 7e-8). Predicted to close with the accidental horizontal-skyline; it did."
     },
     "barline.next.time-change-glyph": {
       "probe": "barline-spacing.ly",

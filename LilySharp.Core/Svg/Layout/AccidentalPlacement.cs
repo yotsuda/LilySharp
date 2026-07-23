@@ -124,11 +124,9 @@ internal sealed class AccidentalPlacement
         double scale = 1.0)
     {
         var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>();
-        double minHeadOffset = 0;
         for (int i = 0; i < notes.Count; i++)
         {
             double off = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
-            minHeadOffset = Math.Min(minHeadOffset, off);
             if (!string.IsNullOrEmpty(notes[i].Accidental))
                 accidentals.Add((notes[i], off));
         }
@@ -136,18 +134,9 @@ internal sealed class AccidentalPlacement
         if (accidentals.Count == 0)
             return ImmutableArray<AccidentalLayout>.Empty;
 
-        if (accidentals.Count == 1)
-        {
-            var (n, _) = accidentals[0];
-            double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy) * scale;
-            // A head reversed to the LEFT of the stem extends the column ink;
-            // the accidental clears the leftmost head edge.
-            return ImmutableArray.Create(new AccidentalLayout(
-                n.StaffPosition, n.Accidental!,
-                minHeadOffset - (totalWidth + _params.RightPadding * scale),
-                n.IsCourtesy));
-        }
-
+        // Everything — a single accidental included — goes through the skyline packer:
+        // LilyPond runs position_apes even for one accidental, so a lone accidental clears
+        // the note by right-padding (0.15) PLUS padding (0.2) = 0.35, not 0.15 alone.
         return CalculateMultipleAccidentals(accidentals, notes, headOffsets, scale);
     }
 
@@ -159,29 +148,70 @@ internal sealed class AccidentalPlacement
         if (string.IsNullOrEmpty(note.Accidental))
             return null;
 
-        double totalWidth = ComputeRenderedWidth(note.Accidental, note.IsCourtesy);
+        // One accidental against one note at the column origin — the single-ape case of
+        // position_apes, so the glyph clears the head by right-padding + padding = 0.35.
+        // LILYPOND-REF: accidental-placement.cc:391-438 position_apes.
+        var nhBBox = GlyphMetrics.NoteheadBlack;
+        double yCenterSS = note.StaffPosition / 2.0;
+        var reference = HorizontalSkyline.FromBox(
+            yCenterSS + nhBBox.Bottom, yCenterSS + nhBBox.Top, 0, nhBBox.Width,
+            HorizontalDirection.Left);
+        reference.Raise(-_params.RightPadding);
+
+        var (_, glyphRight) = GlyphSkylinePair(note.Accidental, note.IsCourtesy, 1.0);
+        glyphRight.Shift(yCenterSS);
+        double offset = -glyphRight.Distance(reference, _params.HorizonPadding);
+        if (double.IsInfinity(offset)) offset = 0; else offset -= _params.Padding;
+
+        var bbox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
         return new AccidentalLayout(
-            note.StaffPosition,
-            note.Accidental,
-            -(totalWidth + _params.RightPadding),
-            note.IsCourtesy);
+            note.StaffPosition, note.Accidental,
+            InkLeft(offset, bbox.Left, note.IsCourtesy, 1.0), note.IsCourtesy);
     }
 
     /// <summary>
-    /// Computes the rendered width of an accidental glyph, accounting for
-    /// courtesy parentheses.
+    /// The accidental's ink-left X (the value <see cref="AccidentalLayout.XOffset"/> carries):
+    /// the glyph origin sits at <paramref name="offset"/>, so the LILC left edge is
+    /// offset + bbox.Left; a courtesy accidental adds its left-parenthesis width, which draws
+    /// (and is packed) that much further left again.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize().
-    /// (Editorial/AccidentalSuggestion accidentals never reach this class —
-    /// they print ABOVE the note via the articulation channel.)
-    /// </remarks>
-    private double ComputeRenderedWidth(string accidental, bool isCourtesy)
+    private static double InkLeft(double offset, double bboxLeft, bool isCourtesy, double scale)
     {
-        double baseWidth = GetAccidentalWidth(accidental);
+        double inkLeft = offset + bboxLeft * scale;
         if (isCourtesy)
-            return baseWidth + GlyphMetrics.AccidentalParensInkWidth;
-        return baseWidth;
+            inkLeft -= GlyphMetrics.AccidentalLeftParen.Width * scale;
+        return inkLeft;
+    }
+
+    /// <summary>
+    /// The accidental glyph's (LEFT, RIGHT) outline skyline pair, freshly cloned so the
+    /// caller may mutate it, cue-scaled about the origin. Courtesy accidentals add the
+    /// parenthesis ink as a box on each side, since LilyPond parenthesizes the stencil and
+    /// the parens then join the skyline.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:48 horizontal_skylines; :35-46 parenthesize.</remarks>
+    private static (HorizontalSkyline Left, HorizontalSkyline Right) GlyphSkylinePair(
+        string accidental, bool isCourtesy, double scale)
+    {
+        var (bakedLeft, bakedRight) = GlyphMetrics.AccidentalSkylinePair(accidental);
+        var left = bakedLeft.Clone();
+        var right = bakedRight.Clone();
+        if (isCourtesy)
+        {
+            var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
+            double lpW = GlyphMetrics.AccidentalLeftParen.Width;
+            double rpW = GlyphMetrics.AccidentalRightParen.Width;
+            left.Merge(HorizontalSkyline.FromBox(
+                bbox.Bottom, bbox.Top, bbox.Left - lpW, bbox.Left, HorizontalDirection.Left));
+            right.Merge(HorizontalSkyline.FromBox(
+                bbox.Bottom, bbox.Top, bbox.Right, bbox.Right + rpW, HorizontalDirection.Right));
+        }
+        if (scale != 1.0)
+        {
+            left.Scale(scale);
+            right.Scale(scale);
+        }
+        return (left, right);
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
@@ -214,16 +244,19 @@ internal sealed class AccidentalPlacement
                 n.IsCourtesy));
         }
 
-        // Sort by octave first, then alteration priority: naturals rightmost, flats leftmost
-        // LILYPOND-REF: accidental-placement.cc:164-184 acc_less
-        // Octave grouping ensures same-octave accidentals are placed together
+        // Processing order = rightmost (closest to the notes) placed FIRST. Naturals sort
+        // rightmost (priority 0), so they are never mistaken for cancellation naturals; among
+        // equal alterations the HIGHER accidental is placed first, so the pair interlocks into
+        // LilyPond's C-shape (the lower one, placed to its left, tucks under). Processing the
+        // lower one first instead leaves the skylines box-far apart — the whole point of the
+        // real-outline nesting. LILYPOND-REF: accidental-placement.cc:130-146 ape_priority /
+        // ape_less (higher skyline is placed nearer the notes); :164-181 acc_less (naturals
+        // largest, i.e. rightmost).
         entries.Sort((a, b) =>
         {
-            int octaveA = OctaveOf(a.StaffPosition);
-            int octaveB = OctaveOf(b.StaffPosition);
-            if (octaveA != octaveB)
-                return octaveA.CompareTo(octaveB);
-            return a.Priority.CompareTo(b.Priority);
+            if (a.Priority != b.Priority)
+                return a.Priority.CompareTo(b.Priority);
+            return b.StaffPosition.CompareTo(a.StaffPosition);
         });
 
         // LILYPOND-REF: accidental-placement.cc:192-235 stagger_apes
@@ -232,106 +265,90 @@ internal sealed class AccidentalPlacement
         if (entries.Count > 2)
             entries = StaggerEntries(entries);
 
-        // LILYPOND-REF: accidental-placement.cc:341-385 build_heads_skyline —
-        // the reference skyline is built from ALL noteheads of the column
-        // (not only the accidental-carrying ones), at their real X extents:
-        // heads reversed to the LEFT of a down-stem (seconds) shift their box.
-        // (LilyPond also adds the stems; for the LEFT skyline they never
-        // protrude beyond the head boxes, so they are omitted here.)
-        var noteheadBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        // LILYPOND-REF: accidental-placement.cc:375-385 build_heads_skyline — the reference
+        // LEFT skyline is built from ALL noteheads of the column (not only the
+        // accidental-carrying ones), at their real X extents; heads reversed to the LEFT of a
+        // down-stem (seconds) shift their box. (LilyPond also adds the stems; for the LEFT
+        // skyline they never protrude beyond the head boxes, so they are omitted here.)
+        var headBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
         for (int i = 0; i < allNotes.Count; i++)
         {
             double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
             double yCenterSS = allNotes[i].StaffPosition / 2.0;
             var nhBBox = GlyphMetrics.NoteheadBlack;
-            // headOffset arrives already cue-scaled (ChordHeadPositioning); the head
-            // box's Y-extent and the right-padding scale with the cue font here.
-            noteheadBoxes.Add((
+            // headOffset arrives already cue-scaled (ChordHeadPositioning); the head box's
+            // Y-extent scales with the cue font here.
+            headBoxes.Add((
                 yCenterSS + nhBBox.Bottom * scale,
                 yCenterSS + nhBBox.Top * scale,
-                headOffset - _params.RightPadding * scale,
-                headOffset));
+                headOffset,
+                headOffset + nhBBox.Width * scale));
         }
-        var referenceSkyline = Skyline.FromBoxes(noteheadBoxes, Skyline.Direction.Left);
+        // LILYPOND-REF: accidental-placement.cc:398-400 — left_skyline = heads; raise by
+        // -right-padding (0.15) so accidentals keep that much clear of the notes.
+        var reference = HorizontalSkyline.FromBoxes(headBoxes, HorizontalDirection.Left);
+        reference.Raise(-_params.RightPadding * scale);
 
-        // Position right-to-left with skyline collision avoidance
-        // LILYPOND-REF: accidental-placement.cc:393-439 position_apes
-        // LILYPOND-REF: accidental-placement.cc:338-390 skyline collision
+        // Position right-to-left with skyline-to-skyline nesting.
+        // LILYPOND-REF: accidental-placement.cc:391-438 position_apes.
         var layouts = new List<AccidentalLayout>(entries.Count);
 
-        // Track placed accidentals for flat-merge overlap (special case not in skyline)
-        var placedEntries = new List<(double LeftEdge, double YBottom, double YTop, string Accidental, double Width)>();
-
         // LILYPOND-REF: accidental-placement.cc set_ape_skylines() — accidentals of the SAME
-        // note name form one "APE" that shares a SINGLE horizontal column, whatever the octave.
-        // The first accidental of each note-name+alteration is positioned against the reference
-        // skyline; every later accidental at that note name snaps to the SAME column — a
-        // same-octave unison overstrikes, a different octave aligns vertically (C♯4 and C♯5 sit
-        // in one column, as LilyPond draws them). Snapping also sidesteps a spurious self-
-        // collision: the flat reference skyline merges a lower partner's left edge up across the
-        // gap to its neighbour, which would otherwise shove the upper partner an extra column left.
+        // note name form one APE sharing a SINGLE column, whatever the octave. The first of
+        // each note-name+alteration is positioned against the reference; later ones at that
+        // note name snap to the SAME column (same octave overstrikes, different octaves align
+        // vertically — C♯4 and C♯5 sit in one column, as LilyPond draws them).
         var apeColumn = new Dictionary<(int NoteName, string Accidental), double>();
+        double lastOffset = 0.0;
 
         foreach (var entry in entries)
         {
-            // Note name class: staff positions equal mod 7 are the same note name across octaves.
             int noteName = ((entry.StaffPosition % 7) + 7) % 7;
             var apeKey = (noteName, entry.Accidental);
+            var bbox = GlyphMetrics.GetAccidentalBBox(entry.Accidental);
+            double yCenterSS = entry.StaffPosition / 2.0;
 
-            // A later accidental of the same note name shares its APE's already-placed column.
-            if (apeColumn.TryGetValue(apeKey, out double sharedXLeft))
+            // The glyph's own LEFT/RIGHT outline skylines, cue-scaled and lifted onto the
+            // note's staff position (the Y centre does not scale — cue heads sit on the real
+            // staff lines). LILYPOND-REF: accidental-placement.cc:292-295 set_ape_skylines.
+            var (glyphLeft, glyphRight) = GlyphSkylinePair(entry.Accidental, entry.IsCourtesy, scale);
+            glyphLeft.Shift(yCenterSS);
+            glyphRight.Shift(yCenterSS);
+
+            double offset;
+            if (apeColumn.TryGetValue(apeKey, out double sharedOffset))
             {
-                // LILYPOND-REF: accidental-placement.cc:292-296 — glyph-shape skyline.
-                var alignedSkyline = AccidentalGlyphSkyline.Build(
-                    entry.Accidental, entry.YBottom, entry.YTop,
-                    sharedXLeft, sharedXLeft + entry.Width, Skyline.Direction.Left);
-                referenceSkyline = referenceSkyline.Merge(alignedSkyline);
-                layouts.Add(new AccidentalLayout(
-                    entry.StaffPosition, entry.Accidental, sharedXLeft, entry.IsCourtesy));
-                continue;
+                offset = sharedOffset;
+            }
+            else
+            {
+                // LILYPOND-REF: accidental-placement.cc:411-416 — nest the RIGHT skyline
+                // against the accumulated LEFT skyline (horizon padding 0.1), then back off
+                // by the inter-column padding (0.2).
+                offset = -glyphRight.Distance(reference, _params.HorizonPadding * scale);
+                if (double.IsInfinity(offset))
+                    offset = lastOffset;
+                else
+                    offset -= _params.Padding * scale;
+                apeColumn[apeKey] = offset;
+                lastOffset = offset;
             }
 
-            // Query the reference skyline for the leftmost boundary in this Y range
-            // (with horizon padding for proximity tolerance)
-            double yQueryBottom = entry.YBottom - _params.HorizonPadding * scale;
-            double yQueryTop = entry.YTop + _params.HorizonPadding * scale;
-            double skylineLeft = referenceSkyline.QueryXInRange(yQueryBottom, yQueryTop);
+            // LILYPOND-REF: accidental-placement.cc:418-421 — the new LEFT skyline is this
+            // accidental's LEFT skyline shifted into place, merged over the old one.
+            glyphLeft.Raise(offset);
+            glyphLeft.Merge(reference);
+            reference = glyphLeft;
 
-            // Start with skyline boundary (or rightPadding if skyline is empty in this range)
-            double xRight = double.IsPositiveInfinity(skylineLeft)
-                ? -_params.RightPadding * scale
-                : skylineLeft - _params.Padding * scale;
-
-            // LILYPOND-REF: accidental-placement.cc:290-295
-            // Check for flat-merge overlap with previously placed flats
-            if (entry.Accidental == "flat")
-            {
-                foreach (var placed in placedEntries)
-                {
-                    if (placed.Accidental == "flat" &&
-                        entry.YBottom - _params.HorizonPadding * scale < placed.YTop &&
-                        placed.YBottom - _params.HorizonPadding * scale < entry.YTop)
-                    {
-                        double overlap = Math.Min(entry.Width, placed.Width) * 0.375;
-                        double maxRight = placed.LeftEdge - _params.Padding * scale + overlap;
-                        if (maxRight < xRight)
-                            xRight = maxRight;
-                    }
-                }
-            }
-
-            double xLeft = xRight - entry.Width;
-
-            // LILYPOND-REF: accidental-placement.cc:292-296 — glyph-shape skyline (vs naive BBox).
-            var accSkyline = AccidentalGlyphSkyline.Build(
-                entry.Accidental, entry.YBottom, entry.YTop, xLeft, xRight, Skyline.Direction.Left);
-            referenceSkyline = referenceSkyline.Merge(accSkyline);
-
-            placedEntries.Add((xLeft, entry.YBottom, entry.YTop, entry.Accidental, entry.Width));
+            // XOffset is the whole accidental's ink-left (what DrawAccidentalAtInkLeft and the
+            // reservation boxes anchor to): the glyph origin lands at `offset`, so its LILC
+            // left edge is offset + bbox.Left. A courtesy accidental's left parenthesis draws
+            // that much further left again (DrawAccidentalAtInkLeft: accInkLeft = inkLeftX +
+            // leftParen.Width) and its box is already packed there, so the anchor must be the
+            // group left, not the bare glyph's. All cue-scaled.
             layouts.Add(new AccidentalLayout(
-                entry.StaffPosition, entry.Accidental, xLeft,
-                entry.IsCourtesy));
-            apeColumn[apeKey] = xLeft;
+                entry.StaffPosition, entry.Accidental,
+                InkLeft(offset, bbox.Left, entry.IsCourtesy, scale), entry.IsCourtesy));
         }
 
         return layouts.ToImmutableArray();
@@ -436,26 +453,12 @@ internal sealed class AccidentalPlacement
     }
 
     /// <summary>
-    /// The diatonic octave of a staff position (7 positions per octave), using FLOORED
-    /// division so it agrees with the floored note-name modulo below the middle line.
-    /// C# integer division truncates toward zero, which would put e.g. position 3 and
-    /// position -4 (one octave apart) in the same octave and wrongly overstrike them.
-    /// </summary>
-    private static int OctaveOf(int staffPosition) =>
-        (int)Math.Floor(staffPosition / 7.0);
-
-    /// <summary>
     /// Gets alteration sorting priority.
     /// Lower values are placed first (rightmost, closest to notes).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: accidental-placement.cc acc_less(), set_ape_skylines()
-    /// In LilyPond, acc_less sorts within APEs (same note-name groups):
-    ///   naturals sort LAST, processed FIRST (rightmost) via backward iteration.
-    /// For cross-note-name ordering, LilyPond uses stagger_apes (group size +
-    /// skyline position), not alteration priority.
-    /// In Lily#'s forward iteration, lower priority = processed first = rightmost.
-    /// Naturals get priority 0 (rightmost) to match LilyPond's effective placement.
+    /// LILYPOND-REF: accidental-placement.cc acc_less() — naturals sort largest so they are
+    /// never confused with cancellation naturals; they are placed rightmost (priority 0 here).
     /// </remarks>
     private static int GetAlterationPriority(string accidental) => accidental switch
     {
@@ -466,9 +469,4 @@ internal sealed class AccidentalPlacement
         "doubleFlat" => 4,
         _ => 2
     };
-
-    // Single source of truth for the accidental BBox lives in GlyphMetrics; the
-    // former private copy here diverged only in an unreachable fallback.
-    private static double GetAccidentalWidth(string accidental) =>
-        GlyphMetrics.GetAccidentalBBox(accidental).Width;
 }

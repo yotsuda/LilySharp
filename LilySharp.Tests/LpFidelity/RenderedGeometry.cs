@@ -319,6 +319,43 @@ internal sealed class RenderedGeometry
           or EmmentalerGlyphs.NoteheadBlack
           or EmmentalerGlyphs.NoteheadDoubleWhole;
 
+    /// <summary>The plain accidental glyphs (sharp, flat, natural and the doubles).</summary>
+    private static bool IsAccidental(char g) =>
+        g is EmmentalerGlyphs.AccidentalSharp
+          or EmmentalerGlyphs.AccidentalFlat
+          or EmmentalerGlyphs.AccidentalNatural
+          or EmmentalerGlyphs.AccidentalDoubleSharp
+          or EmmentalerGlyphs.AccidentalDoubleFlat;
+
+    /// <summary>Accidental glyphs, left to right.</summary>
+    public IReadOnlyList<DrawnGlyph> Accidentals =>
+        Glyphs.Where(g => IsAccidental(g.Glyph)).ToList();
+
+    /// <summary>
+    /// The X gap between the two accidental COLUMNS of the chord that opens the measure after
+    /// bar line <paramref name="barIndex"/>: the nearer (rightmost) accidental's anchor minus
+    /// the farther (leftmost) one's. This is the quantity Accidental_placement decides —
+    /// how far apart it stacks two accidentals whose glyphs overlap vertically.
+    /// </summary>
+    /// <remarks>
+    /// The probes carry exactly two accidentals of the SAME glyph, so whatever left-bearing
+    /// that glyph's draw anchor holds cancels in the difference and the number is a pure
+    /// column-to-column distance — the same reason the LilyPond side reads it anchor-to-anchor
+    /// off two ACC dumps. Selecting by X (not by chord membership) is safe here because the
+    /// probe's trailing notes carry no accidental, so the only two after the bar line are the
+    /// chord's.
+    /// </remarks>
+    public double ChordAccidentalColumnGap(int barIndex)
+    {
+        double bar = BarlineRight(barIndex);
+        var accs = Accidentals.Where(a => a.X > bar + 1e-9).OrderBy(a => a.X).ToList();
+        if (accs.Count < 2)
+            throw new InvalidOperationException(
+                $"expected two accidentals after bar line {barIndex} (a chord stacking into "
+                + $"two columns) but found {accs.Count}.\nDrawn geometry:\n" + Describe());
+        return accs[1].X - accs[0].X;
+    }
+
     /// <summary>
     /// Bar line <paramref name="barIndex"/>'s ink right edge → the first NOTEHEAD after it.
     /// Use when a key or time signature stands between the bar line and the note.

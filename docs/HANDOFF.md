@@ -4,8 +4,8 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-24 / master `d772558f`（§0 で必ず裏取り——この docs 更新の分だけ HEAD/ahead は先へ進む）。origin より 33 ahead・未 push。
-このセッションで **beam の forced-direction shortening を移植して閉じた**（`81d5740d` 実装＋`d772558f` docs）。テスト 3219 passed / 0 failed / 3 skipped。LP 忠実度 33/46 exact・0.021985 ss。
+最終更新: 2026-07-24 / master `d23390e8`・origin より 38 ahead・未 push（§0 で必ず裏取り——この冒頭更新のコミット 1 件分だけ HEAD は先・ahead は 39 になる）。実質コミットは `e08f5e12`（島2 実装）、`9fa5be5f`/`d23390e8` は記録・校正プローブ。
+このセッションで **島2（実 glyph 水平スカイライン基盤）を建てて臨時記号スタッキングを閉じた**（`e08f5e12`）。`chord.accidental.{sharp,flat}-column-gap` の **4 点とも exact**（sharp 1.284000 / flat 0.964561。旧 +0.016 / +0.155）。おまけに `barline.next.key-change-to-notehead` も **exact**（旧 −0.017672＝♮ のスカイライン項——単音の左予約が取りこぼしていた・下記 ▶）。テスト 3218 passed / 0 failed / 3 skipped。LP 忠実度 **38/50 exact・total |residual| 0.004313 ss**（0.364863 から）。snapshot 18 件再ベース（純粋な臨時記号の再配置・693/693・出力外描画なし・承認済）。
 
 ---
 
@@ -28,13 +28,20 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **未測の領域に点を開く（臨時記号配置・ページ跨ぎスラー/タイ）**
+### ▶ 次のセッションの最初の一手 ＝ **ページ跨ぎスラー/タイ（SSU/SSD）を対で起票する**
 
-**beam quanter はこのセッションで閉じた**（下記 ✅・`staff.staff.beam-{under,over}-notes` は **+0.69 → 0**、BMD=BMU exact）。
-残る未測領域は §3A の通り: **臨時記号配置**（台帳点ゼロ）と**ページ跨ぎスラー/タイ**（SSU/SSD 未起票）。
-手順は §1 末尾の「4 回連続で成立した型」（対で起票→予測を先に書く→種）を使う。
+**島2 は建った**（`e08f5e12`・下記 ✅）。臨時記号スタッキングの 4 点は **exact**（実 glyph outline スカイラインを bake→`position_apes` へ字面移植）。**残る真の未測領域はページ跨ぎスラー/タイだけ**——`AugmentSkylinesForPaging` にスラー/タイをまだ種として入れていない（§3A）。
+手順は §1 末尾の「4 回連続で成立した型」（対で起票→予測を先に書く→種）。**SSU/SSD の対を先に起票**してから種を入れる（台帳点の無い snapshot を動かさないため。タプレットが TU/TD の後に TSU/TSD で page を閉じたのと同じ順序）。
 
-⚠️ **beam の残（今回スコープ外・次点の候補）**:
+⚠️ **島2 の残（focused session で拾う候補）**:
+- ★ **単音/グレースの臨時記号 DRAW が第2の配置モデル**（§5.2.1②）。和音は `AccidentalColumn.CalculatePositions`（position_apes）→`DrawAccidentalAtInkLeft` だが、**単音 `NoteItem`（`SharedRenderer.Noteheads.cs:440`）とグレース（`SharedRenderer.GraceNotes.cs:91`）は `DrawAccidental` の固定 `AccidentalNoteGap 0.35`**。sharp/flat は一致するが、**♮ は実スカイラインと 0.0176 ss ずれる**（sub-visual。符頭間隔は `SpacingRules`/`ItemSkylineFactory` が `CalculateSinglePosition` で LP-exact なので台帳は緑）。単音描画も `CalculateSinglePosition` の XOffset で描けば一元化＝ずれ消滅。**バグでなく重複モデルの掃除**。
+- **courtesy 臨時記号は box paren スカイライン**（近似）。非 courtesy は実 outline。閉じるなら `accidentals.leftparen/rightparen` の実 outline スカイラインを bake して `GlyphSkylinePair` の courtesy 枝を置換。
+- ★ **LP 語彙へのリネームをユーザーに依頼**（構造は既に LP に揃った＝`position_apes` の字面移植）。`AccidentalPlacement` の packer 内部を per-ape 命名へ：`Ape`/`PositionApes`/`SetApeSkylines`/`BuildHeadsSkyline` 等。**今回はリネームでなく構造ごと入れ替えた**ので、残るのは命名だけ。§5.1 の「MSVS でユーザーが F2」手順で。
+- **clef の LILC-vs-skyline sliver（Y 4 点）** は依然 SKPath だけでは閉じない（下記「保留になった一手」）。⚠️ **島2 と混同しない**——accidental は実効 scale が **1.0**（生 outline/250 が LP と 15 桁一致）だが、clef は `get_unscaled_indexed_char_dimensions × magnification` の 0.27% がある。別問題。
+
+★ **今回の教訓: 単位のミスマッチが最後の欠陥を出す**。position_apes を入れて 4 点 exact になった後、**snapshot ではなく PNG 目視でユーザーが courtesy×barline の重なりを見つけた**。原因は `SpacingRules` の単音経路が「glyph 幅 + gap」で予約していたこと（描画は `position_apes` の 0.35 gap ＋ courtesy paren）。**予約と描画が別式**＝§5.2.1② の X 版。直したら **♮ の `barline.next.key-change-to-notehead` −0.017672 も一緒に閉じた**（単音の左予約が取りこぼしていた同じ項）。§5.2.1④「穴を開けるまで何が溜まっているか分からない」がまた成立。
+
+⚠️ **beam の残（前セッション・次点の候補）**:
 - **page/system スカイラインの beam 種は未着手**: 譜間（`BuildStaffSkylines`）だけが drawn beam を種にする。`BuildSkylines`（system/page）は固定 3.5 のまま（page 用 beam 台帳点＝TSU/TSD 相当が無いので触らない）。
 - **cross-staff / kneed beam** は forced-shorten の対象外（`ComputeBeamShorten` は knee で 0＝LP `calc_stem_shorten` line 1068 と一致）＝固定 3.5 のまま。
 
@@ -87,7 +94,22 @@ magnification 0.5690551 の相互作用**由来で、Skia からは出せない�
 実効 scale を突き止めるのが先（payoff は 4 点 ×0.0001〜0.0008 ss）。**SKPath 直読みで定数を合わせるのは
 §5.2 違反（fitting）。** ⚠️ この 4 点はまだ台帳に「clef sliver」として残っている（§3A）。
 
-#### ✅ このセッション（2026-07-24 最新）＝ **beam を LP の forced-shorten で閉じた（+0.69 → 0）**
+#### ✅ このセッション（2026-07-24 最新）＝ **島2（実 glyph 水平スカイライン基盤）を建てて臨時記号スタッキングを閉じた（4 点 exact ＋ ♮ 1 点）**
+
+| commit | 内容 |
+|---|---|
+| `e08f5e12` | **臨時記号を実 glyph 水平スカイラインで nest**（`position_apes` 字面移植）。①実 outline スカイラインを bake（`Extract-EmmentalerSkylines.py`→`GlyphSkylinesGenerated.cs`＝`add_outline_to_skyline` の再現。CCW 分類・cubic を `max(2,len/0.2)` で平坦化・**scale=1.0 で LP dump と 15 桁一致**）。②`HorizontalSkyline` に contour 構築＋`Raise`/`Shift`/`Scale`/`MaxHeight`＋horizon-padded `Distance`（LP `padded()`）。③`AccidentalPlacement` の box `QueryXInRange` を `position_apes` へ（**高い臨時記号を先に置く**＝三度が C 字に nest。単音も同経路＝note gap 0.35）。④`SpacingRules` の単音予約を `CalculateSinglePosition` の実左端へ（courtesy paren×barline 重なりを解消＝ユーザーが PNG 目視で発見）。⑤`0.375` は LP の位置へ（`accidental.cc:76` flat の右スカイライン膨らませ）、box/2-rect `AccidentalGlyphSkyline` 削除。**4 点 exact（sharp 1.284000 / flat 0.964561）＋ `barline.next.key-change-to-notehead` −0.017672→exact**。snapshot 18 件再ベース |
+| `aa09f78e` | **chord accidental の列スタッキングを台帳に開いた**（`chord.accidental.{sharp,flat}-column-gap-{below,above}`・4 点・vertical mirror・ハーネスのみ・**出力不変**）。probe CSB/CSA/CFB/CFA（三度クラスタ＝符頭非反転で列が clean、trailing a/b/c'' で cancellation natural を排除）＋ `RenderedGeometry.ChordAccidentalColumnGap` ＋ 台帳 4 点。**mirror 一致**（below=above）＝方向非依存が確認できたので数値は信頼できる |
+| `452830b1` | §1 書き換え（この分。▶ を島2 の実スカイライン建設へ repoint） |
+
+**開いた時の測定**（`aa09f78e`。この 4 点は `e08f5e12` で閉じた＝上の行）: Lily# は列を **box（glyph 幅 + padding 0.2）** で積んでいた（sharps 1.300 / flats 1.120）が、LP は **実 glyph 水平スカイライン**で nest（sharps **1.284000** / flats **0.964561**）＝当時 残差 **+0.016 / +0.155**。**予測を先に書き、sharp の +0.016 は測定前に桁一致**（同じ和音を二度＝second で書くと LP も 1.300＝nest 無しになることから導出）。
+開いた時点: テスト 3223 / LP 忠実度 33/50 exact・total 0.364863 ss（現在は 38/50・0.004313 ss＝§1 冒頭）。
+
+##### ★★ 教訓: **実装があっても、台帳の点が無ければ LP との差は見えない**
+`AccidentalPlacement.cs` は skyline collision・stagger・ape 列を持つ立派な実装だが、**字面移植ではなく再解釈**で、box パッキングという構造欠陥を抱えていた。点を開くまで +0.016/+0.155 は誰にも見えていなかった（§5.2.1④ の X 版）。
+⚠️ **発明の `0.375` flat-merge は不発だった**（box より緩い枝で `maxRight<xRight` guard が非発火）＝**定数を疑う前に「その枝が実際に発火しているか」を測る**。予測（0.375 が原因）は方向だけ当たり magnitude が外れ、その外れが真因（box モデル）を指した——§1 の「予測が外れたときこそ2つ目」の X 版。
+
+#### ✅ 前セッション（2026-07-24）＝ **beam を LP の forced-shorten で閉じた（+0.69 → 0）**
 
 | commit | 内容 |
 |---|---|
@@ -1346,7 +1368,7 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 **現状 33/46 exact, total |residual| = 0.021985 ss over 42 distances ＋ counts 4/4**
 （`audit/lp-geometry/`・**LP 2.26.0 基準**。beam 2 点は `1a002706`/`0138e5c0` で開き＋種（各 +0.95→+0.69）、
-最新セッションで **forced-direction stem shortening（beam `shorten`）を移植して各 +0.69 → 0**（exact）＝§1 冒頭。
+前セッションで **forced-direction stem shortening（beam `shorten`）を移植して各 +0.69 → 0**（exact）＝§1 冒頭。
 合計は 0.021985 → 1.921985 → 1.401985 → **0.021985**（スラー/タイを閉じた地点に戻った）。この合計を過去値と直接比べない——点集合が違う）。
 **X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 5 点は 2 exact、
 system 間タプレット 2 点、ページ本数 4 点は全て exact**
@@ -1387,11 +1409,12 @@ X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイラ
 
 ✅ **タプレット括弧は 2 つのスカイラインとも閉じた**（`caa0f239` 譜間 / `075277ff` ページ）。
 
-⚠️ **未測定の疑い**: **臨時記号配置には台帳の点が 1 つも無い**（スラー/タイ/ビームは対で開き済みで**全て閉じた**——
-スラーは `87bcde22`＋`f093583e`→`d11ede43`、タイは `c182d4d0`→`b0fe9c42`、
-**ビームは `1a002706`／`0138e5c0` で開き＋種、`81d5740d` で forced-direction shortening を移植して +0.95→+0.69→0（exact・§1 冒頭）**）。
-タプレットで点を開いたら**欠陥が 4 つ**出た（うち 1 つは snapshot に構造的に現れない種類だった）。
-着手手順は §1 の「次の一手」（臨時記号配置）。**必ず対で作ること。**
+✅ **臨時記号スタッキングの 4 点は `e08f5e12` で閉じた**（`chord.accidental.{sharp,flat}-column-gap-{below,above}` exact＝sharp 1.284000 / flat 0.964561。`aa09f78e` で対で開き、mirror 一致）。
+スラー/タイ/ビームも対で開き済みで閉じた——スラー `87bcde22`＋`f093583e`→`d11ede43`、タイ `c182d4d0`→`b0fe9c42`、
+ビーム `1a002706`／`0138e5c0`→`81d5740d`（+0.95→+0.69→0 exact・§1 冒頭）。
+閉じ方＝**実 glyph 水平スカイラインを bake→`position_apes` 字面移植**（島2＝実スカイライン基盤・§1 ▶）。
+おまけに **♮ の `barline.next.key-change-to-notehead` −0.017672 も閉じた**（単音の左予約が同じスカイライン項を取りこぼしていた）。**残る真の未測領域はページ跨ぎスラー/タイ（SSU/SSD）だけ。**
+⚠️ タプレットで点を開いたら**欠陥が 4 つ**出た教訓は健在——**新しい点は必ず対で作ること。**
 
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 

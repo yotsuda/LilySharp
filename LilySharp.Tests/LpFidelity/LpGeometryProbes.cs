@@ -98,6 +98,27 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' e' f' | cis'4 d' e' f'     (accidental opening the measure)
     private static readonly string X = Score("c4 d e f | cis d e f |", "X");
 
+    // --- CHORD accidental stacking (Accidental_placement::calc_positioning_done) ---
+    // Score X measures a SINGLE accidental; these four carry a two-note cluster (a written
+    // third) whose accidental glyphs OVERLAP vertically and are forced into TWO columns, so
+    // the measured quantity is the ACC-to-ACC column gap (ChordAccidentalColumnGap). A third
+    // does not reverse a head across the stem, so the heads share one column and the heads
+    // skyline is clean; the trailing a/b/c'' never repeat the chord's altered letters, so no
+    // cancellation natural is engraved as a third accidental. The pairs are vertical MIRRORS
+    // (below the middle line, stems up; above it, stems down): the accidentals sit left of the
+    // note column against the heads' left skyline regardless of stem direction, so each pair
+    // must print the SAME gap and a difference is a direction-dependence defect of its own —
+    // the P/Q relationship.
+
+    // LilyPond twin: c'4 d' e' f' | <dis' fis'>4 a' b' c''   (D#4/F#4, stems up)
+    private static readonly string CSB = Score("c4 d e f | <dis fis>4 a b c' |", "CSB");
+    // LilyPond twin: c'4 d' e' f' | <eis'' gis''>4 a' b' c''  (E#5/G#5, stems down) — mirror of CSB
+    private static readonly string CSA = Score("c4 d e f | <eis' gis'>4 a b c' |", "CSA");
+    // LilyPond twin: c'4 d' e' f' | <ees' ges'>4 a' b' c''    (Eb4/Gb4, stems up) — the flat-merge site
+    private static readonly string CFB = Score("c4 d e f | <ees ges>4 a b c' |", "CFB");
+    // LilyPond twin: c'4 d' e' f' | <des'' fes''>4 a' b' c''  (Db5/Fb5, stems down) — mirror of CFB
+    private static readonly string CFA = Score("c4 d e f | <des' fes'>4 a b c' |", "CFA");
+
     // LilyPond twin: c'4 d' e' f' \key a \major c'4 d' e' f'
     private static readonly string K = Score("c4 d e f | key a major c4 d e f |", "K");
 
@@ -923,6 +944,16 @@ internal static class LpGeometryProbes
         // bar-line side and the accidental-to-head side, which have different owners.
         new("barline.next.accidental", X, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.accidental-to-notehead", X, g => g.BarlineRightToNextNotehead(MidLineBarline)),
+
+        // The first points to reach Accidental_placement's CHORD stacking (two accidentals
+        // forced into two columns). Each alteration is a mirror pair (below/above the middle
+        // line): the column gap is direction-independent, so the two must agree and a
+        // difference is a defect on its own. See probes CSB/CSA, CFB/CFA and
+        // ChordAccidentalColumnGap.
+        new("chord.accidental.sharp-column-gap-below", CSB, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.sharp-column-gap-above", CSA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.flat-column-gap-below", CFB, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.flat-column-gap-above", CFA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
 
         // The first glyph after the bar line is the key/time signature; the note is found by
         // IDENTITY, not by counting past it — Lily# draws one glyph per key accidental while

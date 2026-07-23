@@ -130,6 +130,23 @@ internal readonly struct SkylineBuilding
     public SkylineBuilding WithRange(double newStart, double newEnd)
         => new SkylineBuilding(newStart, ValueAt(newStart), ValueAt(newEnd), newEnd);
 
+    /// <summary>A copy with the roof raised by <paramref name="d"/> in the value frame
+    /// (= adding <paramref name="d"/> to the intercept).</summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:512 Skyline::raise — y_intercept_ += sky*r.</remarks>
+    public SkylineBuilding RaisedBy(double d)
+        => new SkylineBuilding(Start, ValueAt(Start) + d, ValueAt(End) + d, End);
+
+    /// <summary>A copy translated by <paramref name="s"/> along the horizon axis, keeping
+    /// the same roof value at each (translated) point.</summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:519 Skyline::shift — x_ += s, y_intercept_ -= s*slope_.</remarks>
+    public SkylineBuilding ShiftedHorizon(double s)
+        => new SkylineBuilding(Start + s, ValueAt(Start), ValueAt(End), End + s);
+
+    /// <summary>A copy uniformly scaled about the origin by <paramref name="k"/> (both the
+    /// horizon interval and the value). Used to shrink cue-sized accidental glyphs.</summary>
+    public SkylineBuilding ScaledBy(double k)
+        => new SkylineBuilding(Start * k, ValueAt(Start) * k, ValueAt(End) * k, End * k);
+
     public override string ToString()
         => $"SkylineBuilding[{Start:F2}, {End:F2}] v = {Slope:F4}c + {Intercept:F2}";
 }

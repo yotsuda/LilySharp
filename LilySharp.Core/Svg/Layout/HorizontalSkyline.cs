@@ -91,6 +91,65 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
+    /// Creates a skyline from a flat list of sign-framed buildings, four doubles apiece:
+    /// start (horizon low), startValue (sky*x there), endValue (sky*x at horizon high),
+    /// end (horizon high). This is the form the baked accidental skylines
+    /// (<see cref="GlyphMetrics.AccidentalSkylinePair"/>) are stored in.
+    /// </summary>
+    public static HorizontalSkyline FromSignedBuildings(HorizontalDirection direction, double[] quads)
+    {
+        var buildings = new List<SkylineBuilding>(quads.Length / 4);
+        for (int i = 0; i + 3 < quads.Length; i += 4)
+            buildings.Add(new SkylineBuilding(quads[i], quads[i + 1], quads[i + 2], quads[i + 3]));
+        return new HorizontalSkyline(buildings, direction);
+    }
+
+    /// <summary>A deep copy (the building list is duplicated), so mutating operations
+    /// (<see cref="Raise"/>/<see cref="Shift"/>/<see cref="Merge"/>) on the copy leave the
+    /// original — e.g. a shared baked glyph skyline — untouched.</summary>
+    public HorizontalSkyline Clone() => new HorizontalSkyline(new List<SkylineBuilding>(_buildings), _direction);
+
+    /// <summary>Raises every building's roof by <paramref name="r"/> in real X (mutates).
+    /// LILYPOND-REF: lily/skyline.cc:512 Skyline::raise (y_intercept_ += sky*r).</summary>
+    public void Raise(double r)
+    {
+        int sky = (int)_direction;
+        for (int i = 0; i < _buildings.Count; i++)
+            _buildings[i] = _buildings[i].RaisedBy(sky * r);
+    }
+
+    /// <summary>Translates every building along the horizon (Y) by <paramref name="s"/> (mutates).
+    /// LILYPOND-REF: lily/skyline.cc:519 Skyline::shift.</summary>
+    public void Shift(double s)
+    {
+        for (int i = 0; i < _buildings.Count; i++)
+            _buildings[i] = _buildings[i].ShiftedHorizon(s);
+    }
+
+    /// <summary>Uniformly scales every building about the origin by <paramref name="k"/>
+    /// (mutates) — used to shrink a cue-sized accidental glyph before it is shifted onto
+    /// its (unscaled) staff position.</summary>
+    public void Scale(double k)
+    {
+        for (int i = 0; i < _buildings.Count; i++)
+            _buildings[i] = _buildings[i].ScaledBy(k);
+    }
+
+    /// <summary>Maximum roof height (real X in the skyline's own sense: rightmost for a
+    /// RIGHT skyline, leftmost for a LEFT one). NegativeInfinity if empty.
+    /// LILYPOND-REF: lily/skyline.cc:668 Skyline::max_height.</summary>
+    public double MaxHeight()
+    {
+        double ret = NegativeInfinity;
+        foreach (var b in _buildings)
+        {
+            ret = Math.Max(ret, b.ValueAt(b.Start));
+            ret = Math.Max(ret, b.ValueAt(b.End));
+        }
+        return (int)_direction * ret;
+    }
+
+    /// <summary>
     /// Creates a skyline from a sloped region (e.g., beam edge).
     /// </summary>
     public static HorizontalSkyline FromSlope(double yBottom, double xBottom, double yTop, double xTop, HorizontalDirection direction)
@@ -147,6 +206,61 @@ internal sealed class HorizontalSkyline
             throw new ArgumentException("Distance requires skylines with opposite directions");
 
         return SkylineMath.Distance(_buildings, other._buildings);
+    }
+
+    /// <summary>
+    /// Distance to an opposite-facing skyline with a horizon padding: a grob is kept clear
+    /// by <paramref name="horizonPadding"/> even from neighbours that are that far away
+    /// ALONG the horizon (Y) rather than only where the Y ranges overlap. The padding falls
+    /// off at 45° (skyline.cc:558-615 padded), so a distant-in-Y neighbour pushes less than
+    /// a directly-facing one.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:530-554 Skyline::distance(other, horizon_padding).
+    /// LilyPond pads ONE side and reuses the other as-is; we pad <c>this</c>.</remarks>
+    public double Distance(HorizontalSkyline other, double horizonPadding)
+    {
+        if (_direction == other._direction)
+            throw new ArgumentException("Distance requires skylines with opposite directions");
+        if (horizonPadding <= 0.0)
+            return SkylineMath.Distance(_buildings, other._buildings);
+
+        return SkylineMath.Distance(Padded(horizonPadding), other._buildings);
+    }
+
+    /// <summary>
+    /// This skyline's buildings plus the sloped-and-flat pad buildings that thicken it by
+    /// <paramref name="horizonPadding"/> along the horizon. The lazy-list envelope makes
+    /// concatenation sufficient (a shadowed pad building never wins the distance max), so —
+    /// unlike LilyPond, which must canonicalise — no merge is needed.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded. Heights are in the
+    /// sign frame (sky*x); subtracting the padding lowers the roof for both directions.</remarks>
+    private List<SkylineBuilding> Padded(double horizonPadding)
+    {
+        double hp = horizonPadding;
+        var pad = new List<SkylineBuilding>(_buildings);
+        foreach (var b in _buildings)
+        {
+            if (!double.IsInfinity(b.Start))
+            {
+                double h = b.ValueAt(b.Start);
+                if (!double.IsNegativeInfinity(h))
+                {
+                    pad.Add(new SkylineBuilding(b.Start - 2 * hp, h - hp, h, b.Start - hp));
+                    pad.Add(new SkylineBuilding(b.Start - hp, h, h, b.Start));
+                }
+            }
+            if (!double.IsInfinity(b.End))
+            {
+                double h = b.ValueAt(b.End);
+                if (!double.IsNegativeInfinity(h))
+                {
+                    pad.Add(new SkylineBuilding(b.End, h, h, b.End + hp));
+                    pad.Add(new SkylineBuilding(b.End + hp, h, h - hp, b.End + 2 * hp));
+                }
+            }
+        }
+        return pad;
     }
 
     /// <summary>
