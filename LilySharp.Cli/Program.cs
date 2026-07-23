@@ -60,6 +60,7 @@ static int Run(string[] args)
         "png" => RunPng(args.Skip(1).ToArray()),
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
+        "ly" => RunLy(args.Skip(1).ToArray()),
         "import" => RunImport(args.Skip(1).ToArray()),
         "vsqx" => RunVsqx(args.Skip(1).ToArray()),
         "harmonize" => RunHarmonize(args.Skip(1).ToArray()),
@@ -83,6 +84,7 @@ static void ShowHelp()
           png     Convert to PNG (raster image)
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
+          ly      Convert to LilyPond (.ly) source
           import  Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
           vsqx    Convert to VOCALOID sequence (vocal part + lyrics)
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
@@ -581,6 +583,60 @@ static int ExecuteXml(string inputPath, string outputPath) =>
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {parts}");
         Console.WriteLine($"  Measures: {measures}");
+        return 0;
+    });
+
+// ============ LilyPond Command ============
+
+static int RunLy(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        ShowLyHelp();
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseIoOnly(args, ".ly");
+    if (error != null) return OptionError(error, "ly");
+
+    return ExecuteLy(inputPath!, outputPath!);
+}
+
+static void ShowLyHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to LilyPond (.ly)
+
+        Usage: lysc ly [options] <input.lys> [output.ly]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.ly]      Output LilyPond file (default: input with .ly extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          -h, --help             Show this help
+
+        The octave marks you wrote in the .lys are preserved verbatim: an
+        `octave absolute` source is wrapped in \fixed c', a relative one in
+        \relative c', so the pitches stay identical in real LilyPond.
+
+        Examples:
+          lysc ly score.lys
+          lysc ly score.lys export.ly
+          lysc ly -o export.ly score.lys
+        """);
+}
+
+static int ExecuteLy(string inputPath, string outputPath) =>
+    RunOutputCommand(inputPath, null, tree =>
+    {
+        var exporter = new LilySharp.Core.LilyPond.LilyPondExporter();
+        var ly = exporter.Export(tree);
+        File.WriteAllText(outputPath, ly);
+        Console.WriteLine($"Created: {outputPath}");
+        foreach (var w in exporter.Warnings)
+            Console.WriteLine($"  warning: {w}");
         return 0;
     });
 
