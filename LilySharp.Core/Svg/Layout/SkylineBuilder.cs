@@ -215,7 +215,8 @@ internal sealed class SkylineBuilder
     private void AddStaffToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         double staffMiddleUp, double stemLength, double noteheadHeight,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline,
+        IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null)
     {
         bool multiVoice = staff.Voices.Length > 1;
         for (int vi = 0; vi < staff.Voices.Length; vi++)
@@ -250,8 +251,13 @@ internal sealed class SkylineBuilder
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
+                    // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
+                    // reserve the fixed 3.5 stem, or the stale over-reservation would win.
+                    bool reserveStem = suppressStems is null
+                        || !suppressStems.Contains((vi, measureIndex, itemIndex));
+
                     AddMusicItemToSkylines(item, itemX, staffMiddleUp,
-                        stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
+                        stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp, reserveStem);
                 }
             }
         }
@@ -271,7 +277,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<ArticulationLayout> articulationLayouts = default,
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
-        ImmutableArray<TieLayout> ties = default)
+        ImmutableArray<TieLayout> ties = default,
+        ImmutableArray<BeamLayout> beams = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -279,6 +286,14 @@ internal sealed class SkylineBuilder
         double staffMiddleUp = -_staffHeight / 2;
         double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = EngravingDefaults.NoteheadHeight;
+
+        // A beamed stem is DRAWN to whatever length the quanter gives its beat, but
+        // AddNoteBoxToSkylines reserves a per-note box with a FIXED DefaultStemLength 3.5 —
+        // the "draws right, reserves stale" double model. When the drawn beams are known, the
+        // beamed members' fixed stems are SUPPRESSED here and the beam's own outer edge is
+        // seeded instead (AddBeamsToSkyline), the way AddTiesToSkyline seeds the drawn bow.
+        // audit/lp-geometry staff.staff.beam-{under,over}-notes.
+        var suppressStems = BeamedItemsToSuppress(beams);
 
         // The staff symbol itself (the 5 lines, ±StaffHeight/2 around the middle)
         // is part of LilyPond's VerticalAxisGroup skyline, so adjacent staves are
@@ -289,7 +304,7 @@ internal sealed class SkylineBuilder
         SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
-            stemLength, noteheadHeight, upSkyline, downSkyline);
+            stemLength, noteheadHeight, upSkyline, downSkyline, suppressStems);
 
         // Dynamics hang below the lowest stem of any voice (or rise above for @f.up);
         // they must widen the inter-staff gap or a dynamic overlaps the adjacent staff.
@@ -326,7 +341,84 @@ internal sealed class SkylineBuilder
         // the notes alone (-0.560901).
         AddTiesToSkyline(ties, upSkyline, downSkyline);
 
+        // A beam is ordinary ink inside the staff's own axis group (scm/define-grobs.scm Beam
+        // carries vertical-skylines from its stencil and sets no outside-staff-priority), so a
+        // staff below must clear its outer edge exactly as it clears a tuplet bracket. The
+        // members' fixed stems were suppressed above; this seeds the real drawn geometry.
+        AddBeamsToSkyline(beams, staffMiddleUp, upSkyline, downSkyline);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// The (voice, measure, item) keys of notes whose FIXED per-note stem must be suppressed
+    /// because their beam's real geometry is seeded instead (see <see cref="AddBeamsToSkyline"/>).
+    /// A beamed stem is drawn to the quanter's length, not <c>DefaultStemLength</c>, so leaving
+    /// the fixed 3.5 stem in the box would over-reserve it and the seed would never bind.
+    /// </summary>
+    /// <remarks>
+    /// Cross-staff and kneed beams are EXCLUDED: their outer edge is not a single line on one
+    /// side, and no ledger point measures them, so their members keep the per-note fixed stem
+    /// unchanged. audit/lp-geometry staff.staff.beam-{under,over}-notes.
+    /// </remarks>
+    private static HashSet<(int Voice, int Measure, int Item)> BeamedItemsToSuppress(
+        ImmutableArray<BeamLayout> beams)
+    {
+        var set = new HashSet<(int, int, int)>();
+        if (beams.IsDefaultOrEmpty)
+            return set;
+        foreach (var b in beams)
+        {
+            var g = b.Group;
+            if (g.IsCrossStaff || g.IsKnee)
+                continue;
+            foreach (var m in g.Members)
+                set.Add((g.VoiceIndex, m.ResolveMeasureIndex(g.MeasureIndex), m.ItemIndex));
+        }
+        return set;
+    }
+
+    /// <summary>
+    /// Seeds the drawn beams into the per-staff skylines, so the inter-staff gap reserves the
+    /// real beam geometry rather than the fixed stem <see cref="AddNoteBoxToSkylines"/> would
+    /// give each member. The analogue of <see cref="AddTupletBracketsToSkyline"/> and
+    /// <see cref="AddTiesToSkyline"/> for the beam.
+    /// </summary>
+    /// <remarks>
+    /// The outer edge is <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/> — the stem tip plus
+    /// half <c>Beam.thickness</c> (plus the stack for multiple beams) — the one canonical line
+    /// scripts, slurs and tuplet brackets already clear a beam by, so the reservation and the
+    /// drawing come from ONE computation. It is Y-up from the staff MIDDLE, so it is rebased
+    /// to this skyline's origin (the staff top) by <c>+ staffMiddleUp</c>, exactly as the note
+    /// boxes are. A beam sits entirely on its stems' side, so it joins only that direction's
+    /// skyline, like the tuplet bracket. Cross-staff and kneed beams are not seeded here (their
+    /// members keep the per-note stem — see <see cref="BeamedItemsToSuppress"/>).
+    /// LILYPOND-REF: scm/define-grobs.scm Beam (vertical-skylines from the stencil,
+    /// thickness 0.48); lily/beam.cc — a beamed stem ends at the beam's outer face.
+    /// </remarks>
+    internal static void AddBeamsToSkyline(
+        ImmutableArray<BeamLayout> beams, double staffMiddleUp,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (beams.IsDefaultOrEmpty)
+            return;
+        foreach (var b in beams)
+        {
+            var g = b.Group;
+            if (g.IsCrossStaff || g.IsKnee)
+                continue;
+            double xLeft = Math.Min(b.LeftX, b.RightX);
+            double xRight = Math.Max(b.LeftX, b.RightX);
+            if (xRight <= xLeft)
+                continue;
+
+            bool stemUp = g.StemUp;
+            double yLeft = b.OuterEdgeStaffSpaceAtX(xLeft, stemUp) + staffMiddleUp;
+            double yRight = b.OuterEdgeStaffSpaceAtX(xRight, stemUp) + staffMiddleUp;
+            var direction = stemUp ? VerticalDirection.Up : VerticalDirection.Down;
+            var sky = stemUp ? upSkyline : downSkyline;
+            sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+        }
     }
 
     /// <summary>
@@ -695,13 +787,14 @@ internal sealed class SkylineBuilder
         double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
-        bool? forcedStemUp = null)
+        bool? forcedStemUp = null,
+        bool reserveStem = true)
     {
         switch (item)
         {
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp,
-                    stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
+                    stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp, reserveStem);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
                         note.StaffPosition * 0.5 + staffMiddleUp, upSkyline, downSkyline);
@@ -718,7 +811,7 @@ internal sealed class SkylineBuilder
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp,
                         stemLength, noteheadHeight, chordStemUp, chordNoteValue,
-                        upSkyline, downSkyline);
+                        upSkyline, downSkyline, reserveStem);
                 }
                 // Chord accidentals go through the REAL placement machinery
                 // (stagger columns, reversed-head offsets) so the skyline
@@ -802,13 +895,14 @@ internal sealed class SkylineBuilder
         double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
-        bool? forcedStemUp = null)
+        bool? forcedStemUp = null,
+        bool reserveStem = true)
     {
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
         bool stemUp = forcedStemUp ?? note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp,
-            stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
+            stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline, reserveStem);
     }
 
     /// <summary>
@@ -838,7 +932,8 @@ internal sealed class SkylineBuilder
         bool stemUp,
         int noteValue,
         VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
+        VerticalSkyline downSkyline,
+        bool reserveStem = true)
     {
         // Translate a Y-up coordinate (staff-spaces above THIS staff's middle line)
         // into the shared skyline Y-up frame (whose origin is the system/staff top).
@@ -916,7 +1011,12 @@ internal sealed class SkylineBuilder
         // point: on a single staff the clef reaches further than any of this, and between
         // systems basic-distance wins. audit/lp-geometry staff.staff.lower-note-to-upper-lines
         // measured it as +1.450000 against LilyPond, the whole of which is this stem.
-        if (noteValue < 2)
+        //
+        // A BEAMED note's stem is not this fixed length either: it is drawn to the beam the
+        // quanter placed, so when the beam is seeded (AddBeamsToSkyline) reserveStem is false
+        // and the stem and its phantom flag are left to the beam. audit/lp-geometry
+        // staff.staff.beam-{under,over}-notes.
+        if (noteValue < 2 || !reserveStem)
             return;
 
         if (stemUp)

@@ -4,7 +4,8 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-24 / master `aa49357a` 付近（§0 で必ず裏取り——この docs 更新の分だけ HEAD/ahead は先へ進む）。origin より約 18 ahead・未 push
+最終更新: 2026-07-24 / master `d772558f`（§0 で必ず裏取り——この docs 更新の分だけ HEAD/ahead は先へ進む）。origin より 33 ahead・未 push。
+このセッションで **beam の forced-direction shortening を移植して閉じた**（`81d5740d` 実装＋`d772558f` docs）。テスト 3219 passed / 0 failed / 3 skipped。LP 忠実度 33/46 exact・0.021985 ss。
 
 ---
 
@@ -27,26 +28,30 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **beam 点を対で開く（LP 実測済み・欠陥確定）**
+### ▶ 次のセッションの最初の一手 ＝ **未測の領域に点を開く（臨時記号配置・ページ跨ぎスラー/タイ）**
 
-このセッションで **スラーの 0.13 を閉じ（`d11ede43`）、タイを開いて種を入れて閉じた**（`c182d4d0`→`93ae87d1`→`b0fe9c42`、下記 ✅）。
-タイ残 **+0.001391 は追わない**（インク taper 近似＋ratio 0.333 vs 1/3。スラーの −0.000076 Pango と同類）。
-スラー・タイの縦は**もう「定数 1 つで閉じる」ネタは無い**。
+**beam quanter はこのセッションで閉じた**（下記 ✅・`staff.staff.beam-{under,over}-notes` は **+0.69 → 0**、BMD=BMU exact）。
+残る未測領域は §3A の通り: **臨時記号配置**（台帳点ゼロ）と**ページ跨ぎスラー/タイ**（SSU/SSD 未起票）。
+手順は §1 末尾の「4 回連続で成立した型」（対で起票→予測を先に書く→種）を使う。
 
-⚠️⚠️ **beam を実測して欠陥を確定した**（このセッション末・probe は起票せず revert 済）。
-**per-note のスカイライン箱（`SkylineBuilder.AddNoteBoxToSkylines`）は符尾を固定 3.5**（`DefaultStemLength`）で
-予約し、**beam quanter の実際の符尾長を無視している**。同音の beam 群では LP の符尾は**短い**——
-`\stemDown g8[g g g]`（G3・中線下 4.5ss）を LP は beam を **positions −6.81ss**（符尾 2.31ss）に量子化し、
-beam 底＝−6.81−0.24（beam-thickness 0.48 の半分）＝ **−7.05ss**、gap ＝ 7.05+3.05 ＝ **10.100000**
-（BMD＝BMU で 14 桁一致）。Lily# は固定 3.5 で予約＝**約 0.95ss 過剰予約**（描画は quanter で正しいのに予約だけ古い＝§5.2.1② の二重モデル）。
-→ **修正の筋**: beam layout を staff スカイラインへ渡し（slur/tie の `StaffSlurLayouts`/`SeedBowInk` と同型）、
-固定 3.5 でなく**実 beam ジオメトリ**（符尾先端＋beam 厚）を予約する。
-⚠️ **twin の壁**: Lily# は `@stemdown`（単音）では beam 群の符尾を下向きに強制**できない**（実測：beam が上に出た）。
-`voice { … }` の**第2声部**が確実（`test/multivoice-beams.lys`）。だが LP twin も `\voiceTwo` に替えると
-量子化が変わり得る＝**LP を再実測**してから対で起票すること。
+⚠️ **beam の残（今回スコープ外・次点の候補）**:
+- **page/system スカイラインの beam 種は未着手**: 譜間（`BuildStaffSkylines`）だけが drawn beam を種にする。`BuildSkylines`（system/page）は固定 3.5 のまま（page 用 beam 台帳点＝TSU/TSD 相当が無いので触らない）。
+- **cross-staff / kneed beam** は forced-shorten の対象外（`ComputeBeamShorten` は knee で 0＝LP `calc_stem_shorten` line 1068 と一致）＝固定 3.5 のまま。
 
-手順は 7 回連続で成立した型（§5.2.1④）: 1.**点を対で起票**（コード変更ゼロ・予測先書き）。2.**床に座らせない**。3.**probe が何を測るか確認**。
-**穴を開けるまで何が溜まっているかは分からない**（タイも種を入れた瞬間に +0.02＝arc 高さが出た）。
+#### ★★ 教訓: **base_lengths_ 仮説は測定で否定された——正体は beam 'shorten**
+前 handoff は「score_stem_lengths の base_lengths_[i]/stem_ypositions_[i] を絶対フレームで再構成」と診断したが、これは**誤り**だった。
+`inspect-quants` で −6.5/−6.19 を強制して full score card を吐かせると、**limit_penalty は UNSHIFTED beam_y に対して発火**（shortest_y_=−6.74・base_lengths_=0）。
+シフトは**すべて ideal 側**にあり、その正体は **forced-direction stem shortening**（Roush & Gourlay）＝**beam の `shorten` プロパティ**:
+- `Beam::calc_stem_shorten`（`beam.cc:1059-1090`）＝`beamed-stem-shorten[beam_count-1]`（`define-grobs.scm:493`＝`(1.0 0.5 0.25)`）× `forced_stem_count/normal_stem_count`。knee は 0。
+- 「forced」＝頭が中線から外れ（`|chord_start_y|>0.1`）かつ direction ≠ default-direction（`beam.cc:1277-1293`）。default-direction は**音符位置ごと**（中線下→up・上→down・中線上→0＝除外）。
+- `shorten` は **ideal のみ**から引く（`stem.cc:1245` `ideal_y -= shorten`）——**shortest_y_ は引かない**。BMD は 4 stem 全 forced で shorten=1.0、ideal を −7.52→−6.52 に寄せ、shortest_y_ −6.74 に引かれ −6.81 に量子化。
+- 移植＝`BeamScoringProblem.ComputeBeamShorten` ＋ `CalculateBeamedStemInfo` の `idealY -= beamShorten`。**定数 fitting なし**（`shorten` は grob プロパティの字面移植）。
+- ⚠️ **LP 検証で clef を必ず合わせる**: `instrument bass` は Lily# では**楽器名**（ト音記号のまま）だが、この fixture は**ヘ音**で組まれる。treble の LP と比べて「不一致」と誤読した（実際は bass で 0.5/0/0 一致）。
+
+★ **twin の壁は測定で解けた**: Lily# は単音 `@stemdown` で beam 群を下向き強制**できない**ので BMD/BMU は `voice { … }` で強制。LP の量子化は単音 `\stemDown`・`\voiceTwo`・`\voiceOne` で **14 桁一致**。
+
+★ **スラー・タイの縦は完了**（`d11ede43`／`c182d4d0`→`b0fe9c42`）。タイ残 +0.001391 は追わない
+（インク taper 近似＋ratio 0.333。スラーの −0.000076 Pango と同類）。
 
 ⚠️ **LP の実測は scheme dump が速い**: `\once \override <Grob>.after-line-breaking = #(lambda (g) (format (current-error-port) "…~s…" (ly:grob-property g 'positions/'control-points)) '())`
 で staff 相対（中線=0・up+）に吐ける。タイ arc 高さ・beam positions ともこれで LP と桁照合（SVG 精密測定＝§5.3 禁止 を回避）。
@@ -82,9 +87,41 @@ magnification 0.5690551 の相互作用**由来で、Skia からは出せない�
 実効 scale を突き止めるのが先（payoff は 4 点 ×0.0001〜0.0008 ss）。**SKPath 直読みで定数を合わせるのは
 §5.2 違反（fitting）。** ⚠️ この 4 点はまだ台帳に「clef sliver」として残っている（§3A）。
 
-### ▶ その次 ＝ **さらに未測の領域（ビーム・タイ・臨時記号配置）に点を開く**
+#### ✅ このセッション（2026-07-24 最新）＝ **beam を LP の forced-shorten で閉じた（+0.69 → 0）**
 
-#### ✅ このセッション（2026-07-24）＝ **スラー 0.13 を閉じ、タイを開いて種を入れて閉じた（縦の bow は完了）**
+| commit | 内容 |
+|---|---|
+| （**未コミット・要 add**） | **forced-direction stem shortening を移植**（beam の `shorten` プロパティ）。`BeamScoringProblem.ComputeBeamShorten`＝`Beam::calc_stem_shorten`（`beam.cc:1059-1090`）の字面移植＝`beamed-stem-shorten[beam_count-1]`（`(1.0 0.5 0.25)`）× `forced_stem_count/normal_stem_count`（forced＝頭が中線外＋dir≠default-direction、`beam.cc:1277-1293`）。`CalculateBeamedStemInfo` が `idealY -= beamShorten`（`stem.cc:1245`＝**ideal のみ**、shortest_y_ は不変）。tab は string 位置に音高 default-direction が無いので除外（`LILYSHARP-OWN`）。**`staff.staff.beam-{under,over}-notes` +0.69 → 0**（BMD=BMU exact）。**snapshot 7 件再ベース**（全て forced beam の短縮・**LP と個別照合済**: tab 0.5/0/0・drums 1.0・script 0.75・swing 0.75・showcase 0.25・全一致） |
+
+**テスト 3219 passed / 0 failed / 3 skipped**（基準 3218）。Core 0 warn / 0 err。
+**LP 忠実度 33/46 exact, total |residual| = 0.021985 ss over 42 distances ＋ counts 4/4**
+（beam 2 点 0.69 → 0＝exact。合計 1.401985 → 0.021985）。
+
+##### ★★ 教訓: **base_lengths_ 仮説は否定・正体は beam 'shorten（§1 冒頭に詳細）**
+前 handoff の「score_stem_lengths の base_lengths_ を絶対フレームで再構成」診断は誤りだった。full score card 測定で
+limit_penalty は UNSHIFTED beam_y に発火（base_lengths_=0）と判明、シフトは ideal 側の forced-shorten だった。
+⚠️ **LP 照合で clef 取り違え**（`instrument bass`＝楽器名でト音のまま vs Lily# ヘ音）を一度踏んだ——**必ず同一 clef で比較**。
+
+#### ✅ 前セッション（2026-07-24 後半）＝ **beam を対で開き、種を入れた（+0.95→+0.69）**
+
+| commit | 内容 |
+|---|---|
+| `1a002706`（**未 push**） | **beam の台帳点を対で起票**（BMD/BMU）。`SkylineBuilder.AddNoteBoxToSkylines` の**固定 3.5 符尾**予約を確定＝**残差 +0.950000000**。コード変更ゼロ |
+| `0138e5c0`（**未 push**） | **beam の種を staff スカイラインへ**（`AddBeamsToSkyline`＝`OuterEdgeStaffSpaceAtX`／`BeamedItemsToSuppress`／`StaffBeamLayouts`）。**+0.95 → +0.69**。視覚 fixture `test/beam-under-staves` 新設。残 +0.69＝描画 beam 自体（→上記で forced-shorten と判明・閉じた） |
+
+##### ★★ 教訓: **種が「描画は正しい」という前提を否定した（第2欠陥＝描画 beam）**
+前 handoff は「描画は quanter で正しい・予約だけ古い」と書いた。種を入れて予約が描画に一致した瞬間、**残差は 0 でなく +0.69**——
+つまり**描画の beam 自体が LP より 0.69 低い**（Lily# 中心 −7.5ss・符尾 3.0／LP −6.81ss・符尾 2.31）。
+固定 3.5 の過剰予約がこの描画欠陥を**隠していた**。§5.2.1④「穴を開けるまで何が溜まっているか分からない」の実例。
+⚠️ **「描画は正しい」を実測せず信じない**——予約が描画より外側にある間は描画欠陥は見えない。
+
+##### ★ 教訓: **「twin の壁」は起票前に測って否定できる**
+前セッションの「`\voiceTwo` で量子化が変わり得る」警告を実測で否定（単音 `\stemDown`・`\voiceTwo`・`\voiceOne` とも ∓6.81 で 14 桁一致）。
+beam 数を 2/3/4 に変えても平坦 beam の量子・gap は不変（BMD=BMU の一致がその検算）。
+
+#### ✅ このセッション（2026-07-24 前半）＝ **スラー 0.13 を閉じ、タイを開いて種を入れて閉じた（縦の bow は完了）**
+
+#### ✅ このセッション（2026-07-24 前半）＝ **スラー 0.13 を閉じ、タイを開いて種を入れて閉じた（縦の bow は完了）**
 
 | commit | 内容 |
 |---|---|
@@ -1307,8 +1344,10 @@ PASS 2 を `SpringSolver` による両方向 solve に置き換えて測った�
 
 ### A. LP 忠実度を測定可能にし、単調に上げる ★中心
 
-**現状 29/42 exact, total |residual| = 0.279202 ss over 38 distances ＋ counts 4/4**
-（`audit/lp-geometry/`・**LP 2.26.0 基準**。スラー予約で 1.044394 → 0.279202、残スラー 2 点 −0.130000）。
+**現状 33/46 exact, total |residual| = 0.021985 ss over 42 distances ＋ counts 4/4**
+（`audit/lp-geometry/`・**LP 2.26.0 基準**。beam 2 点は `1a002706`/`0138e5c0` で開き＋種（各 +0.95→+0.69）、
+最新セッションで **forced-direction stem shortening（beam `shorten`）を移植して各 +0.69 → 0**（exact）＝§1 冒頭。
+合計は 0.021985 → 1.921985 → 1.401985 → **0.021985**（スラー/タイを閉じた地点に戻った）。この合計を過去値と直接比べない——点集合が違う）。
 **X 22 点は 19 exact / 0.022412、Y 7 点は 3 exact / 0.001365、譜間 5 点は 2 exact、
 system 間タプレット 2 点、ページ本数 4 点は全て exact**
 （`920cf4dc` で起票、`113fdeda`＋`850c7d98` で閉じた）。
@@ -1348,10 +1387,11 @@ X 3 点のうち 2 点は Lily# に無いパイプライン（水平スカイラ
 
 ✅ **タプレット括弧は 2 つのスカイラインとも閉じた**（`caa0f239` 譜間 / `075277ff` ページ）。
 
-⚠️ **未測定の疑い**: **ビーム・タイ・臨時記号配置には台帳の点が 1 つも無い**（スラーは `87bcde22`＋
-`f093583e` で対で開いて予約まで実施＝SD/SU、−0.512596 → **−0.130000**。残る 0.13 は峰高定数・§1 冒頭）。
+⚠️ **未測定の疑い**: **臨時記号配置には台帳の点が 1 つも無い**（スラー/タイ/ビームは対で開き済みで**全て閉じた**——
+スラーは `87bcde22`＋`f093583e`→`d11ede43`、タイは `c182d4d0`→`b0fe9c42`、
+**ビームは `1a002706`／`0138e5c0` で開き＋種、`81d5740d` で forced-direction shortening を移植して +0.95→+0.69→0（exact・§1 冒頭）**）。
 タプレットで点を開いたら**欠陥が 4 つ**出た（うち 1 つは snapshot に構造的に現れない種類だった）。
-着手手順は §1 の「その次」。**必ず対で作ること。**
+着手手順は §1 の「次の一手」（臨時記号配置）。**必ず対で作ること。**
 
 ### B. 座標系の LP 統一を完了させる（COORDINATE_AUDIT §4.6）
 

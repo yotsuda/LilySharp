@@ -1519,8 +1519,9 @@ internal sealed class MultiStaffLayouter
                 var tupletBrackets = StaffTupletBracketLayouts(score, staff, thisStaff, measureLayouts);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
+                var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts);
                 var sky = skylineBuilder.BuildStaffSkylines(
-                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties);
+                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties, beams);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline
@@ -1660,6 +1661,51 @@ internal sealed class MultiStaffLayouter
             LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
         return _elementCoordinator.LayoutTies(
             staffScore, ImmutableArray.Create(system), staffIndex: 0, staff);
+    }
+
+    /// <summary>
+    /// This staff's own beams, laid out in the staff's own frame so the skyline can reserve
+    /// their outer edges — the beam analogue of <see cref="StaffSlurLayouts"/>. Reuses
+    /// <see cref="ElementCoordinator.LayoutBeams"/> whole on the same trivial one-staff system,
+    /// exactly as the final pass computes beams (<c>LayoutEngine.LayoutAllSpanners</c>).
+    /// </summary>
+    /// <remarks>
+    /// A beam's Y is measured from the staff MIDDLE (half-space positions) and its X from the
+    /// measure layout — both independent of the inter-staff spacing — so computing it before
+    /// that spacing is decided is sound, and it matches the drawn beam.
+    /// <para>
+    /// The score MUST expose all voices, as the final pass does: auto-beaming runs per voice, so
+    /// a second-voice beam — the shape audit/lp-geometry BMD/BMU measure — never forms on a
+    /// primary-voice-only score. Tuplet spans are passed because auto beams break at tuplet
+    /// boundaries (<see cref="BeamDetector"/>), so the beams here are the ones the renderer draws.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<BeamLayout> StaffBeamLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(group),
+            Indent: 0);
+        var staffTuplets = score.TupletBrackets.IsDefaultOrEmpty
+            ? ImmutableArray<TupletBracketItem>.Empty
+            : score.TupletBrackets.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
+        var staffScore = staff.Voices.Length > 1
+            ? new Score(
+                staff.Voices, score.TimeSignature, score.KeySignature,
+                LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                tupletBrackets: staffTuplets)
+            : new Score(
+                staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                tupletBrackets: staffTuplets);
+        return _elementCoordinator.LayoutBeams(staffScore, ImmutableArray.Create(system), staffIndex: 0);
     }
 
     /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its

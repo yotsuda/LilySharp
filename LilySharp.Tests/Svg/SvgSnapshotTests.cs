@@ -359,6 +359,11 @@ public class SvgSnapshotTests
         // the staff below clears its bow — SkylineBuilder had no slur in it. Pinned against
         // real LilyPond by staff.staff.slur-{under,over}-notes in the LP-fidelity corpus.
         yield return new object[] { "test/slur-under-whole-notes" };
+        // Multi-staff: a BEAM drooping into the inter-staff gap must be RESERVED at its DRAWN
+        // geometry, not the fixed 3.5 stem AddNoteBoxToSkylines gives an unbeamed note —
+        // SkylineBuilder now suppresses the beamed stems and seeds the beam's outer edge.
+        // Pinned against real LilyPond by staff.staff.beam-{under,over}-notes in the corpus.
+        yield return new object[] { "test/beam-under-staves" };
         // Multi-staff: an arpeggio on a SECOND (bass) staff chord draws to the
         // left of that chord, not the first staff (ArpeggioItem.StaffIndex).
         yield return new object[] { "test/arpeggio-lower-staff" };

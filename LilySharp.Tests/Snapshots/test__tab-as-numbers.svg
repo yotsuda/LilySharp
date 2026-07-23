@@ -69,9 +69,9 @@
   <text x="51.60" y="22.62" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="477">9</text>
   <rect x="55.44" y="20.90" width="1.62" height="1.79" fill="#FFFFFF" data-pos="480"/>
   <text x="56.26" y="22.62" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="480">5</text>
-  <polygon points="16.19,16.55 20.27,15.86 20.27,16.34 16.19,17.03"/>
-  <line x1="16.25" y1="13.94" x2="16.25" y2="16.78" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.21" y1="12.94" x2="20.21" y2="16.11" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="16.19,15.86 20.27,15.24 20.27,15.72 16.19,16.34"/>
+  <line x1="16.25" y1="13.94" x2="16.25" y2="16.09" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.21" y1="12.94" x2="20.21" y2="15.49" stroke="#000000" stroke-width="0.130"/>
   <polygon points="24.10,15.05 28.38,15.86 28.38,16.34 24.10,15.53"/>
   <line x1="24.16" y1="11.94" x2="24.16" y2="15.30" stroke="#000000" stroke-width="0.130"/>
   <line x1="28.32" y1="12.94" x2="28.32" y2="16.09" stroke="#000000" stroke-width="0.130"/>

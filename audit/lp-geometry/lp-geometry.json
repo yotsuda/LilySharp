@@ -310,6 +310,20 @@
       "residual": 0.001391435,
       "why": "The mirror of staff.staff.tie-under-notes: TID binds the lower staff's top line against a tie coming down, TIU the upper staff's bottom line against one going up. a' (A4) sits +11 above the bass middle line, the mirror of e's -11 below the treble one, so LilyPond prints the same 9.655901202802955 -- measured identical, the pair's cross-check. Prediction and full account on staff.staff.tie-under-notes."
     },
+    "staff.staff.beam-under-notes": {
+      "probe": "page-vertical.ly",
+      "score": "BMD",
+      "lilypond": 10.100000,
+      "residual": 0.0,
+      "why": "CLOSED this session by porting LilyPond's forced-direction stem shortening. History: opened at +0.95 (Lily# reserved a fixed DefaultStemLength 3.5 stem, ignoring the quanter), seeded to +0.69 (SkylineBuilder now reserves the drawn beam's outer edge via AddBeamsToSkyline), and the residual +0.69 was the DRAWN beam itself sitting too low -- Lily# placed this forced-down same-pitch beam at centre -7.5 ss where LilyPond places it at -6.81. THE CAUSE was the beam 'shorten property, missing from Lily#'s quanter. A stem forced into its UNNATURAL direction (here g at -9, whose natural stem is UP, forced DOWN by \\voiceTwo) is shortened toward the staff: Beam::calc_stem_shorten (lily/beam.cc:1059-1090) returns beamed-stem-shorten[beam_count-1] (scm/define-grobs.scm:493 = (1.0 0.5 0.25)) times staff_space times forced_stem_count/normal_stem_count, where a stem is 'forced' when its head is off the middle line and its direction differs from its default-direction (lily/beam.cc:1277-1293). That beam 'shorten is subtracted from the IDEAL beam Y only (lily/stem.cc:1245 ideal_y -= shorten), NOT from shortest_y_; for BMD all 4 stems are forced so shorten = 1.0, moving the ideal from -7.52 to -6.52, which the quanter pulls to shortest_y (-6.74) and quantises to -6.81. Ported literally as BeamScoringProblem.ComputeBeamShorten + StemCalculator.CalculateBeamedStemInfo's idealY -= beamShorten. NOTE: an earlier diagnosis in this ledger attributed the +0.69 to a dropped base_lengths_[i]/stem_ypositions_[i] grob-frame term (current_y = beam_y + base_lengths_[i]); that was disproved -- forcing candidates at -6.5/-6.19 showed LilyPond's limit_penalty fires against the UNSHIFTED beam_y with shortest_y_ = -6.74 (base_lengths_ = 0), and the shift is entirely on the ideal via the beam 'shorten. Verified: LilyPond and Lily# both draw -6.81; BMD == BMU (the pair holds). The same port matches LilyPond's shorten on tab (0.5/0/0), drums (1.0), and mixed forced beams (0.75/0.75/0.25). LILYPOND-REF: lily/beam.cc:1059-1090 calc_stem_shorten; lily/beam.cc:1277-1293 forced_stem_count; lily/stem.cc:1245."
+    },
+    "staff.staff.beam-over-notes": {
+      "probe": "page-vertical.ly",
+      "score": "BMU",
+      "lilypond": 10.100000,
+      "residual": 0.0,
+      "why": "The mirror of staff.staff.beam-under-notes: BMD binds the lower staff's top line against a beam coming down, BMU the upper staff's bottom line against one going up. f' (F4) sits +9 above the bass middle line, the mirror of g's -9 below the treble one, so LilyPond prints the same 10.100000. The beam is in the FIRST voice here (stems forced UP, natural DOWN). CLOSED identically to BMD by the forced-direction stem shortening port (all 4 stems forced, shorten = 1.0); BMD == BMU held at every stage (+0.95 -> +0.69 -> 0). Full account on staff.staff.beam-under-notes."
+    },
     "system.tuplet-bracket-up": {
       "probe": "page-vertical.ly",
       "score": "TSU",

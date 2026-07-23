@@ -541,3 +541,68 @@ probeTag =
     >>
   }
 }
+
+%% BMD / BMU — a BEAM over same-pitch eighth notes, reaching into the staff gap from ABOVE
+%%     (BMD, a down-stemmed beam on the upper staff) and from BELOW (BMU, an up-stemmed beam
+%%     on the lower staff). Same quantity as P/Q, TU/TD and SD/SU: Align_interface's
+%%     staff-to-staff distance, ragged-bottom so the springs stay at their natural length.
+%%
+%%     The suspicion, and the first ledger point ever to reach a BEAM. A beam is drawn by the
+%%     quanter at whatever stem length its beat needs, but Lily#'s SkylineBuilder reserves a
+%%     per-note box with a FIXED stem of DefaultStemLength 3.5 (AddNoteBoxToSkylines) and
+%%     never consults the quanter — so a beam group of low, forced-down eighths reserves a
+%%     3.5 stem where LilyPond's quanter draws a SHORTER one. This is the "draws right,
+%%     reserves stale" double model, the same shape as the tuplet bracket that was reserved
+%%     nowhere: the drawing and the reservation come from two different models.
+%%
+%%     MEASURED unperturbed on 2.26.0. The beam quantises to positions -6.81 (stem 2.31 from
+%%     g's centre at -4.5), so its outer edge is 6.81 + 0.24 (half of Beam.thickness 0.48)
+%%     = 7.05 below the upper refpoint, and the gap is 7.05 + 2.05 (the lower staff line's
+%%     INK) + 1 (StaffGrouper padding) = 10.100000. A Lily# that reserves the FIXED 3.5 stem
+%%     reads g's stem tip at 4.5 + 3.5 = 8.0 instead, for a gap of 8.0 + 2.05 + 1 = 11.05 --
+%%     so the predicted residual is +0.95, the whole of the stem it over-reserves.
+%%
+%%     ⚠️ THE PITCH IS NOT FREE, for the reason SD/SU's is not: g (G3, six spaces below the
+%%     treble middle line) puts the beam deep enough that 10.100000 beats StaffGrouper's
+%%     basic-distance 9 with room (0.66 above the floor, like the tie), while the noteheads
+%%     alone (5.045 below the refpoint, + 2.05 + 1 = 8.095) LOSE to it -- so a Lily# that
+%%     reserved the notes but not the stem would sit on the floor and this residual would
+%%     read floor-minus-LilyPond rather than the whole stem. On a higher note neither side
+%%     would beat 9 and the pair would print 9.000000 and measure nothing.
+%%
+%%     ⚠️ TWO VOICES, and it is load bearing. A single-voice \stemDown does force a beam
+%%     down in LilyPond, but Lily# cannot force a beam group's direction from a single-note
+%%     token -- measured, the beam came out UP -- so its twins use a second voice, whose
+%%     stems (and beam) LilyPond's \voiceTwo forces down and \voiceOne up. Measured on
+%%     2.26.0, the quant is IDENTICAL either way: single-voice \stemDown, \voiceTwo and
+%%     \voiceOne all report positions -/+6.81 to fourteen digits, so the two-voice twin is a
+%%     faithful mirror of the single-voice defect HANDOFF first measured. Voice one/two also
+%%     holds the middle line so each staff is an ordinary two-voice texture.
+%%
+%%     BMD and BMU must print the SAME number: two edges of one gap reached through two
+%%     different skylines (f', +9 above the bass middle line, is the mirror of g's -9 below
+%%     the treble one), so a difference between them is a defect on its own -- the
+%%     relationship P/Q, TU/TD and SD/SU are built on.
+\book {
+  \probeTag "BMD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 4/4
+        << { \voiceOne b'1 } \\ { \voiceTwo g8 g g g g g g g } >> }
+      \new Staff { \clef bass \time 4/4 d1 }
+    >>
+  }
+}
+
+\book {
+  \probeTag "BMU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \time 4/4 b'1 }
+      \new Staff { \clef bass \time 4/4
+        << { \voiceOne f'8 f' f' f' f' f' f' f' } \\ { \voiceTwo d1 } >> }
+    >>
+  }
+}

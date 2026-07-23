@@ -74,6 +74,19 @@ internal sealed class BeamScoringProblem
     // ideal/shortest stem length, matching LilyPond's Stem_info.
     private readonly int[] _memberBeamCounts;
 
+    // Beam-level stem shortening applied to every stem's IDEAL beam Y (not its
+    // shortest_y_). LilyPond shortens stems forced into their unnatural direction;
+    // the amount is a single beam property. See <see cref="ComputeBeamShorten"/>.
+    // LILYPOND-REF: lily/beam.cc:1059-1090 Beam::calc_stem_shorten (the beam 'shorten);
+    //               lily/stem.cc:1245 ideal_y -= shorten (applied to the ideal only).
+    private readonly double _beamShorten;
+
+    // True when this beam is quanted from TAB string lines (stemPositions) rather than
+    // pitch. Forced-direction shortening keys off a note's natural (pitch) stem
+    // direction, which a string line does not have, so it does not apply here.
+    // LILYSHARP-OWN: a TAB string position carries no pitch default-direction.
+    private readonly bool _isTab;
+
     // Edge (first/last member) beam counts and stem directions.
     // LILYPOND-REF: beam-quanting.cc edge_beam_counts_, edge_dirs_
     private readonly int[] _edgeBeamCounts; // [0]=left, [1]=right
@@ -160,6 +173,7 @@ internal sealed class BeamScoringProblem
             _maxBeamCount = Math.Max(_maxBeamCount, member.BeamCount);
         }
 
+        _isTab = stemPositions != null;
         _beamDir = group.StemUp ? 1 : -1;
 
         // LILYPOND-REF: beam-quanting.cc:333 is_knee_
@@ -171,6 +185,9 @@ internal sealed class BeamScoringProblem
         {
             _memberBeamDirs[i] = group.Members[i].MemberStemUp ? 1 : -1;
         }
+
+        // Beam-level forced-direction shortening applied to every stem's ideal beam Y.
+        _beamShorten = ComputeBeamShorten();
 
         // LILYPOND-REF: beam-quanting.cc edge_beam_counts_ / edge_dirs_ —
         // forbidden-quant checks run per beam END with that end's own beam
@@ -186,6 +203,49 @@ internal sealed class BeamScoringProblem
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
         _beamTranslation = EngravingDefaults.BeamTranslation;
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
+    }
+
+    /// <summary>
+    /// The beam's forced-direction stem shortening: the ideal beam Y of every stem is
+    /// pulled toward the staff by this amount (the shortest_y_ floor is NOT). LilyPond
+    /// shortens stems forced away from their natural direction; the amount is a single
+    /// beam property scaled by the fraction of stems that are forced.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:1059-1090 Beam::calc_stem_shorten —
+    ///   shorten = beamed-stem-shorten[beam_count-1] * staff_space * (forced/normal),
+    ///   0 for knees. staff_space = 1 here.
+    /// LILYPOND-REF: lily/beam.cc:1277-1293 Beam::forced_stem_count — a stem is forced
+    ///   when its head is off the middle line (|chord_start_y| > 0.1) and its direction
+    ///   differs from the note's default (natural) direction.
+    /// </remarks>
+    private double ComputeBeamShorten()
+    {
+        // LILYPOND-REF: lily/beam.cc:1068 — shortening looks silly for knee/x-staff beams.
+        // TAB beams quant from string lines, which have no pitch default-direction.
+        if (_isKnee || _isTab)
+            return 0.0;
+
+        double[] beamedStemShorten = StemDetails.Default.BeamedStemShorten; // (1.0 0.5 0.25)
+        // LILYPOND-REF: lily/beam.cc:1082 robust_list_ref (beam_count - 1, shorten_list).
+        int idx = Math.Clamp(_maxBeamCount - 1, 0, beamedStemShorten.Length - 1);
+
+        int forced = 0;
+        for (int i = 0; i < _staffPositions.Length; i++)
+        {
+            // Beam-side head; a single note has close == far == StaffPosition (half-spaces).
+            int headPos = _staffPositions[i];
+            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            // default-direction: a note below the middle line naturally stems up.
+            int naturalDir = headPos < 0 ? 1 : -1;
+            // |chord_start_y| > 0.1 excludes middle-line heads; integer half-spaces
+            // means that is exactly headPos != 0.
+            if (headPos != 0 && dir != naturalDir)
+                forced++;
+        }
+
+        double forcedFraction = forced / (double)_staffPositions.Length;
+        return beamedStemShorten[idx] * forcedFraction;
     }
 
     /// <summary>
@@ -276,7 +336,7 @@ internal sealed class BeamScoringProblem
             int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation, isKnee: _isKnee);
+                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY; // staff-spaces (native quanter frame)
             ideals.Add((_stemXPositions[i], idealY));
         }
@@ -593,7 +653,7 @@ internal sealed class BeamScoringProblem
             int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation, isKnee: _isKnee);
+                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double minBeamY = info.ShortestY; // staff-spaces (native quanter frame)
             // Convert to left Y: leftY = beamAtStem - slope * stemX
             double leftYForMin = minBeamY - slope * _stemXPositions[i];
@@ -1025,7 +1085,7 @@ internal sealed class BeamScoringProblem
             //               lily/beam-quanting.cc:1133-1137 score_stem_lengths.
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], memberDir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation, isKnee: _isKnee);
+                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY;
             double shortestY = info.ShortestY;
 

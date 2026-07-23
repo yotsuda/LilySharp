@@ -1,0 +1,29 @@
+// Regression: a BEAM must be RESERVED in the inter-staff gap at the geometry it is DRAWN
+// with, not with the fixed DefaultStemLength 3.5 that SkylineBuilder.AddNoteBoxToSkylines
+// gives an unbeamed stem. LilyPond's Beam is an ordinary inside-staff grob (no
+// outside-staff-priority), so it joins the staff's vertical skyline like the slur and the
+// tuplet bracket, and the staff below must clear its outer edge.
+//
+// Before the seed the corpus saw it nowhere: SkylineBuilder reserved every beamed member's
+// stem at 3.5, over-reserving the shortened same-pitch beam. It now suppresses those stems
+// (BeamedItemsToSuppress) and seeds the drawn beam's outer edge (AddBeamsToSkyline), from a
+// staff-frame BeamLayout (MultiStaffLayouter.StaffBeamLayouts).
+//
+// The shape is the corpus books BMD/BMU (audit/lp-geometry/probes/page-vertical.ly), which
+// pin the same geometry against real LilyPond: staff.staff.beam-{under,over}-notes. The
+// pitch puts the noteheads UNDER StaffGrouper's basic-distance of 9 while the down-beam
+// beats it, so the gap reads the beam and not the floor. Two voices are required because a
+// beam group's direction cannot be forced from a single-note token; the second voice's stems
+// (and beam) point down, and voice one holds the middle line.
+octave absolute
+time 4/4
+key c major
+title "A beam reserves its room in the staff gap"
+part rh { clef treble }
+part lh { clef bass }
+section S {
+  rh { voice { b1 } voice { g,8 g, g, g, g, g, g, g, } | }
+  lh { d,1 | }
+}
+form main { S }
+score main "beam-under-staves" { grandStaff { staff rh staff lh } }

@@ -36,7 +36,7 @@ namespace LilySharp.Core.LilyPond;
 /// </summary>
 public sealed class LilyPondExporter
 {
-    private const string LilyPondVersion = "2.24.4";
+    private const string LilyPondVersion = "2.26.0";
 
     private readonly StringBuilder _sb = new();
     private readonly List<string> _warnings = new();

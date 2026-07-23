@@ -90,6 +90,26 @@ public class BeamScoringTests
     }
 
     [Fact]
+    public void BeamScoringProblem_ForcedDirectionBeamIsShortened()
+    {
+        // A beam forced into its unnatural direction is pulled toward the staff by the
+        // beam's 'shorten (Beam::calc_stem_shorten). Eight g's at staff position -9 (below
+        // the middle line, so their natural stem is UP) forced DOWN: LilyPond quantises to
+        // -6.81 ss (staff position -13.62); without the shortening Lily# would draw -7.5.
+        // LILYPOND-REF: lily/beam.cc:1059-1090, lily/stem.cc:1245.
+        var members = ImmutableArray.CreateBuilder<BeamMember>();
+        var xs = new List<double>();
+        for (int i = 0; i < 8; i++)
+        {
+            members.Add(new BeamMember(CreateNote(-9), 1, i == 0 ? 0 : 1, i == 7 ? 0 : 1, -9, i, memberStemUp: false));
+            xs.Add(50.0 + i * 20.0);
+        }
+        var group = new BeamGroup(members.ToImmutable(), 0, 0, stemUp: false);
+        var (leftY, _) = new BeamScoringProblem(group, xs).Solve();
+        Assert.Equal(-13.62, leftY, 1);
+    }
+
+    [Fact]
     public void BeamConfiguration_CalculatesSlope()
     {
         var config = new BeamConfiguration(-3.5, -2.5);

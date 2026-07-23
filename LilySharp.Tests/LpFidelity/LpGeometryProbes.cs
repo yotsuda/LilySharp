@@ -711,6 +711,107 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A BEAM over same-pitch eighth notes, drooping DOWN into the staff gap from the upper
+    /// staff — the first ledger point ever to reach a beam. Measures the staff-to-staff
+    /// distance, shaped like <see cref="SD"/> and <see cref="TU"/>.
+    /// </summary>
+    /// <remarks>
+    /// A beam is DRAWN by the quanter at whatever stem length its beat needs, but Lily#'s
+    /// <c>SkylineBuilder.AddNoteBoxToSkylines</c> reserves each note's box with a FIXED stem
+    /// of <c>DefaultStemLength</c> 3.5 and never consults the quanter. So a beam group of low,
+    /// forced-down eighths reserves a 3.5 stem where LilyPond's quanter draws a SHORTER one —
+    /// the "draws right, reserves stale" double model, the same shape the tuplet bracket had
+    /// before it was seeded (there the bracket was reserved NOWHERE; here the stem is reserved
+    /// too LONG).
+    /// <para>
+    /// The pitch is chosen so the beam binds and the noteheads alone do not: the <c>g,</c>
+    /// (LilyPond <c>g</c>, G3) sits 4.5 below the treble middle line, so LilyPond's beam
+    /// quantises to positions -6.81 and its outer edge reaches 6.81 + 0.24 (half of
+    /// <c>Beam.thickness</c> 0.48) = 7.05 below the refpoint, for a gap of 7.05 + 2.05 + 1 =
+    /// 10.100000. A Lily# that reserves the fixed 3.5 stem reads g's stem tip at 4.5 + 3.5 =
+    /// 8.0 instead (gap 8.0 + 2.05 + 1 = 11.05), while the noteheads alone (5.045 below the
+    /// refpoint, + 2.05 + 1 = 8.095) would LOSE to StaffGrouper's basic-distance 9. So the
+    /// predicted residual is +0.95, the whole of the stem it over-reserves.
+    /// </para>
+    /// <para>
+    /// Why two voices, and why it is load bearing: Lily# cannot force a beam group's
+    /// direction from a single-note token (measured, the beam came out UP), so the beam is put
+    /// in the SECOND voice, whose stems and beam Lily# forces down — the same device
+    /// <see cref="DY"/> and <see cref="TD"/> use. Measured on 2.26.0, LilyPond's quant is
+    /// identical under single-voice <c>\stemDown</c>, <c>\voiceTwo</c> and <c>\voiceOne</c>
+    /// (all -/+6.81 to fourteen digits), so the two-voice twin faithfully mirrors the
+    /// single-voice defect. Voice one holds the middle line so the staff is an ordinary
+    /// two-voice texture.
+    /// </para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 4/4 &lt;&lt;
+    /// { \voiceOne b'1 } \\ { \voiceTwo g8 g g g g g g g } &gt;&gt; }
+    /// \new Staff { \clef bass \time 4/4 d1 } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string BMD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b1 } voice { g,8 g, g, g, g, g, g, g, } | }
+          lh { d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMD" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="BMD"/> with the beam on the other side — an up-stemmed beam reaching UP into
+    /// the gap from the lower staff, the mirror of book BMU.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="BMD"/>, for the reason Q is not redundant with P: BMD
+    /// binds the lower staff's top line against a beam coming down, BMU the upper staff's
+    /// bottom line against one going up. Two edges of one gap through two different skylines.
+    /// <c>f</c> (LilyPond <c>f'</c>, F4) sits +9 above the bass staff's middle line, the
+    /// mirror of <c>g,</c>'s -9 below the treble one, so LilyPond prints the same 10.100000
+    /// and the two must agree. The beam is in the FIRST voice here, whose stems Lily# forces
+    /// UP.
+    /// <para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \time 4/4 b'1 }
+    /// \new Staff { \clef bass \time 4/4 &lt;&lt; { \voiceOne f'8 f' f' f' f' f' f' f' } \\
+    /// { \voiceTwo d1 } &gt;&gt; } &gt;&gt;</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string BMU = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { b1 | }
+          lh { voice { f8 f f f f f f f } voice { d,1 } | }
+        }
+
+        form main { ~Main }
+
+        score main "BMU" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// The same tuplet bracket as <see cref="TU"/>, measured BETWEEN SYSTEMS instead of
     /// between staves — the mirror of book TSD.
     /// </summary>
@@ -952,6 +1053,15 @@ internal static class LpGeometryProbes
         // the upper staff's bottom line against one going up. See probes TID and TIU.
         new("staff.staff.tie-under-notes", TID, g => g.StaffGap()),
         new("staff.staff.tie-over-notes", TIU, g => g.StaffGap()),
+
+        // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
+        // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s
+        // SkylineBuilder reserves each note's box with a FIXED 3.5 stem and ignores the
+        // quanter, so it over-reserves the shortened same-pitch beam. Both sides because BMD
+        // binds the lower staff's top line against a beam coming down and BMU the upper
+        // staff's bottom line against one going up. See probes BMD and BMU.
+        new("staff.staff.beam-under-notes", BMD, g => g.StaffGap()),
+        new("staff.staff.beam-over-notes", BMU, g => g.StaffGap()),
 
         // The same bracket again, one staff over several systems, so StaffGap() reads
         // system-system-spacing instead of Align_interface. TU/TD reach

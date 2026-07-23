@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
+import * as os from 'os';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -866,21 +867,35 @@ async function exportPreview(
     // source file's basename; every other score appends its name to it —
     // song.lys + `score sub` → song-sub, + `score sub "custom"` → song-custom.
     const docUri = vscode.Uri.parse(uri);
-    const baseDir = vscode.Uri.joinPath(docUri, '..');
-    const sourceName = (docUri.path.split('/').pop() || 'score').replace(/\.lys$/i, '');
+    // An unsaved (untitled:) score has no folder on disk, so its parent URI keeps
+    // the untitled scheme and showSaveDialog cannot anchor to it — the simple file
+    // dialog then falls back to browsing the home directory (".. / agents / …")
+    // instead of offering a save target. Anchor an untitled export at a real folder
+    // (the workspace root, else the user's home) and take the name from the
+    // untitled label; a saved score keeps opening the dialog in its own folder.
+    const onDisk = docUri.scheme === 'file';
+    const rawName = (onDisk ? docUri.path.split('/').pop() : docUri.path) || 'score';
+    const sourceName = rawName.replace(/\.lys$/i, '');
     const baseName = renderName && renderName.length > 0
         ? `${sourceName}-${renderName}`
         : sourceName;
+    const baseDir = onDisk
+        ? vscode.Uri.joinPath(docUri, '..')
+        : (vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir()));
 
     // Default name WITHOUT an extension: the dialog's "Save as type"
     // dropdown appends the chosen one. Baking .pdf into the name meant the
     // typed name won over the selected type — picking PNG still saved a PDF.
     const target = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.joinPath(baseDir, baseName),
+        // Ordered by kind: rendered images, then the score as source/interchange,
+        // then audio/performance.
         filters: {
             'PDF document': ['pdf'],
             'SVG image': ['svg'],
             'PNG image': ['png'],
+            'LilyPond source': ['ly'],
+            'MusicXML': ['xml', 'musicxml'],
             'MIDI (whole piece)': ['mid', 'midi'],
             'VOCALOID sequence (vocal + lyrics)': ['vsqx'],
         }
@@ -893,8 +908,8 @@ async function exportPreview(
     const ext = (target.fsPath.split('.').pop() || '').toLowerCase();
     const format = ext === 'mid' || ext === 'midi' ? 'midi'
         : ext === 'xml' || ext === 'musicxml' ? 'musicxml'
-        : ext; // png / pdf / svg
-    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx'].includes(format)) {
+        : ext; // png / pdf / svg / ly
+    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx', 'ly'].includes(format)) {
         vscode.window.showErrorMessage(`Lily#: unsupported export type ".${ext}".`);
         return;
     }

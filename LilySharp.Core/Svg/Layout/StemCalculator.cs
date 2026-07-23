@@ -60,6 +60,14 @@ public sealed record StemDetails
     public double[] StemShorten { get; init; } = [1.0, 0.5, 0.25];
 
     /// <summary>
+    /// How much to shorten beamed stems forced into their unnatural direction,
+    /// indexed by beam count − 1. A beam-level amount (scaled by the forced fraction),
+    /// subtracted from every stem's ideal beam Y.
+    /// LILYPOND-REF: define-grobs.scm:493 (beamed-stem-shorten . (1.0 0.5 0.25))
+    /// </summary>
+    public double[] BeamedStemShorten { get; init; } = [1.0, 0.5, 0.25];
+
+    /// <summary>
     /// Length fraction multiplier.
     /// LILYPOND-REF: define-grobs.scm Stem.length-fraction (default 1.0)
     /// </summary>
@@ -215,7 +223,8 @@ public static class StemCalculator
         double beamThickness = 0.48,
         double beamTranslation = 0.81,
         StemDetails? details = null,
-        bool isKnee = false)
+        bool isKnee = false,
+        double beamShorten = 0.0)
     {
         var d = details ?? StemDetails.Default;
         int dir = stemUp ? 1 : -1; // staff positions: positive = up
@@ -253,6 +262,13 @@ public static class StemCalculator
             idealY = Math.Max(idealY, 0.0);
             idealY = Math.Max(idealY, -1.0 - beamThickness + heightOfMyBeams);
         }
+
+        // --- Forced-direction shortening (beam-level, ideal only) ---
+        // LILYPOND-REF: stem.cc:1245 ideal_y -= (ly:grob-property beam 'shorten).
+        // The beam's 'shorten (Beam::calc_stem_shorten) pulls the ideal beam toward the
+        // staff for stems forced into their unnatural direction; the shortest_y_ floor
+        // below is deliberately NOT shortened (LilyPond leaves minimum_y alone).
+        idealY -= beamShorten;
 
         // --- Extreme minimum ---
         // LILYPOND-REF: stem.cc:1247-1259
