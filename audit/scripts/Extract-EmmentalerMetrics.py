@@ -104,6 +104,13 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     # (LILC bbox left ~0.67, not 0), so its ink width (Right - Left) and its draw origin both
     # differ from the pitched clefs; see GlyphMetrics.LineStartClefWidth / SharedRenderer DrawClef.
     GlyphSpec("ClefPercussion", "clefs.percussion", "Percussion clef", "mf/feta-clefs.mf — clefs.percussion"),
+    # TAB clef. LilyPond puts it in the SAME Clef break-align group as the pitched clefs and
+    # it is WIDER than the G clef (origin-to-ink-right 2.8 against 2.565), so on a
+    # notation+tab score it governs where every staff's meter and first note sit --
+    # audit/lp-geometry/probes/line-start-mindist.ly measures the 0.235 difference between
+    # TKC's and SKC's min_dist and it is exactly this. Like the percussion clef its ink
+    # starts right of the grob origin (LILC left 0.2, not 0).
+    GlyphSpec("ClefTab", "clefs.tab", "TAB clef", "mf/feta-clefs.mf — clefs.tab"),
     # Change clefs are their OWN glyphs, not the full clef scaled — see Clef::calc_glyph_name
     # appending "_change". Their width sets the gap after a mid-measure clef change, so it
     # has to be a real metric rather than a fraction of the full clef's.
