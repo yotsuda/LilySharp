@@ -1666,8 +1666,14 @@ internal sealed class MultiStaffLayouter
     /// primary-voice-only score. Tuplet spans are passed because auto beams break at tuplet
     /// boundaries (<see cref="BeamDetector"/>), so the beams here are the ones the renderer draws.
     /// </para>
+    /// <para>
+    /// Internal so <c>LayoutEngine</c> can compute the SAME per-staff beams for the
+    /// system silhouette (<c>SkylineBuilder.BuildSystemSkylines</c>) — one beam model
+    /// for both skylines, the way <c>BuildStaffSkylines</c> and this pass already share
+    /// one. audit/lp-geometry system.beam-{under,over}-notes.
+    /// </para>
     /// </remarks>
-    private ImmutableArray<BeamLayout> StaffBeamLayouts(
+    internal ImmutableArray<BeamLayout> StaffBeamLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts)
     {

@@ -50,7 +50,9 @@ internal sealed class SkylineBuilder
         MultiStaffScore score,
         ImmutableArray<MeasureLayout> measureLayouts,
         double systemHeight = 0,
-        double systemLeft = double.NaN)
+        double systemLeft = double.NaN,
+        ImmutableArray<BeamLayout> firstStaffBeams = default,
+        ImmutableArray<BeamLayout> lastStaffBeams = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -68,8 +70,19 @@ internal sealed class SkylineBuilder
         var firstStaff = score.StaffGroups[0].PrimaryStaff;
         // Y-up from the system top: the first staff's middle is half a staff BELOW it.
         double firstStaffMiddleUp = -_staffHeight / 2;
+        // A beamed stem is DRAWN to the quanter's length, but AddNoteBoxToSkylines
+        // reserves a FIXED DefaultStemLength 3.5 stem — the same "draws right, reserves
+        // stale" double model BuildStaffSkylines had between staves. When the caller
+        // supplies the drawn beams, the members' fixed stems are suppressed and the
+        // beam's own outer edge is seeded instead, exactly as BuildStaffSkylines does.
+        // audit/lp-geometry system.beam-{under,over}-notes.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline —
+        //   the system stencil the page spaces by carries the real Beam ink, not a
+        //   fixed-length stem model.
         AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
-            stemLength, noteheadHeight, upSkyline, downSkyline);
+            stemLength, noteheadHeight, upSkyline, downSkyline,
+            BeamedItemsToSuppress(firstStaffBeams));
+        AddBeamsToSkyline(firstStaffBeams, firstStaffMiddleUp, upSkyline, downSkyline);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
@@ -81,7 +94,9 @@ internal sealed class SkylineBuilder
             // Bottom staff's top line is at systemHeight - staffHeight from system reference
             double lastStaffMiddleUp = _staffHeight / 2 - systemHeight;
             AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleUp,
-                stemLength, noteheadHeight, upSkyline, downSkyline);
+                stemLength, noteheadHeight, upSkyline, downSkyline,
+                BeamedItemsToSuppress(lastStaffBeams));
+            AddBeamsToSkyline(lastStaffBeams, lastStaffMiddleUp, upSkyline, downSkyline);
         }
 
         double bottomLineY = lastStaff != firstStaff && systemHeight > 0
@@ -357,11 +372,24 @@ internal sealed class SkylineBuilder
     /// the fixed 3.5 stem in the box would over-reserve it and the seed would never bind.
     /// </summary>
     /// <remarks>
-    /// Cross-staff and kneed beams are EXCLUDED: their outer edge is not a single line on one
-    /// side, and no ledger point measures them, so their members keep the per-note fixed stem
-    /// unchanged. audit/lp-geometry staff.staff.beam-{under,over}-notes.
+    /// A CROSS-STAFF beam's members are suppressed WITHOUT a seed: LilyPond leaves
+    /// cross-staff grobs out of the vertical skylines altogether — the beam cannot be
+    /// formatted until the staff distance is known, so spacing deliberately ignores it —
+    /// and a stem whose beam is cross-staff is itself cross-staff, so the stems are out
+    /// too (only the noteheads remain, and those this builder reserves regardless). The
+    /// fixed 3.5 stem Lily# used to keep for them reserved ink LilyPond does not.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:850-858 ("we just leave cross-staff
+    ///   grobs out of the skyline altogether"), :921,:954 skyline_spacing skips
+    ///   cross-staff elements; lily/stem.cc:1278-1290 Stem::is_cross_staff — a stem is
+    ///   cross-staff iff its beam is.
+    /// A same-staff KNEED beam still keeps the per-note fixed stem: LilyPond DOES carry
+    /// its real Beam/Stem stencils in the skylines, but Lily# has no faithful model of
+    /// the knee's stencil band yet (OuterEdgeStaffSpaceAtX is symmetric about the primary
+    /// beam's centre and cannot name the stack's inner face), so porting it is deferred
+    /// until the band is measured from LP — see HANDOFF §1.
+    /// audit/lp-geometry staff.staff.beam-{under,over}-notes.
     /// </remarks>
-    private static HashSet<(int Voice, int Measure, int Item)> BeamedItemsToSuppress(
+    internal static HashSet<(int Voice, int Measure, int Item)> BeamedItemsToSuppress(
         ImmutableArray<BeamLayout> beams)
     {
         var set = new HashSet<(int, int, int)>();
@@ -370,7 +398,7 @@ internal sealed class SkylineBuilder
         foreach (var b in beams)
         {
             var g = b.Group;
-            if (g.IsCrossStaff || g.IsKnee)
+            if (g.IsKnee && !g.IsCrossStaff)
                 continue;
             foreach (var m in g.Members)
                 set.Add((g.VoiceIndex, m.ResolveMeasureIndex(g.MeasureIndex), m.ItemIndex));
@@ -391,8 +419,11 @@ internal sealed class SkylineBuilder
     /// drawing come from ONE computation. It is Y-up from the staff MIDDLE, so it is rebased
     /// to this skyline's origin (the staff top) by <c>+ staffMiddleUp</c>, exactly as the note
     /// boxes are. A beam sits entirely on its stems' side, so it joins only that direction's
-    /// skyline, like the tuplet bracket. Cross-staff and kneed beams are not seeded here (their
-    /// members keep the per-note stem — see <see cref="BeamedItemsToSuppress"/>).
+    /// skyline, like the tuplet bracket. A CROSS-STAFF beam is not seeded — and its members'
+    /// stems are suppressed all the same — because LilyPond leaves cross-staff grobs out of
+    /// the skylines entirely (see <see cref="BeamedItemsToSuppress"/> for the references).
+    /// A same-staff KNEED beam is not seeded either; its members keep the per-note fixed stem
+    /// until the knee's stencil band is measured from LP (same remark).
     /// LILYPOND-REF: scm/define-grobs.scm Beam (vertical-skylines from the stencil,
     /// thickness 0.48); lily/beam.cc — a beamed stem ends at the beam's outer face.
     /// </remarks>

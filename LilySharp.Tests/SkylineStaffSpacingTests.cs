@@ -69,6 +69,79 @@ public class SkylineStaffSpacingTests
         return ImmutableArray.Create(new MeasureLayout(0, 0, 40, items.ToImmutable()));
     }
 
+    /// <summary>Builds a one-measure beam layout over two eighth notes, with the given
+    /// per-member target staves and knee-ness, for the suppression-policy tests below.</summary>
+    private static BeamLayout MakeBeamLayout(
+        int targetStaffIndex0, int targetStaffIndex1, bool knee)
+    {
+        var n0 = new NoteItem(-9, Fraction.Eighth, 0, null, false, 0);
+        var n1 = new NoteItem(knee ? 9 : -9, Fraction.Eighth, 0, null, false, 1);
+        var members = ImmutableArray.Create(
+            new BeamMember(n0, 1, 1, 1, staffPosition: -9, itemIndex: 0,
+                memberStemUp: false, targetStaffIndex: targetStaffIndex0),
+            new BeamMember(n1, 1, 1, 1, staffPosition: knee ? 9 : -9, itemIndex: 1,
+                memberStemUp: knee, targetStaffIndex: targetStaffIndex1));
+        var group = new BeamGroup(members, measureIndex: 0, startIndex: 0,
+            stemUp: false, growDirection: 0, voiceIndex: 0);
+        return new BeamLayout(group, leftY: -13, rightY: -13, leftX: 5.0, rightX: 9.0,
+            ImmutableArray.Create(5.0, 9.0));
+    }
+
+    /// <summary>
+    /// An ordinary (same-staff, same-direction) beam's members lose their fixed
+    /// 3.5 stems: the drawn beam is seeded instead.
+    /// audit/lp-geometry staff.staff.beam-{under,over}-notes.
+    /// </summary>
+    [Fact]
+    public void BeamedItemsToSuppress_OrdinaryBeam_SuppressesMembers()
+    {
+        var set = SkylineBuilder.BeamedItemsToSuppress(
+            ImmutableArray.Create(MakeBeamLayout(-1, -1, knee: false)));
+        Assert.Equal(2, set.Count);
+        Assert.Contains((0, 0, 0), set);
+        Assert.Contains((0, 0, 1), set);
+    }
+
+    /// <summary>
+    /// A CROSS-STAFF beam's members are suppressed too — with NO seed: LilyPond leaves
+    /// cross-staff grobs out of the vertical skylines altogether, and a stem whose beam
+    /// is cross-staff is itself cross-staff, so neither the beam nor the stems reserve
+    /// anything (the noteheads still do). The fixed 3.5 stem Lily# kept for them
+    /// reserved ink LilyPond does not.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:850-858 ("we just leave cross-staff
+    ///   grobs out of the skyline altogether"), :921,:954 skyline_spacing;
+    ///   lily/stem.cc:1278-1290 Stem::is_cross_staff.
+    /// </summary>
+    /// <remarks>
+    /// No end-to-end twin exists yet: nothing in the collector stamps a BeamMember's
+    /// TargetStaffIndex, so IsCrossStaff is unreachable from .lys today (the @cross
+    /// annotation flows only to CrossStaffLayouts at render time). This pins the
+    /// skyline policy for when the feature lands — see HANDOFF §1.
+    /// </remarks>
+    [Fact]
+    public void BeamedItemsToSuppress_CrossStaffBeam_SuppressesMembersWithoutSeed()
+    {
+        var set = SkylineBuilder.BeamedItemsToSuppress(
+            ImmutableArray.Create(MakeBeamLayout(-1, 1, knee: true)));
+        Assert.Equal(2, set.Count);
+        Assert.Contains((0, 0, 0), set);
+        Assert.Contains((0, 0, 1), set);
+    }
+
+    /// <summary>
+    /// A same-staff KNEED beam keeps the per-note fixed stems: LilyPond does carry its
+    /// real Beam/Stem stencils in the skylines, but Lily# has no faithful model of the
+    /// knee's stencil band yet, so the members stay on the fixed-stem reservation until
+    /// that band is measured from LP (deferred — see BeamedItemsToSuppress remarks).
+    /// </summary>
+    [Fact]
+    public void BeamedItemsToSuppress_SameStaffKnee_KeepsFixedStems()
+    {
+        var set = SkylineBuilder.BeamedItemsToSuppress(
+            ImmutableArray.Create(MakeBeamLayout(-1, -1, knee: true)));
+        Assert.Empty(set);
+    }
+
     [Fact]
     public void SkylineSpacing_SimpleNotes_UsesAtLeastBasicDistance()
     {

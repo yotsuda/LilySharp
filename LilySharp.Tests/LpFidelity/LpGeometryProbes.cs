@@ -1111,6 +1111,109 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A BEAM measured BETWEEN SYSTEMS instead of between staves — the beam's version of
+    /// <see cref="TSID"/>/<see cref="TSIU"/>, a forced-down beam drooping DOWN out of one
+    /// system toward the next. The first ledger point to reach
+    /// <c>LayoutEngine.AugmentSkylinesForPaging</c> with a beam.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="BMD"/>/<see cref="BMU"/> reach <c>SkylineBuilder.BuildStaffSkylines</c>,
+    /// where the drawn beam is seeded (<c>AddBeamsToSkyline</c>) and the members' fixed stems
+    /// suppressed. Nothing in the corpus reaches <c>AugmentSkylinesForPaging</c> — the skyline
+    /// the PAGE spaces systems by — with a beam: that pass now seeds tuplet brackets, slurs
+    /// and ties but NOT beams, and its base skylines come from <c>BuildSkylines</c>, where
+    /// <c>AddNoteBoxToSkylines</c> reserves each beamed member's FIXED
+    /// <c>DefaultStemLength</c> 3.5 stem. So between systems the last "draws right, reserves
+    /// stale" double model survives. One staff over several systems, so <c>StaffGap()</c>
+    /// reads system-system-spacing here (all systems identical, and a same-pitch beam's quant
+    /// is span-independent, so the gaps are uniform and the TSD route — no interior-gap
+    /// carve-out — applies).
+    /// <para>
+    /// THE FLOOR IS TWELVE and the notes sit 8 staff spaces below the middle line (<c>g,,</c>,
+    /// LilyPond <c>g,</c>, G2 — the depth <see cref="TSU"/> proved): the beam must clear 12
+    /// and the noteheads alone must NOT (8.545 + 2.05 + 1 = 11.595, under 12). All stems are
+    /// forced (head off the middle line, direction against the default), so
+    /// <c>beamed-stem-shorten</c> 1.0 applies exactly as in <see cref="BMD"/> — but at this
+    /// depth the beam is far outside the staff and the quanter keeps the IDEAL shortened stem
+    /// of 3.5 - 1.0 = 2.5 (BMD's 2.31 was the staff-line grid's pull). MEASURED on 2.26.0:
+    /// the gap is 13.790000 = 8 + 2.5 (stem) + 0.24 (half of Beam.thickness 0.48) + 2.05
+    /// (staff line ink) + 1 (padding), every term an LP constant. A Lily# that reserves the
+    /// fixed 3.5 stem reads 8 + 3.5 + 2.05 + 1 = 14.55 instead — predicted residual +0.76,
+    /// the stem it over-reserves past the drawn beam's outer edge (3.5 - 2.5 - 0.24).
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO VOICES, load bearing as in <see cref="BMD"/>: Lily# cannot force a beam group's
+    /// direction from a single-note token, so the beam lives in the second voice, whose stems
+    /// Lily# forces down. Each bar OPENS AND CLOSES with a plain whole note — the
+    /// <see cref="TSU"/> correction, both ends — so the beam spans the middle third of the
+    /// bar, where the other system's binding ink is its plain staff line, not its clef.
+    /// </para>
+    /// LilyPond twin: <c>\new Staff { \time 12/4 \repeat unfold 6 { &lt;&lt; { \voiceOne
+    /// b'1 b'1 b'1 } \\ { \voiceTwo a'1 g,8 g, g, g, g, g, g, g, a'1 } &gt;&gt; } }</c>
+    /// under <c>\paper { ragged-bottom = ##t }</c>.
+    /// </remarks>
+    private static readonly string BSD = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+            voice { {{string.Concat(Enumerable.Repeat("a1 g,,8 g,, g,, g,, g,, g,, g,, g,, a1 | ", 6)).Trim()}} }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BSD" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="BSD"/> with the beam on the other side — an up-stemmed beam reaching UP out
+    /// of the lower system toward the one above it, the mirror of book BSU. <c>d'''</c>
+    /// (LilyPond <c>d''''</c>, D7) sits +16 above the middle line, the exact reflection of
+    /// <c>g,,</c>'s -16 below it, and quant, shorten and thickness are direction-symmetric,
+    /// so LilyPond prints the same 13.790000 and the two must agree.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="BSD"/>, for the reason <see cref="TSIU"/> is not
+    /// redundant with <see cref="TSID"/>: BSD binds the lower system's top ink against a beam
+    /// coming down, BSU the upper system's bottom ink against one going up. Two edges of one
+    /// gap through two different skylines. The beam is in the FIRST voice here, whose stems
+    /// Lily# forces UP.
+    /// <para>
+    /// LilyPond twin: <c>\new Staff { \time 12/4 \repeat unfold 6 { &lt;&lt; { \voiceOne
+    /// a'1 d''''8 d'''' d'''' d'''' d'''' d'''' d'''' d'''' a'1 } \\ { \voiceTwo b'1 b'1 b'1 }
+    /// &gt;&gt; } }</c> under <c>\paper { ragged-bottom = ##t }</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string BSU = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { {{string.Concat(Enumerable.Repeat("a1 d'''8 d''' d''' d''' d''' d''' d''' d''' a1 | ", 6)).Trim()}} }
+            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BSU" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Line-start clef → first note with a CLEF-ONLY prefix, measured on an INTERIOR system.
     /// The horizontal prefix defect the page-crossing slur/tie residuals point to
     /// (<see cref="SSD"/>, <see cref="TSID"/>): under justification a clef prefix ~1.76 ss too
@@ -1599,6 +1702,18 @@ internal static class LpGeometryProbes
         // and TSIU. Same INTERIOR gap (index 1) as the slur pair, for the same span-dependence.
         new("system.tie-under-notes", TSID, g => g.StaffGapAt(1)),
         new("system.tie-over-notes", TSIU, g => g.StaffGapAt(1)),
+
+        // The beam between systems: BMD/BMU reach SkylineBuilder.BuildStaffSkylines, where
+        // the drawn beam is seeded and the members' fixed stems suppressed; these are the
+        // only beam points that reach LayoutEngine.AugmentSkylinesForPaging, whose base
+        // skylines (BuildSkylines) still reserve every beamed member's FIXED 3.5 stem — the
+        // last "draws right, reserves stale" double model. Both sides because BSD binds the
+        // lower system's top against a beam coming down and BSU the upper system's bottom
+        // against one going up. A same-pitch beam's quant is span-independent, so the plain
+        // first gap serves (the TSD route, not the slur pair's interior carve-out). See
+        // probes BSD and BSU.
+        new("system.beam-under-notes", BSD, g => g.StaffGap()),
+        new("system.beam-over-notes", BSU, g => g.StaffGap()),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

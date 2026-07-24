@@ -126,9 +126,35 @@ internal sealed class LayoutEngine
         // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — check if any staff uses remove-empty
         bool hasHaraKiri = score.StaffGroups.Any(g => g.Staves.Any(s => s.RemoveEmpty));
 
+        // The system silhouette's edge staves — the two staves BuildSystemSkylines
+        // processes — and their drawn beams. A beamed stem is drawn to the quanter's
+        // length, but the note boxes reserve a fixed 3.5 stem; supplying the beams lets
+        // the builder suppress those and seed the real outer edge instead, so the page
+        // (and the first system's Y) spaces against the drawn ink, exactly as the
+        // staff-to-staff path does. Beams are a pure function of the same measure
+        // content the skyline memo is keyed on, so computing them inside the compute
+        // lambda keeps the cache sound. audit/lp-geometry system.beam-{under,over}-notes.
+        // First/last in EnumerateStaves order, which is by construction the same
+        // pair BuildSystemSkylines picks (StaffGroups[0].Staves[0] is the first
+        // yield, StaffGroups[^1].Staves[^1] the last) — the index comes from the
+        // same enumeration, so no reference matching or fallback is involved.
+        var edgeFirstStaff = score.StaffGroups[0].PrimaryStaff;
+        var edgeLastStaff = score.StaffGroups[^1].Staves[^1];
+        int edgeFirstStaffIndex = 0, edgeLastStaffIndex = 0;
+        foreach (var (_, _, gi) in score.EnumerateStaves())
+            edgeLastStaffIndex = gi;
+        (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last) EdgeStaffBeams(
+            ImmutableArray<MeasureLayout> mls) =>
+            (multiStaffLayouter.StaffBeamLayouts(score, edgeFirstStaff, edgeFirstStaffIndex, mls),
+             edgeLastStaff != edgeFirstStaff
+                ? multiStaffLayouter.StaffBeamLayouts(score, edgeLastStaff, edgeLastStaffIndex, mls)
+                : default);
+
         // Pre-calculate first system skylines for initial Y positioning
+        var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts);
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
-            score, firstSystemMeasureLayouts, systemHeight, indent);
+            score, firstSystemMeasureLayouts, systemHeight, indent,
+            firstEdgeBeams.first, firstEdgeBeams.last);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
             _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
@@ -176,7 +202,12 @@ internal sealed class LayoutEngine
 
             var (upSky, downSky) = ComputeSystemSkyline(systemCache, firstMeasureIndex, measureCount,
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
-                () => _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent));
+                () =>
+                {
+                    var edgeBeams = EdgeStaffBeams(measureLayouts);
+                    return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
+                        edgeBeams.first, edgeBeams.last);
+                });
             perSystemSkylines.Add((upSky, downSky));
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),

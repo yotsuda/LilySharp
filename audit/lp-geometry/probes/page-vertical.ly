@@ -723,3 +723,66 @@ probeTag =
       \repeat unfold 4 { b'1 f''''1~ f''''1 } }
   }
 }
+
+%% BSD / BSU — the BEAM pair (BMD/BMU) measured BETWEEN SYSTEMS instead of between staves,
+%%     the beam's version of TSD/TSU. BMD/BMU reach SkylineBuilder.BuildStaffSkylines, where
+%%     the drawn beam is seeded and the members' fixed stems suppressed; nothing in the
+%%     corpus reaches LayoutEngine.AugmentSkylinesForPaging with a beam. That pass — the one
+%%     the PAGE spaces systems by — now seeds tuplet brackets, slurs and ties but still NOT
+%%     beams, and its base skylines come from BuildSkylines, where AddNoteBoxToSkylines
+%%     still reserves each beamed member's FIXED DefaultStemLength 3.5 stem. So between
+%%     systems the last "draws right, reserves stale" double model survives: the quanter
+%%     draws a shortened stem where the page reserves 3.5. One staff over several systems,
+%%     so the same StaffGap() that reads Align_interface in BMD/BMU reads
+%%     system-system-spacing here.
+%%
+%%     ragged-bottom and short enough for one page, so the gap is the spring's natural
+%%     length — the regime of books N, L, TSD/TSU, SSD/SSU and TSID/TSIU. HANDOFF 5.3.
+%%
+%%     ⚠️ THE PITCH IS NOT FREE, AND THE FLOOR IS TWELVE HERE, not StaffGrouper's nine.
+%%     The notes sit 8 staff spaces outside the middle line, the depth TSD/TSU proved: the
+%%     beam's outer edge must clear 12 and the noteheads alone must NOT (8.545 + 2.05 + 1 =
+%%     11.595, under 12). On BMD's g (4.5 out) neither side would beat 12 and the pair
+%%     would print 12.000000 and measure nothing. All stems are FORCED (head off the middle
+%%     line, direction against the default), so beamed-stem-shorten 1.0 applies exactly as
+%%     in BMD/BMU; if the quanter picks BMD's stem of 2.31, the outer edge is 8 + 2.31 +
+%%     0.24 (half of Beam.thickness 0.48) = 10.55 and the gap 10.55 + 2.05 + 1 = 13.60. A
+%%     Lily# that reserves the fixed 3.5 stem reads 8 + 3.5 + 2.05 + 1 = 14.55 instead —
+%%     predicted residual +0.95, the whole of the stem it over-reserves, the same number
+%%     BMD/BMU carried. The quant at this depth is measured, not assumed.
+%%
+%%     ⚠️ TWO VOICES, load bearing as in BMD/BMU: Lily# cannot force a beam group's
+%%     direction from a single-note token, so the beam lives in the voice whose stems are
+%%     forced toward the gap (\voiceTwo down for BSD, \voiceOne up for BSU). Measured on
+%%     2.26.0 (BMD), the quant is identical under \stemDown, \voiceTwo and \voiceOne.
+%%
+%%     ⚠️ EACH BAR OPENS AND CLOSES WITH A PLAIN WHOLE NOTE — the TSD/TSU correction, both
+%%     ends. A beam starting at the bar line would sit over the NEXT system's clef
+%%     (down-skyline 3.540 / up-skyline 4.776) and fold the clef's LILC-vs-skyline sliver
+%%     (system.clef-bounded-distance) into a beam entry; the trailing whole keeps it clear
+%%     of the line's final bar line too. The beam spans the middle third of the bar, where
+%%     the other system's binding ink is its plain staff line at 2.05. HANDOFF 5.3.
+%%
+%%     BSD and BSU must print the SAME number: g, at -16 and d'''' at +16 are exact mirrors
+%%     about the middle line, and quant, shorten and thickness are direction-symmetric — so
+%%     a difference between them is a defect on its own, the property P/Q, TU/TD, SD/SU,
+%%     BMD/BMU and TSD/TSU are all built on.
+\book {
+  \probeTag "BSD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff { \time 12/4
+      \repeat unfold 6 {
+        << { \voiceOne b'1 b'1 b'1 } \\ { \voiceTwo a'1 g,8 g, g, g, g, g, g, g, a'1 } >> } }
+  }
+}
+
+\book {
+  \probeTag "BSU"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff { \time 12/4
+      \repeat unfold 6 {
+        << { \voiceOne a'1 d''''8 d'''' d'''' d'''' d'''' d'''' d'''' d'''' a'1 } \\ { \voiceTwo b'1 b'1 b'1 } >> } }
+  }
+}
