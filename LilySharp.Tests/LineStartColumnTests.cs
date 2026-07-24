@@ -36,10 +36,13 @@ namespace LilySharp.Tests;
 /// engravers place the same ink, not that the test was fed the answer.
 /// </para>
 /// <para>
-/// Nothing consumes <see cref="LineStartColumn"/> in the layout yet: this is step 1 of the
-/// merge_springs port (docs/HANDOFF.md section 1), which is deliberately output-invariant.
-/// Step 2 floors the line-start spring's fixed distance at <c>0.3 + min_dist</c>
-/// (lily/staff-spacing.cc:213) and moves the output.
+/// <see cref="MultiStaffLayouter"/> consumes this: the line-start spring's FIXED distance is
+/// floored at <c>0.3 + min_dist</c> and its minimum IS <c>min_dist</c>
+/// (lily/staff-spacing.cc:210-220, <see cref="LineStartColumn.SpringWithMinimumDistanceFloor"/>).
+/// That cannot move a force-0 layout, and measured, it does not move one ledger point that is
+/// read ragged; what it moves is compressed lines, where
+/// <c>compressed.line-start.time-to-first-note</c> reads it. The break GATE still does not
+/// see the floor — docs/HANDOFF.md section 1 carries what that costs.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -321,6 +324,101 @@ public class LineStartColumnTests
         var (left, right) = SpacingRules.ClefGroupExtent(
             new[] { SpacingRules.ClefStencil(clef) });
         Assert.Equal(GlyphMetrics.LineStartClefWidth(clef), right - left, 6);
+    }
+
+    // ===================== THE SPRING =====================
+    //
+    // staff-spacing.cc:210-220 turns (ideal, fixed, stretchability, min_dist) into the
+    // spring. Everything below works PREFIX-RELATIVE (0 = where the prefix ink ends), which
+    // is the frame BreakAlignSpacing.FirstNoteSpring already speaks, and each assertion
+    // converts back to LilyPond's column-relative frame by adding the prefix right — so the
+    // expected numbers are the ones LilyPond actually dumped.
+
+    /// <summary>The prefix ink right edge — LilyPond's <c>last_ext[RIGHT]</c>.</summary>
+    private static double PrefixRight(KeySignature key, bool hasTime)
+        => BreakAlignSpacing.SolvePrefixColumns(
+            GlyphMetrics.LineStartClefWidth(ClefType.Treble),
+            SpacingRules.KeySignatureInkWidth(key), hasTime, 4, 4).Right;
+
+    /// <summary>
+    /// SKC's spring, end to end. LilyPond's own numbers for this line start:
+    /// <c>fixed</c> 7.585 lifted to <c>0.3 + 7.485 = 7.785</c>, <c>ideal</c> 8.585 (the
+    /// natural first-head X probe JN measures on a justified line, so the lift must NOT
+    /// move it), <c>min_distance</c> 7.485 — the SKYLINE distance, not the fixed one.
+    /// </summary>
+    [Fact]
+    public void MeteredLineStart_SpringIsLilyPonds()
+    {
+        double prefixRight = PrefixRight(KeySignature.CMajor, hasTime: true);
+        Assert.Equal(6.585000, prefixRight, 6);
+
+        double minDist = MinimumDistance(KeySignature.CMajor, staffPosition: -6);
+        var (ideal, fixed_) = SpacingRules.FirstNoteSpring(
+            keyInkWidth: 0.0, includeTimeSignature: true,
+            clefWidth: GlyphMetrics.LineStartClefWidth(ClefType.Treble));
+
+        var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
+            ideal, fixed_, stretchability: 0.0, minDist - prefixRight);
+
+        // Column-relative, i.e. directly against the dump.
+        Assert.Equal(8.585000, prefixRight + spring.IdealDistance, 6);
+        Assert.Equal(7.485000, prefixRight + spring.MinDistance, 6);
+        // fixed = ideal - inverse_compress_strength, by :219.
+        Assert.Equal(7.785000,
+            prefixRight + spring.IdealDistance - spring.InverseCompressStrength, 6);
+        Assert.Equal(0.0, spring.InverseStretchStrength, 6);
+        // What the floor bought, prefix-relative: the ideal is untouched (2.0, the
+        // space-alist's own) while the compressibility drops from 1.0 to 0.8. That is the
+        // whole observable effect — force 0 does not move, compressed lines do.
+        Assert.Equal(2.000000, spring.IdealDistance, 6);
+        Assert.Equal(0.800000, spring.InverseCompressStrength, 6);
+        Assert.Equal(1.000000, fixed_, 6);   // the un-floored fixed, for contrast
+    }
+
+    /// <summary>
+    /// A CONTINUATION line start, whose prefix is the clef alone: the floor does NOT bind
+    /// there (<c>0.3 + 3.565</c> against a fixed of 5.8), and the spring comes out with
+    /// compress strength 0 — RIGID, unable to shrink at any force. That is what LilyPond's
+    /// <c>minimum-fixed-space</c> means, and it is why a continuation system's first head
+    /// sits on 5.800000 whether the line is justified or not (probe JN, systems 2 and 3).
+    /// </summary>
+    [Fact]
+    public void ClefOnlyLineStart_SpringIsRigidAndTheFloorDoesNotBind()
+    {
+        double clefInk = GlyphMetrics.LineStartClefWidth(ClefType.Treble);
+        double prefixRight = PrefixRight(KeySignature.CMajor, hasTime: false);
+        Assert.Equal(3.365000, prefixRight, 6);
+
+        // The prefatory column is the clef alone; the note column is a plain head.
+        var notes = FirstNote(staffPosition: -6);
+        double nb = double.PositiveInfinity, nt = double.NegativeInfinity;
+        foreach (var b in notes)
+        {
+            nb = System.Math.Min(nb, b.YBottom);
+            nt = System.Math.Max(nt, b.YTop);
+        }
+        var clefBox = GlyphMetrics.ClefG;
+        var prefatory = new List<ColumnBox>
+        {
+            LineStartColumn.PrefatoryBox(
+                EngravingDefaults.ClefGlyphXOffset,
+                EngravingDefaults.ClefGlyphXOffset + clefInk,
+                clefBox.Bottom + TrebleClefLineOffset, clefBox.Top + TrebleClefLineOffset,
+                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth,
+                StaffBottom, StaffTop, nb, nt),
+        };
+        double minDist = LineStartColumn.MinimumDistance(prefatory, notes);
+        Assert.Equal(3.565000, minDist, 6);   // clef ink right 3.365 + 0.1 - (0 - 0.1)
+
+        var (ideal, fixed_) = SpacingRules.FirstNoteSpring(
+            keyInkWidth: 0.0, includeTimeSignature: false, clefWidth: clefInk);
+        var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
+            ideal, fixed_, stretchability: 0.0, minDist - prefixRight);
+
+        Assert.Equal(5.800000, prefixRight + spring.IdealDistance, 6);
+        Assert.Equal(3.565000, prefixRight + spring.MinDistance, 6);
+        Assert.Equal(0.0, spring.InverseStretchStrength, 6);
+        Assert.Equal(0.0, spring.InverseCompressStrength, 6);
     }
 
     /// <summary>

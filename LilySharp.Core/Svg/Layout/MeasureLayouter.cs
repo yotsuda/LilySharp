@@ -29,14 +29,21 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed class MeasureLayouter
 {
-    /// <summary>
-    /// Predicate returning whether a music item is part of a beam group (and so
-    /// carries NO flag). Set by <see cref="LayoutEngine"/> before a layout pass so
-    /// note-to-note spacing does not reserve flag width for beamed notes. Null =>
-    /// treat every note as unbeamed (flag reserved), the pre-beam-aware behaviour.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/note-spacing.cc — a beamed Stem has no Flag grob.</remarks>
-    public Func<MusicItem, bool>? IsItemBeamed { get; set; }
+    // Beam membership is NOT threaded through this class. It is a property of the item —
+    // NoteItem.IsBeamed / ChordItem.IsBeamed, baked by MeasureCollector's
+    // ResolveBeamStemDirections before any spacing runs — so every consumer reads the same
+    // answer and none can be handed a wrong one. That mirrors LilyPond, where a beamed
+    // stem's Flag grob has already SUICIDED by spacing time (lily/stem-engraver.cc:165-172)
+    // and the column skyline simply walks the grobs that exist
+    // (lily/separation-item.cc:130-164): nothing there asks whether a note is beamed.
+    // ⚠️ It used to be a settable predicate here, and the line-break gate — which builds its
+    // springs through this very class — never set it, so the gate priced every beamed note
+    // WITH a flag: a beamed eighth's skyline minimum read 2.532200 instead of 1.704200 and
+    // the merge_springs headroom (minimum + 0.3) then lifted its IDEAL from LilyPond's
+    // 2.504200 to 2.832200, a spring the layout never uses. On probe JN that is +0.984029
+    // per bar, enough that the gate could not see LilyPond's five-bar first system as a
+    // natural fit and cut 4,4,4,4 where LilyPond sets 5,5,6 (ledger point
+    // justified.first-system.heads, audit/lp-geometry/probes/jn-line-forces.ly).
 
     /// <summary>
     /// Layouts items within a measure using the Spring-Rod model.
@@ -380,9 +387,8 @@ internal sealed class MeasureLayouter
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
-            bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
             maxSkyDist = Math.Max(maxSkyDist,
-                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0, prevBeamed: prevBeamed));
+                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0));
         }
         if (maxSkyDist > spring.MinDistance)
             spring = new Spring(spring.IdealDistance, maxSkyDist, spring.InverseStretchStrength);

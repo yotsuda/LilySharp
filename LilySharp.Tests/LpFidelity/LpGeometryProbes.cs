@@ -339,6 +339,48 @@ internal static class LpGeometryProbes
         LayoutOptions.Default with { PageHeight = 70.0 };
 
     /// <summary>
+    /// LilyPond's DEFAULT first-system indent, for the books that do not zero it.
+    /// </summary>
+    /// <remarks>
+    /// Lily# indents the first system only when instrument names ask for it
+    /// (LayoutEngine.CalculateIndentFromInstrumentNames returns 0 with no names), so a probe
+    /// whose LilyPond book leaves `indent` alone must be told, or the two sides engrave
+    /// different pages and every quantity read off them is a comparison of two layouts
+    /// rather than of one.
+    /// <para>
+    /// ⚠️ MEASURED 2026-07-25 (jn-line-forces.ly, TPT vs TPD): forty bars at the tight
+    /// paper give FIVE systems of eight bars at indent 0 and SIX cut 6,7,7,7,7,6 at the
+    /// default indent. For books TSD/TSU the indent is not cosmetic at all — it is what puts
+    /// their six bars on TWO systems, which is the regime those points measure, so there the
+    /// LilyPond book keeps its indent and THIS is what makes the pair comparable.
+    /// </para>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — indent = 15\mm; the conversion is the
+    ///   corpus's own output-scale (A4's 210mm is LayoutOptions.Default's 119.501575, i.e.
+    ///   1.757299017 mm per staff space, the same one the 10mm margins use).
+    /// </remarks>
+    private static readonly LayoutOptions IndentedPaper =
+        LayoutOptions.Default with { Indent = 15.0 / 1.757299017 };
+
+    /// <summary>
+    /// Sixteen bars of <paramref name="bar"/> cut into four systems of four by an explicit
+    /// break, mirroring the LilyPond books that write
+    /// <c>\repeat unfold 4 { … } \break</c> four times over.
+    /// </summary>
+    /// <remarks>
+    /// The four inter-system bow probes (SSD/SSU/TSID/TSIU, page-vertical.ly:653-726) force
+    /// that split ON PURPOSE — a bow's arc is span-dependent, so the pair only holds while
+    /// both systems are spacing-identical, and LilyPond's own natural break is uneven. Their
+    /// Lily# sources carried NO break and let the breaker choose, so the two sides agreed
+    /// only while Lily#'s breaker happened to land on LilyPond's forced division.
+    /// ⚠️ MEASURED 2026-07-25: freed of the invented OverfullPenalty, Lily# cuts this music
+    /// into THREE systems (5,5,6) — and so does LilyPond when its \break is removed
+    /// (jn-line-forces.ly, score SSN). Both engravers are right; the PAIR was mis-specified.
+    /// </remarks>
+    private static string ForcedFourBarSystems(string bar) =>
+        string.Join(" break ",
+            Enumerable.Repeat(string.Concat(Enumerable.Repeat(bar, 4)).Trim(), 4));
+
+    /// <summary>
     /// TWO STAVES, one system — the mirror of book P in page-vertical.ly.
     /// </summary>
     /// <remarks>
@@ -974,7 +1016,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            {{string.Concat(Enumerable.Repeat("b1 g,,1( g,,1) | ", 16)).Trim()}}
+            {{ForcedFourBarSystems("b1 g,,1( g,,1) | ")}}
           }
         }
 
@@ -1010,7 +1052,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            {{string.Concat(Enumerable.Repeat("b1 d'''1( d'''1) | ", 16)).Trim()}}
+            {{ForcedFourBarSystems("b1 d'''1( d'''1) | ")}}
           }
         }
 
@@ -1062,7 +1104,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            {{string.Concat(Enumerable.Repeat("b1 e,,1~ e,,1 | ", 16)).Trim()}}
+            {{ForcedFourBarSystems("b1 e,,1~ e,,1 | ")}}
           }
         }
 
@@ -1099,7 +1141,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            {{string.Concat(Enumerable.Repeat("b1 f'''1~ f'''1 | ", 16)).Trim()}}
+            {{ForcedFourBarSystems("b1 f'''1~ f'''1 | ")}}
           }
         }
 
@@ -1645,6 +1687,65 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The line start of a COMPRESSED line — the one regime every other
+    /// <c>line-start.*</c> point is blind to.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The rest of this corpus is read at force 0, where a line-start spring sits on its
+    /// space-alist ideal and neither its FIXED distance nor its compressibility can be seen.
+    /// This score's eight bars overflow the 102.429921 line — LilyPond and Lily# reach the
+    /// same natural geometry, column for column
+    /// (audit/lp-geometry/probes/ties-slurs-breaks-ragged.ly) — so LilyPond solves a NEGATIVE
+    /// force and every spring gives ground by <c>|force| × inverse_compress_strength</c>.
+    /// </para>
+    /// <para>
+    /// For the line-start spring that strength is <c>ideal - fixed</c>, and <c>fixed</c> is
+    /// floored at <c>0.3 + min_dist</c> (lily/staff-spacing.cc:210-220) — the port
+    /// <see cref="LineStartColumn.SpringWithMinimumDistanceFloor"/> makes. Without the floor
+    /// the metered line start is 1.0 compressible; with it, 0.8. So this point moves when
+    /// that floor is wired and NOTHING at force 0 does, which is what makes it the point that
+    /// justifies the snapshot rebase (handoff section 5.2.1 item 3).
+    /// </para>
+    /// <para>
+    /// It is the music of <c>Fixtures/test/ties-slurs.lys</c>, the fixture whose snapshot
+    /// moves, deliberately: the pair is the snapshot's own regime rather than a proxy for it.
+    /// Engraved on the default page, since this is the rare point that depends on the paper.
+    /// </para>
+    /// <para>
+    /// ⚠️ WITHOUT the fixture's <c>tempo 120</c>, on both sides. A MetronomeMark draws a
+    /// NOTEHEAD glyph ("♩ = 120") and <see cref="RenderedGeometry.TimeSignatureToFirstNotehead"/>
+    /// finds that one first — it read 2.438400 before this was caught. The mark is
+    /// outside-staff on both sides and does not enter the horizontal skylines, so dropping it
+    /// leaves the quantity alone; keeping it would have measured the tempo mark.
+    /// </para>
+    /// </remarks>
+    /// <remarks>LilyPond twin: probe score TSJ in ties-slurs-breaks.ly, which dumps
+    /// <c>TimeSignature=4.885000..6.585000</c> and <c>head=8.579465</c> on a single
+    /// justified system.</remarks>
+    private static readonly string TSJ = """
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            c4~ c4 d2 |
+            d2 e2~ | e4 f g a |
+            c4( d e f) |
+            g4( f e d) | c2 r2 |
+            c4~ c4 r2 |
+            b'4~ b4 r2 |
+          }
+        }
+
+        form main { Main }
+
+        score main "TSJ" { staff melody }
+        """;
+
+    /// <summary>
     /// A tab staff ALONE, six strings — the defect half of the tab string-spacing pair.
     /// LilyPond's TabStaff sets <c>StaffSymbol.staff-space = 1.5</c> for every string
     /// count (ly/engraver-init.ly), so its six-string staff spans (6-1) × 1.5 = 7.500000
@@ -1905,8 +2006,12 @@ internal static class LpGeometryProbes
         // system-system-spacing instead of Align_interface. TU/TD reach
         // MultiStaffLayouter.BuildAllStaffSkylines; these are the only points that reach
         // LayoutEngine.AugmentSkylinesForPaging. See probes TSU and TSD.
-        new("system.tuplet-bracket-up", TSU, g => g.StaffGap()),
-        new("system.tuplet-bracket-down", TSD, g => g.StaffGap()),
+        // ⚠️ IndentedPaper, not the default: books TSU/TSD keep LilyPond's 15mm indent
+        // (page-vertical.ly:412-446) and it is not decoration — measured 2026-07-25, at
+        // indent 0 LilyPond fits those six bars on ONE system and the inter-system gap these
+        // two points read stops existing. See IndentedPaper.
+        new("system.tuplet-bracket-up", TSU, g => g.StaffGap(), IndentedPaper),
+        new("system.tuplet-bracket-down", TSD, g => g.StaffGap(), IndentedPaper),
 
         // The slur once more, one staff over two systems, so StaffGap() reads
         // system-system-spacing instead of Align_interface. SD/SU reach
@@ -2026,6 +2131,10 @@ internal static class LpGeometryProbes
         // (LilyPond removes its Key_engraver), so the pair's LilyPond side is an IDENTITY —
         // TKC and TKT differ only in a key nothing reads. Lily#'s reservation walks every
         // staff and its drawing walk skips tab/text/ossia, so only TKT loses.
+        // The same quantity on a COMPRESSED line, which is where the line-start spring's
+        // FIXED distance and its 0.3 + min_dist floor become observable at all. See TSJ.
+        new("compressed.line-start.time-to-first-note", TSJ,
+            g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-concert", TKC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-keyed", TKT, g => g.TimeSignatureToFirstNotehead()),
     };

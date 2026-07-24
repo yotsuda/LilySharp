@@ -34,7 +34,12 @@ internal readonly record struct MeasureSpringData(
     double Spring0Ideal = 0,
     double Spring0Min = 0,
     double Spring0Stretch = 0,
-    double Spring0Compress = 0);
+    double Spring0Compress = 0,
+    // The prefix→first-note spring this measure gets WHEN it opens a line (built by
+    // MultiStaffLayouter.LineStartSpringForLine — the same one the layout uses), or null
+    // when unknown (the single-staff gate path). ApplyLineStartSpring swaps it for the
+    // Spring0* mid-line spring above when this measure is a line's first.
+    Spring? LineStartSpring = null);
 
 /// <summary>
 /// Knuth-Plass optimal line breaking algorithm for music scores.
@@ -61,48 +66,11 @@ internal sealed class KnuthPlassBreaker
     private readonly double _tolerance;
     private readonly double _looseness;
     private readonly bool _raggedRight;
-    private readonly Spring? _firstLineStartSpring;
-    private readonly Spring? _continuationLineStartSpring;
 
     /// <summary>
     /// Penalty for infinite badness (line cannot be set).
     /// </summary>
     private const double Infinity = 1e18;
-
-    /// <summary>
-    /// Extra surcharge on a compressed line, ON TOP of LilyPond's own force penalty.
-    /// ⚠️ NOT LilyPond's, and known not to be.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ UNSOURCED. Its former <c>LILYPOND-REF: lily/simple-spacer.cc:281</c> pointed at
-    /// <c>: sp-&gt;inverse_stretch_strength ();</c>, an unrelated line of compress_line's
-    /// bookkeeping, and the value 50000 appears nowhere in LilyPond.
-    /// <para>
-    /// LilyPond's counterpart — <see cref="ForcePenalty"/> plus the impossible-line rule in
-    /// <see cref="FindOptimalBreaks"/> — is now PORTED, and this constant survives only as
-    /// an additive term beside it. That is the whole of what is left unsourced in a line's
-    /// cost, and it is load-bearing: zeroing it moves six ledger points that are exact today
-    /// (page.tight.page-count and system.{tuplet-bracket,slur,tie}-*) AWAY from LilyPond.
-    /// </para>
-    /// <para>
-    /// ⚠️ Measured, so as not to be re-guessed: it is NOT standing in for the line-start
-    /// spring the gate used to be missing. Wiring that in (<see cref="ApplyLineStartSpring"/>)
-    /// and zeroing this constant regresses exactly the same six points by exactly the same
-    /// amounts as zeroing it alone did. The missing quantity is a per-line MINIMUM that is
-    /// larger still — the candidate being LilyPond's <c>0.3 + min_dist</c> floor on the
-    /// line-start spring's fixed distance (staff-spacing.cc:210-215), whose min_dist
-    /// <see cref="LineStartColumn.MinimumDistance"/> computes and nothing yet wires into
-    /// either spring system. docs/HANDOFF.md §1 carries the account.
-    /// </para>
-    /// <para>
-    /// What it costs meanwhile, measured on test/ties-slurs (2026-07-25): LilyPond sets
-    /// those eight bars as ONE COMPRESSED system, and Lily# reaches the same natural
-    /// geometry — every column agrees to 2e-5 — but cannot choose that line, because this
-    /// term prices it at 50000 × |force|. So the constant does not merely stand in for
-    /// something; it forbids a regime LilyPond uses.
-    /// </para>
-    /// </remarks>
-    private const double OverfullPenalty = 50000;
 
     /// <summary>
     /// Creates a new Knuth-Plass line breaker.
@@ -113,27 +81,16 @@ internal sealed class KnuthPlassBreaker
     /// <param name="tolerance">Acceptable ratio deviation from 1.0 (default 1.1).</param>
     /// <param name="looseness">Prefer more lines (positive) or fewer (negative).</param>
     /// <param name="raggedRight">If true, exclude Δforce² from demerits (ragged-right mode).</param>
-    /// <param name="firstLineStartSpring">The prefix→first-note spring on the FIRST line,
-    /// where the prefix carries the meter; null keeps the measure's own spring 0.</param>
-    /// <param name="continuationLineStartSpring">The same on a continuation line, whose
-    /// prefix is the clef (and key) only.</param>
     /// <remarks>
-    /// The two line-start springs are score-level, not per measure — they come from the
-    /// prefix's space-alist (<see cref="SpacingRules.FirstNoteSpring"/>) — so they are
-    /// passed once, exactly as the prefix widths are. What IS per measure is the spring
-    /// they REPLACE, which each <see cref="MeasureSpringData"/> carries as its
-    /// <c>Spring0*</c> fields.
-    /// <para>
-    /// ⚠️ The gate must have both because it is the thing deciding where lines start. The
-    /// layout substitutes spring 0 on a line's first measure (MultiStaffLayouter) and the
-    /// gate used not to follow, so it priced every line start with a spring the layout
-    /// would never use — 0.900000/0.200000 against 2.000000/1.000000 on a metered line.
-    /// That is section 5.4's "the two spring systems and the break gate must agree",
-    /// broken at the one place the gate exists to predict.
-    /// </para>
-    /// <para>LILYPOND-REF: lily/spacing-spanner.cc:219-224 — LilyPond generates the
-    /// spacing for the PREBROKEN pieces of a column alongside the unbroken one, so a
-    /// candidate line start is priced with the spring it would really get.</para>
+    /// The line-start substitution the gate must make — replacing a line's first measure's
+    /// bar-line spring 0 with the prefix→first-note spring the layout gives it — is carried
+    /// PER MEASURE on <see cref="MeasureSpringData.LineStartSpring"/> (built by
+    /// MultiStaffLayouter.LineStartSpringForLine, the one implementation the system layout
+    /// also uses), not passed here. That is section 5.4's "the two spring systems and the
+    /// break gate must agree", honoured at the one place the gate exists to predict.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:219-224 — LilyPond generates the spacing for the
+    /// PREBROKEN pieces of a column, so a candidate line start is priced with the spring it
+    /// would really get.
     /// </remarks>
     public KnuthPlassBreaker(
         double lineWidth,
@@ -141,9 +98,7 @@ internal sealed class KnuthPlassBreaker
         double continuationPrefixWidth,
         double tolerance = 1.1,
         double looseness = 0,
-        bool raggedRight = false,
-        Spring? firstLineStartSpring = null,
-        Spring? continuationLineStartSpring = null)
+        bool raggedRight = false)
     {
         _lineWidth = lineWidth;
         _firstPrefixWidth = firstPrefixWidth;
@@ -151,8 +106,6 @@ internal sealed class KnuthPlassBreaker
         _tolerance = tolerance;
         _looseness = looseness;
         _raggedRight = raggedRight;
-        _firstLineStartSpring = firstLineStartSpring;
-        _continuationLineStartSpring = continuationLineStartSpring;
     }
 
     /// <summary>
@@ -376,13 +329,13 @@ internal sealed class KnuthPlassBreaker
                 // The line's FIRST measure is priced with the prefix→first-note spring the
                 // layout will actually give it, not with the bar-line spring it carries as
                 // a mid-line measure. See the constructor's remarks.
-                ApplyLineStartSpring(springData[i], isFirstLine,
+                ApplyLineStartSpring(springData[i],
                     ref idealSum, ref minSum, ref invStretchSum, ref invCompressSum);
 
                 // ⚠️ This rule is NOT LilyPond's: LilyPond PRICES an underfull line (a big
                 // positive force, or the leftover whitespace when ragged) rather than
-                // forbidding it. It is still here because removing it makes Lily# worse —
-                // see the note on OverfullPenalty, which is the same open question.
+                // forbidding it. It is still here because removing it makes Lily# worse; it is
+                // an open invention (docs/HANDOFF.md §2H), separate from the line-start spring.
                 bool isLastLine = (j == n);
                 bool hasForceAtJ = j <= n && j > 0 && springData[j - 1].BreakPermission == BreakPermission.Force;
                 bool hasForceAtI = i > 0 && springData[i - 1].BreakPermission == BreakPermission.Force;
@@ -426,8 +379,7 @@ internal sealed class KnuthPlassBreaker
                 // PENALISED force, not the raw one.
                 // LILYPOND-REF: lily/simple-spacer.cc:506-507 → Line_details::force_.
                 double storedForce = penalizedForce;
-                double penalty = penalizedForce * penalizedForce
-                    + (force < 0 ? OverfullPenalty * Math.Abs(force) : 0);
+                double penalty = penalizedForce * penalizedForce;
 
                 // 1-2: LILYPOND-REF: lily/constrained-breaking.cc:112-113
                 // Add break_penalty_ from the measure at the break point
@@ -537,33 +489,30 @@ internal sealed class KnuthPlassBreaker
     }
 
     /// <summary>
-    /// Swaps a line's first measure from its mid-line spring 0 to the prefix→first-note
-    /// spring, mirroring the substitution the layout makes.
+    /// Swaps a line's first measure from its mid-line spring 0 to the line-start spring the
+    /// layout gives it, floored at LilyPond's 0.3 + min_dist. No-op when the spring data
+    /// carries none — the single-staff gate path leaves it null, keeping those callers on
+    /// their previous behaviour.
     /// </summary>
     /// <remarks>
-    /// The layout's rule (MultiStaffLayouter): the replacement keeps whichever minimum is
-    /// larger — the space-alist's or the measure's own spring 0 — and is rigid
-    /// (<c>inverseStretchStrength: 0</c>), with its ideal floored at that minimum.
-    /// No-op when the caller supplied no line-start spring, which keeps every existing
-    /// caller on its previous behaviour.
+    /// The spring is PRE-BUILT per measure (MultiStaffLayouter.LineStartSpringForLine) and
+    /// stored on <see cref="MeasureSpringData"/> by the multi-staff gate, so the substitution
+    /// here is a straight swap for the same spring the system layout puts at spring 0 — which
+    /// is exactly what section 5.4 requires the gate to price. The <c>Spring0*</c> fields are
+    /// the mid-line spring 0 this replaces.
     /// </remarks>
-    private void ApplyLineStartSpring(
-        in MeasureSpringData first, bool isFirstLine,
+    private static void ApplyLineStartSpring(
+        in MeasureSpringData first,
         ref double idealSum, ref double minSum,
         ref double invStretchSum, ref double invCompressSum)
     {
-        var spring = isFirstLine ? _firstLineStartSpring : _continuationLineStartSpring;
-        if (spring is not { } lineStart)
+        if (first.LineStartSpring is not { } lineStart)
             return;
 
-        double newMin = Math.Max(lineStart.MinDistance, first.Spring0Min);
-        var replaced = new Spring(
-            Math.Max(lineStart.IdealDistance, newMin), newMin, inverseStretchStrength: 0);
-
-        idealSum += replaced.IdealDistance - first.Spring0Ideal;
-        minSum += replaced.MinDistance - first.Spring0Min;
-        invStretchSum += replaced.InverseStretchStrength - first.Spring0Stretch;
-        invCompressSum += replaced.InverseCompressStrength - first.Spring0Compress;
+        idealSum += lineStart.IdealDistance - first.Spring0Ideal;
+        minSum += lineStart.MinDistance - first.Spring0Min;
+        invStretchSum += lineStart.InverseStretchStrength - first.Spring0Stretch;
+        invCompressSum += lineStart.InverseCompressStrength - first.Spring0Compress;
     }
 
     /// <summary>Break points of the best solution that uses exactly

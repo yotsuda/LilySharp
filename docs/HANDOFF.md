@@ -32,78 +32,109 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25 / HEAD ＝ **この docs コミット**（`4069ad1d` の上。⚠️ 自己参照＝**§0 で裏取り**）
-/ 未 push 76 本。**3282 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
-64/83 exact・total |residual| 0.806267 ss・counts 4/5**。
-新点 4 つ（`note-to-note.{half,quarter-shortest}` / `note-to-rest.half-rest` /
-`barline.prev.half-rest`）は**全部 exact** なので total は不変。snapshot は 1 枚も動いていない。
+最終更新 2026-07-25 / HEAD ＝ **この docs コミット**（`408d9e9c` の上。⚠️ 自己参照＝**§0 で裏取り**）
+/ 未 push 79 本。**3285 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
+64/84 exact・total |residual| 0.810716 ss・counts 4/5**。
+snapshot は **8 枚を再ベース済み**（`408d9e9c`・承認済み。正当化キー ＝
+`compressed.line-start.time-to-first-note`）。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。
+⚠️ **total を過去の値と直接比べない**（点集合が違う）。0.806267 → 0.810716 は
+新点 `compressed.line-start.*` の**持参金 +0.004183 と、床が足した drift +0.000266**。
 
 **非ゼロで残っている台帳点**（これが仕事の全リスト）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `line-start.time-to-first-note.tab-{concert,keyed}` | 両 **+0.400000000** | ▶ 譜間 merge_springs 未移植 |
-| `justified.first-system.heads` | **−6 heads** | ▶ と同じ原因＝`OverfullPenalty`（下記） |
+| `line-start.time-to-first-note.tab-{concert,keyed}` | 両 **+0.400000000** | 譜間 merge_springs 未移植（per-staff wish が無い） |
+| `justified.first-system.heads` | **−6 heads** | ▶ ＝ gate が行頭 spring と床を見ない ＋ `OverfullPenalty` |
+| `compressed.line-start.time-to-first-note` | **+0.004449092** | 圧縮行で行頭が LP ほど譲らない。**機構は未特定**（下記・容疑者 2 つは棄却済み） |
 | clef sliver（Y 4 点） | 各 0.0001〜0.0008 | LP の実効 scale 未特定（§2C） |
 | Pango 量子化の族（tuplet 4・強弱 1・tie 1 ほか） | 1e-4〜1e-6 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差** |
 
-### ▶ 次の一手 ＝ **行頭 spring の `0.3 + min_dist` 床。3 つで 1 つの変更**
+### ▶ 次の一手 ＝ **改行 gate に行頭 spring と床を配線し、`OverfullPenalty` を外す（同時に）**
 
-順序は固定で、**途中で止めると出力が LP から遠ざかる**（どちらも実測済み）:
+3 つで 1 つの変更のうち **1 は済んだ**（`408d9e9c`・描画側）。残り 2 つは**同時**でないと入らない:
 
-1. **`0.3 + min_dist` 床**（`staff-spacing.cc:210-215`）を **描画側と改行 gate の両方**へ配線。
-   min_dist は `LineStartColumn.MinimumDistance`（`effeabc3`）が既に計算する。
-2. **`OverfullPenalty = 50000` を外す**（`KnuthPlassBreaker`。出典が無いことは `4069ad1d` で確定）。
-3. **gate の行頭 spring 差し替えを配線**（`SystemBreaker.LineStartSpring` /
-   `KnuthPlassBreaker.ApplyLineStartSpring`＝`4069ad1d` で書いてあるが **inert**）。
+1. ~~`0.3 + min_dist` 床を描画側へ~~ — **完了**（`408d9e9c`）。`staff-spacing.cc:210-220` を
+   `LineStartColumn.SpringWithMinimumDistanceFloor` へ字面移植し、`MultiStaffLayouter` が消費。
+   LP の実測値と一致: 拍子付き行頭 ideal 8.585000 / fixed 7.785000 / min_distance **7.485000**、
+   clef のみ 5.800000 / 3.565000 / **圧縮強度 0（剛）**。
+2. **gate の行頭 spring 差し替えを配線**（`SystemBreaker.LineStartSpring` /
+   `KnuthPlassBreaker.ApplyLineStartSpring`＝`4069ad1d` で書いてあるが **inert**）＋
+   **同じ床を gate 側にも**（gate は per-measure なので「その小節が行頭になる場合」の
+   spring を `MeasureSpringData` に別に持たせる。`Spring0*` 欄は既にある）。
+3. **`OverfullPenalty = 50000` を外す**（出典が無いことは `4069ad1d` で確定）。
 
-**なぜ 1 つの変更なのか**（2026-07-25 実測）: LP は `test/ties-slurs` の 8 小節を
+**なぜ 2 と 3 が同時なのか**（2026-07-25 実測）: LP は `test/ties-slurs` の 8 小節を
 **1 系に圧縮して**組む（`probes/ties-slurs-breaks.ly`＝`\bar "|."` 込みで 1 系・幅 102.429921）。
 Lily# は**同じ自然幾何に到達している**——ragged 対照で**列ごとに 2e-5 一致**（小節線も含む）、
 自然行末はどちらも 101.717032（`probes/ties-slurs-breaks-ragged.ly`）。できないのは
 **その圧縮行を選ぶこと**で、`50000 × |force|` が禁じている。
-⇒ **3 だけ**入れると 2 系に割れる。**2 だけ**外すと `page.tight.page-count` ほか 6 点が壊れる
-（Lily# が行に詰め込みすぎる＝**行あたりの最小が足りない**＝1 が要る）。
+⇒ **2 だけ**入れると 2 系に割れる。**3 だけ**外すと `page.tight.page-count` ほか 6 点が壊れる
+（Lily# が行に詰め込みすぎる＝**行あたりの最小が足りない**）。
 
-⚠️ **前セッションの「Lily# の 8 小節が 0.6 ss 広い」は誤り**（コメントごと訂正済み）。
-差 0.900018 の正体は、**Lily# が終止線 `|.`（0.19+kern 0.3+thick 0.6 ＝ 1.09）を描き、
-LP は `\bar "|."` を書かない限り細い `|`（0.19）で終える**——その ink 差だけ。
-LP は行末の小節線を**インクの右端**で列に載せる（ext −0.19..0。行中は 0..0.19）。
-**プローブが何を測っているか確かめてから信じる**（§5.0）の実例。
+#### ⚠️ 床を入れて開いた第2の欠陥 ＝ **圧縮行で行頭が LP ほど譲らない（機構は未特定）**
 
-**移植の前に読むこと**:
+新点は床で **+0.004183440 → +0.004449092**（LP から 0.000266 遠ざかった）。
+LP はこの行で 3.7 から **0.005535** 譲るのに Lily# は **0.001086** しか譲らない。
+自然幅は 2e-5 一致なので**幅の問題ではない**。
 
-- **① spring の意味が 1 個ずれている。** LP は `Spring(ideal, min_dist)` ＝
-  **min_distance は列間距離そのもの**で、`fixed` は `inverse_compress_strength = ideal − fixed`
-  の形でしか効かない。Lily# は `Spring.MinDistance` に **LP の `fixed` に当たる値**を入れている
-  （4 引数コンストラクタがあるので表現はできる）。
-  **この意味のずれを直さずに床だけ足すと、床が min_distance に化ける。**
-- **② 予測（実装前に書いた・反証可能）**: 床は **force 0 の出力を動かさない**。SKC は
-  fixed 7.585→7.785 に対し ideal は max で 8.585 のまま・TKC も 8.82 のまま＝台帳の
-  `line-start.*` も tab 2 点も **新点 4 つ（HR）も不変のはず**。動くのは
-  `inverse_compress_strength` だけ＝**圧縮された行だけ**。外れたら①の取り違えを疑う。
-- **③ min_dist は単一譜でも効く**（SKC 実測 7.485000・床 7.785 が binding）。多段譜の話ではない。
-- **④ `AllStavesTab` の `TabClefToFirstNoteSpace = 1.5`（`MultiStaffLayouter.cs`）は
+⚠️ **床を差し戻す理由にはならない**（§5.2 両面）。床は LP の実測値で照合済み（LP 自身の
+fixed 7.785000 ＝ 0.3+7.485000・ideal 8.585000 不動）で、悪化は「間違った定数が別の欠陥を
+隠していた」形。床は圧縮強度を 1.0→0.8 にするので、**force が何であれ譲りが比例して減る**。
+
+**棄却済み**（推測でなく実測。2026-07-25）:
+
+- ❌ `MultiStaffLayouter` の `Math.Max(fixed, s0.MinDistance)` ガード —
+  **外してもこの点は +0.004449092 のまま**。ただし**外すと無関係な snapshot 21 枚が動く**
+  （grace-notes / lyric-break-pricing / lead-sheet-lyrics / chorale / ornaments）＝
+  **grace と lyrics の幅に対して load-bearing**（LP はそれらを独立した paper column にする）。
+  ここでは不活性。**消さないこと。**
+- ❌ `CalculateLineForce` の線形式 — それは**改行 gate の側**で、描画経路ではない。
+  `SpringSolver.CompressLine` は**既に** blocking force 順に `InverseCompressStrength` を
+  畳んでいる＝`Simple_spacer::compress_line`（`simple-spacer.cc:232-287`）の移植済み。
+
+**次の一手（この点について）**: **解かれた force と行内各 spring の
+`InverseCompressStrength` を実際に dump して LP と突き合わせる**。LP 側は probe `JZ`/`JR` が
+確立した `springs-and-rods` フックで到達できる。⚠️ 未検証の候補は §2H の `MinItemGap 0.4`
+だが、**符号が合わない**（最小が 0.2 広い＝ideal−min が 0.2 小さい＝force は大きくなる側）
+ので、絡んでいるとしても単独ではない。
+
+**移植の前に読むこと**（①は解決済み・残りは有効）:
+
+- ~~① spring の意味のずれ~~ — **解決**（`408d9e9c`）。`Spring.MinDistance` は今 LP の
+  `min_dist`（列間距離）で、`fixed` は `InverseCompressStrength = ideal − fixed` として入る。
+  ⚠️ **gate 側の spring も同じ意味に揃えること。**
+- **② min_dist は単一譜でも効く**（SKC 実測 7.485000・床 7.785 が binding）。多段譜の話ではない。
+- **③ `AllStavesTab` の `TabClefToFirstNoteSpace = 1.5`（`MultiStaffLayouter.cs`）は
   「TAB clef は小さいから 5.0 は要らない」という Lily# 独自判断**だが、**LP の TAB clef ink は
-  G clef より広い**（`0829185b` で照合済み）＝前提が崩れている。**この移植で置き換わる側。**
-- **⑤ min_dist のモデル（＝grob の extent を esw/esh で膨らませた矩形の union。outline ではない）
+  G clef より広い**（`0829185b` で照合済み）＝前提が崩れている。**merge_springs の側で置き換わる。**
+- **④ min_dist のモデル（＝grob の extent を esw/esh で膨らませた矩形の union。outline ではない）
   と 4 つの実測値（SKC 7.485 / SKD 10.135 / TKC 7.720 / TKA 9.270）は
   `probes/line-start-mindist.ly` のヘッダに全部ある。** グリフ outline を bake するのは**発明**。
+- **⑤ 描画側の min_dist は leading grace と lyrics を見ていない。** LP は grace を独立した
+  paper column にするので min_dist が grace まで測るが、Lily# は spring に畳み込む
+  （`LeadingGracePrefixWidth` / `LyricSpacing`）＝だから小節自身の spring 0 の最小が今も床を
+  支えている（`Math.Max(fixed, s0.MinDistance)`・呼び出し側に注記済み）。
+  **実測: 外すと snapshot 21 枚が動く＝消さないこと。**
+  第1音の**臨時記号は min_dist が届く**（probe TKA・+1.55）。
 - ⚠️ `SkylineBuilder.SeedClef` の X は今も原点..Right（グループ ink ではない）。縦スカイライン
   専用で位置には効かないので**半端に移さず注記のみ**（コード内にも記載）。
 
-⚠️ **出力は tab/ossia を含む全スコアで動く**＝**snapshot 再ベース＋ユーザー承認**が要る。
-再ベースを正当化する台帳キーは `justified.first-system.heads` と tab 2 点（§5.2.1③）。
+⚠️ **2+3 は改行位置を動かす**＝**snapshot 再ベース＋ユーザー承認**が要る。
+正当化キーは `justified.first-system.heads`（−6 が閉じるはず）。
 
-✅ **済んでいる下ごしらえ**: `LineStartColumn`（`effeabc3`）／clef グループのアンカー規則
-（`6878c0db`）／`line-start.clef-to-time.tab`（`0829185b`・tab snapshot 23 枚再ベース済み）／
-`TabStringSpace` を LP の 1.5 へ（`255f494f`・6 弦 5 枚再ベース済み）／改行器の DP を LP の形へ
-（`59832afc`）／`force_penalty` と「組めない行は不可能」規則（`4069ad1d`）。
+✅ **済んでいる下ごしらえ**: `LineStartColumn`（`effeabc3`）＋その score 走査と床（`408d9e9c`）／
+clef グループのアンカー規則（`6878c0db`）／`line-start.clef-to-time.tab`（`0829185b`）／
+`TabStringSpace` を LP の 1.5 へ（`255f494f`）／改行器の DP を LP の形へ（`59832afc`）／
+`force_penalty` と「組めない行は不可能」規則（`4069ad1d`）。
 
 **消えた容疑者**（再走査しない）: duration space・音符間の最小・行幅・demerits の 3 項・
 DP の形・小節線・**自然幅そのもの**。経緯は各コミットメッセージと `probes/*.ly` のヘッダに。
+
+⚠️ **プローブの罠 2 件**（同じ形で 2 回噛まれた。§5.0）: LP は `\bar "|."` を書かない限り
+終止線を細い `|` で終える／`tempo` の**メトロノーム記号は符頭グリフを描く**ので
+`TimeSignatureToFirstNotehead` が最初にそれを拾う（2.438400 と読んだ）。
 
 ---
 

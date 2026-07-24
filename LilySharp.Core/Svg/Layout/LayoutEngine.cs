@@ -81,14 +81,6 @@ internal sealed class LayoutEngine
         // Calculate the common shortest duration across all voices for Gourlay spacing
         double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
 
-        // Beam membership drives note spacing (a beamed note has no flag). Collect
-        // it across every staff's voices before laying out the measures.
-        var beamGroups = new List<BeamGroup>();
-        foreach (var (_, staff, _) in score.EnumerateStaves())
-            beamGroups.AddRange(_elementCoordinator.DetectBeamGroups(
-                new Score(staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef))));
-        _measureLayouter.IsItemBeamed = BeamedPredicate(beamGroups);
-
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // Calculate indent from instrument names (auto-calculate if not explicitly set)
@@ -2008,22 +2000,6 @@ internal sealed class LayoutEngine
         // Indent = max(LP default 15mm, name width + delimiter + padding)
         double calculatedIndent = maxNameWidth + 1.5; // 1.0 delimiter + 0.3 name padding + 0.2 extra
         return Math.Max(DefaultIndent, calculatedIndent);
-    }
-
-    /// <summary>
-    /// Builds a reference-identity predicate over the items carried by the given
-    /// beam groups (the notes/chords that render with no flag). Returns null when
-    /// nothing is beamed, so the spacing keeps its flag-reserving default.
-    /// </summary>
-    private static Func<MusicItem, bool>? BeamedPredicate(IEnumerable<BeamGroup> groups)
-    {
-        var set = new HashSet<object>(ReferenceEqualityComparer.Instance);
-        foreach (var g in groups)
-            foreach (var m in g.Members)
-                set.Add(m.Item);
-        if (set.Count == 0)
-            return null;
-        return set.Contains;
     }
 
     internal static string ClefToString(ClefType clef) => clef switch

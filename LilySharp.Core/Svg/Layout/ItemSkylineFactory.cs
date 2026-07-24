@@ -34,9 +34,7 @@ internal static class ItemSkylineFactory
     /// <param name="item">The music item</param>
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
-    /// <param name="isBeamed">True when the item is beamed, so its flag is omitted from the skyline.</param>
-    public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY,
-        bool isBeamed = false)
+    public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
     {
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
 
@@ -108,14 +106,23 @@ internal static class ItemSkylineFactory
             double noteheadYTop = noteY - noteheadBBox.Bottom;
             boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
 
-            // Add flag if present (8th notes and shorter with stems). A BEAMED
-            // note has NO flag — its stems join the beam — so including one here
-            // spuriously reserves ~1 notehead of extra horizontal space and makes
-            // beamed runs rod-bound wider than LilyPond. LP builds the skyline
-            // from the actual grobs, where a beamed note simply has no Flag grob.
-            // LILYPOND-REF: lily/note-spacing.cc get_spacing uses the note-column
-            //   skyline; a beamed Stem carries no Flag.
-            if (item is NoteItem note2 && noteValue >= 8 && !isBeamed)
+            // Add flag if present (8th notes and shorter with stems). A BEAMED note has
+            // NO flag — its stem joins the beam — so including one here spuriously
+            // reserves ~1 notehead of extra horizontal space and makes beamed runs
+            // rod-bound wider than LilyPond.
+            // The fact is read from the ITEM, which the collector resolved before any
+            // spacing ran (MeasureCollector.ResolveBeamStemDirections bakes IsBeamed),
+            // exactly as LilyPond reads it from the grobs that exist: its Flag grob has
+            // already SUICIDED by spacing time, so nothing asks "is this beamed?" — the
+            // ink simply is not there to be walked. Taking it as a caller-supplied
+            // argument instead let a call site answer WRONGLY: the line-break gate never
+            // passed it, so it priced every beamed note with a flag (+0.984029 per bar on
+            // probe JN) — see MeasureLayouter and audit/lp-geometry/probes/jn-line-forces.ly.
+            // LILYPOND-REF: lily/stem-engraver.cc:165-172 Stem_engraver::kill_unused_flags —
+            //   a stem with a `beam` object kills its Flag item.
+            // LILYPOND-REF: lily/separation-item.cc:130-164 Separation_item::boxes — the
+            //   column's skyline boxes are built by walking the grobs that EXIST in it.
+            if (item is NoteItem note2 && noteValue >= 8 && !note2.IsBeamed)
             {
                 var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note2.StemUp);
                 if (flagBBox != default)

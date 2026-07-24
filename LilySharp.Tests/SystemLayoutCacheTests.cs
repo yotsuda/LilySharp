@@ -182,12 +182,17 @@ public class SystemLayoutCacheTests
     [Fact]
     public void MultiStaff_ReusesSystems_AndStaysByteIdentical()
     {
-        // 03-piano is a single-voice, 2-staff grand-staff score with no grob
-        // overrides, so the per-system cache engages (S5-3c) with per-measure keys
-        // that combine both staves, and both the spring solve AND the skyline are
-        // memoized per system. (A multi-VOICE score is deliberately excluded from
-        // reuse — see MultiVoice_FallsBackToFullLayout_AndStaysByteIdentical.)
-        var source = LoadFixture("showcase/03-piano");
+        // feature-tour is a single-voice, 2-staff score with no grob overrides, so the
+        // per-system cache engages (S5-3c) with per-measure keys that combine both staves,
+        // and both the spring solve AND the skyline are memoized per system. (A multi-VOICE
+        // score is deliberately excluded from reuse — see
+        // MultiVoice_FallsBackToFullLayout_AndStaysByteIdentical.)
+        // ⚠️ It must span SEVERAL systems or this test is vacuous — reuse across systems is
+        // the whole subject. It used to read showcase/03-piano, whose sixteen bars stopped
+        // spanning two systems once the break gate's springs were corrected; the assertion
+        // below then failed on the fixture's premise rather than on reuse. Pick a longer
+        // score rather than weakening the guard.
+        var source = LoadFixture("test/feature-tour");
         var session = new IncrementalCompiler(SyntaxTree.Parse(source));
         session.Render();
 

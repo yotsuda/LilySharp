@@ -188,4 +188,199 @@ internal static class LineStartColumn
         double eswLeft = -SpacingRules.DefaultExtraSpacingWidth,
         double eswRight = SpacingRules.DefaultExtraSpacingWidth)
         => new ColumnBox(inkBottom, inkTop, inkLeft + eswLeft, inkRight + eswRight);
+
+    /// <summary>
+    /// <c>min_dist</c> for a line start of <paramref name="score"/> — the largest column
+    /// distance any of its staves demands.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond makes ONE <c>Paper_column::minimum_distance</c> call over every staff's
+    /// boxes at once. Taking the max of per-staff calls is the same number, and the reason is
+    /// measured rather than assumed: a prefatory grob's <c>extra-spacing-height</c> stretches
+    /// its box to its own STAFF and to its NEIGHBOURS, and the neighbour set is per-staff —
+    /// the esh LilyPond dumps for the notation staff's TimeSignature is IDENTICAL on the
+    /// one-staff score (SKC) and the notation+tab one (TKC), so no staff's prefatory box ever
+    /// faces another staff's note column (audit/lp-geometry/probes/line-start-mindist.ly).
+    /// A skyline distance is a max over Y bands, and disjoint bands make the max
+    /// distributive.
+    /// </para>
+    /// <para>
+    /// ⚠️ Y is therefore not modelled per grob here: every box of one staff is given the same
+    /// band. That is not a simplification of the ANSWER — the stretch guarantees each
+    /// prefatory box faces the note column whatever the first note's pitch, which is exactly
+    /// why <see cref="MinimumDistance"/> is pitch-independent — but it does mean these boxes
+    /// must not be reused for a question where the bands matter. The distance still goes
+    /// through <see cref="MinimumDistance"/> rather than a reach subtraction, so there is one
+    /// implementation of the skyline step and it is the one the four LilyPond numbers pin.
+    /// </para>
+    /// </remarks>
+    /// <param name="columns">The break-align table this line start is drawn on
+    /// (<see cref="BreakAlignSpacing.SolvePrefixColumns"/>) — ONE table for every staff.</param>
+    /// <param name="clefGroupLeft"><see cref="SpacingRules.ClefGroupExtent"/>'s Left: each
+    /// clef keeps its own stencil offset inside the group, whose ink-left lands on the
+    /// column.</param>
+    /// <param name="keyInkWidth">The KeySignature GROUP's engraved ink width. Passing the
+    /// group's width for every staff that engraves one overstates a narrower staff's own box,
+    /// which cannot change the MAX this returns — and the key is shadowed by the meter
+    /// whenever there is one (measured: probe SKD).</param>
+    /// <param name="timeInkWidth">The TimeSignature's ink width, 0 when the prefix has
+    /// none.</param>
+    public static double MinimumDistanceAtLineStart(
+        Model.MultiStaffScore score,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft,
+        double keyInkWidth,
+        double timeInkWidth,
+        int startMeasureIndex)
+    {
+        double worst = 0.0;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            // A lyric / chord row engraves no prefatory grob, and its text does not join the
+            // horizontal skylines at all.
+            if (staff.IsTextRow)
+                continue;
+
+            var notes = FirstNoteBoxes(staff, startMeasureIndex);
+            if (notes.Count == 0)
+                continue;
+
+            worst = Math.Max(worst, MinimumDistance(
+                PrefatoryBoxes(staff, columns, clefGroupLeft, keyInkWidth, timeInkWidth),
+                notes));
+        }
+        return worst;
+    }
+
+    /// <summary>The one Y band every box of a staff is given — see the remarks on
+    /// <see cref="MinimumDistanceAtLineStart"/> for why one band is enough.</summary>
+    private const double SharedBand = 1.0;
+
+    /// <summary>
+    /// The prefatory boxes one staff contributes: its clef, and the key and meter it
+    /// ENGRAVES, at the shared break-align columns.
+    /// </summary>
+    /// <remarks>
+    /// A tab staff engraves neither: LilyPond removes its <c>Key_engraver</c>
+    /// (ly/engraver-init.ly:1214) and gives its TimeSignature no stencil — dumped as an EMPTY
+    /// extent, which is why the probe harness reports skipping <c>TKC TABTIME</c>. Its TAB
+    /// clef IS an ordinary Clef grob in the shared group, and a wide one.
+    /// </remarks>
+    private static List<ColumnBox> PrefatoryBoxes(
+        Model.Staff staff,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft, double keyInkWidth, double timeInkWidth)
+    {
+        var stencil = staff.IsTab
+            ? SpacingRules.TabClefStencil
+            : SpacingRules.ClefStencil(staff.Clef);
+        double anchor = columns.ClefX - clefGroupLeft;
+
+        var boxes = new List<ColumnBox>
+        {
+            new ColumnBox(-SharedBand, SharedBand,
+                anchor + stencil.Left - SpacingRules.DefaultExtraSpacingWidth,
+                anchor + stencil.Right + SpacingRules.DefaultExtraSpacingWidth),
+        };
+
+        bool engravesPrefatoryStaffGrobs = SpacingRules.ContributesToKeyColumnWidth(staff);
+        if (columns.HasKey && keyInkWidth > 0.0 && engravesPrefatoryStaffGrobs)
+            boxes.Add(new ColumnBox(-SharedBand, SharedBand,
+                columns.KeyX, columns.KeyX + keyInkWidth + KeySignatureEswRight));
+
+        if (columns.HasTime && timeInkWidth > 0.0 && engravesPrefatoryStaffGrobs)
+            boxes.Add(new ColumnBox(-SharedBand, SharedBand,
+                columns.TimeX, columns.TimeX + timeInkWidth + TimeSignatureEswRight));
+
+        return boxes;
+    }
+
+    /// <summary>
+    /// The first musical column of <paramref name="staff"/>'s measure
+    /// <paramref name="measureIndex"/>, as the single box its LEFTMOST ink makes.
+    /// </summary>
+    /// <remarks>
+    /// The leftward reach is <see cref="SpacingRules.MusicalColumnLeftReach"/> — the item's
+    /// own left extent plus its <c>extra-spacing-width</c>, which is 0.2 for a note carrying
+    /// an accidental and 0.1 otherwise. That is the quantity TKA measures: a sharp on the
+    /// first note moves min_dist by 1.45 + 0.1 = 1.55. Every voice of the staff is walked and
+    /// the furthest-reaching wins, a paper column being shared by all of them.
+    /// </remarks>
+    private static List<ColumnBox> FirstNoteBoxes(Model.Staff staff, int measureIndex)
+    {
+        double reachLeft = double.NegativeInfinity;
+        double reachRight = 0.0;
+        foreach (var voice in staff.Voices)
+        {
+            if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var item in voice.Measures[measureIndex].Items)
+            {
+                if (!SpacingRules.IsMusicalColumn(item))
+                    continue;
+                reachLeft = Math.Max(reachLeft, SpacingRules.MusicalColumnLeftReach(item));
+                reachRight = Math.Max(reachRight,
+                    SpacingRules.CalculateNoteheadRightExtent(item)
+                    + SpacingRules.DefaultExtraSpacingWidth);
+                break;   // the FIRST column of this voice, not every column
+            }
+        }
+
+        return double.IsNegativeInfinity(reachLeft)
+            ? new List<ColumnBox>()
+            : new List<ColumnBox> { new ColumnBox(-SharedBand, SharedBand, -reachLeft, reachRight) };
+    }
+
+    /// <summary>
+    /// The last three statements of <c>Staff_spacing::get_spacing</c>: floor the FIXED
+    /// distance at <c>0.3 + min_dist</c>, lift the ideal to it, and build the spring.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:210-220.
+    /// <code>
+    ///   min_dist_correction = max (0, 0.3 + min_dist - fixed);
+    ///   fixed += min_dist_correction;
+    ///   ideal  = max (ideal, fixed);
+    ///   Spring ret (ideal, min_dist);
+    ///   ret.set_inverse_stretch_strength  (max (0, stretchability));
+    ///   ret.set_inverse_compress_strength (max (0, ideal - fixed));
+    /// </code>
+    /// <para>
+    /// ⚠️ Note WHICH distance ends up as the spring's minimum: it is <c>min_dist</c>, the
+    /// column-to-column skyline distance, NOT <c>fixed</c>. <c>fixed</c> is the distance
+    /// reached at force −1 and enters only through the compress strength. Lily# had been
+    /// putting <c>fixed</c> in <see cref="Spring.MinDistance"/> and deriving the compress
+    /// strength from it, which is why the floor cannot be added without this: a floor
+    /// applied to that field would raise the spring's hard minimum instead of stiffening it.
+    /// </para>
+    /// <para>
+    /// Every distance here is measured from the SAME origin. The callers work in
+    /// prefix-relative terms (0 = where the prefix ink ends, which is
+    /// <see cref="BreakAlignSpacing.PrefixColumns.Right"/>), LilyPond in column-relative
+    /// ones; the difference is a constant that cancels, since all four quantities shift
+    /// together.
+    /// </para>
+    /// </remarks>
+    /// <param name="ideal">The space-alist ideal (<see cref="BreakAlignSpacing.FirstNoteSpring"/>'s
+    /// <c>Ideal</c>).</param>
+    /// <param name="fixed_">The space-alist FIXED distance (that same helper's <c>Min</c>,
+    /// which is LilyPond's <c>fixed</c> and not its <c>min_dist</c>).</param>
+    /// <param name="stretchability">
+    /// <c>is_stretchable ? ideal - fixed : 0</c> (staff-spacing.cc:200). Zero for all three
+    /// line-start entries: Clef's <c>minimum-fixed-space</c> leaves ideal == fixed, and
+    /// KeySignature's <c>shrink-space</c> and TimeSignature's <c>semi-shrink-space</c> set
+    /// <c>is_stretchable = false</c> (:191, :197). Measured: probe JN's first head sits on
+    /// its natural 8.585000 on a JUSTIFIED line, i.e. the spring does not stretch.</param>
+    /// <param name="minDistance"><see cref="MinimumDistance"/>, in the same frame.</param>
+    public static Spring SpringWithMinimumDistanceFloor(
+        double ideal, double fixed_, double stretchability, double minDistance)
+    {
+        double correctedFixed =
+            fixed_ + Math.Max(0.0, SpacingRules.SpringHeadroom + minDistance - fixed_);
+        double correctedIdeal = Math.Max(ideal, correctedFixed);
+        return new Spring(correctedIdeal, minDistance,
+            Math.Max(0.0, stretchability),
+            Math.Max(0.0, correctedIdeal - correctedFixed));
+    }
 }

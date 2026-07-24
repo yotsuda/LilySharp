@@ -173,6 +173,16 @@ probeTag =
 %%     the breaker's arithmetic at all. Shrinking the paper until a page holds a handful of
 %%     systems puts the force where a small error in it changes the answer.
 %%
+%%     ⚠️ CORRECTED 2026-07-25 — THIS BOOK USED TO HAVE NO `indent = 0`, and it was the only
+%%     page book here without one (the four inter-system books below all say it). It
+%%     therefore engraved at LilyPond's DEFAULT 15mm indent while its Lily# twin renders at
+%%     LayoutOptions.Default, whose indent is 0: the two sides of the pair were not setting
+%%     the same page. Measured (jn-line-forces.ly, scores TPT and TPD): the same forty bars
+%%     on this same tight paper give SIX systems cut 6,7,7,7,7,6 at the default indent and
+%%     FIVE systems of eight bars at indent 0 — the six WAS the indent, not the page breaker
+%%     and not paging. The paragraph below is kept because its reasoning about WHY the paper
+%%     is shrunk still holds, but its counts were read on the indented engraving.
+%%
 %%     40 bars is six systems at this line width. On 2.26.0 LilyPond splits them 5 + 1 across
 %%     two pages for every paper height up to 75 staff spaces; Lily# does so up to 76. So 70
 %%     sits five or six staff spaces inside BOTH plateaus — deliberately not on either
@@ -203,7 +213,7 @@ probeTag =
 %%     deliberately not invented.
 \book {
   \probeTag "T"
-  \paper { paper-height = 123.0109\mm }
+  \paper { paper-height = 123.0109\mm indent = 0 }
   \score { \new Staff { \repeat unfold 40 { c'4 d' e' f' } } }
 }
 
@@ -411,6 +421,13 @@ probeTag =
 %%     on its own, exactly as for P/Q and TU/TD.
 \book {
   \probeTag "TSD"
+  %% ⚠️ NO `indent = 0` HERE, and that is deliberate as of 2026-07-25 — the default 15mm is
+  %% what puts these six bars on TWO systems at all. Measured: with indent = 0 LilyPond fits
+  %% them on ONE system and the inter-system gap this book exists to measure does not exist.
+  %% The pair is made comparable from the LILY# side instead, which passes the same indent
+  %% through LayoutOptions (LpGeometryProbes.IndentedPaper). Book T went the other way (it
+  %% got `indent = 0`) because there the indent was not holding a regime open, it was only
+  %% making the two sides break differently.
   \paper { ragged-bottom = ##t }
   \score {
     \new Staff { \time 12/4
@@ -421,6 +438,7 @@ probeTag =
 
 \book {
   \probeTag "TSU"
+  %% No `indent = 0` — see TSD: the default indent is what holds the two systems open here.
   \paper { ragged-bottom = ##t }
   \score {
     \new Staff { \time 12/4

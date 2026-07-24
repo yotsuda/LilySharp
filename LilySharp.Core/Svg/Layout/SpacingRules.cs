@@ -542,6 +542,18 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/spring.cc:104-129 <c>merge_springs</c>, :122
     /// <c>avg_distance = std::max (min_distance + 0.3, avg_distance);</c> — "leave a little
     /// headroom above the largest minimum distance so that things don't get too cramped".
+    /// <para>
+    /// LilyPond writes the same 0.3 a second time, in
+    /// <c>Staff_spacing::get_spacing</c> — <c>min_dist_correction = max (0, 0.3 + min_dist -
+    /// fixed)</c> (lily/staff-spacing.cc:212-213, "ensure that the <q>fixed</q> distance will
+    /// leave a gap of at least 0.3 ss") — and BOTH readings live on this one constant:
+    /// <see cref="RightGap"/> for a mid-measure change column and
+    /// <see cref="LineStartColumn.SpringWithMinimumDistanceFloor"/> for a line start. One
+    /// home rather than two, because a second constant with the same value in another file is
+    /// how <c>SystemSpacing * 0.5</c> survived (section 5.2.1 item 5). ⚠️ They are distinct
+    /// LilyPond sites all the same: if one of them ever stops being 0.3 upstream, this has to
+    /// split.
+    /// </para>
     /// </remarks>
     internal const double SpringHeadroom = 0.3;
 
@@ -1972,7 +1984,7 @@ internal static class SpacingRules
     /// including the grob's own <c>extra-spacing-width</c> — the right-hand term of
     /// <c>Paper_column::minimum_distance</c>.
     /// </summary>
-    private static double MusicalColumnLeftReach(MusicItem item) =>
+    internal static double MusicalColumnLeftReach(MusicItem item) =>
         CalculateLeftExtent(item)
         + (HasAccidental(item) ? AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth);
 
@@ -3186,8 +3198,7 @@ internal static class SpacingRules
 
     public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem,
                                                    double staffY,
-                                                   NoteSpacingParameters? noteParams = null,
-                                                   bool prevBeamed = false)
+                                                   NoteSpacingParameters? noteParams = null)
     {
         // LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding (LP default 0.1).
         // LilySharp historically used GlyphMetrics.MinItemGap (0.4) as the static
@@ -3222,7 +3233,7 @@ internal static class SpacingRules
         }
 
         // Create skylines for both items (at reference X = 0)
-        var rightSkyline = ItemSkylineFactory.CreateRightSkyline(prevItem, 0, staffY, prevBeamed);
+        var rightSkyline = ItemSkylineFactory.CreateRightSkyline(prevItem, 0, staffY);
         var leftSkyline = ItemSkylineFactory.CreateLeftSkyline(nextItem, 0, staffY);
 
         // Calculate minimum distance using skyline collision detection

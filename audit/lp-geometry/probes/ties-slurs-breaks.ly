@@ -31,6 +31,10 @@
 %% off the PDF is how the wrong one gets read.
 #(define probe-done (make-hash-table))
 
+#(define (grobs-of col sym)
+   (let ((ga (ly:grob-object col sym #f)))
+     (if (ly:grob-array? ga) (ly:grob-array->list ga) '())))
+
 #(define ((dump-system tag) g)
    (let ((sys (ly:grob-system g)))
      (if (not (hash-ref probe-done (cons tag sys) #f))
@@ -45,14 +49,53 @@
                      (apply max (cons 0.0
                                       (map (lambda (c)
                                              (ly:grob-relative-coordinate c sys X))
-                                           cols))))))))
+                                           cols))))
+             ;; The line start ON A COMPRESSED LINE, which is the whole point of this
+             ;; score: its natural width overflows the 102.429921 line, so LilyPond solves
+             ;; a NEGATIVE force and the line-start spring gives ground by
+             ;; ideal - |force| * inverse_compress_strength, where
+             ;; inverse_compress_strength = ideal - fixed and fixed is floored at
+             ;; 0.3 + min_dist (staff-spacing.cc:210-220). Every other line-start number in
+             ;; this corpus is read at force 0, where the floor is invisible.
+             (let ((prefix '()) (head #f))
+               (for-each
+                (lambda (c)
+                  (if (grob::has-interface c 'musical-paper-column-interface)
+                      (if (not head)
+                          (for-each
+                           (lambda (e)
+                             (if (and (not head)
+                                      (grob::has-interface e 'note-head-interface))
+                                 (set! head (ly:grob-relative-coordinate e sys X))))
+                           (grobs-of c 'elements)))
+                      (for-each
+                       (lambda (e)
+                         (let ((n (grob::name e)))
+                           (if (memq n '(Clef KeySignature TimeSignature))
+                               (let ((xe (ly:grob-extent e sys X)))
+                                 (if (not (or (inf? (car xe)) (inf? (cdr xe))))
+                                     (set! prefix
+                                           (cons (format #f "~a=~,6f..~,6f"
+                                                         n (car xe) (cdr xe))
+                                                 prefix)))))))
+                       (grobs-of c 'elements))))
+                cols)
+               (format #t "\nPROBE ~a LINESTART head=~a prefix=~a\n"
+                       tag
+                       (if head (format #f "~,6f" head) "?")
+                       (string-join (reverse prefix) " ")))))))
    '())
 
 \score {
   \new Staff \with {
     \override NoteHead.after-line-breaking = #(dump-system "TSJ")
   } {
-    \tempo 4 = 120
+    %% ⚠️ NO \tempo. The fixture carries one, but a MetronomeMark draws a NOTEHEAD glyph
+    %% ("♩ = 120"), and on the Lily# side that glyph is the first thing
+    %% RenderedGeometry.TimeSignatureToFirstNotehead finds — it read 2.438400 as the
+    %% line-start gap before this was noticed. Dropping the mark from BOTH twins keeps the
+    %% pair measuring the line-start spring; it is outside-staff on both sides and does not
+    %% enter the horizontal skylines.
     \time 4/4
     \key c \major
     c'4~ c'4 d'2 |

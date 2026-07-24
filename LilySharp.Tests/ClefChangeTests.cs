@@ -220,9 +220,13 @@ score main ""test"" { staff melody }
     {
         // Use enough measures to force a natural system break.
         // The clef changes to bass at measure 3, so system 2 should start with bass clef.
+        // The break is EXPLICIT: what this test asserts is that a system's prefix clef
+        // follows the active clef, not where the breaker happens to cut. It used to rely on
+        // eight bars not fitting one line, which stopped being true when the breaker's
+        // springs were corrected — the assertion then failed on a premise, not on its point.
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
+phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | break e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
 section A { melody { $m } }
 form main { A }
 score main ""test"" { staff melody }

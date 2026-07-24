@@ -744,6 +744,89 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// The line-start spring a system's opening measure gets: its bar-line spring 0
+    /// REPLACED by the prefix→first-note spring, floored at LilyPond's 0.3 + min_dist.
+    /// The ONE implementation of that spring, shared by the actual layout (LayoutMeasures)
+    /// and the line-break gate (SystemBreaker.ComputeMultiStaffSpringData), so section 5.4's
+    /// "the two spring systems and the break gate must agree" holds at the line start by
+    /// construction rather than by a re-derivation that can drift.
+    /// </summary>
+    /// <remarks>
+    /// Self-contained from the score and the line's first measure so the gate can call it
+    /// per measure: it recomputes the prefix reservation (key ink, whether the prefix
+    /// carries the meter, the break-align columns) that LayoutMeasures also computes for the
+    /// prefix width — the SAME functions on the SAME inputs, so the numbers are identical and
+    /// substituting this call for the inline block is output-invariant for the layout.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:219-224 — LilyPond generates the spacing for the
+    ///   PREBROKEN pieces of a column, so a candidate line start is priced with the spring it
+    ///   would really get. The spring itself is staff-spacing.cc:210-220 via
+    ///   <see cref="LineStartColumn.SpringWithMinimumDistanceFloor"/>.
+    /// </remarks>
+    /// <param name="isFirstSystem">systemIndex == 0. The first line carries the opening meter
+    /// in its prefix; a continuation hoists only a meter CHANGE that opens it.</param>
+    /// <param name="measureSpring0">The opening measure's own spring 0 — the bar-line spring
+    /// the substitution replaces, whose minimum still floors the FIXED distance (the leading
+    /// grace / lyric widths Lily# prices here that LilyPond puts in separate paper columns;
+    /// MEASURED 2026-07-25: dropping it moves 21 snapshots — grace-notes, lyric-break-pricing,
+    /// lead-sheet-lyrics, chorale, ornaments — and is inert on a plain line start).</param>
+    internal static Spring LineStartSpringForLine(
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0)
+    {
+        var primaryVoice = score.PrimaryContentStaff.PrimaryVoice;
+        double activeKeyInk = SpacingRules.WidestActiveKeyInk(score, startMeasureIndex);
+
+        // A meter change that OPENS a continuation system is drawn in the prefix (clef, key,
+        // THEN time); the first system carries the initial meter. A tab prefix draws no
+        // meter, so an all-tab score hoists none. Mirrors LayoutMeasures.
+        TimeSignatureChangeItem? leadingTimeChange = null;
+        if (!score.AllStavesTab && !isFirstSystem && startMeasureIndex < primaryVoice.Measures.Length)
+            foreach (var item in primaryVoice.Measures[startMeasureIndex].Items)
+            {
+                if (item is TimeSignatureChangeItem tc) { leadingTimeChange = tc; break; }
+                if (item.Duration > Fraction.Zero) break;
+            }
+
+        bool prefixHasTime = !score.AllStavesTab && (isFirstSystem || leadingTimeChange != null);
+        // The widest clef in the system governs where the meter and first note sit; the SAME
+        // width threads into FirstNoteSpring so the clef-only case still cancels.
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        int prefixBeats = leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats;
+        int prefixBeatType = leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType;
+        // The break-align table itself, not just its right edge: the min_dist needs every
+        // column's X to place the prefatory boxes (staff-spacing.cc:210).
+        var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
+            maxClefWidth, activeKeyInk, prefixHasTime, prefixBeats, prefixBeatType);
+
+        // The compact "TAB" clef starts its notes close to the clef (no key/time between);
+        // notation staves take the LilyPond space-alist value.
+        // LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/TimeSignature space-alist
+        //   (first-note . ...).
+        var (ideal, fixedDistance) = score.AllStavesTab
+            ? (TabClefToFirstNoteSpace, TabClefToFirstNoteSpace)
+            : SpacingRules.FirstNoteSpring(activeKeyInk, prefixHasTime, maxClefWidth);
+
+        // When the opening meter change is hoisted into the prefix, its hang-left width is no
+        // longer reserved in the measure, so the bare fixed distance holds; otherwise the
+        // measure's own spring-0 minimum still floors this FIXED distance (min_dist below does
+        // not cover the leading grace / lyric widths — LilyPond puts those in their own paper
+        // columns; an accidental on the first note DOES reach min_dist, probe TKA +1.55).
+        double fixedFloor = leadingTimeChange != null
+            ? fixedDistance : Math.Max(fixedDistance, measureSpring0.MinDistance);
+
+        // LILYPOND-REF: lily/staff-spacing.cc:210-220 — the FIXED distance is floored at
+        // 0.3 + min_dist and the spring's MINIMUM is min_dist itself.
+        double minDistance = LineStartColumn.MinimumDistanceAtLineStart(
+            score, prefixColumns, SpacingRules.ClefGroupInkLeft(score),
+            activeKeyInk,
+            prefixHasTime ? GlyphMetrics.GetTimeSigWidth(prefixBeats, prefixBeatType) : 0.0,
+            startMeasureIndex) - prefixColumns.Right;
+
+        return LineStartColumn.SpringWithMinimumDistanceFloor(
+            ideal, fixedFloor, stretchability: 0.0, minDistance);
+    }
+
+
+    /// <summary>
     /// Layouts measures for multi-staff scores with timing-based column information.
     /// Supports measure ranges for system breaking and proportional justification.
     /// </summary>
@@ -787,9 +870,13 @@ internal sealed class MultiStaffLayouter
         // sit — a bass/alto/C clef reserves more than the treble G (ledger defect-3). The
         // SAME width threads into FirstNoteSpring below so the clef-only case still cancels.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, activeKeyInk, prefixHasTime,
-            leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats,
-            leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
+        int prefixBeats = leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats;
+        int prefixBeatType = leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType;
+        // The break-align table itself, not just its right edge: the line-start spring's
+        // min_dist needs every column's X to place the prefatory boxes (staff-spacing.cc:210).
+        var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
+            maxClefWidth, activeKeyInk, prefixHasTime, prefixBeats, prefixBeatType);
+        double prefixWidth = prefixColumns.Right;
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the page
         // places the whole line at MarginLeft once, via the renderer's margin
@@ -945,21 +1032,12 @@ internal sealed class MultiStaffLayouter
             //   TimeSignature space-alist (first-note . ...).
             if (i == startMeasureIndex && springs.Length > 0)
             {
-                // The 5.0 clef→first-note gap is tuned for a wide engraved clef; the
-                // compact "TAB" clef needs far less, so an all-tab line starts its notes
-                // close to the clef (there is no key/time between them either). Notation
-                // staves keep the LilyPond space-alist value.
-                var (ideal, min) = score.AllStavesTab
-                    ? (TabClefToFirstNoteSpace, TabClefToFirstNoteSpace)
-                    : SpacingRules.FirstNoteSpring(activeKeyInk, prefixHasTime, maxClefWidth);
-                var s0 = springs[0];
-                // When the opening meter change is hoisted into the prefix, its
-                // hang-left width is no longer reserved in the measure — use the
-                // bare prefix→first-note spring so the first note doesn't inherit
-                // the (now prefix-drawn) time signature's reservation.
-                double newMin = leadingTimeChange != null ? min : Math.Max(min, s0.MinDistance);
-                springs = springs.SetItem(0, new Spring(
-                    Math.Max(ideal, newMin), newMin, inverseStretchStrength: 0));
+                // The bar-line spring 0 becomes the prefix→first-note spring, floored at
+                // LilyPond's 0.3 + min_dist. ONE implementation (LineStartSpringForLine),
+                // shared with the break gate so both price a line start identically
+                // (section 5.4). systemIndex == 0 is the first line, which carries the meter.
+                springs = springs.SetItem(0, LineStartSpringForLine(
+                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0]));
             }
             measureSprings.Add(springs);
             measureTimings.Add(allTimings);
