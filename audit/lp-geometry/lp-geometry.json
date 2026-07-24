@@ -478,6 +478,34 @@
       "residual": 0.0,
       "why": "EXACT from the moment it was opened (Lily# 3.772771429 against a LilyPond value recorded to six digits, so the 4.29e-7 is the rounding of the record and not a gap). The third of the plain note-to-note points, and the one that carries the BAR LINE: the two gaps inside a measure being exact leaves this one measuring what a bar line costs a line's total, which is the quantity a line breaker sums. Rendered on 2.26.0: last head of bar 1 at 23.506000, bar line ink 26.188771..26.378771, first head of bar 2 at 27.278771. It was opened to test whether the bar line explains justified.first-system.heads -- Lily# putting 4 bars on the first system where LilyPond puts 5. It does not. With the duration space, the note-to-note minimum, the line width, the three extra demerit terms and the DP's shape all eliminated before it, what is left is that the BREAKER's own per-measure spring totals may not equal the spacing the layout renders -- they are computed on a separate path (SystemBreaker.ComputeMultiStaffSpringData), and section 5.4's rule that the two spring systems and the break gate must agree is asserted for the springs but not for a line's TOTAL."
     },
+    "note-to-note.half": {
+      "probe": "barline-spacing.ly",
+      "score": "HR",
+      "lilypond": 4.275445,
+      "residual": 0.0,
+      "why": "EXACT from the moment it was opened, and opened to fill a hole the corpus did not know it had: every note-to-note point before this one was a QUARTER or an EIGHTH against a BLACK notehead. A half gap is not the quarter's plus the spacing-increment 1.2 -- it is 1.273200 more, because Note_spacing adds the LEFT column's head width and a half notehead is 1.377400 against the black head's 1.304200. So this point reads a glyph metric in the spacing path that nothing else does, and a defect in the half head's ink would move it while leaving every other note-to-note point exact. Measured 4.275445 on both sides; the same value falls out of the ties-slurs decomposition (probes/ties-slurs-breaks-ragged.ly, columns 23 to 24)."
+    },
+    "note-to-note.quarter-shortest": {
+      "probe": "barline-spacing.ly",
+      "score": "HR",
+      "lilypond": 3.002245,
+      "residual": 0.0,
+      "why": "EXACT, and the PAIR against note-to-note.quarter: the same quarter-to-quarter gap, 3.002245 here against 3.704200 there, differing only in what the score's OTHER notes are. Spacing_spanner::find_shortest does not use the shortest note in the score; it takes the most common per-measure shortest and averages it with base-shortest-duration (1/8). NN's most common shortest IS 1/8, so its average is 1/8 again and the averaging is INVISIBLE there -- which means every duration-space point in this corpus was measured in the one regime where that step does nothing. Here the most common shortest is 1/4, global_shortest is 3/16, and a quarter's ratio is 4/3: (2 + log2 4/3) * 1.2 - 1.2 + 1.304200 = 3.002245. Lily# reproduces it to nine digits, so its port of the averaging is right and not merely untested. Section 5.2.1 item 4: exact is not the same as correct, but exact in a regime the corpus never entered is new information."
+    },
+    "note-to-rest.half-rest": {
+      "probe": "barline-spacing.ly",
+      "score": "HR",
+      "lilypond": 3.002245,
+      "residual": 0.0,
+      "why": "EXACT. Every rest point in this corpus measures a rest against a BAR LINE (F, barline.prev.whole-rest, barline.next.whole-rest); none has ever measured a note against a REST, i.e. a rest as the RIGHT-hand column of a spring. The prediction written before the measurement was that it equals note-to-note.quarter-shortest, since the space is decided by the LEFT column's duration and head width and the rest contributes only its left reach -- and it does, to six digits. That makes the point a guard rather than a discovery: a rest box that started paying its own way on the left would move this one and nothing else."
+    },
+    "barline.prev.half-rest": {
+      "probe": "barline-spacing.ly",
+      "score": "HR",
+      "lilypond": 4.398045,
+      "residual": 0.0,
+      "why": "EXACT. The closing side of the same measure, against barline.prev.whole-rest (5.598045) as the control: the two differ by exactly the rests' own ink, so the pair says the item-to-bar-line path reads the REST STENCIL's width and not a nominal box. GlyphMetrics.RestWidth / RestHeight are two of the unsourced nominal constants LpProvenanceTests still carries (handoff section 5.2.1 item 1), so this is the point that would catch them if the half rest's box were the nominal one."
+    },
     "justified.first-system.heads": {
       "probe": "line-start-mindist.ly",
       "score": "JN",

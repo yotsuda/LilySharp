@@ -55,7 +55,9 @@ internal sealed class MultiStaffLayouter
     /// (BreakAlignSpacing.FirstNoteSpring), so the notes begin close to it — a Lily#
     /// choice, since a tab line carries no key/time between the clef and the first
     /// fret.</summary>
-    private const double TabClefToFirstNoteSpace = 1.5;
+    /// <remarks>Visible to <see cref="SystemBreaker"/>, which has to price a line start
+    /// with the same spring this layouter substitutes there.</remarks>
+    internal const double TabClefToFirstNoteSpace = 1.5;
 
     /// <summary>
     /// Current indent for the system being laid out (in staff spaces).

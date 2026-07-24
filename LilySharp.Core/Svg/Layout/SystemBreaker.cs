@@ -71,6 +71,30 @@ internal sealed class SystemBreaker
 
         if (_options.UseOptimalLineBreaking)
         {
+            // ⚠️ The gate DISAGREES with the layout about the line-start spring, knowingly.
+            // MultiStaffLayouter replaces spring 0 of a line's first measure with the
+            // prefix→first-note spring (2.0/1.0 metered, a rigid max(0, 5.0 - clef width)
+            // on a continuation); the gate keeps the bar-line spring it was built with
+            // (0.9/0.2). That is a section 5.4 violation and the correction is written and
+            // ready — <see cref="LineStartSpring"/> below, and KnuthPlassBreaker's
+            // firstLineStartSpring / continuationLineStartSpring — but it is NOT wired,
+            // because on its own it moves output AWAY from LilyPond:
+            //
+            //   test/ties-slurs splits into TWO systems where LilyPond 2.26.0 takes ONE
+            //   (audit/lp-geometry/probes/ties-slurs-breaks.ly).
+            //
+            // The reason is NOT that Lily# spaces those eight bars too widely. Measured
+            // 2026-07-25, column by column at force 0 against the ragged twin
+            // (…-breaks-ragged.ly): every column agrees with LilyPond to 2e-5, bar lines
+            // included, and the natural line ends at the same 101.717032. LilyPond's own
+            // natural width overflows the 102.429921 line too, and LilyPond simply
+            // COMPRESSES the line and keeps one system.
+            //
+            // What Lily# cannot do is accept that compressed line: OverfullPenalty prices
+            // it at 50000 × |force|. So this correction and that constant are ONE change,
+            // and the constant cannot go until the per-line MINIMUM it stands in for is
+            // there — see the remarks on OverfullPenalty in KnuthPlassBreaker.
+            // docs/HANDOFF.md §1 carries the account.
             var breaker = new KnuthPlassBreaker(
                 _options.ContentWidth,
                 firstPrefixWidth,
@@ -82,6 +106,28 @@ internal sealed class SystemBreaker
         }
 
         return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+    }
+
+    /// <summary>
+    /// The bare prefix→first-note spring a line start is given, before it is combined
+    /// with the opening measure's own spring 0.
+    /// </summary>
+    /// <remarks>
+    /// The same two branches as <see cref="MultiStaffLayouter"/>'s line-start substitution:
+    /// an all-tab line starts its notes close to the compact "TAB" clef, everything else
+    /// takes the space-alist value.
+    /// LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/TimeSignature space-alist
+    ///   (first-note . ...).
+    /// ⚠️ Not called yet — see the block in <see cref="BreakIntoSystems"/> for why the
+    /// correction is held back.
+    /// </remarks>
+    private static Spring LineStartSpring(
+        MultiStaffScore score, double activeKeyInk, bool hasTime, double maxClefWidth)
+    {
+        var (ideal, min) = score.AllStavesTab
+            ? (MultiStaffLayouter.TabClefToFirstNoteSpace, MultiStaffLayouter.TabClefToFirstNoteSpace)
+            : SpacingRules.FirstNoteSpring(activeKeyInk, hasTime, maxClefWidth);
+        return new Spring(Math.Max(ideal, min), min, inverseStretchStrength: 0);
     }
 
     /// <summary>
@@ -215,11 +261,18 @@ internal sealed class SystemBreaker
 
             double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
                             + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+            // The measure's own spring 0 — the one the layout REPLACES when this measure
+            // opens a line (MultiStaffLayouter). Carried so the gate can make the same
+            // substitution instead of pricing a line start with a spring the layout will
+            // not use. See KnuthPlassBreaker's constructor remarks.
+            var s0 = springs.Length > 0 ? springs[0] : null;
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
                 primaryMeasure.BreakPenalty,
                 runMap.ForbidsBreakAfter(i)
                     ? BreakPermission.Forbid : primaryMeasure.LineBreakPermission,
-                invCompress);
+                invCompress,
+                s0?.IdealDistance ?? 0, s0?.MinDistance ?? 0,
+                s0?.InverseStretchStrength ?? 0, s0?.InverseCompressStrength ?? 0);
         }
         return springData;
     }

@@ -1547,6 +1547,50 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The same note-to-note question in the regime <see cref="NN"/> cannot reach: a score
+    /// whose shortest note is a QUARTER, with a HALF note gap and a REST as a spacing
+    /// target.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY THE SHORTEST MATTERS. <c>Spacing_spanner::find_shortest</c> does not use the
+    /// score's shortest note: it takes the most common per-measure shortest and AVERAGES it
+    /// with <c>base-shortest-duration</c> (1/8). In NN the most common shortest IS 1/8, so
+    /// the average is 1/8 again and the averaging does nothing — the whole corpus has only
+    /// ever measured the case where it is invisible. Here the most common shortest is 1/4,
+    /// so <c>global_shortest</c> is (1/4 + 1/8)/2 = 3/16, a quarter's ratio is 4/3 rather
+    /// than 2, and the same quarter gap reads 3.002245 against NN's 3.704200.
+    /// </para>
+    /// <para>
+    /// The half gap is NOT that plus the spacing-increment 1.2: a half notehead is wider
+    /// than a black one and <c>Note_spacing</c> adds the LEFT head's width, so the
+    /// difference carries 0.073200 of glyph metric that no other note-to-note point reads.
+    /// The rest is the third hole — every existing rest point measures a rest against a BAR
+    /// LINE, never a note against a rest.
+    /// </para>
+    /// <para>
+    /// Bar 3 is there so the most common per-measure shortest is unambiguously the quarter,
+    /// and so nothing read here touches the FINAL bar line, whose column LilyPond places by
+    /// its ink RIGHT edge rather than its left.
+    /// </para>
+    /// </remarks>
+    /// <remarks>LilyPond twin: probe score HR in barline-spacing.ly.</remarks>
+    private static readonly string HR = """
+        octave absolute
+        time 4/4
+
+        part melody
+
+        section Main {
+          melody { c2 c2 | c4 c4 r2 | c4 c4 c4 c4 | }
+        }
+
+        form main { Main }
+
+        score main "HR" { staff melody }
+        """;
+
+    /// <summary>
     /// A JUSTIFIED line with mixed durations — the first probe here whose value depends on
     /// a spring's MINIMUM rather than only on its ideal.
     /// </summary>
@@ -1936,6 +1980,20 @@ internal static class LpGeometryProbes
         // Plain note-to-note, ragged, which nothing else in this corpus reads.
         new("note-to-note.quarter", NN, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
         new("note-to-note.eighth", NN, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(1)),
+        // The three holes NN cannot reach, all found by decomposing test/ties-slurs column
+        // by column against LilyPond: a score whose most common shortest is a QUARTER (so
+        // find_shortest's averaging with base-shortest-duration is observable at all), a
+        // HALF gap (which carries the half notehead's extra 0.0732 of ink), and a REST as
+        // the right-hand column. note-to-note.quarter-shortest is the PAIR against
+        // note-to-note.quarter: the same quarter gap, 3.002245 against 3.704200, differing
+        // only by global_shortest.
+        new("note-to-note.half", HR, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
+        new("note-to-note.quarter-shortest", HR, g => g.NoteheadAnchor(3) - g.NoteheadAnchor(2)),
+        new("note-to-rest.half-rest", HR,
+            g => g.FirstGlyphAfter(g.NoteheadAnchor(3)).X - g.NoteheadAnchor(3)),
+        // …and the closing side of the same measure, against barline.prev.whole-rest as
+        // the control: the corpus has only ever measured a WHOLE rest into a bar line.
+        new("barline.prev.half-rest", HR, g => g.LastGlyphToBarlineLeft(1)),
         // ACROSS the bar line — the same two notes' worth of duration space plus whatever
         // the bar line itself costs. The two gaps above are exact, so this isolates the
         // bar line's contribution to a line's total, which is what the breaker sums.

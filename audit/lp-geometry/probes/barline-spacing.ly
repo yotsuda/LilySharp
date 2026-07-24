@@ -71,6 +71,38 @@ lay =
 %%   flag widens a left column.
 \score { \new Staff { \time 4/4 c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' } \lay "NN" }
 
+%% HR — the same note-to-note question in the regime NN cannot reach: a score whose
+%%   shortest note is a QUARTER, with a HALF note gap and a REST as a spacing target.
+%%   Three holes at once, and all three were found by decomposing a real fixture
+%%   (test/ties-slurs) column by column against LilyPond -- see
+%%   probes/ties-slurs-breaks-ragged.ly.
+%%
+%%   WHY THE SHORTEST MATTERS. Spacing_spanner::find_shortest does not use the score's
+%%   shortest note: it takes the most common per-measure shortest and AVERAGES it with
+%%   base-shortest-duration (1/8). In NN, where the most common shortest IS 1/8, the
+%%   average is 1/8 again and the averaging is INVISIBLE -- so the whole corpus has only
+%%   ever measured the case where it does nothing. Here the most common shortest is 1/4,
+%%   so global_shortest is (1/4 + 1/8)/2 = 3/16 and a quarter's ratio is 4/3 rather than
+%%   2: predicted (2 + log2 4/3) * 1.2 - 1.2 + head 1.304200 = 3.002245, against NN's
+%%   3.704200 for the same quarter. Measured on the ties-slurs twin: 3.002245.
+%%
+%%   The half gap is the second reading, and it is NOT the quarter's plus the increment
+%%   1.2: a HALF notehead is wider than a black one, and Note_spacing adds the LEFT
+%%   head's width. Predicted 3.002245 + 1.2 + (half head - black head) and measured on
+%%   the twin as 4.275445, i.e. that difference is 0.073200 -- so this point reads a
+%%   glyph metric no other note-to-note point does.
+%%
+%%   The third is the REST as the RIGHT column: every existing rest point (F, and
+%%   barline.prev.whole-rest) measures a rest against a BAR LINE, never a note against a
+%%   rest. Predicted equal to the quarter gap, since the space is the LEFT column's
+%%   duration and head; the twin measured 3.002245, which is that prediction.
+%%
+%%   Bar 3 exists so the most common per-measure shortest is unambiguously the quarter
+%%   (two measures against one), and so that nothing read here touches the FINAL bar
+%%   line, whose column is placed by its ink RIGHT edge (ext -0.19 .. 0) rather than its
+%%   left the way an interior one is.
+\score { \new Staff { \time 4/4 c'2 c'2 | c'4 c'4 r2 | c'4 c'4 c'4 c'4 } \lay "HR" }
+
 %% B — clef change AT the bar line, DOWN stems after it.
 \score { \new Staff { \time 4/4 c'4 d' e' f' \clef bass g4 a b c' } \lay "B" }
 
