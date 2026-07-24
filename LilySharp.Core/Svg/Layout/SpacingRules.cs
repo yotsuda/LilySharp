@@ -242,12 +242,101 @@ internal static class SpacingRules
     /// </remarks>
     public static double MaxClefWidth(MultiStaffScore score)
     {
-        double max = 0.0;
-        foreach (var (_, staff, _) in score.EnumerateStaves())
-            if (!staff.IsTab && !staff.IsTextRow && !staff.IsOssia)
-                max = Math.Max(max, GlyphMetrics.LineStartClefWidth(staff.Clef));
-        return max > 0.0 ? max : GlyphMetrics.LineStartClefWidth(ClefType.Treble);
+        var (left, right) = ClefGroupExtent(score);
+        return right - left;
     }
+
+    /// <summary>
+    /// The Clef break-align GROUP's LEFT ink edge, relative to each clef's grob origin —
+    /// the minimum over the staves that engrave one. The group is positioned so that THIS
+    /// edge lands on <see cref="EngravingDefaults.ClefGlyphXOffset"/>, and every clef in
+    /// the group then keeps its own stencil offset inside it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:242 — the offset is
+    /// <c>extents[LeftEdge][RIGHT] + distance - extents[next][LEFT]</c>, and :141-142 makes
+    /// that <c>[LEFT]</c> the union across the system's staves. So the anchor is a property
+    /// of the GROUP, not of each clef.
+    /// <para>
+    /// It matters only where a system's clefs have DIFFERENT stencil left edges, since the
+    /// pitched clefs all start at 0. Measured on 2.26.0
+    /// (audit/lp-geometry/probes/line-start-mindist.ly, scores CGP and CGT), predicted
+    /// before the dump and confirmed to 6 digits:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>percussion ALONE — group left 0.67, so the grob sits at 0.13 and its ink
+    /// reaches 0.8. A per-clef "put my own ink-left on 0.8" rule agrees here, which is why
+    /// this looked settled.</item>
+    /// <item>percussion WITH a treble staff (CGP) — group left is min(0.67, 0) = 0, so both
+    /// grobs sit at 0.8 and the percussion clef's ink is at 1.470..2.800, NOT flush at 0.8.
+    /// The per-clef rule drew it 0.67 too far LEFT here.</item>
+    /// <item>a TAB clef (stencil left 0.2) alone (CGT) — grob at 0.6, ink 0.800..3.400;
+    /// beside a notation staff (TKC) — grob at 0.8, ink 1.000..3.600.</item>
+    /// </list>
+    /// Tab staves ARE in the group — LilyPond's TAB clef is an ordinary Clef grob
+    /// (ly/engraver-init.ly TabStaff <c>clefGlyph = "clefs.tab"</c>) — which is what makes
+    /// a notation+tab score's meter and first note sit 0.235 further right than the same
+    /// music without the tab staff (probes TKC 7.720000 against SKC 7.485000).
+    /// <see cref="SharedRenderer"/>'s tab renderer draws <c>clefs.tab</c> unscaled at this
+    /// same anchor, so the width booked here is the width drawn.
+    /// </remarks>
+    public static (double Left, double Right) ClefGroupExtent(MultiStaffScore score)
+        => ClefGroupExtent(EngravedClefStencils(score));
+
+    /// <summary>
+    /// The clef stencil each staff contributes to the break-align group, as an
+    /// origin-relative ink extent. Text (lyric / chord) and ossia rows engrave none.
+    /// </summary>
+    /// <remarks>
+    /// A tab staff engraves the TAB clef, which is an ordinary Clef grob in the SAME group
+    /// (LILYPOND-REF ly/engraver-init.ly TabStaff <c>clefGlyph = "clefs.tab"</c>) and is
+    /// WIDER than the G clef — origin-to-ink-right 2.8 against 2.565. Its stencil also
+    /// starts 0.2 right of the origin, so it moves the group's LEFT too: alone the group's
+    /// left is 0.2 (probe CGT — grob at 0.6, ink 0.800..3.400), beside a notation staff it
+    /// is 0 (probe TKC — grob at 0.8, tab ink 1.000..3.600).
+    /// </remarks>
+    private static IEnumerable<(double Left, double Right)> EngravedClefStencils(
+        MultiStaffScore score)
+    {
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow || staff.IsOssia)
+                continue;
+            yield return staff.IsTab ? TabClefStencil : ClefStencil(staff.Clef);
+        }
+    }
+
+    /// <summary>
+    /// The Clef break-align group's ink extent over an explicit set of clef stencils — the
+    /// union, in the frame of a clef's own grob origin. An empty set falls back to the
+    /// treble G (the historical default). This ONE fold serves the score walk and the
+    /// tests, so a tab staff's contribution cannot be modelled twice.
+    /// </summary>
+    public static (double Left, double Right) ClefGroupExtent(
+        IEnumerable<(double Left, double Right)> stencils)
+    {
+        double left = double.PositiveInfinity, right = double.NegativeInfinity;
+        foreach (var (l, r) in stencils)
+        {
+            left = Math.Min(left, l);
+            right = Math.Max(right, r);
+        }
+        return double.IsInfinity(left)
+            ? (GlyphMetrics.ClefInkLeft(ClefType.Treble), GlyphMetrics.ClefInkRight(ClefType.Treble))
+            : (left, right);
+    }
+
+    /// <summary>The stencil extent a pitched clef contributes to the group.</summary>
+    public static (double Left, double Right) ClefStencil(ClefType clef)
+        => (GlyphMetrics.ClefInkLeft(clef), GlyphMetrics.ClefInkRight(clef));
+
+    /// <summary>The stencil extent the TAB clef contributes to the group.</summary>
+    public static (double Left, double Right) TabClefStencil
+        => (GlyphMetrics.ClefTab.Left, GlyphMetrics.ClefTab.Right);
+
+    /// <summary>The Clef break-align group's left ink edge — <see cref="ClefGroupExtent"/>'s
+    /// <c>Left</c>, which is what the drawn clef is offset by.</summary>
+    public static double ClefGroupInkLeft(MultiStaffScore score) => ClefGroupExtent(score).Left;
 
     /// <summary>
     /// Whether this staff ENGRAVES a key signature, i.e. whether it is one of the grobs the

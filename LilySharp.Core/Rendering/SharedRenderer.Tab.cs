@@ -43,7 +43,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets
     /// </remarks>
     private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
-        double staffY, double staffRight, double systemStartX,
+        double staffY, double staffRight, double systemStartX, double clefGroupInkLeft,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems,
         HashSet<int> percentCovered, IDrawingContext gc, double pageHeight)
     {
@@ -73,11 +73,21 @@ internal static partial class SharedRenderer
         double dotOff = ((stringCount - 1) % 2 == 0) ? 0.5 : 1.0;
         (double, double) tabDots = ((dotCenter - dotOff) * stringSpace, (dotCenter + dotOff) * stringSpace);
 
-        // TAB clef (clefs.tab), sized to span the actual staff height (the glyph's
-        // designed span is ~5.78 font units) and centered on it.
+        // TAB clef (clefs.tab). LilyPond's is an ORDINARY Clef grob -- TabStaff only sets
+        // clefGlyph to "clefs.tab" and clefPosition to 0 (LILYPOND-REF
+        // ly/engraver-init.ly) -- so it is drawn at the staff's own size, NOT scaled with
+        // the staff-space, and centred on the middle line. Dumped on 2.26.0
+        // (audit/lp-geometry/probes/line-start-mindist.ly, score CGT): the tab staff spans
+        // 7.600000 while the clef spans only 5.760000, the bare LILC height. Lily# scaled
+        // it by tabHeight/5.78 so it nearly FILLED the staff, and drew it at systemStartX
+        // with no LeftEdge->clef gap at all.
+        // The X is the Clef break-align GROUP's anchor, the same one DrawClef uses, which
+        // is what lets the TAB clef join the group in SpacingRules.ClefGroupExtent: the
+        // width booked there is now the width drawn here.
         double tabCenterY = staffY - tabHeight / 2.0;
-        gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
-            FontSize * tabHeight / 5.78);
+        gc.DrawGlyph(EmmentalerGlyphs.TabClef,
+            systemStartX + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft,
+            tabCenterY, FontSize);
         bool lineStart = true;
         foreach (var ml in system.Measures)
         {

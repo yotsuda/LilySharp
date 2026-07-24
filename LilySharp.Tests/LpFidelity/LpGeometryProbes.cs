@@ -1798,6 +1798,13 @@ internal static class LpGeometryProbes
         // The last defect-3 remnant: the percussion clef's ink starts 0.67 ss right of its
         // origin, so its clef->time is 3.52 (not the treble/bass shape). See DCP.
         new("line-start.clef-to-time.percussion", DCP, g => g.ClefToTimeSignatureOnFirstSystem()),
+        // The TAB half of the same pair, against line-start.clef-to-time.treble as CONTROL:
+        // LilyPond's TAB clef is an ordinary Clef grob in the shared break-align group and
+        // is WIDER than the G (origin-to-ink-right 2.8 vs 2.565), so a tab staff under the
+        // notation staff pushes the meter column 0.235 right — 4.320000 against the
+        // control's 4.085000. Lily# printed them EQUAL while LilyPond differs, the
+        // cross-check that the defect was MaxClefWidth's staff set.
+        new("line-start.clef-to-time.tab", TKC, g => g.ClefToTimeSignatureOnFirstSystem()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
         new("line-start.clef-to-time.keyed", DCTK, g => g.ClefToTimeSignatureOnFirstSystem()),
         // The break-align draw-walk regimes (reserve/draw split): KCS is the standard-key

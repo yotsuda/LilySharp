@@ -239,6 +239,10 @@ internal static partial class SharedRenderer
         // is the same width the layout reserved (SpacingRules.MaxClefWidth), so the drawn
         // prefatory items land exactly where the first note was spaced from (ledger defect-3).
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        // Where the Clef break-align GROUP's ink starts, relative to each clef's own origin:
+        // one anchor for every staff, so a system mixing a percussion clef with a pitched one
+        // places both from the group and not each from itself. See ClefGroupExtent.
+        double clefGroupInkLeft = SpacingRules.ClefGroupInkLeft(score);
 
         // Shared time-signature column. LilyPond break-aligns the TimeSignature into ONE
         // column spanning all staves (break-alignment-interface.cc:141-142,242 — the
@@ -450,7 +454,7 @@ internal static partial class SharedRenderer
                         if (prItem.StaffIndex == globalIdx)
                             tabPercentCovered.Add(prItem.MeasureIndex);
                     DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX,
-                        beamedItems, tabPercentCovered, sgc, pageHeight);
+                        clefGroupInkLeft, beamedItems, tabPercentCovered, sgc, pageHeight);
                     continue;
                 }
 
@@ -485,7 +489,8 @@ internal static partial class SharedRenderer
                     // at the one score-level position.
                     int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
                     using (SourceScope(sgc, clefPos))
-                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth, sgc);
+                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth,
+                            clefGroupInkLeft, sgc);
                 }
                 // Break-align gaps between prefix items, from the SAME space-alists
                 // CalculatePrefixWidth reserves by, so the drawn glyph lands where the spacing

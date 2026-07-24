@@ -207,6 +207,20 @@
                  (dump-elements tag "MUS" mus))))))
    '())
 
+%% The staff a grob sits on, so the TAB clef's ink can be compared against the tab staff
+%% it is drawn onto rather than against a notation staff.
+#(define ((dump-staff tag) g)
+   (let ((ss (ly:grob-object g 'staff-symbol #f)))
+     (if (ly:grob? ss)
+         (let ((ye (ly:grob-extent ss (ly:grob-system g) Y))
+               (ce (ly:grob-extent g (ly:grob-system g) Y)))
+           (format #t "\nPROBE ~a STAFF space=~a lines=~a staffY=~a..~a clefY=~a..~a\n"
+                   tag
+                   (nf (ly:staff-symbol-staff-space g))
+                   (ly:grob-property ss 'line-count)
+                   (nf (car ye)) (nf (cdr ye)) (nf (car ce)) (nf (cdr ce))))))
+   '())
+
 lay =
 #(define-scheme-function (tag) (string?)
    #{
@@ -216,7 +230,10 @@ lay =
        indent = 0
        \context {
          \Score
+         %% Both, because a tab-only score has no NoteHead to hang the dump on. The
+         %% hash guard makes whichever fires first the one that dumps.
          \override NoteHead.after-line-breaking = #(dump-mindist tag)
+         \override Clef.after-line-breaking = #(dump-mindist tag)
        }
      }
    #})
@@ -257,6 +274,84 @@ lay =
 %%   "which grob binds": if a keyed score's min_dist ever came from the key, the reach
 %%   model would be wrong.
 \score { \new Staff { \key d \major \time 4/4 d'4 e' fis' g' | a'2 fis' } \lay "SKD" }
+
+%% CGT / CGP — WHERE THE CLEF GROUP SITS when its staves' clefs have DIFFERENT stencil
+%%   left edges. TKC showed the notation clef's ink at 0.800 and the TAB clef's at 1.000,
+%%   i.e. they are NOT both flush to the LeftEdge->clef 0.8. The rule that explains it is
+%%   break-alignment's own: the offset is
+%%     extents[LeftEdge][RIGHT] + 0.8 - extents[clef group][LEFT]
+%%   (lily/break-alignment-interface.cc:242), where the group extent is the UNION across
+%%   staves (:141-142). So the GROUP's left ink lands on 0.8 and each clef keeps its own
+%%   stencil offset inside it. LILC stencil lefts: G 0.000, TAB 0.200, percussion 0.670.
+%%
+%%   Predictions, written BEFORE the dump:
+%%     CGT (tab staff ALONE)   group left 0.200 => the grob sits at 0.8 - 0.2 = 0.600
+%%                             and the TAB clef's ink is 0.800..3.400 -- NOT TKC's
+%%                             1.000..3.600, because with no notation clef in the group
+%%                             there is nothing holding the group's left at 0.
+%%     CGP (percussion + treble)  group left min(0.670, 0.000) = 0 => the group sits at
+%%                             0.800, so the PERCUSSION clef's ink is 0.670 further in, at
+%%                             1.470..2.800, and it is NOT flush at 0.800. On a
+%%                             percussion-ONLY score it would be (group left 0.670 => grob
+%%                             at 0.130, ink 0.800..2.130), which is the 0.13 origin an
+%%                             earlier session measured -- so a per-CLEF "put my ink-left
+%%                             at 0.8" rule and this per-GROUP rule agree on every score
+%%                             with one kind of clef and disagree only here.
+%%   Lily# implemented the per-CLEF rule (GlyphMetrics.ClefInkLeft, and MaxClefWidth as a
+%%   max of ink WIDTHS), so these two scores are where it must diverge.
+%%
+%%   MEASURED, both predictions exact:
+%%     CGT  Clef sx=0.600000  self=0.200..2.800  => ink 0.800000..3.400000
+%%     CGP  percussion Clef sx=0.800000  self=0.670..2.000 => ink 1.470000..2.800000
+%%          treble     Clef sx=0.800000  self=0.000..2.565 => ink 0.800000..3.365000
+%%   So the anchor is the GROUP's left ink edge, and each clef keeps its own stencil
+%%   offset inside it. Ported in SpacingRules.ClefGroupExtent / DrawClef; CGP is the pair
+%%   that made the per-clef rule falsifiable, since it is the only shape where the two
+%%   rules disagree.
+%% CGT also carries the TAB CLEF vs TAB STAFF comparison Lily# has never made. LilyPond's
+%% TabStaff sets StaffSymbol.staff-space = 1.5 (ly/engraver-init.ly), clefGlyph
+%% "clefs.tab" and clefPosition 0, and does NOT scale the glyph with the staff-space --
+%% TKC already showed its ink 2.6 wide, the bare LILC width. Predictions, before the dump:
+%%     space = 1.500000, lines = 6, so the staff is 5 * 1.5 = 7.500000 tall
+%%     the clef's own ink is 5.760000 tall (LILC -2.88 . 2.88), UNSCALED and centred on
+%%     the middle line -- i.e. SMALLER than the staff, not fitted to it.
+%% Lily# does neither: TabStringSpace(6) = 1.3 makes its six-string staff 6.5 tall, and
+%% SharedRenderer.Tab scales clefs.tab by tabHeight/5.78 so the clef nearly FILLS the
+%% staff (width 2.6 * 1.1246 = 2.924) and draws it at systemStartX, not on the
+%% LeftEdge->clef 0.8 column.
+%%
+%%   MEASURED: space=1.500000 lines=6 staffY=-7.600000..0.000000 clefY=-6.680000..-0.920000
+%%   The staff spans 7.600000 = 5 * 1.5 + 0.1, the 0.1 being the outer lines' own thickness
+%%   (Lily#'s LineThickness is the same 0.1). The clef spans 5.760000 -- the bare LILC
+%%   height -- centred on the middle line at -3.8. Both predictions hold.
+%%
+%%   So Lily#'s tab geometry differs from LilyPond's in four ways at once:
+%%     string space   LP 1.5 for every string count   Lily# 1.3 / 1.4 / 1.5 by count
+%%     staff height   LP 5 * 1.5 = 7.5 lines          Lily# 5 * 1.3 = 6.5
+%%     clef size      LP unscaled 2.6 x 5.76          Lily# scaled by staffHeight/5.78
+%%     clef X         LP the Clef break-align column  Lily# systemStartX (no 0.8)
+%%   The last two are why the TAB clef cannot join the clef group until they are fixed:
+%%   the group would book LilyPond's 2.8 while the renderer drew 2.924 somewhere else.
+\score { \new TabStaff \with {
+  \override Clef.after-line-breaking = #(dump-staff "CGT")
+} { \key c \major c4 d e f | g2 e } \lay "CGT" }
+%% CG4 — a FOUR-string tab staff (bass), which is what most of Lily#'s tab corpus is.
+%%   The 6-string dump says the clef is unscaled at 5.760000 tall while the staff spans
+%%   7.600000, so it fits. A 4-string staff spans only 3 * 1.5 + 0.1 = 4.600000. Does
+%%   LilyPond shrink the clef to fit, or does it let a glyph designed for six strings
+%%   overhang a four-string staff?
+%%   PREDICTION: no shrink — clefs.tab is one glyph and nothing in TabStaff scales it, so
+%%   the clef still spans 5.760000 and OVERHANGS by 0.58 above and below.
+\score { \new TabStaff \with {
+  stringTunings = #bass-tuning
+  \override Clef.after-line-breaking = #(dump-staff "CG4")
+} { \key c \major c,4 d, e, f, | g,2 e, } \lay "CG4" }
+
+\score { <<
+  \new Staff \with { \override Clef.after-line-breaking = #(dump-mindist "CGP") }
+    { \clef percussion \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new Staff { \time 4/4 c'4 d' e' f' | g'2 e' }
+>> \lay "CGP" }
 
 %% TKA — TKC with a sharp on the notation staff's first note. The ONLY difference is
 %%   an Accidental, which reaches the column skyline through conditional-elements

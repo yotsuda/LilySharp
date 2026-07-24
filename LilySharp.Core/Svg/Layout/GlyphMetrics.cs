@@ -236,6 +236,18 @@ internal static partial class GlyphMetrics
     /// </summary>
     public static double ClefInkLeft(Model.ClefType clef) => ClefBBox(clef).Left;
 
+    /// <summary>
+    /// The clef stencil's RIGHT ink edge relative to its grob origin (2.565 for the G clef,
+    /// 2.0 for the percussion clef whose ink is only 1.33 wide).
+    /// </summary>
+    /// <remarks>
+    /// Paired with <see cref="ClefInkLeft"/> to give the Clef break-align GROUP's extent,
+    /// which is the union across the system's staves — see
+    /// <see cref="SpacingRules.ClefGroupInkLeft"/>. For a single kind of clef the group is
+    /// that clef, so <c>Right - Left</c> is <see cref="LineStartClefWidth"/>.
+    /// </remarks>
+    public static double ClefInkRight(Model.ClefType clef) => ClefBBox(clef).Right;
+
     // ClefChangePadding (0.5) lived here as "the padding before and after a change item".
     // It was never a LilyPond quantity: 0.5 is Clef.space-alist's `right-edge` entry, the gap
     // to the END of a line, and LilyPond has no single padding that applies to both sides of

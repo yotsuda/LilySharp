@@ -195,6 +195,13 @@ internal sealed class SkylineBuilder
             return;
 
         var (box, aboveMiddle) = ClefInk(staff.Clef);
+        // ⚠️ X here is the glyph ORIGIN, so the span runs origin..Right rather than the ink
+        // the renderer draws. The two differ only for a clef whose stencil does not start
+        // at its origin (percussion 0.67, TAB 0.2), and the correct anchor is the break-align
+        // GROUP's left ink (SpacingRules.ClefGroupExtent, ported into DrawClef) — which is a
+        // score-wide quantity this method cannot see, holding only two staves. Left as is
+        // rather than half-migrated: it feeds the VERTICAL skyline, where an X span that is
+        // 0.67 too wide costs a little page spacing and no position.
         double x = systemLeft + EngravingDefaults.ClefGlyphXOffset;
         double bottomUp = aboveMiddle + box.Bottom + staffMiddleUp;
         double topUp = aboveMiddle + box.Top + staffMiddleUp;

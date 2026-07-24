@@ -32,10 +32,13 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-24 / HEAD ＝ `effeabc3` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
-/ 未 push 42 本。**3264 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
-54/72 exact・total |residual| 0.806267 ss**（`LineStartColumnTests` の 5 本ぶん増。
-snapshot は 1 枚も動いていない＝台帳も不変）。
+最終更新 2026-07-24 / HEAD ＝ `0829185b` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
+/ 未 push 47 本。**3272 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
+55/73 exact・total |residual| 0.806267 ss**。
+新点 `line-start.clef-to-time.tab` はこのセッションで開いて閉じた（+0.235 → 0）ので total は不変。
+snapshot は tab の 23 枚だけ再ベース済み。
+⚠️ clef アンカー（`6878c0db`）の方が byte 不変なのは**結果であって構成ではない**——
+打楽器 clef と pitched clef が同居する fixture がコーパスに無いだけ。
 
 ⚠️ **total を過去の値と直接比べない**（点集合が違う）。0.006267 → 0.806267 の増加は**悪化ではなく、
 新しく開いた 2 点（tab-key 対）の正直な残差**＝下の ▶ が正体。**増加は「誰も測っていなかった
@@ -113,26 +116,76 @@ extra-spacing-height`（**隣接列の grob＝第1音列そのもの**まで伸�
 （LP は打楽器 clef と違い TAB clef を列へシフトしない）。
 `BoundaryColumn` と同族＝**列モデルを 2 つに増やさないこと**。
 
+#### ✅ clef 列のアンカー規則は移植済（`6878c0db`・出力不変＝結果であって構成ではない）
+
+手順2-1（`MaxClefWidth` に tab を）に着手したら、**その下に別の欠陥**が出た:
+LP の break-align は `- extents[group][LEFT]`（`break-alignment-interface.cc:242`・
+group extent は譜の union）でずらす＝**グループの ink 左が 0.8 に載り、各 clef は
+その中で自分の stencil offset を保つ**。Lily# は**各 clef 自身の ink 左**を 0.8 に
+載せていた。両者は「1 種類の clef しか無い系」では一致する（全 pitched も、
+打楽器**単独**も）ので何年も見えなかった。**混ざった系だけが判別する**:
+
+| probe | LP 実測（予測どおり） |
+|---|---|
+| CGP 打楽器+treble | 打楽器 clef ink **1.470000**..2.800（0.8 に揃わない）／treble 0.800..3.365 |
+| CGT tab 単独 | Clef 原点 **0.600000**・ink 0.800..3.400 |
+
+`SpacingRules.ClefGroupExtent` へ移植し `DrawClef` が消費。`MaxClefWidth` も
+group extent（`Right − Left`）に書き換え——**現状の clef 集合では全部これまでと同値**
+（`ClefGroupWidth_OfOneClef_IsThatClefsInkWidth` が固定）なので予約は動かない。
+
+#### ✅ 手順2-1 完了（`0829185b`・**tab snapshot 23 枚 再ベース済み**）
+
+台帳点 `line-start.clef-to-time.tab`（LP **4.320000**・対照 treble 4.085000）を起こして閉じた
+（Lily# 4.085000 → 4.320000）。tab 譜が clef グループに入り、`clefs.tab` は**無スケール**で
+グループのアンカーに描かれる（＝予約幅＝描画幅）。LP 実測での裏取り: TabStaff は
+`staff-space 1.5`、clef は **5.760000 高・無スケール・中央線中心**で、**4 弦譜（4.600000 高）
+からは上下 0.58 はみ出す**（probe `CG4`。予測を先に書いて的中）。
+
+⚠️ **`TabStringSpace` は独自のまま**（LP は弦数によらず 1.5、Lily# は 1.5/1.4/1.3）＝
+6 弦譜が LP 7.5 に対し 6.5。**別の再ベースを伴う独立島**なので分けてある。
+
 **残り＝手順2**:
-1. `SpacingRules.MaxClefWidth` に tab 譜を入れる（＝上の 0.235。**出力が動く**）
 2. `LineStartColumn` を spring 生成へ配線し、fixed を `0.3 + min_dist` で床にする
    （`staff-spacing.cc:213`）。Y は `LayoutStaffGroups(score)` の score だけ取る
    オーバーロード（`MultiStaffLayouter.cs:278`）＝LP の pure 側と同じ構造で取れる
 3. per-staff wish ＋ `merge_springs`
 4. snapshot 再ベース＋承認
 
+##### 手順2-2 に着手する前に読むこと（2026-07-24 に設計まで詰めた）
+
+**① 先に「第1音列の箱が esw を持つ」を作る。** LP の `boxes()` は grob ごとに
+`extra-spacing-width` を足す（notehead −0.1／Accidental **−0.2**）。Lily# の
+`ItemSkylineFactory.CreateLeftSkyline` は**生の ink しか作らない**ので、そのままでは
+min_dist の臨時記号ケースが 0.1 ずれる。「臨時記号付きの第1音は稀だから」で流すのは
+§5.2 の byte 一致細工そのもの。**esw を運ぶのは note spacing 側とも共有の関心**なので、
+`ItemSkylineFactory` に持たせる（＝1 モデル）のが正しい入口。
+
+**② LP と Lily# で spring の意味が 1 個ずれている。** LP は
+`Spring(ideal, min_dist)` ＝ **spring の min_distance は列間距離そのもの**で、
+`fixed` は `inverse_compress_strength = ideal − fixed` の形でしか効かない。
+Lily# は今 `Spring.MinDistance` に **LP の `fixed` に当たる値**を入れている。
+`Spring` には 4 引数コンストラクタ（compress 明示）が既にあるので表現はできる。
+**この意味のずれを直さずに床だけ足すと、床が min_distance に化ける。**
+
+**③ 予測（実装前に書いた・反証可能）**: 床は **force 0 の出力を動かさない**。
+SKC は fixed 7.585→7.785 に対し ideal は max で 8.585 のまま、TKC も ideal 8.82 のまま
+＝台帳の `line-start.*` も tab 2 点（+0.400000）も**不変のはず**。動くのは
+`inverse_compress_strength` だけ＝**圧縮された行だけ**。外れたら②の取り違えを疑う。
+
+⚠️ `SkylineBuilder.SeedClef` の X は今も原点..Right（グループ ink ではない）。
+縦スカイライン専用で位置には効かないので**半端に移さず注記のみ**（コード内にも記載）。
+
 ⚠️ **min_dist は単一譜でも効く**（SKC で実測 **7.485000**）。fixed 7.585 に対し床
 0.3+7.485=7.785＝**床が binding**（ideal は max で 8.585 のまま＝KCS 台帳 3.700000 と一致）。
 つまり ideal は動かないが **fixed と compress 強度が動く**＝force 0 の点は不変でも
 **圧縮 regime で出力が動く**。**多段譜だけの話ではない。**
 
-⚠️ **TKC 7.720000 と SKC 7.485000 の差 0.235 は TAB clef の ink（3.600）− G clef（3.365）。**
-TAB clef が共有 Clef 列を広げ、時値記号列（+1.52）ごと右へ押している＝
-**§2A の `MaxClefWidth` の staff 集合は min_dist と別欠陥ではなく同じ数**。一緒に測る。
-`AllStavesTab` の `TabClefToFirstNoteSpace = 1.5`（`MultiStaffLayouter.cs:53-58`）は
+⚠️ `AllStavesTab` の `TabClefToFirstNoteSpace = 1.5`（`MultiStaffLayouter.cs:53-58`）は
 「TAB clef は小さいから 5.0 は要らない」という**明示的な Lily# 独自判断**だが、
-**LP の TAB clef ink は (1.0 . 3.6) で G clef より広い**＝前提そのものが未照合。
+**LP の TAB clef ink は G clef より広い**＝前提そのものが崩れている（`0829185b` で照合済み）。
 LP は 1譜 tab でも Clef の `minimum-fixed-space 5.0`（fixed = 1.0+max(2.6,5.0) = 6.0）＋床。
+**手順2-2 で置き換わる側。**
 **移植で置き換わる側**なので、TAB clef ink を測る時に一緒に判定する。
 
 ⚠️ **出力は tab/ossia を含む全スコアで動く**（第1音が ~0.4 左へ）＝**snapshot 再ベース＋
@@ -147,11 +200,11 @@ LP は 1譜 tab でも Clef の `minimum-fixed-space 5.0`（fixed = 1.0+max(2.6,
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
 
-- **`MaxClefWidth` の staff 集合** — LP の TAB clef は Clef 列に入り、しかも G より広い。
-  Lily# は tab を skip＝▶ と同じ族。**▶ の手順2-1 そのもの**（出力が動くので単独では入れない）。
-  量は実測済み: TAB clef 原点→右 2.800 − G clef 2.565 ＝ **0.235**。これが時値記号列（+1.52）
-  ごと右へ伝播し、min_dist の TKC 7.720000 と SKC 7.485000 の差そのもの。
-  `GlyphMetrics.ClefTab` は生成済み＝**あとは staff 集合に tab を入れるだけ**。
+- ~~`MaxClefWidth` の staff 集合~~ — `0829185b` で完了（台帳 `line-start.clef-to-time.tab`）。
+- **Lily# の tab 譜の弦間隔が独自** — LP は弦数によらず `StaffSymbol.staff-space = 1.5`
+  （`ly/engraver-init.ly`）、Lily# は `TabStringSpace` が 1.5/1.4/1.3。6 弦譜の高さが
+  LP 7.5 に対し **6.5**。tab clef 側（無スケール・グループアンカー）は移植済みなので、
+  残るのはこの弦間隔だけ。**tab snapshot が再度動く**ので独立コミットで。
 - **prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`** — `LayoutEngine` /
   `SystemBreaker` / `IncrementalCompiler` の 3 経路が **score.KeySignature をそのまま**使い、
   per-staff key も「調号を彫る譜」も見ない。`transpose-multistaff`（score=C major・上譜 D major）

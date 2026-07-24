@@ -233,7 +233,8 @@ internal static partial class SharedRenderer
         return false;
     }
 
-    private static double DrawClef(ClefType clef, double x, double staffY, double clefColumnWidth, IDrawingContext gc)
+    private static double DrawClef(ClefType clef, double x, double staffY, double clefColumnWidth,
+        double clefGroupInkLeft, IDrawingContext gc)
     {
         char glyph = clef switch
         {
@@ -257,13 +258,18 @@ internal static partial class SharedRenderer
             ClefType.Baritone => staffY - 0,      // C4 on the top line
             _ => staffY - 3,
         };
-        // Anchor the clef's INK-left on the shared LeftEdge->clef column (ClefGlyphXOffset),
-        // not the glyph origin: the pitched clefs' ink starts at the origin (ClefInkLeft 0), but
-        // the percussion clef's ink begins 0.67 ss right of it, so its glyph is drawn 0.67 LEFT
-        // (origin 0.13) to bring ink-left onto 0.8 -- exactly where LilyPond places the grob
-        // (rendered origin 0.13, ink-left 0.8). Was drawn at the bare origin, so the percussion
-        // ink landed 0.67 too far right.
-        double glyphX = x + EngravingDefaults.ClefGlyphXOffset - GlyphMetrics.ClefInkLeft(clef);
+        // Anchor the clef GROUP's ink-left on the shared LeftEdge->clef column
+        // (ClefGlyphXOffset), not each clef's own: break-alignment offsets by
+        // `- extents[group][LEFT]` (LILYPOND-REF break-alignment-interface.cc:242) and that
+        // extent is the union across staves (:141-142), so every clef in the system sits at
+        // ONE grob X and keeps its own stencil offset inside it.
+        // This was `- ClefInkLeft(clef)`, per clef. The two agree whenever a system's clefs
+        // share a stencil left edge -- which every all-pitched score does (all 0) and a
+        // percussion-ONLY score does too (group left 0.67, grob at 0.13, ink on 0.8, the
+        // dump an earlier session took). They disagree on a system that MIXES them: with a
+        // treble staff present the group's left is 0, so LilyPond leaves the percussion
+        // clef's ink at 1.470 (probe CGP) where the per-clef rule dragged it to 0.8.
+        double glyphX = x + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft;
         gc.DrawGlyph(glyph, glyphX, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
             DrawClefModifier8(glyphX, staffY, change: false, gc);

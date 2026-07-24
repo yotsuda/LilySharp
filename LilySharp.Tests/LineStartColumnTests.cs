@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -210,6 +211,116 @@ public class LineStartColumnTests
         Assert.Equal(7.720000, withTab, 6);
         Assert.Equal(0.235000,
             withTab - MinimumDistance(KeySignature.CMajor, staffPosition: -6), 6);
+    }
+
+    /// <summary>Where a drawn clef glyph's ink lands, exactly as <c>DrawClef</c> and the
+    /// tab renderer compute it: the GROUP's ink-left on the shared column, each clef at
+    /// its own stencil offset inside it.</summary>
+    private static (double Left, double Right) DrawnInk(
+        (double Left, double Right) clef, params (double Left, double Right)[] group)
+    {
+        double anchor = EngravingDefaults.ClefGlyphXOffset
+                        - SpacingRules.ClefGroupExtent(group).Left;
+        return (anchor + clef.Left, anchor + clef.Right);
+    }
+
+    private static void AssertInk(double left, double right, (double Left, double Right) ink)
+    {
+        Assert.Equal(left, ink.Left, 6);
+        Assert.Equal(right, ink.Right, 6);
+    }
+
+    private static double DrawnInkLeft(ClefType clef, params ClefType[] group)
+        => DrawnInk(SpacingRules.ClefStencil(clef),
+            System.Array.ConvertAll(group, SpacingRules.ClefStencil)).Left;
+
+    /// <summary>
+    /// CGP: a percussion clef BESIDE a pitched one. The Clef break-align group's left is
+    /// the union — min(0.67, 0) = 0 — so both grobs sit at 0.8 and the percussion clef's
+    /// ink stays at 1.470000, which is what LilyPond 2.26.0 dumps. Anchoring each clef's
+    /// OWN ink-left on 0.8 (what Lily# did) drags it to 0.800000 instead.
+    /// </summary>
+    [Fact]
+    public void MixedClefs_PlaceEachClefFromTheGROUPsLeftEdge()
+    {
+        Assert.Equal(0.0, SpacingRules.ClefGroupExtent(new[]
+        {
+            SpacingRules.ClefStencil(ClefType.Percussion),
+            SpacingRules.ClefStencil(ClefType.Treble),
+        }).Left, 6);
+        Assert.Equal(1.470000,
+            DrawnInkLeft(ClefType.Percussion, ClefType.Percussion, ClefType.Treble), 6);
+        Assert.Equal(0.800000,
+            DrawnInkLeft(ClefType.Treble, ClefType.Percussion, ClefType.Treble), 6);
+    }
+
+    /// <summary>
+    /// The same rule on a percussion-ONLY system gives the group left 0.67, the grob at
+    /// 0.13 and the ink flush on 0.800000 — the placement an earlier session dumped from
+    /// LilyPond and read as a per-CLEF rule. Both rules agree here, which is exactly why
+    /// the mixed case above went unnoticed; keep this pinned so the group rule is not
+    /// "fixed" back into the per-clef one.
+    /// </summary>
+    [Fact]
+    public void PercussionAlone_StillPutsItsInkOnTheColumn()
+    {
+        Assert.Equal(GlyphMetrics.ClefInkLeft(ClefType.Percussion),
+            SpacingRules.ClefGroupExtent(
+                new[] { SpacingRules.ClefStencil(ClefType.Percussion) }).Left, 6);
+        Assert.Equal(0.800000, DrawnInkLeft(ClefType.Percussion, ClefType.Percussion), 6);
+    }
+
+    /// <summary>
+    /// The TAB clef is in the group, and both scores LilyPond was dumped on come out
+    /// right. Its stencil starts 0.2 right of its origin, so the group's left — and with
+    /// it every clef's grob X — depends on whether a notation staff is there too.
+    /// </summary>
+    /// <remarks>
+    /// The reserved column right edge is <c>ClefGlyphXOffset + MaxClefWidth</c>
+    /// (BreakAlignSpacing.SolvePrefixColumns) and the drawn ink comes from
+    /// <see cref="DrawnInkLeft"/>; asserting BOTH is the point, since booking a width the
+    /// renderer does not draw is the failure mode that kept the TAB clef out of the group.
+    /// </remarks>
+    [Fact]
+    public void TabClef_IsInTheGroupAndDrawnWhereItIsBooked()
+    {
+        var tab = SpacingRules.TabClefStencil;
+        var treble = SpacingRules.ClefStencil(ClefType.Treble);
+        AssertInk(0.200000, 2.800000, tab);
+
+        // CGT — tab alone: the group is the TAB clef's own (0.2 . 2.8), so the grob sits
+        // at 0.6 and the ink runs 0.800000..3.400000. LilyPond's dump exactly.
+        AssertInk(0.800000, 3.400000, DrawnInk(tab, tab));
+
+        // TKC — beside a notation staff the group's left is min(0.2, 0) = 0, so the grob
+        // sits at 0.8 and the TAB ink runs 1.000000..3.600000, again LilyPond's numbers,
+        // while the treble clef stays at 0.800000..3.365000.
+        AssertInk(1.000000, 3.600000, DrawnInk(tab, tab, treble));
+        AssertInk(0.800000, 3.365000, DrawnInk(treble, tab, treble));
+
+        // …and the width the PREFIX books reaches that same 3.600000, so the reservation
+        // and the drawing agree. Booking a width the renderer does not draw is what kept
+        // the TAB clef out of the group until its stencil was compared against LilyPond.
+        var (l, r) = SpacingRules.ClefGroupExtent(new[] { tab, treble });
+        Assert.Equal(3.600000, EngravingDefaults.ClefGlyphXOffset + (r - l), 6);
+    }
+
+    /// <summary>
+    /// The reserved column width is the GROUP extent, and for every clef set Lily# can
+    /// build today that equals the widest clef's ink width — so this rewrite of
+    /// <see cref="SpacingRules.MaxClefWidth"/> moves no existing score. (It stops being
+    /// true the moment the TAB clef joins the group, which is why that is a separate step.)
+    /// </summary>
+    [Theory]
+    [InlineData(ClefType.Treble)]
+    [InlineData(ClefType.Bass)]
+    [InlineData(ClefType.Alto)]
+    [InlineData(ClefType.Percussion)]
+    public void ClefGroupWidth_OfOneClef_IsThatClefsInkWidth(ClefType clef)
+    {
+        var (left, right) = SpacingRules.ClefGroupExtent(
+            new[] { SpacingRules.ClefStencil(clef) });
+        Assert.Equal(GlyphMetrics.LineStartClefWidth(clef), right - left, 6);
     }
 
     /// <summary>
