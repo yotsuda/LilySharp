@@ -182,6 +182,17 @@ internal static class ItemSkylineFactory
             }
         }
 
+        // Every spacing box is widened by its grob's own extra-spacing-width before it
+        // enters the column's skyline — the INK is untouched, this is spacing width. The
+        // default is Interval (-0.1, 0.1) and only the left side has exceptions
+        // (see CreateLeftSkyline), so the right side is uniform.
+        // LILYPOND-REF: lily/separation-item.cc:166-179 Separation_item::boxes —
+        //   `x[RIGHT] += extra_width[RIGHT]`, extra-spacing-width defaulting to
+        //   Interval (-0.1, 0.1) at :166-167.
+        for (int i = 0; i < boxes.Count; i++)
+            boxes[i] = (boxes[i].YBottom, boxes[i].YTop, boxes[i].XLeft,
+                        boxes[i].XRight + SpacingRules.DefaultExtraSpacingWidth);
+
         return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
     }
 
@@ -197,6 +208,9 @@ internal static class ItemSkylineFactory
     public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
     {
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        // Accidentals are collected apart because they are the one grob here that does not
+        // take the default extra-spacing-width — see the widening at the end.
+        var accidentalBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
 
         int noteValue = SpacingRules.GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
@@ -235,7 +249,7 @@ internal static class ItemSkylineFactory
                 double noteY = staffY - layout.StaffPosition / 2.0;
                 double accYBottom = noteY - accBBox.Top;
                 double accYTop = noteY - accBBox.Bottom;
-                boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
+                accidentalBoxes.Add((accYBottom, accYTop, accX, accX + accWidth));
             }
 
             // Arpeggio wavy line hangs to the LEFT of the chord. Reserve its extent
@@ -276,7 +290,7 @@ internal static class ItemSkylineFactory
 
                     double accYBottom = noteY - accBBox.Top;
                     double accYTop = noteY - accBBox.Bottom;
-                    boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
+                    accidentalBoxes.Add((accYBottom, accYTop, accX, accX + accWidth));
                 }
             }
         }
@@ -288,6 +302,18 @@ internal static class ItemSkylineFactory
             double noteheadYTop = noteY - noteheadBBox.Bottom;
             boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
         }
+
+        // The same widening as the right skyline, on the other side — and here one grob
+        // declares its own value: an Accidental reaches 0.2 left rather than the default 0.1.
+        // LILYPOND-REF: lily/separation-item.cc:166-179 Separation_item::boxes —
+        //   `x[LEFT] += extra_width[LEFT]`, the default Interval (-0.1, 0.1) at :166-167;
+        //   scm/define-grobs.scm Accidental (extra-spacing-width . (-0.2 . 0.0)).
+        for (int i = 0; i < boxes.Count; i++)
+            boxes[i] = (boxes[i].YBottom, boxes[i].YTop,
+                        boxes[i].XLeft - SpacingRules.DefaultExtraSpacingWidth, boxes[i].XRight);
+        foreach (var b in accidentalBoxes)
+            boxes.Add((b.YBottom, b.YTop,
+                       b.XLeft - SpacingRules.AccidentalExtraSpacingWidthLeft, b.XRight));
 
         return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Left);
     }

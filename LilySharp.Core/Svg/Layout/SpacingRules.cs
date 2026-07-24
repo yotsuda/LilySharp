@@ -520,6 +520,28 @@ internal static class SpacingRules
     internal const double DefaultExtraSpacingWidth = 0.1;
 
     /// <summary>
+    /// The vertical padding a MUSICAL column's skyline distance is taken with — how far
+    /// apart two boxes must be in Y before they stop constraining each other horizontally.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm PaperColumn
+    ///   <c>(skyline-vertical-padding . 0.08)</c>, read by lily/note-spacing.cc:79-81 off the
+    ///   RIGHT column. A NonMusicalPaperColumn leaves it at 0.
+    /// </remarks>
+    internal const double MusicalColumnSkylineVerticalPadding = 0.08;
+
+    /// <summary>
+    /// The padding the spacing spanner adds on top of a skyline distance to make a ROD.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 —
+    ///   <c>Real padding = from_scm&lt;double&gt; (get_property (prev, "padding"), 0.1);
+    ///   set_column_rods (cols, padding);</c>, spent in lily/separation-item.cc:56
+    ///   (<c>dist = padding + …distance (right)</c>).
+    /// </remarks>
+    internal const double SeparationRodPadding = 0.1;
+
+    /// <summary>
     /// The LEFTward <c>extra-spacing-width</c> an Accidental declares for itself — twice the
     /// default, and asymmetric: an accidental reserves 0.2 to its left and 0.0 to its right.
     /// </summary>
@@ -3236,19 +3258,46 @@ internal static class SpacingRules
         var rightSkyline = ItemSkylineFactory.CreateRightSkyline(prevItem, 0, staffY);
         var leftSkyline = ItemSkylineFactory.CreateLeftSkyline(nextItem, 0, staffY);
 
-        // Calculate minimum distance using skyline collision detection
-        double skylineDistance = rightSkyline.Distance(leftSkyline);
+        // LilyPond's spring minimum for a note-to-note pair, literally: the distance
+        // between the two columns' skylines, taken with the RIGHT column's
+        // skyline-vertical-padding, and clamped at 0. No gap is added here — the 0.2 that
+        // separates two heads is already in the boxes, as each grob's extra-spacing-width
+        // (ItemSkylineFactory). The rod adds a further `padding` on top; that is
+        // SeparationRodDistance, not this.
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 —
+        //   `Real distance = skys[LEFT].distance (skys[RIGHT], skyline-vertical-padding);
+        //    Real min_dist = max (0.0, distance); base.set_min_distance (min_dist);`
+        // ⚠️ There is no fall-back branch for skylines that do not overlap vertically:
+        // LilyPond has none, and the one that used to be here (prevRight + nextLeft + gap)
+        // could exceed the skyline answer it was standing in for.
+        double skylineDistance = rightSkyline.Distance(
+            leftSkyline, MusicalColumnSkylineVerticalPadding);
+        return double.IsNegativeInfinity(skylineDistance) ? 0.0 : Math.Max(0.0, skylineDistance);
+    }
 
-        // If skylines don't overlap vertically, fall back to simple calculation
-        if (double.IsNegativeInfinity(skylineDistance))
-        {
-            double prevRightExtent = CalculateNoteheadRightExtent(prevItem);
-            double nextLeftExtent = CalculateLeftExtent(nextItem);
-            return prevRightExtent + nextLeftExtent + minItemGap;
-        }
-
-        // Add minimum gap padding
-        return Math.Max(skylineDistance + minItemGap, minItemGap);
+    /// <summary>
+    /// The ROD between two musical columns: the skyline minimum plus the spacing spanner's
+    /// padding. This is the hard floor a compressed line cannot cross, and it is what the
+    /// drawn gap saturates at.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond keeps the two apart — <see cref="CalculateSkylineDistance"/> is the SPRING's
+    /// min_distance (note-spacing.cc:78-83) and this is the rod
+    /// (separation-item.cc:47-68, `dist = padding + lines[LEFT][RIGHT].distance (right)`),
+    /// raised over the same pair by Spacing_spanner::set_column_rods.
+    /// MEASURED (audit/lp-geometry/probes/compressed-note-spacing.ly): for two same-pitch
+    /// quarters LilyPond's rod is 1.604200 = 0.1 + 1.504200, and every column in that dump
+    /// carries exactly that. Spring::length saturates at min_distance (lily/spring.cc:236)
+    /// and the rod is the floor under it, so the compressed plateau is this number.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 — the padding passed to
+    ///   set_column_rods is the last column's `padding`, defaulting to 0.1.
+    /// </remarks>
+    public static double SeparationRodDistance(MusicItem? prevItem, MusicItem? nextItem,
+                                               double staffY,
+                                               NoteSpacingParameters? noteParams = null)
+    {
+        double d = CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams);
+        return d > 0 ? d + SeparationRodPadding : d;
     }
 
     /// <summary>

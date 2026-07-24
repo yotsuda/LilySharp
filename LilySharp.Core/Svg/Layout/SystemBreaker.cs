@@ -83,7 +83,6 @@ internal sealed class SystemBreaker
                 _options.ContentWidth,
                 firstPrefixWidth,
                 continuationPrefixWidth,
-                _options.LineBreakingTolerance,
                 raggedRight: _options.RaggedRight);
 
             return breaker.BreakIntoLines(measures, ComputeMultiStaffSpringData(score, baseShortestDuration));

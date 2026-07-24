@@ -387,8 +387,11 @@ internal sealed class MeasureLayouter
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
+            // A ROD, so it carries the spacing spanner's padding on top of the skyline
+            // distance — the spring's own minimum (the padding-free distance) is set in
+            // CreateSpring. See SpacingRules.SeparationRodDistance.
             maxSkyDist = Math.Max(maxSkyDist,
-                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0));
+                SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
         }
         if (maxSkyDist > spring.MinDistance)
             spring = new Spring(spring.IdealDistance, maxSkyDist, spring.InverseStretchStrength);

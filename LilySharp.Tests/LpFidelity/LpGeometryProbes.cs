@@ -362,6 +362,60 @@ internal static class LpGeometryProbes
         LayoutOptions.Default with { Indent = 15.0 / 1.757299017 };
 
     /// <summary>
+    /// A line too narrow for its bar, so every note-to-note spring is driven onto its
+    /// MINIMUM — the one regime in which that minimum is observable at all.
+    /// </summary>
+    /// <remarks>
+    /// The width mirrors probe CN4 in compressed-note-spacing.ly (30mm = 17.071654 staff
+    /// spaces at the corpus's output-scale), chosen INSIDE LilyPond's saturation plateau
+    /// rather than at its edge: measured 2026-07-25, LilyPond's gap for this bar falls
+    /// 3.048125 -> 2.037936 as the line narrows and then stops dead at 1.956300 for every
+    /// width from 19.916929 down to 12.519213. Sitting at 30mm keeps the entry reading the
+    /// saturated value and not a rounding at the flip point, the same discipline
+    /// page.tight.* uses for its paper height.
+    /// <para>
+    /// ContentWidth is PageWidth minus the two margins, so the page is widened by exactly
+    /// the margins to leave LilyPond's line-width behind.
+    /// </para>
+    /// </remarks>
+    private static readonly LayoutOptions NarrowPaper =
+        LayoutOptions.Default with { PageWidth = 30.0 / 1.757299017 + 2 * 8.535827 };
+
+    /// <summary>
+    /// EIGHT QUARTERS IN ONE BAR, to be squeezed. The mirror of compressed-note-spacing.ly.
+    /// </summary>
+    /// <remarks>
+    /// One bar so no bar-line spring sits between the measured heads, and eight of them so
+    /// the line has enough springs that the line start cannot absorb the compression on its
+    /// own (it does take some: LilyPond's first head moves 8.489735 -> 7.489735 across the
+    /// widths). Same pitch throughout, so the gap is the plain head-to-head minimum with no
+    /// accidental ink in it — the quantity probe N2N reads at force 0.
+    /// <para>
+    /// ⚠️ <c>g</c> (LilyPond <c>g'</c>), NOT <c>c</c>. The first cut of this pair used
+    /// middle C, which in a treble staff carries a LEDGER LINE — and a ledger sticks out
+    /// past the head on both sides and joins the column's horizontal skyline like any other
+    /// ink, so LilyPond's rod read 1.956300 instead of 1.604200 and the point was measuring
+    /// the unported ledger geometry (handoff section 2E) as well as the minimum. g sits on a
+    /// staff line inside the staff, stem up like c, and has no ledger.
+    /// </para>
+    /// </remarks>
+    private static readonly string CN = """
+        octave absolute
+        time 8/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { g4 g g g g g g g | }
+        }
+
+        form main { Main }
+
+        score main "CN" { staff melody }
+        """;
+
+    /// <summary>
     /// Sixteen bars of <paramref name="bar"/> cut into four systems of four by an explicit
     /// break, mirroring the LilyPond books that write
     /// <c>\repeat unfold 4 { … } \break</c> four times over.
@@ -2109,11 +2163,31 @@ internal static class LpGeometryProbes
         // rather than an assumption — and being a count it stays out of the ss total.
         new("justified.first-system.heads", JN,
             g => g.NoteheadAnchorsOnSystem(0).Count),
-        // The note-to-note gaps themselves are NOT here yet, deliberately. With 4 bars on
-        // the first system against LilyPond's 5 they read 4.909926 and 3.107063 against
-        // 3.765697 and 2.534949, which is the line-breaking disagreement above and not
-        // note spacing; recording them as note-to-note residuals would pin a defect to the
-        // wrong cause. They go in when justified.first-system.heads closes.
+        // …and NOW the gaps themselves, which that count was the precondition for. They were
+        // held back while the two engravers put different music on this system (4 bars
+        // against LilyPond's 5), because recording them then would have pinned a
+        // line-breaking disagreement to note spacing — the shape section 5.2 forbids. With
+        // the count exact both sides share the same five bars and the gaps mean what they
+        // say.
+        //
+        // ⚠️ They were opened expecting to be the ledger keys for removing
+        // GlyphMetrics.MinItemGap 0.4, and they are NOT — both opened exact (+5.3e-8 and
+        // -4.7e-7). LilyPond's note_spacing sets inverse_stretch_strength from
+        // `len - increment_`, NOT from the skyline minimum (lily/spacing-basic.cc), so a
+        // STRETCHED line never consults that minimum and the knob is invisible here. It
+        // binds only where a spring is compressed onto its minimum, so the key that removal
+        // needs is a COMPRESSED note-to-note point the corpus still lacks. What this pair
+        // does pin is justification itself, which the ragged corpus cannot see at all.
+        new("justified.note-to-note.quarter", JN,
+            g => g.NoteheadAnchorsOnSystem(0)[1] - g.NoteheadAnchorsOnSystem(0)[0]),
+        new("justified.note-to-note.eighth", JN,
+            g => g.NoteheadAnchorsOnSystem(0)[2] - g.NoteheadAnchorsOnSystem(0)[1]),
+        // …and the regime the two above turned out NOT to reach: a line squeezed until every
+        // note-to-note spring sits on its MINIMUM. This is the only place a spring minimum is
+        // observable, so it is the ledger key for GlyphMetrics.MinItemGap 0.4 — the knob
+        // LilyPond does not have. See probe CN and compressed-note-spacing.ly.
+        new("compressed.note-to-note.quarter", CN,
+            g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), NarrowPaper),
         new("tab.staff.line-span.six-string", TAB6, g => g.StaffLineSpan()),
         new("tab.staff.line-span.four-string", TAB4, g => g.StaffLineSpan()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),

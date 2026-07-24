@@ -129,12 +129,6 @@ internal sealed record LayoutOptions
     public bool UseOptimalLineBreaking { get; init; } = true;
 
     /// <summary>
-    /// Tolerance for line stretch/compression in optimal breaking.
-    /// Lines with ratio outside 1/tolerance to tolerance*2 are rejected.
-    /// </summary>
-    public double LineBreakingTolerance { get; init; } = 1.1;
-
-    /// <summary>
     /// If true, ALWAYS runs the optimal page breaker. When false (default),
     /// a score that FITS one page keeps the simple content-driven layout
     /// (byte-identical to the historical output) and the breaker engages

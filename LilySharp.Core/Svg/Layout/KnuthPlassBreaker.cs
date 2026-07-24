@@ -63,7 +63,6 @@ internal sealed class KnuthPlassBreaker
     private readonly double _lineWidth;
     private readonly double _firstPrefixWidth;
     private readonly double _continuationPrefixWidth;
-    private readonly double _tolerance;
     private readonly double _looseness;
     private readonly bool _raggedRight;
 
@@ -78,7 +77,6 @@ internal sealed class KnuthPlassBreaker
     /// <param name="lineWidth">Available width for content.</param>
     /// <param name="firstPrefixWidth">Width of prefix on first line (clef, key, time).</param>
     /// <param name="continuationPrefixWidth">Width of prefix on continuation lines (clef, key).</param>
-    /// <param name="tolerance">Acceptable ratio deviation from 1.0 (default 1.1).</param>
     /// <param name="looseness">Prefer more lines (positive) or fewer (negative).</param>
     /// <param name="raggedRight">If true, exclude Δforce² from demerits (ragged-right mode).</param>
     /// <remarks>
@@ -96,14 +94,12 @@ internal sealed class KnuthPlassBreaker
         double lineWidth,
         double firstPrefixWidth,
         double continuationPrefixWidth,
-        double tolerance = 1.1,
         double looseness = 0,
         bool raggedRight = false)
     {
         _lineWidth = lineWidth;
         _firstPrefixWidth = firstPrefixWidth;
         _continuationPrefixWidth = continuationPrefixWidth;
-        _tolerance = tolerance;
         _looseness = looseness;
         _raggedRight = raggedRight;
     }
@@ -332,17 +328,16 @@ internal sealed class KnuthPlassBreaker
                 ApplyLineStartSpring(springData[i],
                     ref idealSum, ref minSum, ref invStretchSum, ref invCompressSum);
 
-                // ⚠️ This rule is NOT LilyPond's: LilyPond PRICES an underfull line (a big
-                // positive force, or the leftover whitespace when ragged) rather than
-                // forbidding it. It is still here because removing it makes Lily# worse; it is
-                // an open invention (docs/HANDOFF.md §2H), separate from the line-start spring.
-                bool isLastLine = (j == n);
-                bool hasForceAtJ = j <= n && j > 0 && springData[j - 1].BreakPermission == BreakPermission.Force;
-                bool hasForceAtI = i > 0 && springData[i - 1].BreakPermission == BreakPermission.Force;
-                if (!isLastLine && idealSum < availableWidth / (_tolerance * 2) && idealSum > 0
-                    && !hasForceAtJ && !hasForceAtI)
-                    continue;
-
+                // ⚠️ There is deliberately NO "this line is too underfull to consider" rule
+                // here. LilyPond has none: an underfull line is PRICED — a big positive
+                // force, squared into the demerits like any other, or the leftover
+                // whitespace when ragged (Simple_spacer::force_penalty,
+                // lily/simple-spacer.cc:308-320) — and a line is dropped only when it cannot
+                // be SET at all, which is the impossible-line rule below.
+                // One used to stand here, excluding any non-last line whose ideal was under
+                // availableWidth / (tolerance * 2). It was removed 2026-07-25 with no
+                // observable effect at all: 3286 tests and 87 ledger points unmoved, no
+                // snapshot touched.
                 double effectiveWidth = Math.Max(idealSum, minSum);
                 double force = CalculateLineForce(
                     availableWidth, effectiveWidth, invStretchSum, invCompressSum);
