@@ -182,14 +182,14 @@ internal static class SpacingRules
     /// Line-start prefix-to-first-note spring (ideal, min) — see
     /// BreakAlignSpacing.FirstNoteSpring.
     /// </summary>
-    public static (double Ideal, double Min) FirstNoteSpring(KeySignature key, bool includeTimeSignature, double clefWidth)
+    public static (double Ideal, double Min) FirstNoteSpring(double keyInkWidth, bool includeTimeSignature, double clefWidth)
         // clefWidth MUST be the SAME width CalculatePrefixWidth reserves for this line start,
         // so the clef-only case cancels to max(width, 5.0) from the clef's left ink, per
         // LilyPond's minimum-fixed-space. Pass MaxClefWidth(score): a bass/alto/C clef reserves
         // more than the treble G, and threading a mismatched width would break that cancellation
         // (the clef-only first note would no longer land 5.0 out). See defect-3 in the ledger.
         => BreakAlignSpacing.FirstNoteSpring(
-            KeySignatureInkWidth(key), includeTimeSignature, clefWidth);
+            keyInkWidth, includeTimeSignature, clefWidth);
 
     public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,
         int timeSigBeats = 4, int timeSigBeatType = 4)
@@ -217,6 +217,19 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// Calculates the width of a system prefix from the key column's own INK width — the
+    /// break-align group's right edge (<see cref="WidestActiveKeyInk"/>), which is what a
+    /// multi-staff system reserves: a union across staves is a width, not one staff's key.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242.</remarks>
+    public static double CalculatePrefixWidth(double clefWidth, double keyInkWidth,
+        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+    {
+        return BreakAlignSpacing.CalculatePrefixWidth(
+            clefWidth, keyInkWidth, includeTimeSignature, timeSigBeats, timeSigBeatType);
+    }
+
+    /// <summary>
     /// The widest line-start clef ink across the score's notation staves — the shared
     /// prefix column every staff's key/time signature and first note break-align past.
     /// </summary>
@@ -237,57 +250,71 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Whether this staff's key signature ink counts towards the shared key column — the
-    /// ONE staff set both the reservation (<see cref="WidestActiveKey"/>) and the drawn
-    /// prefix walk (SharedRenderer's shared time column) select by, so the width booked and
-    /// the width drawn cannot come from different staves.
+    /// Whether this staff ENGRAVES a key signature, i.e. whether it is one of the grobs the
+    /// KeySignature break-align group is the union of. The ONE staff set both the
+    /// reservation (<see cref="WidestActiveKeyInk"/>) and the drawn prefix walk
+    /// (SharedRenderer's shared time column) select by, so the width booked and the width
+    /// drawn cannot come from different staves.
     /// </summary>
     /// <remarks>
-    /// <para>
     /// LILYPOND-REF: ly/engraver-init.ly:1214 — <c>TabStaff \remove Key_engraver</c> (and
     /// :297 for DrumStaff): a tab staff has NO KeySignature grob at all, so it contributes
     /// nothing to the group extent however many accidentals its own key spells. A lyric /
     /// chord-name row is a Lyrics-like context, which never had a Key_engraver to remove.
-    /// The ledger pair line-start.time-to-first-note.{tab-concert,tab-keyed} opened on
-    /// exactly this: the reservation walked EVERY staff, so a tab-only transposed part
-    /// booked a 6-sharp column nobody engraves and drove the first note 7.05 ss right of
-    /// the meter it is spaced from, while LilyPond's two twins are geometrically identical.
-    /// </para>
-    /// <para>
-    /// An OSSIA is excluded here, and that is a KNOWN deviation, not the LilyPond rule: an
-    /// ossia is an ordinary Staff, keeps its Key_engraver and DOES join the group (probe
-    /// scores OKN/OKNF measured its key sitting in the shared column). Its stencil is
-    /// SCALED though (EngravingDefaults.OssiaScale; probe OKM dumped the ossia key ink as
-    /// 1.5558 = 2.2 * magstep(-3)), and both call sites carry a KeySignature rather than a
-    /// width, so they cannot express a scaled contribution yet. Including it unscaled would
-    /// book more than LilyPond does. Reaching it needs an ossia whose own key is at least
-    /// two accidentals wider than every notation staff's; open that pair before porting.
-    /// </para>
+    /// Everything else — an OSSIA included, it being an ordinary Staff that keeps its
+    /// Key_engraver — is in the group; probe scores OKN/OKNF measured the ossia's key
+    /// sitting in the shared column. The ledger pair
+    /// line-start.time-to-first-note.{tab-concert,tab-keyed} opened on the tab half: the
+    /// reservation walked EVERY staff, so a tab-only transposed part booked a 6-sharp
+    /// column nobody engraves and drove the first note 7.05 ss right of the meter it is
+    /// spaced from, while LilyPond's two twins are geometrically identical.
     /// </remarks>
     public static bool ContributesToKeyColumnWidth(Staff staff) =>
-        !staff.IsTab && !staff.IsTextRow && !staff.IsOssia;
+        !staff.IsTab && !staff.IsTextRow;
 
     /// <summary>
-    /// The WIDEST active key across the score's notation staves at a system starting at
-    /// <paramref name="startMeasureIndex"/> — the key whose INK width the shared prefix
-    /// column reserves and every staff's time signature break-aligns past. A transposed
-    /// part (<see cref="Staff.PerStaffKeySignature"/>) may carry more accidentals than the
-    /// primary, so its signature governs the shared time column (LP break-alignment,
-    /// KeySignature group extent = union across staves). Widest by
-    /// <see cref="KeySignatureInkWidth"/> — the union of engraved stencils is an ink
-    /// quantity, and it is what carries a CUSTOM signature into the reservation (a custom
-    /// key is <c>KeySignature(0, custom)</c>; comparing <c>Sharps</c> dropped it). Only the
-    /// staves that ENGRAVE a signature are walked (<see cref="ContributesToKeyColumnWidth"/>);
-    /// a score whose only wide key lives on a staff that prints none — a tab-only transposed
-    /// part — reserves nothing for it, exactly as LilyPond books nothing for a TabStaff that
-    /// has no Key_engraver. A score with no such staff at all prints no key (C major).
+    /// The engraved width of <paramref name="key"/> ON <paramref name="staff"/> — its
+    /// stencil's X extent, which is the quantity the break-align group is the union of.
     /// </summary>
-    public static KeySignature WidestActiveKey(MultiStaffScore score, int startMeasureIndex)
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — the group extent unions
+    /// the grobs' own extents, so a staff engraving at a reduced size contributes its
+    /// SMALLER stencil. An ossia is set at magstep(-3) (NR "Ossia staves": fontSize -3 +
+    /// StaffSymbol.staff-space), which scales the stencil though not the space-alist:
+    /// probe OKN dumped the ossia's key ink as 1.5558 = 2.2 * magstep(-3) while its column
+    /// X stayed the unscaled shared one, and probe OKM shows the same under
+    /// <c>\magnifyStaff</c> (which additionally scales the alist).
+    /// </remarks>
+    public static double EngravedKeyInkWidth(Staff staff, KeySignature key) =>
+        KeySignatureInkWidth(key) * (staff.IsOssia ? EngravingDefaults.OssiaScale : 1.0);
+
+    /// <summary>
+    /// The RIGHT edge of the KeySignature break-align group at a system starting at
+    /// <paramref name="startMeasureIndex"/>, measured from the group's left — i.e. the
+    /// widest engraved signature in the system. Every staff's time signature and first note
+    /// break-align past it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — a break-align group's
+    /// extent is the UNION of its grobs' extents across the whole system; :242 — the next
+    /// column offsets from that union's RIGHT. Every signature starts at the shared column
+    /// left, so the union's right is the widest engraved ink.
+    /// </para>
+    /// <para>
+    /// A width, not a key, because that is what LilyPond unions: it carries a CUSTOM
+    /// signature (a custom key is <c>KeySignature(0, custom)</c>, so comparing
+    /// <c>Sharps</c> dropped it), a transposed part's own wider signature
+    /// (<see cref="Staff.PerStaffKeySignature"/>), and an ossia's reduced-size stencil,
+    /// none of which a single KeySignature value can stand for. Staves that engrave no
+    /// signature are skipped (<see cref="ContributesToKeyColumnWidth"/>) — an all-tab score
+    /// or a tab-only transposed part books nothing, exactly as LilyPond books nothing for a
+    /// TabStaff that has no Key_engraver.
+    /// </para>
+    /// </remarks>
+    public static double WidestActiveKeyInk(MultiStaffScore score, int startMeasureIndex)
     {
-        if (score.AllStavesTab)
-            return KeySignature.CMajor;
-        var activeKey = KeySignature.CMajor;
-        double widestInk = -1.0;
+        double widestInk = 0.0;
         foreach (var staffGroup in score.StaffGroups)
             foreach (var staff in staffGroup.Staves)
             {
@@ -299,14 +326,9 @@ internal static class SpacingRules
                     foreach (var item in pv.Measures[m].Items)
                         if (item is KeySignatureChangeItem kc)
                             key = kc.NewKey;
-                double ink = KeySignatureInkWidth(key);
-                if (ink > widestInk)
-                {
-                    widestInk = ink;
-                    activeKey = key;
-                }
+                widestInk = Math.Max(widestInk, EngravedKeyInkWidth(staff, key));
             }
-        return activeKey;
+        return widestInk;
     }
 
     /// <summary>

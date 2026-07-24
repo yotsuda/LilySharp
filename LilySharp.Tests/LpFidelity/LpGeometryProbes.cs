@@ -1512,12 +1512,15 @@ internal static class LpGeometryProbes
 
     /// <summary>
     /// The defect half of the tab-key pair: the SAME score with the tab staff in F# major
-    /// (6 sharps). Nothing engraves that key — a tab staff prints none — yet
-    /// <see cref="Svg.Layout.SpacingRules.WidestActiveKey"/> walks EVERY staff (tab, text
-    /// row and ossia included) while the drawing walk skips tab/text/ossia, so the
-    /// reservation books a 6-sharp key column and shoves the first note that far right of
-    /// the meter it is spaced from. LilyPond's TKT dump is identical to TKC's, so the whole
-    /// disagreement between the two Lily# readings is the reservation's staff set.
+    /// (6 sharps). Nothing engraves that key — a tab staff prints none — yet the
+    /// reservation once walked EVERY staff (tab, text row and ossia included) while the
+    /// drawing walk skipped tab/text/ossia, so it booked a 6-sharp key column and shoved
+    /// the first note that far right of the meter it is spaced from. Both walks now select
+    /// the staves that ENGRAVE a signature
+    /// (<see cref="Svg.Layout.SpacingRules.ContributesToKeyColumnWidth"/>) and union their
+    /// engraved widths (<see cref="Svg.Layout.SpacingRules.WidestActiveKeyInk"/>).
+    /// LilyPond's TKT dump is identical to TKC's, so the whole disagreement between the two
+    /// Lily# readings was the reservation's staff set.
     /// </summary>
     /// <remarks>LilyPond twin: probe score TKT (the TabStaff's <c>\key fis \major</c>).</remarks>
     private static readonly string TKT = TabKeyScore("key fis major  ", "TKT");

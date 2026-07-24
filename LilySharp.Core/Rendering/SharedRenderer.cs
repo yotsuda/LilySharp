@@ -272,9 +272,10 @@ internal static partial class SharedRenderer
             sharedTimeX = clefToTime;
             foreach (var (_, st, _) in score.EnumerateStaves())
             {
-                // The SAME staff set the reservation's WidestActiveKey walks — one predicate,
-                // so the column that is drawn and the column that is booked cannot be built
-                // from different staves (ledger line-start.time-to-first-note.tab-*).
+                // The SAME staff set the reservation's WidestActiveKeyInk walks — one
+                // predicate, so the column that is drawn and the column that is booked
+                // cannot be built from different staves (ledger
+                // line-start.time-to-first-note.tab-*).
                 if (!SpacingRules.ContributesToKeyColumnWidth(st))
                     continue;
                 var k = ResolveKeySignature(st, system, score);
@@ -283,8 +284,10 @@ internal static partial class SharedRenderer
                 // "Keyed" is ink > 0 — the SAME predicate the reservation's key column
                 // uses (SolveColumns skips zero-width items), so a degenerate signature
                 // with glyphless Custom (e.g. `key custom` naming no pitches) neither
-                // draws nor spaces a key column on either side.
-                double keyInk = SpacingRules.KeySignatureInkWidth(k);
+                // draws nor spaces a key column on either side. The width is the ENGRAVED
+                // stencil's, so an ossia contributes its reduced-size signature — the same
+                // union LilyPond takes (break-alignment-interface.cc:141-142).
+                double keyInk = SpacingRules.EngravedKeyInkWidth(st, k);
                 double tx = keyInk > 0.0
                     ? sharedKeyX + keyInk + keyToTime
                     : clefToTime;

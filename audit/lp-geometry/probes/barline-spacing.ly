@@ -311,9 +311,11 @@ lay =
 %%   ONLY in the tab staff's \key — C major in TKC, F# major (6 sharps) in TKT — so on the
 %%   LilyPond side nothing whatever reads the difference and the two dumps are IDENTICAL.
 %%   The pair's LP side is an IDENTITY; a Lily# disagreement is its reservation's staff set
-%%   alone (SpacingRules.WidestActiveKey walks EVERY staff — tab, text row and ossia
-%%   included — while the drawing walk skips tab/text/ossia, so TKT reserves a 6-sharp key
-%%   nobody engraves and shoves the first note right of the meter it is spaced from).
+%%   alone (the reservation once walked EVERY staff — tab, text row and ossia included —
+%%   while the drawing walk skipped tab/text/ossia, so TKT reserved a 6-sharp key nobody
+%%   engraves and shoved the first note right of the meter it is spaced from; both walks
+%%   now union the ENGRAVED signatures, SpacingRules.ContributesToKeyColumnWidth /
+%%   WidestActiveKeyInk).
 %%
 %%   Ledger quantity = TIME anchor -> first HEAD anchor on the NOTATION staff = 3.300000,
 %%   and the 3.3 (not the single-staff 3.7 of KCS/KC2) is the point of the absolute value:
@@ -348,3 +350,50 @@ lay =
     \override TimeSignature.after-line-breaking = #(gd "TKT" "TABTIME")
   } { \key fis \major c4 d e f | g2 e }
 >> \lay "TKT" }
+
+%% TM3 / TM4 — NOT ledger points. The model check behind TKC/TKT's residual: is the
+%%   line-start distance really the per-staff AVERAGE (merge_springs, spring.cc:104),
+%%   and is the weight really one wish per STAFF? Adding notation staves to the
+%%   notation+tab pair changes the average in a way max() and min() cannot fake.
+%%   Written as predictions BEFORE the dump, with the tab staff's wish taken as the
+%%   8.02 that TKC's 8.42 implies:
+%%     TKC (1 notation + 1 tab)  (8.82 + 8.02) / 2       = 8.420000   measured 8.420000
+%%     TM3 (2 notation + 1 tab)  (8.82*2 + 8.02) / 3     = 8.553333   measured 8.553333
+%%     TM4 (3 notation + 1 tab)  (8.82*3 + 8.02) / 4     = 8.620000   measured 8.620000
+%%   A max() model prints 8.820000 for all three, a min() model 8.020000. Both refuted.
+%%   TM3 and TM4 also SOLVE for the tab staff's own wish independently -- 8.020000 from
+%%   either equation -- which pins staff-spacing.cc:212-215's floor: 8.02 = 0.3 +
+%%   min_dist, so the prefatory-to-first-note min_dist of this score is 7.720000. That
+%%   is the number Lily# has to reproduce (a skyline distance over ALL staves) before
+%%   the averaging can be ported; the other prerequisite is the TAB clef's own ink,
+%%   which LilyPond puts at origin 0.8 with ext (1.0 . 3.6) -- WIDER than the G clef's
+%%   2.565, and Lily# has never measured its tab clef against it.
+\score { <<
+  \new Staff { \key c \major \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new Staff \with {
+    \override Clef.after-line-breaking = #(gd "TM3" "CLEF2")
+    \override TimeSignature.after-line-breaking = #(gd "TM3" "TIME2")
+    \override NoteHead.after-line-breaking = #(gd "TM3" "HEAD2")
+  } { \key c \major c'4 d' e' f' | g'2 e' }
+  \new TabStaff \with {
+    \override Clef.after-line-breaking = #(gd "TM3" "TABCLEF")
+    \override TimeSignature.after-line-breaking = #(gd "TM3" "TABTIME")
+  } { \key c \major c4 d e f | g2 e }
+>> \lay "TM3" }
+\score { <<
+  \new Staff { \key c \major \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new Staff \with {
+    \override Clef.after-line-breaking = #(gd "TM4" "CLEF2")
+    \override TimeSignature.after-line-breaking = #(gd "TM4" "TIME2")
+    \override NoteHead.after-line-breaking = #(gd "TM4" "HEAD2")
+  } { \key c \major c'4 d' e' f' | g'2 e' }
+  \new Staff \with {
+    \override Clef.after-line-breaking = #(gd "TM4" "CLEF3")
+    \override TimeSignature.after-line-breaking = #(gd "TM4" "TIME3")
+    \override NoteHead.after-line-breaking = #(gd "TM4" "HEAD3")
+  } { \key c \major c'4 d' e' f' | g'2 e' }
+  \new TabStaff \with {
+    \override Clef.after-line-breaking = #(gd "TM4" "TABCLEF")
+    \override TimeSignature.after-line-breaking = #(gd "TM4" "TABTIME")
+  } { \key c \major c4 d e f | g2 e }
+>> \lay "TM4" }
