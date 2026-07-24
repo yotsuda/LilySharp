@@ -471,6 +471,13 @@
       "residual": 0.0,
       "why": "The eighth-note half of the note-to-note pair, exact from the start. Its value is note-to-note.quarter's less the spacing-increment 1.2 (2.504200 against 3.704200) on both sides; keeping both is what distinguishes a wrong increment from a wrong base. Note the quarter gap here is 3.704200, not score A's 3.002245: the common-shortest-duration of the piece is an eighth here and a quarter there, and the whole scale rides on it (spacing-spanner.cc calc_common_shortest_duration) -- the two probes agreeing on that is itself part of what these points check. Full account on note-to-note.quarter."
     },
+    "note-to-note.across-barline": {
+      "probe": "barline-spacing.ly",
+      "score": "NN",
+      "lilypond": 3.772771,
+      "residual": 0.0,
+      "why": "EXACT from the moment it was opened (Lily# 3.772771429 against a LilyPond value recorded to six digits, so the 4.29e-7 is the rounding of the record and not a gap). The third of the plain note-to-note points, and the one that carries the BAR LINE: the two gaps inside a measure being exact leaves this one measuring what a bar line costs a line's total, which is the quantity a line breaker sums. Rendered on 2.26.0: last head of bar 1 at 23.506000, bar line ink 26.188771..26.378771, first head of bar 2 at 27.278771. It was opened to test whether the bar line explains justified.first-system.heads -- Lily# putting 4 bars on the first system where LilyPond puts 5. It does not. With the duration space, the note-to-note minimum, the line width, the three extra demerit terms and the DP's shape all eliminated before it, what is left is that the BREAKER's own per-measure spring totals may not equal the spacing the layout renders -- they are computed on a separate path (SystemBreaker.ComputeMultiStaffSpringData), and section 5.4's rule that the two spring systems and the break gate must agree is asserted for the springs but not for a line's TOTAL."
+    },
     "justified.first-system.heads": {
       "probe": "line-start-mindist.ly",
       "score": "JN",

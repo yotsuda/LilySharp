@@ -177,12 +177,16 @@ internal sealed class SystemBreaker
                     }
             }
 
-            double ideal = 0, min = 0, invStretch = 0;
+            double ideal = 0, min = 0, invStretch = 0, invCompress = 0;
             foreach (var s in springs)
             {
                 ideal += s.IdealDistance;
                 min += s.MinDistance;
                 invStretch += s.InverseStretchStrength;
+                // The compression Hooke sum is its own number, not the stretch one:
+                // LilyPond's compress_line sums inverse_compress_strength where
+                // expand_line sums inverse_stretch_strength (simple-spacer.cc:207-287).
+                invCompress += s.InverseCompressStrength;
             }
             // The run rod, priced exactly as the layouter prices it, so the break gate
             // and the layout agree on how wide a multi-measure rest bar really is.
@@ -214,7 +218,8 @@ internal sealed class SystemBreaker
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
                 primaryMeasure.BreakPenalty,
                 runMap.ForbidsBreakAfter(i)
-                    ? BreakPermission.Forbid : primaryMeasure.LineBreakPermission);
+                    ? BreakPermission.Forbid : primaryMeasure.LineBreakPermission,
+                invCompress);
         }
         return springData;
     }

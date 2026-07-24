@@ -32,12 +32,12 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-24 / HEAD ＝ `255f494f` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
-/ 未 push 52 本。**3274 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
-57/75 exact・total |residual| 0.806267 ss**。
-新点 3 つ（`line-start.clef-to-time.tab`／`tab.staff.line-span.{six,four}-string`）は
-**いずれもこのセッションで開いて閉じた**ので total は不変。snapshot は tab の
-23 枚（clef）＋ 6 弦 5 枚（弦間隔）を再ベース済み。
+最終更新 2026-07-25 / HEAD ＝ `401e5114` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
+/ 未 push 72 本。**3278 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
+60/79 exact・total |residual| 0.806267 ss・counts 4/5**。
+新点 7 つのうち 6 つは開いて閉じたので total は不変。**開いている 1 点 ＝
+`justified.first-system.heads` −6 heads**（改行が LP と食い違う。下の ▶ 参照）。
+snapshot は tab の 23 枚（clef）＋ 6 弦 5 枚（弦間隔）を再ベース済み。
 ⚠️ clef アンカー（`6878c0db`）の方が byte 不変なのは**結果であって構成ではない**——
 打楽器 clef と pitched clef が同居する fixture がコーパスに無いだけ。
 
@@ -246,12 +246,96 @@ Lily# には LP に無い項が **3 つ**ある（`KnuthPlassBreaker.cs`）:
 `page.tight.*` 側を先に LP と照合し直す必要がある。
 ⇒ **B は不活性な発明**——単独で消せる可能性が高い（要 snapshot 確認）。
 
-**残る本命は構造の違い**: LP は総 demerits を最小化するだけでなく、
-**系の本数を最小から 1 つずつ増やし、改善しなくなり、かつ圧縮された行が無ければ即座に打ち切る**
-（`constrained-breaking.cc:232-256` の `best_solution` ＋ `too_many_lines`）。
-Lily# は**素の最小 demerits DP**で、行あたりの固定コストが無い＝
-**行を増やすほど force² が小さくなり、系が増える方へ系統的に偏る**。
-実測（LP 3 系 / Lily# 4 系）はまさにその形。**次はここを字面移植する。**
+**構造の違いも移植した——が、これも原因ではなかった**（`KnuthPlassBreaker`）:
+DP を LP と同じ **(break, 系数) の 2 次元**にし（各状態が自分の行の force を持ち、
+次の行が `(prev−force)²` をそこに課す＝`constrained-breaking.cc:80-124`）、
+選択を **`best_solution` の歩き方**（本数を増やしながら、改善せず圧縮行も無くなったら打ち切り
+＝`:224-260` の `too_many_lines`）に置き換えた。
+
+⇒ **`first-system.heads` は −6 のまま。snapshot も 1 枚も動かない。**
+byte 不変は**結果**であって構成ではない（意図して合わせていない）。
+字面としては正しくなったので移植は残す（§5.2 裏面）。
+
+**小節線の勘定も exact だった**（新点 `note-to-note.across-barline` LP **3.772771** /
+Lily# 3.772771429）。描画される 1 小節の幅は LP と一致している。
+
+⇒ **消えた容疑者**: duration space・音符間の最小・行幅・demerits の 3 項・DP の形・小節線。
+
+#### ✅ 原因確定: **overfull 罰則 ＋ DP の形（2 つ揃って初めて効く）**
+
+改行器を直接叩いて実測（`SystemBreaker.ComputeMultiStaffSpringData` ＋ `BreakIntoSystems`）:
+
+- Lily# の per-measure ideal ≈ **17.87**（描画の 18.69 と整合。合計の見積りは狂っていない）
+- 改行形状: Lily# **4+4+4+4** / LP **5+5+6**
+- 継続系の使える幅 99.065 に対し 6 小節は 107.2＝**圧縮が必要**。
+  LP は force² だけ払って許容、Lily# は `50000×|force|` で事実上禁止。
+
+⚠️ **`OverfullPenalty` を 0 にすると形状は `5+5+6` ＝ LP と完全一致**。
+ただし**それは DP を LP の形に移植した後の話**——移植前に同じ実験をしても形は変わらなかった。
+**2 つは揃って初めて効く**（`best_solution` の歩きは「圧縮行が残っている限り本数を増やし続ける」
+＝罰則で圧縮解が消えていると意味を持たない）。
+
+⚠️ **だが単純に 0 にはできない。** 罰則を外すと `page.tight.page-count` 2→1、
+`system.{tuplet-bracket,slur,tie}-*` の 6 点が**新たに乖離する**（いずれも今は exact）。
+つまり **50000 は他の点を支える形で「別のどこかの誤り」を打ち消している**。
+最有力は**圧縮側の force の大きさ**——Lily# は
+`effectiveWidth = max(idealSum, minSum)` と線形式で出すが、LP は
+`Simple_spacer::compress_line` が blocking force 順に spring を畳んで解く（`:232-287`）。
+圧縮時の force が違えば force² の尺度が狂い、50000 はその補正として効いてしまう。
+
+##### LP の該当コードは特定済み。ただし**単独では入れられない**（2026-07-25 に実測）
+
+- **✅ 移植済（出力不変）**: 圧縮側の Hooke 和。LP は `expand_line` が
+  `inverse_stretch_strength`、`compress_line` が `inverse_compress_strength` を足す
+  （`simple-spacer.cc:207-287`）。Lily# は**両方向で伸び強度**を使っていた。
+  `MeasureSpringData` に `InverseCompressStrength` を追加して字面化。**全緑・snapshot 不変。**
+- **⚠️ 未投入（書いて測って戻した）**: LP の `force_penalty`（`:309-320`）＝
+  非 ragged なら **`f − 2f⁴`**（圧縮時のみ）・ragged なら**残り空白**。これを
+  `combine_demerits` が二乗する。さらに**組めない行は「高い」のではなく「不可能」**
+  （`:509-515` が `infinity_f`、`constrained-breaking.cc:477-478` が DP から落とす。
+  単一小節だけ **−200000**）。`OverfullPenalty` はこの 2 つの代役。
+
+⚠️ **忠実に移植しても、罰則を 0 にしただけの時と** **同じ 6 点が同じ残差で壊れる**
+（`page.tight.page-count` 2→1・`system.{tuplet-bracket,slur,tie}-*`）。
+⇒ **50000 は行コストの別の誤りを打ち消している。** 壊れる向きから相手を絞った:
+
+`page.tight.page-count` は LP **2 ページ**に対し罰則なしの Lily# が **1 ページ**＝
+**Lily# は行に詰め込みすぎる**。LP がそれを拒むのは「不可能な行」規則＝
+**LP の行あたり最小の方が大きい**ということ。
+
+⇒ **有力な相手は、まさに ▶ の本題である行頭 spring の `0.3 + min_dist` 床**。
+LP は行頭 spring の `fixed` をここで底上げし（`staff-spacing.cc:213`）、
+spring の `min_distance` は `min_dist` そのもの（記譜1譜で **7.485**、prefix 相対で ~5.9）。
+Lily# の改行 gate は `CreateSpringsForMeasure` の素の spring を足すだけで、
+**行頭 spring への差し替えすらしていない**（描画側の `MultiStaffLayouter` だけが差し替える）
+＝**1 行あたり ~6 ss 分の最小が丸ごと欠けている**。1 小節ぶん多く載ってしまうのに十分な量。
+
+⇒ **調査は ▶ の出発点に戻った。** `LineStartColumn` の min_dist を
+**描画側と改行 gate の両方**へ配線するのが本筋で、50000 はその欠落の代役だった可能性が高い。
+⚠️ 実測値を定数に埋めて確かめようとしないこと（ユーザー指示）。配線して測る。
+
+##### ✅ その手前に、**gate と描画側が行頭 spring で食い違っている**（実測・2026-07-25）
+
+| 行頭 spring | ideal | min |
+|---|---|---|
+| 改行 gate（`CreateSpringsForMeasure` の素の第0 spring＝小節線→音符） | 0.900000 | 0.200000 |
+| 描画側（`MultiStaffLayouter` が差し替える `FirstNoteSpring`） | **2.000000** | **1.000000** |
+
+＝**1 行あたり ideal 1.1 / min 0.8 を gate が過小に見ている**（拍子付き行頭の場合）。
+継続系は clef のみなので `FirstNoteSpring` は `max(0, 5.0−clef)` ＝ 2.435 の剛 spring になり、
+**差は ideal 1.535 / min 2.235 とさらに大きい**。
+
+⚠️ これは §5.4 の「**spring 2 系統 ＋ 改行 gate の 3 箇所を必ず一致させる**」の**明確な破れ**。
+min_dist 以前の問題で、**先にこれを直す**。
+
+**やり方**（LP の prebroken piece に対応）: `MeasureSpringData` に
+「行頭として使う場合の第0 spring」を別に持たせ、DP が `i` の位置で選ぶ。
+gate は「どこが行頭か」を決める側なので、両方を持っていないと表現できない。
+⚠️ 改行が動く＝**出力が動く**。台帳点 `justified.first-system.heads` が判定してくれる。
+
+（構造の制約も記録: `CalculateLineForce` は 1 本の線形式だが LP の `compress_line` は
+blocking force 順に spring を畳む＝**行内の個々の spring が要る**。改行 gate は
+per-measure の合計しか持たない＝F3 の増分ゲートがその集約に依存している。）
 
 **以下は否定済みの容疑者**（記録として残す）。行幅も違わない（一時計測）:
 

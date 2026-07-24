@@ -1936,6 +1936,11 @@ internal static class LpGeometryProbes
         // Plain note-to-note, ragged, which nothing else in this corpus reads.
         new("note-to-note.quarter", NN, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
         new("note-to-note.eighth", NN, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(1)),
+        // ACROSS the bar line — the same two notes' worth of duration space plus whatever
+        // the bar line itself costs. The two gaps above are exact, so this isolates the
+        // bar line's contribution to a line's total, which is what the breaker sums.
+        new("note-to-note.across-barline", NN,
+            g => g.NoteheadAnchor(6) - g.NoteheadAnchor(5)),
         // …and FIRST, how many notes the breaker put on that system. A justified point is
         // only meaningful once both engravers agree on that, so it is a checked point
         // rather than an assumption — and being a count it stays out of the ss total.
