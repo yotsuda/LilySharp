@@ -1511,6 +1511,38 @@ internal static class LpGeometryProbes
     private static readonly string TKC = TabKeyScore("", "TKC");
 
     /// <summary>
+    /// A tab staff ALONE, six strings — the defect half of the tab string-spacing pair.
+    /// LilyPond's TabStaff sets <c>StaffSymbol.staff-space = 1.5</c> for every string
+    /// count (ly/engraver-init.ly), so its six-string staff spans (6-1) × 1.5 = 7.500000
+    /// line centre to line centre.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CGT in line-start-mindist.ly, which dumps
+    /// <c>space=1.500000 lines=6 staffY=-7.600000..0.000000</c> — the 7.6 being the 7.5
+    /// span widened by half a line thickness at each edge.</remarks>
+    private static readonly string TAB6 = """
+        part gtr { instrument guitar section A { c4 d e f | } }
+        form main { A }
+        score main "TAB6" { tab gtr }
+        """;
+
+    /// <summary>
+    /// The CONTROL: a FOUR-string tab staff, where Lily#'s per-string-count taper already
+    /// happens to sit on LilyPond's 1.5, so the span is (4-1) × 1.5 = 4.500000 on both
+    /// sides. The pair's point is that LilyPond's two readings differ ONLY by the string
+    /// count while Lily#'s differ by the string count AND by a spacing that shrinks with
+    /// it, so a control that is exact while the six-string half is 1.0 short isolates the
+    /// taper rather than the tab staff as a whole.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CG4 in line-start-mindist.ly
+    /// (<c>space=1.500000 lines=4 staffY=-5.192000..-0.592000</c>, a 4.6 extent over a
+    /// 4.5 span).</remarks>
+    private static readonly string TAB4 = """
+        part bs { instrument bass section A { c4 d e f | } }
+        form main { A }
+        score main "TAB4" { tab bs }
+        """;
+
+    /// <summary>
     /// The defect half of the tab-key pair: the SAME score with the tab staff in F# major
     /// (6 sharps). Nothing engraves that key — a tab staff prints none — yet the
     /// reservation once walked EVERY staff (tab, text row and ossia included) while the
@@ -1805,6 +1837,11 @@ internal static class LpGeometryProbes
         // control's 4.085000. Lily# printed them EQUAL while LilyPond differs, the
         // cross-check that the defect was MaxClefWidth's staff set.
         new("line-start.clef-to-time.tab", TKC, g => g.ClefToTimeSignatureOnFirstSystem()),
+        // Tab VERTICAL geometry, which the corpus had no point for at all. LilyPond gives
+        // every TabStaff staff-space 1.5 whatever its string count; Lily# tapers it, so the
+        // six-string half is short while the four-string CONTROL lands on 1.5 by accident.
+        new("tab.staff.line-span.six-string", TAB6, g => g.StaffLineSpan()),
+        new("tab.staff.line-span.four-string", TAB4, g => g.StaffLineSpan()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
         new("line-start.clef-to-time.keyed", DCTK, g => g.ClefToTimeSignatureOnFirstSystem()),
         // The break-align draw-walk regimes (reserve/draw split): KCS is the standard-key

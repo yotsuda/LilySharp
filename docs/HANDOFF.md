@@ -32,11 +32,12 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-24 / HEAD ＝ `0829185b` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
-/ 未 push 47 本。**3272 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
-55/73 exact・total |residual| 0.806267 ss**。
-新点 `line-start.clef-to-time.tab` はこのセッションで開いて閉じた（+0.235 → 0）ので total は不変。
-snapshot は tab の 23 枚だけ再ベース済み。
+最終更新 2026-07-24 / HEAD ＝ `255f494f` の上にこの docs コミット（⚠️ 自己参照。**§0 で裏取り**）
+/ 未 push 52 本。**3274 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
+57/75 exact・total |residual| 0.806267 ss**。
+新点 3 つ（`line-start.clef-to-time.tab`／`tab.staff.line-span.{six,four}-string`）は
+**いずれもこのセッションで開いて閉じた**ので total は不変。snapshot は tab の
+23 枚（clef）＋ 6 弦 5 枚（弦間隔）を再ベース済み。
 ⚠️ clef アンカー（`6878c0db`）の方が byte 不変なのは**結果であって構成ではない**——
 打楽器 clef と pitched clef が同居する fixture がコーパスに無いだけ。
 
@@ -142,8 +143,8 @@ group extent（`Right − Left`）に書き換え——**現状の clef 集合�
 `staff-space 1.5`、clef は **5.760000 高・無スケール・中央線中心**で、**4 弦譜（4.600000 高）
 からは上下 0.58 はみ出す**（probe `CG4`。予測を先に書いて的中）。
 
-⚠️ **`TabStringSpace` は独自のまま**（LP は弦数によらず 1.5、Lily# は 1.5/1.4/1.3）＝
-6 弦譜が LP 7.5 に対し 6.5。**別の再ベースを伴う独立島**なので分けてある。
+✅ `TabStringSpace` も LP の 1.5 に統一済み（`255f494f`・6 弦 snapshot 5 枚 再ベース）。
+tab 譜まわりで残る乖離は**フレット数字のサイズだけ**で、それは §3 の批准済み乖離。
 
 **残り＝手順2**:
 2. `LineStartColumn` を spring 生成へ配線し、fixed を `0.3 + min_dist` で床にする
@@ -201,10 +202,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
 
 - ~~`MaxClefWidth` の staff 集合~~ — `0829185b` で完了（台帳 `line-start.clef-to-time.tab`）。
-- **Lily# の tab 譜の弦間隔が独自** — LP は弦数によらず `StaffSymbol.staff-space = 1.5`
-  （`ly/engraver-init.ly`）、Lily# は `TabStringSpace` が 1.5/1.4/1.3。6 弦譜の高さが
-  LP 7.5 に対し **6.5**。tab clef 側（無スケール・グループアンカー）は移植済みなので、
-  残るのはこの弦間隔だけ。**tab snapshot が再度動く**ので独立コミットで。
+- ~~tab 譜の弦間隔~~ — `255f494f` で完了（台帳 `tab.staff.line-span.{six,four}-string`）。
+  LP の 1.5 に統一。フレット数字の**サイズ**は §3 で批准した意図的乖離＝**戻さない**。
 - **prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`** — `LayoutEngine` /
   `SystemBreaker` / `IncrementalCompiler` の 3 経路が **score.KeySignature をそのまま**使い、
   per-staff key も「調号を彫る譜」も見ない。`transpose-multistaff`（score=C major・上譜 D major）
@@ -309,6 +308,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **本数（count）の点は ss の総和に入れない** | 距離ではないから（`unit` フィールドで分離） |
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
+| ★ **タブのフレット数字を LP より大きく描くのは意図的乖離**（ユーザー判断・2026-07-24 明示） | LP のタブ数字は小さくて読みにくい。Lily# は `TabConstants.FretFontSize = 2.6`（単数字幅 1.625・高さ 1.7875）＝LP の TabNoteHead 幅 0.990155 の約 1.64 倍。和音で数字が被る問題は**じぐざぐ配置**（`SpacingRules.ApplyTabChordSpacing` ほか）で解いてある。**「LP と違う＝発明だから消す」で削らないこと。** ⚠️ 弦間隔（`TabStringSpace`）は別の話で、そちらは LP の 1.5 に揃える |
 
 ---
 

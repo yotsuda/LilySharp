@@ -346,17 +346,36 @@ internal static class EngravingDefaults
     public const double MaxStiffness = 10.0;
 
     /// <summary>
-    /// Tab string-line spacing in staff spaces for a given string count. Wider than
-    /// the 1.0 of a normal staff so the larger fret numbers fit (≈1.5× the notation
-    /// staff-space, as in LilyPond's TabStaff); tightened a little as strings are
-    /// added so a 5- or 6-string staff does not grow excessively tall.
+    /// Tab string-line spacing in staff spaces — 1.5, for every string count.
     /// </summary>
-    public static double TabStringSpace(int stringCount) => stringCount switch
-    {
-        >= 6 => 1.3,
-        5 => 1.4,
-        _ => 1.5,
-    };
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly, TabStaff <c>\override StaffSymbol.staff-space
+    /// = #1.5</c>. One value, with no dependence on the string count: LilyPond's
+    /// six-string tab staff spans 5 × 1.5 = 7.5 line centre to line centre and its
+    /// four-string one 3 × 1.5 = 4.5, both confirmed on 2.26.0
+    /// (audit/lp-geometry/probes/line-start-mindist.ly, scores CGT and CG4).
+    /// <para>
+    /// This USED to taper — 1.5 below five strings, 1.4 at five, 1.3 at six — "so a 5- or
+    /// 6-string staff does not grow excessively tall". That reasoning also worked against
+    /// Lily#'s own larger fret digits (<see cref="Svg.Layout.TabConstants.FretFontSize"/>,
+    /// a ratified deviation): a 1.7875-tall digit overlaps a 1.3 string gap, which is what
+    /// the white occluding background behind each digit is for. Widening to LilyPond's 1.5
+    /// gives them more room, so fidelity and legibility agreed here. Ledger pair
+    /// tab.staff.line-span.{six,four}-string; the four-string half was already exact,
+    /// which is what proved the taper was the defect rather than the tab staff generally.
+    /// </para>
+    /// <para>
+    /// ⚠️ Do not confuse this with the fret DIGIT size, which stays deliberately larger
+    /// than LilyPond's (docs/HANDOFF.md §3).
+    /// </para>
+    /// <para>
+    /// <paramref name="stringCount"/> is deliberately still taken and deliberately unused:
+    /// every caller has it, and keeping it in the signature is what says "LilyPond's tab
+    /// spacing does not depend on the string count" at each call site rather than only
+    /// here. It is not a leftover.
+    /// </para>
+    /// </remarks>
+    public static double TabStringSpace(int stringCount) => 1.5;
 
     // === Barline rendering ===
     /// <summary>

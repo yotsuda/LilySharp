@@ -147,6 +147,34 @@ internal sealed class RenderedGeometry
     /// both would need grouping this does not do — and would silently return a brace's
     /// inner gap where the caller asked for a system's.
     /// </remarks>
+    /// <summary>
+    /// The outermost-to-outermost span of the staff LINES on the page, i.e. line centre to
+    /// line centre. On a probe with a single staff this is that staff's height.
+    /// </summary>
+    /// <remarks>
+    /// Written for the TAB staff, whose line count is the string count rather than 5, so
+    /// <see cref="StaffRefpoints"/>'s "whole number of 5-line staves" check cannot serve.
+    /// LilyPond's own quantity is the StaffSymbol's line span: <c>(line-count - 1) *
+    /// staff-space</c>, which its Y-extent then widens by half a line thickness at each
+    /// edge — measured on 2.26.0 as 7.600000 for a six-string tab staff at staff-space
+    /// 1.5, i.e. a 7.5 line span plus 2 × 0.05
+    /// (audit/lp-geometry/probes/line-start-mindist.ly, scores CGT and CG4).
+    /// </remarks>
+    public double StaffLineSpan(int page = 0)
+    {
+        var ys = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
+            .Select(l => l.Y1)
+            .ToList();
+        if (ys.Count < 2)
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff line(s); a staff span needs at least 2."
+                + "\nDrawn geometry:\n" + Describe());
+        return ys.Max() - ys.Min();
+    }
+
     public IReadOnlyList<double> StaffRefpoints(int page = 0)
     {
         var ys = _pages[page].Lines

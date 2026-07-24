@@ -30,6 +30,20 @@ namespace LilySharp.Core.Svg.Layout;
 internal static class TabConstants
 {
     /// <summary>Font size of a tab fret number, in staff spaces.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
+    /// enough to be hard to read. A single digit here is 0.625 × 2.6 = 1.625 wide and
+    /// 0.6875 × 2.6 = 1.7875 tall, against the 0.990155 LilyPond's TabNoteHead measures
+    /// (audit/lp-geometry/probes/line-start-mindist.ly, score TKC) — about 1.64×. The
+    /// collisions that follow from bigger digits are solved rather than avoided: chords
+    /// stagger their digits into two columns (the zigzag), and the columns reserve that
+    /// real extent (SpacingRules.ApplyTabChordSpacing).
+    /// <para>
+    /// ⚠️ This is a RATIFIED deviation (docs/HANDOFF.md §3), not an un-ported LilyPond
+    /// quantity. Do not "fix" it toward LilyPond. The tab STRING SPACING is a separate
+    /// question and does follow LilyPond — see <c>EngravingDefaults.TabStringSpace</c>.
+    /// </para>
+    /// </remarks>
     public const double FretFontSize = 2.6;
 
     /// <summary>Grace fret digits relative to the main fret size (just slightly smaller).</summary>
