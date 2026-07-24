@@ -67,7 +67,7 @@ public static class PartReferenceFinder
                         tokens.Add(ot);
                     break;
                 case TabRenderSyntax tab:
-                    if (LastTargetToken(tab) is { } tt)
+                    if (TabPartToken(tab) is { } tt)
                         tokens.Add(tt);
                     break;
             }
@@ -100,7 +100,7 @@ public static class PartReferenceFinder
                         tokens.Add(ot);
                     break;
                 case TabRenderSyntax tab:
-                    if (LastTargetToken(tab) is { } tt)
+                    if (TabPartToken(tab) is { } tt)
                         tokens.Add(tt);
                     break;
             }
@@ -150,11 +150,40 @@ public static class PartReferenceFinder
         return partIdx < toks.Count ? toks[partIdx] : null;
     }
 
-    /// <summary>The part token for <c>ossia</c> / <c>tab</c>: always the last
-    /// target token (RenderSpecParser.ParseOssia / ParseTab).</summary>
+    /// <summary>The part token for <c>ossia</c>: always the last target token
+    /// (RenderSpecParser.ParseOssia — <c>ossia [clef] part</c> takes the last slot, and an
+    /// ossia carries no <c>as</c> selector to strip).</summary>
     private static SyntaxTokenNode? LastTargetToken(SyntaxNode node)
     {
         var toks = TargetTokens(node);
+        return toks.Count > 0 ? toks[^1] : null;
+    }
+
+    /// <summary>
+    /// The part token in a <c>tab</c> render item: cut off the <c>with chords …</c> tail
+    /// (a different, chord-part name), then the trailing <c>as numbers | full</c> style
+    /// selector, and take the last token that remains. A leading token before it is the
+    /// tuning override, not the part.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors RenderSpecParser.ParseTab, which strips BOTH tails before reading
+    /// <c>toks[^1]</c> — including the guards (a <c>with</c> tail shorter than
+    /// <c>with chords NAME</c>, or a trailing <c>as</c> with no mode word, is left alone
+    /// there, so it is left alone here). Taking the last token flat instead read the
+    /// selector word as the part name: <c>tab m as numbers</c> reported LYS1007
+    /// "Undefined part: 'numbers'" on a perfectly good score — the committed fixture
+    /// test/tab-as-numbers.lys among them — and a rename from any occurrence would have
+    /// rewritten the selector rather than the part.
+    /// </remarks>
+    private static SyntaxTokenNode? TabPartToken(TabRenderSyntax tab)
+    {
+        var toks = TargetTokens(tab);
+        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
+        if (wi >= 0 && toks.Count >= wi + 3)
+            toks = toks.GetRange(0, wi);
+        int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
+        if (asIdx >= 0 && asIdx + 1 < toks.Count)
+            toks = toks.GetRange(0, asIdx);
         return toks.Count > 0 ? toks[^1] : null;
     }
 

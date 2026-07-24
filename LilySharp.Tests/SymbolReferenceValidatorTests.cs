@@ -152,6 +152,15 @@ $undefined2
     [InlineData("part melody { clef treble section A { c d e f } }\nform main { A }\nscore main { staff melody }")]
     // A clef modifier before the part name is not the part.
     [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { staff bass melody }")]
+    // `tab NAME as numbers | full` — the tab STYLE selector is not a part reference.
+    // This reported LYS1007 "Undefined part: 'numbers'" on a valid score, so the
+    // committed fixture test/tab-as-numbers.lys would not render through the CLI (the
+    // snapshot path never runs this validator, which is why the suite stayed green).
+    [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { tab melody as numbers }")]
+    [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { tab melody as full }")]
+    // Tuning override + style selector, and the chord-display selector after it.
+    [InlineData("section A { melody { c d e f } }\nchords h { c1 }\nform main { A }\n"
+              + "score main { tab bass melody as numbers with chords h as both }")]
     public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
         => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
 

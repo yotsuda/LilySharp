@@ -132,6 +132,69 @@ public class PartReferenceFinderTests
         Assert.Equal(3, PartReferenceFinder.Occurrences(tab, "bl").Count);
     }
 
+    /// <summary>
+    /// `tab NAME as numbers | full` — the tab STYLE selector, which
+    /// RenderSpecParser.ParseTab strips before reading the part. Taking the last target
+    /// token flat read `numbers` as the part: the score failed semantic validation with
+    /// LYS1007 "Undefined part: 'numbers'" (the committed fixture test/tab-as-numbers.lys
+    /// would not render through the CLI), and a rename would have rewritten the selector.
+    /// </summary>
+    [Fact]
+    public void TabStyleSelectorIsNotThePartToken()
+    {
+        var src = """
+            part m { clef treble }
+            section A { m { c4 } }
+            score main "s" { staff m  tab m as numbers }
+            """;
+        var root = Root(src);
+
+        // decl + section block + staff render + tab render.
+        Assert.Equal(4, PartReferenceFinder.Occurrences(root, "m").Count);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "numbers"));
+        Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("numbers")));
+        // The tab render's own part token is the `m` before the selector.
+        int mInTab = src.LastIndexOf("m as numbers");
+        Assert.Equal("m", PartReferenceFinder.PartNameTokenAt(root, mInTab)?.Text);
+    }
+
+    /// <summary>
+    /// Both selectors at once (`tab m as numbers with chords h as both`): the chord part
+    /// `h` belongs to a different namespace and neither display word is a part.
+    /// </summary>
+    [Fact]
+    public void TabStyleAndChordDisplaySelectorsAreBothSkipped()
+    {
+        var src = """
+            part m { clef treble }
+            chords h { c1 }
+            section A { m { c4 } }
+            score main "s" { tab m as numbers with chords h as both }
+            """;
+        var root = Root(src);
+
+        Assert.Equal(3, PartReferenceFinder.Occurrences(root, "m").Count);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "numbers"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "both"));
+        Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("h ")));
+    }
+
+    /// <summary>A tuning override keeps the part as the token after it, selector or not.</summary>
+    [Fact]
+    public void TabTuningOverrideIsNotThePartToken()
+    {
+        var src = """
+            part gt { clef treble_8 }
+            section A { gt { c4 } }
+            score main "s" { tab bass gt as full }
+            """;
+        var root = Root(src);
+
+        Assert.Equal(3, PartReferenceFinder.Occurrences(root, "gt").Count);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "full"));
+        Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("bass")));
+    }
+
     [Fact]
     public void CaretOnDeclarationResolvesToTheName()
     {
