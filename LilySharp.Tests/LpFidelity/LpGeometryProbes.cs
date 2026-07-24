@@ -1491,6 +1491,64 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A TAB staff beside a concert notation staff, both in C major — the CONTROL of the
+    /// tab-key pair. LilyPond's TabStaff removes the Key_engraver (engraver-init.ly:1214),
+    /// so a tab staff has no KeySignature grob and contributes nothing to the KeySignature
+    /// break-align group; TKC and TKT carry the SAME notes and differ only in the tab
+    /// staff's key, so LilyPond dumps them identically (verified: all 13 grobs equal).
+    /// The quantity is TIME → first notehead on the notation staff = 3.300000, NOT the
+    /// single-staff 3.700000: the line-start spring is merge_springs (spring.cc:104)
+    /// AVERAGING one wish per staff, and the two staves wish differently because their last
+    /// prefatory grob differs (meter, semi-shrink 2.0 → 8.82; TAB clef, minimum-fixed 5.0
+    /// floored by the shared min_dist → 8.02; average 8.42 = ink-right 6.82 + 1.6). Two
+    /// ORDINARY staves keep 3.700000 — their wishes are equal — so this control also opens
+    /// the cross-staff wish-averaging regime, which Lily# does not model (it computes ONE
+    /// system-wide first-note spring).
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score TKC (<c>\new Staff { \key c \major \time 4/4
+    /// c'4 d' e' f' | g'2 e' }</c> over <c>\new TabStaff { \key c \major c4 d e f |
+    /// g2 e }</c>).</remarks>
+    private static readonly string TKC = TabKeyScore("", "TKC");
+
+    /// <summary>
+    /// The defect half of the tab-key pair: the SAME score with the tab staff in F# major
+    /// (6 sharps). Nothing engraves that key — a tab staff prints none — yet
+    /// <see cref="Svg.Layout.SpacingRules.WidestActiveKey"/> walks EVERY staff (tab, text
+    /// row and ossia included) while the drawing walk skips tab/text/ossia, so the
+    /// reservation books a 6-sharp key column and shoves the first note that far right of
+    /// the meter it is spaced from. LilyPond's TKT dump is identical to TKC's, so the whole
+    /// disagreement between the two Lily# readings is the reservation's staff set.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score TKT (the TabStaff's <c>\key fis \major</c>).</remarks>
+    private static readonly string TKT = TabKeyScore("key fis major  ", "TKT");
+
+    /// <summary>
+    /// A notation staff over a tab staff of the SAME music, the tab part optionally opening
+    /// with its own key. Both staves play the same pitches (a key never transposes), so the
+    /// two scores this builds differ in nothing an engraver draws.
+    /// </summary>
+    private static string TabKeyScore(string tabKey, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part gt { clef treble }
+        part pn { clef treble }
+
+        section Main {
+          gt { {{tabKey}}c,4 d, e, f, | g,2 e, }
+          pn { c4 d e f | g2 e }
+        }
+
+        form main { Main }
+
+        score main "{{name}}" {
+          staff pn
+          tab gt
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -1748,5 +1806,11 @@ internal static class LpGeometryProbes
         new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.ossia-key-alignment.sharps", OKN, g => g.OssiaKeyAlignmentOffset()),
         new("line-start.ossia-key-alignment.flats", OKNF, g => g.OssiaKeyAlignmentOffset()),
+        // WHICH staves the key column is made of. A tab staff engraves no key signature
+        // (LilyPond removes its Key_engraver), so the pair's LilyPond side is an IDENTITY —
+        // TKC and TKT differ only in a key nothing reads. Lily#'s reservation walks every
+        // staff and its drawing walk skips tab/text/ossia, so only TKT loses.
+        new("line-start.time-to-first-note.tab-concert", TKC, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.tab-keyed", TKT, g => g.TimeSignatureToFirstNotehead()),
     };
 }

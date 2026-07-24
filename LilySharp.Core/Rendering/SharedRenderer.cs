@@ -272,7 +272,10 @@ internal static partial class SharedRenderer
             sharedTimeX = clefToTime;
             foreach (var (_, st, _) in score.EnumerateStaves())
             {
-                if (st.IsTab || st.IsTextRow || st.IsOssia)
+                // The SAME staff set the reservation's WidestActiveKey walks — one predicate,
+                // so the column that is drawn and the column that is booked cannot be built
+                // from different staves (ledger line-start.time-to-first-note.tab-*).
+                if (!SpacingRules.ContributesToKeyColumnWidth(st))
                     continue;
                 var k = ResolveKeySignature(st, system, score);
                 if (GetSystemStartKeyChange(st, system) is { } kc)

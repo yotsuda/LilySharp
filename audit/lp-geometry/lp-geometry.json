@@ -512,6 +512,20 @@
       "lilypond": 0.0,
       "residual": 0.0,
       "why": "OPENED AND CLOSED THE SAME SESSION (-3.365 -> 0 exact). Flats half of the ossia key-alignment pair (B-flat major; see the sharps entry for the mechanism and the fix). LilyPond: OKEY == KEY == 4.185, offset 0 -- the same 0 as sharps, the pair's content-independence cross-check. Lily# now prints 0 on both halves: the shared key column is one expression, so it cannot depend on the key's content."
+    },
+    "line-start.time-to-first-note.tab-concert": {
+      "probe": "barline-spacing.ly",
+      "score": "TKC",
+      "lilypond": 3.300000,
+      "residual": 0.400000000,
+      "why": "CONTROL of the tab-key pair (a tab staff beside a concert notation staff, both in C major). It opened NON-ZERO and its residual is NOT the defect the pair was cut for: the LilyPond value is 3.300000, not the single-staff 3.700000 of KCS/KC2, because the line-start spring is merge_springs (spring.cc:104) AVERAGING one wish per staff and the two staves wish for different things -- their last prefatory grob differs. Notation staff: last grob TimeSignature, (first-note . (semi-shrink-space . 2.0)), staff-spacing.cc:193-198 -> fixed 6.82+1.0, ideal 8.82. Tab staff: last grob Clef, (first-note . (minimum-fixed-space . 5.0)), :183-187 -> ink-left 1.0 + max(2.6, 5.0) = 6.0, then the SHARED min_dist floor (:212-215, 0.3 + min_dist) lifts it to 8.02. Average (8.82+8.02)/2 = 8.42 = TIME ink right 6.82 + 1.6. Two ORDINARY staves keep 3.700000 exactly (measured on a treble+bass twin: TIME 5.0034 -> HEAD 8.7034) because equal wishes average to themselves -- which is why no earlier multi-staff point could see this. Lily# computes ONE system-wide first-note spring (SpacingRules.FirstNoteSpring) and has no per-staff wish at all, so it prints the notation staff's 3.700000: residual +0.400000. NOT FIXED HERE -- porting it means giving every staff its own Staff_spacing wish (a tab staff's is measured off its TAB clef ink, which Lily# has never measured against LilyPond either) and averaging, which moves the first note in every score that mixes a tab or ossia row with notation staves."
+    },
+    "line-start.time-to-first-note.tab-keyed": {
+      "probe": "barline-spacing.ly",
+      "score": "TKT",
+      "lilypond": 3.300000,
+      "residual": 0.400000000,
+      "why": "OPENED AT +7.450000 AND CLOSED TO THE CONTROL'S +0.400000 THE SAME SESSION. The defect half: the SAME score as TKC with the tab part opening in F# major (6 sharps). Nothing engraves that key -- LilyPond's TabStaff removes the Key_engraver (engraver-init.ly:1214) and Lily# draws no key on a tab staff either -- so the two LilyPond twins are geometrically IDENTICAL (all 13 dumped grobs equal to 15 digits) and the pair's LP side is an identity. Lily# disagreed by exactly 7.050000000 = Clef->Key 0.82 + 6-sharp ink 6.6 + Key->Time 1.15 - Clef->Time 1.52, the prediction written before the measurement, to 15 digits: SpacingRules.WidestActiveKey walked EVERY staff (tab, text row and ossia included) while the drawn walk skipped tab/text/ossia, so the reservation booked a key column nobody engraves and shoved the first note that far right of the meter it is spaced from -- a gaping hole, with no fixture in the corpus to show it. THE FIX: one predicate, SpacingRules.ContributesToKeyColumnWidth, selects the staff set for BOTH the reservation and the drawn shared-time walk. The pair is now an identity on the Lily# side too (both halves read 3.700000), which is the cross-check that the staff set was the whole of what differed; the residual left on both is the merge_springs averaging recorded under tab-concert. NOTE the ossia is excluded by that predicate and that is a KNOWN deviation: an ossia is an ordinary Staff, keeps its Key_engraver and does join the group, but its stencil is SCALED (probe OKM: ossia key ink 1.5558 = 2.2 * magstep(-3)) and neither call site carries a width yet. Open a pair for an ossia whose own key is 2+ accidentals wider than every notation staff's before porting that."
     }
   }
 }

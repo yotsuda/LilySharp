@@ -286,6 +286,10 @@ public class SvgSnapshotTests
         // The ossia's key sits in the system-wide key column, its glyph advances scaled
         // with the small staff (ledger line-start.ossia-key-alignment).
         yield return new object[] { "test/ossia-key" };
+        // A tab-only part's own key reserves nothing — a tab staff engraves no signature,
+        // so the reservation and the drawing walk select the same staves (ledger
+        // line-start.time-to-first-note.tab-keyed).
+        yield return new object[] { "test/tab-part-key" };
         // Middle C in all four clefs — guards that alto and tenor C-clefs are
         // positioned distinctly (tenor a third higher than alto).
         yield return new object[] { "test/clef-positions" };

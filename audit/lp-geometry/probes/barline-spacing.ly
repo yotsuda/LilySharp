@@ -303,3 +303,48 @@ lay =
     \override NoteHead.after-line-breaking = #(gd "OKM" "OHEAD")
   } { \magnifyStaff #(magstep -3) \key d \major d''4 e'' fis'' g'' | R1 }
 >> \lay "OKM" }
+
+%% TKC / TKT — which staves the KeySignature break-align group is made of. LilyPond's
+%%   TabStaff \remove Key_engraver (engraver-init.ly:1214), so a tab staff has NO
+%%   KeySignature grob at all: it contributes nothing to the group extent no matter how
+%%   many accidentals its own key spells. The two scores carry the SAME notes and differ
+%%   ONLY in the tab staff's \key — C major in TKC, F# major (6 sharps) in TKT — so on the
+%%   LilyPond side nothing whatever reads the difference and the two dumps are IDENTICAL.
+%%   The pair's LP side is an IDENTITY; a Lily# disagreement is its reservation's staff set
+%%   alone (SpacingRules.WidestActiveKey walks EVERY staff — tab, text row and ossia
+%%   included — while the drawing walk skips tab/text/ossia, so TKT reserves a 6-sharp key
+%%   nobody engraves and shoves the first note right of the meter it is spaced from).
+%%
+%%   Ledger quantity = TIME anchor -> first HEAD anchor on the NOTATION staff = 3.300000,
+%%   and the 3.3 (not the single-staff 3.7 of KCS/KC2) is the point of the absolute value:
+%%   the line-start spring is merge_springs (spring.cc:104) AVERAGING one wish per staff,
+%%   and the two staves wish for different things because their last prefatory grob differs.
+%%     notation staff: last grob TimeSignature, (first-note . (semi-shrink-space . 2.0))
+%%                     -> fixed 6.82+1.0, ideal 7.82+1.0 = 8.82   (staff-spacing.cc:193-198)
+%%     tab staff:      last grob Clef,     (first-note . (minimum-fixed-space . 5.0))
+%%                     -> fixed = ink-left 1.0 + max(2.6, 5.0) = 6.0 = ideal  (:183-187)
+%%                        then the shared min_dist floor (:212-215) lifts it to 8.02
+%%     merged:         (8.82 + 8.02) / 2 = 8.42, i.e. TIME ink right 6.82 + 1.6
+%%   Two ORDINARY staves keep the 2.0 (their wishes are equal, so the average is that wish):
+%%   measured on a treble+bass twin, TIME 5.0034 -> HEAD 8.7034 = 3.700000 exactly. So this
+%%   pair also opens the cross-staff wish-averaging regime, which Lily# does not model at
+%%   all (it computes ONE system-wide first-note spring): expect the CONTROL to sit ~0.4
+%%   off until that is ported.
+%%   The TabStaff's own Clef ("TAB", ink 1.0 . 3.6 — WIDER than the G clef, and it is in the
+%%   Clef break-align group: TIME sits at 3.6+1.52 = 5.12, not 3.365+1.52) and its
+%%   stencil-less TimeSignature are routed to TABCLEF/TABTIME so the notation staff's
+%%   CLEF/TIME rows stay unambiguous.
+\score { <<
+  \new Staff { \key c \major \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new TabStaff \with {
+    \override Clef.after-line-breaking = #(gd "TKC" "TABCLEF")
+    \override TimeSignature.after-line-breaking = #(gd "TKC" "TABTIME")
+  } { \key c \major c4 d e f | g2 e }
+>> \lay "TKC" }
+\score { <<
+  \new Staff { \key c \major \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new TabStaff \with {
+    \override Clef.after-line-breaking = #(gd "TKT" "TABCLEF")
+    \override TimeSignature.after-line-breaking = #(gd "TKT" "TABTIME")
+  } { \key fis \major c4 d e f | g2 e }
+>> \lay "TKT" }

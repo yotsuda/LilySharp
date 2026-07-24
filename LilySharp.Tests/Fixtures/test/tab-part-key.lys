@@ -1,0 +1,27 @@
+// A part rendered ONLY as tablature, carrying its own (6-sharp) key, beside a concert
+// notation staff. A tab staff ENGRAVES no key signature — LilyPond's TabStaff removes the
+// Key_engraver (ly/engraver-init.ly:1214) — so that key must reserve NOTHING. Before the
+// fix the reservation walked every staff while the drawing walk skipped tab/text/ossia, so
+// it booked a key column nobody draws and left a 7.05 ss hole between the meter and the
+// first note (ledger line-start.time-to-first-note.tab-keyed, probe scores TKC/TKT, whose
+// two LilyPond twins are geometrically identical).
+title "Tab Part Key"
+
+octave absolute
+time 4/4
+key c major
+
+part gt { clef treble }
+part pn { clef treble }
+
+section Main {
+  gt { key fis major  c,4 d, e, f, | g,2 e, }
+  pn { c4 d e f | g2 e }
+}
+
+form main { Main }
+
+score main "tab-part-key" {
+  staff pn
+  tab gt
+}
