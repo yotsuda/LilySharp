@@ -149,20 +149,26 @@ internal static class SpacingRules
     ///
     /// Delegates to BreakAlignSpacing which implements LP's break-alignment-interface
     /// with space-alist lookups and break-align-orders for correct element ordering.
-    /// Uses G-clef width as default; for other clefs, use the overload with clefWidth.
+    /// Uses the treble G-clef stencil ink as default; for other clefs, use the overload with clefWidth.
     /// </remarks>
     /// <summary>
     /// Line-start prefix-to-first-note spring (ideal, min) — see
     /// BreakAlignSpacing.FirstNoteSpring.
     /// </summary>
-    public static (double Ideal, double Min) FirstNoteSpring(int keySharps, bool includeTimeSignature)
-        => BreakAlignSpacing.FirstNoteSpring(Math.Abs(keySharps), includeTimeSignature);
+    public static (double Ideal, double Min) FirstNoteSpring(int keySharps, bool includeTimeSignature, double clefWidth)
+        // clefWidth MUST be the SAME width CalculatePrefixWidth reserves for this line start,
+        // so the clef-only case cancels to max(width, 5.0) from the clef's left ink, per
+        // LilyPond's minimum-fixed-space. Pass MaxClefWidth(score): a bass/alto/C clef reserves
+        // more than the treble G, and threading a mismatched width would break that cancellation
+        // (the clef-only first note would no longer land 5.0 out). See defect-3 in the ledger.
+        => BreakAlignSpacing.FirstNoteSpring(
+            Math.Abs(keySharps), includeTimeSignature, clefWidth);
 
     public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature,
         int timeSigBeats = 4, int timeSigBeatType = 4)
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth,
+            GlyphMetrics.LineStartClefWidth(ClefType.Treble),
             Math.Abs(keySharps), keySharps > 0,
             includeTimeSignature, timeSigBeats, timeSigBeatType);
     }
@@ -181,6 +187,58 @@ internal static class SpacingRules
             clefWidth,
             Math.Abs(keySharps), keySharps > 0,
             includeTimeSignature, timeSigBeats, timeSigBeatType);
+    }
+
+    /// <summary>
+    /// The widest line-start clef ink across the score's notation staves — the shared
+    /// prefix column every staff's key/time signature and first note break-align past.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-align-interface.cc — the Clef break-align column spans the
+    /// whole system, so in a grand staff the wider bass F clef governs the treble staff's
+    /// meter position too (both signatures stay vertically aligned). Tab (its own clef),
+    /// text (lyric/chord) and ossia rows carry no shared-prefix clef and are skipped. Empty
+    /// selection falls back to the treble G width (the historical default).
+    /// </remarks>
+    public static double MaxClefWidth(MultiStaffScore score)
+    {
+        double max = 0.0;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (!staff.IsTab && !staff.IsTextRow && !staff.IsOssia)
+                max = Math.Max(max, GlyphMetrics.LineStartClefWidth(staff.Clef));
+        return max > 0.0 ? max : GlyphMetrics.LineStartClefWidth(ClefType.Treble);
+    }
+
+    /// <summary>
+    /// The signed sharps of the WIDEST active key across the score's notation staves at a
+    /// system starting at <paramref name="startMeasureIndex"/> — the key whose width the shared
+    /// prefix column reserves and every staff's time signature break-aligns past. A transposed
+    /// part (<see cref="Staff.PerStaffKeySignature"/>) may carry more accidentals than the
+    /// primary, so its signature governs the shared time column (LP break-alignment, KeySignature
+    /// group extent = union across staves). All-tab scores print no key (returns 0).
+    /// </summary>
+    public static int WidestActiveKeySharps(MultiStaffScore score, int startMeasureIndex)
+    {
+        if (score.AllStavesTab)
+            return 0;
+        int activeKeySharps = score.KeySignature.Sharps;
+        int widestAccidentals = -1;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+            {
+                int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
+                var pv = staff.PrimaryVoice;
+                for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
+                    foreach (var item in pv.Measures[m].Items)
+                        if (item is KeySignatureChangeItem kc)
+                            sharps = kc.NewKey.Sharps;
+                if (Math.Abs(sharps) > widestAccidentals)
+                {
+                    widestAccidentals = Math.Abs(sharps);
+                    activeKeySharps = sharps;
+                }
+            }
+        return activeKeySharps;
     }
 
     /// <summary>

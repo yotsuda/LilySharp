@@ -113,64 +113,44 @@ internal sealed class BoundaryColumn
             }
         }
 
-        var grobs = ImmutableArray.CreateBuilder<BoundaryColumnGrob>();
-        BreakAlignSymbol? prev = null;
-        double prevLeft = 0, prevRight = 0;
-
-        // LILYPOND-REF: lily/break-alignment-interface.cc:239-247 calc_positioning_done.
-        //   extra-space:   offsets[r] = extents[l][RIGHT] + distance - extents[r][LEFT]
-        //   minimum-space: offsets[r] = max (extents[l][RIGHT], distance)
-        // offsets[r] translates the RIGHT grob's ORIGIN relative to the left grob's.
-        // Every grob's ink here starts at its own origin (extents[..][LEFT] == 0), so the
-        // extra-space case collapses to "previous ink right edge + distance" — which is
-        // why the space-alist values read as plain edge gaps when measured. minimum-space
-        // does NOT collapse that way, so it is transcribed rather than folded in.
-        void Place(BreakAlignSymbol symbol, double width, double eswLeft, double eswRight)
-        {
-            // LilyPond skips break-align groups whose extent is empty
-            // (break-alignment-interface.cc:145-146 and :155-156), so a grob that draws
-            // nothing must not consume a space-alist gap or anchor its neighbour.
-            if (width <= 0)
-                return;
-
-            double left;
-            if (prev is { } p)
-            {
-                var entry = BreakAlignSpacing.GetSpacing(p, symbol);
-                double offset = entry.Style == SpacingStyle.MinimumSpace
-                    ? System.Math.Max(prevRight - prevLeft, entry.Value)
-                    : prevRight - prevLeft + entry.Value;
-                left = prevLeft + offset;
-            }
-            else
-            {
-                left = 0;
-            }
-
-            double right = left + width;
-            grobs.Add(new BoundaryColumnGrob(symbol, left, right, eswLeft, eswRight));
-            prevLeft = left;
-            prevRight = right;
-            prev = symbol;
-        }
-
-        // Unbroken break-align order: clef, staff-bar, key-signature, time-signature.
+        // Unbroken break-align order: clef, staff-bar, key-signature, time-signature
+        // (LILYPOND-REF define-grobs.scm:650-664), each with its extra-spacing-width. A clef
+        // change sits BEFORE the bar line and a key/time change AFTER it — the single fact that
+        // moves the column ORIGIN without moving the bar line.
+        var candidates = new List<(BreakAlignSymbol Symbol, double Width, double EswLeft, double EswRight)>();
         if (clef != null)
-            Place(BreakAlignSymbol.Clef, SpacingRules.GetClefChangeWidth(clef.NewClef),
-                EswDefaultLeft, EswDefaultRight);
-
-        Place(BreakAlignSymbol.StaffBar, EngravingDefaults.BarlineDrawnWidth(barline),
-            EswDefaultLeft, EswDefaultRight);
-
+            candidates.Add((BreakAlignSymbol.Clef,
+                SpacingRules.GetClefChangeWidth(clef.NewClef), EswDefaultLeft, EswDefaultRight));
+        candidates.Add((BreakAlignSymbol.StaffBar,
+            EngravingDefaults.BarlineDrawnWidth(barline), EswDefaultLeft, EswDefaultRight));
         if (key != null)
             // scm/define-grobs.scm KeySignature extra-spacing-width (0.0 . 1.0).
-            Place(BreakAlignSymbol.KeySignature,
-                SpacingRules.GetKeySignatureChangeWidth(key), 0.0, 1.0);
-
+            candidates.Add((BreakAlignSymbol.KeySignature,
+                SpacingRules.GetKeySignatureChangeWidth(key), 0.0, 1.0));
         if (time != null)
             // scm/define-grobs.scm TimeSignature extra-spacing-width (0.0 . 0.8).
-            Place(BreakAlignSymbol.TimeSignature,
-                SpacingRules.GetTimeSignatureChangeWidth(time), 0.0, 0.8);
+            candidates.Add((BreakAlignSymbol.TimeSignature,
+                SpacingRules.GetTimeSignatureChangeWidth(time), 0.0, 0.8));
+
+        // The SAME break-align walk the line-start prefix uses (BreakAlignSpacing.SolveColumns):
+        // each present grob is placed at the previous grob's ink right + the space-alist distance,
+        // empty grobs skipped. startLeft 0 — a mid-line boundary's first grob IS the column origin.
+        var items = new List<(BreakAlignSymbol, double)>();
+        foreach (var c in candidates)
+            items.Add((c.Symbol, c.Width));
+        var placed = BreakAlignSpacing.SolveColumns(items, startLeft: 0.0);
+
+        var grobs = ImmutableArray.CreateBuilder<BoundaryColumnGrob>();
+        foreach (var pc in placed)
+        {
+            // Symbols are unique on a boundary column, so the esw joins back by symbol.
+            foreach (var c in candidates)
+                if (c.Symbol == pc.Symbol)
+                {
+                    grobs.Add(new BoundaryColumnGrob(pc.Symbol, pc.Left, pc.Right, c.EswLeft, c.EswRight));
+                    break;
+                }
+        }
 
         return new BoundaryColumn(grobs.ToImmutable());
     }

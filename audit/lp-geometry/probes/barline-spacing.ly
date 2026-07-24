@@ -79,6 +79,62 @@ lay =
 %% G — half notes.
 \score { \new Staff { \time 4/4 c'2 c'2 | c'2 c'2 } \lay "G" }
 
+%% LSCT / LSCB — line-start CLEF-ONLY prefix (the meter glyph omitted), the only prefix where
+%%   Clef's (first-note . minimum-fixed-space . 5.0) binds the first note. The ledger quantity
+%%   is the CLEF anchor -> first HEAD anchor. staff-spacing.cc:183-187 puts the head at
+%%   last_ext[LEFT] + max(last_ext.length(), distance) = clef-left + max(clef-width, 5.0), and
+%%   since every engraved clef is under 5 ss wide the clef width is ABSORBED by the max rather
+%%   than added: a treble clef (ink 2.565) and the WIDER bass clef (2.683) both put the head at
+%%   0.8 + 5.0 = 5.8 for a clef-to-head distance of 5.0 EXACTLY. That identity is the pair's
+%%   cross-check -- a defect that ADDS the clef width makes the two disagree, while a wrong
+%%   fixed constant keeps them equal. The Lily# twin (LpGeometryProbes LSCT/LSCB) reaches the
+%%   same clef-only prefix on an INTERIOR system, since Lily# cannot omit the meter on system 1;
+%%   this omit-time single system was measured equal to that interior system (clef@0.8, head@5.8
+%%   either way), the documented harness asymmetry the octave spelling already carries.
+\score { \new Staff { \omit Staff.TimeSignature \time 4/4 c'1 c'1 } \lay "LSCT" }
+\score { \new Staff { \omit Staff.TimeSignature \clef bass \time 4/4 c1 c1 } \lay "LSCB" }
+
+%% DCT / DCB — defect-3: SpacingRules.CalculatePrefixWidth reserves a FIXED GClefWidth for
+%%   EVERY clef, so a wider clef's meter (and, on a metered first system, its first note) is
+%%   placed as if the clef were a treble G. The line-start meter binds through Clef.space-alist
+%%   (time-signature . (extra-space . 1.52)), measured off the clef's OWN ink RIGHT edge
+%%   (last_ext[RIGHT]), so the CLEF anchor -> TIME anchor distance rides on the clef ink width.
+%%   Treble is the CONTROL (GClefWidth == the G clef's own ink 2.565, so DCT reads ~0), bass is
+%%   the DEFECT (F clef ink 2.683 vs GClefWidth 2.565). LilyPond spaces the meter off the ACTUAL
+%%   clef ink, so DCB's clef->time is 0.118 WIDER than DCT's; Lily#, reserving GClefWidth for
+%%   both, prints them EQUAL -- the pair's cross-check. The Lily# twin measures the same clef
+%%   anchor -> time-signature anchor on the first (metered) system.
+\score { \new Staff { \time 4/4 c'1 c'1 } \lay "DCT" }
+\score { \new Staff { \clef bass \time 4/4 c1 c1 } \lay "DCB" }
+
+%% DCP — clef -> time with a PERCUSSION clef, the last of defect-3. Unlike the pitched clefs,
+%%   the percussion glyph's ink does NOT start at the grob origin: rendered on 2.26.0 the CLEF
+%%   grob sits at x=0.13 with ext (0.67 . 2.0), so its ink-left is 0.13+0.67 = 0.8 (the same
+%%   LeftEdge->clef 0.8 as every clef) and its ink-right is 0.13+2.0 = 2.13. The meter binds
+%%   1.52 off that ink right edge -> TIME at 3.65, so the CLEF anchor -> TIME anchor distance
+%%   is 3.65-0.13 = 3.52. Lily# reserved GClefWidth (2.565) for the percussion clef AND drew
+%%   the glyph at the origin without the 0.67 ink-left offset, so its twin read 4.085 (the
+%%   treble value) until both were fixed.
+\score { \new Staff { \clef percussion \time 4/4 c'1 c'1 } \lay "DCP" }
+
+%% TSA — cross-staff time-signature alignment. A grand staff whose staves carry DIFFERENT key
+%%   signatures (upper D major = 2 sharps, lower C major = none), like a transposed part beside
+%%   a concert one. Break-alignment shares the KeySignature/TimeSignature columns across staves
+%%   (break-alignment-interface.cc:141-142,242 — the KeySignature group extent is the union), so
+%%   BOTH TimeSignatures print at the SAME x, past the WIDEST key: the lower staff's meter is NOT
+%%   tight against its clef but aligned under the upper's. The twin dumps TWO TIME grobs; their x
+%%   are EQUAL (spread 0). The Lily# twin measures max-min of the per-staff meter x.
+\score { \new PianoStaff << \new Staff { \key d \major \time 4/4 d'1 d'1 }
+                            \new Staff { \clef bass \key c \major \time 4/4 c1 c1 } >> \lay "TSA" }
+
+%% DCTK — clef -> time on a KEYED staff (D major, 2 sharps). The meter binds through the key,
+%%   not the clef: KeySignature.space-alist (time-signature . (extra-space . 1.15)) measured
+%%   off the KEY's ink RIGHT edge -- NO extra pad. Rendered: CLEF 0.8, KEY 4.185 (ext 2.2),
+%%   TIME 7.535 (= 4.185 + 2.2 + 1.15), so clef->time = 6.735. The Lily# twin once drew the
+%%   meter a KeySigTrailingGap 0.4 further right (draw-vs-reserve split); this probe guards
+%%   the unified, key-ink-measured column.
+\score { \new Staff { \key d \major \time 4/4 d'1 d'1 } \lay "DCTK" }
+
 %% X — an accidental opens the second measure. Its leftmost ink is the accidental, which
 %%     declares extra-spacing-width (-0.2 . 0.0) rather than the default 0.1.
 \score { \new Staff { \time 4/4 c'4 d' e' f' | cis'4 d' e' f' } \lay "X" }

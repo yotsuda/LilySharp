@@ -62,10 +62,12 @@ internal sealed class SystemBreaker
         // An all-tab score reserves neither key nor time-signature width (tab prints
         // neither), so the break budget matches the reclaimed prefix the layout uses;
         // otherwise the score key and the opening meter, as before.
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, includeTimeSignature: !score.AllStavesTab,
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKeySharps,
+            includeTimeSignature: !score.AllStavesTab,
             score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.LeadingKeySharps, includeTimeSignature: false)
-            + _options.ShortIndent;
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKeySharps,
+            includeTimeSignature: false) + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)
         {

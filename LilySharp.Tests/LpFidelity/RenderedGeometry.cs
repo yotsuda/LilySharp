@@ -346,6 +346,23 @@ internal sealed class RenderedGeometry
           or EmmentalerGlyphs.NoteheadBlack
           or EmmentalerGlyphs.NoteheadDoubleWhole;
 
+    /// <summary>The line-start clef glyphs (G, F, C, percussion and their smaller change variants).</summary>
+    private static bool IsClef(char g) =>
+        g is EmmentalerGlyphs.GClef
+          or EmmentalerGlyphs.FClef
+          or EmmentalerGlyphs.CClef
+          or EmmentalerGlyphs.PercussionClef
+          or EmmentalerGlyphs.GClefChange
+          or EmmentalerGlyphs.FClefChange
+          or EmmentalerGlyphs.CClefChange
+          or EmmentalerGlyphs.PercussionClefChange;
+
+    /// <summary>The time-signature glyphs (common/cut and the numerals; digits are
+    /// non-contiguous in the font, so they are matched through GetTimeSigDigit).</summary>
+    private static bool IsTimeSignature(char g) =>
+        g is EmmentalerGlyphs.TimeSigCommon or EmmentalerGlyphs.TimeSigCutCommon
+        || Enumerable.Range(0, 10).Any(d => EmmentalerGlyphs.GetTimeSigDigit(d) == g);
+
     /// <summary>The plain accidental glyphs (sharp, flat, natural and the doubles).</summary>
     private static bool IsAccidental(char g) =>
         g is EmmentalerGlyphs.AccidentalSharp
@@ -410,6 +427,99 @@ internal sealed class RenderedGeometry
                 $"wanted notehead #{index} but the probe drew {heads.Count}.\n"
                 + "Drawn geometry:\n" + Describe());
         return heads[index].X;
+    }
+
+    /// <summary>
+    /// The clef anchor → first-notehead anchor on system <paramref name="systemIndex"/>
+    /// (0-based). This is the quantity <c>Staff_spacing::get_spacing</c>'s
+    /// <c>minimum-fixed-space</c> branch decides for a CLEF-ONLY line-start prefix.
+    /// </summary>
+    /// <remarks>
+    /// An INTERIOR system carries a repeated clef but no repeated time signature, so its first
+    /// note binds through Clef's <c>(first-note . minimum-fixed-space . 5.0)</c> — the one
+    /// break-align spring measured from the left item's LEFT edge with a max
+    /// (<c>staff-spacing.cc:183-187</c>: <c>fixed = last_ext[LEFT] + max(last_ext.length(),
+    /// distance)</c>), so LilyPond absorbs the clef width into the 5.0 rather than adding it.
+    /// System 0 cannot be used: Lily# always draws a meter glyph on it, so its prefix is not
+    /// clef-only — which is why this reads an interior system rather than the one-system probes
+    /// the rest of the X corpus uses.
+    /// <para>
+    /// The system is isolated by its staff middle line (<see cref="StaffRefpoints"/>): every
+    /// glyph of a one-staff system sits within a few staff spaces of it, and systems are at
+    /// least system-system-spacing (12) apart, so a ±6 ss band takes this system's prefix
+    /// without reaching the next. Anchor-to-anchor and clef-selected-by-identity, so it needs
+    /// no glyph metric and no index a repeated meter could shift.
+    /// </para>
+    /// </remarks>
+    public double ClefToFirstNoteOnSystem(int systemIndex)
+    {
+        var refs = StaffRefpoints();
+        if (systemIndex < 0 || systemIndex >= refs.Count)
+            throw new InvalidOperationException(
+                $"wanted system #{systemIndex} but the probe drew {refs.Count} system(s). "
+                + "This quantity needs an INTERIOR system (index >= 1), whose line-start prefix "
+                + "is clef-only.\nDrawn geometry:\n" + Describe());
+        double mid = refs[systemIndex];
+        const double band = 6.0;
+        var onSystem = Glyphs.Where(g => Math.Abs(g.Y - mid) <= band).ToList();
+        var clef = onSystem.FirstOrDefault(g => IsClef(g.Glyph),
+            throw_: $"no clef on system {systemIndex} (±{band} ss around the middle line "
+                    + $"y={mid:F6}).\nDrawn geometry:\n" + Describe());
+        foreach (var g in onSystem)   // onSystem preserves Glyphs' left-to-right order
+            if (g.X > clef.X + 1e-9 && IsNotehead(g.Glyph))
+                return g.X - clef.X;
+        throw new InvalidOperationException(
+            $"no notehead after the clef on system {systemIndex}.\n"
+            + "Drawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
+    /// The clef anchor → line-start time-signature anchor on the first system. The meter binds
+    /// to the clef through Clef.space-alist (time-signature . extra-space 1.52), measured off
+    /// the clef's own ink right edge, so this distance rides on the clef ink WIDTH — the
+    /// quantity defect-3 (CalculatePrefixWidth once reserving a fixed GClefWidth for every clef)
+    /// diverged on, now closed by threading the real per-clef ink (SpacingRules.MaxClefWidth /
+    /// GlyphMetrics.LineStartClefWidth). Single-system probe, so the clef is the leftmost glyph and the meter the
+    /// first time-signature glyph after it (no key between them on these probes).
+    /// </summary>
+    public double ClefToTimeSignatureOnFirstSystem()
+    {
+        var clef = Glyphs.FirstOrDefault(g => IsClef(g.Glyph),
+            throw_: "no clef in the probe.\nDrawn geometry:\n" + Describe());
+        foreach (var g in Glyphs)   // Glyphs is left-to-right
+            if (g.X > clef.X + 1e-9 && IsTimeSignature(g.Glyph))
+                return g.X - clef.X;
+        throw new InvalidOperationException(
+            "no time signature after the clef.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
+    /// The spread (max − min) of the time-signature X across the staves of the first system —
+    /// 0 when every staff's meter aligns to one shared break-align column, non-zero when a
+    /// staff's meter sits in the wrong column (e.g. a transposed part's wider key not shared).
+    /// Metric-free: it compares two glyph anchors in the SAME render, so it depends on no ink
+    /// width — LilyPond prints both TimeSignatures at one x and so must Lily#.
+    /// </summary>
+    public double TimeSignatureAlignmentSpread()
+    {
+        var refs = StaffRefpoints();
+        if (refs.Count < 2)
+            throw new InvalidOperationException(
+                $"cross-staff time alignment needs >= 2 staves; found {refs.Count}.");
+        const double band = 3.5;   // the meter's digits sit within ~2 ss of the middle line
+        var xs = new List<double>();
+        foreach (var mid in refs)
+        {
+            var ts = Glyphs
+                .Where(g => IsTimeSignature(g.Glyph) && Math.Abs(g.Y - mid) <= band)
+                .OrderBy(g => g.X)
+                .ToList();
+            if (ts.Count == 0)
+                throw new InvalidOperationException(
+                    $"no time signature on the staff at y={mid:F3}.\nDrawn geometry:\n" + Describe());
+            xs.Add(ts[0].X);
+        }
+        return xs.Max() - xs.Min();
     }
 
     /// <summary>

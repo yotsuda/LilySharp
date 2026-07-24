@@ -194,16 +194,22 @@ internal static class EngravingDefaults
     public const double FlagHeightIncrement = 0.5;
 
     /// <summary>
-    /// The nudge between a system's left edge and the clef glyph's drawing origin.
+    /// The gap between a system's left edge and the clef glyph's drawing origin — the
+    /// LeftEdge → Clef break-align spacing.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN: LilyPond has no such quantity. There the clef's X falls out of
-    /// break-alignment against Clef.space-alist; Lily# draws the prefix by walking left to
-    /// right and this is the gap it opens first. It lives here because the SKYLINE has to
-    /// place the clef's ink exactly where SharedRenderer.DrawClef draws it, and the two
-    /// agreeing by both saying `0.3` is how a constant quietly becomes two constants.
+    /// LILYPOND-REF: scm/define-grobs.scm LeftEdge.space-alist (clef . (extra-space . 0.8)),
+    /// with LeftEdge's X-extent (0 . 0) so the extra-space ideal is 0 + 0.8 = 0.8. This is
+    /// the first gap the line-start prefix opens (LeftEdge is the origin of break-alignment),
+    /// so a line-start clef's ink sits 0.8 ss in. Measured on 2.26.0: every line-start clef
+    /// anchor is at 0.8. Was an invented 0.3 (LILYSHARP-OWN), which sat the clef 0.5 too far
+    /// left and, because CalculatePrefixWidth did NOT reserve it, left the first note short by
+    /// the same 0.8 (ledger line-start.clef-to-first-note). It lives here because THREE readers
+    /// must agree on it — SharedRenderer.DrawClef draws the glyph at this offset, SkylineBuilder
+    /// seeds the clef ink there, and BreakAlignSpacing.CalculatePrefixWidth reserves it as the
+    /// prefix's leading distance — and one constant is how they stay agreed.
     /// </remarks>
-    public const double ClefGlyphXOffset = 0.3;
+    public const double ClefGlyphXOffset = 0.8;
 
     // === Notehead dimensions ===
     // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).

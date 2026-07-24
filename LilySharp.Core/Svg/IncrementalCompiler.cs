@@ -166,10 +166,11 @@ public sealed class IncrementalCompiler
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
         var springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
-        double firstPrefix = SpacingRules.CalculatePrefixWidth(
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        double firstPrefix = SpacingRules.CalculatePrefixWidth(maxClefWidth,
             score.KeySignature.Sharps, includeTimeSignature: true,
             score.TimeSignature.Beats, score.TimeSignature.BeatType);
-        double contPrefix = SpacingRules.CalculatePrefixWidth(
+        double contPrefix = SpacingRules.CalculatePrefixWidth(maxClefWidth,
             score.KeySignature.Sharps, includeTimeSignature: false);
 
         bool skip = allowSkip

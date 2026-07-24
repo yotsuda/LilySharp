@@ -6,15 +6,15 @@
 </style>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="259">Chords only</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="16.85" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="28.22" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="38.88" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="39.37" y="13.12" width="0.60" height="4.00" data-pos="0"/>
-  <text x="7.77" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="313">C</text>
-  <text x="12.45" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="316">Am</text>
-  <text x="19.31" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="322">F</text>
-  <text x="23.82" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="325">G7</text>
-  <text x="33.28" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="331">C</text>
+  <rect x="17.65" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="29.02" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="39.68" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="40.17" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <text x="8.57" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="313">C</text>
+  <text x="13.25" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="316">Am</text>
+  <text x="20.11" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="322">F</text>
+  <text x="24.62" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="325">G7</text>
+  <text x="34.08" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="331">C</text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="282"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="282">Main</text>
   </g>

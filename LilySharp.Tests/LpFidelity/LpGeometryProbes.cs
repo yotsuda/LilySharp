@@ -1101,6 +1101,204 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// Line-start clef → first note with a CLEF-ONLY prefix, measured on an INTERIOR system.
+    /// The horizontal prefix defect the page-crossing slur/tie residuals point to
+    /// (<see cref="SSD"/>, <see cref="TSID"/>): under justification a clef prefix ~1.76 ss too
+    /// wide compresses the notes, and its floor is here, at natural length.
+    /// </summary>
+    /// <remarks>
+    /// An interior system carries a repeated clef but no repeated time signature, so its first
+    /// note binds through Clef's <c>(first-note . minimum-fixed-space . 5.0)</c> — the one
+    /// break-align spring LilyPond measures from the left item's LEFT edge with a max, so the
+    /// clef width is absorbed into the 5.0. This cannot be measured on system 0 the way the
+    /// rest of the X corpus is: Lily# always draws a meter glyph there, so system 0's prefix is
+    /// not clef-only. Its LilyPond twin (barline-spacing.ly LSCT) omits the meter on a single
+    /// system instead, verified to produce the identical clef-only spacing.
+    /// <para>
+    /// Whole notes near the middle line, enough bars to wrap past one system so that
+    /// <c>ClefToFirstNoteOnSystem(1)</c> reads an interior one; the pitch does not matter (the
+    /// spacing is clef-only), it is kept near the middle line only to keep the system band
+    /// clean.
+    /// </para>
+    /// LilyPond twin: <c>\new Staff { \omit Staff.TimeSignature \time 4/4 c'1 c'1 }</c> — the
+    /// omit-time single system that reproduces this interior clef-only prefix.
+    /// </remarks>
+    private static readonly string LSCT = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 | ", 32)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "LSCT" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="LSCT"/> with a BASS clef — a wider clef binding the same clef-only first-note
+    /// spring. LilyPond prints the IDENTICAL distance to the treble twin (the clef width is
+    /// absorbed by <c>max(width, 5.0)</c>, not added), the cross-check this pair exists for: a
+    /// defect that ADDS the clef width makes the two residuals differ by the clef-width
+    /// difference, while a wrong fixed constant would keep them equal — the P/Q relationship on
+    /// the horizontal prefix.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: <c>\new Staff { \omit Staff.TimeSignature \clef bass \time 4/4 c1 c1 }</c>.
+    /// </remarks>
+    private static readonly string LSCB = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef bass }
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("d,1 | ", 32)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "LSCB" {
+          staff melody
+        }
+        """;
+
+    // LilyPond twin: \new Staff { \time 4/4 c'1 c'1 } (barline-spacing.ly DCT). The TREBLE
+    // control for defect-3: GClefWidth IS the G clef's own ink, so the clef→time distance
+    // reads LilyPond's 4.085 and the residual is ~0 — confirming the clef→time mechanism is
+    // right so the bass twin's residual is the width divergence alone.
+    private static readonly string DCT = Score("c1 | c1 |", "DCT");
+
+    /// <summary>
+    /// The BASS half of the defect-3 pair (now CLOSED). CalculatePrefixWidth once reserved
+    /// GClefWidth (the treble G's ink) for the wider F clef too, so Lily# spaced the line-start
+    /// meter as if the clef were a treble G; LilyPond spaces it off the ACTUAL F-clef ink
+    /// (2.683 vs 2.565), so its clef→time is 0.118 WIDER than the treble's. The fix threads the
+    /// real per-clef ink (SpacingRules.MaxClefWidth / GlyphMetrics.LineStartClefWidth) so Lily#
+    /// now matches LilyPond's 4.2034 exactly. The treble control (DCT) stays EQUAL to its old
+    /// value — that pair (bass now DIFFERS from treble on the Lily# side, matching LilyPond) is
+    /// the cross-check that defect-3 was exactly the fixed GClefWidth.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \clef bass \time 4/4 c1 c1 }</c>.</remarks>
+    private static readonly string DCB = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef bass }
+
+        section Main {
+          melody { c,1 | c,1 | }
+        }
+
+        form main { Main }
+
+        score main "DCB" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// The PERCUSSION half of defect-3 (the last remnant). Unlike a pitched clef, whose ink
+    /// starts at the grob origin (ext-left 0), the percussion clef's ink begins 0.67 ss RIGHT
+    /// of its origin: LilyPond 2.26.0 places the grob at 0.13 with ext (0.67 . 2.0), so its
+    /// ink-left is 0.8 (the LeftEdge→clef offset every clef shares) and ink-right 2.13. The
+    /// meter binds 1.52 off that ink right edge → TIME at 3.65, so the clef anchor → time anchor
+    /// distance is 3.65 − 0.13 = 3.52. Lily# reserved GClefWidth (2.565) for the percussion clef
+    /// AND drew the glyph at its origin without the 0.67 ink-left offset, so this twin read the
+    /// treble 4.085 until both the ink WIDTH (1.33) and the draw origin (−0.67) were threaded.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \clef percussion \time 4/4 c'1 c'1 }</c>.</remarks>
+    private static readonly string DCP = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef percussion }
+
+        section Main {
+          melody { c1 | c1 | }
+        }
+
+        form main { Main }
+
+        score main "DCP" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// Cross-staff time-signature alignment. A grand staff whose staves carry DIFFERENT key
+    /// signatures — the upper part is transposed (<c>transpose d</c>, so it prints D major = 2
+    /// sharps) beside a concert-pitch lower staff (C major, no key). LilyPond break-aligns the
+    /// TimeSignature into ONE column spanning both staves (the KeySignature group extent is the
+    /// union across staves), so BOTH meters print at the same x, past the WIDEST key — the lower
+    /// staff's meter is NOT tight against its clef. The twin dumps two TIME grobs at an EQUAL x
+    /// (rendered: both 7.6534, spread 0); the Lily# side measures max−min of the per-staff meter x.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \key d \major \time 4/4 d'1 d'1 }
+    /// \new Staff { \clef bass \key c \major \time 4/4 c1 c1 } &gt;&gt;</c>.</remarks>
+    private static readonly string TSA = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble transpose d }
+        part lower { clef bass }
+
+        section Main {
+          upper { c1 | c1 | }
+          lower { c,1 | c,1 | }
+        }
+
+        form main { Main }
+
+        score main "TSA" {
+          grandStaff {
+            staff upper
+            staff lower
+          }
+        }
+        """;
+
+    /// <summary>
+    /// Clef → time signature on a KEYED staff (D major, 2 sharps). The meter binds through the
+    /// key, not the clef: KeySignature.space-alist (time-signature . (extra-space . 1.15))
+    /// measured off the KEY's ink RIGHT edge, with NO extra pad. Rendered on 2.26.0: CLEF 0.8,
+    /// KEY 4.185 (ext 2.2), TIME 7.535, so clef→time = 6.735. Guards the unified key-ink-measured
+    /// time column against the old KeySigTrailingGap 0.4 draw-vs-reserve split.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \key d \major \time 4/4 d'1 d'1 }</c>.</remarks>
+    private static readonly string DCTK = $$"""
+        octave absolute
+        time 4/4
+        key d major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { d1 | d1 | }
+        }
+
+        form main { Main }
+
+        score main "DCTK" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -1307,5 +1505,30 @@ internal static class LpGeometryProbes
         // and TSIU. Same INTERIOR gap (index 1) as the slur pair, for the same span-dependence.
         new("system.tie-under-notes", TSID, g => g.StaffGapAt(1)),
         new("system.tie-over-notes", TSIU, g => g.StaffGapAt(1)),
+
+        // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
+        // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR
+        // system, whose prefix is clef-only. A treble and a WIDER bass clef must print the
+        // IDENTICAL LilyPond distance (the clef width is absorbed by max(width, 5.0), not
+        // added), so a defect that adds the clef width makes the pair DISAGREE — the P/Q
+        // cross-check applied to the horizontal prefix. This is where the sub-question-1
+        // residual (system.slur-*, system.tie-*) lives, at natural length and at its source.
+        new("line-start.clef-to-first-note.treble", LSCT, g => g.ClefToFirstNoteOnSystem(1)),
+        new("line-start.clef-to-first-note.bass", LSCB, g => g.ClefToFirstNoteOnSystem(1)),
+
+        // --- defect-3: the line-start prefix reserves a fixed GClefWidth for every clef, so a
+        // wider clef's meter is placed as if the clef were a treble G. Measured clef anchor ->
+        // time-signature anchor with a 4/4 meter present (the clef->time gap rides on the clef
+        // ink width). Treble is the control (GClefWidth == the G clef ink, residual ~0); bass
+        // exposes the defect (F clef ink 2.683 vs GClefWidth 2.565). LilyPond spaces off the
+        // ACTUAL clef ink so its pair DIFFERS by the ink-width difference; Lily# prints them
+        // EQUAL -- the cross-check.
+        new("line-start.clef-to-time.treble", DCT, g => g.ClefToTimeSignatureOnFirstSystem()),
+        new("line-start.clef-to-time.bass", DCB, g => g.ClefToTimeSignatureOnFirstSystem()),
+        // The last defect-3 remnant: the percussion clef's ink starts 0.67 ss right of its
+        // origin, so its clef->time is 3.52 (not the treble/bass shape). See DCP.
+        new("line-start.clef-to-time.percussion", DCP, g => g.ClefToTimeSignatureOnFirstSystem()),
+        new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
+        new("line-start.clef-to-time.keyed", DCTK, g => g.ClefToTimeSignatureOnFirstSystem()),
     };
 }

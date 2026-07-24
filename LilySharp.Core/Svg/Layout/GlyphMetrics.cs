@@ -178,6 +178,64 @@ internal static partial class GlyphMetrics
     /// <summary>C clef change width — <c>clefs.C_change</c> ink right edge.</summary>
     public static double CClefChangeWidth => ClefCChange.Right;
 
+    /// <summary>
+    /// The line-start clef's stencil BBox (LILC bbox, staff spaces, Y-up) — the ONE place a
+    /// clef's ink extent is read from, so the line-start prefix treats every clef uniformly
+    /// through its own stencil, exactly as LilyPond does (no glyph is special-cased).
+    /// </summary>
+    /// <remarks>
+    /// The G/F/C clefs' ink starts at the grob origin (LILC bbox left 0); the percussion clef's
+    /// ink starts 0.67 ss RIGHT of its origin (LILC bbox left 0.67) — a per-glyph property of
+    /// the (byte-identical) font, in the SAME staff-space frame, not a coordinate difference
+    /// between Lily# and LilyPond. <see cref="LineStartClefWidth"/> (ink width) and
+    /// <see cref="ClefInkLeft"/> (origin→ink-left) both derive from this map, so the reservation
+    /// and the draw-origin correction can never disagree on a clef's ink. Tab clefs never reach
+    /// here (filtered out of <see cref="SpacingRules.MaxClefWidth"/>, drawn by DrawTabStaff).
+    /// </remarks>
+    private static BBox ClefBBox(Model.ClefType clef) => clef switch
+    {
+        Model.ClefType.Bass or Model.ClefType.Bass8Below => ClefF,
+        Model.ClefType.Alto or Model.ClefType.Tenor or Model.ClefType.Soprano
+            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => ClefC,
+        Model.ClefType.Percussion => ClefPercussion,
+        // Treble family (incl. treble_8 — the octave digit is drawn below/above, not on the
+        // clef's horizontal ink).
+        _ => ClefG,
+    };
+
+    /// <summary>
+    /// The clef ink WIDTH the line-start prefix reserves, and the width the drawn key/time
+    /// signatures break-align past — the ink-left-to-ink-right span, measured from the shared
+    /// LeftEdge→clef column its ink-left sits on (<see cref="ClefInkLeft"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:169-198 + lily/break-alignment-interface.cc:141-142,242
+    /// — the break-align gap after the clef rides on the clef stencil's ink (the next item lands
+    /// at the clef's <c>extent[RIGHT]</c> + gap). Measured off the clef's own stencil, per clef,
+    /// as <c>Right - Left</c>: the G clef 2.565, the F clef (bass) 2.6834, the C clef 2.720, the
+    /// percussion clef 1.33. For the G/F/C clefs Left is 0 so this equals <c>.Right</c>; the
+    /// percussion clef's Left is 0.67, so its ink width is 1.33, not its 2.0 origin-to-right
+    /// span. Reserving the G width for the wider F/C clefs (or the 2.565 fallback for percussion)
+    /// shoved their line-start meter and metered first note off LilyPond's position (ledger
+    /// line-start.clef-to-time, "defect-3", now closed for every clef family).
+    /// </remarks>
+    public static double LineStartClefWidth(Model.ClefType clef)
+    {
+        var b = ClefBBox(clef);
+        return b.Right - b.Left;
+    }
+
+    /// <summary>
+    /// The clef stencil's LEFT ink edge relative to its grob origin (0 for the G/F/C clefs,
+    /// 0.67 for the percussion clef). <c>DrawClef</c> shifts the glyph by <c>-ClefInkLeft</c> so
+    /// EVERY clef's ink-left lands on the shared LeftEdge→clef column
+    /// (<see cref="EngravingDefaults.ClefGlyphXOffset"/> = 0.8) — for the G/F/C clefs the shift
+    /// is 0 (origin already = ink-left); for percussion it draws the glyph at origin 0.13 so its
+    /// ink-left reaches 0.8, exactly as LilyPond places it (rendered on 2.26.0: origin 0.13,
+    /// ink-left 0.8). Without it the percussion ink drew 0.67 too far right.
+    /// </summary>
+    public static double ClefInkLeft(Model.ClefType clef) => ClefBBox(clef).Left;
+
     // ClefChangePadding (0.5) lived here as "the padding before and after a change item".
     // It was never a LilyPond quantity: 0.5 is Clef.space-alist's `right-edge` entry, the gap
     // to the END of a line, and LilyPond has no single padding that applies to both sides of

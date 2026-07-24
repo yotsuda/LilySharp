@@ -181,6 +181,12 @@ internal static partial class GlyphMetrics
     /// <summary>C (alto/tenor) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCAdvance = 2.720000;
 
+    /// <summary>Percussion clef — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.percussion (clefs.percussion = U+E08F in this build)</remarks>
+    public static readonly BBox ClefPercussion = new(0.670000, -1.000000, 2.000000, 1.000000);
+    /// <summary>Percussion clef — advance width (next-glyph horizontal feed).</summary>
+    public const double ClefPercussionAdvance = 2.000000;
+
     /// <summary>G (treble) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G_change (clefs.G_change = U+E08A in this build)</remarks>
     public static readonly BBox ClefGChange = new(0.000000, -2.040000, 2.052000, 3.966800);

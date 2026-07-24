@@ -765,24 +765,7 @@ internal sealed class MultiStaffLayouter
         // drawn at the system head, so reserve none of its width — the notes spread into
         // the reclaimed space (there is no notation staff to align against). A score with
         // any notation staff keeps the existing widest-key reservation unchanged.
-        int activeKeySharps = score.AllStavesTab ? 0 : score.KeySignature.Sharps;
-        int widestAccidentals = -1;
-        if (!score.AllStavesTab)
-            foreach (var staffGroup in score.StaffGroups)
-                foreach (var staff in staffGroup.Staves)
-                {
-                    int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
-                    var pv = staff.PrimaryVoice;
-                    for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
-                        foreach (var item in pv.Measures[m].Items)
-                            if (item is KeySignatureChangeItem kc)
-                                sharps = kc.NewKey.Sharps;
-                    if (Math.Abs(sharps) > widestAccidentals)
-                    {
-                        widestAccidentals = Math.Abs(sharps);
-                        activeKeySharps = sharps;
-                    }
-                }
+        int activeKeySharps = SpacingRules.WidestActiveKeySharps(score, startMeasureIndex);
 
         // A meter change that OPENS this system's first measure (i.e. a change
         // landing exactly at the line break) is drawn in the prefix — clef, key,
@@ -801,7 +784,11 @@ internal sealed class MultiStaffLayouter
             }
 
         bool prefixHasTime = !score.AllStavesTab && (systemIndex == 0 || leadingTimeChange != null);
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, prefixHasTime,
+        // The widest clef in the system governs where every staff's meter and first note
+        // sit — a bass/alto/C clef reserves more than the treble G (ledger defect-3). The
+        // SAME width threads into FirstNoteSpring below so the clef-only case still cancels.
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        double prefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, activeKeySharps, prefixHasTime,
             leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats,
             leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
@@ -965,7 +952,7 @@ internal sealed class MultiStaffLayouter
                 // staves keep the LilyPond space-alist value.
                 var (ideal, min) = score.AllStavesTab
                     ? (TabClefToFirstNoteSpace, TabClefToFirstNoteSpace)
-                    : SpacingRules.FirstNoteSpring(activeKeySharps, prefixHasTime);
+                    : SpacingRules.FirstNoteSpring(activeKeySharps, prefixHasTime, maxClefWidth);
                 var s0 = springs[0];
                 // When the opening meter change is hoisted into the prefix, its
                 // hang-left width is no longer reserved in the measure — use the

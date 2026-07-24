@@ -233,7 +233,7 @@ internal static partial class SharedRenderer
         return false;
     }
 
-    private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)
+    private static double DrawClef(ClefType clef, double x, double staffY, double clefColumnWidth, IDrawingContext gc)
     {
         char glyph = clef switch
         {
@@ -257,12 +257,28 @@ internal static partial class SharedRenderer
             ClefType.Baritone => staffY - 0,      // C4 on the top line
             _ => staffY - 3,
         };
-        gc.DrawGlyph(glyph, x + EngravingDefaults.ClefGlyphXOffset, clefY, FontSize);
+        // Anchor the clef's INK-left on the shared LeftEdge->clef column (ClefGlyphXOffset),
+        // not the glyph origin: the pitched clefs' ink starts at the origin (ClefInkLeft 0), but
+        // the percussion clef's ink begins 0.67 ss right of it, so its glyph is drawn 0.67 LEFT
+        // (origin 0.13) to bring ink-left onto 0.8 -- exactly where LilyPond places the grob
+        // (rendered origin 0.13, ink-left 0.8). Was drawn at the bare origin, so the percussion
+        // ink landed 0.67 too far right.
+        double glyphX = x + EngravingDefaults.ClefGlyphXOffset - GlyphMetrics.ClefInkLeft(clef);
+        gc.DrawGlyph(glyph, glyphX, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
-            DrawClefModifier8(x + 0.3, staffY, change: false, gc);
+            DrawClefModifier8(glyphX, staffY, change: false, gc);
         else if (clef == ClefType.Treble8Above)
-            DrawClefModifier8(x + 0.3, staffY, change: false, gc, above: true);
-        return x + 0.3 + 3.0;  // approximate clef width + padding
+            DrawClefModifier8(glyphX, staffY, change: false, gc, above: true);
+        // Where the NEXT prefix item (key/time) starts: the LeftEdge->Clef offset plus the
+        // SHARED clef-column width (the widest clef in the system, GlyphMetrics.MaxClefWidth),
+        // so every staff's key/time break-aligns to one column and a grand staff's signatures
+        // stay vertically aligned even when the bass F clef is wider than the treble G. The
+        // clef GLYPH above still draws at its own ink; only this flow-anchor uses the shared
+        // width. This is the same width CalculatePrefixWidth reserved, so the drawn prefatory
+        // items land exactly where the spacing placed the first note. Was a fixed GClefWidth
+        // for every clef, which mis-spaced the bass/alto/C line-start meter (ledger defect-3);
+        // earlier still a hardcoded 0.3 + 3.0 that tracked neither ClefGlyphXOffset nor the gap.
+        return x + EngravingDefaults.ClefGlyphXOffset + clefColumnWidth;
     }
 
     /// <summary>
@@ -370,6 +386,28 @@ internal static partial class SharedRenderer
     private static readonly int[] KeySigSharpSteps = [3, 0, 4, 1, 5, 2, 6];
     private static readonly int[] KeySigFlatSteps = [6, 2, 5, 1, 4, 0, 3];
 
+    /// <summary>
+    /// The ink width of a key signature — the sum of its accidentals' advances, 0 for an empty
+    /// (C major) signature. This is exactly what <see cref="BreakAlignSpacing.SolvePrefixColumns"/>
+    /// reserves (KeySignature group extent RIGHT), so the drawn time column and the layout's
+    /// reservation coincide — and LilyPond's key→time is measured off this same ink right edge
+    /// (rendered: KeySignature ext 2.2 for 2 sharps, TimeSignature at ink-right + 1.15).
+    /// </summary>
+    internal static double KeySignatureInkWidth(KeySignature key)
+    {
+        if (key.Custom is { } custom)
+        {
+            double w = 0.0;
+            foreach (var (_, alter) in KeySignature.DecodeCustom(custom))
+                w += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+            return w;
+        }
+        if (key.Sharps == 0)
+            return 0.0;
+        return Math.Min(Math.Abs(key.Sharps), 7)
+            * GlyphMetrics.GetKeySignatureAccidentalWidth(key.Sharps > 0);
+    }
+
     private static double DrawKeySignature(
         KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc)
     {
@@ -394,7 +432,7 @@ internal static partial class SharedRenderer
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
                 x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
             }
-            return x + 0.4;
+            return x;
         }
 
         if (key.Sharps == 0) return x;
@@ -414,7 +452,7 @@ internal static partial class SharedRenderer
             gc.DrawGlyph(glyph, x, y, FontSize);
             x += accidentalWidth;
         }
-        return x + 0.4;
+        return x;
     }
 
     /// <summary>

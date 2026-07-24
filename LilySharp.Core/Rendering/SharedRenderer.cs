@@ -233,6 +233,47 @@ internal static partial class SharedRenderer
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
+        // The widest clef in the system: every staff's key/time signature break-aligns
+        // past this SHARED column (LP's Clef break-align spans the whole system), so a
+        // grand staff's bass F clef keeps the treble staff's meter aligned with it. This
+        // is the same width the layout reserved (SpacingRules.MaxClefWidth), so the drawn
+        // prefatory items land exactly where the first note was spaced from (ledger defect-3).
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+
+        // Shared time-signature column. LilyPond break-aligns the TimeSignature into ONE
+        // column spanning all staves (break-alignment-interface.cc:141-142,242 — the
+        // KeySignature group extent is the union across staves), so a transposed part with a
+        // wider key pushes the concert staff's meter to the SAME X rather than each staff
+        // spacing its meter off its own key. Computed as the MAX of each staff's own would-be
+        // meter X: a score whose staves share a key is byte-identical (max == each), and only
+        // genuinely differing keys re-align. Uses the KEY INK width (KeySignatureInkWidth), the
+        // same width the layout's break-align reservation uses, so the drawn meter and the
+        // reserved column coincide — one model, not two — and both match LilyPond's key→time
+        // (measured off the key's ink RIGHT edge, extra-space 1.15).
+        double sharedTimeX;
+        {
+            double clefRightX = systemStartX + EngravingDefaults.ClefGlyphXOffset + maxClefWidth;
+            double clefToTime = clefRightX + BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature).Value;
+            double clefToKey = clefRightX + BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
+            double keyToTime = BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature).Value;
+            sharedTimeX = clefToTime;
+            foreach (var (_, st, _) in score.EnumerateStaves())
+            {
+                if (st.IsTab || st.IsTextRow || st.IsOssia)
+                    continue;
+                var k = ResolveKeySignature(st, system, score);
+                if (GetSystemStartKeyChange(st, system) is { } kc)
+                    k = kc.NewKey;
+                bool keyed = k.Sharps != 0 || k.Custom is not null;
+                double tx = keyed
+                    ? clefToKey + KeySignatureInkWidth(k) + keyToTime
+                    : clefToTime;
+                sharedTimeX = Math.Max(sharedTimeX, tx);
+            }
+        }
 
         // System-start delimiters (brackets / bar lines connecting staves in a group).
         DrawSystemStartDelimiters(system, gc);
@@ -424,8 +465,13 @@ internal static partial class SharedRenderer
                     // at the one score-level position.
                     int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
                     using (SourceScope(sgc, clefPos))
-                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, sgc);
+                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth, sgc);
                 }
+                // Break-align gaps between prefix items, from the SAME space-alists
+                // CalculatePrefixWidth reserves by, so the drawn glyph lands where the spacing
+                // reserved rather than tight against the clef. Each gap is measured off the
+                // previous item's ink (extra-space). LILYPOND-REF Clef/KeySignature space-alist.
+                bool keyDrawn = false;
                 if (ossiaAtSystemStart)
                 {
                     var activeKey = ResolveKeySignature(staff, system, score);
@@ -440,20 +486,32 @@ internal static partial class SharedRenderer
                         activeKey = startKeyChange.NewKey;
                         keySigPos = startKeyChange.SourcePosition;
                     }
+                    // Only a non-empty signature draws and takes the Clef→KeySignature gap;
+                    // C major draws nothing and leaves the meter spaced from the clef itself.
+                    keyDrawn = activeKey.Sharps != 0 || activeKey.Custom is not null;
+                    if (keyDrawn)
+                        prefixEndX += BreakAlignSpacing.GetSpacing(
+                            BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
                     using (SourceScope(sgc, keySigPos))
                         prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
                 }
                 if (!isOssia)
                 {
+                    // The meter draws at the SHARED time column (sharedTimeX), so every staff's
+                    // meter aligns even when a transposed part carries a wider key signature.
+                    // keyDrawn/this staff's own key no longer pick the X — the system-wide max
+                    // does (LP break-alignment shares the TimeSignature column across staves).
                     if (isFirstSystem)
                     {
-                        using (SourceScope(sgc, score.Header.Time))
-                            prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, sgc);
+                        if (!score.TimeSignature.SenzaMisura)
+                            using (SourceScope(sgc, score.Header.Time))
+                                DrawTimeSignature(score.TimeSignature, sharedTimeX, localStaffY, sgc);
                     }
                     else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
                     {
                         // A meter change at the line break is part of the prefix.
-                        prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, sgc);
+                        if (!startTimeChange.NewTime.SenzaMisura)
+                            DrawTimeSignature(startTimeChange.NewTime, sharedTimeX, localStaffY, sgc);
                     }
                 }
 

@@ -338,58 +338,150 @@ internal static class BreakAlignSpacing
         };
     }
 
+    /// <summary>One placed break-align column: its symbol and ink extent, in the column frame.</summary>
+    public readonly record struct PlacedColumn(BreakAlignSymbol Symbol, double Left, double Right);
+
     /// <summary>
-    /// Calculates the system prefix width using break-alignment spacing rules.
+    /// LilyPond's <c>Break_alignment_interface::calc_positioning_done</c> as ONE forward walk over
+    /// an ordered break-align group — the single engine both the line-start prefix
+    /// (<see cref="SolvePrefixColumns"/>) and the mid-line boundary (<c>BoundaryColumn</c>) run, so
+    /// the one algorithm cannot drift between them the way two hand-rolled copies could.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc
-    /// Iterates through the break-align-orders for start-of-line,
-    /// querying space-alist for each pair of adjacent present items.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:152-283 calc_positioning_done, :239-247:
+    ///   extra-space    <c>offsets[r] = extents[l][RIGHT] + distance - extents[r][LEFT]</c>;
+    ///   minimum-space  <c>offsets[r] = max(extents[l][RIGHT], distance)</c>.
+    /// Every break-aligned stencil here starts its ink at its own origin (<c>extents[.][LEFT] = 0</c>),
+    /// so a present item's LEFT = the previous item's ink RIGHT + the LEFT item's space-alist
+    /// distance to it (<see cref="GetSpacing"/>). Empty items (<c>Width &lt;= 0</c>) are skipped, as
+    /// LilyPond skips empty break-align groups (break-alignment-interface.cc:145-146,155-156): a grob
+    /// that draws nothing neither consumes a gap nor anchors its neighbour. <paramref name="startLeft"/>
+    /// is where the first present item's LEFT sits — the LeftEdge→Clef gap
+    /// (<see cref="EngravingDefaults.ClefGlyphXOffset"/>) at a line start, 0 at a mid-line boundary
+    /// whose first grob is the column origin.
     /// </remarks>
-    public static double CalculatePrefixWidth(
+    public static IReadOnlyList<PlacedColumn> SolveColumns(
+        IEnumerable<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
+    {
+        var placed = new List<PlacedColumn>();
+        BreakAlignSymbol? prev = null;
+        double prevLeft = 0.0, prevWidth = 0.0;
+        foreach (var (symbol, width) in items)
+        {
+            if (width <= 0.0)
+                continue;
+            double left;
+            if (prev is { } p)
+            {
+                // LP measures the distance off the LEFT item's own RIGHT extent — the exact
+                // width, extents[l][RIGHT] with LEFT=0 — NOT a reconstructed prevRight-prevLeft
+                // (which rounds differently and shifts a line-start note by ~0.01 at a rounding
+                // boundary — test/keysig-change). extents[r][LEFT] is 0, so it drops out.
+                var entry = GetSpacing(p, symbol);
+                double offset = entry.Style == SpacingStyle.MinimumSpace
+                    ? Math.Max(prevWidth, entry.Value)
+                    : prevWidth + entry.Value;
+                left = prevLeft + offset;
+            }
+            else
+            {
+                left = startLeft;
+            }
+            placed.Add(new PlacedColumn(symbol, left, left + width));
+            prevLeft = left;
+            prevWidth = width;
+            prev = symbol;
+        }
+        return placed;
+    }
+
+    /// <summary>
+    /// The shared X of each break-align column at a line start (LeftEdge→Clef→KeySignature→
+    /// TimeSignature) plus the prefix right edge — one column table for the whole system, so
+    /// every staff draws its clef/key/time at the SAME X and the signatures stay aligned.
+    /// </summary>
+    /// <remarks>
+    /// <c>ClefX/KeyX/TimeX</c> are the LEFT edge of each column, relative to the prefix origin
+    /// (0 = line start, before the system indent). A column is present only if its
+    /// <c>Has*</c> flag is set; an absent column's X is 0.
+    /// <see cref="PrefixColumns.Right"/> is where the prefix ink ends (the first-note spring
+    /// starts here, see <see cref="FirstNoteSpring"/>).
+    /// </remarks>
+    public readonly record struct PrefixColumns(
+        double ClefX, double KeyX, double TimeX, double Right, bool HasKey, bool HasTime);
+
+    /// <summary>
+    /// Solves the line-start break-align column table — LilyPond's
+    /// <c>Break_alignment_interface::calc_positioning_done</c>, ported as a pure forward walk.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:152-256 calc_positioning_done. Each
+    /// column's offset = the previous column's GROUP right extent + the space-alist distance
+    /// (<c>extents[idx][RIGHT] + distance - extents[next][LEFT]</c>, with the clef/key/time
+    /// stencils starting at 0 so <c>[LEFT] = 0</c>). The extents are GROUP extents — the union
+    /// across the system's staves — so the caller passes the WIDEST clef (<see cref="clefWidth"/>)
+    /// and the WIDEST key (<see cref="keyAccidentalCount"/>): the whole point of break-alignment
+    /// is that one column spans all staves, so a grand staff's bass F clef fixes the treble
+    /// staff's meter column and a transposed part's larger key fixes everyone's time column.
+    /// A pure forward pass — no fixpoint, no dependency on note positions — so it slots exactly
+    /// where the scalar prefix width used to be computed, before the system spring solve.
+    /// </remarks>
+    public static PrefixColumns SolvePrefixColumns(
         double clefWidth,
         int keyAccidentalCount, bool keySharps,
         bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
     {
-        // Build the list of present items in break-align order
-        // At minimum we have Clef → FirstNote
-        // Optionally: Clef → KeySignature → TimeSignature → FirstNote
+        bool hasKey = keyAccidentalCount > 0;
 
-        double distance = 0;
-        var currentSymbol = BreakAlignSymbol.Clef;
-        double currentRightExtent = clefWidth;
-
-        // Clef → KeySignature (if present)
-        if (keyAccidentalCount > 0)
+        // The line-start break-align order (clef, then the key and time when present).
+        // LeftEdge → Clef opens the prefix: break-alignment's origin (LeftEdge, extent 0) spaces
+        // the clef in by extra-space 0.8 (LILYPOND-REF LeftEdge.space-alist (clef . (extra-space .
+        // 0.8))), which is where the clef's LEFT starts (startLeft below).
+        var items = new List<(BreakAlignSymbol, double)>
         {
-            var entry = GetSpacing(currentSymbol, BreakAlignSymbol.KeySignature);
-            distance += CalculateDistance(entry, currentRightExtent);
-
-            // Key signature width
-            double accWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(keySharps);
-            currentRightExtent = keyAccidentalCount * accWidth;
-            currentSymbol = BreakAlignSymbol.KeySignature;
-        }
-
-        // → TimeSignature (if present, first system only)
+            (BreakAlignSymbol.Clef, clefWidth),   // Clef group extent RIGHT (LEFT = 0)
+        };
+        if (hasKey)
+            items.Add((BreakAlignSymbol.KeySignature,
+                keyAccidentalCount * GlyphMetrics.GetKeySignatureAccidentalWidth(keySharps)));
         if (includeTimeSignature)
-        {
-            var entry = GetSpacing(currentSymbol, BreakAlignSymbol.TimeSignature);
-            distance += CalculateDistance(entry, currentRightExtent);
+            items.Add((BreakAlignSymbol.TimeSignature,
+                GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType)));
 
-            double timeSigWidth = GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType);
-            currentRightExtent = timeSigWidth;
-            currentSymbol = BreakAlignSymbol.TimeSignature;
+        var placed = SolveColumns(items, EngravingDefaults.ClefGlyphXOffset);
+
+        double clefX = EngravingDefaults.ClefGlyphXOffset, keyX = 0.0, timeX = 0.0;
+        foreach (var col in placed)
+        {
+            switch (col.Symbol)
+            {
+                case BreakAlignSymbol.Clef: clefX = col.Left; break;
+                case BreakAlignSymbol.KeySignature: keyX = col.Left; break;
+                case BreakAlignSymbol.TimeSignature: timeX = col.Left; break;
+            }
         }
 
-        // The prefix ends at the last item's INK. The prefix→first-note
-        // distance is NOT part of the prefix: it is carried by the first
-        // measure's leading spring (see FirstNoteSpring) so it can take part
-        // in spring solving with the proper minimum — adding it here AND in
-        // the spring double-counted the gap and line-start measures came out
-        // ~3x wider than LilyPond's.
-        return distance + currentRightExtent;
+        // The prefix ends at the last item's INK. The prefix→first-note distance is NOT part of
+        // the prefix: it is carried by the first measure's leading spring (see FirstNoteSpring)
+        // so it can take part in spring solving with the proper minimum — adding it here AND in
+        // the spring double-counted the gap and line-start measures came out ~3x wide.
+        double right = placed.Count > 0
+            ? placed[placed.Count - 1].Right
+            : EngravingDefaults.ClefGlyphXOffset;
+        return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature);
     }
+
+    /// <summary>
+    /// The system prefix width — the right edge of the break-align column table
+    /// (<see cref="SolvePrefixColumns"/>).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc.</remarks>
+    public static double CalculatePrefixWidth(
+        double clefWidth,
+        int keyAccidentalCount, bool keySharps,
+        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+        => SolvePrefixColumns(clefWidth, keyAccidentalCount, keySharps,
+            includeTimeSignature, timeSigBeats, timeSigBeatType).Right;
 
     /// <summary>
     /// Ideal/minimum distance from the END of the line-start prefix to the
@@ -400,16 +492,33 @@ internal static class BreakAlignSpacing
     ///   Clef           (minimum-fixed-space . 5.0)  — rigid
     ///   KeySignature   (shrink-space . 2.5)         — compressible
     ///   TimeSignature  (semi-shrink-space . 2.0)    — compressible to half
-    /// LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
-    ///   the style decides how much of the ideal survives compression.
+    /// LILYPOND-REF: lily/staff-spacing.cc:169-198 Staff_spacing::get_spacing —
+    ///   the style decides how much of the ideal survives compression, AND from
+    ///   which edge of the left item the distance is measured.
+    /// <para>
+    /// The clef case is the only one measured from the left item's LEFT edge:
+    /// minimum-fixed-space sets <c>fixed = last_ext[LEFT] + max(last_ext.length(),
+    /// distance)</c> (staff-spacing.cc:183-187), so the 5.0 is the whole distance
+    /// from the clef's LEFT ink and ABSORBS the clef width rather than following
+    /// it. The caller has already reserved that width as the prefix, so the spring
+    /// from the prefix END is <c>max(width, 5.0) - width = max(0, 5.0 - width)</c>.
+    /// The key/time cases are extra-space-like (semi-fixed / shrink, measured from
+    /// the right edge, staff-spacing.cc:176-197), so their bare value is already
+    /// the gap after the prefix. Threading the clef width here is what stops the
+    /// note being placed clef-width + 5.0 out — the double-count the pair
+    /// line-start.clef-to-first-note.{treble,bass} opened.
+    /// </para>
     /// </remarks>
     public static (double Ideal, double Min) FirstNoteSpring(
-        int keyAccidentalCount, bool includeTimeSignature)
+        int keyAccidentalCount, bool includeTimeSignature, double clefWidth)
     {
         if (includeTimeSignature)
-            return (2.0, 1.0);   // semi-shrink: fixed = d/2
+            return (2.0, 1.0);   // semi-shrink: fixed = d/2, measured from the right edge
         if (keyAccidentalCount > 0)
-            return (2.5, 1.25);  // shrink-space: generously compressible
-        return (5.0, 5.0);       // minimum-fixed: rigid
+            return (2.5, 1.25);  // shrink-space: generously compressible, from the right edge
+        // minimum-fixed-space 5.0, measured from the clef's LEFT edge with a max —
+        // the prefix already holds the clef width, so the remaining gap absorbs it.
+        double gap = Math.Max(0.0, 5.0 - clefWidth);
+        return (gap, gap);       // rigid
     }
 }

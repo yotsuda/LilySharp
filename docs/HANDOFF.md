@@ -4,9 +4,9 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-24 / master `4c8cb54a`（今セッション＝**タイ横アタッチの Y 依存移植**・下記 ▶✅）・未 push。ahead は §0 で必ず裏取り。前セッションの実装は `2ca9cf69`（TSID/TSIU 種で −0.045）→ `ff2a08fc`（tie-column 訂正・下記）。前セッションまでの実質コミットは `0385b1fb`（ページ跨ぎスラー SSD/SSU 起票）→ `3ac143e7`（種）→ `6f572c29`（衝突修正を LP 字面へ）→ docs（`38a78d4f`/`f4df18a6`）。
-このセッションで **ページ跨ぎタイの対（TSID/TSIU）を起票し、種を入れ、そのとき露呈した cross-system 衝突バグを修正して −0.9176 → −0.045 まで詰めた**（`2ca9cf69`・下記 ▶ の ✅）。**変更 6 ファイル**：`ElementCoordinator.cs`（cross-system 衝突修正＝**tie-column グルーピング**）・`LayoutEngine.cs`（`AugmentSkylinesForPaging` にタイ種）・`LpGeometryProbes.cs`（TSID/TSIU twin）・`lp-geometry.json`（2 点）・`page-vertical.ly`（2 book）・`showcase__02-ornaments.svg`（再ベース +0.69）。
-**起票は出力不変・予測が桁まで的中**（notehead-alone 12.595・residual −0.917560328・対一致）。種は `AddTiesToSkyline` を `AugmentSkylinesForPaging` に配線（スラー種ブロックの真下・`SeedBowInk` 共有）。**種を入れた瞬間、対が食い違った**（TSID −0.9176 のまま／TSIU +0.2047）＝第2欠陥。TIEDBG で実データを見ると interior system の下タイの制御点が**音符中心で鏡映**＝**勝者候補の向きが up に化けていた**（`TieItem.CurveUp` は down のまま・`SeedBowInk` は geometry で向き判定するので down タイが up skyline に誤送→予約ゼロ）。真因は **`TieFormattingProblem` の `ScoreTieTieCollision`**：`LayoutTies` が `existingTies` に**全 system のタイを累積**して渡し、改行後は各 system の小節が local X を共有するので、interior 下タイが上の同位置タイと衝突判定され monotonicity で向きが反転。**スラーの cross-system 衝突と完全に同型**——HANDOFF の「タイは衝突回避を持たない…はず（要確認）」の予測が外れ、その外れが真因を指した。修正＝`LayoutTies` が `existingTies` を時間スパン重なり（`TieSpansOverlap`＝`SlurSpansOverlap` の字面）で絞る＝チョード列の実スタックタイだけ残る。以後 TSID==TSIU が **13.467245850 で桁一致**。残 **−0.045314478 は OPEN（受容せず）。原因は LP の Tie.control-points を after-line-breaking で実測して分解済**：縦モデルは exact、発散は横。**LP のタイ端点 span 7.319ss / Lily# 5.206ss**（端点 Y は −9.75 で一致）＝**~2.1ss 狭いアタッチ幅**を `BezierBow.Height(1.0,0.333,width)` が忠実に 0.061 浅い制御点に変換（Lily# 弧 0.776 / LP 0.837337・width=7.2 で 0.837 再現）→ 予約 ink が 0.045 浅い。**スラーの −0.0077 と同じ X 軸族**（広い 12/4 justified の全音符スペーシング／横アタッチ・4分音符 bar-line corpus 未監査）で、タイのアタッチ幅発散(2.1ss)がスラーの中心間発散(0.14ss)より大きい分だけ大きい。**タイ arc は slur より鈍感**（感度 0.019 vs 0.076）なので 0.045 は arc の 0.14ss 漏れでは説明できない＝**横アタッチ幅**が正体。テスト 3222 passed / 0 failed / 3 skipped。LP 忠実度 **38/54 exact・total |residual| 0.110359 ss**（前 0.019730＋タイ 2 点 ×0.045。点集合が違うので過去値と直接比べない）。
+最終更新: 2026-07-24 / master ＝ **`8ef0044e` まで commit 済・未 push（6 commits ahead・レビュー承認待ち）**。⚠️ hash は自己参照——**HEAD は §0 で裏取り**。直近 commit `8ef0044e`（percussion clef の defect-3 クローズ＋clef ink を単一 `ClefBBox` に統一・percussion-todo docs commit を squash 済＝製品 3・probe/harness 3・generator 1・台帳 1・snapshot 1・本ファイル）→ `43a73cea`（key→time +0.4 統一）→ `8e5a315d`（TSA probe）→ `824798c4`（break-align 列エンジン）→ `5f9ee531`（clef 実 ink・defect-3 pitched）→ `9d5c2bd6`（行頭 prefix）。**このセッションで defect-3 の最後の残＝percussion clef を閉じた**（`line-start.clef-to-time.percussion` **+0.565→0 exact**・予測が桁まで的中）＝**defect-3 は全 clef 族で完了**（残: mid-line break-align 未移植のみ）。**3232 passed / 0 failed / 3 skipped**、Core 0 warn/err。**LP 忠実度 45/61 exact・total |residual| = 0.006267 ss**（percussion は 0 で total 不変）。**snapshot 再ベース 1 枚**（`drum-groove`＝時値列 −1.235・clef glyph −0.67 の純 X 再配置・Y/要素数/viewBox 不変・PNG 目視で重なりなし）。
+このセッションで **defect-3（行頭 clef の幅を GClefWidth 固定で reserve）を全 clef で LP 実 ink へ字面移植して閉じた**。`GlyphMetrics.LineStartClefWidth(ClefType)` が **clef 別のステンシル右端**（LP `last_ext[RIGHT]`＝`g->extent(g,X)[RIGHT]`）を返す：**G=`ClefG.Right`2.565／F=`ClefF.Right`2.6834／C=`ClefC.Right`2.720**（percussion のみ実 metric 無しで G 近似）。`SpacingRules.MaxClefWidth(score)` が **系内最広 clef** を `CalculatePrefixWidth`＋`FirstNoteSpring`（同一幅で clef-only を cancel）＋`DrawClef` の flow-anchor に配線。**grandStaff は 1 本の clef break-align 列を共有**（`break-alignment-interface.cc:141-142,242` 実読で裏取り：グループ extent＝全譜 clef の union＝max、次列は max+gap）＝広い bass F が treble 譜の meter も支配し、両 meter が縦に揃ったまま +0.12 右へ（`timesig-grandstaff`: 両 4.88→5.00・両 note 8.35→8.47・整列維持を実測）。**変更 8 製品ファイル**（`GlyphMetrics.cs`・`SpacingRules.cs`・`LayoutEngine.cs`・`MultiStaffLayouter.cs`・`SystemBreaker.cs`・`IncrementalCompiler.cs`・`SharedRenderer.cs`・`SharedRenderer.Prefix.cs`）＋データ 1（`lp-geometry.json`）＋テスト注釈 2。
+**台帳**：`line-start.clef-to-time.{treble,bass}` **両方 exact**（treble −0.001→0・bass −0.1194→0）。**GClefWidth（advance 2.564）を prefix ink に使う経路は消滅**——全 clef が自分のステンシル ink を読む＝advance-vs-ink 乖離ゼロ。**3226 passed / 0 failed / 3 skipped**、Core 0 warn / 0 err。**LP 忠実度 42/58 exact・total |residual| = 0.006267 ss**。**snapshot 再ベース 182 枚**（非 treble 64＝bass/alto/C/grandStaff/mixed-tab は +0.12・treble 116＝G の advance→ink で +0.001＝2 桁で多くは丸め消滅・programmatic 2）、**要素数・viewBox 全て不変の純 X 再配置**（Y-reflow/OOB なし・機械照合）。⚠️ churn 回避で treble を advance に残す前案は**ユーザー指示で撤回**——「byte churn は非 faithful を残す理由にならない」。
 
 ---
 
@@ -29,13 +29,97 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **X 軸：広い justified 拍子での全音符スペーシング（sub-question ①）** — タイの横アタッチ（②）は閉じた
+### ▶ 次のセッションの最初の一手 ＝ **島2 の残（単音/グレース臨時記号 ♮ の重複描画モデル）／beam の page/system 種／courtesy paren スカイライン**。X 軸は defect-3 も閉じ、単一定数残差は尽きた
 
-**ページ跨ぎの弓は縦もタイの横アタッチも閉じた**：tuplet（`eb8315f8`）→ スラー SSD/SSU（−0.0077）→ タイ TSID/TSIU を種で −0.045 まで（`2ca9cf69`）→ **今セッション、タイの横アタッチを LP の Y 依存モデルで字面移植して閉じた（−0.045 → −0.0019・`4c8cb54a`・下記 ✅）**。残るのは **① 全音符スペーシングだけ**：slur −0.0077 と tie −0.0019 が**同じ 0.14ss の中心間差**を指す（Lily# c2c 7.575 vs LP 7.718628）。縦モデル（`SeedBowInk`・arc 式）は exact。
+**sub-question ①（X 軸）は完全決着**：前セッションで行頭 prefix を LP exact に、今セッションで **defect-3（非 treble clef の prefix 幅）も 0 exact**。**X 軸に残る単一定数残差は無い**。次はどれも「点を対で起票→測って初めて見える」未測定領域（§3A の穴）：
 
-**② の正体は「横アタッチ幅」ではなく「LP の Y 依存アタッチ」だった**。LP は chord-outline スカイラインをタイの**端点 Y で読む**：端点が符頭の 1ss 箱の**内**なら内側エッジ、**外**なら符頭**中心**（`-dir/2` が整数除算で 0＝`linear_combination(0)`＝中点）。切替は `|delta|=0.5` の階段（whole/half/quarter/dotted+pitch sweep で実測）。**素朴な「常に中心」は TID を +0.0736 に悪化させた**——対の食い違いが真のモデルを出した。移植後 TSID/TSIU −0.045→−0.0019、TID/TIU（delta −0.5・箱の縁）は edge のまま **+0.001391 不変**。
+- ★ **単音/グレースの臨時記号 ♮ が第2の配置モデル**（§5.2.1②・下記「島2 の残」）。和音は `position_apes` 経路だが単音/グレースは固定 `AccidentalNoteGap 0.35`。♮ が実スカイラインと 0.0176 ss ずれる（sub-visual）。
+- **beam の page/system スカイライン種は未着手**（`AugmentSkylinesForPaging` 固定 3.5）。TSU/TSD 相当の beam 台帳点が無いので**先に対で起票**。
+- **courtesy 臨時記号 = box paren スカイライン**（近似）。実 `accidentals.leftparen/rightparen` outline を bake して置換。
+- **clef の LILC-vs-skyline sliver（Y 4 点）** は SKPath 不可＝下記「保留になった一手」（LP instrument が先）。
 
-⚠️ **残 ① は横スペーシングの問題**（縦の弓コードは触らない）。詰め方：なぜ Lily# の全音符 c2c が LP より 0.14ss 狭いか（clef/prefix が ~1.76ss 広い or 全音符ばね差）。4 分音符 4/4 の bar-line X-corpus は未監査。**今はコード/残差そのまま**（ユーザー判断）＝OPEN のまま X 軸修正の機会に回す。
+**手順は 5 回連続で成立した型をそのまま**（点を対で起票→予測を why に先書き→種/移植→対の食い違いが第2欠陥を出す）。§1 末尾の 4 箇条を読むこと。
+
+#### ✅ このセッション（2026-07-24 最新）＝ **break-align 列エンジンを純関数で移植し、移調パートの meter 整列を LP 実測で閉じた（未コミット）**
+
+ユーザーの問い「break-align エンジンを移植するとアーキ上の不利（1-pass 不可・red-green 破綻・perf）が出るか」に**実コードで判定＝3 つとも出ない**：① `calc_positioning_done`（`break-alignment-interface.cc:152-283`）は**反復なし前向き計算**（extent＋space-alist を1回積む・ノード非依存）で、Lily# の系全体 spring solve（`MultiStaffLayouter.LayoutMeasures`）の**前にスカラで出る今の場所にそのまま入る**＝1-pass 維持。② memo は**系単位**（`SystemLayoutCache`）でキーが**全譜 clef＋`PerStaffKeySignature` を既に畳む**（`MeasureContentKey:161-162,276`）＝cross-staff 依存は memo 単位内で完結・幾何はキーに載せない。③ O(譜×前置≈4)＝無視。**移植したのはアルゴリズム（純関数）で LP の grob/callback 機構ではない**（Lily# に grob 無し・持込は逆に有害）。
+
+| ファイル | 内容 |
+|---|---|
+| `BreakAlignSpacing.cs` | **`SolvePrefixColumns` 新設**＝`calc_positioning_done` の前向き walk を純関数移植。各列 X＝前列 group-right＋space-alist（`CalculateDistance`）。返り値＝`PrefixColumns(ClefX,KeyX,TimeX,Right,…)`。`CalculatePrefixWidth` は `.Right` に委譲＝**完全等価**（既存 19 テスト緑で証明） |
+| `SpacingRules.cs` | **`WidestActiveKeySharps(score,startMeasureIndex)` 抽出**（layout の widest-key 走査を helper 化・layout も呼ぶ＝単一ソース） |
+| `SharedRenderer.cs` | **共有 time 列 `sharedTimeX`**＝**全譜の per-staff meter X の max**。同 key の譜は max==各で byte 不変、key が譜ごとに違う時だけ最広に整列。meter 描画を per-staff flow から `sharedTimeX` へ |
+| `SharedRenderer.Prefix.cs` | `+0.4` を `KeySigTrailingGap` 定数＋`KeySignatureDrawnWidth(key)` に抽出（draw と共有幅計算で同式） |
+| snapshot 3 枚 | `transpose-multistaff`・`key-per-staff`・`part-header-key-per-part`＝**全て譜ごとに key が違う**。他 194 枚 byte 不変 |
+
+##### ★★ 教訓: **LP を実際にレンダしたら「Verified against LilyPond」コメントが誤りだった**
+`transpose-multistaff`（上 D-dur/下 C-dur）の現状は上 meter x8.05・下 meter x5.0＝**ズレ**（fixture コメントは「LP 照合済」と主張）。LP を実レンダ（`lilypond.exe --svg`）して測ると**両 meter が x16.19 で整列**（下は clef 密着でなく最広 key の後ろ）＝Lily# が誤り。修正後 Lily# も両 x8.05 で整列＝LP と一致。**主張でなく実測（§5.3）**——`--svg` 出力の glyph translate を直読みで足りる粗さの照合。
+
+##### ✅ 台帳点も起票した（metric-free）＝ `line-start.time-signature-cross-staff-alignment`（TSA）
+移調 grand staff（上 D-dur/下 C-dur）の meter X の**譜間 spread**（max−min）。LP を実レンダ（barline-spacing.ly の TSA・両 TIME grob **x=7.6534 で EQUAL**・CLEF 0.8・**共有 KEY 列 4.3034**＝空の下 key も同列・HEAD 11.3534）＝**spread 0**。`RenderedGeometry.TimeSignatureAlignmentSpread` が Lily# の per-staff meter X の max−min を返す＝**同一レンダ内の 2 anchor 差＝ink 幅非依存の metric-free** probe（LP=0 は整列そのもの・距離でない）。修正前 ~3.05 → 後 **0 exact**。**LP 忠実度 43/59 exact・0.006267 ss**。
+
+##### ✅ `+0.4`（KeySigTrailingGap）の draw-vs-reserve 分裂も閉じた＝ `line-start.clef-to-time.keyed`（DCTK）
+`DrawKeySignature` が key-ink + **0.4** を返して meter がそこから流れる一方、`BreakAlignSpacing` は key-ink だけで note 列を予約＝**§5.2.1② の別式**。LP を実レンダ（DCTK＝単一譜 D-dur・CLEF 0.8・KEY 4.185(ext 2.2)・TIME 7.535＝clef→time **6.735**）で key→time は **ink 右端 +1.15・pad 無し**と確定。`sharedTimeX` を `KeySignatureInkWidth`（ink のみ＝予約と同一）へ、`DrawKeySignature` の死んでいた +0.4 return も削除＝**draw=reserve 一元化**。**+0.4 → 0 exact**（Lily# の key ink 幅は LP の 2.2 と既に一致＝0.4 が分裂の全て）。**snapshot 24 枚**（key+time を持つ譜）＝**meter が 0.4 左へ寄るのみ**（keysig-treble は time 7.94→7.54 の 1 行だけ・first note 不動・要素数不変）。TSA の絶対も LP 一致に。**LP 忠実度 44/60 exact・0.006267 ss**。
+
+##### ⚠️ 正直な残り（**このセッションで一部解消・未コミット**）
+- ~~移植は列エンジンの line-start 部分のみ~~ ← **不正確だった**。mid-line 境界（clef/key/time 変更＋bar）は `BoundaryColumn.cs` が既に `calc_positioning_done` を忠実移植済み・`barline.next.*` 台帳で測定済み。実態は「LP は 1 関数を Lily# が 2 コピー（line-start=`SolvePrefixColumns`／mid-line=`BoundaryColumn`）」だった。**このセッションで 1 本の `BreakAlignSpacing.SolveColumns`（LP `calc_positioning_done` の単一前向き walk）に統一**し両者が呼ぶ形へ＝LP の「エンジン 1・順序ベクタ」構造に一致。**出力不変**（3232 緑・snapshot 0 枚・2 ファイルのみ）。⚠️ 落とし穴: 距離は LP と同じく左 grob の**厳密な ink 幅**（`extents[l][RIGHT]`）で測る——`prevRight-prevLeft` の再構成は丸め境界で line-start note を 0.01 動かす（keysig-change で検出）。
+- **残る第3の複製**: `SharedRenderer` の line-start **描画** walk（`sharedTimeX` 算出＋`prefixEndX` 累算・`GetSpacing` 直呼び）は draw 側で、reserve 側（`SolveColumns`）と `GetSpacing` 値を共有して一致済みだが、engine を通していない。描画ループが delicate（ossia/tab/source-scope/cross-staff max）なので別途。
+- **custos** は順序ベクタの end-of-line 側に載る**未実装フィーチャ**（グリフも配置も無し・台帳点ゼロ）。engine 統一とは独立。
+
+##### ✅ このセッション（2026-07-24 最新）＝ **percussion clef を閉じて defect-3 を全 clef 族で完了（+0.565→0 exact・`8ef0044e`・9 ファイル＋本ファイル）**
+LP 実レンダ（`\clef percussion \time 4/4` を自分で `--svg` 実行）で **CLEF 原点 x=0.13・ext (0.67 . 2.0)・TIME x=3.65・HEAD x=7.35** を確認（handoff の測定値と桁一致）＝pitched clef（ext-left=0・原点=ink-left=0.8）と違い、**percussion は glyph 原点が ink-left より 0.67 左**。単純な幅置換では済まず **2 量**を通した：
+
+| ファイル | 内容 |
+|---|---|
+| `Extract-EmmentalerMetrics.py`／`GlyphMetricsGenerated.cs` | **`ClefPercussion` BBox を font の LILC 表から抽出**（`clefs.percussion`＝`(0.67,-1.0,2.0,1.0)`・treble control の grob-extent が LILC bbox と一致することで LP 値=font 値を裏取り）。差分は ClefPercussion 追加のみ＝font drift なし |
+| `GlyphMetrics.cs` | **clef metric を単一 `ClefBBox(clef)` map に統一**＝`LineStartClefWidth`＝`Right-Left`（ink 幅）・`ClefInkLeft`＝`Left`（原点→ink-left）を同じ BBox から導出。percussion 特別扱いも「ink-left=原点」隠れ仮定も廃止＝**LP と同じく全 clef を stencil extent で一様に扱う**（pitched は Left=0 なので出力不変＝3232 緑・snapshot 差分不変で実証）。単位/方向の差ではない——同じ ss・同じ +X・同一 font の per-glyph ink offset |
+| `SharedRenderer.Prefix.cs` | `DrawClef` の glyph 描画を **`x+ClefGlyphXOffset − ClefInkLeft(clef)`** へ＝percussion 原点を 0.13 に落とし ink-left を共有 0.8 列に載せる（pitched は no-op） |
+| `barline-spacing.ly`／`LpGeometryProbes.cs`／`RenderedGeometry.cs`／`lp-geometry.json` | **DCP probe（`clef percussion \time 4/4`）** 起票＝`line-start.clef-to-time.percussion` 3.52。`IsClef` に percussion 追加。`ClefToTimeSignatureOnFirstSystem` を流用（`StaffRefpoints` 非依存なので drum の可変線数でも OK） |
+| snapshot `drum-groove` | 再ベース 1 枚＝時値列 −1.235・clef glyph −0.67 の純 X 再配置（Y/要素数/viewBox 不変・**PNG 目視で clef 重なりなし**） |
+
+★ **教訓（型が 6 回目に成立）**: 起票時の予測「+0.565」が**測定で桁まで的中**（Lily# 4.085＝treble 値・G 幅 fallback＋origin 未補正の合成）。fix 後 **3.520000 exact**。⚠️ **BBox は font の LILC 表から抽出**（`Extract-EmmentalerMetrics.py` に `clefs.percussion` を足して再生成＝CI が font drift を検出できる faithful な経路）——LP 実レンダの grob-extent と 15 桁一致で二重裏取り。**mid-line clef change（`DrawClefChange`・percussion_change glyph）は同型の origin ズレを持つ可能性があるが台帳点が無いので未着手**（drum-groove は行頭 clef のみで未露出）。
+
+#### ✅ このセッション（2026-07-24）＝ **defect-3 を全 clef で実 ink へ字面移植して閉じた（treble/bass 両 → 0 exact・`362ffda0`）**
+
+| ファイル | 内容 |
+|---|---|
+| `GlyphMetrics.cs` | **`LineStartClefWidth(ClefType)` 新設**＝**全 clef が自分のステンシル右端**（LP `last_ext[RIGHT]`）。**G=`ClefG.Right`2.565／F=`ClefF.Right`2.6834／C=`ClefC.Right`2.720**（percussion のみ metric 無し＝G 近似・要 probe・tab は上流除外） |
+| `SpacingRules.cs` | **`MaxClefWidth(score)` 新設**＝非 tab/非 text/非 ossia 譜の最広 clef（fallback も `LineStartClefWidth(Treble)`）。`FirstNoteSpring` に `clefWidth` 引数（`CalculatePrefixWidth` と**同一幅**で clef-only を cancel）。int-only `CalculatePrefixWidth`（treble 既定）も `LineStartClefWidth(Treble)` 経由＝**GClefWidth を prefix ink に使う経路は消滅** |
+| `LayoutEngine.cs`／`MultiStaffLayouter.cs`／`SystemBreaker.cs`／`IncrementalCompiler.cs` | prefix 幅 4 経路を `MaxClefWidth(score)` 配線。`MultiStaffLayouter` は `FirstNoteSpring` にも同 `maxClefWidth` |
+| `SharedRenderer.cs`／`SharedRenderer.Prefix.cs` | `DrawClef` に `clefColumnWidth` を渡し、戻り値（key/time の flow-anchor）を**系内共有列**へ。glyph は自分の ink で描き、次項目だけ共有幅から。**grandStaff の両 meter が整列維持**（`timesig-grandstaff`: 両 4.88→5.00・両 note 8.35→8.47） |
+| `lp-geometry.json` | `line-start.clef-to-time.{treble,bass}` **両方 → 0 exact**（treble −0.001→0・bass −0.1194→0・why を CLOSED へ） |
+| snapshot 182 枚 | 非 treble 64（+0.12）＋treble 116（G advance→ink で +0.001・多くは 2 桁で丸め消滅）＋programmatic 2。純 X 再配置（要素数/viewBox 不変・OOB/Y-reflow なし・機械照合） |
+
+##### ★ 教訓: **grandStaff の縦整列は「幅の広い方が列を支配」＝1 列共有（LP 実ソースで裏取り）**
+per-staff で clef 別幅を描くと bass 譜だけ meter が右へ動き **treble と縦がずれる**（visible regression）。LP は Clef break-align 列を**系全体で共有**する——`break-alignment-interface.cc:141-142` の `g->extent(g,X)` は**グループ（＝全譜の clef）の union**、`:242` の次列 offset が `extents[clefIdx][RIGHT]+gap`＝max 起点。`MaxClefWidth`（系内最広）を予約・描画の両方に通すと両 meter が 5.00 で揃ったまま右へ。**片側だけ動かす naive fix は `timesig-grandstaff` が捕まえる**。⚠️ ただし `MaxClefWidth` は loop の**字面転写でなく結果の再実装**（Lily# に break-align エンジンは無い）。grand-staff cross-staff の**台帳点は未起票**（DCT/DCB は単一譜）＝ソース確認止まり。
+
+##### ★ 教訓: **byte churn は非 faithful を残す理由にならない**（前案の撤回）
+当初 G だけ advance(2.564) のまま残し「treble snapshot を churn させない」を理由にした——**ユーザーが却下**：LP は全 clef で stencil ink（`last_ext[RIGHT]`）を読むので G も `ClefG.Right`2.565 が字面。churn 回避のための非 faithful は **§5.2 の焼き込みと同型の病**。全 clef を ink に統一＝DCT も 0 exact・treble 116 枚が +0.001 再配置（sub-visual・2 桁で大半消滅・OOB/Y なし）。**「効くが LP でない」を snapshot 都合で温存しない**。
+
+#### ✅ 前セッション（2026-07-24）＝ **行頭 prefix を LP へ字面移植し sub-question ① を決着（+2.264 → 0 exact・2 段 port・`9d5c2bd6`）**
+
+| ファイル | 内容 |
+|---|---|
+| `BreakAlignSpacing.cs` | `FirstNoteSpring` に clef 幅を配線し clef case を **`max(0, 5.0−clefWidth)`**（`staff-spacing.cc:183-187` minimum-fixed-space の字面＝`last_ext[LEFT] + max(length, 5.0)`）。`CalculatePrefixWidth` が LeftEdge→Clef（`ClefGlyphXOffset`）を prefix 先頭に確保 |
+| `EngravingDefaults.cs` | `ClefGlyphXOffset` **0.3（LILYSHARP-OWN）→ 0.8**（`define-grobs.scm:2091` `LeftEdge.space-alist (clef . extra-space 0.8)`・LeftEdge extent 0）。**draw / skyline / prefix の 3 読者が同一定数を共有** |
+| `SpacingRules.cs` | `FirstNoteSpring` が `GClefWidth` を配線（prefix と cancel）。⚠️ この GClefWidth 固定が defect-3 |
+| `SharedRenderer.Prefix.cs` | `DrawClef` の戻り値を発明の `0.3+3.0` → **実 clef ink 右端 `ClefGlyphXOffset + GClefWidth`** |
+| `SharedRenderer.cs` | 行頭 prefix 描画に **clef→key(0.82)/clef→time(1.52)/key→time(1.15)** の break-align gap を `BreakAlignSpacing.GetSpacing` から挿入（空 key は gap なし）。meter/key が LP 位置へ（4/4 の C: 3.30→4.88=LP・note 不動） |
+| `lp-geometry.json` | `line-start.clef-to-first-note.{treble,bass}` 2 点起票 → +2.264 → −0.30 → **0**。slur/tie 4 点を新残差（+0.0005）へ更新 |
+| `barline-spacing.ly` / `LpGeometryProbes.cs` / `RenderedGeometry.cs` | LSCT/LSCB probe（**LP＝omit-time 単一 system／Lily#＝interior system** の documented 非対称・等価を実測確認）＋ `ClefToFirstNoteOnSystem` |
+| snapshot 196 | clef 0.30→0.80・note +0.8。要素数/viewBox 幅/OOB 全不変、5 枚のみ健全 Y-reflow |
+
+##### ★★ 教訓: **ペアが「予測外れ」で真因を出した（機構は当初診断が正しかった）**
+起票の予測は「clef 幅の二重計上 ⇒ treble/bass で residual が**異なる**」。実測は**両方 +2.264 で一致**＝予測外れ。だが真因（spring が clef 右端から 5.0 を足す＝二重計上）は当初診断どおりで、**測定の挙動**を読み違えていた：prefix が固定 GClefWidth を使い（defect-3）、かつ clef 描画位置も幅連動するので clef-anchor→note が幅非依存になっていた。**計装（一時 `[PREFIX]` dump）で `note = prefixWidth + 5.0` を実測して確定**（疑った `Math.Max(5.0, s0.min)` は s0.min=0.2 で不発）。§5.3「推測でなく計装で実測」。
+
+##### ★ 教訓: **発明定数は LP 実ソースの値へ（焼き込みでなく）**
+`ClefGlyphXOffset 0.3` は「LILYSHARP-OWN・LP に無い」とコメントされていたが、実は LP の `LeftEdge.space-alist (clef . extra-space 0.8)` そのものだった。0.5 や 0.8 を焼くのでなく **LP の grob 既定値を引いて 0.8 に**。§5.2「未実装でなく、書いてあるが LP でない」の X 版。draw/skyline/prefix が同じ定数を読むよう一元化（§5.2.1⑤「読み手が居なかった」）。
+
+##### ★ 教訓: **2 段 port は 1 段目が「行き過ぎ」て 2 段目の strand を出す**
+spring-frame だけ入れると ledger は +2.264 → **−0.30**（0 を跨いで行き過ぎ）。その −0.30 が left-edge→clef の欠落（defect-1）で、ClefGlyphXOffset を LP の 0.8 にして閉じた。slur/tie も 1 段目で符号反転（−0.0077→+0.0042）、2 段目で +0.0005 に収束。**行き過ぎは「別 strand が残っている」の徴候**。
+
+##### ★ 教訓: **spacing を直すと描画の別式バグが露呈する（§5.2.1②）**
+ClefGlyphXOffset を 0.8 にした瞬間、`DrawClef` の戻り値が発明の `0.3+3.0`（リテラル 0.3＝旧 ClefGlyphXOffset）だったため meter/key が clef と一緒に動かず、以前 0.435 あった clef→meter 隙間が **−0.065（微小重なり）** に悪化——ユーザーが「C は以前から左寄り」と指摘。真因は**prefix 描画が break-align gap を一切足さず item を密着**（spacing は正しく積む）＝予約と描画が別式。描画を `BreakAlignSpacing.GetSpacing` の gap で組み直し **draw=spacing** に一元化。⚠️ **note は spring 由来なので不動**——動くのは meter/key glyph だけ（snapshot は全て純水平・要素数/viewBox/OOB/高さ全不変）。**「発明値 `0.3+3.0` があった」は §5.2 の「未実装でなく、書いてあるが LP でない」の描画版。**
 
 #### ✅ このセッション（2026-07-24）＝ **タイの横アタッチを LP の Y 依存モデルで字面移植（−0.045 → −0.0019・`4c8cb54a`・9 ファイル）**
 

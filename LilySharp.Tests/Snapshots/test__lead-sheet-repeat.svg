@@ -6,21 +6,21 @@
 </style>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="250">Repeat</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="16.85" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="17.04" y="13.12" width="0.60" height="4.00" data-pos="0"/>
-  <rect x="17.94" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="18.63" cy="14.62" r="0.20" data-pos="0"/>
-  <circle cx="18.63" cy="15.62" r="0.20" data-pos="0"/>
-  <rect x="30.01" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <circle cx="40.87" cy="14.62" r="0.20" data-pos="0"/>
-  <circle cx="40.87" cy="15.62" r="0.20" data-pos="0"/>
-  <rect x="41.37" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="41.86" y="13.12" width="0.60" height="4.00" data-pos="0"/>
-  <text x="7.77" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
-  <text x="12.45" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
-  <text x="21.10" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
-  <text x="25.61" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
-  <text x="35.07" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
+  <rect x="17.65" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="17.84" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="18.74" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="19.43" cy="14.62" r="0.20" data-pos="0"/>
+  <circle cx="19.43" cy="15.62" r="0.20" data-pos="0"/>
+  <rect x="30.81" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <circle cx="41.67" cy="14.62" r="0.20" data-pos="0"/>
+  <circle cx="41.67" cy="15.62" r="0.20" data-pos="0"/>
+  <rect x="42.17" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="42.66" y="13.12" width="0.60" height="4.00" data-pos="0"/>
+  <text x="8.57" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="299">C</text>
+  <text x="13.25" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="302">Am</text>
+  <text x="21.90" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="309">F</text>
+  <text x="26.41" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="312">G7</text>
+  <text x="35.87" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-pos="318">C</text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="268"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="268">Main</text>
   </g>

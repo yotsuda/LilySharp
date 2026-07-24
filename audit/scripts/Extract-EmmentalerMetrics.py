@@ -100,6 +100,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ClefG", "clefs.G", "G (treble) clef", "mf/feta-clefs.mf — clefs.G"),
     GlyphSpec("ClefF", "clefs.F", "F (bass) clef", "mf/feta-clefs.mf — clefs.F"),
     GlyphSpec("ClefC", "clefs.C", "C (alto/tenor) clef", "mf/feta-clefs.mf — clefs.C"),
+    # Percussion clef — unlike the pitched clefs its ink starts RIGHT of the grob origin
+    # (LILC bbox left ~0.67, not 0), so its ink width (Right - Left) and its draw origin both
+    # differ from the pitched clefs; see GlyphMetrics.LineStartClefWidth / SharedRenderer DrawClef.
+    GlyphSpec("ClefPercussion", "clefs.percussion", "Percussion clef", "mf/feta-clefs.mf — clefs.percussion"),
     # Change clefs are their OWN glyphs, not the full clef scaled — see Clef::calc_glyph_name
     # appending "_change". Their width sets the gap after a mid-measure clef change, so it
     # has to be a real metric rather than a fraction of the full clef's.
