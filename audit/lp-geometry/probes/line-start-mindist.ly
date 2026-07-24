@@ -221,6 +221,13 @@
                    (nf (car ye)) (nf (cdr ye)) (nf (car ce)) (nf (cdr ce))))))
    '())
 
+%% The JUSTIFIED layout — LilyPond's own default page, with only the indent zeroed so the
+%% first system starts where Lily#'s does. Nothing else is overridden ON PURPOSE: the point
+%% is paper-dependent (see JN).
+layjust =
+#(define-scheme-function () ()
+   #{ \layout { indent = 0 } #})
+
 lay =
 #(define-scheme-function (tag) (string?)
    #{
@@ -274,6 +281,334 @@ lay =
 %%   "which grob binds": if a keyed score's min_dist ever came from the key, the reach
 %%   model would be wrong.
 \score { \new Staff { \key d \major \time 4/4 d'4 e' fis' g' | a'2 fis' } \lay "SKD" }
+
+%% JN — the note-to-note distance on a JUSTIFIED line, which is where the note-to-note
+%%   MINIMUM becomes observable at all. Every score in barline-spacing.ly is ragged-right on
+%%   purpose, putting each spring at force 0, so the whole corpus reads IDEALS. Here the
+%%   slack is shared out in proportion to inverse_stretch_strength =
+%%   fraction * max (0.1, ideal - min) (lily/spacing-basic.cc), so the minimum decides where
+%%   each note lands.
+%%
+%%   Three things this score has to get right, each learned by getting it wrong first:
+%%     * the durations must MIX. A line of identical springs divides its width evenly
+%%       whatever their stretch strengths are -- eight equal quarters came out at exactly
+%%       the ragged natural 3.002245 and saw nothing.
+%%     * it must be SEVERAL systems, and the quantities read on the FIRST. A single line is
+%%       also the LAST line and stays ragged (measured: 3.002245 again), and forcing it with
+%%       ragged-last = ##f is not comparable either, because Lily# ports LilyPond's own rule
+%%       that a score whose only line would be stretched stays ragged
+%%       (constrained-breaking.cc:142-148) and has no ragged-last to switch off.
+%%     * the paper must MATCH. No line-width override: LilyPond's A4 with 10mm margins is
+%%       190mm, and LayoutOptions.Default describes the same page (119.501575 less two
+%%       8.535827 = 102.429925). Measured on a justified line, LilyPond's last bar line ends
+%%       at 102.429921 -- the two papers agree to 4e-6, and the dump prints it so a mismatch
+%%       shows up as a wrong LINE WIDTH rather than as a plausible wrong gap.
+%%   It does put the line BREAKER into the comparison, so each row says which bar its
+%%   system opens on and how many heads it holds: if the two engravers disagree on that,
+%%   the gaps mean nothing.
+%%
+%%   MEASURED (LilyPond 2.26.0, 16 bars over 3 systems, all three at width 102.429921):
+%%     bar= 1  n=30  first= 8.585000  quarter 3.765697  eighth 2.534949
+%%     bar= 6  n=30  first= 5.800000  quarter 3.899914  eighth 2.602057
+%%     bar=11  n=36  first= 5.800000  quarter 3.114963  eighth 2.209582
+%%   The continuation systems are the ones to pair against: 5.800000 is the clef-only
+%%   prefix (the same 5.8 as LSCT), so they carry no meter and no line-start spring. Note
+%%   the two of them differ (3.899914 against 3.114963) purely by how many bars the breaker
+%%   put on each, which is why a twin has to be checked to agree on that first.
+%%
+%%   ⚠️ HARNESS TRAP, and it cost two wrong conclusions before it was found: `layjust` was
+%%   written as a define-VOID-function, so `\score { … \layjust }` attached NO \layout at
+%%   all and this score silently ran at LilyPond's DEFAULT indent of 15mm while every other
+%%   score here has indent 0. The first system's head then read 17.005592 instead of
+%%   8.585000, and that 8.42 of indent was chased as if it were a spring stretching. A
+%%   \layout-producing function must be define-scheme-function; a void one returns nothing
+%%   and the score is left with the defaults, in silence.
+%%
+%%   The line-start spring is RIGID, exactly as the source says, and the corpus can rely on
+%%   that: the first system's head sits on its natural 8.585000 and the continuation
+%%   systems' on 0.8 + 5.0 = 5.800000, the minimum-fixed-space answer. Both are
+%%   zero-stretch — TimeSignature's entry is (first-note . (semi-shrink-space . 2.0))
+%%   (define-grobs.scm:3949), so is_stretchable is false and stretchability 0
+%%   (staff-spacing.cc:193-200), while Clef's minimum-fixed-space leaves ideal == fixed —
+%%   and Simple_spacer::expand_line gives each spring force times its OWN
+%%   inverse_stretch_strength (simple-spacer.cc:207-223), so neither moves. Nothing here
+%%   contradicts the reading step 2-2 is built on.
+%%
+%%   Also confirmed while this was being chased, and worth keeping: all three systems have
+%%   n=1 spacing-wish, that wish IS a StaffSpacing carrying the staff-spacing interface,
+%%   and the line-start columns have break-dir RIGHT (the piece's first column, CENTER,
+%%   likewise) — so the pair really does take Staff_spacing::get_spacing and merge_springs
+%%   rather than the stretchable standard_breakable_column_spacing fallback
+%%   (spacing-spanner.cc:494-517).
+#(define ((dump-justified tag) g)
+   ;; Keyed on the SYSTEM, so every system dumps exactly once and the first one is
+   ;; identifiable rather than whichever the callback happened to reach first.
+   (if (not (hash-ref probe-done (cons tag (ly:grob-system g)) #f))
+       (begin
+         (hash-set! probe-done (cons tag (ly:grob-system g)) #t)
+         (let* ((sys (ly:grob-system g))
+                (cols (ly:grob-array->list (ly:grob-object sys 'columns)))
+                (heads '()))
+           ;; Walk the FIRST system's musical columns in order and take each one's
+           ;; leftmost note head x, so the record is one system's row and nothing else.
+           (for-each
+            (lambda (c)
+              (if (grob::has-interface c 'musical-paper-column-interface)
+                  (let ((elts (grobs-of c 'elements)))
+                    (for-each
+                     (lambda (e)
+                       (if (grob::has-interface e 'note-head-interface)
+                           (set! heads
+                                 (cons (ly:grob-relative-coordinate e sys X) heads))))
+                     elts))))
+            cols)
+           ;; The PREFATORY column too, so "the first head moved" can be told apart from
+           ;; "the whole prefix moved". If the clef is still at 0.8 and the meter at its
+           ;; break-align position while the head has moved, the line-start spring is what
+           ;; stretched; if the prefix moved with it, something upstream did.
+           (let ((cmd (find (lambda (c)
+                              (not (grob::has-interface
+                                    c 'musical-paper-column-interface)))
+                            cols)))
+             ;; WHICH spring the line start got: breakable_column_spacing uses
+             ;; Staff_spacing::get_spacing only for the StaffSpacing grobs in the LEFT
+             ;; column's 'spacing-wishes (spacing-spanner.cc:494-511), and falls back to
+             ;; standard_breakable_column_spacing when that set is empty
+             ;; (:514-515) — a spring with a NON-zero stretch strength.
+             (if (ly:grob? cmd)
+                 (format #t "\nPROBE ~a JWISH n=~a breakdir=~a\n" tag
+                         (length (grobs-of cmd 'spacing-wishes))
+                         (ly:item-break-dir cmd)))
+             ;; The spring as REGISTERED, not as the source says it should be:
+             ;; Spaceable_grob::add_spring stores (spring . other-column) pairs in
+             ;; 'ideal-distances (spaceable-grob.cc:69-75). Scheme has only setters for a
+             ;; spring, so this leans on the smob's own printed form.
+             (if (ly:grob? cmd)
+                 (format #t "\nPROBE ~a JSPRING ~a\n"
+                         tag (ly:grob-object cmd 'ideal-distances '())))
+             (if (ly:grob? cmd)
+                 (for-each
+                  (lambda (e)
+                    (let ((xe (ly:grob-extent e cmd X)))
+                      (if (not (or (inf? (car xe)) (inf? (cdr xe))))
+                          (format #t "\nPROBE ~a JPREFIX name=~a x=~a..~a\n"
+                                  tag (grob::name e) (nf (car xe)) (nf (cdr xe))))))
+                  (elements-of cmd))))
+           (let ((xs (reverse heads)))
+             (format #t "\nPROBE ~a JUSTIFIED rank=~a n=~a width=~a xs=~a\n"
+                     tag
+                     ;; The bar number the system opens on identifies WHICH system this row
+                     ;; is: the dump order follows LilyPond's processing, not the page.
+                     (let ((rl (ly:grob-property (car cols) 'rhythmic-location)))
+                       (if (pair? rl) (car rl) "?"))
+                     (length xs)
+                     (nf (apply max (cons 0.0 (map (lambda (c)
+                                                     (ly:grob-relative-coordinate c sys X))
+                                                   cols))))
+                     (string-join (map nf xs) " "))))))
+   '())
+
+jnbar = { c'4 c'8 c' c'4 c'8 c' | }
+\score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(dump-justified "JN")
+} { \time 4/4
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+} \layjust }
+
+%% JZ — the PERTURBATION that decides where JN's 8.42 comes from. A Spring smob prints as
+%%   plain `#<Spring>` and Scheme has only SETTERS for it (ly:spring-set-inverse-*!), so the
+%%   registered spring cannot be read — but it can be written. Hooking
+%%   SpacingSpanner.springs-and-rods lets that happen AFTER ly:spacing-spanner::set-springs
+%%   has registered everything and BEFORE the line is solved, which after-line-breaking is
+%%   far too late for.
+%%
+%%   The score is JN's, and the first column's spring to the first musical column is forced
+%%   to inverse-stretch-strength 0 — the value staff-spacing.cc:200 says it already has.
+%%     if the first head STAYS at 17.005592, the strength really was 0 and the stretch is
+%%       coming from somewhere outside the spring;
+%%     if it MOVES, the strength was NOT 0, and the get_spacing reading is what is wrong.
+%%
+%%   MEASURED: 8.585000 for every value written — 0.0, 0.8, 8.585 — and JN, once its indent
+%%   was fixed, reads 8.585000 too. So the write changes nothing, which is the RIGHT answer:
+%%   the spring is rigid and was already sitting on its ideal. The apparent 17.005592 it was
+%%   built to explain never existed; it was JN running at the default 15mm indent (see the
+%%   harness trap noted at JN).
+%%
+%%   Kept because the technique is worth having written down: a Spring smob prints as bare
+%%   #<Spring> and Scheme has only setters, so this hook — call
+%%   ly:spacing-spanner::set-springs, then write the registered spring, all before the line
+%%   is solved — is the only way to reach one. Score JR is its CONTROL: same hook, no write.
+%%   JR and JZ agreeing (both 8.585000) is what says the hook does not itself disturb the
+%%   layout, which is exactly the check that was missing the first time round.
+%% SA1..SA4 — the SCORE-level perturbation, which needs no engine hook at all and so cannot
+%%   be accused of what JZ was: vary the TimeSignature's own (first-note . …) space-alist
+%%   entry and watch JN's first head. The four types differ exactly in what
+%%   Staff_spacing::get_spacing does with them (staff-spacing.cc:169-198), all at the same
+%%   distance 2.0:
+%%     semi-shrink-space  fixed += 1.0, ideal = fixed + 1.0, is_stretchable FALSE  (baseline)
+%%     shrink-space       ideal = fixed + 2.0,               is_stretchable FALSE
+%%     extra-space        ideal = fixed + 2.0,               is_stretchable TRUE
+%%     semi-fixed-space   fixed += 1.0, ideal = fixed + 1.0, is_stretchable TRUE
+%%   The last two pairs are the discriminator: semi-shrink and semi-fixed compute the SAME
+%%   ideal and the SAME fixed and differ ONLY in stretchability, as do shrink and extra. If
+%%   the justified head is the same across a pair, stretchability is not what moves it.
+tsfirst =
+#(define-scheme-function (tag kind dist) (string? symbol? number?)
+   #{
+     \layout {
+       indent = 0
+       \context {
+         \Score
+         \override TimeSignature.space-alist =
+           #(list (cons 'first-note (cons kind dist))
+                  (cons 'right-edge '(extra-space . 0.5))
+                  (cons 'staff-bar '(extra-space . 1.0)))
+         \override NoteHead.after-line-breaking = #(dump-justified tag)
+       }
+     }
+   #})
+
+jnmusic = { \time 4/4
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+}
+
+\score { \new Staff \jnmusic \tsfirst "SA1" #'semi-shrink-space #2.0 }
+\score { \new Staff \jnmusic \tsfirst "SA2" #'shrink-space      #2.0 }
+\score { \new Staff \jnmusic \tsfirst "SA3" #'extra-space       #2.0 }
+\score { \new Staff \jnmusic \tsfirst "SA4" #'semi-fixed-space  #2.0 }
+
+%% JR — the ROD itself, the one thing the add_rod reading above never actually looked at.
+%%   Spaceable_grob::add_rod stores (other-column . distance) pairs in 'minimum-distances
+%%   (spaceable-grob.cc:51-65), and set_column_rods fills them during
+%%   ly:spacing-spanner::set-springs, so they can be read from the same hook — as plain
+%%   numbers, unlike the springs.
+#(define (dump-rods! grob)
+   (ly:spacing-spanner::set-springs grob)
+   (let* ((first (ly:spanner-bound grob LEFT))
+          (mins (ly:grob-object first 'minimum-distances '())))
+     (format #t "\nPROBE JR RODS n=~a dists=~a\n"
+             (length mins)
+             (string-join
+              (map (lambda (p) (if (pair? p) (nf (cdr p)) "?")) mins) " "))))
+
+%%   This score is ALSO the CONTROL for JZ: it replaces springs-and-rods exactly as JZ does
+%%   and writes NOTHING. JR, JZ and JN all read 8.585000, which is what licenses the hook as
+%%   an instrument — it does not move the layout by itself.
+%%   The rod dump is what it is for otherwise: the first column carries ONE rod of
+%%   6.272000, under this spring's own minimum, so add_rod returns early
+%%   (simple-spacer.cc:98-101) and never reaches its ideal-rescaling branch.
+\score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(dump-justified "JR")
+} { \time 4/4
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+} \layout {
+  indent = 0
+  \context { \Score \override SpacingSpanner.springs-and-rods = #dump-rods! }
+} }
+
+%% The strength the perturbation writes. 0.0 is the value staff-spacing.cc:200 says the
+%% spring already carries; 8.585 is the ideal_distance, which is what
+%% Spring::set_default_stretch_strength (spring.cc:213-216) would leave if the explicit
+%% set never happened.
+#(define jz-strength 0.0)
+
+#(define (zero-first-spring! grob)
+   (ly:spacing-spanner::set-springs grob)
+   ;; The SpacingSpanner's LEFT bound IS the piece's first PaperColumn; the System's
+   ;; 'columns array is not populated yet at springs-and-rods time.
+   (let* ((first (ly:spanner-bound grob LEFT))
+          (ids (ly:grob-object first 'ideal-distances '())))
+     (for-each
+      (lambda (pair)
+        (if (and (pair? pair) (ly:spring? (car pair)))
+            (ly:spring-set-inverse-stretch-strength! (car pair) jz-strength)))
+      ids)
+     ;; The wish count HERE, before line breaking, is the one that decides which branch
+     ;; breakable_column_spacing took (spacing-spanner.cc:494-515). The JWISH dump was
+     ;; taken at after-line-breaking, i.e. on the already-broken piece, which is a
+     ;; DIFFERENT column object.
+     ;; …and WHAT the wish is. breakable_column_spacing only feeds a wish to
+     ;; Staff_spacing::get_spacing when it has the staff-spacing interface
+     ;; (spacing-spanner.cc:500-501); anything else leaves `springs` empty and the pair
+     ;; falls through to standard_breakable_column_spacing, which IS stretchable.
+     (format #t "\nPROBE JZ ZEROED n=~a wishes=~a breakdir=~a kinds=~a\n"
+             (length ids)
+             (length (grobs-of first 'spacing-wishes))
+             (ly:item-break-dir first)
+             (string-join
+              (map (lambda (w)
+                     (format #f "~a/staff-spacing=~a" (grob::name w)
+                             (grob::has-interface w 'staff-spacing-interface)))
+                   (grobs-of first 'spacing-wishes))
+              " "))))
+
+\score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(dump-justified "JZ")
+} { \time 4/4
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+  \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar \jnbar
+} \layout {
+  indent = 0
+  \context { \Score \override SpacingSpanner.springs-and-rods = #zero-first-spring! }
+} }
+
+%% N2N — the NOTE-TO-NOTE column distance, the quantity Lily#'s GlyphMetrics.MinItemGap
+%%   0.4 stands in for. Measured the same way as min_dist above and for the same reason:
+%%   the value is decided by the two columns' skylines, so it can be read WITHOUT driving a
+%%   line into compression (where it would only ever be observable). Trying to reach that
+%%   regime by shrinking line-width is a detour — with one unbreakable measure LilyPond
+%%   does not compress at all, and with breaks it justifies instead.
+%%
+%%     spring minimum = skys[LEFT].distance (skys[RIGHT], skyline-vertical-padding)
+%%                      (note-spacing.cc:78-83) -- no horizontal padding
+%%     rod            = padding + that same distance
+%%                      (separation-item.cc:48-68; padding from the column's `padding`,
+%%                       default 0.1, spacing-spanner.cc:315)
+%%   so the rod is the larger and is what a fully compressed line stands on.
+%%
+%%   PREDICTION, written before the dump: two same-pitch quarter heads give
+%%     column distance = notehead ink 1.304200 + esw right 0.1 + esw left 0.1 = 1.504200
+%%     rod             = 1.604200
+%%   Lily# computes 1.304200 + MinItemGap 0.4 = 1.704200 for the same pair, so it should be
+%%   0.100000 wider than LilyPond's rod and 0.200000 wider than the spring minimum.
+%%
+%%   MEASURED: d=1.504200, the prediction to six digits, decomposed by the ELEM lines
+%%   beside it (both columns' NoteHead x=0.000000..1.304200, esw default). So:
+%%     LilyPond spring minimum  1.504200      Lily# 1.704200   +0.200000
+%%     LilyPond rod             1.604200      Lily# 1.704200   +0.100000
+%%   Lily#'s Stem box (x 1.174200..1.304200) is inside the head's reach and changes nothing,
+%%   which is why the same-pitch pair is the clean case to measure.
+%%
+%%   ⚠️ NOT reachable by shrinking line-width, which was tried first: with one unbreakable
+%%   measure LilyPond does not compress at all (the head gap stays 1.956300 from 40mm down
+%%   to 12mm and the line simply overflows), and once breaks exist the lines JUSTIFY
+%%   instead. The columns' skylines decide the value whether or not any line ever stands
+%%   on it, exactly as with min_dist above.
+#(define ((dump-n2n tag) g)
+   (if (not (hash-ref probe-done tag #f))
+       (begin
+         (hash-set! probe-done tag #t)
+         (let* ((sys (ly:grob-system g))
+                (cols (ly:grob-array->list (ly:grob-object sys 'columns)))
+                (mus (filter (lambda (c)
+                               (grob::has-interface c 'musical-paper-column-interface))
+                             cols)))
+           (if (>= (length mus) 2)
+               (let* ((l (car mus)) (r (cadr mus))
+                      (lp (ly:grob-property l 'horizontal-skylines))
+                      (rp (ly:grob-property r 'horizontal-skylines)))
+                 (format #t "\nPROBE ~a N2N d=~a\n"
+                         tag (nf (ly:skyline-distance (cdr lp) (car rp))))
+                 (dump-grobs tag "L" l (elements-of l))
+                 (dump-grobs tag "R" r (elements-of r)))))))
+   '())
+
+\score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(dump-n2n "N2N")
+} { \time 4/4 c'4 c' c' c' } \lay "N2N" }
 
 %% CGT / CGP — WHERE THE CLEF GROUP SITS when its staves' clefs have DIFFERENT stencil
 %%   left edges. TKC showed the notation clef's ink at 0.800 and the TAB clef's at 1.000,

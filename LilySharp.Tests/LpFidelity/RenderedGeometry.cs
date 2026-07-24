@@ -474,6 +474,31 @@ internal sealed class RenderedGeometry
     public IReadOnlyList<DrawnGlyph> Noteheads =>
         Glyphs.Where(g => IsNotehead(g.Glyph)).ToList();
 
+    /// <summary>
+    /// The notehead anchors on ONE system, left to right — for probes that span several
+    /// systems, where <see cref="Noteheads"/> sorts across the whole page and interleaves
+    /// them.
+    /// </summary>
+    /// <remarks>
+    /// Systems are told apart by the heads' Y, grouped to a tolerance and ordered top of
+    /// the page down, so this only serves a probe whose notes sit at ONE pitch — which is
+    /// also what keeps the columns' skylines a plain reach difference. It is the same trap
+    /// the LilyPond side has: its own dump script sorts every grob by X and mixes the
+    /// systems together, which is why the .ly twin walks one system's columns instead.
+    /// </remarks>
+    public IReadOnlyList<double> NoteheadAnchorsOnSystem(int systemIndex)
+    {
+        var groups = Noteheads
+            .GroupBy(h => Math.Round(h.Y, 3))
+            .OrderBy(g => g.Key)
+            .ToList();
+        if (systemIndex < 0 || systemIndex >= groups.Count)
+            throw new InvalidOperationException(
+                $"wanted system #{systemIndex} but the probe drew noteheads at "
+                + $"{groups.Count} distinct heights.\nDrawn geometry:\n" + Describe());
+        return groups[systemIndex].Select(h => h.X).OrderBy(x => x).ToList();
+    }
+
     /// <summary>The <paramref name="index"/>-th notehead's anchor, 0-based, left to right.</summary>
     public double NoteheadAnchor(int index)
     {

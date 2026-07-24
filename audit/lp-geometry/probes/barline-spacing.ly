@@ -60,6 +60,17 @@ lay =
 %% A — plain measure start, UP stems after the bar line.
 \score { \new Staff { \time 4/4 c'4 d' e' f' | g'4 a' b' c'' } \lay "A" }
 
+%% NN — plain NOTE-TO-NOTE spacing, which this corpus has never measured. Every existing
+%%   point measures FROM something: barline.next.* from a bar line, line-start.* from the
+%%   prefix. Nothing measures one note to the next, so Lily#'s duration space has only ever
+%%   been checked through those. Ragged, so this reads the spring's IDEAL and is
+%%   paper-independent like its neighbours.
+%%   Mixed durations on ONE pitch: the quarter gap and the eighth gap are the pair. One
+%%   pitch keeps the columns' skylines a plain reach difference and earns no stem-direction
+%%   correction, so what is left is the duration space alone. The eighths are beamed, so no
+%%   flag widens a left column.
+\score { \new Staff { \time 4/4 c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' } \lay "NN" }
+
 %% B — clef change AT the bar line, DOWN stems after it.
 \score { \new Staff { \time 4/4 c'4 d' e' f' \clef bass g4 a b c' } \lay "B" }
 

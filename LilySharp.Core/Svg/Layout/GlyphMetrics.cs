@@ -133,6 +133,25 @@ internal static partial class GlyphMetrics
     /// <summary>
     /// Minimum gap between adjacent items (note-to-note), in staff spaces.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ UNRECONCILED — carries neither a <c>LILYPOND-REF</c> nor a
+    /// <c>LILYSHARP-OWN</c> because it is honestly neither yet, and saying otherwise would
+    /// be worse than saying nothing (§5.2.1①). It is added to a RAW-INK skyline distance
+    /// by <see cref="SpacingRules.CalculateSkylineDistance"/>, where LilyPond instead
+    /// inflates each grob's box by its <c>extra-spacing-width</c> — default
+    /// <c>(-0.1 . 0.1)</c>, so 0.2 between two adjacent columns — and then takes a
+    /// PADDING-FREE skyline distance for the spring minimum (lily/note-spacing.cc:78-83).
+    /// So LilyPond's note-to-note minimum has no 0.4 in it at all, and this constant is
+    /// standing in for the esw the boxes do not carry, at a different value.
+    /// <para>
+    /// Retiring it means giving <see cref="ItemSkylineFactory"/>'s boxes their real esw,
+    /// which is the SAME change the line-start <c>min_dist</c> port needs
+    /// (<see cref="LineStartColumn"/> already builds boxes that way). Not done here
+    /// because it moves every note-to-note rod, and a rod only binds under compression —
+    /// a regime the corpus does not currently measure, so it needs a ledger pair in a
+    /// COMPRESSED line first. See docs/HANDOFF.md §1, "手順2-2 に着手する前に読むこと".
+    /// </para>
+    /// </remarks>
     public const double MinItemGap = 0.4;
 
     /// <summary>

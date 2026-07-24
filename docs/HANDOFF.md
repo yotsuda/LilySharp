@@ -155,12 +155,191 @@ tab 譜まわりで残る乖離は**フレット数字のサイズだけ**で、
 
 ##### 手順2-2 に着手する前に読むこと（2026-07-24 に設計まで詰めた）
 
-**① 先に「第1音列の箱が esw を持つ」を作る。** LP の `boxes()` は grob ごとに
-`extra-spacing-width` を足す（notehead −0.1／Accidental **−0.2**）。Lily# の
-`ItemSkylineFactory.CreateLeftSkyline` は**生の ink しか作らない**ので、そのままでは
-min_dist の臨時記号ケースが 0.1 ずれる。「臨時記号付きの第1音は稀だから」で流すのは
-§5.2 の byte 一致細工そのもの。**esw を運ぶのは note spacing 側とも共有の関心**なので、
-`ItemSkylineFactory` に持たせる（＝1 モデル）のが正しい入口。
+**① 先に「音符列の箱が esw を持つ」を作る。⚠️ これは当初の見立てより大きい。**
+LP の `boxes()` は grob ごとに `extra-spacing-width` を足す（notehead −0.1／
+Accidental **−0.2**）。Lily# の `ItemSkylineFactory` は**生の ink しか作らない**。
+そして `SpacingRules.CalculateSkylineDistance` はその生 ink 距離に
+**`GlyphMetrics.MinItemGap = 0.4` を足している**——LP は esw で 0.2 を作り、
+spring の最小には **padding を足さない**（`note-spacing.cc:78-83`）。
+つまり **LP の音符間 minimum に 0.4 は存在せず、0.4 は箱が持たない esw の代役**
+（しかも値が違う）。`MinItemGap` は **LILYPOND-REF も LILYSHARP-OWN も無い**素の定数で、
+`LpProvenanceTests` の監視範囲外＝§5.2.1① の網の穴。
+
+**量は実測済み**（probe `N2N`・同音高の 4分音符 2 つ）:
+
+| | LP | Lily# | 差 |
+|---|---|---|---|
+| spring minimum | **1.504200** | 1.704200 | **+0.200000** |
+| rod（＝ +padding 0.1） | **1.604200** | 1.704200 | **+0.100000** |
+
+⚠️ **`line-width` を縮めても圧縮 regime には入れない**（実測）: 1 小節だけだと LP は
+**まったく圧縮せず**（40mm→12mm で音符間 1.956300 のまま行が溢れる）、改行を入れると
+今度は justify される。**列のスカイラインが値を決めるので、圧縮に入らなくても測れる**
+——min_dist とまったく同じ。だから「圧縮の台帳対を先に」は**不要**だった。
+
+##### ⚠️ 一度実装して**差し戻した**（2026-07-24）。予測が外れた場所が要点
+
+移植そのものは 3 箇所で済む（下記）。だが **「rod は force<0 でしか出ないから出力は
+動かない」という予測は外れた**——実装して測ると **snapshot 24 枚が動く**。理由:
+`inverse_stretch_strength = ideal − min`（LP も同じ）なので **min を下げると伸び強度が
+上がり、justify された行の音符位置が全部動く**。rod は不可視ではない。
+
+そして **台帳は 1 点も動かなかった**（57/75・0.806267 のまま）＝
+**再ベースを正当化する台帳キーが名指せない**（§5.2.1③）。
+⇒ **先に「justify された行の音符間距離」の台帳点を起こすこと。** それが本当の入口。
+
+##### ⚠️ その入口で**改行そのものが食い違う**ことが判明（新点 `justified.first-system.heads`）
+
+justify した 16 小節スコアの第1系に、**LP は 5 小節（30 音符）／Lily# は 4 小節（24）**。
+残差 **−6 heads**（`unit: heads` なので ss 合計には入らない）。
+
+⇒ **音符間 gap の点は意図的に保留**。4 小節が LP の 5 小節ぶんの幅を分けているので
+Lily# は 4.909926／3.107063（LP 3.765697／2.534949）と読めるが、これを
+「音符間の残差」として記録すると**改行の食い違いを音符間のせいにする**ことになる（§5.2）。
+`justified.first-system.heads` が閉じてから入れる。
+
+**仮説は検証して否定済み**（2026-07-25）: 「`inverse_stretch_strength = ideal − min`
+なので最小が 0.2 広い＝伸び強度が足りず改行器の入力がずれる」——**esw 移植を実際に
+入れて測ったら `justified.first-system.heads` は −6 のまま**（台帳も 1 点も動かず
+57/76・0.806267 不変。snapshot は 24 枚動く）。**音符間の最小は改行差の原因ではない。**
+
+⇒ **ideal（duration space）も否定済み**。コーパスの穴だった「素の音符→音符」を
+対で開いた（新点 `note-to-note.{quarter,eighth}`・probe `NN`・ragged）:
+
+| | LP | Lily# |
+|---|---|---|
+| 4分 | 3.704200 | **3.704200000（exact）** |
+| 8分 | 2.504200 | **2.504200000（exact）** |
+
+差はどちらも spacing-increment 1.2 ちょうど＝増分と基底の両方が一致。
+
+##### ⇒ 在り処は **`KnuthPlassBreaker` の demerits**（2026-07-25 に字面照合で特定）
+
+LP は `combine_demerits(force, prev) = force² + (prev−force)²`（ragged-right なら force² のみ。
+`constrained-breaking.cc:568-573`）＋ `break_penalty_` **だけ**。
+**overfull 用の項は無い**——不可能な行は `get_line_forces` が**無限大**を返し、
+`:477-478` の `isinf → break` で DP から消える（`:475-476` は ragged-last 専用の特例）。
+
+Lily# には LP に無い項が **3 つ**ある（`KnuthPlassBreaker.cs`）:
+
+| Lily# | LP |
+|---|---|
+| `force<0` に `OverfullPenalty(50000) × \|force\|` を加算（:317） | 無い |
+| 無限大 force を `−(超過)×1000` で代用（:308-309） | 無い（コード内も「LP 等価物なし」と明記） |
+| 「極端に underfull」を除外 `idealSum < availableWidth/(tolerance×2)`、tolerance 1.1（:295-297） | 無い |
+
+⚠️ **`OverfullPenalty = 50000` の `LILYPOND-REF: lily/simple-spacer.cc:281` は別物を指している。**
+その行は `: sp->inverse_stretch_strength ();`（`compress_line` の inv_hooke 計算）。
+**`50000` は LilyPond のどこにも無い**（最も近いのは無関係な `-200000`）。
+§5.2 の「REF が付いていても式が一致しているとは限らない」の実例で、
+しかも `KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外＝**ラチェットの穴**。
+
+**3 項とも 1 つずつ外して測った（2026-07-25）。どれも原因ではない**:
+
+| 実験 | `first-system.heads` | 副作用 |
+|---|---|---|
+| A: overfull 罰則を 0 に | **24 のまま** | ⚠️ `page.tight.page-count` 2→1 ほか**複数の台帳点が壊れる**＝**load-bearing** |
+| B: underfull 除外を無効化 | **24 のまま** | **78 点すべて記録どおり＝完全に不活性** |
+| C: 無限大 force の代用 | 未実施（縮退時のみ発火。この譜では出ない） | — |
+
+⇒ **A は「出典が無いのに他の点を支えている」**という最悪の形。外すには
+`page.tight.*` 側を先に LP と照合し直す必要がある。
+⇒ **B は不活性な発明**——単独で消せる可能性が高い（要 snapshot 確認）。
+
+**残る本命は構造の違い**: LP は総 demerits を最小化するだけでなく、
+**系の本数を最小から 1 つずつ増やし、改善しなくなり、かつ圧縮された行が無ければ即座に打ち切る**
+（`constrained-breaking.cc:232-256` の `best_solution` ＋ `too_many_lines`）。
+Lily# は**素の最小 demerits DP**で、行あたりの固定コストが無い＝
+**行を増やすほど force² が小さくなり、系が増える方へ系統的に偏る**。
+実測（LP 3 系 / Lily# 4 系）はまさにその形。**次はここを字面移植する。**
+
+**以下は否定済みの容疑者**（記録として残す）。行幅も違わない（一時計測）:
+
+| | 第1系の最後の音符 X | 行幅 |
+|---|---|---|
+| LP | 99.526401 | 102.429921 |
+| Lily# | 107.490114 − 左余白 8.535827 ＝ **98.954287** | 102.429925 |
+
+⚠️ **Lily# の描画 X には左余白が入っている**（LP は系相対で 0＝行頭）。
+音符間 gap は差なので原点が消える——だから `note-to-note.*` は exact になった。
+**行の埋まり方はほぼ同じ**（98.95 vs 99.53）。つまり Lily# は
+**同じ行幅を 4 小節で埋めている**だけ。ideal も最小も幅も一致している以上、
+残るのは **改行器の選択そのもの**＝`KnuthPlassBreaker` の demerits / looseness /
+tolerance（`SystemBreaker` の gate 含む）。次はそこを直接見ること。
+**LP 側は測定済み**（probe `JN`・16 小節 3 系・全系 width 102.429921・indent 0）:
+
+| 系 | 先頭音符 | 4分 gap | 8分 gap |
+|---|---|---|---|
+| bar 1（拍子あり・5 小節） | 8.585000 | 3.765697 | 2.534949 |
+| bar 6（5 小節） | 5.800000 | 3.899914 | 2.602057 |
+| bar 11（6 小節） | 5.800000 | 3.114963 | 2.209582 |
+
+**対にするのは継続系**（5.800000＝clef のみの前置＝LSCT と同じ）。残るのは Lily# 側の双子
+（どの系を測るか・改行が一致するかの確認）だけ。⚠️ 3 つの罠は probe に明記済み:
+①持続長を混ぜないと判別しない（同一 spring の行は幅で等分される）
+②単一行は最終行＝ragged（Lily# は LP の `constrained-breaking.cc:142-148` を移植済みで
+`ragged-last` つまみが無いので、LP 側で無効化しても比較にならない）
+③用紙を合わせる（LP の A4 190mm ＝ `LayoutOptions.Default` の 102.429925。実測 4e-6 一致）
+
+**移植の中身**（再実装は数分。設計は確定済み）:
+1. `ItemSkylineFactory` — RIGHT 側は全箱に `+0.1`、LEFT 側は全箱に `−0.1` ＋
+   臨時記号だけ差分 `−0.1` 追加（LP: Accidental は `(-0.2 . 0.0)`）
+2. `SpacingRules.CalculateSkylineDistance` の item→item — `MinItemGap` を足すのをやめ、
+   `Distance(other, 0.08)`（musical column の `skyline-vertical-padding`）＋
+   **`Math.Max(0, d)`**。⚠️ 重ならない時の現行フォールバック
+   （`prevRight + nextLeft + gap`）は LP に無い量なので**消す**（LP は 0）
+3. `EngravingDefaults` に `MusicalColumnSkylineVerticalPadding = 0.08`
+   （`define-grobs.scm:2747`。非 musical 列は 0＝実測済み）
+
+⚠️ **`SeparatingPaddingTests` の 3 本は発明を固定している**
+（`MinItemGap` が効くことを主張＝§5.4 の「実装の定数を実装自身と比べるテスト」）。
+移植と同時に落ちる。**`NoteSpacingParameters.MinItemGap` という調整つまみ自体が LP に
+存在しない**ので、**捨てるか §3 に批准するかの判断が要る**（フレット数字と同じ形）。
+
+**出力が動かないことは移植しない理由にならない**（§5.2 裏面）——が、動くと分かった以上、
+順序は「台帳点 → 移植 → 再ベース」。
+
+**⚠️ ②の前に片付ける「開いた矛盾」（`JN` の第1系・実測）**
+
+justify された第1系で **行頭 prefix→第1音が 8.585000 → 17.005592（+8.42）伸びている**。
+**前置自体は動いていない**（`JPREFIX`: Clef 0.800000..3.365000・TimeSignature
+4.885000..6.585000＝break-align どおり）。一方 **継続系（最後の前置が Clef）は伸びず
+5.800000 ＝ 0.8+5.0 ちょうど**。
+
+ソースはどちらも「伸びない」と言っている:
+
+- `JWISH`: **3 系とも wish 1 個・break-dir RIGHT** ＝ 全部 `get_spacing`→`merge_springs`
+  経路（`standard_breakable_column_spacing` へは落ちていない）
+- TimeSignature は実物も `(first-note . (semi-shrink-space . 2.0))`（`define-grobs.scm:3949`）
+  ＝`is_stretchable=false`→stretchability 0。Clef の minimum-fixed は ideal==fixed で 0
+- `merge_springs` は伸び強度に**平均**を入れる（`spring.cc:119,125`）＝0 が 1 個なら 0
+- `Simple_spacer::expand_line` は行に**1 つの force** を解き、各 spring は
+  `force × 自分の inverse_stretch_strength` だけ伸びる（`simple-spacer.cc:207-223`）
+  ＝強度 0 の spring は動けない
+
+**読みでは 0 の spring が 2 つあり、片方だけが 8.42 伸びた。**
+
+#### ✅ 決着: **矛盾は無かった**（原因はプローブの `indent` バグ）
+
+`layjust` を `define-void-function` で書いていたため `\score { … \layjust }` に
+**`\layout` が付かず、JN だけ LP 既定の `indent = 15mm` で走っていた**。
+17.005592 − 8.585000 = 8.42 は**その indent**で、spring は伸びていない。
+`indent = 0` を実際に効かせると **第1音 8.585000＝自然位置**。
+
+⚠️ **`\layout` を返す関数は `define-scheme-function`。`define-void-function` は
+何も返さず、スコアは既定値のまま黙って走る。** 用紙 regime が静かに変わる罠。
+
+⇒ **行頭 spring は読みどおり剛**。手順2-2 の前提は崩れていない。
+途中で書いた 2 つの結論（「rod が ideal を倍する」「`springs-and-rods` の差し替えは
+中立でない」）は**どちらもこの indent 差を追っていただけで、撤回済み**。
+
+**副産物として残る有用物**:
+
+- probe `JZ`/`JR` — Spring smob は Scheme から読めない（setter のみ）ので、
+  `springs-and-rods` を差し替えて `set-springs` 直後に書く hook が唯一の到達手段。
+  **`JR`＝書き換えない対照**があり、JN/JR/JZ が 8.585000 で一致＝**hook は版面を動かさない**
+- 第1列の rod は **1 本・6.272000**（spring の最小より小さく `add_rod` は早期 return）
+- 全系 wish 1 個・interface 付き `StaffSpacing`＝`get_spacing`→`merge_springs` 経路で確定
 
 **② LP と Lily# で spring の意味が 1 個ずれている。** LP は
 `Spring(ideal, min_dist)` ＝ **spring の min_distance は列間距離そのもの**で、

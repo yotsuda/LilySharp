@@ -1511,6 +1511,96 @@ internal static class LpGeometryProbes
     private static readonly string TKC = TabKeyScore("", "TKC");
 
     /// <summary>
+    /// Plain NOTE-TO-NOTE spacing — the one thing this corpus has never measured.
+    /// </summary>
+    /// <remarks>
+    /// Every other point measures FROM something: <c>barline.next.*</c> from a bar line,
+    /// <c>line-start.*</c> from the prefix. Nothing measures one note to the next, so
+    /// Lily#'s duration space has only ever been checked through those. Two measures, so
+    /// the score is one system and stays ragged (LilyPond's own rule that a score whose
+    /// only line would be stretched keeps its natural width,
+    /// constrained-breaking.cc:142-148, which Lily# ports) — the springs sit at force 0 and
+    /// the reading is the IDEAL, paper-independent like its neighbours.
+    /// <para>
+    /// Mixed durations on ONE pitch: the quarter gap and the eighth gap are the pair. One
+    /// pitch keeps the columns' skylines a plain reach difference and earns no
+    /// stem-direction correction, so what is left is the duration space alone. LilyPond's
+    /// two readings differ by exactly the spacing-increment 1.2 (3.704200 against
+    /// 2.504200), which is the pair's cross-check: a defect in the increment moves them
+    /// apart, one in the base moves them together.
+    /// </para>
+    /// </remarks>
+    /// <remarks>LilyPond twin: probe score NN.</remarks>
+    private static readonly string NN = """
+        octave absolute
+        time 4/4
+
+        part melody
+
+        section Main {
+          melody { c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | }
+        }
+
+        form main { Main }
+
+        score main "NN" { staff melody }
+        """;
+
+    /// <summary>
+    /// A JUSTIFIED line with mixed durations — the first probe here whose value depends on
+    /// a spring's MINIMUM rather than only on its ideal.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every other probe is ragged-right on purpose, which sits each spring at force 0 and
+    /// makes the measurement paper-independent — and is exactly why the note-to-note
+    /// minimum has never been measurable here. On a justified line the slack is shared out
+    /// in proportion to <c>inverse_stretch_strength = fraction * max (0.1, ideal - min)</c>
+    /// (lily/spacing-basic.cc), so the minimum decides where each note lands.
+    /// </para>
+    /// <para>
+    /// Three things this had to get right, each learned by getting it wrong:
+    /// the durations must MIX (a line of identical springs divides its width evenly
+    /// whatever their stretch strengths are — eight equal quarters read the ragged natural
+    /// 3.002245 and saw nothing); it must be SEVERAL systems (a single line is also the
+    /// LAST line and stays ragged, and forcing it is not comparable either, because Lily#
+    /// ports LilyPond's own rule that a score whose only line would be stretched stays
+    /// ragged, constrained-breaking.cc:142-148); and the paper must MATCH, since unlike
+    /// every other point here this one is paper-dependent.
+    /// </para>
+    /// <para>
+    /// ⚠️ So this probe engraves on the DEFAULT page and must not pass an Options override:
+    /// LilyPond's A4 with 10mm margins measures 102.429921 to the final bar line's ink
+    /// right, and <see cref="LayoutOptions.Default"/> describes the same page
+    /// (119.501575 less two 8.535827 = 102.429925). It also puts the line BREAKER into the
+    /// comparison, so the pair below is read on the FIRST system, where the head indices
+    /// are unambiguous, and a disagreement about how many bars fit shows up as a large
+    /// residual rather than a plausible small one.
+    /// </para>
+    /// <remarks>LilyPond twin: probe score JN in line-start-mindist.ly, whose first system
+    /// holds 5 bars with its first head at 8.585000.</remarks>
+    /// </remarks>
+    private static readonly string JN = """
+        octave absolute
+        time 4/4
+
+        part melody
+
+        section Main {
+          melody {
+            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
+            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
+            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
+            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
+          }
+        }
+
+        form main { Main }
+
+        score main "JN" { staff melody }
+        """;
+
+    /// <summary>
     /// A tab staff ALONE, six strings — the defect half of the tab string-spacing pair.
     /// LilyPond's TabStaff sets <c>StaffSymbol.staff-space = 1.5</c> for every string
     /// count (ly/engraver-init.ly), so its six-string staff spans (6-1) × 1.5 = 7.500000
@@ -1840,6 +1930,22 @@ internal static class LpGeometryProbes
         // Tab VERTICAL geometry, which the corpus had no point for at all. LilyPond gives
         // every TabStaff staff-space 1.5 whatever its string count; Lily# tapers it, so the
         // six-string half is short while the four-string CONTROL lands on 1.5 by accident.
+        // The note-to-note MINIMUM, reachable only on a justified line (see JN). The pair
+        // is the two durations on that line: a defect in the shared minimum moves them by
+        // DIFFERENT amounts, while a paper or line-breaking mismatch moves both together.
+        // Plain note-to-note, ragged, which nothing else in this corpus reads.
+        new("note-to-note.quarter", NN, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
+        new("note-to-note.eighth", NN, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(1)),
+        // …and FIRST, how many notes the breaker put on that system. A justified point is
+        // only meaningful once both engravers agree on that, so it is a checked point
+        // rather than an assumption — and being a count it stays out of the ss total.
+        new("justified.first-system.heads", JN,
+            g => g.NoteheadAnchorsOnSystem(0).Count),
+        // The note-to-note gaps themselves are NOT here yet, deliberately. With 4 bars on
+        // the first system against LilyPond's 5 they read 4.909926 and 3.107063 against
+        // 3.765697 and 2.534949, which is the line-breaking disagreement above and not
+        // note spacing; recording them as note-to-note residuals would pin a defect to the
+        // wrong cause. They go in when justified.first-system.heads closes.
         new("tab.staff.line-span.six-string", TAB6, g => g.StaffLineSpan()),
         new("tab.staff.line-span.four-string", TAB4, g => g.StaffLineSpan()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
