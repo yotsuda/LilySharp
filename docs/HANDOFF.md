@@ -4,7 +4,7 @@
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
 > それぞれの置き場所へ出す。ここに溜め込むと、以前と同じように 16 個に分裂する。
 
-最終更新: 2026-07-24 / master ＝ **`ae53b356`（parenthesize 字面移植）＋docs 2 commits・未 push（12 commits ahead）**。⚠️ hash は自己参照——**HEAD は §0 で裏取り**。**このセッション＝courtesy paren を実測→一旦「打ち切り」と判定→ユーザー指示「出力が同じでも字面移植できる部分は字面移植する」で box paren を `parenthesize` の字面移植へ置換**（leftparen/rightparen の実 outline skyline を bake・flat 0.375 を runtime の `!parenthesized` 分岐へ移動・LP dump ピンの単体テスト 4 本追加＝旧 box では 3 本落ちることを実証済み）。**出力 byte 不変**（snapshot 0 枚）・**3238 passed / 0 failed / 3 skipped**・Core 0 warn/err・**LP 忠実度 47/63 exact・0.006267 ss**（全て不変）。直近 commit `c71a8218`（単音/グレース臨時記号 DRAW を position_apes へ一元化＋position 側も `CalculateSinglePosition`→`CalculatePositions` 1 本化）→ `d7240c27`（break-align 列 walk を `SolveColumns` 1 本に統一）→ `8ef0044e`（percussion defect-3＋clef ink を `ClefBBox` に統一）→ `43a73cea`（key→time +0.4 統一）→ `8e5a315d`（TSA probe）→ `824798c4`（break-align 列エンジン）→ `5f9ee531`（clef 実 ink・defect-3 pitched）。**前セッション（`c71a8218`）で島2 の残＝単音/グレース臨時記号の第2描画モデルを閉じた**：draw を reserve と同じ `AccidentalPlacement.CalculateSinglePosition` 経路（＋`DrawAccidentalAtInkLeft`）に通し、固定 gap の `DrawAccidental` を**削除**（dead）。台帳2点 `accidental.single-natural-to-notehead` **+0.0177→0**・`accidental.single-flat-to-notehead` **+0.12→0**（両予測が桁一致）。**さらに字面統一**: `CalculateSinglePosition` の単一 ape アルゴリズムを**削除**し、`CalculatePositions`（position_apes）の**1 要素呼び出し**へ畳んだ——LP は単音でも汎用 position_apes を 1 要素リストで回すだけで単音専用関数は無い。これで**単音も和音も同一の position エンジン 1 本**（break-align/`ClefBBox` と同型の重複解消・出力不変で実証）。⚠️ **flat の 0.12 は handoff 想定外の第2欠陥**——「sharp/flat は一致」は reserve だけで、**draw は flat の bbox.Left −0.12 overhang を誤計上して 0.12 外していた**（穴を開けたら別欠陥＝§5.2.1④）。**3234 passed / 0 failed / 3 skipped**、Core 0 warn/err。**LP 忠実度 47/63 exact・total |residual| = 0.006267 ss**（両点 0 で total 不変）。**snapshot 再ベース 11 枚**（flat +0.12・natural −0.0177 の純 X・**sharp 不変**・PNG 目視で重なりなし）。
+最終更新: 2026-07-24 / master ＝ **`ae53b356` 以降＝起票→修正→時値幅と 3 連続で commit＋docs・未 push**。⚠️ hash は自己参照——**HEAD は §0 で裏取り**。**このセッション（続き×2）＝break-align 描画 walk の 2 regime を対起票→修正、さらに残った −0.0953 の正体（4/4=C グリフの幅 2 モデル）まで閉じた**：①custom key の欠落 key 列（KCC −2.745→…・key 幅モデル `SpacingRules.KeySignatureInkWidth` 1 本化）②ossia key を系共有列へ（OKN/OKNF −3.365→**0 exact**・座標系ルールで ossia 調号 advance のスケール混在も修正）③**4/4・2/2 は C/¢ グリフ＝LILC 経路**（`timesig.C44/C22` ink **1.700000** を bake・`GetTimeSigWidth` に LP の style 分岐を字面移植・KCS/KCC/KC2 全て **0 exact**）。③で **4/4 第1システムの音符が +0.095264567 右へ＝snapshot 184 枚＋programmatic 2 枚再ベース**（機械照合: 全枚 行数不変・Y 系属性不変・viewBox 高さ不変＝純 X・改行移動ゼロ・PNG 目視済）。**3245 passed / 0 failed / 3 skipped**・Core 0 warn/err・**LP 忠実度 52/68 exact・total |residual| = 0.006267 ss**＝今日開いた 5 点は全て exact で閉じ、total はセッション開始時 baseline（slur/tie 残等）に復帰。直近 commit `c71a8218`（単音/グレース臨時記号 DRAW を position_apes へ一元化＋position 側も `CalculateSinglePosition`→`CalculatePositions` 1 本化）→ `d7240c27`（break-align 列 walk を `SolveColumns` 1 本に統一）→ `8ef0044e`（percussion defect-3＋clef ink を `ClefBBox` に統一）→ `43a73cea`（key→time +0.4 統一）→ `8e5a315d`（TSA probe）→ `824798c4`（break-align 列エンジン）→ `5f9ee531`（clef 実 ink・defect-3 pitched）。**前セッション（`c71a8218`）で島2 の残＝単音/グレース臨時記号の第2描画モデルを閉じた**：draw を reserve と同じ `AccidentalPlacement.CalculateSinglePosition` 経路（＋`DrawAccidentalAtInkLeft`）に通し、固定 gap の `DrawAccidental` を**削除**（dead）。台帳2点 `accidental.single-natural-to-notehead` **+0.0177→0**・`accidental.single-flat-to-notehead` **+0.12→0**（両予測が桁一致）。**さらに字面統一**: `CalculateSinglePosition` の単一 ape アルゴリズムを**削除**し、`CalculatePositions`（position_apes）の**1 要素呼び出し**へ畳んだ——LP は単音でも汎用 position_apes を 1 要素リストで回すだけで単音専用関数は無い。これで**単音も和音も同一の position エンジン 1 本**（break-align/`ClefBBox` と同型の重複解消・出力不変で実証）。⚠️ **flat の 0.12 は handoff 想定外の第2欠陥**——「sharp/flat は一致」は reserve だけで、**draw は flat の bbox.Left −0.12 overhang を誤計上して 0.12 外していた**（穴を開けたら別欠陥＝§5.2.1④）。**3234 passed / 0 failed / 3 skipped**、Core 0 warn/err。**LP 忠実度 47/63 exact・total |residual| = 0.006267 ss**（両点 0 で total 不変）。**snapshot 再ベース 11 枚**（flat +0.12・natural −0.0177 の純 X・**sharp 不変**・PNG 目視で重なりなし）。
 その前のセッションで **defect-3（行頭 clef の幅を GClefWidth 固定で reserve）を全 clef で LP 実 ink へ字面移植して閉じた**。`GlyphMetrics.LineStartClefWidth(ClefType)` が **clef 別のステンシル右端**（LP `last_ext[RIGHT]`＝`g->extent(g,X)[RIGHT]`）を返す：**G=`ClefG.Right`2.565／F=`ClefF.Right`2.6834／C=`ClefC.Right`2.720**（percussion のみ実 metric 無しで G 近似）。`SpacingRules.MaxClefWidth(score)` が **系内最広 clef** を `CalculatePrefixWidth`＋`FirstNoteSpring`（同一幅で clef-only を cancel）＋`DrawClef` の flow-anchor に配線。**grandStaff は 1 本の clef break-align 列を共有**（`break-alignment-interface.cc:141-142,242` 実読で裏取り：グループ extent＝全譜 clef の union＝max、次列は max+gap）＝広い bass F が treble 譜の meter も支配し、両 meter が縦に揃ったまま +0.12 右へ（`timesig-grandstaff`: 両 4.88→5.00・両 note 8.35→8.47・整列維持を実測）。**変更 8 製品ファイル**（`GlyphMetrics.cs`・`SpacingRules.cs`・`LayoutEngine.cs`・`MultiStaffLayouter.cs`・`SystemBreaker.cs`・`IncrementalCompiler.cs`・`SharedRenderer.cs`・`SharedRenderer.Prefix.cs`）＋データ 1（`lp-geometry.json`）＋テスト注釈 2。
 **台帳**：`line-start.clef-to-time.{treble,bass}` **両方 exact**（treble −0.001→0・bass −0.1194→0）。**GClefWidth（advance 2.564）を prefix ink に使う経路は消滅**——全 clef が自分のステンシル ink を読む＝advance-vs-ink 乖離ゼロ。**3226 passed / 0 failed / 3 skipped**、Core 0 warn / 0 err。**LP 忠実度 42/58 exact・total |residual| = 0.006267 ss**。**snapshot 再ベース 182 枚**（非 treble 64＝bass/alto/C/grandStaff/mixed-tab は +0.12・treble 116＝G の advance→ink で +0.001＝2 桁で多くは丸め消滅・programmatic 2）、**要素数・viewBox 全て不変の純 X 再配置**（Y-reflow/OOB なし・機械照合）。⚠️ churn 回避で treble を advance に残す前案は**ユーザー指示で撤回**——「byte churn は非 faithful を残す理由にならない」。
 
@@ -29,7 +29,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-### ▶ 次のセッションの最初の一手 ＝ **break-align 描画 walk（第3の複製）——ただし着手前に「予約と描画が既に食い違う 2 regime」（custom key 行頭／ossia の clef 無し key）を LP で測って点を対で起票**（本セッションの source 調査で特定・下記ブロック）。単純な engine 差し替えは出力不変にならない。次点: beam の page/system 種（TSU/TSD 相当を先に対で起票）
+### ▶ 次のセッションの最初の一手 ＝ **beam の page/system 種（TSU/TSD 相当を先に対で起票）**——`AugmentSkylinesForPaging` の固定 3.5 が残る最後の既知の未測定領域（§1 の beam 残メモ参照）。次点（byte-hack 監査 2026-07-24 の残り 2 件）: ① **widest-key の対象譜集合の不一致**＝予約 `WidestActiveKey` は tab/ossia **込み**の全譜・描画の max ループは tab/text/ossia を **skip**。移調 tab パート＋concert 譜のような「tab が最広 key を持つ」regime で予約＞描画になり得る（fixture 皆無・未測定）。LP の key 群は「調号を**彫る**譜」＝tab 除外が字面——**probe を対で起票してから**両者を 1 helper に統一。② break-align 描画 walk の純構造化（sharedKeyX/sharedTimeX の手組み max ループ→`SolvePrefixColumns` 消費へ。値は一致済＝出力不変・ただし予約側は score モデル＋measure 走査、描画側は `ResolveKeySignature`＋`GetSystemStartKeyChange` と **key 解決経路が別**——この解決経路の統一が本丸で、片方だけ挿げ替えると多分岐で壊れる。急がず focused session で）
 
 **sub-question ①（X 軸）は完全決着**、**島2（単音/グレース臨時記号）も決着**（courtesy paren は本セッションで**字面移植して完了**＝島2 完了）。次はどれも「点を対で起票→測って初めて見える」未測定領域（§3A の穴）：
 
@@ -41,7 +41,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 **手順は 5 回連続で成立した型をそのまま**（点を対で起票→予測を why に先書き→種/移植→対の食い違いが第2欠陥を出す）。§1 末尾の 4 箇条を読むこと。
 
-#### ✅ このセッション（2026-07-24 最新）＝ **courtesy paren を実測→`parenthesize` 字面移植（出力不変）＋break-align 描画 walk の乖離 2 regime を特定**
+#### ✅ このセッション（2026-07-24 前半）＝ **courtesy paren を実測→`parenthesize` 字面移植（出力不変）＋break-align 描画 walk の乖離 2 regime を特定**
 
 ##### ★★ 教訓: **「観測可能な差が無い」は字面移植をしない理由にならない**（ユーザー指示・byte churn 教訓の裏面）
 実測で「単音は box と恒等・列 regime は Lily# で書けない」を確認し**一旦打ち切りと判定したが、ユーザーが覆した**：Lily# の目標は出力の類似でなく **LP 内部ロジックの完全模倣**であり、**字面移植が可能な部分は出力が同じでも字面移植する**。「効くが LP でない」を残さないの適用対象は**観測不能な内部モデルにも及ぶ**（§5.2 の box パッキングが台帳の点を開くまで見えなかったのと同じ構図——今は差が出なくても、和音 courtesy 実装など将来の regime 拡張で box は再び欠陥になる）。
@@ -61,7 +61,50 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 - **break-align 描画 walk（第3の複製）のスコープ調査**（次手の下ごしらえ・コード変更なし）: 単純に `SolveColumns` へ差し替えるだけでは**出力不変にならない**。予約と描画が**既に**食い違う（＝統一すると出力が動く）regime を source で 2 つ特定:
   1. **custom key（非伝統的調号）の行頭**: 予約側 `WidestActiveKeySharps`（`SpacingRules.cs:220-242`）と `KeySignatureChangeItem` 走査は **`.Sharps` しか見ない**が、custom key は `new KeySignature(0, custom)`（`MeasureCollector.Form.cs:385`）で Sharps=0 のまま＝**予約は key 列ゼロ・描画は `keyed = Custom≠null` で描く**（`SharedRenderer.cs:270,491`・幅は `KeySignatureInkWidth` の per-glyph 和）。行頭 custom key で予約と描画が別物の疑い（**source 読みのみ・未実測・fixture 有無も未確認——測ってから**）。
   2. **ossia の clef 無し key**: 描画は drawClef=false でも `GetSpacing(Clef,Key)` 0.82 を systemStartX に足す（`SharedRenderer.cs:492-494`）＝存在しない clef からの gap。LP なら LeftEdge→KeySignature の space-alist。engine（`SolveColumns` は幅 0 item を skip）へ通すと 0.80 になり **0.02 動く**。
-  どちらも**先に LP で測って点を対で起票してから**統一する（型どおり）。それまでは描画 walk の統一は「標準 key・clef あり」の範囲でしか出力不変にできず、複製の本体が残る。
+  どちらも**先に LP で測って点を対で起票してから**統一する（型どおり）→ **同セッション後半で起票完了（次ブロック）**。
+
+#### ✅ このセッション（2026-07-24 続き）＝ **break-align 描画 walk の 2 regime を対で起票（4 点・ハーネスのみ・出力不変）**
+
+| 点 | LP | Lily# 残差 | 中身 |
+|---|---|---|---|
+| `line-start.time-to-first-note.standard-key`（KCS） | **3.700000**（TIME ink右 9.235 + **semi-shrink-space 2.0**＝`TimeSignature.space-alist (first-note . (semi-shrink-space . 2.0))`） | **−0.095264567** | **control が開けた瞬間から非ゼロ**＝keyed+metered 行頭の time→第1音は誰も測っていなかった regime（§5.2.1④）。分解: −0.1（Lily# の gap 1.9 vs LP 2.0。1.9 は full-measure と同値＝共有 spring 疑い・未単離）＋0.004735433（Pango 時値幅差＝time-change-to-notehead 閉鎖時の既知量） |
+| `line-start.time-to-first-note.custom-key`（KCC） | **3.700000**（`\set Staff.keyAlterations` で同じ 2 sharps＝**KCS と 15 桁一致**。LP の key モデルは keyAlterations 1 本） | **−2.745264567** | **対の差 = −2.650000000 exact**（= Clef→Key 0.82 + key ink 2.2 + Key→Time 1.15 − Clef→Time 1.52）＝**欠落 key 列を 15 桁で単離**。実害: 描画 meter 7.54 が第1音 8.49 に**重なる**（custom key `key custom fis cis` で再現・fixture 皆無だった） |
+| `line-start.ossia-key-alignment.{sharps,flats}`（OKN/OKNF） | **0**（metric-free・TSA と同型） | **−3.365000**（両方同値＝予測が桁一致・pair 一致が content 非依存の検算） | ⚠️ **予測「LeftEdge→key 0.8」は LP dump が棄却**——真相は **ossia の key も系全体の KeySignature break-align 列に入る**（`break-alignment-interface.cc:141-142`。OKEY x ≡ 主譜 KEY x = 4.185。NR 慣行でも `\magnifyStaff` でも同じ＝OKM スコアで裏取り）。Lily# は存在しない clef からの 0.82 を systemStartX に足して **0.82** に描く |
+
+- **probe**: `barline-spacing.ly` に KCS/KCC/OKN/OKNF＋**OKM**（`\magnifyStaff` は space-alist もスケールする＝`music-functions-init.ly:1106-1116`。ossia の scaled key→time 1.15×magstep(−3) が共有 TIME 列を 7.198 に引く——モデル比較用・台帳点ではない）。ハーネス: `TimeSignatureToFirstNotehead`／`OssiaKeyAlignmentOffset`（ossia glyph は **fontSize で識別**・recorder が group transform を解決済みなので X は絶対座標）。
+- **Lily# fixture**: custom key は `key custom fis cis`（構文は既存・**corpus に fixture ゼロだった**）。ossia は ossia-beams 形（measure 1 fragment・LP twin は全長小staff＝R1 が鳴る documented 非対称・量は行頭なので無関係）。
+- ⚠️ **`\set Staff.keyAlterations` は単独で印字される**（`key-engraver.cc:148-151` lastKeyAlterations≠keyAlterations で create_key）。
+- **教訓（対の設計）**: KCS/KCC は「同じ 2 sharps を二通りに書く」対＝LP 側が**恒等**になる対。Lily# 側の差だけが欠陥を運ぶので、**対の差が定数 2.65 を 15 桁で切り出した**。control 自身の −0.0953 は「開けるまで見えなかった」持参金。
+
+#### ✅ このセッション（2026-07-24 続き×4・最新）＝ **byte-hack 監査（ユーザー問い掛け）＝細工ゼロを確認・`keyed` 述語の二重定義を 1 件検出して修正**
+
+- **監査結果: フィッティングや byte 細工は無し**——今日の等価性は全て同一算術（標準 key の 本数×advance ≡ ink・max 式 ≡ engine TimeX・DrawClef 戻り値 ≡ sharedKeyX）で、byte 不変は強制でなく**検証結果**。
+- **検出・修正**: `keyed` 述語が描画 `Sharps!=0 || Custom!=null` / 予約 `ink>0` の二重定義で、**`key custom`（音名なし）＝Custom="" という到達可能な縮退入力**で予約≠描画（描画だけ key 列 +1.97）。両所を `KeySignatureInkWidth > 0`（予約と同じ述語＝`SolveColumns` の幅 0 skip と同型）へ統一。corpus 出力不変（3245 緑・snapshot 0 枚）。
+- **残り 2 件は ▶ の次点に起票**（widest-key の譜集合不一致＝probe から／walk の純構造化＝key 解決経路の統一が本丸）。
+
+#### ✅ このセッション（2026-07-24 続き×3）＝ **4/4・2/2 の「幅 2 モデル」を閉じた（KCS/KCC/KC2 全て 0 exact・snapshot 184+2 再ベース）**
+
+- **正体**: LP の既定 style は `make-c-time-signature-markup`（`time-signature-settings.scm:954-964,981-982`）＝**ちょうど 2/2 と 4/4 だけ `timesig.C22/C44` グリフ（LILC ink 経路）、他の分数は `\number` markup（Pango 経路）**。Lily# は C を**描いて**いたのに予約は digit Pango 幅 1.604735433。C44/C22 の LILC ink は **1.700000**（bake して確認＝KCS 実測 TIME ext と一致）。
+- **fix**: `Extract-EmmentalerMetrics.py` に `TimeSigCommon/TimeSigCutCommon` bbox を追加→再生成。`GetTimeSigWidth` に **LP の style 分岐を字面移植**（(4,4)/(2,2)→C ink・他→Pango digit 不変＝`barline.next.time-change-to-notehead` は exact のまま）。`DrawTimeSignature` の発明 `return x+2.0` も同じ幅へ。**対 KC2**（2/2）を起票＝LP 実測 **3.700000＝KCS と一致**（C22 ink も 1.7＝対の検算）→ Lily# も 3 点全部 **0 exact**。
+- **snapshot 184＋programmatic 2 再ベース**（4/4/2/2 第1システムの音符・小節線が +0.095264567 右へ）。**機械照合**: 全枚で行数不変・y/y1/y2/cy/height 属性完全不変・viewBox 高さ不変＝**純 X・改行移動ゼロ**。PNG 目視（keysig-treble）健全。`TimeSignaturePangoWidthTests` の「4/4=digit」ピンは前提が LP と食い違っていたので LP モデルに書き換え（digit 経路のピンは維持）。
+- ★ **教訓: 残差の why が 2 回外れて、3 回目は「描かれている物を見る」で当たった**——(1)「spring 1.9 vs 2.0」は `FirstNoteSpring` 実読で棄却、(2)「digit の ext vs advance」は **PNG に C グリフが写っていた**ことで棄却。数字だけ睨むより **何が描かれているかを見る**（§5.3 の親戚）。「LP の時値幅は markup 経路」という記憶/REF は **digit の話**で、C グリフには適用されない——**同じ grob に経路が 2 本**あるのが LP の字面。
+
+#### ✅ このセッション（2026-07-24 続き×2）＝ **起票した 2 regime をそのまま修正（KCC −2.745→−0.0953／OKN・OKNF −3.365→0 exact・既存 corpus byte 不変）**
+
+| 変更 | 内容 |
+|---|---|
+| `SpacingRules.KeySignatureInkWidth(KeySignature)` **新設＝key 幅の単一モデル** | custom は per-glyph advance 和・標準は本数×advance。**予約と描画が同じ関数を読む**（旧 `SharedRenderer.Prefix` の同名は削除・描画側は委譲）。LP は key モデルが keyAlterations 1 本＝予約が描画そのもの、の構造写し |
+| `SolvePrefixColumns`/`CalculatePrefixWidth`/`FirstNoteSpring` | 引数を **(本数, sharps?) → key ink 幅 (double)** へ。標準 key は同一算術＝byte 不変 |
+| `WidestActiveKey`（旧 `WidestActiveKeySharps` 置換） | **KeySignature の全 record を返す**・widest は ink 幅比較（group extent は ink の union＝`break-alignment-interface.cc:141-142`）。**mid-piece の key change も `kc.NewKey` を丸ごと**（旧は `.Sharps` に落として Custom を捨てていた） |
+| `MultiStaffScore.LeadingKey`（旧 `LeadingKeySharps` 置換） | all-tab は CMajor。呼び出し 4 系統（LayoutEngine/SystemBreaker/IncrementalCompiler/MultiStaffLayouter）を KeySignature 駆動へ |
+| `SharedRenderer` **sharedKeyX** | key 列を **系共有の 1 式**（widest-clef 右＋Clef→Key）に。clef を描く譜では旧 walk と**恒等**（DrawClef の戻り＝共有 clef 右）・**ossia（clef 無し）だけが動く**＝OKN/OKNF が 0 に |
+| `DrawKeySignature` に **scale 引数** | ⚠️ **ユーザーの座標系ルールが捕まえた単位混在**：ossia 調号の**グリフ advance が非スケール（実 1.1ss）のまま scaled frame に置かれていた**。列 X＝非スケール共有・stencil 内部＝譜のスケール frame、の区別を明示（LP は NR 慣行でも stencil をスケール＝OKN dump OKEY ink 1.5558≈2.2×magstep(−3)。**残る sub-0.1% は LP の design-size フォント metric＝clef sliver 族・未起票**） |
+| fixture 2 枚新設＋snapshot | `test/custom-key`（重なり解消の固定）・`test/ossia-key`（共有列＋scaled advance の固定）。**PNG 目視済**・SvgSnapshotTests 登録 |
+
+**LP 忠実度 49/67 exact・total 9.577→0.196796 ss**。既存 snapshot 0 枚変化（標準 key は同一算術・ossia+key の既存 fixture は無かった）。
+
+##### ★★ 教訓: **PNG 目視が 2 つの別欠陥を追加で出した**（§5.3・7 回目）
+①**Lily# は 4/4 を C グリフで描いている**のに予約幅は digit 経路の Pango 幅——control −0.0953 の正体仮説が「spring 1.9 vs 2.0」（誤・`FirstNoteSpring` は (2.0,1.0) で LP 一致）から「**C の LILC ink 1.7 vs digit Pango 1.6047 の幅 2 モデル**」へ鋭利化（▶ 参照）。②視覚 fixture が**既定の相対オクターブで `cis'`/`e'` が跳ね上がる**罠（`'` は相対では octave 跳躍）——`octave absolute` を明示して解消。probe 側は Preamble が絶対指定済みで無事。ついで **twin の音列不一致**（Lily# `c'`=C♮ は D major で cancellation ♮ を印字・LP twin は `cis''`）も目視が出し、fixture/probe の音列を `cis'`・`ees` に統一（測定量は第1音なので台帳値は不変）。
 
 #### ✅ 前セッション（2026-07-24）＝ **break-align 列エンジンを純関数で移植し、移調パートの meter 整列を LP 実測で閉じた（`824798c4` ほか）**
 

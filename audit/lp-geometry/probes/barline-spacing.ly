@@ -219,3 +219,87 @@ lay =
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would
 %% look like coverage. If a mid-measure time change ever needs a number, engrave it with
 %% \partial / explicit bar checks so both sides agree on where the bars are.
+
+%% --- LINE-START, the reserve/draw split regimes (the break-align draw walk) -----------
+
+%% KCS / KCC — the SAME two sharps, once as a standard D major and once as a
+%%   non-traditional signature (keyAlterations set directly; Key_engraver prints whenever
+%%   lastKeyAlterations != keyAlterations, key-engraver.cc:148-151). LilyPond has only ONE
+%%   key model — keyAlterations — so the two scores dump byte-identical geometry (verified:
+%%   every grob equal to 15 digits). The ledger quantity is TIME anchor -> first HEAD
+%%   anchor: head = time ink-right + 2.0 (TimeSignature.space-alist (first-note .
+%%   (semi-shrink-space . 2.0)), at its natural length under ragged-right) = 9.235 + 2.0,
+%%   giving 3.700000 from the TIME anchor. Lily#'s reservation reads KeySignature.Sharps
+%%   ONLY (a custom key is KeySignature(0, custom)), so KCS is the CONTROL and KCC the
+%%   defect: the pair's disagreement on the Lily# side isolates the missing key column.
+\score { \new Staff { \key d \major \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d'' } \lay "KCS" }
+\score { \new Staff {
+  \set Staff.keyAlterations = #`((3 . ,SHARP) (0 . ,SHARP))
+  \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d''
+} \lay "KCC" }
+
+%% KC2 — the cut-common half of the C-glyph width pair: LilyPond's DEFAULT style prints
+%%   2/2 as the timesig.C22 GLYPH (make-c-time-signature-markup,
+%%   time-signature-settings.scm:954-964 — only 2/2 and 4/4 take the glyph path; every
+%%   other fraction is \number markup / Pango, the path the digit ledger points pin).
+%%   C22's LILC ink is 1.7, the same as C44, so the ledger quantity (TIME anchor -> first
+%%   HEAD anchor = ink 1.7 + semi-shrink-space 2.0) must equal KCS's 3.700000 exactly —
+%%   the pair's cross-check. Lily# reserved BOTH from the digit Pango table
+%%   (GetTimeSigWidth), the wrong path for the C glyphs it draws.
+\score { \new Staff { \key d \major \time 2/2 d'2 e' | fis'2 g' } \lay "KC2" }
+
+%% OKN / OKNF — an ossia (NR "Ossia staves" recipe: fontSize -3 + staff-space magstep -3,
+%%   firstClef = ##f, no Time_signature_engraver) above a keyed main staff. The ossia has
+%%   NO clef, yet LilyPond break-aligns its KeySignature into the ONE key column spanning
+%%   the whole system (break-alignment-interface.cc:141-142 — the group extent is the
+%%   union across staves): OKEY x == the main staff's KEY x (4.185) exactly, so the ledger
+%%   quantity — ossia KEY anchor minus main KEY anchor — is 0, metric-free (two anchors in
+%%   one render). The prediction written before this dump said "LeftEdge -> key-signature
+%%   extra-space 0.8" (define-grobs.scm:2097); the dump refuted it — column sharing wins,
+%%   for the NR recipe, for \magnifyStaff (OKM below), for sharps and for flats. The pair
+%%   (sharps / flats) must print the same 0; content-dependence is its cross-check.
+%%   Lily# twin asymmetry, documented: the LP ossia staff spans both measures (R1 prints a
+%%   whole-measure rest), while the Lily# ossia is a measure-1 fragment — the quantity is
+%%   at the line start, before the difference can matter.
+\score { <<
+  \new Staff = "main" { \key d \major \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d'' }
+  \new Staff \with {
+    alignAboveContext = "main"
+    fontSize = #-3
+    \override StaffSymbol.staff-space = #(magstep -3)
+    firstClef = ##f
+    \remove "Time_signature_engraver"
+    \override KeySignature.after-line-breaking = #(gd "OKN" "OKEY")
+    \override NoteHead.after-line-breaking = #(gd "OKN" "OHEAD")
+  } { \key d \major d''4 e'' fis'' g'' | R1 }
+>> \lay "OKN" }
+\score { <<
+  \new Staff = "main" { \key bes \major \time 4/4 d'4 ees' f' g' | a'4 bes' c'' d'' }
+  \new Staff \with {
+    alignAboveContext = "main"
+    fontSize = #-3
+    \override StaffSymbol.staff-space = #(magstep -3)
+    firstClef = ##f
+    \remove "Time_signature_engraver"
+    \override KeySignature.after-line-breaking = #(gd "OKNF" "OKEY")
+    \override NoteHead.after-line-breaking = #(gd "OKNF" "OHEAD")
+  } { \key bes \major d''4 ees'' f'' g'' | R1 }
+>> \lay "OKNF" }
+
+%% OKM — the same ossia via \magnifyStaff, which unlike the bare NR recipe ALSO scales
+%%   every space-alist (music-functions-init.ly:1106-1116 shrinkable-props). Not a ledger
+%%   point — it is the model check: OKEY still sits in the shared key column (4.185), and
+%%   the scaled alist shows up elsewhere (the ossia's key->time 1.15 * magstep(-3) pulls
+%%   the shared TIME column to 7.198 vs 7.535). Committed so the model comparison stays
+%%   re-runnable; Lily#'s ossia cites the NR recipe (EngravingDefaults.OssiaScale), so
+%%   OKN/OKNF are the twins.
+\score { <<
+  \new Staff = "main" { \key d \major \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d'' }
+  \new Staff \with {
+    alignAboveContext = "main"
+    firstClef = ##f
+    \remove "Time_signature_engraver"
+    \override KeySignature.after-line-breaking = #(gd "OKM" "OKEY")
+    \override NoteHead.after-line-breaking = #(gd "OKM" "OHEAD")
+  } { \magnifyStaff #(magstep -3) \key d \major d''4 e'' fis'' g'' | R1 }
+>> \lay "OKM" }

@@ -63,10 +63,10 @@ internal sealed class SystemBreaker
         // neither), so the break budget matches the reclaimed prefix the layout uses;
         // otherwise the score key and the opening meter, as before.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKeySharps,
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKey,
             includeTimeSignature: !score.AllStavesTab,
             score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKeySharps,
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKey,
             includeTimeSignature: false) + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)

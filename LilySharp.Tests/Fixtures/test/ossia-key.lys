@@ -1,0 +1,28 @@
+// Ossia opening at the system head of a KEYED score. The ossia's first appearance draws
+// no clef, but its key signature still sits in the ONE KeySignature break-align column
+// spanning the system — at the main staff's key X, not at some gap off the missing clef
+// (LilyPond break-alignment-interface.cc:141-142; ledger
+// line-start.ossia-key-alignment.{sharps,flats}, probe scores OKN/OKNF: OKEY == KEY).
+// The ossia signature's internal glyph advances scale with the small staff (the stencil
+// lives in the ossia's magstep(-3) frame; only the column X is shared, unscaled).
+title "Ossia Key"
+
+octave absolute
+time 4/4
+key d major
+
+section Main {
+    melody {
+        d4 e fis g | a4 b cis' d' |
+    }
+    ossia_melody {
+        d'4 e' fis' g' | r1 |
+    }
+}
+
+form main { Main }
+
+score main "ossia-key" {
+    staff melody
+    ossia ossia_melody
+}

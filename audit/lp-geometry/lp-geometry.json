@@ -463,6 +463,41 @@
       "lilypond": 6.735000,
       "residual": 0.0,
       "why": "OPENED AND CLOSED THIS SESSION (+0.4 -> 0). Clef -> time on a KEYED staff (D major, 2 sharps): the meter binds through the KEY, not the clef -- KeySignature.space-alist (time-signature . (extra-space . 1.15)) off the key's ink RIGHT edge, no pad. Rendered on 2.26.0: CLEF 0.8, KEY 4.185 (ext 2.2), TIME 7.535 => clef->time 6.735. The Lily# meter drew a KeySigTrailingGap 0.4 further right than the layout reserved -- a draw-vs-reserve split (SS 5.2.1(2)): DrawKeySignature returned key-ink + 0.4 for the meter to flow from, while BreakAlignSpacing reserved the note column off key-ink alone. THE FIX: the drawn time column (SharedRenderer.sharedTimeX) now uses KeySignatureInkWidth (the ink alone, = the reservation), and DrawKeySignature's now-dead +0.4 return was dropped. MEASURED after: Lily# 6.735000000, residual 0.000000000 EXACT -- confirming Lily#'s key ink width already matches LP's 2.2, so the 0.4 pad was the whole of the split. Impact: every keyed score's drawn line-start meter moves 0.4 LEFT onto the reserved column (first notes, layout-driven, do not move); snapshots with a key + time signature re-base."
+    },
+    "line-start.time-to-first-note.standard-key": {
+      "probe": "barline-spacing.ly",
+      "score": "KCS",
+      "lilypond": 3.700000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED THE SAME SESSION (-0.095264567 -> 0 exact). The CONTROL of the KCS/KCC custom-key pair was non-zero the moment it opened -- the keyed+metered line-start time->first-note regime had no point. LilyPond: head at the meter's ink RIGHT + 2.0 (TimeSignature.space-alist (first-note . (semi-shrink-space . 2.0)), natural length under ragged-right): TIME 7.535, ink 1.700000, HEAD 11.235 => 3.700000. The residual went through TWO wrong decompositions before the PNG showed the truth: (1) 'gap 1.9 vs 2.0' -- refuted by reading FirstNoteSpring, whose time arm is (2.0, 1.0) = LP exactly; (2) 'grob ext vs Pango advance of the digits' -- refuted by LOOKING at the render: Lily# (like LilyPond) draws the default 4/4 as the common-time C GLYPH, not digits. LilyPond's default style prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44 -- scm/time-signature-settings.scm:954-964,981-982 make-c-time-signature-markup) and every other fraction as \\number markup; the C44 LILC ink is 1.700000 (extracted from the font, = the measured grob ext to the digit). Lily# drew the C glyph but reserved the DIGIT path's Pango width 1.604735433. THE FIX: GetTimeSigWidth mirrors LP's style branch -- (4,4)->TimeSigCommon.Width, (2,2)->TimeSigCutCommon.Width (both LILC 1.7, newly extracted), else the Pango digit path unchanged (barline.next.time-change-to-notehead stays exact on it); DrawTimeSignature's invented flat 2.0 return replaced by the same widths. Every 4/4 first system's notes move +0.095264567 right (snapshot re-base, justified by this key and cut-common going exact)."
+    },
+    "line-start.time-to-first-note.custom-key": {
+      "probe": "barline-spacing.ly",
+      "score": "KCC",
+      "lilypond": 3.700000,
+      "residual": 0.0,
+      "why": "CLOSED IN TWO STEPS THE SAME SESSION (-2.745264567 -> -0.095264567 -> 0 exact; the second step is the shared C-glyph meter width, see line-start.time-to-first-note.standard-key).The defect: the same two sharps declared as a CUSTOM signature reserved NO key column, because the reservation read KeySignature.Sharps only (WidestActiveKeySharps and the KeySignatureChangeItem scan dropped Custom; a custom key is KeySignature(0, custom), MeasureCollector.Form.cs:385) while the draw walk drew the signature -- the drawn meter overlapped the first note. THE FIX: one key-width model. SpacingRules.KeySignatureInkWidth(KeySignature) is now the single source (custom = per-glyph advance sum, standard = count x advance); SolvePrefixColumns/CalculatePrefixWidth/FirstNoteSpring take the key INK width instead of a sharps count; WidestActiveKey returns the full KeySignature record, widest by ink (the break-align group extent is an ink union, break-alignment-interface.cc:141-142), and preserves Custom through mid-piece key changes; MultiStaffScore.LeadingKey replaces LeadingKeySharps. LilyPond's KCC dump is byte-identical to KCS (one key model, keyAlterations) and Lily# now mirrors that structure. The whole existing corpus is byte-invariant (standard keys compute the identical width; zero snapshots moved)."
+    },
+    "line-start.time-to-first-note.cut-common": {
+      "probe": "barline-spacing.ly",
+      "score": "KC2",
+      "lilypond": 3.700000,
+      "residual": 0.0,
+      "why": "OPENED EXACT as the cut-common half of the C-glyph width pair (with line-start.time-to-first-note.standard-key). LilyPond's default style prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, make-c-time-signature-markup); C22's LILC ink is 1.700000 like C44's, so time -> first note is 3.700000 for BOTH -- the pair's equality is the cross-check that the two C widths ride one (glyph) path while every other fraction stays on the Pango digit path. Lily# reserved 2/2 from the digit table too (GetTimeSigWidth max digit '2' = 1.4657 Pango) under a drawn cut-C glyph; the same fix (GetTimeSigWidth's LP-style branch) closes both."
+    },
+    "line-start.ossia-key-alignment.sharps": {
+      "probe": "barline-spacing.ly",
+      "score": "OKN",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED THE SAME SESSION (-3.365 -> 0 exact). The ossia (no clef on its first appearance) above a keyed main staff: its key signature must sit in the ONE KeySignature break-align column spanning the system, exactly like the grand-staff clef/time columns (break-alignment-interface.cc:141-142, group extent = union across staves). METRIC-FREE: ossia key X minus main key X in the same render; LilyPond prints 0 (OKEY anchor == KEY anchor == 4.185, for the NR fontSize+staff-space recipe AND under \\magnifyStaff -- probe scores OKN/OKM). The PREDICTION written before the LP dump said 'LeftEdge -> key-signature extra-space 0.8 (define-grobs.scm:2097)' -- the dump REFUTED it: column sharing wins; the 0.8 alist entry never binds because the system-wide Clef column exists (the main staff has a clef). Lily# drew the ossia key at systemStartX + Clef->Key 0.82 off a clef that was not there. THE FIX: the drawn walk places every staff's key at the SHARED key column (sharedKeyX = widest-clef right + Clef->Key), the same expression the reservation's SolvePrefixColumns KeyX carries -- for a staff with a clef this is byte-identical to the former per-staff walk, so only the ossia moved. ALSO fixed with it, per the coordinate-frame rule: the ossia signature's INTERNAL glyph advances were unscaled (1.1 real ss inside a magstep(-3) staff -- mixed frames); DrawKeySignature now scales its advances by the staff's notation scale, matching LP's scaled stencil (OKN dump: OKEY ink 1.5558 ~ 2.2 x magstep(-3); the sub-0.1% remainder is LP's design-size font metrics, the clef-sliver family, not opened here)."
+    },
+    "line-start.ossia-key-alignment.flats": {
+      "probe": "barline-spacing.ly",
+      "score": "OKNF",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED THE SAME SESSION (-3.365 -> 0 exact). Flats half of the ossia key-alignment pair (B-flat major; see the sharps entry for the mechanism and the fix). LilyPond: OKEY == KEY == 4.185, offset 0 -- the same 0 as sharps, the pair's content-independence cross-check. Lily# now prints 0 on both halves: the shared key column is one expression, so it cannot depend on the key's content."
     }
   }
 }

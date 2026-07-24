@@ -349,6 +349,18 @@ internal static partial class GlyphMetrics
     /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
     public const double ArticFlageoletGlyphAdvance = 0.400000;
 
+    /// <summary>Common-time (C) signature — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-timesignatures.mf — timesig.C44 (timesig.C44 = U+E095 in this build)</remarks>
+    public static readonly BBox TimeSigCommon = new(0.000000, -1.000000, 1.700000, 1.000000);
+    /// <summary>Common-time (C) signature — advance width (next-glyph horizontal feed).</summary>
+    public const double TimeSigCommonAdvance = 1.696000;
+
+    /// <summary>Cut-common (alla breve) signature — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-timesignatures.mf — timesig.C22 (timesig.C22 = U+E096 in this build)</remarks>
+    public static readonly BBox TimeSigCutCommon = new(0.000000, -1.000000, 1.700000, 1.000000);
+    /// <summary>Cut-common (alla breve) signature — advance width (next-glyph horizontal feed).</summary>
+    public const double TimeSigCutCommonAdvance = 1.696000;
+
     /// <summary>Dynamic letter 'f' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — f (f = U+0066 in this build)</remarks>
     public static readonly BBox DynamicLetterF = new(-0.408000, -0.692000, 1.748000, 1.896000);

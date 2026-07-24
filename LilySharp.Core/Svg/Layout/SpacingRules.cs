@@ -152,24 +152,51 @@ internal static class SpacingRules
     /// Uses the treble G-clef stencil ink as default; for other clefs, use the overload with clefWidth.
     /// </remarks>
     /// <summary>
+    /// The ink width of a key signature — the sum of its accidentals' advances, 0 for an
+    /// empty (C major) signature. This is the ONE key-width model: the break-align
+    /// reservation (<see cref="CalculatePrefixWidth"/> → SolvePrefixColumns, the
+    /// KeySignature group extent RIGHT) and the drawn prefix (SharedRenderer) both read
+    /// it, so a custom (non-traditional) signature reserves exactly what it draws — the
+    /// defect the ledger pair line-start.time-to-first-note.{standard,custom}-key opened
+    /// was the reservation reading <c>Sharps</c> alone and dropping <c>Custom</c>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — the group extent
+    /// is the union of the engraved signatures' stencils; LilyPond has one key model
+    /// (keyAlterations), so its reservation IS its drawing.</remarks>
+    public static double KeySignatureInkWidth(KeySignature key)
+    {
+        if (key.Custom is { } custom)
+        {
+            double w = 0.0;
+            foreach (var (_, alter) in KeySignature.DecodeCustom(custom))
+                w += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+            return w;
+        }
+        if (key.Sharps == 0)
+            return 0.0;
+        return Math.Min(Math.Abs(key.Sharps), 7)
+            * GlyphMetrics.GetKeySignatureAccidentalWidth(key.Sharps > 0);
+    }
+
+    /// <summary>
     /// Line-start prefix-to-first-note spring (ideal, min) — see
     /// BreakAlignSpacing.FirstNoteSpring.
     /// </summary>
-    public static (double Ideal, double Min) FirstNoteSpring(int keySharps, bool includeTimeSignature, double clefWidth)
+    public static (double Ideal, double Min) FirstNoteSpring(KeySignature key, bool includeTimeSignature, double clefWidth)
         // clefWidth MUST be the SAME width CalculatePrefixWidth reserves for this line start,
         // so the clef-only case cancels to max(width, 5.0) from the clef's left ink, per
         // LilyPond's minimum-fixed-space. Pass MaxClefWidth(score): a bass/alto/C clef reserves
         // more than the treble G, and threading a mismatched width would break that cancellation
         // (the clef-only first note would no longer land 5.0 out). See defect-3 in the ledger.
         => BreakAlignSpacing.FirstNoteSpring(
-            Math.Abs(keySharps), includeTimeSignature, clefWidth);
+            KeySignatureInkWidth(key), includeTimeSignature, clefWidth);
 
-    public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature,
+    public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,
         int timeSigBeats = 4, int timeSigBeatType = 4)
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.LineStartClefWidth(ClefType.Treble),
-            Math.Abs(keySharps), keySharps > 0,
+            KeySignatureInkWidth(key),
             includeTimeSignature, timeSigBeats, timeSigBeatType);
     }
 
@@ -180,12 +207,12 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/break-alignment-interface.cc
     /// Use this overload when the clef type is known for accurate spacing.
     /// </remarks>
-    public static double CalculatePrefixWidth(double clefWidth, int keySharps,
+    public static double CalculatePrefixWidth(double clefWidth, KeySignature key,
         bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
             clefWidth,
-            Math.Abs(keySharps), keySharps > 0,
+            KeySignatureInkWidth(key),
             includeTimeSignature, timeSigBeats, timeSigBeatType);
     }
 
@@ -210,35 +237,40 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// The signed sharps of the WIDEST active key across the score's notation staves at a
-    /// system starting at <paramref name="startMeasureIndex"/> — the key whose width the shared
-    /// prefix column reserves and every staff's time signature break-aligns past. A transposed
+    /// The WIDEST active key across the score's notation staves at a system starting at
+    /// <paramref name="startMeasureIndex"/> — the key whose INK width the shared prefix
+    /// column reserves and every staff's time signature break-aligns past. A transposed
     /// part (<see cref="Staff.PerStaffKeySignature"/>) may carry more accidentals than the
-    /// primary, so its signature governs the shared time column (LP break-alignment, KeySignature
-    /// group extent = union across staves). All-tab scores print no key (returns 0).
+    /// primary, so its signature governs the shared time column (LP break-alignment,
+    /// KeySignature group extent = union across staves). Widest by
+    /// <see cref="KeySignatureInkWidth"/> — the union of engraved stencils is an ink
+    /// quantity, and it is what carries a CUSTOM signature into the reservation (a custom
+    /// key is <c>KeySignature(0, custom)</c>; comparing <c>Sharps</c> dropped it). All-tab
+    /// scores print no key (returns C major).
     /// </summary>
-    public static int WidestActiveKeySharps(MultiStaffScore score, int startMeasureIndex)
+    public static KeySignature WidestActiveKey(MultiStaffScore score, int startMeasureIndex)
     {
         if (score.AllStavesTab)
-            return 0;
-        int activeKeySharps = score.KeySignature.Sharps;
-        int widestAccidentals = -1;
+            return KeySignature.CMajor;
+        var activeKey = score.KeySignature;
+        double widestInk = -1.0;
         foreach (var staffGroup in score.StaffGroups)
             foreach (var staff in staffGroup.Staves)
             {
-                int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
+                var key = staff.PerStaffKeySignature ?? score.KeySignature;
                 var pv = staff.PrimaryVoice;
                 for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
                     foreach (var item in pv.Measures[m].Items)
                         if (item is KeySignatureChangeItem kc)
-                            sharps = kc.NewKey.Sharps;
-                if (Math.Abs(sharps) > widestAccidentals)
+                            key = kc.NewKey;
+                double ink = KeySignatureInkWidth(key);
+                if (ink > widestInk)
                 {
-                    widestAccidentals = Math.Abs(sharps);
-                    activeKeySharps = sharps;
+                    widestInk = ink;
+                    activeKey = key;
                 }
             }
-        return activeKeySharps;
+        return activeKey;
     }
 
     /// <summary>

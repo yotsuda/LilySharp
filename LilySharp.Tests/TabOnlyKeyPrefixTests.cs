@@ -54,11 +54,11 @@ public class TabOnlyKeyPrefixTests
         """;
 
     [Fact]
-    public void AllTabScore_DrawsNoKeySignature_SoLeadingKeySharpsIsZero()
+    public void AllTabScore_DrawsNoKeySignature_SoLeadingKeyIsEmpty()
     {
         var score = Collect(Src("e major", "tab bass bl"));
         Assert.True(score.AllStavesTab);
-        Assert.Equal(0, score.LeadingKeySharps);           // reclaimed — E major would be 4
+        Assert.Equal(KeySignature.CMajor, score.LeadingKey);   // reclaimed — E major would be 4
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public class TabOnlyKeyPrefixTests
     {
         var score = Collect(Src("e major", "staff bass bl  tab bass bl"));
         Assert.False(score.AllStavesTab);
-        Assert.Equal(4, score.LeadingKeySharps);           // E major = 4 sharps, still reserved
-        Assert.Equal(score.KeySignature.Sharps, score.LeadingKeySharps);
+        Assert.Equal(4, score.LeadingKey.Sharps);              // E major = 4 sharps, still reserved
+        Assert.Equal(score.KeySignature, score.LeadingKey);
     }
 
     [Fact]

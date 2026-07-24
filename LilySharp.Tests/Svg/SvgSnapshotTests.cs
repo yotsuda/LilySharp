@@ -280,6 +280,12 @@ public class SvgSnapshotTests
         yield return new object[] { "test/keysig-treble" };
         yield return new object[] { "test/keysig-bass" };
         yield return new object[] { "test/keysig-clefs" };
+        // A custom (non-traditional) signature reserves its INK width like the standard
+        // key it spells — the reserve/draw one-key-model unification (ledger KCS/KCC).
+        yield return new object[] { "test/custom-key" };
+        // The ossia's key sits in the system-wide key column, its glyph advances scaled
+        // with the small staff (ledger line-start.ossia-key-alignment).
+        yield return new object[] { "test/ossia-key" };
         // Middle C in all four clefs — guards that alto and tenor C-clefs are
         // positioned distinctly (tenor a third higher than alto).
         yield return new object[] { "test/clef-positions" };

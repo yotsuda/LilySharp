@@ -1309,6 +1309,85 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// Time signature → first note on a keyed, metered first system — the STANDARD key
+    /// control of the KCS/KCC pair. LilyPond places the head at the meter's ink RIGHT +
+    /// 2.0 (TimeSignature.space-alist (first-note . (semi-shrink-space . 2.0)) at natural
+    /// length): TIME 7.535, ink-right 9.235, HEAD 11.235 → 3.700. Opened as the control
+    /// and immediately non-zero — the keyed+metered line-start first-note regime had no
+    /// point until now.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \key d \major \time 4/4 d'4 e' fis' g' |
+    /// a'4 b' cis'' d'' }</c>.</remarks>
+    private static readonly string KCS = Score("d4 e fis g | a b cis' d' |", "KCS", "d major");
+
+    /// <summary>
+    /// The SAME two sharps as a CUSTOM (non-traditional) signature. LilyPond has only one
+    /// key model — keyAlterations — so its KCC dump is byte-identical to KCS; the pair's
+    /// disagreement on the Lily# side isolates the custom-key reserve/draw split
+    /// (WidestActiveKeySharps reads .Sharps only, a custom key is KeySignature(0, custom)).
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \set Staff.keyAlterations =
+    /// #`((3 . ,SHARP) (0 . ,SHARP)) \time 4/4 d'4 e' fis' g' | a'4 b' cis'' d'' }</c>.</remarks>
+    private static readonly string KCC = Score("d4 e fis g | a b cis' d' |", "KCC", "custom fis cis");
+
+    /// <summary>
+    /// The cut-common (2/2) half of the C-glyph width pair. LilyPond's default style
+    /// prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, LILC ink 1.7 both); every
+    /// other fraction is \number markup (Pango). Time → first note must equal KCS's
+    /// 3.700000 exactly — the pair's cross-check that the C widths ride one path.
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \key d \major \time 2/2 d'2 e' |
+    /// fis'2 g' }</c>.</remarks>
+    private static readonly string KC2 = Score("d2 e | fis2 g |", "KC2", "d major");
+
+    /// <summary>
+    /// An ossia (no clef on first appearance) above a keyed main staff — the ossia's key
+    /// signature must break-align into the ONE key column spanning the system, exactly
+    /// like the grand-staff clef/time columns. The measured quantity is the ossia key X
+    /// minus the main key X (metric-free; LilyPond prints 0). Sharps half of the pair.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score OKN (NR "Ossia staves" recipe — fontSize -3 +
+    /// staff-space magstep(-3), firstClef ##f, no Time_signature_engraver).</remarks>
+    private static readonly string OKN = $$"""
+        octave absolute
+        time 4/4
+        key d major
+
+        section Main {
+          melody { d4 e fis g | a b cis' d' | }
+          ossia_melody { d'4 e' fis' g' | r1 | }
+        }
+
+        form main { Main }
+
+        score main "OKN" {
+          staff melody
+          ossia ossia_melody
+        }
+        """;
+
+    /// <summary>Flats half of the ossia key-alignment pair (B-flat major). Must print the
+    /// same offset as OKN — a difference is a content-dependence defect of its own.</summary>
+    /// <remarks>LilyPond twin: probe score OKNF.</remarks>
+    private static readonly string OKNF = $$"""
+        octave absolute
+        time 4/4
+        key bes major
+
+        section Main {
+          melody { d4 ees f g | a bes c' d' | }
+          ossia_melody { d'4 ees' f' g' | r1 | }
+        }
+
+        form main { Main }
+
+        score main "OKNF" {
+          staff melody
+          ossia ossia_melody
+        }
+        """;
+
+    /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
     /// <c>Staff_spacing::get_spacing</c> governs; a system start is break-align spacing and
@@ -1545,5 +1624,14 @@ internal static class LpGeometryProbes
         new("line-start.clef-to-time.percussion", DCP, g => g.ClefToTimeSignatureOnFirstSystem()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
         new("line-start.clef-to-time.keyed", DCTK, g => g.ClefToTimeSignatureOnFirstSystem()),
+        // The break-align draw-walk regimes (reserve/draw split): KCS is the standard-key
+        // CONTROL, KCC the same two sharps declared `key custom` — the reservation reads
+        // KeySignature.Sharps only, so only KCC loses its key column. The OKN/OKNF pair
+        // measures the ossia key against the system-wide key column (metric-free, LP = 0).
+        new("line-start.time-to-first-note.standard-key", KCS, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.custom-key", KCC, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.ossia-key-alignment.sharps", OKN, g => g.OssiaKeyAlignmentOffset()),
+        new("line-start.ossia-key-alignment.flats", OKNF, g => g.OssiaKeyAlignmentOffset()),
     };
 }

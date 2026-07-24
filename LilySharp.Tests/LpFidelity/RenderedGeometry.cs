@@ -551,6 +551,54 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The TIME-signature anchor → the first notehead after it, on a single-system probe.
+    /// LilyPond places that head at the meter's ink RIGHT + 2.0 — TimeSignature.space-alist
+    /// (first-note . (semi-shrink-space . 2.0)) at its natural length under ragged-right —
+    /// so the anchor distance rides on the meter's ink width (3.70 for a 4/4).
+    /// </summary>
+    public double TimeSignatureToFirstNotehead()
+    {
+        var ts = Glyphs.FirstOrDefault(g => IsTimeSignature(g.Glyph),
+            throw_: "no time signature in the probe.\nDrawn geometry:\n" + Describe());
+        foreach (var g in Glyphs)   // Glyphs is left-to-right
+            if (g.X > ts.X + 1e-9 && IsNotehead(g.Glyph))
+                return g.X - ts.X;
+        throw new InvalidOperationException(
+            "no notehead after the time signature.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
+    /// The ossia staff's first key-signature accidental X minus the main staff's, on a
+    /// probe whose only accidentals are the two line-start key signatures. Metric-free:
+    /// two glyph anchors in the SAME render. LilyPond break-aligns the ossia's
+    /// KeySignature into the ONE key column spanning the system — the ossia has no clef,
+    /// yet its key prints at the main staff's key X — so the offset there is 0
+    /// (break-alignment-interface.cc:141-142, group extent = union across staves; probe
+    /// scores OKN/OKNF, and OKM shows the same under \magnifyStaff).
+    /// </summary>
+    /// <remarks>
+    /// The ossia's glyphs are told apart by their scaled font size (the ossia draws at
+    /// <c>EngravingDefaults.OssiaScale</c>); the recorder resolves the ossia group
+    /// transform, so both X values are absolute page space and directly comparable.
+    /// </remarks>
+    public double OssiaKeyAlignmentOffset()
+    {
+        var accs = Accidentals;
+        if (accs.Count == 0)
+            throw new InvalidOperationException(
+                "no accidentals in the probe (expected two key signatures).\n"
+                + "Drawn geometry:\n" + Describe());
+        double full = accs.Max(g => g.FontSize);
+        var main = accs.Where(g => Math.Abs(g.FontSize - full) < 1e-9).ToList();
+        var ossia = accs.Where(g => g.FontSize < full - 1e-9).ToList();
+        if (ossia.Count == 0)
+            throw new InvalidOperationException(
+                "no scaled (ossia) accidentals in the probe — the ossia key signature "
+                + "was not drawn.\nDrawn geometry:\n" + Describe());
+        return ossia.Min(g => g.X) - main.Min(g => g.X);
+    }
+
+    /// <summary>
     /// The anchor of the first NON-notehead music glyph right of <paramref name="x"/> — the
     /// change glyph of a mid-measure clef or key change.
     /// </summary>

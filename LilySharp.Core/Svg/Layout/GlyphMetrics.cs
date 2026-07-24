@@ -315,9 +315,27 @@ internal static partial class GlyphMetrics
         System.Math.Round(widthStaffSpaces / PangoQuantumStaffSpaces,
             System.MidpointRounding.AwayFromZero) * PangoQuantumStaffSpaces;
 
-    /// <summary>Gets the width of a time signature based on its digit widths.</summary>
-    public static double GetTimeSigWidth(int beats, int beatType) =>
-        System.Math.Max(GetTimeSigDigitWidth(beats), GetTimeSigDigitWidth(beatType));
+    /// <summary>
+    /// The engraved time-signature width. LilyPond's DEFAULT style prints 4/4 and 2/2 as
+    /// the <c>timesig.C44</c> / <c>timesig.C22</c> GLYPHS — the glyph (LILC ink) path,
+    /// both 1.7 wide — and every other fraction as stacked <c>\number</c> digits, the
+    /// Pango markup path <see cref="GetTimeSigDigitWidth"/> serves. The reservation must
+    /// ride whichever path the draw takes: reserving the digit width under a drawn C
+    /// glyph left every 4/4 first note 0.0953 short of LilyPond (ledger
+    /// line-start.time-to-first-note.{standard,custom}-key; the digit-path point
+    /// barline.next.time-change-to-notehead stays on the Pango width, exact).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/time-signature-settings.scm:954-964
+    /// make-c-time-signature-markup — the glyph branch is exactly (n=2 ∧ d=2) ∨ (n=4 ∧
+    /// d=4); :981-982 the default style is that procedure.</remarks>
+    public static double GetTimeSigWidth(int beats, int beatType)
+    {
+        if (beats == 4 && beatType == 4)
+            return TimeSigCommon.Width;
+        if (beats == 2 && beatType == 2)
+            return TimeSigCutCommon.Width;
+        return System.Math.Max(GetTimeSigDigitWidth(beats), GetTimeSigDigitWidth(beatType));
+    }
 
     /// <summary>
     /// Gets the advance width of a single time signature digit, snapped to Pango's grid the

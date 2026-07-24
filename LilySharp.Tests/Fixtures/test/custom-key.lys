@@ -1,0 +1,30 @@
+// Custom (non-traditional) key signature at the line start — D major's two sharps
+// written as `key custom`. Pins the reserve/draw unification: the reservation reads the
+// key's INK width (SpacingRules.KeySignatureInkWidth, the same model the drawn signature
+// uses), so the meter and first note sit exactly where a standard D major puts them.
+// Before the fix the springs reserved NO key column (the reservation read .Sharps only,
+// and a custom key is KeySignature(0, custom)), so the drawn meter overlapped the first
+// note. LilyPond twin: \set Staff.keyAlterations = #`((3 . ,SHARP) (0 . ,SHARP)) — its
+// geometry is byte-identical to \key d \major (ledger
+// line-start.time-to-first-note.custom-key, probe score KCC).
+title "Custom Key"
+
+octave absolute
+time 4/4
+key custom fis cis
+
+part melody
+
+phrase p1 {
+  d4 e fis g | a4 b cis' d' |
+}
+
+section Main {
+  melody { p1 }
+}
+
+form main { Main }
+
+score main "custom-key" {
+  staff melody
+}

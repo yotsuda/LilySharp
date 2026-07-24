@@ -55,16 +55,22 @@ public class TimeSignaturePangoWidthTests
         => Assert.Equal(expected, GlyphMetrics.GetTimeSigDigitWidth(digit), 6);
 
     /// <summary>
-    /// The 4/4 signature the ledger's <c>barline.next.time-change-to-notehead</c> is built
-    /// on: both digits are '4', so the width is the quantised '4'. Was 1.600000 before the
-    /// quantum was ported — the whole of that entry's -0.004735.
+    /// The default 4/4 and 2/2 print the <c>timesig.C44</c>/<c>timesig.C22</c> GLYPHS —
+    /// LilyPond's default style takes the glyph (LILC ink) path for exactly those two
+    /// fractions (make-c-time-signature-markup) — so their width is the C glyphs' LILC
+    /// ink 1.7, NOT a quantised digit (the former pin here asserted the digit width and
+    /// left every 4/4 first note 0.0953 short of LilyPond — ledger
+    /// line-start.time-to-first-note.{standard-key,cut-common}). Every OTHER fraction
+    /// stays on the Pango digit path: 3/4 rides its quantised '4' denominator, which is
+    /// what barline.next.time-change-to-notehead is exact on.
     /// </summary>
+    /// <remarks>LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.</remarks>
     [Fact]
-    public void FourFour_IsTheQuantisedFour_NotTheRawGlyph()
+    public void FourFourAndTwoTwo_AreTheCGlyphInk_NotQuantisedDigits()
     {
-        double w = GlyphMetrics.GetTimeSigWidth(4, 4);
-        Assert.Equal(1.604735, w, 6);
-        Assert.NotEqual(1.600000, w, 6); // the raw fattened advance, before quantisation
+        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(4, 4), 6); // timesig.C44 LILC
+        Assert.Equal(1.700000, GlyphMetrics.GetTimeSigWidth(2, 2), 6); // timesig.C22 LILC
+        Assert.Equal(1.604735, GlyphMetrics.GetTimeSigWidth(3, 4), 6); // digit path, unchanged
     }
 
     /// <summary>

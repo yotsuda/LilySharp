@@ -145,10 +145,11 @@ public sealed record MultiStaffScore
     public bool AllStavesTab => StaffGroups.Length > 0
         && StaffGroups.All(g => g.Staves.Length > 0 && g.Staves.All(s => s.IsTab));
 
-    /// <summary>The leading key-signature accidental count actually engraved at each
-    /// system head: the score key normally, but 0 for an all-tab score (tab never prints
-    /// a key signature, so its reserved prefix width is reclaimed).</summary>
-    public int LeadingKeySharps => AllStavesTab ? 0 : KeySignature.Sharps;
+    /// <summary>The leading key signature actually engraved at each system head: the
+    /// score key normally, but C major (nothing) for an all-tab score — tab never prints
+    /// a key signature, so its reserved prefix width is reclaimed. The full record, so a
+    /// custom (non-traditional) signature keeps its glyphs in the reservation.</summary>
+    public KeySignature LeadingKey => AllStavesTab ? KeySignature.CMajor : KeySignature;
 
     /// <summary>Total number of individual staves.</summary>
     public int TotalStaffCount => StaffGroups.Sum(g => g.StaffCount);

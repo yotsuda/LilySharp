@@ -187,7 +187,7 @@ internal sealed class LayoutEngine
                 SystemIndex: sysIdx, Y: currentY,
                 Width: _options.ContentWidth - sysIndent,
                 PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
-                    score.LeadingKeySharps, isFirstSystem && !score.AllStavesTab,
+                    score.LeadingKey, isFirstSystem && !score.AllStavesTab,
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent));

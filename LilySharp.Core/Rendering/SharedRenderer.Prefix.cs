@@ -316,15 +316,21 @@ internal static partial class SharedRenderer
         // Senza misura: unmeasured music prints NO signature.
         if (ts.SenzaMisura)
             return x;
+        // 4/4 and 2/2 print the C / cut-C GLYPH — LilyPond's default style takes the
+        // glyph (LILC) path for exactly these two fractions and the numbered markup
+        // path for everything else. The returned right edge is the glyph's LILC ink,
+        // the same width GlyphMetrics.GetTimeSigWidth reserves (one model; the old
+        // return was an invented flat 2.0).
+        // LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - 2, FontSize);
-            return x + 2.0;
+            return x + GlyphMetrics.TimeSigCommon.Width;
         }
         if (ts.Beats == 2 && ts.BeatType == 2)
         {
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - 2, FontSize);
-            return x + 2.0;
+            return x + GlyphMetrics.TimeSigCutCommon.Width;
         }
         // Stack numerator over denominator, each centered on the staff like
         // LilyPond: numerator centered at staff position +2 (device staffY+1),
@@ -386,30 +392,16 @@ internal static partial class SharedRenderer
     private static readonly int[] KeySigSharpSteps = [3, 0, 4, 1, 5, 2, 6];
     private static readonly int[] KeySigFlatSteps = [6, 2, 5, 1, 4, 0, 3];
 
-    /// <summary>
-    /// The ink width of a key signature — the sum of its accidentals' advances, 0 for an empty
-    /// (C major) signature. This is exactly what <see cref="BreakAlignSpacing.SolvePrefixColumns"/>
-    /// reserves (KeySignature group extent RIGHT), so the drawn time column and the layout's
-    /// reservation coincide — and LilyPond's key→time is measured off this same ink right edge
-    /// (rendered: KeySignature ext 2.2 for 2 sharps, TimeSignature at ink-right + 1.15).
-    /// </summary>
-    internal static double KeySignatureInkWidth(KeySignature key)
-    {
-        if (key.Custom is { } custom)
-        {
-            double w = 0.0;
-            foreach (var (_, alter) in KeySignature.DecodeCustom(custom))
-                w += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
-            return w;
-        }
-        if (key.Sharps == 0)
-            return 0.0;
-        return Math.Min(Math.Abs(key.Sharps), 7)
-            * GlyphMetrics.GetKeySignatureAccidentalWidth(key.Sharps > 0);
-    }
-
+    /// <param name="scale">The staff's notation scale — <c>EngravingDefaults.OssiaScale</c>
+    /// on an ossia, 1.0 elsewhere. The signature's INTERNAL glyph advances are stencil
+    /// composition, so they live in the staff's scaled frame and shrink with it, while the
+    /// signature's START <paramref name="x"/> is a shared break-align column in unscaled
+    /// line space. Mixing the two frames (unscaled advances inside a scaled ossia) is
+    /// exactly the units error the coordinate-frame rule forbids: LilyPond's ossia key
+    /// stencil measures its full ink scaled (OKN dump: ext 1.5558 ≈ 2.2 × magstep(-3)).</param>
     private static double DrawKeySignature(
-        KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc)
+        KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc,
+        double scale = 1.0)
     {
         // Non-traditional signature: draw the written (step, alter) pairs in
         // print order, each on the position the standard tables would give
@@ -430,7 +422,7 @@ internal static partial class SharedRenderer
                 int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
                 double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
-                x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+                x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0) * scale;
             }
             return x;
         }
@@ -444,7 +436,7 @@ internal static partial class SharedRenderer
 
         int n = Math.Min(Math.Abs(key.Sharps), 7);
 
-        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
+        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps) * scale;
         for (int i = 0; i < n; i++)
         {
             int staffPosition = KeySigStaffPosition(clef, isSharps, i);

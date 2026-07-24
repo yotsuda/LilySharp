@@ -160,6 +160,13 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     # The residual +2e-5 is Pango's own quantisation of the outline and stays named rather
     # than fitted (HANDOFF 5.2.1 (5)); Lily# has no Pango.
     #
+    # Common / cut-common time signatures. LilyPond's DEFAULT style prints 4/4 and 2/2 as
+    # these GLYPHS (scm/time-signature-settings.scm:954-964 make-c-time-signature-markup ->
+    # timesig.C44 / timesig.C22, glyph path = LILC ink); every other fraction takes the
+    # numbered markup (Pango) path the TimeSigDigit*Advance table serves.
+    GlyphSpec("TimeSigCommon",    "timesig.C44", "Common-time (C) signature",          "mf/feta-timesignatures.mf — timesig.C44"),
+    GlyphSpec("TimeSigCutCommon", "timesig.C22", "Cut-common (alla breve) signature",  "mf/feta-timesignatures.mf — timesig.C22"),
+
     # These are the seven letters the fetaText encoding draws dynamics from; they are
     # addressed by the bare ASCII name, not a "dynamics." prefix.
     GlyphSpec("DynamicLetterF", "f", "Dynamic letter 'f' (fetaText)", "mf/feta-dynamics.mf — f", source="outline"),

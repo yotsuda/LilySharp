@@ -420,18 +420,20 @@ internal static class BreakAlignSpacing
     /// (<c>extents[idx][RIGHT] + distance - extents[next][LEFT]</c>, with the clef/key/time
     /// stencils starting at 0 so <c>[LEFT] = 0</c>). The extents are GROUP extents — the union
     /// across the system's staves — so the caller passes the WIDEST clef (<see cref="clefWidth"/>)
-    /// and the WIDEST key (<see cref="keyAccidentalCount"/>): the whole point of break-alignment
-    /// is that one column spans all staves, so a grand staff's bass F clef fixes the treble
-    /// staff's meter column and a transposed part's larger key fixes everyone's time column.
-    /// A pure forward pass — no fixpoint, no dependency on note positions — so it slots exactly
-    /// where the scalar prefix width used to be computed, before the system spring solve.
+    /// and the WIDEST key's INK width (<paramref name="keyInkWidth"/>, from
+    /// <see cref="SpacingRules.KeySignatureInkWidth"/> — the SAME model the draw walk uses, so
+    /// a custom (non-traditional) signature reserves exactly what it draws): the whole point of
+    /// break-alignment is that one column spans all staves, so a grand staff's bass F clef fixes
+    /// the treble staff's meter column and a transposed part's larger key fixes everyone's time
+    /// column. A pure forward pass — no fixpoint, no dependency on note positions — so it slots
+    /// exactly where the scalar prefix width used to be computed, before the system spring solve.
     /// </remarks>
     public static PrefixColumns SolvePrefixColumns(
         double clefWidth,
-        int keyAccidentalCount, bool keySharps,
+        double keyInkWidth,
         bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
     {
-        bool hasKey = keyAccidentalCount > 0;
+        bool hasKey = keyInkWidth > 0.0;
 
         // The line-start break-align order (clef, then the key and time when present).
         // LeftEdge → Clef opens the prefix: break-alignment's origin (LeftEdge, extent 0) spaces
@@ -442,8 +444,7 @@ internal static class BreakAlignSpacing
             (BreakAlignSymbol.Clef, clefWidth),   // Clef group extent RIGHT (LEFT = 0)
         };
         if (hasKey)
-            items.Add((BreakAlignSymbol.KeySignature,
-                keyAccidentalCount * GlyphMetrics.GetKeySignatureAccidentalWidth(keySharps)));
+            items.Add((BreakAlignSymbol.KeySignature, keyInkWidth));
         if (includeTimeSignature)
             items.Add((BreakAlignSymbol.TimeSignature,
                 GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType)));
@@ -478,9 +479,9 @@ internal static class BreakAlignSpacing
     /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc.</remarks>
     public static double CalculatePrefixWidth(
         double clefWidth,
-        int keyAccidentalCount, bool keySharps,
+        double keyInkWidth,
         bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
-        => SolvePrefixColumns(clefWidth, keyAccidentalCount, keySharps,
+        => SolvePrefixColumns(clefWidth, keyInkWidth,
             includeTimeSignature, timeSigBeats, timeSigBeatType).Right;
 
     /// <summary>
@@ -510,11 +511,11 @@ internal static class BreakAlignSpacing
     /// </para>
     /// </remarks>
     public static (double Ideal, double Min) FirstNoteSpring(
-        int keyAccidentalCount, bool includeTimeSignature, double clefWidth)
+        double keyInkWidth, bool includeTimeSignature, double clefWidth)
     {
         if (includeTimeSignature)
             return (2.0, 1.0);   // semi-shrink: fixed = d/2, measured from the right edge
-        if (keyAccidentalCount > 0)
+        if (keyInkWidth > 0.0)
             return (2.5, 1.25);  // shrink-space: generously compressible, from the right edge
         // minimum-fixed-space 5.0, measured from the clef's LEFT edge with a max —
         // the prefix already holds the clef width, so the remaining gap absorbs it.

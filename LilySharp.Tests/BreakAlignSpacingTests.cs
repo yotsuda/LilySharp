@@ -17,6 +17,7 @@
 using Xunit;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Tests;
 
@@ -155,6 +156,11 @@ public class BreakAlignSpacingTests
 
     // === CalculatePrefixWidth integration tests ===
 
+    // The engine takes the key's INK width (the one model the draw shares, so a custom
+    // signature reserves what it draws); n standard sharps are n sharp advances.
+    private static double SharpsInk(int n) =>
+        n * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
+
     [Fact]
     public void PrefixWidth_FirstSystem_NoKey_MatchesRenderer()
     {
@@ -162,14 +168,14 @@ public class BreakAlignSpacingTests
         // time signature's INK; the 2.0 first-note distance is carried by
         // the first measure's leading spring (FirstNoteSpring), not here.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, 0, false, true, 4, 4);
+            GlyphMetrics.GClefWidth, 0.0, true, 4, 4);
 
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
         // LeftEdge→Clef 0.8 opens the prefix, then Clef→TimeSignature extra-space 1.52.
         double expected = EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth + 1.52 + timeSigWidth;
         Assert.Equal(expected, width, 1);
         Assert.Equal((2.0, 1.0),
-            BreakAlignSpacing.FirstNoteSpring(0, includeTimeSignature: true, GlyphMetrics.GClefWidth));
+            BreakAlignSpacing.FirstNoteSpring(0.0, includeTimeSignature: true, GlyphMetrics.GClefWidth));
     }
 
     [Fact]
@@ -177,7 +183,7 @@ public class BreakAlignSpacingTests
     {
         // D major (2 sharps), first system with 4/4 time — ink end only.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, 2, true, true, 4, 4);
+            GlyphMetrics.GClefWidth, SharpsInk(2), true, 4, 4);
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
@@ -194,14 +200,14 @@ public class BreakAlignSpacingTests
         // leading spring.
         // LILYPOND-REF: Clef space-alist (first-note . (minimum-fixed-space . 5.0))
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, 0, false, false);
+            GlyphMetrics.GClefWidth, 0.0, false);
 
         Assert.Equal(EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth, width, 1);
         // minimum-fixed-space 5.0 is measured from the clef's LEFT ink and absorbs the
         // clef width, so the prefix (the clef width) plus the leading spring sum to 5.0 —
         // the width is not added AFTER the prefix. LILYPOND-REF staff-spacing.cc:183-187.
         var (clefGap, clefMin) =
-            BreakAlignSpacing.FirstNoteSpring(0, includeTimeSignature: false, GlyphMetrics.GClefWidth);
+            BreakAlignSpacing.FirstNoteSpring(0.0, includeTimeSignature: false, GlyphMetrics.GClefWidth);
         Assert.Equal(5.0, GlyphMetrics.GClefWidth + clefGap, 6);
         Assert.Equal(clefGap, clefMin);
     }
@@ -212,22 +218,22 @@ public class BreakAlignSpacingTests
         // D major (2 sharps), continuation line — ink end only; the 2.5
         // key→first-note distance lives in the leading spring.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, 2, true, false);
+            GlyphMetrics.GClefWidth, SharpsInk(2), false);
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
         // LeftEdge→Clef 0.8 opens the prefix, then Clef→KeySignature extra-space 0.82.
         double expected = EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth + 0.82 + keyWidth;
         Assert.Equal(expected, width, 1);
         Assert.Equal((2.5, 1.25),
-            BreakAlignSpacing.FirstNoteSpring(2, includeTimeSignature: false, GlyphMetrics.GClefWidth));
+            BreakAlignSpacing.FirstNoteSpring(SharpsInk(2), includeTimeSignature: false, GlyphMetrics.GClefWidth));
     }
 
     [Fact]
     public void PrefixWidth_MoreKeySharps_Wider()
     {
-        double width0 = SpacingRules.CalculatePrefixWidth(0, true);
-        double width2 = SpacingRules.CalculatePrefixWidth(2, true);
-        double width4 = SpacingRules.CalculatePrefixWidth(4, true);
+        double width0 = SpacingRules.CalculatePrefixWidth(new KeySignature(0), true);
+        double width2 = SpacingRules.CalculatePrefixWidth(new KeySignature(2), true);
+        double width4 = SpacingRules.CalculatePrefixWidth(new KeySignature(4), true);
 
         Assert.True(width2 > width0, "2 sharps wider than 0");
         Assert.True(width4 > width2, "4 sharps wider than 2");
@@ -236,8 +242,8 @@ public class BreakAlignSpacingTests
     [Fact]
     public void PrefixWidth_WithTimeSig_WiderThanWithout()
     {
-        double withTime = SpacingRules.CalculatePrefixWidth(0, true);
-        double withoutTime = SpacingRules.CalculatePrefixWidth(0, false);
+        double withTime = SpacingRules.CalculatePrefixWidth(new KeySignature(0), true);
+        double withoutTime = SpacingRules.CalculatePrefixWidth(new KeySignature(0), false);
 
         Assert.True(withTime > withoutTime,
             $"With time ({withTime:F2}) should be wider than without ({withoutTime:F2})");
@@ -252,8 +258,8 @@ public class BreakAlignSpacingTests
         // across the clef-only / +key / +key+time cases (equivalence of the refactor).
         foreach (var (keys, time) in new[] { (0, false), (0, true), (2, false), (2, true), (4, true) })
         {
-            var cols = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, keys, keys > 0, time);
-            double width = BreakAlignSpacing.CalculatePrefixWidth(GlyphMetrics.GClefWidth, keys, keys > 0, time);
+            var cols = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, SharpsInk(keys), time);
+            double width = BreakAlignSpacing.CalculatePrefixWidth(GlyphMetrics.GClefWidth, SharpsInk(keys), time);
             Assert.Equal(width, cols.Right, 9);
         }
     }
@@ -262,7 +268,7 @@ public class BreakAlignSpacingTests
     public void SolvePrefixColumns_ColumnsAreOrderedAndSpaced()
     {
         // Clef opens at the LeftEdge->Clef offset; key and time each sit strictly right of it.
-        var cols = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, 2, keySharps: true, includeTimeSignature: true);
+        var cols = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, SharpsInk(2), includeTimeSignature: true);
         Assert.Equal(EngravingDefaults.ClefGlyphXOffset, cols.ClefX, 9);
         Assert.True(cols.HasKey && cols.HasTime);
         Assert.True(cols.KeyX > cols.ClefX, "key right of clef");
@@ -275,9 +281,9 @@ public class BreakAlignSpacingTests
     {
         // The break-align generalisation: a WIDER key (union extent across staves) moves the
         // shared time column right, so a transposed part's key aligns every staff's meter.
-        double timeNoKey = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, 0, false, true).TimeX;
-        double timeTwoSharp = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, 2, true, true).TimeX;
-        double timeFourSharp = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, 4, true, true).TimeX;
+        double timeNoKey = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, 0.0, true).TimeX;
+        double timeTwoSharp = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, SharpsInk(2), true).TimeX;
+        double timeFourSharp = BreakAlignSpacing.SolvePrefixColumns(GlyphMetrics.GClefWidth, SharpsInk(4), true).TimeX;
         Assert.True(timeTwoSharp > timeNoKey, "a key pushes the time column right of the no-key case");
         Assert.True(timeFourSharp > timeTwoSharp, "a wider key pushes it further");
     }

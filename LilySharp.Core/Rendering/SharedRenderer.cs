@@ -246,16 +246,26 @@ internal static partial class SharedRenderer
         // wider key pushes the concert staff's meter to the SAME X rather than each staff
         // spacing its meter off its own key. Computed as the MAX of each staff's own would-be
         // meter X: a score whose staves share a key is byte-identical (max == each), and only
-        // genuinely differing keys re-align. Uses the KEY INK width (KeySignatureInkWidth), the
+        // genuinely differing keys re-align. Uses the KEY INK width (SpacingRules
+        // .KeySignatureInkWidth — the ONE model the reservation reads too), the
         // same width the layout's break-align reservation uses, so the drawn meter and the
         // reserved column coincide — one model, not two — and both match LilyPond's key→time
         // (measured off the key's ink RIGHT edge, extra-space 1.15).
+        // Shared KEY column: the KeySignature break-aligns into ONE column spanning the
+        // system exactly like the clef and time columns — every staff's signature starts
+        // at the widest clef's right + the Clef→Key gap, INCLUDING an ossia whose first
+        // appearance draws no clef of its own (its key still sits in the system column,
+        // not at some LeftEdge distance — the ledger pair line-start.ossia-key-alignment
+        // measured LilyPond's OKEY anchor equal to the main staff's KEY anchor).
+        // LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — group extent = union
+        // across staves; :242 — the next column offsets from the union RIGHT.
+        double sharedKeyX;
         double sharedTimeX;
         {
             double clefRightX = systemStartX + EngravingDefaults.ClefGlyphXOffset + maxClefWidth;
             double clefToTime = clefRightX + BreakAlignSpacing.GetSpacing(
                 BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature).Value;
-            double clefToKey = clefRightX + BreakAlignSpacing.GetSpacing(
+            sharedKeyX = clefRightX + BreakAlignSpacing.GetSpacing(
                 BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
             double keyToTime = BreakAlignSpacing.GetSpacing(
                 BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature).Value;
@@ -267,9 +277,13 @@ internal static partial class SharedRenderer
                 var k = ResolveKeySignature(st, system, score);
                 if (GetSystemStartKeyChange(st, system) is { } kc)
                     k = kc.NewKey;
-                bool keyed = k.Sharps != 0 || k.Custom is not null;
-                double tx = keyed
-                    ? clefToKey + KeySignatureInkWidth(k) + keyToTime
+                // "Keyed" is ink > 0 — the SAME predicate the reservation's key column
+                // uses (SolveColumns skips zero-width items), so a degenerate signature
+                // with glyphless Custom (e.g. `key custom` naming no pitches) neither
+                // draws nor spaces a key column on either side.
+                double keyInk = SpacingRules.KeySignatureInkWidth(k);
+                double tx = keyInk > 0.0
+                    ? sharedKeyX + keyInk + keyToTime
                     : clefToTime;
                 sharedTimeX = Math.Max(sharedTimeX, tx);
             }
@@ -486,14 +500,23 @@ internal static partial class SharedRenderer
                         activeKey = startKeyChange.NewKey;
                         keySigPos = startKeyChange.SourcePosition;
                     }
-                    // Only a non-empty signature draws and takes the Clef→KeySignature gap;
+                    // Only a non-empty signature draws, at the SHARED key column
+                    // (sharedKeyX): the KeySignature break-aligns into one column spanning
+                    // the system, so an ossia whose first appearance has no clef of its own
+                    // still prints its key at the main staves' key X — not at some gap off
+                    // a clef that is not there (ledger line-start.ossia-key-alignment).
                     // C major draws nothing and leaves the meter spaced from the clef itself.
-                    keyDrawn = activeKey.Sharps != 0 || activeKey.Custom is not null;
+                    // For a staff with a clef this is byte-identical to the former
+                    // prefixEndX + Clef→Key walk (the clef return IS the shared clef right).
+                    // "Keyed" is ink > 0 — the reservation's predicate (SolveColumns skips
+                    // zero-width items), so draw and reserve agree even for a degenerate
+                    // glyphless Custom signature.
+                    keyDrawn = SpacingRules.KeySignatureInkWidth(activeKey) > 0.0;
                     if (keyDrawn)
-                        prefixEndX += BreakAlignSpacing.GetSpacing(
-                            BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
+                        prefixEndX = sharedKeyX;
                     using (SourceScope(sgc, keySigPos))
-                        prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
+                        prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc,
+                            isOssia ? OssiaScale : 1.0);
                 }
                 if (!isOssia)
                 {
