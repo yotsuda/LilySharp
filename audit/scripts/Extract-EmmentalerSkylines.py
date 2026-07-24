@@ -27,9 +27,16 @@ HOW LilyPond builds the skyline (verified against a live 2.26.0 dump, see below)
     of a flat's LEFT skyline bottoms at x=-0.108 (the OUTLINE left), not the LILC
     grob extent -0.12 — confirming scale 1.0, no LILC rescale.
   * flats and flatflats get one extra RIGHT building at x = stencil.right*0.375
-    over the stencil's Y-extent (lily/accidental.cc:75-81): "a bit more padding
-    for the right of the stem ... brings flats closer to doubleflats". The
-    stencil extent here is the LILC bbox.
+    over the stencil's Y-extent (lily/accidental.cc:65-82) — but ONLY when the
+    accidental is NOT parenthesized, so that branch lives at RUNTIME
+    (AccidentalPlacement.GlyphSkylinePair), matching LilyPond's placement of it
+    in horizontal_skylines rather than in the glyph data. This file bakes RAW
+    outlines only.
+  * a courtesy (cautionary) accidental's stencil embeds accidentals.leftparen /
+    accidentals.rightparen (accidental.cc:33-43 parenthesize, add_at_edge with
+    padding 0), and the skyline is built over that combined stencil — so the
+    paren glyphs' raw outline skylines are baked here too and composed at
+    runtime by shifting each to the accidental's LILC edge.
 
 The classified segments are stored as sign-framed skyline BUILDINGS
 (value = sky*x, RIGHT sky=+1, LEFT sky=-1) — the same representation
@@ -37,7 +44,8 @@ SkylineBuilding uses — so the C# side only loads numbers.
 
 The live LilyPond dump this was calibrated against is committed and re-runnable:
 audit/lp-geometry/probes/accidental-skyline.ly (the flat/sharp horizontal-skylines
-plus the column gaps position_apes produces).
+plus the column gaps position_apes produces, and the AccidentalCautionary
+skylines the runtime paren composition must reproduce).
 
 Run after the bundled Emmentaler font is updated; CI should re-run and assert the
 output is unchanged.
@@ -58,19 +66,24 @@ STAFF_SPACE_UNITS = 250.0
 # Emmentaler is a CFF (PostScript) font: contours wind counter-clockwise.
 ORIENTATION_CCW = True
 
-# Accidentals to bake: (csharp kind, feta glyph, LILC bbox (L,B,R,T) in ss, flat-fatten?)
-# LILC bbox mirrors GlyphMetricsGenerated; only the flat/flatflat rows use it (for the
-# 0.375 fattening's Y-extent and right edge — see accidental.cc:75-81).
+# Accidentals to bake: (csharp kind, feta glyph). RAW outlines only — the flat 0.375
+# fattening is a RUNTIME branch (accidental.cc:65-82, skipped when parenthesized) and
+# lives in AccidentalPlacement.GlyphSkylinePair, not in the glyph data.
 ACCIDENTALS = [
-    ("sharp",       "accidentals.sharp",       (0.0,   -1.5,  1.1,  1.5),  False),
-    ("flat",        "accidentals.flat",        (-0.12, -0.63, 0.80, 1.83), True),
-    ("natural",     "accidentals.natural",     (0.0,   -1.5,  0.6666, 1.5), False),
-    ("doubleSharp", "accidentals.doublesharp", (0.0,   -0.5,  1.0,  0.5),  False),
-    ("doubleFlat",  "accidentals.flatflat",    (-0.12, -0.63, 1.45, 1.83), True),
+    ("sharp",       "accidentals.sharp"),
+    ("flat",        "accidentals.flat"),
+    ("natural",     "accidentals.natural"),
+    ("doubleSharp", "accidentals.doublesharp"),
+    ("doubleFlat",  "accidentals.flatflat"),
 ]
 
-# LILYPOND-REF: lily/accidental.cc:76 — right = stencil.extent(X)[RIGHT] * 0.375
-FLAT_FATTEN_FRAC = 0.375
+# Parenthesis glyphs a courtesy accidental's stencil embeds
+# (accidental.cc:33-43 parenthesize). Baked as raw outlines in their own glyph
+# frame; the runtime composes them at the accidental's LILC edges (padding 0).
+PARENS = [
+    ("leftParen",  "accidentals.leftparen"),
+    ("rightParen", "accidentals.rightparen"),
+]
 
 
 def bezier_pt(p0, p1, p2, p3, t):
@@ -168,16 +181,9 @@ def classify(contour, both):
     return left, right
 
 
-def build(glyphset, glyph, lilc, fatten):
+def build(glyphset, glyph):
     contour, both = outline_segments(glyphset, glyph)
-    left, right = classify(contour, both)
-    if fatten:
-        L, B, R, T = lilc
-        # LILYPOND-REF: accidental.cc:75-81 — one flat RIGHT building at
-        # x = stencil.right * 0.375 over the stencil's Y-extent.
-        x = R * FLAT_FATTEN_FRAC
-        right.append((B, x, x, T))  # sky=+1, flat building (startValue==endValue)
-    return left, right
+    return classify(contour, both)
 
 
 def fmt(v):
@@ -222,8 +228,10 @@ def main():
     L.append("// flattened to max(2, len/0.2) segments, classified by contour orientation")
     L.append("// (Emmentaler is CFF => CCW). The effective outline->stencil scale is 1.0 for")
     L.append("// accidentals, so a skyline coordinate is just the outline in staff spaces")
-    L.append("// (1 ss = unitsPerEm/4 = 250 font units). Flats/flatflats carry one extra RIGHT")
-    L.append("// building at x = stencil.right*0.375 (accidental.cc:75-81).")
+    L.append("// (1 ss = unitsPerEm/4 = 250 font units). These are RAW outlines: the flat")
+    L.append("// 0.375 fattening (accidental.cc:65-82, skipped when parenthesized) and the")
+    L.append("// courtesy paren composition (accidental.cc:33-43 parenthesize) are runtime")
+    L.append("// branches in AccidentalPlacement.GlyphSkylinePair, where LilyPond has them.")
     L.append("//")
     L.append("// Each array is a flat list of skyline BUILDINGS, four doubles apiece:")
     L.append("//   start (yLow), startValue (sky*x at yLow), endValue (sky*x at yHigh), end (yHigh)")
@@ -235,11 +243,11 @@ def main():
     L.append("{")
 
     kinds = []
-    for kind, glyph, lilc, fatten in ACCIDENTALS:
+    for kind, glyph in ACCIDENTALS + PARENS:
         if glyph not in order:
             sys.stderr.write(f"ERROR: glyph name not in font: {glyph}\n")
             return 1
-        left, right = build(glyphset, glyph, lilc, fatten)
+        left, right = build(glyphset, glyph)
         cap = kind[0].upper() + kind[1:]
         L.append(f"    // ===== {kind} ({glyph}): {len(left)} LEFT + {len(right)} RIGHT buildings =====")
         L.extend(emit_side(f"AccSky{cap}L", left))
@@ -247,16 +255,27 @@ def main():
         L.append("")
         kinds.append((kind, cap))
 
+    acc_kinds = [(k, c) for (k, c) in kinds if k not in ("leftParen", "rightParen")]
+
     # Loader: build the HorizontalSkyline pair for a kind, cached.
     L.append("    /// <summary>The (LEFT, RIGHT) horizontal skyline pair for an accidental kind,")
     L.append("    /// in the glyph's own frame (X from the glyph origin, Y centred on the note).</summary>")
     L.append("    public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalSkylinePair(string kind) => kind switch")
     L.append("    {")
-    for kind, cap in kinds:
+    for kind, cap in acc_kinds:
         L.append(f"        \"{kind}\" => (AccSkyPair{cap}.Left, AccSkyPair{cap}.Right),")
     L.append("        // naturals-as-fallback: an unknown kind draws the natural sign.")
     L.append("        _ => (AccSkyPairNatural.Left, AccSkyPairNatural.Right),")
     L.append("    };")
+    L.append("")
+    L.append("    /// <summary>The raw outline skyline pair of accidentals.leftparen /")
+    L.append("    /// accidentals.rightparen, in each paren glyph's own frame. A courtesy")
+    L.append("    /// accidental's stencil embeds these at its LILC edges (padding 0), and the")
+    L.append("    /// runtime composition mirrors that placement.")
+    L.append("    /// LILYPOND-REF: lily/accidental.cc:33-43 parenthesize.</summary>")
+    L.append("    public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalParenSkylinePair(bool leftParen) =>")
+    L.append("        leftParen ? (AccSkyPairLeftParen.Left, AccSkyPairLeftParen.Right)")
+    L.append("                  : (AccSkyPairRightParen.Left, AccSkyPairRightParen.Right);")
     L.append("")
     for kind, cap in kinds:
         L.append(f"    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPair{cap} =")
@@ -266,7 +285,7 @@ def main():
     L.append("")
 
     out_path.write_text("\n".join(L), encoding="utf-8")
-    print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals)")
+    print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals + {len(PARENS)} parens)")
     return 0
 
 

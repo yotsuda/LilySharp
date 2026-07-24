@@ -114,6 +114,65 @@ public class AccidentalPlacementTests
         Assert.Null(layout);
     }
 
+    // --- Courtesy (parenthesized) accidental skylines ---
+    // Expected values are read off a LIVE LilyPond 2.26.0 dump of AccidentalCautionary's
+    // horizontal-skylines (audit/lp-geometry/probes/accidental-skyline.ly, scores
+    // PFLAT/PSHARP/PNAT): the stencil embeds accidentals.leftparen/rightparen at the
+    // accidental's LILC edges with padding 0 and the skyline is the combined stencil's
+    // REAL outline — the parens span y = ±1.052 with the belly at y = 0, and above the
+    // paren the accidental's own outline shows through.
+    // LILYPOND-REF: lily/accidental.cc:33-43 parenthesize; :45-84 horizontal_skylines.
+
+    [Fact]
+    public void CourtesySharp_SkylineIsParenOutline_NotABox()
+    {
+        var (left, right) = AccidentalPlacement.GlyphSkylinePair("sharp", isCourtesy: true, scale: 1.0);
+
+        // Paren bellies at y=0: right = bbox.Right 1.1 + paren 0.6, left = 0 - 0.6.
+        Assert.Equal(1.7, right.X(0), 9);
+        Assert.Equal(-0.6, left.X(0), 9);
+        // Above the paren's top (±1.052) the sharp's OWN outline shows through: LilyPond
+        // dumps 0.8639999... between its bars at y=1.2. The former box model kept the
+        // paren wall (1.7) up to the sharp's ±1.5 here.
+        Assert.Equal(0.864, right.X(1.2), 5);
+    }
+
+    [Fact]
+    public void CourtesyFlat_SkipsTheFattenBranch()
+    {
+        var (left, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: true, scale: 1.0);
+
+        Assert.Equal(1.4, right.X(0), 9);    // bbox.Right 0.8 + paren 0.6
+        Assert.Equal(-0.72, left.X(0), 9);   // bbox.Left -0.12 - paren 0.6
+        // accidental.cc:65-82 applies the 0.375 fattening ONLY when NOT parenthesized:
+        // at y=1.5 the courtesy flat shows its bare stem outline (LP interpolates to
+        // ~0.10134 between the dump vertices), not the 0.30 fatten wall.
+        Assert.True(right.X(1.5) < 0.29,
+            $"courtesy flat must not carry the 0.375 fatten wall, got {right.X(1.5)}");
+        Assert.Equal(0.10134, right.X(1.5), 3);
+    }
+
+    [Fact]
+    public void BareFlat_KeepsTheFattenWall()
+    {
+        // The fatten moved from the baked data to a runtime branch; a bare flat must
+        // still show the 0.30 wall (bbox.Right 0.8 * 0.375) over the stencil Y-extent.
+        var (_, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: false, scale: 1.0);
+
+        Assert.Equal(0.3, right.X(1.5), 9);
+    }
+
+    [Fact]
+    public void CourtesyNatural_ParenSpanIsNarrowerThanTheGlyph()
+    {
+        var (_, right) = AccidentalPlacement.GlyphSkylinePair("natural", isCourtesy: true, scale: 1.0);
+
+        Assert.Equal(1.2666, right.X(0), 9); // bbox.Right 0.6666 + paren 0.6
+        // At y=1.3 (above the paren top 1.052) only the natural's own stem remains:
+        // LP interpolates to ~0.16581. The box model kept 1.2666 up to ±1.5 here.
+        Assert.Equal(0.16581, right.X(1.3), 3);
+    }
+
     // --- New tests for LilyPond-faithful algorithm ---
 
     [Fact]

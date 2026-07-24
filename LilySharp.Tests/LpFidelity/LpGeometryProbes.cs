@@ -98,6 +98,16 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' e' f' | cis'4 d' e' f'     (accidental opening the measure)
     private static readonly string X = Score("c4 d e f | cis d e f |", "X");
 
+    // LilyPond twin: \key d \major c'1  (a single note carrying a NATURAL, cancelling the key's
+    // C#). Measures the single-note accidental DRAW gap: the natural's real right skyline clears
+    // the head at 0.367672, not the fixed AccidentalNoteGap 0.35, so HEAD - ACC anchor is 1.034272.
+    private static readonly string NAT = Score("c1 |", "NAT", "d major");
+
+    // LilyPond twin: \key c \major ces'1  (a single note carrying a FLAT). The flat's ink starts
+    // 0.12 LEFT of its origin, so the fixed-gap draw over-counted the overhang and placed it at
+    // gap 0.47 instead of LilyPond's 0.35; HEAD - ACC anchor is 1.150000.
+    private static readonly string FLAT = Score("ces1 |", "FLAT", "c major");
+
     // --- CHORD accidental stacking (Accidental_placement::calc_positioning_done) ---
     // Score X measures a SINGLE accidental; these four carry a two-note cluster (a written
     // third) whose accidental glyphs OVERLAP vertically and are forced into TWO columns, so
@@ -1327,6 +1337,11 @@ internal static class LpGeometryProbes
         // bar-line side and the accidental-to-head side, which have different owners.
         new("barline.next.accidental", X, g => g.BarlineRightToNextGlyph(MidLineBarline)),
         new("barline.next.accidental-to-notehead", X, g => g.BarlineRightToNextNotehead(MidLineBarline)),
+        // The single-note accidental DRAW gap. A natural clears its head at 0.367672 (its real
+        // right skyline, not 0.35); a flat's ink starts 0.12 left of its origin, so the fixed-gap
+        // draw over-placed it. Sharps (Left 0, box) are unaffected. See NAT / FLAT.
+        new("accidental.single-natural-to-notehead", NAT, g => g.NaturalToNoteheadAnchor()),
+        new("accidental.single-flat-to-notehead", FLAT, g => g.FlatToNoteheadAnchor()),
 
         // The first points to reach Accidental_placement's CHORD stacking (two accidentals
         // forced into two columns). Each alteration is a mirror pair (below/above the middle

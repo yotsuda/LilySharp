@@ -143,30 +143,27 @@ internal sealed class AccidentalPlacement
     /// <summary>
     /// Calculates position for a single note's accidental.
     /// </summary>
-    public AccidentalLayout? CalculateSinglePosition(NoteItem note)
+    public AccidentalLayout? CalculateSinglePosition(NoteItem note, double scale = 1.0)
+        => CalculateSinglePosition(note.StaffPosition, note.Accidental, note.IsCourtesy, scale);
+
+    /// <summary>
+    /// The placement of ONE note's accidental (a full <see cref="NoteItem"/> or a grace
+    /// <see cref="GraceNoteInfo"/>, reached through its primitives). LilyPond runs the SAME
+    /// position_apes over every accidental, single or chord, so this is
+    /// <see cref="CalculatePositions"/> over a ONE-element list — not a separate single-ape
+    /// algorithm. Grace / cue notes pass scale &lt; 1; scale 1.0 is exact, so the reservation
+    /// callers stay byte-identical. Returns null when there is no accidental.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/accidental-placement.cc:391-438 position_apes.</remarks>
+    public AccidentalLayout? CalculateSinglePosition(
+        int staffPosition, string? accidental, bool isCourtesy, double scale = 1.0)
     {
-        if (string.IsNullOrEmpty(note.Accidental))
+        if (string.IsNullOrEmpty(accidental))
             return null;
-
-        // One accidental against one note at the column origin — the single-ape case of
-        // position_apes, so the glyph clears the head by right-padding + padding = 0.35.
-        // LILYPOND-REF: accidental-placement.cc:391-438 position_apes.
-        var nhBBox = GlyphMetrics.NoteheadBlack;
-        double yCenterSS = note.StaffPosition / 2.0;
-        var reference = HorizontalSkyline.FromBox(
-            yCenterSS + nhBBox.Bottom, yCenterSS + nhBBox.Top, 0, nhBBox.Width,
-            HorizontalDirection.Left);
-        reference.Raise(-_params.RightPadding);
-
-        var (_, glyphRight) = GlyphSkylinePair(note.Accidental, note.IsCourtesy, 1.0);
-        glyphRight.Shift(yCenterSS);
-        double offset = -glyphRight.Distance(reference, _params.HorizonPadding);
-        if (double.IsInfinity(offset)) offset = 0; else offset -= _params.Padding;
-
-        var bbox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
-        return new AccidentalLayout(
-            note.StaffPosition, note.Accidental,
-            InkLeft(offset, bbox.Left, note.IsCourtesy, 1.0), note.IsCourtesy);
+        var note = new ChordNoteInfo(
+            staffPosition, accidental, NeedsLedgerLines: false, IsCourtesy: isCourtesy);
+        var layouts = CalculatePositions(new[] { note }, headOffsets: null, scale);
+        return layouts.Length > 0 ? layouts[0] : (AccidentalLayout?)null;
     }
 
     /// <summary>
@@ -185,26 +182,42 @@ internal sealed class AccidentalPlacement
 
     /// <summary>
     /// The accidental glyph's (LEFT, RIGHT) outline skyline pair, freshly cloned so the
-    /// caller may mutate it, cue-scaled about the origin. Courtesy accidentals add the
-    /// parenthesis ink as a box on each side, since LilyPond parenthesizes the stencil and
-    /// the parens then join the skyline.
+    /// caller may mutate it, cue-scaled about the origin. A courtesy accidental's stencil
+    /// embeds the real leftparen/rightparen glyphs at its LILC edges (padding 0), and the
+    /// skyline is built over that combined stencil — so the parens' baked outline skylines
+    /// are composed in here. A bare flat/double-flat instead takes the 0.375 right-side
+    /// fattening, which LilyPond skips when parenthesized.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/accidental.cc:48 horizontal_skylines; :35-46 parenthesize.</remarks>
-    private static (HorizontalSkyline Left, HorizontalSkyline Right) GlyphSkylinePair(
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental.cc:45-84 horizontal_skylines — skylines_from_stencil
+    /// over the printed stencil; :33-43 parenthesize (add_at_edge X LEFT/RIGHT, padding 0);
+    /// :65-82 the flat 0.375 right-skyline merge, guarded on !parenthesized.
+    /// </remarks>
+    internal static (HorizontalSkyline Left, HorizontalSkyline Right) GlyphSkylinePair(
         string accidental, bool isCourtesy, double scale)
     {
         var (bakedLeft, bakedRight) = GlyphMetrics.AccidentalSkylinePair(accidental);
         var left = bakedLeft.Clone();
         var right = bakedRight.Clone();
+        var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
         if (isCourtesy)
         {
-            var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
-            double lpW = GlyphMetrics.AccidentalLeftParen.Width;
-            double rpW = GlyphMetrics.AccidentalRightParen.Width;
-            left.Merge(HorizontalSkyline.FromBox(
-                bbox.Bottom, bbox.Top, bbox.Left - lpW, bbox.Left, HorizontalDirection.Left));
+            // parenthesize(): each paren's stencil extent butts against the accidental's
+            // LILC extent with 0 padding — open's RIGHT at the accidental's LEFT, close's
+            // LEFT at its RIGHT. Raise() is the X translation of a horizontal skyline.
+            MergeParen(left, right, leftParen: true,
+                bbox.Left - GlyphMetrics.AccidentalLeftParen.Right);
+            MergeParen(left, right, leftParen: false,
+                bbox.Right - GlyphMetrics.AccidentalRightParen.Left);
+        }
+        else if (accidental is "flat" or "doubleFlat")
+        {
+            // "a bit more padding for the right of the stem" — one box on the RIGHT
+            // skyline at x = stencil-right * 0.375 over the stencil's Y-extent,
+            // NOT applied to a parenthesized accidental.
             right.Merge(HorizontalSkyline.FromBox(
-                bbox.Bottom, bbox.Top, bbox.Right, bbox.Right + rpW, HorizontalDirection.Right));
+                bbox.Bottom, bbox.Top, bbox.Left, bbox.Right * 0.375,
+                HorizontalDirection.Right));
         }
         if (scale != 1.0)
         {
@@ -212,6 +225,20 @@ internal sealed class AccidentalPlacement
             right.Scale(scale);
         }
         return (left, right);
+    }
+
+    /// <summary>Merges one paren glyph's baked outline skylines, translated to
+    /// <paramref name="dx"/> in the accidental's frame, into the accidental's pair.</summary>
+    private static void MergeParen(
+        HorizontalSkyline left, HorizontalSkyline right, bool leftParen, double dx)
+    {
+        var (parenLeft, parenRight) = GlyphMetrics.AccidentalParenSkylinePair(leftParen);
+        var pl = parenLeft.Clone();
+        pl.Raise(dx);
+        left.Merge(pl);
+        var pr = parenRight.Clone();
+        pr.Raise(dx);
+        right.Merge(pr);
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(

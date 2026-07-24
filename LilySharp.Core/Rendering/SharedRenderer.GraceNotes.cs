@@ -87,8 +87,12 @@ internal static partial class SharedRenderer
                             os.YUp(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
                             EngravingDefaults.NoteheadBlackWidth * eff,
                             unit: os.Size(1.0, g.StaffIndex));
-                    if (note.Accidental is { } acc)
-                        DrawAccidental(acc, isCourtesy: false, currentX, y,
+                    // Same single-ape skyline path as full notes (draw = reserve): a grace
+                    // natural clears its head by its real right skyline, not the fixed gap.
+                    if (note.Accidental is { } acc
+                        && AccidentalColumn.CalculateSinglePosition(
+                            note.StaffPosition, acc, isCourtesy: false, eff) is { } al)
+                        DrawAccidentalAtInkLeft(acc, isCourtesy: false, currentX + al.XOffset, y,
                             g.SourcePosition, gc, eff);
                     gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
                         GlyphMetrics.NoteheadBlackAdvance * eff,

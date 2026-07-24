@@ -74,3 +74,48 @@
   \override NoteHead.after-line-breaking = #(rec "CFLAT-HEAD")
   \override Accidental.after-line-breaking = #(rec "CFLAT-ACC")
 } { <bes' des''>1 } } }
+
+%% (3) The COURTESY (cautionary) accidental's skylines. The cautionary is a SEPARATE grob,
+%%     AccidentalCautionary (accidental-engraver.cc:294; parenthesized #t in define-grobs.scm)
+%%     — an Accidental override dumps NOTHING for bes'? / c'? / fis'?. Its stencil embeds
+%%     accidentals.leftparen/rightparen at the accidental's LILC edges with padding 0
+%%     (accidental.cc:33-43 parenthesize), the skyline is built over that combined stencil,
+%%     and the flat 0.375 fattening is SKIPPED when parenthesized (accidental.cc:65-82).
+%%     EXPECTED (LilyPond 2.26.0), which GlyphSkylinePair's runtime composition reproduces:
+%%       extX = accidental LILC bbox widened by 0.6 per paren:
+%%         flat (-0.72 . 1.4)   sharp (-0.6 . 1.7)   natural (-0.6 . 1.2666).
+%%       paren outlines span y = ±1.052 (narrower than the sharp's ±1.5), belly at y=0:
+%%         RIGHT belly = bbox.right + 0.6; at |y| > 1.052 the accidental's own outline
+%%         shows through (e.g. PSHARP RIGHT 0.864 between the bars above the paren).
+%%       flat RIGHT has NO 0.30 floor over [-0.63, 1.83] — the 0.375 branch is skipped.
+%%     Single courtesy -> note head stays ink-right + 0.35 (PFLAT1/PSHARP1/PNAT1 below):
+%%     the box model and the real outline coincide there (the head faces the paren belly,
+%%     and the belly IS the box wall). They only differ when a neighbour nests at a
+%%     non-belly Y — a chord/column regime Lily# cannot yet write (chord notes carry no
+%%     @courtesy), so no ledger point exists; the composition is verified by THIS dump.
+\book { \score { \new Staff \with {
+  \override AccidentalCautionary.after-line-breaking = #(dump-sky "PFLAT")
+} { bes'?1 } } }
+\book { \score { \new Staff \with {
+  \override AccidentalCautionary.after-line-breaking = #(dump-sky "PSHARP")
+} { fis'?1 } } }
+\book { \score { \new Staff \with {
+  \override AccidentalCautionary.after-line-breaking = #(dump-sky "PNAT")
+} { c'?1 } } }
+
+%% (4) The single courtesy accidental -> note-head gap, all three glyphs. EXPECTED:
+%%     paren ink-right sits 0.35 left of the head (right-padding 0.15 + padding 0.20),
+%%     identical to the bare accidental — anchor-to-anchor HEAD - ACC:
+%%       flat 1.75 (= 1.4 + 0.35)   sharp 2.05 (= 1.7 + 0.35)   natural 1.6166.
+\book { \score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(rec "PFLAT1-HEAD")
+  \override AccidentalCautionary.after-line-breaking = #(rec "PFLAT1-ACC")
+} { bes'?1 } } }
+\book { \score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(rec "PSHARP1-HEAD")
+  \override AccidentalCautionary.after-line-breaking = #(rec "PSHARP1-ACC")
+} { fis'?1 } } }
+\book { \score { \new Staff \with {
+  \override NoteHead.after-line-breaking = #(rec "PNAT1-HEAD")
+  \override AccidentalCautionary.after-line-breaking = #(rec "PNAT1-ACC")
+} { c'?1 } } }

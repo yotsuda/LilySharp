@@ -9,8 +9,10 @@
 // flattened to max(2, len/0.2) segments, classified by contour orientation
 // (Emmentaler is CFF => CCW). The effective outline->stencil scale is 1.0 for
 // accidentals, so a skyline coordinate is just the outline in staff spaces
-// (1 ss = unitsPerEm/4 = 250 font units). Flats/flatflats carry one extra RIGHT
-// building at x = stencil.right*0.375 (accidental.cc:75-81).
+// (1 ss = unitsPerEm/4 = 250 font units). These are RAW outlines: the flat
+// 0.375 fattening (accidental.cc:65-82, skipped when parenthesized) and the
+// courtesy paren composition (accidental.cc:33-43 parenthesize) are runtime
+// branches in AccidentalPlacement.GlyphSkylinePair, where LilyPond has them.
 //
 // Each array is a flat list of skyline BUILDINGS, four doubles apiece:
 //   start (yLow), startValue (sky*x at yLow), endValue (sky*x at yHigh), end (yHigh)
@@ -116,7 +118,7 @@ internal static partial class GlyphMetrics
         0.476000, 0.000000, 0.014000, 0.519500,
     };
 
-    // ===== flat (accidentals.flat): 18 LEFT + 23 RIGHT buildings =====
+    // ===== flat (accidentals.flat): 18 LEFT + 22 RIGHT buildings =====
     private static readonly double[] AccSkyFlatL =
     {
         0.331500, -0.449500, -0.320000, 0.416000,
@@ -162,7 +164,6 @@ internal static partial class GlyphMetrics
         0.448000, 0.080000, 0.250000, 0.547500,
         1.851500, 0.055500, 0.000000, 1.860000,
         1.828000, -0.108000, -0.055500, 1.851500,
-        -0.630000, 0.300000, 0.300000, 1.830000,
     };
 
     // ===== natural (accidentals.natural): 14 LEFT + 14 RIGHT buildings =====
@@ -281,7 +282,7 @@ internal static partial class GlyphMetrics
         -0.090500, 0.771000, 0.608000, 0.000000,
     };
 
-    // ===== doubleFlat (accidentals.flatflat): 38 LEFT + 44 RIGHT buildings =====
+    // ===== doubleFlat (accidentals.flatflat): 38 LEFT + 43 RIGHT buildings =====
     private static readonly double[] AccSkyDoubleFlatL =
     {
         0.331500, -1.079500, -0.956000, 0.416000,
@@ -368,7 +369,106 @@ internal static partial class GlyphMetrics
         0.148000, 0.368000, 0.342500, 0.330000,
         -0.416000, 0.084000, 0.226963, -0.251111,
         -0.280000, 0.071500, 0.068000, -0.144000,
-        -0.630000, 0.543750, 0.543750, 1.830000,
+    };
+
+    // ===== leftParen (accidentals.leftparen): 20 LEFT + 22 RIGHT buildings =====
+    private static readonly double[] AccSkyLeftParenL =
+    {
+        1.046000, 0.221500, 0.200000, 1.052000,
+        0.840064, 0.358848, 0.240000, 1.028000,
+        0.641952, 0.458304, 0.358848, 0.840064,
+        0.435008, 0.534336, 0.458304, 0.641952,
+        0.220576, 0.582912, 0.534336, 0.435008,
+        -0.220576, 0.582912, 0.600000, 0.000000,
+        -0.435008, 0.534336, 0.582912, -0.220576,
+        -0.641952, 0.458304, 0.534336, -0.435008,
+        -0.840064, 0.358848, 0.458304, -0.641952,
+        -1.046000, 0.221500, 0.240000, -1.028000,
+        0.796032, 0.260224, 0.160000, 0.972000,
+        0.986000, 0.151000, 0.148000, 1.000000,
+        1.036500, 0.163500, 0.200000, 1.052000,
+        1.028000, 0.240000, 0.221500, 1.046000,
+        0.000000, 0.600000, 0.582912, 0.220576,
+        -1.028000, 0.240000, 0.358848, -0.840064,
+        -1.052000, 0.200000, 0.221500, -1.046000,
+        -1.036500, 0.163500, 0.148000, -1.000000,
+        -0.986000, 0.151000, 0.160000, -0.972000,
+        -0.204768, 0.393856, 0.400000, 0.000000,
+    };
+    private static readonly double[] AccSkyLeftParenR =
+    {
+        0.000000, -0.400000, -0.393856, 0.204768,
+        0.204768, -0.393856, -0.371968, 0.408384,
+        0.408384, -0.371968, -0.329152, 0.606816,
+        0.606816, -0.329152, -0.260224, 0.796032,
+        0.972000, -0.160000, -0.151000, 0.986000,
+        1.000000, -0.148000, -0.163500, 1.036500,
+        -1.052000, -0.200000, -0.163500, -1.036500,
+        -1.000000, -0.148000, -0.151000, -0.986000,
+        -0.972000, -0.160000, -0.260224, -0.796032,
+        -0.796032, -0.260224, -0.329152, -0.606816,
+        -0.606816, -0.329152, -0.371968, -0.408384,
+        -0.408384, -0.371968, -0.393856, -0.204768,
+        0.796032, -0.260224, -0.160000, 0.972000,
+        0.986000, -0.151000, -0.148000, 1.000000,
+        1.036500, -0.163500, -0.200000, 1.052000,
+        1.028000, -0.240000, -0.221500, 1.046000,
+        0.000000, -0.600000, -0.582912, 0.220576,
+        -1.028000, -0.240000, -0.358848, -0.840064,
+        -1.052000, -0.200000, -0.221500, -1.046000,
+        -1.036500, -0.163500, -0.148000, -1.000000,
+        -0.986000, -0.151000, -0.160000, -0.972000,
+        -0.204768, -0.393856, -0.400000, 0.000000,
+    };
+
+    // ===== rightParen (accidentals.rightparen): 22 LEFT + 20 RIGHT buildings =====
+    private static readonly double[] AccSkyRightParenL =
+    {
+        -0.204768, -0.393856, -0.400000, 0.000000,
+        -0.408384, -0.371968, -0.393856, -0.204768,
+        -0.606816, -0.329152, -0.371968, -0.408384,
+        -0.796032, -0.260224, -0.329152, -0.606816,
+        -0.986000, -0.151000, -0.160000, -0.972000,
+        -1.036500, -0.163500, -0.148000, -1.000000,
+        1.036500, -0.163500, -0.200000, 1.052000,
+        0.986000, -0.151000, -0.148000, 1.000000,
+        0.796032, -0.260224, -0.160000, 0.972000,
+        0.606816, -0.329152, -0.260224, 0.796032,
+        0.408384, -0.371968, -0.329152, 0.606816,
+        0.204768, -0.393856, -0.371968, 0.408384,
+        -0.972000, -0.160000, -0.260224, -0.796032,
+        -1.000000, -0.148000, -0.151000, -0.986000,
+        -1.052000, -0.200000, -0.163500, -1.036500,
+        -1.046000, -0.221500, -0.240000, -1.028000,
+        -0.220576, -0.582912, -0.600000, 0.000000,
+        0.840064, -0.358848, -0.240000, 1.028000,
+        1.046000, -0.221500, -0.200000, 1.052000,
+        1.000000, -0.148000, -0.163500, 1.036500,
+        0.972000, -0.160000, -0.151000, 0.986000,
+        0.000000, -0.400000, -0.393856, 0.204768,
+    };
+    private static readonly double[] AccSkyRightParenR =
+    {
+        -1.052000, 0.200000, 0.221500, -1.046000,
+        -1.028000, 0.240000, 0.358848, -0.840064,
+        -0.840064, 0.358848, 0.458304, -0.641952,
+        -0.641952, 0.458304, 0.534336, -0.435008,
+        -0.435008, 0.534336, 0.582912, -0.220576,
+        0.000000, 0.600000, 0.582912, 0.220576,
+        0.220576, 0.582912, 0.534336, 0.435008,
+        0.435008, 0.534336, 0.458304, 0.641952,
+        0.641952, 0.458304, 0.358848, 0.840064,
+        1.028000, 0.240000, 0.221500, 1.046000,
+        -0.972000, 0.160000, 0.260224, -0.796032,
+        -1.000000, 0.148000, 0.151000, -0.986000,
+        -1.052000, 0.200000, 0.163500, -1.036500,
+        -1.046000, 0.221500, 0.240000, -1.028000,
+        -0.220576, 0.582912, 0.600000, 0.000000,
+        0.840064, 0.358848, 0.240000, 1.028000,
+        1.046000, 0.221500, 0.200000, 1.052000,
+        1.000000, 0.148000, 0.163500, 1.036500,
+        0.972000, 0.160000, 0.151000, 0.986000,
+        0.000000, 0.400000, 0.393856, 0.204768,
     };
 
     /// <summary>The (LEFT, RIGHT) horizontal skyline pair for an accidental kind,
@@ -383,6 +483,15 @@ internal static partial class GlyphMetrics
         // naturals-as-fallback: an unknown kind draws the natural sign.
         _ => (AccSkyPairNatural.Left, AccSkyPairNatural.Right),
     };
+
+    /// <summary>The raw outline skyline pair of accidentals.leftparen /
+    /// accidentals.rightparen, in each paren glyph's own frame. A courtesy
+    /// accidental's stencil embeds these at its LILC edges (padding 0), and the
+    /// runtime composition mirrors that placement.
+    /// LILYPOND-REF: lily/accidental.cc:33-43 parenthesize.</summary>
+    public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalParenSkylinePair(bool leftParen) =>
+        leftParen ? (AccSkyPairLeftParen.Left, AccSkyPairLeftParen.Right)
+                  : (AccSkyPairRightParen.Left, AccSkyPairRightParen.Right);
 
     private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPairSharp =
         (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSkySharpL),
@@ -399,4 +508,10 @@ internal static partial class GlyphMetrics
     private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPairDoubleFlat =
         (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSkyDoubleFlatL),
          HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Right, AccSkyDoubleFlatR));
+    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPairLeftParen =
+        (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSkyLeftParenL),
+         HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Right, AccSkyLeftParenR));
+    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPairRightParen =
+        (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSkyRightParenL),
+         HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Right, AccSkyRightParenR));
 }

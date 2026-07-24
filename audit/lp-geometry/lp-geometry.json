@@ -82,6 +82,20 @@
       "residual": 0.0,
       "why": "EXACT since LilyPond 2.26.0, and NOT because anything in Lily# changed. 2.26.0 rebuilt Emmentaler with the LILC bboxes rounded to three decimals in the design unit, which put accidentals.sharp's right edge on exactly 1.100000 (2.24.4: 1.100010). The skyline term that separated LilyPond's measurement from Lily#'s box measurement was -0.000010 and is now zero. The horizontal skyline is still not ported (accidental-placement.cc:412) -- this entry merely stopped being able to see it. barline.next.key-change-to-notehead is now the only entry that still measures it."
     },
+    "accidental.single-natural-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "NAT",
+      "lilypond": 1.034272,
+      "residual": 0.0,
+      "why": "CLOSED TO EXACT THIS SESSION (-0.017672 -> 0). The single-note / grace accidental DRAW was a SECOND placement model: chords place accidentals through AccidentalColumn.CalculatePositions (position_apes, the REAL glyph right skyline) then DrawAccidentalAtInkLeft, but a single NoteItem (SharedRenderer.Noteheads.cs) and grace (GraceNotes.cs) drew via DrawAccidental at a FIXED AccidentalNoteGap 0.35. Measured on 2.26.0 (barline-spacing.ly score NAT, a c-natural in D major): HEAD anchor 11.569272 (ext 0 . 1.962), natural ACC anchor 10.535000 (ext 0 . 0.6666), so the natural's ink clears the head at 0.367672 -- NOT 0.35 -- and HEAD - ACC anchor = 1.034272. OPENED at residual -0.017672 (predicted to the digit): Lily# drew the natural at head - natWidth(0.6666) - 0.35 = head - 1.0166, so HEAD - ACC read 1.016600. THE FIX: route the single-note / grace accidental DRAW through AccidentalPlacement.CalculateSinglePosition (the real skyline, the SAME path the spacing reservation already uses -- so draw = reserve) then DrawAccidentalAtInkLeft. MEASURED after: Lily# 1.034272 (residual -0.00000007, within tolerance) EXACT. Sharps (Left 0, box) are byte-unchanged; naturals move 0.017672 LEFT onto LilyPond's position. This ALSO fixed a flat draw bug the same fix exposed -- see accidental.single-flat-to-notehead."
+    },
+    "accidental.single-flat-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "FLAT",
+      "lilypond": 1.150000,
+      "residual": 0.0,
+      "why": "CLOSED TO EXACT THIS SESSION (+0.120000 -> 0). A SECOND defect the single-note-accidental unification exposed, NOT anticipated by the handoff (which claimed sharp/flat 'match'): the flat's ink starts 0.12 ss LEFT of its origin (LILC bbox left -0.12). The old DrawAccidental seated the glyph origin at head - accWidth - 0.35 with accWidth = the FULL width 0.92 (Right 0.8 - Left -0.12), so the flat's ink-right landed at head - 0.47 -- gap 0.47, NOT LilyPond's 0.35. Rendered on 2.26.0 (score FLAT, a c-flat): HEAD anchor 9.155 (ext 0 . 1.962), flat ACC anchor 8.005 (ext -0.12 . 0.8), ink gap 9.155 - (8.005 + 0.8) = 0.35, HEAD - ACC anchor = 1.150000. OPENED at residual +0.120000 (predicted to the digit): Lily# drew the flat origin at head - 0.92 - 0.35 = head - 1.27, so HEAD - ACC read 1.270000. THE FIX is the same one that closed the natural: routing the draw through CalculateSinglePosition + DrawAccidentalAtInkLeft, which anchors on the glyph's ink-left (bbox.Left aware) rather than assuming the ink starts at the origin, so the flat lands on LilyPond's 0.35 gap. MEASURED after: Lily# 1.150000000, residual 0.000000000 EXACT. Sharp/natural (Left 0) have no overhang; only flats (and double-flats) move, ~0.12 onto LilyPond's position."
+    },
     "chord.accidental.sharp-column-gap-below": {
       "probe": "barline-spacing.ly",
       "score": "CSB",

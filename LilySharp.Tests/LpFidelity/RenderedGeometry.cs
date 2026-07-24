@@ -376,6 +376,34 @@ internal sealed class RenderedGeometry
         Glyphs.Where(g => IsAccidental(g.Glyph)).ToList();
 
     /// <summary>
+    /// The anchor distance from a single-note accidental of the given glyph to the notehead it
+    /// sits before — the single-note accidental DRAW gap plus the glyph's own width. LilyPond
+    /// seats each accidental so its real skyline / ink clears the head (a natural at 0.367672,
+    /// a flat's ink starting 0.12 left of its origin), which the fixed AccidentalNoteGap 0.35
+    /// draw path got wrong. The probe carries exactly ONE accidental of this glyph (the note's
+    /// key signature uses a different one), so it is unambiguous.
+    /// </summary>
+    public double AccidentalToNoteheadAnchor(char accidentalGlyph)
+    {
+        var acc = Glyphs.FirstOrDefault(g => g.Glyph == accidentalGlyph,
+            throw_: $"no accidental U+{(int)accidentalGlyph:X4} in the probe.\n"
+                    + "Drawn geometry:\n" + Describe());
+        foreach (var g in Glyphs)   // Glyphs is left-to-right
+            if (g.X > acc.X + 1e-9 && IsNotehead(g.Glyph))
+                return g.X - acc.X;
+        throw new InvalidOperationException(
+            "no notehead after the accidental.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>Single-note NATURAL accidental to the notehead it precedes (see the char overload).</summary>
+    public double NaturalToNoteheadAnchor() =>
+        AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural);
+
+    /// <summary>Single-note FLAT accidental to the notehead it precedes (see the char overload).</summary>
+    public double FlatToNoteheadAnchor() =>
+        AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalFlat);
+
+    /// <summary>
     /// The X gap between the two accidental COLUMNS of the chord that opens the measure after
     /// bar line <paramref name="barIndex"/>: the nearer (rightmost) accidental's anchor minus
     /// the farther (leftmost) one's. This is the quantity Accidental_placement decides —

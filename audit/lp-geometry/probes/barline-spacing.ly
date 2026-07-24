@@ -139,6 +139,20 @@ lay =
 %%     declares extra-spacing-width (-0.2 . 0.0) rather than the default 0.1.
 \score { \new Staff { \time 4/4 c'4 d' e' f' | cis'4 d' e' f' } \lay "X" }
 
+%% NAT — the single-note accidental DRAW gap: a natural (c-natural in D major cancels the key's
+%%     C#) sits before its head at the distance its REAL right skyline clears the head, NOT a
+%%     fixed AccidentalNoteGap. Rendered on 2.26.0: HEAD anchor 11.569272 (ext 0 . 1.962),
+%%     natural ACC anchor 10.535000 (ext 0 . 0.6666), so ink gap = 11.569272 - (10.535 + 0.6666)
+%%     = 0.367672 (NOT 0.35) and HEAD - ACC anchor = 1.034272. A sharp/flat control clears at
+%%     exactly 0.35 (box), so only the natural's skyline term (0.017672) shows.
+\score { \new Staff { \key d \major c'1 } \lay "NAT" }
+
+%% FLAT — the flat's ink starts 0.12 LEFT of its origin (LILC bbox left -0.12), so a single-note
+%%     draw that seats the glyph at `head - width - gap` over-counts the overhang and places the
+%%     flat at gap 0.47, not LilyPond's 0.35. Rendered on 2.26.0: HEAD anchor 9.155 (ext 0 . 1.962),
+%%     flat ACC anchor 8.005 (ext -0.12 . 0.8), ink gap 9.155 - (8.005 + 0.8) = 0.35, HEAD - ACC = 1.15.
+\score { \new Staff { \key c \major ces'1 } \lay "FLAT" }
+
 %% CSB/CSA, CFB/CFA — the first probes to reach Accidental_placement's CHORD stacking
 %%     (calc_positioning_done -> position_apes). Score X above measures a SINGLE accidental;
 %%     these carry a cluster whose two accidentals' glyphs OVERLAP vertically and so are

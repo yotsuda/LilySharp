@@ -434,11 +434,18 @@ internal static partial class SharedRenderer
         // to the note's own position-based default in single-voice staves.
         bool stemUp = forcedStemUp ?? note.StemUp;
 
-        // Accidental (left of notehead). Cue notes scale their accidental with
-        // the head (LP CueVoice fontSize = -4 reduces the accidental grob too).
+        // Accidental (left of notehead). Placed through the SAME single-ape skyline path the
+        // spacing reservation uses (AccidentalPlacement.CalculateSinglePosition), so draw =
+        // reserve: a natural clears the head by its real right skyline (0.367672), not a fixed
+        // AccidentalNoteGap 0.35 (sharp/flat are 0.35 either way). Cue notes scale their
+        // accidental with the head (LP CueVoice fontSize = -4 reduces the accidental grob too).
         if (note.Accidental != null)
-            DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc,
-                note.IsCue ? 0.66 : 1.0);
+        {
+            double accScale = note.IsCue ? 0.66 : 1.0;
+            if (AccidentalColumn.CalculateSinglePosition(note, accScale) is { } al)
+                DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
+                    note.SourcePosition, gc, accScale);
+        }
 
         // Notehead — skipped when this head merges with another voice's (head wipe)
         // or when NoteHead.transparent is overridden.
