@@ -27,8 +27,16 @@ internal readonly record struct DrawnRect(double X, double Y, double Width, doub
 /// <summary>A straight line — staff lines, stems, ledger lines.</summary>
 internal readonly record struct DrawnLine(double X1, double Y1, double X2, double Y2, double StrokeWidth);
 
-/// <summary>Plain text — titles, lyrics, dynamics.</summary>
-internal readonly record struct DrawnText(string Text, double X, double Y);
+/// <summary>
+/// Plain text — titles, lyrics, chord symbols, dynamics. The font and the anchor are kept
+/// because the string and position alone cannot say WHICH of those a text is, and a
+/// measurement that picked up a title instead of a chord symbol would look plausible.
+/// <see cref="Anchor"/> also records what <see cref="X"/> MEANS: <c>Middle</c> makes it the
+/// ink centre, not the ink left, which is the difference between Lily#'s chord symbol and
+/// LilyPond's ChordName reference point.
+/// </summary>
+internal readonly record struct DrawnText(
+    string Text, double X, double Y, double FontSize, string FontFamily, TextAnchor Anchor);
 
 /// <summary>
 /// An <see cref="IDocumentContext"/> that records what was drawn instead of writing a file,
@@ -154,7 +162,7 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public void DrawText(string text, double x, double y, double fontSize, string fontFamily,
                          FontStyle style = FontStyle.Regular, TextAnchor anchor = TextAnchor.Start,
                          Color? fill = null, VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
-        => _texts.Add(new DrawnText(text, Tx(x), Ty(y)));
+        => _texts.Add(new DrawnText(text, Tx(x), Ty(y), Sy(fontSize), fontFamily, anchor));
 
     public IDisposable Source(int sourcePosition) => NullScope.Instance;
 

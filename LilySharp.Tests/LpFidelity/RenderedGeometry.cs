@@ -302,6 +302,39 @@ internal sealed class RenderedGeometry
     public IReadOnlyList<DrawnGlyph> Glyphs =>
         _page.Glyphs.OrderBy(g => g.X).ToList();
 
+    /// <summary>Plain text runs in drawing order, left to right.</summary>
+    public IReadOnlyList<DrawnText> Texts =>
+        _page.Texts.OrderBy(t => t.X).ToList();
+
+    /// <summary>
+    /// Chord symbols, left to right — the sans-serif text runs. Everything else Lily# draws
+    /// as text (title, composer, lyrics, dynamics, rehearsal marks) takes the document's
+    /// serif face, so the family is what tells them apart; matching on the STRING would not,
+    /// since a chord symbol and a lyric syllable are both arbitrary words.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Their <see cref="DrawnText.X"/> is the ink CENTRE, not the ink left: Lily# draws a
+    /// chord symbol with <c>TextAnchor.Middle</c> (SharedRenderer.Marks). LilyPond's ChordName
+    /// declares no X-offset and no self-alignment-interface at all
+    /// (scm/define-grobs.scm:837-855), so ITS reference point is the ink LEFT. Comparing the
+    /// two raw numbers would carry half a symbol width as a constant, so every ledger point
+    /// built on this must use a quantity in which that convention cancels — a difference of
+    /// two anchors measured the same way on each side.
+    /// </remarks>
+    public IReadOnlyList<DrawnText> ChordSymbols =>
+        Texts.Where(t => t.FontFamily == "sans-serif").ToList();
+
+    /// <summary>The first (leftmost) chord symbol's anchor.</summary>
+    public double FirstChordSymbolAnchor()
+    {
+        var chords = ChordSymbols;
+        if (chords.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no chord symbol (no sans-serif text run).\nDrawn geometry:\n"
+                + Describe());
+        return chords[0].X;
+    }
+
     /// <summary>Thin bar lines, left to right.</summary>
     public IReadOnlyList<DrawnRect> Barlines =>
         _page.Rects.Where(r => r.Width > 0 && r.Width <= ThinBarlineMaxWidth)
@@ -684,6 +717,9 @@ internal sealed class RenderedGeometry
     {
         var events = Glyphs.Select(g => (g.X, Label: $"glyph U+{(int)g.Glyph:X4}"))
             .Concat(Barlines.Select(b => (b.X, Label: $"barline w={b.Width:F3}")))
+            // Texts too — a staff-less probe draws NO glyph and no bar line worth the name, so
+            // without them a failure there would print an empty dump.
+            .Concat(Texts.Select(t => (t.X, Label: $"text \"{t.Text}\" {t.FontFamily} {t.Anchor}")))
             .OrderBy(e => e.X);
         return string.Join("\n", events.Select(e => $"    x={e.X,10:F6}  {e.Label}"));
     }

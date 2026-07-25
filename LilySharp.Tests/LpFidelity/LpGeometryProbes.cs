@@ -1887,6 +1887,94 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // --- a system with NO STAFF: chords only (probes/staffless-system.ly) ---
+    // All four scores below carry the SAME progression, LilyPond's
+    // `\chordmode { c2 a:m | f2 g:7 | c1 }`, so the first symbol is "C" in every one of them
+    // and its width cancels out of every difference these points measure. That matters here
+    // more than usual: Lily# records a chord symbol's CENTRE (TextAnchor.Middle) while
+    // LilyPond's ChordName reference point is its ink LEFT, so a RAW anchor could not be
+    // compared at all — only a difference of two anchors read the same way on each side.
+    //
+    // ⚠️ Each uses `form main { ~Main }`, the SILENT section reference. A plain `{ Main }`
+    // engraves a rehearsal mark, and on a staff-less system that box is the only other ink
+    // on the row.
+
+    /// <summary>
+    /// Chords ONLY, 4/4 — the baseline every staff-less point subtracts. LilyPond puts the
+    /// first symbol on 0.500000, which is <c>standard_breakable_column_spacing</c>'s
+    /// <c>min_dist + 0.5</c> with <c>min_dist</c> 0: a ChordNames context engraves no clef,
+    /// no key and no meter (ly/engraver-init.ly:703-725), so nothing prefatory stands in
+    /// front of it.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CO in staffless-system.ly.</remarks>
+    private static readonly string SCO = StafflessChords("time 4/4", "key c major", "SCO");
+
+    /// <summary>
+    /// The METER identity twin: the same chords under 3/4. A ChordNames context has no
+    /// Time_signature_engraver, so LilyPond draws no meter either way and CO3's first symbol
+    /// lands on CO's to 15 digits — the LilyPond side of this pair is an IDENTITY, which
+    /// makes any Lily# difference the size of a Lily# defect by construction. Lily# used to
+    /// book <c>GetTimeSigWidth(beats, beatType)</c> here, which is NOT the same for 4/4 and
+    /// 3/4; <see cref="Svg.Layout.SpacingRules.AnyStaffEngravesTime"/> now asks whether any
+    /// row engraves a meter at all.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CO3.</remarks>
+    private static readonly string SCO3 = StafflessChords("time 3/4", "key c major", "SCO3");
+
+    /// <summary>
+    /// The KEY identity twin: the same chords in E major (4 sharps). ChordNames has no
+    /// Key_engraver either, so LilyPond is again unmoved. This half was already closed —
+    /// <see cref="Svg.Layout.SpacingRules.ContributesToKeyColumnWidth"/> excludes a text row —
+    /// so it is a control that the key column really is shut, and a guard that it stays so.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score COK.</remarks>
+    private static readonly string SCOK = StafflessChords("time 4/4", "key e major", "SCOK");
+
+    /// <summary>
+    /// The same chords OVER AN ORDINARY STAFF. Here LilyPond DOES engrave a clef and a meter,
+    /// so its first symbol sits at 8.585000 — the same line-start number probes SKC and JN
+    /// already pin and Lily# already reproduces. CS − CO = 8.085000 is therefore "what a
+    /// staff earns", the frame-free quantity, and the staff-ful side being known-good is what
+    /// makes the difference read the staff-LESS side.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CS (<c>&lt;&lt; \new ChordNames … \new Staff … &gt;&gt;</c>).
+    /// The staff plays <c>c'2 a' | f'2 g' | c'1</c>, i.e. Lily#'s <c>c2 a | f2 g | c1</c>.</remarks>
+    private static readonly string SCS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { c2 a | f2 g | c1 | }
+          chords prog { c2 a:m | f2 g:7 | c1 | }
+        }
+
+        form main { ~Main }
+
+        score main "SCS" {
+          staff melody with chords prog
+        }
+        """;
+
+    /// <summary>A staff-less score of one chord progression, under a given meter and key.</summary>
+    private static string StafflessChords(string time, string key, string name) => $$"""
+        octave absolute
+        {{time}}
+        {{key}}
+
+        section Main {
+          chords prog { c2 a:m | f2 g:7 | c1 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          chords prog
+        }
+        """;
+
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
@@ -2226,5 +2314,30 @@ internal static class LpGeometryProbes
             g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-concert", TKC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-keyed", TKT, g => g.TimeSignatureToFirstNotehead()),
+        // --- a system with NO STAFF (staffless-system.ly) ---
+        // Every one of these is a DIFFERENCE of two chord-symbol anchors, because the two
+        // engravers do not agree on what a chord symbol's anchor IS (Lily# the ink centre,
+        // LilyPond the ink left) and the same progression opens all four scores, so the
+        // convention and the symbol's width cancel. The second render is taken here rather
+        // than inside RenderedGeometry: a ledger point is a quantity, and this one is
+        // genuinely a quantity over two scores.
+        new("staffless.line-start.chords-vs-staff", SCS,
+            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
+        new("staffless.line-start.meter-identity", SCO3,
+            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
+        new("staffless.line-start.key-identity", SCOK,
+            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
+        // The one point that needs a single render: over a staff, LilyPond's ChordName and
+        // the note head it stands over share an anchor exactly (CS dumps both at 8.585000),
+        // because ChordName declares no X-offset and no self-alignment-interface at all
+        // (scm/define-grobs.scm:837-855). LilyPond's value is 0 by construction, so this
+        // measures Lily#'s centring of the symbol and nothing else.
+        new("staffless.chord-symbol-over-notehead", SCS,
+            g => g.FirstChordSymbolAnchor() - g.NoteheadAnchor(0)),
     };
+
+    /// <summary>The first chord symbol's anchor in a SECOND score, for the difference points
+    /// above. Rendering twice is the point: the quantity is a difference between scores.</summary>
+    private static double ChordAnchorOf(string source) =>
+        RenderedGeometry.Render(source).FirstChordSymbolAnchor();
 }
