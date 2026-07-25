@@ -118,6 +118,18 @@ internal sealed class LayoutEngine
         // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — check if any staff uses remove-empty
         bool hasHaraKiri = score.StaffGroups.Any(g => g.Staves.Any(s => s.RemoveEmpty));
 
+        // The springs the PAGE solves between this score's staves
+        // (LILYPOND-REF: lily/page-layout-problem.cc:651-720). Computed ONCE from the same
+        // groups and the same skylines every system is laid out with — building them per
+        // system would rebuild every staff skyline per system for an answer that cannot
+        // differ. Hara-kiri is the exception: there each system has its own visible staves,
+        // so its springs are built with its own groups inside the loop (and without
+        // skylines, which that layout path does not produce — see StaffSprings).
+        var sharedStaffSprings = hasHaraKiri
+            ? ImmutableArray<StaffSpring>.Empty
+            : multiStaffLayouter.StaffSprings(
+                score, firstStaffGroupLayouts, _skylineBuilder, firstSystemMeasureLayouts);
+
         // The system silhouette's edge staves — the two staves BuildSystemSkylines
         // processes — and their drawn beams. A beamed stem is drawn to the quanter's
         // length, but the note boxes reserve a fixed 3.5 stem; supplying the beams lets
@@ -224,10 +236,11 @@ internal sealed class LayoutEngine
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent,
-                // The springs the PAGE will solve between this system's staves. Built from
-                // THIS system's groups, so a hara-kiri'd system springs only the staves it
-                // actually shows. LILYPOND-REF: lily/page-layout-problem.cc:651-720.
-                StaffSprings: multiStaffLayouter.StaffSprings(score, sysStaffGroups)));
+                // A hara-kiri'd system springs only the staves it actually shows, so its
+                // springs come from ITS groups; every other system shares one set.
+                StaffSprings: hasHaraKiri
+                    ? multiStaffLayouter.StaffSprings(score, sysStaffGroups)
+                    : sharedStaffSprings));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }

@@ -1512,12 +1512,20 @@ internal sealed class MultiStaffLayouter
     /// chain, taking the spec from the upper staff's grouper and flooring the spring at the
     /// minimum translation with <c>ensure_min_distance</c>.
     /// <para>
-    /// Derived from the produced <see cref="StaffGroupLayout"/>s rather than recomputed:
-    /// each pair's minimum IS the refpoint distance the layout gave it, so the spring cannot
-    /// disagree with the placement it floors (HANDOFF 5.2.1 (2) — a second implementation of
-    /// a quantity is where a port lands only half the time). Only the SPEC comes from the
-    /// same selection the layout used, which is why that selection now lives in
-    /// <see cref="InterGroupSpec"/> and is called from both.
+    /// The floor is <see cref="AlignmentMinimumWithSkylines"/> — the same function the
+    /// layout floors itself with, on skylines built by the same call — and NOT the distance
+    /// the staves were drawn at. The two differ by exactly basic-distance, which is the
+    /// SPRING'S IDEAL and must not also be its floor: taken from the drawn distance the
+    /// spring cannot compress at all, which is how the first cut of this measured 9.000000
+    /// where LilyPond compresses to 8.651797. Only the SPEC selection is shared through
+    /// <see cref="InterGroupSpec"/> (HANDOFF 5.2.1 (2) — a second implementation of a
+    /// quantity is where a port lands only half the time).
+    /// </para>
+    /// <para>
+    /// ⚠️ WITHOUT skylines (the hara-kiri layout path, which does not build them) the floor
+    /// falls back to the spec's own minimum-distance, i.e. the only one of LilyPond's two
+    /// floors that can be known without measuring the ink. A hara-kiri page can therefore
+    /// compress a pair further than its ink allows. Named, not hidden.
     /// </para>
     /// <para>
     /// Which pairs get a spring, and why the others do not:
@@ -1539,12 +1547,17 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// </remarks>
     public ImmutableArray<StaffSpring> StaffSprings(
-        MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups)
+        MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
+        SkylineBuilder? skylineBuilder = null,
+        ImmutableArray<MeasureLayout> measureLayouts = default)
     {
         if (groups.IsDefaultOrEmpty)
             return ImmutableArray<StaffSpring>.Empty;
 
         var sp = _options.StaffSpacing;
+        var staffSkylines = skylineBuilder is null
+            ? null
+            : BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
         // (model staff, its layout, the group it belongs to) in global staff order — the
         // order EnumerateStaves yields and the order the group layouts were built in.
         var flat = new List<(Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)>();
@@ -1576,7 +1589,19 @@ internal sealed class MultiStaffLayouter
                 : InterGroupSpec(upper.Group, lower.Group, sp);
 
             // Refpoint to refpoint, the frame every vertical spring in LilyPond works in.
-            double minimum = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
+            // Taken as the DRAWN distance minus whatever basic-distance added to it, rather
+            // than as the alignment minimum directly: the two are computed in the layout's
+            // staff-TOP frame, and only their difference is a pure length. Converting the
+            // minimum itself would be off by half the difference of the two staff heights,
+            // which is 0 between two ordinary staves and 0.25 above a four-string tab staff
+            // — enough to move it at force 0, on pages that are not being spaced at all.
+            double drawn = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
+            double minimum = staffSkylines is null
+                // No skylines to ask, so the drawn distance stands: the pair can be
+                // stretched but not squeezed. Anything lower would be a guess.
+                ? drawn
+                : drawn - Math.Max(0, spec.BasicDistance - AlignmentMinimumWithSkylines(
+                    spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex));
             builder.Add(new StaffSpring(
                 upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
         }
@@ -2022,14 +2047,51 @@ internal sealed class MultiStaffLayouter
         if (upperDown.IsEmpty || lowerUp.IsEmpty)
             return Math.Max(0, spec.BasicDistance - upperStaffHeight);
 
-        double skyDistance = upperDown.Distance(lowerUp);
-
-        // LILYPOND-REF: lily/align-interface.cc:247-260
-        // center_to_center = max(skyline_distance + padding, minimum_distance, basic_distance)
+        // The distance a staff is DRAWN at is the page spring at rest, and a spring at rest
+        // is max(its floor, its ideal) — so basic-distance enters here as the IDEAL and the
+        // alignment minimum is the floor. Same number as writing one max over all three,
+        // which is how this read until 2026-07-26, and NOT the same model: fed to a spring
+        // as its floor, a basic-distance folded into the minimum makes the spring
+        // incompressible, and the page could not squeeze the staves the way LilyPond does
+        // (ledger page.compressed.staff-staff-inside).
         double centerToCenter = Math.Max(
-            Math.Max(skyDistance + spec.Padding, spec.MinimumDistance),
-            spec.BasicDistance);
+            spec.BasicDistance,
+            AlignmentMinimumWithSkylines(spec, staffSkylines, upperStaffIndex, lowerStaffIndex));
 
         return Math.Max(0, centerToCenter - upperStaffHeight);
+    }
+
+    /// <summary>
+    /// The refpoint-to-refpoint MINIMUM two staves may sit at — <c>Align_interface</c>'s
+    /// minimum translation, which is what floors the page's spring for that pair.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:228-238 internal_get_minimum_translations —
+    /// <c>dy = down_skyline.distance(next) + padding</c>, raised to
+    /// <c>minimum-distance</c>, and NOT to basic-distance.
+    /// <para>
+    /// ⚠️ basic-distance IS in that function, at :234-238, but behind
+    /// <c>INT_MAX == end &amp;&amp; 0 == start</c> — the PURE estimate the page breaker uses
+    /// for heights (<c>get_pure_minimum_translations</c>). The placement path,
+    /// <c>get_minimum_translations</c>, calls with <c>start = end = 0</c> (:128-134), so the
+    /// branch is dead there. It reads like a max over three numbers because at force 0 the
+    /// spring returns max(floor, basic-distance) anyway — and that is exactly why folding it
+    /// in was invisible until a page tried to COMPRESS.
+    /// </para>
+    /// </remarks>
+    private static double AlignmentMinimumWithSkylines(
+        VerticalSpacingSpec spec,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        int upperStaffIndex, int lowerStaffIndex)
+    {
+        if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
+            return spec.MinimumDistance;
+
+        var upperDown = staffSkylines[upperStaffIndex].Down;
+        var lowerUp = staffSkylines[lowerStaffIndex].Up;
+        if (upperDown.IsEmpty || lowerUp.IsEmpty)
+            return spec.MinimumDistance;
+
+        return Math.Max(upperDown.Distance(lowerUp) + spec.Padding, spec.MinimumDistance);
     }
 }

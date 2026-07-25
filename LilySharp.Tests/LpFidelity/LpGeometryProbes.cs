@@ -339,6 +339,24 @@ internal static class LpGeometryProbes
     /// the same music, and it was not, twice).</remarks>
     private static readonly string JSSC = TwoStaffPageScore("JSSC");
 
+    /// <summary>The COMPRESSED twin — the mirror of book JSK.</summary>
+    /// <remarks>
+    /// The same music again, on a page packed with eight systems instead of six, which is
+    /// what the breaker picks for this score unaided — and it squeezes them. Compression
+    /// runs on a DIFFERENT strength from stretching: <c>alter_spring_from_spacing_spec</c>
+    /// sets minimum-distance 7 and then <c>set_default_strength</c>, so the inverse compress
+    /// strength is <c>ideal - minimum</c> = 2 (spring.cc:205-211), and the
+    /// <c>ensure_min_distance</c> that follows raises the FLOOR without recomputing the
+    /// strength. Its system-spring counterpart is 12 - 8 = 4, where stretching used 60.
+    /// <para>
+    /// ⚠️ There is no ragged control for this one: ragged-bottom suppresses stretching only,
+    /// so a full ragged page compresses just the same. The control is
+    /// <c>page.natural.staff-staff-inside</c> — same music, same bar count, a page with
+    /// slack — which is exact on both sides at 9.
+    /// </para>
+    /// </remarks>
+    private static readonly string JSK = TwoStaffPageScore("JSK");
+
     /// <summary>
     /// At most six systems per page, so the page keeps slack to distribute and its springs
     /// STRETCH.
@@ -362,6 +380,20 @@ internal static class LpGeometryProbes
         LayoutOptions.Default with
         {
             PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 6 },
+        };
+
+    /// <summary>
+    /// Eight systems to a page — enough of this music that the page must SQUEEZE them.
+    /// </summary>
+    /// <remarks>
+    /// Written as a cap for the same reason <see cref="SixSystemsPerPage"/> is, and it is
+    /// what the breaker chooses here unaided on both sides; pinning it keeps the entry a
+    /// measurement of the spring rather than of the page breaker.
+    /// </remarks>
+    private static readonly LayoutOptions EightSystemsPerPage =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 8 },
         };
 
     /// <summary>The same paper with vertical justification off — the control's regime.</summary>
@@ -2347,6 +2379,15 @@ internal static class LpGeometryProbes
         // index means the staff it is supposed to mean only while the page holds the staves
         // this probe assumes. Six two-staff systems = twelve staves.
         new("page.stretched.two-staff.staves-on-first-page", JSS, g => g.StavesOnPage(0), SixSystemsPerPage),
+
+        // The THIRD regime of the same spring (book JSK): squeezed. Compression runs on a
+        // different strength from stretching — ideal - minimum-distance, 2 for the staff
+        // spring and 4 for the system one, against 5 and 60 — so a port that has the spring
+        // but takes its strengths from the wrong place is green on the stretched pair and
+        // wrong here. The natural entry above is the control for both directions.
+        new("page.compressed.staff-staff-inside", JSK, g => g.StaffGapAt(0), EightSystemsPerPage),
+        new("system.compressed-distance.two-staff", JSK, g => g.StaffGapAt(1), EightSystemsPerPage),
+        new("page.compressed.two-staff.staves-on-first-page", JSK, g => g.StavesOnPage(0), EightSystemsPerPage),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

@@ -298,16 +298,23 @@ internal sealed class PageLayouter
         // k-th staff spring leads to the entry one further along. Recorded rather than
         // computed from sysIdx because the number of springs per system now varies.
         var firstStaffPosition = new int[count];
-        // The refpoint span from a system's first spaceable staff to its last, at the
-        // MINIMUM — the sum of its staff springs' floors. It is the frame conversion the
-        // two neighbouring springs need (see below), and it is what LilyPond means by
+        // Two spans read off the LAID-OUT system — the frame its skylines were built in —
+        // per system: how far its first SPRUNG staff sits below the system's anchor, and
+        // how far its last sprung staff sits below that. Their sum is the conversion the
+        // neighbouring springs need (see below), and it is what LilyPond means by
         // last_spaceable_dy (:1116, :1126).
-        var minStaffSpan = new double[count];
+        // ⚠️ NOT the sum of the springs' floors. Those are the ALIGNMENT minimums, which
+        // sit below the drawn distance by exactly the basic-distance the spring supplies as
+        // its ideal — the distinction that lets a page compress at all.
+        var anchorToFirstSprung = new double[count];
+        var anchorToLastSprung = new double[count];
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
             int local = sysIdx - startIdx;
             firstStaffPosition[local] = springs.Count;
             var staffSprings = allSystems[sysIdx].StaffSprings;
+            (anchorToFirstSprung[local], anchorToLastSprung[local]) =
+                SprungStaffOffsets(allSystems[sysIdx], halfStaff);
             if (!staffSprings.IsDefaultOrEmpty)
             {
                 foreach (var ss in staffSprings)
@@ -316,7 +323,6 @@ internal sealed class PageLayouter
                     // (basic-distance / stretchability), floored by the minimum translation
                     // through ensure_min_distance.
                     springs.Add(LayoutUtilities.CreateSpring(ss.Spec, ss.MinimumDistance));
-                    minStaffSpan[local] += ss.MinimumDistance;
                 }
             }
 
@@ -367,12 +373,15 @@ internal sealed class PageLayouter
                         // last_spaceable_dy out of the same minimum translations this span
                         // is the sum of. Subtracting it here keeps SkylineBuilder in one
                         // frame for its other readers.
+                        // (A leading loose line — a lead sheet's chord row — sits between
+                        // the anchor and the first sprung staff, which is why the offset is
+                        // measured from the anchor and not from the first spring.)
                         // ⚠️ It is also what makes the two branches agree: the scalar
                         // fallbacks below are ALREADY written in this frame
                         // (`StaffHeight + …` = halfStaff + ink + halfStaff), so before this
                         // subtraction a multi-staff system priced its skyline gap and its
                         // fallback gap in different frames.
-                        dist -= minStaffSpan[local];
+                        dist -= anchorToLastSprung[local];
 
                         // Whole-line annotation bands (lyric lines below,
                         // chord-symbol rows above) lay out after the page Y is
@@ -438,7 +447,7 @@ internal sealed class PageLayouter
             // last's bottom line), so dropping halfStaff reaches the first staff's refpoint
             // and dropping the minimum staff span reaches the last one's.
             double inkBelowLastRefpoint =
-                (lastDetails.StaffHeight - halfStaff - minStaffSpan[count - 1])
+                (lastDetails.StaffHeight - halfStaff - anchorToLastSprung[count - 1])
                 + systemExtents[endIdx - 1].downExtent;
             springs.Add(LayoutUtilities.CreateSpring(
                 vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
@@ -478,8 +487,12 @@ internal sealed class PageLayouter
             // (LILYPOND-REF: page-layout-problem.cc:896-901 — solution_[spring_idx] is the
             // first staff's position and the system origin is that plus min_offsets[0]).
             // Lily# stacks systems by their origin, which is halfStaff above the refpoint.
+            // ⚠️ The chain positions the first SPRUNG staff, which is the anchor itself on
+            // an ordinary system and one loose line lower on a lead sheet whose chord row
+            // comes first — so the anchor is recovered by stepping back up that offset.
+            // Zero, and this whole line inert, whenever a system has no staff springs.
             double refpoint = _options.MarginTop + positions[firstStaffPosition[local]];
-            double origin = refpoint - halfStaff;
+            double origin = refpoint - halfStaff - anchorToFirstSprung[local];
 
             var system = allSystems[sysIdx];
             // Stage-4 W2-core multi-page producer seam: origin is the system top measured
@@ -494,6 +507,45 @@ internal sealed class PageLayouter
         }
 
         return pageSystems.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Where a system's sprung staves sit in the layout the page's skylines were built
+    /// from: the first one's refpoint below the system ANCHOR (the refpoint the chain
+    /// positions a system by), and the last one's below that same anchor.
+    /// </summary>
+    /// <remarks>
+    /// Both are 0 when a system has no staff springs, which makes every use of them inert
+    /// on one-staff scores and on lead sheets (a text row is never sprung), and that is what
+    /// keeps those scores on the arithmetic they had before the springs existed.
+    /// <para>
+    /// The anchor is half a staff below the system's own origin — the frame
+    /// <c>SkylineBuilder</c> builds in and <c>SystemLayout.Y</c> is stacked in.
+    /// </para>
+    /// </remarks>
+    private static (double ToFirst, double ToLast) SprungStaffOffsets(
+        SystemLayout system, double halfStaff)
+    {
+        var sprung = system.StaffSprings;
+        if (sprung.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
+            return (0, 0);
+
+        double? first = null, last = null;
+        foreach (var group in system.StaffGroups)
+        {
+            foreach (var staff in group.Staves)
+            {
+                if (staff.StaffIndex == sprung[0].UpperStaffIndex)
+                    first = MultiStaffLayouter.StaffRefpoint(staff);
+                if (staff.StaffIndex == sprung[^1].LowerStaffIndex)
+                    last = MultiStaffLayouter.StaffRefpoint(staff);
+            }
+        }
+        if (first is null || last is null)
+            return (0, 0);
+
+        // Y-up: a refpoint below the anchor is NEGATIVE, and the anchor is at -halfStaff.
+        return (-first.Value - halfStaff, -last.Value - halfStaff);
     }
 
     /// <summary>
@@ -526,16 +578,27 @@ internal sealed class PageLayouter
         if (sprung.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
             return system.StaffGroups;
 
-        // How far each sprung staff moved from where it was laid out, by global staff index.
+        // Where each sprung staff was laid out, by global staff index.
+        var laidOut = new Dictionary<int, double>();
+        foreach (var group in system.StaffGroups)
+            foreach (var staff in group.Staves)
+                laidOut[staff.StaffIndex] = MultiStaffLayouter.StaffRefpoint(staff);
+
+        // How far each sprung staff moved from there. Measured against the LAID-OUT
+        // distance, not against the spring's floor: the floor is the alignment minimum and
+        // sits a basic-distance below where the staves were actually drawn.
         var shift = new Dictionary<int, double>();
-        double cumulativeSolved = 0, cumulativeMinimum = 0;
+        double cumulativeSolved = 0;
         for (int k = 0; k < sprung.Length; k++)
         {
+            if (!laidOut.TryGetValue(sprung[0].UpperStaffIndex, out double anchorY)
+                || !laidOut.TryGetValue(sprung[k].LowerStaffIndex, out double lowerY))
+                return system.StaffGroups;
             cumulativeSolved += positions[firstStaffPosition + k + 1]
                                 - positions[firstStaffPosition + k];
-            cumulativeMinimum += sprung[k].MinimumDistance;
+            double cumulativeLaidOut = anchorY - lowerY;
             // Y-up: a staff pushed further DOWN the page has a SMALLER Y.
-            shift[sprung[k].LowerStaffIndex] = -(cumulativeSolved - cumulativeMinimum);
+            shift[sprung[k].LowerStaffIndex] = -(cumulativeSolved - cumulativeLaidOut);
         }
         if (shift.Values.All(v => Math.Abs(v) < 1e-9))
             return system.StaffGroups;

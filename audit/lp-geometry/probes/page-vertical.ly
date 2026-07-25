@@ -1026,3 +1026,45 @@ probeTag =
     >>
   }
 }
+
+%% JSK — THE SAME STAFF SPRING, COMPRESSED. The third regime of one spring: JSSC reads it
+%%     at rest (9.000000), JSS stretched, this one squeezed.
+%%
+%%     It is the SAME MUSIC as JSS/JSSC and differs in one paper number: eight systems to a
+%%     page instead of six, which is what the breaker picks for this score when nothing caps
+%%     it (measured while writing these books — and it COMPRESSES them, reading 8.651797
+%%     inside a system). The cap is written down anyway so both engravers are pinned to the
+%%     same page and the entry cannot silently become a page-breaker measurement.
+%%
+%%     WHICH STRENGTH COMPRESSION USES, and it is not the one stretching uses:
+%%     alter_spring_from_spacing_spec sets min-distance 7 and then set_default_strength
+%%     (page-layout-problem.cc:1345-1358), so inverse_compress = ideal - min = 9 - 7 = 2
+%%     (spring.cc:205-211). ensure_min_distance afterwards raises the FLOOR to the alignment
+%%     minimum but does NOT recompute the strength (the setters do not recalculate — the
+%%     same fact the note-spacing side of the corpus already leans on). The system spring is
+%%     12 / 8, so its compress strength is 4 where its stretch strength was 60.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       inside < 9.000000 on page 1, and the falsifier is again inside the same dump:
+%%       (9 - inside) / 2 must equal (12 - system-to-system) / 4 to six digits, one negative
+%%       force for the page. ⚠️ It must ALSO stay above the alignment minimum 7.545 (3.545
+%%       under the treble's middle line + 3.0 of bass up-stem + 1), or the spring is sitting
+%%       on its floor and measuring nothing (HANDOFF 5.0).
+%%       (falsifier: an inside distance of exactly 9.000000, which would mean compression
+%%        never reaches the staff spring.)
+%%
+%%     ⚠️ ragged-bottom would NOT undo this and the control is NOT a ragged twin: that flag
+%%     suppresses stretching only, so a ragged page that is full compresses just the same
+%%     (book N's header says it, and the first draft of JSS walked into it). The control for
+%%     THIS entry is page.natural.staff-staff-inside — same music, same bar count, a page
+%%     with slack — which is exact on both sides at 9.000000.
+\book {
+  \probeTag "JSK"
+  \paper { max-systems-per-page = #8 }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
+      \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}
