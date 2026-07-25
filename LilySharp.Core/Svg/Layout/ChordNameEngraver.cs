@@ -153,6 +153,12 @@ internal static class ChordNameEngraver
         // names render in. The symbol occupies (x . x + width): LilyPond's ChordName
         // declares no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855),
         // so its reference point is its ink LEFT and it stands ON its column.
+        // LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
+        // floor on the HALF width before the anchor port doubled the quantity) and it BINDS —
+        // a one-letter symbol like "C" measures 1.877882, so the floor overrides it. LilyPond
+        // has no such floor: a ChordName's extent is its stencil's. It survives here only
+        // because removing it moves output for a reason unrelated to the anchor; it belongs
+        // with the other named inventions in docs/HANDOFF.md section 2H.
         double Width(ChordNameItem c) =>
             Math.Max(2.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, 2.6));
 

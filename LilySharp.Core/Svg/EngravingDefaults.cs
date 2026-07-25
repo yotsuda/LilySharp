@@ -266,6 +266,24 @@ internal static class EngravingDefaults
     /// <summary>Approximate width of rest glyph for skyline calculation (in staff spaces).</summary>
     public const double RestWidth = 1.0;
 
+    // === Paper column ===
+    /// <summary>
+    /// Width of the extent a grob aligns to on a paper column that carries no rhythmic grob at
+    /// all — "as wide as a note head". The extent itself is <c>(0 . 1.35)</c>, so the point a
+    /// CENTER-aligned grob takes is half of this.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2749-2750 — PaperColumn
+    /// <c>X-alignment-extent = (0 . 1.35)</c>, used by
+    /// lily/self-alignment-interface.cc:121-139 when the column's note-column extent is empty.
+    /// LilyPond's own comment there names the case: "This situation happens for lyrics without
+    /// `associatedVoice`, for example."
+    /// MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CLI and CLA): a staff-less
+    /// syllable's ink centre stands 0.675000 = 1.35/2 right of its column, the same for two
+    /// syllables of different widths.
+    /// </remarks>
+    public const double PaperColumnXAlignmentExtentWidth = 1.35;
+
     // === Dots ===
     /// <summary>Gap between notehead and augmentation dot (in staff spaces).</summary>
     public const double DotGap = 0.3;

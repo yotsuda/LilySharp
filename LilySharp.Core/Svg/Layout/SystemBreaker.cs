@@ -148,9 +148,14 @@ internal sealed class SystemBreaker
             {
                 springs = score.IsLeadSheet
                     // Mirror MultiStaffLayouter: on a lead sheet reserve lyric width by timing
-                    // column (union columns ≠ syllable count), else by note item.
-                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
-                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, allTimings, i, score.Lyrics);
+                    // column (union columns ≠ syllable count), else by note item — and from
+                    // the same alignment centres, since a syllable's ink is centred on those.
+                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(
+                        springs, allTimings, i, score.Lyrics,
+                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
+                    : LyricSpacing.ApplyLyricSpacing(
+                        springs, primaryMeasure, allTimings, i, score.Lyrics,
+                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
             }
             if (score.IsLeadSheet)
             {

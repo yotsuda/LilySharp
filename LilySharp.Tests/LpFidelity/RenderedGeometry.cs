@@ -327,6 +327,52 @@ internal sealed class RenderedGeometry
     public IReadOnlyList<DrawnText> ChordSymbols =>
         Texts.Where(t => t.FontFamily == "sans-serif").ToList();
 
+    /// <summary>
+    /// Lyric syllables, left to right — the serif text runs at the lyric size (SharedRenderer
+    /// draws them at <c>FontSize * 0.8</c> = 3.2 ss).
+    /// </summary>
+    /// <remarks>
+    /// The SIZE is what tells a syllable from the other serif text Lily# draws: a title, a
+    /// composer line, a rehearsal mark and a dynamic are all serif too, and matching on the
+    /// STRING could not tell them apart since a syllable is an arbitrary word. Probes that use
+    /// this carry no title, so the filter is belt and braces rather than the only guard.
+    /// </remarks>
+    public IReadOnlyList<DrawnText> LyricSyllables =>
+        Texts.Where(t => t.FontFamily != "sans-serif" && Math.Abs(t.FontSize - 3.2) < 1e-9)
+             .ToList();
+
+    /// <summary>
+    /// The first (leftmost) syllable's ink CENTRE — the quantity in which the syllable's own
+    /// width cancels out of LilyPond's placement, and so the only one comparable across two
+    /// engravers whose lyric faces differ.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176 <c>aligned_on_parent</c>. With
+    /// <c>self-alignment-X</c> and <c>parent-alignment-X</c> both CENTER (LyricText's
+    /// <c>left-align-at-split-notes</c> returns CENTER unless a Completion_heads_engraver split
+    /// the head, scm/output-lib.scm:1642-1673, and <c>parent-alignment-X</c> is <c>()</c> so it
+    /// copies self), the offset is <c>x = -w/2 + he.centre</c>, hence
+    /// <c>ink centre = column + x + w/2 = column + he.centre</c> — <c>w</c> cancels identically.
+    /// <para>
+    /// Lily# draws a syllable with <c>TextAnchor.Middle</c>, so the recorded anchor IS the ink
+    /// centre and no width has to be added back here.
+    /// </para>
+    /// </remarks>
+    public double FirstSyllableInkCentre()
+    {
+        var syllables = LyricSyllables;
+        if (syllables.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no lyric syllable (no serif text run at the 3.2 ss lyric size)."
+                + "\nDrawn geometry:\n" + Describe());
+        var first = syllables[0];
+        return first.Anchor == LilySharp.Core.Rendering.TextAnchor.Middle
+            ? first.X
+            : throw new InvalidOperationException(
+                $"a syllable was drawn with TextAnchor.{first.Anchor}, so its recorded X is not "
+                + "its ink centre and this measurement would be silently wrong.");
+    }
+
     /// <summary>The first (leftmost) chord symbol's anchor.</summary>
     public double FirstChordSymbolAnchor()
     {

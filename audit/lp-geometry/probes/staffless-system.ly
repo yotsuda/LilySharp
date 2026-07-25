@@ -418,6 +418,111 @@ harmony = \chordmode { c2 a:m | f2 g:7 | c1 }
   \lay "CLA"
 }
 
+%% ---- THE OTHER BRANCH of the same formula (2026-07-25): lyrics UNDER NOTE HEADS ----
+%%
+%% aligned_on_parent takes `he` from the parent column's note-column-interface extent and only
+%% falls back to the (0 . 1.35) placeholder when that is EMPTY
+%% (self-alignment-interface.cc:117-141). Every score above exercises the fallback. LSH
+%% exercises the branch that is normally taken, so the port can write BOTH (section 5.2: write
+%% every branch) instead of the staff-less one alone.
+%%
+%% THE QUANTITY IS THE SYLLABLE'S INK CENTRE MINUS ITS COLUMN, and it is free of every text
+%% metric: with self_align = par_align = CENTER,
+%%     ink centre = column + x + w/2 = column + (-w/2 + he.centre) + w/2 = column + he.centre
+%% so w cancels identically. That is what makes this comparable with Lily# directly — unlike
+%% the raw anchor, which carries half a syllable width in a face the two engravers do not
+%% share. The staff-less scores above already answer it: CLI and CLA both put the ink centre
+%% on 1.175000 over a column at 0.500000, i.e. 0.675000 = 1.35/2 exactly, for two syllables of
+%% different widths.
+%%
+%% PREDICTION for LSH, written before running (section 5.0-2): the syllable's ink centre sits
+%% he.centre right of its column, and here `he` is the note head's own extent, so the answer is
+%% half a note head — NOT 0.675. The dumped HEAD ext says what half a note head is, and the
+%% two must agree to 6 digits.
+%%   (falsifier: 0.675000 again, which would mean the placeholder is used even when note heads
+%%    are present and the note-column branch is dead code for lyrics.)
+
+%% LSH — a plain vocal line: one staff, one syllable per note, no chords.
+\score {
+  <<
+    \new Staff { \time 4/4 c'2 a' | f'2 g' | c'1 }
+    \new Lyrics \lyricmode { I2 no2 | oh2 no2 | yes1 }
+  >>
+  \lay "LSH"
+}
+
+%% LSA — LSH with an ACCIDENTAL on the first note. WHAT IT DECIDES: `he` is
+%%   robust_relative_extent of each NOTE COLUMN (paper-column.cc get_interface_extent), and a
+%%   Note_column is an axis group — so whether an accidental standing left of the head joins
+%%   that extent decides what a port must union. The question is not answerable from LSH,
+%%   where the column holds a bare head.
+%%
+%%   PREDICTION, written before running (section 5.0-2): the accidental IS in the note column,
+%%   so `he` becomes (-a . w_head), its centre drops below half a head, and the syllable moves
+%%   LEFT relative to its head — offset < 0.688700 by half the accidental's reach.
+%%   (falsifier: 0.688700 unchanged, which would mean the note column's extent is its heads
+%%    alone and a port may union heads only.)
+%%
+%%   ★ THE PREDICTION WAS WRONG AND THE FALSIFIER FIRED — measured 2026-07-25:
+%%       LSA  HEAD anchor 9.335000 (= its column)   LYRIC ink [9.528622 10.518778]
+%%            ink centre 10.023700 - 9.335000 = 0.688700, IDENTICAL to LSH to 6 digits.
+%%   The sharp stands left of the column and changes nothing. So `he` is the note HEADS' own
+%%   extent, and a port must union HEADS — NOT the column's musical ink, which is a different
+%%   and wider quantity (SpacingRules.MusicalInkOverhangsPerColumn deliberately includes the
+%%   accidental's leftward reach, because the keep-inside-line rod DOES take it). Using that
+%%   one here would have moved every accidental-bearing syllable left by half the accidental.
+%%   This is the section 5.0 case for writing predictions down: the wrong direction named the
+%%   quantity to port.
+\score {
+  <<
+    \new Staff { \time 4/4 cis'2 a' | f'2 g' | c'1 }
+    \new Lyrics \lyricmode { I2 no2 | oh2 no2 | yes1 }
+  >>
+  \lay "LSA"
+}
+
+%% LSD / LSR — the last two things a port has to know about `he`, since a NoteColumn's
+%%   X-extent is its whole axis group (define-grobs.scm NoteColumn X-extent =
+%%   ly:axis-group-interface::width) and the accidental turned out NOT to be in it.
+%%
+%%   PREDICTIONS, written before running (section 5.0-2):
+%%     LSD — the first note is DOTTED. A dot sits right of the head, so if it is in the group
+%%           the extent grows rightward and the syllable moves RIGHT: offset > 0.688700.
+%%     LSR — the first column is a REST. A rest is held by its note column, so `he` should be
+%%           the REST's extent and the offset half a rest — a quarter rest is narrower than a
+%%           head, so predict BELOW 0.688700.
+%%     (falsifier for either: 0.688700 unchanged, i.e. the extent really is the note heads
+%%      alone and a port unions heads and nothing else.)
+%%
+%%   ★ MEASURED 2026-07-25 — the dot prediction was WRONG, the rest one held:
+%%       LSD  HEAD anchor 8.585000  LYRIC ink [8.778622 9.768778]  centre - column = 0.688700
+%%            IDENTICAL to LSH. A DOT IS NOT IN `he`.
+%%       LSR  column 8.585000       LYRIC ink [8.839922 9.830078]  centre - column = 0.750000
+%%            A REST IS, and it replaces the head that is not there (half rest, so half of 1.5).
+%%
+%%   ⇒ WHAT A PORT MUST UNION, decided by measurement rather than by reading an axis group:
+%%      note heads and rests, NOT accidentals (LSA) and NOT dots (LSD). That is consistent
+%%      with LilyPond's own structure — a Dots grob hangs off its NOTE HEAD and the
+%%      accidentals off an Accidental_placement, so neither is among the note column's
+%%      `elements`, which is what ly:axis-group-interface::width unions (define-grobs.scm
+%%      NoteColumn X-extent). A stem is in the group but never widens it: it stands at the
+%%      head's own edge.
+\score {
+  <<
+    \new Staff { \time 4/4 c'2. a'4 | f'2 g' | c'1 }
+    \new Lyrics \lyricmode { I2. no4 | oh2 no2 | yes1 }
+  >>
+  \lay "LSD"
+}
+
+\score {
+  <<
+    \new Staff { \time 4/4 r2 a' | f'2 g' | c'1 }
+    \new Lyrics \lyricmode { I2 no2 | oh2 no2 | yes1 }
+  >>
+  \lay "LSR"
+}
+
 %% CS — the CONTROL that is NOT staff-less: the same chords over an ordinary staff. Here
 %%   LilyPond DOES engrave a clef and a meter, so the first chord sits far right, and the
 %%   difference CS - CO is the size of the prefix a staff earns. Lily# should agree on THIS

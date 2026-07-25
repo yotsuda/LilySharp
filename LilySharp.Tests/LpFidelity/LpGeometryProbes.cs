@@ -2012,6 +2012,36 @@ internal static class LpGeometryProbes
     /// <remarks>LilyPond twin: probe score CLA (first syllable <c>a</c>, one letter wider).</remarks>
     private static readonly string SCLA = StafflessChordsAndLyrics("a", "SCLA");
 
+    /// <summary>
+    /// A plain vocal line — one staff, one syllable per note — which is the branch of
+    /// <c>aligned_on_parent</c> that is normally taken: the parent column HAS note heads, so
+    /// <c>he</c> is their combined extent and the placeholder never comes into it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: probe score LSH. MEASURED there: the note head is 1.377400 wide and the
+    /// syllable's ink centre sits 0.688700 right of its column — half a note head, NOT the
+    /// 0.675000 the staff-less scores give. The two numbers being different is what proves the
+    /// note-column branch is live rather than dead code for lyrics.
+    /// </remarks>
+    private static readonly string SLSH = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { c2 a | f2 g | c1 | }
+          lyrics words { I no | oh no | yes | }
+        }
+
+        form main { ~Main }
+
+        score main "SLSH" {
+          staff melody with lyrics words
+        }
+        """;
+
     /// <summary>A staff-less score of one chord progression, under a given meter and key.</summary>
     private static string StafflessChords(string time, string key, string name) => $$"""
         octave absolute
@@ -2399,6 +2429,16 @@ internal static class LpGeometryProbes
             g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
         new("staffless.lead-sheet.narrow-syllable-width-blind", SCLA,
             g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCLI)),
+        // --- where the syllable itself sits: both branches of aligned_on_parent ---
+        // The quantity is the syllable's ink CENTRE minus its column, in which the syllable's
+        // own width cancels (see RenderedGeometry.FirstSyllableInkCentre) — the only lyric
+        // quantity the two engravers can be compared on directly, since their lyric faces
+        // differ. The column is read through the chord symbol standing on it (staff-less) or
+        // the note head (staff-ful); both ARE their column.
+        new("lyric.syllable-centre.placeholder-column", SCLI,
+            g => g.FirstSyllableInkCentre() - g.FirstChordSymbolAnchor()),
+        new("lyric.syllable-centre.note-column", SLSH,
+            g => g.FirstSyllableInkCentre() - g.NoteheadAnchor(0)),
     };
 
     /// <summary>The first chord symbol's anchor in a SECOND score, for the difference points

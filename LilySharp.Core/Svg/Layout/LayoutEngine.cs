@@ -1557,9 +1557,56 @@ internal sealed class LayoutEngine
             };
         }
 
-        var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
-            ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline);
+        // A syllable is CENTRED on its column's alignment extent, not on the column
+        // (self-alignment-interface.cc:117-176). That extent is the column's note heads /
+        // rests — which only the MUSIC knows, so it is resolved here and handed down.
+        // Cached per (measure, timing): a bar's syllables all ask the same measure.
+        const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
+        var alignmentCentreCache = new Dictionary<int, Dictionary<Fraction, double>>();
+        double ParentAlignmentCentre(int measureIndex, Fraction timing)
+        {
+            if (!alignmentCentreCache.TryGetValue(measureIndex, out var byTiming))
+            {
+                byTiming = new Dictionary<Fraction, double>();
+                // EVERY staff's bar at this index — a paper column is shared by all of them,
+                // and so is the extent a grob on it aligns to.
+                var barMeasures = new List<Measure>();
+                if (measuresByStaff != null)
+                    foreach (var staffMeasures in measuresByStaff.Values)
+                    {
+                        if (measureIndex < staffMeasures.Length)
+                            barMeasures.Add(staffMeasures[measureIndex]);
+                    }
+                else if (measures != null && measureIndex < measures.Length)
+                    barMeasures.Add(measures[measureIndex]);
+
+                var barTimings = new List<Fraction>();
+                foreach (var barMeasure in barMeasures)
+                {
+                    var onset = Fraction.Zero;
+                    foreach (var item in barMeasure.Items)
+                    {
+                        if (!barTimings.Contains(onset))
+                            barTimings.Add(onset);
+                        onset += item.Duration;
+                    }
+                }
+                barTimings.Sort();
+
+                var centres = SpacingRules.ParentAlignmentCentresPerColumn(barMeasures, barTimings);
+                for (int c = 0; c < barTimings.Count; c++)
+                    byTiming[barTimings[c]] = centres[c];
+                alignmentCentreCache[measureIndex] = byTiming;
+            }
+            // A moment no staff plays on — a lyric row's own finer grid — has an empty
+            // note-column extent, which is exactly when LilyPond takes the placeholder.
+            return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
+        }
+
+        var lyricLayouts = new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
+            .CalculateLayouts(
+                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
+                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).

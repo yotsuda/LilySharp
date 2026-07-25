@@ -37,6 +37,21 @@ public class LeadSheetLyricSpacingTests
     private static LyricItem Ly(string text, Fraction timing)
         => new(Text: text, MeasureIndex: 0, ItemIndex: 0, Timing: timing, IsLyricsRow: true);
 
+    /// <summary>
+    /// The alignment centre every column here takes: a lead sheet's rows carry no note heads,
+    /// so LilyPond's <c>he</c> is the PaperColumn placeholder <c>(0 . 1.35)</c> and a syllable
+    /// centres 0.675 right of its column (self-alignment-interface.cc:121-139).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Stated per column rather than defaulted: a syllable centred ON its column is not a
+    /// LilyPond regime at all, so a test that quietly assumed one would be asserting Lily#'s
+    /// old invention. See ledger lyric.syllable-centre.placeholder-column.
+    /// </remarks>
+    private static double[] PlaceholderCentres(int columns) =>
+        Enumerable.Repeat(
+            LilySharp.Core.Svg.EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2,
+            columns).ToArray();
+
     [Fact]
     public void ReservesLyricWidthAcrossAChordOnlyColumn()
     {
@@ -47,21 +62,38 @@ public class LeadSheetLyricSpacingTests
         var der = Ly("der", new Fraction(1, 3));
         var what = Ly("what", new Fraction(2, 3));
 
-        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(springs, columns, 0, new[] { won, der, what });
+        var centres = PlaceholderCentres(columns.Length);
+        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(
+            springs, columns, 0, new[] { won, der, what }, centres);
 
         // won → der (adjacent columns 0→1): that single spring reserves their combined ink.
-        double wonDer = LyricSpacing.CalculateLyricDistance(new List<LyricItem> { won }, new List<LyricItem> { der });
+        double wonDer = LyricSpacing.CalculateLyricDistance(
+            new List<LyricItem> { won }, new List<LyricItem> { der }, centres[0], centres[1]);
         Assert.True(result[1].MinDistance >= wonDer - 1e-6,
             $"won→der spring {result[1].MinDistance} < needed {wonDer}");
 
         // der (col 1) → what (col 3) SPANS the chord-only column 1/2: the two springs together clear it.
-        double derWhat = LyricSpacing.CalculateLyricDistance(new List<LyricItem> { der }, new List<LyricItem> { what });
+        double derWhat = LyricSpacing.CalculateLyricDistance(
+            new List<LyricItem> { der }, new List<LyricItem> { what }, centres[1], centres[3]);
         Assert.True(result[2].MinDistance + result[3].MinDistance >= derWhat - 1e-6,
             $"der→what span {result[2].MinDistance + result[3].MinDistance} < needed {derWhat}");
 
         // The leading syllable clears the start barline; the trailing one the end barline.
-        Assert.True(result[0].MinDistance >= LyricSpacing.GetLyricLeftExtent(new List<LyricItem> { won }) + GlyphMetrics.MinItemGap - 1e-6);
-        Assert.True(result[^1].MinDistance >= LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }) + GlyphMetrics.MinItemGap - 1e-6);
+        Assert.True(result[0].MinDistance
+            >= LyricSpacing.GetLyricLeftExtent(new List<LyricItem> { won }, centres[0])
+               + GlyphMetrics.MinItemGap - 1e-6);
+        Assert.True(result[^1].MinDistance
+            >= LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, centres[3])
+               + GlyphMetrics.MinItemGap - 1e-6);
+
+        // …and the reservation is ASYMMETRIC, which is the whole of the port: the trailing
+        // syllable owes the bar line half its width PLUS the 0.675 it stands right of its
+        // column, where a syllable centred on the column would owe only the half width.
+        // LILYPOND-REF: lily/self-alignment-interface.cc:117-176.
+        Assert.Equal(
+            LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, 0) + centres[3],
+            LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, centres[3]),
+            precision: 6);
     }
 
     [Fact]
@@ -69,7 +101,9 @@ public class LeadSheetLyricSpacingTests
     {
         var columns = new[] { Fraction.Zero, new Fraction(1, 2) };
         var springs = Enumerable.Repeat(new Spring(0.5, 0.5, 1.0), columns.Length + 1).ToImmutableArray();
-        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(springs, columns, 0, new[] { Ly("x", Fraction.Zero) with { MeasureIndex = 9 } });
+        var result = LyricSpacing.ApplyLeadSheetLyricSpacing(
+            springs, columns, 0, new[] { Ly("x", Fraction.Zero) with { MeasureIndex = 9 } },
+            PlaceholderCentres(columns.Length));
         Assert.Equal(springs, result);
     }
 }

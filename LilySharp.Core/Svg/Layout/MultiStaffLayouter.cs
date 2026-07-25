@@ -963,8 +963,12 @@ internal sealed class MultiStaffLayouter
                 springs = score.IsLeadSheet
                     // The union timing columns don't match the syllable count on a lead sheet
                     // (chords and lyrics subdivide the bar differently), so reserve by column.
-                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(springs, allTimings, i, score.Lyrics)
-                    : LyricSpacing.ApplyLyricSpacing(springs, primaryMeasure, allTimings, i, score.Lyrics);
+                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(
+                        springs, allTimings, i, score.Lyrics,
+                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
+                    : LyricSpacing.ApplyLyricSpacing(
+                        springs, primaryMeasure, allTimings, i, score.Lyrics,
+                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
             }
             if (score.IsLeadSheet)
             {
@@ -1028,21 +1032,29 @@ internal sealed class MultiStaffLayouter
             // BEFORE spring 0 is replaced: the extents do not depend on the spring, but the
             // by-item/by-column choice reads springs.Length, exactly as the lyric reservation
             // above does.
-            var lyricHalf = LyricSpacing.CentredHalfWidthPerColumn(
-                springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet);
+            // Where a CENTER-aligned grob stands on each column — the note heads'/rests'
+            // centre, or the placeholder's when the column has neither. The syllable reaches
+            // from there, not from the column.
+            // LILYPOND-REF: lily/self-alignment-interface.cc:121-139.
+            var alignmentCentres = SpacingRules.ParentAlignmentCentresPerColumn(
+                allMeasures, allTimings);
+            var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
+                springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
+                alignmentCentres);
             var chordWidth = SpacingRules.ChordInkRightReachPerColumn(
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
             for (int c = 0; c < leftOverhangs.Length; c++)
             {
-                // A CENTRED syllable reaches half its width to either side; a chord
-                // symbol is anchored at its ink left (scm/define-grobs.scm:837-855),
-                // so it reaches its WHOLE width right and nothing at all left.
-                double lyric = c < lyricHalf.Length ? lyricHalf[c] : 0.0;
+                // A syllable is centred on its column's alignment extent, so it reaches
+                // w/2 - he.centre left and w/2 + he.centre right; a chord symbol is
+                // anchored at its ink left (scm/define-grobs.scm:837-855), so it reaches
+                // its WHOLE width right and nothing at all left.
                 double chord = c < chordWidth.Length ? chordWidth[c] : 0.0;
-                leftOverhangs[c] = lyric;
-                rightOverhangs[c] = Math.Max(lyric, chord);
+                leftOverhangs[c] = c < lyricLeft.Length ? lyricLeft[c] : 0.0;
+                rightOverhangs[c] = Math.Max(
+                    c < lyricRight.Length ? lyricRight[c] : 0.0, chord);
             }
             // …and so does the MUSICAL ink on the column, which is the rest of
             // col->extent (col, X_AXIS).

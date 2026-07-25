@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -79,9 +80,26 @@ internal sealed class LyricEngraver
 {
     private readonly LyricParameters _params;
 
-    public LyricEngraver(LyricParameters? parameters = null)
+    /// <summary>
+    /// The point on a column that a CENTER-aligned grob aligns to, by (measure index, timing)
+    /// — LilyPond's <c>he.linear_combination (CENTER)</c>. Supplied by the caller, which is
+    /// what holds the music; the default is the placeholder every staff-less column takes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:121-139 — <c>he</c> is the paper column's
+    /// note-column extent, falling back to <c>X-alignment-extent</c> when that is empty.
+    /// See <see cref="Svg.Layout.SpacingRules.ParentAlignmentCentresPerColumn"/> for which
+    /// grobs are in that extent (MEASURED — heads and rests yes, accidentals and dots no).
+    /// </remarks>
+    private readonly Func<int, Fraction, double> _parentAlignmentCentre;
+
+    public LyricEngraver(
+        LyricParameters? parameters = null,
+        Func<int, Fraction, double>? parentAlignmentCentre = null)
     {
         _params = parameters ?? LyricParameters.Default;
+        _parentAlignmentCentre = parentAlignmentCentre
+            ?? ((_, _) => EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
     }
 
     /// <summary>
@@ -459,11 +477,26 @@ internal sealed class LyricEngraver
 
         double textWidth = EstimateTextWidth(lyric.Text);
 
-        // Center the syllable under the note. Hyphen dashes and extender
-        // lines are LyricHyphen's job (the LP grobs: lyric-hyphen.cc /
-        // lyric-extender.cc); this engraver used to ALSO emit a "-" text and
-        // its own extender line, double-drawing every connector.
-        double syllableX = noteX;
+        // Centre the syllable on the column's ALIGNMENT EXTENT, which is not the column.
+        // Hyphen dashes and extender lines are LyricHyphen's job (the LP grobs:
+        // lyric-hyphen.cc / lyric-extender.cc); this engraver used to ALSO emit a "-" text
+        // and its own extender line, double-drawing every connector.
+        //
+        // LILYPOND-REF: lily/self-alignment-interface.cc:117-176 aligned_on_parent —
+        //   x = -ext.linear_combination (self_align) + he.linear_combination (par_align)
+        // with self_align = CENTER (LyricText's `left-align-at-split-notes` returns CENTER
+        // unless a Completion_heads_engraver split the head, scm/output-lib.scm:1642-1673)
+        // and par_align = () copying self (:156-157). So the syllable's INK CENTRE lands on
+        // `column + he.centre`: the -w/2 that centres it and the +w/2 back to the centre
+        // cancel, which is why this needs no text width at all.
+        // `he` is the column's note-column extent, or the (0 . 1.35) placeholder when the
+        // column carries no rhythmic grob — SpacingRules.ParentAlignmentCentresPerColumn.
+        // MEASURED (audit/lp-geometry/probes/staffless-system.ly): 0.675000 with no note
+        // head (CLI/CLA), 0.688700 over a 1.377400 head (LSH), 0.750000 over a half rest
+        // (LSR); ledger lyric.syllable-centre.{placeholder-column,note-column}.
+        // ⚠️ Lily# used to draw the syllable centred on the column itself, i.e. with this
+        // term missing entirely — both regimes, not one branch of them.
+        double syllableX = noteX + _parentAlignmentCentre(lyric.MeasureIndex, lyric.Timing);
 
         // y is the verse baseline in system-relative device (down+ from the system
         // top); store it Y-up from the system top (= its negation), offset-free.

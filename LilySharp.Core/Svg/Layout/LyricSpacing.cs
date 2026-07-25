@@ -49,15 +49,25 @@ internal static class LyricSpacing
         Measure measure,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics)
+        IReadOnlyList<LyricItem> lyrics,
+        IReadOnlyList<double> parentAlignmentCentres)
     {
+        // Where a CENTER-aligned grob stands on column c — the syllable's ink is centred
+        // THERE, not on the column, so every extent below is measured from it.
+        // LILYPOND-REF: lily/self-alignment-interface.cc:121-139.
+        // ⚠️ A column past the end of the supplied list falls back to the PLACEHOLDER, which
+        // is what LilyPond does for a column with no note heads — NOT to 0, which is a model
+        // that exists nowhere in LilyPond (it would mean an alignment extent of zero width).
+        double Centre(int column) => AlignmentCentre(parentAlignmentCentres, column);
+
         // The springs are built from TIMING COLUMNS. In a plain measure those columns
         // coincide with the note items, so the item-index reservation below lines up. But
         // when the bar opens with a non-note item (a mid-piece time/clef change) the item
         // slots no longer match the columns — the item-index chain would bail and leave the
         // syllables to crowd. Reserve by timing column instead.
         if (measure.Items.Length == 0 || springs.Length != measure.Items.Length + 1)
-            return ReserveLyricWidthByColumn(springs, columnTimings, measureIndex, lyrics, _ => true);
+            return ReserveLyricWidthByColumn(
+                springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentCentres);
 
         var lyricsByItem = new Dictionary<int, List<LyricItem>>();
         foreach (var lyric in lyrics)
@@ -77,7 +87,8 @@ internal static class LyricSpacing
         if (lyricsByItem.TryGetValue(0, out var firstLyrics))
         {
             var s0 = result[0];
-            double adjustedMin = Math.Max(s0.MinDistance, GetLyricLeftExtent(firstLyrics) + GlyphMetrics.MinItemGap);
+            double adjustedMin = Math.Max(
+                s0.MinDistance, GetLyricLeftExtent(firstLyrics, Centre(0)) + GlyphMetrics.MinItemGap);
             result[0] = new Spring(Math.Max(s0.IdealDistance, adjustedMin), adjustedMin, s0.InverseStretchStrength);
         }
 
@@ -86,7 +97,8 @@ internal static class LyricSpacing
         {
             double lyricDistance = CalculateLyricDistance(
                 lyricsByItem.GetValueOrDefault(i),
-                lyricsByItem.GetValueOrDefault(i + 1));
+                lyricsByItem.GetValueOrDefault(i + 1),
+                Centre(i), Centre(i + 1));
             var spring = result[i + 1];
             if (lyricDistance > spring.MinDistance)
                 result[i + 1] = new Spring(
@@ -99,7 +111,8 @@ internal static class LyricSpacing
         if (lyricsByItem.TryGetValue(lastIndex, out var lastLyrics))
         {
             var sl = result[^1];
-            double adjustedMin = Math.Max(sl.MinDistance, GetLyricRightExtent(lastLyrics) + GlyphMetrics.MinItemGap);
+            double adjustedMin = Math.Max(
+                sl.MinDistance, GetLyricRightExtent(lastLyrics, Centre(lastIndex)) + GlyphMetrics.MinItemGap);
             result[^1] = new Spring(Math.Max(sl.IdealDistance, adjustedMin), adjustedMin, sl.InverseStretchStrength);
         }
 
@@ -124,8 +137,27 @@ internal static class LyricSpacing
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
-        IReadOnlyList<LyricItem> lyrics)
-        => ReserveLyricWidthByColumn(springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow);
+        IReadOnlyList<LyricItem> lyrics,
+        IReadOnlyList<double> parentAlignmentCentres)
+        => ReserveLyricWidthByColumn(
+            springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow,
+            parentAlignmentCentres);
+
+    /// <summary>
+    /// The alignment centre for a column, with LilyPond's own fallback for a column the list
+    /// does not cover: the PLACEHOLDER, never zero.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:130-139 — an empty note-column extent
+    /// falls back to <c>X-alignment-extent</c>, i.e. <c>(0 . 1.35)</c>
+    /// (scm/define-grobs.scm:2749-2750). ⚠️ There is no LilyPond regime in which the extent a
+    /// syllable centres on is EMPTY, so 0 must never be the fallback: a caller that reached
+    /// this with a short list would otherwise silently get the pre-port model back.
+    /// </remarks>
+    private static double AlignmentCentre(IReadOnlyList<double> centres, int column)
+        => column >= 0 && column < centres.Count
+            ? centres[column]
+            : EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
 
     /// <summary>
     /// Reserves lyric ink against the TIMING COLUMNS the springs were built from: each
@@ -140,8 +172,11 @@ internal static class LyricSpacing
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
-        System.Func<LyricItem, bool> include)
+        System.Func<LyricItem, bool> include,
+        IReadOnlyList<double> parentAlignmentCentres)
     {
+        double Centre(int column) => AlignmentCentre(parentAlignmentCentres, column);
+
         int cols = columnTimings.Count;
         // springs = [start→col0, col0→col1, …, colLast→end] → length == cols + 1.
         if (cols == 0 || springs.Length != cols + 1)
@@ -170,20 +205,20 @@ internal static class LyricSpacing
         // Leading extent: the first syllable clears the start barline.
         int firstCol = lyricCols[0];
         BumpSpanMin(result, 0, firstCol,
-            GetLyricLeftExtent(lyricsByCol[firstCol]) + GlyphMetrics.MinItemGap);
+            GetLyricLeftExtent(lyricsByCol[firstCol], Centre(firstCol)) + GlyphMetrics.MinItemGap);
 
         // Between consecutive syllables (across any note/chord-only columns in between).
         for (int p = 0; p + 1 < lyricCols.Count; p++)
         {
             int a = lyricCols[p], b = lyricCols[p + 1];
             BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(lyricsByCol[a], lyricsByCol[b]));
+                CalculateLyricDistance(lyricsByCol[a], lyricsByCol[b], Centre(a), Centre(b)));
         }
 
         // Trailing extent: the last syllable clears the end barline.
         int lastCol = lyricCols[^1];
         BumpSpanMin(result, lastCol + 1, cols,
-            GetLyricRightExtent(lyricsByCol[lastCol]) + GlyphMetrics.MinItemGap);
+            GetLyricRightExtent(lyricsByCol[lastCol], Centre(lastCol)) + GlyphMetrics.MinItemGap);
 
         return result.ToImmutable();
     }
@@ -214,26 +249,31 @@ internal static class LyricSpacing
     /// make, so the quantity rodded is the same one those reserve.
     /// </summary>
     /// <remarks>
-    /// A syllable is drawn with <c>text-anchor="middle"</c> on its column
-    /// (SharedRenderer.Overlays' DrawLyrics), so its ink reaches half a width to EITHER side:
-    /// the one number is both <c>-extent[LEFT]</c> and <c>extent[RIGHT]</c> for the column —
-    /// ⚠️ of the LYRIC alone. LilyPond's <c>keep_inside_line_</c> is the column's WHOLE ink;
-    /// see the caller (MultiStaffLayouter) for what is missing from it.
+    /// A syllable's ink is centred on the column's ALIGNMENT EXTENT, not on the column: its
+    /// centre stands <c>he.centre</c> right of the column
+    /// (lily/self-alignment-interface.cc:117-176, see LyricEngraver), so it reaches
+    /// <c>w/2 - he.centre</c> LEFT of the column and <c>w/2 + he.centre</c> RIGHT of it —
+    /// asymmetric, and the left reach goes NEGATIVE for a syllable narrower than the extent,
+    /// which is a rod that simply does not bind.
+    /// ⚠️ These are the LYRIC's reaches alone; LilyPond's <c>keep_inside_line_</c> is the
+    /// column's WHOLE ink, so see the caller (MultiStaffLayouter) for the rest of it.
     /// NO padding is added — LilyPond's rods carry none (lily/simple-spacer.cc:558-559) —
     /// unlike the neighbour reservations above, which carry
     /// <see cref="GlyphMetrics.MinItemGap"/>.
     /// </remarks>
-    internal static double[] CentredHalfWidthPerColumn(
+    internal static (double[] Left, double[] Right) InkReachPerColumn(
         ImmutableArray<Spring> springs,
         Measure measure,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
-        bool isLeadSheet)
+        bool isLeadSheet,
+        IReadOnlyList<double> parentAlignmentCentres)
     {
-        var half = new double[columnTimings.Count];
+        var leftReach = new double[columnTimings.Count];
+        var rightReach = new double[columnTimings.Count];
         if (lyrics.Count == 0 || columnTimings.Count == 0)
-            return half;
+            return (leftReach, rightReach);
 
         // Staff-backed bars whose items line up with the springs reserve BY ITEM INDEX, so
         // column c carries item c's syllables (ApplyLyricSpacing:77-95). Everything else — a
@@ -264,9 +304,15 @@ internal static class LyricSpacing
             (perColumn[col] ??= new List<LyricItem>()).Add(ly);
         }
 
-        for (int c = 0; c < half.Length; c++)
-            half[c] = GetLyricLeftExtent(perColumn[c]);
-        return half;
+        for (int c = 0; c < leftReach.Length; c++)
+        {
+            if (perColumn[c] is not { Count: > 0 })
+                continue;
+            double centre = AlignmentCentre(parentAlignmentCentres, c);
+            leftReach[c] = GetLyricLeftExtent(perColumn[c], centre);
+            rightReach[c] = GetLyricRightExtent(perColumn[c], centre);
+        }
+        return (leftReach, rightReach);
     }
 
     /// <summary>
@@ -278,13 +324,15 @@ internal static class LyricSpacing
     /// The distance is: prevLyricRightExtent + nextLyricLeftExtent + padding
     /// where each extent is half the lyric text width (centered under note).
     /// </remarks>
-    internal static double CalculateLyricDistance(List<LyricItem>? prevLyrics, List<LyricItem>? nextLyrics)
+    internal static double CalculateLyricDistance(
+        List<LyricItem>? prevLyrics, List<LyricItem>? nextLyrics,
+        double prevAlignmentCentre, double nextAlignmentCentre)
     {
         if (prevLyrics == null && nextLyrics == null)
             return 0;
 
-        double prevRight = GetLyricRightExtent(prevLyrics);
-        double nextLeft = GetLyricLeftExtent(nextLyrics);
+        double prevRight = GetLyricRightExtent(prevLyrics, prevAlignmentCentre);
+        double nextLeft = GetLyricLeftExtent(nextLyrics, nextAlignmentCentre);
 
         // Minimum INK gap between syllables: a word-space at the lyric font
         // (~0.31 em at 3.2 ss), which is also what LP's lyric spacing yields
@@ -298,9 +346,17 @@ internal static class LyricSpacing
     }
 
     /// <summary>
-    /// Gets the right extent of lyrics (from note center to right edge of text).
+    /// How far the widest syllable on a column reaches RIGHT of that column: half its width,
+    /// plus the alignment centre it is centred on.
     /// </summary>
-    internal static double GetLyricRightExtent(List<LyricItem>? lyrics)
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176 — the syllable's ink centre
+    /// stands <c>he.centre</c> right of the column, so its ink runs
+    /// <c>(he.centre - w/2 . he.centre + w/2)</c>. ⚠️ The centre is REQUIRED: there is no
+    /// LilyPond regime in which a syllable is centred on its column, so a defaulted 0 would be
+    /// a model of Lily#'s own making leaking back in.
+    /// </remarks>
+    internal static double GetLyricRightExtent(List<LyricItem>? lyrics, double alignmentCentre)
     {
         if (lyrics == null || lyrics.Count == 0)
             return 0;
@@ -310,16 +366,21 @@ internal static class LyricSpacing
         foreach (var lyric in lyrics)
         {
             double width = EstimateLyricTextWidth(lyric.Text);
-            // Right extent is half the width (text is centered under note)
-            maxExtent = Math.Max(maxExtent, width / 2);
+            maxExtent = Math.Max(maxExtent, width / 2 + alignmentCentre);
         }
         return maxExtent;
     }
 
     /// <summary>
-    /// Gets the left extent of lyrics (from note center to left edge of text).
+    /// How far the widest syllable on a column reaches LEFT of that column: half its width
+    /// MINUS the alignment centre — negative when the syllable is narrower than the extent it
+    /// is centred on, which simply means it does not reach left at all.
     /// </summary>
-    internal static double GetLyricLeftExtent(List<LyricItem>? lyrics)
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176, as for
+    /// <see cref="GetLyricRightExtent"/>.
+    /// </remarks>
+    internal static double GetLyricLeftExtent(List<LyricItem>? lyrics, double alignmentCentre)
     {
         if (lyrics == null || lyrics.Count == 0)
             return 0;
@@ -329,8 +390,7 @@ internal static class LyricSpacing
         foreach (var lyric in lyrics)
         {
             double width = EstimateLyricTextWidth(lyric.Text);
-            // Left extent is half the width (text is centered under note)
-            maxExtent = Math.Max(maxExtent, width / 2);
+            maxExtent = Math.Max(maxExtent, width / 2 - alignmentCentre);
         }
         return maxExtent;
     }

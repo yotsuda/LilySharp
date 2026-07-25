@@ -3056,6 +3056,103 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// The point a grob whose <c>parent-alignment-X</c> is CENTER aligns to on each timing
+    /// column — LilyPond's <c>he.linear_combination (CENTER)</c>, i.e. the centre of the
+    /// column's note-column extent, or of the placeholder when the column holds no rhythmic
+    /// grob at all. One entry per column, measured from the column's own reference point.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-141 <c>aligned_on_parent</c> —
+    /// <c>he = Paper_column::get_interface_extent (him, note-column-interface, a)</c>, and when
+    /// that is empty on X it falls back to the column's <c>X-alignment-extent</c>
+    /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtent"/>). The extent is unioned over
+    /// EVERY note column on the paper column — a paper column is shared by all staves and
+    /// voices — which is the same walk <see cref="MusicalInkOverhangsPerColumn"/> makes.
+    /// <para>
+    /// ⚠️ WHAT IS IN THAT EXTENT WAS MEASURED, NOT ASSUMED (audit/lp-geometry/probes/
+    /// staffless-system.ly, scores LSH / LSA / LSD / LSR). A NoteColumn's X-extent is its whole
+    /// axis group (define-grobs.scm NoteColumn <c>X-extent = ly:axis-group-interface::width</c>),
+    /// so the question is which grobs are IN the group, and the answer is not the one a reading
+    /// of "the column's ink" would give: note heads are (LSH, 0.688700 = half of a 1.377400
+    /// head) and rests are (LSR, 0.750000 = half a half-rest), but an ACCIDENTAL is not (LSA,
+    /// unchanged at 0.688700) and neither is a DOT (LSD, unchanged). Both predictions to the
+    /// contrary were written down first and both were wrong. That is consistent with LilyPond's
+    /// structure — a Dots grob hangs off its note head and the accidentals off an
+    /// Accidental_placement, so neither is among the note column's <c>elements</c> — and it is
+    /// why this does NOT reuse <see cref="MusicalInkOverhangsPerColumn"/>, which deliberately
+    /// includes an accidental's leftward reach because the keep-inside-line rod does take it.
+    /// </para>
+    /// <para>
+    /// A stem is in the group but never widens it: it stands at a head's own edge.
+    /// </para>
+    /// </remarks>
+    internal static double[] ParentAlignmentCentresPerColumn(
+        IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings)
+    {
+        var left = new double[timings.Count];
+        var right = new double[timings.Count];
+        var seen = new bool[timings.Count];
+
+        foreach (var measure in measures)
+        {
+            var onset = Fraction.Zero;
+            foreach (var item in measure.Items)
+            {
+                if (RhythmicHeadExtent(item) is { } ext)
+                    for (int t = 0; t < timings.Count; t++)
+                        if (timings[t] == onset)
+                        {
+                            left[t] = seen[t] ? Math.Min(left[t], ext.Left) : ext.Left;
+                            right[t] = seen[t] ? Math.Max(right[t], ext.Right) : ext.Right;
+                            seen[t] = true;
+                            break;
+                        }
+                onset += item.Duration;
+            }
+        }
+
+        var centres = new double[timings.Count];
+        for (int t = 0; t < timings.Count; t++)
+            centres[t] = seen[t]
+                // The placeholder extent is (0 . 1.35), so its CENTER is half the width.
+                ? (left[t] + right[t]) / 2
+                : EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
+        return centres;
+    }
+
+    /// <summary>
+    /// One item's contribution to the note-column extent above: the note heads it draws, or
+    /// the rest, measured from the column's reference point. Null for anything that is not a
+    /// rhythmic grob (a note column holds no clef or bar line).
+    /// </summary>
+    private static (double Left, double Right)? RhythmicHeadExtent(MusicItem? item)
+    {
+        if (!IsMusicalColumn(item) || item is null)
+            return null;
+
+        int noteValue = GetNoteValue(item);
+
+        // A rest is drawn glyph-left-aligned at its column, so its own box IS its extent.
+        if (item is RestItem)
+        {
+            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            return (restBox.Left, restBox.Right);
+        }
+
+        var head = GlyphMetrics.GetNoteheadBBox(noteValue);
+        if (item is ChordItem chord)
+        {
+            // Seconds reverse a head to the other side of the stem, so the group is wider
+            // than one head on whichever side the reversal happened.
+            // LILYPOND-REF: lily/stem.cc:606-760 — the same offsets CalculateLeftExtent reads.
+            double[] offsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue);
+            return (offsets.Min() + head.Left, offsets.Max() + head.Right);
+        }
+        return (head.Left, head.Right);
+    }
+
+    /// <summary>
     /// Floors a LEAD-SHEET bar at a readable grid-cell width. Row bars carry
     /// no notation ink, so without a floor a long chart packs every bar onto
     /// one line; with it the chart wraps like a song-book grid.
