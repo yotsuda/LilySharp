@@ -32,9 +32,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第7セッション）/ HEAD は `8b7b2615`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **41 ahead・未 push**）。
-**3324 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+最終更新 2026-07-26（第7セッション）/ HEAD は `21e67804`
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **46 ahead・未 push**）。
+**3342 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 84/104 exact・total |residual| 0.058509 ss / 97 distances・counts 7/7**。
 この回の snapshot 再ベースは **1 枚**（`programmatic/hara-kiri-paged`。正当化する台帳キー 2 件を
 message に名指し済＝§5.2.1③。ユーザー承認済）。
@@ -49,60 +49,37 @@ message に名指し済＝§5.2.1③。ユーザー承認済）。
 
 | やったこと | 結果 |
 |---|---|
-| §0 の裏取り | HEAD が `8d1368d2` でなく `8f69c448`・samples の未 commit 枠は消滅 |
 | **▶ の前提を実コードで確認** | **`BuildSystemSkylines` の minimum-vs-final は Lily# では同じ数**＝測れない。**理由は譜間ばねが無いこと** |
 | **staff ばねの対を起票**（`e467d51e`。books JSS/JSSC＋台帳 4 点） | 予測は**自前の falsifier ごと的中**。−0.495460 / +0.373744 で OPEN |
-| **譜間ばねをページの鎖へ移植**（`c309b751`。`:651-720` の字面） | **2 点が同時に閉じた** −0.002480 / −0.029762。total **0.038509 ss** |
-| **圧縮側を起票**（`8b7b2615`。book JSK＋台帳 3 点） | **起票した瞬間に移植の欠陥を捕まえた**（下記）。直して −0.006666 / −0.013334 |
+| **譜間ばねをページの鎖へ移植**（`c309b751`。`:651-720` の字面） | **2 点が同時に閉じた** −0.002480 / −0.029762 |
+| **圧縮側を起票**（`8b7b2615`。book JSK＋台帳 3 点） | **起票した瞬間に移植の欠陥を捕まえた**。直して −0.006666 / −0.013334 |
+| §2F の小物 3 件（`47aa093d` `94d83206` `21e67804`） | `smartTyping` 改名／`IDrawingContext` の 2 フレーム明記／**スラー警告 LYS4010**（master 直・ユーザー判断） |
 
-**移植の要点**（同じ regime に戻るとき）:
+**この回の知識は §1 に溜めず出してある**（§4）。戻るときはここから:
 
-- 産地は 1 つ: `MultiStaffLayouter.StaffSprings` が**配置済みの譜 Y から**各ペアの最小を読む
-  （ばねの床が配置と食い違えない）。spec 選択も `InterGroupSpec` に 1 本化した（§5.2.1②）。
-- **frame が 2 つ動いた**（どちらも元から不整合だった）: system 間ばねは**前 system の
-  最後の譜 → 次 system の最初の譜**（LP は `:1120-1126` でスカイラインを譜へ寄せる。Lily# は
-  スカイラインを原点フレームのまま置き、ばねを作る側で最小 span を引く）／
-  last-bottom の床は**最後の譜の refpoint より下のインク**。
-- **force 0 では 1 バイトも動かない**——ばねは `max(min, ideal)` で、渡す min は配置済み距離＝
-  spec の basic-distance を下回らないから。⚠️ **これは「結果」であって「構成」ではない**（§5.2）。
-  だから機構そのものを主張するテストを別に置いた
-  （`TheStavesOfASystem_AreSpacedByThePageChain_NotPinnedAtTheAlignmentMinimum`。
-  ばね挿入を潰すと**落ちることを実証済**）。
-- **残差は 2 つでなく 1 つ**: 両点を force に直すと Lily# 0.09859604・LP 0.09909207 で
-  **9 桁一致**＝鎖の形は一致し、**残るのはページ全体の slack 差 Δf = 0.000496** だけ。
-  圧縮側も同じ（Lily# 0.17743462 / LP 0.17410134・残差比は 2:4＝ばねの圧縮強度そのもの）。
-  ⚠️ **伸長では Lily# が伸びず・圧縮では Lily# が縮みすぎる**＝**同じ 1 つの原因**
-  （Lily# の内容が僅かに背高い＝▶ の符頭インク）が符号違いで出ているだけ。
+| 知りたいこと | 置き場所 |
+|---|---|
+| 譜間ばねの模型（ideal/床/伸び 5・縮み 2／frame 2 つ／force 0 で不変なのは「結果」） | `PageLayouter.PositionSystemsOnPage`・`RespaceStaves`・`MultiStaffLayouter.StaffSprings` の remarks |
+| ★ **Align_interface の最小に basic-distance は入らない**（`:234-238` は pure 専用）＝床に混ぜると圧縮不能 | `AlignmentMinimumWithSkylines` の remarks＋user memory |
+| ★ **床は「描かれた距離 −(basic が押し上げた分)」**（フレーム差の半分ずれる／床が低いと force 0 でも動く） | `StaffSprings` の該当行のコメント＋user memory |
+| 実測・予測・falsifier・踏んだ罠（圧縮域に落ちた第1案／`systems-per-page` の fallback） | `probes/page-vertical.ly` の JSS/JSSC/JSK ヘッダ＋台帳 7 点の `why` |
+| 残差が「2 つでなく 1 つ」である算術 | `page.{stretched,compressed}.staff-staff-inside` の `why` |
 
-★ **圧縮側の点が、移植の欠陥を起票直後に捕まえた**（`8b7b2615`。同じ regime に戻る人向け）:
+**この回に踏んだ罠**（§5.0 の 7・8 に汎化済）: ①**ragged-bottom は伸長しか止めない**
+②**`systems-per-page` は Lily# では fallback を踏む**（本数の点だけが気づいた）。
 
-- **Align_interface の minimum translation に basic-distance は入らない。**
-  `align-interface.cc:234-238` に確かに在るが `INT_MAX == end && 0 == start` の**pure 経路
-  専用**で、配置経路（`:128-134` の `get_minimum_translations`）は `start = end = 0` で呼ぶ。
-  ⇒ basic-distance は**ばねの ideal としてだけ**配置に届く。**描かれる距離＝ばねの静止長
-  `max(床, ideal)`**。Lily# は 3 つの max を 1 つにまとめていて、**値は同じ・模型は別**。
-  床に basic-distance が混ざったばねは**圧縮できない**（9.000000 で固まった）。
-- **床は「描かれた距離 −（basic-distance が押し上げた分）」で取る。** 配置は**譜の上端**
-  フレーム、ばねは refpoint フレームなので、**差だけが純粋な長さ**。最小をそのまま変換すると
-  **譜の高さ差の半分**ずれる（通常譜どうしは 0・4 弦タブの上では 0.25）。
-  ⇒ `test/tab-percent-repeat` が**force 0 のページで 0.25 動いて**それを捕まえた。
-- ⚠️ **床が「配置が描いた距離」より低いと、force 0 でも譜が動く。** 呼び出し側が
-  スカイラインを渡し忘れていて床が `minimum-distance` に落ち、タブ譜が **190 ss 跳んだ**。
-  スカイラインが無い経路（hara-kiri）は**描かれた距離を床にする**＝伸びるが縮まない。
+### ▶ 次の一手 ＝ **縦スカイラインの符頭を LILC の実インクにする**（残差 4 点の共通原因）
 
-**この回に踏んだ罠**（§5.0 に汎化済・ここでは名前だけ）: ①**ragged-bottom は伸長しか止めない**
-＝ページが埋まると両者とも**圧縮域**へ落ちる（別 regime）②**`systems-per-page` は Lily# では
-fallback を踏む**（17 systems・最終ページ 5 で候補が全滅→1 ページに全部）。**count の点が
-無ければ、存在しないページの距離を 3 つ記録していた**＝§5.2.1 の網が効いた実例。
-
-### ▶ 次の一手 ＝ **縦スカイラインの符頭を LILC の実インクにする**（Δf の正体）
-
-残る 3 点（`system.stretched-distance` −0.000414・上の 2 点の残り）は**同じ 1 族**:
 Lily# は縦スカイラインの符頭を **名目 1.0**（`EngravingDefaults.NoteheadHeight`）で種まきするが、
-LP のインクは **0.545**（`GlyphMetricsGenerated.NoteheadBlack` に**既にある**）。
-`system.stretched-distance` の `why` が「X で `ec7a2254` がやったことの縦半分・**未配線**」と
-名指している。⇒ **0.045 は説明が付き、残り 0.005 は未説明（LP 0.550 対 LILC 0.545）＝
-そこは埋めない**。⚠️ **全部の縦スカイラインが動く＝独立した島**。出力が動くので対を先に。
+LP のインクは **0.545**（`GlyphMetricsGenerated.NoteheadBlack` に**既にある**＝X で `ec7a2254` が
+やったことの**縦半分が未配線**。`system.stretched-distance` の `why` が名指している）。
+⇒ Lily# の内容が僅かに背高く、**伸長では伸び足りず・圧縮では縮みすぎる**（同じ原因の符号違い）。
+
+- **対は既にある**（この回に開けた 4 点＋`system.stretched-distance`）＝**新規起票は不要**。
+  着手前に**予測を `why` に書く**こと（§5.0-2）: 4 点が揃って 0 へ向かうはず。
+- ⚠️ **0.045 は説明が付き、残り 0.005 は未説明**（LP 0.550 対 LILC 0.545）＝**そこは埋めない**。
+- ⚠️ **全部の縦スカイラインが動く＝独立した島**。**snapshot が広く動く前提**なので
+  LP 照合 → 承認 → 再ベースの段取りを最初に取ること（今回の 1 枚とは規模が違う）。
 
 #### その次の候補
 
@@ -110,7 +87,6 @@ LP のインクは **0.545**（`GlyphMetricsGenerated.NoteheadBlack` に**既に
   上の譜に貼り付いたまま伸びる。`RespaceStaves` の remarks に明記済。
 - **ossia ペアは rigid のまま**（`gap * OssiaScale` は Lily# 独自で、spec のばねを当てると
   force 0 で動いてしまう）。**ossia 距離そのものの移植が先**。
-
 - **§2A の残り**: ゲートは継続行 prefix をスコア全体で 1 つ・measure 0 で計算する（改行位置が
   未定のため）⇒ **mid-piece の key change 後の行は古い幅のまま**。構造的な解は **per-line prefix**
   で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
@@ -118,7 +94,7 @@ LP のインクは **0.545**（`GlyphMetricsGenerated.NoteheadBlack` に**既に
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 18 点**（旧 16 点は**この回は 1 つも動いていない**）:
+**非ゼロで残っている台帳点は 20 点**（旧 16 点は**この回は 1 つも動いていない**）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
@@ -128,6 +104,10 @@ LP のインクは **0.545**（`GlyphMetricsGenerated.NoteheadBlack` に**既に
 | **`{page,system}.compressed.*two-staff` 2 点** | −0.006666 / −0.013334 | 圧縮側。**残差比 2:4＝ばねの圧縮強度**＝やはり同じ 1 つの量。⚠️ **4 点は独立でない** |
 
 #### 前回の移植で分かったこと（歌詞・和音アンカーの regime に触るとき用）
+
+> ⚠️ **これは第6セッションの regime ブロックで、今の ▶ とは無関係。** §1 が 1 画面に
+> 収まらなくなったときに**最初に落とす候補**（§7-3・§8。落とす前に、各行が §5 かコード注記か
+> `probes/*.ly` のヘッダに残っているかを確かめること）。
 
 - ★ ⚠️ **台帳点が「閉じる先の数値」を先に名指していた**（0.938600 − 0.500000 = 0.438600）。
   実装後の残差は `8.085000000`＝予測どおり。**閉じる前に算術で犯人を名指せた点は、
