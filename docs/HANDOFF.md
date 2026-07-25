@@ -33,9 +33,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `8d1368d2`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **30 ahead・未 push**）。
-**3315 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 80/96 exact・total |residual| 0.006268 ss / 91 distances・counts 5/5**。
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **32 ahead・未 push**）。
+**3316 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 81/97 exact・total |residual| 0.006268 ss / 92 distances・counts 5/5**。
 この回の snapshot 再ベースは **27 枚**（`dcbf08e9` の chords 系 11 枚＋`98672c3a` の lyrics 系
 16 枚。どちらも正当化する台帳キーを message に名指し済＝§5.2.1③）。
 
@@ -172,12 +172,35 @@ LP は全譜を merge するが、**offset は minimum_translations**＝
 ⚠️ **紙面が揃っていない**（LP はこのプローブの紙、Lily# は既定の内容サイズ紙＝§3 の意図的乖離）
 ので**まだ欠陥と読まないこと**。床も違う（LP 9.000000 / Lily# 10.500000）。**紙面を揃えた対**が要る。
 
-### ▶ 次の一手 ＝ **同一譜 knee の実 ink seed**（§2B の残り・対を先に）
+### §2B の同一譜 knee も**測った。ページには届かない**（`system.knee-beam-notes` = exact）
 
-LP は同一譜 knee の Beam/Stem stencil を skyline に入れる（cross-staff **だけ**除外＝
-`axis-group-interface.cc:850-858` の LP 自身のコメント）。Lily# の `OuterEdgeStaffSpaceAtX` は
-対称モデルで stack の内側面を言えない＝**LP の knee 帯（Beam ext）を dump してから両面 seed**。
-現行の固定 stem は観測不能な非忠実。
+LP は同一譜 knee の Beam/Stem を skyline に入れる（cross-staff **だけ**除外）。Lily# は
+**どちらも seed せず**、各メンバーに固定 3.5 stem を残す（`AddBeamsToSkyline` と
+`BeamedItemsToSuppress` の両方が `IsKnee` を skip）。⇒ **構造としては乖離**。
+
+★ **しかし knee の stem は内向き**（低音は上へ・高音は下へ、間のビームへ）＝ビーム帯も stem も
+**2 つの符頭の間**にあるので、外側の envelope は**どちらも符頭**。LP の実測がそれを言う：
+kneed の上端 ink は refpoint から **8.545000**＝`d''''` の符頭ちょうど（ビームはその上に無い）。
+
+| book | system gap |
+|---|---|
+| KNE（knee） | **18.090000** ← Lily# も **18.090000000**＝exact |
+| KNEC（同じ音楽・`auto-knee-gap = #100` で knee 禁止） | 20.285000 |
+
+⇒ **点は床に座っていない**（12 の floor でも 20.285 でもない）＝**kneed envelope 自体を測っている**。
+knee 帯を誤った幾何で seed する将来の移植はこの点を動かす。**だから点を残す**
+（内側譜 union の件と違い、こちらは有効な guard になる）。
+
+⚠️ **この対で fixture を 2 回間違えた**（どちらも同じ罠・§5.0）:
+①対照を「跳躍の無い音楽」にして、差 6.090000 の**ほとんどが `d''''` 自身の ink** だった。
+②4 小節＋明示 `\break` にして **Lily# 側が 1 行に収めてしまい**、gap が読めなかった。
+⇒ **対の両側は音高だけでなく小節数も揃える。**
+
+### ▶ 次の一手 ＝ **`BuildSystemSkylines` の offset が minimum か最終位置か**（§2B の本命）
+
+LP は `minimum_translations` で merge（全譜を上／下へ詰めた仮定）、Lily# は末尾譜を**最終**
+`systemHeight` に置く。**staff ばねが最小より伸びたページ**で差が出るはず。⚠️ 未測定。
+⚠️ 同じ regime で出た**未確認のリード**（system 内 +4.595 対 +2.595）も、紙面を揃えた対で一緒に見る。
 
 #### その次の候補
 
@@ -286,10 +309,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 いずれも**先に LP を dump して対で起票**（発明回避）。アーキ上の不利は無いと確認済み。
 
-- **同一譜 knee の実 ink seed** — LP は同一譜 knee の Beam/Stem stencil を skyline に入れる
-  （cross-staff だけが除外＝`axis-group-interface.cc:850-858` の LP 自身のコメント）。
-  Lily# の `OuterEdgeStaffSpaceAtX` は対称モデルで stack の内側面を言えない＝
-  **LP の knee 帯（Beam ext）を dump してから両面 seed**。現行の固定 stem は観測不能な非忠実。
+- ~~**同一譜 knee の実 ink seed**~~ — ⚠️ **測った。ページには届かない**（`system.knee-beam-notes`
+  = 18.090000 exact・§1）。knee の stem は内向きで、帯も stem も符頭の間にある。
+  **構造の乖離は残るが観測不能**で、点が guard になっている。
 - **`BuildSystemSkylines` の全譜 union** — ⚠️ **測った。内側譜は届かない**（probe `IS3`/`IS3C`・
   §1）。「内側譜の ink が edge 譜の silhouette を突き抜ける」は**音高では起こらない**（詰め offset
   9 ss ＝ 約 2.5 オクターブ）。**残る本命は offset が minimum_translations であること**＝

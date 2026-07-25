@@ -1448,6 +1448,52 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A SAME-STAFF KNEE between systems: each half-bar leaps about four octaves, so both
+    /// engravers knee the beam without being told to (the leap is far past any auto-knee-gap).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The question is whether Lily#'s NON-seeding of a knee is observable. LilyPond leaves
+    /// only CROSS-staff grobs out of the skylines (axis-group-interface.cc:850-858), so a
+    /// same-staff kneed Beam and its Stems ARE in them; Lily# seeds neither
+    /// (SkylineBuilder.AddBeamsToSkyline skips <c>IsKnee</c>) and leaves each member its
+    /// per-note FIXED 3.5 stem instead, in the member's OWN direction.
+    /// </para>
+    /// <para>
+    /// MEASURED, and it is why this point can exist at all: LilyPond's kneed system gap is
+    /// 18.090000 where the SAME music with the knee forbidden
+    /// (<c>\override Beam.auto-knee-gap = #100</c>, probe book KNEC) is 20.285000. So the knee
+    /// is worth 2.195000 of vertical room and the regime is not inert. But LilyPond's kneed
+    /// ink TOP sits 8.545000 above the refpoint — exactly d''''`s head (8.0 + 0.545) — so in
+    /// the kneed case the beam band does not break the note heads' envelope, which is what
+    /// Lily#'s inward-pointing substitute stems also stay inside.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: probe book KNE under <c>\paper { ragged-bottom = ##t }</c>, the paper
+    /// BSD/BSU use.
+    /// </para>
+    /// </remarks>
+    private static readonly string KNE = $$"""
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            {{string.Concat(Enumerable.Repeat("b1 g,,8 d''' g,, d''' b1 g,,8 d''' g,, d''' | ", 6)).Trim()}}
+          }
+        }
+
+        form main { ~Main }
+
+        score main "KNE" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// Cross-staff time-signature alignment. A grand staff whose staves carry DIFFERENT key
     /// signatures — the upper part is transposed (<c>transpose d</c>, so it prints D major = 2
     /// sharps) beside a concert-pitch lower staff (C major, no key). LilyPond break-aligns the
@@ -2287,6 +2333,10 @@ internal static class LpGeometryProbes
         // probes BSD and BSU.
         new("system.beam-under-notes", BSD, g => g.StaffGap()),
         new("system.beam-over-notes", BSU, g => g.StaffGap()),
+        // …and the beam regime those two do NOT reach: a KNEE, whose Beam and Stems LilyPond
+        // keeps in the skylines (only CROSS-staff grobs are left out) and Lily# seeds not at
+        // all, substituting each member's fixed 3.5 stem. See KNE.
+        new("system.knee-beam-notes", KNE, g => g.StaffGap()),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

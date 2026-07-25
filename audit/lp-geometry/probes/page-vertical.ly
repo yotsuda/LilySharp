@@ -805,6 +805,59 @@ probeTag =
   }
 }
 
+%% KNE / KNEC — the SAME-STAFF KNEE, measured between systems, and the question is whether
+%%     Lily#'s omission of it is observable at all.
+%%
+%%     LilyPond leaves only CROSS-staff grobs out of the skylines
+%%     (axis-group-interface.cc:850-858, its own comment), so a same-staff kneed Beam and its
+%%     Stems ARE in them. Lily# seeds neither: SkylineBuilder.AddBeamsToSkyline skips
+%%     `IsKnee`, and BeamedItemsToSuppress skips it too, so the members keep the per-note
+%%     FIXED 3.5 stem instead — each in its OWN direction (AddNoteBoxToSkylines takes
+%%     note.StemUp, not the group's).
+%%
+%%     PREDICTION, written before running (section 5.0-2): KNE - KNEC = 0.000000, i.e. the
+%%     knee cannot be seen from outside. A knee's stems point INWARD — the low note stems up
+%%     to the beam, the high note stems down to it — so the beam band and both stems live
+%%     BETWEEN the two heads, and the heads are what the skyline sees either way. LilyPond
+%%     only knees when the gap exceeds auto-knee-gap (5.5 ss), which is wider than the 3.5
+%%     fixed stem Lily# substitutes, so even that substitute stays inside the envelope.
+%%     (falsifier: any difference, which would mean the knee's ink DOES break the heads'
+%%      envelope — and then the number to port is the beam band, measured here.)
+%%
+%%     ⚠️ THE CONTROL IS THE SAME MUSIC WITH THE KNEE SWITCHED OFF, not music without the
+%%     leap. The first attempt paired the kneed bar against plain low notes and read a
+%%     difference of 6.090000 that was almost entirely d''''`s OWN ink — the trap section 5.0
+%%     names ("both sides of a pair must be the same music"), walked into once more. Both books
+%%     below carry the IDENTICAL notes and differ only in Beam.auto-knee-gap: 0 forces the
+%%     knee, 100 forbids it. What the difference then contains is the knee and nothing else.
+%%     KNE takes the paper BSD/BSU take (ragged-bottom alone) so its Lily# twin is the one
+%%     those points already validate, and it lets the knee happen NATURALLY: the leap is about
+%%     four octaves, far past any auto-knee-gap either engraver could be using, so both knee it
+%%     without an override and the twin is just the music. KNEC keeps the override and is a
+%%     LilyPond-SIDE reference only — Lily# has no auto-knee-gap to switch.
+%%     SIX BARS AND NO \break, the BSD/BSU shape exactly: each engraver breaks where it likes
+%%     and the gap is uniform, so the twin does not have to reproduce a break decision. An
+%%     earlier draft wrote 4 bars with an explicit \break here and the Lily# side fitted all
+%%     four on ONE system — the pair could not even be measured. Same music on both sides
+%%     means the same BAR COUNT too (section 5.0).
+\book {
+  \probeTag "KNE"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff \with { \omit TimeSignature } { \time 12/4
+      \repeat unfold 6 { b'1 g,8 d'''' g, d'''' b'1 g,8 d'''' g, d'''' } }
+  }
+}
+
+\book {
+  \probeTag "KNEC"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new Staff \with { \omit TimeSignature \override Beam.auto-knee-gap = #100 } { \time 12/4
+      \repeat unfold 6 { b'1 g,8 d'''' g, d'''' b'1 g,8 d'''' g, d'''' } }
+  }
+}
+
 %% IS3 / IS3C — WHICH STAVES the SYSTEM skyline is built from, measured between systems.
 %%
 %%     Page_layout_problem::build_system_skyline (page-layout-problem.cc:1080-1127) merges
