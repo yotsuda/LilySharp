@@ -37,6 +37,27 @@ internal sealed class SystemBreaker
     }
 
     /// <summary>
+    /// The prefix width the gate charges a FIRST line — indent excluded, since that is the
+    /// caller's own option rather than anything the score engraves.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so the gate's model can be asserted against the layout's instead of being
+    /// re-derived beside it (SpacingInvariantTests.BreakGateAndLayout_PriceTheSameLineStart)
+    /// and so IncrementalCompiler's skip fingerprint reads the same inputs.
+    /// </remarks>
+    internal static double GateFirstPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
+        SpacingRules.CalculatePrefixWidth(
+            maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
+            includeTimeSignature: !score.AllStavesTab,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+
+    /// <summary>The same for a CONTINUATION line, which carries clef and key but no meter.</summary>
+    internal static double GateContinuationPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
+        SpacingRules.CalculatePrefixWidth(
+            maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
+            includeTimeSignature: false);
+
+    /// <summary>
     /// Breaks measures into systems for a multi-staff score.
     /// Uses the primary voice of the first staff group for measure widths.
     /// </summary>
@@ -59,15 +80,26 @@ internal sealed class SystemBreaker
         // matches the rendered fit (the layout subtracts the same indent from the
         // available width). Default indent 0 → no-op.
         // LILYPOND-REF: scm/output-lib.scm system-start-text indent.
-        // An all-tab score reserves neither key nor time-signature width (tab prints
-        // neither), so the break budget matches the reclaimed prefix the layout uses;
-        // otherwise the score key and the opening meter, as before.
+        // The key column is the UNION of the signatures the staves actually ENGRAVE
+        // (SpacingRules.WidestActiveKeyInk — the one model the system layout reserves from,
+        // LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242). Reading the SCORE key
+        // here instead made the gate a second model: on a grand staff whose upper part is
+        // transposed, the score key is C major and books nothing while the staff engraves
+        // D major, so the gate under-booked the line start by 2.650000 — the key's 2.2 plus
+        // the Clef->Key and Key->Time gaps, which only open when a signature is engraved.
+        // A gate that books less than the layout packs a line the layout then cannot set.
+        // The all-tab case needs no special key handling any more: a TabStaff engraves no
+        // signature, so the union is 0 for it by construction, exactly as LilyPond books
+        // nothing for a staff with no Key_engraver (ly/engraver-init.ly:1214).
+        // ⚠️ Measure 0, both here and for continuation lines, because the breaker prices ONE
+        // continuation prefix for the whole score and does not yet know where lines start.
+        // A mid-piece key change therefore still books its OLD width on the lines after it —
+        // a separate, pre-existing narrowing of the same shape, and the structural fix is a
+        // per-line prefix (MeasureSpringData already carries a per-measure LineStartSpring).
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKey,
-            includeTimeSignature: !score.AllStavesTab,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(maxClefWidth, score.LeadingKey,
-            includeTimeSignature: false) + _options.ShortIndent;
+        double firstPrefixWidth = GateFirstPrefixWidth(score, maxClefWidth) + _options.Indent;
+        double continuationPrefixWidth =
+            GateContinuationPrefixWidth(score, maxClefWidth) + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)
         {

@@ -166,12 +166,15 @@ public sealed class IncrementalCompiler
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
         var springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+        // The break gate's OWN key model — the union of the signatures the staves engrave
+        // (SpacingRules.WidestActiveKeyInk), which is what SystemBreaker now prices a line
+        // start from. This pair is a CHANGE DETECTOR, not the gate's number (it carries no
+        // indent), so what matters is that it reads the same INPUTS: reading score.KeySignature
+        // here left an edit that changed only a transposed part's own signature — and so
+        // changed the gate — looking unchanged to the skip.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double firstPrefix = SpacingRules.CalculatePrefixWidth(maxClefWidth,
-            score.KeySignature, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
-        double contPrefix = SpacingRules.CalculatePrefixWidth(maxClefWidth,
-            score.KeySignature, includeTimeSignature: false);
+        double firstPrefix = SystemBreaker.GateFirstPrefixWidth(score, maxClefWidth);
+        double contPrefix = SystemBreaker.GateContinuationPrefixWidth(score, maxClefWidth);
 
         bool skip = allowSkip
             && _lineSizes != null

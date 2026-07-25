@@ -209,8 +209,16 @@ internal sealed class LayoutEngine
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
                 Width: _options.ContentWidth - sysIndent,
+                // The union of the signatures this system's staves ENGRAVE, which is the model
+                // the spacing reserves from and the renderer draws to — not the score key,
+                // which knows nothing about a transposed part's own signature.
+                // LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242.
+                // ⚠️ Nothing reads this field today (see SystemLayout.PrefixWidth); it is kept
+                // on the one model rather than deleted here so this commit stays a single
+                // concern, and it must not become a third reading of the key.
                 PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
-                    score.LeadingKey, isFirstSystem && !score.AllStavesTab,
+                    SpacingRules.WidestActiveKeyInk(score, firstMeasureIndex),
+                    isFirstSystem && !score.AllStavesTab,
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent));

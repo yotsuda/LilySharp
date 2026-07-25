@@ -73,35 +73,27 @@ public class SpacingInvariantTests
         """;
 
     /// <summary>
-    /// ⚠️ OPEN DEFECT, held at its current size so the fix shows up in the diff: the BREAK GATE
-    /// and the LAYOUT price a line start from two different key models, and disagree by
-    /// 2.650000 on a score where only one staff engraves a signature.
+    /// The break gate and the layout price a line start from ONE key model. On a score where
+    /// only one staff engraves a signature — a transposed part beside a concert one — the two
+    /// used to disagree by 2.650000, the gate booking the score key (C major, nothing at all)
+    /// where the layout books the union of the staves' own signatures.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// LilyPond has ONE model — its page/line breaker solves the real springs
-    /// (lily/constrained-breaking.cc), so "what the breaker books for a line start" is the same
-    /// quantity as "what the layout books" BY CONSTRUCTION, and any Lily# difference is a Lily#
-    /// defect with no LilyPond measurement needed (docs/HANDOFF.md section 5.2.1-2).
+    /// LilyPond has ONE model — its breaker solves the real springs
+    /// (lily/constrained-breaking.cc), so "what the breaker books for a line start" and "what
+    /// the layout books" are the same quantity BY CONSTRUCTION, and a Lily# difference is a
+    /// Lily# defect with no LilyPond measurement needed (docs/HANDOFF.md section 5.2.1-2).
+    /// That is why this is a test and not a ledger point: the gate's only visible consequence
+    /// is a line BREAK, which flips inside a 2.650000 window, so a corpus entry built on one
+    /// would swing on a thousandth of a staff space and measure the fixture, not the engine.
     /// </para>
     /// <para>
-    /// The layout reserves <see cref="SpacingRules.WidestActiveKeyInk"/> — the union of the
-    /// staves' OWN signatures, skipping staves that engrave none — and is exact against
-    /// LilyPond (ledger line-start.clef-to-time.mixed-key-grand-staff, 6.853400). The gate
-    /// reserves <c>score.LeadingKey</c> instead (SystemBreaker.cs:66-69 and
-    /// IncrementalCompiler.cs:170-174), which on this score is C major and books NOTHING: the
-    /// 2.650000 is the key's 2.200000 plus the Clef→Key and Key→Time gaps that only open when
-    /// a signature is engraved.
-    /// </para>
-    /// <para>
-    /// ⚠️ THIS IS NOT A LEDGER POINT, on purpose: the gate's only visible consequence is a line
-    /// BREAK, and a break flips inside a 2.650000 window — a corpus entry built on one would
-    /// swing on a thousandth of a staff space and measure the fixture rather than the engine.
-    /// </para>
-    /// <para>
-    /// ⚠️ WHEN THE GATE IS FIXED this test must become <c>Assert.Equal(layout, gate)</c> with
-    /// the recorded difference deleted, NOT re-pinned to a new number. And the fix must move
-    /// the GATE up to the layout: the ledger point above is what says which side is right.
+    /// The number the two agree ON is LilyPond's: probe TSA puts the meter's ink right edge at
+    /// 9.353400 (TIME anchor 7.653400 + ext 1.700000), and the ledger holds the same line start
+    /// through the drawn geometry as <c>line-start.clef-to-time.mixed-key-grand-staff</c>
+    /// = 6.853400. ⚠️ Which is also why the fix had to move the GATE up rather than the layout
+    /// down — the ledger point is what says which side was right.
     /// </para>
     /// </remarks>
     [Fact]
@@ -110,25 +102,33 @@ public class SpacingInvariantTests
         var (_, _, _, score) = Collect(TransposedGrandStaff);
 
         double clefWidth = SpacingRules.MaxClefWidth(score);
-        double gate = SpacingRules.CalculatePrefixWidth(
-            clefWidth, score.LeadingKey, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+        double activeKeyInk = SpacingRules.WidestActiveKeyInk(score, 0);
         double layout = BreakAlignSpacing.CalculatePrefixWidth(
-            clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
+            clefWidth, activeKeyInk, includeTimeSignature: true,
             score.TimeSignature.Beats, score.TimeSignature.BeatType);
 
-        // The layout half is the one LilyPond agrees with: its meter's ink ends at 9.353400
-        // (probe TSA — TIME anchor 7.653400, ext 1.700000), which is this number exactly.
+        // The line start LilyPond gives this score, to the digit.
         Assert.Equal(9.353400, layout, precision: 6);
 
-        // …and the gate is short by the whole engraved key column plus its two gaps.
-        Assert.Equal(2.650000, layout - gate, precision: 6);
+        // The gate reads the same model — asserted through SystemBreaker's own inputs rather
+        // than by repeating its arithmetic, so a future edit that points the gate at some
+        // third key cannot pass this by coincidence.
+        Assert.Equal(layout, SystemBreaker.GateFirstPrefixWidth(score, clefWidth), precision: 6);
+
+        // ⚠️ The score-level key is NOT that model here, and this is the assertion that would
+        // have failed before the fix: C major books nothing, leaving the gate 2.650000 short —
+        // the key's 2.200000 plus the Clef→Key and Key→Time gaps, which only open when a
+        // signature is engraved.
+        double scoreKeyModel = SpacingRules.CalculatePrefixWidth(
+            clefWidth, score.LeadingKey, includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+        Assert.Equal(2.650000, layout - scoreKeyModel, precision: 6);
     }
 
     /// <summary>
-    /// The control for the test above: with NO transposed part the two models read the same key,
-    /// so they already agree. Without this, "the gate is 2.65 short" could be read as a constant
-    /// offset in the gate rather than as the missing per-staff key it is.
+    /// The control for the test above: with NO transposed part every model reads the same key,
+    /// so the score-level key agrees too. Without this, "the score key was 2.65 short" could be
+    /// read as a constant offset rather than as the missing per-staff signature it is.
     /// </summary>
     [Fact]
     public void BreakGateAndLayout_AlreadyAgreeWhenNoStaffCarriesItsOwnKey()
@@ -147,10 +147,13 @@ public class SpacingInvariantTests
             """);
 
         double clefWidth = SpacingRules.MaxClefWidth(score);
+        double layout = BreakAlignSpacing.CalculatePrefixWidth(
+            clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+
+        Assert.Equal(layout, SystemBreaker.GateFirstPrefixWidth(score, clefWidth), precision: 6);
         Assert.Equal(
-            BreakAlignSpacing.CalculatePrefixWidth(
-                clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
-                score.TimeSignature.Beats, score.TimeSignature.BeatType),
+            layout,
             SpacingRules.CalculatePrefixWidth(
                 clefWidth, score.LeadingKey, includeTimeSignature: true,
                 score.TimeSignature.Beats, score.TimeSignature.BeatType),
