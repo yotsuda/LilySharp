@@ -213,9 +213,11 @@ internal sealed class LayoutEngine
                 // the spacing reserves from and the renderer draws to — not the score key,
                 // which knows nothing about a transposed part's own signature.
                 // LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242.
-                // ⚠️ Nothing reads this field today (see SystemLayout.PrefixWidth); it is kept
-                // on the one model rather than deleted here so this commit stays a single
-                // concern, and it must not become a third reading of the key.
+                // ⚠️ THIS FIELD IS READ, and a 2026-07-25 commit message wrongly called it
+                // dead: TrillSpannerEngraver starts a trill's CONTINUATION segment at
+                // `system.PrefixWidth + BoundPadding`, so this is where a trill line begins
+                // after a line break — it must be the prefix the renderer actually draws, not
+                // the score key's. TabOnlyKeyPrefixTests asserts the same value directly.
                 PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
                     SpacingRules.WidestActiveKeyInk(score, firstMeasureIndex),
                     isFirstSystem && !score.AllStavesTab,

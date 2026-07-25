@@ -137,13 +137,20 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 （⚠️ ゲートを `SystemBreaker` の入口経由で読む＝算術のコピーではないので、第3の key を
 指す改変が偶然通ることはない）。
 
-**残した 2 件**（silent にしない）:
+**残した 1 件**（silent にしない）:
 
 - **ゲートは継続行の prefix をスコア全体で 1 つ・measure 0 で計算する**（改行位置が未定のため）。
   ⇒ **mid-piece の key change 後の行は古い幅のまま**＝同型の過少予約。構造的な解は
   **per-line prefix** で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
-- **`SystemLayout.PrefixWidth`（`LayoutEngine:212`）は誰も読んでいない**＝dead。
-  正しいモデルには載せ替えたが、**削除は §5.1 の横断 grep ＋ 承認が要る**ので別件。
+- ★ ⚠️ **`SystemLayout.PrefixWidth` を「誰も読んでいない＝dead」と書いたのは誤り**
+  （`8d1368d2` の message と旧 §1。2026-07-25 に削除承認を受けて横断 grep したら**読み手が 2 つ**
+  出た）: **`TrillSpannerEngraver.cs:153`＝改行をまたぐトリルの継続セグメントの開始 X**
+  （`system.PrefixWidth + BoundPadding`）と `TabOnlyKeyPrefixTests`（4 テスト）。
+  ⇒ **削除しない。** そして `8d1368d2` はここを score key モデルから彫られた union へ変えた＝
+  **製品の量を変えていた**（向きは正しい——トリルが避けるべきは実際に描かれる prefix）。
+  ⚠️ 教訓: **`.PrefixWidth` のような一般語は grep が同名の別メンバー（`CalculatePrefixWidth`・
+  `ChangeItemPrefixWidth`・ローカル変数）に埋もれる。「dead」と言う前に
+  `\.PrefixWidth\b` の形で絞り、head_limit で切れた出力を鵜呑みにしない。**
 
 ### §2B の「全譜 union」は**測った。届かない**（probe `IS3`/`IS3C`・台帳点は作らない）
 
@@ -297,7 +304,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ~~**prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`**~~ — **閉じた**（`8d1368d2`）。
   3 経路とも `SystemBreaker.Gate{First,Continuation}PrefixWidth` の 1 モデル。詳細と**残した
-  2 件**（継続行 prefix が measure 0 固定／`SystemLayout.PrefixWidth` が dead）は §1。
+  1 件**（継続行 prefix が measure 0 固定）は §1。⚠️ §1 に `SystemLayout.PrefixWidth` を
+  **dead と誤記した訂正**もある（実際はトリルの継続セグメントが読む）。
 - **break-align 描画 walk の純構造化** — `sharedKeyX`/`sharedTimeX` の手組み max ループを
   `SolvePrefixColumns` 消費へ。値は一致済（出力不変）だが、**予約側は score モデル＋measure 走査、
   描画側は `ResolveKeySignature`＋`GetSystemStartKeyChange` と key 解決経路が別**——
