@@ -62,18 +62,153 @@
 %% Paper_column::minimum_distance, so min_dist stays 0 and `min_dist + 0.5` is the whole
 %% answer. That half is ready to port.
 %%
-%% ★ CHORDS + LYRICS IS NOT. Widening the first SYLLABLE by 21 ss moves the first chord
+%% ★ CHORDS + LYRICS WAS NOT — it is now; read on to "RESOLVED" before believing this
+%% paragraph, which is kept because the wrong turn it records is the reason the column dump
+%% was run. Widening the first SYLLABLE by 21 ss moves the first chord
 %% from 2.312539 to 12.777463 — so something about the lyric DOES reach the first column,
 %% while the lyric's own ink stays pinned at 0.000000 in both. Two candidates, not yet
 %% told apart:
 %%   (a) LyricText joins min_dist (it would have to, to push the column), or
 %%   (b) LilyPond clamps a first syllable that would hang off the left edge of the system
 %%       back inside it, and the column follows.
-%% The arithmetic does not separate them from these four numbers alone (neither "centred on
-%% the column" nor "left-aligned at the column" reproduces both scores), and GUESSING here
-%% is exactly what section 5.3 forbids. NEXT MEASUREMENT: dump the paper column itself
-%% (-ddebug-paper-columns) and re-run CL/CLW, which says directly whether the COLUMN moved
-%% or only the grobs on it.
+%% GUESSING here is exactly what section 5.3 forbids, so the paper column itself is dumped
+%% (see the *COL# rows below) and CL/CLW re-run: that says directly whether the COLUMN moved
+%% or only the grobs standing on it.
+%%
+%% ============ PREDICTION, written BEFORE the column dump was run (section 5.0-2) ============
+%%
+%% The four numbers above are not as mute as the paragraph above them claimed. The chord
+%% moved 12.777463 - 2.312539 = 10.464924, and the syllable was widened by
+%% 26.904926 - 5.975079 = 20.929847 — EXACTLY twice that, to 15 digits. A factor of one half
+%% tied to the syllable's own width is the signature of the syllable being CENTRED on its
+%% column. Combine that with the lyric ink staying pinned at 0.000000 in both scores (a
+%% clamp: LilyPond will not let the first syllable hang off the left edge) and the column is
+%% forced to sit at half the syllable width. So:
+%%
+%%   predicted first musical column X   CL  =  5.975079 / 2 =  2.987540
+%%                                      CLW = 26.904926 / 2 = 13.452463
+%%   predicted CHORD offset ON that column, both scores = -0.675000  (a constant, since
+%%                                      2.312539 - 2.987540 = 12.777463 - 13.452463)
+%%
+%% If the dump shows those column X values, candidate (b) holds and (a) is dead: the lyric
+%% does NOT price the column through min_dist, it is placed by self-alignment against a
+%% clamped left edge and the column follows it. If instead the column sits at 2.312539 /
+%% 12.777463 (i.e. under the chord), the chord is what is column-aligned and the lyric is
+%% hanging off it — a different port entirely. Either way the -0.675000 constant then needs
+%% a LilyPond source before it may enter code (section 5.2).
+%%
+%% ============ THE PREDICTION WAS WRONG — column dump, 2026-07-25 ============
+%%
+%%   score  LYRIC ink left   LYRIC's column   CHORD ink left   CHORD's column
+%%   CL       0.000000         2.312539         2.312539         2.312539
+%%   CLW      0.000000        12.777463        12.777463        12.777463
+%%
+%% (Every previously recorded figure reproduced unchanged in the same run, so the added dump
+%% perturbs nothing.)
+%%
+%% Three facts, and the predicted "column at w/2" is not among them:
+%%
+%%   1. THE CHORD IS THE COLUMN. ChordName anchor == its column's X in every score here
+%%      (CO, COW, CS too). The chord never moves relative to its column; what moved between
+%%      CL and CLW is the COLUMN.
+%%   2. THE LYRIC HANGS LEFT OF ITS COLUMN, by w/2 - 0.675000 — and that offset is LilyPond's
+%%      own formula, not a fitted constant. self-alignment-interface.cc:117-176
+%%      (`aligned_on_parent`) computes
+%%          x = -ext.linear_combination (self_align) + he.linear_combination (par_align)
+%%      where, because the column holds NO note heads, `he` falls back to the PaperColumn's
+%%      placeholder `X-alignment-extent = (0 . 1.35)` (define-grobs.scm:2750, "as wide as a
+%%      note head"; self-alignment-interface.cc:134-139). LyricText's `self-alignment-X` is
+%%      `left-align-at-split-notes` (define-grobs.scm:2222), which returns CENTER when there
+%%      are no note heads to ask (output-lib.scm:1671-1673), and `parent-alignment-X` is ()
+%%      so it copies self_align (:156-157). With ext = (0 . w) that is
+%%          x = -w/2 + 1.35/2 = -w/2 + 0.675
+%%      ⇒ CL  -2.987540 + 0.675 = -2.312540   ⇒ ink left 2.312539 - 2.312540 = 0.000000
+%%         CLW -13.452463 + 0.675 = -12.777463 ⇒ ink left 0.000000
+%%      THE 0.675 IS 1.35/2. It is not a clamp constant; the syllable is simply centred on a
+%%      note-head-sized placeholder.
+%%   3. THE LYRIC'S INK LEFT LANDS ON 0.000000 IN BOTH SCORES. Given fact 2 that is not a
+%%      property of the lyric at all — it says the COLUMN sits at exactly the position where
+%%      the syllable's leftmost ink touches the system's left edge. So something DOES push
+%%      the column right by the amount the syllable overhangs it, and the answer to the
+%%      original question is: THE COLUMN MOVED, the grobs on it did not.
+%%
+%% What is still open is which mechanism does the pushing, and the four numbers still do not
+%% say. Both of these produce "ink left = 0.000000":
+%%   (a) a ROD from the left-edge column, i.e. set_column_rods (spacing-spanner.cc:228-297)
+%%       reading the column's LEFT horizontal skyline, which contains the overhanging lyric
+%%       ("stickout will be negative if the right-hand column sticks out a lot to the left",
+%%       :254-255), OR
+%%   (b) the spring's own min_dist growing with the overhang.
+%% They differ in what happens when the overhang goes away, so the next two scores remove it
+%% two different ways instead of arguing.
+%%
+%% ============ RESOLVED — perturbation 2, measured 2026-07-25 ============
+%%
+%%   score  first column   LYRIC ink left   CHORD ink left     (predictions were CLX 2.987540
+%%   CL       2.312539       0.000000         2.312539          / CLL 0.500000; both hit)
+%%   CLX      2.987539       0.000000         2.987539
+%%   CLL      0.500000       0.500000         0.500000
+%%
+%% CLL is the decisive one: take away the syllable's REACH to the left of its column — the
+%% music, the syllable and its width are untouched — and the column falls straight back to
+%% 0.500000, the chords-only answer. So the column is not priced by the lyric's width. It is
+%% pushed by the lyric's OVERHANG, and the size of the push is the overhang itself: CL's
+%% 2.312539 carries no `+ 0.5` on top.
+%%
+%% CL vs CLX confirms the shape from the other side: every column moved by exactly 0.675000
+%% and the column-to-column distances are identical to 6 digits (2nd chord minus 1st is
+%% 4.845920 in both). Only the FIRST gap changed. That is one rod at the head of the line,
+%% not a respacing.
+%%
+%% THE MECHANISM, entirely from LilyPond source (no fitting):
+%%
+%%   1. THE ROD. simple-spacer.cc:431-432 gives every column but the line starter
+%%          description.keep_inside_line_ = col->extent (col, X_AXIS);
+%%      when `keep-inside-line` is set — and it is #t by default on both PaperColumn
+%%      (define-grobs.scm:2742) and NonMusicalPaperColumn (:2525); the property means "this
+%%      column cannot have objects sticking into the margin"
+%%      (define-grob-properties.scm:637). simple-spacer.cc:556-560 then adds
+%%          spacer.add_rod (i, cols.size (), cols[i].keep_inside_line_[RIGHT]);
+%%          spacer.add_rod (0, i, -cols[i].keep_inside_line_[LEFT]);
+%%      The second rod is this defect's whole answer: the first musical column must stand at
+%%      least `-extent[LEFT]` away from the line-start column. No padding, no spring term —
+%%      which is why the measurement is the bare overhang.
+%%      ⇒ first column X = max (standard_breakable_column_spacing's min_dist + 0.5,
+%%                              -column_extent[LEFT])
+%%      CO/COW/COK/CO3: a ChordName never reaches left of its column, so the rod is 0 and the
+%%      spring's 0.5 stands. CL/CLW/CLX: the rod wins. CLL: the rod is 0 again.
+%%
+%%   2. WHY A SYLLABLE REACHES LEFT AND A CHORD NAME DOES NOT.
+%%      LyricText has (X-offset . ,ly:self-alignment-interface::aligned-on-x-parent)
+%%      (define-grobs.scm:2229). In aligned_on_parent (self-alignment-interface.cc:117-176)
+%%          x = -ext.linear_combination (self_align) + he.linear_combination (par_align)
+%%      * self_align = `left-align-at-split-notes` (define-grobs.scm:2222), which asks the
+%%        parent for note heads and returns CENTER when there are none
+%%        (output-lib.scm:1642-1673) — a staff-less lyric always takes that branch;
+%%      * par_align = `parent-alignment-X` = () (define-grobs.scm:2221) ⇒ copies self_align
+%%        (self-alignment-interface.cc:156-157);
+%%      * `he` is the PARENT's extent, and for a PaperColumn holding no note heads it falls
+%%        back to the placeholder `X-alignment-extent = (0 . 1.35)`, "as wide as a note head"
+%%        (self-alignment-interface.cc:121-139, define-grobs.scm:2749-2750). LilyPond's own
+%%        comment names this exact situation: "This situation happens for lyrics without
+%%        `associatedVoice`, for example."
+%%      With ext = (0 . w) that is  x = -w/2 + 1.35/2 = -w/2 + 0.675.
+%%      ⇒ overhang = w/2 - 0.675:  CL 2.312540, CLW 12.777463, CLX (placeholder forced to
+%%        (0 . 0)) 2.987540 — each equal to the measured column to 6 digits.
+%%      THE 0.675 IS 1.35/2, NOT A CLAMP CONSTANT. Nothing in LilyPond clamps a syllable to
+%%      the margin; the syllable is centred on a note-head-sized placeholder and the ROD then
+%%      moves the COLUMN until the ink clears the margin, which is why the ink lands on
+%%      0.000000 exactly.
+%%      ChordName, by contrast, declares no X-offset and no self-alignment-interface at all
+%%      (define-grobs.scm:837-855), so it sits on its column's reference point with offset 0
+%%      — which is why CHORD anchor == column X in every score dumped here.
+%%
+%% CONSEQUENCE FOR THE PORT. The two halves are no longer coupled: CO's `min_dist + 0.5` and
+%% CL's rod are separate LilyPond mechanisms, so porting the staff-less line-start spring no
+%% longer requires guessing at the lead-sheet case. What CL additionally needs is the
+%% keep-inside-line rod, which Lily# does not have at all — and note it is NOT staff-less
+%% specific: it is a general left- AND right-margin constraint on every column of every
+%% system, so it belongs with the spacer, not with the staff-less special case.
 %%
 %% This matters because the lead-sheet fixtures are all the CL shape, and both halves go
 %% through ONE Lily# code path — so the CO half cannot be ported alone without guessing at
@@ -91,10 +226,24 @@
 %% Dumps go to STDOUT; keep stderr on its own stream (the script does) — see
 %% barline-spacing.ly's header for what happens when they are merged.
 
+%% Each dumped grob produces TWO records:
+%%   PROBE <tag> <NAME>       — the grob's own anchor and ink extent, as everywhere else
+%%   PROBE <tag> <NAME>COL#<rank> — the X of the PAPER COLUMN it hangs from (its X-parent),
+%%       in the same system frame. `ext=(0 . 0)` there is a PLACEHOLDER, not a measurement:
+%%       a paper column has no ink of its own, and the field exists only so the shared
+%%       parser (Measure-LilyPondGeometry.ps1, which treats an unparsable PROBE line as a
+%%       fatal hole) accepts the row. Read the anchor, ignore the ink.
+%% The pair is what tells a column that MOVED apart from a grob that slid along a column
+%% that did not.
 #(define ((gd tag name) g)
-   (format #t "\nPROBE ~a ~a x=~a ext=~a\n" tag name
-           (ly:grob-relative-coordinate g (ly:grob-system g) X)
-           (ly:grob-extent g g X)))
+   (let* ((sys (ly:grob-system g))
+          (col (ly:grob-parent g X)))
+     (format #t "\nPROBE ~a ~a x=~a ext=~a\n" tag name
+             (ly:grob-relative-coordinate g sys X)
+             (ly:grob-extent g g X))
+     (format #t "\nPROBE ~a ~aCOL#~a x=~a ext=(0 . 0)\n" tag name
+             (ly:grob-property col 'rank)
+             (ly:grob-relative-coordinate col sys X))))
 
 lay =
 #(define-scheme-function (tag) (string?)
@@ -163,6 +312,52 @@ harmony = \chordmode { c2 a:m | f2 g:7 | c1 }
     \new Lyrics \lyricmode { Twinkletwinkletwinkle2 -- kle4 twin -- kle | lit2 -- tle | star1 }
   >>
   \lay "CLW"
+}
+
+%% ---- PERTURBATION 2 (2026-07-25): remove the overhang, two different ways ----
+%% Both scores are the SAME MUSIC as CL. Only the lyric's alignment against its column
+%% changes, i.e. only how far the syllable reaches LEFT of the column it hangs from. If the
+%% column is placed by something that reads that reach (a rod off the left-edge column, or a
+%% min_dist that grew), the column must come back left when the reach is removed. If the
+%% column is priced by the syllable's WIDTH regardless of where the syllable sits, it will
+%% not move at all.
+%%
+%% PREDICTIONS, written before running (section 5.0-2):
+%%
+%%   CLX — X-alignment-extent forced to (0 . 0), so the 0.675 half-placeholder disappears
+%%         and aligned_on_parent gives x = -w/2 exactly. The syllable now reaches
+%%         2.987540 left of its column instead of 2.312540.
+%%         predict  column 2.987540, LYRIC ink left 0.000000, CHORD 2.987540
+%%         (falsifier: column stays 2.312539 and the lyric hangs off the page at -0.675001,
+%%          which would mean the column never knew about the lyric.)
+%%
+%%   CLL — self-alignment-X forced to LEFT. Then aligned_on_parent gives
+%%         x = -ext.linear_combination(-1) + he.linear_combination(-1) = -0 + 0 = 0, so the
+%%         syllable's ink left sits exactly ON its column and reaches nothing.
+%%         predict  column 0.500000 (back to the chords-only `min_dist + 0.5`),
+%%                  LYRIC ink left 0.500000, CHORD 0.500000
+%%         (falsifier: column stays 2.312539, i.e. the width was priced, not the reach.)
+
+%% CLX — CL with the PaperColumn placeholder width taken away.
+\score {
+  <<
+    \new ChordNames { \time 4/4 \harmony }
+    \new Lyrics \lyricmode { Twin2 -- kle4 twin -- kle | lit2 -- tle | star1 }
+  >>
+  \layout {
+    \lay "CLX"
+    \context { \Score \override PaperColumn.X-alignment-extent = #'(0 . 0) }
+  }
+}
+
+%% CLL — CL with the syllable left-aligned on its column instead of centred.
+\score {
+  <<
+    \new ChordNames { \time 4/4 \harmony }
+    \new Lyrics \with { \override LyricText.self-alignment-X = #LEFT }
+      \lyricmode { Twin2 -- kle4 twin -- kle | lit2 -- tle | star1 }
+  >>
+  \lay "CLL"
 }
 
 %% CS — the CONTROL that is NOT staff-less: the same chords over an ordinary staff. Here
