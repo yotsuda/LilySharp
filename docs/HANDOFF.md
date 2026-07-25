@@ -67,24 +67,62 @@ time＝`semi-shrink-space`。全部 `fixed-space` と書かれていた）＝§5
 **閉じた点**: `line-start.time-to-first-note.tab-{concert,keyed}` の 2 点。経緯は
 `lp-geometry.json` の `why` に全部ある（予測・実測・第2欠陥の算術まで）。
 
-### ▶ 次の一手 ＝ **prefix 幅の第3のモデル `MultiStaffScore.LeadingKey` を畳む**（§2A）
+### ▶ 次の一手 ＝ **誰も彫らない clef/メーターの予約をやめる**（staff の無い system）
 
-**X の台帳はもう指してくれない**（残 16 点は全部 clef sliver と Pango＝§2C／閉じない族）。
-だから次は**台帳が薄い場所**を選ぶ＝§5.2.1④「既存の点が測っていない regime を優先」。
+**LP は測定済み。移植するだけ**（`probes/staffless-system.ly`・2026-07-25 実測）。
 
-行頭 prefix を計算する経路が**まだ 2 つある**: 実レイアウトは per-staff の
-`WidestActiveKeyInk`／`ActiveKeyInkForStaff` を通るのに、`LayoutEngine` /
-`SystemBreaker` / `IncrementalCompiler` の 3 経路は **`score.KeySignature` をそのまま**
-使い、per-staff key も「調号を彫る譜」も見ない。`transpose-multistaff`（score=C major・
-上譜 D major）で**改行器の予約が実レイアウトより 2.2 狭い**。LP に break-align モデルは
-1 本しかないので、**同じ量を計算する場所が 2 つ＝次の欠陥の住所**（§5.2.1②）。
+★ **これは既に閉じた欠陥の続き**。`line-start.time-to-first-note.tab-keyed` で
+「**調号**の列を、彫る譜が無いのに book していた」を直した（`ContributesToKeyColumnWidth`）。
+**clef 列とメーター列は直していない**——同じ形が 2 つ残っている:
 
-⚠️ **出力（改行位置）が動く。§5.0 どおり対を先に起票すること。** 対の設計は
-`transpose-multistaff` 系（LP 側が恒等になる対＝移調楽器の調号を変えても LP の改行は
-同じ、という形が作れるはず）。
+| 予約するもの | 誰も彫らないのに book する原因 | 場所 |
+|---|---|---|
+| **clef** | `EngravedClefStencils` が text row/ossia を飛ばして**空集合になると treble G にフォールバック** | `SpacingRules.ClefGroupExtent` |
+| **メーター** | `prefixHasTime` が「メーターを彫る譜があるか」を見ていない | `MultiStaffLayouter` |
 
-その次の候補（どれも先に LP を dump して対で起票・§2B）: 同一譜 knee の実 ink seed /
-`BuildSystemSkylines` の全譜 union / Y の圧縮 regime（§2D）。
+chords/lyrics だけの system がこれを踏み、clef 2.565 + メーターを予約する。
+
+#### LP の実測（`probes/staffless-system.ly`。再測定は不要）
+
+| score | 第1 ChordName の X（＝その ink 左。extent は `(0 . w)`） |
+|---|---|
+| CO（chords のみ 4/4） | **0.500000** |
+| CO3（同じ和音・3/4） | **0.500000**＝恒等（15 桁） |
+| COK（同じ和音・E major） | **0.500000**＝恒等（調号側が閉じている確認） |
+| CS（同じ和音＋記譜譜） | **8.585000**（既存の SKC/JN と同じ値。**Lily# は既に一致**） |
+
+CO は `standard_breakable_column_spacing` そのもの: prefatory 列が何も彫らないので
+`min_dist = 0`、`spacing-basic.cc:71-82` の `ideal = min_dist + 0.5` ⇒ **0.5**。
+**CS − CO = 8.085000 が「譜が earn する prefix」**で、Lily# は譜が無くてもほぼ全部 book する。
+
+#### 手順（この順でないと壊れる）
+
+1. **予約側を直す**（上の表の 2 箇所）。誰も彫らなければ clef 列もメーター列も**置かない**
+   ＝`SolvePrefixColumns` の item リストが空になり `PrefixColumns.Right` も 0 になること
+   （現状は placed が空だと `ClefGlyphXOffset` 0.8 を返すので**そこも直す**）。
+2. **そのうえで** `LineStartColumn.LineStartSpring` の `wishes.Count == 0` 分岐を
+   `standard_breakable_column_spacing` の字面（`ideal = min_dist + 0.5`・
+   `Spring(ideal, min_dist)` の既定 strength）に置き換える。**1 を飛ばすと負の spring になる**
+   （列フレームの 0.5 から幻の prefix 右端 6.585 を引くため）。⇒ `LILYSHARP-OWN` が 1 つ消える。
+
+⚠️ **出力が大きく動く**（lead-sheet / rows-song-sheet の行頭が約 8 ss 左へ）。
+§5.1 どおり**ユーザー承認が要る**。
+
+#### 対（起票が残っている・§5.0 step 1）
+
+プローブは commit 済みで再実行可能。**Lily# 側の twin がまだ無い。**
+⚠️ **anchor 規約の決着が先**: LP の ChordName は参照点＝ink 左だが、Lily# は
+`text-anchor="middle"`＝**中心**を記録する。生の数値を比べると和音名の半幅が定数で乗る。
+**frame-free な量は `CS − CO`**（両側とも自分の規約で一貫するので相殺）＝
+これを台帳キーにすること。CL（chords+lyrics）は LP 側で第1 LYRIC 0.000000 /
+第1 CHORD 2.312539 と**同じ瞬間なのに X が違う**ので、どの grob を測るか決めてから。
+
+#### その次の候補
+
+- **prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`**（§2A）— `LayoutEngine` /
+  `SystemBreaker` / `IncrementalCompiler` の 3 経路が `score.KeySignature` をそのまま使い、
+  `transpose-multistaff` で**改行器の予約が実レイアウトより 2.2 狭い**。対を先に。
+- §2B の未測定領域（同一譜 knee / `BuildSystemSkylines` の全譜 union）・Y の圧縮（§2D）。
 
 #### この移植で分かったこと（同じ regime に触るとき用）
 
@@ -276,11 +314,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
   名指す形）。本来の移植は **paper column 表現の導入**で、実測: 外すと snapshot 21 枚が動く
-- **staff の無い system（chords/lyrics 行だけ）の行頭 spring** — LP にこの system は存在せず
-  （それらの context は clef もメーターも `Staff_spacing` も持たない＝prefatory 列が空で
-  `standard_breakable_column_spacing` に落ちる）、Lily# は共有 prefix を予約して第1列を
-  そこから測る。`LILYSHARP-OWN` と明示済み。**そもそも予約が要るのかは別の問い**（外すと
-  lead-sheet / rows-song-sheet の行頭が 8〜10 ss 詰まる）
+- **staff の無い system（chords/lyrics 行だけ）の行頭 spring** — **▶ で閉じる**。⚠️ 当初
+  「LP にこの system は存在しない」と書いたが**それは誤り**（`\new ChordNames` 単独もリード
+  シートも LP に普通にある）。LP は `standard_breakable_column_spacing` で `min_dist + 0.5`
+  ＝実測 0.500000。Lily# が幻の clef/メーターを予約しているので字面移植が入らないだけ
 - ⚠️ **`KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外**＝§5.2.1① の網の穴。
   `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため
 

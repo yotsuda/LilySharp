@@ -479,13 +479,28 @@ internal static class LineStartColumn
             wishes.Add(WishFrom(last.Symbol, last.InkLeft, last.InkRight, floor, minDistance));
         }
 
-        // No staff at all — a system made only of chord / lyric rows. LilyPond has no such
-        // system: those contexts carry no clef, meter or Staff_spacing, so its prefatory
-        // column would be empty and `springs` empty too, landing on
-        // standard_breakable_column_spacing (spacing-spanner.cc:514-515). Lily# DOES reserve
-        // a shared prefix for such a system, and prices the first column from that
-        // reservation — LILYSHARP-OWN, and only reachable where LilyPond's model does not
-        // apply. The reserved columns stand in for the staff nobody engraves.
+        // No staff at all — a system made only of chord / lyric rows.
+        //
+        // ⚠️ LILYSHARP-OWN, AND KNOWN WRONG. LilyPond has this system perfectly well
+        // (`\new ChordNames` alone, a lead sheet of ChordNames + Lyrics); what those
+        // contexts lack is a clef, a meter and a Staff_spacing. So `springs` is empty there
+        // too and spacing-spanner.cc:514-515 falls to standard_breakable_column_spacing —
+        // spacing-basic.cc:71-82, `ideal = min_dist + 0.5` for a dt == 0 pair. MEASURED
+        // (audit/lp-geometry/probes/staffless-system.ly, score CO): min_dist is 0 and the
+        // first chord lands on 0.500000, i.e. that 0.5 exactly.
+        //
+        // The literal port cannot be made from HERE, because the frame it would be
+        // converted into is itself phantom: Lily# reserves a prefix for this system —
+        // SpacingRules.ClefGroupExtent falls back to the treble G when NO staff contributes
+        // a clef stencil, and prefixHasTime never asks whether any staff engraves a meter —
+        // so `columns.Right` below subtracts ~6.585 of ink nobody draws and the spring comes
+        // out NEGATIVE. Booking a column for a grob no staff engraves is the SAME defect the
+        // ledger closed for the KEY column under line-start.time-to-first-note.tab-keyed;
+        // the clef and meter columns were left unfixed. Fix the reservation and this whole
+        // branch deletes itself. See docs/HANDOFF.md section 1 for the derivation.
+        //
+        // Until then the reserved columns stand in for the staff nobody engraves, which
+        // keeps a lead sheet where it has always been rather than 8 ss further left.
         var merged = wishes.Count > 0
             ? Spring.MergeSprings(wishes)
             : WishFrom(
