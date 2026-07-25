@@ -146,12 +146,15 @@ internal static partial class GlyphMetrics
     ///   lily/separation-item.cc:47-68 with lily/spacing-spanner.cc:315-316 (the rod).
     /// <para>
     /// What is LEFT is <see cref="LyricSpacing"/>, which adds this to a lyric's own extent
-    /// in four places. LilyPond spaces lyrics through the same Separation_item machinery as
-    /// everything else — a LyricText is a grob in its column, with its own
-    /// extra-spacing-width — so 0.4 is standing in there for the same thing it used to
-    /// stand in for here, and the port is the same shape. It stays until a lyric pair is
-    /// opened in the corpus to justify moving it; the ledger key that closed the note-to-note
-    /// case is compressed.note-to-note.quarter, and lyrics need their own.
+    /// in four places. ⚠️ DO NOT assume that is the same defect wearing a different hat and
+    /// port it away by analogy. Lily#'s lyric model is not LilyPond's: syllables are bound
+    /// to notes and DIVIDED BY BAR LINE here, and LilyPond has no such division — so the
+    /// quantity these four sites reserve may have no LilyPond counterpart to port at all,
+    /// and 0.4 may be a legitimate own value rather than a stand-in. Establish WHICH it is
+    /// (a corpus pair, or the plain fact that LilyPond does not engrave this) before
+    /// touching it. Removing it because the note-to-note case was an invention would be
+    /// reasoning by resemblance, which is how the note-to-note port was nearly aimed at the
+    /// wrong number twice.
     /// </para>
     /// </remarks>
     public const double MinItemGap = 0.4;

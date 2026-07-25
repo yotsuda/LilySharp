@@ -32,73 +32,78 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25 / HEAD ＝ **この docs コミット**（`408d9e9c` の上。⚠️ 自己参照＝**§0 で裏取り**）
-/ 未 push 79 本。**3285 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**LP 忠実度
-64/84 exact・total |residual| 0.810716 ss・counts 4/5**。
-snapshot は **8 枚を再ベース済み**（`408d9e9c`・承認済み。正当化キー ＝
-`compressed.line-start.time-to-first-note`）。
+最終更新 2026-07-25（第2セッション）/ HEAD ＝ **この docs コミット**（`9e26a220` の上。
+⚠️ 自己参照＝**§0 で裏取り**）。**3286 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 68/87 exact・total |residual| 0.810763 ss・counts 5/5**。
+snapshot は **12 枚**（`OverfullPenalty` 撤去・正当化キー `justified.first-system.heads`）と
+**21 枚**（`MinItemGap` 撤去・正当化キー `compressed.note-to-note.quarter`）を再ベース済み・承認済み。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。0.806267 → 0.810716 は
-新点 `compressed.line-start.*` の**持参金 +0.004183 と、床が足した drift +0.000266**。
+⚠️ **total を過去の値と直接比べない**（点集合が違う。84 → 87 点）。
+
+### このセッションで**発明が 4 つ消えた**（ここが前回からの一番の差）
+
+| 発明 | 置換先 | 出力 |
+|---|---|---|
+| `OverfullPenalty = 50000` | `ForcePenalty` ＋ impossible-line 規則（既存移植） | snapshot 12 枚 |
+| `MinItemGap = 0.4`（音符間） | esw 0.1＋0.1（`separation-item.cc:166-179`）＋ rod padding 0.1 | snapshot 21 枚 |
+| 「極端に underfull な行を除外」 | LP は値付けするので**規則ごと不要** | 不変（結果として） |
+| `tolerance` knob | LP に存在しない（`Constrained_breaking` に無い） | 不変（元から未参照） |
+
+⚠️ **`MinItemGap` はまだ生きている**（`LyricSpacing` の 4 箇所＝歌詞 extent）。`LILYSHARP-OWN` と
+明示済みで、**歌詞の対を開けば同じ形で移植できる**。`NoteSpacingParameters.MinItemGap` は
+実質死んだ knob（「起こり得ない」ガードでのみ read）＝**削除候補・承認待ち**。
 
 **非ゼロで残っている台帳点**（これが仕事の全リスト）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
 | `line-start.time-to-first-note.tab-{concert,keyed}` | 両 **+0.400000000** | 譜間 merge_springs 未移植（per-staff wish が無い） |
-| `justified.first-system.heads` | **−6 heads** | ▶ ＝ gate が行頭 spring と床を見ない ＋ `OverfullPenalty` |
-| `compressed.line-start.time-to-first-note` | **+0.004449092** | 圧縮行で行頭が LP ほど譲らない。**機構は未特定**（下記・容疑者 2 つは棄却済み） |
+| `compressed.line-start.time-to-first-note` | **+0.004496199** | 圧縮行で行頭が LP ほど譲らない。**機構は未特定**（容疑者 3 つ棄却済み・下記） |
 | clef sliver（Y 4 点） | 各 0.0001〜0.0008 | LP の実効 scale 未特定（§2C） |
 | Pango 量子化の族（tuplet 4・強弱 1・tie 1 ほか） | 1e-4〜1e-6 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差** |
 
-### ▶ 次の一手 ＝ **改行 gate に行頭 spring と床を配線し、`OverfullPenalty` を外す（同時に）**
+**閉じた点**: `justified.first-system.heads`（−6 → exact）／`compressed.note-to-note.quarter`
+（+0.1 → exact）。`page.tight.*` は**対が壊れていた**のを直して再測定（下記）。
 
-3 つで 1 つの変更のうち **1 は済んだ**（`408d9e9c`・描画側）。残り 2 つは**同時**でないと入らない:
+### ▶ 次の一手 ＝ **`compressed.line-start.time-to-first-note` の機構を特定する**
 
-1. ~~`0.3 + min_dist` 床を描画側へ~~ — **完了**（`408d9e9c`）。`staff-spacing.cc:210-220` を
-   `LineStartColumn.SpringWithMinimumDistanceFloor` へ字面移植し、`MultiStaffLayouter` が消費。
-   LP の実測値と一致: 拍子付き行頭 ideal 8.585000 / fixed 7.785000 / min_distance **7.485000**、
-   clef のみ 5.800000 / 3.565000 / **圧縮強度 0（剛）**。
-2. **gate の行頭 spring 差し替えを配線**（`SystemBreaker.LineStartSpring` /
-   `KnuthPlassBreaker.ApplyLineStartSpring`＝`4069ad1d` で書いてあるが **inert**）＋
-   **同じ床を gate 側にも**（gate は per-measure なので「その小節が行頭になる場合」の
-   spring を `MeasureSpringData` に別に持たせる。`Spring0*` 欄は既にある）。
-3. **`OverfullPenalty = 50000` を外す**（出典が無いことは `4069ad1d` で確定）。
-
-**なぜ 2 と 3 が同時なのか**（2026-07-25 実測）: LP は `test/ties-slurs` の 8 小節を
-**1 系に圧縮して**組む（`probes/ties-slurs-breaks.ly`＝`\bar "|."` 込みで 1 系・幅 102.429921）。
-Lily# は**同じ自然幾何に到達している**——ragged 対照で**列ごとに 2e-5 一致**（小節線も含む）、
-自然行末はどちらも 101.717032（`probes/ties-slurs-breaks-ragged.ly`）。できないのは
-**その圧縮行を選ぶこと**で、`50000 × |force|` が禁じている。
-⇒ **2 だけ**入れると 2 系に割れる。**3 だけ**外すと `page.tight.page-count` ほか 6 点が壊れる
-（Lily# が行に詰め込みすぎる＝**行あたりの最小が足りない**）。
-
-#### ⚠️ 床を入れて開いた第2の欠陥 ＝ **圧縮行で行頭が LP ほど譲らない（機構は未特定）**
-
-新点は床で **+0.004183440 → +0.004449092**（LP から 0.000266 遠ざかった）。
-LP はこの行で 3.7 から **0.005535** 譲るのに Lily# は **0.001086** しか譲らない。
+**前回の ▶（gate 配線＋`OverfullPenalty` 撤去）は完了**。残る X 系の未特定はこれ 1 点だけで、
+LP は圧縮行の行頭で 3.7 から **0.005535** 譲るのに Lily# は **0.001086** しか譲らない。
 自然幅は 2e-5 一致なので**幅の問題ではない**。
 
-⚠️ **床を差し戻す理由にはならない**（§5.2 両面）。床は LP の実測値で照合済み（LP 自身の
-fixed 7.785000 ＝ 0.3+7.485000・ideal 8.585000 不動）で、悪化は「間違った定数が別の欠陥を
-隠していた」形。床は圧縮強度を 1.0→0.8 にするので、**force が何であれ譲りが比例して減る**。
+**棄却済みの容疑者 3 つ**（実測。再走査しない）:
 
-**棄却済み**（推測でなく実測。2026-07-25）:
+- ❌ `MultiStaffLayouter` の `Math.Max(fixed, s0.MinDistance)` ガード — 外してもこの点は動かない。
+  ただし**外すと無関係な snapshot 21 枚が動く**＝grace と lyrics の幅に load-bearing。**消さないこと**
+- ❌ `CalculateLineForce` の線形式 — それは gate 側で、描画経路ではない
+  （`SpringSolver.CompressLine` は `Simple_spacer::compress_line` 移植済み）
+- ❌ `GlyphMetrics.MinItemGap 0.4` — **2026-07-25 に撤去したが、この点は逆に +4.7e-5 悪化**
+  （+0.004449092 → +0.004496199）。音符 spring の最小が LP の値になって blocking force が
+  変わった副作用で、**原因ではなかった**
 
-- ❌ `MultiStaffLayouter` の `Math.Max(fixed, s0.MinDistance)` ガード —
-  **外してもこの点は +0.004449092 のまま**。ただし**外すと無関係な snapshot 21 枚が動く**
-  （grace-notes / lyric-break-pricing / lead-sheet-lyrics / chorale / ornaments）＝
-  **grace と lyrics の幅に対して load-bearing**（LP はそれらを独立した paper column にする）。
-  ここでは不活性。**消さないこと。**
-- ❌ `CalculateLineForce` の線形式 — それは**改行 gate の側**で、描画経路ではない。
-  `SpringSolver.CompressLine` は**既に** blocking force 順に `InverseCompressStrength` を
-  畳んでいる＝`Simple_spacer::compress_line`（`simple-spacer.cc:232-287`）の移植済み。
+**次の測定**: 解かれた force と行内各 spring の `InverseCompressStrength` を dump して LP と
+突き合わせる。LP 側は `springs-and-rods` フックで到達できる（JZ/JR が確立）。
+⚠️ ただし **spring は Scheme から読めない**（setter のみ）。**rod は読める**
+（`minimum-distances`＝`(列 . 距離)` の数値ペア）ので、`compressed-note-spacing.ly` の
+`PROBE … ROD` と同じ手が使える。
 
-**次の一手（この点について）**: **解かれた force と行内各 spring の
-`InverseCompressStrength` を実際に dump して LP と突き合わせる**。LP 側は probe `JZ`/`JR` が
-確立した `springs-and-rods` フックで到達できる。⚠️ 未検証の候補は §2H の `MinItemGap 0.4`
-だが、**符号が合わない**（最小が 0.2 広い＝ideal−min が 0.2 小さい＝force は大きくなる側）
-ので、絡んでいるとしても単独ではない。
+#### ⚠️ **対が壊れていたのを直した**（過去の exact は打ち消し合いだった）
+
+`page.tight.*` と `system.{tuplet-bracket,slur,tie}-*` の 7 点は、**LP 側と Lily# 側が
+同じ紙面を組んでいなかった**。発明（`OverfullPenalty`）が Lily# を「LP がインデントや
+強制改行で偶然到達していた分割」へ押し込んでいたので exact に見えていた:
+
+- **book T** は `page-vertical.ly` で唯一 `indent = 0` を書いていなかった＝LP 既定 15mm。
+  実測（`jn-line-forces.ly` の `TPT`/`TPD`）: 同じ 40 小節が indent 0 で**5 系 1 ページ**、
+  既定 indent で**6 系 2 ページ**。**6 系はインデントだった**。→ book に `indent = 0` を足し、
+  台帳の LP 値を 2 → 1 に再測定
+- **TSD/TSU** は逆で、indent 0 にすると LP が 6 小節を**1 系に収めて**測る対象が消える。
+  → **Lily# 側に LP と同じ 15mm を渡す**（`LpGeometryProbes.IndentedPaper`）
+- **slur/tie 4 本**は LP 側だけ `\break` で 4+4+4+4 を強制していた。→ Lily# 側にも同じ
+  強制改行（`ForcedFourBarSystems`）。自由に割らせると**LP も Lily# も 5,5,6**（`SSN`）
+
+**LP の行分割と Lily# の行分割は、測った 3 スコアすべてで一致している**
+（JN 5,5,6 ／ TP 8×5 ／ SSN 5,5,6）。
 
 **移植の前に読むこと**（①は解決済み・残りは有効）:
 
@@ -121,20 +126,22 @@ fixed 7.785000 ＝ 0.3+7.485000・ideal 8.585000 不動）で、悪化は「間�
 - ⚠️ `SkylineBuilder.SeedClef` の X は今も原点..Right（グループ ink ではない）。縦スカイライン
   専用で位置には効かないので**半端に移さず注記のみ**（コード内にも記載）。
 
-⚠️ **2+3 は改行位置を動かす**＝**snapshot 再ベース＋ユーザー承認**が要る。
-正当化キーは `justified.first-system.heads`（−6 が閉じるはず）。
-
-✅ **済んでいる下ごしらえ**: `LineStartColumn`（`effeabc3`）＋その score 走査と床（`408d9e9c`）／
-clef グループのアンカー規則（`6878c0db`）／`line-start.clef-to-time.tab`（`0829185b`）／
-`TabStringSpace` を LP の 1.5 へ（`255f494f`）／改行器の DP を LP の形へ（`59832afc`）／
-`force_penalty` と「組めない行は不可能」規則（`4069ad1d`）。
-
 **消えた容疑者**（再走査しない）: duration space・音符間の最小・行幅・demerits の 3 項・
-DP の形・小節線・**自然幅そのもの**。経緯は各コミットメッセージと `probes/*.ly` のヘッダに。
+DP の形・小節線・**自然幅そのもの**・**行分割そのもの**。経緯は各コミットメッセージと
+`probes/*.ly` のヘッダに。
 
-⚠️ **プローブの罠 2 件**（同じ形で 2 回噛まれた。§5.0）: LP は `\bar "|."` を書かない限り
-終止線を細い `|` で終える／`tempo` の**メトロノーム記号は符頭グリフを描く**ので
-`TimeSignatureToFirstNotehead` が最初にそれを拾う（2.438400 と読んだ）。
+### ⚠️ プローブの罠（同じ形で 4 回噛まれた。§5.0「何を測っているか確かめてから信じる」）
+
+1. LP は `\bar "|."` を書かない限り終止線を細い `|` で終える
+2. `tempo` の**メトロノーム記号は符頭グリフを描く**ので `TimeSignatureToFirstNotehead` が
+   最初にそれを拾う（2.438400 と読んだ）
+3. **`indent` を書き忘れた book**（JN で 8.42 を spring の伸びと誤認・book T で 6 系を
+   ページ分割と誤認）。⚠️ **新しい book には必ず `indent = 0` を書く**か、書かないなら
+   **Lily# 側に同じ indent を渡す**
+4. **加線**（2026-07-25）。`c'` は treble で加線を持ち、加線は符頭の左右に張り出して列の
+   スカイラインに入る。圧縮 rod を 1.604200 でなく **1.956300** と読み、あやうく
+   「§2H の移植は符号が逆」という誤結論を出すところだった。**音符間を測る対の音高は
+   加線のないものにする**（`g'` など）
 
 ---
 
@@ -238,29 +245,35 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **stretch strength 0.45 の検証**（数値は `SpacingInvariantTests.BarlineToFirstNoteSpring_…` に）と
   **符尾 Y extent のダンプ**（数値は `SpacingRules.BarlineToNextNotesCorrection` の remarks に）
 
-### H. 改行器と音符間 spacing に残る発明（▶ の前後で片付く）
+### H. 音符間 spacing に残る発明 ← **音符間そのものは 2026-07-25 に片付いた**
 
-- **`GlyphMetrics.MinItemGap = 0.4` は LP に無い。** LP は esw（NoteHead −0.1／Accidental
-  **−0.2**）で 0.2 を作り、spring の最小に padding を足さない（`note-spacing.cc:78-83`）。
-  実測（probe `N2N`）: LP は spring 最小 **1.504200**／rod **1.604200**、Lily# は両方 1.704200
-  ＝ **+0.2／+0.1**。移植は 3 箇所で済む: ①`ItemSkylineFactory` の箱に esw（右 +0.1・左 −0.1、
-  Accidental だけ更に −0.1）②`SpacingRules.CalculateSkylineDistance` の item→item から
-  `MinItemGap` を外し `Distance(other, 0.08)` ＋ `Math.Max(0, d)`（重ならない時のフォールバック
-  `prevRight + nextLeft + gap` は LP に無いので**消す**）③`EngravingDefaults` に
-  `MusicalColumnSkylineVerticalPadding = 0.08`（`define-grobs.scm:2747`。非 musical 列は 0）。
-  ⚠️ **一度入れて差し戻した**——`inverse_stretch_strength = ideal − min` なので min を下げると
-  伸び強度が上がり、**snapshot 24 枚が動くのに台帳は 1 点も動かない**＝**再ベースを正当化する
-  台帳キーが名指せない**（§5.2.1③）。⇒ **先に「justify された行の音符間距離」の点を起こす**。
-  ただしそれは `justified.first-system.heads` が閉じてから（改行が食い違ったまま入れると
-  **改行の食い違いを音符間のせいにする**）。
-  ⚠️ `SeparatingPaddingTests` の 3 本は `MinItemGap` が効くことを主張＝**発明を固定している**ので
-  同時に落ちる。**`NoteSpacingParameters.MinItemGap` というつまみ自体が LP に無い**＝
-  捨てるか §3 に批准するかの判断が要る（フレット数字と同じ形）。
-- **`KnuthPlassBreaker` の「極端に underfull を除外」**（`idealSum < availableWidth/(tolerance×2)`・
-  tolerance 1.1）は LP に無く、**実測で完全に不活性**（無効化しても 78 点すべて記録どおり）。
-  ⇒ **単独で消せる可能性が高い**（要 snapshot 確認）。
+~~`GlyphMetrics.MinItemGap = 0.4`（音符間）~~ — **移植完了**。LP の 3 段（①箱に esw
+`separation-item.cc:166-179` ②spring 最小＝縦 padding 0.08 込みの padding-free 距離
+`note-spacing.cc:78-83` ③rod＝**縦 padding 無し**の距離＋spanner の padding 0.1
+`separation-item.cc:47-68` ＋ `spacing-spanner.cc:315-316`）に置換。`compressed.note-to-note.quarter`
+が **1.604200 で exact**。`SeparatingPaddingTests` は LP 由来の期待値に書き直し済みで、
+「`MinItemGap` を何に設定しても音符間が動かない」ことを主張するテストを追加＝**戻ってこない**。
+
+⚠️ このとき **§2H の旧記述は 2 つとも外れていた**ので、同じ推論を繰り返さないこと:
+
+- 「Lily# の最小は **0.2 広い**」→ 圧縮域では **0.2521 狭く見えた**（加線の混入）。実際は
+  rod で **+0.1** ちょうど。**加線のない音高で測ること**
+- 「snapshot 24 枚が動くのに台帳は 1 点も動かない」→ **鍵になる点が無かっただけ**。
+  圧縮 regime の点（`compressed.note-to-note.quarter`）を開いたら正当化できた。
+  ⇒ **鍵が無いのは「移植できない」ではなく「まだ測っていない」**
+
+**残っている発明**:
+
+- **`LyricSpacing` の `MinItemGap` 4 箇所**（歌詞 extent）。⚠️ **音符間と同じ発明だと決めつけない。**
+  Lily# の歌詞モデルは LP と違い（音符に束縛され、**小節線で区切る**）、LP に対応物が
+  無い可能性がある＝**必要な独自量かもしれない**。どちらかを確かめてから触ること
+- **`MultiStaffLayouter` の `Math.Max(fixed, s0.MinDistance)` ガード** — LP は leading grace と
+  lyrics を**独立した paper column** にするので min_dist がそこまで測る。Lily# は spring に
+  畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が名指す形）。
+  本来の移植は **paper column 表現の導入**で、実測: 外すと snapshot 21 枚が動く
+- ~~`tolerance` knob~~ / ~~「極端に underfull を除外」~~ — **両方 2026-07-25 に撤去**（出力不変）
 - ⚠️ **`KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外**＝§5.2.1① の網の穴。
-  `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため。
+  `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため
 
 ---
 
