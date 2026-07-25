@@ -131,25 +131,27 @@ internal static partial class GlyphMetrics
     public const double AccidentalNoteGap = 0.35;
 
     /// <summary>
-    /// Minimum gap between adjacent items (note-to-note), in staff spaces.
+    /// LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
     /// </summary>
     /// <remarks>
-    /// ⚠️ UNRECONCILED — carries neither a <c>LILYPOND-REF</c> nor a
-    /// <c>LILYSHARP-OWN</c> because it is honestly neither yet, and saying otherwise would
-    /// be worse than saying nothing (§5.2.1①). It is added to a RAW-INK skyline distance
-    /// by <see cref="SpacingRules.CalculateSkylineDistance"/>, where LilyPond instead
-    /// inflates each grob's box by its <c>extra-spacing-width</c> — default
-    /// <c>(-0.1 . 0.1)</c>, so 0.2 between two adjacent columns — and then takes a
-    /// PADDING-FREE skyline distance for the spring minimum (lily/note-spacing.cc:78-83).
-    /// So LilyPond's note-to-note minimum has no 0.4 in it at all, and this constant is
-    /// standing in for the esw the boxes do not carry, at a different value.
+    /// ⚠️ It is no longer the note-to-note minimum, and must not become one again. That
+    /// quantity is now built the way LilyPond builds it — each grob's own
+    /// <c>extra-spacing-width</c> folded into its spacing box, a padding-free skyline
+    /// distance for the spring minimum, and the spacing spanner's <c>padding</c> on top for
+    /// the rod — so nothing this is set to can move a note-to-note distance, and
+    /// <c>SeparatingPaddingTests.NoteToNoteDistance_DoesNotDependOnMinItemGap</c> asserts
+    /// exactly that.
+    /// LILYPOND-REF: lily/separation-item.cc:166-179 (extra-spacing-width into the boxes),
+    ///   lily/note-spacing.cc:78-83 (the spring minimum),
+    ///   lily/separation-item.cc:47-68 with lily/spacing-spanner.cc:315-316 (the rod).
     /// <para>
-    /// Retiring it means giving <see cref="ItemSkylineFactory"/>'s boxes their real esw,
-    /// which is the SAME change the line-start <c>min_dist</c> port needs
-    /// (<see cref="LineStartColumn"/> already builds boxes that way). Not done here
-    /// because it moves every note-to-note rod, and a rod only binds under compression —
-    /// a regime the corpus does not currently measure, so it needs a ledger pair in a
-    /// COMPRESSED line first. See docs/HANDOFF.md §1, "手順2-2 に着手する前に読むこと".
+    /// What is LEFT is <see cref="LyricSpacing"/>, which adds this to a lyric's own extent
+    /// in four places. LilyPond spaces lyrics through the same Separation_item machinery as
+    /// everything else — a LyricText is a grob in its column, with its own
+    /// extra-spacing-width — so 0.4 is standing in there for the same thing it used to
+    /// stand in for here, and the port is the same shape. It stays until a lyric pair is
+    /// opened in the corpus to justify moving it; the ledger key that closed the note-to-note
+    /// case is compressed.note-to-note.quarter, and lyrics need their own.
     /// </para>
     /// </remarks>
     public const double MinItemGap = 0.4;

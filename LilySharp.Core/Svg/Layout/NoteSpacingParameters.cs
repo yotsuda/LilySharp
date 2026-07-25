@@ -79,17 +79,25 @@ internal sealed record NoteSpacingParameters
                                                   * EngravingDefaults.SpacingIncrement;
 
     /// <summary>
-    /// Minimum padding between adjacent items in the spring/rod model after
-    /// skyline-based collision detection. Mirrors LP's
-    /// <c>skyline-horizontal-padding</c> grob property.
+    /// LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
+    /// a candidate for removal rather than for use.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding default 0.1
-    /// LILYPOND-REF: lily/separation-item.cc:49-68 — set_distance(padding)
-    /// LilySharp's compiled default <c>0.4</c> (= <see cref="GlyphMetrics.MinItemGap"/>)
-    /// is intentionally wider than LP's 0.1; expose the parameter so callers can
-    /// dial it down for tighter LP-style proportional spacing while keeping the
-    /// historical default for the existing snapshots.
+    /// It used to be added to a raw-ink skyline distance, and its old REFs claimed
+    /// <c>skyline-horizontal-padding</c> as the source. That was wrong twice over: the 0.2
+    /// between two columns comes from each grob's <c>extra-spacing-width</c>, not from a
+    /// per-pair padding, and LilyPond's note-to-note spring minimum takes NO padding at all.
+    /// Both are now ported and the note-to-note path does not read this property — see
+    /// <c>SeparatingPaddingTests.NoteToNoteDistance_DoesNotDependOnMinItemGap</c>, which
+    /// asserts that nothing it is set to moves that distance.
+    /// LILYPOND-REF: lily/separation-item.cc:166-179; lily/note-spacing.cc:78-83;
+    ///   lily/separation-item.cc:47-68 with lily/spacing-spanner.cc:315-316.
+    /// <para>
+    /// The one place it is still READ is
+    /// <see cref="SpacingRules.CalculateSkylineDistance"/>'s both-items-null guard, which is
+    /// a "cannot happen" branch. <see cref="GlyphMetrics.MinItemGap"/> itself is still live
+    /// for LYRIC extents, which are their own unported quantity.
+    /// </para>
     /// </remarks>
     public double MinItemGap { get; init; } = GlyphMetrics.MinItemGap;
 }

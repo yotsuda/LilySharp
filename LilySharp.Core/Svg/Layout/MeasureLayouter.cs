@@ -388,8 +388,11 @@ internal sealed class MeasureLayouter
             if (prev == null || next == null)
                 continue;
             // A ROD, so it carries the spacing spanner's padding on top of the skyline
-            // distance — the spring's own minimum (the padding-free distance) is set in
-            // CreateSpring. See SpacingRules.SeparationRodDistance.
+            // distance — the spring's own minimum (which takes skyline-vertical-padding
+            // instead, and no spanner padding) is set in CreateSpring.
+            // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
+            //   raises a rod over every pair of columns that can reach each other, via
+            //   lily/separation-item.cc:47-68 Separation_item::set_distance.
             maxSkyDist = Math.Max(maxSkyDist,
                 SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
         }
