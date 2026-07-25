@@ -2948,10 +2948,10 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// How far the chord-symbol ink on a measure's FIRST column reaches LEFT of that column —
-    /// the chord half of LilyPond's keep-inside-line rod. Mirrors
-    /// <see cref="ApplyChordRowSpacing"/>'s <c>half[0]</c> exactly (same filter, same metric),
-    /// so the quantity rodded is the one that method reserves.
+    /// How far the chord-symbol ink on each of a measure's columns reaches beyond that column
+    /// — the chord side of LilyPond's keep-inside-line rod, one entry per column. Mirrors
+    /// <see cref="ApplyChordRowSpacing"/>'s own <c>half</c> array exactly (same filter, same
+    /// metric), so the quantity rodded is the one that method reserves.
     /// </summary>
     /// <remarks>
     /// Lily# draws a chord symbol with <c>text-anchor="middle"</c> on its column, so its ink
@@ -2964,25 +2964,29 @@ internal static class SpacingRules
     /// No padding is added — LilyPond's rod carries none (lily/simple-spacer.cc:559) — unlike
     /// <see cref="ApplyChordRowSpacing"/>'s neighbour gaps.
     /// </remarks>
-    internal static double ChordLeadingLeftExtent(
+    internal static double[] ChordCentredHalfWidthPerColumn(
         IReadOnlyList<Fraction> timings,
         int measureIndex,
         ImmutableArray<ChordNameItem> chordNames,
         bool includeAttached)
     {
+        var half = new double[timings.Count];
         if (chordNames.IsDefaultOrEmpty || timings.Count == 0)
-            return 0.0;
+            return half;
 
-        double half = 0.0;
         foreach (var cn in chordNames)
         {
             if (cn.MeasureIndex != measureIndex)
                 continue;
             if (!cn.IsChordRow && (!includeAttached || !cn.UseTiming))
                 continue;
-            if (timings[0] == cn.Timing)
-                half = Math.Max(half,
-                    Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
+            for (int t = 0; t < timings.Count; t++)
+                if (timings[t] == cn.Timing)
+                {
+                    half[t] = Math.Max(half[t],
+                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
+                    break;
+                }
         }
         return half;
     }

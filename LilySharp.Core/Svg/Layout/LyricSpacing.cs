@@ -208,20 +208,20 @@ internal static class LyricSpacing
     }
 
     /// <summary>
-    /// How far the syllable ink on a measure's FIRST column reaches LEFT of that column —
-    /// the lyric half of LilyPond's keep-inside-line rod. Mirrors the selection
-    /// <see cref="ApplyLyricSpacing"/> / <see cref="ApplyLeadSheetLyricSpacing"/> make, so
-    /// the quantity rodded is the same one those reserve.
+    /// How far the syllable ink on each of a measure's columns reaches beyond that column —
+    /// the lyric side of LilyPond's keep-inside-line rod, one entry per column. Mirrors the
+    /// selection <see cref="ApplyLyricSpacing"/> / <see cref="ApplyLeadSheetLyricSpacing"/>
+    /// make, so the quantity rodded is the same one those reserve.
     /// </summary>
     /// <remarks>
     /// A syllable is drawn with <c>text-anchor="middle"</c> on its column
-    /// (SharedRenderer.Overlays' DrawLyrics), so its ink starts half a width to the LEFT —
-    /// that half width IS <c>-extent[LEFT]</c> for the column. NO padding is added: LilyPond's
-    /// rod is <c>add_rod (0, i, -keep_inside_line_[LEFT])</c> with none
-    /// (lily/simple-spacer.cc:559), unlike the neighbour reservations above, which carry
+    /// (SharedRenderer.Overlays' DrawLyrics), so its ink reaches half a width to EITHER side:
+    /// the one number is both <c>-extent[LEFT]</c> and <c>extent[RIGHT]</c> for the column.
+    /// NO padding is added — LilyPond's rods carry none (lily/simple-spacer.cc:558-559) —
+    /// unlike the neighbour reservations above, which carry
     /// <see cref="GlyphMetrics.MinItemGap"/>.
     /// </remarks>
-    internal static double LeadingLeftExtent(
+    internal static double[] CentredHalfWidthPerColumn(
         ImmutableArray<Spring> springs,
         Measure measure,
         IReadOnlyList<Fraction> columnTimings,
@@ -229,33 +229,42 @@ internal static class LyricSpacing
         IReadOnlyList<LyricItem> lyrics,
         bool isLeadSheet)
     {
+        var half = new double[columnTimings.Count];
         if (lyrics.Count == 0 || columnTimings.Count == 0)
-            return 0.0;
+            return half;
 
         // Staff-backed bars whose items line up with the springs reserve BY ITEM INDEX, so
-        // the first column's syllables are item 0's (ApplyLyricSpacing:77-82). Everything
-        // else — a lead sheet, an empty bar, a bar opening with a time/clef change — reserves
-        // BY TIMING COLUMN (ReserveLyricWidthByColumn:171-173).
+        // column c carries item c's syllables (ApplyLyricSpacing:77-95). Everything else — a
+        // lead sheet, an empty bar, a bar opening with a time/clef change — reserves BY
+        // TIMING COLUMN (ReserveLyricWidthByColumn:150-163).
         bool byItem = !isLeadSheet
                       && measure.Items.Length > 0
                       && springs.Length == measure.Items.Length + 1;
 
-        var first = new List<LyricItem>();
+        var perColumn = new List<LyricItem>[columnTimings.Count];
         foreach (var ly in lyrics)
         {
             if (ly.MeasureIndex != measureIndex)
                 continue;
+            int col = -1;
             if (byItem)
             {
-                if (ly.ItemIndex == 0)
-                    first.Add(ly);
+                if (ly.ItemIndex >= 0 && ly.ItemIndex < columnTimings.Count)
+                    col = ly.ItemIndex;
             }
-            else if ((!isLeadSheet || ly.IsLyricsRow) && columnTimings[0].Equals(ly.Timing))
+            else if (!isLeadSheet || ly.IsLyricsRow)
             {
-                first.Add(ly);
+                for (int c = 0; c < columnTimings.Count; c++)
+                    if (columnTimings[c].Equals(ly.Timing)) { col = c; break; }
             }
+            if (col < 0)
+                continue;
+            (perColumn[col] ??= new List<LyricItem>()).Add(ly);
         }
-        return GetLyricLeftExtent(first);
+
+        for (int c = 0; c < half.Length; c++)
+            half[c] = GetLyricLeftExtent(perColumn[c]);
+        return half;
     }
 
     /// <summary>

@@ -901,9 +901,10 @@ internal sealed class MultiStaffLayouter
         var measureAllMeasures = new List<List<Measure>>();
         var measureBarlineWidths = new List<double>();
         double totalBarlineWidth = 0;
-        // How far the ink on the line's FIRST column reaches left of it — LilyPond's
-        // keep_inside_line_[LEFT], filled in when that measure is built below.
-        double lineStartLeftOverhang = 0.0;
+        // Per measure, per column: how far the CENTRED ink on that column reaches beyond it —
+        // LilyPond's keep_inside_line_, which is symmetric here because the only grobs Lily#
+        // centres on a column are text (see the rod block below).
+        var measureColumnOverhangs = new List<double[]>();
 
         // A compressed multi-measure rest is ONE bar between two bar-line columns,
         // so the measures a run swallows contribute neither springs nor bar lines;
@@ -922,6 +923,7 @@ internal sealed class MultiStaffLayouter
                 measureTimings.Add(allTimings);
                 measureAllMeasures.Add(allMeasures);
                 measureBarlineWidths.Add(0);
+                measureColumnOverhangs.Add(System.Array.Empty<double>());
                 continue;
             }
 
@@ -1020,18 +1022,23 @@ internal sealed class MultiStaffLayouter
             // BarLine semi-shrink. The prefix width itself ends at the ink.
             // LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/
             //   TimeSignature space-alist (first-note . ...).
+            // Each column's own centred ink, for the keep-inside-line rods below. Measured
+            // BEFORE spring 0 is replaced: the extents do not depend on the spring, but the
+            // by-item/by-column choice reads springs.Length, exactly as the lyric reservation
+            // above does.
+            var lyricHalf = LyricSpacing.CentredHalfWidthPerColumn(
+                springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet);
+            var chordHalf = SpacingRules.ChordCentredHalfWidthPerColumn(
+                allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
+            var overhangs = new double[allTimings.Count];
+            for (int c = 0; c < overhangs.Length; c++)
+                overhangs[c] = Math.Max(
+                    c < lyricHalf.Length ? lyricHalf[c] : 0.0,
+                    c < chordHalf.Length ? chordHalf[c] : 0.0);
+            measureColumnOverhangs.Add(overhangs);
+
             if (i == startMeasureIndex && springs.Length > 0)
             {
-                // LilyPond's keep-inside-line rod for the line's FIRST column, measured
-                // BEFORE spring 0 is replaced (the extents do not depend on the spring, but
-                // the by-item/by-column choice reads springs.Length, exactly as the lyric
-                // reservation above did). Applied to the assembled chain below.
-                lineStartLeftOverhang = Math.Max(
-                    LyricSpacing.LeadingLeftExtent(
-                        springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet),
-                    SpacingRules.ChordLeadingLeftExtent(
-                        allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet));
-
                 // The bar-line spring 0 becomes the prefix→first-note spring, floored at
                 // LilyPond's 0.3 + min_dist. ONE implementation (LineStartSpringForLine),
                 // shared with the break gate so both price a line start identically
@@ -1056,28 +1063,57 @@ internal sealed class MultiStaffLayouter
         // (SpringSolver.ApplyRods, blocking-force propagation included).
         var rods = new List<(int Left, int Right, double Distance)>();
 
-        // KEEP-INSIDE-LINE, the left-margin half, at the line's first column.
+        // KEEP-INSIDE-LINE: no column may push its ink into either margin.
         // LILYPOND-REF: lily/simple-spacer.cc:431-432 — every column but the line starter is
         //   given `keep_inside_line_ = col->extent (col, X_AXIS)` (the property is #t by
         //   default on PaperColumn scm/define-grobs.scm:2742 and NonMusicalPaperColumn :2525,
         //   and means "this column cannot have objects sticking into the margin",
-        //   scm/define-grob-properties.scm:637) — and :559
-        //   `spacer.add_rod (0, i, -cols[i].keep_inside_line_[LEFT])`. NO padding and no
-        //   spring term: the rod is the bare overhang, which is why LilyPond's answer for a
-        //   lead sheet is the overhang itself and not overhang + 0.5.
+        //   scm/define-grob-properties.scm:637) — and :556-560
+        //     spacer.add_rod (i, cols.size (), cols[i].keep_inside_line_[RIGHT]);
+        //     spacer.add_rod (0, i, -cols[i].keep_inside_line_[LEFT]);
+        //   NO padding and no spring term: each rod is the bare overhang, which is why
+        //   LilyPond's answer for a lead sheet is the overhang itself and not overhang + 0.5.
         // MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CL/CLX/CLL): a
         //   syllable reaching 2.312540 left of its column puts that column on 2.312539
         //   instead of the 0.500000 `min_dist + 0.5` alone gives, moving every column of the
         //   line by the same amount and none of the column-to-column distances; take the
         //   reach away (CLL) and the column drops straight back to 0.500000.
-        // ⚠️ PARTIAL PORT — only the FIRST column, and only its LEFT side. LilyPond rods
-        //   EVERY column both ways (:558 adds the right-margin twin
-        //   `add_rod (i, cols.size (), keep_inside_line_[RIGHT])`). The first column is where
-        //   the constraint binds, because the springs between absorb any later column's
-        //   overhang; generalising it to every column is the next step and needs ledger
-        //   points for the regimes it opens. See docs/HANDOFF.md section 1.
-        if (lineStartLeftOverhang > 0.0 && measureSprings.Count > 0 && measureSprings[0].Length > 0)
-            rods.Add((0, 1, lineStartLeftOverhang));
+        // The rod is a MINIMUM, so it is inert wherever the springs already clear it — which
+        // is everywhere but the first column and the last, since the springs in between
+        // accumulate. That is why generalising this from the first column to all of them
+        // moves nothing: the constraint was already met.
+        // ⚠️ WHAT REACHES BEYOND ITS COLUMN, and what does not. Lily# anchors note heads,
+        //   clefs, signatures and bar lines AT the column, so their extent starts there; the
+        //   grobs it centres are the chord symbols and the lyric syllables
+        //   (text-anchor="middle"), so those are the whole of keep_inside_line_ today. Two
+        //   LilyPond quantities are still unported and would change these numbers:
+        //   ChordName declares no X-offset and no self-alignment-interface at all
+        //   (scm/define-grobs.scm:837-855) so LilyPond's chord ink starts AT its column, and
+        //   a LyricText is centred not on the column but on the PaperColumn placeholder
+        //   X-alignment-extent = (0 . 1.35), i.e. at -w/2 + 0.675
+        //   (self-alignment-interface.cc:117-176, define-grobs.scm:2749-2750).
+        {
+            int columnOffset = 0;
+            for (int m = 0; m < measureColumnOverhangs.Count; m++)
+            {
+                var overhangs = measureColumnOverhangs[m];
+                for (int c = 0; c < overhangs.Length; c++)
+                {
+                    if (overhangs[c] <= 0.0)
+                        continue;
+                    // Spring j spans column j → column j+1, so measure m's column c is the
+                    // right end of spring columnOffset + c.
+                    int column = columnOffset + c + 1;
+                    if (column >= 1 && column <= allSprings.Length)
+                        rods.Add((0, column, overhangs[c]));
+                    // A rod from the LINE's last column to itself is the degenerate one
+                    // LilyPond's own `add_rod (i, cols.size (), …)` reduces to; skip it.
+                    if (column < allSprings.Length)
+                        rods.Add((column, allSprings.Length, overhangs[c]));
+                }
+                columnOffset += measureSprings[m].Length;
+            }
+        }
 
         // Multi-measure rest runs: LilyPond's run-level rod across the springs of the
         // run-opening measure (the run's single column pair).
