@@ -1783,15 +1783,30 @@ internal static class LpGeometryProbes
 
         part melody
 
+        // ⚠️ THE PHRASES ARE LOAD-BEARING, and flattening them into one melody block is what
+        // made this probe measure DIFFERENT MUSIC from its LilyPond twin until 2026-07-25.
+        // Lily# resets the relative frame at every phrase reference (RelativeResetMarker), so
+        // in the fixture `slurs` opens on the c nearest C4 = c'. Inlined, the relative chain
+        // runs on from the `a` that ends `ties`, and the nearest c to a' is c'' — an octave
+        // up, which flips the stems of bars 4 and 5 down and cost 0.314107 ss of natural
+        // width that was very nearly diagnosed as a Lily# spacing defect.
+        phrase ties {
+          c4~ c4 d2 |
+          d2 e2~ | e4 f g a |
+        }
+
+        phrase slurs {
+          c4( d e f) |
+          g4( f e d) c2 r2 |
+        }
+
+        phrase tieDirection {
+          c4~ c4 r2 |
+          b'4~ b4 r2 |
+        }
+
         section Main {
-          melody {
-            c4~ c4 d2 |
-            d2 e2~ | e4 f g a |
-            c4( d e f) |
-            g4( f e d) | c2 r2 |
-            c4~ c4 r2 |
-            b'4~ b4 r2 |
-          }
+          melody { ties slurs tieDirection }
         }
 
         form main { Main }

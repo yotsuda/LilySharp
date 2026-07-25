@@ -55,6 +55,29 @@
 %% rod saturating most of LilyPond's line (blocking_force >= 0 excludes a spring from
 %% inv_hooke at simple-spacer.cc:259-262).
 %%
+%% OUTCOME, written after the run. The prediction was RIGHT about the overflow and RIGHT that
+%% the compressibility was also wrong, and both were needed:
+%%
+%%   * CLW came back at 102.807014 against the 102.429921 line, i.e. LilyPond overflows by
+%%     0.377093 where Lily# overflowed by 0.062984 — the predicted ~102.765, near enough.
+%%   * CLW - CLJ over |force| = 0.006918750 reads LilyPond's springs directly, and they are
+%%     the DURATION values to six places: 0.800000 at the line start, 1.698045 for
+%%     quarter-to-quarter (= duration_space 2.898045 - increment 1.2, NOT ideal - min
+%%     1.398045), 2.898045 for a half, 0.400000 bar-line-to-note, 54.701125 over the line.
+%%     Ported; Lily# now produces 54.701125 exactly.
+%%   * ⚠️ THE 0.314107 OF MISSING NATURAL WIDTH WAS NOT A SPACING DEFECT. It was the PAIR:
+%%     the Lily# side of ledger score TSJ had the fixture's three phrases flattened into one
+%%     melody block, and Lily# resets the relative frame at each phrase reference, so bars 4
+%%     to 8 were engraved an OCTAVE UP and their stems pointed the other way. Restoring the
+%%     phrases closed `compressed.line-start.time-to-first-note` to exact. The per-spring
+%%     table this probe produced is what made that visible — bar 3's closing spring was exact
+%%     while bar 4's was off by very nearly twice its own stem correction, which is a sign
+%%     flip and not a magnitude error, and nothing but a stem direction flips that sign.
+%%
+%% So this probe stays as the way to read LilyPond's springs, and CLW stays as the natural
+%% width of this music (probes/ties-slurs-breaks-ragged.ly is NOT that — it omits the final
+%% bar line; see the warning at the top of that file).
+%%
 %% Dumps go to STDOUT, ONE RECORD PER LINE (a split record is cut in half by LilyPond's own
 %% diagnostics on stderr — see the note in barline-spacing.ly).
 

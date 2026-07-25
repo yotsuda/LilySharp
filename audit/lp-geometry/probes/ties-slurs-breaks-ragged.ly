@@ -1,5 +1,19 @@
 \version "2.26.0"
 
+%% ⚠️⚠️ THIS IS NOT THE SAME MUSIC AS ties-slurs-breaks.ly, AND ITS WIDTH IS NOT THAT
+%% SCORE'S NATURAL WIDTH. Discovered 2026-07-25. The music below has NO `\bar "|."`, which
+%% TSJ carries, and the final bar line is worth exactly 0.900000: this score's 101.907014 is
+%% TSJ's real natural width 102.807014 minus 0.900000. Worse, with the final bar line in place
+%% LilyPond will not keep the eight bars on one ragged line at all -- it takes two systems --
+%% so the per-column decomposition below CANNOT be subtracted from TSJ's justified columns,
+%% and the conclusion drawn from it ("the natural widths agree to 2e-5 over all eight bars")
+%% was wrong and is retracted in lp-geometry.json.
+%% ⇒ USE probes/compressed-line-force.ly INSTEAD. Its CLW engraves TSJ's music, final bar
+%% line and all, ragged on a line wide enough not to break, which is the natural width; and
+%% CLW - CLJ is then |force| * inverse_compress_strength per spring.
+%% What this file is still good for: the LINE-COUNT question in the paragraph below, and the
+%% per-column dump of THIS music (which is the fixture's music minus its final bar line).
+%%
 %% Control for ties-slurs-breaks.ly: the SAME music ragged-right, so the system's
 %% natural (force 0) width can be read off directly. If it exceeds the justified
 %% line width of 102.3799 ss, LilyPond COMPRESSED that line -- i.e. LilyPond accepts
