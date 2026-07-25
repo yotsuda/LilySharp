@@ -32,8 +32,8 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第3セッション）/ HEAD ＝ **この docs コミット**（`ed06bb56` の上。
-⚠️ 自己参照＝**§0 で裏取り**。origin より 5 ahead・**未 push**）。**3289 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+最終更新 2026-07-25（第3セッション）/ HEAD ＝ **この docs コミット**（コード最終は `ed06bb56`。
+⚠️ 自己参照＝**§0 で裏取り**。origin より **6 ahead・未 push**）。**3289 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 69/87 exact・total |residual| 0.806268 ss・counts 5/5**。
 snapshot は **15 枚**を再ベース済み・承認済み（`eb790bb2`・正当化キー
 `compressed.line-start.time-to-first-note`。要素数は 15 枚すべて不変＝改行もページ数も動いて
@@ -69,20 +69,65 @@ snapshot は **15 枚**を再ベース済み・承認済み（`eb790bb2`・正�
 **total 0.806268 の 99%**。残る X 系はここに集中しているので、次はこれ 1 本。
 
 LP の形（`spacing-spanner.cc:492-517`）: `dt == 0` の列対では、左列の `spacing-wishes` から
-**`Staff_spacing` を持つ grob ごとに 1 本の spring** を `Staff_spacing::get_spacing` で作り、
-`merge_springs` で 1 本に畳む（`spring.cc:101-129`＝ideal は平均・**min は最大**・
-invStretch は平均・**invCompress は調和平均**）。Lily# は per-staff の wish を作っておらず、
-1 本を全譜まとめて作っている。§2A③ の `TabClefToFirstNoteSpace = 1.5` は**この移植で消える**
-（LP の TAB clef ink は G clef より広い＝独自判断の前提が崩れている。`0829185b` で照合済み）。
+**`Staff_spacing` を持つ grob ごと（＝譜ごと）に 1 本の spring** を `Staff_spacing::get_spacing`
+で作り、`merge_springs` で 1 本に畳む（`spring.cc:101-129`＝ideal は平均のうえ `min+0.3` で床・
+**min は最大**・invStretch は平均・**invCompress は調和平均**）。Lily# は per-staff の wish を
+作っておらず、共有 prefix から 1 本だけ作っている（`MultiStaffLayouter.LineStartSpringForLine`
+→ `SpacingRules.FirstNoteSpring`）。
 
-⚠️ **`Spring.Merge` は 2 本用**で、LP の `merge_springs` は N 本を一度に平均する。3 譜以上で
-`Merge` を畳み込むと平均が前寄りに歪むので、**N 本版を作る**こと（`invCompress` が 0 の枝の
-挙動も LP と違う＝下記）。
+#### 導出は完了している（2026-07-25 に LP を実測。**再測定は不要**）
 
-⚠️ **`Spring.Merge` の invCompress ゼロ枝は LP と違う**（今回は触っていない）。LP は
-`avg_compress += 1 / invC` を無条件でやるので、1 本でも `invC == 0` なら `1/inf = 0`＝
-**畳んだ spring は圧縮不能**になる。Lily# は `avgIdeal − maxMin` を返す。多声部の複数 wish
-経路だけの話なので別関心として分離した。**merge_springs を触るときに同時に直す。**
+`last_ext` は **その譜自身の left-break-aligned grob のうち右端が最大のもの**の ink extent で、
+**extent が空の grob はスキップされる**（`spacing-interface.cc:201-227`、`:219-220`）。
+`StaffSpacing` は譜ごとに 1 個なので、この集合は譜ごとに違う。
+
+★ **鍵はこれ**: probe TKC の LP ダンプで **`TABTIME ext=(+inf . -inf)`＝tab 譜の
+TimeSignature はインクが空**（grob 自体は共有 time 列 x=5.12 に居る）。だから空 extent の
+スキップに掛かり、**tab の last grob は TAB clef** になる。Lily# 側の
+`ContributesToKeyColumnWidth`（`!IsTab && !IsTextRow`）が key と time の両方を落としている
+（`LineStartColumn.cs:287-294`）ので、**述語はすでに LP と一致している**。
+
+probe TKC（notation＋tab・C major・4/4）:
+
+| 譜 | last grob | space-alist | fixed | ideal |
+|---|---|---|---|---|
+| notation | TimeSignature ink 5.12..6.82 | `semi-shrink-space 2.0`（`:193-198`） | 6.82+1.0＝**7.82** | **8.82** |
+| tab | TAB clef ink **1.00..3.60** | `minimum-fixed-space 5.0`（`:183-187`） | 1.0+max(2.6,5.0)＝**6.00** | **6.00** |
+
+共有 floor `:212-215`（`0.3 + min_dist 7.72 = 8.02`）を**両方に**掛けて
+notation(fixed 8.02, ideal 8.82, invC 0.8) / tab(fixed 8.02, ideal 8.02, invC 0)。
+`merge_springs` ⇒ ideal (8.82+8.02)/2＝**8.42**（実測 `HEAD x=8.42` と一致）・min 7.72・
+invStretch 0.5・**invCompress は 1/0.8 + 1/0 = ∞ ⇒ 0＝圧縮不能**。
+台帳量＝8.42 − TIME ink left 5.12＝**3.300000** ＝ 記録済みの LP 値。
+Lily# は notation の 8.82 だけ使うので 3.700000 ⇒ 残差 +0.400000。
+
+#### 同時に直すもの（単独では入れられない・§5.1）
+
+1. **`Spring.Merge` は 2 本用**。LP は N 本を一度に平均するので、3 譜以上で `Merge` を
+   畳み込むと平均が前寄りに歪む ⇒ **N 本版 `MergeSprings` を作る**。
+2. **`Spring.Merge` の invCompress ゼロ枝が LP と違う。** LP は `avg_compress += 1/invC` を
+   無条件でやるので 1 本でも `invC == 0` なら `1/∞ = 0`＝**畳んだ spring は圧縮不能**。
+   Lily# は `avgIdeal − maxMin` を返す。**TKC がまさにこの枝**（tab の wish が rigid）なので、
+   これを直さないと tab 混在行の圧縮が LP と違う。
+3. ★ **`FirstNoteSpring` の key 分岐 `(2.5, 1.25)` の 1.25 は誤り。** `shrink-space` は
+   `fixed` を動かさない（`staff-spacing.cc:188-192`／`fixed = last_ext[RIGHT]` は `:166`）＝
+   prefix 相対の fixed は **0**。1.25 は semi-shrink の算術を書き写したもの。
+   ⚠️ 0.3+min_dist の床が効く regime では不可視なので、**対を開く価値がある**
+   （メーターの無い継続行＋key＋圧縮）。
+4. §2A③ の `TabClefToFirstNoteSpace = 1.5` は**この移植で消える**（LP の TAB clef ink は
+   G clef より広い＝独自判断の前提が崩れている。`0829185b` で照合済み）。
+
+#### 予測（実装前に書いた。外れたら `last_ext` の取り方を疑う）
+
+- tab 2 点は**両方 exact** ⇒ total 0.806268 → **約 0.006268・71/87 exact**
+- **台帳の他の点は 1 つも動かない**。等しい wish は自分自身に平均され、1 本の merge は
+  `max(min+0.3, avg)` 以外は恒等（行頭では `max(7.485+0.3, 8.585)=8.585` で no-op）。
+  ⚠️ `line-start.time-to-first-note.{standard-key,custom-key,cut-common}` や
+  `compressed.line-start.time-to-first-note` が動いたら、**merge ではなく per-staff wish が誤り**
+- snapshot が動くのは **tab/text/ossia 行と「メーターか調号を彫る譜」が同一 system に混在する
+  スコアだけ**（純記譜も全 tab も wish が等しい）
+- ⚠️ 混在 system の行頭 spring は**圧縮不能になる**（上の 2）。これは LP の算術であって
+  抑え込む対象ではない
 
 **移植の前に読むこと**（①は解決済み・残りは有効）:
 
