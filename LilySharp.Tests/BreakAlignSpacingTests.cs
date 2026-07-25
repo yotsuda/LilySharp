@@ -68,7 +68,7 @@ public class BreakAlignSpacingTests
     }
 
     [Fact]
-    public void KeySignatureToFirstNote_FixedSpace_2_5()
+    public void KeySignatureToFirstNote_ShrinkSpace_2_5()
     {
         // LILYPOND-REF: scm/define-grobs.scm:1996 (first-note . (shrink-space . 2.5)) — the
         // STYLE was transcribed as fixed-space, which is a different spring: shrink-space
@@ -80,7 +80,7 @@ public class BreakAlignSpacingTests
     }
 
     [Fact]
-    public void TimeSignatureToFirstNote_FixedSpace_2_0()
+    public void TimeSignatureToFirstNote_SemiShrinkSpace_2_0()
     {
         // LILYPOND-REF: scm/define-grobs.scm:3949 (first-note . (semi-shrink-space . 2.0)) —
         // half fixed, half compressible, and not stretchable at all (:193-198).
