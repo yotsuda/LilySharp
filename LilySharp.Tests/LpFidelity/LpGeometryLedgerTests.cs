@@ -220,6 +220,41 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// The distance between two staves of a system is decided by the PAGE's spring chain,
+    /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
+    /// ledger measures it with.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:651-720 — <c>append_system</c> pushes one
+    /// spring per spaceable staff pair into the same chain as the system springs.
+    /// <para>
+    /// ⚠️ Why this exists next to the ledger points rather than instead of them: a residual
+    /// is a number and can shrink for the wrong reason. This asserts the two halves that
+    /// make it the right one — the ragged page sits EXACTLY on the alignment minimum (so
+    /// force 0 is unchanged from before the spring existed, which is what keeps every
+    /// single-page score byte-identical), and the justified page opens WIDER on the same
+    /// music and the same paper. Before the port the two numbers were equal, and this test
+    /// fails on that.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheStavesOfASystem_AreSpacedByThePageChain_NotPinnedAtTheAlignmentMinimum()
+    {
+        var natural = LpGeometryProbes.All.Single(p => p.Id == "page.natural.staff-staff-inside");
+        var stretched = LpGeometryProbes.All.Single(p => p.Id == "page.stretched.staff-staff-inside");
+
+        double raggedGap = RenderedGeometry.Render(natural.Source, natural.Options).StaffGapAt(0);
+        double justifiedGap = RenderedGeometry.Render(stretched.Source, stretched.Options).StaffGapAt(0);
+
+        // staff-staff-spacing's basic-distance, which is what this music's own skyline loses
+        // to (see the probe's remarks): the ragged page must be exactly there.
+        Assert.Equal(9.0, raggedGap, 9);
+        Assert.True(justifiedGap > raggedGap + 0.4,
+            $"the justified page must stretch its staves apart: ragged {raggedGap:F6}, "
+            + $"justified {justifiedGap:F6}");
+    }
+
+    /// <summary>
     /// The headline fidelity number: the total distance from LilyPond across the corpus.
     /// </summary>
     /// <remarks>

@@ -223,7 +223,11 @@ internal sealed class LayoutEngine
                     isFirstSystem && !score.AllStavesTab,
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
-                Indent: sysIndent));
+                Indent: sysIndent,
+                // The springs the PAGE will solve between this system's staves. Built from
+                // THIS system's groups, so a hara-kiri'd system springs only the staves it
+                // actually shows. LILYPOND-REF: lily/page-layout-problem.cc:651-720.
+                StaffSprings: multiStaffLayouter.StaffSprings(score, sysStaffGroups)));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }

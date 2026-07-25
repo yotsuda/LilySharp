@@ -166,6 +166,24 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// The spacing spec for the pair straddling two groups, including the ossia rule.
+    /// </summary>
+    /// <remarks>
+    /// One home for the choice, because it is now read twice: by the layout loops that
+    /// place the staves and by <see cref="StaffSprings"/>, which builds the page spring
+    /// that floors the same distance. Two copies of a spec selection is the shape
+    /// HANDOFF 5.2.1 (2) names — the port lands on one of them and not the other.
+    /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity-aware selection.
+    /// Ossia/staff pairs share one alignment in LilyPond, so they take ordinary
+    /// staff-staff-spacing (the CALLER then scales the distance — see CalculateSystemHeight).
+    /// </remarks>
+    private static VerticalSpacingSpec InterGroupSpec(
+        StaffGroup upper, StaffGroup lower, StaffSpacingParameters sp)
+        => upper.Staves.Any(s => s.IsOssia) || lower.Staves.Any(s => s.IsOssia)
+            ? sp.StaffStaff
+            : SelectInterGroupSpec(upper, lower, sp);
+
+    /// <summary>
     /// Estimates pure system height including content-dependent loose line extents.
     /// Used for page breaking optimization before full layout.
     /// </summary>
@@ -303,13 +321,9 @@ internal sealed class MultiStaffLayouter
             {
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
-                var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                var spec = InterGroupSpec(group, nextGroup, sp);
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                // Ossia/staff pairs share one alignment in LP → ordinary
-                // staff-staff-spacing, scaled (see CalculateSystemHeight).
-                if (nextIsOssia || currentIsOssia)
-                    spec = sp.StaffStaff;
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
@@ -407,13 +421,9 @@ internal sealed class MultiStaffLayouter
                 {
                     // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                     var nextGroup = score.StaffGroups[i + 1];
-                    var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                    var spec = InterGroupSpec(group, nextGroup, sp);
                     bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                     bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                    // Ossia/staff pairs share one alignment in LP → ordinary
-                    // staff-staff-spacing, scaled (see CalculateSystemHeight).
-                    if (nextIsOssia || currentIsOssia)
-                        spec = sp.StaffStaff;
                     bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
@@ -1398,13 +1408,9 @@ internal sealed class MultiStaffLayouter
                 int firstOfNext = globalStaffIdx + staffCount;
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
-                var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                var spec = InterGroupSpec(group, nextGroup, sp);
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                // Ossia/staff pairs share one alignment in LP → ordinary
-                // staff-staff-spacing, scaled (see CalculateSystemHeight).
-                if (nextIsOssia || currentIsOssia)
-                    spec = sp.StaffStaff;
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
@@ -1475,13 +1481,9 @@ internal sealed class MultiStaffLayouter
                 int firstOfNext = globalStaffIndex + group.StaffCount;
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
-                var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                var spec = InterGroupSpec(group, nextGroup, sp);
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                // Ossia/staff pairs share one alignment in LP → ordinary
-                // staff-staff-spacing, scaled (see CalculateSystemHeight).
-                if (nextIsOssia || currentIsOssia)
-                    spec = sp.StaffStaff;
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
@@ -1499,6 +1501,92 @@ internal sealed class MultiStaffLayouter
 
         return builder.ToImmutable();
     }
+
+    /// <summary>
+    /// The springs LilyPond puts BETWEEN the spaceable staves of one system, read off the
+    /// layout those staves already have.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:651-720 — <c>append_system</c> walks the
+    /// system's elements and pushes one spring per spaceable staff PAIR into the page's
+    /// chain, taking the spec from the upper staff's grouper and flooring the spring at the
+    /// minimum translation with <c>ensure_min_distance</c>.
+    /// <para>
+    /// Derived from the produced <see cref="StaffGroupLayout"/>s rather than recomputed:
+    /// each pair's minimum IS the refpoint distance the layout gave it, so the spring cannot
+    /// disagree with the placement it floors (HANDOFF 5.2.1 (2) — a second implementation of
+    /// a quantity is where a port lands only half the time). Only the SPEC comes from the
+    /// same selection the layout used, which is why that selection now lives in
+    /// <see cref="InterGroupSpec"/> and is called from both.
+    /// </para>
+    /// <para>
+    /// Which pairs get a spring, and why the others do not:
+    /// <list type="bullet">
+    /// <item>TEXT ROWS (lyric/chord rows) are LilyPond's non-spaceable lines — its own loop
+    /// springs only between <c>is_spaceable</c> elements (:660-719) and distributes the rest
+    /// afterwards (<c>distribute_loose_lines</c>). ⚠️ Lily# has no such distribution: a text
+    /// row keeps its laid-out offset from the staff above it, so on a stretched page it
+    /// travels with that staff instead of being re-spaced. Named, not hidden.</item>
+    /// <item>HIDDEN staves are gone from LilyPond's element list too
+    /// (<c>filter_dead_elements</c>, :589).</item>
+    /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid. Lily# spaces an ossia at
+    /// <c>gap * OssiaScale</c>, which is its own model and lands BELOW the spec's
+    /// basic-distance — a spring built from that spec would pull the pair apart at force 0,
+    /// i.e. change output where nothing is being ported. LilyPond has no such scaling and
+    /// springs an ossia like any staff; closing that needs the ossia distance itself ported
+    /// first.</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public ImmutableArray<StaffSpring> StaffSprings(
+        MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups)
+    {
+        if (groups.IsDefaultOrEmpty)
+            return ImmutableArray<StaffSpring>.Empty;
+
+        var sp = _options.StaffSpacing;
+        // (model staff, its layout, the group it belongs to) in global staff order — the
+        // order EnumerateStaves yields and the order the group layouts were built in.
+        var flat = new List<(Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)>();
+        int gi = 0;
+        foreach (var group in score.StaffGroups)
+        {
+            if (gi >= groups.Length)
+                break;
+            var groupLayout = groups[gi];
+            for (int k = 0; k < group.Staves.Length && k < groupLayout.Staves.Length; k++)
+                flat.Add((group.Staves[k], groupLayout.Staves[k], group, gi));
+            gi++;
+        }
+
+        var builder = ImmutableArray.CreateBuilder<StaffSpring>();
+        for (int i = 0; i + 1 < flat.Count; i++)
+        {
+            var upper = flat[i];
+            var lower = flat[i + 1];
+            if (upper.Staff.IsTextRow || lower.Staff.IsTextRow)
+                continue;
+            if (upper.Layout.IsHidden || lower.Layout.IsHidden)
+                continue;
+            if (upper.Staff.IsOssia || lower.Staff.IsOssia)
+                continue;
+
+            var spec = upper.GroupIndex == lower.GroupIndex
+                ? sp.StaffStaff
+                : InterGroupSpec(upper.Group, lower.Group, sp);
+
+            // Refpoint to refpoint, the frame every vertical spring in LilyPond works in.
+            double minimum = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
+            builder.Add(new StaffSpring(
+                upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
+        }
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// A staff's refpoint (its middle line) in the system's Y-up frame.
+    /// </summary>
+    internal static double StaffRefpoint(StaffLayout staff) => staff.Y - staff.Height / 2.0;
 
     /// <summary>
     /// Layouts a grand staff group using skyline-based spacing.

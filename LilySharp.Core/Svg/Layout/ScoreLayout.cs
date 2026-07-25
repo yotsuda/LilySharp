@@ -114,6 +114,30 @@ internal sealed record MeasureLayout
 }
 
 /// <summary>
+/// One of the springs LilyPond puts BETWEEN two spaceable staves of a system.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/page-layout-problem.cc:651-720 — <c>append_system</c> pushes these
+/// into the SAME chain as the system-to-system springs, so a page solves the distance
+/// between two staves of a system and the distance between two systems at one force.
+///
+/// <paramref name="MinimumDistance"/> is the refpoint-to-refpoint distance
+/// <c>Align_interface</c> already decided, i.e. LilyPond's
+/// <c>minimum_offsets_with_min_dist[i] - minimum_offsets_with_min_dist[last]</c>, and it
+/// reaches the spring through <c>ensure_min_distance</c> (:699-704) rather than as the
+/// distance itself. Since that number is <c>max(skyline + padding, minimum-distance,
+/// basic-distance)</c> it is never BELOW the spec's basic-distance, so at force 0 the
+/// spring is exactly the distance the staves were laid out at.
+/// </remarks>
+/// <param name="UpperStaffIndex">Global index of the upper staff of the pair.</param>
+/// <param name="LowerStaffIndex">Global index of the lower staff of the pair.</param>
+internal readonly record struct StaffSpring(
+    int UpperStaffIndex,
+    int LowerStaffIndex,
+    VerticalSpacingSpec Spec,
+    double MinimumDistance);
+
+/// <summary>
 /// Layout information for a single system (staff line).
 /// All coordinates are in staff spaces.
 /// </summary>
@@ -124,7 +148,10 @@ internal sealed record SystemLayout(
     double PrefixWidth,                    // Width of clef + key + time (staff spaces)
     ImmutableArray<MeasureLayout> Measures, // Measures in this system
     ImmutableArray<StaffGroupLayout> StaffGroups = default,  // Staff groups (optional, for multi-staff)
-    double Indent = 0                      // LILYPOND-REF: ly/paper-defaults-init.ly — indent for instrument names
+    double Indent = 0,                     // LILYPOND-REF: ly/paper-defaults-init.ly — indent for instrument names
+    // The springs between this system's spaceable staves, in top-to-bottom order. Empty on
+    // a one-staff system. LILYPOND-REF: lily/page-layout-problem.cc:651-720.
+    ImmutableArray<StaffSpring> StaffSprings = default
 )
 {
     /// <summary>Whether this system has multiple staff groups.</summary>

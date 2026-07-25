@@ -278,6 +278,13 @@ internal sealed class PageLayouter
         // solves that whole chain at once, so every spring on the page carries the SAME
         // force — the top and bottom springs stretch with the middle.
         // LILYPOND-REF: lily/page-layout-problem.cc:406-545 Page_layout_problem::Page_layout_problem
+        //
+        // ⚠️ AND THE STAVES OF A SYSTEM ARE IN THAT CHAIN TOO. append_system pushes the
+        // system's own spring and then one spring per spaceable staff PAIR (:651-720), so
+        // "how far apart are two staves of this system" is solved by the page, at the same
+        // force as "how far apart are two systems". Lily# used to draw every system at the
+        // Align_interface minimum on every page and at every force; the ledger points
+        // page.natural/page.stretched.staff-staff-inside are the pair that measured it.
         var springs = ImmutableArray.CreateBuilder<Spring>();
 
         // Spring 0 — down to the first system's staff refpoint. Only the first page
@@ -287,8 +294,32 @@ internal sealed class PageLayouter
             systemExtents[startIdx].upExtent, halfStaff, vs.TopSystem));
 
         int count = endIdx - startIdx;
+        // positions[FirstStaffPosition(local)] is that system's FIRST staff refpoint; its
+        // k-th staff spring leads to the entry one further along. Recorded rather than
+        // computed from sysIdx because the number of springs per system now varies.
+        var firstStaffPosition = new int[count];
+        // The refpoint span from a system's first spaceable staff to its last, at the
+        // MINIMUM — the sum of its staff springs' floors. It is the frame conversion the
+        // two neighbouring springs need (see below), and it is what LilyPond means by
+        // last_spaceable_dy (:1116, :1126).
+        var minStaffSpan = new double[count];
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
+            int local = sysIdx - startIdx;
+            firstStaffPosition[local] = springs.Count;
+            var staffSprings = allSystems[sysIdx].StaffSprings;
+            if (!staffSprings.IsDefaultOrEmpty)
+            {
+                foreach (var ss in staffSprings)
+                {
+                    // LILYPOND-REF: lily/page-layout-problem.cc:678-704 — the spec's spring
+                    // (basic-distance / stretchability), floored by the minimum translation
+                    // through ensure_min_distance.
+                    springs.Add(LayoutUtilities.CreateSpring(ss.Spec, ss.MinimumDistance));
+                    minStaffSpan[local] += ss.MinimumDistance;
+                }
+            }
+
             if (sysIdx < endIdx - 1)
             {
                 // Select spacing spec for this pair
@@ -325,6 +356,24 @@ internal sealed class PageLayouter
                     }
                     else
                     {
+                        // FRAME. Both skylines are built about their system's ORIGIN (its
+                        // first staff's top line), so Distance() is origin-to-origin, while
+                        // the spring being built runs from the PREVIOUS system's LAST
+                        // spaceable staff to the next system's FIRST. LilyPond states the
+                        // same conversion as a shift of the skylines themselves —
+                        // LILYPOND-REF: lily/page-layout-problem.cc:1120-1126 leaves the up
+                        // skyline relative to the top spaceable staff and the down skyline
+                        // relative to the BOTTOM one, by first_spaceable_dy /
+                        // last_spaceable_dy out of the same minimum translations this span
+                        // is the sum of. Subtracting it here keeps SkylineBuilder in one
+                        // frame for its other readers.
+                        // ⚠️ It is also what makes the two branches agree: the scalar
+                        // fallbacks below are ALREADY written in this frame
+                        // (`StaffHeight + …` = halfStaff + ink + halfStaff), so before this
+                        // subtraction a multi-staff system priced its skyline gap and its
+                        // fallback gap in different frames.
+                        dist -= minStaffSpan[local];
+
                         // Whole-line annotation bands (lyric lines below,
                         // chord-symbol rows above) lay out after the page Y is
                         // fixed and are absent from the skylines; they floor
@@ -384,8 +433,13 @@ internal sealed class PageLayouter
         // spring's padding and its stretchability out of the force calculation.
         {
             var lastDetails = systemDetails[endIdx - 1];
+            // Measured from the LAST SPACEABLE staff's refpoint, which is where this spring
+            // now attaches: StaffHeight is the whole body (first staff's top line to the
+            // last's bottom line), so dropping halfStaff reaches the first staff's refpoint
+            // and dropping the minimum staff span reaches the last one's.
             double inkBelowLastRefpoint =
-                (lastDetails.StaffHeight - halfStaff) + systemExtents[endIdx - 1].downExtent;
+                (lastDetails.StaffHeight - halfStaff - minStaffSpan[count - 1])
+                + systemExtents[endIdx - 1].downExtent;
             springs.Add(LayoutUtilities.CreateSpring(
                 vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
         }
@@ -417,21 +471,101 @@ internal sealed class PageLayouter
 
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
+            int local = sysIdx - startIdx;
             // positions[] is the running sum of the chain, measured DOWN from the top of
-            // the printable area, and entry k+1 is system k's STAFF REFPOINT
+            // the printable area, and firstStaffPosition names the entry that is this
+            // system's FIRST staff refpoint
             // (LILYPOND-REF: page-layout-problem.cc:896-901 — solution_[spring_idx] is the
             // first staff's position and the system origin is that plus min_offsets[0]).
             // Lily# stacks systems by their origin, which is halfStaff above the refpoint.
-            double refpoint = _options.MarginTop + positions[sysIdx - startIdx + 1];
+            double refpoint = _options.MarginTop + positions[firstStaffPosition[local]];
             double origin = refpoint - halfStaff;
 
+            var system = allSystems[sysIdx];
             // Stage-4 W2-core multi-page producer seam: origin is the system top measured
             // DOWNWARD (device) within the page; store it as page Y-up (UP from the page
             // bottom) against this page's fixed height, matching the PageLayout.Height
             // (= _options.PageHeight) built above.
-            pageSystems.Add(allSystems[sysIdx] with { Y = _options.PageHeight - origin });
+            pageSystems.Add(system with
+            {
+                Y = _options.PageHeight - origin,
+                StaffGroups = RespaceStaves(system, positions, firstStaffPosition[local]),
+            });
         }
 
         return pageSystems.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Re-places a system's staves at the distances the PAGE solved for them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:896-914 — <c>find_system_offsets</c> reads
+    /// one solution entry per spaceable staff and translates that staff by it, so the
+    /// staves of a system end up wherever the page's force put them rather than at the
+    /// minimum <c>Align_interface</c> handed in.
+    /// <para>
+    /// Returns the system's own groups UNCHANGED when nothing moved, so a page at force 0 —
+    /// every ragged page, and every score that fits one page — is byte-identical to before
+    /// the springs existed. That is a consequence, not a construction: at force 0 a spring
+    /// is <c>max(min_distance, ideal)</c> and the minimum handed in IS the laid-out
+    /// distance, which is never below the spec's basic-distance.
+    /// </para>
+    /// <para>
+    /// ⚠️ Staves with no spring — text rows, hidden staves, an ossia (see
+    /// <c>MultiStaffLayouter.StaffSprings</c>) — keep their offset from the spaceable staff
+    /// above them. LilyPond re-spaces its loose lines separately
+    /// (<c>distribute_loose_lines</c>, :1025-1054), which Lily# does not model; a lyric row
+    /// therefore travels with its staff instead of being distributed. Named, not hidden.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<StaffGroupLayout> RespaceStaves(
+        SystemLayout system, ImmutableArray<double> positions, int firstStaffPosition)
+    {
+        var sprung = system.StaffSprings;
+        if (sprung.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
+            return system.StaffGroups;
+
+        // How far each sprung staff moved from where it was laid out, by global staff index.
+        var shift = new Dictionary<int, double>();
+        double cumulativeSolved = 0, cumulativeMinimum = 0;
+        for (int k = 0; k < sprung.Length; k++)
+        {
+            cumulativeSolved += positions[firstStaffPosition + k + 1]
+                                - positions[firstStaffPosition + k];
+            cumulativeMinimum += sprung[k].MinimumDistance;
+            // Y-up: a staff pushed further DOWN the page has a SMALLER Y.
+            shift[sprung[k].LowerStaffIndex] = -(cumulativeSolved - cumulativeMinimum);
+        }
+        if (shift.Values.All(v => Math.Abs(v) < 1e-9))
+            return system.StaffGroups;
+
+        var groups = ImmutableArray.CreateBuilder<StaffGroupLayout>(system.StaffGroups.Length);
+        // A staff with no spring of its own follows the last sprung staff above it.
+        double running = 0;
+        foreach (var group in system.StaffGroups)
+        {
+            var staves = ImmutableArray.CreateBuilder<StaffLayout>(group.Staves.Length);
+            foreach (var staff in group.Staves)
+            {
+                if (shift.TryGetValue(staff.StaffIndex, out double own))
+                    running = own;
+                staves.Add(staff with { Y = staff.Y + running });
+            }
+            var moved = staves.ToImmutable();
+            double top = moved[0].Y;
+            double bottom = moved[^1].Y - moved[^1].Height;
+            var delimiter = group.GrandStaffLayout is { } d
+                ? d with { Staves = moved, BraceTop = top, BraceBottom = bottom }
+                : null;
+            groups.Add(group with
+            {
+                Staves = moved,
+                Y = top,
+                Height = top - bottom,
+                GrandStaffLayout = delimiter,
+            });
+        }
+        return groups.ToImmutable();
     }
 }
