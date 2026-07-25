@@ -1958,6 +1958,60 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// Chords AND lyrics with a NARROW first syllable — the regime where LilyPond's own offset
+    /// is too small to reach past the line-start spring, so its column stands on 0.500000 with
+    /// no text metric in it at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is what makes a lead-sheet pair possible. LilyPond stands the column at
+    /// <c>w/2 - 0.675</c> (the syllable is centred on the PaperColumn placeholder
+    /// <c>X-alignment-extent = (0 . 1.35)</c>, define-grobs.scm:2749-2750) and Lily# at
+    /// <c>w/2</c>, but the two do not measure the same <c>w</c> — Lily# draws lyrics in its own
+    /// serif at 3.2 ss and is ~27% wider here ("Twin" 7.587200 against LilyPond's 5.975079).
+    /// A point on the wide-syllable CL would mix the missing 0.675 with that metric difference.
+    /// </para>
+    /// <para>
+    /// A narrow syllable separates them because the rod is a MINIMUM: under 2.35 ss LilyPond's
+    /// reach falls below the 0.5 the line-start spring already gives, the rod goes slack, and
+    /// the column sits exactly where the chords-only line does. MEASURED: CLI's syllable is
+    /// 0.990156 wide and sits 0.179922 RIGHT of its column, CLA's is 1.365732 and reaches
+    /// 0.007866 left — a real reach that does not bind — and both columns dump 0.500000.
+    /// Lily#'s reach is <c>w/2</c> with no placeholder, so it clears 0.5 for anything over
+    /// 1.0 ss ("I" 1.302400, "a" 1.779200) and the column leaves the floor.
+    /// </para>
+    /// <para>
+    /// The lyric line is minimal and rhythmically identical on both sides: two half-note
+    /// syllables per bar against the two half-note chords, because Lily# spreads a row's
+    /// syllables evenly across the bar while LilyPond reads their written durations, and two
+    /// equal syllables is where the two agree exactly.
+    /// </para>
+    /// </remarks>
+    private static string StafflessChordsAndLyrics(string firstSyllable, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        section Main {
+          chords prog { c2 a:m | f2 g:7 | c1 | }
+          lyrics words { {{firstSyllable}} no | oh no | yes | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          chords prog
+          lyrics words
+        }
+        """;
+
+    /// <remarks>LilyPond twin: probe score CLI (first syllable <c>I</c>).</remarks>
+    private static readonly string SCLI = StafflessChordsAndLyrics("I", "SCLI");
+
+    /// <remarks>LilyPond twin: probe score CLA (first syllable <c>a</c>, one letter wider).</remarks>
+    private static readonly string SCLA = StafflessChordsAndLyrics("a", "SCLA");
+
     /// <summary>A staff-less score of one chord progression, under a given meter and key.</summary>
     private static string StafflessChords(string time, string key, string name) => $$"""
         octave absolute
@@ -2334,6 +2388,17 @@ internal static class LpGeometryProbes
         // measures Lily#'s centring of the symbol and nothing else.
         new("staffless.chord-symbol-over-notehead", SCS,
             g => g.FirstChordSymbolAnchor() - g.NoteheadAnchor(0)),
+        // --- the lead sheet: two IDENTITIES on LilyPond's side (staffless-system.ly CLI/CLA) ---
+        // Both measure the first column through the chord symbol standing on it, which is the
+        // column exactly (ChordName has no X-offset — scm/define-grobs.scm:837-855), and both
+        // are 0 on LilyPond's side by the rod being SLACK: a syllable under 2.35 ss reaches
+        // less than the line-start spring's own 0.5, so the column never moves. Any Lily#
+        // difference is therefore a Lily# defect in Lily#'s own units, with no LilyPond text
+        // metric in it — which is the whole reason the narrow regime was measured.
+        new("staffless.lead-sheet.narrow-syllable-floor", SCLI,
+            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
+        new("staffless.lead-sheet.narrow-syllable-width-blind", SCLA,
+            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCLI)),
     };
 
     /// <summary>The first chord symbol's anchor in a SECOND score, for the difference points

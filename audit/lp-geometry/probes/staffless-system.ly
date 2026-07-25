@@ -360,6 +360,64 @@ harmony = \chordmode { c2 a:m | f2 g:7 | c1 }
   \lay "CLL"
 }
 
+%% ---- PERTURBATION 3 (2026-07-25): the NARROW-syllable regime, where LilyPond's own
+%%      offset is too small to reach past the spring ----
+%%
+%% WHY THESE EXIST. The Lily# twin for CL cannot be a raw comparison: the column stands at
+%% w/2 - 0.675 on LilyPond's side and at w/2 on Lily#'s, and the two engravers do not measure
+%% the same w (Lily# draws lyrics in its own serif at 3.2 ss and is ~27% wider than LilyPond
+%% here — "Twin" is 7.587200 against LilyPond's 5.975079). A point on CL would therefore mix
+%% the missing 0.675 with a text-metric difference and could not say which is which.
+%%
+%% A NARROW syllable separates them, because the rod is a MINIMUM. LilyPond's reach is
+%% w/2 - 0.675, so for any syllable under 2.35 ss wide the reach is below the 0.5 that
+%% standard_breakable_column_spacing already gives, the rod is slack, and the column stands
+%% on 0.500000 — the chords-only answer, with NO font metric in it at all. Lily#'s reach is
+%% w/2 with no placeholder, so it clears 0.5 for anything wider than 1.0 ss and the column
+%% leaves the floor. Both scores below sit in that window on both sides
+%% ("I" = 1.302400 and "a" = 1.779200 in Lily#'s metric, so its reaches are 0.651200 and
+%% 0.889600; LilyPond's are narrower still, so both are far under 2.35).
+%%
+%% That makes BOTH points identities on LilyPond's side, which is the strongest form of pair
+%% (section 5.0): LilyPond's difference is 0 by construction, so whatever Lily# reports IS
+%% the defect's size, in Lily#'s own units, with no LilyPond metric to contaminate it.
+%%
+%% The lyric line is deliberately MINIMAL and rhythmically identical on both sides: two
+%% half-note syllables per bar, matching the two half-note chords, because Lily# spreads a
+%% row's syllables evenly across the bar while LilyPond reads their written durations. Two
+%% syllables of equal length is where the two agree exactly (section 5.0: confirm the pair is
+%% the same music).
+%%
+%% PREDICTIONS, written before running (section 5.0-2):
+%%
+%%   CLI — first syllable "I". predict column 0.500000, i.e. CLI - CO = 0.000000 exactly.
+%%   CLA — first syllable "a". predict column 0.500000, i.e. CLA - CLI = 0.000000 exactly.
+%%   (falsifier for both: a column above 0.5, which would mean LilyPond's "I"/"a" are wider
+%%    than 2.35 ss and the scores missed the window. The LYRIC ext dumped below says so
+%%    directly — read it before believing the identity.)
+%%   Lily# side, predicted from its own metric: CLI - CO = 1.302400/2 - 0.5 = +0.151200 and
+%%   CLA - CLI = (1.779200 - 1.302400)/2 = +0.238400. Porting the placeholder takes both to
+%%   0, because w/2 - 0.675 is then negative for these syllables and Lily# lands on the same
+%%   0.5 floor.
+
+%% CLI — chords + lyrics, first syllable NARROW ("I").
+\score {
+  <<
+    \new ChordNames { \time 4/4 \harmony }
+    \new Lyrics \lyricmode { I2 no2 | oh2 no2 | yes1 }
+  >>
+  \lay "CLI"
+}
+
+%% CLA — the same, one letter wider ("a"). Still inside LilyPond's floor window.
+\score {
+  <<
+    \new ChordNames { \time 4/4 \harmony }
+    \new Lyrics \lyricmode { a2 no2 | oh2 no2 | yes1 }
+  >>
+  \lay "CLA"
+}
+
 %% CS — the CONTROL that is NOT staff-less: the same chords over an ordinary staff. Here
 %%   LilyPond DOES engrave a clef and a meter, so the first chord sits far right, and the
 %%   difference CS - CO is the size of the prefix a staff earns. Lily# should agree on THIS
