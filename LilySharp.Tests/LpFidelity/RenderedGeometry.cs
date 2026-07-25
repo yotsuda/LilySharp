@@ -252,6 +252,30 @@ internal sealed class RenderedGeometry
     public double FirstStaffRefpoint(int page = 0) => StaffRefpoints(page)[0];
 
     /// <summary>
+    /// Distance from the LAST staff refpoint on <paramref name="page"/> down to the bottom
+    /// paper edge — the closing term of that page's spring chain.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:538-545 — <c>last-bottom-spacing</c> is a
+    /// spring appended after every system, and what it spans is the LAST SPACEABLE STAFF's
+    /// refpoint to the bottom of the page's band, not the system origin and not the ink.
+    /// So the refpoint frame <see cref="StaffRefpoints"/> already works in is the frame this
+    /// term lives in, and the reading is the page height less the last refpoint.
+    /// <para>
+    /// ⚠️ Why the chain needs a reading down here at all, when six entries already read it:
+    /// all of them read a GAP, and a gap is a spring's length at the page's force. A force is
+    /// the page's slack over the chain's total strength, so an error in a FIXED term of the
+    /// chain lands in every gap at once, each in proportion to its own strength — N readings
+    /// of one cause, with nothing in the corpus to attribute it to. That is what
+    /// <c>page.{stretched,compressed}.*</c> were for a session: four residuals that were two
+    /// forces (HANDOFF 5.3 — divide a residual by its spring's strength before believing N
+    /// residuals are N quantities). This reads the term itself.
+    /// </para>
+    /// </remarks>
+    public double LastStaffRefpointToFoot(int page = 0) =>
+        PageHeight(page) - StaffRefpoints(page)[^1];
+
+    /// <summary>
     /// The single staff-to-staff distance on <paramref name="page"/>.
     /// </summary>
     /// <remarks>

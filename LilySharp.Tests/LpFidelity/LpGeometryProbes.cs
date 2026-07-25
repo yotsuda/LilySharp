@@ -2389,6 +2389,25 @@ internal static class LpGeometryProbes
         new("system.compressed-distance.two-staff", JSK, g => g.StaffGapAt(1), EightSystemsPerPage),
         new("page.compressed.two-staff.staves-on-first-page", JSK, g => g.StavesOnPage(0), EightSystemsPerPage),
 
+        // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
+        // spring's length at the page's force — and a force is the page's slack over the
+        // chain's total strength, so a fixed term that is wrong at the foot shows up in all
+        // of them at once, each scaled by its own spring. That is not a hypothetical: the
+        // four entries above stood at four different residuals for a session and were ONE
+        // fault, and naming it took dividing each residual by its own strength and then
+        // solving the chain from both regimes at once, because the corpus had no reading of
+        // the term itself. These two are that reading.
+        //
+        // LilyPond puts the SAME 10.023885 here in both regimes, which is the other thing
+        // worth pinning: the last spring is ideal 1 with stretchability 30, and
+        // ensure_min_distance raises its FLOOR to padding 1 + the last staff's own ink
+        // 3.333333 (page-layout-problem.cc:538-545) without touching that strength — so it
+        // blocks at f = 0.111111 and neither of these pages ever reaches it (stretched
+        // f = 0.099092, compressed f = -0.174101). Rigid on both sides, for a reason that
+        // stops being true if a page ever stretches harder.
+        new("page.stretched.last-staff-to-foot", JSS, g => g.LastStaffRefpointToFoot(), SixSystemsPerPage),
+        new("page.compressed.last-staff-to-foot", JSK, g => g.LastStaffRefpointToFoot(), EightSystemsPerPage),
+
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.
         new("page.tight.page-count", TP, g => g.PageCount, TightPaper),

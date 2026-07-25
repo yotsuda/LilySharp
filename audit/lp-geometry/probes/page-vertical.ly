@@ -1005,6 +1005,28 @@ probeTag =
 %%     either way. ⚠️ That 18-vs-17 is a LINE-breaking difference on two-staff music and is
 %%     NOT what this pair measures; it is recorded here because it decides how the pair has
 %%     to be spelled.
+%%
+%%     THE FOOT OF THE CHAIN, added 2026-07-26 and read on JSS and JSK alike. Everything
+%%     above measures a GAP, which is a spring's length at the page's force; a force is the
+%%     page's slack over the chain's total strength, so a fixed term that is wrong at either
+%%     END shows up in every gap at once, each scaled by its own spring, and the dump has
+%%     nothing to attribute it to. That is how four residuals here turned out to be TWO
+%%     forces (HANDOFF 5.3). The script now prints "last STAFF refpoint below edge ... to
+%%     foot", which is the span of the spring page-layout-problem.cc:538-545 appends after
+%%     the last system — refpoint to the bottom of the band, not the system origin and not
+%%     the ink.
+%%
+%%     MEASURED: 10.023885 on JSS page 1 AND on JSK page 1 — the same number in both
+%%     regimes, which is the mechanism and not a coincidence. The spring is ideal 1 with
+%%     stretchability 30 (ly/paper-defaults-init.ly:84-87) and ensure_min_distance raises
+%%     only its FLOOR, to padding 1 + the last staff's own ink 3.333333, leaving that
+%%     strength alone (spring.cc:156-159) — so it blocks at f = (4.333333 - 1) / 30 =
+%%     0.111111 and neither page gets there (JSS f = 0.099092, JSK f = -0.174101).
+%%     ⚠️ A book that stretches past f = 0.111111 opens this spring and is measuring a
+%%     DIFFERENT quantity; it needs its own entry rather than a comparison with these.
+%%     ⚠️ The 3.333333 is a middle-line DOWN STEM, shortened from 7 to 20/3 half-spaces by
+%%     stem.cc:519-555. Lily# reserved 3.5 until 96641db7, which is exactly the 0.166664
+%%     that both regimes' forces independently pointed at.
 \book {
   \probeTag "JSS"
   \paper { max-systems-per-page = #6 }
