@@ -410,8 +410,9 @@ public class LineStartColumnTests
     /// <summary>
     /// The rods are built for EVERY column, not just the first — so the fact that
     /// generalising them moved no output is "already satisfied", not "never generated".
-    /// This pins the input side: a chord row hands back one overhang PER COLUMN, each the
-    /// half width of the symbol standing there, because Lily# draws it centred.
+    /// This pins the input side: a chord row hands back one reach PER COLUMN, each the
+    /// WHOLE width of the symbol standing there, because the symbol's ink starts at its
+    /// column (scm/define-grobs.scm:837-855 — no X-offset, no self-alignment-interface).
     /// </summary>
     [Fact]
     public void KeepInsideLineOverhangs_AreMeasuredForEveryColumnNotJustTheFirst()
@@ -426,21 +427,21 @@ public class LineStartColumnTests
             new ChordNameItem("Bbmaj7", 0, 1, 0, useTiming: true,
                 timing: new Fraction(1, 2), isChordRow: true));
 
-        var half = SpacingRules.ChordCentredHalfWidthPerColumn(
+        var reach = SpacingRules.ChordInkRightReachPerColumn(
             timings, measureIndex: 0, chords, includeAttached: false);
 
-        Assert.Equal(2, half.Length);
-        // Half of what the renderer draws: SansBold at the 2.6 ss chord font.
-        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("C", 2.6) / 2, half[0], 6);
-        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("Bbmaj7", 2.6) / 2, half[1], 6);
-        // The SECOND column's overhang is real and larger — the wide symbol is not on the
+        Assert.Equal(2, reach.Length);
+        // ALL of what the renderer draws: SansBold at the 2.6 ss chord font, undivided.
+        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("C", 2.6), reach[0], 6);
+        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("Bbmaj7", 2.6), reach[1], 6);
+        // The SECOND column's reach is real and larger — the wide symbol is not on the
         // first column, so a first-column-only rod would never have seen it.
-        Assert.True(half[1] > half[0]);
+        Assert.True(reach[1] > reach[0]);
 
         // A symbol in a DIFFERENT measure contributes nothing to this one.
         Assert.Equal(
             new double[] { 0.0, 0.0 },
-            SpacingRules.ChordCentredHalfWidthPerColumn(
+            SpacingRules.ChordInkRightReachPerColumn(
                 timings, measureIndex: 1, chords, includeAttached: false));
     }
 

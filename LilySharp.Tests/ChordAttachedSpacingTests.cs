@@ -62,10 +62,60 @@ public sealed class ChordAttachedSpacingTests
         // The interior spring between the symbol column and the bare note column
         // is untouched — the symbol overhangs the note, keeping it evenly spaced.
         Assert.Equal(0.5, result[1].MinDistance, precision: 6);
-        // The bar edge still prices the symbol's width so it clears the barline
-        // (this is what keeps an all-rest attached bar wide enough).
-        Assert.True(result[0].MinDistance > 0.5,
-            $"edge spring ({result[0].MinDistance:F2}) should reserve the symbol width");
+        // Nor does the bar's LEFT edge grow: none of the symbol's ink lies left of its
+        // column, only extra-spacing-width's 0.5, which the 0.5 spring already clears.
+        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
+    }
+
+    /// <summary>
+    /// The all-rest bar, which is why staff-attached symbols price at all: its only column
+    /// is the rest, so nothing but the symbol can hold the bar open. The width is reserved
+    /// on the bar's RIGHT edge now, because that is the side the ink runs to
+    /// (scm/define-grobs.scm:837-855 — ChordName's extent is <c>(0 . w)</c>).
+    /// </summary>
+    [Fact]
+    public void AttachedChord_OverAnAllRestBar_HoldsTheBarOpenOnTheRight()
+    {
+        var chords = ImmutableArray.Create(Attached("Cmaj7", Fraction.Zero));
+        double w = LilySharp.Core.Rendering.TextFontMetrics.SansBold("Cmaj7", 2.6);
+
+        // One column (the whole-bar rest) => two springs.
+        var result = SpacingRules.ApplyChordRowSpacing(
+            Springs(2), new List<Fraction> { Fraction.Zero },
+            measureIndex: 0, chords, includeAttached: true);
+
+        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
+        Assert.Equal(w + 0.5, result[1].MinDistance, precision: 6);
+    }
+
+    /// <summary>
+    /// The reservation is asymmetric because the symbol is. LilyPond's ChordName declares no
+    /// <c>X-offset</c> and no <c>self-alignment-interface</c> (scm/define-grobs.scm:837-855),
+    /// so its ink runs <c>(0 . w)</c> from its column and <c>extra-spacing-width (-0.5 . 0.5)</c>
+    /// makes the spacing extent <c>(-0.5 . w + 0.5)</c>. Before this was ported, Lily# centred
+    /// the symbol and both edges reserved <c>w/2 + 0.5</c>, which stood a staff-less line's
+    /// first column 0.438600 too far right (ledger staffless.line-start.chords-vs-staff).
+    /// </summary>
+    [Fact]
+    public void ChordName_ReservesItsWholeWidthToTheRightOnly()
+    {
+        var chords = ImmutableArray.Create(
+            new ChordNameItem("Cmaj7", measureIndex: 0, itemIndex: 0, sourcePosition: 0,
+                useTiming: true, timing: Fraction.Zero, isChordRow: true));
+        double w = LilySharp.Core.Rendering.TextFontMetrics.SansBold("Cmaj7", 2.6);
+
+        // One column => two springs: bar line -> column, column -> bar line.
+        var result = SpacingRules.ApplyChordRowSpacing(
+            Springs(2, min: 0.0), new List<Fraction> { Fraction.Zero },
+            measureIndex: 0, chords, includeAttached: false);
+
+        // LEFT of the column: the 0.5 of extra-spacing-width alone, no part of the ink.
+        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
+        // RIGHT of it: the whole width plus that same 0.5.
+        Assert.Equal(w + 0.5, result[1].MinDistance, precision: 6);
+        // And the symbol is wide enough that halving it would have shown: this test is not
+        // passing on a coincidence between w and w/2.
+        Assert.True(w > 1.0, $"the probe symbol must be wider than 1.0 ss (was {w:F3})");
     }
 
     [Fact]

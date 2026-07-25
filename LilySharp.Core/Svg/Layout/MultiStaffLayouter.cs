@@ -1030,18 +1030,19 @@ internal sealed class MultiStaffLayouter
             // above does.
             var lyricHalf = LyricSpacing.CentredHalfWidthPerColumn(
                 springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet);
-            var chordHalf = SpacingRules.ChordCentredHalfWidthPerColumn(
+            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
             for (int c = 0; c < leftOverhangs.Length; c++)
             {
-                // Centred text reaches half its width to EITHER side.
-                double half = Math.Max(
-                    c < lyricHalf.Length ? lyricHalf[c] : 0.0,
-                    c < chordHalf.Length ? chordHalf[c] : 0.0);
-                leftOverhangs[c] = half;
-                rightOverhangs[c] = half;
+                // A CENTRED syllable reaches half its width to either side; a chord
+                // symbol is anchored at its ink left (scm/define-grobs.scm:837-855),
+                // so it reaches its WHOLE width right and nothing at all left.
+                double lyric = c < lyricHalf.Length ? lyricHalf[c] : 0.0;
+                double chord = c < chordWidth.Length ? chordWidth[c] : 0.0;
+                leftOverhangs[c] = lyric;
+                rightOverhangs[c] = Math.Max(lyric, chord);
             }
             // …and so does the MUSICAL ink on the column, which is the rest of
             // col->extent (col, X_AXIS).

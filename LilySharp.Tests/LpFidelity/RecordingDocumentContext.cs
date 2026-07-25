@@ -32,8 +32,10 @@ internal readonly record struct DrawnLine(double X1, double Y1, double X2, doubl
 /// because the string and position alone cannot say WHICH of those a text is, and a
 /// measurement that picked up a title instead of a chord symbol would look plausible.
 /// <see cref="Anchor"/> also records what <see cref="X"/> MEANS: <c>Middle</c> makes it the
-/// ink centre, not the ink left, which is the difference between Lily#'s chord symbol and
-/// LilyPond's ChordName reference point.
+/// ink centre and <c>Start</c> the ink left. A chord symbol takes <c>Start</c>, which is
+/// LilyPond's ChordName reference point (scm/define-grobs.scm:837-855 — no X-offset, no
+/// self-alignment-interface); a lyric syllable is still centred, which is not LyricText's
+/// placement and is the next thing to port.
 /// </summary>
 internal readonly record struct DrawnText(
     string Text, double X, double Y, double FontSize, string FontFamily, TextAnchor Anchor);

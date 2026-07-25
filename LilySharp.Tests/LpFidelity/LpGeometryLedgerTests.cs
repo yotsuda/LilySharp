@@ -170,6 +170,56 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// A chord symbol is drawn anchored at its ink LEFT, standing ON its column — LilyPond's
+    /// ChordName declares no <c>X-offset</c> and no <c>self-alignment-interface</c> at all
+    /// (scm/define-grobs.scm:837-855), so the grob's reference point IS its ink left. MEASURED
+    /// (audit/lp-geometry/probes/staffless-system.ly): the ChordName anchor equals its
+    /// column's X to six digits in every score of that probe.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This exists because NO ledger point can see this. Every <c>staffless.*</c> point is a
+    /// DIFFERENCE of two anchors read the same way on each side — built that way on purpose,
+    /// so the convention cancels out of them. Centring the symbol again would leave all four
+    /// of them exact and only <c>chords-vs-staff</c> would drift, and then only because the
+    /// keep-inside-line rod happens to make a staff-LESS line's first column visible. On a
+    /// staff, the corpus would not notice at all. So the convention is asserted directly.
+    /// </remarks>
+    [Fact]
+    public void ChordSymbolsAreAnchoredAtTheirInkLeft()
+    {
+        // A chord symbol over the first note of an ordinary staff: the note's column is
+        // where LilyPond stands both grobs (probe CS dumps ChordName and NoteHead at
+        // 8.585000 alike).
+        var geometry = RenderedGeometry.Render("""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+
+            section Main {
+              melody { c2 a | f2 g | c1 | }
+              chords prog { c2 a:m | f2 g:7 | c1 | }
+            }
+
+            form main { ~Main }
+
+            score main "anchor" {
+              staff melody with chords prog
+            }
+            """);
+
+        var symbols = geometry.ChordSymbols;
+        Assert.NotEmpty(symbols);
+        Assert.All(symbols, t => Assert.Equal(
+            LilySharp.Core.Rendering.TextAnchor.Start, t.Anchor));
+
+        // …and the anchor really is the note's column, not merely a left-anchored point
+        // somewhere near it.
+        Assert.Equal(geometry.NoteheadAnchor(0), symbols[0].X, 6);
+    }
+
+    /// <summary>
     /// The headline fidelity number: the total distance from LilyPond across the corpus.
     /// </summary>
     /// <remarks>

@@ -2880,6 +2880,13 @@ internal static class SpacingRules
     /// the sans face the symbols render in.
     /// LILYPOND-REF: scm/define-grobs.scm ChordName extra-spacing-width.
     /// </summary>
+    /// <remarks>
+    /// The reservation is ASYMMETRIC because the symbol is: ChordName has no X-offset and no
+    /// self-alignment-interface (scm/define-grobs.scm:837-855), so its ink runs <c>(0 . w)</c>
+    /// from its column and the spacing extent runs <c>(-0.5 . w + 0.5)</c>. A column therefore
+    /// owes 0.5 to its LEFT neighbour and <c>w + 0.5</c> to its right one, whichever side the
+    /// neighbour is — not <c>w/2 + 0.5</c> to each, which is what a centred symbol would owe.
+    /// </remarks>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
@@ -2890,7 +2897,7 @@ internal static class SpacingRules
         if (chordNames.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
             return springs;
 
-        var half = new double[timings.Count];
+        var width = new double[timings.Count];
         bool any = false;
         foreach (var cn in chordNames)
         {
@@ -2904,8 +2911,8 @@ internal static class SpacingRules
             {
                 if (timings[t] == cn.Timing)
                 {
-                    half[t] = Math.Max(half[t],
-                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
+                    width[t] = Math.Max(width[t],
+                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6));
                     any = true;
                     break;
                 }
@@ -2915,9 +2922,9 @@ internal static class SpacingRules
             return springs;
 
         // LILYPOND-REF: scm/define-grobs.scm ChordName extra-spacing-width
-        // (-0.5 . 0.5): each symbol's spacing extent grows 0.5 to each side,
-        // so adjacent symbols keep 1.0 and a symbol clears a barline by 0.5.
-        const double chordGap = 1.0;
+        // (-0.5 . 0.5): the symbol's spacing extent is its ink (0 . w) grown by
+        // 0.5 on each side, so it clears a bar line on its left by 0.5, reaches
+        // w + 0.5 to its right, and two adjacent symbols keep 1.0 between them.
         const double edgeGap = 0.5;
         var result = springs.ToBuilder();
         void Widen(int springIndex, double needed)
@@ -2927,7 +2934,14 @@ internal static class SpacingRules
                 result[springIndex] = new Spring(
                     Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
         }
-        Widen(0, half[0] + edgeGap);
+        // How far a column's symbol reaches on each side, extra-spacing-width included.
+        // A column with no symbol reaches nowhere: LilyPond has no grob there to grow.
+        double LeftReach(int t) => width[t] > 0 ? edgeGap : 0;
+        double RightReach(int t) => width[t] > 0 ? width[t] + edgeGap : 0;
+
+        // Left edge: only the -0.5 of the extent stands left of the column, never a
+        // half width — the ink itself starts ON the column.
+        Widen(0, LeftReach(0));
         for (int t = 0; t < timings.Count - 1; t++)
         {
             // A STAFF-ATTACHED symbol OVERHANGS a bare-note column (LP ChordName
@@ -2939,40 +2953,42 @@ internal static class SpacingRules
             // Two adjacent symbols always price so they never overprint, and the
             // bar EDGES below price the full width so an all-rest (R1) attached
             // bar, whose only column is the rest, still clears the barlines.
-            if (includeAttached && (half[t] <= 0 || half[t + 1] <= 0))
+            if (includeAttached && (width[t] <= 0 || width[t + 1] <= 0))
                 continue;
-            Widen(t + 1, half[t] + half[t + 1] + chordGap);
+            // The LEFT symbol's whole width lies between the two columns; the right
+            // one's lies beyond them. So the gap owes (w[t] + 0.5) + 0.5.
+            Widen(t + 1, RightReach(t) + LeftReach(t + 1));
         }
-        Widen(timings.Count, half[^1] + edgeGap);
+        Widen(timings.Count, RightReach(timings.Count - 1));
         return result.ToImmutable();
     }
 
     /// <summary>
-    /// How far the chord-symbol ink on each of a measure's columns reaches beyond that column
+    /// How far the chord-symbol ink on each of a measure's columns reaches RIGHT of that column
     /// — the chord side of LilyPond's keep-inside-line rod, one entry per column. Mirrors
-    /// <see cref="ApplyChordRowSpacing"/>'s own <c>half</c> array exactly (same filter, same
+    /// <see cref="ApplyChordRowSpacing"/>'s own <c>width</c> array exactly (same filter, same
     /// metric), so the quantity rodded is the one that method reserves.
     /// </summary>
     /// <remarks>
-    /// Lily# draws a chord symbol with <c>text-anchor="middle"</c> on its column, so its ink
-    /// starts half a width LEFT of it. ⚠️ LilyPond's ChordName does NOT: it declares no
-    /// X-offset and no self-alignment-interface at all (scm/define-grobs.scm:837-855), so its
-    /// reference point IS its ink left and it sits ON the column — MEASURED in every score of
-    /// audit/lp-geometry/probes/staffless-system.ly, where the ChordName anchor equals its
-    /// column's X to 6 digits. Lily#'s centring is a separate, unported divergence; this
-    /// function prices what Lily# actually draws, so the rod keeps THAT ink inside the line.
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 — ChordName declares no <c>X-offset</c> and
+    /// no <c>self-alignment-interface</c> at all, so its reference point IS its ink left and
+    /// the symbol stands ON its column: its extent is <c>(0 . w)</c>. There is therefore NO
+    /// left reach to rod, and the right reach is the symbol's whole width.
+    /// MEASURED (audit/lp-geometry/probes/staffless-system.ly): the ChordName anchor equals
+    /// its column's X to 6 digits in every score of that probe (CO, COW, CL, CLW, CS), and
+    /// widening the name by 13.5 ss does not move the first column by a thousandth.
     /// No padding is added — LilyPond's rod carries none (lily/simple-spacer.cc:559) — unlike
     /// <see cref="ApplyChordRowSpacing"/>'s neighbour gaps.
     /// </remarks>
-    internal static double[] ChordCentredHalfWidthPerColumn(
+    internal static double[] ChordInkRightReachPerColumn(
         IReadOnlyList<Fraction> timings,
         int measureIndex,
         ImmutableArray<ChordNameItem> chordNames,
         bool includeAttached)
     {
-        var half = new double[timings.Count];
+        var width = new double[timings.Count];
         if (chordNames.IsDefaultOrEmpty || timings.Count == 0)
-            return half;
+            return width;
 
         foreach (var cn in chordNames)
         {
@@ -2983,12 +2999,12 @@ internal static class SpacingRules
             for (int t = 0; t < timings.Count; t++)
                 if (timings[t] == cn.Timing)
                 {
-                    half[t] = Math.Max(half[t],
-                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
+                    width[t] = Math.Max(width[t],
+                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6));
                     break;
                 }
         }
-        return half;
+        return width;
     }
 
     /// <summary>

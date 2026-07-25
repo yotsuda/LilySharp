@@ -34,6 +34,19 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm ChordName: font-family=sans, font-size=1.5
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — chord-name formatting
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 — ChordName declares NO <c>X-offset</c> and
+    ///   no <c>self-alignment-interface</c>, so the grob's reference point is its ink LEFT and
+    ///   the symbol stands ON its paper column: <c>TextAnchor.Start</c>, not <c>Middle</c>.
+    ///   MEASURED (audit/lp-geometry/probes/staffless-system.ly): every score there dumps the
+    ///   ChordName anchor equal to its column's X, and the ledger point
+    ///   <c>staffless.line-start.chords-vs-staff</c> priced the centring at 0.438600 ss.
+    /// <para>
+    /// ⚠️ A chord GRID is a different grob: <c>GridChordName</c> centres its ink in the
+    /// measure square (scm/define-grobs.scm:1736-1752 → <c>grid-chord-name::calc-X-offset</c>,
+    /// scm/output-lib.scm:3744-3768, which subtracts <c>interval-center</c> of the stencil).
+    /// Lily# has no measure squares — its chords-only sheet places symbols on timing columns —
+    /// so it stays on this ChordName path; porting GridChordName is separate work.
+    /// </para>
     /// </remarks>
     private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
@@ -49,10 +62,10 @@ internal static partial class SharedRenderer
             using (gc.Source(c.SourcePosition))
             {
                 gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
-                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                    FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (c.AboveLine != null)
                     gc.DrawText(c.AboveLine, c.X, cy + stackLineHeight, size, "sans-serif",
-                        FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                        FontStyle.Bold, TextAnchor.Start, Color.Black);
             }
         }
     }

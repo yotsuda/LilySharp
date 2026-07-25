@@ -148,11 +148,13 @@ internal static class ChordNameEngraver
             prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));
         }
 
-        // Half the drawn width of a centred (TextAnchor.Middle) chord symbol, at
-        // the renderer's chord font size (FontSize 4.0 × 0.65 = 2.6), measured with
-        // SANS bold advances — the face the names render in.
-        double HalfWidth(ChordNameItem c) =>
-            Math.Max(1.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, 2.6) / 2);
+        // The drawn width of a chord symbol at the renderer's chord font size
+        // (FontSize 4.0 × 0.65 = 2.6), measured with SANS bold advances — the face the
+        // names render in. The symbol occupies (x . x + width): LilyPond's ChordName
+        // declares no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855),
+        // so its reference point is its ink LEFT and it stands ON its column.
+        double Width(ChordNameItem c) =>
+            Math.Max(2.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, 2.6));
 
         // Resolve horizontal overlaps between adjacent TIMING-placed symbols ON THE
         // SAME LINE (same system + staff). Proportional timing X can pack two names —
@@ -171,7 +173,9 @@ internal static class ChordNameEngraver
             if (!cur.chord.UseTiming || !prev.chord.UseTiming
                 || cur.sysIdx != prev.sysIdx || cur.chord.StaffIndex != prev.chord.StaffIndex)
                 continue;
-            double minX = prev.x + HalfWidth(prev.chord) + HalfWidth(cur.chord) + chordGap;
+            // Both symbols start AT their columns, so only the earlier one's box lies
+            // between them: prev.x + its width + the gap.
+            double minX = prev.x + Width(prev.chord) + chordGap;
             if (cur.x < minX)
                 prepared[i] = (cur.chord, minX, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
         }
@@ -207,13 +211,12 @@ internal static class ChordNameEngraver
                 up = lowerStaffUpSkyline?.Invoke(p.sysIdx, p.chord.StaffIndex);
             if (up == null || up.IsEmpty)
                 continue;
-            // The symbol's footprint: centred text at the chord font size
-            // (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS
-            // bold advances — the face chord names render in. Measured,
-            // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
-            // tall chord, which a narrow per-character estimate missed.
-            double halfWidth = HalfWidth(p.chord);
-            double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
+            // The symbol's footprint: the text runs RIGHT from its column at the chord
+            // font size (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS bold
+            // advances — the face chord names render in. Measured, not guessed: a wide
+            // "Gm7♭5" reaches over the NEXT beat's tall chord, which a narrow
+            // per-character estimate missed.
+            double peak = up.MaxProtrusionInRange(p.x, p.x + Width(p.chord));
             var key = (p.sysIdx, p.chord.StaffIndex);
             if (!linePeak.TryGetValue(key, out var cur) || peak > cur)
                 linePeak[key] = peak;

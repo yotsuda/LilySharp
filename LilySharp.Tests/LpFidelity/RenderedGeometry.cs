@@ -313,13 +313,16 @@ internal sealed class RenderedGeometry
     /// since a chord symbol and a lyric syllable are both arbitrary words.
     /// </summary>
     /// <remarks>
-    /// ⚠️ Their <see cref="DrawnText.X"/> is the ink CENTRE, not the ink left: Lily# draws a
-    /// chord symbol with <c>TextAnchor.Middle</c> (SharedRenderer.Marks). LilyPond's ChordName
-    /// declares no X-offset and no self-alignment-interface at all
-    /// (scm/define-grobs.scm:837-855), so ITS reference point is the ink LEFT. Comparing the
-    /// two raw numbers would carry half a symbol width as a constant, so every ledger point
-    /// built on this must use a quantity in which that convention cancels — a difference of
-    /// two anchors measured the same way on each side.
+    /// Their <see cref="DrawnText.X"/> is the ink LEFT, which is also the symbol's column:
+    /// Lily# draws a chord symbol with <c>TextAnchor.Start</c> (SharedRenderer.Marks), the
+    /// port of ChordName declaring no X-offset and no self-alignment-interface at all
+    /// (scm/define-grobs.scm:837-855). So a raw anchor is now comparable with LilyPond's.
+    /// <para>
+    /// ⚠️ The ledger points built on this are still DIFFERENCES of two anchors, and stay that
+    /// way: they were designed so the convention cancels, which means they cannot see a
+    /// symmetric error in it. <c>ChordSymbolsAreAnchoredAtTheirInkLeft</c> is what asserts the
+    /// convention itself.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<DrawnText> ChordSymbols =>
         Texts.Where(t => t.FontFamily == "sans-serif").ToList();
