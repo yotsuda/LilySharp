@@ -32,10 +32,10 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `98672c3a`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **26 ahead・未 push**）。
-**3312 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 79/95 exact・total |residual| 0.006268 ss / 90 distances・counts 5/5**。
+最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `98672c3a`・台帳は `beb76809`
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **28 ahead・未 push**）。
+**3315 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 80/96 exact・total |residual| 0.006268 ss / 91 distances・counts 5/5**。
 この回の snapshot 再ベースは **27 枚**（`dcbf08e9` の chords 系 11 枚＋`98672c3a` の lyrics 系
 16 枚。どちらも正当化する台帳キーを message に名指し済＝§5.2.1③）。
 
@@ -59,6 +59,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | **ChordName のアンカーを字面移植**（`dcbf08e9`。ユーザー判断＝LP に合わせる） | `staffless.line-start.chords-vs-staff` −0.438600 → **0** |
 | **歌詞の対を起票**（`4fab5800`。狭い音節で LP を恒等にする新規実測 2 スコア） | +0.151200 / +0.238400 で OPEN |
 | **LyricText の alignment extent を字面移植**（`98672c3a`。LP 実測 5 スコアで `he` の中身を確定） | 歌詞 4 点すべて **exact**。total → **0.006268 ss**・79/95 |
+| **§2A の対を起票**（`beb76809`。台帳コントロール＋不変条件テスト） | ゲート差は **2.650000**（§1 の ▶。⚠️ 旧記述の 2.2 は誤り） |
 
 **LP の機構（`scm/*.scm` の行から。実測合わせはゼロ）**:
 
@@ -117,12 +118,34 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 （`LyricSpacing.AlignmentCentre`）。最初これを省略可能にしていて、テスト 2 本が黙って旧モデルを
 主張していた。
 
-### ▶ 次の一手 ＝ **prefix 幅の第3のモデル `MultiStaffScore.LeadingKey`**（§2A）
+### ▶ 次の一手 ＝ **改行ゲートを実レイアウトへ合わせる**（§2A・対は `beb76809` で起票済）
 
-`LayoutEngine` / `SystemBreaker` / `IncrementalCompiler` の 3 経路が `score.KeySignature` を
-そのまま使い、per-staff key も「調号を彫る譜」も見ない。`transpose-multistaff`（score=C major・
-上譜 D major）で**改行器の予約が実レイアウトより 2.2 狭い**。⚠️ **出力（改行位置）が動くので
-対を先に起票する**。LP には break-align モデルが 1 本しか無い（§5.2.1②）。
+⚠️ **§2A の「2.2 狭い」は誤りだった**（実測 = **2.650000**）。key ink 2.2 ＋ **調号が彫られる
+ときだけ開く Clef→Key / Key→Time の gap 0.45**。ゼロ幅の key 列はその 2 つの space-alist に
+到達しないので、差は key 幅そのものより大きい。
+
+| | 予約する量 | `transpose d` の grand staff で |
+|---|---|---|
+| **実レイアウト**（`MultiStaffLayouter`） | `WidestActiveKeyInk`＝**譜ごとの調号の union**（彫らない譜は skip） | **9.353400**＝LP と一致 |
+| **改行ゲート**（`SystemBreaker:66-69`・`IncrementalCompiler:170-174`） | `score.LeadingKey`＝**スコアの調** | **6.703400**（この譜では C major＝0 を予約） |
+
+**起票した対（2 種・理由が違う）**:
+
+- **台帳 `line-start.clef-to-time.mixed-key-grand-staff`（TSA）= 6.853400・exact**。
+  ⚠️ これは**コントロール**で、**どちら側が正しいかを固定する**ためにある。既存の
+  `line-start.time-signature-cross-staff-alignment` は恒等（両メーターが同一 X）なので
+  **key 列が幅ゼロでも成立してしまう**＝絶対幅の guard が corpus に無かった。
+- **不変条件テスト `SpacingInvariantTests.BreakGateAndLayout_PriceTheSameLineStart`**（＋対照
+  `…AlreadyAgreeWhenNoStaffCarriesItsOwnKey`）。⚠️ **台帳点にしなかった理由**: LP は
+  breaker が実ばねを解く 1 本のモデル（`constrained-breaking.cc`）なので**ゲートに対応する
+  LP 数値が存在しない**（§5.2.1②）。しかもゲートの唯一の可視結果は**改行位置**で、改行は
+  2.650000 の窓で反転する＝**台帳に載せると engine でなく fixture を測る点**になる。
+
+⚠️ **修正はゲートをレイアウトへ引き上げる向き**。逆向き（レイアウトを `score.KeySignature` に
+揃える）にすると台帳点が 2.650000 動く——それを言うために上の点がある。
+⚠️ **出力（改行位置）が動く**ので §5.1 どおり承認が要る。
+⚠️ 検証中に判明: **`SystemLayout.PrefixWidth`（`LayoutEngine:212`・3 経路の 1 つ）は
+どこからも読まれていない**＝欠陥ではなく dead。修正と同時に片付ける。
 
 #### その次の候補
 
@@ -217,10 +240,12 @@ DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
 
-- **prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`** ← **▶ 次の一手**。`LayoutEngine` /
-  `SystemBreaker` / `IncrementalCompiler` の 3 経路が **score.KeySignature をそのまま**使い、
-  per-staff key も「調号を彫る譜」も見ない。`transpose-multistaff`（score=C major・上譜 D major）
-  で**改行器の予約が実レイアウトより 2.2 狭い**。**出力（改行位置）が動くので対を起票してから。**
+- **prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`** ← **▶ 次の一手・対は起票済**
+  （`beb76809`）。`SystemBreaker` / `IncrementalCompiler` が **score.LeadingKey をそのまま**使い、
+  per-staff key も「調号を彫る譜」も見ない＝実レイアウト（`WidestActiveKeyInk`）より
+  **2.650000 狭い**（⚠️ 旧記述の 2.2 は誤り。key ink 2.2 ＋ 調号があるときだけ開く gap 0.45）。
+  詳細と「どちら向きに直すか」は §1 の ▶。`LayoutEngine:212` の `SystemLayout.PrefixWidth` は
+  **誰も読んでいない**＝dead。**出力（改行位置）が動くので承認を取ってから。**
 - **break-align 描画 walk の純構造化** — `sharedKeyX`/`sharedTimeX` の手組み max ループを
   `SolvePrefixColumns` 消費へ。値は一致済（出力不変）だが、**予約側は score モデル＋measure 走査、
   描画側は `ResolveKeySignature`＋`GetSystemStartKeyChange` と key 解決経路が別**——
