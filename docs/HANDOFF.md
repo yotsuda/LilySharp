@@ -32,89 +32,74 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第5セッション）/ 実装の最終コミットは `622e88b4`（そのあとに docs が
-1 本。⚠️ 自己参照＝**§0 で裏取り**。origin より **17 ahead・未 push**）。
-**3300 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 71/87 exact・total |residual| 0.006268 ss・counts 5/5**（この回は**動いていない**）。
-この回の snapshot 再ベースは **5 枚**（`efb3ddfb`＝`test/lead-sheet{,-chords,-lyrics,-repeat}`・
-`rows-song-sheet`。⚠️ **正当化する台帳キーが無い**ので message はプローブ CO/CL/CLX/CLL を
-名指ししてある＝§5.2.1③ の例外で、**キーを作るのが次の一手の一部**）。
+最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `dcbf08e9`
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **21 ahead・未 push**）。
+**3308 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 75/91 exact・total |residual| 0.006268 ss / 86 distances・counts 5/5**。
+この回の snapshot 再ベースは **11 枚**（`dcbf08e9`＝chords 系全部。正当化する台帳キーは
+`staffless.line-start.chords-vs-staff`＝§5.2.1③ を満たす）。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。
+⚠️ **total を過去の値と直接比べない**（点集合が違う）。ただし**この回だけは比較が意味を持つ**：
+0.444868 → 0.006268 は点集合が同じで、差は閉じた 1 点そのもの。
 
 ⚠️ **作業ツリーに `samples/amazing-grace.lys` と `samples/canon-in-d.lys` が未 commit で残っている。**
 私の変更ではなく、**`LILYSHARP_UPDATE_SNAPSHOTS=1` を立てた実行が書き換えたもの**
 （`partial` を section 内へ／`$ground` → `ground` という文法移行）。中身は妥当に見えるが
 **別件なので混ぜずに判断すること**。⚠️ 再ベースのたびに出る＝§7-8 の「意図しないファイル」枠。
 
-### このセッションで起きたこと ＝ **staff の無い system が閉じた**
+### このセッションで起きたこと ＝ **和音記号のアンカーが LP になった**
+
+前セッションの §1 は**着手時点で既に stale**（HEAD も台帳も進んでいた）。§0 の裏取りで判明。
 
 | やったこと | 結果 |
 |---|---|
-| プローブに**列そのものの dump** を足して CL/CLW を再実行（`196db1ca`） | 前セッションの「4 数値では分離できない」が**決着**。⚠️ 事前に書いた予測（列＝音節幅の半分）は**外れ**、その外れ方が真因を指した |
-| **予約側**: 誰も彫らないなら clef 群は空・メーター列も置かない・prefix 右端は 0（`efb3ddfb`） | `ClefGroupExtent` の treble G フォールバックと `prefixHasTime` を修正。`SolvePrefixColumns(...).Right` は 0.8 → 0 |
-| **行頭 spring**: `standard_breakable_column_spacing` の字面移植（同 commit） | `LILYSHARP-OWN` が 1 つ消滅。`LineStartColumn.StandardBreakableColumnSpacing` |
-| **`keep-inside-line` rod** を Lily# に新規移植（`efb3ddfb` で行頭列 → `622e88b4` で全列・左右両方） | Lily# に**存在しなかった** LP 機構（`audit/property_coverage.csv` が "Absent" と記録していた） |
+| §0 の裏取り | 「対はまだ起票されていない」は誤り＝`34111b9c` で `staffless.*` 4 点が入っていた |
+| **ChordName のアンカーを字面移植**（`dcbf08e9`。ユーザー判断＝LP に合わせる） | `staffless.line-start.chords-vs-staff` −0.438600 → **0**。total 0.444868 → **0.006268 ss** |
 
-**LP の機構（全部 `lily/*.cc` / `scm/*.scm` の行から。実測合わせはゼロ）**:
+**LP の機構（`scm/*.scm` の行から。実測合わせはゼロ）**:
 
-```
-第1列の X = max( standard_breakable_column_spacing の min_dist + 0.5 ,  列の ink が左へ出る量 )
-                spacing-basic.cc:41-83                simple-spacer.cc:431-432,556-560
-```
-
-- `keep-inside-line` は PaperColumn / NonMusicalPaperColumn の**既定 `#t`**
-  （`define-grobs.scm:2742,2525`・意味は `define-grob-properties.scm:637`「この列は余白へ
-  物をはみ出させない」）。rod は `add_rod (0, i, -keep_inside_line_[LEFT])` と
-  `add_rod (i, cols.size (), keep_inside_line_[RIGHT])` の 2 本で、**padding も +0.5 も乗らない**。
-- **なぜ音節だけが列より左へ出るのか**: `LyricText.X-offset = aligned-on-x-parent`
-  （`define-grobs.scm:2229`）→ `self-alignment-interface.cc:117-176` の
-  `x = −ext.linear_combination(self) + he.linear_combination(par)`。`self-alignment-X` は
-  `left-align-at-split-notes` で**符頭が無ければ CENTER**（`output-lib.scm:1642-1673`）、
-  `parent-alignment-X` は `()` で self を写す（`:156-157`）、`he` は符頭を持たない列なので
-  placeholder **`X-alignment-extent = (0 . 1.35)`**（`define-grobs.scm:2749-2750`・
-  `self-alignment-interface.cc:121-139`。LP 自身のコメントが「歌詞で起きる」と名指し）。
-  ⇒ **`x = −w/2 + 0.675`**。★ **0.675 は 1.35/2 であって、クランプ定数ではない。**
-  LP は音節をクランプしない——**rod が列を動かす**から ink が 0.000000 に着地する。
 - **ChordName は X-offset も self-alignment-interface も持たない**（`define-grobs.scm:837-855`）
-  ＝ **ink 左が列そのもの**。dump した全スコアで `CHORD anchor == 列の X`。
+  ＝ **ink 左が列そのもの**・extent は `(0 . w)`。dump した全スコアで `CHORD anchor == 列の X`。
+  だから rod へ渡す reach は**右へ全幅・左へゼロ**、予約は `extra-spacing-width (-0.5 . 0.5)`
+  のまま**非対称**（左 0.5 / 右 w+0.5）。
+- ★ ⚠️ **和音グリッドは別 grob で、そちらは LP も中心合わせする。**
+  `GridChordName` は `grid-chord-name::calc-X-offset`（`scm/output-lib.scm:3744-3768`）で
+  `interval-center` を引く。ただし中心を取る相手は**小節の四角**であって列ではない。
+  Lily# に四角は無いので chords-only シートは ChordName 経路に残してある＝
+  **「グリッドも直す」で触らないこと**（`SharedRenderer.Marks` に注記済み）。
 
 **LP 実測**（`probes/staffless-system.ly`。再測定不要・ヘッダに導出が全部ある）:
 
 | score | 第1列 | 第1 LYRIC ink 左 | 意味 |
 |---|---|---|---|
-| CO / CO3 / COK | **0.500000** | — | `min_dist(0) + 0.5`。4/4・3/4・E major で 15 桁恒等 |
+| CO / CO3 / COK | **0.500000** | — | `min_dist(0) + 0.5`。4/4・3/4・E major で 15 桁恒等。**Lily# 一致済** |
 | CL | 2.312539 | 0.000000 | rod が勝つ（`w/2 − 0.675`） |
 | CLW | 12.777463 | 0.000000 | 音節を 21 ss 広げても同じ式 |
 | **CLX**（placeholder を `(0 . 0)` に） | **2.987539** | 0.000000 | ＝**Lily# 現行の歌詞モデルそのもの** |
 | **CLL**（音節を左揃え） | **0.500000** | 0.500000 | はみ出しを消すと**ばねの 0.5 に戻る** |
-| CS（同じ和音＋記譜譜） | 8.585000 | — | Lily# は既に一致 |
+| CS（同じ和音＋記譜譜） | 8.585000 | — | Lily# 一致済 |
 
-### ▶ 次の一手 ＝ **Lily# が中心合わせしている 2 つの text grob を LP に合わせる**
+### ▶ 次の一手 ＝ **LyricText の placeholder（`−w/2 + 0.675`）**
 
-rod が入ったので、lead sheet の残差は**まるごとこの 2 件**に集約された。どちらも
-`scm/define-grobs.scm` の字面で、**rod が測る量そのものを変える**（＝先に決めるべき）。
+lead sheet に残った中心合わせは**これ 1 件だけ**になった。LP の導出（全部字面）:
 
-| 件 | LP | Lily# | 効果 |
-|---|---|---|---|
-| **ChordName** | X-offset も self-alignment も無い＝ink 左が列（`define-grobs.scm:837-855`） | `text-anchor="middle"`＝中心 | 和音のみの行頭が 0.94 → LP の **0.500000** |
-| **LyricText の placeholder** | `−w/2 + 1.35/2`（上記） | `−w/2`（＝CLX） | 行頭が 0.675 左へ。**CL と CLX の差はまるごとこれ** |
+`LyricText.X-offset = aligned-on-x-parent`（`define-grobs.scm:2229`）→
+`self-alignment-interface.cc:117-176` の
+`x = −ext.linear_combination(self) + he.linear_combination(par)`。`self-alignment-X` は
+`left-align-at-split-notes` で**符頭が無ければ CENTER**（`output-lib.scm:1642-1673`）、
+`parent-alignment-X` は `()` で self を写す（`:156-157`）、`he` は符頭を持たない列なので
+placeholder **`X-alignment-extent = (0 . 1.35)`**（`define-grobs.scm:2749-2750`・
+`self-alignment-interface.cc:121-139`。LP 自身のコメントが「歌詞で起きる」と名指し）。
+⇒ **`x = −w/2 + 0.675`**。★ **0.675 は 1.35/2 であって、クランプ定数ではない。**
+LP は音節をクランプしない——**rod が列を動かす**から ink が 0.000000 に着地する。
 
-⚠️ **ChordName は「意図的乖離」の可能性がある**（タブのフレット数字と同じ形＝§3 の表）。
-**着手前にユーザー判断を取ること。** 中心合わせをやめると和音記号の見え方が全体的に変わる。
+Lily# は `−w/2`（＝CLX）。**CL と CLX の差 0.675 はまるごとこれ。**
 
-⚠️ **どちらも出力が動く**ので §5.1 どおり承認が要る。**先に台帳点**（下記）を作ること。
-
-#### 対（**まだ起票されていない**・§5.0 step 1）
-
-プローブは commit 済みで再実行可能。**Lily# 側の twin がまだ無い。**
-⚠️ **anchor 規約の決着が先**: LP の ChordName は参照点＝ink 左だが、Lily# は
-`text-anchor="middle"`＝**中心**を記録する。生の数値を比べると和音名の半幅が定数で乗る。
-**frame-free な量は `CS − CO`**（両側とも自分の規約で一貫するので相殺）＝
-これを台帳キーにすること。CL（chords+lyrics）は LP 側で第1 LYRIC 0.000000 /
-第1 CHORD 2.312539 と**同じ瞬間なのに X が違う**ので、どの grob を測るか決めてから。
-★ ChordName の中心合わせをやめると規約差そのものが消えるので、**その順でやれば台帳キーは
-素直な `staffless.line-start.first-chord` にできる**。
+⚠️ **出力が動く**ので §5.1 どおり承認が要る。**先に台帳点**（§5.0 step 1）:
+CL を測る対がまだ無い。**和音側の規約差はもう消えた**ので、台帳キーは素直に
+`staffless.line-start.first-chord`（CL の第1 CHORD ＝ 2.312539）にできる。
+⚠️ ただし LP の CL は第1 LYRIC 0.000000 / 第1 CHORD 2.312539 と**同じ瞬間なのに X が違う**。
+どちらの grob を測るか決めてから起票すること。
 
 #### その次の候補
 
@@ -123,7 +108,7 @@ rod が入ったので、lead sheet の残差は**まるごとこの 2 件**に�
   `transpose-multistaff` で**改行器の予約が実レイアウトより 2.2 狭い**。対を先に。
 - §2B の未測定領域（同一譜 knee / `BuildSystemSkylines` の全譜 union）・Y の圧縮（§2D）。
 
-**非ゼロで残っている台帳点は 16 点・全部 0.0014 以下**（この回は 1 点も動いていない）:
+**非ゼロで残っている台帳点は 16 点・全部 0.0014 以下**（この回に閉じた 1 点以外は動いていない）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
@@ -132,6 +117,13 @@ rod が入ったので、lead sheet の残差は**まるごとこの 2 件**に�
 
 #### この移植で分かったこと（同じ regime に触るとき用）
 
+- ★ ⚠️ **台帳点が「閉じる先の数値」を先に名指していた**（0.938600 − 0.500000 = 0.438600）。
+  実装後の残差は `8.085000000`＝予測どおり。**閉じる前に算術で犯人を名指せた点は、
+  移植の照合器としてそのまま使える**（§5.0-2 の最良形）。
+- ★ ⚠️ **恒等の対も「規約が正しい」ことは言えない。** `staffless.*` の 4 点は全部
+  「両側を同じ規約で読んだ差」なので、**中心合わせに戻しても 3 点は exact のまま**。
+  だからアンカー規約そのものを主張するテストを別に置いた
+  （`ChordSymbolsAreAnchoredAtTheirInkLeft`）。**恒等が守れない量は、恒等の外で主張する。**
 - ⚠️ **「staff が無い system は LP に存在しない regime」は誤りで、撤回済み。**
   `\new ChordNames` 単独もリードシートも LP に普通にある。前の引継ぎのこの一文が、
   `LineStartColumn` の `LILYSHARP-OWN` を何セッションも正当化していた。
@@ -141,7 +133,8 @@ rod が入ったので、lead sheet の残差は**まるごとこの 2 件**に�
   `KeepInsideLineOverhangs_AreMeasuredForEveryColumnNotJustTheFirst` が**入力側**を
   主張している（第2列の overhang が第1列より大きいこと＝行頭専用 rod では見えない量）。
 - **列より左へ出るのは「Lily# が中心合わせする grob」だけ**。符頭・clef・調号・小節線は
-  すべて列にアンカーされる＝`keep_inside_line_` の中身は今のところ和音記号と音節だけ。
+  すべて列にアンカーされる＝`keep_inside_line_` の中身は**いま音節だけ**（和音記号は
+  `dcbf08e9` で列にアンカーされた）。
 - `last_ext` は **その譜自身の left-break-aligned grob のうち右端が最大のもの**の ink で、
   **extent が空の grob はスキップされる**（`spacing-interface.cc:190-230`、`:219-220`）。
   tab 譜の TimeSignature は**インクが空**（grob は共有 time 列に居る）＝だから
@@ -172,35 +165,8 @@ rod が入ったので、lead sheet の残差は**まるごとこの 2 件**に�
 DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・**行頭 spring そのもの**。
 経緯は各コミットメッセージと `probes/*.ly` のヘッダに。
 
-### ⚠️ プローブの罠（同じ形で 6 回噛まれた。§5.0「何を測っているか確かめてから信じる」）
-
-⚠️ **5 と 6 は「対の両側が同じ音楽ではなかった」型で、2 セッション分の誤診の原因**だった。
-新しい対を作ったら **まず両側の音高と小節線を突き合わせる**こと。
-
-1. LP は `\bar "|."` を書かない限り終止線を細い `|` で終える
-2. `tempo` の**メトロノーム記号は符頭グリフを描く**ので `TimeSignatureToFirstNotehead` が
-   最初にそれを拾う（2.438400 と読んだ）
-3. **`indent` を書き忘れた book**（JN で 8.42 を spring の伸びと誤認・book T で 6 系を
-   ページ分割と誤認）。⚠️ **新しい book には必ず `indent = 0` を書く**か、書かないなら
-   **Lily# 側に同じ indent を渡す**
-4. **加線**（2026-07-25）。`c'` は treble で加線を持ち、加線は符頭の左右に張り出して列の
-   スカイラインに入る。圧縮 rod を 1.604200 でなく **1.956300** と読み、あやうく
-   「§2H の移植は符号が逆」という誤結論を出すところだった。**音符間を測る対の音高は
-   加線のないものにする**（`g'` など）
-5. ★ **プローブの Lily# 側で fixture の `phrase` を平坦化すると音高が変わる**（2026-07-25）。
-   Lily# は **phrase 参照ごとに相対フレームを既定へ戻す**（`Svg/Collector/RelativeResetMarker`
-   の doc に明記）。TSJ は fixture の 3 phrase を 1 つの `melody { }` に潰していたので、
-   `slurs` の `c4(` が「`a` の最寄りの c」＝**c''** になり、第4〜8小節が 1 オクターブ上・
-   **符尾が逆向き**になった。符尾向きは 2 つの spacing 規則が読む
-   （`note-spacing.cc:288-301` の符号／`staff-spacing.cc:55` は `d == DOWN` のみ発火）ので、
-   **自然幅が 0.314107 ずれ、2 セッション「機構未特定」として残っていた**。
-   ⇒ **対の Lily# 側は fixture を phrase 構造ごと写す。**
-6. ★ **「同じ音楽の ragged 対照」が同じ音楽ではなかった**（2026-07-25）。
-   `ties-slurs-breaks-ragged.ly` は `\bar "|."` を欠いており、終止線はちょうど 0.900000＝
-   その 101.907014 は真の自然幅 102.807014 − 0.9。しかも終止線を足すと **LP は 8 小節を
-   1 行に収めない**（2 系になる）＝列ごとの引き算そのものが成立しない。
-   「自然幅は 2e-5 一致」はこの引き算から出た**誤り**で、撤回済み
-   （正しい自然幅は `compressed-line-force.ly` の CLW）。
+⚠️ **プローブの罠の実例 6 件は §5.0 の末尾へ移した**（原則の隣に置くほうが読まれる）。
+新しい対を作るときは必ずそこを見ること。
 
 ---
 
@@ -209,7 +175,8 @@ DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・
 > ⚠️ **`keep-inside-line` は入った**（`efb3ddfb`・`622e88b4`）。全列・左右両方の rod が
 > `SpringSolver.ApplyRods`（＝`Simple_spacer::add_rod` の移植）へ流れている。
 >
-> rod の入力は**列の ink 全体**＝中心合わせテキスト（和音記号・音節）＋**音楽の ink**
+> rod の入力は**列の ink 全体**＝テキスト（**音節は中心合わせなので左右へ半幅ずつ／和音記号は
+> `dcbf08e9` 以降 ink 左が列なので右へ全幅・左へゼロ**）＋**音楽の ink**
 > （`SpacingRules.MusicalInkOverhangsPerColumn`。符頭は列から右へ全幅、臨時記号は左へ届く。
 > どちらも esw 抜きの素の extent＝`col->extent` が取るもの）。⚠️ 一時期テキストだけだった
 > （`622e88b4`）のを `f9b3c87e` で報告し、追い移植済み。**出力は動かない**が、それは
@@ -343,9 +310,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
   名指す形）。本来の移植は **paper column 表現の導入**で、実測: 外すと snapshot 21 枚が動く
-- **中心合わせされた 2 つの text grob**（§1 の ▶）。`ChordName` を `text-anchor="middle"` で
-  描くのも、音節を `−w/2`（placeholder 抜き）に置くのも LP の字面ではない。**`keep-inside-line`
-  rod が測る量そのもの**なので、rod より先にここを決めると台帳キーが素直になる
+- ~~**中心合わせされた 2 つの text grob**~~ — **和音記号は片付いた**（`dcbf08e9`）。残るのは
+  **音節を `−w/2`（placeholder 抜き）に置くこと**＝§1 の ▶。LP の字面は `−w/2 + 1.35/2`。
+  **`keep-inside-line` rod が測る量そのもの**なので、ここを直すと rod の入力も一緒に動く
 - ⚠️ **`KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外**＝§5.2.1① の網の穴。
   `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため
 
@@ -363,6 +330,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **本数（count）の点は ss の総和に入れない** | 距離ではないから（`unit` フィールドで分離） |
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
+| ★ **和音記号は LP に合わせる＝中心合わせしない**（ユーザー判断・2026-07-25 明示） | 意図的乖離かを問うたうえでの決定。`ChordName` は X-offset も self-alignment も持たない（`define-grobs.scm:837-855`）＝ink 左が列。`dcbf08e9` で移植し `staffless.line-start.chords-vs-staff` が閉じた。⚠️ **和音グリッドは別 grob（`GridChordName`）で LP も中心合わせする**が、中心を取る相手は小節の四角。Lily# に四角は無いので chords-only シートは ChordName 経路のまま＝**「グリッドも直す」で触らない** |
 | ★ **タブのフレット数字を LP より大きく描くのは意図的乖離**（ユーザー判断・2026-07-24 明示） | LP のタブ数字は小さくて読みにくい。Lily# は `TabConstants.FretFontSize = 2.6`（単数字幅 1.625・高さ 1.7875）＝LP の TabNoteHead 幅 0.990155 の約 1.64 倍。和音で数字が被る問題は**じぐざぐ配置**（`SpacingRules.ApplyTabChordSpacing` ほか）で解いてある。**「LP と違う＝発明だから消す」で削らないこと。** ⚠️ 弦間隔（`TabStringSpace`）は別の話で、そちらは LP の 1.5 に揃える |
 
 ---
@@ -419,7 +387,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ⚠️ **床に座らせない。** 距離が spec の下限に張り付く配置では、両側 exact になって**何も測らない**。
 - ⚠️ **probe が何を測っているか確かめてから信じる**（別の grob を測っていた事例が複数）。
 - ★ ⚠️ **対の両側が同じ音楽であることを、音を並べて確かめる。** これが 3 回外れて、うち 2 回は
-  「Lily# のスペーシング欠陥」として何セッションも台帳に居座った（§1 の罠 5・6）。確かめる 3 点:
+  「Lily# のスペーシング欠陥」として何セッションも台帳に居座った（下の罠 5・6）。確かめる 3 点:
   **①音高**（Lily# は phrase 参照ごとに相対オクターブを既定へ戻す。fixture を写すなら
   `phrase` 構造ごと写す。LP `c'` ↔ Lily# `c`）**②小節線**（LP は `\bar "|."` を書かないと
   終止線を細い `|` にする＝0.9 の差）**③紙面**（`indent`・`line-width`）。
@@ -429,6 +397,40 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ★ ⚠️ **残差の内訳を spring／列ごとに出す。** 総和だけ見ていると「幅ではなく force の問題」
   のような誤った切り分けに落ちる。列ごとに出せば **1 本だけ符号が逆**のような形が見え、
   符号違いは定数誤りではなく**入力（符尾向き・音高）の違い**を指す。
+- ★ ⚠️ **恒等の対は「規約が正しい」ことを言えない。** 両側を同じ規約で読んだ差は、規約が
+  丸ごと間違っていても 0 のまま（2026-07-25 の和音アンカー：`staffless.*` の 4 点は
+  中心合わせのまま全部 exact だった）。⇒ **恒等が守れない量は、恒等の外で直接主張する**
+  （`ChordSymbolsAreAnchoredAtTheirInkLeft`）。
+
+#### ⚠️ プローブの罠（同じ形で 6 回噛まれた実例）
+
+⚠️ **5 と 6 は「対の両側が同じ音楽ではなかった」型で、2 セッション分の誤診の原因**だった。
+新しい対を作ったら **まず両側の音高と小節線を突き合わせる**こと。
+
+1. LP は `\bar "|."` を書かない限り終止線を細い `|` で終える
+2. `tempo` の**メトロノーム記号は符頭グリフを描く**ので `TimeSignatureToFirstNotehead` が
+   最初にそれを拾う（2.438400 と読んだ）
+3. **`indent` を書き忘れた book**（JN で 8.42 を spring の伸びと誤認・book T で 6 系を
+   ページ分割と誤認）。⚠️ **新しい book には必ず `indent = 0` を書く**か、書かないなら
+   **Lily# 側に同じ indent を渡す**
+4. **加線**（2026-07-25）。`c'` は treble で加線を持ち、加線は符頭の左右に張り出して列の
+   スカイラインに入る。圧縮 rod を 1.604200 でなく **1.956300** と読み、あやうく
+   「§2H の移植は符号が逆」という誤結論を出すところだった。**音符間を測る対の音高は
+   加線のないものにする**（`g'` など）
+5. ★ **プローブの Lily# 側で fixture の `phrase` を平坦化すると音高が変わる**（2026-07-25）。
+   Lily# は **phrase 参照ごとに相対フレームを既定へ戻す**（`Svg/Collector/RelativeResetMarker`
+   の doc に明記）。TSJ は fixture の 3 phrase を 1 つの `melody { }` に潰していたので、
+   `slurs` の `c4(` が「`a` の最寄りの c」＝**c''** になり、第4〜8小節が 1 オクターブ上・
+   **符尾が逆向き**になった。符尾向きは 2 つの spacing 規則が読む
+   （`note-spacing.cc:288-301` の符号／`staff-spacing.cc:55` は `d == DOWN` のみ発火）ので、
+   **自然幅が 0.314107 ずれ、2 セッション「機構未特定」として残っていた**。
+   ⇒ **対の Lily# 側は fixture を phrase 構造ごと写す。**
+6. ★ **「同じ音楽の ragged 対照」が同じ音楽ではなかった**（2026-07-25）。
+   `ties-slurs-breaks-ragged.ly` は `\bar "|."` を欠いており、終止線はちょうど 0.900000＝
+   その 101.907014 は真の自然幅 102.807014 − 0.9。しかも終止線を足すと **LP は 8 小節を
+   1 行に収めない**（2 系になる）＝列ごとの引き算そのものが成立しない。
+   「自然幅は 2e-5 一致」はこの引き算から出た**誤り**で、撤回済み
+   （正しい自然幅は `compressed-line-force.ly` の CLW）。
 
 ### 5.1 ワークフロー規律
 
