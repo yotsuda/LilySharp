@@ -35,8 +35,26 @@ public enum LineCap
 /// PDF points, etc.) at emit time.
 /// </summary>
 /// <remarks>
-/// Origin is top-left, Y axis points downward (matches both SVG and PDF
-/// page coordinates).
+/// ⚠️ THIS TYPE CARRIES TWO Y FRAMES, and which one you are in depends on where you sit
+/// relative to <see cref="YFlipDrawingContext"/>:
+/// <list type="bullet">
+/// <item><b>Before the flip</b> — everything the renderer draws through the context
+/// <c>SharedRenderer</c> hands out (SharedRenderer.cs:99 wraps each page) is in <b>page
+/// Y-up</b>: origin at the page's BOTTOM-left, Y growing upward, the frame the layout
+/// engine works in.</item>
+/// <item><b>After the flip</b> — what <c>YFlipDrawingContext</c> passes to the backend
+/// (SVG, PDF, Skia) is <b>device Y-down</b>: origin top-left, Y growing downward, which is
+/// what both SVG and PDF page coordinates want.</item>
+/// </list>
+/// One type spanning two frames is a sign-error smell, and it is deliberate rather than
+/// accidental: the flip exists in exactly ONE place so that no other code has to know
+/// about it (docs/COORDINATE_AUDIT.md §3.G, §4.4). An implementor of this interface is a
+/// BACKEND and therefore lives after the flip; a caller of it is a renderer and lives
+/// before it. Anything that both implements and calls — a decorator like
+/// <c>TextFontDrawingContext</c> — stays in whichever frame it was handed and must not
+/// convert.
+///
+/// X is unaffected: origin at the left edge, growing rightward, in both frames.
 ///
 /// Color parameters accept <c>null</c> to mean "use renderer default"
 /// (typically opaque black for fills, transparent for strokes).

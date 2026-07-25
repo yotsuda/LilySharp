@@ -314,7 +314,7 @@ ss→pixel/spaceHeight 演算は出現しない**（SVG backend 側）。全 `÷
   renderer → `YFlipDrawingContext` は **page Y-up**、`YFlipDrawingContext` → `SvgDrawingContext` は
   **device Y-down**。つまり doc は「後段」だけを述べており、前段の呼び出し側には当てはまらない。
   実害はない（各実装は一貫）が、**同じ型が2フレームを運ぶ**のは符号ミス誘発 smell → contract に
-  「装飾前=Y-up / 装飾後=Y-down」を明記するのが望ましい。
+  「装飾前=Y-up / 装飾後=Y-down」を明記するのが望ましい。**⇒ 2026-07-26 に明記（§4.4）。**
   ⚠️ 経緯: 本監査は当初「doc は stale」と指摘 →「YFlip 未配線につき false-positive」と取消 →
   **その取消の前提（未配線）が誤り**（`SharedRenderer.cs:99` で配線済み、`YFlipDrawingContext.cs:49`
   自身が "This is WIRED" と明記）。doc を実コードで裏取りせずに書き換えた失敗例として残す。
@@ -548,8 +548,11 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | — | (既知) | BeamScoringProblem collision island / tab beam quanter | frame island | §3.A 記載・別 follow-up |
 
 ### 4.4 doc/label のみ修正（コードは正）
-- **IDrawingContext.cs:37-39** — 🔲**未対処**。YFlip は配線済みなので、この interface は装飾前=Y-up /
-  装飾後=Y-down の**2フレームを運ぶ**。remark は後段のみ記述 → 両フレームを明記する更新が要る（§3.G）。
+- **IDrawingContext.cs:37-39** — ✅**対処済**。remark に**2フレームを明記**した（装飾前＝renderer が
+  書く page Y-up／装飾後＝backend が受け取る device Y-down）。あわせて**誰がどちらに居るか**を
+  規約として書いた: **実装者＝backend＝flip の後ろ／呼び出し側＝renderer＝flip の前**、
+  両方を兼ねる decorator（`TextFontDrawingContext`）は**渡されたフレームのまま・変換しない**。
+  X は両フレームで同一。
 - **StemCalculator.cs:205,262-265** / **StemInfo** — 戻り値「staff positions/half-spaces」ラベルが実際は ss。
   → **修正済**（ss と明記）。
 - **COORDINATE_SYSTEM.md** 陳腐化 → **修正済**（本書へのポインタ＋layer 表更新）。
@@ -569,7 +572,7 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 | 9 | **non-musical PaperColumn の欠落**（§3.I） | 🔄**進行中**。①LP 境界幾何の導出＝**完了**（`820504e2`、rod の式を実測と6桁一致で検証）／②列の導入＝**完了**（`a87f2e6d`+`b8fecfca`、出力中立・`GetStaffBarSpacing` の値誤りも修正）／③clef を bar line の前へ＝**完了**（`a47029bc`+`94656b84`、既存 snapshot 1件のみ変更・LP 照合済）／④残る3ヘルパの吸収と item→bar line 最小値の LP 式化＝**未着手**（全小節が動くため要承認） |
 | 10 | **X 基準点未統一**（§4.7） | 🔄**進行中**。①音符/休符を左端基準へ＋`GetItemToBarlineSpace`=0.2＝**完了**（`8448749a`）／③`CalculateLeftExtent` の stale doc＝**完了**（`86dbb093`）／④`BarlineToFirstColumnSpring` の `Staff_spacing::get_spacing` 字面移植（min/stretch/0.3補正/compress/optical）＝**完了**（`9b31c2ba`+`9ffeef8f`、snapshot 43+59 再ベース・LP 実測照合済）／①変更 item の frame＋定数と②`CalculateRightExtent` の統廃合＝**未着手** |
 | doc | StemCalculator / COORDINATE_SYSTEM | ✅ doc 修正済 |
-| doc | IDrawingContext.cs:37-39 | 🔲**未対処**。YFlip 配線済につき装飾前=Y-up/装飾後=Y-down の2フレームを運ぶ。remark は後段のみ記述（§3.G）。当初「false-positive」としたのは**誤り**だった |
+| doc | IDrawingContext.cs:37-39 | ✅**対処済**（2026-07-26）。装飾前=Y-up/装飾後=Y-down の2フレームと「実装者=backend=flip の後ろ／呼び出し側=renderer=flip の前／decorator は変換しない」を remark に明記。当初「false-positive」としたのは**誤り**だった |
 | 島1 | **譜間/system 縦積み Y-up 化＋YFlip 配線（=Stage-4 全体）** | ✅**完了**。YFlip 配線＋全 grob レイアウト Y-up 化（Phase 2i〜2z、`e09d4e72`ほか）→ `system.Y` の page Y-up 格納（`477c5452`）→ 共有 device stacking の de-island（DynamicEngraver `ece55e9a`・SkylineBuilder `db7b0c5b`・OutsideStaffStacker `39da7084`・Y-up skyline 2 パス `7f2f8ff8`）→ **`staff.Y` の Y-up 格納（`ff64f38e`）で締めた**。全段階が boundary-shim で byte 不変。詳細は §2.1 |
 | 島2 | device 島群（TieVariant/Pedal[dead]/水平 skyline/TabStaffGeometry/beam collision island）/ LILYPOND-REF 行再採番 | ⏸**繰延**（frame 忠実性の残・数値は正）。島1 が完了したので次はここ |
 
