@@ -32,22 +32,21 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第2セッション）/ HEAD ＝ **この docs コミット**（`9e26a220` の上。
-⚠️ 自己参照＝**§0 で裏取り**）。**3286 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 68/87 exact・total |residual| 0.810763 ss・counts 5/5**。
-snapshot は **12 枚**（`OverfullPenalty` 撤去・正当化キー `justified.first-system.heads`）と
-**21 枚**（`MinItemGap` 撤去・正当化キー `compressed.note-to-note.quarter`）を再ベース済み・承認済み。
+最終更新 2026-07-25（第3セッション）/ HEAD ＝ **この docs コミット**（`ed06bb56` の上。
+⚠️ 自己参照＝**§0 で裏取り**。origin より 5 ahead・**未 push**）。**3289 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 69/87 exact・total |residual| 0.806268 ss・counts 5/5**。
+snapshot は **15 枚**を再ベース済み・承認済み（`eb790bb2`・正当化キー
+`compressed.line-start.time-to-first-note`。要素数は 15 枚すべて不変＝改行もページ数も動いて
+いない。差分は 0.01 ss 級の座標だけ）。
 
 ⚠️ **total を過去の値と直接比べない**（点集合が違う。84 → 87 点）。
 
-### このセッションで**発明が 4 つ消えた**（ここが前回からの一番の差）
+### このセッションで起きたこと ＝ **X 系の残差が実質 tab の 2 点だけになった**
 
-| 発明 | 置換先 | 出力 |
-|---|---|---|
-| `OverfullPenalty = 50000` | `ForcePenalty` ＋ impossible-line 規則（既存移植） | snapshot 12 枚 |
-| `MinItemGap = 0.4`（音符間） | esw 0.1＋0.1（`separation-item.cc:166-179`）＋ rod padding 0.1 | snapshot 21 枚 |
-| 「極端に underfull な行を除外」 | LP は値付けするので**規則ごと不要** | 不変（結果として） |
-| `tolerance` knob | LP に存在しない（`Constrained_breaking` に無い） | 不変（元から未参照） |
+| やったこと | 結果 |
+|---|---|
+| `inverse_compress_strength` の**字面移植**（`spring.cc:131-159` の setter は strength を再計算しない） | 音符 spring の圧縮柔軟性が LP の実測値と一致（四分 1.698045・二分 2.898045・行頭 0.800000・小節線→音符 0.400000／行の総和 54.701125）。snapshot 15 枚 |
+| **対の破損を発見**（TSJ の Lily# 側が fixture の phrase を平坦化＝第4〜8小節が**1 オクターブ上**） | `compressed.line-start.time-to-first-note` が **+0.004613857 → exact**。「機構未特定」の 0.314107 は**スペーシング欠陥ではなかった** |
 
 ⚠️ **`MinItemGap` はまだ生きている**（`LyricSpacing` の 4 箇所＝歌詞 extent）。`LILYSHARP-OWN` と
 明示済みで、**歌詞の対を開けば同じ形で移植できる**。`NoteSpacingParameters.MinItemGap` は
@@ -57,53 +56,33 @@ snapshot は **12 枚**（`OverfullPenalty` 撤去・正当化キー `justified.
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `line-start.time-to-first-note.tab-{concert,keyed}` | 両 **+0.400000000** | 譜間 merge_springs 未移植（per-staff wish が無い） |
-| `compressed.line-start.time-to-first-note` | **+0.004496199** | 圧縮行で行頭が LP ほど譲らない。**機構は未特定**（容疑者 3 つ棄却済み・下記） |
+| `line-start.time-to-first-note.tab-{concert,keyed}` | 両 **+0.400000000** | 譜間 merge_springs 未移植（per-staff wish が無い）。**total 0.806268 のうち 0.8＝99%** |
 | clef sliver（Y 4 点） | 各 0.0001〜0.0008 | LP の実効 scale 未特定（§2C） |
-| Pango 量子化の族（tuplet 4・強弱 1・tie 1 ほか） | 1e-4〜1e-6 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差** |
+| Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1 ほか） | 2e-5〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**過去セッションからの伝聞で今回再検証していない**（tie の 0.001391 は Pango で説明が付くか未確認） |
 
-**閉じた点**: `justified.first-system.heads`（−6 → exact）／`compressed.note-to-note.quarter`
-（+0.1 → exact）。`page.tight.*` は**対が壊れていた**のを直して再測定（下記）。
+**閉じた点**: `compressed.line-start.time-to-first-note`（+0.0045 → exact。経緯は
+`lp-geometry.json` の `why` と `probes/compressed-line-force.ly` のヘッダに全部ある）。
 
-### ▶ 次の一手 ＝ **`compressed.line-start.time-to-first-note` の機構を特定する**
+### ▶ 次の一手 ＝ **譜間 `merge_springs` の移植（per-staff spacing wish）**
 
-**前回の ▶（gate 配線＋`OverfullPenalty` 撤去）は完了**。残る X 系の未特定はこれ 1 点だけで、
-LP は圧縮行の行頭で 3.7 から **0.005535** 譲るのに Lily# は **0.001086** しか譲らない。
-自然幅は 2e-5 一致なので**幅の問題ではない**。
+`line-start.time-to-first-note.tab-{concert,keyed}` の **+0.400000 が 2 本で 0.8**＝
+**total 0.806268 の 99%**。残る X 系はここに集中しているので、次はこれ 1 本。
 
-**棄却済みの容疑者 3 つ**（実測。再走査しない）:
+LP の形（`spacing-spanner.cc:492-517`）: `dt == 0` の列対では、左列の `spacing-wishes` から
+**`Staff_spacing` を持つ grob ごとに 1 本の spring** を `Staff_spacing::get_spacing` で作り、
+`merge_springs` で 1 本に畳む（`spring.cc:101-129`＝ideal は平均・**min は最大**・
+invStretch は平均・**invCompress は調和平均**）。Lily# は per-staff の wish を作っておらず、
+1 本を全譜まとめて作っている。§2A③ の `TabClefToFirstNoteSpace = 1.5` は**この移植で消える**
+（LP の TAB clef ink は G clef より広い＝独自判断の前提が崩れている。`0829185b` で照合済み）。
 
-- ❌ `MultiStaffLayouter` の `Math.Max(fixed, s0.MinDistance)` ガード — 外してもこの点は動かない。
-  ただし**外すと無関係な snapshot 21 枚が動く**＝grace と lyrics の幅に load-bearing。**消さないこと**
-- ❌ `CalculateLineForce` の線形式 — それは gate 側で、描画経路ではない
-  （`SpringSolver.CompressLine` は `Simple_spacer::compress_line` 移植済み）
-- ❌ `GlyphMetrics.MinItemGap 0.4` — **2026-07-25 に撤去したが、この点は逆に +4.7e-5 悪化**
-  （+0.004449092 → +0.004496199）。音符 spring の最小が LP の値になって blocking force が
-  変わった副作用で、**原因ではなかった**
+⚠️ **`Spring.Merge` は 2 本用**で、LP の `merge_springs` は N 本を一度に平均する。3 譜以上で
+`Merge` を畳み込むと平均が前寄りに歪むので、**N 本版を作る**こと（`invCompress` が 0 の枝の
+挙動も LP と違う＝下記）。
 
-**次の測定**: 解かれた force と行内各 spring の `InverseCompressStrength` を dump して LP と
-突き合わせる。LP 側は `springs-and-rods` フックで到達できる（JZ/JR が確立）。
-⚠️ ただし **spring は Scheme から読めない**（setter のみ）。**rod は読める**
-（`minimum-distances`＝`(列 . 距離)` の数値ペア）ので、`compressed-note-spacing.ly` の
-`PROBE … ROD` と同じ手が使える。
-
-#### ⚠️ **対が壊れていたのを直した**（過去の exact は打ち消し合いだった）
-
-`page.tight.*` と `system.{tuplet-bracket,slur,tie}-*` の 7 点は、**LP 側と Lily# 側が
-同じ紙面を組んでいなかった**。発明（`OverfullPenalty`）が Lily# を「LP がインデントや
-強制改行で偶然到達していた分割」へ押し込んでいたので exact に見えていた:
-
-- **book T** は `page-vertical.ly` で唯一 `indent = 0` を書いていなかった＝LP 既定 15mm。
-  実測（`jn-line-forces.ly` の `TPT`/`TPD`）: 同じ 40 小節が indent 0 で**5 系 1 ページ**、
-  既定 indent で**6 系 2 ページ**。**6 系はインデントだった**。→ book に `indent = 0` を足し、
-  台帳の LP 値を 2 → 1 に再測定
-- **TSD/TSU** は逆で、indent 0 にすると LP が 6 小節を**1 系に収めて**測る対象が消える。
-  → **Lily# 側に LP と同じ 15mm を渡す**（`LpGeometryProbes.IndentedPaper`）
-- **slur/tie 4 本**は LP 側だけ `\break` で 4+4+4+4 を強制していた。→ Lily# 側にも同じ
-  強制改行（`ForcedFourBarSystems`）。自由に割らせると**LP も Lily# も 5,5,6**（`SSN`）
-
-**LP の行分割と Lily# の行分割は、測った 3 スコアすべてで一致している**
-（JN 5,5,6 ／ TP 8×5 ／ SSN 5,5,6）。
+⚠️ **`Spring.Merge` の invCompress ゼロ枝は LP と違う**（今回は触っていない）。LP は
+`avg_compress += 1 / invC` を無条件でやるので、1 本でも `invC == 0` なら `1/inf = 0`＝
+**畳んだ spring は圧縮不能**になる。Lily# は `avgIdeal − maxMin` を返す。多声部の複数 wish
+経路だけの話なので別関心として分離した。**merge_springs を触るときに同時に直す。**
 
 **移植の前に読むこと**（①は解決済み・残りは有効）:
 
@@ -130,7 +109,10 @@ LP は圧縮行の行頭で 3.7 から **0.005535** 譲るのに Lily# は **0.0
 DP の形・小節線・**自然幅そのもの**・**行分割そのもの**。経緯は各コミットメッセージと
 `probes/*.ly` のヘッダに。
 
-### ⚠️ プローブの罠（同じ形で 4 回噛まれた。§5.0「何を測っているか確かめてから信じる」）
+### ⚠️ プローブの罠（同じ形で 6 回噛まれた。§5.0「何を測っているか確かめてから信じる」）
+
+⚠️ **5 と 6 は「対の両側が同じ音楽ではなかった」型で、2 セッション分の誤診の原因**だった。
+新しい対を作ったら **まず両側の音高と小節線を突き合わせる**こと。
 
 1. LP は `\bar "|."` を書かない限り終止線を細い `|` で終える
 2. `tempo` の**メトロノーム記号は符頭グリフを描く**ので `TimeSignatureToFirstNotehead` が
@@ -142,6 +124,20 @@ DP の形・小節線・**自然幅そのもの**・**行分割そのもの**。
    スカイラインに入る。圧縮 rod を 1.604200 でなく **1.956300** と読み、あやうく
    「§2H の移植は符号が逆」という誤結論を出すところだった。**音符間を測る対の音高は
    加線のないものにする**（`g'` など）
+5. ★ **プローブの Lily# 側で fixture の `phrase` を平坦化すると音高が変わる**（2026-07-25）。
+   Lily# は **phrase 参照ごとに相対フレームを既定へ戻す**（`Svg/Collector/RelativeResetMarker`
+   の doc に明記）。TSJ は fixture の 3 phrase を 1 つの `melody { }` に潰していたので、
+   `slurs` の `c4(` が「`a` の最寄りの c」＝**c''** になり、第4〜8小節が 1 オクターブ上・
+   **符尾が逆向き**になった。符尾向きは 2 つの spacing 規則が読む
+   （`note-spacing.cc:288-301` の符号／`staff-spacing.cc:55` は `d == DOWN` のみ発火）ので、
+   **自然幅が 0.314107 ずれ、2 セッション「機構未特定」として残っていた**。
+   ⇒ **対の Lily# 側は fixture を phrase 構造ごと写す。**
+6. ★ **「同じ音楽の ragged 対照」が同じ音楽ではなかった**（2026-07-25）。
+   `ties-slurs-breaks-ragged.ly` は `\bar "|."` を欠いており、終止線はちょうど 0.900000＝
+   その 101.907014 は真の自然幅 102.807014 − 0.9。しかも終止線を足すと **LP は 8 小節を
+   1 行に収めない**（2 系になる）＝列ごとの引き算そのものが成立しない。
+   「自然幅は 2e-5 一致」はこの引き算から出た**誤り**で、撤回済み
+   （正しい自然幅は `compressed-line-force.ly` の CLW）。
 
 ---
 
@@ -339,6 +335,17 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   新しい点は**既存の点が測っていない regime**を優先する。
 - ⚠️ **床に座らせない。** 距離が spec の下限に張り付く配置では、両側 exact になって**何も測らない**。
 - ⚠️ **probe が何を測っているか確かめてから信じる**（別の grob を測っていた事例が複数）。
+- ★ ⚠️ **対の両側が同じ音楽であることを、音を並べて確かめる。** これが 3 回外れて、うち 2 回は
+  「Lily# のスペーシング欠陥」として何セッションも台帳に居座った（§1 の罠 5・6）。確かめる 3 点:
+  **①音高**（Lily# は phrase 参照ごとに相対オクターブを既定へ戻す。fixture を写すなら
+  `phrase` 構造ごと写す。LP `c'` ↔ Lily# `c`）**②小節線**（LP は `\bar "|."` を書かないと
+  終止線を細い `|` にする＝0.9 の差）**③紙面**（`indent`・`line-width`）。
+  ⚠️ **「対照」と名前が付いていても対照とは限らない。** 自然幅を測る ragged 対照は、
+  **本体と同じ音楽が 1 行に収まる幅**で組むこと（収まらないと LP は行を割り、
+  列ごとの引き算が静かに壊れる）。
+- ★ ⚠️ **残差の内訳を spring／列ごとに出す。** 総和だけ見ていると「幅ではなく force の問題」
+  のような誤った切り分けに落ちる。列ごとに出せば **1 本だけ符号が逆**のような形が見え、
+  符号違いは定数誤りではなく**入力（符尾向き・音高）の違い**を指す。
 
 ### 5.1 ワークフロー規律
 
