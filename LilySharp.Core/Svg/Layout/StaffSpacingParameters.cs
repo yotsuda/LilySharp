@@ -120,7 +120,6 @@ internal sealed record StaffSpacingParameters
     /// Returns a new StaffSpacingParameters with overridden values.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
     /// LILYPOND-REF: lily/staff-grouper-interface.cc — staff-staff-spacing, staffgroup-staff-spacing
     ///
     /// LilyPond syntax:
@@ -129,6 +128,16 @@ internal sealed record StaffSpacingParameters
     ///
     /// Supports all 4 sub-properties: basic-distance, minimum-distance, padding, stretchability
     /// for both staff-staff-spacing and staffgroup-staff-spacing.
+    ///
+    /// ⚠️ THIS IS NOT alignment-distances, and a LILYPOND-REF to
+    /// page-layout-problem.cc:656-717 sat here saying it was (removed 2026-07-26 — the
+    /// shape HANDOFF 5.2.1 (1) warns about: a REF whose neighbouring code is a different
+    /// quantity). What this overrides is the SPEC a staff spring is built from; LilyPond's
+    /// alignment-distances is a per-system manual override read out of
+    /// line-break-system-details (:706-717, and get_fixed_spacing :1202-1240) that makes
+    /// the spring RIGID — set_ideal_distance(dy), set_min_distance(dy),
+    /// set_inverse_stretch_strength(0). Lily# has no surface for it and does not port it;
+    /// see HANDOFF 2D.
     /// </remarks>
     public StaffSpacingParameters ApplyOverrides(
         System.Collections.Immutable.ImmutableArray<LilySharp.Core.Svg.Model.GrobOverride> overrides)

@@ -371,8 +371,16 @@ internal sealed class PageLayouter
                         // skyline relative to the top spaceable staff and the down skyline
                         // relative to the BOTTOM one, by first_spaceable_dy /
                         // last_spaceable_dy out of the same minimum translations this span
-                        // is the sum of. Subtracting it here keeps SkylineBuilder in one
-                        // frame for its other readers.
+                        // is the sum of.
+                        // ⚠️ NOT A LITERAL PORT, and the deviation is here rather than
+                        // hidden: LilyPond performs the conversion by RAISING THE SKYLINES
+                        // THEMSELVES inside build_system_skyline, so what leaves that
+                        // function is already relative to the top/bottom spaceable staff.
+                        // Lily# subtracts at the spring instead, which keeps
+                        // SkylineBuilder in ONE frame for its other readers (LayoutEngine's
+                        // up/down extents, the paging pass). Same number, different place.
+                        // Moving it into the builder is a frame migration across those
+                        // readers, not an edit to this line — HANDOFF 2D.
                         // (A leading loose line — a lead sheet's chord row — sits between
                         // the anchor and the first sprung staff, which is why the offset is
                         // measured from the anchor and not from the first spring.)

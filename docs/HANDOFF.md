@@ -243,6 +243,25 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - **`LayoutEngine` の単一ページ経路が今も自前で積む**（force 0 なので鎖と一致するが二重実装）
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
 
+#### ★ 譜間ばね移植（`c309b751`+`8b7b2615`）で**字面から外れた 2 件と未移植 3 件**
+
+⚠️ **出力は正しいが LP の書き方ではない**＝§5.2 の「報告する」に該当。コード側にも同じ注記あり。
+
+| | 現状 | 字面の姿 |
+|---|---|---|
+| ① **ばねの床の作り方** | `drawn − max(0, basic − alignmentMin)` と**逆算** | LP は `get_minimum_translations` が返す**ベクタの差**をそのまま使う（`:699-704`）。⇒ **`internal_get_minimum_translations` 相当（`translates[]` を返す）を配置とばねで共有する**のが本来。**構造変更＝独立した島**（配置は譜の上端フレーム・ばねは refpoint フレームで、今は refpoint 側の最小を誰も保持していない） |
+| ② **フレーム変換の置き場所** | ばねを作る側で span を引く（`PageLayouter`） | LP は `build_system_skyline` 内で**スカイラインを raise**（`:1120-1126`）。⚠️ 移すと `SkylineBuilder` の**読み手が全部巻き込まれる**（`CalculateUpExtent`/`CalculateDownExtent`・paging パス）＝frame 移行なので、島1 の手順（格納値を主張するテスト→生産側を同時に→縁で 1 回だけ反射）に従うこと |
+
+**未移植（`StaffSprings` の remarks に列挙済）**: ⑴ `alignment-distances`（`:706-717`＝
+`line-break-system-details` 由来の手動指定でばねを**剛体**にする。**Lily# に言語表面が無い**ので
+入れるなら文法から）⑵ 最初の spaceable 譜の loose line 用の床（`:667-670`）
+⑶ `include_fixed_spacing` の第2制約（`align-interface.cc:240-267`）。⑵⑶ は
+**loose line 再配分の不在と同根**なので、そちらと一緒に。
+
+⚠️ **`StaffSpacingParameters.ApplyOverrides` の `alignment_distances` REF は誤りだった**
+（2026-07-26 に削除）。実装は `\override StaffGrouper.staff-staff-spacing.*` で**別量**
+＝§5.2.1① の「REF の隣が別の式」の 2 例目。**REF を見たら隣の式を読むこと。**
+
 ### E. 未移植の LP 計算・座標系の島2
 
 - **未移植 LP 計算**: tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord /

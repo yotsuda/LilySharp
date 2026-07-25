@@ -1523,9 +1523,24 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// <para>
     /// ⚠️ WITHOUT skylines (the hara-kiri layout path, which does not build them) the floor
-    /// falls back to the spec's own minimum-distance, i.e. the only one of LilyPond's two
-    /// floors that can be known without measuring the ink. A hara-kiri page can therefore
-    /// compress a pair further than its ink allows. Named, not hidden.
+    /// falls back to the drawn distance, so such a pair stretches but never compresses.
+    /// Named, not hidden.
+    /// </para>
+    /// <para>
+    /// ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+    /// reader does not have to rediscover which parts of :651-720 are missing:
+    /// <list type="bullet">
+    /// <item><c>alignment-distances</c> (:706-717) — a per-system manual override out of
+    /// <c>line-break-system-details</c> that pins the spring RIGID (ideal = min = dy,
+    /// inverse stretch 0). Lily# has no surface for it; before this port there was no
+    /// spring to pin either.</item>
+    /// <item>the first spaceable staff's extra floor for loose lines ABOVE it
+    /// (:667-670) — same root as the missing <c>distribute_loose_lines</c>.</item>
+    /// <item><c>include_fixed_spacing</c>'s second constraint (align-interface.cc:240-267):
+    /// a spaceable staff is also floored against the PREVIOUS SPACEABLE staff (not just the
+    /// previous element) and by <c>get_fixed_spacing</c>. It only bites when loose lines sit
+    /// between two staves, which is the same gap again.</item>
+    /// </list>
     /// </para>
     /// <para>
     /// Which pairs get a spring, and why the others do not:
@@ -1595,6 +1610,16 @@ internal sealed class MultiStaffLayouter
             // minimum itself would be off by half the difference of the two staff heights,
             // which is 0 between two ordinary staves and 0.25 above a four-string tab staff
             // — enough to move it at force 0, on pages that are not being spaced at all.
+            // ⚠️ NOT A LITERAL PORT, and the deviation is here rather than hidden:
+            // LilyPond takes this number straight out of the vector Align_interface
+            // returns (page-layout-problem.cc:699-704 indexes
+            // minimum_offsets_with_min_dist). Lily# RECONSTRUCTS it because the layout
+            // keeps its answer in the staff-TOP frame and never materialises the
+            // refpoint-frame translations at all. The literal port is to make the layout
+            // produce and keep them — align-interface.cc:162-285
+            // internal_get_minimum_translations returns translates[] — and feed the same
+            // vector to the placement AND to these springs. That is a structural change
+            // (HANDOFF 2D), not a rewrite of this line.
             double drawn = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
             double minimum = staffSkylines is null
                 // No skylines to ask, so the drawn distance stands: the pair can be
