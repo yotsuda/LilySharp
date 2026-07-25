@@ -280,12 +280,22 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - `override` の消費側は 4 つだけ（文法側は元から開いている）。⚠️ **値に小数リテラルが書けない**。
   ⚠️ **page 系（`paper-height`/`top-system-spacing`/`systems-per-page`）を `override` に載せない**——
   LP ではそれらは `\paper` 変数であって grob プロパティではない（コーパスはハーネス引数で解決済み）
-- **chords 行 / lyrics 行が `PartReferenceFinder` に無い** — part 参照が検証も改名もされない。
-  足すと「未定義の chord/lyrics part を参照するスコアを新たに弾く」挙動変更になる＝要判断
-- **対応の取れないスラーが無警告で消える**（`SlurDetector.cs:49-56`）＝タイの LYS4007 相当の警告を。**別ブランチで**
-- `editors/vscode/src/smartBrackets.ts` → `smartTyping.ts` 改名（実態から名前が離れた）
-- Dead-code 監査の手動分 / `LILYPOND-REF` 行番号の一括再採番（cosmetic）/
-  `IDrawingContext.cs:37-39` の remark が装飾前後2フレームを記述していない
+- **chords 行 / lyrics 行が `PartReferenceFinder` に無い**（2026-07-26 実コードで再確認）— 
+  `AllPartNameTokens`/`ReferenceTokens` の switch は `PartDeclaration`・`PartBlock`・
+  `MidiPartRender`・`StaffRender`・`OssiaRender`・`TabRender` だけで、
+  **`ChordRowRenderSyntax` と `LyricsRowRenderSyntax` が無い**⇒ その part 参照は検証も改名も
+  されない。⚠️ `staff … with chords NAME` の NAME は**意図的に除外**（別種の名前）なので
+  そちらと混同しないこと。足すと「未定義の chord/lyrics part を参照するスコアを新たに弾く」
+  挙動変更になる＝**要判断**
+- **対応の取れないスラーが無警告で消える**（2026-07-26 実コードで再確認＝`SlurDetector.cs:54` の
+  `hasEnd && openSlurs.Count > 0` で余った `)` を黙って捨て、走査終了時にスタックに残った `(` も
+  捨てる）＝タイの LYS4007 相当の警告を。
+  ⚠️ **別ブランチ指定＝ブランチ作成は GO 待ち**（§5.1）。master 直で入れてよいなら言うこと
+- ~~`smartBrackets.ts` → `smartTyping.ts` 改名~~ — **完了**（`registerSmartTyping`・ログ接頭辞も。
+  `out/` は未追跡の生成物なので触っていない）
+- ~~`IDrawingContext` の remark~~ — **完了**（2フレーム＋「誰が flip のどちら側か」を明記）
+- Dead-code 監査の手動分 / `LILYPOND-REF` 行番号の一括再採番（cosmetic・**島2 に紐づく繰延**＝
+  `COORDINATE_AUDIT.md` §4.5 の島2 行。単独でやると差分が巨大なわりに何も守らない）
 
 ### G. 保守性の負債・未 commit のプローブ
 
