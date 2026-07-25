@@ -49,6 +49,36 @@
 %% they share a moment — so a Lily# twin for CL must decide which grob it measures before
 %% it can compare. Not yet ledgered.
 %%
+%% ============ PERTURBATION, measured the same day ============
+%%
+%%   score  first CHORD ink left   first LYRIC ink left
+%%   CO      0.500000              -            chord name 1.877882 wide
+%%   COW     0.500000              -            chord name 15.410322 wide
+%%   CL      2.312539              0.000000     first syllable 5.975079 wide
+%%   CLW    12.777463              0.000000     first syllable 26.904926 wide
+%%
+%% ★ CHORDS ONLY IS SETTLED. Widening the chord name by 13.5 ss does not move the first
+%% column by a thousandth: the ChordName does NOT reach left into
+%% Paper_column::minimum_distance, so min_dist stays 0 and `min_dist + 0.5` is the whole
+%% answer. That half is ready to port.
+%%
+%% ★ CHORDS + LYRICS IS NOT. Widening the first SYLLABLE by 21 ss moves the first chord
+%% from 2.312539 to 12.777463 — so something about the lyric DOES reach the first column,
+%% while the lyric's own ink stays pinned at 0.000000 in both. Two candidates, not yet
+%% told apart:
+%%   (a) LyricText joins min_dist (it would have to, to push the column), or
+%%   (b) LilyPond clamps a first syllable that would hang off the left edge of the system
+%%       back inside it, and the column follows.
+%% The arithmetic does not separate them from these four numbers alone (neither "centred on
+%% the column" nor "left-aligned at the column" reproduces both scores), and GUESSING here
+%% is exactly what section 5.3 forbids. NEXT MEASUREMENT: dump the paper column itself
+%% (-ddebug-paper-columns) and re-run CL/CLW, which says directly whether the COLUMN moved
+%% or only the grobs on it.
+%%
+%% This matters because the lead-sheet fixtures are all the CL shape, and both halves go
+%% through ONE Lily# code path — so the CO half cannot be ported alone without guessing at
+%% the CL half.
+%%
 %% ⚠️ ANCHOR CONVENTION, unresolved for the Lily# twin: LilyPond's ChordName reference point
 %% IS its ink left (the extent above is (0 . w)), while Lily# draws a chord name with
 %% text-anchor="middle", i.e. it records the CENTRE. A twin that compares the two raw
@@ -116,6 +146,23 @@ harmony = \chordmode { c2 a:m | f2 g:7 | c1 }
     \new Lyrics \lyricmode { Twin2 -- kle4 twin -- kle | lit2 -- tle | star1 }
   >>
   \lay "CL"
+}
+
+%% ---- PERTURBATION (section 5.3): does a ChordName / LyricText join min_dist? ----
+%% If the first column's position depends on the WIDTH of the text sitting on it, that text
+%% is in Paper_column::minimum_distance; if it does not, the text is priced some other way
+%% and the column is fixed by `min_dist + 0.5` alone. Vary ONE thing per score.
+
+%% COW — CO with a much WIDER first chord name. Same music otherwise.
+\score { \new ChordNames { \time 4/4 \chordmode { c:maj9.11+ 2 a:m | f2 g:7 | c1 } } \lay "COW" }
+
+%% CLW — CL with a much LONGER first syllable.
+\score {
+  <<
+    \new ChordNames { \time 4/4 \harmony }
+    \new Lyrics \lyricmode { Twinkletwinkletwinkle2 -- kle4 twin -- kle | lit2 -- tle | star1 }
+  >>
+  \lay "CLW"
 }
 
 %% CS — the CONTROL that is NOT staff-less: the same chords over an ordinary staff. Here
