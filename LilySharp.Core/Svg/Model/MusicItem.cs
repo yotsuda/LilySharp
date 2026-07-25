@@ -90,7 +90,11 @@ public sealed record NoteItem : MusicItem
     /// <summary>The number of augmentation dots on the note.</summary>
     public int Dots { get; }
     /// <summary>The accidental glyph drawn left of the notehead (e.g. <c>sharp</c>, <c>flat</c>), or null for none.</summary>
-    public string? Accidental { get; }
+    /// <remarks><c>init</c> so a per-STAFF post-pass can take it away: a tablature context
+    /// has no Accidental grob at all (see <see cref="Collector.TabResolver.RemoveAccidentals"/>),
+    /// and the accidental is decided once per PART, before the score binds that part to a
+    /// staff.</remarks>
+    public string? Accidental { get; init; }
     /// <summary>Whether the note needs ledger lines because it sits outside the staff.</summary>
     public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
@@ -140,7 +144,10 @@ public sealed record NoteItem : MusicItem
     /// suggestions, while courtesy accidentals are reminders of canceled
     /// accidentals (parenthesized, left of the note).
     /// </remarks>
-    public string? EditorialAccidental { get; }
+    /// <remarks><c>init</c> for the same reason as <see cref="Accidental"/>: the
+    /// Accidental_engraver makes AccidentalSuggestion grobs too, so removing it removes
+    /// these as well.</remarks>
+    public string? EditorialAccidental { get; init; }
 
     /// <summary>Whether this note carries an editorial (suggestion) accidental.</summary>
     public bool IsEditorial => EditorialAccidental != null;

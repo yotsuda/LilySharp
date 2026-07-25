@@ -157,6 +157,90 @@ internal sealed class TabResolver
         return ImmutableArray.Create(result);
     }
 
+    /// <summary>
+    /// Takes every accidental away from a tab staff's own copy of a voice: a tablature
+    /// context has no Accidental grob at all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:1189 (TabVoice) and :1213 (TabStaff) —
+    /// <c>\remove Accidental_engraver</c>, both under the comment "No accidental in
+    /// tablature !". The engraver makes Accidental and AccidentalSuggestion grobs, so
+    /// removing it removes both; and a grob that is never created neither draws nor
+    /// RESERVES — it is absent from the paper column's spacing boxes and from every rod.
+    /// <para>
+    /// Lily# decides accidentals once per PART
+    /// (<c>MeasureCollector.GetDisplayAccidental</c>, which is
+    /// lily/accidental-engraver.cc's default style), and that runs before the score spec
+    /// binds the part to a staff — so a part written in F# major and shown as tablature
+    /// carried naturals that nothing draws. They were not inert:
+    /// <see cref="Svg.Layout.SpacingRules.MusicalColumnLeftReach"/> read them, which on
+    /// probe TKT took every tab note's leftward reach from 0.100000 to 1.234272 — 1.13 ss
+    /// of blank paper in front of each fret number, and through the measure's spring-0
+    /// minimum a moved line start (ledger key
+    /// <c>line-start.time-to-first-note.tab-keyed</c>, whose LilyPond side is an IDENTITY
+    /// with tab-concert and so measures this defect and nothing else).
+    /// </para>
+    /// <para>
+    /// This rewrites the TAB staff's own copy of the voice, which is exactly the context
+    /// boundary LilyPond removes the engraver at: the same part shown on a notation staff
+    /// beside it keeps its accidentals. ⚠️ A shared paper column therefore still sees the
+    /// NOTATION staff's accidental at that moment, as LilyPond's does — removing an
+    /// engraver empties one context, not the column.
+    /// </para>
+    /// </remarks>
+    public static Voice RemoveAccidentals(Voice voice)
+    {
+        var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
+        bool anyMeasureChanged = false;
+
+        foreach (var measure in voice.Measures)
+        {
+            var items = measure.Items.ToArray();
+            bool changed = false;
+            for (int i = 0; i < items.Length; i++)
+            {
+                var stripped = WithoutAccidentals(items[i]);
+                if (!ReferenceEquals(stripped, items[i]))
+                {
+                    items[i] = stripped;
+                    changed = true;
+                }
+            }
+            anyMeasureChanged |= changed;
+            rebuilt.Add(changed ? measure with { Items = ImmutableArray.Create(items) } : measure);
+        }
+
+        return anyMeasureChanged ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
+    }
+
+    /// <summary>One item without its accidentals, or the SAME instance when it had none —
+    /// so a tab score that spells no accidental is not rebuilt at all.</summary>
+    private static MusicItem WithoutAccidentals(MusicItem item) => item switch
+    {
+        NoteItem note when note.Accidental != null || note.EditorialAccidental != null
+                           || note.LeadingGrace.Any(g => g.Accidental != null)
+            => note with
+            {
+                Accidental = null,
+                EditorialAccidental = null,
+                LeadingGrace = WithoutGraceAccidentals(note.LeadingGrace),
+            },
+        ChordItem chord when chord.Notes.Any(n => n.Accidental != null)
+                             || chord.LeadingGrace.Any(g => g.Accidental != null)
+            => chord with
+            {
+                Notes = ImmutableArray.CreateRange(chord.Notes, n => n with { Accidental = null }),
+                LeadingGrace = WithoutGraceAccidentals(chord.LeadingGrace),
+            },
+        _ => item,
+    };
+
+    private static ImmutableArray<GraceNoteInfo> WithoutGraceAccidentals(
+        ImmutableArray<GraceNoteInfo> grace)
+        => grace.Any(g => g.Accidental != null)
+            ? ImmutableArray.CreateRange(grace, g => g with { Accidental = null })
+            : grace;
+
     /// <summary>A sounding pitch is playable when some string frets it at 0..24.</summary>
     private static bool IsTabPlaceable(int sounding, int[] tun)
     {

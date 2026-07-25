@@ -1430,12 +1430,15 @@ public sealed partial class MeasureCollector
         // \N kept, repeated pitches in a bar reuse the first string, the rest
         // auto-pick the nearest-fret string. Done here so the layout and every
         // render pass (fret number, stem, beam) read one consistent string.
+        // A tablature context ALSO has no Accidental_engraver (ly/engraver-init.ly:1189,
+        // :1213), so the same per-tab-staff copy of the voice drops every accidental —
+        // see TabResolver.RemoveAccidentals for what they were reserving.
         staffGroups = staffGroups
             .Select(sg => sg with
             {
                 Staves = sg.Staves
                     .Select(st => st.IsTab && st.Tuning.HasValue
-                        ? st with { Voices = st.Voices.SetItem(0, _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value, st.TabSourceClef, st.Transposition)) }
+                        ? st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(_tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value, st.TabSourceClef, st.Transposition))) }
                         : st)
                     .ToImmutableArray()
             })
