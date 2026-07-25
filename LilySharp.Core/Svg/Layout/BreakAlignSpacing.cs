@@ -75,6 +75,9 @@ public enum SpacingStyle
     MinimumFixedSpace,
     /// <summary>Half natural, half fixed: <c>distance = extent(left_right_edge) + value/2 + natural/2</c>.</summary>
     SemiFixedSpace,
+    /// <summary>Like <see cref="ExtraSpace"/>, but NOT stretchable: the whole distance is
+    /// compressible and none of it grows (staff-spacing.cc:188-192).</summary>
+    ShrinkSpace,
     /// <summary>Mostly fixed but slightly compressible, allowing the spacing to shrink under compression.</summary>
     SemiShrinkSpace
 }
@@ -192,9 +195,9 @@ internal static class BreakAlignSpacing
         // (time-signature . (extra-space . 1.25))
         BreakAlignSymbol.TimeSignature =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 1.25),
-        // (first-note . (fixed-space . 2.5))
+        // (first-note . (shrink-space . 2.5))  — define-grobs.scm:1947
         BreakAlignSymbol.FirstNote =>
-            new SpacingEntry(SpacingStyle.FixedSpace, 2.5),
+            new SpacingEntry(SpacingStyle.ShrinkSpace, 2.5),
         // (staff-bar . (extra-space . 0.6))
         BreakAlignSymbol.StaffBar =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.6),
@@ -212,9 +215,9 @@ internal static class BreakAlignSpacing
         // (time-signature . (extra-space . 1.15))
         BreakAlignSymbol.TimeSignature =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 1.15),
-        // (first-note . (fixed-space . 2.5))
+        // (first-note . (shrink-space . 2.5))  — define-grobs.scm:1996
         BreakAlignSymbol.FirstNote =>
-            new SpacingEntry(SpacingStyle.FixedSpace, 2.5),
+            new SpacingEntry(SpacingStyle.ShrinkSpace, 2.5),
         // (staff-bar . (extra-space . 1.1))
         BreakAlignSymbol.StaffBar =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 1.1),
@@ -232,9 +235,9 @@ internal static class BreakAlignSpacing
     /// </remarks>
     private static SpacingEntry GetTimeSignatureSpacing(BreakAlignSymbol right) => right switch
     {
-        // (first-note . (fixed-space . 2.0))
+        // (first-note . (semi-shrink-space . 2.0))  — define-grobs.scm:3949
         BreakAlignSymbol.FirstNote =>
-            new SpacingEntry(SpacingStyle.FixedSpace, 2.0),
+            new SpacingEntry(SpacingStyle.SemiShrinkSpace, 2.0),
         // (right-edge . (extra-space . 0.5))
         BreakAlignSymbol.RightEdge =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.5),
@@ -328,9 +331,13 @@ internal static class BreakAlignSpacing
             SpacingStyle.SemiFixedSpace =>
                 leftItemRightExtent + entry.Value,
 
-            // semi-shrink-space (staff-spacing.cc:193-197): same ideal as semi-fixed
-            // (leftRight + distance); differs only by being non-stretchable, which this
-            // single-distance model does not represent.
+            // shrink-space (staff-spacing.cc:188-192) / semi-shrink-space (:193-197): the
+            // same ideal as extra-space / semi-fixed (leftRight + distance); they differ
+            // only by being non-stretchable, which this single-distance model does not
+            // represent. <see cref="SpaceAlistDistances"/> is the model that does.
+            SpacingStyle.ShrinkSpace =>
+                leftItemRightExtent + entry.Value,
+
             SpacingStyle.SemiShrinkSpace =>
                 leftItemRightExtent + entry.Value,
 
@@ -485,41 +492,84 @@ internal static class BreakAlignSpacing
             includeTimeSignature, timeSigBeats, timeSigBeatType).Right;
 
     /// <summary>
-    /// Ideal/minimum distance from the END of the line-start prefix to the
-    /// first note column, per the LAST prefix item's space-alist entry.
+    /// The FIXED distance, the IDEAL distance and the STRETCHABILITY one space-alist entry
+    /// makes against a left grob whose own ink extent is
+    /// <paramref name="lastExtLeft"/>..<paramref name="lastExtRight"/> — the middle of
+    /// <c>Staff_spacing::get_spacing</c>, transcribed branch for branch.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm space-alist (first-note . ...):
-    ///   Clef           (minimum-fixed-space . 5.0)  — rigid
-    ///   KeySignature   (shrink-space . 2.5)         — compressible
-    ///   TimeSignature  (semi-shrink-space . 2.0)    — compressible to half
-    /// LILYPOND-REF: lily/staff-spacing.cc:169-198 Staff_spacing::get_spacing —
-    ///   the style decides how much of the ideal survives compression, AND from
-    ///   which edge of the left item the distance is measured.
+    /// LILYPOND-REF: lily/staff-spacing.cc:161-200:
+    /// <code>
+    ///   Real fixed = last_ext[RIGHT];
+    ///   Real ideal = fixed + 1.0;
+    ///   fixed-space          fixed += distance;                       ideal = fixed;
+    ///   extra-space                                                   ideal = fixed + distance;
+    ///   semi-fixed-space     fixed += distance / 2;                   ideal = fixed + distance / 2;
+    ///   minimum-space                                                 ideal = last_ext[LEFT] + max (last_ext.length (), distance);
+    ///   minimum-fixed-space  fixed = last_ext[LEFT] + max (...);      ideal = fixed;
+    ///   shrink-space                                                  ideal = fixed + distance;       is_stretchable = false;
+    ///   semi-shrink-space    fixed += distance / 2;                   ideal = fixed + distance / 2;   is_stretchable = false;
+    ///   Real stretchability = is_stretchable ? ideal - fixed : 0;
+    /// </code>
+    /// Every distance is in the LEFT COLUMN's frame, because <c>last_ext</c> is
+    /// <c>break_item-&gt;extent (col, X_AXIS)</c> (spacing-interface.cc:217) — the grob's
+    /// INK relative to the column origin, with no <c>extra-spacing-width</c> on it (that
+    /// widens spacing BOXES, which is a different question — <c>min_dist</c>'s).
     /// <para>
-    /// The clef case is the only one measured from the left item's LEFT edge:
-    /// minimum-fixed-space sets <c>fixed = last_ext[LEFT] + max(last_ext.length(),
-    /// distance)</c> (staff-spacing.cc:183-187), so the 5.0 is the whole distance
-    /// from the clef's LEFT ink and ABSORBS the clef width rather than following
-    /// it. The caller has already reserved that width as the prefix, so the spring
-    /// from the prefix END is <c>max(width, 5.0) - width = max(0, 5.0 - width)</c>.
-    /// The key/time cases are extra-space-like (semi-fixed / shrink, measured from
-    /// the right edge, staff-spacing.cc:176-197), so their bare value is already
-    /// the gap after the prefix. Threading the clef width here is what stops the
-    /// note being placed clef-width + 5.0 out — the double-count the pair
-    /// line-start.clef-to-first-note.{treble,bass} opened.
+    /// ⚠️ The <c>minimum-*</c> pair is the only one measured from the left grob's LEFT
+    /// edge, and it ABSORBS that grob's width rather than following it: a Clef's
+    /// <c>(first-note . (minimum-fixed-space . 5.0))</c> puts the first note 5.0 out from
+    /// where the clef's ink STARTS whenever the clef is narrower than that. Which is why
+    /// the caller must pass the ink of the staff's OWN clef and not the break-align
+    /// GROUP's: on a notation+tab system the TAB clef's ink opens 0.2 later than the
+    /// group's left edge, and that 0.2 lands directly on its first note.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>minimum-space</c> leaves <c>fixed</c> at <c>last_ext[RIGHT]</c> — only
+    /// <c>minimum-fixed-space</c> replaces it. Transcribed, not tidied.
     /// </para>
     /// </remarks>
-    public static (double Ideal, double Min) FirstNoteSpring(
-        double keyInkWidth, bool includeTimeSignature, double clefWidth)
+    public static (double Fixed, double Ideal, double Stretchability) SpaceAlistDistances(
+        SpacingEntry entry, double lastExtLeft, double lastExtRight)
     {
-        if (includeTimeSignature)
-            return (2.0, 1.0);   // semi-shrink: fixed = d/2, measured from the right edge
-        if (keyInkWidth > 0.0)
-            return (2.5, 1.25);  // shrink-space: generously compressible, from the right edge
-        // minimum-fixed-space 5.0, measured from the clef's LEFT edge with a max —
-        // the prefix already holds the clef width, so the remaining gap absorbs it.
-        double gap = Math.Max(0.0, 5.0 - clefWidth);
-        return (gap, gap);       // rigid
+        double distance = entry.Value;
+        bool isStretchable = true;
+
+        double fixed_ = lastExtRight;
+        double ideal = fixed_ + 1.0;
+        double length = lastExtRight - lastExtLeft;
+
+        switch (entry.Style)
+        {
+            case SpacingStyle.FixedSpace:
+                fixed_ += distance;
+                ideal = fixed_;
+                break;
+            case SpacingStyle.ExtraSpace:
+                ideal = fixed_ + distance;
+                break;
+            case SpacingStyle.SemiFixedSpace:
+                fixed_ += distance / 2;
+                ideal = fixed_ + distance / 2;
+                break;
+            case SpacingStyle.MinimumSpace:
+                ideal = lastExtLeft + Math.Max(length, distance);
+                break;
+            case SpacingStyle.MinimumFixedSpace:
+                fixed_ = lastExtLeft + Math.Max(length, distance);
+                ideal = fixed_;
+                break;
+            case SpacingStyle.ShrinkSpace:
+                ideal = fixed_ + distance;
+                isStretchable = false;
+                break;
+            case SpacingStyle.SemiShrinkSpace:
+                fixed_ += distance / 2;
+                ideal = fixed_ + distance / 2;
+                isStretchable = false;
+                break;
+        }
+
+        return (fixed_, ideal, isStretchable ? ideal - fixed_ : 0);
     }
 }

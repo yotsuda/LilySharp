@@ -70,19 +70,33 @@ public class BreakAlignSpacingTests
     [Fact]
     public void KeySignatureToFirstNote_FixedSpace_2_5()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:1839 (first-note . (fixed-space . 2.5))
+        // LILYPOND-REF: scm/define-grobs.scm:1996 (first-note . (shrink-space . 2.5)) — the
+        // STYLE was transcribed as fixed-space, which is a different spring: shrink-space
+        // leaves `fixed` on the signature's ink and makes the whole 2.5 compressible, where
+        // fixed-space would have made all of it rigid (staff-spacing.cc:169-173, :188-192).
         var entry = BreakAlignSpacing.GetSpacing(BreakAlignSymbol.KeySignature, BreakAlignSymbol.FirstNote);
-        Assert.Equal(SpacingStyle.FixedSpace, entry.Style);
+        Assert.Equal(SpacingStyle.ShrinkSpace, entry.Style);
         Assert.Equal(2.5, entry.Value, 2);
     }
 
     [Fact]
     public void TimeSignatureToFirstNote_FixedSpace_2_0()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:3599 (first-note . (fixed-space . 2.0))
+        // LILYPOND-REF: scm/define-grobs.scm:3949 (first-note . (semi-shrink-space . 2.0)) —
+        // half fixed, half compressible, and not stretchable at all (:193-198).
         var entry = BreakAlignSpacing.GetSpacing(BreakAlignSymbol.TimeSignature, BreakAlignSymbol.FirstNote);
-        Assert.Equal(SpacingStyle.FixedSpace, entry.Style);
+        Assert.Equal(SpacingStyle.SemiShrinkSpace, entry.Style);
         Assert.Equal(2.0, entry.Value, 2);
+    }
+
+    [Fact]
+    public void KeyCancellationToFirstNote_IsShrinkSpace()
+    {
+        // LILYPOND-REF: scm/define-grobs.scm:1947 (first-note . (shrink-space . 2.5)).
+        var entry = BreakAlignSpacing.GetSpacing(
+            BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.FirstNote);
+        Assert.Equal(SpacingStyle.ShrinkSpace, entry.Style);
+        Assert.Equal(2.5, entry.Value, 2);
     }
 
     // === CalculateDistance tests ===
@@ -166,7 +180,7 @@ public class BreakAlignSpacingTests
     {
         // C major, first system with 4/4 time. The prefix ends at the
         // time signature's INK; the 2.0 first-note distance is carried by
-        // the first measure's leading spring (FirstNoteSpring), not here.
+        // the first measure's leading spring (LineStartColumn.LineStartSpring), not here.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.GClefWidth, 0.0, true, 4, 4);
 
@@ -174,8 +188,17 @@ public class BreakAlignSpacingTests
         // LeftEdge→Clef 0.8 opens the prefix, then Clef→TimeSignature extra-space 1.52.
         double expected = EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth + 1.52 + timeSigWidth;
         Assert.Equal(expected, width, 1);
-        Assert.Equal((2.0, 1.0),
-            BreakAlignSpacing.FirstNoteSpring(0.0, includeTimeSignature: true, GlyphMetrics.GClefWidth));
+
+        // TimeSignature (first-note . (semi-shrink-space . 2.0)): half fixed, half not,
+        // and none of it stretchable — measured off the meter's own ink right, i.e. the
+        // prefix end, so prefix-relative it is (fixed 1.0, ideal 2.0).
+        var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.TimeSignature, BreakAlignSymbol.FirstNote),
+            width - timeSigWidth, width);
+        Assert.Equal(1.0, fixed_ - width, 6);
+        Assert.Equal(2.0, ideal - width, 6);
+        Assert.Equal(0.0, stretchability, 6);
     }
 
     [Fact]
@@ -206,10 +229,12 @@ public class BreakAlignSpacingTests
         // minimum-fixed-space 5.0 is measured from the clef's LEFT ink and absorbs the
         // clef width, so the prefix (the clef width) plus the leading spring sum to 5.0 —
         // the width is not added AFTER the prefix. LILYPOND-REF staff-spacing.cc:183-187.
-        var (clefGap, clefMin) =
-            BreakAlignSpacing.FirstNoteSpring(0.0, includeTimeSignature: false, GlyphMetrics.GClefWidth);
-        Assert.Equal(5.0, GlyphMetrics.GClefWidth + clefGap, 6);
-        Assert.Equal(clefGap, clefMin);
+        var (clefFixed, clefIdeal, _) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(BreakAlignSymbol.Clef, BreakAlignSymbol.FirstNote),
+            EngravingDefaults.ClefGlyphXOffset,
+            EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth);
+        Assert.Equal(5.0, GlyphMetrics.GClefWidth + (clefIdeal - width), 6);
+        Assert.Equal(clefIdeal, clefFixed);
     }
 
     [Fact]
@@ -224,8 +249,17 @@ public class BreakAlignSpacingTests
         // LeftEdge→Clef 0.8 opens the prefix, then Clef→KeySignature extra-space 0.82.
         double expected = EngravingDefaults.ClefGlyphXOffset + GlyphMetrics.GClefWidth + 0.82 + keyWidth;
         Assert.Equal(expected, width, 1);
-        Assert.Equal((2.5, 1.25),
-            BreakAlignSpacing.FirstNoteSpring(SharpsInk(2), includeTimeSignature: false, GlyphMetrics.GClefWidth));
+
+        // KeySignature (first-note . (shrink-space . 2.5)): the WHOLE 2.5 is compressible,
+        // so `fixed` stays on the signature's ink right — prefix-relative 0, not the 1.25
+        // Lily# used to carry (which was semi-shrink's arithmetic on a shrink entry).
+        var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.KeySignature, BreakAlignSymbol.FirstNote),
+            width - keyWidth, width);
+        Assert.Equal(0.0, fixed_ - width, 6);
+        Assert.Equal(2.5, ideal - width, 6);
+        Assert.Equal(0.0, stretchability, 6);
     }
 
     [Fact]

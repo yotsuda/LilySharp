@@ -7,11 +7,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="26">Multi-Voice</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="49">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="16.32" x2="37.65" y2="16.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.32" x2="37.65" y2="17.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.32" x2="37.65" y2="18.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.32" x2="37.65" y2="19.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.32" x2="37.65" y2="20.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.32" x2="37.62" y2="16.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.32" x2="37.62" y2="17.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.32" x2="37.62" y2="18.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.32" x2="37.62" y2="19.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.32" x2="37.62" y2="20.32" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.32" font-size="4.00"></text>
   <text class="music" x="4.88" y="18.32" font-size="4.00" data-pos="67"></text>
   <text class="music" x="8.59" y="17.82" font-size="4.00" data-pos="176"></text>
@@ -48,8 +48,8 @@
   <line x1="34.70" y1="19.82" x2="34.70" y2="16.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="17.15" y="16.32" width="0.19" height="4.00" data-pos="182"/>
   <rect x="26.79" y="16.32" width="0.19" height="4.00" data-pos="189"/>
-  <rect x="36.56" y="16.32" width="0.19" height="4.00" data-pos="309"/>
-  <rect x="37.05" y="16.32" width="0.60" height="4.00" data-pos="309"/>
+  <rect x="36.53" y="16.32" width="0.19" height="4.00" data-pos="309"/>
+  <rect x="37.02" y="16.32" width="0.60" height="4.00" data-pos="309"/>
   <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="314"/>
   <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="314">Main</text>
   <text class="music" x="7.32" y="13.66" font-size="1.60" data-pos="0"></text>

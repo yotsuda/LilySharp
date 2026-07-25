@@ -50,15 +50,6 @@ internal sealed class MultiStaffLayouter
     // StaffSlurLayouts); cheap to construct (options only) and stateless per call.
     private readonly ElementCoordinator _elementCoordinator;
 
-    /// <summary>Clef→first-note gap (staff spaces) on an ALL-TAB line. The compact "TAB"
-    /// clef does not warrant the wide 5.0 space-alist gap an engraved clef reserves
-    /// (BreakAlignSpacing.FirstNoteSpring), so the notes begin close to it — a Lily#
-    /// choice, since a tab line carries no key/time between the clef and the first
-    /// fret.</summary>
-    /// <remarks>Visible to <see cref="SystemBreaker"/>, which has to price a line start
-    /// with the same spring this layouter substitutes there.</remarks>
-    internal const double TabClefToFirstNoteSpace = 1.5;
-
     /// <summary>
     /// Current indent for the system being laid out (in staff spaces).
     /// Set by LayoutEngine before each system's layout calls.
@@ -787,8 +778,8 @@ internal sealed class MultiStaffLayouter
             }
 
         bool prefixHasTime = !score.AllStavesTab && (isFirstSystem || leadingTimeChange != null);
-        // The widest clef in the system governs where the meter and first note sit; the SAME
-        // width threads into FirstNoteSpring so the clef-only case still cancels.
+        // The break-align GROUP's width places the shared meter column; each staff's own clef
+        // ink inside that group is what its own first-note wish is measured from.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
         int prefixBeats = leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats;
         int prefixBeatType = leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType;
@@ -797,32 +788,21 @@ internal sealed class MultiStaffLayouter
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
             maxClefWidth, activeKeyInk, prefixHasTime, prefixBeats, prefixBeatType);
 
-        // The compact "TAB" clef starts its notes close to the clef (no key/time between);
-        // notation staves take the LilyPond space-alist value.
-        // LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/TimeSignature space-alist
-        //   (first-note . ...).
-        var (ideal, fixedDistance) = score.AllStavesTab
-            ? (TabClefToFirstNoteSpace, TabClefToFirstNoteSpace)
-            : SpacingRules.FirstNoteSpring(activeKeyInk, prefixHasTime, maxClefWidth);
-
         // When the opening meter change is hoisted into the prefix, its hang-left width is no
-        // longer reserved in the measure, so the bare fixed distance holds; otherwise the
-        // measure's own spring-0 minimum still floors this FIXED distance (min_dist below does
-        // not cover the leading grace / lyric widths — LilyPond puts those in their own paper
+        // longer reserved in the measure, so the bare space-alist fixed distance holds;
+        // otherwise the measure's own spring-0 minimum still floors it (min_dist does not
+        // cover the leading grace / lyric widths — LilyPond puts those in their own paper
         // columns; an accidental on the first note DOES reach min_dist, probe TKA +1.55).
-        double fixedFloor = leadingTimeChange != null
-            ? fixedDistance : Math.Max(fixedDistance, measureSpring0.MinDistance);
+        double? ownFixedFloor = leadingTimeChange != null ? null : measureSpring0.MinDistance;
 
-        // LILYPOND-REF: lily/staff-spacing.cc:210-220 — the FIXED distance is floored at
-        // 0.3 + min_dist and the spring's MINIMUM is min_dist itself.
-        double minDistance = LineStartColumn.MinimumDistanceAtLineStart(
+        // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
+        // do NOT agree: a tab staff ends its prefix on the TAB clef (minimum-fixed-space 5.0)
+        // where its notation neighbour ends on the meter (semi-shrink-space 2.0), and
+        // merge_springs averages the two ideals.
+        return LineStartColumn.LineStartSpring(
             score, prefixColumns, SpacingRules.ClefGroupInkLeft(score),
-            activeKeyInk,
             prefixHasTime ? GlyphMetrics.GetTimeSigWidth(prefixBeats, prefixBeatType) : 0.0,
-            startMeasureIndex) - prefixColumns.Right;
-
-        return LineStartColumn.SpringWithMinimumDistanceFloor(
-            ideal, fixedFloor, stretchability: 0.0, minDistance);
+            startMeasureIndex, ownFixedFloor);
     }
 
 

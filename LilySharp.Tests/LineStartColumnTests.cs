@@ -328,11 +328,11 @@ public class LineStartColumnTests
 
     // ===================== THE SPRING =====================
     //
-    // staff-spacing.cc:210-220 turns (ideal, fixed, stretchability, min_dist) into the
-    // spring. Everything below works PREFIX-RELATIVE (0 = where the prefix ink ends), which
-    // is the frame BreakAlignSpacing.FirstNoteSpring already speaks, and each assertion
-    // converts back to LilyPond's column-relative frame by adding the prefix right — so the
-    // expected numbers are the ones LilyPond actually dumped.
+    // staff-spacing.cc:161-200 turns the extremal grob's space-alist entry and its own INK
+    // extent into (fixed, ideal, stretchability), and :210-220 turns those plus min_dist
+    // into the spring. Everything below is COLUMN-relative, the frame LilyPond's dump and
+    // BreakAlignSpacing.SpaceAlistDistances both speak, and each assertion subtracts the
+    // prefix right where it wants the prefix-relative quantity the measure chain carries.
 
     /// <summary>The prefix ink right edge — LilyPond's <c>last_ext[RIGHT]</c>.</summary>
     private static double PrefixRight(KeySignature key, bool hasTime)
@@ -353,26 +353,33 @@ public class LineStartColumnTests
         Assert.Equal(6.585000, prefixRight, 6);
 
         double minDist = MinimumDistance(KeySignature.CMajor, staffPosition: -6);
-        var (ideal, fixed_) = SpacingRules.FirstNoteSpring(
-            keyInkWidth: 0.0, includeTimeSignature: true,
-            clefWidth: GlyphMetrics.LineStartClefWidth(ClefType.Treble));
+
+        // The extremal grob is the meter, whose ink ends at the prefix right; its
+        // (first-note . (semi-shrink-space . 2.0)) gives fixed = ink + 1.0, ideal = + 2.0,
+        // and no stretchability at all.
+        var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.TimeSignature, BreakAlignSymbol.FirstNote),
+            prefixRight - GlyphMetrics.GetTimeSigWidth(4, 4), prefixRight);
+        Assert.Equal(7.585000, fixed_, 6);
+        Assert.Equal(8.585000, ideal, 6);
+        Assert.Equal(0.0, stretchability, 6);
 
         var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
-            ideal, fixed_, stretchability: 0.0, minDist - prefixRight);
+            ideal, fixed_, stretchability, minDist);
 
-        // Column-relative, i.e. directly against the dump.
-        Assert.Equal(8.585000, prefixRight + spring.IdealDistance, 6);
-        Assert.Equal(7.485000, prefixRight + spring.MinDistance, 6);
-        // fixed = ideal - inverse_compress_strength, by :219.
-        Assert.Equal(7.785000,
-            prefixRight + spring.IdealDistance - spring.InverseCompressStrength, 6);
+        // Directly against the dump.
+        Assert.Equal(8.585000, spring.IdealDistance, 6);
+        Assert.Equal(7.485000, spring.MinDistance, 6);
+        // fixed = ideal - inverse_compress_strength, by :219 — lifted from 7.585 to
+        // 0.3 + 7.485.
+        Assert.Equal(7.785000, spring.IdealDistance - spring.InverseCompressStrength, 6);
         Assert.Equal(0.0, spring.InverseStretchStrength, 6);
-        // What the floor bought, prefix-relative: the ideal is untouched (2.0, the
-        // space-alist's own) while the compressibility drops from 1.0 to 0.8. That is the
-        // whole observable effect — force 0 does not move, compressed lines do.
-        Assert.Equal(2.000000, spring.IdealDistance, 6);
+        // What the floor bought: the ideal is untouched (the space-alist's own 8.585, which
+        // probe JN reads on a justified line) while the compressibility drops from 1.0 to
+        // 0.8. That is the whole observable effect — force 0 does not move, compressed
+        // lines do.
         Assert.Equal(0.800000, spring.InverseCompressStrength, 6);
-        Assert.Equal(1.000000, fixed_, 6);   // the un-floored fixed, for contrast
     }
 
     /// <summary>
@@ -410,13 +417,21 @@ public class LineStartColumnTests
         double minDist = LineStartColumn.MinimumDistance(prefatory, notes);
         Assert.Equal(3.565000, minDist, 6);   // clef ink right 3.365 + 0.1 - (0 - 0.1)
 
-        var (ideal, fixed_) = SpacingRules.FirstNoteSpring(
-            keyInkWidth: 0.0, includeTimeSignature: false, clefWidth: clefInk);
-        var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
-            ideal, fixed_, stretchability: 0.0, minDist - prefixRight);
+        // minimum-fixed-space 5.0 off the clef's own INK LEFT (0.8), absorbing its 2.565
+        // width: fixed = ideal = 0.8 + max (2.565, 5.0).
+        var (fixed_, ideal, stretchability) = BreakAlignSpacing.SpaceAlistDistances(
+            BreakAlignSpacing.GetSpacing(BreakAlignSymbol.Clef, BreakAlignSymbol.FirstNote),
+            EngravingDefaults.ClefGlyphXOffset,
+            EngravingDefaults.ClefGlyphXOffset + clefInk);
+        Assert.Equal(5.800000, fixed_, 6);
+        Assert.Equal(5.800000, ideal, 6);
+        Assert.Equal(0.0, stretchability, 6);   // is_stretchable, but ideal == fixed
 
-        Assert.Equal(5.800000, prefixRight + spring.IdealDistance, 6);
-        Assert.Equal(3.565000, prefixRight + spring.MinDistance, 6);
+        var spring = LineStartColumn.SpringWithMinimumDistanceFloor(
+            ideal, fixed_, stretchability, minDist);
+
+        Assert.Equal(5.800000, spring.IdealDistance, 6);
+        Assert.Equal(3.565000, spring.MinDistance, 6);
         Assert.Equal(0.0, spring.InverseStretchStrength, 6);
         Assert.Equal(0.0, spring.InverseCompressStrength, 6);
     }

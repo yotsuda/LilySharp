@@ -178,19 +178,6 @@ internal static class SpacingRules
             * GlyphMetrics.GetKeySignatureAccidentalWidth(key.Sharps > 0);
     }
 
-    /// <summary>
-    /// Line-start prefix-to-first-note spring (ideal, min) — see
-    /// BreakAlignSpacing.FirstNoteSpring.
-    /// </summary>
-    public static (double Ideal, double Min) FirstNoteSpring(double keyInkWidth, bool includeTimeSignature, double clefWidth)
-        // clefWidth MUST be the SAME width CalculatePrefixWidth reserves for this line start,
-        // so the clef-only case cancels to max(width, 5.0) from the clef's left ink, per
-        // LilyPond's minimum-fixed-space. Pass MaxClefWidth(score): a bass/alto/C clef reserves
-        // more than the treble G, and threading a mismatched width would break that cancellation
-        // (the clef-only first note would no longer land 5.0 out). See defect-3 in the ledger.
-        => BreakAlignSpacing.FirstNoteSpring(
-            keyInkWidth, includeTimeSignature, clefWidth);
-
     public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,
         int timeSigBeats = 4, int timeSigBeatType = 4)
     {
@@ -406,18 +393,37 @@ internal static class SpacingRules
         double widestInk = 0.0;
         foreach (var staffGroup in score.StaffGroups)
             foreach (var staff in staffGroup.Staves)
-            {
-                if (!ContributesToKeyColumnWidth(staff))
-                    continue;
-                var key = staff.PerStaffKeySignature ?? score.KeySignature;
-                var pv = staff.PrimaryVoice;
-                for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
-                    foreach (var item in pv.Measures[m].Items)
-                        if (item is KeySignatureChangeItem kc)
-                            key = kc.NewKey;
-                widestInk = Math.Max(widestInk, EngravedKeyInkWidth(staff, key));
-            }
+                widestInk = Math.Max(widestInk,
+                    ActiveKeyInkForStaff(score, staff, startMeasureIndex));
         return widestInk;
+    }
+
+    /// <summary>
+    /// The key-signature ink ONE staff engraves at the head of a system starting at
+    /// <paramref name="startMeasureIndex"/> — 0 for a staff with no <c>Key_engraver</c>, and
+    /// 0 for a C-major signature (which has no stencil, hence an empty extent).
+    /// </summary>
+    /// <remarks>
+    /// The per-grob half of <see cref="WidestActiveKeyInk"/>, which is the union of exactly
+    /// this over the system's staves — ONE model, so the group extent and any individual
+    /// grob's extent cannot drift apart. The individual extent is what
+    /// <c>Staff_spacing::get_spacing</c> reads as <c>last_ext</c>
+    /// (<see cref="LineStartColumn.LineStartSpring"/>): the break-align COLUMN is shared, the
+    /// grob in it is the staff's own.
+    /// </remarks>
+    public static double ActiveKeyInkForStaff(
+        MultiStaffScore score, Staff staff, int startMeasureIndex)
+    {
+        if (!ContributesToKeyColumnWidth(staff))
+            return 0.0;
+
+        var key = staff.PerStaffKeySignature ?? score.KeySignature;
+        var pv = staff.PrimaryVoice;
+        for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
+            foreach (var item in pv.Measures[m].Items)
+                if (item is KeySignatureChangeItem kc)
+                    key = kc.NewKey;
+        return EngravedKeyInkWidth(staff, key);
     }
 
     /// <summary>
@@ -979,7 +985,7 @@ internal static class SpacingRules
     /// Each voice with a note/chord column at BOTH moments contributes one wish:
     /// the duration-proportional <paramref name="baseSpring"/> refined by that
     /// voice's stem-direction correction. The wishes are combined with
-    /// <see cref="Spring.Merge"/>, exactly as LilyPond merges the simultaneous
+    /// <see cref="Spring.MergeSprings"/>, exactly as LilyPond merges the simultaneous
     /// voices' spacing wishes for a musical column pair.
     /// </summary>
     /// <remarks>
@@ -994,7 +1000,7 @@ internal static class SpacingRules
         Spring baseSpring, IReadOnlyList<Measure> voices,
         Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams)
     {
-        Spring? merged = null;
+        var wishes = new List<Spring>();
         foreach (var voice in voices)
         {
             var left = NoteColumnAt(voice, tLeft);
@@ -1006,14 +1012,12 @@ internal static class SpacingRules
             // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141).
-            Spring wish = corr != 0
+            wishes.Add(corr != 0
                 ? baseSpring.WithIdealDistance(
                     Math.Max(baseSpring.MinDistance, baseSpring.IdealDistance + corr))
-                : baseSpring;
-
-            merged = merged is null ? wish : Spring.Merge(merged, wish);
+                : baseSpring);
         }
-        return merged ?? baseSpring;
+        return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
     }
 
     /// <summary>
@@ -1050,7 +1054,7 @@ internal static class SpacingRules
         Spring baseSpring, IReadOnlyList<Measure> voices,
         Fraction tLeft, NoteSpacingParameters noteParams)
     {
-        Spring? merged = null;
+        var wishes = new List<Spring>();
         foreach (var voice in voices)
         {
             if (NoteColumnAt(voice, tLeft) is not { } left)
@@ -1058,13 +1062,11 @@ internal static class SpacingRules
 
             double corr = CalculateStemCorrectionToBarline(left, noteParams);
             // LILYPOND-REF: lily/note-spacing.cc:111-113, as in MergeVoiceStemWishes.
-            Spring wish = corr != 0
+            wishes.Add(corr != 0
                 ? baseSpring.WithIdealDistance(Math.Max(0, baseSpring.IdealDistance + corr))
-                : baseSpring;
-
-            merged = merged is null ? wish : Spring.Merge(merged, wish);
+                : baseSpring);
         }
-        return merged ?? baseSpring;
+        return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
     }
 
     /// <summary>

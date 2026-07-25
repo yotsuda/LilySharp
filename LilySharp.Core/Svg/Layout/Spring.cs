@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
+
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
@@ -168,40 +170,64 @@ internal sealed record Spring
         => minDistance > MinDistance ? WithMinDistance(minDistance) : this;
 
     /// <summary>
-    /// Merges two springs by averaging their properties.
-    /// Used when multiple spacing wishes exist for the same column pair.
+    /// Merges the simultaneous spacing wishes for ONE column pair into one spring —
+    /// LilyPond's <c>merge_springs</c>, taking all of them at once.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spring.cc:105-131 Spring::merge()
-    /// - Ideal distances and stretch strengths are averaged
-    /// - Compress strengths use harmonic mean (1/avg(1/k))
-    /// - Headroom: avg_distance = max(min_distance + 0.3, avg_distance)
+    /// LILYPOND-REF: lily/spring.cc:101-129 <c>merge_springs</c>:
+    /// <code>
+    ///   avg_distance += springs[i].ideal_distance ();
+    ///   avg_stretch  += springs[i].inverse_stretch_strength ();
+    ///   avg_compress += 1 / springs[i].inverse_compress_strength ();
+    ///   min_distance  = max (springs[i].min_distance (), min_distance);
+    ///   ... /= springs.size ();
+    ///   avg_distance = max (min_distance + 0.3, avg_distance);
+    ///   ret.set_inverse_stretch_strength (avg_stretch);
+    ///   ret.set_inverse_compress_strength (1 / avg_compress);
+    /// </code>
+    /// The ideal distance and the stretch flexibility are ARITHMETIC means, the compress
+    /// flexibility is the HARMONIC one, the minimum is the MAX, and the merged ideal is
+    /// floored at <c>min_distance + 0.3</c> — LilyPond's own comment: "leave a little
+    /// headroom above the largest minimum distance so that things don't get too cramped".
+    /// <para>
+    /// ⚠️ N at once, NOT a fold of a two-argument merge. Folding weights three wishes
+    /// 1/4 : 1/4 : 1/2 where LilyPond weights them 1/3 each, and re-applies the headroom
+    /// floor at every step — so a system's third staff would count double.
+    /// </para>
+    /// <para>
+    /// ⚠️ The harmonic term is taken UNCONDITIONALLY, which is the whole behaviour of a
+    /// RIGID wish: one spring with <c>inverse_compress_strength == 0</c> contributes
+    /// <c>1 / 0 = +inf</c>, so <c>avg_compress</c> is <c>+inf</c> and the merged strength is
+    /// <c>1 / inf = 0</c> — the merged spring cannot be compressed at all. That is
+    /// LilyPond's arithmetic and not an edge case to be smoothed away: a staff that cannot
+    /// give way stops the whole column pair from giving way. (A notation+tab line start is
+    /// exactly this — the TAB clef's <c>minimum-fixed-space</c> wish sits on its
+    /// <c>0.3 + min_dist</c> floor with nothing left to compress.)
+    /// </para>
+    /// <para>
+    /// <c>set_inverse_compress_strength</c>'s <c>!isfinite</c> guard (spring.cc:172-181) is
+    /// unreachable from here: it would need <c>avg_compress == 0</c>, i.e. EVERY wish
+    /// infinitely compressible, and <c>inverse_compress_strength</c> is always finite.
+    /// </para>
     /// </remarks>
-    public static Spring Merge(Spring a, Spring b)
+    public static Spring MergeSprings(IReadOnlyList<Spring> springs)
     {
-        double avgIdeal = (a.IdealDistance + b.IdealDistance) / 2;
-        double maxMin = Math.Max(a.MinDistance, b.MinDistance);
+        double avgDistance = 0, minDistance = 0, avgStretch = 0, avgCompress = 0;
 
-        // Headroom: ensure some stretch room above min_distance
-        // LILYPOND-REF: spring.cc:122
-        avgIdeal = Math.Max(maxMin + 0.3, avgIdeal);
-
-        // Average stretch strength
-        double avgStretch = (a.InverseStretchStrength + b.InverseStretchStrength) / 2;
-
-        // Harmonic mean of compress strength
-        // LILYPOND-REF: spring.cc:126-128
-        double avgCompress;
-        if (a.InverseCompressStrength > 0 && b.InverseCompressStrength > 0)
+        for (int i = 0; i < springs.Count; i++)
         {
-            avgCompress = 2.0 / (1.0 / a.InverseCompressStrength + 1.0 / b.InverseCompressStrength);
-        }
-        else
-        {
-            avgCompress = Math.Max(0, avgIdeal - maxMin);
+            avgDistance += springs[i].IdealDistance;
+            avgStretch += springs[i].InverseStretchStrength;
+            avgCompress += 1 / springs[i].InverseCompressStrength;
+            minDistance = Math.Max(springs[i].MinDistance, minDistance);
         }
 
-        return new Spring(avgIdeal, maxMin, avgStretch, avgCompress);
+        avgStretch /= springs.Count;
+        avgCompress /= springs.Count;
+        avgDistance /= springs.Count;
+        avgDistance = Math.Max(minDistance + SpacingRules.SpringHeadroom, avgDistance);
+
+        return new Spring(avgDistance, minDistance, avgStretch, 1 / avgCompress);
     }
 
     /// <summary>

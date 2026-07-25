@@ -10,13 +10,13 @@
   <text x="-0.30" y="24.82" font-size="1.12" font-family="Emmentaler-Brace" text-anchor="end"></text>
   <line x1="0.00" y1="16.32" x2="0.00" y2="33.32" stroke="#000000" stroke-width="0.160"/>
   <rect x="43.22" y="20.32" width="0.19" height="9.00"/>
-  <rect x="64.33" y="20.32" width="0.19" height="9.00"/>
-  <rect x="64.82" y="20.32" width="0.60" height="9.00"/>
-  <line x1="0.00" y1="16.32" x2="65.42" y2="16.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.32" x2="65.42" y2="17.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.32" x2="65.42" y2="18.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.32" x2="65.42" y2="19.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.32" x2="65.42" y2="20.32" stroke="#000000" stroke-width="0.100"/>
+  <rect x="64.34" y="20.32" width="0.19" height="9.00"/>
+  <rect x="64.83" y="20.32" width="0.60" height="9.00"/>
+  <line x1="0.00" y1="16.32" x2="65.43" y2="16.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.32" x2="65.43" y2="17.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.32" x2="65.43" y2="18.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.32" x2="65.43" y2="19.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.32" x2="65.43" y2="20.32" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.32" font-size="4.00"></text>
   <text class="music" x="4.30" y="16.32" font-size="4.00" data-pos="635"></text>
   <text class="music" x="6.55" y="18.32" font-size="4.00" data-pos="626"></text>
@@ -49,13 +49,13 @@
   <text class="music" x="60.04" y="19.32" font-size="4.00" data-pos="809"></text>
   <line x1="60.11" y1="19.32" x2="60.11" y2="22.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="43.22" y="16.32" width="0.19" height="4.00" data-pos="751"/>
-  <rect x="64.33" y="16.32" width="0.19" height="4.00" data-pos="770"/>
-  <rect x="64.82" y="16.32" width="0.60" height="4.00" data-pos="770"/>
-  <line x1="0.00" y1="29.32" x2="65.42" y2="29.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="30.32" x2="65.42" y2="30.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="31.32" x2="65.42" y2="31.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="32.32" x2="65.42" y2="32.32" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="33.32" x2="65.42" y2="33.32" stroke="#000000" stroke-width="0.100"/>
+  <rect x="64.34" y="16.32" width="0.19" height="4.00" data-pos="770"/>
+  <rect x="64.83" y="16.32" width="0.60" height="4.00" data-pos="770"/>
+  <line x1="0.00" y1="29.32" x2="65.43" y2="29.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="30.32" x2="65.43" y2="30.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="31.32" x2="65.43" y2="31.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="32.32" x2="65.43" y2="32.32" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="33.32" x2="65.43" y2="33.32" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="30.32" font-size="4.00"></text>
   <text class="music" x="4.30" y="30.32" font-size="4.00" data-pos="635"></text>
   <text class="music" x="6.55" y="31.32" font-size="4.00" data-pos="626"></text>
@@ -92,11 +92,11 @@
   <text class="music" x="60.04" y="33.32" font-size="4.00" data-pos="913"></text>
   <line x1="60.11" y1="33.32" x2="60.11" y2="35.99" stroke="#000000" stroke-width="0.130"/>
   <rect x="43.22" y="29.32" width="0.19" height="4.00" data-pos="857"/>
-  <rect x="64.33" y="29.32" width="0.19" height="4.00" data-pos="870"/>
-  <rect x="64.82" y="29.32" width="0.60" height="4.00" data-pos="870"/>
+  <rect x="64.34" y="29.32" width="0.19" height="4.00" data-pos="870"/>
+  <rect x="64.83" y="29.32" width="0.60" height="4.00" data-pos="870"/>
   <rect x="43.22" y="16.32" width="0.19" height="17.00"/>
-  <rect x="64.33" y="16.32" width="0.19" height="17.00"/>
-  <rect x="64.82" y="16.32" width="0.60" height="17.00"/>
+  <rect x="64.34" y="16.32" width="0.19" height="17.00"/>
+  <rect x="64.83" y="16.32" width="0.60" height="17.00"/>
   <text class="music" x="60.73" y="14.35" font-size="4.00" data-pos="761"></text>
   <text x="13.37" y="39.44" font-size="3.20" text-anchor="middle" data-pos="941">Praise</text>
   <text x="22.04" y="39.44" font-size="3.20" text-anchor="middle" data-pos="948">God</text>

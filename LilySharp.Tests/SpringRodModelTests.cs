@@ -39,43 +39,80 @@ public class SpringRodModelTests
         Assert.True(p.SpaceToBarline);
     }
 
-    // --- Spring.Merge ---
+    // --- Spring.MergeSprings (lily/spring.cc:101-129 merge_springs) ---
 
     [Fact]
-    public void Spring_Merge_AveragesIdealDistances()
+    public void Spring_MergeSprings_AveragesIdealDistances()
     {
         var a = new Spring(10, 5, 5);
         var b = new Spring(20, 5, 15);
 
-        var merged = Spring.Merge(a, b);
+        var merged = Spring.MergeSprings(new[] { a, b });
 
         // Average of 10 and 20 = 15, but headroom: max(5+0.3, 15) = 15
         Assert.Equal(15.0, merged.IdealDistance, 3);
     }
 
     [Fact]
-    public void Spring_Merge_TakesMaxMinDistance()
+    public void Spring_MergeSprings_TakesMaxMinDistance()
     {
         var a = new Spring(10, 3, 7);
         var b = new Spring(10, 7, 3);
 
-        var merged = Spring.Merge(a, b);
+        var merged = Spring.MergeSprings(new[] { a, b });
 
         Assert.Equal(7.0, merged.MinDistance, 3);
     }
 
     [Fact]
-    public void Spring_Merge_EnforcesHeadroom()
+    public void Spring_MergeSprings_EnforcesHeadroom()
     {
         // When average ideal is close to min, headroom ensures some gap
         var a = new Spring(5.1, 5, 0.1);
         var b = new Spring(5.1, 5, 0.1);
 
-        var merged = Spring.Merge(a, b);
+        var merged = Spring.MergeSprings(new[] { a, b });
 
         // Headroom: max(5 + 0.3, 5.1) = 5.3
         Assert.True(merged.IdealDistance >= 5.3 - 0.01,
             $"Merged ideal ({merged.IdealDistance}) should respect headroom >= 5.3");
+    }
+
+    /// <summary>
+    /// THREE wishes are averaged with equal weight. Folding a two-argument merge over them
+    /// weights the first pair 1/4 : 1/4 : 1/2, which is what Lily# used to do — the reason
+    /// merge_springs is ported as an N-ary function.
+    /// </summary>
+    [Fact]
+    public void Spring_MergeSprings_WeighsEveryWishEqually()
+    {
+        var merged = Spring.MergeSprings(new[]
+        {
+            new Spring(3, 0, 3), new Spring(3, 0, 3), new Spring(9, 0, 9),
+        });
+
+        Assert.Equal(5.0, merged.IdealDistance, 6);          // (3+3+9)/3, not 4.5
+        Assert.Equal(5.0, merged.InverseStretchStrength, 6);
+    }
+
+    /// <summary>
+    /// ONE rigid wish makes the merged spring rigid: <c>avg_compress += 1 / 0</c> is
+    /// <c>+inf</c> unconditionally (spring.cc:115), so <c>1 / avg_compress</c> is 0. This is
+    /// the branch a notation+tab line start takes — the TAB clef's wish has nothing left to
+    /// compress — and the one the old two-argument merge got wrong, returning
+    /// <c>avgIdeal - maxMin</c> instead.
+    /// </summary>
+    [Fact]
+    public void Spring_MergeSprings_OneRigidWishMakesTheMergeIncompressible()
+    {
+        var flexible = new Spring(10, 5, 0, 4);
+        var rigid = new Spring(8, 5, 0, 0);
+
+        var merged = Spring.MergeSprings(new[] { flexible, rigid });
+
+        Assert.Equal(9.0, merged.IdealDistance, 6);
+        Assert.Equal(0.0, merged.InverseCompressStrength, 6);
+        Assert.Equal(9.0, merged.Length(-1.0), 6);   // cannot give way at all
     }
 
     // --- the SETTERS: replacing the ideal or the minimum must NOT restate the strengths ---

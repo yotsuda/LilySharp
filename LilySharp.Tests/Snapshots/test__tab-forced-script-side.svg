@@ -6,28 +6,28 @@
 </style>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="16">tab forced script side</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.12" x2="18.36" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.62" x2="18.36" y2="14.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.12" x2="18.36" y2="16.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.62" x2="18.36" y2="17.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.12" x2="19.26" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.62" x2="19.26" y2="14.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="19.26" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.62" x2="19.26" y2="17.62" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.60" y="15.37" font-size="4.00"></text>
-  <rect x="17.27" y="13.12" width="0.19" height="4.50" data-pos="148"/>
-  <rect x="17.76" y="13.12" width="0.60" height="4.50" data-pos="148"/>
-  <rect x="4.74" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="108"/>
-  <text x="5.55" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="108">0</text>
-  <line x1="4.96" y1="14.31" x2="4.96" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="7.74" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="123"/>
-  <text x="8.55" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="123">2</text>
-  <line x1="7.97" y1="14.31" x2="7.97" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="10.99" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="133"/>
-  <text x="11.81" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="133">7</text>
-  <line x1="11.22" y1="14.31" x2="11.22" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="13.76" y="12.22" width="2.60" height="1.79" fill="#FFFFFF" data-pos="147"/>
-  <text x="15.06" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="147">12</text>
-  <line x1="14.47" y1="14.31" x2="14.47" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="5.55" y="18.62" font-size="4.00" data-pos="111"></text>
-  <text class="music" x="8.55" y="11.22" font-size="4.00" data-pos="125"></text>
-  <text class="music" x="11.81" y="11.22" font-size="4.00" data-pos="135"></text>
+  <rect x="18.17" y="13.12" width="0.19" height="4.50" data-pos="148"/>
+  <rect x="18.66" y="13.12" width="0.60" height="4.50" data-pos="148"/>
+  <rect x="5.64" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="108"/>
+  <text x="6.45" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="108">0</text>
+  <line x1="5.87" y1="14.31" x2="5.87" y2="18.81" stroke="#000000" stroke-width="0.130"/>
+  <rect x="8.64" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="123"/>
+  <text x="9.45" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="123">2</text>
+  <line x1="8.87" y1="14.31" x2="8.87" y2="18.81" stroke="#000000" stroke-width="0.130"/>
+  <rect x="11.89" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="133"/>
+  <text x="12.71" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="133">7</text>
+  <line x1="12.12" y1="14.31" x2="12.12" y2="18.81" stroke="#000000" stroke-width="0.130"/>
+  <rect x="14.66" y="12.22" width="2.60" height="1.79" fill="#FFFFFF" data-pos="147"/>
+  <text x="15.96" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="147">12</text>
+  <line x1="15.37" y1="14.31" x2="15.37" y2="18.81" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="6.45" y="18.62" font-size="4.00" data-pos="111"></text>
+  <text class="music" x="9.45" y="11.22" font-size="4.00" data-pos="125"></text>
+  <text class="music" x="12.71" y="11.22" font-size="4.00" data-pos="135"></text>
   <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="96"/>
   <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="96">A</text>
   </g>

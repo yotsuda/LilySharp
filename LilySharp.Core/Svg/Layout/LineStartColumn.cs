@@ -220,17 +220,12 @@ internal static class LineStartColumn
     /// <param name="clefGroupLeft"><see cref="SpacingRules.ClefGroupExtent"/>'s Left: each
     /// clef keeps its own stencil offset inside the group, whose ink-left lands on the
     /// column.</param>
-    /// <param name="keyInkWidth">The KeySignature GROUP's engraved ink width. Passing the
-    /// group's width for every staff that engraves one overstates a narrower staff's own box,
-    /// which cannot change the MAX this returns — and the key is shadowed by the meter
-    /// whenever there is one (measured: probe SKD).</param>
     /// <param name="timeInkWidth">The TimeSignature's ink width, 0 when the prefix has
     /// none.</param>
     public static double MinimumDistanceAtLineStart(
         Model.MultiStaffScore score,
         BreakAlignSpacing.PrefixColumns columns,
         double clefGroupLeft,
-        double keyInkWidth,
         double timeInkWidth,
         int startMeasureIndex)
     {
@@ -246,9 +241,13 @@ internal static class LineStartColumn
             if (notes.Count == 0)
                 continue;
 
-            worst = Math.Max(worst, MinimumDistance(
-                PrefatoryBoxes(staff, columns, clefGroupLeft, keyInkWidth, timeInkWidth),
-                notes));
+            var boxes = new List<ColumnBox>();
+            foreach (var g in PrefatoryGrobs(
+                         score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
+                boxes.Add(new ColumnBox(-SharedBand, SharedBand,
+                    g.InkLeft + g.EswLeft, g.InkRight + g.EswRight));
+
+            worst = Math.Max(worst, MinimumDistance(boxes, notes));
         }
         return worst;
     }
@@ -258,42 +257,67 @@ internal static class LineStartColumn
     private const double SharedBand = 1.0;
 
     /// <summary>
-    /// The prefatory boxes one staff contributes: its clef, and the key and meter it
-    /// ENGRAVES, at the shared break-align columns.
+    /// One break-aligned grob of one staff's prefatory column: its own INK, in the column
+    /// frame, plus the <c>extra-spacing-width</c> that widens it into a spacing BOX.
     /// </summary>
     /// <remarks>
-    /// A tab staff engraves neither: LilyPond removes its <c>Key_engraver</c>
+    /// Both questions the prefatory column answers read this: <c>min_dist</c> wants the
+    /// BOX (ink + esw, <see cref="MinimumDistanceAtLineStart"/>) and
+    /// <c>Staff_spacing::get_spacing</c> wants the bare INK (<c>last_ext</c>,
+    /// <see cref="LineStartSpring"/>). One walk, so the two cannot come to disagree about
+    /// which grobs a staff engraves.
+    /// </remarks>
+    private readonly record struct PrefatoryGrob(
+        BreakAlignSymbol Symbol,
+        double InkLeft, double InkRight, double EswLeft, double EswRight);
+
+    /// <summary>
+    /// The break-aligned grobs one staff contributes to the line-start prefatory column:
+    /// its clef, and the key and meter it ENGRAVES, at the shared break-align columns.
+    /// </summary>
+    /// <remarks>
+    /// A tab staff engraves neither key nor meter: LilyPond removes its <c>Key_engraver</c>
     /// (ly/engraver-init.ly:1214) and gives its TimeSignature no stencil — dumped as an EMPTY
     /// extent, which is why the probe harness reports skipping <c>TKC TABTIME</c>. Its TAB
     /// clef IS an ordinary Clef grob in the shared group, and a wide one.
+    /// <para>
+    /// The key ink is the one THIS staff engraves (<see cref="SpacingRules.ActiveKeyInkForStaff"/>),
+    /// not the group's union: the column X is shared (that is what break-alignment is) but
+    /// the extent is the grob's own, so a transposed part's wider signature does not widen
+    /// its neighbour's grob.
+    /// </para>
     /// </remarks>
-    private static List<ColumnBox> PrefatoryBoxes(
+    private static List<PrefatoryGrob> PrefatoryGrobs(
+        Model.MultiStaffScore score,
         Model.Staff staff,
         BreakAlignSpacing.PrefixColumns columns,
-        double clefGroupLeft, double keyInkWidth, double timeInkWidth)
+        double clefGroupLeft, double timeInkWidth, int startMeasureIndex)
     {
         var stencil = staff.IsTab
             ? SpacingRules.TabClefStencil
             : SpacingRules.ClefStencil(staff.Clef);
         double anchor = columns.ClefX - clefGroupLeft;
 
-        var boxes = new List<ColumnBox>
+        var grobs = new List<PrefatoryGrob>
         {
-            new ColumnBox(-SharedBand, SharedBand,
-                anchor + stencil.Left - SpacingRules.DefaultExtraSpacingWidth,
-                anchor + stencil.Right + SpacingRules.DefaultExtraSpacingWidth),
+            // Clef declares no extra-spacing-width, so it takes separation-item.cc:166-167's
+            // default (-0.1 . 0.1).
+            new PrefatoryGrob(BreakAlignSymbol.Clef,
+                anchor + stencil.Left, anchor + stencil.Right,
+                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth),
         };
 
-        bool engravesPrefatoryStaffGrobs = SpacingRules.ContributesToKeyColumnWidth(staff);
-        if (columns.HasKey && keyInkWidth > 0.0 && engravesPrefatoryStaffGrobs)
-            boxes.Add(new ColumnBox(-SharedBand, SharedBand,
-                columns.KeyX, columns.KeyX + keyInkWidth + KeySignatureEswRight));
+        double keyInkWidth = SpacingRules.ActiveKeyInkForStaff(score, staff, startMeasureIndex);
+        if (columns.HasKey && keyInkWidth > 0.0)
+            grobs.Add(new PrefatoryGrob(BreakAlignSymbol.KeySignature,
+                columns.KeyX, columns.KeyX + keyInkWidth, 0.0, KeySignatureEswRight));
 
-        if (columns.HasTime && timeInkWidth > 0.0 && engravesPrefatoryStaffGrobs)
-            boxes.Add(new ColumnBox(-SharedBand, SharedBand,
-                columns.TimeX, columns.TimeX + timeInkWidth + TimeSignatureEswRight));
+        if (columns.HasTime && timeInkWidth > 0.0
+            && SpacingRules.ContributesToKeyColumnWidth(staff))
+            grobs.Add(new PrefatoryGrob(BreakAlignSymbol.TimeSignature,
+                columns.TimeX, columns.TimeX + timeInkWidth, 0.0, TimeSignatureEswRight));
 
-        return boxes;
+        return grobs;
     }
 
     /// <summary>
@@ -382,5 +406,145 @@ internal static class LineStartColumn
         return new Spring(correctedIdeal, minDistance,
             Math.Max(0.0, stretchability),
             Math.Max(0.0, correctedIdeal - correctedFixed));
+    }
+
+    /// <summary>
+    /// The line-start prefatory-column → first-note spring for the WHOLE system: one
+    /// <c>Staff_spacing</c> wish per staff, merged.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:492-517 <c>breakable_column_spacing</c> — for a
+    /// column pair at the same moment (<c>dt == 0</c>, which a prefatory column and the note
+    /// column it opens always are) LilyPond walks the LEFT column's <c>spacing-wishes</c>,
+    /// keeps the ones carrying <c>Staff_spacing</c> — one per STAFF — builds a spring from
+    /// each with <c>Staff_spacing::get_spacing</c>, and ends in
+    /// <c>spring = merge_springs (springs)</c>. Only when there is no wish at all does it
+    /// fall back to <c>standard_breakable_column_spacing</c>.
+    /// <para>
+    /// The staves differ in WHICH grob is extremal and how wide its ink is, so they differ
+    /// in the space-alist entry consulted and in the distance it yields. On a notation+tab
+    /// system the notation staff ends on its TimeSignature (semi-shrink-space 2.0) while
+    /// the tab staff ends on its TAB clef (minimum-fixed-space 5.0) — its meter has no
+    /// stencil and is skipped for having an empty extent — and the two ideals are averaged.
+    /// Taking the notation staff's wish alone put the first note 0.4 too far right on both
+    /// halves of the ledger pair <c>line-start.time-to-first-note.tab-{concert,keyed}</c>.
+    /// </para>
+    /// <para>
+    /// <c>min_dist</c> is a property of the column PAIR, not of a staff
+    /// (<c>Paper_column::minimum_distance (left_col, right_col)</c>, staff-spacing.cc:210),
+    /// so every wish is floored against the same <see cref="MinimumDistanceAtLineStart"/>.
+    /// The optical correction (staff-spacing.cc:206) is 0 here for every staff: it needs
+    /// <c>bar_y_positions</c> of the extremal grob, which is empty unless that grob is a bar
+    /// line, and a line start has none.
+    /// </para>
+    /// </remarks>
+    /// <param name="ownFixedFloor">A LOWER BOUND on each wish's FIXED distance, expressed
+    /// like everything the caller hands in — see the frame note below — or null for none.
+    /// This is Lily#'s own (<c>LILYSHARP-OWN</c>), not LilyPond's: LilyPond puts a leading
+    /// grace and the lyrics in their OWN paper columns so <c>min_dist</c> reaches them,
+    /// where Lily# folds their widths into the measure's spring 0. It is applied to every
+    /// wish, so it survives the merge (a mean of values each at least the floor is at least
+    /// the floor).</param>
+    /// <returns>The merged spring in the caller's PREFIX-RELATIVE frame (0 = where the
+    /// prefix ink ends, <see cref="BreakAlignSpacing.PrefixColumns.Right"/>), which the
+    /// measure's spring chain speaks. The wishes themselves are built in LilyPond's
+    /// COLUMN-relative frame, because <c>last_ext</c> only means anything there; the shift
+    /// between the two is a constant, and a spring's two strengths are differences, so only
+    /// the two distances move.</returns>
+    public static Spring LineStartSpring(
+        Model.MultiStaffScore score,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft,
+        double timeInkWidth,
+        int startMeasureIndex,
+        double? ownFixedFloor)
+    {
+        double minDistance = MinimumDistanceAtLineStart(
+            score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
+        double floor = ownFixedFloor is { } f ? columns.Right + f : double.NegativeInfinity;
+
+        var wishes = new List<Spring>();
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            // A lyric / chord row is a Lyrics-like context: no Staff_spacing grob, hence no
+            // spacing wish — the same set MinimumDistanceAtLineStart walks.
+            if (staff.IsTextRow)
+                continue;
+
+            var grobs = PrefatoryGrobs(
+                score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
+            if (ExtremalBreakAlignedGrob(grobs) is not { } last)
+                continue;
+
+            wishes.Add(WishFrom(last.Symbol, last.InkLeft, last.InkRight, floor, minDistance));
+        }
+
+        // No staff at all — a system made only of chord / lyric rows. LilyPond has no such
+        // system: those contexts carry no clef, meter or Staff_spacing, so its prefatory
+        // column would be empty and `springs` empty too, landing on
+        // standard_breakable_column_spacing (spacing-spanner.cc:514-515). Lily# DOES reserve
+        // a shared prefix for such a system, and prices the first column from that
+        // reservation — LILYSHARP-OWN, and only reachable where LilyPond's model does not
+        // apply. The reserved columns stand in for the staff nobody engraves.
+        var merged = wishes.Count > 0
+            ? Spring.MergeSprings(wishes)
+            : WishFrom(
+                columns.HasTime ? BreakAlignSymbol.TimeSignature
+                : columns.HasKey ? BreakAlignSymbol.KeySignature
+                : BreakAlignSymbol.Clef,
+                columns.HasTime ? columns.TimeX
+                : columns.HasKey ? columns.KeyX
+                : columns.ClefX,
+                columns.Right, floor, minDistance);
+
+        return new Spring(
+            merged.IdealDistance - columns.Right, merged.MinDistance - columns.Right,
+            merged.InverseStretchStrength, merged.InverseCompressStrength);
+    }
+
+    /// <summary>
+    /// One staff's <c>Staff_spacing</c> wish: its extremal prefatory grob's
+    /// <c>first-note</c> space-alist entry against that grob's own ink, floored.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:143-220 — the alist lookup
+    /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>) and the <c>0.3 + min_dist</c>
+    /// correction (<see cref="SpringWithMinimumDistanceFloor"/>) that ends it.</remarks>
+    private static Spring WishFrom(
+        BreakAlignSymbol symbol, double inkLeft, double inkRight,
+        double fixedFloor, double minDistance)
+    {
+        var entry = BreakAlignSpacing.GetSpacing(symbol, BreakAlignSymbol.FirstNote);
+        var (fixed_, ideal, stretchability) =
+            BreakAlignSpacing.SpaceAlistDistances(entry, inkLeft, inkRight);
+        return SpringWithMinimumDistanceFloor(
+            ideal, Math.Max(fixed_, fixedFloor), stretchability, minDistance);
+    }
+
+    /// <summary>
+    /// <c>Spacing_interface::extremal_break_aligned_grob</c> with <c>d == LEFT</c>: the
+    /// prefatory grob whose ink reaches FURTHEST RIGHT, skipping the ones whose extent is
+    /// empty.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-interface.cc:190-230. The comparison is
+    /// <c>d * (ext[-d] - last_ext[-d]) &lt; 0</c>, which for <c>d == LEFT</c> reads
+    /// <c>ext[RIGHT] &gt; last_ext[RIGHT]</c>, and :219-220 <c>continue</c>s on an empty
+    /// extent — the branch that makes a tab staff's stencil-less TimeSignature invisible
+    /// here even though the grob is in the shared time column. The walk runs BACKWARDS
+    /// (:201 <c>for (vsize i = elts.size (); i--;)</c>) and the comparison is strict, so a
+    /// tie is won by the grob LATEST in break-align order; <paramref name="grobs"/> is in
+    /// that order.
+    /// </remarks>
+    private static PrefatoryGrob? ExtremalBreakAlignedGrob(List<PrefatoryGrob> grobs)
+    {
+        PrefatoryGrob? last = null;
+        for (int i = grobs.Count; i-- > 0;)
+        {
+            if (grobs[i].InkRight <= grobs[i].InkLeft)
+                continue;   // ext.is_empty ()
+            if (last is not { } l || grobs[i].InkRight > l.InkRight)
+                last = grobs[i];
+        }
+        return last;
     }
 }
