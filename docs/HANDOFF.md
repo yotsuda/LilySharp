@@ -32,67 +32,55 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `8d1368d2`・以降は audit と docs
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **34 ahead・未 push**）。
-**3316 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 81/97 exact・total |residual| 0.006268 ss / 92 distances・counts 5/5**。
-この回の snapshot 再ベースは **27 枚**（`dcbf08e9` の chords 系 11 枚＋`98672c3a` の lyrics 系
-16 枚。どちらも正当化する台帳キーを message に名指し済＝§5.2.1③）。
+最終更新 2026-07-26（第7セッション）/ HEAD は `e467d51e`（audit のみ・製品コード変更ゼロ）
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **37 ahead・未 push**）。
+**3320 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 83/101 exact・total |residual| 0.875472 ss / 95 distances・counts 6/6**。
+この回の snapshot 再ベースは **0 枚**（製品コードに触っていない）。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。この回の推移は
-**0.444868 →（和音 1 点を閉じて）0.006268 →（歌詞 4 点を開けて）0.395868 →
-（その 4 点を閉じて）0.006268**。**開けた分の増加は後退ではない**（§5.2.1④）。
-**残る非ゼロ 16 点は全部 clef sliver と Pango 量子化の 2 族**＝閉じる予定の無い名前付き残差。
+⚠️ **total を過去の値と直接比べない**（点集合が違う）。この回は
+**0.006268 →（staff ばねの 2 点を開けて）0.875472**。**開けた分の増加は後退ではない**（§5.2.1④）。
+非ゼロは **18 点**＝従来の 16 点（clef sliver・Pango 量子化。⚠️ 動いていない）＋
+この回に開けた 2 点（`page.stretched.staff-staff-inside` −0.495460 /
+`system.stretched-distance.two-staff` +0.373744）。
 
-⚠️ **作業ツリーに `samples/amazing-grace.lys` と `samples/canon-in-d.lys` が未 commit で残っている。**
-私の変更ではなく、**`LILYSHARP_UPDATE_SNAPSHOTS=1` を立てた実行が書き換えたもの**
-（`partial` を section 内へ／`$ground` → `ground` という文法移行）。中身は妥当に見えるが
-**別件なので混ぜずに判断すること**。⚠️ 再ベースのたびに出る＝§7-8 の「意図しないファイル」枠。
+### このセッションで起きたこと ＝ **▶ は「測れない問い」で、その下に本物があった**
 
-### このセッションで起きたこと ＝ **中心合わせの 2 grob が両方とも LP になった**
-
-前セッションの §1 は**着手時点で既に stale**（HEAD も台帳も進んでいた）。§0 の裏取りで判明。
+前セッションの §1 は**着手時点で既に stale**（samples 2 件は `a5a8db9a`・`8f69c448` で commit 済）。
 
 | やったこと | 結果 |
 |---|---|
-| §0 の裏取り | 「対はまだ起票されていない」は誤り＝`34111b9c` で `staffless.*` 4 点が入っていた |
-| **ChordName のアンカーを字面移植**（`dcbf08e9`。ユーザー判断＝LP に合わせる） | `staffless.line-start.chords-vs-staff` −0.438600 → **0** |
-| **歌詞の対を起票**（`4fab5800`。狭い音節で LP を恒等にする新規実測 2 スコア） | +0.151200 / +0.238400 で OPEN |
-| **LyricText の alignment extent を字面移植**（`98672c3a`。LP 実測 5 スコアで `he` の中身を確定） | 歌詞 4 点すべて **exact**。total → **0.006268 ss**・79/95 |
-| **§2A の対を起票**（`beb76809`。台帳コントロール＋不変条件テスト） | ゲート差は **2.650000**（⚠️ 旧記述の 2.2 は誤り） |
-| **§2A の第3モデルを閉じる**（`8d1368d2`。3 経路を 1 モデルへ） | 出力は**不変**＝該当 fixture が無いだけ（構成ではない） |
-| **§2B の 2 項目を測る**（`d9b54386`＝全譜 union・`05b3c46c`＝同一譜 knee） | どちらも**構造は乖離・ページには届かない**。knee だけ点を残した |
+| §0 の裏取り | HEAD が `8d1368d2` でなく `8f69c448`・ahead 34 でなく 36・samples の未 commit 枠は消滅 |
+| **▶ の前提を実コードで確認** | **`BuildSystemSkylines` の minimum-vs-final は Lily# では同じ数**＝測れない（下記） |
+| **staff ばねの対を起票**（`e467d51e`。books JSS/JSSC＋台帳 4 点） | 予測は**自前の falsifier ごと的中**（下記）。−0.495460 / +0.373744 で OPEN |
 
-**この回の恒久知識は §1 に溜めず出してある**（§4）。戻るときはここから:
+**▶ が測れなかった理由**（同じ問いを再度開かないために）: LP は system 内の各譜にも
+**ページの鎖と同じ springs_ にばねを 1 本ずつ積む**（`page-layout-problem.cc:651-720`。ideal＝
+`staff-staff-spacing` の basic-distance 9、伸びの逆強度＝stretchability 5）。Lily# の
+`PageLayouter.PositionSystemsOnPage` は **system 境界にしかばねを作らない**ので、譜間は
+どの force でも `CalculateSystemHeight`（＝Align_interface の最小）のまま。⇒ **minimum も
+最終位置も同じ数**。スカイラインの規約（`:1080-1095` は minimum_translations を取る）は
+**このばねが入るまで観測不能**。
 
 | 知りたいこと | 置き場所 |
 |---|---|
-| 和音記号/音節のアンカーと `he` の中身（0.675 / 0.6887 / 0.750・臨時記号と付点は入らない） | `probes/staffless-system.ly` のヘッダ＋user memory＋`ParentAlignmentCentresPerColumn` の remarks |
-| 和音グリッドは別 grob（`GridChordName` は LP も中心合わせ・ただし小節の四角の中心） | `SharedRenderer.Marks` の remarks＋§3 の決定表 |
-| §2A ゲートの 2.650000 とその内訳 | `system.knee-beam-notes` 隣の台帳 `why`＋`BreakGateAndLayout_PriceTheSameLineStart` |
-| §2B の 2 つの実測（IS3/IS3C・KNE/KNEC） | `probes/page-vertical.ly` のヘッダ（予測と外れも含めて全部） |
+| staff ばねの実測・予測・罠（圧縮域に落ちた第1案／`systems-per-page` で fallback を測っていた件） | `probes/page-vertical.ly` の JSS/JSSC ヘッダ＋台帳 4 点の `why` |
+| 「slack がどこへ行ったか」（Lily# は system 間へ全部） | `system.stretched-distance.two-staff` の `why`（⚠️ **magnitude は未説明**と明記済） |
 
-**この回に踏んだ罠**（§5.0 に汎化済・ここでは名前だけ）: ①対照が同じ音楽でなかった（2 回）
-②対の両側は**小節数**も揃える ③描画だけ直して予約を置き去りにした ④省略可能引数の既定値が
-LP に無いモデルだった ⑤**「dead」と言う前にメンバー形で grep する**（下記）。
+**この回に踏んだ罠**（§5.0 に汎化済・ここでは名前だけ）: ①**ragged-bottom は伸長しか止めない**
+＝ページが埋まると両者とも**圧縮域**へ落ちる（別 regime）②**`systems-per-page` は Lily# では
+fallback を踏む**（17 systems・最終ページ 5 で候補が全滅→1 ページに全部）。**count の点が
+無ければ、存在しないページの距離を 3 つ記録していた**＝§5.2.1 の網が効いた実例。
 
-⚠️ **`SystemLayout.PrefixWidth` を「誰も読んでいない＝dead」と書いたのは誤り**（`8d1368d2` の
-message と旧 §1）。実際は **`TrillSpannerEngraver.cs:153`＝改行をまたぐトリルの継続セグメントの
-開始 X** と `TabOnlyKeyPrefixTests` が読む。⇒ **削除しない。** `8d1368d2` はここも彫られた union へ
-変えた＝**製品の量を変えていた**（向きは正しい）。教訓は `.PrefixWidth` のような一般語は
-`\.PrefixWidth\b` の形で絞ること（同名の別メンバーに埋もれる）。
+### ▶ 次の一手 ＝ **staff ばねをページの鎖へ入れる**（**出力が動く＝要承認**）
 
-### ▶ 次の一手 ＝ **`BuildSystemSkylines` の offset は minimum か最終位置か**（§2B の本命）
-
-LP は各譜を **`minimum_translations`** で merge する＝「上スカイラインでは全譜を上へ詰めたと
-仮定する」（`page-layout-problem.cc:1070-1074` の LP 自身のコメント）。Lily# は末尾譜を
-**最終 `systemHeight`** に置く（`SkylineBuilder`）。⇒ **staff ばねが最小より伸びたページ**で
-差が出るはず。⚠️ **未測定**。⚠️ 出力（system 間隔）が動くので対を先に。
-
-⚠️ **同じ regime の未確認リード**（`d9b54386`）: 3 譜の高音が system 内を押し広げる量が
-**Lily# +4.595 対 LP +2.595**。⚠️ **紙面が揃っていない**（LP はプローブの紙・Lily# は既定の
-内容サイズ紙＝§3 の意図的乖離）ので**まだ欠陥と読まない**。床も違う（9.000000 / 10.500000）。
-**紙面を揃えた対でこの 2 つを一緒に見る**のが次の設計。
+`PageLayouter.PositionSystemsOnPage` の鎖に、system ごとに**譜間ばね**（ideal 9 / 逆強度 5 /
+`ensure_min_distance` は Align_interface の最小）を差し込み、解いた位置で各譜を配置する。
+⇒ 現状は `SystemLayout` が譜の Y を持たず `CalculateSystemHeight` のスカラだから、
+**「今の構造では表現できない」型（§5.2）**＝構造から直す。閉じるべきは
+**`page.stretched.staff-staff-inside` と `system.stretched-distance.two-staff` の 2 点同時**。
+片方だけ 0 にしたのは移植でなく金の移動。⚠️ 入ったあとで初めて §2B のスカイライン規約
+（minimum か最終か）が測れるようになる。
 
 #### その次の候補
 
@@ -103,15 +91,16 @@ LP は各譜を **`minimum_translations`** で merge する＝「上スカイラ
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 16 点・全部 0.0014 以下**（この 2 族だけ。この回に閉じた 5 点以外は
-動いていない）:
+**非ゼロで残っている台帳点は 18 点**（旧 16 点は**この回は 1 つも動いていない**）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
 | clef sliver（`{page.stretched,page.clef}.first-staff-refpoint`・`system.{stretched,clef-bounded}-distance`） | 4e-5〜8.3e-4 | LP の実効 scale 未特定（§2C）。**LP を instrument するまで動かせない** |
 | Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1・`barline.next.down-stems-after-clef`） | 5e-6〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**伝聞で未再検証**（tie の 0.001391 が Pango で説明が付くかは未確認） |
+| **`page.stretched.staff-staff-inside`**（`e467d51e` で開けた） | **−0.495460** | ページの鎖に譜間ばねが無い＝▶ そのもの。control（`page.natural.staff-staff-inside`）は両側 exact なので**この残差は伸びの全量** |
+| **`system.stretched-distance.two-staff`**（同上） | **+0.373744** | 上の裏面＝slack が全部 system 間ばねへ行く。⚠️ **符号と向きだけが予測どおりで、量は未説明**（台帳の `why` に明記）|
 
-#### この移植で分かったこと（同じ regime に触るとき用）
+#### 前回の移植で分かったこと（歌詞・和音アンカーの regime に触るとき用）
 
 - ★ ⚠️ **台帳点が「閉じる先の数値」を先に名指していた**（0.938600 − 0.500000 = 0.438600）。
   実装後の残差は `8.085000000`＝予測どおり。**閉じる前に算術で犯人を名指せた点は、
@@ -210,8 +199,11 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **構造の乖離は残るが観測不能**で、点が guard になっている。
 - **`BuildSystemSkylines` の全譜 union** — ⚠️ **測った。内側譜は届かない**（probe `IS3`/`IS3C`・
   §1）。「内側譜の ink が edge 譜の silhouette を突き抜ける」は**音高では起こらない**（詰め offset
-  9 ss ＝ 約 2.5 オクターブ）。**残る本命は offset が minimum_translations であること**＝
-  Lily# は最終位置を使う。ばねが伸びたページで対を。
+  9 ss ＝ 約 2.5 オクターブ）。
+- ~~**offset が minimum_translations か最終位置か**~~ — ⚠️ **問いとして成立しない**（`e467d51e`）。
+  Lily# には譜間ばねが無く、譜間は**どの force でも Align_interface の最小**なので
+  **minimum＝最終位置**。**先に §1 の ▶（譜間ばね）を入れる**こと。入れたあとで
+  「スカイラインは minimum を取る」（`page-layout-problem.cc:1080-1095`）が初めて測れる。
 - **cross-staff beam 機能そのもの** — `BeamMember.TargetStaffIndex` を立てる producer が皆無で
   `IsCrossStaff` は到達不能（`@cross` は描画側にしか流れない）。skyline 方針（＝LP は除外）は
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
@@ -230,6 +222,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### D. Y 軸（ページ縦）の残り
 
+- ★ **譜間ばねがページの鎖に無い**＝§1 の ▶。台帳 2 点が起票済（`e467d51e`）。
+  ⚠️ **圧縮側でも同じ穴が開いている**: ページが埋まると LP は譜間も縮める（実測: 本 probe の
+  cap 無し版で inside 8.651797）。**伸長を入れるとき圧縮側の逆強度
+  （`inverse_compress_strength = ideal − min`・`spring.cc:198-217`）も同時に見ること**
 - **圧縮 regime は未実装**（順序は「余白 → 圧縮」。入れるときは**圧縮が実際に走るケース**
   ＝`SystemsPerPage` 強制などを同時に用意する。過去に PASS 2 を両方向 solve へ替えて測ったら
   1 バイトも動かなかった＝当時は伸長側しか選ばれていなかった）
@@ -427,6 +423,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
    1 行に収めない**（2 系になる）＝列ごとの引き算そのものが成立しない。
    「自然幅は 2e-5 一致」はこの引き算から出た**誤り**で、撤回済み
    （正しい自然幅は `compressed-line-force.ly` の CLW）。
+7. ★ **`ragged-bottom` は伸長しか止めない**（2026-07-26）。ページが埋まると LP は
+   **ragged 指定でも圧縮する**（警告は出るが出力は圧縮）。⇒ 縦の対を「justified vs ragged」で
+   作ったのに**両側とも圧縮域**に落ち、差が 1 桁も出ない形で「乖離なし」と読むところだった。
+   **伸長 regime を測るなら、ページに slack が残る本数まで systems を減らす**
+   （`max-systems-per-page`）。⚠️ **どちらの regime に居るかは、量が spring の ideal より
+   大きいか小さいかで判定できる**（ここでは inside 8.651797 < ideal 9 ＝圧縮）。
+8. ★ **paper 変数が Lily# 側で fallback を踏むと、存在しないページを測る**（2026-07-26）。
+   `systems-per-page = #6` は LP では効くが、Lily# の `PageBreaker` は
+   **本数が厳密に一致しない候補を全部落とす**ので最終ページが 5 本になる曲では解が無くなり、
+   **1 ページに全 system**（内容サイズ紙）へ落ちる。距離の点は 3 つとも「もっともらしい数」を
+   返し、**気づいたのは本数の点だけ**。⇒ **index で読む点には必ず「そのページの本数」の点を
+   添える**（§5.2.1 の網の実例）。
 
 ### 5.1 ワークフロー規律
 
