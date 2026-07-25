@@ -53,6 +53,110 @@ public class SpacingInvariantTests
         score main "x" { staff melody }
         """;
 
+    /// <summary>
+    /// A grand staff whose UPPER part is transposed: it prints its own D-major signature
+    /// (2 sharps) beside a concert-pitch C-major staff, so the engraved key column belongs to
+    /// no score-level key at all. LilyPond's own key column here is the union of the staves'
+    /// signatures (probe TSA dumps KEY ext 2.200000 over a score whose key is C major).
+    /// </summary>
+    private const string TransposedGrandStaff = """
+        time 4/4
+        key c major
+        part upper { clef treble transpose d }
+        part lower { clef bass }
+        section Main {
+          upper { c'4 d e f | g2 e | }
+          lower { c4 d e f | g2 e | }
+        }
+        form main { Main }
+        score main "x" { grandStaff { staff upper staff lower } }
+        """;
+
+    /// <summary>
+    /// ⚠️ OPEN DEFECT, held at its current size so the fix shows up in the diff: the BREAK GATE
+    /// and the LAYOUT price a line start from two different key models, and disagree by
+    /// 2.650000 on a score where only one staff engraves a signature.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond has ONE model — its page/line breaker solves the real springs
+    /// (lily/constrained-breaking.cc), so "what the breaker books for a line start" is the same
+    /// quantity as "what the layout books" BY CONSTRUCTION, and any Lily# difference is a Lily#
+    /// defect with no LilyPond measurement needed (docs/HANDOFF.md section 5.2.1-2).
+    /// </para>
+    /// <para>
+    /// The layout reserves <see cref="SpacingRules.WidestActiveKeyInk"/> — the union of the
+    /// staves' OWN signatures, skipping staves that engrave none — and is exact against
+    /// LilyPond (ledger line-start.clef-to-time.mixed-key-grand-staff, 6.853400). The gate
+    /// reserves <c>score.LeadingKey</c> instead (SystemBreaker.cs:66-69 and
+    /// IncrementalCompiler.cs:170-174), which on this score is C major and books NOTHING: the
+    /// 2.650000 is the key's 2.200000 plus the Clef→Key and Key→Time gaps that only open when
+    /// a signature is engraved.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS IS NOT A LEDGER POINT, on purpose: the gate's only visible consequence is a line
+    /// BREAK, and a break flips inside a 2.650000 window — a corpus entry built on one would
+    /// swing on a thousandth of a staff space and measure the fixture rather than the engine.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHEN THE GATE IS FIXED this test must become <c>Assert.Equal(layout, gate)</c> with
+    /// the recorded difference deleted, NOT re-pinned to a new number. And the fix must move
+    /// the GATE up to the layout: the ledger point above is what says which side is right.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void BreakGateAndLayout_PriceTheSameLineStart()
+    {
+        var (_, _, _, score) = Collect(TransposedGrandStaff);
+
+        double clefWidth = SpacingRules.MaxClefWidth(score);
+        double gate = SpacingRules.CalculatePrefixWidth(
+            clefWidth, score.LeadingKey, includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+        double layout = BreakAlignSpacing.CalculatePrefixWidth(
+            clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+
+        // The layout half is the one LilyPond agrees with: its meter's ink ends at 9.353400
+        // (probe TSA — TIME anchor 7.653400, ext 1.700000), which is this number exactly.
+        Assert.Equal(9.353400, layout, precision: 6);
+
+        // …and the gate is short by the whole engraved key column plus its two gaps.
+        Assert.Equal(2.650000, layout - gate, precision: 6);
+    }
+
+    /// <summary>
+    /// The control for the test above: with NO transposed part the two models read the same key,
+    /// so they already agree. Without this, "the gate is 2.65 short" could be read as a constant
+    /// offset in the gate rather than as the missing per-staff key it is.
+    /// </summary>
+    [Fact]
+    public void BreakGateAndLayout_AlreadyAgreeWhenNoStaffCarriesItsOwnKey()
+    {
+        var (_, _, _, score) = Collect("""
+            time 4/4
+            key d major
+            part upper { clef treble }
+            part lower { clef bass }
+            section Main {
+              upper { d'4 e fis g | a2 fis | }
+              lower { d4 e fis g | a2 fis | }
+            }
+            form main { Main }
+            score main "x" { grandStaff { staff upper staff lower } }
+            """);
+
+        double clefWidth = SpacingRules.MaxClefWidth(score);
+        Assert.Equal(
+            BreakAlignSpacing.CalculatePrefixWidth(
+                clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
+                score.TimeSignature.Beats, score.TimeSignature.BeatType),
+            SpacingRules.CalculatePrefixWidth(
+                clefWidth, score.LeadingKey, includeTimeSignature: true,
+                score.TimeSignature.Beats, score.TimeSignature.BeatType),
+            precision: 6);
+    }
+
     [Fact]
     public void BothSpringSystems_AgreeOnEveryMusicalSpring()
     {

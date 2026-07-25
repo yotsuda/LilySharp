@@ -2378,6 +2378,17 @@ internal static class LpGeometryProbes
         new("tab.staff.line-span.six-string", TAB6, g => g.StaffLineSpan()),
         new("tab.staff.line-span.four-string", TAB4, g => g.StaffLineSpan()),
         new("line-start.time-signature-cross-staff-alignment", TSA, g => g.TimeSignatureAlignmentSpread()),
+        // …and the ABSOLUTE distance the spread cannot see. The alignment point is an identity
+        // (both meters at one x), so it holds however wide the shared key column is — including
+        // not at all. This one SPANS that column: clef to meter across a key only ONE staff
+        // engraves, so it is the corpus's only guard that the line start is booked from the
+        // union of the staves' OWN signatures (SpacingRules.WidestActiveKeyInk /
+        // ActiveKeyInkForStaff) rather than from the score-level key, which here is C major and
+        // books nothing. Pointing that reservation at score.KeySignature moves this by
+        // 2.650000 — the key's 2.2 plus the Clef->Key and Key->Time gaps that only open when a
+        // signature is engraved.
+        new("line-start.clef-to-time.mixed-key-grand-staff", TSA,
+            g => g.ClefToTimeSignatureOnFirstSystem()),
         new("line-start.clef-to-time.keyed", DCTK, g => g.ClefToTimeSignatureOnFirstSystem()),
         // The break-align draw-walk regimes (reserve/draw split): KCS is the standard-key
         // CONTROL, KCC the same two sharps declared `key custom` — the reservation reads
