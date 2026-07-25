@@ -4,14 +4,13 @@
 // Lily# features on display:
 //   octave absolute  — every pitch is anchored to C4; nothing drifts
 //   part { octave 3 }— the bass re-anchors to C3, so no comma pile-up
-//   phrase / $ref    — the A theme is written once and played twice
-//   partial 8        — the two-sixteenth pickup, declared ONCE for all parts
+//   phrase / ref     — the A theme is written once and played twice
+//   partial 8        — the pickup, declared ONCE for all parts of the section
 title "Für Elise"
 composer "L. v. Beethoven"
 tempo 120
 time 3/8
 key a minor
-partial 8
 octave absolute
 
 part rh { clef treble }
@@ -40,23 +39,24 @@ phrase themeA_lh {
 }
 
 section Main {
+  partial 8
   rh {
     e'16@pp dis' |
-    $themeA_rh
+    themeA_rh
     e'8. g'16 f' e' |
     d'8. f'16 e' d' |
     c'8. e'16 d' c' |
     b8 r16 e e' dis' |
-    $themeA_rh
+    themeA_rh
   }
   lh {
     r8 |
-    $themeA_lh
+    themeA_lh
     c16 g c' r16 r8 |
     g,16 g b r16 r8 |
     a,16 e a r16 r8 |
     e,16 e gis r16 r8 |
-    $themeA_lh
+    themeA_lh
   }
 }
 

@@ -3,7 +3,7 @@
 // progressively livelier variations (an excerpt in the original's spirit).
 //
 // Lily# features on display:
-//   phrase / $ref    — the 4-bar ground is written ONCE...
+//   phrase / ref     — the 4-bar ground is written ONCE...
 //   repeat unfold    — ...and cycled 13 times with a single statement
 //   octave absolute  — with the bass re-anchored to C3 (part { octave 3 })
 //   R1               — whole-measure rests while the ground establishes itself
