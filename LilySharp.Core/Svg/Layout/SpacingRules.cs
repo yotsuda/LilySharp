@@ -2992,6 +2992,54 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// How far the MUSICAL ink on each timing column reaches past that column, on each side —
+    /// the note half of LilyPond's <c>keep_inside_line_</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:431-432 — <c>keep_inside_line_ =
+    /// col-&gt;extent (col, X_AXIS)</c>, the column's own INK. Not the spacing box: an
+    /// <c>extra-spacing-width</c> is read by <c>Separation_item</c>, it is not part of a
+    /// grob's X-extent, so <see cref="CalculateLeftExtent"/> and
+    /// <see cref="CalculateNoteheadRightExtent"/> are used bare here where
+    /// <see cref="MusicalColumnLeftReach"/> (which serves <c>Paper_column::minimum_distance</c>)
+    /// adds it.
+    /// <para>
+    /// The column reference point coincides with a note head's LEFT edge, so a plain head
+    /// reaches its full width RIGHT and nothing left; what reaches LEFT is an accidental
+    /// (probe TKT read a note carrying one at 1.234272 against a plain note's 0.100000, both
+    /// including the 0.1 / 0.2 <c>extra-spacing-width</c> that this function excludes).
+    /// </para>
+    /// <para>
+    /// Every measure at the index is walked — a paper column is shared by all staves and
+    /// voices — and items are matched to columns by ONSET, the same walk
+    /// <see cref="ApplyTabChordSpacing"/> makes.
+    /// </para>
+    /// </remarks>
+    internal static (double[] Left, double[] Right) MusicalInkOverhangsPerColumn(
+        IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings)
+    {
+        var left = new double[timings.Count];
+        var right = new double[timings.Count];
+        foreach (var measure in measures)
+        {
+            var onset = Fraction.Zero;
+            foreach (var item in measure.Items)
+            {
+                if (IsMusicalColumn(item))
+                    for (int t = 0; t < timings.Count; t++)
+                        if (timings[t] == onset)
+                        {
+                            left[t] = Math.Max(left[t], CalculateLeftExtent(item));
+                            right[t] = Math.Max(right[t], CalculateNoteheadRightExtent(item));
+                            break;
+                        }
+                onset += item.Duration;
+            }
+        }
+        return (left, right);
+    }
+
+    /// <summary>
     /// Floors a LEAD-SHEET bar at a readable grid-cell width. Row bars carry
     /// no notation ink, so without a floor a long chart packs every bar onto
     /// one line; with it the chart wraps like a song-book grid.

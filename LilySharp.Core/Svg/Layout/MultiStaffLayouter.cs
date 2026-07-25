@@ -901,10 +901,11 @@ internal sealed class MultiStaffLayouter
         var measureAllMeasures = new List<List<Measure>>();
         var measureBarlineWidths = new List<double>();
         double totalBarlineWidth = 0;
-        // Per measure, per column: how far the CENTRED ink on that column reaches beyond it —
-        // LilyPond's keep_inside_line_, which is symmetric here because the only grobs Lily#
-        // centres on a column are text (see the rod block below).
-        var measureColumnOverhangs = new List<double[]>();
+        // Per measure, per column: how far that column's own ink reaches PAST the column, on
+        // each side — LilyPond's keep_inside_line_ = col->extent (col, X_AXIS), negated on
+        // the left. Not symmetric: a note head reaches its full width right and nothing left,
+        // while a centred chord symbol reaches half its width both ways.
+        var measureColumnOverhangs = new List<(double[] Left, double[] Right)>();
 
         // A compressed multi-measure rest is ONE bar between two bar-line columns,
         // so the measures a run swallows contribute neither springs nor bar lines;
@@ -923,7 +924,8 @@ internal sealed class MultiStaffLayouter
                 measureTimings.Add(allTimings);
                 measureAllMeasures.Add(allMeasures);
                 measureBarlineWidths.Add(0);
-                measureColumnOverhangs.Add(System.Array.Empty<double>());
+                measureColumnOverhangs.Add(
+                    (System.Array.Empty<double>(), System.Array.Empty<double>()));
                 continue;
             }
 
@@ -1030,12 +1032,27 @@ internal sealed class MultiStaffLayouter
                 springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet);
             var chordHalf = SpacingRules.ChordCentredHalfWidthPerColumn(
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
-            var overhangs = new double[allTimings.Count];
-            for (int c = 0; c < overhangs.Length; c++)
-                overhangs[c] = Math.Max(
+            var leftOverhangs = new double[allTimings.Count];
+            var rightOverhangs = new double[allTimings.Count];
+            for (int c = 0; c < leftOverhangs.Length; c++)
+            {
+                // Centred text reaches half its width to EITHER side.
+                double half = Math.Max(
                     c < lyricHalf.Length ? lyricHalf[c] : 0.0,
                     c < chordHalf.Length ? chordHalf[c] : 0.0);
-            measureColumnOverhangs.Add(overhangs);
+                leftOverhangs[c] = half;
+                rightOverhangs[c] = half;
+            }
+            // …and so does the MUSICAL ink on the column, which is the rest of
+            // col->extent (col, X_AXIS).
+            var (musicalLeft, musicalRight) =
+                SpacingRules.MusicalInkOverhangsPerColumn(allMeasures, allTimings);
+            for (int c = 0; c < leftOverhangs.Length; c++)
+            {
+                leftOverhangs[c] = Math.Max(leftOverhangs[c], musicalLeft[c]);
+                rightOverhangs[c] = Math.Max(rightOverhangs[c], musicalRight[c]);
+            }
+            measureColumnOverhangs.Add((leftOverhangs, rightOverhangs));
 
             if (i == startMeasureIndex && springs.Length > 0)
             {
@@ -1082,18 +1099,11 @@ internal sealed class MultiStaffLayouter
         // is everywhere but the first column and the last, since the springs in between
         // accumulate. That is why generalising this from the first column to all of them
         // moves nothing: the constraint was already met.
-        // ⚠️ THE INPUT IS INCOMPLETE, and knowingly so. LilyPond's keep_inside_line_ is the
-        //   column's WHOLE ink extent; what is fed in here is only the CENTRED TEXT on it —
-        //   chord symbols and lyric syllables, which Lily# draws with text-anchor="middle"
-        //   and which therefore hang half their width to the left. A MUSICAL column can also
-        //   reach left: SpacingRules.MusicalColumnLeftReach is CalculateLeftExtent + esw, and
-        //   probe TKT read 1.234272 for a note carrying an accidental against 0.100000 for a
-        //   plain one — so an accidental reaches ~1.13 ss past its column and is NOT in this
-        //   rod. It is inert today (the line-start spring's own min_dist already carries an
-        //   opening accidental — probe TKA, +1.55 — and the springs between absorb any
-        //   mid-line column's reach), but "no observable difference" is not a reason to skip
-        //   a literal port. Doing it properly needs the item-to-timing-column mapping this
-        //   loop does not have; see docs/HANDOFF.md section 2.
+        // THE INPUT IS THE COLUMN'S WHOLE INK: the centred text on it AND the musical ink
+        //   (a note head's width to the right, an accidental's reach to the left), built
+        //   above. It was text-only for one commit, which under-measured a column carrying an
+        //   accidental by ~1.13 ss (probe TKT: 1.234272 against a plain note's 0.100000,
+        //   minus the extra-spacing-width that reading includes).
         // ⚠️ Two LilyPond quantities are unported and would change what this rod measures:
         //   ChordName declares no X-offset and no self-alignment-interface at all
         //   (scm/define-grobs.scm:837-855) so LilyPond's chord ink starts AT its column, and
@@ -1105,20 +1115,20 @@ internal sealed class MultiStaffLayouter
             int columnOffset = 0;
             for (int m = 0; m < measureColumnOverhangs.Count; m++)
             {
-                var overhangs = measureColumnOverhangs[m];
-                for (int c = 0; c < overhangs.Length; c++)
+                var (left, right) = measureColumnOverhangs[m];
+                for (int c = 0; c < left.Length; c++)
                 {
-                    if (overhangs[c] <= 0.0)
-                        continue;
                     // Spring j spans column j → column j+1, so measure m's column c is the
                     // right end of spring columnOffset + c.
                     int column = columnOffset + c + 1;
-                    if (column >= 1 && column <= allSprings.Length)
-                        rods.Add((0, column, overhangs[c]));
+                    // A rod of 0 is satisfied by construction; LilyPond's own add_rod only
+                    // records one when the distance is positive (separation-item.cc:57).
+                    if (left[c] > 0.0 && column >= 1 && column <= allSprings.Length)
+                        rods.Add((0, column, left[c]));
                     // A rod from the LINE's last column to itself is the degenerate one
                     // LilyPond's own `add_rod (i, cols.size (), …)` reduces to; skip it.
-                    if (column < allSprings.Length)
-                        rods.Add((column, allSprings.Length, overhangs[c]));
+                    if (right[c] > 0.0 && column < allSprings.Length)
+                        rods.Add((column, allSprings.Length, right[c]));
                 }
                 columnOffset += measureSprings[m].Length;
             }

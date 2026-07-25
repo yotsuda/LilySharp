@@ -444,6 +444,70 @@ public class LineStartColumnTests
                 timings, measureIndex: 1, chords, includeAttached: false));
     }
 
+    /// <summary>
+    /// The MUSICAL half of <c>keep_inside_line_</c>, which the rod was missing for one
+    /// commit: a column reference point coincides with the note head's LEFT edge, so a plain
+    /// head reaches its full width RIGHT of the column and NOTHING left, while a head
+    /// carrying an accidental reaches left by the accidental's ink. Both are the bare extent
+    /// — <c>extra-spacing-width</c> is read by Separation_item and is not part of a grob's
+    /// X-extent, which is what <c>col-&gt;extent (col, X_AXIS)</c> takes.
+    /// </summary>
+    /// <remarks>
+    /// This exists so "the rods moved nothing" stays distinguishable from "the rods were
+    /// never generated": the numbers below are the rod distances, and they are not zero.
+    /// </remarks>
+    [Fact]
+    public void KeepInsideLineOverhangs_IncludeTheMusicalInkNotJustTheCentredText()
+    {
+        var plain = ParseMeasure("c4 d e f |");
+        var withAccidental = ParseMeasure("cis4 d e f |");
+        var timings = new List<Fraction>
+        {
+            Fraction.Zero, new Fraction(1, 4), new Fraction(1, 2), new Fraction(3, 4),
+        };
+
+        var (plainLeft, plainRight) = SpacingRules.MusicalInkOverhangsPerColumn(
+            new[] { plain }, timings);
+        var (accLeft, _) = SpacingRules.MusicalInkOverhangsPerColumn(
+            new[] { withAccidental }, timings);
+
+        // A plain head hangs nothing left of its column…
+        Assert.Equal(0.0, plainLeft[0], 6);
+        // …but reaches its whole ink width to the right, on EVERY column — so the right-hand
+        // rod is a live constraint everywhere, not an empty list.
+        Assert.All(plainRight, r => Assert.True(r > 1.0, $"expected a notehead width, got {r}"));
+
+        // The accidental is what reaches LEFT, and only on the column that carries it.
+        Assert.True(accLeft[0] > 1.0,
+            $"an accidental should reach past its column; got {accLeft[0]}");
+        Assert.Equal(0.0, accLeft[1], 6);
+    }
+
+    /// <summary>The first measure of a one-part score, for the overhang tests.</summary>
+    private static Measure ParseMeasure(string music)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse($$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody
+
+            section Main {
+              melody { {{music}} }
+            }
+
+            form main { ~Main }
+
+            score main "M" {
+              staff melody
+            }
+            """);
+        var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!;
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
+        return score.PrimaryContentStaff.PrimaryVoice.Measures[0];
+    }
+
     /// <summary>The prefix ink right edge — LilyPond's <c>last_ext[RIGHT]</c>.</summary>
     private static double PrefixRight(KeySignature key, bool hasTime)
         => BreakAlignSpacing.SolvePrefixColumns(
