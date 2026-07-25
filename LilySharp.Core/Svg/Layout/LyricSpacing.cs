@@ -216,7 +216,9 @@ internal static class LyricSpacing
     /// <remarks>
     /// A syllable is drawn with <c>text-anchor="middle"</c> on its column
     /// (SharedRenderer.Overlays' DrawLyrics), so its ink reaches half a width to EITHER side:
-    /// the one number is both <c>-extent[LEFT]</c> and <c>extent[RIGHT]</c> for the column.
+    /// the one number is both <c>-extent[LEFT]</c> and <c>extent[RIGHT]</c> for the column —
+    /// ⚠️ of the LYRIC alone. LilyPond's <c>keep_inside_line_</c> is the column's WHOLE ink;
+    /// see the caller (MultiStaffLayouter) for what is missing from it.
     /// NO padding is added — LilyPond's rods carry none (lily/simple-spacer.cc:558-559) —
     /// unlike the neighbour reservations above, which carry
     /// <see cref="GlyphMetrics.MinItemGap"/>.

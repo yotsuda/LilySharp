@@ -209,6 +209,15 @@ DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・
 > ⚠️ **`keep-inside-line` は入った**（`efb3ddfb`・`622e88b4`）。全列・左右両方の rod が
 > `SpringSolver.ApplyRods`（＝`Simple_spacer::add_rod` の移植）へ流れている。
 >
+> ⚠️ **ただし rod の入力が不完全**（自己監査で判明・要追い移植）。LP の `keep_inside_line_` は
+> **列の ink 全体**だが、Lily# が渡しているのは**中心合わせのテキスト（和音記号・音節）だけ**。
+> **臨時記号を持つ音符の列も左へ届く**——`SpacingRules.MusicalColumnLeftReach` は
+> `CalculateLeftExtent + esw` で、probe TKT が素の音符 0.100000 に対し 1.234272 を読んでいる
+> ＝ 約 1.13 ss。**今は不活性**（行頭は spring の min_dist が既に運ぶ＝probe TKA +1.55、
+> 行中は間のばねが吸収する）だが、§5.2 の裏面「観測可能な差が無いことは字面移植をしない理由に
+> ならない」に該当する。**残作業**: item → timing 列の対応付けが要る（`measureColumnOverhangs`
+> を作るループはそれを持っていない）。
+>
 > ⚠️ **`audit/{property,grob}_coverage.csv` は生成物で、いま大きく stale。**
 > `pwsh audit\scripts\Build-GrobCoverage.ps1` を走らせると（**約 6.5 分**）
 > `keep-inside-line` は `"0","Absent"` → `"4","Used"` に正しく反転するが、**同時に無関係な

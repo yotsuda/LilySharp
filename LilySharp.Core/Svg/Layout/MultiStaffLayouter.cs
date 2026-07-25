@@ -1082,16 +1082,25 @@ internal sealed class MultiStaffLayouter
         // is everywhere but the first column and the last, since the springs in between
         // accumulate. That is why generalising this from the first column to all of them
         // moves nothing: the constraint was already met.
-        // ⚠️ WHAT REACHES BEYOND ITS COLUMN, and what does not. Lily# anchors note heads,
-        //   clefs, signatures and bar lines AT the column, so their extent starts there; the
-        //   grobs it centres are the chord symbols and the lyric syllables
-        //   (text-anchor="middle"), so those are the whole of keep_inside_line_ today. Two
-        //   LilyPond quantities are still unported and would change these numbers:
+        // ⚠️ THE INPUT IS INCOMPLETE, and knowingly so. LilyPond's keep_inside_line_ is the
+        //   column's WHOLE ink extent; what is fed in here is only the CENTRED TEXT on it —
+        //   chord symbols and lyric syllables, which Lily# draws with text-anchor="middle"
+        //   and which therefore hang half their width to the left. A MUSICAL column can also
+        //   reach left: SpacingRules.MusicalColumnLeftReach is CalculateLeftExtent + esw, and
+        //   probe TKT read 1.234272 for a note carrying an accidental against 0.100000 for a
+        //   plain one — so an accidental reaches ~1.13 ss past its column and is NOT in this
+        //   rod. It is inert today (the line-start spring's own min_dist already carries an
+        //   opening accidental — probe TKA, +1.55 — and the springs between absorb any
+        //   mid-line column's reach), but "no observable difference" is not a reason to skip
+        //   a literal port. Doing it properly needs the item-to-timing-column mapping this
+        //   loop does not have; see docs/HANDOFF.md section 2.
+        // ⚠️ Two LilyPond quantities are unported and would change what this rod measures:
         //   ChordName declares no X-offset and no self-alignment-interface at all
         //   (scm/define-grobs.scm:837-855) so LilyPond's chord ink starts AT its column, and
         //   a LyricText is centred not on the column but on the PaperColumn placeholder
         //   X-alignment-extent = (0 . 1.35), i.e. at -w/2 + 0.675
-        //   (self-alignment-interface.cc:117-176, define-grobs.scm:2749-2750).
+        //   (self-alignment-interface.cc:117-176, define-grobs.scm:2749-2750). The ledger
+        //   point staffless.line-start.chords-vs-staff (-0.438600) is the first of these.
         {
             int columnOffset = 0;
             for (int m = 0; m < measureColumnOverhangs.Count; m++)
