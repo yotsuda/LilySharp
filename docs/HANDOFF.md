@@ -32,60 +32,59 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第8セッション）/ HEAD は `96641db7`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **49 ahead・未 push**）。
-**3343 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 88/104 exact・total |residual| 0.006268 ss / 97 distances・counts 7/7**。
-この回の snapshot 再ベースは **85 枚**（SVG 83＋HaraKiri baseline 2。正当化する台帳キー **4 件**を
-message に名指し済＝§5.2.1③。ユーザー承認済）。
+最終更新 2026-07-26（第9セッション）/ HEAD は `dd46d39b`
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **51 ahead・未 push**）。
+**3345 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 90/106 exact・total |residual| 0.006268 ss / 99 distances・counts 7/7**。
+この回は **Core を 1 行も触っていない**＝**snapshot 再ベース 0 枚・出力不変**。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。非ゼロは **16 点**＝clef sliver・
-Pango 量子化の**従来分だけ**で、⚠️ **この回も 1 つも動いていない**。前回開いた 4 点は全部閉じた。
+⚠️ **total を過去の値と直接比べない**（点集合が違う）。非ゼロは **16 点**で、
+**前回から 1 つも動いていない**（増えたのは分母だけ＝104→106）。
 
-### このセッションで起きたこと ＝ **▶ は既に済んでいた。反証して真因を測り直した**
+### このセッションで起きたこと ＝ **前回の ▶ を実行し、予測どおり閉じた**
 
 | やったこと | 結果 |
 |---|---|
-| **▶ の前提を摂動で検定**（符頭インク 0.545→0.550） | ★ **反証**。9 点が動き、狙いの 4 点は**不動**。▶ は `cff877c8` で消化済で、診断ごと誤りだった |
-| **4 点は「4 距離」でなく「2 force」と判明** | 残差 ÷ ばね強度が一致（`0.002480/5 = 0.029762/60`・`0.006666/2 = 0.013334/4`）⇒ 犯人は**ばねでなく鎖の固定項** |
-| **両 regime から固定項を逆算**（測る前に） | 伸長 `336×0.000496` と圧縮 `50×0.003333` が**同じ 0.166664**＝独立 2 regime が同一の項を指す |
-| **LP を実測**（プローブ script に鎖の底の読みを追加） | LP は最終譜 refpoint 下に **3.333333**、Lily# は 3.500000（JSS/JSSC/JSK 共通）＝中央線の下向き符尾 |
-| **`stem.cc:519-555` を字面移植**（`96641db7`） | **4 点が同時に閉じた**。84/104 → **88/104 exact**・total 0.058509 → **0.006268** |
+| **鎖の底に台帳点 2 つ**（`page.{stretched,compressed}.last-staff-to-foot`・`dd46d39b`） | ★ **予測どおり両方 exact**。Lily# 10.023884333 対 LP 10.023885＝**残差 −6.67e-7 は台帳が持つ F6 の桁**であって欠陥ではない（LP の真値は 5.690551+1+3.333333） |
+| **LP を再測**（handoff の数値を鵜呑みにしない） | JSS も JSK もページ 1 で `to foot = 10.023885 / ink below = 3.333333` |
+| **foot spring が両 regime で剛体な理由を式で確定** | ideal 1・stretchability 30（`paper-defaults-init.ly:84-87`）で `ensure_min_distance` は**床だけ**上げる（`spring.cc:156-159`）⇒ **blocking force = (4.333333−1)/30 = 0.111111**。伸長 f=0.099092・圧縮 f=−0.174101 でどちらも届かない |
+| **§2D の stale を 1 件訂正** | 「top spring は Lily# では伸びない」は**誤り**＝移植済（`PageLayouter.cs:290-294` が spring 0 を積む。`page.stretched.first-staff-refpoint` の `why` に経緯） |
 
-**この回の知識は §1 に溜めず出してある**（§4）。戻るときはここから:
+⚠️ **この 2 点は「新しい欠陥を探す点」ではなく「前回直した項を守る網」**（§5.2.1④）。
+分解能は tolerance 1e-6 で、守る対象だった欠陥は 0.166667＝**桁が 5 つ違う**。
+⚠️ **f > 0.111111 まで伸びるページを作ると foot spring は開く**＝そのときこの 2 点は
+**別の量を測っている**。新しい book を足すなら比較せず自分の点を持たせること。
+知識の置き場所は `probes/page-vertical.ly` の JSS ヘッダと両 `why`（§4）。前回の
+regime（譜間ばね・符尾）へ戻るときの入口は `page.stretched.staff-staff-inside` の `why`。
 
-| 知りたいこと | 置き場所 |
-|---|---|
-| ★ **`stem.cc:522` の guard は `>= 0`＝position 0 を含む**（中央線の符尾も短縮される。`7 → 20/3` half-space） | `StemCalculator.CalculateStemLength` の remarks＋`StemCalculatorTests` の対 2 本 |
-| ★ 4 点が **2 つの force** だった算術と、符頭インク説の反証 | `page.stretched.staff-staff-inside` の `why`（他 3 点はそこを指す） |
-| 符頭インク説がなぜ 1 セッション生き延びたか（**死んだ引数が grep に生きて見える**） | `system.stretched-distance` の `why`＋§5.2.1⑥ |
-| 鎖の底（last-bottom がどの refpoint に付くか・LP の実値） | `Measure-LilyPondPageGeometry.ps1` の新しい 1 行＋`PageLayouter` の該当ブロック |
-| 譜間ばねの模型（ideal/床/伸び 5・縮み 2／frame 2 つ） | `PageLayouter.PositionSystemsOnPage`・`RespaceStaves`・`MultiStaffLayouter.StaffSprings` の remarks |
-| 実測・予測・falsifier・踏んだ罠 | `probes/page-vertical.ly` の JSS/JSSC/JSK ヘッダ＋台帳 7 点の `why` |
+### ▶ 次の一手 ＝ **loose line 再配分の対を起票する（出力不変）**
 
-### ▶ 次の一手 ＝ **鎖の底に台帳点を置く（起票・出力不変）**
+LP はページの鎖に **spaceable 譜だけ**を入れ、非 spaceable（歌詞行・和音行）は
+**あとから別の `Simple_spacer` で配る**（`:1004-1014` → `distribute_loose_lines :1025-1054`）。
+隣接ペアの rod（`min_offsets[i-1] − min_offsets[i]`）を最小とするばねを並べ、
+直前の spaceable 譜の解から次の spaceable 譜（または `-page_height_`）までを**もう一度 solve** する。
+⇒ **伸びたページでは歌詞行も slack を分けとる**。Lily# は上の譜からの offset を保つので
+**貼り付いたまま動く**（`PageLayouter.PositionSystemsOnPage` と
+`MultiStaffLayouter.StaffSprings` の remarks に明記済）。
 
-今回の欠陥が**何セッションも見えなかった理由は、鎖の底に読みが 1 つも無かったこと**。
-`last-bottom-spacing` は最終 spaceable 譜の refpoint に付くので、そこを読まないと
-**force を何にも帰属できない**（4 点は force の 4 通りの読みでしかなかった）。script 側の
-読みは入れた＝**あとは台帳点にするだけ**。LP 値は測ってある:
-
-- `page.{stretched,compressed}.last-staff-to-foot` = **10.023885**（JSS も JSK も同値）
-- 参考: refpoint 下のインク LP 3.333333 / book N は 3.550000（**そちらは符頭**＝別の量）
-
-⚠️ **予測を先に `why` へ書く**（§5.0-2）: 両方 exact で開くはず。**exact で開くのは正常**——
-これは新しい欠陥を探す点ではなく、**今回直した項を守る網**（§5.2.1④）。
+⚠️ **対の設計上の罠を先に書いておく**（§5.3 の「フォント量が混ざる対」）:
+歌詞行の位置は **ばねの basic-distance と歌詞インクの床のどちらが binding か**で意味が変わる。
+両 engraver の**文字寸法が違う**（Lily# の歌詞面は LP より約 27% 広い）ので、
+**床に座らせると測るのはフォント差**になる。JSS が `7.545 < 9` を選んだのと同じ形で、
+**ink floor < basic-distance に収まる歌詞と音高**を選ぶこと。
+対は natural（slack のあるページ）vs stretched（同じ音楽・`max-systems-per-page` で slack を残す）で、
+⚠️ **起票の前に LP 側で「譜→歌詞の距離が natural と stretched で実際に変わる」ことを確かめる**
+（変わらないなら regime に入っていない＝§5.0。伸長 regime の作り方は §5.0 の罠 7）。
 
 #### その次の候補
 
-- **loose line の再配分**（`distribute_loose_lines`・`:1025-1054`）が未実装＝歌詞/和音行は
-  上の譜に貼り付いたまま伸びる。`RespaceStaves` の remarks に明記済。
+- **loose line 再配分そのものの移植**（上の対が開いたあと）。`RespaceStaves` の remarks に明記済。
 - **ossia ペアは rigid のまま**（`gap * OssiaScale` は Lily# 独自で、spec のばねを当てると
   force 0 で動いてしまう）。**ossia 距離そのものの移植が先**。
 - **§2A の残り**: ゲートは継続行 prefix をスコア全体で 1 つ・measure 0 で計算する（改行位置が
   未定のため）⇒ **mid-piece の key change 後の行は古い幅のまま**。構造的な解は **per-line prefix**
   で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
-- Y の圧縮（§2D）・§2C（LP を instrument する必要があるもの）。
+- §2D の残り（**字面から外れた 2 件・未移植 3 件**）・§2C（LP を instrument する必要があるもの）。
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
@@ -95,7 +94,7 @@ Pango 量子化の**従来分だけ**で、⚠️ **この回も 1 つも動い�
 |---|---|---|
 | clef sliver（`{page.stretched,page.clef}.first-staff-refpoint`・`system.clef-bounded-distance`） | 4e-5〜8.3e-4 | LP の実効 scale 未特定（§2C）。**LP を instrument するまで動かせない** |
 | Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1・`barline.next.down-stems-after-clef`） | 5e-6〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**伝聞で未再検証**（tie の 0.001391 が Pango で説明が付くかは未確認） |
-| `system.stretched-distance` | −0.000414 | ★ **これは符頭**（単一譜 book W の束縛インクが符頭）。LP 0.550000 対 LILC 0.545000 で**未説明**＝フォント metric の問題。⚠️ **そこは埋めない**。⚠️ **`page.*`/`system.*two-staff` を同族と読まないこと**——あれは符尾で、この回に閉じた |
+| `system.stretched-distance` | −0.000414 | ★ **これは符頭**（単一譜 book W の束縛インクが符頭）。LP 0.550000 対 LILC 0.545000 で**未説明**＝フォント metric の問題。⚠️ **そこは埋めない**。⚠️ **`page.*`/`system.*two-staff` を同族と読まないこと**——あれは符尾で、第8セッション（`96641db7`）で閉じた |
 
 #### 前回の移植で分かったこと（歌詞・和音アンカーの regime に触るとき用）
 
@@ -232,8 +231,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `system.compressed-distance.two-staff`（book JSK）は **exact**。⚠️ **圧縮強度は伸長強度と別**
   （`ideal − minimum`。staff 2 / system 4 に対し伸長は 5 / 60）なので、**片方だけ緑の移植は
   もう片方で落ちる**——`8b7b2615` が実際にそれで移植の欠陥を捕まえている
-- **LP の top spring はページ justify で伸びる**（`spring.cc:213-216`）が Lily# は先頭 system を固定＝
-  **伸長 regime に着手するとき最初に触る乖離**
+- ~~**LP の top spring はページ justify で伸びる**が Lily# は先頭 system を固定~~ —
+  ⚠️ **この記述は stale だった**（2026-07-26 に実コードで確認）。`PageLayouter.cs:290-294` が
+  spring 0 として top spring を鎖に積んでおり、`page.stretched.first-staff-refpoint` は
+  残差 **−0.000042**（＝符頭インク族。§1 の非ゼロ表）。**乖離ではない**
 - **`PageLayouter` は systemDetails の `i == 0` で `vs.SystemSystem`、配置側は `vs.TopSystem`**＝
   ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
 - **`LayoutEngine` の単一ページ経路が今も自前で積む**（force 0 なので鎖と一致するが二重実装）
