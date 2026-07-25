@@ -32,8 +32,8 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `8d1368d2`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **32 ahead・未 push**）。
+最終更新 2026-07-25（第6セッション）/ 実装の最終コミットは `8d1368d2`・以降は audit と docs
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **34 ahead・未 push**）。
 **3316 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 81/97 exact・total |residual| 0.006268 ss / 92 distances・counts 5/5**。
 この回の snapshot 再ベースは **27 枚**（`dcbf08e9` の chords 系 11 枚＋`98672c3a` の lyrics 系
@@ -61,157 +61,45 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | **LyricText の alignment extent を字面移植**（`98672c3a`。LP 実測 5 スコアで `he` の中身を確定） | 歌詞 4 点すべて **exact**。total → **0.006268 ss**・79/95 |
 | **§2A の対を起票**（`beb76809`。台帳コントロール＋不変条件テスト） | ゲート差は **2.650000**（⚠️ 旧記述の 2.2 は誤り） |
 | **§2A の第3モデルを閉じる**（`8d1368d2`。3 経路を 1 モデルへ） | 出力は**不変**＝該当 fixture が無いだけ（構成ではない） |
+| **§2B の 2 項目を測る**（`d9b54386`＝全譜 union・`05b3c46c`＝同一譜 knee） | どちらも**構造は乖離・ページには届かない**。knee だけ点を残した |
 
-**LP の機構（`scm/*.scm` の行から。実測合わせはゼロ）**:
+**この回の恒久知識は §1 に溜めず出してある**（§4）。戻るときはここから:
 
-- **ChordName は X-offset も self-alignment-interface も持たない**（`define-grobs.scm:837-855`）
-  ＝ **ink 左が列そのもの**・extent は `(0 . w)`。dump した全スコアで `CHORD anchor == 列の X`。
-  だから rod へ渡す reach は**右へ全幅・左へゼロ**、予約は `extra-spacing-width (-0.5 . 0.5)`
-  のまま**非対称**（左 0.5 / 右 w+0.5）。
-- ★ ⚠️ **和音グリッドは別 grob で、そちらは LP も中心合わせする。**
-  `GridChordName` は `grid-chord-name::calc-X-offset`（`scm/output-lib.scm:3744-3768`）で
-  `interval-center` を引く。ただし中心を取る相手は**小節の四角**であって列ではない。
-  Lily# に四角は無いので chords-only シートは ChordName 経路に残してある＝
-  **「グリッドも直す」で触らないこと**（`SharedRenderer.Marks` に注記済み）。
-
-**LP 実測**（`probes/staffless-system.ly`。再測定不要・ヘッダに導出が全部ある）:
-
-| score | 第1列 | 第1 LYRIC ink 左 | 意味 |
-|---|---|---|---|
-| CO / CO3 / COK | **0.500000** | — | `min_dist(0) + 0.5`。4/4・3/4・E major で 15 桁恒等。**Lily# 一致済** |
-| CL | 2.312539 | 0.000000 | rod が勝つ（`w/2 − 0.675`） |
-| CLW | 12.777463 | 0.000000 | 音節を 21 ss 広げても同じ式 |
-| **CLX**（placeholder を `(0 . 0)` に） | **2.987539** | 0.000000 | ＝**Lily# 現行の歌詞モデルそのもの** |
-| **CLL**（音節を左揃え） | **0.500000** | 0.500000 | はみ出しを消すと**ばねの 0.5 に戻る** |
-| CS（同じ和音＋記譜譜） | 8.585000 | — | Lily# 一致済 |
-
-### 歌詞の alignment extent（`98672c3a`）＝ **この regime に戻るとき用**
-
-`LyricText.X-offset = aligned-on-x-parent`（`define-grobs.scm:2229`）→
-`self-alignment-interface.cc:117-176` の
-`x = −ext.linear_combination(self) + he.linear_combination(par)`。self も par も **CENTER**
-（`left-align-at-split-notes` は Completion_heads で割れた符頭以外 CENTER＝`output-lib.scm:1642-1673`、
-`parent-alignment-X` は `()` で self を写す）。⇒ **音節の ink 中心 = 列 + `he.centre`**
-（`−w/2` と `+w/2` が相殺＝**音節幅が式から消える**＝これが engraver 間で比較できる唯一の量）。
-
-★ ⚠️ **`he` の中身は「読む」では決まらない。5 スコアで測って決めた**（`probes/staffless-system.ly`）:
-
-| score | 状況 | `he.centre` | 分かったこと |
-|---|---|---|---|
-| CLI / CLA | 符頭なし | **0.675000** | placeholder `(0 . 1.35)`。音節幅 0.99 と 1.37 で同一 |
-| LSH | 符頭あり | **0.688700** | 符頭幅 1.377400 の半分。**0.675 ではない** |
-| LSA | ＋臨時記号 | 0.688700 | ⚠️ **予測外れ**＝臨時記号は `he` に**入らない** |
-| LSD | ＋付点 | 0.688700 | ⚠️ **予測外れ**＝付点も**入らない** |
-| LSR | 休符 | **0.750000** | 休符は**入る**（＝符頭を置き換える） |
-
-⚠️ **外れた 2 つが移植先を決めた。** 素朴に `MusicalInkOverhangsPerColumn`（臨時記号の左伸びを
-含む＝rod 用には正しい）を流用していたら、臨時記号付きの音節が半分ずれていた。
-⇒ **union するのは符頭と休符だけ**（`SpacingRules.ParentAlignmentCentresPerColumn`）。
-⚠️ **LSH が無ければ 0.675 を全ケースに使い、声楽譜が 0.013700 ずれたまま**になっていた
-（丸め誤差に見える大きさ＝永久に疑われない）。**分岐は必ず両方測る。**
-
-⚠️ **描画だけ直すと予約が置き去りになる。** 音節を +0.675 動かして予約を列中心のままにしたら、
-小節末の音節が小節線と **0.275 重なった**。`LyricSpacing` の予約・`SystemBreaker` の改行ゲートも
-同じ非対称に揃えてある（§5.4）。実測で gap が `MinItemGap` 0.400000 に戻ることを SVG 座標で確認。
-
-⚠️ **`alignmentCentre` の既定値 0 を作らない。** LP に「extent 幅ゼロ」の regime は無く、
-0 は**移植前の Lily# 独自モデルそのもの**。引数は必須にし、範囲外は placeholder へ落とす
-（`LyricSpacing.AlignmentCentre`）。最初これを省略可能にしていて、テスト 2 本が黙って旧モデルを
-主張していた。
-
-### §2A の第3モデルは閉じた（対 `beb76809` → 修正 `8d1368d2`）
-
-⚠️ **§2A の「2.2 狭い」は誤りだった**（実測 = **2.650000**）。key ink 2.2 ＋ **調号が彫られる
-ときだけ開く Clef→Key / Key→Time の gap 0.45**。ゼロ幅の key 列はその 2 つの space-alist に
-到達しないので、差は key 幅そのものより大きい。**旧数値のまま直すと 0.45 ずれる。**
-
-いま 3 経路とも `SystemBreaker.Gate{First,Continuation}PrefixWidth` ＝
-`WidestActiveKeyInk`（譜ごとの調号の union・彫らない譜は skip）の**1 モデル**。
-`IncrementalCompiler` は `score.KeySignature` 生読みで all-tab も無視していた（＝
-移調パートの調号だけ変えた編集が**ゲートを変えるのに skip からは無変化に見えた**）。
-
-⚠️ **出力は 1 バイトも動かなかったが、それは「結果」であって「構成」ではない**（§5.2）:
-**譜ごとの調号を持ち、かつ改行の 2.650000 窓に入る fixture が corpus に無いだけ**。
-除外や特別扱いは 1 つも入れていない。入力側は
-`SpacingInvariantTests.BreakGateAndLayout_PriceTheSameLineStart` が主張している
-（⚠️ ゲートを `SystemBreaker` の入口経由で読む＝算術のコピーではないので、第3の key を
-指す改変が偶然通ることはない）。
-
-**残した 1 件**（silent にしない）:
-
-- **ゲートは継続行の prefix をスコア全体で 1 つ・measure 0 で計算する**（改行位置が未定のため）。
-  ⇒ **mid-piece の key change 後の行は古い幅のまま**＝同型の過少予約。構造的な解は
-  **per-line prefix** で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
-- ★ ⚠️ **`SystemLayout.PrefixWidth` を「誰も読んでいない＝dead」と書いたのは誤り**
-  （`8d1368d2` の message と旧 §1。2026-07-25 に削除承認を受けて横断 grep したら**読み手が 2 つ**
-  出た）: **`TrillSpannerEngraver.cs:153`＝改行をまたぐトリルの継続セグメントの開始 X**
-  （`system.PrefixWidth + BoundPadding`）と `TabOnlyKeyPrefixTests`（4 テスト）。
-  ⇒ **削除しない。** そして `8d1368d2` はここを score key モデルから彫られた union へ変えた＝
-  **製品の量を変えていた**（向きは正しい——トリルが避けるべきは実際に描かれる prefix）。
-  ⚠️ 教訓: **`.PrefixWidth` のような一般語は grep が同名の別メンバー（`CalculatePrefixWidth`・
-  `ChangeItemPrefixWidth`・ローカル変数）に埋もれる。「dead」と言う前に
-  `\.PrefixWidth\b` の形で絞り、head_limit で切れた出力を鵜呑みにしない。**
-
-### §2B の「全譜 union」は**測った。届かない**（probe `IS3`/`IS3C`・台帳点は作らない）
-
-LP は全譜を merge するが、**offset は minimum_translations**＝
-「上スカイラインでは全譜を上へ詰めたと仮定する」（`page-layout-problem.cc:1070-1074` の LP 自身の
-コメント）。中間譜は上譜の **9 下**に詰められるので、その ink は**9 ss 登って初めて上譜の refpoint
-に並ぶ**。1 ss ＝ 2 staff position なので **9 ss ＝ 18 度＝約 2.5 オクターブ**。
-
-実測（`d''''`＝中央線の 8 ss 上＝実用上の最高域）:
-
-| book | top-to-top | INSIDE | **inter-system ＝ 差** |
-|---|---|---|---|
-| IS3（高音あり） | 32.595000 | 20.595000 | **12.000000** |
-| IS3C（対照） | 30.000000 | 18.000000 | **12.000000** |
-
-⇒ **IS3 − IS3C = 0**。動いた 2.595000 は**全部 system 内**（Align_interface＝Lily# では
-`BuildAllStaffSkylines` で**全譜を見ている**別経路）。Lily# 側も 6.600000 / 6.600000 で**差 0**。
-⚠️ **台帳点は作らない**——両者とも床（LP 12.000000）に座るので**何も測らない**（§5.0）。
-
-**残る本命は「minimum vs 実位置」**: LP は詰めた offset で merge、Lily# は**最終位置**を使う
-（`SkylineBuilder` は末尾譜を `systemHeight` に置く）。⇒ **staff ばねが最小より伸びたページ**で
-差が出るはず。**これが §2B の次の対**。
-
-⚠️ **同じ run で出た「リード」（まだ finding ではない）**: 同じ形を Lily# は system 内
-21.000000 → 25.595000（+4.595）で組む＝LP の +2.595 と **2.0 違う**。
-⚠️ **紙面が揃っていない**（LP はこのプローブの紙、Lily# は既定の内容サイズ紙＝§3 の意図的乖離）
-ので**まだ欠陥と読まないこと**。床も違う（LP 9.000000 / Lily# 10.500000）。**紙面を揃えた対**が要る。
-
-### §2B の同一譜 knee も**測った。ページには届かない**（`system.knee-beam-notes` = exact）
-
-LP は同一譜 knee の Beam/Stem を skyline に入れる（cross-staff **だけ**除外）。Lily# は
-**どちらも seed せず**、各メンバーに固定 3.5 stem を残す（`AddBeamsToSkyline` と
-`BeamedItemsToSuppress` の両方が `IsKnee` を skip）。⇒ **構造としては乖離**。
-
-★ **しかし knee の stem は内向き**（低音は上へ・高音は下へ、間のビームへ）＝ビーム帯も stem も
-**2 つの符頭の間**にあるので、外側の envelope は**どちらも符頭**。LP の実測がそれを言う：
-kneed の上端 ink は refpoint から **8.545000**＝`d''''` の符頭ちょうど（ビームはその上に無い）。
-
-| book | system gap |
+| 知りたいこと | 置き場所 |
 |---|---|
-| KNE（knee） | **18.090000** ← Lily# も **18.090000000**＝exact |
-| KNEC（同じ音楽・`auto-knee-gap = #100` で knee 禁止） | 20.285000 |
+| 和音記号/音節のアンカーと `he` の中身（0.675 / 0.6887 / 0.750・臨時記号と付点は入らない） | `probes/staffless-system.ly` のヘッダ＋user memory＋`ParentAlignmentCentresPerColumn` の remarks |
+| 和音グリッドは別 grob（`GridChordName` は LP も中心合わせ・ただし小節の四角の中心） | `SharedRenderer.Marks` の remarks＋§3 の決定表 |
+| §2A ゲートの 2.650000 とその内訳 | `system.knee-beam-notes` 隣の台帳 `why`＋`BreakGateAndLayout_PriceTheSameLineStart` |
+| §2B の 2 つの実測（IS3/IS3C・KNE/KNEC） | `probes/page-vertical.ly` のヘッダ（予測と外れも含めて全部） |
 
-⇒ **点は床に座っていない**（12 の floor でも 20.285 でもない）＝**kneed envelope 自体を測っている**。
-knee 帯を誤った幾何で seed する将来の移植はこの点を動かす。**だから点を残す**
-（内側譜 union の件と違い、こちらは有効な guard になる）。
+**この回に踏んだ罠**（§5.0 に汎化済・ここでは名前だけ）: ①対照が同じ音楽でなかった（2 回）
+②対の両側は**小節数**も揃える ③描画だけ直して予約を置き去りにした ④省略可能引数の既定値が
+LP に無いモデルだった ⑤**「dead」と言う前にメンバー形で grep する**（下記）。
 
-⚠️ **この対で fixture を 2 回間違えた**（どちらも同じ罠・§5.0）:
-①対照を「跳躍の無い音楽」にして、差 6.090000 の**ほとんどが `d''''` 自身の ink** だった。
-②4 小節＋明示 `\break` にして **Lily# 側が 1 行に収めてしまい**、gap が読めなかった。
-⇒ **対の両側は音高だけでなく小節数も揃える。**
+⚠️ **`SystemLayout.PrefixWidth` を「誰も読んでいない＝dead」と書いたのは誤り**（`8d1368d2` の
+message と旧 §1）。実際は **`TrillSpannerEngraver.cs:153`＝改行をまたぐトリルの継続セグメントの
+開始 X** と `TabOnlyKeyPrefixTests` が読む。⇒ **削除しない。** `8d1368d2` はここも彫られた union へ
+変えた＝**製品の量を変えていた**（向きは正しい）。教訓は `.PrefixWidth` のような一般語は
+`\.PrefixWidth\b` の形で絞ること（同名の別メンバーに埋もれる）。
 
-### ▶ 次の一手 ＝ **`BuildSystemSkylines` の offset が minimum か最終位置か**（§2B の本命）
+### ▶ 次の一手 ＝ **`BuildSystemSkylines` の offset は minimum か最終位置か**（§2B の本命）
 
-LP は `minimum_translations` で merge（全譜を上／下へ詰めた仮定）、Lily# は末尾譜を**最終**
-`systemHeight` に置く。**staff ばねが最小より伸びたページ**で差が出るはず。⚠️ 未測定。
-⚠️ 同じ regime で出た**未確認のリード**（system 内 +4.595 対 +2.595）も、紙面を揃えた対で一緒に見る。
+LP は各譜を **`minimum_translations`** で merge する＝「上スカイラインでは全譜を上へ詰めたと
+仮定する」（`page-layout-problem.cc:1070-1074` の LP 自身のコメント）。Lily# は末尾譜を
+**最終 `systemHeight`** に置く（`SkylineBuilder`）。⇒ **staff ばねが最小より伸びたページ**で
+差が出るはず。⚠️ **未測定**。⚠️ 出力（system 間隔）が動くので対を先に。
+
+⚠️ **同じ regime の未確認リード**（`d9b54386`）: 3 譜の高音が system 内を押し広げる量が
+**Lily# +4.595 対 LP +2.595**。⚠️ **紙面が揃っていない**（LP はプローブの紙・Lily# は既定の
+内容サイズ紙＝§3 の意図的乖離）ので**まだ欠陥と読まない**。床も違う（9.000000 / 10.500000）。
+**紙面を揃えた対でこの 2 つを一緒に見る**のが次の設計。
 
 #### その次の候補
 
-- §2B の未測定領域（同一譜 knee / `BuildSystemSkylines` の全譜 union）・Y の圧縮（§2D）。
+- **§2A の残り**: ゲートは継続行 prefix をスコア全体で 1 つ・measure 0 で計算する（改行位置が
+  未定のため）⇒ **mid-piece の key change 後の行は古い幅のまま**。構造的な解は **per-line prefix**
+  で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
+- Y の圧縮（§2D）・§2C（LP を instrument する必要があるもの）。
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
