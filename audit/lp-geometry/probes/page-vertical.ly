@@ -804,3 +804,91 @@ probeTag =
         << { \voiceOne a'1 d''''8 d'''' d'''' d'''' d'''' d'''' d'''' d'''' a'1 } \\ { \voiceTwo b'1 b'1 b'1 } >> } }
   }
 }
+
+%% IS3 / IS3C — WHICH STAVES the SYSTEM skyline is built from, measured between systems.
+%%
+%%     Page_layout_problem::build_system_skyline (page-layout-problem.cc:1080-1127) merges
+%%     EVERY staff of the system, and its own comment says why: "for the upper skyline, we
+%%     pretend that all of the staves in the system are packed together close to the top
+%%     system" (:1070-1074) — each staff's vertical-skylines merged at dy taken from
+%%     MINIMUM_translations, i.e. the staves packed, not where they finally sit.
+%%     Lily#'s SkylineBuilder.BuildSystemSkylines adds the FIRST staff and the LAST staff and
+%%     nothing else, so on three staves the middle one contributes nothing at all.
+%%
+%%     THIS PAIR ASKS WHETHER THAT IS REACHABLE, and the honest expectation is that it is not
+%%     by pitch. The middle staff is packed 9 (StaffGrouper basic-distance) below the top, so
+%%     its ink must clear 9 staff spaces just to reach the top staff's REFPOINT, and one staff
+%%     space is TWO staff positions — 9 ss is 18 diatonic steps, about two and a half octaves
+%%     above the middle line, before it competes with anything the top staff draws. IS3 puts
+%%     the highest ink a real score would carry on the middle staff (d'''' , the same pitch
+%%     BSU/TSU use, 8 ss above its middle line); IS3C is the CONTROL with that staff plain.
+%%
+%%     PREDICTIONS, written before running (section 5.0-2):
+%%       IS3 - IS3C = 0.000000. The middle staff's 8 ss of reach is 1 ss SHORT of its own
+%%       9 ss packing offset, so even packed to the top it stays below the top staff's
+%%       refpoint and cannot touch the system's up-skyline.
+%%       (falsifier: a non-zero difference, which would mean the packing offset is smaller
+%%        than StaffGrouper's basic-distance — the number to read then is what LilyPond used,
+%%        not what this comment assumed.)
+%%
+%%     ⚠️ IF THE PREDICTION HOLDS, the finding is that Lily#'s omission of inner staves is
+%%     UNREACHABLE BY PITCH, and the reachable half of the same divergence is the OTHER thing
+%%     the LilyPond comment says: the offsets are the MINIMUM translations, where Lily# uses
+%%     the staves' FINAL positions. That wants its own pair, on a page whose staff springs are
+%%     stretched past their minimum — do not fold it into this one.
+%%
+%%     ★ THE PREDICTION HELD — measured 2026-07-25:
+%%
+%%       book   top-to-top gap   INSIDE a system   inter-system = gap - inside
+%%       IS3      32.595000        20.595000         12.000000
+%%       IS3C     30.000000        18.000000         12.000000
+%%
+%%     The inter-system distance is system-system-spacing's basic-distance 12.000000 in BOTH,
+%%     so IS3 - IS3C = 0.000000: eight staff spaces of reach on the middle staff, packed nine
+%%     below the top, never touches the system's up-skyline. ALL of the 2.595000 that moved is
+%%     INSIDE the system (18.000000 = two StaffGrouper gaps of 9; 20.595000 = 9 + 11.595000,
+%%     the same 8.545 + 2.05 + 1 the SSD/SSU header derives), i.e. Align_interface, which is a
+%%     different Lily# path (MultiStaffLayouter.BuildAllStaffSkylines) and DOES see every staff.
+%%
+%%     ⚠️ SO THERE IS NO LEDGER POINT HERE, deliberately: both engravers sit on the 12.000000
+%%     floor, so an entry would be exact on both sides while measuring nothing (HANDOFF 5.0,
+%%     "do not sit on the floor"). What these books are for is the RECORD that the regime was
+%%     measured and does not reach — so the next reader does not re-open it — and they stay
+%%     re-runnable if the packing offset ever changes.
+%%
+%%     ⚠️ A LEAD, NOT A FINDING, from the same run: Lily# renders this shape with an INSIDE
+%%     distance of 21.000000 plain and 25.595000 with the high note, i.e. the note pushes the
+%%     staves apart by 4.595000 where LilyPond pushes 2.595000. That is the staff-to-staff
+%%     path, not this one. ⚠️ DO NOT read it as a 2.0 defect yet: these books are ragged-bottom
+%%     on this probe's paper while the Lily# side was rendered on its own default (content-sized)
+%%     page, so the two are not the same regime and their floors differ (LilyPond's plain gap is
+%%     9.000000, Lily#'s 10.500000). It needs a paper-matched pair before anyone believes it.
+\book {
+  \probeTag "IS3"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new StaffGroup <<
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 b'1 b'1 } \break \repeat unfold 4 { b'1 b'1 b'1 } }
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 d''''1 b'1 } \break \repeat unfold 4 { b'1 d''''1 b'1 } }
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 b'1 b'1 } \break \repeat unfold 4 { b'1 b'1 b'1 } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "IS3C"
+  \paper { ragged-bottom = ##t ragged-right = ##f indent = 0 }
+  \score {
+    \new StaffGroup <<
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 b'1 b'1 } \break \repeat unfold 4 { b'1 b'1 b'1 } }
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 b'1 b'1 } \break \repeat unfold 4 { b'1 b'1 b'1 } }
+      \new Staff \with { \omit TimeSignature } { \time 12/4
+        \repeat unfold 4 { b'1 b'1 b'1 } \break \repeat unfold 4 { b'1 b'1 b'1 } }
+    >>
+  }
+}

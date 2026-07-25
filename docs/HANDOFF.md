@@ -145,12 +145,39 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 - **`SystemLayout.PrefixWidth`（`LayoutEngine:212`）は誰も読んでいない**＝dead。
   正しいモデルには載せ替えたが、**削除は §5.1 の横断 grep ＋ 承認が要る**ので別件。
 
-### ▶ 次の一手 ＝ **§2B の未測定領域**（対を先に）
+### §2B の「全譜 union」は**測った。届かない**（probe `IS3`/`IS3C`・台帳点は作らない）
 
-- **同一譜 knee の実 ink seed** — LP は同一譜 knee の Beam/Stem stencil を skyline に入れる
-  （cross-staff だけ除外＝`axis-group-interface.cc:850-858`）。現行の固定 stem は観測不能な非忠実。
-- **`BuildSystemSkylines` の全譜 union** — LP は全譜を offset 付きで union
-  （`page-layout-problem.cc:1075-1124`）、Lily# は先頭/末尾譜のみ。3 譜 probe を対で。
+LP は全譜を merge するが、**offset は minimum_translations**＝
+「上スカイラインでは全譜を上へ詰めたと仮定する」（`page-layout-problem.cc:1070-1074` の LP 自身の
+コメント）。中間譜は上譜の **9 下**に詰められるので、その ink は**9 ss 登って初めて上譜の refpoint
+に並ぶ**。1 ss ＝ 2 staff position なので **9 ss ＝ 18 度＝約 2.5 オクターブ**。
+
+実測（`d''''`＝中央線の 8 ss 上＝実用上の最高域）:
+
+| book | top-to-top | INSIDE | **inter-system ＝ 差** |
+|---|---|---|---|
+| IS3（高音あり） | 32.595000 | 20.595000 | **12.000000** |
+| IS3C（対照） | 30.000000 | 18.000000 | **12.000000** |
+
+⇒ **IS3 − IS3C = 0**。動いた 2.595000 は**全部 system 内**（Align_interface＝Lily# では
+`BuildAllStaffSkylines` で**全譜を見ている**別経路）。Lily# 側も 6.600000 / 6.600000 で**差 0**。
+⚠️ **台帳点は作らない**——両者とも床（LP 12.000000）に座るので**何も測らない**（§5.0）。
+
+**残る本命は「minimum vs 実位置」**: LP は詰めた offset で merge、Lily# は**最終位置**を使う
+（`SkylineBuilder` は末尾譜を `systemHeight` に置く）。⇒ **staff ばねが最小より伸びたページ**で
+差が出るはず。**これが §2B の次の対**。
+
+⚠️ **同じ run で出た「リード」（まだ finding ではない）**: 同じ形を Lily# は system 内
+21.000000 → 25.595000（+4.595）で組む＝LP の +2.595 と **2.0 違う**。
+⚠️ **紙面が揃っていない**（LP はこのプローブの紙、Lily# は既定の内容サイズ紙＝§3 の意図的乖離）
+ので**まだ欠陥と読まないこと**。床も違う（LP 9.000000 / Lily# 10.500000）。**紙面を揃えた対**が要る。
+
+### ▶ 次の一手 ＝ **同一譜 knee の実 ink seed**（§2B の残り・対を先に）
+
+LP は同一譜 knee の Beam/Stem stencil を skyline に入れる（cross-staff **だけ**除外＝
+`axis-group-interface.cc:850-858` の LP 自身のコメント）。Lily# の `OuterEdgeStaffSpaceAtX` は
+対称モデルで stack の内側面を言えない＝**LP の knee 帯（Beam ext）を dump してから両面 seed**。
+現行の固定 stem は観測不能な非忠実。
 
 #### その次の候補
 
@@ -263,9 +290,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   （cross-staff だけが除外＝`axis-group-interface.cc:850-858` の LP 自身のコメント）。
   Lily# の `OuterEdgeStaffSpaceAtX` は対称モデルで stack の内側面を言えない＝
   **LP の knee 帯（Beam ext）を dump してから両面 seed**。現行の固定 stem は観測不能な非忠実。
-- **`BuildSystemSkylines` の全譜 union** — LP の `build_system_skyline`
-  （`page-layout-problem.cc:1075-1124`）は**全譜**を offset 付きで union。Lily# は先頭/末尾譜のみ＝
-  内側譜の ink が edge 譜の silhouette を突き抜ける regime で乖離。3 譜 probe を対で。
+- **`BuildSystemSkylines` の全譜 union** — ⚠️ **測った。内側譜は届かない**（probe `IS3`/`IS3C`・
+  §1）。「内側譜の ink が edge 譜の silhouette を突き抜ける」は**音高では起こらない**（詰め offset
+  9 ss ＝ 約 2.5 オクターブ）。**残る本命は offset が minimum_translations であること**＝
+  Lily# は最終位置を使う。ばねが伸びたページで対を。
 - **cross-staff beam 機能そのもの** — `BeamMember.TargetStaffIndex` を立てる producer が皆無で
   `IsCrossStaff` は到達不能（`@cross` は描画側にしか流れない）。skyline 方針（＝LP は除外）は
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
