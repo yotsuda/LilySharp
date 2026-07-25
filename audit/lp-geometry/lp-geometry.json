@@ -702,6 +702,35 @@
       "lilypond": 0.0,
       "residual": 0.0,
       "why": "EXACT ON ARRIVAL, and the honest reading is that it measures LESS than it looks like it does. LilyPond's value is 0 by construction: over a staff its ChordName and the note head it stands over share an anchor exactly (score CS dumps both at 8.585000), because ChordName has no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855). Lily# agrees to 0.000000 -- the symbol IS on the note's column. ⚠️ What this CANNOT see is the anchor convention, and it did not see it when the convention was WRONG either: the recorder stores the ANCHOR POINT a text was drawn at, which is the column whether the ink is centred on it (Lily# until 2026-07-25) or starts at it (LilyPond, and Lily# since). This number was 0.000000 through both. It is kept as a cheap guard that a chord symbol stays bound to its note's column (a lead sheet where the symbol drifts off the note would show here), NOT as evidence the anchor convention is right -- LpGeometryLedgerTests.ChordSymbolsAreAnchoredAtTheirInkLeft asserts that directly, for exactly this reason."
+    },
+    "page.natural.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "JSSC",
+      "lilypond": 9.0,
+      "residual": 0.0,
+      "why": "EXACT. THE CONTROL of the pair that asks whether the distance between two staves of a system comes out of the PAGE's spring chain. Same music and same bar count as page.stretched.staff-staff-inside, on the same six-systems-per-page paper, with ragged-bottom on so nothing stretches. PREDICTION, written before running: 9.000000 on both sides -- staff-staff-spacing's basic-distance, because this music asks ensure_min_distance for less than that (the treble c hangs 3.545 below its middle line, the bass staff's deepest up-stem reaches 3.0 above its own, 3.545 + 3.0 + 1 = 7.545 < 9). Measured on LilyPond 2.26.0: 9.000000 on all three pages, and Lily# reads 9.000000 too, so the control is flat on both sides and every digit the stretched entry moves is the stretch. NOT SITTING ON A FLOOR in the sense HANDOFF 5.0 warns about: 9 is the spring's IDEAL, not its minimum, so a force reaches it -- which is exactly what the twin entry shows."
+    },
+    "page.stretched.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "JSS",
+      "lilypond": 9.49546,
+      "residual": -0.49546,
+      "why": "THE STAFF SPRING INSIDE A SYSTEM, on a page that stretches. Page_layout_problem::append_system pushes one spring per spaceable staff into the SAME chain as the system-to-system springs (page-layout-problem.cc:651-720): ideal = staff-staff-spacing's basic-distance 9, inverse stretch strength = its stretchability 5 (define-grobs.scm:3352-3355). Lily# has no such spring -- PageLayouter.PositionSystemsOnPage builds one spring per SYSTEM boundary, and every system on every page is drawn at the score-wide MultiStaffLayouter.CalculateSystemHeight, the Align_interface minimum, at any force. PREDICTION, written before running: LilyPond 9 + 5f and Lily# 9.000000 flat, so the residual is the whole stretch. THE PREDICTION HELD AND ITS OWN FALSIFIER CONFIRMED IT: measured 9.495460 with the system gap on the same page at 17.945524, i.e. (9.495460 - 9) / 5 = 0.0990920 and (17.945524 - 12) / 60 = 0.0990921 -- one force, seven digits, which is only possible if the staff distance is a spring in that chain. Lily# reads 9.000000 -- the same number as the ragged control, on the same paper -- so the residual -0.495460 IS the stretch, in one piece, with nothing else mixed in. Read on PAGE 1; page 2 and the short page 3 solve to their own forces (both 9.491922 under the cap). This is also the answer to the older question of whether BuildSystemSkylines should offset the last staff by the MINIMUM translation (page-layout-problem.cc:1080-1095) or by the final position: today they are the same number in Lily# because nothing ever stretches them apart, so that divergence cannot be measured until this spring exists."
+    },
+    "system.stretched-distance.two-staff": {
+      "probe": "page-vertical.ly",
+      "score": "JSS",
+      "lilypond": 17.945524,
+      "residual": 0.373744235,
+      "why": "WHERE THE SLACK WENT INSTEAD. The SYSTEM spring on the same stretched page as page.stretched.staff-staff-inside, measured last-staff-refpoint to next-system-first-staff-refpoint (the probe script prints it from the raw doubles rather than leaving two F6 prints to be subtracted -- arithmetic on a rounded gap is how 3.544994 for 3.550000 got into system.stretched-distance). It is here because the slack has to go somewhere: LilyPond shares this page's stretch between 5 system springs at stretchability 60 and 6 staff springs at 5, while Lily# has only the system springs. PREDICTED DIRECTION, written before running: Lily#'s gap opens WIDER. IT DOES -- 18.319268 against 17.945524, i.e. Lily# solves the same page to force 0.105321 where LilyPond solves it to 0.099092. ⚠️ THE MAGNITUDE WAS NOT PREDICTED CORRECTLY and is NOT yet accounted for: the guess was +0.53 from sharing the same slack over 300 units of stretchability instead of 330, and the truth is +0.373744. The two chains differ in more than the staff springs (top-system-spacing, last-bottom-spacing and the ink extents that floor them are Lily#'s own numbers on this page: its first refpoint and foot slack are not LilyPond's either), so the arithmetic that would close this entry has not been done -- do not read the residual as 'the staff springs' share' until it has. What the entry IS good for: a port that adds the staff spring must close this and page.stretched.staff-staff-inside TOGETHER, and one that closes only the staff entry has moved the money rather than the model."
+    },
+    "page.stretched.two-staff.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "JSS",
+      "lilypond": 12,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "The structural guard for the three entries above, which read gaps by INDEX: gap 0 is a system's INSIDE distance and gap 1 the distance to the next system only while the page holds six two-staff systems. Six is forced on both sides (systems-per-page = 6 / PageBreakingParameters.SystemsPerPage), so this counts the staves that reached the page: 12."
     }
   }
 }

@@ -945,3 +945,84 @@ probeTag =
     >>
   }
 }
+
+%% JSS / JSSC — THE STAFF SPRING INSIDE A SYSTEM, ON A STRETCHED PAGE. This is the OTHER
+%%     half of the IS3 divergence, the half that header says wants its own pair.
+%%
+%%     Page_layout_problem::append_system pushes one spring per spaceable staff of the system
+%%     into the SAME chain as the system-to-system springs (page-layout-problem.cc:651-720):
+%%     ideal = staff-staff-spacing's basic-distance 9, inverse stretch strength = its
+%%     stretchability 5 (define-grobs.scm:3352-3355), then ensure_min_distance floors it at
+%%     what Align_interface's minimum translations asked for. One solve sets them all, so on
+%%     a page stretched to force f the staves INSIDE a system move apart by 5f while the
+%%     systems move apart by 60f (system-system-spacing's stretchability).
+%%
+%%     Lily# has no such spring: PageLayouter.PositionSystemsOnPage builds one spring per
+%%     SYSTEM boundary and nothing else, and every system on every page is drawn at the
+%%     score-wide MultiStaffLayouter.CalculateSystemHeight — the Align_interface minimum, at
+%%     any force. Which is also the answer to "is BuildSystemSkylines' offset the minimum or
+%%     the final position": today it is BOTH, because nothing ever stretches them apart. The
+%%     skyline convention (build_system_skyline takes minimum_translations, :1080-1095)
+%%     cannot be measured until the spring exists, so this pair measures the spring.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       JSSC (ragged-bottom, natural): staff-to-staff INSIDE a system = 9.000000, the plain
+%%       basic-distance, because this music's own skyline asks for less than that: the
+%%       treble's c' hangs 3.545 below its middle line, the bass staff's deepest up-stem
+%%       reaches 3.0 above its own, and 3.545 + 3.0 + 1 = 7.545 < 9.
+%%       JSS (justified, read on page 1 which is FULL): the same distance reads 9 + 5f and
+%%       the system-to-system gap on that page reads 12 + 60f, for ONE f — so the falsifier
+%%       is inside the same dump: (inside - 9) / 5 must equal (gap - 12) / 60 to six digits.
+%%       (falsifier: an inside distance that does not move at all, which would mean the staff
+%%        spring is not in the page's chain and Lily#'s fixed system height is right.)
+%%
+%%     ⚠️ BOTH BOOKS CARRY THE IDENTICAL MUSIC AND THE IDENTICAL BAR COUNT (HANDOFF 5.0), and
+%%     differ in ragged-bottom alone. ⚠️ Read page 1, never the last page: ragged-last-bottom
+%%     governs that one and it is a different measurement (book L).
+%%     ⚠️ The music must NOT sit on the staff spring's floor — nothing here may protrude far
+%%     enough for ensure_min_distance to beat 9, or the spring blocks (blocking_force =
+%%     (min - ideal) / 5, spring.cc:64-72) and reads its floor at any force this page solves
+%%     to. Book P's own shape is exactly that trap: its 9.595 floor blocks until f > 0.119,
+%%     and the force book J solves to is 0.0042.
+%%
+%%     ⚠️ max-systems-per-page IS LOAD BEARING, and the first draft had no cap at all. Left
+%%     to choose, the breaker put EIGHT of these two-staff systems on the page and COMPRESSED
+%%     them: measured 2026-07-26, the inside distance read 8.651797 — under the 9 it is
+%%     supposed to stretch from — and ragged-bottom made not one digit of difference, because
+%%     that flag suppresses stretching and not compression (the same trap book N's header
+%%     names). A compressed page cannot answer this question: it is the OTHER regime, the one
+%%     HANDOFF 2D says is unimplemented in Lily# altogether, so a pair measured there would
+%%     read a defect that is not the one being asked about. Capping at six leaves the page
+%%     slack to distribute and puts both books on the stretching side of force 0.
+%%
+%%     ⚠️ THE CAP, NOT systems-per-page = #6, and the difference is the Lily# twin's. Written
+%%     as an exact count first: LilyPond breaks this music into 18 systems and pages it 6/6/6,
+%%     but Lily# breaks it into 17, so its last page would hold 5 — and its page breaker
+%%     rejects every candidate that is not exactly 6 (PageBreaker.cs:523), finds no paging at
+%%     all, and falls back to ONE content-sized page carrying all 17 systems (34 staves,
+%%     caught by page.stretched.two-staff.staves-on-first-page). A cap admits a short last
+%%     page on both sides, and page 1 — the only page these entries read — holds six systems
+%%     either way. ⚠️ That 18-vs-17 is a LINE-breaking difference on two-staff music and is
+%%     NOT what this pair measures; it is recorded here because it decides how the pair has
+%%     to be spelled.
+\book {
+  \probeTag "JSS"
+  \paper { max-systems-per-page = #6 }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
+      \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "JSSC"
+  \paper { max-systems-per-page = #6 ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
+      \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}

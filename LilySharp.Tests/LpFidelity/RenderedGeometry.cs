@@ -229,7 +229,18 @@ internal sealed class RenderedGeometry
     /// last-bottom springs can fit a different number of systems than the placement chain
     /// that follows it — with no committed fixture obliged to notice.
     /// </remarks>
-    public int SystemsOnPage(int page = 0) => StaffRefpoints(page).Count;
+    public int SystemsOnPage(int page = 0) => StavesOnPage(page);
+
+    /// <summary>
+    /// How many STAVES were drawn on <paramref name="page"/>.
+    /// </summary>
+    /// <remarks>
+    /// The quantity <see cref="SystemsOnPage"/> actually computes, named for what it is, so a
+    /// multi-staff probe can assert the shape of its page without claiming to count systems.
+    /// A probe that reads gaps by index (<see cref="StaffGapAt"/>) needs this: the index means
+    /// the staff it is supposed to mean only while the page holds the staves the probe assumes.
+    /// </remarks>
+    public int StavesOnPage(int page = 0) => StaffRefpoints(page).Count;
 
     /// <summary>
     /// Distance from the top paper edge down to the first system's staff refpoint.

@@ -143,12 +143,26 @@ try {
             # the system -- zero on a one-staff score, and on a two-staff one the number
             # Align_interface solved for. Printed only when it exists, so the single-staff
             # books stay as terse as they were.
-            $inside = @(
+            $insideAll = @(
                 for ($i = 0; $i -lt $sys.Count; $i++) { $sys[$i].StaffUp - $sys[$i].StaffDown }
-            ) | Where-Object { $_ -gt 1e-9 }
+            )
+            $inside = @($insideAll | Where-Object { $_ -gt 1e-9 })
             if ($inside) {
                 $insideUniq = @($inside | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
                 "     staff-to-staff INSIDE a system = {0}" -f ($insideUniq -join ', ')
+            }
+            # On a MULTI-STAFF score the gap printed below runs first-staff to first-staff, so
+            # it carries the inside distance with it. The system-to-system spring is the part
+            # that is left: LAST staff of one system to FIRST staff of the next. Computed here
+            # from the raw doubles rather than left to the reader to subtract two F6 prints --
+            # arithmetic on a ROUNDED gap is exactly how 3.544994 (for 3.550000) got into the
+            # ledger's system.stretched-distance entry.
+            if ($inside -and $sys.Count -ge 2) {
+                $inter = for ($i = 1; $i -lt $sys.Count; $i++) {
+                    $staff[$i] - ($staff[$i - 1] + $insideAll[$i - 1])
+                }
+                $interUniq = @($inter | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
+                "     system-to-system (last staff -> next first) = {0}" -f ($interUniq -join ', ')
             }
             if ($sys.Count -ge 2) {
                 $gaps = for ($i = 1; $i -lt $sys.Count; $i++) { $staff[$i] - $staff[$i - 1] }

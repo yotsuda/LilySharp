@@ -278,6 +278,104 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
+    /// (ragged-bottom control). The two entries built from it measure the staff spring
+    /// LilyPond puts INSIDE a system and Lily# does not have.
+    /// </summary>
+    /// <remarks>
+    /// <c>Page_layout_problem::append_system</c> pushes one spring per spaceable staff into
+    /// the SAME chain as the system-to-system springs
+    /// (LILYPOND-REF: lily/page-layout-problem.cc:651-720): ideal =
+    /// <c>staff-staff-spacing</c>'s basic-distance 9, inverse stretch strength = its
+    /// stretchability 5 (scm/define-grobs.scm:3352-3355). So a page stretched to force f
+    /// moves the staves of a system apart by 5f while it moves the systems apart by 60f.
+    /// Lily# solves one spring per SYSTEM boundary and draws every system at the score-wide
+    /// <c>MultiStaffLayouter.CalculateSystemHeight</c>, i.e. at the <c>Align_interface</c>
+    /// minimum, at every force.
+    /// <para>
+    /// The music is shaped so the staff spring does NOT sit on its floor: the treble's
+    /// <c>c</c> (LilyPond <c>c'</c>) hangs 3.545 below its middle line and the bass staff's
+    /// deepest up-stem reaches 3.0 above its own, so <c>ensure_min_distance</c> asks for
+    /// 3.545 + 3.0 + 1 = 7.545, under the basic-distance 9 the spring stretches from. Book
+    /// P's shape is the trap this avoids: its 9.595 floor blocks the spring until f &gt;
+    /// 0.119, and pages like this solve to f ≈ 0.099.
+    /// </para>
+    /// <para>
+    /// Both books carry the identical music and bar count and differ in ragged-bottom alone.
+    /// ⚠️ <see cref="SixSystemsPerPage"/> is load bearing — left to choose, both engravers
+    /// fill the page and COMPRESS it, which is the other regime entirely (see the .ly twin's
+    /// header for the measurement that showed it).
+    /// </para>
+    /// </remarks>
+    private static string TwoStaffPageScore(string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 120)).Trim()}} }
+          lh { {{string.Concat(Enumerable.Repeat("c,4 d, e, f, | ", 120)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>The justified twin — the mirror of book JSS.</summary>
+    private static readonly string JSS = TwoStaffPageScore("JSS");
+
+    /// <summary>The ragged-bottom control — the mirror of book JSSC.</summary>
+    /// <remarks>Same music as <see cref="JSS"/>, built by the same call, so the two cannot
+    /// drift apart the way a hand-copied pair can (HANDOFF 5.0: both sides of a pair must be
+    /// the same music, and it was not, twice).</remarks>
+    private static readonly string JSSC = TwoStaffPageScore("JSSC");
+
+    /// <summary>
+    /// At most six systems per page, so the page keeps slack to distribute and its springs
+    /// STRETCH.
+    /// </summary>
+    /// <remarks>
+    /// <c>max-systems-per-page</c> is a <c>\paper</c> variable in LilyPond, so it is set here
+    /// for the same reason <see cref="TightPaper"/>'s paper height is — see
+    /// <see cref="RenderedGeometry.Render"/>.
+    /// <para>
+    /// ⚠️ A CAP, not <c>SystemsPerPage = 6</c>, which was tried first and cannot work: this
+    /// music is 17 systems, so the last page holds 5, and <c>PageBreaker</c> drops every
+    /// candidate page whose count is not exactly 6 (PageBreaker.cs:523). With no feasible
+    /// paging left it fell back to a single content-sized page carrying all 17 systems — the
+    /// probe measured its own fallback rather than a stretched page, and only the staff COUNT
+    /// entry noticed. LilyPond takes the exact form (it re-breaks the lines into 18 systems
+    /// and pages them 6/6/6, its page breaker choosing the line breaking); under the cap both
+    /// sides break into 17 and page 1 holds six systems on both.
+    /// </para>
+    /// </remarks>
+    private static readonly LayoutOptions SixSystemsPerPage =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 6 },
+        };
+
+    /// <summary>The same paper with vertical justification off — the control's regime.</summary>
+    private static readonly LayoutOptions SixSystemsPerPageRagged =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with
+            {
+                MaxSystemsPerPage = 6,
+                RaggedBottom = true,
+            },
+        };
+
+    /// <summary>
     /// TIGHT PAPER — the mirror of book T in page-vertical.ly. The page BREAKER's own
     /// quantity: how many systems it puts on a page, and how many pages that takes.
     /// </summary>
@@ -2232,6 +2330,23 @@ internal static class LpGeometryProbes
         // life, and the committed fixtures agree with it only by coincidence.
         new("page.stretched.systems-on-first-page", W, g => g.SystemsOnPage(0)),
         new("page.stretched.page-count", W, g => g.PageCount),
+
+        // --- the STAFF spring inside a system, on a page that STRETCHES (books JSS/JSSC) ---
+        // The pair asks one question: does the distance between two staves of a system come
+        // out of the page's spring chain (LilyPond) or is it a fixed height the page cannot
+        // touch (Lily#)? The control is the SAME music with ragged-bottom on, so LilyPond's
+        // own difference between the two entries IS the stretch, and Lily#'s is zero.
+        // The third entry reads the system spring on the same page, because the slack has to
+        // go somewhere: with no staff springs to share it with, Lily#'s system gaps must open
+        // WIDER than LilyPond's. A port that adds the staff spring has to close both.
+        new("page.natural.staff-staff-inside", JSSC, g => g.StaffGapAt(0), SixSystemsPerPageRagged),
+        new("page.stretched.staff-staff-inside", JSS, g => g.StaffGapAt(0), SixSystemsPerPage),
+        new("system.stretched-distance.two-staff", JSS, g => g.StaffGapAt(1), SixSystemsPerPage),
+
+        // The structural guard the three above cannot give: they read gaps by INDEX, and an
+        // index means the staff it is supposed to mean only while the page holds the staves
+        // this probe assumes. Six two-staff systems = twelve staves.
+        new("page.stretched.two-staff.staves-on-first-page", JSS, g => g.StavesOnPage(0), SixSystemsPerPage),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.
