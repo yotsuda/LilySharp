@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="337.5" viewBox="0 0 119.50 33.75" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="335.8" viewBox="0 0 119.50 33.58" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -34,7 +34,7 @@
   <text class="music" x="37.94" y="14.56" font-size="4.00" data-pos="355"></text>
   <line x1="39.18" y1="14.41" x2="39.18" y2="11.06" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="40.95" y="14.06" font-size="4.00" data-pos="359"></text>
-  <line x1="41.02" y1="14.21" x2="41.02" y2="17.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="41.02" y1="14.21" x2="41.02" y2="17.39" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.84" y="12.06" width="0.19" height="4.00" data-pos="349"/>
   <rect x="43.79" y="12.06" width="0.19" height="4.00" data-pos="361"/>
   <rect x="44.28" y="12.06" width="0.60" height="4.00" data-pos="361"/>
@@ -57,7 +57,7 @@
   <text class="music" x="31.93" y="25.06" font-size="4.00" data-pos="384"></text>
   <line x1="33.17" y1="24.91" x2="33.17" y2="21.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.94" y="24.56" font-size="4.00" data-pos="386"></text>
-  <line x1="35.00" y1="24.71" x2="35.00" y2="28.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.00" y1="24.71" x2="35.00" y2="27.89" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="37.94" y="24.06" font-size="4.00" data-pos="388"></text>
   <line x1="38.01" y1="24.21" x2="38.01" y2="27.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="40.95" y="23.56" font-size="4.00" data-pos="392"></text>

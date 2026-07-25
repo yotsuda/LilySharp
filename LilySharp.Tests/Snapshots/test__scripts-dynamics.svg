@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="265.4" viewBox="0 0 119.50 26.54" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="263.8" viewBox="0 0 119.50 26.38" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -27,7 +27,7 @@
   <text class="music" x="24.92" y="14.85" font-size="4.00" data-pos="304"></text>
   <line x1="26.16" y1="14.70" x2="26.16" y2="11.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.93" y="14.35" font-size="4.00" data-pos="320"></text>
-  <line x1="29.16" y1="14.20" x2="29.16" y2="10.85" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.16" y1="14.20" x2="29.16" y2="11.02" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="30.93" y="13.85" font-size="4.00" data-pos="328"></text>
   <line x1="32.17" y1="13.70" x2="32.17" y2="10.68" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="35.11" y="13.35" font-size="4.00" data-pos="340"></text>
@@ -35,7 +35,7 @@
   <text class="music" x="38.12" y="13.85" font-size="4.00" data-pos="357"></text>
   <line x1="39.35" y1="13.70" x2="39.35" y2="10.68" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="41.12" y="14.35" font-size="4.00" data-pos="377"></text>
-  <line x1="42.36" y1="14.20" x2="42.36" y2="10.85" stroke="#000000" stroke-width="0.130"/>
+  <line x1="42.36" y1="14.20" x2="42.36" y2="11.02" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="44.12" y="14.85" font-size="4.00" data-pos="389"></text>
   <line x1="45.36" y1="14.70" x2="45.36" y2="11.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.38" y="16.85" font-size="4.00" data-pos="401"></text>
@@ -71,11 +71,11 @@
   <text x="44.12" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
   <text class="music" x="22.57" y="16.64" font-size="4.00" data-pos="289"></text>
   <text class="music" x="25.57" y="16.64" font-size="4.00" data-pos="305"></text>
-  <text class="music" x="28.58" y="10.65" font-size="4.00" data-pos="321"></text>
+  <text class="music" x="28.58" y="10.82" font-size="4.00" data-pos="321"></text>
   <text class="music" x="31.58" y="10.48" font-size="4.00" data-pos="329"></text>
   <text class="music" x="35.77" y="9.75" font-size="4.00" data-pos="346"></text>
   <text class="music" x="38.77" y="16.64" font-size="4.00" data-pos="358"></text>
-  <text class="music" x="41.77" y="10.25" font-size="4.00" data-pos="378"></text>
+  <text class="music" x="41.77" y="10.42" font-size="4.00" data-pos="378"></text>
   <text class="music" x="49.07" y="10.88" font-size="4.00" data-pos="409"></text>
   <text class="music" x="53.34" y="16.85" font-size="4.00" data-pos="426"></text>
   <text class="music" x="60.19" y="12.03" font-size="4.00" data-pos="444"></text>

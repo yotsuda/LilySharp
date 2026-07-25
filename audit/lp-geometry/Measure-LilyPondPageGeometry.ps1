@@ -147,6 +147,16 @@ try {
                 for ($i = 0; $i -lt $sys.Count; $i++) { $sys[$i].StaffUp - $sys[$i].StaffDown }
             )
             $inside = @($insideAll | Where-Object { $_ -gt 1e-9 })
+            # THE BOTTOM OF THE CHAIN, which had no reading here at all. last-bottom-spacing
+            # attaches to the LAST SPACEABLE STAFF's refpoint (page-layout-problem.cc:538-545),
+            # not to the system origin and not to the ink, so this is the term that closes the
+            # page's force. Without it, page.{stretched,compressed}.* are four readings of TWO
+            # forces with nothing to attribute them to -- a force is slack over strength, and
+            # the slack is not measurable from the gaps alone. Computed from the raw doubles
+            # for the same reason the inter-system line below is.
+            $lastStaff = $staff[-1] + $insideAll[-1]
+            "     last  STAFF refpoint below edge  = {0:F6}   to foot = {1:F6}   ink below it = {2:F6}" -f `
+                $lastStaff, ($p.PaperHeight - $lastStaff), ($inkBottom - $lastStaff)
             if ($inside) {
                 $insideUniq = @($inside | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
                 "     staff-to-staff INSIDE a system = {0}" -f ($insideUniq -join ', ')

@@ -43,11 +43,11 @@
   <text class="music" x="49.15" y="21.21" font-size="4.00" data-pos="578"></text>
   <line x1="50.39" y1="21.06" x2="50.39" y2="17.71" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="56.50" y="20.71" font-size="4.00" data-pos="580"></text>
-  <line x1="56.57" y1="20.86" x2="56.57" y2="24.21" stroke="#000000" stroke-width="0.130"/>
+  <line x1="56.57" y1="20.86" x2="56.57" y2="24.05" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="63.60" y="20.21" font-size="4.00" data-pos="582"></text>
   <line x1="63.67" y1="20.36" x2="63.67" y2="23.71" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="72.93" y="20.71" font-size="4.00" data-pos="586"></text>
-  <line x1="73.00" y1="20.86" x2="73.00" y2="24.21" stroke="#000000" stroke-width="0.130"/>
+  <line x1="73.00" y1="20.86" x2="73.00" y2="24.05" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="80.34" y="21.21" font-size="4.00" data-pos="589"></text>
   <line x1="81.57" y1="21.06" x2="81.57" y2="17.71" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="87.56" y="21.71" font-size="4.00" data-pos="591"></text>

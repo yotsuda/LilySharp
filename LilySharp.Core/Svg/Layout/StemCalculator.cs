@@ -122,35 +122,55 @@ public static class StemCalculator
     /// <remarks>
     /// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position
     /// </remarks>
-    public static double CalculateStemEndY(
-        double stemAttachY,
+    /// <summary>
+    /// The stem's LENGTH in staff spaces: <c>details.lengths</c> picked by duration, less the
+    /// unnatural-direction shortening, times <c>length-fraction</c>. This is LilyPond's
+    /// <c>length</c> local in <c>Stem::calc_length</c> — BEFORE the middle-line extension and
+    /// the minimum-length floor that <see cref="CalculateStemEndY"/> applies on top of it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:506-557 internal_calc_stem_end_position — :506-517 picks the
+    /// length out of <c>details.lengths</c>, :519-555 shortens a stem that points the way its
+    /// own head already lies, :557 scales by <c>length-fraction</c>.
+    /// <para>
+    /// Split out of <see cref="CalculateStemEndY"/> so the SKYLINE can reserve the stem the
+    /// renderer draws. <c>SkylineBuilder</c> seeded a flat
+    /// <see cref="EngravingDefaults.DefaultStemLength"/>, which is LilyPond's <c>lengths</c>
+    /// ENTRY and not its <c>length</c> — the same "draws right, reserves stale" double model
+    /// that <c>AddStaffToSkylines</c> already names for BEAMED stems (HANDOFF §5.2.1②).
+    /// </para>
+    /// </remarks>
+    /// <param name="stemUp">True if the stem points up.</param>
+    /// <param name="durationLog">Duration log (2=quarter, 3=eighth, 4=16th...).</param>
+    /// <param name="staffPosition">
+    /// Staff position of the head the stem hangs off, in HALF-spaces from the middle line,
+    /// up-positive — LilyPond's <c>hp[dir]</c>.
+    /// </param>
+    /// <param name="details">Stem details parameters.</param>
+    public static double CalculateStemLength(
         bool stemUp,
-        double staffTopDown,
         int durationLog = 2,
         int staffPosition = 0,
         StemDetails? details = null)
     {
         var d = details ?? StemDetails.Default;
-        double staffHeight = 4.0; // staff spaces
-        double staffMiddleDown = staffTopDown + staffHeight / 2;
 
-        // Convert the device-Y attach point into LilyPond's Y-up frame
-        // (staff-spaces above the middle line): middle − device.
-        double attachUp = staffMiddleDown - stemAttachY;
-
-        // --- Base length from duration ---
-        // LILYPOND-REF: stem.cc:506-517
+        // LILYPOND-REF: stem.cc:506-517 — length = 2 * details.lengths[durlog - 2], in
+        // half-spaces there and in whole staff-spaces here.
         int lengthIndex = Math.Clamp(durationLog - 2, 0, d.Lengths.Length - 1);
         double length = d.Lengths[lengthIndex]; // in staff spaces
 
-        // --- Unnatural direction shortening ---
-        // LILYPOND-REF: stem.cc:519-555
-        // If stem direction matches head position direction (both above or both below middle),
-        // this is the "unnatural" direction and the stem should be shortened.
+        // LILYPOND-REF: stem.cc:519-522 — "Stems in unnatural (forced) direction should be
+        // shortened, according to [Roush & Gourlay]":
+        //     Interval hp = head_positions (me);
+        //     if (dir && dir * hp[dir] >= 0)
+        // ⚠️ The comparison is >= 0, so a head sitting ON the middle line is shortened too:
+        // its stem points neither with nor against the head, and LilyPond counts that as the
+        // unnatural side. This used to be spelled as two STRICT inequalities, which agrees
+        // with LilyPond everywhere except position 0 — exactly where a plain middle-line
+        // down-stem is the deepest ink a system has.
         int dir = stemUp ? 1 : -1; // 1=up, -1=down
-        bool unnaturalDirection = (dir > 0 && staffPosition > 0) || (dir < 0 && staffPosition < 0);
-
-        if (unnaturalDirection && d.StemShorten.Length > 0)
+        if (dir * staffPosition >= 0 && d.StemShorten.Length > 0)
         {
             int shortenIndex = Math.Clamp(durationLog - 2, 0, d.StemShorten.Length - 1);
             // LP computes the whole shortening in HALF-spaces: length=2·lengths, and
@@ -170,9 +190,31 @@ public static class StemCalculator
             length -= shorten / 2.0; // half-spaces -> staff-spaces
         }
 
-        // --- Length fraction ---
-        // LILYPOND-REF: stem.cc:557
+        // LILYPOND-REF: stem.cc:557 — length *= length-fraction.
         length *= d.LengthFraction;
+        return length;
+    }
+
+    public static double CalculateStemEndY(
+        double stemAttachY,
+        bool stemUp,
+        double staffTopDown,
+        int durationLog = 2,
+        int staffPosition = 0,
+        StemDetails? details = null)
+    {
+        var d = details ?? StemDetails.Default;
+        double staffHeight = 4.0; // staff spaces
+        double staffMiddleDown = staffTopDown + staffHeight / 2;
+
+        // Convert the device-Y attach point into LilyPond's Y-up frame
+        // (staff-spaces above the middle line): middle − device.
+        double attachUp = staffMiddleDown - stemAttachY;
+
+        // --- Length from duration, less the unnatural-direction shortening ---
+        // LILYPOND-REF: stem.cc:506-557 (see CalculateStemLength)
+        int dir = stemUp ? 1 : -1; // 1=up, -1=down
+        double length = CalculateStemLength(stemUp, durationLog, staffPosition, d);
 
         // --- Calculate stem end (Y-up) ---
         // LILYPOND-REF: stem.cc:588 — stem end = attach + dir * length.

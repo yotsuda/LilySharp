@@ -29,7 +29,7 @@
   <text class="music" x="42.06" y="18.82" font-size="4.00" data-pos="1314"></text>
   <line x1="43.30" y1="18.67" x2="43.30" y2="15.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="45.08" y="18.32" font-size="4.00" data-pos="1316"></text>
-  <line x1="45.14" y1="18.47" x2="45.14" y2="21.82" stroke="#000000" stroke-width="0.130"/>
+  <line x1="45.14" y1="18.47" x2="45.14" y2="21.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.08" y="17.82" font-size="4.00" data-pos="1318"></text>
   <line x1="48.14" y1="17.97" x2="48.14" y2="21.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.83" y="16.32" width="0.19" height="4.00" data-pos="1282"/>

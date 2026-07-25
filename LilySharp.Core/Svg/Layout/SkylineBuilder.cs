@@ -62,16 +62,12 @@ internal sealed class SkylineBuilder
         upSkyline.BeginBatch();
         downSkyline.BeginBatch();
 
-        // All dimensions in staff spaces (coordinate system is unified)
-        double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = EngravingDefaults.NoteheadHeight;
-
         // Process topmost staff for UP skyline (elements above the system)
         var firstStaff = score.StaffGroups[0].PrimaryStaff;
         // Y-up from the system top: the first staff's middle is half a staff BELOW it.
         double firstStaffMiddleUp = -_staffHeight / 2;
-        // A beamed stem is DRAWN to the quanter's length, but AddNoteBoxToSkylines
-        // reserves a FIXED DefaultStemLength 3.5 stem — the same "draws right, reserves
+        // A beamed stem is DRAWN to the quanter's length, which is not what
+        // Stem::calc_length gives an unbeamed one — the same "draws right, reserves
         // stale" double model BuildStaffSkylines had between staves. When the caller
         // supplies the drawn beams, the members' fixed stems are suppressed and the
         // beam's own outer edge is seeded instead, exactly as BuildStaffSkylines does.
@@ -80,7 +76,7 @@ internal sealed class SkylineBuilder
         //   the system stencil the page spaces by carries the real Beam ink, not a
         //   fixed-length stem model.
         AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
-            stemLength, noteheadHeight, upSkyline, downSkyline,
+            upSkyline, downSkyline,
             BeamedItemsToSuppress(firstStaffBeams));
         AddBeamsToSkyline(firstStaffBeams, firstStaffMiddleUp, upSkyline, downSkyline);
 
@@ -94,7 +90,7 @@ internal sealed class SkylineBuilder
             // Bottom staff's top line is at systemHeight - staffHeight from system reference
             double lastStaffMiddleUp = _staffHeight / 2 - systemHeight;
             AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleUp,
-                stemLength, noteheadHeight, upSkyline, downSkyline,
+                upSkyline, downSkyline,
                 BeamedItemsToSuppress(lastStaffBeams));
             AddBeamsToSkyline(lastStaffBeams, lastStaffMiddleUp, upSkyline, downSkyline);
         }
@@ -236,7 +232,7 @@ internal sealed class SkylineBuilder
 
     private void AddStaffToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
-        double staffMiddleUp, double stemLength, double noteheadHeight,
+        double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
         IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null)
     {
@@ -274,12 +270,12 @@ internal sealed class SkylineBuilder
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
-                    // reserve the fixed 3.5 stem, or the stale over-reservation would win.
+                    // reserve an unbeamed stem, or the stale over-reservation would win.
                     bool reserveStem = suppressStems is null
                         || !suppressStems.Contains((vi, measureIndex, itemIndex));
 
                     AddMusicItemToSkylines(item, itemX, staffMiddleUp,
-                        stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp, reserveStem);
+                        upSkyline, downSkyline, forcedStemUp, reserveStem);
                 }
             }
         }
@@ -306,12 +302,10 @@ internal sealed class SkylineBuilder
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
         double staffMiddleUp = -_staffHeight / 2;
-        double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
-        // A beamed stem is DRAWN to whatever length the quanter gives its beat, but
-        // AddNoteBoxToSkylines reserves a per-note box with a FIXED DefaultStemLength 3.5 —
-        // the "draws right, reserves stale" double model. When the drawn beams are known, the
+        // A beamed stem is DRAWN to whatever length the quanter gives its beat, which is not
+        // what Stem::calc_length gives an unbeamed one — the "draws right, reserves stale"
+        // double model. When the drawn beams are known, the
         // beamed members' fixed stems are SUPPRESSED here and the beam's own outer edge is
         // seeded instead (AddBeamsToSkyline), the way AddTiesToSkyline seeds the drawn bow.
         // audit/lp-geometry staff.staff.beam-{under,over}-notes.
@@ -326,7 +320,7 @@ internal sealed class SkylineBuilder
         SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
-            stemLength, noteheadHeight, upSkyline, downSkyline, suppressStems);
+            upSkyline, downSkyline, suppressStems);
 
         // Dynamics hang below the lowest stem of any voice (or rise above for @f.up);
         // they must widen the inter-staff gap or a dynamic overlaps the adjacent staff.
@@ -821,8 +815,6 @@ internal sealed class SkylineBuilder
         MusicItem item,
         double x,
         double staffMiddleUp,
-        double stemLength,
-        double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
         bool? forcedStemUp = null,
@@ -832,7 +824,7 @@ internal sealed class SkylineBuilder
         {
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp,
-                    stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp, reserveStem);
+                    upSkyline, downSkyline, forcedStemUp, reserveStem);
                 if (note.Accidental != null)
                     AddAccidentalBoxToSkylines(note.Accidental, x,
                         note.StaffPosition * 0.5 + staffMiddleUp, upSkyline, downSkyline);
@@ -848,7 +840,7 @@ internal sealed class SkylineBuilder
                 foreach (var chordNote in chord.Notes)
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp,
-                        stemLength, noteheadHeight, chordStemUp, chordNoteValue,
+                        chordStemUp, chordNoteValue,
                         upSkyline, downSkyline, reserveStem);
                 }
                 // Chord accidentals go through the REAL placement machinery
@@ -929,8 +921,6 @@ internal sealed class SkylineBuilder
         NoteItem note,
         double x,
         double staffMiddleUp,
-        double stemLength,
-        double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
         bool? forcedStemUp = null,
@@ -940,7 +930,7 @@ internal sealed class SkylineBuilder
         bool stemUp = forcedStemUp ?? note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp,
-            stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline, reserveStem);
+            stemUp, noteValue, upSkyline, downSkyline, reserveStem);
     }
 
     /// <summary>
@@ -965,8 +955,6 @@ internal sealed class SkylineBuilder
         int staffPosition,
         double x,
         double staffMiddleUp,
-        double stemLength,
-        double noteheadHeight,
         bool stemUp,
         int noteValue,
         VerticalSkyline upSkyline,
@@ -1056,6 +1044,19 @@ internal sealed class SkylineBuilder
         // staff.staff.beam-{under,over}-notes.
         if (noteValue < 2 || !reserveStem)
             return;
+
+        // The stem the RENDERER draws, through the same port: Stem::calc_length is not the
+        // details.lengths entry, it is that entry LESS the shortening a stem takes when it
+        // points the way its own head already lies (stem.cc:519-555). A middle-line head —
+        // position 0, which stem.cc:522's `dir * hp[dir] >= 0` includes — is the deepest ink
+        // a plain system has, so seeding EngravingDefaults.DefaultStemLength here reserved
+        // more room than LilyPond does and the page's last-bottom spring sat on a floor that
+        // was too tall. audit/lp-geometry page.{stretched,compressed}.staff-staff-inside and
+        // system.{stretched,compressed}-distance.two-staff are four readings of the two
+        // forces that error produced.
+        // LILYPOND-REF: lily/stem.cc:506-557 internal_calc_stem_end_position.
+        double stemLength = StemCalculator.CalculateStemLength(
+            stemUp, StemCalculator.GetDurationLog(noteValue), staffPosition);
 
         if (stemUp)
         {

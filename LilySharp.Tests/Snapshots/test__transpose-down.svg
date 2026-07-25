@@ -22,7 +22,7 @@
   <text class="music" x="15.96" y="18.82" font-size="4.00" data-pos="422"></text>
   <line x1="17.20" y1="18.67" x2="17.20" y2="15.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="18.98" y="18.32" font-size="4.00" data-pos="424"></text>
-  <line x1="19.04" y1="18.47" x2="19.04" y2="21.82" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.04" y1="18.47" x2="19.04" y2="21.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.07" y="17.82" font-size="4.00" data-pos="428"></text>
   <line x1="23.14" y1="17.82" x2="23.14" y2="21.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.60" y="16.32" font-size="4.00" data-pos="431"></text>

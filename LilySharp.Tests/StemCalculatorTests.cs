@@ -37,9 +37,28 @@ public class StemCalculatorTests
     }
 
     [Fact]
-    public void CalculateStemEndY_QuarterNote_Uses3_5StaffSpaces()
+    public void CalculateStemEndY_QuarterOnTheMiddleLine_IsShortened_BecauseLilyPondsTestIncludesZero()
     {
-        // Quarter note stem up at middle of staff
+        // A head sitting ON the middle line. LilyPond's guard is
+        //   stem.cc:522   if (dir && dir * hp[dir] >= 0)
+        // and the comparison is >= 0, so the unnatural-direction shortening of
+        // stem.cc:519-555 DOES fire on position 0. This test used to assert 3.5 here — the
+        // raw details.lengths entry — which is what Lily# produced and NOT what LilyPond
+        // draws. That is the shape HANDOFF 5.4 names: an expectation pinned to the
+        // implementation rather than to LilyPond.
+        //
+        // The expected number is LilyPond's own arithmetic, in the half-spaces stem.cc works
+        // in (:516 length, :530 shorten-property, :534 quarter_stem_length, :541-554):
+        //   length           = 2 * lengths[0]                 = 7
+        //   shorten-property = 2 * stem-shorten[0] = 2 * 1.0  = 2
+        //   shortening-step  = min(max(0.25, 2/6), 0.5)       = 1/3
+        //   which-step       = min(1, 7 - 2*staff_rad - 2) + |0| = min(1, 1) + 0 = 1
+        //   shorten          = min(max(0, 1/3 * 1), 2)        = 1/3
+        //   length - shorten = 20/3 half-spaces               = 10/3 staff spaces
+        // Confirmed against 2.26.0: audit/lp-geometry/probes/page-vertical.ly books JSS,
+        // JSSC and JSK all put the ink below the last staff's refpoint at 3.333333, the
+        // bass staff's middle-line down stem.
+        // LILYPOND-REF: lily/stem.cc:519-555, scm/define-grobs.scm:3448,3452.
         double stemAttachY = 4.0; // middle of 4-space staff at systemY=2
         double systemY = 0.0;
 
@@ -47,9 +66,27 @@ public class StemCalculatorTests
             stemAttachY, stemUp: true, systemY,
             durationLog: 2, staffPosition: 0);
 
-        // Stem should be 3.5 staff spaces long (going up = smaller Y)
         double stemLength = stemAttachY - endY;
-        Assert.True(stemLength >= 3.5 - 0.01, $"Quarter stem should be >= 3.5, got {stemLength}");
+        Assert.Equal(10.0 / 3.0, stemLength, 9);
+    }
+
+    [Fact]
+    public void CalculateStemEndY_QuarterOnTheNaturalSide_IsNotShortened()
+    {
+        // The falsifier for the entry above: one staff position BELOW the middle line with
+        // the stem pointing UP is the natural direction, dir * hp[dir] = 1 * -1 < 0, so
+        // stem.cc:522 does not fire and the stem keeps the full details.lengths entry. If a
+        // future edit widened the guard instead of matching LilyPond's `>= 0`, this catches
+        // it — the two tests together pin the boundary rather than the value.
+        // LILYPOND-REF: lily/stem.cc:521-522.
+        double stemAttachY = 4.5;
+        double systemY = 0.0;
+
+        double endY = StemCalculator.CalculateStemEndY(
+            stemAttachY, stemUp: true, systemY,
+            durationLog: 2, staffPosition: -1);
+
+        Assert.Equal(StemDetails.Default.Lengths[0], stemAttachY - endY, 9);
     }
 
     [Fact]

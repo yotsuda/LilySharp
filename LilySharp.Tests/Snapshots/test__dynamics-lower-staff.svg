@@ -38,7 +38,7 @@
   <text class="music" x="17.20" y="26.12" font-size="4.00" data-pos="538"></text>
   <line x1="18.44" y1="25.97" x2="18.44" y2="22.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.21" y="25.62" font-size="4.00" data-pos="543"></text>
-  <line x1="20.28" y1="25.77" x2="20.28" y2="29.12" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.28" y1="25.77" x2="20.28" y2="28.95" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.22" y="25.12" font-size="4.00" data-pos="545"></text>
   <line x1="23.28" y1="25.27" x2="23.28" y2="28.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.22" y="24.62" font-size="4.00" data-pos="547"></text>
