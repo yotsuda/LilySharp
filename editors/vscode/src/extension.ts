@@ -11,7 +11,7 @@ import {
 } from 'vscode-languageclient/node';
 import { registerAiTransform } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
-import { registerSmartBrackets } from './smartBrackets';
+import { registerSmartTyping } from './smartTyping';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -346,9 +346,11 @@ export function activate(context: vscode.ExtensionContext) {
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
 
-    // Smart '<' typing: wrap the following note (`<` before c4 -> `<c>4`) and
-    // promote a chord's '>' to '>>' when its '<' is doubled into an arpeggio.
-    registerSmartBrackets(context, (msg: string) => outputChannel.appendLine(msg));
+    // Smart typing: the brackets it started with (`<` before c4 -> `<c>4`, and a
+    // chord's '>' promoted to '>>' when its '<' is doubled into an arpeggio) plus
+    // slurs, octave marks, beams, ties and durations — hence smartTyping, not
+    // smartBrackets.
+    registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
 
     // Watch for document changes
     context.subscriptions.push(

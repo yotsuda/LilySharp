@@ -206,7 +206,7 @@ let applyingFix = false;
  * (undoStopBefore: false), so one undo reverts both ends together; the handler
  * itself never runs on undo/redo.
  */
-export function registerSmartBrackets(
+export function registerSmartTyping(
     context: vscode.ExtensionContext,
     log: (msg: string) => void,
 ) {
@@ -724,7 +724,7 @@ function onInsertSlurOpen(editor: vscode.TextEditor, text: string, offset: numbe
     else if (!paired) { edits.push({ at: insertAt(closeOn.end), ins: ')' }); }
     applyFixWithCaret(editor, text, edits, openAt + 1);
 
-    log(`smartBrackets: ( typed -> ${openAt === offset ? '' : 'moved to the end of its note, '}`
+    log(`smartTyping: ( typed -> ${openAt === offset ? '' : 'moved to the end of its note, '}`
         + (extend ? 'extended the slur starting there'
             : paired ? 'paired with the unresolved ) ahead'
                 : ') placed after the following note'));
@@ -830,7 +830,7 @@ function onInsertBeamOpen(editor: vscode.TextEditor, text: string, offset: numbe
     ];
     if (!paired) { edits.push({ at: insertAt(runEnd), ins: ']' }); }
     applyFixWithCaret(editor, text, edits, anchor.end + 1);
-    log(`smartBrackets: [ typed -> beam ${paired ? 'opened against the ] ahead' : 'closed on its run'}`);
+    log(`smartTyping: [ typed -> beam ${paired ? 'opened against the ] ahead' : 'closed on its run'}`);
 }
 
 /** ']' typed in music: the end of a beam is written after its note like every
@@ -860,7 +860,7 @@ function onInsertBeamClose(editor: vscode.TextEditor, text: string, offset: numb
     if (runStart >= 0) { edits.push({ at: insertAt(runStart), ins: '[' }); }
     // Past the ']' — which the '[' inserted before it has pushed along by one.
     applyFixWithCaret(editor, text, edits, anchor.end + (runStart >= 0 ? 2 : 1));
-    log(`smartBrackets: ] typed -> ${runStart >= 0 ? '[ placed on its run' : 'moved to the end of its note'}`);
+    log(`smartTyping: ] typed -> ${runStart >= 0 ? '[ placed on its run' : 'moved to the end of its note'}`);
 }
 
 /** '~' typed in music: a tie is written after the note it starts from, exactly
@@ -879,7 +879,7 @@ function onInsertTie(editor: vscode.TextEditor, text: string, offset: number,
         { at: offset, del: 1 },
         { at: anchor.end <= offset ? anchor.end : anchor.end + 1, ins: '~' },
     ], anchor.end + 1);
-    log('smartBrackets: ~ typed -> moved to the end of its note');
+    log('smartTyping: ~ typed -> moved to the end of its note');
 }
 
 /** ')' typed in music: the slur's '(' belongs after the note BEFORE the one the
@@ -940,7 +940,7 @@ function onInsertSlurClose(editor: vscode.TextEditor, text: string, offset: numb
         }
     }
     applyFixWithCaret(editor, text, edits, caret);
-    log(`smartBrackets: ) typed -> ${what}`);
+    log(`smartTyping: ) typed -> ${what}`);
 }
 
 /** The written slots of the note event at [start, end): where its octave marks
@@ -1035,7 +1035,7 @@ function onInsertOctaveMark(editor: vscode.TextEditor, text: string, offset: num
             { at: offset, del: 1 },
             { at: shifted(cancel), del: 1 },
         ], marksEnd - 1);
-        log(`smartBrackets: ${mark} typed -> cancelled one ${opposite}`);
+        log(`smartTyping: ${mark} typed -> cancelled one ${opposite}`);
         return;
     }
     if (marksEnd === offset) { return; } // already in the slot
@@ -1046,7 +1046,7 @@ function onInsertOctaveMark(editor: vscode.TextEditor, text: string, offset: num
         { at: offset, del: 1 },
         { at: marksEnd <= offset ? marksEnd : marksEnd + 1, ins: mark },
     ], marksEnd + 1);
-    log(`smartBrackets: ${mark} typed -> moved into the octave slot`);
+    log(`smartTyping: ${mark} typed -> moved into the octave slot`);
 }
 
 /** A digit typed in music: a duration belongs AFTER the octave marks (`c,4`),
@@ -1083,7 +1083,7 @@ function onInsertDuration(editor: vscode.TextEditor, text: string, offset: numbe
     // `written === digits` is the same duration retyped (`c1` + '1'): the text
     // does not move, only the caret — that '1' is the first of a `16` or a `128`.
     const action = extend ? 'extended' : written === digits ? 'restarted' : 'replaced';
-    log(`smartBrackets: ${digit} typed -> duration ${action} (${written})`);
+    log(`smartTyping: ${digit} typed -> duration ${action} (${written})`);
 }
 
 /** '<' typed: wrap the following note, or — against an existing '<' — promote
@@ -1102,7 +1102,7 @@ function onInsertOpen(editor: vscode.TextEditor, text: string, offset: number,
         const close = findClose(text, bodyStart, end);
         if (close < 0 || text[close + 1] === '>') { return; } // unclosed, or already '>>'
         applyFix(editor, b => b.insert(editor.document.positionAt(close + 1), '>'));
-        log('smartBrackets: < doubled -> promoted the matching > to >>');
+        log('smartTyping: < doubled -> promoted the matching > to >>');
         return;
     }
 
@@ -1123,7 +1123,7 @@ function onInsertOpen(editor: vscode.TextEditor, text: string, offset: number,
         const caret = editor.document.positionAt(noteEnd);
         editor.selection = new vscode.Selection(caret, caret);
     });
-    log(`smartBrackets: wrapped note -> <${m[0]}>`);
+    log(`smartTyping: wrapped note -> <${m[0]}>`);
 }
 
 /** VS Code auto-closed a typed '<' into '<>'. When the measure ahead already
@@ -1136,7 +1136,7 @@ function onAutoClosePair(editor: vscode.TextEditor, text: string, offset: number
     if (!hasUnresolvedClose(text, closeAt + 1, end)) { return; }
     applyFix(editor, b => b.delete(new vscode.Range(
         editor.document.positionAt(closeAt), editor.document.positionAt(closeAt + 1))));
-    log('smartBrackets: unresolved > ahead -> dropped the auto-closed >');
+    log('smartTyping: unresolved > ahead -> dropped the auto-closed >');
 }
 
 /** One '<' of a '<<' deleted: demote the measure's matching '>>' to '>'. A
@@ -1159,7 +1159,7 @@ function onDeleteOpen(editor: vscode.TextEditor, text: string, oldText: string,
     if (close < 0 || text[close + 1] !== '>') { return; } // no close, or already single
     applyFix(editor, b => b.delete(new vscode.Range(
         editor.document.positionAt(close), editor.document.positionAt(close + 1))));
-    log('smartBrackets: << reduced -> demoted the matching >> to >');
+    log('smartTyping: << reduced -> demoted the matching >> to >');
 }
 
 /** '>' typed. Against an existing '>' it promotes the measure's matching '<'
@@ -1179,7 +1179,7 @@ function onInsertClose(editor: vscode.TextEditor, text: string, offset: number,
         const open = findOpen(text, pairStart, pStart);
         if (open < 0 || text[open - 1] === '<') { return; } // unopened, or already '<<'
         applyFix(editor, b => b.insert(editor.document.positionAt(open), '<'));
-        log('smartBrackets: > doubled -> promoted the matching < to <<');
+        log('smartTyping: > doubled -> promoted the matching < to <<');
         return;
     }
     // Lone '>': with an unresolved '<' before it, it IS that chord's close.
@@ -1191,8 +1191,8 @@ function onInsertClose(editor: vscode.TextEditor, text: string, offset: number,
     const m = /(?:^|[^a-z])([a-g][a-z]*[',]*)$/.exec(text.slice(start, offset));
     const openAt = m ? offset - m[1].length : offset;
     applyFix(editor, b => b.insert(editor.document.positionAt(openAt), '<'));
-    log(m ? `smartBrackets: > typed -> wrapped <${m[1]}>`
-          : 'smartBrackets: > typed -> auto-opened <>');
+    log(m ? `smartTyping: > typed -> wrapped <${m[1]}>`
+          : 'smartTyping: > typed -> auto-opened <>');
 }
 
 /** One '>' of a '>>' deleted: demote the measure's matching '<<' to '<'. A
@@ -1213,5 +1213,5 @@ function onDeleteClose(editor: vscode.TextEditor, text: string, oldText: string,
     if (open < 0 || text[open - 1] !== '<') { return; } // no opener, or already single
     applyFix(editor, b => b.delete(new vscode.Range(
         editor.document.positionAt(open - 1), editor.document.positionAt(open))));
-    log('smartBrackets: >> reduced -> demoted the matching << to <');
+    log('smartTyping: >> reduced -> demoted the matching << to <');
 }
