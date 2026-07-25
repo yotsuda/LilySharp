@@ -69,7 +69,7 @@ section Canon {
     <d' fis' a'>1@fermata |
   }
   continuo {
-    repeat unfold 13 { $ground }
+    repeat unfold 13 { ground }
     d1 |
   }
 }
