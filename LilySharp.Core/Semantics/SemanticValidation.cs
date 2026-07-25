@@ -71,6 +71,7 @@ public static class SemanticValidation
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
         new TabTieStringValidator(),        // a tie naming two tab strings
         new TieTargetValidator(),           // a tie whose next note is not the tied pitch
+        new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new DuplicateCellValidator(),       // a (section × part) cell filled twice

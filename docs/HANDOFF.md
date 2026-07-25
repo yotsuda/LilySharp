@@ -287,10 +287,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   されない。⚠️ `staff … with chords NAME` の NAME は**意図的に除外**（別種の名前）なので
   そちらと混同しないこと。足すと「未定義の chord/lyrics part を参照するスコアを新たに弾く」
   挙動変更になる＝**要判断**
-- **対応の取れないスラーが無警告で消える**（2026-07-26 実コードで再確認＝`SlurDetector.cs:54` の
-  `hasEnd && openSlurs.Count > 0` で余った `)` を黙って捨て、走査終了時にスタックに残った `(` も
-  捨てる）＝タイの LYS4007 相当の警告を。
-  ⚠️ **別ブランチ指定＝ブランチ作成は GO 待ち**（§5.1）。master 直で入れてよいなら言うこと
+- ~~**対応の取れないスラーが無警告で消える**~~ — **完了**（**LYS4010**・ユーザー判断で master 直）。
+  ペアリング規則は**レンダラのものを読む**（`SlurPairingScanner` が collector の副作用として記録し
+  `SlurPairingValidator` が出す＝タイ LYS4007 と同じ形）。描かれる結果と食い違う警告を出さないため、
+  規則を再実装していない。既存 208 ファイル（samples＋fixtures）で**誤爆ゼロ**を確認済み
 - ~~`smartBrackets.ts` → `smartTyping.ts` 改名~~ — **完了**（`registerSmartTyping`・ログ接頭辞も。
   `out/` は未追跡の生成物なので触っていない）
 - ~~`IDrawingContext` の remark~~ — **完了**（2フレーム＋「誰が flip のどちら側か」を明記）

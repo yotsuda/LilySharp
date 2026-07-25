@@ -519,7 +519,11 @@ Tie            = '~' ;            (* same pitch across notes/barline: c4~ | c4. 
                                      the IMMEDIATELY following note/chord, which must repeat the
                                      tied pitch — a different pitch or a rest there ties nothing
                                      and warns (LYS4007); different pitches connect with a slur. *)
-Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d f>) *)
+Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d f>) . A slur mark
+                                     goes AFTER the note it belongs to, so a '(' written before any
+                                     note belongs to none. Marks pair innermost-first and do not
+                                     carry into another voice; one that pairs with nothing draws no
+                                     slur and warns (LYS4010). *)
 Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
 ### 8.4 Annotations (@name, attached to a note or chord)

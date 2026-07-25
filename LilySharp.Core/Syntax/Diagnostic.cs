@@ -355,6 +355,12 @@ public static class DiagnosticCodes
     /// unchanged (it stays a barline); this only names what happened. Written with a
     /// space before it, the barline is unambiguous and nothing is reported.</summary>
     public const string DashedBarGluedToNote = "LYS4009";
+    /// <summary>Warning: a slur mark that pairs with nothing — a <c>(</c> that is never
+    /// closed, or a <c>)</c> with no <c>(</c> open. Either way no slur is drawn, and
+    /// nothing else says so. A slur's marks also do not cross a voice boundary
+    /// (LilyPond's Slur_engraver lives in the Voice context), so one left open when the
+    /// voice ends is unpaired too.</summary>
+    public const string UnpairedSlur = "LYS4010";
     /// <summary>Warning: an annotation on a broken-chord group
     /// (<c>&lt;&lt; … &gt;&gt;@staccato</c>) or on one of its bare pitch members is
     /// not applied — only a dynamic (<c>@f</c>) and a chord name (<c>@chord</c>)

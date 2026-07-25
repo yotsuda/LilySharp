@@ -86,6 +86,20 @@ public record TieTargetWarning(
 );
 
 /// <summary>
+/// A slur mark that pairs with nothing, so no slur is drawn: a <c>(</c> that is never
+/// closed (including one left open when its voice ends — a slur does not cross voices)
+/// or a <c>)</c> read with none open. <see cref="SourcePosition"/> points at the NOTE the
+/// mark is written on, because that is where the mark binds: a slur mark annotates the
+/// note BEFORE it (MeasureCollector.MusicWalk PeekMarkers), which is also why a <c>(</c>
+/// with no note before it never becomes a mark at all and is seen here only through the
+/// <c>)</c> that then has nothing to pair with.
+/// </summary>
+public record UnpairedSlurWarning(
+    int SourcePosition,
+    bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -774,6 +788,12 @@ public sealed partial class MeasureCollector
     /// <summary>Ties (<c>~</c>) whose following item cannot receive them — a pitch
     /// mismatch or an audible rest. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TieTargetWarning> TieTargetWarnings => _tieTargetWarnings.ToList();
+    // Slur marks that pair with nothing, so SlurDetector draws no slur for them.
+    // Scanned per finished voice by SlurPairingScanner; surfaced by SlurPairingValidator.
+    private readonly List<UnpairedSlurWarning> _unpairedSlurWarnings = new();
+    /// <summary>Slur marks — a <c>(</c> never closed or a <c>)</c> with none open — that
+    /// draw no slur. Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<UnpairedSlurWarning> UnpairedSlurWarnings => _unpairedSlurWarnings.ToList();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -1017,6 +1037,7 @@ public sealed partial class MeasureCollector
         // Tie sanity scan runs BEFORE the ottava display transposition (it compares
         // written staff positions; an 8va span must not fake a pitch change).
         TieTargetScanner.Scan(voice, _tieTargetWarnings);
+        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings);
 
         // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
         // (etc.) while sounding at their written pitch. Single-staff score, so
@@ -1727,7 +1748,10 @@ public sealed partial class MeasureCollector
 
         // Tie sanity scan per voice, BEFORE the ottava display transposition.
         foreach (var v in voices)
+        {
             TieTargetScanner.Scan(v, _tieTargetWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+        }
 
         // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
         var multiVoiceOttava = DetectOttavaSpans(0);
@@ -1859,7 +1883,10 @@ public sealed partial class MeasureCollector
             voices.Add(new Voice($"{voiceName}.{i + 2}", extras[i]));
         // Tie sanity scan per staff voice, BEFORE any display-only transform.
         foreach (var v in voices)
+        {
             TieTargetScanner.Scan(v, _tieTargetWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+        }
         return ResolveVoiceStemDirections(voices.ToImmutable());
     }
 
@@ -1955,6 +1982,7 @@ public sealed partial class MeasureCollector
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _tieTargetWarnings.Clear();
+        _unpairedSlurWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
