@@ -777,7 +777,10 @@ internal sealed class MultiStaffLayouter
                 if (item.Duration > Fraction.Zero) break;
             }
 
-        bool prefixHasTime = !score.AllStavesTab && (isFirstSystem || leadingTimeChange != null);
+        // …and no meter is booked when NO row engraves one (a chords / lyrics-only system):
+        // SpacingRules.AnyStaffEngravesTime. Mirrors LayoutMeasures.
+        bool prefixHasTime = !score.AllStavesTab && SpacingRules.AnyStaffEngravesTime(score)
+                             && (isFirstSystem || leadingTimeChange != null);
         // The break-align GROUP's width places the shared meter column; each staff's own clef
         // ink inside that group is what its own first-note wish is measured from.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
@@ -845,7 +848,11 @@ internal sealed class MultiStaffLayouter
                 if (item.Duration > Fraction.Zero) break;
             }
 
-        bool prefixHasTime = !score.AllStavesTab && (systemIndex == 0 || leadingTimeChange != null);
+        // A chords / lyrics-only system engraves no meter either — neither Lyrics nor
+        // ChordNames consists a Time_signature_engraver (ly/engraver-init.ly:632-649,:703-725)
+        // — so it books none, exactly as it books no key and (now) no clef.
+        bool prefixHasTime = !score.AllStavesTab && SpacingRules.AnyStaffEngravesTime(score)
+                             && (systemIndex == 0 || leadingTimeChange != null);
         // The widest clef in the system governs where every staff's meter and first note
         // sit — a bass/alto/C clef reserves more than the treble G (ledger defect-3). The
         // SAME width threads into FirstNoteSpring below so the clef-only case still cancels.
@@ -894,6 +901,9 @@ internal sealed class MultiStaffLayouter
         var measureAllMeasures = new List<List<Measure>>();
         var measureBarlineWidths = new List<double>();
         double totalBarlineWidth = 0;
+        // How far the ink on the line's FIRST column reaches left of it — LilyPond's
+        // keep_inside_line_[LEFT], filled in when that measure is built below.
+        double lineStartLeftOverhang = 0.0;
 
         // A compressed multi-measure rest is ONE bar between two bar-line columns,
         // so the measures a run swallows contribute neither springs nor bar lines;
@@ -1012,6 +1022,16 @@ internal sealed class MultiStaffLayouter
             //   TimeSignature space-alist (first-note . ...).
             if (i == startMeasureIndex && springs.Length > 0)
             {
+                // LilyPond's keep-inside-line rod for the line's FIRST column, measured
+                // BEFORE spring 0 is replaced (the extents do not depend on the spring, but
+                // the by-item/by-column choice reads springs.Length, exactly as the lyric
+                // reservation above did). Applied to the assembled chain below.
+                lineStartLeftOverhang = Math.Max(
+                    LyricSpacing.LeadingLeftExtent(
+                        springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet),
+                    SpacingRules.ChordLeadingLeftExtent(
+                        allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet));
+
                 // The bar-line spring 0 becomes the prefix→first-note spring, floored at
                 // LilyPond's 0.3 + min_dist. ONE implementation (LineStartSpringForLine),
                 // shared with the break gate so both price a line start identically
@@ -1032,12 +1052,37 @@ internal sealed class MultiStaffLayouter
         // Concatenate all springs and solve for a single force across the system
         var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
 
-        // Multi-measure rest runs: add LilyPond's run-level rod across the springs of
-        // the run-opening measure (the run's single column pair) and re-propagate.
+        // The system's rods, all fed through the one Simple_spacer::add_rod port
+        // (SpringSolver.ApplyRods, blocking-force propagation included).
+        var rods = new List<(int Left, int Right, double Distance)>();
+
+        // KEEP-INSIDE-LINE, the left-margin half, at the line's first column.
+        // LILYPOND-REF: lily/simple-spacer.cc:431-432 — every column but the line starter is
+        //   given `keep_inside_line_ = col->extent (col, X_AXIS)` (the property is #t by
+        //   default on PaperColumn scm/define-grobs.scm:2742 and NonMusicalPaperColumn :2525,
+        //   and means "this column cannot have objects sticking into the margin",
+        //   scm/define-grob-properties.scm:637) — and :559
+        //   `spacer.add_rod (0, i, -cols[i].keep_inside_line_[LEFT])`. NO padding and no
+        //   spring term: the rod is the bare overhang, which is why LilyPond's answer for a
+        //   lead sheet is the overhang itself and not overhang + 0.5.
+        // MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CL/CLX/CLL): a
+        //   syllable reaching 2.312540 left of its column puts that column on 2.312539
+        //   instead of the 0.500000 `min_dist + 0.5` alone gives, moving every column of the
+        //   line by the same amount and none of the column-to-column distances; take the
+        //   reach away (CLL) and the column drops straight back to 0.500000.
+        // ⚠️ PARTIAL PORT — only the FIRST column, and only its LEFT side. LilyPond rods
+        //   EVERY column both ways (:558 adds the right-margin twin
+        //   `add_rod (i, cols.size (), keep_inside_line_[RIGHT])`). The first column is where
+        //   the constraint binds, because the springs between absorb any later column's
+        //   overhang; generalising it to every column is the next step and needs ledger
+        //   points for the regimes it opens. See docs/HANDOFF.md section 1.
+        if (lineStartLeftOverhang > 0.0 && measureSprings.Count > 0 && measureSprings[0].Length > 0)
+            rods.Add((0, 1, lineStartLeftOverhang));
+
+        // Multi-measure rest runs: LilyPond's run-level rod across the springs of the
+        // run-opening measure (the run's single column pair).
         // LILYPOND-REF: lily/multi-measure-rest.cc:341-391 calculate_spacing_rods →
-        // Rod::add_to_cols → lily/simple-spacer.cc:90-128 Simple_spacer::add_rod,
-        // which SpringSolver.ApplyRods mirrors (blocking-force propagation included).
-        var mmrRods = new List<(int Left, int Right, double Distance)>();
+        // Rod::add_to_cols → lily/simple-spacer.cc:90-128 Simple_spacer::add_rod.
         int springOffset = 0;
         for (int i = 0; i < measureSprings.Count; i++)
         {
@@ -1067,16 +1112,16 @@ internal sealed class MultiStaffLayouter
                     SpacingRules.GetBarlineWidth(runStartMeasure.StartBarline)
                     + SpacingRules.GetBarlineWidth(runStartMeasure.EndBarline);
 
-                mmrRods.Add((springOffset, springOffset + springCount,
+                rods.Add((springOffset, springOffset + springCount,
                     SpacingRules.MmrRodDistance(
                         run.Count, measureLength, minimumDistance, runBarlineWidth)));
             }
             springOffset += springCount;
         }
 
-        if (mmrRods.Count > 0)
+        if (rods.Count > 0)
         {
-            allSprings = SpringSolver.ApplyRods(allSprings, mmrRods);
+            allSprings = SpringSolver.ApplyRods(allSprings, rods);
             // ApplyRods preserves order and count, so slice the adjusted springs back
             // into their measures — per-measure widths below read from these lists.
             int offset = 0;

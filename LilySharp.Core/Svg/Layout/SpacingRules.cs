@@ -224,8 +224,8 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/break-align-interface.cc — the Clef break-align column spans the
     /// whole system, so in a grand staff the wider bass F clef governs the treble staff's
     /// meter position too (both signatures stay vertically aligned). Tab (its own clef),
-    /// text (lyric/chord) and ossia rows carry no shared-prefix clef and are skipped. Empty
-    /// selection falls back to the treble G width (the historical default).
+    /// text (lyric/chord) and ossia rows carry no shared-prefix clef and are skipped. An
+    /// empty selection books NOTHING — see <see cref="ClefGroupExtent(IEnumerable{ValueTuple{double, double}})"/>.
     /// </remarks>
     public static double MaxClefWidth(MultiStaffScore score)
     {
@@ -295,10 +295,26 @@ internal static class SpacingRules
 
     /// <summary>
     /// The Clef break-align group's ink extent over an explicit set of clef stencils — the
-    /// union, in the frame of a clef's own grob origin. An empty set falls back to the
-    /// treble G (the historical default). This ONE fold serves the score walk and the
-    /// tests, so a tab staff's contribution cannot be modelled twice.
+    /// union, in the frame of a clef's own grob origin. An EMPTY set gives an empty extent
+    /// <c>(0, 0)</c>, i.e. no clef column at all. This ONE fold serves the score walk and
+    /// the tests, so a tab staff's contribution cannot be modelled twice.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:145-146,155-156 — a break-align group
+    /// with no grobs is SKIPPED; it neither consumes a space-alist gap nor anchors its
+    /// neighbour. So a system whose rows are all lyric / chord (ly/engraver-init.ly:632-649
+    /// Lyrics, :703-725 ChordNames — neither consists a <c>Clef_engraver</c>) gets NO clef
+    /// column, not a default one.
+    /// <para>
+    /// This used to fall back to the treble G, which booked 2.565 of ink nobody draws in
+    /// front of a lead sheet. It is the same defect the ledger closed for the KEY column
+    /// under <c>line-start.time-to-first-note.tab-keyed</c>, where a column was booked for
+    /// staves that engrave none. MEASURED (audit/lp-geometry/probes/staffless-system.ly,
+    /// scores CO/CO3/COK): LilyPond puts the first chord name of a staff-less system on
+    /// 0.500000 — <c>standard_breakable_column_spacing</c>'s <c>min_dist + 0.5</c> with
+    /// <c>min_dist</c> 0 — so there is no prefatory ink in front of it at all.
+    /// </para>
+    /// </remarks>
     public static (double Left, double Right) ClefGroupExtent(
         IEnumerable<(double Left, double Right)> stencils)
     {
@@ -308,9 +324,7 @@ internal static class SpacingRules
             left = Math.Min(left, l);
             right = Math.Max(right, r);
         }
-        return double.IsInfinity(left)
-            ? (GlyphMetrics.ClefInkLeft(ClefType.Treble), GlyphMetrics.ClefInkRight(ClefType.Treble))
-            : (left, right);
+        return double.IsInfinity(left) ? (0.0, 0.0) : (left, right);
     }
 
     /// <summary>The stencil extent a pitched clef contributes to the group.</summary>
@@ -347,6 +361,43 @@ internal static class SpacingRules
     /// </remarks>
     public static bool ContributesToKeyColumnWidth(Staff staff) =>
         !staff.IsTab && !staff.IsTextRow;
+
+    /// <summary>
+    /// Whether this staff ENGRAVES a time signature — the same question
+    /// <see cref="ContributesToKeyColumnWidth"/> asks for the key column, for the meter one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:80 — <c>Staff \consists Time_signature_engraver</c>,
+    /// and neither Lyrics (:632-649) nor ChordNames (:703-725) does. So a lyric / chord row
+    /// has no TimeSignature grob at all and books nothing.
+    /// <para>
+    /// A TAB staff is NOT excluded here: its TimeSignature grob exists and sits in the shared
+    /// meter column, it merely has no stencil (dumped as an EMPTY extent — the probe harness
+    /// reports skipping <c>TKC TABTIME</c>). An all-tab score's meter is dropped by the
+    /// separate <c>AllStavesTab</c> gate at the call sites, which is where that (Lily#-side)
+    /// modelling of the missing stencil already lives.
+    /// </para>
+    /// </remarks>
+    public static bool ContributesToTimeColumnWidth(Staff staff) => !staff.IsTextRow;
+
+    /// <summary>
+    /// Whether ANY staff in the score engraves a time signature. False for a system built
+    /// only of chord / lyric rows, which is what stops the prefix booking a meter column no
+    /// row draws.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CO and CO3): the same
+    /// chords under 4/4 and under 3/4 put their first chord name on 0.500000 in both, to 15
+    /// digits — LilyPond books no meter width because no context engraves one, while Lily#
+    /// booked <c>GetTimeSigWidth(beats, beatType)</c>, which differs between the two.
+    /// </remarks>
+    public static bool AnyStaffEngravesTime(MultiStaffScore score)
+    {
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (ContributesToTimeColumnWidth(staff))
+                return true;
+        return false;
+    }
 
     /// <summary>
     /// The engraved width of <paramref name="key"/> ON <paramref name="staff"/> — its
@@ -2894,6 +2945,46 @@ internal static class SpacingRules
         }
         Widen(timings.Count, half[^1] + edgeGap);
         return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// How far the chord-symbol ink on a measure's FIRST column reaches LEFT of that column —
+    /// the chord half of LilyPond's keep-inside-line rod. Mirrors
+    /// <see cref="ApplyChordRowSpacing"/>'s <c>half[0]</c> exactly (same filter, same metric),
+    /// so the quantity rodded is the one that method reserves.
+    /// </summary>
+    /// <remarks>
+    /// Lily# draws a chord symbol with <c>text-anchor="middle"</c> on its column, so its ink
+    /// starts half a width LEFT of it. ⚠️ LilyPond's ChordName does NOT: it declares no
+    /// X-offset and no self-alignment-interface at all (scm/define-grobs.scm:837-855), so its
+    /// reference point IS its ink left and it sits ON the column — MEASURED in every score of
+    /// audit/lp-geometry/probes/staffless-system.ly, where the ChordName anchor equals its
+    /// column's X to 6 digits. Lily#'s centring is a separate, unported divergence; this
+    /// function prices what Lily# actually draws, so the rod keeps THAT ink inside the line.
+    /// No padding is added — LilyPond's rod carries none (lily/simple-spacer.cc:559) — unlike
+    /// <see cref="ApplyChordRowSpacing"/>'s neighbour gaps.
+    /// </remarks>
+    internal static double ChordLeadingLeftExtent(
+        IReadOnlyList<Fraction> timings,
+        int measureIndex,
+        ImmutableArray<ChordNameItem> chordNames,
+        bool includeAttached)
+    {
+        if (chordNames.IsDefaultOrEmpty || timings.Count == 0)
+            return 0.0;
+
+        double half = 0.0;
+        foreach (var cn in chordNames)
+        {
+            if (cn.MeasureIndex != measureIndex)
+                continue;
+            if (!cn.IsChordRow && (!includeAttached || !cn.UseTiming))
+                continue;
+            if (timings[0] == cn.Timing)
+                half = Math.Max(half,
+                    Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2);
+        }
+        return half;
     }
 
     /// <summary>

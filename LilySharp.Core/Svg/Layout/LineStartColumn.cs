@@ -479,42 +479,72 @@ internal static class LineStartColumn
             wishes.Add(WishFrom(last.Symbol, last.InkLeft, last.InkRight, floor, minDistance));
         }
 
-        // No staff at all — a system made only of chord / lyric rows.
+        // No Staff_spacing wish at all — a system made only of chord / lyric rows. Neither
+        // Lyrics (ly/engraver-init.ly:632-649) nor ChordNames (:703-725) consists a
+        // Clef_engraver, a Key_engraver or a Time_signature_engraver, and neither makes a
+        // Staff_spacing grob, so LilyPond's `springs` is empty here too.
         //
-        // ⚠️ LILYSHARP-OWN, AND KNOWN WRONG. LilyPond has this system perfectly well
-        // (`\new ChordNames` alone, a lead sheet of ChordNames + Lyrics); what those
-        // contexts lack is a clef, a meter and a Staff_spacing. So `springs` is empty there
-        // too and spacing-spanner.cc:514-515 falls to standard_breakable_column_spacing —
-        // spacing-basic.cc:71-82, `ideal = min_dist + 0.5` for a dt == 0 pair. MEASURED
-        // (audit/lp-geometry/probes/staffless-system.ly, score CO): min_dist is 0 and the
-        // first chord lands on 0.500000, i.e. that 0.5 exactly.
+        // LILYPOND-REF: lily/spacing-spanner.cc:514-515 — an empty wish list falls to
+        // standard_breakable_column_spacing; lily/spacing-basic.cc:71-82 — for a dt == 0
+        // pair `ideal = min_dist + 0.5`, returned as `Spring (ideal, min_dist)`, whose
+        // default strengths (lily/spring.cc:49-60,198-216) are inverse_stretch = ideal and
+        // inverse_compress = max(0, ideal - min_dist). min_dist is
+        // std::max (0.0, Paper_column::minimum_distance (l, r)) (spacing-basic.cc:44), and
+        // MinimumDistanceAtLineStart gives 0 here because a text row contributes no box —
+        // exactly LilyPond, whose left column engraves nothing to measure against.
         //
-        // The literal port cannot be made from HERE, because the frame it would be
-        // converted into is itself phantom: Lily# reserves a prefix for this system —
-        // SpacingRules.ClefGroupExtent falls back to the treble G when NO staff contributes
-        // a clef stencil, and prefixHasTime never asks whether any staff engraves a meter —
-        // so `columns.Right` below subtracts ~6.585 of ink nobody draws and the spring comes
-        // out NEGATIVE. Booking a column for a grob no staff engraves is the SAME defect the
-        // ledger closed for the KEY column under line-start.time-to-first-note.tab-keyed;
-        // the clef and meter columns were left unfixed. Fix the reservation and this whole
-        // branch deletes itself. See docs/HANDOFF.md section 1 for the derivation.
+        // MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CO/CO3/COK): the
+        // first chord name of a staff-less system lands on 0.500000, identical to 15 digits
+        // under 4/4 and 3/4 and under a 4-sharp key — that 0.5 and nothing else.
         //
-        // Until then the reserved columns stand in for the staff nobody engraves, which
-        // keeps a lead sheet where it has always been rather than 8 ss further left.
-        var merged = wishes.Count > 0
-            ? Spring.MergeSprings(wishes)
-            : WishFrom(
-                columns.HasTime ? BreakAlignSymbol.TimeSignature
-                : columns.HasKey ? BreakAlignSymbol.KeySignature
-                : BreakAlignSymbol.Clef,
-                columns.HasTime ? columns.TimeX
-                : columns.HasKey ? columns.KeyX
-                : columns.ClefX,
-                columns.Right, floor, minDistance);
+        // ⚠️ What this does NOT port is LilyPond's keep-inside-line rod
+        // (lily/simple-spacer.cc:431-432,556-560), which pushes the first column right when
+        // a grob on it reaches left of the margin. That is what puts a LEAD SHEET's first
+        // column at 2.312539 rather than 0.5 (probe scores CL/CLX/CLL), and it is a general
+        // margin constraint on every column of every system, not a staff-less special case —
+        // so it belongs with the spacer, not here. See docs/HANDOFF.md section 1.
+        if (wishes.Count == 0)
+        {
+            var standard = StandardBreakableColumnSpacing(minDistance);
+            return new Spring(
+                standard.IdealDistance - columns.Right, standard.MinDistance - columns.Right,
+                standard.InverseStretchStrength);
+        }
+
+        var merged = Spring.MergeSprings(wishes);
 
         return new Spring(
             merged.IdealDistance - columns.Right, merged.MinDistance - columns.Right,
             merged.InverseStretchStrength, merged.InverseCompressStrength);
+    }
+
+    /// <summary>
+    /// <c>Spacing_spanner::standard_breakable_column_spacing</c> for a <c>dt == 0</c> pair —
+    /// the spring LilyPond falls back to when the left column carries no
+    /// <c>Staff_spacing</c> wish. COLUMN-relative, like everything else here.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:41-83.
+    /// <code>
+    ///   Real min_dist = std::max (0.0, Paper_column::minimum_distance (l, r));   // :44
+    ///   if (dt == Moment (0, 0)) ideal = min_dist + 0.5;                         // :71-77
+    ///   return Spring (ideal, min_dist);                                         // :82
+    /// </code>
+    /// and lily/spring.cc:49-60,198-216 — <c>Spring (dist, min_dist)</c> takes the DEFAULT
+    /// strengths: <c>inverse_stretch_strength = ideal_distance</c> and
+    /// <c>inverse_compress_strength = ideal &gt;= min ? ideal - min : 0</c>, which is what the
+    /// three-argument <see cref="Spring"/> constructor computes.
+    /// <para>
+    /// The comment at :73-76 explains the 0.5: "In this case, Staff_spacing should handle the
+    /// job, using dt when it is 0 is silly." Where there IS a Staff_spacing this is never
+    /// reached; a system of chord / lyric rows has none.
+    /// </para>
+    /// </remarks>
+    public static Spring StandardBreakableColumnSpacing(double minDistance)
+    {
+        double minDist = Math.Max(0.0, minDistance);
+        double ideal = minDist + 0.5;
+        return new Spring(ideal, minDist, ideal);
     }
 
     /// <summary>

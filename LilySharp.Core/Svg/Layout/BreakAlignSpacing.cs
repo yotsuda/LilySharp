@@ -458,7 +458,9 @@ internal static class BreakAlignSpacing
 
         var placed = SolveColumns(items, EngravingDefaults.ClefGlyphXOffset);
 
-        double clefX = EngravingDefaults.ClefGlyphXOffset, keyX = 0.0, timeX = 0.0;
+        // An absent column's X is 0 (see PrefixColumns) — including the clef's, which a
+        // system of chord / lyric rows does not have at all.
+        double clefX = 0.0, keyX = 0.0, timeX = 0.0;
         foreach (var col in placed)
         {
             switch (col.Symbol)
@@ -473,9 +475,14 @@ internal static class BreakAlignSpacing
         // the prefix: it is carried by the first measure's leading spring (see FirstNoteSpring)
         // so it can take part in spring solving with the proper minimum — adding it here AND in
         // the spring double-counted the gap and line-start measures came out ~3x wide.
-        double right = placed.Count > 0
-            ? placed[placed.Count - 1].Right
-            : EngravingDefaults.ClefGlyphXOffset;
+        // Nothing placed = nothing prefatory is engraved, so the prefix ends where it began:
+        // 0, not the LeftEdge→Clef gap. The 0.8 is the space-alist distance TO a clef
+        // (LILYPOND-REF LeftEdge.space-alist (clef . (extra-space . 0.8))); with no clef
+        // there is no such gap, and break-alignment-interface.cc:145-146,155-156 skips the
+        // empty group rather than spacing past it. Returning 0.8 here made the line-start
+        // spring measure from ink nobody draws, which is what forced the LILYSHARP-OWN
+        // fallback in LineStartColumn.LineStartSpring.
+        double right = placed.Count > 0 ? placed[placed.Count - 1].Right : 0.0;
         return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature);
     }
 

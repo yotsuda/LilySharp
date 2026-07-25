@@ -334,6 +334,79 @@ public class LineStartColumnTests
     // BreakAlignSpacing.SpaceAlistDistances both speak, and each assertion subtracts the
     // prefix right where it wants the prefix-relative quantity the measure chain carries.
 
+    /// <summary>
+    /// A system whose rows are ALL chord / lyric rows engraves no clef, so the Clef
+    /// break-align group is EMPTY and the prefix books nothing at all — not the treble G it
+    /// used to fall back to, and not even the 0.8 LeftEdge→Clef gap, since with no clef
+    /// there is no such gap (break-alignment-interface.cc:145-146,155-156 skips an empty
+    /// group). Booking 6.585 of ink nobody draws is what drove a lead sheet's first column
+    /// ~8 ss right of LilyPond's.
+    /// </summary>
+    [Fact]
+    public void StafflessSystem_BooksNoPrefatoryColumnAtAll()
+    {
+        var empty = SpacingRules.ClefGroupExtent(System.Array.Empty<(double, double)>());
+        Assert.Equal(0.0, empty.Left, 6);
+        Assert.Equal(0.0, empty.Right, 6);
+
+        var cols = BreakAlignSpacing.SolvePrefixColumns(
+            clefWidth: 0.0, keyInkWidth: 0.0, includeTimeSignature: false);
+        Assert.Equal(0.0, cols.Right, 6);
+        Assert.Equal(0.0, cols.ClefX, 6);
+        Assert.False(cols.HasKey);
+        Assert.False(cols.HasTime);
+    }
+
+    /// <summary>
+    /// With no <c>Staff_spacing</c> wish in the left column LilyPond falls to
+    /// <c>standard_breakable_column_spacing</c>, which for a <c>dt == 0</c> pair is
+    /// <c>ideal = min_dist + 0.5</c> with the default spring strengths. MEASURED
+    /// (audit/lp-geometry/probes/staffless-system.ly, scores CO / CO3 / COK): with nothing
+    /// prefatory engraved <c>min_dist</c> is 0 and the first chord name of a staff-less
+    /// system lands on 0.500000 — identical to 15 digits under 4/4, under 3/4 and under a
+    /// 4-sharp key, because a ChordNames context engraves no meter and no signature.
+    /// </summary>
+    [Fact]
+    public void StafflessLineStart_IsStandardBreakableColumnSpacing()
+    {
+        var spring = LineStartColumn.StandardBreakableColumnSpacing(0.0);
+        Assert.Equal(0.500000, spring.IdealDistance, 6);
+        Assert.Equal(0.000000, spring.MinDistance, 6);
+        // Spring (dist, min_dist) defaults: stretch = ideal, compress = ideal - min.
+        Assert.Equal(0.500000, spring.InverseStretchStrength, 6);
+        Assert.Equal(0.500000, spring.InverseCompressStrength, 6);
+
+        // The min_dist term is carried, and clamped at 0 like spacing-basic.cc:44.
+        Assert.Equal(2.500000, LineStartColumn.StandardBreakableColumnSpacing(2.0).IdealDistance, 6);
+        Assert.Equal(0.500000, LineStartColumn.StandardBreakableColumnSpacing(-1.0).IdealDistance, 6);
+        Assert.Equal(0.000000, LineStartColumn.StandardBreakableColumnSpacing(-1.0).MinDistance, 6);
+    }
+
+    /// <summary>
+    /// The keep-inside-line rod: a column whose ink reaches LEFT of it must stand at least
+    /// that far from the line-start column, and the rod carries NO padding and no spring term
+    /// (lily/simple-spacer.cc:559 <c>add_rod (0, i, -keep_inside_line_[LEFT])</c>). MEASURED
+    /// (same probe, CL / CLX / CLL): a syllable reaching 2.312540 left of its column puts the
+    /// column on 2.312539, not on that plus the spring's 0.5; remove the reach (CLL) and the
+    /// column drops back to the bare 0.500000.
+    /// </summary>
+    [Fact]
+    public void KeepInsideLineRod_MovesTheFirstColumnByTheOverhangAlone()
+    {
+        var chain = System.Collections.Immutable.ImmutableArray.Create(
+            LineStartColumn.StandardBreakableColumnSpacing(0.0),
+            new Spring(4.0, 2.0, 4.0));
+
+        // No overhang: the line start keeps standard_breakable_column_spacing's 0.5.
+        Assert.Equal(0.500000, chain[0].IdealDistance, 6);
+
+        var rodded = SpringSolver.ApplyRods(
+            chain, new[] { (Left: 0, Right: 1, Distance: 2.312540) });
+        Assert.Equal(2.312540, rodded[0].IdealDistance, 6);
+        // The rod does not touch the springs it does not span.
+        Assert.Equal(4.000000, rodded[1].IdealDistance, 6);
+    }
+
     /// <summary>The prefix ink right edge — LilyPond's <c>last_ext[RIGHT]</c>.</summary>
     private static double PrefixRight(KeySignature key, bool hasTime)
         => BreakAlignSpacing.SolvePrefixColumns(
