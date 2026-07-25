@@ -78,6 +78,102 @@ public class SpringRodModelTests
             $"Merged ideal ({merged.IdealDistance}) should respect headroom >= 5.3");
     }
 
+    // --- the SETTERS: replacing the ideal or the minimum must NOT restate the strengths ---
+    //
+    // LilyPond's Spring::set_ideal_distance / set_min_distance / ensure_min_distance assign
+    // one field and call update_blocking_force (), and that is all: whatever
+    // set_default_strength or set_inverse_*_strength last wrote stays
+    // (lily/spring.cc:131-159). Every refinement a note spring gets after it is built runs
+    // through those setters — the left head width and the stem correction land on
+    // note-spacing.cc:113 base.set_ideal_distance, and the SKYLINE minimum on :83
+    // base.set_min_distance — so the compressibility keeps the DURATION value
+    // `fraction * (duration_space - increment)` that Spacing_spanner::note_spacing gave it
+    // (spacing-basic.cc:151-157 with spring.cc:204-210). Rebuilding the spring through the
+    // defaulting constructor instead makes it `ideal - min`, which is a different number and
+    // is only visible on a COMPRESSED line.
+
+    /// <summary>
+    /// The quarter-to-quarter spring of ledger point
+    /// <c>compressed.line-start.time-to-first-note</c> (probe score TSJ), and the number
+    /// LilyPond itself compresses it by.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, not inferred: <c>audit/lp-geometry/probes/compressed-line-force.ly</c>
+    /// engraves that music twice, ragged (CLW) and justified (CLJ), so CLW - CLJ is
+    /// <c>|force| * inverse_compress_strength</c> per spring and nothing else. LilyPond gives
+    /// up 0.011749 on this spring at a solved force of -0.006918750, i.e. 1.698045 — which is
+    /// <c>duration_space (quarter) - spacing-increment = 2.898045 - 1.2</c>, and NOT
+    /// <c>ideal - min = 3.002245 - 1.604200 = 1.398045</c>.
+    /// </remarks>
+    [Fact]
+    public void NoteSpring_KeepsItsDurationCompressibility_WhenIdealAndMinimumAreReplaced()
+    {
+        // Spring (fraction * len, fraction * increment) — spacing-basic.cc:157.
+        var duration = new Spring(2.898045, 1.2, 1.698045);
+        Assert.Equal(1.698045, duration.InverseCompressStrength, 6);
+
+        // note-spacing.cc:77 then :113 — the left head width refines the IDEAL.
+        var refined = duration.WithIdealDistance(3.002245);
+        Assert.Equal(3.002245, refined.IdealDistance, 6);
+        Assert.Equal(1.698045, refined.InverseCompressStrength, 6);
+
+        // note-spacing.cc:82-83 — the skyline distance becomes the MINIMUM.
+        var withSkyline = refined.EnsureMinDistance(1.604200);
+        Assert.Equal(1.604200, withSkyline.MinDistance, 6);
+
+        // LilyPond's number, and not the one a rebuild would produce.
+        Assert.Equal(1.698045, withSkyline.InverseCompressStrength, 6);
+        Assert.NotEqual(1.398045, withSkyline.InverseCompressStrength, 6);
+
+        // update_blocking_force DOES follow the new pair. LILYPOND-REF: spring.cc:62-83.
+        Assert.Equal((1.604200 - 3.002245) / 1.698045, withSkyline.BlockingForce, 6);
+
+        // …and that is what the drawn length is: at LilyPond's solved force the spring gives
+        // up 1.698045 * 0.006918750 = 0.011748349. The probe reports 0.011749 because it
+        // subtracts two column positions LilyPond printed to six places, so five is the
+        // precision that comparison actually carries.
+        Assert.Equal(1.698045 * 0.006918750,
+            refined.IdealDistance - withSkyline.Length(-0.006918750), 9);
+        Assert.Equal(0.011749, refined.IdealDistance - withSkyline.Length(-0.006918750), 5);
+    }
+
+    /// <summary>
+    /// <see cref="Spring.EnsureMinDistance"/> lowers nothing — <c>ensure_min_distance</c> is
+    /// <c>set_min_distance (max (d, min_distance_))</c>. LILYPOND-REF: lily/spring.cc:155-159.
+    /// </summary>
+    [Fact]
+    public void EnsureMinDistance_NeverLowersTheMinimum()
+    {
+        var spring = new Spring(3.0, 1.6, 1.7);
+        Assert.Same(spring, spring.EnsureMinDistance(1.0));
+        Assert.Equal(1.9, spring.EnsureMinDistance(1.9).MinDistance, 6);
+    }
+
+    /// <summary>
+    /// A ROD raises a spring's minimum through <c>Spring::set_blocking_force</c>, which sets
+    /// <c>min_distance_ = length (f)</c> and updates the blocking force — the strengths are
+    /// what make the new blocking force come out as <c>f</c>, so restating them would undo
+    /// the rod. LILYPOND-REF: lily/spring.cc:183-195; lily/simple-spacer.cc:124-126.
+    /// </summary>
+    [Fact]
+    public void ApplyRods_RaisesTheMinimum_WithoutRestatingTheCompressibility()
+    {
+        // The four-argument constructor, because the compressibility here is the DURATION one
+        // (1.7 = len - increment) and not ideal - min (1.5) — which is the whole point.
+        var springs = ImmutableArray.Create(
+            new Spring(3.0, 1.5, 1.7, 1.7),
+            new Spring(3.0, 1.5, 1.7, 1.7));
+
+        var rodded = SpringSolver.ApplyRods(
+            springs, new (int Left, int Right, double Distance)[] { (0, 2, 5.0) });
+
+        Assert.True(rodded[0].MinDistance > 1.5);
+        foreach (var s in rodded)
+            Assert.Equal(1.7, s.InverseCompressStrength, 6);
+        // The rod is what it says: the range cannot compress below 5.0.
+        Assert.Equal(5.0, rodded[0].Length(double.MinValue) + rodded[1].Length(double.MinValue), 6);
+    }
+
     // --- Spring.Scale ---
 
     [Fact]

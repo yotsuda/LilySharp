@@ -117,6 +117,57 @@ internal sealed record Spring
     }
 
     /// <summary>
+    /// Replaces the ideal distance, leaving BOTH strengths exactly as they are.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:131-141 Spring::set_ideal_distance — it assigns
+    /// <c>ideal_distance_</c> and calls <c>update_blocking_force ()</c>, and that is ALL:
+    /// <c>inverse_compress_strength_</c> and <c>inverse_stretch_strength_</c> keep whatever
+    /// <c>set_default_strength</c> / <c>set_inverse_*_strength</c> last put there.
+    /// <para>
+    /// Every refinement LilyPond applies to a note spring after building it goes through
+    /// this setter — the left head width and the stem correction
+    /// (lily/note-spacing.cc:77 and :111, both landing on :113
+    /// <c>base.set_ideal_distance (std::max (0.0, ideal))</c>) — so a note spring's
+    /// compressibility stays <c>fraction * (duration_space - increment)</c> from
+    /// lily/spacing-basic.cc:151-157 with lily/spring.cc:204-210, NOT
+    /// <c>ideal - min_distance</c> recomputed from the refined pair.
+    /// </para>
+    /// <para>
+    /// MEASURED, per spring, off LilyPond's own compressed line
+    /// (audit/lp-geometry/probes/compressed-line-force.ly, CLW - CLJ over |force|
+    /// 0.006918750): a quarter-to-quarter spring compresses at 1.698045 where
+    /// <c>ideal - min</c> would give 1.398045, and a half at 2.898045. Those are exactly
+    /// <c>len - 1.2</c>, i.e. this setter's semantics and not the constructor's.
+    /// </para>
+    /// </remarks>
+    public Spring WithIdealDistance(double idealDistance)
+        => new(idealDistance, MinDistance, InverseStretchStrength, InverseCompressStrength);
+
+    /// <summary>
+    /// Replaces the minimum distance, leaving BOTH strengths exactly as they are.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:143-153 Spring::set_min_distance — as with
+    /// <see cref="WithIdealDistance"/>, it updates the blocking force and nothing else.
+    /// This is the setter <c>Note_spacing::get_spacing</c> uses to put the SKYLINE distance
+    /// under a duration-built spring (lily/note-spacing.cc:82-83
+    /// <c>base.set_min_distance (min_dist)</c>): the minimum becomes geometric while the
+    /// compressibility stays the duration one.
+    /// </remarks>
+    public Spring WithMinDistance(double minDistance)
+        => new(IdealDistance, minDistance, InverseStretchStrength, InverseCompressStrength);
+
+    /// <summary>
+    /// Raises the minimum distance to at least <paramref name="minDistance"/>, leaving both
+    /// strengths as they are.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance —
+    /// <c>set_min_distance (std::max (d, min_distance_))</c>.</remarks>
+    public Spring EnsureMinDistance(double minDistance)
+        => minDistance > MinDistance ? WithMinDistance(minDistance) : this;
+
+    /// <summary>
     /// Merges two springs by averaging their properties.
     /// Used when multiple spacing wishes exist for the same column pair.
     /// </summary>

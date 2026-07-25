@@ -639,9 +639,13 @@ internal static class SpacingRules
     internal static Spring ApplyMergeSpringsHeadroom(Spring spring)
     {
         double floor = spring.MinDistance + SpringHeadroom;
+        // LILYPOND-REF: lily/spring.cc:104-129 merge_springs — the headroom moves
+        // avg_distance ONLY; both strengths are then assigned from the averages
+        // (:125-127), which for a single wish are that wish's own strengths
+        // (avg_compress = 1 / (1 / invC) = invC). So the floor must not recompute them.
         return spring.IdealDistance >= floor
             ? spring
-            : new Spring(floor, spring.MinDistance, spring.InverseStretchStrength);
+            : spring.WithIdealDistance(floor);
     }
 
     /// <summary>Gap between accidental and notehead in staff spaces.</summary>
@@ -999,11 +1003,12 @@ internal static class SpacingRules
                 continue;
 
             double corr = CalculateStemCorrection(left, right, noteParams);
+            // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
+            // ideal and hands it to base.set_ideal_distance, which does not touch either
+            // strength (lily/spring.cc:131-141).
             Spring wish = corr != 0
-                ? new Spring(
-                    Math.Max(baseSpring.MinDistance, baseSpring.IdealDistance + corr),
-                    baseSpring.MinDistance,
-                    baseSpring.InverseStretchStrength)
+                ? baseSpring.WithIdealDistance(
+                    Math.Max(baseSpring.MinDistance, baseSpring.IdealDistance + corr))
                 : baseSpring;
 
             merged = merged is null ? wish : Spring.Merge(merged, wish);
@@ -1052,11 +1057,9 @@ internal static class SpacingRules
                 continue;
 
             double corr = CalculateStemCorrectionToBarline(left, noteParams);
+            // LILYPOND-REF: lily/note-spacing.cc:111-113, as in MergeVoiceStemWishes.
             Spring wish = corr != 0
-                ? new Spring(
-                    Math.Max(0, baseSpring.IdealDistance + corr),
-                    baseSpring.MinDistance,
-                    baseSpring.InverseStretchStrength)
+                ? baseSpring.WithIdealDistance(Math.Max(0, baseSpring.IdealDistance + corr))
                 : baseSpring;
 
             merged = merged is null ? wish : Spring.Merge(merged, wish);
@@ -2641,7 +2644,9 @@ internal static class SpacingRules
 
         double ideal = Math.Max(EngravingDefaults.SpacingIncrement,
             spring.IdealDistance + leftHeadEnd - EngravingDefaults.SpacingIncrement);
-        return new Spring(ideal, spring.MinDistance, spring.InverseStretchStrength);
+        // LILYPOND-REF: lily/note-spacing.cc:113 base.set_ideal_distance (…) — the SETTER,
+        // which leaves the duration-built compressibility alone (lily/spring.cc:131-141).
+        return spring.WithIdealDistance(ideal);
     }
 
     /// <summary>
@@ -2787,21 +2792,18 @@ internal static class SpacingRules
         // did. A measure has one voice, so this is the single-wish case of
         // MergeVoiceStemWishesToBarline — merging one wish returns it unchanged.
         // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264; :113 clamps at 0.0.
-        lastSpring = new Spring(
+        lastSpring = lastSpring.WithIdealDistance(
             Math.Max(0, lastSpring.IdealDistance
-                + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)),
-            lastSpring.MinDistance,
-            lastSpring.InverseStretchStrength);
+                + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)));
 
         // Mirror of MeasureLayouter.CreateLastToBarlineSpring: a clef change opening the
         // NEXT measure is drawn before this bar line, so it widens the MINIMUM here. The
         // duration-based ideal is already bar-line framed and stays put.
         double clefAllowance = BoundaryClefAllowance(measure.EndBarline, nextMeasure);
         if (clefAllowance > 0)
-            lastSpring = new Spring(
-                lastSpring.IdealDistance,
-                lastSpring.MinDistance + clefAllowance,
-                lastSpring.InverseStretchStrength);
+            // LILYPOND-REF: lily/spring.cc:143-153 set_min_distance — the minimum moves,
+            // the strengths do not.
+            lastSpring = lastSpring.WithMinDistance(lastSpring.MinDistance + clefAllowance);
 
         // ...and merge_springs' headroom then lifts the ideal off that minimum, which is
         // what places the bar line when a clef precedes it. Mirror of

@@ -334,11 +334,10 @@ internal sealed class SpringSolver
                     double factor = dist / idealLen;
                     for (int i = left; i < right; i++)
                     {
-                        var s = result[i];
-                        result[i] = new Spring(
-                            s.IdealDistance * factor,
-                            s.MinDistance,
-                            s.InverseStretchStrength);
+                        // LILYPOND-REF: lily/simple-spacer.cc:116-117
+                        //   springs_[i].set_ideal_distance (… * factor) — the SETTER, which
+                        //   leaves both strengths alone (lily/spring.cc:131-141).
+                        result[i] = result[i].WithIdealDistance(result[i].IdealDistance * factor);
                     }
                     changed = true;
                 }
@@ -360,7 +359,12 @@ internal sealed class SpringSolver
                             {
                                 double newMin = Math.Max(s.MinDistance,
                                     s.IdealDistance + newBlockForce * s.InverseCompressStrength);
-                                result[i] = new Spring(s.IdealDistance, newMin, s.InverseStretchStrength);
+                                // LILYPOND-REF: lily/spring.cc:183-195
+                                //   Spring::set_blocking_force sets min_distance_ = length (f)
+                                //   and then only update_blocking_force (): the strengths are
+                                //   what make the new blocking force come out as f, so
+                                //   recomputing them here would undo the rod.
+                                result[i] = s.WithMinDistance(newMin);
                                 changed = true;
                             }
                         }

@@ -396,8 +396,12 @@ internal sealed class MeasureLayouter
             maxSkyDist = Math.Max(maxSkyDist,
                 SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
         }
-        if (maxSkyDist > spring.MinDistance)
-            spring = new Spring(spring.IdealDistance, maxSkyDist, spring.InverseStretchStrength);
+        // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance — raising the
+        // minimum leaves BOTH strengths where the duration spring put them, so the
+        // compressibility stays fraction * (duration_space - increment) and does not become
+        // ideal - skyline. Measured against LilyPond's own compressed line: 1.698045 for a
+        // quarter-to-quarter spring (audit/lp-geometry/probes/compressed-line-force.ly).
+        spring = spring.EnsureMinDistance(maxSkyDist);
 
         // The change column's two gaps, computed above, become this one spring — see
         // SpacingRules.MidMeasureChangeGaps for the derivation, the measurements, and what
@@ -468,13 +472,8 @@ internal sealed class MeasureLayouter
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);
             }
 
-            if (maxSkyDist > endSpring.MinDistance)
-            {
-                endSpring = new Spring(
-                    endSpring.IdealDistance,
-                    maxSkyDist,
-                    endSpring.InverseStretchStrength);
-            }
+            // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance.
+            endSpring = endSpring.EnsureMinDistance(maxSkyDist);
 
             // NOTE: full-measure-extra-space is NOT applied here. LilyPond passes it
             // as `situational_space` to Staff_spacing::get_spacing, i.e. to the
@@ -490,11 +489,11 @@ internal sealed class MeasureLayouter
         // duration-based ideal measured to the bar line itself (note-spacing.cc:99-100
         // subtracts the bar line's column-internal offset), which is the frame this
         // spring is already in. LILYPOND-REF: SpacingRules.BoundaryClefAllowance.
+        // LILYPOND-REF: lily/spring.cc:143-153 set_min_distance — the minimum moves, the
+        // strengths do not.
         if (boundaryClefAllowance > 0)
-            endSpring = new Spring(
-                endSpring.IdealDistance,
-                endSpring.MinDistance + boundaryClefAllowance,
-                endSpring.InverseStretchStrength);
+            endSpring = endSpring.WithMinDistance(
+                endSpring.MinDistance + boundaryClefAllowance);
 
         // ...and then merge_springs' headroom lifts the IDEAL off that minimum, which is
         // what actually places the bar line when a clef sits before it: the ideal above
