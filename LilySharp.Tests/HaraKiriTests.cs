@@ -14,10 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Tests.LpFidelity;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -308,6 +311,100 @@ public class HaraKiriTests
     }
 
     // --- The declaration on its own ---
+
+    /// <summary>
+    /// Book JSK's music — two staves, 120 bars, which the breaker packs eight systems to a
+    /// page and then SQUEEZES — with the upper staff optionally DECLARING
+    /// <c>removeEmpty</c>. Neither staff is ever empty, so the declaration can never fire.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MUSIC IS JSK'S ON PURPOSE, not the LYRHKD/LYRHKN books that were built for
+    /// this question. Those carry lyrics, which makes their systems tall enough that only
+    /// seven fit and the page STRETCHES (measured: inside 9.166134, above the ideal
+    /// 9.000000), and a spring's minimum cannot bind on a stretching page — the pair agrees
+    /// there while the defect is untouched. HANDOFF 5.0 trap 7, and it caught this test
+    /// before this test caught anything. JSK's page compresses (inside 8.651797, below the
+    /// ideal), and audit/lp-geometry <c>page.compressed.staff-staff-inside</c> records that
+    /// LilyPond reads the same 8.651797 there — so the undeclared side of this pair is
+    /// independently known to be RIGHT, not merely different.
+    /// <para>⚠️ Lily# <c>c</c> is LilyPond <c>c'</c> (HANDOFF 5.5).</para>
+    /// </remarks>
+    private static string PlainHaraKiriScore(bool declareRemoveEmpty)
+    {
+        string rh = string.Concat(Enumerable.Repeat("c4 d e f | ", 120)).Trim();
+        string lh = string.Concat(Enumerable.Repeat("c,4 d, e, f, | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part lh { clef bass }
+
+            section Main {
+              rh { {{rh}} }
+              lh { {{lh}} }
+            }
+
+            form main { ~Main }
+
+            score main "HKJ" {
+              grandStaff {
+                staff rh
+                staff lh
+              }
+            }
+            """;
+    }
+
+    /// <summary>
+    /// Declaring <c>removeEmpty</c> where nothing is ever empty changes NOTHING.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc <c>consider_suicide</c> +
+    /// lily/page-layout-problem.cc:1366-1370 — LilyPond's hara-kiri is a suicide followed by
+    /// a live-filter, so a grob that never dies leaves NO TRACE and its two readings of this
+    /// pair are identical BY CONSTRUCTION. Whatever Lily# reads differently between them is
+    /// entirely its own, and needs no LilyPond measurement to interpret: the pair is an
+    /// identity (HANDOFF 5.0), so any difference IS the defect.
+    /// <para>
+    /// ⚠️ THE PAPER IS PART OF THE TEST. Compression is the ONLY regime where a staff
+    /// spring's MINIMUM binds: a spring built without skylines falls back to the drawn
+    /// distance, so it can stretch but never squeeze, and on a stretching page the two
+    /// sides agree while the defect is untouched (HANDOFF 5.0 trap 7). Assert the regime
+    /// rather than trusting it — if the inside gap ever comes out at or above the ideal
+    /// 9.000000, this test has stopped measuring and must be re-aimed, not relaxed.
+    /// </para>
+    /// <para>
+    /// MEASURED before the fix: undeclared 8.651797 inside (the ledger's LilyPond value),
+    /// declared 9.000000 — the spring stuck at its drawn distance, with the squeeze it
+    /// refused pushed into the system springs (11.303595 -&gt; 10.927848).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing()
+    {
+        var paper = LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 8 },
+        };
+
+        var declared = RenderedGeometry.Render(PlainHaraKiriScore(true), paper);
+        var undeclared = RenderedGeometry.Render(PlainHaraKiriScore(false), paper);
+
+        // HANDOFF 5.0 trap 7: prove the page really squeezed, or the rest measures nothing.
+        Assert.True(undeclared.StaffGapAt(0) < LayoutOptions.Default.StaffSpacing.StaffStaff.BasicDistance,
+            $"page did not compress: inside {undeclared.StaffGapAt(0):F6} is not below the ideal "
+            + $"{LayoutOptions.Default.StaffSpacing.StaffStaff.BasicDistance:F6}; re-aim the book");
+
+        Assert.Equal(undeclared.PageCount, declared.PageCount);
+        for (int page = 0; page < undeclared.PageCount; page++)
+        {
+            Assert.Equal(
+                undeclared.StaffRefpoints(page).Select(y => Math.Round(y, 6)),
+                declared.StaffRefpoints(page).Select(y => Math.Round(y, 6)));
+        }
+    }
 
     /// <summary>
     /// A system is as tall as the staves it PLACED, whoever placed them — the height is not

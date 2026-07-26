@@ -124,9 +124,14 @@ internal sealed class LayoutEngine
         // (LILYPOND-REF: lily/page-layout-problem.cc:651-720). Computed ONCE from the same
         // groups and the same skylines every system is laid out with — building them per
         // system would rebuild every staff skyline per system for an answer that cannot
-        // differ. Hara-kiri is the exception: there each system has its own visible staves,
-        // so its springs are built with its own groups inside the loop (and without
-        // skylines, which that layout path does not produce — see StaffSprings).
+        // differ, BECAUSE THE PLACEMENT ITSELF IS SHARED here (every system reuses
+        // firstStaffGroupLayouts / defaultStaffGroupLayouts). ⚠️ LilyPond builds these per
+        // system, out of that system's own skylines (append_system runs once per system);
+        // Lily# can only follow it once the PLACEMENT is per-system too, since a spring's
+        // minimum is reconstructed from the drawn distance and mixing a shared drawn
+        // distance with a per-system minimum would be neither engine's answer.
+        // Hara-kiri is the exception that already places per system, so its springs are
+        // built inside the loop from ITS groups and ITS skylines.
         var sharedStaffSprings = hasHaraKiri
             ? ImmutableArray<StaffSpring>.Empty
             : multiStaffLayouter.StaffSprings(
@@ -241,8 +246,19 @@ internal sealed class LayoutEngine
                 Indent: sysIndent,
                 // A hara-kiri'd system springs only the staves it actually shows, so its
                 // springs come from ITS groups; every other system shares one set.
+                // ⚠️ THE SKYLINES ARE THE POINT. Without them StaffSprings has nothing to
+                // floor against and falls back to the drawn distance, so the pair can
+                // stretch but never squeeze — and a spring's minimum only binds on a page
+                // that COMPRESSES, which is why declaring removeEmpty used to hold the
+                // inside distance at its ideal 9.000000 where the same music without the
+                // declaration squeezed to 8.651797 (LilyPond's own value: audit/lp-geometry
+                // page.compressed.staff-staff-inside). This layout path DOES produce
+                // skylines — they are built from the same per-system measure layouts as
+                // everything else here — so the old "which that layout path does not
+                // produce" was a supply problem, not a structural one.
                 StaffSprings: hasHaraKiri
-                    ? multiStaffLayouter.StaffSprings(score, sysStaffGroups)
+                    ? multiStaffLayouter.StaffSprings(
+                        score, sysStaffGroups, _skylineBuilder, measureLayouts)
                     : sharedStaffSprings));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
