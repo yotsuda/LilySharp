@@ -1282,9 +1282,38 @@ probeTag =
 %%     WRONG BY 0.158444 — the post-placement rel is not the minimum translation. The term to
 %%     pin is min_offsets[0] itself.
 %%     ⇒ Porting distribute_loose_lines needs that one number; everything else in the chain
-%%     is now measured. The cheapest next probe is a book whose syllable ink differs (say a
-%%     taller verse 1), which moves the floor by a known amount: if R* tracks it one for one,
-%%     the unnamed term is a constant and can be read straight off.
+%%     is now measured.
+%%
+%%     ★ THE "IT IS A CONSTANT" HYPOTHESIS WAS TESTED AND FAILED (2026-07-26). Verse 1's
+%%     syllable was changed from "no" (x-height 1.187880) to "hi" (ascender 1.820098), which
+%%     raises the first spring's floor by exactly 0.632218 and leaves everything else alone —
+%%     verse 2 stays "no", so the second spring stays on its 2.8 minimum, measured:
+%%
+%%       book      gap     staff->v1   v1 up-ink   v1->v2
+%%       no-12.0   12.0    3.737890    1.187880    2.800000   (floor)
+%%       no-12.5   12.5    3.740655    1.187880    2.800000
+%%       no-13.0   13.0    4.163732    1.187880    2.800000
+%%       hi-12.0   12.0    4.370123    1.820098    2.800000   (floor)
+%%       hi-12.5   12.5    4.370123    1.820098    2.800000   (floor)
+%%       hi-13.0   13.0    4.370123    1.820098    2.800000   (floor)
+%%       hi-13.5   13.5    4.586809    1.820098    2.800000
+%%       hi-14.0   14.0    5.009886    1.820098    2.800000
+%%
+%%     If the unnamed term were constant, the release point would move with the floor:
+%%     R*(no) = 12.000000 and a floor 0.632218 taller would give R*(hi) = 12.632218. But
+%%     "hi" is still ON its floor at 13.000000 and only moves at 13.500000, so R* moved by
+%%     MORE THAN 1.0 while the floor moved 0.632218. ⇒ NOT a constant, and not proportional
+%%     to the ink either. The model "the first spring releases exactly at R = sum(minimums)"
+%%     is what has to be wrong, since every other term was checked.
+%%
+%%     ★ ONE CLEAN INVARIANT CAME OUT OF IT AND IS WORTH KEEPING: OFF the floor, the reading
+%%     does not depend on the ink at all — at R = 14.000000 both books read 5.009886, to six
+%%     digits. So the syllable's ink sets the floor and nothing else in this chain; once the
+%%     chain has room, the position is decided by the ideals and strengths alone.
+%%     ⇒ The next thing to question is not the minimums but the RELEASE: how Simple_spacer
+%%     behaves between force -1 and 0 when several springs block at different points (the
+%%     slope here changes 0.005530 -> 0.846154, so they do). Read Simple_spacer::solve and
+%%     compress_line before measuring anything else.
 \book {
   \probeTag "LYRV"
   \paper { max-systems-per-page = #4 ragged-bottom = ##t }
