@@ -465,10 +465,19 @@ internal static class LpGeometryProbes
     /// The spelling is the ONLY difference, and it is the whole point: LilyPond reads both
     /// books identically (a Lyrics context is a Lyrics context; association changes which
     /// column a syllable stands on, not what the vertical spacing spec is), so its side of
-    /// this pair is an identity and any difference Lily# shows between the two is its own.
+    /// this comparison is an identity and any difference Lily# shows between the two is its
+    /// own. Consumed by
+    /// <see cref="LpGeometryLedgerTests.LyricRowIsSpacedAsAStaffLikeBand"/> rather than by a
+    /// ledger entry — see the remark at the <c>lyrics.*</c> probes for why.
     /// </remarks>
-    private static readonly string LYRR =
+    internal static readonly string LYRR =
         LyricRowPageScore("LYRR", "  staff melody\n  lyrics words");
+
+    /// <summary>The paper books LYRC/LYRR are measured on.</summary>
+    internal static LayoutOptions LyricRowOptions => FourSystemsPerPageRagged;
+
+    /// <summary>The note-bound spelling of the same music — book LYRC.</summary>
+    internal static string LyricNoteBoundScore => LYRC;
 
     /// <summary>Four systems to a page, so page 1 keeps real slack and STRETCHES.</summary>
     private static readonly LayoutOptions FourSystemsPerPage =
@@ -2512,14 +2521,12 @@ internal static class LpGeometryProbes
         new("lyrics.natural.staff-to-lyric", LYRC, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
         new("lyrics.stretched.staff-to-lyric", LYRS, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPage),
 
-        // The same line spelled as an independent ROW (books LYRC/LYRR). LilyPond reads the
-        // two books IDENTICALLY — every printed figure of the two agrees, staff-to-loose-line
-        // included — because a Lyrics context is a Lyrics context and \lyricsto changes which
-        // column a syllable stands on, not its spacing spec. So the LilyPond side of this
-        // pair is an identity, and whatever Lily# reads differently between its own two
-        // spellings is by construction entirely Lily#'s (HANDOFF 5.0: the strongest shape a
-        // pair can have).
-        new("lyrics.row.staff-to-lyric", LYRR, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
+        // ⚠️ The same line spelled as an independent ROW is NOT a ledger point, and the
+        // measurement that says why is in LyricRowIsSpacedAsAStaffLikeBand (HANDOFF 3): the
+        // row is a deliberate Lily# object, so carrying its +5.600000 here would put a
+        // decided divergence into the headline total — the same reason page.height is not
+        // carried. Books LYRC/LYRR stay in the .ly probe because the LilyPond side of that
+        // comparison is an identity and that is the evidence the decision rests on.
 
         // The guard the two above cannot give, and it is not decorative: with 40 bars instead
         // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it

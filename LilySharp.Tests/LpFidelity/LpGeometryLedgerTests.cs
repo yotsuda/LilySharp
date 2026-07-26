@@ -220,6 +220,63 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// An independent lyrics ROW is spaced as a staff-like BAND, which is 5.600000 further
+    /// from the staff than LilyPond puts a Lyrics line — a DECIDED divergence (HANDOFF 3),
+    /// asserted here because it is deliberately not in the ledger.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/page-vertical.ly, books LYRC and LYRR): LilyPond
+    /// reads the two spellings IDENTICALLY — every figure the probe prints agrees, the
+    /// staff-to-loose-line distance included at 5.500000 — because a Lyrics context is a
+    /// Lyrics context and <c>\lyricsto</c> decides which column a syllable stands on, not
+    /// what spring holds the line (ly/engraver-init.ly:648-652). So LilyPond's side of the
+    /// comparison is an identity, and the whole difference is Lily#'s.
+    /// <para>
+    /// LILYSHARP-OWN: Lily#'s independent row is a lead sheet's word TRACK, not a staff's
+    /// lyrics, and it is laid out as one — a staff-like band that carries its own bar lines
+    /// and stacks its own verses. Spacing it as a staff group follows from that, and the
+    /// decision is recorded in HANDOFF 3 next to the chord ROW, which was decided the same
+    /// way for the same reason.
+    /// </para>
+    /// <para>
+    /// ⚠️ Why it is asserted rather than carried as a ledger point: a decided divergence in
+    /// the corpus total would break the headline number (5.600000 against 0.006268),
+    /// the reason page.height is not carried either. But dropping it silently would let the
+    /// band drift with nothing to notice, so the quantity is pinned here IN DERIVED FORM —
+    /// if any term of it moves, this fails and the mover has to say which.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void LyricRowIsSpacedAsAStaffLikeBand()
+    {
+        double noteBound = RenderedGeometry
+            .Render(LpGeometryProbes.LyricNoteBoundScore, LpGeometryProbes.LyricRowOptions)
+            .FirstStaffToLyricBaseline();
+        double row = RenderedGeometry
+            .Render(LpGeometryProbes.LYRR, LpGeometryProbes.LyricRowOptions)
+            .FirstStaffToLyricBaseline();
+
+        // The note-bound spelling IS LilyPond's, and the ledger holds it there. Read again
+        // here so the two numbers are compared in one place: the claim is about the
+        // DIFFERENCE between the spellings, and a test that only pinned the row would still
+        // pass if both drifted together.
+        Assert.Equal(5.5, noteBound, 6);
+
+        // staff refpoint -> bottom line, then the row's own group spacing (StaffGroupStaff's
+        // basic-distance less the staff-height band a lyrics row reserves), then the
+        // baseline inside that band. Written as the model rather than as 11.1 so that a
+        // change to any term reads as the term it is.
+        const double staffHalf = 2.0;
+        const double groupBasicDistance = 10.5;   // StaffSpacingParameters.StaffGroupStaff
+        const double rowBandHeight = 4.0;         // a lyrics row reserves a staff height
+        const double baselineInBand = 2.6;        // LyricEngraver.LyricRowBaseline
+        Assert.Equal(
+            staffHalf + (groupBasicDistance - rowBandHeight) + baselineInBand, row, 6);
+
+        Assert.Equal(5.6, row - noteBound, 6);
+    }
+
+    /// <summary>
     /// The distance between two staves of a system is decided by the PAGE's spring chain,
     /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
     /// ledger measures it with.

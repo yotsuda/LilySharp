@@ -228,10 +228,21 @@ internal sealed class LyricEngraver
 
     /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
     /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
-    // Verse 1's baseline inside the row's STAFF-HEIGHT band: the text block
-    // (ascender 2.11 + descender 0.9) vertically centred in the 4.0 ss band —
-    // the words sit where the staff lines would be, "a staff with the lines
-    // removed".
+    /// <remarks>
+    /// LILYSHARP-OWN: an independent row is a lead sheet's word TRACK rather than a staff's
+    /// lyrics, and it is laid out as one — a staff-like band with its own bar lines, spaced
+    /// from its neighbour as a staff group. This is verse 1's baseline inside that band: the
+    /// text block (ascender 2.11 + descender 0.9) centred in the 4.0 ss height, so the words
+    /// sit where the staff lines would be, "a staff with the lines removed".
+    /// <para>
+    /// ⚠️ NOT the branch a note-bound lyric line takes. <c>staff mel with lyrics words</c>
+    /// carries LilyPond's <see cref="LyricParameters.RelatedStaffBasicDistance"/> and does
+    /// not read this at all — MEASURED, by perturbation: moving this constant moves the row
+    /// spelling with coefficient 1 and the note-bound spelling by ZERO. The two are 5.600000
+    /// apart on the same music, which is a DECIDED divergence from LilyPond (HANDOFF 3) and
+    /// is asserted by <c>LyricRowIsSpacedAsAStaffLikeBand</c>, not by a ledger point.
+    /// </para>
+    /// </remarks>
     private const double LyricRowBaseline = 2.6;
 
     /// <summary>
