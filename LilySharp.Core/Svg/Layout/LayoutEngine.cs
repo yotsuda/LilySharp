@@ -193,12 +193,16 @@ internal sealed class LayoutEngine
                     () => multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
                         sysIdx == systemMeasures.Count - 1, commonShortestDuration));
 
-            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — per-system staff visibility
-            // When hara-kiri is active, compute per-system staff group layouts
-            // so empty staves are hidden only in systems where they have no content.
+            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — per-system staff visibility.
+            // When hara-kiri is active this system gets its own placement, because which
+            // staves survive is a per-system question; everything else about the placement
+            // is the SAME walk (MultiStaffLayouter.LayoutStaffGroups takes the liveness as a
+            // predicate, not as a mode). Without hara-kiri every system shares one answer,
+            // which is why it is computed once above.
             var sysStaffGroups = hasHaraKiri
                 ? multiStaffLayouter.LayoutStaffGroups(
-                    score, firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
+                    score, _skylineBuilder, measureLayouts,
+                    firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
                 : (isFirstSystem ? firstStaffGroupLayouts : defaultStaffGroupLayouts);
 
             // The height of THIS system: the extent of the groups it actually placed. No

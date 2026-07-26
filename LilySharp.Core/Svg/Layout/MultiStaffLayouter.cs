@@ -360,133 +360,74 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Layouts all staff groups with hara-kiri support (empty staff auto-hiding).
+    /// Layouts all staff groups with hara-kiri support, WITHOUT skylines.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
     /// LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
-    ///
-    /// Checks each staff's content in the given measure range. Staves with
-    /// RemoveEmpty=true that contain no notes/chords are hidden (Height=0, IsHidden=true).
-    /// Hidden staves contribute no height or inter-group spacing.
+    /// <para>
+    /// ⚠️ THE ESTIMATE, NOT THE PLACEMENT — see <see cref="StackStaves"/>: with no skylines
+    /// every gap is the spec's basic-distance, which cannot see ink that needs more room.
+    /// The render path calls the overload that takes a <see cref="SkylineBuilder"/>.
+    /// </para>
     /// </remarks>
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
         int startMeasure, int endMeasure, bool isFirstSystem)
-    {
-        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
-        double currentY = 0;
-        double staffHeight = _options.StaffHeight;
-        var sp = _options.StaffSpacing;
-        int globalStaffIndex = 0;
-
-        // Track which groups are entirely hidden for inter-group spacing
-        int lastVisibleGroupIndex = -1;
-
-        for (int i = 0; i < score.StaffGroups.Length; i++)
-        {
-            var group = score.StaffGroups[i];
-            StaffGroupLayout layout;
-
-            if (group.IsGrandStaff)
-            {
-                layout = LayoutGrandStaffGroupWithHaraKiri(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
-                    startMeasure, endMeasure, isFirstSystem);
-            }
-            else if (group.HasDelimiter)
-            {
-                layout = LayoutBracketGroupWithHaraKiri(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
-                    startMeasure, endMeasure, isFirstSystem);
-            }
-            else
-            {
-                layout = LayoutSingleStaffGroupWithHaraKiri(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
-                    startMeasure, endMeasure, isFirstSystem);
-            }
-
-            builder.Add(layout);
-
-            bool groupIsHidden = layout.Staves.All(s => s.IsHidden);
-            if (!groupIsHidden)
-            {
-                currentY -= layout.Height;
-                lastVisibleGroupIndex = i;
-            }
-
-            // Inter-group gap: only add between visible groups
-            if (i < score.StaffGroups.Length - 1 && !groupIsHidden)
-            {
-                // Check if next visible group exists
-                bool nextGroupVisible = false;
-                for (int j = i + 1; j < score.StaffGroups.Length; j++)
-                {
-                    bool allHidden = true;
-                    foreach (var staff in score.StaffGroups[j].Staves)
-                    {
-                        if (!HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem))
-                        {
-                            allHidden = false;
-                            break;
-                        }
-                    }
-                    if (!allHidden) { nextGroupVisible = true; break; }
-                }
-
-                if (nextGroupVisible)
-                {
-                    // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
-                    var nextGroup = score.StaffGroups[i + 1];
-                    var spec = InterGroupSpec(group, nextGroup, sp);
-                    bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                    bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                    bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
-                    double interGroupGap = textRowPair
-                        ? TextRowPairGap
-                        : spec.BasicDistance - staffHeight;
-                    if (nextIsOssia || currentIsOssia)
-                        interGroupGap *= OssiaScaleFactor;
-                    currentY -= interGroupGap;
-                    // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                    currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
-                }
-            }
-
-            globalStaffIndex += group.StaffCount;
-        }
-
-        return builder.ToImmutable();
-    }
+        => LayoutStaffGroups(score, staffSkylines: null,
+            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem));
 
     /// <summary>
-    /// The shared hara-kiri staff-stacking loop for a group: places each staff at its
-    /// real height (<see cref="GetStaffHeight"/> — a tab/ossia staff differs from the
-    /// nominal staffHeight), hiding hara-kiri staves at zero height. Returns the
-    /// builder plus the running bottom Y (<paramref name="currentY"/>) and whether any
-    /// staff is visible (<paramref name="anyVisible"/>). The grand/single/bracket
-    /// hara-kiri helpers share this and differ only in their delimiter tail.
+    /// The staff-stacking loop for one group: places each SURVIVING staff at its real
+    /// height (<see cref="GetStaffHeight"/> — a tab/ossia staff differs from the nominal
+    /// staffHeight) one spacing below the previous survivor, and gives each staff that
+    /// committed hara-kiri zero height at the current Y. Returns the builder plus the
+    /// running top-of-last-staff Y (<paramref name="currentY"/>) and whether any staff
+    /// survived (<paramref name="anyVisible"/>). The grand/single/bracket helpers share
+    /// this and differ only in their delimiter tail.
     /// </summary>
-    private ImmutableArray<StaffLayout>.Builder StackHaraKiriStaves(
-        StaffGroup group, double y, double staffSpacing,
-        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem,
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations,
+    /// which walks the alignment's elements and skips the dead ones (:90 hands an empty
+    /// skyline back for a dead group). There is ONE such walk in LilyPond, so there is one
+    /// here: <paramref name="isDead"/> is the whole of hara-kiri's effect on placement.
+    /// <para>
+    /// ⚠️ THE GAP IS MEASURED BETWEEN SURVIVORS, not between neighbours in the model. When
+    /// the staff above died, the pair that must clear each other is this staff and the last
+    /// one still standing, which is the pair LilyPond's element list leaves adjacent.
+    /// </para>
+    /// <para>
+    /// ⚠️ <paramref name="staffSkylines"/> null falls back to the spec's basic-distance,
+    /// which is LilyPond's PURE estimate rather than its placement — <c>align-interface.cc
+    /// :234-238</c> is the same fallback, reached when <c>get_pure_minimum_translations</c>
+    /// calls with <c>INT_MAX == end &amp;&amp; 0 == start</c>. It cannot see that the ink
+    /// between two staves needs more room than the spec asks for, so it is only for callers
+    /// that have no measure layouts to build skylines from. The RENDER path never takes it:
+    /// as of 2026-07-26 the only callers of the two skyline-less overloads are tests.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<StaffLayout>.Builder StackStaves(
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
+        Func<Staff, bool> isDead,
         out double currentY, out bool anyVisible)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
         currentY = y;
         anyVisible = false;
+        int lastVisibleIndex = -1;
+        double lastVisibleHeight = 0;
 
         for (int i = 0; i < group.Staves.Length; i++)
         {
             var staff = group.Staves[i];
-            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
+            int globalIndex = startIndex + i;
             double thisStaffHeight = GetStaffHeight(staff);
 
-            if (hidden)
+            if (isDead(staff))
             {
                 staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
+                    StaffIndex: globalIndex,
                     Clef: staff.Clef,
                     Y: currentY,
                     Height: 0,
@@ -494,26 +435,52 @@ internal sealed class MultiStaffLayouter
                     InstrumentName: staff.InstrumentName,
                     IsOssia: staff.IsOssia,
                     IsHidden: true));
+                continue;
             }
-            else
-            {
-                if (anyVisible)
-                    currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
 
-                staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
-                    Clef: staff.Clef,
-                    Y: currentY,
-                    Height: thisStaffHeight,
-                    Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName,
-                    IsOssia: staff.IsOssia));
-                anyVisible = true;
+            if (anyVisible)
+            {
+                // ⚠️ The PREVIOUS staff's height, not this one's. Advancing by the height of
+                // the staff about to be placed misplaces every group whose staves are not
+                // all the same height (an ossia or tab staff under a normal one); it was
+                // invisible while this loop only ever ran on equal-height staves.
+                double gap = StaffGap(
+                    staffSpec, lastVisibleHeight, staffSkylines, lastVisibleIndex, globalIndex);
+                currentY -= lastVisibleHeight + gap;
             }
+
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: globalIndex,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: thisStaffHeight,
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName,
+                IsOssia: staff.IsOssia));
+            anyVisible = true;
+            lastVisibleIndex = globalIndex;
+            lastVisibleHeight = thisStaffHeight;
         }
 
         return staffLayouts;
     }
+
+    /// <summary>
+    /// The distance below <paramref name="upperStaffHeight"/>'s staff at which the next one
+    /// sits: the skyline-aware gap when skylines exist, and the spec's basic-distance when
+    /// they do not. See <see cref="StackStaves"/> for when the fallback is taken.
+    /// </summary>
+    private static double StaffGap(
+        VerticalSpacingSpec spec, double upperStaffHeight,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
+        int upperStaffIndex, int lowerStaffIndex)
+        => staffSkylines is null
+            ? Math.Max(0, spec.BasicDistance - upperStaffHeight)
+            : CalculateStaffGapWithSkylines(
+                spec, upperStaffHeight, staffSkylines, upperStaffIndex, lowerStaffIndex);
+
+    /// <summary>Nothing ever dies — the filter for a score with no hara-kiri in it.</summary>
+    private static readonly Func<Staff, bool> NothingDies = _ => false;
 
     /// <summary>Height of the last visible staff in a stacked group (0 if none).</summary>
     private static double LastVisibleStaffHeight(ImmutableArray<StaffLayout>.Builder staffLayouts)
@@ -525,20 +492,20 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Layouts a grand staff group with hara-kiri support.
+    /// Layouts a grand staff group (piano/organ style with brace) from the placed staves.
     /// </summary>
-    private StaffGroupLayout LayoutGrandStaffGroupWithHaraKiri(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
-        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    private StaffGroupLayout LayoutGrandStaffGroupWithSkylines(
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
-        double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        var staffLayouts = StackHaraKiriStaves(
-            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+        var staffLayouts = StackStaves(
+            group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
         {
-            // All staves hidden — zero-height group
+            // Every staff in the group committed hara-kiri — a zero-height group, which is
+            // what leaves it out of the system's extent (see SystemHeightOf).
             return StaffGroupLayout.CreateGrandStaff(
                 staffLayouts.ToImmutable(), y, 0,
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
@@ -558,46 +525,36 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Layouts a single staff group with hara-kiri support.
+    /// Layouts a single staff group from the placed staves.
     /// </summary>
-    private StaffGroupLayout LayoutSingleStaffGroupWithHaraKiri(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
-        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
-        double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        var staffLayouts = StackHaraKiriStaves(
-            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+        var staffLayouts = StackStaves(
+            group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
-        {
-            // All staves hidden — zero-height group
-            return StaffGroupLayout.CreateSingle(
-                staffLayouts[0], y, 0);
-        }
+            return StaffGroupLayout.CreateSingle(staffLayouts[0], y, 0);
 
-        double lastVisibleHeight = LastVisibleStaffHeight(staffLayouts);
-        double totalHeight = group.StaffCount == 1
-            ? lastVisibleHeight
-            : y - currentY + lastVisibleHeight;
+        double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
 
-        return StaffGroupLayout.CreateSingle(
-            staffLayouts[0], y, totalHeight);
+        return StaffGroupLayout.CreateSingle(staffLayouts[0], y, totalHeight);
     }
 
     /// <summary>
-    /// Layouts a bracket group with hara-kiri support.
+    /// Layouts a bracket group from the placed staves.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering with collapse-height
     /// </remarks>
-    private StaffGroupLayout LayoutBracketGroupWithHaraKiri(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
-        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    private StaffGroupLayout LayoutBracketGroupWithSkylines(
+        StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
-        double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        var staffLayouts = StackHaraKiriStaves(
-            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+        var staffLayouts = StackStaves(
+            group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
@@ -1432,6 +1389,47 @@ internal sealed class MultiStaffLayouter
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
         SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
+        => LayoutStaffGroups(
+            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts), NothingDies);
+
+    /// <summary>
+    /// Layouts all staff groups for ONE system, hiding the staves that are empty across
+    /// <paramref name="startMeasure"/>..<paramref name="endMeasure"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc consider_suicide() — the only thing
+    /// hara-kiri contributes is WHICH staves are still there. Everything downstream is the
+    /// same walk over whatever survived, which is why this is one line.
+    /// </remarks>
+    public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
+        MultiStaffScore score,
+        SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure, bool isFirstSystem)
+        => LayoutStaffGroups(
+            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts),
+            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem));
+
+    /// <summary>
+    /// THE staff-group placement: one walk over the alignment's surviving elements.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations().
+    /// <para>
+    /// ⚠️ HARA-KIRI IS THE <paramref name="isDead"/> ARGUMENT AND NOTHING ELSE. Until
+    /// 2026-07-26 there were two of these walks — this one, and a hara-kiri copy that spaced
+    /// staves at the bare <c>basic-distance</c> and never consulted a skyline — and
+    /// LayoutEngine chose between them on whether any staff DECLARED removeEmpty. That is
+    /// the shape HANDOFF 5.2.1 (2) names, and it cost exactly what it always costs: on music
+    /// whose ink between the staves is tall, declaring removeEmpty collapsed the gap from
+    /// 22.090000 to 9.000000 and ran the two staves' ledger lines together. LilyPond has one
+    /// walk and a live-filter (page-layout-problem.cc:1366-1370), so this has one walk and a
+    /// predicate.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
+        MultiStaffScore score,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
+        Func<Staff, bool> isDead)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
@@ -1439,56 +1437,77 @@ internal sealed class MultiStaffLayouter
         var sp = _options.StaffSpacing;
         int globalStaffIndex = 0;
 
-        var staffSkylines = BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
+        // The global staff index of each group's first and last SURVIVOR, so the gap between
+        // two groups is measured between the staves that actually face each other.
+        int FirstLiveIndex(int groupIndex)
+        {
+            int at = 0;
+            for (int g = 0; g < groupIndex; g++)
+                at += score.StaffGroups[g].StaffCount;
+            var staves = score.StaffGroups[groupIndex].Staves;
+            for (int k = 0; k < staves.Length; k++)
+                if (!isDead(staves[k]))
+                    return at + k;
+            return -1;
+        }
+        int LastLiveIndex(int groupIndex)
+        {
+            int at = 0;
+            for (int g = 0; g < groupIndex; g++)
+                at += score.StaffGroups[g].StaffCount;
+            var staves = score.StaffGroups[groupIndex].Staves;
+            for (int k = staves.Length - 1; k >= 0; k--)
+                if (!isDead(staves[k]))
+                    return at + k;
+            return -1;
+        }
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
             var group = score.StaffGroups[i];
 
-            if (group.IsGrandStaff)
-            {
-                var layout = LayoutGrandStaffGroupWithSkylines(
-                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
-                    staffSkylines);
-                builder.Add(layout);
-                currentY -= layout.Height;
-            }
-            else if (group.HasDelimiter)
-            {
-                var layout = LayoutBracketGroupWithSkylines(
-                    group, currentY, sp.StaffStaff, globalStaffIndex,
-                    staffSkylines);
-                builder.Add(layout);
-                currentY -= layout.Height;
-            }
-            else
-            {
-                var layout = LayoutSingleStaffGroupWithSkylines(
-                    group, currentY, sp.StaffStaff, globalStaffIndex,
-                    staffSkylines);
-                builder.Add(layout);
-                currentY -= layout.Height;
-            }
+            var layout = group.IsGrandStaff
+                ? LayoutGrandStaffGroupWithSkylines(
+                    group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                : group.HasDelimiter
+                    ? LayoutBracketGroupWithSkylines(
+                        group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                    : LayoutSingleStaffGroupWithSkylines(
+                        group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead);
+            builder.Add(layout);
 
-            if (i < score.StaffGroups.Length - 1)
+            // A group with no survivor takes no room and no gap: it is not in the alignment.
+            bool groupIsDead = layout.Staves.All(s => s.IsHidden);
+            if (!groupIsDead)
             {
-                int lastOfGroup = globalStaffIndex + group.StaffCount - 1;
-                int firstOfNext = globalStaffIndex + group.StaffCount;
-                // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
-                var nextGroup = score.StaffGroups[i + 1];
-                var spec = InterGroupSpec(group, nextGroup, sp);
-                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
-                double interGroupGap = textRowPair
-                    ? TextRowPairGap
-                    : CalculateStaffGapWithSkylines(
-                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
-                if (nextIsOssia || currentIsOssia)
-                    interGroupGap *= OssiaScaleFactor;
-                currentY -= interGroupGap;
-                // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                currentY -= layout.Height;
+
+                // The next group that still has a staff — NOT simply the next group, which
+                // may have died. LilyPond's element list has already dropped the dead ones,
+                // so the spec and the skyline pair both come from the surviving neighbour.
+                int next = i + 1;
+                while (next < score.StaffGroups.Length && FirstLiveIndex(next) < 0)
+                    next++;
+
+                if (next < score.StaffGroups.Length)
+                {
+                    // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
+                    var nextGroup = score.StaffGroups[next];
+                    var spec = InterGroupSpec(group, nextGroup, sp);
+                    bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
+                    bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                    bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                    double interGroupGap = textRowPair
+                        ? TextRowPairGap
+                        : StaffGap(spec, staffHeight, staffSkylines,
+                            LastLiveIndex(i), FirstLiveIndex(next));
+                    if (nextIsOssia || currentIsOssia)
+                        interGroupGap *= OssiaScaleFactor;
+                    currentY -= interGroupGap;
+                    // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
+                    currentY -= NoteBoundLyricExtraGap(
+                        score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                }
             }
 
             globalStaffIndex += group.StaffCount;
@@ -1632,152 +1651,6 @@ internal sealed class MultiStaffLayouter
     /// A staff's refpoint (its middle line) in the system's Y-up frame.
     /// </summary>
     internal static double StaffRefpoint(StaffLayout staff) => staff.Y - staff.Height / 2.0;
-
-    /// <summary>
-    /// Layouts a grand staff group using skyline-based spacing.
-    /// </summary>
-    private StaffGroupLayout LayoutGrandStaffGroupWithSkylines(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
-        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
-    {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            staffLayouts.Add(new StaffLayout(
-                StaffIndex: startIndex + i,
-                Clef: staff.Clef,
-                Y: currentY,
-                Height: staffHeight,
-                Tuning: staff.Tuning,
-                InstrumentName: staff.InstrumentName));
-
-            if (i < group.Staves.Length - 1)
-            {
-                int upperIdx = startIndex + i;
-                int lowerIdx = startIndex + i + 1;
-                double gap = CalculateStaffGapWithSkylines(
-                    staffSpec, staffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY -= staffHeight + gap;
-            }
-        }
-
-        double totalHeight = y - currentY + staffHeight;
-        double braceX = CurrentIndent - SystemStartBracePadding;
-
-        var grandStaffLayout = new GrandStaffLayout(
-            Staves: staffLayouts.ToImmutable(),
-            BraceX: braceX,
-            BraceTop: y,
-            BraceBottom: y - totalHeight);
-
-        return StaffGroupLayout.CreateGrandStaff(
-            staffLayouts.ToImmutable(),
-            y,
-            totalHeight,
-            grandStaffLayout);
-    }
-
-    /// <summary>
-    /// Layouts a single staff group using skyline-based spacing.
-    /// </summary>
-    private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
-        StaffGroup group, double y, VerticalSpacingSpec staffSpec,
-        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
-    {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            double thisStaffHeight = GetStaffHeight(staff);
-            staffLayouts.Add(new StaffLayout(
-                StaffIndex: startIndex + i,
-                Clef: staff.Clef,
-                Y: currentY,
-                Height: thisStaffHeight,
-                Tuning: staff.Tuning,
-                InstrumentName: staff.InstrumentName,
-                IsOssia: staff.IsOssia));
-
-            if (i < group.Staves.Length - 1)
-            {
-                int upperIdx = startIndex + i;
-                int lowerIdx = startIndex + i + 1;
-                double gap = CalculateStaffGapWithSkylines(
-                    staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY -= thisStaffHeight + gap;
-            }
-        }
-
-        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
-        double totalHeight = group.StaffCount == 1
-            ? lastStaffHeight
-            : y - currentY + lastStaffHeight;
-
-        return StaffGroupLayout.CreateSingle(
-            staffLayouts[0],
-            y,
-            totalHeight);
-    }
-
-    /// <summary>
-    /// Layouts a bracket group using skyline-based spacing.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering
-    /// </remarks>
-    private StaffGroupLayout LayoutBracketGroupWithSkylines(
-        StaffGroup group, double y, VerticalSpacingSpec staffSpec,
-        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
-    {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            double thisStaffHeight = GetStaffHeight(staff);
-            staffLayouts.Add(new StaffLayout(
-                StaffIndex: startIndex + i,
-                Clef: staff.Clef,
-                Y: currentY,
-                Height: thisStaffHeight,
-                Tuning: staff.Tuning,
-                InstrumentName: staff.InstrumentName,
-                IsOssia: staff.IsOssia));
-
-            if (i < group.Staves.Length - 1)
-            {
-                int upperIdx = startIndex + i;
-                int lowerIdx = startIndex + i + 1;
-                double gap = CalculateStaffGapWithSkylines(
-                    staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
-                currentY -= thisStaffHeight + gap;
-            }
-        }
-
-        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
-        double totalHeight = y - currentY + lastStaffHeight;
-        double bracketX = CurrentIndent - SystemStartBracketPadding;
-
-        var delimiterLayout = new GrandStaffLayout(
-            Staves: staffLayouts.ToImmutable(),
-            BraceX: bracketX,
-            BraceTop: y,
-            BraceBottom: y - totalHeight,
-            DelimiterType: SystemStartDelimiterType.Bracket);
-
-        return StaffGroupLayout.CreateBracketGroup(
-            group.Type,
-            staffLayouts.ToImmutable(),
-            y,
-            totalHeight,
-            delimiterLayout);
-    }
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.

@@ -329,10 +329,18 @@ public class HaraKiriTests
     /// independently known to be RIGHT, not merely different.
     /// <para>⚠️ Lily# <c>c</c> is LilyPond <c>c'</c> (HANDOFF 5.5).</para>
     /// </remarks>
-    private static string PlainHaraKiriScore(bool declareRemoveEmpty)
+    private static string PlainHaraKiriScore(bool declareRemoveEmpty, bool wideInk = false)
     {
-        string rh = string.Concat(Enumerable.Repeat("c4 d e f | ", 120)).Trim();
-        string lh = string.Concat(Enumerable.Repeat("c,4 d, e, f, | ", 120)).Trim();
+        // wideInk: the rh dives below its staff and the lh climbs above its own, so the ink
+        // BETWEEN the staves needs far more room than basic-distance asks for and the
+        // alignment minimum — not the spec — decides the distance (measured: 22.090000
+        // against a basic-distance of 9). That is the regime the hara-kiri placement used to
+        // be blind to, and it is a different one from the compressed page below: this one
+        // binds at force 0, on any paper.
+        string rh = string.Concat(Enumerable.Repeat(
+            wideInk ? "c,,4 d,, e,, f,, | " : "c4 d e f | ", 120)).Trim();
+        string lh = string.Concat(Enumerable.Repeat(
+            wideInk ? "c''4 d'' e'' f'' | " : "c,4 d, e, f, | ", 120)).Trim();
         return $$"""
             octave absolute
             time 4/4
@@ -381,21 +389,26 @@ public class HaraKiriTests
     /// refused pushed into the system springs (11.303595 -&gt; 10.927848).
     /// </para>
     /// </remarks>
-    [Fact]
-    public void RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing()
+    [Theory]
+    [InlineData(false)]  // the SPRING: a compressed page, where a spring's minimum binds
+    [InlineData(true)]   // the PLACEMENT: ink between the staves that the spec cannot see
+    public void RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing(bool wideInk)
     {
         var paper = LayoutOptions.Default with
         {
             PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 8 },
         };
 
-        var declared = RenderedGeometry.Render(PlainHaraKiriScore(true), paper);
-        var undeclared = RenderedGeometry.Render(PlainHaraKiriScore(false), paper);
+        var declared = RenderedGeometry.Render(PlainHaraKiriScore(true, wideInk), paper);
+        var undeclared = RenderedGeometry.Render(PlainHaraKiriScore(false, wideInk), paper);
 
-        // HANDOFF 5.0 trap 7: prove the page really squeezed, or the rest measures nothing.
-        Assert.True(undeclared.StaffGapAt(0) < LayoutOptions.Default.StaffSpacing.StaffStaff.BasicDistance,
-            $"page did not compress: inside {undeclared.StaffGapAt(0):F6} is not below the ideal "
-            + $"{LayoutOptions.Default.StaffSpacing.StaffStaff.BasicDistance:F6}; re-aim the book");
+        // HANDOFF 5.0 trap 7: prove each book is in the regime it was built for, or it
+        // measures nothing. Compressed means BELOW the ideal; wide ink means far above it.
+        double ideal = LayoutOptions.Default.StaffSpacing.StaffStaff.BasicDistance;
+        double inside = undeclared.StaffGapAt(0);
+        Assert.True(wideInk ? inside > ideal : inside < ideal,
+            $"book is not in its regime: inside {inside:F6} against the ideal {ideal:F6} "
+            + $"(wideInk={wideInk}); re-aim the book rather than relaxing this");
 
         Assert.Equal(undeclared.PageCount, declared.PageCount);
         for (int page = 0; page < undeclared.PageCount; page++)
