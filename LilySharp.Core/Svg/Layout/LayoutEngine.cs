@@ -1550,6 +1550,12 @@ internal sealed class LayoutEngine
     /// 0 is a block between two staves of one system, which <see cref="LyricEngraver"/>
     /// keeps out because its closing spring is <c>nonstaff-unrelatedstaff-spacing</c> against
     /// the next staff's up-skyline (:1301-1312) — an input the engraver is not given.
+    /// ⚠️ THE BAIL-OUT IS COARSER THAN IT NEEDS TO BE and LilyPond has no counterpart for it
+    /// at all — it always solves. One ossia anywhere in the score drops the chain on every
+    /// system, where per-system would only need to drop the two systems whose reference
+    /// points that ossia stands between. Left that way because no corpus point measures an
+    /// ossia or a text row against a lyric block yet, and narrowing an exclusion nothing
+    /// measures is how a port acquires an untested branch.
     /// </para>
     /// </remarks>
     private Func<int, (double Room, double NextStaffMinDistance)?>? BuildLooseChainEnds(
@@ -1561,11 +1567,23 @@ internal sealed class LayoutEngine
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
 
-        // Device-DOWN from each system's origin to its LAST spaceable staff's top line —
-        // the near end of every chain on that system. A hidden staff is skipped because
-        // hara-kiri leaves it at the current Y with zero height (MultiStaffLayouter), so it
-        // neither draws nor takes room; an ossia or a text row makes the whole score bail
-        // out, per the remarks above.
+        // Device-DOWN from each system's origin to its FIRST and its LAST spaceable staff's
+        // top line — the two ends every chain on the page attaches to. A hidden staff is
+        // skipped because hara-kiri leaves it at the current Y with zero height
+        // (MultiStaffLayouter), so it neither draws nor takes room; an ossia or a text row
+        // makes the whole score bail out, per the remarks above.
+        //
+        // ⚠️ BOTH ARE DERIVED, and the first one is derived even though the guard above
+        // makes it 0 today: LilyPond's far end is `-solution_[spring_idx]`, the next
+        // system's FIRST SPACEABLE STAFF's reference point, so reading that staff is the
+        // port and assuming it coincides with the system origin is a shortcut. It does
+        // coincide — MultiStaffLayouter advances its running Y only past a staff it has
+        // already placed, and a hidden staff or a wholly hidden group advances it not at
+        // all — but that is an invariant of another file, and §5.2.1 (6) is about exactly
+        // this: a quantity whose value you can only justify by reading elsewhere. The
+        // corpus confirms it rather than the comment doing so — introducing the term moved
+        // no entry and no snapshot.
+        var firstSpaceable = new double[systemsArray.Length];
         var lastSpaceable = new double[systemsArray.Length];
         for (int s = 0; s < systemsArray.Length; s++)
         {
@@ -1579,6 +1597,7 @@ internal sealed class LayoutEngine
                     if (st.IsHidden) continue;
                     if (st.IsOssia || textRowStaves.Contains(st.StaffIndex)) return null;
                     double down = -st.Y;
+                    if (!found || down < firstSpaceable[s]) firstSpaceable[s] = down;
                     if (!found || down > lastSpaceable[s]) lastSpaceable[s] = down;
                     found = true;
                 }
@@ -1605,14 +1624,18 @@ internal sealed class LayoutEngine
                 if (i + 1 < onPage.Length)
                 {
                     // ...and `-solution_[spring_idx]`, the next system's FIRST spaceable
-                    // staff. The guard above leaves the first visible staff at the system
-                    // origin — MultiStaffLayouter advances its running Y only past a staff
-                    // it has already placed — so that reference point is a half-staff below
-                    // onPage[i + 1].Y and no span comes off this end.
+                    // staff's reference point.
+                    //
+                    // The minimum on the spring that reaches it is
+                    // `elements_[i].padding - min_offsets[0]` (:931-932), and min_offsets[0]
+                    // is that same staff's own translation, so the ink term is measured from
+                    // the SAME point: the system's up extent (from its origin) plus the span
+                    // down to that staff plus the half-staff to its reference point.
                     double nextUpExtent = index + 1 < perSystemExtents.Count
                         ? perSystemExtents[index + 1].upExtent : 0;
-                    ends[index] = (anchor - (onPage[i + 1].Y - halfStaff),
-                                   systemPadding + nextUpExtent + halfStaff);
+                    double nextFirst = firstSpaceable[index + 1];
+                    ends[index] = (anchor - (onPage[i + 1].Y - nextFirst - halfStaff),
+                                   systemPadding + nextUpExtent + nextFirst + halfStaff);
                 }
                 else
                 {
