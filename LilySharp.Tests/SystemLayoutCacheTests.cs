@@ -37,6 +37,53 @@ public class SystemLayoutCacheTests
     private static ImmutableArray<MeasureLayout> Layout(int measureIndex) =>
         ImmutableArray.Create(new MeasureLayout(measureIndex, 0, 1, ImmutableArray<ItemLayout>.Empty));
 
+    /// <summary>
+    /// A system's PER-STAFF skylines are reused on an exact key match and recomputed when
+    /// the content under them changes.
+    /// </summary>
+    /// <remarks>
+    /// These went from one list per SCORE to one per SYSTEM when the placement did
+    /// (2026-07-27), which is what made them worth memoising: without this, a one-note edit
+    /// on a fifty-system score rebuilt all fifty, measured at ~100 ms of an edit's ~500 ms.
+    /// With it, only the edited system's list is rebuilt. ⚠️ This test is the reason a
+    /// future reader cannot quietly drop the memo — the fuzz tests would stay green,
+    /// because dropping it costs time and not correctness.
+    /// </remarks>
+    [Fact]
+    public void StaffSkylines_ReuseOnExactMatch_RecomputeWhenTheContentChanges()
+    {
+        var cache = new SystemLayoutCache();
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(2),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+
+        int calls = 0;
+        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> factory = () =>
+        {
+            calls++;
+            return new List<(VerticalSkyline Up, VerticalSkyline Down)>();
+        };
+
+        var first = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
+        Assert.Equal(1, calls);
+
+        // Same system, same content -> the same list object, not a rebuild.
+        var second = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
+        Assert.Equal(1, calls);
+        Assert.Same(first, second);
+
+        // A different system in the same score -> its own entry.
+        cache.GetOrComputeStaffSkylines(2, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(2, calls);
+
+        // Content under the first system changed -> it must not be reused.
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(99),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+        cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
+        Assert.Equal(3, calls);
+    }
+
     [Fact]
     public void ReusesOnExactMatch_RecomputesOnAnyDifference()
     {

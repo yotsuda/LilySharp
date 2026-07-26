@@ -113,8 +113,11 @@ internal sealed class LayoutEngine
         // ⚠️ The second arm is a DEGENERATE-INPUT guard, not a spacing branch: a score with
         // no measures has no range to test emptiness over, and asking hara-kiri about the
         // range 0..0 would report every staff empty and hide the lot.
-        var firstStaffSkylines = multiStaffLayouter.BuildStaffSkylines(
-            score, _skylineBuilder, firstSystemMeasureLayouts);
+        var firstStaffSkylines = ComputeStaffSkylines(systemCache, 0,
+            systemMeasures.Count > 0 ? systemMeasures[0].Count : 0, true,
+            systemMeasures.Count <= 1, indent, commonShortestDuration,
+            () => multiStaffLayouter.BuildStaffSkylines(
+                score, _skylineBuilder, firstSystemMeasureLayouts));
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
                 score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true)
@@ -186,8 +189,10 @@ internal sealed class LayoutEngine
             // MultiStaffLayouter.BuildStaffSkylines.
             var sysStaffSkylines = isFirstSystem
                 ? firstStaffSkylines
-                : multiStaffLayouter.BuildStaffSkylines(
-                    score, _skylineBuilder, measureLayouts);
+                : ComputeStaffSkylines(systemCache, firstMeasureIndex, measureCount, false,
+                    sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration,
+                    () => multiStaffLayouter.BuildStaffSkylines(
+                        score, _skylineBuilder, measureLayouts));
 
             // THIS system's placement, from ITS music. LILYPOND-REF:
             // lily/align-interface.cc:217-268 — each System has its own VerticalAlignment and
@@ -639,6 +644,20 @@ internal sealed class LayoutEngine
             ? compute()
             : cache.GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
                 indent, commonShortestDuration, compute);
+
+    // Route a system's PER-STAFF skylines through the session cache. They became a
+    // per-system cost when the placement did (see the loop above); before that one list
+    // served the whole score, so there was nothing worth memoising. On a fifty-system
+    // score a one-note edit rebuilt all fifty without this. Null cache => direct compute,
+    // byte-identical to the non-incremental path.
+    private static List<(VerticalSkyline Up, VerticalSkyline Down)> ComputeStaffSkylines(
+        SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
+        bool isLastSystem, double indent, double commonShortestDuration,
+        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> compute)
+        => cache == null
+            ? compute()
+            : cache.GetOrComputeStaffSkylines(firstMeasureIndex, measureCount, isFirstSystem,
+                isLastSystem, indent, commonShortestDuration, compute);
 
     // F3/S5-3c: route a system's skyline through the session cache (the dominant
     // per-system cost, esp. multi-staff). Keyed additionally on systemHeight.

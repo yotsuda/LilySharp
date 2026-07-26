@@ -54,6 +54,7 @@ internal sealed class SystemLayoutCache
     private ImmutableArray<MeasureContentKey> _keys;
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new();
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
+    private readonly TypedCache<List<(VerticalSkyline Up, VerticalSkyline Down)>> _staffSkylines = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -64,6 +65,7 @@ internal sealed class SystemLayoutCache
         _keys = keys;
         _measures.NextGeneration();
         _skylines.NextGeneration();
+        _staffSkylines.NextGeneration();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -84,6 +86,38 @@ internal sealed class SystemLayoutCache
         LastWasHit = hit;
         return result;
     }
+
+    /// <summary>Reuses or computes the system's PER-STAFF skylines — the list its staves
+    /// are both placed and sprung against.</summary>
+    /// <remarks>
+    /// Keyed exactly like <see cref="GetOrComputeMeasures"/> and for the same reason: the
+    /// staff skylines are a function of that system's measure layouts plus the score's
+    /// side-tables, and every one of those inputs is already in this key.
+    /// <list type="bullet">
+    /// <item>the measure layouts themselves are the value under this same key;</item>
+    /// <item><c>Dynamics</c>, <c>Articulations</c>, <c>ChordNames</c>, <c>TupletBrackets</c>
+    /// and <c>GraceNotes</c> — the side tables <c>BuildAllStaffSkylines</c> reads — are
+    /// folded per measure by <c>MeasureContentKey.BucketSideTables</c>;</item>
+    /// <item>slurs, ties and beams are derived from the voices' own measures, which the
+    /// intrinsic hash covers (secondary voices included);</item>
+    /// <item>which staves exist and what they are is folded by <c>AddStaffIdentity</c>.</item>
+    /// </list>
+    /// ⚠️ NO <c>systemHeight</c> HERE, unlike <see cref="GetOrComputeSkyline"/>: a staff's
+    /// skyline is built in that staff's own frame and does not know where the system's
+    /// other staves ended up. Adding it would only make the key stricter, but stating why
+    /// it is absent keeps the next reader from "fixing" the asymmetry.
+    /// ⚠️ THE CACHED LIST IS SHARED, so nothing downstream may mutate it or the skylines in
+    /// it. Verified 2026-07-27: every consumer goes through
+    /// <c>CalculateStaffGapWithSkylines</c> / <c>AlignmentMinimumWithSkylines</c>, which
+    /// only read (<c>Distance</c>, <c>IsEmpty</c>, <c>Count</c>). The one mutation,
+    /// <c>ReserveChordRowBand</c>, happens during construction, before the value is stored.
+    /// </remarks>
+    public List<(VerticalSkyline Up, VerticalSkyline Down)> GetOrComputeStaffSkylines(
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> compute)
+        => _staffSkylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+            isLastSystem, indent, commonShortestDuration, extra: 0, compute, out _);
 
     /// <summary>Reuses or computes the system's up/down skyline. Keyed additionally
     /// on <paramref name="systemHeight"/>, which the skyline depends on.</summary>
