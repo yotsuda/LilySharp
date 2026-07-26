@@ -668,21 +668,147 @@ internal static class LpGeometryProbes
     /// </remarks>
     private static readonly string LYRHK = BuildHaraKiriLyricScore();
 
-    /// <summary>Builds <see cref="LYRHK"/> — six bars to a system, twenty systems, the upper
-    /// staff silent through the first of them.</summary>
-    private static string BuildHaraKiriLyricScore()
+    /// <summary>
+    /// HARA-KIRI INSIDE A GROUPER — the mirror of book LYRHKG, and the book that stops
+    /// LYRHK's defect being closed with a literal.
+    /// </summary>
+    /// <remarks>
+    /// A grand staff of A (always playing) and B (removeEmpty, silent through system 0) over
+    /// a bare staff C carrying the melody and two verses. Both 9 and 10.5 must appear, and
+    /// WHICH APPEARS WHERE depends on which staves are still alive: LilyPond reads the
+    /// spacing property off the staff above the gap (page-layout-problem.cc:1280-1281) and
+    /// then asks whether that staff still has a LIVE spaceable member below it inside its
+    /// grouper (axis-group-interface.cc:1008-1027). Killing B therefore PROMOTES A to last
+    /// live member and changes the spec of the gap that survives — 10.5 under system 0
+    /// against 9 then 10.5 under the others. A fix that writes 9 where
+    /// <c>LayoutEngine</c> writes 10.5 passes LYRHK, whose staves are both bare, and fails
+    /// here.
+    /// <para>⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).</para>
+    /// </remarks>
+    private static readonly string LYRHKG = BuildHaraKiriGrouperScore();
+
+    /// <summary>
+    /// THE DECLARATION ON ITS OWN — the mirrors of books LYRHKD and LYRHKN, which are the
+    /// same music differing ONLY in whether the upper staff declares <c>removeEmpty</c>.
+    /// </summary>
+    /// <remarks>
+    /// No staff is ever empty in either, so the declaration cannot fire and LILYPOND'S TWO
+    /// READINGS ARE IDENTICAL BY CONSTRUCTION: its hara-kiri is a suicide followed by a
+    /// live-filter (page-layout-problem.cc:1366-1370, align-interface.cc:90), and a grob
+    /// that never dies leaves no trace. Whatever Lily# reads differently between them is
+    /// entirely its own, and needs no force arithmetic to interpret.
+    /// <para>
+    /// ⚠️ WHY LYRHK CANNOT SERVE. Lily# branches on the DECLARATION (<c>hasHaraKiri</c>, six
+    /// sites in LayoutEngine), not on anything having been hidden, and two of those sites
+    /// pick a different formula: the per-system height (:198-202), which LYRHK sees, and the
+    /// page's staff springs, emptied and rebuilt per system WITHOUT SKYLINES (:128-131),
+    /// which it cannot — a spring's minimum comes from those skylines and only binds on a
+    /// COMPRESSED page, while every hara-kiri book so far is ragged. Hence the justified
+    /// paper packed 8 systems to a page, the regime book JSK measures.
+    /// </para>
+    /// <para>
+    /// ⚠️ HANDOFF 5.0 trap 7: confirm from the dump that the page really compressed — the
+    /// inside distance must come out BELOW the ideal 9.000000 — before reading anything.
+    /// </para>
+    /// </remarks>
+    private static readonly string LYRHKD = BuildHaraKiriPlainScore(declareRemoveEmpty: true);
+
+    /// <summary>The control of the pair above: the same music without the declaration.</summary>
+    private static readonly string LYRHKN = BuildHaraKiriPlainScore(declareRemoveEmpty: false);
+
+    /// <summary>Three bars to a system, twenty systems — the shape books LYRHK, LYRHKG,
+    /// LYRHKD and LYRHKN all share. Breaks go BETWEEN systems, so there are nineteen of
+    /// them and no trailing one.</summary>
+    private static (string Upper, string Melody, string Syllables) HaraKiriParts(
+        int silentSystems)
     {
         const int barsPerSystem = 3;
         const int systems = 20;
-        string restSystem = string.Concat(Enumerable.Repeat("r1 | ", barsPerSystem));
-        string upperSystem = string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", barsPerSystem));
-        // Breaks go BETWEEN systems, so there are nineteen of them and no trailing one.
-        string upper = restSystem + string.Concat(
-            Enumerable.Repeat("break " + upperSystem, systems - 1));
-        string melody = string.Concat(
-            Enumerable.Repeat("g4 a g a | ", barsPerSystem * systems));
-        string syllables = string.Concat(
-            Enumerable.Repeat("no no no no | ", barsPerSystem * systems));
+        string rest = string.Concat(Enumerable.Repeat("r1 | ", barsPerSystem));
+        string play = string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", barsPerSystem));
+        string upper = string.Join("break ",
+            Enumerable.Range(0, systems).Select(s => s < silentSystems ? rest : play));
+        return (upper,
+            string.Concat(Enumerable.Repeat("g4 a g a | ", barsPerSystem * systems)),
+            string.Concat(Enumerable.Repeat("no no no no | ", barsPerSystem * systems)));
+    }
+
+    /// <summary>Builds <see cref="LYRHKG"/>.</summary>
+    private static string BuildHaraKiriGrouperScore()
+    {
+        var (upper, melody, syllables) = HaraKiriParts(silentSystems: 0);
+        // The inner staff is silent through system 0 and takes no `break` of its own — the
+        // staff above it carries them, since a break belongs to the score and not to a staff.
+        string inner = string.Concat(Enumerable.Repeat("r1 | ", 3))
+            + string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 57));
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part top { clef treble }
+            part inner { clef treble removeEmpty all }
+            part melody { clef treble }
+
+            section Main {
+              top { {{upper.Trim()}} }
+              inner { {{inner.Trim()}} }
+              melody { {{melody.Trim()}} }
+              lyrics one { {{syllables.Trim()}} }
+              lyrics two { {{syllables.Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "LYRHKG" {
+              grandStaff { staff top staff inner }
+              staff melody with lyrics one with lyrics two
+            }
+            """;
+    }
+
+    /// <summary>Builds <see cref="LYRHKD"/> / <see cref="LYRHKN"/> — identical but for the
+    /// declaration, which never fires.</summary>
+    private static string BuildHaraKiriPlainScore(bool declareRemoveEmpty)
+    {
+        var (upper, melody, syllables) = HaraKiriParts(silentSystems: 0);
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part upper { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part melody { clef treble }
+
+            section Main {
+              upper { {{upper.Trim()}} }
+              melody { {{melody.Trim()}} }
+              lyrics one { {{syllables.Trim()}} }
+              lyrics two { {{syllables.Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{(declareRemoveEmpty ? "LYRHKD" : "LYRHKN")}}" {
+              staff upper
+              staff melody with lyrics one with lyrics two
+            }
+            """;
+    }
+
+    /// <summary>The justified paper books LYRHKD/LYRHKN engrave onto — eight systems to a
+    /// page, so the page COMPRESSES and the springs' minima bind (book JSK's regime).</summary>
+    private static readonly LayoutOptions EightSystemsPerPageJustified =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 8 },
+        };
+
+    /// <summary>Builds <see cref="LYRHK"/> — three bars to a system, twenty systems, the
+    /// upper staff silent through the first of them.</summary>
+    private static string BuildHaraKiriLyricScore()
+    {
+        var (upper, melody, syllables) = HaraKiriParts(silentSystems: 1);
         return $$"""
             octave absolute
             time 4/4
@@ -2864,6 +2990,50 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(1), FourSystemsPerPageRagged),
         new("lyrics.hara-kiri.staves-on-first-page", LYRHK,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // HARA-KIRI INSIDE A GROUPER (LYRHKG). Both 9 and 10.5 must appear, and which
+        // appears where turns on which staves are LIVE: killing the grand staff's lower
+        // member promotes the upper one to last live member of the grouper, so the gap that
+        // survives changes spec. This is what stops LYRHK's +1.500000 being closed by
+        // writing 9 where LayoutEngine writes 10.5 — that passes LYRHK, whose staves are
+        // both bare, and fails the first entry here.
+        // ⚠️ Page 1 is 2 + 3 + 3 + 3 staves, so index 0 is system 0's TOP staff (its grand
+        // staff's only survivor), index 1 its melody staff, and indices 2..4 are system 1's
+        // three. The count entry is what keeps those indices honest (HANDOFF 5.0 trap 8).
+        new("lyrics.hara-kiri.grouper.promoted-gap", LYRHKG,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.grouper.inside-grouper", LYRHKG,
+            g => g.StaffGapAt(2), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.grouper.staff-to-lyric", LYRHKG,
+            g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.grouper.staves-on-first-page", LYRHKG,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE DECLARATION ON ITS OWN (LYRHKD/LYRHKN) — the same music differing only in
+        // whether the upper staff declares removeEmpty, which never fires because no staff
+        // is ever empty. LILYPOND'S TWO READINGS ARE IDENTICAL BY CONSTRUCTION: its
+        // hara-kiri is a suicide followed by a live-filter (page-layout-problem.cc:1366-1370,
+        // align-interface.cc:90), so a grob that never dies leaves no trace. The two entries
+        // of each pair therefore carry the SAME LilyPond number, and the finding is whether
+        // Lily#'s two differ — it branches on the declaration, not on anything having been
+        // hidden.
+        //
+        // ⚠️ COMPRESSED PAPER ON PURPOSE. The branch LYRHK cannot see is the page's staff
+        // springs, which under hara-kiri are emptied and rebuilt per system WITHOUT
+        // SKYLINES; a spring's minimum comes from those skylines and only binds when the
+        // page is squeezed. Eight systems to a justified page is book JSK's regime.
+        // HANDOFF 5.0 trap 7: the inside distance must read BELOW the ideal 9.000000, or the
+        // page did not compress and these entries measure nothing.
+        // ⚠️ ONLY THE COUNTS ARE CARRIED, and the reason is a measurement: LilyPond fits 8
+        // systems on this page and COMPRESSES to do it (inside 8.429724, below the ideal 9),
+        // while Lily# fits 6 and STRETCHES (9.647977). A gap on a 6-system stretched page and
+        // the same-named gap on an 8-system compressed one are not the same quantity, so the
+        // distance entries would have measured the page count. They wait for a paper both
+        // engines fill alike. The counts ARE comparable, and they are what caught it.
+        new("lyrics.hara-kiri.declared-only.staves-on-first-page", LYRHKD,
+            g => g.StavesOnPage(0), EightSystemsPerPageJustified),
+        new("lyrics.hara-kiri.undeclared.staves-on-first-page", LYRHKN,
+            g => g.StavesOnPage(0), EightSystemsPerPageJustified),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the

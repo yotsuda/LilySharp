@@ -1734,3 +1734,148 @@ probeTag =
   }
 }
 
+%% LYRHKG — HARA-KIRI INSIDE A GROUPER, which is the book that stops the defect LYRHK found
+%%     from being closed with a literal. LYRHK's staves are both bare, so a fix that writes
+%%     9 where the code writes 10.5 passes it; here BOTH numbers must appear at once, and
+%%     which one appears where depends on WHICH STAVES ARE STILL ALIVE.
+%%
+%%     A GrandStaff holding A (always playing) and B (\RemoveAllEmptyStaves, silent through
+%%     system 0), with a bare staff C carrying the melody and two verses beneath them.
+%%     get_spacing_spec reads the property off the staff ABOVE the gap
+%%     (page-layout-problem.cc:1280-1281) and calc_maybe_pure_staff_staff_spacing then asks
+%%     whether that staff still has a LIVE spaceable member below it inside its grouper
+%%     (axis-group-interface.cc:1008-1027, Staff_grouper_interface::maybe_pure_within_group).
+%%     So killing B does not merely delete a gap — it PROMOTES A to last live member of the
+%%     grouper and changes the spec of the gap that remains.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (a) system 0, where B is gone: A -> C = 10.500000, staffgroup-staff-spacing. A is
+%%           the grouper's only live member, hence its last.
+%%       (b) systems 1..3, where B is alive: A -> B = 9.000000 (staff-staff-spacing, a live
+%%           member still below inside the group) and B -> C = 10.500000
+%%           (staffgroup-staff-spacing, B is now the last live member).
+%%       (c) system-to-system = 12.000000 and the loose set {3.737890, 2.800000, 5.500001},
+%%           both unchanged from LYRHK — the block still hangs from the system's last
+%%           spaceable staff and is still solved into the same refpoint-to-refpoint room.
+%%       (d) page 1: 4 systems, 2 + 3 + 3 + 3 = 11 staff refpoints.
+%%     (falsifier for (a), and it is the one that matters: 9.000000 there would mean
+%%      maybe_pure_within_group counts DECLARED members rather than LIVE ones. The whole
+%%      reading this probe rests on — that LilyPond has no hara-kiri branch, only a filter
+%%      that removes dead groups before the ordinary spacing runs — would then be wrong,
+%%      and so would the port planned on top of it.)
+%%
+%%     ALL FOUR HELD. Inside-system spread 10.500000 on system 0 and 19.500000 =
+%%     9.000000 + 10.500000 on the rest; system-to-system 12.000000; loose
+%%     {3.737890, 2.800000, 5.500000}; page-1 first-staff gaps 22.500000 and 31.500000,
+%%     i.e. 2 + 3 + 3 + 3 = 11 staves. ★ SO LIVENESS IS WHAT DECIDES THE SPEC, and that is
+%%     the direct evidence for the porting principle this island rests on.
+%%     ⚠️ Lily# is EXACT on all three shape readings today (10.500000 / 9.000000 / 11) and
+%%     its lyric sits on the font floor — the hara-kiri height branch happens to be RIGHT
+%%     here, because the gap it hardcodes at 10.5 really is 10.5 between a grand staff and
+%%     a bare staff. **That is why the book is worth keeping**: patch that literal to 9 to
+%%     close LYRHK and these entries go 1.500000 wrong the other way.
+\book {
+  \probeTag "LYRHKG"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new GrandStaff <<
+        \new Staff {
+          \repeat unfold 3 { g''4 a'' g'' a'' } \break
+          \repeat unfold 18 { \repeat unfold 3 { g''4 a'' g'' a'' } \break }
+          \repeat unfold 3 { g''4 a'' g'' a'' }
+        }
+        \new Staff \with { \RemoveAllEmptyStaves } {
+          \repeat unfold 3 { r1 }
+          \repeat unfold 57 { g'4 a' g' a' }
+        }
+      >>
+      \new Staff { \new Voice = "mel" { \repeat unfold 60 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+    >>
+  }
+}
+
+%% LYRHKD / LYRHKN — THE DECLARATION ON ITS OWN, and LILYPOND'S SIDE IS AN IDENTITY BY
+%%     CONSTRUCTION rather than by measurement. The two books are the same music on the same
+%%     paper; the only difference is that LYRHKD's upper staff carries
+%%     \with { \RemoveAllEmptyStaves } and LYRHKN's does not. NO STAFF IS EVER EMPTY in
+%%     either, so the declaration cannot fire, and LilyPond's hara-kiri is a suicide followed
+%%     by a live-filter (page-layout-problem.cc:1366-1370, align-interface.cc:90) — a grob
+%%     that never dies leaves no trace of the interface at all. Every reading must match to
+%%     the last digit. ⇒ Whatever Lily# reads differently between them is ENTIRELY its own,
+%%     and needs no force arithmetic to interpret.
+%%
+%%     ⚠️ WHY THE PAIR IS NEEDED AND LYRHK IS NOT ENOUGH. Lily# branches on the DECLARATION
+%%     (LayoutEngine `hasHaraKiri`, six sites), not on anything having been hidden, and two
+%%     of those sites select a different formula: the per-system height (:198-202) and the
+%%     page's staff springs, which under hara-kiri are emptied and rebuilt per system
+%%     WITHOUT SKYLINES (:128-131). LYRHK sees the first because a skyline feeds the lyric
+%%     chain. It cannot see the second: a spring's MINIMUM comes from those skylines, and a
+%%     minimum only binds when the page is compressed — every hara-kiri book to date is
+%%     ragged. Hence the justified paper below.
+%%
+%%     THE REGIME IS THE POINT (HANDOFF 5.0 trap 7): ragged-bottom would stop the stretch but
+%%     not the compression, so the paper is LilyPond's justified default and the systems are
+%%     packed 8 to a page the way book JSK packs them. ⚠️ Confirm from the dump which regime
+%%     it landed in before reading anything else — the inside distance must come out BELOW
+%%     the ideal 9.000000 for the minima to be binding at all. If it does not, raise
+%%     max-systems-per-page rather than trusting the numbers.
+%%
+%%     PREDICTIONS: every reading of LYRHKD equals the same reading of LYRHKN, digit for
+%%     digit, on every page.
+%%     (falsifier: any difference whatever, which would mean LilyPond does react to the bare
+%%      declaration and the invariant Lily# is about to be held to is not LilyPond's.)
+%%
+%%     HELD, TO THE LAST DIGIT: both books print 8 systems, inside 8.429724, system-to-system
+%%     11.119934, first-staff gap 19.549658, loose {3.737890, 2.800000}. The regime is
+%%     CONFIRMED COMPRESSED — 8.429724 is below the ideal 9.000000 (trap 7).
+%%     ⇒ THE INVARIANT IS LILYPOND'S: declaring removeEmpty where nothing is empty changes
+%%     nothing. Lily# breaks it — inside 9.647977 declared against 9.166134 undeclared,
+%%     staff-to-lyric 5.500000 against 4.194860 — because it branches on the DECLARATION.
+%%
+%%     ⚠️ ONLY THE COUNTS ARE CARRIED AS ENTRIES, and that is itself a finding: LilyPond
+%%     fits 8 systems here and Lily# fits 6 declared / 7 undeclared, so it never reaches the
+%%     compressed regime at all and STRETCHES instead. A gap on a 6-system stretched page is
+%%     not the same quantity as the same-named gap on an 8-system compressed one, so the
+%%     distance entries would have been measuring the page count. They wait for a paper both
+%%     engines fill alike. ★ Note the two Lily# counts DIFFER (12 against 14): the
+%%     declaration costs a whole system off page 1, so the invariant is broken in the page
+%%     BREAKER as well as in the spacing — the fix cannot be local to the lyric chain.
+%%     ⚠️ The invariant itself belongs in a TEST, not here (HANDOFF 4). These two entries
+%%     record only that LilyPond's side of it is real.
+\book {
+  \probeTag "LYRHKD"
+  \paper { max-systems-per-page = #8 }
+  \score {
+    <<
+      \new Staff \with { \RemoveAllEmptyStaves } {
+        \repeat unfold 3 { g''4 a'' g'' a'' } \break
+        \repeat unfold 18 { \repeat unfold 3 { g''4 a'' g'' a'' } \break }
+        \repeat unfold 3 { g''4 a'' g'' a'' }
+      }
+      \new Staff { \new Voice = "mel" { \repeat unfold 60 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "LYRHKN"
+  \paper { max-systems-per-page = #8 }
+  \score {
+    <<
+      \new Staff {
+        \repeat unfold 3 { g''4 a'' g'' a'' } \break
+        \repeat unfold 18 { \repeat unfold 3 { g''4 a'' g'' a'' } \break }
+        \repeat unfold 3 { g''4 a'' g'' a'' }
+      }
+      \new Staff { \new Voice = "mel" { \repeat unfold 60 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+    >>
+  }
+}
+

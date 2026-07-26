@@ -869,6 +869,51 @@
       "residual": 0.0,
       "why": "EXACT, and it EARNED ITS KEEP BEFORE THE PROBE EVER RAN (HANDOFF 5.0 trap 8). One staff under system 0, two under each of systems 1..3 -- LilyPond's page-1 gaps are 12.000000, 21.000000, 21.000000, i.e. 9 + 12 out of the two-staff systems and 12 alone out of the one-staff one, ending on a last refpoint of 74.690551. Written first with SIX bars to a system, the count read 6 against LilyPond's 7 and caught that the two engines do not fit the same amount of music on a lyric line: LilyPond took the \\break as given while Lily#, whose lyric face is about 27% wider, SUBDIVIDED every group and made page 1 1+1+2+2. The distance entries went on returning plausible numbers throughout -- only the count knew. At three bars both engines honour the break and both pages read 1+2+2+2. ⚠️ The width difference itself is NOT carried as an entry: no lyric point measures how much music reaches a line, and that gap is worth knowing about but belongs to the horizontal corpus."
     },
+    "lyrics.hara-kiri.grouper.promoted-gap": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKG",
+      "lilypond": 10.5,
+      "residual": 0.0,
+      "why": "EXACT, and it is the entry that stops LYRHK's +1.500000 being closed with a literal. System 0's grand staff has lost its lower member to hara-kiri, which PROMOTES the upper one to last LIVE member of the grouper, so the gap that survives takes staffgroup-staff-spacing (10.5) where the same gap on systems 1..3 takes staff-staff-spacing (9). MEASURED: LilyPond's inside-system spread is 10.500000 on system 0 and 19.500000 = 9.000000 + 10.500000 on the others, exactly as predicted before running. ⚠️ LIVENESS IS WHAT DECIDES -- calc_maybe_pure_staff_staff_spacing asks whether a LIVE spaceable member is still below (axis-group-interface.cc:1008-1027, Staff_grouper_interface::maybe_pure_within_group), and get_spacing_spec reads the property off the staff ABOVE the gap (page-layout-problem.cc:1280-1281). That is the direct evidence for the porting principle the hara-kiri island rests on: LilyPond has no hara-kiri branch, it removes dead groups and runs the ordinary spacing over what is left. ⇒ A fix that writes 9 where LayoutEngine.cs:198-202 writes 10.5 passes lyrics.hara-kiri.shown-system.staff-to-lyric, whose staves are both bare, and BREAKS THIS ENTRY."
+    },
+    "lyrics.hara-kiri.grouper.inside-grouper": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKG",
+      "lilypond": 9.0,
+      "residual": 0.0,
+      "why": "EXACT -- staff-staff-spacing, read off the grand staff's upper member on a system where its lower member is ALIVE. The pair with the entry above is the whole point: same two staves, same grouper, and the spec changes with liveness alone (9.000000 here against 10.500000 on system 0). Part of LilyPond's 19.500000 inside-system spread on systems 1..3."
+    },
+    "lyrics.hara-kiri.grouper.staff-to-lyric": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKG",
+      "lilypond": 3.73789,
+      "residual": 0.27131,
+      "why": "AT THE FONT FLOOR, i.e. the same +0.271310 as lyrics.hara-kiri.hidden-system.staff-to-lyric and no mechanism on top of it -- LilyPond's loose set here is {3.737890, 2.800000, 5.500000}, unchanged by the grouper. ⚠️ CARRIED AS THE SENSOR FOR THE HEIGHT LITERAL rather than as a finding: the hara-kiri height branch (LayoutEngine.cs:198-202) happens to be RIGHT on this book, because the gap it hardcodes at 10.5 really is 10.5 between a grand staff and a bare staff. That is precisely why the entry is worth having -- patch the literal to 9 to close LYRHK and this reading goes 1.500000 wrong in the other direction. ⚠️ Do not drive it to zero; 3.737890 would mean a font quantity had been fitted."
+    },
+    "lyrics.hara-kiri.grouper.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKG",
+      "unit": "count",
+      "lilypond": 11,
+      "residual": 0.0,
+      "why": "EXACT -- 2 + 3 + 3 + 3, LilyPond's page-1 first-staff gaps being 22.500000 (10.5 + 12) and 31.500000 (19.5 + 12). The shape guard for the three entries above, all of which are named by staff INDEX and mean what they say only while system 0 has lost exactly one staff and the others have not (HANDOFF 5.0 trap 8)."
+    },
+    "lyrics.hara-kiri.declared-only.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKD",
+      "unit": "count",
+      "lilypond": 16,
+      "residual": -4.0,
+      "why": "A DEFECT, and A DIFFERENT ONE FROM THE HARA-KIRI ISLAND: the page BREAKER. LilyPond fits 8 systems (16 staves) on this justified page and compresses to do it -- inside 8.429724, below the ideal 9.000000, which is what says the regime is compression and not stretch (HANDOFF 5.0 trap 7). Lily# fits 6 systems (12 staves) and STRETCHES instead, reading 9.647977 inside. ---- WHY THE DISTANCE ENTRIES OF THIS BOOK ARE NOT CARRIED ---- because of exactly this. A gap on Lily#'s 6-system stretched page and the same-named gap on LilyPond's 8-system compressed page are not the same quantity, so their difference would be the page count and not the thing the book was built for. The count is the one reading that IS comparable, so it is the one carried, and the distances wait for a paper both engines fill alike. ⚠️ HANDOFF 5.0 trap 8 again, and this is the THIRD time in this island that a count caught what three plausible-looking distances did not."
+    },
+    "lyrics.hara-kiri.undeclared.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "LYRHKN",
+      "unit": "count",
+      "lilypond": 16,
+      "residual": -2.0,
+      "why": "THE CONTROL -- AND THE TWO RESIDUALS DIFFER, WHICH IS THE FINDING. Lily# puts 7 systems (14 staves) on this page without the declaration and 6 (12 staves) with it, so declaring removeEmpty costs a whole SYSTEM off page 1; LilyPond reads 16 for both. The invariant is broken in the page BREAKER as well as in the spacing, which is what says the fix cannot be local to the lyric chain. LilyPond's two books are IDENTICAL TO THE LAST DIGIT -- 8 systems, inside 8.429724, system-to-system 11.119934, first-staff gap 19.549658, loose {3.737890, 2.800000}. That is not a measurement of LilyPond's behaviour so much as a confirmation of its structure: hara-kiri there is a suicide followed by a live-filter (page-layout-problem.cc:1366-1370, align-interface.cc:90), so a declaration that never fires leaves no trace anywhere. ⇒ THE INVARIANT LILY# MUST HOLD TO: declaring removeEmpty on a score where nothing is empty must change NOTHING. It does not today -- rendered side by side, Lily# reads inside 9.647977 declared against 9.166134 undeclared and staff-to-lyric 5.500000 against 4.194860, because it branches on the DECLARATION (LayoutEngine hasHaraKiri, six sites) rather than on anything having died. ⚠️ That invariant belongs in a TEST and not here (HANDOFF 4): these two entries only record that LilyPond's side of it is real."
+    },
     "barnumber.low-melody.staff-to-baseline": {
       "probe": "page-vertical.ly",
       "score": "BNL",
