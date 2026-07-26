@@ -33,7 +33,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 2026-07-27（第13セッション・**hara-kiri 島を完全に閉じた＋その性能劣化を計測して回収**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`e0ab3359`・origin より **110 ahead・未 push**）。
+HEAD は §0 で確認すること（⚠️ 自己参照。`921787a7`・origin より **112 ahead・未 push**）。
 **3383 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 103/129 exact・total |residual| 1.454788 ss / 116 distances・counts 11/13**。
 
@@ -381,10 +381,12 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### G. 保守性の負債・未 commit のプローブ
 
-- ★ **hara-kiri 島が残した API の債務**（2026-07-27・**着手は承認待ち**）:
-  - **`StaffSprings(score, groups, skylineBuilder?, measureLayouts)` は呼び出し元ゼロ**
-    （repo 横断 grep 済み・`<see cref>` も内部版を指す）。`e0ab3359` までの refactor で
-    内部オーバーロードに委譲するラッパーになった残骸＝**削除候補**
+- ★ **hara-kiri 島が残した API の債務**（2026-07-27）:
+  - ~~`StaffSprings(score, groups, skylineBuilder?, measureLayouts)` は呼び出し元ゼロ~~
+    — **削除済**（`921787a7`・ユーザー承認）。⚠️ **一緒に「スカイライン無しの床」も消えた**:
+    あの経路だけが `staffSkylines == null` に到達できたので、`minimum = drawn`
+    （＝伸びるが縮まない＝Stage 2 が閉じた欠陥そのもの）が**到達不能な生き写しとして
+    残っていた**。引数は非 nullable にしたので null で復活させられない
   - **公開メソッド 3 つがテスト専用に落ちた**: `CalculateSystemHeight(score, skylineBuilder,
     measureLayouts)`・`LayoutStaffGroups(score)`・`LayoutStaffGroups(score, start, end,
     isFirstSystem)`。最後のは「スカイライン無し＝LP の pure 見積り」経路で API としては
