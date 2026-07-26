@@ -1513,3 +1513,88 @@ probeTag =
   }
 }
 
+%% LYRMV — LYRV'S LOOSE CHAIN WITH A STAFF ADDED ABOVE IT, which is the book that says
+%%     whether the room a two-verse block is squeezed into depends on how many staves the
+%%     system has. LYRM answered the ANCHOR question (which staff the block hangs from) and
+%%     is now exact; this one asks the question LYRM could not, because one loose line has
+%%     nothing to be squeezed against — LYRC and LYRV differ by exactly that.
+%%
+%%     ★ LILYPOND'S SIDE IS AN IDENTITY WITH LYRV, and it is an identity in the source
+%%     rather than by observation. distribute_loose_lines is handed
+%%     `last_spaceable_line_translation` and `-solution_[spring_idx]`
+%%     (page-layout-problem.cc:936-939): the PREVIOUS spaceable staff's position on the page
+%%     and THIS one's. Both are refpoints in `solution_`, the page's own spring chain, and
+%%     neither end knows or cares which system it belongs to — the same call site serves a
+%%     block between two systems and a block between two staves of one system, and the only
+%%     thing that changes is which minimum closes it (:923-933). So adding a staff ABOVE the
+%%     lyric-bearing one adds a spring to the PAGE's chain, between two positions the loose
+%%     chain never reads.
+%%
+%%     ⚠️ WHY IT IS WORTH A BOOK ANYWAY, and it is not LilyPond's behaviour that is in doubt.
+%%     Lily#'s `LayoutEngine.BuildLooseChainEnds` computes the room as
+%%     `onPage[i].Y - onPage[i+1].Y` — the gap between two system ORIGINS — and RETURNS NULL
+%%     FOR THE WHOLE SCORE as soon as any system holds more than one staff. On this book
+%%     every chain therefore runs at force 0, i.e. every spring at max(min, ideal), which is
+%%     where LilyPond's chain lands only when it has room to spare. LYRV is the proof that it
+%%     does not: the same two verses solve at f = -0.841556 and the first spring gives way
+%%     from its ideal 5.500000 to its ink floor 3.737890.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2). All three are identities, so all
+%%     three are quoted from books already measured rather than derived afresh:
+%%       (a) system-to-system (last staff -> next first) = 12.000000, LYRV's and LYRM's
+%%           reading. LilyPond does not widen a system gap for loose lines, and the added
+%%           staff is not in the loose chain.
+%%       (b) staff/loose -> next loose = the set {3.737890, 2.800000, 5.500001}, LYRV's
+%%           readings digit for digit: the inner systems' chains compressed onto the first
+%%           spring's ink floor, the last one on the page running to -page_height_ with room
+%%           to spare and reaching the basic-distance.
+%%       (c) staff-to-staff INSIDE a system = 9.000000, LYRM's reading — nothing was added
+%%           between those two staves, and Align_interface is the owner of that distance.
+%%     (falsifier for (a): a gap near 13.762110 — 12.000000 plus the 1.762110 by which a
+%%      force-0 chain is longer than this one's compressed length — which would mean the
+%%      system spring DOES take the block into account once the block hangs from a system's
+%%      LAST staff rather than from its only staff. That would make Lily#'s force-0 placement
+%%      right for the wrong reason and the port below wrong to reuse LYRV's room.)
+%%     (falsifier for (c): a number above 9.000000, which would mean the block's ink is
+%%      inside the two staves' own spring and the chain is not what places it at all.)
+%%
+%%     ALL THREE HELD, to six digits, on pages 1, 2 and 3 alike: 12.000000, the set
+%%     {3.737890, 2.800000, 5.500001}, and 9.000000, with four systems (eight staves) to a
+%%     page. The identity is exact — this book's dump differs from LYRV's only by the second
+%%     staff's own lines.
+%%
+%%     ★ AND THE HOLE HAD SOMETHING ELSE IN IT (HANDOFF 5.0). The Lily# side reads 10.500000
+%%     for (c) — staffgroup-staff-spacing's basic-distance — because it models each bare
+%%     `staff` declaration as its own group, where LilyPond, finding no staff-grouper at all,
+%%     falls through to the staff's own default-staff-staff-spacing
+%%     (axis-group-interface.cc:1008-1027, basic-distance 9). It reads the SAME 10.500000 on
+%%     LYRM, so the lyrics are not in it; the two books together are what say so. Font-free
+%%     on both sides, and nothing in the corpus had read the inside gap of an UNGROUPED pair
+%%     before — page.natural.staff-staff-inside measures a PianoStaff. Carried as
+%%     lyrics.two-staff{,.two-verse}.staff-staff-inside.
+%%
+%%     ⚠️ AND THE LILY#-SIDE PREDICTION FOR (a) WAS WRONG BY THE WHOLE AMOUNT, which is the
+%%     more useful half: the gap was expected near 13.762110 because a force-0 chain is
+%%     longer, and it reads 12.157200 — lyrics.two-verse.system-gap's residual exactly. The
+%%     system gap is set by the RESERVATION, not by the solve, and those were decoupled one
+%%     commit earlier. The reading that does see the missing solve is the staff-to-verse-1
+%%     distance, opened afterwards as lyrics.two-staff.two-verse.staff-to-lyric.
+%%
+%%     ⚠️ The bottom staff carries LYRM's melody (g'/a', inside the staff) so its own ink
+%%     cannot bind the first spring, and the top staff carries LYRC's high melody so the
+%%     system's up-ink is unchanged from every book above. Both syllables are "no" for the
+%%     reason LYRV's header gives at length: an ascender or a descender would put the reading
+%%     on a font metric and it would stop being a spec measurement.
+\book {
+  \probeTag "LYRMV"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \repeat unfold 120 { g''4 a'' g'' a'' } }
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+    >>
+  }
+}
+

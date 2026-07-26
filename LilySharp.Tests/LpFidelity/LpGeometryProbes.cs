@@ -572,27 +572,60 @@ internal static class LpGeometryProbes
     /// ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
     /// </para>
     /// </remarks>
-    private static readonly string LYRM = $$"""
-        octave absolute
-        time 4/4
-        key c major
+    private static string LyricTwoStaffPageScore(string name, bool secondVerse)
+    {
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
 
-        part upper { clef treble }
-        part melody { clef treble }
+            part upper { clef treble }
+            part melody { clef treble }
 
-        section Main {
-          upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
-          melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
-          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
-        }
+            section Main {
+              upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+              melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
+              lyrics one { {{syllables}} }{{(secondVerse ? $"\n  lyrics two {{ {syllables} }}" : "")}}
+            }
 
-        form main { ~Main }
+            form main { ~Main }
 
-        score main "LYRM" {
-          staff upper
-          staff melody with lyrics one
-        }
-        """;
+            score main "{{name}}" {
+              staff upper
+              staff melody with lyrics one{{(secondVerse ? " with lyrics two" : "")}}
+            }
+            """;
+    }
+
+    /// <summary>The one-verse book — the mirror of book LYRM.</summary>
+    private static readonly string LYRM = LyricTwoStaffPageScore("LYRM", secondVerse: false);
+
+    /// <summary>
+    /// The same two-staff system with a SECOND verse — the mirror of book LYRMV.
+    /// </summary>
+    /// <remarks>
+    /// Book LYRV's loose chain with a staff added ABOVE the one the lyrics hang from, and
+    /// LilyPond's side is an IDENTITY WITH LYRV in the SOURCE rather than by observation:
+    /// <c>distribute_loose_lines</c> is handed <c>last_spaceable_line_translation</c> and
+    /// <c>-solution_[spring_idx]</c> (page-layout-problem.cc:936-939) — the previous
+    /// spaceable staff's position on the page and this one's, both out of the page's own
+    /// spring chain, neither knowing which system it belongs to. An added staff joins THAT
+    /// chain, between two positions the loose chain never reads.
+    /// <para>
+    /// MEASURED, and every reading is LYRV's or LYRM's to six digits: the system gap
+    /// 12.000000, the loose chain {3.737890, 2.800000, 5.500001}, the inside-system
+    /// distance 9.000000, four systems (eight staves) on page 1.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHY LILY# CANNOT MATCH IT TODAY, stated so the entry is read as a defect and not as
+    /// a baseline: <c>LayoutEngine.BuildLooseChainEnds</c> returns null for the whole score as
+    /// soon as a system holds more than one staff, so every chain here runs at force 0 — each
+    /// spring at <c>max(min, ideal)</c>, which is where LilyPond's lands only when it has room
+    /// to spare. LYRV is the proof that this one does not (f = -0.841556).
+    /// </para>
+    /// </remarks>
+    private static readonly string LYRMV = LyricTwoStaffPageScore("LYRMV", secondVerse: true);
 
     /// <summary>
     /// WHERE A BAR NUMBER SITS — the mirrors of books BNL and BNH. The two differ ONLY in
@@ -2703,6 +2736,31 @@ internal static class LpGeometryProbes
         // is exactly what this reads. ⚠️ Index 1, the first system's BOTTOM staff.
         new("lyrics.two-staff.staff-to-lyric", LYRM,
             g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
+
+        // The SAME BOOK WITH A SECOND VERSE (LYRMV), which is the one question LYRM cannot
+        // ask: a single loose line has nothing to be squeezed against, so it reads the same
+        // whether the chain is solved or left at force 0. LYRC/LYRV differ by exactly that.
+        // LilyPond's side is an identity with LYRV in the SOURCE — distribute_loose_lines
+        // takes the previous spaceable staff's page position and this one's (:936-939), so
+        // a staff added above joins the PAGE's chain and nothing else — and it measures out
+        // that way: 12.000000, {3.737890, 2.800000, 5.500001}, 9.000000, LYRV's and LYRM's
+        // numbers throughout.
+        //
+        // The gap entry is the measurement; the other two are what keep it honest. The
+        // inside-system distance is the falsifier for "the block's ink is in the two staves'
+        // own spring" — if that were so, the chain would not be what places it at all — and
+        // the count is HANDOFF 5.0 trap 8, since a gap named by INDEX means the gap it is
+        // supposed to mean only while the page holds the staves this probe assumes.
+        new("lyrics.two-staff.two-verse.system-gap", LYRMV,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.two-staff.two-verse.staff-staff-inside", LYRMV,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.two-staff.two-verse.staves-on-first-page", LYRMV,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("lyrics.two-staff.two-verse.staff-to-lyric", LYRMV,
+            g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
+        new("lyrics.two-staff.staff-staff-inside", LYRM,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the
