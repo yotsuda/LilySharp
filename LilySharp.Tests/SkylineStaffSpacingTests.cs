@@ -291,4 +291,69 @@ public class SkylineStaffSpacingTests
 
         Assert.Equal(baseHeight, pureHeight, 3);
     }
+
+    /// <summary>
+    /// Each system is spaced against ITS OWN staves' skylines, so a system whose ink
+    /// reaches between the staves gets the room it needs and its neighbours do not.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 — every System owns a
+    /// VerticalAlignment and is spaced through it, so there is no score-wide staff
+    /// placement in LilyPond to share. Until 2026-07-26 Lily# computed ONE placement from
+    /// system 0's measure layouts and handed it to every system, so a later system whose
+    /// music needed more room silently got system 0's answer. The corpus could not see it:
+    /// no fixture has two systems that want different distances, which is why this is a
+    /// test and not a snapshot.
+    /// <para>
+    /// ⚠️ ASSERTS THE RULE, NOT THE NUMBERS. What matters is that system 1's staves stand
+    /// further apart than system 0's, because only system 1's ink asks for it; the shared
+    /// version returns the same distance for both and fails here.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EachSystemIsSpacedByItsOwnInk_NotByTheFirstSystems()
+    {
+        // System 0 is ordinary. System 1 drives the treble staff far below its own staff
+        // and the bass staff far above its own, so its ink between the two needs much more
+        // than staff-staff basic-distance.
+        const string source = """
+            octave absolute
+            time 4/4
+            key c major
+
+            part rh { clef treble }
+            part lh { clef bass }
+
+            section Main {
+              rh { c'4 d' e' f' |
+                   break
+                   c,,4 d,, e,, f,, | }
+              lh { c,4 d, e, f, |
+                   break
+                   c''4 d'' e'' f'' | }
+            }
+
+            form main { ~Main }
+
+            score main "TWO" {
+              grandStaff {
+                staff rh
+                staff lh
+              }
+            }
+            """;
+
+        var geometry = LpFidelity.RenderedGeometry.Render(source);
+        var refpoints = geometry.StaffRefpoints(0);
+
+        Assert.Equal(4, refpoints.Count);
+        double insideSystem0 = refpoints[1] - refpoints[0];
+        double insideSystem1 = refpoints[3] - refpoints[2];
+
+        Assert.Equal(
+            DefaultOptions.StaffSpacing.StaffStaff.BasicDistance, insideSystem0, 6);
+        Assert.True(insideSystem1 > insideSystem0 + 1.0,
+            $"system 1's ink needs room system 0's does not, but the two were spaced alike: "
+            + $"{insideSystem1:F6} against {insideSystem0:F6} — the placement is being shared");
+    }
 }

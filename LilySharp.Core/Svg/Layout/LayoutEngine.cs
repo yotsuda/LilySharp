@@ -104,38 +104,24 @@ internal sealed class LayoutEngine
                     isLastSystem: systemMeasures.Count == 1,
                     baseShortestDuration: commonShortestDuration))
             : ImmutableArray<MeasureLayout>.Empty;
-        var firstStaffGroupLayouts = multiStaffLayouter.LayoutStaffGroups(
-            score, _skylineBuilder, firstSystemMeasureLayouts);
+        // System 0's own placement — the same call the loop below makes for every system,
+        // with system 0's measure range. LILYPOND-REF: lily/align-interface.cc:217-268 runs
+        // once per System, on THAT system's skylines; there is no score-wide placement in
+        // LilyPond to share, and Lily# no longer has one either (the shared
+        // firstStaffGroupLayouts / defaultStaffGroupLayouts pair, and the hasHaraKiri flag
+        // that chose between shared and per-system, went with it).
+        // ⚠️ The second arm is a DEGENERATE-INPUT guard, not a spacing branch: a score with
+        // no measures has no range to test emptiness over, and asking hara-kiri about the
+        // range 0..0 would report every staff empty and hide the lot.
+        var firstStaffGroupLayouts = systemMeasures.Count > 0
+            ? multiStaffLayouter.LayoutStaffGroups(
+                score, _skylineBuilder, firstSystemMeasureLayouts,
+                0, systemMeasures[0].Count, isFirstSystem: true)
+            : multiStaffLayouter.LayoutStaffGroups(
+                score, _skylineBuilder, firstSystemMeasureLayouts);
         // The system's height is the extent of the groups AS PLACED — see
-        // MultiStaffLayouter.SystemHeightOf. Reading it off the layout rather than summing
-        // the specs again is what lets the hara-kiri systems below share this one model.
+        // MultiStaffLayouter.SystemHeightOf.
         double systemHeight = MultiStaffLayouter.SystemHeightOf(firstStaffGroupLayouts);
-
-        // Pre-compute staff group layouts for subsequent systems (shortIndent)
-        multiStaffLayouter.CurrentIndent = shortIndent;
-        var defaultStaffGroupLayouts = indent != shortIndent
-            ? multiStaffLayouter.LayoutStaffGroups(score, _skylineBuilder, firstSystemMeasureLayouts)
-            : firstStaffGroupLayouts;
-
-        // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — check if any staff uses remove-empty
-        bool hasHaraKiri = score.StaffGroups.Any(g => g.Staves.Any(s => s.RemoveEmpty));
-
-        // The springs the PAGE solves between this score's staves
-        // (LILYPOND-REF: lily/page-layout-problem.cc:651-720). Computed ONCE from the same
-        // groups and the same skylines every system is laid out with — building them per
-        // system would rebuild every staff skyline per system for an answer that cannot
-        // differ, BECAUSE THE PLACEMENT ITSELF IS SHARED here (every system reuses
-        // firstStaffGroupLayouts / defaultStaffGroupLayouts). ⚠️ LilyPond builds these per
-        // system, out of that system's own skylines (append_system runs once per system);
-        // Lily# can only follow it once the PLACEMENT is per-system too, since a spring's
-        // minimum is reconstructed from the drawn distance and mixing a shared drawn
-        // distance with a per-system minimum would be neither engine's answer.
-        // Hara-kiri is the exception that already places per system, so its springs are
-        // built inside the loop from ITS groups and ITS skylines.
-        var sharedStaffSprings = hasHaraKiri
-            ? ImmutableArray<StaffSpring>.Empty
-            : multiStaffLayouter.StaffSprings(
-                score, firstStaffGroupLayouts, _skylineBuilder, firstSystemMeasureLayouts);
 
         // The system silhouette's edge staves — the two staves BuildSystemSkylines
         // processes — and their drawn beams. A beamed stem is drawn to the quanter's
@@ -193,23 +179,22 @@ internal sealed class LayoutEngine
                     () => multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
                         sysIdx == systemMeasures.Count - 1, commonShortestDuration));
 
-            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — per-system staff visibility.
-            // When hara-kiri is active this system gets its own placement, because which
-            // staves survive is a per-system question; everything else about the placement
-            // is the SAME walk (MultiStaffLayouter.LayoutStaffGroups takes the liveness as a
-            // predicate, not as a mode). Without hara-kiri every system shares one answer,
-            // which is why it is computed once above.
-            var sysStaffGroups = hasHaraKiri
-                ? multiStaffLayouter.LayoutStaffGroups(
+            // THIS system's placement, from ITS music. LILYPOND-REF:
+            // lily/align-interface.cc:217-268 — each System has its own VerticalAlignment and
+            // is spaced against its own staves' skylines, so a system whose ink reaches
+            // between the staves gets more room and its neighbours do not. Hara-kiri needs no
+            // branch here: which staves survive is one more per-system input, passed as the
+            // measure range (LayoutStaffGroups takes liveness as a predicate, not as a mode).
+            var sysStaffGroups = isFirstSystem
+                ? firstStaffGroupLayouts
+                : multiStaffLayouter.LayoutStaffGroups(
                     score, _skylineBuilder, measureLayouts,
-                    firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
-                : (isFirstSystem ? firstStaffGroupLayouts : defaultStaffGroupLayouts);
+                    firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem);
 
-            // The height of THIS system: the extent of the groups it actually placed. No
-            // hara-kiri branch — a hidden staff was placed at zero height, so it leaves the
-            // union by itself, exactly as LilyPond's dead elements leave its alignment
-            // (page-layout-problem.cc:1366-1370). Where every system shows the same staves
-            // this is the scalar systemHeight above, by the same function on the same groups.
+            // The height of THIS system: the extent of the groups it actually placed. A
+            // hidden staff was placed at zero height, so it leaves the union by itself,
+            // exactly as LilyPond's dead elements leave its alignment
+            // (page-layout-problem.cc:1366-1370).
             double sysHeight = MultiStaffLayouter.SystemHeightOf(sysStaffGroups);
             // Ensure at least one staff space for completely empty systems
             // (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
@@ -248,22 +233,23 @@ internal sealed class LayoutEngine
                     score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent,
-                // A hara-kiri'd system springs only the staves it actually shows, so its
-                // springs come from ITS groups; every other system shares one set.
+                // The springs the PAGE solves between THIS system's staves.
+                // LILYPOND-REF: lily/page-layout-problem.cc:651-720 append_system(), which
+                // LilyPond calls once per system and floors out of that system's own
+                // skylines. They are built from the same groups and the same measure layouts
+                // this system was placed with, which is what makes the floor and the drawn
+                // distance the same system's answer — a spring's minimum is reconstructed
+                // from the drawn distance (see StaffSprings), so the two cannot come from
+                // different systems.
                 // ⚠️ THE SKYLINES ARE THE POINT. Without them StaffSprings has nothing to
                 // floor against and falls back to the drawn distance, so the pair can
                 // stretch but never squeeze — and a spring's minimum only binds on a page
                 // that COMPRESSES, which is why declaring removeEmpty used to hold the
                 // inside distance at its ideal 9.000000 where the same music without the
                 // declaration squeezed to 8.651797 (LilyPond's own value: audit/lp-geometry
-                // page.compressed.staff-staff-inside). This layout path DOES produce
-                // skylines — they are built from the same per-system measure layouts as
-                // everything else here — so the old "which that layout path does not
-                // produce" was a supply problem, not a structural one.
-                StaffSprings: hasHaraKiri
-                    ? multiStaffLayouter.StaffSprings(
-                        score, sysStaffGroups, _skylineBuilder, measureLayouts)
-                    : sharedStaffSprings));
+                // page.compressed.staff-staff-inside).
+                StaffSprings: multiStaffLayouter.StaffSprings(
+                    score, sysStaffGroups, _skylineBuilder, measureLayouts)));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
