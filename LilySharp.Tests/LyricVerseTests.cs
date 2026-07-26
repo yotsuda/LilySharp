@@ -326,4 +326,47 @@ score main ""x"" { staff melody with lyrics melody }
             $"verse 2's own ink must drive its own skyline: verse 1 {verse1:F6}, "
             + $"verse 2 {verse2:F6}");
     }
+
+    /// <summary>
+    /// The band a lyric block reserves at its ALIGNMENT MINIMUM is much smaller than the
+    /// band it is DRAWN in — which is the whole of why Lily#'s systems sit further apart
+    /// than LilyPond's.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's system skyline takes a loose line at
+    /// <c>Align_interface::get_minimum_translations</c> (page-layout-problem.cc:593-599),
+    /// and that minimum does NOT include the spec's basic-distance — align-interface.cc
+    /// :235-238 adds it only behind the pure branch's <c>INT_MAX == end &amp;&amp; 0 == start</c>,
+    /// while this call passes <c>start = end = 0</c>. So the line is RESERVED at padding +
+    /// ink and DRAWN at 5.5, and the difference is room the systems do not have to give up.
+    /// <para>
+    /// ⚠️ Asserted while nothing consumes it, on purpose: switching
+    /// <c>LayoutEngine.EstimateLooseLineExtents</c> onto this is step ① of the loose-line
+    /// island (audit/lp-geometry, <c>lyrics.two-verse.system-gap</c>, open at +4.060000) and
+    /// has to land with step ②. Pinning the value now means the switch is judged against a
+    /// number that was agreed before it moved any output (HANDOFF 2E).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AlignmentMinimumBand_IsWellBelowTheDrawnBand()
+    {
+        var oneVerse = new[] { ("no", 1) };
+        var twoVerses = new[] { ("no", 1), ("no", 2) };
+
+        double min1 = LilySharp.Core.Svg.Layout.LyricEngraver.AlignmentMinimumBand(oneVerse);
+        double min2 = LilySharp.Core.Svg.Layout.LyricEngraver.AlignmentMinimumBand(twoVerses);
+
+        // What the placement draws, measured from the same bottom line: LilyPond's
+        // basic-distance less the half staff, plus one verse step for the second line.
+        var p = LilySharp.Core.Svg.Layout.LyricParameters.Default;
+        double drawn1 = p.BasicDistanceBelowBottomLine;
+
+        Assert.True(min1 < drawn1 - 1.0,
+            $"the reservation must be the MINIMUM, well under the drawn {drawn1:F6}: "
+            + $"got {min1:F6}");
+
+        // A second verse adds its step to both, so the gap between them does not close.
+        Assert.True(min2 > min1 + LilySharp.Core.Svg.Layout.SkylineDrop.NonStaffNonStaffMinimum - 1e-6,
+            $"a second verse must add at least its minimum step: {min1:F6} -> {min2:F6}");
+    }
 }

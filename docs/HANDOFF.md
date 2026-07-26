@@ -121,9 +121,19 @@ LP は loose line を system スカイラインに**入れる**。ただし置�
 作り直さない」（§2B・`e467d51e`+`c309b751`）。**同じ原則が loose line にも当たる。**
 
 **順序**: ①**最小で予約**（system ばねが 12 に戻る）→ ②**loose 行の `Simple_spacer`** で
-実際の隙間へ配る。①だけだと下の譜に重なり、②だけだと無変化。
-⚠️ ②は **Lily# は system の中で歌詞を置き、LP はページを解いた後に置く**＝**frame 移行**。
-**全歌詞スコアの system 間隔が動く。**
+実際の隙間へ配る。①だけだと下の譜に重なり、②だけだと無変化。**1 コミットで入れること。**
+
+★ **②は frame 移行ではない**（前の記述を訂正・2026-07-26 実コードで確認）:
+**Lily# も歌詞をページ配置の「後」に置いている**——`LayoutEngine.cs:378` で `CreatePages`、
+`:1649` で `CalculateLayouts`。しかも `systems`（Y 入り）と `systemSkylines` が渡っている。
+⇒ **隙間は歌詞を置く場所で既に分かる**＝②は `LyricEngraver` 内のローカルな solve で済む。
+
+**①の値は用意して主張済**（`LyricEngraver.AlignmentMinimumBand`＋
+`AlignmentMinimumBand_IsWellBelowTheDrawnBand`・出力不変）。残りは
+**`LayoutEngine.EstimateLooseLineExtents` の歌詞バンドをそれに差し替える 1 行**と、②の solve。
+⚠️ **全歌詞スコアの system 間隔が動く**（fixture 17 個規模）。歌詞の下に付く機能
+（`pedal-below-lyrics`・`nav-below-clears-lyrics`・`lyrics-below-marcato`）も一緒に動くので、
+**focused session で**。
 
 ### その次 ＝ **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）**
 

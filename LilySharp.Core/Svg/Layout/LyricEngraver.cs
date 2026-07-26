@@ -694,6 +694,62 @@ internal sealed class LyricEngraver
                         down + up + SkylineDrop.NonStaffNonStaffPadding);
     }
 
+    /// <summary>
+    /// The band a lyric block occupies below the staff's BOTTOM LINE when its lines are at
+    /// their ALIGNMENT MINIMUM — LilyPond's <c>minimum_offsets_with_min_dist</c>, which is
+    /// what the system skyline reserves, as opposed to the distance the lines are drawn at.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
+    /// handed <c>Align_interface::get_minimum_translations</c>, so a loose line IS in the
+    /// system's skyline, but at its minimum.
+    /// LILYPOND-REF: lily/align-interface.cc:227-238 — that minimum is
+    /// <c>down_skyline.distance(up) + padding</c>, raised by the spec's
+    /// <c>minimum-distance</c>. ⚠️ The spec's BASIC-DISTANCE is added only behind
+    /// <c>INT_MAX == end &amp;&amp; 0 == start</c>, the PURE estimate branch, and the call
+    /// that feeds the skyline passes <c>start = end = 0</c> — so the 5.5 this engraver draws
+    /// at is NOT in the reservation. The drawn distance arrives afterwards, out of
+    /// <c>distribute_loose_lines</c>.
+    /// <para>
+    /// ⚠️ NOT WIRED IN YET. <c>LayoutEngine.EstimateLooseLineExtents</c> still reserves the
+    /// DRAWN distance, which is why Lily#'s systems sit further apart than LilyPond's
+    /// (audit/lp-geometry, <c>lyrics.two-verse.system-gap</c>, open at +4.060000). Switching
+    /// the reservation to this is step ① of that island and must land together with step ② —
+    /// placing the lines inside the gap that results — or two verses will overlap the staff
+    /// below. Prepared and asserted first so the switch is a one-line change with a number
+    /// already agreed on (HANDOFF 2E's island order, the same shape
+    /// <see cref="BuildVerseUpSkylines"/> was landed in).
+    /// </para>
+    /// <para>
+    /// The staff's own down-ink is taken as the bottom line, which is what an estimate can
+    /// know before the skylines exist; the real pass uses the staff's down-skyline and can
+    /// only come out larger, never smaller.
+    /// </para>
+    /// </remarks>
+    internal static double AlignmentMinimumBand(IReadOnlyList<(string Text, int Verse)> block)
+    {
+        if (block.Count == 0) return 0;
+        int maxVerse = block.Max(b => b.Verse);
+
+        // Verse 1's own minimum, measured from the bottom line: padding + its ink.
+        double up = 0;
+        foreach (var (text, verse) in block)
+            if (verse == 1) up = Math.Max(up, LyricUpExtent(text));
+        double band = SkylineDrop.RelatedStaffPadding + up;
+
+        // ...then each further verse's step, at ITS minimum, and the last one's descender.
+        for (int v = 2; v <= maxVerse; v++)
+        {
+            band += VerseStepBound(
+                block.Where(b => b.Verse == v - 1).Select(b => b.Text),
+                block.Where(b => b.Verse == v).Select(b => b.Text));
+        }
+        double down = 0;
+        foreach (var (text, verse) in block)
+            if (verse == maxVerse) down = Math.Max(down, LyricDownExtent(text));
+        return band + down;
+    }
+
     /// <summary>One verse's skylines, keyed by system — the shape SkylineDrop consumes.</summary>
     private static Dictionary<int, VerticalSkyline> VerseSkylines(
         Dictionary<(int System, int Verse), VerticalSkyline> byVerse, int verse)
