@@ -49,36 +49,81 @@ public class SystemSpacingTests
     }
 
     /// <summary>
-    /// <c>default-staff-staff-spacing</c> declares NO <c>stretchability</c>, and that has to
-    /// stay spelled as the absence rather than as the 9 it works out to.
+    /// Every spec whose LilyPond source declares NO <c>stretchability</c> has to stay
+    /// spelled as the ABSENCE (0), never as the number the rule works out to.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spring.cc:213-216 <c>set_default_strength</c> — with no
-    /// stretchability in the spec the inverse stretch strength IS the ideal, so the two
-    /// spellings agree at today's basic-distance and diverge the moment anything overrides
-    /// it: LilyPond's spring follows the new ideal, a literal 9 would not.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1350-1357
+    /// <c>alter_spring_from_spacing_spec</c> — <c>set_default_strength()</c> runs
+    /// UNCONDITIONALLY (:1354) and only then does a declared <c>stretchability</c> override
+    /// it (:1356-1357); <c>set_default_stretch_strength</c> is
+    /// <c>inverse_stretch_strength_ = ideal_distance_</c> (spring.cc:213-216). So an absent
+    /// stretchability tracks the ideal and a declared one does not.
     /// <para>
-    /// ⚠️ This exists because the port was first written with the literal. Nothing would
-    /// have caught it — every output is identical, and <c>LpProvenanceTests</c> only asks
-    /// that a constant carry a source, which the literal did (HANDOFF 5.2.1 (1): a REF can
-    /// sit next to a different expression). The test asserts the RULE instead: perturb the
-    /// basic-distance and the stretch strength must follow it.
+    /// ⚠️ WHY THIS IS A TEST AND NOT A COMMENT. Both members below were first written as the
+    /// number instead of the absence — <c>DefaultStaffStaff</c> as 9 when the port was
+    /// added, <c>MarkupMarkup</c> as 1 long before that — and NOTHING could have caught
+    /// either: every output is byte-identical (the ideal equals the literal in both), and
+    /// <c>LpProvenanceTests</c> only asks that a constant carry a source, which both did
+    /// (HANDOFF 5.2.1 (1): a REF can sit beside a different expression). So the RULE is
+    /// asserted instead of the number — perturb the basic-distance and the stretch strength
+    /// must follow it. Written as a Theory so the next spec of this shape is one line.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    // LILYPOND-REF: scm/define-grobs.scm:4237-4239 default-staff-staff-spacing.
+    [InlineData("DefaultStaffStaff", 9.0)]
+    // LILYPOND-REF: ly/paper-defaults-init.ly:76-77 markup-markup-spacing.
+    [InlineData("MarkupMarkup", 1.0)]
+    public void SpecsLilyPondLeavesUnstretched_TrackTheIdeal_NotALiteral(
+        string member, double expectedIdeal)
+    {
+        var spec = member switch
+        {
+            "DefaultStaffStaff" => StaffSpacingParameters.Default.DefaultStaffStaff,
+            "MarkupMarkup" => VerticalSpacingParameters.Default.MarkupMarkup,
+            _ => throw new ArgumentOutOfRangeException(nameof(member), member, null),
+        };
+
+        // 0 IS LilyPond's absent — CreateSpring's convention.
+        Assert.Equal(0, spec.Stretchability);
+        Assert.Equal(expectedIdeal, spec.BasicDistance);
+
+        Assert.Equal(
+            expectedIdeal,
+            LayoutUtilities.CreateSpring(spec, 0).InverseStretchStrength, 9);
+
+        // The rule, not the number: move the ideal and the strength must move with it.
+        Assert.Equal(
+            expectedIdeal + 5,
+            LayoutUtilities.CreateSpring(spec with { BasicDistance = expectedIdeal + 5 }, 0)
+                .InverseStretchStrength, 9);
+    }
+
+    /// <summary>
+    /// <c>nonstaff-relatedstaff-spacing</c> and <c>nonstaff-nonstaff-spacing</c> each have
+    /// TWO homes in Lily#, and they have to agree.
+    /// </summary>
+    /// <remarks>
+    /// One LilyPond property, two transcriptions: <see cref="StaffSpacingParameters"/> holds
+    /// the pair the STAFF layout reaches through <c>StaffAffinity.Select</c>, and
+    /// <c>LooseLineSpacer</c> holds the pair the loose-line chain builds its springs from.
+    /// HANDOFF 5.2.1 (2) is about exactly this: a duplicated quantity is where a port lands
+    /// on one copy and not the other, and the padding-times-four defect lived in the copy.
+    /// Unifying them is the real fix and is not free (the loose chain does not take
+    /// <c>\override</c> plumbing today), so until then the invariant is asserted.
+    /// <para>
+    /// LILYPOND-REF: ly/engraver-init.ly:649-652 and :653-657 — the Lyrics context's two
+    /// overrides, which is what BOTH copies transcribe.
     /// </para>
     /// </remarks>
     [Fact]
-    public void DefaultStaffStaff_TakesItsStretchStrengthFromTheIdeal_NotFromALiteral()
+    public void TheTwoHomesOfTheLyricSpacingSpecs_Agree()
     {
-        var spec = StaffSpacingParameters.Default.DefaultStaffStaff;
-        Assert.Equal(0, spec.Stretchability);
+        var sp = StaffSpacingParameters.Default;
 
-        // Spring.InverseStretchStrength is the quantity set_default_strength decides.
-        Assert.Equal(
-            spec.BasicDistance,
-            LayoutUtilities.CreateSpring(spec, 0).InverseStretchStrength, 9);
-
-        var widened = spec with { BasicDistance = 14 };
-        Assert.Equal(
-            14, LayoutUtilities.CreateSpring(widened, 0).InverseStretchStrength, 9);
+        Assert.Equal(sp.NonStaffRelatedStaff, LooseLineSpacer.NonStaffRelatedStaff);
+        Assert.Equal(sp.NonStaffNonStaff, LooseLineSpacer.NonStaffNonStaff);
     }
 
     [Fact]

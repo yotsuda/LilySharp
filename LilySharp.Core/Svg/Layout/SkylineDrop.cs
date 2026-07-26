@@ -48,14 +48,18 @@ internal static class SkylineDrop
     /// <remarks>
     /// LILYPOND-REF: ly/engraver-init.ly:653-656 — the Lyrics context sets
     /// <c>nonstaff-nonstaff-spacing = ((basic-distance . 0) (minimum-distance . 2.8)
-    /// (padding . 0.2))</c>, and page-layout-problem.cc:1315-1332 is the branch of
-    /// <c>get_spacing_spec</c> that hands it to a spring between two loose lines.
+    /// (padding . 0.2) (stretchability . 0))</c>, and page-layout-problem.cc:1315-1332 is
+    /// the branch of <c>get_spacing_spec</c> that hands it to a spring between two loose
+    /// lines.
     /// ⚠️ A ZERO basic-distance with a minimum is the opposite shape from
     /// <see cref="RelatedStaffPadding"/>'s spec: there is no ideal to fall back on, so the
-    /// realized step IS <c>max(minimum, ink + padding)</c> and nothing else. That also makes
-    /// the spring rigid — <c>set_default_strength</c> derives the inverse stretch strength
-    /// from the ideal (spring.cc:213-216), which is 0 — so the step does not move with the
-    /// page's force. MEASURED (audit/lp-geometry, <c>lyrics.verse-step</c>): 2.800000 on a
+    /// realized step IS <c>max(minimum, ink + padding)</c> and nothing else. The spring is
+    /// rigid in stretch because the spec DECLARES <c>(stretchability . 0)</c> at :657.
+    /// ⚠️ CORRECTED 2026-07-26: this said <c>set_default_strength</c> derived the strength
+    /// from the ideal. It does run (page-layout-problem.cc:1354, unconditionally), but a
+    /// declared stretchability overrides it immediately after (:1356-1357), so the 0 here is
+    /// LilyPond's own number and not a derived one. The two agree only because the ideal is
+    /// also 0 — the same coincidence that hid a literal in <c>MarkupMarkup</c>. MEASURED (audit/lp-geometry, <c>lyrics.verse-step</c>): 2.800000 on a
     /// page whose loose chain is compressed hard enough to pull the first line off its own
     /// basic-distance.
     /// </remarks>

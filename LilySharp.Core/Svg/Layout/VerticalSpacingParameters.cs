@@ -116,13 +116,27 @@ internal sealed record VerticalSpacingParameters
     /// <summary>
     /// Spacing between consecutive titles/markups.
     /// </summary>
-    /// <remarks>LILYPOND-REF: paper-defaults-init.ly:78-79</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:76-77
+    /// <c>markup-markup-spacing = #'((basic-distance . 1) (padding . 0.5))</c>.
+    /// <para>
+    /// ⚠️ NO <c>stretchability</c> MEMBER, and it is SPELLED as the absence — 0, which
+    /// <c>LayoutUtilities.CreateSpring</c> reads as LilyPond's absent and answers with the
+    /// ideal (<c>alter_spring_from_spacing_spec</c> calls <c>set_default_strength</c>
+    /// unconditionally at page-layout-problem.cc:1354 and only then lets a declared
+    /// stretchability override it, spring.cc:213-216). ⚠️ This used to say 1 — the number
+    /// the rule works out to, since the ideal here IS 1 — which is the failure mode
+    /// HANDOFF 5.2's ★★ block names: identical today, and wrong the moment anything
+    /// overrides the basic-distance, because LilyPond's spring would follow the new ideal
+    /// and a literal would not.
+    /// </para>
+    /// </remarks>
     public VerticalSpacingSpec MarkupMarkup { get; init; } = new()
     {
         BasicDistance = 1,
         MinimumDistance = 0,
         Padding = 0.5,
-        Stretchability = 1
+        Stretchability = 0,
     };
 
     /// <summary>

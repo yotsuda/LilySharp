@@ -1163,9 +1163,16 @@ probeTag =
 %%     a staff on its NON-affinity side LARGE_STRETCH = 10e5 (:1257-1338, with LilyPond's
 %%     own comment saying this is deliberate: "a spacing-affinity UP line at the bottom of
 %%     the page will still be placed close to its staff"). Against those, the spring to its
-%%     OWN staff is an ordinary nonstaff-relatedstaff-spacing whose default strength is its
-%%     ideal, 5.5. The second solve therefore pours essentially all the slack into the huge
-%%     springs and gives this one a part in 10e7.
+%%     OWN staff is an ordinary nonstaff-relatedstaff-spacing with stretchability 1. The
+%%     second solve therefore pours essentially all the slack into the huge springs and
+%%     gives this one a part in 10e7.
+%%     ⚠️ CORRECTED 2026-07-26: this used to say "whose default strength is its ideal, 5.5".
+%%     WRONG — ly/engraver-init.ly:648-652 DECLARES (stretchability . 1) for the Lyrics
+%%     context, so set_default_strength (spring.cc:213-216) never runs on this spring at all.
+%%     The finding is unchanged and slightly stronger (1 gets an even smaller share than 5.5
+%%     would), and Lily# was already right; the error was in this header. ⚠️ Do not confuse
+%%     it with the COMPRESS strength, which IS ideal - minimum-distance = 5.5 and is what
+%%     every LYRV reading below depends on. Two different quantities, one old sentence.
 %%
 %%     MEASURED, both books, first system of page 1: staff refpoint to Lyrics refpoint =
 %%     5.500000 — 5.500000001945665 on the ragged page against 5.500000181705927 on a page
