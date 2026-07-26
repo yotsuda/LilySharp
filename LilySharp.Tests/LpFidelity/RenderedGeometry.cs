@@ -447,6 +447,40 @@ internal sealed class RenderedGeometry
         return below.Min(t => t.Y) - staff;
     }
 
+    /// <summary>
+    /// Baseline to baseline between the first system's verse 1 and verse 2.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 — with two loose lines the
+    /// spacing spec is the UPPER line's <c>nonstaff-nonstaff-spacing</c>, not the
+    /// <c>nonstaff-relatedstaff-spacing</c> that holds the first line under its staff. So
+    /// this is a different quantity from <see cref="FirstStaffToLyricBaseline"/> and needs
+    /// its own reading.
+    /// <para>
+    /// Rows are found by grouping baselines rather than by <c>Distinct()</c>: a row's
+    /// syllables share a Y by construction, but comparing doubles for equality would turn a
+    /// last-bit difference into a phantom row and silently return zero.
+    /// </para>
+    /// </remarks>
+    public double LyricVerseStep()
+    {
+        const int page = 0;
+        double staff = StaffRefpoints(page)[0];
+        var rows = LyricSyllables.Where(t => t.Y > staff)
+                                 .Select(t => t.Y)
+                                 .OrderBy(y => y)
+                                 .Aggregate(new List<double>(), (acc, y) =>
+                                 {
+                                     if (acc.Count == 0 || y - acc[^1] > 1e-6) acc.Add(y);
+                                     return acc;
+                                 });
+        if (rows.Count < 2)
+            throw new InvalidOperationException(
+                $"page {page}: found {rows.Count} lyric row(s) below the first staff; a verse "
+                + "step needs two.\nDrawn geometry:\n" + Describe());
+        return rows[1] - rows[0];
+    }
+
     /// <summary>The first (leftmost) chord symbol's anchor.</summary>
     public double FirstChordSymbolAnchor()
     {

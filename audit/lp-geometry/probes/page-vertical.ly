@@ -1185,6 +1185,62 @@ probeTag =
   }
 }
 
+%% LYRV — A SECOND VERSE, which LilyPond spaces from a DIFFERENT SPEC. Everything above
+%%     measures the staff-to-lyrics spring (nonstaff-relatedstaff-spacing). Stack a second
+%%     Lyrics line under the first and get_spacing_spec takes its loose-to-loose branch
+%%     instead (:1315-1332): neither neighbour is spaceable, the upper one's affinity is UP
+%%     so the first test `before_affinity != UP` fails, and the second — `after_affinity !=
+%%     DOWN`, true for a second UP line — returns the UPPER line's
+%%     nonstaff-nonstaff-spacing, which ly/engraver-init.ly:653-656 sets to
+%%     ((basic-distance . 0) (minimum-distance . 2.8) (padding . 0.2)).
+%%
+%%     ⚠️ A ZERO BASIC-DISTANCE WITH A MINIMUM, which is the opposite shape from the spring
+%%     above it: the ideal is 0, so the realized step is whatever ensure_min_distance leaves
+%%     — max(minimum-distance 2.8, the alignment minimum, which is the two lines' own ink
+%%     plus padding 0.2). LilyPond's verse spacing therefore RESPONDS TO THE TEXT and only
+%%     falls back to 2.8 when the text is short.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2): 2.800000. The syllable is "no",
+%%     with neither ascender nor descender, so the ink term is about 0.037 (the first line's
+%%     overshoot below its baseline) + an x-height + 0.2, well under 2.8 — the minimum
+%%     binds and the reading has no font in it.
+%%     (falsifier: a number above 2.8, which would mean the ink term binds after all and
+%%      this book is measuring the two faces rather than the spec.)
+%%
+%%     THE PREDICTION HELD — 2.800000 — AND THE CONTROL IT CAME WITH DID NOT, which is the
+%%     more interesting half. Same music, same paper and the same syllable as LYRC, so the
+%%     first line's own distance was supposed to read 5.500000 again. It reads
+%%     "3.737890, 2.800000, 5.500001": the verse step at 2.8 on every system, but
+%%     staff-to-verse-1 at 3.737890 on the inner systems and only 5.500001 on the last.
+%%     ★ THE LOOSE CHAIN IS COMPRESSED. Two lyric lines plus their paddings no longer fit in
+%%     the 12.000000 the system spring keeps (it does NOT widen for them — the staff-to-staff
+%%     gap is still 12.000000 all the way down), so distribute_loose_lines solves at a
+%%     NEGATIVE force and the first spring gives way to its floor. 3.737890 is that floor:
+%%     the staff's own ink 2.05 + the syllable's x-height + padding 0.5 — i.e. a FONT
+%%     quantity, which is why it is deliberately not a ledger point.
+%%     ⚠️ So LYRV is NOT a control for the staff-to-lyrics distance. LYRC is.
+%%     ★ AND THIS IS THE REGIME THE ONE-LINE PAIR SAID TO LOOK FOR: with a single loose line
+%%     LilyPond's redistribution is invisible (the springs on the far side carry
+%%     LARGE_STRETCH/HUGE_STRETCH), but with TWO the pass really does move them.
+%%
+%%     ⚠️ WHY THE VERSE STEP IS STILL READABLE IN A COMPRESSED CHAIN, from the source rather
+%%     than from luck: basic-distance 0 means set_default_strength gives that spring an
+%%     inverse STRETCH strength of 0 (spring.cc:213-216) — it cannot stretch — and
+%%     minimum-distance 2.8 means it cannot compress past 2.8 either. The step is RIGID at
+%%     max(2.8, ink + 0.2) at every force, which is what makes 2.800000 a spec reading and
+%%     not a regime artefact.
+\book {
+  \probeTag "LYRV"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g''4 a'' g'' a'' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+    >>
+  }
+}
+
 %% LYRR — THE SAME LINE, UNASSOCIATED. Identical to LYRC except that the Lyrics context is
 %%     not \lyricsto anything: its syllables carry their own durations instead of being
 %%     handed to a Voice's note columns. In LilyPond that changes WHICH COLUMN a syllable

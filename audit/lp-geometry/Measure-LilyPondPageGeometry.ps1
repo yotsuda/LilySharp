@@ -194,6 +194,13 @@ try {
             # NOT follow them: get_spacing_spec gives a loose line's springs to its NON-own
             # side LARGE_STRETCH/HUGE_STRETCH (page-layout-problem.cc:1257-1338), so the row
             # stays with its own staff while the page around it stretches.
+            #
+            # CONSECUTIVE distances down the chain, not all-of-them-from-the-staff: with two
+            # loose lines (a second verse) the quantity in question is the step BETWEEN them,
+            # which LilyPond takes from a different spec entirely (nonstaff-nonstaff-spacing,
+            # via get_spacing_spec's loose-loose branch :1327-1332). Computed from the raw
+            # doubles for the same reason the inter-system line above is: subtracting two F6
+            # prints is how 3.544994 (for 3.550000) got into the ledger once.
             $loose = @(
                 foreach ($sysNo in ($b.Groups | Where-Object Page -eq $pageNo |
                                     Select-Object -ExpandProperty Index -Unique)) {
@@ -202,13 +209,13 @@ try {
                     $anchor = $null
                     foreach ($v in $vags) {
                         if (-not $v.Loose) { $anchor = $v.Rel }
-                        elseif ($null -ne $anchor) { $anchor - $v.Rel }
+                        elseif ($null -ne $anchor) { $anchor - $v.Rel; $anchor = $v.Rel }
                     }
                 }
             )
             if ($loose) {
                 $looseUniq = @($loose | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
-                "     staff -> loose line (lyrics etc.) = {0}" -f ($looseUniq -join ', ')
+                "     staff/loose -> next loose line = {0}" -f ($looseUniq -join ', ')
             }
             if ($sys.Count -ge 2) {
                 $gaps = for ($i = 1; $i -lt $sys.Count; $i++) { $staff[$i] - $staff[$i - 1] }

@@ -473,7 +473,47 @@ internal static class LpGeometryProbes
     internal static readonly string LYRR =
         LyricRowPageScore("LYRR", "  staff melody\n  lyrics words");
 
-    /// <summary>The paper books LYRC/LYRR are measured on.</summary>
+    /// <summary>
+    /// The same music and paper again with a SECOND verse — the mirror of book LYRV.
+    /// </summary>
+    /// <remarks>
+    /// Two <c>with lyrics</c> clauses is how Lily# stacks verses (docs/GRAMMAR.md), and it
+    /// is a different quantity from everything above: LilyPond spaces a second loose line
+    /// from the first by <c>nonstaff-nonstaff-spacing</c>, not by the
+    /// <c>nonstaff-relatedstaff-spacing</c> that holds the first under its staff
+    /// (page-layout-problem.cc:1315-1332).
+    /// <para>
+    /// ⚠️ NOT a control for the staff-to-lyrics distance, even though it is the same music:
+    /// two lyric lines no longer fit in the 12.000000 the system spring keeps, so LilyPond
+    /// SOLVES THE LOOSE CHAIN AT A NEGATIVE FORCE and the first line drops to its ink floor
+    /// (3.737890 on this book's inner systems, against 5.500000 on LYRC). The verse step is
+    /// readable there anyway because it is rigid — see the ledger entry.
+    /// </para>
+    /// </remarks>
+    private static string LyricVersePageScore(string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+          lyrics two { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody with lyrics one with lyrics two
+        }
+        """;
+
+    /// <summary>The two-verse book — the mirror of book LYRV.</summary>
+    private static readonly string LYRV = LyricVersePageScore("LYRV");
+
+    /// <summary>The paper books LYRC/LYRR/LYRV are measured on.</summary>
     internal static LayoutOptions LyricRowOptions => FourSystemsPerPageRagged;
 
     /// <summary>The note-bound spelling of the same music — book LYRC.</summary>
@@ -2520,6 +2560,15 @@ internal static class LpGeometryProbes
         // single entry could not distinguish "does not move" from "was never stretched".
         new("lyrics.natural.staff-to-lyric", LYRC, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
         new("lyrics.stretched.staff-to-lyric", LYRS, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPage),
+
+        // The step to a SECOND verse (book LYRV), which comes from a different LilyPond spec
+        // than everything above it: with two loose lines, get_spacing_spec takes its
+        // loose-loose branch and returns the UPPER line's nonstaff-nonstaff-spacing
+        // (:1315-1332). Its basic-distance is 0, which makes the spring rigid in stretch
+        // (set_default_strength, spring.cc:213-216), and its minimum-distance 2.8 stops it
+        // compressing — so the step is the one reading on that book that a compressed loose
+        // chain cannot distort.
+        new("lyrics.verse-step", LYRV, g => g.LyricVerseStep(), FourSystemsPerPageRagged),
 
         // ⚠️ The same line spelled as an independent ROW is NOT a ledger point, and the
         // measurement that says why is in LyricRowIsSpacedAsAStaffLikeBand (HANDOFF 3): the
