@@ -106,7 +106,26 @@
                                     (ly:grob-property g 'staff-affinity)
                                     (car (ly:grob-extent g g Y))
                                     (cdr (ly:grob-extent g g Y))))
-                          (ly:grob-array->list (ly:grob-object align 'elements)))))
+                          (ly:grob-array->list (ly:grob-object align 'elements))))
+                     ;; ...and the outside-staff grobs that ride ABOVE a staff, which the
+                     ;; VAG line cannot show either: they are inside the group's skyline,
+                     ;; so they set `min_offsets[0]` — the ink a system reserves above its
+                     ;; own reference point — without appearing as a group of their own.
+                     ;; `rel` is the grob's own reference point (a text grob's BASELINE);
+                     ;; subtract the VAG rel above to get its height over the staff.
+                     (if (ly:grob? sg)
+                         (let ((all (ly:grob-object sg 'all-elements)))
+                           (if (ly:grob-array? all)
+                               (for-each
+                                (lambda (g)
+                                  (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
+                                    (if (eq? nm 'BarNumber)
+                                        (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a)\n"
+                                                n i nm
+                                                (ly:grob-relative-coordinate g sg Y)
+                                                (car (ly:grob-extent g g Y))
+                                                (cdr (ly:grob-extent g g Y))))))
+                                (ly:grob-array->list all))))))
                    (inner (cdr ls) (1+ i)))))
            (loop (cdr ps) (1+ n))))))
 
@@ -1384,3 +1403,58 @@ probeTag =
     >>
   }
 }
+
+%% BNL / BNH — WHERE A BAR NUMBER SITS, and the pair is built so that LilyPond's side is an
+%%     IDENTITY (HANDOFF 5.0: the strongest shape). A BarNumber rides above the staff at the
+%%     LINE START, left of the clef, and LilyPond places outside-staff grobs against an
+%%     X-AWARE skyline (axis-group-interface.cc:359-474) — so the notes, which start after
+%%     the clef, cannot reach it. Raising the melody by two octaves must therefore leave the
+%%     number exactly where it was.
+%%
+%%     ⚠️ THE QUANTITY IS NOT DECORATIVE. This number is inside its staff's VerticalAxisGroup
+%%     skyline, so it IS `min_offsets[0]` — the ink a system reserves ABOVE its own reference
+%%     point (align-interface.cc:215-220, the j = 0 branch). That term closes the loose-line
+%%     chain of the system before it (page-layout-problem.cc:931-932,
+%%     `elements_[i].padding - min_offsets[0]`) and floors the system-to-system spring
+%%     (:625-629), so a bar number placed too high moves BOTH — which is how this pair came
+%%     to be written: Lily#'s two-verse lyric block would not compress into the 12.000000
+%%     LilyPond keeps, and the excess was not the lyrics.
+%%
+%%     The dumped GROB rel is the number's BASELINE about the system's reference point, and
+%%     the VAG rel on the same system is the staff's, so the measured quantity is their
+%%     difference: staff refpoint UP to bar-number baseline.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       BNL and BNH agree to six digits, at about 3.05 — the staff's own half plus its line
+%%       thickness (2.050000) plus BarNumber's padding 1.0, with the number's own descent the
+%%       only other term.
+%%     (falsifier: BNH reading higher than BNL, which would mean the placement is NOT
+%%      X-aware and the whole diagnosis of the lyric island's residual is wrong.)
+%%
+%%     MEASURED: both books print the IDENTICAL set 3.074440 / 3.050000 / 3.076208 — the
+%%     variation is which digits the number contains and nothing else (LilyPond puts the
+%%     number's INK BOTTOM 1.0 above the staff's 2.050000, so the baseline sits at 3.050000
+%%     plus that digit's own bottom overshoot). BNH's first ink starts 1.200000 higher up
+%%     the page and the number did not move by a bit. Prediction held.
+%%
+%%     ★ AND THE LILY# SIDE REFUTED THE MECHANISM THE PAIR WAS BUILT TO CATCH: Lily# reads
+%%     4.260000 on BOTH books, so its bar number is not riding above the notes either. The
+%%     divergence is a flat OFFSET of 1.185560, not a missing X-awareness — which makes the
+%%     fix a formula rather than a rework of the above-staff stacker. The pair still did its
+%%     job: without BNH the constant would have been indistinguishable from "clears whatever
+%%     is tallest", and the two hypotheses call for very different repairs.
+%%
+%%     ⚠️ Bar 1 carries no number (barNumberVisibility's default), so the reading must be
+%%     taken from a CONTINUATION system, not from system 0.
+\book {
+  \probeTag "BNL"
+  \paper { ragged-bottom = ##t }
+  \score { \new Staff { \repeat unfold 48 { a'4 b' a' b' } } }
+}
+
+\book {
+  \probeTag "BNH"
+  \paper { ragged-bottom = ##t }
+  \score { \new Staff { \repeat unfold 48 { a'''4 b''' a''' b''' } } }
+}
+

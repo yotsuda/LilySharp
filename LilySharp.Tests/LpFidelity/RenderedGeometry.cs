@@ -213,6 +213,65 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Bar numbers, top of the page down — the small BOLD serif text runs
+    /// (<c>SharedRenderer.DrawBarNumbers</c> draws them at
+    /// <see cref="LilySharp.Core.Svg.Layout.BarNumberEngraver.FontSize"/>).
+    /// </summary>
+    /// <remarks>
+    /// Told apart from the other serif text by SIZE, the same way
+    /// <see cref="LyricSyllables"/> is: a bar number, a syllable, a title and a dynamic are
+    /// all serif, and matching on the STRING cannot work when the string is a number.
+    /// </remarks>
+    public IReadOnlyList<DrawnText> BarNumbers =>
+        Texts.Where(t => t.FontFamily != "sans-serif"
+                         && Math.Abs(t.FontSize - LilySharp.Core.Svg.Layout.BarNumberEngraver.FontSize) < 1e-9)
+             .OrderBy(t => t.Y)
+             .ToList();
+
+    /// <summary>
+    /// The FIRST bar number's baseline above the staff reference point it rides over.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm BarNumber — <c>outside-staff-priority 100</c> and
+    /// <c>padding 1.0</c>, placed by the X-AWARE skyline pass
+    /// (lily/axis-group-interface.cc:359-474). The number stands at the LINE START, left of
+    /// the clef, so the notes — which begin after it — cannot push it up however high they
+    /// are. That invariance is the whole of the pair this serves (books BNL/BNH): LilyPond's
+    /// two readings are IDENTICAL, so any difference Lily# shows between them is its own.
+    /// <para>
+    /// ⚠️ Bar 1 carries no number, so the topmost one belongs to the SECOND system, and the
+    /// reference point it is measured against is that system's — the first refpoint BELOW
+    /// it, which is what the search here finds.
+    /// </para>
+    /// <para>
+    /// ⚠️ CARRIES A FONT TERM, small and named: LilyPond puts the number's INK BOTTOM
+    /// 1.0 above the staff (2.050000 + 1.0 = 3.050000 for a flat-bottomed digit), so the
+    /// BASELINE this reads sits a digit's own bottom overshoot higher — measured across
+    /// LilyPond's own books as 0.000000, 0.024440 and 0.026208 depending on which digits the
+    /// number happens to contain. A residual of that order is the floor of this entry, not a
+    /// defect; the defect it was opened for is over a staff space.
+    /// </para>
+    /// </remarks>
+    public double FirstBarNumberBaselineAboveStaff(int page = 0)
+    {
+        var numbers = BarNumbers;
+        if (numbers.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the probe drew no bar number.\nDrawn geometry:\n" + Describe());
+        }
+        double y = numbers[0].Y;
+        var below = StaffRefpoints(page).Where(r => r > y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the first bar number at {y:F6} has no staff below it, so it "
+                + "is not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        return below.Min() - y;
+    }
+
+    /// <summary>
     /// How many systems the page breaker put on <paramref name="page"/>.
     /// </summary>
     /// <remarks>

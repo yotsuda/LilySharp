@@ -549,6 +549,65 @@ internal static class LpGeometryProbes
         };
 
     /// <summary>
+    /// WHERE A BAR NUMBER SITS — the mirrors of books BNL and BNH. The two differ ONLY in
+    /// the melody's octave, and LilyPond reads them identically.
+    /// </summary>
+    /// <remarks>
+    /// A BarNumber stands at the LINE START, left of the clef, and LilyPond places
+    /// outside-staff grobs against an X-AWARE skyline
+    /// (lily/axis-group-interface.cc:359-474), so notes that begin after the clef cannot
+    /// reach it. MEASURED (audit/lp-geometry/probes/page-vertical.ly, books BNL/BNH):
+    /// both print the same three readings, 3.074440 / 3.050000 / 3.076208, with the
+    /// variation being which digits the number contains and nothing else — while BNH's
+    /// first ink starts 1.200000 higher up the page. So LilyPond's side of this pair is an
+    /// IDENTITY, and whatever Lily# reads differently between the two spellings is its own.
+    /// <para>
+    /// ⚠️ THIS IS NOT A COSMETIC QUANTITY. The bar number is inside its staff's
+    /// VerticalAxisGroup skyline, so it IS the ink a system reserves above its own
+    /// reference point — LilyPond's <c>min_offsets[0]</c> (align-interface.cc:215-220).
+    /// That term closes the loose-line chain of the system before it
+    /// (page-layout-problem.cc:931-932) and floors the system-to-system spring (:625-629).
+    /// The pair was opened because porting <c>distribute_loose_lines</c> made a two-verse
+    /// lyric block refuse to compress into the 12.000000 LilyPond keeps, and the excess
+    /// turned out not to be the lyrics.
+    /// </para>
+    /// <para>
+    /// ⚠️ Lily# <c>a</c> is LilyPond <c>a'</c>, so the high book is <c>a''</c> here against
+    /// <c>a'''</c> there (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static string BarNumberScore(string name, string octave) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat($"a{octave}4 b{octave} a{octave} b{octave} | ", 48)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The melody inside the staff — the mirror of book BNL.</summary>
+    private static readonly string BNL = BarNumberScore("BNL", "");
+
+    /// <summary>The same music two octaves up — the mirror of book BNH.</summary>
+    private static readonly string BNH = BarNumberScore("BNH", "''");
+
+    /// <summary>The default page with vertical justification off, as books BNL/BNH set.</summary>
+    private static readonly LayoutOptions RaggedBottomPaper =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
+        };
+
+    /// <summary>
     /// TIGHT PAPER — the mirror of book T in page-vertical.ly. The page BREAKER's own
     /// quantity: how many systems it puts on a page, and how many pages that takes.
     /// </summary>
@@ -2589,6 +2648,18 @@ internal static class LpGeometryProbes
         // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it
         // unstretched, and the "stretched" entry would have read a ragged page and agreed.
         new("lyrics.stretched.systems-on-first-page", LYRS, g => g.SystemsOnPage(0), FourSystemsPerPage),
+
+        // --- where a BAR NUMBER sits (books BNL/BNH) ---
+        // The ink a system reserves ABOVE its own reference point, which is what closes the
+        // loose-line chain of the system before it and floors the system-to-system spring.
+        // Two entries with the SAME LilyPond value because the finding is the invariance:
+        // LilyPond places the number against an X-aware skyline, at the line start where only
+        // the clef stands, so a melody two octaves higher does not move it by a bit. A single
+        // entry could not tell "placed correctly" from "placed above whatever is tallest".
+        new("barnumber.low-melody.staff-to-baseline", BNL,
+            g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
+        new("barnumber.high-melody.staff-to-baseline", BNH,
+            g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

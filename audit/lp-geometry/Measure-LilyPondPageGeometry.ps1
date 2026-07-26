@@ -68,6 +68,7 @@ try {
         '^PROBEV PAGE (\d+) systems=(\d+)$'
         '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$'
         '^PROBEV VAG (\d+) (\d+) rel=(\S+) aff=(\S+) ext=\((\S+) \. (\S+)\)$'
+        '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\)$'
     )
     $bad = @($lines | Where-Object { $l = $_; -not ($shapes | Where-Object { $l -match $_ }) })
     if ($bad) {
@@ -80,7 +81,7 @@ try {
     foreach ($line in $lines) {
         if ($line -match '^PROBEV BOOK (\S+)$') {
             $book = $Matches[1]
-            $books[$book] = [pscustomobject]@{ Paper = $null; Systems = @(); Groups = @() }
+            $books[$book] = [pscustomobject]@{ Paper = $null; Systems = @(); Groups = @(); Grobs = @() }
         }
         elseif ($line -match '^PROBEV PAPER top-margin=(\S+) bottom-margin=(\S+) paper-height=(\S+) paper-width=(\S+) output-scale=(\S+) line-width=(\S+)$') {
             $books[$book].Paper = [pscustomobject]@{
@@ -102,6 +103,20 @@ try {
                 Index    = [int]$Matches[2]
                 Rel      = [double]$Matches[3]   # relative to the system: negative is down
                 Loose    = $Matches[4] -ne '()'
+            }
+        }
+        elseif ($line -match '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\)$') {
+            # An outside-staff grob riding above a staff. It is inside that staff's
+            # VerticalAxisGroup skyline, so it sets the ink the system reserves above its own
+            # reference point -- the term that closes a loose-line chain and floors the
+            # system-to-system spring -- while appearing nowhere in the VAG or SYS lines.
+            $books[$book].Grobs += [pscustomobject]@{
+                Page  = [int]$Matches[1]
+                Index = [int]$Matches[2]
+                Name  = $Matches[3]
+                Rel   = [double]$Matches[4]   # the grob's own refpoint (a text grob: its baseline)
+                Down  = [double]$Matches[5]
+                Up    = [double]$Matches[6]
             }
         }
         elseif ($line -match '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$') {
@@ -216,6 +231,24 @@ try {
             if ($loose) {
                 $looseUniq = @($loose | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
                 "     staff/loose -> next loose line = {0}" -f ($looseUniq -join ', ')
+            }
+            # OUTSIDE-STAFF grobs (today: BarNumber), measured from the staff refpoint they
+            # ride over. Printed only when the book has any. This is the other half of what
+            # decides `min_offsets[0]`, and it is X-AWARE on LilyPond's side: a bar number
+            # stands left of the clef, so a high melody -- which starts after it -- cannot
+            # push it up. That invariance is what books BNL/BNH are for.
+            $outside = @(
+                foreach ($g in ($b.Grobs | Where-Object Page -eq $pageNo | Sort-Object Index)) {
+                    $s = $sys | Where-Object Index -eq $g.Index
+                    if ($s) { [pscustomobject]@{ Name = $g.Name; Above = $g.Rel - $s.StaffUp } }
+                }
+            )
+            if ($outside) {
+                foreach ($name in ($outside.Name | Select-Object -Unique)) {
+                    $vals = @($outside | Where-Object Name -eq $name |
+                              ForEach-Object { "{0:F6}" -f $_.Above } | Select-Object -Unique)
+                    "     staff refpoint -> {0} baseline = {1}" -f $name, ($vals -join ', ')
+                }
             }
             if ($sys.Count -ge 2) {
                 $gaps = for ($i = 1; $i -lt $sys.Count; $i++) { $staff[$i] - $staff[$i - 1] }
