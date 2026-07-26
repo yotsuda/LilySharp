@@ -133,6 +133,14 @@ fixture が小さいので**テストスイートは system 数に比例する�
 
 ### ▶ 次の一手
 
+⚠️★ **借り: `41f9749d` の snapshot 再ベースは §5.2.1③ を満たしていない。**
+`test/hara-kiri` を +0.500000 動かしたのに、**それを正当化する台帳キーを名指していない**
+（message は機構の説明とテストで代えた。cf59a00d のほうは 2 キーを名指せている）。
+規則は「名指せないなら**先に台帳点を作る**」。⇒ **開くべき点**: hara-kiri'd system で
+**譜間インクが basic-distance を超える**対（今回 9.000000 → 9.500000 に動いた regime）。
+LP 側は `\RemoveAllEmptyStaves` の同じ音楽で測れる。**この島で唯一、機構だけで通した差分**なので、
+次に触るときの最優先。
+
 0. ★ **spec の「宣言なし」がまだ 3 メンバ畳まれている**（`3193a851` で
    `Stretchability` だけ nullable 化して閉じた。**残りは `BasicDistance` /
    `MinimumDistance` / `Padding`**）。
