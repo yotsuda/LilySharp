@@ -580,6 +580,20 @@ internal sealed class LyricEngraver
     /// takes verse 1 wherever that left it and rebuilds the stack below it, so the two
     /// passes compose instead of fighting.
     /// </para>
+    /// <para>
+    /// ⚠️ THE SPEC IS PORTED, THE SOLVE IS NOT, and the difference is measurable rather than
+    /// theoretical. LilyPond does not evaluate these steps pair by pair: it pushes one
+    /// spring per gap into a <c>Simple_spacer</c> that also holds the springs to the staff
+    /// above and to the next system, and solves the whole chain at one force
+    /// (<c>distribute_loose_lines</c>, page-layout-problem.cc:1025-1054, which Lily# does
+    /// not have). This computes each pair's REST LENGTH instead. The two agree while the
+    /// chain has room, which is why the ledger point closes — and they part when it does
+    /// not: MEASURED on probe book LYRV, two lyric lines no longer fit the 12.000000 the
+    /// system spring keeps, LilyPond solves at a NEGATIVE force and pulls the FIRST line
+    /// from 5.500000 down to its ink floor 3.737890, while Lily# leaves it at 5.500000 and
+    /// lets the block reach further down. This step survives that regime because its spring
+    /// is rigid (zero ideal, minimum floor); the one above it does not. Named, not hidden.
+    /// </para>
     /// </remarks>
     private List<LyricLayout> ApplyVerseSpacing(
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
@@ -657,13 +671,18 @@ internal sealed class LyricEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 + ly/engraver-init.ly:653-656 —
-    /// the same <c>max(minimum-distance 2.8, ink + padding 0.2)</c> the placement uses, with
-    /// the deepest descender of the verses above against the tallest ascender of the verses
-    /// below. That is what the skylines would give if every syllable stood over every other
-    /// one, so it can only OVER-reserve, never under — which is the direction an estimate
-    /// has to err in, and the direction LilyPond's own pure-height path errs in.
-    /// ⚠️ It exists so the breaker cannot drift from the placement again: a flat constant
-    /// here read 1.8 against the placement's 3.2 for as long as both were constants.
+    /// the <c>max(minimum-distance 2.8, ink + padding 0.2)</c> the placement solves.
+    /// <para>
+    /// LILYSHARP-OWN: the BOUNDING, not the rule. Taking the deepest descender of the verses
+    /// above against the tallest ascender of the verses below — as though every syllable
+    /// stood over every other one — is not a line of LilyPond. LilyPond's estimate path asks
+    /// the same specs through <c>get_maybe_pure_property</c> and
+    /// <c>Align_interface</c>'s pure branch; this is a cruder over-estimate that happens to
+    /// bound it. It can only OVER-reserve, never under, which is the direction an estimate
+    /// has to err in, and it exists so the breaker cannot drift from the placement again: a
+    /// flat constant here read 1.8 against the placement's 3.2 for as long as both were
+    /// constants.
+    /// </para>
     /// </remarks>
     internal static double VerseStepBound(
         IEnumerable<string> upperTexts, IEnumerable<string> lowerTexts)
