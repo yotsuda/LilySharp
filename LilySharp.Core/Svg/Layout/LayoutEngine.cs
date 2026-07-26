@@ -454,6 +454,49 @@ internal sealed class LayoutEngine
             }
         }
 
+        // ...and the anchor for everything else note-bound: the system's LAST SPACEABLE
+        // staff, device-down from the system origin to its top line.
+        //
+        // LILYPOND-REF: lily/page-layout-problem.cc:943-944 — find_system_offsets records
+        // each spaceable staff as `last_spaceable_line`, and a loose line below it is
+        // spaced from THAT (get_spacing_spec, :1284-1294, takes the affinity-UP branch
+        // against the staff above the line). Lily# used to measure the block from the
+        // SYSTEM ORIGIN — the TOP staff's top line — which is the same place only when the
+        // system has one staff. With two it is a staff away, and the basic-distance 5.5
+        // stopped binding entirely: MEASURED at 4.009200 against LilyPond's 5.500000
+        // (audit/lp-geometry, lyrics.two-staff.staff-to-lyric), and that 4.009200 is purely
+        // the ink floor, 2.050000 + the syllable's 1.459200 + padding 0.500000.
+        //
+        // ⚠️ SPACEABLE, which is what excludes a text ROW (a chord or lyrics track) and an
+        // ossia: those carry no staff spring (MultiStaffLayouter.StaffSprings) and LilyPond
+        // never makes them a `last_spaceable_line`. A lead sheet's chord row sits ABOVE the
+        // staff, so taking the bottom-most staff blindly would anchor on the wrong thing on
+        // exactly the scores that have lyrics.
+        // ⚠️ Read from the FIRST system, like staffYByIndex and noteBoundAnchorY above: a
+        // staff's offset INSIDE a system is fixed by the staff layout. Hara-kiri can hide
+        // different staves per system, which this does not model — the same simplification
+        // the two tables above already carry.
+        double lastSpaceableStaffY = 0;
+        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
+        {
+            bool found = false;
+            foreach (var group in systemsArray[0].StaffGroups)
+            {
+                if (group.Staves.IsDefaultOrEmpty) continue;
+                foreach (var st in group.Staves)
+                {
+                    if (st.IsHidden || st.IsOssia || textRowStaves.Contains(st.StaffIndex))
+                        continue;
+                    double down = -st.Y;
+                    if (!found || down > lastSpaceableStaffY)
+                    {
+                        lastSpaceableStaffY = down;
+                        found = true;
+                    }
+                }
+            }
+        }
+
         var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = primaryScore,
@@ -488,6 +531,7 @@ internal sealed class LayoutEngine
             NoteBoundAnchorY = noteBoundAnchorY,
             StaffByIndex = staffByIndex,
             LooseChainEnd = looseChainEnd,
+            LastSpaceableStaffY = lastSpaceableStaffY,
         });
 
         var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
@@ -1484,13 +1528,14 @@ internal sealed class LayoutEngine
     /// force. Every term of that is six digits.
     /// </para>
     /// <para>
-    /// ⚠️ RETURNS NULL FOR ANYTHING BUT A ONE-STAFF SYSTEM, deliberately. The room here is
-    /// measured to the next system's staff reference point, which is only the end of the
-    /// chain if the block hangs from the LAST staff of this one — and Lily# anchors a
-    /// note-bound block below the SYSTEM ORIGIN instead (see
-    /// <c>LyricEngraver.DistributeLooseLines</c>). Solving a chain against an anchor that
-    /// is a staff or more away from where LilyPond's is would move the lines by that
-    /// error, so those chains stay at force 0 until the anchor itself is ported.
+    /// ⚠️ RETURNS NULL FOR ANYTHING BUT A ONE-STAFF SYSTEM, deliberately, and the reason is
+    /// no longer the anchor — that was ported once <c>lyrics.two-staff.staff-to-lyric</c>
+    /// measured it. It is the ROOM: <c>onPage[i].Y - onPage[i+1].Y</c> is the gap between
+    /// two system ORIGINS, and the chain runs from this system's LAST staff reference point
+    /// to the next system's FIRST, which is the same distance only when each system's last
+    /// staff is also its first. Doing it properly means subtracting the origin-to-last-staff
+    /// span per system, which hara-kiri makes non-uniform (it can hide different staves on
+    /// different systems), so it is a step of its own rather than a term added here.
     /// </para>
     /// </remarks>
     private Func<int, (double Room, double NextStaffMinDistance)?>? BuildLooseChainEnds(
@@ -1579,6 +1624,11 @@ internal sealed class LayoutEngine
         public Dictionary<int, double>? StaffYByIndex { get; init; }
         public Dictionary<int, double>? NoteBoundAnchorY { get; init; }
         public Dictionary<int, Staff>? StaffByIndex { get; init; }
+
+        /// <summary>Device-down from the system origin to the LAST SPACEABLE staff's top
+        /// line — the staff a note-bound lyric block hangs from. 0 on a one-staff system,
+        /// which is why that case is untouched by it.</summary>
+        public double LastSpaceableStaffY { get; init; }
 
         /// <summary>Per system, the room its lyric chain is solved into and what closes it
         /// — see <see cref="BuildLooseChainEnds"/>. Null in the preliminary pass, which
@@ -1743,7 +1793,8 @@ internal sealed class LayoutEngine
         var lyricLayouts = new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
             .CalculateLayouts(
                 lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
-                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd);
+                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
+                ctx.LastSpaceableStaffY);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).

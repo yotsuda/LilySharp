@@ -321,7 +321,8 @@ internal sealed class LyricEngraver
         IReadOnlyDictionary<int, double>? staffYByIndex = null,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null,
-        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd = null)
+        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd = null,
+        double lastSpaceableStaffY = 0)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -374,7 +375,11 @@ internal sealed class LyricEngraver
                 // and the line's real (font-metric) glyph height.
                 verseY = groupBottomY + staffBottom + BasicDistanceBelowBottomLine + (verseNumber - 1) * _params.VerseSpacing;
             else
-                verseY = staffBottom + BasicDistanceBelowBottomLine + (verseNumber - 1) * _params.VerseSpacing;
+                // Below the system's LAST SPACEABLE staff, which is the one a
+                // staff-affinity-UP line is spaced from (page-layout-problem.cc:943-944,
+                // :1284-1294). Zero on a one-staff system, so that case is unchanged.
+                verseY = lastSpaceableStaffY + staffBottom + BasicDistanceBelowBottomLine
+                         + (verseNumber - 1) * _params.VerseSpacing;
 
             var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
@@ -401,7 +406,8 @@ internal sealed class LyricEngraver
         // left between this staff and the next spaceable one.
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
-                noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd);
+                noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd,
+                lastSpaceableStaffY);
 
         return layouts.ToImmutableArray();
     }
@@ -432,12 +438,13 @@ internal sealed class LyricEngraver
     /// is the regime <c>lyrics.two-verse.system-gap</c> measures. The other two run at
     /// force 0, i.e. exactly where they were:
     /// <list type="bullet">
-    /// <item>A block under a MULTI-staff system is anchored at
-    /// <paramref name="staffBottom"/> below the SYSTEM ORIGIN, not at the last spaceable
-    /// staff LilyPond anchors it to (<c>last_spaceable_line</c>, :943-944) — so its
-    /// basic-distance is measured from the wrong staff and only the skyline minimum ever
-    /// binds. Solving a chain whose anchor is wrong would move the lines by that error.
-    /// That anchor is a separate defect and wants its own ledger point.</item>
+    /// <item>A block under a MULTI-staff system now hangs from the right staff — the
+    /// anchor was ported once <c>lyrics.two-staff.staff-to-lyric</c> measured it — but the
+    /// ROOM below it has not been: <c>LayoutEngine.BuildLooseChainEnds</c> reads the gap
+    /// between two system ORIGINS, which is the gap between two staff reference points
+    /// only when each system's last staff IS its first. Computing it in the last-staff
+    /// frame is the remaining step, and it has to survive hara-kiri hiding different
+    /// staves on different systems.</item>
     /// <item>A block between two staves of one system (<c>staff … with lyrics</c> on a
     /// non-last group) closes on the next staff through
     /// <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (:1301-1312), whose minimum
@@ -452,7 +459,8 @@ internal sealed class LyricEngraver
         double staffBottom,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline,
-        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd)
+        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd,
+        double lastSpaceableStaffY)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -476,7 +484,7 @@ internal sealed class LyricEngraver
             bool isUpperFamily = familyKey >= 0;
             double anchorBase = isUpperFamily && noteBoundAnchorY != null
                                 && noteBoundAnchorY.TryGetValue(familyKey, out var groupBottomY)
-                ? groupBottomY : 0;
+                ? groupBottomY : lastSpaceableStaffY;
 
             var up = BuildVerseUpSkylines(family, measureToSystem);
             var down = BuildVerseDownSkylines(family, measureToSystem);
@@ -498,6 +506,15 @@ internal sealed class LyricEngraver
                     : systemSkylines != null && system < systemSkylines.Count
                         ? systemSkylines[system].down : null;
 
+                // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion
+                // to the anchor's. A system skyline is measured from the SYSTEM ORIGIN, so
+                // reaching the anchor means stepping past every staff above it as well as
+                // the half-staff to its reference point; a per-staff skyline is already
+                // measured from that staff's own top line, so only the half-staff is left.
+                // Getting this wrong drops the block by exactly the inter-staff distance —
+                // measured, 10.500000 on the two-staff probe.
+                double skylineToAnchor = isUpperFamily ? anchorOffset : anchorBase + anchorOffset;
+
                 var gaps = new List<LooseLineSpacer.Gap>(verses.Count + 2);
 
                 // Staff to verse 1. LILYPOND-REF: lily/align-interface.cc:227-238 — the
@@ -508,7 +525,7 @@ internal sealed class LyricEngraver
                 {
                     double dist = ad.Distance(firstUp, SkylineDrop.HorizonPadding);
                     if (!double.IsInfinity(dist) && !double.IsNaN(dist))
-                        staffToFirst = dist + SkylineDrop.RelatedStaffPadding - anchorOffset;
+                        staffToFirst = dist + SkylineDrop.RelatedStaffPadding - skylineToAnchor;
                 }
                 gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NonStaffRelatedStaff, staffToFirst));
 
