@@ -379,7 +379,8 @@ internal sealed class LayoutEngine
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
             pagingSkylines, perSystemHeights, perSystemBands);
 
-        var looseChainEnd = BuildLooseChainEnds(score, pages, systemsArray, perSystemExtents);
+        var looseChainEnd = BuildLooseChainEnds(
+            score, pages, systemsArray, perSystemExtents, textRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
@@ -1528,31 +1529,61 @@ internal sealed class LayoutEngine
     /// force. Every term of that is six digits.
     /// </para>
     /// <para>
-    /// ⚠️ RETURNS NULL FOR ANYTHING BUT A ONE-STAFF SYSTEM, deliberately, and the reason is
-    /// no longer the anchor — that was ported once <c>lyrics.two-staff.staff-to-lyric</c>
-    /// measured it. It is the ROOM: <c>onPage[i].Y - onPage[i+1].Y</c> is the gap between
-    /// two system ORIGINS, and the chain runs from this system's LAST staff reference point
-    /// to the next system's FIRST, which is the same distance only when each system's last
-    /// staff is also its first. Doing it properly means subtracting the origin-to-last-staff
-    /// span per system, which hara-kiri makes non-uniform (it can hide different staves on
-    /// different systems), so it is a step of its own rather than a term added here.
+    /// ⚠️ THE ROOM IS BETWEEN TWO STAFF REFERENCE POINTS, never between two system origins,
+    /// and LilyPond's call site is where that is plainest: the two arguments are
+    /// <c>last_spaceable_line_translation</c> and <c>-solution_[spring_idx]</c> (:936-939) —
+    /// the previous spaceable staff's position in the PAGE's spring chain and this one's.
+    /// Neither end knows which system it belongs to; the same call serves a block between
+    /// two systems and a block between two staves of one system, and only the minimum that
+    /// closes it changes (:923-933). So the span from a system's origin down to its LAST
+    /// spaceable staff has to come off the near end, and it is read PER SYSTEM because
+    /// hara-kiri hides different staves on different systems — which is why it could not be
+    /// taken from <c>systemsArray[0]</c> the way <c>lastSpaceableStaffY</c> is.
+    /// MEASURED on book LYRMV (audit/lp-geometry, <c>lyrics.two-staff.two-verse.*</c>).
+    /// </para>
+    /// <para>
+    /// ⚠️ STILL NULL WHEN THE ROOM HOLDS SOMETHING THIS CHAIN DOES NOT MODEL, and that is
+    /// the room being unknown rather than an exclusion (§5.2): an ossia and a text ROW (a
+    /// chords or lyrics track) are loose lines to LilyPond and go INTO the chain, while
+    /// Lily# lays them out as bands of their own. A chain solved into a room that contains
+    /// one of them would be solved into somebody else's space. The other case left at force
+    /// 0 is a block between two staves of one system, which <see cref="LyricEngraver"/>
+    /// keeps out because its closing spring is <c>nonstaff-unrelatedstaff-spacing</c> against
+    /// the next staff's up-skyline (:1301-1312) — an input the engraver is not given.
     /// </para>
     /// </remarks>
     private Func<int, (double Room, double NextStaffMinDistance)?>? BuildLooseChainEnds(
         MultiStaffScore score, ImmutableArray<PageLayout> pages,
         ImmutableArray<SystemLayout> systemsArray,
-        List<(double upExtent, double downExtent)> perSystemExtents)
+        List<(double upExtent, double downExtent)> perSystemExtents,
+        IReadOnlySet<int> textRowStaves)
     {
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
 
-        foreach (var system in systemsArray)
+        // Device-DOWN from each system's origin to its LAST spaceable staff's top line —
+        // the near end of every chain on that system. A hidden staff is skipped because
+        // hara-kiri leaves it at the current Y with zero height (MultiStaffLayouter), so it
+        // neither draws nor takes room; an ossia or a text row makes the whole score bail
+        // out, per the remarks above.
+        var lastSpaceable = new double[systemsArray.Length];
+        for (int s = 0; s < systemsArray.Length; s++)
         {
-            if (system.StaffGroups.IsDefaultOrEmpty) return null;
-            int staves = 0;
-            foreach (var group in system.StaffGroups)
-                staves += group.Staves.IsDefaultOrEmpty ? 0 : group.Staves.Length;
-            if (staves != 1) return null;
+            if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) return null;
+            bool found = false;
+            foreach (var group in systemsArray[s].StaffGroups)
+            {
+                if (group.Staves.IsDefaultOrEmpty) continue;
+                foreach (var st in group.Staves)
+                {
+                    if (st.IsHidden) continue;
+                    if (st.IsOssia || textRowStaves.Contains(st.StaffIndex)) return null;
+                    double down = -st.Y;
+                    if (!found || down > lastSpaceable[s]) lastSpaceable[s] = down;
+                    found = true;
+                }
+            }
+            if (!found) return null;
         }
 
         double halfStaff = _options.StaffHeight / 2.0;
@@ -1569,20 +1600,24 @@ internal sealed class LayoutEngine
             var onPage = page.Systems;
             for (int i = 0; i < onPage.Length; i++, index++)
             {
+                // LilyPond's `last_spaceable_line_translation`.
+                double anchor = onPage[i].Y - lastSpaceable[index] - halfStaff;
                 if (i + 1 < onPage.Length)
                 {
-                    // Both reference points are a half-staff below their system's origin,
-                    // so the conversion cancels and the origins' own gap IS the room.
+                    // ...and `-solution_[spring_idx]`, the next system's FIRST spaceable
+                    // staff. The guard above leaves the first visible staff at the system
+                    // origin — MultiStaffLayouter advances its running Y only past a staff
+                    // it has already placed — so that reference point is a half-staff below
+                    // onPage[i + 1].Y and no span comes off this end.
                     double nextUpExtent = index + 1 < perSystemExtents.Count
                         ? perSystemExtents[index + 1].upExtent : 0;
-                    ends[index] = (onPage[i].Y - onPage[i + 1].Y,
+                    ends[index] = (anchor - (onPage[i + 1].Y - halfStaff),
                                    systemPadding + nextUpExtent + halfStaff);
                 }
                 else
                 {
                     // The last block on a page runs to the bottom of the printable area.
-                    ends[index] = (onPage[i].Y - halfStaff - _options.MarginBottom,
-                                   double.NaN);
+                    ends[index] = (anchor - _options.MarginBottom, double.NaN);
                 }
             }
         }

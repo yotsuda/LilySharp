@@ -304,7 +304,7 @@ internal sealed class LyricEngraver
     /// placing lyric rows in a multi-staff score; null falls back to <paramref name="staffBottom"/>.</param>
     /// <param name="looseChainEnd">
     /// Per system, what closes its lyric block's spring chain: the ROOM the page left
-    /// between this system's staff reference point and the next spaceable one, and the
+    /// between this system's LAST spaceable staff's reference point and the next one, and the
     /// minimum distance from the null line that breaks the affinity to that next staff
     /// (NaN when the chain runs to the page edge instead, LilyPond's
     /// <c>-page_height_</c> call at page-layout-problem.cc:1012-1013). Null — or a null
@@ -433,23 +433,26 @@ internal sealed class LyricEngraver
     /// </para>
     /// <para>
     /// ⚠️ WHICH CHAINS ARE SOLVED, named rather than left to be discovered. A chain is
-    /// solved only where its anchor really is a staff reference point and the room below
-    /// it is known — today that is a note-bound block under a SINGLE-staff system, which
-    /// is the regime <c>lyrics.two-verse.system-gap</c> measures. The other two run at
-    /// force 0, i.e. exactly where they were:
+    /// solved where its anchor really is a staff reference point and the room below it is
+    /// known — a note-bound block under the LAST spaceable staff of a system, however many
+    /// staves that system has. The one-staff case is the regime
+    /// <c>lyrics.two-verse.system-gap</c> measures and the multi-staff one is
+    /// <c>lyrics.two-staff.two-verse.staff-to-lyric</c>, where the port took the block from
+    /// its force-0 5.500000 to its alignment floor 4.009200 against LilyPond's 3.737890 —
+    /// the two lyric faces, and nothing else, left over.
+    /// <para>
+    /// What still runs at force 0, i.e. exactly where it was:
     /// <list type="bullet">
-    /// <item>A block under a MULTI-staff system now hangs from the right staff — the
-    /// anchor was ported once <c>lyrics.two-staff.staff-to-lyric</c> measured it — but the
-    /// ROOM below it has not been: <c>LayoutEngine.BuildLooseChainEnds</c> reads the gap
-    /// between two system ORIGINS, which is the gap between two staff reference points
-    /// only when each system's last staff IS its first. Computing it in the last-staff
-    /// frame is the remaining step, and it has to survive hara-kiri hiding different
-    /// staves on different systems.</item>
     /// <item>A block between two staves of one system (<c>staff … with lyrics</c> on a
     /// non-last group) closes on the next staff through
     /// <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (:1301-1312), whose minimum
     /// is that staff's up-skyline against the last verse's descenders — an input this
-    /// engraver is not given.</item>
+    /// engraver is not given. LilyPond's own room for it is the same refpoint-to-refpoint
+    /// span (:936-939 again); only the closing minimum differs, being
+    /// <c>min_offsets[k-1] - min_offsets[k]</c> with no null line (:923-925).</item>
+    /// <item>Any system carrying an ossia or a text ROW, which LilyPond puts INTO the
+    /// chain as loose lines and Lily# lays out as bands of their own — see
+    /// <c>LayoutEngine.BuildLooseChainEnds</c>, which returns null for those.</item>
     /// </list>
     /// </para>
     /// </remarks>
