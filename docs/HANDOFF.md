@@ -389,8 +389,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     残っていた**。引数は非 nullable にしたので null で復活させられない
   - **公開メソッド 3 つがテスト専用に落ちた**: `CalculateSystemHeight(score, skylineBuilder,
     measureLayouts)`・`LayoutStaffGroups(score)`・`LayoutStaffGroups(score, start, end,
-    isFirstSystem)`。最後のは「スカイライン無し＝LP の pure 見積り」経路で API としては
-    筋が通るが、**製品コードは 1 つも使っていない**
+    isFirstSystem)`。⚠️ **消さないと決めた**（`10267f6f` で監査済）——支えているのは
+    **フレーム不変条件**（Y-up 積み・brace 端）・**liveness と括弧の幾何**・**delimiter 種別**で、
+    どれも実在の主張。スカイライン無し経路は **LP の pure 見積り**（`align-interface.cc:234-238`）
+    に対応するので、**spec を摂動するテストはむしろこちらが正しい**。
+    ⇒ 代わりに **①主張の締め直し ②実態に合わない名前 ③描画幾何を測るテストの経路**を直した。
+    ⚠️ **`BraceCollapseTests` は描画側へ移した**が、`HaraKiriSystemHeight_*` は
+    **意図的に pure 経路のまま**（spec の一変数実験を skyline に濁されないため・理由はテストに明記）
   - **`LayoutEngine.Layout()` が 516 行**（次点 `CalculateAnnotationLayouts` 440 行）。
     per-system ループに配置・スカイライン・ばね・高さが同居。**この島で増えた**
 
@@ -877,6 +882,12 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   実例 `DefaultStaffStaff_TakesItsStretchStrengthFromTheIdeal_NotFromALiteral`:
   `Stretchability = 0`（＝LP の absent）を assert したうえで **basic-distance を 14 に振り**、
   伸長強度が 14 になることを要求する。リテラル `9` を書いた版はここで落ちる
+- ★ ⚠️ **不等号の向きが「そのテストが存在する理由」を要求しているか確かめる**（2026-07-27）。
+  `SkylineSpacing_ExtremeLedgerLines_IncreasesGap` は名前どおり「広がる」ことを主張していたが
+  `>=` しか要求しておらず、**兄弟テストが「中央の音符なら両者は等しい」ことを示している**
+  ＝ **自分が区別したいはずのケースで既に満たされる**不等号だった。⇒ **`>` に締めた**
+  （実測 15.090000 対 13.000000）。同族で `>= x − 0.01` は**逆向きにずれても通る**ので
+  等号へ。⚠️ **判定法**: その主張は、**測っている効果が丸ごと消えても通るか**。
 - **テストが LP と食い違ったら、テストを実測に合わせる**（再ピン止めしない）
 - **追加したテストが「修正前なら落ちる」ことを実証する**
 - **1点狙い撃ちにせず掃く**（掃引テストは改行位置が動いても空振りしない）
