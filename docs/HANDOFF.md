@@ -32,63 +32,45 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第9セッション）/ HEAD は §0 で確認すること
-（⚠️ 自己参照。origin より **59 ahead・未 push**）。
-**3351 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 94/111 exact・total |residual| 4.066268 ss / 103 distances・counts 8/8**
-（⚠️ **4.06 は最後に開いた 1 点**＝下の ▶。従来の 16 点は不動）。
-この回の snapshot 再ベースは **8 枚**（3＋2＋3。それぞれ正当化する台帳キーを message に
-名指し済＝§5.2.1③。ユーザー承認済）。
+最終更新 2026-07-26（第9セッション・**歌詞の縦**）/ HEAD は §0 で確認すること
+（⚠️ 自己参照。origin より **75 ahead・未 push**）。
+**3353 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 94/111 exact・total |residual| 4.066268 ss / 103 distances・counts 8/8**。
+snapshot 再ベースは **8 枚**（3＋2＋3。台帳キーを message に名指し済＝§5.2.1③・承認済）。
 
-⚠️ **total の増減は全部「点の開閉」で、退行は 1 つも無い。** 0.006268 →（歌詞 2 点を開いて）
-2.006268 →（同じ回に移植して）0.006268 →（独立行の点を開いて）5.606268 →
-（**意図的乖離と決まり台帳から降ろして**）0.006268 →（verse の点を開いて）0.406268 →
-（**同じ回に規則を移植して**）**0.006268**。
-§5.0 の「穴を開けるまで何が溜まっているか分からない」そのもの。
-⚠️ **total を過去の値と直接比べない**（点集合が違う。104→106→109→110→109→110）。
-**従来の 16 点は不動＝この回に開いた歌詞の点は 3 つとも片付いた**（2 つは移植、1 つは §3 の決定）。
+⚠️ **total 4.066268 の 4.06 は「最後に開いた 1 点」**（`lyrics.two-verse.system-gap`＝下の ▶）。
+**従来の非ゼロ 16 点はこの回 1 つも動いていない。** 増減は全部「点の開閉」で退行は無い:
+`0.006268 →(2点開く) 2.006268 →(移植) 0.006268 →(独立行を開く) 5.606268 →(§3 の決定で降ろす)
+0.006268 →(verse を開く) 0.406268 →(規則を移植) 0.006268 →(system gap を開く) 4.066268`。
+⚠️ **total を過去の値と直接比べない**（点集合が違う。104→111）。
 
-### このセッションで起きたこと ＝ **前回の ▶ を実行し、予測どおり閉じた**
+### このセッションでやったこと（詳細は各 commit・台帳の `why`・probe ヘッダへ）
 
-| やったこと | 結果 |
+| | |
 |---|---|
-| **鎖の底に台帳点 2 つ**（`page.{stretched,compressed}.last-staff-to-foot`・`dd46d39b`） | ★ **予測どおり両方 exact**。Lily# 10.023884333 対 LP 10.023885＝**残差 −6.67e-7 は台帳が持つ F6 の桁**であって欠陥ではない（LP の真値は 5.690551+1+3.333333） |
-| **LP を再測**（handoff の数値を鵜呑みにしない） | JSS も JSK もページ 1 で `to foot = 10.023885 / ink below = 3.333333` |
-| **foot spring が両 regime で剛体な理由を式で確定** | ideal 1・stretchability 30（`paper-defaults-init.ly:84-87`）で `ensure_min_distance` は**床だけ**上げる（`spring.cc:156-159`）⇒ **blocking force = (4.333333−1)/30 = 0.111111**。伸長 f=0.099092・圧縮 f=−0.174101 でどちらも届かない |
-| **§2D の stale を 1 件訂正** | 「top spring は Lily# では伸びない」は**誤り**＝移植済（`PageLayouter.cs:290-294` が spring 0 を積む。`page.stretched.first-staff-refpoint` の `why` に経緯） |
-| ★ **loose line の対を起票**（`lyrics.{natural,stretched}.staff-to-lyric`＋本数点・`6faa4d5a`） | **狙っていた欠陥は存在しなかった**。LP も歌詞行を伸ばさない（`get_spacing_spec` が非 affinity 側に `HUGE_STRETCH 10e7`／`LARGE_STRETCH 10e5` を与える＝`:1257-1338`。LP 自身のコメントが意図と明言）。実測 5.500000001945665（ragged）対 5.500000181705927（gap 43.84 に伸びたページ） |
-| ★ **代わりに落ちた本物の欠陥** | **Lily# に `nonstaff-relatedstaff-spacing` が無い**。note-bound 歌詞の基本距離は `staffBottom 2.0 + StaffPadding 2.5 = 4.5`（refpoint→ベースライン）で、LP は **basic-distance 5.5**。残差 **−1.000000 ちょうど・両 regime 同値** |
-| ★ **その 5.5 を字面移植**（`2b901484`・**出力が変わる／承認済み**） | 2 点とも **exact**。`engraver-init.ly:650` の `(basic-distance . 5.5)` を `LyricParameters.RelatedStaffBasicDistance` へ。spec の 3 項の**行き先を全部書いた**＝padding 0.5 は `SkylineDrop.RelatedStaffPadding`（既存・max の第2項）、stretchability は**不活性**（非 affinity 側が 10e5/10e7）。⚠️ **台帳の 5.500000 はこの定数の照合であって出典ではない**（§5.2） |
-| **二重モデルを同時に潰した** | `LayoutEngine` のバンド見積り（**ページブレーカー**が使う）にも `2.5` のコピーがあった。片方だけ直すと**ブレーカーが 1 ss 短いバンドで値付けする**＝padding 4 倍と同じ形（§5.2.1②）。共有プロパティ経由に変更 |
-| ★ **独立 lyrics 行の対を起票**（`5157a2bd`） | **LP 側が完全な恒等**（`\lyricsto` 有無で LP の縦は 1 桁も変わらない＝probe の全項目一致）⇒ 差はまるごと Lily#。**11.100000 対 5.5＝+5.600000**。内訳は `2.0 +(10.5−4.0)+ 2.6` で桁まで一致＝**Lily# は行を「譜グループ」として `staffgroup-staff-spacing` で置いている**（LP は loose line の spec） |
-| ★ **それを意図的乖離と決めて台帳から降ろした**（ユーザー判断） | **複数行歌詞のレンダは Lily# の拡張**＝独立行は word トラック。§3 に決定を記録し、`LyricRowIsSpacedAsAStaffLikeBand` が**導出形で**主張、`LyricRowBaseline` に `LILYSHARP-OWN`。台帳に載せない理由は `page.height` と同じ（指標が壊れる） |
-| ★ **verse 2 の対を起票**（`lyrics.verse-step`・`c5c90192`） | LP は **`nonstaff-nonstaff-spacing`＝ideal 0・min 2.8・padding 0.2**＝**ideal が 0 の逆の形**。実現値は `max(2.8, インク+0.2)` で**テキストに応じて動く**。LP **2.800000** 対 Lily# の平坦な **3.200000**＝**+0.400000**（両方とも予測どおり） |
-| ★ **同じ本が「loose line 再配分が見える regime」を出した** | 2 行になると **12.0 の system 間隔に収まらず、LP は loose 鎖を負の force で解く**（第1行が 5.5 → インク床 3.737890 へ落ちる）。**1 行の対が「効くとすればここ」と予測した場所**が実測で出た。⚠️ 3.737890 は**フォント量**なので点にしない＝**LYRV は第1行距離の対照ではない**（対照は LYRC） |
-| **バンド見積りの `1.8` を配置側と共有**（同 commit・snapshot 2 枚） | ブレーカーが **verse 2 以降 1 verse あたり 1.4 過少予約**していた（§5.2.1②）。⚠️ **忠実度は上がっていない**——共有した 3.2 自体がまだ LP でない（台帳は +0.4 のまま開いている） |
-| ★ **verse ごとの up-skyline を格納**（`044f2f69`・出力不変） | 島の手順①（§2E）。`BuildVerseUpSkylines` が **(system, verse) 単位**で作る。`EachVerseGetsItsOwnUpSkyline` が格納値を主張し、**旧フィルタを戻すと落ちる**ことも実証済 |
-| ★ **verse 間を LP の規則に置換**（`9953012f`・snapshot 3 枚） | `ApplyVerseSpacing` が **system ごとに** `max(2.8, インク+0.2)` を解く。台帳 **exact**。fixture では**インクが binding して 2.960000**＝定数では出せない値。⚠️ **新しい定数はゼロ**——下降部は `TextFontMetrics`（書体アウトライン実測）で、**「測った descent が無い」という前回の §1 の記述が誤りだった**（幅では同じ API を既に使っていた） |
-| ⚠️ **up-extent の一括移行は試して差し戻し** | **TeX Gyre Schola に CJK が無い**＝かなのアウトラインが空で up-extent 0 になる。**snapshot 14 枚＋CJK テスト 1 本が落ちる**ことを実測。⇒ 次の ▶ |
+| **鎖の底に点 2 つ**（`dd46d39b`） | 予測どおり exact。⚠️ **f > 0.111111 まで伸びるページではこの 2 点は別の量**（foot spring が開く） |
+| **歌詞の縦を 4 点起票→2 点を移植して閉じ、1 点は §3 の決定、1 点は開いたまま** | 下の表と ▶ |
+| **§1/§2D の stale を 3 件訂正**（top spring・「descent が無い」・「②は frame 移行」） | ⚠️ **どれも私がこの回に書いた記述**。§0 の「毎回複数踏む」は**同一セッション内でも起きる** |
 
-⚠️ **この 2 点は「新しい欠陥を探す点」ではなく「前回直した項を守る網」**（§5.2.1④）。
-分解能は tolerance 1e-6 で、守る対象だった欠陥は 0.166667＝**桁が 5 つ違う**。
-⚠️ **f > 0.111111 まで伸びるページを作ると foot spring は開く**＝そのときこの 2 点は
-**別の量を測っている**。新しい book を足すなら比較せず自分の点を持たせること。
-知識の置き場所は `probes/page-vertical.ly` の JSS ヘッダと両 `why`（§4）。前回の
-regime（譜間ばね・符尾）へ戻るときの入口は `page.stretched.staff-staff-inside` の `why`。
+**歌詞の縦で確定したこと**（LP の式。移植済／未済は右）:
 
-★ **17 個ある歌詞 fixture のうち動いたのは 3 枚だけ**（+2.00 / +2.00 / +0.19）。配置は
-`max(basic, インク床)` なので、**動かなかった 14 枚は床が既に 5.5 以上だった証拠**＝
-普通の音楽（音符が譜下へ出る）は LP と同じく床で決まる。⇒ **この欠陥が何年も
-「見た目おかしくない」まま出荷され得た理由**であり、**probe を高い旋律で組まねば見えなかった理由**。
+| LP | 値・出典 | Lily# |
+|---|---|---|
+| 譜→歌詞行の基本距離 | `nonstaff-relatedstaff-spacing` basic 5.5 / padding 0.5 / stretch 1（`engraver-init.ly:648-652`） | **移植済**（`2b901484`。padding は `SkylineDrop` に既存、stretch は不活性） |
+| verse 間 | `nonstaff-nonstaff-spacing` **ideal 0** / min 2.8 / padding 0.2（`:653-656`）⇒ 実現値 `max(2.8, インク+0.2)`・**完全剛体** | **移植済**（`9953012f`。`ApplyVerseSpacing` が system ごとに解く） |
+| 1 行なら**再配分は見えない** | 非 affinity 側が `LARGE_STRETCH 10e5`／`HUGE_STRETCH 10e7`（`:1257-1338`。LP のコメントが意図と明言） | ——（移植不要と確定） |
+| system ばねは loose 行で**広がらない** | スカイラインは `get_minimum_translations` の位置＝**basic-distance を含まない**（`:593-599`＋`align-interface.cc:235-238` は pure 枝専用） | **未**＝▶ |
+| ばねが最小から離れる force | `blocking = (min−ideal)/inverse_compress`。**分母は spec の `ideal − minimum-distance`**（無ければ 0）で `ensure_min_distance` は再計算しない | **未**＝▶ |
 
-⚠️ **この回の歌詞移植は「spec は字面・solve は未移植」**（自己監査で確定）。LP は
-staff→行・行→行・次 system への**ばねを 1 本の `Simple_spacer` に入れて 1 つの force で解く**
-（`distribute_loose_lines :1025-1054`）が、**Lily# はペアごとの静止長を出しているだけ**。
-鎖に余裕があるうちは一致するので台帳は閉じるが、**余裕が無いと別れる**——
-**実測（book LYRV）: 2 行が 12.0 の system 間隔に入らず、LP は負の force で解いて
-第1行を 5.500000 → インク床 3.737890 へ引き下げる。Lily# は 5.500000 のまま。**
-verse 間の段は**ばねが剛体なので**この regime でも一致する（＝台帳点は正しく閉じている）。
-コード側（`ApplyVerseSpacing` の remarks）にも同じ注記あり。
+★ **17 個ある歌詞 fixture のうち動いたのは 3 枚だけ**。配置は `max(basic, インク床)` なので、
+**動かなかった 14 枚は床が既に 5.5 以上だった証拠**＝普通の音楽は LP と同じく床で決まる。
+⇒ **この欠陥が何年も「見た目おかしくない」まま出荷され得た理由**であり、
+**probe を高い旋律＋ascender 無しの音節で組まねば見えなかった理由**。
+
+⚠️ **歌詞の移植は「spec は字面・solve は未移植」**（自己監査）。LP は staff→行・行→行・
+次 system を**1 本の `Simple_spacer`** で解く（`distribute_loose_lines :1025-1054`）が、
+Lily# は**ペアごとの静止長**を出しているだけ。**鎖に余裕があるうちは一致**するので台帳は
+閉じており、**余裕が無いと別れる**——それが ▶。
 
 ### ▶ 次の一手 ＝ **loose line の島（⚠️ 大きい・出力が大きく動く・要判断）**
 
@@ -174,7 +156,7 @@ blocking_force = (床 − 5.5) / 5.5        （f = −1 ではない）
 ```
 
 私は `inverse_compress = ideal − 床` と思い込んでいた＝**f = −1 で解放**という前提。
-**0.158444 はその前提の誤差**で、項として存在しませんでした。
+**0.158444 はその前提の誤差**で、項としては存在しない。
 
 検算（`length(f) = max(床, 5.5 + 5.5f)`）:
 `no` の blocking −0.320384 / `hi` は −0.205432。R=12.5 の `no` は f=−0.319881＝**解放直後**。
