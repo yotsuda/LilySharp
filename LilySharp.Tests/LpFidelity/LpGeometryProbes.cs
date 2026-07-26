@@ -2570,6 +2570,14 @@ internal static class LpGeometryProbes
         // chain cannot distort.
         new("lyrics.verse-step", LYRV, g => g.LyricVerseStep(), FourSystemsPerPageRagged),
 
+        // The SYSTEM gap on that same page, which is the precondition the step above hides.
+        // LilyPond's system-system-spacing does NOT widen for loose lines — measured, the
+        // gap is 12.000000 with one lyric line and 12.000000 with two — so a second verse
+        // does not push the systems apart, it gets squeezed into the room that already
+        // exists. Lily# grows the system's extent instead, so its chain always has room and
+        // can never compress. Font-free on both sides: 12.000000 is a basic-distance.
+        new("lyrics.two-verse.system-gap", LYRV, g => g.StaffGap(), FourSystemsPerPageRagged),
+
         // ⚠️ The same line spelled as an independent ROW is NOT a ledger point, and the
         // measurement that says why is in LyricRowIsSpacedAsAStaffLikeBand (HANDOFF 3): the
         // row is a deliberate Lily# object, so carrying its +5.600000 here would put a
