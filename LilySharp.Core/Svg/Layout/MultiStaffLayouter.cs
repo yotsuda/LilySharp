@@ -1563,9 +1563,14 @@ internal sealed class MultiStaffLayouter
     /// quantity is where a port lands only half the time).
     /// </para>
     /// <para>
-    /// ⚠️ WITHOUT skylines (the hara-kiri layout path, which does not build them) the floor
-    /// falls back to the drawn distance, so such a pair stretches but never compresses.
-    /// Named, not hidden.
+    /// The skylines are the CALLER's, built once per system and shared with the placement
+    /// (<see cref="BuildStaffSkylines"/>) — the floor and the drawn distance have to be the
+    /// same system's answer, since the floor is reconstructed from the distance. There used
+    /// to be a skyline-less overload whose floor fell back to the drawn distance, so a
+    /// spring built through it could stretch but never compress; that is what held a
+    /// hara-kiri'd score's staves at 9.000000 where the same music without the declaration
+    /// squeezed to 8.651797. It was fixed in 2026-07-26 and the overload removed once
+    /// nothing called it, so this argument is no longer nullable.
     /// </para>
     /// <para>
     /// ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
@@ -1602,23 +1607,9 @@ internal sealed class MultiStaffLayouter
     /// </list>
     /// </para>
     /// </remarks>
-    public ImmutableArray<StaffSpring> StaffSprings(
-        MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
-        SkylineBuilder? skylineBuilder = null,
-        ImmutableArray<MeasureLayout> measureLayouts = default)
-        => StaffSprings(
-            score, groups,
-            skylineBuilder is null
-                ? null
-                : BuildAllStaffSkylines(score, skylineBuilder, measureLayouts));
-
-    /// <summary>
-    /// The same springs on skylines the caller has ALREADY built for this system — see
-    /// <see cref="BuildStaffSkylines"/> for why the overload exists.
-    /// </summary>
     internal ImmutableArray<StaffSpring> StaffSprings(
         MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
-        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines)
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
     {
         if (groups.IsDefaultOrEmpty)
             return ImmutableArray<StaffSpring>.Empty;
@@ -1672,12 +1663,8 @@ internal sealed class MultiStaffLayouter
             // vector to the placement AND to these springs. That is a structural change
             // (HANDOFF 2D), not a rewrite of this line.
             double drawn = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
-            double minimum = staffSkylines is null
-                // No skylines to ask, so the drawn distance stands: the pair can be
-                // stretched but not squeezed. Anything lower would be a guess.
-                ? drawn
-                : drawn - Math.Max(0, spec.BasicDistance - AlignmentMinimumWithSkylines(
-                    spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex));
+            double minimum = drawn - Math.Max(0, spec.BasicDistance - AlignmentMinimumWithSkylines(
+                spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex));
             builder.Add(new StaffSpring(
                 upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
         }

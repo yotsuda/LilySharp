@@ -256,13 +256,14 @@ internal sealed class LayoutEngine
                 // distance the same system's answer — a spring's minimum is reconstructed
                 // from the drawn distance (see StaffSprings), so the two cannot come from
                 // different systems.
-                // ⚠️ THE SKYLINES ARE THE POINT. Without them StaffSprings has nothing to
-                // floor against and falls back to the drawn distance, so the pair can
-                // stretch but never squeeze — and a spring's minimum only binds on a page
-                // that COMPRESSES, which is why declaring removeEmpty used to hold the
-                // inside distance at its ideal 9.000000 where the same music without the
-                // declaration squeezed to 8.651797 (LilyPond's own value: audit/lp-geometry
-                // page.compressed.staff-staff-inside).
+                // ⚠️ THE SKYLINES ARE THE POINT, and passing them is no longer optional:
+                // StaffSprings used to have an overload that took none, whose floor fell
+                // back to the drawn distance so the pair could stretch but never squeeze.
+                // A spring's minimum only binds on a page that COMPRESSES, which is why
+                // that overload held a hara-kiri'd score's staves at their ideal 9.000000
+                // where the same music without the declaration squeezed to 8.651797
+                // (LilyPond's own value: audit/lp-geometry page.compressed.staff-staff-inside).
+                // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
                     score, sysStaffGroups, sysStaffSkylines)));
             currentY += sysHeight + _options.SystemSpacing;
