@@ -132,6 +132,20 @@ LP は loose line を system スカイラインに**入れる**。ただし置�
 `AlignmentMinimumBand_IsWellBelowTheDrawnBand`・出力不変）。残りは
 **`LayoutEngine.EstimateLooseLineExtents` の歌詞バンドをそれに差し替える 1 行**と、②の solve。
 
+⚠️ **②の設計制約（着手前に必ず読む）**: 「予約した最小の中へ押し込む」clamp は**間違い**。
+**LP は最小で予約して 5.5 で描く**——差は system の余りから出る。予約に clamp すると
+1 verse の `lyrics.natural.staff-to-lyric`（現在 exact 5.500000）が**壊れる**。
+⇒ **clamp する相手は「実際の隙間」**＝`CalculateLayouts` に渡っている `systems` の Y と
+`systemSkylines` から取ること。①だけ入れて②を予約基準にすると、閉じている点を潰す。
+
+**ばねの式は確定済**（上の★★）。鎖のうち**圧縮できるのは第1ばねだけ**:
+verse 間ばねは ideal 0 ⇒ `set_default_compress_strength` が `(ideal≥min)?ideal−min:0` で **0**、
+stretch も ideal=0 で **0**＝**完全剛体**（実測でも 2.800000 固定）。
+⇒ ②は「第1ばねだけを `max(床, 5.5 + 5.5f)` で解く」形になる。⚠️ ただし
+**f を決めるのは鎖全体**で、null ばね（`HUGE_STRETCH`）側の項は**まだ検算が通っていない**
+（0.158444 の件で 3 回外した相手）。**実際の隙間から f を逆算するのでなく、
+「隙間に収まる範囲で ideal に最も近い長さ」に clamp する**なら鎖の残りを知らずに済む。
+
 ★ **鎖の regime と最小の和は実測で確定した**（2026-07-26。表は `probes/page-vertical.ly` の
 LYRV ヘッダ）。LP バイナリは instrument できないので**摂動と挟み撃ち**で出した:
 
