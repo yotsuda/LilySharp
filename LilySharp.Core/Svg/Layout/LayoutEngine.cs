@@ -113,10 +113,11 @@ internal sealed class LayoutEngine
         // ⚠️ The second arm is a DEGENERATE-INPUT guard, not a spacing branch: a score with
         // no measures has no range to test emptiness over, and asking hara-kiri about the
         // range 0..0 would report every staff empty and hide the lot.
+        var firstStaffSkylines = multiStaffLayouter.BuildStaffSkylines(
+            score, _skylineBuilder, firstSystemMeasureLayouts);
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
-                score, _skylineBuilder, firstSystemMeasureLayouts,
-                0, systemMeasures[0].Count, isFirstSystem: true)
+                score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true)
             : multiStaffLayouter.LayoutStaffGroups(
                 score, _skylineBuilder, firstSystemMeasureLayouts);
         // The system's height is the extent of the groups AS PLACED — see
@@ -179,6 +180,15 @@ internal sealed class LayoutEngine
                     () => multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
                         sysIdx == systemMeasures.Count - 1, commonShortestDuration));
 
+            // THIS system's staff skylines, built ONCE and used by both its placement and
+            // its page springs below. Building them is the expensive part of laying a system
+            // out, and the two halves need the identical list anyway — see
+            // MultiStaffLayouter.BuildStaffSkylines.
+            var sysStaffSkylines = isFirstSystem
+                ? firstStaffSkylines
+                : multiStaffLayouter.BuildStaffSkylines(
+                    score, _skylineBuilder, measureLayouts);
+
             // THIS system's placement, from ITS music. LILYPOND-REF:
             // lily/align-interface.cc:217-268 — each System has its own VerticalAlignment and
             // is spaced against its own staves' skylines, so a system whose ink reaches
@@ -188,7 +198,7 @@ internal sealed class LayoutEngine
             var sysStaffGroups = isFirstSystem
                 ? firstStaffGroupLayouts
                 : multiStaffLayouter.LayoutStaffGroups(
-                    score, _skylineBuilder, measureLayouts,
+                    score, sysStaffSkylines,
                     firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem);
 
             // The height of THIS system: the extent of the groups it actually placed. A
@@ -249,7 +259,7 @@ internal sealed class LayoutEngine
                 // declaration squeezed to 8.651797 (LilyPond's own value: audit/lp-geometry
                 // page.compressed.staff-staff-inside).
                 StaffSprings: multiStaffLayouter.StaffSprings(
-                    score, sysStaffGroups, _skylineBuilder, measureLayouts)));
+                    score, sysStaffGroups, sysStaffSkylines)));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
