@@ -97,6 +97,15 @@ ideal に座る。**コーパスはこの regime に届いていない。**守�
 
 ### ▶ 次の一手
 
+0. ★ **§5.2 の構造的違反が 1 件残っている**（`5fba1ad7` の監査で判明・**報告のみで未修正**）。
+   `VerticalSpacingSpec.Stretchability` が素の `double` なので、**「LP が 0 と宣言」と
+   「LP が宣言しない」が同じ値**になり、`CreateSpring` は両方を ideal に解決する。
+   LP は区別する（`page-layout-problem.cc:1350-1357`＝`set_default_strength()` は**無条件に**
+   走り、**宣言があればその後で上書き**）。⇒ §5.2 の「**今の構造では表現できないから畳む**」
+   そのもの。**nullable にするのが移植で、畳み続けるのは違反。**
+   ⚠️ **今は潜在で顕在ではない**——0 を宣言する唯一の spec（`nonstaff-nonstaff-spacing`）は
+   basic-distance も 0 なので両解釈が一致する。⇒ **出力不変で直せる**（宣言 14 箇所＋
+   `ApplySubProperty`＋テスト）。独立した commit にすること。
 1. **hara-kiri × 歌詞ブロックが未測定**（`c64ee958` の報告事項）。`BuildLooseChainEnds` は
    span を **system ごと**に読むようにしたが、**それを踏む fixture も台帳点も無い**
    （`hara-kiri.lys`/`ossia.lys`/`dashed-barline.lys` はどれも歌詞なし）。
