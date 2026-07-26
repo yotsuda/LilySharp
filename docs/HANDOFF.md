@@ -146,20 +146,30 @@ LYRV ヘッダ）。LP バイナリは instrument できないので**摂動と�
   ⚠️ 区間で傾きが変わる（0.425842→0.846154）＝**他のばねが順に unblock している**。
   この鎖は 2 本ではない。
 
-⚠️ **手計算の最小の和は 11.841556**（`min_offsets[0]` に次 system の staff rel −4.303666 を代入）
-で、実測 12.000000 と **0.158444 ずれる**。
+★★ **0.158444 の正体は「項」ではなく「解放条件の誤り」だった**（2026-07-26・`Simple_spacer`
+と `Spring` を読んで確定。全数値が 6 桁で合う。表と算術は probe ヘッダ）。
 
-★ **「未特定項は定数」を検定して反証した**（2026-07-26。表は probe ヘッダ）。verse 1 を
-`no`（x-height 1.187880）→`hi`（ascender 1.820098）にして**床だけ 0.632218 上げる**と:
+ばねが最小に居るのは **f ≤ blocking_force** の間で、
+`blocking_force = (min_distance − ideal) / inverse_compress_strength`（`spring.cc:78-82`）。
+⚠️ **その `inverse_compress_strength` は spec を読んだ時点の `ideal − spec の minimum-distance`**
+（`spring.cc:205-210`）。`nonstaff-relatedstaff-spacing` に minimum-distance は**無い**ので
+**5.5 − 0 = 5.5**。`ensure_min_distance` が床を上げても **強度は再計算されない**。⇒
 
-- 定数なら R\* も 0.632218 動くはずが、**`hi` は R=13.0 でもまだ床**で、動くのは 13.5。
-  **R\* は 1.0 以上動いた**＝**定数でもインク比例でもない**。
-- ⇒ **疑うべきは最小の項ではなく「解放の仕方」**。`Simple_spacer` が force −1〜0 で
-  **複数のばねを別々の点で unblock する**挙動（傾きが 0.005530→0.846154 と変わる）。
-  **次は測る前に `Simple_spacer::solve` / `compress_line` を読むこと。**
+```
+blocking_force = (床 − 5.5) / 5.5        （f = −1 ではない）
+```
 
-★ **副産物として堅い不変量が 1 つ**: **床から離れると読みはインクに依存しない**——
-R=14.0 で `no` も `hi` も **5.009886**（6 桁一致）。**インクは床だけを決める。**
+私は `inverse_compress = ideal − 床` と思い込んでいた＝**f = −1 で解放**という前提。
+**0.158444 はその前提の誤差**で、項として存在しませんでした。
+
+検算（`length(f) = max(床, 5.5 + 5.5f)`）:
+`no` の blocking −0.320384 / `hi` は −0.205432。R=12.5 の `no` は f=−0.319881＝**解放直後**。
+R=13.0 では f≈−0.242958 で、**`hi` の blocking −0.205432 を下回る＝まだ床**——反証の正体。
+R=14.0 は両者 f=−0.089112 で **5.009886**＝**床の項が式に無い**からインクが消える。
+
+⚠️ **これは memory の「spring の strength は一度だけ設定」と同じ事実**で、
+**probe を作る前にプロジェクト自身が持っていた**。⇒ **移植では loose 行のばねの圧縮強度を
+`ideal − spec の minimum-distance`（無ければ 0）にすること。整列の床で引かない。**
 ⚠️ **全歌詞スコアの system 間隔が動く**（fixture 17 個規模）。歌詞の下に付く機能
 （`pedal-below-lyrics`・`nav-below-clears-lyrics`・`lyrics-below-marcato`）も一緒に動くので、
 **focused session で**。

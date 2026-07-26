@@ -1310,10 +1310,39 @@ probeTag =
 %%     does not depend on the ink at all — at R = 14.000000 both books read 5.009886, to six
 %%     digits. So the syllable's ink sets the floor and nothing else in this chain; once the
 %%     chain has room, the position is decided by the ideals and strengths alone.
-%%     ⇒ The next thing to question is not the minimums but the RELEASE: how Simple_spacer
-%%     behaves between force -1 and 0 when several springs block at different points (the
-%%     slope here changes 0.005530 -> 0.846154, so they do). Read Simple_spacer::solve and
-%%     compress_line before measuring anything else.
+%%     ★★ SOLVED, by reading Simple_spacer and Spring instead of measuring again
+%%     (2026-07-26). THE RELEASE IS NOT AT FORCE -1. A spring sits at its minimum while
+%%     f <= blocking_force, and blocking_force is
+%%       (min_distance - ideal_distance) / inverse_compress_strength   (spring.cc:78-82)
+%%     — where inverse_compress_strength came from set_default_strength as
+%%     ideal - min AT THE TIME THE SPEC WAS READ (spring.cc:205-210), i.e. with the SPEC's
+%%     minimum-distance, which nonstaff-relatedstaff-spacing does not have at all, so it is
+%%     5.5 - 0 = 5.5. ensure_min_distance then raises min_distance to the ink floor and
+%%     update_blocking_force runs, but THE STRENGTH IS NOT RECOMPUTED — the setters never
+%%     recalculate it. So
+%%       blocking_force = (floor - 5.5) / 5.5
+%%     and f = -1 would be the release only if the strength were ideal - FLOOR, which is
+%%     what I had assumed. That assumption is the whole of the 0.158444: it never existed as
+%%     a term, it was the error in a release condition.
+%%
+%%     EVERY NUMBER IN THE TABLE FALLS OUT OF length(f) = max(floor, 5.5 + f * 5.5):
+%%       blocking_force("no") = (3.737890 - 5.5)/5.5 = -0.320384
+%%       blocking_force("hi") = (4.370123 - 5.5)/5.5 = -0.205432
+%%       no-12.5 reads 3.740655 -> f = -0.319881, a hair ABOVE its blocking force: released.
+%%       no-13.0 reads 4.163732 -> f = -0.242958.
+%%       hi-13.0 is at the same R and therefore near the same f = -0.242958, which is BELOW
+%%         hi's blocking force -0.205432 — so it is still blocked, and reads its floor. That
+%%         is the refutation explained: the release point moves with (floor - ideal)/ideal,
+%%         not with the floor.
+%%       R=14.0 reads 5.009886 in BOTH books -> f = -0.089112. Off the floor the length is
+%%         5.5 + f*5.5 with no floor term in it, which is why the ink drops out entirely.
+%%
+%%     ⇒ WHAT A PORT NEEDS: the compress strength of a loose-line spring is the SPEC's
+%%     ideal - minimum-distance (0 when the spec has no minimum-distance), NOT ideal minus
+%%     the alignment floor. ⚠️ This is the same fact the note on staff springs already
+%%     records — the strengths are set once and ensure_min_distance does not touch them —
+%%     applied to a different spring, and it was in the project's own memory before this
+%%     probe was built.
 \book {
   \probeTag "LYRV"
   \paper { max-systems-per-page = #4 ragged-bottom = ##t }
