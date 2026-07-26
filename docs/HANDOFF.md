@@ -34,7 +34,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 最終更新 2026-07-26（第9セッション）/ HEAD は §0 で確認すること
 （⚠️ 自己参照。origin より **59 ahead・未 push**）。
-**3350 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**3351 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 93/110 exact・total |residual| 0.406268 ss / 102 distances・counts 8/8**。
 この回の snapshot 再ベースは **5 枚**（3 枚＋2 枚。それぞれ正当化する台帳キーを message に
 名指し済＝§5.2.1③。ユーザー承認済）。
@@ -63,6 +63,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | ★ **verse 2 の対を起票**（`lyrics.verse-step`・`c5c90192`） | LP は **`nonstaff-nonstaff-spacing`＝ideal 0・min 2.8・padding 0.2**＝**ideal が 0 の逆の形**。実現値は `max(2.8, インク+0.2)` で**テキストに応じて動く**。LP **2.800000** 対 Lily# の平坦な **3.200000**＝**+0.400000**（両方とも予測どおり） |
 | ★ **同じ本が「loose line 再配分が見える regime」を出した** | 2 行になると **12.0 の system 間隔に収まらず、LP は loose 鎖を負の force で解く**（第1行が 5.5 → インク床 3.737890 へ落ちる）。**1 行の対が「効くとすればここ」と予測した場所**が実測で出た。⚠️ 3.737890 は**フォント量**なので点にしない＝**LYRV は第1行距離の対照ではない**（対照は LYRC） |
 | **バンド見積りの `1.8` を配置側と共有**（同 commit・snapshot 2 枚） | ブレーカーが **verse 2 以降 1 verse あたり 1.4 過少予約**していた（§5.2.1②）。⚠️ **忠実度は上がっていない**——共有した 3.2 自体がまだ LP でない（台帳は +0.4 のまま開いている） |
+| ★ **verse ごとの up-skyline を格納**（`044f2f69`・出力不変） | 島の手順①（§2E）。`BuildVerseUpSkylines` が **(system, verse) 単位**で作り、**verse 2 以降はまだ誰も読まない**。`EachVerseGetsItsOwnUpSkyline` が格納値を主張し、**旧フィルタを戻すと落ちる**ことも実証済 |
 
 ⚠️ **この 2 点は「新しい欠陥を探す点」ではなく「前回直した項を守る網」**（§5.2.1④）。
 分解能は tolerance 1e-6 で、守る対象だった欠陥は 0.166667＝**桁が 5 つ違う**。
@@ -83,11 +84,18 @@ LP の 2.8 は **ideal 0 の下の MINIMUM** なので、**平坦な 2.8 は平�
 なる（下降部と上昇部が向き合った瞬間にインク項が勝つ）。移植すべきは
 **`max(minimum-distance 2.8, インク + padding 0.2)` という規則**。
 
-⚠️ **今の構造では表現できない**: `ApplySkylineDrop` は **1 行の verse をまとめて**下げるので
-**verse ごとのスカイラインが無い**。これは §5.2 が名指す「表現できないから畳み込む」型なので、
-**畳み込むのでなく表現できるように直す**のが移植。着手時は
-①verse ごとの up-skyline を持たせる ②`SkylineDrop` を verse 間にも適用（padding 0.2・min 2.8）
-の順で、**①の格納値を主張するテストを先に置く**（島の手順・§2E）。
+**①は済んだ**（`044f2f69`・出力不変）: `BuildVerseUpSkylines` が **(system, verse) ごとに**
+up-skyline を作り、`EachVerseGetsItsOwnUpSkyline` が**格納値を主張**している
+（旧 `VerseNumber > 1` フィルタを戻すと落ちることも実証済）。**verse 2 以降は作ってあるが
+まだ誰も読んでいない**——読ませるのが②。
+
+⚠️ **②の前に、無い metric が 1 つある**: 規則の相手は**上の verse の DOWN-skyline＝下降部**で、
+**Lily# の歌詞書体には測った descent が無い**。`AscenderEm 0.66` / `XHeightEm 0.456` は
+「実際の描画面から測った」ものだが、下降部は `VerseSpacing` のコメントに
+**「descender ~0.9」と文中で概算**されているだけ。⚠️ **ここで数字を発明するのが §5.2 の禁止事項**。
+⇒ **②は「埋め込み歌詞フォントを実測する」から始める**（音楽フォントに対する
+`Extract-EmmentalerMetrics.py` と同じ立て付け）。それから
+`SkylineDrop` を verse 間へ（padding 0.2・min 2.8）。
 
 - ⚠️ **`VerseSpacing` の remarks の `LILYPOND-REF` は「歌詞行は text extent で空く」を指しているのに
   実装は平坦な定数**＝§5.2.1① の「REF の隣が別の式」の**3 例目**。直すときに REF も直すこと。
