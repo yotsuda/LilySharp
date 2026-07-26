@@ -106,11 +106,24 @@ verse 間の段は**ばねが剛体なので**この regime でも一致する�
 Lily# は歌詞を保って system を 4.06 広げる。** どちらも読めるが、忠実度の基準は LP 側。
 ⇒ **閉じると 2 verse のスコアは「きれい」でなく「詰まる」。着手前に承知しておくこと。**
 
-**順序が肝**（間違えやすい）: ①**歌詞ブロックを `MultiStaffLayouter` の system extent から
-外す**（＝`system-system-spacing` から見えなくする）→ ②**loose 行の `Simple_spacer`** で隙間へ配る。
-①だけだと下の譜に重なり、②だけだと無変化。
-⚠️ **Lily# は system の中で歌詞を置き、LP はページを解いた後に置く**——**frame 移行**であって
-編集ではない。**全歌詞スコアの system 間隔が動く。**
+★ **①は「extent から外す」ではない——`LILYPOND-REF` まで確認した正しい機構**（2026-07-26）:
+LP は loose line を system スカイラインに**入れる**。ただし置く位置が
+`minimum_offsets_with_min_dist`＝`Align_interface::get_minimum_translations`
+（`page-layout-problem.cc:593-599`）で、⚠️ **そこに basic-distance は入らない**
+（`align-interface.cc:235-238` の `INT_MAX == end && 0 == start` は**pure 経路専用**で、
+ここは start=end=0 で呼ばれる）。⇒ **spec の `padding` とインクだけ**＝歌詞行は
+**床（≈3.737890）の位置でスカイラインに入る**。だから system ばねの床は
+`3.775 + 3.8 + padding 1 ≈ 8.58 < 12` で**基本距離 12 のまま**になる。
+**描かれる 5.5 は、そのあと loose 鎖を解いた結果**。
+
+⇒ **①＝「歌詞ブロックを *最小* で予約する」**（今の Lily# は**描く距離** 5.5＋verse 段で予約している）。
+⚠️ **これは既に閉じた譜間ばねの発見と同じ形**——「スカイラインは最小高で作る。伸びた位置で
+作り直さない」（§2B・`e467d51e`+`c309b751`）。**同じ原則が loose line にも当たる。**
+
+**順序**: ①**最小で予約**（system ばねが 12 に戻る）→ ②**loose 行の `Simple_spacer`** で
+実際の隙間へ配る。①だけだと下の譜に重なり、②だけだと無変化。
+⚠️ ②は **Lily# は system の中で歌詞を置き、LP はページを解いた後に置く**＝**frame 移行**。
+**全歌詞スコアの system 間隔が動く。**
 
 ### その次 ＝ **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）**
 
