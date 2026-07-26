@@ -160,6 +160,197 @@ internal sealed class LayoutEngine
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
             _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
 
+        var placed = LayoutSystems(new SystemPassContext
+        {
+            Score = score,
+            Layouter = multiStaffLayouter,
+            SystemMeasures = systemMeasures,
+            SystemCache = systemCache,
+            Indent = indent,
+            ShortIndent = shortIndent,
+            CommonShortestDuration = commonShortestDuration,
+            FirstSystemMeasureLayouts = firstSystemMeasureLayouts,
+            FirstStaffGroupLayouts = firstStaffGroupLayouts,
+            FirstStaffSkylines = firstStaffSkylines,
+            EdgeStaffBeams = EdgeStaffBeams,
+            FirstSystemY = currentY,
+        });
+        var systems = placed.Systems;
+        var perSystemExtents = placed.Extents;
+        var perSystemSkylines = placed.Skylines;
+        var perSystemHeights = placed.Heights;
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
+        var perSystemBands = new List<(double bandUp, double bandDown)>();
+        var multiMeasureRanges = new List<(int startMeasure, int measureCount)>();
+        int multiMeasStart = 0;
+        foreach (var sysMeasures in systemMeasures)
+        {
+            multiMeasureRanges.Add((multiMeasStart, sysMeasures.Count));
+            multiMeasStart += sysMeasures.Count;
+        }
+        // Chord symbols on a TEXT ROW (lead sheets) live in their own band and
+        // must not inflate a music staff's up-extent; inline chord symbols
+        // (nameless `chords { }`) sit above their staff and must.
+        var textRowStaves = new HashSet<int>();
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (st.IsTextRow)
+                textRowStaves.Add(gi);
+        var inlineChordNames = score.ChordNames
+            .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
+        AugmentExtentsWithLooseLines(perSystemExtents,
+            score.Lyrics, score.Dynamics, score.FiguredBasses,
+            score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
+            inlineChordNames, perSystemBands);
+
+        // Preliminary annotation pass (see the single-staff path): real
+        // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
+        // spacing extents before the page Y is fixed.
+        var pagingSkylines = RunPreliminaryAnnotationPass(
+            score, systems.ToImmutableArray(), perSystemExtents, perSystemSkylines);
+
+        var (pages, systemsArray) = CreatePages(
+            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
+            pagingSkylines, perSystemHeights, perSystemBands);
+
+        var looseChainEnd = BuildLooseChainEnds(
+            score, pages, systemsArray, perSystemExtents, textRowStaves);
+
+        // Calculate beams/ties/slurs/glissandos per staff
+        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
+            LayoutAllSpanners(score, systemsArray);
+
+        // Resolve cross-staff layouts per voice
+        var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
+        if (!score.CrossStaffItems.IsDefaultOrEmpty)
+        {
+            // Use primary staff index (0) as default source; in full multi-voice,
+            // each voice would have its own staff index.
+            int primaryStaffIdx = 0;
+            int staffCount = score.StaffGroups.Sum(g => g.StaffCount);
+            crossStaffLayouts = CrossStaffEngraver.Calculate(
+                score.CrossStaffItems, primaryStaffIdx, staffCount);
+        }
+
+        // Create primary staff Score for annotation engravers
+        var primaryStaff = score.PrimaryContentStaff;
+        var primaryScore = new Score(
+            primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
+            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision,
+            // The MMR engraver reads score.ChordNames to keep a chord-bearing
+            // rest bar out of a compressed run (see MultiMeasureRestEngraver).
+            chordNames: score.ChordNames)
+        {
+            TempoText = score.TempoText,
+            TempoBeatUnit = score.TempoBeatUnit,
+            TempoDots = score.TempoDots,
+        };
+
+        var anchors = BuildStaffAnchorTables(score, systemsArray, textRowStaves);
+
+        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
+        {
+            Score = primaryScore,
+            Systems = systemsArray,
+            Dynamics = score.Dynamics,
+            Articulations = score.Articulations,
+            GraceNotes = score.GraceNotes,
+            Lyrics = score.Lyrics,
+            MusicMarks = score.MusicMarks,
+            CustomTexts = score.CustomTexts,
+            VoltaBrackets = score.VoltaBrackets,
+            TupletBrackets = score.TupletBrackets,
+            Arpeggios = score.Arpeggios,
+            Measures = primaryStaff.PrimaryVoice.Measures,
+            FiguredBasses = score.FiguredBasses,
+            ChordNames = score.ChordNames,
+            PercentRepeats = score.PercentRepeats,
+            CrossStaffLayouts = crossStaffLayouts,
+            TrillSpanners = score.TrillSpanners,
+            // bracket-visibility = if-no-beam needs the beam groups; without
+            // them every tuplet bracket draws even when fully beamed. The
+            // beam LAYOUTS let the suppressed-bracket number attach to the
+            // beam itself.
+            BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
+            BeamLayouts = allBeamLayouts.ToImmutableArray(),
+            SystemSkylines = perSystemSkylines,
+            TupletForceStemUp = primaryStaff.IsMultiVoice,
+            StaffVoices = primaryStaff.Voices,
+            VoicesByStaff = anchors.VoicesByStaff,
+            MeasuresByStaff = anchors.MeasuresByStaff,
+            StaffYByIndex = anchors.StaffYByIndex,
+            NoteBoundAnchorY = anchors.NoteBoundAnchorY,
+            StaffByIndex = anchors.StaffByIndex,
+            LooseChainEnd = looseChainEnd,
+            LastSpaceableStaffY = anchors.LastSpaceableStaffY,
+        });
+
+        var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
+            CalculateVoiceCollisions(score, systemsArray);
+
+        var result = BuildScoreLayout(pages, systemsArray,
+            allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
+            allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
+            annotations,
+            voiceOffsets,
+            headWipes,
+            dotForceDown,
+            restShifts,
+            partCombineLayouts);
+        return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
+    }
+
+    /// <summary>Everything the per-system pass needs that does not vary between systems.</summary>
+    private sealed class SystemPassContext
+    {
+        public required MultiStaffScore Score { get; init; }
+        public required MultiStaffLayouter Layouter { get; init; }
+        public required List<List<Measure>> SystemMeasures { get; init; }
+        public required SystemLayoutCache? SystemCache { get; init; }
+        public required double Indent { get; init; }
+        public required double ShortIndent { get; init; }
+        public required double CommonShortestDuration { get; init; }
+        public required ImmutableArray<MeasureLayout> FirstSystemMeasureLayouts { get; init; }
+        public required ImmutableArray<StaffGroupLayout> FirstStaffGroupLayouts { get; init; }
+        public required List<(VerticalSkyline Up, VerticalSkyline Down)> FirstStaffSkylines { get; init; }
+        public required Func<ImmutableArray<MeasureLayout>,
+            (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams { get; init; }
+        public required double FirstSystemY { get; init; }
+    }
+
+    /// <summary>What the per-system pass produces, index-aligned by system.</summary>
+    private readonly record struct SystemPlacements(
+        List<SystemLayout> Systems,
+        List<(double upExtent, double downExtent)> Extents,
+        List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
+        List<double> Heights);
+
+    /// <summary>
+    /// Lays out every system: its measures, its staves, its height and its skyline.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <c>Layout</c>'s body. ⚠️ System 0's measure layouts, staff
+    /// skylines and placement are computed by the CALLER (it needs them to fix the first
+    /// system's Y) and handed in, so this pass reuses them rather than recomputing — see
+    /// <see cref="MultiStaffLayouter.BuildStaffSkylines"/> for why building them twice is
+    /// worth avoiding.
+    /// </remarks>
+    private SystemPlacements LayoutSystems(SystemPassContext ctx)
+    {
+        var score = ctx.Score;
+        var multiStaffLayouter = ctx.Layouter;
+        var systemMeasures = ctx.SystemMeasures;
+        var systemCache = ctx.SystemCache;
+        double indent = ctx.Indent;
+        double shortIndent = ctx.ShortIndent;
+        double commonShortestDuration = ctx.CommonShortestDuration;
+        var firstSystemMeasureLayouts = ctx.FirstSystemMeasureLayouts;
+        var firstStaffGroupLayouts = ctx.FirstStaffGroupLayouts;
+        var firstStaffSkylines = ctx.FirstStaffSkylines;
+        var EdgeStaffBeams = ctx.EdgeStaffBeams;
+        double currentY = ctx.FirstSystemY;
+
         // Layout each system with skyline extents
         var systems = new List<SystemLayout>();
         var perSystemExtents = new List<(double upExtent, double downExtent)>();
@@ -270,178 +461,149 @@ internal sealed class LayoutEngine
             firstMeasureIndex += measureCount;
         }
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
-        var perSystemBands = new List<(double bandUp, double bandDown)>();
-        var multiMeasureRanges = new List<(int startMeasure, int measureCount)>();
-        int multiMeasStart = 0;
-        foreach (var sysMeasures in systemMeasures)
-        {
-            multiMeasureRanges.Add((multiMeasStart, sysMeasures.Count));
-            multiMeasStart += sysMeasures.Count;
-        }
-        // Chord symbols on a TEXT ROW (lead sheets) live in their own band and
-        // must not inflate a music staff's up-extent; inline chord symbols
-        // (nameless `chords { }`) sit above their staff and must.
-        var textRowStaves = new HashSet<int>();
-        foreach (var (_, st, gi) in score.EnumerateStaves())
-            if (st.IsTextRow)
-                textRowStaves.Add(gi);
-        var inlineChordNames = score.ChordNames
-            .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
-        AugmentExtentsWithLooseLines(perSystemExtents,
-            score.Lyrics, score.Dynamics, score.FiguredBasses,
-            score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
-            inlineChordNames, perSystemBands);
+        return new SystemPlacements(
+            systems, perSystemExtents, perSystemSkylines, perSystemHeights);
+    }
 
-        // Preliminary annotation pass (see the single-staff path): real
-        // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
-        // spacing extents before the page Y is fixed.
-        List<(VerticalSkyline up, VerticalSkyline down)>? pagingSkylines = perSystemSkylines;
-        {
-            var prelimSystems = systems.ToImmutableArray();
-            var prelimStaff = score.PrimaryContentStaff;
-            var prelimScore = new Score(
-                prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-                ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
-                tupletBrackets: score.TupletBrackets)
-            {
-                TempoText = score.TempoText,
-                TempoBeatUnit = score.TempoBeatUnit,
-                TempoDots = score.TempoDots,
-            };
-            var prelimBeams = new List<BeamLayout>();
-            var prelimTies = new List<TieLayout>();
-            var prelimSlurs = new List<SlurLayout>();
-            foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
-            {
-                // Beam detection breaks at tuplet boundaries by note index, so a
-                // per-staff beam score must see only THIS staff's tuplets — else a
-                // tuplet on another staff would split a beam at a colliding index.
-                var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
-                var staffScore = new Score(
-                    staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: staffTuplets);
-                // Beams detect per voice — expose every voice so voice 2's beam
-                // protrusions join the spacing extents (matches the final pass).
-                // Ties/slurs keep the primary-voice prelim score (unchanged).
-                var staffBeamScore = staff.Voices.Length > 1
-                    ? new Score(
-                        staff.Voices, score.TimeSignature, score.KeySignature,
-                        ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                        tupletBrackets: staffTuplets)
-                    : staffScore;
-                var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
-                prelimBeams.AddRange(staffPrelimBeams);
-                prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
-                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams));
-            }
-            // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
-            // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
-            // every tuplet, so a voice-two tuplet is positioned from voice one's notes and a
-            // lower staff's tuplet from the top staff's — silently, because the FINAL pass
-            // does have the lookups and draws the bracket correctly. Only the spacing pass
-            // was wrong, which is exactly the kind of divergence a snapshot cannot see.
-            // Caught by system.tuplet-bracket-down staying put while its mirror -up moved.
-            var prelimVoicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
-            var prelimMeasuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
-            var prelimStaffByIndex = new Dictionary<int, Staff>();
-            foreach (var (_, st, idx) in score.EnumerateStaves())
-            {
-                prelimVoicesByStaff[idx] = st.Voices;
-                prelimMeasuresByStaff[idx] = st.PrimaryVoice.Measures;
-                prelimStaffByIndex[idx] = st;
-            }
-            // Device-DOWN staff offsets, built the same way the final pass builds its own.
-            // Read from the PRELIMINARY systems on purpose: a staff's offset INSIDE a system
-            // is fixed by the staff layout and paging only moves the system's own Y, so this
-            // is the same table — and it has to exist before paging, which is what needs it.
-            var prelimStaffYByIndex = new Dictionary<int, double>();
-            if (prelimSystems.Length > 0 && !prelimSystems[0].StaffGroups.IsDefaultOrEmpty)
-                foreach (var sg in prelimSystems[0].StaffGroups)
-                    foreach (var st in sg.Staves)
-                        prelimStaffYByIndex[st.StaffIndex] = -st.Y;
 
-            var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
-            {
-                Score = prelimScore,
-                Systems = prelimSystems,
-                Dynamics = score.Dynamics,
-                Articulations = score.Articulations,
-                GraceNotes = score.GraceNotes,
-                Lyrics = score.Lyrics,
-                MusicMarks = score.MusicMarks,
-                CustomTexts = score.CustomTexts,
-                VoltaBrackets = score.VoltaBrackets,
-                TupletBrackets = score.TupletBrackets,
-                Arpeggios = score.Arpeggios,
-                Measures = prelimStaff.PrimaryVoice.Measures,
-                FiguredBasses = score.FiguredBasses,
-                ChordNames = score.ChordNames,
-                PercentRepeats = score.PercentRepeats,
-                TrillSpanners = score.TrillSpanners,
-                BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
-                BeamLayouts = prelimBeams.ToImmutableArray(),
-                SystemSkylines = perSystemSkylines,
-                TupletForceStemUp = prelimStaff.IsMultiVoice,
-                StaffVoices = prelimStaff.Voices,
-                VoicesByStaff = prelimVoicesByStaff,
-                MeasuresByStaff = prelimMeasuresByStaff,
-                StaffYByIndex = prelimStaffYByIndex,
-                StaffByIndex = prelimStaffByIndex,
-            });
-            EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
-                prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
-            pagingSkylines = AugmentSkylinesForPaging(
-                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-                prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
-                prelimTies.ToImmutableArray());
-        }
-
-        var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            pagingSkylines, perSystemHeights, perSystemBands);
-
-        var looseChainEnd = BuildLooseChainEnds(
-            score, pages, systemsArray, perSystemExtents, textRowStaves);
-
-        // Calculate beams/ties/slurs/glissandos per staff
-        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
-            LayoutAllSpanners(score, systemsArray);
-
-        // Resolve cross-staff layouts per voice
-        var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
-        if (!score.CrossStaffItems.IsDefaultOrEmpty)
-        {
-            // Use primary staff index (0) as default source; in full multi-voice,
-            // each voice would have its own staff index.
-            int primaryStaffIdx = 0;
-            int staffCount = score.StaffGroups.Sum(g => g.StaffCount);
-            crossStaffLayouts = CrossStaffEngraver.Calculate(
-                score.CrossStaffItems, primaryStaffIdx, staffCount);
-        }
-
-        // Create primary staff Score for annotation engravers
-        var primaryStaff = score.PrimaryContentStaff;
-        var primaryScore = new Score(
-            primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision,
-            // The MMR engraver reads score.ChordNames to keep a chord-bearing
-            // rest bar out of a compressed run (see MultiMeasureRestEngraver).
-            chordNames: score.ChordNames)
+    /// <summary>
+    /// The PRELIMINARY annotation pass: lays the annotations out against provisional system
+    /// positions purely so their real protrusions can join the spacing extents and skylines
+    /// BEFORE the page Y is fixed, and returns the skylines paging should use.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <c>Layout</c>'s body, where it already stood in a block of
+    /// its own. ⚠️ It MUTATES <paramref name="perSystemExtents"/> — that is the point of the
+    /// pass, and it is why the caller must run it before <c>CreatePages</c>.
+    /// <para>
+    /// ⚠️ The annotations computed here are THROWN AWAY; the final pass recomputes them
+    /// against the paged systems. Only their extents survive, which is why a divergence
+    /// between the two passes is invisible in the drawing and shows up as spacing — see the
+    /// per-staff lookup comment inside, which records one that did exactly that.
+    /// </para>
+    /// </remarks>
+    private List<(VerticalSkyline up, VerticalSkyline down)>? RunPreliminaryAnnotationPass(
+        MultiStaffScore score, ImmutableArray<SystemLayout> prelimSystems,
+        List<(double upExtent, double downExtent)> perSystemExtents,
+        List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines)
+    {
+        var prelimStaff = score.PrimaryContentStaff;
+        var prelimScore = new Score(
+            prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
+            tupletBrackets: score.TupletBrackets)
         {
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
         };
+        var prelimBeams = new List<BeamLayout>();
+        var prelimTies = new List<TieLayout>();
+        var prelimSlurs = new List<SlurLayout>();
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        {
+            // Beam detection breaks at tuplet boundaries by note index, so a
+            // per-staff beam score must see only THIS staff's tuplets — else a
+            // tuplet on another staff would split a beam at a colliding index.
+            var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
+            var staffScore = new Score(
+                staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                tupletBrackets: staffTuplets);
+            // Beams detect per voice — expose every voice so voice 2's beam
+            // protrusions join the spacing extents (matches the final pass).
+            // Ties/slurs keep the primary-voice prelim score (unchanged).
+            var staffBeamScore = staff.Voices.Length > 1
+                ? new Score(
+                    staff.Voices, score.TimeSignature, score.KeySignature,
+                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: staffTuplets)
+                : staffScore;
+            var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
+            prelimBeams.AddRange(staffPrelimBeams);
+            prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
+            prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams));
+        }
+        // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
+        // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
+        // every tuplet, so a voice-two tuplet is positioned from voice one's notes and a
+        // lower staff's tuplet from the top staff's — silently, because the FINAL pass
+        // does have the lookups and draws the bracket correctly. Only the spacing pass
+        // was wrong, which is exactly the kind of divergence a snapshot cannot see.
+        // Caught by system.tuplet-bracket-down staying put while its mirror -up moved.
+        var prelimVoicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
+        var prelimMeasuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        var prelimStaffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+        {
+            prelimVoicesByStaff[idx] = st.Voices;
+            prelimMeasuresByStaff[idx] = st.PrimaryVoice.Measures;
+            prelimStaffByIndex[idx] = st;
+        }
+        // Device-DOWN staff offsets, built the same way the final pass builds its own.
+        // Read from the PRELIMINARY systems on purpose: a staff's offset INSIDE a system
+        // is fixed by the staff layout and paging only moves the system's own Y, so this
+        // is the same table — and it has to exist before paging, which is what needs it.
+        var prelimStaffYByIndex = new Dictionary<int, double>();
+        if (prelimSystems.Length > 0 && !prelimSystems[0].StaffGroups.IsDefaultOrEmpty)
+            foreach (var sg in prelimSystems[0].StaffGroups)
+                foreach (var st in sg.Staves)
+                    prelimStaffYByIndex[st.StaffIndex] = -st.Y;
 
+        var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
+        {
+            Score = prelimScore,
+            Systems = prelimSystems,
+            Dynamics = score.Dynamics,
+            Articulations = score.Articulations,
+            GraceNotes = score.GraceNotes,
+            Lyrics = score.Lyrics,
+            MusicMarks = score.MusicMarks,
+            CustomTexts = score.CustomTexts,
+            VoltaBrackets = score.VoltaBrackets,
+            TupletBrackets = score.TupletBrackets,
+            Arpeggios = score.Arpeggios,
+            Measures = prelimStaff.PrimaryVoice.Measures,
+            FiguredBasses = score.FiguredBasses,
+            ChordNames = score.ChordNames,
+            PercentRepeats = score.PercentRepeats,
+            TrillSpanners = score.TrillSpanners,
+            BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
+            BeamLayouts = prelimBeams.ToImmutableArray(),
+            SystemSkylines = perSystemSkylines,
+            TupletForceStemUp = prelimStaff.IsMultiVoice,
+            StaffVoices = prelimStaff.Voices,
+            VoicesByStaff = prelimVoicesByStaff,
+            MeasuresByStaff = prelimMeasuresByStaff,
+            StaffYByIndex = prelimStaffYByIndex,
+            StaffByIndex = prelimStaffByIndex,
+        });
+        EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
+            prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
+        return AugmentSkylinesForPaging(
+            perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
+            prelimAnn.VoltaBrackets, prelimSystems,
+            prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+            prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
+            prelimTies.ToImmutableArray());
+    }
+
+    /// <summary>
+    /// The per-staff lookups and the anchor Ys the annotation engravers position against.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <c>Layout</c>'s body. Everything here is read from the FIRST
+    /// laid-out system on purpose: a staff's offset INSIDE a system is fixed by the staff
+    /// layout, and paging only moves the system's own Y. ⚠️ Hara-kiri can hide different
+    /// staves per system, which this does not model — a simplification all four tables carry.
+    /// </remarks>
+    private static StaffAnchorTables BuildStaffAnchorTables(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
+        HashSet<int> textRowStaves)
+    {
         // Per-staff lookups so a dynamic is positioned under its OWN staff (clears
         // that staff's stems) and offset to it — score-level dynamics otherwise all
-        // collapse onto the first staff. Staff vertical offsets are uniform across
-        // systems, so read them from the first laid-out system.
+        // collapse onto the first staff.
         var voicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
         var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
         var staffByIndex = new Dictionary<int, Staff>();
@@ -498,10 +660,6 @@ internal sealed class LayoutEngine
         // never makes them a `last_spaceable_line`. A lead sheet's chord row sits ABOVE the
         // staff, so taking the bottom-most staff blindly would anchor on the wrong thing on
         // exactly the scores that have lyrics.
-        // ⚠️ Read from the FIRST system, like staffYByIndex and noteBoundAnchorY above: a
-        // staff's offset INSIDE a system is fixed by the staff layout. Hara-kiri can hide
-        // different staves per system, which this does not model — the same simplification
-        // the two tables above already carry.
         double lastSpaceableStaffY = 0;
         if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
         {
@@ -523,57 +681,21 @@ internal sealed class LayoutEngine
             }
         }
 
-        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
-        {
-            Score = primaryScore,
-            Systems = systemsArray,
-            Dynamics = score.Dynamics,
-            Articulations = score.Articulations,
-            GraceNotes = score.GraceNotes,
-            Lyrics = score.Lyrics,
-            MusicMarks = score.MusicMarks,
-            CustomTexts = score.CustomTexts,
-            VoltaBrackets = score.VoltaBrackets,
-            TupletBrackets = score.TupletBrackets,
-            Arpeggios = score.Arpeggios,
-            Measures = primaryStaff.PrimaryVoice.Measures,
-            FiguredBasses = score.FiguredBasses,
-            ChordNames = score.ChordNames,
-            PercentRepeats = score.PercentRepeats,
-            CrossStaffLayouts = crossStaffLayouts,
-            TrillSpanners = score.TrillSpanners,
-            // bracket-visibility = if-no-beam needs the beam groups; without
-            // them every tuplet bracket draws even when fully beamed. The
-            // beam LAYOUTS let the suppressed-bracket number attach to the
-            // beam itself.
-            BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
-            BeamLayouts = allBeamLayouts.ToImmutableArray(),
-            SystemSkylines = perSystemSkylines,
-            TupletForceStemUp = primaryStaff.IsMultiVoice,
-            StaffVoices = primaryStaff.Voices,
-            VoicesByStaff = voicesByStaff,
-            MeasuresByStaff = measuresByStaff,
-            StaffYByIndex = staffYByIndex,
-            NoteBoundAnchorY = noteBoundAnchorY,
-            StaffByIndex = staffByIndex,
-            LooseChainEnd = looseChainEnd,
-            LastSpaceableStaffY = lastSpaceableStaffY,
-        });
-
-        var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
-            CalculateVoiceCollisions(score, systemsArray);
-
-        var result = BuildScoreLayout(pages, systemsArray,
-            allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
-            allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
-            annotations,
-            voiceOffsets,
-            headWipes,
-            dotForceDown,
-            restShifts,
-            partCombineLayouts);
-        return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
+        return new StaffAnchorTables(
+            voicesByStaff, measuresByStaff, staffByIndex, staffYByIndex,
+            noteBoundAnchorY, lastSpaceableStaffY);
     }
+
+    /// <summary>
+    /// The per-staff lookups and anchor Ys <see cref="BuildStaffAnchorTables"/> produces.
+    /// </summary>
+    private readonly record struct StaffAnchorTables(
+        Dictionary<int, ImmutableArray<Voice>> VoicesByStaff,
+        Dictionary<int, ImmutableArray<Measure>> MeasuresByStaff,
+        Dictionary<int, Staff> StaffByIndex,
+        Dictionary<int, double> StaffYByIndex,
+        Dictionary<int, double> NoteBoundAnchorY,
+        double LastSpaceableStaffY);
 
     /// <summary>
     /// Lays out beams, ties, slurs and glissandos for every staff (each detected
