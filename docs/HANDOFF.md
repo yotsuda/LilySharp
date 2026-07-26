@@ -32,253 +32,103 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第9セッション・**歌詞の縦**）/ HEAD は §0 で確認すること
-（⚠️ 自己参照。origin より **75 ahead・未 push**）。
-**3353 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 94/111 exact・total |residual| 4.066268 ss / 103 distances・counts 8/8**。
-snapshot 再ベースは **8 枚**（3＋2＋3。台帳キーを message に名指し済＝§5.2.1③・承認済）。
+最終更新 2026-07-26（第10セッション・**loose line の島を閉じた**）/ HEAD は §0 で確認すること
+（⚠️ 自己参照。origin より **79 ahead・未 push**）。
+**3356 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 94/113 exact・total |residual| 0.212348 ss / 105 distances・counts 8/8**。
+snapshot 再ベースは **18 枚**（14＋4。台帳キーを message に名指し済＝§5.2.1③・承認済）。
 
-⚠️ **total 4.066268 の 4.06 は「最後に開いた 1 点」**（`lyrics.two-verse.system-gap`＝下の ▶）。
-**従来の非ゼロ 16 点はこの回 1 つも動いていない。** 増減は全部「点の開閉」で退行は無い:
-`0.006268 →(2点開く) 2.006268 →(移植) 0.006268 →(独立行を開く) 5.606268 →(§3 の決定で降ろす)
-0.006268 →(verse を開く) 0.406268 →(規則を移植) 0.006268 →(system gap を開く) 4.066268`。
-⚠️ **total を過去の値と直接比べない**（点集合が違う。104→111）。
+⚠️ **total を前回の 4.066268 と直接比べない**（点集合が 103→105 に変わった）。
+比べるなら点ごと: **`lyrics.two-verse.system-gap` 4.060000 → 0.157200**、新規の
+`barnumber.*` 2 点が 1.185560 → −0.024440。**従来の非ゼロ 16 点はこの回も 1 つも動いていない。**
 
 ### このセッションでやったこと（詳細は各 commit・台帳の `why`・probe ヘッダへ）
 
-| | |
+| commit | |
 |---|---|
-| **鎖の底に点 2 つ**（`dd46d39b`） | 予測どおり exact。⚠️ **f > 0.111111 まで伸びるページではこの 2 点は別の量**（foot spring が開く） |
-| **歌詞の縦を 4 点起票→2 点を移植して閉じ、1 点は §3 の決定、1 点は開いたまま** | 下の表と ▶ |
-| **§1/§2D の stale を 3 件訂正**（top spring・「descent が無い」・「②は frame 移行」） | ⚠️ **どれも私がこの回に書いた記述**。§0 の「毎回複数踏む」は**同一セッション内でも起きる** |
+| `ee697b28` 台帳点 2 つを起票 | 小節番号の上方インク。**コード変更ゼロ・出力不変** |
+| `2cefff77` 小節番号の配置 | `break-alignment-list` の三つ組を**逆に読んでいた**。snapshot 14 枚 |
+| `ce3be1af` **`distribute_loose_lines` 移植** | 予約＝最小＋鎖を解く。snapshot 4 枚 |
 
-**歌詞の縦で確定したこと**（LP の式。移植済／未済は右）:
+★ **この回の欠陥も 3 件とも「Lily# が発明した箇所」だった**（§5.2.1 の方針は 10 セッション連続で正しい）。
 
-| LP | 値・出典 | Lily# |
-|---|---|---|
-| 譜→歌詞行の基本距離 | `nonstaff-relatedstaff-spacing` basic 5.5 / padding 0.5 / stretch 1（`engraver-init.ly:648-652`） | **移植済**（`2b901484`。padding は `SkylineDrop` に既存、stretch は不活性） |
-| verse 間 | `nonstaff-nonstaff-spacing` **ideal 0** / min 2.8 / padding 0.2（`:653-656`）⇒ 実現値 `max(2.8, インク+0.2)`・**完全剛体** | **移植済**（`9953012f`。`ApplyVerseSpacing` が system ごとに解く） |
-| 1 行なら**再配分は見えない** | 非 affinity 側が `LARGE_STRETCH 10e5`／`HUGE_STRETCH 10e7`（`:1257-1338`。LP のコメントが意図と明言） | ——（移植不要と確定） |
-| system ばねは loose 行で**広がらない** | スカイラインは `get_minimum_translations` の位置＝**basic-distance を含まない**（`:593-599`＋`align-interface.cc:235-238` は pure 枝専用） | **未**＝▶ |
-| ばねが最小から離れる force | `blocking = (min−ideal)/inverse_compress`。**分母は spec の `ideal − minimum-distance`**（無ければ 0）で `ensure_min_distance` は再計算しない | **未**＝▶ |
+★★ **島は 1 つでは終わらなかった。移植したら第2の欠陥が落ちてきて、そちらが先だった。**
+`distribute_loose_lines` だけ入れると `lyrics.two-verse.system-gap` は 13.367200 止まりで、
+**同時に exact だった `lyrics.natural.staff-to-lyric` が壊れた**（5.500000 → 4.603077）。
+どちらも原因は 1 つ＝**継続 system が譜の上に予約するインクが 1.256334 過大**で、その正体は
+小節番号。⇒ **§5.0-4「対の食い違いが第2の欠陥を出す」がそのまま起きた。**
 
-★ **17 個ある歌詞 fixture のうち動いたのは 3 枚だけ**。配置は `max(basic, インク床)` なので、
-**動かなかった 14 枚は床が既に 5.5 以上だった証拠**＝普通の音楽は LP と同じく床で決まる。
-⇒ **この欠陥が何年も「見た目おかしくない」まま出荷され得た理由**であり、
-**probe を高い旋律＋ascender 無しの音節で組まねば見えなかった理由**。
+### ★ 小節番号でわかったこと（恒久・**同じ罠がまだ他にある**）
 
-⚠️ **歌詞の移植は「spec は字面・solve は未移植」**（自己監査）。LP は staff→行・行→行・
-次 system を**1 本の `Simple_spacer`** で解く（`distribute_loose_lines :1025-1054`）が、
-Lily# は**ペアごとの静止長**を出しているだけ。**鎖に余裕があるうちは一致**するので台帳は
-閉じており、**余裕が無いと別れる**——それが ▶。
+`define-grobs.scm:334` の `self-alignment-X = (break-alignment-list LEFT LEFT RIGHT)` の
+三つ組は `output-lib.scm:506` が **`(end-of-line middle begin-of-line)`** と名付けている
+⇒ **行頭は RIGHT**。Lily# は逆に読んで左揃えし、番号を clef の上に置き、
+above-staff stacker がそれを持ち上げていた。
+⚠️ **`LILYPOND-REF` は正しく付いていた。読み方だけが逆だった**＝§5.2.1① の形。
+⚠️ **`break-alignment-list` / `break-visibility` を読むときは必ず三つ組の順序を確認する。**
+他の grob にも同じ書式があるので、次に触るときは同じ確認をすること。
 
-### ▶ 次の一手 ＝ **loose line の島（⚠️ 大きい・出力が大きく動く・要判断）**
+実測（LP 2.26.0・books BNL/BNH）: 番号 X `(-0.956013 .. 0.000000)`／clef X
+`(0.800000 .. 3.365000)`＝**0.8 離れて交わらない**。番号は左マージンに垂れる。
 
-**`ce39df14` で島の turning point を測って起票した**: `lyrics.two-verse.system-gap`
-＝ LP **12.000000** 対 Lily# **16.060000**（**+4.060000**）。
+### ▶ 次の一手 ＝ **multi-staff の歌詞アンカー（⚠️ 台帳点が先）**
 
-⚠️ **`distribute_loose_lines` だけ移植しても 1 ピクセルも動かない。** loose line はページの鎖に
-居ないので **`system-system-spacing` は loose line のぶん広がらない**（実測: 歌詞 1 行でも
-2 行でも staff 間は **12.000000** のまま）。第2 verse は system を押し広げず、**既にある隙間へ
-押し込まれる**——だから LP はその鎖を**負の force** で解いて第1行を 5.5 → 床 3.737890 まで
-引き下げる。**Lily# はその regime に入れない**（歌詞ブロックが**system の extent に入る**ので
-鎖は常に余裕がある＝force 0）。**2 つは同じ欠陥の両端。**
+`DistributeLooseLines` は **単一譜 system の鎖しか解いていない**（remarks に明記）。理由:
 
-★ **量の意味**（見た目では欠陥に見えないので明記）: **LP は system を 12.0 に保って歌詞を詰める。
-Lily# は歌詞を保って system を 4.06 広げる。** どちらも読めるが、忠実度の基準は LP 側。
-⇒ **閉じると 2 verse のスコアは「きれい」でなく「詰まる」。着手前に承知しておくこと。**
+- **multi-staff の legacy 配置は system 原点の下 `staffBottom` に anchor している**。LP は
+  **`last_spaceable_line`**（`page-layout-problem.cc:943-944`）＝その system の**最後の譜**に
+  anchor する。⇒ Lily# の basic-distance は**別の譜から測られていて**、実際にはスカイライン
+  最小しか効いていない。**アンカーが違う鎖を解くとその誤差ぶん行が動く**ので force 0 のまま。
+- **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）は次の譜へ
+  `nonstaff-unrelatedstaff-spacing` ＋ LARGE_STRETCH（`:1301-1312`）で閉じる。その最小は
+  **次の譜の up-skyline 対 最終 verse の descender**で、engraver に渡っていない入力。
 
-★ **①は「extent から外す」ではない——`LILYPOND-REF` まで確認した正しい機構**（2026-07-26）:
-LP は loose line を system スカイラインに**入れる**。ただし置く位置が
-`minimum_offsets_with_min_dist`＝`Align_interface::get_minimum_translations`
-（`page-layout-problem.cc:593-599`）で、⚠️ **そこに basic-distance は入らない**
-（`align-interface.cc:235-238` の `INT_MAX == end && 0 == start` は**pure 経路専用**で、
-ここは start=end=0 で呼ばれる）。⇒ **spec の `padding` とインクだけ**＝歌詞行は
-**床（≈3.737890）の位置でスカイラインに入る**。だから system ばねの床は
-`3.775 + 3.8 + padding 1 ≈ 8.58 < 12` で**基本距離 12 のまま**になる。
-**描かれる 5.5 は、そのあと loose 鎖を解いた結果**。
+⇒ **順序**: ①**アンカーの対を起票**（LP は最後の譜から 5.5、Lily# は原点から 7.5 ＝ 約 3 ss の
+はず。実測していないので予測として書くこと）→ ②アンカーを移植 → ③その鎖も解く。
+⚠️ ①をやらずに②へ行かないこと——**この島がまさにそれで 1 セッション溶けた**（上の ★★）。
 
-⇒ **①＝「歌詞ブロックを *最小* で予約する」**（今の Lily# は**描く距離** 5.5＋verse 段で予約している）。
-⚠️ **これは既に閉じた譜間ばねの発見と同じ形**——「スカイラインは最小高で作る。伸びた位置で
-作り直さない」（§2B・`e467d51e`+`c309b751`）。**同じ原則が loose line にも当たる。**
+### その次の候補
 
-**順序**: ①**最小で予約**（system ばねが 12 に戻る）→ ②**loose 行の `Simple_spacer`** で
-実際の隙間へ配る。①だけだと下の譜に重なり、②だけだと無変化。**1 コミットで入れること。**
-
-★ **②は frame 移行ではない**（前の記述を訂正・2026-07-26 実コードで確認）:
-**Lily# も歌詞をページ配置の「後」に置いている**——`LayoutEngine.cs:378` で `CreatePages`、
-`:1649` で `CalculateLayouts`。しかも `systems`（Y 入り）と `systemSkylines` が渡っている。
-⇒ **隙間は歌詞を置く場所で既に分かる**＝②は `LyricEngraver` 内のローカルな solve で済む。
-
-**①の値は用意して主張済**（`LyricEngraver.AlignmentMinimumBand`＋
-`AlignmentMinimumBand_IsWellBelowTheDrawnBand`・出力不変）。残りは
-**`LayoutEngine.EstimateLooseLineExtents` の歌詞バンドをそれに差し替える 1 行**と、②の solve。
-
-⚠️ **②の設計制約（着手前に必ず読む）**: 「予約した最小の中へ押し込む」clamp は**間違い**。
-**LP は最小で予約して 5.5 で描く**——差は system の余りから出る。予約に clamp すると
-1 verse の `lyrics.natural.staff-to-lyric`（現在 exact 5.500000）が**壊れる**。
-⇒ **clamp する相手は「実際の隙間」**＝`CalculateLayouts` に渡っている `systems` の Y と
-`systemSkylines` から取ること。①だけ入れて②を予約基準にすると、閉じている点を潰す。
-
-**ばねの式は確定済**（上の★★）。鎖のうち**圧縮できるのは第1ばねだけ**:
-verse 間ばねは ideal 0 ⇒ `set_default_compress_strength` が `(ideal≥min)?ideal−min:0` で **0**、
-stretch も ideal=0 で **0**＝**完全剛体**（実測でも 2.800000 固定）。
-⇒ ②は「第1ばねだけを `max(床, 5.5 + 5.5f)` で解く」形になる。⚠️ ただし
-**f を決めるのは鎖全体**で、null ばね（`HUGE_STRETCH`）側の項は**まだ検算が通っていない**
-（0.158444 の件で 3 回外した相手）。**実際の隙間から f を逆算するのでなく、
-「隙間に収まる範囲で ideal に最も近い長さ」に clamp する**なら鎖の残りを知らずに済む。
-
-★ **鎖の regime と最小の和は実測で確定した**（2026-07-26。表は `probes/page-vertical.ly` の
-LYRV ヘッダ）。LP バイナリは instrument できないので**摂動と挟み撃ち**で出した:
-
-- **内側の system 0-2 は staff→v1 = 3.737890（整列最小）、最後の system 3 だけ 5.500001**。
-  最後だけ緩いのは鎖が `-page_height_` まで伸びるから。**3.737890 の内訳も 6 桁で合う**
-  （2.050000 ＋ 1.187880 ＋ 0.500000）。
-- **摂動①** system 間 12→20 で内側が 3.737890→**5.500000**＝**圧縮されていた**。
-  **摂動②** `nonstaff-relatedstaff-spacing` の basic-distance 5.5→8 で
-  **内側は不動**・最後の system だけ 8.000001＝**最小に固定**（override は効いている）。
-- ★ **挟み撃ちで Σ(最小) = 12.000000**（R=12 で床、13 で 4.163732、14 で 5.009886、
-  15 で ideal。第1区間の傾き 0.425842 で外挿すると R*=12.000000）＝**臨界圧縮**。
-  ⚠️ 区間で傾きが変わる（0.425842→0.846154）＝**他のばねが順に unblock している**。
-  この鎖は 2 本ではない。
-
-★★ **0.158444 の正体は「項」ではなく「解放条件の誤り」だった**（2026-07-26・`Simple_spacer`
-と `Spring` を読んで確定。全数値が 6 桁で合う。表と算術は probe ヘッダ）。
-
-ばねが最小に居るのは **f ≤ blocking_force** の間で、
-`blocking_force = (min_distance − ideal) / inverse_compress_strength`（`spring.cc:78-82`）。
-⚠️ **その `inverse_compress_strength` は spec を読んだ時点の `ideal − spec の minimum-distance`**
-（`spring.cc:205-210`）。`nonstaff-relatedstaff-spacing` に minimum-distance は**無い**ので
-**5.5 − 0 = 5.5**。`ensure_min_distance` が床を上げても **強度は再計算されない**。⇒
-
-```
-blocking_force = (床 − 5.5) / 5.5        （f = −1 ではない）
-```
-
-私は `inverse_compress = ideal − 床` と思い込んでいた＝**f = −1 で解放**という前提。
-**0.158444 はその前提の誤差**で、項としては存在しない。
-
-検算（`length(f) = max(床, 5.5 + 5.5f)`）:
-`no` の blocking −0.320384 / `hi` は −0.205432。R=12.5 の `no` は f=−0.319881＝**解放直後**。
-R=13.0 では f≈−0.242958 で、**`hi` の blocking −0.205432 を下回る＝まだ床**——反証の正体。
-R=14.0 は両者 f=−0.089112 で **5.009886**＝**床の項が式に無い**からインクが消える。
-
-⚠️ **これは memory の「spring の strength は一度だけ設定」と同じ事実**で、
-**probe を作る前にプロジェクト自身が持っていた**。⇒ **移植では loose 行のばねの圧縮強度を
-`ideal − spec の minimum-distance`（無ければ 0）にすること。整列の床で引かない。**
-⚠️ **全歌詞スコアの system 間隔が動く**（fixture 17 個規模）。歌詞の下に付く機能
-（`pedal-below-lyrics`・`nav-below-clears-lyrics`・`lyrics-below-marcato`）も一緒に動くので、
-**focused session で**。
-
-### その次 ＝ **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）**
-
-⚠️ **1 つの音節に高さが 2 つある**（§5.2.1②）。**下降部は書体のアウトライン実測**
-（`TextFontMetrics`・`9953012f` で導入）、**上昇部は文字クラス別の em 分数のまま**
-（`AscenderEm` / `XHeightEm` / `CjkAscenderEm`）。
-
-⚠️ **一括で移すのは試して差し戻した。理由が本体**: **TeX Gyre Schola に CJK グリフが無い**ので、
-かな音節のアウトラインは**空＝up-extent が 0** になり、`CjkAscenderEm` が存在する理由が消える。
-**実測: snapshot 14 枚が動き `UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin`
-が落ちる**。⇒ **先に CJK の受け皿**（CJK 書体を持つか、非 Latin は表に落とす分岐か）を決めること。
-1 行の置換では閉じない。
-
-- ⚠️ **`VerseSpacing` はもう配置に効いていない**（`ApplyVerseSpacing` が規則で積み直す）。
-  残っているのは**行 ROW の帯**と旧経路の初期値。§5.2.1① の「REF の隣が別の式」だった記述も
-  規則化で解消済み。
-- **`LayoutEngine` のバンド見積りは規則の上限**（`VerseStepBound`）を読む。**平坦な定数に戻さないこと**
-  ——CJK では 3.2 が**過少**になる（2.816+0.384+0.2 = 3.4）。
-  ⚠️ ただし**上限の取り方（全音節の最大どうし）は LP の行ではない**＝`LILYSHARP-OWN` と明示済。
-  LP の見積りは `get_maybe_pure_property` と `Align_interface` の pure 枝で同じ spec を引く。
-- **`distribute_loose_lines` の solve 自体は依然として未移植**（上の⚠️）。着手するなら
-  **loose 行だけの `Simple_spacer`** を入れる島で、対は **LYRV の第1行（3.737890）**——
-  ⚠️ ただしその数はフォント量なので、**点にするなら床に座らない音楽で組み直すこと**。
-
-⚠️ **床そのもの（両engraver のインク）はどの点でも測っていない。** 低い旋律／背の高い音節は
-別の量で、**別の点＋「誰のインクが入ってよいか」の規則**が要る（§5.3）。
-
-#### その次の候補
-
-- ~~**loose line 再配分の不在**~~ — ⚠️ **これは狙う対象ではないと実測で分かった**（`6faa4d5a`）。
-  歌詞行 1 本なら **LP も伸ばさない**（非 affinity 側が `HUGE_STRETCH`/`LARGE_STRETCH`）。
-  効くとすれば **同じ譜間に loose line が 2 本以上**あるとき（間が `nonstaff-nonstaff-spacing`）。
-  対を作るならそこ。
-- **独立 lyrics 行の枝**（`LyricRowBaseline` = 2.6）は**まだ点が無い**。同型に見えるが別経路なので、
-  今回の点の原因を流用せず**自分の probe を持たせる**こと。
-- **ossia ペアは rigid のまま**（`gap * OssiaScale` は Lily# 独自で、spec のばねを当てると
-  force 0 で動いてしまう）。**ossia 距離そのものの移植が先**。
-- **§2A の残り**: ゲートは継続行 prefix をスコア全体で 1 つ・measure 0 で計算する（改行位置が
-  未定のため）⇒ **mid-piece の key change 後の行は古い幅のまま**。構造的な解は **per-line prefix**
-  で、`MeasureSpringData` に per-measure `LineStartSpring` の受け皿が既にある。
+- **`lyrics.two-verse.system-gap` の残り 0.157200 は機構ではなくフォント量**。内訳は
+  **0.046334**＝Lily# が小節番号の baseline 上に取る 1.3 の cap-height と LP の実字高の差、
+  残りは**歌詞面のインク**（Lily# の歌詞書体は LP より約 27% 大きい）。
+  ⚠️ **spacing をいじって埋めない。** 埋めるなら書体メトリクスの側。
+  同じ理由で `barnumber.*` の −0.024440 も**字形の下はみ出しが無いことによる床**で、
+  閉じるには数字書体の ink-bottom メトリクスが要る（台帳の `why` に明記済）。
+- **`LyricEngraver.VerseSkylines` が到達不能になった**（呼び手 2 つが今回の置換で消えた）。
+  §5.1 の削除手順（横断 grep →承認）に従うので**この島では消していない**。次に触る人が処理する。
+- **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）** — ⚠️ **1 つの音節に高さが 2 つある**
+  （§5.2.1②）。下降部は書体のアウトライン実測（`TextFontMetrics`）、上昇部は文字クラス別の
+  em 分数のまま（`AscenderEm`/`XHeightEm`/`CjkAscenderEm`）。⚠️ **一括で移すのは試して差し戻した**:
+  TeX Gyre Schola に CJK グリフが無いので、かな音節のアウトラインは空＝up-extent が 0 になり
+  `CjkAscenderEm` が存在する理由が消える（実測: snapshot 14 枚が動き
+  `UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin` が落ちる）。
+  ⇒ **先に CJK の受け皿**（CJK 書体を持つか、非 Latin は表に落とす分岐か）を決めること。
+- **独立 lyrics 行の枝**（`LyricRowBaseline` = 2.6）は**まだ点が無い**。同型に見えるが別経路
+  （§3 の意図的乖離）なので、**自分の probe を持たせる**こと。
+- **ossia ペアは rigid のまま**（`gap * OssiaScale` は Lily# 独自）。**ossia 距離そのものの移植が先**。
+- **§2A の残り**: 継続行 prefix をスコア全体で 1 つ・measure 0 で計算する ⇒ **mid-piece の
+  key change 後の行は古い幅のまま**。構造的な解は **per-line prefix** で、`MeasureSpringData` に
+  per-measure `LineStartSpring` の受け皿が既にある。
 - §2D の残り（**字面から外れた 2 件・未移植 3 件**）・§2C（LP を instrument する必要があるもの）。
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 17 点**（**従来の 16 点は不動**。歌詞で開いた 4 点のうち 2 つは
-移植で閉じ、独立行の 1 つは**意図的乖離と決まって台帳から降ろし**＝§3、最後の 1 つが開いている）:
+**非ゼロで残っている台帳点は 19 点**（従来の 16 点は不動・新規 2＋歌詞 1）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `lyrics.two-verse.system-gap` | **+4.060000** | ★ **loose line の島の turning point＝上の ▶。** LP は system を 12.0 に保って歌詞を詰め、Lily# は歌詞を保って system を広げる |
+| `lyrics.two-verse.system-gap` | **+0.157200** | ★ **フォント量に落ちた**（上記）。機構は移植済 |
+| `barnumber.{low,high}-melody.staff-to-baseline` | **−0.024440** ×2 | ★ **字形の床**（LP は数字のインク下端を置く／Lily# は baseline）。閉じるには書体メトリクス |
 | clef sliver（`{page.stretched,page.clef}.first-staff-refpoint`・`system.clef-bounded-distance`） | 4e-5〜8.3e-4 | LP の実効 scale 未特定（§2C）。**LP を instrument するまで動かせない** |
 | Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1・`barline.next.down-stems-after-clef`） | 5e-6〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**伝聞で未再検証**（tie の 0.001391 が Pango で説明が付くかは未確認） |
 | `system.stretched-distance` | −0.000414 | ★ **これは符頭**（単一譜 book W の束縛インクが符頭）。LP 0.550000 対 LILC 0.545000 で**未説明**＝フォント metric の問題。⚠️ **そこは埋めない**。⚠️ **`page.*`/`system.*two-staff` を同族と読まないこと**——あれは符尾で、第8セッション（`96641db7`）で閉じた |
 
-#### 前回の移植で分かったこと（歌詞・和音アンカーの regime に触るとき用）
-
-> ⚠️ **これは第6セッションの regime ブロックで、今の ▶ とは無関係。** §1 が 1 画面に
-> 収まらなくなったときに**最初に落とす候補**（§7-3・§8。落とす前に、各行が §5 かコード注記か
-> `probes/*.ly` のヘッダに残っているかを確かめること）。
-
-- ★ ⚠️ **台帳点が「閉じる先の数値」を先に名指していた**（0.938600 − 0.500000 = 0.438600）。
-  実装後の残差は `8.085000000`＝予測どおり。**閉じる前に算術で犯人を名指せた点は、
-  移植の照合器としてそのまま使える**（§5.0-2 の最良形）。
-- ★ ⚠️ **恒等の対も「規約が正しい」ことは言えない。** `staffless.*` の 4 点は全部
-  「両側を同じ規約で読んだ差」なので、**中心合わせに戻しても 3 点は exact のまま**。
-  だからアンカー規約そのものを主張するテストを別に置いた
-  （`ChordSymbolsAreAnchoredAtTheirInkLeft`）。**恒等が守れない量は、恒等の外で主張する。**
-- ⚠️ **「staff が無い system は LP に存在しない regime」は誤りで、撤回済み。**
-  `\new ChordNames` 単独もリードシートも LP に普通にある。前の引継ぎのこの一文が、
-  `LineStartColumn` の `LILYSHARP-OWN` を何セッションも正当化していた。
-- **rod は最小値なので、満たされていれば無音**。行頭列だけの rod を全列へ広げても
-  **1 バイトも動かなかった**——中間の列は間のばねが既に距離を稼いでいるから。
-  ⚠️ **この byte 不変は「結果」であって「構成」ではない**（§5.2）。区別を保つために
-  `KeepInsideLineOverhangs_AreMeasuredForEveryColumnNotJustTheFirst` が**入力側**を
-  主張している（第2列の overhang が第1列より大きいこと＝行頭専用 rod では見えない量）。
-- **列より左へ出るのは「Lily# が中心合わせする grob」だけ**。符頭・clef・調号・小節線は
-  すべて列にアンカーされる＝`keep_inside_line_` の中身は**いま音節だけ**（和音記号は
-  `dcbf08e9` で列にアンカーされた）。
-- `last_ext` は **その譜自身の left-break-aligned grob のうち右端が最大のもの**の ink で、
-  **extent が空の grob はスキップされる**（`spacing-interface.cc:190-230`、`:219-220`）。
-  tab 譜の TimeSignature は**インクが空**（grob は共有 time 列に居る）＝だから
-  **tab の last grob は TAB clef** になる。
-- **`merge_springs` は 1 本でも通る。** `1/(1/invC)` の往復が入るので、単一 wish の
-  スコアでも F2 丸め境界で 0.01 動く座標がある。**LP も同じ往復をする**＝直さない。
-- **1 本でも rigid な wish があると畳んだ spring は圧縮不能**（`avg_compress += 1/invC` は
-  無条件）。**抑え込む対象ではない。**
-- `SpringWithMinimumDistanceFloor` の `fixed` 床（`ownFixedFloor`）は **wish ごとに掛ける**。
-  平均は「各項が床以上なら平均も床以上」なので merge を越えて生き残る。
-
-**まだ有効な前提**（この regime に戻るとき）:
-
-- **min_dist は単一譜でも効く**（SKC 実測 7.485000・床 7.785 が binding）。多段譜の話ではない。
-- **min_dist のモデル（＝grob の extent を esw/esh で膨らませた矩形の union。outline ではない）
-  と 4 つの実測値（SKC 7.485 / SKD 10.135 / TKC 7.720 / TKA 9.270）は
-  `probes/line-start-mindist.ly` のヘッダに全部ある。** グリフ outline を bake するのは**発明**。
-- **描画側の min_dist は leading grace と lyrics を見ていない。** LP は grace を独立した
-  paper column にするので min_dist が grace まで測るが、Lily# は spring に畳み込む
-  （`LeadingGracePrefixWidth` / `LyricSpacing`）＝だから小節自身の spring 0 の最小が今も床を
-  支えている（`LineStartSpringForLine` の `ownFixedFloor`・`LILYSHARP-OWN` と注記済み）。
-  **実測: 外すと snapshot 21 枚が動く＝消さないこと。**
-  第1音の**臨時記号は min_dist が届く**（probe TKA・+1.55）。
-- ⚠️ `SkylineBuilder.SeedClef` の X は今も原点..Right（グループ ink ではない）。縦スカイライン
-  専用で位置には効かないので**半端に移さず注記のみ**（コード内にも記載）。
-
 **消えた容疑者**（再走査しない）: duration space・音符間の最小・行幅・demerits の 3 項・
-DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・**行頭 spring そのもの**。
-経緯は各コミットメッセージと `probes/*.ly` のヘッダに。
+DP の形・小節線・**自然幅そのもの**・**行分割そのもの**・**行頭 spring そのもの**・
+**loose line 再配分の不在**（今回移植）。経緯は各コミットメッセージと `probes/*.ly` のヘッダに。
 
-⚠️ **プローブの罠の実例 6 件は §5.0 の末尾へ移した**（原則の隣に置くほうが読まれる）。
-新しい対を作るときは必ずそこを見ること。
+⚠️ **プローブの罠の実例は §5.0 の末尾へ。** 新しい対を作るときは必ずそこを見ること。
 
 ---
 
@@ -352,9 +202,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ~~**譜間ばねがページの鎖に無い**~~ — **移植済**（`c309b751`）。**圧縮側も台帳点あり**
   （`8b7b2615`。`page.compressed.staff-staff-inside` ほか）。残る名前付き乖離は
-  **ossia ペアが rigid**（§1 の候補）。⚠️ **「loose line 再配分の不在」はここから外した**
-  （`6faa4d5a` で実測）——歌詞行 1 本では **LP も動かさない**ので観測可能な乖離ではない。
-  歌詞行の実際の乖離は**縦の基本距離 5.5 の欠落**で、§1 の ▶ に移した
+  **ossia ペアが rigid**（§1 の候補）。~~**loose line 再配分の不在**~~ — **移植済**
+  （`ce3be1af`）。⚠️ **単一譜 system の鎖だけ**で、multi-staff とグループ間歌詞は force 0 の
+  まま＝§1 の ▶。歌詞行 1 本では **LP も動かさない**（`6faa4d5a` で実測）ので、
+  効くのは **同じ譜間に loose line が 2 本以上**あるときだけ、という当時の読みは正しかった
 - ~~**圧縮 regime は未実装**~~ — ⚠️ **この記述は stale だった**（2026-07-26 に実測で確認）。
   ページは両方向に solve しており、`page.compressed.staff-staff-inside` /
   `system.compressed-distance.two-staff`（book JSK）は **exact**。⚠️ **圧縮強度は伸長強度と別**
@@ -559,6 +410,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   丸ごと間違っていても 0 のまま（2026-07-25 の和音アンカー：`staffless.*` の 4 点は
   中心合わせのまま全部 exact だった）。⇒ **恒等が守れない量は、恒等の外で直接主張する**
   （`ChordSymbolsAreAnchoredAtTheirInkLeft`）。
+- ★ ⚠️ **対が「機構の仮説」を反証しても、量はちゃんと測れている。仮説が外れたから対を捨てる、
+  にはならない。**（2026-07-26 の小節番号 BNL/BNH）「Lily# は番号を音符の上に積んでいる」という
+  仮説で 2 冊組んだら、**Lily# 側も 4.260000 で不動**＝仮説は外れた。しかし対は
+  「両engraver とも音高に依存しない」ことを示し、**欠陥が定数オフセットだと確定させた**
+  ——`OutsideStaffStacker` の作り直しではなく式 1 行、と分かったのはこの反証のおかげ。
+  ⚠️ **1 冊だけなら「正しく置いている」と「一番高いものを避けている」が同じ数を返す。**
+  ⇒ **仮説を確かめる対は、仮説が外れる側にも意味があるように組む。**
 
 #### ⚠️ プローブの罠（同じ形で 6 回噛まれた実例）
 
