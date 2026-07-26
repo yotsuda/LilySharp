@@ -40,6 +40,45 @@ public class SystemSpacingTests
         Assert.Equal(8, p.StaffGroupStaff.MinimumDistance);
         Assert.Equal(1, p.StaffGroupStaff.Padding);
         Assert.Equal(9, p.StaffGroupStaff.Stretchability);
+
+        // LILYPOND-REF: scm/define-grobs.scm:4237-4239 — the branch for a staff that has no
+        // staff-grouper at all (axis-group-interface.cc:1008-1027).
+        Assert.Equal(9, p.DefaultStaffStaff.BasicDistance);
+        Assert.Equal(8, p.DefaultStaffStaff.MinimumDistance);
+        Assert.Equal(1, p.DefaultStaffStaff.Padding);
+    }
+
+    /// <summary>
+    /// <c>default-staff-staff-spacing</c> declares NO <c>stretchability</c>, and that has to
+    /// stay spelled as the absence rather than as the 9 it works out to.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:213-216 <c>set_default_strength</c> — with no
+    /// stretchability in the spec the inverse stretch strength IS the ideal, so the two
+    /// spellings agree at today's basic-distance and diverge the moment anything overrides
+    /// it: LilyPond's spring follows the new ideal, a literal 9 would not.
+    /// <para>
+    /// ⚠️ This exists because the port was first written with the literal. Nothing would
+    /// have caught it — every output is identical, and <c>LpProvenanceTests</c> only asks
+    /// that a constant carry a source, which the literal did (HANDOFF 5.2.1 (1): a REF can
+    /// sit next to a different expression). The test asserts the RULE instead: perturb the
+    /// basic-distance and the stretch strength must follow it.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void DefaultStaffStaff_TakesItsStretchStrengthFromTheIdeal_NotFromALiteral()
+    {
+        var spec = StaffSpacingParameters.Default.DefaultStaffStaff;
+        Assert.Equal(0, spec.Stretchability);
+
+        // Spring.InverseStretchStrength is the quantity set_default_strength decides.
+        Assert.Equal(
+            spec.BasicDistance,
+            LayoutUtilities.CreateSpring(spec, 0).InverseStretchStrength, 9);
+
+        var widened = spec with { BasicDistance = 14 };
+        Assert.Equal(
+            14, LayoutUtilities.CreateSpring(widened, 0).InverseStretchStrength, 9);
     }
 
     [Fact]

@@ -83,12 +83,17 @@ internal sealed record StaffSpacingParameters
     /// (default-staff-staff-spacing . ((basic-distance . 9)
     ///                                 (minimum-distance . 8)
     ///                                 (padding . 1)))
-    /// ⚠️ NO <c>stretchability</c> MEMBER, so <c>set_default_strength</c> makes the inverse
-    /// stretch strength the ideal itself, 9 — which is what
+    /// ⚠️ NO <c>stretchability</c> MEMBER, and it is SPELLED as the absence rather than as
+    /// the number it works out to. <c>LayoutUtilities.CreateSpring</c> is where
+    /// <c>set_default_strength</c> lives (spring.cc:213-216) and its convention is that a
+    /// <c>Stretchability</c> of 0 IS LilyPond's absent, whereupon the inverse stretch
+    /// strength becomes the ideal — 9 here, which is coincidentally what
     /// <c>staffgroup-staff-spacing</c> declares outright, so the two springs stretch alike
-    /// and only the basic-distance separates them. The COMPRESS strengths do differ
-    /// (<c>ideal - minimum-distance</c> = 1 here against 2.5), which a compressed page would
-    /// see.
+    /// and only the basic-distance separates them. ⚠️ Writing that 9 here instead would
+    /// read the same today and stop being LilyPond's rule the moment anything overrode the
+    /// basic-distance: LilyPond's spring would follow the new ideal and a literal would not.
+    /// The COMPRESS strengths do differ (<c>ideal - minimum-distance</c> = 1 here against
+    /// 2.5), which a compressed page would see — no corpus point measures that yet.
     /// </para>
     /// </remarks>
     public VerticalSpacingSpec DefaultStaffStaff { get; init; } = new()
@@ -96,7 +101,7 @@ internal sealed record StaffSpacingParameters
         BasicDistance = 9,
         MinimumDistance = 8,
         Padding = 1,
-        Stretchability = 9
+        Stretchability = 0,
     };
 
     /// <summary>
