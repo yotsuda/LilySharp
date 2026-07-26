@@ -1184,3 +1184,33 @@ probeTag =
     >>
   }
 }
+
+%% LYRR — THE SAME LINE, UNASSOCIATED. Identical to LYRC except that the Lyrics context is
+%%     not \lyricsto anything: its syllables carry their own durations instead of being
+%%     handed to a Voice's note columns. In LilyPond that changes WHICH COLUMN a syllable
+%%     stands on and nothing else — a Lyrics context is a Lyrics context, so
+%%     engraver-init.ly gives it the same staff-affinity UP and the same
+%%     nonstaff-relatedstaff-spacing either way.
+%%
+%%     ⚠️ WHICH IS WHY THIS BOOK EXISTS, and it is not for LilyPond's sake: Lily# has TWO
+%%     models here. `staff mel with lyrics words` is note-bound, and a bare `lyrics words`
+%%     row is laid out as a staff-like BAND with its own baseline constant
+%%     (LyricEngraver.LyricRowBaseline, MultiStaffLayouter's text-row band). LilyPond has one
+%%     model for both, so this pair is the strongest kind (HANDOFF 5.0): the LilyPond side is
+%%     an IDENTITY, and whatever Lily# reads differently between its two spellings is,
+%%     by construction, entirely Lily#'s.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2): 5.500000, the same as LYRC, to
+%%     six digits.
+%%     (falsifier: a different number, which would mean the association DOES reach the
+%%      vertical spacing and the two Lily# models might both be defensible.)
+\book {
+  \probeTag "LYRR"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g''4 a'' g'' a'' } } }
+      \new Lyrics \lyricmode { \repeat unfold 480 { no4 } }
+    >>
+  }
+}

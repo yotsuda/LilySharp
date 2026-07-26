@@ -422,7 +422,14 @@ internal static class LpGeometryProbes
     /// to say so. The count entry is the guard that would now catch it.
     /// </para>
     /// </remarks>
-    private static string LyricRowPageScore(string name) => $$"""
+    /// <param name="scoreBody">
+    /// How the lyric line is SPELLED — the one thing the three books built from this differ
+    /// in. <c>staff melody with lyrics words</c> is note-bound; a bare <c>lyrics words</c>
+    /// under the staff is an independent ROW, which Lily# lays out through a different model
+    /// entirely. LilyPond has one model for both, which is what makes the third book a
+    /// LilyPond-side identity (see the <c>lyrics.row.*</c> entry).
+    /// </param>
+    private static string LyricRowPageScore(string name, string scoreBody) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -437,16 +444,31 @@ internal static class LpGeometryProbes
         form main { ~Main }
 
         score main "{{name}}" {
-          staff melody with lyrics words
+        {{scoreBody}}
         }
         """;
 
     /// <summary>The justified twin — the mirror of book LYRS.</summary>
-    private static readonly string LYRS = LyricRowPageScore("LYRS");
+    private static readonly string LYRS =
+        LyricRowPageScore("LYRS", "  staff melody with lyrics words");
 
     /// <summary>The ragged-bottom control — the mirror of book LYRC.</summary>
     /// <remarks>Same music, built by the same call (HANDOFF 5.0).</remarks>
-    private static readonly string LYRC = LyricRowPageScore("LYRC");
+    private static readonly string LYRC =
+        LyricRowPageScore("LYRC", "  staff melody with lyrics words");
+
+    /// <summary>
+    /// The same music and the same paper as <see cref="LYRC"/>, with the lyric line spelled
+    /// as an independent ROW instead of note-bound — the mirror of book LYRR.
+    /// </summary>
+    /// <remarks>
+    /// The spelling is the ONLY difference, and it is the whole point: LilyPond reads both
+    /// books identically (a Lyrics context is a Lyrics context; association changes which
+    /// column a syllable stands on, not what the vertical spacing spec is), so its side of
+    /// this pair is an identity and any difference Lily# shows between the two is its own.
+    /// </remarks>
+    private static readonly string LYRR =
+        LyricRowPageScore("LYRR", "  staff melody\n  lyrics words");
 
     /// <summary>Four systems to a page, so page 1 keeps real slack and STRETCHES.</summary>
     private static readonly LayoutOptions FourSystemsPerPage =
@@ -2489,6 +2511,15 @@ internal static class LpGeometryProbes
         // single entry could not distinguish "does not move" from "was never stretched".
         new("lyrics.natural.staff-to-lyric", LYRC, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
         new("lyrics.stretched.staff-to-lyric", LYRS, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPage),
+
+        // The same line spelled as an independent ROW (books LYRC/LYRR). LilyPond reads the
+        // two books IDENTICALLY — every printed figure of the two agrees, staff-to-loose-line
+        // included — because a Lyrics context is a Lyrics context and \lyricsto changes which
+        // column a syllable stands on, not its spacing spec. So the LilyPond side of this
+        // pair is an identity, and whatever Lily# reads differently between its own two
+        // spellings is by construction entirely Lily#'s (HANDOFF 5.0: the strongest shape a
+        // pair can have).
+        new("lyrics.row.staff-to-lyric", LYRR, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
 
         // The guard the two above cannot give, and it is not decorative: with 40 bars instead
         // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it
