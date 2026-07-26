@@ -205,6 +205,17 @@ internal sealed class LyricEngraver
     /// capital, or CJK glyph lifts the whole box), so the up-skyline reflects the
     /// tallest ink the staff's down-skyline must clear.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT <see cref="Rendering.TextFontMetrics"/>, which reads the bundled face's own
+    /// outline and is what this engraver already uses for syllable WIDTHS. Reading heights
+    /// from it too was tried and reverted, for a reason worth keeping: TeX Gyre Schola has
+    /// NO CJK GLYPHS, so the outline of a kana syllable is empty and its up-extent would
+    /// come out ZERO — the case <see cref="CjkAscenderEm"/> exists for. Measured while
+    /// trying it: 14 snapshots move and
+    /// <c>UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin</c> fails. So the
+    /// two sources are a real duplication (HANDOFF 5.2.1②) and closing it needs a CJK
+    /// fallback first, not a one-line substitution.
+    /// </remarks>
     private static double LyricUpExtent(string text)
     {
         double em = XHeightEm;
@@ -216,6 +227,36 @@ internal sealed class LyricEngraver
                 em = AscenderEm;
         }
         return LyricFontSize * em;
+    }
+
+    /// <summary>
+    /// Down-extent (baseline → bottom of ink, POSITIVE for a descender) of a lyric syllable.
+    /// </summary>
+    /// <remarks>
+    /// The second operand of LilyPond's verse-to-verse spacing: the step between two lyric
+    /// lines is <c>max(minimum-distance 2.8, this line's descenders to the next line's
+    /// ascenders + padding 0.2)</c>, so a line that descends pushes the next one down.
+    /// <para>
+    /// LATIN COMES FROM THE FACE, not from a table: <see cref="Rendering.TextFontMetrics"/>
+    /// reads the bundled outline, which is LilyPond's own way of measuring text
+    /// (lily/modified-font-metric.cc:125-143). There is no descender constant here to get
+    /// wrong — a syllable with no descender measures 0 and one with a `g` measures the g.
+    /// </para>
+    /// <para>
+    /// LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is
+    /// empty for them and cannot answer; those glyphs fill the em square, so what is left
+    /// below the baseline is the rest of that square — written as
+    /// <c>1 - CjkAscenderEm</c> rather than as a number of its own, so it cannot drift away
+    /// from the up-extent it is the complement of.
+    /// </para>
+    /// </remarks>
+    private static double LyricDownExtent(string text)
+    {
+        double outline = -Rendering.TextFontMetrics.Ink(text, LyricFontSize).Bottom;
+        foreach (char c in text)
+            if (IsFullHeightGlyph(c))
+                return Math.Max(outline, LyricFontSize * (1.0 - CjkAscenderEm));
+        return outline;
     }
 
     // LilyPond Lyrics relatedstaff-spacing: the line is lowered so its up-skyline
@@ -349,6 +390,12 @@ internal sealed class LyricEngraver
             layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, noteBoundStaffDownSkyline);
 
+        // ...and then re-stack verses 2..n under verse 1 at LilyPond's own step. Second pass
+        // rather than folded into the verseY above, because the step depends on the ink of
+        // the two verses ON THAT SYSTEM and the flat stacking above cannot see systems.
+        if (!systems.IsDefaultOrEmpty)
+            layouts = ApplyVerseSpacing(layouts, systems, noteBoundAnchorY);
+
         return layouts.ToImmutableArray();
     }
 
@@ -479,6 +526,153 @@ internal sealed class LyricEngraver
             else result[key] = box;
         }
         return result;
+    }
+
+    /// <summary>
+    /// The DOWN-skyline box of one syllable, self-relative to its own baseline: anchor at
+    /// y = 0, ink bottom at <see cref="LyricDownExtent"/> below it.
+    /// </summary>
+    internal static VerticalSkyline SyllableDownBox(LyricLayout lay)
+    {
+        double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
+        return VerticalSkyline.FromBox(
+            lay.X - halfW, lay.X + halfW, -LyricDownExtent(lay.Item.Text), 0,
+            VerticalDirection.Down);
+    }
+
+    /// <summary>
+    /// One merged DOWN-skyline per (system, VERSE) — the descenders the verse below has to
+    /// clear. The mirror of <see cref="BuildVerseUpSkylines"/>.
+    /// </summary>
+    internal static Dictionary<(int System, int Verse), VerticalSkyline> BuildVerseDownSkylines(
+        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem)
+    {
+        var result = new Dictionary<(int System, int Verse), VerticalSkyline>();
+        foreach (var lay in layouts)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            var key = (System: s, Verse: lay.Item.VerseNumber);
+            var box = SyllableDownBox(lay);
+            if (result.TryGetValue(key, out var sky)) sky.Merge(box);
+            else result[key] = box;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Re-stacks verses 2..n under verse 1 at LilyPond's <c>nonstaff-nonstaff-spacing</c>
+    /// step instead of a flat <see cref="LyricParameters.VerseSpacing"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 <c>get_spacing_spec</c> +
+    /// ly/engraver-init.ly:653-656 — with a zero basic-distance the realized step is
+    /// <c>max(minimum-distance 2.8, the two lines' ink + padding 0.2)</c>, per SYSTEM,
+    /// because each system's syllables are different text.
+    /// <para>
+    /// ⚠️ NOTE-BOUND LINES ONLY. An independent lyrics ROW is a decided divergence — a
+    /// staff-like band with its own bar lines and its own verse stacking (HANDOFF 3,
+    /// asserted by <c>LyricRowIsSpacedAsAStaffLikeBand</c>) — so applying LilyPond's
+    /// loose-line rule inside that band would half-port the very thing that was decided
+    /// against.
+    /// </para>
+    /// <para>
+    /// ⚠️ Runs AFTER <see cref="ApplySkylineDrop"/>, which moves a whole line together: this
+    /// takes verse 1 wherever that left it and rebuilds the stack below it, so the two
+    /// passes compose instead of fighting.
+    /// </para>
+    /// </remarks>
+    private List<LyricLayout> ApplyVerseSpacing(
+        List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
+        IReadOnlyDictionary<int, double>? noteBoundAnchorY)
+    {
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+        bool IsUpper(LyricItem l) =>
+            !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
+
+        // The families that stack verses independently: an upper note-bound line belongs to
+        // its own staff, everything else note-bound shares the legacy placement.
+        var families = layouts.Where(l => !l.Item.IsLyricsRow)
+                              .GroupBy(l => IsUpper(l.Item) ? l.Item.StaffIndex : -1);
+
+        var newY = new Dictionary<(int Family, int System, int Verse), double>();
+        foreach (var family in families)
+        {
+            var up = BuildVerseUpSkylines(family, measureToSystem);
+            var down = BuildVerseDownSkylines(family, measureToSystem);
+            var verses = family.Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v).ToList();
+            if (verses.Count < 2) continue;
+
+            foreach (int system in family.Select(l => l.Item.MeasureIndex)
+                                         .Where(measureToSystem.ContainsKey)
+                                         .Select(m => measureToSystem[m])
+                                         .Distinct())
+            {
+                // Verse 1's own Y on this system is wherever the earlier passes put it.
+                var firstOnSystem = family.FirstOrDefault(
+                    l => l.Item.VerseNumber == verses[0]
+                         && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s) && s == system);
+                if (firstOnSystem is null) continue;
+                double y = firstOnSystem.YUp;
+                newY[(family.Key, system, verses[0])] = y;
+
+                for (int i = 1; i < verses.Count; i++)
+                {
+                    double step = SkylineDrop.NonStaffNonStaffMinimum;
+                    if (down.TryGetValue((system, verses[i - 1]), out var d)
+                        && up.TryGetValue((system, verses[i]), out var u)
+                        && !d.IsEmpty && !u.IsEmpty)
+                    {
+                        double dist = d.Distance(u, SkylineDrop.HorizonPadding);
+                        if (!double.IsInfinity(dist) && !double.IsNaN(dist))
+                            step = Math.Max(step, dist + SkylineDrop.NonStaffNonStaffPadding);
+                    }
+                    y -= step;   // Y-up: the next verse sits lower
+                    newY[(family.Key, system, verses[i])] = y;
+                }
+            }
+        }
+
+        if (newY.Count == 0) return layouts;
+
+        var restacked = new List<LyricLayout>(layouts.Count);
+        foreach (var lay in layouts)
+        {
+            if (!lay.Item.IsLyricsRow
+                && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
+                && newY.TryGetValue(
+                    (IsUpper(lay.Item) ? lay.Item.StaffIndex : -1, s, lay.Item.VerseNumber),
+                    out double y))
+            {
+                restacked.Add(lay with { YUp = y });
+            }
+            else restacked.Add(lay);
+        }
+        return restacked;
+    }
+
+    /// <summary>
+    /// An upper BOUND on the verse-to-verse step for a set of syllables — the estimate the
+    /// page breaker prices a band against, where <see cref="ApplyVerseSpacing"/>'s
+    /// per-system skylines are not available yet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 + ly/engraver-init.ly:653-656 —
+    /// the same <c>max(minimum-distance 2.8, ink + padding 0.2)</c> the placement uses, with
+    /// the deepest descender of the verses above against the tallest ascender of the verses
+    /// below. That is what the skylines would give if every syllable stood over every other
+    /// one, so it can only OVER-reserve, never under — which is the direction an estimate
+    /// has to err in, and the direction LilyPond's own pure-height path errs in.
+    /// ⚠️ It exists so the breaker cannot drift from the placement again: a flat constant
+    /// here read 1.8 against the placement's 3.2 for as long as both were constants.
+    /// </remarks>
+    internal static double VerseStepBound(
+        IEnumerable<string> upperTexts, IEnumerable<string> lowerTexts)
+    {
+        double down = 0, up = 0;
+        foreach (var t in upperTexts) down = Math.Max(down, LyricDownExtent(t));
+        foreach (var t in lowerTexts) up = Math.Max(up, LyricUpExtent(t));
+        return Math.Max(SkylineDrop.NonStaffNonStaffMinimum,
+                        down + up + SkylineDrop.NonStaffNonStaffPadding);
     }
 
     /// <summary>One verse's skylines, keyed by system — the shape SkylineDrop consumes.</summary>

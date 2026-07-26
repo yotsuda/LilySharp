@@ -42,6 +42,33 @@ internal static class SkylineDrop
     public const double HorizonPadding = 0.1;
 
     /// <summary>
+    /// <c>nonstaff-nonstaff-spacing</c>'s minimum-distance — the floor under the step from
+    /// one lyric line to the next.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:653-656 — the Lyrics context sets
+    /// <c>nonstaff-nonstaff-spacing = ((basic-distance . 0) (minimum-distance . 2.8)
+    /// (padding . 0.2))</c>, and page-layout-problem.cc:1315-1332 is the branch of
+    /// <c>get_spacing_spec</c> that hands it to a spring between two loose lines.
+    /// ⚠️ A ZERO basic-distance with a minimum is the opposite shape from
+    /// <see cref="RelatedStaffPadding"/>'s spec: there is no ideal to fall back on, so the
+    /// realized step IS <c>max(minimum, ink + padding)</c> and nothing else. That also makes
+    /// the spring rigid — <c>set_default_strength</c> derives the inverse stretch strength
+    /// from the ideal (spring.cc:213-216), which is 0 — so the step does not move with the
+    /// page's force. MEASURED (audit/lp-geometry, <c>lyrics.verse-step</c>): 2.800000 on a
+    /// page whose loose chain is compressed hard enough to pull the first line off its own
+    /// basic-distance.
+    /// </remarks>
+    public const double NonStaffNonStaffMinimum = 2.8;
+
+    /// <summary>
+    /// <c>nonstaff-nonstaff-spacing</c>'s padding — the gap left between one lyric line's
+    /// descenders and the next line's ascenders when the ink beats the minimum.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly:656.</remarks>
+    public const double NonStaffNonStaffPadding = 0.2;
+
+    /// <summary>
     /// Per-system downward Y-shift so each system's UP-skyline clears the staff's
     /// DOWN-skyline: <c>drop = max(0, max(basicY, distance + RelatedStaffPadding) - basicY)</c>.
     /// Only systems that need a shift appear in the result. <paramref name="basicY"/>

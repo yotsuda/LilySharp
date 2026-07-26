@@ -775,6 +775,7 @@ internal sealed class LayoutEngine
         if (!lyrics.IsDefaultOrEmpty)
         {
             int maxVerse = 0;
+            var inRange = new List<LilySharp.Core.Svg.Model.LyricItem>();
             foreach (var lyric in lyrics)
             {
                 // Independent lyrics-row syllables get their own text band; they must
@@ -782,7 +783,10 @@ internal sealed class LayoutEngine
                 if (lyric.IsLyricsRow)
                     continue;
                 if (lyric.MeasureIndex >= startMeasure && lyric.MeasureIndex < endMeasure)
+                {
                     maxVerse = Math.Max(maxVerse, lyric.VerseNumber);
+                    inRange.Add(lyric);
+                }
             }
             if (maxVerse > 0)
             {
@@ -795,14 +799,15 @@ internal sealed class LayoutEngine
                 // lived in). The distance to verse 1 was a local 2.5 that would have gone a
                 // whole staff space stale the moment it became LilyPond's
                 // nonstaff-relatedstaff-spacing. The step per further verse was a local 1.8
-                // while THREE other places agreed on 3.2 — LyricEngraver.VerseSpacing, which
-                // actually places the syllables, MultiStaffLayouter.TextRowVerseSpacing and
-                // SharedRenderer.LyricVerseSpacing, the latter two carrying comments saying
-                // they must match it. So from verse 2 on the breaker was reserving 1.4 per
-                // verse LESS than the renderer draws. Both now read the placement's own
-                // numbers, so they cannot disagree again.
+                // while three other places agreed on a flat 3.2 — so from verse 2 on the
+                // breaker reserved 1.4 per verse LESS than the renderer drew. It is now the
+                // BOUND of the same rule the placement solves per system
+                // (LyricEngraver.VerseStepBound): the deepest descender above against the
+                // tallest ascender below, which can only over-reserve, never under.
                 double lyricStaffPadding = LyricParameters.Default.BasicDistanceBelowBottomLine;
-                double lyricVerseSpacing = LyricParameters.Default.VerseSpacing;
+                double lyricVerseSpacing = maxVerse < 2 ? 0 : LyricEngraver.VerseStepBound(
+                    inRange.Where(l => l.VerseNumber < maxVerse).Select(l => l.Text),
+                    inRange.Where(l => l.VerseNumber > 1).Select(l => l.Text));
                 const double lyricFontSize = 1.2;     // lyric text height
                 double lyricBand = lyricStaffPadding + (maxVerse - 1) * lyricVerseSpacing + lyricFontSize;
                 downExtent = Math.Max(downExtent, lyricBand);
