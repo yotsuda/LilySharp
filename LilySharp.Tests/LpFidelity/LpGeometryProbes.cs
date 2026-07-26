@@ -396,6 +396,76 @@ internal static class LpGeometryProbes
             PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 8 },
         };
 
+    /// <summary>
+    /// One staff with a lyric row under it, over enough music to fill several pages — the
+    /// mirror of books LYRS (justified) and LYRC (ragged-bottom).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MELODY IS HIGH AND THE SYLLABLE HAS NO ASCENDER, and both are load bearing:
+    /// each engraver's placement is a max of a basic distance and an INK floor, and a reading
+    /// that lands on either floor is a measurement of the font, whose lyric faces differ by
+    /// about 27% (HANDOFF 5.3). Measured, both ways round: with the melody on c' LilyPond's
+    /// floor is 5.865115 and beats its basic-distance 5.5; with the syllable <c>la</c> Lily#
+    /// reads 4.662000, its own glyph-height floor (<c>l</c> is an ascender), rather than its
+    /// own basic distance. Either one makes the residual carry two models at once and name no
+    /// defect. High melody plus <c>no</c> puts both sides on their basic distances.
+    /// <para>
+    /// Four syllables to the bar against four quarter notes, which is where the two engravers
+    /// agree by construction: Lily# spreads a row's syllables evenly across the bar while
+    /// LilyPond reads their written durations (the same reason the staff-less pair uses two
+    /// equal syllables per bar).
+    /// </para>
+    /// <para>
+    /// 120 bars, and that is load bearing rather than generous: the first draft had 40 and
+    /// LilyPond re-broke it onto a SINGLE page, where <c>ragged-last-bottom</c> (default true)
+    /// left it unstretched — so the "stretched" book was measuring a ragged one, with nothing
+    /// to say so. The count entry is the guard that would now catch it.
+    /// </para>
+    /// </remarks>
+    private static string LyricRowPageScore(string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+          lyrics words { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody with lyrics words
+        }
+        """;
+
+    /// <summary>The justified twin — the mirror of book LYRS.</summary>
+    private static readonly string LYRS = LyricRowPageScore("LYRS");
+
+    /// <summary>The ragged-bottom control — the mirror of book LYRC.</summary>
+    /// <remarks>Same music, built by the same call (HANDOFF 5.0).</remarks>
+    private static readonly string LYRC = LyricRowPageScore("LYRC");
+
+    /// <summary>Four systems to a page, so page 1 keeps real slack and STRETCHES.</summary>
+    private static readonly LayoutOptions FourSystemsPerPage =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 4 },
+        };
+
+    /// <summary>The same paper with vertical justification off — the control's regime.</summary>
+    private static readonly LayoutOptions FourSystemsPerPageRagged =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with
+            {
+                MaxSystemsPerPage = 4,
+                RaggedBottom = true,
+            },
+        };
+
     /// <summary>The same paper with vertical justification off — the control's regime.</summary>
     private static readonly LayoutOptions SixSystemsPerPageRagged =
         LayoutOptions.Default with
@@ -2407,6 +2477,23 @@ internal static class LpGeometryProbes
         // stops being true if a page ever stretches harder.
         new("page.stretched.last-staff-to-foot", JSS, g => g.LastStaffRefpointToFoot(), SixSystemsPerPage),
         new("page.compressed.last-staff-to-foot", JSK, g => g.LastStaffRefpointToFoot(), EightSystemsPerPage),
+
+        // --- where a LOOSE LINE sits (books LYRS/LYRC) ---
+        // A lyric row is not spaceable, so it is left out of the page's chain and placed by
+        // a second spacer afterwards (distribute_loose_lines, :1025-1054). The pair asks
+        // whether that pass moves it: same music, same paper, one page stretched to gaps of
+        // ~43.8 and one ragged at 12. LilyPond's answer is 5.500000 on BOTH — the springs to
+        // a loose line's non-own side carry LARGE_STRETCH/HUGE_STRETCH by design
+        // (:1257-1338), so the row keeps to its own staff while the page opens around it.
+        // Two entries rather than one because that regime-independence is the finding; a
+        // single entry could not distinguish "does not move" from "was never stretched".
+        new("lyrics.natural.staff-to-lyric", LYRC, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
+        new("lyrics.stretched.staff-to-lyric", LYRS, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPage),
+
+        // The guard the two above cannot give, and it is not decorative: with 40 bars instead
+        // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it
+        // unstretched, and the "stretched" entry would have read a ragged page and agreed.
+        new("lyrics.stretched.systems-on-first-page", LYRS, g => g.SystemsOnPage(0), FourSystemsPerPage),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

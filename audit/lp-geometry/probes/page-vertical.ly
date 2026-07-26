@@ -80,6 +80,33 @@
                            (car ext) (cdr ext)
                            (car staff) (cdr staff)
                            (if (equal? #t (ly:prob-property sys 'is-title)) 1 0))
+                   ;; EVERY vertical axis group of this system, spaceable or not. The SYS
+                   ;; line above cannot show a loose line at all: staff-refpoint-extent is
+                   ;; built from the SPACEABLE staves only (lily/system.cc:706-717), which
+                   ;; is exactly the set the page's spring chain contains. A Lyrics line is
+                   ;; not in it, and it is placed by a SECOND spacer afterwards
+                   ;; (page-layout-problem.cc:1025-1054), so its distance from its staff is
+                   ;; a quantity nothing here was reading.
+                   ;;
+                   ;; The groups hang off the System's 'vertical-alignment, NOT its own
+                   ;; 'elements -- looking in 'elements finds no VerticalAxisGroup at all and
+                   ;; prints nothing, silently.
+                   ;; `aff` is staff-affinity: () on a spaceable staff, 1 (UP) or -1 (DOWN)
+                   ;; on a loose line, which is what says WHICH staff the line belongs to.
+                   (let* ((sg (ly:prob-property sys 'system-grob))
+                          (align (if (ly:grob? sg)
+                                     (ly:grob-object sg 'vertical-alignment)
+                                     #f)))
+                     (if (ly:grob? align)
+                         (for-each
+                          (lambda (g)
+                            (format #t "PROBEV VAG ~a ~a rel=~a aff=~a ext=(~a . ~a)\n"
+                                    n i
+                                    (ly:grob-relative-coordinate g sg Y)
+                                    (ly:grob-property g 'staff-affinity)
+                                    (car (ly:grob-extent g g Y))
+                                    (cdr (ly:grob-extent g g Y))))
+                          (ly:grob-array->list (ly:grob-object align 'elements)))))
                    (inner (cdr ls) (1+ i)))))
            (loop (cdr ps) (1+ n))))))
 
@@ -1087,6 +1114,73 @@ probeTag =
     \new PianoStaff <<
       \new Staff { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
       \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}
+
+%% LYRS / LYRC — WHERE A LOOSE LINE SITS, and the answer is "with its staff, in BOTH
+%%     regimes". A Lyrics line is not spaceable, so it is left out of the page's spring
+%%     chain and placed afterwards by a SECOND Simple_spacer over the lines between two
+%%     already-placed spaceable ones (page-layout-problem.cc:919-942 collects, :1025-1054
+%%     solves). The obvious reading of that is "the row shares the page's slack", and it is
+%%     WRONG — which is the whole reason this pair is two books and not one.
+%%
+%%     ★ WHY IT DOES NOT MOVE, from the source: get_spacing_spec hands the spring from a
+%%     loose line to a NULL neighbour (the page edge, or the null that breaks affinity at a
+%%     system boundary) add_stretchability(SCM_EOL, HUGE_STRETCH = 10e7), and the spring to
+%%     a staff on its NON-affinity side LARGE_STRETCH = 10e5 (:1257-1338, with LilyPond's
+%%     own comment saying this is deliberate: "a spacing-affinity UP line at the bottom of
+%%     the page will still be placed close to its staff"). Against those, the spring to its
+%%     OWN staff is an ordinary nonstaff-relatedstaff-spacing whose default strength is its
+%%     ideal, 5.5. The second solve therefore pours essentially all the slack into the huge
+%%     springs and gives this one a part in 10e7.
+%%
+%%     MEASURED, both books, first system of page 1: staff refpoint to Lyrics refpoint =
+%%     5.500000 — 5.500000001945665 on the ragged page against 5.500000181705927 on a page
+%%     stretched to gaps of ~43. The excess IS the sliver the 5.5 spring takes (about 2e-8
+%%     of the slack), and its being two orders of magnitude larger on the stretched page is
+%%     the falsifier that the mechanism above is the right one rather than a coincidence.
+%%
+%%     ⚠️ THE MELODY IS HIGH AND THE SYLLABLE HAS NO ASCENDER, and BOTH are the trap this
+%%     pair is built around (HANDOFF 5.3): each side's spring is floored by an alignment
+%%     minimum made of the staff's ink, the LYRIC'S OWN INK and a padding, and a reading
+%%     that lands on that floor is a measurement of the FONT — the two engravers' lyric
+%%     faces differ by about 27%. Both sides have to be off their floors, and they are off
+%%     DIFFERENT floors:
+%%       - melody at g''/a'' rather than c': with a head 3.55 under the middle line the
+%%         LilyPond floor is 5.865115 and beats basic-distance 5.5. Measured on the first
+%%         draft, which read exactly that.
+%%       - the syllable is "no" rather than "la": Lily#'s own floor is its glyph height, and
+%%         `l` is an ascender. Measured with "la", Lily# read 4.662000 — its ink floor, not
+%%         its basic distance — so the residual carried BOTH engravers' models at once and
+%%         could not name one defect. With "no" it sits on its own basic distance instead.
+%%     ⚠️ So this pair says nothing about either floor. A book with a low melody or a tall
+%%     syllable measures a different quantity and needs its own entry — and a rule about
+%%     whose ink it is allowed to contain.
+%%
+%%     ⚠️ Four systems to a page, so page 1 keeps real slack. ragged-bottom ALONE would not
+%%     make the control (trap 7 in HANDOFF 5.0: a full ragged page compresses anyway), and
+%%     the music must be long enough that page 1 is not also the LAST page — the first draft
+%%     had 40 bars, which LilyPond re-broke onto a single page, and ragged-last-bottom then
+%%     left it unstretched. Both books are 120 bars for that reason.
+\book {
+  \probeTag "LYRS"
+  \paper { max-systems-per-page = #4 }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g''4 a'' g'' a'' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "LYRC"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g''4 a'' g'' a'' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
     >>
   }
 }

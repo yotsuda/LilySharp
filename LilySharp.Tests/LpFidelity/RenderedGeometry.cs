@@ -408,6 +408,45 @@ internal sealed class RenderedGeometry
                 + "its ink centre and this measurement would be silently wrong.");
     }
 
+    /// <summary>
+    /// The first system's staff refpoint down to the baseline of the lyric row under it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 <c>distribute_loose_lines</c> —
+    /// a Lyrics line is not spaceable, so it is left out of the page's spring chain and
+    /// placed by a second spacer afterwards. This reads where that puts it.
+    /// <para>
+    /// BOTH SIDES ARE BASELINES and neither carries a font metric. LilyPond's Lyrics
+    /// <c>VerticalAxisGroup</c> refpoint is the syllable's baseline (its Y-extent on the
+    /// probe is (-0.037044 . 1.820098) — an overshoot below, the ascender above), and a
+    /// Lily# syllable is drawn at its baseline. ⚠️ That holds only while the spring's
+    /// BASIC-DISTANCE binds; when the alignment floor wins, the quantity acquires the
+    /// lyric's own ink and the two engravers' faces differ by ~27% (HANDOFF 5.3). The
+    /// probes that use this keep their melody above the middle line for that reason.
+    /// </para>
+    /// <para>
+    /// The row is found by Y rather than by taking the leftmost syllable: every system's
+    /// row starts at nearly the same X, so <c>LyricSyllables[0]</c> can belong to any of
+    /// them. The smallest Y below the first staff is that staff's own row.
+    /// </para>
+    /// <para>
+    /// PAGE 1 ONLY, and it takes no page argument on purpose: <see cref="Texts"/> reads the
+    /// first page alone, so a page parameter here would silently pair one page's staff with
+    /// another page's syllables.
+    /// </para>
+    /// </remarks>
+    public double FirstStaffToLyricBaseline()
+    {
+        const int page = 0;
+        double staff = StaffRefpoints(page)[0];
+        var below = LyricSyllables.Where(t => t.Y > staff).ToList();
+        if (below.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no lyric syllable was drawn below the first staff refpoint "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return below.Min(t => t.Y) - staff;
+    }
+
     /// <summary>The first (leftmost) chord symbol's anchor.</summary>
     public double FirstChordSymbolAnchor()
     {

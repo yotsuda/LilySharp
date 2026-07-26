@@ -67,6 +67,7 @@ try {
         '^PROBEV PAPER top-margin=(\S+) bottom-margin=(\S+) paper-height=(\S+) paper-width=(\S+) output-scale=(\S+) line-width=(\S+)$'
         '^PROBEV PAGE (\d+) systems=(\d+)$'
         '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$'
+        '^PROBEV VAG (\d+) (\d+) rel=(\S+) aff=(\S+) ext=\((\S+) \. (\S+)\)$'
     )
     $bad = @($lines | Where-Object { $l = $_; -not ($shapes | Where-Object { $l -match $_ }) })
     if ($bad) {
@@ -79,7 +80,7 @@ try {
     foreach ($line in $lines) {
         if ($line -match '^PROBEV BOOK (\S+)$') {
             $book = $Matches[1]
-            $books[$book] = [pscustomobject]@{ Paper = $null; Systems = @() }
+            $books[$book] = [pscustomobject]@{ Paper = $null; Systems = @(); Groups = @() }
         }
         elseif ($line -match '^PROBEV PAPER top-margin=(\S+) bottom-margin=(\S+) paper-height=(\S+) paper-width=(\S+) output-scale=(\S+) line-width=(\S+)$') {
             $books[$book].Paper = [pscustomobject]@{
@@ -89,6 +90,18 @@ try {
                 PaperWidth   = [double]$Matches[4]
                 OutputScale  = [double]$Matches[5]
                 LineWidth    = [double]$Matches[6]
+            }
+        }
+        elseif ($line -match '^PROBEV VAG (\d+) (\d+) rel=(\S+) aff=(\S+) ext=\((\S+) \. (\S+)\)$') {
+            # One per vertical axis group, spaceable or not. `aff` is staff-affinity: '()'
+            # on a spaceable staff, 1/-1 on a loose line. The SYS line cannot carry these —
+            # staff-refpoint-extent holds the SPACEABLE staves only, which is the set the
+            # page's spring chain contains, and a loose line is by definition not in it.
+            $books[$book].Groups += [pscustomobject]@{
+                Page     = [int]$Matches[1]
+                Index    = [int]$Matches[2]
+                Rel      = [double]$Matches[3]   # relative to the system: negative is down
+                Loose    = $Matches[4] -ne '()'
             }
         }
         elseif ($line -match '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$') {
@@ -173,6 +186,29 @@ try {
                 }
                 $interUniq = @($inter | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
                 "     system-to-system (last staff -> next first) = {0}" -f ($interUniq -join ', ')
+            }
+            # LOOSE LINES (lyrics, chord rows, dynamics): distance from the staff refpoint
+            # ABOVE them, per system. Printed only when the score has any, so every existing
+            # book's output is unchanged. This is the quantity distribute_loose_lines
+            # decides, and the reason it is worth printing next to the gaps is that it does
+            # NOT follow them: get_spacing_spec gives a loose line's springs to its NON-own
+            # side LARGE_STRETCH/HUGE_STRETCH (page-layout-problem.cc:1257-1338), so the row
+            # stays with its own staff while the page around it stretches.
+            $loose = @(
+                foreach ($sysNo in ($b.Groups | Where-Object Page -eq $pageNo |
+                                    Select-Object -ExpandProperty Index -Unique)) {
+                    $vags = @($b.Groups | Where-Object { $_.Page -eq $pageNo -and $_.Index -eq $sysNo } |
+                              Sort-Object Rel -Descending)
+                    $anchor = $null
+                    foreach ($v in $vags) {
+                        if (-not $v.Loose) { $anchor = $v.Rel }
+                        elseif ($null -ne $anchor) { $anchor - $v.Rel }
+                    }
+                }
+            )
+            if ($loose) {
+                $looseUniq = @($loose | ForEach-Object { "{0:F6}" -f $_ } | Select-Object -Unique)
+                "     staff -> loose line (lyrics etc.) = {0}" -f ($looseUniq -join ', ')
             }
             if ($sys.Count -ge 2) {
                 $gaps = for ($i = 1; $i -lt $sys.Count; $i++) { $staff[$i] - $staff[$i - 1] }
