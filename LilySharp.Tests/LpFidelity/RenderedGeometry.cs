@@ -494,14 +494,34 @@ internal sealed class RenderedGeometry
     /// another page's syllables.
     /// </para>
     /// </remarks>
-    public double FirstStaffToLyricBaseline()
+    public double FirstStaffToLyricBaseline() => LyricBaselineBelowStaff(0);
+
+    /// <summary>
+    /// The topmost lyric baseline below staff <paramref name="staffIndex"/>, measured from
+    /// that staff's reference point.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ STAVES, not systems — <see cref="StaffRefpoints"/> returns one entry per staff top
+    /// of the page down, so on a two-staff score index 1 is the FIRST system's BOTTOM staff.
+    /// That is the index a note-bound lyric line is spaced from: a Lyrics line has
+    /// staff-affinity UP, so <c>nonstaff-relatedstaff-spacing</c> runs from the staff
+    /// directly above it, which page-layout-problem.cc:943-944 records as
+    /// <c>last_spaceable_line</c>.
+    /// </remarks>
+    public double LyricBaselineBelowStaff(int staffIndex, int page = 0)
     {
-        const int page = 0;
-        double staff = StaffRefpoints(page)[0];
+        var refpoints = StaffRefpoints(page);
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + "staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
         var below = LyricSyllables.Where(t => t.Y > staff).ToList();
         if (below.Count == 0)
             throw new InvalidOperationException(
-                $"page {page}: no lyric syllable was drawn below the first staff refpoint "
+                $"page {page}: no lyric syllable was drawn below staff {staffIndex}'s refpoint "
                 + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
         return below.Min(t => t.Y) - staff;
     }

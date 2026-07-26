@@ -1471,3 +1471,45 @@ probeTag =
   \score { \new Staff { \repeat unfold 48 { a'''4 b''' a''' b''' } } }
 }
 
+
+%% LYRM — THE SAME LYRIC LINE UNDER A TWO-STAFF SYSTEM, and the pair is again built so that
+%%     LilyPond's side is an IDENTITY (HANDOFF 5.0). A Lyrics line has staff-affinity UP, so
+%%     nonstaff-relatedstaff-spacing runs from the staff DIRECTLY ABOVE it — the system's
+%%     LAST spaceable staff (page-layout-problem.cc:943-944 records exactly that as
+%%     last_spaceable_line). Adding a staff ABOVE that one must therefore leave the
+%%     staff-to-lyric distance untouched: it is the same spring, between the same two
+%%     VerticalAxisGroups, on the same music.
+%%
+%%     ⚠️ WHY THIS IS WORTH A BOOK. Lily# does not anchor a note-bound block on the last
+%%     staff at all — it puts it `staffBottom` below the SYSTEM ORIGIN (the TOP staff's top
+%%     line) and lets the skyline drop push it clear of whatever is under it. On a one-staff
+%%     system those are the same place, which is why lyrics.natural.staff-to-lyric is exact
+%%     and has been for sessions. On a two-staff system they are a whole staff apart, and the
+%%     basic-distance 5.5 stops binding entirely — only the ink minimum is left. That is the
+%%     reason distribute_loose_lines was ported for SINGLE-staff systems only (HANDOFF 1):
+%%     solving a chain whose anchor is a staff away from LilyPond's would move the lines by
+%%     that error rather than fix them.
+%%
+%%     The bottom staff's melody stays INSIDE the staff so its own ink cannot bind: the
+%%     alignment minimum is 2.050000 + the syllable's x-height 1.187880 + padding 0.500000 =
+%%     3.737890, comfortably under 5.5 (HANDOFF 5.0: do not sit the measurement on a floor).
+%%     The top staff carries LYRC's high melody so the SYSTEM's up-ink is unchanged from it.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2): 5.500001 — the same reading as
+%%     LYRC to six digits, sliver and all, because it is the same spring in the same chain
+%%     and the extra staff joins the PAGE's chain, not this one.
+%%     (falsifier: anything else, and in particular a number near 17.5 — that would mean
+%%      LilyPond measures the line from the system's TOP staff, which would make Lily#'s
+%%      origin anchor defensible and this whole island wrong.)
+\book {
+  \probeTag "LYRM"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \repeat unfold 120 { g''4 a'' g'' a'' } }
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+    >>
+  }
+}
+

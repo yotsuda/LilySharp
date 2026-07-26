@@ -549,6 +549,52 @@ internal static class LpGeometryProbes
         };
 
     /// <summary>
+    /// The same note-bound lyric line under a TWO-staff system — the mirror of book LYRM.
+    /// </summary>
+    /// <remarks>
+    /// A Lyrics line has staff-affinity UP, so <c>nonstaff-relatedstaff-spacing</c> runs from
+    /// the staff DIRECTLY ABOVE it — the system's LAST spaceable staff, which
+    /// page-layout-problem.cc:943-944 records as <c>last_spaceable_line</c>. Putting another
+    /// staff ABOVE that one cannot change the distance: it is the same spring between the
+    /// same two VerticalAxisGroups on the same music. So LilyPond's side of the
+    /// LYRC/LYRM comparison is an IDENTITY, and whatever Lily# reads differently is its own.
+    /// <para>
+    /// ⚠️ Lily# anchors a note-bound block <c>staffBottom</c> below the SYSTEM ORIGIN — the
+    /// TOP staff's top line — and lets the skyline drop push it clear of whatever is beneath.
+    /// On a one-staff system that IS the last staff, which is why
+    /// <c>lyrics.natural.staff-to-lyric</c> has been exact for sessions. Here they are a
+    /// whole staff apart and the basic-distance 5.5 stops binding at all.
+    /// </para>
+    /// <para>
+    /// The bottom staff's melody stays inside the staff so its own ink cannot bind (the
+    /// alignment minimum is 3.737890 against a basic-distance of 5.5), and the top staff
+    /// carries LYRC's high melody so the system's up-ink is unchanged from it.
+    /// ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static readonly string LYRM = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part melody { clef treble }
+
+        section Main {
+          upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+          melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
+          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "LYRM" {
+          staff upper
+          staff melody with lyrics one
+        }
+        """;
+
+    /// <summary>
     /// WHERE A BAR NUMBER SITS — the mirrors of books BNL and BNH. The two differ ONLY in
     /// the melody's octave, and LilyPond reads them identically.
     /// </summary>
@@ -2648,6 +2694,15 @@ internal static class LpGeometryProbes
         // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it
         // unstretched, and the "stretched" entry would have read a ragged page and agreed.
         new("lyrics.stretched.systems-on-first-page", LYRS, g => g.SystemsOnPage(0), FourSystemsPerPage),
+
+        // The same line under a TWO-staff system (book LYRM), which is the identity twin of
+        // lyrics.natural.staff-to-lyric above: LilyPond spaces a Lyrics line from the staff
+        // it has affinity to — the system's LAST — so a staff added ABOVE that one cannot
+        // move it, and both entries carry the same 5.5. Lily# anchors the block below the
+        // system ORIGIN instead, so the two staves' worth of distance between the two anchors
+        // is exactly what this reads. ⚠️ Index 1, the first system's BOTTOM staff.
+        new("lyrics.two-staff.staff-to-lyric", LYRM,
+            g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the
