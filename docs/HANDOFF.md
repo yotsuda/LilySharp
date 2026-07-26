@@ -32,9 +32,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第13セッション・**hara-kiri 島＝「分岐」を「フィルタ」へ。Stage 1–3 完了**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`41f9749d`・origin より **105 ahead・未 push**）。
-**3381 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+最終更新 2026-07-26（第13セッション・**hara-kiri 島を完全に閉じた＝`hasHaraKiri` は存在しない**）/
+HEAD は §0 で確認すること（⚠️ 自己参照。`29bde26d`・origin より **107 ahead・未 push**）。
+**3382 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 103/129 exact・total |residual| 1.454788 ss / 116 distances・counts 11/13**。
 
 ★★ **方針転換（ユーザー指示・2026-07-26）**: 目標は **LP レイアウトの完全模倣**。
@@ -42,17 +42,34 @@ HEAD は §0 で確認すること（⚠️ 自己参照。`41f9749d`・origin �
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
-### このセッションでやったこと ＝ **hara-kiri 島を Stage 3 まで閉じた**（3 commit）
+### このセッションでやったこと ＝ **hara-kiri 島を完全に閉じた**（4 commit）
 
 **LP には hara-kiri 用のアルゴリズムが 1 つも無い**（`page-layout-problem.cc:1366-1370` の
 live フィルタ＋`align-interface.cc:90` の空スカイライン）。Lily# にあった**3 つの別式**を
-全部消して、**1 つの計算＋述語**にした。
+全部消して**1 つの計算＋述語**にし、最後に**残った「いつ走らせるか」の分岐も消した**。
+⇒ **`hasHaraKiri` というシンボルはもう存在しない。**
 
 | | commit | 消したもの | 出力 |
 |---|---|---|---|
 | **1** | `cf59a00d` | **高さ**の別式（`LayoutEngine.cs:198-205`。群間を 10.5 リテラルで綴っていた） | ossia 3 枚 |
 | **2** | `b415dd16` | **ばね**にスカイラインが渡っていなかった（＝床が描画距離に落ち**縮まない**） | 不変 |
 | **3** | `41f9749d` | **配置**の別式（固定 `BasicDistance` でスカイラインを一度も見ない walk） | hara-kiri 1 枚 |
+| **4** | `29bde26d` | **配置とばねの共有**（`hasHaraKiri`／`defaultStaffGroupLayouts`／`sharedStaffSprings`） | 不変 |
+
+★ **Stage 4 が直した量**: Lily# は**配置を system 0 の音楽から 1 回だけ作って全 system に配って
+いた**。LP は system ごと（`align-interface.cc:217-268` は System ごとの VerticalAlignment、
+`append_system` も system ごと）。**後ろの system が自分に必要な room をもらえていなかった**:
+
+| | 前 | 後 |
+|---|---|---|
+| system 0 の譜間 | 9.000000 | 9.000000 |
+| system 1 の譜間（インクが高い） | **9.000000** | **22.090000** |
+
+⚠️ **配置とばねは同時に動かすしかない**（ばねの最小は描画距離から逆算するので、距離を
+system A・最小を system B から取るとどちらのエンジンの答えでもなくなる）。だから Stage 2
+ではできず、Stage 3 で配置を 1 本にしてからでないと手が出なかった。
+⚠️ **旧コメントの「共有する理由＝性能」は load-bearing ではなかった**（per-system で
+スカイラインを毎回作っても全テスト 31 秒で不変）。**測って確かめてある。**
 
 ★ **Stage 1 の予測は 6 桁で当たった**（実装前に記載）: 10.5 − 9 = **1.500000**。
 `lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の
@@ -102,24 +119,19 @@ live フィルタ＋`align-interface.cc:90` の空スカイライン）。Lily# 
    ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
    （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
    ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
-1. ~~**hara-kiri 島**~~ — **閉じた**（Stage 0–3・`02a5b43e`／`cf59a00d`／`b415dd16`／`41f9749d`）。
-   `MultiStaffLayouter` に hara-kiri は**述語としてしか残っていない**。
-   残る `hasHaraKiri` 4 箇所は `LayoutEngine` にあり、**どれも同じ 1 つの区別**＝
-   「その 1 つの計算を **system ごとに走らせるか 1 回で済ませるか**」。別式ではない。
-   ⇒ **これを閉じるには「非 hara-kiri も配置を system ごとにする」**（LP の `append_system` は
-   常に system ごと）。⚠️ **ばねの最小は描画距離から逆算しているので、配置とばねは
-   同時に動かすしかない**（片方だけだと、共有の描画距離と system ごとの最小が混ざって
-   どちらのエンジンの答えでもなくなる）。§2D ① の `translates[]` 共有と同じ島。
+1. ~~**hara-kiri 島**~~ — **完全に閉じた**（Stage 0–4・上の表）。**`hasHaraKiri` は無い。**
 
    ⚠️ **`SystemHeightOf` に幾何を足さない。** あれは「置かれたものの union」であって
    計算する場所ではない。何かを足したくなったら、それは**配置側**が落としている量。
    ⚠️ **リテラルを 9 に書き換えて閉じない**（もう該当箇所は無いが、同型を見たら）——
    LYRHKG が**現に exact** で、liveness が spec を決める＝10.5 と 9 が同じ本に両方出る。
 
-   **不変条件テストが唯一の網**（台帳の regime 外なので）:
-   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing` は**2 regime の Theory**で、
-   **どちらも「自分がその regime に居ること」を assert する**（§5.0 罠 7）。
-   ⚠️ **これを緩めない。** inside が ideal を跨いだら、それは**測定をやめた**合図で、
+   **網は 3 本のテストだけ**（この島の量はどれも台帳の regime の外にある）:
+   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`（**2 regime の Theory**・
+   **どちらも「自分がその regime に居ること」を assert する**＝§5.0 罠 7）・
+   `HaraKiriSystemHeight_FollowsTheInterGroupSpec_NotALiteral`・
+   `EachSystemIsSpacedByItsOwnInk_NotByTheFirstSystems`。
+   ⚠️ **緩めない。** inside が ideal を跨いだら、それは**測定をやめた**合図で、
    本を建て直す側が正しい。
 2. **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）＝ loose 鎖の残り 1 枝。
    ⚠️ **room はもう問題ではない**——同じ refpoint 間 span で取れる（`:936-939`）。
@@ -298,7 +310,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | | 現状 | 字面の姿 |
 |---|---|---|
-| ① **ばねの床の作り方** | `drawn − max(0, basic − alignmentMin)` と**逆算** | LP は `get_minimum_translations` が返す**ベクタの差**をそのまま使う（`:699-704`）。⇒ **`internal_get_minimum_translations` 相当（`translates[]` を返す）を配置とばねで共有する**のが本来。**構造変更＝独立した島**（配置は譜の上端フレーム・ばねは refpoint フレームで、今は refpoint 側の最小を誰も保持していない） |
+| ① **ばねの床の作り方** | `drawn − max(0, basic − alignmentMin)` と**逆算** | LP は `get_minimum_translations` が返す**ベクタの差**をそのまま使う（`:699-704`）。⇒ **`internal_get_minimum_translations` 相当（`translates[]` を返す）を配置とばねで共有する**のが本来。**構造変更＝独立した島**（配置は譜の上端フレーム・ばねは refpoint フレームで、今は refpoint 側の最小を誰も保持していない）。⚠️ **2026-07-26 に半分だけ前進した**（`29bde26d`）: 配置とばねは**同じ system の同じ群・同じスカイライン**から作られるようになった（旧: 配置は score 全体で 1 回・ばねはそこから逆算）。**残るのは逆算そのもの**で、**この逆算があるから配置とばねは今後も同時にしか動かせない** |
 | ② **フレーム変換の置き場所** | ばねを作る側で span を引く（`PageLayouter`） | LP は `build_system_skyline` 内で**スカイラインを raise**（`:1120-1126`）。⚠️ 移すと `SkylineBuilder` の**読み手が全部巻き込まれる**（`CalculateUpExtent`/`CalculateDownExtent`・paging パス）＝frame 移行なので、島1 の手順（格納値を主張するテスト→生産側を同時に→縁で 1 回だけ反射）に従うこと |
 
 **未移植（`StaffSprings` の remarks に列挙済）**: ⑴ `alignment-distances`（`:706-717`＝
