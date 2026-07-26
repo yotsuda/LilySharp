@@ -55,7 +55,7 @@
   <rect x="63.02" y="25.12" width="0.19" height="4.00" data-pos="496"/>
   <rect x="101.34" y="25.12" width="0.19" height="4.00" data-pos="501"/>
   <rect x="101.83" y="25.12" width="0.60" height="4.00" data-pos="501"/>
-  <text x="0.05" y="22.86" font-size="1.75" font-weight="bold">3</text>
+  <text x="0.00" y="24.07" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="400"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="400">Main</text>
   </g>

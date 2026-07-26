@@ -90,7 +90,7 @@
   <rect x="52.25" y="9.88" width="0.19" height="13.73"/>
   <rect x="102.24" y="9.88" width="0.19" height="13.73"/>
   <text x="55.79" y="26.16" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="0">f</text>
-  <text x="0.05" y="7.62" font-size="1.75" font-weight="bold">3</text>
+  <text x="0.00" y="8.83" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
   </g>
 </g>
 <g class="page" data-page-top="64.00" data-page-height="32.00" transform="translate(0, 64.00)">
@@ -120,7 +120,7 @@
   <rect x="52.28" y="9.88" width="0.19" height="4.00" data-pos="0"/>
   <rect x="102.24" y="9.88" width="0.19" height="4.00" data-pos="0"/>
   <text x="5.80" y="17.15" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="0">p</text>
-  <text x="0.05" y="7.62" font-size="1.75" font-weight="bold">5</text>
+  <text x="0.00" y="8.83" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   </g>
 </g>
 </svg>

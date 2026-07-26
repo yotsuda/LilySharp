@@ -119,12 +119,25 @@
                                (for-each
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                                    (if (eq? nm 'BarNumber)
-                                        (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a)\n"
+                                    ;; Clef rides along because the QUESTION about a bar
+                                    ;; number is whether the two overlap in X: the number is
+                                    ;; break-aligned to `left-edge` with the comment "want the
+                                    ;; bar number before the clef at line start"
+                                    ;; (define-grobs.scm:322-323) AND declares
+                                    ;; extra-spacing-width (+inf.0 . -inf.0), i.e. it takes no
+                                    ;; horizontal room, so "before the clef" does not by itself
+                                    ;; say they are disjoint. X is printed as the grob's own
+                                    ;; span about the SYSTEM, ready to intersect.
+                                    (if (or (eq? nm 'BarNumber) (eq? nm 'Clef))
+                                        (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)
                                                 (car (ly:grob-extent g g Y))
-                                                (cdr (ly:grob-extent g g Y))))))
+                                                (cdr (ly:grob-extent g g Y))
+                                                (+ (ly:grob-relative-coordinate g sg X)
+                                                   (car (ly:grob-extent g g X)))
+                                                (+ (ly:grob-relative-coordinate g sg X)
+                                                   (cdr (ly:grob-extent g g X)))))))
                                 (ly:grob-array->list all))))))
                    (inner (cdr ls) (1+ i)))))
            (loop (cdr ps) (1+ n))))))

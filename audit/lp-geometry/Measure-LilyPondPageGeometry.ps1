@@ -68,7 +68,7 @@ try {
         '^PROBEV PAGE (\d+) systems=(\d+)$'
         '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$'
         '^PROBEV VAG (\d+) (\d+) rel=(\S+) aff=(\S+) ext=\((\S+) \. (\S+)\)$'
-        '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\)$'
+        '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\) x=\((\S+) \. (\S+)\)$'
     )
     $bad = @($lines | Where-Object { $l = $_; -not ($shapes | Where-Object { $l -match $_ }) })
     if ($bad) {
@@ -105,7 +105,7 @@ try {
                 Loose    = $Matches[4] -ne '()'
             }
         }
-        elseif ($line -match '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\)$') {
+        elseif ($line -match '^PROBEV GROB (\d+) (\d+) name=(\S+) rel=(\S+) ext=\((\S+) \. (\S+)\) x=\((\S+) \. (\S+)\)$') {
             # An outside-staff grob riding above a staff. It is inside that staff's
             # VerticalAxisGroup skyline, so it sets the ink the system reserves above its own
             # reference point -- the term that closes a loose-line chain and floors the
@@ -117,6 +117,8 @@ try {
                 Rel   = [double]$Matches[4]   # the grob's own refpoint (a text grob: its baseline)
                 Down  = [double]$Matches[5]
                 Up    = [double]$Matches[6]
+                XL    = [double]$Matches[7]   # already about the SYSTEM, ready to intersect
+                XR    = [double]$Matches[8]
             }
         }
         elseif ($line -match '^PROBEV SYS (\d+) (\d+) y=(\S+) ext=\((\S+) \. (\S+)\) staff=\((\S+) \. (\S+)\) title=(\d)$') {
@@ -240,7 +242,11 @@ try {
             $outside = @(
                 foreach ($g in ($b.Grobs | Where-Object Page -eq $pageNo | Sort-Object Index)) {
                     $s = $sys | Where-Object Index -eq $g.Index
-                    if ($s) { [pscustomobject]@{ Name = $g.Name; Above = $g.Rel - $s.StaffUp } }
+                    if ($s) {
+                        [pscustomobject]@{
+                            Name = $g.Name; Above = $g.Rel - $s.StaffUp; XL = $g.XL; XR = $g.XR
+                        }
+                    }
                 }
             )
             if ($outside) {
@@ -248,6 +254,9 @@ try {
                     $vals = @($outside | Where-Object Name -eq $name |
                               ForEach-Object { "{0:F6}" -f $_.Above } | Select-Object -Unique)
                     "     staff refpoint -> {0} baseline = {1}" -f $name, ($vals -join ', ')
+                    $xs = @($outside | Where-Object Name -eq $name |
+                            ForEach-Object { "[{0:F6}, {1:F6}]" -f $_.XL, $_.XR } | Select-Object -Unique)
+                    "                     {0} X span     = {1}" -f $name, ($xs -join ', ')
                 }
             }
             if ($sys.Count -ge 2) {

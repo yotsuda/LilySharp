@@ -115,41 +115,62 @@ internal static class BarNumberEngraver
                 // so the pickup is bar 0 and the first full measure is bar 1.
                 int displayedNumber = measureIndex + 1 + numberOffset;
 
-                // Line-start numbers break-align to the LEFT EDGE (the staff-
-                // line origin, before the clef) and LEFT-align to it plus a
-                // small horizon padding, so the number sits above the staff
-                // start and extends RIGHTWARD — clear of the system-start brace
-                // in the left margin. (Right-aligning here made the number hang
-                // left into the margin and collide with the brace.) Mid-line
-                // (period) numbers keep the measure-start anchor, also left-aligned.
-                // LILYPOND-REF: scm/define-grobs.scm BarNumber —
-                //   break-align-symbols (left-edge staff-bar),
-                //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT) =
-                //   LEFT at a line start, horizon-padding 0.05
+                // Line-start numbers break-align to the LEFT EDGE — the staff-line
+                // origin, BEFORE the clef, as LilyPond's own comment on
+                // break-align-symbols says — and at a line start they align their
+                // RIGHT edge to it, so the number hangs into the left margin and
+                // the clef is never underneath it.
+                //
+                // LILYPOND-REF: scm/define-grobs.scm:323 BarNumber
+                //   break-align-symbols = (left-edge staff-bar), and :334
+                //   self-alignment-X = (break-alignment-list LEFT LEFT RIGHT).
+                // ⚠️ THAT TRIPLE IS (end-of-line middle begin-of-line) —
+                // scm/output-lib.scm:506 names the three arguments in that order — so
+                // at a LINE START it is RIGHT, and only a mid-line number is LEFT.
+                // This code read the triple the other way round for as long as it
+                // existed, put the number over the clef, and the above-staff stacker
+                // then lifted it clear: MEASURED at 4.260000 above the staff refpoint
+                // against LilyPond's 3.074440 (audit/lp-geometry,
+                // barnumber.{low,high}-melody.staff-to-baseline). That excess is not
+                // cosmetic — a bar number is inside its staff's skyline, so it IS the
+                // ink the system reserves above its own reference point, which floors
+                // the system-to-system spring and closes the previous system's
+                // loose-line chain (page-layout-problem.cc:625-629, :931-932).
+                //
+                // MEASURED, LilyPond 2.26.0 on a continuation system (probe
+                // page-vertical.ly, book BNL): the number spans X (-0.956013 .. 0.0)
+                // and the clef (0.800000 .. 3.365000). Disjoint, by 0.8.
+                //
+                // ⚠️ horizon-padding 0.05 is a SKYLINE padding, not an X shift; the
+                // 0.05 that used to be added here had no counterpart in LilyPond.
                 bool atLineStart = isFirstInSystem;
                 // The system's left edge is where the staff lines start:
                 // the indent (margins live in the page transform). ml.X is
                 // the prefix END, and PrefixWidth is not reliable per-system
                 // here, so anchor on the staff-line origin directly.
-                double x = atLineStart
-                    ? system.Indent + 0.05
-                    : ml.X;
+                double x = atLineStart ? system.Indent : ml.X;
 
-                // Baseline = digit bottom, padding 1.0sp above the staff
-                // top (= 1.0 sp above the system top in the Y-up frame).
-                // Collisions with protruding staff content and other
-                // outside-staff grobs are resolved afterwards by the unified
-                // OutsideStaffStacker.StackAboveStaff pass. The system top is
-                // resolved at draw time, so no system.Y is baked here.
-                // LILYPOND-REF: scm/define-grobs.scm BarNumber — padding 1.0.
-                const double yUp = 1.0;
+                // The number's INK BOTTOM sits padding 1.0 above the staff's own
+                // up-skyline, and that skyline is the top staff LINE plus half its
+                // thickness — not the line's centre. Written as the derivation rather
+                // than as 1.05 so it follows the staff symbol if that ever changes
+                // (HANDOFF 5.2.1⑤). Lily# has no measured bottom overshoot for its
+                // digits, so its baseline IS that ink bottom; LilyPond's sits a
+                // digit's own overshoot higher, which is the ~0.024 floor the ledger
+                // entries name.
+                // Collisions with protruding staff content and other outside-staff
+                // grobs are resolved afterwards by OutsideStaffStacker.StackAboveStaff.
+                // LILYPOND-REF: scm/define-grobs.scm:333 BarNumber padding = 1.0;
+                // lily/side-position-interface.cc y_aligned_side.
+                const double padding = 1.0;
+                double yUp = EngravingDefaults.StaffLineThickness / 2 + padding;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,
                     Text: displayedNumber.ToString(),
                     X: x,
                     YUp: yUp,
-                    RightAligned: false));
+                    RightAligned: atLineStart));
             }
         }
 

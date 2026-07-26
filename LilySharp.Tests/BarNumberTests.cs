@@ -76,20 +76,48 @@ public class BarNumberTests
     }
 
     [Fact]
-    public void BarNumberX_LeftAlignsToSystemLeftEdge()
+    public void BarNumberAtALineStart_RightAlignsToTheStaffOrigin_LeavingTheClefClear()
     {
-        // Line-start bar numbers break-align to the LEFT EDGE (before the clef)
-        // and LEFT-align to it (+ horizon padding 0.05), so the number sits
-        // above the staff start and extends rightward — clear of the
-        // system-start brace in the left margin.
-        // LILYPOND-REF: scm/define-grobs.scm BarNumber —
-        //   break-align-symbols (left-edge staff-bar),
-        //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT) = LEFT at line start.
+        // LILYPOND-REF: scm/define-grobs.scm:323,334 BarNumber —
+        //   break-align-symbols = (left-edge staff-bar) with LilyPond's own comment
+        //   "want the bar number before the clef at line start", and
+        //   self-alignment-X = (break-alignment-list LEFT LEFT RIGHT).
+        // ⚠️ THAT TRIPLE IS (end-of-line middle begin-of-line) — scm/output-lib.scm:506
+        // names the arguments in that order — so a LINE-START number aligns RIGHT: its
+        // right edge sits on the left-edge break-align point (the staff-line origin) and
+        // the number hangs into the margin, which is what keeps the clef out from under
+        // it. Only a mid-line number is LEFT.
+        //
+        // MEASURED, LilyPond 2.26.0 on a continuation system
+        // (audit/lp-geometry/probes/page-vertical.ly, book BNL): the number spans
+        // X (-0.956013 .. 0.000000) and the clef (0.800000 .. 3.365000) — disjoint by 0.8.
+        //
+        // ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE and that is why it is worth reading:
+        // it pinned the triple read backwards, which put the number over the clef, made
+        // the above-staff stacker lift it clear, and cost 1.185560 ss of reserved ink
+        // above EVERY continuation system — a quantity that floors the system-to-system
+        // spring. See audit/lp-geometry, barnumber.{low,high}-melody.staff-to-baseline.
         var layout = BuildLayout("c4 d e f | break g4 a b c |");
         var bn = layout.BarNumberLayouts[0];
         var system = layout.AllSystems[1];
-        Assert.False(bn.RightAligned);
-        Assert.Equal(system.Indent + 0.05, bn.X, precision: 4);
+        Assert.True(bn.RightAligned);
+        Assert.Equal(system.Indent, bn.X, precision: 6);
+    }
+
+    [Fact]
+    public void BarNumberInkBottom_SitsOnePaddingAboveTheStaffsOwnUpSkyline()
+    {
+        // LILYPOND-REF: scm/define-grobs.scm:333 BarNumber padding = 1.0, placed by
+        // side-position-interface::y-aligned-side against the staff. The staff's up
+        // skyline is the top LINE plus half its thickness, not the line's centre, so the
+        // number's ink bottom is 0.05 + 1.0 above the top line.
+        // MEASURED (book BNL): 3.050000 above the staff REFPOINT for a flat-bottomed
+        // digit, i.e. 2.050000 + 1.0. Asserted here as the derivation rather than as the
+        // number, so it follows the staff symbol if that ever changes.
+        var layout = BuildLayout("c4 d e f | break g4 a b c |");
+        var bn = layout.BarNumberLayouts[0];
+        Assert.Equal(LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness / 2 + 1.0,
+                     bn.YUp, precision: 6);
     }
 
     [Fact]

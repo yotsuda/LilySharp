@@ -109,8 +109,8 @@
   <rect x="58.24" y="40.32" width="0.19" height="4.00" data-pos="263"/>
   <rect x="101.34" y="40.32" width="0.19" height="4.00" data-pos="272"/>
   <rect x="101.83" y="40.32" width="0.60" height="4.00" data-pos="272"/>
-  <text x="0.05" y="26.06" font-size="1.75" font-weight="bold">3</text>
-  <text x="0.05" y="38.06" font-size="1.75" font-weight="bold">5</text>
+  <text x="0.00" y="27.27" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
+  <text x="0.00" y="39.27" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="153"/>
   <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="153">Main</text>
   <text class="music" x="7.32" y="13.66" font-size="1.60" data-pos="0"></text>
