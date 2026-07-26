@@ -434,6 +434,14 @@ public class HaraKiriTests
     /// drawn in (audit/lp-geometry book LYRHK,
     /// <c>lyrics.hara-kiri.shown-system.staff-to-lyric</c>). A literal version fails here.
     /// </para>
+    /// <para>
+    /// ⚠️ THE SKYLINE-LESS OVERLOAD IS DELIBERATE HERE, unlike in BraceCollapseTests, which
+    /// were moved onto the render path's overload on 2026-07-27. This test's subject is the
+    /// SPEC, and a skyline can raise the gap above it — which would be the alignment minimum
+    /// binding instead, and the perturbation would stop being a clean one-variable
+    /// experiment. LilyPond makes the same split: the spec-only answer is its PURE estimate
+    /// (align-interface.cc:234-238).
+    /// </para>
     /// </remarks>
     [Theory]
     [InlineData(9.0)]
@@ -473,7 +481,11 @@ public class HaraKiriTests
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:1366-1370 — <c>consider_suicide</c> followed
     /// by <c>if (is_live()) push_back</c>. LilyPond has no hara-kiri height formula.
-    /// </remarks>
+    /// <para>
+    /// ⚠️ Skyline-less on purpose, for the reason given on the test above: the claim is that
+    /// a dead group contributes NOTHING, and the survivor's own height is the whole answer.
+    /// A skyline could only add to it, which would blur exactly what is being asserted.
+    /// </para>
     [Fact]
     public void HaraKiriSystemHeight_OfAHiddenNeighbour_IsTheSurvivorAlone()
     {

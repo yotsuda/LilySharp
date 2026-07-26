@@ -101,8 +101,14 @@ public class StaffLayoutFrameTests
         Assert.True(delim.TotalHeight > 0, $"TotalHeight ({delim.TotalHeight:F6}) must be positive");
     }
 
+    /// <summary>The frame survives a LIVENESS FILTER being applied (nothing dies here).</summary>
+    /// <remarks>
+    /// ⚠️ This used to be called <c>GrandStaff_HaraKiriPath_…</c>, from when hara-kiri was a
+    /// second placement algorithm. Since 2026-07-26 there is ONE walk and hara-kiri is a
+    /// predicate on it, so what this overload varies is the FILTER, not the path.
+    /// </remarks>
     [Fact]
-    public void GrandStaff_HaraKiriPath_StoresStaffYAsYUp()
+    public void GrandStaff_WithLivenessFilter_StoresStaffYAsYUp()
     {
         var group = StaffGroup.CreateGrandStaff(CreateStaff(ClefType.Treble), CreateStaff(ClefType.Bass));
         var layout = Layouter().LayoutStaffGroups(ScoreOf(group), 0, 1, isFirstSystem: true)[0];
@@ -113,8 +119,11 @@ public class StaffLayoutFrameTests
             $"BraceTop ({delim.BraceTop:F6}) must be ABOVE BraceBottom ({delim.BraceBottom:F6})");
     }
 
+    /// <summary>The frame survives SKYLINES deciding the gaps instead of the bare spec.</summary>
+    /// <remarks>⚠️ Formerly <c>GrandStaff_SkylinePath_…</c> — see the test above for why
+    /// "path" is the wrong word now. This is the overload the render path actually uses.</remarks>
     [Fact]
-    public void GrandStaff_SkylinePath_StoresStaffYAsYUp()
+    public void GrandStaff_WithSkylines_StoresStaffYAsYUp()
     {
         var group = StaffGroup.CreateGrandStaff(CreateStaff(ClefType.Treble), CreateStaff(ClefType.Bass));
         var layout = Layouter().LayoutStaffGroups(

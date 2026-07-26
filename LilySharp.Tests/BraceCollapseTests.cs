@@ -57,6 +57,33 @@ public class BraceCollapseTests
             RemoveEmpty: removeEmpty,
             RemoveFirst: removeFirst);
 
+    /// <summary>
+    /// Lays the groups out through the overload THE RENDER PATH USES — skylines decide the
+    /// gaps, and hara-kiri is the measure range.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ These tests used to call the skyline-less overload, which no production code has
+    /// taken since 2026-07-27; their subject (which staves die, and whether the brace
+    /// collapses around what is left) is DRAWN geometry, so it should be measured where it
+    /// is drawn. What the switch buys is the entry point, not different numbers: brace
+    /// collapse turns on how many staves survive and on the spec's basic-distance, and a
+    /// skyline can only ever push the pair FURTHER apart — so every assertion below holds
+    /// either way, and would have to be re-derived rather than relaxed if one ever did not.
+    /// </remarks>
+    private static ImmutableArray<StaffGroupLayout> LayoutAsRendered(
+        MultiStaffLayouter layouter, MultiStaffScore score, bool isFirstSystem)
+    {
+        var items = ImmutableArray.CreateBuilder<ItemLayout>(4);
+        for (int i = 0; i < 4; i++)
+            items.Add(new ItemLayout(i, 5.0 + i * 4.0, 1.0));
+        var measureLayouts = ImmutableArray.Create(
+            new MeasureLayout(0, 0, 40, items.ToImmutable()));
+
+        return layouter.LayoutStaffGroups(
+            score, new SkylineBuilder(LayoutOptions.Default.StaffHeight), measureLayouts,
+            0, 1, isFirstSystem);
+    }
+
     [Fact]
     public void GrandStaff_TwoStaves_OneHidden_BraceHeightEqualsSingleStaff()
     {
@@ -74,7 +101,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
+        var groups = LayoutAsRendered(layouter, score, isFirstSystem: false);
 
         Assert.Single(groups);
         var group = groups[0];
@@ -108,7 +135,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
+        var groups = LayoutAsRendered(layouter, score, isFirstSystem: false);
 
         var group = groups[0];
         double braceHeight = group.GrandStaffLayout!.TotalHeight;
@@ -134,7 +161,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
+        var groups = LayoutAsRendered(layouter, score, isFirstSystem: false);
 
         var group = groups[0];
         Assert.True(group.Staves[1].IsHidden);   // middle: hidden
@@ -163,7 +190,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
+        var groups = LayoutAsRendered(layouter, score, isFirstSystem: true);
 
         var group = groups[0];
         Assert.True(group.Staves[0].IsHidden);
@@ -190,7 +217,7 @@ public class BraceCollapseTests
 
         var options = LayoutOptions.Default;
         var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
-        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: false);
+        var groups = LayoutAsRendered(layouter, score, isFirstSystem: false);
 
         var group = groups[0];
         var gs = group.GrandStaffLayout!;

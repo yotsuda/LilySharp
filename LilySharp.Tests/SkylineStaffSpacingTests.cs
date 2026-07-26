@@ -162,9 +162,13 @@ public class SkylineStaffSpacingTests
         double height = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts);
         double heightFixed = layouter.CalculateSystemHeight(score);
 
-        // Skyline-based height should be >= fixed height (it uses max of skyline + padding and basic-distance)
-        Assert.True(height >= heightFixed - 0.01,
-            $"Skyline height ({height:F2}) should be >= fixed height ({heightFixed:F2})");
+        // Notes in the middle of both staves cannot reach across the gap, so the alignment
+        // minimum stays under basic-distance and the spec decides: the skyline height is
+        // EXACTLY the fixed one. ⚠️ The old assertion was `>= heightFixed - 0.01`, which
+        // allowed the skyline path to come out SMALLER than basic-distance — the one thing
+        // the name says cannot happen — and would have survived the skyline contribution
+        // being dropped entirely (HANDOFF 5.4).
+        Assert.Equal(heightFixed, height, 6);
     }
 
     [Fact]
@@ -187,9 +191,14 @@ public class SkylineStaffSpacingTests
         double skylineHeight = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts);
         double fixedHeight = layouter.CalculateSystemHeight(score);
 
-        // With extreme ledger lines, skyline-based spacing should be larger than fixed
-        Assert.True(skylineHeight >= fixedHeight,
-            $"Skyline height ({skylineHeight:F2}) should be >= fixed height ({fixedHeight:F2}) with extreme notes");
+        // ⚠️ STRICTLY greater, which is what the test's name claims. The old assertion was
+        // `>=`, so it passed whether or not the skyline did anything at all — and the
+        // companion test above shows that middle-of-staff notes make the two EQUAL, i.e.
+        // `>=` was satisfied by the case this test exists to distinguish itself from.
+        // Measured 2026-07-27: 15.090000 against 13.000000.
+        Assert.True(skylineHeight > fixedHeight,
+            $"Skyline height ({skylineHeight:F6}) must EXCEED fixed height ({fixedHeight:F6}) "
+            + "when ledger lines reach across the gap — equal means the skyline was ignored");
     }
 
     [Fact]
