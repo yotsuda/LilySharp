@@ -396,11 +396,16 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     ⇒ 代わりに **①主張の締め直し ②実態に合わない名前 ③描画幾何を測るテストの経路**を直した。
     ⚠️ **`BraceCollapseTests` は描画側へ移した**が、`HaraKiriSystemHeight_*` は
     **意図的に pure 経路のまま**（spec の一変数実験を skyline に濁されないため・理由はテストに明記）
-  - ~~`LayoutEngine.Layout()` が 516 行~~ — **262 行に分割済**（`b06f7391`）。
-    `RunPreliminaryAnnotationPass` / `BuildStaffAnchorTables` / `LayoutSystems` の
-    3 フェーズを逐語抽出（出力 byte 不変）。⚠️ **prologue（setup／system 0／初期 Y）は
-    意図的に残した**——11 個の値とローカル関数を吐くので、抽出すると引数の儀式に化ける。
-    ⚠️ **今の最長は `CalculateAnnotationLayouts` の 440 行**（未着手）
+  - ~~`LayoutEngine.Layout()` 516 行 / `CalculateAnnotationLayouts` 440 行~~ —
+    **それぞれ 262 / 257 行に分割済**（`b06f7391`＋`6c9fba1b`・出力 byte 不変）。
+    前者は `RunPreliminaryAnnotationPass`／`BuildStaffAnchorTables`／`LayoutSystems`、
+    後者は `LayoutLyrics`／`LayoutChordNames`／`LayoutFingerings`。
+    ⚠️ **意図的に残した 2 つ**: `Layout()` の prologue（11 個の値とローカル関数を吐くので
+    抽出すると引数の儀式になる）と、`CalculateAnnotationLayouts` の**共有機構**
+    （ctx 展開・`staffYAt`／`minStaffYAt`・全アノテーションを一度に見る outside-staff
+    stacking）——構造上共有なので、出しても引数で戻すだけ。
+    ⚠️ **歌詞と和音記号の skyline lookup は遅延構築が仕様**（そういうスコアが無ければ
+    一切働かず byte 不変）。「簡素化」で eager にしないこと——remark に明記済
 
 - `DrawingTransform.Identity` は `new()` なので **`ScaleX/ScaleY = 0`**（record struct はプライマリ
   コンストラクタの既定値を適用しない）。出荷 3 backend は無害だが記録用コンテキストの作者を
