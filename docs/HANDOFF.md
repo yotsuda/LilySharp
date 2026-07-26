@@ -131,6 +131,19 @@ LP は loose line を system スカイラインに**入れる**。ただし置�
 **①の値は用意して主張済**（`LyricEngraver.AlignmentMinimumBand`＋
 `AlignmentMinimumBand_IsWellBelowTheDrawnBand`・出力不変）。残りは
 **`LayoutEngine.EstimateLooseLineExtents` の歌詞バンドをそれに差し替える 1 行**と、②の solve。
+
+⚠️⚠️ **②に着手する前に閉じるべき算術がある**（2026-07-26・実装を止めた理由）。
+LYRV ページ1の**システム別**の読み（`probes/page-vertical.ly` の LYRV ヘッダに表で記録）:
+**内側の system 0-2 は staff→v1 = 3.737890（整列最小）、最後の system 3 だけ 5.500001**。
+最後だけ緩いのは、その loose 鎖が `-page_height_` まで伸びる＝余裕があるから、で筋は通る。
+**3.737890 の内訳も合う**（2.050000 + 1.187880 + 0.500000）。
+⚠️ **合わないのは force のほう**: 第1ばねが最小を読むには鎖が **force ≤ −1**＝最小の和が
+12.000000 を埋めていなければならないのに、ソースから足すと
+`3.737890 + 2.800000 + 0.0 + (1 + 4.303666) = 11.841556` で **0.158444 足りない**。
+その余裕があれば huge ばねが全部吸って第1ばねは ideal 5.5 を読むはずで、実測と逆。
+⇒ **項が 1 つ間違っているか欠けている。名前が付くまで移植しない**（§5.3「まず自分の
+当てはめを検算」）。**一番安いのは `distribute_loose_lines` の中から
+`min_distances[]` と解いた force を dump すること**——offset から逆算を続けない。
 ⚠️ **全歌詞スコアの system 間隔が動く**（fixture 17 個規模）。歌詞の下に付く機能
 （`pedal-below-lyrics`・`nav-below-clears-lyrics`・`lyrics-below-marcato`）も一緒に動くので、
 **focused session で**。

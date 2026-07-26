@@ -1229,6 +1229,37 @@ probeTag =
 %%     minimum-distance 2.8 means it cannot compress past 2.8 either. The step is RIGID at
 %%     max(2.8, ink + 0.2) at every force, which is what makes 2.800000 a spec reading and
 %%     not a regime artefact.
+%%
+%%     PER-SYSTEM READINGS, page 1 (2026-07-26), because the uniqued line above hides WHICH
+%%     system is which and a port was nearly built on the wrong reading of it:
+%%
+%%       sys | staff rel  | v1 rel     | v2 rel      | staff->v1 | v1->v2
+%%        0  | -3.776000  | -7.513890  | -10.313890  | 3.737890  | 2.800000
+%%        1  | -4.303666  | -8.041556  | -10.841556  | 3.737890  | 2.800000
+%%        2  | -4.279226  | -8.017116  | -10.817116  | 3.737890  | 2.800000
+%%        3  | -4.279226  | -9.779227  | -12.579227  | 5.500001  | 2.800000
+%%
+%%     So the INNER systems sit on the alignment minimum and only the LAST one on the page
+%%     reaches the basic-distance — which fits: the last system's loose chain runs to
+%%     -page_height_, a span with room to spare, while an inner one runs to the next
+%%     system's staff, 12.000000 away.
+%%     3.737890 IS that alignment minimum, and it checks out: 2.050000 (the staff's bottom
+%%     LINE plus half its thickness — the notes are up at g''/a'' and never enter it) +
+%%     1.187880 (the x-height of "no", the VAG's own printed up-extent) + 0.500000 (the
+%%     spec's padding) = 3.737880.
+%%
+%%     ⚠️ WHAT DOES NOT CLOSE YET, left here rather than rounded over: for the first spring
+%%     to READ its minimum, the chain has to be at force <= -1, i.e. its minimums must
+%%     already fill the 12.000000. Adding up what the source says they are —
+%%     3.737890 (staff->v1) + 2.800000 (v1->v2) + 0.0 (the null that breaks affinity,
+%%     :928-933) + (padding 1 - min_offsets[0] = 1 + 4.303666) — gives 11.841556, which is
+%%     0.158444 SHORT of the span. With that much slack the huge-stretchability springs
+%%     would take essentially all of it and the first spring would read its ideal 5.500000,
+%%     not its minimum. So one term in this list is wrong or missing.
+%%     ⇒ DO NOT PORT distribute_loose_lines OFF THIS MODEL until the 0.158444 is named.
+%%     The cheapest way to name it is to dump the springs themselves — min_distances[] and
+%%     the solved force — from inside distribute_loose_lines, rather than to keep inferring
+%%     them from the offsets they produce.
 \book {
   \probeTag "LYRV"
   \paper { max-systems-per-page = #4 ragged-bottom = ##t }
