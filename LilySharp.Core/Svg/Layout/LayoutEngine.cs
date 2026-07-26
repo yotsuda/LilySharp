@@ -1937,6 +1937,252 @@ internal sealed class LayoutEngine
             : ImmutableArray<ArticulationLayout>.Empty;
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
+        var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);
+
+        // LILYPOND-REF: axis-group-interface.cc skyline_spacing
+        // Outside-staff elements are placed in priority order (lower priority = closer to staff).
+        // DynamicLineSpanner (250) must be calculated before TextSpanner (350)
+        // so text spanners can be placed below dynamics.
+
+        // Dynamics first (outside-staff-priority: 250)
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff) : ImmutableArray<DynamicLayout>.Empty;
+
+        // Detect and layout hairpins from cresc/decresc marks
+        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
+        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt);
+
+        // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
+        // Pass dynamic layouts so text spanners can stack below them
+        var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt);
+
+        // Detect and layout ottava brackets from ottava/loco marks
+        var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYAt);
+
+        // Layout arpeggio markings
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
+
+        // Piano pedal marks render per the part's `pedal` style (Staff.PedalStyle):
+        //   bracket (Lily# default) / mixed  -> a spanning bracket, and the "Ped." /
+        //                                        "*" text is suppressed (mixed keeps
+        //                                        the leading "Ped." only);
+        //   text                             -> keep "Ped." / "*", no bracket.
+        // LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle.
+        PedalStyle StaffPedalStyle(int staffIndex) =>
+            staffByIndex != null && staffByIndex.TryGetValue(staffIndex, out var st)
+                ? st.PedalStyle : PedalStyle.Text; // no staff info -> plain text
+        var pedalBracketBuilder = ImmutableArray.CreateBuilder<PedalBracketLayout>();
+        if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
+        {
+            foreach (var staffIndex in musicMarks
+                .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
+            {
+                var style = StaffPedalStyle(staffIndex);
+                if (style == PedalStyle.Text)
+                    continue;
+                var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
+                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks);
+                pedalBracketBuilder.AddRange(
+                    PedalEngraver.Calculate(brackets, systems, ml, isMixed: style == PedalStyle.Mixed));
+            }
+        }
+        var pedalBracketLayouts = pedalBracketBuilder.ToImmutable();
+        // A bracket/mixed style suppresses the "Ped." / "*" text a mark would draw.
+        // The predicate is applied when the mark LAYOUT is built (below), so the raw
+        // mark list — and every mark's SourceIndex into it — stays intact for the
+        // incremental-reuse data-pos path (SharedRenderer.ResolveDataPos).
+        Func<MusicMarkItem, bool> keepMarkText = m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex));
+
+        // Layout figured bass (drops below below-staff scripts via the
+        // script-augmented DOWN skylines)
+        var figuredBassLayouts = FiguredBassEngraver.Calculate(
+            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
+            measuresByStaff, scriptedSkylines);
+
+        var chordNameLayouts = LayoutChordNames(
+            ctx, ml, scriptedSkylines, staffYAt, minStaffYAt);
+
+        // Layout percent repeats
+        var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
+            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
+
+        // Layout trill spanners (tr + wavy line)
+        // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
+        var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
+            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt);
+
+        // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
+        // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml);
+
+        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
+        // Post-process below-staff elements using priority-based stacking.
+        // This ensures hairpins avoid dynamics (both priority 250) and
+        // text spanners avoid both dynamics and hairpins (priority 350).
+        var (stackedDynamics, stackedHairpins) =
+            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
+                articulationLayouts, applyStaffOffsets: staffYAt != null);
+
+        // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
+        // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
+        // volta 600, marks 1500), seeded from the per-system up-skylines.
+        // Replaces the old pairwise hacks (bar-number-vs-volta in the
+        // renderer; music-mark-vs-volta inside MusicMarkEngraver).
+        var tupletBracketLayouts = TupletBracketEngraver.Calculate(
+            tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
+            forceStemUp: tupletForceStemUp,
+            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
+            staffByIndex: staffByIndex);
+        var musicMarkLayouts = MusicMarkEngraver.Calculate(
+            score, musicMarks, systems, ml, measures, default,
+            chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText);
+        var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
+        // A leading \partial pickup is bar 0: shift displayed numbers down by one
+        // so the first FULL measure is numbered 1, not 2.
+        int barNumberOffset = (!measures.IsDefaultOrEmpty && measures[0].IsPickup) ? -1 : 0;
+        var barNumberLayouts = BarNumberEngraver.Calculate(systems, numberOffset: barNumberOffset);
+        // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
+        // cleared by, the other above-staff grobs. Below dynamics were already placed by
+        // StackBelowStaff and pass through untouched.
+        var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
+             stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners) = OutsideStaffStacker.StackAboveStaff(
+            systems, systemSkylines, tupletBracketLayouts,
+            trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
+            customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
+            articulationLayouts, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
+        stackedDynamics = stackedDynamicsAbove;
+        // After stacking, sit a boundary "To Coda" on the adjacent section label's
+        // line (the two straddle one barline) instead of stacking them apart.
+        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
+        // Likewise a tempo mark joins its section label's line ("[Chorus] ♩ = 132").
+        stackedMarks = MusicMarkEngraver.CoPlaceTempoWithLabels(stackedMarks, chordNameLayouts, systems);
+
+        var fingeringLayouts = LayoutFingerings(
+            score, systems, voicesByStaff, articulationLayouts, staffYAt);
+
+        return new AnnotationLayouts(
+            Dynamics: stackedDynamics,
+            Articulations: articulationLayouts,
+            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
+            Lyrics: lyricLayouts,
+            LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
+            MusicMarks: stackedMarks,
+            CustomTexts: stackedCustomTexts,
+            VoltaBrackets: stackedVoltas,
+            TupletBrackets: tupletBracketLayouts,
+            Hairpins: stackedHairpins,
+            TextSpanners: stackedTextSpanners,
+            OttavaBrackets: stackedOttavas,
+            Arpeggios: arpeggioLayouts,
+            PedalBrackets: pedalBracketLayouts,
+            FiguredBasses: figuredBassLayouts,
+            ChordNames: chordNameLayouts,
+            PercentRepeats: percentRepeatLayouts,
+            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
+            TrillSpanners: stackedTrills,
+            // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
+            Fingerings: fingeringLayouts,
+            // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
+            TieVariants: score != null
+                ? TieVariantEngraver.Calculate(score, systems)
+                : ImmutableArray<TieVariantLayout>.Empty,
+            // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
+            MultiMeasureRests: score != null
+                ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
+                    allStaffMeasures: measuresByStaff != null && measuresByStaff.Count > 1
+                        ? measuresByStaff.Values.ToArray() : null)
+                : ImmutableArray<MultiMeasureRestLayout>.Empty,
+            // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
+            LedgerLineSpans: score != null
+                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
+                : ImmutableArray<LedgerLineSpan>.Empty,
+            // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
+            BarNumbers: stackedBarNumbers,
+            // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
+            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
+    }
+
+    /// <summary>
+    /// The chord symbols, and the up-skyline a row below the top staff has to clear.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <see cref="CalculateAnnotationLayouts"/>. Skyline-spaced
+    /// above high notes when skylines are available; a chords-ONLY sheet (chord rows, no
+    /// lyric rows) is a measure grid instead, and its symbols centre between the
+    /// full-height grid barlines.
+    /// </remarks>
+    private ImmutableArray<ChordNameLayout> LayoutChordNames(
+        AnnotationLayoutContext ctx, ImmutableArray<MeasureLayout> ml,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? scriptedSkylines,
+        Func<int, int, double>? staffYAt, Func<int, double>? minStaffYAt)
+    {
+        var systems = ctx.Systems;
+        var staffByIndex = ctx.StaffByIndex;
+        var staffYByIndex = ctx.StaffYByIndex;
+
+        bool chordGridSheet =
+            (ctx.ChordNames?.Any(c => c.IsChordRow) ?? false)
+            && !ctx.Lyrics.Any(l => l.IsLyricsRow);
+
+        // Chord names on a NON-top staff (`staff bass with chords ...`) must clear
+        // that staff's own high/ledger notes, but the system up-skyline carries only
+        // the topmost staff. Provide a per-(system, staff) up-skyline for the staves
+        // that actually host a chord row below the top; built lazily and only when
+        // such a row exists, so the common lead sheet (chords on the top staff only)
+        // does no extra work and is byte-identical.
+        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null;
+        var cn = ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty;
+        if (!cn.IsDefaultOrEmpty && staffByIndex != null && staffYByIndex != null
+            && staffYByIndex.Count > 0)
+        {
+            double topStaffY = staffYByIndex.Values.Min();
+            bool anyLowerStaffChords = cn.Any(c => !c.IsChordRow
+                && staffYByIndex.TryGetValue(c.StaffIndex, out var sy) && sy > topStaffY + 1e-6);
+            if (anyLowerStaffChords)
+            {
+                var skyCache = new Dictionary<(int, int), VerticalSkyline?>();
+                lowerStaffUpSkyline = (sysIdx, staffIndex) =>
+                {
+                    if (sysIdx < 0 || sysIdx >= systems.Length
+                        || !staffByIndex.TryGetValue(staffIndex, out var staff))
+                        return null;
+                    var key = (sysIdx, staffIndex);
+                    if (!skyCache.TryGetValue(key, out var sky))
+                    {
+                        sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Up;
+                        skyCache[key] = sky;
+                    }
+                    return sky;
+                };
+            }
+        }
+
+        return ChordNameEngraver.Calculate(
+            cn, systems, ml, ctx.Measures,
+            ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
+            chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline);
+    }
+
+    /// <summary>
+    /// The syllables, with the two things only the surrounding music can answer: what each
+    /// one is centred on, and what it has to clear.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <see cref="CalculateAnnotationLayouts"/>. Both caches are
+    /// per-call and lazy, which is what keeps a score without note-bound lyrics doing no
+    /// extra work at all.
+    /// </remarks>
+    private ImmutableArray<LyricLayout> LayoutLyrics(
+        AnnotationLayoutContext ctx, ImmutableArray<MeasureLayout> ml,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? scriptedSkylines)
+    {
+        var systems = ctx.Systems;
+        var lyrics = ctx.Lyrics;
+        var staffByIndex = ctx.StaffByIndex;
+        var measuresByStaff = ctx.MeasuresByStaff;
+        var measures = ctx.Measures;
+
         // Per-(system, staff) DOWN-skyline for a note-bound lyric line that sits under an
         // UPPER staff, so it clears THAT staff's own notes and real (font-metric) glyph
         // height instead of the whole system's lowest staff. Mirrors lowerStaffUpSkyline
@@ -2009,176 +2255,38 @@ internal sealed class LayoutEngine
             return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
         }
 
-        var lyricLayouts = new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
+        return new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
             .CalculateLayouts(
-                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
+                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
                 ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
                 ctx.LastSpaceableStaffY);
+    }
 
-        // LILYPOND-REF: axis-group-interface.cc skyline_spacing
-        // Outside-staff elements are placed in priority order (lower priority = closer to staff).
-        // DynamicLineSpanner (250) must be calculated before TextSpanner (350)
-        // so text spanners can be placed below dynamics.
-
-        // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff) : ImmutableArray<DynamicLayout>.Empty;
-
-        // Detect and layout hairpins from cresc/decresc marks
-        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
-        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt);
-
-        // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
-        // Pass dynamic layouts so text spanners can stack below them
-        var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
-        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt);
-
-        // Detect and layout ottava brackets from ottava/loco marks
-        var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
-        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYAt);
-
-        // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
-
-        // Piano pedal marks render per the part's `pedal` style (Staff.PedalStyle):
-        //   bracket (Lily# default) / mixed  -> a spanning bracket, and the "Ped." /
-        //                                        "*" text is suppressed (mixed keeps
-        //                                        the leading "Ped." only);
-        //   text                             -> keep "Ped." / "*", no bracket.
-        // LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle.
-        PedalStyle StaffPedalStyle(int staffIndex) =>
-            staffByIndex != null && staffByIndex.TryGetValue(staffIndex, out var st)
-                ? st.PedalStyle : PedalStyle.Text; // no staff info -> plain text
-        var pedalBracketBuilder = ImmutableArray.CreateBuilder<PedalBracketLayout>();
-        if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
-        {
-            foreach (var staffIndex in musicMarks
-                .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
-            {
-                var style = StaffPedalStyle(staffIndex);
-                if (style == PedalStyle.Text)
-                    continue;
-                var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
-                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks);
-                pedalBracketBuilder.AddRange(
-                    PedalEngraver.Calculate(brackets, systems, ml, isMixed: style == PedalStyle.Mixed));
-            }
-        }
-        var pedalBracketLayouts = pedalBracketBuilder.ToImmutable();
-        // A bracket/mixed style suppresses the "Ped." / "*" text a mark would draw.
-        // The predicate is applied when the mark LAYOUT is built (below), so the raw
-        // mark list — and every mark's SourceIndex into it — stays intact for the
-        // incremental-reuse data-pos path (SharedRenderer.ResolveDataPos).
-        Func<MusicMarkItem, bool> keepMarkText = m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex));
-
-        // Layout figured bass (drops below below-staff scripts via the
-        // script-augmented DOWN skylines)
-        var figuredBassLayouts = FiguredBassEngraver.Calculate(
-            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, scriptedSkylines);
-
-        // Layout chord names (skyline-spaced above high notes when skylines available).
-        // A chords-ONLY sheet (chord rows, no lyric rows) is a measure grid: its
-        // symbols centre between the full-height grid barlines.
-        bool chordGridSheet =
-            (chordNames?.Any(c => c.IsChordRow) ?? false)
-            && !lyrics.Any(l => l.IsLyricsRow);
-
-        // Chord names on a NON-top staff (`staff bass with chords ...`) must clear
-        // that staff's own high/ledger notes, but the system up-skyline carries only
-        // the topmost staff. Provide a per-(system, staff) up-skyline for the staves
-        // that actually host a chord row below the top; built lazily and only when
-        // such a row exists, so the common lead sheet (chords on the top staff only)
-        // does no extra work and is byte-identical.
-        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null;
-        var cn = chordNames ?? ImmutableArray<ChordNameItem>.Empty;
-        if (!cn.IsDefaultOrEmpty && staffByIndex != null && staffYByIndex != null
-            && staffYByIndex.Count > 0)
-        {
-            double topStaffY = staffYByIndex.Values.Min();
-            bool anyLowerStaffChords = cn.Any(c => !c.IsChordRow
-                && staffYByIndex.TryGetValue(c.StaffIndex, out var sy) && sy > topStaffY + 1e-6);
-            if (anyLowerStaffChords)
-            {
-                var skyCache = new Dictionary<(int, int), VerticalSkyline?>();
-                lowerStaffUpSkyline = (sysIdx, staffIndex) =>
-                {
-                    if (sysIdx < 0 || sysIdx >= systems.Length
-                        || !staffByIndex.TryGetValue(staffIndex, out var staff))
-                        return null;
-                    var key = (sysIdx, staffIndex);
-                    if (!skyCache.TryGetValue(key, out var sky))
-                    {
-                        sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Up;
-                        skyCache[key] = sky;
-                    }
-                    return sky;
-                };
-            }
-        }
-
-        var chordNameLayouts = ChordNameEngraver.Calculate(
-            cn, systems, ml, measures,
-            measuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
-            chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline);
-
-        // Layout percent repeats
-        var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
-            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
-
-        // Layout trill spanners (tr + wavy line)
-        // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
-        var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
-            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt);
-
-        // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
-        // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
-        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml);
-
-        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
-        // Post-process below-staff elements using priority-based stacking.
-        // This ensures hairpins avoid dynamics (both priority 250) and
-        // text spanners avoid both dynamics and hairpins (priority 350).
-        var (stackedDynamics, stackedHairpins) =
-            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
-                articulationLayouts, applyStaffOffsets: staffYAt != null);
-
-        // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
-        // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
-        // volta 600, marks 1500), seeded from the per-system up-skylines.
-        // Replaces the old pairwise hacks (bar-number-vs-volta in the
-        // renderer; music-mark-vs-volta inside MusicMarkEngraver).
-        var tupletBracketLayouts = TupletBracketEngraver.Calculate(
-            tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
-            forceStemUp: tupletForceStemUp,
-            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
-            staffByIndex: staffByIndex);
-        var musicMarkLayouts = MusicMarkEngraver.Calculate(
-            score, musicMarks, systems, ml, measures, default,
-            chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText);
-        var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
-        // A leading \partial pickup is bar 0: shift displayed numbers down by one
-        // so the first FULL measure is numbered 1, not 2.
-        int barNumberOffset = (!measures.IsDefaultOrEmpty && measures[0].IsPickup) ? -1 : 0;
-        var barNumberLayouts = BarNumberEngraver.Calculate(systems, numberOffset: barNumberOffset);
-        // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
-        // cleared by, the other above-staff grobs. Below dynamics were already placed by
-        // StackBelowStaff and pass through untouched.
-        var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
-             stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners) = OutsideStaffStacker.StackAboveStaff(
-            systems, systemSkylines, tupletBracketLayouts,
-            trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
-            customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
-            articulationLayouts, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
-        stackedDynamics = stackedDynamicsAbove;
-        // After stacking, sit a boundary "To Coda" on the adjacent section label's
-        // line (the two straddle one barline) instead of stacking them apart.
-        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
-        // Likewise a tempo mark joins its section label's line ("[Chorus] ♩ = 132").
-        stackedMarks = MusicMarkEngraver.CoPlaceTempoWithLabels(stackedMarks, chordNameLayouts, systems);
-
-        // Fingerings live on the NoteItem, so they must be read from EACH staff's
-        // own voice (score.Voice is only the first staff) and positioned at that
-        // staff's index — otherwise lower-staff fingerings vanish.
+    /// <summary>
+    /// Every staff's fingerings, pushed OUTSIDE any articulation that shares the note and
+    /// the side so the two do not overprint.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <see cref="CalculateAnnotationLayouts"/>.
+    /// <para>
+    /// Fingerings live on the NoteItem, so they must be read from EACH staff's own voice
+    /// (<c>score.Voice</c> is only the first staff) and positioned at that staff's index —
+    /// otherwise lower-staff fingerings vanish.
+    /// </para>
+    /// <para>
+    /// LilyPond keeps the articulation (Script) close to the note and places the fingering
+    /// on the OUTSIDE — verified against LilyPond 2.24.4: a fingering and a marcato forced
+    /// above the same note render marcato inner, fingering outer (the digit sits above the
+    /// marcato). So the FINGERING is the one that moves, not the articulation.
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc; empirical stacking order.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<FingeringLayout> LayoutFingerings(
+        Score? score, ImmutableArray<SystemLayout> systems,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
+        ImmutableArray<ArticulationLayout> articulationLayouts,
+        Func<int, int, double>? staffYAt)
+    {
         ImmutableArray<FingeringLayout> fingeringLayouts;
         if (score == null)
             fingeringLayouts = ImmutableArray<FingeringLayout>.Empty;
@@ -2198,94 +2306,45 @@ internal sealed class LayoutEngine
         else
             fingeringLayouts = FingeringEngraver.Calculate(score, systems);
 
-        // Push each fingering OUTSIDE any articulation sharing the note & side, so
-        // they don't overprint. LilyPond keeps the articulation (Script) close to
-        // the note and places the fingering on the OUTSIDE -- verified against
-        // LilyPond 2.24.4: a fingering and a marcato forced above the same note
-        // render marcato inner, fingering outer (the digit sits above the marcato).
-        // So the fingering, not the articulation, is the one that moves.
-        // LILYPOND-REF: lily/new-fingering-engraver.cc; empirical stacking order.
-        if (!fingeringLayouts.IsDefaultOrEmpty && !articulationLayouts.IsDefaultOrEmpty)
-        {
-            // Gap from the outermost articulation's anchor to the fingering baseline.
-            // Below needs more: the fingering baseline is the digit's lower edge.
-            const double aboveGap = 1.4;
-            const double belowGap = 1.9;
-            // Outermost articulation anchor per note & side (min Y above / max Y below).
-            // StaffIndex is -1 for single-staff fingerings and 0 for their articulations,
-            // so normalise a negative staff to 0 on both sides before matching.
-            // Outermost articulation anchor per note & side, in Y-up: "outermost"
-            // is the MOST above (max YUp) or MOST below (min YUp).
-            var artOuter = new Dictionary<(int, int, int, bool), double>();
-            foreach (var a in articulationLayouts)
-            {
-                var key = (a.StaffIndex < 0 ? 0 : a.StaffIndex, a.MeasureIndex, a.ItemIndex, a.IsAbove);
-                artOuter[key] = artOuter.TryGetValue(key, out var cur)
-                    ? (a.IsAbove ? System.Math.Max(cur, a.YUp) : System.Math.Min(cur, a.YUp))
-                    : a.YUp;
-            }
-            var fb2 = fingeringLayouts.ToBuilder();
-            for (int i = 0; i < fb2.Count; i++)
-            {
-                var fg = fb2[i];
-                var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
-                if (artOuter.TryGetValue(key, out var artYUp))
-                {
-                    // Both are Y-up now; do the gap clamp in device against the shared
-                    // staff middle (fingering & its articulation are the same note/staff),
-                    // then reflect back to Y-up.
-                    double staffMid = (staffYAt?.Invoke(fg.MeasureIndex, fg.StaffIndex) ?? 0)
-                        + _options.StaffHeight / 2.0;
-                    double artY = staffMid - artYUp; // ToDevice
-                    double fgY = staffMid - fg.YUp;  // ToDevice
-                    double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
-                    double newY = fg.IsAbove ? System.Math.Min(fgY, target) : System.Math.Max(fgY, target);
-                    fb2[i] = fg with { YUp = staffMid - newY }; // ToUp
-                }
-            }
-            fingeringLayouts = fb2.ToImmutable();
-        }
+        if (fingeringLayouts.IsDefaultOrEmpty || articulationLayouts.IsDefaultOrEmpty)
+            return fingeringLayouts;
 
-        return new AnnotationLayouts(
-            Dynamics: stackedDynamics,
-            Articulations: articulationLayouts,
-            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
-            Lyrics: lyricLayouts,
-            LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
-            MusicMarks: stackedMarks,
-            CustomTexts: stackedCustomTexts,
-            VoltaBrackets: stackedVoltas,
-            TupletBrackets: tupletBracketLayouts,
-            Hairpins: stackedHairpins,
-            TextSpanners: stackedTextSpanners,
-            OttavaBrackets: stackedOttavas,
-            Arpeggios: arpeggioLayouts,
-            PedalBrackets: pedalBracketLayouts,
-            FiguredBasses: figuredBassLayouts,
-            ChordNames: chordNameLayouts,
-            PercentRepeats: percentRepeatLayouts,
-            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
-            TrillSpanners: stackedTrills,
-            // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
-            Fingerings: fingeringLayouts,
-            // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
-            TieVariants: score != null
-                ? TieVariantEngraver.Calculate(score, systems)
-                : ImmutableArray<TieVariantLayout>.Empty,
-            // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
-            MultiMeasureRests: score != null
-                ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
-                    allStaffMeasures: measuresByStaff != null && measuresByStaff.Count > 1
-                        ? measuresByStaff.Values.ToArray() : null)
-                : ImmutableArray<MultiMeasureRestLayout>.Empty,
-            // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
-            LedgerLineSpans: score != null
-                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
-                : ImmutableArray<LedgerLineSpan>.Empty,
-            // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
-            BarNumbers: stackedBarNumbers,
-            // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
-            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
+        // Gap from the outermost articulation's anchor to the fingering baseline.
+        // Below needs more: the fingering baseline is the digit's lower edge.
+        const double aboveGap = 1.4;
+        const double belowGap = 1.9;
+        // Outermost articulation anchor per note & side, in Y-up: "outermost" is the MOST
+        // above (max YUp) or MOST below (min YUp). StaffIndex is -1 for single-staff
+        // fingerings and 0 for their articulations, so normalise a negative staff to 0 on
+        // both sides before matching.
+        var artOuter = new Dictionary<(int, int, int, bool), double>();
+        foreach (var a in articulationLayouts)
+        {
+            var key = (a.StaffIndex < 0 ? 0 : a.StaffIndex, a.MeasureIndex, a.ItemIndex, a.IsAbove);
+            artOuter[key] = artOuter.TryGetValue(key, out var cur)
+                ? (a.IsAbove ? System.Math.Max(cur, a.YUp) : System.Math.Min(cur, a.YUp))
+                : a.YUp;
+        }
+        var fb2 = fingeringLayouts.ToBuilder();
+        for (int i = 0; i < fb2.Count; i++)
+        {
+            var fg = fb2[i];
+            var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
+            if (artOuter.TryGetValue(key, out var artYUp))
+            {
+                // Both are Y-up now; do the gap clamp in device against the shared
+                // staff middle (fingering & its articulation are the same note/staff),
+                // then reflect back to Y-up.
+                double staffMid = (staffYAt?.Invoke(fg.MeasureIndex, fg.StaffIndex) ?? 0)
+                    + _options.StaffHeight / 2.0;
+                double artY = staffMid - artYUp; // ToDevice
+                double fgY = staffMid - fg.YUp;  // ToDevice
+                double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
+                double newY = fg.IsAbove ? System.Math.Min(fgY, target) : System.Math.Max(fgY, target);
+                fb2[i] = fg with { YUp = staffMid - newY }; // ToUp
+            }
+        }
+        return fb2.ToImmutable();
     }
 
     /// <summary>
