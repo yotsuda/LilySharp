@@ -32,8 +32,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-27（第13セッション・**hara-kiri 島を完全に閉じた＋その性能劣化を計測して回収**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`921787a7`・origin より **112 ahead・未 push**）。
+最終更新 2026-07-27（第13セッション・**hara-kiri 島を完全に閉じた＋性能劣化を計測して回収＋
+§2G の保守債務を一掃**）/
+HEAD は §0 で確認すること（⚠️ 自己参照。`dd3959c6`・origin より **119 ahead・未 push**）。
 **3383 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 103/129 exact・total |residual| 1.454788 ss / 116 distances・counts 11/13**。
 
@@ -68,6 +69,7 @@ live フィルタ＋`align-interface.cc:90` の空スカイライン）。Lily# 
 ⚠️ **配置とばねは同時に動かすしかない**（ばねの最小は描画距離から逆算するので、距離を
 system A・最小を system B から取るとどちらのエンジンの答えでもなくなる）。だから Stage 2
 ではできず、Stage 3 で配置を 1 本にしてからでないと手が出なかった。
+
 ### ★ その性能劣化を**測って**回収した（`78870228`＋`e0ab3359`）
 
 ⚠️ **「全テスト 31 秒で不変だから性能は問題ない」と一度書いたが、それは誤りだった。**
@@ -97,6 +99,13 @@ fixture が小さいので**テストスイートは system 数に比例する�
 `lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の
 0.271310・0 にしない**）・total **2.954788 → 1.454788**。
 
+### ★ そのあと §2G の保守債務を一掃した（出力不変・4 commit）
+
+`921787a7` 死んだ `StaffSprings` オーバーロード削除（**到達不能になった「床＝描画距離」も
+道連れ**）／`10267f6f` テスト監査（**効果が消えても通る不等号 2 件**を締め・実態に合わない
+テスト名 2 件・描画幾何のテストを製品経路へ）／`b06f7391`＋`6c9fba1b` **`Layout()` 516→262 行・
+`CalculateAnnotationLayouts` 440→257 行**に分割。⇒ **§2G は空**。
+
 ★ **Stage 2/3 が直した量**（どちらも台帳の regime 外なので、**網はテスト側**）:
 
 | regime | 宣言なし | 宣言あり・前 | 宣言あり・後 |
@@ -112,20 +121,14 @@ fixture が小さいので**テストスイートは system 数に比例する�
 同じ高さの譜しか通っていなかったので完全に隠れていたが、grandStaff に ossia/tab が
 入ると差の分ずれる。**どちらの複製も半分ずつ正しかった**＝§5.2.1②。
 
-### ★ 狙っていなかった 2 件が同時に落ちた（§5.0・今回も例外なし）
+### ★ 狙っていなかった 2 件が同時に落ちた（§5.0・今回も例外なし。詳細は台帳の `why`）
 
-1. **ページブレーカーの不変条件が閉じた**。`lyrics.hara-kiri.declared-only.staves-on-first-page`
-   が **−4 → −2**、宣言あり／なしが**同じ 14 譜**になった（旧 12 対 14）。LP の 2 読みは
-   構成上恒等なので、**「宣言しただけ」はもう spacing にもページ分割にも効かない**。
-   ⇒ ▶1 が「修正は歌詞の鎖に閉じない」と警告していた側は**これで閉じた**。
-   残る −2 は**両書に共通**＝ページブレーカー自身の別欠陥（LP 8 system／Lily# 7）。
-   ⚠️ **Lily# の 7 system ページがどちらの regime かは未再測定**（旧 6 system の 9.647977 は
-   もう存在しないページの値）。読む前に dump すること。
-2. **ossia の snapshot 3 枚が動いた**（ユーザー承認済で再ベース）。**ossia は `removeEmpty` を
-   暗黙に立てる**ので **ずっとこの分岐に居た**——前セッションの「`removeEmpty` を持つ fixture は
-   `hara-kiri.lys` と `HaraKiriVisualTests` の 2 つだけ」は**誤りだった**。そこでは分岐が
-   **ossia スケールも落として**おり、`4 + 6.5 + 2.828427 = 13.328427` を予約して
-   **10.363961 にしか置いていなかった**＝**2.964466 は誰も描かない空白**（page 41.82→38.86）。
+1. **ページブレーカーの不変条件が閉じた**（`lyrics.hara-kiri.declared-only.staves-on-first-page`
+   −4 → −2）。宣言あり／なしが**同じ 14 譜**に。残る −2 は**両書に共通**＝ページブレーカー
+   自身の別欠陥（LP 8 system／Lily# 7）。⚠️ **Lily# の 7 system ページの regime は未再測定**
+   （旧 6 system の 9.647977 はもう存在しないページの値）。読む前に dump すること。
+2. **ossia の snapshot 3 枚が動いた**（承認済）。**ossia は `removeEmpty` を暗黙に立てる**ので
+   ずっとこの分岐に居た＝前セッションの fixture 数え上げが誤りだった（§5.0 に汎化）。
    ⚠️ **これで ossia が正しくなったのではない**（下の候補へ）。
 
 ### ▶ 次の一手
@@ -141,20 +144,12 @@ fixture が小さいので**テストスイートは system 数に比例する�
    ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
    （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
    ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
-1. ~~**hara-kiri 島**~~ — **完全に閉じた**（Stage 0–4・上の表）。**`hasHaraKiri` は無い。**
-
-   ⚠️ **`SystemHeightOf` に幾何を足さない。** あれは「置かれたものの union」であって
-   計算する場所ではない。何かを足したくなったら、それは**配置側**が落としている量。
-   ⚠️ **リテラルを 9 に書き換えて閉じない**（もう該当箇所は無いが、同型を見たら）——
-   LYRHKG が**現に exact** で、liveness が spec を決める＝10.5 と 9 が同じ本に両方出る。
-
-   **網は 3 本のテストだけ**（この島の量はどれも台帳の regime の外にある）:
-   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`（**2 regime の Theory**・
-   **どちらも「自分がその regime に居ること」を assert する**＝§5.0 罠 7）・
-   `HaraKiriSystemHeight_FollowsTheInterGroupSpec_NotALiteral`・
-   `EachSystemIsSpacedByItsOwnInk_NotByTheFirstSystems`。
-   ⚠️ **緩めない。** inside が ideal を跨いだら、それは**測定をやめた**合図で、
-   本を建て直す側が正しい。
+1. ~~**hara-kiri 島**~~ — **完全に閉じた**（上の表）。⚠️ **この島の量は台帳の regime の外**
+   なので、網は**テスト 4 本だけ**（`RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`
+   の 2 regime ＋ `HaraKiriSystemHeight_*` ＋ `EachSystemIsSpacedByItsOwnInk_*`）。
+   **緩めない**——inside が ideal を跨いだら測定をやめた合図で、本を建て直す側が正しい。
+   ⚠️ **`SystemHeightOf` に幾何を足さない**（「置かれたものの union」であって計算の場所では
+   ない。足したくなったらそれは**配置側**が落としている量）。
 2. **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）＝ loose 鎖の残り 1 枝。
    ⚠️ **room はもう問題ではない**——同じ refpoint 間 span で取れる（`:936-939`）。
    **違うのは閉じ方だけ**＝`min_offsets[k−1] − min_offsets[k]`・**null 行なし**（`:923-925`）、
@@ -381,31 +376,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### G. 保守性の負債・未 commit のプローブ
 
-- ★ **hara-kiri 島が残した API の債務**（2026-07-27）:
-  - ~~`StaffSprings(score, groups, skylineBuilder?, measureLayouts)` は呼び出し元ゼロ~~
-    — **削除済**（`921787a7`・ユーザー承認）。⚠️ **一緒に「スカイライン無しの床」も消えた**:
-    あの経路だけが `staffSkylines == null` に到達できたので、`minimum = drawn`
-    （＝伸びるが縮まない＝Stage 2 が閉じた欠陥そのもの）が**到達不能な生き写しとして
-    残っていた**。引数は非 nullable にしたので null で復活させられない
-  - **公開メソッド 3 つがテスト専用に落ちた**: `CalculateSystemHeight(score, skylineBuilder,
-    measureLayouts)`・`LayoutStaffGroups(score)`・`LayoutStaffGroups(score, start, end,
-    isFirstSystem)`。⚠️ **消さないと決めた**（`10267f6f` で監査済）——支えているのは
-    **フレーム不変条件**（Y-up 積み・brace 端）・**liveness と括弧の幾何**・**delimiter 種別**で、
-    どれも実在の主張。スカイライン無し経路は **LP の pure 見積り**（`align-interface.cc:234-238`）
-    に対応するので、**spec を摂動するテストはむしろこちらが正しい**。
-    ⇒ 代わりに **①主張の締め直し ②実態に合わない名前 ③描画幾何を測るテストの経路**を直した。
-    ⚠️ **`BraceCollapseTests` は描画側へ移した**が、`HaraKiriSystemHeight_*` は
-    **意図的に pure 経路のまま**（spec の一変数実験を skyline に濁されないため・理由はテストに明記）
-  - ~~`LayoutEngine.Layout()` 516 行 / `CalculateAnnotationLayouts` 440 行~~ —
-    **それぞれ 262 / 257 行に分割済**（`b06f7391`＋`6c9fba1b`・出力 byte 不変）。
-    前者は `RunPreliminaryAnnotationPass`／`BuildStaffAnchorTables`／`LayoutSystems`、
-    後者は `LayoutLyrics`／`LayoutChordNames`／`LayoutFingerings`。
-    ⚠️ **意図的に残した 2 つ**: `Layout()` の prologue（11 個の値とローカル関数を吐くので
-    抽出すると引数の儀式になる）と、`CalculateAnnotationLayouts` の**共有機構**
-    （ctx 展開・`staffYAt`／`minStaffYAt`・全アノテーションを一度に見る outside-staff
-    stacking）——構造上共有なので、出しても引数で戻すだけ。
-    ⚠️ **歌詞と和音記号の skyline lookup は遅延構築が仕様**（そういうスコアが無ければ
-    一切働かず byte 不変）。「簡素化」で eager にしないこと——remark に明記済
+> **§2G の債務は 2026-07-27 に一掃した**（`921787a7`／`10267f6f`／`b06f7391`／`6c9fba1b`）。
+> 残すのは**次の人が蒸し返しやすい 4 つの判断**だけ:
+>
+> - **テスト専用に見える 3 メソッドは消さない**（`CalculateSystemHeight(3 引数)`・
+>   `LayoutStaffGroups(score)`・`LayoutStaffGroups(score, start, end, isFirstSystem)`）。
+>   支えているのはフレーム不変条件・liveness と括弧の幾何・delimiter 種別＝実在の主張。
+>   スカイライン無し経路は **LP の pure 見積り**（`align-interface.cc:234-238`）に対応するので、
+>   **spec を摂動するテストはむしろそちらが正しい**（`HaraKiriSystemHeight_*` は意図的にそのまま。
+>   `BraceCollapseTests` は描画幾何なので製品経路へ移した）
+> - **`Layout()` の prologue と `CalculateAnnotationLayouts` の共有機構は意図的に残した**——
+>   前者は 11 値＋ローカル関数、後者は全エングレーバが読む機構で、出しても引数で戻すだけ
+> - **歌詞と和音記号の skyline lookup は遅延構築が仕様**（該当スコアが無ければ一切働かない）。
+>   「簡素化」で eager にしないこと
+> - **`StaffSprings` の `staffSkylines` は非 nullable**。null 経路＝「床＝描画距離」は
+>   Stage 2 が閉じた欠陥そのものなので、復活させない
 
 - `DrawingTransform.Identity` は `new()` なので **`ScaleX/ScaleY = 0`**（record struct はプライマリ
   コンストラクタの既定値を適用しない）。出荷 3 backend は無害だが記録用コンテキストの作者を
