@@ -32,9 +32,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第13セッション・**hara-kiri 島 Stage 1 ＝ 高さの「分岐」を「フィルタ」へ**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`cf59a00d`・origin より **102 ahead・未 push**）。
-**3379 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+最終更新 2026-07-26（第13セッション・**hara-kiri 島＝「分岐」を「フィルタ」へ。Stage 1–3 完了**）/
+HEAD は §0 で確認すること（⚠️ 自己参照。`41f9749d`・origin より **105 ahead・未 push**）。
+**3381 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
 **LP 忠実度 103/129 exact・total |residual| 1.454788 ss / 116 distances・counts 11/13**。
 
 ★★ **方針転換（ユーザー指示・2026-07-26）**: 目標は **LP レイアウトの完全模倣**。
@@ -42,18 +42,36 @@ HEAD は §0 で確認すること（⚠️ 自己参照。`cf59a00d`・origin �
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
-### このセッションでやったこと
+### このセッションでやったこと ＝ **hara-kiri 島を Stage 3 まで閉じた**（3 commit）
 
-`cf59a00d` の 1 commit（詳細は message・台帳の `why`・コード注釈へ）。**Stage 1 完了**＝
-**system 高さを「配置された群の Y-extent」に一本化**し、`LayoutEngine.cs:198-205` の
-hara-kiri 用高さ分岐を**削除**した。唯一のモデルは `MultiStaffLayouter.SystemHeightOf`
-（LP は高さを二度目の spec 走査で作らない——alignment が置いた結果の extent が高さ。
-`axis-group-interface.cc:112-136`）。`CalculateSystemHeight(3 引数)` はその委譲になった。
-**`hasHaraKiri` は残り 3 箇所で、どれも「どの譜が見えるか／どのばねを作るか」＝ Stage 2 の領分**。
+**LP には hara-kiri 用のアルゴリズムが 1 つも無い**（`page-layout-problem.cc:1366-1370` の
+live フィルタ＋`align-interface.cc:90` の空スカイライン）。Lily# にあった**3 つの別式**を
+全部消して、**1 つの計算＋述語**にした。
 
-★ **予測は 6 桁で当たった**（実装前に記載）: 10.5 − 9 = **1.500000**。
-`lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の 0.271310・
-0 にしない**）・total **2.954788 → 1.454788**。
+| | commit | 消したもの | 出力 |
+|---|---|---|---|
+| **1** | `cf59a00d` | **高さ**の別式（`LayoutEngine.cs:198-205`。群間を 10.5 リテラルで綴っていた） | ossia 3 枚 |
+| **2** | `b415dd16` | **ばね**にスカイラインが渡っていなかった（＝床が描画距離に落ち**縮まない**） | 不変 |
+| **3** | `41f9749d` | **配置**の別式（固定 `BasicDistance` でスカイラインを一度も見ない walk） | hara-kiri 1 枚 |
+
+★ **Stage 1 の予測は 6 桁で当たった**（実装前に記載）: 10.5 − 9 = **1.500000**。
+`lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の
+0.271310・0 にしない**）・total **2.954788 → 1.454788**。
+
+★ **Stage 2/3 が直した量**（どちらも台帳の regime 外なので、**網はテスト側**）:
+
+| regime | 宣言なし | 宣言あり・前 | 宣言あり・後 |
+|---|---|---|---|
+| **圧縮ページ**（JSK の音楽） | 8.651797 | **9.000000**（縮まない） | 8.651797 |
+| **譜間インクが高い** | 22.090000 | **9.000000**（加線が融合） | 22.090000 |
+
+8.651797 は台帳 `page.compressed.staff-staff-inside` ＝ **LP 自身の値**なので、
+合わせた先が正しいことは独立に分かる。
+
+★ **合流で第2の欠陥が落ちた**（§5.0・今回も例外なし）: 積み上げループが
+**「次に置く譜」の高さで進んでいた**（`currentY -= thisStaffHeight + spacing`）。
+同じ高さの譜しか通っていなかったので完全に隠れていたが、grandStaff に ossia/tab が
+入ると差の分ずれる。**どちらの複製も半分ずつ正しかった**＝§5.2.1②。
 
 ### ★ 狙っていなかった 2 件が同時に落ちた（§5.0・今回も例外なし）
 
@@ -84,41 +102,25 @@ hara-kiri 用高さ分岐を**削除**した。唯一のモデルは `MultiStaff
    ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
    （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
    ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
-1. ★★ **hara-kiri 島＝「分岐」を「フィルタ」へ。残るは Stage 2**（Stage 0/1 完了・
-   `02a5b43e`＋`cf59a00d`）。
+1. ~~**hara-kiri 島**~~ — **閉じた**（Stage 0–3・`02a5b43e`／`cf59a00d`／`b415dd16`／`41f9749d`）。
+   `MultiStaffLayouter` に hara-kiri は**述語としてしか残っていない**。
+   残る `hasHaraKiri` 4 箇所は `LayoutEngine` にあり、**どれも同じ 1 つの区別**＝
+   「その 1 つの計算を **system ごとに走らせるか 1 回で済ませるか**」。別式ではない。
+   ⇒ **これを閉じるには「非 hara-kiri も配置を system ごとにする」**（LP の `append_system` は
+   常に system ごと）。⚠️ **ばねの最小は描画距離から逆算しているので、配置とばねは
+   同時に動かすしかない**（片方だけだと、共有の描画距離と system ごとの最小が混ざって
+   どちらのエンジンの答えでもなくなる）。§2D ① の `translates[]` 共有と同じ島。
 
-   **原則（LP 実ソースで裏取り済）**: LP には **hara-kiri 用の別アルゴリズムが 1 つも無い**。
-   `page-layout-problem.cc:1366-1370` は `consider_suicide` →`if (is_live()) push_back` の
-   **フィルタ**、`align-interface.cc:90` は死んだ群に**空スカイライン**を返して**同じ計算**へ流す。
-   ⇒ **§5.2 的には分岐そのものが欠陥で、10.5 は症状。** 目標は
-   **`hasHaraKiri` を spacing 経路から消す**（自殺判定にだけ残す）。
-
-   | 段 | 内容 | byte |
-   |---|---|---|
-   | ~~0~~ | ~~台帳点を開く~~ **完了**: LYRHKG＋LYRHKD/N | 不変 |
-   | ~~1~~ | ~~system 高さを統合~~ **完了**（`SystemHeightOf`＝配置の extent。高さの分岐は消えた） | ossia 3 枚（承認済） |
-   | 2 | **譜ばねを統合**（`LayoutEngine.cs:128-131` と `:241-243`。`StaffSprings` は既に `skylineBuilder` を取るので**供給の問題**＝§5.2 の「構造上表現できない」言い訳ではない） | **動く** |
-   | 3 | 分岐を削除＋不変条件テスト | — |
-
-   **Stage 2 の中身**: 宣言があると譜ばねが **system ごとに・スカイライン無しで**組み直される。
-   `StaffSprings` の remarks 自身が「スカイライン無しでは床が描画距離に落ちるので**伸びるが
-   縮まない**」と書いている⇒ **圧縮ページでしか見えない**。だから受入条件は
-   **LYRHKD/LYRHKN（8 system/page の justified 紙）で宣言の有無が同じ出力を出すこと**——
-   本数はもう一致したので、**次は距離**。⚠️ この対は **LP 側が構成上恒等**なので、
-   残差はまるごと Lily# のもの（§5.0 の「恒等の対」）。
-
-   **Stage 3 のテスト（受入条件）**: `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`。
-   ⚠️ **まだ入れていない**——Stage 2 前は今日の乖離（ばね側）を pin するだけになる。
-   Stage 1 のぶんは**規則を摂動で主張する 2 本**として先に入れた（§5.4）:
-   `HaraKiriSystemHeight_FollowsTheInterGroupSpec_NotALiteral`（basic-distance を 14 に振る。
-   消したリテラル版は 9 でも 14 でも 14.5 を返すので落ちる）と
-   `HaraKiriSystemHeight_OfAHiddenNeighbour_IsTheSurvivorAlone`。
-
-   ⚠️ **リテラルを 9 に書き換えて閉じない**——LYRHKG が**現に exact**で、9 にすると
-   1.500000 逆へ壊れる（liveness が spec を決める＝10.5 と 9 が同じ本に両方出る）。
-   Stage 1 は**リテラルを置き換えたのではなく、それを綴っていた分岐ごと消した**のが要点。
    ⚠️ **`SystemHeightOf` に幾何を足さない。** あれは「置かれたものの union」であって
    計算する場所ではない。何かを足したくなったら、それは**配置側**が落としている量。
+   ⚠️ **リテラルを 9 に書き換えて閉じない**（もう該当箇所は無いが、同型を見たら）——
+   LYRHKG が**現に exact** で、liveness が spec を決める＝10.5 と 9 が同じ本に両方出る。
+
+   **不変条件テストが唯一の網**（台帳の regime 外なので）:
+   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing` は**2 regime の Theory**で、
+   **どちらも「自分がその regime に居ること」を assert する**（§5.0 罠 7）。
+   ⚠️ **これを緩めない。** inside が ideal を跨いだら、それは**測定をやめた**合図で、
+   本を建て直す側が正しい。
 2. **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）＝ loose 鎖の残り 1 枝。
    ⚠️ **room はもう問題ではない**——同じ refpoint 間 span で取れる（`:936-939`）。
    **違うのは閉じ方だけ**＝`min_offsets[k−1] − min_offsets[k]`・**null 行なし**（`:923-925`）、
@@ -141,10 +143,11 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
   1.5 広く、配置 3.5355 は 1.46 狭い）——§5.2 の**偶然一致そのもの**。今は予約＝配置なので
   **残るズレは 1 個の名前の付いた量**。⚠️ **先に台帳点**（対になる ossia の本が無い）。
   §2D の「ossia ペアが rigid」と**同じ 1 個**なので一緒に片付く。
-- ★ **`LayoutGrandStaffGroupWithSkylines` が全譜を名目 `staffHeight` で積む**（tab/ossia を
-  含む grandStaff で誤る）。消した高さ走査の注釈は「ここは直した」と言っていたが、
-  **直っていたのは高さだけで配置は放置**＝§5.2.1② の同じ病。**高さを配置から導いたので、
-  欠陥は 2 箇所の食い違いに隠れず 1 箇所に見える形になった**。fixture が無く全緑。
+- ~~**grandStaff が全譜を名目 `staffHeight` で積む**~~ — **Stage 3 の合流で消えた**
+  （`41f9749d`）。積み上げは 1 つになり `GetStaffHeight` を使う。⚠️ **ただし群間ギャップの
+  上側高さは今も名目 `staffHeight`**（`LayoutStaffGroups` の `StaffGap(spec, staffHeight, …)`）。
+  最終譜が tab/ossia の群で誤るはずだが、**これは非 hara-kiri 経路にも元からある**ので
+  この島では触っていない。踏む fixture が無く未測定＝**着手するなら対を先に**。
 - **`lyrics.two-verse.system-gap` の残り 0.157200 は機構ではなくフォント量**。内訳は
   **0.046334**＝Lily# が小節番号の baseline 上に取る 1.3 の cap-height と LP の実字高の差、
   残りは**歌詞面のインク**（Lily# の歌詞書体は LP より約 27% 大きい）。
@@ -532,6 +535,14 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
    **伸長 regime を測るなら、ページに slack が残る本数まで systems を減らす**
    （`max-systems-per-page`）。⚠️ **どちらの regime に居るかは、量が spring の ideal より
    大きいか小さいかで判定できる**（ここでは inside 8.651797 < ideal 9 ＝圧縮）。
+   ★ **2026-07-26 に同じ罠でもう一度落ちかけた**（Stage 2）。ばねの最小を測る対を
+   LYRHKD/LYRHKN で組んだら**修正前も後も pass**——歌詞で system が高く 7 本しか載らず
+   **inside 9.166134 ＞ ideal ＝伸長**で、**最小はそもそも binding していなかった**。
+   ⚠️ **`max-systems-per-page` は「上限」なので圧縮を作れない**。この本の本数は
+   内容律速で、8→10→12→14 と上げても 7 のまま。**regime を変えるには音楽か紙を替える**
+   （JSK の音楽へ移して解決）。⇒ ★ **不変条件テストには「自分がその regime に居ること」を
+   assert させる**。そうしないと**黙って測定をやめる**。実例
+   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`（2 regime の Theory）。
 8. ★ **paper 変数が Lily# 側で fallback を踏むと、存在しないページを測る**（2026-07-26）。
    `systems-per-page = #6` は LP では効くが、Lily# の `PageBreaker` は
    **本数が厳密に一致しない候補を全部落とす**ので最終ページが 5 本になる曲では解が無くなり、
