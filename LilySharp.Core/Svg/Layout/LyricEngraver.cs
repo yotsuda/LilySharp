@@ -380,27 +380,11 @@ internal sealed class LyricEngraver
         bool IsUpper(LyricItem l) =>
             !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 
-        // The verse-1 UP-skyline box of a syllable, self-relative to the line's anchor
-        // (anchor at y=0; text top at +topExtent above it in the Y-up frame — a font-metric
-        // height, so the clearance reflects a tall CJK glyph as well as a low note).
-        VerticalSkyline Box(LyricLayout lay)
-        {
-            double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
-            return VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
-        }
-
-        // System-wide drop for the bottom-/single-staff note-bound lines (unchanged).
-        var lyricUp = new Dictionary<int, VerticalSkyline>();
-        foreach (var lay in layouts)
-        {
-            if (lay.Item.IsLyricsRow || IsUpper(lay.Item)) continue;
-            if (lay.Item.VerseNumber > 1) continue; // verse 1 is the line's top edge
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var box = Box(lay);
-            if (lyricUp.TryGetValue(s, out var sky)) sky.Merge(box);
-            else lyricUp[s] = box;
-        }
+        // System-wide drop for the bottom-/single-staff note-bound lines. Verse 1 is the
+        // line's top edge, so it is the verse that has to clear the staff.
+        var verseUp = BuildVerseUpSkylines(
+            layouts.Where(l => !l.Item.IsLyricsRow && !IsUpper(l.Item)), measureToSystem);
+        var lyricUp = VerseSkylines(verseUp, verse: 1);
         var systemDrop = SkylineDrop.Compute(lyricUp, _ => basic, systemSkylines);
 
         // Per-(system, staff) drop for the UPPER note-bound lines: clear the ATTACHED
@@ -412,15 +396,7 @@ internal sealed class LyricEngraver
             foreach (var byStaff in layouts.Where(l => IsUpper(l.Item)).GroupBy(l => l.Item.StaffIndex))
             {
                 int staffIndex = byStaff.Key;
-                var up = new Dictionary<int, VerticalSkyline>();
-                foreach (var lay in byStaff)
-                {
-                    if (lay.Item.VerseNumber > 1) continue;
-                    if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-                    var box = Box(lay);
-                    if (up.TryGetValue(s, out var sky)) sky.Merge(box);
-                    else up[s] = box;
-                }
+                var up = VerseSkylines(BuildVerseUpSkylines(byStaff, measureToSystem), verse: 1);
                 if (up.Count == 0) continue;
                 // One (empty-up, staff-down) pair per system for SkylineDrop.Compute.
                 var staffSky = new List<(VerticalSkyline up, VerticalSkyline down)>(systems.Length);
@@ -450,6 +426,70 @@ internal sealed class LyricEngraver
             shifted.Add(drop > 0 ? lay with { YUp = lay.YUp - drop } : lay);
         }
         return shifted;
+    }
+
+    /// <summary>
+    /// The UP-skyline box of one syllable, self-relative to its own baseline: anchor at
+    /// y = 0, ink top at <see cref="LyricUpExtent"/> above it in the Y-up frame.
+    /// </summary>
+    /// <remarks>
+    /// A font-metric height, so the clearance it produces reflects a tall CJK glyph as well
+    /// as a low note. LilyPond builds the LyricText skyline from the grob's true stencil
+    /// bounding box; the em-fraction extents stand in for that here.
+    /// </remarks>
+    internal static VerticalSkyline SyllableUpBox(LyricLayout lay)
+    {
+        double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
+        return VerticalSkyline.FromBox(
+            lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
+    }
+
+    /// <summary>
+    /// One merged UP-skyline per (system, VERSE) — each verse's own ink, in its own frame.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 <c>get_spacing_spec</c> — a
+    /// second lyric line under the first is spaced from it by the UPPER line's
+    /// <c>nonstaff-nonstaff-spacing</c> (ly/engraver-init.ly:653-656:
+    /// <c>((basic-distance . 0) (minimum-distance . 2.8) (padding . 0.2))</c>), and a zero
+    /// ideal under a minimum means the realized step is
+    /// <c>max(2.8, the two lines' own ink + 0.2)</c> — LilyPond's verse spacing RESPONDS TO
+    /// THE TEXT. Measuring that needs each verse's ink separately, which is what this
+    /// returns; the flat <see cref="LyricParameters.VerseSpacing"/> cannot express it.
+    /// <para>
+    /// ⚠️ ONLY VERSE 1 IS CONSUMED TODAY (<see cref="ApplySkylineDrop"/> asks for it by
+    /// number). The verses below it are built and not yet read, deliberately: the storage
+    /// change is separated from the placement change so the placement one arrives with a
+    /// ledger point to judge it by (audit/lp-geometry, <c>lyrics.verse-step</c>, open at
+    /// +0.400000). ⚠️ It is also only HALF the input that rule needs — the other half is the
+    /// upper verse's DOWN-skyline, i.e. its descenders, and Lily#'s lyric face has no
+    /// measured descent metric yet. Inventing one would be the thing HANDOFF 5.2 forbids.
+    /// </para>
+    /// </remarks>
+    internal static Dictionary<(int System, int Verse), VerticalSkyline> BuildVerseUpSkylines(
+        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem)
+    {
+        var result = new Dictionary<(int System, int Verse), VerticalSkyline>();
+        foreach (var lay in layouts)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            var key = (System: s, Verse: lay.Item.VerseNumber);
+            var box = SyllableUpBox(lay);
+            if (result.TryGetValue(key, out var sky)) sky.Merge(box);
+            else result[key] = box;
+        }
+        return result;
+    }
+
+    /// <summary>One verse's skylines, keyed by system — the shape SkylineDrop consumes.</summary>
+    private static Dictionary<int, VerticalSkyline> VerseSkylines(
+        Dictionary<(int System, int Verse), VerticalSkyline> byVerse, int verse)
+    {
+        var result = new Dictionary<int, VerticalSkyline>();
+        foreach (var ((system, v), sky) in byVerse)
+            if (v == verse)
+                result[system] = sky;
+        return result;
     }
 
     /// <summary>

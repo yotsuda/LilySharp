@@ -278,4 +278,52 @@ score main ""x"" { staff melody with lyrics melody }
         Assert.NotEmpty(score.Lyrics);
         Assert.All(score.Lyrics, l => Assert.Equal(0, l.MeasureIndex));
     }
+
+    /// <summary>
+    /// Every verse gets its OWN up-skyline, built from its own syllables — not verse 1's
+    /// repeated, and not one merged skyline for the whole line.
+    /// </summary>
+    /// <remarks>
+    /// This is the stored value behind <c>lyrics.verse-step</c> (audit/lp-geometry, open at
+    /// +0.400000). LilyPond spaces a second lyric line from the first by the UPPER line's
+    /// <c>nonstaff-nonstaff-spacing</c> — <c>((basic-distance . 0) (minimum-distance . 2.8)
+    /// (padding . 0.2))</c>, ly/engraver-init.ly:653-656, reached through
+    /// page-layout-problem.cc:1315-1332 — and a zero ideal under a minimum makes the
+    /// realized step <c>max(2.8, the two lines' ink + 0.2)</c>. Lily# steps by a flat
+    /// <c>VerseSpacing</c>, so it cannot answer that; per-verse ink is the input it was
+    /// missing.
+    /// <para>
+    /// ⚠️ ASSERTED BEFORE ANYTHING CONSUMES IT, on purpose (HANDOFF 2E's island order):
+    /// nothing in the output moves yet, so without this test the storage change would be
+    /// invisible and could rot before the placement change arrives. It asserts what a
+    /// skyline is FOR — that a verse's height follows that verse's own text — rather than
+    /// re-stating the em fractions, which would only compare the implementation with
+    /// itself (HANDOFF 5.4).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EachVerseGetsItsOwnUpSkyline()
+    {
+        // Verse 1 is all x-height ("no"); verse 2 reaches the ascender line ("hi"). Same
+        // system, same measure, same X — so the ONLY thing that can separate the two
+        // skylines is which verse's text each was built from.
+        static LilySharp.Core.Svg.Layout.LyricLayout Syllable(string text, int verse) =>
+            new(new LilySharp.Core.Svg.Model.LyricItem(text, MeasureIndex: 0, ItemIndex: 0)
+                { VerseNumber = verse },
+                X: 3.0, YUp: -5.0, Width: 1.2);
+
+        var byVerse = LilySharp.Core.Svg.Layout.LyricEngraver.BuildVerseUpSkylines(
+            new[] { Syllable("no", 1), Syllable("hi", 2) },
+            new Dictionary<int, int> { [0] = 0 });
+
+        Assert.Equal(2, byVerse.Count);
+        double verse1 = byVerse[(0, 1)].MaxHeight();
+        double verse2 = byVerse[(0, 2)].MaxHeight();
+
+        // "hi" has an ascender and "no" does not, so verse 2's ink is the taller of the
+        // two. Before this, only verse 1 was built at all and verse 2 had no skyline.
+        Assert.True(verse2 > verse1 + 0.1,
+            $"verse 2's own ink must drive its own skyline: verse 1 {verse1:F6}, "
+            + $"verse 2 {verse2:F6}");
+    }
 }
