@@ -32,15 +32,16 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第10セッション・**loose line の島を閉じた**）/ HEAD は §0 で確認すること
-（⚠️ 自己参照。origin より **79 ahead・未 push**）。
-**3356 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 94/113 exact・total |residual| 0.212348 ss / 105 distances・counts 8/8**。
+最終更新 2026-07-26（第10セッション・**loose line の島＋歌詞アンカー**）/ HEAD は §0 で確認すること
+（⚠️ 自己参照。origin より **82 ahead・未 push**）。
+**3357 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 95/114 exact・total |residual| 0.212348 ss / 106 distances・counts 8/8**。
 snapshot 再ベースは **18 枚**（14＋4。台帳キーを message に名指し済＝§5.2.1③・承認済）。
 
-⚠️ **total を前回の 4.066268 と直接比べない**（点集合が 103→105 に変わった）。
-比べるなら点ごと: **`lyrics.two-verse.system-gap` 4.060000 → 0.157200**、新規の
-`barnumber.*` 2 点が 1.185560 → −0.024440。**従来の非ゼロ 16 点はこの回も 1 つも動いていない。**
+⚠️ **total を前回の 4.066268 と直接比べない**（点集合が 103→106 に変わった）。
+比べるなら点ごと: **`lyrics.two-verse.system-gap` 4.060000 → 0.157200**、新規 3 点のうち
+`barnumber.*` 2 点が 1.185560 → −0.024440、`lyrics.two-staff.staff-to-lyric` が
+−1.490800 → **exact**。**従来の非ゼロ 16 点はこの回も 1 つも動いていない。**
 
 ### このセッションでやったこと（詳細は各 commit・台帳の `why`・probe ヘッダへ）
 
@@ -49,8 +50,13 @@ snapshot 再ベースは **18 枚**（14＋4。台帳キーを message に名指
 | `ee697b28` 台帳点 2 つを起票 | 小節番号の上方インク。**コード変更ゼロ・出力不変** |
 | `2cefff77` 小節番号の配置 | `break-alignment-list` の三つ組を**逆に読んでいた**。snapshot 14 枚 |
 | `ce3be1af` **`distribute_loose_lines` 移植** | 予約＝最小＋鎖を解く。snapshot 4 枚 |
+| `4bc9e31a` 台帳点 1 つを起票 | 歌詞アンカーの恒等対（LYRC 対 LYRM）。**コード変更ゼロ・出力不変** |
+| `9069f6ac` **歌詞アンカーを最後の譜へ** | **exact**。snapshot 0 枚（＝結果であって構成でない・下記★） |
 
-★ **この回の欠陥も 3 件とも「Lily# が発明した箇所」だった**（§5.2.1 の方針は 10 セッション連続で正しい）。
+★ **この回の欠陥も 4 件とも「Lily# が発明した箇所」だった**（§5.2.1 の方針は 10 セッション連続で正しい）。
+★ **起票 → 予測 → 移植 の型が 2 回とも当たった**: 小節番号は LP 側の恒等が的中して**機構仮説だけ
+外れ**、アンカーは台帳の `why` に書いた「移植すれば exact になり、しかもフォントが消える」が
+そのとおりになった。**予測を先に書いてあるから、移植が当たったことを主張できる。**
 
 ★★ **島は 1 つでは終わらなかった。移植したら第2の欠陥が落ちてきて、そちらが先だった。**
 `distribute_loose_lines` だけ入れると `lyrics.two-verse.system-gap` は 13.367200 止まりで、
@@ -71,21 +77,34 @@ above-staff stacker がそれを持ち上げていた。
 実測（LP 2.26.0・books BNL/BNH）: 番号 X `(-0.956013 .. 0.000000)`／clef X
 `(0.800000 .. 3.365000)`＝**0.8 離れて交わらない**。番号は左マージンに垂れる。
 
-### ▶ 次の一手 ＝ **multi-staff の歌詞アンカー（⚠️ 台帳点が先）**
+### ▶ 次の一手 ＝ **multi-staff の鎖の「隙間」（アンカーは済んだ）**
 
-`DistributeLooseLines` は **単一譜 system の鎖しか解いていない**（remarks に明記）。理由:
+**アンカーは移植済**（`9069f6ac`・`lyrics.two-staff.staff-to-lyric` **exact**）。LP どおり
+**その system の最後の spaceable 譜**から測る（`last_spaceable_line`＝`:943-944`）。
+⚠️ **spaceable が効く**——text ROW（chords/lyrics トラック）と ossia は譜ばねを持たないので
+除外する。リードシートの chord 行は**譜の上**にあるので、最下段を素朴に取ると外れる。
 
-- **multi-staff の legacy 配置は system 原点の下 `staffBottom` に anchor している**。LP は
-  **`last_spaceable_line`**（`page-layout-problem.cc:943-944`）＝その system の**最後の譜**に
-  anchor する。⇒ Lily# の basic-distance は**別の譜から測られていて**、実際にはスカイライン
-  最小しか効いていない。**アンカーが違う鎖を解くとその誤差ぶん行が動く**ので force 0 のまま。
+**残っているのは `DistributeLooseLines` が単一譜 system の鎖しか解いていないこと**で、
+理由は**もうアンカーではなく「隙間」**:
+
+- `BuildLooseChainEnds` は **system 原点どうしの差**を room にしている。鎖は
+  **この system の最後の譜 refpoint → 次の system の最初の譜 refpoint** を走るので、
+  **最後の譜＝最初の譜のときしか同じ距離にならない**。
+  ⇒ **system ごとに 原点→最後の譜 の span を引く**のが残りの一手。⚠️ hara-kiri がその span を
+  system ごとに変えるので、`systemsArray[0]` を読む今の作りのままでは足りない。
 - **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）は次の譜へ
   `nonstaff-unrelatedstaff-spacing` ＋ LARGE_STRETCH（`:1301-1312`）で閉じる。その最小は
   **次の譜の up-skyline 対 最終 verse の descender**で、engraver に渡っていない入力。
 
-⇒ **順序**: ①**アンカーの対を起票**（LP は最後の譜から 5.5、Lily# は原点から 7.5 ＝ 約 3 ss の
-はず。実測していないので予測として書くこと）→ ②アンカーを移植 → ③その鎖も解く。
-⚠️ ①をやらずに②へ行かないこと——**この島がまさにそれで 1 セッション溶けた**（上の ★★）。
+★ **アンカー移植は snapshot を 1 枚も動かさなかったが、それは「結果」であって「構成」ではない**
+（§5.2）。実位置は `max(アンカー+5.5, インク床)` で、**最後の譜の下のインクが浅いときだけ**両者は
+分かれる。コーパスの multi-staff 歌詞 fixture は全部バス声部で床が深い。
+**推測ではない**——途中の**誤った版**（スカイラインの frame を直し忘れた版）は
+`showcase/08-chorale` を動かしており、それがアンカー非ゼロ＝legacy 系が効いている証拠。
+
+⚠️ **その誤った版の正体は frame 誤り**で、この種は繰り返し出る: **system スカイラインは
+system 原点から／譜ごとのスカイラインはその譜の上端から**測られているので、アンカーへの
+変換が 2 系統で違う（`skylineToAnchor`）。片方だけ直すと**譜間距離ちょうど**ずれる（実測 10.5）。
 
 ### その次の候補
 
@@ -114,7 +133,8 @@ above-staff stacker がそれを持ち上げていた。
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 19 点**（従来の 16 点は不動・新規 2＋歌詞 1）:
+**非ゼロで残っている台帳点は 19 点**（従来の 16 点は不動・`barnumber.*` 2＋歌詞 1。
+`lyrics.two-staff.staff-to-lyric` は exact なのでここには無い）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
