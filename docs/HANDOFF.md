@@ -396,8 +396,11 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     ⇒ 代わりに **①主張の締め直し ②実態に合わない名前 ③描画幾何を測るテストの経路**を直した。
     ⚠️ **`BraceCollapseTests` は描画側へ移した**が、`HaraKiriSystemHeight_*` は
     **意図的に pure 経路のまま**（spec の一変数実験を skyline に濁されないため・理由はテストに明記）
-  - **`LayoutEngine.Layout()` が 516 行**（次点 `CalculateAnnotationLayouts` 440 行）。
-    per-system ループに配置・スカイライン・ばね・高さが同居。**この島で増えた**
+  - ~~`LayoutEngine.Layout()` が 516 行~~ — **262 行に分割済**（`b06f7391`）。
+    `RunPreliminaryAnnotationPass` / `BuildStaffAnchorTables` / `LayoutSystems` の
+    3 フェーズを逐語抽出（出力 byte 不変）。⚠️ **prologue（setup／system 0／初期 Y）は
+    意図的に残した**——11 個の値とローカル関数を吐くので、抽出すると引数の儀式に化ける。
+    ⚠️ **今の最長は `CalculateAnnotationLayouts` の 440 行**（未着手）
 
 - `DrawingTransform.Identity` は `new()` なので **`ScaleX/ScaleY = 0`**（record struct はプライマリ
   コンストラクタの既定値を適用しない）。出荷 3 backend は無害だが記録用コンテキストの作者を
