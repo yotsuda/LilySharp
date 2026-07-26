@@ -35,7 +35,8 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 最終更新 2026-07-26（第9セッション）/ HEAD は §0 で確認すること
 （⚠️ 自己参照。origin より **59 ahead・未 push**）。
 **3351 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 94/110 exact・total |residual| 0.006268 ss / 102 distances・counts 8/8**。
+**LP 忠実度 94/111 exact・total |residual| 4.066268 ss / 103 distances・counts 8/8**
+（⚠️ **4.06 は最後に開いた 1 点**＝下の ▶。従来の 16 点は不動）。
 この回の snapshot 再ベースは **8 枚**（3＋2＋3。それぞれ正当化する台帳キーを message に
 名指し済＝§5.2.1③。ユーザー承認済）。
 
@@ -89,7 +90,29 @@ staff→行・行→行・次 system への**ばねを 1 本の `Simple_spacer` 
 verse 間の段は**ばねが剛体なので**この regime でも一致する（＝台帳点は正しく閉じている）。
 コード側（`ApplyVerseSpacing` の remarks）にも同じ注記あり。
 
-### ▶ 次の一手 ＝ **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）**
+### ▶ 次の一手 ＝ **loose line の島（⚠️ 大きい・出力が大きく動く・要判断）**
+
+**`ce39df14` で島の turning point を測って起票した**: `lyrics.two-verse.system-gap`
+＝ LP **12.000000** 対 Lily# **16.060000**（**+4.060000**）。
+
+⚠️ **`distribute_loose_lines` だけ移植しても 1 ピクセルも動かない。** loose line はページの鎖に
+居ないので **`system-system-spacing` は loose line のぶん広がらない**（実測: 歌詞 1 行でも
+2 行でも staff 間は **12.000000** のまま）。第2 verse は system を押し広げず、**既にある隙間へ
+押し込まれる**——だから LP はその鎖を**負の force** で解いて第1行を 5.5 → 床 3.737890 まで
+引き下げる。**Lily# はその regime に入れない**（歌詞ブロックが**system の extent に入る**ので
+鎖は常に余裕がある＝force 0）。**2 つは同じ欠陥の両端。**
+
+★ **量の意味**（見た目では欠陥に見えないので明記）: **LP は system を 12.0 に保って歌詞を詰める。
+Lily# は歌詞を保って system を 4.06 広げる。** どちらも読めるが、忠実度の基準は LP 側。
+⇒ **閉じると 2 verse のスコアは「きれい」でなく「詰まる」。着手前に承知しておくこと。**
+
+**順序が肝**（間違えやすい）: ①**歌詞ブロックを `MultiStaffLayouter` の system extent から
+外す**（＝`system-system-spacing` から見えなくする）→ ②**loose 行の `Simple_spacer`** で隙間へ配る。
+①だけだと下の譜に重なり、②だけだと無変化。
+⚠️ **Lily# は system の中で歌詞を置き、LP はページを解いた後に置く**——**frame 移行**であって
+編集ではない。**全歌詞スコアの system 間隔が動く。**
+
+### その次 ＝ **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）**
 
 ⚠️ **1 つの音節に高さが 2 つある**（§5.2.1②）。**下降部は書体のアウトライン実測**
 （`TextFontMetrics`・`9953012f` で導入）、**上昇部は文字クラス別の em 分数のまま**
@@ -132,11 +155,12 @@ verse 間の段は**ばねが剛体なので**この regime でも一致する�
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 16 点**（**この回も 1 つも動いていない**。歌詞で開いた 3 点は
-2 つを移植で閉じ、独立行の 1 点は**意図的乖離と決まったので台帳から降ろした**＝§3）:
+**非ゼロで残っている台帳点は 17 点**（**従来の 16 点は不動**。歌詞で開いた 4 点のうち 2 つは
+移植で閉じ、独立行の 1 つは**意図的乖離と決まって台帳から降ろし**＝§3、最後の 1 つが開いている）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
+| `lyrics.two-verse.system-gap` | **+4.060000** | ★ **loose line の島の turning point＝上の ▶。** LP は system を 12.0 に保って歌詞を詰め、Lily# は歌詞を保って system を広げる |
 | clef sliver（`{page.stretched,page.clef}.first-staff-refpoint`・`system.clef-bounded-distance`） | 4e-5〜8.3e-4 | LP の実効 scale 未特定（§2C）。**LP を instrument するまで動かせない** |
 | Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1・`barline.next.down-stems-after-clef`） | 5e-6〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**伝聞で未再検証**（tie の 0.001391 が Pango で説明が付くかは未確認） |
 | `system.stretched-distance` | −0.000414 | ★ **これは符頭**（単一譜 book W の束縛インクが符頭）。LP 0.550000 対 LILC 0.545000 で**未説明**＝フォント metric の問題。⚠️ **そこは埋めない**。⚠️ **`page.*`/`system.*two-staff` を同族と読まないこと**——あれは符尾で、第8セッション（`96641db7`）で閉じた |
