@@ -32,61 +32,44 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第12セッション・**hara-kiri × 歌詞ブロックの起票＝▶1 完了**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`02a5b43e`・origin より **100 ahead・未 push**）。
-**3376 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 103/129 exact・total |residual| 2.954788 ss / 116 distances・counts 11/13**。
+最終更新 2026-07-26（第13セッション・**hara-kiri 島 Stage 1 ＝ 高さの「分岐」を「フィルタ」へ**）/
+HEAD は §0 で確認すること（⚠️ 自己参照。`cf59a00d`・origin より **102 ahead・未 push**）。
+**3379 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 103/129 exact・total |residual| 1.454788 ss / 116 distances・counts 11/13**。
 
 ★★ **方針転換（ユーザー指示・2026-07-26）**: 目標は **LP レイアウトの完全模倣**。
 **一時的に byte 不一致になっても、移植忠実度が部分的にでも上がるなら受け入れる。**
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
-snapshot 再ベース **0 枚**・**レイアウトコード変更ゼロ**（＝出力 byte 不変。ただしこれは
-**「結果」であって「構成」ではない**——`removeEmpty` と歌詞を同時に持つ fixture が 1 つも無い）。
-
-⚠️ **total を前回の 0.640858 と比べない**（点集合が 110→113）。比べるなら点ごと。
-増分 **+2.042620 は新規 2 点ちょうど**（+0.271310 と +1.771310）。
-**従来の非ゼロ 21 点はこの回も 1 つも動いていない。**
 
 ### このセッションでやったこと
 
-`e50fdc34` の 1 commit だけ（詳細は message・台帳の `why`・probe ヘッダへ）。
-**book LYRHK ＝ LYRMV の上段譜を system 0 だけ hara-kiri で消したもの**と、台帳点 4 つ。
+`cf59a00d` の 1 commit（詳細は message・台帳の `why`・コード注釈へ）。**Stage 1 完了**＝
+**system 高さを「配置された群の Y-extent」に一本化**し、`LayoutEngine.cs:198-205` の
+hara-kiri 用高さ分岐を**削除**した。唯一のモデルは `MultiStaffLayouter.SystemHeightOf`
+（LP は高さを二度目の spec 走査で作らない——alignment が置いた結果の extent が高さ。
+`axis-group-interface.cc:112-136`）。`CalculateSystemHeight(3 引数)` はその委譲になった。
+**`hasHaraKiri` は残り 3 箇所で、どれも「どの譜が見えるか／どのばねを作るか」＝ Stage 2 の領分**。
 
-★ **LP 側の予測 4 件は 6 桁で全部当たった**（ヘッダに実行前記載）: loose 集合
-`{3.737890, 2.800000, 5.500001}`＝**LYRMV と 1 桁違わず**・譜間 9.000000・system 12.000000・
-page 1 が 1+2+2+2 の 7 譜。⚠️ **集合に第4の値が無いこと自体が所見**——1 譜 system の鎖が
-別の room に解かれていたら 3.737890 の隣にもう 1 つ値が立つ。**LP 側は恒等**。
+★ **予測は 6 桁で当たった**（実装前に記載）: 10.5 − 9 = **1.500000**。
+`lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の 0.271310・
+0 にしない**）・total **2.954788 → 1.454788**。
 
-### ★ 穴を開けたら別の欠陥が落ちた（§5.0・今回も例外なし）。**ただし狙った 2 つのどちらでもない**
+### ★ 狙っていなかった 2 件が同時に落ちた（§5.0・今回も例外なし）
 
-**`removeEmpty` を「宣言しただけ」でスコア中の全 note-bound 歌詞ブロックが 1.500000 下がる。**
-狙っていた per-system span（`c64ee958`）もアンカーも**無罪**——room は両 system とも
-12.157200 で、どちらも解けている。
-
-- **切り分けは摂動で行った（読んでではなく）**: `removeEmpty` を宣言し**どこも空でない**音楽は
-  全 system 5.509200、宣言を外すと 4.009200。⇒ 発火ではなく**宣言**が原因
-- **真因**: `LayoutEngine.cs:198-202` が hara-kiri のとき**別経路の per-system 高さ**を取り、
-  群間距離をリテラル `StaffSpacing.StaffGroupStaff.BasicDistance`（10.5）で綴っている。
-  `MultiStaffLayouter.SelectInterGroupSpec` は `a666b476` 以降 grouper 無しに
-  `DefaultStaffStaff`（9）を返す。**10.5 − 9 = 1.500000**
-- この高さが `BuildSystemSkylines` と `CalculateDownExtent` に入る⇒ **system の down
-  スカイラインが 1.5 深い**⇒ 鎖の第1ばねがそこにインク床を測る。**譜そのものは別経路で
-  置かれるので動かない**——だから同じページで譜間は 9.000000 exact のまま歌詞だけ 1.5 低い
-- ★ **§5.2.1② そのもの**（同じ量を計算する場所が複数）。`MultiStaffLayouter` の注釈自身が
-  「この選択は *one home ... because it is now read twice*」と書いており、**そこに数えられて
-  いない第3の読み手**が `LayoutEngine` にあった。`a666b476` は 2 つにしか当たっていない
-
-★ **測定量は 2 点の差**（`lyrics.hara-kiri.{hidden,shown}-system.staff-to-lyric`）。
-**同じ本・同じばね・同じ書体なので書体差が相殺**し、1.771310 − 0.271310 = **1.500000 は
-font-free の機構**。⚠️ **どちらの点も単独で 0 にしてはいけない**（床は +0.271310）。
-
-★ **本数の点は probe を走らせる前に元を取った**（§5.0 罠 8）。最初 6 小節/system で組んだら
-本数が **6 対 LP 7**。LP は `\break` をそのまま採り、**歌詞書体が約 27% 広い Lily# は各群を
-さらに分割**して 1+1+2+2 になっていた＝**両側が同じ音楽ではなくなっていた**。
-距離の点 3 つはその間ずっと「もっともらしい数」を返しており、**気づいたのは本数だけ**。
-3 小節/system で両者一致。⚠️ **この行あたり小節数の差は台帳に載せていない**——
-歌詞の点はどれもページを測っており、**1 行に入る音楽の量を測る点が無い**（横コーパスの話）。
+1. **ページブレーカーの不変条件が閉じた**。`lyrics.hara-kiri.declared-only.staves-on-first-page`
+   が **−4 → −2**、宣言あり／なしが**同じ 14 譜**になった（旧 12 対 14）。LP の 2 読みは
+   構成上恒等なので、**「宣言しただけ」はもう spacing にもページ分割にも効かない**。
+   ⇒ ▶1 が「修正は歌詞の鎖に閉じない」と警告していた側は**これで閉じた**。
+   残る −2 は**両書に共通**＝ページブレーカー自身の別欠陥（LP 8 system／Lily# 7）。
+   ⚠️ **Lily# の 7 system ページがどちらの regime かは未再測定**（旧 6 system の 9.647977 は
+   もう存在しないページの値）。読む前に dump すること。
+2. **ossia の snapshot 3 枚が動いた**（ユーザー承認済で再ベース）。**ossia は `removeEmpty` を
+   暗黙に立てる**ので **ずっとこの分岐に居た**——前セッションの「`removeEmpty` を持つ fixture は
+   `hara-kiri.lys` と `HaraKiriVisualTests` の 2 つだけ」は**誤りだった**。そこでは分岐が
+   **ossia スケールも落として**おり、`4 + 6.5 + 2.828427 = 13.328427` を予約して
+   **10.363961 にしか置いていなかった**＝**2.964466 は誰も描かない空白**（page 41.82→38.86）。
+   ⚠️ **これで ossia が正しくなったのではない**（下の候補へ）。
 
 ### ▶ 次の一手
 
@@ -101,42 +84,41 @@ font-free の機構**。⚠️ **どちらの点も単独で 0 にしてはい�
    ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
    （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
    ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
-1. ★★ **hara-kiri 島＝「分岐」を「フィルタ」へ**（Stage 0 完了・`02a5b43e`）。
+1. ★★ **hara-kiri 島＝「分岐」を「フィルタ」へ。残るは Stage 2**（Stage 0/1 完了・
+   `02a5b43e`＋`cf59a00d`）。
 
    **原則（LP 実ソースで裏取り済）**: LP には **hara-kiri 用の別アルゴリズムが 1 つも無い**。
    `page-layout-problem.cc:1366-1370` は `consider_suicide` →`if (is_live()) push_back` の
    **フィルタ**、`align-interface.cc:90` は死んだ群に**空スカイライン**を返して**同じ計算**へ流す。
-   Lily# は `hasHaraKiri` で**分岐**する（`LayoutEngine.cs:119,128,192,198,204,241`）。
    ⇒ **§5.2 的には分岐そのものが欠陥で、10.5 は症状。** 目標は
    **`hasHaraKiri` を spacing 経路から消す**（自殺判定にだけ残す）。
 
    | 段 | 内容 | byte |
    |---|---|---|
-   | ~~0~~ | ~~台帳点を開く~~ **完了**: LYRHKG（grouper 内 hara-kiri）＋LYRHKD/N（宣言のみ） | 不変 |
-   | 1 | **system 高さを統合**（`:198-205` を消し `CalculateSystemHeight` に生存群を食わせる） | corpus は動かない見込み |
-   | 2 | **譜ばねを統合**（`:128-131`。`StaffSprings` は既に `skylineBuilder` を取るので**供給の問題**＝§5.2 の「構造上表現できない」言い訳ではない） | **動く** |
+   | ~~0~~ | ~~台帳点を開く~~ **完了**: LYRHKG＋LYRHKD/N | 不変 |
+   | ~~1~~ | ~~system 高さを統合~~ **完了**（`SystemHeightOf`＝配置の extent。高さの分岐は消えた） | ossia 3 枚（承認済） |
+   | 2 | **譜ばねを統合**（`LayoutEngine.cs:128-131` と `:241-243`。`StaffSprings` は既に `skylineBuilder` を取るので**供給の問題**＝§5.2 の「構造上表現できない」言い訳ではない） | **動く** |
    | 3 | 分岐を削除＋不変条件テスト | — |
 
-   **Stage 3 のテスト（受入条件・LP 側は実測で恒等と確認済）**:
-   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`。
-   ⚠️ **今は入れない**（今日の乖離を pin するだけになる）。
+   **Stage 2 の中身**: 宣言があると譜ばねが **system ごとに・スカイライン無しで**組み直される。
+   `StaffSprings` の remarks 自身が「スカイライン無しでは床が描画距離に落ちるので**伸びるが
+   縮まない**」と書いている⇒ **圧縮ページでしか見えない**。だから受入条件は
+   **LYRHKD/LYRHKN（8 system/page の justified 紙）で宣言の有無が同じ出力を出すこと**——
+   本数はもう一致したので、**次は距離**。⚠️ この対は **LP 側が構成上恒等**なので、
+   残差はまるごと Lily# のもの（§5.0 の「恒等の対」）。
+
+   **Stage 3 のテスト（受入条件）**: `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`。
+   ⚠️ **まだ入れていない**——Stage 2 前は今日の乖離（ばね側）を pin するだけになる。
+   Stage 1 のぶんは**規則を摂動で主張する 2 本**として先に入れた（§5.4）:
+   `HaraKiriSystemHeight_FollowsTheInterGroupSpec_NotALiteral`（basic-distance を 14 に振る。
+   消したリテラル版は 9 でも 14 でも 14.5 を返すので落ちる）と
+   `HaraKiriSystemHeight_OfAHiddenNeighbour_IsTheSurvivorAlone`。
 
    ⚠️ **リテラルを 9 に書き換えて閉じない**——LYRHKG が**現に exact**で、9 にすると
    1.500000 逆へ壊れる（liveness が spec を決める＝10.5 と 9 が同じ本に両方出る）。
-   ⚠️ **不変条件は spacing だけでなく page breaker でも破れている**（宣言の有無で
-   Lily# の page 1 が 12 対 14 譜）。**修正は歌詞の鎖に閉じない。**
-   ~~hara-kiri × 歌詞ブロックが未測定~~ は **book LYRHK で測って閉じた**（`e50fdc34`）。
-   per-system span は無罪と確認済。残っているのは上の真因＝`LayoutEngine.cs:198-202`。
-   ⚠️ **リテラルを 9 に書き換えて閉じない**——それは 1 段先の同じリテラルで、譜が grouper を
-   **持つ**瞬間に誤りになる。⇒ 正しい形は **`MultiStaffLayouter` の群間ギャップ選択に 1 本化**
-   （§5.2.1②「そもそも足さず統合する」）。
-   ⚠️ **単なる spec 差し替えでは済まない**: hara-kiri 経路は `CalculateSystemHeight` が持つ
-   **ossia スケール・text-row ペアの gap・`NoteBoundLyricExtraGap` を丸ごと落としている**。
-   ⇒ **「群間ギャップ 1 関数に統合」か「高さモデルごと統合」かを決めてから着手する**。
-   ⚠️ **出力は corpus では動かない**（`removeEmpty` を持つ fixture は `hara-kiri.lys` と
-   `HaraKiriVisualTests` の 2 つだけで、どちらも **grandStaff 1 群**＝(n−1) 項がゼロ）。
-   守るのは台帳点 `lyrics.hara-kiri.shown-system.staff-to-lyric`（+1.771310 → **+0.271310** へ）。
-   ⚠️ 摂動テストを同時に足すこと（§5.4・§7 手順 7.5）
+   Stage 1 は**リテラルを置き換えたのではなく、それを綴っていた分岐ごと消した**のが要点。
+   ⚠️ **`SystemHeightOf` に幾何を足さない。** あれは「置かれたものの union」であって
+   計算する場所ではない。何かを足したくなったら、それは**配置側**が落としている量。
 2. **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）＝ loose 鎖の残り 1 枝。
    ⚠️ **room はもう問題ではない**——同じ refpoint 間 span で取れる（`:936-939`）。
    **違うのは閉じ方だけ**＝`min_offsets[k−1] − min_offsets[k]`・**null 行なし**（`:923-925`）、
@@ -152,6 +134,17 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 
 ### その次の候補
 
+- ★ **ossia 距離そのもの（`gap * OssiaScale`）＝ Stage 1 が裸にした発明**。LP は ossia を
+  **ページの絶対 staff-space** で置き、距離を magstep で縮めない。Lily# は今
+  **3.535534**（`(9−4)×0.70711`）で、LP の spec なら **5.000000**。
+  ⚠️ **Stage 1 前は 2 つの欠陥が「高さの中でだけ」打ち消し合っていた**（予約 6.5 は LP の 5 より
+  1.5 広く、配置 3.5355 は 1.46 狭い）——§5.2 の**偶然一致そのもの**。今は予約＝配置なので
+  **残るズレは 1 個の名前の付いた量**。⚠️ **先に台帳点**（対になる ossia の本が無い）。
+  §2D の「ossia ペアが rigid」と**同じ 1 個**なので一緒に片付く。
+- ★ **`LayoutGrandStaffGroupWithSkylines` が全譜を名目 `staffHeight` で積む**（tab/ossia を
+  含む grandStaff で誤る）。消した高さ走査の注釈は「ここは直した」と言っていたが、
+  **直っていたのは高さだけで配置は放置**＝§5.2.1② の同じ病。**高さを配置から導いたので、
+  欠陥は 2 箇所の食い違いに隠れず 1 箇所に見える形になった**。fixture が無く全緑。
 - **`lyrics.two-verse.system-gap` の残り 0.157200 は機構ではなくフォント量**。内訳は
   **0.046334**＝Lily# が小節番号の baseline 上に取る 1.3 の cap-height と LP の実字高の差、
   残りは**歌詞面のインク**（Lily# の歌詞書体は LP より約 27% 大きい）。
@@ -177,13 +170,12 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 23 点**（従来の 21 点は不動・今回 +2。
-新規の `lyrics.hara-kiri.staff-staff-inside` と count 点は exact なのでここには無い）:
+**非ゼロで残っている台帳点は 23 点**（今回 2 点が改善して残ったが、非ゼロのままなので数は不変）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `lyrics.hara-kiri.shown-system.staff-to-lyric` | **+1.771310** | ★ **今回起票・唯一の機構欠陥**。内訳は書体床 0.271310 ＋ **1.500000**（hara-kiri 経路が群間を 10.5 リテラルで綴る＝上記 ▶1）。⚠️ **0 でなく +0.271310 が合格ライン** |
-| `lyrics.hara-kiri.hidden-system.staff-to-lyric` | **+0.271310** | ★ **その対照**（1 譜 system＝正しく解けている側）。**2 点の差 1.500000 が font-free の測定量** |
+| `lyrics.hara-kiri.{shown,hidden}-system.staff-to-lyric` | **+0.271310** ×2 | ★ **Stage 1 で 1.500000 が取れて 2 点が一致した**（旧 shown = 1.771310）。残りは**歌詞書体の床**＝`lyrics.two-staff.two-verse.staff-to-lyric` と同じ量。⚠️ **0 にしない** |
+| `lyrics.hara-kiri.declared-only.staves-on-first-page` | **−2**（count） | ★ **宣言あり／なしが一致した**（旧 −4）。残る −2 は**両書に共通のページブレーカー欠陥**で、hara-kiri 島ではない。⚠️ ss の総和には入らない（`unit`） |
 | `lyrics.two-verse.system-gap` | **+0.157200** | ★ **フォント量に落ちた**（上記）。機構は移植済 |
 | `lyrics.two-staff.two-verse.system-gap` | **+0.157200** | ★ **同じ量**。多段譜でも予約側は追加作業不要という control |
 | `lyrics.two-staff.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済の残り＝歌詞書体差だけ**（up-extent 1.459200 対 1.187880）。⚠️ **0 にしてはいけない**——3.737890 へ寄せたらフォント量の fitting |
@@ -471,6 +463,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ⚠️ **穴を開けるまで、そこに何が溜まっているかは分からない。** 点を開く／種を入れると、
   狙っていた欠陥と**一緒に狙っていなかった欠陥が落ちる**（これまで一度の例外もなく起きた）。
   だから **control（対の基準側）が非ゼロで開くのは正常**——それは持参金であって失敗ではない。
+- ★ ⚠️ **「どの fixture がこの経路を踏むか」を宣言の grep で数えない。暗黙に立てる経路がある。**
+  （2026-07-26）hara-kiri の高さ分岐を直す前に「`removeEmpty` を持つ fixture は 2 つだけ・
+  どちらも 1 群なので出力は動かない」と数えたが、**ossia は `removeEmpty` を暗黙に立てる**ので
+  snapshot 3 枚が動いた。⇒ **数えるなら宣言ではなく、分岐が読むフラグが立つ場所**
+  （`RemoveEmpty` を**書き込む**側）を grep する。⚠️ そして動いた 3 枚は
+  **その分岐が第2の量（ossia スケール）も落としていた**ことを見せた——
+  **予測から漏れた fixture は、たいてい漏れた理由のほうが所見**。
 - ⚠️ **`exact` は「正しい」ではなく「その regime では動かない」かもしれない。**
   新しい点は**既存の点が測っていない regime**を優先する。
 - ⚠️ **床に座らせない。** 距離が spec の下限に張り付く配置では、両側 exact になって**何も測らない**。
