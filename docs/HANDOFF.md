@@ -32,14 +32,16 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第9セッション）/ HEAD は `dd46d39b`
-（⚠️ 自己参照＝**§0 で裏取り**。origin より **51 ahead・未 push**）。
-**3345 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 90/106 exact・total |residual| 0.006268 ss / 99 distances・counts 7/7**。
+最終更新 2026-07-26（第9セッション）/ HEAD は `6faa4d5a`
+（⚠️ 自己参照＝**§0 で裏取り**。origin より **53 ahead・未 push**）。
+**3348 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 91/109 exact・total |residual| 2.006268 ss / 101 distances・counts 8/8**。
 この回は **Core を 1 行も触っていない**＝**snapshot 再ベース 0 枚・出力不変**。
 
-⚠️ **total を過去の値と直接比べない**（点集合が違う）。非ゼロは **16 点**で、
-**前回から 1 つも動いていない**（増えたのは分母だけ＝104→106）。
+⚠️ **total が 0.006268 → 2.006268 になったのは退行ではない。** 新しく**開いた**欠陥 2 点
+（`lyrics.*.staff-to-lyric` が各 −1.000000）で、§5.0 の「穴を開けるまで何が溜まっているか
+分からない」そのもの。**従来の 16 点は 1 つも動いていない**。
+⚠️ **total を過去の値と直接比べない**（点集合が違う。104→106→109）。
 
 ### このセッションで起きたこと ＝ **前回の ▶ を実行し、予測どおり閉じた**
 
@@ -49,6 +51,8 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 | **LP を再測**（handoff の数値を鵜呑みにしない） | JSS も JSK もページ 1 で `to foot = 10.023885 / ink below = 3.333333` |
 | **foot spring が両 regime で剛体な理由を式で確定** | ideal 1・stretchability 30（`paper-defaults-init.ly:84-87`）で `ensure_min_distance` は**床だけ**上げる（`spring.cc:156-159`）⇒ **blocking force = (4.333333−1)/30 = 0.111111**。伸長 f=0.099092・圧縮 f=−0.174101 でどちらも届かない |
 | **§2D の stale を 1 件訂正** | 「top spring は Lily# では伸びない」は**誤り**＝移植済（`PageLayouter.cs:290-294` が spring 0 を積む。`page.stretched.first-staff-refpoint` の `why` に経緯） |
+| ★ **loose line の対を起票**（`lyrics.{natural,stretched}.staff-to-lyric`＋本数点・`6faa4d5a`） | **狙っていた欠陥は存在しなかった**。LP も歌詞行を伸ばさない（`get_spacing_spec` が非 affinity 側に `HUGE_STRETCH 10e7`／`LARGE_STRETCH 10e5` を与える＝`:1257-1338`。LP 自身のコメントが意図と明言）。実測 5.500000001945665（ragged）対 5.500000181705927（gap 43.84 に伸びたページ） |
+| ★ **代わりに落ちた本物の欠陥** | **Lily# に `nonstaff-relatedstaff-spacing` が無い**。note-bound 歌詞の基本距離は `staffBottom 2.0 + LyricParameters.StaffPadding 2.5 = 4.5`（refpoint→ベースライン）で、LP は **basic-distance 5.5**。残差 **−1.000000 ちょうど・両 regime 同値** |
 
 ⚠️ **この 2 点は「新しい欠陥を探す点」ではなく「前回直した項を守る網」**（§5.2.1④）。
 分解能は tolerance 1e-6 で、守る対象だった欠陥は 0.166667＝**桁が 5 つ違う**。
@@ -57,28 +61,28 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 知識の置き場所は `probes/page-vertical.ly` の JSS ヘッダと両 `why`（§4）。前回の
 regime（譜間ばね・符尾）へ戻るときの入口は `page.stretched.staff-staff-inside` の `why`。
 
-### ▶ 次の一手 ＝ **loose line 再配分の対を起票する（出力不変）**
+### ▶ 次の一手 ＝ **`nonstaff-relatedstaff-spacing` の 5.5 を移植する（⚠️ 出力が変わる）**
 
-LP はページの鎖に **spaceable 譜だけ**を入れ、非 spaceable（歌詞行・和音行）は
-**あとから別の `Simple_spacer` で配る**（`:1004-1014` → `distribute_loose_lines :1025-1054`）。
-隣接ペアの rod（`min_offsets[i-1] − min_offsets[i]`）を最小とするばねを並べ、
-直前の spaceable 譜の解から次の spaceable 譜（または `-page_height_`）までを**もう一度 solve** する。
-⇒ **伸びたページでは歌詞行も slack を分けとる**。Lily# は上の譜からの offset を保つので
-**貼り付いたまま動く**（`PageLayouter.PositionSystemsOnPage` と
-`MultiStaffLayouter.StaffSprings` の remarks に明記済）。
+台帳の 2 点が名指している唯一の量。`LyricEngraver.CalculateLayouts` の note-bound 枝
+（`verseY = staffBottom + _params.StaffPadding`）が **4.5**、LP は **basic-distance 5.5**
+（refpoint→ベースライン）。両者とも「基本距離とインク床の max」で、**この対は両側とも床から
+降ろしてある**ので残差 −1.000000 は 1 つの量。
 
-⚠️ **対の設計上の罠を先に書いておく**（§5.3 の「フォント量が混ざる対」）:
-歌詞行の位置は **ばねの basic-distance と歌詞インクの床のどちらが binding か**で意味が変わる。
-両 engraver の**文字寸法が違う**（Lily# の歌詞面は LP より約 27% 広い）ので、
-**床に座らせると測るのはフォント差**になる。JSS が `7.545 < 9` を選んだのと同じ形で、
-**ink floor < basic-distance に収まる歌詞と音高**を選ぶこと。
-対は natural（slack のあるページ）vs stretched（同じ音楽・`max-systems-per-page` で slack を残す）で、
-⚠️ **起票の前に LP 側で「譜→歌詞の距離が natural と stretched で実際に変わる」ことを確かめる**
-（変わらないなら regime に入っていない＝§5.0。伸長 regime の作り方は §5.0 の罠 7）。
+- ⚠️ **`LyricEngraver.LyricRowBaseline = 2.6` を触っても 1 ビットも動かない**（摂動で確認）。
+  あれは**独立 lyrics 行**の枝で、`staff … with lyrics …` は note-bound 枝。**直す場所を間違える**。
+- ⚠️ **出力が変わる＝ユーザー承認が要る**（§5.1。snapshot 再ベースは LP 照合 → 承認 → 実行）。
+  歌詞のある fixture は動くはず。**先に何枚動くかを報告すること。**
+- ⚠️ 床（両engraver のインク）は**この対では測っていない**。低い旋律／背の高い音節は別の量で、
+  **別の点＋「誰のインクが入ってよいか」の規則**が要る（§5.3）。
 
 #### その次の候補
 
-- **loose line 再配分そのものの移植**（上の対が開いたあと）。`RespaceStaves` の remarks に明記済。
+- ~~**loose line 再配分の不在**~~ — ⚠️ **これは狙う対象ではないと実測で分かった**（`6faa4d5a`）。
+  歌詞行 1 本なら **LP も伸ばさない**（非 affinity 側が `HUGE_STRETCH`/`LARGE_STRETCH`）。
+  効くとすれば **同じ譜間に loose line が 2 本以上**あるとき（間が `nonstaff-nonstaff-spacing`）。
+  対を作るならそこ。
+- **独立 lyrics 行の枝**（`LyricRowBaseline` = 2.6）は**まだ点が無い**。同型に見えるが別経路なので、
+  今回の点の原因を流用せず**自分の probe を持たせる**こと。
 - **ossia ペアは rigid のまま**（`gap * OssiaScale` は Lily# 独自で、spec のばねを当てると
   force 0 で動いてしまう）。**ossia 距離そのものの移植が先**。
 - **§2A の残り**: ゲートは継続行 prefix をスコア全体で 1 つ・measure 0 で計算する（改行位置が
@@ -88,10 +92,11 @@ LP はページの鎖に **spaceable 譜だけ**を入れ、非 spaceable（歌�
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 16 点**（**この回も 1 つも動いていない**）:
+**非ゼロで残っている台帳点は 18 点**（**従来の 16 点はこの回も 1 つも動いていない**）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
+| `lyrics.{natural,stretched}.staff-to-lyric` | −1.000000 ×2 | ★ **この回開いた。犯人は名指し済＝上の ▶。** 両 regime 同値なのが「Lily# は歌詞行を伸ばさない」の証拠でもある |
 | clef sliver（`{page.stretched,page.clef}.first-staff-refpoint`・`system.clef-bounded-distance`） | 4e-5〜8.3e-4 | LP の実効 scale 未特定（§2C）。**LP を instrument するまで動かせない** |
 | Pango 量子化の族（tuplet 4・tie/slur 6・強弱 1・`barline.next.down-stems-after-clef`） | 5e-6〜1.4e-3 | Lily# に無いテキスト metric＝**閉じる予定の無い名前付き残差**。⚠️ この分類は**伝聞で未再検証**（tie の 0.001391 が Pango で説明が付くかは未確認） |
 | `system.stretched-distance` | −0.000414 | ★ **これは符頭**（単一譜 book W の束縛インクが符頭）。LP 0.550000 対 LILC 0.545000 で**未説明**＝フォント metric の問題。⚠️ **そこは埋めない**。⚠️ **`page.*`/`system.*two-staff` を同族と読まないこと**——あれは符尾で、第8セッション（`96641db7`）で閉じた |
@@ -225,7 +230,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ~~**譜間ばねがページの鎖に無い**~~ — **移植済**（`c309b751`）。**圧縮側も台帳点あり**
   （`8b7b2615`。`page.compressed.staff-staff-inside` ほか）。残る名前付き乖離は
-  **loose line 再配分の不在**と **ossia ペアが rigid**（§1 の候補）
+  **ossia ペアが rigid**（§1 の候補）。⚠️ **「loose line 再配分の不在」はここから外した**
+  （`6faa4d5a` で実測）——歌詞行 1 本では **LP も動かさない**ので観測可能な乖離ではない。
+  歌詞行の実際の乖離は**縦の基本距離 5.5 の欠落**で、§1 の ▶ に移した
 - ~~**圧縮 regime は未実装**~~ — ⚠️ **この記述は stale だった**（2026-07-26 に実測で確認）。
   ページは両方向に solve しており、`page.compressed.staff-staff-inside` /
   `system.compressed-distance.two-staff`（book JSK）は **exact**。⚠️ **圧縮強度は伸長強度と別**
@@ -328,9 +335,11 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 **残っている発明**:
 
-- **`LyricSpacing` の `MinItemGap` 4 箇所**（歌詞 extent）。⚠️ **音符間と同じ発明だと決めつけない。**
-  Lily# の歌詞モデルは LP と違い（音符に束縛され、**小節線で区切る**）、LP に対応物が
-  無い可能性がある＝**必要な独自量かもしれない**。どちらかを確かめてから触ること
+- **`LyricSpacing` の `MinItemGap` 4 箇所**（歌詞 extent＝**横**）。⚠️ **音符間と同じ発明だと
+  決めつけない。** Lily# の歌詞モデルは LP と違い（音符に束縛され、**小節線で区切る**）、
+  LP に対応物が無い可能性がある＝**必要な独自量かもしれない**。どちらかを確かめてから触ること。
+  ⚠️ **縦のほうは 2026-07-26 に測って発明と確定した**（`LyricParameters.StaffPadding = 2.5`＝
+  §1 の ▶）。横も同じとは限らないので、**この確定を横へ流用しないこと**
 - **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
