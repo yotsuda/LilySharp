@@ -379,6 +379,8 @@ internal sealed class LayoutEngine
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
             pagingSkylines, perSystemHeights, perSystemBands);
 
+        var looseChainEnd = BuildLooseChainEnds(score, pages, systemsArray, perSystemExtents);
+
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray);
@@ -485,6 +487,7 @@ internal sealed class LayoutEngine
             StaffYByIndex = staffYByIndex,
             NoteBoundAnchorY = noteBoundAnchorY,
             StaffByIndex = staffByIndex,
+            LooseChainEnd = looseChainEnd,
         });
 
         var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
@@ -790,26 +793,28 @@ internal sealed class LayoutEngine
             }
             if (maxVerse > 0)
             {
-                // Down-extent reserved for staff-attached lyrics — the band the PAGE BREAKER
-                // prices a page against.
+                // Down-extent reserved for staff-attached lyrics.
                 //
-                // ⚠️ NEITHER OF THE TWO DISTANCES IS A LOCAL CONSTANT ANY MORE, and both were
-                // once, which is the whole point (HANDOFF 5.2.1②: a duplicated quantity is
-                // where a change lands only half the time — the shape the padding-4x bug
-                // lived in). The distance to verse 1 was a local 2.5 that would have gone a
-                // whole staff space stale the moment it became LilyPond's
-                // nonstaff-relatedstaff-spacing. The step per further verse was a local 1.8
-                // while three other places agreed on a flat 3.2 — so from verse 2 on the
-                // breaker reserved 1.4 per verse LESS than the renderer drew. It is now the
-                // BOUND of the same rule the placement solves per system
-                // (LyricEngraver.VerseStepBound): the deepest descender above against the
-                // tallest ascender below, which can only over-reserve, never under.
-                double lyricStaffPadding = LyricParameters.Default.BasicDistanceBelowBottomLine;
-                double lyricVerseSpacing = maxVerse < 2 ? 0 : LyricEngraver.VerseStepBound(
-                    inRange.Where(l => l.VerseNumber < maxVerse).Select(l => l.Text),
-                    inRange.Where(l => l.VerseNumber > 1).Select(l => l.Text));
-                const double lyricFontSize = 1.2;     // lyric text height
-                double lyricBand = lyricStaffPadding + (maxVerse - 1) * lyricVerseSpacing + lyricFontSize;
+                // ⚠️ THE BAND IS THE BLOCK AT ITS ALIGNMENT MINIMUM, NOT AT THE DISTANCE IT
+                // IS DRAWN. LilyPond hands build_system_skyline the vector out of
+                // Align_interface::get_minimum_translations (page-layout-problem.cc:593-599),
+                // and that minimum contains the spec's PADDING and the lines' ink but NOT its
+                // basic-distance — align-interface.cc:235-238 adds basic-distance only behind
+                // `INT_MAX == end && 0 == start`, the PURE estimate branch, and this call
+                // passes start = end = 0. The 5.5 a lyric line is drawn at arrives afterwards,
+                // out of distribute_loose_lines, INSIDE the room this reservation left.
+                //
+                // Reserving the drawn distance instead is what made Lily#'s systems stand
+                // 4.060000 further apart than LilyPond's on a two-verse score
+                // (audit/lp-geometry, lyrics.two-verse.system-gap): the block grew the
+                // system's extent, so its chain always had room and could never compress,
+                // while LilyPond keeps the gap at 12.000000 and squeezes the block.
+                //
+                // ⚠️ The two sides of that must move TOGETHER (HANDOFF 5.2.1②): shrinking
+                // this without LyricEngraver.DistributeLooseLines placing the lines inside
+                // the resulting gap would drop them onto the next system.
+                double lyricBand = LyricEngraver.AlignmentMinimumBand(
+                    inRange.Select(l => (l.Text, l.VerseNumber)).ToList());
                 downExtent = Math.Max(downExtent, lyricBand);
                 bandDown = Math.Max(bandDown, lyricBand);
             }
@@ -1457,6 +1462,90 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>
+    /// What closes each system's lyric chain, and how much room the page left it — the two
+    /// numbers <c>distribute_loose_lines</c> is called with.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:872-874, :936-939 and :1012-1013 — the
+    /// three calls, whose last two arguments are <c>first_translation</c> (the placed staff
+    /// above) and <c>last_translation</c> (the next placed staff, or <c>-page_height_</c>).
+    /// Their difference is the room; this returns it directly.
+    /// <para>
+    /// The minimum on the gap that reaches the next system's staff is
+    /// <c>elements_[i].padding - min_offsets[0]</c> (:931-932): the system-system-spacing
+    /// padding, plus the ink that system carries ABOVE its own reference point —
+    /// <c>min_offsets[0]</c> is <c>-(up-skyline height + padding)</c> out of
+    /// align-interface.cc:215-220, the first element's own translation. Lily#'s up extent
+    /// is measured from the top staff LINE, so the reference-point quantity is a half-staff
+    /// more, the same conversion <c>LayoutUtilities.CreateTopSystemSpring</c> makes.
+    /// ⚠️ CHECKED against LilyPond rather than assumed: on book LYRV the chain
+    /// 3.737890 + 2.800000 + (1 + f) + (1 + 4.303666) solves to the measured room
+    /// 12.000000 at f = -0.841556, and the first spring's 3.737890 is its floor at that
+    /// force. Every term of that is six digits.
+    /// </para>
+    /// <para>
+    /// ⚠️ RETURNS NULL FOR ANYTHING BUT A ONE-STAFF SYSTEM, deliberately. The room here is
+    /// measured to the next system's staff reference point, which is only the end of the
+    /// chain if the block hangs from the LAST staff of this one — and Lily# anchors a
+    /// note-bound block below the SYSTEM ORIGIN instead (see
+    /// <c>LyricEngraver.DistributeLooseLines</c>). Solving a chain against an anchor that
+    /// is a staff or more away from where LilyPond's is would move the lines by that
+    /// error, so those chains stay at force 0 until the anchor itself is ported.
+    /// </para>
+    /// </remarks>
+    private Func<int, (double Room, double NextStaffMinDistance)?>? BuildLooseChainEnds(
+        MultiStaffScore score, ImmutableArray<PageLayout> pages,
+        ImmutableArray<SystemLayout> systemsArray,
+        List<(double upExtent, double downExtent)> perSystemExtents)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
+            return null;
+
+        foreach (var system in systemsArray)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty) return null;
+            int staves = 0;
+            foreach (var group in system.StaffGroups)
+                staves += group.Staves.IsDefaultOrEmpty ? 0 : group.Staves.Length;
+            if (staves != 1) return null;
+        }
+
+        double halfStaff = _options.StaffHeight / 2.0;
+        // The pair spec a music system takes; a title between two systems would take
+        // another (VerticalSpacingParameters.SelectSpec), which no lyric score reaches.
+        double systemPadding = _options.VerticalSpacing.SystemSystem.Padding;
+
+        // systemsArray IS pages.SelectMany(p => p.Systems), so this running index is the
+        // one SpannerBreakSubstitution.BuildMeasureToSystemMap hands the lyric engraver.
+        var ends = new Dictionary<int, (double Room, double NextStaffMinDistance)>();
+        int index = 0;
+        foreach (var page in pages)
+        {
+            var onPage = page.Systems;
+            for (int i = 0; i < onPage.Length; i++, index++)
+            {
+                if (i + 1 < onPage.Length)
+                {
+                    // Both reference points are a half-staff below their system's origin,
+                    // so the conversion cancels and the origins' own gap IS the room.
+                    double nextUpExtent = index + 1 < perSystemExtents.Count
+                        ? perSystemExtents[index + 1].upExtent : 0;
+                    ends[index] = (onPage[i].Y - onPage[i + 1].Y,
+                                   systemPadding + nextUpExtent + halfStaff);
+                }
+                else
+                {
+                    // The last block on a page runs to the bottom of the printable area.
+                    ends[index] = (onPage[i].Y - halfStaff - _options.MarginBottom,
+                                   double.NaN);
+                }
+            }
+        }
+
+        return s => ends.TryGetValue(s, out var end) ? end : null;
+    }
+
+    /// <summary>
     /// Inputs to <see cref="CalculateAnnotationLayouts"/>. Collapses the former
     /// 21-parameter signature into one context object; the optional members default
     /// to null/empty, matching the old optional parameters exactly.
@@ -1490,6 +1579,11 @@ internal sealed class LayoutEngine
         public Dictionary<int, double>? StaffYByIndex { get; init; }
         public Dictionary<int, double>? NoteBoundAnchorY { get; init; }
         public Dictionary<int, Staff>? StaffByIndex { get; init; }
+
+        /// <summary>Per system, the room its lyric chain is solved into and what closes it
+        /// — see <see cref="BuildLooseChainEnds"/>. Null in the preliminary pass, which
+        /// runs before the page exists, so that pass lays the block out at force 0.</summary>
+        public Func<int, (double Room, double NextStaffMinDistance)?>? LooseChainEnd { get; init; }
     }
 
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
@@ -1649,7 +1743,7 @@ internal sealed class LayoutEngine
         var lyricLayouts = new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
             .CalculateLayouts(
                 lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, staffYByIndex,
-                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline);
+                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
