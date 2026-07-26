@@ -1879,3 +1879,125 @@ probeTag =
   }
 }
 
+%% HKW / HKWN — HARA-KIRI WHERE THE INK BETWEEN TWO SURVIVING STAVES BEATS THE SPEC. This is
+%%     the regime commit 41f9749d moved a snapshot in and could NOT name an entry for:
+%%     test/hara-kiri's system 1 went 9.000000 -> 9.500000 and the message justified it with
+%%     the mechanism and a test instead of a ledger key (HANDOFF 5.2.1 ③ — when the key
+%%     cannot be named, the point is opened FIRST). Nothing in the corpus reached it. Every
+%%     hara-kiri book above (LYRHK, LYRHKG, LYRHKD/LYRHKN) keeps its staves' ink inside their
+%%     own lines, so all of them sit on StaffGrouper's basic-distance and would still read
+%%     9.000000 with the skylines unplugged altogether — which is exactly what the walk this
+%%     corpus was blind to did.
+%%
+%%     THE SHAPE IS BOOK P's ARITHMETIC UNDER A HARA-KIRI DECLARATION. `d` in the treble
+%%     staff hangs 6 staff spaces below its middle line and its head reaches 0.545 further,
+%%     while the same written pitch is the bass staff's own middle line, so nothing there
+%%     rises above its top line: 6.545 + 2.05 + 1 = 9.595 beats basic-distance 9
+%%     (align-interface.cc:228-238, define-grobs.scm:3352-3355). WHOLE NOTES, so no stem
+%%     enters the gap (lily/stem.cc, Stem::is_normal_stem — duration-log >= 1) and the ink
+%%     that binds is the notehead and the staff line, both of which the corpus already agrees
+%%     on to six digits: staff.staff.{upper-note-to-lower-lines,lower-note-to-upper-lines}
+%%     are 9.595000 exact. ⇒ the new points inherit a KNOWN value, so a divergence here can
+%%     only be about hara-kiri and not about the ink.
+%%
+%%     ★ LILYPOND'S SIDE IS AN IDENTITY BETWEEN THE TWO BOOKS on the tall-ink systems, and it
+%%     is an identity in the SOURCE rather than a measurement. Hara-kiri is a suicide
+%%     followed by a live-filter (page-layout-problem.cc:1366-1370, align-interface.cc:90);
+%%     the surviving system's Align_interface then runs the ordinary max() over the staves it
+%%     still holds, and what some OTHER system did with its own staves reaches neither term.
+%%     ⇒ whatever Lily# reads differently between HKW and HKWN is entirely its own, with no
+%%     force arithmetic to interpret — ragged-bottom keeps a page force out of the number too.
+%%
+%%     ⚠️ AND THE CONTROL CARRIES ITS OWN REGIME ASSERTION (HANDOFF 5.0 trap 7 — "do not sit
+%%     on the floor"). HKWN's system 0 keeps the silent staff, whose whole rest hangs from the
+%%     fourth line and protrudes nowhere, so that ONE gap is spec-bound at 9.000000 while its
+%%     neighbours are ink-bound at 9.595000. Both readings come out of one book, one paper and
+%%     one solve, so a probe that has quietly stopped consulting the skyline cannot stay green
+%%     — it would have to print 9.000000 twice.
+%%
+%%     THE SILENT BARS ARE `r1` AND NOT `R1`, for the reason LYRHK's header gives at length: a
+%%     multi-measure rest is a quantity the two engines model differently, and the pair would
+%%     then differ in something besides what is under test. Three bars to a system, twenty
+%%     systems, four to a page, breaks explicit — the same shape as every hara-kiri book
+%%     above, so nothing here rests on the two line breakers agreeing about how much music
+%%     reaches a line.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (a) HKW page 1 = 1 + 2 + 2 + 2 = 7 staff refpoints. Its system 0 has no inside gap
+%%           at all; systems 1..3 read 9.595000.
+%%       (b) HKWN page 1 = 8. Its system 0 reads 9.000000 and systems 1..3 read 9.595000 —
+%%           the same 9.595000 as (a), digit for digit.
+%%       (c) system-to-system is 12.000000 in both, unchanged from every ragged book above.
+%%     (falsifier, and it is the one that matters: HKW's tall-ink gap differing from HKWN's in
+%%      either direction. That would mean removing a staff from ONE system changes how the
+%%      others are spaced, and the live-filter reading this whole island was ported on top of
+%%      would be wrong.)
+%%
+%%     ALL THREE HELD once the grouper was right: HKW page 1 reads 12.000000 then 21.595000
+%%     between its systems' first staves — a lone staff, then 9.595000 + 12.000000 twice —
+%%     and HKWN reads 21.000000 then 21.595000 twice, i.e. 9.000000 and 9.595000 inside. The
+%%     tall-ink gap is 9.595000 in BOTH books and matches P and Q to the last digit.
+%%
+%%     ★ AND THE POINT WAS MEASURED BACKWARDS THROUGH THE ISLAND before being recorded, which
+%%     is what says it is a NET and not a reading that never moves (HANDOFF 5.0: exact can
+%%     mean "does not move in this regime"). Lily#'s two tall-ink gaps, by commit:
+%%
+%%                                       b415dd16   41f9749d   29bde26d   HEAD
+%%       HKW   (declared)                9.000000   9.595000   9.595000   9.595000
+%%       HKWN  (control)                 9.000000   9.000000   9.595000   9.595000
+%%       HKWN system 0 (spec-bound)      9.000000   9.000000   9.000000   9.000000
+%%
+%%     So the ink was ignored on BOTH paths for two different reasons, and the pair separates
+%%     them: 41f9749d removed the fixed-gap walk the DECLARATION selected — that is the entry
+%%     its snapshot rebase could not name — and 29bde26d stopped the surviving walk from
+%%     building ONE skyline off system 0's music and handing it to every system, which is why
+%%     the CONTROL was still 9.000000 in between (system 0 is the one whose upper staff rests,
+%%     so the score-wide skyline was the 9.000000 one). ⚠️ That second commit had no ledger key
+%%     either; its net was the test EachSystemIsSpacedByItsOwnInk, and this pair is now the
+%%     corpus half of it. The spec-bound reading never moves across any of it, which is what
+%%     rules out "both gaps sat on the floor together".
+%%
+%%     ★ ⚠️ AND (a) FAILED ON THE FIRST RUN FOR A REASON THAT IS ITSELF THE FINDING: written
+%%     with \new PianoStaff (which is what books P/Q/D/TU/TD use), NOTHING WAS REMOVED —
+%%     HKW and HKWN printed identical pages, 8 staves and a 9.000000 system-0 gap in both.
+%%     LilyPond says why in one line of its own source: PianoStaff is "just like GrandStaff,
+%%     but the staves are only removed together, never separately", because it
+%%     \consists Keep_alive_together_engraver (ly/engraver-init.ly:535-544). The declaration
+%%     was live and the sibling staff kept the resting one alive. ⇒ A HARA-KIRI BOOK MUST BE
+%%     A GrandStaff, and that is also what makes this pair the same music as its Lily# twin:
+%%     Lily#'s `grandStaff` removes members separately, which fixture test/hara-kiri relies
+%%     on. The existing PianoStaff books are unaffected — no staff can die in any of them, and
+%%     the two contexts differ in nothing else — but a probe that had been copied from them
+%%     would have measured a hara-kiri regime it was never in, and both sides would have
+%%     agreed (HANDOFF 5.0: exact can mean "does not move here").
+\book {
+  \probeTag "HKW"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    \new GrandStaff <<
+      \new Staff \with { \RemoveAllEmptyStaves } {
+        \clef treble
+        \repeat unfold 3 { r1 } \break
+        \repeat unfold 18 { \repeat unfold 3 { d1 } \break }
+        \repeat unfold 3 { d1 }
+      }
+      \new Staff { \clef bass \repeat unfold 60 { d1 } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "HKWN"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    \new GrandStaff <<
+      \new Staff {
+        \clef treble
+        \repeat unfold 3 { r1 } \break
+        \repeat unfold 18 { \repeat unfold 3 { d1 } \break }
+        \repeat unfold 3 { d1 }
+      }
+      \new Staff { \clef bass \repeat unfold 60 { d1 } }
+    >>
+  }
+}

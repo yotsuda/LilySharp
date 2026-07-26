@@ -796,6 +796,97 @@ internal static class LpGeometryProbes
             """;
     }
 
+    /// <summary>
+    /// HARA-KIRI WHERE THE INK BETWEEN TWO SURVIVING STAVES BEATS THE SPEC — the mirrors of
+    /// books HKW and HKWN, and the regime commit 41f9749d moved a snapshot in without being
+    /// able to name a ledger key for it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every hara-kiri book above keeps its staves' ink inside their own lines, so all of
+    /// them sit on StaffGrouper's basic-distance and would still read 9.000000 with the
+    /// skylines unplugged — which is what the second placement walk did until 41f9749d.
+    /// This pair is book P's arithmetic under a <c>removeEmpty</c> declaration:
+    /// <c>d,</c> (LilyPond <c>d</c>) hangs 6 staff spaces below the treble staff's middle
+    /// line and its head reaches 0.545 further, while the same written pitch is the bass
+    /// staff's own middle line, so 6.545 + 2.05 + 1 = 9.595 beats basic-distance 9
+    /// (align-interface.cc:228-238). WHOLE notes, so no stem enters the gap
+    /// (stem.cc, <c>Stem::is_normal_stem</c>) and the binding ink is the notehead and the
+    /// staff line — both already exact at 9.595000 in
+    /// <c>staff.staff.{upper-note-to-lower-lines,lower-note-to-upper-lines}</c>, so a
+    /// divergence here can only be about hara-kiri and not about the ink.
+    /// </para>
+    /// <para>
+    /// ★ LILYPOND'S TALL-INK GAP IS THE SAME IN BOTH BOOKS, by construction rather than by
+    /// measurement: hara-kiri is a suicide followed by a live-filter
+    /// (page-layout-problem.cc:1366-1370, align-interface.cc:90), and the surviving system's
+    /// Align_interface then runs the ordinary max() over the staves it still holds. What
+    /// another system did with its own staves reaches neither term. So any difference Lily#
+    /// shows between the two is entirely its own — and ragged-bottom keeps a page force out
+    /// of the number as well.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE CONTROL CARRIES ITS OWN REGIME ASSERTION (HANDOFF 5.0 trap 7). HKWN's system 0
+    /// keeps the silent staff, whose whole rest hangs from the fourth line and protrudes
+    /// nowhere, so that ONE gap is spec-bound at 9.000000 while its neighbours are ink-bound
+    /// at 9.595000 — out of one book, one paper and one solve. A probe that has quietly
+    /// stopped consulting the skyline would have to report 9.000000 twice.
+    /// </para>
+    /// <para>
+    /// ⚠️ A GRAND STAFF AND NOT A PIANO STAFF, which is not a spelling preference and cost the
+    /// first run: <c>PianoStaff</c> \consists <c>Keep_alive_together_engraver</c> and its
+    /// staves "are only removed together, never separately" (ly/engraver-init.ly:535-544), so
+    /// written that way NOTHING is removed and the two books print identical pages. Lily#'s
+    /// <c>grandStaff</c> removes members separately, which is what fixture test/hara-kiri
+    /// rests on, so <c>GrandStaff</c> is also what makes the two sides the same music.
+    /// ⚠️ Lily# <c>d,</c> is LilyPond <c>d</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static readonly string HKW = BuildHaraKiriWideInkScore(declareRemoveEmpty: true);
+
+    /// <summary>The control of the pair above: the same music without the declaration, so its
+    /// system 0 keeps a resting staff instead of losing it.</summary>
+    private static readonly string HKWN = BuildHaraKiriWideInkScore(declareRemoveEmpty: false);
+
+    /// <summary>Builds <see cref="HKW"/> / <see cref="HKWN"/> — three bars to a system,
+    /// twenty systems, the upper staff silent through the first of them and hanging low
+    /// under all the others.</summary>
+    private static string BuildHaraKiriWideInkScore(bool declareRemoveEmpty)
+    {
+        const int barsPerSystem = 3;
+        const int systems = 20;
+        string rest = string.Concat(Enumerable.Repeat("r1 | ", barsPerSystem));
+        string play = string.Concat(Enumerable.Repeat("d,1 | ", barsPerSystem));
+        // Breaks go BETWEEN systems, so there are nineteen of them and no trailing one, and
+        // they are carried by the upper staff alone — a break belongs to the score, not to a
+        // staff. Explicit, so nothing here rests on the two line breakers agreeing about how
+        // much music reaches a line (HANDOFF 5.0).
+        string upper = string.Join("break ",
+            Enumerable.Range(0, systems).Select(s => s == 0 ? rest : play));
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
+            part lh { clef bass }
+
+            section Main {
+              rh { {{upper.Trim()}} }
+              lh { {{string.Concat(Enumerable.Repeat("d,1 | ", barsPerSystem * systems)).Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{(declareRemoveEmpty ? "HKW" : "HKWN")}}" {
+              grandStaff {
+                staff rh
+                staff lh
+              }
+            }
+            """;
+    }
+
     /// <summary>The justified paper books LYRHKD/LYRHKN engrave onto — eight systems to a
     /// page, so the page COMPRESSES and the springs' minima bind (book JSK's regime).</summary>
     private static readonly LayoutOptions EightSystemsPerPageJustified =
@@ -3034,6 +3125,38 @@ internal static class LpGeometryProbes
             g => g.StavesOnPage(0), EightSystemsPerPageJustified),
         new("lyrics.hara-kiri.undeclared.staves-on-first-page", LYRHKN,
             g => g.StavesOnPage(0), EightSystemsPerPageJustified),
+
+        // HARA-KIRI WITH THE INK BETWEEN THE STAVES BEATING THE SPEC (HKW/HKWN) — the regime
+        // 41f9749d moved test/hara-kiri's snapshot in (9.000000 -> 9.500000 on one system)
+        // and could not name an entry for, because every hara-kiri book above sits on
+        // basic-distance and reads 9.000000 whether or not a skyline was ever consulted.
+        // Book P's arithmetic under a removeEmpty declaration: 6.545 + 2.05 + 1 = 9.595.
+        //
+        // The two tall-ink entries carry the SAME LilyPond number, and that is the finding
+        // rather than the value — a suicide plus a live-filter leaves the surviving system's
+        // Align_interface running its ordinary max(), so no other system's staff count can
+        // reach it. The spec-bound entry is the regime assertion the other two need (HANDOFF
+        // 5.0 trap 7): it comes out of the SAME book and solve as its 9.595000 neighbours, so
+        // a reading that has stopped seeing the ink cannot stay green by sitting on the floor
+        // — it would have to report 9.000000 in both places.
+        //
+        // ⚠️ Page 1 is 1 + 2 + 2 + 2 staves in HKW and 2 + 2 + 2 + 2 in HKWN, so gap 0 in HKW
+        // is a SYSTEM gap (the lone survivor to the next system's first staff) while gap 0 in
+        // HKWN is system 0's inside distance. The count entries are what make those indices
+        // mean what they say (HANDOFF 5.0 trap 8), and the lone-staff gap is the reading that
+        // would go red if Lily# left a removed staff's room behind.
+        new("hara-kiri.wide-ink.staff-staff-inside", HKW,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("hara-kiri.wide-ink.lone-staff-to-next-system", HKW,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("hara-kiri.wide-ink.staves-on-first-page", HKW,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("hara-kiri.undeclared.wide-ink.staff-staff-inside", HKWN,
+            g => g.StaffGapAt(2), FourSystemsPerPageRagged),
+        new("hara-kiri.undeclared.spec-bound.staff-staff-inside", HKWN,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("hara-kiri.undeclared.staves-on-first-page", HKWN,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the

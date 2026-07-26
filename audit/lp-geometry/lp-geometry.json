@@ -928,6 +928,50 @@
       "residual": -0.02444,
       "why": "PORTED with its twin and to the SAME number, which is the part worth checking: 3.050000 on both books, so the new placement did not become dependent on the melody's height either. See barnumber.low-melody.staff-to-baseline for the misread break-alignment triple that was the defect and for why -0.024440 is this entry's floor. ---- ORIGINAL ENTRY ---- The twin of barnumber.low-melody.staff-to-baseline, two octaves up -- see that entry for what the quantity is and how the arithmetic closes. The pair exists because a single entry cannot tell 'placed by LilyPond's rule' from 'placed above whatever is tallest in the system': both would sit on the same number for music that stays inside the staff. This book's melody clears the staff by a wide margin (its first ink starts 1.200000 higher than BNL's), so a placement that clears the NOTES would read visibly higher here. Neither engraver's does -- LilyPond by design (X-aware skyline, the number stands left of the clef), Lily# because its offset is simply a constant. Both sides read exactly what they read on BNL, so the two entries carry the same residual and must close together; one of them moving alone would mean the fix made the placement depend on something it should not."
     },
+    "hara-kiri.wide-ink.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "HKW",
+      "lilypond": 9.595,
+      "residual": 0.0,
+      "why": "EXACT -- AND THIS IS THE ENTRY COMMIT 41f9749d COULD NOT NAME. That commit rebased test/hara-kiri by +0.500000 because one system's intra-group gap went 9.000000 -> 9.500000, justified the move with the mechanism and a test, and reported that no ledger point was in a regime it reached -- which was true, and is the debt HANDOFF 5.2.1 (3) forbids: a rebase must name the entry that justifies it, and when it cannot, the entry is opened FIRST. This is that entry, opened afterwards and measured back through the island. THE QUANTITY: book P's arithmetic under a removeEmpty declaration that FIRES. `d` hangs 6 staff spaces below the treble staff's middle line and its head reaches 0.545 further, while the same written pitch is the bass staff's middle line, so 6.545 + 2.05 + 1 = 9.595 beats basic-distance 9 (align-interface.cc:228-238). Whole notes, so no stem enters the gap (stem.cc, Stem::is_normal_stem) and the binding ink is the notehead and the staff line -- the same ink staff.staff.{upper-note-to-lower-lines,lower-note-to-upper-lines} already carry at 9.595000 exact, so a divergence here could only be about hara-kiri. ★ MEASURED BACK ACROSS THE ISLAND, and the point lands where the commit said it would: at 41f9749d^ (b415dd16) Lily# reads 9.000000 -- residual -0.595000, the whole ink excess -- and at 41f9749d itself it reads 9.595000. So the entry that would have justified the rebase WOULD have been red before it and green after, and it is a net over that defect rather than a reading that never moves (HANDOFF 5.0: exact can mean 'does not move in this regime'). ⚠️ Its partner hara-kiri.undeclared.wide-ink.staff-staff-inside is the same LilyPond number on the same music WITHOUT the declaration, and the two closed at DIFFERENT commits -- see there."
+    },
+    "hara-kiri.wide-ink.lone-staff-to-next-system": {
+      "probe": "page-vertical.ly",
+      "score": "HKW",
+      "lilypond": 12.0,
+      "residual": 0.0,
+      "why": "EXACT -- system-system-spacing's basic-distance, read from the refpoint of a system that has ONE staff because hara-kiri removed its other one. Every other reading of this spring in the corpus runs between systems of equal staff count, so none of them can say whether a removed staff leaves its room behind: the gap and the count would both have to be wrong together for that to hide, and the count entry beside this one is what closes that door. Measured 9.000000-era through today it never moved (12.000000 at b415dd16, 41f9749d, 29bde26d and HEAD), which is the useful half -- the two commits that moved the inside gaps did NOT disturb the system spring, so their effect is attributable to the staff chain alone."
+    },
+    "hara-kiri.wide-ink.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "HKW",
+      "unit": "count",
+      "lilypond": 7,
+      "residual": 0.0,
+      "why": "EXACT -- 1 + 2 + 2 + 2, the removal having happened on system 0 and nowhere else. The shape guard the two HKW distances need: both are named by staff INDEX and mean what they say only while page 1 holds exactly these staves (HANDOFF 5.0 trap 8). It is also the assertion that the declaration FIRED at all -- the control book HKWN is the same music and reads 8 -- which is not a formality: written first with \\new PianoStaff, LilyPond removed nothing (Keep_alive_together_engraver, ly/engraver-init.ly:535-544) and both books printed 8, with every distance still agreeing. A pair can be exact on both sides for the reason that it never entered the regime."
+    },
+    "hara-kiri.undeclared.wide-ink.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "HKWN",
+      "lilypond": 9.595,
+      "residual": 0.0,
+      "why": "EXACT -- the control of hara-kiri.wide-ink.staff-staff-inside, and LILYPOND'S TWO READINGS ARE THE SAME NUMBER BY CONSTRUCTION rather than by measurement: hara-kiri is a suicide followed by a live-filter (page-layout-problem.cc:1366-1370, align-interface.cc:90), so the surviving system's Align_interface runs its ordinary max() over the staves it still holds and no other system's staff count reaches either term. ⇒ any difference Lily# showed between the two was entirely its own, with no force arithmetic to interpret (ragged-bottom keeps a page force out of it too). ★ AND THE TWO SIDES CLOSED AT DIFFERENT COMMITS, WHICH IS THE FINDING THE CONTROL WAS FOR: measured back through the island, the declared side reads 9.595000 from 41f9749d on while THIS one still read 9.000000 there, and only reached 9.595000 at 29bde26d. So the ink was being ignored on BOTH paths, for two different reasons -- 41f9749d removed the fixed-gap walk the declaration selected, and 29bde26d stopped the surviving walk from building ONE skyline off system 0's music and handing it to every system (this book's system 0 is the one whose upper staff rests, so the score-wide skyline was the 9.000000 one). ⚠️ THAT SECOND COMMIT HAD NO LEDGER KEY EITHER; its net was the test EachSystemIsSpacedByItsOwnInk. This entry is now the corpus half of it."
+    },
+    "hara-kiri.undeclared.spec-bound.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "HKWN",
+      "lilypond": 9.0,
+      "residual": 0.0,
+      "why": "EXACT -- StaffGrouper's basic-distance, read on system 0 of the control book, where the upper staff's whole rest hangs from the fourth line and protrudes nowhere: 2.05 + 2.05 + 1 = 5.1 loses to 9. THIS IS THE REGIME ASSERTION ITS NEIGHBOURS NEED (HANDOFF 5.0 trap 7 and 'do not sit on the floor'), and it is stronger than a paper flag because it comes out of the SAME book, paper and solve as the 9.595000 two gaps below it: a reading that has quietly stopped consulting the skyline cannot stay green by sitting on the floor, since it would have to report 9.000000 in both places. Measured back across the island it does exactly that and only that -- 9.000000 at b415dd16, 41f9749d, 29bde26d and HEAD, while its ink-bound neighbour moved twice."
+    },
+    "hara-kiri.undeclared.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "HKWN",
+      "unit": "count",
+      "lilypond": 8,
+      "residual": 0.0,
+      "why": "EXACT -- 2 + 2 + 2 + 2, the same music as HKW's 7 with the declaration removed, so the pair says the removal is what changes the page and not the music. The index guard for the two HKWN distances (HANDOFF 5.0 trap 8): gap 0 is system 0's INSIDE distance here where in HKW gap 0 is a system gap, and only the counts keep those two facts apart. ⚠️ Unlike lyrics.hara-kiri.{declared-only,undeclared}.staves-on-first-page, which are -2.000000 on a compressed page, this pair is ragged and both counts are exact -- so the page breaker's remaining defect is not reached here and cannot be confused with the spacing being measured."
+    },
     "page.compressed.last-staff-to-foot": {
       "probe": "page-vertical.ly",
       "score": "JSK",
