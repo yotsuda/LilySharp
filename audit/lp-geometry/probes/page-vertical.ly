@@ -1248,18 +1248,43 @@ probeTag =
 %%     1.187880 (the x-height of "no", the VAG's own printed up-extent) + 0.500000 (the
 %%     spec's padding) = 3.737880.
 %%
-%%     ⚠️ WHAT DOES NOT CLOSE YET, left here rather than rounded over: for the first spring
-%%     to READ its minimum, the chain has to be at force <= -1, i.e. its minimums must
-%%     already fill the 12.000000. Adding up what the source says they are —
-%%     3.737890 (staff->v1) + 2.800000 (v1->v2) + 0.0 (the null that breaks affinity,
-%%     :928-933) + (padding 1 - min_offsets[0] = 1 + 4.303666) — gives 11.841556, which is
-%%     0.158444 SHORT of the span. With that much slack the huge-stretchability springs
-%%     would take essentially all of it and the first spring would read its ideal 5.500000,
-%%     not its minimum. So one term in this list is wrong or missing.
-%%     ⇒ DO NOT PORT distribute_loose_lines OFF THIS MODEL until the 0.158444 is named.
-%%     The cheapest way to name it is to dump the springs themselves — min_distances[] and
-%%     the solved force — from inside distribute_loose_lines, rather than to keep inferring
-%%     them from the offsets they produce.
+%%     THE REGIME IS CONFIRMED BY PERTURBATION, since the offsets alone could not say
+%%     whether the inner chain was compressed onto its floors or stretched onto its ideals
+%%     (2026-07-26, two throwaway books):
+%%       - widen system-system-spacing 12 -> 20: the inner systems' staff->v1 goes
+%%         3.737890 -> 5.500000. More room releases it, so it WAS compressed.
+%%       - raise nonstaff-relatedstaff-spacing's basic-distance 5.5 -> 8 at the same room:
+%%         the inner systems DO NOT MOVE (3.737890) while the last system on the page
+%%         follows to 8.000001. Pinned on the minimum, and the override demonstrably took.
+%%
+%%     ★ AND THE SUM OF THE CHAIN'S MINIMUMS IS MEASURED, not inferred, by bisecting the
+%%     room R (system-system-spacing's basic-distance) and watching where the first spring
+%%     lifts off its floor — a fully compressed chain is exactly R <= sum(minimums):
+%%
+%%       R     | inner staff->v1
+%%       12.0  | 3.737890   (on the floor)
+%%       13.0  | 4.163732
+%%       14.0  | 5.009886
+%%       15.0  | 5.500000   (at the ideal)
+%%       16.0  | 5.500000
+%%
+%%     Extrapolating the first segment back (slope 0.425842 per unit of R) hits 3.737890 at
+%%     R = 12.000000. ⇒ SUM OF MINIMUMS = 12.000000 on this book, exactly the system gap:
+%%     the chain is critically compressed, which is why the reading looks like a hard floor.
+%%     ⚠️ The slope CHANGES between segments (0.425842, then 0.846154) — other springs are
+%%     unblocking one by one as the force rises, which is Simple_spacer behaving normally
+%%     and a reminder that this chain is not two springs.
+%%
+%%     ⚠️ WHAT IS STILL UNNAMED: adding the minimums by hand from the source gives
+%%     3.737890 + 2.800000 + 0.0 (the null that breaks affinity, :928-933) +
+%%     (padding 1 - min_offsets[0]) = 11.841556 when min_offsets[0] is read as the next
+%%     system's staff rel, -4.303666. The measurement says 12.000000, so THAT SUBSTITUTION IS
+%%     WRONG BY 0.158444 — the post-placement rel is not the minimum translation. The term to
+%%     pin is min_offsets[0] itself.
+%%     ⇒ Porting distribute_loose_lines needs that one number; everything else in the chain
+%%     is now measured. The cheapest next probe is a book whose syllable ink differs (say a
+%%     taller verse 1), which moves the floor by a known amount: if R* tracks it one for one,
+%%     the unnamed term is a constant and can be read straight off.
 \book {
   \probeTag "LYRV"
   \paper { max-systems-per-page = #4 ragged-bottom = ##t }
