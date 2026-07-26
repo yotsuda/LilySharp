@@ -972,6 +972,43 @@
       "residual": 0.0,
       "why": "EXACT -- 2 + 2 + 2 + 2, the same music as HKW's 7 with the declaration removed, so the pair says the removal is what changes the page and not the music. The index guard for the two HKWN distances (HANDOFF 5.0 trap 8): gap 0 is system 0's INSIDE distance here where in HKW gap 0 is a system gap, and only the counts keep those two facts apart. ⚠️ Unlike lyrics.hara-kiri.{declared-only,undeclared}.staves-on-first-page, which are -2.000000 on a compressed page, this pair is ragged and both counts are exact -- so the page breaker's remaining defect is not reached here and cannot be confused with the spacing being measured."
     },
+    "hara-kiri.compressed.declared.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "HKCD",
+      "lilypond": 8.651797,
+      "residual": 0.0,
+      "why": "EXACT -- AND THIS IS THE NET FOR b415dd16, the one stage of the hara-kiri island that had no ledger key at all. THE BOOK: JSK's, with removeEmpty added to the upper part and nothing else changed (same builder, so the two cannot drift), and NO STAFF IS EVER EMPTY -- so LilyPond's two readings are identical by construction (page-layout-problem.cc:1366-1370, align-interface.cc:90: a grob that never dies leaves no trace) and any difference Lily# shows between them is entirely its own, with no force arithmetic to interpret. ★ MEASURED BACK ACROSS THE ISLAND before recording: at cf59a00d -- b415dd16's parent -- the declared book reads 9.000000 against LilyPond's 8.651797, residual +0.348203, WHILE ITS CONTROL READS 8.651797 EXACT. That is the defect b415dd16 fixed, seen from the corpus for the first time: under a declaration the staff springs were emptied and rebuilt WITHOUT skylines, so their floor fell back to the drawn distance, the spring became effectively rigid at its ideal and the page could not squeeze it. ⚠️ THE SLACK WENT SOMEWHERE, and the second entry of this book is where: the system gap reads 10.927848 there against 11.303595, so the force the staff spring refused to take was absorbed by the system springs -- (9 - 9) / 2 = 0 for the staff spring against (12 - 10.927848) / 4 = 0.268038 for the system one. A page's force is shared, so a spring that will not move is visible in every OTHER spring, which is why the pair carries both distances. ⚠️ WHY LYRHKD/LYRHKN COULD NOT BE THIS KEY: with two verses hanging under the lower staff the two engines do not fit the same number of systems (LilyPond 8, Lily# 7), so their distances would have measured the page count and only the counts were carried. Without the lyrics the shape is JSK's, where both engines agree at 16 staves, and the distances become comparable. REGIME CONFIRMED COMPRESSED: 8.651797 is below the ideal 9.000000 (HANDOFF 5.0 trap 7), and the alignment minimum is 7.545, so the spring is genuinely between its floor and its ideal rather than sitting on either."
+    },
+    "hara-kiri.compressed.declared.system-gap": {
+      "probe": "page-vertical.ly",
+      "score": "HKCD",
+      "lilypond": 11.303595,
+      "residual": 0.0,
+      "why": "EXACT -- the other half of the same page force, and the entry that says WHERE the slack went when the staff spring would not take it. At cf59a00d this reads 10.927848 against LilyPond's 11.303595 while the staff gap sits at its ideal 9.000000: the staff spring absorbed nothing ((9 - 9) / 2 = 0) and the system springs absorbed 0.268038 ((12 - 10.927848) / 4) instead. ⇒ A RIGID SPRING IS NOT A LOCAL DEFECT: a page's force is slack over total strength, so one spring that will not move shows up in every other spring on the page, and an entry that read only the staff gap would have reported a smaller divergence than the page actually had. Today both halves close together, which is the check that the fix restored the spring rather than re-tuning the force: 11.303595 with inside 8.651797 satisfies (9 - inside) / 2 = (12 - system) / 4 to six digits, one negative force for the page."
+    },
+    "hara-kiri.compressed.declared.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "HKCD",
+      "unit": "count",
+      "lilypond": 16,
+      "residual": 0.0,
+      "why": "EXACT -- 8 systems of 2 staves. THE ENTRY THAT MAKES THE TWO DISTANCES ABOVE MEAN ANYTHING (HANDOFF 5.0 trap 8, and the lesson of lyrics.hara-kiri.declared-only.staves-on-first-page): a gap on a page holding 8 systems and the same-named gap on a page holding 7 are not the same quantity, and it is exactly that mismatch which stopped LYRHKD/LYRHKN from carrying distances. Here both engines put 16 staves on page 1 with and without the declaration, and it held at cf59a00d too -- so the +0.348203 measured there was the SPRING and not the page breaker, which is the whole reason this pair could be built without lyrics."
+    },
+    "hara-kiri.compressed.undeclared.staff-staff-inside": {
+      "probe": "page-vertical.ly",
+      "score": "HKCN",
+      "lilypond": 8.651797,
+      "residual": 0.0,
+      "why": "EXACT -- the control of hara-kiri.compressed.declared.staff-staff-inside, and it is JSK's music unchanged, so this number is also page.compressed.staff-staff-inside's. That duplication is deliberate and is what makes the pair readable: the two books differ in the DECLARATION alone, LilyPond's side is an identity by construction, and this side was ALREADY EXACT at cf59a00d while the declared side read 9.000000. ⇒ the divergence was reachable only through the declaration, which is what says the defect lived in the hara-kiri branch and not in the staff spring generally. ⚠️ Do not close this entry by pointing it at page.compressed.staff-staff-inside: they are the same LilyPond quantity, but this one exists to be COMPARED with its declared twin, and a pair whose control has been deleted cannot be read at all."
+    },
+    "hara-kiri.compressed.undeclared.staves-on-first-page": {
+      "probe": "page-vertical.ly",
+      "score": "HKCN",
+      "unit": "count",
+      "lilypond": 16,
+      "residual": 0.0,
+      "why": "EXACT -- the control's page shape, and the second half of the guard its twin describes. Both books put 16 staves on page 1 in both engines and did so at cf59a00d as well, so the declaration never cost this score a system the way it cost LYRHKD one -- the page-breaker defect that pair measures is reached by the lyric chain's height reservation, not by the declaration alone, and these two counts are what keeps the two findings from being confused."
+    },
     "page.compressed.last-staff-to-foot": {
       "probe": "page-vertical.ly",
       "score": "JSK",

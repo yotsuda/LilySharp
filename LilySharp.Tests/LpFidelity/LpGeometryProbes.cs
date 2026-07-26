@@ -307,12 +307,16 @@ internal static class LpGeometryProbes
     /// header for the measurement that showed it).
     /// </para>
     /// </remarks>
-    private static string TwoStaffPageScore(string name) => $$"""
+    /// <param name="declareRemoveEmpty">Adds <c>removeEmpty all</c> to the upper part and
+    /// nothing else. No staff in this music is ever empty, so the declaration cannot fire —
+    /// see <see cref="HKCD"/> for the pair that rests on it. Defaulted, so the four books
+    /// above are spelled exactly as before.</param>
+    private static string TwoStaffPageScore(string name, bool declareRemoveEmpty = false) => $$"""
         octave absolute
         time 4/4
         key c major
 
-        part rh { clef treble }
+        part rh { clef treble{{(declareRemoveEmpty ? " removeEmpty all" : "")}} }
         part lh { clef bass }
 
         section Main {
@@ -847,6 +851,40 @@ internal static class LpGeometryProbes
     /// <summary>The control of the pair above: the same music without the declaration, so its
     /// system 0 keeps a resting staff instead of losing it.</summary>
     private static readonly string HKWN = BuildHaraKiriWideInkScore(declareRemoveEmpty: false);
+
+    /// <summary>
+    /// THE DECLARATION ON ITS OWN, ON A COMPRESSED PAGE AND WITHOUT LYRICS — the mirrors of
+    /// books HKCD and HKCN, and the net for the one stage of the hara-kiri island that had no
+    /// ledger key: b415dd16, which gave the hara-kiri staff springs their skylines.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="JSK"/>'s book with <c>removeEmpty</c> added to the upper part and nothing
+    /// else changed — same builder, so the two cannot drift apart — and NO STAFF IS EVER
+    /// EMPTY, so LilyPond's two readings are identical by construction and any difference
+    /// Lily# shows between them is entirely its own.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHY NOT <see cref="LYRHKD"/>/<see cref="LYRHKN"/> AGAIN. Those ask the same question
+    /// and can only carry their COUNTS: with two verses hanging under the lower staff the two
+    /// engines do not fit the same number of systems on the page (LilyPond 8, Lily# 7), so a
+    /// gap on one page and the same-named gap on the other are not the same quantity. Without
+    /// the lyrics the shape is JSK's, where both engines already agree exactly at 16 staves
+    /// and 8.651797, so here the DISTANCES can be carried.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND WHY THE INK IS LOW, unlike <see cref="HKW"/>. Compression drives a spring onto
+    /// its MINIMUM, which is the alignment distance; with HKW's tall ink the floor would be
+    /// 9.595000 and the page would sit on it and measure nothing (HANDOFF 5.0). JSK's music
+    /// leaves the minimum at 7.545, well below the 8.651797 the page solves for, so the
+    /// spring is genuinely between its floor and its ideal — the only regime in which the
+    /// spring itself can be read.
+    /// </para>
+    /// </remarks>
+    private static readonly string HKCD = TwoStaffPageScore("HKCD", declareRemoveEmpty: true);
+
+    /// <summary>The control of the pair above: JSK's music unchanged.</summary>
+    private static readonly string HKCN = TwoStaffPageScore("HKCN");
 
     /// <summary>Builds <see cref="HKW"/> / <see cref="HKWN"/> — three bars to a system,
     /// twenty systems, the upper staff silent through the first of them and hanging low
@@ -3157,6 +3195,34 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
         new("hara-kiri.undeclared.staves-on-first-page", HKWN,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE DECLARATION ON ITS OWN, COMPRESSED AND WITHOUT LYRICS (HKCD/HKCN) — JSK's book
+        // plus removeEmpty on the upper part, nothing else changed, and no staff ever empty.
+        // This is the net for b415dd16, the one stage of the island with no ledger key: before
+        // it, a declared score rebuilt its staff springs WITHOUT skylines, so the floor fell
+        // back to the drawn distance and the page could not squeeze (9.000000 declared against
+        // 8.651797 undeclared, on this music). LYRHKD/LYRHKN were built to be that key and
+        // could not: their lyrics make the two engines fill the page differently, so only the
+        // counts were comparable. Without lyrics the shape is JSK's, where both already agree.
+        //
+        // ⚠️ THE INK IS DELIBERATELY LOW, unlike HKW above. Compression drives a spring onto
+        // its minimum, and the minimum is the alignment distance -- with tall ink the floor
+        // would be 9.595000 and the page would sit on it and measure nothing. JSK's music
+        // leaves it at 7.545, below the 8.651797 solved for, so the spring is between its
+        // floor and its ideal. The regime assertion is that 8.651797 < the ideal 9.000000
+        // (HANDOFF 5.0 trap 7); the system gap is the second half of the same force, so the
+        // two distances of the declared book cross-check each other:
+        // (9 - inside) / 2 == (12 - system) / 4.
+        new("hara-kiri.compressed.declared.staff-staff-inside", HKCD,
+            g => g.StaffGapAt(0), EightSystemsPerPageJustified),
+        new("hara-kiri.compressed.declared.system-gap", HKCD,
+            g => g.StaffGapAt(1), EightSystemsPerPageJustified),
+        new("hara-kiri.compressed.declared.staves-on-first-page", HKCD,
+            g => g.StavesOnPage(0), EightSystemsPerPageJustified),
+        new("hara-kiri.compressed.undeclared.staff-staff-inside", HKCN,
+            g => g.StaffGapAt(0), EightSystemsPerPageJustified),
+        new("hara-kiri.compressed.undeclared.staves-on-first-page", HKCN,
+            g => g.StavesOnPage(0), EightSystemsPerPageJustified),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the

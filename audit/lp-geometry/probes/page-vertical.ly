@@ -2001,3 +2001,85 @@ probeTag =
     >>
   }
 }
+
+%% HKCD / HKCN — THE DECLARATION ON ITS OWN, ON A COMPRESSED PAGE AND WITHOUT LYRICS. This
+%%     is JSK's book with \RemoveAllEmptyStaves added to the upper staff and NOTHING ELSE
+%%     CHANGED — same music, same paper, no staff ever empty — so LilyPond's two readings are
+%%     identical by construction (a suicide plus a live-filter leaves no trace of a grob that
+%%     never dies: page-layout-problem.cc:1366-1370, align-interface.cc:90) and whatever Lily#
+%%     reads differently between them is entirely its own.
+%%
+%%     ⚠️ WHY THIS IS NOT LYRHKD/LYRHKN AGAIN, which asked the same question and could only
+%%     carry its COUNTS. Those books hang two verses under the lower staff, and the two
+%%     engines then do not fit the same number of systems on the page (LilyPond 8, Lily# 7),
+%%     so a gap on one page and the same-named gap on the other are not the same quantity.
+%%     Strip the lyrics and the shape is JSK's, where both engines already agree exactly —
+%%     16 staves to page 1, inside 8.651797 — so here the DISTANCES can be carried.
+%%
+%%     ⚠️ AND WHY THE INK IS DELIBERATELY LOW, unlike HKW above. A spring's MINIMUM is what
+%%     compression drives it onto, and the minimum is the alignment distance; with HKW's tall
+%%     ink the floor would be 9.595000 and a compressed page would sit on it and measure
+%%     nothing (HANDOFF 5.0, "do not sit on the floor"). JSK's music leaves the alignment
+%%     minimum at 7.545 (3.545 under the treble's middle line + 3.0 of bass up-stem + 1), well
+%%     below the 8.651797 the page solves for, so the spring is genuinely between its floor
+%%     and its ideal — which is the only regime in which the SPRING can be measured at all.
+%%
+%%     THE STAGE THIS IS THE NET FOR. b415dd16 gave the hara-kiri staff springs their
+%%     skylines; before it, a declared score rebuilt those springs WITHOUT skylines, the floor
+%%     fell back to the drawn distance and the page could not squeeze — measured at the time
+%%     as 9.000000 declared against 8.651797 undeclared, on exactly this music. It was the one
+%%     stage of the island with no ledger key at all; LYRHKD/LYRHKN were built to be that key
+%%     and the page-count mismatch stopped them.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (a) LilyPond's two books are identical to the last digit, and equal to JSK's ledger
+%%           values: inside 8.651797, system-to-system 11.303595, 16 staves on page 1.
+%%       (b) inside < 9.000000 on page 1, or the page did not compress and the pair measures
+%%           nothing (trap 7).
+%%     (falsifier: any difference between the two books on LilyPond's side, which would mean
+%%      LilyPond reacts to the bare declaration and the invariant Lily# is held to is not
+%%      LilyPond's.)
+%%
+%%     BOTH HELD, on all three pages and not just the first: 8.651797 / 11.303595 / 16 staves
+%%     on page 1, 8.565484 / 11.130968 on page 2, 8.565484 on the last — the two books print
+%%     the same numbers throughout, and 8.651797 is below the ideal 9.000000 so the regime is
+%%     confirmed compressed.
+%%
+%%     ★ AND THE POINT WAS MEASURED BACKWARDS BEFORE BEING RECORDED, the same way HKW/HKWN
+%%     were. Lily#, at b415dd16's PARENT (cf59a00d) against today:
+%%
+%%                                       cf59a00d    HEAD       LilyPond
+%%       HKCD  inside (declared)         9.000000    8.651797   8.651797
+%%       HKCN  inside (control)          8.651797    8.651797   8.651797
+%%       HKCD  system-to-system         10.927848   11.303595  11.303595
+%%       both  staves on page 1               16          16         16
+%%
+%%     The declared page could not squeeze — its staff spring sat at the ideal, floor fallen
+%%     back to the drawn distance — while the control was already exact. ⚠️ AND THE SLACK IS
+%%     VISIBLE IN THE OTHER SPRING: (9 − 9)/2 = 0 for the staff spring against
+%%     (12 − 10.927848)/4 = 0.268038 for the system one, so a rigid spring is not a local
+%%     defect and an entry reading only the staff gap would have understated the page. Both
+%%     halves close together today, which is what says the spring was restored rather than the
+%%     force re-tuned. The counts hold throughout — that is what makes the distances
+%%     comparable at all, and it is precisely what LYRHKD/LYRHKN could not achieve.
+\book {
+  \probeTag "HKCD"
+  \paper { max-systems-per-page = #8 }
+  \score {
+    \new GrandStaff <<
+      \new Staff \with { \RemoveAllEmptyStaves } { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
+      \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "HKCN"
+  \paper { max-systems-per-page = #8 }
+  \score {
+    \new GrandStaff <<
+      \new Staff { \clef treble \repeat unfold 120 { c'4 d' e' f' } }
+      \new Staff { \clef bass \repeat unfold 120 { c4 d e f } }
+    >>
+  }
+}
