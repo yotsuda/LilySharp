@@ -18,6 +18,95 @@
 
 ---
 
+## 0. 第13セッション（2026-07-27）— **hara-kiri 島を完全に閉じた＋性能を計測して回収**
+
+> `HANDOFF.md` §1 から落とした逐語。**閉じた島なので、読むのは同じ regime に触るときだけ。**
+> 台帳側の証拠は `hara-kiri.*`（第14セッションで開いた 6 点）とコミットメッセージにある。
+
+**LP には hara-kiri 用のアルゴリズムが 1 つも無い**（`page-layout-problem.cc:1366-1370` の
+live フィルタ＋`align-interface.cc:90` の空スカイライン）。Lily# にあった**3 つの別式**を
+全部消して**1 つの計算＋述語**にし、最後に**残った「いつ走らせるか」の分岐も消した**。
+⇒ **`hasHaraKiri` というシンボルはもう存在しない。**
+
+| | commit | 消したもの | 出力 |
+|---|---|---|---|
+| **1** | `cf59a00d` | **高さ**の別式（`LayoutEngine.cs:198-205`。群間を 10.5 リテラルで綴っていた） | ossia 3 枚 |
+| **2** | `b415dd16` | **ばね**にスカイラインが渡っていなかった（＝床が描画距離に落ち**縮まない**） | 不変 |
+| **3** | `41f9749d` | **配置**の別式（固定 `BasicDistance` でスカイラインを一度も見ない walk） | hara-kiri 1 枚 |
+| **4** | `29bde26d` | **配置とばねの共有**（`hasHaraKiri`／`defaultStaffGroupLayouts`／`sharedStaffSprings`） | 不変 |
+
+★ **Stage 4 が直した量**: Lily# は**配置を system 0 の音楽から 1 回だけ作って全 system に配って
+いた**。LP は system ごと（`align-interface.cc:217-268` は System ごとの VerticalAlignment、
+`append_system` も system ごと）。**後ろの system が自分に必要な room をもらえていなかった**:
+system 1 の譜間 **9.000000 → 22.090000**（system 0 は 9.000000 のまま）。
+
+⚠️ **配置とばねは同時に動かすしかない**（ばねの最小は描画距離から逆算するので、距離を
+system A・最小を system B から取るとどちらのエンジンの答えでもなくなる）。だから Stage 2
+ではできず、Stage 3 で配置を 1 本にしてからでないと手が出なかった。
+
+### その性能劣化を**測って**回収した（`78870228`＋`e0ab3359`）
+
+⚠️ **「全テスト 31 秒で不変だから性能は問題ない」と一度書いたが、それは誤りだった。**
+fixture が小さいので**テストスイートは system 数に比例する劣化を 1 つも検出しない**。
+ユーザーの指摘で 400 小節/50 system を測って初めて出た（原則は `HANDOFF.md` §5.3 へ汎化）。
+
+`BuildAllStaffSkylines` の回数（時間でなく**回数**で測る。同一コードで median が 3 倍振れる）:
+
+| | 全描画 50 system | 一音編集 |
+|---|---|---|
+| Stage 4 前 | 2 回 / 495 ms | 2 回 / 494 ms |
+| **Stage 4 直後**（欠陥） | **100 回 / 732 ms** | **50 回 / 596 ms** |
+| `78870228` 重複除去 | 50 回 / 621 ms | 50 回 |
+| **`e0ab3359` F3 キャッシュ** | 50 回 | **1 回 / 333 ms** |
+
+- **配置とばねが別々にスカイラインを作っていた**＝1 system 2 回。内部オーバーロードで 1 回に
+- **残る「2 → N」は正しさの代価で消してはいけない**（旧 2 回が安かったのは system 0 の
+  スカイラインを全 system に配っていたから＝`EachSystemIsSpacedByItsOwnInk` が捕まえた欠陥）。
+  ⚠️ ただし**コストは譜面サイズに線形**（各 build はその system の小節だけ見る）
+- **編集パスは F3 キャッシュに載せて 1 回に**。キーは `_measures` と同一で足りることを
+  入力ごとに確認済み（side table・intrinsic・`AddStaffIdentity`）。網は既存の
+  `SessionFuzz_RandomizedEdits_AlwaysMatchFull`、メモ自体の番人は新規
+  `StaffSkylines_ReuseOnExactMatch_RecomputeWhenTheContentChanges`
+  （**fuzz では守れない**——メモを外しても正しさは壊れず遅くなるだけだから）
+
+★ **Stage 1 の予測は 6 桁で当たった**（実装前に記載）: 10.5 − 9 = **1.500000**。
+`lyrics.hara-kiri.shown-system.staff-to-lyric` **1.771310 → 0.271310**（**床は書体の
+0.271310・0 にしない**）・total **2.954788 → 1.454788**。
+
+### そのあと §2G の保守債務を一掃した（出力不変・4 commit）
+
+`921787a7` 死んだ `StaffSprings` オーバーロード削除（**到達不能になった「床＝描画距離」も
+道連れ**）／`10267f6f` テスト監査（**効果が消えても通る不等号 2 件**を締め・実態に合わない
+テスト名 2 件・描画幾何のテストを製品経路へ）／`b06f7391`＋`6c9fba1b` **`Layout()` 516→262 行・
+`CalculateAnnotationLayouts` 440→257 行**に分割。
+
+★ **Stage 2/3 が直した量**（どちらも台帳の regime 外だったので、当時の網はテスト側だけ）:
+
+| regime | 宣言なし | 宣言あり・前 | 宣言あり・後 |
+|---|---|---|---|
+| **圧縮ページ**（JSK の音楽） | 8.651797 | **9.000000**（縮まない） | 8.651797 |
+| **譜間インクが高い** | 22.090000 | **9.000000**（加線が融合） | 22.090000 |
+
+8.651797 は台帳 `page.compressed.staff-staff-inside` ＝ **LP 自身の値**なので、
+合わせた先が正しいことは独立に分かる。
+
+★ **合流で第2の欠陥が落ちた**: 積み上げループが**「次に置く譜」の高さで進んでいた**
+（`currentY -= thisStaffHeight + spacing`）。同じ高さの譜しか通っていなかったので完全に
+隠れていたが、grandStaff に ossia/tab が入ると差の分ずれる。**どちらの複製も半分ずつ
+正しかった**＝§5.2.1②。
+
+★ **狙っていなかった 2 件が同時に落ちた**（§5.0・詳細は台帳の `why`）:
+
+1. **ページブレーカーの不変条件が閉じた**（`lyrics.hara-kiri.declared-only.staves-on-first-page`
+   −4 → −2）。宣言あり／なしが**同じ 14 譜**に。残る −2 は**両書に共通**＝ページブレーカー
+   自身の別欠陥（LP 8 system／Lily# 7）。⚠️ **Lily# の 7 system ページの regime は未再測定**
+   （旧 6 system の 9.647977 はもう存在しないページの値）。読む前に dump すること。
+2. **ossia の snapshot 3 枚が動いた**（承認済）。**ossia は `removeEmpty` を暗黙に立てる**ので
+   ずっとこの分岐に居た＝前セッションの fixture 数え上げが誤りだった（§5.0 に汎化）。
+   ⚠️ **これで ossia が正しくなったのではない**。
+
+---
+
 ## 1. 現在地 ← **毎セッション書き換える**
 
 ### ▶ 次のセッションの最初の一手 ＝ **譜間 merge_springs（行頭 spring の平均化）を移植する**——**点は既に開いている**（`line-start.time-to-first-note.{tab-concert,tab-keyed}`＝両方 +0.400000000）。LP の行頭 spring は `Spacing_spanner::breakable_column_spacing`（`spacing-spanner.cc:478-517`）が**譜ごとに 1 wish を集めて `merge_springs`（`spring.cc:104` ＝ ideal の単純平均・min は max・床 min+0.3）**。**前置の最後の grob が譜ごとに違うときだけ効く**——記譜譜=TimeSignature（semi-shrink 2.0→ideal 8.82）／tab 譜=Clef（minimum-fixed 5.0→6.0 が共有 min_dist 床で 8.02）→平均 8.42＝**LP 3.300000**。⚠️ **通常譜 2 段では 3.700000 のまま**（wish が等しい＝平均は自分自身）＝**だから既存の多段譜の点では見えなかった**。Lily# は `SpacingRules.FirstNoteSpring` の**系全体 1 本**で per-staff wish が存在しない＝+0.4。✅ **モデルは実測で確定済み（続き×7 で probe `TM3`/`TM4` を追加・台帳点ではなくモデル照合）**: 記譜譜を足すと平均が動く——予測を dump 前に書いて **6 桁で的中**（1記譜+1tab `(8.82+8.02)/2=8.420000` ／ 2記譜+1tab `8.553333` ／ 3記譜+1tab `8.620000`・実測すべて一致）。**max() モデル（8.82）も min() モデル（8.02）も棄却**。さらに TM3/TM4 の 2 式が**独立に tab 譜の wish = 8.020000 を解く**＝`staff-spacing.cc:212-215` の床から **この曲の min_dist = 7.720000** が確定。**残る前提 2 つ**（どちらもそれ自体が測定＋移植）: ①**Lily# の TAB clef ink**——LP は原点 0.8・ext **(1.0 . 3.6)** で G clef 2.565 より**広い**（LP の TIME 5.12 はこの union から）。Lily# の tab clef は `SharedRenderer.Tab` の独自スケール（"designed span ~5.78 font units"）で **LP と照合したことが無い**＝`clefs.tab` の LILC bbox を `Extract-EmmentalerMetrics.py` に足すところから。なお `MaxClefWidth` が tab を skip しているのも同じ族の非忠実。②**行頭 min_dist**（全譜にまたがる prefatory 列→第1音列のスカイライン距離）＝`FirstNoteSpring` は今スカイラインを一切見ない。**出力は tab/ossia を含む全スコアで動く**（第1音が ~0.4 左へ＝snapshot 再ベース＋ユーザー承認が要る）。次点: ② break-align 描画 walk の純構造化（sharedKeyX/sharedTimeX の手組み max ループ→`SolvePrefixColumns` 消費へ。値は一致済＝出力不変・ただし予約側は score モデル＋measure 走査、描画側は `ResolveKeySignature`＋`GetSystemStartKeyChange` と **key 解決経路が別**——この解決経路の統一が本丸で、片方だけ挿げ替えると多分岐で壊れる。急がず focused session で）。✅ **widest-key の譜集合（旧 ▶）は本セッションで完了**（下記ブロック・TKC/TKT）。残る忠実化キュー（続き×6 の監査＋本セッションで確定・いずれもアーキ不利なし）: **(0) ✅ 済＝ossia は群の一員に戻した**（幅 union へ移植済み。ただし **ossia 自身の key が全記譜譜より 2 本以上広い** regime は corpus に無く未測定＝そこを踏む対を起票する価値はある）・**(0') `MaxClefWidth` の staff 集合**（LP の TAB clef は Clef 列に入り、しかも G より広い ext (1.0 . 3.6)。Lily# は tab を skip＝同じ族の非忠実。▶ の merge_springs と同時に測る）・**(0'') prefix 幅の第3のモデル＝`MultiStaffScore.LeadingKey`**（`LayoutEngine`/`SystemBreaker`/`IncrementalCompiler` の 3 経路は **score.KeySignature をそのまま**使う＝per-staff key も彫る譜集合も見ない。`transpose-multistaff`（score=C major・上譜 D major）で**改行器の予約が実レイアウトより 2.2 狭い**。LP には break-align モデルが 1 本しか無い＝§5.2.1② の二重実装。出力（改行位置）が動くので対を起票してから）・ **(a) 同一譜 knee の実 ink seed**（LP の knee stencil 帯を dump してから＝発明回避）・**(b) `BuildSystemSkylines` の全譜 union**（LP は全譜・probe を対で起票してから・focused session 向き）・**(c) cross-staff beam 機能そのもの**（`TargetStaffIndex` を立てる producer が無い＝`IsCrossStaff` 到達不能。skyline 方針は `72905813` でピン済み）・mid-line clef change の origin（`8ef0044e` の教訓参照）。
