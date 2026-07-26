@@ -97,15 +97,17 @@ ideal に座る。**コーパスはこの regime に届いていない。**守�
 
 ### ▶ 次の一手
 
-0. ★ **§5.2 の構造的違反が 1 件残っている**（`5fba1ad7` の監査で判明・**報告のみで未修正**）。
-   `VerticalSpacingSpec.Stretchability` が素の `double` なので、**「LP が 0 と宣言」と
-   「LP が宣言しない」が同じ値**になり、`CreateSpring` は両方を ideal に解決する。
-   LP は区別する（`page-layout-problem.cc:1350-1357`＝`set_default_strength()` は**無条件に**
-   走り、**宣言があればその後で上書き**）。⇒ §5.2 の「**今の構造では表現できないから畳む**」
-   そのもの。**nullable にするのが移植で、畳み続けるのは違反。**
-   ⚠️ **今は潜在で顕在ではない**——0 を宣言する唯一の spec（`nonstaff-nonstaff-spacing`）は
-   basic-distance も 0 なので両解釈が一致する。⇒ **出力不変で直せる**（宣言 14 箇所＋
-   `ApplySubProperty`＋テスト）。独立した commit にすること。
+0. ★ **spec の「宣言なし」がまだ 3 メンバ畳まれている**（`3193a851` で
+   `Stretchability` だけ nullable 化して閉じた。**残りは `BasicDistance` /
+   `MinimumDistance` / `Padding`**）。
+   LP の `read_spacing_spec` は**在るメンバだけ**を書き込むので、宣言の無いメンバは
+   **呼び手が作ったばねの値のまま**残る（loose 鎖なら `Spring spring (1.0, 0.0)`＝
+   `page-layout-problem.cc:1035`）。Lily# は一律 0 と書く。
+   ⚠️ **実害の候補は `nonstaff-unrelatedstaff-spacing`**——LP は
+   **padding しか宣言しない**（`define-grobs.scm:4240`）のに Lily# は basic 0 / min 0。
+   ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
+   （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
+   ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
 1. **hara-kiri × 歌詞ブロックが未測定**（`c64ee958` の報告事項）。`BuildLooseChainEnds` は
    span を **system ごと**に読むようにしたが、**それを踏む fixture も台帳点も無い**
    （`hara-kiri.lys`/`ossia.lys`/`dashed-barline.lys` はどれも歌詞なし）。
