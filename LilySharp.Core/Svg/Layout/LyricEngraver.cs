@@ -573,10 +573,13 @@ internal sealed class LyricEngraver
                             LooseLineSpacer.NullNeighbour, chainEnd.NextStaffMinDistance));
                     }
                 }
-                else
-                {
-                    gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NullNeighbour, 0.0));
-                }
+                // ...and NOTHING when the room is unknown. LilyPond's chain always ends on
+                // something — the next staff, or the page edge — so a terminator with no
+                // room behind it would be a spring this port invented: it cannot be given
+                // LilyPond's minimum, it changes no position (the verses read
+                // positions[1..n], which the gaps above already produce), and it would read
+                // to the next person as if the chain were complete. The absent end is the
+                // honest spelling of "this chain is not solved yet".
 
                 var positions = LooseLineSpacer.Distribute(gaps, room);
                 for (int i = 0; i < verses.Count; i++)
