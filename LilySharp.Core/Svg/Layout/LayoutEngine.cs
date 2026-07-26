@@ -790,7 +790,15 @@ internal sealed class LayoutEngine
                 // constants are the annotation-band ESTIMATE and are distinct from
                 // MultiStaffLayouter.TextRowVerseSpacing, which sizes independent
                 // text rows — different purpose, so the values legitimately differ.)
-                const double lyricStaffPadding = 2.5; // LyricText staff-padding
+                //
+                // ⚠️ The distance to verse 1 is NOT one of them: it is the same quantity
+                // LyricEngraver places the line at, so it is read from there rather than
+                // copied. It used to be a local 2.5, and when that became LilyPond's
+                // nonstaff-relatedstaff-spacing the estimate would have gone stale by a
+                // whole staff space — the breaker pricing a page against a band the
+                // placement no longer uses (HANDOFF 5.2.1②, the duplicated-model trap that
+                // the padding-4x bug lived in).
+                double lyricStaffPadding = LyricParameters.Default.BasicDistanceBelowBottomLine;
                 const double lyricVerseSpacing = 1.8; // extra band per additional verse
                 const double lyricFontSize = 1.2;     // lyric text height
                 double lyricBand = lyricStaffPadding + (maxVerse - 1) * lyricVerseSpacing + lyricFontSize;

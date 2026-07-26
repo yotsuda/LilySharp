@@ -29,8 +29,55 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed record LyricParameters
 {
-    /// <summary>Distance below the staff in staff spaces.</summary>
-    public double StaffPadding { get; init; } = 2.5;
+    /// <summary>
+    /// Staff REFPOINT to lyric baseline for a lyric line attached to the staff above it —
+    /// LilyPond's <c>basic-distance</c> for a <c>staff-affinity = UP</c> Lyrics line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:648-652 — the Lyrics context sets
+    /// <c>VerticalAxisGroup.staff-affinity = #UP</c> and
+    /// <c>nonstaff-relatedstaff-spacing = ((basic-distance . 5.5) (padding . 0.5)
+    /// (stretchability . 1))</c>. This value is the <c>basic-distance</c> member, taken
+    /// from that line of LilyPond's source and not from any measurement of its output.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1284-1294 <c>get_spacing_spec</c> — that is
+    /// the spec of the spring between a spaceable staff and the loose line under it, and
+    /// <c>distribute_loose_lines</c> (:1025-1054) realizes
+    /// <c>max(ideal, ensure_min_distance(alignment minimum))</c>.
+    /// <para>
+    /// WHERE THE OTHER TWO MEMBERS OF THE SPEC LIVE, so the port is not silently partial:
+    /// <c>padding</c> is <see cref="SkylineDrop.RelatedStaffPadding"/>, which is the second
+    /// term of that max; <c>stretchability</c> is not modelled at all, and is INERT rather
+    /// than skipped — <c>get_spacing_spec</c> hands the springs from a loose line to its
+    /// non-own side LARGE_STRETCH 10e5 / HUGE_STRETCH 10e7 (:1257-1338, with LilyPond's own
+    /// comment that this is deliberate so an affinity-UP line "will still be placed close to
+    /// its staff"), so this spring takes about a part in 10e7 of a page's slack and the
+    /// solved length is its rest length either way.
+    /// </para>
+    /// <para>
+    /// That last claim is the one the corpus checks rather than assumes
+    /// (audit/lp-geometry, <c>lyrics.{natural,stretched}.staff-to-lyric</c>): LilyPond puts
+    /// the row 5.500000 below the staff on a page at rest AND on one stretched to staff gaps
+    /// of 43.841185. ⚠️ Those readings are the CHECK on this constant, not its source.
+    /// </para>
+    /// <para>
+    /// ⚠️ Refpoint to refpoint (the middle line), not from the bottom line: the spacing runs
+    /// between two VerticalAxisGroup reference points, and a Lyrics group's reference point
+    /// is the syllable baseline.
+    /// </para>
+    /// </remarks>
+    public double RelatedStaffBasicDistance { get; init; } = 5.5;
+
+    /// <summary>The outer staff line, staff spaces from the middle line — the step between
+    /// the frame <see cref="RelatedStaffBasicDistance"/> is defined in (the staff's own
+    /// reference point) and the one the layout code works in (the bottom line).</summary>
+    private const double StaffHalf = 2.0;
+
+    /// <summary>
+    /// Staff BOTTOM LINE to lyric baseline — <see cref="RelatedStaffBasicDistance"/> in the
+    /// frame the callers measure in. Lives here, on the parameters, so the page breaker's
+    /// band estimate and the placement cannot drift apart (HANDOFF 5.2.1②).
+    /// </summary>
+    public double BasicDistanceBelowBottomLine => RelatedStaffBasicDistance - StaffHalf;
 
     /// <summary>Minimum distance between syllables in staff spaces.</summary>
     public double MinSyllableSpacing { get; init; } = 0.5;
@@ -108,6 +155,12 @@ internal sealed class LyricEngraver
     /// the same value to turn em-fraction advance widths into staff-space widths.
     /// </summary>
     private const double LyricFontSize = 3.2;
+
+    /// <summary>
+    /// Staff bottom line to lyric baseline — see
+    /// <see cref="LyricParameters.BasicDistanceBelowBottomLine"/>.
+    /// </summary>
+    private double BasicDistanceBelowBottomLine => _params.BasicDistanceBelowBottomLine;
 
     /// <summary>
     /// Serif cap/ascender height as an em fraction — the top of letters like
@@ -256,9 +309,9 @@ internal sealed class LyricEngraver
                 // staff. This is the BASIC floor; ApplySkylineDrop then lowers it — using
                 // the attached staff's own down-skyline — so it clears that staff's notes
                 // and the line's real (font-metric) glyph height.
-                verseY = groupBottomY + staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
+                verseY = groupBottomY + staffBottom + BasicDistanceBelowBottomLine + (verseNumber - 1) * _params.VerseSpacing;
             else
-                verseY = staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
+                verseY = staffBottom + BasicDistanceBelowBottomLine + (verseNumber - 1) * _params.VerseSpacing;
 
             var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
@@ -308,7 +361,7 @@ internal sealed class LyricEngraver
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
-        double basic = staffBottom + _params.StaffPadding;
+        double basic = staffBottom + BasicDistanceBelowBottomLine;
 
         // A non-last-group note-bound line is anchored below its OWN group, so the
         // system-wide drop (which clears the LOWEST staff) must not touch it. It gets a
