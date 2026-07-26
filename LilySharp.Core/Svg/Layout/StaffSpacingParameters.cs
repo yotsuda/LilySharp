@@ -66,6 +66,40 @@ internal sealed record StaffSpacingParameters
     };
 
     /// <summary>
+    /// The gap below a staff that belongs to NO group at all — LilyPond's third branch,
+    /// which Lily# did not have.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:1008-1027
+    /// <c>calc_maybe_pure_staff_staff_spacing</c> — the spec is read off the UPPER staff of
+    /// the pair (<c>get_spacing_spec</c> asks <c>before</c>, page-layout-problem.cc:1280-1281)
+    /// and describes the gap BELOW it, and it has three branches, not two: no
+    /// <c>staff-grouper</c> at all falls through to the staff's own
+    /// <c>default-staff-staff-spacing</c>, and only a staff that HAS a grouper and is its
+    /// last live spaceable member (<c>Staff_grouper_interface::maybe_pure_within_group</c>)
+    /// takes <c>staffgroup-staff-spacing</c>.
+    /// <para>
+    /// LILYPOND-REF: scm/define-grobs.scm:4237-4239
+    /// (default-staff-staff-spacing . ((basic-distance . 9)
+    ///                                 (minimum-distance . 8)
+    ///                                 (padding . 1)))
+    /// ⚠️ NO <c>stretchability</c> MEMBER, so <c>set_default_strength</c> makes the inverse
+    /// stretch strength the ideal itself, 9 — which is what
+    /// <c>staffgroup-staff-spacing</c> declares outright, so the two springs stretch alike
+    /// and only the basic-distance separates them. The COMPRESS strengths do differ
+    /// (<c>ideal - minimum-distance</c> = 1 here against 2.5), which a compressed page would
+    /// see.
+    /// </para>
+    /// </remarks>
+    public VerticalSpacingSpec DefaultStaffStaff { get; init; } = new()
+    {
+        BasicDistance = 9,
+        MinimumDistance = 8,
+        Padding = 1,
+        Stretchability = 9
+    };
+
+    /// <summary>
     /// Spacing between a non-staff line and the nearest staff in the direction of its
     /// <c>staff-affinity</c> ("close" / related direction).
     /// </summary>

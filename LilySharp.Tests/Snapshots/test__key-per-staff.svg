@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="350.4" viewBox="0 0 119.50 35.04" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="335.4" viewBox="0 0 119.50 33.54" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="6.00" y="14.35" font-size="3.00" text-anchor="middle" dominant-baseline="central">Melody</text>
-  <text x="6.00" y="24.85" font-size="3.00" text-anchor="middle" dominant-baseline="central">Melody2</text>
-  <line x1="12.00" y1="12.35" x2="12.00" y2="26.85" stroke="#000000" stroke-width="0.160"/>
+  <text x="6.00" y="23.35" font-size="3.00" text-anchor="middle" dominant-baseline="central">Melody2</text>
+  <line x1="12.00" y1="12.35" x2="12.00" y2="25.35" stroke="#000000" stroke-width="0.160"/>
   <line x1="12.00" y1="12.35" x2="31.82" y2="12.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="12.00" y1="13.35" x2="31.82" y2="13.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="12.00" y1="14.35" x2="31.82" y2="14.35" stroke="#000000" stroke-width="0.100"/>
@@ -19,21 +19,21 @@
   <text class="music" x="24.67" y="17.35" font-size="4.00" data-pos="38"></text>
   <rect x="30.73" y="12.35" width="0.19" height="4.00" data-pos="39"/>
   <rect x="31.22" y="12.35" width="0.60" height="4.00" data-pos="39"/>
-  <line x1="12.00" y1="22.85" x2="31.82" y2="22.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="12.00" y1="23.85" x2="31.82" y2="23.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="12.00" y1="24.85" x2="31.82" y2="24.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="12.00" y1="25.85" x2="31.82" y2="25.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="12.00" y1="26.85" x2="31.82" y2="26.85" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="12.80" y="25.85" font-size="4.00"></text>
-  <text class="music" x="16.18" y="22.85" font-size="4.00"></text>
-  <text class="music" x="17.29" y="24.35" font-size="4.00"></text>
-  <text class="music" x="18.39" y="22.35" font-size="4.00"></text>
-  <text class="music" x="20.63" y="24.85" font-size="4.00"></text>
-  <line x1="24.49" y1="27.85" x2="27.12" y2="27.85" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="23.64" y="27.85" font-size="4.00" data-pos="84"></text>
-  <text class="music" x="24.67" y="27.85" font-size="4.00" data-pos="84"></text>
-  <rect x="30.73" y="22.85" width="0.19" height="4.00" data-pos="85"/>
-  <rect x="31.22" y="22.85" width="0.60" height="4.00" data-pos="85"/>
+  <line x1="12.00" y1="21.35" x2="31.82" y2="21.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="12.00" y1="22.35" x2="31.82" y2="22.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="12.00" y1="23.35" x2="31.82" y2="23.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="12.00" y1="24.35" x2="31.82" y2="24.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="12.00" y1="25.35" x2="31.82" y2="25.35" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="12.80" y="24.35" font-size="4.00"></text>
+  <text class="music" x="16.18" y="21.35" font-size="4.00"></text>
+  <text class="music" x="17.29" y="22.85" font-size="4.00"></text>
+  <text class="music" x="18.39" y="20.85" font-size="4.00"></text>
+  <text class="music" x="20.63" y="23.35" font-size="4.00"></text>
+  <line x1="24.49" y1="26.35" x2="27.12" y2="26.35" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="23.64" y="26.35" font-size="4.00" data-pos="84"></text>
+  <text class="music" x="24.67" y="26.35" font-size="4.00" data-pos="84"></text>
+  <rect x="30.73" y="21.35" width="0.19" height="4.00" data-pos="85"/>
+  <rect x="31.22" y="21.35" width="0.60" height="4.00" data-pos="85"/>
   <rect x="12.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="14"/>
   <text x="13.33" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="14">A</text>
   </g>

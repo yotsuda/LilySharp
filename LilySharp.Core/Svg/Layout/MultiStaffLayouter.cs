@@ -151,8 +151,23 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// LILYPOND-REF: lily/align-interface.cc:240-252 — direction-aware non-staff spacing.
     /// The boundary is between the LAST staff of <paramref name="upper"/> and the FIRST
-    /// staff of <paramref name="lower"/>. When both are spaceable, falls back to
-    /// staffgroup-staff-spacing.
+    /// staff of <paramref name="lower"/>.
+    /// <para>
+    /// ⚠️ WHEN BOTH ARE SPACEABLE THERE ARE THREE BRANCHES, NOT TWO
+    /// (LILYPOND-REF: lily/axis-group-interface.cc:1008-1027). The spec is read off the
+    /// UPPER staff — <c>get_spacing_spec</c> asks <c>before</c>
+    /// (page-layout-problem.cc:1280-1281) — and describes the gap below it:
+    /// a staff with no <c>staff-grouper</c> uses its own
+    /// <c>default-staff-staff-spacing</c> (9), a staff that still has a live spaceable
+    /// group member below it uses the grouper's <c>staff-staff-spacing</c> (9), and only
+    /// the LAST live member of a grouper uses <c>staffgroup-staff-spacing</c> (10.5).
+    /// Lily# had no third branch and sent every group boundary to 10.5, so two bare
+    /// <c>staff</c> declarations — which carry no grouper at all — sat 1.500000 too far
+    /// apart. MEASURED (audit/lp-geometry, books LYRM/LYRMV:
+    /// <c>lyrics.two-staff{,.two-verse}.staff-staff-inside</c>).
+    /// ⚠️ It is the UPPER group that decides, not the pair: a bare staff above a
+    /// PianoStaff takes 9 as well, because the staff above has no grouper to ask.
+    /// </para>
     /// </remarks>
     private static VerticalSpacingSpec SelectInterGroupSpec(
         StaffGroup upper, StaffGroup lower, StaffSpacingParameters sp)
@@ -160,9 +175,12 @@ internal sealed class MultiStaffLayouter
         if (upper.Staves.IsDefaultOrEmpty || lower.Staves.IsDefaultOrEmpty)
             return sp.StaffGroupStaff;
 
+        var spaceable = upper.Type == StaffGroupType.Single
+            ? sp.DefaultStaffStaff
+            : sp.StaffGroupStaff;
         int? upperAffinity = upper.Staves[^1].StaffAffinity;
         int? lowerAffinity = lower.Staves[0].StaffAffinity;
-        return StaffAffinity.Select(upperAffinity, lowerAffinity, sp.StaffGroupStaff, sp);
+        return StaffAffinity.Select(upperAffinity, lowerAffinity, spaceable, sp);
     }
 
     /// <summary>

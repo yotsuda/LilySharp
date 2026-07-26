@@ -357,7 +357,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
 | ★ **和音記号は LP に合わせる＝中心合わせしない**（ユーザー判断・2026-07-25 明示） | 意図的乖離かを問うたうえでの決定。`ChordName` は X-offset も self-alignment も持たない（`define-grobs.scm:837-855`）＝ink 左が列。`dcbf08e9` で移植し `staffless.line-start.chords-vs-staff` が閉じた。⚠️ **和音グリッドは別 grob（`GridChordName`）で LP も中心合わせする**が、中心を取る相手は小節の四角。Lily# に四角は無いので chords-only シートは ChordName 経路のまま＝**「グリッドも直す」で触らない** |
-| ★ **独立 lyrics 行（`lyrics NAME`）を「譜のような帯」として置くのは意図的乖離**（ユーザー判断・2026-07-26 明示） | **複数行歌詞のレンダは Lily# の拡張機能**であり、独立行は「譜に付く歌詞」ではなく**リードシートの word トラック**（自前の小節線・verse を積む帯）。だから譜グループとして `staffgroup-staff-spacing` で置く。**量は測ってある: 11.100000 対 LP 5.500000＝+5.600000**（`2.0 +(10.5−4.0)+ 2.6`）。⚠️ **LP 側は綴りで変わらない**（`\lyricsto` 有無で probe の全項目一致）ので、差はまるごと Lily# のもの——それを承知の決定。⚠️ **台帳には載せない**（total が 0.006 → 5.6 になり指標が壊れる＝`page.height` と同じ理由）。代わりに `LyricRowIsSpacedAsAStaffLikeBand` が**導出形で**主張し、`LyricRowBaseline` に `LILYSHARP-OWN` を付けた。⚠️ **note-bound（`with lyrics`）は別枝で、そちらは LP の 5.5 に揃っている**（`2b901484`）——混同しないこと |
+| ★ **独立 lyrics 行（`lyrics NAME`）を「譜のような帯」として置くのは意図的乖離**（ユーザー判断・2026-07-26 明示） | **複数行歌詞のレンダは Lily# の拡張機能**であり、独立行は「譜に付く歌詞」ではなく**リードシートの word トラック**（自前の小節線・verse を積む帯）。だから譜グループとして `staffgroup-staff-spacing` で置く。**量は測ってある: 9.600000 対 LP 5.500000＝+4.100000**（`2.0 +(9−4.0)+ 2.6`）。
+⚠️ **2026-07-26 に +5.600000 から縮んだが、決定は変わっていない**——帯を置く spec が
+`staffgroup-staff-spacing`(10.5) だったのを LP どおり `default-staff-staff-spacing`(9) に
+直しただけ（台帳 `lyrics.two-staff{,.two-verse}.staff-staff-inside`）。**模型は不動。**⚠️ **LP 側は綴りで変わらない**（`\lyricsto` 有無で probe の全項目一致）ので、差はまるごと Lily# のもの——それを承知の決定。⚠️ **台帳には載せない**（total が 0.006 → 5.6 になり指標が壊れる＝`page.height` と同じ理由）。代わりに `LyricRowIsSpacedAsAStaffLikeBand` が**導出形で**主張し、`LyricRowBaseline` に `LILYSHARP-OWN` を付けた。⚠️ **note-bound（`with lyrics`）は別枝で、そちらは LP の 5.5 に揃っている**（`2b901484`）——混同しないこと |
 | ★ **タブのフレット数字を LP より大きく描くのは意図的乖離**（ユーザー判断・2026-07-24 明示） | LP のタブ数字は小さくて読みにくい。Lily# は `TabConstants.FretFontSize = 2.6`（単数字幅 1.625・高さ 1.7875）＝LP の TabNoteHead 幅 0.990155 の約 1.64 倍。和音で数字が被る問題は**じぐざぐ配置**（`SpacingRules.ApplyTabChordSpacing` ほか）で解いてある。**「LP と違う＝発明だから消す」で削らないこと。** ⚠️ 弦間隔（`TabStringSpace`）は別の話で、そちらは LP の 1.5 に揃える |
 
 ---

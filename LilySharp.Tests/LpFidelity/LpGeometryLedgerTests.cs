@@ -262,18 +262,25 @@ public class LpGeometryLedgerTests
         // pass if both drifted together.
         Assert.Equal(5.5, noteBound, 6);
 
-        // staff refpoint -> bottom line, then the row's own group spacing (StaffGroupStaff's
+        // staff refpoint -> bottom line, then the row's own group spacing (the spec's
         // basic-distance less the staff-height band a lyrics row reserves), then the
-        // baseline inside that band. Written as the model rather than as 11.1 so that a
-        // change to any term reads as the term it is.
+        // baseline inside that band. Written as the model rather than as a number so that a
+        // change to any term reads as the term it is — which is what happened: the middle
+        // term was StaffGroupStaff's 10.5 until the staff above the row was found to carry
+        // no group at all, and LilyPond gives such a staff its own default-staff-staff-spacing
+        // (audit/lp-geometry, lyrics.two-staff{,.two-verse}.staff-staff-inside).
+        // ⚠️ THE DECISION IS UNCHANGED by that (HANDOFF 3: an independent lyrics row is
+        // deliberately placed as a staff-like BAND). Only the spec the band is placed with
+        // was wrong, so the decided divergence from LilyPond's 5.5 shrinks 5.6 -> 4.1
+        // without the model moving.
         const double staffHalf = 2.0;
-        const double groupBasicDistance = 10.5;   // StaffSpacingParameters.StaffGroupStaff
+        const double groupBasicDistance = 9.0;    // StaffSpacingParameters.DefaultStaffStaff
         const double rowBandHeight = 4.0;         // a lyrics row reserves a staff height
         const double baselineInBand = 2.6;        // LyricEngraver.LyricRowBaseline
         Assert.Equal(
             staffHalf + (groupBasicDistance - rowBandHeight) + baselineInBand, row, 6);
 
-        Assert.Equal(5.6, row - noteBound, 6);
+        Assert.Equal(4.1, row - noteBound, 6);
     }
 
     /// <summary>
