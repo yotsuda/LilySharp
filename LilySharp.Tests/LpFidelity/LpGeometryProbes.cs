@@ -618,14 +618,94 @@ internal static class LpGeometryProbes
     /// distance 9.000000, four systems (eight staves) on page 1.
     /// </para>
     /// <para>
-    /// ⚠️ WHY LILY# CANNOT MATCH IT TODAY, stated so the entry is read as a defect and not as
-    /// a baseline: <c>LayoutEngine.BuildLooseChainEnds</c> returns null for the whole score as
-    /// soon as a system holds more than one staff, so every chain here runs at force 0 — each
-    /// spring at <c>max(min, ideal)</c>, which is where LilyPond's lands only when it has room
-    /// to spare. LYRV is the proof that this one does not (f = -0.841556).
+    /// ⚠️ THE PARAGRAPH THAT STOOD HERE IS STALE AND HAS BEEN CORRECTED. It said
+    /// <c>LayoutEngine.BuildLooseChainEnds</c> returns null for the whole score as soon as a
+    /// system holds more than one staff, so every chain on this book ran at force 0. That was
+    /// true when the entry was opened and stopped being true in <c>90e47848</c>, which moved
+    /// the room to the refpoint frame: a multi-staff system's chain is now solved like a
+    /// one-staff system's. What is left is <b>+0.271310</b> and it is the two lyric faces
+    /// rather than a mechanism — see the ledger's <c>why</c>, and ⚠️ do not drive it to zero,
+    /// since landing on LilyPond's 3.737890 would mean a font quantity had been fitted.
     /// </para>
     /// </remarks>
     private static readonly string LYRMV = LyricTwoStaffPageScore("LYRMV", secondVerse: true);
+
+    /// <summary>
+    /// LYRMV WITH THE UPPER STAFF REMOVED UNDER ONE SYSTEM — the mirror of book LYRHK, and
+    /// the only book in the corpus whose staff count is not constant down the page.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The question is whether the room a loose chain is solved into belongs to the SYSTEM the
+    /// block hangs under or to the SCORE. Every other lyric book is uniform, so reading the
+    /// origin-to-last-spaceable-staff span off <c>systemsArray[0]</c> and reading it per system
+    /// give the same answer on all of them; <c>c64ee958</c> went per system and reported that
+    /// nothing measured the difference. This book is where the two cannot agree.
+    /// </para>
+    /// <para>
+    /// LILYPOND'S SIDE IS AN IDENTITY WITH LYRMV, in the SOURCE: <c>distribute_loose_lines</c>
+    /// is handed <c>last_spaceable_line_translation</c> and <c>-solution_[spring_idx]</c>
+    /// (page-layout-problem.cc:936-939), two members of the PAGE's spring chain. A staff
+    /// hara-kiri removed is not in that chain, and a surviving staff is in it whether or not
+    /// the neighbouring system kept one — so no staff count can reach either end of the room.
+    /// </para>
+    /// <para>
+    /// THE SHAPE IS FORCED WITH EXPLICIT BREAKS rather than left to the line breaker: "the
+    /// upper staff rests through exactly system 0" is otherwise a bet on both engines choosing
+    /// the same bar, and HANDOFF 5.0 traps 5 and 6 are both that bet being lost. Six bars to a
+    /// system: system 0 one staff, systems 1..3 two, so page 1 carries SEVEN staff refpoints
+    /// and the block under system 1 is the reading that separates the implementations — its
+    /// anchor is that system's LAST staff, nine staff spaces below its origin, where a
+    /// score-wide span would take system 0's zero and hand the chain nine spaces it has not
+    /// got.
+    /// </para>
+    /// <para>
+    /// ⚠️ Silent bars are <c>r1</c> and not <c>R1</c>: how many bars a multi-measure rest
+    /// swallows is answered differently by the two engines, and while the staff is removed
+    /// either way, the pair would then differ in something besides the quantity under test.
+    /// ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static readonly string LYRHK = BuildHaraKiriLyricScore();
+
+    /// <summary>Builds <see cref="LYRHK"/> — six bars to a system, twenty systems, the upper
+    /// staff silent through the first of them.</summary>
+    private static string BuildHaraKiriLyricScore()
+    {
+        const int barsPerSystem = 3;
+        const int systems = 20;
+        string restSystem = string.Concat(Enumerable.Repeat("r1 | ", barsPerSystem));
+        string upperSystem = string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", barsPerSystem));
+        // Breaks go BETWEEN systems, so there are nineteen of them and no trailing one.
+        string upper = restSystem + string.Concat(
+            Enumerable.Repeat("break " + upperSystem, systems - 1));
+        string melody = string.Concat(
+            Enumerable.Repeat("g4 a g a | ", barsPerSystem * systems));
+        string syllables = string.Concat(
+            Enumerable.Repeat("no no no no | ", barsPerSystem * systems));
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part upper { clef treble removeEmpty all }
+            part melody { clef treble }
+
+            section Main {
+              upper { {{upper.Trim()}} }
+              melody { {{melody.Trim()}} }
+              lyrics one { {{syllables.Trim()}} }
+              lyrics two { {{syllables.Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "LYRHK" {
+              staff upper
+              staff melody with lyrics one with lyrics two
+            }
+            """;
+    }
 
     /// <summary>
     /// WHERE A BAR NUMBER SITS — the mirrors of books BNL and BNH. The two differ ONLY in
@@ -2761,6 +2841,29 @@ internal static class LpGeometryProbes
             g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
         new("lyrics.two-staff.staff-staff-inside", LYRM,
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+
+        // THE SAME BOOK WITH ONE SYSTEM'S UPPER STAFF REMOVED (LYRHK) — the only book here
+        // whose staff count varies down the page, and therefore the only one that can tell a
+        // per-system origin-to-last-staff span from a score-wide one. Both readings below are
+        // the SAME LilyPond number, and that is the finding: the room distribute_loose_lines
+        // solves into comes out of the page's spring chain (:936-939), which no staff count
+        // reaches. Two entries rather than one because a single entry could not distinguish
+        // "read from the right system" from "every system read alike".
+        //
+        // ⚠️ Staff index 0 is system 0's ONLY staff and index 2 is system 1's BOTTOM staff —
+        // page 1 runs 1 + 2 + 2 + 2. The count entry is what makes those indices mean what
+        // they say (HANDOFF 5.0 trap 8), and the inside-system distance is the second half of
+        // the same guard: it is 9.000000 only while index 1 and index 2 are two staves of ONE
+        // system, so a removal that failed to happen — or happened to the wrong staff — turns
+        // it into a system gap and the entry goes red instead of the measurement going quiet.
+        new("lyrics.hara-kiri.hidden-system.staff-to-lyric", LYRHK,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.shown-system.staff-to-lyric", LYRHK,
+            g => g.LyricBaselineBelowStaff(2), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.staff-staff-inside", LYRHK,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        new("lyrics.hara-kiri.staves-on-first-page", LYRHK,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // --- where a BAR NUMBER sits (books BNL/BNH) ---
         // The ink a system reserves ABOVE its own reference point, which is what closes the

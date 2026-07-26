@@ -1605,3 +1605,132 @@ probeTag =
   }
 }
 
+%% LYRHK — LYRMV WITH THE UPPER STAFF TAKEN AWAY UNDER ONE SYSTEM, which is the book that
+%%     asks whether the room a loose chain is solved into belongs to the SYSTEM it hangs
+%%     under or to the SCORE. Every book above holds its staff count constant down the
+%%     page, so none of them can tell the two apart: read the span off system 0 or off the
+%%     system the block actually belongs to and you get the same number either way.
+%%
+%%     ★ LILYPOND'S SIDE IS AN IDENTITY WITH LYRMV, and it is an identity in the SOURCE.
+%%     distribute_loose_lines is handed `last_spaceable_line_translation` and
+%%     `-solution_[spring_idx]` (page-layout-problem.cc:936-939) — the previous spaceable
+%%     staff's position on the page and this one's, both members of the PAGE's spring
+%%     chain. A staff that hara-kiri removed is not in that chain, and a staff that
+%%     survives is in it whether or not its NEIGHBOUR system kept one; so how many staves
+%%     any system carries cannot reach either end of the block's room.
+%%
+%%     ⚠️ WHY IT IS WORTH A BOOK, and it is Lily# that is in question rather than LilyPond.
+%%     `LayoutEngine.BuildLooseChainEnds` takes the origin-to-last-spaceable-staff span
+%%     PER SYSTEM (commit c64ee958) rather than off `systemsArray[0]` the way the sibling
+%%     term was written, and the commit reported that NOTHING IN THE CORPUS OR THE FIXTURES
+%%     REACHES THE DIFFERENCE: hara-kiri.lys, ossia.lys and dashed-barline.lys carry no
+%%     lyrics, and every lyric book here is uniform down the page. A per-system read and a
+%%     score-wide one agree on all of them. This is the book where they cannot agree.
+%%
+%%     THE SHAPE, and it is forced with explicit \break rather than left to the line
+%%     breaker (HANDOFF 5.0: the two sides of a pair must be the same music, and "the
+%%     upper staff rests through exactly system 0" is otherwise a bet on both engines
+%%     choosing the same bar). Three bars to a system, twenty systems, four to a page:
+%%       system 0 — upper staff silent, REMOVED, one staff
+%%       systems 1..3 — upper staff playing, two staves
+%%     so page 1 carries 7 staff refpoints, and the block under system 1 is the reading
+%%     that separates the two implementations. Its anchor is that system's LAST staff,
+%%     nine staff spaces below its origin; a score-wide span would take system 0's zero
+%%     instead and hand the chain nine staff spaces of room it does not have.
+%%
+%%     ⚠️ THREE BARS AND NOT SIX, AND THE REASON IS A MEASUREMENT, not a preference: THE
+%%     TWO ENGINES DO NOT FIT THE SAME NUMBER OF BARS ON A LYRIC LINE. Written first with
+%%     six, the \break was honoured by LilyPond (whose lines hold about 6.7 bars of this
+%%     music) but SUBDIVIDED by Lily#, which fits about three and split every group in
+%%     two; its page 1 came out 1+1+2+2 = 6 staves against LilyPond's 1+2+2+2 = 7, and the
+%%     two sides stopped being the same music. At three bars both engines take the break
+%%     as given and both pages read 1+2+2+2. ⚠️ The underlying width difference is NOT a
+%%     finding of this book and is not carried as an entry — it is the ~27% wider lyric
+%%     face (HANDOFF 5.3) widening every column that a syllable binds — but it is worth
+%%     knowing that no ledger point sees it, because every lyric book here measures the
+%%     page and none measures how much music reached a line.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2). All of them are identities, so
+%%     all of them are quoted from books already measured rather than derived afresh:
+%%       (a) staff/loose -> next loose = the set {3.737890, 2.800000, 5.500001}, LYRMV's
+%%           and LYRV's readings digit for digit — INCLUDING under system 0, whose staff
+%%           count differs from its neighbours'. 3.737890 is the alignment floor the first
+%%           spring gives way to when the chain is critically compressed, 2.800000 the
+%%           verse step's minimum-distance, 5.500001 the last chain on the page running to
+%%           -page_height_ with room to spare and reaching its basic-distance.
+%%       (b) staff-to-staff INSIDE a system = 9.000000, from the three two-staff systems;
+%%           default-staff-staff-spacing, since neither staff is in a staff-grouper
+%%           (axis-group-interface.cc:1008-1027).
+%%       (c) system-to-system (last staff -> next first) = 12.000000, LYRMV's reading. The
+%%           gap out of a one-staff system and the gap out of a two-staff one are the same
+%%           spring on the same spec.
+%%       (d) page 1: 4 systems, 7 staff refpoints — the count that says the removal
+%%           happened at all, and happened once (HANDOFF 5.0 trap 8).
+%%     (falsifier for (a): any reading other than 3.737890 under system 0 or under system
+%%      1, and in particular 5.500000 — the basic-distance, i.e. a chain with room to
+%%      spare. That would mean the room a block is solved into DOES move with the staff
+%%      count of the system it hangs under or of the one below it, which would make a
+%%      score-wide span defensible and c64ee958 wrong to have gone per-system.)
+%%     (falsifier for (d): 8 staves, which would mean the upper staff was not removed at
+%%      all and this book is a slower spelling of LYRMV.)
+%%
+%%     ALL FOUR HELD, to six digits, on pages 1, 2 and 3 alike: {3.737890, 2.800000,
+%%     5.500001}, 9.000000, 12.000000, and a page 1 of 12.000000 + 21.000000 + 21.000000
+%%     ending on a last refpoint of 74.690551 — one staff, then three pairs. Note that the
+%%     loose set has no FOURTH member: if the one-staff system's chain had been solved into
+%%     different room than its two-staff neighbours', a second first-spring value would
+%%     stand next to the 3.737890, and none does. The identity is exact.
+%%
+%%     ★ AND THE HOLE HAD SOMETHING ELSE IN IT (HANDOFF 5.0), which is neither of the two
+%%     things this book was built to look at. Lily# reads 4.009200 under system 0 and
+%%     5.509200 under systems 1..3 — so the per-system span c64ee958 introduced is fine and
+%%     the room really is 12.157200 on both — but the DIFFERENCE, exactly +1.500000, comes
+%%     from `removeEmpty` being DECLARED at all. Rendering this music with the declaration
+%%     present and no staff ever empty reproduces 5.509200 on every system; dropping the
+%%     declaration restores 4.009200. LayoutEngine.cs:198-202 takes a separate per-system
+%%     height branch under hara-kiri and spells the inter-group distance as the literal
+%%     `StaffSpacing.StaffGroupStaff.BasicDistance` (10.5) where MultiStaffLayouter's
+%%     SelectInterGroupSpec has answered DefaultStaffStaff (9) since a666b476 — the same
+%%     1.500000 that port closed, surviving in a THIRD copy of the selection that the port
+%%     did not reach (HANDOFF 5.2.1 (2); MultiStaffLayouter's own remark says the choice has
+%%     "one home ... because it is now read twice"). The height feeds the system's DOWN
+%%     skyline, which is what the chain's first spring measures its ink floor against, so
+%%     the block moves while the staves — placed elsewhere — do not: this book reads
+%%     9.000000 inside a system on the very page whose lyrics are 1.5 low.
+%%     ⚠️ Carried as lyrics.hara-kiri.{hidden,shown}-system.staff-to-lyric, and THE
+%%     MEASUREMENT IS THE DIFFERENCE OF THE TWO: both are the same spring on the same face
+%%     in one book, so the ~27% lyric-face difference cancels and 1.771310 - 0.271310 =
+%%     1.500000 is font-free mechanism. Neither entry may be driven to zero on its own.
+%%
+%%     ⚠️ The melodies are LYRMV's unchanged — the bottom staff inside the staff (g'/a') so
+%%     its own ink cannot bind the first spring, the top staff high (g''/a'') so the
+%%     system's up-ink is what every book above reserves — and both syllables are "no" for
+%%     the reason LYRV's header gives at length: an ascender or a descender would put the
+%%     reading on a font metric and it would stop being a spec measurement.
+%%
+%%     ⚠️ THE SILENT BARS ARE `r1` AND NOT `R1`, which is not a spelling preference. An R1
+%%     is a MULTI-MEASURE REST, and how many bars one of them swallows is a question the
+%%     two engines answer differently — LilyPond prints six separate ones without
+%%     \compressMMRests, and Lily#'s MMR runs are a model of their own. Neither answer
+%%     changes what this book measures, because the staff is removed either way; but the
+%%     pair would then differ in something other than the quantity under test, which is
+%%     how a probe stops measuring what its header says (HANDOFF 5.0). A plain whole rest
+%%     is one bar in both, and it keeps no staff alive in either: keepAliveInterfaces asks
+%%     for note-head-interface and a Rest does not implement it.
+\book {
+  \probeTag "LYRHK"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff \with { \RemoveAllEmptyStaves } {
+        \repeat unfold 3 { r1 } \break
+        \repeat unfold 18 { \repeat unfold 3 { g''4 a'' g'' a'' } \break }
+        \repeat unfold 3 { g''4 a'' g'' a'' }
+      }
+      \new Staff { \new Voice = "mel" { \repeat unfold 60 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 240 { no } }
+    >>
+  }
+}
+
