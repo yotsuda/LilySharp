@@ -1369,81 +1369,58 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
     /// Uses per-staff skylines to determine actual spacing needed, instead of fixed formula.
+    /// <para>
+    /// This lays the groups out and returns <see cref="SystemHeightOf"/> — it does NOT walk
+    /// the specs a second time. LilyPond has one such walk: the alignment translates its
+    /// elements and the axis group's Y-extent is whatever came out of it. The second walk
+    /// this method used to be drifted from the placement it was supposed to describe (its
+    /// grand-staff branch summed each staff's REAL height while the placement stacked the
+    /// nominal one), which is the shape HANDOFF 5.2.1 (2) names.
+    /// </para>
     /// </remarks>
     public double CalculateSystemHeight(
         MultiStaffScore score, SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
+        => SystemHeightOf(LayoutStaffGroups(score, skylineBuilder, measureLayouts));
+
+    /// <summary>
+    /// The height of a system: the Y-extent of the staff groups AS PLACED.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:112-136 generic_group_extent() — a
+    /// system's height is the union of the extents of the elements the alignment placed,
+    /// never a second sum over the spacing specs.
+    /// <para>
+    /// ⚠️ THIS IS WHY HARA-KIRI NEEDS NO ARITHMETIC OF ITS OWN. LilyPond does not compute a
+    /// hara-kiri'd system's height differently; it removes the dead elements
+    /// (<c>page-layout-problem.cc:1366-1370</c> keeps only <c>is_live()</c>,
+    /// <c>align-interface.cc:90</c> hands an empty skyline back for a dead group) and runs
+    /// the SAME extent over what is left. A hidden group is placed at zero height and is
+    /// skipped here, so it leaves the union by itself. The branch this replaced spelled the
+    /// gap between surviving groups as the literal
+    /// <c>StaffSpacing.StaffGroupStaff.BasicDistance</c> (10.5) and so ignored
+    /// <see cref="InterGroupSpec"/> (9 for staves with no grouper), the ossia scaling, the
+    /// text-row pair gap and <see cref="NoteBoundLyricExtraGap"/> — measured at
+    /// 1.500000 too deep, audit/lp-geometry book LYRHK
+    /// (<c>lyrics.hara-kiri.shown-system.staff-to-lyric</c>).
+    /// </para>
+    /// </remarks>
+    public static double SystemHeightOf(ImmutableArray<StaffGroupLayout> groups)
     {
-        double height = 0;
-        double staffHeight = _options.StaffHeight;
-        var sp = _options.StaffSpacing;
+        if (groups.IsDefaultOrEmpty)
+            return 0;
 
-        // Build per-staff skylines
-        var staffSkylines = BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
-
-        int globalStaffIdx = 0;
-        for (int i = 0; i < score.StaffGroups.Length; i++)
+        double top = double.NegativeInfinity;
+        double bottom = double.PositiveInfinity;
+        foreach (var group in groups)
         {
-            var group = score.StaffGroups[i];
-            int staffCount = group.StaffCount;
-
-            if (group.IsGrandStaff)
-            {
-                // Accumulate each staff's ACTUAL height (a tab/ossia staff in a
-                // grand staff differs from the nominal staffHeight), matching this
-                // method's own non-grand branch and the fixed CalculateSystemHeight
-                // overload — the fixed-staffHeight version here mis-measured a
-                // grand staff containing a non-normal staff.
-                double groupHeight = GetStaffHeight(group.Staves[0]); // first staff
-                for (int s = 1; s < group.Staves.Length; s++)
-                {
-                    int upperIdx = globalStaffIdx + s - 1;
-                    int lowerIdx = globalStaffIdx + s;
-                    double gap = CalculateStaffGapWithSkylines(
-                        sp.StaffStaff, staffHeight, staffSkylines, upperIdx, lowerIdx);
-                    groupHeight += gap + GetStaffHeight(group.Staves[s]);
-                }
-                height += groupHeight;
-            }
-            else
-            {
-                for (int s = 0; s < group.Staves.Length; s++)
-                {
-                    height += GetStaffHeight(group.Staves[s]);
-                    if (s < group.Staves.Length - 1)
-                    {
-                        int upperIdx = globalStaffIdx + s;
-                        int lowerIdx = globalStaffIdx + s + 1;
-                        double gap = CalculateStaffGapWithSkylines(
-                            sp.StaffStaff, staffHeight, staffSkylines, upperIdx, lowerIdx);
-                        height += gap;
-                    }
-                }
-            }
-
-            if (i < score.StaffGroups.Length - 1)
-            {
-                int lastOfGroup = globalStaffIdx + staffCount - 1;
-                int firstOfNext = globalStaffIdx + staffCount;
-                // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
-                var nextGroup = score.StaffGroups[i + 1];
-                var spec = InterGroupSpec(group, nextGroup, sp);
-                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
-                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
-                double interGroupGap = textRowPair
-                    ? TextRowPairGap
-                    : CalculateStaffGapWithSkylines(
-                        spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
-                if (nextIsOssia || currentIsOssia)
-                    interGroupGap *= OssiaScaleFactor;
-                height += interGroupGap;
-                height += NoteBoundLyricExtraGap(score, globalStaffIdx, globalStaffIdx + staffCount);
-            }
-
-            globalStaffIdx += staffCount;
+            // A group whose every staff committed hara-kiri is not in the union.
+            if (group.Staves.All(s => s.IsHidden))
+                continue;
+            top = Math.Max(top, group.Y);
+            bottom = Math.Min(bottom, group.Y - group.Height);
         }
 
-        return height;
+        return double.IsInfinity(top) ? 0 : top - bottom;
     }
 
     /// <summary>

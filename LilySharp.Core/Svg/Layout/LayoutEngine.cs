@@ -104,10 +104,12 @@ internal sealed class LayoutEngine
                     isLastSystem: systemMeasures.Count == 1,
                     baseShortestDuration: commonShortestDuration))
             : ImmutableArray<MeasureLayout>.Empty;
-        double systemHeight = multiStaffLayouter.CalculateSystemHeight(
-            score, _skylineBuilder, firstSystemMeasureLayouts);
         var firstStaffGroupLayouts = multiStaffLayouter.LayoutStaffGroups(
             score, _skylineBuilder, firstSystemMeasureLayouts);
+        // The system's height is the extent of the groups AS PLACED — see
+        // MultiStaffLayouter.SystemHeightOf. Reading it off the layout rather than summing
+        // the specs again is what lets the hara-kiri systems below share this one model.
+        double systemHeight = MultiStaffLayouter.SystemHeightOf(firstStaffGroupLayouts);
 
         // Pre-compute staff group layouts for subsequent systems (shortIndent)
         multiStaffLayouter.CurrentIndent = shortIndent;
@@ -194,14 +196,15 @@ internal sealed class LayoutEngine
                     score, firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem)
                 : (isFirstSystem ? firstStaffGroupLayouts : defaultStaffGroupLayouts);
 
-            // Use per-system height when hara-kiri is active (different staves may be visible per system)
-            double sysHeight = hasHaraKiri
-                ? sysStaffGroups.Where(g => !g.Staves.All(s => s.IsHidden)).Sum(g => g.Height)
-                    + Math.Max(0, (sysStaffGroups.Count(g => !g.Staves.All(s => s.IsHidden)) - 1)
-                        * (_options.StaffSpacing.StaffGroupStaff.BasicDistance - _options.StaffHeight))
-                : systemHeight;
+            // The height of THIS system: the extent of the groups it actually placed. No
+            // hara-kiri branch — a hidden staff was placed at zero height, so it leaves the
+            // union by itself, exactly as LilyPond's dead elements leave its alignment
+            // (page-layout-problem.cc:1366-1370). Where every system shows the same staves
+            // this is the scalar systemHeight above, by the same function on the same groups.
+            double sysHeight = MultiStaffLayouter.SystemHeightOf(sysStaffGroups);
             // Ensure at least one staff space for completely empty systems
-            if (hasHaraKiri && sysHeight <= 0)
+            // (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+            if (sysHeight <= 0)
                 sysHeight = _options.StaffHeight;
 
             var (upSky, downSky) = ComputeSystemSkyline(systemCache, firstMeasureIndex, measureCount,

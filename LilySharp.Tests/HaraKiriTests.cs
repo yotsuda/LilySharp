@@ -306,4 +306,82 @@ public class HaraKiriTests
         Assert.True(staffGroups[0].Staves[0].IsHidden);
         Assert.True(staffGroups[1].Staves[0].IsHidden);
     }
+
+    // --- The declaration on its own ---
+
+    /// <summary>
+    /// A system is as tall as the staves it PLACED, whoever placed them — the height is not
+    /// re-derived from the spacing specs by a second walk that hara-kiri gets its own copy of.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:112-136 generic_group_extent().
+    /// <para>
+    /// ⚠️ THIS ASSERTS THE RULE, NOT TODAY'S NUMBER (HANDOFF 5.4). The perturbation is the
+    /// inter-group SPEC: drive <c>default-staff-staff-spacing</c>'s basic-distance and the
+    /// system height must follow it, because the placement follows it. The branch this
+    /// replaced spelled the gap as the literal <c>StaffGroupStaff.BasicDistance</c>, so it
+    /// stayed put while the staves below it moved — 1.500000 of height that nothing was ever
+    /// drawn in (audit/lp-geometry book LYRHK,
+    /// <c>lyrics.hara-kiri.shown-system.staff-to-lyric</c>). A literal version fails here.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(9.0)]
+    [InlineData(14.0)]
+    public void HaraKiriSystemHeight_FollowsTheInterGroupSpec_NotALiteral(double basicDistance)
+    {
+        var upper = CreateStaff([MakeNoteMeasure()]);
+        var lower = CreateStaff([MakeNoteMeasure()], removeEmpty: true);
+        var score = new MultiStaffScore(
+            ImmutableArray.Create(
+                StaffGroup.CreateSingle(upper),
+                StaffGroup.CreateSingle(lower)),
+            new TimeSignature(4, 4), KeySignature.CMajor);
+
+        var sp = LayoutOptions.Default.StaffSpacing;
+        var options = LayoutOptions.Default with
+        {
+            StaffSpacing = sp with
+            {
+                DefaultStaffStaff = sp.DefaultStaffStaff with { BasicDistance = basicDistance },
+            },
+        };
+        var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
+
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
+        double height = MultiStaffLayouter.SystemHeightOf(groups);
+
+        // Two staves neither of which carries a grouper: the gap between them is
+        // default-staff-staff-spacing, so the system is two staves plus that distance.
+        Assert.Equal(options.StaffHeight + basicDistance, height, 9);
+    }
+
+    /// <summary>
+    /// A group whose every staff committed hara-kiri leaves the system's height by itself:
+    /// no arithmetic counts the survivors, they are simply what is left in the union.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1366-1370 — <c>consider_suicide</c> followed
+    /// by <c>if (is_live()) push_back</c>. LilyPond has no hara-kiri height formula.
+    /// </remarks>
+    [Fact]
+    public void HaraKiriSystemHeight_OfAHiddenNeighbour_IsTheSurvivorAlone()
+    {
+        var upper = CreateStaff([MakeNoteMeasure()]);
+        // removeFirst too: a staff LilyPond keeps on the first system is not dead there.
+        var lower = CreateStaff([MakeRestMeasure()], removeEmpty: true, removeFirst: true);
+        var score = new MultiStaffScore(
+            ImmutableArray.Create(
+                StaffGroup.CreateSingle(upper),
+                StaffGroup.CreateSingle(lower)),
+            new TimeSignature(4, 4), KeySignature.CMajor);
+
+        var options = LayoutOptions.Default;
+        var layouter = new MultiStaffLayouter(options, new MeasureLayouter());
+
+        var groups = layouter.LayoutStaffGroups(score, 0, 1, isFirstSystem: true);
+
+        Assert.True(groups[1].Staves[0].IsHidden);
+        Assert.Equal(options.StaffHeight, MultiStaffLayouter.SystemHeightOf(groups), 9);
+    }
 }
