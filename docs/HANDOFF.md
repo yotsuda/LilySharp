@@ -33,9 +33,14 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 2026-07-26（第12セッション・**hara-kiri × 歌詞ブロックの起票＝▶1 完了**）/
-HEAD は §0 で確認すること（⚠️ 自己参照。`e50fdc34`・origin より **98 ahead・未 push**）。
-**3370 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 100/123 exact・total |residual| 2.683478 ss / 113 distances・counts 10/10**。
+HEAD は §0 で確認すること（⚠️ 自己参照。`02a5b43e`・origin より **100 ahead・未 push**）。
+**3376 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 103/129 exact・total |residual| 2.954788 ss / 116 distances・counts 11/13**。
+
+★★ **方針転換（ユーザー指示・2026-07-26）**: 目標は **LP レイアウトの完全模倣**。
+**一時的に byte 不一致になっても、移植忠実度が部分的にでも上がるなら受け入れる。**
+⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
+出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 snapshot 再ベース **0 枚**・**レイアウトコード変更ゼロ**（＝出力 byte 不変。ただしこれは
 **「結果」であって「構成」ではない**——`removeEmpty` と歌詞を同時に持つ fixture が 1 つも無い）。
 
@@ -96,7 +101,30 @@ font-free の機構**。⚠️ **どちらの点も単独で 0 にしてはい�
    ⚠️ **今は潜在**: この spec に届くのは `StaffAffinity.Select` 経由だけで、それを使う枝
    （loose line → 非 affinity 側の譜）は**まだ force 0 のまま**＝下の 2 と同じ島。
    ⇒ **2 と一緒にやるのが自然**（そちらを移植すると同時に顕在化する）。
-1. ★ **hara-kiri の system 高さを spec 選択へ通す**（**今回起票した欠陥・+1.500000**）。
+1. ★★ **hara-kiri 島＝「分岐」を「フィルタ」へ**（Stage 0 完了・`02a5b43e`）。
+
+   **原則（LP 実ソースで裏取り済）**: LP には **hara-kiri 用の別アルゴリズムが 1 つも無い**。
+   `page-layout-problem.cc:1366-1370` は `consider_suicide` →`if (is_live()) push_back` の
+   **フィルタ**、`align-interface.cc:90` は死んだ群に**空スカイライン**を返して**同じ計算**へ流す。
+   Lily# は `hasHaraKiri` で**分岐**する（`LayoutEngine.cs:119,128,192,198,204,241`）。
+   ⇒ **§5.2 的には分岐そのものが欠陥で、10.5 は症状。** 目標は
+   **`hasHaraKiri` を spacing 経路から消す**（自殺判定にだけ残す）。
+
+   | 段 | 内容 | byte |
+   |---|---|---|
+   | ~~0~~ | ~~台帳点を開く~~ **完了**: LYRHKG（grouper 内 hara-kiri）＋LYRHKD/N（宣言のみ） | 不変 |
+   | 1 | **system 高さを統合**（`:198-205` を消し `CalculateSystemHeight` に生存群を食わせる） | corpus は動かない見込み |
+   | 2 | **譜ばねを統合**（`:128-131`。`StaffSprings` は既に `skylineBuilder` を取るので**供給の問題**＝§5.2 の「構造上表現できない」言い訳ではない） | **動く** |
+   | 3 | 分岐を削除＋不変条件テスト | — |
+
+   **Stage 3 のテスト（受入条件・LP 側は実測で恒等と確認済）**:
+   `RemoveEmptyDeclaration_WithNothingEmpty_ChangesNothing`。
+   ⚠️ **今は入れない**（今日の乖離を pin するだけになる）。
+
+   ⚠️ **リテラルを 9 に書き換えて閉じない**——LYRHKG が**現に exact**で、9 にすると
+   1.500000 逆へ壊れる（liveness が spec を決める＝10.5 と 9 が同じ本に両方出る）。
+   ⚠️ **不変条件は spacing だけでなく page breaker でも破れている**（宣言の有無で
+   Lily# の page 1 が 12 対 14 譜）。**修正は歌詞の鎖に閉じない。**
    ~~hara-kiri × 歌詞ブロックが未測定~~ は **book LYRHK で測って閉じた**（`e50fdc34`）。
    per-system span は無罪と確認済。残っているのは上の真因＝`LayoutEngine.cs:198-202`。
    ⚠️ **リテラルを 9 に書き換えて閉じない**——それは 1 段先の同じリテラルで、譜が grouper を
