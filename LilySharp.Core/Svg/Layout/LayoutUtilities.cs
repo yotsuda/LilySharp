@@ -196,19 +196,28 @@ internal static class LayoutUtilities
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:1345-1358 alter_spring_from_spacing_spec —
     /// basic-distance is the IDEAL and minimum-distance the MIN, then
-    /// <c>set_default_strength()</c> makes the inverse stretch equal the ideal
-    /// (spring.cc:213-216) and only a <c>stretchability</c> entry overrides it. Lily#'s
-    /// spec cannot say "absent", so a Stretchability of 0 is read as LilyPond's absent —
-    /// which is what top-system-spacing actually is in ly/paper-defaults-init.ly:78-80.
+    /// <c>set_default_strength()</c> runs UNCONDITIONALLY (:1354), making the inverse stretch
+    /// equal the ideal (spring.cc:213-216), and only then does a <c>stretchability</c> entry
+    /// override it (:1356-1357). So the two branches below are LilyPond's own two, and
+    /// <c>Stretchability</c> is null exactly where LilyPond's spec declares none —
+    /// <c>top-system-spacing</c> and <c>markup-markup-spacing</c>
+    /// (ly/paper-defaults-init.ly:76-80), <c>default-staff-staff-spacing</c>
+    /// (scm/define-grobs.scm:4237-4239).
+    /// ⚠️ A DECLARED 0 IS NOT THE SAME AS ABSENT, and used to be folded into it: it makes
+    /// the spring rigid however large the ideal, where an absent one tracks the ideal.
+    /// <c>nonstaff-nonstaff-spacing</c> declares 0 (ly/engraver-init.ly:657) and its ideal
+    /// is also 0, which is the coincidence that let the two spellings pass for one.
     ///
     /// The compress strength is fixed at <c>ideal - minimum-distance</c> from the SPEC
     /// (spring.cc:205-210), because <c>ensure_min_distance</c> raises the minimum
     /// afterwards and deliberately does not restrengthen the spring (spring.cc:156-159).
     /// Passing the raised minimum here instead would quietly change every blocking force.
+    /// ⚠️ <c>set_default_compress_strength</c> is NOT overridable from a spec at all — no
+    /// spacing spec has a compress member — so it is computed here in every case.
     /// </remarks>
     public static Spring CreateSpring(VerticalSpacingSpec spec, double ensureMinDistance)
     {
-        double inverseStretch = spec.Stretchability > 0 ? spec.Stretchability : spec.BasicDistance;
+        double inverseStretch = spec.Stretchability ?? spec.BasicDistance;
         double inverseCompress = Math.Max(0, spec.BasicDistance - spec.MinimumDistance);
         double minDistance = Math.Max(spec.MinimumDistance, ensureMinDistance);
         return new Spring(spec.BasicDistance, minDistance, inverseStretch, inverseCompress);

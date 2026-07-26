@@ -46,11 +46,26 @@ internal sealed record VerticalSpacingSpec
     public double Padding { get; init; }
 
     /// <summary>
-    /// Flexibility for stretching (inverse stretch strength).
-    /// Higher values = more elastic. 0 = rigid.
-    /// Maps to LilyPond's stretchability.
+    /// Flexibility for stretching (inverse stretch strength), or <c>null</c> when LilyPond's
+    /// spec does not declare one.
     /// </summary>
-    public double Stretchability { get; init; }
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1350-1357
+    /// <c>alter_spring_from_spacing_spec</c> — <c>set_default_strength()</c> runs
+    /// UNCONDITIONALLY (:1354) and a declared <c>stretchability</c> overrides it only
+    /// afterwards (:1356-1357), where <c>set_default_stretch_strength</c> is
+    /// <c>inverse_stretch_strength_ = ideal_distance_</c> (spring.cc:213-216).
+    /// <para>
+    /// ⚠️ NULLABLE BECAUSE LILYPOND DISTINGUISHES TWO THINGS THIS USED TO COLLAPSE: a spec
+    /// that DECLARES <c>(stretchability . 0)</c> is rigid whatever its ideal, while a spec
+    /// that declares NOTHING tracks its ideal. Both were written as <c>0</c> and
+    /// <c>CreateSpring</c> resolved both to the ideal — HANDOFF 5.2's "the current data
+    /// structure cannot express LilyPond's quantity, so it is folded", which the rule names
+    /// as forbidden. It was latent rather than live: the only spec declaring 0
+    /// (<c>nonstaff-nonstaff-spacing</c>) has an ideal of 0 too, so the two readings agreed.
+    /// </para>
+    /// </remarks>
+    public double? Stretchability { get; init; }
 }
 
 /// <summary>
@@ -136,7 +151,7 @@ internal sealed record VerticalSpacingParameters
         BasicDistance = 1,
         MinimumDistance = 0,
         Padding = 0.5,
-        Stretchability = 0,
+        Stretchability = null,
     };
 
     /// <summary>
@@ -152,7 +167,8 @@ internal sealed record VerticalSpacingParameters
         BasicDistance = 6,
         MinimumDistance = 0,
         Padding = 1,
-        Stretchability = 0
+        // ly/paper-defaults-init.ly:78-80 declares no stretchability.
+        Stretchability = null,
     };
 
     /// <summary>

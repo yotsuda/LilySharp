@@ -101,7 +101,7 @@ internal sealed record StaffSpacingParameters
         BasicDistance = 9,
         MinimumDistance = 8,
         Padding = 1,
-        Stretchability = 0,
+        Stretchability = null,
     };
 
     /// <summary>
@@ -127,15 +127,27 @@ internal sealed record StaffSpacingParameters
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grob-properties.scm:837-841 nonstaff-unrelatedstaff-spacing
-    /// LILYPOND-REF: scm/define-grobs.scm:4239 VerticalAxisGroup default (padding . 0.5)
+    /// LILYPOND-REF: scm/define-grobs.scm:4240 VerticalAxisGroup default
+    /// <c>(nonstaff-unrelatedstaff-spacing . ((padding . 0.5)))</c>
     /// LILYPOND-REF: ly/engraver-init.ly:658 Lyrics override padding=1.5
+    /// <para>
+    /// ⚠️ LILYPOND DECLARES ONLY A PADDING HERE — no basic-distance, no minimum-distance and
+    /// no stretchability. The stretchability is now spelled as the absence; the other two
+    /// are still written as 0, which is NOT the same thing (<c>read_spacing_spec</c> leaves
+    /// an absent member at whatever the caller's spring already held —
+    /// <c>Spring spring (1.0, 0.0)</c> at page-layout-problem.cc:1035 for a loose-line
+    /// chain), and closing that needs the same nullable treatment for the other three
+    /// members. Latent today: this spec is only reachable through
+    /// <c>StaffAffinity.Select</c>, which the ported chain does not use — the
+    /// loose-to-unrelated-staff branch is the one still at force 0 (HANDOFF 1).
+    /// </para>
     /// </remarks>
     public VerticalSpacingSpec NonStaffUnrelatedStaff { get; init; } = new()
     {
         BasicDistance = 0,
         MinimumDistance = 0,
         Padding = 1.5,
-        Stretchability = 0
+        Stretchability = null,
     };
 
     /// <summary>

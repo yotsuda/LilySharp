@@ -84,10 +84,13 @@ internal static class LooseLineSpacer
     /// one's affinity is UP and the lower one's is not DOWN, so the spec is the UPPER
     /// line's <c>nonstaff-nonstaff-spacing</c>.
     /// <para>
-    /// A zero ideal under a real minimum makes this spring RIGID in both directions:
-    /// <c>set_default_strength</c> gives it stretch 0 (spring.cc:213-216) and compress
-    /// <c>max(0, 0 - 2.8) = 0</c>, so it sits at <c>max(2.8, ink + 0.2)</c> at every
-    /// force. That is why <c>lyrics.verse-step</c> reads 2.800000 even on a page whose
+    /// This spring is RIGID in both directions, and the two halves come from different
+    /// places: the stretch 0 is DECLARED by the spec (<c>(stretchability . 0)</c>,
+    /// ly/engraver-init.ly:657) and the compress 0 is DERIVED, <c>max(0, 0 - 2.8)</c>
+    /// (spring.cc:205-210). So it sits at <c>max(2.8, ink + 0.2)</c> at every force.
+    /// ⚠️ CORRECTED 2026-07-26: this said <c>set_default_strength</c> produced the stretch 0.
+    /// It does run (page-layout-problem.cc:1354) but the declaration overrides it right
+    /// after (:1356-1357); the two agree only because this spec's ideal is 0 as well. That is why <c>lyrics.verse-step</c> reads 2.800000 even on a page whose
     /// loose chain is compressed hard enough to pull the line above it off its ideal.
     /// </para>
     /// </remarks>

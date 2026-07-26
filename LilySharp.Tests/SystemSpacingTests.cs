@@ -85,8 +85,8 @@ public class SystemSpacingTests
             _ => throw new ArgumentOutOfRangeException(nameof(member), member, null),
         };
 
-        // 0 IS LilyPond's absent — CreateSpring's convention.
-        Assert.Equal(0, spec.Stretchability);
+        // null IS LilyPond's absent, and a declared 0 would be a different spring.
+        Assert.Null(spec.Stretchability);
         Assert.Equal(expectedIdeal, spec.BasicDistance);
 
         Assert.Equal(
@@ -124,6 +124,37 @@ public class SystemSpacingTests
 
         Assert.Equal(sp.NonStaffRelatedStaff, LooseLineSpacer.NonStaffRelatedStaff);
         Assert.Equal(sp.NonStaffNonStaff, LooseLineSpacer.NonStaffNonStaff);
+    }
+
+    /// <summary>
+    /// A DECLARED <c>(stretchability . 0)</c> is a different spring from an ABSENT one, and
+    /// the spec type has to keep them apart.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:657 declares <c>(stretchability . 0)</c> for
+    /// <c>nonstaff-nonstaff-spacing</c>; scm/define-grobs.scm:4237-4239 declares none for
+    /// <c>default-staff-staff-spacing</c>. Before <c>Stretchability</c> was nullable both
+    /// were written as 0 and <c>CreateSpring</c> answered the ideal for both — which is
+    /// right for the absent one and wrong for the declared one. It never showed because
+    /// <c>nonstaff-nonstaff-spacing</c>'s ideal is 0 as well.
+    /// <para>
+    /// ⚠️ Asserted on a PERTURBED copy rather than on the shipping specs, because the whole
+    /// point is the case the shipping values cannot exhibit.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ADeclaredZeroStretchability_IsRigid_WhereAnAbsentOneTracksTheIdeal()
+    {
+        var declaredZero = StaffSpacingParameters.Default.NonStaffNonStaff
+            with { BasicDistance = 7 };
+        var absent = StaffSpacingParameters.Default.DefaultStaffStaff
+            with { BasicDistance = 7 };
+
+        Assert.Equal(0, declaredZero.Stretchability);
+        Assert.Null(absent.Stretchability);
+
+        Assert.Equal(0, LayoutUtilities.CreateSpring(declaredZero, 0).InverseStretchStrength, 9);
+        Assert.Equal(7, LayoutUtilities.CreateSpring(absent, 0).InverseStretchStrength, 9);
     }
 
     [Fact]
