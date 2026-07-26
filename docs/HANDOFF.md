@@ -32,15 +32,15 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-26（第11セッション・**多段譜の loose 鎖**）/ HEAD は §0 で確認すること
-（⚠️ 自己参照。`90e47848`・origin より **86 ahead・未 push**）。
+最終更新 2026-07-26（第11セッション・**多段譜の loose 鎖＋群なし譜間隔**）/ HEAD は §0 で確認すること
+（⚠️ 自己参照。`a666b476`・origin より **89 ahead・未 push**）。
 **3362 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 96/119 exact・total |residual| 3.640858 ss / 110 distances・counts 9/9**。
-snapshot 再ベースは **0 枚**（＝結果であって構成でない・下記★）。
+**LP 忠実度 98/119 exact・total |residual| 0.640858 ss / 110 distances・counts 9/9**。
+snapshot 再ベースは **36 枚**（台帳キーを message に名指し済＝§5.2.1③・**GO 取得済**）。
 
-⚠️ **total を前回の 0.212348 と比べない**（点集合が 106→110）。**増分 3.428510 は 1 つも回帰でない**:
-新規 4 点のうち **2 点（各 +1.500000）が「開けた穴から落ちてきた別欠陥」**、
-1 点が移植後の残り +0.271310、1 点が単一譜の双子と同じ font 残差 +0.157200。
+⚠️ **total を前回の 0.212348 と比べない**（点集合が 106→110）。比べるなら点ごと。
+新規 4 点の内訳は **+1.500000 ×2 →（同セッション中に移植して）0**・
+移植後の残り **+0.271310**・単一譜の双子と同じ font 残差 **+0.157200**。
 **従来の非ゼロ 19 点はこの回も 1 つも動いていない。**
 
 ### このセッションでやったこと（詳細は各 commit・台帳の `why`・probe ヘッダへ）
@@ -49,6 +49,8 @@ snapshot 再ベースは **0 枚**（＝結果であって構成でない・下�
 |---|---|
 | `eac8d8f2` 台帳点 5 つを起票（book LYRMV＝2譜＋2verse） | **コード変更ゼロ・出力不変** |
 | `90e47848` **鎖の room を refpoint フレームへ** | 多段譜も解く。snapshot 0 枚 |
+| `c64ee958` 鎖の遠い端を**導出**に | コメントで主張していた不変条件を消す。byte 不変＝**証拠** |
+| `a666b476` **`default-staff-staff-spacing` 移植** | 群なし 2 譜 10.5→9。**snapshot 36 枚**（GO 済） |
 
 ★ **LP 側の予測 3 件は 6 桁で当たり、Lily# 側の予測は丸ごと外れた**——外れたほうが収穫だった。
 「force 0 の鎖は長いから system gap は 13.762110 になるはず」→ 実測 **12.157200＝単一譜の残差
@@ -66,26 +68,42 @@ snapshot 再ベースは **0 枚**（＝結果であって構成でない・下�
 `showcase/08-chorale` だけで、それは **1 verse**＝ばね 1 本の鎖は余裕があればどの force でも
 ideal に座る。**コーパスはこの regime に届いていない。**守っているのは台帳点。
 
-### ★ 穴を開けたら別の欠陥が落ちた（§5.0・**今回も例外なし**）
+### ★ 穴を開けたら別の欠陥が落ち、**同じセッションで閉じた**（§5.0・今回も例外なし）
 
-**`lyrics.two-staff{,.two-verse}.staff-staff-inside` = +1.500000 ×2**
-＝**グループに属さない 2 譜の間隔**が LP 9.000000 に対し Lily# **10.500000**。
+`lyrics.two-staff{,.two-verse}.staff-staff-inside` = **+1.500000 ×2 → 0**（`a666b476`）。
+**LP の譜間 spec は 3 分岐で、Lily# は 2 つしか持っていなかった**（`axis-group-interface.cc:1008-1027`）:
 
-- LP: staff-grouper が無ければ**譜自身の `default-staff-staff-spacing`**（basic 9）へ落ちる
-  （`axis-group-interface.cc:1008-1027`・`define-grobs.scm:4237-4239`）
-- Lily#: 素の `staff` 宣言を**それぞれ独立した StaffGroup** とみなし、
-  `MultiStaffLayouter.SelectInterGroupSpec` が**群間の spec**（`StaffSpacingParameters.StaffGroupStaff`
-  ＝10.5）を返す。⇒ **Lily# に `default-staff-staff-spacing` が存在しない。足すのが直し方**
-- ⚠️ **歌詞は無関係**——1 verse の LYRM でも**同じ 1.500000**。だから 2 点ある
-  （`barnumber.{low,high}` と同じ構成＝**不変性そのものが所見**）。両側フォントフリー
+| 上の譜の状態 | spec | basic |
+|---|---|---|
+| staff-grouper が**無い** | `default-staff-staff-spacing` | **9** ← Lily# に無かった |
+| grouper 有・**下にまだ生きた譜** | `staff-staff-spacing` | 9 |
+| grouper 有・**最下段** | `staffgroup-staff-spacing` | 10.5 |
+
+- ★ ⚠️ **決めるのは「上の譜」で、ペアではない**（**推測は逆だった**）。`get_spacing_spec` は
+  `before` から読む（`page-layout-problem.cc:1280-1281`）＝プロパティは**上の譜に付いて
+  その下の間隔を表す**。`maybe_pure_within_group` は「**自分より下に**生きた spaceable 譜があるか」。
+  ⇒ **PianoStaff の上に素の譜を置いてもその間は 9**（上の譜が grouper を持たないから）
+- ⚠️ **ばねの強度は「宣言」でなく「算術」で一致する**: `default-staff-staff-spacing` に
+  stretchability メンバが無いので `set_default_strength` が ideal 自身（9）を入れ、
+  `staffgroup-staff-spacing` の明示 9 と一致する。**圧縮強度だけは別**
+  （`ideal − minimum-distance` ＝ 1 対 2.5）で、**圧縮ページを測る点はまだ無い**
+- ⚠️ **歌詞は無関係だった**——1 verse の LYRM でも同じ 1.500000。だから点が 2 つある
+  （`barnumber.{low,high}` と同じ構成＝**不変性そのものが所見**）
 - ⚠️ **コーパスが見えていなかった理由**: `page.natural.staff-staff-inside` は PianoStaff（群あり）、
   `lyrics.two-staff.staff-to-lyric` はアンカーのおかげで上の間隔に依存しない読み。
   **群なし 2 譜の内側を読む点が 1 つも無かった**
-- ⚠️ **出力が動く**（素の 2 譜スコア全部）＝ snapshot 再ベースになるので **GO 待ち**
+- ⚠️ **`grandstaff-*` という名前の fixture は GrandStaff ではない**（中身は素の `staff` 2 本）。
+  36 枚が動いたのはそれで正しい。実測差分は**下段が 1.50 上がるだけ**で上段は不動
 
 ### ▶ 次の一手
 
-1. **上の `default-staff-staff-spacing`**（小さい・字面あり・**要 GO**）
+1. **hara-kiri × 歌詞ブロックが未測定**（`c64ee958` の報告事項）。`BuildLooseChainEnds` は
+   span を **system ごと**に読むようにしたが、**それを踏む fixture も台帳点も無い**
+   （`hara-kiri.lys`/`ossia.lys`/`dashed-barline.lys` はどれも歌詞なし）。
+   ⇒ **対の形は決まっている**: 上の譜だけ前半を空にして消し、下の譜に 2 verse を付ける。
+   LP 側は**両 regime とも同じ 3.737890**（鎖の床）＝**恒等**になるはずで、
+   Lily# が span を `systemsArray[0]` 相当で読んでいたら**譜間距離ちょうど**ずれる。
+   ⚠️ `LyricBaselineBelowStaff` は譜を index で数えるので、**本数の点を必ず添える**（§5.0 罠 8）
 2. **譜と譜のあいだの歌詞**（非最終グループの `with lyrics`）＝ loose 鎖の残り 1 枝。
    ⚠️ **room はもう問題ではない**——同じ refpoint 間 span で取れる（`:936-939`）。
    **違うのは閉じ方だけ**＝`min_offsets[k−1] − min_offsets[k]`・**null 行なし**（`:923-925`）、
@@ -126,12 +144,12 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 23 点**（従来の 19 点は不動・今回 +4。
-`lyrics.two-staff.staff-to-lyric` と新規の count 点は exact なのでここには無い）:
+**非ゼロで残っている台帳点は 21 点**（従来の 19 点は不動・今回 +2。
+`lyrics.two-staff{,.two-verse}.staff-staff-inside` は**同セッションで閉じた**ので
+`lyrics.two-staff.staff-to-lyric`・新規の count 点とともにここには無い）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `lyrics.two-staff{,.two-verse}.staff-staff-inside` | **+1.500000** ×2 | ★ **今回落ちてきた別欠陥**。群なし 2 譜に `default-staff-staff-spacing`(9) が無く群間 spec(10.5) を使う。**歌詞と無関係・両側フォントフリー・要 GO**（上記） |
 | `lyrics.two-verse.system-gap` | **+0.157200** | ★ **フォント量に落ちた**（上記）。機構は移植済 |
 | `lyrics.two-staff.two-verse.system-gap` | **+0.157200** | ★ **同じ量**。多段譜でも予約側は追加作業不要という control |
 | `lyrics.two-staff.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済の残り＝歌詞書体差だけ**（up-extent 1.459200 対 1.187880）。⚠️ **0 にしてはいけない**——3.737890 へ寄せたらフォント量の fitting |
