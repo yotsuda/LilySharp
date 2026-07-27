@@ -73,6 +73,28 @@ internal static class SkylineDrop
     public const double NonStaffNonStaffPadding = 0.2;
 
     /// <summary>
+    /// <c>nonstaff-unrelatedstaff-spacing</c>'s padding — the gap left between the LAST
+    /// line of a lyric block and the up-skyline of the staff on the far side of it, the
+    /// side its <c>staff-affinity</c> does NOT point at.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:658 — the Lyrics context overrides exactly this
+    /// one member, <c>nonstaff-unrelatedstaff-spacing.padding = #1.5</c>, over the
+    /// VerticalAxisGroup default's 0.5 (scm/define-grobs.scm:4240).
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — the branch of
+    /// <c>get_spacing_spec</c> that reaches it: <c>before</c> is the loose line, its
+    /// affinity is UP, and <c>after</c> is spaceable.
+    /// <para>
+    /// ⚠️ THE PADDING IS ALL THE SPEC DECLARES. No basic-distance, no minimum-distance and
+    /// no stretchability, so every other member of the resulting spring comes from the
+    /// caller's own <c>Spring spring (1.0, 0.0)</c> (:1035) and from the LARGE_STRETCH the
+    /// branch adds — see <see cref="LooseLineSpacer.NonStaffUnrelatedStaff"/>, which is
+    /// where that spring is spelled.
+    /// </para>
+    /// </remarks>
+    public const double UnrelatedStaffPadding = 1.5;
+
+    /// <summary>
     /// Per-system downward Y-shift so each system's UP-skyline clears the staff's
     /// DOWN-skyline: <c>drop = max(0, max(basicY, distance + RelatedStaffPadding) - basicY)</c>.
     /// Only systems that need a shift appear in the result. <paramref name="basicY"/>

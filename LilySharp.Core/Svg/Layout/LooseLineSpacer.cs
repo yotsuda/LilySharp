@@ -103,6 +103,43 @@ internal static class LooseLineSpacer
     };
 
     /// <summary>
+    /// The spring from the LAST line of a block to the staff on the far side of it — the
+    /// side the line's <c>staff-affinity</c> does not point at. This is what closes a block
+    /// that sits BETWEEN two staves of one system, where there is no system boundary and so
+    /// no null line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — <c>before</c> is the loose
+    /// line, its affinity is UP and <c>after</c> is spaceable, so <c>get_spacing_spec</c>
+    /// returns the LINE's <c>nonstaff-unrelatedstaff-spacing</c> with
+    /// <c>add_stretchability (…, LARGE_STRETCH)</c> on top.
+    /// <para>
+    /// ⚠️ ONLY THE PADDING IS THE SPEC'S. ly/engraver-init.ly:658 overrides
+    /// <c>nonstaff-unrelatedstaff-spacing.padding</c> and declares nothing else, and
+    /// <c>read_spacing_spec</c> writes only the members that are there — so the ideal 1.0
+    /// and the compress strength 1.0 are the caller's own <c>Spring spring (1.0, 0.0)</c>
+    /// (:1035, <c>set_default_strength</c> making the inverse strengths
+    /// <c>distance - min_distance</c>), exactly as for <see cref="NullNeighbour"/>. Writing
+    /// a basic-distance of 0 here would be a DIFFERENT spring, not a tidier spelling of
+    /// this one.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE STRETCH IS LARGE, NOT HUGE — 10e5 against the null neighbour's 10e7
+    /// (:1262-1263). Both exist so that a block keeps close to the staff it belongs to
+    /// while the page opens around it; the two orders of magnitude are LilyPond's own and
+    /// are never interchangeable, since the two springs can meet in one chain.
+    /// </para>
+    /// </remarks>
+    public static readonly VerticalSpacingSpec NonStaffUnrelatedStaff = new()
+    {
+        BasicDistance = 1.0,
+        MinimumDistance = 0,
+        Padding = SkylineDrop.UnrelatedStaffPadding,
+        // LILYPOND-REF: lily/page-layout-problem.cc:1262 LARGE_STRETCH = 10e5.
+        Stretchability = 10e5,
+    };
+
+    /// <summary>
     /// The spring from a loose line to a NULL neighbour — the page edge, or the null line
     /// LilyPond inserts at a system boundary to break the affinity to the previous system.
     /// </summary>

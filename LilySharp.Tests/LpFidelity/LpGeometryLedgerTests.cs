@@ -284,6 +284,67 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// A lyric block BETWEEN two staves of one system is SOLVED into the room those two
+    /// staves leave, not laid out at force 0 — asserted as a rule, by perturbing the block
+    /// and requiring the answer to follow.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:923-925 + :936-939 — the block closes on the
+    /// next spaceable staff of the same system, with no null line, and the room is the same
+    /// reference-point-to-reference-point span every other block is solved into.
+    /// <para>
+    /// ⚠️ WHY A RULE AND NOT A VALUE (HANDOFF 5.4): the two positions ARE ledger points, and
+    /// a ledger point pins a number. What it cannot pin is that the number came from a solve
+    /// — a port that reverted to force 0 would put both readings at
+    /// <c>RelatedStaffBasicDistance</c> and each entry would fail with a plausible residual
+    /// of its own, giving no reason to look at the mechanism. The perturbation here is the
+    /// SECOND VERSE: it changes the block's own floor, so a solved chain answers differently
+    /// for the first spring and a force-0 one cannot, since every spring there is
+    /// <c>max(min, ideal)</c> and the ideal 5.5 is above both floors.
+    /// </para>
+    /// <para>
+    /// MEASURED, and both directions matter: one verse leaves the block's floor under the
+    /// staff spring's ideal so the chain compresses but does not bottom out (4.452000, above
+    /// its own floor), two verses raise the floor past it so every spring sits on its minimum
+    /// (4.009200, exactly the floor). ⚠️ Those two facts BOUND THE ROOM FROM BOTH SIDES —
+    /// too small a room would pin the one-verse reading to the floor as well, too large a one
+    /// would leave the two-verse reading above it — which is why the frame conversion at the
+    /// far end of the chain is checked here and not only in the ledger.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void BetweenStavesLyricBlock_IsSolvedIntoTheRoom_NotLeftAtForceZero()
+    {
+        var options = LpGeometryProbes.LyricRowOptions;
+        double oneVerse = RenderedGeometry
+            .Render(LpGeometryProbes.BetweenStavesOneVerseScore, options)
+            .LyricBaselineBelowStaff(0);
+        double twoVerse = RenderedGeometry
+            .Render(LpGeometryProbes.BetweenStavesTwoVerseScore, options)
+            .LyricBaselineBelowStaff(0);
+
+        // A chain at force 0 puts spring 1 at max(min, ideal) and the ideal wins on both
+        // books, so a port that does not solve reads exactly this on each of them.
+        const double idealAtForceZero = 5.5;   // LyricParameters.RelatedStaffBasicDistance
+        Assert.True(oneVerse < idealAtForceZero,
+            $"one verse: {oneVerse:F6} — the chain is not being solved at all.");
+        Assert.True(twoVerse < idealAtForceZero,
+            $"two verses: {twoVerse:F6} — the chain is not being solved at all.");
+
+        // ...and the perturbation itself: a second verse takes room from the first spring.
+        Assert.True(twoVerse < oneVerse,
+            $"a second verse did not move the first spring ({oneVerse:F6} -> {twoVerse:F6}), "
+            + "so the block is not being squeezed into a room it shares.");
+
+        // ⚠️ THE THREE TOGETHER BOUND THE ROOM FROM BOTH SIDES, which no one of them does:
+        // a room that is too small pins BOTH readings to the block's floor (the third
+        // assertion fails, since the floors differ only by the second verse's own step being
+        // absent from the first book — they are the same first spring), and a room that is
+        // too large leaves BOTH at the ideal (the first two fail). Neither failure mode is
+        // reachable while all three hold.
+    }
+
+    /// <summary>
     /// The distance between two staves of a system is decided by the PAGE's spring chain,
     /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
     /// ledger measures it with.

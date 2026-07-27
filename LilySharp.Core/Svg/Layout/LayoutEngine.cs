@@ -283,6 +283,7 @@ internal sealed class LayoutEngine
             NoteBoundAnchorY = anchors.NoteBoundAnchorY,
             StaffByIndex = anchors.StaffByIndex,
             LooseChainEnd = looseChainEnd,
+            TextRowStaves = textRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
         });
 
@@ -1853,6 +1854,12 @@ internal sealed class LayoutEngine
         /// — see <see cref="BuildLooseChainEnds"/>. Null in the preliminary pass, which
         /// runs before the page exists, so that pass lays the block out at force 0.</summary>
         public Func<int, (double Room, double NextStaffMinDistance)?>? LooseChainEnd { get; init; }
+
+        /// <summary>The staves that are a lead sheet's chord or lyrics TRACK rather than
+        /// music — not spaceable, so they are neither an anchor nor an end for a loose
+        /// chain (<see cref="ComputeBetweenStavesEnd"/>). Empty when the caller has none.
+        /// </summary>
+        public IReadOnlySet<int> TextRowStaves { get; init; } = new HashSet<int>();
     }
 
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
@@ -2209,6 +2216,42 @@ internal sealed class LayoutEngine
             };
         }
 
+        // ...and the OTHER end of that block's chain: the next spaceable staff of the same
+        // system. Per (system, anchor staff), how much room the two reference points leave
+        // and the up-skyline that closes it.
+        //
+        // LILYPOND-REF: lily/page-layout-problem.cc:936-939 — distribute_loose_lines is
+        // handed `last_spaceable_line_translation` and `-solution_[spring_idx]`, two members
+        // of the PAGE's spring chain, and the same call site serves a block between two
+        // SYSTEMS and a block between two STAVES of one system. So the room is read the same
+        // way here as in BuildLooseChainEnds; what differs is only the minimum that closes
+        // it (:923-925, no null line), which the engraver builds from NextStaffUp.
+        //
+        // ⚠️ A SPAN, NOT TWO POSITIONS, so no frame can be mixed: both staves are read out
+        // of the SAME system, and the half-staff from a top line to a reference point is the
+        // same on both ends and cancels. Reading the near end here and the far end from
+        // systemsArray[0] would be the frame error HANDOFF 1 keeps naming.
+        //
+        // ⚠️ PER SYSTEM, because the page's own solve can have moved the staves apart by
+        // different amounts (PageLayouter.RespaceStaves) and hara-kiri can leave different
+        // staves alive — the same reason BuildLooseChainEnds could not read systemsArray[0].
+        Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null;
+        if (nbAnchor is { Count: > 0 } && staffByIndex != null
+            && lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex)))
+        {
+            var endCache = new Dictionary<(int, int), (double, VerticalSkyline)?>();
+            betweenStavesEnd = (sysIdx, anchorStaffIndex) =>
+            {
+                var key = (sysIdx, anchorStaffIndex);
+                if (endCache.TryGetValue(key, out var cached))
+                    return cached;
+                var computed = ComputeBetweenStavesEnd(
+                    sysIdx, anchorStaffIndex, systems, staffByIndex, ctx.TextRowStaves);
+                endCache[key] = computed;
+                return computed;
+            };
+        }
+
         // A syllable is CENTRED on its column's alignment extent, not on the column
         // (self-alignment-interface.cc:117-176). That extent is the column's note heads /
         // rests — which only the MUSIC knows, so it is resolved here and handed down.
@@ -2259,7 +2302,97 @@ internal sealed class LayoutEngine
             .CalculateLayouts(
                 lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
                 ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
-                ctx.LastSpaceableStaffY);
+                betweenStavesEnd, ctx.LastSpaceableStaffY);
+    }
+
+    /// <summary>
+    /// The room a lyric block between two staves of <paramref name="sysIdx"/> is solved into
+    /// — the span from the anchor staff's reference point to the next spaceable staff's —
+    /// and that staff's up-skyline, which is what the closing minimum measures against.
+    /// </summary>
+    /// <remarks>
+    /// The anchor is the BOTTOM spaceable staff of the group holding
+    /// <paramref name="anchorStaffIndex"/>, which is how <see cref="BuildStaffAnchorTables"/>
+    /// picks the Y a non-last group's lyrics hang from; the closing staff is the first
+    /// spaceable one below it, wherever in the system it lives.
+    /// <para>
+    /// ⚠️ SPACEABLE, the same set as everywhere else in this island: a hidden staff, an ossia
+    /// and a text ROW are not in the page's spring chain
+    /// (<c>MultiStaffLayouter.StaffSprings</c>) and LilyPond never makes one a
+    /// <c>last_spaceable_line</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ NULL WHEN NO SPACEABLE STAFF IS LEFT BELOW THE ANCHOR, AND THAT IS A DIVERGENCE
+    /// RATHER THAN A DEFINITION — corrected here after the port's own commit message stated
+    /// it as though LilyPond agreed. LilyPond has no such case: a block whose system runs out
+    /// of staves is flushed at the NEXT system's first spaceable staff through the null line
+    /// (page-layout-problem.cc:927-933), or at the foot of the page if there is none
+    /// (:1004-1013). It always closes on something. Lily# leaves the chain at force 0
+    /// instead. Reachable only where hara-kiri has killed every staff of every group below a
+    /// non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+    /// is why it is named rather than implemented — a branch nothing measures is how a port
+    /// acquires an untested one (the same judgement <see cref="BuildLooseChainEnds"/>'s
+    /// coarse bail-out is left on).
+    /// </para>
+    /// <para>
+    /// ⚠️ Null ALSO when the system carries an ossia or a text row anywhere, and that is the
+    /// room being unknown rather than an exclusion (§5.2): LilyPond puts those INTO the
+    /// chain as loose lines of their own, so a span that steps over one is somebody else's
+    /// space. Same reason, same words as <see cref="BuildLooseChainEnds"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE ROOM IS READ PER SYSTEM AND THE ANCHOR IT IS DRAWN FROM IS NOT, and that is
+    /// named rather than repaired here. <see cref="BuildStaffAnchorTables"/> takes
+    /// <c>NoteBoundAnchorY</c> off <c>systemsArray[0]</c> — the simplification its own remark
+    /// declares, shared by all four of its tables — while this walks the system it is asked
+    /// about, which is what LilyPond does (<c>-solution_[spring_idx]</c> is that system's
+    /// staff). The two disagree only where hara-kiri leaves different staves alive on
+    /// different systems AND the block hangs from a non-last group; no fixture and no ledger
+    /// point reaches that, so narrowing it would add a branch nothing measures — the same
+    /// judgement <see cref="BuildLooseChainEnds"/>'s coarse bail-out is left on.
+    /// </para>
+    /// </remarks>
+    private (double Room, VerticalSkyline NextStaffUp)? ComputeBetweenStavesEnd(
+        int sysIdx, int anchorStaffIndex, ImmutableArray<SystemLayout> systems,
+        IReadOnlyDictionary<int, Staff> staffByIndex, IReadOnlySet<int> textRowStaves)
+    {
+        if (sysIdx < 0 || sysIdx >= systems.Length) return null;
+        var groups = systems[sysIdx].StaffGroups;
+        if (groups.IsDefaultOrEmpty) return null;
+
+        // Device-DOWN to each spaceable staff's top line, and the anchor's own group.
+        double? anchorDown = null;
+        var below = new List<(double Down, int StaffIndex)>();
+        foreach (var group in groups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            bool holdsAnchor = group.Staves.Any(s => s.StaffIndex == anchorStaffIndex);
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden) continue;
+                if (st.IsOssia || textRowStaves.Contains(st.StaffIndex)) return null;
+                double down = -st.Y;
+                if (holdsAnchor)
+                {
+                    if (anchorDown is null || down > anchorDown) anchorDown = down;
+                }
+                below.Add((down, st.StaffIndex));
+            }
+        }
+        if (anchorDown is not { } anchor) return null;
+
+        double? nextDown = null;
+        int nextIndex = -1;
+        foreach (var (down, staffIndex) in below)
+        {
+            if (down <= anchor) continue;
+            if (nextDown is null || down < nextDown) { nextDown = down; nextIndex = staffIndex; }
+        }
+        if (nextDown is not { } next || !staffByIndex.TryGetValue(nextIndex, out var nextStaff))
+            return null;
+
+        var up = _skylineBuilder.BuildStaffSkylines(nextStaff, systems[sysIdx].Measures).Up;
+        return (next - anchor, up);
     }
 
     /// <summary>

@@ -635,6 +635,72 @@ internal static class LpGeometryProbes
     private static readonly string LYRMV = LyricTwoStaffPageScore("LYRMV", secondVerse: true);
 
     /// <summary>
+    /// The lyric block BETWEEN two staves of one system — the mirror of books LYRB/LYRBV.
+    /// </summary>
+    /// <remarks>
+    /// Every other two-staff lyric book here puts the melody on the LOWER staff, so its block
+    /// hangs from the system's last staff and closes on the NEXT SYSTEM's first one. This one
+    /// swaps them, which is the branch <see cref="LyricEngraver.DistributeLooseLines"/> names
+    /// as still running at force 0: the chain closes on a staff of the SAME system through
+    /// <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (page-layout-problem.cc:1299-1312)
+    /// and there is no null line (:923-925).
+    /// <para>
+    /// MEASURED, and TWO PREDICTIONS OUT OF FIVE MISSED — see the probe header, which records
+    /// both and why they are the useful half. The closing minimum is a SKYLINE distance and
+    /// neither end of it is what the arithmetic assumed: the next staff's up-skyline is its
+    /// CLEF and its stems (up-extent 3.800000), not its top line, and the down-skyline that
+    /// meets it is the accumulated one — every staff and verse ABOVE, raised by the distances
+    /// already fixed — so it is a different number with one verse (4.972149) and with two
+    /// (4.535174). LilyPond: one verse 4.027851 into a room of 9.000000, two verses
+    /// 3.737890 + 2.800000 into 11.073064.
+    /// </para>
+    /// <para>
+    /// ⚠️ BOTH STAVES CARRY g'/a', which is not the same choice as LYRM/LYRMV. There the
+    /// upper staff was made high to hold the SYSTEM's up-ink constant against the one-staff
+    /// books; here the quantity under test is the gap BELOW the lyrics, so the staff that
+    /// must stay plain is the lower one. ⚠️ Lily# <c>g</c> is LilyPond <c>g'</c> (HANDOFF 5.5).
+    /// </para>
+    /// </remarks>
+    private static string LyricBetweenStavesPageScore(string name, bool secondVerse)
+    {
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
+        string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part lower { clef treble }
+
+            section Main {
+              melody { {{bars}} }
+              lower { {{bars}} }
+              lyrics one { {{syllables}} }{{(secondVerse ? $"\n  lyrics two {{ {syllables} }}" : "")}}
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              staff melody with lyrics one{{(secondVerse ? " with lyrics two" : "")}}
+              staff lower
+            }
+            """;
+    }
+
+    /// <summary>The one-verse book — the mirror of book LYRB.</summary>
+    private static readonly string LYRB = LyricBetweenStavesPageScore("LYRB", secondVerse: false);
+
+    /// <summary>The two-verse book — the mirror of book LYRBV.</summary>
+    private static readonly string LYRBV = LyricBetweenStavesPageScore("LYRBV", secondVerse: true);
+
+    /// <summary>The between-staves books, for the mechanism assertion beside the ledger.</summary>
+    internal static string BetweenStavesOneVerseScore => LYRB;
+
+    /// <inheritdoc cref="BetweenStavesOneVerseScore"/>
+    internal static string BetweenStavesTwoVerseScore => LYRBV;
+
+    /// <summary>
     /// LYRMV WITH THE UPPER STAFF REMOVED UNDER ONE SYSTEM — the mirror of book LYRHK, and
     /// the only book in the corpus whose staff count is not constant down the page.
     /// </summary>
@@ -3096,6 +3162,40 @@ internal static class LpGeometryProbes
             g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
         new("lyrics.two-staff.staff-staff-inside", LYRM,
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+
+        // THE SAME TWO STAVES WITH THE MELODY ON TOP (books LYRB/LYRBV), which puts the lyric
+        // block BETWEEN them — the last branch of the loose chain still laid out at force 0.
+        // The room is the same refpoint-to-refpoint span every other block is solved into
+        // (page-layout-problem.cc:936-939); what changes is the minimum that CLOSES it, which
+        // is `min_offsets[k-1] - min_offsets[k]` with no null line (:923-925) and a spring
+        // taking the line's own nonstaff-unrelatedstaff-spacing plus LARGE_STRETCH
+        // (:1299-1312) instead of the system boundary's HUGE_STRETCH null.
+        //
+        // ONE VERSE AND TWO, because the pair is what separates a solved chain from a force-0
+        // one: with one verse the staff spring's ideal 9.000000 is above the block's floor and
+        // the chain is compressed to 4.027851, with two the floor rises past it and the whole
+        // chain sits on its minimums (3.737890 + 2.800000) in a room of 11.073064. A port that
+        // never solves reads its ideal 5.500000 on BOTH and is wrong by different amounts, so
+        // neither book alone could say whether the mechanism or a constant was missing.
+        //
+        // The inside-system distance is carried for each because it is the ROOM: the block is
+        // inside the staff spring's floor (:699-704), so a port that grows the reservation
+        // without solving the chain moves this and nothing else would notice. The counts are
+        // HANDOFF 5.0 trap 8 — every reading here is by index.
+        new("lyrics.between-staves.staff-to-lyric", LYRB,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.staff-staff-inside", LYRB,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.staves-on-first-page", LYRB,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.two-verse.staff-to-lyric", LYRBV,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.two-verse.verse-step", LYRBV,
+            g => g.LyricVerseStep(), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.two-verse.staff-staff-inside", LYRBV,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.between-staves.two-verse.staves-on-first-page", LYRBV,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // THE SAME BOOK WITH ONE SYSTEM'S UPPER STAFF REMOVED (LYRHK) — the only book here
         // whose staff count varies down the page, and therefore the only one that can tell a

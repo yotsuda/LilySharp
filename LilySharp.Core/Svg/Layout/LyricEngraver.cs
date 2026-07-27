@@ -322,6 +322,7 @@ internal sealed class LyricEngraver
         IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null,
         Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd = null,
+        Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0)
     {
         if (lyrics.Count == 0)
@@ -406,7 +407,7 @@ internal sealed class LyricEngraver
         // left between this staff and the next spaceable one.
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
-                noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd,
+                noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
                 lastSpaceableStaffY);
 
         return layouts.ToImmutableArray();
@@ -441,19 +442,22 @@ internal sealed class LyricEngraver
     /// its force-0 5.500000 to its alignment floor 4.009200 against LilyPond's 3.737890 —
     /// the two lyric faces, and nothing else, left over.
     /// <para>
-    /// What still runs at force 0, i.e. exactly where it was:
-    /// <list type="bullet">
-    /// <item>A block between two staves of one system (<c>staff … with lyrics</c> on a
-    /// non-last group) closes on the next staff through
-    /// <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (:1301-1312), whose minimum
-    /// is that staff's up-skyline against the last verse's descenders — an input this
-    /// engraver is not given. LilyPond's own room for it is the same refpoint-to-refpoint
-    /// span (:936-939 again); only the closing minimum differs, being
-    /// <c>min_offsets[k-1] - min_offsets[k]</c> with no null line (:923-925).</item>
-    /// <item>Any system carrying an ossia or a text ROW, which LilyPond puts INTO the
-    /// chain as loose lines and Lily# lays out as bands of their own — see
-    /// <c>LayoutEngine.BuildLooseChainEnds</c>, which returns null for those.</item>
-    /// </list>
+    /// A block BETWEEN two staves of one system (<c>staff … with lyrics</c> on a non-last
+    /// group) is solved too, and closes differently: on the next spaceable staff of the same
+    /// system through <c>nonstaff-unrelatedstaff-spacing</c> + LARGE_STRETCH (:1299-1312),
+    /// with NO null line, its minimum being the alignment's own last step
+    /// <c>min_offsets[k-1] - min_offsets[k]</c> (:923-925). The room is the same
+    /// refpoint-to-refpoint span (:936-939 again) — <c>LayoutEngine</c> supplies both ends.
+    /// The regimes are <c>lyrics.between-staves.*</c>: with one verse the block's floor stays
+    /// under the staff spring's ideal and the chain is compressed but not critically
+    /// (4.027851), with two the floor rises past it and every spring sits on its minimum
+    /// (3.737890 + 2.800000 into 11.073064).
+    /// <para>
+    /// What still runs at force 0, i.e. exactly where it was: any system carrying an ossia
+    /// or a text ROW, which LilyPond puts INTO the chain as loose lines and Lily# lays out
+    /// as bands of their own — see <c>LayoutEngine.BuildLooseChainEnds</c> and
+    /// <c>BuildBetweenStavesChainEnds</c>, both of which decline those.
+    /// </para>
     /// </para>
     /// </remarks>
     private List<LyricLayout> DistributeLooseLines(
@@ -463,6 +467,7 @@ internal sealed class LyricEngraver
         IReadOnlyDictionary<int, double>? noteBoundAnchorY,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline,
         Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd,
+        Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
@@ -520,36 +525,109 @@ internal sealed class LyricEngraver
 
                 var gaps = new List<LooseLineSpacer.Gap>(verses.Count + 2);
 
-                // Staff to verse 1. LILYPOND-REF: lily/align-interface.cc:227-238 — the
-                // alignment minimum is the two skylines' distance plus the spec's padding.
-                double staffToFirst = 0;
-                if (anchorDown is { IsEmpty: false } ad
-                    && up.TryGetValue((system, verses[0]), out var firstUp) && !firstUp.IsEmpty)
-                {
-                    double dist = ad.Distance(firstUp, SkylineDrop.HorizonPadding);
-                    if (!double.IsInfinity(dist) && !double.IsNaN(dist))
-                        staffToFirst = dist + SkylineDrop.RelatedStaffPadding - skylineToAnchor;
-                }
-                gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NonStaffRelatedStaff, staffToFirst));
+                // ⚠️ ONE RUNNING DOWN-SKYLINE, NOT A PAIR PER GAP, because that is what the
+                // alignment is: it walks the group once, and after fixing each distance it
+                // RAISES what it has accumulated by that distance and MERGES the line just
+                // placed into it (lily/align-interface.cc:272-273). So the profile a line is
+                // measured against is everything above it, not just its neighbour — and at
+                // an x where the neighbour has no ink, what shows through is whatever is
+                // further up.
+                //
+                // ⚠️ MEASURED, and it is the term two predictions got wrong (audit/lp-geometry,
+                // books LYRB/LYRBV): the SAME gap between a verse and the staff under it reads
+                // 4.972149 with one verse and 4.535174 with two, because with one verse the
+                // staff ABOVE is only 3.737890 up and still binds over the next staff's clef,
+                // while with two it is 6.537890 up and the verse's own outline binds instead.
+                // A pairwise distance cannot produce two different numbers there.
+                var running = new VerticalSkyline(VerticalDirection.Down);
+                if (anchorDown is { IsEmpty: false } ad) running.Merge(ad);
 
-                // Verse to verse — the upper line's descenders against the lower one's
-                // ascenders. CreateSpring raises this to the spec's 2.8 when it is shorter.
+                // One step of that walk: the distance from what has accumulated to the next
+                // line's up-skyline, plus the spec's padding — and then the raise and merge
+                // that put the accumulation into the next line's frame.
+                // LILYPOND-REF: lily/align-interface.cc:228 dy = down.distance (up) + padding.
+                // ⚠️ The spec's MINIMUM-DISTANCE is deliberately not applied here: this is the
+                // vector page-layout-problem.cc:590-592 takes WITHOUT it (elements_.min_offsets
+                // is get_minimum_translations_without_min_dist), and the spec's own minimum
+                // arrives on the spring instead, through CreateSpring.
+                double Advance(int verse, double padding)
+                {
+                    double dy = 0;
+                    if (!running.IsEmpty
+                        && up.TryGetValue((system, verse), out var lineUp) && !lineUp.IsEmpty)
+                    {
+                        double dist = running.Distance(lineUp, SkylineDrop.HorizonPadding);
+                        if (!double.IsInfinity(dist) && !double.IsNaN(dist))
+                            dy = dist + padding;
+                    }
+                    running.Raise(dy);
+                    if (down.TryGetValue((system, verse), out var lineDown) && !lineDown.IsEmpty)
+                        running.Merge(lineDown);
+                    return dy;
+                }
+
+                // Staff to verse 1, in the chain's frame — the anchor staff's REFERENCE
+                // POINT, which is what skylineToAnchor converts to.
+                gaps.Add(new LooseLineSpacer.Gap(
+                    LooseLineSpacer.NonStaffRelatedStaff,
+                    Advance(verses[0], SkylineDrop.RelatedStaffPadding) - skylineToAnchor));
+
+                // Verse to verse. CreateSpring raises this to the spec's 2.8 when it is shorter.
                 for (int i = 1; i < verses.Count; i++)
                 {
-                    double step = 0;
-                    if (down.TryGetValue((system, verses[i - 1]), out var d)
-                        && up.TryGetValue((system, verses[i]), out var u)
-                        && !d.IsEmpty && !u.IsEmpty)
-                    {
-                        double dist = d.Distance(u, SkylineDrop.HorizonPadding);
-                        if (!double.IsInfinity(dist) && !double.IsNaN(dist))
-                            step = dist + SkylineDrop.NonStaffNonStaffPadding;
-                    }
-                    gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NonStaffNonStaff, step));
+                    gaps.Add(new LooseLineSpacer.Gap(
+                        LooseLineSpacer.NonStaffNonStaff,
+                        Advance(verses[i], SkylineDrop.NonStaffNonStaffPadding)));
                 }
 
                 // What closes the chain, and how much room it has.
                 double room = double.PositiveInfinity;
+                if (isUpperFamily)
+                {
+                    // A block between two staves of ONE system. LilyPond closes it on the
+                    // next spaceable staff with no null line at all — the minimum is
+                    // `min_offsets[k-1] - min_offsets[k]` (page-layout-problem.cc:923-925),
+                    // the alignment's own last step, and the room is the same
+                    // reference-point-to-reference-point span every other block is solved
+                    // into (:936-939). The spring is the line's own
+                    // nonstaff-unrelatedstaff-spacing plus LARGE_STRETCH (:1299-1312).
+                    var between = betweenStavesEnd?.Invoke(system, familyKey);
+                    if (between is { } b)
+                    {
+                        room = b.Room;
+                        double closing = 0;
+                        if (!running.IsEmpty && !b.NextStaffUp.IsEmpty)
+                        {
+                            double dist = running.Distance(
+                                b.NextStaffUp, SkylineDrop.HorizonPadding);
+                            if (!double.IsInfinity(dist) && !double.IsNaN(dist))
+                            {
+                                // ⚠️ THE SAME FRAME STEP AS skylineToAnchor, AT THE OTHER END.
+                                // A per-staff skyline is measured from that staff's own top
+                                // line, so a distance to it lands on the next staff's TOP
+                                // LINE while the chain is solved between REFERENCE POINTS;
+                                // anchorOffset is that half-staff, taken from the same two
+                                // distances so the two ends cannot drift apart. The
+                                // system-boundary branch below spells it as `+ halfStaff` in
+                                // LayoutEngine.BuildLooseChainEnds for the same reason.
+                                //
+                                // ⚠️ THIS TERM IS NOT A LINE OF LILYPOND, and HANDOFF 5.2
+                                // asks for that to be REPORTED rather than pushed through
+                                // quietly: LilyPond's skylines are refpoint-framed on both
+                                // sides, so its dy needs no conversion at all. The term
+                                // exists because Lily#'s per-staff skylines are top-line
+                                // framed. It is an adapter between two frames, not an
+                                // adjustment to a distance — the fix that would remove it is
+                                // building staff skylines about the reference point, which
+                                // is the frame migration HANDOFF 2D (2) describes and would
+                                // take every reader of SkylineBuilder with it.
+                                closing = dist + SkylineDrop.UnrelatedStaffPadding + anchorOffset;
+                            }
+                        }
+                        gaps.Add(new LooseLineSpacer.Gap(
+                            LooseLineSpacer.NonStaffUnrelatedStaff, closing));
+                    }
+                }
                 var end = isUpperFamily ? null : looseChainEnd?.Invoke(system);
                 if (end is { } chainEnd)
                 {
@@ -576,9 +654,11 @@ internal sealed class LyricEngraver
                             LooseLineSpacer.NullNeighbour, chainEnd.NextStaffMinDistance));
                     }
                 }
-                // ...and NOTHING when the room is unknown. LilyPond's chain always ends on
-                // something — the next staff, or the page edge — so a terminator with no
-                // room behind it would be a spring this port invented: it cannot be given
+                // ...and NOTHING when the room is unknown, which is now only the system
+                // carrying an ossia or a text ROW (LayoutEngine.BuildLooseChainEnds and
+                // BuildBetweenStavesChainEnds both decline those). LilyPond's chain always
+                // ends on something — the next staff, or the page edge — so a terminator with
+                // no room behind it would be a spring this port invented: it cannot be given
                 // LilyPond's minimum, it changes no position (the verses read
                 // positions[1..n], which the gaps above already produce), and it would read
                 // to the next person as if the chain were complete. The absent end is the
@@ -749,6 +829,20 @@ internal sealed class LyricEngraver
     /// The staff's own down-ink is taken as the bottom line, which is what an estimate can
     /// know before the skylines exist; the real pass uses the staff's down-skyline and can
     /// only come out larger, never smaller.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS IS THE SECOND MODEL OF ONE LILYPOND QUANTITY (HANDOFF 5.2.1②), and it is named
+    /// rather than left to be found. An EXTENT SUM is not what the alignment computes: the
+    /// alignment walks the group once, raising and merging as it goes, which
+    /// <see cref="DistributeLooseLines"/> now does for the placement. LilyPond has ONE such
+    /// walk and hands the same vector to both (<c>Align_interface::get_minimum_translations</c>
+    /// for the reservation, the without-min-dist vector for the chain), so the port is not
+    /// finished until this reads that walk too.
+    /// MEASURED: <c>lyrics.between-staves.two-verse.staff-staff-inside</c> carries +0.126936
+    /// against LilyPond, of which the lyric face accounts for +0.271310 in one direction and
+    /// this estimate's closing term for about 0.144374 in the other. Its ONE-verse twin is
+    /// exact, because there the staff spring's own ideal is above the band and the estimate
+    /// cannot be seen at all — which is why only the two-verse book reads it.
     /// </para>
     /// </remarks>
     internal static double AlignmentMinimumBand(IReadOnlyList<(string Text, int Verse)> block)

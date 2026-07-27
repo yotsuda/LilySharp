@@ -2083,3 +2083,137 @@ probeTag =
     >>
   }
 }
+
+%% LYRB / LYRBV — THE LYRIC BLOCK BETWEEN TWO STAVES OF ONE SYSTEM, which is the last branch
+%%     of the loose chain still laid out at force 0 (HANDOFF 1, the second entry under
+%%     "next"). Every lyric book above it hangs its block from the system's LAST staff, so
+%%     the chain closes on the NEXT SYSTEM's first staff through a null line; here it closes
+%%     on a staff of the SAME system, and LyricEngraver.DistributeLooseLines keeps out of it
+%%     because the minimum that closes it is "an input this engraver is not given".
+%%
+%%     ★ THE ROOM IS THE SAME REFPOINT-TO-REFPOINT SPAN AS EVERY OTHER BLOCK'S, and that is
+%%     source rather than observation: distribute_loose_lines is handed
+%%     `last_spaceable_line_translation` and `-solution_[spring_idx]`
+%%     (page-layout-problem.cc:936-939) — the previous spaceable staff's position in the
+%%     PAGE's chain and this one's. The same call site serves a block between two systems and
+%%     a block between two staves of one system. ONLY THE CLOSING MINIMUM DIFFERS: with the
+%%     next staff inside the same system it is `min_offsets[k-1] - min_offsets[k]` and there
+%%     is NO null line (:923-925), where a system boundary inserts one and closes on
+%%     `elements_[i].padding - min_offsets[0]` (:927-933).
+%%
+%%     ⚠️ THE CLOSING SPRING IS A DIFFERENT SPEC FROM ANYTHING THE CORPUS HAS MEASURED. A
+%%     Lyrics line's affinity is UP and the staff below it is spaceable, so get_spacing_spec
+%%     takes its :1299-1312 branch and returns the LINE's `nonstaff-unrelatedstaff-spacing`
+%%     with LARGE_STRETCH (10e5) added. The Lyrics context overrides that spec's padding to
+%%     1.5 and declares NOTHING ELSE (engraver-init.ly:658), so the spring keeps the ideal
+%%     1.0 and the compress strength 1.0 of the caller's own `Spring spring (1.0, 0.0)`
+%%     (:1035) — which is exactly the "absent member" shape HANDOFF 1's item 0 is about, and
+%%     this pair is where it stops being latent.
+%%
+%%     ⚠️ THE TWO BOOKS ARE ONE VERSE AND TWO, and the pair is what separates a chain that is
+%%     SOLVED from one left at force 0. The block's own minimums are
+%%       staff -> verse 1   2.050000 + 1.187880 + 0.500000 = 3.737890  (the same floor LYRV,
+%%                          LYRMV and LYRHK all read; the melody stays inside the staff so its
+%%                          own ink cannot bind it)
+%%       verse -> verse     2.800000                                    (nonstaff-nonstaff's
+%%                          minimum-distance; the ink distance 1.387880 is under it)
+%%       verse -> staff     0.000000 + 2.050000 + 1.500000 = 3.550000  ("no" has no descender,
+%%                          the next staff's up-skyline is its own top line, padding 1.5)
+%%     so ONE verse needs 7.287890 and TWO need 10.087890 against the staff spring's ideal
+%%     9.000000 (default-staff-staff-spacing, both staves bare — lyrics.two-staff.*
+%%     established that reading). ⇒ ONE VERSE LEAVES SLACK AND TWO DO NOT, and those are the
+%%     two regimes a force-0 port cannot tell apart (HANDOFF 5.3: record which regime you are
+%%     in, and do not sit the measurement on a floor on both sides at once).
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2):
+%%       (a) LYRB  staff -> verse 1 = 5.450000. The room is the spring's ideal 9.000000
+%%           (its floor 7.287890 is under it), the closing spring is blocked at its own
+%%           minimum 3.550000 for every force below 2.55e-6, so the chain compresses on the
+%%           first spring alone: 9.000000 - 3.550000, i.e. f = -0.009091 on a compress
+%%           strength of 5.500000 - 0.000000. ★ FONT-FREE ON LILYPOND'S SIDE: 5.450000 is
+%%           built from a basic-distance, a staff half-height and a padding, and the
+%%           syllable's own ink drops out because 3.737890 does not bind.
+%%       (b) LYRB  staff -> staff INSIDE the system = 9.000000, the spring's ideal.
+%%       (c) LYRBV staff -> verse 1 = 3.737890 and verse step = 2.800000. With two verses the
+%%           chain's minimums sum to exactly the room, so it is CRITICALLY COMPRESSED and
+%%           every spring sits on its floor.
+%%       (d) LYRBV staff -> staff INSIDE the system = 10.087890 — the staff spring's floor,
+%%           `minimum_offsets_with_min_dist[staff1] - [staff2]` (:699-704), which is the same
+%%           three numbers because the alignment applies minimum-distance but NOT
+%%           basic-distance on the non-pure call (align-interface.cc:230-238 gates that on
+%%           `INT_MAX == end`, and get_minimum_translations passes end = 0).
+%%       (e) 8 staves on page 1 in both — four systems of two (HANDOFF 5.0 trap 8).
+%%     (falsifier for (a): 5.500000, which would mean the chain between two staves is NOT
+%%      solved on LilyPond's side either and the branch Lily# leaves at force 0 is right by
+%%      accident. The whole port planned on top of this pair would then be unnecessary.)
+%%     (falsifier for (c): 5.450000 or anything else above 3.737890 — that would mean the
+%%      room is NOT the sum of the alignment's own minimums and the staff spring keeps slack
+%%      the block cannot reach, i.e. the reservation and the solve read different minimums.)
+%%     (falsifier for (d): 9.000000, which would mean the loose lines are NOT inside the
+%%      staff spring's floor at all and the block overlaps the staff below it.)
+%%
+%%     MEASURED — (b), (c) and (e) HELD, (a) AND (d) MISSED, AND THE MISS IS THE USEFUL HALF.
+%%       LYRB   staff -> verse 1 = 4.027851  (predicted 5.450000)
+%%              staff -> staff   = 9.000000  ✔
+%%       LYRBV  staff -> verse 1 = 3.737890  ✔   verse step = 2.800000  ✔
+%%              staff -> staff   = 11.073064 (predicted 10.087890)
+%%       8 staves on page 1 in both, on all three pages alike.  ✔
+%%
+%%     ★ BOTH MISSES ARE ONE WRONG TERM: the CLOSING MINIMUM, which the predictions built as
+%%     "the next staff's top line 2.050000 + padding 1.500000 = 3.550000". It is neither end
+%%     of that. Dumped straight off the VerticalAxisGroups (ly:grob-extent on the groups the
+%%     System's 'vertical-alignment holds):
+%%       - a staff's own up-extent is 3.800000, its CLEF and its STEMS, not its top line;
+%%         its down-extent is -3.550000, the clef again. (The lyric line's is
+%%         (-0.037044 . 1.187880): "no" has essentially no descender, as intended.)
+%%       - and the skyline that meets it is the ACCUMULATED down-skyline — every staff and
+%%         verse above, each raised by the distance already fixed (align-interface.cc:272-273
+%%         raises and merges as it walks) — so the binding X is where the LYRIC HAS NO INK,
+%%         over the next staff's clef, and what meets it there is the staff ABOVE.
+%%     ⇒ THE SAME-LOOKING GAP IS A DIFFERENT NUMBER IN THE TWO BOOKS: 4.972149 with one verse
+%%     (the staff above is only 3.737890 up) and 4.535174 with two (it is 6.537890 up, so the
+%%     lyric's own outline binds instead). A port that writes this minimum as an extent sum
+%%     will be right in neither book, and one book alone could not have shown that.
+%%     ⚠️ SO NEITHER staff-to-lyric READING IS FONT-FREE, which the predictions also had
+%%     wrong: (a) was expected to be built from a basic-distance, a staff half-height and a
+%%     padding with the syllable dropping out. The syllable is in it twice over, through the
+%%     raise. Both entries name that in their `why` so the port is not judged against zero.
+%%
+%%     WHAT LILY# READS TODAY: 5.500000 for BOTH staff-to-verse-1 readings — the force-0
+%%     ideal, since LyricEngraver.DistributeLooseLines asks for a room only for the non-upper
+%%     family — so the residuals are +1.472149 and +1.762110. The verse step is exact (it is
+%%     rigid at every force) and so is the ONE-VERSE room, 9.000000: there the block's floor
+%%     8.710039 is under the staff spring's ideal and the reservation cannot show. The
+%%     TWO-VERSE room is +0.126936, which is where it does.
+%%
+%%     ⚠️ THE MELODY IS ON THE UPPER STAFF HERE, which is the swap that makes the book: every
+%%     other two-staff lyric book puts it on the lower one. Both staves carry g'/a' so
+%%     neither one's ink can bind (LYRMV's upper staff is high because the SYSTEM's up-ink
+%%     was the quantity being held constant there; here the quantity is the gap BELOW the
+%%     lyrics, so the lower staff must be the plain one). Syllables are "no" for the reason
+%%     LYRV's header gives at length: an ascender or a descender would put the reading on a
+%%     font metric and it would stop being a spec measurement.
+\book {
+  \probeTag "LYRB"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "LYRBV"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
