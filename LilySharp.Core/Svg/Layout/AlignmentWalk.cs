@@ -37,6 +37,15 @@ namespace LilySharp.Core.Svg.Layout;
 /// are flipped to Lily#'s convention that a distance DOWN is positive, so LilyPond's
 /// <c>where</c> (which decreases) is <see cref="Where"/> (which increases).
 /// <para>
+/// ⚠️ BOTH CALLERS NOW PASS THE SAME ARGUMENTS — the padding and the minimum-distance of
+/// whichever spec governs each step. The chain used to omit the minimum-distance on the
+/// grounds that <c>CreateSpring</c> applies the same member to the same spring a line
+/// later; that is true of the SPRING and false of the WALK, which raises by the clamped dy
+/// (:271-273) and so puts a different accumulation in front of every later line. Passing it
+/// was measured inert, so "one walk" is now a statement about the numbers and not only
+/// about the code.
+/// </para>
+/// <para>
 /// ⚠️ THE POINT OF THIS TYPE IS THAT THERE IS ONE OF IT. LilyPond runs this walk once per
 /// system and hands the SAME vector to both consumers — <c>build_system_skyline</c> for
 /// what the page RESERVES (page-layout-problem.cc:593-599) and
@@ -57,7 +66,12 @@ namespace LilySharp.Core.Svg.Layout;
 /// <para>
 /// The accumulated profile is not a by-product either: <c>build_system_skyline</c>
 /// (:1093-1108) merges each element's skyline raised by its own translation, i.e. it
-/// rebuilds exactly what this walk already has in <see cref="Profile"/>.
+/// rebuilds exactly what this walk already accumulates. ⚠️ It is NOT exposed: a
+/// <c>Profile</c> property was added with the type and nothing ever read it, so it went
+/// again (HANDOFF 5.2.1⑥ — an unread member reads to the next person as a used one). The
+/// reservation wants a LENGTH, which is <see cref="Where"/> plus a closing
+/// <see cref="Distance"/>; whoever needs the silhouette itself can put it back with a
+/// caller attached.
 /// </para>
 /// <para>
 /// ⚠️ NO SKYLINE-HORIZONTAL-PADDING ON THE DISTANCES, and that is LilyPond's reading rather
@@ -78,12 +92,6 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed class AlignmentWalk
 {
     private readonly VerticalSkyline _downSkyline = new(VerticalDirection.Down);
-
-    /// <summary>
-    /// The accumulated silhouette of everything placed so far, in the frame of the line
-    /// placed LAST — the caller's own frame moves down with each <see cref="Advance"/>.
-    /// </summary>
-    public VerticalSkyline Profile => _downSkyline;
 
     /// <summary>How far below the walk's origin the last line placed sits.</summary>
     public double Where { get; private set; }

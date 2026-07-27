@@ -2097,9 +2097,11 @@ internal sealed class MultiStaffLayouter
             // LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 — neither neighbour
             // spaceable, so line to line is the UPPER line's nonstaff-nonstaff-spacing,
             // whose minimum-distance 2.8 (ly/engraver-init.ly:653-657) belongs in the WALK:
-            // align-interface.cc:231-233 raises dy by it BEFORE the raise and merge. (The
-            // chain does not pass it, because CreateSpring applies the same member to the
-            // same spring a line later; see AlignmentWalk's remarks.)
+            // align-interface.cc:231-233 raises dy by it BEFORE the raise and merge, so it
+            // changes the accumulation every later line is measured against. ⚠️ THE CHAIN
+            // PASSES THE SAME TWO ARGUMENTS (LyricEngraver.DistributeLooseLines) — it did not
+            // until 2026-07-27, and while it did not, "one walk" was a claim about the code
+            // and not about the numbers.
             walk.Advance(
                 looseLines![k].Up, looseLines[k].Down,
                 k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,

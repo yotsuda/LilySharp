@@ -549,35 +549,38 @@ internal sealed class LyricEngraver
                 walk.Seed(anchorDown);
 
                 // One step of that walk: the distance from what has accumulated to the next
-                // line's up-skyline, plus the spec's padding — and then the raise and merge
-                // that put the accumulation into the next line's frame.
-                // ⚠️ The spec's MINIMUM-DISTANCE is not passed here, and the reason is NOT
-                // the one this comment used to give (that the chain reads a vector computed
-                // "without min dist" — it does not; see AlignmentWalk's remarks, where the
-                // source says that name means without the SPACEABLE minimum). It is that
-                // CreateSpring applies the same member to the same spring a line later, so
-                // passing it would be applying it twice. ⚠️ That is NOT a no-op — the walk
-                // raises by the clamped dy — and it is the one place this port still differs
-                // from align-interface.cc:231-233. Left alone because moving it moves output.
-                double Advance(int verse, double padding)
+                // line's up-skyline, raised to the spec's minimum-distance, and then the
+                // raise and merge that put the accumulation into the next line's frame.
+                // ⚠️ THE MINIMUM-DISTANCE IS PASSED, and it has to be even though CreateSpring
+                // applies the same member to the same spring a line later. The walk RAISES BY
+                // THE CLAMPED dy (align-interface.cc:271-273), so leaving it out puts a
+                // different accumulation in front of every later line — the two are only the
+                // same number by coincidence, never the same walk. It used to be left out;
+                // MEASURED 2026-07-27, passing it moves nothing, which is what makes the
+                // reservation and the chain literally one walk rather than two spellings.
+                double Advance(int verse, double padding, double minimumDistance)
                 {
                     up.TryGetValue((system, verse), out var lineUp);
                     down.TryGetValue((system, verse), out var lineDown);
-                    return walk.Advance(lineUp, lineDown, padding);
+                    return walk.Advance(lineUp, lineDown, padding, minimumDistance);
                 }
 
                 // Staff to verse 1, in the chain's frame — the anchor staff's REFERENCE
-                // POINT, which is what skylineToAnchor converts to.
+                // POINT, which is what skylineToAnchor converts to. nonstaff-relatedstaff-spacing
+                // declares no minimum-distance, which read_spacing_spec leaves as no raise.
                 gaps.Add(new LooseLineSpacer.Gap(
                     LooseLineSpacer.NonStaffRelatedStaff,
-                    Advance(verses[0], SkylineDrop.RelatedStaffPadding) - skylineToAnchor));
+                    Advance(verses[0], SkylineDrop.RelatedStaffPadding,
+                            LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance)
+                        - skylineToAnchor));
 
-                // Verse to verse. CreateSpring raises this to the spec's 2.8 when it is shorter.
+                // Verse to verse, whose spec DOES declare one (2.8).
                 for (int i = 1; i < verses.Count; i++)
                 {
                     gaps.Add(new LooseLineSpacer.Gap(
                         LooseLineSpacer.NonStaffNonStaff,
-                        Advance(verses[i], SkylineDrop.NonStaffNonStaffPadding)));
+                        Advance(verses[i], SkylineDrop.NonStaffNonStaffPadding,
+                                LooseLineSpacer.NonStaffNonStaff.MinimumDistance)));
                 }
 
                 // What closes the chain, and how much room it has.
@@ -923,17 +926,6 @@ internal sealed class LyricEngraver
         foreach (var (text, verse) in block)
             if (verse == maxVerse) down = Math.Max(down, LyricDownExtent(text));
         return band + down;
-    }
-
-    /// <summary>One verse's skylines, keyed by system — the shape SkylineDrop consumes.</summary>
-    private static Dictionary<int, VerticalSkyline> VerseSkylines(
-        Dictionary<(int System, int Verse), VerticalSkyline> byVerse, int verse)
-    {
-        var result = new Dictionary<int, VerticalSkyline>();
-        foreach (var ((system, v), sky) in byVerse)
-            if (v == verse)
-                result[system] = sky;
-        return result;
     }
 
     /// <summary>

@@ -36,7 +36,7 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 HEAD は §0 で確認すること（⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から
 commit のたびに嘘になる。前セッションの §1 が `124 ahead` と書いて実際は push 済みだったのが
 その形）。**最後のコード commit は clef を譜スカイラインへ入れたもの。全部未 push。**
-**3411 passed / 0 failed / 3 skipped**（+2＝新しい摂動テストと clef の網）・Core 0 warn 0 err・
+**3411 passed / 0 failed / 3 skipped**（+2＝room の摂動テストと clef の網）・Core 0 warn 0 err・
 **LP 忠実度 118/147 exact・total |residual| 2.141583 ss / 128 distances・counts 17/19**。
 ⚠️ **total は 2.277183 → 2.434383 → 2.141583 と動いた。上がった段が正しい。**
 `between-staves.two-verse.staff-staff-inside` の +0.126936 は**両向きの打ち消し**で、
@@ -99,14 +99,17 @@ minimum-distance は**両ベクタで走る**。⇒ **歌詞行は spaceable で
 room が 9.00 しか無く、歌詞が下の譜の領域に食い込んでいた**（`nonstaff-unrelatedstaff-spacing`
 の padding 1.5 が取れていなかった）。両方レンダして確認済み。
 
-⚠️ **字面から外れて残っている 4 つ**（全部コードに `LILYSHARP-OWN` 相当で明記。§7.5 で洗い直し済み）:
+⚠️ **字面から外れて残っている 3 つ**（⑶ は §7.5 の洗い直しで閉じた。残りは全部コードに
+`LILYSHARP-OWN` 相当で明記済み）:
 **⑴ pure 見積り経路**（スカイライン無し＝`CalculateSystemHeight` と skyline 無し overload）は
 `NoteBoundLyricExtraGap` の定数のまま。⚠️ **「LP も同じ分け方」は誤りで訂正済み**——LP の
 `get_pure_minimum_translations` は**同じ walk を pure スカイラインで走らせる**（`:136-143`）。
 Lily# に pure スカイラインが無いだけ。**見積りと配置がブロックについて食い違いうる。**
 **⑵ `AlignmentMinimumBand`（ページ分割の予約）はまだ extent の和**。別の読み手＝上の表。
-**⑶ 鎖側の walk は minimum-distance を渡さない**（`CreateSpring` が同じ member を後で当てるため）。
-LP は両方で当てるので**これは字面からの乖離**。直すと出力が動く＝別の段。
+~~**⑶ 鎖側の walk は minimum-distance を渡さない**~~ — **閉じた**。渡した（`:231-233`）。
+「`CreateSpring` が後で当てるから同じ」は**ばねについては真・walk については偽**——
+walk は clamp 後の dy で raise する（`:271-273`）ので、後続の全行が別の積み上げに当たる。
+**測ったら不変**なので、**「1 本の walk」がコードの主張から数値の主張になった。**
 **⑷ `BuildLooseLinesBetween` の「群境界だけ」条件**。LP に該当するテストは無い（Lyrics は
 どこに居ても alignment の要素）。Lily# のモデル（note-bound は群の下にぶら下がる）に従った
 条件なので、**閉じるならモデルのほうを先に動かす**。
@@ -115,7 +118,9 @@ LP は両方で当てるので**これは字面からの乖離**。直すと出�
 
 ### ▶ 次の一手
 
-0. ★ **閉じ方に残った 0.139961 は LP を instrument しないと割れない**（§2C 行き）。
+★★ **次セッションの本題は 1 番**（0 番は LP を instrument するまで動かせない）。
+
+0. ⛔ **BLOCKED — 閉じ方に残った 0.139961 は LP を instrument しないと割れない**（§2C 行き）。
    clef を入れたあと `between-staves.staff-to-lyric` は **+0.131349** で、これは**また両向きの
    net**（第1段の歌詞書体 +0.271310 対 閉じ方 −0.139961）。Lily# 側の機構は算術で再現する
    （上の譜が 4.009200 下がり自分の clef が refpoint の 3.550000 下 ⇒ 第1節 baseline の
@@ -160,12 +165,19 @@ LP は両方で当てるので**これは字面からの乖離**。直すと出�
    ⚠️ **`between-staves.*` はここを読まない**（今回の摂動で確定）。
    ⚠️ **walk に載せると譜の実スカイラインが予約に入る**ので、譜下に低い音符があるスコアで
    予約が増える方向に動きうる（未測定）。出力が動く＝**承認ゲート**。
-   ⚠️ **pure 見積り経路は LP も別**（`get_pure_minimum_translations`）。そこまで 1 本にしない。
-2. ★ **鎖側の walk に minimum-distance を渡す**（`align-interface.cc:231-233`）。
-   今は `CreateSpring` が同じ member を後で当てるので**ばねは同じ**だが、
-   **walk は clamp された dy で raise する**ので後続の段と閉じ方が変わりうる。
-   ⇒ **これを入れて初めて「予約と鎖が同じ walk」**になる。出力が動くか未測定。
-3. **ossia / text ROW を持つ system は今も force 0**（`BuildLooseChainEnds` と
+   ⚠️ **pure 見積り経路まで 1 本にはできない**（Lily# に pure スカイラインが無い＝上の ⑴）。
+   **実行が 2 回になるならそう書くこと**——「1 本の walk」と書いて 2 回走らせるのは記録の誤り。
+
+   **道具は揃っている**（この島で作った）: `AlignmentWalk`（両呼び手が同じ引数で走る）、
+   `LyricEngraver.NoteBoundBlockSkylines`（配置より前に音節の箱を作る・Y を読まない）、
+   `LayoutEngine.BuildParentAlignmentCentre`（X のモデルは 1 つ）。
+   **手順**: ①予備パスで walk からバンドを算出 ②`EnrichExtentsWithAnnotationProtrusions` 側で
+   `perSystemExtents`/`perSystemBands` に載せる ③`EstimateLooseLineExtents` の歌詞枝を落とす。
+   ⚠️ **`EnrichExtentsWithAnnotationProtrusions` は歌詞の DRAWN Y も `downExtent` に max して
+   いる**（`ann.Lyrics` の `lyY + 0.9`）。予約を walk に載せるなら**その枝との関係を先に測る**
+   ——両方が同じ `downExtent` に max で入るので、片方だけ直しても支配されうる。
+   ⚠️ **§5.0 のとおり、コードの前に台帳の `why` へ予測を書くこと。**
+2. **ossia / text ROW を持つ system は今も force 0**（`BuildLooseChainEnds` と
    `ComputeBetweenStavesEnd` の両方が null を返す）。
    LP はそれらを**鎖に入れる**が Lily# は独立した帯として置く（§3 の決定）＝ room の意味が
    食い違う。**「除外」ではなく「room が不明」**としてコードに明記済み。
@@ -196,8 +208,6 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
   ⚠️ **spacing をいじって埋めない。** 埋めるなら書体メトリクスの側。
   同じ理由で `barnumber.*` の −0.024440 も**字形の下はみ出しが無いことによる床**で、
   閉じるには数字書体の ink-bottom メトリクスが要る（台帳の `why` に明記済）。
-- **`LyricEngraver.VerseSkylines` が到達不能になった**（呼び手 2 つが今回の置換で消えた）。
-  §5.1 の削除手順（横断 grep →承認）に従うので**この島では消していない**。次に触る人が処理する。
 - **歌詞の up-extent も書体から読む（⚠️ CJK の受け皿が先）** — ⚠️ **1 つの音節に高さが 2 つある**
   （§5.2.1②）。下降部は書体のアウトライン実測（`TextFontMetrics`）、上昇部は文字クラス別の
   em 分数のまま（`AscenderEm`/`XHeightEm`/`CjkAscenderEm`）。⚠️ **一括で移すのは試して差し戻した**:
