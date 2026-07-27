@@ -298,10 +298,25 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private double RefpointBelowTop(Staff staff, bool chordGridSheet)
         => staff.IsTextRow
-            ? (staff.IsLyricsTextRow
-                ? LyricEngraver.LyricRowBaseline
-                : ChordNameEngraver.RowTextBaseline(chordGridSheet))
+            ? TextRowRefpointBelowTop(staff, chordGridSheet)
             : GetStaffHeight(staff) / 2.0;
+
+    /// <summary>
+    /// How far below a TEXT ROW's band top its reference point — the text baseline — sits.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
+    /// ChordNames VerticalAxisGroup's refpoint IS the syllable/symbol baseline and there is
+    /// nothing above it to measure from. The two constants are Lily#'s own band model, so
+    /// the CHOICE between them is Lily#'s too — and a choice with two homes is
+    /// HANDOFF 5.2.1②. It briefly had two: <c>LayoutEngine.ApplySolvedRowPositions</c> grew
+    /// its own copy when a lyrics row started arriving there (2026-07-28), and this is where
+    /// that copy went.
+    /// </remarks>
+    internal static double TextRowRefpointBelowTop(Staff staff, bool chordGridSheet)
+        => staff.IsLyricsTextRow
+            ? LyricEngraver.LyricRowBaseline
+            : ChordNameEngraver.RowTextBaseline(chordGridSheet);
 
     /// <summary>The rest of an element's height, below its reference point.</summary>
     private double HeightBelowRefpoint(Staff staff, bool chordGridSheet)

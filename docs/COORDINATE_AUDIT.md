@@ -87,8 +87,24 @@ LILYPOND-REF: `align-interface.cc:274`（`where += stacking_dir * dy`, `stacking
 | スカイライン | 原点 |
 |---|---|
 | 譜ごと（`BuildStaffSkylines`） | **その譜の refpoint（中央線）** ← 今回ここを移した |
-| system（`BuildSystemSkylines`） | **最上段譜の上端線**＝ system 原点（未統合・別用途） |
+| system（`BuildSystemSkylines`） | **最上段譜の上端線**＝ system 原点（未統合・別用途）。⚠️ **2026-07-28 以降、この中で枠が 2 つに割れている**——下記 |
 | seed の入力 | **2 つ**——`staffMiddleUp` 系（五線・符頭・強弱・アーティキュレーション・ビーム）と `staffTopUp` 系（tuplet ブラケット・スラー・タイ。engraver が譜 offset 無しで走るため） |
+
+⚠️★★ **`BuildSystemSkylines` は今フレーム混在**（2026-07-28・`8e4857c8`。**意図して残した
+半移行**で、事故ではない）:
+
+| その中の seed | 何を基準に置くか |
+|---|---|
+| **外側の譜線**（`SeedSystemStaffSymbol`） | **置かれた譜の span**（タブ 6 弦なら 0..−7.550000） |
+| **音符・ビーム・clef**（`AddStaffToSkylines`／`SeedClef`） | **名目**（中央線 `-_staffHeight/2` = −2.000000） |
+
+タブ譜の実際の中央線は **−3.750000** なので、**同じ関数の中で線と音符が 1.750000 ずれた枠**にいる。
+⚠️ **変更前は両方 nominal で一貫していた**（全体を 4.0 の譜として扱う）。出力は改善している
+（DOWN の極値＝譜の下端が正しくなった。音符は内側なので極値にならない）が、**モデルは後退**。
+⚠️ **線引きは値段に影響された**——中央線/clef まで placement から採ると snapshot が **1 枚 → 22 枚**。
+⇒ **揃えるのが HANDOFF §1 ▶0 の扉 ⑷**で、**先に「タブ譜の音符と clef が silhouette に入る高さ」の
+台帳点**が要る（譜線の点 `tab.staff.line-span.six-string` では通せない）。**分割不可**（選択の修正は
+placed offset を要求する）。
 
 ⚠️ **`staffTopUp` は消せる項ではない**。engraver 側の出力枠が上端線基準であることの反映で、
 **原点から導出**して 1 箇所に置いてある（上端線原点の時代は 0 だった）。

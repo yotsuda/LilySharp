@@ -307,8 +307,7 @@ internal sealed class LayoutEngine
         // ...and the rows the lyric chain solved are moved to where it put them, AFTER the
         // pass rather than inside it — see AnnotationLayoutContext.SolvedRowBaselines.
         (systemsArray, annotations) = ApplySolvedRowPositions(
-            score, systemsArray, annotations, annotationContext.SolvedRowBaselines,
-            lyricsRowStaves);
+            score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
 
         var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
             CalculateVoiceCollisions(score, systemsArray);
@@ -1768,9 +1767,18 @@ internal sealed class LayoutEngine
     /// A text row this port does not place in a chain stands below a spaceable staff: a row
     /// BETWEEN two of them (that is <see cref="ComputeBetweenStavesEnd"/>'s span, which still
     /// declines), or a CHORDS row below one (its <c>nonstaff-*</c> specs are the ChordNames
-    /// set and no corpus point measures that arrangement). ⚠️ Both are the room being unknown
-    /// rather than an exclusion — the caller declines the whole chain, exactly as it did for
-    /// every trailing row before 2026-07-28.
+    /// set and no corpus point measures that arrangement).
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond always solves. Its chain
+    /// runs from one spaceable line to the next whatever is between them
+    /// (page-layout-problem.cc:919-925), so "the room belongs to something this port does not
+    /// model" is a Lily# state and not a LilyPond one. It is an EXTENSION of the bail-out
+    /// <see cref="BuildLooseChainEnds"/> has carried since the chain existed, not a new kind
+    /// of thing, and it goes when the last un-modelled arrangement does: a row between two
+    /// staves, a chords row below one, and an ossia. ⚠️ Until then the flag is what keeps the
+    /// reservation and the chain agreeing — <c>LyricReservationBelowSystem</c> reads it too,
+    /// because reserving for a line the chain will not place is worse than either.
+    /// </para>
     /// </param>
     private readonly record struct SystemAlignment(
         StaffLayout? FirstSpaceable,
@@ -2153,11 +2161,16 @@ internal sealed class LayoutEngine
     private static (ImmutableArray<SystemLayout>, AnnotationLayouts) ApplySolvedRowPositions(
         MultiStaffScore score, ImmutableArray<SystemLayout> systems,
         AnnotationLayouts annotations,
-        IReadOnlyDictionary<(int System, int StaffIndex), double> solved,
-        IReadOnlySet<int> lyricsRowStaves)
+        IReadOnlyDictionary<(int System, int StaffIndex), double> solved)
     {
         if (solved.Count == 0)
             return (systems, annotations);
+
+        // The MODEL staff behind each index — the row itself, which is what says whether its
+        // refpoint is a chord row's baseline or a lyrics row's.
+        var staffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            staffByIndex[idx] = st;
 
         // How far each solved row moved, by (system, staff) — computed once, applied to the
         // staff and to its symbols from the same number.
@@ -2166,6 +2179,7 @@ internal sealed class LayoutEngine
         foreach (var ((sysIdx, staffIndex), baselinePageY) in solved)
         {
             if (sysIdx < 0 || sysIdx >= systems.Length) continue;
+            staffByIndex.TryGetValue(staffIndex, out var rowStaff);
             var system = systems[sysIdx];
             var groups = system.StaffGroups;
             if (groups.IsDefaultOrEmpty) continue;
@@ -2178,16 +2192,16 @@ internal sealed class LayoutEngine
                 for (int k = 0; k < staves.Length; k++)
                 {
                     if (staves[k].StaffIndex != staffIndex) continue;
+                    if (rowStaff is not { } row) continue;
                     double bandTopPageY = system.Y + staves[k].Y;
-                    // How far under the band's top the row's REFERENCE POINT sits — the same
-                    // seam MultiStaffLayouter.RefpointBelowTop reads, and it differs by the
-                    // kind of row: a chord row's text baseline, a lyrics row's VERSE 1
-                    // baseline.
-                    double refpointBelowTop = lyricsRowStaves.Contains(staffIndex)
-                        ? LyricEngraver.LyricRowBaseline
-                        : ChordNameEngraver.RowTextBaseline(
-                            ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics));
-                    double d = baselinePageY - (bandTopPageY - refpointBelowTop);
+                    // How far under the band's top the row's REFERENCE POINT sits. ⚠️ ASKED,
+                    // NOT RESTATED: the choice between a chord row's text baseline and a
+                    // lyrics row's verse-1 baseline lives in one place, because both are
+                    // Lily#'s own band model and a second copy of the choice is
+                    // HANDOFF 5.2.1②. This method had one for a day.
+                    double d = baselinePageY - (bandTopPageY
+                        - MultiStaffLayouter.TextRowRefpointBelowTop(
+                            row, ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics)));
                     if (Math.Abs(d) < 1e-9) continue;
                     delta[(sysIdx, staffIndex)] = d;
                     newGroups[g] = newGroups[g] with

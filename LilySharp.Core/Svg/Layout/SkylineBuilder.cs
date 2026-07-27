@@ -153,6 +153,16 @@ internal sealed class SkylineBuilder
     /// <c>StaffGroups[0].Staves[0]</c> and <c>StaffGroups[^1].Staves[^1]</c>, and the layouts
     /// are yielded in that same order, so the span has to be read at the SAME index or a
     /// hidden staff would hand this the height of a different one.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE NOMINAL HEIGHT IS A SECOND ANSWER FOR ONE
+    /// QUANTITY, which is the shape HANDOFF 5.2.1② calls the worst — a main path and an
+    /// approximate one, where a port can land on the copy that never runs. LilyPond has no
+    /// such branch: <c>build_system_skyline</c> is handed the elements as placed
+    /// (page-layout-problem.cc:1093-1108) and there is nothing to fall back to. It is here
+    /// because two skyline-less overloads exist for callers that want only the scalar
+    /// extents. ⚠️ THE PRODUCT PATH ALWAYS PASSES <c>placed</c> (both LayoutEngine call
+    /// sites), so what this serves today is tests; it goes when those overloads do.
+    /// </para>
     /// </remarks>
     private double StaffSpanAt(ImmutableArray<StaffGroupLayout> placed, int index)
         => LayoutAt(placed, index) is { } lay && lay.Height > 0 ? lay.Height : _staffHeight;
