@@ -121,9 +121,9 @@ public class LyricStaffOrderTests
     /// <para>
     /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that the room RESPONDS to
     /// the input, which is the only net that catches the shape this island removed —
-    /// <c>MultiStaffLayouter.NoteBoundLyricExtraGap</c> read <c>(verses - 1) * 3.2</c> and
-    /// nothing else, so both books here returned the SAME distance and every value-based
-    /// test still passed. Its sibling
+    /// the constant it replaced (<c>NoteBoundLyricExtraGap</c>, since deleted) read
+    /// <c>(verses - 1) * 3.2</c> and nothing else, so both books here returned the SAME
+    /// distance and every value-based test still passed. Its sibling
     /// <c>UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin</c> asserts the
     /// LINE moves; this one asserts the STAFF BELOW moves with it, which is the half that
     /// was missing (the line used to drop into the lower staff's room instead of being
@@ -155,6 +155,56 @@ public class LyricStaffOrderTests
         Assert.True(cjkInside > latinInside + 0.1,
             "the room between the two staves must respond to the block's ink: "
             + $"latin {latinInside:F6}, cjk {cjkInside:F6}");
+    }
+
+    /// <summary>
+    /// The PAGE's reservation for a lyric block responds to that block's ink too — a tall
+    /// CJK syllable pushes the next system further than a Latin one, on identical music.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
+    /// handed <c>Align_interface::get_minimum_translations</c>, so the block is in the
+    /// system's silhouette at its alignment minimum, and that minimum is made of ink.
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4), and it is the net for TWO shapes this island
+    /// removed: an extent sum that never saw the staff's own skyline
+    /// (<c>LyricEngraver.AlignmentMinimumBand</c>), and a reservation taken at the DRAWN
+    /// force-0 distance (<c>EnrichExtentsWithAnnotationProtrusions</c>), which is a
+    /// CONSTANT 5.500000 whatever the syllable is. Under the second one both books here
+    /// returned the same gap, and every value-based test still passed.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void SystemGap_RespondsToTheLyricBlocksInk_NotToTheDrawnDistance()
+    {
+        // Enough bars to wrap, so there IS an inter-system gap, and one staff, so the block
+        // hangs below the system rather than between two staves.
+        string bars = string.Concat(Enumerable.Repeat("c4 d e f | ", 24)).Trim();
+        string latinWords = string.Concat(Enumerable.Repeat("la le li lo | ", 24)).Trim();
+        string cjkWords = string.Concat(Enumerable.Repeat("か え る の | ", 24)).Trim();
+        string Src(string words) =>
+            $"part melody {{ section A {{ {bars} }} }}\n"
+            + $"lyrics w {{ section A {{ {words} }} }}\n"
+            + "form main { A }\n"
+            + "score main {\n  staff melody with lyrics w\n}\n";
+
+        double latin = SystemGapOf(Src(latinWords));
+        double cjk = SystemGapOf(Src(cjkWords));
+
+        Assert.True(latin > 0 && cjk > 0, "the books must wrap, or there is no gap to read");
+        Assert.True(cjk > latin + 0.05,
+            "the page must reserve the block's own ink: "
+            + $"latin gap {latin:F6}, cjk gap {cjk:F6}");
+    }
+
+    /// <summary>The distance between the first two systems, 0 if the book does not wrap.</summary>
+    private static double SystemGapOf(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, spec));
+        if (layout.Systems.Length < 2) return 0;
+        return System.Math.Abs(layout.Systems[0].Y - layout.Systems[1].Y);
     }
 
     [Fact]

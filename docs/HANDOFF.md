@@ -36,9 +36,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 HEAD は §0 で確認すること（⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から
 commit のたびに嘘になる。前セッションの §1 が `124 ahead` と書いて実際は push 済みだったのが
 その形）。**最後のコード commit は clef を譜スカイラインへ入れたもの。全部未 push。**
-**3411 passed / 0 failed / 3 skipped**（+2＝room の摂動テストと clef の網）・Core 0 warn 0 err・
-**LP 忠実度 118/147 exact・total |residual| 2.141583 ss / 128 distances・counts 17/19**。
-⚠️ **total は 2.277183 → 2.434383 → 2.141583 と動いた。上がった段が正しい。**
+**3412 passed / 0 failed / 3 skipped**（+3＝room・clef・予約の網）・Core 0 warn 0 err・
+**LP 忠実度 118/147 exact・total |residual| 2.241583 ss / 128 distances・counts 17/19**。
+⚠️ **total は 2.277183 → 2.434383 → 2.141583 → 2.241583 と動いた。上がった段が正しい。**
 `between-staves.two-verse.staff-staff-inside` の +0.126936 は**両向きの打ち消し**で、
 片側を閉じたら必ず広がる（→ +0.284136）。台帳の `why` に**コードを書く前**にそう書いてある。
 下がった分は clef を譜スカイラインへ入れた別件（−0.292800）。**指標は「下がったか」ではなく
@@ -51,7 +51,12 @@ commit のたびに嘘になる。前セッションの §1 が `124 ahead` と�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
-### このセッションでやったこと ＝ **walk を 1 つの型にし、譜間の room をそれに載せた**
+### このセッションでやったこと ＝ **`AlignmentWalk` を作り、同じ量の 4 モデルを 1 本にした**
+
+★ **到達点**: LP の loose-line 量を計算する場所は Lily# に **4 つ**あった——配置の walk／
+ページ分割の予約（extent 和）／譜間 room（平坦な 3.2）／予備パスの**描かれた Y**。
+**いまは `AlignmentWalk` 1 本**（pure 見積り経路を除く＝下の ⑴）。
+経緯は以下。⚠️ **4 つのうち 2 つは、このセッションの摂動で初めて「持ち主」が分かった。**
 
 前セッションの ▶0 は「予約側（`AlignmentMinimumBand`＝ extent の和）を walk へ載せ替える。
 読む点は `lyrics.between-staves.two-verse.staff-staff-inside` の +0.126936 ただ 1 つ」だった。
@@ -99,13 +104,14 @@ minimum-distance は**両ベクタで走る**。⇒ **歌詞行は spaceable で
 room が 9.00 しか無く、歌詞が下の譜の領域に食い込んでいた**（`nonstaff-unrelatedstaff-spacing`
 の padding 1.5 が取れていなかった）。両方レンダして確認済み。
 
-⚠️ **字面から外れて残っている 3 つ**（⑶ は §7.5 の洗い直しで閉じた。残りは全部コードに
-`LILYSHARP-OWN` 相当で明記済み）:
-**⑴ pure 見積り経路**（スカイライン無し＝`CalculateSystemHeight` と skyline 無し overload）は
-`NoteBoundLyricExtraGap` の定数のまま。⚠️ **「LP も同じ分け方」は誤りで訂正済み**——LP の
-`get_pure_minimum_translations` は**同じ walk を pure スカイラインで走らせる**（`:136-143`）。
-Lily# に pure スカイラインが無いだけ。**見積りと配置がブロックについて食い違いうる。**
-**⑵ `AlignmentMinimumBand`（ページ分割の予約）はまだ extent の和**。別の読み手＝上の表。
+⚠️ **字面から外れて残っているのは 1 つだけ**（⑴⑵⑶ は閉じた。残りはコードに
+`LILYSHARP-OWN` 明記済み）:
+~~**⑴ pure 見積り経路の per-verse 定数**~~ — **削除した**（テストが 1 つも依存していなかった）。
+⚠️ **参考**: LP の `get_pure_minimum_translations` は**同じ walk を pure スカイラインで走らせる**
+（`align-interface.cc:136-143`）ので、**そもそも「定数で代用」は LP の分け方ではない**。
+Lily# に pure スカイラインを作るのが本来の道。
+~~**⑵ `AlignmentMinimumBand`（ページ分割の予約）はまだ extent の和**~~ — **閉じた**
+（`f040ab7e`・▶1）。**予約・鎖・譜間 room の 3 つとも `AlignmentWalk` 1 本になった。**
 ~~**⑶ 鎖側の walk は minimum-distance を渡さない**~~ — **閉じた**。渡した（`:231-233`）。
 「`CreateSpring` が後で当てるから同じ」は**ばねについては真・walk については偽**——
 walk は clamp 後の dy で raise する（`:271-273`）ので、後続の全行が別の積み上げに当たる。
@@ -158,25 +164,25 @@ walk は clamp 後の dy で raise する（`:271-273`）ので、後続の全�
    per-staff スカイラインも前もって padding されていない
    （`skyline_spacing` が広げるのは **outside-staff** grob だけ・
    `axis-group-interface.cc:747-753` 既定 0）。
-1. ★ **予約側（`AlignmentMinimumBand`）を walk へ載せ替える。**まだ extent の和で、
-   `AlignmentWalk` の**第2モデル**（§5.2.1②）。★ **読む点は測ってある**——
-   `lyrics.two-verse.system-gap` と `lyrics.two-staff.two-verse.system-gap`（各 +0.157200・
-   §1 の表では「フォント量」に分類されている）と snapshot `test/lyrics-volta` **だけ**。
-   ⚠️ **`between-staves.*` はここを読まない**（今回の摂動で確定）。
-   ⚠️ **walk に載せると譜の実スカイラインが予約に入る**ので、譜下に低い音符があるスコアで
-   予約が増える方向に動きうる（未測定）。出力が動く＝**承認ゲート**。
-   ⚠️ **pure 見積り経路まで 1 本にはできない**（Lily# に pure スカイラインが無い＝上の ⑴）。
-   **実行が 2 回になるならそう書くこと**——「1 本の walk」と書いて 2 回走らせるのは記録の誤り。
-
-   **道具は揃っている**（この島で作った）: `AlignmentWalk`（両呼び手が同じ引数で走る）、
-   `LyricEngraver.NoteBoundBlockSkylines`（配置より前に音節の箱を作る・Y を読まない）、
-   `LayoutEngine.BuildParentAlignmentCentre`（X のモデルは 1 つ）。
-   **手順**: ①予備パスで walk からバンドを算出 ②`EnrichExtentsWithAnnotationProtrusions` 側で
-   `perSystemExtents`/`perSystemBands` に載せる ③`EstimateLooseLineExtents` の歌詞枝を落とす。
-   ⚠️ **`EnrichExtentsWithAnnotationProtrusions` は歌詞の DRAWN Y も `downExtent` に max して
-   いる**（`ann.Lyrics` の `lyY + 0.9`）。予約を walk に載せるなら**その枝との関係を先に測る**
-   ——両方が同じ `downExtent` に max で入るので、片方だけ直しても支配されうる。
-   ⚠️ **§5.0 のとおり、コードの前に台帳の `why` へ予測を書くこと。**
+1. ~~**ページ分割の予約を walk へ載せ替える**~~ — **閉じた**（`f040ab7e`）。予約は
+   `LayoutEngine.LyricReservationBelowSystem`＝`AlignmentWalk`。**2 つ同時に外した**
+   （extent 和と、`EnrichExtentsWithAnnotationProtrusions` の歌詞 DOWN 側＝**描かれた
+   force-0 距離**。後者が実際に効いていた側で、13 snapshot を支配していた）。
+   ★ **予測どおり +0.157200 → +0.207200**（drift 0.050000003・双子も同値）。上がったのは
+   **打ち消しが解けた**から: extent 和は**下端線の中心**から測り、walk は**線のインク
+   2.050000** から測る（LP が読むのはインクのほう）。snapshot 13 枚は**ページが縮む**方向。
+   ★ **旧モデルの残骸は全部消した**（承認あり）: `AlignmentMinimumBand`・
+   その専用ヘルパ `VerseStepBound`・`NoteBoundLyricExtraGap`。
+   ⚠️ **最後の 1 つは「テストに効くなら残す」で判定した**——0 を返しても **3411 件全緑**、
+   つまりどのテストも依存していなかったので削除（テストが守っていない定数を
+   「pure 見積り」の名目で残すと、次の人には生きて見える）。
+   ⇒ **loose line の予約・鎖・譜間 room は `AlignmentWalk` 1 本だけ**になった。
+   ★★ **この移植が既出荷のバグを 1 件あぶり出した**（同 commit で修正）:
+   `CalculateSyllableLayout` は measure layout を**位置**で引くので、**system 単位の切片**を
+   渡すと最初の system 以外は全部 null になる。`BuildLooseLinesBetween`（`a4a800fe`）も
+   同じで、**譜間 room は system 0 でしか効いていなかった**。
+   ⇒ ⚠️ **per-system の layout を engraver に渡すときは MeasureIndex で引くこと。**
+   気づけたのはハーネスの「gaps が一様か」チェックのおかげ（非一様 12.207200/12/12 で例外）。
 2. **ossia / text ROW を持つ system は今も force 0**（`BuildLooseChainEnds` と
    `ComputeBetweenStavesEnd` の両方が null を返す）。
    LP はそれらを**鎖に入れる**が Lily# は独立した帯として置く（§3 の決定）＝ room の意味が
@@ -231,8 +237,8 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 |---|---|---|
 | `lyrics.hara-kiri.{shown,hidden}-system.staff-to-lyric` | **+0.271310** ×2 | ★ **Stage 1 で 1.500000 が取れて 2 点が一致した**（旧 shown = 1.771310）。残りは**歌詞書体の床**＝`lyrics.two-staff.two-verse.staff-to-lyric` と同じ量。⚠️ **0 にしない** |
 | `lyrics.hara-kiri.declared-only.staves-on-first-page` | **−2**（count） | ★ **宣言あり／なしが一致した**（旧 −4）。残る −2 は**両書に共通のページブレーカー欠陥**で、hara-kiri 島ではない。⚠️ ss の総和には入らない（`unit`） |
-| `lyrics.two-verse.system-gap` | **+0.157200** | ★ **フォント量に落ちた**（上記）。機構は移植済 |
-| `lyrics.two-staff.two-verse.system-gap` | **+0.157200** | ★ **同じ量**。多段譜でも予約側は追加作業不要という control |
+| `lyrics.two-verse.system-gap` | **+0.207200** | ★ **予約も walk になり、打ち消しが解けて上がった**（旧 +0.157200・予測どおり）。残りはフォント量＋小節番号 cap-height 0.046334 |
+| `lyrics.two-staff.two-verse.system-gap` | **+0.207200** | ★ **双子と同値のまま**（六桁一致）＝ system gap は下の譜数を知らない、という control が移植後も成立 |
 | `lyrics.two-staff.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済の残り＝歌詞書体差だけ**（up-extent 1.459200 対 1.187880）。⚠️ **0 にしてはいけない**——3.737890 へ寄せたらフォント量の fitting |
 | `lyrics.between-staves.staff-to-lyric` | **+0.131349** | ★ **clef を譜スカイラインへ入れて 0.424149 から下がった**（旧 +1.472149）。**また両向きの net**＝歌詞書体 +0.271310 対 閉じ方 −0.139961。後者は **LP の skyline 当たり点が素朴な max の組より低い**ことで、**LP の instrument 待ち**＝▶0。⚠️ **定数で埋めない** |
 | `lyrics.between-staves.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済（旧 +1.762110）＝台帳が事前に名指した床へ着地**。⚠️ **0 にしない**——3.737890 はフォント量の fitting |

@@ -135,7 +135,6 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
-                height += NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -270,49 +269,6 @@ internal sealed class MultiStaffLayouter
     /// names above a staff — not a whole staff-distance away.</summary>
     private const double TextRowPairGap = 0.6;
 
-    /// <summary>
-    /// Extra inter-group gap so a note-bound (<c>with lyrics</c>) line's SECOND-and-later
-    /// verses, which sit below a non-last group, clear the staff beneath. Verse 1 fits
-    /// in the ordinary staff-staff distance (so single-verse layouts are unchanged); each
-    /// further verse adds one <see cref="TextRowVerseSpacing"/> — the same step the
-    /// LyricEngraver stacks verses by. 0 when the group's staves carry no such lyrics.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ LILYSHARP-OWN, AND THE THIRD MODEL OF ONE LILYPOND QUANTITY (HANDOFF 5.2.1②).
-    /// The <c>LILYPOND-REF</c> that stood here pointed at
-    /// <c>axis-group-interface.cc skyline_spacing</c> "grows the gap by the outside-staff
-    /// line's extent" — but this grows it by a CONSTANT PER VERSE and reads no extent at
-    /// all, so the reference named a rule the code does not follow (HANDOFF 5.2.1①: the
-    /// line next to a REF is the thing to check).
-    /// <para>
-    /// LilyPond has ONE model, the alignment's raise-and-merge walk
-    /// (<see cref="AlignmentWalk"/>): the room between two staves with a block between
-    /// them is that block's own three distances. Lily# has three — the walk in
-    /// <c>LyricEngraver.DistributeLooseLines</c> (placement), the extent sum in
-    /// <c>LyricEngraver.AlignmentMinimumBand</c> (the page breaker's reservation), and
-    /// this constant (the room the placement is then solved into).
-    /// </para>
-    /// <para>
-    /// ⚠️ MEASURED 2026-07-27, by perturbation, because the three had been confused for
-    /// two: zeroing <c>AlignmentMinimumBand</c> moves <c>lyrics.two-verse.system-gap</c>,
-    /// <c>lyrics.two-staff.two-verse.system-gap</c> and one snapshot — and NOT
-    /// <c>lyrics.between-staves.two-verse.staff-staff-inside</c>. Zeroing THIS moves that
-    /// entry alone, 11.200000 → 9.000000. So this constant, not the reservation, is what
-    /// carries that entry's +0.126936 against LilyPond's ink-derived 11.073064
-    /// (= 3.737890 + 2.800000 + 4.535174). The port is to take the room off
-    /// <see cref="AlignmentWalk"/>; the prediction is written in the ledger's <c>why</c>.
-    /// </para>
-    /// </remarks>
-    private static double NoteBoundLyricExtraGap(MultiStaffScore score, int firstStaffIndex, int endStaffIndex)
-    {
-        if (score.Lyrics.IsDefaultOrEmpty) return 0;
-        int maxVerse = 0;
-        foreach (var ly in score.Lyrics)
-            if (!ly.IsLyricsRow && ly.StaffIndex >= firstStaffIndex && ly.StaffIndex < endStaffIndex)
-                maxVerse = Math.Max(maxVerse, ly.VerseNumber);
-        return maxVerse <= 1 ? 0 : (maxVerse - 1) * TextRowVerseSpacing;
-    }
-
     /// <summary>How far left of the staff a system-start BRACE sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm SystemStartBrace (padding . 0.3)</remarks>
     private const double SystemStartBracePadding = 0.3;
@@ -373,8 +329,6 @@ internal sealed class MultiStaffLayouter
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY -= interGroupGap;
-                // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                currentY -= NoteBoundLyricExtraGap(score, globalStaffIndex, globalStaffIndex + group.StaffCount);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -1382,7 +1336,8 @@ internal sealed class MultiStaffLayouter
     /// gap between surviving groups as the literal
     /// <c>StaffSpacing.StaffGroupStaff.BasicDistance</c> (10.5) and so ignored
     /// <see cref="InterGroupSpec"/> (9 for staves with no grouper), the ossia scaling, the
-    /// text-row pair gap and <see cref="NoteBoundLyricExtraGap"/> — measured at
+    /// text-row pair gap and the per-verse lyric constant that used to sit beside them
+    /// (deleted once the room became <see cref="AlignmentWalk"/>) — measured at
     /// 1.500000 too deep, audit/lp-geometry book LYRHK
     /// (<c>lyrics.hara-kiri.shown-system.staff-to-lyric</c>).
     /// </para>
@@ -1568,18 +1523,6 @@ internal sealed class MultiStaffLayouter
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
                     currentY -= interGroupGap;
-                    if (staffSkylines is null)
-                        // ⚠️ LILYSHARP-OWN, AND NOT "LilyPond's own split" — an earlier
-                        // spelling of this comment said that and it was wrong. LilyPond's
-                        // pure path (get_pure_minimum_translations, align-interface.cc
-                        // :136-143) runs THE SAME WALK with pure skylines; it does not
-                        // substitute anything. Lily# has no pure skylines to walk, so the
-                        // skyline-less callers keep the crude per-verse constant, and this
-                        // branch is the honest spelling of "no walk available here" rather
-                        // than a port. ⚠️ It also means the estimate and the placement can
-                        // now disagree about a lyric block — see NoteBoundLyricExtraGap.
-                        currentY -= NoteBoundLyricExtraGap(
-                            score, globalStaffIndex, globalStaffIndex + group.StaffCount);
                 }
             }
 

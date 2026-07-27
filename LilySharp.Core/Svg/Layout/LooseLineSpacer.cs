@@ -43,8 +43,9 @@ namespace LilySharp.Core.Svg.Layout;
 /// block is <c>Align_interface::get_minimum_translations</c>, the block at its ALIGNMENT
 /// MINIMUM, not the distance it is drawn at (:593-599 hands the skyline builder the
 /// minimum translations, and align-interface.cc:235-238 adds the spec's basic-distance
-/// only behind the PURE branch, which that call is not). See
-/// <see cref="LyricEngraver.AlignmentMinimumBand"/>.
+/// only behind the PURE branch, which that call is not). That reservation is
+/// <c>LayoutEngine.LyricReservationBelowSystem</c>, and it is <see cref="AlignmentWalk"/> —
+/// the same walk this chain's own minimums come from, which is the point.
 /// </para>
 /// </remarks>
 internal static class LooseLineSpacer

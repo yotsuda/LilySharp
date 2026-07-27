@@ -205,9 +205,9 @@ internal sealed class LayoutEngine
         var inlineChordNames = score.ChordNames
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
         AugmentExtentsWithLooseLines(perSystemExtents,
-            score.Lyrics, score.Dynamics, score.FiguredBasses,
+            score.Dynamics, score.FiguredBasses,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
-            inlineChordNames, perSystemBands);
+            inlineChordNames, perSystemBands, placed.LyricBands);
 
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
@@ -334,7 +334,12 @@ internal sealed class LayoutEngine
         List<SystemLayout> Systems,
         List<(double upExtent, double downExtent)> Extents,
         List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
-        List<double> Heights);
+        List<double> Heights,
+        /// <summary>Per system, the note-bound lyric block's ALIGNMENT MINIMUM below the
+        /// last spaceable staff's bottom line — see
+        /// <see cref="LyricReservationBelowSystem"/>. Produced here because only this pass
+        /// has the system's own staff skylines.</summary>
+        List<double> LyricBands);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -370,6 +375,7 @@ internal sealed class LayoutEngine
         // tall as its OWN surviving staves). CreatePages spaces systems by this so a
         // hara-kiri'd system's gap is not over-reserved at the full height.
         var perSystemHeights = new List<double>();
+        var perSystemLyricBands = new List<double>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -439,6 +445,9 @@ internal sealed class LayoutEngine
                 LayoutUtilities.CalculateUpExtent(upSky),
                 LayoutUtilities.CalculateDownExtent(downSky, sysHeight)));
             perSystemHeights.Add(sysHeight);
+            perSystemLyricBands.Add(LyricReservationBelowSystem(
+                score, measureLayouts, sysStaffSkylines, sysStaffGroups,
+                firstMeasureIndex, firstMeasureIndex + measureCount));
 
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
@@ -481,7 +490,8 @@ internal sealed class LayoutEngine
         }
 
         return new SystemPlacements(
-            systems, perSystemExtents, perSystemSkylines, perSystemHeights);
+            systems, perSystemExtents, perSystemSkylines, perSystemHeights,
+            perSystemLyricBands);
     }
 
 
@@ -964,7 +974,6 @@ internal sealed class LayoutEngine
     /// elements so that page breaking can accurately predict system heights.
     /// </remarks>
     private static (double downExtent, double upExtent, double bandDown, double bandUp) EstimateLooseLineExtents(
-        ImmutableArray<LyricItem> lyrics,
         ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MusicMarkItem> musicMarks,
@@ -998,52 +1007,11 @@ internal sealed class LayoutEngine
 
         // --- Below-staff elements (downExtent) ---
 
-        // LILYPOND-REF: scm/define-grobs.scm LyricText.outside-staff-priority = #(* 100 1)
-        // Lyrics: staffPadding(2.5) + (verseCount-1) * verseSpacing(1.8) + fontSize(1.2)
-        if (!lyrics.IsDefaultOrEmpty)
-        {
-            int maxVerse = 0;
-            var inRange = new List<LilySharp.Core.Svg.Model.LyricItem>();
-            foreach (var lyric in lyrics)
-            {
-                // Independent lyrics-row syllables get their own text band; they must
-                // not reserve phantom space under a music staff (that inflates the gap).
-                if (lyric.IsLyricsRow)
-                    continue;
-                if (lyric.MeasureIndex >= startMeasure && lyric.MeasureIndex < endMeasure)
-                {
-                    maxVerse = Math.Max(maxVerse, lyric.VerseNumber);
-                    inRange.Add(lyric);
-                }
-            }
-            if (maxVerse > 0)
-            {
-                // Down-extent reserved for staff-attached lyrics.
-                //
-                // ⚠️ THE BAND IS THE BLOCK AT ITS ALIGNMENT MINIMUM, NOT AT THE DISTANCE IT
-                // IS DRAWN. LilyPond hands build_system_skyline the vector out of
-                // Align_interface::get_minimum_translations (page-layout-problem.cc:593-599),
-                // and that minimum contains the spec's PADDING and the lines' ink but NOT its
-                // basic-distance — align-interface.cc:235-238 adds basic-distance only behind
-                // `INT_MAX == end && 0 == start`, the PURE estimate branch, and this call
-                // passes start = end = 0. The 5.5 a lyric line is drawn at arrives afterwards,
-                // out of distribute_loose_lines, INSIDE the room this reservation left.
-                //
-                // Reserving the drawn distance instead is what made Lily#'s systems stand
-                // 4.060000 further apart than LilyPond's on a two-verse score
-                // (audit/lp-geometry, lyrics.two-verse.system-gap): the block grew the
-                // system's extent, so its chain always had room and could never compress,
-                // while LilyPond keeps the gap at 12.000000 and squeezes the block.
-                //
-                // ⚠️ The two sides of that must move TOGETHER (HANDOFF 5.2.1②): shrinking
-                // this without LyricEngraver.DistributeLooseLines placing the lines inside
-                // the resulting gap would drop them onto the next system.
-                double lyricBand = LyricEngraver.AlignmentMinimumBand(
-                    inRange.Select(l => (l.Text, l.VerseNumber)).ToList());
-                downExtent = Math.Max(downExtent, lyricBand);
-                bandDown = Math.Max(bandDown, lyricBand);
-            }
-        }
+        // ⚠️ NO LYRIC BRANCH HERE ANY MORE. The block's reservation is
+        // LyricReservationBelowSystem — the alignment's own walk over the real syllable ink
+        // and the real staff skyline — and the caller max-es it into the same two figures
+        // this returns. An estimate built from the items alone cannot see either, and while
+        // it existed it was a SECOND model of the walk (HANDOFF 5.2.1②).
 
         // LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner.outside-staff-priority = 250
         // Dynamics + hairpins: staffPadding(0.2) + padding(0.6) + textAscent(1.2) = 2.0
@@ -1197,6 +1165,15 @@ internal sealed class LayoutEngine
             down[s] = Math.Max(down[s], bottomRel - bottoms[s]);
         }
 
+        /// <summary>The up half alone — for a grob whose DOWN reservation is somebody
+        /// else's (a note-bound lyric line, whose depth is its alignment minimum).</summary>
+        void AddUpOnly(int measureIndex, double topRel)
+        {
+            if (!measureToSystem.TryGetValue(measureIndex, out int s))
+                return;
+            up[s] = Math.Max(up[s], -topRel);
+        }
+
         foreach (var t in ann.TupletBrackets)
         {
             // t.*YUp is Y-up from the system top; this pass is system-relative device.
@@ -1243,12 +1220,35 @@ internal sealed class LayoutEngine
         // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above
         // the baseline at the 3.2 ss lyric font — without it, a first system
         // whose top content is a lyrics/chord ROW grazes the title ink.
+        //
+        // ⚠️ THE DOWN HALF IS THE ROW'S ONLY. A note-bound line's down reservation is the
+        // ALIGNMENT MINIMUM (LyricReservationBelowSystem), not the distance it is DRAWN —
+        // and this pass sees the DRAWN one, laid out at force 0, i.e. at
+        // nonstaff-relatedstaff-spacing's basic-distance 5.500000. LilyPond reserves the
+        // minimum: page-layout-problem.cc:593-599 hands build_system_skyline the minimum
+        // translations, and align-interface.cc:235-238 adds basic-distance only behind the
+        // pure branch, which that call is not.
+        //
+        // ⚠️ IT USED TO ADD BOTH, AND THE DRAWN ONE WON. MEASURED 2026-07-27 by
+        // perturbation: suppressing this down half for non-row lines moved 13 snapshots
+        // (07-lead-sheet, 08-chorale and 11 test/lyrics-*) and no ledger entry, while
+        // zeroing the alignment-minimum band moved a DISJOINT set (two system-gap entries
+        // and test/lyrics-volta). So the two models bound on different books and the
+        // drawn one silently overrode the ported one wherever they met.
+        //
+        // A lyrics ROW keeps its drawn extent, and that is not the same case: a row is a
+        // band of its own with no staff above it to be spaced from, so there is no
+        // alignment minimum to prefer. Its UP half is kept for every line — a first system
+        // whose top content is a lyrics/chord row would otherwise graze the title ink.
         foreach (var lyLay in ann.Lyrics)
         {
             // lyLay.YUp is Y-up from the system top; the system-relative device
             // baseline (old lyLay.Y) is its negation.
             double lyY = -lyLay.YUp;
-            Add(lyLay.Item.MeasureIndex, lyY - 2.11, lyY + 0.9);
+            if (lyLay.Item.IsLyricsRow)
+                Add(lyLay.Item.MeasureIndex, lyY - 2.11, lyY + 0.9);
+            else
+                AddUpOnly(lyLay.Item.MeasureIndex, lyY - 2.11);
         }
         foreach (var tr in ann.TrillSpanners)
         {
@@ -1666,21 +1666,31 @@ internal sealed class LayoutEngine
 
     private static void AugmentExtentsWithLooseLines(
         List<(double upExtent, double downExtent)> perSystemExtents,
-        ImmutableArray<LyricItem> lyrics,
         ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         List<(int startMeasure, int measureCount)> systemMeasureRanges,
-        ImmutableArray<ChordNameItem> chordNames = default,
-        List<(double bandUp, double bandDown)>? perSystemBands = null)
+        ImmutableArray<ChordNameItem> chordNames,
+        List<(double bandUp, double bandDown)>? perSystemBands,
+        IReadOnlyList<double> lyricBands)
     {
         for (int i = 0; i < perSystemExtents.Count && i < systemMeasureRanges.Count; i++)
         {
             var (start, count) = systemMeasureRanges[i];
             var (looseDown, looseUp, bandDown, bandUp) = EstimateLooseLineExtents(
-                lyrics, dynamics, figuredBasses, musicMarks, voltaBrackets,
+                dynamics, figuredBasses, musicMarks, voltaBrackets,
                 start, start + count, chordNames);
+
+            // The lyric block's reservation is the WALK's, computed per system by
+            // LyricReservationBelowSystem where the staff skylines live — not an estimate
+            // made from the items alone. It joins the same two maxima the estimate feeds.
+            double lyricBand = i < lyricBands.Count ? lyricBands[i] : 0;
+            if (lyricBand > 0)
+            {
+                looseDown = Math.Max(looseDown, lyricBand);
+                bandDown = Math.Max(bandDown, lyricBand);
+            }
             perSystemBands?.Add((bandUp, bandDown));
 
             var ext = perSystemExtents[i];
@@ -2390,6 +2400,90 @@ internal sealed class LayoutEngine
     /// model rather than the source, and closing it means moving the model first.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// How far below the system's LAST SPACEABLE staff's bottom line a note-bound lyric
+    /// block reaches when its lines are at their ALIGNMENT MINIMUM — what the page reserves
+    /// for it, as opposed to the distance it is eventually drawn at.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
+    /// handed <c>Align_interface::get_minimum_translations</c>, so a loose line IS in the
+    /// system's skyline, at its minimum.
+    /// LILYPOND-REF: lily/align-interface.cc:235-238 — that minimum does NOT contain the
+    /// spec's basic-distance: it is added only behind <c>INT_MAX == end &amp;&amp; 0 == start</c>,
+    /// the pure branch, and the call that feeds the skyline passes <c>start = end = 0</c>.
+    /// The 5.500000 the line is drawn at arrives afterwards, out of
+    /// <c>distribute_loose_lines</c>, INSIDE the room this reservation left.
+    /// <para>
+    /// It is <see cref="AlignmentWalk"/>, the same walk the placement and the inter-staff
+    /// room run — the whole point of the island. It replaces TWO estimates of this quantity:
+    /// <c>LyricEngraver.AlignmentMinimumBand</c>'s extent sum, and the DRAWN baseline the
+    /// enrich pass used to fold into the same <c>downExtent</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY THE BLOCK THAT HANGS BELOW THE SYSTEM, which is the one attached to a staff of
+    /// the LAST group — the same split <c>BuildStaffAnchorTables</c> makes for
+    /// <c>NoteBoundAnchorY</c>. A block between two groups is INSIDE the system and its room
+    /// is the staff pair's (<see cref="BuildLooseLinesBetween"/>); reserving it here as well
+    /// would count it twice, which the extent sum did.
+    /// </para>
+    /// </remarks>
+    private double LyricReservationBelowSystem(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        ImmutableArray<StaffGroupLayout> groups, int startMeasure, int endMeasure)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty || groups.IsDefaultOrEmpty)
+            return 0;
+
+        var textRows = new HashSet<int>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            if (st.IsTextRow) textRows.Add(idx);
+
+        // The staff a staff-affinity-UP line below the system is spaced from.
+        // LILYPOND-REF: lily/page-layout-problem.cc:943-944 last_spaceable_line.
+        StaffLayout? anchor = null;
+        foreach (var g in groups)
+            foreach (var st in g.Staves)
+                if (!st.IsHidden && !st.IsOssia && !textRows.Contains(st.StaffIndex))
+                    anchor = st;
+        if (anchor is not { } anchorStaff || anchorStaff.StaffIndex >= staffSkylines.Count)
+            return 0;
+
+        int total = score.StaffGroups.Sum(g => g.StaffCount);
+        int lastGroupFirst = total - score.StaffGroups[^1].StaffCount;
+        var engraver = BuildBlockEngraver(score);
+        var lines = engraver.NoteBoundBlockSkylines(
+            score.Lyrics, measureLayouts, startMeasure, endMeasure, lastGroupFirst, total);
+        if (lines.Count == 0)
+            return 0;
+
+        var walk = new AlignmentWalk();
+        walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
+        for (int k = 0; k < lines.Count; k++)
+            walk.Advance(
+                lines[k].Up, lines[k].Down,
+                k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,
+                k == 0
+                    ? LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance
+                    : LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
+
+        // The walk is in the anchor's REFPOINT frame and a down extent is measured below its
+        // BOTTOM LINE, half a staff lower; the last line's own descenders finish the band.
+        double descent = -lines[^1].Down.MaxHeight();
+        return Math.Max(0, walk.Where + descent - anchorStaff.Height / 2.0);
+    }
+
+    /// <summary>A lyric engraver configured for geometry only — one X model, no layout.</summary>
+    private static LyricEngraver BuildBlockEngraver(MultiStaffScore score)
+    {
+        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            measuresByStaff[idx] = st.PrimaryVoice.Measures;
+        return new LyricEngraver(
+            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, null));
+    }
+
     private MultiStaffLayouter.LooseLinesBetween? BuildLooseLinesBetween(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
         int startMeasure, int endMeasure)
@@ -2413,11 +2507,7 @@ internal sealed class LayoutEngine
             at += count;
         }
 
-        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
-        foreach (var (_, st, idx) in score.EnumerateStaves())
-            measuresByStaff[idx] = st.PrimaryVoice.Measures;
-        var engraver = new LyricEngraver(
-            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, null));
+        var engraver = BuildBlockEngraver(score);
 
         var cache = new Dictionary<(int, int), IReadOnlyList<(VerticalSkyline, VerticalSkyline)>?>();
         return (upperStaffIndex, lowerStaffIndex) =>

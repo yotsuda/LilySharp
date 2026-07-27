@@ -721,14 +721,20 @@ internal sealed class LyricEngraver
         int maxVerse = 0;
         foreach (var l in inBlock) maxVerse = Math.Max(maxVerse, l.VerseNumber);
 
+        // ⚠️ BY MeasureIndex, NOT BY POSITION. The caller hands ONE SYSTEM's layouts, whose
+        // positions restart at 0 while a LyricItem's MeasureIndex is score-wide.
+        var byMeasure = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in measureLayouts) byMeasure[ml.MeasureIndex] = ml;
+
         for (int verse = 1; verse <= maxVerse; verse++)
         {
             var laid = new List<LyricLayout>();
             foreach (var l in inBlock)
             {
                 if (l.VerseNumber != verse) continue;
+                if (!byMeasure.TryGetValue(l.MeasureIndex, out var ml)) continue;
                 // Baseline 0: this walk reads X, width and text, never Y.
-                var lay = CalculateSyllableLayout(l, measureLayouts, 0);
+                var lay = CalculateSyllableLayout(l, ml, 0);
                 if (lay != null) laid.Add(lay);
             }
             if (laid.Count == 0) continue;
@@ -827,108 +833,6 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
-    /// An upper BOUND on the verse-to-verse step for a set of syllables — the estimate the
-    /// page breaker prices a band against, where <see cref="DistributeLooseLines"/>'s
-    /// per-system skylines are not available yet.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 + ly/engraver-init.ly:653-656 —
-    /// the <c>max(minimum-distance 2.8, ink + padding 0.2)</c> the placement solves.
-    /// <para>
-    /// LILYSHARP-OWN: the BOUNDING, not the rule. Taking the deepest descender of the verses
-    /// above against the tallest ascender of the verses below — as though every syllable
-    /// stood over every other one — is not a line of LilyPond. LilyPond's estimate path asks
-    /// the same specs through <c>get_maybe_pure_property</c> and
-    /// <c>Align_interface</c>'s pure branch; this is a cruder over-estimate that happens to
-    /// bound it. It can only OVER-reserve, never under, which is the direction an estimate
-    /// has to err in, and it exists so the breaker cannot drift from the placement again: a
-    /// flat constant here read 1.8 against the placement's 3.2 for as long as both were
-    /// constants.
-    /// </para>
-    /// </remarks>
-    internal static double VerseStepBound(
-        IEnumerable<string> upperTexts, IEnumerable<string> lowerTexts)
-    {
-        double down = 0, up = 0;
-        foreach (var t in upperTexts) down = Math.Max(down, LyricDownExtent(t));
-        foreach (var t in lowerTexts) up = Math.Max(up, LyricUpExtent(t));
-        return Math.Max(SkylineDrop.NonStaffNonStaffMinimum,
-                        down + up + SkylineDrop.NonStaffNonStaffPadding);
-    }
-
-    /// <summary>
-    /// The band a lyric block occupies below the staff's BOTTOM LINE when its lines are at
-    /// their ALIGNMENT MINIMUM — LilyPond's <c>minimum_offsets_with_min_dist</c>, which is
-    /// what the system skyline reserves, as opposed to the distance the lines are drawn at.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
-    /// handed <c>Align_interface::get_minimum_translations</c>, so a loose line IS in the
-    /// system's skyline, but at its minimum.
-    /// LILYPOND-REF: lily/align-interface.cc:227-238 — that minimum is
-    /// <c>down_skyline.distance(up) + padding</c>, raised by the spec's
-    /// <c>minimum-distance</c>. ⚠️ The spec's BASIC-DISTANCE is added only behind
-    /// <c>INT_MAX == end &amp;&amp; 0 == start</c>, the PURE estimate branch, and the call
-    /// that feeds the skyline passes <c>start = end = 0</c> — so the 5.5 this engraver draws
-    /// at is NOT in the reservation. The drawn distance arrives afterwards, out of
-    /// <c>distribute_loose_lines</c>.
-    /// <para>
-    /// This is what <c>LayoutEngine.EstimateLooseLineExtents</c> reserves, and it landed in
-    /// the same commit as <see cref="DistributeLooseLines"/> because neither half works
-    /// alone: reserving the minimum without placing the lines inside the resulting gap
-    /// drops them onto the staff below, and placing them without shrinking the reservation
-    /// leaves the chain room it should not have, so it never compresses.
-    /// </para>
-    /// <para>
-    /// The staff's own down-ink is taken as the bottom line, which is what an estimate can
-    /// know before the skylines exist; the real pass uses the staff's down-skyline and can
-    /// only come out larger, never smaller.
-    /// </para>
-    /// <para>
-    /// ⚠️ THIS IS THE SECOND MODEL OF ONE LILYPOND QUANTITY (HANDOFF 5.2.1②), and it is named
-    /// rather than left to be found. An EXTENT SUM is not what the alignment computes: the
-    /// alignment walks the group once, raising and merging as it goes, which
-    /// <see cref="AlignmentWalk"/> now is and <see cref="DistributeLooseLines"/> calls.
-    /// LilyPond has ONE such walk and hands the same vector to both consumers, so the port
-    /// is not finished until this reads it too.
-    /// <para>
-    /// ⚠️ WHAT THIS ONE IS ACTUALLY READ BY, measured by perturbation 2026-07-27 rather than
-    /// inferred, because the remark here used to name the wrong entry: returning 0 from this
-    /// method moves <c>lyrics.two-verse.system-gap</c>,
-    /// <c>lyrics.two-staff.two-verse.system-gap</c> and the snapshot
-    /// <c>test/lyrics-volta</c> — and nothing else in 3412 tests. In particular it does NOT
-    /// move <c>lyrics.between-staves.two-verse.staff-staff-inside</c>, which this remark
-    /// claimed as its reader: that entry is owned by a THIRD model,
-    /// <c>MultiStaffLayouter.NoteBoundLyricExtraGap</c>'s flat 3.200000 per verse. Two
-    /// separate ports, not one.
-    /// </para>
-    /// </para>
-    /// </remarks>
-    internal static double AlignmentMinimumBand(IReadOnlyList<(string Text, int Verse)> block)
-    {
-        if (block.Count == 0) return 0;
-        int maxVerse = block.Max(b => b.Verse);
-
-        // Verse 1's own minimum, measured from the bottom line: padding + its ink.
-        double up = 0;
-        foreach (var (text, verse) in block)
-            if (verse == 1) up = Math.Max(up, LyricUpExtent(text));
-        double band = SkylineDrop.RelatedStaffPadding + up;
-
-        // ...then each further verse's step, at ITS minimum, and the last one's descender.
-        for (int v = 2; v <= maxVerse; v++)
-        {
-            band += VerseStepBound(
-                block.Where(b => b.Verse == v - 1).Select(b => b.Text),
-                block.Where(b => b.Verse == v).Select(b => b.Text));
-        }
-        double down = 0;
-        foreach (var (text, verse) in block)
-            if (verse == maxVerse) down = Math.Max(down, LyricDownExtent(text));
-        return band + down;
-    }
-
-    /// <summary>
     /// Resolves overlapping syllables by shifting them apart.
     /// </summary>
     /// <remarks>
@@ -1003,8 +907,23 @@ internal sealed class LyricEngraver
         if (lyric.MeasureIndex < 0 || lyric.MeasureIndex >= measureLayouts.Count)
             return null;
 
-        var measureLayout = measureLayouts[lyric.MeasureIndex];
+        return CalculateSyllableLayout(lyric, measureLayouts[lyric.MeasureIndex], y);
+    }
 
+    /// <summary>
+    /// The same, with the measure already resolved — for callers holding ONE SYSTEM's
+    /// layouts, where a global measure index is not a position in the list.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE POSITIONAL OVERLOAD ABOVE IS ONLY CORRECT ON THE SCORE-WIDE LIST, where index
+    /// equals <see cref="MeasureLayout.MeasureIndex"/>. Handed a per-system slice it reads
+    /// the wrong bar, or returns null for every bar past the first system's count — which is
+    /// exactly what it did when <c>NoteBoundBlockSkylines</c> was first wired up: every
+    /// system but the first produced an empty block and silently reserved nothing.
+    /// </remarks>
+    private LyricLayout? CalculateSyllableLayout(
+        LyricItem lyric, MeasureLayout measureLayout, double y)
+    {
         // Get X position from the associated note's musical MOMENT against the shared
         // column grid — the same X the renderer draws that timing at.
         // LILYPOND-REF: lily/lyric-engraver.cc:100-110 horizontal alignment
