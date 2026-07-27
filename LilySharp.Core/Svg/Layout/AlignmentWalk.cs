@@ -59,26 +59,25 @@ namespace LilySharp.Core.Svg.Layout;
 /// (:1093-1108) merges each element's skyline raised by its own translation, i.e. it
 /// rebuilds exactly what this walk already has in <see cref="Profile"/>.
 /// </para>
+/// <para>
+/// ⚠️ NO SKYLINE-HORIZONTAL-PADDING ON THE DISTANCES, and that is LilyPond's reading rather
+/// than an omission: align-interface.cc:228 calls plain <c>Skyline::distance</c>, whose
+/// padding defaults to 0, and the per-staff skylines it reads are not pre-padded either —
+/// <c>Axis_group_interface::skyline_spacing</c> widens only OUTSIDE-staff grobs, by their
+/// own <c>outside-staff-horizontal-padding</c> (axis-group-interface.cc:747-753, default
+/// 0). LilyPond adds the system's padding later and elsewhere, and says so in its own
+/// comment (page-layout-problem.cc:619-628: "the system skyline-horizontal-padding is not
+/// added during the creation of an individual staff").
+/// ⚠️ Lily#'s lyric chain took <c>SkylineDrop.HorizonPadding</c> here for as long as it
+/// existed. MEASURED 2026-07-27, IT IS INERT: taking LilyPond's 0 in both the chain and the
+/// room leaves all 3411 tests, every ledger entry and every snapshot unchanged. It was
+/// replaced rather than kept behind a parameter, so no caller is left with a choice to get
+/// wrong.
+/// </para>
 /// </remarks>
 internal sealed class AlignmentWalk
 {
     private readonly VerticalSkyline _downSkyline = new(VerticalDirection.Down);
-    private readonly double _horizonPadding;
-
-    /// <param name="horizonPadding">
-    /// The <c>skyline-horizontal-padding</c> every <c>distance</c> in this walk is taken
-    /// with. ⚠️ A NAMED DIVERGENCE, and a parameter rather than a constant because Lily#'s
-    /// two callers disagree: align-interface.cc:228 calls plain <c>Skyline::distance</c>,
-    /// whose padding defaults to 0, and LilyPond adds the system's own padding later and
-    /// elsewhere (page-layout-problem.cc:619-628 says so in its own comment, "the system
-    /// skyline-horizontal-padding is not added during the creation of an individual
-    /// staff"). Lily#'s staff-to-staff minimum has always taken 0 and its lyric chain has
-    /// always taken <see cref="SkylineDrop.HorizonPadding"/>; making them agree moves every
-    /// staff pair in the corpus, so it is one island of its own and not this one. What
-    /// matters here is that a pair WITH lyric lines between it takes the same value in the
-    /// room and in the chain — otherwise the block does not fit the room it was given.
-    /// </param>
-    public AlignmentWalk(double horizonPadding = 0) => _horizonPadding = horizonPadding;
 
     /// <summary>
     /// The accumulated silhouette of everything placed so far, in the frame of the line
@@ -177,7 +176,8 @@ internal sealed class AlignmentWalk
         if (_downSkyline.IsEmpty || lineUp is not { IsEmpty: false } up)
             return 0;
 
-        double dist = _downSkyline.Distance(up, _horizonPadding);
+        // LILYPOND-REF: lily/align-interface.cc:228 — plain Skyline::distance, no padding.
+        double dist = _downSkyline.Distance(up);
         if (double.IsInfinity(dist) || double.IsNaN(dist))
             return 0;
         return dist + padding;

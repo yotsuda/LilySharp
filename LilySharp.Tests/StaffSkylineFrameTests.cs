@@ -89,6 +89,54 @@ public class StaffSkylineFrameTests
             staff, Layouts(), default, default, tuplets, slurs, ties, default);
 
     /// <summary>
+    /// THE CLEF IS IN THE PER-STAFF SILHOUETTE, and it is the grob that reaches furthest out
+    /// of a plain staff — so the alignment, which walks THIS skyline, sees it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 <c>skyline_spacing</c> — the
+    /// inside-staff skylines carry every inside-staff grob and a Clef is one.
+    /// <para>
+    /// ⚠️ THE EXPECTATION IS DERIVED, NOT MEASURED (HANDOFF 5.2.1⑤): the G clef's own ink box
+    /// placed on the line it names, not the 3.800000 LilyPond happens to dump. The two agree
+    /// to every digit, which is the point — the font metric was always right and only the
+    /// seed was missing, so a test written against the dumped number would have passed for
+    /// the wrong reason once the box changed.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE ABSENCE IS ASSERTED TOO. <c>systemLeft = NaN</c> means "no clef" — the
+    /// contract callers that want only the scalar extents rely on — and without that half a
+    /// reader could pass the clef in by accident and nothing would say so.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Clef_IsInThePerStaffSkyline_AtItsOwnGlyphExtent()
+    {
+        // A note that stays well inside the staff, so the clef is the only thing that can
+        // reach past the staff lines.
+        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0));
+
+        var withClef = new SkylineBuilder(StaffHeight).BuildStaffSkylines(
+            staff, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+        var withoutClef = Build(staff);
+
+        // The treble clef sits on the G line — staff position -2, i.e. one staff space below
+        // the middle — and its ink box is the font's own.
+        const double gLine = -1.0;
+        double clefTop = gLine + GlyphMetrics.ClefG.Top;
+        double clefBottom = gLine + GlyphMetrics.ClefG.Bottom;
+
+        Assert.Equal(clefTop, withClef.Up.MaxHeight(), 9);
+        Assert.Equal(clefBottom, withClef.Down.MaxHeight(), 9);
+
+        // ...and it really is the clef doing it: without the seed the silhouette stops at
+        // the staff lines, so the reading is not something the notes would have given.
+        Assert.Equal(StaffLineInk, withoutClef.Up.MaxHeight(), 9);
+        Assert.True(clefTop > StaffLineInk + 1.0,
+            $"the clef must reach well past the staff lines: {clefTop:F6} against {StaffLineInk:F6}");
+    }
+
+    /// <summary>
     /// THE STAFF SYMBOL, which is the seed that names the origin: the outer lines are ink,
     /// so they reach half a line thickness past the outermost line CENTRE, and the two
     /// readings are what say where 0 is. Symmetric about the origin would mean the middle

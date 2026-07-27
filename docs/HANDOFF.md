@@ -35,12 +35,13 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 最終更新 2026-07-27（第16セッション・**walk を型にし、譜間の room を定数から walk へ移した**）/
 HEAD は §0 で確認すること（⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から
 commit のたびに嘘になる。前セッションの §1 が `124 ahead` と書いて実際は push 済みだったのが
-その形）。**最後のコード commit は `a4a800fe`。全部未 push。**
-**3410 passed / 0 failed / 3 skipped**（+1＝新しい摂動テスト）・Core 0 warn 0 err・
-**LP 忠実度 118/147 exact・total |residual| 2.434383 ss / 128 distances・counts 17/19**。
-⚠️ **total が 2.277183 から上がったのは狙いどおり**——`between-staves.two-verse.staff-staff-inside`
-の +0.126936 は**両向きの打ち消し**で、片側を閉じたら必ず広がる（+0.284136）。
-台帳の `why` に**コードを書く前**にそう書いてある。**指標は「下がったか」ではなく
+その形）。**最後のコード commit は clef を譜スカイラインへ入れたもの。全部未 push。**
+**3411 passed / 0 failed / 3 skipped**（+2＝新しい摂動テストと clef の網）・Core 0 warn 0 err・
+**LP 忠実度 118/147 exact・total |residual| 2.141583 ss / 128 distances・counts 17/19**。
+⚠️ **total は 2.277183 → 2.434383 → 2.141583 と動いた。上がった段が正しい。**
+`between-staves.two-verse.staff-staff-inside` の +0.126936 は**両向きの打ち消し**で、
+片側を閉じたら必ず広がる（→ +0.284136）。台帳の `why` に**コードを書く前**にそう書いてある。
+下がった分は clef を譜スカイラインへ入れた別件（−0.292800）。**指標は「下がったか」ではなく
 「残ったものが 1 方向の名前付き量か」で読むこと。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3 に追記）。
 **変更の効果は全テストを走らせて落ちた id で見る。**
@@ -98,23 +99,60 @@ minimum-distance は**両ベクタで走る**。⇒ **歌詞行は spaceable で
 room が 9.00 しか無く、歌詞が下の譜の領域に食い込んでいた**（`nonstaff-unrelatedstaff-spacing`
 の padding 1.5 が取れていなかった）。両方レンダして確認済み。
 
-⚠️ **意図的に触っていない 3 つ**（コードにも明記）:
+⚠️ **字面から外れて残っている 4 つ**（全部コードに `LILYSHARP-OWN` 相当で明記。§7.5 で洗い直し済み）:
 **⑴ pure 見積り経路**（スカイライン無し＝`CalculateSystemHeight` と skyline 無し overload）は
-定数のまま。LP も `get_pure_minimum_translations` で分けている。
+`NoteBoundLyricExtraGap` の定数のまま。⚠️ **「LP も同じ分け方」は誤りで訂正済み**——LP の
+`get_pure_minimum_translations` は**同じ walk を pure スカイラインで走らせる**（`:136-143`）。
+Lily# に pure スカイラインが無いだけ。**見積りと配置がブロックについて食い違いうる。**
 **⑵ `AlignmentMinimumBand`（ページ分割の予約）はまだ extent の和**。別の読み手＝上の表。
 **⑶ 鎖側の walk は minimum-distance を渡さない**（`CreateSpring` が同じ member を後で当てるため）。
 LP は両方で当てるので**これは字面からの乖離**。直すと出力が動く＝別の段。
+**⑷ `BuildLooseLinesBetween` の「群境界だけ」条件**。LP に該当するテストは無い（Lyrics は
+どこに居ても alignment の要素）。Lily# のモデル（note-bound は群の下にぶら下がる）に従った
+条件なので、**閉じるならモデルのほうを先に動かす**。
+（`Seed` が `align-interface.cc:217` の第1要素 dy を取らない件と、空スカイラインで 0 を返す
+ガードは `AlignmentWalk` の remarks に明記。）
 
 ### ▶ 次の一手
 
-0. ★★ **閉じ方の項 0.012826 を名指す。**`between-staves.two-verse.staff-staff-inside` に
-   残る **+0.284136** は、歌詞書体の床 +0.271310 と**閉じ方の 0.012826** の和で、
-   **もう打ち消し合っていない**（前者は 0 にしない量＝§5.2）。候補は台帳の `why` に 2 つ:
-   ⑴ **walk の horizon padding 0.100000 対 `align-interface.cc:228` の 0**
-   （`AlignmentWalk` の ctor に理由を書いた。**両者を揃えると全譜ペアが動く**ので別の島）
-   ⑵ **下の譜の up-skyline の中身**（LP の VAG up-extent 3.800000 に対し Lily# 側は未読。
-   `between-staves.staff-to-lyric` の未特定 0.152839 と**同じ未読量**）。
-   ⚠️ **どちらも定数を合わせて閉じない。** ⑵ は**専用の点を開く**話。
+0. ★ **閉じ方に残った 0.139961 は LP を instrument しないと割れない**（§2C 行き）。
+   clef を入れたあと `between-staves.staff-to-lyric` は **+0.131349** で、これは**また両向きの
+   net**（第1段の歌詞書体 +0.271310 対 閉じ方 −0.139961）。Lily# 側の機構は算術で再現する
+   （上の譜が 4.009200 下がり自分の clef が refpoint の 3.550000 下 ⇒ 第1節 baseline の
+   0.459200 上、3.800000 − 0.459200 + 1.500000 = **4.840800**）。同じ算術を LP の 3.737890 で
+   やると 5.112110 になるが **LP は 4.972149**。⇒ **LP の `Skyline::distance` は素朴な
+   max どうしの組より 0.139961 低いところで当たっている。** 当たり点の対を dump するまで
+   これ以上は割れない。⚠️ **この 0.139961 に定数を合わせない。**
+
+   ★ **完了（2026-07-27・この島で 2 つ閉じた）**
+
+   ⑴ **譜ごとのスカイラインに clef が無かった**——`SeedClef` は `BuildSystemSkylines` から
+   しか呼ばれておらず、**alignment が歩く輪郭**（譜間距離と loose line の room）が
+   `axis-group-interface.cc:914-940` に反して clef を落としていた。**入れた**（全 4 呼び手に
+   同じ `systemLeft` を渡す）。`between-staves.staff-to-lyric` **4.452000 → 4.159200**
+   （残差 0.424149 → **0.131349**）、**snapshot 0 枚**。
+   ⚠️ **0 枚は結果であって構成ではない**: 普通の 2 譜では clef 由来の最小が
+   3.550000＋3.800000＋padding ＜ ideal 9 なので**そもそも binding しない**。効くのは
+   **あいだに loose line がある**ときだけ（そこでは ideal が各段に効かない）。
+   ★ **質的な挙動が戻った**のが数字より大きい: Lily# の閉じ方は両方の本で 4.548000 だったのが
+   **4.840800（1 節）と 4.548000（2 節）**になり、LP と同じく**上にあるものに応答する**。
+   網は `Clef_IsInThePerStaffSkyline_AtItsOwnGlyphExtent`（期待値は `GlyphMetrics.ClefG` からの
+   **導出形**で、LP の 3.800000 を書き写していない＝§5.2.1⑤）。
+
+   ⑵ **`between-staves.two-verse.staff-staff-inside` の閉じ方 0.012826 を特定した。**
+   その点の +0.284136 ＝ 歌詞書体 +0.271310 ＋ 閉じ方 0.012826 で、後者は
+   **a) 0.010956 ＝ 歌詞の descent**（Lily# 0.048000 対 LP 0.037044。**摂動で係数 1** を確認。
+   ⚠️ **両者ともアウトラインを読んでいるので純粋な書体差**＝ em 分数のままの up-extent とは
+   別物。合わせたら fitting）＋ **b) 0.001870 ＝ 下の譜の up 輪郭**（Lily# 3.000000＝符尾先端、
+   LP 実効 2.998130）。⚠️ **b は clef ではない**（clef を入れてもこの点は不動＝LP と同じ挙動。
+   2 節あると当たるのは歌詞自身の輪郭）。**これ以上割るには LP の instrument が要る**（§2C）。
+   ⚠️ **候補「walk の horizon padding 0.1 対 LP の 0」は消え、コードからも消した**:
+   鎖と room の**両方**を LP の 0 にしても 3411 件・台帳・snapshot が 1 つも動かない
+   （＝0.1 は不活性）。**引数ごと削除**したので caller に選択の余地は無い。
+   LP の値が 0 である裏取り: `align-interface.cc:228` は素の `Skyline::distance`、
+   per-staff スカイラインも前もって padding されていない
+   （`skyline_spacing` が広げるのは **outside-staff** grob だけ・
+   `axis-group-interface.cc:747-753` 既定 0）。
 1. ★ **予約側（`AlignmentMinimumBand`）を walk へ載せ替える。**まだ extent の和で、
    `AlignmentWalk` の**第2モデル**（§5.2.1②）。★ **読む点は測ってある**——
    `lyrics.two-verse.system-gap` と `lyrics.two-staff.two-verse.system-gap`（各 +0.157200・
@@ -186,7 +224,7 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 | `lyrics.two-verse.system-gap` | **+0.157200** | ★ **フォント量に落ちた**（上記）。機構は移植済 |
 | `lyrics.two-staff.two-verse.system-gap` | **+0.157200** | ★ **同じ量**。多段譜でも予約側は追加作業不要という control |
 | `lyrics.two-staff.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済の残り＝歌詞書体差だけ**（up-extent 1.459200 対 1.187880）。⚠️ **0 にしてはいけない**——3.737890 へ寄せたらフォント量の fitting |
-| `lyrics.between-staves.staff-to-lyric` | **+0.424149** | ★ **移植済（旧 +1.472149）**。0.271310 は歌詞書体が raise を通った分、**残り 0.152839 は未特定**＝譜 up-skyline の中身の差（LP の VAG up-extent 3.800000 対 Lily# 未読）。⚠️ **定数で埋めない** |
+| `lyrics.between-staves.staff-to-lyric` | **+0.131349** | ★ **clef を譜スカイラインへ入れて 0.424149 から下がった**（旧 +1.472149）。**また両向きの net**＝歌詞書体 +0.271310 対 閉じ方 −0.139961。後者は **LP の skyline 当たり点が素朴な max の組より低い**ことで、**LP の instrument 待ち**＝▶0。⚠️ **定数で埋めない** |
 | `lyrics.between-staves.two-verse.staff-to-lyric` | **+0.271310** | ★ **移植済（旧 +1.762110）＝台帳が事前に名指した床へ着地**。⚠️ **0 にしない**——3.737890 はフォント量の fitting |
 | `lyrics.between-staves.two-verse.staff-staff-inside` | **+0.284136** | ★ **room を walk へ移して上がった（旧 +0.126936）＝打ち消しが解けた**。内訳は歌詞書体 +0.271310 ＋**閉じ方 0.012826**＝▶0。⚠️ **戻さない。**1 番の対照は exact＝そこでは ideal 9 が walk の和を上回る |
 | `barnumber.{low,high}-melody.staff-to-baseline` | **−0.024440** ×2 | ★ **字形の床**（LP は数字のインク下端を置く／Lily# は baseline）。閉じるには書体メトリクス |

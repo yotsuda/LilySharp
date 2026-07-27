@@ -1569,9 +1569,15 @@ internal sealed class MultiStaffLayouter
                         interGroupGap *= OssiaScaleFactor;
                     currentY -= interGroupGap;
                     if (staffSkylines is null)
-                        // The PURE estimate path has no skylines to walk, which is
-                        // LilyPond's own split (get_pure_minimum_translations against
-                        // get_minimum_translations). It keeps the crude per-verse constant.
+                        // ⚠️ LILYSHARP-OWN, AND NOT "LilyPond's own split" — an earlier
+                        // spelling of this comment said that and it was wrong. LilyPond's
+                        // pure path (get_pure_minimum_translations, align-interface.cc
+                        // :136-143) runs THE SAME WALK with pure skylines; it does not
+                        // substitute anything. Lily# has no pure skylines to walk, so the
+                        // skyline-less callers keep the crude per-verse constant, and this
+                        // branch is the honest spelling of "no walk available here" rather
+                        // than a port. ⚠️ It also means the estimate and the placement can
+                        // now disagree about a lyric block — see NoteBoundLyricExtraGap.
                         currentY -= NoteBoundLyricExtraGap(
                             score, globalStaffIndex, globalStaffIndex + group.StaffCount);
                 }
@@ -1753,8 +1759,13 @@ internal sealed class MultiStaffLayouter
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
                 var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts);
+                // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
+                // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
+                // silhouettes have to agree about the clef or the page and the alignment
+                // are spacing different pictures.
                 var sky = skylineBuilder.BuildStaffSkylines(
-                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties, beams);
+                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties, beams,
+                    CurrentIndent);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline
@@ -2075,7 +2086,7 @@ internal sealed class MultiStaffLayouter
         // LILYPOND-REF: lily/align-interface.cc:201-285, run over
         // upper staff, line 1 .. line n, lower staff.
         bool hasLooseLines = looseLines is { Count: > 0 };
-        var walk = new AlignmentWalk(hasLooseLines ? SkylineDrop.HorizonPadding : 0);
+        var walk = new AlignmentWalk();
         walk.Seed(upperDown);
         for (int k = 0; k < (looseLines?.Count ?? 0); k++)
         {

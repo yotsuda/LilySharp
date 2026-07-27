@@ -2183,7 +2183,8 @@ internal sealed class LayoutEngine
                     if (!skyCache.TryGetValue(key, out var sky))
                     {
                         var up = _skylineBuilder.BuildStaffSkylines(
-                            staff, systems[sysIdx].Measures).Up;
+                            staff, systems[sysIdx].Measures,
+                            systemLeft: systems[sysIdx].Indent).Up;
                         // ⚠️ REFLECTED ONCE, HERE AT THE EDGE. BuildStaffSkylines works about
                         // the staff's REFERENCE POINT, which is LilyPond's frame;
                         // ChordNameEngraver works in "above the staff's TOP line" throughout,
@@ -2247,7 +2248,10 @@ internal sealed class LayoutEngine
                 var key = (sysIdx, staffIndex);
                 if (!downCache.TryGetValue(key, out var sky))
                 {
-                    sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Down;
+                    // Same silhouette the room was measured from — including the clef,
+                    // which is why the indent goes with it (SkylineBuilder.SeedClef).
+                    sky = _skylineBuilder.BuildStaffSkylines(
+                        staff, systems[sysIdx].Measures, systemLeft: systems[sysIdx].Indent).Down;
                     downCache[key] = sky;
                 }
                 return sky;
@@ -2377,9 +2381,13 @@ internal sealed class LayoutEngine
     /// takes the adjacent-pair path unchanged.
     /// </para>
     /// <para>
-    /// ⚠️ ONLY ACROSS A GROUP BOUNDARY, which is where Lily# puts a note-bound line (see
-    /// <c>LyricEngraver.CalculateLayouts</c>: a block under a non-last group hangs below
-    /// that GROUP's bottom staff). A pair inside one group has nothing between it.
+    /// ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+    /// no such test: a Lyrics context is an element of the alignment wherever it sits, so a
+    /// block between two staves of ONE group would be in its walk too. Lily# hangs a
+    /// note-bound line below the whole GROUP (<c>LyricEngraver.CalculateLayouts</c>: a block
+    /// under a non-last group anchors on that group's bottom staff), so under this model a
+    /// pair inside one group really has nothing between it — the condition follows the
+    /// model rather than the source, and closing it means moving the model first.
     /// </para>
     /// </remarks>
     private MultiStaffLayouter.LooseLinesBetween? BuildLooseLinesBetween(
@@ -2520,7 +2528,13 @@ internal sealed class LayoutEngine
         if (nextDown is not { } next || !staffByIndex.TryGetValue(nextIndex, out var nextStaff))
             return null;
 
-        var up = _skylineBuilder.BuildStaffSkylines(nextStaff, systems[sysIdx].Measures).Up;
+        // ⚠️ THE INDENT GOES WITH IT, and this is the call where it matters most: this
+        // up-skyline is what CLOSES the chain, and the room the chain is solved into was
+        // measured by MultiStaffLayouter against the same staff's skyline. If one carries
+        // the clef (SkylineBuilder.SeedClef) and the other does not, the block is handed a
+        // room its own closing step disagrees with.
+        var up = _skylineBuilder.BuildStaffSkylines(
+            nextStaff, systems[sysIdx].Measures, systemLeft: systems[sysIdx].Indent).Up;
         return (next - anchor, up);
     }
 

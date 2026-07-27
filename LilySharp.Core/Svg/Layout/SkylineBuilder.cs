@@ -309,6 +309,23 @@ internal sealed class SkylineBuilder
     /// lookup in <c>LayoutEngine</c> (which now reflects once, at the edge).
     /// </para>
     /// <para>
+    /// ⚠️ THE CLEF IS IN IT, and it was not until 2026-07-27. <see cref="SeedClef"/> used to
+    /// be called only from <c>BuildSystemSkylines</c>, so the per-staff silhouette that
+    /// <c>Align_interface</c> walks — staff-to-staff spacing, and the room a loose-line
+    /// block is solved into — had never carried the one grob that reaches furthest out of
+    /// a plain staff. LILYPOND-REF: lily/axis-group-interface.cc:914-940
+    /// <c>skyline_spacing</c> — the inside-staff skylines carry every inside-staff grob and
+    /// a Clef is one, the same sentence <see cref="SeedClef"/>'s own remark quotes.
+    /// MEASURED on probe book LYRB before the fix: an up-height of 3.000000, which is a′'s
+    /// stem tip and nothing else, where LilyPond dumps a VerticalAxisGroup up-extent of
+    /// 3.800000 — its clef and its stems. The metric was never wrong: with
+    /// <c>GlyphMetrics.ClefG</c> at (-2.550000 . 4.800000) on the G line at -1.000000 this
+    /// now reads 3.800000, LilyPond's number exactly.
+    /// ⚠️ <paramref name="systemLeft"/> IS WHERE THE CLEF IS, and NaN means "no clef" —
+    /// the same contract <see cref="SeedClef"/> and <c>SeedSystemStaffSymbol</c> already
+    /// had, for callers that want only the scalar extents.
+    /// </para>
+    /// <para>
     /// ⚠️ THE SEEDS ARRIVE IN TWO STAFF-LOCAL FRAMES and always did — see
     /// <c>StaffSkylineFrameTests</c>, which names each one. The staff symbol, noteheads,
     /// dynamics, articulations and beams are placed about the staff MIDDLE
@@ -324,7 +341,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
         ImmutableArray<TieLayout> ties = default,
-        ImmutableArray<BeamLayout> beams = default)
+        ImmutableArray<BeamLayout> beams = default,
+        double systemLeft = double.NaN)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -353,6 +371,14 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
         //   inside_staff_skylines include the StaffSymbol grob.
         SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
+
+        // ...and the clef, which on a plain staff is the extreme ink in BOTH directions —
+        // further out than any note that stays inside the staff. The same seed the system
+        // silhouette gets, in this staff's own frame.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing — the
+        // inside-staff skylines carry every inside-staff grob, and a Clef is one, so it is
+        // in the vertical skyline Align_interface walks exactly as a notehead is.
+        SeedClef(staff, staffMiddleUp, systemLeft, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
             upSkyline, downSkyline, suppressStems);

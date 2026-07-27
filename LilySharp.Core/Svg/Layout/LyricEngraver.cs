@@ -545,7 +545,7 @@ internal sealed class LyricEngraver
                 //
                 // The walk itself is <see cref="AlignmentWalk"/> — the SAME object the
                 // reservation reads, which is the whole point of the type existing.
-                var walk = new AlignmentWalk(SkylineDrop.HorizonPadding);
+                var walk = new AlignmentWalk();
                 walk.Seed(anchorDown);
 
                 // One step of that walk: the distance from what has accumulated to the next
