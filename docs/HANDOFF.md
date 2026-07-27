@@ -32,15 +32,15 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-27（第19セッション・**▶0 の点を作り、重なりを閉じ、§3 の band 決定を撤回した**）/
+最終更新 2026-07-28（第20セッション・**▶0 を閉じた——独立 lyrics 行が loose 鎖の要素になった**）/
 HEAD・ahead 数は §0 で確認すること（⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から
 commit のたびに嘘になる）。**全部未 push。**
-**3430 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
-**LP 忠実度 124/157 exact・total |residual| 2.906328 ss / 135 distances・counts 20/22**。
+**3432 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・
+**LP 忠実度 125/157 exact・total |residual| 2.506328 ss / 135 distances・counts 20/22**。
 
-前セッション 2.506328 からの **+0.400000 はまるごと新しい点**（`lyrics.row.two-verse.verse-step`）。
-母数が 154/133/21 → 157/135/22 に**動いているので総和どうしは比較しない**——
-**既存 154 点は 1 つも動いていない**（3 つのコード変更で動いた既存台帳点はゼロ・**snapshot もゼロ**）。
+前セッション 2.906328 からの **−0.400000 は `lyrics.row.two-verse.verse-step` 1 点が exact に
+なった分**。母数は動いていないので**総和どうしを比較してよい回**で、**既存 156 点は 1 つも
+動いていない**（**snapshot もゼロ枚**）。
 ⚠️ **snapshot ゼロは結果であって構成ではない**——譜の下に独立 lyrics 行を持つ fixture が
 **snapshot リストに 1 つも無い**（`rows-song-sheet` は譜なし、`samples/drunken-sailor` は
 リストに載っていない）。**この regime を見ているのは probe LYRR/LYRRV だけ。**
@@ -54,210 +54,88 @@ commit のたびに嘘になる）。**全部未 push。**
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
-### 第19セッション（2026-07-27） ＝ **▶0 に点を作った・製品コードは不変**
+### 第20セッション（2026-07-28） ＝ **▶0 を閉じた——行が「置かれる」だけでなく「解かれる」ようになった**
 
-§5.0 の①だけを回したセッション（②の予測は probe ヘッダと台帳の `why` に、③の移植は**未着手**）。
-成果物は **probe 1 冊＋台帳 3 点**で、**出力は 1 ビットも動いていない**。
+**判定条件は満たした**: LYRRV が **LYRV と六桁で同値**になった（page 1 の全 system で
+gap **12.207200** / staff→verse1 **4.009200** / verse step **2.800000**、ページ端 system は
+**5.500001**）。LP は 2 冊を 59 行完全一致で読むので、**Lily# の 2 綴りが一致すること自体が
+LP の恒等の再現**。台帳 `lyrics.row.two-verse.verse-step` は **+0.400000 → exact**。
+**snapshot は 1 枚も動いていない**（＝結果であって構成ではない。この regime を踏む fixture が無い）。
 
-- ★★ **出荷済みの重なりを 1 件見つけた**（PNG で目視確認済・`png --crop`）。**2 番を持つ独立
-  lyrics 行は、次の system の五線の上に描かれる。** verse 2 のベースラインは譜 refpoint の
-  **12.800000** 下（band 9.600000 ＋ step 3.200000）で、次の system の譜 refpoint は
-  **12.000000** 下＝**−0.800000 のめり込み**。1 番だけなら 9.600000 でぎりぎり収まるので、
-  **踏むのは 2 番以上のときだけ**。fixture は `rows-song-sheet`（1 番・譜なし）しかないので
-  **snapshot も台帳も一度も踏んでいなかった**。
-- ⚠️ **そして system gap は 12.000000 で exact**。LP も 12.000000。**間隔の点では絶対に
-  見えない**——行はどのスカイラインにも居ないので system 間ばねの床に何も届かない。
-  §5.2.1④ の「exact は regime に入っていないだけかもしれない」の最も鋭い形＝
-  **「合っている」ではなく「その量が欠陥に対して盲目」**。台帳 `lyrics.row.two-verse.system-gap`
-  はこれを**記録するために** 0 で載せてある（⚠️ 移植後も 12.000000 のままであることが要件。
-  LP は loose line で system を広げない）。
-- ★ **既存の LYRC/LYRR 対は、この島については何も測っていなかった。** 実測すると Lily# は
-  2 冊を**ページ数・staff gap・first refpoint・foot slack まで同値**に読み、違うのは §3 の
-  決定した band 距離だけ。**loose line が 1 本だと非 own 側のばねが LARGE/HUGE_STRETCH** なので
-  何も binding しない（§5.0「床に座らせない」の実例）。⇒ **新しい regime を開く必要があった。**
-- **LYRRV を起票した**＝ LYRV から `\lyricsto` を落としただけの本。**LP 側は恒等**で、
-  それを**行単位の機械比較で確かめた**（59 行が 1 行残らず一致。⚠️ 予測は 3 つの数を名指して
-  いたが、**dump 全体で比較した**——3 つだけ見ていたら 4 つ目が動いても気づかない）。
-- ★ **正体は「1 つのフィールド・2 つのモデル」**（§5.2.1②）。行の verse step 3.200000 は
-  `LyricParameters.VerseSpacing` の**素の値**。**音符束縛の枝は同じフィールドを読むのに
-  2.800000 になる**——`DistributeLooseLines` が鎖で解き直すから（`lyrics.verse-step` は exact）。
-  行の枝は鎖に入らないので素の値が生き残る: `RowSkylinesOf` が `IsLyricsTextRow` で**空**を返す
-  → `LeadingLinesOfSystem` が降りる → `ComputeInterSystemEnds` は**譜の下に text row があると
-  スコアごと null を返す**（`LayoutEngine.cs:1833`）。
-- ⇒ ★ **▶0 は 2 つに割れる（重要）**: **⑴ 行にインクを与える**——重なりが閉じ、§3 は
-  **動かない**（§3 が決めたのは band の**位置**であって、次の system にめり込んでよいとは
-  決めていない）。**⑵ 行を spec で置くか**（9.600000 → LP 5.500000）——**これが §3 そのもの**で
-  ユーザー判断。**⑴ だけで出荷可能**、というのが今回の一番の収穫。
+**入れたもの 3 つ**（どれも「行を Lyrics context として扱う」の別の面）:
+- ① **鎖の要素キーを `verse` → `(alignment line, verse)` に一般化**し、**system の最後の
+  spaceable 譜の下に立つ行の verse を、音符束縛の verse と同じ run に並べた**
+  （`page-layout-problem.cc:919-925` は spaceable 2 本の間の非 spaceable を**1 本の run** に
+  集める。2 本の鎖を同じ room に解くと重なる、が前セッションの申し送りだった）。
+- ② **予約が同じ run を歩く**（`LyricReservationBelowSystem`）＝ **alignment 最小**を予約する。
+  「描画到達点を予約する」枝は消えた（`:593-599`）。
+- ③ **`RowSkylinesAboutBaseline` の verse step を `AlignmentWalk` で計算**（`max(2.8, ink+0.2)`）。
+  平坦な `VerseSpacing` は行の経路から消えた。
 
-**⑴ は同セッションで移植した**（ユーザー GO・`dee2c045`）。重なりは閉じ、**snapshot も既存台帳点も
-1 つも動いていない**（＝**結果であって構成ではない**。この regime を踏む fixture が 1 つも無いから
-出荷されていた）。
+**▶0 が名指していた 4 発明**: ⑴⑵⑶ は**コードから消えた**
+（`RowReachBelowBandTop`・`RowReservationBelowSystem`・`row.Y >= anchorStaff.Y` を削除。
+行の帰属は**位置比較でなく alignment 順**＝`LayoutEngine.ClassifySystem`）。
+⑷ `IsSpecSpacedRowBoundary` は**残した**——行は解かれるようになったが、**解く前の配置**と
+**行の上下に立つ要素**は今も枠の選択を要る。消すには tab/ossia を refpoint 枠へ通す必要があり、
+それは §1 が前から名指している別島（コード側にも明記済み）。
 
-- **住所は摂動で見つけた**（読解ではなく・§5.3）。描画の verse step を 9.2 にしても、band の
-  高さを 9.2 にしても、**system gap は 12.000000 のまま六桁不動**＝どちらもばねに届かない。
-  ページは system **スカイライン**で行間ばねを床にする（`PageLayouter` の `Distance()`）が、
-  **`AugmentSkylinesForPaging` は歌詞を一切運んでいない**。届く唯一の歌詞量は
-  `LyricReservationBelowSystem` の band で、そこが**音符束縛専用**だった。行の描画 extent は
-  `perSystemExtents`（＝空スカイライン時の fallback）にだけ入っていた＝**§5.2.1② の
-  「効かない方の複製に移植が乗った」**。
-- **入れたもの**: `LyricReservationBelowSystem` が**譜の下にぶら下がる独立 lyrics 行**も予約する。
-  位置は**置かれた layout から**（行の band top と anchor の下線）、インクは engraver から
-  （`LyricEngraver.RowBlockSkylines` ＋ `RowReachBelowBandTop`）。**X モデルも band 算術も
-  二重化していない。**
-- ⚠️ **行が予約するのは「描かれた到達点」で、alignment 最小ではない**＝`LILYSHARP-OWN`。
-  音符束縛が最小を予約するのは LP がそのあと鎖で解くからで、**行は解かれない**（§3）。
-- ⚠️ ★ **予測は外れた: ⑴ で verse step は閉じない**（+0.400000 のまま）。インクは**両方の前提**
-  だが、step は行が**鎖で解かれる**ことを要求し、解けば staff→行も動く＝⑵。**2 つの機構**だった。
-- ⚠️ **台帳点を 1 つ、足した次の commit で外した**（`lyrics.row.two-verse.system-gap`）。
-  重なっているページで **12.000000＝exact** だったのが**盲目の証拠**で、それは役目を終えた。
-  予約後は押し広げる側に振れるので、載せると**「行が鎖に居ない」という 1 つの事実を
-  2 度数える**ことになる。代わりに**規則で主張**した
-  （`LyricRowReservesItsInkAgainstTheNextSystem`・§5.4。修正前に落ちることを実証済み）。
-
-**⑵a も同セッションで移植した**（ユーザー GO・`9a1b1e3c`）＝ **§3 の band 決定を撤回**。
-
-- **入れたもの 3 つ**: ①行の音節を **alignment 側スカイライン**（`BuildAllStaffSkylines`。
-  ⑴ で入れたのは**ページ側**）に seed、②`SelectInterGroupSpec` の `IsLyricsTextRow` 除外を撤去、
-  ③`IsSpecSpacedRowBoundary` の歌詞除外を撤去。⚠️ **②③だけでは §5.2 違反**——群間ギャップは
-  `spec.BasicDistance − GapSpan` なので、インク無しだと「このコーパスの音節が短いから
-  5.5 が勝つ」に依存する。**①が本体。**
-- **X モデルの家を 1 つにした**: `BuildParentAlignmentCentre` を `LayoutEngine` の private から
-  `LyricEngraver.ParentAlignmentCentre` へ移し、`LyricEngraver.ForGeometry(score)` を
-  **唯一の geometry-only 構築点**にした（`MultiStaffLayouter` も `LayoutEngine` もこれを呼ぶ）。
-- **結果**: `lyrics.row.staff-to-lyric` **exact**（LYRR 5.500000）で、**音符束縛の LYRC と同値**
-  ＝ **LP の恒等をそのまま再現**。§3 の +4.100000 は消えた。
-- ⚠️ **残りはすべて ⑵b（鎖参加）**: LYRRV は staff→verse1 が 5.500000（LP は圧縮して 3.737890）、
-  verse step 3.200000（LP 2.800000）、system gap 14.098000（LP 12.000000）。
-  **行は「置かれる」ようになったが「解かれ」ていない。**
-
-### ★ 出典監査（同セッション末・`43116dd2`） ＝ **§7.5 が実際に仕事をした回**
-
-ユーザーに「字面通り移植できたか・変なハックは無いか」と問われて**差分を数えた**結果:
-
-- **Core に足した 348 行のうち `LILYPOND-REF:` は 1 本だけ**で、**それは移動してきた既存
-  コードに元から付いていたもの**。⇒ **この島で新しく書いた式には出典が 1 本も無かった。**
-- ⚠️ **`LpProvenanceTests` は緑のまま**だった。あれは `EngravingDefaults` /
-  `LayoutOptions` / `VerticalSpacingParameters` の**数値定数**しか見ないので、
-  **数値定数を足さずに式だけ足すと素通りする**＝§5.2.1① が名指す穴を実際に踏み抜いた形。
-  ⇒ ★ **「LpProvenanceTests が緑」は「出典を書いた」の証拠ではない。**
-- ⚠️ **ハックは無かった**（byte 一致のための分岐・除外・近似はゼロ。むしろ除外を 2 つ外し、
-  `system-gap` が動くのを受け入れ、都合の悪くなった点も消さずに扱いを変えた）。
-  **出ていたのは「発明に名前が付いていない」ほう**で、名前を付ける作業がそのまま
-  ▶0 の設計になった（上の 4 件表）。
-- ★ **教訓**: 出典を書こうとすると、**書けない箇所が発明の在処を教える**。
-  §7.5 は「REF が付いているか」ではなく「**REF の隣の式が LP と同じ形か**」の手順だが、
-  **REF が無い箇所を数えるだけでも同じ効果があった。** 移植したら
-  `git diff | grep -c LILYPOND-REF` を 1 回打つ。
-
-### 第18セッション（2026-07-27） ＝ **▶0（chords 行）を閉じた**
-
-`e7bfd78f`（P1・出力不変）→ `9660e5d8`（P2–P5・chord row 系だけ動く）。
-`lyrics.chord-row.between-systems.staff-to-lyric` **+0.891186 → +0.002047**、
-残りは**フォント量 3 項だけ**（歌詞 descent +0.010956／row 上インク −0.010099／row descent
-−0.003277、和 ×0.846154 = 0.002048 対 実測 0.002047402＝**3e-7**）。snapshot は 1 枚も動いて
-いない——**規制ではなく結果**で、chords 行が**譜の上にある** fixture が 1 つも無い（台帳の
-LYRCH/LYRMC/LYROS だけが踏む。`rows-song-sheet` は譜なしの行ペアで `TextRowPairGap`）。
-
-⚠️ **P1 の前提（引継ぎの「行のスカイラインは存在しない」）は半分外れていた**: 五線シンボル
-（±2.050000）と**描かれない符頭**（±0.500000）が入っていて、描かれる和音記号だけが
-どのスカイラインにも無かった。⇒ §0 の「実コードで裏を取る」が 1 回目でこれを出した。
-
-⚠️ **P2 は「出力不変」ではなかった**（引継ぎの見積り違い）。`StaffAffinity` を立てると
-`SelectInterGroupSpec` が別の spec を返すので、P2 は P4/P5 と同じ島。ユーザー判断で 1 島に
-まとめ、さらに**alignment 配置も移植**した（そうしないとページ先頭 system の row だけ band
-配置で残り、同じページに 2 つの高さが出る）。
-
-★ **配線中に「同じ量のモデルが 2 つ」を 2 件見つけた**（どちらも §5.2.1② の形）:
-- **行のベースラインが 2 綴り**。`ChordNameEngraver` は chords-only grid sheet で 2.9、他で
-  1.6 を描く。しかも「grid sheet」の定義は「chords 行があって **lyrics 行**が無い」なので、
-  **音符束縛の歌詞を持つリードシート（＝LYRMC）も grid 扱い**。1.6 で予約して 2.9 で描くと
-  行のインクが 1.300000 譜に食い込む。⇒ `IsChordGridSheet`／`RowTextBaseline` に 1 つの家。
-- **null 行は位置を 1 つ占める**。解の添字を 1 つずらして読むと row が m2＝2.974600 高く出る
-  （6.550800 対 3.576200）。LP は null を実体として push し（`:975`）、translate のときだけ
-  飛ばす（`:1047`）。
-
-### 第17セッション（2026-07-27・短） ＝ **▶0 を「書くだけ」にした**
-
-コードは 1 行も変えていない。やったのは 2 つで、どちらも**書く前に要るもの**:
-- **鎖を項ごとに割った**（`79ab7b85`）。LYRMC の PROBEV VAG から 4 本のばねと 2 つの床を
-  読み、床が**式に分解できる**ことを確かめた（詳細は台帳の `why` と probe ヘッダ、
-  要点は ▶0）。⇒ **総和 4.608814 でなくばね 1 本ずつで照合できる。**
-- **島を 5 つに分けて実コードで裏を取った**（▶0 の表）。⚠️ **`TextRow` のスカイラインは
-  存在しない**ことと、**`ChordNames` の spec が Lyrics のものと別**なことが、
-  「あとは書くだけ」の見積りを外していた 2 点。
-- 副産物: **`font "NAME"` で予約と描画の face が食い違う**（§2F に起票）。
-
-### 第16セッション ＝ **loose line の量を `AlignmentWalk` 1 本にした**
-
-同じ LP 量を計算する場所が Lily# に **4 つ**あった——配置の walk／ページ分割の予約（extent 和）／
-譜間 room（平坦な 3.2）／予備パスの**描かれた Y**。**いまは `AlignmentWalk` 1 本**。
-⚠️ **4 つのうち 2 つは、摂動で初めて「持ち主」が分かった**（コメントも台帳も別のものを
-名指していた＝§5.3 に汎化）。閉じた順に `b8953fcf`（型の抽出・出力不変）→ `a4a800fe`（譜間
-room）→ `f040ab7e`（予約・snapshot 13 枚）→ `d6c3da34`（force 0 の narrowing）。
-残骸（`AlignmentMinimumBand`・`VerseStepBound`・`NoteBoundLyricExtraGap`）は承認を得て削除。
-
-**ついでに閉じた／出た主なもの**（詳細は各 commit と台帳の `why`）:
-- **譜ごとのスカイラインに clef が無かった**（`SeedClef` は system 側からしか呼ばれていなかった）。
-  入れて `between-staves.staff-to-lyric` 0.424149 → **0.131349**。網は
-  `Clef_IsInThePerStaffSkyline_AtItsOwnGlyphExtent`。
-- **既出荷のバグ**: `CalculateSyllableLayout` は measure layout を**位置**で引くので、
-  **system 単位の切片**を渡すと最初の system 以外が空になる。`BuildLooseLinesBetween` も
-  同じで**譜間 room は system 0 でしか効いていなかった**。⇒ ⚠️ **per-system の layout を
-  engraver へ渡すときは `MeasureIndex` で引く。**
-- **新しい対を 3 冊**（LYRCH / LYROS / LYRMC）。LP 実測は probe ヘッダに、点は台帳に。
-
-⚠️ **`SystemHeightOf` に幾何を足さない**（hara-kiri 島の申し送り。「置かれたものの union」で
-あって計算の場所ではない。足したくなったらそれは**配置側**が落としている量）。
+- ★★ **副産物 1（今回の一番の所見）: 同じ walk の「種」が 2 綴りだった**（§5.2.1②）。
+  **鎖は system スカイライン**から、**予約はアンカー譜自身のスカイライン**から歩いていた。
+  アンカーが system の**最下端である限り同じ数**なので、何セッションも見えない。
+  行を下に置いた瞬間に割れる: `BuildSystemSkylines` の DOWN は**最後の要素の下端**を取るので、
+  **譜自身の下線が profile から落ちる**（実測: 音節の下の profile が 4.050000 でなく
+  **3.000000**＝下向き符尾）→ 第1ばねの床が **1.050000 不足**。
+  ⇒ ⚠️ **今の修理は鎖の種にアンカー譜自身のスカイラインを merge しただけ**で、`LILYSHARP-OWN`
+  と明示してある。**本丸は `SkylineBuilder.BuildSystemSkylines`**（DOWN を最後の要素でなく
+  **全要素の union** にする＝`:1093-1108`）。**直したら merge は消す**（▶0）。
+- ⚠️ **hara-kiri で一度落ちた**: 種を per-system にしたのに base（`LastSpaceableStaffY`）が
+  score 全体のままで、**system gap ちょうど（12.207200）**ずれた。
+  ⇒ ★ **アンカーは「どの譜か」と「どの高さか」を必ず一緒に運ぶ**
+  （`AnnotationLayoutContext.LastSpaceableStaff`）。片方だけ per-system にすると frame が割れる。
+- ⚠️ **`VerticalSkyline.Raise` の符号はコメントの主張と逆だった**（DOWN スカイラインに `+a` で
+  **上がる**）。**実測で確定**（merge が効かないので dump した）。§5.2.1① の「REF の隣の主張を疑う」
+  と同じ形で、**符号は測って決める**。
+- ★★ ⚠️ **同セッションで回帰を 1 件出して直した**（`fe679617` → `58f8b210`）。
+  **`staff X with lyrics a` ＋ `lyrics b`（音符束縛と行が同じ譜にぶら下がる）で 2 行が重なった。**
+  ⇒ 原因は**キーではなく族の分裂**: `BuildStaffAnchorTables` は「配列の最後の群でない」staff を
+  upper 扱いにするが、**行は Lily# では独立した群**なので、行を足した瞬間に譜の歌詞が
+  inter-group 鎖へ移り、行は below-system 鎖で解かれる＝**1 つの room に 2 本の鎖**。
+  **「最後」を spaceable な群で数える**ように直した（数行下の `lastSpaceableStaffY` と同じ述語＝
+  1 つの関数に「spaceable」の読みが 2 つあったのが欠陥）。
+  ⚠️ ★ **`fe679617` の message はこの配置を名指していた。名指すことは確かめることではない。**
+  4 行の本を `png --crop` で 1 回描けば commit 前に落ちていた。
+  網は `RowUnderANoteBoundLine_IsOneRunWithIt_NotASecondChain`（修正前に落ちることを実証済）。
+  ⚠️ **この対はまだ完全な恒等ではない**——step は双子と一致するが**最初の距離は 5.500000 対
+  4.009200**で、**行の band が system を高くして room を増やす**から。テスト側に不等号＋理由で
+  書いてあり、**band が消えた日に `Assert.Equal` にする**と明記した（▶3 の実害の 1 つ目）。
+- **網は `LyricRowIsSolvedLikeTheLyricsContextsItIs`**（LYRRV ≡ LYRV を system ごとに）。
+  ⚠️ ★ **台帳点は「2.8」と書けば通る。この対は通らない**——そして**両側とも Lily# の書体**なので
+  フォント量が相殺し、**書体を変えても生き続ける**。§5.4 の「値でなく規則」の、
+  **恒等の対バージョン**。
 
 ### ▶ 次の一手
 
-~~0. chords / lyrics 行を loose 鎖の要素にする~~ — **閉じた**（`e7bfd78f`＋`9660e5d8`・上の節）。
-**この島が残した 4 件**は、どれも**台帳点が無いので次の人は先に点を作る**:
+~~0. 独立 lyrics 行を loose 鎖で解く（⑵b）~~ — **閉じた**（第20セッション・上の節）。
+**この島が残した 2 件**は、どちらも**台帳点が無いので次の人は先に点を作る**:
 
-0. ★★ **独立 lyrics 行 ＝ 残るは ⑵b「行を鎖で解く」1 つ。いま最優先。**
-   ~~⑴ インクを与えて重なりを閉じる~~・~~⑵a spec で置く~~ — **どちらも閉じた**（上の節）。
-   残差は `lyrics.row.two-verse.verse-step` **+0.400000** ＝ **行が loose 鎖に居ないこと 1 つ**。
-
-   ⚠️★★ **⑵b は「verse step を 2.8 にする」作業ではない。⑴⑵a が置いていった発明 4 件を
-   まとめて回収する作業。** 出典監査（下の「★ 出典監査」）で名前が付いた 4 つで、
-   **コード側にも「行が鎖に入った日に消える」と 4 箇所とも明記済み**:
-
-   | 発明 | LP の対応 |
-   |---|---|
-   | `RowSkylinesAboutBaseline`／`RowReachBelowBandTop` の**平坦な verse step** | LP は `get_spacing_spec` の loose-loose 分岐で `max(2.8, ink + 0.2)` を**計算**（`page-layout-problem.cc:1315-1332`・`engraver-init.ly:653-656`）。**宣言で置き換えている**＝§5.2 ★★ の逆側 |
-   | `RowReservationBelowSystem` が**描画到達点**を予約 | LP は `build_system_skyline` に **minimum translations** を渡す（`:593-599`）。解かれない行には最小が無いので描画値で代用している |
-   | 同 `row.Y >= anchorStaff.Y` のガード | **LP に対応物なし。** LP は alignment を順に歩くだけで位置比較をしない |
-   | `IsSpecSpacedRowBoundary`（`upper.IsTextRow \|\| lower.IsTextRow`） | **LP に対応物なし。** Lily# にフレームが 2 つある（refpoint / 名目 staff 高）ことの選択器。⑵a は**この門を消さずに広げた**——消すには残り（tab/ossia 対）を refpoint 枠へ通す必要があり、それは §1 が前から名指している別の島 |
-
-   ⇒ **判定条件**: ⑵b が終わったとき、この 4 つが**コードから消えていること**。
-   1 つでも残るなら移植は途中で、`verse-step` が 2.800000 になっていても意味しない。
-
-   - **どこが降りているか**（3 箇所・実コードで確認済み）: `LyricEngraver.DistributeLooseLines`
-     の `layouts.Where(l => !l.Item.IsLyricsRow)`／`LayoutEngine.RowSkylinesOf`（`IsLyricsTextRow`
-     で空を返す）／`ComputeInterSystemEnds`（`LayoutEngine.cs:1833`「譜の下に text row があると
-     スコアごと null」）。
-   - ⚠️ **1 述語ずつ外すのでは済まない。** 鎖の行キーが `verse:int` なので、音符束縛ブロックと
-     行が**同じ anchor に共存する譜**（`staff X with lyrics a` ＋ `lyrics b`）で 2 本の鎖が
-     同じ room に解かれて重なる。LP 忠実な形は **1 本の鎖に「音符束縛の verse → 行の verse」の順**
-     で並べることで、**行キーを `(isRow, verse)` に一般化する**リファクタになる
-     （`BuildVerseUp/DownSkylines` のキー・`newY` のキー・適用側も同時）。
-   - ⚠️ **行は `StaffLayout.Y` から自前の小節線を描く**ので、解を適用する側
-     （`ApplySolvedRowPositions`。いまは和音記号だけ）に**歌詞行の枝**が要る。
-   - **閉じると同時に動くはず**: verse step → 2.800000、staff→verse1 → 3.737890 側へ、
-     system gap 14.098000 → 12.000000。**3 つが同時に動かないなら移植が半分。**
-   ⚠️ **`verse-step` を 2.8 と書いて閉じない**（§5.2 の「評価結果を書かない」）。LP の 2.800000 は
-   `max(2.8, ink + 0.2)` を鎖が解いた**出力**であって定数ではない。
-   ⚠️ **`MultiStaffLayouter.TextRowVerseSpacing`（band 高さ 3.2）は生きている。消さないこと。**
-   ★ **これは第19セッション中に自分で書いた誤診の訂正**で、§5.2.1⑥ の実例としてそのまま残す:
-   LYRRV で 3.2 → 9.2 に振っても gap・staff→歌詞・ページ数が**六桁不動**だったので
-   「死んでいる疑い」と書いたが、**規制ではなく regime**だった。**行を譜の上に置くと係数 1 で
-   効く**（`lyrics words` の下に `staff melody` を置く本で、先頭譜 refpoint 18.890551 →
-   24.890551 ＝摂動 +6.000000 ちょうど、ページ高も追随）。読む経路は
-   `GetStaffHeight(row)` → `HeightBelowRefpoint(row)` → `RefpointSpanToGap(row, 下の譜)`。
-   **コーパスの本も fixture も行を必ず最後に置く**ので、**下側の境界を持つ本が 1 つも無い**だけ。
-   ⇒ ⚠️ **「摂動して動かない」は 1 regime では「死んでいる」の証拠にならない。**
-   値が読まれる式まで追ったうえで、**その式が発火する形を作って**から結論すること。
-1. ★ **内容サイズ紙 × ページ端の鎖**（2026-07-27・ユーザーが目視で見つけた）。
+0. ★★ **system スカイラインの DOWN が「全要素の union」でない。いま最優先。**
+   `SkylineBuilder.BuildSystemSkylines` は DOWN profile に**最後の要素の下端**を取るので、
+   譜の下に非 spaceable な行が立つと**譜自身の下線が profile から落ちる**
+   （実測 LYRRV: 音節の下が 4.050000 でなく **3.000000**）。LP の `build_system_skyline` は
+   **全要素を自分の translation で raise して merge** する（`page-layout-problem.cc:1093-1108`）
+   ので、下に何が居ようと StaffSymbol の線は union に居る。
+   - ⚠️ **いまは鎖の種で応急修理してある**（`LyricEngraver.DistributeLooseLines` が
+     アンカー譜自身のスカイラインを system のものへ merge する。`LILYSHARP-OWN` と明示済）。
+     **本丸を直したら、その merge は消すこと**——残すと同じ量のモデルが 2 つになる。
+   - ⚠️ **触ると全 system のスカイラインが動く**ので、**先に対を起票して**から。
+     いまの網は「行の下で 4.050000 が出ること」を**間接的にしか**主張していない。
+1. **LEADING lyrics 行（行が system の先頭・譜の上）は鎖に入っていない**。
+   `LayoutEngine.RowSkylinesOf` が lyrics 行に空を返し、`LeadingLinesOfSystem` が降りる。
+   ⚠️ **「ここで行のインクを返す」では直らない**: LP では行の**verse ごと**が別の Lyrics context
+   ＝別の loose line なので（`:948-990`）、**verse ごとに `LeadingLine` を 1 本**出し、
+   **音節も解から動かす**必要がある（いまは和音記号だけが `ApplySolvedRowPositions` を通る）。
+   踏む fixture も台帳点も無い。
+2. ★ **内容サイズ紙 × ページ端の鎖**（2026-07-27・ユーザーが目視で見つけた）。
    ページ**最後**の block の鎖はページ下端まで走る（`:1004-1013`）が、Lily# は単一ページを
    内容サイズで出す（§3）ので下端に slack が無く、鎖が floor まで圧縮される。実測（2 system
    の本）: 1 行目 **5.500000**／最終行 **4.009200**。⚠️ **chords 行の有無で同じ数字**＝
@@ -265,11 +143,15 @@ room）→ `f040ab7e`（予約・snapshot 13 枚）→ `d6c3da34`（force 0 の 
    があると鎖ごと降りていたので、リードシートだけ 5.5/5.5 に見えていた）。
    LP は実紙面なので最後の block にも slack があり 5.500000 のまま。⇒ **「§3 の紙」と
    「ページ端の鎖」が噛み合っていない**。台帳点は全部 real paper なので**この regime を測る点が無い**。
-2. **system の高さはまだ band を予約する**。row は LP のフレームで置かれ・解かれるように
-   なったが `GetStaffHeight` は `TextRowHeight = 2.5` のままなので、chords 行を持つ system は
-   インクより広く取る。**LP の alignment 最小を高さにも通すのが本体**（＝`SystemHeightOf` では
-   なく**配置側**が落としている量。上の ⚠️ と同じ話）。
-3. **ページ先頭 system の row は鎖で解かれていない**。LP はページ上端から走らせる
+3. **system の高さはまだ band を予約する**。row は LP のフレームで置かれ・解かれるように
+   なったが `GetStaffHeight` は chords 行で `TextRowHeight = 2.5`、lyrics 行で
+   `StaffHeight + (verses−1) * TextRowVerseSpacing` のままなので、インクより広く取る。
+   ⚠️ **`TextRowVerseSpacing`（3.2）は最後に残った平坦な verse step**——鎖に入った行の
+   verse 間は `max(2.8, ink+0.2)` で解かれるのに、band の**高さ**だけ 3.2 刻みで数える。
+   効くのは**行を譜の上に置いた regime だけ**（実測・係数 1）で踏む本が無い。
+   **LP の alignment 最小を高さにも通すのが本体**（＝`SystemHeightOf` ではなく**配置側**が
+   落としている量。上の ⚠️ と同じ話）。⚠️ **鎖が入ったからといって消さないこと**（§5.3）。
+4. **ページ先頭 system の row は鎖で解かれていない**。LP はページ上端から走らせる
    （`:963-988`・`:1004-1013`）。今のコーパスでは**そのばねがどちらの経路でも最小に座る**ので
    同じ数（実測: 両 system とも譜 refpoint の 3.576200 上）だが、**圧縮ページでは割れる**。
 
@@ -337,12 +219,12 @@ system 原点から／譜ごとのスカイラインはその譜の上端から*
 - §2H に残る発明（`MinItemGap` の歌詞 4 箇所・`ownFixedFloor`・`ChordNameEngraver` の
   `Math.Max(2.0, …)` 床＝`LILYSHARP-OWN` と明示済で**実際に効いている**）。
 
-**非ゼロで残っている台帳点は 29 点**（前セッション 28 ＋ 今回開いた `lyrics.row.two-verse.verse-step`。
-**既存の 28 点は 1 つも動いていない**——重なりの修正が既存 regime に触れていないことの確認）:
+**非ゼロで残っている台帳点は 28 点**（前セッション 29 −
+`lyrics.row.two-verse.verse-step`（**exact になった**）。
+**残る 28 点は 1 つも動いていない**——行を鎖へ入れる移植が既存 regime に触れていないことの確認）:
 
 | 点 | 残差 | 正体 |
 |---|---|---|
-| `lyrics.row.two-verse.verse-step` | **+0.400000** | ★★ **第19セッションで開いた＝▶0 の測定器**。行の verse step は `LyricParameters.VerseSpacing` の**素の 3.200000**で、**音符束縛の枝は同じフィールドで 2.800000**（鎖が解き直す）＝§5.2.1②。LP 側は LYRV と**59 行完全一致の恒等**なので**全部 Lily# のもの**。⚠️ **2.8 と書いて閉じない**（LP の 2.8 は解の出力） |
 | `lyrics.hara-kiri.{shown,hidden}-system.staff-to-lyric` | **+0.271310** ×2 | ★ **Stage 1 で 1.500000 が取れて 2 点が一致した**（旧 shown = 1.771310）。残りは**歌詞書体の床**＝`lyrics.two-staff.two-verse.staff-to-lyric` と同じ量。⚠️ **0 にしない** |
 | `lyrics.hara-kiri.declared-only.staves-on-first-page` | **−2**（count） | ★ **宣言あり／なしが一致した**（旧 −4）。残る −2 は**両書に共通のページブレーカー欠陥**で、hara-kiri 島ではない。⚠️ ss の総和には入らない（`unit`） |
 | `lyrics.two-verse.system-gap` | **+0.207200** | ★ **予約も walk になり、打ち消しが解けて上がった**（旧 +0.157200・予測どおり）。残りはフォント量＋小節番号 cap-height 0.046334 |
@@ -617,7 +499,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
 | ★ **和音記号は LP に合わせる＝中心合わせしない**（ユーザー判断・2026-07-25 明示） | 意図的乖離かを問うたうえでの決定。`ChordName` は X-offset も self-alignment も持たない（`define-grobs.scm:837-855`）＝ink 左が列。`dcbf08e9` で移植し `staffless.line-start.chords-vs-staff` が閉じた。⚠️ **和音グリッドは別 grob（`GridChordName`）で LP も中心合わせする**が、中心を取る相手は小節の四角。Lily# に四角は無いので chords-only シートは ChordName 経路のまま＝**「グリッドも直す」で触らない** |
-| ❌ **撤回（2026-07-27・ユーザー判断）: 独立 lyrics 行を「譜のような帯」として置く** — **もう決定ではない。蒸し返し禁止の対象から外れた。** | **旧決定**（2026-07-26）: 独立行は「譜に付く歌詞」ではなく**リードシートの word トラック**なので譜グループとして置く＝**9.600000 対 LP 5.500000＝+4.100000**、台帳には載せず導出形で主張。**撤回の理由**は「間違いだったから」ではなく**射程が二度狭まって残らなかった**から: ①2026-07-27 に「鎖に参加しない」部分が `lyrics.chord-row.between-systems.*` の実測で落ち、②同日 LYRR/LYRRV が **LP 側の恒等を 59 行の機械差分で確定**させ（`\lyricsto` の有無で LP は 1 行も変わらない）、**残っていた「距離」も Lily# 単独の量**だと分かった。⇒ 行は `nonstaff-relatedstaff-spacing` で自分のインクから置かれる（`dee2c045` 系）。**いまの状態**: `lyrics.row.staff-to-lyric` は**台帳点で exact**、`LyricRowIsSpacedLikeTheLyricsContextItIs` が**2 つの綴りが一致すること**（＝LP の恒等の再現）を主張する。⚠️ **帯そのものは残っている**——行は自前の小節線を持ち verse を band 内に積む（`LyricRowBaseline` は `LILYSHARP-OWN` のまま）。**消えたのは「どこに置くか」だけ。** ⚠️ **まだ鎖には入っていない**（`lyrics.row.two-verse.verse-step` +0.400000 が残＝§1 の ▶0）|
+| ❌ **撤回（2026-07-27・ユーザー判断）: 独立 lyrics 行を「譜のような帯」として置く** — **もう決定ではない。蒸し返し禁止の対象から外れた。** | **旧決定**（2026-07-26）: 独立行は「譜に付く歌詞」ではなく**リードシートの word トラック**なので譜グループとして置く＝**9.600000 対 LP 5.500000＝+4.100000**、台帳には載せず導出形で主張。**撤回の理由**は「間違いだったから」ではなく**射程が二度狭まって残らなかった**から: ①2026-07-27 に「鎖に参加しない」部分が `lyrics.chord-row.between-systems.*` の実測で落ち、②同日 LYRR/LYRRV が **LP 側の恒等を 59 行の機械差分で確定**させ（`\lyricsto` の有無で LP は 1 行も変わらない）、**残っていた「距離」も Lily# 単独の量**だと分かった。⇒ 行は `nonstaff-relatedstaff-spacing` で自分のインクから置かれる（`dee2c045` 系）。**いまの状態**: `lyrics.row.staff-to-lyric` は**台帳点で exact**、`LyricRowIsSpacedLikeTheLyricsContextItIs` が**2 つの綴りが一致すること**（＝LP の恒等の再現）を主張する。⚠️ **帯そのものは残っている**——行は自前の小節線を持ち verse を band 内に積む（`LyricRowBaseline` は `LILYSHARP-OWN` のまま）。**消えたのは「どこに置くか」だけ。** ★ **2026-07-28 に鎖にも入った**（§1 の第20セッション）。**帯そのものはまだ残る**が、
+system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の要素**で、帯の上端は解に従う。
+`lyrics.row.two-verse.verse-step` は exact、LYRRV ≡ LYRV|
 | ★ **タブのフレット数字を LP より大きく描くのは意図的乖離**（ユーザー判断・2026-07-24 明示） | LP のタブ数字は小さくて読みにくい。Lily# は `TabConstants.FretFontSize = 2.6`（単数字幅 1.625・高さ 1.7875）＝LP の TabNoteHead 幅 0.990155 の約 1.64 倍。和音で数字が被る問題は**じぐざぐ配置**（`SpacingRules.ApplyTabChordSpacing` ほか）で解いてある。**「LP と違う＝発明だから消す」で削らないこと。** ⚠️ 弦間隔（`TabStringSpace`）は別の話で、そちらは LP の 1.5 に揃える |
 
 ---
@@ -694,6 +578,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   LYRRV の予測は 3 つの数を挙げていたが、照合は**両 book の dump を機械的に行単位で差分**した
   （59 行・完全一致）。3 つだけ見ていたら**4 つ目が動いても「恒等」と書いていた**。
   ⚠️ 目視で「同じに見える」も同じ穴——**差分は道具に取らせる。**
+- ★★ ⚠️ **commit message で「この配置に対応した」と書いたら、その配置を 1 回描く**
+  （2026-07-28・同セッションで回帰を出して直した）。`fe679617` は
+  「音符束縛と行が同じアンカーに共存する譜のためにキーを一般化した」と**名指したうえで、
+  その本を一度も走らせなかった**——実際には別の機構（族の分裂）で割れていて、**2 行が重なって
+  commit された**。全テスト緑・snapshot 不動・台帳不動で、**網は 1 つも鳴らない**。
+  ⇒ ⚠️ **「対応した」と書いた配置は、テストが無いなら最低でも `png --crop` を 1 枚。**
+  名指しは仮説であって観測ではない（§5.3 の「推論せず測る」の、文章版）。
 - ⚠️ **穴を開けるまで、そこに何が溜まっているかは分からない。** 点を開く／種を入れると、
   狙っていた欠陥と**一緒に狙っていなかった欠陥が落ちる**（これまで一度の例外もなく起きた）。
   だから **control（対の基準側）が非ゼロで開くのは正常**——それは持参金であって失敗ではない。
@@ -960,6 +851,16 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 縛ってある。**縦も同じ扱いにする**。⚠️ **padding 4 倍のバグは「複製された側」（単一ページ経路）に
 住んでいた。** 重複は美観ではなく**移植が半分しか当たらない場所**。新しい経路を足すときは
 「既存の経路と同じ答えを出す」テストを同時に足すか、**そもそも足さず統合する**。
+★★ ⚠️ **「1 つの walk」でも種が 2 綴りなら 2 モデル**（2026-07-28）。同じ `AlignmentWalk` を
+使っていても、**どこから歩き始めるか**が別々に書いてあれば同じ欠陥。実例: 鎖は **system
+スカイライン**から、予約は**アンカー譜自身のスカイライン**から歩いていた。**アンカーが system の
+最下端である限り両者は同じ数**なので、何セッションも見えない——下に非 spaceable な行を 1 本
+置いた瞬間に **1.050000** 割れた。⇒ ⚠️ **「同じ関数を呼んでいる」は一致の証拠にならない。
+入力が同じ式から来ているかまで見る。** そして**「今は一致する」の理由が『たまたま最下端だから』
+なら、それは regime であって不変条件ではない**（§5.2.1④ の親戚）。
+⚠️ **frame は「どの要素か」と「どの高さか」を必ず一緒に運ぶ**: 片方だけ per-system にして
+もう片方を score 全体のままにしたら、hara-kiri で**system gap ちょうど**ずれた。
+
 ★★ ⚠️ **最悪の形は「本経路と fallback」**（2026-07-27）。同じ量に精密版と概算版があり、
 概算版が**片方が空のときだけ**使われると、そこへ書いた移植は**コンパイルも通りテストも緑で、
 ただ一度も効かない**。実例: 独立 lyrics 行の描画 extent は `perSystemExtents` に入っていたが、
@@ -1148,6 +1049,15 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⑵ 2 譜の本に `StaffGap()` を使ったら例外（gap が 9/12 と交互）＝**誤った accessor が
   黙って平均されずに済んだ**。⇒ **測定ヘルパには「その読みが意味を持つ前提」を assert させる。**
   緩めると、配線バグが改善に化ける。
+- ★★ ⚠️ **台帳点はリテラルで通せる。恒等の対は通せない**（2026-07-28）。
+  `lyrics.row.two-verse.verse-step` は「2.8 と書いて閉じるな」と `why` に書いてあったが、
+  **その禁止を守らせる網は台帳の側に無い**——点は数を 1 つ留めるだけだから。
+  ⇒ **恒等の対を「Lily# の 2 綴りが一致すること」としてテストに落とす**
+  （`LyricRowIsSolvedLikeTheLyricsContextsItIs`: LYRRV ≡ LYRV を system ごとに）。
+  ★ **利点が 2 つある**: ⑴ 定数を書いた実装は**片方だけ**当たるので落ちる、
+  ⑵ **両側とも自分の書体**なのでフォント量が相殺し、**書体を変えても生き続ける**
+  （台帳点のほうは +0.271310 を抱えたままなので、そちらは書体に依存する）。
+  ⚠️ **regime を assert してから比べる**（この対は圧縮ページでしか何も言わない）。
 - **テストが LP と食い違ったら、テストを実測に合わせる**（再ピン止めしない）
 - **追加したテストが「修正前なら落ちる」ことを実証する**
 - **1点狙い撃ちにせず掃く**（掃引テストは改行位置が動いても空振りしない）

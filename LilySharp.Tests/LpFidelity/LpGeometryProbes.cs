@@ -568,6 +568,50 @@ internal static class LpGeometryProbes
     /// <summary>The note-bound spelling of the same music — book LYRC.</summary>
     internal static string LyricNoteBoundScore => LYRC;
 
+    /// <summary>The note-bound TWO-VERSE spelling — book LYRV, <see cref="LYRRV"/>'s twin.
+    /// LilyPond reads the two identically, so any difference Lily# shows is its own.</summary>
+    internal static string LyricVerseScore => LYRV;
+
+    private static string CoexistScore(string name, string scoreBlock) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 40)).Trim()}} }
+          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
+          lyrics two { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+        {{scoreBlock}}
+        }
+        """;
+
+    /// <summary>
+    /// A note-bound line and an independent ROW under the SAME staff — two Lyrics contexts
+    /// where only the second one's association differs.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ARRANGEMENT THAT SPLITS LILY#'S MODEL IN TWO. Lily# makes a row a staff GROUP of
+    /// its own, so the staff carrying the note-bound line stops being in the last group and
+    /// its syllables move to the inter-group chain while the row is solved below the system —
+    /// two chains, one room. LilyPond has one run for both (page-layout-problem.cc:919-925).
+    /// <see cref="NoteBoundVersesScore"/> is the same music with the second line note-bound
+    /// as well, which is what makes LilyPond's side of the comparison an identity.
+    /// </remarks>
+    internal static readonly string RowUnderNoteBoundScore = CoexistScore(
+        "coexist-row", "  staff melody with lyrics one\n  lyrics two");
+
+    /// <summary>The same music with BOTH lines note-bound — the twin of
+    /// <see cref="RowUnderNoteBoundScore"/>.</summary>
+    internal static readonly string NoteBoundVersesScore = CoexistScore(
+        "coexist-bound", "  staff melody with lyrics one with lyrics two");
+
     /// <summary>Four systems to a page, so page 1 keeps real slack and STRETCHES.</summary>
     private static readonly LayoutOptions FourSystemsPerPage =
         LayoutOptions.Default with
@@ -3375,11 +3419,16 @@ internal static class LpGeometryProbes
         // LARGE/HUGE_STRETCH (page-layout-problem.cc:1257-1338), so the line sits at its ideal
         // whatever the page does and 5.500000 is a basic-distance on both sides. LYRV's regime
         // is the compressed one — the sum of the chain's minimums equals the 12.000000 gap,
-        // bisected in the .ly header — and THERE the row is still not an element of the chain,
-        // so LilyPond pulls its first line down to the ink floor 3.737890 and steps the verses
-        // by 2.800000 while Lily# holds 5.500000 and 3.200000. This entry is what says the
-        // row is placed but not SOLVED. HANDOFF 5.2.1 (4): exact can mean "that regime does
-        // not move", and LYRR is exactly that.
+        // bisected in the .ly header — and THERE the row model had somewhere to be wrong.
+        // HANDOFF 5.2.1 (4): exact can mean "that regime does not move", and LYRR is exactly
+        // that.
+        //
+        // ★ EXACT SINCE 2026-07-28, when the row became an element of the loose chain. ⚠️ THE
+        // ENTRY IS NOT THE TEST OF THAT PORT: a literal 2.8 would pass it, which is what its
+        // `why` spent a session warning about. What holds the port is
+        // LyricRowIsSolvedLikeTheLyricsContextsItIs — Lily# reads LYRRV and LYRV digit for
+        // digit on every system, which is LilyPond's own identity between the two spellings
+        // reproduced, and is font-free where this entry is not.
         new("lyrics.row.two-verse.verse-step", LYRRV, g => g.LyricVerseStep(), FourSystemsPerPageRagged),
 
         // ⚠️ THE SYSTEM GAP ON THIS BOOK WAS A LEDGER ENTRY FOR EXACTLY ONE COMMIT, and what

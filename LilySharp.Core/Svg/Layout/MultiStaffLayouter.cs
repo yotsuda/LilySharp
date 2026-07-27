@@ -355,6 +355,13 @@ internal sealed class MultiStaffLayouter
     /// placement, which is the tab/ossia pair HANDOFF 1 has named and left unmeasured for
     /// several sessions. ⚠️ Widening a gate is not the same as porting it away, and this note
     /// is here so the next reader does not read the condition as LilyPond's.
+    /// <para>
+    /// ⚠️ IT SURVIVED THE LOOSE-CHAIN PORT (2026-07-28) AND THAT IS NOT AN OVERSIGHT. A lyrics
+    /// row below the system is now SOLVED, so this only decides where it is placed BEFORE the
+    /// solve and where the elements around it go — which still has to be the refpoint frame.
+    /// Removing the gate is still the tab/ossia conversion above, and it is still that
+    /// island's commit.
+    /// </para>
     /// </para>
     /// </remarks>
     private static bool IsSpecSpacedRowBoundary(Staff upper, Staff lower)
@@ -367,6 +374,16 @@ internal sealed class MultiStaffLayouter
     /// <summary>Extra band height per additional lyrics verse. MUST match
     /// LyricEngraver's VerseSpacing, or verse 2+ leak out of the reserved
     /// band (they did, at the stale 1.8).</summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
+    /// element of the loose chain (2026-07-28) the step between its verses is SOLVED at
+    /// <c>max(2.8, ink + 0.2)</c> and the band's top follows verse 1, so this only over-states
+    /// the band's HEIGHT — which reaches nothing below the system. It is live in exactly one
+    /// regime, a row placed ABOVE a staff, where it moves the gap with coefficient 1
+    /// (perturbation, 2026-07-27); no fixture and no corpus book has that shape. ⚠️ DO NOT
+    /// DELETE IT ON THE STRENGTH OF THE CHAIN: that is the misdiagnosis HANDOFF 5.3 records.
+    /// The port is to take the band's height from the same walk, which wants the pair first.
+    /// </remarks>
     private const double TextRowVerseSpacing = 3.2;
 
     /// <summary>Gap between two adjacent TEXT rows (chord row above a lyric
@@ -1696,10 +1713,11 @@ internal sealed class MultiStaffLayouter
     /// too, for the case the corpus measures: a CHORDS row leading a system is an element of
     /// the previous block's chain and is translated to the solve
     /// (<c>LyricEngraver.DistributeLooseLines</c>, <c>LayoutEngine.ApplySolvedRowPositions</c>).
-    /// ⚠️ A LYRICS row is still not — it has no ink in any skyline, so nothing can space it
-    /// (HANDOFF 1) — and neither is a row on a page's FIRST system, whose chain LilyPond runs
-    /// from the page top (:963-988). Both keep their laid-out offset and travel with the
-    /// staff above. Named, not hidden.</item>
+    /// ★ SINCE 2026-07-28 an independent LYRICS row standing below a system's last spaceable
+    /// staff is distributed too, verse by verse, in that system's own run. What still keeps
+    /// its laid-out offset: a row on a page's FIRST system, whose chain LilyPond runs from the
+    /// page top (:963-988), and a LEADING lyrics row (LayoutEngine.RowSkylinesOf). Named, not
+    /// hidden.</item>
     /// <item>HIDDEN staves are gone from LilyPond's element list too
     /// (<c>filter_dead_elements</c>, :589).</item>
     /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid. Lily# spaces an ossia at
@@ -1857,7 +1875,9 @@ internal sealed class MultiStaffLayouter
                 // ⚠️ THE SAME FRAME AS THE CHORD ROW: the row's TEXT BASELINE, which is what
                 // RefpointBelowTop returns for a text row and what LilyPond's VerticalAxisGroup
                 // uses. For a multi-verse row that is VERSE 1's baseline, and the verses below
-                // it are merged at the engraver's own step (RowSkylinesAboutBaseline).
+                // it are merged at the step the ALIGNMENT WALKS — the same
+                // nonstaff-nonstaff-spacing the loose chain steps them by
+                // (RowSkylinesAboutBaseline), not a flat constant.
                 if (staff.IsTextRow)
                 {
                     var rowInk = staff.IsLyricsTextRow

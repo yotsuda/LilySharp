@@ -318,6 +318,140 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// An independent lyrics ROW is spaced as the Lyrics contexts it is: Lily# reads the row
+    /// spelling and the note-bound spelling of the SAME music identically, on every system of
+    /// a page whose loose chain is critically compressed.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE PORT'S TEST, NOT THE LEDGER ENTRY. <c>lyrics.row.two-verse.verse-step</c>
+    /// pins one number (2.800000), and a port that wrote that number as a constant would pass
+    /// it — which is what the entry spent a session warning about. What cannot be faked is the
+    /// IDENTITY: books LYRV and LYRRV differ only in whether the two verses are two Lyrics
+    /// contexts or one unassociated row, LilyPond reads them line for line the same (measured
+    /// as whole dumps, all 59 lines), so its side of the comparison is a constant and any
+    /// difference Lily# shows between its two spellings is entirely Lily#'s.
+    /// <para>
+    /// ⚠️ AND IT IS FONT-FREE, which the ledger entries on this book are not: both sides are
+    /// Lily#'s own engraver, so the ~27% lyric-face difference that leaves +0.271310 in the
+    /// ledger cancels identically here. This test therefore keeps working if the lyric face is
+    /// ever changed.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REGIME IS ASSERTED FIRST (HANDOFF 5.0, trap 8): four systems on page 1 and a
+    /// compressed chain. With room to spare every spring sits at its ideal and the two
+    /// spellings would agree at 5.500000 whatever the row model was — the same trap
+    /// <c>lyrics.row.staff-to-lyric</c> (book LYRR, exact since before the port) sits in.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void LyricRowIsSolvedLikeTheLyricsContextsItIs()
+    {
+        var options = LpGeometryProbes.LyricRowOptions;
+        var row = RenderedGeometry.Render(LpGeometryProbes.LYRRV, options);
+        var noteBound = RenderedGeometry.Render(LpGeometryProbes.LyricVerseScore, options);
+
+        // The regime: page 1 holds four systems, so systems 0..2 have a successor and their
+        // chains close on it rather than on the page edge.
+        Assert.Equal(4, noteBound.StavesOnPage(0));
+        Assert.Equal(4, row.StavesOnPage(0));
+
+        // ...and it really is compressed: a chain with slack leaves the first spring at its
+        // ideal, and this one is pulled below it.
+        const double idealAtForceZero = 5.5;   // LyricParameters.RelatedStaffBasicDistance
+        Assert.True(noteBound.LyricBaselineBelowStaff(0, 0) < idealAtForceZero,
+            "the note-bound chain is not compressed, so this pair measures nothing.");
+
+        for (int system = 0; system < 3; system++)
+        {
+            Assert.Equal(
+                noteBound.LyricBaselineBelowStaff(system, 0),
+                row.LyricBaselineBelowStaff(system, 0), 6);
+            Assert.Equal(
+                noteBound.StaffGapAt(system, 0), row.StaffGapAt(system, 0), 6);
+        }
+        Assert.Equal(noteBound.LyricVerseStep(), row.LyricVerseStep(), 6);
+    }
+
+    /// <summary>
+    /// A note-bound line and an independent ROW under the SAME staff are ONE run of the
+    /// alignment: the row is stepped off the line above it exactly as a second verse would be.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — everything non-spaceable between
+    /// two spaceable lines goes into ONE <c>loose_lines</c> vector and is distributed by ONE
+    /// solve. A Lyrics context is non-spaceable whether or not it was <c>\lyricsto</c>
+    /// anything, so it cannot end a run; the two spellings are the same alignment.
+    /// <para>
+    /// ⚠️ THIS IS A REGRESSION TEST WITH A SHIPPED FAILURE BEHIND IT. Lily# makes an
+    /// independent row a staff GROUP of its own, so the staff carrying the note-bound line
+    /// stopped being in the last group, its syllables went to the INTER-GROUP chain, and the
+    /// row was solved below the system — two chains sharing one room. Both landed on the same
+    /// basic-distance and the two lines were drawn ON TOP OF EACH OTHER. Nothing caught it:
+    /// no fixture pairs the two spellings, and every ledger book has one or the other.
+    /// </para>
+    /// <para>
+    /// ★ ASSERTED AS AN IDENTITY rather than as the 2.800000 step (HANDOFF 5.4). The twin
+    /// spells the second line note-bound, so LilyPond reads the two books the same and every
+    /// difference Lily# shows is its own; and because both sides are Lily#'s own engraver the
+    /// lyric face cancels. A port that produced the right STEP by some other route would still
+    /// have to produce the right FIRST distance to pass this.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void RowUnderANoteBoundLine_IsOneRunWithIt_NotASecondChain()
+    {
+        var options = LpGeometryProbes.LyricRowOptions;
+        var row = RenderedGeometry.Render(LpGeometryProbes.RowUnderNoteBoundScore, options);
+        var bound = RenderedGeometry.Render(LpGeometryProbes.NoteBoundVersesScore, options);
+
+        // ⚠️ AN INTERIOR SYSTEM, and the regime is asserted rather than assumed (HANDOFF 5.0,
+        // trap 8). The LAST system of a page closes its chain on the PAGE EDGE, and on a
+        // content-sized sheet that edge has no slack, so the block compresses to its floor —
+        // a named divergence of its own (HANDOFF 1's next-steps list) that has nothing to do
+        // with this one. On an interior system the chain closes on the next system's staff and
+        // both books get the same room.
+        Assert.True(bound.StavesOnPage(0) >= 2,
+            $"the twin put {bound.StavesOnPage(0)} system(s) on page 1, so there is no "
+            + "interior system to read and the page-edge chain would be measured instead.");
+        Assert.True(row.StavesOnPage(0) >= 2,
+            $"the row book put {row.StavesOnPage(0)} system(s) on page 1.");
+
+        double boundFirst = bound.LyricBaselineBelowStaff(0, 0);
+        double rowFirst = row.LyricBaselineBelowStaff(0, 0);
+        double boundStep = bound.LyricVerseStep();
+        double rowStep = row.LyricVerseStep();
+
+        // The failure that shipped: two chains solved into one room put both lines on the
+        // same baseline, so the step collapsed to zero and they printed on top of each other.
+        Assert.True(rowStep > 1e-6,
+            $"the row and the note-bound line are on the same baseline ({rowFirst:F6} below "
+            + "the staff) — they are being solved as two chains into one room.");
+
+        // The step is the run's own spring — the UPPER line's nonstaff-nonstaff-spacing
+        // (page-layout-problem.cc:1315-1332) — and it must be the step the twin gets, because
+        // to LilyPond the two books ARE the same two Lyrics contexts. Compared against the
+        // twin rather than against 2.800000 so that no literal can satisfy it and so that the
+        // lyric face cancels.
+        Assert.Equal(boundStep, rowStep, 6);
+        Assert.True(rowStep >= 2.8 - 1e-9,
+            $"the step is {rowStep:F6}, under the nonstaff-nonstaff minimum 2.800000.");
+
+        // ⚠️ THE FIRST DISTANCE IS *NOT* ASSERTED EQUAL, and the reason is a divergence this
+        // test must not be made to hide: Lily# still gives the row a BAND in the system's
+        // height (MultiStaffLayouter.GetStaffHeight — HANDOFF 1's next-steps list), and here
+        // that band is placed BELOW the note-bound block, so the row book's system is taller,
+        // its inter-system gap larger, and its chain less compressed. MEASURED: gap 15.823600
+        // against the twin's 12.207200, first distance 5.500000 (the ideal) against 4.009200
+        // (the floor). ⚠️ WHEN THE BAND GOES, THIS BECOMES Assert.Equal AND MUST BE MADE ONE —
+        // the two spellings are one alignment in LilyPond and the whole point of the pair is
+        // that Lily# should not be able to tell them apart.
+        Assert.True(rowFirst >= boundFirst - 1e-9,
+            $"the row book put its first line {rowFirst:F6} below the staff, ABOVE the twin's "
+            + $"{boundFirst:F6} — the band can only ever give the chain more room, so this is "
+            + "a different defect from the one this test documents.");
+    }
+
+    /// <summary>
     /// A lyric block BETWEEN two staves of one system is SOLVED into the room those two
     /// staves leave, not laid out at force 0 — asserted as a rule, by perturbing the block
     /// and requiring the answer to follow.

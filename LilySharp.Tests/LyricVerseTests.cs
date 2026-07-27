@@ -312,13 +312,16 @@ score main ""x"" { staff melody with lyrics melody }
                 { VerseNumber = verse },
                 X: 3.0, YUp: -5.0, Width: 1.2);
 
+        // The line key: these syllables are note-bound and share the block below the system,
+        // which is the -1 the chain uses for it.
         var byVerse = LilySharp.Core.Svg.Layout.LyricEngraver.BuildVerseUpSkylines(
             new[] { Syllable("no", 1), Syllable("hi", 2) },
-            new Dictionary<int, int> { [0] = 0 });
+            new Dictionary<int, int> { [0] = 0 },
+            _ => -1);
 
         Assert.Equal(2, byVerse.Count);
-        double verse1 = byVerse[(0, 1)].MaxHeight();
-        double verse2 = byVerse[(0, 2)].MaxHeight();
+        double verse1 = byVerse[(0, -1, 1)].MaxHeight();
+        double verse2 = byVerse[(0, -1, 2)].MaxHeight();
 
         // "hi" has an ascender and "no" does not, so verse 2's ink is the taller of the
         // two. Before this, only verse 1 was built at all and verse 2 had no skyline.

@@ -360,7 +360,10 @@ internal sealed class LyricEngraver
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null,
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd = null,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
-        double lastSpaceableStaffY = 0)
+        double lastSpaceableStaffY = 0,
+        Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
+        Func<int, VerticalSkyline?>? belowSystemAnchorDown = null,
+        Func<int, double?>? belowSystemAnchorY = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -404,6 +407,12 @@ internal sealed class LyricEngraver
             double verseY;
             if (isRow && rowKey >= 0 && staffYByIndex != null && staffYByIndex.TryGetValue(rowKey, out var rowAnchor))
                 // An independent row sits IN its own band at that staff's Y.
+                // ⚠️ THE PRE-CHAIN PLACEMENT ONLY. Where the row stands below a system's last
+                // spaceable staff, DistributeLooseLines overwrites every one of these from the
+                // solve (:1046-1053) and the band follows through SolvedRowBaselines; this is
+                // what a row the chain does not reach keeps — a staffless sheet, a leading row,
+                // a row between two staves. The flat VerseSpacing survives in those regimes and
+                // nowhere else.
                 verseY = rowAnchor + LyricRowBaseline + (verseNumber - 1) * _params.VerseSpacing;
             else if (!isRow && rowKey >= 0 && noteBoundAnchorY != null
                      && noteBoundAnchorY.TryGetValue(rowKey, out var groupBottomY))
@@ -445,7 +454,8 @@ internal sealed class LyricEngraver
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
-                lastSpaceableStaffY);
+                lastSpaceableStaffY, trailingRowStaves, belowSystemAnchorDown,
+                belowSystemAnchorY);
 
         return layouts.ToImmutableArray();
     }
@@ -496,11 +506,19 @@ internal sealed class LyricEngraver
     /// grow for it, so the extra occupant compresses the solve and the lyric line above is
     /// pulled closer to its staff (4.610861 against 5.500000 without).
     /// <para>
-    /// What still runs at force 0, i.e. exactly where it was: a system carrying an OSSIA, and
-    /// a text row that is NOT a leading chords row — a lyrics row (no ink in any skyline yet,
-    /// HANDOFF 1) or a row standing between two spaceable staves, which belongs to
-    /// <c>ComputeBetweenStavesEnd</c>'s span rather than this one. Both builders decline
-    /// those, and for the same reason: the room would be somebody else's.
+    /// ★ AN INDEPENDENT LYRICS ROW BELOW THE SYSTEM IS IN THIS CHAIN SINCE 2026-07-28, verse
+    /// by verse and in the same run as the note-bound block above it — which is what
+    /// <c>lyrics.row.two-verse.verse-step</c> measures. LilyPond has one model for a Lyrics
+    /// context and does not ask whether it was <c>\lyricsto</c> anything, so book LYRRV now
+    /// reads book LYRV digit for digit: that identity, not the step alone, is the port's test.
+    /// <para>
+    /// What still runs at force 0, i.e. exactly where it was: a system carrying an OSSIA; a
+    /// text row standing between two spaceable staves, which belongs to
+    /// <c>ComputeBetweenStavesEnd</c>'s span rather than this one; a CHORDS row below a staff,
+    /// whose <c>nonstaff-*</c> specs are the ChordNames set and which no corpus point measures
+    /// there; and a LEADING lyrics row, which wants one leading line PER VERSE
+    /// (<c>LayoutEngine.RowSkylinesOf</c>). All of them decline for the same reason: the room
+    /// would be somebody else's.
     /// </para>
     /// </para>
     /// </para>
@@ -513,7 +531,10 @@ internal sealed class LyricEngraver
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline,
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
-        double lastSpaceableStaffY)
+        double lastSpaceableStaffY,
+        Func<int, IReadOnlyList<int>>? trailingRowStaves,
+        Func<int, VerticalSkyline?>? belowSystemAnchorDown,
+        Func<int, double?>? belowSystemAnchorY)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -522,16 +543,63 @@ internal sealed class LyricEngraver
         bool IsUpper(LyricItem l) =>
             !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 
+        // Which LINE OF THE ALIGNMENT a syllable stands on. An independent ROW is a line of
+        // its own and so is an upper note-bound block; the bottom-staff note-bound lyrics
+        // share the legacy -1. THE SAME RULE <see cref="CalculateLayouts"/> GROUPS BY, so the
+        // chain's elements are the lines that were drawn rather than a second reading of
+        // "what is a line here".
+        int LineKeyOf(LyricItem l) => l.IsLyricsRow || IsUpper(l) ? l.StaffIndex : -1;
+
         // From a family's anchor BASE down to the anchor staff's reference point — the
         // frame the chain is solved in. Derived from the two distances that already
         // exist rather than restating the half-staff, so it cannot drift from them.
         double anchorOffset =
             staffBottom + BasicDistanceBelowBottomLine - _params.RelatedStaffBasicDistance;
 
-        var newY = new Dictionary<(int Family, int System, int Verse), double>();
+        // The independent rows standing below each system's last spaceable staff, in
+        // alignment order. Cached because the membership test below is asked once per
+        // syllable and a book of this shape has hundreds.
+        var trailingCache = new Dictionary<int, IReadOnlyList<int>>();
+        IReadOnlyList<int> TrailingRows(int system)
+        {
+            if (trailingRowStaves == null) return Array.Empty<int>();
+            if (!trailingCache.TryGetValue(system, out var rows))
+                trailingCache[system] = rows = trailingRowStaves(system);
+            return rows;
+        }
 
-        foreach (var family in layouts.Where(l => !l.Item.IsLyricsRow)
-                                      .GroupBy(l => IsUpper(l.Item) ? l.Item.StaffIndex : -1))
+        bool IsTrailingRow(LyricLayout lay, out int system)
+        {
+            system = -1;
+            return lay.Item.IsLyricsRow
+                && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out system)
+                && TrailingRows(system).Contains(lay.Item.StaffIndex);
+        }
+
+        // ONE PAIR OF DICTIONARIES FOR EVERY LINE, keyed by the alignment line rather than by
+        // the verse alone: a row and a note-bound block can stand under the SAME anchor
+        // (`staff X with lyrics a` + `lyrics b`), and keying by verse would have their verse 1
+        // read each other's ink.
+        var up = BuildVerseUpSkylines(layouts, measureToSystem, LineKeyOf);
+        var down = BuildVerseDownSkylines(layouts, measureToSystem, LineKeyOf);
+
+        var newY = new Dictionary<(int Family, int System, int Line, int Verse), double>();
+
+        // The blocks the alignment walks. ★ AN INDEPENDENT LYRICS ROW STANDING BELOW THE
+        // SYSTEM IS IN THE BLOCK BELOW THE SYSTEM, because that is the run LilyPond collects:
+        // every non-spaceable line between the last spaceable staff and the next one, in
+        // alignment order, into ONE chain (page-layout-problem.cc:919-925, :948-990). It is
+        // NOT a chain of its own — two chains solved into one room would overlap.
+        var families = layouts.Where(l => !l.Item.IsLyricsRow)
+            .GroupBy(l => IsUpper(l.Item) ? l.Item.StaffIndex : -1)
+            .Select(g => (Key: g.Key, Lines: (IReadOnlyList<LyricLayout>)g.ToList()))
+            .ToList();
+        // ...and a book whose only lyrics ARE a row still has that block: the run is made of
+        // rows alone. Without this the loop below never runs and the row keeps its band.
+        if (families.All(f => f.Key != -1) && layouts.Any(l => IsTrailingRow(l, out _)))
+            families.Add((-1, Array.Empty<LyricLayout>()));
+
+        foreach (var family in families)
         {
             int familyKey = family.Key;
             bool isUpperFamily = familyKey >= 0;
@@ -539,21 +607,56 @@ internal sealed class LyricEngraver
                                 && noteBoundAnchorY.TryGetValue(familyKey, out var groupBottomY)
                 ? groupBottomY : lastSpaceableStaffY;
 
-            var up = BuildVerseUpSkylines(family, measureToSystem);
-            var down = BuildVerseDownSkylines(family, measureToSystem);
+            var chainSystems = new SortedSet<int>();
+            foreach (var lay in family.Lines)
+                if (measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
+                    chainSystems.Add(s);
+            if (!isUpperFamily)
+                foreach (var lay in layouts)
+                    if (IsTrailingRow(lay, out int s))
+                        chainSystems.Add(s);
 
-            foreach (int system in family.Select(l => l.Item.MeasureIndex)
-                                         .Where(measureToSystem.ContainsKey)
-                                         .Select(m => measureToSystem[m])
-                                         .Distinct())
+            foreach (int system in chainSystems)
             {
-                var verses = family
-                    .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s) && s == system)
-                    .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v).ToList();
-                if (verses.Count == 0) continue;
+                // THIS block's lines, in the order the alignment walks them: the note-bound
+                // verses that hang under the anchor staff, and then — below the system —
+                // every independent row standing under it, verse by verse. A row's verses are
+                // separate Lyrics contexts to LilyPond (the LYRV/LYRRV pair is exactly that
+                // spelling difference), so they are separate elements here.
+                var elements = new List<(int Line, int Verse)>();
+                var rowFirstElement = new List<(int RowStaff, int Index)>();
+                foreach (int v in family.Lines
+                             .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                         && s == system)
+                             .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                    elements.Add((familyKey, v));
+                if (!isUpperFamily)
+                {
+                    foreach (int rowStaff in TrailingRows(system))
+                    {
+                        int before = elements.Count;
+                        foreach (int v in layouts
+                                     .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
+                                                 && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                                 && s == system)
+                                     .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                            elements.Add((rowStaff, v));
+                        if (elements.Count > before)
+                            rowFirstElement.Add((rowStaff, before));
+                    }
+                }
+                if (elements.Count == 0) continue;
 
-                // The staff this block hangs from: the whole system's silhouette for the
-                // legacy placement, that staff's own for a block between two staves.
+                // The staff this block hangs from — ITS OWN down-skyline, whichever block it
+                // is. LILYPOND-REF: lily/align-interface.cc:272-273 — the walk measures each
+                // element against what has accumulated ABOVE it, and at the first loose line
+                // that is the anchor staff.
+                // ★ THE LEGACY BRANCH USED TO READ THE WHOLE SYSTEM'S SILHOUETTE, which is the
+                // same thing only while the anchor IS the bottom of the system. It stops being
+                // so the moment an independent row stands under it — MEASURED on book LYRRV,
+                // the staff's own bottom line drops out of the system's bottom profile and the
+                // floor came out 1.050000 short. The system skyline remains the FALLBACK for
+                // the case with no anchor to name (a staffless sheet).
                 var anchorDown = isUpperFamily
                     ? noteBoundStaffDownSkyline?.Invoke(system, familyKey)
                     : systemSkylines != null && system < systemSkylines.Count
@@ -571,7 +674,52 @@ internal sealed class LyricEngraver
                 // measured, 10.500000 on the two-staff probe.
                 double skylineToAnchor = isUpperFamily ? 0 : anchorBase + anchorOffset;
 
-                var gaps = new List<LooseLineSpacer.Gap>(verses.Count + 2);
+                // ⚠️ LILYSHARP-OWN: A REPAIR AT THE WRONG SITE, AND IT GOES WHEN THE SILHOUETTE
+                // IS FIXED. LilyPond has no such merge because it has nothing to repair —
+                // build_system_skyline already merges every element raised by its own
+                // translation (page-layout-problem.cc:1093-1108), so a StaffSymbol's lines are
+                // in the union whatever stands under them. The line this departs from is
+                // SkylineBuilder.BuildSystemSkylines, which gives the system's DOWN profile the
+                // bottom edge of its LAST element instead of the union of all of them; put an
+                // independent lyrics row there and the real staff's bottom line is gone. Fixing
+                // it there moves every system skyline in the corpus, so it is its own island —
+                // this merge holds the chain correct until then, and must be deleted with it.
+                //
+                // ★ THE ANCHOR STAFF'S OWN SILHOUETTE IS MERGED INTO THE SYSTEM'S (2026-07-28),
+                // because Lily#'s system skyline DROPS IT when the bottom element of the system
+                // is not a staff. LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 —
+                // build_system_skyline merges EVERY element raised by its own translation, so a
+                // StaffSymbol's lines are in the union whatever stands under them. Put an
+                // independent lyrics row below the staff and Lily#'s union loses the staff's
+                // bottom line: MEASURED on book LYRRV, the profile under the syllables read
+                // 3.000000 (the down-stems) instead of 4.050000 (the bottom line and its half
+                // thickness), and the chain's first spring was floored 1.050000 short.
+                // ⚠️ A MISSING MEMBER RESTORED, NOT A SUBSTITUTION. The system skyline is kept
+                // because it carries what the per-staff one does not — the below-staff SCRIPTS
+                // (LayoutEngine.AugmentSkylinesWithScripts), which is what
+                // test/lyrics-below-marcato exists to hold. Merging is monotone, so on every
+                // book whose bottom element IS the anchor staff this changes nothing, and it
+                // was measured to change nothing: only the row books moved.
+                var ownDown = isUpperFamily ? null : belowSystemAnchorDown?.Invoke(system);
+                if (ownDown is { IsEmpty: false } own && anchorDown is not null)
+                {
+                    // Its frame is that staff's REFERENCE POINT; the system's is the system
+                    // ORIGIN, which is the span between them HIGHER UP — read PER SYSTEM,
+                    // because hara-kiri leaves a different staff as the anchor on different
+                    // systems. MEASURED rather than reasoned: the sign is the one that puts
+                    // the staff's bottom line back at 4.050000 under the origin.
+                    double ownToOrigin =
+                        (belowSystemAnchorY?.Invoke(system) ?? anchorBase) + anchorOffset;
+                    var raised = new VerticalSkyline(VerticalDirection.Down);
+                    raised.Merge(own);
+                    raised.Raise(-ownToOrigin);
+                    var merged = new VerticalSkyline(VerticalDirection.Down);
+                    merged.Merge(anchorDown);
+                    merged.Merge(raised);
+                    anchorDown = merged;
+                }
+
+                var gaps = new List<LooseLineSpacer.Gap>(elements.Count + 2);
 
                 // ⚠️ ONE RUNNING DOWN-SKYLINE, NOT A PAIR PER GAP, because that is what the
                 // alignment is: it walks the group once, and after fixing each distance it
@@ -603,28 +751,32 @@ internal sealed class LyricEngraver
                 // same number by coincidence, never the same walk. It used to be left out;
                 // MEASURED 2026-07-27, passing it moves nothing, which is what makes the
                 // reservation and the chain literally one walk rather than two spellings.
-                double Advance(int verse, double padding, double minimumDistance)
+                double Advance((int Line, int Verse) element, double padding, double minimumDistance)
                 {
-                    up.TryGetValue((system, verse), out var lineUp);
-                    down.TryGetValue((system, verse), out var lineDown);
+                    up.TryGetValue((system, element.Line, element.Verse), out var lineUp);
+                    down.TryGetValue((system, element.Line, element.Verse), out var lineDown);
                     return walk.Advance(lineUp, lineDown, padding, minimumDistance);
                 }
 
-                // Staff to verse 1, in the chain's frame — the anchor staff's REFERENCE
-                // POINT, which is what skylineToAnchor converts to. nonstaff-relatedstaff-spacing
-                // declares no minimum-distance, which read_spacing_spec leaves as no raise.
+                // Staff to the first loose line, in the chain's frame — the anchor staff's
+                // REFERENCE POINT, which is what skylineToAnchor converts to.
+                // nonstaff-relatedstaff-spacing declares no minimum-distance, which
+                // read_spacing_spec leaves as no raise.
                 gaps.Add(new LooseLineSpacer.Gap(
                     LooseLineSpacer.NonStaffRelatedStaff,
-                    Advance(verses[0], SkylineDrop.RelatedStaffPadding,
+                    Advance(elements[0], SkylineDrop.RelatedStaffPadding,
                             LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance)
                         - skylineToAnchor));
 
-                // Verse to verse, whose spec DOES declare one (2.8).
-                for (int i = 1; i < verses.Count; i++)
+                // Line to line, whose spec DOES declare one (2.8). ⚠️ THE SAME SPEC WHETHER
+                // THE STEP IS VERSE-TO-VERSE OR BLOCK-TO-ROW: get_spacing_spec's loose-loose
+                // branch reads the UPPER line's nonstaff-nonstaff-spacing and never asks what
+                // kind of Lyrics context it is (page-layout-problem.cc:1315-1332).
+                for (int i = 1; i < elements.Count; i++)
                 {
                     gaps.Add(new LooseLineSpacer.Gap(
                         LooseLineSpacer.NonStaffNonStaff,
-                        Advance(verses[i], SkylineDrop.NonStaffNonStaffPadding,
+                        Advance(elements[i], SkylineDrop.NonStaffNonStaffPadding,
                                 LooseLineSpacer.NonStaffNonStaff.MinimumDistance)));
                 }
 
@@ -669,9 +821,10 @@ internal sealed class LyricEngraver
                         // LILYPOND-REF: lily/page-layout-problem.cc:1004-1013 — the last
                         // block on a page runs to the page edge, floored by the last
                         // line's own descent (Lily# has no footer).
+                        var last = elements[^1];
                         double descent = 0;
-                        foreach (var lay in family)
-                            if (lay.Item.VerseNumber == verses[^1]
+                        foreach (var lay in layouts)
+                            if (LineKeyOf(lay.Item) == last.Line && lay.Item.VerseNumber == last.Verse
                                 && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s) && s == system)
                                 descent = Math.Max(descent, LyricDownExtent(lay.Item.Text));
                         gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NullNeighbour, descent));
@@ -744,11 +897,25 @@ internal sealed class LyricEngraver
                 // honest spelling of "this chain is not solved yet".
 
                 var positions = LooseLineSpacer.Distribute(gaps, room);
-                for (int i = 0; i < verses.Count; i++)
+                for (int i = 0; i < elements.Count; i++)
                 {
                     // Y-up: a line below the anchor is negative.
-                    newY[(familyKey, system, verses[i])] =
+                    newY[(familyKey, system, elements[i].Line, elements[i].Verse)] =
                         -(anchorBase + anchorOffset + positions[i + 1]);
+                }
+
+                // ...and THIS system's own rows travel with the solve: a row draws its own bar
+                // grid off its StaffLayout.Y, so the band has to follow the syllables or the
+                // two come apart. What is published is the row's REFERENCE POINT — verse 1's
+                // baseline — in page Y-up, which is the frame ApplySolvedRowPositions works in.
+                // LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — distribute_loose_lines
+                // ends by translating every loose line to its solved position.
+                if (rowFirstElement.Count > 0 && system < systems.Length && !systems.IsDefaultOrEmpty)
+                {
+                    double rowAnchorPageY = systems[system].Y - (anchorBase + anchorOffset);
+                    foreach (var (rowStaff, index) in rowFirstElement)
+                        SolvedRowBaselines[(system, rowStaff)] =
+                            rowAnchorPageY - positions[index + 1];
                 }
 
                 // ...and the NEXT system's leading rows, which were solved in the same chain.
@@ -774,10 +941,13 @@ internal sealed class LyricEngraver
         var placed = new List<LyricLayout>(layouts.Count);
         foreach (var lay in layouts)
         {
-            if (!lay.Item.IsLyricsRow
-                && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
+            // A row's family is the one below the system; a note-bound line's is its anchor.
+            // A row the chain did not reach — leading, between two staves, or on a staffless
+            // sheet — simply has no entry and keeps the band it was laid out in.
+            if (measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
                 && newY.TryGetValue(
-                    (IsUpper(lay.Item) ? lay.Item.StaffIndex : -1, s, lay.Item.VerseNumber),
+                    (lay.Item.IsLyricsRow ? -1 : IsUpper(lay.Item) ? lay.Item.StaffIndex : -1,
+                     s, LineKeyOf(lay.Item), lay.Item.VerseNumber),
                     out double y))
             {
                 placed.Add(lay with { YUp = y });
@@ -839,10 +1009,12 @@ internal sealed class LyricEngraver
     /// as whole dumps rather than by eye: books LYRC/LYRR and LYRV/LYRRV print line for line
     /// the same figures (audit/lp-geometry/probes/page-vertical.ly).
     /// <para>
-    /// ⚠️ WHAT LILY# DOES WITH IT IS NOT YET LILYPOND'S. The row is placed by the spec but
-    /// never SOLVED — it is not an element of the loose chain — so this feeds the row's
-    /// reservation and its own skyline, not <see cref="DistributeLooseLines"/>. Closing that
-    /// is HANDOFF 1 item 0, and <c>lyrics.row.two-verse.verse-step</c> is what measures it.
+    /// ★ THIS IS THE CHAIN'S INPUT SINCE 2026-07-28. A row standing below the system's last
+    /// spaceable staff has its verses walked into that system's own run
+    /// (<c>LayoutEngine.LyricReservationBelowSystem</c> for what the page reserves,
+    /// <see cref="DistributeLooseLines"/> for where they land), so the same list serves the
+    /// reservation, the row's own skyline and the solve — one reading of the ink, three
+    /// consumers, which is the shape HANDOFF 5.2.1② asks for.
     /// </para>
     /// <para>
     /// ⚠️ ONE X MODEL. It goes through the same <see cref="CalculateSyllableLayout"/> and
@@ -864,73 +1036,29 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
-    /// How far an independent lyrics ROW's ink reaches below its own band TOP — the depth
-    /// the page has to leave under it.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN: LilyPond has no such quantity, because it has no band. Its loose lines
-    /// are placed by <c>distribute_loose_lines</c> and reserved at their MINIMUM translations
-    /// (page-layout-problem.cc:593-599), so the reach under a Lyrics context is an output of
-    /// the solve. Lily#'s row is not in that chain yet (HANDOFF 1 item 0), so the only figure
-    /// that exists for it is where it is DRAWN — which is what this returns. ⚠️ THE DAY THE
-    /// ROW IS SOLVED THIS IS WRONG, not merely superseded: it would reserve the pre-solve
-    /// stack while the page places the post-solve one.
-    /// <para>
-    /// The two terms are the two this engraver DRAWS the row with
-    /// (<c>rowAnchor + LyricRowBaseline + (verse - 1) * VerseSpacing</c>), read here rather
-    /// than re-derived by the caller, so the reservation and the drawing cannot disagree —
-    /// the failure mode HANDOFF 5.2.1② names, and the one this island already produced once
-    /// (the band's own <c>MultiStaffLayouter.TextRowVerseSpacing</c> is a THIRD spelling of
-    /// the verse step; perturbation on 2026-07-27 showed it reaches nothing HERE, and reaches
-    /// the gap BELOW a row with coefficient 1 — one regime is not evidence of death).
-    /// <para>
-    /// ⚠️ THE DEEPEST POINT OVER EVERY VERSE, not the last verse's — the same rule
-    /// <c>LayoutEngine.LyricReservationBelowSystem</c> states for the note-bound block: a
-    /// verse with a deeper descender than the one under it still owns the band.
-    /// </para>
-    /// <para>
-    /// ⚠️ THIS IS THE DRAWN REACH, AND FOR A ROW THAT IS THE RIGHT FIGURE (LILYSHARP-OWN).
-    /// A note-bound line reserves its ALIGNMENT MINIMUM because LilyPond then solves it into
-    /// the room that leaves; a row is placed as a staff-like band and never solved
-    /// (HANDOFF 3), so where it is drawn is where it is, and reserving a minimum it will not
-    /// be drawn at would reserve the wrong band. The day HANDOFF 3 is revisited, this goes
-    /// with it.
-    /// </para>
-    /// </remarks>
-    internal double RowReachBelowBandTop(
-        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)> verses)
-    {
-        double deepest = 0;
-        for (int v = 0; v < verses.Count; v++)
-        {
-            double baselineBelowTop = LyricRowBaseline + v * _params.VerseSpacing;
-            deepest = Math.Max(deepest, baselineBelowTop + -verses[v].Down.MaxHeight());
-        }
-        return deepest;
-    }
-
-    /// <summary>
     /// One independent lyrics ROW's whole ink, as a single up/down pair about the row's own
     /// REFERENCE POINT — verse 1's baseline, which is where <c>MultiStaffLayouter</c> puts a
     /// text row's refpoint.
     /// </summary>
     /// <remarks>
     /// The frame is the one every entry in the per-staff skyline list is in: the element's
-    /// own reference point (a staff's middle line, a text row's text baseline). Verse k is
-    /// merged <c>k * VerseSpacing</c> lower, the same step
-    /// <see cref="RowReachBelowBandTop"/> and the drawing use.
+    /// own reference point (a staff's middle line, a text row's text baseline).
     /// <para>
-    /// ⚠️ LILYSHARP-OWN: THE VERSE STEP IS THIS ENGRAVER'S FLAT CONSTANT, AND LILYPOND
-    /// COMPUTES THE SAME THING. There a second Lyrics line is spaced from the first by
-    /// <c>nonstaff-nonstaff-spacing</c> (basic-distance 0, minimum-distance 2.8, padding 0.2 —
-    /// ly/engraver-init.ly:653-656) through <c>get_spacing_spec</c>'s loose-loose branch
-    /// (page-layout-problem.cc:1315-1332), so the realized step is
-    /// <c>max(2.8, the two lines' ink + 0.2)</c> and RESPONDS TO THE TEXT. Declaring it flat
-    /// is HANDOFF 5.2's "評価結果を書かない" on the wrong side, and it is written down here
-    /// rather than left implicit: the row is not in the chain yet, so there is no solve to
-    /// read, and this stands in for one. ⚠️ WHEN THE ROW JOINS THE CHAIN THIS READS THE SOLVE
-    /// and the constant goes — the two are not allowed to coexist
-    /// (<c>lyrics.row.two-verse.verse-step</c> is +0.400000 for exactly this reason).
+    /// ★ THE VERSE STEP IS WALKED, NOT DECLARED (2026-07-28). Verse k sits where
+    /// <see cref="AlignmentWalk"/> puts it — <c>nonstaff-nonstaff-spacing</c> (basic-distance
+    /// 0, minimum-distance 2.8, padding 0.2 — ly/engraver-init.ly:653-656) through
+    /// <c>get_spacing_spec</c>'s loose-loose branch (page-layout-problem.cc:1315-1332), whose
+    /// realized step is <c>max(2.8, the two lines' ink + 0.2)</c> and RESPONDS TO THE TEXT.
+    /// This used to be a flat <c>k * VerseSpacing</c>, which was HANDOFF 5.2's
+    /// "評価結果を書かない" on the wrong side: LilyPond computes the step, so Lily# computes it.
+    /// <para>
+    /// ⚠️ THE SAME WALK THE CHAIN TAKES, and it has to be: <c>DistributeLooseLines</c> now
+    /// makes each verse an element of the loose chain with these very specs, and the verse
+    /// spring is rigid in both directions (stretch declared 0, compress derived
+    /// <c>max(0, 0 - 2.8)</c>), so the solve cannot move a step off the number this walk
+    /// produces. A second model of the step would be free to disagree the day either side
+    /// changed — HANDOFF 5.2.1②.
+    /// </para>
     /// </para>
     /// </remarks>
     internal (VerticalSkyline Up, VerticalSkyline Down) RowSkylinesAboutBaseline(
@@ -938,9 +1066,24 @@ internal sealed class LyricEngraver
     {
         var up = new VerticalSkyline(VerticalDirection.Up);
         var down = new VerticalSkyline(VerticalDirection.Down);
+        if (verses.Count == 0) return (up, down);
+
+        // Where each verse sits below verse 1's baseline. Walked first and applied second,
+        // because applying it raises the very skylines the walk reads.
+        var drops = new double[verses.Count];
+        var walk = new AlignmentWalk();
+        walk.Seed(verses[0].Down);
+        for (int v = 1; v < verses.Count; v++)
+        {
+            walk.Advance(verses[v].Up, verses[v].Down,
+                SkylineDrop.NonStaffNonStaffPadding,
+                LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
+            drops[v] = walk.Where;
+        }
+
         for (int v = 0; v < verses.Count; v++)
         {
-            double drop = v * _params.VerseSpacing;
+            double drop = drops[v];
             // Skyline::raise moves a skyline along its OWN direction, so a DOWN skyline is
             // lowered by +drop and an UP skyline by -drop (lily/skyline.cc:512,
             // `y_intercept_ += sky_ * amount`). AlignmentWalk raises its accumulated DOWN
@@ -1121,14 +1264,15 @@ internal sealed class LyricEngraver
     /// and verse 1's against the staff for the spring above it.
     /// </para>
     /// </remarks>
-    internal static Dictionary<(int System, int Verse), VerticalSkyline> BuildVerseUpSkylines(
-        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem)
+    internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseUpSkylines(
+        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
+        Func<LyricItem, int> lineKeyOf)
     {
-        var result = new Dictionary<(int System, int Verse), VerticalSkyline>();
+        var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
         foreach (var lay in layouts)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Verse: lay.Item.VerseNumber);
+            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
             var box = SyllableUpBox(lay);
             if (result.TryGetValue(key, out var sky)) sky.Merge(box);
             else result[key] = box;
@@ -1152,14 +1296,15 @@ internal sealed class LyricEngraver
     /// One merged DOWN-skyline per (system, VERSE) — the descenders the verse below has to
     /// clear. The mirror of <see cref="BuildVerseUpSkylines"/>.
     /// </summary>
-    internal static Dictionary<(int System, int Verse), VerticalSkyline> BuildVerseDownSkylines(
-        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem)
+    internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseDownSkylines(
+        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
+        Func<LyricItem, int> lineKeyOf)
     {
-        var result = new Dictionary<(int System, int Verse), VerticalSkyline>();
+        var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
         foreach (var lay in layouts)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Verse: lay.Item.VerseNumber);
+            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
             var box = SyllableDownBox(lay);
             if (result.TryGetValue(key, out var sky)) sky.Merge(box);
             else result[key] = box;
