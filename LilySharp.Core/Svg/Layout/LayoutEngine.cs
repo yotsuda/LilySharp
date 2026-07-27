@@ -2574,7 +2574,7 @@ internal sealed class LayoutEngine
         }
 
         var engraver = new LyricEngraver(
-            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, measures),
+            parentAlignmentCentre: LyricEngraver.ParentAlignmentCentre(measuresByStaff, measures),
             systemPadding: _options.VerticalSpacing.SystemSystem.Padding);
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
@@ -2588,71 +2588,6 @@ internal sealed class LayoutEngine
             ctx.SolvedRowBaselines[kv.Key] = kv.Value;
 
         return laid;
-    }
-
-    /// <summary>
-    /// Where a syllable's ink centre lands on its column: the column's ALIGNMENT EXTENT
-    /// centre, not the column itself.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176 — the extent is the column's
-    /// note heads / rests, which only the MUSIC knows, so it is resolved here and handed to
-    /// the engraver. Cached per (measure, timing): a bar's syllables all ask the same
-    /// measure.
-    /// <para>
-    /// ⚠️ ONE FACTORY, because a syllable's X is now wanted TWICE — once for the drawn
-    /// layouts and once, before the staves are placed, for the ink the room between two
-    /// staves is walked from (<c>LyricEngraver.NoteBoundBlockSkylines</c>). Two spellings of
-    /// an X is the shape HANDOFF 5.2.1② names.
-    /// </para>
-    /// </remarks>
-    private static Func<int, Fraction, double> BuildParentAlignmentCentre(
-        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
-        ImmutableArray<Measure>? measures)
-    {
-        const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
-        var alignmentCentreCache = new Dictionary<int, Dictionary<Fraction, double>>();
-        return ParentAlignmentCentre;
-
-        double ParentAlignmentCentre(int measureIndex, Fraction timing)
-        {
-            if (!alignmentCentreCache.TryGetValue(measureIndex, out var byTiming))
-            {
-                byTiming = new Dictionary<Fraction, double>();
-                // EVERY staff's bar at this index — a paper column is shared by all of them,
-                // and so is the extent a grob on it aligns to.
-                var barMeasures = new List<Measure>();
-                if (measuresByStaff != null)
-                    foreach (var staffMeasures in measuresByStaff.Values)
-                    {
-                        if (measureIndex < staffMeasures.Length)
-                            barMeasures.Add(staffMeasures[measureIndex]);
-                    }
-                else if (measures is { } scoreMeasures && measureIndex < scoreMeasures.Length)
-                    barMeasures.Add(scoreMeasures[measureIndex]);
-
-                var barTimings = new List<Fraction>();
-                foreach (var barMeasure in barMeasures)
-                {
-                    var onset = Fraction.Zero;
-                    foreach (var item in barMeasure.Items)
-                    {
-                        if (!barTimings.Contains(onset))
-                            barTimings.Add(onset);
-                        onset += item.Duration;
-                    }
-                }
-                barTimings.Sort();
-
-                var centres = SpacingRules.ParentAlignmentCentresPerColumn(barMeasures, barTimings);
-                for (int c = 0; c < barTimings.Count; c++)
-                    byTiming[barTimings[c]] = centres[c];
-                alignmentCentreCache[measureIndex] = byTiming;
-            }
-            // A moment no staff plays on — a lyric row's own finer grid — has an empty
-            // note-column extent, which is exactly when LilyPond takes the placeholder.
-            return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
-        }
     }
 
     /// <summary>
@@ -2731,10 +2666,27 @@ internal sealed class LayoutEngine
         int total = score.StaffGroups.Sum(g => g.StaffCount);
         int lastGroupFirst = total - score.StaffGroups[^1].StaffCount;
         var engraver = BuildBlockEngraver(score);
+
+        // An independent lyrics ROW below the anchor reserves its own drawn band, and it is
+        // a SEPARATE branch rather than another element of the walk below because it is
+        // placed by a different model: a row is a staff-like band (HANDOFF 3), so it is not
+        // solved into the room the walk leaves and its reach is simply where it is drawn.
+        // ⚠️ WITHOUT THIS A TWO-VERSE ROW PRINTED ACROSS THE NEXT SYSTEM'S STAFF. The row's
+        // ink was in NO figure the inter-system spring reads: the page floors that spring
+        // from the system SKYLINES (PageLayouter, Distance()), whose only lyric contribution
+        // is this band, and AugmentSkylinesForPaging carries no lyrics at all. The row's
+        // drawn extent did reach perSystemExtents (EnrichExtentsWithAnnotationProtrusions),
+        // but those are the fallback used only when a skyline comes back empty — HANDOFF
+        // 5.2.1② with the port landed on the copy that does not bind.
+        // MEASURED by perturbation 2026-07-27: moving the drawn verse step to 9.2 left the
+        // system gap at 12.000000 to six digits, and so did moving the band's height.
+        double rowBand = RowReservationBelowSystem(
+            score, measureLayouts, engraver, groups, anchorStaff, startMeasure, endMeasure);
+
         var lines = engraver.NoteBoundBlockSkylines(
             score.Lyrics, measureLayouts, startMeasure, endMeasure, lastGroupFirst, total);
         if (lines.Count == 0)
-            return 0;
+            return rowBand;
 
         var walk = new AlignmentWalk();
         walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
@@ -2766,18 +2718,74 @@ internal sealed class LayoutEngine
         // (SkylineBuilder.BuildSystemSkylines), and this figure is max-ed into the same
         // downExtent. Reading the profile whole would count the staff twice; what the page
         // needs here is the BLOCK's reach.
-        return Math.Max(0, deepest - anchorStaff.Height / 2.0);
+        return Math.Max(rowBand, deepest - anchorStaff.Height / 2.0);
+    }
+
+    /// <summary>
+    /// What an independent lyrics ROW hanging below the system reserves, measured below the
+    /// anchor staff's BOTTOM LINE — the frame <see cref="LyricReservationBelowSystem"/>
+    /// returns in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, AND IT DEVIATES FROM THE SOURCE IN TWO NAMED WAYS.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
+    /// handed <c>minimum_offsets_with_min_dist</c>, so every loose line enters the system's
+    /// reserved profile AT ITS MINIMUM TRANSLATION, and the position it is finally drawn at
+    /// arrives later out of <c>distribute_loose_lines</c>. ⑴ This reserves the DRAWN reach
+    /// instead, because Lily#'s row is not in that chain (HANDOFF 1 item 0) and therefore has
+    /// no minimum to prefer — where it is drawn is where it is. ⑵ The
+    /// <c>row.Y &gt;= anchorStaff.Y</c> test has no counterpart at all: LilyPond collects
+    /// loose lines by walking the alignment in order, not by comparing positions. Both go the
+    /// day the row joins the chain, and neither is allowed to outlive it.
+    /// <para>
+    /// ⚠️ ONLY A ROW BELOW THE ANCHOR. A row ABOVE the system's first spaceable staff is a
+    /// LEADING line and belongs to the previous block's loose chain
+    /// (<c>LeadingLinesOfSystem</c>); reserving it here as well would count it twice, the
+    /// same trap the note-bound branch documents for a block between two groups.
+    /// </para>
+    /// <para>
+    /// Everything positional is read from the PLACED layout — the row's band top and the
+    /// anchor's bottom line — and everything about the ink from the engraver, so no term of
+    /// the band's placement is re-derived here. That matters more than usual on this path:
+    /// the placement arithmetic (<c>MultiStaffLayouter</c>'s inter-group gap) is exactly what
+    /// a reservation is not allowed to guess at.
+    /// </para>
+    /// </remarks>
+    private static double RowReservationBelowSystem(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        LyricEngraver engraver, ImmutableArray<StaffGroupLayout> groups,
+        StaffLayout anchorStaff, int startMeasure, int endMeasure)
+    {
+        var rowStaves = new HashSet<int>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            if (st.IsLyricsTextRow) rowStaves.Add(idx);
+        if (rowStaves.Count == 0) return 0;
+
+        // Y-up: a StaffLayout's Y is its TOP, so the anchor's bottom line is a staff height
+        // under it and a row placed BELOW the anchor has the smaller Y.
+        double anchorBottomLine = anchorStaff.Y - anchorStaff.Height;
+        double reservation = 0;
+        foreach (var g in groups)
+        {
+            foreach (var row in g.Staves)
+            {
+                if (row.IsHidden || !rowStaves.Contains(row.StaffIndex)) continue;
+                if (row.Y >= anchorStaff.Y) continue;
+
+                var verses = engraver.RowBlockSkylines(
+                    score.Lyrics, measureLayouts, startMeasure, endMeasure, row.StaffIndex);
+                if (verses.Count == 0) continue;
+
+                double inkBottom = row.Y - engraver.RowReachBelowBandTop(verses);
+                reservation = Math.Max(reservation, anchorBottomLine - inkBottom);
+            }
+        }
+        return Math.Max(0, reservation);
     }
 
     /// <summary>A lyric engraver configured for geometry only — one X model, no layout.</summary>
     private static LyricEngraver BuildBlockEngraver(MultiStaffScore score)
-    {
-        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
-        foreach (var (_, st, idx) in score.EnumerateStaves())
-            measuresByStaff[idx] = st.PrimaryVoice.Measures;
-        return new LyricEngraver(
-            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, null));
-    }
+        => LyricEngraver.ForGeometry(score);
 
     private MultiStaffLayouter.LooseLinesBetween? BuildLooseLinesBetween(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,

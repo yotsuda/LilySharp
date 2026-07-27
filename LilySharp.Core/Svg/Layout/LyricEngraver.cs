@@ -298,18 +298,27 @@ internal sealed class LyricEngraver
     /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
     /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
     /// <remarks>
-    /// LILYSHARP-OWN: an independent row is a lead sheet's word TRACK rather than a staff's
-    /// lyrics, and it is laid out as one — a staff-like band with its own bar lines, spaced
-    /// from its neighbour as a staff group. This is verse 1's baseline inside that band: the
-    /// text block (ascender 2.11 + descender 0.9) centred in the 4.0 ss height, so the words
-    /// sit where the staff lines would be, "a staff with the lines removed".
+    /// LILYSHARP-OWN: a row's band is still Lily#'s — its own bar lines run a staff height and
+    /// its verses stack inside it — and this is verse 1's baseline within it: the text block
+    /// (ascender 2.11 + descender 0.9) centred in the 4.0 ss height, so the words sit where
+    /// the staff lines would be, "a staff with the lines removed".
     /// <para>
-    /// ⚠️ NOT the branch a note-bound lyric line takes. <c>staff mel with lyrics words</c>
+    /// ⚠️ WHAT THIS IS NO LONGER. Until 2026-07-27 it also decided how FAR the row sat from
+    /// its staff: the band was placed as a staff group, 9.600000 down against LilyPond's
+    /// 5.500000, a DECIDED divergence (HANDOFF 3). That decision was revisited — the row is
+    /// spaced by <c>nonstaff-relatedstaff-spacing</c> off its own ink now, and the distance is
+    /// a ledger point (<c>lyrics.row.staff-to-lyric</c>, exact). What survives here is only
+    /// the offset of the baseline inside the band, which is also the row's REFERENCE POINT
+    /// (<c>MultiStaffLayouter.RefpointBelowTop</c>), so moving it moves where the spec
+    /// measures to.
+    /// </para>
+    /// <para>
+    /// ⚠️ STILL NOT the branch a note-bound lyric line takes. <c>staff mel with lyrics words</c>
     /// carries LilyPond's <see cref="LyricParameters.RelatedStaffBasicDistance"/> and does
     /// not read this at all — MEASURED, by perturbation: moving this constant moves the row
-    /// spelling with coefficient 1 and the note-bound spelling by ZERO. The two are 5.600000
-    /// apart on the same music, which is a DECIDED divergence from LilyPond (HANDOFF 3) and
-    /// is asserted by <c>LyricRowIsSpacedAsAStaffLikeBand</c>, not by a ledger point.
+    /// spelling with coefficient 1 and the note-bound spelling by ZERO. That the two now land
+    /// on the same 5.500000 anyway is LilyPond's own identity reproduced, asserted by
+    /// <c>LyricRowIsSpacedLikeTheLyricsContextItIs</c>.
     /// </para>
     /// </remarks>
     internal const double LyricRowBaseline = 2.6;
@@ -807,15 +816,241 @@ internal sealed class LyricEngraver
         IReadOnlyList<LyricItem> lyrics, IReadOnlyList<MeasureLayout> measureLayouts,
         int startMeasure, int endMeasure, int firstStaffIndex, int endStaffIndex)
     {
-        var result = new List<(VerticalSkyline, VerticalSkyline)>();
-        if (lyrics.Count == 0) return result;
-
         var inBlock = new List<LyricItem>();
         foreach (var l in lyrics)
             if (!l.IsLyricsRow
                 && l.StaffIndex >= firstStaffIndex && l.StaffIndex < endStaffIndex
                 && l.MeasureIndex >= startMeasure && l.MeasureIndex < endMeasure)
                 inBlock.Add(l);
+        return BlockSkylines(inBlock, measureLayouts);
+    }
+
+    /// <summary>
+    /// The verses of ONE independent lyrics ROW, in the same self-relative form
+    /// <see cref="NoteBoundBlockSkylines"/> returns — its real syllable ink, per verse, for
+    /// the measures of one system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 and :948-990 — a Lyrics context is
+    /// pushed onto <c>loose_lines</c> and spaced by its own skyline wherever it sits, and
+    /// <c>\lyricsto</c> is not consulted: association decides which COLUMN a syllable stands
+    /// on, not what holds the line. So a row's ink is collected exactly as
+    /// <see cref="NoteBoundBlockSkylines"/>'s is, and only the staff index differs. MEASURED,
+    /// as whole dumps rather than by eye: books LYRC/LYRR and LYRV/LYRRV print line for line
+    /// the same figures (audit/lp-geometry/probes/page-vertical.ly).
+    /// <para>
+    /// ⚠️ WHAT LILY# DOES WITH IT IS NOT YET LILYPOND'S. The row is placed by the spec but
+    /// never SOLVED — it is not an element of the loose chain — so this feeds the row's
+    /// reservation and its own skyline, not <see cref="DistributeLooseLines"/>. Closing that
+    /// is HANDOFF 1 item 0, and <c>lyrics.row.two-verse.verse-step</c> is what measures it.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE X MODEL. It goes through the same <see cref="CalculateSyllableLayout"/> and
+    /// <see cref="ResolveOverlaps"/> as every other reading of syllable ink, for the reason
+    /// spelled out on <see cref="NoteBoundBlockSkylines"/>: a second X model here would be
+    /// HANDOFF 5.2.1② in the place that has already cost this island a session.
+    /// </para>
+    /// </remarks>
+    internal List<(VerticalSkyline Up, VerticalSkyline Down)> RowBlockSkylines(
+        IReadOnlyList<LyricItem> lyrics, IReadOnlyList<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure, int rowStaffIndex)
+    {
+        var inBlock = new List<LyricItem>();
+        foreach (var l in lyrics)
+            if (l.IsLyricsRow && l.StaffIndex == rowStaffIndex
+                && l.MeasureIndex >= startMeasure && l.MeasureIndex < endMeasure)
+                inBlock.Add(l);
+        return BlockSkylines(inBlock, measureLayouts);
+    }
+
+    /// <summary>
+    /// How far an independent lyrics ROW's ink reaches below its own band TOP — the depth
+    /// the page has to leave under it.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no such quantity, because it has no band. Its loose lines
+    /// are placed by <c>distribute_loose_lines</c> and reserved at their MINIMUM translations
+    /// (page-layout-problem.cc:593-599), so the reach under a Lyrics context is an output of
+    /// the solve. Lily#'s row is not in that chain yet (HANDOFF 1 item 0), so the only figure
+    /// that exists for it is where it is DRAWN — which is what this returns. ⚠️ THE DAY THE
+    /// ROW IS SOLVED THIS IS WRONG, not merely superseded: it would reserve the pre-solve
+    /// stack while the page places the post-solve one.
+    /// <para>
+    /// The two terms are the two this engraver DRAWS the row with
+    /// (<c>rowAnchor + LyricRowBaseline + (verse - 1) * VerseSpacing</c>), read here rather
+    /// than re-derived by the caller, so the reservation and the drawing cannot disagree —
+    /// the failure mode HANDOFF 5.2.1② names, and the one this island already produced once
+    /// (the band's own <c>MultiStaffLayouter.TextRowVerseSpacing</c> is a THIRD spelling of
+    /// the verse step; perturbation on 2026-07-27 showed it reaches nothing HERE, and reaches
+    /// the gap BELOW a row with coefficient 1 — one regime is not evidence of death).
+    /// <para>
+    /// ⚠️ THE DEEPEST POINT OVER EVERY VERSE, not the last verse's — the same rule
+    /// <c>LayoutEngine.LyricReservationBelowSystem</c> states for the note-bound block: a
+    /// verse with a deeper descender than the one under it still owns the band.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS IS THE DRAWN REACH, AND FOR A ROW THAT IS THE RIGHT FIGURE (LILYSHARP-OWN).
+    /// A note-bound line reserves its ALIGNMENT MINIMUM because LilyPond then solves it into
+    /// the room that leaves; a row is placed as a staff-like band and never solved
+    /// (HANDOFF 3), so where it is drawn is where it is, and reserving a minimum it will not
+    /// be drawn at would reserve the wrong band. The day HANDOFF 3 is revisited, this goes
+    /// with it.
+    /// </para>
+    /// </remarks>
+    internal double RowReachBelowBandTop(
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)> verses)
+    {
+        double deepest = 0;
+        for (int v = 0; v < verses.Count; v++)
+        {
+            double baselineBelowTop = LyricRowBaseline + v * _params.VerseSpacing;
+            deepest = Math.Max(deepest, baselineBelowTop + -verses[v].Down.MaxHeight());
+        }
+        return deepest;
+    }
+
+    /// <summary>
+    /// One independent lyrics ROW's whole ink, as a single up/down pair about the row's own
+    /// REFERENCE POINT — verse 1's baseline, which is where <c>MultiStaffLayouter</c> puts a
+    /// text row's refpoint.
+    /// </summary>
+    /// <remarks>
+    /// The frame is the one every entry in the per-staff skyline list is in: the element's
+    /// own reference point (a staff's middle line, a text row's text baseline). Verse k is
+    /// merged <c>k * VerseSpacing</c> lower, the same step
+    /// <see cref="RowReachBelowBandTop"/> and the drawing use.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE VERSE STEP IS THIS ENGRAVER'S FLAT CONSTANT, AND LILYPOND
+    /// COMPUTES THE SAME THING. There a second Lyrics line is spaced from the first by
+    /// <c>nonstaff-nonstaff-spacing</c> (basic-distance 0, minimum-distance 2.8, padding 0.2 —
+    /// ly/engraver-init.ly:653-656) through <c>get_spacing_spec</c>'s loose-loose branch
+    /// (page-layout-problem.cc:1315-1332), so the realized step is
+    /// <c>max(2.8, the two lines' ink + 0.2)</c> and RESPONDS TO THE TEXT. Declaring it flat
+    /// is HANDOFF 5.2's "評価結果を書かない" on the wrong side, and it is written down here
+    /// rather than left implicit: the row is not in the chain yet, so there is no solve to
+    /// read, and this stands in for one. ⚠️ WHEN THE ROW JOINS THE CHAIN THIS READS THE SOLVE
+    /// and the constant goes — the two are not allowed to coexist
+    /// (<c>lyrics.row.two-verse.verse-step</c> is +0.400000 for exactly this reason).
+    /// </para>
+    /// </remarks>
+    internal (VerticalSkyline Up, VerticalSkyline Down) RowSkylinesAboutBaseline(
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)> verses)
+    {
+        var up = new VerticalSkyline(VerticalDirection.Up);
+        var down = new VerticalSkyline(VerticalDirection.Down);
+        for (int v = 0; v < verses.Count; v++)
+        {
+            double drop = v * _params.VerseSpacing;
+            // Skyline::raise moves a skyline along its OWN direction, so a DOWN skyline is
+            // lowered by +drop and an UP skyline by -drop (lily/skyline.cc:512,
+            // `y_intercept_ += sky_ * amount`). AlignmentWalk raises its accumulated DOWN
+            // profile the same way.
+            var vUp = verses[v].Up;
+            var vDown = verses[v].Down;
+            if (drop != 0)
+            {
+                vUp.Raise(-drop);
+                vDown.Raise(drop);
+            }
+            up.Merge(vUp);
+            down.Merge(vDown);
+        }
+        return (up, down);
+    }
+
+    /// <summary>
+    /// An engraver configured for GEOMETRY ONLY — one X model, no layout — for the callers
+    /// that need a syllable's ink before anything has been placed.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE CONSTRUCTION SITE. Both the page's reservation (<c>LayoutEngine</c>) and the
+    /// alignment's own skylines (<c>MultiStaffLayouter</c>) need this, and two of them would
+    /// be two X models — the shape HANDOFF 5.2.1② names, in the place that has already cost
+    /// this island a session.
+    /// </remarks>
+    internal static LyricEngraver ForGeometry(MultiStaffScore score)
+    {
+        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            measuresByStaff[idx] = st.PrimaryVoice.Measures;
+        return new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre(measuresByStaff, null));
+    }
+
+    /// <summary>
+    /// Where a syllable's ink centre lands on its column: the column's ALIGNMENT EXTENT
+    /// centre, not the column itself.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176 — the extent is the column's
+    /// note heads / rests, which only the MUSIC knows, so it is resolved from the model and
+    /// handed to the engraver. Cached per (measure, timing): a bar's syllables all ask the
+    /// same measure.
+    /// <para>
+    /// ⚠️ ONE FACTORY, because a syllable's X is wanted several times over — for the drawn
+    /// layouts, for the ink the room between two staves is walked from
+    /// (<see cref="NoteBoundBlockSkylines"/>), and for a ROW's own skyline
+    /// (<see cref="RowBlockSkylines"/>). Two spellings of an X is the shape HANDOFF 5.2.1②
+    /// names. It lives here rather than in <c>LayoutEngine</c>, where it used to be, because
+    /// the engraver is the thing that has to agree with itself.
+    /// </para>
+    /// </remarks>
+    internal static Func<int, Fraction, double> ParentAlignmentCentre(
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        ImmutableArray<Measure>? measures)
+    {
+        const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
+        var alignmentCentreCache = new Dictionary<int, Dictionary<Fraction, double>>();
+        return Centre;
+
+        double Centre(int measureIndex, Fraction timing)
+        {
+            if (!alignmentCentreCache.TryGetValue(measureIndex, out var byTiming))
+            {
+                byTiming = new Dictionary<Fraction, double>();
+                // EVERY staff's bar at this index — a paper column is shared by all of them,
+                // and so is the extent a grob on it aligns to.
+                var barMeasures = new List<Measure>();
+                if (measuresByStaff != null)
+                    foreach (var staffMeasures in measuresByStaff.Values)
+                    {
+                        if (measureIndex < staffMeasures.Length)
+                            barMeasures.Add(staffMeasures[measureIndex]);
+                    }
+                else if (measures is { } scoreMeasures && measureIndex < scoreMeasures.Length)
+                    barMeasures.Add(scoreMeasures[measureIndex]);
+
+                var barTimings = new List<Fraction>();
+                foreach (var barMeasure in barMeasures)
+                {
+                    var onset = Fraction.Zero;
+                    foreach (var item in barMeasure.Items)
+                    {
+                        if (!barTimings.Contains(onset))
+                            barTimings.Add(onset);
+                        onset += item.Duration;
+                    }
+                }
+                barTimings.Sort();
+
+                var centres = SpacingRules.ParentAlignmentCentresPerColumn(barMeasures, barTimings);
+                for (int c = 0; c < barTimings.Count; c++)
+                    byTiming[barTimings[c]] = centres[c];
+                alignmentCentreCache[measureIndex] = byTiming;
+            }
+            // A moment no staff plays on — a lyric row's own finer grid — has an empty
+            // note-column extent, which is exactly when LilyPond takes the placeholder.
+            return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
+        }
+    }
+
+    /// <summary>
+    /// One self-relative up/down skyline pair per verse, in verse order, for a set of
+    /// syllables already selected by the caller.
+    /// </summary>
+    private List<(VerticalSkyline Up, VerticalSkyline Down)> BlockSkylines(
+        List<LyricItem> inBlock, IReadOnlyList<MeasureLayout> measureLayouts)
+    {
+        var result = new List<(VerticalSkyline, VerticalSkyline)>();
         if (inBlock.Count == 0) return result;
 
         int maxVerse = 0;

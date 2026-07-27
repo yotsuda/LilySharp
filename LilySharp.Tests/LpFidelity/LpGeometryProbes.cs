@@ -470,9 +470,10 @@ internal static class LpGeometryProbes
     /// books identically (a Lyrics context is a Lyrics context; association changes which
     /// column a syllable stands on, not what the vertical spacing spec is), so its side of
     /// this comparison is an identity and any difference Lily# shows between the two is its
-    /// own. Consumed by
-    /// <see cref="LpGeometryLedgerTests.LyricRowIsSpacedAsAStaffLikeBand"/> rather than by a
-    /// ledger entry — see the remark at the <c>lyrics.*</c> probes for why.
+    /// own. Carried as <c>lyrics.row.staff-to-lyric</c> since 2026-07-27, when the band model
+    /// this book was built to measure was retired and the distance stopped being a decision;
+    /// <see cref="LpGeometryLedgerTests.LyricRowIsSpacedLikeTheLyricsContextItIs"/> asserts
+    /// the identity itself, which no single entry can.
     /// </remarks>
     internal static readonly string LYRR =
         LyricRowPageScore("LYRR", "  staff melody\n  lyrics words");
@@ -516,6 +517,50 @@ internal static class LpGeometryProbes
 
     /// <summary>The two-verse book — the mirror of book LYRV.</summary>
     private static readonly string LYRV = LyricVersePageScore("LYRV");
+
+    /// <summary>
+    /// <see cref="LYRV"/>'s music with the two verses spelled as ONE independent ROW — the
+    /// mirror of book LYRRV.
+    /// </summary>
+    /// <remarks>
+    /// The same 960 syllables over the same 120 bars on the same paper; only the CONTAINER
+    /// differs, and that is the measurement. A row auto-wraps a block longer than the section
+    /// into stacked verses (<c>LyricsCollector.CollectRow</c>), so 240 written bars against
+    /// 120 of music is two verses standing on the same columns LilyPond's two Lyrics contexts
+    /// stand on.
+    /// <para>
+    /// ⚠️ WHY THIS BOOK AND NOT <see cref="LYRR"/>, which asks the same question: LYRR asks it
+    /// where nothing binds. With ONE loose line the springs on its non-own side carry
+    /// LARGE_STRETCH/HUGE_STRETCH (page-layout-problem.cc:1257-1338), so the line sits at its
+    /// ideal whatever the page does, and Lily# reads LYRC and LYRR identically on every
+    /// quantity except the decided band distance — the pair measures the DECISION and nothing
+    /// else. LYRV's regime is the one where the loose chain is critically compressed (sum of
+    /// minimums = the 12.000000 system gap, bisected in the .ly probe's header), so there
+    /// every term is load bearing. This is that regime with the row model in it.
+    /// </para>
+    /// </remarks>
+    private static string LyricRowVersePageScore(string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+          lyrics words { {{string.Concat(Enumerable.Repeat("no no no no | ", 240)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+          lyrics words
+        }
+        """;
+
+    /// <summary>The two-verse ROW book — the mirror of book LYRRV.</summary>
+    internal static readonly string LYRRV = LyricRowVersePageScore("LYRRV");
 
     /// <summary>The paper books LYRC/LYRR/LYRV are measured on.</summary>
     internal static LayoutOptions LyricRowOptions => FourSystemsPerPageRagged;
@@ -3310,12 +3355,51 @@ internal static class LpGeometryProbes
         // can never compress. Font-free on both sides: 12.000000 is a basic-distance.
         new("lyrics.two-verse.system-gap", LYRV, g => g.StaffGap(), FourSystemsPerPageRagged),
 
-        // ⚠️ The same line spelled as an independent ROW is NOT a ledger point, and the
-        // measurement that says why is in LyricRowIsSpacedAsAStaffLikeBand (HANDOFF 3): the
-        // row is a deliberate Lily# object, so carrying its +5.600000 here would put a
-        // decided divergence into the headline total — the same reason page.height is not
-        // carried. Books LYRC/LYRR stay in the .ly probe because the LilyPond side of that
-        // comparison is an identity and that is the evidence the decision rests on.
+        // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
+        // stopped being a decision. Lily# used to place an independent lyrics row as a
+        // staff-like band 9.600000 down (HANDOFF 3, a decided divergence deliberately kept out
+        // of this ledger); the band was retired and the row now takes LilyPond's
+        // nonstaff-relatedstaff-spacing off its own ink. Book LYRR is book LYRC with the
+        // Lyrics context unassociated, and LilyPond reads the two IDENTICALLY — so this entry
+        // and lyrics.natural.staff-to-lyric are one LilyPond number reached two ways, and both
+        // being exact is that identity reproduced. LyricRowIsSpacedLikeTheLyricsContextItIs
+        // asserts the identity itself, which no single entry can.
+        new("lyrics.row.staff-to-lyric", LYRR, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
+
+        // ...and the same line in the regime where the chain BINDS, which is book LYRRV —
+        // LYRV with `\lyricsto` struck from both Lyrics contexts, whose dump is LINE FOR LINE
+        // IDENTICAL to LYRV's (measured 2026-07-27, all 59 lines).
+        //
+        // ⚠️ WHY THIS BOOK IS NEEDED WHEN LYRR ABOVE IS EXACT. LYRR asks the question where
+        // nothing binds: with one loose line the springs on its non-own side carry
+        // LARGE/HUGE_STRETCH (page-layout-problem.cc:1257-1338), so the line sits at its ideal
+        // whatever the page does and 5.500000 is a basic-distance on both sides. LYRV's regime
+        // is the compressed one — the sum of the chain's minimums equals the 12.000000 gap,
+        // bisected in the .ly header — and THERE the row is still not an element of the chain,
+        // so LilyPond pulls its first line down to the ink floor 3.737890 and steps the verses
+        // by 2.800000 while Lily# holds 5.500000 and 3.200000. This entry is what says the
+        // row is placed but not SOLVED. HANDOFF 5.2.1 (4): exact can mean "that regime does
+        // not move", and LYRR is exactly that.
+        new("lyrics.row.two-verse.verse-step", LYRRV, g => g.LyricVerseStep(), FourSystemsPerPageRagged),
+
+        // ⚠️ THE SYSTEM GAP ON THIS BOOK WAS A LEDGER ENTRY FOR EXACTLY ONE COMMIT, and what
+        // it was for is worth keeping even though the number is not. It read 12.000000 —
+        // EXACT, matching LilyPond — on a page whose second verse was drawn 0.800000 BELOW the
+        // next system's staff refpoint, because the row's ink reached no figure the
+        // inter-system spring reads. That is HANDOFF 5.2.1 (4) at its sharpest: the quantity
+        // was not right, it was BLIND. It reads 14.098000 now, and the excess is the row not
+        // being in the chain: LilyPond squeezes both verses into the 12.000000 it already has,
+        // Lily# places them at their ideals and pushes the systems apart to fit. That is the
+        // same shape lyrics.two-verse.system-gap carried at +4.060000 before ITS chain landed,
+        // and it closes the same way — so it is not carried here, where it would read as a
+        // quantity of its own rather than as the one thing lyrics.row.two-verse.verse-step
+        // already says. What IS asserted is the invariant that must hold either way, in
+        // LyricRowReservesItsInkAgainstTheNextSystem.
+
+        // ...and the regime guard the verse step needs (HANDOFF 5.0, trap 8): it is read by
+        // index off page 1, and an index means the system it is supposed to mean only while
+        // that page holds the four systems LilyPond puts there.
+        new("lyrics.row.two-verse.staves-on-first-page", LYRRV, g => g.StavesOnPage(0), FourSystemsPerPageRagged),
 
         // The guard the two above cannot give, and it is not decorative: with 40 bars instead
         // of 120 LilyPond re-broke the music onto one page, ragged-last-bottom left it

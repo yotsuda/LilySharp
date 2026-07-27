@@ -220,9 +220,8 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
-    /// An independent lyrics ROW is spaced as a staff-like BAND, which is 5.600000 further
-    /// from the staff than LilyPond puts a Lyrics line — a DECIDED divergence (HANDOFF 3),
-    /// asserted here because it is deliberately not in the ledger.
+    /// An independent lyrics ROW is spaced like the Lyrics context it is — the SAME distance
+    /// from its staff as the note-bound spelling of the same line.
     /// </summary>
     /// <remarks>
     /// MEASURED (audit/lp-geometry/probes/page-vertical.ly, books LYRC and LYRR): LilyPond
@@ -232,22 +231,31 @@ public class LpGeometryLedgerTests
     /// what spring holds the line (ly/engraver-init.ly:648-652). So LilyPond's side of the
     /// comparison is an identity, and the whole difference is Lily#'s.
     /// <para>
-    /// LILYSHARP-OWN: Lily#'s independent row is a lead sheet's word TRACK, not a staff's
-    /// lyrics, and it is laid out as one — a staff-like band that carries its own bar lines
-    /// and stacks its own verses. Spacing it as a staff group follows from that, and the
-    /// decision is recorded in HANDOFF 3 next to the chord ROW, which was decided the same
-    /// way for the same reason.
+    /// ★ THIS TEST USED TO ASSERT THE OPPOSITE, and the history is the point. Lily# placed an
+    /// independent row as a staff-like BAND — a lead sheet's word TRACK rather than a staff's
+    /// lyrics — which put it 4.100000 further from the staff than LilyPond puts a Lyrics line
+    /// (9.600000 against 5.500000, derived as <c>2.0 + (9.0 - 4.0) + 2.6</c>). That was a
+    /// DECIDED divergence, recorded in HANDOFF 3 and asserted here rather than carried in the
+    /// ledger so a decision would not enter the headline total. It was revisited on
+    /// 2026-07-27 and the band is gone: the row is spaced by
+    /// <c>nonstaff-relatedstaff-spacing</c> off its own ink, like the Lyrics context it is.
     /// </para>
     /// <para>
-    /// ⚠️ Why it is asserted rather than carried as a ledger point: a decided divergence in
-    /// the corpus total would break the headline number (5.600000 against 0.006268),
-    /// the reason page.height is not carried either. But dropping it silently would let the
-    /// band drift with nothing to notice, so the quantity is pinned here IN DERIVED FORM —
-    /// if any term of it moves, this fails and the mover has to say which.
+    /// ⚠️ WHAT MAKES THE CLAIM STRONG IS THE IDENTITY, not the number. LilyPond reads the two
+    /// spellings identically — measured, and not by eye: books LYRC/LYRR and LYRV/LYRRV dump
+    /// line for line the same figures, because <c>\lyricsto</c> decides which COLUMN a
+    /// syllable stands on and not what spring holds the line. So the two Lily# readings
+    /// agreeing is LilyPond's own answer reproduced, and a test that pinned only the row
+    /// would still pass if both spellings drifted together.
+    /// </para>
+    /// <para>
+    /// The distance itself is a ledger point now that it is no longer a decision
+    /// (<c>lyrics.row.staff-to-lyric</c>), which is why 5.500000 is asserted here only as the
+    /// shared value — this test is about the two spellings agreeing.
     /// </para>
     /// </remarks>
     [Fact]
-    public void LyricRowIsSpacedAsAStaffLikeBand()
+    public void LyricRowIsSpacedLikeTheLyricsContextItIs()
     {
         double noteBound = RenderedGeometry
             .Render(LpGeometryProbes.LyricNoteBoundScore, LpGeometryProbes.LyricRowOptions)
@@ -256,31 +264,57 @@ public class LpGeometryLedgerTests
             .Render(LpGeometryProbes.LYRR, LpGeometryProbes.LyricRowOptions)
             .FirstStaffToLyricBaseline();
 
-        // The note-bound spelling IS LilyPond's, and the ledger holds it there. Read again
-        // here so the two numbers are compared in one place: the claim is about the
-        // DIFFERENCE between the spellings, and a test that only pinned the row would still
-        // pass if both drifted together.
         Assert.Equal(5.5, noteBound, 6);
+        Assert.Equal(noteBound, row, 6);
+    }
 
-        // staff refpoint -> bottom line, then the row's own group spacing (the spec's
-        // basic-distance less the staff-height band a lyrics row reserves), then the
-        // baseline inside that band. Written as the model rather than as a number so that a
-        // change to any term reads as the term it is — which is what happened: the middle
-        // term was StaffGroupStaff's 10.5 until the staff above the row was found to carry
-        // no group at all, and LilyPond gives such a staff its own default-staff-staff-spacing
-        // (audit/lp-geometry, lyrics.two-staff{,.two-verse}.staff-staff-inside).
-        // ⚠️ THE DECISION IS UNCHANGED by that (HANDOFF 3: an independent lyrics row is
-        // deliberately placed as a staff-like BAND). Only the spec the band is placed with
-        // was wrong, so the decided divergence from LilyPond's 5.5 shrinks 5.6 -> 4.1
-        // without the model moving.
-        const double staffHalf = 2.0;
-        const double groupBasicDistance = 9.0;    // StaffSpacingParameters.DefaultStaffStaff
-        const double rowBandHeight = 4.0;         // a lyrics row reserves a staff height
-        const double baselineInBand = 2.6;        // LyricEngraver.LyricRowBaseline
-        Assert.Equal(
-            staffHalf + (groupBasicDistance - rowBandHeight) + baselineInBand, row, 6);
+    /// <summary>
+    /// An independent lyrics ROW reserves its ink against the NEXT system, so its last verse
+    /// cannot be drawn over that system's staff.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS FAILED BEFORE 2026-07-27 AND THE FAILURE WAS VISIBLE ON THE PAGE: a two-verse
+    /// row put verse 2's baseline 12.800000 below its staff refpoint while the next system's
+    /// refpoint sat 12.000000 below, so every row of this shape printed straight across the
+    /// following system's staff and noteheads. Nothing caught it. No committed fixture reaches
+    /// the regime (rows-song-sheet is one verse and staffless), and the corpus entry that
+    /// covers the quantity — the system gap — read 12.000000, EXACT against LilyPond, because
+    /// the row's ink reached no figure the inter-system spring is floored by. HANDOFF 5.2.1
+    /// (4): a reading can be exact and blind at the same time.
+    /// <para>
+    /// ★ ASSERTED AS A RULE, NOT A VALUE (HANDOFF 5.4). The distance itself is not a number
+    /// worth pinning: it carries HANDOFF 3's decided band placement, so it would move with any
+    /// revision of that decision and would fail for a reason that is not a defect. What must
+    /// hold under every such revision is the CLEARANCE — the row's deepest ink stays above the
+    /// next system's staff — and that is font-free and decision-free.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE READINGS ARE TAKEN FROM PAGE 1'S INTERIOR, where a system really does have a
+    /// next one. The last system on a page closes on the page edge instead, which is a
+    /// different spring and would pass this trivially.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void LyricRowReservesItsInkAgainstTheNextSystem()
+    {
+        var geometry = RenderedGeometry
+            .Render(LpGeometryProbes.LYRRV, LpGeometryProbes.LyricRowOptions);
 
-        Assert.Equal(4.1, row - noteBound, 6);
+        // The regime this reads in: four systems on page 1, so system 0 has a successor.
+        Assert.Equal(4, geometry.StavesOnPage(0));
+
+        double staffToNextStaff = geometry.StaffGapAt(0, 0);
+        double staffToVerse1 = geometry.LyricBaselineBelowStaff(0, 0);
+        double verseStep = geometry.LyricVerseStep();
+
+        // Verse 2's BASELINE, and then its descenders, have to finish above the next staff.
+        // Any positive slack proves the reservation happened; the size of it is the band
+        // decision's and is deliberately not asserted.
+        double lastVerseBaseline = staffToVerse1 + verseStep;
+        Assert.True(lastVerseBaseline < staffToNextStaff,
+            $"the row's last verse sits {lastVerseBaseline:F6} below its staff refpoint while "
+            + $"the next system's is only {staffToNextStaff:F6} below — it is drawn over that "
+            + "system's staff.");
     }
 
     /// <summary>

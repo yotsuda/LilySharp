@@ -180,16 +180,13 @@ internal sealed class MultiStaffLayouter
         var before = upper.Staves[^1];
         var after = lower.Staves[0];
 
-        // ⚠️ A LYRICS ROW IS STILL PLACED BY LILY#'s BAND MODEL, and the reason is its
-        // SKYLINE rather than a decision: an independent lyrics row has no ink in any
-        // skyline yet (HANDOFF 1 — its branch has no ledger point and its syllables are not
-        // seeded), so a spec-driven distance to it would be measured against nothing and
-        // would collapse onto the neighbour. The band is what holds it apart until the ink
-        // lands. A CHORDS row has its ink and takes LilyPond's own spec — see
-        // BuildAllStaffSkylines.
-        if (before.IsLyricsTextRow || after.IsLyricsTextRow)
-            return spaceable;
-
+        // ⚠️ A LYRICS ROW TAKES LILYPOND'S SPEC SINCE 2026-07-27, and the exclusion that used
+        // to stand here went with the reason for it: the row had no ink in any skyline, so a
+        // spec-driven distance would have been measured against nothing and collapsed onto
+        // the neighbour, and the band held it apart instead. The ink is seeded now
+        // (BuildAllStaffSkylines), so the row is spaced like the Lyrics context it is —
+        // ly/engraver-init.ly:648-658, staff-affinity UP and nonstaff-relatedstaff-spacing.
+        // HANDOFF 3's "place it as a staff-like band" decision was revisited to get here.
         return StaffAffinity.GetSpacingSpec(
             before.StaffAffinity, NonStaffSpecsOf(before, sp),
             after.StaffAffinity, NonStaffSpecsOf(after, sp),
@@ -342,15 +339,26 @@ internal sealed class MultiStaffLayouter
     /// Lily#'s band model? True exactly when a CHORDS row faces a staff.
     /// </summary>
     /// <remarks>
-    /// The two exclusions are the two whose ink is not there to be spaced by: a LYRICS row
-    /// has no skyline yet (HANDOFF 1), and a pair of text rows takes
-    /// <see cref="TextRowPairGap"/> before this is ever asked. Written once because the SPEC
-    /// and the SPAN have to agree — a spec-placed pair measured in the band's frame lands
+    /// True when either side is a text ROW of any kind, since 2026-07-27: a lyrics row used
+    /// to be excluded with the chords row's spec exclusion above, and for the same reason
+    /// (no ink to be spaced by), and both went when the ink landed. A pair of text rows never
+    /// reaches this — it takes <see cref="TextRowPairGap"/> first. Written once because the
+    /// SPEC and the SPAN have to agree: a spec-placed pair measured in the band's frame lands
     /// half a band out.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, AND IT IS A GATE ON A DEFECT RATHER THAN A RULE. LilyPond has no such
+    /// predicate: <c>Align_interface</c> works between reference points for EVERY pair, so
+    /// there is nothing to select. This exists because Lily# has two frames — this one and the
+    /// nominal staff height the rest of <see cref="GapSpan"/> still hands out — and it names
+    /// how far the refpoint frame has been taken. 2026-07-27 widened it (the lyrics exclusion
+    /// came off) rather than removed it; removing it means converting the REST of the
+    /// placement, which is the tab/ossia pair HANDOFF 1 has named and left unmeasured for
+    /// several sessions. ⚠️ Widening a gate is not the same as porting it away, and this note
+    /// is here so the next reader does not read the condition as LilyPond's.
+    /// </para>
     /// </remarks>
     private static bool IsSpecSpacedRowBoundary(Staff upper, Staff lower)
-        => !upper.IsLyricsTextRow && !lower.IsLyricsTextRow
-           && (upper.IsTextRow || lower.IsTextRow);
+        => upper.IsTextRow || lower.IsTextRow;
 
     /// <summary>Reserved vertical band (staff spaces) for an independent text row
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
@@ -1840,17 +1848,23 @@ internal sealed class MultiStaffLayouter
                 // list is about its staff's MIDDLE LINE. The two agree in kind — both are
                 // the element's own reference point — and differ from Lily#'s band model,
                 // whose StaffLayout.Y is the band TOP.
-                // ⚠️ A LYRICS ROW GETS NO INK YET and that is a gap, not a decision: its
-                // syllables are as real as these symbols, but the independent-row branch has
-                // no ledger point of its own (HANDOFF 1) and seeding it would move a
-                // quantity nothing measures. Its skyline is EMPTY, which the gap consumers
-                // read as "no constraint" — the same answer the phantom staff symbol gave,
-                // for an honest reason.
-                if (staff.IsTextRow && !staff.IsLyricsTextRow)
+                // ★ A LYRICS ROW IS SEEDED THE SAME WAY SINCE 2026-07-27. Its syllables were
+                // always as real as the chord symbols; what kept them out was that no ledger
+                // point measured them, so seeding would have moved a quantity nothing could
+                // check (HANDOFF 1). Book LYRRV measures them now, and with the ink here the
+                // row is spaced by LilyPond's own spec instead of Lily#'s band — see
+                // SelectInterGroupSpec.
+                // ⚠️ THE SAME FRAME AS THE CHORD ROW: the row's TEXT BASELINE, which is what
+                // RefpointBelowTop returns for a text row and what LilyPond's VerticalAxisGroup
+                // uses. For a multi-verse row that is VERSE 1's baseline, and the verses below
+                // it are merged at the engraver's own step (RowSkylinesAboutBaseline).
+                if (staff.IsTextRow)
                 {
-                    var rowInk = ChordNameEngraver.RowSkylines(
-                        score.ChordNames, measureLayouts, thisStaff,
-                        staff.PrimaryVoice.Measures);
+                    var rowInk = staff.IsLyricsTextRow
+                        ? LyricRowInk(score, measureLayouts, thisStaff)
+                        : ChordNameEngraver.RowSkylines(
+                            score.ChordNames, measureLayouts, thisStaff,
+                            staff.PrimaryVoice.Measures);
                     sky.Up.Merge(rowInk.Up);
                     sky.Down.Merge(rowInk.Down);
                 }
@@ -1861,6 +1875,33 @@ internal sealed class MultiStaffLayouter
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// An independent lyrics ROW's own ink, about its text baseline — the lyric twin of
+    /// <c>ChordNameEngraver.RowSkylines</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a Lyrics context goes onto
+    /// <c>loose_lines</c> and is spaced by its OWN skyline between the two spaceable staves
+    /// that bracket it, exactly as the ChordNames context above does. The two branches of the
+    /// caller are one rule in the source.
+    /// Goes through <see cref="LyricEngraver.ForGeometry"/> so the X it measures is the X the
+    /// row is drawn at; a second X model here is the shape HANDOFF 5.2.1② names.
+    /// ⚠️ THE WHOLE SCORE'S MEASURE LAYOUTS, not one system's — <c>RowBlockSkylines</c>
+    /// selects by <c>MeasureIndex</c> and this list is score-wide, which is the pairing that
+    /// overload wants (the positional one is the trap its remarks describe).
+    /// </remarks>
+    private static (VerticalSkyline Up, VerticalSkyline Down) LyricRowInk(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts, int staffIndex)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty)
+            return (new VerticalSkyline(VerticalDirection.Up),
+                    new VerticalSkyline(VerticalDirection.Down));
+        var engraver = LyricEngraver.ForGeometry(score);
+        var verses = engraver.RowBlockSkylines(
+            score.Lyrics, measureLayouts, 0, int.MaxValue, staffIndex);
+        return engraver.RowSkylinesAboutBaseline(verses);
     }
 
     /// <summary>

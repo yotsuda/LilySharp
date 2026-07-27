@@ -1394,6 +1394,84 @@ probeTag =
   }
 }
 
+%% LYRRV — LYRV UNASSOCIATED, and it is LYRR's question asked in the regime where the answer
+%%     can be seen. LYRR already put the two spellings side by side and LilyPond read them
+%%     identically, but it did so on the ONE-LINE book, where the loose chain never binds:
+%%     a single loose line's far-side springs carry LARGE_STRETCH/HUGE_STRETCH
+%%     (:1257-1338), so the row sits at its ideal whatever the page does. LYRV's regime is
+%%     the opposite one and it is measured — the chain there is CRITICALLY compressed
+%%     (sum of minimums = the 12.000000 gap, bisected in LYRV's header above), so every
+%%     term of it is load bearing. This book is LYRV with `\lyricsto "mel"` struck from both
+%%     Lyrics contexts and nothing else touched.
+%%
+%%     ⚠️ WHY IT EXISTS, and it is not for LilyPond's sake. Lily# has TWO MODELS for a lyric
+%%     line and LilyPond has one. `staff mel with lyrics words` is note-bound and reaches the
+%%     loose chain; a bare `lyrics words` ROW is laid out as a staff-like BAND
+%%     (MultiStaffLayouter's text row, LyricEngraver.LyricRowBaseline) and reaches nothing —
+%%     it has no ink in any skyline, so no spring is floored by it and no chain contains it.
+%%     HANDOFF 1 names that as the island; this pair is the instrument for it.
+%%
+%%     ⚠️ THE TWO SIDES SPELL "TWO VERSES" DIFFERENTLY AND THAT IS THE MEASUREMENT, not a
+%%     flaw in the pair (HANDOFF 5.0, trap 5/6: check that both sides are the same MUSIC).
+%%     They are: 480 syllables `no` over the same 120 bars of g''/a'', on the same paper,
+%%     standing on the same columns. What differs is the CONTAINER — LilyPond has no
+%%     one-context-two-verses spelling, so its second verse is a second Lyrics context, while
+%%     Lily#'s row auto-wraps a long block into stacked verses inside ONE band. Comparing the
+%%     containers is the point: the note-bound side is a chain and the row side is a band.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2): every figure this probe prints for
+%%     LYRRV equals LYRV's, digit for digit —
+%%       (a) staff/loose -> next loose = the set {3.737890, 2.800000, 5.500001}, INCLUDING
+%%           the 5.500001 that only the last system on the page reaches;
+%%       (b) system-to-system and staff-to-staff gap = 12.000000, unwidened by the lyrics;
+%%       (c) 4 systems on page 1.
+%%     Because a Lyrics context is a Lyrics context: engraver-init.ly:648-658 gives it
+%%     staff-affinity UP and its nonstaff-* specs without ever asking whether a Voice was
+%%     named, and `\lyricsto` decides which COLUMN a syllable stands on, not which spring
+%%     holds the line.
+%%
+%%     ★ WRITTEN AS A FORK (HANDOFF 5.0), so the reading selects the next piece of work
+%%     rather than merely scoring:
+%%       - IDENTITY  => LilyPond's side of the comparison is a constant, so every difference
+%%         Lily# shows between its two spellings is Lily#'s own, and the port has a target
+%%         that carries no font quantity and no LilyPond uncertainty: give the ROW its ink.
+%%       - DIFFERENT => association reaches the vertical spacing after all, LYRR's identity
+%%         was a regime artefact rather than a fact about Lyrics contexts, and the row model
+%%         cannot be measured against the note-bound one at all — the island then needs a
+%%         different instrument before any porting, and LYRR's own conclusion has to be
+%%         re-opened.
+%%     ⚠️ The falsifier is real rather than decorative: LYROS is the book in this very file
+%%     where an "obviously identical" addition turned out to change WHAT WAS BEING MEASURED
+%%     (staff-refpoint-extent spans spaceable lines only, so adding a spaceable one moved the
+%%     quantity's meaning). "It is a Lyrics context either way" is the same kind of claim.
+%%
+%%     ★ MEASURED 2026-07-27 — THE IDENTITY HOLDS IN THE STRONGEST FORM AVAILABLE: this
+%%     probe's LYRV and LYRRV dumps are LINE FOR LINE IDENTICAL, all 59 of them, compared
+%%     mechanically rather than by eye. Same 5 pages with the same 4/4/4/4/2 systems, the same
+%%     first and last staff refpoints per page, the same {3.737890, 2.800000, 5.500001}, the
+%%     same 12.000000 gap. ⚠️ Compared as WHOLE DUMPS on purpose: predictions (a)(b)(c) name
+%%     three figures, and checking only those three would not have noticed the association
+%%     moving a fourth.
+%%
+%%     ⇒ THE FORK TOOK THE FIRST BRANCH. LilyPond's side is a constant here, so the whole of
+%%     any difference Lily# shows between `with lyrics words` and `lyrics words` is Lily#'s
+%%     own, in a regime where every term of the chain is load bearing. What Lily# shows is in
+%%     the ledger as lyrics.row.two-verse.*; the short version is that the ROW's verse step is
+%%     3.200000 against this 2.800000 and its system gap is 12.000000 — exact — while the
+%%     second verse is drawn 0.800000 BELOW the next system's staff refpoint. The gap being
+%%     right is not the layout being right.
+\book {
+  \probeTag "LYRRV"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g''4 a'' g'' a'' } } }
+      \new Lyrics \lyricmode { \repeat unfold 480 { no4 } }
+      \new Lyrics \lyricmode { \repeat unfold 480 { no4 } }
+    >>
+  }
+}
+
 %% LYRR — THE SAME LINE, UNASSOCIATED. Identical to LYRC except that the Lyrics context is
 %%     not \lyricsto anything: its syllables carry their own durations instead of being
 %%     handed to a Voice's note columns. In LilyPond that changes WHICH COLUMN a syllable
