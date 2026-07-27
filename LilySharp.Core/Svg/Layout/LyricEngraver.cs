@@ -542,31 +542,28 @@ internal sealed class LyricEngraver
                 // staff ABOVE is only 3.737890 up and still binds over the next staff's clef,
                 // while with two it is 6.537890 up and the verse's own outline binds instead.
                 // A pairwise distance cannot produce two different numbers there.
-                var running = new VerticalSkyline(VerticalDirection.Down);
-                if (anchorDown is { IsEmpty: false } ad) running.Merge(ad);
+                //
+                // The walk itself is <see cref="AlignmentWalk"/> — the SAME object the
+                // reservation reads, which is the whole point of the type existing.
+                var walk = new AlignmentWalk(SkylineDrop.HorizonPadding);
+                walk.Seed(anchorDown);
 
                 // One step of that walk: the distance from what has accumulated to the next
                 // line's up-skyline, plus the spec's padding — and then the raise and merge
                 // that put the accumulation into the next line's frame.
-                // LILYPOND-REF: lily/align-interface.cc:228 dy = down.distance (up) + padding.
-                // ⚠️ The spec's MINIMUM-DISTANCE is deliberately not applied here: this is the
-                // vector page-layout-problem.cc:590-592 takes WITHOUT it (elements_.min_offsets
-                // is get_minimum_translations_without_min_dist), and the spec's own minimum
-                // arrives on the spring instead, through CreateSpring.
+                // ⚠️ The spec's MINIMUM-DISTANCE is not passed here, and the reason is NOT
+                // the one this comment used to give (that the chain reads a vector computed
+                // "without min dist" — it does not; see AlignmentWalk's remarks, where the
+                // source says that name means without the SPACEABLE minimum). It is that
+                // CreateSpring applies the same member to the same spring a line later, so
+                // passing it would be applying it twice. ⚠️ That is NOT a no-op — the walk
+                // raises by the clamped dy — and it is the one place this port still differs
+                // from align-interface.cc:231-233. Left alone because moving it moves output.
                 double Advance(int verse, double padding)
                 {
-                    double dy = 0;
-                    if (!running.IsEmpty
-                        && up.TryGetValue((system, verse), out var lineUp) && !lineUp.IsEmpty)
-                    {
-                        double dist = running.Distance(lineUp, SkylineDrop.HorizonPadding);
-                        if (!double.IsInfinity(dist) && !double.IsNaN(dist))
-                            dy = dist + padding;
-                    }
-                    running.Raise(dy);
-                    if (down.TryGetValue((system, verse), out var lineDown) && !lineDown.IsEmpty)
-                        running.Merge(lineDown);
-                    return dy;
+                    up.TryGetValue((system, verse), out var lineUp);
+                    down.TryGetValue((system, verse), out var lineDown);
+                    return walk.Advance(lineUp, lineDown, padding);
                 }
 
                 // Staff to verse 1, in the chain's frame — the anchor staff's REFERENCE
@@ -598,25 +595,18 @@ internal sealed class LyricEngraver
                     if (between is { } b)
                     {
                         room = b.Room;
-                        double closing = 0;
-                        if (!running.IsEmpty && !b.NextStaffUp.IsEmpty)
-                        {
-                            double dist = running.Distance(
-                                b.NextStaffUp, SkylineDrop.HorizonPadding);
-                            if (!double.IsInfinity(dist) && !double.IsNaN(dist))
-                            {
-                                // ⚠️ NO FRAME STEP, and it is worth saying why there is none:
-                                // both ends of this distance are per-staff skylines about
-                                // their own REFERENCE POINTS, which is the frame the chain is
-                                // solved in, so the expression is LilyPond's dy unchanged —
-                                // `down_skyline.distance (up) + padding`
-                                // (align-interface.cc:228). It carried `+ anchorOffset` when
-                                // this landed, because staff skylines were then built about
-                                // the TOP line; the adapter is GONE WITH THE FRAME rather than
-                                // moved elsewhere (SkylineBuilder.BuildStaffSkylines).
-                                closing = dist + SkylineDrop.UnrelatedStaffPadding;
-                            }
-                        }
+
+                        // ⚠️ NO FRAME STEP, and it is worth saying why there is none: both
+                        // ends of this distance are per-staff skylines about their own
+                        // REFERENCE POINTS, which is the frame the chain is solved in, so the
+                        // expression is LilyPond's dy unchanged — `down_skyline.distance (up)
+                        // + padding` (align-interface.cc:228), i.e. one more step of the SAME
+                        // walk. It carried `+ anchorOffset` when this landed, because staff
+                        // skylines were then built about the TOP line; the adapter is GONE
+                        // WITH THE FRAME rather than moved elsewhere
+                        // (SkylineBuilder.BuildStaffSkylines).
+                        double closing = walk.Distance(
+                            b.NextStaffUp, SkylineDrop.UnrelatedStaffPadding);
                         gaps.Add(new LooseLineSpacer.Gap(
                             LooseLineSpacer.NonStaffUnrelatedStaff, closing));
                     }
@@ -683,6 +673,74 @@ internal sealed class LyricEngraver
             else placed.Add(lay);
         }
         return placed;
+    }
+
+    /// <summary>
+    /// The note-bound lyric lines that hang below one staff group, as the alignment sees
+    /// them: one self-relative up/down skyline pair per verse, in verse order, for the
+    /// measures of ONE system.
+    /// </summary>
+    /// <remarks>
+    /// These are the alignment's ELEMENTS between two spaceable staves — what
+    /// <c>MultiStaffLayouter</c> has to walk to know how much room the pair must leave.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 and :948-990 — the run of
+    /// non-spaceable lines collected between two spaceable ones, whose minimums are the
+    /// successive differences of the alignment's translations.
+    /// <para>
+    /// ⚠️ CALLED BEFORE THE STAVES ARE PLACED, and that is sound rather than lucky: a
+    /// syllable's box is built from its X, its width and its text only
+    /// (<see cref="SyllableUpBox"/> anchors at y = 0), so nothing here reads a staff Y.
+    /// The room it produces then decides those Ys. Feeding it a real baseline would make
+    /// the room a function of itself.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT GOES THROUGH <see cref="CalculateSyllableLayout"/> AND
+    /// <see cref="ResolveOverlaps"/> rather than re-deriving X, so the ink the room is
+    /// measured from is the ink that gets drawn. A second X model here would be
+    /// HANDOFF 5.2.1② one more time, in the place that just cost this island a session.
+    /// </para>
+    /// </remarks>
+    internal List<(VerticalSkyline Up, VerticalSkyline Down)> NoteBoundBlockSkylines(
+        IReadOnlyList<LyricItem> lyrics, IReadOnlyList<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure, int firstStaffIndex, int endStaffIndex)
+    {
+        var result = new List<(VerticalSkyline, VerticalSkyline)>();
+        if (lyrics.Count == 0) return result;
+
+        var inBlock = new List<LyricItem>();
+        foreach (var l in lyrics)
+            if (!l.IsLyricsRow
+                && l.StaffIndex >= firstStaffIndex && l.StaffIndex < endStaffIndex
+                && l.MeasureIndex >= startMeasure && l.MeasureIndex < endMeasure)
+                inBlock.Add(l);
+        if (inBlock.Count == 0) return result;
+
+        int maxVerse = 0;
+        foreach (var l in inBlock) maxVerse = Math.Max(maxVerse, l.VerseNumber);
+
+        for (int verse = 1; verse <= maxVerse; verse++)
+        {
+            var laid = new List<LyricLayout>();
+            foreach (var l in inBlock)
+            {
+                if (l.VerseNumber != verse) continue;
+                // Baseline 0: this walk reads X, width and text, never Y.
+                var lay = CalculateSyllableLayout(l, measureLayouts, 0);
+                if (lay != null) laid.Add(lay);
+            }
+            if (laid.Count == 0) continue;
+            laid = ResolveOverlaps(laid);
+
+            var up = new VerticalSkyline(VerticalDirection.Up);
+            var down = new VerticalSkyline(VerticalDirection.Down);
+            foreach (var lay in laid)
+            {
+                up.Merge(SyllableUpBox(lay));
+                down.Merge(SyllableDownBox(lay));
+            }
+            result.Add((up, down));
+        }
+        return result;
     }
 
     /// <summary>
@@ -827,15 +885,20 @@ internal sealed class LyricEngraver
     /// ⚠️ THIS IS THE SECOND MODEL OF ONE LILYPOND QUANTITY (HANDOFF 5.2.1②), and it is named
     /// rather than left to be found. An EXTENT SUM is not what the alignment computes: the
     /// alignment walks the group once, raising and merging as it goes, which
-    /// <see cref="DistributeLooseLines"/> now does for the placement. LilyPond has ONE such
-    /// walk and hands the same vector to both (<c>Align_interface::get_minimum_translations</c>
-    /// for the reservation, the without-min-dist vector for the chain), so the port is not
-    /// finished until this reads that walk too.
-    /// MEASURED: <c>lyrics.between-staves.two-verse.staff-staff-inside</c> carries +0.126936
-    /// against LilyPond, of which the lyric face accounts for +0.271310 in one direction and
-    /// this estimate's closing term for about 0.144374 in the other. Its ONE-verse twin is
-    /// exact, because there the staff spring's own ideal is above the band and the estimate
-    /// cannot be seen at all — which is why only the two-verse book reads it.
+    /// <see cref="AlignmentWalk"/> now is and <see cref="DistributeLooseLines"/> calls.
+    /// LilyPond has ONE such walk and hands the same vector to both consumers, so the port
+    /// is not finished until this reads it too.
+    /// <para>
+    /// ⚠️ WHAT THIS ONE IS ACTUALLY READ BY, measured by perturbation 2026-07-27 rather than
+    /// inferred, because the remark here used to name the wrong entry: returning 0 from this
+    /// method moves <c>lyrics.two-verse.system-gap</c>,
+    /// <c>lyrics.two-staff.two-verse.system-gap</c> and the snapshot
+    /// <c>test/lyrics-volta</c> — and nothing else in 3412 tests. In particular it does NOT
+    /// move <c>lyrics.between-staves.two-verse.staff-staff-inside</c>, which this remark
+    /// claimed as its reader: that entry is owned by a THIRD model,
+    /// <c>MultiStaffLayouter.NoteBoundLyricExtraGap</c>'s flat 3.200000 per verse. Two
+    /// separate ports, not one.
+    /// </para>
     /// </para>
     /// </remarks>
     internal static double AlignmentMinimumBand(IReadOnlyList<(string Text, int Verse)> block)

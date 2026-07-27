@@ -109,6 +109,54 @@ public class LyricStaffOrderTests
             $"a 2nd verse should drop the lower staff: 1-verse Y={oneVerse[1]:F2}, 2-verse Y={twoVerse[1]:F2}");
     }
 
+    /// <summary>
+    /// The ROOM two staves leave for the block between them is that block's own INK, not a
+    /// constant per verse: a tall CJK syllable pushes the lower staff further than a Latin
+    /// one, on identical music with identical verse counts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:201-285 — the alignment walks the loose lines
+    /// between two spaceable staves and each step is <c>down_skyline.distance (up) +
+    /// padding</c>, so the block's glyph heights are IN the distance.
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that the room RESPONDS to
+    /// the input, which is the only net that catches the shape this island removed —
+    /// <c>MultiStaffLayouter.NoteBoundLyricExtraGap</c> read <c>(verses - 1) * 3.2</c> and
+    /// nothing else, so both books here returned the SAME distance and every value-based
+    /// test still passed. Its sibling
+    /// <c>UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin</c> asserts the
+    /// LINE moves; this one asserts the STAFF BELOW moves with it, which is the half that
+    /// was missing (the line used to drop into the lower staff's room instead of being
+    /// given room of its own).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void RoomBetweenStaves_ComesFromTheBlocksInk_NotAConstantPerVerse()
+    {
+        const string head =
+            "part melody { section A { c4 d e f } }\n" +
+            "part back { section A { e4 f g a } }\n";
+        const string tail =
+            "\nform main { A }\n" +
+            "score main {\n  staff melody with lyrics w\n  staff back\n}\n";
+        var (latinLyrics, latinStaff) = LayoutOf(
+            head + "lyrics w { section A { la le li lo } }" + tail);
+        var (cjkLyrics, cjkStaff) = LayoutOf(
+            head + "lyrics w { section A { か え る の } }" + tail);
+
+        double latinInside = latinStaff[1] - latinStaff[0];
+        double cjkInside = cjkStaff[1] - cjkStaff[0];
+
+        // The line itself drops further (its own sibling asserts this) ...
+        Assert.True(cjkLyrics[0] > latinLyrics[0] + 0.1,
+            $"the CJK line should sit lower: latin {latinLyrics[0]:F6}, cjk {cjkLyrics[0]:F6}");
+        // ... and the staff below has to follow, or the extra drop is spent on the lower
+        // staff's clearance instead of being room the block was given.
+        Assert.True(cjkInside > latinInside + 0.1,
+            "the room between the two staves must respond to the block's ink: "
+            + $"latin {latinInside:F6}, cjk {cjkInside:F6}");
+    }
+
     [Fact]
     public void GrandStaffLyrics_StayBelowTheWholeGrandStaff()
     {

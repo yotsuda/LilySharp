@@ -276,9 +276,33 @@ internal sealed class MultiStaffLayouter
     /// in the ordinary staff-staff distance (so single-verse layouts are unchanged); each
     /// further verse adds one <see cref="TextRowVerseSpacing"/> — the same step the
     /// LyricEngraver stacks verses by. 0 when the group's staves carry no such lyrics.
-    /// LILYPOND-REF: axis-group-interface.cc skyline_spacing grows the gap by the
-    /// outside-staff line's extent.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, AND THE THIRD MODEL OF ONE LILYPOND QUANTITY (HANDOFF 5.2.1②).
+    /// The <c>LILYPOND-REF</c> that stood here pointed at
+    /// <c>axis-group-interface.cc skyline_spacing</c> "grows the gap by the outside-staff
+    /// line's extent" — but this grows it by a CONSTANT PER VERSE and reads no extent at
+    /// all, so the reference named a rule the code does not follow (HANDOFF 5.2.1①: the
+    /// line next to a REF is the thing to check).
+    /// <para>
+    /// LilyPond has ONE model, the alignment's raise-and-merge walk
+    /// (<see cref="AlignmentWalk"/>): the room between two staves with a block between
+    /// them is that block's own three distances. Lily# has three — the walk in
+    /// <c>LyricEngraver.DistributeLooseLines</c> (placement), the extent sum in
+    /// <c>LyricEngraver.AlignmentMinimumBand</c> (the page breaker's reservation), and
+    /// this constant (the room the placement is then solved into).
+    /// </para>
+    /// <para>
+    /// ⚠️ MEASURED 2026-07-27, by perturbation, because the three had been confused for
+    /// two: zeroing <c>AlignmentMinimumBand</c> moves <c>lyrics.two-verse.system-gap</c>,
+    /// <c>lyrics.two-staff.two-verse.system-gap</c> and one snapshot — and NOT
+    /// <c>lyrics.between-staves.two-verse.staff-staff-inside</c>. Zeroing THIS moves that
+    /// entry alone, 11.200000 → 9.000000. So this constant, not the reservation, is what
+    /// carries that entry's +0.126936 against LilyPond's ink-derived 11.073064
+    /// (= 3.737890 + 2.800000 + 4.535174). The port is to take the room off
+    /// <see cref="AlignmentWalk"/>; the prediction is written in the ledger's <c>why</c>.
+    /// </para>
+    /// </remarks>
     private static double NoteBoundLyricExtraGap(MultiStaffScore score, int firstStaffIndex, int endStaffIndex)
     {
         if (score.Lyrics.IsDefaultOrEmpty) return 0;
@@ -473,11 +497,13 @@ internal sealed class MultiStaffLayouter
     private static double StaffGap(
         VerticalSpacingSpec spec, double upperStaffHeight,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
-        int upperStaffIndex, int lowerStaffIndex)
+        int upperStaffIndex, int lowerStaffIndex,
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
         => staffSkylines is null
             ? Math.Max(0, spec.BasicDistance - upperStaffHeight)
             : CalculateStaffGapWithSkylines(
-                spec, upperStaffHeight, staffSkylines, upperStaffIndex, lowerStaffIndex);
+                spec, upperStaffHeight, staffSkylines, upperStaffIndex, lowerStaffIndex,
+                looseLines);
 
     /// <summary>Nothing ever dies — the filter for a score with no hara-kiri in it.</summary>
     private static readonly Func<Staff, bool> NothingDies = _ => false;
@@ -1425,10 +1451,12 @@ internal sealed class MultiStaffLayouter
     internal ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        int startMeasure, int endMeasure, bool isFirstSystem)
+        int startMeasure, int endMeasure, bool isFirstSystem,
+        LooseLinesBetween? looseLines = null)
         => LayoutStaffGroups(
             score, staffSkylines,
-            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem));
+            staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem),
+            looseLines);
 
     /// <summary>Builds the per-staff skylines one system is placed and sprung against.</summary>
     internal List<(VerticalSkyline Up, VerticalSkyline Down)> BuildStaffSkylines(
@@ -1456,7 +1484,8 @@ internal sealed class MultiStaffLayouter
     private ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
-        Func<Staff, bool> isDead)
+        Func<Staff, bool> isDead,
+        LooseLinesBetween? looseLines = null)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
@@ -1524,16 +1553,27 @@ internal sealed class MultiStaffLayouter
                     bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                     bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                     bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                    int upperLive = LastLiveIndex(i);
+                    int lowerLive = FirstLiveIndex(next);
+                    // The alignment's own elements between the two staves — this group's
+                    // `with lyrics` lines. They are IN the walk that fixes the gap; there
+                    // is no separate term for them.
+                    // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a non-spaceable
+                    // staff is pushed onto `loose_lines` and the NEXT spaceable one closes
+                    // the run, so the two spaceable staves are never adjacent in the walk.
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
-                        : StaffGap(spec, staffHeight, staffSkylines,
-                            LastLiveIndex(i), FirstLiveIndex(next));
+                        : StaffGap(spec, staffHeight, staffSkylines, upperLive, lowerLive,
+                            looseLines?.Invoke(upperLive, lowerLive));
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
                     currentY -= interGroupGap;
-                    // Room for this group's `with lyrics` 2nd+ verses (verse 1 fits the gap).
-                    currentY -= NoteBoundLyricExtraGap(
-                        score, globalStaffIndex, globalStaffIndex + group.StaffCount);
+                    if (staffSkylines is null)
+                        // The PURE estimate path has no skylines to walk, which is
+                        // LilyPond's own split (get_pure_minimum_translations against
+                        // get_minimum_translations). It keeps the crude per-verse constant.
+                        currentY -= NoteBoundLyricExtraGap(
+                            score, globalStaffIndex, globalStaffIndex + group.StaffCount);
                 }
             }
 
@@ -1609,7 +1649,8 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal ImmutableArray<StaffSpring> StaffSprings(
         MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
-        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        LooseLinesBetween? looseLines = null)
     {
         if (groups.IsDefaultOrEmpty)
             return ImmutableArray<StaffSpring>.Empty;
@@ -1662,9 +1703,14 @@ internal sealed class MultiStaffLayouter
             // internal_get_minimum_translations returns translates[] — and feed the same
             // vector to the placement AND to these springs. That is a structural change
             // (HANDOFF 2D), not a rewrite of this line.
+            // ⚠️ THE SAME LOOSE LINES THE PLACEMENT WALKED, or the reconstruction above is
+            // being done against a different alignment from the one that drew the staves —
+            // and since `minimum` is DERIVED from `drawn`, the two disagreeing would leave
+            // the block a room it does not fit.
             double drawn = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
             double minimum = drawn - Math.Max(0, spec.BasicDistance - AlignmentMinimumWithSkylines(
-                spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex));
+                spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex,
+                looseLines?.Invoke(upper.Layout.StaffIndex, lower.Layout.StaffIndex)));
             builder.Add(new StaffSpring(
                 upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
         }
@@ -1961,7 +2007,8 @@ internal sealed class MultiStaffLayouter
     private static double CalculateStaffGapWithSkylines(
         VerticalSpacingSpec spec, double upperStaffHeight,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        int upperStaffIndex, int lowerStaffIndex)
+        int upperStaffIndex, int lowerStaffIndex,
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
     {
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
             return Math.Max(0, spec.BasicDistance - upperStaffHeight);
@@ -1981,7 +2028,8 @@ internal sealed class MultiStaffLayouter
         // (ledger page.compressed.staff-staff-inside).
         double centerToCenter = Math.Max(
             spec.BasicDistance,
-            AlignmentMinimumWithSkylines(spec, staffSkylines, upperStaffIndex, lowerStaffIndex));
+            AlignmentMinimumWithSkylines(
+                spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines));
 
         return Math.Max(0, centerToCenter - upperStaffHeight);
     }
@@ -2007,7 +2055,8 @@ internal sealed class MultiStaffLayouter
     private static double AlignmentMinimumWithSkylines(
         VerticalSpacingSpec spec,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        int upperStaffIndex, int lowerStaffIndex)
+        int upperStaffIndex, int lowerStaffIndex,
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
     {
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
             return spec.MinimumDistance;
@@ -2017,6 +2066,65 @@ internal sealed class MultiStaffLayouter
         if (upperDown.IsEmpty || lowerUp.IsEmpty)
             return spec.MinimumDistance;
 
-        return Math.Max(upperDown.Distance(lowerUp) + spec.Padding, spec.MinimumDistance);
+        // The alignment's walk from the upper staff down to the lower one. With nothing
+        // between them that is ONE step and reads as it always did — Skyline::distance with
+        // no horizon padding, plus the pair's own spec padding. With loose lines between,
+        // the pair is not adjacent in the alignment and the minimum is the SUM of the walk's
+        // steps, each measured against everything above it rather than against its
+        // neighbour. One expression for both, because LilyPond has one loop for both.
+        // LILYPOND-REF: lily/align-interface.cc:201-285, run over
+        // upper staff, line 1 .. line n, lower staff.
+        bool hasLooseLines = looseLines is { Count: > 0 };
+        var walk = new AlignmentWalk(hasLooseLines ? SkylineDrop.HorizonPadding : 0);
+        walk.Seed(upperDown);
+        for (int k = 0; k < (looseLines?.Count ?? 0); k++)
+        {
+            // The spec each step takes.
+            // LILYPOND-REF: lily/page-layout-problem.cc:1284-1294 get_spacing_spec — before
+            // is spaceable, after is not and its affinity is UP, so the staff-to-first-line
+            // step is the line's nonstaff-relatedstaff-spacing.
+            // LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 — neither neighbour
+            // spaceable, so line to line is the UPPER line's nonstaff-nonstaff-spacing,
+            // whose minimum-distance 2.8 (ly/engraver-init.ly:653-657) belongs in the WALK:
+            // align-interface.cc:231-233 raises dy by it BEFORE the raise and merge. (The
+            // chain does not pass it, because CreateSpring applies the same member to the
+            // same spring a line later; see AlignmentWalk's remarks.)
+            walk.Advance(
+                looseLines![k].Up, looseLines[k].Down,
+                k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,
+                k == 0 ? 0 : SkylineDrop.NonStaffNonStaffMinimum);
+        }
+        // ...and the last element to the staff below.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1299-1312 — before is the loose line,
+        // its affinity is UP and after is spaceable, so get_spacing_spec returns the LINE's
+        // nonstaff-unrelatedstaff-spacing. Same closing step LyricEngraver's chain takes, so
+        // the block fits the room. With no loose lines it is the staff pair's own spec.
+        double total = walk.Where + walk.Distance(
+            lowerUp, hasLooseLines ? SkylineDrop.UnrelatedStaffPadding : spec.Padding);
+
+        // The two STAVES' own minimum-distance applies across the whole span — over the loose
+        // lines when there are any.
+        // LILYPOND-REF: lily/align-interface.cc:257-263
+        //   if (read_spacing_spec (spec, &spaceable_min_distance, "minimum-distance"))
+        //     dy = std::max (dy, spaceable_min_distance
+        //                          + stacking_dir * (last_spaceable_element_pos - where));
+        // i.e. measured from the last SPACEABLE element, not from the neighbour. It sits
+        // inside the `include_fixed_spacing` guard (:240), so it is in the RESERVATION
+        // vector — which this function is — and not in the chain's.
+        return Math.Max(total, spec.MinimumDistance);
     }
+
+    /// <summary>
+    /// The alignment's non-spaceable elements between two spaceable staves of one system —
+    /// the <c>with lyrics</c> block, one self-relative skyline pair per verse, in order.
+    /// Null or empty means the two staves are adjacent in the alignment.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — the run of loose lines collected
+    /// between two spaceable staves. Supplied by the caller because only it knows the
+    /// system's measure range and can build the syllable geometry
+    /// (<c>LyricEngraver.NoteBoundBlockSkylines</c>).
+    /// </remarks>
+    internal delegate IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? LooseLinesBetween(
+        int upperStaffIndex, int lowerStaffIndex);
 }

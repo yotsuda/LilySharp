@@ -118,9 +118,14 @@ internal sealed class LayoutEngine
             systemMeasures.Count <= 1, indent, commonShortestDuration,
             () => multiStaffLayouter.BuildStaffSkylines(
                 score, _skylineBuilder, firstSystemMeasureLayouts));
+        var firstLooseLines = systemMeasures.Count > 0
+            ? BuildLooseLinesBetween(
+                score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count)
+            : null;
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
-                score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true)
+                score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true,
+                firstLooseLines)
             : multiStaffLayouter.LayoutStaffGroups(
                 score, _skylineBuilder, firstSystemMeasureLayouts);
         // The system's height is the extent of the groups AS PLACED — see
@@ -172,6 +177,7 @@ internal sealed class LayoutEngine
             FirstSystemMeasureLayouts = firstSystemMeasureLayouts,
             FirstStaffGroupLayouts = firstStaffGroupLayouts,
             FirstStaffSkylines = firstStaffSkylines,
+            FirstLooseLines = firstLooseLines,
             EdgeStaffBeams = EdgeStaffBeams,
             FirstSystemY = currentY,
         });
@@ -315,6 +321,9 @@ internal sealed class LayoutEngine
         public required ImmutableArray<MeasureLayout> FirstSystemMeasureLayouts { get; init; }
         public required ImmutableArray<StaffGroupLayout> FirstStaffGroupLayouts { get; init; }
         public required List<(VerticalSkyline Up, VerticalSkyline Down)> FirstStaffSkylines { get; init; }
+        /// <summary>System 0's loose-line lookup, built by the caller alongside its placement
+        /// so the springs below are floored against the SAME alignment that drew it.</summary>
+        public MultiStaffLayouter.LooseLinesBetween? FirstLooseLines { get; init; }
         public required Func<ImmutableArray<MeasureLayout>,
             (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams { get; init; }
         public required double FirstSystemY { get; init; }
@@ -392,11 +401,20 @@ internal sealed class LayoutEngine
             // between the staves gets more room and its neighbours do not. Hara-kiri needs no
             // branch here: which staves survive is one more per-system input, passed as the
             // measure range (LayoutStaffGroups takes liveness as a predicate, not as a mode).
+            // The alignment's loose lines between THIS system's staves — the block whose ink
+            // the room between two staves is walked from. Built once and handed to both the
+            // placement and the springs, for the same reason the staff skylines are.
+            var sysLooseLines = isFirstSystem
+                ? ctx.FirstLooseLines
+                : BuildLooseLinesBetween(
+                    score, measureLayouts, firstMeasureIndex, firstMeasureIndex + measureCount);
+
             var sysStaffGroups = isFirstSystem
                 ? firstStaffGroupLayouts
                 : multiStaffLayouter.LayoutStaffGroups(
                     score, sysStaffSkylines,
-                    firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem);
+                    firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem,
+                    sysLooseLines);
 
             // The height of THIS system: the extent of the groups it actually placed. A
             // hidden staff was placed at zero height, so it leaves the union by itself,
@@ -457,7 +475,7 @@ internal sealed class LayoutEngine
                 // (LilyPond's own value: audit/lp-geometry page.compressed.staff-staff-inside).
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
-                    score, sysStaffGroups, sysStaffSkylines)));
+                    score, sysStaffGroups, sysStaffSkylines, sysLooseLines)));
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
@@ -2272,12 +2290,38 @@ internal sealed class LayoutEngine
             };
         }
 
-        // A syllable is CENTRED on its column's alignment extent, not on the column
-        // (self-alignment-interface.cc:117-176). That extent is the column's note heads /
-        // rests — which only the MUSIC knows, so it is resolved here and handed down.
-        // Cached per (measure, timing): a bar's syllables all ask the same measure.
+        return new LyricEngraver(
+                parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, measures))
+            .CalculateLayouts(
+                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
+                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
+                betweenStavesEnd, ctx.LastSpaceableStaffY);
+    }
+
+    /// <summary>
+    /// Where a syllable's ink centre lands on its column: the column's ALIGNMENT EXTENT
+    /// centre, not the column itself.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-176 — the extent is the column's
+    /// note heads / rests, which only the MUSIC knows, so it is resolved here and handed to
+    /// the engraver. Cached per (measure, timing): a bar's syllables all ask the same
+    /// measure.
+    /// <para>
+    /// ⚠️ ONE FACTORY, because a syllable's X is now wanted TWICE — once for the drawn
+    /// layouts and once, before the staves are placed, for the ink the room between two
+    /// staves is walked from (<c>LyricEngraver.NoteBoundBlockSkylines</c>). Two spellings of
+    /// an X is the shape HANDOFF 5.2.1② names.
+    /// </para>
+    /// </remarks>
+    private static Func<int, Fraction, double> BuildParentAlignmentCentre(
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        ImmutableArray<Measure>? measures)
+    {
         const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
         var alignmentCentreCache = new Dictionary<int, Dictionary<Fraction, double>>();
+        return ParentAlignmentCentre;
+
         double ParentAlignmentCentre(int measureIndex, Fraction timing)
         {
             if (!alignmentCentreCache.TryGetValue(measureIndex, out var byTiming))
@@ -2292,8 +2336,8 @@ internal sealed class LayoutEngine
                         if (measureIndex < staffMeasures.Length)
                             barMeasures.Add(staffMeasures[measureIndex]);
                     }
-                else if (measures != null && measureIndex < measures.Length)
-                    barMeasures.Add(measures[measureIndex]);
+                else if (measures is { } scoreMeasures && measureIndex < scoreMeasures.Length)
+                    barMeasures.Add(scoreMeasures[measureIndex]);
 
                 var barTimings = new List<Fraction>();
                 foreach (var barMeasure in barMeasures)
@@ -2317,12 +2361,77 @@ internal sealed class LayoutEngine
             // note-column extent, which is exactly when LilyPond takes the placeholder.
             return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
         }
+    }
 
-        return new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre)
-            .CalculateLayouts(
-                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
-                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
-                betweenStavesEnd, ctx.LastSpaceableStaffY);
+    /// <summary>
+    /// The alignment's loose lines between each pair of staves of ONE system: the
+    /// <c>with lyrics</c> block a non-last group carries, as skylines, so the room the two
+    /// staves leave is the block's own ink rather than a constant per verse.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — the run of non-spaceable lines
+    /// collected between two spaceable staves, which
+    /// <c>Align_interface::internal_get_minimum_translations</c> has already walked over.
+    /// <para>
+    /// Null when the score has no such block, so a score without one does no extra work and
+    /// takes the adjacent-pair path unchanged.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY ACROSS A GROUP BOUNDARY, which is where Lily# puts a note-bound line (see
+    /// <c>LyricEngraver.CalculateLayouts</c>: a block under a non-last group hangs below
+    /// that GROUP's bottom staff). A pair inside one group has nothing between it.
+    /// </para>
+    /// </remarks>
+    private MultiStaffLayouter.LooseLinesBetween? BuildLooseLinesBetween(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure)
+    {
+        if (score.Lyrics.IsDefaultOrEmpty || score.StaffGroups.Length < 2)
+            return null;
+        bool anyNoteBound = false;
+        foreach (var l in score.Lyrics)
+            if (!l.IsLyricsRow) { anyNoteBound = true; break; }
+        if (!anyNoteBound)
+            return null;
+
+        // staff index -> (its group, that group's staff range)
+        var groupOf = new Dictionary<int, (int Group, int First, int End)>();
+        int at = 0;
+        for (int g = 0; g < score.StaffGroups.Length; g++)
+        {
+            int count = score.StaffGroups[g].StaffCount;
+            for (int k = 0; k < count; k++)
+                groupOf[at + k] = (g, at, at + count);
+            at += count;
+        }
+
+        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            measuresByStaff[idx] = st.PrimaryVoice.Measures;
+        var engraver = new LyricEngraver(
+            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, null));
+
+        var cache = new Dictionary<(int, int), IReadOnlyList<(VerticalSkyline, VerticalSkyline)>?>();
+        return (upperStaffIndex, lowerStaffIndex) =>
+        {
+            var key = (upperStaffIndex, lowerStaffIndex);
+            if (cache.TryGetValue(key, out var hit))
+                return hit;
+
+            IReadOnlyList<(VerticalSkyline, VerticalSkyline)>? lines = null;
+            if (groupOf.TryGetValue(upperStaffIndex, out var upper)
+                && groupOf.TryGetValue(lowerStaffIndex, out var lower)
+                && upper.Group != lower.Group)
+            {
+                var built = engraver.NoteBoundBlockSkylines(
+                    score.Lyrics, measureLayouts, startMeasure, endMeasure,
+                    upper.First, upper.End);
+                if (built.Count > 0)
+                    lines = built;
+            }
+            cache[key] = lines;
+            return lines;
+        };
     }
 
     /// <summary>
