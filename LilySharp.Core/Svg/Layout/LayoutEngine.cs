@@ -1236,10 +1236,17 @@ internal sealed class LayoutEngine
         // and test/lyrics-volta). So the two models bound on different books and the
         // drawn one silently overrode the ported one wherever they met.
         //
-        // A lyrics ROW keeps its drawn extent, and that is not the same case: a row is a
-        // band of its own with no staff above it to be spaced from, so there is no
-        // alignment minimum to prefer. Its UP half is kept for every line — a first system
-        // whose top content is a lyrics/chord row would otherwise graze the title ink.
+        // ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+        // reading of LilyPond. To LilyPond a row is a loose line like any other and its
+        // reservation is the same alignment minimum; Lily# places it as an independent
+        // staff-like BAND instead (HANDOFF 3, a decided divergence), so it has no alignment
+        // minimum to prefer — the drawn extent is the only figure that exists for it. The
+        // day that decision is revisited, this branch goes with it.
+        // Its UP half is kept for every line — a first system whose top content is a
+        // lyrics/chord row would otherwise graze the title ink. ⚠️ For a note-bound line the
+        // up half is INERT (the line sits below the staff, so 2.11 - lyY is negative); it is
+        // called anyway so the two branches read as one rule with one exception, and so that
+        // a future line placed ABOVE its staff is not silently dropped.
         foreach (var lyLay in ann.Lyrics)
         {
             // lyLay.YUp is Y-up from the system top; the system-relative device
@@ -2460,18 +2467,35 @@ internal sealed class LayoutEngine
 
         var walk = new AlignmentWalk();
         walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
+
+        // ⚠️ THE DEEPEST POINT OVER EVERY LINE, not the last line's. LilyPond's
+        // build_system_skyline merges each element's skyline RAISED BY ITS OWN TRANSLATION
+        // (page-layout-problem.cc:1093-1108) and the profile's maximum is what the page
+        // reserves, so a line with a deeper descender than the one under it still owns the
+        // band. Taking the last line's descent gives the same number on every book in the
+        // corpus — the verse step is at least 2.800000 and a descender is a tenth of that —
+        // which is exactly why it would have gone unnoticed.
+        double deepest = 0;
         for (int k = 0; k < lines.Count; k++)
+        {
             walk.Advance(
                 lines[k].Up, lines[k].Down,
                 k == 0 ? SkylineDrop.RelatedStaffPadding : SkylineDrop.NonStaffNonStaffPadding,
                 k == 0
                     ? LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance
                     : LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
+            deepest = Math.Max(deepest, walk.Where + -lines[k].Down.MaxHeight());
+        }
 
-        // The walk is in the anchor's REFPOINT frame and a down extent is measured below its
-        // BOTTOM LINE, half a staff lower; the last line's own descenders finish the band.
-        double descent = -lines[^1].Down.MaxHeight();
-        return Math.Max(0, walk.Where + descent - anchorStaff.Height / 2.0);
+        // ...and a down extent is measured below the anchor's BOTTOM LINE, half a staff
+        // under the reference point the walk runs from.
+        // ⚠️ THE STAFF'S OWN INK IS DELIBERATELY NOT IN THIS. The accumulated profile also
+        // carries the anchor staff raised into each line's frame — its clef hangs 3.550000
+        // under its reference point — but that ink is already in the system's own extents
+        // (SkylineBuilder.BuildSystemSkylines), and this figure is max-ed into the same
+        // downExtent. Reading the profile whole would count the staff twice; what the page
+        // needs here is the BLOCK's reach.
+        return Math.Max(0, deepest - anchorStaff.Height / 2.0);
     }
 
     /// <summary>A lyric engraver configured for geometry only — one X model, no layout.</summary>
@@ -2587,9 +2611,12 @@ internal sealed class LayoutEngine
         var groups = systems[sysIdx].StaffGroups;
         if (groups.IsDefaultOrEmpty) return null;
 
-        // Device-DOWN to each spaceable staff's top line, and the anchor's own group.
+        // Device-DOWN to each SPACEABLE staff's top line, and the anchor's own group; the
+        // lines Lily# lays out as bands of their own — an ossia, a chords or lyrics track —
+        // are collected separately, because whether they matter depends on WHERE they are.
         double? anchorDown = null;
         var below = new List<(double Down, int StaffIndex)>();
+        var looseBands = new List<double>();
         foreach (var group in groups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
@@ -2597,8 +2624,12 @@ internal sealed class LayoutEngine
             foreach (var st in group.Staves)
             {
                 if (st.IsHidden) continue;
-                if (st.IsOssia || textRowStaves.Contains(st.StaffIndex)) return null;
                 double down = -st.Y;
+                if (st.IsOssia || textRowStaves.Contains(st.StaffIndex))
+                {
+                    looseBands.Add(down);
+                    continue;
+                }
                 if (holdsAnchor)
                 {
                     if (anchorDown is null || down > anchorDown) anchorDown = down;
@@ -2617,6 +2648,22 @@ internal sealed class LayoutEngine
         }
         if (nextDown is not { } next || !staffByIndex.TryGetValue(nextIndex, out var nextStaff))
             return null;
+
+        // ⚠️ THE ROOM IS UNKNOWN ONLY IF ONE OF THOSE BANDS IS INSIDE IT. The span this
+        // returns runs from the anchor staff's reference point down to the next spaceable
+        // staff's, and a band ABOVE the anchor or BELOW that next staff is in somebody
+        // else's span — LilyPond's own call site takes two spaceable positions and the loose
+        // lines strictly between them (page-layout-problem.cc:936-939, :948-990). A band
+        // that IS between them is a genuine disagreement: LilyPond makes it a loose line in
+        // this very chain while Lily# gives it a band of its own (HANDOFF 3), so the chain
+        // would be solved into space it does not own.
+        // ⚠️ THIS USED TO BAIL ON THE WHOLE SYSTEM, and the remark on BuildLooseChainEnds
+        // said why it was left coarse: nothing measured it, and narrowing an exclusion
+        // nothing measures is how a port acquires an untested branch. The corpus measures it
+        // now — lyrics.chord-row.* on book LYRCH, where LilyPond is the identity with LYRB.
+        foreach (double band in looseBands)
+            if (band > anchor && band < next)
+                return null;
 
         // ⚠️ THE INDENT GOES WITH IT, and this is the call where it matters most: this
         // up-skyline is what CLOSES the chain, and the room the chain is solved into was

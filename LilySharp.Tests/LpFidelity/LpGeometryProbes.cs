@@ -606,6 +606,65 @@ internal static class LpGeometryProbes
     private static readonly string LYRM = LyricTwoStaffPageScore("LYRM", secondVerse: false);
 
     /// <summary>
+    /// LYRM WITH A CHORD ROW — the mirror of book LYRMC, and the book that says the
+    /// remaining force-0 decline is NOT a guard that can be narrowed.
+    /// </summary>
+    /// <remarks>
+    /// LYRCH's row sits ABOVE the anchor staff and so outside the span the room covers,
+    /// which is why narrowing <c>ComputeBetweenStavesEnd</c> closed it. Here the lyrics hang
+    /// under the system's LAST staff, so the room runs to the NEXT SYSTEM's first staff —
+    /// and that system's chord row is INSIDE it. LilyPond puts the row into the very chain
+    /// the lyrics are distributed by (page-layout-problem.cc:948-990).
+    /// <para>
+    /// ★ MEASURED, AND IT DECIDES THE FORK: LilyPond reads 4.608814 where LYRM reads
+    /// 5.500000, with <c>system-to-system</c> 12.000000 in BOTH. The room did not grow for
+    /// the row; the row is squeezed into it alongside the lyrics, and the lyric line is
+    /// pulled CLOSER to its staff because one more spring in a fixed room compresses the
+    /// solve. ⇒ THE ROW AND THE LYRICS SHARE ONE ROOM. Lily# gives the row a band of its own
+    /// (HANDOFF 3), and a band cannot be squeezed by somebody else's chain — so
+    /// <c>BuildLooseChainEnds</c>' decline is honest here, and closing it means MOVING THAT
+    /// DECISION rather than narrowing a guard. A judgement call, not a port.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY THE FIRST OF LilyPond's two readings moves; the last system on a page runs its
+    /// chain to the page edge with no row between, and reads LYRM's 5.500001. So the defect
+    /// is per-chain, not per-score — which is the other half of what
+    /// <c>BuildLooseChainEnds</c>' own remark suspected when it called the whole-score
+    /// bail-out coarser than it needs to be.
+    /// </para>
+    /// </remarks>
+    private static string LyricTwoStaffChordRowScore(string name)
+    {
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part upper { clef treble }
+            part melody { clef treble }
+
+            section Main {
+              upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
+              melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
+              lyrics one { {{syllables}} }
+              chords prog { {{string.Concat(Enumerable.Repeat("c1 | ", 120)).Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              chords prog
+              staff upper
+              staff melody with lyrics one
+            }
+            """;
+    }
+
+    /// <inheritdoc cref="LyricTwoStaffChordRowScore"/>
+    private static readonly string LYRMC = LyricTwoStaffChordRowScore("LYRMC");
+
+    /// <summary>
     /// The same two-staff system with a SECOND verse — the mirror of book LYRMV.
     /// </summary>
     /// <remarks>
@@ -693,6 +752,124 @@ internal static class LpGeometryProbes
 
     /// <summary>The two-verse book — the mirror of book LYRBV.</summary>
     private static readonly string LYRBV = LyricBetweenStavesPageScore("LYRBV", secondVerse: true);
+
+    /// <summary>
+    /// LYRB WITH A CHORD ROW ADDED — the mirror of book LYRCH, and the control for the last
+    /// branch of the loose chain Lily# still lays out at force 0.
+    /// </summary>
+    /// <remarks>
+    /// <c>LayoutEngine.BuildLooseChainEnds</c> and <c>ComputeBetweenStavesEnd</c> both return
+    /// null as soon as the system carries a text ROW, so the lyric block gets
+    /// room = +infinity and every spring sits at <c>max(min, ideal)</c> — 5.500000 — however
+    /// tight the page is. This book is LYRB with one <c>chords</c> row added and nothing else
+    /// changed.
+    /// <para>
+    /// ★★ LILYPOND IS THE IDENTITY HERE, MEASURED, which is the strongest form a pair can
+    /// take (HANDOFF 5.0) and it arrived by accident: book LYRCH prints LYRB's numbers to six
+    /// digits on EVERY spacing quantity in the dump — the chain 4.027851, the inside distance
+    /// 9.000000, system-to-system 12.000000, four systems on page 1 — and differs only in
+    /// where the first ink starts, which is the chord row's own glyphs. So LilyPond's
+    /// difference is ZERO and whatever Lily# reads differently is the defect outright, with
+    /// no font quantity and no page-breaking term in it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FALSIFIER DID NOT FIRE. It was 5.500000 on LilyPond's side, which would have
+    /// meant LilyPond leaves the chain at force 0 too and Lily#'s branch is right by
+    /// accident; the item would then close by deletion rather than by a port. It reads
+    /// 4.027851, so the branch is a defect.
+    /// </para>
+    /// <para>
+    /// ⚠️ ITS SIBLING LYROS (an OSSIA instead of a chord row) IS MEASURED IN THE PROBE BUT NOT
+    /// WIRED HERE. Same chain reading, 4.027851, but its inside distance is 18.000000 rather
+    /// than 9.000000 — <c>staff-refpoint-extent</c> spans every SPACEABLE staff, and an ossia
+    /// is a real <c>\new Staff</c> to LilyPond, so there are three of them. ⇒ AN OSSIA IS
+    /// SPACEABLE IN LILYPOND AND IS NOT IN LILY#, a second and different defect that has to
+    /// be decided before its points mean anything. The probe header carries the numbers.
+    /// </para>
+    /// </remarks>
+    private static string LyricChordRowPageScore(string name)
+    {
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
+        string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim();
+        string chords = string.Concat(Enumerable.Repeat("c1 | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part lower { clef treble }
+
+            section Main {
+              melody { {{bars}} }
+              lower { {{bars}} }
+              lyrics one { {{syllables}} }
+              chords prog { {{chords}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              chords prog
+              staff melody with lyrics one
+              staff lower
+            }
+            """;
+    }
+
+    /// <inheritdoc cref="LyricChordRowPageScore"/>
+    private static readonly string LYRCH = LyricChordRowPageScore("LYRCH");
+
+    /// <summary>
+    /// LYRB WITH AN OSSIA ADDED — the mirror of book LYROS, and the other half of the
+    /// force-0 branch: <c>ComputeBetweenStavesEnd</c> declined an ossia for the same reason
+    /// it declined a text row.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONLY THE CHAIN READING IS WIRED. LilyPond's inside-system distance on this book is
+    /// 18.000000, not LYRB's 9.000000, because <c>staff-refpoint-extent</c> spans every
+    /// SPACEABLE staff (lily/system.cc:705-717) and an ossia is a real <c>\new Staff</c> to
+    /// LilyPond — there are three. ⇒ AN OSSIA IS SPACEABLE THERE AND IS NOT HERE
+    /// (<c>MultiStaffLayouter.StaffSprings</c> skips it), a second and different defect, so
+    /// the inside reading is not like-for-like and is deliberately not a point.
+    /// <para>
+    /// The chain reading IS like-for-like: LilyPond solves it to 4.027851, LYRB's own number
+    /// to six digits, exactly as it does with a chord row. The ossia sits ABOVE the anchor
+    /// staff, so it is not in the span between the anchor and the staff below it.
+    /// </para>
+    /// </remarks>
+    private static string LyricOssiaPageScore(string name)
+    {
+        string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
+        string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim();
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+            part ossia_mel { clef treble }
+            part lower { clef treble }
+
+            section Main {
+              melody { {{bars}} }
+              ossia_mel { {{bars}} }
+              lower { {{bars}} }
+              lyrics one { {{syllables}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              staff melody with lyrics one
+              ossia ossia_mel
+              staff lower
+            }
+            """;
+    }
+
+    /// <inheritdoc cref="LyricOssiaPageScore"/>
+    private static readonly string LYROS = LyricOssiaPageScore("LYROS");
 
     /// <summary>The between-staves books, for the mechanism assertion beside the ledger.</summary>
     internal static string BetweenStavesOneVerseScore => LYRB;
@@ -3188,6 +3365,42 @@ internal static class LpGeometryProbes
             g => g.StaffGapAt(0), FourSystemsPerPageRagged),
         new("lyrics.between-staves.staves-on-first-page", LYRB,
             g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE SAME BOOK WITH A CHORD ROW ADDED, which is the branch that still runs at force
+        // 0 — BuildLooseChainEnds and ComputeBetweenStavesEnd both decline a system carrying
+        // a text ROW, so the block gets room = +infinity and sits at its ideal 5.500000.
+        // ★ LilyPond is the IDENTITY on all three: the row changes nothing it measures, so
+        // each residual is Lily#'s defect outright. See LyricChordRowPageScore.
+        new("lyrics.chord-row.staff-to-lyric", LYRCH,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.staff-staff-inside", LYRCH,
+            g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+        new("lyrics.chord-row.staves-on-first-page", LYRCH,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE ROW INSIDE THE ROOM, which is the case narrowing a guard cannot reach: the
+        // lyrics hang under the system's LAST staff, so their room runs to the next system
+        // and that system's chord row is in it. LilyPond squeezes both into one 12.000000.
+        // See LyricTwoStaffChordRowScore for what the pair decides.
+        // ⚠️ INDEX 1, the first system's BOTTOM staff — the one the block hangs from, as in
+        // lyrics.two-staff.staff-to-lyric. Index 0 reads the upper staff and comes out one
+        // whole staff-staff distance too big (14.500000 against 5.500000, measured).
+        new("lyrics.chord-row.between-systems.staff-to-lyric", LYRMC,
+            g => g.LyricBaselineBelowStaff(1), FourSystemsPerPageRagged),
+        // ⚠️ StaffGapAt(1), not StaffGap(): a two-staff book's gaps alternate 9 inside a
+        // system and 12 between two, so the uniform reading throws. Index 1 is the
+        // between-systems one, the same index lyrics.two-staff.two-verse.system-gap takes.
+        new("lyrics.chord-row.between-systems.system-gap", LYRMC,
+            g => g.StaffGapAt(1), FourSystemsPerPageRagged),
+        // ...and the count, because both readings above are BY INDEX (HANDOFF 5.0 trap 8).
+        new("lyrics.chord-row.between-systems.staves-on-first-page", LYRMC,
+            g => g.StavesOnPage(0), FourSystemsPerPageRagged),
+
+        // THE OSSIA HALF, chain reading only — the inside distance is not like-for-like
+        // (LilyPond has three spaceable staves there and Lily# has two). See
+        // LyricOssiaPageScore.
+        new("lyrics.ossia.staff-to-lyric", LYROS,
+            g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
         new("lyrics.between-staves.two-verse.staff-to-lyric", LYRBV,
             g => g.LyricBaselineBelowStaff(0), FourSystemsPerPageRagged),
         new("lyrics.between-staves.two-verse.verse-step", LYRBV,

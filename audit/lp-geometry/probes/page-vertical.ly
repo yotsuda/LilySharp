@@ -2217,3 +2217,194 @@ probeTag =
     >>
   }
 }
+
+%% LYROS / LYRCH — A SYSTEM THAT ALSO CARRIES AN OSSIA, OR A CHORD ROW.  The last branch of
+%%     the loose chain Lily# still lays out at FORCE 0: LayoutEngine.BuildLooseChainEnds and
+%%     ComputeBetweenStavesEnd BOTH return null as soon as the system holds an ossia or a
+%%     text ROW, so the lyric block gets room = +infinity and every spring sits at
+%%     max(min, ideal) — 5.500000 — however tight the page is.
+%%
+%%     WHY THESE TWO BOOKS AND NOT ONE.  The two Lily# constructs decline for the same
+%%     reason but are DIFFERENT THINGS to LilyPond, and the pair is what says whether the
+%%     defect is one or two:
+%%       - an OSSIA is a Staff.  It is not spaceable in Lily#'s model (it carries no staff
+%%         spring, MultiStaffLayouter.StaffSprings skips it) but in LilyPond it is an
+%%         ordinary staff in the alignment, spaced like any other.
+%%       - a CHORD ROW is a ChordNames context, which LilyPond does treat as a loose line:
+%%         non-spaceable, distributed by distribute_loose_lines exactly as the Lyrics are.
+%%     ⇒ THEY SHOULD NOT READ ALIKE ON LILYPOND'S SIDE, and if they do, that is the finding.
+%%
+%%     THE CONTROL IS LYRB, deliberately, not a fourth book: LYROS and LYRCH are LYRB with
+%%     ONE line added and nothing else changed — same two staves, same 120 bars of g'/a',
+%%     same 480 syllables, same paper.  So every difference from LYRB's readings is the added
+%%     line, and LYRB's own numbers are already ported and understood
+%%     (lyrics.between-staves.staff-to-lyric, +0.131349).
+%%     ⚠️ ADDING A LINE IS NOT AN IDENTITY (HANDOFF 5.0 prefers those): one more line per
+%%     system changes how many systems fit, which changes the page's spring solution, which
+%%     changes the room the chain is solved into.  So LilyPond's staff-to-lyric here is NOT
+%%     expected to equal LYRB's — what is expected is that it is SOLVED, i.e. off 5.500000.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0):
+%%       (a) LYROS staff -> verse 1: BELOW 5.500000, compressed like LYRB's 4.027851 and
+%%           probably close to it — the ossia sits ABOVE the upper staff, so it does not come
+%%           between the block and the staff under it.
+%%       (b) LYRCH staff -> verse 1: BELOW 5.500000 as well.  The chord row is ABOVE the
+%%           staff too, so the block's own chain is untouched; what the row costs is page
+%%           height, hence fewer systems.
+%%       (c) staves-on-first-page: FEWER than LYRB's 8 in both, since each system is taller.
+%%       (d) staff -> staff INSIDE the system: 9.000000 in both, the spring's ideal, exactly
+%%           as LYRB — neither added line is BETWEEN the two staves.
+%%     (falsifier for (a)/(b): 5.500000, which would mean LilyPond leaves the chain at force
+%%      zero too and Lily#'s branch is right by accident.  Then the whole item is closed by
+%%      deleting it rather than by porting anything.)
+%%     (falsifier for (d): anything else — that would mean the added line lands between the
+%%      staves and this pair is measuring a different quantity from the one it is named for.)
+%%
+%%     ⚠️ WHAT LILY# READS TODAY, so the residual is not mistaken for a font quantity:
+%%     5.500000 for staff -> verse 1 in both, the force-0 ideal.
+%%
+%%     MEASURED — (a) AND (b) HELD EXACTLY, (c) IS UNMEASURABLE HERE, (d) MISSED ON LYROS.
+%%       LYROS  staff -> next loose line = 4.027851   staff-to-staff INSIDE = 18.000000
+%%       LYRCH  staff -> next loose line = 4.027851   staff-to-staff INSIDE =  9.000000
+%%       LYRB   staff -> next loose line = 4.027851   staff-to-staff INSIDE =  9.000000
+%%
+%%     ★★ AND THAT IS THE STRONGEST FORM OF THE PAIR, ARRIVED AT BY ACCIDENT (HANDOFF 5.0:
+%%     the best pairs are the ones where LILYPOND IS THE IDENTITY). LYRCH is identical to
+%%     LYRB on EVERY spacing quantity in the dump — the chain 4.027851, the inside distance
+%%     9.000000, system-to-system 12.000000, four systems on page 1 — and differs only in
+%%     where the first ink starts, which is the chord row's own glyphs above the staff. So
+%%     LilyPond's difference is ZERO and whatever Lily# reads differently is the defect
+%%     outright, with no font quantity and no page-breaking term in it.
+%%     LYROS is the identity too for the quantity this item is about: the same 4.027851.
+%%
+%%     ⇒ THE FALSIFIER DID NOT FIRE. LilyPond does not leave the chain at force 0 when an
+%%     ossia or a chord row is present; it solves it to exactly the number it solves LYRB to.
+%%     So Lily#'s "decline to supply a room when the system carries one of these" has NO
+%%     counterpart in the source, and the item is a port rather than a decision to delete.
+%%
+%%     ★ (d) MISSED ON LYROS AND THE MISS NAMES THE MECHANISM: 18.000000, not 9.000000.
+%%     `staff-refpoint-extent` spans every SPACEABLE staff (lily/system.cc:705-717), so its
+%%     width is 9.000000 only while there are two of them. An ossia is a `\new Staff`, so
+%%     LilyPond has THREE and the width is the whole span. ⇒ AN OSSIA IS SPACEABLE IN
+%%     LILYPOND — it carries a staff spring and sits in the page's chain like any staff —
+%%     where Lily# treats it as non-spaceable (MultiStaffLayouter.StaffSprings skips it, and
+%%     the loose-chain builders decline the whole system because of it). That is a DIFFERENT
+%%     defect from the chord row's, which is why the two books were opened together, and it
+%%     is the one that has to be decided first: porting the room for an ossia system means
+%%     deciding whether the ossia joins the spring chain.
+%%     ⚠️ SO THE TWO INSIDE READINGS ARE NOT COMPARABLE: LYROS's 18.000000 is a three-staff
+%%     span and LYRB's 9.000000 is a two-staff gap. Only LYRCH's is a like-for-like control.
+%%
+%%     ⚠️ (c) CANNOT BE READ ON THIS PAPER: `max-systems-per-page = #4` caps all three books
+%%     at four systems, so "fewer systems" has nowhere to show. The staff COUNT still
+%%     differs (8 for LYRB and LYRCH, 12 for LYROS) because LYROS's systems hold three
+%%     staves. Anyone wanting the page-breaking half of this must lift the cap first
+%%     (HANDOFF 5.0 trap 7: a cap cannot create the regime it is capping).
+%% LYRMC — LYRM WITH A CHORD ROW, and it asks the ONE question the LYRCH pair could not.
+%%     LYRCH's row sits ABOVE the anchor staff, so it is outside the span the room covers
+%%     and the narrowing that closed it never had to decide anything hard. THIS book puts
+%%     the lyrics under the system's LAST staff (LYRM's arrangement), so the block's room
+%%     runs from that staff to the NEXT SYSTEM's first staff — and the next system's chord
+%%     row is INSIDE it. LilyPond puts that row into the very chain the lyrics are
+%%     distributed by (page-layout-problem.cc:948-990 collects every non-spaceable line
+%%     between two spaceable ones); Lily# gives it a band of its own (HANDOFF 3). So this is
+%%     the case where 'what room is there' genuinely has two answers, and it is the one
+%%     LayoutEngine.BuildLooseChainEnds still declines whole-score.
+%%
+%%     WHAT THE PAIR DECIDES, and it is a fork rather than a number:
+%%       - if LilyPond's staff-to-lyric here EQUALS LYRM's, the row costs the lyric line
+%%         nothing, the two engines can disagree about where the row lives and still agree
+%%         about the lyric, and Lily#'s decline is over-cautious exactly as it was for LYRCH
+%%         — narrow it the same way and the item closes.
+%%       - if it DIFFERS, the row and the lyrics really are sharing one room, Lily#'s
+%%         independent band cannot express that, and closing this means moving the HANDOFF 3
+%%         decision rather than the guard. That is a judgement call, not a port.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0): DIFFERS. The row is a loose line in
+%%     the chain, so the chain has one more spring and one more minimum, and the solve
+%%     cannot land where it lands without it — expect staff-to-lyric ABOVE LYRM's 5.500001,
+%%     since the row eats room the lyric line was stretching into.
+%%     (falsifier: exactly 5.500001, which would mean the row is spaced independently after
+%%      all and the fork above takes its first branch.)
+%%
+%%     ⚠️ THE CONTROL IS LYRM, unchanged: this is LYRM with one ChordNames added and nothing
+%%     else touched — same two staves, same 120 bars, same 480 syllables, same paper.
+%%
+%%     MEASURED — IT DIFFERS, SO THE FORK TAKES ITS SECOND BRANCH. The direction of the
+%%     prediction was WRONG and the miss is the useful half (HANDOFF 5.0).
+%%       LYRM   staff/loose -> next loose line = 5.500000, 5.500001
+%%       LYRMC  staff/loose -> next loose line = 4.608814, 5.500001
+%%       both   system-to-system = 12.000000    staff-to-staff INSIDE = 9.000000
+%%
+%%     ★ THE ROOM DID NOT GROW FOR THE ROW — 12.000000 in both, which is the same principle
+%%     LooseLineSpacer's remarks already carry: a loose line is absent from the page's chain,
+%%     so system-system-spacing is whatever it would have been. The row is SQUEEZED INTO the
+%%     room that already exists, alongside the lyrics. ⇒ the prediction said the lyric would
+%%     be pushed FURTHER from its staff and it is pulled CLOSER, 5.500000 -> 4.608814: one
+%%     more spring in a fixed room means the solve compresses, and the first spring is the
+%%     one with slack to give.
+%%
+%%     ⇒ THE ROW AND THE LYRICS REALLY DO SHARE ONE ROOM, which is what the pair was built to
+%%     decide. Lily# gives the row a band of its own, and a band cannot be squeezed by
+%%     somebody else's chain — so BuildLooseChainEnds' decline is NOT over-cautious here the
+%%     way ComputeBetweenStavesEnd's was. Closing this means putting the row into the
+%%     alignment as a loose line, not narrowing a guard.
+%%     ⚠️ THIS HEADER FIRST CALLED THAT 'a judgement call and not a port' AND THAT WAS WRONG
+%%     (corrected 2026-07-27). The policy is literal porting of LilyPond's code and it does
+%%     not bend for a Lily# model: :948-990 puts every non-spaceable staff into loose_lines
+%%     and closes the run on the next spaceable one, so the row IS in the Lyrics' chain, and
+%%     "Lily# models it as a band" is the thing to change rather than a reason to stop.
+%%     ⚠️ THE PORT MOVES WHERE THE ROW SITS, which is the quantity HANDOFF 3's
+%%     independent-row decision names, so the two are one island and not two.
+%%
+%%     ⚠️ ONLY THE FIRST OF THE TWO READINGS MOVES. The second, 5.500001, is the LAST system
+%%     on the page, whose chain runs to the page edge instead of to a next system — no row
+%%     between it and the foot, so nothing shares its room. The pair therefore also says the
+%%     defect is per-chain and not per-score, which is what BuildLooseChainEnds' own remark
+%%     already suspected when it called the whole-score bail-out coarser than it needs to be.
+\book {
+  \probeTag "LYRMC"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 120 { c1 } } }
+      \new Staff { \repeat unfold 120 { g''4 a'' g'' a'' } }
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "LYROS"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff = "main" <<
+        \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } }
+        \new Staff \with {
+          \remove "Time_signature_engraver"
+          alignAboveContext = "main"
+          fontSize = #-3
+          \override StaffSymbol.staff-space = #(magstep -3)
+          \override StaffSymbol.thickness = #(magstep -3)
+        } { \repeat unfold 120 { g'4 a' g' a' } }
+      >>
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+\book {
+  \probeTag "LYRCH"
+  \paper { max-systems-per-page = #4 ragged-bottom = ##t }
+  \score {
+    <<
+      \new ChordNames { \chordmode { \repeat unfold 120 { c1 } } }
+      \new Staff { \new Voice = "mel" { \repeat unfold 120 { g'4 a' g' a' } } }
+      \new Lyrics \lyricsto "mel" { \repeat unfold 480 { no } }
+      \new Staff { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}

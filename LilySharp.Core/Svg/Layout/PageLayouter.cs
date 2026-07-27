@@ -28,8 +28,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: ly/paper-defaults-init.ly:64-89 — default spacing specs
 ///
 /// Loose line distribution (page-layout-problem.cc:1025-1054):
-///   lyrics, dynamics, and figured bass heights are estimated and added to system extents
-///   in LayoutEngine.AugmentExtentsWithLooseLines() before page breaking
+///   dynamics and figured bass heights are still ESTIMATED from the items and added to the
+///   system extents in LayoutEngine.AugmentExtentsWithLooseLines() before page breaking.
+///   ⚠️ LYRICS ARE NOT ESTIMATED ANY MORE (2026-07-27): a lyric block is reserved at its
+///   ALIGNMENT MINIMUM by LayoutEngine.LyricReservationBelowSystem, which is AlignmentWalk
+///   over the real syllable ink and the real staff skyline — LilyPond's own reservation
+///   (:593-599 hands build_system_skyline the minimum translations). The estimate and the
+///   drawn-distance reading that used to stand beside it are both gone.
 /// build_system_skyline (page-layout-problem.cc:1070-1127):
 ///   per-system UP/DOWN skylines are passed to PositionSystemsOnPage for inter-system collision avoidance
 /// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:1057-1061,
@@ -38,8 +43,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// IMPLEMENTED — in-note-system-padding (page-layout-problem.cc:483)
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (MultiStaffLayouter + LayoutEngine)
 /// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
-/// IMPLEMENTED — pure height estimation for pre-breaking optimization
-///   via LayoutEngine.AugmentExtentsWithLooseLines + MultiStaffLayouter.CalculatePureSystemHeight
+/// ⚠️ NOT WIRED — MultiStaffLayouter.CalculatePureSystemHeight has no product caller. It is
+///   reached only from SkylineStaffSpacingTests, and LilyPond's own pure path
+///   (get_pure_minimum_translations, align-interface.cc:136-143) runs the SAME walk with
+///   pure skylines, which Lily# does not have. The line above used to claim this was
+///   implemented via AugmentExtentsWithLooseLines; it was not.
 /// </remarks>
 internal sealed class PageLayouter
 {
