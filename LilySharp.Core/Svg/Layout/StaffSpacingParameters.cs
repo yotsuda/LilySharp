@@ -167,6 +167,75 @@ internal sealed record StaffSpacingParameters
     };
 
     /// <summary>
+    /// The three <c>nonstaff-*</c> specs a NON-SPACEABLE line carries, as a set — because
+    /// LilyPond reads them off the GROB and not out of a score-wide table
+    /// (<c>get_spacing_spec</c> asks <c>before</c> or <c>after</c> for its own property), and
+    /// the two contexts Lily# has do NOT declare the same numbers.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE SET PER CONTEXT IS THE WHOLE POINT. Lily# had a single
+    /// <see cref="NonStaffRelatedStaff"/> and reusing it for a ChordNames line builds a
+    /// DIFFERENT SPRING UNDER THE SAME PROPERTY NAME: Lyrics declares
+    /// <c>(basic-distance . 5.5) (padding . 0.5) (stretchability . 1)</c>
+    /// (ly/engraver-init.ly:649-652) while ChordNames declares
+    /// <c>(padding . 0.5)</c> and nothing else (:722).
+    /// </remarks>
+    internal readonly record struct NonStaffSpacing(
+        VerticalSpacingSpec RelatedStaff,
+        VerticalSpacingSpec UnrelatedStaff,
+        VerticalSpacingSpec NonStaff);
+
+    /// <summary>The Lyrics context's own three specs.</summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly:648-658.</remarks>
+    public NonStaffSpacing Lyrics => new(NonStaffRelatedStaff, NonStaffUnrelatedStaff, NonStaffNonStaff);
+
+    /// <summary>The ChordNames context's own three specs.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:719-723 — the whole of what ChordNames declares is
+    /// <c>staff-affinity = DOWN</c>, <c>nonstaff-relatedstaff-spacing.padding = 0.5</c> and
+    /// <c>nonstaff-nonstaff-spacing.padding = 0.5</c>. There is no basic-distance, no
+    /// minimum-distance and no stretchability anywhere in it, and
+    /// <c>scm/define-grobs.scm</c> carries no VerticalAxisGroup default for
+    /// <c>nonstaff-relatedstaff-spacing</c> either.
+    /// <para>
+    /// ⚠️ THE 1.0 IS THE CALLER'S SPRING, NOT A BASIC-DISTANCE — <c>Spring spring (1.0, 0.0)</c>
+    /// at page-layout-problem.cc:1035, which <c>read_spacing_spec</c> then leaves alone
+    /// because the member is absent. Written the same way, and for the same reason, as
+    /// <see cref="LooseLineSpacer.NonStaffUnrelatedStaff"/>: a 0 here would be a DIFFERENT
+    /// spring rather than a tidier spelling. Closing the fold properly needs
+    /// <c>BasicDistance</c> nullable the way <c>Stretchability</c> now is (HANDOFF 1).
+    /// </para>
+    /// <para>
+    /// ⚠️ AND <c>nonstaff-unrelatedstaff-spacing</c> IS THE GROB DEFAULT, not the Lyrics
+    /// override: ChordNames does not touch it, so it is
+    /// <c>((padding . 0.5))</c> (scm/define-grobs.scm:4240) — 1.0 less padding than the
+    /// Lyrics line's 1.5.
+    /// </para>
+    /// </remarks>
+    public NonStaffSpacing ChordNames => new(
+        RelatedStaff: new()
+        {
+            BasicDistance = 1.0,
+            MinimumDistance = 0,
+            Padding = 0.5,
+            Stretchability = null,
+        },
+        UnrelatedStaff: new()
+        {
+            BasicDistance = 1.0,
+            MinimumDistance = 0,
+            Padding = 0.5,
+            Stretchability = null,
+        },
+        NonStaff: new()
+        {
+            BasicDistance = 1.0,
+            MinimumDistance = 0,
+            Padding = 0.5,
+            Stretchability = null,
+        });
+
+    /// <summary>
     /// Applies user overrides from \override StaffGrouper.* properties.
     /// Returns a new StaffSpacingParameters with overridden values.
     /// </summary>

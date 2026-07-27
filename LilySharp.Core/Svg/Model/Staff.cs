@@ -210,8 +210,20 @@ public sealed record Staff(
     /// is carried as <c>ChordNameItem</c> / <c>LyricItem</c>s tagged with this row's
     /// staff index.
     /// </summary>
+    /// <remarks>
+    /// The affinity is DOWN — the ChordNames default — and a LYRICS row is flipped to UP
+    /// where it is tagged as one (<c>MeasureCollector</c>), because the two contexts
+    /// disagree: ly/engraver-init.ly:721 gives ChordNames DOWN and :648 gives Lyrics UP.
+    /// <para>
+    /// ⚠️ AN AFFINITY IS WHAT MAKES A LINE NON-SPACEABLE
+    /// (LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 <c>is_spaceable</c>), so setting
+    /// it is not decoration: it is what puts the row into the loose-line chain instead of
+    /// the page's own spring chain.
+    /// </para>
+    /// </remarks>
     public static Staff CreateTextRow(Voice voice)
-        => new(ClefType.Treble, ImmutableArray.Create(voice), IsTextRow: true);
+        => new(ClefType.Treble, ImmutableArray.Create(voice), IsTextRow: true,
+            StaffAffinity: Layout.StaffAffinityDirection.Down);
 
     /// <summary>Parses a pedal-style string; unknown/empty falls back to the default Bracket.</summary>
     public static PedalStyle ParsePedalStyle(string? style) => style switch

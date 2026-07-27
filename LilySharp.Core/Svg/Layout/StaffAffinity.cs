@@ -54,50 +54,86 @@ internal static class StaffAffinity
     public static bool IsSpaceable(int? staffAffinity) => !staffAffinity.HasValue;
 
     /// <summary>
-    /// Selects the right vertical-spacing spec for the gap between two adjacent
-    /// staves (<paramref name="upperAffinity"/> = upper staff, <paramref name="lowerAffinity"/>
-    /// = lower staff). Both are <see cref="LilySharp.Core.Svg.Model.Staff.StaffAffinity"/>
-    /// values (null = spaceable, otherwise UP/DOWN/CENTER).
+    /// LilyPond's <c>LARGE_STRETCH</c> — what goes between a non-spaceable line and the
+    /// staff its affinity does NOT point at.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/page-layout-problem.cc:1262.</remarks>
+    public const double LargeStretch = 10e5;
+
+    /// <summary>
+    /// The spacing spec connecting <paramref name="before"/> (the upper element) to
+    /// <paramref name="after"/> (the lower one) — <c>Page_layout_problem::get_spacing_spec</c>,
+    /// branch for branch.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/align-interface.cc:240-252
-    /// Decision table (upper × lower):
-    /// - spaceable + spaceable          → staff-staff or staffgroup-staff (caller-supplied)
-    /// - non-spaceable + non-spaceable  → nonstaff-nonstaff
-    /// - one is non-spaceable:
-    ///     * affinity points at the spaceable side  → nonstaff-relatedstaff (close)
-    ///     * affinity points away                   → nonstaff-unrelatedstaff (far)
-    ///     * CENTER                                  → nonstaff-relatedstaff (close, treated as related on both sides)
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1266-1342 <c>get_spacing_spec</c>.
+    /// <para>
+    /// ⚠️ THE SPEC IS READ OFF A GROB, WHICH IS WHY THE SPECS COME IN PER-CONTEXT SETS
+    /// (<see cref="StaffSpacingParameters.NonStaffSpacing"/>): every non-spaceable branch
+    /// below asks <c>before</c> or <c>after</c> for ITS OWN <c>nonstaff-*</c> property, and
+    /// Lyrics and ChordNames do not declare the same numbers. A single score-wide
+    /// <c>NonStaffRelatedStaff</c> — which is what this took until 2026-07-27 — builds the
+    /// Lyrics' 5.5-ideal spring under a ChordNames line.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE BOTH-NON-SPACEABLE CASE HAS THREE BRANCHES, NOT ONE (:1313-1337), and the third
+    /// was missing: two lines whose affinities point AWAY from each other (the upper one UP,
+    /// the lower one DOWN — a lyric line under one staff above a chord row belonging to the
+    /// next) take the upper line's <c>nonstaff-unrelatedstaff-spacing</c> with
+    /// <see cref="LargeStretch"/>, not <c>nonstaff-nonstaff-spacing</c>. LilyPond warns when
+    /// the affinities INCREASE (:1322-1325); Lily# has no surface that can produce that
+    /// order, so the warning has nothing to fire on and is not ported.
+    /// </para>
+    /// <para>
+    /// ⚠️ <paramref name="spaceableSpec"/> IS THE CALLER'S because the spaceable/spaceable
+    /// branch reads <c>before</c>'s <c>staff-staff-spacing</c>, and WHICH of the three that
+    /// is (staff-staff, staffgroup-staff, default-staff-staff) is a grouper question the
+    /// caller has already answered — see <c>MultiStaffLayouter.SelectInterGroupSpec</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE STRETCHABILITY IS ADDED, NOT SET (<c>add_stretchability</c>, :1245-1255): it
+    /// applies only where the spec DECLARES none, which is why it is spelled as a
+    /// <c>with</c> on a null <see cref="VerticalSpacingSpec.Stretchability"/> rather than
+    /// unconditionally.
+    /// </para>
     /// </remarks>
-    public static VerticalSpacingSpec Select(
-        int? upperAffinity, int? lowerAffinity,
-        VerticalSpacingSpec spaceableSpec, StaffSpacingParameters sp)
+    public static VerticalSpacingSpec GetSpacingSpec(
+        int? beforeAffinity, StaffSpacingParameters.NonStaffSpacing beforeSpecs,
+        int? afterAffinity, StaffSpacingParameters.NonStaffSpacing afterSpecs,
+        VerticalSpacingSpec spaceableSpec)
     {
-        bool upperSpaceable = IsSpaceable(upperAffinity);
-        bool lowerSpaceable = IsSpaceable(lowerAffinity);
+        // LILYPOND-REF: :1277-1296 — is_spaceable (before)
+        if (IsSpaceable(beforeAffinity))
+        {
+            // LILYPOND-REF: :1279-1281
+            if (IsSpaceable(afterAffinity))
+                return spaceableSpec;
 
-        if (upperSpaceable && lowerSpaceable)
-            return spaceableSpec;
+            // LILYPOND-REF: :1284-1294 — the AFTER line's own affinity and its own specs.
+            return afterAffinity == StaffAffinityDirection.Down
+                ? AddStretchability(afterSpecs.UnrelatedStaff, LargeStretch)
+                : afterSpecs.RelatedStaff;
+        }
 
-        if (!upperSpaceable && !lowerSpaceable)
-            return sp.NonStaffNonStaff;
+        // LILYPOND-REF: :1299-1312
+        if (IsSpaceable(afterAffinity))
+            return beforeAffinity == StaffAffinityDirection.Up
+                ? AddStretchability(beforeSpecs.UnrelatedStaff, LargeStretch)
+                : beforeSpecs.RelatedStaff;
 
-        // Exactly one is non-spaceable. Identify which way its affinity points.
-        // LILYPOND-REF: lily/align-interface.cc:247-260 — direction-aware spec selection
-        int? nonStaffAffinity = upperSpaceable ? lowerAffinity : upperAffinity;
-        // The spaceable element sits above the non-spaceable iff the upper element is spaceable.
-        bool spaceableIsAbove = upperSpaceable;
-
-        // CENTER: treated as related on both sides.
-        if (nonStaffAffinity == StaffAffinityDirection.Center)
-            return sp.NonStaffRelatedStaff;
-
-        // Affinity points at spaceable iff:
-        //   spaceable above + affinity UP, or spaceable below + affinity DOWN
-        bool pointsAtSpaceable =
-            (spaceableIsAbove && nonStaffAffinity == StaffAffinityDirection.Up) ||
-            (!spaceableIsAbove && nonStaffAffinity == StaffAffinityDirection.Down);
-
-        return pointsAtSpaceable ? sp.NonStaffRelatedStaff : sp.NonStaffUnrelatedStaff;
+        // LILYPOND-REF: :1313-1337 — neither is spaceable. Both readings are the BEFORE
+        // line's property; only the last branch differs in which property.
+        if (beforeAffinity != StaffAffinityDirection.Up)
+            return beforeSpecs.NonStaff;
+        if (afterAffinity != StaffAffinityDirection.Down)
+            return beforeSpecs.NonStaff;
+        return AddStretchability(beforeSpecs.UnrelatedStaff, LargeStretch);
     }
+
+    /// <summary>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1245-1255 <c>add_stretchability</c> — adds
+    /// the member only when the spec does not already carry one.
+    /// </summary>
+    private static VerticalSpacingSpec AddStretchability(VerticalSpacingSpec spec, double stretch)
+        => spec.Stretchability.HasValue ? spec : spec with { Stretchability = stretch };
 }

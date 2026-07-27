@@ -365,4 +365,72 @@ public class SkylineStaffSpacingTests
             $"system 1's ink needs room system 0's does not, but the two were spaced alike: "
             + $"{insideSystem1:F6} against {insideSystem0:F6} — the placement is being shared");
     }
+
+    /// <summary>
+    /// A CHORD ROW'S ENTRY IN THE PER-STAFF SKYLINE LIST IS ITS SYMBOL INK — the wiring, on a
+    /// real score, of what <c>StaffSkylineFrameTests</c> asserts on the pieces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context is one of the
+    /// alignment's non-spaceable lines, so the walk that fixes the distances above and below
+    /// it measures ITS skyline, which is its ChordName stencils.
+    /// <para>
+    /// ⚠️ THE WIRING IS THE POINT, not the value: the row's ink is built by
+    /// <c>ChordNameEngraver.RowSkylines</c> and merged by
+    /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c>, two files apart, and a version that
+    /// built it and forgot to merge it looks exactly like this test's absence
+    /// (HANDOFF 5.4: a measurement helper has to assert the premise that makes its reading
+    /// mean anything).
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT NAMES WHAT USED TO BE THERE. Before 2026-07-27 this entry was a five-line
+    /// staff symbol (±2.050000) plus the row's UNDRAWN noteheads (±0.500000) — a row that
+    /// prints neither — while the symbols that ARE drawn were in no skyline at all. Either
+    /// phantom coming back fails this by more than a staff space.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ChordRowsSkylineEntry_IsItsSymbolInk_NotAStaffSymbolAndNotItsUndrawnNotes()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody { clef treble }
+
+            section Main {
+              melody { g4 a g a | g4 a g a | }
+              chords prog { c1 | c1 | }
+            }
+
+            form main { ~Main }
+
+            score main "ROW" {
+              chords prog
+              staff melody
+            }
+            """;
+
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+
+        var skylines = new MultiStaffLayouter(DefaultOptions, new MeasureLayouter())
+            .BuildStaffSkylines(
+                score, new SkylineBuilder(DefaultOptions.StaffHeight), layout.Systems[0].Measures);
+
+        // Staff 0 is the chord row (`chords prog` comes first in the score block).
+        var (bottom, top) = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            "C", 2.6, sans: true, LilySharp.Core.Rendering.FontStyle.Bold);
+        Assert.Equal(top, skylines[0].Up.MaxHeight(), 9);
+        Assert.Equal(bottom, skylines[0].Down.MaxHeight(), 9);
+
+        // ...and the staff below still carries a staff's own silhouette, so the reading above
+        // is the ROW's rule and not a builder that stopped seeding anything.
+        Assert.True(skylines[1].Up.MaxHeight() > 3.0);
+        Assert.True(skylines[1].Down.MaxHeight() < -3.0);
+    }
 }

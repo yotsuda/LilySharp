@@ -47,60 +47,121 @@ public class StaffAffinityTests
         Assert.False(StaffAffinity.IsSpaceable(affinity));
     }
 
+    /// <summary>The Lyrics context's specs, which is what every case below reads unless it
+    /// says otherwise.</summary>
+    private static StaffSpacingParameters.NonStaffSpacing Lyrics => Sp.Lyrics;
+
+    private static VerticalSpacingSpec Spec(int? before, int? after)
+        => StaffAffinity.GetSpacingSpec(before, Lyrics, after, Lyrics, Spaceable);
+
     [Fact]
-    public void Select_BothSpaceable_ReturnsSpaceableSpec()
+    public void GetSpacingSpec_BothSpaceable_ReturnsSpaceableSpec()
     {
-        var spec = StaffAffinity.Select(null, null, Spaceable, Sp);
-        Assert.Same(Spaceable, spec);
+        Assert.Same(Spaceable, Spec(null, null));
+    }
+
+    /// <summary>
+    /// Two non-spaceable lines whose affinities do NOT point away from each other take the
+    /// UPPER line's <c>nonstaff-nonstaff-spacing</c> — verse to verse, and any pair whose
+    /// upper line is not UP.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/page-layout-problem.cc:1327-1332.</remarks>
+    [Theory]
+    [InlineData(StaffAffinityDirection.Up, StaffAffinityDirection.Up)]
+    [InlineData(StaffAffinityDirection.Down, StaffAffinityDirection.Down)]
+    [InlineData(StaffAffinityDirection.Down, StaffAffinityDirection.Up)]
+    [InlineData(StaffAffinityDirection.Center, StaffAffinityDirection.Down)]
+    public void GetSpacingSpec_BothNonSpaceable_ReturnsNonStaffNonStaff(int before, int after)
+    {
+        Assert.Same(Sp.NonStaffNonStaff, Spec(before, after));
+    }
+
+    /// <summary>
+    /// THE THIRD BRANCH, which Lily# did not have: two non-spaceable lines pointing AWAY
+    /// from each other — the upper one UP, the lower one DOWN — belong to different staves,
+    /// so LilyPond puts the upper line's <c>nonstaff-unrelatedstaff-spacing</c> and a
+    /// LARGE_STRETCH between them instead of the verse-to-verse spec.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/page-layout-problem.cc:1333-1336.</remarks>
+    [Fact]
+    public void GetSpacingSpec_NonSpaceablePairPointingApart_IsUnrelatedWithLargeStretch()
+    {
+        var spec = Spec(StaffAffinityDirection.Up, StaffAffinityDirection.Down);
+
+        Assert.Equal(Sp.NonStaffUnrelatedStaff.Padding, spec.Padding);
+        Assert.Equal(StaffAffinity.LargeStretch, spec.Stretchability);
     }
 
     [Fact]
-    public void Select_BothNonSpaceable_ReturnsNonStaffNonStaff()
-    {
-        var spec = StaffAffinity.Select(
-            StaffAffinityDirection.Up, StaffAffinityDirection.Down, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffNonStaff, spec);
-    }
-
-    [Fact]
-    public void Select_LowerNonSpaceableAffinityUp_PointsAtUpperSpaceable_Related()
+    public void GetSpacingSpec_LowerNonSpaceableAffinityUp_PointsAtUpperSpaceable_Related()
     {
         // Lyrics (lower) with affinity UP attaches to the spaceable staff above ⇒ related.
-        var spec = StaffAffinity.Select(null, StaffAffinityDirection.Up, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffRelatedStaff, spec);
+        Assert.Same(Sp.NonStaffRelatedStaff, Spec(null, StaffAffinityDirection.Up));
     }
 
     [Fact]
-    public void Select_LowerNonSpaceableAffinityDown_PointsAway_Unrelated()
+    public void GetSpacingSpec_LowerNonSpaceableAffinityDown_PointsAway_Unrelated()
     {
         // Non-staff (lower) with affinity DOWN points away from the upper spaceable ⇒ unrelated.
-        var spec = StaffAffinity.Select(null, StaffAffinityDirection.Down, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffUnrelatedStaff, spec);
+        var spec = Spec(null, StaffAffinityDirection.Down);
+
+        Assert.Equal(Sp.NonStaffUnrelatedStaff.Padding, spec.Padding);
+        Assert.Equal(StaffAffinity.LargeStretch, spec.Stretchability);
     }
 
     [Fact]
-    public void Select_UpperNonSpaceableAffinityDown_PointsAtLowerSpaceable_Related()
+    public void GetSpacingSpec_UpperNonSpaceableAffinityDown_PointsAtLowerSpaceable_Related()
     {
         // Non-staff (upper) with affinity DOWN attaches to the spaceable staff below ⇒ related.
-        var spec = StaffAffinity.Select(StaffAffinityDirection.Down, null, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffRelatedStaff, spec);
+        Assert.Same(Sp.NonStaffRelatedStaff, Spec(StaffAffinityDirection.Down, null));
     }
 
     [Fact]
-    public void Select_UpperNonSpaceableAffinityUp_PointsAway_Unrelated()
+    public void GetSpacingSpec_UpperNonSpaceableAffinityUp_PointsAway_Unrelated()
     {
         // Non-staff (upper) with affinity UP points away from the lower spaceable ⇒ unrelated.
-        var spec = StaffAffinity.Select(StaffAffinityDirection.Up, null, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffUnrelatedStaff, spec);
+        var spec = Spec(StaffAffinityDirection.Up, null);
+
+        Assert.Equal(Sp.NonStaffUnrelatedStaff.Padding, spec.Padding);
+        Assert.Equal(StaffAffinity.LargeStretch, spec.Stretchability);
     }
 
     [Theory]
     [InlineData(StaffAffinityDirection.Center, null)]   // upper non-spaceable CENTER + lower spaceable
     [InlineData(null, StaffAffinityDirection.Center)]   // upper spaceable + lower non-spaceable CENTER
-    public void Select_CenterAffinity_TreatedAsRelated(int? upper, int? lower)
+    public void GetSpacingSpec_CenterAffinity_TreatedAsRelated(int? upper, int? lower)
     {
-        var spec = StaffAffinity.Select(upper, lower, Spaceable, Sp);
-        Assert.Same(Sp.NonStaffRelatedStaff, spec);
+        Assert.Same(Sp.NonStaffRelatedStaff, Spec(upper, lower));
+    }
+
+    /// <summary>
+    /// THE SPEC IS READ OFF THE GROB, so a ChordNames line and a Lyrics line under the same
+    /// staff take DIFFERENT springs from the same property name.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:649-652 against :722 — Lyrics declares
+    /// <c>(basic-distance . 5.5) (padding . 0.5) (stretchability . 1)</c>, ChordNames
+    /// declares <c>(padding . 0.5)</c> and nothing else. Reusing one table for both is the
+    /// mistake this pair exists to catch: it builds the Lyrics' 5.5-ideal spring under a
+    /// chord row.
+    /// </remarks>
+    [Fact]
+    public void GetSpacingSpec_RelatedStaff_ComesFromTheLinesOwnContext()
+    {
+        var lyric = StaffAffinity.GetSpacingSpec(
+            null, Sp.Lyrics, StaffAffinityDirection.Up, Sp.Lyrics, Spaceable);
+        var chords = StaffAffinity.GetSpacingSpec(
+            StaffAffinityDirection.Down, Sp.ChordNames, null, Sp.Lyrics, Spaceable);
+
+        Assert.Equal(5.5, lyric.BasicDistance);
+        Assert.Equal(1.0, lyric.Stretchability);
+        Assert.Equal(0.5, lyric.Padding);
+
+        // ChordNames declares only the padding: the ideal and both strengths are the
+        // caller's Spring (1.0, 0.0) (page-layout-problem.cc:1035).
+        Assert.Equal(1.0, chords.BasicDistance);
+        Assert.Null(chords.Stretchability);
+        Assert.Equal(0.5, chords.Padding);
     }
 
     [Fact]

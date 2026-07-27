@@ -131,7 +131,7 @@ internal sealed class MultiStaffLayouter
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
-                    : spec.BasicDistance - staffHeight;
+                    : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
@@ -177,10 +177,37 @@ internal sealed class MultiStaffLayouter
         var spaceable = upper.Type == StaffGroupType.Single
             ? sp.DefaultStaffStaff
             : sp.StaffGroupStaff;
-        int? upperAffinity = upper.Staves[^1].StaffAffinity;
-        int? lowerAffinity = lower.Staves[0].StaffAffinity;
-        return StaffAffinity.Select(upperAffinity, lowerAffinity, spaceable, sp);
+        var before = upper.Staves[^1];
+        var after = lower.Staves[0];
+
+        // ⚠️ A LYRICS ROW IS STILL PLACED BY LILY#'s BAND MODEL, and the reason is its
+        // SKYLINE rather than a decision: an independent lyrics row has no ink in any
+        // skyline yet (HANDOFF 1 — its branch has no ledger point and its syllables are not
+        // seeded), so a spec-driven distance to it would be measured against nothing and
+        // would collapse onto the neighbour. The band is what holds it apart until the ink
+        // lands. A CHORDS row has its ink and takes LilyPond's own spec — see
+        // BuildAllStaffSkylines.
+        if (before.IsLyricsTextRow || after.IsLyricsTextRow)
+            return spaceable;
+
+        return StaffAffinity.GetSpacingSpec(
+            before.StaffAffinity, NonStaffSpecsOf(before, sp),
+            after.StaffAffinity, NonStaffSpecsOf(after, sp),
+            spaceable);
     }
+
+    /// <summary>
+    /// Which context's <c>nonstaff-*</c> specs a line carries — the set
+    /// <c>get_spacing_spec</c> reads its property out of.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics, :719-723 ChordNames. A spaceable
+    /// staff never has one of these read off it, so it takes the Lyrics set only as a value
+    /// the branches cannot reach.
+    /// </remarks>
+    private static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
+        Staff staff, StaffSpacingParameters sp)
+        => staff.IsTextRow && !staff.IsLyricsTextRow ? sp.ChordNames : sp.Lyrics;
 
     /// <summary>
     /// The spacing spec for the pair straddling two groups, including the ossia rule.
@@ -255,6 +282,76 @@ internal sealed class MultiStaffLayouter
         return _options.StaffHeight;
     }
 
+    /// <summary>
+    /// How far below its own TOP an element's reference point sits — half a staff for a
+    /// staff, and the TEXT BASELINE for a text row.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:201-285 works between VerticalAxisGroup
+    /// REFERENCE POINTS, and a group's refpoint is not in general the middle of its extent:
+    /// a Lyrics or ChordNames group's is the text baseline
+    /// (<c>ChordNameEngraver.ChordRowTextBaseline</c>, <c>LyricEngraver.LyricRowBaseline</c>).
+    /// <para>
+    /// ⚠️ THIS IS THE ONE SEAM between LilyPond's frame and Lily#'s band model, and every
+    /// distance that used to assume "half of a nominal 4.0 staff" goes through it now. It
+    /// reads exactly as before for two ordinary staves (2.0 + 2.0 = 4.0); what it fixes is
+    /// every pair whose two elements are not the same height — a text row, an ossia, or a
+    /// tab staff, the last of which HANDOFF 1 named as wrong-but-unmeasured.
+    /// </para>
+    /// </remarks>
+    private double RefpointBelowTop(Staff staff, bool chordGridSheet)
+        => staff.IsTextRow
+            ? (staff.IsLyricsTextRow
+                ? LyricEngraver.LyricRowBaseline
+                : ChordNameEngraver.RowTextBaseline(chordGridSheet))
+            : GetStaffHeight(staff) / 2.0;
+
+    /// <summary>The rest of an element's height, below its reference point.</summary>
+    private double HeightBelowRefpoint(Staff staff, bool chordGridSheet)
+        => GetStaffHeight(staff) - RefpointBelowTop(staff, chordGridSheet);
+
+    /// <summary>
+    /// What a refpoint-to-refpoint distance has to give up to become the gap between the
+    /// UPPER element's bottom and the LOWER one's top — the frame the placement loops stack
+    /// in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ASKED ONLY WHERE THIS ISLAND SPACES (<see cref="IsSpecSpacedRowBoundary"/>), and
+    /// the rest of the placement still hands <c>StaffGap</c> the nominal staff height. The
+    /// two agree for two ordinary staves (2.0 + 2.0 = 4.0) and disagree for a TAB or OSSIA
+    /// pair, which is a real defect — HANDOFF 1 names it, no corpus point measures it, and
+    /// switching those over moves twenty snapshots that have nothing to do with a chord row.
+    /// It wants its own pair and its own commit.
+    /// </remarks>
+    private double RefpointSpanToGap(Staff upper, Staff lower, bool chordGridSheet)
+        => HeightBelowRefpoint(upper, chordGridSheet) + RefpointBelowTop(lower, chordGridSheet);
+
+    /// <summary>
+    /// The span for this boundary, in whichever frame the boundary is spaced in: LilyPond's
+    /// refpoints where the spec places the pair, and the nominal staff height everywhere
+    /// else — see <see cref="RefpointSpanToGap"/> for why the rest is left alone.
+    /// </summary>
+    private double GapSpan(MultiStaffScore score, Staff upper, Staff lower)
+        => IsSpecSpacedRowBoundary(upper, lower)
+            ? RefpointSpanToGap(upper, lower,
+                ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics))
+            : _options.StaffHeight;
+
+    /// <summary>
+    /// Is this group boundary spaced by LilyPond's own <c>nonstaff-*</c> spec rather than by
+    /// Lily#'s band model? True exactly when a CHORDS row faces a staff.
+    /// </summary>
+    /// <remarks>
+    /// The two exclusions are the two whose ink is not there to be spaced by: a LYRICS row
+    /// has no skyline yet (HANDOFF 1), and a pair of text rows takes
+    /// <see cref="TextRowPairGap"/> before this is ever asked. Written once because the SPEC
+    /// and the SPAN have to agree — a spec-placed pair measured in the band's frame lands
+    /// half a band out.
+    /// </remarks>
+    private static bool IsSpecSpacedRowBoundary(Staff upper, Staff lower)
+        => !upper.IsLyricsTextRow && !lower.IsLyricsTextRow
+           && (upper.IsTextRow || lower.IsTextRow);
+
     /// <summary>Reserved vertical band (staff spaces) for an independent text row
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
     private const double TextRowHeight = 2.5;
@@ -325,7 +422,7 @@ internal sealed class MultiStaffLayouter
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
-                    : spec.BasicDistance - staffHeight;
+                    : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY -= interGroupGap;
@@ -422,6 +519,10 @@ internal sealed class MultiStaffLayouter
                 // the staff about to be placed misplaces every group whose staves are not
                 // all the same height (an ossia or tab staff under a normal one); it was
                 // invisible while this loop only ever ran on equal-height staves.
+                // ⚠️ A TEXT ROW IS NEVER IN THIS LOOP — RenderSpec gives every chords/lyrics
+                // track a Single group of its own — so the refpoint span this island needed
+                // (RefpointSpanToGap) has no call site here, and the nominal height stands
+                // with the tab/ossia defect it carries (HANDOFF 1).
                 double gap = StaffGap(
                     staffSpec, lastVisibleHeight, staffSkylines, lastVisibleIndex, globalIndex);
                 currentY -= lastVisibleHeight + gap;
@@ -1510,6 +1611,7 @@ internal sealed class MultiStaffLayouter
                     bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                     int upperLive = LastLiveIndex(i);
                     int lowerLive = FirstLiveIndex(next);
+                    double span = GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
                     // The alignment's own elements between the two staves — this group's
                     // `with lyrics` lines. They are IN the walk that fixes the gap; there
                     // is no separate term for them.
@@ -1518,7 +1620,7 @@ internal sealed class MultiStaffLayouter
                     // the run, so the two spaceable staves are never adjacent in the walk.
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
-                        : StaffGap(spec, staffHeight, staffSkylines, upperLive, lowerLive,
+                        : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
                             looseLines?.Invoke(upperLive, lowerLive));
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
@@ -1582,9 +1684,14 @@ internal sealed class MultiStaffLayouter
     /// <list type="bullet">
     /// <item>TEXT ROWS (lyric/chord rows) are LilyPond's non-spaceable lines — its own loop
     /// springs only between <c>is_spaceable</c> elements (:660-719) and distributes the rest
-    /// afterwards (<c>distribute_loose_lines</c>). ⚠️ Lily# has no such distribution: a text
-    /// row keeps its laid-out offset from the staff above it, so on a stretched page it
-    /// travels with that staff instead of being re-spaced. Named, not hidden.</item>
+    /// afterwards (<c>distribute_loose_lines</c>). ★ SINCE 2026-07-27 Lily# distributes them
+    /// too, for the case the corpus measures: a CHORDS row leading a system is an element of
+    /// the previous block's chain and is translated to the solve
+    /// (<c>LyricEngraver.DistributeLooseLines</c>, <c>LayoutEngine.ApplySolvedRowPositions</c>).
+    /// ⚠️ A LYRICS row is still not — it has no ink in any skyline, so nothing can space it
+    /// (HANDOFF 1) — and neither is a row on a page's FIRST system, whose chain LilyPond runs
+    /// from the page top (:963-988). Both keep their laid-out offset and travel with the
+    /// staff above. Named, not hidden.</item>
     /// <item>HIDDEN staves are gone from LilyPond's element list too
     /// (<c>filter_dead_elements</c>, :589).</item>
     /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid. Lily# spaces an ossia at
@@ -1719,6 +1826,34 @@ internal sealed class MultiStaffLayouter
                 if (!score.ChordNames.IsDefaultOrEmpty
                     && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow))
                     ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);
+
+                // An independent chord ROW is a line of the alignment in its own right, and
+                // what the lines above and below it are spaced against is its own symbol
+                // ink. SkylineBuilder cannot see it — a ChordNameItem is not in the staff's
+                // voices — so it is merged here, from the same X model the row is DRAWN with
+                // (ChordNameEngraver.RowSkylines).
+                // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context
+                //   goes onto `loose_lines` and is distributed between the two spaceable
+                //   staves that bracket it, measured by its own skyline.
+                // ⚠️ THE FRAME IS THE ROW'S TEXT BASELINE (see RowSkylines), which is where
+                // LilyPond's VerticalAxisGroup reference point is. Every OTHER entry in this
+                // list is about its staff's MIDDLE LINE. The two agree in kind — both are
+                // the element's own reference point — and differ from Lily#'s band model,
+                // whose StaffLayout.Y is the band TOP.
+                // ⚠️ A LYRICS ROW GETS NO INK YET and that is a gap, not a decision: its
+                // syllables are as real as these symbols, but the independent-row branch has
+                // no ledger point of its own (HANDOFF 1) and seeding it would move a
+                // quantity nothing measures. Its skyline is EMPTY, which the gap consumers
+                // read as "no constraint" — the same answer the phantom staff symbol gave,
+                // for an honest reason.
+                if (staff.IsTextRow && !staff.IsLyricsTextRow)
+                {
+                    var rowInk = ChordNameEngraver.RowSkylines(
+                        score.ChordNames, measureLayouts, thisStaff,
+                        staff.PrimaryVoice.Measures);
+                    sky.Up.Merge(rowInk.Up);
+                    sky.Down.Merge(rowInk.Down);
+                }
 
                 result.Add(sky);
                 staffIndex++;
@@ -1980,6 +2115,15 @@ internal sealed class MultiStaffLayouter
         // as its floor, a basic-distance folded into the minimum makes the spring
         // incompressible, and the page could not squeeze the staves the way LilyPond does
         // (ledger page.compressed.staff-staff-inside).
+        // ⚠️ THE MAX IS LILY#'s MODEL, NOT LilyPond's ALIGNMENT, and it now reaches a pair
+        // LilyPond would answer differently for. align-interface.cc:235-238 takes
+        // basic-distance ONLY behind the pure branch, so a NON-SPACEABLE neighbour is placed
+        // at the skyline distance plus its padding and nothing else; what puts an ideal under
+        // it in LilyPond is the loose-line CHAIN at force 0 (page-layout-problem.cc:1035),
+        // which is a different pass. The two agree wherever the ink clears the ideal — on
+        // book LYRMC the chords row reads max(1.0, 3.576200) either way — and would part
+        // company on a row whose symbols sit closer than its spec's 1.0. No point measures
+        // that, so it is named rather than split.
         double centerToCenter = Math.Max(
             spec.BasicDistance,
             AlignmentMinimumWithSkylines(

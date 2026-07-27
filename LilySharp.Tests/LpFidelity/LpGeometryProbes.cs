@@ -623,7 +623,23 @@ internal static class LpGeometryProbes
     /// solve. ⇒ THE ROW AND THE LYRICS SHARE ONE ROOM. Lily# gives the row a band of its own
     /// (HANDOFF 3), and a band cannot be squeezed by somebody else's chain — so
     /// <c>BuildLooseChainEnds</c>' decline is honest here, and closing it means MOVING THAT
-    /// DECISION rather than narrowing a guard. A judgement call, not a port.
+    /// DECISION rather than narrowing a guard.
+    /// ⚠️ THIS PARAGRAPH ONCE ENDED "a judgement call, not a port" AND THAT WAS WRONG
+    /// (corrected 2026-07-27). The policy is literal porting and does not bend for a Lily#
+    /// model: page-layout-problem.cc:948-990 pushes every non-spaceable staff onto
+    /// <c>loose_lines</c> and closes the run on the next spaceable one, so the row IS in the
+    /// Lyrics' chain. "Lily# models it as a band" is the thing to change, not a reason to
+    /// stop — and because the port moves where the row SITS, the two are one island.
+    /// </para>
+    /// <para>
+    /// ★ THE CHAIN IS DECOMPOSED TERM BY TERM in the probe header and in this point's
+    /// ledger <c>why</c>: room 12.000000 = s0 4.608814 (nonstaff-relatedstaff, off its floor)
+    /// + s1 0.837966 (= 1 + f) + s2 2.973743 (at its minimum) + s3 3.579477 (at its
+    /// minimum), f = -0.162033841. ⚠️ s3's spring is the ChordNames' OWN
+    /// <c>nonstaff-relatedstaff-spacing</c>, which declares only <c>(padding . 0.5)</c>
+    /// (ly/engraver-init.ly:722) — its ideal 1.0 is the caller's <c>Spring (1.0, 0.0)</c>,
+    /// NOT the Lyrics' 5.5. A port that reuses the Lyrics' spec builds a different spring
+    /// under the same property name.
     /// </para>
     /// <para>
     /// ⚠️ ONLY THE FIRST OF LilyPond's two readings moves; the last system on a page runs its

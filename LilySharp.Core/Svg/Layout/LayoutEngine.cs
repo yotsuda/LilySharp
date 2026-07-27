@@ -255,7 +255,7 @@ internal sealed class LayoutEngine
 
         var anchors = BuildStaffAnchorTables(score, systemsArray, textRowStaves);
 
-        var annotations = CalculateAnnotationLayouts(new AnnotationLayoutContext
+        var annotationContext = new AnnotationLayoutContext
         {
             Score = primaryScore,
             Systems = systemsArray,
@@ -291,7 +291,13 @@ internal sealed class LayoutEngine
             LooseChainEnd = looseChainEnd,
             TextRowStaves = textRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
-        });
+        };
+        var annotations = CalculateAnnotationLayouts(annotationContext);
+
+        // ...and the rows the lyric chain solved are moved to where it put them, AFTER the
+        // pass rather than inside it — see AnnotationLayoutContext.SolvedRowBaselines.
+        (systemsArray, annotations) = ApplySolvedRowPositions(
+            score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
 
         var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
             CalculateVoiceCollisions(score, systemsArray);
@@ -1747,22 +1753,32 @@ internal sealed class LayoutEngine
     /// </para>
     /// <para>
     /// ⚠️ STILL NULL WHEN THE ROOM HOLDS SOMETHING THIS CHAIN DOES NOT MODEL, and that is
-    /// the room being unknown rather than an exclusion (§5.2): an ossia and a text ROW (a
-    /// chords or lyrics track) are loose lines to LilyPond and go INTO the chain, while
-    /// Lily# lays them out as bands of their own. A chain solved into a room that contains
-    /// one of them would be solved into somebody else's space. The other case left at force
-    /// 0 is a block between two staves of one system, which <see cref="LyricEngraver"/>
-    /// keeps out because its closing spring is <c>nonstaff-unrelatedstaff-spacing</c> against
-    /// the next staff's up-skyline (:1301-1312) — an input the engraver is not given.
-    /// ⚠️ THE BAIL-OUT IS COARSER THAN IT NEEDS TO BE and LilyPond has no counterpart for it
-    /// at all — it always solves. One ossia anywhere in the score drops the chain on every
-    /// system, where per-system would only need to drop the two systems whose reference
-    /// points that ossia stands between. Left that way because no corpus point measures an
-    /// ossia or a text row against a lyric block yet, and narrowing an exclusion nothing
-    /// measures is how a port acquires an untested branch.
+    /// the room being unknown rather than an exclusion (§5.2): an ossia is a loose line to
+    /// LilyPond and goes INTO the chain, while Lily# lays it out as a band of its own. A
+    /// chain solved into a room that contains one would be solved into somebody else's
+    /// space. The other case left at force 0 is a block between two staves of one system,
+    /// which <see cref="LyricEngraver"/> keeps out because its closing spring is
+    /// <c>nonstaff-unrelatedstaff-spacing</c> against the next staff's up-skyline
+    /// (:1301-1312) — an input the engraver is not given.
+    /// ⚠️ THE BAIL-OUT IS COARSER THAN IT NEEDS TO BE for the ossia and LilyPond has no
+    /// counterpart for it at all — it always solves. One ossia anywhere in the score drops
+    /// the chain on every system, where per-system would only need to drop the two systems
+    /// whose reference points that ossia stands between. Left that way because no corpus
+    /// point measures an ossia against a lyric block yet.
+    /// </para>
+    /// <para>
+    /// ★ A TEXT ROW NO LONGER BAILS OUT WHEN IT LEADS THE NEXT SYSTEM (2026-07-27), which is
+    /// the whole of <c>lyrics.chord-row.between-systems.staff-to-lyric</c>: LilyPond pushes
+    /// every non-spaceable line onto the SAME <c>loose_lines</c> vector and closes the run on
+    /// the next spaceable staff (:948-990), so a chords row at the top of the next system is
+    /// IN this block's chain and the two are squeezed into one room. MEASURED: 12.000000 of
+    /// room in both engravers, and LilyPond's lyric line at 4.608814 where its rowless twin
+    /// LYRM reads 5.500000. A row anywhere ELSE in a system still bails, because that one
+    /// stands between two spaceable staves and is the other call's span (:936-939 takes two
+    /// spaceable positions and the loose lines strictly between them).
     /// </para>
     /// </remarks>
-    private Func<int, (double Room, double NextStaffMinDistance)?>? BuildLooseChainEnds(
+    private Func<int, LooseLineSpacer.ChainEnd?>? BuildLooseChainEnds(
         MultiStaffScore score, ImmutableArray<PageLayout> pages,
         ImmutableArray<SystemLayout> systemsArray,
         List<(double upExtent, double downExtent)> perSystemExtents,
@@ -1771,11 +1787,15 @@ internal sealed class LayoutEngine
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
 
+        var staffByIndex = new Dictionary<int, Staff>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            staffByIndex[idx] = st;
+
         // Device-DOWN from each system's origin to its FIRST and its LAST spaceable staff's
         // top line — the two ends every chain on the page attaches to. A hidden staff is
         // skipped because hara-kiri leaves it at the current Y with zero height
-        // (MultiStaffLayouter), so it neither draws nor takes room; an ossia or a text row
-        // makes the whole score bail out, per the remarks above.
+        // (MultiStaffLayouter), so it neither draws nor takes room; an ossia makes the whole
+        // score bail out, per the remarks above.
         //
         // ⚠️ BOTH ARE DERIVED, and the first one is derived even though the guard above
         // makes it 0 today: LilyPond's far end is `-solution_[spring_idx]`, the next
@@ -1789,19 +1809,37 @@ internal sealed class LayoutEngine
         // no entry and no snapshot.
         var firstSpaceable = new double[systemsArray.Length];
         var lastSpaceable = new double[systemsArray.Length];
+        var firstSpaceableIndex = new int[systemsArray.Length];
+        // The non-spaceable lines each system OPENS with, in placement order — the run
+        // LilyPond hands to the previous block's chain (:948-990).
+        var leading = new List<StaffLayout>[systemsArray.Length];
         for (int s = 0; s < systemsArray.Length; s++)
         {
             if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) return null;
             bool found = false;
+            leading[s] = new List<StaffLayout>();
             foreach (var group in systemsArray[s].StaffGroups)
             {
                 if (group.Staves.IsDefaultOrEmpty) continue;
                 foreach (var st in group.Staves)
                 {
                     if (st.IsHidden) continue;
-                    if (st.IsOssia || textRowStaves.Contains(st.StaffIndex)) return null;
+                    if (st.IsOssia) return null;
+                    if (textRowStaves.Contains(st.StaffIndex))
+                    {
+                        // Above the system's first spaceable staff it is this chain's
+                        // business; anywhere below, it stands between two spaceable staves
+                        // and belongs to ComputeBetweenStavesEnd's span, which still declines.
+                        if (found) return null;
+                        leading[s].Add(st);
+                        continue;
+                    }
                     double down = -st.Y;
-                    if (!found || down < firstSpaceable[s]) firstSpaceable[s] = down;
+                    if (!found || down < firstSpaceable[s])
+                    {
+                        firstSpaceable[s] = down;
+                        firstSpaceableIndex[s] = st.StaffIndex;
+                    }
                     if (!found || down > lastSpaceable[s]) lastSpaceable[s] = down;
                     found = true;
                 }
@@ -1816,7 +1854,7 @@ internal sealed class LayoutEngine
 
         // systemsArray IS pages.SelectMany(p => p.Systems), so this running index is the
         // one SpannerBreakSubstitution.BuildMeasureToSystemMap hands the lyric engraver.
-        var ends = new Dictionary<int, (double Room, double NextStaffMinDistance)>();
+        var ends = new Dictionary<int, LooseLineSpacer.ChainEnd>();
         int index = 0;
         foreach (var page in pages)
         {
@@ -1838,19 +1876,230 @@ internal sealed class LayoutEngine
                     double nextUpExtent = index + 1 < perSystemExtents.Count
                         ? perSystemExtents[index + 1].upExtent : 0;
                     double nextFirst = firstSpaceable[index + 1];
-                    ends[index] = (anchor - (onPage[i + 1].Y - nextFirst - halfStaff),
-                                   systemPadding + nextUpExtent + nextFirst + halfStaff);
+                    double room = anchor - (onPage[i + 1].Y - nextFirst - halfStaff);
+
+                    var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
+                        score, systemsArray, staffByIndex, index + 1,
+                        leading[index + 1], firstSpaceableIndex[index + 1]);
+
+                    ends[index] = new LooseLineSpacer.ChainEnd(
+                        room, systemPadding + nextUpExtent + nextFirst + halfStaff,
+                        lines, closingSpec, closingMin);
                 }
                 else
                 {
                     // The last block on a page runs to the bottom of the printable area.
-                    ends[index] = (anchor - _options.MarginBottom, double.NaN);
+                    // ⚠️ NO LEADING LINES HERE EVEN WHEN THE NEXT PAGE HAS THEM: LilyPond
+                    // closes this chain on the page edge (:1004-1013) and starts the next
+                    // page's with its own call, so a row at the top of the next PAGE is in
+                    // that chain and not this one.
+                    ends[index] = new LooseLineSpacer.ChainEnd(
+                        anchor - _options.MarginBottom, double.NaN,
+                        ImmutableArray<LooseLineSpacer.LeadingLine>.Empty, null, 0);
                 }
             }
         }
 
         return s => ends.TryGetValue(s, out var end) ? end : null;
     }
+
+    /// <summary>
+    /// The non-spaceable lines system <paramref name="sysIdx"/> opens with, as the previous
+    /// block's chain needs them: each line's own skylines, the spec of the spring that
+    /// reaches it, and — for every line after the first — that spring's minimum out of THIS
+    /// system's own alignment.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 collects them, :956-962 gives every
+    /// line after the first its <c>min_offsets[k-1] - min_offsets[k]</c>, and :923-925 gives
+    /// the closing staff the same difference.
+    /// <para>
+    /// ⚠️ THE MINIMUMS COME FROM THIS SYSTEM'S ALIGNMENT, NOT FROM THE CHAIN'S RUNNING WALK,
+    /// and the difference is not cosmetic: the chain's accumulation still carries the
+    /// PREVIOUS system's lyric line raised into place, so at an x where the row has no symbol
+    /// that line's descender would shine through and the closing distance would come out too
+    /// large. <c>min_offsets</c> knows only its own system's elements. The one term that IS
+    /// the chain's is the first line's, which is the system-level
+    /// <c>elements_[i].min_distance + elements_[i].padding</c> — see
+    /// <see cref="LooseLineSpacer.LeadingLine.MinInto"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE INDENT GOES WITH THE CLOSING STAFF'S SKYLINE, the same reason
+    /// <see cref="ComputeBetweenStavesEnd"/> passes it: that skyline is what the chain's last
+    /// spring is floored by, and one built without the clef would floor it somewhere the
+    /// room does not agree with.
+    /// </para>
+    /// </remarks>
+    private (ImmutableArray<LooseLineSpacer.LeadingLine> Lines,
+             VerticalSpacingSpec? ClosingSpec, double ClosingMin) LeadingLinesOfSystem(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
+        IReadOnlyDictionary<int, Staff> staffByIndex, int sysIdx,
+        List<StaffLayout> leading, int firstSpaceableIndex)
+    {
+        if (leading.Count == 0
+            || !staffByIndex.TryGetValue(firstSpaceableIndex, out var closingStaff))
+            return (ImmutableArray<LooseLineSpacer.LeadingLine>.Empty, null, 0);
+
+        var measures = systemsArray[sysIdx].Measures;
+        var sp = _options.StaffSpacing;
+
+        var built = ImmutableArray.CreateBuilder<LooseLineSpacer.LeadingLine>(leading.Count);
+        var walk = new AlignmentWalk();
+        Staff? previous = null;
+
+        foreach (var layout in leading)
+        {
+            if (!staffByIndex.TryGetValue(layout.StaffIndex, out var row))
+                return (ImmutableArray<LooseLineSpacer.LeadingLine>.Empty, null, 0);
+            var (up, down) = RowSkylinesOf(score, row, layout.StaffIndex, measures);
+            if (up.IsEmpty && down.IsEmpty)
+                // A line with no ink is one LilyPond's own walk skips outright
+                // (align-interface.cc:209-213), so it cannot be given a spring here either.
+                return (ImmutableArray<LooseLineSpacer.LeadingLine>.Empty, null, 0);
+
+            var spec = previous is null
+                // The spring the NULL line hands on: either neighbour null, so the spec is
+                // empty and only the caller's HUGE_STRETCH survives (:1274-1275).
+                ? LooseLineSpacer.NullNeighbour
+                : StaffAffinity.GetSpacingSpec(
+                    previous.StaffAffinity, NonStaffSpecsOf(previous, sp),
+                    row.StaffAffinity, NonStaffSpecsOf(row, sp),
+                    sp.StaffStaff);
+
+            // One step of THIS system's own alignment. For the first line the walk is empty
+            // and the step is 0 — LilyPond's `!last_nonempty_element` branch, whose dy only
+            // moves the alignment's own origin (AlignmentWalk.Seed) — so the number is
+            // discarded and the chain's system-level term stands in its place.
+            double minInto = walk.Advance(up, down, spec.Padding, spec.MinimumDistance);
+
+            built.Add(new LooseLineSpacer.LeadingLine(
+                up, down, spec, previous is null ? double.NaN : minInto, layout.StaffIndex));
+            previous = row;
+        }
+
+        // ...and the step from the last line to the system's first spaceable staff, which is
+        // that line's OWN nonstaff-relatedstaff-spacing (its affinity is not UP).
+        var closingSpec = StaffAffinity.GetSpacingSpec(
+            previous!.StaffAffinity, NonStaffSpecsOf(previous, sp),
+            null, sp.Lyrics, sp.StaffStaff);
+        double closingMin = walk.Distance(
+            _skylineBuilder.BuildStaffSkylines(
+                closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent).Up,
+            closingSpec.Padding);
+
+        return (built.ToImmutable(), closingSpec, closingMin);
+    }
+
+    /// <summary>
+    /// Moves each text ROW to where the loose-line chain solved it, and everything anchored
+    /// to that row with it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — <c>distribute_loose_lines</c>
+    /// finishes by translating every loose line by <c>first_translation - solution[i] -
+    /// system-Y-offset</c>, i.e. the line is PLACED by the alignment and then MOVED by the
+    /// solve. This is that translate, in Lily#'s frames: the published number is the row's
+    /// baseline in page Y-up, and what carries it is the row's <c>StaffLayout.Y</c> (its BAND
+    /// TOP, <c>ChordNameEngraver.ChordRowTextBaseline</c> above the baseline) plus the chord
+    /// symbols that hang from it.
+    /// <para>
+    /// ⚠️ THE SYMBOLS MOVE WITH THE BAND, not independently: a ChordNameLayout for a row
+    /// stores <c>YUp = staffY - ChordRowTextBaseline</c> in its system's frame
+    /// (<see cref="ChordNameEngraver"/>), so the SAME delta applies to both and the two
+    /// cannot drift. The row's bar grid needs no term at all — the renderer takes it from
+    /// this very <c>StaffLayout</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOTHING ELSE IS ANCHORED TO A CHORD ROW today. A LYRICS row would need its
+    /// syllables moved here too, and it never reaches this: the chain declines a leading line
+    /// with no ink, which is what a lyrics row still has (HANDOFF 1).
+    /// </para>
+    /// </remarks>
+    private static (ImmutableArray<SystemLayout>, AnnotationLayouts) ApplySolvedRowPositions(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems,
+        AnnotationLayouts annotations,
+        IReadOnlyDictionary<(int System, int StaffIndex), double> solved)
+    {
+        if (solved.Count == 0)
+            return (systems, annotations);
+
+        // How far each solved row moved, by (system, staff) — computed once, applied to the
+        // staff and to its symbols from the same number.
+        var delta = new Dictionary<(int System, int StaffIndex), double>();
+        var moved = systems.ToBuilder();
+        foreach (var ((sysIdx, staffIndex), baselinePageY) in solved)
+        {
+            if (sysIdx < 0 || sysIdx >= systems.Length) continue;
+            var system = systems[sysIdx];
+            var groups = system.StaffGroups;
+            if (groups.IsDefaultOrEmpty) continue;
+
+            var newGroups = groups.ToBuilder();
+            for (int g = 0; g < newGroups.Count; g++)
+            {
+                var staves = newGroups[g].Staves;
+                if (staves.IsDefaultOrEmpty) continue;
+                for (int k = 0; k < staves.Length; k++)
+                {
+                    if (staves[k].StaffIndex != staffIndex) continue;
+                    double bandTopPageY = system.Y + staves[k].Y;
+                    double d = baselinePageY - (bandTopPageY - ChordNameEngraver.RowTextBaseline(
+                        ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics)));
+                    if (Math.Abs(d) < 1e-9) continue;
+                    delta[(sysIdx, staffIndex)] = d;
+                    newGroups[g] = newGroups[g] with
+                    {
+                        Staves = staves.SetItem(k, staves[k] with { Y = staves[k].Y + d }),
+                    };
+                }
+            }
+            moved[sysIdx] = system with { StaffGroups = newGroups.ToImmutable() };
+        }
+        if (delta.Count == 0)
+            return (systems, annotations);
+
+        // The symbols, by the same delta. A ChordNameLayout knows its source index, which is
+        // what says which ROW it belongs to; its system comes from its measure.
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+        var chords = annotations.ChordNames;
+        if (!chords.IsDefaultOrEmpty && !score.ChordNames.IsDefaultOrEmpty)
+        {
+            var newChords = chords.ToBuilder();
+            for (int i = 0; i < newChords.Count; i++)
+            {
+                var c = newChords[i];
+                if (c.SourceIndex < 0 || c.SourceIndex >= score.ChordNames.Length) continue;
+                if (!measureToSystem.TryGetValue(c.MeasureIndex, out int sysIdx)) continue;
+                if (!delta.TryGetValue((sysIdx, score.ChordNames[c.SourceIndex].StaffIndex),
+                        out double d))
+                    continue;
+                newChords[i] = c with { YUp = c.YUp + d };
+            }
+            annotations = annotations with { ChordNames = newChords.ToImmutable() };
+        }
+
+        return (moved.ToImmutable(), annotations);
+    }
+
+    /// <summary>A text row's own skylines, self-relative to its baseline — the same ink
+    /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> puts in the per-staff list.</summary>
+    /// <remarks>
+    /// ⚠️ A LYRICS ROW HAS NO INK YET (HANDOFF 1), so it comes back empty and the caller
+    /// declines the whole chain rather than solving one with a line that reserves nothing.
+    /// </remarks>
+    private static (VerticalSkyline Up, VerticalSkyline Down) RowSkylinesOf(
+        MultiStaffScore score, Staff row, int staffIndex,
+        ImmutableArray<MeasureLayout> measures)
+        => row.IsLyricsTextRow
+            ? (new VerticalSkyline(VerticalDirection.Up), new VerticalSkyline(VerticalDirection.Down))
+            : ChordNameEngraver.RowSkylines(
+                score.ChordNames, measures, staffIndex, row.PrimaryVoice.Measures);
+
+    /// <summary>Which context's <c>nonstaff-*</c> specs a line carries — see
+    /// <c>MultiStaffLayouter.NonStaffSpecsOf</c>, whose rule this is.</summary>
+    private static StaffSpacingParameters.NonStaffSpacing NonStaffSpecsOf(
+        Staff staff, StaffSpacingParameters sp)
+        => staff.IsTextRow && !staff.IsLyricsTextRow ? sp.ChordNames : sp.Lyrics;
 
     /// <summary>
     /// Inputs to <see cref="CalculateAnnotationLayouts"/>. Collapses the former
@@ -1895,13 +2144,27 @@ internal sealed class LayoutEngine
         /// <summary>Per system, the room its lyric chain is solved into and what closes it
         /// — see <see cref="BuildLooseChainEnds"/>. Null in the preliminary pass, which
         /// runs before the page exists, so that pass lays the block out at force 0.</summary>
-        public Func<int, (double Room, double NextStaffMinDistance)?>? LooseChainEnd { get; init; }
+        public Func<int, LooseLineSpacer.ChainEnd?>? LooseChainEnd { get; init; }
 
         /// <summary>The staves that are a lead sheet's chord or lyrics TRACK rather than
         /// music — not spaceable, so they are neither an anchor nor an end for a loose
         /// chain (<see cref="ComputeBetweenStavesEnd"/>). Empty when the caller has none.
         /// </summary>
         public IReadOnlySet<int> TextRowStaves { get; init; } = new HashSet<int>();
+
+        /// <summary>
+        /// FILLED BY THE PASS, not supplied to it: where the loose-line solve put each text
+        /// ROW, by (system, global staff index), as a baseline in page Y-up.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — <c>distribute_loose_lines</c>
+        /// translates its loose lines after solving, so a row's position is an OUTPUT of the
+        /// lyric chain and not an input to the layout. The engraver publishes it
+        /// (<c>LyricEngraver.SolvedRowBaselines</c>) and <see cref="LayoutEngine"/> applies
+        /// it once the annotation pass is over, because the row's Y is read both inside that
+        /// pass (<c>ChordNameEngraver</c>) and after it (the renderer's grid barlines).
+        /// </remarks>
+        public Dictionary<(int System, int StaffIndex), double> SolvedRowBaselines { get; } = new();
     }
 
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
@@ -2170,9 +2433,8 @@ internal sealed class LayoutEngine
         var staffByIndex = ctx.StaffByIndex;
         var staffYByIndex = ctx.StaffYByIndex;
 
-        bool chordGridSheet =
-            (ctx.ChordNames?.Any(c => c.IsChordRow) ?? false)
-            && !ctx.Lyrics.Any(l => l.IsLyricsRow);
+        bool chordGridSheet = ChordNameEngraver.IsChordGridSheet(
+            ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty, ctx.Lyrics);
 
         // Chord names on a NON-top staff (`staff bass with chords ...`) must clear
         // that staff's own high/ledger notes, but the system up-skyline carries only
@@ -2311,12 +2573,21 @@ internal sealed class LayoutEngine
             };
         }
 
-        return new LyricEngraver(
-                parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, measures))
-            .CalculateLayouts(
-                lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
-                ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
-                betweenStavesEnd, ctx.LastSpaceableStaffY);
+        var engraver = new LyricEngraver(
+            parentAlignmentCentre: BuildParentAlignmentCentre(measuresByStaff, measures),
+            systemPadding: _options.VerticalSpacing.SystemSystem.Padding);
+        var laid = engraver.CalculateLayouts(
+            lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
+            ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
+            betweenStavesEnd, ctx.LastSpaceableStaffY);
+
+        // The rows the chain solved travel back out through the context — see
+        // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
+        // rather than here.
+        foreach (var kv in engraver.SolvedRowBaselines)
+            ctx.SolvedRowBaselines[kv.Key] = kv.Value;
+
+        return laid;
     }
 
     /// <summary>
@@ -2586,10 +2857,15 @@ internal sealed class LayoutEngine
     /// coarse bail-out is left on).
     /// </para>
     /// <para>
-    /// ⚠️ Null ALSO when the system carries an ossia or a text row anywhere, and that is the
-    /// room being unknown rather than an exclusion (§5.2): LilyPond puts those INTO the
-    /// chain as loose lines of their own, so a span that steps over one is somebody else's
-    /// space. Same reason, same words as <see cref="BuildLooseChainEnds"/>.
+    /// ⚠️ Null ALSO when an ossia or a text row is STRICTLY INSIDE the span (the guard below),
+    /// and that is the room being unknown rather than an exclusion (§5.2): LilyPond puts
+    /// those INTO the chain as loose lines of their own, so a span that steps over one is
+    /// somebody else's space. ⚠️ THIS IS THE HALF <see cref="BuildLooseChainEnds"/> NO LONGER
+    /// SHARES: since 2026-07-27 that one takes a LEADING chords row into its chain instead of
+    /// declining, because a row above the next system's first staff is exactly the run
+    /// page-layout-problem.cc:948-990 collects. A row inside THIS span is the other case, and
+    /// closing it is the same work — put the row in as an element — with its own point to
+    /// measure it, which the corpus does not have yet.
     /// </para>
     /// <para>
     /// ⚠️ THE ROOM IS READ PER SYSTEM AND THE ANCHOR IT IS DRAWN FROM IS NOT, and that is

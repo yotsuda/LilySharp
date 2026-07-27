@@ -2362,6 +2362,62 @@ probeTag =
 %%     between it and the foot, so nothing shares its room. The pair therefore also says the
 %%     defect is per-chain and not per-score, which is what BuildLooseChainEnds' own remark
 %%     already suspected when it called the whole-score bail-out coarser than it needs to be.
+%%
+%%     ★★ THE CHAIN, TERM BY TERM (read off this book's own PROBEV VAG lines, page 1,
+%%     2026-07-27).  The total 4.608814 was never the hard part; these four are, because a
+%%     port can be checked one spring at a time against them and a port checked on a total
+%%     is a port checked on a coincidence.
+%%
+%%       room                       12.000000   staff 2 of a system -> staff 1 of the next
+%%       s0  staff  -> lyrics        4.608814   nonstaff-relatedstaff (5.5 / str 1 / cmp 5.5)
+%%                                              min 3.737890 -- OFF its floor
+%%       s1  lyrics -> null          0.837966   HUGE_STRETCH, cmp 1, min 0   = 1 + f
+%%       s2  null   -> row           2.973743   HUGE_STRETCH  -- AT its minimum
+%%       s3  row    -> next staff    3.579477   ChordNames' own nonstaff-relatedstaff
+%%                                              -- AT its minimum
+%%                                 ----------
+%%                                  12.000000   f = -0.162033841
+%%
+%%     ⚠️ s3's SPRING IS NOT THE Lyrics ONE even though the property has the same name.
+%%     ly/engraver-init.ly:722 declares only `(padding . 0.5)` for ChordNames and
+%%     define-grobs.scm has no default for that property at all, so read_spacing_spec writes
+%%     nothing else and the ideal 1.0 with both strengths 1.0 are the CALLER's
+%%     `Spring spring (1.0, 0.0)` (page-layout-problem.cc:1035).  A port that reuses the
+%%     Lyrics' 5.5 here builds a different spring with the same name.
+%%
+%%     ★ AND BOTH BINDING MINIMUMS BREAK INTO FORMULAS:
+%%       m2 = 0.037044 (the lyric line's own descent)
+%%          + 1.936699 (the row's up ink)
+%%          + 1.000000 (system-system-spacing padding)
+%%          = ONE MORE STEP OF THE SAME ALIGNMENT WALK that produced m0, taken from the
+%%            accumulation the lyric line left behind.  That is what
+%%            `elements_[i].min_distance + elements_[i].padding` IS: :644-645 recomputes
+%%            min_distance as `first_skyline.distance (bottom_skyline_) -
+%%            bottom_loose_baseline_`, and the subtraction is exactly the re-referencing a
+%%            running walk does for free.
+%%       m3 = 0.034477 (the row's descent) + 3.045000 + 0.500000 (the ChordNames padding),
+%%            where 3.045000 is the staff's UP SKYLINE AT THE CHORD'S x.
+%%     ⚠️ THE 3.045000 IS SOLID AND ITS BREAKDOWN IS NOT.  The number is
+%%     3.579477 - 0.034477 - 0.500000, arithmetic on dumped values.  Reading it as
+%%     2.500000 (g'' on its staff position) + 0.545000 (the notehead's ink above its centre,
+%%     the same 0.545 Lily#'s LILC carries) is an INFERENCE -- nobody has dumped the notehead
+%%     grob to confirm it.  It is a six-digit fit and it predicts that Lily# reproduces m3
+%%     exactly, so it is worth writing down AND worth checking before it is leaned on; the
+%%     PROBEV GROB lines this file already emits can settle it in one run.
+%%     ⚠️ THE BAR NUMBER DOES NOT ENTER m3, and that is the check that this is a SKYLINE
+%%     distance and not an extent: systems 2..4 carry one, so their first staff's up extent
+%%     is 4.303666 rather than 3.800000, and yet the row-to-staff distance is the same
+%%     3.579477 on all four.  The number sits left of the clef, the first chord above the
+%%     first note; they never share an x.
+%%
+%%     ★ WHAT THE PORT SHOULD LAND ON, written before it (HANDOFF 5.0).  With s0 and s1 the
+%%     only free springs, room 12 gives  f = (5.5 - m2 - m3) / 6.5  and  s0 = 5.5 + 5.5 f,
+%%     so  d(s0)/d(m2 + m3) = -0.846154  exactly.  Lily#'s m2 is made of ITS lyric descent
+%%     and ITS chord-symbol cap height, both larger, so the port should land BELOW 4.608814
+%%     by 0.846154 times whatever its (m2 + m3) exceeds 6.553220 by: a NEGATIVE residual
+%%     made of font metrics rather than of mechanism.
+%%     ⚠️ FALSIFIER: landing ABOVE 4.608814, or staying at 5.500000, means the row is not in
+%%     the chain and the port did not take.
 \book {
   \probeTag "LYRMC"
   \paper { max-systems-per-page = #4 ragged-bottom = ##t }

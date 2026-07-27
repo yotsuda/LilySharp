@@ -140,13 +140,41 @@ internal sealed class LyricEngraver
     /// </remarks>
     private readonly Func<int, Fraction, double> _parentAlignmentCentre;
 
+    /// <summary>
+    /// <c>system-system-spacing</c>'s padding — the term that rides on the minimum of the
+    /// spring reaching the NEXT system's first line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:971-972 — <c>elements_[i].min_distance +
+    /// elements_[i].padding</c>, the system spring's own padding, on the loose line that
+    /// opens the next system.
+    /// </remarks>
+    private readonly double _systemPadding;
+
+    /// <summary>
+    /// WHERE THE SOLVE PUT EACH LOOSE LINE THAT IS A TEXT ROW, by (system, global staff
+    /// index), as a baseline in PAGE Y-up — published for <c>LayoutEngine</c> to apply.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — <c>distribute_loose_lines</c>
+    /// ends by <c>translate_axis</c>-ing each loose line to the solved position, i.e. the row
+    /// is MOVED after the fact rather than laid out there. Lily# has to do the same and for a
+    /// sharper reason: the solve happens inside the annotation pass, while the row's Y is
+    /// read both there (<c>ChordNameEngraver</c> through <c>staffYAt</c>) and after it (the
+    /// renderer's grid barlines, off <c>systemsArray</c>). Publishing the answer and letting
+    /// the engine apply it keeps ONE order of operations instead of two.
+    /// </remarks>
+    public Dictionary<(int System, int StaffIndex), double> SolvedRowBaselines { get; } = new();
+
     public LyricEngraver(
         LyricParameters? parameters = null,
-        Func<int, Fraction, double>? parentAlignmentCentre = null)
+        Func<int, Fraction, double>? parentAlignmentCentre = null,
+        double? systemPadding = null)
     {
         _params = parameters ?? LyricParameters.Default;
         _parentAlignmentCentre = parentAlignmentCentre
             ?? ((_, _) => EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
+        _systemPadding = systemPadding ?? VerticalSpacingParameters.Default.SystemSystem.Padding;
     }
 
     /// <summary>
@@ -284,7 +312,7 @@ internal sealed class LyricEngraver
     /// is asserted by <c>LyricRowIsSpacedAsAStaffLikeBand</c>, not by a ledger point.
     /// </para>
     /// </remarks>
-    private const double LyricRowBaseline = 2.6;
+    internal const double LyricRowBaseline = 2.6;
 
     /// <summary>
     /// Calculate layouts for all lyrics in a score.
@@ -321,7 +349,7 @@ internal sealed class LyricEngraver
         IReadOnlyDictionary<int, double>? staffYByIndex = null,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY = null,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null,
-        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd = null,
+        Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd = null,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0)
     {
@@ -453,10 +481,18 @@ internal sealed class LyricEngraver
     /// (4.027851), with two the floor rises past it and every spring sits on its minimum
     /// (3.737890 + 2.800000 into 11.073064).
     /// <para>
-    /// What still runs at force 0, i.e. exactly where it was: any system carrying an ossia
-    /// or a text ROW, which LilyPond puts INTO the chain as loose lines and Lily# lays out
-    /// as bands of their own — see <c>LayoutEngine.BuildLooseChainEnds</c> and
-    /// <c>BuildBetweenStavesChainEnds</c>, both of which decline those.
+    /// ★ A CHORDS ROW LEADING THE NEXT SYSTEM IS IN THIS CHAIN since 2026-07-27
+    /// (page-layout-problem.cc:948-990), which is what
+    /// <c>lyrics.chord-row.between-systems.staff-to-lyric</c> measures: the room does not
+    /// grow for it, so the extra occupant compresses the solve and the lyric line above is
+    /// pulled closer to its staff (4.610861 against 5.500000 without).
+    /// <para>
+    /// What still runs at force 0, i.e. exactly where it was: a system carrying an OSSIA, and
+    /// a text row that is NOT a leading chords row — a lyrics row (no ink in any skyline yet,
+    /// HANDOFF 1) or a row standing between two spaceable staves, which belongs to
+    /// <c>ComputeBetweenStavesEnd</c>'s span rather than this one. Both builders decline
+    /// those, and for the same reason: the room would be somebody else's.
+    /// </para>
     /// </para>
     /// </para>
     /// </remarks>
@@ -466,7 +502,7 @@ internal sealed class LyricEngraver
         double staffBottom,
         IReadOnlyDictionary<int, double>? noteBoundAnchorY,
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline,
-        Func<int, (double Room, double NextStaffMinDistance)?>? looseChainEnd,
+        Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY)
     {
@@ -615,6 +651,7 @@ internal sealed class LyricEngraver
                     }
                 }
                 var end = isUpperFamily ? null : looseChainEnd?.Invoke(system);
+                int firstLeadingPosition = -1;
                 if (end is { } chainEnd)
                 {
                     room = chainEnd.Room;
@@ -630,7 +667,7 @@ internal sealed class LyricEngraver
                                 descent = Math.Max(descent, LyricDownExtent(lay.Item.Text));
                         gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NullNeighbour, descent));
                     }
-                    else
+                    else if (chainEnd.Lines.IsDefaultOrEmpty)
                     {
                         // LILYPOND-REF: lily/page-layout-problem.cc:928-933 — a NULL line
                         // breaks the affinity to the previous system (minimum 0.0), and
@@ -639,10 +676,57 @@ internal sealed class LyricEngraver
                         gaps.Add(new LooseLineSpacer.Gap(
                             LooseLineSpacer.NullNeighbour, chainEnd.NextStaffMinDistance));
                     }
+                    else
+                    {
+                        // ★ THE NEXT SYSTEM OPENS WITH LOOSE LINES, so they are in THIS
+                        // chain — LilyPond pushes every non-spaceable line onto the same
+                        // `loose_lines` vector and closes the run on the next spaceable
+                        // staff (:948-990). The room does not grow for them (MEASURED:
+                        // system-to-system is 12.000000 with the row and without it), so an
+                        // extra occupant COMPRESSES the solve rather than displacing it, and
+                        // the lyric line above is pulled closer to its own staff.
+                        // LILYPOND-REF: :973-975 — the null line first, minimum 0.0.
+                        gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NullNeighbour, 0.0));
+                        // The ELEMENT index of the first leading line, not the spring index:
+                        // element j sits at positions[j] and is reached by spring j-1, so the
+                        // line after the gap about to be added is one past the count.
+                        // ⚠️ THE NULL LINE OCCUPIES AN INDEX OF ITS OWN — LilyPond pushes a
+                        // real (null) entry onto loose_lines (:975) and skips it only when
+                        // translating (:1047) — so leaving it out here reads the null's
+                        // position for the row, which is m2 too high (measured: 6.550800
+                        // above the staff's reference point instead of 3.576200).
+                        firstLeadingPosition = gaps.Count + 1;
+
+                        for (int k = 0; k < chainEnd.Lines.Length; k++)
+                        {
+                            var line = chainEnd.Lines[k];
+                            // LILYPOND-REF: :971-972 — the FIRST line's minimum is the
+                            // system-level `elements_[i].min_distance + elements_[i].padding`,
+                            // and :644-645 recomputes that min_distance as
+                            // `first_skyline.distance (bottom_skyline_) - bottom_loose_baseline_`
+                            // — which is one more step of THIS walk, re-referenced for free.
+                            // Every later line carries its own alignment step (LeadingLine).
+                            double min = k == 0
+                                ? walk.Distance(line.Up, _systemPadding)
+                                : line.MinInto;
+                            gaps.Add(new LooseLineSpacer.Gap(line.SpecInto, min));
+                            walk.Advance(line.Up, line.Down, line.SpecInto.Padding,
+                                         line.SpecInto.MinimumDistance);
+                        }
+
+                        // ...and the closing spring onto the next system's first spaceable
+                        // staff, whose minimum is that system's own alignment step
+                        // (:923-925) rather than anything this walk knows.
+                        gaps.Add(new LooseLineSpacer.Gap(
+                            chainEnd.ClosingSpec ?? LooseLineSpacer.NullNeighbour,
+                            chainEnd.ClosingMinDistance));
+                    }
                 }
-                // ...and NOTHING when the room is unknown, which is now only the system
-                // carrying an ossia or a text ROW (LayoutEngine.BuildLooseChainEnds and
-                // BuildBetweenStavesChainEnds both decline those). LilyPond's chain always
+                // ...and NOTHING when the room is unknown, which is now the system carrying
+                // an ossia, or a text row this chain does not reach — a LYRICS row (no ink to
+                // be spaced by) or one standing between two spaceable staves
+                // (LayoutEngine.BuildLooseChainEnds and ComputeBetweenStavesEnd decline
+                // those; a leading CHORDS row is handled above). LilyPond's chain always
                 // ends on something — the next staff, or the page edge — so a terminator with
                 // no room behind it would be a spring this port invented: it cannot be given
                 // LilyPond's minimum, it changes no position (the verses read
@@ -656,6 +740,22 @@ internal sealed class LyricEngraver
                     // Y-up: a line below the anchor is negative.
                     newY[(familyKey, system, verses[i])] =
                         -(anchorBase + anchorOffset + positions[i + 1]);
+                }
+
+                // ...and the NEXT system's leading rows, which were solved in the same chain.
+                // LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — every loose line that
+                // is a real grob (the null at index 0 of the run is skipped by
+                // `if (loose_lines[i])`) is translated to its solved position.
+                if (firstLeadingPosition >= 0 && end is { } solved
+                    && system < systems.Length && !systems.IsDefaultOrEmpty)
+                {
+                    // The anchor staff's reference point in PAGE Y-up — the frame the
+                    // published baselines are in, because the row belongs to a DIFFERENT
+                    // system from the block that solved it and the two only meet on the page.
+                    double anchorPageY = systems[system].Y - (anchorBase + anchorOffset);
+                    for (int k = 0; k < solved.Lines.Length; k++)
+                        SolvedRowBaselines[(system + 1, solved.Lines[k].StaffIndex)] =
+                            anchorPageY - positions[firstLeadingPosition + k];
                 }
             }
         }

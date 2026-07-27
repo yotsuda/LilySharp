@@ -582,9 +582,13 @@ internal sealed class PageLayouter
     /// <para>
     /// ⚠️ Staves with no spring — text rows, hidden staves, an ossia (see
     /// <c>MultiStaffLayouter.StaffSprings</c>) — keep their offset from the spaceable staff
-    /// above them. LilyPond re-spaces its loose lines separately
-    /// (<c>distribute_loose_lines</c>, :1025-1054), which Lily# does not model; a lyric row
-    /// therefore travels with its staff instead of being distributed. Named, not hidden.
+    /// above them THROUGH THIS PASS. LilyPond re-spaces its loose lines separately
+    /// (<c>distribute_loose_lines</c>, :1025-1054), and since 2026-07-27 so does Lily# — but
+    /// in the LYRIC chain (<c>LyricEngraver.DistributeLooseLines</c>) and applied by
+    /// <c>LayoutEngine.ApplySolvedRowPositions</c>, i.e. AFTER this. So "no spring here" no
+    /// longer means "never re-spaced"; it means this page pass is not what moves them.
+    /// ⚠️ What genuinely still travels with its staff: a LYRICS row (no ink in any skyline,
+    /// HANDOFF 1), an ossia, and any row on a page's FIRST system.
     /// </para>
     /// </remarks>
     private static ImmutableArray<StaffGroupLayout> RespaceStaves(

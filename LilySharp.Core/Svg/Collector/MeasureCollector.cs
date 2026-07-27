@@ -1438,8 +1438,16 @@ public sealed partial class MeasureCollector
                             // Every LYRIC row is tagged (it lays out as a staff
                             // with the lines removed); the verse count grows its
                             // band beyond the first line.
+                            // ...and it takes the Lyrics context's affinity, UP, where
+                            // Staff.CreateTextRow left it at the ChordNames default of DOWN.
+                            // LILYPOND-REF: ly/engraver-init.ly:648 Lyrics staff-affinity = UP.
                             return st.IsTextRow && rowVerses.TryGetValue(idx, out var verses)
-                                ? st with { TextRowVerses = verses, IsLyricsTextRow = true }
+                                ? st with
+                                {
+                                    TextRowVerses = verses,
+                                    IsLyricsTextRow = true,
+                                    StaffAffinity = Layout.StaffAffinityDirection.Up,
+                                }
                                 : st;
                         })
                         .ToImmutableArray()

@@ -230,12 +230,26 @@ internal sealed class SkylineBuilder
         _ => (GlyphMetrics.ClefG, -1.0),
     };
 
+    /// <remarks>
+    /// ⚠️ A TEXT ROW HAS NO MUSIC INK. A lead sheet's chords/lyrics track carries a VOICE —
+    /// that is what gives it the bar grid and the timings its symbols are placed by — but the
+    /// renderer draws none of it (<c>SharedRenderer</c>: a text row draws no staff lines, no
+    /// clef and no notes, only its text). Seeding those noteheads reserved ink that is never
+    /// drawn: measured 2026-07-27, a chords row of whole notes put a flat ±0.500000 band in
+    /// its skyline while its actual symbols were in no skyline at all. The row's OWN ink is
+    /// seeded by <c>MultiStaffLayouter.BuildAllStaffSkylines</c> from the chord symbols.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 <c>skyline_spacing</c> — a group's
+    /// skyline is its MEMBERS' stencils, and a ChordNames group's members are ChordNames.
+    /// </remarks>
     private void AddStaffToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
         IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null)
     {
+        if (staff.IsTextRow)
+            return;
+
         bool multiVoice = staff.Voices.Length > 1;
         for (int vi = 0; vi < staff.Voices.Length; vi++)
         {
@@ -370,7 +384,14 @@ internal sealed class SkylineBuilder
         // first as the baseline; notes/ledgers then extend it outward.
         // LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
         //   inside_staff_skylines include the StaffSymbol grob.
-        SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
+        // ⚠️ A TEXT ROW HAS NO StaffSymbol GROB. A lead sheet's chords/lyrics track prints
+        // no staff lines — the fact SeedSystemStaffSymbol and SeedClef already carry — so it
+        // has none to put in a skyline. Until 2026-07-27 this seeded a full five-line box
+        // (±2.050000) for a row that draws nothing: ink reserved where there is none, and
+        // the reason a text row's skyline looked populated while the row's OWN ink was in no
+        // skyline at all (MultiStaffLayouter.BuildAllStaffSkylines seeds that).
+        if (!staff.IsTextRow)
+            SeedStaffSymbol(measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         // ...and the clef, which on a plain staff is the extreme ink in BOTH directions —
         // further out than any note that stays inside the staff. The same seed the system

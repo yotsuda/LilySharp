@@ -176,6 +176,64 @@ internal static class LooseLineSpacer
     internal readonly record struct Gap(VerticalSpacingSpec Spec, double MinDistance);
 
     /// <summary>
+    /// One non-spaceable line the NEXT system leads with, as the chain sees it: its own
+    /// skylines, the spec of the spring that reaches it, and that spring's minimum.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 — the run of loose lines a system
+    /// opens with is pushed onto the SAME <c>loose_lines</c> vector the previous system's
+    /// block is in, so one chain spans the system boundary and the two are solved together.
+    /// <para>
+    /// ⚠️ <see cref="MinInto"/> IS MEANINGLESS FOR THE FIRST LINE, and deliberately so: the
+    /// first line's minimum is the SYSTEM-level term
+    /// <c>elements_[i].min_distance + elements_[i].padding</c> (:971-972), which is measured
+    /// from the PREVIOUS system's bottom profile and so is only knowable inside the chain's
+    /// own walk. Every later line's is <c>min_offsets[k-1] - min_offsets[k]</c> (:961-962),
+    /// the NEXT system's own alignment, which is what this carries.
+    /// </para>
+    /// </remarks>
+    internal readonly record struct LeadingLine(
+        VerticalSkyline Up, VerticalSkyline Down,
+        VerticalSpacingSpec SpecInto, double MinInto, int StaffIndex);
+
+    /// <summary>
+    /// What closes a note-bound block's chain and how much room it has — the far end of
+    /// LilyPond's <c>distribute_loose_lines</c> call.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:936-939 — the room is
+    /// <c>last_spaceable_line_translation - (-solution_[spring_idx])</c>, i.e. this system's
+    /// last spaceable staff's reference point down to the next system's first.
+    /// </remarks>
+    /// <param name="Room">The refpoint-to-refpoint span the chain is solved into.</param>
+    /// <param name="NextStaffMinDistance">
+    /// The minimum on the spring that reaches the next system's first spaceable staff when
+    /// NOTHING is between — <c>elements_[i].padding - min_offsets[0]</c> (:931-932). NaN
+    /// means the chain runs to the page edge instead (:1004-1013). Superseded by
+    /// <paramref name="Lines"/> when the next system leads with loose lines: the chain then
+    /// reaches those first and closes on <paramref name="ClosingSpec"/>.
+    /// </param>
+    /// <param name="Lines">
+    /// The next system's LEADING non-spaceable lines, top to bottom. Empty on every score
+    /// without a chords/lyrics track, which is what leaves those chains exactly as they were.
+    /// </param>
+    /// <param name="ClosingSpec">
+    /// The spring from the last of <paramref name="Lines"/> to the next system's first
+    /// spaceable staff — that line's OWN <c>nonstaff-relatedstaff-spacing</c>
+    /// (get_spacing_spec :1299-1312). Null when <paramref name="Lines"/> is empty.
+    /// </param>
+    /// <param name="ClosingMinDistance">
+    /// That spring's minimum, <c>min_offsets[k-1] - min_offsets[k]</c> (:924-925) — the next
+    /// system's own alignment step from its last leading line down to its first staff.
+    /// </param>
+    internal sealed record ChainEnd(
+        double Room,
+        double NextStaffMinDistance,
+        ImmutableArray<LeadingLine> Lines,
+        VerticalSpacingSpec? ClosingSpec,
+        double ClosingMinDistance);
+
+    /// <summary>
     /// Distributes <paramref name="gaps"/>.Count - 1 loose lines into
     /// <paramref name="room"/>, returning where each of them sits below the anchor —
     /// element k is the k-th loose line, k from 1.

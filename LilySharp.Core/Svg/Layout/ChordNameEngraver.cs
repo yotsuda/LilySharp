@@ -75,13 +75,47 @@ internal static class ChordNameEngraver
 
     /// <summary>For an independent chord ROW, the chord text baseline below the
     /// row band's top, so a ~1.5 ss symbol sits inside the reserved band.</summary>
-    private const double ChordRowTextBaseline = 1.6;
+    /// <remarks>
+    /// LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
+    /// has no band, only the ChordNames VerticalAxisGroup whose reference point IS this
+    /// baseline. ⚠️ THIS IS THE SEAM between the two, and there is exactly one of it:
+    /// everything LilyPond-shaped (the row's skyline, the chain's springs, the solved
+    /// position) is measured from the BASELINE, and everything band-shaped
+    /// (<c>StaffLayout.Y</c>, <c>GetStaffHeight</c>) from the band TOP. Adding it or taking
+    /// it off is how one converts, and <c>LayoutEngine.ApplySolvedRowPositions</c> is the
+    /// only place that has to.
+    /// </remarks>
+    internal const double ChordRowTextBaseline = 1.6;
 
     /// <summary>On a chords-ONLY grid sheet the row is the measure grid itself
     /// ("a staff with the lines removed", full staff-height barlines): centre
     /// the symbol between the bar ends — cap height 1.87 about the band middle
     /// (2.0), baseline ≈ 2.0 + 1.87/2.</summary>
     private const double GridChordBaseline = 2.9;
+
+    /// <summary>
+    /// Is this score a chords-ONLY grid sheet — the spelling where the row IS the measure
+    /// grid rather than a track above one?
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
+    /// DRAWN at (<see cref="RowTextBaseline"/>), and since 2026-07-27 it also decides where
+    /// the row's REFERENCE POINT is for spacing (<c>MultiStaffLayouter.RefpointBelowTop</c>).
+    /// Two spellings of it would put the row's ink 1.300000 away from the space reserved for
+    /// it — measured, before this became one function.
+    /// <para>
+    /// ⚠️ NOTE-BOUND LYRICS DO NOT COUNT: the test is for a lyrics ROW (<c>IsLyricsRow</c>),
+    /// so a lead sheet whose words hang off a staff is still "grid".
+    /// </para>
+    /// </remarks>
+    internal static bool IsChordGridSheet(
+        ImmutableArray<ChordNameItem> chordNames, ImmutableArray<LyricItem> lyrics)
+        => !chordNames.IsDefaultOrEmpty && chordNames.Any(c => c.IsChordRow)
+           && (lyrics.IsDefaultOrEmpty || !lyrics.Any(l => l.IsLyricsRow));
+
+    /// <summary>Where an independent chord row's text baseline sits below its band top.</summary>
+    internal static double RowTextBaseline(bool chordGridSheet)
+        => chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
 
     /// <summary>
     /// Calculates chord name layouts from collected items.
@@ -134,33 +168,12 @@ internal static class ChordNameEngraver
             var cnMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, chord.StaffIndex, measures);
             double staffOffset = staffYAt?.Invoke(chord.MeasureIndex, chord.StaffIndex) ?? 0;
 
-            // chordnames entries carry their own rhythm: place them by musical
-            // moment against the shared column grid (the same X the renderer draws
-            // a note at that timing), exactly as bound-voice lyrics do. The
-            // note-attached @chord path keeps the item-index offset.
-            double x = chord.UseTiming
-                ? ml.X + ml.GetXForTiming(chord.Timing)
-                : ml.X + LayoutUtilities.GetItemXOffset(
-                    cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+            double x = SymbolX(chord, ml, cnMeasures);
             bool topStaff = staffOffset <= (minStaffYAt?.Invoke(chord.MeasureIndex) ?? 0) + 1e-6;
             int sysIdx = measureToSystem.TryGetValue(chord.MeasureIndex, out var si) ? si : -1;
 
             prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));
         }
-
-        // The drawn width of a chord symbol at the renderer's chord font size
-        // (FontSize 4.0 × 0.65 = 2.6), measured with SANS bold advances — the face the
-        // names render in. The symbol occupies (x . x + width): LilyPond's ChordName
-        // declares no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855),
-        // so its reference point is its ink LEFT and it stands ON its column.
-        // LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
-        // floor on the HALF width before the anchor port doubled the quantity) and it BINDS —
-        // a one-letter symbol like "C" measures 1.877882, so the floor overrides it. LilyPond
-        // has no such floor: a ChordName's extent is its stencil's. It survives here only
-        // because removing it moves output for a reason unrelated to the anchor; it belongs
-        // with the other named inventions in docs/HANDOFF.md section 2H.
-        double Width(ChordNameItem c) =>
-            Math.Max(2.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, 2.6));
 
         // Resolve horizontal overlaps between adjacent TIMING-placed symbols ON THE
         // SAME LINE (same system + staff). Proportional timing X can pack two names —
@@ -171,19 +184,15 @@ internal static class ChordNameEngraver
             a.sysIdx != b.sysIdx ? a.sysIdx.CompareTo(b.sysIdx)
             : a.chord.StaffIndex != b.chord.StaffIndex ? a.chord.StaffIndex.CompareTo(b.chord.StaffIndex)
             : a.x.CompareTo(b.x));
-        const double chordGap = 0.6; // minimum ink gap between adjacent names (staff spaces)
         for (int i = 1; i < prepared.Count; i++)
         {
             var prev = prepared[i - 1];
             var cur = prepared[i];
-            if (!cur.chord.UseTiming || !prev.chord.UseTiming
-                || cur.sysIdx != prev.sysIdx || cur.chord.StaffIndex != prev.chord.StaffIndex)
+            if (cur.sysIdx != prev.sysIdx || cur.chord.StaffIndex != prev.chord.StaffIndex)
                 continue;
-            // Both symbols start AT their columns, so only the earlier one's box lies
-            // between them: prev.x + its width + the gap.
-            double minX = prev.x + Width(prev.chord) + chordGap;
-            if (cur.x < minX)
-                prepared[i] = (cur.chord, minX, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
+            double shifted = ClearOfPrevious(prev.chord, prev.x, cur.chord, cur.x);
+            if (shifted != cur.x)
+                prepared[i] = (cur.chord, shifted, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
         }
 
         // Per system, the peak protrusion of staff content above the staff top,
@@ -217,12 +226,10 @@ internal static class ChordNameEngraver
                 up = lowerStaffUpSkyline?.Invoke(p.sysIdx, p.chord.StaffIndex);
             if (up == null || up.IsEmpty)
                 continue;
-            // The symbol's footprint: the text runs RIGHT from its column at the chord
-            // font size (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS bold
-            // advances — the face chord names render in. Measured, not guessed: a wide
-            // "Gm7♭5" reaches over the NEXT beat's tall chord, which a narrow
-            // per-character estimate missed.
-            double peak = up.MaxProtrusionInRange(p.x, p.x + Width(p.chord));
+            // The symbol's footprint (see SymbolWidth): the text runs RIGHT from its
+            // column. Measured, not guessed — a wide "Gm7♭5" reaches over the NEXT beat's
+            // tall chord, which a narrow per-character estimate missed.
+            double peak = up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(p.chord));
             var key = (p.sysIdx, p.chord.StaffIndex);
             if (!linePeak.TryGetValue(key, out var cur) || peak > cur)
                 linePeak[key] = peak;
@@ -235,7 +242,7 @@ internal static class ChordNameEngraver
             // staff offset is the band top), not floated above an associated staff.
             if (p.chord.IsChordRow)
             {
-                double rowBaseline = chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
+                double rowBaseline = RowTextBaseline(chordGridSheet);
                 var (rowText, rowAbove) = DisplayText(p.chord);
                 // Store Y-up from the system top (= negation of the system-relative
                 // device baseline); no staff offset is baked.
@@ -263,6 +270,156 @@ internal static class ChordNameEngraver
         }
 
         return results.ToImmutable();
+    }
+
+    // ===================== ONE SYMBOL: WHERE IT IS AND HOW BIG IT IS =====================
+    //
+    // Three quantities the engraver used to spell inline and the ROW SKYLINE below now
+    // shares: a symbol's X, its width, and the gap that keeps two of them apart. One home
+    // each, because the skyline has to describe the symbol that gets DRAWN — a second X
+    // model here would be HANDOFF 5.2.1② in the place this island can least afford it.
+
+    /// <summary>The chord font size the renderer draws at: its <c>FontSize 4.0 × 0.65</c>.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's ChordName takes <c>font-size = 1.5</c> off the context's own
+    /// size (scm/define-grobs.scm ChordName); 2.6 is Lily#'s chord size and always was.
+    /// ⚠️ IT IS ALSO SPELT IN <c>SharedRenderer.Marks.DrawChordNames</c> as
+    /// <c>FontSize * 0.65</c>, so this reserves for the face the renderer draws only while
+    /// the two agree — the second-home shape HANDOFF 5.2.1⑤ names. Named here rather than
+    /// unified because the renderer's own <c>FontSize</c> is a device quantity this layer
+    /// does not have; it was two inline literals before and is one named constant now.
+    /// </remarks>
+    private const double ChordFontSize = 2.6;
+
+    /// <summary>Minimum ink gap between two adjacent names (staff spaces).</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
+    /// ChordName has no X-offset and no self-alignment (scm/define-grobs.scm:837-855), and
+    /// two that collide simply collide. This is Lily#'s own overlap resolution for
+    /// proportionally-timed symbols; see <see cref="ClearOfPrevious"/>.
+    /// </remarks>
+    private const double SymbolGap = 0.6;
+
+    /// <summary>
+    /// A symbol's X: chordnames entries carry their own rhythm, so they are placed by
+    /// musical moment against the shared column grid (the same X the renderer draws a note
+    /// at that timing), exactly as bound-voice lyrics are. The note-attached <c>@chord</c>
+    /// path keeps the item-index offset instead.
+    /// </summary>
+    private static double SymbolX(
+        ChordNameItem chord, MeasureLayout ml, ImmutableArray<Measure> staffMeasures)
+        => chord.UseTiming
+            ? ml.X + ml.GetXForTiming(chord.Timing)
+            : ml.X + LayoutUtilities.GetItemXOffset(
+                staffMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+
+    /// <summary>
+    /// The drawn width of a chord symbol at <see cref="ChordFontSize"/>, measured with SANS
+    /// bold advances — the face the names render in. The symbol occupies
+    /// <c>(x . x + width)</c>: LilyPond's ChordName declares no X-offset and no
+    /// self-alignment-interface (scm/define-grobs.scm:837-855), so its reference point is
+    /// its ink LEFT and it stands ON its column.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
+    /// floor on the HALF width before the anchor port doubled the quantity) and it BINDS —
+    /// a one-letter symbol like "C" measures 1.877882, so the floor overrides it. LilyPond
+    /// has no such floor: a ChordName's extent is its stencil's. It survives here only
+    /// because removing it moves output for a reason unrelated to the anchor; it belongs
+    /// with the other named inventions in docs/HANDOFF.md section 2H.
+    /// </remarks>
+    private static double SymbolWidth(ChordNameItem c) =>
+        Math.Max(2.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, ChordFontSize));
+
+    /// <summary>
+    /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
+    /// previous symbol's. Both symbols start AT their columns, so only the earlier one's
+    /// box lies between them.
+    /// </summary>
+    private static double ClearOfPrevious(
+        ChordNameItem prev, double prevX, ChordNameItem cur, double curX)
+    {
+        // Inline @chord symbols (UseTiming false) stay anchored to their note.
+        if (!cur.UseTiming || !prev.UseTiming)
+            return curX;
+        double minX = prevX + SymbolWidth(prev) + SymbolGap;
+        return curX < minX ? minX : curX;
+    }
+
+    /// <summary>
+    /// An independent chord ROW's own UP/DOWN skylines for ONE system — the row's real
+    /// symbol ink, self-relative to the row's BASELINE.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context is a
+    /// non-spaceable line of the alignment, and what the walk above and below it measures is
+    /// its VerticalAxisGroup's skyline, i.e. the ChordName stencils themselves.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 <c>skyline_spacing</c> — a
+    /// group's skyline is built from its members' stencils.
+    /// <para>
+    /// ⚠️ THE FRAME IS THE ROW'S TEXT BASELINE, which is where LilyPond's ChordNames
+    /// VerticalAxisGroup has its reference point — <see cref="Rendering.TextFontMetrics.Ink"/>
+    /// is baseline-relative and nothing is added to it here. Lily#'s <c>StaffLayout.Y</c> for
+    /// the same row is the BAND TOP, <see cref="ChordRowTextBaseline"/> above this origin;
+    /// that band is Lily#'s own model of where the row sits (HANDOFF 3) and this is the LP
+    /// quantity the row is spaced BY. The two are one seam, named here.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE `as both` SECOND LINE IS NOT IN THIS. A Roman degree stacked above the name
+    /// (<c>AboveLine</c>) is drawn higher than the ink measured here, so a row that uses it
+    /// under-reserves. Named rather than approximated: the stacking distance lives in the
+    /// renderer and moving it here without a point to measure it is how a port acquires an
+    /// untested branch.
+    /// </para>
+    /// <para>
+    /// ⚠️ BY <c>MeasureIndex</c>, NOT BY POSITION — the caller hands ONE SYSTEM's layouts,
+    /// whose positions restart at 0 while a <see cref="ChordNameItem.MeasureIndex"/> is
+    /// score-wide. Same trap <c>LyricEngraver.NoteBoundBlockSkylines</c> carries.
+    /// </para>
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) RowSkylines(
+        ImmutableArray<ChordNameItem> chordNames,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex,
+        ImmutableArray<Measure> staffMeasures)
+    {
+        var up = new VerticalSkyline(VerticalDirection.Up);
+        var down = new VerticalSkyline(VerticalDirection.Down);
+        if (chordNames.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return (up, down);
+
+        var byMeasure = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in measureLayouts)
+            byMeasure[ml.MeasureIndex] = ml;
+
+        var placed = new List<(double X, ChordNameItem Chord)>();
+        foreach (var chord in chordNames)
+        {
+            if (!chord.IsChordRow || chord.StaffIndex != staffIndex)
+                continue;
+            if (!byMeasure.TryGetValue(chord.MeasureIndex, out var ml))
+                continue;
+            placed.Add((SymbolX(chord, ml, staffMeasures), chord));
+        }
+        if (placed.Count == 0)
+            return (up, down);
+
+        // The same order and the same clearance the drawn row gets — one line, one staff.
+        placed.Sort((a, b) => a.X.CompareTo(b.X));
+        for (int i = 1; i < placed.Count; i++)
+            placed[i] = (ClearOfPrevious(placed[i - 1].Chord, placed[i - 1].X,
+                                         placed[i].Chord, placed[i].X), placed[i].Chord);
+
+        foreach (var (x, chord) in placed)
+        {
+            var (bottom, top) = Rendering.TextFontMetrics.Ink(
+                DisplayText(chord).Text, ChordFontSize,
+                sans: true, Rendering.FontStyle.Bold);
+            double right = x + SymbolWidth(chord);
+            up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
+            down.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Down));
+        }
+        return (up, down);
     }
 
     /// <summary>The symbol's display text for its mode, plus the optional line stacked

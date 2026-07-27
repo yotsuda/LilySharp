@@ -161,6 +161,81 @@ public class StaffSkylineFrameTests
     }
 
     /// <summary>
+    /// A TEXT ROW HAS NEITHER OF THE TWO SEEDS A STAFF HAS. A lead sheet's chords/lyrics
+    /// track prints no staff lines, no clef and no notes — the renderer draws only its text —
+    /// so nothing a <see cref="Staff"/> contributes belongs in its skyline, and what is left
+    /// is EMPTY until its own ink is merged in
+    /// (<c>MultiStaffLayouter.BuildAllStaffSkylines</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT USED TO BE NEITHER EMPTY NOR ITS OWN INK. Measured 2026-07-27, a chords row of
+    /// whole notes came back with a full five-line staff symbol (±2.050000) AND its
+    /// undrawn noteheads (±0.500000), while the chord symbols that ARE drawn were in no
+    /// skyline at all. Both seeds are gone; this test is what stops either coming back.
+    /// <para>
+    /// ⚠️ THE VOICE IS NOT DECORATION — the row carries one, which is what gives it a bar
+    /// grid and the timings its symbols are placed by (<see cref="Staff.CreateTextRow"/>).
+    /// So this is asserted with notes PRESENT: "the row has no music" would pass trivially on
+    /// an empty voice and say nothing about the rule.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TextRow_SeedsNeitherStaffSymbolNorItsUndrawnNotes()
+    {
+        var measure = new Measure(
+            ImmutableArray.Create<MusicItem>(new NoteItem(0, Fraction.Whole, 0, null, false, 0)),
+            BarlineType.None, BarlineType.Single, null, 0, 0);
+        var row = Staff.CreateTextRow(new Voice("row", ImmutableArray.Create(measure)));
+
+        // systemLeft given, so the clef seed is offered as well and its absence is asserted
+        // along with the other two.
+        var (up, down) = new SkylineBuilder(StaffHeight).BuildStaffSkylines(
+            row, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+
+        Assert.True(up.IsEmpty, $"a text row reserves no up-ink of its own: {up.MaxHeight():F6}");
+        Assert.True(down.IsEmpty, $"a text row reserves no down-ink of its own: {down.MaxHeight():F6}");
+    }
+
+    /// <summary>
+    /// AND THE ROW'S OWN INK ARRIVES IN THE ROW'S BASELINE FRAME — the origin LilyPond's
+    /// ChordNames VerticalAxisGroup has its reference point at, so the walk above and below
+    /// the row measures the symbols themselves.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context is a
+    /// non-spaceable line of the alignment; what brackets it is measured against is its own
+    /// skyline.
+    /// <para>
+    /// ⚠️ THE ASSERTION IS THE FRAME, not the font: the expected numbers are the face's own
+    /// baseline-relative ink for the very string in the row, so nothing is added to them
+    /// anywhere. Add <c>ChordRowTextBaseline</c> (Lily#'s band model, 1.6) or a half-staff
+    /// (the frame every OTHER entry in the skyline list is in) and this fails by exactly that
+    /// amount, which is the mistake it exists to name.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ChordRow_OwnInkIsMeasuredFromItsTextBaseline()
+    {
+        var chords = ImmutableArray.Create(new ChordNameItem(
+            "C", measureIndex: 0, itemIndex: 0, sourcePosition: 0, staffIndex: 3,
+            useTiming: true, isChordRow: true));
+        var (up, down) = ChordNameEngraver.RowSkylines(
+            chords, Layouts(), staffIndex: 3, ImmutableArray<Measure>.Empty);
+
+        var (bottom, top) = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            "C", 2.6, sans: true, LilySharp.Core.Rendering.FontStyle.Bold);
+
+        Assert.Equal(top, up.MaxHeight(), 9);
+        Assert.Equal(bottom, down.MaxHeight(), 9);
+
+        // ...and it is THIS row's ink: a symbol tagged to another staff is not in it.
+        var (otherUp, _) = ChordNameEngraver.RowSkylines(
+            chords, Layouts(), staffIndex: 4, ImmutableArray<Measure>.Empty);
+        Assert.True(otherUp.IsEmpty);
+    }
+
+    /// <summary>
     /// A TUPLET BRACKET, and it is in the staff-TOP group: <c>TupletBracketEngraver</c> is run
     /// with no staff offset, so its <c>*YUp</c> is already measured from the staff's top line
     /// and the seeder adds nothing at all. Fed a Y this test chooses, the ink comes back at
