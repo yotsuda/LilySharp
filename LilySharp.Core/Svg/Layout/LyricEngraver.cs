@@ -361,9 +361,7 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd = null,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0,
-        Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
-        Func<int, VerticalSkyline?>? belowSystemAnchorDown = null,
-        Func<int, double?>? belowSystemAnchorY = null)
+        Func<int, IReadOnlyList<int>>? trailingRowStaves = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -454,8 +452,7 @@ internal sealed class LyricEngraver
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
-                lastSpaceableStaffY, trailingRowStaves, belowSystemAnchorDown,
-                belowSystemAnchorY);
+                lastSpaceableStaffY, trailingRowStaves);
 
         return layouts.ToImmutableArray();
     }
@@ -532,9 +529,7 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY,
-        Func<int, IReadOnlyList<int>>? trailingRowStaves,
-        Func<int, VerticalSkyline?>? belowSystemAnchorDown,
-        Func<int, double?>? belowSystemAnchorY)
+        Func<int, IReadOnlyList<int>>? trailingRowStaves)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -672,52 +667,14 @@ internal sealed class LyricEngraver
                 // the anchor and then the half-staff to its reference point.
                 // Getting this wrong drops the block by exactly the inter-staff distance —
                 // measured, 10.500000 on the two-staff probe.
+                // ⚠️ THE SYSTEM SILHOUETTE HAS TO CONTAIN THE ANCHOR STAFF, and for one commit
+                // in 2026-07-28 it did not: with an independent lyrics row below the staff,
+                // SkylineBuilder seeded the bottom line off the row (which draws none) and the
+                // staff's own line left the profile, flooring this chain 1.050000 short. It is
+                // fixed where it belongs — each edge staff seeds its OWN two lines
+                // (SkylineBuilder.SeedSystemStaffSymbol) — and the interim repair that merged
+                // the anchor's skyline in HERE is gone with it. One silhouette, one reader.
                 double skylineToAnchor = isUpperFamily ? 0 : anchorBase + anchorOffset;
-
-                // ⚠️ LILYSHARP-OWN: A REPAIR AT THE WRONG SITE, AND IT GOES WHEN THE SILHOUETTE
-                // IS FIXED. LilyPond has no such merge because it has nothing to repair —
-                // build_system_skyline already merges every element raised by its own
-                // translation (page-layout-problem.cc:1093-1108), so a StaffSymbol's lines are
-                // in the union whatever stands under them. The line this departs from is
-                // SkylineBuilder.BuildSystemSkylines, which gives the system's DOWN profile the
-                // bottom edge of its LAST element instead of the union of all of them; put an
-                // independent lyrics row there and the real staff's bottom line is gone. Fixing
-                // it there moves every system skyline in the corpus, so it is its own island —
-                // this merge holds the chain correct until then, and must be deleted with it.
-                //
-                // ★ THE ANCHOR STAFF'S OWN SILHOUETTE IS MERGED INTO THE SYSTEM'S (2026-07-28),
-                // because Lily#'s system skyline DROPS IT when the bottom element of the system
-                // is not a staff. LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 —
-                // build_system_skyline merges EVERY element raised by its own translation, so a
-                // StaffSymbol's lines are in the union whatever stands under them. Put an
-                // independent lyrics row below the staff and Lily#'s union loses the staff's
-                // bottom line: MEASURED on book LYRRV, the profile under the syllables read
-                // 3.000000 (the down-stems) instead of 4.050000 (the bottom line and its half
-                // thickness), and the chain's first spring was floored 1.050000 short.
-                // ⚠️ A MISSING MEMBER RESTORED, NOT A SUBSTITUTION. The system skyline is kept
-                // because it carries what the per-staff one does not — the below-staff SCRIPTS
-                // (LayoutEngine.AugmentSkylinesWithScripts), which is what
-                // test/lyrics-below-marcato exists to hold. Merging is monotone, so on every
-                // book whose bottom element IS the anchor staff this changes nothing, and it
-                // was measured to change nothing: only the row books moved.
-                var ownDown = isUpperFamily ? null : belowSystemAnchorDown?.Invoke(system);
-                if (ownDown is { IsEmpty: false } own && anchorDown is not null)
-                {
-                    // Its frame is that staff's REFERENCE POINT; the system's is the system
-                    // ORIGIN, which is the span between them HIGHER UP — read PER SYSTEM,
-                    // because hara-kiri leaves a different staff as the anchor on different
-                    // systems. MEASURED rather than reasoned: the sign is the one that puts
-                    // the staff's bottom line back at 4.050000 under the origin.
-                    double ownToOrigin =
-                        (belowSystemAnchorY?.Invoke(system) ?? anchorBase) + anchorOffset;
-                    var raised = new VerticalSkyline(VerticalDirection.Down);
-                    raised.Merge(own);
-                    raised.Raise(-ownToOrigin);
-                    var merged = new VerticalSkyline(VerticalDirection.Down);
-                    merged.Merge(anchorDown);
-                    merged.Merge(raised);
-                    anchorDown = merged;
-                }
 
                 var gaps = new List<LooseLineSpacer.Gap>(elements.Count + 2);
 

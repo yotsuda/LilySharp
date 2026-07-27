@@ -52,7 +52,8 @@ internal sealed class SkylineBuilder
         double systemHeight = 0,
         double systemLeft = double.NaN,
         ImmutableArray<BeamLayout> firstStaffBeams = default,
-        ImmutableArray<BeamLayout> lastStaffBeams = default)
+        ImmutableArray<BeamLayout> lastStaffBeams = default,
+        ImmutableArray<StaffGroupLayout> placed = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -95,13 +96,27 @@ internal sealed class SkylineBuilder
             AddBeamsToSkyline(lastStaffBeams, lastStaffMiddleUp, upSkyline, downSkyline);
         }
 
-        double bottomLineY = lastStaff != firstStaff && systemHeight > 0
-            ? systemHeight
-            : _staffHeight;
+        // ★ EACH EDGE STAFF SEEDS ITS OWN STAFF SYMBOL — BOTH its lines, not one each
+        // (2026-07-28). It used to seed the outer pair, the first staff's TOP and the last
+        // staff's BOTTOM, which is the same silhouette exactly while both ends are staves: the
+        // lines this adds are interior, and a merge keeps the extreme. MEASURED inert on the
+        // whole corpus.
+        // ⚠️ WHAT IT IS FOR is the end that is NOT a staff. A text row draws no lines, so with
+        // an independent lyrics row under the staff the system had no bottom line at all and
+        // the profile under the syllables read 3.000000 (the down-stems) — while LilyPond's
+        // floor there decomposes as 2.050000 (that very line) + the syllable's ascender +
+        // padding 0.500000 (audit/lp-geometry lyrics.two-staff.two-verse.staff-to-lyric).
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 — build_system_skyline merges
+        // EVERY element raised by its own translation, so a StaffSymbol's lines are in the
+        // union whatever stands under them.
         SeedSystemStaffSymbol(measureLayouts, systemLeft,
-            seedTop: !firstStaff.IsTextRow, topLineY: 0.0,
-            seedBottom: !lastStaff.IsTextRow, bottomLineY: bottomLineY,
+            seed: !firstStaff.IsTextRow, topLineY: 0.0, bottomLineY: FirstStaffSpan(placed),
             upSkyline, downSkyline);
+        if (lastStaff != firstStaff && systemHeight > 0)
+            SeedSystemStaffSymbol(measureLayouts, systemLeft,
+                seed: !lastStaff.IsTextRow,
+                topLineY: systemHeight - LastStaffSpan(placed), bottomLineY: systemHeight,
+                upSkyline, downSkyline);
 
         // The clef opens every system and, on a plain score, is the extreme ink in both
         // directions — further out than any note that stays inside the staff — so it is
@@ -114,6 +129,59 @@ internal sealed class SkylineBuilder
         upSkyline.EndBatch();
         downSkyline.EndBatch();
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// The line-to-line span of the system's first (last) staff AS PLACED — the distance from
+    /// its top line to its bottom one, which is <c>_staffHeight</c> only for an ordinary
+    /// staff.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A TAB STAFF IS NOT 4.000000 TALL. LilyPond's TabStaff sets
+    /// <c>StaffSymbol.staff-space = 1.5</c> for every string count, so six strings span
+    /// <c>(6-1) * 1.5 = 7.500000</c> — measured, and pinned exact by the corpus entries
+    /// <c>tab.staff.line-span.{six,four}-string</c>. Seeding the silhouette's outer LINE at
+    /// the nominal 4.000000 put the system's bottom profile 3.5 staff spaces above the line it
+    /// names, so two tab systems were spaced as if the staff ended where an ordinary one does.
+    /// <para>
+    /// ⚠️ WITHOUT <paramref name="placed"/> the nominal height stands, which is the old
+    /// behaviour and what the callers that want only the scalar extents get.
+    /// </para>
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ BY POSITION, not by "the first visible one": the seed is about
+    /// <c>StaffGroups[0].Staves[0]</c> and <c>StaffGroups[^1].Staves[^1]</c>, and the layouts
+    /// are yielded in that same order, so the span has to be read at the SAME index or a
+    /// hidden staff would hand this the height of a different one.
+    /// </remarks>
+    private double StaffSpanAt(ImmutableArray<StaffGroupLayout> placed, int index)
+        => LayoutAt(placed, index) is { } lay && lay.Height > 0 ? lay.Height : _staffHeight;
+
+    private double FirstStaffSpan(ImmutableArray<StaffGroupLayout> placed)
+        => StaffSpanAt(placed, 0);
+
+    private double LastStaffSpan(ImmutableArray<StaffGroupLayout> placed)
+        => StaffSpanAt(placed, StaffCount(placed) - 1);
+
+    private static int StaffCount(ImmutableArray<StaffGroupLayout> placed)
+    {
+        if (placed.IsDefaultOrEmpty) return 0;
+        int n = 0;
+        foreach (var group in placed)
+            if (!group.Staves.IsDefaultOrEmpty) n += group.Staves.Length;
+        return n;
+    }
+
+    private static StaffLayout? LayoutAt(ImmutableArray<StaffGroupLayout> placed, int index)
+    {
+        if (placed.IsDefaultOrEmpty || index < 0) return null;
+        foreach (var group in placed)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            if (index < group.Staves.Length) return group.Staves[index];
+            index -= group.Staves.Length;
+        }
+        return null;
     }
 
     /// <summary>
@@ -134,10 +202,10 @@ internal sealed class SkylineBuilder
     /// </remarks>
     private static void SeedSystemStaffSymbol(
         ImmutableArray<MeasureLayout> measureLayouts, double systemLeft,
-        bool seedTop, double topLineY, bool seedBottom, double bottomLineY,
+        bool seed, double topLineY, double bottomLineY,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
-        if (double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty)
+        if (!seed || double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty)
             return;
         double xRight = double.NegativeInfinity;
         foreach (var ml in measureLayouts)
@@ -151,14 +219,12 @@ internal sealed class SkylineBuilder
         // thickness further out — the same fact SeedStaffSymbol carries, seen from the
         // system's frame instead of the staff's.
         double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
-        if (seedTop)
-            upSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, -topLineY + halfLine, -topLineY + halfLine,
-                VerticalDirection.Up));
-        if (seedBottom)
-            downSkyline.Merge(VerticalSkyline.FromBox(
-                systemLeft, xRight, -bottomLineY - halfLine, -bottomLineY - halfLine,
-                VerticalDirection.Down));
+        upSkyline.Merge(VerticalSkyline.FromBox(
+            systemLeft, xRight, -topLineY + halfLine, -topLineY + halfLine,
+            VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(
+            systemLeft, xRight, -bottomLineY - halfLine, -bottomLineY - halfLine,
+            VerticalDirection.Down));
     }
 
     // The clef's X comes from EngravingDefaults, not from a literal copied out of the

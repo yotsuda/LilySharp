@@ -160,7 +160,7 @@ internal sealed class LayoutEngine
         var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts);
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
             score, firstSystemMeasureLayouts, systemHeight, indent,
-            firstEdgeBeams.first, firstEdgeBeams.last);
+            firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
             _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
@@ -229,8 +229,6 @@ internal sealed class LayoutEngine
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents, textRowStaves, lyricsRowStaves);
         var trailingRowStaves = BuildTrailingRowStaves(
-            systemsArray, textRowStaves, lyricsRowStaves);
-        var lastSpaceableStaff = BuildLastSpaceableStaff(
             systemsArray, textRowStaves, lyricsRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
@@ -301,7 +299,6 @@ internal sealed class LayoutEngine
             StaffByIndex = anchors.StaffByIndex,
             LooseChainEnd = looseChainEnd,
             TrailingRowStaves = trailingRowStaves,
-            LastSpaceableStaff = lastSpaceableStaff,
             TextRowStaves = textRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
         };
@@ -458,7 +455,7 @@ internal sealed class LayoutEngine
                 {
                     var edgeBeams = EdgeStaffBeams(measureLayouts);
                     return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
-                        edgeBeams.first, edgeBeams.last);
+                        edgeBeams.first, edgeBeams.last, sysStaffGroups);
                 });
             perSystemSkylines.Add((upSky, downSky));
             perSystemExtents.Add((
@@ -1837,30 +1834,6 @@ internal sealed class LayoutEngine
     /// <see cref="BuildLooseChainEnds"/> makes, out of the same classification.
     /// </para>
     /// </remarks>
-    /// <summary>
-    /// Per system, its LAST SPACEABLE staff — <c>last_spaceable_line</c>
-    /// (lily/page-layout-problem.cc:943-944), the element every block below the system hangs
-    /// from: which staff it is and how far below the system origin its top line sits.
-    /// </summary>
-    private static Func<int, (int Index, double DownFromOrigin)>? BuildLastSpaceableStaff(
-        ImmutableArray<SystemLayout> systemsArray,
-        IReadOnlySet<int> textRowStaves, IReadOnlySet<int> lyricsRowStaves)
-    {
-        if (systemsArray.IsDefaultOrEmpty)
-            return null;
-
-        var perSystem = new (int Index, double DownFromOrigin)[systemsArray.Length];
-        for (int s = 0; s < systemsArray.Length; s++)
-        {
-            var last = systemsArray[s].StaffGroups.IsDefaultOrEmpty
-                ? null
-                : ClassifySystem(systemsArray[s].StaffGroups, textRowStaves, lyricsRowStaves)
-                    .LastSpaceable;
-            perSystem[s] = last is null ? (-1, 0) : (last.StaffIndex, -last.Y);
-        }
-        return s => s >= 0 && s < perSystem.Length ? perSystem[s] : (-1, 0);
-    }
-
     private static Func<int, IReadOnlyList<int>>? BuildTrailingRowStaves(
         ImmutableArray<SystemLayout> systemsArray,
         IReadOnlySet<int> textRowStaves, IReadOnlySet<int> lyricsRowStaves)
@@ -2334,23 +2307,6 @@ internal sealed class LayoutEngine
         /// which runs before the systems are placed, so that pass leaves a row in its
         /// band.</summary>
         public Func<int, IReadOnlyList<int>>? TrailingRowStaves { get; init; }
-
-        /// <summary>
-        /// Per system, its LAST SPACEABLE staff — the element every block below the system
-        /// hangs from: which staff it is (so the chain's first distance is measured against
-        /// THAT staff's skyline) and how far below the system origin its top line sits (so
-        /// the solved positions land in the same frame). Index -1 where there is none.
-        /// </summary>
-        /// <remarks>
-        /// ⚠️ PER SYSTEM, and the two members have to travel together: hara-kiri hides
-        /// different staves on different systems, so the anchor is a different staff at a
-        /// different height from one system to the next. <see cref="LastSpaceableStaffY"/> is
-        /// the score-wide approximation of the same thing and is what the pre-chain placement
-        /// still uses. MEASURED 2026-07-28: taking the skyline per system while leaving the
-        /// base score-wide put book LYRHK's block a whole system gap (12.207200) out.
-        /// </remarks>
-        public Func<int, (int Index, double DownFromOrigin)>? LastSpaceableStaff { get; init; }
-
         /// <summary>The staves that are a lead sheet's chord or lyrics TRACK rather than
         /// music — not spaceable, so they are neither an anchor nor an end for a loose
         /// chain (<see cref="ComputeBetweenStavesEnd"/>). Empty when the caller has none.
@@ -2742,40 +2698,6 @@ internal sealed class LayoutEngine
             && lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex)))
             noteBoundStaffDownSkyline = StaffDownSkyline;
 
-        // ...and the SAME skyline for the block that hangs below the whole system: its anchor
-        // is the last spaceable staff, so the profile the first loose line is measured against
-        // is THAT STAFF'S, not the system's silhouette.
-        // ★ THE TWO USED TO DISAGREE (2026-07-28). The chain seeded itself from the system
-        // skyline while LyricReservationBelowSystem walked from the anchor staff's own —
-        // HANDOFF 5.2.1② with the difference invisible for as long as the anchor WAS the
-        // bottom of the system. Put an independent lyrics row under it and the system's bottom
-        // profile stops being the staff's: MEASURED on book LYRRV, the staff's own bottom line
-        // (4.050000 under its reference point) leaves the silhouette and only the down-stems
-        // (3.000000) remain, so the first spring's floor came out 1.050000 short.
-        // LILYPOND-REF: lily/align-interface.cc:272-273 — the walk measures each element
-        // against the accumulation of the elements ABOVE IT, which at the first loose line is
-        // the anchor staff, whatever else the system happens to contain.
-        // ⚠️ THE BASE TRAVELS WITH IT. The chain's positions are measured from the anchor's
-        // reference point, so taking the skyline per system while leaving the base score-wide
-        // puts the whole block out by the difference — MEASURED, a full system gap on the
-        // hara-kiri book, where the anchor is a different staff from one system to the next.
-        Func<int, VerticalSkyline?>? belowSystemAnchorDown = null;
-        Func<int, double?>? belowSystemAnchorY = null;
-        if (staffByIndex != null && !systems.IsDefaultOrEmpty && ctx.LastSpaceableStaff != null)
-        {
-            var anchorOf = ctx.LastSpaceableStaff;
-            belowSystemAnchorDown = sysIdx =>
-            {
-                var (index, _) = anchorOf(sysIdx);
-                return index < 0 ? null : StaffDownSkyline(sysIdx, index);
-            };
-            belowSystemAnchorY = sysIdx =>
-            {
-                var (index, down) = anchorOf(sysIdx);
-                return index < 0 ? null : down;
-            };
-        }
-
         // ...and the OTHER end of that block's chain: the next spaceable staff of the same
         // system. Per (system, anchor staff), how much room the two reference points leave
         // and the up-skyline that closes it.
@@ -2818,8 +2740,7 @@ internal sealed class LayoutEngine
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
-            betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
-            belowSystemAnchorDown, belowSystemAnchorY);
+            betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
