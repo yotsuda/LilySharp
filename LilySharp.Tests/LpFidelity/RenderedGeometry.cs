@@ -213,6 +213,62 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The refpoint-to-refpoint distance between two staves whose LINE COUNTS are given —
+    /// the reading <see cref="StaffGapAt"/> cannot take, because it assumes five lines each.
+    /// </summary>
+    /// <remarks>
+    /// A TAB staff has one line per string and its lines are 1.5 apart, not 1.0
+    /// (<c>EngravingDefaults.TabStringSpace</c>; LilyPond's TabStaff sets
+    /// <c>StaffSymbol.staff-space = 1.5</c> for every string count), so a notation staff over
+    /// a six-string tab staff draws 11 lines at two different spacings and the five-line
+    /// grouping has nothing to say about it.
+    /// <para>
+    /// ⚠️ THE COUNTS ARE PASSED, NOT INFERRED. Splitting 11 lines into 5 + 6 by looking for a
+    /// change of spacing is a heuristic, and a measuring helper that guesses is the thing
+    /// HANDOFF 5.4 warns about: it would keep returning a plausible number after the very
+    /// defect it exists to measure changed the spacings. Given the counts, everything else is
+    /// asserted — the total, and that each staff's own lines really are equally spaced.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REFPOINT IS THE MIDDLE LINE for both, which is LilyPond position 0 and what
+    /// <c>Align_interface</c> measures between. On an even-line staff there is no middle
+    /// LINE, so the midpoint of the span is taken; a six-string tab staff's refpoint is
+    /// therefore 2.5 lines down, and LilyPond's own dump agrees (its ink below the refpoint is
+    /// 3.800000 = half the 7.6 extent).
+    /// </para>
+    /// </remarks>
+    public double StaffRefpointGap(int upperLines, int lowerLines, int page = 0)
+    {
+        var ys = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
+            .Select(l => l.Y1)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToList();
+
+        if (ys.Count != upperLines + lowerLines)
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff lines, not the {upperLines} + "
+                + $"{lowerLines} this reading is about."
+                + "\nDrawn geometry:\n" + Describe());
+
+        static double Refpoint(List<double> ys, int from, int count, int page)
+        {
+            double step = ys[from + 1] - ys[from];
+            for (int k = 1; k < count - 1; k++)
+                if (Math.Abs(ys[from + k + 1] - ys[from + k] - step) > 1e-6)
+                    throw new InvalidOperationException(
+                        $"page {page}: the staff at {ys[from]:F6} has lines that are not "
+                        + "equally spaced, so these are not one staff.");
+            return (ys[from] + ys[from + count - 1]) / 2.0;
+        }
+
+        return Refpoint(ys, upperLines, lowerLines, page) - Refpoint(ys, 0, upperLines, page);
+    }
+
+    /// <summary>
     /// Bar numbers, top of the page down — the small BOLD serif text runs
     /// (<c>SharedRenderer.DrawBarNumbers</c> draws them at
     /// <see cref="LilySharp.Core.Svg.Layout.BarNumberEngraver.FontSize"/>).

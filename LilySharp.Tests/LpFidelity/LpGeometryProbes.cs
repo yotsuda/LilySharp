@@ -572,6 +572,47 @@ internal static class LpGeometryProbes
     /// LilyPond reads the two identically, so any difference Lily# shows is its own.</summary>
     internal static string LyricVerseScore => LYRV;
 
+    /// <summary>
+    /// A notation staff over a LOWER staff that is either a TAB staff or an ordinary one —
+    /// the Lily# half of books TABS / NST.
+    /// </summary>
+    /// <remarks>
+    /// The two differ only in <paramref name="render"/>, which is the measurement: LilyPond
+    /// reads BOTH at 9.000000 refpoint to refpoint (measured 2026-07-28), so its side is a
+    /// control and any difference Lily# shows between them is its own.
+    /// <para>
+    /// ⚠️ THE MUSIC IS THE SAME AND THE OCTAVES ARE THE PROBE'S, not the .ly's: Lily# writes
+    /// one octave lower than LilyPond (LilyPond <c>g'</c> is Lily# <c>g</c>), so the .ly's
+    /// <c>g'4 a'</c> over <c>g4 a</c> is <c>g4 a</c> over <c>g,4 a,</c> here.
+    /// </para>
+    /// </remarks>
+    private static string TabPairScore(string name, string render) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef treble_8 tuning guitar }
+
+        section A {
+          upper { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
+          lower { {{string.Concat(Enumerable.Repeat("g,4 a, g, a, | ", 8)).Trim()}} }
+        }
+
+        form main { A }
+
+        score main "{{name}}" {
+          staff upper
+          {{render}} lower
+        }
+        """;
+
+    /// <summary>The tab half — book TABS.</summary>
+    internal static readonly string TabPairScoreTab = TabPairScore("TABS", "tab");
+
+    /// <summary>The notation control — book NST.</summary>
+    internal static readonly string TabPairScoreNotation = TabPairScore("NST", "staff");
+
     private static string CoexistScore(string name, string scoreBlock) => $$"""
         octave absolute
         time 4/4
@@ -3350,6 +3391,29 @@ internal static class LpGeometryProbes
         new("page.compressed.staff-staff-inside", JSK, g => g.StaffGapAt(0), EightSystemsPerPage),
         new("system.compressed-distance.two-staff", JSK, g => g.StaffGapAt(1), EightSystemsPerPage),
         new("page.compressed.two-staff.staves-on-first-page", JSK, g => g.StavesOnPage(0), EightSystemsPerPage),
+
+        // WHAT UNIT A STAFF-TO-STAFF DISTANCE IS IN when one staff is a TAB staff, opened as
+        // a pair 2026-07-28 (books TABS / NST). LilyPond reads BOTH at 9.000000 — the same
+        // staff-staff-spacing basic-distance a notation pair gets — because Align_interface
+        // works between VerticalAxisGroup REFERENCE POINTS (a staff's middle line, six-line or
+        // five-line) and nothing in TabStaff overrides the spec. Its side is therefore a
+        // CONTROL and whatever Lily# shows between the two spellings is entirely Lily#'s.
+        //
+        // ⚠️ THE FLOOR DOES NOT BIND ON EITHER SIDE, which is what makes the reading the
+        // SPEC's: both books came back at exactly 9.000000 rather than at their ink. The
+        // pitches are kept inside both staves for that reason, and a reading ABOVE 9.000000
+        // on the LilyPond side would mean the pair had stopped measuring the unit.
+        //
+        // ⚠️ THE CONTROL IS CARRIED RATHER THAN ASSUMED. NST is the same music with the lower
+        // staff spelled as an ordinary Staff; it exists so that "the tab entry is off" cannot
+        // be confused with "this whole arrangement is off".
+        // ⚠️ READ WITH THE LINE COUNTS GIVEN: a six-string tab staff draws six lines 1.5
+        // apart, so StaffGapAt's five-line grouping cannot see it and says so rather than
+        // returning a plausible number.
+        new("staff.tab-pair.staff-staff-inside", TabPairScoreTab,
+            g => g.StaffRefpointGap(5, 6)),
+        new("staff.notation-pair.staff-staff-inside", TabPairScoreNotation,
+            g => g.StaffRefpointGap(5, 5)),
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
         // spring's length at the page's force — and a force is the page's slack over the

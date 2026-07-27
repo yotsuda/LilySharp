@@ -2542,3 +2542,103 @@ probeTag =
     >>
   }
 }
+
+%% TABS / NST — WHAT UNIT A STAFF-TO-STAFF DISTANCE IS IN when one of the staves is a
+%%     TAB staff, and the pair is built so that LilyPond's side is a CONTROL rather than
+%%     an unknown (HANDOFF 5.0): the two books are the same music on the same paper and
+%%     differ only in whether the LOWER staff is a TabStaff or an ordinary Staff.
+%%
+%%     ⚠️ WHY IT IS WORTH A PAIR. LilyPond's TabStaff sets StaffSymbol.staff-space = 1.5
+%%     for every string count (ly/engraver-init.ly), so a six-string tab staff's LINES
+%%     span (6-1) * 1.5 = 7.500000 where a notation staff spans 4.000000 — already pinned
+%%     exact by tab.staff.line-span.six-string. The open question is what that does to the
+%%     DISTANCE to the staff above it, and there are two possible answers with a factor of
+%%     nearly two between them:
+%%       (a) Align_interface works between VerticalAxisGroup REFERENCE POINTS and
+%%           staff-staff-spacing's basic-distance is in the PAGE's staff spaces, so the
+%%           refpoint distance is 9.000000 whatever the lines below it do; or
+%%       (b) the distance is measured in the staff's OWN space, or from its edges, and a
+%%           taller staff pushes the pair apart.
+%%
+%%     PREDICTION, written before running (HANDOFF 5.0-2): (a). Both books read the SAME
+%%     refpoint-to-refpoint distance, 9.000000 to six digits, because
+%%       - align-interface.cc:201-285 accumulates translations between refpoints, and a
+%%         VerticalAxisGroup's refpoint is staff position 0 — the middle LINE of whatever
+%%         staff it is, six-line or five-line;
+%%       - the basic-distance is read off the spec in output staff-spaces, and nothing in
+%%         TabStaff overrides staff-staff-spacing.
+%%     ⚠️ The floor must not bind or the reading is the two staves' ink instead of the
+%%     spec: the music is kept inside both staves for that reason, and if either book
+%%     comes back ABOVE 9.000000 the floor DID bind and the pair measures nothing until
+%%     the pitches are lowered.
+%%
+%%     FALSIFIER, and it is a real one rather than decoration: if TABS reads 10.750000 —
+%%     9 + (7.5 - 4)/2 — then LilyPond is spacing from the staff EDGES and Lily#'s own
+%%     nominal-height arithmetic (MultiStaffLayouter.GapSpan, which subtracts a flat 4.0)
+%%     is accidentally right for tab. The whole "convert the rest to the refpoint frame"
+%%     island would then be a defect that does not exist, and its ~20 snapshots must not
+%%     move.
+%%
+%%     ⇒ WHICHEVER WAY IT READS, IT SELECTS THE NEXT PIECE OF WORK (HANDOFF 5.0's fork):
+%%     9.000000 means Lily# places a tab pair 1.750000 too far apart and the island is
+%%     real; 10.750000 means it is not.
+\book {
+  \probeTag "TABS"
+  \paper { ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \repeat unfold 8 { g'4 a' g' a' } }
+      \new TabStaff { \repeat unfold 8 { g4 a g a } }
+    >>
+  }
+}
+
+%% NST — THE CONTROL. Identical to TABS except that the lower staff is an ordinary Staff,
+%%     so it is the same music, the same paper and the same two elements of one
+%%     VerticalAlignment. Its reading is the number TABS is compared against; carrying it
+%%     rather than assuming 9.000000 is what makes the pair say whether the floor bound
+%%     (HANDOFF 5.0: a control that is non-zero for its own reasons is still a control).
+\book {
+  \probeTag "NST"
+  \paper { ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \repeat unfold 8 { g'4 a' g' a' } }
+      \new Staff { \repeat unfold 8 { g4 a g a } }
+    >>
+  }
+}
+
+%% OSSD — THE SAME QUESTION FOR AN OSSIA-SIZED STAFF, and it is asked separately from TABS
+%%     because the two differ in what is scaled. A TabStaff's staff-space is 1.5 by
+%%     declaration and everything else about it is full size; an ossia is fontSize -3 with
+%%     StaffSymbol.staff-space AND thickness scaled by magstep -3, so if any distance in
+%%     LilyPond followed a staff's own space rather than the page's, this is the book where
+%%     it would show. The lower staff is spelled exactly as LYROS's ossia is, minus the
+%%     alignAboveContext that would nest it, so it is an ordinary element of the alignment.
+%%
+%%     PREDICTION, written before running: 9.000000, the same as TABS and NST.
+%%     staff-staff-spacing's basic-distance is read in output staff-spaces and
+%%     Align_interface accumulates between refpoints; magstep scales the STAFF, not the
+%%     alignment's units.
+%%     FALSIFIER: 9 * (magstep -3) = 6.363961, or any other reading that tracks the ossia's
+%%     own space. That would mean Lily#'s `gap * OssiaScale` is LilyPond's rule after all and
+%%     the ossia half of the frame island is not a defect.
+%%
+%%     ⇒ THE FORK: 9.000000 means Lily# is wrong twice over on an ossia pair — once in the
+%%     nominal span it subtracts and once in the scale it multiplies by — and the two are
+%%     separate quantities that must not be closed with one number.
+\book {
+  \probeTag "OSSD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    <<
+      \new Staff { \repeat unfold 8 { g'4 a' g' a' } }
+      \new Staff \with {
+        fontSize = #-3
+        \override StaffSymbol.staff-space = #(magstep -3)
+        \override StaffSymbol.thickness = #(magstep -3)
+      } { \repeat unfold 8 { g'4 a' g' a' } }
+    >>
+  }
+}

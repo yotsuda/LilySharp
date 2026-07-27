@@ -313,59 +313,51 @@ internal sealed class MultiStaffLayouter
     /// in.
     /// </summary>
     /// <remarks>
-    /// ⚠️ ASKED ONLY WHERE THIS ISLAND SPACES (<see cref="IsSpecSpacedRowBoundary"/>), and
-    /// the rest of the placement still hands <c>StaffGap</c> the nominal staff height. The
-    /// two agree for two ordinary staves (2.0 + 2.0 = 4.0) and disagree for a TAB or OSSIA
-    /// pair, which is a real defect — HANDOFF 1 names it, no corpus point measures it, and
-    /// switching those over moves twenty snapshots that have nothing to do with a chord row.
-    /// It wants its own pair and its own commit.
+    /// ★ ASKED FOR EVERY GROUP BOUNDARY SINCE 2026-07-28. It used to be asked only where a
+    /// text row was involved, and the nominal staff height stood everywhere else; the two
+    /// agree for two ordinary staves (2.0 + 2.0 = 4.0) and disagree for a TAB or OSSIA pair.
+    /// See <see cref="GapSpan"/> for the pair that measured it.
+    /// <para>
+    /// ⚠️ THE STAFF-INTERNAL PATH IS STILL NOMINAL. <see cref="StackStaves"/> advances by the
+    /// previous staff's own height, which is the same quantity from the other side, but the
+    /// gap it adds comes from <c>StaffGap</c> and is not converted here. It only bites for
+    /// two staves of DIFFERENT heights inside ONE group, which no fixture and no corpus book
+    /// has — a tab or ossia staff is always a group of its own.
+    /// </para>
     /// </remarks>
     private double RefpointSpanToGap(Staff upper, Staff lower, bool chordGridSheet)
         => HeightBelowRefpoint(upper, chordGridSheet) + RefpointBelowTop(lower, chordGridSheet);
 
     /// <summary>
-    /// The span for this boundary, in whichever frame the boundary is spaced in: LilyPond's
-    /// refpoints where the spec places the pair, and the nominal staff height everywhere
-    /// else — see <see cref="RefpointSpanToGap"/> for why the rest is left alone.
-    /// </summary>
-    private double GapSpan(MultiStaffScore score, Staff upper, Staff lower)
-        => IsSpecSpacedRowBoundary(upper, lower)
-            ? RefpointSpanToGap(upper, lower,
-                ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics))
-            : _options.StaffHeight;
-
-    /// <summary>
-    /// Is this group boundary spaced by LilyPond's own <c>nonstaff-*</c> spec rather than by
-    /// Lily#'s band model? True exactly when a CHORDS row faces a staff.
+    /// The span a refpoint-to-refpoint distance gives up to become the gap this boundary is
+    /// stacked with — LilyPond's frame, for every pair.
     /// </summary>
     /// <remarks>
-    /// True when either side is a text ROW of any kind, since 2026-07-27: a lyrics row used
-    /// to be excluded with the chords row's spec exclusion above, and for the same reason
-    /// (no ink to be spaced by), and both went when the ink landed. A pair of text rows never
-    /// reaches this — it takes <see cref="TextRowPairGap"/> first. Written once because the
-    /// SPEC and the SPAN have to agree: a spec-placed pair measured in the band's frame lands
-    /// half a band out.
+    /// LILYPOND-REF: lily/align-interface.cc:201-285 — <c>Align_interface</c> accumulates
+    /// between VerticalAxisGroup REFERENCE POINTS, and <c>staff-staff-spacing</c>'s
+    /// basic-distance is read in the PAGE's staff spaces. So the distance between two staves
+    /// does not know how tall either of them is.
     /// <para>
-    /// ⚠️ LILYSHARP-OWN, AND IT IS A GATE ON A DEFECT RATHER THAN A RULE. LilyPond has no such
-    /// predicate: <c>Align_interface</c> works between reference points for EVERY pair, so
-    /// there is nothing to select. This exists because Lily# has two frames — this one and the
-    /// nominal staff height the rest of <see cref="GapSpan"/> still hands out — and it names
-    /// how far the refpoint frame has been taken. 2026-07-27 widened it (the lyrics exclusion
-    /// came off) rather than removed it; removing it means converting the REST of the
-    /// placement, which is the tab/ossia pair HANDOFF 1 has named and left unmeasured for
-    /// several sessions. ⚠️ Widening a gate is not the same as porting it away, and this note
-    /// is here so the next reader does not read the condition as LilyPond's.
-    /// <para>
-    /// ⚠️ IT SURVIVED THE LOOSE-CHAIN PORT (2026-07-28) AND THAT IS NOT AN OVERSIGHT. A lyrics
-    /// row below the system is now SOLVED, so this only decides where it is placed BEFORE the
-    /// solve and where the elements around it go — which still has to be the refpoint frame.
-    /// Removing the gate is still the tab/ossia conversion above, and it is still that
-    /// island's commit.
+    /// ★ IT USED TO HAND OUT THE NOMINAL 4.000000 EVERYWHERE EXCEPT A TEXT-ROW BOUNDARY
+    /// (2026-07-28). That is right for two ordinary staves — <c>2.0 + 2.0</c> — and wrong for
+    /// every pair whose elements are not both 4.000000 tall: a six-string TAB staff's lines
+    /// span 7.500000, so its refpoint sat <c>(7.5 - 4)/2 = 1.750000</c> too far from the staff
+    /// above it. MEASURED, and the pair says it in LilyPond's own numbers:
+    /// <c>staff.tab-pair.staff-staff-inside</c> reads 9.000000 in LilyPond and read 10.750000
+    /// here, while its control <c>staff.notation-pair.staff-staff-inside</c> is 9.000000 on
+    /// both sides.
     /// </para>
+    /// <para>
+    /// ⚠️ AN OSSIA PAIR IS STILL NOT RIGHT, and this does not claim to fix it: the caller
+    /// multiplies the gap by <c>OssiaScaleFactor</c>, which is Lily#'s own — LilyPond places
+    /// an ossia in the page's absolute staff spaces and scales the STAFF, not the distance.
+    /// This change moves an ossia pair TOWARD LilyPond by correcting the span; the scale
+    /// remains, and it is a separate named quantity with its own entry.
     /// </para>
     /// </remarks>
-    private static bool IsSpecSpacedRowBoundary(Staff upper, Staff lower)
-        => upper.IsTextRow || lower.IsTextRow;
+    private double GapSpan(MultiStaffScore score, Staff upper, Staff lower)
+        => RefpointSpanToGap(upper, lower,
+            ChordNameEngraver.IsChordGridSheet(score.ChordNames, score.Lyrics));
 
     /// <summary>Reserved vertical band (staff spaces) for an independent text row
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
