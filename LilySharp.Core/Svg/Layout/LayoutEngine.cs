@@ -1452,7 +1452,12 @@ internal sealed class LayoutEngine
                 up.Merge(result[s].up);
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
-                SkylineBuilder.AddTupletBracketsToSkyline(group.ToImmutableArray(), up, down);
+                // staffTopUp 0: the SYSTEM skyline's origin is the top staff's top line and
+                // these layouts are already in it (the annotation pass baked the staff offset
+                // in), so there is no half-staff to close here. The PER-STAFF seeding passes a
+                // real one, because that skyline is about the staff's reference point.
+                SkylineBuilder.AddTupletBracketsToSkyline(
+                    group.ToImmutableArray(), staffTopUp: 0, up, down);
                 result[s] = (up, down);
             }
         }
@@ -1482,7 +1487,8 @@ internal sealed class LayoutEngine
                 up.Merge(result[s].up);
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
-                SkylineBuilder.AddSlursToSkyline(group.ToImmutableArray(), up, down);
+                // staffTopUp 0 — the system frame again, as for the brackets above.
+                SkylineBuilder.AddSlursToSkyline(group.ToImmutableArray(), staffTopUp: 0, up, down);
                 result[s] = (up, down);
             }
         }
@@ -1510,7 +1516,8 @@ internal sealed class LayoutEngine
                 up.Merge(result[s].up);
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
-                SkylineBuilder.AddTiesToSkyline(group.ToImmutableArray(), up, down);
+                // staffTopUp 0 — the system frame again, as for the brackets above.
+                SkylineBuilder.AddTiesToSkyline(group.ToImmutableArray(), staffTopUp: 0, up, down);
                 result[s] = (up, down);
             }
         }
@@ -2157,7 +2164,20 @@ internal sealed class LayoutEngine
                     var key = (sysIdx, staffIndex);
                     if (!skyCache.TryGetValue(key, out var sky))
                     {
-                        sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Up;
+                        var up = _skylineBuilder.BuildStaffSkylines(
+                            staff, systems[sysIdx].Measures).Up;
+                        // ⚠️ REFLECTED ONCE, HERE AT THE EDGE. BuildStaffSkylines works about
+                        // the staff's REFERENCE POINT, which is LilyPond's frame;
+                        // ChordNameEngraver works in "above the staff's TOP line" throughout,
+                        // because that is where a chord row's padding is defined and because
+                        // its OTHER input — the SYSTEM up-skyline, for a row on the top staff
+                        // — is measured from the system origin, which IS that staff's top
+                        // line. Lowering by the half-staff makes the engraver's two inputs one
+                        // frame, so it needs no branch and no knowledge of either. Reflecting
+                        // inside the engraver would put a half-staff on one path and not the
+                        // other, which is the shape this migration exists to remove.
+                        up.Raise(-_options.StaffHeight / 2.0);
+                        sky = up;
                         skyCache[key] = sky;
                     }
                     return sky;

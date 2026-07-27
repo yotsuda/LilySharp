@@ -60,7 +60,7 @@ LP の内部は `Page_layout_problem` の**ページ配置だけ Y-down**で、�
 | `TieFormattingProblem.cs` | `_y + notePos * 0.5`（page Y） | Y-up（`_y` 依存） |
 | `ElementCoordinator.cs` | `staffY **+** StaffHeight/2` | **Y-down** |
 | `StemCalculator.cs` | `staffTopY **+** staffHeight/2` | **Y-down** |
-| `SkylineBuilder.cs` | `_staffHeight / 2` | **Y-down** |
+| `SkylineBuilder.cs` | 譜ごと: **0**（原点＝中央線）／system: `-_staffHeight/2` | **Y-up** ／ Y-up |
 | `TupletBracketEngraver.cs` | `const StaffMiddleY = 2.0` | **Y-down** |
 | `ElementCoordinator.cs`(2) | `StaffOffsetInSystem(...)` | **Y-down** |
 
@@ -75,6 +75,29 @@ LP の内部は `Page_layout_problem` の**ページ配置だけ Y-down**で、�
 LILYPOND-REF: `align-interface.cc:274`（`where += stacking_dir * dy`, `stacking_dir = DOWN = -1`）。
 ⚠️ **上表の Y-down 行が消えたわけではない**——それらは意図的な device 島（島2）で、
 `Down` はその**縁の反射**として残す。島2 に着手するときの入口がこの表。
+
+✅ **譜ごとのスカイラインは `6bb5a1de` で refpoint 枠へ移した**（2026-07-27・**出力完全不変**）。
+`SkylineBuilder.BuildStaffSkylines` の原点は**上端線 → 中央線**。LP の VerticalAxisGroup
+スカイラインと同じ枠で、`Align_interface` が測るのは refpoint 間だから
+（`align-interface.cc:228`）。⇒ 読み手が各自で半譜を足し戻していたアダプタが消えた
+（`LyricEngraver` の 2 箇所）。
+
+⚠️ **これは 3 つの枠が並んでいる層で、統合されたのは 1 つだけ**:
+
+| スカイライン | 原点 |
+|---|---|
+| 譜ごと（`BuildStaffSkylines`） | **その譜の refpoint（中央線）** ← 今回ここを移した |
+| system（`BuildSystemSkylines`） | **最上段譜の上端線**＝ system 原点（未統合・別用途） |
+| seed の入力 | **2 つ**——`staffMiddleUp` 系（五線・符頭・強弱・アーティキュレーション・ビーム）と `staffTopUp` 系（tuplet ブラケット・スラー・タイ。engraver が譜 offset 無しで走るため） |
+
+⚠️ **`staffTopUp` は消せる項ではない**。engraver 側の出力枠が上端線基準であることの反映で、
+**原点から導出**して 1 箇所に置いてある（上端線原点の時代は 0 だった）。
+⚠️ **tuplet 経路は seed が 2 回**（ブラケット線と**数字**）。数字は線より外へ届くので
+**線だけ変換すると束縛インクが元の位置に残る**。
+⚠️ **枠を触る前に `StaffSkylineFrameTests` を読むこと。** 経路ごとに枠を主張していて、
+**1 回目の反転はこのテストが無かったので失敗した**（spacing の測定が 6 つ同時に落ちるだけで、
+どの seed が動いたか誰も言わなかった）。島1 手順の「格納値を主張するテストを先に書く」は
+比喩ではない。
 
 ⚠️ **clef をスカイラインに入れたときの `+1.110000`（HANDOFF §1）はこの層にある。**
 `VerticalSkyline` 自体は正しいことを `SkylineMergeTests.Distance_BetweenFacingSystems_IsTheirInkAndNoMore`
@@ -168,7 +191,7 @@ Y フリップは `StaffFrame`（device↔up の involution）に**集約**、pe
 | File | 量 | 軸 | 方向 | 単位 | 根拠 |
 |---|---|---|---|---|---|
 | VerticalSkyline.cs | `sky=±1`, `FromBox`高さ=`sky*edge`, `Raise`, `Padded`(45°), `MaxHeight` | Y | **Y-up native** | ss | `skyline.cc:104-680` と一致 |
-| SkylineBuilder.cs | `noteUp=pos*0.5`, `ToSystemUp(up)=up-staffMiddleY`, stem-up は加算 | Y | Y-up native | ss（pos=half→×0.5） | :525-620 |
+| SkylineBuilder.cs | `noteUp=pos*0.5`, `ToSystemUp(up)=up+staffMiddleUp`, stem-up は加算。譜ごとは `staffMiddleUp=0`（原点＝refpoint）／上端線基準の seed は `+staffTopUp` | Y | Y-up native | ss（pos=half→×0.5） | :525-620 |
 | SkylineMath `Distance` | penetration=max(v1+v2) | scalar | 内部 | ss | `skyline.cc:618-649` |
 | HorizontalSkyline / ItemSkylineFactory / Skyline(flat) | 値=`sky*x`／`noteY-BBox.Top` | X値 / **Y horizon=device Y-down** | X sign-conv | ss | HorizontalSkyline:105-112, ItemSkylineFactory:64-283 |
 | AccidentalGlyphSkyline.cs | silhouette 矩形近似 | X/Y | device 近似 | 無次元×BBox | :49-145 |

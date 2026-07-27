@@ -282,12 +282,40 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Builds vertical skylines for a single staff, relative to its own origin (Y=0 at top line).
-    /// Used for staff-to-staff spacing within a multi-staff system.
+    /// Builds vertical skylines for a single staff about its REFERENCE POINT — Y=0 at the
+    /// middle line, the frame LilyPond's own VerticalAxisGroup skylines are in. Used for
+    /// staff-to-staff spacing within a multi-staff system.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/align-interface.cc:217-268 — per-staff skylines for spacing
     /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
+    /// <para>
+    /// ⚠️ THE ORIGIN IS THE MIDDLE LINE (changed 2026-07-27; it was the TOP line before).
+    /// Every distance <c>Align_interface</c> computes is between two VerticalAxisGroup
+    /// reference points, and a staff's reference point is its middle line — MEASURED, the
+    /// probe dumps a staff group's extent as (-3.550000 . 3.800000), symmetric about the
+    /// middle and not about the top. While this built about the top line, every consumer that
+    /// wanted LilyPond's number added a half-staff back at its own call site, written out
+    /// separately each time: a port acquires one frame adapter per call, and one of them
+    /// eventually gets forgotten or doubled.
+    /// </para>
+    /// <para>
+    /// ⚠️ STAFF-TO-STAFF DISTANCES DID NOT MOVE, and could not have: every staff's skyline
+    /// shifts by the same <c>_staffHeight / 2</c> (this builder has ONE staff height, not one
+    /// per staff), so <c>Skyline::distance</c> between any two of them is unchanged. What
+    /// moved is the meaning of a single skyline's own numbers, so the consumers that read a
+    /// HEIGHT out of one — rather than a distance between two — are the ones that changed
+    /// with it: <c>LyricEngraver</c> (whose two adapters this removed) and the chord-row
+    /// lookup in <c>LayoutEngine</c> (which now reflects once, at the edge).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SEEDS ARRIVE IN TWO STAFF-LOCAL FRAMES and always did — see
+    /// <c>StaffSkylineFrameTests</c>, which names each one. The staff symbol, noteheads,
+    /// dynamics, articulations and beams are placed about the staff MIDDLE
+    /// (<c>staffMiddleUp</c>); tuplet brackets, slurs and ties come from engravers run with no
+    /// staff offset and are about the staff TOP (<c>staffTopUp</c>). The two read alike only
+    /// while this origin was the top line, which is why the difference had never mattered.
+    /// </para>
     /// </remarks>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildStaffSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
@@ -301,7 +329,14 @@ internal sealed class SkylineBuilder
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double staffMiddleUp = -_staffHeight / 2;
+        // The middle line IS the origin: every helper that takes this places its ink relative
+        // to the staff middle, so this one number says which frame the result is in.
+        const double staffMiddleUp = 0;
+        // ...and the step to the OTHER staff-local frame, for the seeds whose engravers were
+        // run with no staff offset and so measure from the staff's TOP line. Derived from the
+        // origin rather than written as a half-staff, so the two cannot drift apart: it was 0
+        // while the origin was the top line and is the half-staff now that it is the middle.
+        double staffTopUp = staffMiddleUp + _staffHeight / 2.0;
 
         // A beamed stem is DRAWN to whatever length the quanter gives its beat, which is not
         // what Stem::calc_length gives an unbeamed one — the "draws right, reserves stale"
@@ -341,21 +376,21 @@ internal sealed class SkylineBuilder
         // it here before, and the consequence was visible rather than theoretical: a
         // bracket over notes reaching towards the neighbour was drawn straight across that
         // neighbour's staff lines.
-        AddTupletBracketsToSkyline(tupletBrackets, upSkyline, downSkyline);
+        AddTupletBracketsToSkyline(tupletBrackets, staffTopUp, upSkyline, downSkyline);
 
         // A slur is an ordinary inside-staff grob in LilyPond too (no
         // outside-staff-priority), so it joins the staff's vertical skyline like the
         // clef and the tuplet bracket, and the staff below must clear its bow. Nothing
         // seeded it here before; the gap rested on the notes and a slur drooping into it
         // was reserved nowhere. audit/lp-geometry staff.staff.slur-{under,over}-notes.
-        AddSlursToSkyline(slurs, upSkyline, downSkyline);
+        AddSlursToSkyline(slurs, staffTopUp, upSkyline, downSkyline);
 
         // A tie is the same kind of grob as the slur — vertical-skylines from its stencil,
         // no outside-staff-priority (scm/define-grobs.scm Tie) — so it joins the staff's own
         // skyline too, and a staff below must clear its bow. Ties were reserved nowhere;
         // audit/lp-geometry staff.staff.tie-{under,over}-notes measured the gap resting on
         // the notes alone (-0.560901).
-        AddTiesToSkyline(ties, upSkyline, downSkyline);
+        AddTiesToSkyline(ties, staffTopUp, upSkyline, downSkyline);
 
         // A beam is ordinary ink inside the staff's own axis group (scm/define-grobs.scm Beam
         // carries vertical-skylines from its stencil and sets no outside-staff-priority), so a
@@ -487,8 +522,16 @@ internal sealed class SkylineBuilder
     /// given: the caller decides whether <c>*YUp</c> was produced with a staff offset
     /// (system frame) or without one (staff frame), and both are Y-up.
     /// </remarks>
+    /// <param name="staffTopUp">
+    /// The step from the bracket engraver's frame — the staff's TOP line, since it is run
+    /// with no staff offset — to this skyline's. ⚠️ IT APPLIES TO BOTH SEEDS BELOW. The
+    /// number reaches further out than the line it straddles, so converting the line alone
+    /// moves the line and leaves the BINDING ink where it was: a change that looks like
+    /// nothing until a staff below it collides. <c>StaffSkylineFrameTests</c> holds the
+    /// number to the same frame as its line for exactly that reason.
+    /// </param>
     internal static void AddTupletBracketsToSkyline(
-        ImmutableArray<TupletBracketLayout> tupletBrackets,
+        ImmutableArray<TupletBracketLayout> tupletBrackets, double staffTopUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (tupletBrackets.IsDefaultOrEmpty)
@@ -512,8 +555,8 @@ internal sealed class SkylineBuilder
             // FromSlope's thickness parameter: that parameter's DOWN arm is unexercised
             // by any production caller and its sign is not pinned by a test, while
             // thickness 0 means "store exactly this edge" in both arms.
-            double yLeft = (leftFirst ? b.StartYUp : b.EndYUp) + dir * half;
-            double yRight = (leftFirst ? b.EndYUp : b.StartYUp) + dir * half;
+            double yLeft = (leftFirst ? b.StartYUp : b.EndYUp) + dir * half + staffTopUp;
+            double yRight = (leftFirst ? b.EndYUp : b.StartYUp) + dir * half + staffTopUp;
 
             var direction = b.IsStemUp ? VerticalDirection.Up : VerticalDirection.Down;
             var sky = b.IsStemUp ? upSkyline : downSkyline;
@@ -531,7 +574,7 @@ internal sealed class SkylineBuilder
                     b.NumberText, size, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
                 double halfH = Rendering.TextFontMetrics.InkHeight(
                     b.NumberText, size, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
-                double midYUp = b.NumberYUp;
+                double midYUp = b.NumberYUp + staffTopUp;
                 sky.Merge(VerticalSkyline.FromBox(
                     b.NumberX - halfW, b.NumberX + halfW,
                     midYUp - halfH, midYUp + halfH, direction));
@@ -560,14 +603,14 @@ internal sealed class SkylineBuilder
     /// </para>
     /// </remarks>
     internal static void AddSlursToSkyline(
-        ImmutableArray<SlurLayout> slurs,
+        ImmutableArray<SlurLayout> slurs, double staffTopUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (slurs.IsDefaultOrEmpty)
             return;
         foreach (var s in slurs)
             SeedBowInk(s.StartX, s.StartYUp, s.Control1, s.Control2, s.EndX, s.EndYUp,
-                upSkyline, downSkyline);
+                staffTopUp, upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -578,14 +621,14 @@ internal sealed class SkylineBuilder
     /// <see cref="SeedBowInk"/>. audit/lp-geometry staff.staff.tie-{under,over}-notes.
     /// </summary>
     internal static void AddTiesToSkyline(
-        ImmutableArray<TieLayout> ties,
+        ImmutableArray<TieLayout> ties, double staffTopUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (ties.IsDefaultOrEmpty)
             return;
         foreach (var t in ties)
             SeedBowInk(t.StartX, t.StartYUp, t.Control1, t.Control2, t.EndX, t.EndYUp,
-                upSkyline, downSkyline);
+                staffTopUp, upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -615,8 +658,18 @@ internal sealed class SkylineBuilder
     /// </remarks>
     private static void SeedBowInk(
         double p0x, double p0y, (double X, double Y) c1, (double X, double Y) c2,
-        double p3x, double p3y, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        double p3x, double p3y, double staffTopUp,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
+        // ⚠️ ONE CONVERSION AT THE DOOR: the bow scorer's frame is the staff's TOP line and
+        // this skyline's is the staff's REFERENCE POINT. Applied to all four points here so
+        // that every y below — including the direction test, which compares the controls
+        // against the ends — is in one frame from this line on.
+        p0y += staffTopUp;
+        p3y += staffTopUp;
+        c1.Y += staffTopUp;
+        c2.Y += staffTopUp;
+
         const int samples = 16;
         double halfCurve = 0.5 * EngravingDefaults.SlurMidThickness; // 0.5·curvethick perp shift
         double halfPen = 0.5 * EngravingDefaults.BowEndRounding;     // half the round stroke pen

@@ -514,14 +514,17 @@ internal sealed class LyricEngraver
                     : systemSkylines != null && system < systemSkylines.Count
                         ? systemSkylines[system].down : null;
 
-                // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion
-                // to the anchor's. A system skyline is measured from the SYSTEM ORIGIN, so
-                // reaching the anchor means stepping past every staff above it as well as
-                // the half-staff to its reference point; a per-staff skyline is already
-                // measured from that staff's own top line, so only the half-staff is left.
+                // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion to
+                // the anchor's — the chain is solved between REFERENCE POINTS, so whatever
+                // frame the anchor's skyline is in has to be stepped to that. A per-staff
+                // skyline is ALREADY about its staff's reference point
+                // (SkylineBuilder.BuildStaffSkylines: the middle line is its origin), so a
+                // block between two staves needs NO step at all; a system skyline is measured
+                // from the SYSTEM ORIGIN, so the legacy placement steps past every staff above
+                // the anchor and then the half-staff to its reference point.
                 // Getting this wrong drops the block by exactly the inter-staff distance —
                 // measured, 10.500000 on the two-staff probe.
-                double skylineToAnchor = isUpperFamily ? anchorOffset : anchorBase + anchorOffset;
+                double skylineToAnchor = isUpperFamily ? 0 : anchorBase + anchorOffset;
 
                 var gaps = new List<LooseLineSpacer.Gap>(verses.Count + 2);
 
@@ -602,26 +605,16 @@ internal sealed class LyricEngraver
                                 b.NextStaffUp, SkylineDrop.HorizonPadding);
                             if (!double.IsInfinity(dist) && !double.IsNaN(dist))
                             {
-                                // ⚠️ THE SAME FRAME STEP AS skylineToAnchor, AT THE OTHER END.
-                                // A per-staff skyline is measured from that staff's own top
-                                // line, so a distance to it lands on the next staff's TOP
-                                // LINE while the chain is solved between REFERENCE POINTS;
-                                // anchorOffset is that half-staff, taken from the same two
-                                // distances so the two ends cannot drift apart. The
-                                // system-boundary branch below spells it as `+ halfStaff` in
-                                // LayoutEngine.BuildLooseChainEnds for the same reason.
-                                //
-                                // ⚠️ THIS TERM IS NOT A LINE OF LILYPOND, and HANDOFF 5.2
-                                // asks for that to be REPORTED rather than pushed through
-                                // quietly: LilyPond's skylines are refpoint-framed on both
-                                // sides, so its dy needs no conversion at all. The term
-                                // exists because Lily#'s per-staff skylines are top-line
-                                // framed. It is an adapter between two frames, not an
-                                // adjustment to a distance — the fix that would remove it is
-                                // building staff skylines about the reference point, which
-                                // is the frame migration HANDOFF 2D (2) describes and would
-                                // take every reader of SkylineBuilder with it.
-                                closing = dist + SkylineDrop.UnrelatedStaffPadding + anchorOffset;
+                                // ⚠️ NO FRAME STEP, and it is worth saying why there is none:
+                                // both ends of this distance are per-staff skylines about
+                                // their own REFERENCE POINTS, which is the frame the chain is
+                                // solved in, so the expression is LilyPond's dy unchanged —
+                                // `down_skyline.distance (up) + padding`
+                                // (align-interface.cc:228). It carried `+ anchorOffset` when
+                                // this landed, because staff skylines were then built about
+                                // the TOP line; the adapter is GONE WITH THE FRAME rather than
+                                // moved elsewhere (SkylineBuilder.BuildStaffSkylines).
+                                closing = dist + SkylineDrop.UnrelatedStaffPadding;
                             }
                         }
                         gaps.Add(new LooseLineSpacer.Gap(

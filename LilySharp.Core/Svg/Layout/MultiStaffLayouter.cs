@@ -1718,7 +1718,7 @@ internal sealed class MultiStaffLayouter
                 // chord GRID row, IsChordRow, is its own staff and reserves its own band.)
                 if (!score.ChordNames.IsDefaultOrEmpty
                     && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow))
-                    ReserveChordRowBand(sky.Up, measureLayouts);
+                    ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);
 
                 result.Add(sky);
                 staffIndex++;
@@ -1918,7 +1918,7 @@ internal sealed class MultiStaffLayouter
     /// reserve a flat band to that top across the drawn width.
     /// </summary>
     private static void ReserveChordRowBand(
-        VerticalSkyline up, ImmutableArray<MeasureLayout> measureLayouts)
+        VerticalSkyline up, ImmutableArray<MeasureLayout> measureLayouts, double halfStaff)
     {
         if (up.IsEmpty || measureLayouts.IsDefaultOrEmpty)
             return;
@@ -1933,9 +1933,17 @@ internal sealed class MultiStaffLayouter
 
         // Note ink already in the skyline sets where the shared-baseline row floats;
         // the symbol top clears the top line by padding + that protrusion + cap.
+        // ⚠️ THE EXPRESSION IS FRAME-FREE AND THAT IS NOT LUCK: `protrusion` is read out of
+        // the same skyline the band is merged back into, so both sides move together when the
+        // frame does. Only the box's FLOOR names a place — the staff's top line, a half-staff
+        // above the reference point this skyline is built about
+        // (SkylineBuilder.BuildStaffSkylines). It never reaches the roof of an UP skyline and
+        // so cannot move the answer; it is written correctly anyway, because a floor that says
+        // "the top line" while meaning the middle one is how the next reader learns the wrong
+        // frame.
         double protrusion = up.MaxProtrusionInRange(xLeft, xRight);
-        double bandTop = ChordRowStaffPadding + protrusion + ChordSymbolCapHeight; // Y-up above the top line
-        up.Merge(VerticalSkyline.FromBox(xLeft, xRight, 0.0, bandTop, VerticalDirection.Up));
+        double bandTop = ChordRowStaffPadding + protrusion + ChordSymbolCapHeight;
+        up.Merge(VerticalSkyline.FromBox(xLeft, xRight, halfStaff, bandTop, VerticalDirection.Up));
     }
 
     /// <summary>
