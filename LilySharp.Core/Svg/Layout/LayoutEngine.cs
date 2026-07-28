@@ -1538,8 +1538,16 @@ internal sealed class LayoutEngine
                 // these layouts are already in it (the annotation pass baked the staff offset
                 // in), so there is no half-staff to close here. The PER-STAFF seeding passes a
                 // real one, because that skyline is about the staff's reference point.
+                // ⚠️ StaffSize.FullSize for the same reason staffTopUp is 0: these layouts
+                // arrive in the SYSTEM's frame and units, the annotation pass having baked
+                // both in, so sizing them again here would apply the magnification twice.
+                // ⚠️ WHAT THAT LEAVES OPEN, named rather than hidden: the annotation pass
+                // does not know about magnification either, so an ossia's bracket reaching
+                // THIS path is reserved full size. It is the same unit question as
+                // SkylineBuilder's, one frame further out, and it goes when the annotation
+                // layouts carry the staff they belong to.
                 SkylineBuilder.AddTupletBracketsToSkyline(
-                    group.ToImmutableArray(), staffTopUp: 0, up, down);
+                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
                 result[s] = (up, down);
             }
         }
@@ -1569,8 +1577,10 @@ internal sealed class LayoutEngine
                 up.Merge(result[s].up);
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
-                // staffTopUp 0 — the system frame again, as for the brackets above.
-                SkylineBuilder.AddSlursToSkyline(group.ToImmutableArray(), staffTopUp: 0, up, down);
+                // staffTopUp 0 and FullSize — the system frame and its units again, as for
+                // the brackets above, and open in the same way for an ossia.
+                SkylineBuilder.AddSlursToSkyline(
+                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
                 result[s] = (up, down);
             }
         }
@@ -1598,8 +1608,10 @@ internal sealed class LayoutEngine
                 up.Merge(result[s].up);
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(result[s].down);
-                // staffTopUp 0 — the system frame again, as for the brackets above.
-                SkylineBuilder.AddTiesToSkyline(group.ToImmutableArray(), staffTopUp: 0, up, down);
+                // staffTopUp 0 and FullSize — the system frame and its units again, as for
+                // the brackets above, and open in the same way for an ossia.
+                SkylineBuilder.AddTiesToSkyline(
+                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
                 result[s] = (up, down);
             }
         }

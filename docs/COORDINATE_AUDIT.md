@@ -588,6 +588,60 @@ context を包む＝LP の L1→L4 単一フリップと同形）。〔2026-07-2
 なお **X 側にも1系統の未完がある**（方向でなく**型の欠落**）: LP の non-musical PaperColumn に
 対応する型が無く、小節境界の列が2小節に分割保持されている → §3.I / §4.3 #9。
 
+### 4.2.1 ~~★★ `SkylineBuilder` の X は **1 本の数に 2 単位**~~ — **閉じた**（2026-07-28・`94705160`）
+
+**手順①②③とも完了。** `StaffSize` が LP の 2 つの量（`Modified_font_metric` の magnification と
+`StaffSymbol.staff-space`）を持ち、**seed は掛け算をしない**——`Ink()` が
+`b.scale(magnification_)`（`modified-font-metric.cc:62-68`）、`Span()` が staff-space。
+`VerticalSkyline.Scale`（`LILYSHARP-OWN` だった後付けの縮小）は**消えた**。
+- ★ **レビュー規則は 1 文になった**: **seed に残る素の数は X の「位置」だけ**。
+  位置はスコア全体の paper column なので縮まない。**それ以外の素の数は未変換の site。**
+- ★ **掃き漏れはコンパイラが列挙した**（`StaffSize` を引数にしたので未変換の呼び出しは
+  ビルドエラー）。**この表が挙げていなかった `LayoutEngine` の 3 か所が出た。**
+- **出力は 1 ビットも動かない**（予告どおり）＝**台帳は守ってくれず、テストが唯一の網**:
+  `AnOssiaStaffReservesItsOwnSize_InXAsWellAsY`（先に書いて落とし、skip して commit、
+  移行で `[Fact]` に戻した）＋その Y の対。
+- ⚠️ **1 フレーム外に同じ問いが残る**: system 側の annotation 経路（`LayoutEngine` の 3 か所）は
+  `StaffSize.FullSize` を渡す（layout が既に system の単位で焼かれているため二重適用になる）。
+  **annotation pass 自体が magnification を知らない**ので、そこへ届く ossia の装飾は素のまま。
+  **annotation layout が自分の譜を持つ日に消える。**
+
+<details><summary>起票時の記述（経緯）</summary>
+
+#### ★★ `SkylineBuilder` の X は **1 本の数に 2 単位**（2026-07-28 起票・移行前）
+
+⚠️ **方向は揃っている**（この経路は全部 Y-up・`ToSystemUp` は再基準化のみで反射なし＝島1 の成果）。
+**揃っていないのは単位で、しかも X 軸の内側で混ざっている。**
+
+| 量 | 現在の単位 | あるべき単位 |
+|---|---|---|
+| Y 位置（音高・原点からの距離） | 譜ローカル・**名目** staff-space | **その譜の** staff-space |
+| Y 箱の高さ（グリフのインク） | グリフ ss（名目） | その譜の ss |
+| **X 位置**（列・anchor） | **system ss** | system ss（変えない） |
+| **X 箱の幅**（グリフのインク） | **グリフ ss（名目）** | **その譜の ss** |
+
+⇒ **倍率 1 の譜では 2 単位が一致するので 1 つの数で足りていた。** ossia（magstep(-3)）で初めて割れ、
+**グリフの箱が 1/0.7071 だけ横に広い**。⚠️ **スカイラインを X 方向に scale しても直らない**——
+位置まで動くから（`VerticalSkyline.Scale` が Y だけなのはこの理由）。
+
+**LP と描画側は既に正しい**: 倍率譜の X 位置はスコア全体の paper column（`spacing-spanner.cc` /
+`paper-column.cc`）で共有され、**大きさだけ** `magnifyStaff`（`ly/music-functions-init.ly`）で縮む。
+Lily# のレンダラも同形（`BeginGroup(scale)` ＋ `UnscaledXDrawingContext` が位置を先に割る）。
+**予約側だけがこの分離を持っていない。**
+
+⚠️ **移行は「幅を持つ seed を全部同時に」**（島1 の手順）: clef・符頭・臨時記号・加線・符尾・旗・
+休符・付点・強弱。**半分だけ直すと「どちらの単位で書かれた seed か」が混在して誰にも言えなくなる**。
+- **手順①（済）**: 格納値を主張するテストを先に書いた——
+  `StaffSkylineFrameTests.AnOssiaStaffReservesItsOwnSize_InXAsWellAsY`（**skip 済・落ちることを確認済**）。
+  対の Y 側（`..._NotAFullStaffs`）は**今 pass しており、移行中も pass し続けること**が要件。
+- **手順②**: 生産側を全部同時に（seed が「この X は位置／この X はインク」を言う）。
+- **手順③**: 縁で 1 回だけ合成（`AddEdgeStaffInk`／`BuildStaffSkylines` の末尾）。
+- **影響の見込み**: 縦スカイラインで X 幅が効くのは `Skyline::distance` の水平重なり判定だけなので
+  **出力は動かない可能性が高い**（＝台帳点が守ってくれない。**テストが唯一の網**）。
+  ⇒ **実際に 1 ビットも動かなかった。**
+
+</details>
+
 ### 4.3 要修正（座標モデル/値の実バグ、severity 順）
 | # | Sev | 箇所 | 種別 | 内容 |
 |---|---|---|---|---|

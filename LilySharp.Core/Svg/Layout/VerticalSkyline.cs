@@ -463,9 +463,18 @@ internal sealed class VerticalSkyline
     /// metrics are read per staff at that staff's own size.
     /// </para>
     /// <para>
-    /// ⚠️ Y ONLY, matching <c>UnscaledXDrawingContext</c>: an ossia keeps the horizontal
-    /// positions of the music it decorates, so its X coordinates are NOT scaled by the
-    /// renderer either.
+    /// ⚠️ Y ONLY, AND THAT IS NOT THE WHOLE TRUTH — it is what the current frame can express.
+    /// A magnified staff keeps its X POSITIONS (they are the score-wide paper columns, shared
+    /// with the staff it decorates) but its glyphs are narrower as well as shorter: the
+    /// renderer gets both, drawing the ink inside a uniform scale group and pre-dividing the
+    /// positions with <c>UnscaledXDrawingContext</c>. This builder cannot do the same because
+    /// ONE X number here carries two units at once — a position in the system's staff-spaces
+    /// and a box width in the glyph's — so scaling X would move the positions too. The
+    /// consequence, named rather than hidden: an ossia's glyph boxes are 1/0.7071 too WIDE in
+    /// the skyline, which costs horizontal overlap in <see cref="Distance"/> and nothing else.
+    /// <see cref="Height"/>-based assertion
+    /// <c>StaffSkylineFrameTests.AnOssiaStaffReservesItsOwnSize_InXAsWellAsY</c> pins it and
+    /// is skipped until every width-bearing seed separates the two units in one move.
     /// </para>
     /// </remarks>
     public void Scale(double factor)

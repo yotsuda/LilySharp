@@ -197,6 +197,77 @@ public class StaffSkylineFrameTests
     }
 
     /// <summary>
+    /// ...and it is smaller in BOTH AXES, because what shrinks is the GLYPH: an ossia's clef
+    /// is narrower as well as shorter, while the X it is anchored at does not move.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly magnifyStaff — a magnified staff sets
+    /// fontSize and staff-space, so its stencils are built small in both axes; its X
+    /// POSITIONS come from the score-wide paper columns and do not scale
+    /// (LILYPOND-REF: lily/spacing-spanner.cc, lily/paper-column.cc). That is the same split
+    /// <c>SharedRenderer</c> draws with — a uniform scale group for the ink, and
+    /// <c>UnscaledXDrawingContext</c> pre-dividing the positions — so the reserved ink has to
+    /// make it too or the layout and the drawing disagree about the same clef.
+    /// <para>
+    /// ⚠️ THIS IS A UNIT MISMATCH AND NOT A MISSING MULTIPLY. One X coordinate in this
+    /// builder carries two units at once: a POSITION in the system's staff-spaces and a box
+    /// WIDTH in the glyph's. They agree while the staff is full size, which is why one number
+    /// could serve both; on an ossia the width is 1/0.7071 too large. Scaling the finished
+    /// skyline in X cannot fix it — that would move the positions too.
+    /// </para>
+    /// <para>
+    /// The probe is the clef's right edge: the glyph is anchored at
+    /// <c>ClefGlyphXOffset</c> and reaches its own width to the right of it, so a point past
+    /// the SCALED width but inside the full-size one must see the staff lines and not the
+    /// clef.
+    /// </para>
+    /// <para>
+    /// ★ THIS IS WHAT THE UNIT SPLIT BOUGHT. It was written first and skipped, with the
+    /// reason naming what it waited for; the move that turned it on gave every seed its
+    /// staff's <see cref="StaffSize"/>, so a glyph's box comes through <c>Ink</c> and a
+    /// staff-space length through <c>Span</c> while an X POSITION stays bare. Both halves of
+    /// the pair — this and the Y one above — now hold, which is the pair's point: the same
+    /// factor in both axes, and the anchor untouched.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AnOssiaStaffReservesItsOwnSize_InXAsWellAsY()
+    {
+        var note = new NoteItem(0, Fraction.Whole, 0, null, false, 0);
+        var full = OneStaff(note);
+        var ossia = Staff.CreateOssia(
+            ClefType.Treble, new Voice("v", full.PrimaryVoice.Measures));
+
+        var builder = new SkylineBuilder(StaffHeight);
+        var fullSky = builder.BuildStaffSkylines(
+            full, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+        var ossiaSky = builder.BuildStaffSkylines(
+            ossia, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+
+        double anchor = EngravingDefaults.ClefGlyphXOffset;
+        double fullWidth = GlyphMetrics.ClefGOutline.Right - GlyphMetrics.ClefGOutline.Left;
+        double scaledWidth = fullWidth * EngravingDefaults.OssiaScale;
+        // A point PAST the ossia's own clef but still inside a full-size one.
+        double probe = anchor + (scaledWidth + fullWidth) / 2.0;
+
+        // The regime: the full-size clef must actually reach the probe, or the assertion
+        // below would hold for a skyline with no clef in it at all.
+        Assert.True(fullSky.Up.Height(probe) > StaffLineInk + 1.0,
+            $"the full-size clef must reach x={probe:F6}: {fullSky.Up.Height(probe):F6}");
+
+        // ...and the ossia's must not: at that x there is staff, not clef.
+        Assert.True(
+            ossiaSky.Up.Height(probe) < StaffLineInk * EngravingDefaults.OssiaScale + 1e-9,
+            $"an ossia's clef must stop at its OWN width. At x={probe:F6} — past its scaled "
+            + $"clef ({anchor + scaledWidth:F6}) but inside a full-size one "
+            + $"({anchor + fullWidth:F6}) — the skyline reads "
+            + $"{ossiaSky.Up.Height(probe):F6}, where only the staff lines "
+            + $"({StaffLineInk * EngravingDefaults.OssiaScale:F6}) should be.");
+    }
+
+    /// <summary>
     /// THE STAFF SYMBOL, which is the seed that names the origin: the outer lines are ink,
     /// so they reach half a line thickness past the outermost line CENTRE, and the two
     /// readings are what say where 0 is. Symmetric about the origin would mean the middle
