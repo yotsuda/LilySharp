@@ -63,7 +63,13 @@ internal static class BarNumberEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2)
-    /// LILYPOND-REF: ly/paper-defaults-init.ly — text-font-size 11 @ 20pt staff
+    /// LILYPOND-REF: scm/paper.scm:69-77 sets <c>text-font-size</c> to <c>11 * (staff-height / 20pt)</c> and <c>output-scale</c> to <c>staff-height / 4</c>, so 11pt against a 5pt staff space = 2.2 ss.
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c> = <c>exp((s/6) * log 2)</c>.
+    /// ⚠️ THE SECOND ADDRESS SAID <c>ly/paper-defaults-init.ly</c> UNTIL 2026-07-28 and that
+    /// file does not mention text-font-size at all. The value was right; the citation was
+    /// never read (HANDOFF 5.2.1①). It is corrected because two later constants —
+    /// <see cref="EngravingDefaults.LyricTextFontSize"/> and
+    /// <see cref="EngravingDefaults.ChordNameFontSize"/> — were derived by copying it.
     /// </remarks>
     public static readonly double FontSize = 2.2 * Math.Pow(2, -2.0 / 6.0);
 

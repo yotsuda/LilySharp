@@ -176,14 +176,14 @@
   <line x1="71.03" y1="35.27" x2="102.13" y2="35.27" stroke="#000000" stroke-width="0.130" data-pos="958"/>
   <line x1="102.13" y1="35.27" x2="102.13" y2="37.27" stroke="#000000" stroke-width="0.130" data-pos="958"/>
   <text x="71.53" y="35.57" font-size="2.40" font-weight="bold" dominant-baseline="hanging" data-pos="958">2.</text>
-  <text x="8.59" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="228">C</text>
-  <text x="12.19" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="245">Dm</text>
-  <text x="15.80" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="264">Em</text>
-  <text x="19.91" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="284">F</text>
-  <text x="24.75" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="307">G</text>
-  <text x="28.36" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="326">Am</text>
-  <text x="31.97" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="346">G</text>
-  <text x="35.58" y="16.52" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="363">C</text>
+  <text x="8.59" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="228">C</text>
+  <text x="12.19" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="245">Dm</text>
+  <text x="15.80" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="264">Em</text>
+  <text x="19.91" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="284">F</text>
+  <text x="24.75" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="307">G</text>
+  <text x="28.36" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="326">Am</text>
+  <text x="31.97" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="346">G</text>
+  <text x="35.58" y="16.52" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="363">C</text>
   <text x="40.19" y="28.21" font-size="3.00" text-anchor="middle" data-pos="429">5</text>
   <text x="40.19" y="29.71" font-size="3.00" text-anchor="middle" data-pos="429">3</text>
   <text x="43.80" y="28.21" font-size="3.00" text-anchor="middle" data-pos="440">6</text>

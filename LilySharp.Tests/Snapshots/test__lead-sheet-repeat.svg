@@ -16,11 +16,11 @@
   <circle cx="33.43" cy="15.62" r="0.20" data-pos="0"/>
   <rect x="33.93" y="13.12" width="0.19" height="4.00" data-pos="0"/>
   <rect x="34.42" y="13.12" width="0.60" height="4.00" data-pos="0"/>
-  <text x="0.50" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="299">C</text>
-  <text x="4.90" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="302">Am</text>
-  <text x="13.69" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="309">F</text>
-  <text x="18.09" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="312">G7</text>
-  <text x="27.29" y="16.02" font-size="2.60" font-family="sans-serif" font-weight="bold" data-pos="318">C</text>
+  <text x="0.50" y="16.02" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="299">C</text>
+  <text x="4.90" y="16.02" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="302">Am</text>
+  <text x="13.69" y="16.02" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="309">F</text>
+  <text x="18.09" y="16.02" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="312">G7</text>
+  <text x="27.29" y="16.02" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="318">C</text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="268"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="268">Main</text>
   </g>

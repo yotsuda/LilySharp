@@ -774,17 +774,25 @@ internal sealed class RenderedGeometry
         Texts.Where(t => t.FontFamily == "sans-serif").ToList();
 
     /// <summary>
-    /// Lyric syllables, left to right — the serif text runs at the lyric size (SharedRenderer
-    /// draws them at <c>FontSize * 0.8</c> = 3.2 ss).
+    /// Lyric syllables, left to right — the serif text runs at the lyric size.
     /// </summary>
     /// <remarks>
     /// The SIZE is what tells a syllable from the other serif text Lily# draws: a title, a
     /// composer line, a rehearsal mark and a dynamic are all serif too, and matching on the
     /// STRING could not tell them apart since a syllable is an arbitrary word. Probes that use
     /// this carry no title, so the filter is belt and braces rather than the only guard.
+    /// <para>
+    /// ⚠️ IT READS THE SAME CONSTANT THE ENGRAVER AND THE RENDERER DO, and it was a literal
+    /// 3.2 until 2026-07-28. When the lyric em moved to LilyPond's own
+    /// <c>LyricText</c> size, this filter matched nothing and eighteen ledger points failed
+    /// with "no lyric syllable was drawn" — a harness that pins the value it is measuring
+    /// against fails LOUDLY, which is the good version of this, but it has no business
+    /// holding its own copy.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<DrawnText> LyricSyllables =>
-        Texts.Where(t => t.FontFamily != "sans-serif" && Math.Abs(t.FontSize - 3.2) < 1e-9)
+        Texts.Where(t => t.FontFamily != "sans-serif"
+                         && Math.Abs(t.FontSize - LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize) < 1e-9)
              .ToList();
 
     /// <summary>
@@ -809,7 +817,7 @@ internal sealed class RenderedGeometry
         var syllables = LyricSyllables;
         if (syllables.Count == 0)
             throw new InvalidOperationException(
-                "the probe drew no lyric syllable (no serif text run at the 3.2 ss lyric size)."
+                "the probe drew no lyric syllable (no serif text run at the lyric em size)."
                 + "\nDrawn geometry:\n" + Describe());
         var first = syllables[0];
         return first.Anchor == LilySharp.Core.Rendering.TextAnchor.Middle

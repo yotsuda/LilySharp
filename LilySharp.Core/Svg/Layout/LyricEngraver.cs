@@ -178,11 +178,11 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
-    /// The lyric serif font size in staff spaces (SharedRenderer draws lyrics at
-    /// FontSize * 0.8 = 4 * 0.8). Kept in sync with EstimateTextWidth, which uses
-    /// the same value to turn em-fraction advance widths into staff-space widths.
+    /// The lyric serif em size in staff spaces — <see cref="EngravingDefaults.LyricTextFontSize"/>,
+    /// which is LilyPond's own <c>LyricText</c> size and is shared with the renderer so the
+    /// reserved ink and the drawn ink cannot drift apart.
     /// </summary>
-    private const double LyricFontSize = 3.2;
+    private static double LyricFontSize => EngravingDefaults.LyricTextFontSize;
 
     /// <summary>
     /// Staff bottom line to lyric baseline — see
@@ -191,28 +191,27 @@ internal sealed class LyricEngraver
     private double BasicDistanceBelowBottomLine => _params.BasicDistanceBelowBottomLine;
 
     /// <summary>
-    /// Serif cap/ascender height as an em fraction — the top of letters like
-    /// l, d, k, t, every capital, and digits. Measured from the rendered face
-    /// (an 'l' tops 2.11 sp above the baseline at <see cref="LyricFontSize"/>).
-    /// </summary>
-    private const double AscenderEm = 0.66;
-
-    /// <summary>
-    /// Serif x-height as an em fraction — the top of an all-short word like
-    /// "up"/"now". Measured at 1.46 sp above the baseline.
-    /// </summary>
-    private const double XHeightEm = 0.456;
-
-    /// <summary>Lowercase letters whose ink reaches the cap/ascender line.</summary>
-    private const string AscenderLetters = "bdfhijklt";
-
-    /// <summary>
     /// CJK (kana, ideographs, Hangul, fullwidth forms) up-extent as an em fraction.
     /// These glyphs fill the em square — their ink top reaches the ideographic ascent,
     /// ABOVE the Latin cap line — so a syllable like き needs more clearance than any
-    /// Latin word. Without this it would fall to <see cref="XHeightEm"/> (no upper/
-    /// ascender char matches) and overlap notes that dip below the staff.
+    /// Latin word.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
+    /// counterpart because it never needs one: it measures whatever face the context names,
+    /// and a CJK score there uses a CJK face. Lily# ships TeX Gyre Schola, which has NO CJK
+    /// GLYPHS (measured 2026-07-28: a kana or ideographic syllable's path is empty, so
+    /// <c>TextFontMetrics.Ink</c> returns (0, 0)), so this is the FALLBACK for a font that is
+    /// missing rather than a spacing rule — <see cref="LyricUpExtent"/> and
+    /// <see cref="LyricDownExtent"/> both take it as a floor UNDER the measured outline, so it
+    /// can only act where the face has nothing to say.
+    /// <para>
+    /// ⚠️ It was one of four em fractions until the lyric em was corrected; the other three
+    /// are no longer read. It is the only one that cannot be replaced by a measurement, and
+    /// it stops being needed the day Lily# carries a CJK face — which is the real fix, and
+    /// the reason this is marked rather than tuned.
+    /// </para>
+    /// </remarks>
     private const double CjkAscenderEm = 0.88;
 
     /// <summary>True for a full-em-height script glyph (Hiragana, Katakana, CJK
@@ -234,27 +233,38 @@ internal sealed class LyricEngraver
     /// tallest ink the staff's down-skyline must clear.
     /// </summary>
     /// <remarks>
-    /// ⚠️ NOT <see cref="Rendering.TextFontMetrics"/>, which reads the bundled face's own
-    /// outline and is what this engraver already uses for syllable WIDTHS. Reading heights
-    /// from it too was tried and reverted, for a reason worth keeping: TeX Gyre Schola has
-    /// NO CJK GLYPHS, so the outline of a kana syllable is empty and its up-extent would
-    /// come out ZERO — the case <see cref="CjkAscenderEm"/> exists for. Measured while
-    /// trying it: 14 snapshots move and
-    /// <c>UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin</c> fails. So the
-    /// two sources are a real duplication (HANDOFF 5.2.1②) and closing it needs a CJK
-    /// fallback first, not a one-line substitution.
+    /// ★ THE FACE'S OWN OUTLINE, floored by the declared CJK fraction — the SAME shape
+    /// <see cref="LyricDownExtent"/> has always had, and it is what the "CJK receptacle" this
+    /// was blocked on turned out to be. TeX Gyre Schola has NO CJK GLYPHS (measured: a kana or
+    /// ideographic syllable's path is empty, so its ink reads (0, 0)), which is why a bare
+    /// substitution was tried and reverted — 14 snapshots moved and
+    /// <c>UpperStaffLyrics_DropByFontHeight_TallCjkClearsFurtherThanLatin</c> failed. Taking
+    /// the max with <see cref="CjkAscenderEm"/> keeps that case exactly as it was and lets
+    /// every Latin syllable be measured.
+    /// <para>
+    /// ⚠️ IT COULD NOT LAND WITHOUT THE SIZE, and that is why this waited: at the old em of
+    /// 3.2 the measured "no" reads 1.539200 against LilyPond's 1.187880, i.e. the outline
+    /// made the residual WORSE, not better. With
+    /// <see cref="EngravingDefaults.LyricTextFontSize"/> it reads 1.187789. Two halves of one
+    /// claim (HANDOFF 5.0), and each alone lands on the wrong side of the answer.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE LETTER-CLASS TABLE IS GONE, deleted 2026-07-29: an <c>AscenderEm</c> of 0.66, an
+    /// <c>XHeightEm</c> of 0.456 and a list of ascender letters <c>"bdfhijklt"</c>, which
+    /// together guessed which of two heights a syllable had. The face's own outline answers
+    /// that per string, including for the words the table got wrong (anything with an accent,
+    /// a capital in the middle, or punctuation). Do not reintroduce a letter class here.
+    /// <see cref="CjkAscenderEm"/> is the one em fraction that survives, because it stands in
+    /// for a face Lily# does not carry; both extents take it as a floor.
+    /// </para>
     /// </remarks>
     private static double LyricUpExtent(string text)
     {
-        double em = XHeightEm;
+        double outline = Rendering.TextFontMetrics.Ink(text, LyricFontSize).Top;
         foreach (char c in text)
-        {
             if (IsFullHeightGlyph(c))
-                return LyricFontSize * CjkAscenderEm; // the tallest — no glyph exceeds it
-            if (char.IsUpper(c) || char.IsDigit(c) || AscenderLetters.IndexOf(c) >= 0)
-                em = AscenderEm;
-        }
-        return LyricFontSize * em;
+                return Math.Max(outline, LyricFontSize * CjkAscenderEm);
+        return outline;
     }
 
     /// <summary>

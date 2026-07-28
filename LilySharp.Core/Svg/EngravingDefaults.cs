@@ -211,6 +211,60 @@ internal static class EngravingDefaults
     /// </remarks>
     public const double ClefGlyphXOffset = 0.8;
 
+    /// <summary>
+    /// The em size a lyric syllable is set at, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2213-2230 <c>LyricText</c>, whose self-alignment-X is <c>left-align-at-split-notes</c> and which declares <c>(font-size . 1.0)</c> at :2220.
+    /// The size that is off is the paper's: LILYPOND-REF scm/paper.scm:69-77 sets <c>text-font-size</c> to <c>11 * (staff-height / 20pt)</c> and <c>output-scale</c> to <c>staff-height / 4</c>,
+    /// so on the default staff it is 11pt against a 5pt staff space = <b>2.2 ss</b>
+    /// (scm/define-paper-variables.scm:548-550 documents the same <c>text-font-size</c> rule as <c>staff-height / 20 * 11</c>).
+    /// LILYPOND-REF scm/lily-library.scm <c>magstep</c> is <c>exp((s/6) * log 2)</c> = 2^(s/6).
+    /// Hence 2.2 * 2^(1/6).
+    /// ⚠️ THE ADDRESS WAS WRONG WHEN THIS WAS WRITTEN and is corrected here: it said
+    /// <c>ly/paper-defaults-init.ly</c>, which does not mention text-font-size at all — the
+    /// claim was copied from <c>BarNumberEngraver.FontSize</c>'s comment rather than read
+    /// (HANDOFF 5.2.1①). The VALUE was right; only the citation was not.
+    /// <para>
+    /// ⚠️ IT WAS 3.2, i.e. 29.6% TOO LARGE, and the ledger had it recorded as a FONT
+    /// DIFFERENCE that must never be closed ("Lily#'s lyric face is about 27% bigger than
+    /// LilyPond's"). It was not a face difference at all: measured 2026-07-28, the bundled
+    /// face's own ink for the syllable "no" at THIS size is 1.187789 against LilyPond's
+    /// measured 1.187880 — 0.000091 apart — where at 3.2 it reads 1.539200. That one
+    /// mis-sourced number is the +0.271310 that appeared in nine ledger entries.
+    /// </para>
+    /// <para>
+    /// It lives here because BOTH sides must agree on it: <c>LyricEngraver</c> reserves the
+    /// syllable's ink and advance with it and <c>SharedRenderer.DrawLyrics</c> draws with it.
+    /// They used to hold two copies (3.2 and <c>FontSize * 0.8</c>), which is the split this
+    /// file exists to prevent.
+    /// </para>
+    /// </remarks>
+    public static readonly double LyricTextFontSize = 2.2 * Math.Pow(2.0, 1.0 / 6.0);
+
+    /// <summary>
+    /// The em size a chord symbol is set at, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:837-846 <c>ChordName</c>, which declares <c>font-family . sans</c> and <c>(font-size . 1.5)</c>, so the size is 2.2 * magstep(1.5) = 2.2 * 2^(1.5/6).
+    /// The 2.2 and the magstep are the paper's; see <see cref="LyricTextFontSize"/>, which
+    /// carries both addresses.
+    /// <para>
+    /// ⚠️ IT WAS 2.6, declared LILYSHARP-OWN with LilyPond's own rule quoted right beside it —
+    /// an approximation of the number that rule works out to (2.616256), 0.62% low, kept in
+    /// TWO homes (<c>ChordNameEngraver.ChordFontSize</c> and the renderer's
+    /// <c>FontSize * 0.65</c>). Derived here so both read it and neither approximates.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE WEIGHT IS STILL LILY#'S OWN and is deliberately NOT changed here: Lily# sets
+    /// chord symbols BOLD (<c>TextFontMetrics.SansBold</c>) where the grob above declares no
+    /// <c>font-series</c> at all, i.e. normal. Nothing in the corpus measures it — the chord
+    /// points are anchors, in which the symbol's own width cancels — so changing it would move
+    /// output with no reading to justify the direction. It wants a point first.
+    /// </para>
+    /// </remarks>
+    public static readonly double ChordNameFontSize = 2.2 * Math.Pow(2.0, 1.5 / 6.0);
+
     // === Notehead dimensions ===
     // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).
     // Existing call sites use these names; new code should prefer GlyphMetrics directly.

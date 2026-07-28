@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="332.5" viewBox="0 0 119.50 33.25" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="326.4" viewBox="0 0 119.50 32.64" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -43,35 +43,36 @@
   <rect x="86.06" y="16.32" width="0.19" height="4.00" data-pos="221"/>
   <rect x="95.94" y="16.32" width="0.19" height="4.00" data-pos="226"/>
   <rect x="96.43" y="16.32" width="0.60" height="4.00" data-pos="226"/>
-  <text x="10.93" y="23.94" font-size="3.20" text-anchor="middle" data-pos="247">A</text>
-  <text x="19.84" y="23.94" font-size="3.20" text-anchor="middle" data-pos="250">ma</text>
-  <text x="27.92" y="23.94" font-size="3.20" text-anchor="middle" data-pos="254">zing</text>
-  <text x="36.98" y="23.94" font-size="3.20" text-anchor="middle" data-pos="259">grace</text>
-  <text x="45.94" y="23.94" font-size="3.20" text-anchor="middle" data-pos="267">how</text>
-  <text x="55.17" y="23.94" font-size="3.20" text-anchor="middle" data-pos="272">sweet</text>
-  <text x="62.77" y="23.94" font-size="3.20" text-anchor="middle" data-pos="280">the</text>
-  <text x="70.59" y="23.94" font-size="3.20" text-anchor="middle" data-pos="284">sound</text>
-  <text x="79.11" y="23.94" font-size="3.20" text-anchor="middle" data-pos="290">that</text>
-  <text x="90.86" y="23.94" font-size="3.20" text-anchor="middle" data-pos="297">saved</text>
-  <text x="10.93" y="26.90" font-size="3.20" text-anchor="middle" data-pos="325">Twas</text>
-  <text x="19.84" y="26.90" font-size="3.20" text-anchor="middle" data-pos="330">grace</text>
-  <text x="27.92" y="26.90" font-size="3.20" text-anchor="middle" data-pos="336">that</text>
-  <text x="36.98" y="26.90" font-size="3.20" text-anchor="middle" data-pos="341">taught</text>
-  <text x="45.94" y="26.90" font-size="3.20" text-anchor="middle" data-pos="350">my</text>
-  <text x="55.17" y="26.90" font-size="3.20" text-anchor="middle" data-pos="354">heart</text>
-  <text x="62.77" y="26.90" font-size="3.20" text-anchor="middle" data-pos="362">to</text>
-  <text x="70.59" y="26.90" font-size="3.20" text-anchor="middle" data-pos="365">fear</text>
-  <text x="79.11" y="26.90" font-size="3.20" text-anchor="middle" data-pos="370">and</text>
-  <text x="90.86" y="26.90" font-size="3.20" text-anchor="middle" data-pos="376">grace</text>
-  <text x="2.58" y="23.94" font-size="2.40" font-weight="bold">1.</text>
-  <text x="2.58" y="26.90" font-size="2.40" font-weight="bold">2.</text>
+  <text x="10.93" y="23.64" font-size="2.47" text-anchor="middle" data-pos="247">A</text>
+  <text x="19.84" y="23.64" font-size="2.47" text-anchor="middle" data-pos="250">ma</text>
+  <text x="27.92" y="23.64" font-size="2.47" text-anchor="middle" data-pos="254">zing</text>
+  <text x="36.98" y="23.64" font-size="2.47" text-anchor="middle" data-pos="259">grace</text>
+  <text x="45.94" y="23.64" font-size="2.47" text-anchor="middle" data-pos="267">how</text>
+  <text x="55.17" y="23.64" font-size="2.47" text-anchor="middle" data-pos="272">sweet</text>
+  <text x="62.77" y="23.64" font-size="2.47" text-anchor="middle" data-pos="280">the</text>
+  <text x="70.59" y="23.64" font-size="2.47" text-anchor="middle" data-pos="284">sound</text>
+  <text x="79.11" y="23.64" font-size="2.47" text-anchor="middle" data-pos="290">that</text>
+  <text x="90.86" y="23.64" font-size="2.47" text-anchor="middle" data-pos="297">saved</text>
+  <text x="10.93" y="26.44" font-size="2.47" text-anchor="middle" data-pos="325">Twas</text>
+  <text x="19.84" y="26.44" font-size="2.47" text-anchor="middle" data-pos="330">grace</text>
+  <text x="27.92" y="26.44" font-size="2.47" text-anchor="middle" data-pos="336">that</text>
+  <text x="36.98" y="26.44" font-size="2.47" text-anchor="middle" data-pos="341">taught</text>
+  <text x="45.94" y="26.44" font-size="2.47" text-anchor="middle" data-pos="350">my</text>
+  <text x="55.17" y="26.44" font-size="2.47" text-anchor="middle" data-pos="354">heart</text>
+  <text x="62.77" y="26.44" font-size="2.47" text-anchor="middle" data-pos="362">to</text>
+  <text x="70.59" y="26.44" font-size="2.47" text-anchor="middle" data-pos="365">fear</text>
+  <text x="79.11" y="26.44" font-size="2.47" text-anchor="middle" data-pos="370">and</text>
+  <text x="90.86" y="26.44" font-size="2.47" text-anchor="middle" data-pos="376">grace</text>
+  <text x="2.58" y="23.64" font-size="2.40" font-weight="bold">1.</text>
+  <text x="2.58" y="26.44" font-size="2.40" font-weight="bold">2.</text>
   <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="164"/>
   <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="164">Main</text>
   <text class="music" x="7.32" y="13.66" font-size="1.60" data-pos="0"></text>
   <line x1="7.84" y1="13.66" x2="7.84" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="8.42" y="13.66" font-size="1.80" data-pos="0">= 96</text>
-  <line x1="13.60" y1="23.44" x2="14.40" y2="23.44" stroke="#000000" stroke-width="0.160"/>
-  <line x1="15.21" y1="23.44" x2="16.01" y2="23.44" stroke="#000000" stroke-width="0.160"/>
-  <line x1="23.08" y1="23.44" x2="23.88" y2="23.44" stroke="#000000" stroke-width="0.160"/>
+  <line x1="13.60" y1="23.14" x2="14.40" y2="23.14" stroke="#000000" stroke-width="0.160"/>
+  <line x1="15.48" y1="23.14" x2="16.28" y2="23.14" stroke="#000000" stroke-width="0.160"/>
+  <line x1="22.75" y1="23.14" x2="23.30" y2="23.14" stroke="#000000" stroke-width="0.160"/>
+  <line x1="23.85" y1="23.14" x2="24.40" y2="23.14" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

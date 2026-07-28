@@ -367,8 +367,13 @@ public class StaffSkylineFrameTests
         var (up, down) = ChordNameEngraver.RowSkylines(
             chords, Layouts(), staffIndex: 3, ImmutableArray<Measure>.Empty);
 
+        // ⚠️ THE EM COMES FROM THE ENGRAVING DEFAULT, not a literal: it was 2.6 here until
+        // 2026-07-28, a third copy of a size that already had two homes, and it failed the day
+        // the size moved to LilyPond's own ChordName figure. A net that pins the value it is
+        // measuring cannot see the value change.
         var (bottom, top) = LilySharp.Core.Rendering.TextFontMetrics.Ink(
-            "C", 2.6, sans: true, LilySharp.Core.Rendering.FontStyle.Bold);
+            "C", LilySharp.Core.Svg.EngravingDefaults.ChordNameFontSize,
+            sans: true, LilySharp.Core.Rendering.FontStyle.Bold);
 
         Assert.Equal(top, up.MaxHeight(), 9);
         Assert.Equal(bottom, down.MaxHeight(), 9);

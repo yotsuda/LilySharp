@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="432.8" viewBox="0 0 119.50 43.28" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="428.4" viewBox="0 0 119.50 42.84" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -98,18 +98,18 @@
   <rect x="63.65" y="16.32" width="0.19" height="15.33"/>
   <rect x="64.14" y="16.32" width="0.60" height="15.33"/>
   <text class="music" x="60.04" y="14.52" font-size="4.00" data-pos="761"></text>
-  <text x="13.37" y="36.94" font-size="3.20" text-anchor="middle" data-pos="941">Praise</text>
-  <text x="22.04" y="36.94" font-size="3.20" text-anchor="middle" data-pos="948">God</text>
-  <text x="29.47" y="36.94" font-size="3.20" text-anchor="middle" data-pos="952">from</text>
-  <text x="38.38" y="36.94" font-size="3.20" text-anchor="middle" data-pos="957">whom</text>
-  <text x="45.71" y="36.94" font-size="3.20" text-anchor="middle" data-pos="964">all</text>
-  <text x="52.29" y="36.94" font-size="3.20" text-anchor="middle" data-pos="968">bless</text>
-  <text x="60.04" y="36.94" font-size="3.20" text-anchor="middle" data-pos="975">ings</text>
+  <text x="13.37" y="36.64" font-size="2.47" text-anchor="middle" data-pos="941">Praise</text>
+  <text x="22.04" y="36.64" font-size="2.47" text-anchor="middle" data-pos="948">God</text>
+  <text x="29.47" y="36.64" font-size="2.47" text-anchor="middle" data-pos="952">from</text>
+  <text x="38.38" y="36.64" font-size="2.47" text-anchor="middle" data-pos="957">whom</text>
+  <text x="45.71" y="36.64" font-size="2.47" text-anchor="middle" data-pos="964">all</text>
+  <text x="52.29" y="36.64" font-size="2.47" text-anchor="middle" data-pos="968">bless</text>
+  <text x="60.04" y="36.64" font-size="2.47" text-anchor="middle" data-pos="975">ings</text>
   <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="701"/>
   <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="701">Main</text>
   <text class="music" x="7.32" y="13.66" font-size="1.60" data-pos="0"></text>
   <line x1="7.84" y1="13.66" x2="7.84" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="8.42" y="13.66" font-size="1.80" data-pos="0">= 80</text>
-  <line x1="56.31" y1="36.44" x2="56.61" y2="36.44" stroke="#000000" stroke-width="0.160"/>
+  <line x1="55.99" y1="36.14" x2="56.79" y2="36.14" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

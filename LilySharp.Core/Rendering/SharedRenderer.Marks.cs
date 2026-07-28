@@ -51,7 +51,10 @@ internal static partial class SharedRenderer
     private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
-        double size = FontSize * 0.65;
+        // The one home for the chord em, shared with ChordNameEngraver so the reserved ink
+        // and the drawn ink are the same size. It was a local FontSize * 0.65 (= 2.6), an
+        // approximation of LilyPond's own ChordName size.
+        double size = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontSize;
         // `as both`: the Roman degree stacked one line ABOVE the absolute name.
         const double stackLineHeight = 2.2;
         foreach (var c in layout.ChordNameLayouts)

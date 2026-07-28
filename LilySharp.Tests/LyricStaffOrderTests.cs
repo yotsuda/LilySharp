@@ -188,21 +188,56 @@ public class LyricStaffOrderTests
             + "form main { A }\n"
             + "score main {\n  staff melody with lyrics w\n}\n";
 
-        double latin = SystemGapOf(Src(latinWords));
-        double cjk = SystemGapOf(Src(cjkWords));
+        double latin = SystemGapOf(Src(latinWords), FloorBindingPaper);
+        double cjk = SystemGapOf(Src(cjkWords), FloorBindingPaper);
 
         Assert.True(latin > 0 && cjk > 0, "the books must wrap, or there is no gap to read");
+        // ⚠️ AND THAT THE FLOOR IS WHAT IS BEING READ (HANDOFF 5.0 trap 7): a reading of the
+        // spring's ideal means the reservation lost, and then the two books agree whatever
+        // the ink is — the test would go on passing while measuring nothing.
+        Assert.True(latin > FloorBindingPaper.VerticalSpacing.SystemSystem.BasicDistance,
+            $"the reservation must beat the spring's ideal, or nothing is being measured: {latin:F6}");
         Assert.True(cjk > latin + 0.05,
             "the page must reserve the block's own ink: "
             + $"latin gap {latin:F6}, cjk gap {cjk:F6}");
     }
 
+    /// <summary>
+    /// Paper whose inter-system spring has almost no ideal left, so the SKYLINE FLOOR is what
+    /// holds two systems apart.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ADDED 2026-07-28, and the reason is the point of the test rather than plumbing. On
+    /// the shipping spring this book used to bind because Lily#'s lyric em was 3.2 — 29.6%
+    /// larger than LilyPond's LyricText size — so the block's ink beat basic-distance 12. At
+    /// the true size it does not, and LilyPond agrees: its own reading on this shape is
+    /// 12.000000, the ideal (audit/lp-geometry lyrics.*.system-gap, exact on both sides since
+    /// the em was corrected). So the test had quietly left its regime — both books returned
+    /// 12.000000 and the assertion below could no longer fail for the right reason. Taking the
+    /// ideal away puts the floor back in charge without inventing ink, the same move book SCF
+    /// makes in probes/system-clef-floor.ly.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system.
+    /// </remarks>
+    private static readonly LayoutOptions FloorBindingPaper =
+        LayoutOptions.Default with
+        {
+            VerticalSpacing = VerticalSpacingParameters.Default with
+            {
+                SystemSystem = VerticalSpacingParameters.Default.SystemSystem with
+                {
+                    BasicDistance = 0,
+                    MinimumDistance = 0,
+                },
+            },
+        };
+
     /// <summary>The distance between the first two systems, 0 if the book does not wrap.</summary>
-    private static double SystemGapOf(string src)
+    private static double SystemGapOf(string src, LayoutOptions? options = null)
     {
         var tree = SyntaxTree.Parse(src);
         var spec = RenderSpecParser.FindFirst(tree);
-        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, spec));
+        var engine = options is null ? new LayoutEngine() : new LayoutEngine(options);
+        var layout = engine.Layout(SvgGenerator.CollectScore(tree, spec));
         if (layout.Systems.Length < 2) return 0;
         return System.Math.Abs(layout.Systems[0].Y - layout.Systems[1].Y);
     }

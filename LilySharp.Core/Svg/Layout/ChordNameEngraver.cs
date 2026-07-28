@@ -279,17 +279,19 @@ internal static class ChordNameEngraver
     // each, because the skyline has to describe the symbol that gets DRAWN — a second X
     // model here would be HANDOFF 5.2.1② in the place this island can least afford it.
 
-    /// <summary>The chord font size the renderer draws at: its <c>FontSize 4.0 × 0.65</c>.</summary>
+    /// <summary>
+    /// The chord font size — <see cref="EngravingDefaults.ChordNameFontSize"/>, LilyPond's own
+    /// <c>ChordName</c> size, shared with the renderer.
+    /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN: LilyPond's ChordName takes <c>font-size = 1.5</c> off the context's own
-    /// size (scm/define-grobs.scm ChordName); 2.6 is Lily#'s chord size and always was.
-    /// ⚠️ IT IS ALSO SPELT IN <c>SharedRenderer.Marks.DrawChordNames</c> as
-    /// <c>FontSize * 0.65</c>, so this reserves for the face the renderer draws only while
-    /// the two agree — the second-home shape HANDOFF 5.2.1⑤ names. Named here rather than
-    /// unified because the renderer's own <c>FontSize</c> is a device quantity this layer
-    /// does not have; it was two inline literals before and is one named constant now.
+    /// ⚠️ IT WAS 2.6 AND LILYSHARP-OWN, with LilyPond's rule (<c>font-size = 1.5</c> off the
+    /// context's size) quoted beside it — the rule works out to 2.616256, so the constant was
+    /// an approximation of the number its own comment named. And it had a SECOND HOME in
+    /// <c>SharedRenderer.Marks.DrawChordNames</c> (<c>FontSize * 0.65</c>), the shape
+    /// HANDOFF 5.2.1⑤ warns about: this reserved for the face the renderer drew only while
+    /// the two happened to agree. One home now, derived rather than approximated.
     /// </remarks>
-    private const double ChordFontSize = 2.6;
+    private static double ChordFontSize => EngravingDefaults.ChordNameFontSize;
 
     /// <summary>Minimum ink gap between two adjacent names (staff spaces).</summary>
     /// <remarks>

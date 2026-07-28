@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="270.8" viewBox="0 0 119.50 27.08" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="266.4" viewBox="0 0 119.50 26.64" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -50,28 +50,28 @@
   <rect x="80.21" y="13.12" width="0.19" height="4.00" data-pos="487"/>
   <rect x="101.34" y="13.12" width="0.19" height="4.00" data-pos="499"/>
   <rect x="101.83" y="13.12" width="0.60" height="4.00" data-pos="499"/>
-  <text x="18.32" y="20.73" font-size="3.20" text-anchor="middle" data-pos="522">Twin</text>
-  <text x="25.37" y="20.73" font-size="3.20" text-anchor="middle" data-pos="528">kle</text>
-  <text x="31.97" y="20.73" font-size="3.20" text-anchor="middle" data-pos="532">twin</text>
-  <text x="38.57" y="20.73" font-size="3.20" text-anchor="middle" data-pos="538">kle</text>
-  <text x="43.44" y="20.73" font-size="3.20" text-anchor="middle" data-pos="544">lit</text>
-  <text x="48.00" y="20.73" font-size="3.20" text-anchor="middle" data-pos="549">tle</text>
-  <text x="53.89" y="20.73" font-size="3.20" text-anchor="middle" data-pos="553">star</text>
-  <text x="61.23" y="20.73" font-size="3.20" text-anchor="middle" data-pos="560">How</text>
-  <text x="66.26" y="20.73" font-size="3.20" text-anchor="middle" data-pos="564">I</text>
-  <text x="70.93" y="20.73" font-size="3.20" text-anchor="middle" data-pos="566">won</text>
-  <text x="77.38" y="20.73" font-size="3.20" text-anchor="middle" data-pos="571">der</text>
-  <text x="84.54" y="20.73" font-size="3.20" text-anchor="middle" data-pos="577">what</text>
-  <text x="91.91" y="20.73" font-size="3.20" text-anchor="middle" data-pos="582">you</text>
-  <text x="97.94" y="20.73" font-size="3.20" text-anchor="middle" data-pos="586">are</text>
+  <text x="18.32" y="20.44" font-size="2.47" text-anchor="middle" data-pos="522">Twin</text>
+  <text x="25.37" y="20.44" font-size="2.47" text-anchor="middle" data-pos="528">kle</text>
+  <text x="31.97" y="20.44" font-size="2.47" text-anchor="middle" data-pos="532">twin</text>
+  <text x="38.57" y="20.44" font-size="2.47" text-anchor="middle" data-pos="538">kle</text>
+  <text x="43.44" y="20.44" font-size="2.47" text-anchor="middle" data-pos="544">lit</text>
+  <text x="48.00" y="20.44" font-size="2.47" text-anchor="middle" data-pos="549">tle</text>
+  <text x="53.89" y="20.44" font-size="2.47" text-anchor="middle" data-pos="553">star</text>
+  <text x="61.23" y="20.44" font-size="2.47" text-anchor="middle" data-pos="560">How</text>
+  <text x="66.26" y="20.44" font-size="2.47" text-anchor="middle" data-pos="564">I</text>
+  <text x="70.93" y="20.44" font-size="2.47" text-anchor="middle" data-pos="566">won</text>
+  <text x="77.38" y="20.44" font-size="2.47" text-anchor="middle" data-pos="571">der</text>
+  <text x="84.54" y="20.44" font-size="2.47" text-anchor="middle" data-pos="577">what</text>
+  <text x="91.91" y="20.44" font-size="2.47" text-anchor="middle" data-pos="582">you</text>
+  <text x="97.94" y="20.44" font-size="2.47" text-anchor="middle" data-pos="586">are</text>
   <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="430"/>
   <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="430">A</text>
   <text class="music" x="3.17" y="10.46" font-size="1.60" data-pos="0"></text>
   <line x1="3.68" y1="10.46" x2="3.68" y2="9.06" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="4.27" y="10.46" font-size="1.80" data-pos="0">= 100</text>
-  <line x1="22.46" y1="20.23" x2="22.76" y2="20.23" stroke="#000000" stroke-width="0.160"/>
-  <line x1="35.67" y1="20.23" x2="35.97" y2="20.23" stroke="#000000" stroke-width="0.160"/>
-  <line x1="45.42" y1="20.23" x2="45.72" y2="20.23" stroke="#000000" stroke-width="0.160"/>
-  <line x1="74.30" y1="20.23" x2="74.60" y2="20.23" stroke="#000000" stroke-width="0.160"/>
+  <line x1="22.04" y1="19.94" x2="22.84" y2="19.94" stroke="#000000" stroke-width="0.160"/>
+  <line x1="35.29" y1="19.94" x2="36.09" y2="19.94" stroke="#000000" stroke-width="0.160"/>
+  <line x1="45.24" y1="19.94" x2="45.97" y2="19.94" stroke="#000000" stroke-width="0.160"/>
+  <line x1="73.99" y1="19.94" x2="74.79" y2="19.94" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="285.1" viewBox="0 0 119.50 28.51" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="282.1" viewBox="0 0 119.50 28.21" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -46,20 +46,20 @@
   <rect x="47.54" y="13.12" width="0.19" height="4.00" data-pos="456"/>
   <rect x="63.65" y="13.12" width="0.19" height="4.00" data-pos="466"/>
   <rect x="64.14" y="13.12" width="0.60" height="4.00" data-pos="466"/>
-  <text x="9.14" y="22.78" font-size="3.20" text-anchor="middle" data-pos="485">la</text>
-  <text x="12.93" y="22.78" font-size="3.20" text-anchor="middle" data-pos="488">la</text>
-  <text x="16.72" y="22.78" font-size="3.20" text-anchor="middle" data-pos="491">la</text>
-  <text x="24.63" y="22.78" font-size="3.20" text-anchor="middle" data-pos="496">Twin</text>
-  <text x="31.68" y="22.78" font-size="3.20" text-anchor="middle" data-pos="502">kle</text>
-  <text x="38.28" y="22.78" font-size="3.20" text-anchor="middle" data-pos="506">twin</text>
-  <text x="44.88" y="22.78" font-size="3.20" text-anchor="middle" data-pos="512">kle</text>
-  <text x="49.76" y="22.78" font-size="3.20" text-anchor="middle" data-pos="518">lit</text>
-  <text x="54.31" y="22.78" font-size="3.20" text-anchor="middle" data-pos="523">tle</text>
-  <text x="60.20" y="22.78" font-size="3.20" text-anchor="middle" data-pos="527">star</text>
+  <text x="9.14" y="22.48" font-size="2.47" text-anchor="middle" data-pos="485">la</text>
+  <text x="12.93" y="22.48" font-size="2.47" text-anchor="middle" data-pos="488">la</text>
+  <text x="16.72" y="22.48" font-size="2.47" text-anchor="middle" data-pos="491">la</text>
+  <text x="24.63" y="22.48" font-size="2.47" text-anchor="middle" data-pos="496">Twin</text>
+  <text x="31.68" y="22.48" font-size="2.47" text-anchor="middle" data-pos="502">kle</text>
+  <text x="38.28" y="22.48" font-size="2.47" text-anchor="middle" data-pos="506">twin</text>
+  <text x="44.88" y="22.48" font-size="2.47" text-anchor="middle" data-pos="512">kle</text>
+  <text x="49.76" y="22.48" font-size="2.47" text-anchor="middle" data-pos="518">lit</text>
+  <text x="54.31" y="22.48" font-size="2.47" text-anchor="middle" data-pos="523">tle</text>
+  <text x="60.20" y="22.48" font-size="2.47" text-anchor="middle" data-pos="527">star</text>
   <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="417"/>
   <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="417">A</text>
-  <line x1="28.78" y1="22.28" x2="29.08" y2="22.28" stroke="#000000" stroke-width="0.160"/>
-  <line x1="41.98" y1="22.28" x2="42.28" y2="22.28" stroke="#000000" stroke-width="0.160"/>
-  <line x1="51.74" y1="22.28" x2="52.04" y2="22.28" stroke="#000000" stroke-width="0.160"/>
+  <line x1="28.35" y1="21.98" x2="29.15" y2="21.98" stroke="#000000" stroke-width="0.160"/>
+  <line x1="41.61" y1="21.98" x2="42.41" y2="21.98" stroke="#000000" stroke-width="0.160"/>
+  <line x1="51.56" y1="21.98" x2="52.28" y2="21.98" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

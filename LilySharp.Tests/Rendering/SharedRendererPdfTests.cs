@@ -145,9 +145,20 @@ public sealed class SharedRendererPdfTests
         Assert.True(stream.Contains(" 24 Tf"),
             "Expected a 24-pt music font selection (Emmentaler).");
 
-        // Lyrics use serif at 0.8 × FontSize × scale = 0.8 × 4 × 6 = 19.2 pt
-        Assert.True(stream.Contains(" 19.2 Tf") || stream.Contains(" 19 Tf"),
-            "Expected a 19.2-pt serif font selection for lyrics.");
+        // Lyrics use serif at LilyPond's own LyricText em × scale. It was an invented
+        // 0.8 × FontSize (= 3.2 ss, 19.2 pt here) until 2026-07-28; the size now comes from
+        // EngravingDefaults so this asserts the derivation rather than the old number.
+        // The exact decimals PdfSharpCore prints are its business, so every plausible
+        // rounding of the one computed size is accepted — the point of the assertion is
+        // that the lyric run is NOT at the music font's size.
+        double lyricPt = LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize * 6;
+        var forms = Enumerable.Range(0, 5)
+            .Select(d => " " + Math.Round(lyricPt, d).ToString(
+                System.Globalization.CultureInfo.InvariantCulture) + " Tf")
+            .ToList();
+        Assert.True(forms.Any(stream.Contains),
+            $"Expected a {lyricPt:F4}-pt serif font selection for lyrics; tried "
+            + string.Join(", ", forms));
     }
 
     private static string DecodeAllContentStreams(byte[] pdfBytes)

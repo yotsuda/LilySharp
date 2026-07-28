@@ -324,13 +324,15 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/lyric-engraver.cc:32-52 LyricText grob
-    /// LILYPOND-REF: scm/define-grobs.scm:2213 LyricText (font-size 1.0 in LP;
-    /// this port instead uses a 0.8x reduced size below).
+    /// LILYPOND-REF: scm/define-grobs.scm:2213-2230 LyricText, whose self-alignment-X is left-align-at-split-notes, declares (font-size . 1.0) — the size now
+    /// comes from EngravingDefaults.LyricTextFontSize, shared with LyricEngraver so the
+    /// drawn ink and the reserved ink are the same size. It used to be a local
+    /// FontSize * 0.8 (= 3.2), 29.6% larger, with the divergence declared right here.
     /// </remarks>
     private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.LyricLayouts.IsDefaultOrEmpty) return;
-        double lyricFontSize = FontSize * 0.8;
+        double lyricFontSize = LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize;
         foreach (var l in layout.LyricLayouts)
         {
             if (!sysTopYUp.TryGetValue(l.Item.MeasureIndex, out var syUp)) continue; // other page
