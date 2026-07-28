@@ -602,6 +602,97 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// On a page that must squeeze, an ossia pair is SOLVED by the page like any spaceable
+    /// pair — the same one-force law its notation control obeys — and the page reserves its
+    /// head for the ossia that LEADS a system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 is_spaceable — a line is spaceable
+    /// exactly when it declares no <c>staff-affinity</c>, and an ossia is a <c>\new Staff</c>
+    /// that declares none. Everything below follows from that one fact.
+    /// <para>
+    /// ⚠️ WHY A LAW AND NOT THE FOUR NUMBERS (HANDOFF 5.4). Books OSSK/OSSKN already pin four
+    /// residuals each in the ledger, and a literal could pass them; what no literal passes is
+    /// the RELATION between them. Every gap on a page is its spring's length at ONE force, so
+    /// a spring's deficit from its ideal is that force times its own compress strength —
+    /// <c>ideal - minimum-distance</c>, which is 1 for the ungrouped staff spring (9 - 8) and
+    /// 4 for the system spring (12 - 8). The system gap must therefore fall short by exactly
+    /// FOUR times what the staff gap falls short by, on both halves of the pair.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE RATIO CATCHES BOTH HALVES OF THE PORT, which is why it is asserted rather than
+    /// the compression alone. Leave the spring out and the pair is RIGID: it prints its ideal
+    /// 9.000000 whatever the page does, the deficit is 0 and the ratio is undefined. Put the
+    /// spring in but keep the pair on the GROUPER's spec (<c>staff-staff-spacing</c>, minimum
+    /// 7) and it compresses at strength 2 instead of 1, so the ratio comes out 2 and not 4.
+    /// Both specs declare basic-distance 9, so nothing measured at REST can tell them apart —
+    /// this is the reading that can (measured 2026-07-28: the pair 8.785507, the system
+    /// 11.142030, against LilyPond's 8.787816 / 11.151264).
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE HEAD, because a chain is only solved as well as the end it hangs from. A
+    /// system LED by an ossia must start BELOW the top margin like any other. Before this
+    /// port the ossia was not spaceable, so the page anchored on the staff it decorates and
+    /// drew the ossia 2.123312 ABOVE the margin — the defect
+    /// <c>page.ossia-pair.compressed.first-staff-refpoint</c> recorded at -6.850208, and the
+    /// one that showed as a section mark flush against the paper edge in test/ossia.
+    /// ⚠️ THE TWO HEADS ARE NOT ASSERTED EQUAL: LilyPond keeps them 0.049104 apart (it
+    /// compresses the top spring past its floor and the ossia's smaller ink lets it go
+    /// further), while Lily# currently sits on that floor on both books. That remainder is
+    /// the ledger's +0.073104 against the control's +0.024000 and is named there, so this
+    /// asks only for the same ORDER of head, not one number.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AnOssiaIsSpaceable_SoThePageSolvesItsPairAndReservesItsHead()
+    {
+        var ossia = LpGeometryProbes.All.First(
+            p => p.Id == "staff.ossia-pair.compressed.staff-staff-inside");
+        var control = LpGeometryProbes.All.First(
+            p => p.Id == "staff.ossia-control.compressed.staff-staff-inside");
+        var options = ossia.Options ?? LayoutOptions.Default;
+        Assert.Same(options, control.Options);
+
+        var ossiaPage = RenderedGeometry.Render(ossia.Source, options);
+        var controlPage = RenderedGeometry.Render(control.Source, options);
+
+        double ossiaInside = ossiaPage.ScaledPairGapAt(0, 5, EngravingDefaults.OssiaScale, 5);
+        double ossiaSystem = ossiaPage.ScaledPairGapAt(1, 5, EngravingDefaults.OssiaScale, 5);
+        double controlInside = controlPage.ScaledPairGapAt(0, 5, 1.0, 5);
+        double controlSystem = controlPage.ScaledPairGapAt(1, 5, 1.0, 5);
+
+        var sp = options.StaffSpacing;
+        double staffIdeal = sp.DefaultStaffStaff.BasicDistance;
+        double systemIdeal = options.VerticalSpacing.SystemSystem.BasicDistance;
+
+        // ⚠️ ASSERT THE REGIME FIRST (HANDOFF 5.0 trap 7): below its ideal is what "this page
+        // squeezes" means, and a book that stopped squeezing would otherwise pass everything
+        // below by measuring nothing.
+        Assert.True(ossiaInside < staffIdeal - 0.05,
+            $"the ossia pair must be COMPRESSED on this page, not printing its ideal: "
+            + $"{ossiaInside:F9} against the spec's {staffIdeal:F6}. A rigid spring prints "
+            + "the ideal exactly whatever force the page solves.");
+        Assert.True(controlInside < staffIdeal - 0.05,
+            $"the control must squeeze too or the pair is not like-for-like: {controlInside:F9}");
+
+        // One force per page, read through two springs of strength 1 and 4.
+        Assert.Equal(4.0, (systemIdeal - ossiaSystem) / (staffIdeal - ossiaInside), 3);
+        Assert.Equal(4.0, (systemIdeal - controlSystem) / (staffIdeal - controlInside), 3);
+
+        double ossiaHead = ossiaPage.ScaledPairFirstStaffRefpoint(
+            5, EngravingDefaults.OssiaScale, 5);
+        double controlHead = controlPage.ScaledPairFirstStaffRefpoint(5, 1.0, 5);
+
+        Assert.True(ossiaHead > options.MarginTop,
+            $"a system led by an ossia must start BELOW the top margin {options.MarginTop:F6}; "
+            + $"its first refpoint is at {ossiaHead:F6}, i.e. "
+            + $"{options.MarginTop - ossiaHead:F6} INTO the margin.");
+        Assert.True(Math.Abs(ossiaHead - controlHead) < 0.5,
+            $"the two spellings of one book must hang from the same head: ossia "
+            + $"{ossiaHead:F6}, control {controlHead:F6}.");
+    }
+
+    /// <summary>
     /// The headline fidelity number: the total distance from LilyPond across the corpus.
     /// </summary>
     /// <remarks>

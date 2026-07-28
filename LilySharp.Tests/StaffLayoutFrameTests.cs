@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -172,6 +173,58 @@ public class StaffLayoutFrameTests
             $"second group Y ({groups[1].Y:F6}) must clear the first group's bottom");
         Assert.True(groups[0].Height > 0 && groups[1].Height > 0,
             "group Height is a LENGTH and must stay positive");
+    }
+
+    /// <summary>
+    /// Two staves of DIFFERENT heights inside ONE group are placed CENTRE TO CENTRE: the
+    /// distance the alignment decided lands between their reference points, not between
+    /// their top lines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations — the
+    /// accumulated <c>dy</c> runs from one element's reference point to the next's, and
+    /// nothing in it reads an element's height. A page spring at rest is
+    /// <c>max(floor, ideal)</c>, so the drawn refpoint distance must be exactly
+    /// <c>max(spec basic-distance, the spring's floor)</c>.
+    /// <para>
+    /// ⚠️ THE ASSERTION TAKES THE FLOOR FROM THE SPRING rather than recomputing the
+    /// alignment minimum, so it cannot pass by comparing the implementation with itself
+    /// (HANDOFF 5.4). What it pins is that the PLACEMENT and the SPRING agree about the
+    /// frame — which is what makes a force-0 page leave the staves where they were drawn.
+    /// </para>
+    /// <para>
+    /// ⚠️ UNEQUAL HEIGHTS ARE THE WHOLE POINT and no .lys score can spell them: RenderSpec
+    /// gives a tab or ossia staff a Single group of its own, so this arrangement is
+    /// reachable only through the model. That is exactly why the defect survived — the
+    /// stacking loop passed the upper staff's whole HEIGHT where the inter-group path passed
+    /// the refpoint SPAN, and the two agree for every pair the corpus can build. Before
+    /// 2026-07-28 this reads 7.250000 against 9.000000: a six-string tab staff is 7.500000
+    /// tall against the ordinary 4.000000, and half that difference is 1.750000.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void UnequalStavesInOneGroup_ArePlacedCentreToCentre()
+    {
+        var tab = Staff.CreateTab(
+            TuningType.Guitar, new Voice("t", ImmutableArray.Create(MakeNoteMeasure())));
+        var group = StaffGroup.CreateGrandStaff(tab, CreateStaff(ClefType.Bass));
+        var layout = new LayoutEngine().Layout(ScoreOf(group));
+        var system = layout.Systems[0];
+
+        var spring = Assert.Single(system.StaffSprings);
+        var staves = system.StaffGroups[0].Staves;
+        Assert.Equal(spring.UpperStaffIndex, staves[0].StaffIndex);
+        Assert.Equal(spring.LowerStaffIndex, staves[1].StaffIndex);
+
+        // The regime this measures: the two staves must actually differ in height, or the
+        // reading is the one every corpus book already takes and says nothing.
+        Assert.True(Math.Abs(staves[0].Height - staves[1].Height) > 1.0,
+            $"the pair must be unequal: {staves[0].Height:F6} against {staves[1].Height:F6}");
+
+        double drawn = MultiStaffLayouter.StaffRefpoint(staves[0])
+                       - MultiStaffLayouter.StaffRefpoint(staves[1]);
+        Assert.Equal(
+            Math.Max(spring.Spec.BasicDistance, spring.MinimumDistance), drawn, 9);
     }
 
     /// <summary>

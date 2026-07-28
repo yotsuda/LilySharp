@@ -638,7 +638,11 @@ internal static class LpGeometryProbes
     /// bind and both readings are of the SPEC.
     /// </para>
     /// </remarks>
-    private static string OssiaPairScore(string name, string render) => $$"""
+    /// <param name="bars">How much music, which is what puts the pair in one regime or the
+    /// other: eight bars is one system on a page with slack (OSSU/OSSUN, every spring at its
+    /// ideal), 120 is more systems than the page holds (OSSK/OSSKN, every spring solved).
+    /// Defaulted, so the two books at rest are spelled exactly as they were.</param>
+    private static string OssiaPairScore(string name, string render, int bars = 8) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -646,11 +650,11 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
-          upper  { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
+          melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", bars)).Trim()}} }
+          upper  { {{string.Concat(Enumerable.Repeat("g4 a g a | ", bars)).Trim()}} }
         }
 
-        form main { A }
+        form main { ~A }
 
         score main "{{name}}" {
           {{render}} upper
@@ -663,6 +667,37 @@ internal static class LpGeometryProbes
 
     /// <summary>The full-size control — book OSSUN.</summary>
     internal static readonly string OssiaPairScoreNotation = OssiaPairScore("OSSUN", "staff");
+
+    /// <summary>
+    /// The same pair over enough music to fill pages — the Lily# half of books OSSK / OSSKN,
+    /// which ask whether an ossia's distance is a SPRING at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="OssiaPairScoreOssia"/> reads its distance at REST, where a rigid pair and a
+    /// solved one are the same number, so it cannot see that
+    /// <c>MultiStaffLayouter.StaffSprings</c> skips an ossia pair outright. On a page that
+    /// must squeeze, LilyPond compresses the ossia's distance like any other staff pair
+    /// (measured 2026-07-28: OSSK 8.787816 against its own ideal 9, one force per page with
+    /// its system springs), because an ossia is a <c>\new Staff</c> and therefore a SPACEABLE
+    /// staff — its VerticalAxisGroup prints <c>aff=()</c> in the same dump.
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO DEFECTS SHOW HERE, not one, and they are separate quantities. The pair is rigid
+    /// in Lily# (the skip), AND when it is spaced at all it is spaced by the GROUPED spec:
+    /// <c>MultiStaffLayouter</c> substitutes <c>sp.StaffStaff</c> whenever either side is an
+    /// ossia (:130-131, :222-223) where LilyPond falls through to the VerticalAxisGroup's own
+    /// <c>default-staff-staff-spacing</c> (<c>axis-group-interface.cc:1007-1027</c>). Both
+    /// specs declare basic-distance 9, so at rest they agree to the digit; their MINIMA are 7
+    /// and 8, so a compressed page separates them.
+    /// </para>
+    /// </remarks>
+    internal static readonly string OssiaCompressedScoreOssia =
+        OssiaPairScore("OSSK", "ossia", 120);
+
+    /// <summary>The full-size control of the compressed pair — book OSSKN.</summary>
+    internal static readonly string OssiaCompressedScoreNotation =
+        OssiaPairScore("OSSKN", "staff", 120);
 
     /// <summary>
     /// The SAME guitar part alone on a page of its own, as either a tab staff or an ordinary
@@ -3538,6 +3573,71 @@ internal static class LpGeometryProbes
             g => g.ScaledStaffRefpointGap(5, EngravingDefaults.OssiaScale, 5)),
         new("staff.ossia-control.staff-staff-inside", OssiaPairScoreNotation,
             g => g.StaffRefpointGap(5, 5)),
+
+        // THE SAME PAIR ON A PAGE THAT MUST SQUEEZE (books OSSK / OSSKN), which is the only
+        // regime in which an ossia's distance being a SPRING and its being RIGID are two
+        // different numbers. The pair above reads both at 9.000000 and cannot tell them apart;
+        // MultiStaffLayouter.StaffSprings skips an ossia pair outright, and perturbing that
+        // skip on 2026-07-28 moved nothing in the corpus for exactly this reason — every ossia
+        // book in it is one content-sized page at force 0 (HANDOFF 5.3).
+        //
+        // LilyPond's side, measured: an ossia is a `\new Staff`, so its VerticalAxisGroup is
+        // SPACEABLE (it prints aff=() in the same dump) and its distance is solved like any
+        // other staff pair's — OSSK page 1 reads 8.787816 against the ideal 9, and the page's
+        // own system springs confirm it is one force rather than two quantities:
+        // (9 - 8.787816) / 1 == (12 - 11.151264) / 4 == 0.212184 to six digits.
+        //
+        // ⚠️ THE STAFF SPRING'S COMPRESS STRENGTH IS 1 HERE AND 2 IN JSK, and the difference is
+        // the SPEC rather than the regime. JSK's staves are in a PianoStaff, so
+        // Axis_group_interface::calc_maybe_pure_staff_staff_spacing finds a staff-grouper and
+        // returns StaffGrouper.staff-staff-spacing (minimum 7); these have no grouper, so the
+        // same function falls through to the VerticalAxisGroup's own default-staff-staff-spacing
+        // (minimum 8) — axis-group-interface.cc:1007-1027, define-grobs.scm:3352-3355 and
+        // :4237-4239. ⇒ TWO Lily# defects live in these four numbers, not one: the pair is
+        // rigid, AND MultiStaffLayouter hands an ossia pair sp.StaffStaff — the GROUPED spec —
+        // at :130-131 and :222-223, where StaffSpacingParameters.DefaultStaffStaff is the
+        // ported one. Both specs declare basic-distance 9, so the pair at rest cannot see it.
+        //
+        // ⚠️ PAGE 1 ONLY, on both halves. The LAST page of each book prints the PREVIOUS page's
+        // force rather than one of its own (OSSKN's page 3 holds ONE system over 144 units of
+        // slack and still reads page 2's 8.728721719 to nine digits), so a reading taken there
+        // would be pinning an artefact rather than a spring.
+        //
+        // ⚠️ ONE INSTRUMENT FOR BOTH HALVES: the control is read by ScaledPairGapAt with scale
+        // 1.0 rather than by StaffGapAt. The books differ in one word and the readings must
+        // too, or the instrument can move the pair's difference by itself.
+        new("staff.ossia-pair.compressed.staff-staff-inside", OssiaCompressedScoreOssia,
+            g => g.ScaledPairGapAt(0, 5, EngravingDefaults.OssiaScale, 5), EightSystemsPerPage),
+        new("system.ossia-pair.compressed-distance", OssiaCompressedScoreOssia,
+            g => g.ScaledPairGapAt(1, 5, EngravingDefaults.OssiaScale, 5), EightSystemsPerPage),
+        new("page.ossia-pair.compressed.staves-on-first-page", OssiaCompressedScoreOssia,
+            g => g.ScaledPairStavesOnPage(5, EngravingDefaults.OssiaScale, 5), EightSystemsPerPage),
+        new("staff.ossia-control.compressed.staff-staff-inside", OssiaCompressedScoreNotation,
+            g => g.ScaledPairGapAt(0, 5, 1.0, 5), EightSystemsPerPage),
+        new("system.ossia-control.compressed-distance", OssiaCompressedScoreNotation,
+            g => g.ScaledPairGapAt(1, 5, 1.0, 5), EightSystemsPerPage),
+        new("page.ossia-control.compressed.staves-on-first-page", OssiaCompressedScoreNotation,
+            g => g.ScaledPairStavesOnPage(5, 1.0, 5), EightSystemsPerPage),
+
+        // BOTH ENDS OF THE SAME CHAIN, carried for the reason JSK's foot reading is (HANDOFF
+        // 5.3): every gap on a page is a spring's length at that page's force, a force is the
+        // slack over the chain's total strength, and so a fixed term that is wrong at either
+        // END shows up in every gap at once, each scaled by its own spring, with nothing in the
+        // gaps to attribute it to. ⚠️ THIS PAIR NEEDED THEM ON ARRIVAL rather than later: the
+        // control's two gaps are ONE force in Lily# (its staff and system deficits stand at
+        // exactly 1 : 4, nine digits) and one force in LilyPond too — different forces, same
+        // law — so the control's divergence is already known NOT to be a spring and to be a
+        // fixed term. These two readings are what say which end holds it.
+        new("page.ossia-pair.compressed.first-staff-refpoint", OssiaCompressedScoreOssia,
+            g => g.ScaledPairFirstStaffRefpoint(5, EngravingDefaults.OssiaScale, 5),
+            EightSystemsPerPage),
+        new("page.ossia-pair.compressed.last-staff-to-foot", OssiaCompressedScoreOssia,
+            g => g.ScaledPairLastStaffToFoot(5, EngravingDefaults.OssiaScale, 5),
+            EightSystemsPerPage),
+        new("page.ossia-control.compressed.first-staff-refpoint", OssiaCompressedScoreNotation,
+            g => g.ScaledPairFirstStaffRefpoint(5, 1.0, 5), EightSystemsPerPage),
+        new("page.ossia-control.compressed.last-staff-to-foot", OssiaCompressedScoreNotation,
+            g => g.ScaledPairLastStaffToFoot(5, 1.0, 5), EightSystemsPerPage),
 
         // ...and the SAME question one frame out (books TABL / NTL): where a tab staff sits on
         // the PAGE. The pair above reads a distance INSIDE one system, which Align_interface

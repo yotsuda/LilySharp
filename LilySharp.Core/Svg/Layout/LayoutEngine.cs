@@ -679,7 +679,9 @@ internal sealed class LayoutEngine
         // placement — which deliberately includes a grand staff's staves (one group), so
         // an SATB chorale's lyrics still sit below the whole grand staff.
         // ⚠️ "LAST" MEANS THE LAST SPACEABLE GROUP, not the last group in the array, and the
-        // difference is a whole run of the alignment. A text ROW is a group of its own in
+        // difference is a whole run of the alignment. ⚠️ ONLY A TEXT ROW IS UNSPACEABLE here
+        // since 2026-07-28 — an ossia is a staff (see lastSpaceableStaffY below).
+        // A text ROW is a group of its own in
         // Lily#'s model, so counting it would make `staff X with lyrics a` + `lyrics b` put
         // X's syllables in the INTER-GROUP gap while the row is solved below the system —
         // two chains, one room, and the two blocks drawn on top of each other (MEASURED:
@@ -696,7 +698,7 @@ internal sealed class LayoutEngine
             {
                 if (groups[gi].Staves.IsDefaultOrEmpty) continue;
                 foreach (var st in groups[gi].Staves)
-                    if (!st.IsHidden && !st.IsOssia && !textRowStaves.Contains(st.StaffIndex))
+                    if (!st.IsHidden && !textRowStaves.Contains(st.StaffIndex))
                     {
                         lastSpaceableGroup = gi;
                         break;
@@ -724,11 +726,19 @@ internal sealed class LayoutEngine
         // (audit/lp-geometry, lyrics.two-staff.staff-to-lyric), and that 4.009200 is purely
         // the ink floor, 2.050000 + the syllable's 1.459200 + padding 0.500000.
         //
-        // ⚠️ SPACEABLE, which is what excludes a text ROW (a chord or lyrics track) and an
-        // ossia: those carry no staff spring (MultiStaffLayouter.StaffSprings) and LilyPond
-        // never makes them a `last_spaceable_line`. A lead sheet's chord row sits ABOVE the
-        // staff, so taking the bottom-most staff blindly would anchor on the wrong thing on
-        // exactly the scores that have lyrics.
+        // ⚠️ SPACEABLE, which is what excludes a text ROW (a chord or lyrics track): a row
+        // carries no staff spring (MultiStaffLayouter.StaffSprings) and LilyPond never makes
+        // one a `last_spaceable_line`. A lead sheet's chord row sits ABOVE the staff, so
+        // taking the bottom-most staff blindly would anchor on the wrong thing on exactly the
+        // scores that have lyrics.
+        // ⚠️ AN OSSIA IS NOT EXCLUDED, and used to be — on the same false reading corrected in
+        // ClassifySystem: `staff-affinity` is all LilyPond asks
+        // (page-layout-problem.cc:1173-1177 is_spaceable), and an ossia declares none, so an
+        // ossia BELOW a staff is that system's
+        // `last_spaceable_line` and its lyrics hang from IT. ⚠️ MEASURED: moving this predicate
+        // alone changes nothing in the corpus, because every ossia book here puts the ossia
+        // ABOVE. That is a regime and not a proof (HANDOFF 5.3) — the reason it moves with the
+        // rest is that one predicate spelled three ways is one defect (HANDOFF 5.2.1②).
         double lastSpaceableStaffY = 0;
         if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
         {
@@ -738,7 +748,7 @@ internal sealed class LayoutEngine
                 if (group.Staves.IsDefaultOrEmpty) continue;
                 foreach (var st in group.Staves)
                 {
-                    if (st.IsHidden || st.IsOssia || textRowStaves.Contains(st.StaffIndex))
+                    if (st.IsHidden || textRowStaves.Contains(st.StaffIndex))
                         continue;
                     double down = -st.Y;
                     if (!found || down > lastSpaceableStaffY)
@@ -1788,9 +1798,14 @@ internal sealed class LayoutEngine
     /// model" is a Lily# state and not a LilyPond one. It is an EXTENSION of the bail-out
     /// <see cref="BuildLooseChainEnds"/> has carried since the chain existed, not a new kind
     /// of thing, and it goes when the last un-modelled arrangement does: a row between two
-    /// staves, a chords row below one, and an ossia. ⚠️ Until then the flag is what keeps the
+    /// staves and a chords row below one. ⚠️ Until then the flag is what keeps the
     /// reservation and the chain agreeing — <c>LyricReservationBelowSystem</c> reads it too,
     /// because reserving for a line the chain will not place is worse than either.
+    /// </para>
+    /// <para>
+    /// ★ AN OSSIA USED TO BE A THIRD REASON TO DECLINE and is not one since 2026-07-28: it is
+    /// a spaceable staff, so it BRACKETS runs instead of being one. The flag that carried it
+    /// (<c>HasOssia</c>) is gone with its three readers.
     /// </para>
     /// </param>
     private readonly record struct SystemAlignment(
@@ -1798,7 +1813,6 @@ internal sealed class LayoutEngine
         StaffLayout? LastSpaceable,
         ImmutableArray<StaffLayout> Leading,
         ImmutableArray<int> Trailing,
-        bool HasOssia,
         bool UnmodelledRow);
 
     /// <summary>Cuts one system's placed staves into that classification.</summary>
@@ -1809,7 +1823,7 @@ internal sealed class LayoutEngine
         StaffLayout? first = null, last = null;
         var leading = ImmutableArray.CreateBuilder<StaffLayout>();
         var trailing = ImmutableArray.CreateBuilder<int>();
-        bool ossia = false, unmodelled = false;
+        bool unmodelled = false;
 
         foreach (var group in groups)
         {
@@ -1826,7 +1840,15 @@ internal sealed class LayoutEngine
                     else unmodelled = true;
                     continue;
                 }
-                if (st.IsOssia) { ossia = true; continue; }
+                // ⚠️ AN OSSIA IS NOT EXCLUDED HERE, and that one word is what put an ossia
+                // that LEADS a system outside the page's chain entirely — the anchor fell
+                // through to the staff the ossia decorates and the ossia was drawn ABOVE the
+                // page's head, 2.123312 into the top margin (audit/lp-geometry
+                // page.ossia-pair.compressed.first-staff-refpoint, book OSSK).
+                // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 is_spaceable — a line is
+                // spaceable exactly when it has NO `staff-affinity`, and an ossia is a
+                // `\new Staff` whose VerticalAxisGroup declares none (its dump prints aff=()).
+                // Nothing there reads a magnification: a small staff is a staff.
                 // A spaceable staff below a row means that row stood BETWEEN two of them.
                 if (trailing.Count > 0) { unmodelled = true; trailing.Clear(); }
                 double down = -st.Y;
@@ -1836,7 +1858,7 @@ internal sealed class LayoutEngine
         }
 
         return new SystemAlignment(
-            first, last, leading.ToImmutable(), trailing.ToImmutable(), ossia, unmodelled);
+            first, last, leading.ToImmutable(), trailing.ToImmutable(), unmodelled);
     }
 
     /// <summary>
@@ -1942,7 +1964,7 @@ internal sealed class LayoutEngine
             }
             var alignment = ClassifySystem(system.StaffGroups, textRowStaves, lyricsRowStaves);
             perSystem.Add(
-                alignment.HasOssia || alignment.UnmodelledRow || alignment.LastSpaceable is null
+                alignment.UnmodelledRow || alignment.LastSpaceable is null
                     ? Array.Empty<int>()
                     : alignment.Trailing);
         }
@@ -1993,18 +2015,18 @@ internal sealed class LayoutEngine
     /// row below one. Both are <see cref="SystemAlignment.UnmodelledRow"/>.
     /// <para>
     /// ⚠️ STILL NULL WHEN THE ROOM HOLDS SOMETHING THIS CHAIN DOES NOT MODEL, and that is
-    /// the room being unknown rather than an exclusion (§5.2): an ossia is a loose line to
-    /// LilyPond and goes INTO the chain, while Lily# lays it out as a band of its own. A
-    /// chain solved into a room that contains one would be solved into somebody else's
-    /// space. The other case left at force 0 is a block between two staves of one system,
-    /// which <see cref="LyricEngraver"/> keeps out because its closing spring is
-    /// <c>nonstaff-unrelatedstaff-spacing</c> against the next staff's up-skyline
-    /// (:1301-1312) — an input the engraver is not given.
-    /// ⚠️ THE BAIL-OUT IS COARSER THAN IT NEEDS TO BE for the ossia and LilyPond has no
-    /// counterpart for it at all — it always solves. One ossia anywhere in the score drops
-    /// the chain on every system, where per-system would only need to drop the two systems
-    /// whose reference points that ossia stands between. Left that way because no corpus
-    /// point measures an ossia against a lyric block yet.
+    /// the room being unknown rather than an exclusion (§5.2). The case left at force 0 is a
+    /// block between two staves of one system, which <see cref="LyricEngraver"/> keeps out
+    /// because its closing spring is <c>nonstaff-unrelatedstaff-spacing</c> against the next
+    /// staff's up-skyline (:1301-1312) — an input the engraver is not given.
+    /// <para>
+    /// ★ AN OSSIA NO LONGER BAILS OUT AT ALL (2026-07-28), and the bail-out it had was
+    /// written on a false premise twice over: it said an ossia "is a loose line to LilyPond
+    /// and goes INTO the chain, while Lily# lays it out as a band of its own". LilyPond makes
+    /// an ossia SPACEABLE (page-layout-problem.cc:1173-1177 <c>is_spaceable</c> asks only for
+    /// <c>staff-affinity</c>, which a <c>\new Staff</c> has none of), so it BRACKETS a run
+    /// instead of standing in one, and Lily# now agrees. It is a chain END here.
+    /// </para>
     /// </para>
     /// <para>
     /// ★ A TEXT ROW NO LONGER BAILS OUT WHEN IT LEADS THE NEXT SYSTEM (2026-07-27), which is
@@ -2034,8 +2056,7 @@ internal sealed class LayoutEngine
         // Device-DOWN from each system's origin to its FIRST and its LAST spaceable staff's
         // top line — the two ends every chain on the page attaches to. A hidden staff is
         // skipped because hara-kiri leaves it at the current Y with zero height
-        // (MultiStaffLayouter), so it neither draws nor takes room; an ossia makes the whole
-        // score bail out, per the remarks above.
+        // (MultiStaffLayouter), so it neither draws nor takes room.
         //
         // ⚠️ BOTH ARE DERIVED, and the first one is derived even though the guard above
         // makes it 0 today: LilyPond's far end is `-solution_[spring_idx]`, the next
@@ -2058,10 +2079,14 @@ internal sealed class LayoutEngine
             if (systemsArray[s].StaffGroups.IsDefaultOrEmpty) return null;
             var alignment = ClassifySystem(
                 systemsArray[s].StaffGroups, textRowStaves, lyricsRowStaves);
-            // An ossia is a loose line to LilyPond and goes INTO the chain, while Lily# lays
-            // it out as a band of its own; a row this port does not model leaves its room to
-            // somebody else. Either way the room is UNKNOWN, which is the remarks' bail-out.
-            if (alignment.HasOssia || alignment.UnmodelledRow) return null;
+            // A row this port does not model leaves its room to somebody else, so the room is
+            // UNKNOWN — the remarks' bail-out. ⚠️ AN OSSIA USED TO BAIL OUT HERE TOO, on the
+            // reading that it "is a loose line to LilyPond and goes INTO the chain while Lily#
+            // lays it out as a band of its own". BOTH HALVES OF THAT WERE WRONG: an ossia has
+            // no `staff-affinity`, so LilyPond makes it SPACEABLE and it brackets runs rather
+            // than filling them (page-layout-problem.cc:1173-1177 is_spaceable), and since 2026-07-28 Lily#
+            // does the same. It is a chain END here like any other staff.
+            if (alignment.UnmodelledRow) return null;
             if (alignment.FirstSpaceable is not { } firstStaff
                 || alignment.LastSpaceable is not { } lastStaff) return null;
 
@@ -2938,7 +2963,7 @@ internal sealed class LayoutEngine
         // ALIGNMENT MINIMUM like every other line (:593-599).
         var lines = engraver.NoteBoundBlockSkylines(
             score.Lyrics, measureLayouts, startMeasure, endMeasure, lastGroupFirst, total);
-        if (!alignment.HasOssia && !alignment.UnmodelledRow)
+        if (!alignment.UnmodelledRow)
             foreach (int rowStaff in alignment.Trailing)
                 lines.AddRange(engraver.RowBlockSkylines(
                     score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff));
@@ -3041,10 +3066,11 @@ internal sealed class LayoutEngine
     /// picks the Y a non-last group's lyrics hang from; the closing staff is the first
     /// spaceable one below it, wherever in the system it lives.
     /// <para>
-    /// ⚠️ SPACEABLE, the same set as everywhere else in this island: a hidden staff, an ossia
-    /// and a text ROW are not in the page's spring chain
-    /// (<c>MultiStaffLayouter.StaffSprings</c>) and LilyPond never makes one a
-    /// <c>last_spaceable_line</c>.
+    /// ⚠️ SPACEABLE, the same set as everywhere else in this island: a hidden staff and a text
+    /// ROW are not in the page's spring chain (<c>MultiStaffLayouter.StaffSprings</c>) and
+    /// LilyPond never makes one a <c>last_spaceable_line</c>. ⚠️ AN OSSIA IS IN THAT SET since
+    /// 2026-07-28 — it has no <c>staff-affinity</c> and is therefore spaceable
+    /// (page-layout-problem.cc:1173-1177 <c>is_spaceable</c>).
     /// </para>
     /// <para>
     /// ⚠️ NULL WHEN NO SPACEABLE STAFF IS LEFT BELOW THE ANCHOR, AND THAT IS A DIVERGENCE
@@ -3060,7 +3086,7 @@ internal sealed class LayoutEngine
     /// coarse bail-out is left on).
     /// </para>
     /// <para>
-    /// ⚠️ Null ALSO when an ossia or a text row is STRICTLY INSIDE the span (the guard below),
+    /// ⚠️ Null ALSO when a text row is STRICTLY INSIDE the span (the guard below),
     /// and that is the room being unknown rather than an exclusion (§5.2): LilyPond puts
     /// those INTO the chain as loose lines of their own, so a span that steps over one is
     /// somebody else's space. ⚠️ THIS IS THE HALF <see cref="BuildLooseChainEnds"/> NO LONGER
@@ -3091,8 +3117,11 @@ internal sealed class LayoutEngine
         if (groups.IsDefaultOrEmpty) return null;
 
         // Device-DOWN to each SPACEABLE staff's top line, and the anchor's own group; the
-        // lines Lily# lays out as bands of their own — an ossia, a chords or lyrics track —
-        // are collected separately, because whether they matter depends on WHERE they are.
+        // lines Lily# lays out as bands of their own — a chords or lyrics track — are
+        // collected separately, because whether they matter depends on WHERE they are.
+        // ⚠️ AN OSSIA IS NO LONGER ONE OF THEM (2026-07-28). It is spaceable
+        // (page-layout-problem.cc:1173-1177 is_spaceable), so it CLOSES this span like any staff instead of
+        // making the room unknown by standing in it.
         double? anchorDown = null;
         var below = new List<(double Down, int StaffIndex)>();
         var looseBands = new List<double>();
@@ -3104,7 +3133,7 @@ internal sealed class LayoutEngine
             {
                 if (st.IsHidden) continue;
                 double down = -st.Y;
-                if (st.IsOssia || textRowStaves.Contains(st.StaffIndex))
+                if (textRowStaves.Contains(st.StaffIndex))
                 {
                     looseBands.Add(down);
                     continue;

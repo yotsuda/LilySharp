@@ -125,9 +125,15 @@ internal sealed record MeasureLayout
 /// <c>Align_interface</c> already decided, i.e. LilyPond's
 /// <c>minimum_offsets_with_min_dist[i] - minimum_offsets_with_min_dist[last]</c>, and it
 /// reaches the spring through <c>ensure_min_distance</c> (:699-704) rather than as the
-/// distance itself. Since that number is <c>max(skyline + padding, minimum-distance,
-/// basic-distance)</c> it is never BELOW the spec's basic-distance, so at force 0 the
-/// spring is exactly the distance the staves were laid out at.
+/// distance itself.
+///
+/// ⚠️ IT IS <c>max(skyline + padding, minimum-distance)</c> AND basic-distance IS NOT IN IT.
+/// That is the point of the floor: basic-distance is the spring's IDEAL, and folding it in
+/// here would make the spring incompressible (the defect
+/// <c>page.compressed.staff-staff-inside</c> caught in 2026-07-26). The floor is therefore
+/// often BELOW the spec's basic-distance. At force 0 a spring is <c>max(floor, ideal)</c>,
+/// which is exactly the distance the staves were laid out at — asserted for the case the
+/// two could disagree by <c>StaffLayoutFrameTests.UnequalStavesInOneGroup_ArePlacedCentreToCentre</c>.
 /// </remarks>
 /// <param name="UpperStaffIndex">Global index of the upper staff of the pair.</param>
 /// <param name="LowerStaffIndex">Global index of the lower staff of the pair.</param>

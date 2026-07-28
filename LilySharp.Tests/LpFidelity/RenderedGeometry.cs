@@ -342,6 +342,134 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Every staff refpoint on a page whose systems are each an upper staff drawn at
+    /// <paramref name="upperScale"/> over a full-size lower one, top of the page downwards.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The MANY-SYSTEM reading <see cref="ScaledStaffRefpointGap"/> cannot take — that one is
+    /// written for a page holding exactly one such pair and asserts the page's whole line
+    /// count against it — and the SCALED reading <see cref="StaffRefpoints"/> cannot take,
+    /// because an ossia's staff lines are <see cref="StaffLineThickness"/> times the scale and
+    /// the shared selection keys on an exact thickness. Books OSSK / OSSKN need both at once:
+    /// eight systems to a page, each an ossia over its staff.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SCALE AND THE COUNTS ARE PASSED, NOT INFERRED, for the reason
+    /// <see cref="StaffRefpointGap(int, int, int)"/> gives (HANDOFF 5.4): a helper that
+    /// recovered them from the drawing would go on returning a plausible number after the
+    /// defect it exists to measure had changed them. Everything else is asserted — the page's
+    /// total is a whole number of pairs, and each staff's own lines really are
+    /// <paramref name="upperScale"/> and 1.0 apart respectively.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE CONTROL IS READ BY THIS SAME METHOD with <paramref name="upperScale"/> 1.0,
+    /// rather than by <see cref="StaffRefpoints"/>. The pair differs in one word and must
+    /// differ in one word here too: an instrument used on only one half can move the pair's
+    /// difference by itself.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<double> ScaledPairRefpoints(
+        int upperLines, double upperScale, int lowerLines, int page = 0)
+    {
+        double upperThickness = StaffLineThickness * upperScale;
+        var ys = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                            || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9)
+                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
+            .Select(l => l.Y1)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToList();
+
+        int perSystem = upperLines + lowerLines;
+        if (ys.Count == 0 || ys.Count % perSystem != 0)
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff lines, which is not a whole number of "
+                + $"{upperLines} + {lowerLines} systems. Either a system is spelled some other "
+                + "way or the staff-line selection no longer admits the scaled staff."
+                + "\nDrawn geometry:\n" + Describe());
+
+        static double Refpoint(List<double> ys, int from, int count, double space, int page)
+        {
+            for (int k = 0; k < count - 1; k++)
+                if (Math.Abs(ys[from + k + 1] - ys[from + k] - space) > 1e-6)
+                    throw new InvalidOperationException(
+                        $"page {page}: the staff at {ys[from]:F6} does not have lines "
+                        + $"{space:F6} apart, so it is not the staff this reading is about."
+                        + "\nStaff line Ys: "
+                        + string.Join(", ", ys.Select(y => y.ToString("F6"))));
+            return (ys[from] + ys[from + count - 1]) / 2.0;
+        }
+
+        var refpoints = new List<double>();
+        for (int i = 0; i < ys.Count; i += perSystem)
+        {
+            refpoints.Add(Refpoint(ys, i, upperLines, upperScale, page));
+            refpoints.Add(Refpoint(ys, i + upperLines, lowerLines, 1.0, page));
+        }
+        return refpoints;
+    }
+
+    /// <summary>
+    /// One named gap down a page of scaled pairs: even indices are a system's own upper-to-
+    /// lower distance, odd ones the distance from a system's lower staff to the next system's
+    /// upper one.
+    /// </summary>
+    /// <remarks>
+    /// The counterpart of <see cref="StaffGapAt"/> for books OSSK / OSSKN, and it does not
+    /// check uniformity for the same reason: the caller has asserted by index which gap is the
+    /// meaningful one. ⚠️ Pair it with <see cref="ScaledPairStavesOnPage"/> — an index means
+    /// the staff it is supposed to mean only while the page holds the staves the probe assumes
+    /// (HANDOFF 5.0 trap 8).
+    /// </remarks>
+    public double ScaledPairGapAt(
+        int index, int upperLines, double upperScale, int lowerLines, int page = 0)
+    {
+        var refs = ScaledPairRefpoints(upperLines, upperScale, lowerLines, page);
+        if (index < 0 || index + 1 >= refs.Count)
+            throw new InvalidOperationException(
+                $"page {page}: asked for gap {index} but the page holds {refs.Count} staves."
+                + "\nDrawn geometry:\n" + Describe());
+        return refs[index + 1] - refs[index];
+    }
+
+    /// <summary>How many STAVES a page of scaled pairs drew — the count the index reads need.</summary>
+    public int ScaledPairStavesOnPage(
+        int upperLines, double upperScale, int lowerLines, int page = 0) =>
+        ScaledPairRefpoints(upperLines, upperScale, lowerLines, page).Count;
+
+    /// <summary>
+    /// Top paper edge down to the FIRST staff refpoint of a page of scaled pairs — the head of
+    /// the page's spring chain.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT <see cref="FirstStaffRefpoint"/>, and the difference is the whole point on an
+    /// ossia book: the first staff of such a system is the OSSIA, whose lines the ordinary
+    /// selection does not admit at all, so that method would silently answer with the staff
+    /// UNDER it — a different quantity by the very distance the pair is measuring.
+    /// <para>
+    /// Carried for the reason the foot reading below is (HANDOFF 5.3): a force is the page's
+    /// slack over the chain's total strength, so a fixed term that is wrong at either END
+    /// shows up in every gap at once, each scaled by its own spring, and the gaps alone have
+    /// nothing to attribute it to.
+    /// </para>
+    /// </remarks>
+    public double ScaledPairFirstStaffRefpoint(
+        int upperLines, double upperScale, int lowerLines, int page = 0) =>
+        ScaledPairRefpoints(upperLines, upperScale, lowerLines, page)[0];
+
+    /// <summary>
+    /// The LAST staff refpoint of a page of scaled pairs down to the bottom paper edge — the
+    /// foot of the page's spring chain, the counterpart of <see cref="LastStaffRefpointToFoot"/>.
+    /// </summary>
+    public double ScaledPairLastStaffToFoot(
+        int upperLines, double upperScale, int lowerLines, int page = 0) =>
+        PageHeight(page)
+        - ScaledPairRefpoints(upperLines, upperScale, lowerLines, page)[^1];
+
+    /// <summary>
     /// Each system's staff refpoint on <paramref name="page"/>, top down, on a page whose
     /// staves all have <paramref name="linesPerStaff"/> lines — the reading
     /// <see cref="StaffRefpoints"/> cannot take, because it assumes five of them one staff

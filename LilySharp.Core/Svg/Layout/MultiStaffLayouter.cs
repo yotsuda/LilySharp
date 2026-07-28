@@ -117,18 +117,11 @@ internal sealed class MultiStaffLayouter
             if (i < score.StaffGroups.Length - 1)
             {
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — direction-aware staff-affinity spec selection.
+                // ⚠️ ONE HOME FOR THE SELECTION, INCLUDING THE OSSIA CASE — see
+                // InterGroupSpec, which this used to duplicate with a second ossia branch of
+                // its own (HANDOFF 5.2.1②: the port lands on one copy and not the other).
                 var nextGroup = score.StaffGroups[i + 1];
-                var spec = SelectInterGroupSpec(group, nextGroup, sp);
-
-                // An ossia joins the SAME vertical alignment as the staves in LP
-                // (vertical-align-engraver.cc inserts its grob among them), so
-                // the ossia/staff pair gets ordinary staff-staff-spacing — not
-                // the wider between-groups spacing. The distance itself is NOT
-                // scaled with the ossia — align-interface.cc:201-285 has no term
-                // that reads an element's magnification; see the full note on
-                // LayoutStaffGroupsWithSkylines.
-                if (nextGroup.Staves.Any(s => s.IsOssia) || group.Staves.Any(s => s.IsOssia))
-                    spec = sp.StaffStaff;
+                var spec = InterGroupSpec(group, nextGroup, sp);
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
@@ -214,14 +207,32 @@ internal sealed class MultiStaffLayouter
     /// that floors the same distance. Two copies of a spec selection is the shape
     /// HANDOFF 5.2.1 (2) names — the port lands on one of them and not the other.
     /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity-aware selection.
-    /// Ossia/staff pairs share one alignment in LilyPond, so they take ordinary
-    /// staff-staff-spacing (the CALLER then scales the distance — see CalculateSystemHeight).
+    /// <para>
+    /// ⚠️ AN OSSIA PAIR HAS NO SPECIAL SPEC, and it had one until 2026-07-28: the pair was
+    /// substituted to <c>sp.StaffStaff</c>, the GROUPER's spec. LilyPond reads the spec off
+    /// the upper staff and falls through to that staff's own
+    /// <c>default-staff-staff-spacing</c> when it has no <c>staff-grouper</c>
+    /// (LILYPOND-REF: lily/axis-group-interface.cc:1007-1027 calc_maybe_pure_staff_staff_spacing),
+    /// whose <c>grouper</c> branch returns
+    /// <c>staff-staff-spacing</c> / <c>staffgroup-staff-spacing</c> and whose fall-through
+    /// returns <c>default-staff-staff-spacing</c> — and an ossia is a bare <c>\new Staff</c>
+    /// with no grouper — so it takes the fall-through, which
+    /// <see cref="SelectInterGroupSpec"/> already selects for a <c>Single</c> group.
+    /// ⚠️ THE TWO SPECS DECLARE THE SAME basic-distance 9 and differ in their MINIMA (7
+    /// against 8), so no reading at rest can tell them apart and removing the substitution
+    /// moves nothing until a page squeezes — MEASURED, on its own it moved no entry and no
+    /// snapshot. It is half of one quantity with the spring above, not an independent change.
+    /// </para>
+    /// <para>
+    /// ⚠️ WITH THE OSSIA BRANCH GONE THIS FORWARDS TO <see cref="SelectInterGroupSpec"/> AND
+    /// NOTHING ELSE. It is kept as the name its four call sites use for "the spec for a pair
+    /// straddling two groups", and because this is where that decision is recorded; merging
+    /// the two is a rename and not a behaviour change, for whoever wants one name.
+    /// </para>
     /// </remarks>
     private static VerticalSpacingSpec InterGroupSpec(
         StaffGroup upper, StaffGroup lower, StaffSpacingParameters sp)
-        => upper.Staves.Any(s => s.IsOssia) || lower.Staves.Any(s => s.IsOssia)
-            ? sp.StaffStaff
-            : SelectInterGroupSpec(upper, lower, sp);
+        => SelectInterGroupSpec(upper, lower, sp);
 
     /// <summary>
     /// Estimates pure system height including content-dependent loose line extents.
@@ -521,6 +532,7 @@ internal sealed class MultiStaffLayouter
         anyVisible = false;
         int lastVisibleIndex = -1;
         double lastVisibleHeight = 0;
+        Staff? lastVisibleStaff = null;
 
         for (int i = 0; i < group.Staves.Length; i++)
         {
@@ -548,12 +560,23 @@ internal sealed class MultiStaffLayouter
                 // the staff about to be placed misplaces every group whose staves are not
                 // all the same height (an ossia or tab staff under a normal one); it was
                 // invisible while this loop only ever ran on equal-height staves.
+                // ★ AND THE SPAN IS THE REFPOINT SPAN, not that height (2026-07-28). What
+                // StaffGap subtracts is the distance from the upper staff's REFERENCE POINT
+                // down to the lower staff's — the frame every alignment distance is in
+                // (LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations,
+                // whose dy runs between reference points). Passing the upper staff's whole
+                // height instead made this loop treat a centre-to-centre distance as a
+                // top-to-top one, so two staves of DIFFERENT heights in one group landed
+                // (lower - upper) / 2 out — 1.750000 for a six-string tab staff over an
+                // ordinary one. The inter-group path already passed the span (GapSpan), so the
+                // same parameter carried two different quantities depending on the caller;
+                // that is what forced StaffSprings to RECONSTRUCT the alignment minimum
+                // instead of asking for it (HANDOFF 5.2.1②).
                 // ⚠️ A TEXT ROW IS NEVER IN THIS LOOP — RenderSpec gives every chords/lyrics
-                // track a Single group of its own — so the refpoint span this island needed
-                // (RefpointSpanToGap) has no call site here, and the nominal height stands
-                // with the tab/ossia defect it carries (HANDOFF 1).
+                // track a Single group of its own — so `chordGridSheet` cannot be read here.
+                double span = RefpointSpanToGap(lastVisibleStaff!, staff, chordGridSheet: false);
                 double gap = StaffGap(
-                    staffSpec, lastVisibleHeight, staffSkylines, lastVisibleIndex, globalIndex);
+                    staffSpec, span, staffSkylines, lastVisibleIndex, globalIndex);
                 currentY -= lastVisibleHeight + gap;
             }
 
@@ -568,25 +591,33 @@ internal sealed class MultiStaffLayouter
             anyVisible = true;
             lastVisibleIndex = globalIndex;
             lastVisibleHeight = thisStaffHeight;
+            lastVisibleStaff = staff;
         }
 
         return staffLayouts;
     }
 
     /// <summary>
-    /// The distance below <paramref name="upperStaffHeight"/>'s staff at which the next one
-    /// sits: the skyline-aware gap when skylines exist, and the spec's basic-distance when
-    /// they do not. See <see cref="StackStaves"/> for when the fallback is taken.
+    /// The gap between the bottom of one staff and the top of the next: the skyline-aware
+    /// distance when skylines exist, and the spec's basic-distance when they do not. See
+    /// <see cref="StackStaves"/> for when the fallback is taken.
     /// </summary>
+    /// <param name="refpointSpan">
+    /// From the upper staff's REFERENCE POINT down to the lower staff's — what has to come
+    /// off a centre-to-centre alignment distance to leave a gap between their edges.
+    /// ⚠️ ONE QUANTITY AT BOTH CALL SITES since 2026-07-28. The stacking loop used to pass
+    /// the upper staff's whole HEIGHT here while the inter-group path passed the span, so the
+    /// same parameter meant two things and only agreed while every pair had equal heights.
+    /// </param>
     private static double StaffGap(
-        VerticalSpacingSpec spec, double upperStaffHeight,
+        VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
         IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
         => staffSkylines is null
-            ? Math.Max(0, spec.BasicDistance - upperStaffHeight)
+            ? Math.Max(0, spec.BasicDistance - refpointSpan)
             : CalculateStaffGapWithSkylines(
-                spec, upperStaffHeight, staffSkylines, upperStaffIndex, lowerStaffIndex,
+                spec, refpointSpan, staffSkylines, upperStaffIndex, lowerStaffIndex,
                 looseLines);
 
     /// <summary>Nothing ever dies — the filter for a score with no hara-kiri in it.</summary>
@@ -1750,38 +1781,30 @@ internal sealed class MultiStaffLayouter
     /// hidden.</item>
     /// <item>HIDDEN staves are gone from LilyPond's element list too
     /// (<c>filter_dead_elements</c>, :589).</item>
-    /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid, and this is now the LAST of the
-    /// ossia island. ⚠️ THE STATED BLOCKER IS GONE AS OF 2026-07-28: the reason written here
-    /// was that Lily# spaced an ossia at <c>gap * OssiaScale</c>, which landed BELOW the
-    /// spec's basic-distance, so a spring built from that spec would pull the pair apart at
-    /// force 0 — and "closing that needs the ossia distance itself ported first". That port
-    /// is done; the pair now sits ON the spec (<c>staff.ossia-pair.staff-staff-inside</c>
-    /// reads 9.000000 on both sides).
+    /// <item>★ AN OSSIA PAIR IS SPRUNG LIKE ANY OTHER, since 2026-07-28. It used to be
+    /// skipped here and left rigid, which cost +0.212184 on a squeezing page
+    /// (<c>staff.ossia-pair.compressed.staff-staff-inside</c>, book OSSK) and, through the
+    /// force that rigidity refuses, showed up in every other spring on that page.
     /// <para>
-    /// ⚠️ DO NOT READ THAT AS "the skip is inert". Deleting these two lines leaves the whole
-    /// suite green — 3444 tests, no snapshot and no ledger entry moves — because EVERY ossia
-    /// book in the corpus is a content-sized single page solving at force 0. Measured on a
-    /// 70-space page that actually compresses (2026-07-28), the skip is worth this, in
-    /// refpoint gaps down one page, with the same music spelled both ways:
-    /// <code>
-    ///   ossia, skip kept   pair 9.000000   system 12.749239   (pair RIGID)
-    ///   ossia, skip gone   pair 8.350000   system 17.350000
-    ///   control (2 staves) pair 8.491718   system  9.966872
-    /// </code>
-    /// The rigid pair refuses its share and the slack lands on the system spring — 12.749239
-    /// against the control's 9.966872, which is HANDOFF 5.3's "a spring that cannot move
-    /// shows up in every other spring".
+    /// ⚠️ THE SKIP WAS NEVER ONE QUANTITY, and deleting the two lines alone made the book
+    /// WORSE, not better — measured: the pair fell to 8.350000 and the system spring flew to
+    /// 17.350000 against LilyPond's 8.787816 / 11.151264, because the placement still put the
+    /// ossia outside the chain while the chain now had a spring for it. THREE THINGS ARE ONE
+    /// PORT, and the corpus only lands when all three are in:
+    /// <list type="number">
+    /// <item>this spring;</item>
+    /// <item>the SPEC (<see cref="InterGroupSpec"/>) — an ossia has no staff-grouper, so
+    /// LilyPond falls through to <c>default-staff-staff-spacing</c> and compresses at
+    /// strength 1, not the grouper's 2;</item>
+    /// <item>SPACEABILITY itself (<c>LayoutEngine.ClassifySystem</c> and the two other
+    /// spellings of that predicate) — without it the page's anchor skips a LEADING ossia and
+    /// the ossia is drawn into the top margin.</item>
+    /// </list>
     /// </para>
     /// <para>
-    /// ⚠️ AND THE TWO-LINE DELETION IS NOT THE PORT EITHER: without the skip the pair lands
-    /// on 8.350000 where its control solves to 8.491718, so it is not being solved the way an
-    /// ordinary pair is. The rest of "an ossia is not spaceable" is still in place —
-    /// <c>LayoutEngine</c>'s last-spaceable-group scan and <c>lastSpaceableStaffY</c>,
-    /// <c>ClassifySystem</c>, <c>ComputeBetweenStavesEnd</c>, <c>PageLayouter</c> and
-    /// <c>LyricEngraver</c> all exclude it — and LilyPond's ossia is spaceable in all of
-    /// them, which also widens <c>staff-refpoint-extent</c> (probe book LYROS reads
-    /// 18.000000 against Lily#'s two-staff span). Those move TOGETHER or the frame splits
-    /// (HANDOFF 5.2.1②), and nothing measures that span yet. ⇒ The point comes first.
+    /// ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: <c>staff-refpoint-extent</c>
+    /// spans only spaceable staves in LilyPond too, so probe book LYROS reads 18.000000 where
+    /// Lily# reads a two-staff span. Nothing measures it yet.
     /// </para></item>
     /// </list>
     /// </para>
@@ -1818,38 +1841,37 @@ internal sealed class MultiStaffLayouter
                 continue;
             if (upper.Layout.IsHidden || lower.Layout.IsHidden)
                 continue;
-            if (upper.Staff.IsOssia || lower.Staff.IsOssia)
-                continue;
-
+            // ⚠️ NO OSSIA SKIP. An ossia pair is sprung like any other spaceable pair, and
+            // the two lines that used to skip it here were worth +0.212184 on a page that
+            // squeezes (audit/lp-geometry staff.ossia-pair.compressed.staff-staff-inside,
+            // book OSSK: a rigid spring prints its ideal 9.000000 whatever force the page
+            // solves, where LilyPond compresses to 8.787816).
+            // LILYPOND-REF: lily/page-layout-problem.cc:660-672 — append_system's loop springs
+            // between consecutive is_spaceable elements, and :1173-1177 is_spaceable asks only
+            // whether the grob declares a `staff-affinity`. An ossia is a `\new Staff` and
+            // declares none.
             var spec = upper.GroupIndex == lower.GroupIndex
                 ? sp.StaffStaff
                 : InterGroupSpec(upper.Group, lower.Group, sp);
 
-            // Refpoint to refpoint, the frame every vertical spring in LilyPond works in.
-            // Taken as the DRAWN distance minus whatever basic-distance added to it, rather
-            // than as the alignment minimum directly: the two are computed in the layout's
-            // staff-TOP frame, and only their difference is a pure length. Converting the
-            // minimum itself would be off by half the difference of the two staff heights,
-            // which is 0 between two ordinary staves and 0.25 above a four-string tab staff
-            // — enough to move it at force 0, on pages that are not being spaced at all.
-            // ⚠️ NOT A LITERAL PORT, and the deviation is here rather than hidden:
-            // LilyPond takes this number straight out of the vector Align_interface
-            // returns (page-layout-problem.cc:699-704 indexes
-            // minimum_offsets_with_min_dist). Lily# RECONSTRUCTS it because the layout
-            // keeps its answer in the staff-TOP frame and never materialises the
-            // refpoint-frame translations at all. The literal port is to make the layout
-            // produce and keep them — align-interface.cc:162-285
-            // internal_get_minimum_translations returns translates[] — and feed the same
-            // vector to the placement AND to these springs. That is a structural change
-            // (HANDOFF 2D), not a rewrite of this line.
-            // ⚠️ THE SAME LOOSE LINES THE PLACEMENT WALKED, or the reconstruction above is
-            // being done against a different alignment from the one that drew the staves —
-            // and since `minimum` is DERIVED from `drawn`, the two disagreeing would leave
-            // the block a room it does not fit.
-            double drawn = StaffRefpoint(upper.Layout) - StaffRefpoint(lower.Layout);
-            double minimum = drawn - Math.Max(0, spec.BasicDistance - AlignmentMinimumWithSkylines(
+            // Refpoint to refpoint, the frame every vertical spring in LilyPond works in, and
+            // asked for DIRECTLY: this is the number LilyPond indexes out of
+            // Align_interface's vector.
+            // LILYPOND-REF: lily/page-layout-problem.cc:699-704 minimum_offsets_with_min_dist
+            // — the spring's floor is that vector's [i] - [i+1], i.e. the alignment's own
+            // minimum translation for the pair, NOT the distance the staves were drawn at.
+            // ★ IT USED TO BE RECONSTRUCTED — `drawn - max(0, basic - minimum)` — because the
+            // placement worked in the staff-TOP frame and the two only agreed up to half the
+            // difference of the two staff heights. Both call sites of StaffGap now pass the
+            // refpoint span, so the drawn distance IS the alignment answer and the
+            // reconstruction had nothing left to correct. Verified byte-identical across the
+            // suite and the ledger; what it removes is a Lily#-only expression, not a number.
+            // ⚠️ THE SAME LOOSE LINES THE PLACEMENT WALKED, or this floor is computed against
+            // a different alignment from the one that drew the staves, and the block would be
+            // solved into a room it does not fit.
+            double minimum = AlignmentMinimumWithSkylines(
                 spec, staffSkylines, upper.Layout.StaffIndex, lower.Layout.StaffIndex,
-                looseLines?.Invoke(upper.Layout.StaffIndex, lower.Layout.StaffIndex)));
+                looseLines?.Invoke(upper.Layout.StaffIndex, lower.Layout.StaffIndex));
             builder.Add(new StaffSpring(
                 upper.Layout.StaffIndex, lower.Layout.StaffIndex, spec, minimum));
         }
@@ -2205,26 +2227,28 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
     ///
-    /// Formula: gap = max(skyline_distance + padding, minimum_distance, basic_distance) - upper_staff_height
+    /// Formula: gap = max(skyline_distance + padding, minimum_distance, basic_distance) - refpoint_span
     ///
     /// The skyline distance gives the minimum center-to-center distance needed to avoid collisions.
     /// We then take the maximum of that (with padding), the minimum-distance, and basic-distance,
-    /// then subtract the upper staff height to get the gap between bottom of upper and top of lower.
+    /// then subtract the REFPOINT SPAN — the two staves' own half spans — to get the gap between
+    /// bottom of upper and top of lower. Subtracting the upper staff's whole height instead is
+    /// the same number only when both staves are the same height; see <see cref="StaffGap"/>.
     /// </remarks>
     private static double CalculateStaffGapWithSkylines(
-        VerticalSpacingSpec spec, double upperStaffHeight,
+        VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
         IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? looseLines = null)
     {
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
-            return Math.Max(0, spec.BasicDistance - upperStaffHeight);
+            return Math.Max(0, spec.BasicDistance - refpointSpan);
 
         var upperDown = staffSkylines[upperStaffIndex].Down;
         var lowerUp = staffSkylines[lowerStaffIndex].Up;
 
         if (upperDown.IsEmpty || lowerUp.IsEmpty)
-            return Math.Max(0, spec.BasicDistance - upperStaffHeight);
+            return Math.Max(0, spec.BasicDistance - refpointSpan);
 
         // The distance a staff is DRAWN at is the page spring at rest, and a spring at rest
         // is max(its floor, its ideal) — so basic-distance enters here as the IDEAL and the
@@ -2247,7 +2271,7 @@ internal sealed class MultiStaffLayouter
             AlignmentMinimumWithSkylines(
                 spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines));
 
-        return Math.Max(0, centerToCenter - upperStaffHeight);
+        return Math.Max(0, centerToCenter - refpointSpan);
     }
 
     /// <summary>

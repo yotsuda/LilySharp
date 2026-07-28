@@ -2820,6 +2820,111 @@ probeTag =
   }
 }
 
+%% OSSK / OSSKN — IS AN OSSIA'S SPRING IN THE PAGE'S CHAIN?  The pair that decides whether
+%%     MultiStaffLayouter.StaffSprings' skip of an ossia pair is a DEFECT or a PORT. It is
+%%     OSSU/OSSUN with two things changed and nothing else: 120 bars instead of 8, and a
+%%     page that must SQUEEZE them. Same nesting, same alignAboveContext, same fontSize -3
+%%     with StaffSymbol.staff-space and thickness at magstep -3, same g'/a' kept inside the
+%%     staff so the ink decides nothing.
+%%
+%%     WHY THE PAIR AT REST COULD NOT ANSWER IT. OSSU/OSSUN are one page with slack, so both
+%%     springs sit at their ideal — and a RIGID pair and a SOLVED one both read 9.000000
+%%     there. Lily#'s skip was measured by perturbation on 2026-07-28 and moved NOTHING,
+%%     because every ossia book in the corpus is a single content-sized page at force 0
+%%     (HANDOFF 5.3: "perturbed and nothing moved" can be a regime rather than a death).
+%%     This is the regime where the two readings come apart.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0):
+%%       (a) OSSK inside < 9.000000. An ossia is a `\new Staff`, so it is a SPACEABLE staff
+%%           and every consecutive spaceable pair gets a spring.
+%%       (b) the falsifier is inside the same dump, one force per page, as JSK's is:
+%%           (9 - inside) / 2 == (12 - system-to-system) / 4 to six digits.
+%%       (c) neither reading may sit on its floor or it measures ink and not the spring:
+%%           OSSK's alignment minimum is the ossia's scaled clef 2.510179 + the staff's
+%%           3.800000 + padding 1 = 7.310179, OSSKN's is 3.550000 + 3.800000 + 1 = 8.350000.
+%%       (d) OSSKN is the like-for-like control and is NOT expected to print OSSK's number:
+%%           the ossia's ink is smaller, so its systems are shorter, its page keeps a
+%%           different slack and solves a different force. What must hold on BOTH is (b).
+%%
+%%     MEASURED 2026-07-28 — (a), (c) AND (d) HELD; (b) MISSED, AND THE MISS NAMES THE SPEC.
+%%       OSSK  page 1 (8 systems): inside 8.787816   system-to-system 11.151264
+%%       OSSKN page 1 (8 systems): inside 8.786452   system-to-system 11.145808
+%%     Each page is one force, but the STAFF spring's compress strength is 1, not the 2 the
+%%     prediction borrowed from JSK:
+%%       OSSK  (9 - 8.787816) / 1 = 0.212184 == (12 - 11.151264) / 4 = 0.212184
+%%       OSSKN (9 - 8.786452) / 1 = 0.213548 == (12 - 11.145808) / 4 = 0.213548
+%%     ⇒ ★ THIS PAIR IS NOT SPACED BY THE SPEC JSK IS. JSK's staves are in a PianoStaff, so
+%%     Axis_group_interface::calc_maybe_pure_staff_staff_spacing finds a staff-grouper and
+%%     hands back StaffGrouper.staff-staff-spacing — basic 9, minimum 7, stretchability 5,
+%%     so compress strength = 9 - 7 = 2 (axis-group-interface.cc:1007-1027 is the lookup,
+%%     define-grobs.scm:3352-3355 the values). These two staves have NO grouper, so the same
+%%     function falls through to the VerticalAxisGroup's own default-staff-staff-spacing —
+%%     basic 9, minimum 8, padding 1, NO stretchability declared — and compress strength is
+%%     9 - 8 = 1 (define-grobs.scm:4237-4239). The measured 1 IS that fall-through, and an
+%%     ossia takes it because an ossia is a bare `\new Staff` and not a group.
+%%
+%%     ⇒ THE FORK, both branches written before the number existed:
+%%       inside < 9 with (b) holding ⇒ the ossia's spring is an ordinary staff spring in
+%%         LilyPond's chain, Lily#'s skip is a DEFECT, and the port has a measured target.
+%%         ★ THIS IS THE BRANCH THAT FIRED.
+%%       inside == 9.000000 on a page whose system springs did compress ⇒ LilyPond holds it
+%%         rigid too, the skip is a PORT, and the open item closes without being ported.
+%%
+%%     ⇒ ★★ AND THE SAME DUMP NAMES A SECOND DEFECT THE PAIR AT REST COULD NOT SEE. Lily#
+%%     already ports default-staff-staff-spacing exactly — StaffSpacingParameters
+%%     .DefaultStaffStaff is 9 / 8 / 1 / absent, and its own remarks say "the COMPRESS
+%%     strengths do differ (ideal - minimum-distance = 1 here against 2.5), which a
+%%     compressed page would see — no corpus point measures that yet". This is that point.
+%%     But MultiStaffLayouter overrides the spec to sp.StaffStaff — the GROUPED one —
+%%     whenever either side is an ossia (:130-131, :222-223). At force 0 the two specs agree,
+%%     because only the basic-distance 9 is ever read; on this page they cannot, because one
+%%     minimum is 7 and the other is 8. ⇒ Dropping the spring skip is NOT the whole port:
+%%     the ossia pair must also stop taking the grouper's spec.
+%%
+%%     ⚠️ READ PAGE 1 ONLY, and no entry here may read another. The LAST page of each book
+%%     prints the PREVIOUS page's force rather than one of its own: OSSKN's page 3 carries
+%%     ONE system over 144 units of foot slack and still reads 8.728721719, page 2's number
+%%     to nine digits, and OSSK's 7-system last page reads page 1's 8.787815898. Whatever
+%%     that is — the systems of an unjustified last page are evidently not re-solved — it is
+%%     not a spring solution, and a point that read it would be pinning an artefact.
+%%
+%%     ⚠️ `max-systems-per-page = #8` is what the breaker picks unaided on BOTH books
+%%     (measured with no paper block at all before it was pinned). It is written down for the
+%%     reason JSK's is: so the entries stay measurements of the spring and cannot silently
+%%     become measurements of the page breaker.
+\book {
+  \probeTag "OSSK"
+  \paper { max-systems-per-page = #8 indent = 0 }
+  \score {
+    \new Staff = "main" <<
+      \new Voice { \repeat unfold 120 { g'4 a' g' a' } }
+      \new Staff \with {
+        \remove "Time_signature_engraver"
+        alignAboveContext = "main"
+        fontSize = #-3
+        \override StaffSymbol.staff-space = #(magstep -3)
+        \override StaffSymbol.thickness = #(magstep -3)
+      } { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+%% OSSKN — THE CONTROL: the same nesting, the same alignAboveContext, the same paper, a
+%%     FULL-SIZE staff. One word apart from OSSK, exactly as OSSUN is from OSSU.
+\book {
+  \probeTag "OSSKN"
+  \paper { max-systems-per-page = #8 indent = 0 }
+  \score {
+    \new Staff = "main" <<
+      \new Voice { \repeat unfold 120 { g'4 a' g' a' } }
+      \new Staff \with {
+        \remove "Time_signature_engraver"
+        alignAboveContext = "main"
+      } { \repeat unfold 120 { g'4 a' g' a' } }
+    >>
+  }
+}
+
 %% NTL — THE CONTROL. Identical to TABL except that the staff is an ordinary Staff, so it is
 %%     the same music on the same paper with the same page springs, and its reading is the
 %%     number TABL is compared against. Carrying it rather than leaning on book L (which is
