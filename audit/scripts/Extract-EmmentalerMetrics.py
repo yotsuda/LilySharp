@@ -317,6 +317,14 @@ def main() -> int:
     lines.append("    // through the TEXT path (Pango over the outline), where LILC is never read.")
     lines.append("    // For horizontal positioning of the next glyph use the corresponding")
     lines.append("    // ...Advance constant, taken from hmtx as LilyPond takes it.")
+    lines.append("    //")
+    lines.append("    // ...and each glyph ALSO gets a `...Outline` box, which is what a SKYLINE is")
+    lines.append("    // built from. LilyPond keeps the two apart: the extent is the designed (LILC)")
+    lines.append("    // box and the skyline is the curves' own bounds")
+    lines.append("    // (lily/stencil-integral.cc:535-563 add_named_glyph_segments). They coincide")
+    lines.append("    // only for a glyph that fills its box — a notehead does (0.001), the G clef")
+    lines.append("    // does not (0.024 of slack above), the F clef least of all (0.448 below).")
+    lines.append("    // ⚠️ Use the EXTENT for widths and positions, the OUTLINE only for skylines.")
     lines.append("")
     def outline_bbox(glyph: str):
         pen = BoundsPen(glyphSet)
@@ -354,6 +362,19 @@ def main() -> int:
         lines.append(f"    /// <summary>{spec.summary} — BBox ({kind}).</summary>")
         lines.append(f"    /// <remarks>LILYPOND-REF: {cite(spec)}</remarks>")
         lines.append(f"    public static readonly BBox {spec.csharp_name} = new({fmt(L)}, {fmt(B)}, {fmt(R)}, {fmt(T)});")
+        # ...and the box a SKYLINE is built from, which is a different box.
+        # LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments — the
+        # skyline is built from the glyph OUTLINE (get_glyph_outline_bbox), not from the
+        # extent, and the two coincide only for a glyph that fills its designed box.
+        skybox = outline_bbox(spec.glyph)
+        if skybox is not None:
+            SL, SB, SR, ST = skybox
+            lines.append(f"    /// <summary>{spec.summary} — the box its SKYLINE is built from"
+                         " (glyph outline).</summary>")
+            lines.append("    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563"
+                         " add_named_glyph_segments.</remarks>")
+            lines.append(f"    public static readonly BBox {spec.csharp_name}Outline"
+                         f" = new({fmt(SL)}, {fmt(SB)}, {fmt(SR)}, {fmt(ST)});")
         lines.append(f"    /// <summary>{spec.summary} — advance width (next-glyph horizontal feed).</summary>")
         lines.append(f"    public const double {spec.csharp_name}Advance = {fmt(adv_ss)};")
         lines.append("")

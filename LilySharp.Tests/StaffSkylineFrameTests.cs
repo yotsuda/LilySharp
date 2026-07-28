@@ -121,10 +121,16 @@ public class StaffSkylineFrameTests
         var withoutClef = Build(staff);
 
         // The treble clef sits on the G line — staff position -2, i.e. one staff space below
-        // the middle — and its ink box is the font's own.
+        // the middle — and the box a SKYLINE takes is its OUTLINE, not its extent.
+        // LILYPOND-REF: scm/define-grobs.scm:902 Clef grob::always-vertical-skylines-from-stencil
+        // ⚠️ NOT GlyphMetrics.ClefG, which is the designed LILC box the grob's EXTENT is: they
+        // differ by 0.024 at the top and 0.010 at the bottom, and LilyPond dumps both at once
+        // (audit/lp-geometry/probes/glyph-skyline.ly reads ext=(-2.550 . 4.800) against
+        // skyline=(-2.540 . 4.776)). Reading the extent here would assert the box LilyPond
+        // lays out with against the skyline LilyPond spaces with.
         const double gLine = -1.0;
-        double clefTop = gLine + GlyphMetrics.ClefG.Top;
-        double clefBottom = gLine + GlyphMetrics.ClefG.Bottom;
+        double clefTop = gLine + GlyphMetrics.ClefGOutline.Top;
+        double clefBottom = gLine + GlyphMetrics.ClefGOutline.Bottom;
 
         Assert.Equal(clefTop, withClef.Up.MaxHeight(), 9);
         Assert.Equal(clefBottom, withClef.Down.MaxHeight(), 9);

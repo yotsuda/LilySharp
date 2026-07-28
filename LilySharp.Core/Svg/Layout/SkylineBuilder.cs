@@ -376,17 +376,26 @@ internal sealed class SkylineBuilder
     /// clef's box. Both are centred on the middle line and the C clef is the taller, so
     /// this over-reserves rather than under-reserves — a KNOWN approximation, and the one
     /// clef here whose extent is not the font's own.
+    /// <para>
+    /// ⚠️ THE OUTLINE BOX, NOT THE EXTENT, because this feeds a SKYLINE.
+    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 <c>add_named_glyph_segments</c> builds a
+    /// glyph's skyline from <c>get_glyph_outline_bbox</c> while the grob's extent stays the
+    /// designed LILC box, and the two differ by more than a rounding here: the G clef's
+    /// outline stops 0.024 below its box's top and the F clef's 0.448 above its box's bottom.
+    /// MEASURED against LilyPond's own dump of both — audit/lp-geometry/probes/glyph-skyline.ly
+    /// reads <c>ext=(-2.550 . 4.800) skyline=(-2.540 . 4.776)</c> for the G clef.
+    /// </para>
     /// </remarks>
     private static (GlyphMetrics.BBox Box, double AboveMiddle) ClefInk(ClefType clef) => clef switch
     {
-        ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefF, 1.0),
-        ClefType.Alto => (GlyphMetrics.ClefC, 0.0),
-        ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
-        ClefType.Soprano => (GlyphMetrics.ClefC, -2.0),
-        ClefType.MezzoSoprano => (GlyphMetrics.ClefC, -1.0),
-        ClefType.Baritone => (GlyphMetrics.ClefC, 2.0),
-        ClefType.Percussion => (GlyphMetrics.ClefC, 0.0),
-        _ => (GlyphMetrics.ClefG, -1.0),
+        ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefFOutline, 1.0),
+        ClefType.Alto => (GlyphMetrics.ClefCOutline, 0.0),
+        ClefType.Tenor => (GlyphMetrics.ClefCOutline, 1.0),
+        ClefType.Soprano => (GlyphMetrics.ClefCOutline, -2.0),
+        ClefType.MezzoSoprano => (GlyphMetrics.ClefCOutline, -1.0),
+        ClefType.Baritone => (GlyphMetrics.ClefCOutline, 2.0),
+        ClefType.Percussion => (GlyphMetrics.ClefCOutline, 0.0),
+        _ => (GlyphMetrics.ClefGOutline, -1.0),
     };
 
     /// <remarks>
@@ -1130,7 +1139,7 @@ internal sealed class SkylineBuilder
                     chord.Notes,
                     ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
                 {
-                    var accBox = GlyphMetrics.GetAccidentalBBox(al.Accidental);
+                    var accBox = GlyphMetrics.GetAccidentalSkylineBBox(al.Accidental);
                     // Head Y in the skyline's Y-up frame: staff-position → staff-spaces
                     // above the middle (pos*0.5), then to the skyline origin (staff top).
                     double accHeadY = al.StaffPosition * 0.5 + staffMiddleUp;
@@ -1172,7 +1181,10 @@ internal sealed class SkylineBuilder
         string accidental, double headX, double headY,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
-        var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
+        // The OUTLINE box: an Accidental's skyline is built from its stencil, unlike the
+        // NoteHead below it.
+        // LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil
+        var bbox = GlyphMetrics.GetAccidentalSkylineBBox(accidental);
         double right = headX - GlyphMetrics.AccidentalNoteGap;
         // headY is Y-up; BBox Top/Bottom are up-positive so they ADD.
         MergeAccidentalInk(right - bbox.Width, right,
@@ -1257,6 +1269,15 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents —
         //   the extents are the stencil's, and lily/open-type-font.cc:288,389-407 takes
         //   those from LILC. ec7a2254 moved the X axis onto the same table.
+        // ⚠️ THE EXTENT, DELIBERATELY, and it is not the same choice the Clef and the
+        // Accidental make a few lines away: NoteHead declares NO vertical-skylines, so it
+        // falls to the default above, while Clef and Accidental ask for skylines from their
+        // STENCIL and therefore get the glyph outline.
+        // LILYPOND-REF: scm/define-grobs.scm:2595 NoteHead — no vertical-skylines entry, so grob::simple-vertical-skylines-from-extents applies
+        // MEASURED, LilyPond dumping both for one glyph
+        // (audit/lp-geometry/probes/glyph-skyline.ly): the notehead reports 0.545 for its
+        // extent AND its skyline, while its outline stops at 0.544 — so seeding the outline
+        // here would be an invention that happens to land 0.001 away.
         var headBox = GlyphMetrics.GetNoteheadBBox(noteValue);
 
         // Notehead bounding box (head spans noteUp + the glyph's ink in the up frame).

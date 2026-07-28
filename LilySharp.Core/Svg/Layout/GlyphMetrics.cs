@@ -442,6 +442,43 @@ internal static partial class GlyphMetrics
         _ => NoteheadBlack
     };
 
+    // ========== The boxes a SKYLINE is built from ==========
+    // A grob's skyline is NOT always its extent, and WHICH it is, is declared per grob.
+    // LILYPOND-REF: scm/define-grobs.scm — Clef:902 and Flag:1625 take
+    // `grob::always-vertical-skylines-from-stencil`, Accidental:35 and Rest:2958 take
+    // `grob::unpure-vertical-skylines-from-stencil`; NoteHead:2595, StaffSymbol:3391 and
+    // Dots:1272 declare nothing and fall to the default,
+    // LILYPOND-REF: lily/grob.cc:85-89 `simple_vertical_skylines_from_extents`.
+    // A from-stencil skyline is built from the glyph's OUTLINE
+    // (LILYPOND-REF: lily/stencil-integral.cc:535-563 `add_named_glyph_segments`, which
+    // takes `get_glyph_outline_bbox`), while an extent is the designed LILC box
+    // (LILYPOND-REF: lily/open-type-font.cc:390-408 `get_indexed_char_dimensions`).
+    //
+    // ⚠️ SO THERE IS NO GENERAL RULE TO APPLY, and applying one is the defect this replaced.
+    // MEASURED, LilyPond's own dump of both quantities at once
+    // (audit/lp-geometry/probes/glyph-skyline.ly): the CLEF reads
+    // `ext=(-2.550 . 4.800) skyline=(-2.540 . 4.776)` — two different boxes — while the
+    // NOTEHEAD reads 0.545 for both even though its outline stops at 0.544. The notehead's
+    // skyline is its extent BY DECLARATION, and seeding its outline instead would be an
+    // invention that happens to be 0.001 away.
+    //
+    // Hence: a lookup exists here only for a grob LilyPond builds from a stencil. If a new
+    // one is needed, read its line in define-grobs.scm first.
+
+    /// <summary>The box an <c>Accidental</c>'s SKYLINE is built from — its outline.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil.
+    /// </remarks>
+    public static BBox GetAccidentalSkylineBBox(string? accidental) => accidental switch
+    {
+        "sharp" => AccidentalSharpOutline,
+        "flat" => AccidentalFlatOutline,
+        "natural" => AccidentalNaturalOutline,
+        "doubleSharp" => AccidentalDoubleSharpOutline,
+        "doubleFlat" => AccidentalDoubleFlatOutline,
+        _ => default
+    };
+
     /// <summary>
     /// The note-value bucket (1=whole, 2=half, else black) a written base duration
     /// maps to. A non-1 numerator (e.g. a breve 2/1) collapses to a black head as a

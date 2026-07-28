@@ -24,388 +24,588 @@ internal static partial class GlyphMetrics
     // through the TEXT path (Pango over the outline), where LILC is never read.
     // For horizontal positioning of the next glyph use the corresponding
     // ...Advance constant, taken from hmtx as LilyPond takes it.
+    //
+    // ...and each glyph ALSO gets a `...Outline` box, which is what a SKYLINE is
+    // built from. LilyPond keeps the two apart: the extent is the designed (LILC)
+    // box and the skyline is the curves' own bounds
+    // (lily/stencil-integral.cc:535-563 add_named_glyph_segments). They coincide
+    // only for a glyph that fills its box — a notehead does (0.001), the G clef
+    // does not (0.024 of slack above), the F clef least of all (0.448 below).
+    // ⚠️ Use the EXTENT for widths and positions, the OUTLINE only for skylines.
 
     /// <summary>Whole notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0 (noteheads.s0 = U+E0FC in this build)</remarks>
     public static readonly BBox NoteheadWhole = new(0.000000, -0.545000, 1.962000, 0.545000);
+    /// <summary>Whole notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadWholeOutline = new(0.000000, -0.544000, 1.964000, 0.544000);
     /// <summary>Whole notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadWholeAdvance = 1.960000;
 
     /// <summary>Half (hollow) notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1 (noteheads.s1 = U+E0FD in this build)</remarks>
     public static readonly BBox NoteheadHalf = new(0.000000, -0.545000, 1.377400, 0.545000);
+    /// <summary>Half (hollow) notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadHalfOutline = new(0.000000, -0.544000, 1.376000, 0.544000);
     /// <summary>Half (hollow) notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadHalfAdvance = 1.376000;
 
     /// <summary>Black (filled) notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2 (noteheads.s2 = U+E0FE in this build)</remarks>
     public static readonly BBox NoteheadBlack = new(0.000000, -0.545000, 1.304200, 0.545000);
+    /// <summary>Black (filled) notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadBlackOutline = new(0.000000, -0.544000, 1.304000, 0.544000);
     /// <summary>Black (filled) notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadBlackAdvance = 1.304000;
 
     /// <summary>Sharp accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.sharp (accidentals.sharp = U+E013 in this build)</remarks>
     public static readonly BBox AccidentalSharp = new(0.000000, -1.500000, 1.100000, 1.500000);
+    /// <summary>Sharp accidental — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000);
     /// <summary>Sharp accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalSharpAdvance = 1.100000;
 
     /// <summary>Flat accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.flat (accidentals.flat = U+E021 in this build)</remarks>
     public static readonly BBox AccidentalFlat = new(-0.120000, -0.630000, 0.800000, 1.830000);
+    /// <summary>Flat accidental — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalFlatOutline = new(-0.108000, -0.652000, 0.800000, 1.860000);
     /// <summary>Flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalFlatAdvance = 0.800000;
 
     /// <summary>Natural accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.natural (accidentals.natural = U+E01D in this build)</remarks>
     public static readonly BBox AccidentalNatural = new(0.000000, -1.500000, 0.666600, 1.500000);
+    /// <summary>Natural accidental — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalNaturalOutline = new(-0.028000, -1.528000, 0.696000, 1.528000);
     /// <summary>Natural accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalNaturalAdvance = 0.664000;
 
     /// <summary>Double sharp accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.doublesharp (accidentals.doublesharp = U+E01C in this build)</remarks>
     public static readonly BBox AccidentalDoubleSharp = new(0.000000, -0.500000, 1.000000, 0.500000);
+    /// <summary>Double sharp accidental — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalDoubleSharpOutline = new(-0.040000, -0.540000, 1.040000, 0.540000);
     /// <summary>Double sharp accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleSharpAdvance = 1.000000;
 
     /// <summary>Double flat accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.flatflat (accidentals.flatflat = U+E02A in this build)</remarks>
     public static readonly BBox AccidentalDoubleFlat = new(-0.120000, -0.630000, 1.450000, 1.830000);
+    /// <summary>Double flat accidental — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalDoubleFlatOutline = new(-0.108000, -0.652000, 1.448000, 1.860000);
     /// <summary>Double flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleFlatAdvance = 1.448000;
 
     /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen (accidentals.leftparen = U+E02F in this build)</remarks>
     public static readonly BBox AccidentalLeftParen = new(-0.600000, -1.000000, 0.000000, 1.000000);
+    /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalLeftParenOutline = new(-0.600000, -1.052000, -0.148000, 1.052000);
     /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalLeftParenAdvance = 0.000000;
 
     /// <summary>Right accidental parenthesis — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.rightparen (accidentals.rightparen = U+E02E in this build)</remarks>
     public static readonly BBox AccidentalRightParen = new(0.000000, -1.000000, 0.600000, 1.000000);
+    /// <summary>Right accidental parenthesis — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalRightParenOutline = new(0.148000, -1.052000, 0.600000, 1.052000);
     /// <summary>Right accidental parenthesis — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalRightParenAdvance = 0.600000;
 
     /// <summary>8th note flag (upward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.u3 (flags.u3 = U+E0D6 in this build)</remarks>
     public static readonly BBox Flag8thUp = new(0.000000, -3.050200, 0.828200, 0.065000);
+    /// <summary>8th note flag (upward stem) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Flag8thUpOutline = new(-0.064000, -3.008000, 0.828000, 0.000000);
     /// <summary>8th note flag (upward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag8thUpAdvance = 0.828000;
 
     /// <summary>8th note flag (downward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.d3 (flags.d3 = U+E0DE in this build)</remarks>
     public static readonly BBox Flag8thDown = new(0.000000, -0.065000, 1.066800, 2.840200);
+    /// <summary>8th note flag (downward stem) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Flag8thDownOutline = new(-0.064000, 0.000000, 1.068000, 2.796000);
     /// <summary>8th note flag (downward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag8thDownAdvance = 1.064000;
 
     /// <summary>16th note flag (upward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.u4 (flags.u4 = U+E0D7 in this build)</remarks>
     public static readonly BBox Flag16thUp = new(0.000000, -3.550200, 0.828200, 0.065000);
+    /// <summary>16th note flag (upward stem) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Flag16thUpOutline = new(-0.064000, -3.508000, 0.828000, 0.000000);
     /// <summary>16th note flag (upward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag16thUpAdvance = 0.828000;
 
     /// <summary>16th note flag (downward stem) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.d4 (flags.d4 = U+E0DF in this build)</remarks>
     public static readonly BBox Flag16thDown = new(0.000000, -0.065000, 1.066800, 3.050200);
+    /// <summary>16th note flag (downward stem) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Flag16thDownOutline = new(-0.064000, 0.000000, 1.068000, 3.008000);
     /// <summary>16th note flag (downward stem) — advance width (next-glyph horizontal feed).</summary>
     public const double Flag16thDownAdvance = 1.064000;
 
     /// <summary>Augmentation dot — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — dots.dot (dots.dot = U+E038 in this build)</remarks>
     public static readonly BBox AugmentationDot = new(0.000000, -0.225000, 0.450000, 0.225000);
+    /// <summary>Augmentation dot — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AugmentationDotOutline = new(0.000000, -0.224000, 0.448000, 0.224000);
     /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
     public const double AugmentationDotAdvance = 0.448000;
 
     /// <summary>Trill ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.trill (scripts.trill = U+E05E in this build)</remarks>
     public static readonly BBox OrnTrillGlyph = new(-0.850000, 0.000000, 0.850000, 2.100000);
+    /// <summary>Trill ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnTrillGlyphOutline = new(-1.288000, -0.044000, 1.108000, 2.160000);
     /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTrillGlyphAdvance = 0.848000;
 
     /// <summary>Turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.turn (scripts.turn = U+E05B in this build)</remarks>
     public static readonly BBox OrnTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);
+    /// <summary>Turn ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000);
     /// <summary>Turn ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTurnGlyphAdvance = 1.092000;
 
     /// <summary>Inverted (reverse) turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.reverseturn (scripts.reverseturn = U+E05A in this build)</remarks>
     public static readonly BBox OrnReverseTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);
+    /// <summary>Inverted (reverse) turn ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnReverseTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000);
     /// <summary>Inverted (reverse) turn ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnReverseTurnGlyphAdvance = 1.092000;
 
     /// <summary>Prall (upper mordent) ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prall (scripts.prall = U+E073 in this build)</remarks>
     public static readonly BBox OrnPrallGlyph = new(-0.833400, -0.500000, 0.833400, 0.500000);
+    /// <summary>Prall (upper mordent) ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnPrallGlyphOutline = new(-1.004000, -0.500000, 1.004000, 0.500000);
     /// <summary>Prall (upper mordent) ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnPrallGlyphAdvance = 0.832000;
 
     /// <summary>Mordent (lower mordent) ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.mordent (scripts.mordent = U+E074 in this build)</remarks>
     public static readonly BBox OrnMordentGlyph = new(-0.833400, -0.666600, 0.833400, 0.666600);
+    /// <summary>Mordent (lower mordent) ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnMordentGlyphOutline = new(-1.004000, -0.668000, 1.004000, 0.668000);
     /// <summary>Mordent (lower mordent) ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnMordentGlyphAdvance = 0.832000;
 
     /// <summary>Prall-prall / prall-triller ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prallprall (scripts.prallprall = U+E075 in this build)</remarks>
     public static readonly BBox OrnPrallPrallGlyph = new(-1.250000, -0.500000, 1.250000, 0.500000);
+    /// <summary>Prall-prall / prall-triller ornament — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnPrallPrallGlyphOutline = new(-1.424000, -0.500000, 1.424000, 0.500000);
     /// <summary>Prall-prall / prall-triller ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnPrallPrallGlyphAdvance = 1.248000;
 
     /// <summary>Segno mark — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.segno (scripts.segno = U+E065 in this build)</remarks>
     public static readonly BBox MarkSegno = new(-1.000000, -1.500000, 1.000000, 1.500000);
+    /// <summary>Segno mark — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox MarkSegnoOutline = new(-1.000000, -1.500000, 1.000000, 1.500000);
     /// <summary>Segno mark — advance width (next-glyph horizontal feed).</summary>
     public const double MarkSegnoAdvance = 1.000000;
 
     /// <summary>Coda mark — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.coda (scripts.coda = U+E067 in this build)</remarks>
     public static readonly BBox MarkCoda = new(-1.016600, -1.350000, 1.016600, 1.350000);
+    /// <summary>Coda mark — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox MarkCodaOutline = new(-1.076000, -1.412000, 1.076000, 1.412000);
     /// <summary>Coda mark — advance width (next-glyph horizontal feed).</summary>
     public const double MarkCodaAdvance = 1.016000;
 
     /// <summary>G (treble) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G (clefs.G = U+E089 in this build)</remarks>
     public static readonly BBox ClefG = new(0.000000, -2.550000, 2.565000, 4.800000);
+    /// <summary>G (treble) clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefGOutline = new(0.008000, -2.540000, 2.580000, 4.776000);
     /// <summary>G (treble) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefGAdvance = 2.564000;
 
     /// <summary>F (bass) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.F (clefs.F = U+E087 in this build)</remarks>
     public static readonly BBox ClefF = new(0.000000, -2.500000, 2.683400, 1.000000);
+    /// <summary>F (bass) clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefFOutline = new(-0.052000, -2.052000, 2.636000, 1.052000);
     /// <summary>F (bass) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefFAdvance = 2.680000;
 
     /// <summary>C (alto/tenor) clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.C (clefs.C = U+E083 in this build)</remarks>
     public static readonly BBox ClefC = new(0.000000, -2.000000, 2.720000, 2.000000);
+    /// <summary>C (alto/tenor) clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefCOutline = new(0.000000, -2.000000, 2.720000, 2.000000);
     /// <summary>C (alto/tenor) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCAdvance = 2.720000;
 
     /// <summary>Percussion clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.percussion (clefs.percussion = U+E08F in this build)</remarks>
     public static readonly BBox ClefPercussion = new(0.670000, -1.000000, 2.000000, 1.000000);
+    /// <summary>Percussion clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefPercussionOutline = new(0.668000, -1.000000, 2.000000, 1.000000);
     /// <summary>Percussion clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefPercussionAdvance = 2.000000;
 
     /// <summary>TAB clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.tab (clefs.tab = U+E093 in this build)</remarks>
     public static readonly BBox ClefTab = new(0.200000, -2.880000, 2.800000, 2.880000);
+    /// <summary>TAB clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefTabOutline = new(0.180000, -2.888000, 2.800000, 2.892000);
     /// <summary>TAB clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefTabAdvance = 2.800000;
 
     /// <summary>G (treble) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G_change (clefs.G_change = U+E08A in this build)</remarks>
     public static readonly BBox ClefGChange = new(0.000000, -2.040000, 2.052000, 3.966800);
+    /// <summary>G (treble) change clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefGChangeOutline = new(0.008000, -2.048000, 2.072000, 3.948000);
     /// <summary>G (treble) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefGChangeAdvance = 2.052000;
 
     /// <summary>F (bass) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.F_change (clefs.F_change = U+E088 in this build)</remarks>
     public static readonly BBox ClefFChange = new(0.000000, -2.000000, 2.146600, 0.800000);
+    /// <summary>F (bass) change clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefFChangeOutline = new(-0.052000, -1.652000, 2.112000, 0.852000);
     /// <summary>F (bass) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefFChangeAdvance = 2.144000;
 
     /// <summary>C (alto/tenor) change clef — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.C_change (clefs.C_change = U+E084 in this build)</remarks>
     public static readonly BBox ClefCChange = new(0.000000, -1.600000, 2.196000, 1.600000);
+    /// <summary>C (alto/tenor) change clef — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ClefCChangeOutline = new(0.000000, -1.600000, 2.196000, 1.600000);
     /// <summary>C (alto/tenor) change clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCChangeAdvance = 2.196000;
 
     /// <summary>Longa (4-measure) rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M2 (rests.M2 = U+E005 in this build)</remarks>
     public static readonly BBox RestLonga = new(0.000000, -1.000000, 0.600000, 1.000000);
+    /// <summary>Longa (4-measure) rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestLongaOutline = new(0.000000, -1.000000, 0.600000, 1.000000);
     /// <summary>Longa (4-measure) rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestLongaAdvance = 0.600000;
 
     /// <summary>Double-whole (breve) rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M1 (rests.M1 = U+E006 in this build)</remarks>
     public static readonly BBox RestDoubleWhole = new(0.000000, 0.000000, 0.600000, 1.000000);
+    /// <summary>Double-whole (breve) rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestDoubleWholeOutline = new(0.000000, 0.000000, 0.600000, 1.000000);
     /// <summary>Double-whole (breve) rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestDoubleWholeAdvance = 0.600000;
 
     /// <summary>Whole rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (rests.0 = U+E000 in this build)</remarks>
     public static readonly BBox RestWhole = new(0.000000, -0.625000, 1.500000, 0.000000);
+    /// <summary>Whole rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestWholeOutline = new(0.000000, -0.624000, 1.500000, 0.000000);
     /// <summary>Whole rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestWholeAdvance = 1.500000;
 
     /// <summary>Half rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.1 (rests.1 = U+E001 in this build)</remarks>
     public static readonly BBox RestHalf = new(0.000000, 0.000000, 1.500000, 0.625000);
+    /// <summary>Half rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestHalfOutline = new(0.000000, 0.000000, 1.500000, 0.624000);
     /// <summary>Half rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestHalfAdvance = 1.500000;
 
     /// <summary>Quarter rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.2 (rests.2 = U+E008 in this build)</remarks>
     public static readonly BBox RestQuarter = new(0.000000, -1.250000, 0.950000, 1.562400);
+    /// <summary>Quarter rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestQuarterOutline = new(-0.092000, -1.280000, 0.972000, 1.584000);
     /// <summary>Quarter rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestQuarterAdvance = 0.948000;
 
     /// <summary>8th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.3 (rests.3 = U+E00B in this build)</remarks>
     public static readonly BBox Rest8th = new(0.000000, -1.050000, 1.000000, 0.820000);
+    /// <summary>8th rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Rest8thOutline = new(-0.012000, -1.040000, 1.000000, 0.820000);
     /// <summary>8th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest8thAdvance = 1.000000;
 
     /// <summary>16th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.4 (rests.4 = U+E00C in this build)</remarks>
     public static readonly BBox Rest16th = new(0.000000, -2.050000, 1.200000, 0.820000);
+    /// <summary>16th rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Rest16thOutline = new(-0.104000, -2.040000, 1.200000, 0.820000);
     /// <summary>16th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest16thAdvance = 1.196000;
 
     /// <summary>32nd rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.5 (rests.5 = U+E00D in this build)</remarks>
     public static readonly BBox Rest32nd = new(0.000000, -2.050000, 1.300000, 1.820000);
+    /// <summary>32nd rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Rest32ndOutline = new(-0.220000, -2.040000, 1.300000, 1.820000);
     /// <summary>32nd rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest32ndAdvance = 1.300000;
 
     /// <summary>64th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.6 (rests.6 = U+E00E in this build)</remarks>
     public static readonly BBox Rest64th = new(0.000000, -3.050000, 1.400000, 1.820000);
+    /// <summary>64th rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Rest64thOutline = new(-0.268000, -3.040000, 1.400000, 1.820000);
     /// <summary>64th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest64thAdvance = 1.396000;
 
     /// <summary>128th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.7 (rests.7 = U+E00F in this build)</remarks>
     public static readonly BBox Rest128th = new(0.000000, -3.050000, 1.500000, 2.820000);
+    /// <summary>128th rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox Rest128thOutline = new(-0.240000, -3.040000, 1.500000, 2.820000);
     /// <summary>128th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest128thAdvance = 1.500000;
 
     /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.staccato (scripts.staccato = U+E04A in this build)</remarks>
     public static readonly BBox ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000);
+    /// <summary>Staccato dot articulation — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000);
     /// <summary>Staccato dot articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatoAdvance = 0.196000;
 
     /// <summary>Accent / sforzato articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.sforzato (scripts.sforzato = U+E048 in this build)</remarks>
     public static readonly BBox ArticAccent = new(-0.750000, -0.420000, 0.750000, 0.420000);
+    /// <summary>Accent / sforzato articulation — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticAccentOutline = new(-0.752000, -0.420000, 0.752000, 0.420000);
     /// <summary>Accent / sforzato articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticAccentAdvance = 0.748000;
 
     /// <summary>Tenuto articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.tenuto (scripts.tenuto = U+E04D in this build)</remarks>
     public static readonly BBox ArticTenuto = new(-0.600000, -0.080000, 0.600000, 0.080000);
+    /// <summary>Tenuto articulation — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticTenutoOutline = new(-0.600000, -0.080000, 0.600000, 0.080000);
     /// <summary>Tenuto articulation — advance width (next-glyph horizontal feed).</summary>
     public const double ArticTenutoAdvance = 0.600000;
 
     /// <summary>Marcato above (upward V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.umarcato (scripts.umarcato = U+E050 in this build)</remarks>
     public static readonly BBox ArticMarcatoAbove = new(-0.500000, 0.000000, 0.500000, 1.100000);
+    /// <summary>Marcato above (upward V) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticMarcatoAboveOutline = new(-0.500000, 0.000000, 0.500000, 1.100000);
     /// <summary>Marcato above (upward V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticMarcatoAboveAdvance = 0.500000;
 
     /// <summary>Marcato below (downward V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dmarcato (scripts.dmarcato = U+E051 in this build)</remarks>
     public static readonly BBox ArticMarcatoBelow = new(-0.500000, -1.100000, 0.500000, 0.000000);
+    /// <summary>Marcato below (downward V) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticMarcatoBelowOutline = new(-0.500000, -1.100000, 0.500000, 0.000000);
     /// <summary>Marcato below (downward V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticMarcatoBelowAdvance = 0.500000;
 
     /// <summary>Fermata above — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ufermata (scripts.ufermata = U+E039 in this build)</remarks>
     public static readonly BBox FermataAboveGlyph = new(-1.325000, -0.075000, 1.325000, 1.450000);
+    /// <summary>Fermata above — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FermataAboveGlyphOutline = new(-1.328000, -0.076000, 1.328000, 1.452000);
     /// <summary>Fermata above — advance width (next-glyph horizontal feed).</summary>
     public const double FermataAboveGlyphAdvance = 1.324000;
 
     /// <summary>Fermata below — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dfermata (scripts.dfermata = U+E03A in this build)</remarks>
     public static readonly BBox FermataBelowGlyph = new(-1.325000, -1.450000, 1.325000, 0.075000);
+    /// <summary>Fermata below — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FermataBelowGlyphOutline = new(-1.328000, -1.452000, 1.328000, 0.076000);
     /// <summary>Fermata below — advance width (next-glyph horizontal feed).</summary>
     public const double FermataBelowGlyphAdvance = 1.324000;
 
     /// <summary>Staccatissimo above (dagger) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ustaccatissimo (scripts.ustaccatissimo = U+E04B in this build)</remarks>
     public static readonly BBox ArticStaccatissimoAboveGlyph = new(-0.200000, -0.040000, 0.200000, 1.000000);
+    /// <summary>Staccatissimo above (dagger) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticStaccatissimoAboveGlyphOutline = new(-0.204000, -0.052000, 0.204000, 1.000000);
     /// <summary>Staccatissimo above (dagger) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatissimoAboveGlyphAdvance = 0.200000;
 
     /// <summary>Staccatissimo below (dagger) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dstaccatissimo (scripts.dstaccatissimo = U+E04C in this build)</remarks>
     public static readonly BBox ArticStaccatissimoBelowGlyph = new(-0.200000, -1.000000, 0.200000, 0.040000);
+    /// <summary>Staccatissimo below (dagger) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticStaccatissimoBelowGlyphOutline = new(-0.204000, -1.000000, 0.204000, 0.052000);
     /// <summary>Staccatissimo below (dagger) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticStaccatissimoBelowGlyphAdvance = 0.200000;
 
     /// <summary>Up-bow above (V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.uupbow (scripts.uupbow = U+E056 in this build)</remarks>
     public static readonly BBox ArticUpBowAboveGlyph = new(-0.650000, 0.000000, 0.650000, 2.080000);
+    /// <summary>Up-bow above (V) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticUpBowAboveGlyphOutline = new(-0.648000, 0.000000, 0.652000, 2.080000);
     /// <summary>Up-bow above (V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticUpBowAboveGlyphAdvance = 0.648000;
 
     /// <summary>Up-bow below (V) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dupbow (scripts.dupbow = U+E057 in this build)</remarks>
     public static readonly BBox ArticUpBowBelowGlyph = new(-0.650000, -2.080000, 0.650000, 0.000000);
+    /// <summary>Up-bow below (V) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticUpBowBelowGlyphOutline = new(-0.648000, -2.080000, 0.652000, 0.000000);
     /// <summary>Up-bow below (V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticUpBowBelowGlyphAdvance = 0.648000;
 
     /// <summary>Down-bow above (frog) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.udownbow (scripts.udownbow = U+E058 in this build)</remarks>
     public static readonly BBox ArticDownBowAboveGlyph = new(-0.750000, 0.000000, 0.750000, 1.333400);
+    /// <summary>Down-bow above (frog) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticDownBowAboveGlyphOutline = new(-0.752000, 0.000000, 0.752000, 1.332000);
     /// <summary>Down-bow above (frog) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticDownBowAboveGlyphAdvance = 0.748000;
 
     /// <summary>Down-bow below (frog) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ddownbow (scripts.ddownbow = U+E059 in this build)</remarks>
     public static readonly BBox ArticDownBowBelowGlyph = new(-0.750000, -1.333400, 0.750000, 0.000000);
+    /// <summary>Down-bow below (frog) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticDownBowBelowGlyphOutline = new(-0.752000, -1.332000, 0.752000, 0.000000);
     /// <summary>Down-bow below (frog) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticDownBowBelowGlyphAdvance = 0.748000;
 
     /// <summary>Flageolet / harmonic circle — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.flageolet (scripts.flageolet = U+E064 in this build)</remarks>
     public static readonly BBox ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000);
+    /// <summary>Flageolet / harmonic circle — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000);
     /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
     public const double ArticFlageoletGlyphAdvance = 0.400000;
 
     /// <summary>Common-time (C) signature — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-timesignatures.mf — timesig.C44 (timesig.C44 = U+E095 in this build)</remarks>
     public static readonly BBox TimeSigCommon = new(0.000000, -1.000000, 1.700000, 1.000000);
+    /// <summary>Common-time (C) signature — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox TimeSigCommonOutline = new(0.000000, -1.052000, 1.732000, 1.048000);
     /// <summary>Common-time (C) signature — advance width (next-glyph horizontal feed).</summary>
     public const double TimeSigCommonAdvance = 1.696000;
 
     /// <summary>Cut-common (alla breve) signature — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-timesignatures.mf — timesig.C22 (timesig.C22 = U+E096 in this build)</remarks>
     public static readonly BBox TimeSigCutCommon = new(0.000000, -1.000000, 1.700000, 1.000000);
+    /// <summary>Cut-common (alla breve) signature — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox TimeSigCutCommonOutline = new(0.000000, -1.400000, 1.732000, 1.400000);
     /// <summary>Cut-common (alla breve) signature — advance width (next-glyph horizontal feed).</summary>
     public const double TimeSigCutCommonAdvance = 1.696000;
 
     /// <summary>Dynamic letter 'f' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — f (f = U+0066 in this build)</remarks>
     public static readonly BBox DynamicLetterF = new(-0.408000, -0.692000, 1.748000, 1.896000);
+    /// <summary>Dynamic letter 'f' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterFOutline = new(-0.408000, -0.692000, 1.748000, 1.896000);
     /// <summary>Dynamic letter 'f' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterFAdvance = 1.280000;
 
     /// <summary>Dynamic letter 'm' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — m (m = U+006D in this build)</remarks>
     public static readonly BBox DynamicLetterM = new(-0.172000, -0.028000, 1.816000, 1.196000);
+    /// <summary>Dynamic letter 'm' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterMOutline = new(-0.172000, -0.028000, 1.816000, 1.196000);
     /// <summary>Dynamic letter 'm' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterMAdvance = 1.748000;
 
     /// <summary>Dynamic letter 'n' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — n (n = U+006E in this build)</remarks>
     public static readonly BBox DynamicLetterN = new(-0.172000, -0.028000, 1.364000, 1.196000);
+    /// <summary>Dynamic letter 'n' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterNOutline = new(-0.172000, -0.028000, 1.364000, 1.196000);
     /// <summary>Dynamic letter 'n' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterNAdvance = 1.292000;
 
     /// <summary>Dynamic letter 'p' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — p (p = U+0070 in this build)</remarks>
     public static readonly BBox DynamicLetterP = new(-0.532000, -0.584000, 1.428000, 1.168000);
+    /// <summary>Dynamic letter 'p' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterPOutline = new(-0.532000, -0.584000, 1.428000, 1.168000);
     /// <summary>Dynamic letter 'p' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterPAdvance = 1.456000;
 
     /// <summary>Dynamic letter 'r' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — r (r = U+0072 in this build)</remarks>
     public static readonly BBox DynamicLetterR = new(-0.120000, 0.000000, 1.148000, 1.224000);
+    /// <summary>Dynamic letter 'r' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterROutline = new(-0.120000, 0.000000, 1.148000, 1.224000);
     /// <summary>Dynamic letter 'r' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterRAdvance = 0.872000;
 
     /// <summary>Dynamic letter 's' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — s (s = U+0073 in this build)</remarks>
     public static readonly BBox DynamicLetterS = new(0.088000, 0.000000, 0.964000, 1.168000);
+    /// <summary>Dynamic letter 's' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterSOutline = new(0.088000, 0.000000, 0.964000, 1.168000);
     /// <summary>Dynamic letter 's' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterSAdvance = 0.824000;
 
     /// <summary>Dynamic letter 'z' (fetaText) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-dynamics.mf — z (z = U+007A in this build)</remarks>
     public static readonly BBox DynamicLetterZ = new(0.000000, -0.112000, 1.144000, 1.068000);
+    /// <summary>Dynamic letter 'z' (fetaText) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox DynamicLetterZOutline = new(0.000000, -0.112000, 1.144000, 1.068000);
     /// <summary>Dynamic letter 'z' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterZAdvance = 1.140000;
 
