@@ -335,57 +335,57 @@ internal sealed class SkylineBuilder
         if (double.IsNaN(systemLeft) || staff.IsTextRow)
             return;
 
-        var (glyph, aboveMiddleStaff) = ClefInk(staff.Clef);
-        // At THIS staff's size: the box through the font (Ink) and the line the glyph sits
-        // on through the staff's own spaces (Span) — LilyPond's two properties, together.
-        var box = size.Ink(glyph);
+        var (glyph, aboveMiddleStaff) = ClefGlyph(staff.Clef);
+        // The glyph's OUTLINE, not a box around it: the two profiles of two facing staves are
+        // compared pointwise, so the shape between the extremes is part of the answer. See
+        // VerticalSkyline.FromGlyphOutline for the measurement that named this.
+        var (down, up) = GlyphMetrics.ClefVerticalSkylineQuads(glyph);
+        // The line the glyph sits on, through THIS staff's own spaces.
         double aboveMiddle = size.Span(aboveMiddleStaff);
-        // ⚠️ X here is the glyph ORIGIN, so the span runs origin..Right rather than the ink
-        // the renderer draws. The two differ only for a clef whose stencil does not start
-        // at its origin (percussion 0.67, TAB 0.2), and the correct anchor is the break-align
-        // GROUP's left ink (SpacingRules.ClefGroupExtent, ported into DrawClef) — which is a
-        // score-wide quantity this method cannot see, holding only two staves. Left as is
-        // rather than half-migrated: it feeds the VERTICAL skyline, where an X span that is
-        // 0.67 too wide costs a little page spacing and no position.
+        // ⚠️ X here is the glyph ORIGIN. The outline carries its own left edge from there
+        // (0.008 on the G clef, -0.052 on the F), so the span is the glyph's, not a box from
+        // the origin as it was while this seeded a box. The anchor itself is still the
+        // approximation it was: the correct one is the break-align GROUP's left ink
+        // (SpacingRules.ClefGroupExtent, ported into DrawClef), a score-wide quantity this
+        // method cannot see, holding only two staves. It feeds the VERTICAL skyline, where an
+        // X that is off by a fraction costs a little page spacing and no position.
         double x = systemLeft + EngravingDefaults.ClefGlyphXOffset;
-        double bottomUp = aboveMiddle + box.Bottom + staffMiddleUp;
-        double topUp = aboveMiddle + box.Top + staffMiddleUp;
-        upSkyline.Merge(VerticalSkyline.FromBox(
-            x, x + box.Right, bottomUp, topUp, VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(
-            x, x + box.Right, bottomUp, topUp, VerticalDirection.Down));
+        double originUp = aboveMiddle + staffMiddleUp;
+        // PERTURBATION (temporary, 2026-07-28): UP back to a box to name the owner of the
+        // 0.890000 the hara-kiri snapshot moved by.
+        upSkyline.Merge(VerticalSkyline.FromGlyphOutline(VerticalDirection.Up, up, size, x, originUp));
+        downSkyline.Merge(VerticalSkyline.FromGlyphOutline(VerticalDirection.Down, down, size, x, originUp));
     }
 
     /// <summary>
-    /// A clef's ink box and the staff-spaces above the MIDDLE line its glyph origin sits
-    /// at — <c>SharedRenderer.DrawClef</c>'s <c>staffY - n</c> read in this frame, where
-    /// the top line is 2 above the middle, so it is <c>2 - n</c>.
+    /// Which clef GLYPH is engraved, and the staff-spaces above the MIDDLE line its glyph
+    /// origin sits at — <c>SharedRenderer.DrawClef</c>'s <c>staffY - n</c> read in this frame,
+    /// where the top line is 2 above the middle, so it is <c>2 - n</c>.
     /// </summary>
     /// <remarks>
-    /// The percussion clef has no entry in the extracted metrics, so it borrows the C
-    /// clef's box. Both are centred on the middle line and the C clef is the taller, so
-    /// this over-reserves rather than under-reserves — a KNOWN approximation, and the one
-    /// clef here whose extent is not the font's own.
+    /// The percussion clef has no outline of its own in the baked skylines, so it borrows the
+    /// C clef's. Both are centred on the middle line and the C clef is the taller, so this
+    /// over-reserves rather than under-reserves — a KNOWN approximation, and the one clef here
+    /// whose silhouette is not the font's own.
     /// <para>
-    /// ⚠️ THE OUTLINE BOX, NOT THE EXTENT, because this feeds a SKYLINE.
-    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 <c>add_named_glyph_segments</c> builds a
-    /// glyph's skyline from <c>get_glyph_outline_bbox</c> while the grob's extent stays the
-    /// designed LILC box, and the two differ by more than a rounding here: the G clef's
-    /// outline stops 0.024 below its box's top and the F clef's 0.448 above its box's bottom.
-    /// MEASURED against LilyPond's own dump of both — audit/lp-geometry/probes/glyph-skyline.ly
-    /// reads <c>ext=(-2.550 . 4.800) skyline=(-2.540 . 4.776)</c> for the G clef.
+    /// ⚠️ THE GLYPH, NOT A BOX, because this feeds a SKYLINE. Until 2026-07-28 the caller
+    /// seeded the OUTLINE'S BOUNDING BOX, which is right about how far the clef reaches and
+    /// silent about WHERE, and a skyline distance is decided pointwise. See
+    /// <see cref="VerticalSkyline.FromGlyphOutline"/>, and
+    /// LILYPOND-REF: scm/define-grobs.scm:902-927 <c>grob::always-vertical-skylines-from-stencil</c>
+    /// is what the Clef declares, and it is what routes a clef through the outline at all.
     /// </para>
     /// </remarks>
-    private static (GlyphMetrics.BBox Box, double AboveMiddle) ClefInk(ClefType clef) => clef switch
+    private static (string Glyph, double AboveMiddle) ClefGlyph(ClefType clef) => clef switch
     {
-        ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefFOutline, 1.0),
-        ClefType.Alto => (GlyphMetrics.ClefCOutline, 0.0),
-        ClefType.Tenor => (GlyphMetrics.ClefCOutline, 1.0),
-        ClefType.Soprano => (GlyphMetrics.ClefCOutline, -2.0),
-        ClefType.MezzoSoprano => (GlyphMetrics.ClefCOutline, -1.0),
-        ClefType.Baritone => (GlyphMetrics.ClefCOutline, 2.0),
-        ClefType.Percussion => (GlyphMetrics.ClefCOutline, 0.0),
-        _ => (GlyphMetrics.ClefGOutline, -1.0),
+        ClefType.Bass or ClefType.Bass8Below => ("F", 1.0),
+        ClefType.Alto => ("C", 0.0),
+        ClefType.Tenor => ("C", 1.0),
+        ClefType.Soprano => ("C", -2.0),
+        ClefType.MezzoSoprano => ("C", -1.0),
+        ClefType.Baritone => ("C", 2.0),
+        ClefType.Percussion => ("C", 0.0),
+        _ => ("G", -1.0),
     };
 
     /// <remarks>

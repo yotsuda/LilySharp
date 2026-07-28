@@ -126,6 +126,80 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// The skyline of ONE GLYPH'S OUTLINE, placed: the baked sign-framed buildings of
+    /// <paramref name="quads"/> read in the glyph's own frame, engraved at
+    /// <paramref name="size"/> and moved to the glyph origin (<paramref name="x"/>,
+    /// <paramref name="y"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:534-563 <c>add_named_glyph_segments</c> —
+    /// a glyph enters a skyline through <c>add_outline_to_skyline</c>
+    /// (LILYPOND-REF: lily/freetype.cc:174-202 <c>Path_interpreter</c> is run over the glyph by
+    /// <c>ly_FT_add_outline_to_skyline</c>), which
+    /// decomposes the OUTLINE, not its bounding box. The baking is
+    /// <c>audit/scripts/Extract-EmmentalerSkylines.py</c>; this method only places what it
+    /// baked, so the arithmetic here is the <c>Transform</c> LilyPond passes to that call.
+    /// <para>
+    /// ⚠️ WHY A BOX IS NOT ENOUGH, since one was here until 2026-07-28: a skyline distance is
+    /// a POINTWISE maximum of two profiles
+    /// (LILYPOND-REF: lily/skyline.cc:618-645 <c>Skyline::internal_distance</c>, which
+    /// sums <c>i-&gt;height(x) + j-&gt;height(x)</c>), so two glyphs
+    /// whose extremes sit at different x bind LOWER than the sum of their maxima. Two facing
+    /// G clefs do exactly that, by 0.105961 — MEASURED off LilyPond in
+    /// <c>audit/lp-geometry/probes/skyline-binding.ly</c>, which reads
+    /// <c>dist=7.210039</c> against <c>3.540000 + 3.776000 = 7.316000</c>. A boxed port
+    /// reproduces <c>max_height</c> and therefore every reading that binds against ONE
+    /// profile; it cannot reproduce a comparison of TWO.
+    /// </para>
+    /// <para>
+    /// X AND Y BOTH SCALE, and only the ORIGIN does not: the quads are glyph-frame numbers, so
+    /// <see cref="StaffSize"/> applies to them exactly as <see cref="StaffSize.Ink"/> applies
+    /// to a box, while <paramref name="x"/> is a paper-column position shared with the staff
+    /// this one decorates. That is the one bare number here, as
+    /// <see cref="StaffSize"/>'s own remark requires.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
+    /// cubic into <c>max(2, |end-start|/0.2)</c> segments measured in the TRANSFORMED frame
+    /// (LILYPOND-REF: lily/freetype.cc:128-150 <c>Path_interpreter::curve3to</c> takes that
+    /// length off <c>transform_</c>), so a magnified staff gets a different segment COUNT.
+    /// A baked profile
+    /// is the full-size one, re-scaled. It costs sub-quantisation accuracy on an ossia's clef
+    /// and nothing at full size; it goes when the outline itself is carried into the layout
+    /// rather than a flattening of it.
+    /// </para>
+    /// </remarks>
+    public static VerticalSkyline FromGlyphOutline(
+        VerticalDirection direction, double[] quads, StaffSize size, double x, double y)
+    {
+        var sky = new VerticalSkyline(direction);
+        double scale = size.Magnification;
+        // The stored value is sky*height, so translating by y adds sky*y and scaling
+        // multiplies the stored number directly
+        // (LILYPOND-REF: lily/skyline.cc:512 Skyline::raise adds sky * amount to y_intercept).
+        double offset = (int)direction * y;
+        for (int i = 0; i + 3 < quads.Length; i += 4)
+        {
+            sky._buildings.Add(new SkylineBuilding(
+                x + scale * quads[i],
+                offset + scale * quads[i + 1],
+                offset + scale * quads[i + 2],
+                x + scale * quads[i + 3]));
+        }
+        // The baked buildings are raw contour edges and overlap each other, exactly as
+        // LilyPond's per-direction todo list does before it is resolved
+        // (LILYPOND-REF: lily/include/lazy-skyline-pair.hh:109-122 Lazy_skyline_pair::merge).
+        // Resolve once.
+        // ⚠️ DO NOT FILTER THESE BY SIGN. `quads` is sorted by CONTOUR DIRECTION, not by
+        // which half of the glyph an edge is in, so a DOWN list legitimately contains
+        // buildings ABOVE the glyph's origin (the C clef's does) and an UP list ones below.
+        // The resolve is what picks the right building at each x; dropping any would delete
+        // real silhouette. See GlyphSkylinesGenerated.cs's header for the measurement.
+        sky.EndBatch();
+        return sky;
+    }
+
+    /// <summary>
     /// Adds a building to the skyline, merging as necessary.
     /// </summary>
     private void AddBuilding(SkylineBuilding b)

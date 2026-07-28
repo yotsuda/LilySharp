@@ -58,6 +58,7 @@ from pathlib import Path
 try:
     from fontTools.ttLib import TTFont
     from fontTools.pens.recordingPen import RecordingPen
+    from fontTools.pens.boundsPen import BoundsPen, ControlBoundsPen
 except ImportError:
     sys.stderr.write("fontTools not installed. Run: py -3.13 -m pip install fonttools\n")
     sys.exit(2)
@@ -85,6 +86,57 @@ PARENS = [
     ("rightParen", "accidentals.rightparen"),
 ]
 
+# Clefs, baked on the OTHER horizon axis: a clef's VERTICAL skylines.
+#
+# WHY. The same add_outline_to_skyline builds these (scm/define-grobs.scm:902 declares
+# Clef.vertical-skylines from its stencil), and a staff's silhouette is where two staves
+# meet. A pair of BOXES makes two facing clefs bind at the sum of their maxima; a pair of
+# OUTLINES makes them bind lower, because the G clef's deepest ink is at x=1.84 and its
+# highest at x=2.228. LilyPond dumped against the boxed port:
+#   dist(upper DOWN, lower UP) = 7.210039  against  3.540000 + 3.776000 = 7.316000
+# — a deficit of 0.105961, measured in audit/lp-geometry/probes/skyline-binding.ly.
+#
+# Keyed by the three glyphs SkylineBuilder.ClefInk names; the percussion clef borrows the
+# C clef there and keeps doing so here, which is the same known approximation.
+CLEFS = [
+    ("G", "clefs.G"),
+    ("F", "clefs.F"),
+    ("C", "clefs.C"),
+]
+
+
+def glyph_outline_scale(glyphset, glyph):
+    """LilyPond's `scale` at lily/stencil-integral.cc:551-557 add_named_glyph_segments,
+    COMPUTED rather than assumed to be one:
+
+        Box bbox      = get_unscaled_indexed_char_dimensions (gidx);   // FT glyph metrics
+        bbox.scale (magnification * design_size / units_per_EM);
+        Box real_bbox = get_glyph_outline_bbox (gidx);                 // FT_Outline_Get_BBox
+        Real scale    = bbox[X_AXIS].length () / real_bbox[X_AXIS].length ();
+
+    `bbox` is FreeType's glyph metrics read under FT_LOAD_NO_SCALE
+    (lily/freetype.cc:51-65 ly_FT_get_unscaled_indexed_char_dimensions reads
+    m.horiBearingX / m.width), which for an unhinted CFF glyph FreeType fills from the
+    CONTROL box — hence ControlBoundsPen. `real_bbox` is the exact outline box
+    (lily/freetype.cc:67-88 uses FT_Outline_Get_BBox) — hence BoundsPen.
+
+    `magnification * design_size / units_per_EM` is the plain unit conversion this file
+    already applies as 1/STAFF_SPACE_UNITS, so it is factored out and only the RATIO of
+    the two widths is returned: 1.0 when the control box and the outline box agree, which
+    is what LilyPond's own comment at :549-550 says to expect and what the clef dumps in
+    audit/lp-geometry/probes/skyline-binding.ly confirm to six digits."""
+    ctrl = ControlBoundsPen(glyphset)
+    exact = BoundsPen(glyphset)
+    glyphset[glyph].draw(ctrl)
+    glyphset[glyph].draw(exact)
+    if ctrl.bounds is None or exact.bounds is None:
+        return 1.0
+    ctrl_w = ctrl.bounds[2] - ctrl.bounds[0]
+    exact_w = exact.bounds[2] - exact.bounds[0]
+    if exact_w == 0:
+        return 1.0
+    return ctrl_w / exact_w
+
 
 def bezier_pt(p0, p1, p2, p3, t):
     mt = 1 - t
@@ -96,7 +148,7 @@ def bezier_pt(p0, p1, p2, p3, t):
             a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1])
 
 
-def outline_segments(glyphset, glyph):
+def outline_segments(glyphset, glyph, scale=1.0):
     """The glyph outline as (p1,p2) edges in staff spaces, cubics flattened exactly
     as lily/freetype.cc:128-149 does (max(2, len/0.2) steps, length in the target
     frame = staff spaces). Returns (contour_edges, both_side_edges); the final
@@ -110,7 +162,10 @@ def outline_segments(glyphset, glyph):
     start = None
 
     def ss(pt):
-        return (pt[0] / STAFF_SPACE_UNITS, pt[1] / STAFF_SPACE_UNITS)
+        # LilyPond scales the TRANSFORM before decomposing (stencil-integral.cc:559-562
+        # `local.scale (scale, scale)`), so the ratio is inside the frame the cubic
+        # flattening measures its lengths in — it must be applied here, not afterwards.
+        return (pt[0] * scale / STAFF_SPACE_UNITS, pt[1] * scale / STAFF_SPACE_UNITS)
 
     for cmd, pts in pen.value:
         if cmd == "moveTo":
@@ -145,45 +200,80 @@ def outline_segments(glyphset, glyph):
     return contour, both
 
 
-def classify(contour, both):
-    """Split edges into LEFT/RIGHT skyline building lists, sign-framed.
-    LILYPOND-REF: lazy-skyline-pair.hh:53-65 add_contour_segment (horizon = Y).
-    Each edge -> (start=yLo, startValue, endValue, end=yHi) with value = sky*x.
-    Degenerate (Δy == 0) edges are dropped (skyline.cc:449 x1 < x2)."""
-    left = []   # sky = -1
-    right = []  # sky = +1
+def classify(contour, both, horizon_axis=1):
+    """Split edges into two sign-framed skyline building lists.
+    LILYPOND-REF: lazy-skyline-pair.hh:53-65 add_contour_segment.
+
+    `horizon_axis` is LilyPond's `a_`: 1 (Y) gives HORIZONTAL skylines and returns
+    (LEFT sky=-1, RIGHT sky=+1); 0 (X) gives VERTICAL skylines and returns
+    (DOWN sky=-1, UP sky=+1).  The classifier is one line of LilyPond either way —
+    `(seg[LEFT][a_] > seg[RIGHT][a_]) == (orientation == CCW)` — but the SIDE it
+    selects flips with the axis: for X that branch is UP (+1) and for Y it is
+    LEFT (-1), which is why `first` below is not always the negative one.
+
+    Each edge -> (start=hLo, startValue, endValue, end=hHi) where h is the horizon
+    coordinate and value = sky * (the other coordinate).
+    Degenerate (Δhorizon == 0) edges are dropped (skyline.cc:449 x1 < x2).
+
+    ⚠️ THE TWO LISTS ARE NOT "THE TOP HALF" AND "THE BOTTOM HALF" OF THE GLYPH, AND THIS
+    IS NOT A BUG TO FIX. The branch above sorts by CONTOUR DIRECTION, so an edge lands in
+    the DOWN list because the contour runs left-to-right there, not because it is low. A
+    glyph with inner contours (counters) or with two separate arms therefore puts edges
+    with POSITIVE y into the DOWN list and edges with NEGATIVE y into the UP list -- the C
+    clef does both, its DOWN list carrying buildings at y = +1.96. LilyPond produces
+    exactly the same mixture (lily/include/lazy-skyline-pair.hh:53-65 add_contour_segment
+    is the one line this reproduces), and the skyline RESOLVE is what picks the right
+    building at each horizon coordinate afterwards. Filtering by sign here would delete
+    real silhouette and would not match LilyPond.
+    ⚠️ VERIFIED, not argued: audit/lp-geometry/probes/skyline-binding.ly dumps each clef's
+    own vertical-skylines with ly:skyline->points, and the resolved profiles agree with
+    these buildings to six digits on all three clefs."""
+    h = horizon_axis          # horizon coordinate index
+    o = 1 - horizon_axis      # the coordinate a building's value carries
+    # (sky of the branch the classifier's TRUE selects, sky of the FALSE branch)
+    true_sky, false_sky = (+1, -1) if horizon_axis == 0 else (-1, +1)
+    true_side = []
+    false_side = []
 
     def building(edge, sky):
         (p1, p2) = edge
-        (lo, hi) = (p1, p2) if p1[1] <= p2[1] else (p2, p1)
-        if hi[1] <= lo[1]:
+        (lo, hi) = (p1, p2) if p1[h] <= p2[h] else (p2, p1)
+        if hi[h] <= lo[h]:
             return None
-        return (lo[1], sky * lo[0], sky * hi[0], hi[1])
+        return (lo[h], sky * lo[o], sky * hi[o], hi[h])
 
     for edge in contour:
         (p1, p2) = edge
-        cond = (p1[1] > p2[1]) == ORIENTATION_CCW
+        cond = (p1[h] > p2[h]) == ORIENTATION_CCW
         if cond:
-            b = building(edge, -1)
+            b = building(edge, true_sky)
             if b:
-                left.append(b)
+                true_side.append(b)
         else:
-            b = building(edge, +1)
+            b = building(edge, false_sky)
             if b:
-                right.append(b)
+                false_side.append(b)
     for edge in both:
-        bl = building(edge, -1)
-        if bl:
-            left.append(bl)
-        br = building(edge, +1)
-        if br:
-            right.append(br)
-    return left, right
+        bt = building(edge, true_sky)
+        if bt:
+            true_side.append(bt)
+        bf = building(edge, false_sky)
+        if bf:
+            false_side.append(bf)
+    # Return in (negative sky, positive sky) order regardless of axis, i.e.
+    # (LEFT, RIGHT) for horizon Y and (DOWN, UP) for horizon X.
+    return (false_side, true_side) if horizon_axis == 0 else (true_side, false_side)
 
 
-def build(glyphset, glyph):
-    contour, both = outline_segments(glyphset, glyph)
-    return classify(contour, both)
+def build(glyphset, glyph, horizon_axis=1):
+    scale = glyph_outline_scale(glyphset, glyph)
+    # Reported rather than silently applied: if a glyph ever comes out off 1.0, the number
+    # LilyPond spaces it by is not the outline in staff spaces any more, and every dump
+    # this file was calibrated against would have to be re-read.
+    if abs(scale - 1.0) > 1e-12:
+        sys.stderr.write(f"NOTE: {glyph} outline->stencil scale = {scale:.9f} (not 1)\n")
+    contour, both = outline_segments(glyphset, glyph, scale)
+    return classify(contour, both, horizon_axis)
 
 
 def fmt(v):
@@ -233,9 +323,40 @@ def main():
     L.append("// courtesy paren composition (accidental.cc:33-43 parenthesize) are runtime")
     L.append("// branches in AccidentalPlacement.GlyphSkylinePair, where LilyPond has them.")
     L.append("//")
+    L.append("//")
+    L.append("// Clef VERTICAL skylines, from the same outline flattening on the other horizon")
+    L.append("// axis: scm/define-grobs.scm:902-927 gives Clef grob::always-vertical-skylines-from-stencil.")
+    L.append("//")
+    L.append("// The outline->stencil ratio lily/stencil-integral.cc:551-557 divides by,")
+    L.append("//     scale = bbox[X_AXIS].length () / real_bbox[X_AXIS].length ()")
+    L.append("// is COMPUTED here rather than assumed (glyph_outline_scale): bbox is FreeType's")
+    L.append("// glyph metrics under FT_LOAD_NO_SCALE (freetype.cc:51-65")
+    L.append("// ly_FT_get_unscaled_indexed_char_dimensions), i.e. the CONTROL box, and real_bbox")
+    L.append("// is the exact outline box (freetype.cc:67-88 uses FT_Outline_Get_BBox). It comes")
+    L.append("// out at exactly 1.0 for every glyph baked here -- which is what LilyPond's own")
+    L.append("// comment at :549-550 predicts -- but it is a division in LilyPond, so it is a")
+    L.append("// division here, and the generator writes a NOTE to stderr if any glyph ever")
+    L.append("// leaves 1.0. Writing 1 instead would be folding an evaluated result.")
+    L.append("// A pair of BOXES makes two facing clefs bind at the sum of their maxima; a pair of")
+    L.append("// OUTLINES binds lower, because the G clef's deepest ink is at x=1.84 and its highest")
+    L.append("// at x=2.228. Measured off LilyPond in audit/lp-geometry/probes/skyline-binding.ly:")
+    L.append("// dist(upper DOWN, lower UP) = 7.210039 against 3.540000 + 3.776000 = 7.316000.")
+    L.append("//")
     L.append("// Each array is a flat list of skyline BUILDINGS, four doubles apiece:")
-    L.append("//   start (yLow), startValue (sky*x at yLow), endValue (sky*x at yHigh), end (yHigh)")
-    L.append("// with sky = +1 for RIGHT, -1 for LEFT — the sign-framed form SkylineBuilding takes.")
+    L.append("//   start (horizon low), startValue (sky*other at horizon low),")
+    L.append("//   endValue (sky*other at horizon high), end (horizon high)")
+    L.append("// — the sign-framed form SkylineBuilding takes. The horizon is Y for the accidental")
+    L.append("// pairs (sky = -1 LEFT, +1 RIGHT) and X for the clefs (sky = -1 DOWN, +1 UP).")
+    L.append("//")
+    L.append("// ⚠️ A LIST IS NOT ONE SIDE OF THE GLYPH, AND MIXED SIGNS ARE NOT A BUG. Edges are")
+    L.append("// sorted by CONTOUR DIRECTION, not by which half of the glyph they sit in")
+    L.append("// (lily/include/lazy-skyline-pair.hh:53-65 add_contour_segment), so a glyph with")
+    L.append("// counters or with two arms puts edges with POSITIVE y into its DOWN array and")
+    L.append("// edges with NEGATIVE y into its UP array. ClefSkyCD really does carry buildings")
+    L.append("// at y = +1.96, and LilyPond's own lists carry the same ones; the skyline RESOLVE")
+    L.append("// picks the right building at each x. Dropping them by sign would delete real")
+    L.append("// silhouette. Checked against LilyPond's ly:skyline->points dump for all three")
+    L.append("// clefs (audit/lp-geometry/probes/skyline-binding.ly): six digits, every vertex.")
     L.append("")
     L.append("namespace LilySharp.Core.Svg.Layout;")
     L.append("")
@@ -254,6 +375,18 @@ def main():
         L.extend(emit_side(f"AccSky{cap}R", right))
         L.append("")
         kinds.append((kind, cap))
+
+    clef_kinds = []
+    for kind, glyph in CLEFS:
+        if glyph not in order:
+            sys.stderr.write(f"ERROR: glyph name not in font: {glyph}\n")
+            return 1
+        down, up = build(glyphset, glyph, horizon_axis=0)
+        L.append(f"    // ===== clef {kind} ({glyph}): {len(down)} DOWN + {len(up)} UP buildings =====")
+        L.extend(emit_side(f"ClefSky{kind}D", down))
+        L.extend(emit_side(f"ClefSky{kind}U", up))
+        L.append("")
+        clef_kinds.append(kind)
 
     acc_kinds = [(k, c) for (k, c) in kinds if k not in ("leftParen", "rightParen")]
 
@@ -276,6 +409,24 @@ def main():
     L.append("    public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalParenSkylinePair(bool leftParen) =>")
     L.append("        leftParen ? (AccSkyPairLeftParen.Left, AccSkyPairLeftParen.Right)")
     L.append("                  : (AccSkyPairRightParen.Left, AccSkyPairRightParen.Right);")
+    L.append("")
+    L.append("    /// <summary>The (DOWN, UP) VERTICAL skyline of a clef glyph, as raw sign-framed")
+    L.append("    /// buildings in the glyph's own frame (X from the glyph origin, Y from the line the")
+    L.append("    /// glyph sits on). Raw rather than a built skyline because every seat wants it at a")
+    L.append("    /// different x, y and staff size, and a <c>VerticalSkyline</c> is mutable.")
+    L.append("    /// LILYPOND-REF: scm/define-grobs.scm:902-927 <c>grob::always-vertical-skylines-from-stencil</c>")
+    L.append("    /// is what the Clef declares, hence")
+    L.append("    /// lily/stencil-integral.cc:562 add_named_glyph_segments and")
+    L.append("    /// lily/freetype.cc:174-202 Path_interpreter, run by ly_FT_add_outline_to_skyline.</summary>")
+    L.append("    public static (double[] Down, double[] Up) ClefVerticalSkylineQuads(string kind) => kind switch")
+    L.append("    {")
+    for kind in clef_kinds:
+        if kind == "G":
+            continue
+        L.append(f"        \"{kind}\" => (ClefSky{kind}D, ClefSky{kind}U),")
+    L.append("        // The G clef is the fallback for the same reason it is in ClefInk.")
+    L.append("        _ => (ClefSkyGD, ClefSkyGU),")
+    L.append("    };")
     L.append("")
     for kind, cap in kinds:
         L.append(f"    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPair{cap} =")

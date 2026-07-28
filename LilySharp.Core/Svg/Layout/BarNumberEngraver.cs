@@ -154,20 +154,30 @@ internal static class BarNumberEngraver
                 // up-skyline, and that skyline is the top staff LINE plus half its
                 // thickness — not the line's centre. Written as the derivation rather
                 // than as 1.05 so it follows the staff symbol if that ever changes
-                // (HANDOFF 5.2.1⑤). Lily# has no measured bottom overshoot for its
-                // digits, so its baseline IS that ink bottom; LilyPond's sits a
-                // digit's own overshoot higher, which is the ~0.024 floor the ledger
-                // entries name.
+                // (HANDOFF 5.2.1⑤).
                 // Collisions with protruding staff content and other outside-staff
                 // grobs are resolved afterwards by OutsideStaffStacker.StackAboveStaff.
                 // LILYPOND-REF: scm/define-grobs.scm:333 BarNumber padding = 1.0;
                 // lily/side-position-interface.cc y_aligned_side.
+                //
+                // ...and the BASELINE is that ink bottom plus the digits' OWN overshoot
+                // below it, which is why this reads the face rather than assuming zero.
+                // It said "Lily# has no measured bottom overshoot for its digits" until
+                // 2026-07-28 and that had stopped being true: TextFontMetrics.Ink measures
+                // the drawn path. MEASURED, and it is PER STRING, which is the shape
+                // LilyPond's own dump has: a round digit overshoots by 0.024446 and a "1"
+                // by nothing, against LilyPond's 3.074440 for "6" and 3.076208 for another
+                // digit over the staff refpoint (probe page-vertical.ly, books BNL/BNH).
+                // A constant here would be right for one numeral and wrong for the next.
                 const double padding = 1.0;
-                double yUp = EngravingDefaults.StaffLineThickness / 2 + padding;
+                string text = displayedNumber.ToString();
+                double overshoot = -Rendering.TextFontMetrics.Ink(
+                    text, FontSize, sans: false, Rendering.FontStyle.Bold).Bottom;
+                double yUp = EngravingDefaults.StaffLineThickness / 2 + padding + overshoot;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,
-                    Text: displayedNumber.ToString(),
+                    Text: text,
                     X: x,
                     YUp: yUp,
                     RightAligned: atLineStart));

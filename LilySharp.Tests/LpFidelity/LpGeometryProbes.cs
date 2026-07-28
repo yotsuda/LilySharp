@@ -279,6 +279,119 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// <see cref="S"/>'s music shortened to one page — the Lily# half of books SCF and SCC in
+    /// probes/system-clef-floor.ly, the pair that puts the system-to-system spring ON its
+    /// SKYLINE FLOOR with the line-start CLEF as the ink that binds it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:625-632 <c>append_system</c> —
+    /// <c>up_skyline.distance (bottom_skyline_, skyline-horizontal-padding) + padding</c> is a
+    /// FLOOR under the inter-system spring, through <c>ensure_min_distance</c>. Lily# computes
+    /// the same quantity at <c>LayoutEngine.cs:965</c> (and again in <c>PageLayouter</c>), and
+    /// before this pair NOTHING in the corpus reached it with the clef binding, because on
+    /// shipping paper it cannot: 3.776 + 3.540 + padding 1 = 8.316 is under
+    /// <c>system-system-spacing</c>'s basic-distance of 12, so the spring reads its ideal and
+    /// the skyline term leaves no trace. That is precisely what
+    /// <c>system.clef-bounded-distance</c> records — 12.000000, exact, and blind to all of
+    /// this. Two staves do not help either:
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1080-1127 <c>build_system_skyline</c> raises the up skyline to the
+    /// system's FIRST spaceable staff and the down skyline to its LAST, so a system's own
+    /// height is not in the distance and a plain two-staff score gets the same 8.316.
+    /// <para>
+    /// So the floor is made to bind by taking the spring's IDEAL away rather than by adding
+    /// ink: <c>basic-distance</c> and <c>minimum-distance</c> both go to 0 and the padding
+    /// stays LilyPond's shipping 1, which makes the reading <c>distance + 1</c> and nothing
+    /// else. Adding ink instead was rejected for the reason probe S's header gives: whatever
+    /// is deep enough to beat 12 is then what the entry measures, and the clef's own profile
+    /// goes back to being invisible.
+    /// </para>
+    /// <para>
+    /// ★ MEASURED 2026-07-28, and it FALSIFIED the prediction that opened this pair. The
+    /// prediction was that the clef's OUTLINE would read below its BOX here, by the same
+    /// 0.105961 skyline-binding.ly found between a G clef and a G clef (the outline's deepest
+    /// point is at x = 1.84 and its highest at x = 2.228, so two of them facing each other
+    /// touch in between). LilyPond prints <b>8.316000</b> — the box sum exactly. The reason is
+    /// the horizon padding, which that earlier probe did not have —
+    /// LILYPOND-REF: lily/skyline.cc:557-615 <c>Skyline::padded</c> extends every building by its <c>horizon_padding</c>
+    /// by a FLAT plateau of <c>horizon_padding</c> and only then a 45° slope, so at 1.0 the
+    /// clef's peak is flat from x ≈ 1.23 to x ≈ 3.23 and covers the deep point at 1.84
+    /// outright. ⇒ At the SYSTEM level a box and an outline give the same answer, and this
+    /// entry is the guard that says so: a Lily# whose horizontal padding is a bare 45° shoulder
+    /// rather than plateau-then-slope reads LESS here, and the residual is that defect and not
+    /// the clef's.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>indent = 0</c> is load bearing on both sides, and not for trap 3's usual reason:
+    /// <c>append_system</c> SHIFTS each system's skylines by its own indent (:600-601), so at
+    /// LilyPond's default 15mm the first system's clef would stand about 8.5 staff spaces right
+    /// of every other system's and the first gap would pair a clef against NOTES.
+    /// <c>LayoutOptions.Default</c> already indents by 0; the .ly says so explicitly.
+    /// </para>
+    /// LilyPond twin: <c>\new Staff { \repeat unfold 24 { a'4 a' a' a' } }</c>.
+    /// </remarks>
+    private static string ClefFloorScore(string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 24)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The book measured on the floor — the mirror of book SCF.</summary>
+    private static readonly string SCF = ClefFloorScore("SCF");
+
+    /// <summary>The same music on shipping spacing — the mirror of book SCC.</summary>
+    private static readonly string SCC = ClefFloorScore("SCC");
+
+    /// <summary>
+    /// Ragged-bottom paper with the inter-system spring's IDEAL AND MINIMUM taken away, so the
+    /// only thing holding two systems apart is the skyline floor — the paper of book SCF.
+    /// </summary>
+    /// <remarks>
+    /// Spelled out rather than derived from <c>RaggedBottomPaper</c> because static field
+    /// initializers run in declaration order and that one is declared far below this point.
+    /// <para>
+    /// ⚠️ The music is short and the page keeps slack on purpose: a FULL ragged page compresses
+    /// anyway (HANDOFF 5.0 trap 7) and would read a force instead of the floor. At force 0 a
+    /// spring whose minimum exceeds its ideal returns exactly that minimum
+    /// (LILYPOND-REF: lily/spring.cc:219-237 <c>Spring::length</c>, whose <c>inverse_compress_strength</c> the blocking force bypasses).
+    /// </para>
+    /// </remarks>
+    private static readonly LayoutOptions ClefFloorPaper =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
+            VerticalSpacing = VerticalSpacingParameters.Default with
+            {
+                SystemSystem = VerticalSpacingParameters.Default.SystemSystem with
+                {
+                    BasicDistance = 0,
+                    MinimumDistance = 0,
+                },
+            },
+        };
+
+    /// <summary>
+    /// The same paper with <c>system-system-spacing</c> left alone — the fork's other side,
+    /// where the spring reads its ideal and says nothing about any skyline. The paper of SCC.
+    /// </summary>
+    private static readonly LayoutOptions ClefFloorControlPaper =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
+        };
+
+    /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
     /// (ragged-bottom control). The two entries built from it measure the staff spring
     /// LilyPond puts INSIDE a system and Lily# does not have.
@@ -3722,7 +3835,16 @@ internal static class LpGeometryProbes
         // does not push the systems apart, it gets squeezed into the room that already
         // exists. Lily# grows the system's extent instead, so its chain always has room and
         // can never compress. Font-free on both sides: 12.000000 is a basic-distance.
-        new("lyrics.two-verse.system-gap", LYRV, g => g.StaffGap(), FourSystemsPerPageRagged),
+        // ⚠️ StaffGapAt(0), not StaffGap(), SINCE 2026-07-28, and the reason is a finding and
+        // not a harness workaround: Lily#'s gaps here stopped being uniform (12.167914,
+        // 12.143468, 12.167914) when the bar number began reserving its OWN numeral's ink.
+        // A round digit overshoots its baseline and a "1" does not, so the reservation is
+        // per-numeral — which is LilyPond's shape too (its dump gives ink tops of 4.305433
+        // and 4.303666 on the same book). LilyPond's gaps stay uniform only because none of
+        // that binds there: its gap sits on the spring's ideal 12.000000, and Lily#'s is
+        // floored by the reservation. So the non-uniformity IS the residual this entry
+        // records, seen from another side, and index 0 names the wider of the two.
+        new("lyrics.two-verse.system-gap", LYRV, g => g.StaffGapAt(0), FourSystemsPerPageRagged),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
@@ -4034,6 +4156,28 @@ internal static class LpGeometryProbes
         // its lowest notehead happens to reach 0.005 further down than the clef does.
         new("page.clef.first-staff-refpoint", S, g => g.FirstStaffRefpoint()),
         new("system.clef-bounded-distance", S, g => g.StaffGap()),
+
+        // --- the same spring SITTING ON ITS SKYLINE FLOOR (books SCF / SCC) ---
+        // The entry above reads the spring's IDEAL, because on shipping paper the clef's
+        // 3.776 + 3.540 + 1 never reaches basic-distance 12. These read the FLOOR instead:
+        // the same music with the ideal and the minimum taken away, so what is left is
+        // ensure_min_distance's own argument. See ClefFloorScore for the arithmetic and for
+        // what LilyPond answered.
+        //
+        // A FORK, not one number (HANDOFF 5.0): SCF and SCC differ in two paper values and
+        // nothing else, so LilyPond's difference between them IS the mechanism. If they read
+        // alike, the paper edit did nothing and SCF is not in the regime it claims.
+        // The refpoint and the system count ride along for the two reasons the corpus has
+        // been bitten by (README "both sides", HANDOFF 5.0 trap 8): top-system-spacing is
+        // untouched, so a moved refpoint means the edit reached further than intended, and a
+        // gap read off a page with the wrong number of systems on it is not this gap.
+        new("system.clef-floor.floor-bound-distance", SCF, g => g.StaffGap(), ClefFloorPaper),
+        new("system.clef-floor.ideal-bound-distance", SCC, g => g.StaffGap(),
+            ClefFloorControlPaper),
+        new("page.clef-floor.first-staff-refpoint", SCF, g => g.FirstStaffRefpoint(),
+            ClefFloorPaper),
+        new("page.clef-floor.systems-on-first-page", SCF, g => g.SystemsOnPage(0),
+            ClefFloorPaper),
 
         // --- the STAFF-TO-STAFF distance inside one system (Align_interface) ---
         // One system with two staves, so the same StaffGap() that reads system-to-system

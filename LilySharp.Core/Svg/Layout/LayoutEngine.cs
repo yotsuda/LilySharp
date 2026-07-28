@@ -1369,7 +1369,21 @@ internal sealed class LayoutEngine
             // bn.YUp is Y-up from the system top; the system-relative device value
             // (the old bn.Y - system.Y) is just -YUp.
             double rel = -bn.YUp;
-            up[s] = Math.Max(up[s], -(rel - 1.3));
+            // The digits' OWN ink over their baseline, from the face — the same face and the
+            // same call the WIDTH beside this already uses. It was a bare 1.3 until
+            // 2026-07-28, which is a cap height nothing states: LilyPond reserves what the
+            // glyphs draw, since a BarNumber's vertical-skylines come from its stencil.
+            // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents — a text
+            // grob's extent IS its stencil's, so there is no designed box to round up to.
+            // MEASURED (audit/lp-geometry/probes/page-vertical.ly, books BNL/BNH): LilyPond
+            // puts the baseline 3.076208 over the staff refpoint and the ink top at 4.305433,
+            // i.e. 1.229225 — against the 1.3 this used to reserve. Closing it took
+            // system.clef-floor.floor-bound-distance to exact and lyrics.*.system-gap from
+            // +0.207200 to +0.143468.
+            double capTop = Rendering.TextFontMetrics.Ink(
+                bn.Text, BarNumberEngraver.FontSize,
+                sans: false, Rendering.FontStyle.Bold).Top;
+            up[s] = Math.Max(up[s], -(rel - capTop));
         }
 
         // Ties and slurs now store WITHIN-SYSTEM device Y (step 2d), so the negated
@@ -1716,7 +1730,8 @@ internal sealed class LayoutEngine
         // only the staff-symbol roof exists; without their ink in the UP
         // silhouette, Distance() lets the previous system's staff lines crowd
         // the number (their scalar up-extent is overridden by the X-aware
-        // distance). Same cap envelope Enrich uses (top = baseline − 1.3).
+        // distance). Same cap envelope Enrich uses — the digits' own ink from
+        // the face, see the note there for what it replaced and what it closed.
         // LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline —
         // the system skyline contains the BarNumber grob.
         if (!barNumbers.IsDefaultOrEmpty)
@@ -1730,10 +1745,13 @@ internal sealed class LayoutEngine
                 double w = Rendering.TextFontMetrics.SerifBold(
                     bn.Text, BarNumberEngraver.FontSize);
                 double x0 = bn.RightAligned ? bn.X - w : bn.X;
+                double capTop = Rendering.TextFontMetrics.Ink(
+                    bn.Text, BarNumberEngraver.FontSize,
+                    sans: false, Rendering.FontStyle.Bold).Top;
                 var up = new VerticalSkyline(VerticalDirection.Up);
                 up.Merge(result[s].up);
                 up.Merge(VerticalSkyline.FromBox(
-                    x0, x0 + w, rel, rel + 1.3, VerticalDirection.Up));
+                    x0, x0 + w, rel, rel + capTop, VerticalDirection.Up));
                 result[s] = (up, result[s].down);
             }
         }

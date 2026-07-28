@@ -247,7 +247,20 @@ public class StaffSkylineFrameTests
             systemLeft: 0.0);
 
         double anchor = EngravingDefaults.ClefGlyphXOffset;
-        double fullWidth = GlyphMetrics.ClefGOutline.Right - GlyphMetrics.ClefGOutline.Left;
+        // ⚠️ THE CLEF'S BOX IS WIDER THAN ITS UPPER SILHOUETTE, so the probe cannot come from
+        // the box — measured 2026-07-28 when the seed became the outline: the G clef's glyph
+        // box reaches 2.580 to the right of its origin, but the part standing clear of the
+        // staff stops at 2.000, the rest of that width being the tail that hangs BELOW. A
+        // probe placed by the box lands where a full-size clef has no upward ink either, and
+        // the regime assertion below (correctly) refuses. Take the right end of the region
+        // where the glyph still clears the staff, from the same baked outline SeedClef seeds.
+        var (_, upQuads) = GlyphMetrics.ClefVerticalSkylineQuads("G");
+        const double gLine = -1.0;                  // the G clef's origin, in the staff's frame
+        double clearOfStaff = StaffLineInk - gLine; // ...that height, in the GLYPH's frame
+        double fullWidth = 0.0;
+        for (int i = 0; i + 3 < upQuads.Length; i += 4)
+            if (upQuads[i + 1] > clearOfStaff && upQuads[i + 2] > clearOfStaff)
+                fullWidth = Math.Max(fullWidth, upQuads[i + 3]);
         double scaledWidth = fullWidth * EngravingDefaults.OssiaScale;
         // A point PAST the ossia's own clef but still inside a full-size one.
         double probe = anchor + (scaledWidth + fullWidth) / 2.0;

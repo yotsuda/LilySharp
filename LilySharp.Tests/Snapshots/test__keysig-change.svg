@@ -148,7 +148,7 @@
   <rect x="84.16" y="28.32" width="0.19" height="4.00" data-pos="645"/>
   <rect x="101.34" y="28.32" width="0.19" height="4.00" data-pos="661"/>
   <rect x="101.83" y="28.32" width="0.60" height="4.00" data-pos="661"/>
-  <text x="0.00" y="27.27" font-size="1.75" font-weight="bold" text-anchor="end">7</text>
+  <text x="0.00" y="27.25" font-size="1.75" font-weight="bold" text-anchor="end">7</text>
   <rect x="0.30" y="11.46" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="666"/>
   <text x="1.33" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="666">A</text>
   <text class="music" x="3.17" y="13.66" font-size="1.60" data-pos="0"></text>

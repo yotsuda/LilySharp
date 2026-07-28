@@ -111,13 +111,23 @@ public class BarNumberTests
         // side-position-interface::y-aligned-side against the staff. The staff's up
         // skyline is the top LINE plus half its thickness, not the line's centre, so the
         // number's ink bottom is 0.05 + 1.0 above the top line.
-        // MEASURED (book BNL): 3.050000 above the staff REFPOINT for a flat-bottomed
-        // digit, i.e. 2.050000 + 1.0. Asserted here as the derivation rather than as the
-        // number, so it follows the staff symbol if that ever changes.
+        // MEASURED (book BNL): 3.050000 above the staff REFPOINT, i.e. 2.050000 + 1.0.
+        // Asserted here as the derivation rather than as the number, so it follows the
+        // staff symbol if that ever changes.
+        // ⚠️ IT IS THE INK BOTTOM, WHICH IS WHAT THIS TEST HAS ALWAYS BEEN CALLED, and
+        // until 2026-07-28 it asserted the BASELINE instead — the same thing only while
+        // Lily# assumed its digits had no overshoot below their baseline. They do (the
+        // face's own path: 0.024446 for a round digit, 0 for a "1"), and LilyPond's dump
+        // shows the same shape: ink bottom 3.050000 for every number, baseline 3.074440
+        // or 3.076208 depending on the digits. So the invariant is stated where LilyPond
+        // states it, and the baseline is free to follow the numeral.
         var layout = BuildLayout("c4 d e f | break g4 a b c |");
         var bn = layout.BarNumberLayouts[0];
+        double inkBottom = bn.YUp + LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            bn.Text, LilySharp.Core.Svg.Layout.BarNumberEngraver.FontSize,
+            sans: false, LilySharp.Core.Rendering.FontStyle.Bold).Bottom;
         Assert.Equal(LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness / 2 + 1.0,
-                     bn.YUp, precision: 6);
+                     inkBottom, precision: 6);
     }
 
     [Fact]

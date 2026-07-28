@@ -499,15 +499,29 @@ internal static class OutsideStaffStacker
             var bn = b[i];
             if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int sysIdx))
                 continue;
-            // Measured digit width; digits have no descenders, cap
-            // height ~0.71em above the baseline anchor.
+            // The digits' OWN ink about their baseline, both ways, from the face — the same
+            // call the width beside it already used, and the same one the paging skyline
+            // makes. It said "digits have no descenders, cap height ~0.71em" until
+            // 2026-07-28, and BOTH halves of that were wrong: a round digit OVERSHOOTS its
+            // baseline, and the cap height is the face's, not a tuning.
+            // LILYPOND-REF: scm/define-grobs.scm BarNumber — side-axis Y, direction UP,
+            // padding 1.0, and its stencil is ly:text-interface::print, so what
+            // outside_staff_axis_group clears is the TEXT's ink and not a designed box
+            // (lily/grob.cc:85-89 simple_vertical_skylines_from_extents).
+            // MEASURED (audit/lp-geometry/probes/page-vertical.ly, books BNL/BNH): LilyPond
+            // puts the number's ink bottom at 3.050000 over the staff refpoint — which is
+            // the staff line's own ink 2.050000 plus that padding of 1.0, exactly — and its
+            // BASELINE at 3.076208. The 0.026208 between them is the overshoot this used to
+            // reserve as zero, and it is the whole of barnumber.*.staff-to-baseline.
             double width = TextFontMetrics.SerifBold(bn.Text, BarNumberEngraver.FontSize);
             double x0 = bn.RightAligned ? bn.X - width : bn.X;
             double x1 = bn.RightAligned ? bn.X : bn.X + width;
+            var ink = TextFontMetrics.Ink(
+                bn.Text, BarNumberEngraver.FontSize, sans: false, FontStyle.Bold);
             // System-relative Y-up: bn.YUp is Y-up from the system top, entering directly.
             double newRel = Place(trackers[sysIdx], x0, x1,
                 bn.YUp,
-                topOffset: CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
+                topOffset: ink.Top, bottomOffset: -ink.Bottom);
             b[i] = bn with { YUp = newRel };
         }
         return b.ToImmutable();
