@@ -120,20 +120,17 @@ internal sealed class MultiStaffLayouter
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = SelectInterGroupSpec(group, nextGroup, sp);
 
-                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 // An ossia joins the SAME vertical alignment as the staves in LP
                 // (vertical-align-engraver.cc inserts its grob among them), so
                 // the ossia/staff pair gets ordinary staff-staff-spacing — not
-                // the wider between-groups spacing — scaled with the ossia.
-                if (nextIsOssia || currentIsOssia)
+                // the wider between-groups spacing. The distance itself is NOT
+                // scaled with the ossia; see LayoutStaffGroupsWithSkylines.
+                if (nextGroup.Staves.Any(s => s.IsOssia) || group.Staves.Any(s => s.IsOssia))
                     spec = sp.StaffStaff;
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
                     : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
-                if (nextIsOssia || currentIsOssia)
-                    interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
             }
 
@@ -363,11 +360,13 @@ internal sealed class MultiStaffLayouter
     /// both sides.
     /// </para>
     /// <para>
-    /// ⚠️ AN OSSIA PAIR IS STILL NOT RIGHT, and this does not claim to fix it: the caller
-    /// multiplies the gap by <c>OssiaScaleFactor</c>, which is Lily#'s own — LilyPond places
-    /// an ossia in the page's absolute staff spaces and scales the STAFF, not the distance.
-    /// This change moves an ossia pair TOWARD LilyPond by correcting the span; the scale
-    /// remains, and it is a separate named quantity with its own entry.
+    /// AN OSSIA PAIR was the second half of the same island and is closed too. The span this
+    /// method returns already used the ossia's own placed half-height; what remained was the
+    /// caller multiplying the finished gap by <c>OssiaScaleFactor</c>, which had no
+    /// counterpart — LilyPond places an ossia in the page's absolute staff spaces and scales
+    /// the STAFF, not the distance. That multiplication is gone;
+    /// <c>staff.ossia-pair.staff-staff-inside</c> now reads 9.000000 on both sides against
+    /// its control <c>staff.ossia-control.staff-staff-inside</c>.
     /// </para>
     /// </remarks>
     private double GapSpan(MultiStaffScore score, Staff upper, Staff lower)
@@ -449,14 +448,10 @@ internal sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = InterGroupSpec(group, nextGroup, sp);
-                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                 double interGroupGap = textRowPair
                     ? TextRowPairGap
                     : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
-                if (nextIsOssia || currentIsOssia)
-                    interGroupGap *= OssiaScaleFactor;
                 currentY -= interGroupGap;
             }
 
@@ -1638,8 +1633,6 @@ internal sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                     var nextGroup = score.StaffGroups[next];
                     var spec = InterGroupSpec(group, nextGroup, sp);
-                    bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
-                    bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                     bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                     int upperLive = LastLiveIndex(i);
                     int lowerLive = FirstLiveIndex(next);
@@ -1650,12 +1643,20 @@ internal sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a non-spaceable
                     // staff is pushed onto `loose_lines` and the NEXT spaceable one closes
                     // the run, so the two spaceable staves are never adjacent in the walk.
+                    // LILYPOND-REF: lily/align-interface.cc:240-267 — the distance between two
+                    // elements of a VerticalAlignment is accumulated between their REFERENCE
+                    // POINTS in the page's staff spaces, and nothing in it reads the element's
+                    // own staff-space. `magstep` scales the STAFF (ly/music-functions-init.ly
+                    // magnifyStaff sets fontSize and StaffSymbol.staff-space), never the
+                    // alignment's units, so an ossia pair is spaced exactly like any other.
+                    // Measured on 2.26.0 across three arrangements — probe page-vertical.ly
+                    // books OSSU (small staff above), OSSD (small staff below) and TABS (a tab
+                    // staff below) all read 9.000000; the falsifier 9 * magstep(-3) = 6.363961
+                    // fired on none of them. Ledger: staff.ossia-pair.staff-staff-inside.
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
                         : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
                             looseLines?.Invoke(upperLive, lowerLive));
-                    if (nextIsOssia || currentIsOssia)
-                        interGroupGap *= OssiaScaleFactor;
                     currentY -= interGroupGap;
                 }
             }
@@ -1727,12 +1728,19 @@ internal sealed class MultiStaffLayouter
     /// hidden.</item>
     /// <item>HIDDEN staves are gone from LilyPond's element list too
     /// (<c>filter_dead_elements</c>, :589).</item>
-    /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid. Lily# spaces an ossia at
-    /// <c>gap * OssiaScale</c>, which is its own model and lands BELOW the spec's
-    /// basic-distance — a spring built from that spec would pull the pair apart at force 0,
-    /// i.e. change output where nothing is being ported. LilyPond has no such scaling and
-    /// springs an ossia like any staff; closing that needs the ossia distance itself ported
-    /// first.</item>
+    /// <item>LILYSHARP-OWN: an OSSIA pair is left rigid, and this is now the LAST of the
+    /// ossia island. ⚠️ THE STATED BLOCKER IS GONE AS OF 2026-07-28: the reason written here
+    /// was that Lily# spaced an ossia at <c>gap * OssiaScale</c>, which landed BELOW the
+    /// spec's basic-distance, so a spring built from that spec would pull the pair apart at
+    /// force 0 — and "closing that needs the ossia distance itself ported first". That port
+    /// is done; the pair now sits ON the spec (<c>staff.ossia-pair.staff-staff-inside</c>
+    /// reads 9.000000 on both sides), so a spring built from it is at its own ideal and does
+    /// not move the pair at force 0. What remains is only that nobody has measured the
+    /// PAGE-level consequence: LilyPond springs an ossia like any staff
+    /// (page-layout-problem.cc), which makes it SPACEABLE and widens
+    /// <c>staff-refpoint-extent</c> — probe book LYROS reads 18.000000 against Lily#'s
+    /// two-staff span for exactly that reason. Un-skipping this without a point for that
+    /// span would be moving the page on an unmeasured quantity.</item>
     /// </list>
     /// </para>
     /// </remarks>

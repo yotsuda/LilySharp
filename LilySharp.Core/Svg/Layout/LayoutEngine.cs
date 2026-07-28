@@ -94,6 +94,22 @@ internal sealed class LayoutEngine
         // new measures and skips the DP. Null => normal (byte-identical) breaking.
         var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration, precomputedLineSizes);
 
+        // Chord symbols on a TEXT ROW (lead sheets) live in their own band and must not
+        // inflate a music staff's up-extent; inline chord symbols (nameless `chords { }`) sit
+        // above their staff and must. ...and the LYRICS rows among them, which are the ones
+        // the loose chain places (a chords row below a staff carries the ChordNames nonstaff-*
+        // set and no corpus point measures that arrangement — see SystemAlignment.UnmodelledRow).
+        // ⚠️ BUILT HERE rather than beside its first reader: PageAnchorOffsets needs the same
+        // sets, and the first system's Y is decided before the paging pass runs.
+        var textRowStaves = new HashSet<int>();
+        var lyricsRowStaves = new HashSet<int>();
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (st.IsTextRow)
+            {
+                textRowStaves.Add(gi);
+                if (st.IsLyricsTextRow) lyricsRowStaves.Add(gi);
+            }
+
         // LILYPOND-REF: lily/align-interface.cc:217-268
         // Compute first system measure layouts first, then use skyline-based staff spacing
         multiStaffLayouter.CurrentIndent = indent;
@@ -161,9 +177,10 @@ internal sealed class LayoutEngine
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
             score, firstSystemMeasureLayouts, systemHeight, indent,
             firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts);
+        var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts, textRowStaves, lyricsRowStaves);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
-            _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
+            firstAnchor.HalfFirst, firstAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
 
         var placed = LayoutSystems(new SystemPassContext
         {
@@ -195,20 +212,6 @@ internal sealed class LayoutEngine
             multiMeasureRanges.Add((multiMeasStart, sysMeasures.Count));
             multiMeasStart += sysMeasures.Count;
         }
-        // Chord symbols on a TEXT ROW (lead sheets) live in their own band and
-        // must not inflate a music staff's up-extent; inline chord symbols
-        // (nameless `chords { }`) sit above their staff and must.
-        var textRowStaves = new HashSet<int>();
-        // ...and the LYRICS rows among them, which are the ones the loose chain places
-        // (a chords row below a staff carries the ChordNames nonstaff-* set and no corpus
-        // point measures that arrangement — see SystemAlignment.UnmodelledRow).
-        var lyricsRowStaves = new HashSet<int>();
-        foreach (var (_, st, gi) in score.EnumerateStaves())
-            if (st.IsTextRow)
-            {
-                textRowStaves.Add(gi);
-                if (st.IsLyricsTextRow) lyricsRowStaves.Add(gi);
-            }
         var inlineChordNames = score.ChordNames
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
         AugmentExtentsWithLooseLines(perSystemExtents,
@@ -224,6 +227,7 @@ internal sealed class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
+            textRowStaves, lyricsRowStaves,
             pagingSkylines, perSystemHeights, perSystemBands);
 
         var looseChainEnd = BuildLooseChainEnds(
@@ -861,6 +865,7 @@ internal sealed class LayoutEngine
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
+        IReadOnlySet<int> textRowStaves, IReadOnlySet<int> lyricsRowStaves,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
         List<(double bandUp, double bandDown)>? perSystemBands = null)
@@ -894,9 +899,16 @@ internal sealed class LayoutEngine
             var skylines = perSystemSkylines != null
                 ? (ImmutableArray<(VerticalSkyline, VerticalSkyline)>?)perSystemSkylines.ToImmutableArray()
                 : null;
+            // The refpoint frame every page spring is written in, per system — see
+            // PageAnchorOffsets. Computed here because the SELECTION it rests on is
+            // ClassifySystem's, which needs the score's text rows; the page layouter is
+            // handed the answer for the same reason it is handed the body heights.
+            var anchors = systems
+                .Select(s => PageAnchorOffsets(s.StaffGroups, textRowStaves, lyricsRowStaves))
+                .ToImmutableArray();
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
-                perSystemBands?.ToImmutableArray(), perSystemHeights);
+                perSystemBands?.ToImmutableArray(), perSystemHeights, anchors);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -904,9 +916,10 @@ internal sealed class LayoutEngine
             return OptimalPages();
 
         // Recalculate Y positions using skyline extents to avoid overlaps
+        var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups, textRowStaves, lyricsRowStaves);
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
-            _options.StaffHeight / 2.0, _options.VerticalSpacing.TopSystem);
+            pageAnchor.HalfFirst, pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
         var updatedSystems = new List<SystemLayout>();
         for (int i = 0; i < systems.Length; i++)
         {
@@ -1824,6 +1837,76 @@ internal sealed class LayoutEngine
 
         return new SystemAlignment(
             first, last, leading.ToImmutable(), trailing.ToImmutable(), ossia, unmodelled);
+    }
+
+    /// <summary>
+    /// How far DOWN from a system's ORIGIN its first and its last SPACEABLE staff's
+    /// REFERENCE POINTS sit — the two anchors every page spring is written against.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — <c>solution_[spring_idx]</c> is the
+    /// first spaceable staff's position and the system's origin is that plus
+    /// <c>min_offsets[0]</c>; :1116 and :1126 are the same conversion at the other end
+    /// (<c>last_spaceable_dy</c>). Every page distance LilyPond writes — top-system-spacing to
+    /// the first one, system-system-spacing between them, last-bottom-spacing under the last —
+    /// runs between reference points, while Lily# stacks systems by their ORIGIN (the first
+    /// element's top line). This is that conversion, and it is one function because it was
+    /// three: <c>_options.StaffHeight / 2.0</c> stood in for it in
+    /// <see cref="Layout"/>, in <see cref="CreatePages"/> and in <c>PageLayouter</c>, and which
+    /// of the three was live depended on the paper regime (HANDOFF 5.2.1 (2)).
+    /// <para>
+    /// ⚠️ A NOMINAL HALF STAFF IS NOT THIS QUANTITY. A staff's refpoint is the middle of its
+    /// OWN line span, so it is 2.000000 below the top line only for a five-line staff: a
+    /// six-string tab staff's is 3.750000 below (its lines span (6-1) × 1.5). MEASURED against
+    /// LilyPond, which puts the first staff of a tab page exactly where it puts the first staff
+    /// of a notation page — audit/lp-geometry <c>page.tab-only.first-staff-refpoint</c> against
+    /// its control <c>page.tab-control.first-staff-refpoint</c>, both 11.690551.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SELECTION IS <see cref="ClassifySystem"/>'s, not "the outer layouts": a hidden
+    /// (hara-kiri'd) staff and a text row are both there in the array and neither is what a
+    /// page spring attaches to. MEASURED both ways — taking the outer layouts regresses
+    /// <c>hara-kiri.wide-ink.lone-staff-to-next-system</c> by 2.000000 (it picks the hidden
+    /// staff) and four <c>lyrics.hara-kiri.grouper.*</c> entries with it.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+    /// lead sheet — keeps the nominal half staff, because LilyPond's anchor there is a
+    /// ChordNames group's own reference point (its baseline) and no corpus point measures a
+    /// page anchor over a staffless system. It goes when such a point exists.
+    /// </para>
+    /// </remarks>
+    /// <param name="groups">One system's placed staff groups.</param>
+    /// <returns>
+    /// <c>ToFirst</c>/<c>ToLast</c>: origin to that staff's refpoint. <c>HalfFirst</c>/
+    /// <c>HalfLast</c>: that staff's OWN half span — the distance from its own top (bottom)
+    /// line to its refpoint, which is NOT the same number as soon as a loose line stands
+    /// between the origin and the staff.
+    /// ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+    /// Lily#-only quantity does. LilyPond has one frame — <c>min_offsets</c> off the system's
+    /// own reference point, every element in it (page-layout-problem.cc:896-901) — and no
+    /// "band": a loose line is IN the skyline it is spaced against. Lily# estimates lyric and
+    /// chord-row bands OUTSIDE the skyline and measures them from the STAFF, so the two frames
+    /// have to be carried separately until those bands are elements like any other. It goes
+    /// with them.
+    /// ⚠️ Quantities floored by a whole-line BAND need the
+    /// half span, because a band is already measured from the staff it hangs off; quantities
+    /// floored by a skyline or a scalar extent need the origin distance, because those are
+    /// measured from the origin. Mixing them double-counts the band — MEASURED, it put
+    /// <c>lyrics.chord-row.between-systems.system-gap</c> 1.883400 over LilyPond's 12.000000.
+    /// </returns>
+    private (double ToFirst, double ToLast, double HalfFirst, double HalfLast) PageAnchorOffsets(
+        ImmutableArray<StaffGroupLayout> groups,
+        IReadOnlySet<int> textRowStaves, IReadOnlySet<int> lyricsRowStaves)
+    {
+        double nominal = _options.StaffHeight / 2.0;
+        if (groups.IsDefaultOrEmpty)
+            return (nominal, nominal, nominal, nominal);
+        var alignment = ClassifySystem(groups, textRowStaves, lyricsRowStaves);
+        return alignment.FirstSpaceable is { } first && alignment.LastSpaceable is { } last
+            ? (-MultiStaffLayouter.StaffRefpoint(first), -MultiStaffLayouter.StaffRefpoint(last),
+               first.Height / 2.0, last.Height / 2.0)
+            : (nominal, nominal, nominal, nominal);
     }
 
     /// <summary>

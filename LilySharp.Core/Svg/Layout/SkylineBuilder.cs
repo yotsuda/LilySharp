@@ -63,10 +63,15 @@ internal sealed class SkylineBuilder
         upSkyline.BeginBatch();
         downSkyline.BeginBatch();
 
-        // Process topmost staff for UP skyline (elements above the system)
-        var firstStaff = score.StaffGroups[0].PrimaryStaff;
-        // Y-up from the system top: the first staff's middle is half a staff BELOW it.
-        double firstStaffMiddleUp = -_staffHeight / 2;
+        // The two staves the silhouette is built from, AS PLACED. Both the element and its
+        // height come from the layout, and they travel together: naming one staff and then
+        // measuring at another's height is the frame error HANDOFF 5.2.1 (2) keeps catching.
+        var (firstStaff, firstLayout) = OuterStaff(score, placed, fromTop: true);
+        var (lastStaff, lastLayout) = OuterStaff(score, placed, fromTop: false);
+        // Y-up from the system ORIGIN down to that staff's MIDDLE line — the frame every
+        // seed below is in. Half a staff for a five-line staff, 3.750000 for a six-string tab
+        // staff, and further still where a text row leads the system.
+        double firstStaffMiddleUp = MiddleUp(firstLayout, -_staffHeight / 2);
         // A beamed stem is DRAWN to the quanter's length, which is not what
         // Stem::calc_length gives an unbeamed one — the same "draws right, reserves
         // stale" double model BuildStaffSkylines had between staves. When the caller
@@ -76,21 +81,20 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline —
         //   the system stencil the page spaces by carries the real Beam ink, not a
         //   fixed-length stem model.
-        AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
-            upSkyline, downSkyline,
-            BeamedItemsToSuppress(firstStaffBeams));
+        if (firstStaff is not null)
+            AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
+                upSkyline, downSkyline,
+                BeamedItemsToSuppress(firstStaffBeams));
         AddBeamsToSkyline(firstStaffBeams, firstStaffMiddleUp, upSkyline, downSkyline);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
         // Both top and bottom staves contribute to the system's vertical extent.
-        var lastGroup = score.StaffGroups[^1];
-        var lastStaff = lastGroup.Staves[^1];
-        if (lastStaff != firstStaff && systemHeight > 0)
+        double lastStaffMiddleUp = MiddleUp(lastLayout, _staffHeight / 2 - systemHeight);
+        bool twoEnds = lastStaff is not null && lastStaff != firstStaff && systemHeight > 0;
+        if (twoEnds)
         {
-            // Bottom staff's top line is at systemHeight - staffHeight from system reference
-            double lastStaffMiddleUp = _staffHeight / 2 - systemHeight;
-            AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleUp,
+            AddStaffToSkylines(lastStaff!, measureLayouts, lastStaffMiddleUp,
                 upSkyline, downSkyline,
                 BeamedItemsToSuppress(lastStaffBeams));
             AddBeamsToSkyline(lastStaffBeams, lastStaffMiddleUp, upSkyline, downSkyline);
@@ -109,22 +113,30 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 — build_system_skyline merges
         // EVERY element raised by its own translation, so a StaffSymbol's lines are in the
         // union whatever stands under them.
+        // ⚠️ AND AT THE HEIGHT THAT STAFF WAS PLACED AT. The lines are the same element as
+        // the notes above, so they take the same middle: the span is read off the layout
+        // (a six-string tab staff spans 7.500000, not 4.000000) and the middle is the middle
+        // of that span, which is what makes a tab staff's own line the extreme of its
+        // silhouette (audit/lp-geometry page.tab-only.first-staff-refpoint).
+        var firstSpan = StaffSpan(firstLayout, firstStaffMiddleUp);
         SeedSystemStaffSymbol(measureLayouts, systemLeft,
-            seed: !firstStaff.IsTextRow, topLineY: 0.0, bottomLineY: FirstStaffSpan(placed),
-            upSkyline, downSkyline);
-        if (lastStaff != firstStaff && systemHeight > 0)
+            seed: firstStaff is not null,
+            firstSpan.TopLineY, firstSpan.BottomLineY, upSkyline, downSkyline);
+        if (twoEnds)
+        {
+            var lastSpan = StaffSpan(lastLayout, lastStaffMiddleUp);
             SeedSystemStaffSymbol(measureLayouts, systemLeft,
-                seed: !lastStaff.IsTextRow,
-                topLineY: systemHeight - LastStaffSpan(placed), bottomLineY: systemHeight,
-                upSkyline, downSkyline);
+                seed: true, lastSpan.TopLineY, lastSpan.BottomLineY, upSkyline, downSkyline);
+        }
 
         // The clef opens every system and, on a plain score, is the extreme ink in both
         // directions — further out than any note that stays inside the staff — so it is
         // what the page's springs are floored by. Seeded for the same two staves the
-        // notes are.
-        SeedClef(firstStaff, firstStaffMiddleUp, systemLeft, upSkyline, downSkyline);
-        if (lastStaff != firstStaff && systemHeight > 0)
-            SeedClef(lastStaff, _staffHeight / 2 - systemHeight, systemLeft, upSkyline, downSkyline);
+        // notes are, about the same middle line.
+        if (firstStaff is not null)
+            SeedClef(firstStaff, firstStaffMiddleUp, systemLeft, upSkyline, downSkyline);
+        if (twoEnds)
+            SeedClef(lastStaff!, lastStaffMiddleUp, systemLeft, upSkyline, downSkyline);
 
         upSkyline.EndBatch();
         downSkyline.EndBatch();
@@ -132,66 +144,90 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// The line-to-line span of the system's first (last) staff AS PLACED — the distance from
-    /// its top line to its bottom one, which is <c>_staffHeight</c> only for an ordinary
-    /// staff.
+    /// The system's outermost ELEMENT and the layout that placed it — the two the silhouette
+    /// is built from. A text row draws no staff and returns none, exactly as before.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A TAB STAFF IS NOT 4.000000 TALL. LilyPond's TabStaff sets
-    /// <c>StaffSymbol.staff-space = 1.5</c> for every string count, so six strings span
-    /// <c>(6-1) * 1.5 = 7.500000</c> — measured, and pinned exact by the corpus entries
-    /// <c>tab.staff.line-span.{six,four}-string</c>. Seeding the silhouette's outer LINE at
-    /// the nominal 4.000000 put the system's bottom profile 3.5 staff spaces above the line it
-    /// names, so two tab systems were spaced as if the staff ended where an ordinary one does.
+    /// ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
+    /// deviation rather than an oversight: LilyPond's <c>build_system_skyline</c> merges
+    /// EVERY element of the
+    /// alignment (page-layout-problem.cc:1093-1108), so a system whose outermost element is a
+    /// Lyrics or ChordNames row still has its STAVES in its own silhouette, while this puts
+    /// nothing there. Changing it to "the outermost SPACEABLE staff" was tried and MEASURED on
+    /// 2026-07-28: it drops book LYRHKG's inter-system floor from 8.900000 to 1.707200 and the
+    /// staves interleave, because the lyric rows Lily# leaves OUT of the skyline are then no
+    /// longer standing in for the staff that was left out with them. The two exclusions are
+    /// one quantity and no corpus point measures either — that is the ▶ item, not this one.
+    /// IT GOES the day a point measures a system whose outer element is a row, and the two
+    /// exclusions (the staff here, the rows in <c>AugmentExtentsWithLooseLines</c>) go
+    /// together or neither.
     /// <para>
-    /// ⚠️ WITHOUT <paramref name="placed"/> the nominal height stands, which is the old
-    /// behaviour and what the callers that want only the scalar extents get.
+    /// ⚠️ WHAT DID CHANGE is the HEIGHT, not the choice: the middle line and the line span now
+    /// come from the layout, so a staff that is not four staff spaces tall is seeded where it
+    /// was drawn (audit/lp-geometry <c>page.tab-only.first-staff-refpoint</c>).
+    /// </para>
+    /// <para>
+    /// ⚠️ WITHOUT <paramref name="placed"/> there is no layout and the caller keeps its
+    /// derived height — the skyline-less overloads, which want only the scalar extents.
     /// </para>
     /// </remarks>
-    /// <remarks>
-    /// ⚠️ BY POSITION, not by "the first visible one": the seed is about
-    /// <c>StaffGroups[0].Staves[0]</c> and <c>StaffGroups[^1].Staves[^1]</c>, and the layouts
-    /// are yielded in that same order, so the span has to be read at the SAME index or a
-    /// hidden staff would hand this the height of a different one.
-    /// <para>
-    /// ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE NOMINAL HEIGHT IS A SECOND ANSWER FOR ONE
-    /// QUANTITY, which is the shape HANDOFF 5.2.1② calls the worst — a main path and an
-    /// approximate one, where a port can land on the copy that never runs. LilyPond has no
-    /// such branch: <c>build_system_skyline</c> is handed the elements as placed
-    /// (page-layout-problem.cc:1093-1108) and there is nothing to fall back to. It is here
-    /// because two skyline-less overloads exist for callers that want only the scalar
-    /// extents. ⚠️ THE PRODUCT PATH ALWAYS PASSES <c>placed</c> (both LayoutEngine call
-    /// sites), so what this serves today is tests; it goes when those overloads do.
-    /// </para>
-    /// </remarks>
-    private double StaffSpanAt(ImmutableArray<StaffGroupLayout> placed, int index)
-        => LayoutAt(placed, index) is { } lay && lay.Height > 0 ? lay.Height : _staffHeight;
-
-    private double FirstStaffSpan(ImmutableArray<StaffGroupLayout> placed)
-        => StaffSpanAt(placed, 0);
-
-    private double LastStaffSpan(ImmutableArray<StaffGroupLayout> placed)
-        => StaffSpanAt(placed, StaffCount(placed) - 1);
-
-    private static int StaffCount(ImmutableArray<StaffGroupLayout> placed)
+    private static (Staff? Staff, StaffLayout? Layout) OuterStaff(
+        MultiStaffScore score, ImmutableArray<StaffGroupLayout> placed, bool fromTop)
     {
-        if (placed.IsDefaultOrEmpty) return 0;
-        int n = 0;
-        foreach (var group in placed)
-            if (!group.Staves.IsDefaultOrEmpty) n += group.Staves.Length;
-        return n;
+        var staff = fromTop
+            ? score.StaffGroups[0].PrimaryStaff
+            : score.StaffGroups[^1].Staves[^1];
+        if (staff.IsTextRow)
+            return (null, null);
+
+        // BY POSITION, the same pairing the span used to be read with: the seeds are about
+        // StaffGroups[0].Staves[0] and StaffGroups[^1].Staves[^1], and the layouts are yielded
+        // in that order, so the layout has to be taken at the SAME end.
+        StaffLayout? layout = null;
+        if (!placed.IsDefaultOrEmpty)
+        {
+            foreach (var group in placed)
+            {
+                if (group.Staves.IsDefaultOrEmpty) continue;
+                if (fromTop) { layout = group.Staves[0]; break; }
+                layout = group.Staves[^1];
+            }
+        }
+        return (staff, layout);
     }
 
-    private static StaffLayout? LayoutAt(ImmutableArray<StaffGroupLayout> placed, int index)
+    /// <summary>Y-up from the system origin down to a placed staff's MIDDLE line.</summary>
+    /// <remarks>
+    /// <c>MultiStaffLayouter.StaffRefpoint</c> read in this builder's frame.
+    /// <para>
+    /// ⚠️ A TAB STAFF IS NOT 4.000000 TALL, which is the whole reason the height comes from
+    /// the layout: LilyPond's TabStaff sets <c>StaffSymbol.staff-space = 1.5</c> for every
+    /// string count, so six strings span <c>(6-1) * 1.5 = 7.500000</c> and its middle line is
+    /// 3.750000 below its top one (pinned by <c>tab.staff.line-span.{six,four}-string</c> and
+    /// by <c>page.tab-only.first-staff-refpoint</c>).
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
+    /// QUANTITY, the shape HANDOFF 5.2.1② calls the worst — a main path and an approximate
+    /// one, where a port can land on the copy that never runs. LilyPond has no such branch:
+    /// <c>build_system_skyline</c> is handed the elements as placed
+    /// (page-layout-problem.cc:1093-1108) and there is nothing to fall back to. It is here
+    /// only because two skyline-less overloads exist for callers that want the scalar extents;
+    /// the product path always passes the layouts, so what it serves today is tests, and it
+    /// goes when those overloads do.
+    /// </para>
+    /// </remarks>
+    private static double MiddleUp(StaffLayout? layout, double derived)
+        => layout is { } lay && lay.Height > 0 ? lay.Y - lay.Height / 2.0 : derived;
+
+    /// <summary>
+    /// A placed staff's TOP and BOTTOM line, device-DOWN from the system origin — its middle
+    /// widened by half its own span, so the two travel together.
+    /// </summary>
+    private (double TopLineY, double BottomLineY) StaffSpan(StaffLayout? layout, double middleUp)
     {
-        if (placed.IsDefaultOrEmpty || index < 0) return null;
-        foreach (var group in placed)
-        {
-            if (group.Staves.IsDefaultOrEmpty) continue;
-            if (index < group.Staves.Length) return group.Staves[index];
-            index -= group.Staves.Length;
-        }
-        return null;
+        double half = (layout is { } lay && lay.Height > 0 ? lay.Height : _staffHeight) / 2.0;
+        return (-middleUp - half, -middleUp + half);
     }
 
     /// <summary>

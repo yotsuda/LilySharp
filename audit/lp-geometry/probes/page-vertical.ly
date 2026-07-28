@@ -2642,3 +2642,191 @@ probeTag =
     >>
   }
 }
+
+%% TABL / NTL — WHERE A TAB STAFF SITS ON THE PAGE, which is the question TABS/NST asked
+%%     one frame down. Those two measured a distance BETWEEN two staves of one system and
+%%     found it to be 9.000000 whatever the lower staff's line span is. These two measure
+%%     the PAGE's own anchors against the same staff: how far below the paper edge the
+%%     first staff's refpoint lands, and how far apart consecutive systems sit. Both books
+%%     are ONE staff and many systems, so every distance here is the page's and none of it
+%%     is Align_interface's.
+%%
+%%     The pair is again built so that LilyPond's side is a CONTROL rather than an unknown
+%%     (HANDOFF 5.0): the same music, the same paper, and the ONE difference is whether the
+%%     staff is a TabStaff or an ordinary Staff. NTL is spelled exactly as NST's lower staff
+%%     is — no clef, so `g` and `a` hang below the treble staff on their ledger lines, which
+%%     is where Lily# draws the same part too.
+%%
+%%     ⚠️ WHY IT IS WORTH A PAIR, and it is not the same question TABS answered. A six-string
+%%     tab staff's LINES span (6-1) * 1.5 = 7.500000 (tab.staff.line-span.six-string), so its
+%%     refpoint — staff position 0, the middle of the span — sits 3.750000 below its top line
+%%     where an ordinary staff's sits 2.000000 below. Every page anchor LilyPond writes is
+%%     against the REFPOINT (top-system-spacing to the first one, system-system-spacing
+%%     between them), and Lily# converts between that frame and its own system-origin frame
+%%     with a NOMINAL half staff: LayoutUtilities.CalculateFirstSystemY subtracts
+%%     `_options.StaffHeight / 2.0`, which is 2.000000 for every staff there is. On a tab
+%%     staff that conversion is 1.750000 short, and nothing in the corpus reads a page anchor
+%%     over a staff that is not 4.000000 tall.
+%%
+%%     PREDICTIONS, written before running (HANDOFF 5.0-2). BOTH books read the SAME two
+%%     numbers, to six digits:
+%%       - first STAFF refpoint below the paper edge = 11.690551, i.e. top-margin plus
+%%         top-system-spacing's basic-distance 6.000000, because the floor loses: the ink a
+%%         tab system carries above its refpoint is its own top line at 3.800000 (7.6/2 —
+%%         MEASURED already, in the TABS dump, and recorded in the `why` of
+%%         staff.tab-pair.staff-staff-inside), and 3.800000 + padding 1 = 4.800000 < 6.
+%%       - staff-to-staff = system-to-system = 12.000000, system-system-spacing's
+%%         basic-distance, because that floor loses too: 3.800000 below + 3.800000 above +
+%%         padding 1 = 8.600000 < 12.
+%%
+%%     ⚠️ THE FLOOR MUST NOT BIND ON EITHER, and the dump says which: a reading ABOVE either
+%%     basic-distance means the book has stopped measuring the page's spec and started
+%%     measuring the tab staff's ink, and the numbers have to be re-read as such rather than
+%%     compared with Lily#'s.
+%%
+%%     FALSIFIER, and it is the one the ⑷ island actually turns on: `ink below it` on TABL's
+%%     last system is 3.800000 EXACTLY — the outermost string line and nothing further. If it
+%%     comes back LARGER, then a fret digit or the TAB clef reaches past the outermost line,
+%%     the silhouette of a tab system is NOT its staff symbol, and the height at which those
+%%     grobs enter it is the excess — which is precisely the quantity Lily#'s
+%%     SkylineBuilder.BuildSystemSkylines has no reading for today (it seeds notes and clef
+%%     about a derived `-staffHeight/2` while seeding the LINES at the placed span). The
+%%     Clef's own ink extent is printed alongside for the same reason.
+%%
+%%     ⇒ THE FORK. If the two books read identically, then LilyPond spaces a tab page exactly
+%%     as it spaces a notation page and the whole of Lily#'s difference on the tab side is its
+%%     own — the island is real and this is the key that justifies moving its snapshots. If
+%%     they do NOT, LilyPond's own anchor moves with the staff's span, and the port is a
+%%     different one: not "convert with the placed half span" but "the anchor is not the
+%%     refpoint at all".
+%%
+%%     ⚠️ THE LILY# TWIN MUST USE A SILENT SECTION REFERENCE (`form main { ~Main }`). A
+%%     printed rehearsal mark is ~3.86 ss of ink landing exactly where the first-refpoint
+%%     reading looks, and it is what made the first draft of probe V read 14.350551 against
+%%     11.690551. Octaves are the probe's: LilyPond `g` is Lily# `g,`.
+%%
+%%     MEASURED 2026-07-28 — EVERY PREDICTION HELD, and the falsifier did not fire:
+%%       - both books: first STAFF refpoint 11.690551, staff-to-staff 12.000000, 3 systems
+%%         on one page. LilyPond spaces a tab page exactly as it spaces a notation page.
+%%       - TABL `ink below it` = 3.800000 EXACTLY (the outermost string line, 7.6/2) against
+%%         NTL's 5.045000 (its notes hang below the staff on ledger lines). The ink differs
+%%         by over a staff space and neither anchor moves — which is what makes both readings
+%%         the SPEC's rather than the ink's.
+%%       - the TAB clef's own ink about the refpoint is [-2.880000, 2.880000], INSIDE the
+%%         lines, where the treble clef's is [-3.550000, 3.800000].
+%%     ⇒ ★ THE FALSIFIER'S FAILING TO FIRE IS THE FINDING. A tab system's silhouette IS its
+%%     staff symbol: no fret digit and no clef reaches past the outermost line. HANDOFF's
+%%     item (4) asked for "a point that measures at what height a tab staff's notes and clef
+%%     enter the system silhouette" — they do not enter it, so seeding them at the placed
+%%     offset cannot change the silhouette. What the nominal 4.000000 does change is the
+%%     ANCHOR: Lily# reads 13.440551 here, +1.750000 = 3.750000 - 2.000000, and the gap on
+%%     the same page is exact.
+%%
+%%     ⚠️ THE BAR NUMBER IS A THIRD, UNCARRIED READING and is worth knowing before someone
+%%     opens it: `staff refpoint -> BarNumber baseline` is 4.826208 on TABL against 3.076208
+%%     on NTL — 1.750000 apart, and on LilyPond's side, because the number rides padding 1
+%%     above the staff's own INK top (3.800000 for tab, 2.050000 for notation). That one IS
+%%     ink-driven, so it is a different quantity from the two carried here and needs its own
+%%     pair rather than being read off this dump.
+\book {
+  \probeTag "TABL"
+  \paper { indent = 0 ragged-bottom = ##t }
+  \score { \new TabStaff { \repeat unfold 24 { g4 a g a } } }
+}
+
+%% OSSU / OSSUN — THE OSSIA DISTANCE ITSELF, in the arrangement Lily# actually renders.
+%%     OSSD (above) already established the LilyPond FACT that an ossia-sized staff sits
+%%     9.000000 from its neighbour — but it puts the small staff BELOW, while Lily#'s `ossia`
+%%     hangs ABOVE the staff it decorates, so the two sides were not the same arrangement and
+%%     it could not become a ledger pair (HANDOFF 5.0, traps 5 and 6). This is that pair.
+%%
+%%     ⚠️ THE PAIR ISOLATES THE SCALE AND NOTHING ELSE. Both books nest a second Staff into
+%%     the first with `alignAboveContext`, which is LilyPond's own ossia idiom (NR "Ossia
+%%     staves") and the same spelling book LYROS uses; they differ ONLY in whether that staff
+%%     is shrunk (fontSize -3 with StaffSymbol.staff-space and thickness at magstep -3). So a
+%%     difference between them is the SCALE's doing and cannot be the nesting's.
+%%
+%%     PREDICTION, written before running: BOTH read 9.000000 — staff-staff-spacing's
+%%     basic-distance, in the PAGE's staff spaces — because Align_interface accumulates
+%%     between VerticalAxisGroup REFERENCE POINTS and magstep scales the STAFF, not the
+%%     alignment's units. OSSD read exactly that with the small staff below.
+%%     FALSIFIER, and it is the whole point of the pair: 9 * (magstep -3) = 6.363961 on OSSU
+%%     against 9.000000 on OSSUN. That would mean LilyPond DOES shrink the distance with the
+%%     staff, and Lily#'s `gap * OssiaScaleFactor` would be its rule after all.
+%%
+%%     ⇒ THE FORK: equal means `gap * OssiaScaleFactor` is an invention with no counterpart
+%%     and the ossia half of the frame island is a real defect with a key; 6.363961 means it
+%%     is a port and the island's ossia half does not exist.
+%%
+%%     ⚠️ The music is kept inside both staves so the FLOOR does not bind — a reading ABOVE
+%%     9.000000 on either side means the ink is being measured and not the spec.
+%%
+%%     MEASURED 2026-07-28 — THE PREDICTION HELD AND THE FALSIFIER DID NOT FIRE:
+%%     OSSU 9.000000, OSSUN 9.000000, equal to the digit, on a page with slack (neither floor
+%%     binds — the ink below the last refpoint is 3.550000 on both). The ossia's own ink IS
+%%     scaled and says so in the same dump: its clef reads [-2.510179, 2.687006] about its
+%%     refpoint against the full-size [-3.550000, 3.800000], and its refpoint still sits
+%%     exactly 9.000000 above the staff it decorates.
+%%     ⇒ ★ THE FORK TOOK THE FIRST BRANCH, now in the arrangement Lily# actually renders
+%%     (the small staff ABOVE, which is what OSSD could not say): LilyPond scales the STAFF
+%%     and not the DISTANCE, so Lily#'s `gap * OssiaScaleFactor` has no counterpart. Together
+%%     with OSSD (small staff BELOW) and TABS (a tab staff below) this is the third
+%%     arrangement to read 9.000000 — the distance does not know what it is spacing.
+%%
+%%     ⚠️ IT IS A LEDGER PAIR AS OF 2026-07-28 — `staff.ossia-pair.staff-staff-inside` and
+%%     `staff.ossia-control.staff-staff-inside`. It was held back for one session on a
+%%     reported LILY# DRAWING defect: 'an `ossia` that spans EVERY measure draws its staff
+%%     lines at the system origin with UNSCALED 1.000000 spacing and a width of 135.55 on a
+%%     119.50 page'. ⇒ ★ THAT READING WAS OF THE OSSIA'S OWN SCALE GROUP, not of the page.
+%%     Measured again through RecordingDocumentContext, which composes the group transform:
+%%     the lines sit at 6.158232..8.986632 with a staff space of 0.707100 and a width of
+%%     95.844921 on a page 119.501575 wide. 95.844921 / 0.7071 = 135.546 — the reported
+%%     width to six digits — and 'the system origin' with 'unscaled 1.000000' is that same
+%%     group-local frame, since SharedRenderer.cs:445 draws an ossia's content at
+%%     localStaffY = pageHeight and lets the transform place it. The drawing is CORRECT and
+%%     no fragment-shaped pair is needed. Lily#'s reading on this arrangement is 7.363919,
+%%     which is 1.636081 below LilyPond, and all of it is `gap * OssiaScaleFactor`.
+%%     ⚠️ THE GENERAL FORM (HANDOFF 5.3): a coordinate read inside a scale group is not a
+%%     coordinate on the page. Compose the transform before calling a number a defect.
+\book {
+  \probeTag "OSSU"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff = "main" <<
+      \new Voice { \repeat unfold 8 { g'4 a' g' a' } }
+      \new Staff \with {
+        \remove "Time_signature_engraver"
+        alignAboveContext = "main"
+        fontSize = #-3
+        \override StaffSymbol.staff-space = #(magstep -3)
+        \override StaffSymbol.thickness = #(magstep -3)
+      } { \repeat unfold 8 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+%% OSSUN — THE CONTROL: the same nesting, the same alignAboveContext, a FULL-SIZE staff.
+\book {
+  \probeTag "OSSUN"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff = "main" <<
+      \new Voice { \repeat unfold 8 { g'4 a' g' a' } }
+      \new Staff \with {
+        \remove "Time_signature_engraver"
+        alignAboveContext = "main"
+      } { \repeat unfold 8 { g'4 a' g' a' } }
+    >>
+  }
+}
+
+%% NTL — THE CONTROL. Identical to TABL except that the staff is an ordinary Staff, so it is
+%%     the same music on the same paper with the same page springs, and its reading is the
+%%     number TABL is compared against. Carrying it rather than leaning on book L (which is
+%%     the same quantity but different music and different paper) is what makes the pair able
+%%     to say that a tab staff changed nothing on LilyPond's side.
+\book {
+  \probeTag "NTL"
+  \paper { indent = 0 ragged-bottom = ##t }
+  \score { \new Staff { \repeat unfold 24 { g4 a g a } } }
+}

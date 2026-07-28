@@ -232,11 +232,22 @@ internal static class LayoutUtilities
     /// the origin frame Lily# stacks systems in; every caller placing a first system goes
     /// through here so the halfStaff conversion exists in exactly one place.
     /// </remarks>
+    /// <param name="halfStaff">
+    /// The first SPACEABLE staff's OWN half span, which is what converts an EXTENT (measured
+    /// from that staff) into ink above its refpoint.
+    /// </param>
+    /// <param name="originToRefpoint">
+    /// The distance from the system's ORIGIN down to that same refpoint, which is what
+    /// converts the answer back into the frame systems are stacked in. The two differ exactly
+    /// when something stands above the staff inside the system — a lead sheet's chord row —
+    /// and they were one parameter until 2026-07-28, which is why such a row was counted
+    /// twice the moment either stopped being a nominal 2.000000.
+    /// </param>
     public static double CalculateFirstSystemY(
         double topMargin, double headerHeight, double systemUpExtent,
-        double halfStaff, VerticalSpacingSpec topSpec)
+        double halfStaff, double originToRefpoint, VerticalSpacingSpec topSpec)
         => CalculateFirstStaffRefpoint(topMargin, headerHeight, systemUpExtent, halfStaff, topSpec)
-           - halfStaff;
+           - originToRefpoint;
 
     /// <summary>
     /// Calculates the actual header height based on title and composer presence.

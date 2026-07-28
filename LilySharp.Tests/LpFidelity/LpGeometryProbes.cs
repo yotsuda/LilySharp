@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Tests.LpFidelity;
@@ -612,6 +613,101 @@ internal static class LpGeometryProbes
 
     /// <summary>The notation control — book NST.</summary>
     internal static readonly string TabPairScoreNotation = TabPairScore("NST", "staff");
+
+    /// <summary>
+    /// The SAME part twice, the upper one rendered either as an OSSIA or as an ordinary
+    /// staff — the Lily# half of books OSSU / OSSUN.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The pair differs in ONE WORD, and that word is the measurement. LilyPond reads both
+    /// arrangements at 9.000000 refpoint to refpoint (measured 2026-07-28,
+    /// page-vertical.ly OSSU/OSSUN): it scales the STAFF and not the DISTANCE, so its side
+    /// is an identity and whatever difference Lily# shows between the two halves is its own.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE OSSIA IS WRITTEN FIRST so that it sits ABOVE, which is the arrangement both
+    /// LilyPond books use (<c>alignAboveContext</c>) and the only one Lily#'s <c>ossia</c>
+    /// has. <see cref="RenderSpec"/> would hoist it there anyway, but writing it in place
+    /// keeps the two halves textually identical apart from the render word.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE OCTAVES ARE THE PROBE'S: LilyPond <c>g'</c> is Lily# <c>g</c>, so the .ly's
+    /// <c>g'4 a'</c> is <c>g4 a</c> here. Both staves carry the same pitches for the same
+    /// reason the .ly does — the music is kept inside the staves so that the FLOOR does not
+    /// bind and both readings are of the SPEC.
+    /// </para>
+    /// </remarks>
+    private static string OssiaPairScore(string name, string render) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
+          upper  { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
+        }
+
+        form main { A }
+
+        score main "{{name}}" {
+          {{render}} upper
+          staff melody
+        }
+        """;
+
+    /// <summary>The ossia half — book OSSU.</summary>
+    internal static readonly string OssiaPairScoreOssia = OssiaPairScore("OSSU", "ossia");
+
+    /// <summary>The full-size control — book OSSUN.</summary>
+    internal static readonly string OssiaPairScoreNotation = OssiaPairScore("OSSUN", "staff");
+
+    /// <summary>
+    /// The SAME guitar part alone on a page of its own, as either a tab staff or an ordinary
+    /// one — the Lily# half of books TABL / NTL.
+    /// </summary>
+    /// <remarks>
+    /// TABS/NST measure a distance INSIDE one system; this pair measures the PAGE's own
+    /// anchors against the same staff — where the first refpoint lands below the paper edge,
+    /// and how far apart consecutive systems sit. One staff and many systems, so every
+    /// distance read from it is the page's.
+    /// <para>
+    /// ⚠️ THE SECTION REFERENCE IS SILENT (<c>~Main</c>). A printed rehearsal mark is ~3.86 ss
+    /// of ink landing exactly where the first-refpoint reading looks; that is what made the
+    /// first draft of probe <see cref="V"/> read 14.350551 against LilyPond's 11.690551.
+    /// </para>
+    /// <para>
+    /// ⚠️ Octaves are the probe's, as everywhere here: LilyPond <c>g</c> is Lily# <c>g,</c>.
+    /// The part is spelled exactly as <see cref="TabPairScore"/>'s lower one, so the notation
+    /// control draws the same ledger lines below the staff that the .ly's clef-less
+    /// <c>\new Staff</c> does.
+    /// </para>
+    /// </remarks>
+    private static string TabPageScore(string name, string render) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part gtr { clef treble_8 tuning guitar }
+
+        section Main {
+          gtr { {{string.Concat(Enumerable.Repeat("g,4 a, g, a, | ", 24)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          {{render}} gtr
+        }
+        """;
+
+    /// <summary>The tab half — book TABL.</summary>
+    private static readonly string TABL = TabPageScore("TABL", "tab");
+
+    /// <summary>The notation control — book NTL.</summary>
+    private static readonly string NTL = TabPageScore("NTL", "staff");
 
     private static string CoexistScore(string name, string scoreBlock) => $$"""
         octave absolute
@@ -3414,6 +3510,71 @@ internal static class LpGeometryProbes
             g => g.StaffRefpointGap(5, 6)),
         new("staff.notation-pair.staff-staff-inside", TabPairScoreNotation,
             g => g.StaffRefpointGap(5, 5)),
+
+        // THE SAME QUESTION FOR THE OTHER SHRUNK STAFF (books OSSU / OSSUN): what a
+        // staff-to-staff distance is in when the upper staff is an OSSIA. A tab staff is
+        // taller than four staff spaces; an ossia is SMALLER, and by a different mechanism —
+        // fontSize -3 with StaffSymbol.staff-space at magstep(-3) — so it asks the unit
+        // question from the other side. LilyPond answers it the same way it answered TABS:
+        // 9.000000, and OSSD (the small staff BELOW) makes three arrangements at one number.
+        // The distance does not know what it is spacing.
+        //
+        // WHY THE PAIR EXISTS AT ALL. Lily# multiplies the whole inter-group gap by
+        // OssiaScaleFactor, which is its own — MultiStaffLayouter says so in its XML doc —
+        // and this is the reading that gives that invention a number. The two halves differ
+        // in ONE WORD and LilyPond reads them as an IDENTITY (OSSU ≡ OSSUN to the digit), so
+        // the Lily# difference IS the invention's size, with no font quantity in it.
+        //
+        // ⚠️ THE FLOOR DOES NOT BIND ON EITHER SIDE. The control lands on exactly 9.000000
+        // rather than on its ink, and the ossia half lands BELOW the basic-distance — which
+        // is only possible because something scaled it, and is the shape the port has to undo.
+        //
+        // ⚠️ READ WITH THE SCALE GIVEN, for the reason the tab pair is read with the line
+        // counts given: an ossia is drawn inside a uniform scale group, so its staff lines
+        // are 0.070710 thick and StaffLineYs — which keys on an exact 0.1 to keep ledger
+        // lines out — does not select them at all. Inferring the scale from the drawing would
+        // be a helper that guesses (HANDOFF 5.4); ScaledStaffRefpointGap asserts it instead.
+        new("staff.ossia-pair.staff-staff-inside", OssiaPairScoreOssia,
+            g => g.ScaledStaffRefpointGap(5, EngravingDefaults.OssiaScale, 5)),
+        new("staff.ossia-control.staff-staff-inside", OssiaPairScoreNotation,
+            g => g.StaffRefpointGap(5, 5)),
+
+        // ...and the SAME question one frame out (books TABL / NTL): where a tab staff sits on
+        // the PAGE. The pair above reads a distance INSIDE one system, which Align_interface
+        // decides; these read the page's own anchors against a staff that is not four staff
+        // spaces tall — top-system-spacing to the first refpoint, system-system-spacing between
+        // consecutive ones. One staff and many systems, so nothing here is Align_interface's.
+        //
+        // WHY IT IS A DIFFERENT QUANTITY. A six-string tab staff's lines span 7.500000, so its
+        // refpoint — staff position 0, the middle of the span — sits 3.750000 below its top
+        // line where an ordinary staff's sits 2.000000 below. Every LilyPond page anchor is
+        // written against that refpoint; Lily# converts between it and its own system-origin
+        // frame with the NOMINAL half staff (LayoutUtilities.CalculateFirstSystemY subtracts
+        // `_options.StaffHeight / 2.0`, which is 2.000000 for every staff there is), so on a
+        // tab staff the conversion is 1.750000 short and no entry in this corpus reads a page
+        // anchor over a staff of any other height.
+        //
+        // ⚠️ NEITHER FLOOR BINDS, which is what makes both readings the SPEC's rather than the
+        // ink's: a tab system carries 3.800000 of ink above its refpoint (its own top line —
+        // measured, and the falsifier of the .ly header is that this is not larger, i.e. that
+        // no fret digit and no TAB clef reaches past the outermost string line), and
+        // 3.800000 + padding 1 loses to top-system-spacing's 6, while 3.8 + 3.8 + 1 loses to
+        // system-system-spacing's 12.
+        //
+        // ⚠️ THE CONTROL IS CARRIED RATHER THAN ASSUMED, and it is NOT book L: L is the same
+        // two quantities but different music on different paper. NTL is this same part on this
+        // same paper with the staff spelled as notation, so the pair differs in one word.
+        // ⚠️ AND THE COUNTS COME WITH THEM (HANDOFF 5.0, trap 8): both distance readings would
+        // return a plausible number off a page that holds a different number of systems.
+        new("page.tab-only.first-staff-refpoint", TABL,
+            g => g.FirstStaffRefpointOfLineCount(6)),
+        new("system.tab-only.natural-distance", TABL,
+            g => g.StaffGapOfLineCount(6)),
+        new("page.tab-only.staves-on-first-page", TABL,
+            g => g.StaffRefpointsOfLineCount(6).Count),
+        new("page.tab-control.first-staff-refpoint", NTL, g => g.FirstStaffRefpoint()),
+        new("system.tab-control.natural-distance", NTL, g => g.StaffGap()),
+        new("page.tab-control.staves-on-first-page", NTL, g => g.StavesOnPage()),
 
         // THE BOTTOM OF THE CHAIN, in both regimes. Every entry above reads a GAP — a
         // spring's length at the page's force — and a force is the page's slack over the

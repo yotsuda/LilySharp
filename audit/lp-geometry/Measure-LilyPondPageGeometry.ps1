@@ -245,6 +245,14 @@ try {
                     if ($s) {
                         [pscustomobject]@{
                             Name = $g.Name; Above = $g.Rel - $s.StaffUp; XL = $g.XL; XR = $g.XR
+                            # ...and the grob's OWN ink about the staff refpoint, which the
+                            # baseline above cannot give: a Clef's refpoint is the line it
+                            # names, so "where it is" and "how far its ink reaches" are two
+                            # numbers. The second one is what a SILHOUETTE is made of, and it
+                            # is the only reading here that says at what height a grob enters
+                            # one -- LilyPond has no dump of the skyline itself.
+                            InkDown = $g.Rel - $s.StaffUp + $g.Down
+                            InkUp   = $g.Rel - $s.StaffUp + $g.Up
                         }
                     }
                 }
@@ -257,6 +265,10 @@ try {
                     $xs = @($outside | Where-Object Name -eq $name |
                             ForEach-Object { "[{0:F6}, {1:F6}]" -f $_.XL, $_.XR } | Select-Object -Unique)
                     "                     {0} X span     = {1}" -f $name, ($xs -join ', ')
+                    $inks = @($outside | Where-Object Name -eq $name |
+                              ForEach-Object { "[{0:F6}, {1:F6}]" -f $_.InkDown, $_.InkUp } |
+                              Select-Object -Unique)
+                    "                     {0} ink about refpoint = {1}" -f $name, ($inks -join ', ')
                 }
             }
             if ($sys.Count -ge 2) {

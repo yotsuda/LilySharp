@@ -162,12 +162,7 @@ internal sealed class RenderedGeometry
     /// </remarks>
     public double StaffLineSpan(int page = 0)
     {
-        var ys = _pages[page].Lines
-            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
-                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
-                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
-            .Select(l => l.Y1)
-            .ToList();
+        var ys = StaffLineYs(page);
         if (ys.Count < 2)
             throw new InvalidOperationException(
                 $"page {page}: found {ys.Count} staff line(s); a staff span needs at least 2."
@@ -175,9 +170,20 @@ internal sealed class RenderedGeometry
         return ys.Max() - ys.Min();
     }
 
-    public IReadOnlyList<double> StaffRefpoints(int page = 0)
-    {
-        var ys = _pages[page].Lines
+    /// <summary>
+    /// Every drawn STAFF LINE's Y on <paramref name="page"/>, deduplicated and top down —
+    /// the one selection every staff reading here shares.
+    /// </summary>
+    /// <remarks>
+    /// Ledger lines are excluded twice over, and deliberately: by THICKNESS (a ledger line is
+    /// <see cref="EngravingDefaults.LegerLineThickness"/>, 0.1 thicker than a staff line) and,
+    /// independently, by SPAN (a ledger line reaches a notehead's width, a staff line the
+    /// system's). A probe whose notes hang below the staff draws plenty of them —
+    /// <c>page.tab-control.*</c>'s does — and a grouping that swallowed one would report a
+    /// staff where there is none.
+    /// </remarks>
+    private List<double> StaffLineYs(int page) =>
+        _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
                         && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
                         && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
@@ -185,6 +191,10 @@ internal sealed class RenderedGeometry
             .Distinct()
             .OrderBy(y => y)
             .ToList();
+
+    public IReadOnlyList<double> StaffRefpoints(int page = 0)
+    {
+        var ys = StaffLineYs(page);
 
         if (ys.Count % 5 != 0)
         {
@@ -204,7 +214,9 @@ internal sealed class RenderedGeometry
                 {
                     throw new InvalidOperationException(
                         $"page {page}: staff lines at {ys[i]:F6}.. are not 1 apart, so they "
-                        + "are not one staff and the grouping into staves is wrong.");
+                        + "are not one staff and the grouping into staves is wrong."
+                        + "\nStaff line Ys: " + string.Join(", ", ys.Select(y => y.ToString("F6")))
+                        + "\nDrawn geometry:\n" + Describe());
                 }
             }
             refpoints.Add(ys[i + 2]);   // middle line = LilyPond position 0
@@ -239,14 +251,7 @@ internal sealed class RenderedGeometry
     /// </remarks>
     public double StaffRefpointGap(int upperLines, int lowerLines, int page = 0)
     {
-        var ys = _pages[page].Lines
-            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
-                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
-                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
-            .Select(l => l.Y1)
-            .Distinct()
-            .OrderBy(y => y)
-            .ToList();
+        var ys = StaffLineYs(page);
 
         if (ys.Count != upperLines + lowerLines)
             throw new InvalidOperationException(
@@ -266,6 +271,169 @@ internal sealed class RenderedGeometry
         }
 
         return Refpoint(ys, upperLines, lowerLines, page) - Refpoint(ys, 0, upperLines, page);
+    }
+
+    /// <summary>
+    /// The refpoint-to-refpoint distance down from a staff drawn at
+    /// <paramref name="upperScale"/> to a full-size staff below it — the reading
+    /// <see cref="StaffRefpointGap(int, int, int)"/> cannot take, because an ossia's staff
+    /// lines are not <see cref="StaffLineThickness"/> thick and
+    /// <see cref="StaffLineYs"/> does not select them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An ossia is drawn inside a uniform scale group (<c>SharedRenderer.cs:409-412</c>), so
+    /// every length it draws — its staff-line THICKNESS along with its staff SPACE — comes
+    /// out multiplied by <c>EngravingDefaults.OssiaScale</c>. The shared selection keys on
+    /// an exact 0.1, which is what keeps a ledger line out of a staff reading, so it keeps
+    /// the ossia out as well. This admits the one extra thickness the caller names.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SCALE IS PASSED, NOT INFERRED, for the same reason the line COUNTS are in
+    /// <see cref="StaffRefpointGap(int, int, int)"/> (HANDOFF 5.4): a helper that recovered
+    /// the scale from the drawing would keep returning a plausible number after the defect
+    /// it exists to measure had changed it. Given the scale, everything else is asserted —
+    /// the total line count, that each staff's own lines are equally spaced, and that the
+    /// upper staff's own staff space really is <paramref name="upperScale"/>. That last
+    /// assertion is what keeps this pair measuring an OSSIA: LilyPond scales the staff and
+    /// not the distance (probe books OSSU / OSSUN), so the staff's own space must go on
+    /// being scaled after the distance stops being.
+    /// </para>
+    /// <para>
+    /// ⚠️ Ledger lines stay excluded, and by the same two guards: inside the group a ledger
+    /// line is <c>LegerLineThickness * upperScale</c> — 0.141421, not the 0.070710 admitted
+    /// here — and it still reaches only a notehead's width.
+    /// </para>
+    /// </remarks>
+    public double ScaledStaffRefpointGap(int upperLines, double upperScale, int lowerLines,
+                                         int page = 0)
+    {
+        double upperThickness = StaffLineThickness * upperScale;
+        var ys = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && (Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                            || Math.Abs(l.StrokeWidth - upperThickness) < 1e-9)
+                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
+            .Select(l => l.Y1)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToList();
+
+        if (ys.Count != upperLines + lowerLines)
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff lines, not the {upperLines} + "
+                + $"{lowerLines} this reading is about."
+                + "\nDrawn geometry:\n" + Describe());
+
+        static double Refpoint(List<double> ys, int from, int count, double space, int page)
+        {
+            for (int k = 0; k < count - 1; k++)
+                if (Math.Abs(ys[from + k + 1] - ys[from + k] - space) > 1e-6)
+                    throw new InvalidOperationException(
+                        $"page {page}: the staff at {ys[from]:F6} does not have lines "
+                        + $"{space:F6} apart, so it is not the staff this reading is about."
+                        + "\nStaff line Ys: "
+                        + string.Join(", ", ys.Select(y => y.ToString("F6"))));
+            return (ys[from] + ys[from + count - 1]) / 2.0;
+        }
+
+        return Refpoint(ys, upperLines, lowerLines, 1.0, page)
+               - Refpoint(ys, 0, upperLines, upperScale, page);
+    }
+
+    /// <summary>
+    /// Each system's staff refpoint on <paramref name="page"/>, top down, on a page whose
+    /// staves all have <paramref name="linesPerStaff"/> lines — the reading
+    /// <see cref="StaffRefpoints"/> cannot take, because it assumes five of them one staff
+    /// space apart.
+    /// </summary>
+    /// <remarks>
+    /// ONE STAFF PER SYSTEM, like <see cref="StaffRefpoints"/>: the consecutive difference is
+    /// then the SYSTEM distance the page's springs decide (see that method for why a score
+    /// with both a system distance and a staff-to-staff one cannot be read by index at all).
+    /// <para>
+    /// ⚠️ THE COUNT IS PASSED, NOT INFERRED, for the reason
+    /// <see cref="StaffRefpointGap(int, int, int)"/> gives: a helper that guesses where one
+    /// staff ends keeps returning a plausible number after the very defect it exists to
+    /// measure has changed the spacing. Everything else is asserted — the total is a whole
+    /// number of staves, each staff's own lines are equally spaced, and every staff on the
+    /// page has the SAME spacing, so a page that mixes staff kinds says so instead of being
+    /// silently cut into groups of <paramref name="linesPerStaff"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REFPOINT IS THE MIDPOINT OF THE SPAN, which is LilyPond staff position 0 and the
+    /// anchor every page spring is written against (<c>top-system-spacing</c> to the first one,
+    /// <c>system-system-spacing</c> between them). On a six-string tab staff that is 2.5 lines
+    /// down rather than 2 — 3.750000 below the top line where an ordinary staff's refpoint is
+    /// 2.000000 below it — and reading such a page in the nominal frame is exactly the defect
+    /// <c>page.tab-only.first-staff-refpoint</c> exists to measure.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<double> StaffRefpointsOfLineCount(int linesPerStaff, int page = 0)
+    {
+        if (linesPerStaff < 2)
+            throw new ArgumentOutOfRangeException(nameof(linesPerStaff),
+                "a staff needs at least two lines for its span to have a midpoint.");
+
+        var ys = StaffLineYs(page);
+        if (ys.Count == 0 || ys.Count % linesPerStaff != 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff lines, which is not a whole number of "
+                + $"{linesPerStaff}-line staves. Either the probe draws a staff with some "
+                + "other line count, or the staff-line predicate no longer selects what it "
+                + "used to.\nDrawn geometry:\n" + Describe());
+        }
+
+        double step = ys[1] - ys[0];
+        var refpoints = new List<double>();
+        for (int i = 0; i < ys.Count; i += linesPerStaff)
+        {
+            for (int k = 0; k < linesPerStaff - 1; k++)
+            {
+                if (Math.Abs(ys[i + k + 1] - ys[i + k] - step) > 1e-6)
+                {
+                    throw new InvalidOperationException(
+                        $"page {page}: the staff at {ys[i]:F6} has lines {ys[i + k + 1] - ys[i + k]:F6} "
+                        + $"apart where the first staff's are {step:F6}, so the page does not "
+                        + $"hold {linesPerStaff}-line staves of one kind and this grouping "
+                        + "would invent staves that are not there.");
+                }
+            }
+            refpoints.Add((ys[i] + ys[i + linesPerStaff - 1]) / 2.0);
+        }
+        return refpoints;
+    }
+
+    /// <summary>
+    /// Distance from the top paper edge down to the first system's staff refpoint, on a page
+    /// of <paramref name="linesPerStaff"/>-line staves — <see cref="FirstStaffRefpoint"/>'s
+    /// reading for a staff that is not four staff spaces tall.
+    /// </summary>
+    public double FirstStaffRefpointOfLineCount(int linesPerStaff, int page = 0) =>
+        StaffRefpointsOfLineCount(linesPerStaff, page)[0];
+
+    /// <summary>
+    /// The single staff-to-staff distance on a page of <paramref name="linesPerStaff"/>-line
+    /// staves — <see cref="StaffGap"/>'s reading for a staff that is not four staff spaces
+    /// tall, and it refuses a non-uniform page for the same reason that one does.
+    /// </summary>
+    public double StaffGapOfLineCount(int linesPerStaff, int page = 0)
+    {
+        var refs = StaffRefpointsOfLineCount(linesPerStaff, page);
+        if (refs.Count < 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: {refs.Count} staff/staves — a staff-to-staff gap needs two.");
+        }
+        var gaps = Enumerable.Range(0, refs.Count - 1).Select(i => refs[i + 1] - refs[i]).ToList();
+        if (gaps.Max() - gaps.Min() > 1e-6)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: gaps are not uniform ({string.Join(", ", gaps.Select(g => g.ToString("F6")))}). "
+                + "Measuring one of them would misrepresent the page.");
+        }
+        return gaps[0];
     }
 
     /// <summary>

@@ -70,13 +70,22 @@ internal sealed class PageLayouter
     /// VerticalSkyline.Distance() for X-dependent collision avoidance
     /// instead of scalar extents.
     /// </remarks>
+    /// <param name="systemAnchors">
+    /// Per system, how far DOWN from its origin its first and its last SPACEABLE staff's
+    /// REFERENCE POINTS sit — the frame every spring on this page is written in
+    /// (<c>LayoutEngine.PageAnchorOffsets</c>, whose remarks carry the LilyPond references and
+    /// the measurement). Absent, a nominal half staff stands in, which is right only for a
+    /// one-staff system of five lines; the product path always supplies it.
+    /// </param>
     public ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
         ImmutableArray<SystemLayout> systems,
         double headerHeight,
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         ImmutableArray<(double bandUp, double bandDown)>? systemBands = null,
-        IReadOnlyList<double>? systemBodyHeights = null)
+        IReadOnlyList<double>? systemBodyHeights = null,
+        ImmutableArray<(double toFirst, double toLast, double halfFirst, double halfLast)>?
+            systemAnchors = null)
     {
         if (systems.Length == 0)
         {
@@ -84,6 +93,26 @@ internal sealed class PageLayouter
         }
 
         var vs = _options.VerticalSpacing;
+
+        // THE REFPOINT FRAME, per system. Every distance below runs between staff REFERENCE
+        // POINTS while Lily# stacks systems by their ORIGIN, and this pair is the conversion:
+        // how far down the origin sits above the first spaceable staff's refpoint, and above
+        // the last one's. It used to be a nominal `_options.StaffHeight / 2.0` written out at
+        // each use, which is that distance only for a five-line staff (a six-string tab
+        // staff's refpoint is 3.750000 below its top line, not 2.000000 — audit/lp-geometry
+        // page.tab-only.first-staff-refpoint).
+        // ⚠️ TWO PAIRS, and they are not interchangeable: ToFirst/ToLast run from the ORIGIN
+        // and convert anything measured there (a skyline, a scalar extent); HalfFirst/HalfLast
+        // are the outer staves' OWN half spans and convert anything measured from the STAFF (a
+        // whole-line band). Using the first where the second belongs counts a leading chord
+        // row twice.
+        (double ToFirst, double ToLast, double HalfFirst, double HalfLast) Anchor(int i)
+        {
+            double nominal = _options.StaffHeight / 2.0;
+            return systemAnchors is { } a && i >= 0 && i < a.Length
+                ? a[i]
+                : (nominal, nominal, nominal, nominal);
+        }
 
         // Create SystemDetails for each system using per-system skyline extents
         // and context-dependent spacing specs
@@ -120,12 +149,9 @@ internal sealed class PageLayouter
                     currentIsNewScore: false);
             }
 
-            // The staff refpoint is the staff's CENTRE, and this system's origin is its
-            // top staff's TOP LINE, so the first staff's refpoint sits half a single
-            // staff below the origin and the last staff's half a single staff above the
-            // body's bottom. LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
+            // LILYPOND-REF: lily/include/constrained-breaking.hh:56-60
             // refpoint_extent_ (LilyPond reads the real grobs; see SystemDetails).
-            double halfStaff = _options.StaffHeight / 2.0;
+            double halfStaffNominal = _options.StaffHeight / 2.0;
 
             systemDetails.Add(new SystemDetails
             {
@@ -141,8 +167,19 @@ internal sealed class PageLayouter
                 // is what made the breaker under-fill pages.
                 MinDistance = spec.MinimumDistance,
                 SpringLength = spec.BasicDistance,
-                RefpointExtentUp = -halfStaff,
-                RefpointExtentDown = -(staffHeight - halfStaff),
+                // ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
+                // protest — LilyPond reads the real grobs here too, so this is a Lily# value
+                // and not a ported one, and it goes when a point measures a page COUNT over a
+                // staff that is not four staff spaces tall. This
+                // is LilyPond's refpoint_extent_ and the placement chain's own anchors are
+                // now the placed ones, so the two models disagree here — but the breaker is a
+                // SECOND implementation of the page's spring model (HANDOFF 5.2.1 (2)) and
+                // moving it changes which systems land on which page: measured, taking the
+                // placed pair re-broke book LYRHKG's pages and left its staves interleaved.
+                // No corpus point measures a page COUNT over a staff that is not four staff
+                // spaces tall, so there is nothing to justify that rebreak with yet.
+                RefpointExtentUp = -halfStaffNominal,
+                RefpointExtentDown = -(staffHeight - halfStaffNominal),
                 // LILYPOND-REF: lily/constrained-breaking.cc:555 —
                 //   out->inverse_hooke_ = out->full_height () + system_system_space_;
                 // where system_system_space_ is system-system-spacing's BASIC-DISTANCE
@@ -232,7 +269,7 @@ internal sealed class PageLayouter
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
                 isFirstPage, headerHeight, isRagged, useFixedForce, lastPageForce,
-                vs, systemSkylines, systemBands, out double pageForce);
+                vs, systemSkylines, systemBands, Anchor, out double pageForce);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -275,10 +312,10 @@ internal sealed class PageLayouter
         VerticalSpacingParameters vs,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         ImmutableArray<(double bandUp, double bandDown)>? systemBands,
+        Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
         out double pageForce)
     {
         var pageSystems = new List<SystemLayout>();
-        double halfStaff = _options.StaffHeight / 2.0;
 
         // THE CHAIN. LilyPond builds one Page_layout_problem per PAGE and pushes one
         // spring per boundary: top-system-spacing first (:511-518), then one spring per
@@ -297,9 +334,11 @@ internal sealed class PageLayouter
 
         // Spring 0 — down to the first system's staff refpoint. Only the first page
         // carries a header, and the header enters this spring's FLOOR, not the anchor.
+        // ⚠️ HalfFirst, not ToFirst: the floor is built from an EXTENT, which is measured from
+        // the staff. On a lead sheet the chord row is already inside that extent.
         springs.Add(LayoutUtilities.CreateTopSystemSpring(
             isFirstPage ? headerHeight : 0,
-            systemExtents[startIdx].upExtent, halfStaff, vs.TopSystem));
+            systemExtents[startIdx].upExtent, anchor(startIdx).HalfFirst, vs.TopSystem));
 
         int count = endIdx - startIdx;
         // positions[FirstStaffPosition(local)] is that system's FIRST staff refpoint; its
@@ -307,22 +346,50 @@ internal sealed class PageLayouter
         // computed from sysIdx because the number of springs per system now varies.
         var firstStaffPosition = new int[count];
         // Two spans read off the LAID-OUT system — the frame its skylines were built in —
-        // per system: how far its first SPRUNG staff sits below the system's anchor, and
-        // how far its last sprung staff sits below that. Their sum is the conversion the
-        // neighbouring springs need (see below), and it is what LilyPond means by
+        // per system: how far below the system's ORIGIN its first spaceable staff's refpoint
+        // sits, and how far below it the last one's does. They are the conversion the
+        // neighbouring springs need, and they are what LilyPond means by first_spaceable_dy /
         // last_spaceable_dy (:1116, :1126).
         // ⚠️ NOT the sum of the springs' floors. Those are the ALIGNMENT minimums, which
         // sit below the drawn distance by exactly the basic-distance the spring supplies as
         // its ideal — the distinction that lets a page compress at all.
-        var anchorToFirstSprung = new double[count];
-        var anchorToLastSprung = new double[count];
+        var originToFirst = new double[count];
+        var originToLast = new double[count];
+
+        // How far a system's ink reaches below the staff its springs attach to — the term
+        // both the scalar fallback and the page's closing spring are written from.
+        // ⚠️ THE BODY, NOT THE HALF SPAN. Whatever hangs under the last spaceable staff —
+        // a lyric row's band — is inside StaffHeight (the body Lily# reserved), not inside
+        // BottomExtent, so the reach below the refpoint is the body less the origin's
+        // distance to that refpoint. Reading it as HalfLast + BottomExtent drops the rows
+        // and the next system lands on top of them (measured: LYRHKG's staves interleaved).
+        double InkBelowLastRefpoint(SystemDetails d, int sysIdx)
+            => d.StaffHeight - originToLast[sysIdx - startIdx] + d.BottomExtent;
+
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
             int local = sysIdx - startIdx;
             firstStaffPosition[local] = springs.Count;
             var staffSprings = allSystems[sysIdx].StaffSprings;
-            (anchorToFirstSprung[local], anchorToLastSprung[local]) =
-                SprungStaffOffsets(allSystems[sysIdx], halfStaff);
+            var sysAnchor = anchor(sysIdx);
+            originToFirst[local] = sysAnchor.ToFirst;
+            // ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+            // LilyPond has no such case — append_system pushes a spring for every spaceable
+            // staff PAIR and its chain therefore always reaches the last one
+            // (page-layout-problem.cc:651-720) — so this says something about Lily#'s chain
+            // and not about LilyPond's. It goes when a system's staff springs cover every
+            // spaceable pair on every system, hara-kiri included. A system
+            // contributes one node per staff SPRING; with no springs it contributes only the
+            // one this loop just recorded, so the spring that leaves this system leaves from
+            // its FIRST refpoint and the conversion below has to say so. Reading the last
+            // staff's refpoint anyway subtracts a span the chain never added: measured on book
+            // LYRHKG (whose hara-kiri'd system has no pair left to spring), the next system
+            // rose 7.192800 and the staves interleaved.
+            // This is what SprungStaffOffsets' `return (0, 0)` used to encode, kept as a
+            // statement about the CHAIN rather than as a floor for existing output.
+            originToLast[local] = staffSprings.IsDefaultOrEmpty
+                ? sysAnchor.ToFirst
+                : sysAnchor.ToLast;
             if (!staffSprings.IsDefaultOrEmpty)
             {
                 foreach (var ss in staffSprings)
@@ -365,8 +432,8 @@ internal sealed class PageLayouter
                     // fall back to scalar calculation in that case
                     if (double.IsNegativeInfinity(dist))
                     {
-                        skylineDistance = _options.StaffHeight + d.BottomExtent
-                            + systemExtents[sysIdx + 1].upExtent;
+                        skylineDistance = InkBelowLastRefpoint(d, sysIdx)
+                            + systemExtents[sysIdx + 1].upExtent + anchor(sysIdx + 1).HalfFirst;
                     }
                     else
                     {
@@ -393,11 +460,11 @@ internal sealed class PageLayouter
                         // the anchor and the first sprung staff, which is why the offset is
                         // measured from the anchor and not from the first spring.)
                         // ⚠️ It is also what makes the two branches agree: the scalar
-                        // fallbacks below are ALREADY written in this frame
-                        // (`StaffHeight + …` = halfStaff + ink + halfStaff), so before this
-                        // subtraction a multi-staff system priced its skyline gap and its
-                        // fallback gap in different frames.
-                        dist -= anchorToLastSprung[local];
+                        // fallbacks are written in the SAME frame (InkBelowLastRefpoint plus
+                        // the next system's own origin-to-refpoint), so a system whose outer
+                        // staves are not four staff spaces tall cannot price its skyline gap
+                        // and its fallback gap differently.
+                        dist += anchor(sysIdx + 1).ToFirst - originToLast[local];
 
                         // Whole-line annotation bands (lyric lines below,
                         // chord-symbol rows above) lay out after the page Y is
@@ -408,20 +475,26 @@ internal sealed class PageLayouter
                         {
                             double bandDownPrev = bands[sysIdx].bandDown;
                             double bandUpNext = bands[sysIdx + 1].bandUp;
+                            // A BAND IS MEASURED FROM THE STAFF IT HANGS OFF, so the term that
+                            // reaches its refpoint is that staff's own half span; the OTHER
+                            // side of each max is an extent measured from the origin and takes
+                            // the origin distance. Reaching for ToFirst/ToLast on both sides
+                            // counts a leading chord row twice.
                             if (bandDownPrev > 0)
-                                dist = Math.Max(dist, _options.StaffHeight + bandDownPrev
-                                    + systemExtents[sysIdx + 1].upExtent);
+                                dist = Math.Max(dist, anchor(sysIdx).HalfLast + bandDownPrev
+                                    + systemExtents[sysIdx + 1].upExtent
+                                    + anchor(sysIdx + 1).HalfFirst);
                             if (bandUpNext > 0)
-                                dist = Math.Max(dist, _options.StaffHeight
-                                    + systemExtents[sysIdx].downExtent + bandUpNext);
+                                dist = Math.Max(dist, InkBelowLastRefpoint(d, sysIdx)
+                                    + anchor(sysIdx + 1).HalfFirst + bandUpNext);
                         }
                         skylineDistance = dist;
                     }
                 }
                 else
                 {
-                    skylineDistance = _options.StaffHeight + d.BottomExtent
-                        + systemExtents[sysIdx + 1].upExtent;
+                    skylineDistance = InkBelowLastRefpoint(d, sysIdx)
+                        + systemExtents[sysIdx + 1].upExtent + anchor(sysIdx + 1).ToFirst;
                 }
 
                 // LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
@@ -459,12 +532,10 @@ internal sealed class PageLayouter
         {
             var lastDetails = systemDetails[endIdx - 1];
             // Measured from the LAST SPACEABLE staff's refpoint, which is where this spring
-            // now attaches: StaffHeight is the whole body (first staff's top line to the
-            // last's bottom line), so dropping halfStaff reaches the first staff's refpoint
-            // and dropping the minimum staff span reaches the last one's.
-            double inkBelowLastRefpoint =
-                (lastDetails.StaffHeight - halfStaff - anchorToLastSprung[count - 1])
-                + systemExtents[endIdx - 1].downExtent;
+            // attaches: StaffHeight is the whole body (the origin down to the last staff's
+            // bottom line), so dropping the origin's distance to that staff's refpoint is
+            // what hangs below it.
+            double inkBelowLastRefpoint = InkBelowLastRefpoint(lastDetails, endIdx - 1);
             springs.Add(LayoutUtilities.CreateSpring(
                 vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
         }
@@ -502,13 +573,11 @@ internal sealed class PageLayouter
             // system's FIRST staff refpoint
             // (LILYPOND-REF: page-layout-problem.cc:896-901 — solution_[spring_idx] is the
             // first staff's position and the system origin is that plus min_offsets[0]).
-            // Lily# stacks systems by their origin, which is halfStaff above the refpoint.
-            // ⚠️ The chain positions the first SPRUNG staff, which is the anchor itself on
-            // an ordinary system and one loose line lower on a lead sheet whose chord row
-            // comes first — so the anchor is recovered by stepping back up that offset.
-            // Zero, and this whole line inert, whenever a system has no staff springs.
+            // Lily# stacks systems by their ORIGIN, which is originToFirst above the refpoint
+            // the chain positions — half a staff on an ordinary system, more on a lead sheet
+            // whose chord row comes first, and 3.750000 on a six-string tab staff.
             double refpoint = _options.MarginTop + positions[firstStaffPosition[local]];
-            double origin = refpoint - halfStaff - anchorToFirstSprung[local];
+            double origin = refpoint - originToFirst[local];
 
             var system = allSystems[sysIdx];
             // Stage-4 W2-core multi-page producer seam: origin is the system top measured
@@ -525,44 +594,15 @@ internal sealed class PageLayouter
         return pageSystems.ToImmutableArray();
     }
 
-    /// <summary>
-    /// Where a system's sprung staves sit in the layout the page's skylines were built
-    /// from: the first one's refpoint below the system ANCHOR (the refpoint the chain
-    /// positions a system by), and the last one's below that same anchor.
-    /// </summary>
-    /// <remarks>
-    /// Both are 0 when a system has no staff springs, which makes every use of them inert
-    /// on one-staff scores and on lead sheets (a text row is never sprung), and that is what
-    /// keeps those scores on the arithmetic they had before the springs existed.
-    /// <para>
-    /// The anchor is half a staff below the system's own origin — the frame
-    /// <c>SkylineBuilder</c> builds in and <c>SystemLayout.Y</c> is stacked in.
-    /// </para>
-    /// </remarks>
-    private static (double ToFirst, double ToLast) SprungStaffOffsets(
-        SystemLayout system, double halfStaff)
-    {
-        var sprung = system.StaffSprings;
-        if (sprung.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
-            return (0, 0);
-
-        double? first = null, last = null;
-        foreach (var group in system.StaffGroups)
-        {
-            foreach (var staff in group.Staves)
-            {
-                if (staff.StaffIndex == sprung[0].UpperStaffIndex)
-                    first = MultiStaffLayouter.StaffRefpoint(staff);
-                if (staff.StaffIndex == sprung[^1].LowerStaffIndex)
-                    last = MultiStaffLayouter.StaffRefpoint(staff);
-            }
-        }
-        if (first is null || last is null)
-            return (0, 0);
-
-        // Y-up: a refpoint below the anchor is NEGATIVE, and the anchor is at -halfStaff.
-        return (-first.Value - halfStaff, -last.Value - halfStaff);
-    }
+    // SprungStaffOffsets lived here: "how far below the anchor does the first (last) SPRUNG
+    // staff sit", with the anchor at a nominal half staff and BOTH offsets 0 when a system
+    // had no staff springs at all. Its own remark said that 0 "keeps one-staff scores and
+    // lead sheets on the arithmetic they had before the springs existed" — which is the shape
+    // HANDOFF 5.2 names: a branch that exists to leave existing output alone. It cost exactly
+    // that, measured: a one-staff TAB page put its refpoint 1.750000 below LilyPond's
+    // (audit/lp-geometry page.tab-only.first-staff-refpoint). The quantity is now
+    // LayoutEngine.PageAnchorOffsets, computed for EVERY system from the same
+    // ClassifySystem selection the loose chain uses, and handed in.
 
     /// <summary>
     /// Re-places a system's staves at the distances the PAGE solved for them.

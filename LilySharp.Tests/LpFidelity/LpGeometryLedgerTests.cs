@@ -17,6 +17,8 @@
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Layout;
 using Xunit;
 
 namespace LilySharp.Tests.LpFidelity;
@@ -545,6 +547,58 @@ public class LpGeometryLedgerTests
         Assert.True(justifiedGap > raggedGap + 0.4,
             $"the justified page must stretch its staves apart: ragged {raggedGap:F6}, "
             + $"justified {justifiedGap:F6}");
+    }
+
+    /// <summary>
+    /// An OSSIA pair is spaced by the SPEC, in the page's staff spaces — the ossia's own
+    /// scale does not enter the distance. Asserted as a rule by perturbing the spec, not as
+    /// the one number the ledger records.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:240-267 — the distance between two elements of a
+    /// VerticalAlignment is accumulated between their REFERENCE POINTS, and nothing in it
+    /// reads an element's own staff-space. <c>magstep</c> scales the STAFF
+    /// (ly/music-functions-init.ly <c>magnifyStaff</c>), never the alignment's units.
+    /// <para>
+    /// ⚠️ WHY THIS EXISTS NEXT TO THE LEDGER POINT RATHER THAN INSTEAD OF IT (HANDOFF 5.4):
+    /// <c>staff.ossia-pair.staff-staff-inside</c> pins ONE number, and a literal 9.0 written
+    /// into the layouter would pass it. This drives the spec's basic-distance to a second
+    /// value and requires the pair to follow with COEFFICIENT 1. The implementation this
+    /// replaced — <c>interGroupGap *= OssiaScaleFactor</c> — follows with 0.7071 instead and
+    /// fails here at both values (14 would land at 10.9, not 14), which is the point: the
+    /// invention cannot come back without the machine saying so.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE CONTROL IS DRIVEN TOO, in the same run and off the same spec. A change that
+    /// moved BOTH halves would be changing staff-staff-spacing rather than the ossia, and
+    /// this asks the pair to stay an identity under perturbation — which is what LilyPond's
+    /// own OSSU/OSSUN pair is.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(9.0)]
+    [InlineData(14.0)]
+    public void AnOssiaPair_IsSpacedByTheSpec_NotByTheOssiasOwnScale(double basicDistance)
+    {
+        var sp = LayoutOptions.Default.StaffSpacing;
+        var options = LayoutOptions.Default with
+        {
+            StaffSpacing = sp with
+            {
+                DefaultStaffStaff = sp.DefaultStaffStaff with { BasicDistance = basicDistance },
+                StaffStaff = sp.StaffStaff with { BasicDistance = basicDistance },
+            },
+        };
+
+        double ossiaGap = RenderedGeometry
+            .Render(LpGeometryProbes.OssiaPairScoreOssia, options)
+            .ScaledStaffRefpointGap(5, EngravingDefaults.OssiaScale, 5);
+        double controlGap = RenderedGeometry
+            .Render(LpGeometryProbes.OssiaPairScoreNotation, options)
+            .StaffRefpointGap(5, 5);
+
+        Assert.Equal(basicDistance, ossiaGap, 9);
+        Assert.Equal(controlGap, ossiaGap, 9);
     }
 
     /// <summary>
