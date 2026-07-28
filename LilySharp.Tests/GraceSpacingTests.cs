@@ -123,7 +123,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupShortestDuration_AllEighths_ReturnsEighth()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
         var notes = ImmutableArray.Create(
             MakeGrace(Fraction.Eighth),
             MakeGrace(Fraction.Eighth),
@@ -137,7 +137,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupShortestDuration_MixedDurations_ReturnsShortest()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — finds shortest in group
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — finds shortest in group
         var notes = ImmutableArray.Create(
             MakeGrace(Fraction.Eighth),
             MakeGrace(Fraction.Sixteenth),
@@ -161,7 +161,7 @@ public class GraceSpacingTests
     [Fact]
     public void CreateGraceSpring_WithPerGroupBsd_AffectsSpacing()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
         // When the base shortest duration is 1/16, eighth notes get more space
         // (because ratio = (1/8) / (1/16) = 2, spaceFactor = 1.6 + log2(2) = 2.6)
         var springDefaultBsd = SpacingRules.CreateGraceSpring(Fraction.Eighth);
@@ -175,7 +175,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupSpringWidth_SingleNote_MinimumWidth()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc:36-80
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80
         var notes = ImmutableArray.Create(MakeGrace(Fraction.Eighth));
 
         double width = SpacingRules.CalculateGraceGroupSpringWidth(notes);
@@ -188,7 +188,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupSpringWidth_MultipleNotes_Wider()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc:36-80
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80
         var oneNote = ImmutableArray.Create(MakeGrace(Fraction.Eighth));
         var twoNotes = ImmutableArray.Create(
             MakeGrace(Fraction.Eighth),
@@ -209,7 +209,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupSpringWidth_MixedDurations_ShorterGetLessSpace()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
         // When there are mixed durations, shorter notes get less space because
         // bsd = shortest in group, and ratio < 1 for shorter notes
         var mixedGroup = ImmutableArray.Create(
@@ -233,7 +233,7 @@ public class GraceSpacingTests
     [Fact]
     public void CalculateGraceGroupSpringWidth_UniformDurations_SameRegardlessOfValue()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
         // When all notes are the same duration, bsd = that duration,
         // so ratio is always 1.0 and spacing is identical
         var eighths = ImmutableArray.Create(
@@ -252,7 +252,7 @@ public class GraceSpacingTests
     [Fact]
     public void AdjustSpringForGraceNotes_WithGraceInfo_UsesSpringWidth()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc:36-80
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80
         var spring = new Spring(3.0, 1.2, 1.8);
         var graceNotes = ImmutableArray.Create(
             MakeGrace(Fraction.Eighth),
@@ -280,7 +280,7 @@ public class GraceSpacingTests
     [Fact]
     public void GraceNoteEngraver_GetGraceGroupWidth_WithNotes_UsesSpringBased()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc:36-80
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80
         var notes = ImmutableArray.Create(
             MakeGrace(Fraction.Eighth),
             MakeGrace(Fraction.Eighth));
@@ -294,7 +294,7 @@ public class GraceSpacingTests
     [Fact]
     public void GraceToMainRod_MatchesLilyPond()
     {
-        // LILYPOND-REF: lily/grace-spacing.cc — junction rod
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — junction rod
         Assert.Equal(0.4, SpacingRules.GraceToMainRod, 2);
     }
 }

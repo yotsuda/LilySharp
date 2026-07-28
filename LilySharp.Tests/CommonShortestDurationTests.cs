@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// Tests for common-shortest-duration calculation and its effect on spacing (H-1).
-/// LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+/// LILYPOND-REF: lily/spacing-spanner.cc
 /// </summary>
 [Trait("Category", "Unit")]
 public class CommonShortestDurationTests

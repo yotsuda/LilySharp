@@ -221,8 +221,10 @@ internal static class SpacingRules
     /// prefix column every staff's key/time signature and first note break-align past.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-align-interface.cc — the Clef break-align column spans the
-    /// whole system, so in a grand staff the wider bass F clef governs the treble staff's
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:132-243 calc_positioning_done — one
+    /// break-align GROUP per symbol, positioned from the group's own X-extent (:140-145), so
+    /// the Clef column spans the
+    /// whole system and in a grand staff the wider bass F clef governs the treble staff's
     /// meter position too (both signatures stay vertically aligned). Tab (its own clef),
     /// text (lyric/chord) and ossia rows carry no shared-prefix clef and are skipped. An
     /// empty selection books NOTHING — see <see cref="ClefGroupExtent(IEnumerable{ValueTuple{double, double}})"/>.

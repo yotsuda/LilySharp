@@ -124,7 +124,9 @@ internal sealed class MultiStaffLayouter
                 // (vertical-align-engraver.cc inserts its grob among them), so
                 // the ossia/staff pair gets ordinary staff-staff-spacing — not
                 // the wider between-groups spacing. The distance itself is NOT
-                // scaled with the ossia; see LayoutStaffGroupsWithSkylines.
+                // scaled with the ossia — align-interface.cc:201-285 has no term
+                // that reads an element's magnification; see the full note on
+                // LayoutStaffGroupsWithSkylines.
                 if (nextGroup.Staves.Any(s => s.IsOssia) || group.Staves.Any(s => s.IsOssia))
                     spec = sp.StaffStaff;
                 bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
@@ -1643,16 +1645,36 @@ internal sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a non-spaceable
                     // staff is pushed onto `loose_lines` and the NEXT spaceable one closes
                     // the run, so the two spaceable staves are never adjacent in the walk.
-                    // LILYPOND-REF: lily/align-interface.cc:240-267 — the distance between two
-                    // elements of a VerticalAlignment is accumulated between their REFERENCE
-                    // POINTS in the page's staff spaces, and nothing in it reads the element's
-                    // own staff-space. `magstep` scales the STAFF (ly/music-functions-init.ly
-                    // magnifyStaff sets fontSize and StaffSymbol.staff-space), never the
-                    // alignment's units, so an ossia pair is spaced exactly like any other.
-                    // Measured on 2.26.0 across three arrangements — probe page-vertical.ly
+                    // NO SCALE FACTOR ANYWHERE IN THE ELEMENT LOOP, which is why
+                    // `gap * OssiaScaleFactor` is gone from this line.
+                    // LILYPOND-REF: lily/align-interface.cc:201-285
+                    // internal_get_minimum_translations. Every term that can enter `dy` is
+                    // written out there: :217 (the first element's own skyline), :223-238
+                    // (get_spacing_spec between the two elements, then padding /
+                    // minimum-distance / basic-distance) and :240-267 (the extra floor
+                    // against the last SPACEABLE element). It accumulates at :274 with
+                    // `where += stacking_dir * dy`. NOT ONE of those terms reads an element's
+                    // magnification or its own staff-space, so a magnified element is spaced
+                    // exactly like any other.
+                    // ⚠️ Read :240-267 as the sibling remark on StaffSprings reads it —
+                    // include_fixed_spacing's second constraint — NOT as this claim's source.
+                    // ⚠️ LilyPond DOES scale the STAFF (ly/music-functions-init.ly
+                    // magnifyStaff, "Change the staff size by factor mag", driving
+                    // StaffSymbol thickness / staff-space and the notation size).
+                    // GetStaffHeight keeps that; only the DISTANCE lost it.
+                    // ⚠️ THAT THESE OFFSETS ARE REFPOINTS is the CORPUS's claim rather than
+                    // this function's — `translates[]` are element offsets here. Measured on
+                    // 2.26.0 across three arrangements — probe page-vertical.ly
                     // books OSSU (small staff above), OSSD (small staff below) and TABS (a tab
                     // staff below) all read 9.000000; the falsifier 9 * magstep(-3) = 6.363961
                     // fired on none of them. Ledger: staff.ossia-pair.staff-staff-inside.
+                    // ⚠️ AND `StaffGap` ITSELF IS NOT A LITERAL PORT — see
+                    // CalculateStaffGapWithSkylines, which takes max(basic-distance,
+                    // alignment minimum) where LilyPond reads basic-distance only behind the
+                    // pure branch. That deviation is older than this line and is named there.
+                    // What changed here is only that an ossia pair now goes through the SAME
+                    // reconstruction as every other pair instead of a scaled one; it does not
+                    // make the ossia's spacing literal, it makes it not-special.
                     double interGroupGap = textRowPair
                         ? TextRowPairGap
                         : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
@@ -1734,13 +1756,33 @@ internal sealed class MultiStaffLayouter
     /// spec's basic-distance, so a spring built from that spec would pull the pair apart at
     /// force 0 — and "closing that needs the ossia distance itself ported first". That port
     /// is done; the pair now sits ON the spec (<c>staff.ossia-pair.staff-staff-inside</c>
-    /// reads 9.000000 on both sides), so a spring built from it is at its own ideal and does
-    /// not move the pair at force 0. What remains is only that nobody has measured the
-    /// PAGE-level consequence: LilyPond springs an ossia like any staff
-    /// (page-layout-problem.cc), which makes it SPACEABLE and widens
-    /// <c>staff-refpoint-extent</c> — probe book LYROS reads 18.000000 against Lily#'s
-    /// two-staff span for exactly that reason. Un-skipping this without a point for that
-    /// span would be moving the page on an unmeasured quantity.</item>
+    /// reads 9.000000 on both sides).
+    /// <para>
+    /// ⚠️ DO NOT READ THAT AS "the skip is inert". Deleting these two lines leaves the whole
+    /// suite green — 3444 tests, no snapshot and no ledger entry moves — because EVERY ossia
+    /// book in the corpus is a content-sized single page solving at force 0. Measured on a
+    /// 70-space page that actually compresses (2026-07-28), the skip is worth this, in
+    /// refpoint gaps down one page, with the same music spelled both ways:
+    /// <code>
+    ///   ossia, skip kept   pair 9.000000   system 12.749239   (pair RIGID)
+    ///   ossia, skip gone   pair 8.350000   system 17.350000
+    ///   control (2 staves) pair 8.491718   system  9.966872
+    /// </code>
+    /// The rigid pair refuses its share and the slack lands on the system spring — 12.749239
+    /// against the control's 9.966872, which is HANDOFF 5.3's "a spring that cannot move
+    /// shows up in every other spring".
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE TWO-LINE DELETION IS NOT THE PORT EITHER: without the skip the pair lands
+    /// on 8.350000 where its control solves to 8.491718, so it is not being solved the way an
+    /// ordinary pair is. The rest of "an ossia is not spaceable" is still in place —
+    /// <c>LayoutEngine</c>'s last-spaceable-group scan and <c>lastSpaceableStaffY</c>,
+    /// <c>ClassifySystem</c>, <c>ComputeBetweenStavesEnd</c>, <c>PageLayouter</c> and
+    /// <c>LyricEngraver</c> all exclude it — and LilyPond's ossia is spaceable in all of
+    /// them, which also widens <c>staff-refpoint-extent</c> (probe book LYROS reads
+    /// 18.000000 against Lily#'s two-staff span). Those move TOGETHER or the frame splits
+    /// (HANDOFF 5.2.1②), and nothing measures that span yet. ⇒ The point comes first.
+    /// </para></item>
     /// </list>
     /// </para>
     /// </remarks>

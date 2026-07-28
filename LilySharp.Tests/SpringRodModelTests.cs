@@ -409,7 +409,7 @@ public class SpringRodModelTests
     [Fact]
     public void CalculateDurationSpace_ShorterBase_GivesLessSpaceForShortNotes()
     {
-        // LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+        // LILYPOND-REF: lily/spacing-spanner.cc
         // When the score has 16th notes as shortest, the base is 1/16 = 0.0625.
         // A 16th note with base=1/16 gets ratio=1 (shortest_duration_space * increment).
         // A 16th note with base=1/8 gets ratio=0.5 (linear, less space).

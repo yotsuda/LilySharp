@@ -126,7 +126,7 @@ public class NoteCollisionTests
     [Fact]
     public void ShiftMultipliers_Default_MatchLilyPond()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:299-350
+        // LILYPOND-REF: lily/note-collision.cc:299-350
         var p = NoteCollisionParameters.Default;
 
         Assert.Equal(0.52, p.CloseHalfShift);     // close_half_collide :326
@@ -178,7 +178,7 @@ public class NoteCollisionTests
     [Fact]
     public void TouchCollision_ShiftAmount_MatchesLilyPond()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:317
+        // LILYPOND-REF: lily/note-collision.cc:317
         // stem_to_stem = 0.65 notehead widths
         var collision = new NoteCollision();
         // ups[0] == downs.Last() triggers touch: lowest up == highest down
@@ -231,7 +231,7 @@ public class NoteCollisionTests
     [Fact]
     public void Meshing_WholeNotes_CannotMesh_UsesHalfShift()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // LILYPOND-REF: lily/note-collision.cc:180-230
         // Whole notes (round noteheads) cannot mesh
         var collision = new NoteCollision();
         var ups = new[] { 5 };
@@ -248,7 +248,7 @@ public class NoteCollisionTests
     [Fact]
     public void Meshing_ChordWithSeconds_CannotMesh_UsesHalfShift()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // LILYPOND-REF: lily/note-collision.cc:180-230
         // Chords with multiple notes can't mesh cleanly at seconds
         var collision = new NoteCollision();
         var ups = new[] { 5, 7 };    // Chord: two notes
@@ -265,7 +265,7 @@ public class NoteCollisionTests
     [Fact]
     public void Meshing_HalfNotes_CannotMesh_SameHeadGroup()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // LILYPOND-REF: lily/note-collision.cc:180-230
         // Two half notes have the same head group (open) — cannot mesh.
         // LilyPond requires head_group_up != head_group_down for meshing.
         var collision = new NoteCollision();
@@ -284,7 +284,7 @@ public class NoteCollisionTests
     [Fact]
     public void Meshing_SmallerThanStandardShift()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // LILYPOND-REF: lily/note-collision.cc:180-230
         // Meshing shift (0.17) should be much smaller than standard half collision (0.52)
         var p = NoteCollisionParameters.Default;
         Assert.True(p.MeshingGeneralShift < p.CloseHalfShift,
@@ -355,7 +355,7 @@ public class NoteCollisionTests
     [Fact]
     public void HeadWipe_Merge_DownHeadTransparent()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // LILYPOND-REF: lily/note-collision.cc:381-407
         // When notes merge (same pitch, same note value), down-stem notehead is wiped
         var collision = new NoteCollision();
         var ups = new[] { 4 };
@@ -372,7 +372,7 @@ public class NoteCollisionTests
     [Fact]
     public void HeadWipe_NoCollision_NoTransparency()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // LILYPOND-REF: lily/note-collision.cc:381-407
         // No collision → no heads hidden
         var collision = new NoteCollision();
         var ups = new[] { 8 };
@@ -388,7 +388,7 @@ public class NoteCollisionTests
     [Fact]
     public void HeadWipe_FullCollision_NoTransparency()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // LILYPOND-REF: lily/note-collision.cc:381-407
         // Full collision (different note values, shifted apart) → no heads wiped
         var collision = new NoteCollision();
         var ups = new[] { 4 };
@@ -418,7 +418,7 @@ public class NoteCollisionTests
     [Fact]
     public void HeadWipe_MergeChord_DownHeadTransparent()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // LILYPOND-REF: lily/note-collision.cc:381-407
         // Chord merge: all overlapping down-stem heads should be wiped
         var collision = new NoteCollision();
         var ups = new[] { 4, 6 };
@@ -436,7 +436,7 @@ public class NoteCollisionTests
     [Fact]
     public void DotDirection_DownVoice_OnLine_ForcedDown()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // LILYPOND-REF: lily/note-collision.cc:411-448
         // In collision context, down-stem voice's dots on lines should shift DOWN
         // to avoid colliding with up-stem voice
         var collision = new NoteCollision();
@@ -453,7 +453,7 @@ public class NoteCollisionTests
     [Fact]
     public void DotDirection_NoCollision_NotForced()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // LILYPOND-REF: lily/note-collision.cc:411-448
         // No collision → no dot direction override
         var collision = new NoteCollision();
         var ups = new[] { 8 };
@@ -503,7 +503,7 @@ public class NoteCollisionTests
     [Fact]
     public void ThreeVoices_CascadingOffsets()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // LILYPOND-REF: lily/note-collision.cc:420-480
         // Voice 1 (up), Voice 2 (down), Voice 3 (up)
         // Voice 3 should get a larger offset than Voice 1
         var collision = new NoteCollision();
@@ -527,7 +527,7 @@ public class NoteCollisionTests
     [Fact]
     public void FourVoices_CascadingOffsets()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // LILYPOND-REF: lily/note-collision.cc:420-480
         // Voice 1 (up), Voice 2 (down), Voice 3 (up), Voice 4 (down)
         var collision = new NoteCollision();
         var column = new VoiceColumn(ImmutableArray.Create(
@@ -608,7 +608,7 @@ public class NoteCollisionTests
     [Fact]
     public void DifferentlyHeadedMerge_HalfAndQuarter_KeepsOpenNotehead()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:252-261
         // When merge-differently-headed is true, half+quarter at same pitch merge.
         // The open (half) notehead is kept visible.
         var collision = new NoteCollision(new NoteCollisionParameters
@@ -667,7 +667,7 @@ public class NoteCollisionTests
     [Fact]
     public void DifferentlyHeadedMerge_WholeAndHalf_CannotMerge()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:252-261
         // Whole+half cannot merge (both open noteheads)
         var collision = new NoteCollision(new NoteCollisionParameters
         {
@@ -687,7 +687,7 @@ public class NoteCollisionTests
     [Fact]
     public void ForceHshift_ResolverQueryReturnsCorrectValue()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // LILYPOND-REF: lily/note-collision.cc:486-502
         // Verify the resolver correctly returns force-hshift values
         var resolver = new GrobPropertyResolver(
             ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0)),
@@ -703,7 +703,7 @@ public class NoteCollisionTests
     [Fact]
     public void ForceHshift_AppliedOffset_MatchesNoteheadWidthMultiple()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // LILYPOND-REF: lily/note-collision.cc:486-502
         // force-hshift is in notehead width units; when applied, the absolute
         // offset should be force-hshift * noteheadWidth
         double forceHshift = 1.5;
@@ -717,7 +717,7 @@ public class NoteCollisionTests
     [Fact]
     public void ForceHshift_OnceOverride_ClearedAfterAdvance()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // LILYPOND-REF: lily/note-collision.cc:486-502
         // \once override should apply only to the next item, then be cleared
         var resolver = new GrobPropertyResolver(
             ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0, IsOnce: true)),

@@ -621,7 +621,9 @@ internal sealed class MeasureBuilder
         // referenced right before another opening `|:` (or a section `:|:` between
         // them) otherwise stacks thick bars and doubles the dots. The join becomes
         // RepeatBoth and the next measure drops its now-duplicate start barline.
-        // LILYPOND-REF: lily/bar-line.cc — ":|.|:" / back-to-back repeat merging.
+        // LILYPOND-REF: scm/bar-line.scm:1308-1310 define-bar-line — ":|.:" and ":|.|:" are
+        // single declared glyphs whose END piece is ":|." and whose BEGIN piece is ".|:",
+        // i.e. LilyPond spells the back-to-back pair as ONE bar line rather than two.
         for (int i = 0; i + 1 < _measures.Count; i++)
         {
             bool endsRepeat = _measures[i].EndBarline

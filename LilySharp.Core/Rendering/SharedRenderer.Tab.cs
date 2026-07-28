@@ -261,8 +261,18 @@ internal static partial class SharedRenderer
         {
             // Half note: a DOUBLE stem distinguishes it from a quarter on a tab
             // staff, where the fret number carries no notehead shape to read the
-            // duration from. The two lines sit 0.355 staff-spaces apart, measured
-            // from LilyPond's own tab output. LILYPOND-REF: ly/tablature-init.ly.
+            // duration from.
+            // LILYPOND-REF: scm/tablature.scm:97-111
+            // tabvoice::make-double-stem-width-for-half-notes — LilyPond widens the Stem's
+            // X-extent to `single-stem-width + separation` and centres it, so the two lines'
+            // centres end up `separation` apart.
+            // ⚠️ LILYSHARP-OWN: 0.355 is NOT that separation. LilyPond reads
+            // `double-stem-separation`, whose default is 0.5 (scm/tablature.scm:107), and
+            // 0.355 was taken off a measured tab rendering instead — the shape HANDOFF 5.2
+            // calls "pasting the measurement". The port is to draw at 0.5 and let the
+            // property carry it; it moves the tab snapshots, so it is named here rather than
+            // done in passing. (Found 2026-07-28 by the citation checker: the old REF,
+            // `ly/tablature-init.ly`, names a file LilyPond does not have.)
             const double halfGap = 0.355 / 2;
             gc.DrawLine(stemX - halfGap, nearY, stemX - halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
             gc.DrawLine(stemX + halfGap, nearY, stemX + halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
