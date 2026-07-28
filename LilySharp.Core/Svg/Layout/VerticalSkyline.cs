@@ -445,6 +445,42 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// Scales every height about Y = 0, leaving X alone — the skyline of the same ink
+    /// engraved at a smaller size.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c> — LilyPond has no operation here
+    /// to port, because it never scales a skyline: a context engraved at <c>fontSize = -3</c>
+    /// builds its stencils small in the first place, so its VerticalAxisGroup's
+    /// <c>vertical-skylines</c> come out small with them
+    /// (LILYPOND-REF: lily/axis-group-interface.cc:914-940 <c>skyline_spacing</c>, which
+    /// merges the members' own stencils).
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+    /// inside <c>SharedRenderer</c>'s <c>BeginGroup(0, .., OssiaScale, OssiaScale)</c> while
+    /// its layout reads full-size <c>GlyphMetrics</c>, so the transform the renderer applies
+    /// has to be applied to the reserved ink as well or the two disagree. It goes when the
+    /// metrics are read per staff at that staff's own size.
+    /// </para>
+    /// <para>
+    /// ⚠️ Y ONLY, matching <c>UnscaledXDrawingContext</c>: an ossia keeps the horizontal
+    /// positions of the music it decorates, so its X coordinates are NOT scaled by the
+    /// renderer either.
+    /// </para>
+    /// </remarks>
+    public void Scale(double factor)
+    {
+        for (int i = 0; i < _buildings.Count; i++)
+        {
+            var b = _buildings[i];
+            _buildings[i] = b.Slope == 0
+                ? new SkylineBuilding(b.Start, b.End, b.Intercept * factor)
+                : new SkylineBuilding(b.Start, b.ValueAt(b.Start) * factor,
+                               b.ValueAt(b.End) * factor, b.End);
+        }
+    }
+
+    /// <summary>
     /// Creates a padded copy of this skyline with 45° sloped edges.
     /// Each building gets flat+sloped extensions on both sides.
     /// </summary>

@@ -137,6 +137,60 @@ public class StaffSkylineFrameTests
     }
 
     /// <summary>
+    /// AN OSSIA RESERVES WHAT IT DRAWS: the same music on an ossia staff has exactly
+    /// <see cref="EngravingDefaults.OssiaScale"/> of the silhouette it has at full size — in
+    /// BOTH directions, because the origin of this skyline is the middle line the renderer
+    /// anchors its scale group on.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c> — an ossia is engraved at
+    /// <c>fontSize = -3</c>, so in LilyPond there is nothing to scale: its stencils are built
+    /// small and <c>axis-group-interface.cc:914-940</c> <c>skyline_spacing</c> merges those.
+    /// Lily# applies the size as a draw-time transform, so the reserved ink has to carry the
+    /// same factor or the two disagree — see <c>VerticalSkyline.Scale</c>.
+    /// <para>
+    /// ⚠️ A RATIO AND NOT A NUMBER (HANDOFF 5.4). Every value here is a glyph metric, so
+    /// asserting the ossia's own extents would pin the FONT and would have to be rewritten
+    /// the day a metric moves; the ratio is the rule and survives that. It also cannot pass
+    /// by comparing the implementation with itself: the full-size reading is what the sibling
+    /// test above pins independently, against the font's own box.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IT CATCHES, measured before the fix: the two were EQUAL. An ossia's notes,
+    /// stems and clef were seeded at full size while the renderer drew them at 0.7071, so an
+    /// ossia reserved a full staff's room — the page's top spring was floored at
+    /// <c>GlyphMetrics.ClefG.Top</c> on an ossia book exactly as on its notation control, and
+    /// the two solved the identical force where LilyPond solves two different ones
+    /// (audit/lp-geometry page.ossia-pair.compressed.first-staff-refpoint).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AnOssiaStaffReservesItsOwnSize_NotAFullStaffs()
+    {
+        var note = new NoteItem(0, Fraction.Whole, 0, null, false, 0);
+        var full = OneStaff(note);
+        var ossia = Staff.CreateOssia(
+            ClefType.Treble, new Voice("v", full.PrimaryVoice.Measures));
+
+        var builder = new SkylineBuilder(StaffHeight);
+        var fullSky = builder.BuildStaffSkylines(
+            full, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+        var ossiaSky = builder.BuildStaffSkylines(
+            ossia, Layouts(), default, default, default, default, default, default,
+            systemLeft: 0.0);
+
+        // The regime this measures: the full-size reading must be non-trivial, or a scale of
+        // anything at all would satisfy the ratio below.
+        Assert.True(fullSky.Up.MaxHeight() > 1.0, $"{fullSky.Up.MaxHeight():F6}");
+
+        Assert.Equal(
+            EngravingDefaults.OssiaScale * fullSky.Up.MaxHeight(), ossiaSky.Up.MaxHeight(), 9);
+        Assert.Equal(
+            EngravingDefaults.OssiaScale * fullSky.Down.MaxHeight(), ossiaSky.Down.MaxHeight(), 9);
+    }
+
+    /// <summary>
     /// THE STAFF SYMBOL, which is the seed that names the origin: the outer lines are ink,
     /// so they reach half a line thickness past the outermost line CENTRE, and the two
     /// readings are what say where 0 is. Symmetric about the origin would mean the middle

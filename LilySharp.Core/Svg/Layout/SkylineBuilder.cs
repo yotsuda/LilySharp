@@ -81,11 +81,8 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline —
         //   the system stencil the page spaces by carries the real Beam ink, not a
         //   fixed-length stem model.
-        if (firstStaff is not null)
-            AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleUp,
-                upSkyline, downSkyline,
-                BeamedItemsToSuppress(firstStaffBeams));
-        AddBeamsToSkyline(firstStaffBeams, firstStaffMiddleUp, upSkyline, downSkyline);
+        AddEdgeStaffInk(firstStaff, measureLayouts, firstStaffMiddleUp, firstStaffBeams,
+            systemLeft, upSkyline, downSkyline);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
@@ -93,12 +90,8 @@ internal sealed class SkylineBuilder
         double lastStaffMiddleUp = MiddleUp(lastLayout, _staffHeight / 2 - systemHeight);
         bool twoEnds = lastStaff is not null && lastStaff != firstStaff && systemHeight > 0;
         if (twoEnds)
-        {
-            AddStaffToSkylines(lastStaff!, measureLayouts, lastStaffMiddleUp,
-                upSkyline, downSkyline,
-                BeamedItemsToSuppress(lastStaffBeams));
-            AddBeamsToSkyline(lastStaffBeams, lastStaffMiddleUp, upSkyline, downSkyline);
-        }
+            AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
+                systemLeft, upSkyline, downSkyline);
 
         // ★ EACH EDGE STAFF SEEDS ITS OWN STAFF SYMBOL — BOTH its lines, not one each
         // (2026-07-28). It used to seed the outer pair, the first staff's TOP and the last
@@ -129,18 +122,72 @@ internal sealed class SkylineBuilder
                 seed: true, lastSpan.TopLineY, lastSpan.BottomLineY, upSkyline, downSkyline);
         }
 
-        // The clef opens every system and, on a plain score, is the extreme ink in both
-        // directions — further out than any note that stays inside the staff — so it is
-        // what the page's springs are floored by. Seeded for the same two staves the
-        // notes are, about the same middle line.
-        if (firstStaff is not null)
-            SeedClef(firstStaff, firstStaffMiddleUp, systemLeft, upSkyline, downSkyline);
-        if (twoEnds)
-            SeedClef(lastStaff!, lastStaffMiddleUp, systemLeft, upSkyline, downSkyline);
-
         upSkyline.EndBatch();
         downSkyline.EndBatch();
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds ONE edge staff's own ink — its notes, its drawn beams and its clef — into the
+    /// system's silhouette. The clef is here with the notes because on a plain score it is
+    /// the extreme ink in both directions, further out than any note that stays inside the
+    /// staff, so it is what the page's springs are floored by.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 <c>build_system_skyline</c> —
+    /// each element's own skyline is raised by its own translation and merged, which is the
+    /// order this keeps: the staff's ink is built in the staff's frame and only then put
+    /// where the staff sits.
+    /// <para>
+    /// ⚠️ AN OSSIA IS ENGRAVED SMALL and its ink was not, until 2026-07-28. The staff SYMBOL
+    /// already came out right because <see cref="StaffSpan"/> reads the placed layout's own
+    /// height, but every notehead, stem, beam and clef seeded here read full-size
+    /// <c>GlyphMetrics</c> while the renderer draws them inside a 0.7071 group — so an ossia
+    /// reserved a full-size staff's room. MEASURED: the page's top spring was floored at
+    /// <c>GlyphMetrics.ClefG.Top</c> on BOTH halves of books OSSK/OSSKN and the two solved
+    /// the identical force 0.214493, where LilyPond solves 0.212184 against 0.213548 — the
+    /// ossia's smaller ink never reached the page at all
+    /// (audit/lp-geometry page.ossia-pair.compressed.first-staff-refpoint).
+    /// </para>
+    /// <para>
+    /// ⚠️ SCALED IN ITS OWN FRAME AND RAISED AFTERWARDS, in that order, because the scale is
+    /// anchored on the staff's MIDDLE line — the point the renderer's group is anchored on
+    /// too. Scaling after the raise would move the staff as well as shrink it.
+    /// </para>
+    /// </remarks>
+    private void AddEdgeStaffInk(
+        Staff? staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        ImmutableArray<BeamLayout> beams, double systemLeft,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        bool ossia = staff is { IsOssia: true };
+        var up = ossia ? new VerticalSkyline(VerticalDirection.Up) : upSkyline;
+        var down = ossia ? new VerticalSkyline(VerticalDirection.Down) : downSkyline;
+        // The staff's OWN frame when it has to be scaled, the system's when it does not.
+        double middle = ossia ? 0 : staffMiddleUp;
+        if (ossia)
+        {
+            up.BeginBatch();
+            down.BeginBatch();
+        }
+
+        if (staff is not null)
+        {
+            AddStaffToSkylines(staff, measureLayouts, middle, up, down,
+                BeamedItemsToSuppress(beams));
+            SeedClef(staff, middle, systemLeft, up, down);
+        }
+        AddBeamsToSkyline(beams, middle, up, down);
+
+        if (!ossia) return;
+        up.EndBatch();
+        down.EndBatch();
+        up.Scale(EngravingDefaults.OssiaScale);
+        down.Scale(EngravingDefaults.OssiaScale);
+        up.Raise(staffMiddleUp);
+        down.Raise(staffMiddleUp);
+        upSkyline.Merge(up);
+        downSkyline.Merge(down);
     }
 
     /// <summary>
@@ -556,6 +603,25 @@ internal sealed class SkylineBuilder
         // staff below must clear its outer edge exactly as it clears a tuplet bracket. The
         // members' fixed stems were suppressed above; this seeds the real drawn geometry.
         AddBeamsToSkyline(beams, staffMiddleUp, upSkyline, downSkyline);
+
+        // ...and an OSSIA is engraved small, so all of that ink is smaller. Applied once
+        // here, at the end, because the origin of this skyline IS the staff's middle line —
+        // the very point the renderer's scale group is anchored on — so one multiply is the
+        // whole transform. See VerticalSkyline.Scale for why Lily# needs the operation at all
+        // and LilyPond does not.
+        // ⚠️ THE STAFF SYMBOL IS IN IT HERE and is NOT in the system silhouette's version of
+        // this (AddEdgeStaffInk), and that is not two answers for one quantity: this builder
+        // holds ONE nominal _staffHeight and seeds ±2.050000 whatever staff it is given, so
+        // the multiply is what makes those lines the ossia's own (±1.449555); the system
+        // silhouette seeds its lines from the PLACED layout's height instead, which is the
+        // ossia's already. Both routes end at the drawn staff — one reads the size, the other
+        // applies it — and the day this builder is given the staff's own height, the seed
+        // here becomes the layout's too and this note goes with the branch.
+        if (staff.IsOssia)
+        {
+            upSkyline.Scale(EngravingDefaults.OssiaScale);
+            downSkyline.Scale(EngravingDefaults.OssiaScale);
+        }
 
         return (upSkyline, downSkyline);
     }

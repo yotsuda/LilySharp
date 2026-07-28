@@ -228,6 +228,55 @@ public class StaffLayoutFrameTests
     }
 
     /// <summary>
+    /// A line is non-spaceable because it DECLARES a <c>staff-affinity</c> — not because it
+    /// is one of the kinds of line that usually carry one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable
+    /// asks one question and it is a property lookup. LILYPOND-REF:
+    /// lily/page-layout-problem.cc:660-672 <c>append_system</c> springs between consecutive
+    /// spaceable elements, which is what this reads.
+    /// <para>
+    /// ⚠️ THE RULE, NOT THE VALUE (HANDOFF 5.4). Lily# used to answer this by listing the
+    /// kinds — "is this staff index one of the score's text rows" — which returns the same
+    /// answer for every score the language can spell today, so no snapshot, no ledger entry
+    /// and no corpus distance can tell the two apart. What tells them apart is perturbing the
+    /// rule's INPUT: an ordinary music staff that declares an affinity is non-spaceable, and a
+    /// predicate written over kinds cannot see it. The list version passes the control arm and
+    /// FAILS the second (it makes the spring anyway) — verified by putting it back.
+    /// </para>
+    /// <para>
+    /// ⚠️ The arrangement is model-only, like its neighbour above: no <c>.lys</c> surface puts
+    /// an affinity on a music staff. That is the point — the corpus could not reach it, which
+    /// is why the proxy survived, and it is what an ossia (a staff with NO affinity that the
+    /// list wrongly held) cost when the list and the property finally disagreed.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ALineIsNonSpaceableBecauseItDeclaresAnAffinity_NotBecauseOfItsKind()
+    {
+        var upper = CreateStaff(ClefType.Treble);
+        var lower = CreateStaff(ClefType.Bass);
+
+        var control = new LayoutEngine()
+            .Layout(ScoreOf(StaffGroup.CreateGrandStaff(upper, lower))).Systems[0];
+        var spring = Assert.Single(control.StaffSprings);
+        Assert.Equal(control.StaffGroups[0].Staves[0].StaffIndex, spring.UpperStaffIndex);
+        Assert.Equal(control.StaffGroups[0].Staves[1].StaffIndex, spring.LowerStaffIndex);
+
+        // The same music, the same kind of staff, one property different.
+        var attached = new LayoutEngine()
+            .Layout(ScoreOf(StaffGroup.CreateGrandStaff(
+                upper, lower with { StaffAffinity = StaffAffinityDirection.Up }))).Systems[0];
+        Assert.Empty(attached.StaffSprings);
+        // ...and the placed staff carries the property, or the classification downstream
+        // (the page's anchor, the loose chain) is back to being told the answer.
+        Assert.Null(attached.StaffGroups[0].Staves[0].StaffAffinity);
+        Assert.Equal(
+            StaffAffinityDirection.Up, attached.StaffGroups[0].Staves[1].StaffAffinity);
+    }
+
+    /// <summary>
     /// The two accessors must remain exact reflections of each other, and their composition
     /// with the system origin must be the plain SUM LilyPond performs.
     /// </summary>

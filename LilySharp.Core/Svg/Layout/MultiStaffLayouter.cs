@@ -553,7 +553,8 @@ internal sealed class MultiStaffLayouter
                     Tuning: staff.Tuning,
                     InstrumentName: staff.InstrumentName,
                     IsOssia: staff.IsOssia,
-                    IsHidden: true));
+                    IsHidden: true,
+                    StaffAffinity: staff.StaffAffinity));
                 continue;
             }
 
@@ -594,7 +595,8 @@ internal sealed class MultiStaffLayouter
                 Height: thisStaffHeight,
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
-                IsOssia: staff.IsOssia));
+                IsOssia: staff.IsOssia,
+                StaffAffinity: staff.StaffAffinity));
             anyVisible = true;
             lastVisibleIndex = globalIndex;
             lastVisibleHeight = thisStaffHeight;
@@ -755,7 +757,8 @@ internal sealed class MultiStaffLayouter
                 Y: currentY,
                 Height: staffHeight,
                 Tuning: staff.Tuning,
-                InstrumentName: staff.InstrumentName));
+                InstrumentName: staff.InstrumentName,
+                StaffAffinity: staff.StaffAffinity));
 
             if (i < group.Staves.Length - 1)
                 currentY -= staffHeight + Math.Max(0, staffSpacing);
@@ -803,7 +806,8 @@ internal sealed class MultiStaffLayouter
                 Height: thisStaffHeight,
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
-                IsOssia: staff.IsOssia));
+                IsOssia: staff.IsOssia,
+                StaffAffinity: staff.StaffAffinity));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
@@ -845,7 +849,8 @@ internal sealed class MultiStaffLayouter
                 Height: thisStaffHeight,
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
-                IsOssia: staff.IsOssia));
+                IsOssia: staff.IsOssia,
+                StaffAffinity: staff.StaffAffinity));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
@@ -1847,7 +1852,12 @@ internal sealed class MultiStaffLayouter
         {
             var upper = flat[i];
             var lower = flat[i + 1];
-            if (upper.Staff.IsTextRow || lower.Staff.IsTextRow)
+            // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable
+            // — the property, not the kind of line that happens to carry it. A spring is made
+            // between consecutive SPACEABLE elements (:660-672 append_system), and everything
+            // else is distributed afterwards.
+            if (!StaffAffinity.IsSpaceable(upper.Staff.StaffAffinity)
+                || !StaffAffinity.IsSpaceable(lower.Staff.StaffAffinity))
                 continue;
             if (upper.Layout.IsHidden || lower.Layout.IsHidden)
                 continue;
@@ -2092,7 +2102,9 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts)
     {
-        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
         var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
         var system = new SystemLayout(
             SystemIndex: 0, Y: 0,
@@ -2119,7 +2131,9 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts)
     {
-        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
         var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
         var system = new SystemLayout(
             SystemIndex: 0, Y: 0,
@@ -2162,7 +2176,9 @@ internal sealed class MultiStaffLayouter
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts)
     {
-        var staffLayout = new StaffLayout(0, staff.Clef, Y: 0, Height: _options.StaffHeight);
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
         var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
         var system = new SystemLayout(
             SystemIndex: 0, Y: 0,

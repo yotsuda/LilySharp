@@ -46,7 +46,15 @@ public sealed record StaffLayout(
     // Whether this staff is hidden due to hara-kiri (empty staff removal).
     // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
     // When true, the staff and its contents should not be rendered.
-    bool IsHidden = false
+    bool IsHidden = false,
+    // This staff's `staff-affinity`, carried over from its Staff. null = spaceable.
+    // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable —
+    // a line is spaceable exactly when it declares no `staff-affinity`, and that one property
+    // is all LilyPond asks. It travels with the PLACED staff because that is where the
+    // question gets asked: the page's anchor, the loose chain and the note-bound anchors all
+    // classify staff LAYOUTS, and without it here they had to be handed the score's set of
+    // text-row indices instead — the type enumeration standing in for the property.
+    int? StaffAffinity = null
 );
 
 /// <summary>

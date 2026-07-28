@@ -679,6 +679,22 @@ public class LpGeometryLedgerTests
         Assert.Equal(4.0, (systemIdeal - ossiaSystem) / (staffIdeal - ossiaInside), 3);
         Assert.Equal(4.0, (systemIdeal - controlSystem) / (staffIdeal - controlInside), 3);
 
+        // ...and the two pages must solve DIFFERENT forces, the ossia's the smaller. An ossia
+        // is engraved small, so its systems are shorter, so its page keeps more slack and
+        // compresses less — LilyPond reads 0.212184 against 0.213548. This is the assertion
+        // that says the ossia's size reaches the PAGE and not merely the staff it sits on: it
+        // is the rule the ledger's numbers are a consequence of, so it survives them moving.
+        // ⚠️ MEASURED BEFORE THE PORT, the two were EQUAL TO NINE DIGITS (0.214493 twice),
+        // because every notehead, stem and clef of an ossia was seeded at full size while the
+        // renderer drew it at OssiaScale — a full staff's room reserved for a small staff.
+        // audit/lp-geometry page.ossia-pair.compressed.first-staff-refpoint carries the account.
+        double ossiaForce = staffIdeal - ossiaInside;
+        double controlForce = staffIdeal - controlInside;
+        Assert.True(ossiaForce < controlForce - 1e-6,
+            $"the ossia book must squeeze LESS than its full-size control — its ink is "
+            + $"smaller: {ossiaForce:F9} against {controlForce:F9}. Equal forces mean the "
+            + "ossia's size never reached the page.");
+
         double ossiaHead = ossiaPage.ScaledPairFirstStaffRefpoint(
             5, EngravingDefaults.OssiaScale, 5);
         double controlHead = controlPage.ScaledPairFirstStaffRefpoint(5, 1.0, 5);
