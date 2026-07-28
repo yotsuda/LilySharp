@@ -343,11 +343,13 @@ internal sealed class MultiStaffLayouter
     /// agree for two ordinary staves (2.0 + 2.0 = 4.0) and disagree for a TAB or OSSIA pair.
     /// See <see cref="GapSpan"/> for the pair that measured it.
     /// <para>
-    /// ⚠️ THE STAFF-INTERNAL PATH IS STILL NOMINAL. <see cref="StackStaves"/> advances by the
-    /// previous staff's own height, which is the same quantity from the other side, but the
-    /// gap it adds comes from <c>StaffGap</c> and is not converted here. It only bites for
-    /// two staves of DIFFERENT heights inside ONE group, which no fixture and no corpus book
-    /// has — a tab or ossia staff is always a group of its own.
+    /// ★ THE STAFF-INTERNAL PATH TAKES IT TOO, since 2026-07-28. <see cref="StackStaves"/>
+    /// used to advance by the previous staff's own HEIGHT while the gap it added came from
+    /// <c>StaffGap</c> in the refpoint frame, so a pair of DIFFERENT heights inside ONE group
+    /// landed half their difference out. Both paths now ask <see cref="GapSpan"/>. It was
+    /// unreachable from any score — a tab or ossia staff is always a group of its own — and
+    /// is pinned by <c>StaffLayoutFrameTests.UnequalStavesInOneGroup_ArePlacedCentreToCentre</c>,
+    /// which builds the arrangement through the model.
     /// </para>
     /// </remarks>
     private double RefpointSpanToGap(Staff upper, Staff lower, bool chordGridSheet)
@@ -522,6 +524,7 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// </remarks>
     private ImmutableArray<StaffLayout>.Builder StackStaves(
+        MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         Func<Staff, bool> isDead,
@@ -572,9 +575,13 @@ internal sealed class MultiStaffLayouter
                 // same parameter carried two different quantities depending on the caller;
                 // that is what forced StaffSprings to RECONSTRUCT the alignment minimum
                 // instead of asking for it (HANDOFF 5.2.1②).
-                // ⚠️ A TEXT ROW IS NEVER IN THIS LOOP — RenderSpec gives every chords/lyrics
-                // track a Single group of its own — so `chordGridSheet` cannot be read here.
-                double span = RefpointSpanToGap(lastVisibleStaff!, staff, chordGridSheet: false);
+                // ⚠️ THE SAME GapSpan THE INTER-GROUP PATH USES, score and all. Writing
+                // RefpointSpanToGap(.., chordGridSheet: false) here instead would be folding
+                // an evaluated result — "a text row is never in this loop, because RenderSpec
+                // gives every chords/lyrics track a Single group of its own" is an invariant
+                // of ANOTHER FILE, and asserting one of those in a comment is the shape
+                // HANDOFF 5.2 names. Ask for the quantity; do not decide it here.
+                double span = GapSpan(score, lastVisibleStaff!, staff);
                 double gap = StaffGap(
                     staffSpec, span, staffSkylines, lastVisibleIndex, globalIndex);
                 currentY -= lastVisibleHeight + gap;
@@ -636,11 +643,12 @@ internal sealed class MultiStaffLayouter
     /// Layouts a grand staff group (piano/organ style with brace) from the placed staves.
     /// </summary>
     private StaffGroupLayout LayoutGrandStaffGroupWithSkylines(
+        MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
         var staffLayouts = StackStaves(
-            group, y, staffSpec, startIndex, staffSkylines, isDead,
+            score, group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
@@ -669,11 +677,12 @@ internal sealed class MultiStaffLayouter
     /// Layouts a single staff group from the placed staves.
     /// </summary>
     private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
+        MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
         var staffLayouts = StackStaves(
-            group, y, staffSpec, startIndex, staffSkylines, isDead,
+            score, group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
@@ -691,11 +700,12 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering with collapse-height
     /// </remarks>
     private StaffGroupLayout LayoutBracketGroupWithSkylines(
+        MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
     {
         var staffLayouts = StackStaves(
-            group, y, staffSpec, startIndex, staffSkylines, isDead,
+            score, group, y, staffSpec, startIndex, staffSkylines, isDead,
             out double currentY, out bool anyVisible);
 
         if (!anyVisible)
@@ -1640,12 +1650,12 @@ internal sealed class MultiStaffLayouter
 
             var layout = group.IsGrandStaff
                 ? LayoutGrandStaffGroupWithSkylines(
-                    group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                    score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
                 : group.HasDelimiter
                     ? LayoutBracketGroupWithSkylines(
-                        group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
                     : LayoutSingleStaffGroupWithSkylines(
-                        group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead);
+                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead);
             builder.Add(layout);
 
             // A group with no survivor takes no room and no gap: it is not in the alignment.

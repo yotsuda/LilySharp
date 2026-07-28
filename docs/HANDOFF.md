@@ -100,7 +100,12 @@ Lily# はそれを **4 か所**で外していた。
 - **未移植で名前を付けたもの**: `staff-refpoint-extent` は LP でも spaceable 譜だけを張るので、
   **LYROS が 18.000000 対 Lily# の 2 譜スパン**。**測る点がまだ無い。**
 
-**同じセッションの 2 本目**: `de270892`（**§2D ① を閉じた**・byte 不変・§2D の表へ）。
+**同じセッションの 2 本目**: `de270892`（**§2D ① を閉じた**・byte 不変・§2D の表へ）＋
+`e1d5c5f8`（**その自己監査**）。⚠️ ★★ **de270892 は §5.2 が名指す形を 2 つ持っていた**——
+⑴ `chordGridSheet: false` の**評価結果の畳み込み**（根拠が**別ファイルの不変条件**＝
+`BuildLooseChainEnds` の span 省略と同型で、その項を読み直した数時間後に自分で書いた）、
+⑵ **commit message が「消した」と書いた注記を消していなかった**。
+⇒ **どちらも全緑・byte 不変で、見つけたのは §7.5 の読み直しだけ**（2 度目の読み直しで出た）。
 ★★ **「逆算は消せない構造だから」ではなかった**——`StaffGap` の第2引数が**呼び手によって
 別の量**だったせいで、逆算がその誤りを吸収していた。⇒ ★ **「構造上できない」と引き継がれた
 項目は、まずその構造の主張を 1 回確かめる**（§5.3 の「引き継がれた数は測り直す」の兄弟。
@@ -259,6 +264,51 @@ LP に該当するテストは無い（Lyrics はどこに居ても alignment �
 ⚠️ **frame 誤りの型は残る**（前セッションからの持ち越し・繰り返し出る）: **system スカイラインは
 system 原点から／譜ごとのスカイラインはその譜の上端から**測られているので、アンカーへの
 変換が 2 系統で違う（`skylineToAnchor`）。片方だけ直すと**譜間距離ちょうど**ずれる（実測 10.5）。
+
+### ★★ 残っている「非字面」の棚卸し（2026-07-28・**別々の項目ではなかった**）
+
+⚠️ **§2D に 3 件・§1 に数件と散っていたが、縦の非字面は次の 3 つに畳める。**
+着手順の推奨もこの順。
+
+**⑴ 代理表現 A＝`is_spaceable` を「型」で書いている（★ 一番安い。材料はもう有る）**
+LP は `!scm_is_number(staff-affinity)` の 1 行（`page-layout-problem.cc:1173-1177`）。
+Lily# は `!IsHidden && !textRowStaves.Contains(idx)` と**型の列挙**で書いている。
+★★ **`Staff.StaffAffinity`（`int?`・null＝spaceable）は既に存在し**、`Staff.cs:218-221` が
+**「affinity こそが線を非 spaceable にする」と LP を引いて自分で書いている**。
+⇒ **`st.StaffAffinity is null` と書けば字面移植**（`IsHidden` は LP の `filter_dead_elements`
+＝別条件なので残す）。⚠️ **障害は 1 つだけ**: `ClassifySystem` が見るのは `StaffLayout` で、
+そこに affinity が乗っていない（だから index の集合を渡している）。**`StaffLayout` に
+`StaffAffinity` を運ばせるのが仕事の全部**。今日の対応表は完全一致（text row は
+`CreateTextRow` が Down/Up を立てる・ossia と tab は null）なので**出力不変のはず**。
+⚠️ **「はず」なので測ること。**
+
+**⑵ 代理表現 B＝「grouper があるか」を `StaffGroupType.Single` で代理**
+LP は grob の `staff-grouper` を引く（`axis-group-interface.cc:1007-1027`）。
+Lily# は群の種別で代理。⚠️ **今日は構造的に正しい**（`RenderSpec` が ossia/tab を必ず
+`CreateSingle` にする）が、**モデルに grouper が無い**ので字面にはできない。
+⇒ **⑴ より重い**（モデル追加）。**急がない。**
+
+**⑶ ★★ 本丸＝walk が「ペアごと」で「system ごと」ではない**
+`AlignmentWalk` **自体は :228-275 の忠実な移植**（Seed/Advance/Distance）。欠けているのは
+**呼び出し側**で、LP は `internal_get_minimum_translations` を **system の要素列全体に 1 回**
+走らせて `translates[]` を返すのに、Lily# は**ペアごとに上の譜から seed し直す**。
+⇒ **これ 1 つで次が全部閉じる**（別々の項目として引き継がない）:
+- §2D 未移植 ⑶ `include_fixed_spacing` の第2制約（`align-interface.cc:240-267`）＝
+  **直前の spaceable 譜**に対する床。**run をまたぐ量なのでペアごとでは書けない**
+- §2D 未移植 ⑵ 最初の spaceable 譜の loose line 用の床（`:667-670`）
+- `AlignmentWalk.Seed` が取らない `:217` の dy＝**`min_offsets[0]`**。
+  ★ **`BuildLooseChainEnds` がそれを手で再構成している**（`LayoutEngine` の
+  「up extent は上端線基準なので半譜足す」の段落）＝**今日消した床の逆算と同じ形が
+  もう 1 箇所残っている**
+- `CalculateStaffGapWithSkylines` の `max(basic, alignmentMin)`（LP は非 spaceable の隣人に
+  basic を足さない。ideal は force 0 の loose line 鎖から来る＝`:1035`）
+⚠️ **測る点が無い**（発火するのは**譜と譜の間に loose line が立つ**とき＝
+`ComputeBetweenStavesEnd` が declines している regime）。⇒ **点が先。**
+⚠️ **frame 移行なので §5.4 どおり「格納値を主張するテスト」を先に書く**
+（`StaffSkylineFrameTests` の前例。無しでやった 1 回目は差し戻している）。
+
+**⑷ 言語表面が無いもの**: §2D 未移植 ⑴ `alignment-distances`
+（`line-break-system-details` 由来の手動指定）。**文法から**なので別系統。
 
 ### その次の候補
 
@@ -676,6 +726,9 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   commit された**。全テスト緑・snapshot 不動・台帳不動で、**網は 1 つも鳴らない**。
   ⇒ ⚠️ **「対応した」と書いた配置は、テストが無いなら最低でも `png --crop` を 1 枚。**
   名指しは仮説であって観測ではない（§5.3 の「推論せず測る」の、文章版）。
+  ★ **散文にも同じ規則が要る**（2026-07-28・`de270892` → `e1d5c5f8`）: commit message に
+  「この注記を消した」と書いて**消していなかった**。残った注記は**コードと逆のことを言う**ので、
+  触らなかったより悪い。⇒ **「消した」と書く前に旧文言で grep する**（1 行で済む）。
 - ★★ ⚠️ **1 つの claim が N 個の量に分かれているとき、「1 つずつ当てて良くなったものだけ入れる」は
   使えない。分割すると悪化することがある**（2026-07-28・ossia）。「ossia は spaceable」は
   ばね・spec・spaceable 性の 3 つで、**ばねだけ入れると両方の読みが遠くなった**

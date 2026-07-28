@@ -82,6 +82,23 @@ LILYPOND-REF: `align-interface.cc:274`（`where += stacking_dir * dy`, `stacking
 （`align-interface.cc:228`）。⇒ 読み手が各自で半譜を足し戻していたアダプタが消えた
 （`LyricEngraver` の 2 箇所）。
 
+✅ **譜を積む側も refpoint 枠に揃えた**（`de270892`＋`e1d5c5f8`・2026-07-28・**出力完全不変**）。
+`MultiStaffLayouter.StaffGap` の第2引数は**呼び手によって別の量**だった——群間は refpoint
+スパン（`GapSpan`）、**群内は上の譜の全高**——ので、群内の配置は
+**中心間距離を上端間距離として扱っていた**。両方 `GapSpan` に統一。
+⇒ **`StaffSprings` の逆算（`drawn − max(0, basic − alignmentMin)`）が消えた**: 床は
+`minimum_offsets_with_min_dist` を**直接読む**（`page-layout-problem.cc:699-704`）。
+⚠️ **逆算はその枠の食い違いを吸収していた**ので、**片方だけ直すとばねと配置が割れる**
+（HANDOFF §2D ①）。踏める本は無い（タブ/ossia は必ず単独群）＝**byte 不変**で、
+網は `StaffLayoutFrameTests.UnequalStavesInOneGroup_ArePlacedCentreToCentre`
+（修正前 **7.250000 対 9.000000**＝ 7.5 と 4.0 の差の半分）。
+
+✅ **ossia は spaceable な譜として扱うようになった**（`489ac6d7`・2026-07-28）。
+LP の `is_spaceable` は `staff-affinity` の有無だけを見る（`page-layout-problem.cc:1173-1177`）。
+Lily# は 4 か所で ossia を外していて、**system の先頭に立つ ossia はページのアンカーから
+落ちて上マージンにはみ出していた**（台帳 `page.ossia-pair.compressed.first-staff-refpoint`
+**−6.850208 → +0.073104**）。
+
 ⚠️ **これは 3 つの枠が並んでいる層で、統合されたのは 1 つだけ**:
 
 | スカイライン | 原点 |
