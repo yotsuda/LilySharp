@@ -32,16 +32,19 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第35セッション・**▶ の `NoteColumnLayout`＝「列の到達距離」の単一の家。
-出力不変・snapshot 0 枚**。詳細は下の第35セッション節）
+最終更新 2026-07-29（第36セッション・**dynamic-support の機構訂正＝「stem は支持でない」を
+実ソースと新対 DMF/DMW が否定。出力不変・snapshot 0 枚**。詳細は下の第36セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3516 passed / 0 failed / 3 skipped**（格納値網 12 本追加）・
+**HEAD は 3521 passed / 0 failed / 3 skipped**（台帳 2 点追加・計 220 点全緑）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**第35セッションの commit（出力不変）**: `300a7f54`。
+**第36セッションの commit（出力不変）**: `8bcf358e`（DMF/DMW＋機構訂正）。
+**第35セッションの commit（どちらも出力不変）**: `300a7f54`（NoteColumnLayout）／
+`c5a44c25`（dynamic-support 起票——⚠️ **この commit の「head のみ」機構主張は
+第36セッションで訂正済み**・台帳 why 参照）。
 **第34セッションの commit（GO 済・snapshot 3 枚再ベース）**:
 `f09abbda`（起票＝プローブ＋台帳 3 点・出力不変）／`3e78ae2a`（移植＋網 2 本＋再ベース）。
 **第33セッションの commit（全部 GO 済・各弾 snapshot 66 枚再ベース）**:
@@ -79,6 +82,60 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
 
+### 第36セッション（2026-07-29）＝ **「stem は支持でない」を実ソースが否定した——\f の着地と \fff の着地は同じ pointwise 計算の 2 つの顔**
+
+★★★ **第35セッション延長の機構主張（「dynamic 側は stem を acknowledge しない」）は誤りだった**。
+`8bcf358e`（出力不変・全 3521 緑・snapshot 0 枚）で対 2 冊＋台帳 2 点＋訂正を landing。
+
+1. ★★★ **ソースが逆を言っていた**: `dynamic-align-engraver.cc:108-117` は head と stem を
+   **両方** support_ に積み（:222-223 `add_support`）、`grob.cc:81-85` が**全 grob**（Stem 込み）に
+   extents 既定の vertical-skylines を与え、`side-position-interface.cc:353-358` は
+   **my_dim＝DynamicText の実アウトライン**（define-grobs.scm:1412-1413 spanner は
+   from-element-stencils・:1446 text は from-stencil）との **pointwise 距離**を取る。
+   ⇒ DSQ の「符頭のみ」は **f の左端の低いインクが細い stem 帯（0.11）に tuck した
+   regime の着地**であって機構ではない（§5.2「評価結果を書かない」の実例——
+   head-only を構造化していたら DMF regime で割れる欠陥を植えていた）。
+2. ★★★ **新対 DMF/DMW（\fff×四分/全音符・予測フォーク先書き）が Branch A を六桁で確定**:
+   DMF の text top −10.844670 ＝ **stem tip −10.276 − 0.6 − fff アウトラインの stem X での
+   局所差 0.055330**（tuck が今度は「勝つ側」で観測された）。DMF−DMW＝**1.923617** ≫ 0.022285。
+   台帳 `staff.staff.dynamic-stem-binding{,-control}`（LP 12.706693／10.783076）。
+   **Lily# ミラーは予測が桁まで的中**: 13.738000000（**DSQ/DSB と九桁同一＝scalar 支持の
+   label 盲目性そのもの**）残差 +1.031307／10.783000000 残差 −0.000076（DSW の face 欠片と同族）。
+3. ★★★ ⇒ **port 設計の訂正（why・probe ヘッダ・`RawSupportEdgeUp` remark に反映済）**:
+   「stem を支持から出す」ではなく**「支持を pointwise にする」**——DSQ は head が勝ち
+   DMF は stem が勝つ必要があり、**scalar edge はどの値でも両立不能**（それが DMF の存在意義）。
+   port の形: 支持 skyline＝per-voice **head インク箱＋実 stem extent 箱**（beamed は quant
+   face・DSB dump の −6.74）＋譜 extent 床、**my_dim＝dynamic 自身のアウトライン**、
+   ＋**下側 outside-staff pass**（0.46・実プロファイル・DSB）。⚠️ **2 つの半分は同時着地**
+   （head-chain 支持だけ入れると DSB の dynamic が beam に乗る＝単独では入れられない）。
+4. **実装準備の所見（次セッションの入口）**:
+   - ~~my_dim の feta 文字アウトラインは baking 経路に足す形~~ — **焼いた**（同セッション・
+     `Extract-EmmentalerSkylines.py` に DYNAMICS 7 文字＋GPOS kern 8 対を追加、
+     `GlyphSkylinesGenerated.cs` +646 行・既存データ byte 不変・**まだ何も消費していない**。
+     アクセサ `DynamicLetterVerticalSkylineQuads(char)`／`DynamicLetterKern(char,char)`。
+     網 `DynamicLetterSkylineTests`＝2 つの独立ジェネレータ（Metrics の箱と Skylines の
+     アウトライン）を極値で突き合わせ。⚠️ `MaxHeight()` は**両方向とも実 y で返る**
+     （DOWN の極値は box bottom そのもの・skyline.cc:667-680——網を書くとき符号を
+     取り違えた実例として記録）。
+   - ★★ **合成の X 模型は同セッションで測定済**（新プローブ `dynamic-text-x.ly`・20 ラベル・
+     ヘッダに全表）: ⑴ **extX 左端は全ラベル 0.0 exact**＝DynamicText の X-extent は
+     **logical rect（pen 走行）**・Y は ink——lsb の張り出し（f −0.408）は extent に入らない
+     ⑵ 文字送り＝**hmtx advance＋GPOS kern**（f→f −0.152・m→f −0.116・m→p +0.232・
+     r→f +0.116・s→p +0.348 ほか 8 対——測定は全対で符号・桁一致）。pp/fp/sf/sfz は無 kern
+     加算 exact ⑶ ⚠️ **実測幅は advance と per-glyph ±0.017ss 以下で両符号にずれる**
+     （f −1.3%・p +0.8%＝共通スケールでない）——**Pango 整形量子化の X 側**（Y の 2e-5 族・
+     C059 位相 1e-3 族の親戚）。閉形式の復元は無い。⇒ **bake するのはフォントの
+     advance＋kern**（それが LP の走らせる計算）。実測幅を焼くのは §5.2 違反。
+     ⑷ **LP 2.26 同梱フォントと Lily# bundled は advance/kern/lsb 全一致**を fontTools で
+     確認済（「作り直しで metrics が違う」仮説は死んだ）。
+   - 描画は serif bold-italic（`DrawDynamics`）＝ **feta を描いていない**。予約=feta 箱／
+     描画=serif の mismatch は既存の named debt で、この port では拡大しない（描画面は別 island）。
+   - 下側 pass: `StackBelowStaff` の support は譜底平坦＋script 箱のみ（`allowPockets:false`
+     の理由）。実 DOWN プロファイルは `SkylineBuilder.BuildStaffSkylines` が既に持つ——
+     (system,staff) ごとに配線し、dynamics/hairpins の Place は 0.46（今は登録・衝突とも
+     `DynamicLineSpannerPadding` 0.6＝第33セッション残債⑵）、`WidenToNeighbors`
+     （LP に無い装置＝下側 pass 欠落の自前補償）を撤去、pockets 解禁（第31セッションの出口）。
+
 ### 第35セッション（2026-07-29）＝ **「列の到達距離」の 4 家を 1 軒にしたら、4 家は 1 マスも同じ値を計算していなかった**
 
 ★★★ **▶ の `NoteColumnLayout` を単独セッション・出力不変で閉じた**（`300a7f54`・全 3516 緑・
@@ -112,6 +169,27 @@ snapshot 0 枚・§5.4 どおり格納値網 12 本を先に書いてから読�
    `staff.staff.tuplet-bracket-shortened-stem` の九桁）・beam face=quant 中心+thickness/2
    （0.48）・LILC ink 0.545。**dynamics の生 3.5 も網で pin**——動かすなら点を開いてから
    （網がその commit を要求する）。
+
+**延長（同セッション・`c5a44c25`）＝ dynamics の点を開いたら、直すべき向きが逆だった**
+（⚠️ この延長の機構主張は**第36セッションでさらに訂正**——下の 6・7 の取り消し線参照）:
+
+6. ★★★ **新プローブ `dynamic-support.ly`（~11 秒・3 冊 DSQ/DSW/DSB）＋台帳 3 点
+   `staff.staff.dynamic-{head-support,head-support-control,beam-avoid}`**。予測のフォークは
+   **ヘッダに無い枝に落ちた**: DSQ の Stem dump は **−6.500000 六桁**（強制方向 quarter は
+   確かに full shorten 1.0）——だが **gap はそれを読まない**。~~LP の dynamic 支持は符頭のみ
+   （…dynamic 側は stem を acknowledge しない）~~ ⚠️ **← この機構主張は第36セッションで
+   訂正済み**（stem は support に居る・pointwise で tuck していただけ。第36セッション節 1）。
+   測定そのもの（spanner 近縁 = head ink − 0.6 が両書六桁・黒/全音符インク差 0.022285 が
+   gap 差と 15 桁一致）は正しい。DSB は beam face −6.74 − 0.46、
+   DSQ の細い stem 尖塔は押さない（f のアウトラインが横に tuck する）。
+7. ★★★ ~~⇒ 生 3.5 の port の向きは「stem を支持から出す」＋下側 pass~~ ⚠️ **← 半分訂正
+   （第36セッション）**: 下側 pass は正しいが、支持は「stem を出す」でなく **pointwise 化**
+   （第36セッション節 3）。Lily# は **DSQ ≡ DSB 九桁同一（13.738000000）**＝
+   beam 盲目の構造的恒等（LP は 2.077286 分ける）。residual +2.977210（予測 2.2e-5 まで的中・
+   stem-in-support の純量）／−0.000076（**dynamic インクの持参金は face 欠片級**・対照 exact 級）／
+   +0.899924（支持規則 7.5+0.6 対 衝突規則 6.74+0.46）。
+   **`RawSupportEdgeUp` の remark と pin 網は測った向きに書き換え済み**——次にこの島を開く人は
+   3 点の why から。
 
 ### 第34セッション（2026-07-29）＝ **描画 bracket の encompass を測ったら、恒等破れが予告どおり鳴った——そして「列の到達距離」の家が 4 つあると分かった**
 
@@ -710,7 +788,12 @@ support seed が箱のまま（OTC の分解には support のアウトライン
 - ~~★★ **`NoteColumnLayout`（Y 側の column/stem 模型）を作る**~~ — **できた（第35セッション・
   `300a7f54`・出力不変・snapshot 0 枚）**。4 家は `NoteColumnLayout` の named read になり、
   **相違表は家の doc にある**（値のセルは 4 家とも割れていた＝どれを畳むのも output-moving・
-  点が先）。**残り**: ⑴ dynamics の生 3.5＝最後の raw 模型（網が pin・点が先）
+  点が先）。**残り**: ⑴ dynamics の生 3.5＝最後の raw 模型——★ **点は 5 点に増えた**
+  （`staff.staff.dynamic-*`・`c5a44c25`＋`8bcf358e`）。⚠️ **port の向きは第36セッションで
+  再訂正**: 「stem を出す」でなく**支持の pointwise 化**（head＋実 stem 箱＋譜床、my_dim＝
+  dynamic アウトライン）＋下側 outside-staff pass（0.46・実プロファイル）——**scalar edge は
+  DSQ と DMF を両立できない**。residual +2.977210／−0.000076／+0.899924／+1.031307／−0.000076。
+  **着手前に dynamic 文字の X 模型を 1 冊測る**（第36セッション節 4）。
   ⑵ beam 所属 lookup は 3 綴りのまま（key/gate が消費者ごと）⑶ grace 描画 stem の生 3.5
   （`SharedRenderer.GraceNotes`・島の外）⑷ 予告どおり行頭 beam quant 差・slope 非字面・
   seed/draw 二重パスは消えていない。詳細は第35セッション節。
@@ -743,8 +826,14 @@ support seed が箱のまま（OTC の分解には support のアウトライン
    1 番を割ると着手根拠がそのまま出る**）／
    **⑵ clef の X アンカー**（`system.clef-floor.*` がその島の点。**箱でなくなった今は効く**）。
 3. **annotation pass の magnification**（第25セッションが名指しで残した「1 フレーム外の同じ問い」）。
-   ⚠️ **`TupletBracketLayout` は `MeasureIndex` しか持たず譜の帰属が無い**ので、
-   **annotation layout に譜を持たせるモデル変更が本体**。出力は動かない見込み＝**テストが網**。
+   ⚠️ ~~`TupletBracketLayout` は `MeasureIndex` しか持たず譜の帰属が無い~~ — **stale と確認**
+   （2026-07-29・第35セッション末・grep で裏取り）: **3 種とも譜の帰属を持っている**——
+   `TupletBracketLayout.StaffIndex`（`TupletBracketEngraver.cs` の record・ossia shrink 用）と
+   `BowLayout.StaffIndex`（slur/tie の基底・`BowLayout.cs:30`）。**残る実体は `LayoutEngine` の
+   3 か所（:1590-1663 の AddTupletBrackets/AddSlurs/AddTies）が `FullSize` を渡すことだけ**——
+   「モデル変更が本体」ではもう無く、layout の `StaffIndex` から `StaffSize` を引く配線に
+   縮んだ。出力は動かない見込み＝**テストが網**（着手時に「本当に動かないか」は §5.4 どおり
+   格納値網を先に）。
 4. **棚卸し ⑶（walk がペアごと・本丸）**／**▶ の silhouette**／**§2D 未移植 ⑵⑶** — **全部「台帳点が先」**。
    発火する regime（譜と譜の間に loose line）を作る本を起票するのが最初の作業。
    ⇒ ★ **その値段はもう払い終わっている**（第27セッション）——**専用プローブ 1 本＝13 秒**なので、

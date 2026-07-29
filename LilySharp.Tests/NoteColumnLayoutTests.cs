@@ -166,9 +166,11 @@ public class NoteColumnLayoutTests
     public void RawSupportEdge_StemSide_IsTheRawDefaultLength()
     {
         // The dynamics' support still extends by the RAW DefaultStemLength 3.5 — no
-        // shortening, no middle-line pull, no beam face. This test PINS the deviation:
-        // switching it to the drawn-stem rules is an output-moving port that must open a
-        // ledger point first (HANDOFF ▶); accidental drift fails here.
+        // shortening, no middle-line pull, no beam face. This test PINS the deviation.
+        // The gating points exist (staff.staff.dynamic-*, probe dynamic-support.ly) and
+        // they measured the port's direction as REMOVING the stem from this support
+        // (LilyPond's dynamic support is the head alone; stems/beams arrive via the
+        // outside-staff pass) — accidental drift in EITHER direction fails here.
         var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // natural: up
         Assert.True(note.StemUp);
         Assert.Equal(-1.0 + 3.5, note.RawSupportEdgeUp(up: true), 12);

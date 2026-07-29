@@ -104,6 +104,23 @@ CLEFS = [
     ("C", "clefs.C"),
 ]
 
+# fetaText dynamic letters, baked on the vertical axis like the clefs.
+#
+# WHY. DynamicText declares vertical-skylines from its stencil
+# (scm/define-grobs.scm:1446 grob::always-vertical-skylines-from-stencil, and the
+# DynamicLineSpanner wraps them via :1412-1413 from-element-stencils), and
+# lily/side-position-interface.cc:353-358 measures the support distance POINTWISE
+# against that outline (my_dim) — which is why a \f tucks beside a thin stem sliver
+# while a \fff binds on it (audit/lp-geometry/probes/dynamic-support.ly, DSQ vs DMF).
+# A text stencil's letters sit at pen positions = hmtx advances + GPOS kerns
+# (audit/lp-geometry/probes/dynamic-text-x.ly measured every kern pair at the font's
+# own sign and magnitude; the per-glyph Pango quantisation of the advance run stays a
+# named residual family, NOT fitted), so each letter is baked in its own glyph frame
+# and the runtime composes them at those pen positions. The letters are addressed by
+# their bare ASCII cmap names, no "dynamics." prefix (same fact recorded in
+# Extract-EmmentalerMetrics.py's DynamicLetter* block).
+DYNAMICS = [(c, c) for c in "fmnprsz"]
+
 
 def glyph_outline_scale(glyphset, glyph):
     """LilyPond's `scale` at lily/stencil-integral.cc:551-557 add_named_glyph_segments,
@@ -276,6 +293,47 @@ def build(glyphset, glyph, horizon_axis=1):
     return classify(contour, both, horizon_axis)
 
 
+def dynamic_kern_pairs(font, letters):
+    """GPOS pair kerning among the fetaText dynamic letters, in staff spaces.
+
+    The Emmentaler dynamic letters are addressed by their bare cmap names, so the
+    glyph names ARE the letters. Pango applies these adjustments when it shapes a
+    dynamic string (measured: audit/lp-geometry/probes/dynamic-text-x.ly — every
+    kern pair lands with the font's sign and magnitude, plus the shaping
+    quantisation the probe header names). Walks PairPos format 1 and 2, unwrapping
+    extension lookups; only pairs where BOTH glyphs are dynamic letters are kept."""
+    pairs = {}
+    if "GPOS" not in font:
+        return pairs
+    glyphs = set(letters)
+    for lookup in font["GPOS"].table.LookupList.Lookup:
+        for st in lookup.SubTable:
+            t = st.ExtSubTable if st.LookupType == 9 else st
+            if t.LookupType != 2:
+                continue
+            if t.Format == 1:
+                for gi, g1 in enumerate(t.Coverage.glyphs):
+                    if g1 not in glyphs:
+                        continue
+                    for pvr in t.PairSet[gi].PairValueRecord:
+                        if pvr.SecondGlyph not in glyphs:
+                            continue
+                        xa = getattr(pvr.Value1, "XAdvance", 0) if pvr.Value1 else 0
+                        if xa:
+                            pairs[(g1, pvr.SecondGlyph)] = xa / STAFF_SPACE_UNITS
+            elif t.Format == 2:
+                c1 = t.ClassDef1.classDefs
+                c2 = t.ClassDef2.classDefs
+                cov = set(t.Coverage.glyphs)
+                for g1 in sorted(glyphs & cov):
+                    for g2 in sorted(glyphs):
+                        rec = t.Class1Record[c1.get(g1, 0)].Class2Record[c2.get(g2, 0)]
+                        xa = getattr(rec.Value1, "XAdvance", 0) if rec.Value1 else 0
+                        if xa:
+                            pairs[(g1, g2)] = xa / STAFF_SPACE_UNITS
+    return pairs
+
+
 def fmt(v):
     return f"{v + 0.0:.6f}"
 
@@ -342,6 +400,17 @@ def main():
     L.append("// at x=2.228. Measured off LilyPond in audit/lp-geometry/probes/skyline-binding.ly:")
     L.append("// dist(upper DOWN, lower UP) = 7.210039 against 3.540000 + 3.776000 = 7.316000.")
     L.append("//")
+    L.append("// fetaText dynamic letter VERTICAL skylines + GPOS kerns, for DynamicText's own")
+    L.append("// profile (my_dim): scm/define-grobs.scm:1446 declares vertical-skylines from the")
+    L.append("// stencil, and side-position-interface.cc:353-358 measures the support distance")
+    L.append("// POINTWISE against it — a \\f tucks beside a thin stem sliver, a \\fff binds on it")
+    L.append("// (audit/lp-geometry/probes/dynamic-support.ly DSQ vs DMF). Letters compose at pen")
+    L.append("// positions = hmtx advance (DynamicLetter*Advance, Extract-EmmentalerMetrics.py) +")
+    L.append("// DynamicLetterKern below; the composition X model and every kern pair are measured")
+    L.append("// in audit/lp-geometry/probes/dynamic-text-x.ly, whose header also names the")
+    L.append("// per-glyph Pango shaping quantisation (<= 0.0167 ss, both signs) that stays a")
+    L.append("// residual family rather than being fitted.")
+    L.append("//")
     L.append("// Each array is a flat list of skyline BUILDINGS, four doubles apiece:")
     L.append("//   start (horizon low), startValue (sky*other at horizon low),")
     L.append("//   endValue (sky*other at horizon high), end (horizon high)")
@@ -388,6 +457,21 @@ def main():
         L.append("")
         clef_kinds.append(kind)
 
+    dyn_kinds = []
+    for kind, glyph in DYNAMICS:
+        if glyph not in order:
+            sys.stderr.write(f"ERROR: glyph name not in font: {glyph}\n")
+            return 1
+        down, up = build(glyphset, glyph, horizon_axis=0)
+        cap = kind.upper()
+        L.append(f"    // ===== dynamic letter '{kind}' ({glyph}): {len(down)} DOWN + {len(up)} UP buildings =====")
+        L.extend(emit_side(f"DynSky{cap}D", down))
+        L.extend(emit_side(f"DynSky{cap}U", up))
+        L.append("")
+        dyn_kinds.append((kind, cap))
+
+    kerns = dynamic_kern_pairs(font, [g for _, g in DYNAMICS])
+
     acc_kinds = [(k, c) for (k, c) in kinds if k not in ("leftParen", "rightParen")]
 
     # Loader: build the HorizontalSkyline pair for a kind, cached.
@@ -428,6 +512,36 @@ def main():
     L.append("        _ => (ClefSkyGD, ClefSkyGU),")
     L.append("    };")
     L.append("")
+    L.append("    /// <summary>The (DOWN, UP) VERTICAL skyline of one fetaText dynamic letter, as raw")
+    L.append("    /// sign-framed buildings in the glyph's own frame (X from the letter's PEN origin, Y")
+    L.append("    /// from the baseline) — default when the char is not one of the seven the encoding")
+    L.append("    /// draws dynamics from (the caller falls back, as TryGetDynamicInk does). A label's")
+    L.append("    /// profile is these letters composed at pen positions = advance + kern")
+    L.append("    /// (<c>DynamicLetter*Advance</c> / <see cref=\"DynamicLetterKern\"/>).")
+    L.append("    /// LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText <c>grob::always-vertical-skylines-from-stencil</c>,")
+    L.append("    /// :1412-1413 DynamicLineSpanner <c>from-element-stencils</c>; the outline walk is")
+    L.append("    /// lily/stencil-integral.cc:562 add_named_glyph_segments and")
+    L.append("    /// lily/freetype.cc:174-202 Path_interpreter, as for the clefs above.</summary>")
+    L.append("    public static (double[] Down, double[] Up) DynamicLetterVerticalSkylineQuads(char c) => c switch")
+    L.append("    {")
+    for kind, cap in dyn_kinds:
+        L.append(f"        '{kind}' => (DynSky{cap}D, DynSky{cap}U),")
+    L.append("        _ => default,")
+    L.append("    };")
+    L.append("")
+    L.append("    /// <summary>GPOS pair kern between two adjacent fetaText dynamic letters, in staff")
+    L.append("    /// spaces (negative pulls the second letter in; 0 for every pair the font does not")
+    L.append("    /// kern). Pango applies exactly these when it shapes a dynamic string, so a label's")
+    L.append("    /// pen positions are advances plus these — measured against LilyPond in")
+    L.append("    /// audit/lp-geometry/probes/dynamic-text-x.ly (every pair the font's sign and")
+    L.append("    /// magnitude; the per-glyph shaping quantisation stays a named residual family).</summary>")
+    L.append("    public static double DynamicLetterKern(char first, char second) => (first, second) switch")
+    L.append("    {")
+    for (g1, g2), v in sorted(kerns.items()):
+        L.append(f"        ('{g1}', '{g2}') => {fmt(v)},")
+    L.append("        _ => 0.0,")
+    L.append("    };")
+    L.append("")
     for kind, cap in kinds:
         L.append(f"    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPair{cap} =")
         L.append(f"        (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSky{cap}L),")
@@ -436,7 +550,8 @@ def main():
     L.append("")
 
     out_path.write_text("\n".join(L), encoding="utf-8")
-    print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals + {len(PARENS)} parens)")
+    print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals + {len(PARENS)} parens + "
+          f"{len(CLEFS)} clefs + {len(DYNAMICS)} dynamic letters, {len(kerns)} kern pairs)")
     return 0
 
 

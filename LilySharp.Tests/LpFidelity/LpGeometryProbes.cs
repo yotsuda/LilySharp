@@ -1989,6 +1989,78 @@ internal static class LpGeometryProbes
         "tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | b1 |");
 
     /// <summary>
+    /// A DYNAMIC under a forced-down column — the mirrors of dynamic-support.ly's books
+    /// DSQ / DSW / DSB, the points that gate the LAST raw-3.5 read
+    /// (<c>NoteColumnLayout.RawSupportEdgeUp</c>, session 35's model table).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/dynamic-support.ly, 2026-07-29). The dumped
+    /// DSQ stem tip sits at −6.500000 (the forced quarter takes the full stem-shorten
+    /// 1.0), yet the spanner's near edge sits at head ink − padding 0.6, and the
+    /// whole/black head-ink difference 0.022285 between DSW and DSQ propagates 1:1 into
+    /// the gap; DSB's spanner edge = beam face −6.74 − 0.46 (the outside-staff pass).
+    /// <para>
+    /// ⚠️ MECHANISM CORRECTED in session 36 (books DMF/DMW): session 35 read the DSQ
+    /// landing as "the Stem is not a side-position support". The source says otherwise
+    /// — dynamic-align-engraver.cc:108-117 acknowledges heads AND stems into support_
+    /// (:222-223 add_support), grob.cc:81-85 gives the Stem default vertical-skylines
+    /// from extents, and side-position-interface.cc:353-358 takes a POINTWISE distance
+    /// against my_dim = the DynamicText's real outline (define-grobs.scm:1412-1413,
+    /// :1446). In DSQ the stem tip IS in the support skyline at its own thin X and the
+    /// f's low left outline tucks beside it, so the head wins; in DMF (\fff, wide) the
+    /// same computation lands ON the stem (tip − 0.6 − the fff outline's local drop
+    /// 0.055330; DMF − DMW = 1.923617). One computation, two landings — which is why a
+    /// scalar support edge cannot reproduce both DSQ and DMF whatever value it takes.
+    /// </para>
+    /// <para>
+    /// Lily#'s DynamicEngraver support extends the head by the raw
+    /// <c>DefaultStemLength</c> 3.5 as a SCALAR edge — label-blind, so DSQ = DMF = DSB
+    /// nine-digit. The port these five points gate: the pointwise side-position support
+    /// (heads + real stems as extent boxes at their own X + staff extent minimum,
+    /// distance against the dynamic's own outline) plus a below-side outside-staff pass
+    /// over the staff's real down profile (0.46, pointwise) for DSB.
+    /// </para>
+    /// LilyPond twin (DSQ): <c>&lt;&lt; { \voiceOne b'1 } \\ { \voiceTwo a4\f r4 r2 }
+    /// &gt;&gt;</c> over <c>\clef bass d1</c>, default-staff-staff-spacing zeroed.
+    /// </remarks>
+    private static string DynamicSupportScore(string name, string upperVoiceTwo) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { voice { b1 } voice { {{upperVoiceTwo}} } | }
+          lower { d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff upper
+          staff lower
+        }
+        """;
+
+    /// <summary>The shortened forced-down quarter: LP reads the HEAD, not the stem.</summary>
+    private static readonly string DSQ = DynamicSupportScore("DSQ", "a,4@f r4 r2");
+
+    /// <summary>The whole-note control: no stem exists; the dynamic-ink dowry isolator.</summary>
+    private static readonly string DSW = DynamicSupportScore("DSW", "a,1@f");
+
+    /// <summary>The beamed pair: the beam pushes via the outside-staff pass (0.46).</summary>
+    private static readonly string DSB = DynamicSupportScore("DSB", "a,8[@f a,8] r4 r2");
+
+    /// <summary>The mechanism book (session 36): \fff is wide enough that LilyPond's
+    /// pointwise support distance lands on the STEM tip at the stem's own X.</summary>
+    private static readonly string DMF = DynamicSupportScore("DMF", "a,4@fff r4 r2");
+
+    /// <summary>DMF's control: \fff on a whole note — the head chain, exactly DSW.</summary>
+    private static readonly string DMW = DynamicSupportScore("DMW", "a,1@fff");
+
+    /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
     /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
     /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
@@ -4605,6 +4677,19 @@ internal static class LpGeometryProbes
         new("staff.staff.tuplet-bracket-partial-beam", TPB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-partial-beam-control", TPC, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-shortened-stem", TPS, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the DYNAMIC's support (DSQ/DSW/DSB + mechanism pair DMF/DMW) ---
+        // The points that gate the last raw-3.5 read (NoteColumnLayout.RawSupportEdgeUp).
+        // MEASURED (mechanism corrected session 36): the support is POINTWISE — heads
+        // AND real stems, distance against the dynamic's own outline — so the head wins
+        // under \f (DSQ) and the stem binds under the wide \fff (DMF); beams reach the
+        // dynamic only through the outside-staff pass (0.46, pointwise, DSB). See
+        // DynamicSupportScore's remark for the decomposition.
+        new("staff.staff.dynamic-head-support", DSQ, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.dynamic-head-support-control", DSW, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.dynamic-beam-avoid", DSB, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.dynamic-stem-binding", DMF, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.dynamic-stem-binding-control", DMW, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- where the OTTAVA BRACKET's LINE sits (books OTF/OTC) ---
         // The first points that reach OttavaBracket's staff-padding floor (2.0) — the

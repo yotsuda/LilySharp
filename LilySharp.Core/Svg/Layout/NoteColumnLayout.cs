@@ -237,14 +237,23 @@ public readonly record struct NoteColumnLayout
     /// </summary>
     /// <remarks>
     /// The raw 3.5 predates the drawn-stem ports and is blind to beams: no
-    /// unnatural-direction shortening, no middle-line pull, no beam-quanted face — LilyPond's
-    /// support would carry the real Stem grob extent
-    /// (lily/side-position-interface.cc:265-321 aligned_side merges the supports).
-    /// It is the LAST of the four homes still on the raw model; switching this read to
-    /// <see cref="OutwardTipDeviceY"/>'s stem rules is an output-moving port that needs a
-    /// ledger point first (no <c>dynamics</c>-side point measures it yet — HANDOFF ▶).
+    /// unnatural-direction shortening, no middle-line pull, no beam-quanted face. It is the
+    /// LAST of the four homes on the raw model — and the ledger points that gate its port
+    /// (staff.staff.dynamic-{head-support,head-support-control,beam-avoid,stem-binding,
+    /// stem-binding-control}, probe dynamic-support.ly, 2026-07-29) measured that the fix
+    /// is not any SCALAR edge at all: LilyPond's dynamic support is POINTWISE — heads AND
+    /// real stems are side-position supports (dynamic-align-engraver.cc:108-117, extent-box
+    /// skylines per grob.cc:81-85), and the distance is taken against the dynamic's own
+    /// OUTLINE (side-position-interface.cc:353-358), so the head wins under a narrow \f
+    /// (the f's low left outline tucks beside the thin stem sliver, DSQ) while the stem
+    /// binds under a wide \fff (DMF). Beams are never acknowledged and reach a dynamic only
+    /// through the outside-staff collision pass (padding 0.46, pointwise, DSB). The port is
+    /// replacing this read with that pointwise support plus a below-side outside-staff pass
+    /// — residuals +2.977210 (raw stem in a scalar support), +1.031307 (same, against the
+    /// stem-binding regime) and +0.899924 (support rule where LilyPond runs the collision
+    /// rule) carry the decomposition in their whys.
     /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents — the head's
-    ///   own extent is its LILC glyph ink (±0.545), not a nominal half staff space.
+    ///   own extent is its LILC glyph ink, not a nominal half staff space.
     /// </remarks>
     public double RawSupportEdgeUp(bool up)
     {
