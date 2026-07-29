@@ -108,4 +108,55 @@ public class TupletNumberTests
         double expected = -((2.0 - edgeLeft) + padding + (2.0 - edgeRight) + padding) / 2.0;
         Assert.Equal(expected, bracket.NumberYUp, precision: 6);
     }
+
+    /// <summary>
+    /// A DRAWN bracket's encompass is the REAL stem: a beamless quarter triplet on the
+    /// middle line reads the SHORTENED stem end (stem.cc's dir*hp[dir] >= 0 includes the
+    /// middle line; 10/3, not the raw lengths entry 3.5) plus TupletBracket padding 1.1.
+    /// The expectation calls the stem calculator, not a literal, so the rule — the
+    /// bracket asks the same house the renderer draws from — is what is asserted.
+    /// Measured against 2.26.0: audit/lp-geometry staff.staff.tuplet-bracket-shortened-stem
+    /// (LilyPond's line centre 4.433333 = 10/3 + 1.1, nine-digit). Before the port this
+    /// read the raw 3.5 and sat 1/6 too deep.
+    /// </summary>
+    [Fact]
+    public void DrawnTupletBracket_HugsTheShortenedQuarterStem()
+    {
+        var layout = BuildLayout("octave absolute\ntuplet 3/2 { b4 c' b } |");
+        var bracket = Assert.Single(layout.TupletBracketLayouts);
+        Assert.True(bracket.ShowBracket);
+        Assert.False(bracket.IsStemUp);
+
+        // Middle-line b, stem down: the drawn stem's end from the one shared calculator.
+        double stemTip = StemCalculator.CalculateStemEndY(
+            2.0, stemUp: false, staffTopDown: 0.0, durationLog: 2, staffPosition: 0);
+        double expected = -(stemTip + 1.1);
+        Assert.Equal(expected, bracket.StartYUp, precision: 9);
+        Assert.Equal(expected, bracket.EndYUp, precision: 9);
+    }
+
+    /// <summary>
+    /// A DRAWN bracket over a PARTIAL beam (bracket shown) reads the beamed stem's end
+    /// at the QUANTED beam face — the encompass is the real column extent, LilyPond's
+    /// calc_position_and_height:554-561, there is no beamed-specific formula. Measured
+    /// against 2.26.0: audit/lp-geometry staff.staff.tuplet-bracket-partial-beam
+    /// (LilyPond's line centre = face at the outer stem + 1.100, six-digit). Before the
+    /// port this read the raw 3.5 and could not tell this book from the beamless one.
+    /// </summary>
+    [Fact]
+    public void DrawnTupletBracket_OverAPartialBeam_ReadsTheQuantedBeamFace()
+    {
+        var layout = BuildLayout("octave absolute\ntuplet 3/2 { c'8[ b] c' } |");
+        var bracket = Assert.Single(layout.TupletBracketLayouts);
+        Assert.True(bracket.ShowBracket); // the third eighth is flagged, not beamed
+        var beam = Assert.Single(layout.BeamLayouts);
+
+        // The deepest encompass: the beam's face at its b-stem (the beam model's own
+        // member X), one bracket padding out.
+        double face = beam.OuterEdgeStaffSpaceAtX(
+            beam.MemberXPositions[1], beam.Group.StemUp);
+        double expected = -((2.0 - face) + 1.1);
+        Assert.Equal(expected, bracket.StartYUp, precision: 9);
+        Assert.Equal(expected, bracket.EndYUp, precision: 9);
+    }
 }

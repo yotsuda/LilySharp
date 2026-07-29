@@ -415,54 +415,23 @@ internal static class DynamicEngraver
     /// (staff-spaces above the staff middle, up-positive; lowest = smallest).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: stem.cc:461-468 calc_stem_end_position
-    /// Accounts for note position and stem direction.
-    /// LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — a stem exists only for
-    ///   duration-log >= 1, i.e. a half note or shorter. A whole note has none, so it
-    ///   must not reserve one; 89aaa29f removed the same phantom stem from SkylineBuilder
-    ///   and the renderer has always branched on it (SharedRenderer.Noteheads.cs).
-    /// The head's own extent is its GLYPH INK (LILC, ±0.545), not the nominal ±0.5 box —
-    ///   the same move 22120764 made for the skyline.
+    /// A note/chord column reads the single house of a column's reach
+    /// (<see cref="NoteColumnLayout.RawSupportEdgeUp"/> — HANDOFF §5.2.1②): the head's
+    /// LILC glyph ink, extended by the RAW <see cref="EngravingDefaults.DefaultStemLength"/>
+    /// when the stem points this way. That raw model is this consumer's named deviation —
+    /// see the house's model table before changing it. Rests and other items are not
+    /// columns and stay here.
     /// </remarks>
     private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null)
     {
-        switch (item)
+        if (NoteColumnLayout.Of(item, forcedStemUp) is { } column)
+            return column.RawSupportEdgeUp(up: false);
+        return item switch
         {
-            case NoteItem note:
-                // StaffPosition (half-spaces, positive = up) → Y-up staff-spaces above
-                // the middle line: Y = StaffPosition * 0.5.
-                // LILYPOND-REF: staff-symbol-referencer.cc:76-89 get_position
-                double noteY = note.StaffPosition * 0.5;
-
-                // If stem down, subtract stem length below the notehead (lower = smaller
-                // Y-up). forcedStemUp (multi-voice) overrides the pitch-default direction.
-                if (!(forcedStemUp ?? note.StemUp) && HasStem(note.BaseDuration))
-                {
-                    return noteY - EngravingDefaults.DefaultStemLength;
-                }
-
-                return noteY + HeadBBox(note.BaseDuration).Bottom;
-
-            case ChordItem chord:
-                // Find lowest note in chord (most negative StaffPosition = lowest on staff)
-                int lowestPos = chord.Notes.Min(n => n.StaffPosition);
-                double lowestNoteY = lowestPos * 0.5;
-
-                // If stem down, subtract stem length from lowest note
-                if (!(forcedStemUp ?? chord.StemUp) && HasStem(chord.BaseDuration))
-                {
-                    return lowestNoteY - EngravingDefaults.DefaultStemLength;
-                }
-
-                return lowestNoteY + HeadBBox(chord.BaseDuration).Bottom;
-
-            case RestItem:
-                // Rest is typically around middle of staff (1 ss below the middle line)
-                return -1.0;
-
-            default:
-                return -StaffMiddle;
-        }
+            // Rest is typically around middle of staff (1 ss below the middle line)
+            RestItem => -1.0,
+            _ => -StaffMiddle,
+        };
     }
 
     /// <summary>
@@ -472,51 +441,12 @@ internal static class DynamicEngraver
     /// </summary>
     private static double GetHighestExtent(MusicItem item, bool? forcedStemUp = null)
     {
-        switch (item)
+        if (NoteColumnLayout.Of(item, forcedStemUp) is { } column)
+            return column.RawSupportEdgeUp(up: true);
+        return item switch
         {
-            case NoteItem note:
-            {
-                double noteY = note.StaffPosition * 0.5;
-                // Stem up: the stem extends UP (larger Y-up) above the notehead.
-                if ((forcedStemUp ?? note.StemUp) && HasStem(note.BaseDuration))
-                    return noteY + EngravingDefaults.DefaultStemLength;
-                return noteY + HeadBBox(note.BaseDuration).Top;
-            }
-            case ChordItem chord:
-            {
-                int highestPos = chord.Notes.Max(n => n.StaffPosition);
-                double highestNoteY = highestPos * 0.5;
-                if ((forcedStemUp ?? chord.StemUp) && HasStem(chord.BaseDuration))
-                    return highestNoteY + EngravingDefaults.DefaultStemLength;
-                return highestNoteY + HeadBBox(chord.BaseDuration).Top;
-            }
-            case RestItem:
-                return 1.0; // 1 ss above the middle line
-
-            default:
-                return StaffMiddle; // staff top
-        }
+            RestItem => 1.0, // 1 ss above the middle line
+            _ => StaffMiddle, // staff top
+        };
     }
-
-    /// <summary>
-    /// True when a note of this written duration carries a stem at all.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — duration-log >= 1, i.e. a half
-    ///   note or shorter. Note value 2 = half, so the test is <c>&gt;= 2</c>; identical to
-    ///   the guard 89aaa29f put in SkylineBuilder and to SharedRenderer.Noteheads.cs.
-    /// </remarks>
-    private static bool HasStem(Semantics.Fraction baseDuration)
-        => LayoutUtilities.GetNoteValueFromFraction(baseDuration) >= 2;
-
-    /// <summary>The notehead's own glyph ink for this written duration.</summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents with
-    ///   lily/open-type-font.cc:288,389-407 — the head's extent is its LILC bbox
-    ///   (±0.545), not a nominal half staff space. Reached through the SAME note-value
-    ///   mapping SkylineBuilder uses, so the two paths cannot drift apart.
-    /// </remarks>
-    private static GlyphMetrics.BBox HeadBBox(Semantics.Fraction baseDuration)
-        => GlyphMetrics.GetNoteheadBBox(
-            LayoutUtilities.GetNoteValueFromFraction(baseDuration));
 }

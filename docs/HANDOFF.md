@@ -32,36 +32,23 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第33セッション・**tempo 島の移植を landing**。TMQ −0.000010／
-TMT **九桁 exact**／X 対 0 exact。詳細は下の第33セッション節）
+最終更新 2026-07-29（第35セッション・**▶ の `NoteColumnLayout`＝「列の到達距離」の単一の家。
+出力不変・snapshot 0 枚**。詳細は下の第35セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3499 passed / 0 failed / 3 skipped**（tempo 2 点の着地更新＋X 対 1 点追加）・
+**HEAD は 3516 passed / 0 failed / 3 skipped**（格納値網 12 本追加）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第35セッションの commit（出力不変）**: `300a7f54`。
+**第34セッションの commit（GO 済・snapshot 3 枚再ベース）**:
+`f09abbda`（起票＝プローブ＋台帳 3 点・出力不変）／`3e78ae2a`（移植＋網 2 本＋再ベース）。
 **第33セッションの commit（全部 GO 済・各弾 snapshot 66 枚再ベース）**:
-`df72dd5f`（移植＋台帳 3 点）／`8dffccc0`（出典コメントのみ）／
-`d7422832`（**残近似の字面化**＝dot run を note-by-number の dotwid 算術へ・stem 付け根を
-font の LILC attachment へ（生成器拡張・diff は新規 20 行のみ＝font 不変）・trill の
-衝突 pass padding 0.46（aligned_side 0.5 は engraver 側＝LP の二段が完成・
-第32セッション残債⑴の後半も閉じた））／
-`178954cc`（**第4弾＝残りの綴りも字面へ**: ⑴ 不活性 clamp 除去（aligned_side は clamp
-無し）⑵ concat の " = N"/" (" を**単一 run 測定**へ（`LeadingSpaceAdvance`＝空白境界
-kerning 込み）⑶ ★ **符頭/旗/dot の skyline をグリフ実アウトラインへ**——
-`TextOutlineSkylines.PlaceMusicGlyph` が Emmentaler の Skia パスに text と同一の walk を
-回す＝`add_named_glyph_segments` の字面で、**実サイズ（magstep(−1)）平坦化**なので baked
-clef quads の「フレーム依存量子化」繰延すら無い。stem は**LP も箱**（round-filled-box）。
-font 不在時のみ designed box に fallback。tempo mark の非字面の残りは swing 等式と
-mid-line meter change の 2 件＝装置/模型の島だけ。snapshot 6 枚）／
-`1c454c58`（★★ **チャート型 tempo×label 対（CoPlaceTempoWithLabels・sideBySide）を撤去**。
-発端はユーザー目視「[A] 箱が行頭 clef に重なる」→「LP 忠実で直らないのか」——**直る。
-LP にこの装置が無い**のが答えで、label(1450) と mark(1300) は各自の X に break-align して
-priority pass が pointwise に積むだけ。engraver では tempo は群 chain に**参加しない**
-（aligned_side 静止高のまま）。途中で入れた `TrillFloorUp`/label-線繕いも装置ごと削除＝
-**stacker の解を手で再導出する必要そのものが消えた**。チャート様式は §3 未掲載だった）
-＋handoff。
+`df72dd5f`（tempo 移植＋台帳 3 点）／`8dffccc0`（出典コメントのみ）／
+`d7422832`（残近似の字面化）／`178954cc`（第4弾＝符頭/旗/dot の skyline を実アウトラインへ）／
+`1c454c58`（チャート型 tempo×label 対を撤去——**LP にこの装置が無い**のが答え）＋handoff。
+詳細は第33セッション節。
 ★ **第2弾の所見**: trill グリフ片の**平ら台地は近似でなく LP 自身の構成**——bound text が
 「straight line as the vertical skyline」ラッパで包まれている（define-grobs.scm:4054-4068 の
 LP 自身のコメント・TMT が glyph top+0.46 六桁丸で束縛した理由）。**アウトライン化は逆に発明**。
@@ -91,6 +78,78 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第35セッション（2026-07-29）＝ **「列の到達距離」の 4 家を 1 軒にしたら、4 家は 1 マスも同じ値を計算していなかった**
+
+★★★ **▶ の `NoteColumnLayout` を単独セッション・出力不変で閉じた**（`300a7f54`・全 3516 緑・
+snapshot 0 枚・§5.4 どおり格納値網 12 本を先に書いてから読み替え）。
+
+1. ★★★ **最大の所見: 4 家は骨格だけ共有し、値のセルは全部割れていた**——stem 模型
+   （Articulation=実 EndY／Dynamic=生 3.5／Skyline=長さ規則のみ・clamp 無し／Tuplet=実 EndY
+   ＋beam face）×head ink（名目 0.5／真側 ink／両側 bbox.Top）×stem 述語の綴り
+   （`GetNoteValueFromFraction`≥2 対 `Numerator==1` gate）。⇒ **出力不変で統一できるのは
+   「骨格 1 回＋各模型を named read として同居させ、相違表を家の doc に置く」まで**。
+   値を 1 本に畳むのは全部 output-moving＝各自の台帳点が先（§5.2.1③）。
+   **次の忠実化は「あちらを書き直す」でなく「家の read を 1 行切り替える」**になった。
+2. **機構**: `NoteColumnLayout`（record・`Of(item, forcedStemUp, beam, beamStemX)`）＝
+   到達側 head 選択・`HasStem`・head ink・beam face・実 stem 端の**単一の家**。
+   4 read: `OutwardTipDeviceY`（tuplet encompass）／`StemSupportDistanceDeviceY`（articulation
+   支持）／`RawSupportEdgeUp`（dynamics/trill・**最後の生 3.5**・LILYSHARP-OWN 明示＋網が pin）／
+   `RendererStemLength`（skyline seed・和音は**per-head**）。**方向解決（多声強制・beam 上書き）と
+   beam 所属 lookup は消費者の政策のまま**（key と gate が 3 綴りで違う——Articulation の
+   staff-key voice-0 map／Tuplet の `MemberBeam`／Skyline の `BeamedItemsToSuppress`
+   knee/cross-staff gate。**ここは統一していない**＝次にこの島を触る人の残件）。
+3. **§5.2.1⑥ の死んだコードをその場で落とした**: 到達不能の unreadable-duration 分岐
+   （`Of` が note/chord しか作らない）・`QuantizedYPosition` の `noteY`/`anchorPosition` 死引数・
+   `ArticulationEngraver.StaffTop`。`beamedTips` map は精算済み tipY でなく
+   **(beam, memberX, stemUp) を運び、face は家が read 時に計算**（同値）。
+4. **生 3.5 の綴りを潰した後に数え直した**（§5.2.1②）: 残る計算箇所は 4——家の
+   `RawSupportEdgeUp`（named read）／`RawOutwardTip`（tab gate・LILYSHARP-OWN）／
+   Articulation の null-item legacy guard（実質 dead）／★ **`SharedRenderer.GraceNotes:216`
+   （grace の描画 stem が生 3.5×scale）＝島の外（描画側）で見つけた綴り**。grace は
+   予約側に対応する家が無く点も無い——grace 島を開く人はここから。
+5. **格納値網の期待値は LP 由来で書けた**: 中央線四分の短縮 stem 10/3（台帳
+   `staff.staff.tuplet-bracket-shortened-stem` の九桁）・beam face=quant 中心+thickness/2
+   （0.48）・LILC ink 0.545。**dynamics の生 3.5 も網で pin**——動かすなら点を開いてから
+   （網がその commit を要求する）。
+
+### 第34セッション（2026-07-29）＝ **描画 bracket の encompass を測ったら、恒等破れが予告どおり鳴った——そして「列の到達距離」の家が 4 つあると分かった**
+
+★★★ **▶ⓐ を起票→移植で閉じた**（`f09abbda`＋`3e78ae2a`・GO 済）。新プローブ
+`tuplet-bracket-encompass.ly`（~10 秒・3 冊・**外側 2 音を同音高＝平ら bracket・1 claim 1 量**）
+＋台帳 3 点 `staff.staff.tuplet-bracket-{partial-beam,partial-beam-control,shortened-stem}`。
+
+1. ★★★ **LP 側は 3 冊とも予測どおり六〜九桁で分解**: TPB 8.013028＝**quant 済 beam 面@外側
+   stem + 1.100**＋half-ink／TPC 6.590000＝clef 束縛（TNC と同値＝恒等 control）／
+   TPS 8.111050＝**10/3 + 1.100 九桁**＝**中央線四分の短縮 stem がそのまま encompass**。
+   LP に beamed 専用式は無い（`calc_position_and_height:554-561`＝列の実 extent・`:504-509` が
+   quantized-positions を先に発火）。
+2. ★★★ **恒等破れ falsifier が予告どおり鳴った**（§5.3「同じであってはならない数が同じ」）:
+   移植前の Lily# は TPB と TPS を**九桁同一**（8.277737800）に読んだ——LP は 0.098 分ける。
+   原因は `CalculateSlope`/`OutwardTip` の encompass が生 `DefaultStemLength` 3.5。
+3. **移植**: per-column 実 extent（`ColumnOutwardTip`）——beam member は **beam 模型の
+   member X での quant 面**（ArticulationEngraver と同じ正準読み）・unbeamed は
+   `StemCalculator.CalculateStemEndY`（短縮・中央線 pull＝描画の家）・stemless／逆向き stem は
+   符頭インク。duration 不明は旧来 raw（予約を増やさない）・**tab は旧経路のまま**（点なし・gate 明示）。
+4. **着地**: TPS **+0.000021133**（half-ink face 差のみ＝TNB 族）／TPB **+0.000958281**＝
+   ★ **実描画で分解済**——番号 2〜8 個目は LP と**九桁一致**（4.335311670）、
+   **行頭小節の beam だけ +0.000937 深く quant**（LP は 8 個全部同値）。⇒ **beam 島の量**
+   （行頭 beam 対 行中 beam の対を組めば開く）＋half-ink 2.1e-5。**埋めない**（why に記録）。
+5. **snapshot 3 枚・全部算術どおり＋png 目視済**: voice-tuplet（bracket が実 stem+1.1 へ 0.67
+   降下→tempo 追随→**Main ラベルがポケットを失い上へ**＝頭 +4.25・機構どおりのカスケード）／
+   multivoice-tuplet-beams（強制方向 quarter の短縮＝**ちょうど 1.0** 降下）／
+   05-special-techniques（入れ子外側 bracket 0.46 降下のみ）。
+6. **残した named 負債**: ⑴ **slope 機構が非字面のまま**（graphical dy `:530-549`・beam 連動
+   max_slope `:566-630`・**平ら bracket の譜内量子化 `:726-746`**——今回の 3 点では発火しない。
+   `CalculateSlope` の LILYSHARP-OWN ブロックに明示・**sloped/譜接 bracket の対が先**）
+   ⑵ nested encompass `:646-680`／scripts `:682-706` は従来どおり未移植 ⑶ 行頭 beam quant の
+   +0.000937（上の 4）。
+7. ★★ **プローブの罠を 1 つ踏んで記録**: 一時 dump を相対オクターブのまま走らせ、`c'` が
+   **音高もろとも別の曲**になった（slope が max clamp に張り付いて気づいた）。§5.5 の
+   fixture 罠の変種＝**一時テストでも `octave absolute` を書く**。
+8. ★★★ **次の島に昇格**: 「列の到達距離」の家が 4 つある（`StemSupportExtent`／
+   `ColumnUpEdge`／`SkylineBuilder` の stem seed／今回の `ColumnOutwardTip`）＝§5.2.1② の形。
+   **`NoteColumnLayout`（Y 側 column/stem 模型）を単独セッション・出力不変で**——▶ 参照。
 
 ### 第33セッション（2026-07-29）＝ **tempo の X を移植したら Y がついてきた——4.76 の正体は「中心化推定幅×行頭 clef」だった**
 
@@ -644,12 +703,17 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 ⚠️ **ottava の +0.027480 はまだ割れていない**——stacker は skyline を持ったが ottava 自身と
 support seed が箱のまま（OTC の分解には support のアウトラインが要る＝SkylineBuilder 統一の島）。
 **次セッションの候補は ⓐ〜ⓔ**:
-- ⓐ **beamed tuplet の 2 分岐を LP の単一経路へ**。LP に「beamed 専用の式」は無い——
-  encompass 点（**実 stem 先端＝beam 面で終わる**）→ブラケット位置→番号が midpoint、の
-  1 本道の帰結が「beam 縁 + 1.1」。Lily# は fallback（`CalculateSlope`＝**生の
-  DefaultStemLength 3.5**）と beamed 分岐（測定値の直書き）の 2 分岐。統一の観測面は
-  **部分 beam・ShowBracket=true で beam を跨ぐ regime**（生 3.5 対 quant 済で割れる）＝
-  **その対を先に起票**。
+- ~~ⓐ **beamed tuplet の 2 分岐を LP の単一経路へ**~~ — **閉じた（第34セッション・
+  `3e78ae2a`・GO 済）**。encompass は実 column extent（beam 面／実 stem／符頭インク）。
+  残: slope 機構の非字面（`CalculateSlope` の LILYSHARP-OWN ブロック・対が先）と
+  行頭 beam quant +0.000937（beam 島）。詳細は第34セッション節。
+- ~~★★ **`NoteColumnLayout`（Y 側の column/stem 模型）を作る**~~ — **できた（第35セッション・
+  `300a7f54`・出力不変・snapshot 0 枚）**。4 家は `NoteColumnLayout` の named read になり、
+  **相違表は家の doc にある**（値のセルは 4 家とも割れていた＝どれを畳むのも output-moving・
+  点が先）。**残り**: ⑴ dynamics の生 3.5＝最後の raw 模型（網が pin・点が先）
+  ⑵ beam 所属 lookup は 3 綴りのまま（key/gate が消費者ごと）⑶ grace 描画 stem の生 3.5
+  （`SharedRenderer.GraceNotes`・島の外）⑷ 予告どおり行頭 beam quant 差・slope 非字面・
+  seed/draw 二重パスは消えていない。詳細は第35セッション節。
 - ⓑ **譜 extent の定数直書き**: TextScript 床の 2.05・Ottava 床の半太さ・`BelowStaffYUp` の
   名目 4.0。LP は `staff_extent[dir]` を**実 StaffSymbol から読む**ので、線数の違う譜・
   `magnifyStaff` 相当で割れる。**tab/ossia 島の「名目 4.0」族と同じ 1 個の物体**——

@@ -1947,6 +1947,48 @@ internal static class LpGeometryProbes
         "b8 c' b c' b c' b c' | b8 c' b c' b c' b c' | b1 |");
 
     /// <summary>
+    /// THE DRAWN BRACKET's ENCOMPASS POINTS — the mirrors of
+    /// tuplet-bracket-encompass.ly's books TPB / TPC / TPS (HANDOFF ▶ⓐ's observation
+    /// surface: a partial beam with the bracket shown, spanning a beam).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond has no beamed-specific tuplet formula: the bracket's encompass points are
+    /// the note columns' REAL extents — a beamed stem ends at the quanted beam face, an
+    /// unbeamed one at its real (possibly shortened) tip — and the line sits one
+    /// TupletBracket padding 1.1 beyond the extreme, the number riding its midpoint.
+    /// MEASURED (audit/lp-geometry/probes/tuplet-bracket-encompass.ly, 2026-07-29), every
+    /// book one system / two staves, outer pitches equal so the bracket is FLAT:
+    /// <list type="bullet">
+    /// <item>TPB (partial beam c''[ b'] c'', bracket SHOWN) 8.013028 = number ink bottom
+    /// 4.963028 (line centre 4.335312 = the quanted beam face AT the outer stem + 1.100;
+    /// the beam's bbox corner 3.24 differs by half-stem × slope ≈ 0.0047) + 2.05 + 1.</item>
+    /// <item>TPC (the same 2-note beams, no tuplet) 6.590000 — clef-bound like TNC, the
+    /// identity control: the bare beam loses to the clef 3.540 by 0.3.</item>
+    /// <item>TPS (quarter triplets, no beam) 8.111050 = (10/3 + 1.1 = 4.433333 NINE-DIGIT
+    /// + half ink 0.627717) + 3.05 — the middle-line quarter's SHORTENED stem
+    /// (stem.cc's dir*hp[dir] >= 0 includes the middle line) is the encompass.</item>
+    /// </list>
+    /// <para>
+    /// Lily#'s drawn-bracket branch (CalculateSlope/OutwardTip) builds its encompass from
+    /// the raw DefaultStemLength 3.5 — it sees neither the beam model nor the stem
+    /// shortening — so TPB and TPS should read NINE-DIGIT IDENTICAL (both flat brackets
+    /// over a raw-3.5 b' extreme). LilyPond separates the two books; the identity, not
+    /// the residual, is the defect (HANDOFF 5.3 「同じであってはならない数が同じ」).
+    /// </para>
+    /// </remarks>
+    private static readonly string TPB = BeamedTupletScore("TPB",
+        "tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } | "
+        + "tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } tuplet 3/2 { c'8[ b] c' } | b1 |");
+
+    /// <summary>The same 2-note beams with no tuplet at all — the identity control.</summary>
+    private static readonly string TPC = BeamedTupletScore("TPC",
+        "c'8[ b] c'[ b] c'[ b] c'[ b] | c'8[ b] c'[ b] c'[ b] c'[ b] | b1 |");
+
+    /// <summary>Quarter triplets, no beam — the shortened-stem half of the claim.</summary>
+    private static readonly string TPS = BeamedTupletScore("TPS",
+        "tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | b1 |");
+
+    /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
     /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
     /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
@@ -4553,6 +4595,16 @@ internal static class LpGeometryProbes
         // clef-down-vs-staff-line silhouette reading.
         new("staff.staff.beamed-tuplet-number", TNB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.beamed-tuplet-control", TNC, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the DRAWN bracket's encompass points (TPB/TPC/TPS) ---
+        // HANDOFF ▶ⓐ's observation surface: with the bracket shown, LilyPond's encompass
+        // is the REAL column extent (quanted beam face / shortened stem) while Lily#'s
+        // CalculateSlope fallback reads the raw DefaultStemLength 3.5. See
+        // BeamedTupletScore's TPB remark for the measured decomposition; TPB and TPS
+        // reading identically in Lily# is the structural half of the defect.
+        new("staff.staff.tuplet-bracket-partial-beam", TPB, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-partial-beam-control", TPC, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-shortened-stem", TPS, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- where the OTTAVA BRACKET's LINE sits (books OTF/OTC) ---
         // The first points that reach OttavaBracket's staff-padding floor (2.0) — the

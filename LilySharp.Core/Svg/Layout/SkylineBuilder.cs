@@ -1365,9 +1365,11 @@ internal sealed class SkylineBuilder
         // was too tall. audit/lp-geometry page.{stretched,compressed}.staff-staff-inside and
         // system.{stretched,compressed}-distance.two-staff are four readings of the two
         // forces that error produced.
+        // The length rule is a named read in the single house of a column's reach
+        // (NoteColumnLayout — HANDOFF §5.2.1②); this seed applies it per HEAD of a chord.
         // LILYPOND-REF: lily/stem.cc:506-557 internal_calc_stem_end_position.
-        double stemLength = size.Span(StemCalculator.CalculateStemLength(
-            stemUp, StemCalculator.GetDurationLog(noteValue), staffPosition));
+        double stemLength = size.Span(
+            NoteColumnLayout.RendererStemLength(stemUp, noteValue, staffPosition));
 
         // The half-width the stem's box is given on either side of the head's edge — a
         // staff-space length like every other, so it belongs to this staff's size too.

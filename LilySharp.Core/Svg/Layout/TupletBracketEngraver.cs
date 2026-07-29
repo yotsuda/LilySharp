@@ -237,9 +237,17 @@ internal static class TupletBracketEngraver
             // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
             bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups, tupMeasures);
 
+            // Tab staves keep the raw-reach fallback: their staff positions are
+            // string slots, not pitches, and no ledger point measures the tab
+            // bracket regime (same gate session 30 left on the seed).
+            bool isTabStaff = staffByIndex != null
+                && staffByIndex.TryGetValue(tuplet.StaffIndex, out var encStaff)
+                && encStaff.IsTab;
+
             // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
             // Calculate slope based on first/last note staff positions
-            var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX);
+            var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX,
+                isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -523,31 +531,19 @@ internal static class TupletBracketEngraver
         return null;
     }
 
+    // The column's REAL extent on the bracket's side (quanted beam face / drawn stem
+    // end / head ink) lives in NoteColumnLayout.OutwardTipDeviceY — the single house of
+    // a column's reach (HANDOFF §5.2.1②, session 34's port of
+    // Note_column::cross_staff_extent). The ledger pair
+    // staff.staff.tuplet-bracket-{partial-beam,shortened-stem} pins that read.
+
     /// <summary>
-    /// How far a note column reaches on the bracket's side, in the staff-top device
-    /// frame (down-positive): the stem TIP when the duration has a stem, and the
-    /// notehead's own glyph ink when it has not.
+    /// The pre-port raw reach, kept for tab staves only: string-slot staff positions,
+    /// and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
+    /// same one session 30 left on the seed). Tab staves never reach the real-extent
+    /// read (<c>useRealExtents</c> false keeps this).
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc <c>Stem::is_normal_stem</c> — a stem exists only for
-    ///   duration-log &gt;= 1, i.e. a half note or shorter. Note value 2 = half, so the
-    ///   test is <c>&gt;= 2</c>; the same guard <c>89aaa29f</c> put in
-    ///   <see cref="SkylineBuilder"/> and <c>26afa9fe</c> in <see cref="DynamicEngraver"/>,
-    ///   at the third site neither of those copies reached. A whole note was reserving
-    ///   3.5 staff spaces of stem it does not have and does not draw
-    ///   (<c>SharedRenderer.Noteheads.cs</c> branches on the same note value).
-    /// <para>
-    /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents with
-    ///   lily/open-type-font.cc:288,389-407 — a stemless head reaches its LILC bbox
-    ///   (±0.545), not a nominal half staff space. Reached through the SAME note-value
-    ///   mapping SkylineBuilder and DynamicEngraver use, so the three cannot drift apart.
-    /// </para>
-    /// <para>
-    /// A duration that cannot be read (an item type with none) keeps the stem, which is
-    /// the pre-existing behaviour: this guard removes a reservation, it must not add one.
-    /// </para>
-    /// </remarks>
-    private static double OutwardTip(int staffPosition, Semantics.Fraction? baseDuration, bool isStemUp)
+    private static double RawOutwardTip(int staffPosition, Semantics.Fraction? baseDuration, bool isStemUp)
     {
         double noteY = StaffMiddleDown - (staffPosition * 0.5);
         int noteValue = baseDuration is { } d ? LayoutUtilities.GetNoteValueFromFraction(d) : int.MaxValue;
@@ -557,8 +553,20 @@ internal static class TupletBracketEngraver
         return isStemUp ? noteY - reach : noteY + reach;
     }
 
+    // LILYSHARP-OWN: the SLOPE machinery below is simpler than LilyPond's. LilyPond's
+    // general branch slopes from the outer columns' GRAPHICAL extents (rv[dir]-lv[dir],
+    // zeroed when its sign disagrees with the musical head contour,
+    // lily/tuplet-bracket.cc:530-549), damps against the covering beam's own slope
+    // (:566-630 max_slope from quantized-positions), and QUANTIZES a near-flat bracket
+    // onto staff positions when it lies within the widened staff (:726-746). Lily#
+    // slopes from the outer MUSICAL positions with the max-slope-factor cap only. The
+    // ledger pair staff.staff.tuplet-bracket-* pins the ENCOMPASS (flat, outside the
+    // staff — none of the three differences fire there); a sloped or staff-adjacent
+    // bracket regime has no point yet, so the slope port waits for its own pair.
     private static (double startY, double endY) CalculateSlope(
-        TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth)
+        TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth,
+        ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,
+        bool useRealExtents = false)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -571,6 +579,41 @@ internal static class TupletBracketEngraver
             return (baseY, baseY);
 
         var measure = measures[tuplet.MeasureIndex];
+
+        // The beam an item's stem belongs to (same measure + voice, own staff
+        // preferred) and the member's index in it — its quanted face at the beam
+        // model's OWN member X is that stem's real end (the same canonical read
+        // ArticulationEngraver's beam-side scripts make).
+        // LILYPOND-REF: lily/tuplet-bracket.cc:504-509, lily/stem.cc Stem::get_beam.
+        (BeamLayout beam, int memberIndex)? MemberBeam(int itemIndex)
+        {
+            if (beamLayouts.IsDefaultOrEmpty)
+                return null;
+            (BeamLayout, int)? fallback = null;
+            foreach (var b in beamLayouts)
+            {
+                if (b.Group.MeasureIndex != tuplet.MeasureIndex
+                    || b.Group.VoiceIndex != tuplet.VoiceIndex)
+                    continue;
+                int member = -1;
+                for (int mi = 0; mi < b.Group.Members.Length; mi++)
+                {
+                    var m = b.Group.Members[mi];
+                    if (m.ResolveMeasureIndex(b.Group.MeasureIndex) == tuplet.MeasureIndex
+                        && m.ItemIndex == itemIndex)
+                    {
+                        member = mi;
+                        break;
+                    }
+                }
+                if (member < 0)
+                    continue;
+                if (b.StaffIndex == tuplet.StaffIndex)
+                    return (b, member);
+                fallback ??= (b, member);
+            }
+            return fallback;
+        }
 
         // Get staff positions of first and last notes, and — separately — the most
         // OUTWARD point any of them reaches on the bracket's side.
@@ -607,7 +650,31 @@ internal static class TupletBracketEngraver
                 ChordItem chord => chord.BaseDuration,
                 _ => (Semantics.Fraction?)null
             };
-            double tip = OutwardTip(pos.Value, duration, isStemUp);
+            double tip;
+            if (useRealExtents && measureLayout is { } ml)
+            {
+                bool itemUp = item switch
+                {
+                    NoteItem n => n.StemUp,
+                    ChordItem c => c.StemUp,
+                    _ => isStemUp
+                };
+                var member = itemUp == isStemUp ? MemberBeam(i) : null;
+                double stemX = member is { } mb && !mb.beam.MemberXPositions.IsDefaultOrEmpty
+                    ? mb.beam.MemberXPositions[mb.memberIndex]
+                    : ml.X
+                      + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml)
+                      + (itemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+                // The single house of a column's reach (HANDOFF §5.2.1②). Of() cannot
+                // return null here — the `pos` gate above keeps only notes/chords.
+                tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col
+                    ? col.OutwardTipDeviceY(isStemUp)
+                    : RawOutwardTip(pos.Value, duration, isStemUp);
+            }
+            else
+            {
+                tip = RawOutwardTip(pos.Value, duration, isStemUp);
+            }
             extremeTip = extremeTip == null
                 ? tip
                 : (isStemUp ? Math.Min(extremeTip.Value, tip) : Math.Max(extremeTip.Value, tip));
