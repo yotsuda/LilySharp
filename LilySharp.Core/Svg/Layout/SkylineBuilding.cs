@@ -168,7 +168,14 @@ internal static class SkylineMath
     /// larger means closer/overlapping. <see cref="double.NegativeInfinity"/>
     /// when either side is empty (no constraint).
     /// </returns>
-    /// <remarks>LILYPOND-REF: lily/skyline.cc:529-533, 617-649 internal_distance()</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:529-533, 617-649 internal_distance().
+    /// ⚠️ ALL-PAIRS ON PURPOSE: <see cref="HorizontalSkyline"/> keeps a LAZY building
+    /// list (overlapping, unsorted — its envelope contract), so every pair must be
+    /// visited. A RESOLVED list (sorted, disjoint — <see cref="VerticalSkyline"/>'s
+    /// invariant) can take the O(n+m) merge walk instead:
+    /// <see cref="DistanceResolved"/>, which is what LilyPond's own iterator walk is.
+    /// </remarks>
     public static double Distance(IReadOnlyList<SkylineBuilding> a, IReadOnlyList<SkylineBuilding> b)
     {
         if (a.Count == 0 || b.Count == 0)
@@ -188,6 +195,48 @@ internal static class SkylineMath
                     max = Math.Max(max, Math.Max(dLo, dHi));
                 }
             }
+        }
+        return max;
+    }
+
+    /// <summary>
+    /// <see cref="Distance"/> for RESOLVED building lists (sorted by start,
+    /// non-overlapping — <see cref="VerticalSkyline"/>'s invariant): the O(n+m) merge
+    /// walk. Bit-identical to the all-pairs loop over such lists — the walk visits
+    /// every overlapping pair, and a pair's linear sum takes its extremum at an
+    /// overlap endpoint either way.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:617-649 internal_distance() — LilyPond advances
+    ///   two iterators in step (:645-648), never the cross product; its skylines are
+    ///   always resolved. The all-pairs cost was what the pointwise dynamics port made
+    ///   visible: a label's outline (~dozens of buildings) against a full system
+    ///   profile (~hundreds) per dynamic priced a dynamics-heavy page at 3×
+    ///   (measured 2026-07-30; this walk restored it).
+    /// </remarks>
+    public static double DistanceResolved(IReadOnlyList<SkylineBuilding> a, IReadOnlyList<SkylineBuilding> b)
+    {
+        if (a.Count == 0 || b.Count == 0)
+            return double.NegativeInfinity;
+
+        double max = double.NegativeInfinity;
+        int i = 0, j = 0;
+        while (i < a.Count && j < b.Count)
+        {
+            var b1 = a[i];
+            var b2 = b[j];
+            double lo = Math.Max(b1.Start, b2.Start);
+            double hi = Math.Min(b1.End, b2.End);
+            if (lo < hi)
+            {
+                double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
+                double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);
+                max = Math.Max(max, Math.Max(dLo, dHi));
+            }
+            // Advance the list whose building ends first — sorted and disjoint per
+            // list, so every overlapping pair is still visited (skyline.cc:645-648).
+            if (b1.End <= b2.End) i++;
+            else j++;
         }
         return max;
     }

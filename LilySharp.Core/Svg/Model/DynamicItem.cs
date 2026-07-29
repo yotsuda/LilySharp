@@ -54,6 +54,17 @@ public sealed record DynamicItem
     public bool IsAbove { get; init; }
 
     /// <summary>
+    /// Zero-based voice index within the staff this dynamic was written in. LilyPond's
+    /// DynamicText X-aligns on its OWN voice's note column (self-alignment-X CENTER on
+    /// the X-parent extent), so in a two-voice staff a lower-voice dynamic centres on
+    /// the lower voice's head — the collector stamps the voice so layout can resolve
+    /// that anchor. LILYPOND-REF: scm/define-grobs.scm:1444 DynamicText
+    /// self-alignment-X = CENTER; ly/engraver-init.ly:359,409-410 Dynamic_align_engraver
+    /// — the <c>\name Voice</c> context consists the dynamic engravers.
+    /// </summary>
+    public int VoiceIndex { get; init; }
+
+    /// <summary>
     /// True for free expressive text (<c>@text("dolce")</c>): rides the whole
     /// DynamicText pipeline (placement, stacking, per-staff routing, ossia
     /// shrink) but is NOT a dynamic level — hairpins do not terminate on it,

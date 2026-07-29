@@ -124,12 +124,14 @@ internal static class DynamicEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Voice> voices = default,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null)
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
 
         var layouts = ImmutableArray.CreateBuilder<DynamicLayout>(dynamics.Length);
+        var beamMembers = BuildBeamMembers(beamLayouts);
 
         var fallbackVoices = voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices;
 
@@ -164,33 +166,32 @@ internal static class DynamicEngraver
                 && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
             var dynMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, dynamic.StaffIndex, score.Voice.Measures);
 
-            // Calculate X position (centered on the note)
-            // LILYPOND-REF: define-grobs.scm:1444 self-alignment-X = CENTER
-            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+            // The COLUMN's X (the drawn head starts here), and the label's own anchor:
+            // LilyPond X-aligns the DynamicText's extent CENTRE on its X-parent — the
+            // dynamic's own voice's note column — so the label centres on that item's
+            // head, half an advance right of the column X.
+            // LILYPOND-REF: define-grobs.scm:1444 self-alignment-X = CENTER;
+            //   lily/self-alignment-interface.cc aligned_on_parent (the parent extent's
+            //   centre; measured for the anchor classes in
+            //   audit/lp-geometry — see reference self-alignment-parent-extent).
+            double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
-
-            // This label's own ink, from the font — the glyph is what LilyPond's
-            // DynamicText extent is made of, so it is per-dynamic, not a constant.
-            var (ascent, descent) = InkOf(dynamic.Text, dynamic.IsExpressiveText);
+            double x = xColumn + AnchorCentreOffset(
+                AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
 
             // The supports: EVERY voice's note column at this timing (a lower voice's
             // down-stem must not be overlapped by a dynamic positioned from the upper
-            // voice's stem-up note), floored by the staff symbol.
-            // LILYPOND-REF: side-position-interface.cc:265-330 skyline-based positioning
-            double dir = dynamic.IsAbove ? 1.0 : -1.0;
-            double supportEdge = ColumnSupportEdge(
-                dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, dir);
-
-            // A wide (or CJK, full-em) label centred on this note also covers its
-            // neighbours' columns; those noteheads are supports too, so the label never
-            // overprints an adjacent lower note. (Below-staff placement; the
-            // forced-above path is a follow-up.)
-            if (!dynamic.IsAbove)
-                supportEdge = WidenToNeighbors(dynMeasures, dynamic.MeasureIndex,
-                    measureLayout, x, LabelHalfWidth(dynamic.Text, dynamic.IsExpressiveText),
-                    supportEdge);
-
-            double y = BaselineY(dir, supportEdge, ascent, descent);
+            // voice's stem-up note), floored by the staff symbol — POINTWISE: heads and
+            // real stems as extent boxes at their own X, the distance taken against the
+            // label's own outline (my_dim), so the head wins under a narrow \f while the
+            // stem binds under a wide \fff. audit/lp-geometry staff.staff.dynamic-*.
+            // LILYPOND-REF: dynamic-align-engraver.cc:108-117 acknowledge_rhythmic_head + acknowledge_stem;
+            //   side-position-interface.cc:353-358 pointwise Skyline::distance to my_dim.
+            int staffIdx = dynamic.StaffIndex;
+            int mi = dynamic.MeasureIndex, ii = dynamic.ItemIndex;
+            double y = PointwiseBaselineY(dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
+                mi, ii, xColumn, x, dynamic.Text, dynamic.IsExpressiveText,
+                vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null);
 
             var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
             int depth = stackAt.GetValueOrDefault(key, 0);
@@ -239,8 +240,10 @@ internal static class DynamicEngraver
 
     /// <summary>
     /// The DynamicText baseline that <c>side-position-interface</c> produces for a
-    /// DynamicLineSpanner whose supports reach <paramref name="supportEdge"/> on the
-    /// <paramref name="dir"/> side (+1 up, −1 down), in the native Y-up frame.
+    /// DynamicLineSpanner over the given SUPPORT skylines on the <paramref name="dir"/>
+    /// side (+1 up, −1 down), in the native Y-up frame — the distance is POINTWISE
+    /// against the spanner's own outline (<paramref name="spannerDim"/>, the label at
+    /// its −0.6 offset about the spanner origin).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side, transcribed for
@@ -266,18 +269,16 @@ internal static class DynamicEngraver
     ///   a nominal 0.64 descent reach the same total as 2.05 + 0.6 and the `f` glyph's
     ///   own 0.692002.
     /// </remarks>
-    private static double BaselineY(double dir, double supportEdge,
-        double ascent, double descent)
+    private static double BaselineY(double dir,
+        (VerticalSkyline Up, VerticalSkyline Down) support,
+        (VerticalSkyline Up, VerticalSkyline Down) spannerDim)
     {
-        // The spanner's own Y-extent about its origin: the text hangs
-        // TextOffsetInSpanner below it, so both of the text's edges shift with it.
-        double myTop = ascent - TextOffsetInSpanner;
-        double myBottom = -(descent + TextOffsetInSpanner);
-        // my_dim = skyp[-dir]: the edge that FACES the supports.
-        double myFacing = dir > 0 ? myBottom : myTop;
-
-        // :354-358 — the offset that brings my facing edge onto the support skyline.
-        double totalOff = supportEdge - myFacing;
+        // :354-358 — dir * the POINTWISE distance of my facing profile (skyp[-dir],
+        // the spanner's own outline about its origin) to the supports' skyline.
+        double overlap = dir > 0
+            ? spannerDim.Down.Distance(support.Up)
+            : spannerDim.Up.Distance(support.Down);
+        double totalOff = dir * overlap;
         // :370
         totalOff += dir * Padding;
         // :384-385
@@ -295,27 +296,231 @@ internal static class DynamicEngraver
     /// <summary>
     /// Baseline Y in the native Y-up frame (staff-spaces above the staff middle,
     /// up-positive; a below-staff dynamic is negative) the dynamic at a given note
-    /// column occupies, BEFORE same-column stacking. Exposed so the inter-staff
-    /// skyline can widen the gap by the dynamic's downward reach (otherwise a low
-    /// lower-voice's dynamic overlaps the staff below).
+    /// column occupies, BEFORE same-column stacking and BEFORE the outside-staff
+    /// collision pass — LilyPond's <c>aligned_side</c>, transcribed pointwise.
+    /// Shared by <see cref="Calculate"/> (the draw side) and
+    /// <c>SkylineBuilder.AddDynamicsToSkyline</c> (the inter-staff seed) so the two
+    /// homes run ONE spelling of the quiet position.
     /// </summary>
-    internal static double ColumnBaselineY(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex,
-        double ascent, double descent)
-        => BaselineY(-1.0, ColumnSupportEdge(voices, measureIndex, itemIndex, -1.0),
-            ascent, descent);
+    /// <param name="xColumn">The note column's X (the drawn head starts here).</param>
+    /// <param name="xLabel">The label's centre (column + the anchor's half advance).</param>
+    internal static double PointwiseBaselineY(bool above,
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
+        double xColumn, double xLabel, string? text, bool expressive,
+        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+    {
+        var support = ColumnSupportSkylines(
+            voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
+        var my = LabelSkylines(text, expressive, xLabel, -TextOffsetInSpanner);
+        return BaselineY(above ? 1.0 : -1.0, support, my);
+    }
 
     /// <summary>
-    /// ABOVE-staff mirror of <see cref="ColumnBaselineY"/>: the baseline Y a forced-above
-    /// dynamic occupies in the native Y-up frame (positive, above the staff middle),
-    /// BEFORE same-column stacking. Exposed so the inter-staff skyline widens the gap
-    /// to the staff ABOVE by the dynamic's upward reach.
+    /// The side-position SUPPORT skylines of the dynamic's OWN voice's note column: its
+    /// head as an extent box at the drawn head's X, its direction-matching REAL stem as a
+    /// thin extent box at the stem's own X (a beamed stem ends on the quanted beam face),
+    /// the staff symbol's extent as the minimum. Y-up about the staff middle; X absolute.
     /// </summary>
-    internal static double ColumnAboveBaselineY(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex,
-        double ascent, double descent)
-        => BaselineY(1.0, ColumnSupportEdge(voices, measureIndex, itemIndex, 1.0),
-            ascent, descent);
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:359,410 Dynamic_align_engraver — the
+    ///   <c>\name Voice</c> context (:359) consists it (:410), so the supports are the
+    ///   dynamic's own voice's grobs; the OTHER voice's ink reaches the dynamic through
+    ///   the outside-staff collision pass over the whole staff profile
+    ///   (axis-group-interface.cc:648-676 avoid_outside_staff_collisions), never through
+    ///   the side-position support. (Until 2026-07-29 Lily# unioned every voice here as
+    ///   its own compensation for that missing pass.)
+    /// LILYPOND-REF: dynamic-align-engraver.cc:108-117 acknowledge_rhythmic_head / acknowledge_stem —
+    ///   heads AND stems into <c>support_</c> (:222-223 <c>add_support</c>).
+    /// LILYPOND-REF: grob.cc:81-85 simple_vertical_skylines_from_extents — each support
+    ///   enters as its extent BOX (the notehead's LILC ink, the stem's drawn span).
+    /// LILYPOND-REF: side-position-interface.cc:273-281 get_grob_direction skip — a stem
+    ///   is kept only when its direction matches the spanner's side;
+    ///   :323-330 set_minimum_height — the staff extent as minimum.
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) ColumnSupportSkylines(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
+        double xColumn,
+        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+    {
+        // :323-330 — the staff extent is the floor under whatever the column contributes.
+        var up = VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity,
+            StaffExtent, StaffExtent, VerticalDirection.Up);
+        var down = VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity,
+            -StaffExtent, -StaffExtent, VerticalDirection.Down);
+
+        var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
+        if (vs.Length > 0)
+        {
+            int vi = Math.Clamp(voiceIndex, 0, vs.Length - 1);
+            var voice = vs[vi];
+            if (measureIndex < voice.Measures.Length
+                && itemIndex < voice.Measures[measureIndex].Items.Length)
+            {
+                var item = voice.Measures[measureIndex].Items[itemIndex];
+                // Direction policy stays the caller side's (NoteColumnLayout's contract):
+                // multi-voice forcing, overridden by the beam's resolved direction.
+                bool? forcedStemUp = vs.Length > 1 ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
+                var beamInfo = beamOf?.Invoke(vi);
+                if (beamInfo is { } bi)
+                    forcedStemUp = bi.StemUp;
+                if (NoteColumnLayout.Of(item, forcedStemUp,
+                        beamInfo?.Beam, beamInfo?.MemberX ?? 0.0) is { } col)
+                {
+                    // The head's extent box, at the drawn head's X (the glyph starts at
+                    // the column X and runs one advance right).
+                    double advance = GlyphMetrics.GetNoteheadAdvance(col.NoteValue);
+                    var ink = GlyphMetrics.GetNoteheadBBox(col.NoteValue);
+                    double headTop = col.TopHeadPosition * 0.5 + ink.Top;
+                    double headBottom = col.BottomHeadPosition * 0.5 + ink.Bottom;
+                    up.Merge(VerticalSkyline.FromBox(
+                        xColumn, xColumn + advance, headBottom, headTop, VerticalDirection.Up));
+                    down.Merge(VerticalSkyline.FromBox(
+                        xColumn, xColumn + advance, headBottom, headTop, VerticalDirection.Down));
+
+                    // The REAL stem — drawn length (shortening, middle-line pull,
+                    // beam-quanted face) at its own thin X: the renderer's attach (down
+                    // at the head's left edge, up at the black head's right edge),
+                    // StemThickness wide.
+                    if (col.HasStem)
+                    {
+                        double tipUp = StaffMiddle - col.OutwardTipDeviceY(col.StemUp);
+                        double anchorUp = col.HeadPositionToward(col.StemUp) * 0.5;
+                        double stemCentre = xColumn + (col.StemUp
+                            ? EngravingDefaults.NoteheadBlackWidth - EngravingDefaults.StemThickness / 2
+                            : EngravingDefaults.StemDownAttachX);
+                        double half = EngravingDefaults.StemThickness / 2;
+                        if (col.StemUp)
+                            up.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,
+                                anchorUp, tipUp, VerticalDirection.Up));
+                        else
+                            down.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,
+                                tipUp, anchorUp, VerticalDirection.Down));
+                    }
+                }
+                // A rest has no head/stem grob to support off — the staff floor stands.
+            }
+        }
+        return (up, down);
+    }
+
+    /// <summary>
+    /// The label's OWN skyline pair (<c>my_dim</c>): the fetaText letters' baked
+    /// outlines composed at advance+kern pen positions, centred on
+    /// <paramref name="xCentre"/> with the baseline at <paramref name="yBaseline"/> —
+    /// or the serif box for a label with no feta outline (free expressive text).
+    /// </summary>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) LabelSkylines(
+        string? text, bool expressive, double xCentre, double yBaseline)
+    {
+        if (!expressive && text is { Length: > 0 }
+            && DynamicOutline.AdvanceWidth(text) is { } w
+            && DynamicOutline.Place(text, xCentre - w / 2.0, yBaseline) is { } outline)
+            return outline;
+        var (ascent, descent) = InkOf(text, expressive);
+        double half = LabelHalfWidth(text ?? "", expressive);
+        return (VerticalSkyline.FromBox(xCentre - half, xCentre + half,
+                    yBaseline - descent, yBaseline + ascent, VerticalDirection.Up),
+                VerticalSkyline.FromBox(xCentre - half, xCentre + half,
+                    yBaseline - descent, yBaseline + ascent, VerticalDirection.Down));
+    }
+
+    /// <summary>
+    /// The outside-staff collision move (≤ 0, downward) that clears a below-staff
+    /// grob's UP profile off a staff's DOWN profile by <paramref name="padding"/>,
+    /// pointwise — one spelling shared by the inter-staff seed
+    /// (<c>SkylineBuilder.AddDynamicsToSkyline</c>) and equivalent to the stacker's
+    /// support-entry placement (<c>OutsideStaffStacker</c>'s tracker: the support entry
+    /// forbids <c>(-(d+pad), ∞)</c> and the nearest allowed move at or below 0 is
+    /// exactly this).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions
+    ///   — pointwise, outside-staff-padding.
+    /// </remarks>
+    internal static double BelowCollisionMove(
+        VerticalSkyline profileDown, VerticalSkyline myUp, double padding)
+    {
+        double d = myUp.Distance(profileDown) + padding;
+        return d > 0 ? -d : 0.0;
+    }
+
+    /// <summary>
+    /// Beam membership per (staff, voice, measure, item) across ALL voices — the
+    /// dynamics' beam lookup (a lower-voice beamed pair carries the dynamic in the
+    /// probe books, so the voice-0-only articulation map cannot serve here).
+    /// </summary>
+    internal static Dictionary<(int Staff, int Voice, int Measure, int Item),
+        (BeamLayout Beam, double MemberX, bool StemUp)> BuildBeamMembers(
+        ImmutableArray<BeamLayout> beamLayouts)
+    {
+        var map = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+        if (beamLayouts.IsDefaultOrEmpty)
+            return map;
+        foreach (var beam in beamLayouts)
+        {
+            var group = beam.Group;
+            for (int i = 0; i < group.Members.Length && i < beam.MemberXPositions.Length; i++)
+            {
+                var member = group.Members[i];
+                int staffIdx = !beam.MemberStaffIndices.IsDefaultOrEmpty
+                    && i < beam.MemberStaffIndices.Length
+                    ? beam.MemberStaffIndices[i]
+                    : Math.Max(0, beam.StaffIndex);
+                map[(staffIdx, group.VoiceIndex,
+                     member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)]
+                    = (beam, beam.MemberXPositions[i], member.MemberStemUp);
+            }
+        }
+        return map;
+    }
+
+    /// <summary>The dynamic's own voice's item at its timing (the X-parent whose extent
+    /// centre the label aligns on), or null when out of range.</summary>
+    internal static MusicItem? AnchorItem(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (voices.IsDefaultOrEmpty)
+            return null;
+        var voice = voices[Math.Clamp(voiceIndex, 0, voices.Length - 1)];
+        if (measureIndex >= voice.Measures.Length)
+            return null;
+        var items = voice.Measures[measureIndex].Items;
+        return itemIndex < items.Length ? items[itemIndex] : null;
+    }
+
+    /// <summary>
+    /// The anchor column's extent CENTRE, right of the column X: half the head's
+    /// advance for a note/chord, the rest glyph's own ink centre for a rest, 0 otherwise.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:117-175 aligned_on_parent —
+    ///   <c>he = him->extent (him, a)</c> (:147, the PARENT's own stencil extent) and the
+    ///   two <c>linear_combination</c> terms (:166 self, :171 parent) land the grob's
+    ///   extent centre on the parent extent's centre for CENTER/CENTER. The parent's
+    ///   extent is its drawn glyph's — so the rest's centre is the rest GLYPH's ink
+    ///   centre, per glyph, not a class constant. MEASURED for the anchor classes in the
+    ///   self-alignment probes (notehead = half its advance; the whole/half rest's
+    ///   0.750 = its ink (0 . 1.5) / 2, which <see cref="GlyphMetrics.GetRestBBox"/>
+    ///   reproduces from the font).
+    /// </remarks>
+    internal static double AnchorCentreOffset(MusicItem? item) => item switch
+    {
+        NoteItem n => GlyphMetrics.GetNoteheadAdvance(
+            LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration)) / 2.0,
+        ChordItem c when c.Notes.Length > 0 => GlyphMetrics.GetNoteheadAdvance(
+            LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration)) / 2.0,
+        RestItem r => RestInkCentre(r),
+        _ => 0.0,
+    };
+
+    private static double RestInkCentre(RestItem r)
+    {
+        var box = GlyphMetrics.GetRestBBox(
+            LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
+        return (box.Left + box.Right) / 2.0;
+    }
 
     /// <summary>
     /// The supports' skyline edge on the <paramref name="dir"/> side (+1 up, −1 down):
@@ -378,37 +583,11 @@ internal static class DynamicEngraver
         return w / 2.0;
     }
 
-    /// <summary>
-    /// Pushes a below-staff label clear of EVERY note whose column its width
-    /// overlaps, not just the annotated note's. A wide (or CJK, full-em) label
-    /// centred on a high note otherwise overprints its lower neighbours.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/side-position-interface.cc:189-320 aligned_side() — an
-    ///   outside-staff grob is pushed off the skyline of EVERY support whose skyline
-    ///   overlaps its horizontal extent, not one column.
-    /// LILYPOND-REF: lily/axis-group-interface.cc:45,395 outside-staff skyline
-    ///   (default_outside_staff_padding_ = 0.46).
-    /// </remarks>
-    private static double WidenToNeighbors(
-        ImmutableArray<Measure> measures, int measureIndex,
-        MeasureLayout measureLayout, double labelX, double halfWidth, double supportEdge)
-    {
-        if (measureIndex >= measures.Length)
-            return supportEdge;
-        var items = measures[measureIndex].Items;
-        for (int j = 0; j < items.Length; j++)
-        {
-            double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                measures, measureIndex, j, measureLayout);
-            // The note's head lies (even partly) under the label's horizontal span.
-            if (Math.Abs(itemX - labelX) > halfWidth + EngravingDefaults.NoteheadHalfWidth)
-                continue;
-            // Native Y-up: the neighbour joins the support skyline (the min, below).
-            supportEdge = Math.Min(supportEdge, GetLowestExtent(items[j]));
-        }
-        return supportEdge;
-    }
+    // WidenToNeighbors is GONE (2026-07-29): it was Lily#'s own compensation for the
+    // missing below-side outside-staff pass — a wide label now clears its neighbours'
+    // ink through the REAL collision pass over the staff's down profile (LilyPond's
+    // avoid_outside_staff_collisions, 0.46, pointwise), the device LilyPond actually
+    // has. audit/lp-geometry staff.staff.dynamic-beam-avoid.
 
     /// <summary>
     /// Gets the lowest Y extent of a music item in the native Y-up frame

@@ -50,8 +50,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// │ <see cref="StemSupportDistanceDeviceY"/>│ the same two                         │ NOMINAL half head 0.5     │
 /// │ (articulation side-support)            │                                       │ (whole/breve only)        │
 /// │ <see cref="RawSupportEdgeUp"/>         │ LILYSHARP-OWN raw                     │ glyph ink, true side      │
-/// │ (dynamics/trill support)               │ <see cref="EngravingDefaults.DefaultStemLength"/> 3.5 — predates │
-/// │                                        │ the drawn-stem ports; blind to beams  │                           │
+/// │ (trill support; the dynamics left for  │ <see cref="EngravingDefaults.DefaultStemLength"/> 3.5 — predates │
+/// │ the pointwise support, session 37)     │ the drawn-stem ports; blind to beams  │                           │
 /// │ <see cref="RendererStemLength"/>       │ length rule only (no middle-line      │ (seeded separately by the │
 /// │ (skyline stem seed, per chord HEAD)    │ extension, no minimum floor — both    │ skyline, glyph ink)       │
 /// │                                        │ bind only inside the staff)           │                           │
@@ -230,28 +230,24 @@ public readonly record struct NoteColumnLayout
     }
 
     /// <summary>
-    /// LILYSHARP-OWN: the dynamics/trill support edge on <paramref name="up"/>'s side, in the
+    /// LILYSHARP-OWN: the TRILL support edge on <paramref name="up"/>'s side, in the
     /// Y-up staff-middle frame (staff-spaces above the middle line, up-positive) — the head's
     /// glyph ink, extended by a RAW <see cref="EngravingDefaults.DefaultStemLength"/> when the
     /// stem points toward that side.
     /// </summary>
     /// <remarks>
     /// The raw 3.5 predates the drawn-stem ports and is blind to beams: no
-    /// unnatural-direction shortening, no middle-line pull, no beam-quanted face. It is the
-    /// LAST of the four homes on the raw model — and the ledger points that gate its port
-    /// (staff.staff.dynamic-{head-support,head-support-control,beam-avoid,stem-binding,
-    /// stem-binding-control}, probe dynamic-support.ly, 2026-07-29) measured that the fix
-    /// is not any SCALAR edge at all: LilyPond's dynamic support is POINTWISE — heads AND
-    /// real stems are side-position supports (dynamic-align-engraver.cc:108-117, extent-box
-    /// skylines per grob.cc:81-85), and the distance is taken against the dynamic's own
-    /// OUTLINE (side-position-interface.cc:353-358), so the head wins under a narrow \f
-    /// (the f's low left outline tucks beside the thin stem sliver, DSQ) while the stem
-    /// binds under a wide \fff (DMF). Beams are never acknowledged and reach a dynamic only
-    /// through the outside-staff collision pass (padding 0.46, pointwise, DSB). The port is
-    /// replacing this read with that pointwise support plus a below-side outside-staff pass
-    /// — residuals +2.977210 (raw stem in a scalar support), +1.031307 (same, against the
-    /// stem-binding regime) and +0.899924 (support rule where LilyPond runs the collision
-    /// rule) carry the decomposition in their whys.
+    /// unnatural-direction shortening, no middle-line pull, no beam-quanted face.
+    /// ⚠️ THE DYNAMICS LEFT THIS READ (session 37, 2026-07-29): their five gating points
+    /// (staff.staff.dynamic-*, probe dynamic-support.ly) measured that no SCALAR edge can
+    /// serve them — LilyPond's dynamic support is POINTWISE (heads AND real stems as
+    /// extent boxes, distance against the label's own outline), which
+    /// <c>DynamicEngraver.ColumnSupportSkylines</c> now ports; the head wins under a
+    /// narrow \f (DSQ) and the stem binds under a wide \fff (DMF), landings a scalar
+    /// cannot produce together. What remains on this read is the TRILL's support
+    /// (<c>DynamicEngraver.ColumnUpEdge</c> → the trill engraver's aligned_side) — still
+    /// the raw model, still LILYSHARP-OWN, still pinned by the network below; moving it
+    /// needs a trill-side point first (§5.2.1③).
     /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents — the head's
     ///   own extent is its LILC glyph ink, not a nominal half staff space.
     /// </remarks>

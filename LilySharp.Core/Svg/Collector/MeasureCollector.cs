@@ -3025,6 +3025,7 @@ public sealed partial class MeasureCollector
                     _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _currentStaffIndex)
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,
+                        VoiceIndex = _currentVoiceIndex,
                     });
                 }
                 else

@@ -126,7 +126,7 @@ public class DynamicPlacementTests
         // Ground truth (LilyPond, \dynamicUp on an on-staff note): the forced-up dynamic's
         // baseline sits 1.342 staff-spaces above the staff top. The DESCENDER — not the
         // baseline — is the edge facing the staff, so a pure ascent-mirror would let the
-        // f/p swash nearly touch the top line. ColumnAboveBaselineY with no voices returns
+        // f/p swash nearly touch the top line. PointwiseBaselineY with no voices returns
         // the staff-governed baseline, in the native Y-up frame (staff-spaces above the
         // staff MIDDLE), so 1.342 above the top line reads as 3.342 above the middle.
         //
@@ -137,10 +137,12 @@ public class DynamicPlacementTests
         // + a nominal descent 0.64 = 3.34) reached the same total by cancelling two
         // errors, which is why this test could not tell them apart at 2 decimals. It is
         // asserted at 3 now: the port's 3.342000 against LilyPond's 3.342002, the residual
-        // being Pango's quantisation of the outline.
-        var (ascent, descent) = DynamicEngraver.InkOf("f", expressive: false);
-        double aboveBaseline = DynamicEngraver.ColumnAboveBaselineY(
-            ImmutableArray<Voice>.Empty, 0, 0, ascent, descent);
+        // being Pango's quantisation of the outline. Pointwise (2026-07-29) the binding
+        // is still the f's own DEEPEST outline point against the flat staff extent, so
+        // the number is the scalar chain's — the pointwise machinery must reproduce it.
+        double aboveBaseline = DynamicEngraver.PointwiseBaselineY(above: true,
+            ImmutableArray<Voice>.Empty, voiceIndex: 0, 0, 0, xColumn: 0.0, xLabel: 0.65,
+            "f", expressive: false, beamOf: null);
         Assert.Equal(3.342, aboveBaseline, 3);
     }
 

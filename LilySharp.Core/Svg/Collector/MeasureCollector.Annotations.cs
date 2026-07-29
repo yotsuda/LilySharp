@@ -508,6 +508,7 @@ public sealed partial class MeasureCollector
                             freeText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex)
                         {
                             IsAbove = forcedUp,
+                            VoiceIndex = _currentVoiceIndex,
                         });
                 }
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark

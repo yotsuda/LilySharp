@@ -2013,12 +2013,14 @@ internal static class LpGeometryProbes
     /// scalar support edge cannot reproduce both DSQ and DMF whatever value it takes.
     /// </para>
     /// <para>
-    /// Lily#'s DynamicEngraver support extends the head by the raw
-    /// <c>DefaultStemLength</c> 3.5 as a SCALAR edge — label-blind, so DSQ = DMF = DSB
-    /// nine-digit. The port these five points gate: the pointwise side-position support
-    /// (heads + real stems as extent boxes at their own X + staff extent minimum,
-    /// distance against the dynamic's own outline) plus a below-side outside-staff pass
-    /// over the staff's real down profile (0.46, pointwise) for DSB.
+    /// PORTED (session 37): <c>DynamicEngraver.ColumnSupportSkylines</c> is the pointwise
+    /// side-position support (heads + real thin stems as extent boxes at their own X +
+    /// staff extent minimum, distance against the label's composed feta outline —
+    /// <c>DynamicOutline</c>), and the below-side outside-staff pass runs over the
+    /// staff's real down profile (0.46, pointwise; seed in
+    /// <c>SkylineBuilder.AddDynamicsToSkyline</c>, draw in the below stacker, one
+    /// spelling). DSB landed on the face-sliver family; DSQ/DMF carry the named Pango
+    /// X-extent centering residual (~+0.0015/+0.0018 — see their whys).
     /// </para>
     /// LilyPond twin (DSQ): <c>&lt;&lt; { \voiceOne b'1 } \\ { \voiceTwo a4\f r4 r2 }
     /// &gt;&gt;</c> over <c>\clef bass d1</c>, default-staff-staff-spacing zeroed.

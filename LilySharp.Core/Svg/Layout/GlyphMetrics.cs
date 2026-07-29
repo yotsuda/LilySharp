@@ -532,6 +532,23 @@ internal static partial class GlyphMetrics
         _ => default
     };
 
+    /// <summary>The hmtx advance of one fetaText dynamic letter (staff spaces), or null
+    /// when the character is not one of the seven the encoding draws dynamics from —
+    /// the letter-feed half of DynamicText's X model (advance + GPOS kern, measured in
+    /// audit/lp-geometry/probes/dynamic-text-x.ly; the kerns live in
+    /// <see cref="DynamicLetterKern"/>).</summary>
+    public static double? DynamicLetterAdvance(char c) => c switch
+    {
+        'f' => DynamicLetterFAdvance,
+        'm' => DynamicLetterMAdvance,
+        'n' => DynamicLetterNAdvance,
+        'p' => DynamicLetterPAdvance,
+        'r' => DynamicLetterRAdvance,
+        's' => DynamicLetterSAdvance,
+        'z' => DynamicLetterZAdvance,
+        _ => null
+    };
+
     /// <summary>
     /// Vertical ink of a dynamic label, in staff spaces from its baseline — the union of
     /// its letters' bounding boxes. False when the label is not spelled from the fetaText

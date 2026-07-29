@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="373.5" viewBox="0 0 119.50 37.35" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="372.1" viewBox="0 0 119.50 37.21" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -101,21 +101,21 @@
   <rect x="89.66" y="19.48" width="0.19" height="4.00" data-pos="632"/>
   <rect x="101.34" y="19.48" width="0.19" height="4.00" data-pos="655"/>
   <rect x="101.83" y="19.48" width="0.60" height="4.00" data-pos="655"/>
-  <text x="11.10" y="26.30" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="285">p</text>
-  <text x="31.32" y="26.48" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
-  <text x="34.85" y="28.20" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="380">ff</text>
-  <text x="55.00" y="29.80" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="448">pp</text>
-  <text x="58.87" y="27.03" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="529">mf</text>
-  <text x="61.58" y="25.80" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="534">p</text>
+  <text x="11.75" y="26.30" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="285">p</text>
+  <text x="31.97" y="26.01" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
+  <text x="35.50" y="28.06" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="380">ff</text>
+  <text x="55.65" y="29.80" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="448">pp</text>
+  <text x="59.52" y="26.33" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="529">mf</text>
+  <text x="62.24" y="26.16" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="534">p</text>
   <text class="music" x="35.50" y="25.10" font-size="4.00" data-pos="383"></text>
   <text class="music" x="38.22" y="25.38" font-size="4.00" data-pos="394"></text>
   <text class="music" x="40.93" y="25.88" font-size="4.00" data-pos="405"></text>
   <text class="music" x="43.64" y="26.38" font-size="4.00" data-pos="416"></text>
   <text class="music" x="99.48" y="19.16" font-size="4.00" data-pos="646"></text>
-  <line x1="26.40" y1="28.11" x2="30.82" y2="27.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="26.40" y1="28.11" x2="30.82" y2="28.77" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="50.07" y1="30.65" x2="54.50" y2="31.31" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
-  <line x1="50.07" y1="31.98" x2="54.50" y2="31.31" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="26.40" y1="25.28" x2="30.82" y2="24.61" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="26.40" y1="25.28" x2="30.82" y2="25.94" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="50.07" y1="30.51" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="50.07" y1="31.84" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <text class="music" x="7.54" y="18.12" font-size="3.56" data-pos="0"></text>
   <line x1="8.64" y1="17.95" x2="8.64" y2="15.44" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="9.31" y="18.60" font-size="2.20" data-pos="0">= 120</text>
@@ -127,7 +127,7 @@
   <text x="59.17" y="15.80" font-size="2.40" font-weight="bold" text-anchor="middle" data-pos="519">B</text>
   <text x="58.87" y="17.97" font-size="2.00" font-style="italic" data-pos="536">rit.</text>
   <line x1="61.57" y1="17.97" x2="78.36" y2="17.97" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="536"/>
-  <text x="78.61" y="17.97" font-size="2.00" font-style="italic" data-pos="617">accel.</text>
-  <line x1="82.41" y1="17.97" x2="90.43" y2="17.97" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="617"/>
+  <text x="78.61" y="18.47" font-size="2.00" font-style="italic" data-pos="617">accel.</text>
+  <line x1="82.41" y1="18.47" x2="90.43" y2="18.47" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="617"/>
   </g>
 </svg>

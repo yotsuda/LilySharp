@@ -2624,7 +2624,7 @@ internal sealed class LayoutEngine
         // so text spanners can be placed below dynamics.
 
         // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff) : ImmutableArray<DynamicLayout>.Empty;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default) : ImmutableArray<DynamicLayout>.Empty;
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
@@ -2700,9 +2700,32 @@ internal sealed class LayoutEngine
         // Post-process below-staff elements using priority-based stacking.
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
+        // The below pass runs over each staff's REAL down profile — the same
+        // ingredients the inter-staff seed accumulated (staff symbol, clef, notes with
+        // real thin stems, beams) — so the draw lands where the seed reserved. Fresh
+        // skylines per call: the tracker raises them into its own frame.
+        // LILYPOND-REF: lily/axis-group-interface.cc:937-950 skyline_spacing.
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? belowProfile = null;
+        if (staffByIndex != null)
+        {
+            var allBeams = beamLayouts ?? ImmutableArray<BeamLayout>.Empty;
+            belowProfile = (sysIdx, staffIndex) =>
+            {
+                if (sysIdx < 0 || sysIdx >= systems.Length
+                    || !staffByIndex.TryGetValue(staffIndex, out var profStaff))
+                    return null;
+                var staffBeams = allBeams.IsDefaultOrEmpty
+                    ? ImmutableArray<BeamLayout>.Empty
+                    : allBeams.Where(b => b.StaffIndex == staffIndex).ToImmutableArray();
+                return _skylineBuilder.BuildStaffSkylines(
+                    profStaff, systems[sysIdx].Measures, beams: staffBeams,
+                    systemLeft: systems[sysIdx].Indent);
+            };
+        }
         var (stackedDynamics, stackedHairpins) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
-                articulationLayouts, applyStaffOffsets: staffYAt != null);
+                articulationLayouts, applyStaffOffsets: staffYAt != null,
+                staffProfile: belowProfile);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,

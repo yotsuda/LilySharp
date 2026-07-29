@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="263.8" viewBox="0 0 119.50 26.38" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="267.7" viewBox="0 0 119.50 26.77" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -64,11 +64,11 @@
   <rect x="65.27" y="12.35" width="0.19" height="4.00" data-pos="453"/>
   <rect x="74.27" y="12.35" width="0.19" height="4.00" data-pos="502"/>
   <rect x="74.76" y="12.35" width="0.60" height="4.00" data-pos="502"/>
-  <text x="8.59" y="20.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
-  <text x="11.59" y="19.89" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
-  <text x="14.59" y="19.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>
-  <text x="17.59" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
-  <text x="44.12" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
+  <text x="9.24" y="20.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
+  <text x="12.24" y="20.78" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
+  <text x="15.24" y="19.14" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>
+  <text x="18.24" y="19.41" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
+  <text x="44.77" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
   <text class="music" x="22.57" y="16.64" font-size="4.00" data-pos="289"></text>
   <text class="music" x="25.57" y="16.64" font-size="4.00" data-pos="305"></text>
   <text class="music" x="28.58" y="10.82" font-size="4.00" data-pos="321"></text>

@@ -104,6 +104,19 @@
 %% real outside-staff pass over the staff's down profile (0.46, pointwise) for DSB.
 %% What must land together: DSQ/DSW/DMW on the head chain, DMF on the stem, DSB on the
 %% beam face + 0.46.
+%%
+%% PORTED (2026-07-29, session 37) — both halves landed together
+%% (DynamicEngraver.ColumnSupportSkylines + the below collision pass over the staff's
+%% real down profile, seed and draw on one spelling): DSB 0.899924 -> -0.000076 (the
+%% face-sliver family exactly; Lily# separates DSQ from DSB by the same 2.077 LilyPond
+%% does), DSQ +2.977210 -> +0.001512, DMF +1.031307 -> +0.001793, DSW/DMW unmoved.
+%% The remaining e-3 pair is the PANGO X-EXTENT CENTERING term, decomposed against this
+%% probe's own dump: LP centres the SHAPED width (DSQ DynamicText x=(8.723849 .
+%% 9.987151), width 1.263302) on the head centre while Lily# centres the advance run
+%% 1.280 — the pen sits 0.008349 left, and the stem's X (dump (8.7034 . 8.8334), the
+%% same 0.13 sliver Lily# attaches) reads the f's left-tail slope that much further in.
+%% Unfittable without Pango (this header's own instruction: do NOT bake the measured
+%% widths); the family is named in the DSQ/DMF whys.
 
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"

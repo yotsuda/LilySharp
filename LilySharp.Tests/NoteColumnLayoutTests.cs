@@ -165,12 +165,12 @@ public class NoteColumnLayoutTests
     [Fact]
     public void RawSupportEdge_StemSide_IsTheRawDefaultLength()
     {
-        // The dynamics' support still extends by the RAW DefaultStemLength 3.5 — no
+        // The TRILL's support still extends by the RAW DefaultStemLength 3.5 — no
         // shortening, no middle-line pull, no beam face. This test PINS the deviation.
-        // The gating points exist (staff.staff.dynamic-*, probe dynamic-support.ly) and
-        // they measured the port's direction as REMOVING the stem from this support
-        // (LilyPond's dynamic support is the head alone; stems/beams arrive via the
-        // outside-staff pass) — accidental drift in EITHER direction fails here.
+        // The DYNAMICS left this read in session 37 (their five points measured the
+        // support as POINTWISE — DynamicEngraver.ColumnSupportSkylines); what remains
+        // here is the trill's aligned_side support (ColumnUpEdge), which has no point
+        // of its own yet — accidental drift in EITHER direction fails here.
         var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // natural: up
         Assert.True(note.StemUp);
         Assert.Equal(-1.0 + 3.5, note.RawSupportEdgeUp(up: true), 12);

@@ -32,15 +32,19 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第36セッション・**dynamic-support の機構訂正＝「stem は支持でない」を
-実ソースと新対 DMF/DMW が否定。出力不変・snapshot 0 枚**。詳細は下の第36セッション節）
+最終更新 2026-07-29（第37セッション・**dynamics pointwise 支持＋下側 outside-staff pass を
+GO 済で landing（DSB は face欠片族 exact・snapshot 28 枚再ベース済）**。
+詳細は下の第37セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3521 passed / 0 failed / 3 skipped**（台帳 2 点追加・計 220 点全緑）・
-Core 0 warn 0 err・**ワーキングツリーは clean**
-（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**HEAD は 3534 passed / 0 failed / 3 skipped**（台帳 220 点全緑）・Core 0 warn 0 err・
+**ワーキングツリーは clean**（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第37セッションの commit**: `34a3d8d0`（pointwise 支持＋下側 pass＋X アンカー port・
+GO 済・snapshot 28 枚再ベース）／`0cdb3efe`（延長＝ハック 4 件の字面化・GO 済・
+snapshot 4 枚再ベース・延長 8-9）／`1e174298`（延長2＝perf 実退行 3.4× の検出と 3 修正・
+**出力不変**・延長 10——merge-walk Distance／clef 輪郭キャッシュ／profile 建てスコープ）。
 **第36セッションの commit（出力不変）**: `8bcf358e`（DMF/DMW＋機構訂正）。
 **第35セッションの commit（どちらも出力不変）**: `300a7f54`（NoteColumnLayout）／
 `c5a44c25`（dynamic-support 起票——⚠️ **この commit の「head のみ」機構主張は
@@ -81,6 +85,115 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第37セッション（2026-07-29）＝ **pointwise 支持＋下側 pass を同時着地——DSB は face欠片族 exact、残る e-3 対の正体は「Pango が整形幅で中心化する」だった**
+
+★★★ **第36セッションが用意した port を実装し、GO 済で landing（`34a3d8d0`）**。5 点の着地:
+**DSQ +2.977210 → +0.001512／DSB +0.899924 → −0.000076（face欠片族 EXACT・Lily# が
+DSQ↔DSB を LP と同じ 2.077 で分離）／DMF +1.031307 → +0.001793／DSW・DMW・DY 不動
+−0.000076**。全 3536 中 snapshot 28 枚のみ fail（=出力が動いた分・GO 対象）。
+
+1. ★★★ **機構**: ⑴ `DynamicEngraver.ColumnSupportSkylines`＝pointwise 支持（per-voice
+   head インク箱＋**実 stem の細い extent 箱**（attach X・StemThickness 幅・beamed は
+   quant face・方向一致のみ :273-281）＋譜 extent 床）、my_dim＝`DynamicOutline`
+   （baked feta 文字を advance+kern の pen 位置で合成・キャッシュ・@text は serif 箱
+   fallback）。`BaselineY` は pointwise `Distance` の字面。⑵ **下側 outside-staff pass**:
+   seed は `AddDynamicsToSkyline` を **beams の後（最後）** に移し、蓄積 down profile へ
+   0.46 で衝突配置→**アウトラインを merge**；draw は `StackBelowStaff` の support を
+   per-(system,staff) の実 profile（`BuildStaffSkylines`）にして pockets 解禁・
+   dynamics=アウトライン・hairpins も 0.46（profile 無しの旧経路は bit 不変で温存）。
+   `WidenToNeighbors` 撤去（LP に無い装置＝pass 欠落の自前補償だった）。
+2. ★★★ **X も port の一部だった**: LP は DynamicText を **X-parent（自 voice の列）の
+   extent 中心**に центр化（dump で確定: text 中心＝符頭中心）。Lily# は列 X（符頭左端）
+   に центр していた＝**半符頭ズレ**。`DynamicItem.VoiceIndex` を collector が焼込み、
+   アンカー＝自 voice の item の advance/2（rest 0.75）。**seed の note 箱も描画フレームへ
+   統一**（head=[x, x+advance]・**stem=attach X の実幅 0.13**・flag=stem X・ledger 追随——
+   旧 ±1.0ss の stem 箱のままでは DSQ の tuck が seed 側で壊れる）。
+3. ★★★ **残る +0.0015/+0.0018 は fit 不能の named 族**: probe 再走の dump で分解——LP の
+   pen＝中心−**整形幅**/2（DSQ f: x=(8.723849 . 9.987151)＝幅 1.263302）、Lily# の pen＝
+   中心−advance run/2（1.280）＝**0.00835 左**。stem X（dump (8.7034 . 8.8334)＝当方
+   attach と一致・幅 0.13・f との重なり 0.11 ✓）が f 左尾の傾斜をその分先で読む。
+   dynamic-text-x.ly が「整形幅を焼くな」と自ら命じた **Pango X 量子化族**（why に記録）。
+4. **網**: `DynamicSupportPointwiseTests`＝機構網（合成 advance+kern／アウトライン極値＝
+   文字インク／**f=tuck・fff=stem-bind の scalar 不可能性**／beam 0.46 push の exact 算術）。
+   `RawSupportEdgeUp` は **trill 専用**に降格（remark・pin 網コメント更新済・raw 3.5 は
+   trill の残債として点が先）。引用ラチェット 747 維持（規則を 1 つ学んだ:
+   **範囲直後・同一行にアンダースコア入り symbol**）。
+5. **perf**: fur-elise min-of-50×3、HEAD 62.47 対 移植後 63.11＝雑音帯（§5.3・worktree A/B）。
+6. **snapshot 28 枚の目視 15 枚**（dynamics／voice-dynamics×4／scripts-dynamics／
+   multi-staff-hairpins／01-expressions／03-piano／08-chorale／hara-kiri／ossia-beams／
+   tuplet-bracket-whole-notes／navigation-marks／chords／custom-text／multi-line-spanners／
+   dynamics-lower-staff）: **全部 LP 形**——f が細 stem 脇に tuck（DSQ の絵）・ラベルが
+   +半符頭右へ・音符に追随して上がる・page bbox の微移動組（chords 等）は相対不変。
+   重なりは見つかっていない。**GO 済→28 枚再ベース→全 3534 緑→`34a3d8d0`**
+   （台帳 3 点の残差・why・probe ヘッダ・LpGeometryProbes 注釈も同 commit）。
+7. **残した named 負債**: ⑴ Pango X 量子化族（上 3・fit 禁止）⑵ 描画 face は serif の
+   まま（予約=feta アウトライン/描画=serif の既存 debt・この port で拡大せず）⑶ 下側 pass
+   の profile に slurs/ties/brackets/scripts は未合流（seed 側 gap には入っている——
+   非対称は既存形・コードに明示）⑷ trill の raw 3.5（RawSupportEdgeUp・点が先）
+   ⑸ ossia の下側 pointwise は gate（box のまま・測定 regime なし）。
+
+**延長（同セッション・ユーザーの字面度監査質問→ハック 4 件を字面化・GO 済）**:
+
+8. ★★ **「ハック風味」と自己申告した 5 件のうち 4 件をその場で LP 字面へ**（snapshot は
+   4 枚だけ動いた＝voice-dynamics×3・above-dynamics・目視済・台帳 220 点は全て不動）:
+   ⑴ **支持を自 voice のみに**——`Dynamic_align_engraver` は Voice 文脈
+   （engraver-init.ly:359,410）。他 voice のインクは衝突 pass が担う（LP の分業）。
+   全 voice union の LILYSHARP-OWN は削除 ⑵ **rest アンカー**——定数 0.75 →
+   `GetRestBBox` の ink 中心（aligned_on_parent :147 `him->extent` の字面・whole/half の
+   0.750 は (0..1.5)/2 として再導出される）⑶ **下側 pass の二経路を一本化**——旧経路
+   （0.6・箱・flat 支持）は両 annotation pass とも profile 供給で**本番到達不能**と裏取り
+   して撤去。`_allowPockets` 封印装置（LILYSHARP-OWN）ごと削除（LP に monotone 分岐が
+   無いのは支持が常に実 profile だから＝`Interval_set` :672-673 の字面）
+   ⑷ **above pass もアウトライン化**——`DynamicHalfWidth 0.75`（dynamic 系最後の名目箱・
+   ▶⑶ の残り半分）消滅。0.6/0.46 の分業（aligned_side :361-370 対
+   add_grobs_of_one_priority :747-749）は跡地コメントに出典つきで明記。
+**延長2（同セッション・ユーザーの perf 質問→実退行を検出して 3 つ直した・全て出力不変）**:
+
+10. ★★★ **pointwise 化の perf 正味を §5.3 の A/B（pre-port worktree `a4c5b721`）で測ったら
+    実退行が出た**: dynamics 過多の合成譜（2譜×32小節×毎音 dynamic・~8 system）で
+    **51.3ms → 177ms（3.4×）**、fur-elise も 62.3 → 68.5ms。3 つ直して全 3533 緑
+    （snapshot byte 不変＝3 つとも出力不変を corpus が確認）:
+    ⑴ ★★ **`SkylineMath.Distance` の全対 O(n×m) → merge-walk O(n+m)**（第31セッションが
+    名指しした本丸・skyline.cc:617-649 の iterator walk＝**字面化がそのまま高速化**）。
+    ⚠️ **罠を 1 つ踏んで学んだ**: kernel は `HorizontalSkyline` と共有で、そちらは
+    **lazy（重なったまま）の building 列**＝merge-walk の前提が偽——全対 `Distance` を
+    汎用に残し、resolved 前提の **`DistanceResolved`** を `VerticalSkyline.Distance`
+    専用に分離（最初の一本化はスペーシング系テストと snapshot 多数を割った——
+    falsifier が働いた実例）。177 → 86ms。
+    ⑵ **clef 輪郭の resolve キャッシュ**（`SkylineBuilder.PlaceGlyphOutlineCached`＝
+    resolve 済み buildings を (quads参照, dir, magnification) でキャッシュ、配置は
+    shift/raise コピー——TextOutlineSkylines/DynamicOutline と同じ形・第31セッションの
+    +15ms の教訓）。SeedClef は譜×build ごとに数百 edge を sort+resolve していた。
+    fur-elise 65.7 → 57.7ms（**pre-port より速い**）。
+    ⑶ **下側 pass の profile 建てを「実際に置く (system,staff) だけ」に**——1 個の dynamic
+    が居るだけで、下側 script のたびに **placeしない譜まで** `BuildStaffSkylines` を
+    建てていた（merge 先の tracker を誰も読まない＝無効果なのに全額払う）。
+    **最終**: fur-elise min 51-64ms（pre-port 62.3 と同等以下）／dyn-heavy min ~76ms＝
+    **pre-port 比 +47% が残る named cost**——内訳は stacker の per-(system,staff) profile
+    建て（実験Aで ~11-17ms）＋ per-dynamic の pointwise 正味（outline merge・支持構築）。
+    **次の lever は構造**（下 11 の「seed/draw 単一家」＝spacing が建てた per-staff skyline
+    を stacker が再利用すれば profile 建てが消える——perf の半分もそこに掛かっている）。
+
+11. **字面化の残り 1 件と次セッション行き（順不同・どれも「点が先」か「モデルが先」）**:
+   - **ossia の pointwise gate 解除**: 下側 pass の ossia 分岐は box のまま。ossia の
+     YUp スケール×stacker system frame の整合に測定 regime が無い——**ossia×dynamic の
+     対を起票してから**（`DynamicOutline` は size 対応可能な形にしてある）。
+   - **DynamicLineSpanner の 1-grob 模型**: LP は hairpin+text を 1 本の spanner に束ね
+     て側位置する（define-grobs.scm:1401-1431）。Lily# は per-item。第33セッション残債⑵
+     ＝**モデル追加が先**。
+   - **`add_grobs_of_one_priority` の l2r polite マルチパス＋rider**（第31セッション残債・
+     axis-group-interface.cc:739-767/:776-796）——同一 priority の X 重なり時の巡回順。
+     機構は `OutsideStaffSkylines` に既にあり、足りないのは巡回ループ。
+   - **seed/draw の単一家**: 下側配置が SkylineBuilder（gap 用）と StackBelowStaff
+     （描画用）の 2 回走る。共有関数で綴りは 1 つだが、走らせる家は 2 軒のまま
+     （アーキテクチャ移行・出力不変で先に骨格を作る形＝NoteColumnLayout の前例）。
+     ★ **perf の残り半分もここ**（上 10 の最終行）: spacing が建てた per-staff skyline を
+     stacker が再利用すれば per-(system,staff) の profile 再建（dyn-heavy の ~11-17ms）が
+     消える。字面と速度が同じ扉。
+   - **下側 profile への slurs/ties/brackets/scripts 合流**（上 7⑶ の非対称解消）——
+     発火 regime（下向き slur×dynamic の X 重なり）の対を組めるか検討から。
+   - **trill の raw 3.5**（`RawSupportEdgeUp` 最後の消費者）——trill 対の起票が先。
 
 ### 第36セッション（2026-07-29）＝ **「stem は支持でない」を実ソースが否定した——\f の着地と \fff の着地は同じ pointwise 計算の 2 つの顔**
 
@@ -788,14 +901,13 @@ support seed が箱のまま（OTC の分解には support のアウトライン
 - ~~★★ **`NoteColumnLayout`（Y 側の column/stem 模型）を作る**~~ — **できた（第35セッション・
   `300a7f54`・出力不変・snapshot 0 枚）**。4 家は `NoteColumnLayout` の named read になり、
   **相違表は家の doc にある**（値のセルは 4 家とも割れていた＝どれを畳むのも output-moving・
-  点が先）。**残り**: ⑴ dynamics の生 3.5＝最後の raw 模型——★ **点は 5 点に増えた**
-  （`staff.staff.dynamic-*`・`c5a44c25`＋`8bcf358e`）。⚠️ **port の向きは第36セッションで
-  再訂正**: 「stem を出す」でなく**支持の pointwise 化**（head＋実 stem 箱＋譜床、my_dim＝
-  dynamic アウトライン）＋下側 outside-staff pass（0.46・実プロファイル）——**scalar edge は
-  DSQ と DMF を両立できない**。residual +2.977210／−0.000076／+0.899924／+1.031307／−0.000076。
-  **着手前に dynamic 文字の X 模型を 1 冊測る**（第36セッション節 4）。
-  ⑵ beam 所属 lookup は 3 綴りのまま（key/gate が消費者ごと）⑶ grace 描画 stem の生 3.5
-  （`SharedRenderer.GraceNotes`・島の外）⑷ 予告どおり行頭 beam quant 差・slope 非字面・
+  点が先）。**残り**: ~~⑴ dynamics の生 3.5~~ — **閉じた（第37セッション・`34a3d8d0`・
+  GO 済）**。DSB face欠片族 exact／DSQ・DMF は Pango X 量子化の named 族
+  （+0.001512／+0.001793・fit 禁止）。**raw 3.5 の最後の消費者は trill**（`RawSupportEdgeUp`・
+  点が先）。
+  ⑵ beam 所属 lookup は綴りが残る（key/gate が消費者ごと——dynamics は第37セッションで
+  **全 voice の 4 キー map**（`BuildBeamMembers`）を足したので 4 綴り目）⑶ grace 描画 stem の
+  生 3.5（`SharedRenderer.GraceNotes`・島の外）⑷ 予告どおり行頭 beam quant 差・slope 非字面・
   seed/draw 二重パスは消えていない。詳細は第35セッション節。
 - ⓑ **譜 extent の定数直書き**: TextScript 床の 2.05・Ottava 床の半太さ・`BelowStaffYUp` の
   名目 4.0。LP は `staff_extent[dir]` を**実 StaffSymbol から読む**ので、線数の違う譜・

@@ -76,9 +76,16 @@ internal static class OutsideStaffStacker
     // (PlaceTrills; the trill engraver's quiet height is the staff-extent case).
     private const double TextScriptStaffPadding = EngravingDefaults.TextScriptStaffPadding;
 
-    // The gap from the note/staff skyline to a below-staff dynamic or hairpin is the
-    // DynamicLineSpanner's own side-position padding, NOT outside-staff-padding.
-    private const double DynamicLineSpannerPadding = EngravingDefaults.DynamicLineSpannerPadding;
+    // (DynamicLineSpanner's side-position padding 0.6 is the ENGRAVER's quiet-position
+    // business — DynamicEngraver.BaselineY spends it against the supports. The stacker
+    // runs only the outside-staff COLLISION pass, whose padding is outside-staff-padding
+    // 0.46 — the split LilyPond itself has between the two passes.
+    // LILYPOND-REF: lily/side-position-interface.cc:361-370 aligned_side — the grob's
+    //   own "padding" (DynamicLineSpanner's 0.6) is spent there, once, against the
+    //   side-position supports.
+    // LILYPOND-REF: lily/axis-group-interface.cc:747-749 add_grobs_of_one_priority —
+    //   the collision pass pays outside-staff-padding (:45
+    //   default_outside_staff_padding_ = 0.46), never the side padding.)
 
     // A dynamic's own ink comes from the font, per label — DynamicEngraver.InkOf. There is
     // no constant here any more: LilyPond's DynamicText extent IS the drawn glyphs' ink,
@@ -90,8 +97,9 @@ internal static class OutsideStaffStacker
     // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin height = 0.6666
     private const double HairpinHalfHeight = 0.6666 / 2.0;
 
-    // Dynamic text half-width estimate for X collision range
-    private const double DynamicHalfWidth = 0.75;
+    // (DynamicHalfWidth 0.75 — the last nominal box of the dynamic pipeline — died on
+    // 2026-07-29: every pass now reads the label's own outline pair,
+    // DynamicEngraver.LabelSkylines.)
 
     // A text grob's vertical extent comes from the FACE, per string, at the size and style
     // the draw uses (TextFontMetrics.Ink) — never from a letter-class fraction of the em.
@@ -126,7 +134,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<DynamicLayout> dynamics,
             ImmutableArray<HairpinLayout> hairpins,
             ImmutableArray<ArticulationLayout> articulations = default,
-            bool applyStaffOffsets = false)
+            bool applyStaffOffsets = false,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null)
     {
         if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty)
             || systems.Length == 0)
@@ -174,17 +183,51 @@ internal static class OutsideStaffStacker
                 // baseline, so gating on this keeps their extent estimate unchanged).
                 double off = applyStaffOffsets && sys >= 0 && sys < staffYBySystem.Count
                     && staffYBySystem[sys].TryGetValue(staff, out var so) ? so : 0;
-                double edge = -(StaffBottom + off);
-                // allowPockets: false — this support has no note-column DOWN ink yet
-                // (see the flag's remark); placement stays monotone below.
-                t = new OutsideStaffSkylines(dir: -1,
-                    FlatBase(edge, VerticalDirection.Up),
-                    FlatBase(edge, VerticalDirection.Down),
-                    allowPockets: false);
+                // The staff's REAL profile (staff symbol, clef, notes, thin real stems,
+                // beams — the same ingredients the inter-staff seed accumulated): the
+                // below pass runs LilyPond's collision pass over real ink, pockets
+                // included. Both production passes (final and prelim) supply it; the
+                // flat-edge fallback is the degenerate support for harnesses that
+                // construct no staff, and takes the SAME placement path.
+                // LILYPOND-REF: lily/axis-group-interface.cc:937-950 skyline_spacing —
+                //   all_v_skylines starts from the INSIDE-staff skylines.
+                if (staffProfile?.Invoke(sys, staff) is { } p)
+                {
+                    // The profile is about the staff MIDDLE; the tracker frame is
+                    // system-relative Y-up, where that middle sits at -(off + half staff).
+                    double toSystem = -(off + StaffBottom / 2.0);
+                    p.Up.Raise(toSystem);
+                    p.Down.Raise(toSystem);
+                    t = new OutsideStaffSkylines(dir: -1, p.Up, p.Down);
+                }
+                else
+                {
+                    double edge = -(StaffBottom + off);
+                    t = new OutsideStaffSkylines(dir: -1,
+                        FlatBase(edge, VerticalDirection.Up),
+                        FlatBase(edge, VerticalDirection.Down));
+                }
                 trackers[(sys, staff)] = t;
             }
             return t;
         }
+
+        // Only the (system, staff) pairs that will actually PLACE something need a
+        // tracker — and building one costs a real staff profile (BuildStaffSkylines).
+        // Without this scope a single dynamic anywhere made every below-staff SCRIPT
+        // build a profile for its own staff, staves the pass never places anything
+        // on: pure waste, and preview relayout pays it on every keystroke. Placement
+        // is unchanged — a support merged into a tracker nothing places against has
+        // no effect (the scripts are already in the movers' quiet Y via the seed).
+        var placedStaves = new HashSet<(int Sys, int Staff)>();
+        if (!dynamics.IsDefaultOrEmpty)
+            foreach (var dyn in dynamics)
+                if (!dyn.IsAbove && measureToSystem.TryGetValue(dyn.MeasureIndex, out int ds))
+                    placedStaves.Add((ds, dyn.StaffIndex));
+        if (!hairpins.IsDefaultOrEmpty)
+            foreach (var hp in hairpins)
+                if (measureToSystem.TryGetValue(hp.StartMeasureIndex, out int hs))
+                    placedStaves.Add((hs, hp.StaffIndex));
 
         // Below-staff articulations (Script grobs) have NO outside-staff
         // priority in LilyPond: they sit against the note and everything at
@@ -198,6 +241,8 @@ internal static class OutsideStaffStacker
             {
                 if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
+                if (!placedStaves.Contains((sysIdx, a.StaffIndex)))
+                    continue;   // no mover on this staff — nothing would read the merge
                 // a.YUp is Y-up above the staff middle; the tracker frame is
                 // system-relative Y-up, where the staff middle sits at -(off + 2) (staff
                 // top is off below the system top, its middle 2 further down), so the
@@ -233,9 +278,6 @@ internal static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                     continue;
 
-                double xStart = dyn.X - DynamicHalfWidth;
-                double xEnd = dyn.X + DynamicHalfWidth;
-                var (ascent, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
                 var tracker = Track(sysIdx, dyn.StaffIndex);
                 // System-relative Y-up: the grob's dyn.YUp (above the staff middle) sits
                 // at dyn.YUp - off - 2; the placement only ever moves it AWAY (down), and
@@ -243,16 +285,15 @@ internal static class OutsideStaffStacker
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(dyn.StaffIndex, out var so) ? so : 0;
                 double dynYup = dyn.YUp - off - 2.0;
-                // Box pair about the baseline anchor: ascent above, descent below. The
-                // dynamic glyphs' ink is per label (DynamicEngraver.InkOf) but stays a
-                // BOX — no baked outline exists for the dynamic glyphs yet; named, not
-                // hidden (the text grobs above the staff carry real outlines).
-                double move = tracker.Place(
-                    VerticalSkyline.FromBox(xStart, xEnd,
-                        dynYup - descent, dynYup + ascent, VerticalDirection.Up),
-                    VerticalSkyline.FromBox(xStart, xEnd,
-                        dynYup - descent, dynYup + ascent, VerticalDirection.Down),
-                    DynamicLineSpannerPadding);
+                // LilyPond's outside-staff collision pass: the label's own OUTLINE
+                // (my_dim) against the staff's real ink, outside-staff padding — a beam
+                // face pushes the dynamic here while a thin stem tucks beside the f's
+                // outline (ledger staff.staff.dynamic-beam-avoid vs -head-support).
+                // LILYPOND-REF: lily/axis-group-interface.cc:648-676,:747-749 avoid_outside_staff_collisions
+                //   — padding = outside-staff-padding.
+                var (myUp, myDown) = DynamicEngraver.LabelSkylines(
+                    dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
+                double move = tracker.Place(myUp, myDown, OutsideStaffPadding);
                 if (move != 0)
                     dynBuilder[i] = dyn with { YUp = dynYup + move + off + 2.0 };
             }
@@ -272,7 +313,8 @@ internal static class OutsideStaffStacker
 
                 var tracker = Track(sysIdx, hp.StaffIndex);
                 // hp.YUp (the CENTRE) is already Y-up from the system top — the tracker
-                // frame — so it enters directly; the box spans half a height each way.
+                // frame — so it enters directly; the box spans half a height each way
+                // (the hairpin's stencil IS its wedge box), at outside-staff padding.
                 double move = tracker.Place(
                     VerticalSkyline.FromBox(hp.StartX, hp.EndX,
                         hp.YUp - HairpinHalfHeight, hp.YUp + HairpinHalfHeight,
@@ -280,7 +322,7 @@ internal static class OutsideStaffStacker
                     VerticalSkyline.FromBox(hp.StartX, hp.EndX,
                         hp.YUp - HairpinHalfHeight, hp.YUp + HairpinHalfHeight,
                         VerticalDirection.Down),
-                    DynamicLineSpannerPadding);
+                    OutsideStaffPadding);
                 if (move != 0)
                     builder[i] = hp with { YUp = hp.YUp + move };
             }
@@ -669,14 +711,15 @@ internal static class OutsideStaffStacker
             if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                 continue;
             // Stack in system-relative Y-up: dyn.YUp relative to this staff's WITHIN-
-            // SYSTEM middle is dyn.YUp + midUp; place, then shift back.
+            // SYSTEM middle is dyn.YUp + midUp; place, then shift back. The mover is the
+            // label's own OUTLINE pair (my_dim, from-stencil), not a nominal box — the
+            // same profile the below pass and the side-position support read.
+            // LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText Grob::vertical_skylines_from_stencil.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
-            var (ascent, _) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
-            double newRel = Place(trackers[sysIdx],
-                dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
-                dyn.YUp + midUp,
-                topOffset: ascent, bottomOffset: 0.0);
-            b[i] = dyn with { YUp = newRel - midUp };
+            var (myUp, myDown) = DynamicEngraver.LabelSkylines(
+                dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
+            double move = trackers[sysIdx].Place(myUp, myDown, OutsideStaffPadding);
+            b[i] = dyn with { YUp = dyn.YUp + move };
         }
         return b.ToImmutable();
     }
@@ -1167,21 +1210,17 @@ internal static class OutsideStaffStacker
             _entries = new();
         private readonly int _dir;
 
-        /// <summary>⚠️ LILYSHARP-OWN: pockets (settling between two prior grobs, LilyPond's
-        /// <c>nearest_point</c> over the interval-set complement) are honest only where the
-        /// support skyline carries the system's REAL ink profile. The above pass does (the
-        /// up-skyline holds note/stem/beam protrusions); the below pass's support is still
-        /// the flat staff edge plus scripts — no note-column DOWN ink — so a pocket there
-        /// lands a hairpin on a ledger-line note the support cannot see. Until the below
-        /// support merges the real down profiles, the below pass stays MONOTONE (clear
-        /// beyond everything x-overlapping, the old frontier semantics).</summary>
-        private readonly bool _allowPockets;
+        // (The LILYSHARP-OWN pocket seal that used to live here — the below pass forced
+        // MONOTONE because its support was a flat staff edge with no note-column DOWN
+        // ink — died on 2026-07-29: the below support now carries the staff's real down
+        // profile, so pockets are honest on both sides.
+        // LILYPOND-REF: lily/axis-group-interface.cc:672-673 Interval_set — the move IS
+        //   interval_union(forbidden).complement().nearest_point(0, dir), pockets and
+        //   all; LilyPond has no monotone branch because its supports are always real.)
 
-        public OutsideStaffSkylines(int dir, VerticalSkyline supportUp, VerticalSkyline supportDown,
-            bool allowPockets = true)
+        public OutsideStaffSkylines(int dir, VerticalSkyline supportUp, VerticalSkyline supportDown)
         {
             _dir = dir;
-            _allowPockets = allowPockets;
             // LILYPOND-REF: lily/axis-group-interface.cc:945-950 all_v_skylines / all_paddings
             // — the support entry carries padding 0: a grob against the staff pays only
             // its own padding.
@@ -1251,14 +1290,6 @@ internal static class OutsideStaffStacker
                 // moves. Goes when the support merges the real far profiles.
                 if (j == 0)
                 {
-                    if (_dir > 0) pushDown = double.PositiveInfinity;
-                    else pushUp = double.PositiveInfinity;
-                }
-                if (!_allowPockets)
-                {
-                    // Monotone: the grob must end up beyond EVERY x-overlapping entry in
-                    // the stacking direction, so the interval reaches to infinity on the
-                    // near side and no pocket between entries is reachable.
                     if (_dir > 0) pushDown = double.PositiveInfinity;
                     else pushUp = double.PositiveInfinity;
                 }

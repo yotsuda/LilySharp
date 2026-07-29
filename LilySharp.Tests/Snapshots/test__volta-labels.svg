@@ -150,13 +150,13 @@
   <text x="50.97" y="13.42" font-size="2.40" font-weight="bold" data-pos="617">2.</text>
   <rect x="0.30" y="15.10" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
   <text x="1.33" y="17.30" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A</text>
-  <rect x="20.64" y="12.35" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
-  <text x="21.70" y="14.55" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
+  <rect x="20.64" y="12.97" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="21.70" y="15.17" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">B</text>
   <rect x="35.50" y="8.26" width="5.25" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
   <text x="38.13" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">first</text>
   <rect x="50.17" y="8.26" width="8.30" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
   <text x="54.32" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="554">second</text>
-  <rect x="63.24" y="13.85" width="3.33" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
-  <text x="64.91" y="16.05" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
+  <rect x="63.24" y="14.35" width="3.33" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="529"/>
+  <text x="64.91" y="16.55" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="529">A2</text>
   </g>
 </svg>

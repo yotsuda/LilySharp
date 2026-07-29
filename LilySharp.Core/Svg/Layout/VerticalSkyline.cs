@@ -699,13 +699,18 @@ internal sealed class VerticalSkyline
     /// in the LilyPond internal (sign*y) frame: larger = closer/overlapping.
     /// Returns <see cref="double.NegativeInfinity"/> if either side is empty.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/skyline.cc:529-533 Skyline::distance()</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:529-533 Skyline::distance() — via the O(n+m)
+    /// merge walk (<see cref="SkylineMath.DistanceResolved"/>): this class maintains
+    /// the resolved invariant (sorted, non-overlapping; a batch may suspend it but the
+    /// batch contract forbids reading until <see cref="EndBatch"/>).
+    /// </remarks>
     public double Distance(VerticalSkyline other)
     {
         if (_direction == other._direction)
             throw new ArgumentException("Distance requires skylines with opposite directions");
 
-        return SkylineMath.Distance(_buildings, other._buildings);
+        return SkylineMath.DistanceResolved(_buildings, other._buildings);
     }
 
     /// <summary>
