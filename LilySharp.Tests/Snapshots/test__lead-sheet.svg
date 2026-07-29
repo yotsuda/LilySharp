@@ -6,32 +6,32 @@
 </style>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="405">Lead sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="22.61" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="40.31" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="62.52" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="72.71" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="73.20" y="16.22" width="0.60" height="4.00" data-pos="0"/>
+  <rect x="24.11" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="43.06" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="67.02" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="77.21" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="77.70" y="16.22" width="0.60" height="4.00" data-pos="0"/>
   <text x="3.79" y="18.82" font-size="2.47" text-anchor="middle" data-pos="511">Twin</text>
-  <text x="10.84" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
-  <text x="15.72" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
-  <text x="20.28" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
-  <text x="26.16" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
-  <text x="33.15" y="18.82" font-size="2.47" text-anchor="middle" data-pos="537">how</text>
-  <text x="37.84" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
-  <text x="43.93" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
-  <text x="50.38" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
-  <text x="58.39" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
-  <text x="67.71" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
-  <text x="3.12" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="458">C</text>
-  <text x="15.05" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="461">G7</text>
-  <text x="25.48" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="467">Am</text>
-  <text x="43.25" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="476">F</text>
-  <text x="51.15" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="479">G7</text>
-  <text x="67.04" y="14.72" font-size="2.62" font-family="sans-serif" font-weight="bold" data-pos="485">C</text>
+  <text x="11.34" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
+  <text x="16.72" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
+  <text x="21.78" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
+  <text x="27.66" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
+  <text x="35.15" y="18.82" font-size="2.47" text-anchor="middle" data-pos="537">how</text>
+  <text x="40.34" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
+  <text x="46.68" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
+  <text x="53.63" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
+  <text x="62.89" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
+  <text x="70.25" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
+  <text x="3.12" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="458">C</text>
+  <text x="16.05" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="461">G7</text>
+  <text x="26.98" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="467">Am</text>
+  <text x="46.00" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="476">F</text>
+  <text x="55.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="479">G7</text>
+  <text x="69.57" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="485">C</text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
-  <line x1="7.51" y1="18.32" x2="8.31" y2="18.32" stroke="#000000" stroke-width="0.160"/>
-  <line x1="17.52" y1="18.32" x2="18.25" y2="18.32" stroke="#000000" stroke-width="0.160"/>
-  <line x1="46.98" y1="18.32" x2="47.78" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="7.76" y1="18.32" x2="8.56" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="18.74" y1="18.32" x2="19.54" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="49.98" y1="18.32" x2="50.78" y2="18.32" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>

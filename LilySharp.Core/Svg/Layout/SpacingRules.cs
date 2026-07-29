@@ -2686,7 +2686,15 @@ internal static class SpacingRules
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right
                 // extent from the column origin is the rest stencil's right edge.
-                RestItem => GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
+                // ⚠️ A SPACER rest engraves nothing: LilyPond's left head is a real
+                // grob read off the note column (note-spacing.cc:46-70 — the "rest"
+                // object or first_head), and a spacer has neither. Pricing the glyph
+                // of a rest nobody draws put a phantom half-rest 1.5 into every
+                // chords-row gap (chord.symbol-width.half-spring-control caught it:
+                // MEASURED, probe chord-symbol-width.ly CAL2, a staff-less row's
+                // columns carry NO spacing wishes at all, so LilyPond's ideal there
+                // is the bare duration spring).
+                RestItem r => r.IsSpacer ? double.NaN : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
                 _ => double.NaN
             };
             if (double.IsNaN(w))
@@ -2914,7 +2922,7 @@ internal static class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6));
+                        ChordNameEngraver.SymbolInkWidth(cn.ChordText));
                     any = true;
                     break;
                 }
@@ -2928,6 +2936,13 @@ internal static class SpacingRules
         // 0.5 on each side, so it clears a bar line on its left by 0.5, reaches
         // w + 0.5 to its right, and two adjacent symbols keep 1.0 between them.
         const double edgeGap = 0.5;
+        // LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs — the rod between
+        // two columns is the Separation_item distance PLUS the column's `padding`, default
+        // 0.1 (`set_column_rods (cols, padding)`), the same 0.1 the note-to-note rods carry.
+        // MEASURED (audit/lp-geometry/probes/chord-symbol-width.ly, score CWA): two adjacent
+        // "Am" quarters sit at w + 0.5 + 0.5 + 0.1 to six digits; before this term the
+        // chord.symbol-width.minor-pair-gap point read exactly 0.100000 of its residual here.
+        const double rodPadding = 0.1;
         var result = springs.ToBuilder();
         void Widen(int springIndex, double needed)
         {
@@ -2940,10 +2955,13 @@ internal static class SpacingRules
         // A column with no symbol reaches nowhere: LilyPond has no grob there to grow.
         double LeftReach(int t) => width[t] > 0 ? edgeGap : 0;
         double RightReach(int t) => width[t] > 0 ? width[t] + edgeGap : 0;
+        // A rod exists only where the symbol contributed a box; a zero reach means no box,
+        // so no padding either (the other content's rods are made elsewhere).
+        double Rod(double reach) => reach > 0 ? reach + rodPadding : 0;
 
         // Left edge: only the -0.5 of the extent stands left of the column, never a
         // half width — the ink itself starts ON the column.
-        Widen(0, LeftReach(0));
+        Widen(0, Rod(LeftReach(0)));
         for (int t = 0; t < timings.Count - 1; t++)
         {
             // A STAFF-ATTACHED symbol OVERHANGS a bare-note column (LP ChordName
@@ -2958,10 +2976,11 @@ internal static class SpacingRules
             if (includeAttached && (width[t] <= 0 || width[t + 1] <= 0))
                 continue;
             // The LEFT symbol's whole width lies between the two columns; the right
-            // one's lies beyond them. So the gap owes (w[t] + 0.5) + 0.5.
-            Widen(t + 1, RightReach(t) + LeftReach(t + 1));
+            // one's lies beyond them. So the gap owes (w[t] + 0.5) + 0.5, plus the
+            // one rod padding — it is a per-rod term, not a per-box one.
+            Widen(t + 1, Rod(RightReach(t) + LeftReach(t + 1)));
         }
-        Widen(timings.Count, RightReach(timings.Count - 1));
+        Widen(timings.Count, Rod(RightReach(timings.Count - 1)));
         return result.ToImmutable();
     }
 
@@ -3002,7 +3021,7 @@ internal static class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6));
+                        ChordNameEngraver.SymbolInkWidth(cn.ChordText));
                     break;
                 }
         }
@@ -3155,10 +3174,83 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// The surviving empty COMMAND columns of a staff-less row: between two of a lead
+    /// sheet's timing columns LilyPond has TWO springs, not one — musical column →
+    /// (empty) command column at the next beat, then command column → that beat's
+    /// musical column — and the second is the breakable dt==0 spring, a flat 0.5.
+    /// This composes that pair into each inter-column spring.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:71-77 standard_breakable_column_spacing —
+    /// <c>ideal = min_dist + 0.5</c> for a dt == 0 pair, and <c>min_dist</c> is 0 here
+    /// because an empty command column has no box. The command columns SURVIVE only on a
+    /// staff-less row: lily/spacing-determine-loose-columns.cc:82-90
+    /// <c>is_loose_column</c> wants a <c>left-neighbor</c>/<c>right-neighbor</c> to
+    /// attach a loose column to, those are set off NOTE columns, and a
+    /// ChordNames/Lyrics-only score has none — so the empty columns are never pruned and
+    /// every beat costs its duration space PLUS this 0.5. On a staff-backed score they
+    /// are pruned and no such term exists, which is why this is applied on the lead-sheet
+    /// path only.
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/chord-symbol-width.ly, CAL2 ALLCOL dump): the
+    /// system of a chords-only score holds a starter-less column 0.5 left of EVERY
+    /// musical column, and each measured gap decomposes to six digits as
+    /// duration-space + 0.500000 across four regimes (quarters 2.898045 + 0.5, halves
+    /// 4.098045 + 0.5, eighths 2.4 + 0.5, and the mixed book's quarter 3.6 + 0.5).
+    /// The last musical column's spring runs to the bar line's own command column, so
+    /// the closing spring carries NO extra term (whole → bar measured 5.298045, the bare
+    /// duration space).
+    /// </para>
+    /// <para>
+    /// Composing the pair into one spring is exact, not an approximation: springs in
+    /// series add their ideals, their minima and their inverse strengths, and the dt==0
+    /// spring is Spring(0.5, 0) with the default strength — its inverse stretch is its
+    /// own ideal (lily/spring.cc set_default_strength), 0.5.
+    /// </para>
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyRowCommandColumnSprings(
+        ImmutableArray<Spring> springs)
+    {
+        // The dt == 0 breakable spring of one surviving empty command column.
+        const double commandIdeal = 0.5;
+        if (springs.Length <= 2)
+            return springs;
+        var result = springs.ToBuilder();
+        // Inter-column springs only: spring 0 (bar line → first column) is already the
+        // breakable pair, and the last spring runs INTO a command column (the bar
+        // line's), so LilyPond adds nothing there.
+        for (int i = 1; i < result.Count - 1; i++)
+        {
+            var s = result[i];
+            result[i] = new Spring(
+                s.IdealDistance + commandIdeal, s.MinDistance,
+                s.InverseStretchStrength + commandIdeal);
+        }
+        return result.ToImmutable();
+    }
+
+    /// <summary>
     /// Floors a LEAD-SHEET bar at a readable grid-cell width. Row bars carry
     /// no notation ink, so without a floor a long chart packs every bar onto
     /// one line; with it the chart wraps like a song-book grid.
     /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+    /// whatever its duration springs add up to. Both the 10.0 and the distribution are
+    /// Lily#'s.
+    /// <para>
+    /// ⚠️ The whole deficit goes into the LAST spring — the trailing room after the bar's
+    /// final chord — and nowhere else. It used to be shared equally across every spring,
+    /// and in a bar with one chord (a whole-note cell: two springs) that put half the
+    /// artificial width IN FRONT of beat 1 — the symbol and its syllable sat ~3.5 ss deep
+    /// into the bar while every multi-chord bar opened at ~0.6 (reported by the user on
+    /// test/lead-sheet, 2026-07-29: a beat-1 note belongs by its bar line). Inner springs
+    /// must not take it either: they are the bar's DURATION springs, the quantity the
+    /// <c>chord.symbol-width.*spring-control</c> ledger points measure against LilyPond,
+    /// and a floor share folded into them is invisible fitting. Trailing room is also
+    /// where LilyPond's own duration springs put a whole note's width.
+    /// </para>
+    /// </remarks>
     public static ImmutableArray<Spring> EnsureLeadSheetBarWidth(ImmutableArray<Spring> springs)
     {
         const double gridBarMinWidth = 10.0;
@@ -3169,15 +3261,12 @@ internal static class SpacingRules
             minSum += s.MinDistance;
         if (minSum >= gridBarMinWidth)
             return springs;
-        double extra = (gridBarMinWidth - minSum) / springs.Length;
+        double extra = gridBarMinWidth - minSum;
         var result = springs.ToBuilder();
-        for (int i = 0; i < result.Count; i++)
-        {
-            var s = result[i];
-            result[i] = new Spring(
-                Math.Max(s.IdealDistance, s.MinDistance + extra),
-                s.MinDistance + extra, s.InverseStretchStrength);
-        }
+        var last = result[^1];
+        result[^1] = new Spring(
+            Math.Max(last.IdealDistance, last.MinDistance + extra),
+            last.MinDistance + extra, last.InverseStretchStrength);
         return result.ToImmutable();
     }
 

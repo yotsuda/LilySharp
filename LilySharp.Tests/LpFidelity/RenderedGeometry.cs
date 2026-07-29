@@ -931,6 +931,23 @@ internal sealed class RenderedGeometry
         return chords[0].X;
     }
 
+    /// <summary>The <paramref name="index"/>-th chord symbol's anchor, left to right.</summary>
+    /// <remarks>
+    /// Both engravers anchor a chord symbol at its ink LEFT (see <see cref="ChordSymbols"/>),
+    /// so a DIFFERENCE of two of these between symbols of the SAME text is convention-free
+    /// AND width-free on the right symbol — the quantity the <c>chord.symbol-width.*</c>
+    /// points read, in which only the LEFT symbol's priced width survives.
+    /// </remarks>
+    public double ChordSymbolAnchor(int index)
+    {
+        var chords = ChordSymbols;
+        if (index < 0 || index >= chords.Count)
+            throw new InvalidOperationException(
+                $"asked for chord symbol {index} but {chords.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return chords[index].X;
+    }
+
     /// <summary>Thin bar lines, left to right.</summary>
     public IReadOnlyList<DrawnRect> Barlines =>
         _page.Rects.Where(r => r.Width > 0 && r.Width <= ThinBarlineMaxWidth)

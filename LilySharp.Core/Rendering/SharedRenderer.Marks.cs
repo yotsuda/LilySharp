@@ -55,6 +55,10 @@ internal static partial class SharedRenderer
         // and the drawn ink are the same size. It was a local FontSize * 0.65 (= 2.6), an
         // approximation of LilyPond's own ChordName size.
         double size = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontSize;
+        // The series shares the same home as the em: ChordName declares NO font-series
+        // (scm/define-grobs.scm:837-855), so the symbol renders regular, in the style the
+        // engraver reserved for.
+        const FontStyle style = LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle;
         // `as both`: the Roman degree stacked one line ABOVE the absolute name.
         const double stackLineHeight = 2.2;
         foreach (var c in layout.ChordNameLayouts)
@@ -65,10 +69,10 @@ internal static partial class SharedRenderer
             using (gc.Source(c.SourcePosition))
             {
                 gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
-                    FontStyle.Bold, TextAnchor.Start, Color.Black);
+                    style, TextAnchor.Start, Color.Black);
                 if (c.AboveLine != null)
                     gc.DrawText(c.AboveLine, c.X, cy + stackLineHeight, size, "sans-serif",
-                        FontStyle.Bold, TextAnchor.Start, Color.Black);
+                        style, TextAnchor.Start, Color.Black);
             }
         }
     }

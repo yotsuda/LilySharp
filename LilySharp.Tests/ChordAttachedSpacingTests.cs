@@ -62,9 +62,10 @@ public sealed class ChordAttachedSpacingTests
         // The interior spring between the symbol column and the bare note column
         // is untouched — the symbol overhangs the note, keeping it evenly spaced.
         Assert.Equal(0.5, result[1].MinDistance, precision: 6);
-        // Nor does the bar's LEFT edge grow: none of the symbol's ink lies left of its
-        // column, only extra-spacing-width's 0.5, which the 0.5 spring already clears.
-        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
+        // The bar's LEFT edge holds only extra-spacing-width's 0.5 — no part of the ink
+        // lies left of the column — plus the rod's own padding 0.1
+        // (lily/spacing-spanner.cc:315-316 set_column_rods).
+        Assert.Equal(0.6, result[0].MinDistance, precision: 6);
     }
 
     /// <summary>
@@ -77,15 +78,17 @@ public sealed class ChordAttachedSpacingTests
     public void AttachedChord_OverAnAllRestBar_HoldsTheBarOpenOnTheRight()
     {
         var chords = ImmutableArray.Create(Attached("Cmaj7", Fraction.Zero));
-        double w = LilySharp.Core.Rendering.TextFontMetrics.SansBold("Cmaj7", 2.6);
+        double w = ChordNameEngraver.SymbolInkWidth("Cmaj7");
 
         // One column (the whole-bar rest) => two springs.
         var result = SpacingRules.ApplyChordRowSpacing(
             Springs(2), new List<Fraction> { Fraction.Zero },
             measureIndex: 0, chords, includeAttached: true);
 
-        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
-        Assert.Equal(w + 0.5, result[1].MinDistance, precision: 6);
+        // Each edge carries its box reach plus the rod's padding 0.1
+        // (lily/spacing-spanner.cc:315-316 set_column_rods).
+        Assert.Equal(0.6, result[0].MinDistance, precision: 6);
+        Assert.Equal(w + 0.6, result[1].MinDistance, precision: 6);
     }
 
     /// <summary>
@@ -102,20 +105,49 @@ public sealed class ChordAttachedSpacingTests
         var chords = ImmutableArray.Create(
             new ChordNameItem("Cmaj7", measureIndex: 0, itemIndex: 0, sourcePosition: 0,
                 useTiming: true, timing: Fraction.Zero, isChordRow: true));
-        double w = LilySharp.Core.Rendering.TextFontMetrics.SansBold("Cmaj7", 2.6);
+        double w = ChordNameEngraver.SymbolInkWidth("Cmaj7");
 
         // One column => two springs: bar line -> column, column -> bar line.
         var result = SpacingRules.ApplyChordRowSpacing(
             Springs(2, min: 0.0), new List<Fraction> { Fraction.Zero },
             measureIndex: 0, chords, includeAttached: false);
 
-        // LEFT of the column: the 0.5 of extra-spacing-width alone, no part of the ink.
-        Assert.Equal(0.5, result[0].MinDistance, precision: 6);
-        // RIGHT of it: the whole width plus that same 0.5.
-        Assert.Equal(w + 0.5, result[1].MinDistance, precision: 6);
+        // LEFT of the column: the 0.5 of extra-spacing-width alone (no part of the ink),
+        // plus the rod's padding 0.1 (lily/spacing-spanner.cc:315-316 set_column_rods).
+        Assert.Equal(0.6, result[0].MinDistance, precision: 6);
+        // RIGHT of it: the whole width plus that same 0.5 and the same padding.
+        Assert.Equal(w + 0.6, result[1].MinDistance, precision: 6);
         // And the symbol is wide enough that halving it would have shown: this test is not
         // passing on a coincidence between w and w/2.
         Assert.True(w > 1.0, $"the probe symbol must be wider than 1.0 ss (was {w:F3})");
+    }
+
+    /// <summary>
+    /// The grid-cell floor (a Lily#-own 10 ss, LilyPond has no such thing) puts its
+    /// artificial room in the bar's LAST spring only — trailing room after the music.
+    /// Never in front of beat 1: a whole-note cell used to share the deficit equally
+    /// across both springs, standing the symbol and its syllable ~3.5 ss into the bar
+    /// (reported on test/lead-sheet, 2026-07-29). And never into the INNER springs: those
+    /// are the duration springs the <c>chord.symbol-width.*spring-control</c> ledger
+    /// points hold against LilyPond, and a floor share folded into them is fitting the
+    /// corpus cannot see past.
+    /// </summary>
+    [Fact]
+    public void LeadSheetBarFloor_IsTrailingRoomOnly()
+    {
+        // Two columns: opening spring + one duration spring + closing spring.
+        var springs = Springs(3, min: 0.6);
+
+        var result = SpacingRules.EnsureLeadSheetBarWidth(springs);
+
+        // Beat 1 stays by its bar line, the duration spring stays the duration's...
+        Assert.Equal(0.6, result[0].MinDistance, precision: 9);
+        Assert.Equal(0.6, result[0].IdealDistance, precision: 9);
+        Assert.Equal(0.6, result[1].MinDistance, precision: 9);
+        Assert.Equal(0.6, result[1].IdealDistance, precision: 9);
+        // ...and the whole deficit is trailing room after the last chord.
+        Assert.Equal(10.0 - 1.2, result[2].MinDistance, precision: 9);
+        Assert.Equal(10.0, result.Sum(s => s.MinDistance), precision: 9);
     }
 
     [Fact]

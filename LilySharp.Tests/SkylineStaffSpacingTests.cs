@@ -423,12 +423,12 @@ public class SkylineStaffSpacingTests
                 score, new SkylineBuilder(DefaultOptions.StaffHeight), layout.Systems[0].Measures);
 
         // Staff 0 is the chord row (`chords prog` comes first in the score block).
-        // The em comes from the engraving default rather than a literal — see the note on
-        // StaffSkylineFrameTests.ChordRow_OwnInkIsMeasuredFromItsTextBaseline, which held the
-        // same third copy of it.
+        // The em AND the series come from the engraving defaults rather than literals — see
+        // the note on StaffSkylineFrameTests.ChordRow_OwnInkIsMeasuredFromItsTextBaseline,
+        // which held the same third copy of both.
         var (bottom, top) = LilySharp.Core.Rendering.TextFontMetrics.Ink(
             "C", LilySharp.Core.Svg.EngravingDefaults.ChordNameFontSize,
-            sans: true, LilySharp.Core.Rendering.FontStyle.Bold);
+            sans: true, LilySharp.Core.Svg.EngravingDefaults.ChordNameFontStyle);
         Assert.Equal(top, skylines[0].Up.MaxHeight(), 9);
         Assert.Equal(bottom, skylines[0].Down.MaxHeight(), 9);
 

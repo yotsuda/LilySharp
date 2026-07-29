@@ -1113,6 +1113,11 @@ internal sealed class MultiStaffLayouter
             }
             if (score.IsLeadSheet)
             {
+                // A staff-less row keeps its empty command columns (LilyPond never
+                // prunes them without note-column neighbours), so every inter-column
+                // gap carries the breakable dt==0 spring's 0.5 on top of its
+                // duration space — see ApplyRowCommandColumnSprings.
+                springs = SpacingRules.ApplyRowCommandColumnSprings(springs);
                 // Chord symbols reserve their widths on the row columns, and a
                 // grid bar never collapses below a readable cell (else a long
                 // chords-only chart packs onto one line and never wraps).

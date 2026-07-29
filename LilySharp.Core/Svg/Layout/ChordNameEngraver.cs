@@ -316,22 +316,43 @@ internal static class ChordNameEngraver
                 staffMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
 
     /// <summary>
-    /// The drawn width of a chord symbol at <see cref="ChordFontSize"/>, measured with SANS
-    /// bold advances — the face the names render in. The symbol occupies
-    /// <c>(x . x + width)</c>: LilyPond's ChordName declares no X-offset and no
-    /// self-alignment-interface (scm/define-grobs.scm:837-855), so its reference point is
-    /// its ink LEFT and it stands ON its column.
+    /// A chord symbol's ink width: its text advance in the SANS face at
+    /// <see cref="EngravingDefaults.ChordNameFontSize"/>, REGULAR series
+    /// (<see cref="EngravingDefaults.ChordNameFontStyle"/>). The one home — the spacing
+    /// rules, the mark collision boxes and this engraver all price the symbol through it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 <c>ChordName</c> (the <c>extra-spacing-width</c> block) — font-family sans,
+    /// font-size 1.5, NO font-series (regular), and its extent is its stencil's
+    /// <c>(0 . w)</c>.
+    /// MEASURED (audit/lp-geometry/probes/chord-symbol-width.ly, score CAL): LilyPond's
+    /// ChordName exts equal the PLAIN string widths — the Ignatzek markup structure adds
+    /// nothing for plain major/minor names — and they are Nimbus Sans REGULAR advances
+    /// ("Am" 3.926480 against this face's advance sum 3.924383). Until 2026-07-29 six call
+    /// sites measured SansBold at a stale literal 2.6; the
+    /// <c>chord.symbol-width.minor-pair-gap</c> point caught the +0.262120 on "Am".
+    /// </remarks>
+    internal static double SymbolInkWidth(string text) =>
+        Rendering.TextFontMetrics.Advance(
+            text, EngravingDefaults.ChordNameFontSize,
+            sans: true, EngravingDefaults.ChordNameFontStyle);
+
+    /// <summary>
+    /// The reserved width of a chord symbol — its ink (<see cref="SymbolInkWidth"/>) under
+    /// a floor. The symbol occupies <c>(x . x + width)</c>: LilyPond's ChordName declares
+    /// no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855), so its
+    /// reference point is its ink LEFT and it stands ON its column.
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
     /// floor on the HALF width before the anchor port doubled the quantity) and it BINDS —
-    /// a one-letter symbol like "C" measures 1.877882, so the floor overrides it. LilyPond
+    /// a one-letter symbol like "C" measures 1.888937, so the floor overrides it. LilyPond
     /// has no such floor: a ChordName's extent is its stencil's. It survives here only
     /// because removing it moves output for a reason unrelated to the anchor; it belongs
     /// with the other named inventions in docs/HANDOFF.md section 2H.
     /// </remarks>
     private static double SymbolWidth(ChordNameItem c) =>
-        Math.Max(2.0, Rendering.TextFontMetrics.SansBold(DisplayText(c).Text, ChordFontSize));
+        Math.Max(2.0, SymbolInkWidth(DisplayText(c).Text));
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -416,7 +437,7 @@ internal static class ChordNameEngraver
         {
             var (bottom, top) = Rendering.TextFontMetrics.Ink(
                 DisplayText(chord).Text, ChordFontSize,
-                sans: true, Rendering.FontStyle.Bold);
+                sans: true, EngravingDefaults.ChordNameFontStyle);
             double right = x + SymbolWidth(chord);
             up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
             down.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Down));

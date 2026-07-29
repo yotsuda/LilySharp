@@ -309,7 +309,7 @@ internal static class MusicMarkEngraver
                         // i.e. cn.YUp > 0) share the marks' band.
                         if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
                             continue;
-                        double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
+                        double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
                         double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn);
@@ -343,7 +343,7 @@ internal static class MusicMarkEngraver
                     {
                         if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
                             continue;
-                        double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
+                        double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
                         bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
                         bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
                         if (overLabel || overTempo)
@@ -629,7 +629,7 @@ internal static class MusicMarkEngraver
                         && measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int ts2)
                         && cs != ts2)
                         continue;
-                    double chHalf = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
+                    double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
                     double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding;
                     bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
                     bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);

@@ -1721,7 +1721,7 @@ internal sealed class LayoutEngine
         {
             foreach (var cn in chordNames)
             {
-                double halfW = Rendering.TextFontMetrics.SansBold(cn.ChordText, 2.6) / 2 + 0.3;
+                double halfW = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
                 double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }

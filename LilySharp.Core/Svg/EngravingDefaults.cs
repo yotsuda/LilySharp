@@ -256,14 +256,33 @@ internal static class EngravingDefaults
     /// <c>FontSize * 0.65</c>). Derived here so both read it and neither approximates.
     /// </para>
     /// <para>
-    /// ⚠️ THE WEIGHT IS STILL LILY#'S OWN and is deliberately NOT changed here: Lily# sets
-    /// chord symbols BOLD (<c>TextFontMetrics.SansBold</c>) where the grob above declares no
-    /// <c>font-series</c> at all, i.e. normal. Nothing in the corpus measures it — the chord
-    /// points are anchors, in which the symbol's own width cancels — so changing it would move
-    /// output with no reading to justify the direction. It wants a point first.
+    /// The point the WEIGHT wanted before it could move now exists:
+    /// <c>chord.symbol-width.minor-pair-gap</c> measured the bold "Am" 0.262120 wider than
+    /// LilyPond's regular one, which is what <see cref="ChordNameFontStyle"/> closed.
     /// </para>
     /// </remarks>
     public static readonly double ChordNameFontSize = 2.2 * Math.Pow(2.0, 1.5 / 6.0);
+
+    /// <summary>
+    /// The chord symbol's font series: REGULAR, in one home the reserving engraver, the
+    /// spacing rules and the renderer all read.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 <c>ChordName</c> (the block that declares its <c>extra-spacing-width</c>) — it declares
+    /// <c>font-family . sans</c> and <c>font-size . 1.5</c> and NO <c>font-series</c> at all,
+    /// so the series is the default regular one.
+    /// <para>
+    /// ⚠️ IT WAS BOLD (<c>TextFontMetrics.SansBold</c>) everywhere, a Lily#-own choice with
+    /// no LilyPond source, and it was invisible to the corpus until 2026-07-29 because every
+    /// chord point was an anchor difference in which the symbol's width cancels. The
+    /// dedicated pair (audit/lp-geometry/probes/chord-symbol-width.ly,
+    /// <c>chord.symbol-width.minor-pair-gap</c>) measured LilyPond's exts as Nimbus Sans
+    /// REGULAR advances per glyph ("Am" 3.926480 where bold would be 4.188600 at the stale
+    /// em) — a per-glyph difference, not a scale, so it was the series and not the size.
+    /// </para>
+    /// </remarks>
+    public const LilySharp.Core.Rendering.FontStyle ChordNameFontStyle =
+        LilySharp.Core.Rendering.FontStyle.Regular;
 
     // === Notehead dimensions ===
     // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).

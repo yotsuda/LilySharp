@@ -3482,6 +3482,56 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // --- the chord symbol's WIDTH, where it becomes geometry (chord-symbol-width.ly) ---
+    // Every other chord point is an anchor (or a difference of anchors) in which the
+    // symbol's own width cancels — deliberately, since the two engravers' text faces
+    // differ. These three read the gap between ADJACENT symbols of the SAME text: both
+    // engravers anchor a chord symbol at its ink LEFT, so the right symbol's width
+    // cancels and only the LEFT one's priced width survives (where the rod binds).
+
+    /// <summary>A staff-less chords row of the given progression, verbatim.</summary>
+    private static string ChordsRowScore(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        section Main {
+          chords prog { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          chords prog
+        }
+        """;
+
+    /// <summary>
+    /// Four adjacent "Am" quarters — the BINDING regime: w + 1.1 (4.3 + 1.1 on the Lily#
+    /// side, 3.926480 + 1.1 on LilyPond's) exceeds the quarter-note spring (3.398045,
+    /// score CWC), so the gap sits on the rod and reads the priced symbol width itself.
+    /// "Am" because the bold-vs-regular advance difference lives almost entirely in the
+    /// lowercase m (Heros bold "m" is 7.4% wider); Helvetica-family "C" has the SAME
+    /// advance in both weights and would show only the em error.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CWA in chord-symbol-width.ly.</remarks>
+    private static readonly string LCWA = ChordsRowScore("a4:m a:m a:m a:m | a1:m |", "LCWA");
+
+    /// <summary>
+    /// The same shape on "C" quarters — the SLACK control: w + 1.1 = 2.977882 is under
+    /// the quarter spring, so the gap reads the duration SPRING with no text metric in
+    /// it. Guards the fork: a width claim on CWA is only meaningful while this is exact.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CWC.</remarks>
+    private static readonly string LCWC = ChordsRowScore("c4 c c c | c1 |", "LCWC");
+
+    /// <summary>
+    /// "C" halves — the second slack control, one duration step out, so a spring defect
+    /// that happened to be exact at quarters would still be caught.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score CWH.</remarks>
+    private static readonly string LCWH = ChordsRowScore("c2 c | c1 |", "LCWH");
+
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —
     /// Lily# draws none at a system start. That is the bar line
@@ -4434,6 +4484,16 @@ internal static class LpGeometryProbes
             g => g.FirstSyllableInkCentre() - g.FirstChordSymbolAnchor()),
         new("lyric.syllable-centre.note-column", SLSH,
             g => g.FirstSyllableInkCentre() - g.NoteheadAnchor(0)),
+        // --- the chord symbol's WIDTH (chord-symbol-width.ly; fixtures above) ---
+        // One binding gap (the width itself + 1.1) and two slack controls (the duration
+        // spring, no text metric). See the fixture remarks and the probe header for the
+        // fork these three decide together.
+        new("chord.symbol-width.minor-pair-gap", LCWA,
+            g => g.ChordSymbolAnchor(1) - g.ChordSymbolAnchor(0)),
+        new("chord.symbol-width.quarter-spring-control", LCWC,
+            g => g.ChordSymbolAnchor(1) - g.ChordSymbolAnchor(0)),
+        new("chord.symbol-width.half-spring-control", LCWH,
+            g => g.ChordSymbolAnchor(1) - g.ChordSymbolAnchor(0)),
     };
 
     /// <summary>The first chord symbol's anchor in a SECOND score, for the difference points

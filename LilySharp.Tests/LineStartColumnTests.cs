@@ -431,9 +431,10 @@ public class LineStartColumnTests
             timings, measureIndex: 0, chords, includeAttached: false);
 
         Assert.Equal(2, reach.Length);
-        // ALL of what the renderer draws: SansBold at the 2.6 ss chord font, undivided.
-        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("C", 2.6), reach[0], 6);
-        Assert.Equal(LilySharp.Core.Rendering.TextFontMetrics.SansBold("Bbmaj7", 2.6), reach[1], 6);
+        // ALL of what the renderer draws — the one width home the engraver, the spacing
+        // rules and the renderer share (regular series at LilyPond's ChordName em).
+        Assert.Equal(ChordNameEngraver.SymbolInkWidth("C"), reach[0], 6);
+        Assert.Equal(ChordNameEngraver.SymbolInkWidth("Bbmaj7"), reach[1], 6);
         // The SECOND column's reach is real and larger — the wide symbol is not on the
         // first column, so a first-column-only rod would never have seen it.
         Assert.True(reach[1] > reach[0]);

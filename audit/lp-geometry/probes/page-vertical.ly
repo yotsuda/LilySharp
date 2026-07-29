@@ -157,9 +157,17 @@
 %% tuplet books differ by exactly 0.027492 — the TupletNumber is the only text in any
 %% binding pair in this file. Pinning here rather than per-book so that the next book with
 %% text in it cannot inherit the bug.
+%%
+%% ⚠️ THE SANS FONT IS PINNED TOO (2026-07-29): fonts.sans falls back the same way under
+%% svg (ly/paper-defaults-init.ly:174-177), and CHORD ROWS are sans text — every chord-row
+%% book here (LYRC / LYRCH / LYRMC / LYROS family) had its ChordName ink measured against
+%% this machine's fontconfig pick for generic "sans" (Verdana metrics — found and measured
+%% in chord-symbol-width.ly's header, ext("Am") 4.336200 against the canonical 3.926480).
+%% Quantities the chord ink binds were re-measured after the pin.
 probeTag =
 #(define-scheme-function (tag) (string?)
    #{ \paper { property-defaults.fonts.serif = "LilyPond Serif"
+               property-defaults.fonts.sans = "LilyPond Sans Serif"
                page-post-process = #(lambda (layout pages)
                                       (format #t "\nPROBEV BOOK ~a\n" tag)
                                       (probe-dump-pages layout pages)) } #})

@@ -32,14 +32,18 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第27セッション・**保留中の clef シルエット移植を、それを測る台帳点を
-作ったうえで landing させ、続けて「フォント量だから閉じない」と書かれていた 3 族が
-定数の取り違えだったと分かって閉じた。台帳 |residual| 総和 2.606965 → 0.012541**）
+最終更新 2026-07-29（第28セッション・**▶1⑴ の「和音記号の weight」を、幅を測る対を
+先に起票してから移植した。対は狙いの weight のほかに 3 つの欠陥を追加で出した**）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
-**HEAD は 3467 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**ワーキングツリーは clean**
+
+**HEAD は 3471 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**commit 6 本**: `c4da07d0`（点の起票・出力不変）／`641c61a6`（weight/em/rod 移植・
+snapshot 11 枚再ベース・**ユーザー GO 済**）／`13253ecc`（リードシート床の再配分・同・3 枚）／
+`1de1abe5`（和音行の時価ばね移植・同・5 枚・下の 4 が**閉じた**）／
+`ab0047be`（§2H: paper column モデル欠落の 3 件を 1 島に束ねた）／本 §1 の最終更新。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -50,6 +54,62 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第28セッション（2026-07-29）＝ **和音記号の幅を初めて測ったら、weight のほかに 3 つ落ちた**
+
+commit の一覧は §1 冒頭。以下がセッションの中身。
+
+★★★ **新プローブ `chord-symbol-width.ly`（13 秒級・5 book）＋台帳 3 点
+`chord.symbol-width.{minor-pair-gap,quarter-spring-control,half-spring-control}`。**
+量は**同一テキストの隣接和音記号のギャップ**（両者とも ink-left アンカー＝規約が消え、
+rod が binding なら `w + 0.5 + 0.5 + 0.1` で**幅そのものが読める**）。予測は桁まで的中
+（+0.162120）。**対が出したもの**:
+
+1. ★★★ **プローブ側の罠（最大の所見）**: `-dbackend=svg` では LP が **`fonts.sans` を
+   generic "sans" に落とす**（`ly/paper-defaults-init.ly:174-177`）＝ fontconfig が
+   **このマシンの Verdana** を掴み、ext("Am") が 4.336200（正典 3.926480）になっていた。
+   ⇒ probe に pin を追加（page-vertical.ly の serif pin と同型）。
+   **page-vertical.ly にも sans pin を追加して全 62 冊を再測定**（20 分・完走）——
+   **動いたのは LYRMC の 1 点だけ**（4.608814 → 4.585369＝旧値は Verdana 汚染。
+   LYRCH/LYROS の 4.027851 は不動）。⚠️ **今後 sans テキストを測る probe は必ず pin。**
+2. **weight**: LP の ChordName は **font-series 宣言なし＝regular**。Lily# は SansBold＋
+   stale な素の 2.6 が 6 箇所（SpacingRules ×2・LayoutEngine・MusicMarkEngraver ×3）。
+   ⇒ 移植: `EngravingDefaults.ChordNameFontStyle`（regular）＋
+   `ChordNameEngraver.SymbolInkWidth` の**単一の家**に統一（描画・予約・spacing・衝突箱）。
+   `minor-pair-gap` **+0.162120 → −0.002097**＝sans face 床（歌詞の −0.000100 と同族。
+   **0 にしない**）。LYRMC も同じ床 **−0.002157** に着地。
+3. **rod padding 0.1 の欠落**: LP は列 rod に spanner padding 0.1 を足す
+   （`spacing-spanner.cc:315-316` `set_column_rods`）。`ApplyChordRowSpacing` に移植。
+4. ★★★ **和音行の時価ばね——同セッションで機構を割って閉じた（両控え exact）**。
+   ギャップは 1 本のばねではなかった: **staff-less 行では拍ごとの空 command 列が
+   刈られず生き残り**（`is_loose_column` は note column の neighbor を要求・
+   `spacing-determine-loose-columns.cc:82-90`）、各拍 = `musical→command`
+   （素の duration space・**wishes=() を dump で確認**）＋ `command→musical`
+   （dt=0 の `min+0.5`・`spacing-basic.cc:71-77`）。ALLCOL dump が starter 無し列を
+   全 musical 列の 0.5 左に実証。4 regime 全て `duration space + 0.5` に六桁分解
+   （末尾 whole→bar 5.298045 のみ +0.5 なし＝bar が command を兼ねる）。
+   ⇒ 移植 2 つ: **⑴ `ApplyLeftHeadWidth` は spacer rest を left head にしない**
+   （行は不可視 spacer rest 刻み——**彫られない半休符のグリフ幅 1.5 を徴収していた**。
+   `s` 休符にも同じ規則）／**⑵ `ApplyRowCommandColumnSprings`**（列間ばねへ 0.5 を
+   直列合成・強度も +0.5）。⚠️ **旧 −0.200000 は 2 欠陥の打ち消し**（幻の休符 +0.3 −
+   欠けた 0.5）＝「clean な単独項」に見えた読みは誤りだった。
+   quarter −0.409108 → **−1e-9**・half −0.200000 → **−1e-9**（予測どおり exact）。
+5. **ユーザー指摘（実 GO 済の修正）**: リードシート最終小節の 1 拍目（"you"/"C"）が
+   小節線から 4.52 ss（他小節 2.87/2.94）。犯人は `EnsureLeadSheetBarWidth`
+   （LILYSHARP-OWN の 10 ss 床）の**全ばね等分**——1 列小節では床の半分が 1 拍目の前に
+   入っていた。⇒ **不足分は最後のばね（末尾余白）だけへ**。⚠️ 内側ばねに入れると
+   4 の控え点を汚す（一度やって落ちた）。網 `LeadSheetBarFloor_IsTrailingRoomOnly`。
+6. ★ **副次の確定**: LP の ChordName ext ＝**素の文字列幅そのもの**（Ignatzek markup の
+   空要素・hspace・super は幅ゼロ＝probe CAL の PLAIN 較正で恒等）。正典値は
+   Nimbus Sans regular の advance（Pango 量子化 ±0.005/glyph）。
+
+**残した宣言済みの負債**（このセッションで名前を付けた・未着手）:
+- `Widen` は rod を **ideal にも** max で乗せる（LP の rod は min のみ）。force 0 では同値、
+  伸長行で配分が割れうる。§2H の発明群の隣。
+- `LayoutEngine`/`MusicMarkEngraver` の和音衝突箱は `cn.X` を**中心**扱いのまま
+  （ink-left 化 `dcbf08e9` の取り残しの疑い。点が無い）。
+- 台帳 quarter-spring-control の why に「真値は遮蔽」と明記——割るには記号なし／
+  細い記号の regime が要る。
 
 ### 第27セッション（2026-07-28）＝ **clef シルエット移植を landing。点を先に作る値段は 13 秒だった**
 
@@ -210,13 +270,13 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 ⚠️★★ **残差はもう最大 0.004090。「総和が下がったか」では何も見えない**——
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
-1. ★ **テキスト量の残り 2 つ**（小節番号・歌詞・和音記号でやったことの続き。**どちらも点が先**）:
-   ⑴ **和音記号の weight**——LP の `ChordName` は `font-series` を**宣言しない**（＝normal）のに
-     Lily# は **bold**（`SansBold`）。**コーパスはアンカーしか測らず記号の幅は打ち消される**ので
-     **測る点が無い**。⇒ **幅そのものを測る対**を組むのが最初の作業。出力は大きく動く。
+1. ★ **テキスト量の残り**:
+   ~~⑴ 和音記号の weight~~ — **移植済（GO 待ち・第28セッション）**。
    ⑵ **`OutsideStaffStacker` の「Own tuning」**（`CapHeightEm = 0.71` / `TextAscentEm = 0.75` /
      `TextDescentEm = 0.25`）＝**コメントが自ら「no single LP grob source」と言っている**。
      小節番号・歌詞・和音の経路からは外れたが、**tuplet 番号・強弱・テキスト系がまだ読む**。
+   ~~⑶ 和音行の時価ばね~~ — **同セッションで閉じた**（上の 4。両控え exact・
+     `chord.symbol-width.{quarter,half}-spring-control` がラチェット網として残る）。
 2. **clef シルエット移植が残した繰延 2 件**（上のセッション節に詳細）＝
    **⑴ 平坦化をレイアウト時へ**（ossia の量子化。**1 番の容疑者 ⑵ と同じ物体なので、
    1 番を割ると着手根拠がそのまま出る**）／
@@ -769,6 +829,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
   名指す形）。本来の移植は **paper column 表現の導入**で、実測: 外すと snapshot 21 枚が動く
+  ★ **これは単独の島ではない（2026-07-29 に束ねた）**——**同じ「paper column モデルの欠落」を
+  指す件が 3 つある**: ⑴ この `ownFixedFloor`（grace/歌詞の独立列）⑵ **和音行の command 列**
+  （第28セッションで発見・`ApplyRowCommandColumnSprings` は 2 本のばねの**直列合成**で数値は
+  厳密だが、LP は空の command 列を実体として持つ）⑶ **mid-measure clef/key/time**（LP はそれを
+  command 列に載せる。Lily# は `MidMeasureChangeGaps` が代役・§2B の mid-line clef 残件と同根）。
+  モデルに列を足す日はこの 3 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
+  ⚠️ ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ
 - ~~**中心合わせされた 2 つの text grob**~~ — **両方とも片付いた**（和音記号 `dcbf08e9`・
   音節 `98672c3a`）。⚠️ ただし `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**残っている**
   （`LILYSHARP-OWN` と明示済・1 文字の "C" 1.877882 を上書きするので**実際に効く**）
