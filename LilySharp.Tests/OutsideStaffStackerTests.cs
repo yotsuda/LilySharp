@@ -98,6 +98,54 @@ public class OutsideStaffStackerTests
     // — covered by the SVG snapshot fixtures.)
 
     [Fact]
+    public void CustomTextDescent_ComesFromTheStringsOwnInk_NotAClassConstant()
+    {
+        // LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (the outside-staff-priority
+        // block) — its Y-extent comes from the stencil, so the clearance under
+        // the baseline is the STRING's own descent. Measured
+        // (audit/lp-geometry/probes/textscript-ink.ly): LilyPond places "poco" 0.404430
+        // HIGHER than "dolce" over the same flat staff, because the p's descender must
+        // clear the same support. The letter-class trio this rule replaced (a flat
+        // 0.25 em descent) prices every string identically and reads 0 here — this is
+        // the perturbation form of the ledger pair TXD/TXP, kept at model level so it
+        // survives fixture edits.
+        var systems = CreateSingleSystem();
+
+        double PlacedBaseline(string text)
+        {
+            var texts = ImmutableArray.Create(
+                new CustomTextLayout(MeasureIndex: 0, X: 20, YUp: -4.0, Text: text,
+                    SourcePosition: 0));
+            var (_, _, _, adjTexts, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
+                systems, systemSkylines: null,
+                ImmutableArray<TupletBracketLayout>.Empty,
+                ImmutableArray<TrillSpannerLayout>.Empty,
+                ImmutableArray<BarNumberLayout>.Empty,
+                ImmutableArray<OttavaBracketLayout>.Empty,
+                texts,
+                ImmutableArray<VoltaBracketLayout>.Empty,
+                ImmutableArray<MusicMarkLayout>.Empty);
+            return adjTexts[0].YUp;
+        }
+
+        double dolce = PlacedBaseline("dolce");
+        double poco = PlacedBaseline("poco");
+
+        double fs = LilySharp.Core.Svg.EngravingDefaults.TextScriptFontSize;
+        double expected =
+            LilySharp.Core.Rendering.TextFontMetrics.Ink(
+                "dolce", fs, sans: false, LilySharp.Core.Rendering.FontStyle.Italic).Bottom
+            - LilySharp.Core.Rendering.TextFontMetrics.Ink(
+                "poco", fs, sans: false, LilySharp.Core.Rendering.FontStyle.Italic).Bottom;
+
+        // The descender string's baseline sits higher by exactly the two inks' descent
+        // difference — about 0.41 ss at em 2.2, and never 0.
+        Assert.Equal(expected, poco - dolce, 6);
+        Assert.True(poco - dolce > 0.3,
+            $"a descender must lift the baseline (measured {poco - dolce:F6})");
+    }
+
+    [Fact]
     public void EmptyInputsReturnUnchanged()
     {
         var systems = CreateSingleSystem();

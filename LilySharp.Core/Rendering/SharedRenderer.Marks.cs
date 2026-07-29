@@ -470,8 +470,11 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.ContainsKey(t.MeasureIndex)) continue; // other page
             // Page Y-up against the (top) staff middle this text resolves.
             double y = os.StaffMiddleYUp(t.StaffIndex, t.MeasureIndex, StaffHeight) + t.YUp;
+            // TextScript declares no font-size, so the em is the paper's own text size —
+            // 2.2 ss, one home with the stacker's reservation (was a Lily#-own 2.4).
+            // LILYPOND-REF: scm/paper.scm:69-77 text-font-size (via EngravingDefaults).
             using (gc.Source(t.SourcePosition))
-                gc.DrawText(t.Text, t.X, y, FontSize * 0.6, "serif",
+                gc.DrawText(t.Text, t.X, y, EngravingDefaults.TextScriptFontSize, "serif",
                     FontStyle.Italic, TextAnchor.Middle, Color.Black);
         }
     }

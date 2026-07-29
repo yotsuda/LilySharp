@@ -473,13 +473,19 @@ internal static partial class SharedRenderer
                         Color.Black, thickness);
                 if (hasText)
                 {
-                    // Hang the number from just below the horizontal line so it sits
-                    // inside the bracket instead of overlapping the line (device
-                    // below = smaller Y-up).
-                    double textY = absY - 0.3;
+                    // The number's INK TOP sits exactly 0.3 below the horizontal line, so
+                    // it hangs inside the bracket without overlapping it. Anchored at the
+                    // BASELINE — the only anchor every backend places identically — a
+                    // further Ink.Top down; the former VerticalAnchor.Hanging was realised
+                    // as a TYPOGRAPHIC-ascent drop on every backend, which left an extra
+                    // quarter staff-space of air over a digit's cap and drew the number
+                    // deeper than OutsideStaffStacker.VoltaBottom reserves (0.3 + the
+                    // string's own InkHeight, which THIS geometry makes exact).
+                    var vInk = TextFontMetrics.Ink(
+                        v.VoltaText, FontSize * 0.6, sans: false, FontStyle.Bold);
+                    double textY = absY - 0.3 - vInk.Top;
                     gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
-                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black,
-                        VerticalAnchor.Hanging);
+                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
                 }
             }
         }

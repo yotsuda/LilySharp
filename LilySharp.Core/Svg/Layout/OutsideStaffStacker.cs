@@ -73,12 +73,16 @@ internal static class OutsideStaffStacker
     // Dynamic text half-width estimate for X collision range
     private const double DynamicHalfWidth = 0.75;
 
-    // Serif text-metric ratios (fraction of the font size / em) used to bound a
-    // text grob's vertical extent from its font size. Own tuning approximating a
-    // serif face; no single LP grob source.
-    private const double CapHeightEm = 0.71;   // cap height (digits: no ascenders/descenders)
-    private const double TextAscentEm = 0.75;  // ascent above the baseline
-    private const double TextDescentEm = 0.25; // descent below the baseline
+    // A text grob's vertical extent comes from the FACE, per string, at the size and style
+    // the draw uses (TextFontMetrics.Ink) — never from a letter-class fraction of the em.
+    // LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (the outside-staff-priority block) —
+    // its Y-extent is grob::always-Y-extent-from-stencil, its stencil ly:text-interface::print, so
+    // what outside_staff_axis_group clears is the TEXT'S ink; the same declaration pattern
+    // covers the tuplet number, the ottava label and the mark texts this file stacks.
+    // The letter-class trio that used to live here (CapHeightEm 0.71 / TextAscentEm 0.75 /
+    // TextDescentEm 0.25, "no single LP grob source") priced "dolce" and "poco" identically;
+    // the dedicated pair (audit/lp-geometry/probes/textscript-ink.ly, ledger textscript.*)
+    // measured LilyPond's baseline RIDING the p's own descender, 0.404430 apart.
 
     /// <summary>
     /// Adjusts below-staff element Y positions using priority-based stacking.
@@ -435,19 +439,36 @@ internal static class OutsideStaffStacker
 
         // Priority 200: above-staff tuplet brackets/numbers. They are bound
         // to their beams in this model, so they seed the occupancy without
-        // being moved themselves.
+        // being moved themselves. The geometry mirrors what is DRAWN — and what
+        // SkylineBuilder.AddTupletBracketsToSkyline already reserves in the staff
+        // skylines: the bracket line's outward edge, and the number's own ink
+        // centred on the bracket midpoint.
+        // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the bracket midpoint —
+        // and :227-228 print, which centers the number's stencil on X and Y.
         if (!tupletBrackets.IsDefaultOrEmpty)
         {
             foreach (var tb in tupletBrackets)
             {
                 if (!tb.IsStemUp || !measureToSystem.TryGetValue(tb.MeasureIndex, out int sysIdx))
                     continue;
-                // Bracket line + the centered number's upper half
-                // (number font = 0.6 x 4sp, cap height ~0.71em). tb.*YUp is Y-up from
-                // the system top; the highest (most-above) endpoint is the max YUp,
-                // and the top of the number's ink sits above it.
-                double top = Math.Max(tb.StartYUp, tb.EndYUp) + CapHeightEm * 2.4 / 2 + 0.1;
-                trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
+                // A fully beamed tuplet draws no bracket (bracket-visibility =
+                // if-no-beam); its number still prints, riding the beam.
+                if (tb.ShowBracket)
+                {
+                    double lineTop = Math.Max(tb.StartYUp, tb.EndYUp)
+                        + EngravingDefaults.TupletBracketThickness / 2.0;
+                    trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, lineTop);
+                }
+                if (!string.IsNullOrEmpty(tb.NumberText))
+                {
+                    double fs = TupletBracketEngraver.NumberFontSize;
+                    double halfW = TextFontMetrics.Advance(
+                        tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                    double halfH = TextFontMetrics.InkHeight(
+                        tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                    trackers[sysIdx].AddRegion(
+                        tb.NumberX - halfW, tb.NumberX + halfW, tb.NumberYUp + halfH);
+                }
             }
         }
 
@@ -602,11 +623,13 @@ internal static class OutsideStaffStacker
             if (o.StaffIndex != 0)
                 continue;
             // System-relative Y-up: o.YUp is Y-up from the system top, entering directly.
-            // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
-            // ~0.75em ascent; the end hook drops EdgeHeight below.
+            // anchor = text baseline / line Y; the label's ascent is its own ink at the
+            // size and face the draw uses (DrawOttavaBrackets: BoldItalic at 0.45 x 4sp);
+            // the end hook drops EdgeHeight below.
             double newRel = Place(trackers[sysIdx], o.StartX, o.EndX,
                 o.YUp,
-                topOffset: TextAscentEm * (0.45 * 4.0),
+                topOffset: TextFontMetrics.Ink(
+                    o.Text, 0.45 * 4.0, sans: false, FontStyle.BoldItalic).Top,
                 bottomOffset: Math.Max(0.1, o.EdgeHeight));
             b[i] = o with { YUp = newRel };
         }
@@ -626,17 +649,21 @@ internal static class OutsideStaffStacker
             var ct = b[i];
             if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
                 continue;
-            // Centered italic text at 0.6 x 4sp; measured width (bold
-            // table, a slight overestimate for italic), ~0.75em ascent
-            // and ~0.25em descent around the baseline anchor.
-            const double ctFs = 0.6 * 4.0;
-            double halfWidth = TextFontMetrics.SerifBold(ct.Text, ctFs) / 2;
+            // Centered italic text at TextScriptFontSize — the same face, size and style
+            // DrawCustomTexts draws, measured per string: advance for the X range, ink
+            // about the baseline anchor for the vertical extent. The descent is what the
+            // required clearance rides (frontier + padding + descent), which is exactly
+            // LilyPond's binding constraint on the textscript-ink pair's descender book.
+            double ctFs = EngravingDefaults.TextScriptFontSize;
+            double halfWidth = TextFontMetrics.Advance(
+                ct.Text, ctFs, sans: false, FontStyle.Italic) / 2;
+            var ctInk = TextFontMetrics.Ink(ct.Text, ctFs, sans: false, FontStyle.Italic);
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ct.StaffIndex) - 2.0;
             double newRel = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
                 ct.YUp + midUp,
-                topOffset: TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
+                topOffset: ctInk.Top, bottomOffset: -ctInk.Bottom);
             b[i] = ct with { YUp = newRel - midUp };
         }
         return b.ToImmutable();
@@ -657,12 +684,15 @@ internal static class OutsideStaffStacker
             return voltas;
         double VoltaBottom(VoltaBracketLayout v)
         {
-            // anchor = bracket line. Hooks drop EdgeHeight; the volta
-            // number hangs from line+0.3 at 0.6 x 4sp (renderer
-            // geometry), so the deeper of the two bounds the extent.
+            // anchor = bracket line. Hooks drop EdgeHeight; the volta number hangs from
+            // 0.3 below the line with VerticalAnchor.Hanging ("y is the top of the glyph
+            // extents"), so its ink reaches its own HEIGHT further down — measured from
+            // the face at the size and style the draw uses (DrawVoltaBrackets: Bold at
+            // 0.6 x 4sp). The deeper of the two bounds the extent.
             double textDepth = string.IsNullOrEmpty(v.VoltaText)
                 ? 0
-                : 0.3 + TextAscentEm * (0.6 * 4.0);
+                : 0.3 + TextFontMetrics.InkHeight(
+                    v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold);
             return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
         }
 
@@ -792,10 +822,18 @@ internal static class OutsideStaffStacker
             }
             default:
             {
-                // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
+                // Plain text marks (D.S./Fine/pedal/…), baseline anchor at 0.7 x 4sp.
+                // Vertical extent = the string's own ink at the style the draw picks
+                // (DrawSingleMusicMark: BoldItalic, except the sustain-pedal words,
+                // which stay upright Bold). Width keeps the existing bold-advance
+                // estimate — the X range was never part of the letter-class trio.
                 double fs = fontSize * 0.7;
                 double halfW = TextFontMetrics.SerifBold(m.Text, fs) / 2;
-                return (-halfW, halfW, TextAscentEm * fs, TextDescentEm * fs);
+                var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+                    ? FontStyle.Bold
+                    : FontStyle.BoldItalic;
+                var ink = TextFontMetrics.Ink(m.Text, fs, sans: false, style);
+                return (-halfW, halfW, ink.Top, -ink.Bottom);
             }
         }
     }

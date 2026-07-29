@@ -32,18 +32,19 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第28セッション・**▶1⑴ の「和音記号の weight」を、幅を測る対を
-先に起票してから移植した。対は狙いの weight のほかに 3 つの欠陥を追加で出した**）
+最終更新 2026-07-29（第29セッション・**▶1⑵ の「OutsideStaffStacker の Own tuning」を、
+点を先に起票してから移植した。対は狙いの 3 定数のほかに「TextScript の em 2.4 は
+取り違え（正=2.2）」と「staff-padding は refpoint に掛かる床」を追加で出した**）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3471 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**ワーキングツリーは clean**
+**HEAD は 3476 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**commit 6 本**: `c4da07d0`（点の起票・出力不変）／`641c61a6`（weight/em/rod 移植・
-snapshot 11 枚再ベース・**ユーザー GO 済**）／`13253ecc`（リードシート床の再配分・同・3 枚）／
-`1de1abe5`（和音行の時価ばね移植・同・5 枚・下の 4 が**閉じた**）／
-`ab0047be`（§2H: paper column モデル欠落の 3 件を 1 島に束ねた）／本 §1 の最終更新。
+**commit 4 本**: `68162b87`（textscript 点 4 つの起票・出力不変）／
+`99ecd3aa`（Own tuning 3 定数 → face ink・TextScript em 2.2・snapshot 6 枚再ベース・
+**ユーザー GO 済**）／`53930190`（volta 番号を baseline アンカーへ・**ユーザーが目視で指摘**・
+5 枚・GO 済）／本 §1 の最終更新。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -55,9 +56,63 @@ snapshot 11 枚再ベース・**ユーザー GO 済**）／`13253ecc`（リー�
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
 
+### 第29セッション（2026-07-29）＝ **「Own tuning」3 定数を測ったら、em の取り違えが 3 例目として落ちた**
+
+★★★ **新プローブ `textscript-ink.ly`（3 秒級・4 book）＋台帳 4 点 `textscript.*`。**
+Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）。対の設計は
+「descender の有無だけが違う 2 冊」＋「2 段重ね（箱が成立する組／しない組）」。
+**予測 4 本とも的中し、外れた細部（TXD が edge 制約でなく別の床に座った）が第 2 の機構を出した**:
+
+1. ★★★ **LP の staff-padding は grob の refpoint（baseline）に掛かる床**
+   （`side-position-interface.cc:401-453 aligned_side`・コメント自身が
+   "Ensure 'staff-padding' from my refpoint to the staff"）。TXD "dolce" = **2.550000 六桁丸**
+   = 譜インク 2.05 + 0.5。**Lily# はこの床を持っていない**（下の残債 ⑴）。
+2. **outside-staff-padding 0.46 はエッジに掛かり、baseline は文字列自身の descent に乗る**：
+   TXP "poco" = **2.510000 六桁丸** + descent 0.444430。Lily# の `Place()` の形
+   （frontier + 0.46 + descent）は**この regime では LP の binding 制約そのもの**で、
+   descent だけが文字クラス定数だった。
+3. ★★★ **TextScript の em は 2.2**（font-size 宣言なし＝ text-font-size 11pt ÷ 5pt/ss）。
+   プローブの 4 つの独立した読み（poco descent／dolce ascender／mum x-height／overshoot）が
+   **全部 2.2000x** を返した。Lily# の 2.4 は**歌詞 3.2・和音 2.6 に続く取り違えの 3 例目**
+   （§5.0 の「フォント量札は弱い」がまた当たった）。`EngravingDefaults.TextScriptFontSize`
+   1 本に統一（描画＝予約）。
+4. **移植の着地（全予測どおり）**: descender **+0.155570 → −0.000030**・box-step
+   **+0.921552 → −0.000048**（em と face の照合）／no-descender **+0.560000 → −0.007000**
+   ＝残差全体が ⑴ の staff-padding 床の欠落**そのもの**（この点がその網）／outline-step
+   **+0.755025 → +0.420825**＝**箱対アウトラインの名前付き残差**（LP は
+   `add_grobs_of_one_priority` でテキストの**アウトライン skyline** を pointwise に
+   突き合わせる。Lily# の `DirectionalOccupancy` は interval 箱＝構造的に読めない。
+   **⚠️ 0.42 を定数で埋めない**——文字列対ごとの量。box-step の双子が −4.8e-5 に居るので、
+   アウトライン移植以外でここが動いたら fitting）。
+5. **tuplet seed は SkylineBuilder の正規予約（数字のインク箱＋線の外縁）の鏡写しになり、
+   出所不明の `+0.1` は消えた**。volta/ottava/mark も各描画 face の ink に置換。
+   網 `CustomTextDescent_ComesFromTheStringsOwnInk_NotAClassConstant`（§5.4 の摂動型）。
+6. ⚠️ **引用ラチェットの罠 2 つ**（§5.2.1⑦ の運用知識）: 末尾アンダースコアのメンバー名
+   （`default_outside_staff_padding_`）は **SymbolPattern が構造的にマッチできない**
+   （`_` は \w なので \b が立たない）→ getter 名で引く。単語 1 個の grob 名（TextScript）と
+   2 節ハイフン（font-size・Y-extent）は「名前」に数えられない → 3 節トークンを同じ行に置く。
+7. ★ **ユーザー指摘（GO 済・`53930190`）**: volta 番号が「あるべきより少し下」。**em port は
+   無罪**（snapshot 座標は移植前後で同一）で、**前からの描画の性質**——
+   `VerticalAnchor.Hanging` は 3 backend とも **typographic ascent 落とし**で実装されており
+   （契約の「y=グリフ上端」と不一致）、cap 高しかない数字は線から ≈0.55 下に落ちていた。
+   ⇒ **baseline アンカー**（唯一 backend 一様）で `線 − 0.3 − Ink.Top` に置き、インク上端が
+   ちょうど 0.3 下に。**同日入れた予約式 0.3 + InkHeight と構成上一致**した。
+   ⚠️ **Hanging を使う新規描画は同じ罠を踏む**——予約と合わせるなら baseline で書く。
+
+**残した宣言済みの負債**（このセッションで名前を付けた・未着手）:
+- ⑴ **staff-padding の refpoint 床が無い**（`textscript.no-descender` の −0.007000 が網）。
+  LP の side-position（padding 0.3 / staff-padding 0.5 → その上に outside-staff pass）を
+  持つ日に閉じる。0.46 一律は**この regime では偶然でなく LP の binding 項**だった。
+- ⑵ **stacker が interval 箱**（`textscript.stacked.outline-step` +0.420825 が網）。
+  §2C の Flag/Accidental/Rest のアウトライン半分と同じ島。
+- ⑶ `TextSpannerAscent/Descent`（1.2/0.3）と `DynamicHalfWidth`（0.75）は**別の定数・別の読者**
+  で今回触っていない。mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）も Lily#-own のまま
+  ＝em を測った点があるのは text script だけ。
+
 ### 第28セッション（2026-07-29）＝ **和音記号の幅を初めて測ったら、weight のほかに 3 つ落ちた**
 
-commit の一覧は §1 冒頭。以下がセッションの中身。
+commit の一覧はアーカイブ行き（`c4da07d0`〜`ab0047be` の 6 本＋台帳 `chord.symbol-width.*` の
+`why` に全部ある）。以下がセッションの中身。
 
 ★★★ **新プローブ `chord-symbol-width.ly`（13 秒級・5 book）＋台帳 3 点
 `chord.symbol-width.{minor-pair-gap,quarter-spring-control,half-spring-control}`。**
@@ -271,11 +326,12 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
 1. ★ **テキスト量の残り**:
-   ~~⑴ 和音記号の weight~~ — **移植済（GO 待ち・第28セッション）**。
-   ⑵ **`OutsideStaffStacker` の「Own tuning」**（`CapHeightEm = 0.71` / `TextAscentEm = 0.75` /
-     `TextDescentEm = 0.25`）＝**コメントが自ら「no single LP grob source」と言っている**。
-     小節番号・歌詞・和音の経路からは外れたが、**tuplet 番号・強弱・テキスト系がまだ読む**。
-   ~~⑶ 和音行の時価ばね~~ — **同セッションで閉じた**（上の 4。両控え exact・
+   ~~⑴ 和音記号の weight~~ — **移植済（第28セッション・GO 済）**。
+   ~~⑵ `OutsideStaffStacker` の「Own tuning」~~ — **閉じた（第29セッション・`99ecd3aa`）**。
+     3 定数は消え、5 消費箇所とも描画と同じ face の ink。**残した負債 3 件は第29セッション節**
+     （staff-padding refpoint 床＝点あり／stacker の interval 箱＝点あり／
+     TextSpanner 1.2/0.3・DynamicHalfWidth 0.75・mark 描画サイズ＝**点が無いので点が先**）。
+   ~~⑶ 和音行の時価ばね~~ — **閉じた**（第28セッション。両控え exact・
      `chord.symbol-width.{quarter,half}-spring-control` がラチェット網として残る）。
 2. **clef シルエット移植が残した繰延 2 件**（上のセッション節に詳細）＝
    **⑴ 平坦化をレイアウト時へ**（ossia の量子化。**1 番の容疑者 ⑵ と同じ物体なので、
@@ -484,8 +540,9 @@ LP は文脈の `fontSize`（→ `magstep`）を読み、**ossia かどうかは
 **次に触る人は「残差」列を信じる前に §0 でテストを走らせること**（§5.2）。
 
 ★★★ **数より効く読み方は「残っているものが何で出来ているか」で、それは 2026-07-28 現在
-ほとんど閉じた**（**|residual| 総和 0.012541**・ss 154 点中 **129 点が exact**・
-**残る最大が 0.011320**＝もう「族」と呼べる大きさのものが無い・
+ほとんど閉じた**（2026-07-29 の再印字: **156/188 exact・|residual| 総和 0.443735**（161 距離点）・
+counts 25/27。⚠️ **総和の跳ねは新設 `textscript.stacked.outline-step` の持参金 +0.420825**＝
+箱対アウトラインの**名前付き**残差で、機構の後退ではない。それを除く総和は従来水準・
 count は別勘定＝§3 の決定。⚠️ **符号付きの和は別の数**——引用するときはどちらを足したか言うこと。
 ⚠️ **第27セッションは 2.606965 → 2.968224 → 2.801498 → 0.022898 → 0.012541 と動いた**。上がった 2 段は
 clef シルエット移植が**打ち消しを解いた +0.105961 ×3** と**新設点の持参金 +0.043376**、
@@ -498,7 +555,9 @@ LP 側の定数を引いてから貼ること。** ⚠️ **ここに数を書�
 
 | 残る族 | 量 | 種類 |
 |---|---|---|
-| `system.clef-floor.floor-bound-distance` | **+0.004090**（**残る最大**） | **フォント**（小節番号の face の cap 差 0.007048 が padding 斜面で薄まった姿）。⚠️ **clef ではない**——padding 無しの距離は LP と六桁一致 |
+| `textscript.stacked.outline-step` | **+0.420825**（**残る最大・ただし名前付き**） | **箱対アウトライン**（第29セッション新設）。LP はテキストの**アウトライン skyline** を pointwise に突き合わせ、Lily# の `DirectionalOccupancy` は interval 箱＝構造的に読めない。**双子の box-step が −4.8e-5**なので、アウトライン移植以外でここが動いたら fitting。§2C の Flag/Accidental/Rest の島と同族 |
+| `textscript.no-descender.staff-to-baseline` | **−0.007000** | **staff-padding refpoint 床の欠落**（`side-position-interface.cc:401-453 aligned_side`）。残差全体がこの 1 項＝この点がその網。descender 側と box-step は −3e-5/−4.8e-5 で face 差の床 |
+| `system.clef-floor.floor-bound-distance` | **+0.004090** | **フォント**（小節番号の face の cap 差 0.007048 が padding 斜面で薄まった姿）。⚠️ **clef ではない**——padding 無しの距離は LP と六桁一致 |
 | `between-staves.two-verse.staff-staff-inside` | **+0.001767**（旧 +0.284136） | 歌詞 descent の書体差ほか |
 | `lyrics.chord-row.between-systems.staff-to-lyric` | **+0.000963**（旧 +0.002047 → +0.011320 → 今） | **和音記号の em を直して 91% 落ちた**。⚠️ 途中で上がったのは**フォント 3 項の打ち消しが解けた**から |
 | `lyrics.*.staff-to-lyric` ×8 | **−0.000100** | **face の差そのもの**（LP 1.187880 対 Lily# 1.187789） |

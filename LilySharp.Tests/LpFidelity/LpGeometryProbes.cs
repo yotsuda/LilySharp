@@ -1647,6 +1647,79 @@ internal static class LpGeometryProbes
     /// <summary>The same music two octaves up — the mirror of book BNH.</summary>
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
+    /// <summary>
+    /// WHERE A TEXT SCRIPT SITS, per string — the mirrors of textscript-ink.ly's books
+    /// TXD / TXP / TXS / TXL. Lily#'s <c>_"text"</c> engraves at the end of the section
+    /// just played and stacks above the staff, which is LilyPond's
+    /// <c>^\markup \italic "text"</c> (TextScript, priority 450) over the same flat staff.
+    /// </summary>
+    /// <remarks>
+    /// The pair that measures OutsideStaffStacker's letter-class constants
+    /// (<c>TextAscentEm 0.75</c> / <c>TextDescentEm 0.25</c> — "no single LP grob source",
+    /// its own comment says) against what LilyPond does, which is to read the string's own
+    /// ink. MEASURED (audit/lp-geometry/probes/textscript-ink.ly, 2026-07-29):
+    /// <list type="bullet">
+    /// <item>TXD "dolce" baseline 2.550000 over the staff refpoint, six-digit round: staff
+    /// ink 2.050000 + staff-padding 0.5 applied to the REFPOINT
+    /// (lily/side-position-interface.cc:401-453 aligned_side).</item>
+    /// <item>TXP "poco" baseline 2.954430 = ink bottom pinned at 2.510000 (staff ink
+    /// 2.050000 + outside-staff-padding 0.46,
+    /// lily/axis-group-interface.cc:45-50 get_default_outside_staff_padding) plus the
+    /// p's own descent 0.444430 — so LilyPond's baseline RIDES THE DESCENDER and the two
+    /// books differ by it, while a flat-fraction stacker reads them identical.</item>
+    /// <item>TXL "poco" over "mum": step 1.938448 = inkTop(mum) 1.034035 + 0.46 +
+    /// descent(poco) 0.444430 to 1.6e-5 — box arithmetic holds because "mum"'s x-height
+    /// top is flat under wherever the descender falls.</item>
+    /// <item>TXS "poco" over "dolce": step 2.104975, 0.420895 BELOW the box arithmetic
+    /// 2.525870 — outline against outline, pointwise
+    /// (lily/axis-group-interface.cc:739-806 add_grobs_of_one_priority, :648
+    /// avoid_outside_staff_collisions): the descender falls over d-o-l's bowls, not
+    /// the ascender. An interval stacker cannot represent this; the entry names it.</item>
+    /// </list>
+    /// <para>
+    /// ⚠️ Every section is referenced as <c>~Name</c>: a section LABEL is serif at the very
+    /// size custom text draws at, and <see cref="RenderedGeometry.CustomTexts"/> tells the
+    /// runs apart by size alone.
+    /// </para>
+    /// <para>
+    /// ⚠️ The music is c' (LilyPond c'') — a DOWN stem, so nothing but the staff's own top
+    /// line stands under the text and the support is flat at every X. An UP-stemmed pitch
+    /// here would turn the entries into measurements of a stem tip.
+    /// </para>
+    /// </remarks>
+    private static string TextScriptScore(string name, string texts) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' c' c' | c'4 c' c' c' | }
+        }
+        section B {
+          melody { c'4 c' c' c' | c'1 | }
+        }
+
+        form main { ~A {{texts}} ~B }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>No descender — the baseline sits on the staff-padding refpoint floor.</summary>
+    private static readonly string TXD = TextScriptScore("TXD", "_\"dolce\"");
+
+    /// <summary>The descender — the baseline rides the p's own ink.</summary>
+    private static readonly string TXP = TextScriptScore("TXP", "_\"poco\"");
+
+    /// <summary>Two scripts whose extremes do NOT align — the outline (pointwise) step.</summary>
+    private static readonly string TXS = TextScriptScore("TXS", "_\"dolce\" _\"poco\"");
+
+    /// <summary>Two scripts with a flat lower profile — the box-arithmetic step.</summary>
+    private static readonly string TXL = TextScriptScore("TXL", "_\"mum\" _\"poco\"");
+
     /// <summary>The default page with vertical justification off, as books BNL/BNH set.</summary>
     private static readonly LayoutOptions RaggedBottomPaper =
         LayoutOptions.Default with
@@ -4194,6 +4267,25 @@ internal static class LpGeometryProbes
             g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
         new("barnumber.high-melody.staff-to-baseline", BNH,
             g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
+
+        // --- where a TEXT SCRIPT sits, per string (books TXD/TXP/TXS/TXL) ---
+        // The first ledger points that reach OutsideStaffStacker's letter-class constants
+        // (TextAscentEm/TextDescentEm). Four entries, three claims: the single-text pair
+        // (TXD/TXP) reads whether the baseline rides the string's own DESCENDER — LilyPond's
+        // two readings differ by exactly the p's ink, a flat-fraction stacker reads them
+        // identical. The stacked pair reads the grob-vs-grob step: TXL in the regime where
+        // box arithmetic equals LilyPond's skyline (flat lower profile), TXS in the regime
+        // where it cannot (outline pointwise) — so TXL is what the ink port must close and
+        // TXS is the named remainder that stays open until the stacker itself holds
+        // outlines. See TextScriptScore for the measured mechanism and the LP refs.
+        new("textscript.no-descender.staff-to-baseline", TXD,
+            g => g.SoleCustomTextBaselineAboveStaff(), RaggedBottomPaper),
+        new("textscript.descender.staff-to-baseline", TXP,
+            g => g.SoleCustomTextBaselineAboveStaff(), RaggedBottomPaper),
+        new("textscript.stacked.box-step", TXL,
+            g => g.CustomTextBaselineStep(), RaggedBottomPaper),
+        new("textscript.stacked.outline-step", TXS,
+            g => g.CustomTextBaselineStep(), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

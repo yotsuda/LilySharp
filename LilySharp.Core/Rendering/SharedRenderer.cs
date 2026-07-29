@@ -60,7 +60,9 @@ internal static partial class SharedRenderer
     private const double LineStartBarClearance = 1.15;
     // Mirror of LyricEngraver's VerseSpacing (baseline step between stacked verses).
     private const double LyricVerseSpacing = 3.2;
-    private const double FontSize = 4.0;
+    // Internal so LP-fidelity readers can identify a text run by the SAME size expression
+    // the draw calls use (e.g. custom text at FontSize * 0.6), instead of a second literal.
+    internal const double FontSize = 4.0;
     private const double TempoNoteSize = 1.6;  // metronome-mark notehead size (shared with the swing equation)
     private const double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
 

@@ -624,6 +624,86 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Custom texts (<c>_"..."</c>), top of the page down — the serif runs at
+    /// <c>EngravingDefaults.TextScriptFontSize</c>, the size <c>DrawCustomTexts</c> draws
+    /// them at.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Told apart by SIZE alone, like <see cref="BarNumbers"/>: <c>DrawnText</c> records
+    /// no font style. A REHEARSAL mark's boxed letter is serif at 2.4 — distinct from the
+    /// script's 2.2 only since the em port — so the textscript-ink probes still suppress
+    /// every section label with <c>~Name</c>: a fixture that lets a mark through should
+    /// fail loudly in the count guard, not depend on a 0.2 size gap.
+    /// </remarks>
+    public IReadOnlyList<DrawnText> CustomTexts =>
+        Texts.Where(t => t.FontFamily != "sans-serif"
+                         && Math.Abs(t.FontSize
+                                     - LilySharp.Core.Svg.EngravingDefaults.TextScriptFontSize) < 1e-9)
+             .OrderBy(t => t.Y)
+             .ToList();
+
+    /// <summary>
+    /// The ONLY custom text's baseline above the staff reference point it rides over.
+    /// </summary>
+    /// <remarks>
+    /// The text-script half of <see cref="FirstBarNumberBaselineAboveStaff"/>, for the
+    /// textscript-ink pair (books TXD/TXP). LilyPond puts a TextScript's baseline at
+    /// <c>max(staff ink + staff-padding, staff ink + outside-staff-padding + descent)</c> —
+    /// the first term to the REFPOINT (lily/side-position-interface.cc:401-453 aligned_side,
+    /// "Ensure 'staff-padding' from my refpoint to the staff"), the second to the INK BOTTOM
+    /// (lily/axis-group-interface.cc:739-806 add_grobs_of_one_priority) — so the reading
+    /// moves with the string's own descender. A stacker that prices descent as a flat
+    /// fraction of the em reads the SAME number for "dolce" and "poco", and that identity
+    /// is what the pair is built to catch.
+    /// </remarks>
+    public double SoleCustomTextBaselineAboveStaff(int page = 0)
+    {
+        var texts = CustomTexts;
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE custom text, found {texts.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        double y = texts[0].Y;
+        var below = StaffRefpoints(page).Where(r => r > y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the custom text at {y:F6} has no staff below it, so it is "
+                + "not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        return below.Min() - y;
+    }
+
+    /// <summary>
+    /// The baseline step between EXACTLY TWO stacked custom texts (lower to upper).
+    /// </summary>
+    /// <remarks>
+    /// The grob-vs-grob half of the textscript-ink pair (books TXL/TXS): LilyPond lifts the
+    /// second script until its skyline clears the first one's by outside-staff-padding 0.46
+    /// (lily/axis-group-interface.cc:45-50 get_default_outside_staff_padding, :739-806
+    /// add_grobs_of_one_priority), so the step is
+    /// <c>inkTop(lower) + 0.46 + descent(upper)</c> when the lower profile is flat under the
+    /// upper's extremes (book TXL) and LESS when it is not (book TXS — outline against
+    /// outline, pointwise). An interval stacker that prices ascent and descent as flat em
+    /// fractions reads the SAME step whatever the strings are.
+    /// </remarks>
+    public double CustomTextBaselineStep(int page = 0)
+    {
+        var texts = CustomTexts;
+        if (texts.Count != 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly TWO stacked custom texts, found {texts.Count} "
+                + "— the probe is not measuring what it claims.\nDrawn geometry:\n"
+                + Describe());
+        }
+        // Device Y grows downward: [0] is the UPPER text, [1] the LOWER one.
+        return texts[1].Y - texts[0].Y;
+    }
+
+    /// <summary>
     /// How many systems the page breaker put on <paramref name="page"/>.
     /// </summary>
     /// <remarks>

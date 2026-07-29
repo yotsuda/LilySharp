@@ -264,6 +264,35 @@ internal static class EngravingDefaults
     public static readonly double ChordNameFontSize = 2.2 * Math.Pow(2.0, 1.5 / 6.0);
 
     /// <summary>
+    /// The em size a text script (<c>_"..."</c> — expression text like "molto rit.") is
+    /// set at, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3800-3833 <c>TextScript</c> (the block that declares its <c>outside-staff-priority</c>) declares NO <c>font-size</c>,
+    /// so a script is set at the paper's own text size: LILYPOND-REF scm/paper.scm:69-77 <c>text-font-size</c> = 11 * (staff-height / 20pt),
+    /// i.e. 11pt against a 5pt staff space = <b>2.2 ss</b>, with no magstep on top (see
+    /// <see cref="LyricTextFontSize"/>, which carries the same paper addresses plus its
+    /// grob's own <c>font-size 1.0</c>).
+    /// <para>
+    /// ⚠️ IT WAS <c>FontSize * 0.6</c> = 2.4, a Lily#-own em 9.1% large — the third member
+    /// of the family the lyric 3.2 and the chord 2.6 belonged to (HANDOFF 5.0: size and
+    /// metric source are two halves of one claim). Confirmed against the dedicated pair
+    /// (audit/lp-geometry/probes/textscript-ink.ly): LilyPond's measured inks for
+    /// "poco" / "dolce" / "mum" divide by the bundled italic face's per-em inks to
+    /// 2.200149 / 2.200054 / 2.200074 / 2.200667 — four independent readings of 2.2.
+    /// </para>
+    /// <para>
+    /// It lives here because both sides must agree on it:
+    /// <c>SharedRenderer.DrawCustomTexts</c> draws with it and
+    /// <c>OutsideStaffStacker.PlaceCustomTexts</c> reserves the string's own ink at it.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: scm/paper.scm:69-77 text-font-size — 11 * (staff-height/20pt), i.e.
+    // 11pt over a 5pt staff space; scm/define-grobs.scm:3800-3833 TextScript (the outside-staff-priority
+    // block) declares no font-size of its own, so the paper size applies unstepped.
+    public static readonly double TextScriptFontSize = 11.0 / 5.0;
+
+    /// <summary>
     /// The chord symbol's font series: REGULAR, in one home the reserving engraver, the
     /// spacing rules and the renderer all read.
     /// </summary>

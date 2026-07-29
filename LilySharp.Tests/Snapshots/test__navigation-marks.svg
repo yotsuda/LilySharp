@@ -72,8 +72,8 @@
   <text class="music" x="0.30" y="12.82" font-size="4.00" data-pos="469"></text>
   <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="447">Main</text>
-  <text x="30.83" y="12.87" font-size="2.80" font-weight="bold" font-style="italic" data-pos="491">To </text>
-  <text class="music" x="35.37" y="11.91" font-size="3.20" data-pos="491"></text>
+  <text x="30.83" y="13.53" font-size="2.80" font-weight="bold" font-style="italic" data-pos="491">To </text>
+  <text class="music" x="35.37" y="12.57" font-size="3.20" data-pos="491"></text>
   <text x="41.92" y="24.08" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="515">D.S. al Coda</text>
   <text class="music" x="42.42" y="13.72" font-size="4.00" data-pos="535"></text>
   <text x="63.45" y="24.08" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="556">D.C. al Fine</text>
