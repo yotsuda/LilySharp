@@ -677,6 +677,58 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The ottava bracket's dashed LINE above the first staff, measured from that staff's
+    /// refpoint (middle line) — the mirror of the OttavaBracket grob's relative
+    /// coordinate: <c>lily/ottava-bracket.cc</c> print puts the line at the stencil's own
+    /// Y=0 (and centres the label's ink on it), and <c>DrawOttavaBrackets</c> places its
+    /// <c>YUp</c> the same way, so both sides anchor the same drawn line.
+    /// </summary>
+    /// <remarks>
+    /// Identified as a HORIZONTAL rule of staff-line thickness ABOVE the top staff line:
+    /// staff lines sit at or below that line, ledger lines are drawn 0.1 thicker, stems,
+    /// hooks and bar lines are vertical or rects. ⚠️ A trill spanner's wavy segments
+    /// would satisfy this predicate — the ottava probes carry no trill, and the count
+    /// guard fails loudly if a second horizontal rule appears up there.
+    /// </remarks>
+    public double OttavaLineAboveStaff(int page = 0)
+    {
+        // ⚠️ Self-contained on purpose: the ottava line is itself a long horizontal rule
+        // of staff-line thickness, so StaffRefpoints' predicate would count SIX lines
+        // here and refuse the page. What separates them is the LEFT END: the five staff
+        // lines all start at the system's left edge, the ottava line starts after its
+        // label's text.
+        var rules = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                && Math.Abs(l.X2 - l.X1) >= 1.0)
+            .ToList();
+        double sysLeft = rules.Min(l => Math.Min(l.X1, l.X2));
+        var staffLines = rules
+            .Where(l => Math.Min(l.X1, l.X2) - sysLeft < 1e-6)
+            .Select(l => l.Y1).Distinct().OrderBy(y => y).ToList();
+        if (staffLines.Count != 5
+            || Enumerable.Range(0, 4).Any(i => Math.Abs(staffLines[i + 1] - staffLines[i] - 1.0) > 1e-6))
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected one 5-line staff at the system's left edge, found "
+                + $"{staffLines.Count} rule(s) — the probe is not measuring what it "
+                + "claims.\nDrawn geometry:\n" + Describe());
+        }
+        double refpoint = staffLines[2];
+        var ys = rules
+            .Where(l => Math.Min(l.X1, l.X2) - sysLeft >= 1e-6 && l.Y1 < staffLines[0] - 1e-6)
+            .Select(l => l.Y1).Distinct().ToList();
+        if (ys.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE horizontal staff-thickness rule above "
+                + $"the staff (the ottava line), found {ys.Count} — the probe is not "
+                + "measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return refpoint - ys[0];
+    }
+
+    /// <summary>
     /// The baseline step between EXACTLY TWO stacked custom texts (lower to upper).
     /// </summary>
     /// <remarks>

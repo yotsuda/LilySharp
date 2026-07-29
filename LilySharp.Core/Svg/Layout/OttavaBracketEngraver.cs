@@ -101,15 +101,32 @@ internal static class OttavaBracketEngraver
     private const double StaffPadding = 2.0;
 
     /// <summary>
-    /// Y-up (above the system top) for 8va/15ma brackets — the padding above the staff.
+    /// Y-up (above the system top) for 8va/15ma brackets — the staff-padding FLOOR,
+    /// measured from the staff's INK edge, not its top line's centre.
     /// </summary>
-    private const double AboveStaffYUp = StaffPadding;
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side — "Ensure
+    /// 'staff-padding' from my refpoint to the staff" floors the refpoint (the bracket
+    /// LINE) at <c>staff_extent[dir] + staff_padding</c>, and the staff's extent is its
+    /// ink (2.05 about the middle). Measured six-digit (audit/lp-geometry
+    /// ottava.floor.staff-to-line: 4.050000 = 2.05 + 2.0); the bare
+    /// <c>StaffPadding</c> here read 4.000000, half a line thickness low.
+    /// </remarks>
+    private const double AboveStaffYUp =
+        StaffPadding + EngravingDefaults.StaffLineThickness / 2.0;
 
     /// <summary>
     /// Y-up (below the system top, so negative) for 8vb/15mb brackets:
-    /// StaffHeight (4) + padding below the staff.
+    /// StaffHeight (4) + the same ink-edge floor below the staff.
     /// </summary>
-    private const double BelowStaffYUp = -(4.0 + StaffPadding);
+    /// <remarks>
+    /// The same single claim as <see cref="AboveStaffYUp"/> — aligned_side reads
+    /// <c>staff_extent[DOWN]</c>, which is the ink edge too. ⚠️ No ledger point measures
+    /// the below-staff regime; this moves with the above side because splitting one
+    /// claim's two halves is how HANDOFF 5.0's cap/baseline trap fires.
+    /// </remarks>
+    private const double BelowStaffYUp =
+        -(4.0 + StaffPadding + EngravingDefaults.StaffLineThickness / 2.0);
 
     /// <summary>
     /// Left shorten (extends bracket slightly left).

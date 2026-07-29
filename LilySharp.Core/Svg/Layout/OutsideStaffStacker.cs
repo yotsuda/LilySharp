@@ -51,6 +51,20 @@ internal static class OutsideStaffStacker
     // grob against OTHER outside-staff grobs.
     private const double OutsideStaffPadding = 0.46;
 
+    // LILYPOND-REF: scm/define-grobs.scm TextScript (staff-padding . 0.5), consumed by
+    // lily/side-position-interface.cc:401-453 aligned_side — "Ensure 'staff-padding' from
+    // my refpoint to the staff": a floor under the grob's REFPOINT (the text baseline,
+    // not its ink edge) against the staff's own ink edge, applied BEFORE the
+    // outside-staff pass. It binds when the string has no descender: LilyPond's
+    // no-descender book reads baseline 2.550000 = staff ink 2.05 + 0.5 while the edge
+    // constraint (2.05 + 0.46 + descent 0.033) loses (ledger
+    // textscript.no-descender.staff-to-baseline — its whole residual was this floor).
+    // ⚠️ TrillSpanner (1.0), TextSpanner (0.8) and DynamicLineSpanner (0.1) declare the
+    // same kind of floor and this stacker does NOT apply it to them yet — no ledger
+    // point measures those regimes; points first. (OttavaBracket's 2.0 lives in
+    // OttavaBracketEngraver.AboveStaffYUp, measured by ottava.floor.staff-to-line.)
+    private const double TextScriptStaffPadding = 0.5;
+
     // The gap from the note/staff skyline to a below-staff dynamic or hairpin is the
     // DynamicLineSpanner's own side-position padding, NOT outside-staff-padding.
     // LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner (padding . 0.6).
@@ -661,8 +675,16 @@ internal static class OutsideStaffStacker
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ct.StaffIndex) - 2.0;
+            // The staff-padding refpoint floor, applied to the anchor BEFORE Place —
+            // aligned_side runs before the outside-staff pass, so the 0.46 raise starts
+            // FROM the floored baseline and the tracker registers the ink where it
+            // lands. The floor is against the STAFF's own ink edge (2.0 + half a line),
+            // not the accumulated frontier — that is what "on a row" in aligned_side's
+            // comment means. See TextScriptStaffPadding for the measurement.
+            double staffPaddingFloor = midUp
+                + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + TextScriptStaffPadding;
             double newRel = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                ct.YUp + midUp,
+                Math.Max(ct.YUp + midUp, staffPaddingFloor),
                 topOffset: ctInk.Top, bottomOffset: -ctInk.Bottom);
             b[i] = ct with { YUp = newRel - midUp };
         }

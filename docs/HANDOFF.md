@@ -32,17 +32,22 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第30セッション・**▶⓪「beamed tuplet 番号の +0.26 を割る」を実施。
-割れた先は 2 欠陥（beam は六桁で無罪）で、同セッションで両方移植し
-+0.260021 → +0.0000208（face 床）に着地・ユーザー GO 済**）
+最終更新 2026-07-29（第30セッション・**3 段: ▶⓪「beamed の +0.26」を割って移植
+（+0.0000208・GO 済）／▶1⑴「staff-padding refpoint 床」を TextScript に移植
+（−0.007000 → 九桁 0・snapshot 全 byte 不変）／Ottava の床も点を作って移植
+（−0.05 → exact・snapshot 1 枚・GO 済）**。**末尾に字面度の自己監査**——seed の tab ガードを
+根本原因ごと除去（byte 不変）し、残る非字面は ▶ の「字面度負債」に名指し）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3480 passed / 0 failed / 3 skipped**（網 2 件追加）・Core 0 warn 0 err・
-**ワーキングツリーは clean**（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**第30セッションの commit**: `9c621814`（engraver beamed 分岐 + seed の beam 共有・
-snapshot 6 枚・台帳 1 点・網 2 件・**GO 済**）＋本 §1 の更新。
+**HEAD は 3483 passed / 0 failed / 3 skipped**（網 3 件＋台帳 2 点追加）・
+Core 0 warn 0 err・**ワーキングツリーは clean**
+（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第30セッションの commit**: `9c621814`（beamed tuplet 番号・snapshot 6 枚・**GO 済**）／
+`d1681204`（handoff）／`4d75912f`（staff-padding 床・TextScript・**出力 byte 不変**）／
+`25e35b8e`（handoff）／`d4c0a0ef`（Ottava 床・プローブ＋台帳 2 点＋snapshot 1 枚・**GO 済**）／
+`07a7e9c8`（seed の tab ガードを根本原因ごと除去・**byte 不変**）＋handoff 数本。
 第29セッションまでの commit 8 本の一覧は第29セッション節と各 commit メッセージに。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
@@ -84,6 +89,46 @@ Lily# の描画 beam 下端は **3.240000 = LP と六桁一致**。0.26 は 2 �
 6. ⚠️ **同型の残り**: engraver の **tab 分岐**はレンダラー offset 補償（+0.3/−0.8）を
    まだ持っている——draw が `VerticalAnchor.Middle` になった今、tab の beamed 番号は
    描画位置も補償分ずれている疑い。**点が無いので点が先**（digitHeight 1.7 も tab 分岐だけに残存）。
+7. ★★★ **同セッション延長で ▶1⑴「staff-padding の refpoint 床」も閉じた**。
+   `PlaceCustomTexts` が **anchor（baseline）を「譜インク縁 2.05 + staff-padding 0.5」で
+   床上げしてから Place に渡す**＝`aligned_side` の順序（床が先・0.46 の outside-staff
+   raise はその上から）。`textscript.no-descender` **−0.007000 → 0.000000000（九桁）**
+   ——床は両側とも 2.0+0.05+0.5 の正確な算術なので exact。**snapshot 197 枚は全て byte 不変**
+   ＝コーパス内で床が bind するのはプローブ regime だけ。
+   網 2 件: `CustomTextWithoutDescender_SitsOnTheStaffPaddingFloor`（床 regime）／
+   既存の descent 摂動網は**frontier を上げた regime へ移した**（素の譜上では対の差が
+   「床対エッジ」= LP 自身の 0.404430 になり、生の descent 差 0.4114 ではなくなったため）。
+8. ⚠️ **床は TextScript だけに入れた**。LP が同じ床を宣言する stacker 配下の残り＝
+   **OttavaBracket 2.0／TrillSpanner 1.0／TextSpanner 0.8／DynamicLineSpanner 0.1**
+   （`define-grobs.scm` 全数走査済・定数のコメントにも明記）。**点が無いので点が先**——
+   盲移植は各 regime の出力を未測定のまま動かす。**→ Ottava は同セッションで点を作って閉じた（9）。**
+9. ★★★ **さらに延長で Ottava の床も「点が先」どおりに閉じた**。新プローブ
+   `ottava-floor.ly`（7 秒級・2 book）＋台帳 2 点 `ottava.{floor,support}.staff-to-line`。
+   アンカーは**破線の線そのもの**（`ottava-bracket.cc` は線を stencil Y=0 に置き
+   ラベルのインクを線に中心合わせ・hook は Y-extent を持たない）。LP 実測:
+   **床 4.050000（六桁丸＝譜インク 2.05 + staff-padding 2.0）／支持 5.777520
+   （列上端 4.485489 + padding 0.5 + ラベル半インク 0.792031＝エッジ制約）**。
+   ★ **falsifier が半分鳴って、それが所見**: Lily# は 4.000000 を読んだ——stacker のエッジ
+   （予測 3.3）ではなく **`OttavaBracketEngraver.AboveStaffYUp = StaffPadding` が既に床を
+   持っていて、基準が譜インクでなく上端線**だった＝残差 −0.05 は線中心対インク縁の
+   半太さ（2.05 対 2.0 の既知族）。⇒ 移植は `StaffLineThickness/2` を above/below 両方へ
+   （**1 claim の 2 つの半分**＝§5.0 の cap/baseline の教訓で分割しない。below は未測定と明記）。
+   **床側 exact 着地・支持側は移植前後で不動 +0.027480**（対の要件どおり）＝
+   **box対outline支持 +0.0595／padding 0.46対0.5 −0.04／hook 0.8対半インク +0.008 の net**
+   （why に分解記録・**埋めない**——interval 箱の島で割れる量）。
+   **snapshot は 1 枚だけ**（multi-staff-ottava の 8vb が +0.05 下へ＝below 双子の動き。
+   8va 側は支持 regime 5.80 で不動が正しい）。
+10. ⚠️ **アクセサの罠を 1 つ記録**: ottava の破線は**長い水平 0.1 罫**なので
+    `StaffRefpoints` の譜線述語がそれを 6 本目に数えてページを拒否する。
+    `OttavaLineAboveStaff` は**左端で分別**（譜線=システム左端から・ottava=ラベルの後から）
+    する自己完結型にした。**trill の波線も同じ述語に掛かる**——trill の点を作る人は同じ罠。
+11. ★★ **字面度の自己監査（ユーザー要請）と、除去したハック 1 件**。
+    除去済: **seed の `staff.IsTab ? default : beamLayouts` ガード**——根本原因は
+    `StaffBeamLayouts` が trivial system の `StaffIndex` 0 で返すことだったので、
+    `StaffTupletBracketLayouts` が**実 staff index に再スタンプ**してから engraver へ渡す。
+    tab の seed も draw と同じ tab-beam 縁の分岐を通るようになり、**全 snapshot byte 不変**
+    （tab の tuplet 予約はどの fixture でも binding していない）。
+    **除去しなかったもの（未測定 regime を動かすため・点が先）は ▶ の「字面度負債」へ。**
 
 ### 第29セッション（2026-07-29）＝ **「Own tuning」3 定数を測ったら、em の取り違えが 3 例目として落ちた**
 
@@ -144,11 +189,10 @@ Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）
 
 **残した宣言済みの負債**（このセッションで名前を付けた・未着手。**次セッションの推奨順**）:
 - ~~⓪ **beamed tuplet 番号の 0.26 を割る**~~ — **閉じた**（第30セッション・+0.0000208 に着地）。
-- ⑴ **staff-padding の refpoint 床が無い**（`textscript.no-descender` の −0.007000 が網）。
-  LP の side-position（padding 0.3 / staff-padding 0.5 → その上に outside-staff pass）＝
-  `aligned_side` の字面移植で閉じる。0.46 一律は**この regime では偶然でなく LP の binding 項**
-  だった。grob ごとの宣言表（padding/staff-padding/priority）を `define-grobs.scm` から
-  持つのが入口。
+- ~~⑴ **staff-padding の refpoint 床が無い**~~ — **TextScript と Ottava は閉じた**
+  （第30セッション・両方 exact 着地）。**残るのは同じ床を宣言する 3 grob**
+  （Trill 1.0／TextSpanner 0.8／DynamicLineSpanner 0.1）＝**点が無いので点が先**
+  （第30セッション節 8-9。ottava-floor.ly が対のレシピ・アクセサの罠は節 10）。
 - ⑵ **stacker が interval 箱**（`textscript.stacked.outline-step` +0.420825 が網）。
   §2C の Flag/Accidental/Rest のアウトライン半分と同じ島。⑴ の後。
   **終着点は SkylineBuilder との「skyline の家 1 つ」**（§5.2.1② の二重実装解消）——
@@ -366,7 +410,7 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 
 ### ▶ 次の一手
 
-★★★ **推奨順（第27セッション末に棚卸し）**
+★★★ **推奨順（第27セッション末に棚卸し・第30セッション末に字面度負債を追記）**
 
 ⚠️ **第26セッション末の ▶0〜▶3 は全部済**。**残す 1 文だけ**: **専用プローブの実測は 13.5 秒**で、
 `-Probe` は既存の `Measure-LilyPondPageGeometry.ps1` が最初から取る。
@@ -374,11 +418,34 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 ⚠️★★ **残差はもう最大 0.004090。「総和が下がったか」では何も見えない**——
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
+★★ **字面度負債（第30セッションの自己監査で名指し・全部「点が先」）**。
+**次セッションの本丸は従来どおり ▶1 の「stacker の interval 箱」**（`textscript.stacked.
+outline-step` +0.420825 が網・点あり。ottava の +0.027480 もそこで割れる）。以下はその後:
+- ⓐ **beamed tuplet の 2 分岐を LP の単一経路へ**。LP に「beamed 専用の式」は無い——
+  encompass 点（**実 stem 先端＝beam 面で終わる**）→ブラケット位置→番号が midpoint、の
+  1 本道の帰結が「beam 縁 + 1.1」。Lily# は fallback（`CalculateSlope`＝**生の
+  DefaultStemLength 3.5**）と beamed 分岐（測定値の直書き）の 2 分岐。統一の観測面は
+  **部分 beam・ShowBracket=true で beam を跨ぐ regime**（生 3.5 対 quant 済で割れる）＝
+  **その対を先に起票**。
+- ⓑ **譜 extent の定数直書き**: TextScript 床の 2.05・Ottava 床の半太さ・`BelowStaffYUp` の
+  名目 4.0。LP は `staff_extent[dir]` を**実 StaffSymbol から読む**ので、線数の違う譜・
+  `magnifyStaff` 相当で割れる。**tab/ossia 島の「名目 4.0」族と同じ 1 個の物体**——
+  `StaffLayout` から高さを引く配線が本体。点は**倍率譜×床 grob の対**を新設。
+- ⓒ **tab 分岐の +0.3/−0.8 補償と digitHeight 1.7**（第30セッション節 6）——tab の
+  beamed 番号の対（`tuplet-number-beamed.ly` の tab 版）が先。
+- ⓓ **TextScript の支持側 side-position padding 0.3 が未移植**（測定 regime では 0.46 か
+  床が勝って影）。発火するのは**支持インクが譜インクより高く、かつ skyline に入らない**組
+  ——対を組めるかから検討。
+- ⓔ **床 grob の宣言表**（padding/staff-padding/priority を `define-grobs.scm` から）。
+  ad hoc 定数が 2 本になった（TextScript/ottava）。**Trill/TextSpanner/Dynamic の床を
+  足す日に表へ畳む**——3 本目を ad hoc で足さないこと。
+
 1. ★ **テキスト量の残り**:
    ~~⑴ 和音記号の weight~~ — **移植済（第28セッション・GO 済）**。
    ~~⑵ `OutsideStaffStacker` の「Own tuning」~~ — **閉じた（第29セッション・`99ecd3aa`）**。
-     3 定数は消え、5 消費箇所とも描画と同じ face の ink。**残した負債 3 件は第29セッション節**
-     （staff-padding refpoint 床＝点あり／stacker の interval 箱＝点あり／
+     3 定数は消え、5 消費箇所とも描画と同じ face の ink。**残した負債は第29セッション節**
+     （~~staff-padding refpoint 床~~＝**TextScript 分は第30セッションで閉じた**／
+     stacker の interval 箱＝点あり／
      TextSpanner 1.2/0.3・DynamicHalfWidth 0.75・mark 描画サイズ＝**点が無いので点が先**）。
    ~~⑶ 和音行の時価ばね~~ — **閉じた**（第28セッション。両控え exact・
      `chord.symbol-width.{quarter,half}-spring-control` がラチェット網として残る）。
@@ -605,7 +672,7 @@ LP 側の定数を引いてから貼ること。** ⚠️ **ここに数を書�
 | 残る族 | 量 | 種類 |
 |---|---|---|
 | `textscript.stacked.outline-step` | **+0.420825**（**残る最大・ただし名前付き**） | **箱対アウトライン**（第29セッション新設）。LP はテキストの**アウトライン skyline** を pointwise に突き合わせ、Lily# の `DirectionalOccupancy` は interval 箱＝構造的に読めない。**双子の box-step が −4.8e-5**なので、アウトライン移植以外でここが動いたら fitting。§2C の Flag/Accidental/Rest の島と同族 |
-| `textscript.no-descender.staff-to-baseline` | **−0.007000** | **staff-padding refpoint 床の欠落**（`side-position-interface.cc:401-453 aligned_side`）。残差全体がこの 1 項＝この点がその網。descender 側と box-step は −3e-5/−4.8e-5 で face 差の床 |
+| `textscript.no-descender.staff-to-baseline` | **0.000000**（旧 −0.007000） | **閉じた（第30セッション）**＝staff-padding refpoint 床を `PlaceCustomTexts` に移植（`aligned_side` の順序）。descender 側と box-step は −3e-5/−4.8e-5 で face 差の床のまま |
 | `staff.staff.beamed-tuplet-number` | **+0.0000208**（旧 −1.434229 → +0.260021 → 今） | **閉じた（第30セッション）**。残りは番号の half-ink face 差（0.627738 対 0.627717）＝歌詞 −0.000100 と同族。**0 にしない** |
 | `staff.staff.beamed-tuplet-control` | **−0.006512** | clef down 3.533488 対 LP 3.540000＝clef 族の欠片（clef 対 平坦線という新しい組の網） |
 | `system.clef-floor.floor-bound-distance` | **+0.004090** | **フォント**（小節番号の face の cap 差 0.007048 が padding 斜面で薄まった姿）。⚠️ **clef ではない**——padding 無しの距離は LP と六桁一致 |

@@ -97,39 +97,46 @@ public class OutsideStaffStackerTests
     // stack ABOVE the staff via StackAboveStaff — LilyPond TextSpanner direction=UP
     // — covered by the SVG snapshot fixtures.)
 
+    private static double PlacedCustomTextBaseline(
+        ImmutableArray<SystemLayout> systems, params string[] texts)
+    {
+        var layouts = texts
+            .Select(t => new CustomTextLayout(MeasureIndex: 0, X: 20, YUp: -4.0, Text: t,
+                SourcePosition: 0))
+            .ToImmutableArray();
+        var (_, _, _, adjTexts, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
+            systems, systemSkylines: null,
+            ImmutableArray<TupletBracketLayout>.Empty,
+            ImmutableArray<TrillSpannerLayout>.Empty,
+            ImmutableArray<BarNumberLayout>.Empty,
+            ImmutableArray<OttavaBracketLayout>.Empty,
+            layouts,
+            ImmutableArray<VoltaBracketLayout>.Empty,
+            ImmutableArray<MusicMarkLayout>.Empty);
+        return adjTexts[^1].YUp;
+    }
+
     [Fact]
     public void CustomTextDescent_ComesFromTheStringsOwnInk_NotAClassConstant()
     {
         // LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (the outside-staff-priority
         // block) — its Y-extent comes from the stencil, so the clearance under
         // the baseline is the STRING's own descent. Measured
-        // (audit/lp-geometry/probes/textscript-ink.ly): LilyPond places "poco" 0.404430
-        // HIGHER than "dolce" over the same flat staff, because the p's descender must
-        // clear the same support. The letter-class trio this rule replaced (a flat
+        // (audit/lp-geometry/probes/textscript-ink.ly): a descender string's baseline
+        // rides its own ink. The letter-class trio this rule replaced (a flat
         // 0.25 em descent) prices every string identically and reads 0 here — this is
         // the perturbation form of the ledger pair TXD/TXP, kept at model level so it
         // survives fixture edits.
+        //
+        // Each string is stacked as the SECOND text over the same first text, so both
+        // sit on the EDGE constraint (frontier + 0.46 + own descent) with a frontier
+        // high enough that the staff-padding refpoint floor cannot bind — over the bare
+        // staff the no-descender string sits ON that floor instead, which is the
+        // separate claim CustomTextWithoutDescender_SitsOnTheStaffPaddingFloor pins.
         var systems = CreateSingleSystem();
 
-        double PlacedBaseline(string text)
-        {
-            var texts = ImmutableArray.Create(
-                new CustomTextLayout(MeasureIndex: 0, X: 20, YUp: -4.0, Text: text,
-                    SourcePosition: 0));
-            var (_, _, _, adjTexts, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
-                systems, systemSkylines: null,
-                ImmutableArray<TupletBracketLayout>.Empty,
-                ImmutableArray<TrillSpannerLayout>.Empty,
-                ImmutableArray<BarNumberLayout>.Empty,
-                ImmutableArray<OttavaBracketLayout>.Empty,
-                texts,
-                ImmutableArray<VoltaBracketLayout>.Empty,
-                ImmutableArray<MusicMarkLayout>.Empty);
-            return adjTexts[0].YUp;
-        }
-
-        double dolce = PlacedBaseline("dolce");
-        double poco = PlacedBaseline("poco");
+        double dolce = PlacedCustomTextBaseline(systems, "MMM", "dolce");
+        double poco = PlacedCustomTextBaseline(systems, "MMM", "poco");
 
         double fs = LilySharp.Core.Svg.EngravingDefaults.TextScriptFontSize;
         double expected =
@@ -143,6 +150,27 @@ public class OutsideStaffStackerTests
         Assert.Equal(expected, poco - dolce, 6);
         Assert.True(poco - dolce > 0.3,
             $"a descender must lift the baseline (measured {poco - dolce:F6})");
+    }
+
+    [Fact]
+    public void CustomTextWithoutDescender_SitsOnTheStaffPaddingFloor()
+    {
+        // LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side — "Ensure
+        // 'staff-padding' from my refpoint to the staff", with TextScript's
+        // staff-padding 0.5 (scm/define-grobs.scm). Over a bare staff a no-descender
+        // string's edge constraint (staff edge + 0.46 + descent ≈ 0.03) loses to the
+        // floor, so the BASELINE lands exactly at staff ink edge + 0.5 — LilyPond's
+        // TXD reads 2.550000 (ledger textscript.no-descender.staff-to-baseline, whose
+        // whole residual was this floor's absence). In this harness no skyline seeds
+        // the staff line's ink, so the edge constraint is even lower and the floor
+        // binds a fortiori; the returned YUp is measured from the staff MIDDLE.
+        var systems = CreateSingleSystem();
+
+        double dolce = PlacedCustomTextBaseline(systems, "dolce");
+
+        double floor = 2.0 + LilySharp.Core.Svg.EngravingDefaults.StaffLineThickness / 2.0
+            + 0.5; // staff ink edge + TextScript staff-padding, both LilyPond's numbers
+        Assert.Equal(floor, dolce, 6);
     }
 
     [Fact]

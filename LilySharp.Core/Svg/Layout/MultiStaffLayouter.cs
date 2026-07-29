@@ -2058,10 +2058,13 @@ internal sealed class MultiStaffLayouter
     /// per-staff beams the skyline itself reserves, so seed and draw share one beam model.
     /// </para>
     /// <para>
-    /// ⚠️ A TAB staff keeps the fallback (<c>default</c>): the per-staff beams here carry
-    /// the trivial system's <c>StaffIndex</c> 0, so the engraver's tab guard
-    /// (<c>beam.StaffIndex == tuplet.StaffIndex</c>) would flip on the staff's global
-    /// position, and no ledger point measures the tab regime — do not move it blind.
+    /// The per-staff beams arrive stamped with the trivial system's <c>StaffIndex</c> 0
+    /// (<see cref="StaffBeamLayouts"/> lays them out on a one-staff score), so they are
+    /// RE-STAMPED to this staff's global index before the engraver sees them — the
+    /// engraver's tab branch keys on <c>beam.StaffIndex == tuplet.StaffIndex</c>, and
+    /// without the re-stamp a tab staff's branch selection would flip on where the staff
+    /// happens to sit in the score. With it, a tab staff's number seeds from the same
+    /// tab-beam edge the renderer draws, exactly as a notation staff's does.
     /// </para>
     /// </remarks>
     private ImmutableArray<TupletBracketLayout> StaffTupletBracketLayouts(
@@ -2088,9 +2091,14 @@ internal sealed class MultiStaffLayouter
                 voiceIndex: v, forceStemUp: VoiceDefaults.GetDefaultStemUp(v + 1)));
         }
 
+        var staffBeams = beamLayouts.IsDefaultOrEmpty
+            ? beamLayouts
+            : beamLayouts.Select(b1 => new BeamLayout(
+                b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX,
+                b1.MemberXPositions, staffIndex, b1.MemberStaffIndices)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
             staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
-            beamGroups.ToImmutable(), beamLayouts: staff.IsTab ? default : beamLayouts,
+            beamGroups.ToImmutable(), beamLayouts: staffBeams,
             forceStemUp: staff.IsMultiVoice,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                 { [staffIndex] = staff.PrimaryVoice.Measures },

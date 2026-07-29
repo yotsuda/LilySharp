@@ -1772,6 +1772,52 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// THE OTTAVA BRACKET LINE over the staff — the mirrors of ottava-floor.ly's books
+    /// OTF / OTC, the first points that reach OttavaBracket's staff-padding floor.
+    /// </summary>
+    /// <remarks>
+    /// OttavaBracket declares <c>staff-padding 2.0</c> and <c>padding 0.5</c>
+    /// (scm/define-grobs.scm), consumed by side-position-interface.cc:401-453
+    /// aligned_side. MEASURED (audit/lp-geometry/probes/ottava-floor.ly, 2026-07-29):
+    /// <list type="bullet">
+    /// <item>OTF (drawn third-space c'' under the bracket): line at 4.050000 above the
+    /// refpoint, SIX-DIGIT ROUND = staff ink 2.05 + staff-padding 2.0 — the FLOOR, the
+    /// same shape TextScript's 2.550000 took.</item>
+    /// <item>OTC (same music, drawn c''' on two ledger lines): 5.777520 = column top
+    /// 4.485489 + padding 0.5 + the label's half-ink 0.792031 (aligned_side clears the
+    /// grob's EDGE, and the hook takes no Y-extent — ottava-bracket.cc erases the
+    /// bracket's own box, only the centred text ink counts).</item>
+    /// </list>
+    /// The written pitch is one octave above the drawn head (the ottava transposes the
+    /// notation): Lily# <c>c''</c> = LilyPond <c>c'''</c> = drawn <c>c''</c>.
+    /// </remarks>
+    private static string OttavaScore(string name, string bars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { {{bars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>Floor regime: drawn third-space heads, every support term far below 4.05.</summary>
+    private static readonly string OTF = OttavaScore("OTF",
+        "c''4@ottava c'' c'' c'' | c'4@loco c' c' c' |");
+
+    /// <summary>Support regime: the same music two octaves up, the column decides.</summary>
+    private static readonly string OTC = OttavaScore("OTC",
+        "c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' |");
+
     /// <summary>Beat-long beamed triplets — number only, no bracket.</summary>
     private static readonly string TNB = BeamedTupletScore("TNB",
         "tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } | "
@@ -4380,6 +4426,14 @@ internal static class LpGeometryProbes
         // clef-down-vs-staff-line silhouette reading.
         new("staff.staff.beamed-tuplet-number", TNB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.beamed-tuplet-control", TNC, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- where the OTTAVA BRACKET's LINE sits (books OTF/OTC) ---
+        // The first points that reach OttavaBracket's staff-padding floor (2.0) — the
+        // largest of the four floors named unported by the TextScript port. See
+        // OttavaScore for the measured decomposition; the control doubles as a
+        // support-arithmetic reading (padding 0.5 + the label's half-ink to the EDGE).
+        new("ottava.floor.staff-to-line", OTF, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
+        new("ottava.support.staff-to-line", OTC, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.
