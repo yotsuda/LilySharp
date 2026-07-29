@@ -609,6 +609,26 @@ internal static partial class GlyphMetrics
     /// <summary>Dynamic letter 'z' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterZAdvance = 1.140000;
 
+    // ========== Up-stem attachment points (from the font's LILC table) ==========
+    // The point where an up stem's lower-right corner meets the head — X is the
+    // head's designed right edge, Y the height above the centre line the stem's
+    // lower end starts at. LilyPond serves it via Font_metric::attachment_point to
+    // Note_head::get_stem_attachment (lily/note-head.cc:164-196), and
+    // \note-by-number turns it back into the stem's lower-end coordinate
+    // (scm/define-markup-commands.scm attach-off).
+
+    /// <summary>noteheads.s1 up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHalfStemAttachment = (1.377400, 0.259000);
+
+    /// <summary>noteheads.s2 up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadBlackStemAttachment = (1.304200, 0.186200);
+
     // ========== Advance widths (extracted from hmtx table) ==========
 
     /// <summary>G (treble) clef advance width</summary>

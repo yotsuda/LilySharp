@@ -93,6 +93,41 @@ internal static class TextOutlineSkylines
                 PlaceResolved(VerticalDirection.Down, down, x, yBaseline));
     }
 
+    // Music-glyph profiles, one per (glyph, size) — the metronome mark's note pieces.
+    private static readonly ConcurrentDictionary<(char Glyph, double Size),
+        (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
+
+    /// <summary>
+    /// One music-font (Emmentaler) glyph's outline skylines at
+    /// <paramref name="fontSize"/> (staff spaces, 4.0 = the nominal staff), the glyph
+    /// origin placed at (<paramref name="x"/>, <paramref name="y"/>). The SAME walk as
+    /// the text overload — LilyPond's named-glyph skyline runs the same freetype
+    /// flattening over the glyph outline, and the flattening happens at the
+    /// TRANSFORMED size, which is why the size is in the cache key.
+    /// Returns an EMPTY pair when the bundled music font cannot be located — the
+    /// caller keeps the glyph's designed box.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments;
+    /// lily/freetype.cc:174-202 ly_FT_add_outline_to_skyline.
+    /// </remarks>
+    public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
+        char glyph, double fontSize, double x, double y)
+    {
+        var (up, down) = MusicProfileCache.GetOrAdd((glyph, fontSize), static key =>
+        {
+            var path = TextFontMetrics.MusicGlyphPath(key.Glyph);
+            if (path == null || path.IsEmpty)
+                return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
+            var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);
+            return (
+                Resolve(VerticalDirection.Up, upQuads),
+                Resolve(VerticalDirection.Down, downQuads));
+        });
+        return (PlaceResolved(VerticalDirection.Up, up, x, y),
+                PlaceResolved(VerticalDirection.Down, down, x, y));
+    }
+
     private static SkylineBuilding[] Resolve(VerticalDirection direction, double[] quads)
         => VerticalSkyline.FromGlyphOutline(direction, quads, StaffSize.FullSize, 0, 0)
             .Buildings.ToArray();

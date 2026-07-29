@@ -149,6 +149,30 @@ public static class TextFontMetrics
         });
     }
 
+    // The bundled Emmentaler face, for LAYOUT-side glyph OUTLINE measurement (the
+    // skyline walk over a music glyph). The drawing backends keep their own loaders —
+    // those are drawing devices per backend; this is the one measurement home. Null
+    // when no bundled font directory is found (callers fall back to the designed box).
+    private static readonly Lazy<SKTypeface?> MusicFace = new(static () =>
+    {
+        var path = FontLocator.ResolveFile("emmentaler-20.otf");
+        return path != null ? SKTypeface.FromFile(path) : null;
+    });
+
+    /// <summary>
+    /// Outline path of one Emmentaler glyph at 1000 units/em (the same frame
+    /// <see cref="OutlinePath"/> serves for text), or null when the bundled music font
+    /// cannot be located.
+    /// </summary>
+    internal static SKPath? MusicGlyphPath(char glyph)
+    {
+        var face = MusicFace.Value;
+        if (face == null)
+            return null;
+        using var paint = new SKPaint { Typeface = face, TextSize = 1000f };
+        return paint.GetTextPath(glyph.ToString(), 0, 0);
+    }
+
     /// <summary>
     /// The bundled face itself, for the RENDERERS — so the engine draws the same font it
     /// reserved for.

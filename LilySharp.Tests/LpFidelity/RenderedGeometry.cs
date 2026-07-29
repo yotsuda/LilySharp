@@ -809,6 +809,38 @@ internal sealed class RenderedGeometry
         return refs[0] - eq[0].Y;
     }
 
+    /// <summary>
+    /// The metronome mark's ink LEFT against the TIME SIGNATURE's ink left. LilyPond
+    /// self-aligns the mark LEFT on the break-aligned meter, so the difference is
+    /// exactly 0 (probe tempo-mark.ly header, TMQ: both ink-lefts at 4.885000). The
+    /// mark's head is the one notehead drawn at the \smaller metronome size
+    /// (<see cref="MetronomeMarkGeometry.NoteSize"/>), which no music notehead shares;
+    /// the meter is the sole common-time glyph.
+    /// </summary>
+    public double TempoMarkToTimeSignatureLeft(int page = 0)
+    {
+        var heads = Glyphs
+            .Where(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack
+                        && Math.Abs(g.FontSize - MetronomeMarkGeometry.NoteSize) < 1e-9)
+            .ToList();
+        if (heads.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE metronome-size notehead, found "
+                + $"{heads.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var meters = Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.TimeSigCommon).ToList();
+        if (meters.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE common-time glyph, found "
+                + $"{meters.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return heads[0].X - meters[0].X;
+    }
+
     private double SoleRuleAboveStaff(string what, int page)
     {
         // ⚠️ Self-contained on purpose: the spanner line is itself a long horizontal rule

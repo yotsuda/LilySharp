@@ -205,6 +205,42 @@ ADVANCE_GLYPHS: list[GlyphSpec] = [
 ]
 
 
+def load_lilc_attachments(font) -> dict[str, tuple[float, float]]:
+    """Parse the font's LILC `attachment` points into {glyph: (x, y)} in staff spaces —
+    the UP-stem attachment. This is the same per-glyph datum LilyPond's
+    Font_metric::attachment_point serves to Note_head::get_stem_attachment
+    (lily/note-head.cc:164-196), which \\note-by-number turns back into the stem's
+    lower-end coordinate (define-markup-commands.scm attach-off). Empty if no LILC."""
+    keys = font.reader.keys()
+    if "LILC" not in keys or "LILY" not in keys:
+        return {}
+    lily = font.getTableData("LILY").decode("latin-1")
+    m = re.search(r"staff_space\s*\.\s*([0-9]+(?:\.[0-9]+)?)", lily)
+    staff_space = float(m.group(1)) if m else 5.0
+    raw = font.getTableData("LILC")
+    try:
+        raw = zlib.decompress(raw)
+    except zlib.error:
+        pass
+    lilc = raw.decode("latin-1")
+    pat = re.compile(
+        r"\(([^\s()]+)\s*\.\s*\(\(bbox\s*\.\s*\([^)]*\)\)\s*"
+        r"\(attachment\s*\.\s*\(([-0-9.eE]+)\s*\.\s*([-0-9.eE]+)\)\)",
+        re.S)
+    out: dict[str, tuple[float, float]] = {}
+    for gm in pat.finditer(lilc):
+        out[gm.group(1)] = (float(gm.group(2)) / staff_space,
+                            float(gm.group(3)) / staff_space)
+    return out
+
+
+# Noteheads whose UP-stem attachment point is emitted (the stemless whole needs none).
+ATTACHMENT_GLYPHS: list[tuple[str, str]] = [
+    ("NoteheadHalfStemAttachment",  "noteheads.s1"),
+    ("NoteheadBlackStemAttachment", "noteheads.s2"),
+]
+
+
 def load_lilc_bboxes(font) -> tuple[dict[str, tuple[float, float, float, float]], float]:
     """Parse the font's LILC table into {glyph_name: (left, bottom, right, top)} in staff
     spaces. This is the SAME per-glyph metric LilyPond itself reads — see
@@ -377,6 +413,28 @@ def main() -> int:
                          f" = new({fmt(SL)}, {fmt(SB)}, {fmt(SR)}, {fmt(ST)});")
         lines.append(f"    /// <summary>{spec.summary} — advance width (next-glyph horizontal feed).</summary>")
         lines.append(f"    public const double {spec.csharp_name}Advance = {fmt(adv_ss)};")
+        lines.append("")
+
+    # Stem attachment points (LILC `attachment`)
+    attachments = load_lilc_attachments(font)
+    lines.append("    // ========== Up-stem attachment points (from the font's LILC table) ==========")
+    lines.append("    // The point where an up stem's lower-right corner meets the head — X is the")
+    lines.append("    // head's designed right edge, Y the height above the centre line the stem's")
+    lines.append("    // lower end starts at. LilyPond serves it via Font_metric::attachment_point to")
+    lines.append("    // Note_head::get_stem_attachment (lily/note-head.cc:164-196), and")
+    lines.append("    // \\note-by-number turns it back into the stem's lower-end coordinate")
+    lines.append("    // (scm/define-markup-commands.scm attach-off).")
+    lines.append("")
+    for cname, glyph in ATTACHMENT_GLYPHS:
+        if glyph not in attachments:
+            sys.stderr.write(f"ERROR: glyph {glyph} has no LILC attachment\n")
+            return 1
+        ax, ay = attachments[glyph]
+        lines.append(f"    /// <summary>{glyph} up-stem attachment point (staff spaces about the")
+        lines.append("    /// glyph origin: X from the ink left, Y above the centre line).</summary>")
+        lines.append("    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,")
+        lines.append("    /// attachment_point — the font's LILC attachment entry.</remarks>")
+        lines.append(f"    public static readonly (double X, double Y) {cname} = ({fmt(ax)}, {fmt(ay)});")
         lines.append("")
 
     # Advance-only glyphs

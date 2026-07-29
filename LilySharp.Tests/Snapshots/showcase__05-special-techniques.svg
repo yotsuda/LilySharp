@@ -192,10 +192,10 @@
   <line x1="73.56" y1="23.21" x2="75.56" y2="21.21" stroke="#000000" stroke-width="0.480" data-pos="627"/>
   <circle cx="74.06" cy="21.71" r="0.25" data-pos="627"/>
   <circle cx="75.06" cy="22.71" r="0.25" data-pos="627"/>
-  <rect x="0.30" y="15.35" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="828"/>
-  <text x="3.41" y="17.55" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="828">Main</text>
-  <text class="music" x="7.32" y="17.55" font-size="1.60" data-pos="0"></text>
-  <line x1="7.84" y1="17.55" x2="7.84" y2="16.15" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="8.42" y="17.55" font-size="1.80" data-pos="0">= 120</text>
+  <text class="music" x="4.88" y="18.57" font-size="3.56" data-pos="0"></text>
+  <line x1="5.99" y1="18.40" x2="5.99" y2="15.89" stroke="#000000" stroke-width="0.116" data-pos="0"/>
+  <text x="6.66" y="19.05" font-size="2.20" data-pos="0">= 120</text>
+  <rect x="0.30" y="12.83" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="828"/>
+  <text x="3.41" y="15.03" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="828">Main</text>
   </g>
 </svg>

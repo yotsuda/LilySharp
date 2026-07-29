@@ -1902,7 +1902,7 @@ internal static class LpGeometryProbes
     /// <item>TMT (a trill under the mark): 5.110000 six-digit round = quiet trill line
     /// 3.55 + tr glyph top 1.1 + outside-staff 0.46 — the priority-1300 pass clears the
     /// priority-50 trill, whose own line stays at the ledger 3.550000.</item>
-    /// <item>X (recorded in the probe header, no entry yet — opened with the port):
+    /// <item>X (ledger tempo.x.mark-to-time-signature, opened with the port):
     /// mark ink-left == time-signature ink-left, difference exactly 0
     /// (self-alignment-X LEFT on the break-aligned time signature).</item>
     /// </list>
@@ -4583,6 +4583,11 @@ internal static class LpGeometryProbes
             g => g.TempoEquationBaselineAboveStaff(), RaggedBottomPaper),
         new("tempo.trill-cleared.staff-to-baseline", TMT,
             g => g.TempoEquationBaselineAboveStaff(), RaggedBottomPaper),
+        // The mark's ink left ON the meter's ink left (self-alignment-X LEFT on the
+        // break-aligned time signature; the probe header measured the difference
+        // exactly 0). Opened with the port, as the session-32 plan said.
+        new("tempo.x.mark-to-time-signature", TMQ,
+            g => g.TempoMarkToTimeSignatureLeft(), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

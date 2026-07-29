@@ -524,14 +524,19 @@ internal static class OutsideStaffStacker
             // stencil-offset (0 . -1), so on a glyph-bearing piece the pair spans
             // (line - reach .. line + glyphTop - reach) — LilyPond's own ext dump reads
             // (-1.0 . 1.1) — and a glyphless continuation carries just the wave
-            // (draw amplitude 0.2 + half thickness). The side padding is the trill's
-            // OWN declared 0.5, not outside-staff-padding: the trill is the
-            // first-placed outside-staff grob, so its only counterpart here IS the
-            // support, which aligned_side clears by the grob's padding (ledger
-            // trill.support.staff-to-line = box top + 0.5 + 1.0, exact). ⚠️ Named
-            // approximation: a support building that is NOT a side-support column
-            // (a beam, a script) would be cleared at 0.46 by LilyPond's outside-staff
-            // pass; this single-pass tracker pays 0.5 against everything.
+            // (draw amplitude 0.2 + half thickness).
+            //
+            // LilyPond's TWO steps both exist here: aligned_side pays the trill's OWN
+            // padding 0.5 against its side supports (the note columns and, via
+            // include_staff, the staff) — that is the ENGRAVER's quiet height, the
+            // anchor entering this pass (ledger trill.{quiet,support}.staff-to-line,
+            // exact) — and the collision pass below pays the grob's
+            // outside-staff-padding 0.46 against the accumulated skylines, which add
+            // the ink aligned_side never sees (beams, scripts). Where a column or the
+            // staff decides, the engraver's 0.5 stands and this pass moves nothing.
+            // LILYPOND-REF: lily/side-position-interface.cc:361-370 aligned_side padding;
+            // lily/axis-group-interface.cc:747-749 add_grobs_of_one_priority — the
+            //   collision padding is outside-staff-padding (default 0.46).
             bool hasGlyph = t.GlyphX < t.LineStartX;
             double wave = EngravingDefaults.TrillWaveAmplitude
                 + EngravingDefaults.StaffLineThickness / 2.0;
@@ -550,13 +555,55 @@ internal static class OutsideStaffStacker
             double x0 = hasGlyph
                 ? t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left
                 : t.LineStartX;
-            double newRel = Place(trackers[sysIdx],
-                x0, t.LineEndX,
-                t.YUp,
-                topOffset: top,
-                bottomOffset: reach,
-                padding: EngravingDefaults.TrillSpannerPadding);
-            b[i] = t with { YUp = newRel };
+            // The REGISTERED entry likewise carries the outside-staff-padding — the
+            // trill declares none, so the 0.46 default — which is what a later grob
+            // (a metronome mark at 1300) pays to clear it. MEASURED:
+            // tempo.trill-cleared.staff-to-baseline read +0.073 with the trill's 0.5
+            // registered, and 0.040 of that was exactly this substitution.
+            // LILYPOND-REF: lily/axis-group-interface.cc:747-749,:804 add_grobs_of_one_priority
+            //   — all_paddings gets outside-staff-padding.
+            //
+            // And the entry's PROFILE is the trill's stencil skyline shape, not its
+            // extent box: a FLAT plateau over the glyph's x-range — LilyPond's OWN
+            // construction, not an approximation: the bound text wraps the glyph so as
+            // to "set up a straight line as the vertical skyline for the trill glyph"
+            // (its comment's words) — and the low WAVE over the rest of the span. The
+            // placement itself stays the extent box (aligned_side Y-offsets by extents
+            // — that is what the TRF/TRC ledger arithmetic reads), but what a later
+            // grob must clear over the wave is the wave, not a glyph-high plateau.
+            // MEASURED: the metronome mark's digits sit over the wave; with one flat
+            // plateau over the whole SPAN registered, TMT read the "0"'s overshoot
+            // (+0.033); with the glyph/wave split it reads 0.000000000 — the binding
+            // ink is a flat-baseline glyph over the plateau, LilyPond's own split.
+            // LILYPOND-REF: scm/define-grobs.scm:4054-4068 TrillSpanner bound-details,
+            //   make-with-dimension-from-markup ("straight line as the vertical
+            //   skyline");
+            // lily/axis-group-interface.cc:770-773 add_grobs_of_one_priority
+            //   — all_v_skylines gets the grob's vertical-skylines (from the stencil).
+            var qUp = VerticalSkyline.FromBox(x0, t.LineEndX,
+                t.YUp - reach, t.YUp + top, VerticalDirection.Up);
+            var qDown = VerticalSkyline.FromBox(x0, t.LineEndX,
+                t.YUp - reach, t.YUp + top, VerticalDirection.Down);
+            VerticalSkyline? regUp = null, regDown = null;
+            if (hasGlyph)
+            {
+                regUp = new VerticalSkyline(VerticalDirection.Up);
+                regDown = new VerticalSkyline(VerticalDirection.Down);
+                double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
+                double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
+                regUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                    t.YUp - reach, t.YUp + top, VerticalDirection.Up));
+                regDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                    t.YUp - reach, t.YUp + top, VerticalDirection.Down));
+                regUp.Merge(VerticalSkyline.FromBox(t.LineStartX, t.LineEndX,
+                    t.YUp - wave, t.YUp + wave, VerticalDirection.Up));
+                regDown.Merge(VerticalSkyline.FromBox(t.LineStartX, t.LineEndX,
+                    t.YUp - wave, t.YUp + wave, VerticalDirection.Down));
+            }
+            double move = trackers[sysIdx].Place(qUp, qDown,
+                OutsideStaffPadding, 0,
+                registerUp: regUp, registerDown: regDown);
+            b[i] = t with { YUp = t.YUp + move };
         }
         return b.ToImmutable();
     }
@@ -846,10 +893,124 @@ internal static class OutsideStaffStacker
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], m.StaffIndex) - 2.0;
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
                 continue;
+            // The metronome mark's pair is its STENCIL's, piecewise like the draw:
+            // outline profiles under the text runs (so a flat-footed digit sits ON the
+            // baseline where a round one overshoots — the split LilyPond's pointwise
+            // clearing reads, ledger tempo.trill-cleared) and under the note GLYPHS
+            // (head, flag, dots — the same freetype walk LilyPond's named-glyph
+            // skyline runs); the STEM is a box because it is a box in LilyPond too
+            // (note-by-number builds it with ly:round-filled-box). A glyph falls back
+            // to its designed box only when the bundled music font cannot be located.
+            // LILYPOND-REF: scm/define-grobs.scm:2357 MetronomeMark vertical-skylines
+            //   = grob::always-vertical-skylines-from-stencil.
+            if (m.MarkType == MusicMarkType.Tempo)
+            {
+                double em = EngravingDefaults.MetronomeMarkFontSize;
+                double anchor = m.YUp + midUp;
+                var tUp = new VerticalSkyline(VerticalDirection.Up);
+                var tDown = new VerticalSkyline(VerticalDirection.Down);
+                double tx = m.X;
+                bool hasMetronome = m.Text.Length > 0;
+
+                double noteSize = MetronomeMarkGeometry.NoteSize;
+                double noteScale = MetronomeMarkGeometry.NoteScale;
+                void MergeGlyph(char g, double gx, double gy, GlyphMetrics.BBox box)
+                {
+                    var (gUp, gDown) = TextOutlineSkylines.PlaceMusicGlyph(
+                        g, noteSize, gx, gy);
+                    if (gUp.IsEmpty && gDown.IsEmpty)
+                    {
+                        gUp = VerticalSkyline.FromBox(
+                            gx + box.Left * noteScale, gx + box.Right * noteScale,
+                            gy + box.Bottom * noteScale, gy + box.Top * noteScale,
+                            VerticalDirection.Up);
+                        gDown = VerticalSkyline.FromBox(
+                            gx + box.Left * noteScale, gx + box.Right * noteScale,
+                            gy + box.Bottom * noteScale, gy + box.Top * noteScale,
+                            VerticalDirection.Down);
+                    }
+                    tUp.Merge(gUp);
+                    tDown.Merge(gDown);
+                }
+
+                if (m.TempoText != null)
+                {
+                    var (mtUp, mtDown) = TextOutlineSkylines.Place(
+                        m.TempoText, em, sans: false, FontStyle.Bold, tx, anchor);
+                    tUp.Merge(mtUp);
+                    tDown.Merge(mtDown);
+                    tx += TextFontMetrics.SerifBold(m.TempoText, em);
+                    if (hasMetronome)
+                    {
+                        var (pUp, pDown) = TextOutlineSkylines.Place(
+                            "(", em, sans: false, FontStyle.Regular,
+                            tx + MetronomeMarkGeometry.LeadingSpaceAdvance("("), anchor);
+                        tUp.Merge(pUp);
+                        tDown.Merge(pDown);
+                        tx += TextFontMetrics.Serif(" (", em);
+                    }
+                }
+                if (hasMetronome)
+                {
+                    // The note, DOWN-aligned: its head origin (the centre line) rides
+                    // half a scaled head above the baseline — the same arithmetic the
+                    // draw runs.
+                    var headBox = MetronomeMarkGeometry.HeadBox(m.TempoBeatUnit);
+                    int tempoLog = MetronomeMarkGeometry.Log(m.TempoBeatUnit);
+                    double centreY = anchor - headBox.Bottom * noteScale;
+                    MergeGlyph(MetronomeMarkGeometry.HeadGlyph(m.TempoBeatUnit),
+                        tx, centreY, headBox);
+                    if (tempoLog > 0)
+                    {
+                        var att = MetronomeMarkGeometry.StemAttachment(m.TempoBeatUnit);
+                        double stemTh = MetronomeMarkGeometry.StemThickness;
+                        double stemRight = tx + att.X * noteScale;
+                        double stemTop = centreY
+                            + MetronomeMarkGeometry.StemTopAboveCentre(m.TempoBeatUnit);
+                        tUp.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
+                            centreY + att.Y * noteScale, stemTop, VerticalDirection.Up));
+                        tDown.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
+                            centreY + att.Y * noteScale, stemTop, VerticalDirection.Down));
+                        if (tempoLog >= 3)
+                            MergeGlyph(EmmentalerGlyphs.Flag8thUp,
+                                stemRight - stemTh / 2, stemTop, GlyphMetrics.Flag8thUp);
+                    }
+                    for (int d = 0; d < m.TempoDots; d++)
+                        MergeGlyph(EmmentalerGlyphs.AugmentationDot,
+                            tx + MetronomeMarkGeometry.DotX(m.TempoBeatUnit, d), centreY,
+                            GlyphMetrics.AugmentationDot);
+
+                    double noteRight = MetronomeMarkGeometry.NoteRight(
+                        m.TempoBeatUnit, m.TempoDots);
+                    string eq = MetronomeMarkGeometry.EquationText(
+                        m.Text, m.TempoText != null);
+                    double eqX = tx + noteRight
+                        + MetronomeMarkGeometry.LeadingSpaceAdvance(eq);
+                    var (eUp, eDown) = TextOutlineSkylines.Place(
+                        eq, em, sans: false, FontStyle.Regular, eqX, anchor);
+                    tUp.Merge(eUp);
+                    tDown.Merge(eDown);
+                    if (m.SwingSubdivision != 0)
+                    {
+                        // The swing feel-equation keeps its named box estimate
+                        // (LILYSHARP-OWN device, see MetronomeMarkGeometry).
+                        double sw0 = eqX + TextFontMetrics.Serif(eq, em);
+                        double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
+                        tUp.Merge(VerticalSkyline.FromBox(sw0, sw1,
+                            anchor - 0.5, anchor + 2.0, VerticalDirection.Up));
+                        tDown.Merge(VerticalSkyline.FromBox(sw0, sw1,
+                            anchor - 0.5, anchor + 2.0, VerticalDirection.Down));
+                    }
+                }
+                double tMove = trackers[sysIdx].Place(tUp, tDown, OutsideStaffPadding,
+                    OutsideStaffHorizontalPadding);
+                b[i] = m with { YUp = m.YUp + tMove };
+                continue;
+            }
             // Plain-text marks (D.S./Fine/pedal words/…) carry their string's OUTLINE
             // pair like every other stencil-skylined text grob; boxed labels ARE drawn
-            // boxes, tempo marks mix glyphs and text, and segno/coda are glyphs with no
-            // baked outline — those keep their box extents (named, not hidden).
+            // boxes and segno/coda are glyphs with no baked outline — those keep their
+            // box extents (named, not hidden).
             if (!m.IsSymbol && m.MarkType is not (MusicMarkType.Rehearsal
                 or MusicMarkType.SectionLabel or MusicMarkType.Tempo))
             {
@@ -915,27 +1076,15 @@ internal static class OutsideStaffStacker
             }
             case MusicMarkType.Tempo:
             {
-                double textW = TextFontMetrics.SerifBold("= " + m.Text, 1.8);
-                if (m.SwingSubdivision == 0)
-                {
-                    // Non-swing metronome: the historical CENTERED estimate.
-                    // Physically the mark is left-anchored, but this well-tuned
-                    // width clears the line-start clef and reproduces every
-                    // existing snapshot, so it is kept as-is.
-                    double halfW = (1.1 + textW) / 2 + 0.6;
-                    return (-halfW, halfW, 1.5, 0.5);
-                }
-                // Swing: the feel-equation ("♫ = ♩. ♪" under a triplet 3) is drawn
-                // to the RIGHT of "= NNN", so the real ink reaches far past the
-                // centered estimate and can sit over a beam or fermata. Use the
-                // true LEFT-anchored span (mirrors CoPlaceTempoWithLabels' tempoW)
-                // so the stacker lifts the whole mark clear of that content, and
-                // the triplet bracket reaches a touch higher (~2sp) than the stem.
-                double sw = 2.3 + textW;
-                if (m.TempoText != null)
-                    sw += TextFontMetrics.SerifBold(m.TempoText, 2.2) + 1.5;
-                sw += 5.0;
-                return (-0.2, sw, 2.0, 0.5);
+                // LEFT-anchored at its ink left (self-aligned LEFT on the break-aligned
+                // meter), baseline-anchored vertically — from the ONE geometry home the
+                // draw uses (the centered width estimate and the bold-1.8 pricing died
+                // with the tempo port). ⚠️ PlaceMusicMarks routes Tempo through its
+                // piecewise stencil pair before reaching this method; this arm stays as
+                // the box description of the same ink.
+                var ink = MetronomeMarkGeometry.Ink(m.Text, m.TempoText,
+                    m.TempoBeatUnit, m.TempoDots, m.SwingSubdivision);
+                return (0.0, ink.Width, ink.Top, -ink.Bottom);
             }
             default:
             {
@@ -974,14 +1123,14 @@ internal static class OutsideStaffStacker
     /// </summary>
     private static double Place(OutsideStaffSkylines tracker, double x0, double x1,
         double anchorY, double topOffset, double bottomOffset, double horizonPadding = 0,
-        double padding = OutsideStaffPadding)
+        double padding = OutsideStaffPadding, double? registerPadding = null)
     {
         double move = tracker.Place(
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Up),
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Down),
-            padding, horizonPadding);
+            padding, horizonPadding, registerPadding);
         return anchorY + move;
     }
 
@@ -1064,7 +1213,8 @@ internal static class OutsideStaffStacker
         /// <c>Interval_set::interval_union(...).complement().nearest_point(0, dir)</c>.
         /// </remarks>
         public double Place(VerticalSkyline up, VerticalSkyline down,
-            double padding, double horizonPadding = 0)
+            double padding, double horizonPadding = 0, double? registerPadding = null,
+            VerticalSkyline? registerUp = null, VerticalSkyline? registerDown = null)
         {
             // The padded copy of the mover's own profile is the same object for every
             // entry that resolves to the same horizon padding (LP recomputes it per
@@ -1117,12 +1267,26 @@ internal static class OutsideStaffStacker
             }
 
             double move = NearestAllowed(forbidden, _dir);
+            // The entry stored for LATER grobs may differ from the pair the move was
+            // computed with, in two LilyPond-lettered ways:
+            //  - its PADDING is the grob's outside-staff-padding (registerPadding) — a
+            //    grob whose SIDE-POSITION padding differs (the trill's 0.5) pays that
+            //    against the support in this single pass, but later grobs pay the
+            //    outside-staff value against it, not the side padding;
+            //  - its PROFILE is the grob's stencil skyline pair (registerUp/Down) where
+            //    the placement itself ran on aligned_side's extent BOX — LilyPond
+            //    Y-offsets by extents and registers vertical-skylines.
+            // LILYPOND-REF: lily/axis-group-interface.cc:747-749,:770-773,:803-804 add_grobs_of_one_priority
+            //   — padding = outside-staff-padding (default), all_v_skylines gets the
+            //   grob's vertical-skylines pair, all_paddings.push_back (padding).
+            var storeUp = registerUp ?? up;
+            var storeDown = registerDown ?? down;
             if (move != 0)
             {
-                up.Raise(move);
-                down.Raise(move);
+                storeUp.Raise(move);
+                storeDown.Raise(move);
             }
-            _entries.Add((up, down, padding, horizonPadding));
+            _entries.Add((storeUp, storeDown, registerPadding ?? padding, horizonPadding));
             return move;
         }
 

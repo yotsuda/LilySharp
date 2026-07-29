@@ -304,6 +304,7 @@ internal sealed class LayoutEngine
             LooseChainEnd = looseChainEnd,
             TrailingRowStaves = trailingRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
+            PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
 
@@ -625,6 +626,7 @@ internal sealed class LayoutEngine
             MeasuresByStaff = prelimMeasuresByStaff,
             StaffYByIndex = prelimStaffYByIndex,
             StaffByIndex = prelimStaffByIndex,
+            PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -1129,9 +1131,17 @@ internal sealed class LayoutEngine
                 if (mark.MeasureIndex < startMeasure || mark.MeasureIndex >= endMeasure)
                     continue;
 
-                // LILYPOND-REF: scm/define-grobs.scm MetronomeMark.outside-staff-priority = 1000
+                // The metronome mark rests at staff ink + its padding 0.8 and its ink
+                // tops out at the \smaller note's stem; stacking can only lift it.
+                // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority
                 if (mark.Type == MusicMarkType.Tempo)
-                    upExtent = Math.Max(upExtent, 2.5); // tempo + metronome mark height
+                {
+                    var tInk = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                        mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
+                    upExtent = Math.Max(upExtent,
+                        MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom)
+                        - 2.0 + tInk.Top);
+                }
 
                 // LILYPOND-REF: scm/define-grobs.scm RehearsalMark.outside-staff-priority = 1500
                 if (mark.Type == MusicMarkType.Rehearsal)
@@ -2464,6 +2474,12 @@ internal sealed class LayoutEngine
         public Dictionary<int, double>? NoteBoundAnchorY { get; init; }
         public Dictionary<int, Staff>? StaffByIndex { get; init; }
 
+        /// <summary>Per system, the ABSOLUTE X of the line-start meter column's ink
+        /// left, or NaN when that system's prefix engraves no meter — the break-align
+        /// anchor a measure-start metronome mark self-aligns LEFT on. See
+        /// <see cref="BuildPrefixTimeSignatureX"/>.</summary>
+        public Func<int, double>? PrefixTimeSignatureX { get; init; }
+
         /// <summary>Device-down from the system origin to the LAST SPACEABLE staff's top
         /// line — the staff a note-bound lyric block hangs from. 0 on a one-staff system,
         /// which is why that case is untouched by it.</summary>
@@ -2495,6 +2511,28 @@ internal sealed class LayoutEngine
         /// </remarks>
         public Dictionary<(int System, int StaffIndex), double> SolvedRowBaselines { get; } = new();
     }
+
+    /// <summary>
+    /// Per system, the ABSOLUTE X of the line-start TimeSignature column's ink left
+    /// (NaN when that system's prefix engraves no meter) — the break-align anchor the
+    /// metronome mark self-aligns LEFT on. Derived from the SAME line-start prefix
+    /// table the spring model and the measure layout solve
+    /// (<see cref="MultiStaffLayouter.SolveLineStartPrefix"/>), so the annotated,
+    /// reserved and drawn meter columns cannot drift apart.
+    /// </summary>
+    private static Func<int, double> BuildPrefixTimeSignatureX(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems)
+        => sysIdx =>
+        {
+            if (sysIdx < 0 || sysIdx >= systems.Length
+                || systems[sysIdx].Measures.IsDefaultOrEmpty)
+                return double.NaN;
+            var prefix = MultiStaffLayouter.SolveLineStartPrefix(
+                score, systems[sysIdx].Measures[0].MeasureIndex, sysIdx == 0);
+            return prefix.HasTime
+                ? systems[sysIdx].Indent + prefix.Columns.TimeX
+                : double.NaN;
+        };
 
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
     {
@@ -2678,7 +2716,8 @@ internal sealed class LayoutEngine
             staffByIndex: staffByIndex);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
-            chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText);
+            chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
+            prefixTimeSignatureX: ctx.PrefixTimeSignatureX);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
@@ -2697,8 +2736,10 @@ internal sealed class LayoutEngine
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.
         stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
-        // Likewise a tempo mark joins its section label's line ("[Chorus] ♩ = 132").
-        stackedMarks = MusicMarkEngraver.CoPlaceTempoWithLabels(stackedMarks, chordNameLayouts, systems);
+        // (No tempo/label co-placement any more: the metronome mark and the section
+        // label each break-align to their own anchor and the priority pass above
+        // already stacked them pointwise, LilyPond's shape. The chart-pair device
+        // died with the tempo port — see MusicMarkEngraver's note.)
 
         var fingeringLayouts = LayoutFingerings(
             score, systems, voicesByStaff, articulationLayouts, staffYAt);

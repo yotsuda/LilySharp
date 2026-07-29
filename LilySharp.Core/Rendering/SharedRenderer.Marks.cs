@@ -273,16 +273,17 @@ internal static partial class SharedRenderer
     {
         int beams = subdivision >= 16 ? 2 : 1;
         const double beamGap = 0.3;          // spacing between the two beams of a 16th
-        // Sizes track the metronome mark: the same notehead size (1.6) and stem length,
-        // and a beam scaled to that small note (0.48 staff-beam x 1.6/FontSize) rather
-        // than the full staff-beam thickness, which read as too heavy here.
-        const double ns = TempoNoteSize;
+        // LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
+        // its head-gap/stem/beam constants were tuned for; a beam scaled to that small
+        // note (0.48 staff-beam x 1.6/FontSize) rather than the full staff-beam
+        // thickness, which read as too heavy here.
+        const double ns = SwingNoteSize;
         const double headGap = 1.0;          // x between the two heads of a pair
-        const double stemUp = 1.4;           // stem height (matches the metronome stem)
+        const double stemUp = 1.4;           // stem height (tuned to ns)
         const double stemDx = ns * 0.32;     // stem offset from head origin (right side)
         const double stemW = 0.09;
         const double beamW = EngravingDefaults.BeamThickness * (ns / FontSize);
-        const double eqSize = 1.8;           // matches the "= NNN" text
+        const double eqSize = 1.8;           // the feel equation's own "=" size
         const double threeSize = 1.0;
 
         // Draws one beamed eighth pair at px; returns the x just past it.
@@ -343,63 +344,77 @@ internal static partial class SharedRenderer
         }
         if (m.MarkType == MusicMarkType.Tempo)
         {
-            // LILYPOND-REF: scm/define-grobs.scm:2335 MetronomeMark
-            // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN";
-            // a textual marking prints bold with the equation parenthesized after
-            // it: Grave (♩ = 54). Text-only tempo prints just the bold marking.
-            const double noteSize = TempoNoteSize;
-            const double textSize = 1.8;
+            // The metronome markup, drawn as LilyPond builds it: a concat of
+            // [bold marking " ("] (general-align Y DOWN \smaller note) " = " count [")"],
+            // all in the mark's plain upright text font (em 2.2) — only the textual
+            // marking is \bold. The note's DOWN alignment puts its ink BOTTOM on the
+            // equation baseline. All geometry comes from MetronomeMarkGeometry, the one
+            // home the engraver and the stacker price the same mark from.
+            // LILYPOND-REF: scm/translation-functions.scm:100-151 format-metronome-markup / metronome-markup;
+            // scm/define-markup-commands.scm:5393-5650 note-by-number.
+            double em = EngravingDefaults.MetronomeMarkFontSize;
+            double noteSize = MetronomeMarkGeometry.NoteSize;
+            double s = MetronomeMarkGeometry.NoteScale;
             double x = m.X;
             bool hasMetronome = m.Text.Length > 0;
             if (m.TempoText != null)
             {
-                const double markingSize = 2.2;
-                gc.DrawText(m.TempoText, x, absY, markingSize,
+                gc.DrawText(m.TempoText, x, absY, em,
                     "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
-                x += TextFontMetrics.SerifBold(m.TempoText, markingSize) + 0.8;
-                gc.DrawText("(", x, absY, textSize,
+                x += TextFontMetrics.SerifBold(m.TempoText, em);
+                // The concat's " (" — one run; its leading space carried as the
+                // single-run offset so no backend collapses it.
+                gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance("("), absY, em,
                     "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
-                x += TextFontMetrics.Serif("(", textSize) + 0.1;
+                x += TextFontMetrics.Serif(" (", em);
             }
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
             // half with stem; 4+ = black head, stem, flags from the 8th up.
-            char head = m.TempoBeatUnit <= 1
-                ? EmmentalerGlyphs.NoteheadWhole
-                : m.TempoBeatUnit == 2
-                    ? EmmentalerGlyphs.NoteheadHalf
-                    : EmmentalerGlyphs.NoteheadBlack;
-            // The stemless whole note sits a touch higher so its center
-            // lines up with the equation text the way the stemmed units do
-            // (their stem carries the visual weight upward). Up = larger Y-up.
-            double headY = m.TempoBeatUnit <= 1 ? absY + 0.5 : absY;
+            char head = MetronomeMarkGeometry.HeadGlyph(m.TempoBeatUnit);
+            var headBox = MetronomeMarkGeometry.HeadBox(m.TempoBeatUnit);
+            int log = MetronomeMarkGeometry.Log(m.TempoBeatUnit);
+            // DOWN-aligned: the head's ink bottom on the baseline, so its centre rides
+            // half a (scaled) head above it. Up = larger Y-up.
+            double headY = absY - headBox.Bottom * s;
             gc.DrawGlyph(head, x, headY, noteSize);
-            double headW = m.TempoBeatUnit <= 1 ? noteSize * 0.62 : noteSize * 0.5;
-            if (m.TempoBeatUnit >= 2)
+            double headRight = headBox.Right * s;
+            if (log > 0)
             {
-                double stemX = x + noteSize * 0.32;
-                // The stem rises from the head (up = larger Y-up).
-                double stemTop = absY + 3.5 * (noteSize / FontSize);
-                gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
-                if (m.TempoBeatUnit >= 8)
+                // note-by-number's up stem: lower-RIGHT corner on the head's attachment
+                // point (the font's LILC datum — X is the head's right edge, Y a little
+                // above its centre), rising to stemy = magstep x max(3, log-1) above
+                // the head's origin line.
+                double stemTh = MetronomeMarkGeometry.StemThickness;
+                var att = MetronomeMarkGeometry.StemAttachment(m.TempoBeatUnit);
+                double stemX = x + att.X * s - stemTh / 2;
+                double stemBottom = headY + att.Y * s;
+                double stemTop = headY
+                    + MetronomeMarkGeometry.StemTopAboveCentre(m.TempoBeatUnit);
+                gc.DrawLine(stemX, stemBottom, stemX, stemTop, Color.Black, stemTh);
+                if (log >= 3)
                     gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
             }
-            double dotX = x + headW + 0.15;
+            // Dot run per note-by-number: one dotwid past the head's ink right,
+            // 2 x dotwid apart, on the head's own line (dots-direction 0); an
+            // up-stem flagged unit shifts the run +0.5 to clear the flag. The
+            // arithmetic lives in MetronomeMarkGeometry.DotX.
             for (int d = 0; d < m.TempoDots; d++)
-            {
-                // Beside the head at ITS center (ly:dots::print puts the dot
-                // on the head's line).
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, headY, noteSize);
-                dotX += 0.55;
-            }
-            double tempoTextX = Math.Max(x + headW + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
-            string equation = "= " + m.Text + (m.TempoText != null ? ")" : "");
-            gc.DrawText(equation, tempoTextX, absY,
-                textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                    x + MetronomeMarkGeometry.DotX(m.TempoBeatUnit, d), headY, noteSize);
+            // " = N" — one run at the note's ink right; the leading space is the
+            // concat's separator, carried as the single-run offset.
+            string equation = MetronomeMarkGeometry.EquationText(
+                m.Text, m.TempoText != null);
+            double eqX = x
+                + MetronomeMarkGeometry.NoteRight(m.TempoBeatUnit, m.TempoDots)
+                + MetronomeMarkGeometry.LeadingSpaceAdvance(equation);
+            gc.DrawText(equation, eqX, absY,
+                em, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
-                double textEnd = tempoTextX + TextFontMetrics.SerifBold(equation, textSize);
+                double textEnd = eqX + TextFontMetrics.Serif(equation, em);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
                 DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }

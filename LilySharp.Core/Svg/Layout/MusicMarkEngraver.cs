@@ -114,9 +114,6 @@ internal static class MusicMarkEngraver
              or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
              or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda;
 
-    // Gap between a section label box and the tempo mark sharing its line
-    private const double TempoLabelGap = 0.8;
-
     // Gap between stacked marks
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double StackGap = 0.46;
@@ -165,7 +162,15 @@ internal static class MusicMarkEngraver
         // Optional per-mark gate: a mark for which this returns false reserves its
         // SourceIndex but draws no text (used to hide the "Ped." / "*" a bracket or
         // mixed pedal style replaces). Null keeps every mark.
-        Func<MusicMarkItem, bool>? keepMarkText = null)
+        Func<MusicMarkItem, bool>? keepMarkText = null,
+        // Per system, the ABSOLUTE X of the line-start TimeSignature column's ink left,
+        // or NaN when that system's prefix engraves no meter — the break-align anchor a
+        // measure-start metronome mark self-aligns LEFT on. Null (single-staff callers
+        // without the prefix model) falls back to the first musical column.
+        // LILYPOND-REF: scm/define-grobs.scm:2337,2352,2360 MetronomeMark break-align-symbols
+        //   (time-signature), self-alignment-X LEFT,
+        //   X-offset self-alignment-interface::self-aligned-on-breakable.
+        Func<int, double>? prefixTimeSignatureX = null)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -186,7 +191,7 @@ internal static class MusicMarkEngraver
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
-            double x = CalculateXPosition(mark, measureLayout, systems);
+            double x = CalculateXPosition(mark, measureLayout, systems, prefixTimeSignatureX);
             markEntries.Add((mark, x, si));
         }
 
@@ -318,69 +323,49 @@ internal static class MusicMarkEngraver
                 }
             }
 
-            // A boxed label and the tempo mark at the SAME anchor start out
-            // SIDE BY SIDE (label box, tempo just right of it) so the initial
-            // stack is ONE level high; CoPlaceTempoWithLabels re-aligns the
-            // pair after the outside-staff stacker has run.
+            // Above-staff estimate BEFORE the outside-staff pass: every mark rests at
+            // its own base and marks sharing the anchor chain upward only among
+            // THEMSELVES — the TEMPO does not join the chain. Its X is the break-aligned
+            // meter (or the musical column), not the label's, so whether its ink and a
+            // label's box actually meet is a pointwise question, and that question
+            // belongs to the priority pass (tempo 1300 is placed first, the label 1450
+            // clears it where — and only where — they overlap), which is exactly
+            // LilyPond's shape. The old side-by-side "chart pair" device (label box with
+            // the tempo re-anchored to its right on one shared line, re-aligned after
+            // stacking) died here: LilyPond has no such construction, and keeping it
+            // meant re-deriving by hand the clearances the stacker had already solved
+            // (the label was pulled down onto the line-start clef that way).
             double stackTopYUp = baseAboveYUp;
-            bool sideBySide = aboveMarks.Count == 2
-                && aboveMarks[0].Mark.Type == MusicMarkType.Tempo
-                && (aboveMarks[1].Mark.Type is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal);
-            if (sideBySide)
-            {
-                var (tempoMark, _, tempoSi) = aboveMarks[0];
-                var (labelMark, labelX, labelSi) = aboveMarks[1];
-                var (lx0, lx1) = MarkXExtent(labelMark, labelX);
-                double tempoX = lx1 + TempoLabelGap;
-                var (tx0, tx1) = MarkXExtent(tempoMark, tempoX);
-
-                // Ceiling on the pair's box BOTTOM in Y-up: init −inf, keep the highest
-                // overlapping chord top.
-                double ceilingUp = double.NegativeInfinity;
-                if (!chordNames.IsDefaultOrEmpty)
-                {
-                    foreach (var cn in chordNames)
-                    {
-                        if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, labelMark.MeasureIndex))
-                            continue;
-                        double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
-                        bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
-                        bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
-                        if (overLabel || overTempo)
-                            ceilingUp = Math.Max(ceilingUp, (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding);
-                    }
-                }
-
-                double halfLabel = GetMarkHalfExtent(labelMark.Type);
-                double pairYUp = baseAboveYUp + Padding;
-                if (!double.IsNegativeInfinity(ceilingUp))
-                    pairYUp = Math.Max(pairYUp, ceilingUp + halfLabel);
-
-                // Store the mark-frame Y-up directly (staff-spaces above the top-staff
-                // middle). The tempo baseline sits 0.9 BELOW the label centre (= −0.9 Y-up).
-                layouts.Add(new MusicMarkLayout(
-                    labelMark.MeasureIndex, labelX, pairYUp, labelMark.Type, labelMark.Text,
-                    labelMark.IsSymbol, labelMark.SourcePosition, labelSi));
-                layouts.Add(new MusicMarkLayout(
-                    tempoMark.MeasureIndex, tempoX, pairYUp - 0.9, tempoMark.Type, tempoMark.Text,
-                    tempoMark.IsSymbol, tempoMark.SourcePosition, tempoSi, tempoMark.SwingSubdivision,
-                    tempoMark.TempoText, tempoMark.TempoBeatUnit, tempoMark.TempoDots));
-                stackTopYUp = pairYUp + halfLabel;
-                aboveMarks.Clear();
-            }
-
+            bool chainStarted = false;
             for (int i = 0; i < aboveMarks.Count; i++)
             {
                 var (mark, x, si) = aboveMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double yUp;
-                if (i == 0)
+                if (mark.Type == MusicMarkType.Tempo)
+                {
+                    // The metronome mark RESTS on the staff by aligned_side — its supports
+                    // are the staves themselves, so its quiet baseline is staff ink +
+                    // padding 0.8 + its own ink bottom (ledger tempo.quiet.staff-to-
+                    // baseline). Collisions with other outside-staff grobs are the
+                    // priority-1300 pass's job (OutsideStaffStacker.PlaceMusicMarks),
+                    // which only ever lifts it. Its ink is BASELINE-anchored, not a
+                    // centered box, so the chord ceiling constrains its ink bottom
+                    // (baseline + Ink.Bottom), not a half-extent.
+                    var tInk = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                        mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
+                    yUp = MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom);
+                    if (!double.IsNegativeInfinity(markCeilingUp))
+                        yUp = Math.Max(yUp, markCeilingUp - tInk.Bottom);
+                }
+                else if (!chainStarted)
                 {
                     yUp = baseAboveYUp + Padding;
                     if (!double.IsNegativeInfinity(markCeilingUp))
                         yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
                     stackTopYUp = yUp + halfExtent;
+                    chainStarted = true;
                 }
                 else
                 {
@@ -512,6 +497,14 @@ internal static class MusicMarkEngraver
         return layouts.ToImmutable();
     }
 
+    // (CoPlaceTempoWithLabels — the "[Chorus] ♩ = 132" chart pair that re-anchored a
+    // tempo to its section label's right on one shared line — was REMOVED with the
+    // tempo port: LilyPond has no such device. The label and the metronome mark each
+    // break-align to their own anchor and the outside-staff pass stacks them by
+    // priority (1300 first, 1450 clears it pointwise where their inks meet), which is
+    // both the letter and what keeps the label's clef clearance intact without
+    // re-deriving it by hand.)
+
     /// <summary>
     /// Co-places a boundary "To Coda" with the section label it shares a barline
     /// with: lifts the sign to the label's (post-stacking) line and tucks it a
@@ -523,152 +516,6 @@ internal static class MusicMarkEngraver
     /// also means a label on the NEXT system (far X) is never matched. Run AFTER
     /// outside-staff stacking so the label's line is final.
     /// </summary>
-    /// <summary>
-    /// After stacking, a tempo mark that shares its anchor with a boxed
-    /// section/rehearsal label moves to the label's RIGHT on one shared line
-    /// ("[Chorus] ♩ = 132" — the standard chart layout) instead of occupying
-    /// a second line above it. The shared line is the higher of the two
-    /// stacked positions, so every collision constraint the stacker resolved
-    /// (chord symbols under either ink) stays respected.
-    /// </summary>
-    public static ImmutableArray<MusicMarkLayout> CoPlaceTempoWithLabels(
-        ImmutableArray<MusicMarkLayout> marks,
-        ImmutableArray<ChordNameLayout> chordNames = default,
-        ImmutableArray<SystemLayout> systems = default)
-    {
-        if (marks.IsDefaultOrEmpty || !marks.Any(m => m.MarkType == MusicMarkType.Tempo))
-            return marks;
-
-        // X is system-local: only chords on the pair's OWN system constrain it.
-        var measureToSystemIdx = new Dictionary<int, int>();
-        if (!systems.IsDefaultOrEmpty)
-            for (int si = 0; si < systems.Length; si++)
-                foreach (var ml in systems[si].Measures)
-                    measureToSystemIdx[ml.MeasureIndex] = si;
-
-        var result = marks.ToBuilder();
-        // Pairs already re-aligned in this pass: a later pair whose span runs
-        // under an earlier one (adjacent one-bar sections with long tempo
-        // texts) must stack ABOVE it — each pair alone only solves against
-        // the chord symbols.
-        var placedPairs = new List<(int Sys, double X0, double X1, double LineYUp)>();
-        for (int i = 0; i < result.Count; i++)
-        {
-            if (result[i].MarkType != MusicMarkType.Tempo)
-                continue;
-            var tempo = result[i];
-            int bestJ = -1;
-            double bestDx = double.MaxValue;
-            for (int j = 0; j < result.Count; j++)
-            {
-                if (result[j].MarkType is not (MusicMarkType.SectionLabel or MusicMarkType.Rehearsal))
-                    continue;
-                if (result[j].MeasureIndex != tempo.MeasureIndex)
-                    continue;
-                double dx = Math.Abs(result[j].X - tempo.X);
-                if (dx < 8.0 && dx < bestDx) { bestDx = dx; bestJ = j; }
-            }
-            if (bestJ < 0)
-            {
-                // UNPAIRED tempo: it still shares the line with the pairs —
-                // "♩=120" (paired with its label) and a following "♩=90"
-                // overprinted on the grand-staff fixture. Same band model:
-                // its "line" is the label-center height it would pair at.
-                const double drop = 0.9; // = section-label fs/2 − pad
-                double uw = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + tempo.Text, 1.8);
-                if (tempo.TempoText != null)
-                    uw += Rendering.TextFontMetrics.SerifBold(tempo.TempoText, 2.2) + 1.5;
-                if (tempo.SwingSubdivision != 0)
-                    uw += 5.0;
-                // The tempo baseline sits `drop` below the pair line, so the line's
-                // mark-frame Y-up is tempo.YUp + drop.
-                double uLineUp = tempo.YUp + drop;
-                int uSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int us) ? us : -1;
-                foreach (var placed in placedPairs)
-                {
-                    if (placed.Sys != uSys)
-                        continue;
-                    if (tempo.X + uw < placed.X0 - 1.0 || tempo.X > placed.X1 + 1.0)
-                        continue;
-                    if (Math.Abs(uLineUp - placed.LineYUp) < 3.0)
-                        uLineUp = Math.Max(uLineUp, placed.LineYUp + 3.6);
-                }
-                placedPairs.Add((uSys, tempo.X, tempo.X + uw, uLineUp));
-                result[i] = tempo with { YUp = uLineUp - drop };
-                continue;
-            }
-
-            var lab = result[bestJ];
-            double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
-            const double pad = 0.2;
-            double halfW = (Rendering.TextFontMetrics.SerifBold(lab.Text, labelFs) + 2 * pad) / 2;
-            double baselineDrop = labelFs / 2 - pad;
-            double boxHalf = labelFs / 2 + pad;
-
-            // Start from the LOWER of the two stacked lines (closer to the
-            // staff) and solve the SHIFTED pair against the chord symbols
-            // directly — inheriting the higher line would drag the pair up by
-            // whatever stacking step the other mark once needed.
-            double tempoX = lab.X + halfW + TempoLabelGap;
-            double tempoW = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + tempo.Text, 1.8);
-            if (tempo.TempoText != null)
-                tempoW += Rendering.TextFontMetrics.SerifBold(tempo.TempoText, 2.2) + 1.5;
-            if (tempo.SwingSubdivision != 0)
-                tempoW += 5.0;
-
-            // Shared pair line in Y-up: start at the LOWER (smaller Y-up) of the label
-            // centre and the tempo baseline lifted by baselineDrop.
-            double lineYUp = Math.Min(lab.YUp, tempo.YUp + baselineDrop);
-            if (!chordNames.IsDefaultOrEmpty)
-            {
-                foreach (var cn in chordNames)
-                {
-                    if (cn.YUp <= 0)
-                        continue;
-                    if (measureToSystemIdx.TryGetValue(cn.MeasureIndex, out int cs)
-                        && measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int ts2)
-                        && cs != ts2)
-                        continue;
-                    double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
-                    double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn) + OutsideStaffPadding;
-                    bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
-                    bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);
-                    // Tempo ink: stem to ~2.1 above the baseline, digits ~0.5 below.
-                    if (overTempo)
-                        lineYUp = Math.Max(lineYUp, chordTopUp + 0.5 + baselineDrop);
-                    if (overLabel)
-                        lineYUp = Math.Max(lineYUp, chordTopUp + boxHalf);
-                }
-            }
-
-            double pairX0 = lab.X - halfW;
-            double pairX1 = tempoX + tempoW;
-            int tempoSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int tsys) ? tsys : -1;
-            foreach (var placed in placedPairs)
-            {
-                if (placed.Sys != tempoSys)
-                    continue;
-                if (pairX1 < placed.X0 - 1.0 || pairX0 > placed.X1 + 1.0)
-                    continue;
-                // Band of a pair ≈ ±1.7ss around its line; step a full band
-                // plus padding above the one it would run into — but only
-                // when the bands actually meet (an X-overlapping mark two
-                // levels up leaves this line free).
-                if (Math.Abs(lineYUp - placed.LineYUp) < 3.0)
-                    lineYUp = Math.Max(lineYUp, placed.LineYUp + 3.6);
-            }
-            placedPairs.Add((tempoSys, pairX0, pairX1, lineYUp));
-
-            result[bestJ] = lab with { YUp = lineYUp };
-            result[i] = tempo with
-            {
-                X = tempoX,
-                YUp = lineYUp - baselineDrop,
-            };
-        }
-        return result.ToImmutable();
-    }
-
     public static ImmutableArray<MusicMarkLayout> CoPlaceToCodaWithLabels(
         ImmutableArray<MusicMarkLayout> marks)
     {
@@ -881,11 +728,9 @@ internal static class MusicMarkEngraver
         {
             case MusicMarkType.Tempo:
             {
-                double w = 2.3 + Rendering.TextFontMetrics.SerifBold("= " + mark.Text, 1.8);
-                if (mark.TempoText != null)
-                    w += Rendering.TextFontMetrics.SerifBold(mark.TempoText, 2.2) + 1.5;
-                if (mark.SwingSubdivision != 0)
-                    w += 5.0;
+                // Left-anchored, priced by the ONE geometry home the draw uses.
+                double w = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                    mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision).Width;
                 return (x, x + w);
             }
             case MusicMarkType.Rehearsal:
@@ -910,8 +755,10 @@ internal static class MusicMarkEngraver
 
     private static double GetMarkHalfExtent(MusicMarkType type) => type switch
     {
-        // LILYPOND-REF: define-grobs.scm:2335 MetronomeMark — notehead + stem + text
-        MusicMarkType.Tempo => 1.8,           // notehead height + stem extends ~1.4 above
+        // Tempo is NOT priced here any more: its ink is baseline-anchored and asymmetric
+        // (note top ~3.16, digit overshoot below), read from MetronomeMarkGeometry by
+        // every consumer. The arm remains only for the generic fallback shape.
+        MusicMarkType.Tempo => 1.8,
         MusicMarkType.Rehearsal => 1.4,       // (FontSize*0.6 + 0.2*2) / 2 = (2.4+0.4)/2
         MusicMarkType.SectionLabel => 1.3,    // (FontSize*0.55 + 0.2*2) / 2 = (2.2+0.4)/2
         MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
@@ -944,7 +791,8 @@ internal static class MusicMarkEngraver
     /// </remarks>
     private static double CalculateXPosition(
         MusicMarkItem mark, MeasureLayout measureLayout,
-        ImmutableArray<SystemLayout> systems)
+        ImmutableArray<SystemLayout> systems,
+        Func<int, double>? prefixTimeSignatureX = null)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -973,6 +821,40 @@ internal static class MusicMarkEngraver
                 return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
             if (mark.AnchorItemIndex < measureLayout.Items.Length)
                 return measureLayout.X + measureLayout.Items[mark.AnchorItemIndex].X - 0.70;
+        }
+
+        // A measure-start tempo self-aligns LEFT on the break-aligned TIME SIGNATURE:
+        // its ink left = the meter column's ink left (measured 0.000000 in the probe,
+        // tempo-mark.ly header). At a line start that column is the prefix's meter; with
+        // no meter to align on, the mark sits over the first notational element of the
+        // measure instead ("Gardner Read, Music Notation p.278", LilyPond's own comment).
+        // ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+        // this model (MidMeasureChangeGaps stands in), so a tempo at such a bar takes the
+        // musical-column arm where LilyPond would align it on the changed meter.
+        // LILYPOND-REF: lily/metronome-engraver.cc:109-135 stop_translation_timestep —
+        //   break-align parent when a support was acknowledged, currentMusicalColumn
+        //   otherwise; scm/output-lib.scm:498-504 self-aligned-on-breakable.
+        if (mark.Type == MusicMarkType.Tempo && mark.Position == MusicMarkPosition.Beginning)
+        {
+            if (prefixTimeSignatureX != null)
+            {
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    var sys = systems[i];
+                    if (sys.Measures.IsDefaultOrEmpty
+                        || sys.Measures[0].MeasureIndex != measureLayout.MeasureIndex)
+                        continue;
+                    double tsX = prefixTimeSignatureX(i);
+                    if (!double.IsNaN(tsX))
+                        return tsX;
+                    break; // line start without a meter → the musical column below
+                }
+            }
+            if (!measureLayout.Columns.IsDefaultOrEmpty)
+                return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
+            if (measureLayout.Items.Length > 0)
+                return measureLayout.X + measureLayout.Items[0].X - 0.70;
+            return measureLayout.X;
         }
 
         // Pedal marks ("Ped." / "*") attach to the note they are written on

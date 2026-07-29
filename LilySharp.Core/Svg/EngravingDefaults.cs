@@ -517,6 +517,33 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1406 DynamicLineSpanner minimum-space, read by aligned_side.</remarks>
     public const double DynamicLineSpannerMinimumSpace = 1.2;
 
+    /// <summary>MetronomeMark's side-position padding, paid against its supports — and its
+    /// supports are the STAVES themselves (metronome-engraver.cc sets side-support-elements
+    /// = stavesFound), so on a quiet staff the mark's stencil BOTTOM lands at staff ink +
+    /// this, and its baseline rides its own ink bottom above that (ledger
+    /// tempo.quiet.staff-to-baseline = 2.05 + 0.8 + 0.033010, to the digit). It declares
+    /// NO staff-padding; its outside-staff-priority is 1300 and its horizontal padding the
+    /// mark family's 0.2.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2343 MetronomeMark padding, read by aligned_side;
+    /// lily/metronome-engraver.cc:136-139 stop_translation_timestep, side-support-elements = stavesFound.</remarks>
+    public const double MetronomeMarkPadding = 0.8;
+
+    /// <summary>The metronome mark's TEXT em (" = 120", and the \bold marking): MetronomeMark
+    /// declares no font-size, so the paper text-font-size applies unstepped — the same
+    /// derivation as <see cref="TextScriptFontSize"/> (11pt over a 5pt staff space = 2.2).</summary>
+    /// <remarks>LILYPOND-REF: scm/paper.scm:69-77 text-font-size;
+    /// scm/define-grobs.scm:2335-2365 MetronomeMark outside-staff-priority block — the
+    /// grob declares no font-size property, so the paper em applies.</remarks>
+    public static readonly double MetronomeMarkFontSize = TextScriptFontSize;
+
+    /// <summary>The scale of the metronome mark's note glyphs: the markup wraps its
+    /// note-by-number in \smaller = one font-size step down, magstep(-1) = 2^(-1/6).
+    /// The note's stem-length is max(3, log-1) staff spaces BEFORE this scale.</summary>
+    /// <remarks>LILYPOND-REF: scm/translation-functions.scm:118-124 metronome-markup make-smaller-markup;
+    /// scm/define-markup-commands.scm:5541-5569 note-by-number size-factor,
+    /// stem-length = size-factor * max(3, log-1), size-factor = magstep(font-size).</remarks>
+    public static readonly double MetronomeMarkNoteMagstep = Math.Pow(2.0, -1.0 / 6.0);
+
 
     /// <summary>
     /// Space for shortest duration.

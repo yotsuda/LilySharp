@@ -87,11 +87,11 @@
   <rect x="93.03" y="16.32" width="0.19" height="4.00" data-pos="360"/>
   <rect x="101.34" y="16.32" width="0.19" height="4.00" data-pos="369"/>
   <rect x="101.83" y="16.32" width="0.60" height="4.00" data-pos="369"/>
+  <text class="music" x="4.88" y="14.96" font-size="3.56" data-pos="0"></text>
+  <line x1="5.99" y1="14.79" x2="5.99" y2="12.28" stroke="#000000" stroke-width="0.116" data-pos="0"/>
+  <text x="6.66" y="15.44" font-size="2.20" data-pos="0">= 120</text>
   <rect x="0.30" y="11.46" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="432"/>
   <text x="1.33" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="432">A</text>
-  <text class="music" x="3.17" y="13.66" font-size="1.60" data-pos="0"></text>
-  <line x1="3.68" y1="13.66" x2="3.68" y2="12.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="4.27" y="13.66" font-size="1.80" data-pos="0">= 120</text>
   <rect x="33.38" y="12.52" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="471"/>
   <text x="34.43" y="14.72" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="471">B</text>
   <rect x="54.60" y="12.52" width="2.11" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="509"/>

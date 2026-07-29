@@ -50,8 +50,8 @@
 %% resolves fonts.serif via this machine's fontconfig otherwise; page-vertical.ly's
 %% header has the history).
 %%
-%% MEASURED (2026-07-29, first run; ledger entries are NOT opened yet — the Lily#
-%% mirrors and accessors are the next session's first move):
+%% MEASURED (2026-07-29, first run; the two Y entries opened the same day, the X
+%% entry tempo.x.mark-to-time-signature opened with the session-33 port, as planned):
 %%   * TMQ Y: baseline − staffRefpoint = 2.883010 = staff ink 2.05 + padding 0.8
 %%     + 0.033010, and 0.033010 IS the mark's own ext bottom (dump (-0.03300964 …)) —
 %%     aligned_side lands the stencil's bottom at 2.85 and the baseline rides its own

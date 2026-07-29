@@ -32,20 +32,55 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第32セッション・**Trill/TextSpanner の staff-padding 島＝新プローブ
-`spanner-floors.ly` 4 点を開いて 4 点とも exact に閉じた**。trill は床でなく
-**include_staff＋自分の padding** が効くという第3の機構が答えだった）
+最終更新 2026-07-29（第33セッション・**tempo 島の移植を landing**。TMQ −0.000010／
+TMT **九桁 exact**／X 対 0 exact。詳細は下の第33セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3498 passed / 0 failed / 3 skipped**（trill/ts 4 点＋tempo 2 点追加）・
+**HEAD は 3499 passed / 0 failed / 3 skipped**（tempo 2 点の着地更新＋X 対 1 点追加）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第33セッションの commit（全部 GO 済・各弾 snapshot 66 枚再ベース）**:
+`df72dd5f`（移植＋台帳 3 点）／`8dffccc0`（出典コメントのみ）／
+`d7422832`（**残近似の字面化**＝dot run を note-by-number の dotwid 算術へ・stem 付け根を
+font の LILC attachment へ（生成器拡張・diff は新規 20 行のみ＝font 不変）・trill の
+衝突 pass padding 0.46（aligned_side 0.5 は engraver 側＝LP の二段が完成・
+第32セッション残債⑴の後半も閉じた））／
+`178954cc`（**第4弾＝残りの綴りも字面へ**: ⑴ 不活性 clamp 除去（aligned_side は clamp
+無し）⑵ concat の " = N"/" (" を**単一 run 測定**へ（`LeadingSpaceAdvance`＝空白境界
+kerning 込み）⑶ ★ **符頭/旗/dot の skyline をグリフ実アウトラインへ**——
+`TextOutlineSkylines.PlaceMusicGlyph` が Emmentaler の Skia パスに text と同一の walk を
+回す＝`add_named_glyph_segments` の字面で、**実サイズ（magstep(−1)）平坦化**なので baked
+clef quads の「フレーム依存量子化」繰延すら無い。stem は**LP も箱**（round-filled-box）。
+font 不在時のみ designed box に fallback。tempo mark の非字面の残りは swing 等式と
+mid-line meter change の 2 件＝装置/模型の島だけ。snapshot 6 枚）／
+`1c454c58`（★★ **チャート型 tempo×label 対（CoPlaceTempoWithLabels・sideBySide）を撤去**。
+発端はユーザー目視「[A] 箱が行頭 clef に重なる」→「LP 忠実で直らないのか」——**直る。
+LP にこの装置が無い**のが答えで、label(1450) と mark(1300) は各自の X に break-align して
+priority pass が pointwise に積むだけ。engraver では tempo は群 chain に**参加しない**
+（aligned_side 静止高のまま）。途中で入れた `TrillFloorUp`/label-線繕いも装置ごと削除＝
+**stacker の解を手で再導出する必要そのものが消えた**。チャート様式は §3 未掲載だった）
+＋handoff。
+★ **第2弾の所見**: trill グリフ片の**平ら台地は近似でなく LP 自身の構成**——bound text が
+「straight line as the vertical skyline」ラッパで包まれている（define-grobs.scm:4054-4068 の
+LP 自身のコメント・TMT が glyph top+0.46 六桁丸で束縛した理由）。**アウトライン化は逆に発明**。
+mark の pair に残る唯一の named 近似は**符頭の箱**（符頭は箱を ~0.001 まで満たす・
+magstep(−1) の outline 化は StaffSize 型の濫用になるため見送り＝コードに明示）。
+★ **perf は測定済・退行なし**（§5.3 の最小値ベンチ・50 小節/5 section/trill/tempo・
+warmup 3＋50 回×3 セットを**セッション前 `7fe0dfd8` の worktree と同一ハーネスで比較**）:
+base min 36.70 対 HEAD min **34.85**＝雑音内で同等。`PlaceMusicGlyph`/等式 outline は
+resolve 済み buildings を (glyph,size)/(string,size) でキャッシュ（第31セッションの
++15ms の教訓を最初から適用）。⚠️ **そのキャッシュはサイズ込みキー**——将来グリフサイズが
+連続値で変わる呼び方（任意倍率 ossia へ音楽グリフ outline を使う日）はキーが増殖するので
+キー設計を見直すこと。
+★ **第3弾の教訓（§5.0 の親戚）**: own device を LP 準拠の量の上に温存すると、
+**stacker が解いた制約を device が捨てるたびに手で再導出する羽目になる**（clef で 1 回・
+trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全部不要だった**——
+「own device への patch が 2 回続いたら、device 自体が LP に在るかを問う」。
 **第32セッションの commit**: `afd158a5`（起票・4 点・出力不変）／
 `8d4799b5`（移植＋snapshot 4 枚再ベース・**GO 済**）／`41386be3`（tempo 島 LP 側）／
 `8b4823cd`（tempo 島 Lily# 側・TMQ==TMT）＋handoff 数本。
-第31セッションの commit（`a931104f`／`019027fb`／`f138c9b2`・全部 GO 済）は第31セッション節に。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -56,6 +91,53 @@ Core 0 warn 0 err・**ワーキングツリーは clean**
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第33セッション（2026-07-29）＝ **tempo の X を移植したら Y がついてきた——4.76 の正体は「中心化推定幅×行頭 clef」だった**
+
+★★★ **tempo 島の移植（ユーザー指示の島・第32セッションが対を用意済）＝`df72dd5f`・GO 済。**
+着地: **TMQ 2.883000（−0.000010＝Lily# の "0" の overshoot 0.033000 対 LP 0.033010・face 床・
+0 にしない）／TMT 5.110000（九桁 exact）／新設 X 対 `tempo.x.mark-to-time-signature` 0 exact**。
+
+1. ★★★ **移植前の 4.760000 は「Y の発明」単独ではなかった**: engraver 4.5 ＋ **stacker が
+   +0.26**——中心化推定幅が行頭 **clef** と X 重なりを作り clef ink top 1.8+0.46+半箱 0.5 へ
+   押し上げていた。LP は **time signature に左揃え**なので clef と重ならず staff+0.8 に座る＝
+   **X の移植が Y の着地の前提**（台帳 why に記録）。
+2. **機構**: ⑴ 新設 `MetronomeMarkGeometry`＝**1 軒**（\smaller=magstep(−1) の note・
+   stem `max(3, log−1)`・upright serif em 2.2（`MetronomeMarkFontSize`=TextScript と同じ
+   text-font-size 由来）・DOWN 揃え＝note 底が baseline・ink/幅/静止高）。描画・engraver・
+   stacker・CoPlace の**全消費者がそこを読む**（旧: bold 1.8 幅×3 軒＋箱 1.5/0.5＋独自 Y）。
+   ⑵ engraver の静止高＝`QuietBaselineAboveMiddle`（staff ink 2.05+padding 0.8+自分の ink 底・
+   support は譜そのもの＝metronome-engraver.cc:136-139）⑶ X＝**line-start prefix 表の TimeX**
+   （`MultiStaffLayouter.SolveLineStartPrefix` に**共通化**——spring 模型と LayoutMeasures の
+   重複ブロックを 1 本化し、annotation ctx へ `PrefixTimeSignatureX` で配線。meter 無し regime
+   は最初の musical column へ fallback＝LP の currentMusicalColumn）⑷ stacker の tempo pair＝
+   **piecewise stencil**（テキストはアウトライン・note は箱＝vertical-skylines-from-stencil）。
+3. ★★★ **TMT が 2 つの既知債を桁で割った**: 移植直後 +0.073000 ＝ **0.040（trill が entry に
+   自分の 0.5 を登録——LP の all_paddings は outside-staff-padding 0.46・
+   axis-group-interface.cc:747-749,:804。第32セッション残債⑴「0.04 割れる・点なし」の点が
+   これ）＋ 0.033（mark 箱底の overshoot）**。⑴ `Place` に **registerPadding**（登録は
+   outside-staff 値）→ +0.033000 ちょうど ⑵ trill の**登録 pair をグリフ片＋波片の 2 箱**へ
+   （`registerUp/Down`——**自身の配置は extent 箱のまま**＝aligned_side は extent を読む・
+   TRF/TRC 不動が要件どおり）→ **九桁 0**。束縛インクは「tr 台地の上の平ら底グリフ」＝LP の
+   分解そのもの。
+4. ★★ **png 目視が第2の欠陥を捕まえ、その場で閉じた**（§5.0）: trill-spanner A 小節の
+   「120」×tr 交差が**移植後も残った**——label 対の tempo は `CoPlaceTempoWithLabels`
+   （チャート型 "[A] ♩=120"・LILYSHARP-OWN）を通り、そこが **stacker の解を `Math.Min` で
+   捨てて和音とだけ再解決**していた。⇒ CoPlace に **stacked trills を渡して 2 片 profile の
+   床を再適用**（`TrillFloorUp`）。目視で交差解消・beat-units/swing/grandstaff/change/
+   lead-sheet/piano も目視済（旗の右リーチを `NoteRight` に入れる修正も 1 件）。
+5. **snapshot 66 枚が動く理由の分解**（ほぼ全 fixture が tempo を持つ）: ⑴ note が
+   1.6 → 3.564（\smaller の正寸・LP の見た目）⑵ 等式が bold 1.8 → upright 2.2 ⑶ X が
+   clef 脇 → TS 左（または label 対はチャート位置のまま）⑷ 静止高 4.5/4.76 → 2.883 系
+   ⑸ trill 上の text/mark が波の上へ降りる（2 片 profile）。**GO 済・再ベース済**（§6 手順・
+   動いたのは 66 枚ちょうど・混入なしを `git status` で確認済）。
+6. **残した named 負債**: ⑴ mark の stacker pair の note 片・segno/coda・swing 箱は箱のまま
+   ⑵ 下側 pass の dynamics 登録 0.6 は LP の 1-grob（DynamicLineSpanner）と別模型のまま
+   ⑶ mid-line meter change の bar に tempo が来ても TS 揃えにならない（command 列模型の欠落・
+   §2H ⑶ と同根・コードに LILYSHARP-OWN 明示）⑷ swing 等式は Lily# 固有装置（寸法は
+   `SwingNoteSize` 1.6 に隔離）。
+7. **チェックリスト済**: 引用ラチェット（+3 を同セッションで 0 に）・§7.5（+461 行に
+   REF 11＋OWN 4・全定数導出形）・台帳 3 点の why 更新済・プローブヘッダ更新済。
 
 ### 第32セッション（2026-07-29）＝ **staff-padding を測ったら、trill では床が主役ですらなかった**
 
@@ -100,9 +182,11 @@ Core 0 warn 0 err・**ワーキングツリーは clean**
    インクが交差する。**ユーザー指示（2026-07-29）: Lily# の tempo 表記は LP を模倣できて
    いない——直すなら tempo が先**。tempo mark の幾何（中心化された推定幅・priority 押し上げ）
    には触っていない。**tempo 島を開くときにこの近接が最初の点**。
-7. **残した named 負債**: ⑴ stacker は単一 pass なので trill は**全 entry に 0.5**を払う
-   （LP は列に 0.5・それ以外は 0.46 の 2 pass——支えが beam/script の regime で 0.04 割れる・
-   点なし）⑵ 下段譜 TextSpanner はエングレーバの譜下配置のまま（stacker は staff-0 のみ＝
+7. **残した named 負債**: ⑴ ~~stacker は単一 pass なので trill は全 entry に 0.5 を払う~~ —
+   **半分閉じた（第33セッション）**: 登録 padding は LP の outside-staff 値になった
+   （registerPadding・TMT の 0.040 がその点）。**残る半分**＝trill 自身が支えに払う 0.5 は
+   単一 pass の近似のまま（LP は aligned_side 0.5 → 衝突 pass 0.46 の 2 段）
+   ⑵ 下段譜 TextSpanner はエングレーバの譜下配置のまま（stacker は staff-0 のみ＝
    既存の staff-0 限定の族）⑶ TextSpanner のテキスト em は描画 2.0 対 LP 2.2 のまま
    （ascent 側は点が無い）⑷ `DynamicHalfWidth 0.75` は残る（▶⑶ の残り半分）。
 
@@ -190,8 +274,9 @@ Core 0 warn 0 err・**ワーキングツリーは clean**
   足りないのは巡回順序の 1 ループ。
 - ~~**TextScript の X 揃え**~~ — **閉じた**（延長 `f138c9b2`・X 対 exact ×2）。
 - **below support に下側実プロファイルが無い**（→ ポケット封印の出口）。
-- **箱 pair のまま**: trill（グリフ）・dynamics（グリフ）・ottava・TextSpanner（定数負債 ⑶）・
-  tempo/boxed mark・segno/coda。数値は移植前と同一。
+- **箱 pair のまま**: dynamics（グリフ）・ottava・TextSpanner（定数負債 ⑶)・boxed mark・
+  segno/coda。**trill は第33セッションで 2 片箱（グリフ台地／波）へ・tempo は piecewise
+  stencil（テキスト＝アウトライン・note＝箱）へ**——残るのはグリフ片の実アウトライン。
 - **support の遠端は通過不能**（LILYSHARP-OWN）——support が実プロファイルを持てば消える。
 
 ### 第30セッション（2026-07-29）＝ **0.26 を割ったら「seed と draw は共有」という前セッションの読みが誤りだった**
@@ -333,8 +418,9 @@ Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）
   箱で、below support は下側実プロファイルを持たない（第31セッション節の負債）。
 - ⑶ ~~`TextSpannerAscent/Descent`（1.2/0.3）~~ — **削除済**（第32セッション・facing extent は
   描画インクへ。TSC の +0.25 がその網だった）。**残るのは `DynamicHalfWidth`（0.75）**。
-  mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）と TextSpanner のテキスト em
-  （描画 2.0 対 LP 2.2）も Lily#-own のまま＝em を測った点があるのは text script だけ。
+  mark/volta/ottava の**描画サイズ自体**（2.8/2.4）と TextSpanner のテキスト em
+  （描画 2.0 対 LP 2.2）も Lily#-own のまま＝em を測って移植済なのは text script と
+  **tempo（第33セッション・em 2.2 へ）**だけ。
   サイズを直すなら各 grob の LP 宣言から em を導出して点を先に。
 
 ### 第28セッション（2026-07-29）＝ **和音記号の幅を初めて測ったら、weight のほかに 3 つ落ちた**
@@ -576,23 +662,8 @@ support seed が箱のまま（OTC の分解には support のアウトライン
 - ~~ⓔ **床 grob の宣言表**~~ — **できた**（第32セッション・`EngravingDefaults` の
   outside-staff declaration table。TextScript/Trill/TextSpanner/Ottava/DynamicLineSpanner の
   5 grob が 1 軒・全消費者がそこを読む）。**次に床 grob を足す人は表へ**。
-- ★★ **tempo 島（ユーザー指示・2026-07-29: 「tempo 表記は LP 未模倣——直すなら tempo が先」）＝
-  対は両側とも済（`probes/tempo-mark.ly`＋台帳 `tempo.{quiet,trill-cleared}.staff-to-baseline`・
-  第32セッション延長）。次セッションは移植から**。Lily# 移植前実測:
-  **TMQ = TMT = 4.760000（同一＝それが欠陥。**LP は対を 2.226990 割る**）**＝
-  残差 +1.876990／−0.350000。マークは trill を見ておらず、発明の静止高が高いせいで
-  「120」×tr 交差は 0.35 帯のインク交錯として出る（4.76 の内訳は**意図的に未分割**——
-  移植が機構ごと置き換える）。**X 点は未開**（LP 実測 0 はプローブヘッダに記録済・
-  左揃えを実装する段で開く）。LP 実測（ヘッダに記録済）:
-  **TMQ 2.883010** = 譜インク 2.05 + padding 0.8 + マーク自身の ext 下 0.033010
-  （support は `stavesFound`＝譜そのもの・`metronome-engraver.cc:136-139`）／
-  **TMQ X: ink 左 = TimeSignature ink 左・差 0**（break-align 左揃え）／
-  **TMT 5.110000（六桁丸）** = trill グリフ上端 4.65 + 0.46（trill は 3.550000 で不動）。
-  宣言: padding 0.8・staff-padding 無し・priority 1300・水平 0.2・skyline は stencil・
-  markup は `\smaller` 音符（bottom=baseline・ext 上 3.161441）+ upright serif " = 120"
-  （em 2.2）。**Lily# の乖離は 4 つ名指し済**: bold（LP は upright）／1.8（LP は em 2.2）／
-  中心化推定幅（LP は time signature に左揃え）／独自 Y（LP は staff+0.8 の aligned_side と
-  1300 の stacking）。trill-spanner A 小節の「120」× tr 交差はこの島の最初の観測。
+- ~~★★ **tempo 島**~~ — **移植済（第33セッション・`df72dd5f`・GO 済）**。TMQ −0.000010／
+  TMT 九桁 exact／X 対 0 exact。詳細・残債は第33セッション節。
 
 1. ★ **テキスト量の残り**:
    ~~⑴ 和音記号の weight~~ — **移植済（第28セッション・GO 済）**。
