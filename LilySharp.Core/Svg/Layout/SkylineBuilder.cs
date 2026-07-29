@@ -751,27 +751,34 @@ internal sealed class SkylineBuilder
         double half = size.Span(EngravingDefaults.TupletBracketThickness / 2.0);
         foreach (var b in tupletBrackets)
         {
-            // A fully beamed tuplet draws no bracket at all (bracket-visibility =
-            // if-no-beam), so there is nothing to reserve; its number rides the beam.
-            if (!b.ShowBracket)
-                continue;
-
             double dir = b.IsStemUp ? 1.0 : -1.0;
             bool leftFirst = b.StartX <= b.EndX;
             double xLeft = leftFirst ? b.StartX : b.EndX;
             double xRight = leftFirst ? b.EndX : b.StartX;
             if (xRight <= xLeft)
                 continue;
-            // The OUTWARD edge of the line, computed here rather than handed to
-            // FromSlope's thickness parameter: that parameter's DOWN arm is unexercised
-            // by any production caller and its sign is not pinned by a test, while
-            // thickness 0 means "store exactly this edge" in both arms.
-            double yLeft = size.Span(leftFirst ? b.StartYUp : b.EndYUp) + dir * half + staffTopUp;
-            double yRight = size.Span(leftFirst ? b.EndYUp : b.StartYUp) + dir * half + staffTopUp;
 
             var direction = b.IsStemUp ? VerticalDirection.Up : VerticalDirection.Down;
             var sky = b.IsStemUp ? upSkyline : downSkyline;
-            sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+
+            // A fully beamed tuplet draws no bracket LINE (bracket-visibility =
+            // if-no-beam), but its NUMBER still prints — and a printed grob is staff
+            // skyline ink like any other. This used to skip the WHOLE tuplet ("its
+            // number rides the beam"), assuming the beam's own seed covers the number;
+            // it does not — the number hangs a bracket-padding past the beam's edge
+            // (measured six-digit on 2.26.0: centre at beam edge + 1.100, ledger
+            // staff.staff.beamed-tuplet-number, which read Lily# identical to its
+            // no-tuplet control while LilyPond reads 1.427717 more).
+            if (b.ShowBracket)
+            {
+                // The OUTWARD edge of the line, computed here rather than handed to
+                // FromSlope's thickness parameter: that parameter's DOWN arm is
+                // unexercised by any production caller and its sign is not pinned by a
+                // test, while thickness 0 means "store exactly this edge" in both arms.
+                double yLeft = size.Span(leftFirst ? b.StartYUp : b.EndYUp) + dir * half + staffTopUp;
+                double yRight = size.Span(leftFirst ? b.EndYUp : b.StartYUp) + dir * half + staffTopUp;
+                sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+            }
 
             // THE NUMBER, which reaches further out than the line it straddles. Centred on
             // the bracket's midpoint on both axes (tuplet-number.cc:342 and :227-228), so

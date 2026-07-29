@@ -1935,10 +1935,11 @@ internal sealed class MultiStaffLayouter
                 // staff-local extent so the inter-staff gap widens to clear them.
                 var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
                     staff, thisStaff, score.Articulations, measureLayouts);
-                var tupletBrackets = StaffTupletBracketLayouts(score, staff, thisStaff, measureLayouts);
+                var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts);
+                var tupletBrackets = StaffTupletBracketLayouts(
+                    score, staff, thisStaff, measureLayouts, beams);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
-                var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts);
                 // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
                 // silhouettes have to agree about the clef or the page and the alignment
@@ -2043,13 +2044,29 @@ internal sealed class MultiStaffLayouter
     /// bracket (<c>bracket-visibility = if-no-beam</c>), and without them every beamed
     /// tuplet in the corpus would reserve a bracket that is never drawn. They are detected
     /// from the model alone (<see cref="BeamDetector"/> reads voices, time signature and
-    /// tuplet spans), so they are available this early; the beam LAYOUTS are not, which
-    /// only affects where a suppressed tuplet's NUMBER sits, and the number is not seeded.
+    /// tuplet spans), so they are available this early.
+    /// </para>
+    /// <para>
+    /// The beam LAYOUTS matter too, since 2026-07-29: a suppressed tuplet's NUMBER is
+    /// seeded (SkylineBuilder.AddTupletBracketsToSkyline), and it sits centred on the
+    /// invisible bracket at the QUANTED beam edge + padding 1.1. Without them the engraver
+    /// falls back to the bracket position built from the raw
+    /// <see cref="EngravingDefaults.DefaultStemLength"/> stem tip, and on the probe pair
+    /// that fallback read +0.260021 against LilyPond while the drawn beam edge was
+    /// six-digit identical (ledger staff.staff.beamed-tuplet-number) — the seed must be
+    /// the drawn geometry. The caller passes <see cref="StaffBeamLayouts"/>, the same
+    /// per-staff beams the skyline itself reserves, so seed and draw share one beam model.
+    /// </para>
+    /// <para>
+    /// ⚠️ A TAB staff keeps the fallback (<c>default</c>): the per-staff beams here carry
+    /// the trivial system's <c>StaffIndex</c> 0, so the engraver's tab guard
+    /// (<c>beam.StaffIndex == tuplet.StaffIndex</c>) would flip on the staff's global
+    /// position, and no ledger point measures the tab regime — do not move it blind.
     /// </para>
     /// </remarks>
     private ImmutableArray<TupletBracketLayout> StaffTupletBracketLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts)
     {
         if (score.TupletBrackets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -2073,7 +2090,7 @@ internal sealed class MultiStaffLayouter
 
         return TupletBracketEngraver.Calculate(
             staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
-            beamGroups.ToImmutable(), beamLayouts: default,
+            beamGroups.ToImmutable(), beamLayouts: staff.IsTab ? default : beamLayouts,
             forceStemUp: staff.IsMultiVoice,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                 { [staffIndex] = staff.PrimaryVoice.Measures },
@@ -2098,9 +2115,9 @@ internal sealed class MultiStaffLayouter
     /// note X and pitch), so computing it before the spacing is decided is sound.
     /// <para>
     /// Beams are not passed (default): they only shift a slur's ENDPOINT attachment to a
-    /// beamed stem tip, never the peak that binds the gap, and the beam layouts are not
-    /// available this early — the same trade <see cref="StaffTupletBracketLayouts"/> makes
-    /// for the tuplet number.
+    /// beamed stem tip, never the peak that binds the gap. (⚠️ Not for want of layouts —
+    /// <see cref="StaffBeamLayouts"/> exists and <see cref="StaffTupletBracketLayouts"/>
+    /// consumes it since 2026-07-29; the slur trade stands on the endpoint argument alone.)
     /// </para>
     /// </remarks>
     private ImmutableArray<SlurLayout> StaffSlurLayouts(

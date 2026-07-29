@@ -32,19 +32,18 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第29セッション・**▶1⑵ の「OutsideStaffStacker の Own tuning」を、
-点を先に起票してから移植した。対は狙いの 3 定数のほかに「TextScript の em 2.4 は
-取り違え（正=2.2）」と「staff-padding は refpoint に掛かる床」を追加で出した**）
+最終更新 2026-07-29（第30セッション・**▶⓪「beamed tuplet 番号の +0.26 を割る」を実施。
+割れた先は 2 欠陥（beam は六桁で無罪）で、同セッションで両方移植し
++0.260021 → +0.0000208（face 床）に着地・ユーザー GO 済**）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3476 passed / 0 failed / 3 skipped**・Core 0 warn 0 err・**ワーキングツリーは clean**
-（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**commit 4 本**: `68162b87`（textscript 点 4 つの起票・出力不変）／
-`99ecd3aa`（Own tuning 3 定数 → face ink・TextScript em 2.2・snapshot 6 枚再ベース・
-**ユーザー GO 済**）／`53930190`（volta 番号を baseline アンカーへ・**ユーザーが目視で指摘**・
-5 枚・GO 済）／本 §1 の最終更新。
+**HEAD は 3480 passed / 0 failed / 3 skipped**（網 2 件追加）・Core 0 warn 0 err・
+**ワーキングツリーは clean**（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第30セッションの commit**: `9c621814`（engraver beamed 分岐 + seed の beam 共有・
+snapshot 6 枚・台帳 1 点・網 2 件・**GO 済**）＋本 §1 の更新。
+第29セッションまでの commit 8 本の一覧は第29セッション節と各 commit メッセージに。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -55,6 +54,36 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第30セッション（2026-07-29）＝ **0.26 を割ったら「seed と draw は共有」という前セッションの読みが誤りだった**
+
+★★★ **▶⓪ の手順（beam 下端を dump して引き算）どおりに割れた。beam は無罪**——
+Lily# の描画 beam 下端は **3.240000 = LP と六桁一致**。0.26 は 2 欠陥に割れた:
+
+1. ★★★ **「seed と draw は NumberYUp を共有」（第29セッション・台帳の why）は細部が誤り**。
+   実体は**別の regime を通る 2 回の `Calculate` 呼び出し**だった:
+   - **draw**（最終パス・beam あり）: 中心 = beam 縁 + **(0.5 + digitHeight 1.7 − 0.8) = +1.4**
+     ＝ **もう存在しないレンダラー text offset の補償**（`99ecd3aa` が
+     `VerticalAnchor.Middle` 描画にした時点で根拠が消えていた）→ 4.640（誤差 +0.300）。
+   - **seed**（per-staff パス・`beamLayouts: default`）: beamed 分岐に入れず fallback＝
+     **生の `DefaultStemLength` 3.5 + padding 1.1 = 4.600**（誤差 +0.260 = 台帳の残差**そのもの**。
+     quant 済 beam 縁 3.24 との差 0.04 は台帳の外でだけ見えていた）。
+2. **移植 2 つ**: ⑴ engraver の beamed 分岐＝**中心を「quant 済 beam 外縁 + TupletBracket
+   padding 1.1」（不可視ブラケット位置・tuplet-number.cc:342 midpoint）**へ。
+   ⑵ `StaffTupletBracketLayouts` が **`StaffBeamLayouts` を受け取り**、seed が draw と
+   同じ分岐・同じ beam モデルを通る（⚠️ **tab 譜は fallback のまま**——trivial system の
+   `StaffIndex` 0 が engraver の tab guard を譜の位置で反転させる・点も無い。why に明記）。
+3. **着地 +0.0000208 ＝ 番号の half-ink face 差**（0.627738 対 0.627717・歌詞 −0.000100 と同族。
+   **0 にしない**）。網 `BeamedTupletNumber_CentresOnTheInvisibleBracket_BeamEdgePlusPadding`
+   （上下両 arm・1.1 は測定値として直書き）。
+4. **snapshot 6 枚**が予測どおりに動いた: 下向き番号 −0.3／上向き −0.6（旧 clearance 0.5 →
+   1.1）／`tab-as-numbers` は **tab 譜が 1.52 上がった**＝記譜譜の番号 seed が生 stem tip 予約
+   だった過剰分の解消（描画インクとの一致）。重なりは無し（目視確認済）。
+5. **台帳印字**: 156/190 exact・|residual| 総和 **0.450268**（163 距離・TNB/TNC の 2 点が
+   前回印字後に増えた分を含む）・counts 25/27。**動いたのは TNB の 1 点だけ**。
+6. ⚠️ **同型の残り**: engraver の **tab 分岐**はレンダラー offset 補償（+0.3/−0.8）を
+   まだ持っている——draw が `VerticalAnchor.Middle` になった今、tab の beamed 番号は
+   描画位置も補償分ずれている疑い。**点が無いので点が先**（digitHeight 1.7 も tab 分岐だけに残存）。
 
 ### 第29セッション（2026-07-29）＝ **「Own tuning」3 定数を測ったら、em の取り違えが 3 例目として落ちた**
 
@@ -98,16 +127,36 @@ Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）
    ⇒ **baseline アンカー**（唯一 backend 一様）で `線 − 0.3 − Ink.Top` に置き、インク上端が
    ちょうど 0.3 下に。**同日入れた予約式 0.3 + InkHeight と構成上一致**した。
    ⚠️ **Hanging を使う新規描画は同じ罠を踏む**——予約と合わせるなら baseline で書く。
+8. ★★★ **同セッション延長で beamed tuplet の番号も閉じた（`b5a69388`＋`62674f98`・GO 済）**。
+   新プローブ `tuplet-number-beamed.ly`：LP は **beamed の番号を beam 下端 + padding 1.100 の
+   不可視ブラケット位置に置き**（2 つの音楽で六桁）、**普通の譜 skyline インクとして数える**。
+   `staff.staff.beamed-tuplet-number` は Lily# が**自分の control と九桁一致**（番号がどの
+   skyline にも居ない）→ SkylineBuilder の `!ShowBracket` skip を「線だけ」に絞って
+   **−1.434229 → +0.260021**。⚠️ **残る +0.26 は予約でなく描画位置**（seed と draw は
+   NumberYUp を共有）＝ **Lily# は beamed の番号を LP より 0.26 深く描く**。engraver の
+   不可視ブラケット Y か beam 自身の Y かは**未分割**——次の一手はこの fixture で Lily# の
+   beam 下端を dump して引き算。⚠️ プローブの罠を 2 つ踏んで記録済（ヘッダ参照）:
+   treble×treble だと **clef 対 clef 7.210039+1 が番号に 0.0023 差で勝ち**、両書同値の
+   「もっともらしい 8.210039」を返す／control は beam でなく **clef 3.540 対 譜線**が
+   binding（`staff.staff.beamed-tuplet-control` −0.006512 = clef 族の欠片の網を兼ねる）。
+9. **mark 幅も描画 style の advance へ**（`9588ef79`）——SerifBold 推定は BoldItalic 描画と
+   別 face だった。**byte 不変は結果**（重なり判定がどの fixture でも反転しなかった）。
 
-**残した宣言済みの負債**（このセッションで名前を付けた・未着手）:
+**残した宣言済みの負債**（このセッションで名前を付けた・未着手。**次セッションの推奨順**）:
+- ~~⓪ **beamed tuplet 番号の 0.26 を割る**~~ — **閉じた**（第30セッション・+0.0000208 に着地）。
 - ⑴ **staff-padding の refpoint 床が無い**（`textscript.no-descender` の −0.007000 が網）。
-  LP の side-position（padding 0.3 / staff-padding 0.5 → その上に outside-staff pass）を
-  持つ日に閉じる。0.46 一律は**この regime では偶然でなく LP の binding 項**だった。
+  LP の side-position（padding 0.3 / staff-padding 0.5 → その上に outside-staff pass）＝
+  `aligned_side` の字面移植で閉じる。0.46 一律は**この regime では偶然でなく LP の binding 項**
+  だった。grob ごとの宣言表（padding/staff-padding/priority）を `define-grobs.scm` から
+  持つのが入口。
 - ⑵ **stacker が interval 箱**（`textscript.stacked.outline-step` +0.420825 が網）。
-  §2C の Flag/Accidental/Rest のアウトライン半分と同じ島。
+  §2C の Flag/Accidental/Rest のアウトライン半分と同じ島。⑴ の後。
+  **終着点は SkylineBuilder との「skyline の家 1 つ」**（§5.2.1② の二重実装解消）——
+  そこまで行けば「この grob の extent をどう見積もるか」という問い自体が消える。
 - ⑶ `TextSpannerAscent/Descent`（1.2/0.3）と `DynamicHalfWidth`（0.75）は**別の定数・別の読者**
   で今回触っていない。mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）も Lily#-own のまま
-  ＝em を測った点があるのは text script だけ。
+  ＝em を測った点があるのは text script だけ。サイズを直すなら各 grob の LP 宣言から
+  em を導出して点を先に。
 
 ### 第28セッション（2026-07-29）＝ **和音記号の幅を初めて測ったら、weight のほかに 3 つ落ちた**
 
@@ -557,6 +606,8 @@ LP 側の定数を引いてから貼ること。** ⚠️ **ここに数を書�
 |---|---|---|
 | `textscript.stacked.outline-step` | **+0.420825**（**残る最大・ただし名前付き**） | **箱対アウトライン**（第29セッション新設）。LP はテキストの**アウトライン skyline** を pointwise に突き合わせ、Lily# の `DirectionalOccupancy` は interval 箱＝構造的に読めない。**双子の box-step が −4.8e-5**なので、アウトライン移植以外でここが動いたら fitting。§2C の Flag/Accidental/Rest の島と同族 |
 | `textscript.no-descender.staff-to-baseline` | **−0.007000** | **staff-padding refpoint 床の欠落**（`side-position-interface.cc:401-453 aligned_side`）。残差全体がこの 1 項＝この点がその網。descender 側と box-step は −3e-5/−4.8e-5 で face 差の床 |
+| `staff.staff.beamed-tuplet-number` | **+0.0000208**（旧 −1.434229 → +0.260021 → 今） | **閉じた（第30セッション）**。残りは番号の half-ink face 差（0.627738 対 0.627717）＝歌詞 −0.000100 と同族。**0 にしない** |
+| `staff.staff.beamed-tuplet-control` | **−0.006512** | clef down 3.533488 対 LP 3.540000＝clef 族の欠片（clef 対 平坦線という新しい組の網） |
 | `system.clef-floor.floor-bound-distance` | **+0.004090** | **フォント**（小節番号の face の cap 差 0.007048 が padding 斜面で薄まった姿）。⚠️ **clef ではない**——padding 無しの距離は LP と六桁一致 |
 | `between-staves.two-verse.staff-staff-inside` | **+0.001767**（旧 +0.284136） | 歌詞 descent の書体差ほか |
 | `lyrics.chord-row.between-systems.staff-to-lyric` | **+0.000963**（旧 +0.002047 → +0.011320 → 今） | **和音記号の em を直して 91% 落ちた**。⚠️ 途中で上がったのは**フォント 3 項の打ち消しが解けた**から |

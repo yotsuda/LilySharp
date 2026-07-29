@@ -823,15 +823,17 @@ internal static class OutsideStaffStacker
             default:
             {
                 // Plain text marks (D.S./Fine/pedal/…), baseline anchor at 0.7 x 4sp.
-                // Vertical extent = the string's own ink at the style the draw picks
+                // Both extents are the string's own metrics at the style the draw picks
                 // (DrawSingleMusicMark: BoldItalic, except the sustain-pedal words,
-                // which stay upright Bold). Width keeps the existing bold-advance
-                // estimate — the X range was never part of the letter-class trio.
+                // which stay upright Bold): ink about the baseline vertically, the
+                // advance horizontally — LilyPond has no "estimated" widths, a mark's
+                // X extent is its markup stencil's. (To-Coda still prices its text
+                // only; the coda glyph beside it stays an unreserved approximation.)
                 double fs = fontSize * 0.7;
-                double halfW = TextFontMetrics.SerifBold(m.Text, fs) / 2;
                 var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
                     ? FontStyle.Bold
                     : FontStyle.BoldItalic;
+                double halfW = TextFontMetrics.Advance(m.Text, fs, sans: false, style) / 2;
                 var ink = TextFontMetrics.Ink(m.Text, fs, sans: false, style);
                 return (-halfW, halfW, ink.Top, -ink.Bottom);
             }

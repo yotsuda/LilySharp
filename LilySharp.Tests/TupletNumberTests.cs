@@ -81,4 +81,31 @@ public class TupletNumberTests
         Assert.NotEmpty(layout.TupletBracketLayouts);
         Assert.Equal("5", layout.TupletBracketLayouts[0].NumberText);
     }
+
+    /// <summary>
+    /// A fully beamed tuplet's number sits centred on the INVISIBLE bracket: the beam's
+    /// outer edge plus TupletBracket padding 1.1 — NOT stem tip + TupletNumber padding
+    /// 0.5, and NOT a clearance/digit-height arithmetic. Measured six-digit in two musics
+    /// on 2.26.0 (audit/lp-geometry staff.staff.beamed-tuplet-number: centre = beam lower
+    /// edge 3.240 + 1.100). The 1.1 is pinned as the measured number, deliberately not
+    /// read back from the engraver's constant.
+    /// </summary>
+    [Theory]
+    [InlineData("tuplet 3/2 { c8 d e } |")]   // stems up — number above the beam
+    [InlineData("tuplet 3/2 { b8 c' b } |")]  // stems down — number below the beam
+    public void BeamedTupletNumber_CentresOnTheInvisibleBracket_BeamEdgePlusPadding(
+        string source)
+    {
+        var layout = BuildLayout(source);
+        var bracket = Assert.Single(layout.TupletBracketLayouts);
+        Assert.False(bracket.ShowBracket); // beat-long, fully beamed: number only
+        var beam = Assert.Single(layout.BeamLayouts);
+
+        double edgeLeft = beam.OuterEdgeStaffSpaceAtX(beam.LeftX, bracket.IsStemUp);
+        double edgeRight = beam.OuterEdgeStaffSpaceAtX(beam.RightX, bracket.IsStemUp);
+        double padding = bracket.IsStemUp ? -1.1 : 1.1; // device down-positive
+        // Device frame from the staff top (middle line = 2.0), reflected to stored Y-up.
+        double expected = -((2.0 - edgeLeft) + padding + (2.0 - edgeRight) + padding) / 2.0;
+        Assert.Equal(expected, bracket.NumberYUp, precision: 6);
+    }
 }

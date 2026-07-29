@@ -262,12 +262,13 @@ internal static class TupletBracketEngraver
                         : EngravingDefaults.StemDownAttachX;
                     startX = beam.LeftX + stemOffset;
                     endX = beam.RightX + stemOffset;
-                    // The digit is BASELINE-anchored: above the beam the
-                    // baseline is the digit's bottom edge, so the clearance
-                    // alone suffices; below the beam the digit body extends
-                    // UPWARD from the baseline, so the digit height must be
-                    // added or the number lands on the beam.
-                    const double digitHeight = 1.7; // cap height at 0.6·FontSize
+                    // TAB BRANCH ONLY: the tab renderer's text offset assumes a
+                    // baseline-anchored digit, so its clearance arithmetic still
+                    // carries the digit height. The notation branch below no
+                    // longer uses either — its number is centred on the
+                    // invisible bracket. No ledger point measures the tab
+                    // regime; when one does, this constant goes with it.
+                    const double digitHeight = 1.7; // cap height of the old 2.4-unit digit
 
                     // On a TAB staff the beam floats a fixed distance off the fret
                     // digits — NOT at the notation beam's staff-relative height — so
@@ -316,19 +317,23 @@ internal static class TupletBracketEngraver
                     }
                     else
                     {
-                        // Clear the beam's OUTER edge (where the stems end), not its
-                        // centre — so a multi-line beam pushes the number out by its
-                        // full thickness. LP measures the number from the stem tip and
-                        // pads by TupletNumber.padding (0.5).
-                        // LILYPOND-REF: lily/tuplet-number.cc:369-377 calc_y_offset —
-                        //   number offset from ref_stem tip by (padding + num_height/2).
-                        // LILYPOND-REF: scm/define-grobs.scm TupletNumber (padding . 0.5).
-                        const double clearance = 0.5;
-                        double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
+                        // The INVISIBLE bracket's position: the beam's OUTER edge (where
+                        // the stems end — a multi-line beam pushes it out by its full
+                        // thickness) plus the bracket's own padding, and the number's
+                        // CENTRE rides its midpoint exactly as it rides a drawn bracket.
+                        // Measured six-digit in two musics on 2.26.0 (audit/lp-geometry
+                        // staff.staff.beamed-tuplet-number): centre = beam edge + 1.100 —
+                        // NOT stem tip + TupletNumber padding 0.5, and NOT the old
+                        // 0.5 + digitHeight − 0.8 here, which compensated a renderer text
+                        // offset DrawTupletBrackets no longer applies (it draws
+                        // VerticalAnchor.Middle at NumberYUp since 99ecd3aa).
+                        // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the
+                        //   bracket midpoint, for every tuplet that is not a knee.
+                        // LILYPOND-REF: scm/define-grobs.scm TupletBracket (padding . 1.1).
+                        double offset = isStemUp ? -BracketPadding : BracketPadding;
                         // OuterEdgeStaffSpaceAtX is Y-up staff-space from the middle
                         // line (frame B); reflect it to the bracket's device top frame
-                        // (device = middle 2.0 − Y-up). The renderer adds its own
-                        // -0.3/+0.8 text offset on top.
+                        // (device = middle 2.0 − Y-up).
                         startY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.LeftX, isStemUp)) + offset;
                         endY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.RightX, isStemUp)) + offset;
                     }

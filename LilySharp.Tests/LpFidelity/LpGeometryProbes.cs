@@ -1720,6 +1720,93 @@ internal static class LpGeometryProbes
     /// <summary>Two scripts with a flat lower profile — the box-arithmetic step.</summary>
     private static readonly string TXL = TextScriptScore("TXL", "_\"mum\" _\"poco\"");
 
+    /// <summary>
+    /// THE NUMBER OF A FULLY BEAMED TUPLET as staff-to-staff binding ink — the mirrors of
+    /// tuplet-number-beamed.ly's books TNB / TNC.
+    /// </summary>
+    /// <remarks>
+    /// A fully beamed tuplet prints NO bracket but its NUMBER still prints, and MEASURED
+    /// (audit/lp-geometry/probes/tuplet-number-beamed.ly, 2026-07-29) LilyPond puts that
+    /// number's CENTRE at the INVISIBLE bracket's position — the beam's lower edge plus
+    /// TupletBracket padding 1.1, six-digit clean in two different musics — NOT riding on
+    /// the beam. The number is ordinary staff-skyline ink, so with the staff-staff ideal
+    /// and minimum taken away (the system-clef-floor recipe applied to
+    /// default-staff-staff-spacing) the gap reads it directly:
+    /// <list type="bullet">
+    /// <item>TNB 8.017717 = number ink bottom 4.967717 (beam edge 3.240 + 1.100 + half
+    /// ink 0.627717) + lower staff line 2.05 + padding 1 — the number binds.</item>
+    /// <item>TNC 6.590000 = the upper staff's CLEF down-reach 3.540 + 2.05 + 1 — in the
+    /// control the beam (3.240) loses to the clef by 0.3, so TNC doubles as a clef-vs-
+    /// staff-line silhouette net on a pairing no other point exercises.</item>
+    /// </list>
+    /// <para>
+    /// ⚠️ The first cut of the probe used treble clefs on BOTH staves and read the
+    /// identical clef-against-clef 8.210039 (= skyline-binding.ly's 7.210039 + 1) in both
+    /// books — the deepest ink is what an entry measures, so the lower staff is BASS here
+    /// and the triplet sits at b'/c'' (HANDOFF 5.0, "probe が何を測っているか").
+    /// </para>
+    /// <para>
+    /// Lily#'s SkylineBuilder.AddTupletBracketsToSkyline SKIPS the whole tuplet when
+    /// !ShowBracket ("its number rides the beam"), so its TNB gap should read like TNC's
+    /// — that identity is the defect this pair opens.
+    /// </para>
+    /// </remarks>
+    private static string BeamedTupletScore(string name, string upperBars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { {{upperBars}} }
+          lower { d,1 | d,1 | d,1 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff upper
+          staff lower
+        }
+        """;
+
+    /// <summary>Beat-long beamed triplets — number only, no bracket.</summary>
+    private static readonly string TNB = BeamedTupletScore("TNB",
+        "tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } | "
+        + "tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } | b1 |");
+
+    /// <summary>The same heads as plain beamed eighths — no tuplet at all.</summary>
+    private static readonly string TNC = BeamedTupletScore("TNC",
+        "b8 c' b c' b c' b c' | b8 c' b c' b c' b c' | b1 |");
+
+    /// <summary>
+    /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
+    /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
+    /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
+    /// depend on which spec Lily# routes two plain staves through; the LilyPond books
+    /// zero default-staff-staff-spacing, the one two ungrouped staves read there.
+    /// </summary>
+    private static readonly LayoutOptions ZeroStaffStaffPaper =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
+            StaffSpacing = StaffSpacingParameters.Default with
+            {
+                StaffStaff = StaffSpacingParameters.Default.StaffStaff with
+                {
+                    BasicDistance = 0,
+                    MinimumDistance = 0,
+                },
+                DefaultStaffStaff = StaffSpacingParameters.Default.DefaultStaffStaff with
+                {
+                    BasicDistance = 0,
+                    MinimumDistance = 0,
+                },
+            },
+        };
+
     /// <summary>The default page with vertical justification off, as books BNL/BNH set.</summary>
     private static readonly LayoutOptions RaggedBottomPaper =
         LayoutOptions.Default with
@@ -4286,6 +4373,13 @@ internal static class LpGeometryProbes
             g => g.CustomTextBaselineStep(), RaggedBottomPaper),
         new("textscript.stacked.outline-step", TXS,
             g => g.CustomTextBaselineStep(), RaggedBottomPaper),
+
+        // --- the FULLY BEAMED tuplet's number as staff-staff binding ink (TNB/TNC) ---
+        // The first points that reach SkylineBuilder's !ShowBracket skip. See
+        // BeamedTupletScore for the measured decomposition; the control doubles as a
+        // clef-down-vs-staff-line silhouette reading.
+        new("staff.staff.beamed-tuplet-number", TNB, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.beamed-tuplet-control", TNC, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.
