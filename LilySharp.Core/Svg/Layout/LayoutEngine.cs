@@ -1317,8 +1317,19 @@ internal sealed class LayoutEngine
         foreach (var tr in ann.TrillSpanners)
         {
             // tr.YUp is Y-up from the system top; this pass is system-relative device.
+            // The "tr" glyph rides stencil-offset (0 . -1) below the LINE tr.YUp
+            // anchors (DrawTrillSpanners), so a glyph-bearing piece's drawn ink is
+            // (glyphTop − offset) up and offset down — LilyPond's own ext (-1.0 . 1.1)
+            // — and a glyphless continuation carries just the wave.
+            bool trHasGlyph = tr.GlyphX < tr.LineStartX;
+            double trWave = EngravingDefaults.TrillWaveAmplitude
+                + EngravingDefaults.StaffLineThickness / 2.0;
             double trY = -tr.YUp;
-            Add(tr.StartMeasureIndex, trY - GlyphMetrics.OrnTrillGlyph.Top, trY + 0.25);
+            Add(tr.StartMeasureIndex,
+                trY - (trHasGlyph
+                    ? GlyphMetrics.OrnTrillGlyph.Top - EngravingDefaults.TrillSpannerTextOffsetDown
+                    : trWave),
+                trY + (trHasGlyph ? EngravingDefaults.TrillSpannerTextOffsetDown : trWave));
         }
         // Figured-bass rows hang below the staff; a skyline-dropped row must
         // widen the gap to the NEXT system, or its digits print through that
@@ -1359,8 +1370,22 @@ internal sealed class LayoutEngine
         foreach (var sp in ann.TextSpanners)
         {
             // sp.YUp is Y-up from the system top; this pass is system-relative device.
+            // Drawn ink about the line: the dashed rule's half thickness both ways,
+            // widened by the text's own ink on the piece that carries it — the same
+            // extents OutsideStaffStacker.PlaceTextSpanners registers (the old flat
+            // 1.2 / 0.3 box was an invention; the 0.3 descent was ledger
+            // textspanner.support.staff-to-line's whole +0.25).
+            double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;
+            double spTop = lineHalf, spBottom = lineHalf;
+            if (!string.IsNullOrEmpty(sp.Text))
+            {
+                var ink = Rendering.TextFontMetrics.Ink(
+                    sp.Text, 4.0 * 0.5, sans: false, Rendering.FontStyle.Italic);
+                spTop = Math.Max(spTop, ink.Top);
+                spBottom = Math.Max(spBottom, -ink.Bottom);
+            }
             double spY = -sp.YUp;
-            Add(sp.StartMeasureIndex, spY - 1.2, spY + 0.3);
+            Add(sp.StartMeasureIndex, spY - spTop, spY + spBottom);
         }
         foreach (var bn in ann.BarNumbers)
         {
@@ -2626,7 +2651,8 @@ internal sealed class LayoutEngine
         // Layout trill spanners (tr + wavy line)
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
-            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt);
+            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
+            voicesByStaff);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

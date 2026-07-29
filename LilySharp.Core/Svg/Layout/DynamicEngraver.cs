@@ -63,14 +63,11 @@ public readonly record struct DynamicLayout(
 /// </remarks>
 internal static class DynamicEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:1408 DynamicLineSpanner (padding . 0.6)
-    private const double Padding = 0.6;
-
-    // LILYPOND-REF: define-grobs.scm:1411 DynamicLineSpanner (staff-padding . 0.1)
-    private const double StaffPadding = 0.1;
-
-    // LILYPOND-REF: define-grobs.scm:1406 DynamicLineSpanner (minimum-space . 1.2)
-    private const double MinimumSpace = 1.2;
+    // One home: EngravingDefaults' outside-staff declaration table (define-grobs.scm
+    // values; the LILYPOND-REFs live beside the table entries).
+    private const double Padding = EngravingDefaults.DynamicLineSpannerPadding;
+    private const double StaffPadding = EngravingDefaults.DynamicLineSpannerStaffPadding;
+    private const double MinimumSpace = EngravingDefaults.DynamicLineSpannerMinimumSpace;
 
     // LILYPOND-REF: define-grobs.scm:1450 DynamicText (Y-offset . (scale-by-font-size
     //   -0.6)) — "center on an 'm'". side-position places the SPANNER, and the text hangs
@@ -330,6 +327,15 @@ internal static class DynamicEngraver
     /// LILYPOND-REF: lily/side-position-interface.cc:265-321 (supports merged into
     ///   <c>dim</c>) and :323-330 (<c>dim.set_minimum_height (staff_extents[dir])</c>).
     /// </remarks>
+    /// <summary>
+    /// The UP support edge of one note column in the staff-middle Y-up frame — exposed
+    /// for the trill spanner's aligned_side, which reads the same side supports (its
+    /// spanned note columns, floored by the staff extent) on the UP side.
+    /// </summary>
+    internal static double ColumnUpEdge(
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
+        => ColumnSupportEdge(voices, measureIndex, itemIndex, 1.0);
+
     private static double ColumnSupportEdge(
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex, double dir)
     {

@@ -1818,6 +1818,125 @@ internal static class LpGeometryProbes
     private static readonly string OTC = OttavaScore("OTC",
         "c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' |");
 
+    /// <summary>
+    /// THE TRILL / TEXT SPANNER LINE over the staff — the mirrors of spanner-floors.ly's
+    /// books TRF / TRC / TSF / TSC, the first points that reach TrillSpanner's and
+    /// TextSpanner's quiet-support heights.
+    /// </summary>
+    /// <remarks>
+    /// TrillSpanner declares <c>staff-padding 1.0</c> and <c>padding 0.5</c>; TextSpanner
+    /// declares <c>staff-padding 0.8</c> and no vertical padding (side-position's default
+    /// 0.0). MEASURED (audit/lp-geometry/probes/spanner-floors.ly, 2026-07-29):
+    /// <list type="bullet">
+    /// <item>TRF (drawn third-space c'' under the trill): line at 3.550000 = staff ink
+    /// 2.05 + padding 0.5 + the grob's downward reach 1.0 (the tr glyph's
+    /// <c>stencil-offset (0 . -1)</c>). NOT the naked staff-padding floor: for a
+    /// deep-reaching grob, staff-padding's operative effect is <c>include_staff</c>
+    /// (side-position-interface.cc:219-222, :323-330 set_minimum_height) — the STAFF
+    /// EXTENT ENTERS THE SUPPORT and the grob pays its own padding over it; the :433-453
+    /// refpoint floor is subsumed whenever the facing reach exceeds
+    /// staff-padding − padding.</item>
+    /// <item>TRC (same music two octaves up, drawn c'''' on ledgers): 9.545000 = head BOX
+    /// top (7.5 + LILC 0.545) + 0.5 + 1.0 — the same formula on the column support.</item>
+    /// <item>TSF: 2.850000 = staff ink 2.05 + staff-padding 0.8 — the NAKED floor, round:
+    /// with padding 0 and a facing reach of only 0.05 (dash half-thickness; "rit." has no
+    /// descender), the floor is what stands.</item>
+    /// <item>TSC: 8.555000 = head box top 8.045 + outside-staff-padding 0.46 + 0.05 —
+    /// the avoid_outside_staff_collisions pass, which outbids aligned_side's padding-0
+    /// support hug.</item>
+    /// </list>
+    /// The trill's LINE and Lily#'s drawn tr-glyph Y coincide (DrawTrillSpanners anchors
+    /// both at YUp); in LilyPond the glyph hangs 1 below the line — the LINE is the
+    /// shared anchor, see RenderedGeometry.TrillLineAboveStaff.
+    /// </remarks>
+    private static string SpannerFloorScore(string name, string bars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { {{bars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>Quiet-support regime: drawn third-space heads, the staff-in-support
+    /// height decides (Lily# <c>c'</c> = LilyPond <c>c''</c>).</summary>
+    private static readonly string TRF = SpannerFloorScore("TRF",
+        "c'4@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c |");
+
+    /// <summary>Support regime: two octaves up, the ledger column decides.</summary>
+    private static readonly string TRC = SpannerFloorScore("TRC",
+        "c'''4@startTrillSpan c''' c''' c'''@stopTrillSpan | c''4 c'' c'' c'' |");
+
+    /// <summary>Quiet-support regime for the rit. text spanner (Lily#'s @rit spans to
+    /// the end of the following measure, like the .ly twin's \stopTextSpan).</summary>
+    private static readonly string TSF = SpannerFloorScore("TSF",
+        "c'4@rit c' c' c' | c'4 c' c' c' |");
+
+    /// <summary>Support regime: two octaves up, the ledger column decides.</summary>
+    private static readonly string TSC = SpannerFloorScore("TSC",
+        "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c''' |");
+
+    /// <summary>
+    /// THE METRONOME MARK's baseline over the staff — the mirrors of tempo-mark.ly's
+    /// books TMQ / TMT, the tempo island's first points (USER DIRECTIVE 2026-07-29:
+    /// tempo does not mimic LilyPond; fix tempo first).
+    /// </summary>
+    /// <remarks>
+    /// MetronomeMark declares padding 0.8 and NO staff-padding, its supports are the
+    /// STAVES themselves (metronome-engraver.cc:136-139 side-support-elements =
+    /// stavesFound), priority 1300, horizontal 0.2, skylines from the stencil.
+    /// MEASURED (audit/lp-geometry/probes/tempo-mark.ly, 2026-07-29):
+    /// <list type="bullet">
+    /// <item>TMQ (quiet): baseline at 2.883010 = staff ink 2.05 + padding 0.8 + the
+    /// mark's own stencil bottom 0.033010 (aligned_side lands the stencil's bottom at
+    /// 2.85; the baseline rides its own overshoot above that).</item>
+    /// <item>TMT (a trill under the mark): 5.110000 six-digit round = quiet trill line
+    /// 3.55 + tr glyph top 1.1 + outside-staff 0.46 — the priority-1300 pass clears the
+    /// priority-50 trill, whose own line stays at the ledger 3.550000.</item>
+    /// <item>X (recorded in the probe header, no entry yet — opened with the port):
+    /// mark ink-left == time-signature ink-left, difference exactly 0
+    /// (self-alignment-X LEFT on the break-aligned time signature).</item>
+    /// </list>
+    /// The baseline compared is the "= N" equation text's: LilyPond's markup puts the
+    /// digits AND the \smaller note's bottom on it; Lily#'s DrawSingleMusicMark draws
+    /// the equation at the mark's anchor Y the same way.
+    /// </remarks>
+    private static string TempoScore(string name, string bars) => $$"""
+        octave absolute
+        tempo 120
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { {{bars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>Quiet regime: nothing else above the staff, the staff support decides.</summary>
+    private static readonly string TMQ = TempoScore("TMQ",
+        "c'4 c' c' c' | c4 c c c |");
+
+    /// <summary>Stacking regime: a trill under the mark; the mark must clear it.</summary>
+    private static readonly string TMT = TempoScore("TMT",
+        "c'4@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c |");
+
     /// <summary>Beat-long beamed triplets — number only, no bracket.</summary>
     private static readonly string TNB = BeamedTupletScore("TNB",
         "tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } | "
@@ -4442,6 +4561,28 @@ internal static class LpGeometryProbes
         // support-arithmetic reading (padding 0.5 + the label's half-ink to the EDGE).
         new("ottava.floor.staff-to-line", OTF, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
         new("ottava.support.staff-to-line", OTC, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
+
+        // --- where the TRILL / TEXT SPANNER LINE sits (books TRF/TRC/TSF/TSC) ---
+        // The last two of the four floors the TextScript port left named unported. See
+        // SpannerFloorScore for the measured decomposition: the trill's quiet height is
+        // include_staff + its own padding 0.5 (NOT the naked floor); the text spanner's
+        // IS the naked floor. The controls double as support-arithmetic readings.
+        new("trill.quiet.staff-to-line", TRF, g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.support.staff-to-line", TRC, g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("textspanner.floor.staff-to-line", TSF,
+            g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
+        new("textspanner.support.staff-to-line", TSC,
+            g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
+
+        // --- where the METRONOME MARK's baseline sits (books TMQ/TMT) ---
+        // The tempo island's first points (user-directed, fix tempo first). See
+        // TempoScore for the measured decomposition; the TMT control doubles as the
+        // priority-1300-over-trill stacking reading — the trill-spanner bar-1
+        // "120"-crosses-tr defect is exactly TMT reading like TMQ.
+        new("tempo.quiet.staff-to-baseline", TMQ,
+            g => g.TempoEquationBaselineAboveStaff(), RaggedBottomPaper),
+        new("tempo.trill-cleared.staff-to-baseline", TMT,
+            g => g.TempoEquationBaselineAboveStaff(), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

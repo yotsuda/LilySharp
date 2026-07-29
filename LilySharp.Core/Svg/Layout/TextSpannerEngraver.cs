@@ -117,10 +117,12 @@ internal static class TextSpannerEngraver
     private const double StaffBottom = 4.0;
 
     /// <summary>
-    /// Staff padding for text spanners.
+    /// Staff padding for text spanners. One home: EngravingDefaults' outside-staff
+    /// declaration table (the LILYPOND-REF lives beside the entry). Consumed here for
+    /// the below-staff seed only — the ABOVE-staff refpoint floor the declaration
+    /// really is lives in OutsideStaffStacker.PlaceTextSpanners.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3852 (staff-padding . 0.8)</remarks>
-    private const double StaffPadding = 0.8;
+    private const double StaffPadding = EngravingDefaults.TextSpannerStaffPadding;
 
     /// <summary>
     /// Text ascent above baseline for text spanner text (italic serif, font-size 2.0).

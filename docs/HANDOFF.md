@@ -32,20 +32,20 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第31セッション＋延長・**▶1「stacker の interval 箱」→ 0.2 水平 padding
-→ TextScript X 揃えまで 3 段で閉じた**。`textscript.stacked.outline-step`
-**+0.420825 → −0.001037**（平坦化位相の床・fitted 定数ゼロ）・新設 X 対 2 点 **exact**）
+最終更新 2026-07-29（第32セッション・**Trill/TextSpanner の staff-padding 島＝新プローブ
+`spanner-floors.ly` 4 点を開いて 4 点とも exact に閉じた**。trill は床でなく
+**include_staff＋自分の padding** が効くという第3の機構が答えだった）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3492 passed / 0 failed / 3 skipped**（アウトライン網 7 件＋台帳 X 対 2 点追加）・
+**HEAD は 3498 passed / 0 failed / 3 skipped**（trill/ts 4 点＋tempo 2 点追加）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**第31セッションの commit**: `a931104f`（TextOutlineSkylines・道具・出力不変）／
-`019027fb`（stacker 移植・snapshot 3 枚・**GO 済**）／
-`f138c9b2`（0.2 水平 padding＋X 揃え・snapshot 4 枚・**GO 済**）＋handoff 数本。
-第30セッションの commit 6 本の一覧は第30セッション節に。
+**第32セッションの commit**: `afd158a5`（起票・4 点・出力不変）／
+`8d4799b5`（移植＋snapshot 4 枚再ベース・**GO 済**）／`41386be3`（tempo 島 LP 側）／
+`8b4823cd`（tempo 島 Lily# 側・TMQ==TMT）＋handoff 数本。
+第31セッションの commit（`a931104f`／`019027fb`／`f138c9b2`・全部 GO 済）は第31セッション節に。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -56,6 +56,55 @@ Core 0 warn 0 err・**ワーキングツリーは clean**
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第32セッション（2026-07-29）＝ **staff-padding を測ったら、trill では床が主役ですらなかった**
+
+★★★ **新プローブ `spanner-floors.ly`（12 秒級・4 book）＋台帳 4 点
+`trill.{quiet,support}.staff-to-line`／`textspanner.{floor,support}.staff-to-line`。**
+第30セッションが名指した「床 3 grob」の残り 2 つ（Trill 1.0／TextSpanner 0.8。
+**DynamicLineSpanner 0.1 は `DynamicEngraver.BaselineY` に移植済みと判明**——点は開けていない）。
+**起票段は `afd158a5`（出力不変）・移植段は `8d4799b5`（snapshot 4 枚・GO 済）**。
+
+1. ★★★ **予測のフォーク（床 vs 0.46 pass）を外れて第3候補が答えだった**: TRF **3.550000
+   ＝譜インク 2.05 + 自分の padding 0.5 + グリフ下リーチ 1.0**。staff-padding 宣言の実効は
+   `include_staff`（`side-position-interface.cc:219-222`・`:323-330 set_minimum_height`＝
+   **譜 extent が SUPPORT に入る**）で、`:433-453` の refpoint 床は**リーチ >
+   staff-padding − padding なら subsumed**。床がそのまま立つのは浅リーチの特殊例
+   （TextScript/Ottava/TextSpanner）。TSF は **2.850000 = 2.05 + 0.8 の裸の床**（六桁丸）。
+   TRC **9.545000**／TSC **8.555000** は箱上端 8.045 +（0.5+1.0）/（0.46+0.05）に六桁分解。
+2. ★★★ **ext dump が LP の trill グリフ配置を確定**: 左バウンドテキストは
+   **`stencil-offset (0 . -1)`**（`define-grobs.scm:4068`）＝ **"tr" グリフは線より 1 下**
+   （ext (−1.0 . 1.1)）。X は **`make-with-true-dimension-markup`＝アウトライン左**
+   （左ループが bbox からはみ出す、と LP 自身のコメント）。
+3. **Lily# 移植前実測は 4 点とも予測どおりに割れた**（+0.650000＝発明 2.2／−0.790000＝
+   (0.46−0.5)+(0.25−1.0)／−0.040000＝**2つの誤項の打ち消しで小さく見えるだけ**
+   （2.05+0.46+0.3 対 床 2.85）／+0.250000＝発明 descent 0.3 対 0.05）。
+4. ★★ **移植（`8d4799b5`・GO 済）**: ⑴ **ⓔ の宣言表**を `EngravingDefaults` に新設
+   （TextScript/Trill/TextSpanner/Ottava/DynamicLineSpanner の padding・staff-padding・
+   stencil-offset を 1 軒に。stacker/各 engraver の ad hoc 定数は全部そこを読む）
+   ⑵ trill エングレーバの静止高を aligned_side の字面へ（**support = スパン下の列
+   `DynamicEngraver.ColumnUpEdge` ∪ 譜インク**、+0.5+リーチ、床は max で併記。発明
+   `StaffPadding+TrillGlyphHeight=2.2` は消滅）⑶ 描画も stencil-offset どおりグリフを
+   線−1 へ・stacker 登録 X はアウトライン左・波振幅 0.2 は 1 軒
+   （`TrillWaveAmplitude`）⑷ TextSpanner は床を Place 前に（PlaceCustomTexts と同順）・
+   facing extent は描画インク（**発明 `TextSpannerAscent/Descent 1.2/0.3` は削除**＝
+   ▶⑶ の TextSpanner 項が閉じた）。**4 点とも exact 着地・全テスト緑・動いた snapshot は
+   4 枚だけ**（01-expressions／multi-staff-text-spanners／trillspan-lower-staff／
+   trill-spanner）。
+5. ★★★ **png 目視が回帰を 1 つ捕まえ、その場で閉じた**（§5.0「対応した配置は 1 枚描く」）:
+   下段譜の trill は stacker をスキップする（staff-0 のみ）ので、静止高が下がったら
+   **符幹がグリフを貫通した**。⇒ ⑵ の列 support をエングレーバに入れて解消
+   （下段も stem tip + 0.5 + 1.0 に座る）。**台帳 4 点は列 support を足しても不動**＝
+   対の要件どおり。
+6. ⚠️★★ **残る近接 1 箇所は tempo 島**: trill-spanner の A 小節で「♩= 120」と tr グリフの
+   インクが交差する。**ユーザー指示（2026-07-29）: Lily# の tempo 表記は LP を模倣できて
+   いない——直すなら tempo が先**。tempo mark の幾何（中心化された推定幅・priority 押し上げ）
+   には触っていない。**tempo 島を開くときにこの近接が最初の点**。
+7. **残した named 負債**: ⑴ stacker は単一 pass なので trill は**全 entry に 0.5**を払う
+   （LP は列に 0.5・それ以外は 0.46 の 2 pass——支えが beam/script の regime で 0.04 割れる・
+   点なし）⑵ 下段譜 TextSpanner はエングレーバの譜下配置のまま（stacker は staff-0 のみ＝
+   既存の staff-0 限定の族）⑶ TextSpanner のテキスト em は描画 2.0 対 LP 2.2 のまま
+   （ascent 側は点が無い）⑷ `DynamicHalfWidth 0.75` は残る（▶⑶ の残り半分）。
 
 ### 第31セッション（2026-07-29）＝ **stacker が skyline を持ったら、残差の正体は「アウトライン」でなく「X 揃え」だった**
 
@@ -274,18 +323,19 @@ Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）
 
 **残した宣言済みの負債**（このセッションで名前を付けた・未着手。**次セッションの推奨順**）:
 - ~~⓪ **beamed tuplet 番号の 0.26 を割る**~~ — **閉じた**（第30セッション・+0.0000208 に着地）。
-- ~~⑴ **staff-padding の refpoint 床が無い**~~ — **TextScript と Ottava は閉じた**
-  （第30セッション・両方 exact 着地）。**残るのは同じ床を宣言する 3 grob**
-  （Trill 1.0／TextSpanner 0.8／DynamicLineSpanner 0.1）＝**点が無いので点が先**
-  （第30セッション節 8-9。ottava-floor.ly が対のレシピ・アクセサの罠は節 10）。
+- ~~⑴ **staff-padding の refpoint 床が無い**~~ — **全部閉じた**（TextScript/Ottava は
+  第30セッション・**Trill/TextSpanner は第32セッション（4 点 exact）・DynamicLineSpanner は
+  `DynamicEngraver.BaselineY` に移植済みと判明**）。⚠️ trill で分かったこと: 深リーチ grob
+  では床でなく **include_staff＋自分の padding** が効く（第32セッション節 1）。
 - ~~⑵ **stacker が interval 箱**~~ — **閉じた**（第31セッション・+0.006825 に着地＝残りは
   X 揃えの named 残差）。**終着点の「SkylineBuilder との skyline の家 1 つ」（§5.2.1②）は
   まだ先**——stacker は skyline を持ったが、seed（support）はまだ SkylineBuilder の鏡写しの
   箱で、below support は下側実プロファイルを持たない（第31セッション節の負債）。
-- ⑶ `TextSpannerAscent/Descent`（1.2/0.3）と `DynamicHalfWidth`（0.75）は**別の定数・別の読者**
-  で今回触っていない。mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）も Lily#-own のまま
-  ＝em を測った点があるのは text script だけ。サイズを直すなら各 grob の LP 宣言から
-  em を導出して点を先に。
+- ⑶ ~~`TextSpannerAscent/Descent`（1.2/0.3）~~ — **削除済**（第32セッション・facing extent は
+  描画インクへ。TSC の +0.25 がその網だった）。**残るのは `DynamicHalfWidth`（0.75）**。
+  mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）と TextSpanner のテキスト em
+  （描画 2.0 対 LP 2.2）も Lily#-own のまま＝em を測った点があるのは text script だけ。
+  サイズを直すなら各 grob の LP 宣言から em を導出して点を先に。
 
 ### 第28セッション（2026-07-29）＝ **和音記号の幅を初めて測ったら、weight のほかに 3 つ落ちた**
 
@@ -523,9 +573,26 @@ support seed が箱のまま（OTC の分解には support のアウトライン
 - ⓓ **TextScript の支持側 side-position padding 0.3 が未移植**（測定 regime では 0.46 か
   床が勝って影）。発火するのは**支持インクが譜インクより高く、かつ skyline に入らない**組
   ——対を組めるかから検討。
-- ⓔ **床 grob の宣言表**（padding/staff-padding/priority を `define-grobs.scm` から）。
-  ad hoc 定数が 2 本になった（TextScript/ottava）。**Trill/TextSpanner/Dynamic の床を
-  足す日に表へ畳む**——3 本目を ad hoc で足さないこと。
+- ~~ⓔ **床 grob の宣言表**~~ — **できた**（第32セッション・`EngravingDefaults` の
+  outside-staff declaration table。TextScript/Trill/TextSpanner/Ottava/DynamicLineSpanner の
+  5 grob が 1 軒・全消費者がそこを読む）。**次に床 grob を足す人は表へ**。
+- ★★ **tempo 島（ユーザー指示・2026-07-29: 「tempo 表記は LP 未模倣——直すなら tempo が先」）＝
+  対は両側とも済（`probes/tempo-mark.ly`＋台帳 `tempo.{quiet,trill-cleared}.staff-to-baseline`・
+  第32セッション延長）。次セッションは移植から**。Lily# 移植前実測:
+  **TMQ = TMT = 4.760000（同一＝それが欠陥。**LP は対を 2.226990 割る**）**＝
+  残差 +1.876990／−0.350000。マークは trill を見ておらず、発明の静止高が高いせいで
+  「120」×tr 交差は 0.35 帯のインク交錯として出る（4.76 の内訳は**意図的に未分割**——
+  移植が機構ごと置き換える）。**X 点は未開**（LP 実測 0 はプローブヘッダに記録済・
+  左揃えを実装する段で開く）。LP 実測（ヘッダに記録済）:
+  **TMQ 2.883010** = 譜インク 2.05 + padding 0.8 + マーク自身の ext 下 0.033010
+  （support は `stavesFound`＝譜そのもの・`metronome-engraver.cc:136-139`）／
+  **TMQ X: ink 左 = TimeSignature ink 左・差 0**（break-align 左揃え）／
+  **TMT 5.110000（六桁丸）** = trill グリフ上端 4.65 + 0.46（trill は 3.550000 で不動）。
+  宣言: padding 0.8・staff-padding 無し・priority 1300・水平 0.2・skyline は stencil・
+  markup は `\smaller` 音符（bottom=baseline・ext 上 3.161441）+ upright serif " = 120"
+  （em 2.2）。**Lily# の乖離は 4 つ名指し済**: bold（LP は upright）／1.8（LP は em 2.2）／
+  中心化推定幅（LP は time signature に左揃え）／独自 Y（LP は staff+0.8 の aligned_side と
+  1300 の stacking）。trill-spanner A 小節の「120」× tr 交差はこの島の最初の観測。
 
 1. ★ **テキスト量の残り**:
    ~~⑴ 和音記号の weight~~ — **移植済（第28セッション・GO 済）**。

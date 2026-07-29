@@ -68,14 +68,11 @@ internal static class TrillSpannerEngraver
     /// <summary>
     /// Horizontal padding from bound objects.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4078 (padding . 0.5)</remarks>
+    /// <remarks>LILYSHARP-OWN: an X-axis bound gap. LilyPond's <c>(padding . 0.5)</c>
+    /// at define-grobs.scm:4079 is the VERTICAL side-position padding (now
+    /// <c>EngravingDefaults.TrillSpannerPadding</c>); its bound-details declare no
+    /// horizontal padding, so this stays a Lily# device with the same value.</remarks>
     private const double BoundPadding = 0.5;
-
-    /// <summary>
-    /// Staff padding for trill spanners.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4080 (staff-padding . 1.0)</remarks>
-    private const double StaffPadding = 1.0;
 
     /// <summary>
     /// Width of the "tr" glyph in staff spaces.
@@ -85,11 +82,6 @@ internal static class TrillSpannerEngraver
     /// Measured from Emmentaler font: ~1.6 staff spaces
     /// </remarks>
     private const double TrillGlyphWidth = 1.6;
-
-    /// <summary>
-    /// Height of the trill glyph in staff spaces.
-    /// </summary>
-    private const double TrillGlyphHeight = 1.2;
 
     /// <summary>
     /// Gap between "tr" glyph and wavy line start.
@@ -108,7 +100,8 @@ internal static class TrillSpannerEngraver
         ImmutableArray<TrillSpannerItem> trillSpanners,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Func<int, int, double>? staffYAt = null)
+        Func<int, int, double>? staffYAt = null,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -122,12 +115,51 @@ internal static class TrillSpannerEngraver
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // Y-up from the system top: above the staff with padding, lowered by
-            // this spanner's OWN staff offset (multi-staff). The old device value
-            // was -StaffPadding - TrillGlyphHeight + staffOffset; Y-up is its
-            // negation. LILYPOND-REF: scm/define-grobs.scm:4080
+            // Y-up from the system top (staff top = 0 in this frame): the trill's
+            // resting height, transcribed from aligned_side. The SUPPORT is the
+            // spanned note columns' UP edges (DynamicEngraver.ColumnUpEdge — the same
+            // side supports the dynamic's port reads, stems included), floored by the
+            // STAFF EXTENT (declaring staff-padding turns include_staff on and the
+            // staff's ink edge enters the support as a minimum); the grob pays its own
+            // padding 0.5 over that with its facing edge — the "tr" glyph's
+            // stencil-offset reach 1.0 below the line. The :433-453 refpoint floor
+            // (ink + staff-padding) is written too, though the padding term subsumes
+            // it for the trill's reach (ledger trill.quiet.staff-to-line = 2.05 + 0.5
+            // + 1.0 = 3.550000, the staff-extent case; trill.support.staff-to-line =
+            // column box top + 0.5 + 1.0, the column case. The old resting height
+            // StaffPadding + TrillGlyphHeight = 2.2 was an invention, +0.65 high —
+            // and it left a lower-staff trill with NO column support at all, so a
+            // stem ran through the lowered glyph).
+            // LILYPOND-REF: lily/side-position-interface.cc:219-222 include_staff,
+            //   :323-330 set_minimum_height, :361-370 padding, :433-453 staff_padding
             double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
-            double yUp = StaffPadding + TrillGlyphHeight - staffOffset;
+            double staffInkUp = EngravingDefaults.StaffLineThickness / 2.0;
+            double support = staffInkUp;
+            if (voicesByStaff != null
+                && voicesByStaff.TryGetValue(spanner.StaffIndex, out var trillVoices)
+                && !trillVoices.IsDefaultOrEmpty)
+            {
+                for (int mi = spanner.StartMeasureIndex; mi <= spanner.EndMeasureIndex; mi++)
+                {
+                    int count = trillVoices.Max(
+                        v => mi < v.Measures.Length ? v.Measures[mi].Items.Length : 0);
+                    int first = mi == spanner.StartMeasureIndex ? spanner.StartItemIndex : 0;
+                    int last = mi == spanner.EndMeasureIndex
+                        ? Math.Min(spanner.EndItemIndex, count - 1)
+                        : count - 1;
+                    for (int ii = first; ii <= last; ii++)
+                    {
+                        // ColumnUpEdge answers in the staff-middle frame; this frame's
+                        // origin is the staff TOP line, 2 above it.
+                        support = Math.Max(support,
+                            DynamicEngraver.ColumnUpEdge(trillVoices, mi, ii) - 2.0);
+                    }
+                }
+            }
+            double supported = support + EngravingDefaults.TrillSpannerPadding
+                + EngravingDefaults.TrillSpannerTextOffsetDown;
+            double floored = staffInkUp + EngravingDefaults.TrillSpannerStaffPadding;
+            double yUp = Math.Max(supported, floored) - staffOffset;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
             if (spanner.StartItemIndex >= startMeasure.Items.Length)

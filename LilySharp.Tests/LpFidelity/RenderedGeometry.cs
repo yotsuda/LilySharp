@@ -729,11 +729,92 @@ internal sealed class RenderedGeometry
     /// guard fails loudly if a second horizontal rule appears up there.
     /// </remarks>
     public double OttavaLineAboveStaff(int page = 0)
+        => SoleRuleAboveStaff("the ottava line", page);
+
+    /// <summary>
+    /// The text spanner's dashed LINE above the first staff, measured from that staff's
+    /// refpoint (middle line) — the mirror of the TextSpanner grob's relative
+    /// coordinate: <c>ly:line-spanner::print</c> builds the line at the stencil's own
+    /// Y=0, and <c>DrawTextSpanners</c> draws its line (and the text's baseline) at the
+    /// layout's <c>YUp</c>, so both sides anchor the same drawn line.
+    /// </summary>
+    /// <remarks>Same selection as <see cref="OttavaLineAboveStaff"/> — the dashed rule
+    /// is recorded as ONE line primitive of staff-line thickness, so it is told from the
+    /// staff lines by its LEFT END exactly like the ottava rule.</remarks>
+    public double TextSpannerLineAboveStaff(int page = 0)
+        => SoleRuleAboveStaff("the text spanner line", page);
+
+    /// <summary>
+    /// The trill spanner's LINE above the first staff, measured from that staff's
+    /// refpoint (middle line). The LINE is the grob's refpoint on both sides; the "tr"
+    /// glyph hangs <c>stencil-offset (0 . -1)</c> below it (scm/define-grobs.scm:4068,
+    /// mirrored by <c>DrawTrillSpanners</c>), so the line is read back as the drawn
+    /// glyph's Y plus that offset — through the glyph because the wave is drawn as
+    /// short sloped segments no rule predicate should try to own.
+    /// </summary>
+    public double TrillLineAboveStaff(int page = 0)
     {
-        // ⚠️ Self-contained on purpose: the ottava line is itself a long horizontal rule
+        // The wavy segments are short (< 1 ss) and sloped, so StaffLineYs never sees
+        // them and StaffRefpoints stays usable here (unlike the ottava/text-spanner
+        // books, whose rule shares the staff lines' predicate).
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var tr = Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.OrnTrill).ToList();
+        if (tr.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE tr glyph, found {tr.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        // Device-down: the glyph sits BELOW the line, so the line is offset less deep.
+        return refs[0] - (tr[0].Y - EngravingDefaults.TrillSpannerTextOffsetDown);
+    }
+
+    /// <summary>
+    /// The metronome mark's "= N" equation baseline above the first staff, measured
+    /// from that staff's refpoint (middle line). In LilyPond the markup's baseline
+    /// carries the digits AND the \smaller note's bottom (general-align Y DOWN,
+    /// translation-functions.scm metronome-markup), and the grob's refpoint IS that
+    /// baseline; Lily#'s DrawSingleMusicMark draws the equation text at the mark's
+    /// anchor Y the same way, so both sides anchor the same drawn baseline.
+    /// </summary>
+    /// <remarks>Selected by the string: the equation is the only serif run starting
+    /// with <c>"= "</c> these probes draw (a textual tempo would wrap it as
+    /// <c>"= N)"</c> — still matched; the probes carry no such text).</remarks>
+    public double TempoEquationBaselineAboveStaff(int page = 0)
+    {
+        var eq = Texts
+            .Where(t => t.FontFamily != "sans-serif"
+                        && t.Text.StartsWith("= ", StringComparison.Ordinal))
+            .ToList();
+        if (eq.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE tempo equation (\"= N\"), found "
+                + $"{eq.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return refs[0] - eq[0].Y;
+    }
+
+    private double SoleRuleAboveStaff(string what, int page)
+    {
+        // ⚠️ Self-contained on purpose: the spanner line is itself a long horizontal rule
         // of staff-line thickness, so StaffRefpoints' predicate would count SIX lines
         // here and refuse the page. What separates them is the LEFT END: the five staff
-        // lines all start at the system's left edge, the ottava line starts after its
+        // lines all start at the system's left edge, the spanner line starts after its
         // label's text.
         var rules = _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
@@ -760,7 +841,7 @@ internal sealed class RenderedGeometry
         {
             throw new InvalidOperationException(
                 $"page {page}: expected exactly ONE horizontal staff-thickness rule above "
-                + $"the staff (the ottava line), found {ys.Count} — the probe is not "
+                + $"the staff ({what}), found {ys.Count} — the probe is not "
                 + "measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
         return refpoint - ys[0];

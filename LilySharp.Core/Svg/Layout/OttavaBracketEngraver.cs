@@ -95,10 +95,10 @@ internal static class OttavaBracketEngraver
     private const double EndEdgeHeight = 0.8;
 
     /// <summary>
-    /// Staff padding — minimum distance from staff.
+    /// Staff padding — minimum distance from staff. One home: EngravingDefaults'
+    /// outside-staff declaration table (the LILYPOND-REF lives beside the entry).
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2718 (staff-padding . 2.0)</remarks>
-    private const double StaffPadding = 2.0;
+    private const double StaffPadding = EngravingDefaults.OttavaBracketStaffPadding;
 
     /// <summary>
     /// Y-up (above the system top) for 8va/15ma brackets — the staff-padding FLOOR,

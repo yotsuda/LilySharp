@@ -439,6 +439,84 @@ internal static class EngravingDefaults
     /// <summary>Padding between staves.</summary>
     public const double StaffStaffPadding = 1.0;
 
+    // === Outside-staff side-position declarations, per grob (the declaration table) ===
+    //
+    // The per-grob values lily/side-position-interface.cc aligned_side and the
+    // outside-staff pass read: `padding` (:361-370, paid against the side supports),
+    // `staff-padding` (:219-222 include_staff — declaring it puts the STAFF EXTENT into
+    // the support skyline as a minimum (:323-330 set_minimum_height) — and :433-453, the
+    // refpoint floor), and minimum-space (:384-385). One home per grob so a floor is
+    // never an ad hoc constant in a consumer again (the TextScript 0.5 and Ottava 2.0
+    // used to live in OutsideStaffStacker / OttavaBracketEngraver; the trill and text
+    // spanner joined as a table, not as a third and fourth stray).
+    //
+    // outside-staff-priority, for the record (consumed as the stackers' call ORDER, not
+    // as data): TrillSpanner 50, BarNumber 100, TupletBracket 200, DynamicLineSpanner /
+    // DynamicText 250, TextSpanner 350, OttavaBracket 400, TextScript 450,
+    // VoltaBracketSpanner 600, RehearsalMark 1500.
+
+    /// <summary>TrillSpanner's side-position padding, paid against its supports.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4079 TrillSpanner padding, read by aligned_side —
+    /// measured binding in both spanner-floors.ly books (ledger
+    /// trill.{quiet,support}.staff-to-line: staff ink + 0.5 + reach, box top + 0.5
+    /// + reach).</remarks>
+    public const double TrillSpannerPadding = 0.5;
+
+    /// <summary>TrillSpanner's staff-padding. Its :433-453 refpoint floor
+    /// (ink + 1.0) is SUBSUMED by <see cref="TrillSpannerPadding"/> + the glyph's
+    /// downward reach whenever reach &gt; staff-padding − padding, which the trill's
+    /// 1.0 always satisfies — what declaring it still does is include_staff, putting
+    /// the staff extent into the support.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4081 TrillSpanner staff-padding, read by aligned_side.</remarks>
+    public const double TrillSpannerStaffPadding = 1.0;
+
+    /// <summary>How far BELOW the trill's line the "tr" glyph's origin sits: the bound
+    /// text's stencil-offset (0 . −1), in staff spaces. The glyph ink about the LINE is
+    /// therefore (−1.0 . glyphTop − 1.0) — LilyPond's own ext dump reads (−1.0 . 1.1) —
+    /// and the grob's downward facing reach in every aligned_side term is this value.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4068 TrillSpanner stencil-offset, inside its left-bound-info text.</remarks>
+    public const double TrillSpannerTextOffsetDown = 1.0;
+
+    /// <summary>TextSpanner's staff-padding — the naked :433-453 refpoint floor: with
+    /// no declared padding (side-position's default 0.0) and a facing reach of only the
+    /// dash half-thickness, the floor is what stands on a quiet staff (ledger
+    /// textspanner.floor.staff-to-line = 2.05 + 0.8, six-digit round).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3852 TextSpanner staff-padding, read by aligned_side.</remarks>
+    public const double TextSpannerStaffPadding = 0.8;
+
+    /// <summary>TextScript's staff-padding — a floor under the grob's REFPOINT (the
+    /// text baseline, not its ink edge) against the staff's own ink edge, applied
+    /// BEFORE the outside-staff pass. It binds when the string has no descender
+    /// (ledger textscript.no-descender.staff-to-baseline = 2.05 + 0.5).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3816 TextScript staff-padding;
+    /// lily/side-position-interface.cc:401-453 aligned_side.</remarks>
+    public const double TextScriptStaffPadding = 0.5;
+
+    /// <summary>OttavaBracket's staff-padding — the floor its LINE rests on over a
+    /// quiet staff (ledger ottava.floor.staff-to-line = 2.05 + 2.0, exact).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2718 OttavaBracket staff-padding, read by aligned_side.</remarks>
+    public const double OttavaBracketStaffPadding = 2.0;
+
+    /// <summary>Half-amplitude of the drawn trill wave about its line.</summary>
+    /// <remarks>LILYSHARP-OWN: a drawing device — LilyPond builds the wave from the
+    /// wave glyph via ly:line-interface::line, Lily# draws a parabolic polyline. One
+    /// home for the amplitude the renderer draws and the stacker reserves.</remarks>
+    public const double TrillWaveAmplitude = 0.2;
+
+    /// <summary>DynamicLineSpanner's side-position padding — the gap from the
+    /// note/staff skyline to a dynamic or hairpin, NOT outside-staff-padding.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner padding, read by aligned_side.</remarks>
+    public const double DynamicLineSpannerPadding = 0.6;
+
+    /// <summary>DynamicLineSpanner's staff-padding (see DynamicEngraver.BaselineY for
+    /// the full aligned_side transcription that consumes it).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1411 DynamicLineSpanner staff-padding, read by aligned_side.</remarks>
+    public const double DynamicLineSpannerStaffPadding = 0.1;
+
+    /// <summary>DynamicLineSpanner's minimum-space (aligned_side :384-385).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1406 DynamicLineSpanner minimum-space, read by aligned_side.</remarks>
+    public const double DynamicLineSpannerMinimumSpace = 1.2;
+
 
     /// <summary>
     /// Space for shortest duration.

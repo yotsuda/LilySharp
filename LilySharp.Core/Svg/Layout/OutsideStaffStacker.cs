@@ -64,24 +64,21 @@ internal static class OutsideStaffStacker
     // OttavaBracket, DynamicText, VoltaBracketSpanner) take the 0.0 default.
     private const double OutsideStaffHorizontalPadding = 0.2;
 
-    // LILYPOND-REF: scm/define-grobs.scm TextScript (staff-padding . 0.5), consumed by
-    // lily/side-position-interface.cc:401-453 aligned_side — "Ensure 'staff-padding' from
-    // my refpoint to the staff": a floor under the grob's REFPOINT (the text baseline,
-    // not its ink edge) against the staff's own ink edge, applied BEFORE the
-    // outside-staff pass. It binds when the string has no descender: LilyPond's
-    // no-descender book reads baseline 2.550000 = staff ink 2.05 + 0.5 while the edge
-    // constraint (2.05 + 0.46 + descent 0.033) loses (ledger
-    // textscript.no-descender.staff-to-baseline — its whole residual was this floor).
-    // ⚠️ TrillSpanner (1.0), TextSpanner (0.8) and DynamicLineSpanner (0.1) declare the
-    // same kind of floor and this stacker does NOT apply it to them yet — no ledger
-    // point measures those regimes; points first. (OttavaBracket's 2.0 lives in
-    // OttavaBracketEngraver.AboveStaffYUp, measured by ottava.floor.staff-to-line.)
-    private const double TextScriptStaffPadding = 0.5;
+    // The per-grob side-position declarations (padding / staff-padding / the trill's
+    // stencil-offset reach) live in ONE home, EngravingDefaults' outside-staff
+    // declaration table — TextScript's 0.5 floor, the trill's 0.5 + 1.0, the text
+    // spanner's 0.8 and DynamicLineSpanner's 0.6 are all read from there. How each is
+    // consumed: aligned_side floors the grob's REFPOINT at staff ink + staff-padding
+    // (lily/side-position-interface.cc:401-453, applied BEFORE the outside-staff
+    // pass — see PlaceCustomTexts / PlaceTextSpanners), and declaring staff-padding
+    // also puts the STAFF EXTENT into the support (include_staff, :219-222 and
+    // :323-330), over which a grob pays its OWN padding where it declares one
+    // (PlaceTrills; the trill engraver's quiet height is the staff-extent case).
+    private const double TextScriptStaffPadding = EngravingDefaults.TextScriptStaffPadding;
 
     // The gap from the note/staff skyline to a below-staff dynamic or hairpin is the
     // DynamicLineSpanner's own side-position padding, NOT outside-staff-padding.
-    // LILYPOND-REF: scm/define-grobs.scm:1408 DynamicLineSpanner (padding . 0.6).
-    private const double DynamicLineSpannerPadding = 0.6;
+    private const double DynamicLineSpannerPadding = EngravingDefaults.DynamicLineSpannerPadding;
 
     // A dynamic's own ink comes from the font, per label — DynamicEngraver.InkOf. There is
     // no constant here any more: LilyPond's DynamicText extent IS the drawn glyphs' ink,
@@ -92,10 +89,6 @@ internal static class OutsideStaffStacker
 
     // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin height = 0.6666
     private const double HairpinHalfHeight = 0.6666 / 2.0;
-
-    // Text spanner text dimensions
-    private const double TextSpannerAscent = 1.2;
-    private const double TextSpannerDescent = 0.3;
 
     // Dynamic text half-width estimate for X collision range
     private const double DynamicHalfWidth = 0.75;
@@ -527,13 +520,42 @@ internal static class OutsideStaffStacker
                 continue;
             // System-relative Y-up: t.YUp is Y-up from the system top, entering the
             // tracker directly; the placed anchor writes back unchanged.
-            // anchor = "tr" glyph baseline; ink extent from the font bbox
-            // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
+            // anchor = the LINE. The grob's ink about it: the "tr" glyph rides
+            // stencil-offset (0 . -1), so on a glyph-bearing piece the pair spans
+            // (line - reach .. line + glyphTop - reach) — LilyPond's own ext dump reads
+            // (-1.0 . 1.1) — and a glyphless continuation carries just the wave
+            // (draw amplitude 0.2 + half thickness). The side padding is the trill's
+            // OWN declared 0.5, not outside-staff-padding: the trill is the
+            // first-placed outside-staff grob, so its only counterpart here IS the
+            // support, which aligned_side clears by the grob's padding (ledger
+            // trill.support.staff-to-line = box top + 0.5 + 1.0, exact). ⚠️ Named
+            // approximation: a support building that is NOT a side-support column
+            // (a beam, a script) would be cleared at 0.46 by LilyPond's outside-staff
+            // pass; this single-pass tracker pays 0.5 against everything.
+            bool hasGlyph = t.GlyphX < t.LineStartX;
+            double wave = EngravingDefaults.TrillWaveAmplitude
+                + EngravingDefaults.StaffLineThickness / 2.0;
+            double reach = hasGlyph
+                ? EngravingDefaults.TrillSpannerTextOffsetDown
+                : wave;
+            double top = hasGlyph
+                ? GlyphMetrics.OrnTrillGlyph.Top - EngravingDefaults.TrillSpannerTextOffsetDown
+                : wave;
+            // X reach: the glyph's TRUE (outline) left, not its bounding box —
+            // LilyPond wraps the bound text in make-with-true-dimension-markup exactly
+            // because "the trill glyph has a loop on its left, which sticks out of its
+            // bounding box" (its own comment).
+            // LILYPOND-REF: scm/define-grobs.scm:4056-4066 TrillSpanner bound-details,
+            //   make-with-true-dimension-markup on scripts.trill
+            double x0 = hasGlyph
+                ? t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left
+                : t.LineStartX;
             double newRel = Place(trackers[sysIdx],
-                t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
+                x0, t.LineEndX,
                 t.YUp,
-                topOffset: GlyphMetrics.OrnTrillGlyph.Top,
-                bottomOffset: 0.25);
+                topOffset: top,
+                bottomOffset: reach,
+                padding: EngravingDefaults.TrillSpannerPadding);
             b[i] = t with { YUp = newRel };
         }
         return b.ToImmutable();
@@ -614,8 +636,8 @@ internal static class OutsideStaffStacker
 
     // ---- 350: TextSpanner (accel./rit. — LilyPond TextSpanner direction=UP) ----
     // LILYPOND-REF: scm/define-grobs.scm TextSpanner (direction . UP),
-    //   (outside-staff-priority . 350), (staff-padding . 0.8). Placed above the
-    //   staff, clearing the up-skyline, instead of below where it hit low notes.
+    //   (outside-staff-priority . 350). Placed above the staff, clearing the
+    //   up-skyline, instead of below where it hit low notes.
     private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
         ImmutableArray<TextSpannerLayout> textSpanners, OutsideStaffSkylines[] trackers,
         Dictionary<int, int> measureToSystem)
@@ -628,10 +650,35 @@ internal static class OutsideStaffStacker
             var ts = b[i];
             if (ts.StaffIndex != 0) continue; // top staff only, like trills
             if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
-            // System-relative Y-up: ts.YUp is Y-up from the system top, entering directly.
+            // aligned_side's staff-padding refpoint floor, applied to the anchor (the
+            // LINE) BEFORE the collision pass — the same order PlaceCustomTexts uses.
+            // With no declared side padding (side-position's default 0.0) and a facing
+            // reach of just the dash half-thickness, this floor is what stands on a
+            // quiet staff (ledger textspanner.floor.staff-to-line = 2.05 + 0.8, exact;
+            // the old anchor was staff edge + 0.46 + an invented 0.3 box descent).
+            // LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side —
+            //   staff_padding; :361-363 padding default 0.0.
+            double anchor = Math.Max(ts.YUp,
+                EngravingDefaults.StaffLineThickness / 2.0
+                + EngravingDefaults.TextSpannerStaffPadding);
+            // The drawn ink about the line: the dashed rule's half thickness both
+            // ways, widened by the text's own ink on the piece that carries it — the
+            // same face, size and style DrawTextSpanners draws (serif italic at
+            // 4.0 × 0.5). For "rit."/"accel." the descender side stays the line's
+            // half thickness, which is LilyPond's facing reach here (ledger
+            // textspanner.support.staff-to-line = box top + 0.46 + 0.05, exact;
+            // the invented TextSpannerDescent 0.3 box was that entry's +0.25).
+            double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;
+            double top = lineHalf, bottom = lineHalf;
+            if (!string.IsNullOrEmpty(ts.Text))
+            {
+                var ink = TextFontMetrics.Ink(ts.Text, 4.0 * 0.5, sans: false, FontStyle.Italic);
+                top = Math.Max(top, ink.Top);
+                bottom = Math.Max(bottom, -ink.Bottom);
+            }
             double newRel = Place(trackers[sysIdx], ts.StartX, ts.EndX,
-                ts.YUp,
-                topOffset: TextSpannerAscent, bottomOffset: TextSpannerDescent);
+                anchor,
+                topOffset: top, bottomOffset: bottom);
             b[i] = ts with { YUp = newRel };
         }
         return b.ToImmutable();
@@ -918,20 +965,23 @@ internal static class OutsideStaffStacker
     /// Places one BOX-extent element: a flat pair spanning [<paramref name="x0"/>,
     /// <paramref name="x1"/>], <paramref name="topOffset"/> above the anchor and
     /// <paramref name="bottomOffset"/> below, cleared against every prior skyline by
-    /// outside-staff-padding; the element only ever moves AWAY from the staff.
-    /// Registers the pair and returns the new anchor. Against a flat support this is
-    /// the old interval-frontier arithmetic exactly; the grobs whose ink has a real
-    /// profile (the text grobs) build outline pairs instead of calling this.
+    /// <paramref name="padding"/> (outside-staff-padding unless the grob declares a
+    /// side-position padding of its own, as the trill does); the element only ever
+    /// moves AWAY from the staff. Registers the pair and returns the new anchor.
+    /// Against a flat support this is the old interval-frontier arithmetic exactly;
+    /// the grobs whose ink has a real profile (the text grobs) build outline pairs
+    /// instead of calling this.
     /// </summary>
     private static double Place(OutsideStaffSkylines tracker, double x0, double x1,
-        double anchorY, double topOffset, double bottomOffset, double horizonPadding = 0)
+        double anchorY, double topOffset, double bottomOffset, double horizonPadding = 0,
+        double padding = OutsideStaffPadding)
     {
         double move = tracker.Place(
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Up),
             VerticalSkyline.FromBox(x0, x1,
                 anchorY - bottomOffset, anchorY + topOffset, VerticalDirection.Down),
-            OutsideStaffPadding, horizonPadding);
+            padding, horizonPadding);
         return anchorY + move;
     }
 

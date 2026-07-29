@@ -583,13 +583,22 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top, add the stored offset, then ossia.
             double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
-            double waveAmplitude = os.Size(0.2, s.StaffIndex);
+            double waveAmplitude = os.Size(EngravingDefaults.TrillWaveAmplitude, s.StaffIndex);
             using (gc.Source(s.SourcePosition))
             {
                 bool isContinuation = Math.Abs(s.GlyphX - s.LineStartX) < 0.01;
                 if (!isContinuation)
-                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX, absY,
+                {
+                    // The "tr" glyph hangs a staff space below the LINE — LilyPond's
+                    // bound text carries stencil-offset (0 . -1), so the glyph's ink
+                    // straddles the line ((-1.0 . 1.1) in LP's own ext dump) instead of
+                    // sitting on it. The layout's YUp is the line; the reservation
+                    // (OutsideStaffStacker.PlaceTrills) prices the same offset.
+                    // LILYPOND-REF: scm/define-grobs.scm:4068 TrillSpanner stencil-offset, inside its left-bound-info text
+                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX,
+                        absY - os.Size(EngravingDefaults.TrillSpannerTextOffsetDown, s.StaffIndex),
                         os.Size(FontSize, s.StaffIndex));
+                }
                 if (s.LineStartX < s.LineEndX)
                 {
                     double length = s.LineEndX - s.LineStartX;
