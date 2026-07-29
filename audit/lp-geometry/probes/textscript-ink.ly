@@ -123,7 +123,11 @@
                                (for-each
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                                    (if (eq? nm 'TextScript)
+                                    ;; NoteHead rows exist for the X pair: the script's
+                                    ;; X-offset is 0 about its parent (self/parent-
+                                    ;; alignment-X both #f), so its x-left must EQUAL the
+                                    ;; anchor note column's origin = its head's left edge.
+                                    (if (memq nm '(TextScript NoteHead))
                                         (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)

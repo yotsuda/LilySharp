@@ -473,9 +473,13 @@ internal static partial class SharedRenderer
             // TextScript declares no font-size, so the em is the paper's own text size —
             // 2.2 ss, one home with the stacker's reservation (was a Lily#-own 2.4).
             // LILYPOND-REF: scm/paper.scm:69-77 text-font-size (via EngravingDefaults).
+            // START-anchored: t.X is the pen origin on the anchor note column's origin
+            // (X-offset 0 — see CustomTextEngraver; ledger
+            // textscript.x.pen-to-notehead-left). A centred draw here reads half an
+            // advance off that entry.
             using (gc.Source(t.SourcePosition))
                 gc.DrawText(t.Text, t.X, y, EngravingDefaults.TextScriptFontSize, "serif",
-                    FontStyle.Italic, TextAnchor.Middle, Color.Black);
+                    FontStyle.Italic, TextAnchor.Start, Color.Black);
         }
     }
 

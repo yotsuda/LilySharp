@@ -32,23 +32,20 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第30セッション・**3 段: ▶⓪「beamed の +0.26」を割って移植
-（+0.0000208・GO 済）／▶1⑴「staff-padding refpoint 床」を TextScript に移植
-（−0.007000 → 九桁 0・snapshot 全 byte 不変）／Ottava の床も点を作って移植
-（−0.05 → exact・snapshot 1 枚・GO 済）**。**末尾に字面度の自己監査**——seed の tab ガードを
-根本原因ごと除去（byte 不変）し、残る非字面は ▶ の「字面度負債」に名指し）
+最終更新 2026-07-29（第31セッション＋延長・**▶1「stacker の interval 箱」→ 0.2 水平 padding
+→ TextScript X 揃えまで 3 段で閉じた**。`textscript.stacked.outline-step`
+**+0.420825 → −0.001037**（平坦化位相の床・fitted 定数ゼロ）・新設 X 対 2 点 **exact**）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3483 passed / 0 failed / 3 skipped**（網 3 件＋台帳 2 点追加）・
+**HEAD は 3492 passed / 0 failed / 3 skipped**（アウトライン網 7 件＋台帳 X 対 2 点追加）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**第30セッションの commit**: `9c621814`（beamed tuplet 番号・snapshot 6 枚・**GO 済**）／
-`d1681204`（handoff）／`4d75912f`（staff-padding 床・TextScript・**出力 byte 不変**）／
-`25e35b8e`（handoff）／`d4c0a0ef`（Ottava 床・プローブ＋台帳 2 点＋snapshot 1 枚・**GO 済**）／
-`07a7e9c8`（seed の tab ガードを根本原因ごと除去・**byte 不変**）＋handoff 数本。
-第29セッションまでの commit 8 本の一覧は第29セッション節と各 commit メッセージに。
+**第31セッションの commit**: `a931104f`（TextOutlineSkylines・道具・出力不変）／
+`019027fb`（stacker 移植・snapshot 3 枚・**GO 済**）／
+`f138c9b2`（0.2 水平 padding＋X 揃え・snapshot 4 枚・**GO 済**）＋handoff 数本。
+第30セッションの commit 6 本の一覧は第30セッション節に。
 
 ⇒ **指標は「下がったか」ではなく「残ったものが 1 方向の名前付き量か」で読む。**
 ⚠️ **§6 の「LP 忠実度スコア」は台帳のエコーで Lily# を測っていない**（§5.3）。
@@ -59,6 +56,94 @@ Core 0 warn 0 err・**ワーキングツリーは clean**
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第31セッション（2026-07-29）＝ **stacker が skyline を持ったら、残差の正体は「アウトライン」でなく「X 揃え」だった**
+
+★★★ **▶1 の本丸（interval 箱）を 2 段で閉じた**。予測は台帳 why に先に書き、**算術枝が桁まで的中**
+（予測 "l-ascender対oco ≈ 2.111・残差 ~+0.006" → 実測 2.111800・**+0.006825**）:
+
+1. ★★★ **道具（`a931104f`・出力不変）**: `TextOutlineSkylines`＝テキスト文字列のアウトライン
+   UP/DOWN skyline。`TextFontMetrics.GetTextPath` の**実パスを単一供給源**にし、
+   `freetype.cc` の平坦化（max(2, len/0.2)・最終セグメントは両側）と
+   `lazy-skyline-pair.hh` の向き分類を字面移植。quad 形式は `FromGlyphOutline` と同一。
+   **検証は LP の実 face で**: C059 Italic を同じ walk に通すと **Schola と六桁同値**
+   ＝**双子面はアウトラインまで一致**（`TheWalkOverC059` が pin）。LP dump との +0.0011 は
+   平坦化位相＋float32＝face の差ではない。
+2. ★★★ **プローブの罠を 1 つ検出**: 原点揃えで測ると 0.016 ずれる——
+   **LP は同一音符上の 2 つの TextScript を ink 左端で揃える**（TXS/TXL dump・両方 x=21.650926）。
+   ⇒ 対を組む・stacker に置く際は**描画の pen 原点**に profile を置くこと。
+3. ★★★ **移植（`019027fb`・GO 済）**: `DirectionalOccupancy` →
+   `OutsideStaffSkylines`＝**skyline pair のリスト＋エントリごとの padding＋forbidden intervals**
+   （`avoid_outside_staff_collisions` の形・nearest allowed move）。TextScript／BarNumber／
+   素テキスト mark は**アウトライン pair**・他は従来と同数値の箱 pair（**箱対箱は旧 frontier と
+   同値**——だから snapshot は 3 枚しか動かない）。volta は**システムごと 1 つの合成 pair**。
+   above の support は**up-skyline を生 merge**（beam の斜面が残る・旧は中点平坦化）。
+4. ~~**TXS 着地 +0.006825 ＝ X 揃えの named 残差**~~ — **同セッション延長（`f138c9b2`）で
+   X 揃えごと閉じた（下の 8-10）**。中間着地の falsifier は全成立
+   （TXL −4.8e-5／TXD/TXP／OTC/OTF 全部不動）。
+5. ★★★ **ポケット配置の回帰を png 目視で捕まえた**（§5.0 の「対応した配置は 1 枚描く」）:
+   below パスにポケットを許すと **hairpin が pp との隙間に入り加線上の低音符に乗った**。
+   原因は below の support が「譜底平坦線＋script」だけで**音符の下インクを持たない**こと
+   （LP は support に実プロファイルを持つからポケットが安全）。⇒ **below は単調配置のまま**
+   （`allowPockets: false`・LILYSHARP-OWN・**出口は below support への実下側プロファイル合流**）。
+   above は up-skyline が音符インクを持つのでポケット有効＝trill-spanner の B/C が
+   LP 形のポケットに座った（目視で重なり無し確認済）。
+6. ⚠️ **踏んだ罠**: `dotnet build Core` だけして `dotnet test --no-build` すると
+   **Tests の bin に stale な Core.dll**（§5.5 の親戚）。偽の回帰を 1 回追いかけた——
+   **test の前に Tests プロジェクトをビルドする**こと。
+7. **snapshot 3 枚**（全部目視済）: custom-text＝B マークが「poco a poco dim.」の
+   x-height 上へ 0.59 詰まる（pointwise text-over-text＝網の機構そのもの）／
+   trill-spanner＝B/C がポケットへ・ページ −3.86／navigation-marks＝To Coda +0.02。
+
+**延長（ユーザーの字面監査質問 → `f138c9b2`・GO 済）＝「残差の正体は X 揃え」の X 揃えを
+移植したら、その途中で第31段自身の字面欠陥が 1 つ割れた**:
+
+8. ★★★ **`outside-staff-horizontal-padding 0.2` の配線漏れ**（TXL の box−1.6e-5 を
+   再導出して発見）。TextScript と **mark 族**（Rehearsal/SectionLabel/Segno/Coda/
+   TextMark/JumpScript/MetronomeMark・全部 0.2）が宣言し、`avoid_outside_staff_collisions`
+   は profile を **0.2 の平坦＋45° で padded してから** pointwise を取る（`Skyline::padded`）。
+   **box regime が box regime なのはこの台地のおかげ**（無 padding だと descender が
+   m アーチの斜面に落ちて 0.0165 低い）。⚠️ **前段の tooling テストの「ink 左揃えで LP と一致」は
+   2 つの誤りの打ち消しだった**（台帳 why に訂正記録）。宣言なしの grob
+   （BarNumber/trill/ottava/dynamics/TextSpanner/volta）は既定 0。
+9. ★★★ **X の規則を点で確定**: `self-alignment-X` も `parent-alignment-X` も `#f` なので
+   `aligned_on_parent` は**両項不発＝X-offset 0**（`X-align-on-main-noteheads` は alignment が
+   数値のときしか効かない）。プローブに NoteHead 行を足して実測——**テキストの x左 ＝
+   アンカー符頭の左端・15 桁一致・文字列によらず**（＝pen 基準。字形の side bearing では不可能）。
+   新設対 `textscript.x.pen-to-notehead-left{,.descender}`（LP 0.000000・双子は
+   「pen が最初の字形の lsb に乗らない」の網）。
+10. **移植**: `_"text"` のアンカーを「小節末 −1.0・中央揃え」（LILYSHARP-OWN）から
+    「**小節の最初の音符列の原点・Start 揃え**」へ。engraver・draw・stacker が同一 pen を読む。
+    着地: X 対 **+8.468502 → exact ×2**／TXS **→ −0.001037**（C059 検証済み walk の
+    位相床 1.643938 対 LP 1.644975 そのもの・**fitted 定数ゼロ**）／box-step −6.4e-5
+    （padded pointwise 対 box 算術・LP 自身の 1.7e-5 と同桁）。snapshot 4 枚
+    （custom-text=音符上へ／volta-labels・04-advanced=0.2 の効き・行頭 B 箱 +0.36／
+    navigation-marks 0.02・全部目視済）。
+11. ★★ **perf 退行をユーザー質問で測って潰した（`71d35b3c`・byte 不変）**。
+    50 回 Layout の最小値×3（7 system・50 小節・§5.3）: 旧 36.4ms → 機構段 36.6-40.8
+    → **0.2 padding 段で 51.4-52.8（+15ms 退行）** → 修正後 **38.1-42.5**。
+    犯人は ⑴ `Place` がエントリごとに `Skyline::padded` を再構築（→ hPad ごとに 1 回へ・
+    `distance(other,hp)==paddedBy(hp).distance(other)` の恒等）⑵ アウトラインを quad で
+    cache して配置ごとに resolve（→ **resolve 済み buildings を cache**・配置は
+    shift/raise コピー＝単調変換は resolve と可換）。⚠️ **残る +2〜5ms は pointwise 機構の
+    正味代金**（support 生 merge＋全対 distance）——次に削るなら `SkylineMath.Distance` の
+    全対ループを merge-walk へ（コミットメッセージに明記）。
+    ⚠️ **`dotnet test` 総秒数はこの退行を見せなかった**（§5.3 どおり）——プレビュー系を
+    触ったら**最小値ベンチを 1 回書いて捨てる**こと。
+
+**残した宣言済みの負債**（コードに named・全部「支え側」）:
+- ⚠️ **`add_grobs_of_one_priority` の l2r polite マルチパスと rider を移植していない**
+  （`axis-group-interface.cc:739-767` の `last_end`＋skip ループ＝同一 priority 内で
+  X 重なりの grob を次パスへ回す／`:776-796` の rider skyline merge）。Lily# は type ごとに
+  リスト順で 1 列に置くだけ。**割れるのは同一 priority の grob が同じ system で X 重なり
+  するときだけ**（現コーパスでは snapshot 不動＝結果であって構成ではない）。
+  次に stacker を触る人はここから——機構は `OutsideStaffSkylines` に既にあるので、
+  足りないのは巡回順序の 1 ループ。
+- ~~**TextScript の X 揃え**~~ — **閉じた**（延長 `f138c9b2`・X 対 exact ×2）。
+- **below support に下側実プロファイルが無い**（→ ポケット封印の出口）。
+- **箱 pair のまま**: trill（グリフ）・dynamics（グリフ）・ottava・TextSpanner（定数負債 ⑶）・
+  tempo/boxed mark・segno/coda。数値は移植前と同一。
+- **support の遠端は通過不能**（LILYSHARP-OWN）——support が実プロファイルを持てば消える。
 
 ### 第30セッション（2026-07-29）＝ **0.26 を割ったら「seed と draw は共有」という前セッションの読みが誤りだった**
 
@@ -193,10 +278,10 @@ Lily# の `_"text"`（CustomText）＝ LP の `^\markup \italic`（TextScript）
   （第30セッション・両方 exact 着地）。**残るのは同じ床を宣言する 3 grob**
   （Trill 1.0／TextSpanner 0.8／DynamicLineSpanner 0.1）＝**点が無いので点が先**
   （第30セッション節 8-9。ottava-floor.ly が対のレシピ・アクセサの罠は節 10）。
-- ⑵ **stacker が interval 箱**（`textscript.stacked.outline-step` +0.420825 が網）。
-  §2C の Flag/Accidental/Rest のアウトライン半分と同じ島。⑴ の後。
-  **終着点は SkylineBuilder との「skyline の家 1 つ」**（§5.2.1② の二重実装解消）——
-  そこまで行けば「この grob の extent をどう見積もるか」という問い自体が消える。
+- ~~⑵ **stacker が interval 箱**~~ — **閉じた**（第31セッション・+0.006825 に着地＝残りは
+  X 揃えの named 残差）。**終着点の「SkylineBuilder との skyline の家 1 つ」（§5.2.1②）は
+  まだ先**——stacker は skyline を持ったが、seed（support）はまだ SkylineBuilder の鏡写しの
+  箱で、below support は下側実プロファイルを持たない（第31セッション節の負債）。
 - ⑶ `TextSpannerAscent/Descent`（1.2/0.3）と `DynamicHalfWidth`（0.75）は**別の定数・別の読者**
   で今回触っていない。mark/volta/ottava の**描画サイズ自体**（2.8/2.4/1.8）も Lily#-own のまま
   ＝em を測った点があるのは text script だけ。サイズを直すなら各 grob の LP 宣言から
@@ -415,12 +500,14 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 ⚠️ **第26セッション末の ▶0〜▶3 は全部済**。**残す 1 文だけ**: **専用プローブの実測は 13.5 秒**で、
 `-Probe` は既存の `Measure-LilyPondPageGeometry.ps1` が最初から取る。
 ⇒ **もう「点を作る値段」を理由に先送りしない。**
-⚠️★★ **残差はもう最大 0.004090。「総和が下がったか」では何も見えない**——
+⚠️★★ **残差はもう最大 0.027480（OTC・支持側の箱）。「総和が下がったか」では何も見えない**——
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
 ★★ **字面度負債（第30セッションの自己監査で名指し・全部「点が先」）**。
-**次セッションの本丸は従来どおり ▶1 の「stacker の interval 箱」**（`textscript.stacked.
-outline-step` +0.420825 が網・点あり。ottava の +0.027480 もそこで割れる）。以下はその後:
+~~▶1 の「stacker の interval 箱」~~ — **閉じた**（第31セッション・X 揃え＋0.2 padding まで込み）。
+⚠️ **ottava の +0.027480 はまだ割れていない**——stacker は skyline を持ったが ottava 自身と
+support seed が箱のまま（OTC の分解には support のアウトラインが要る＝SkylineBuilder 統一の島）。
+**次セッションの候補は ⓐ〜ⓔ**:
 - ⓐ **beamed tuplet の 2 分岐を LP の単一経路へ**。LP に「beamed 専用の式」は無い——
   encompass 点（**実 stem 先端＝beam 面で終わる**）→ブラケット位置→番号が midpoint、の
   1 本道の帰結が「beam 縁 + 1.1」。Lily# は fallback（`CalculateSlope`＝**生の
@@ -671,7 +758,7 @@ LP 側の定数を引いてから貼ること。** ⚠️ **ここに数を書�
 
 | 残る族 | 量 | 種類 |
 |---|---|---|
-| `textscript.stacked.outline-step` | **+0.420825**（**残る最大・ただし名前付き**） | **箱対アウトライン**（第29セッション新設）。LP はテキストの**アウトライン skyline** を pointwise に突き合わせ、Lily# の `DirectionalOccupancy` は interval 箱＝構造的に読めない。**双子の box-step が −4.8e-5**なので、アウトライン移植以外でここが動いたら fitting。§2C の Flag/Accidental/Rest の島と同族 |
+| `textscript.stacked.outline-step` | **−0.001037**（旧 +0.420825） | **閉じた（第31セッション・3 段: アウトライン→0.2 水平 padding→pen 原点 X）**。残りは max(2,len/0.2) 平坦化の**サンプル位相＋float32**（C059 と Schola 共通＝face 差ではない）。**0 にしない**。双子 box-step −6.4e-5・X 対 exact ×2 |
 | `textscript.no-descender.staff-to-baseline` | **0.000000**（旧 −0.007000） | **閉じた（第30セッション）**＝staff-padding refpoint 床を `PlaceCustomTexts` に移植（`aligned_side` の順序）。descender 側と box-step は −3e-5/−4.8e-5 で face 差の床のまま |
 | `staff.staff.beamed-tuplet-number` | **+0.0000208**（旧 −1.434229 → +0.260021 → 今） | **閉じた（第30セッション）**。残りは番号の half-ink face 差（0.627738 対 0.627717）＝歌詞 −0.000100 と同族。**0 にしない** |
 | `staff.staff.beamed-tuplet-control` | **−0.006512** | clef down 3.533488 対 LP 3.540000＝clef 族の欠片（clef 対 平坦線という新しい組の網） |

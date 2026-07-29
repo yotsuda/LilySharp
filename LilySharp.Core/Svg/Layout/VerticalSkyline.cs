@@ -72,6 +72,17 @@ internal sealed class VerticalSkyline
         _direction = direction;
     }
 
+    /// <summary>
+    /// Wraps buildings that are ALREADY a resolved skyline (sorted, non-overlapping) —
+    /// a placement copy of a cached profile. The caller owns the invariant; nothing is
+    /// re-resolved here. A uniform horizon shift / value raise preserves it, which is
+    /// what lets <see cref="TextOutlineSkylines"/> resolve a string once and place it
+    /// per grob without paying the merge again.
+    /// </summary>
+    internal static VerticalSkyline FromResolvedBuildings(
+        VerticalDirection direction, IEnumerable<SkylineBuilding> resolved)
+        => new(new List<SkylineBuilding>(resolved), direction);
+
     public VerticalDirection Direction => _direction;
     public bool IsEmpty => _buildings.Count == 0;
     public IReadOnlyList<SkylineBuilding> Buildings => _buildings;

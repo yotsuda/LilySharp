@@ -68,6 +68,22 @@ public static class TextFontMetrics
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style), SKTypeface> Faces = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), (double Advance, double Bottom, double Top)>
         Cache = new();
+    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), SKPath> Paths = new();
+
+    /// <summary>
+    /// The string's glyph outlines as ONE path at 1000 units/em, baseline origin, in
+    /// Skia's Y-DOWN frame — the same path <see cref="Measure"/> takes its ink box from,
+    /// exposed so the outline-skyline builder reads the identical geometry (one producer,
+    /// like <see cref="Typeface"/> for the renderers). Cached and shared: callers must
+    /// not mutate or dispose the returned path.
+    /// </summary>
+    internal static SKPath OutlinePath(string text, bool sans, FontStyle style)
+        => Paths.GetOrAdd((sans, style, text), static key =>
+        {
+            var typeface = Face(key.Sans, key.Style);
+            using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
+            return paint.GetTextPath(key.Text, 0, 0);
+        });
 
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
     public static double Advance(string text, double fontSize, bool sans = false,
@@ -123,7 +139,7 @@ public static class TextFontMetrics
             // multiplies a pure ratio and no size-dependent hinting enters.
             using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
             double advance = AdvancePerEm(key.Text, typeface, paint);
-            using var path = paint.GetTextPath(key.Text, 0, 0);
+            var path = OutlinePath(key.Text, key.Sans, key.Style);
             if (path.IsEmpty)
                 return (advance, 0, 0);
             var b = path.Bounds;

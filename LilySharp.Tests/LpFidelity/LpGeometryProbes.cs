@@ -4415,6 +4415,14 @@ internal static class LpGeometryProbes
             g => g.SoleCustomTextBaselineAboveStaff(), RaggedBottomPaper),
         new("textscript.descender.staff-to-baseline", TXP,
             g => g.SoleCustomTextBaselineAboveStaff(), RaggedBottomPaper),
+        // The X half of the same pair: the script's PEN ORIGIN sits ON the anchor note
+        // column's origin (X-offset 0 — self/parent-alignment-X both #f). Two strings,
+        // one claim: the pen cannot ride the first glyph's side bearing (d vs p), which
+        // is what pins "pen origin", not "ink left". Notehead #4 is m2's first note.
+        new("textscript.x.pen-to-notehead-left", TXD,
+            g => g.SoleCustomTextPenToNotehead(4), RaggedBottomPaper),
+        new("textscript.x.pen-to-notehead-left.descender", TXP,
+            g => g.SoleCustomTextPenToNotehead(4), RaggedBottomPaper),
         new("textscript.stacked.box-step", TXL,
             g => g.CustomTextBaselineStep(), RaggedBottomPaper),
         new("textscript.stacked.outline-step", TXS,

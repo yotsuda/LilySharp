@@ -79,9 +79,32 @@ internal static class CustomTextEngraver
 
             var measureLayout = measureLayouts[customText.MeasureIndex];
 
-            // Calculate X position (at end of measure)
-            // LILYPOND-REF: text-interface.cc:75-80 self-alignment-X
-            double x = measureLayout.X + measureLayout.Width - 1.0;
+            // X = the measure's first note column origin, and the text's PEN ORIGIN sits
+            // exactly on it (the draw is Start-anchored). LILYPOND-REF:
+            // lily/self-alignment-interface.cc:143-175 aligned_on_parent — TextScript
+            // declares self-alignment-X #f and parent-alignment-X #f, so NEITHER term
+            // applies and the X-offset is zero: the stencil starts at its parent note
+            // column's origin. MEASURED (audit/lp-geometry/probes/textscript-ink.ly,
+            // NoteHead rows): the script's x-left equals the anchor head's left edge at
+            // 21.650925710824165 to 15 digits, for every string (ledger
+            // textscript.x.pen-to-notehead-left). The old "measure end - 1.0, centred"
+            // was LILYSHARP-OWN and read +8.468502 on that entry.
+            //
+            // LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
+            // (1) The zero is aligned_on_parent EVALUATED, not computed: the inputs
+            //     (self/parent-alignment-X) have no surface in Lily#'s model, so the
+            //     general formula has nothing to read — the "model addition first"
+            //     shape (like staff-grouper/magnification), not a folded live input.
+            //     If an alignment override ever enters the grammar, port the formula.
+            // (2) WHICH note is the parent: LilyPond's TextScript attaches to a real
+            //     note; Lily#'s _"text" is a section-boundary directive with no note in
+            //     its model, so "the measure's first column" (Items[0] / Columns[0],
+            //     measure start when empty) is this engraver's own bridge — chosen to
+            //     mirror the fidelity pair's construction, not read from LP source.
+            double x = measureLayout.X
+                + (!measureLayout.Items.IsDefaultOrEmpty ? measureLayout.Items[0].X
+                    : !measureLayout.Columns.IsDefaultOrEmpty ? measureLayout.Columns[0].X
+                    : 0.0);
 
             // Y position below the staff, in the Y-up frame (staff-spaces above the
             // top-staff middle). No staff offset — the draw resolves the (top) staff

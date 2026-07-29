@@ -677,6 +677,44 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The sole custom text's drawn PEN ORIGIN minus the
+    /// <paramref name="noteheadIndex"/>-th notehead's anchor — the TextScript X pair
+    /// (books TXD/TXP). LILYPOND-REF: lily/self-alignment-interface.cc:143-175 aligned_on_parent
+    /// — TextScript's self-alignment-X and parent-alignment-X are both
+    /// #f, so NEITHER term applies and the X-offset is 0: the stencil's pen origin sits
+    /// exactly on the anchor note column's origin (its head's left edge). MEASURED
+    /// (textscript-ink.ly dump, 2026-07-29): the script's x-left equals the fifth
+    /// notehead's x-left at 21.650925710824165, to 15 digits, for every string.
+    /// </summary>
+    /// <remarks>
+    /// The pen origin is derived from the DRAWN anchor: a Start-anchored text starts at
+    /// its X, a Middle-anchored one half an advance earlier — so the entry reads the
+    /// drawn geometry whichever way the draw is anchored, and a centred draw shows up as
+    /// the half-advance it is off by, not as a harness artifact. The advance is measured
+    /// at the italic style DrawCustomTexts uses (DrawnText records no style).
+    /// </remarks>
+    public double SoleCustomTextPenToNotehead(int noteheadIndex, int page = 0)
+    {
+        var texts = CustomTexts;
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE custom text, found {texts.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        double advance = LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Italic);
+        double pen = t.Anchor switch
+        {
+            LilySharp.Core.Rendering.TextAnchor.Middle => t.X - advance / 2,
+            LilySharp.Core.Rendering.TextAnchor.End => t.X - advance,
+            _ => t.X,
+        };
+        return pen - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
     /// The ottava bracket's dashed LINE above the first staff, measured from that staff's
     /// refpoint (middle line) — the mirror of the OttavaBracket grob's relative
     /// coordinate: <c>lily/ottava-bracket.cc</c> print puts the line at the stencil's own
