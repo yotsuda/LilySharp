@@ -135,7 +135,7 @@ internal sealed class LayoutEngine
             systemMeasures.Count > 0 ? systemMeasures[0].Count : 0, true,
             systemMeasures.Count <= 1, indent, commonShortestDuration,
             () => multiStaffLayouter.BuildStaffSkylines(
-                score, _skylineBuilder, firstSystemMeasureLayouts));
+                score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0));
         var firstLooseLines = systemMeasures.Count > 0
             ? BuildLooseLinesBetween(
                 score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count)
@@ -145,7 +145,7 @@ internal sealed class LayoutEngine
                 score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true,
                 firstLooseLines)
             : multiStaffLayouter.LayoutStaffGroups(
-                score, _skylineBuilder, firstSystemMeasureLayouts);
+                score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0);
         // The system's height is the extent of the groups AS PLACED — see
         // MultiStaffLayouter.SystemHeightOf.
         double systemHeight = MultiStaffLayouter.SystemHeightOf(firstStaffGroupLayouts);
@@ -168,14 +168,16 @@ internal sealed class LayoutEngine
         foreach (var (_, _, gi) in score.EnumerateStaves())
             edgeLastStaffIndex = gi;
         (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last) EdgeStaffBeams(
-            ImmutableArray<MeasureLayout> mls) =>
-            (multiStaffLayouter.StaffBeamLayouts(score, edgeFirstStaff, edgeFirstStaffIndex, mls),
+            ImmutableArray<MeasureLayout> mls, int sysIdx) =>
+            (multiStaffLayouter.StaffBeamLayouts(
+                score, edgeFirstStaff, edgeFirstStaffIndex, mls, sysIdx),
              edgeLastStaff != edgeFirstStaff
-                ? multiStaffLayouter.StaffBeamLayouts(score, edgeLastStaff, edgeLastStaffIndex, mls)
+                ? multiStaffLayouter.StaffBeamLayouts(
+                    score, edgeLastStaff, edgeLastStaffIndex, mls, sysIdx)
                 : default);
 
         // Pre-calculate first system skylines for initial Y positioning
-        var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts);
+        var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts, 0);
         var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
             score, firstSystemMeasureLayouts, systemHeight, indent,
             firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts);
@@ -344,7 +346,9 @@ internal sealed class LayoutEngine
         /// <summary>System 0's loose-line lookup, built by the caller alongside its placement
         /// so the springs below are floored against the SAME alignment that drew it.</summary>
         public MultiStaffLayouter.LooseLinesBetween? FirstLooseLines { get; init; }
-        public required Func<ImmutableArray<MeasureLayout>,
+        /// <summary>This system's edge-staff beams — the measure layouts AND the system they
+        /// belong to, because the beams are stamped with it (BeamLayout.SystemIndex).</summary>
+        public required Func<ImmutableArray<MeasureLayout>, int,
             (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams { get; init; }
         public required double FirstSystemY { get; init; }
     }
@@ -419,7 +423,7 @@ internal sealed class LayoutEngine
                 : ComputeStaffSkylines(systemCache, firstMeasureIndex, measureCount, false,
                     sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration,
                     () => multiStaffLayouter.BuildStaffSkylines(
-                        score, _skylineBuilder, measureLayouts));
+                        score, _skylineBuilder, measureLayouts, sysIdx));
 
             // THIS system's placement, from ITS music. LILYPOND-REF:
             // lily/align-interface.cc:217-268 — each System has its own VerticalAlignment and
@@ -456,7 +460,7 @@ internal sealed class LayoutEngine
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
                 () =>
                 {
-                    var edgeBeams = EdgeStaffBeams(measureLayouts);
+                    var edgeBeams = EdgeStaffBeams(measureLayouts, sysIdx);
                     return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
                         edgeBeams.first, edgeBeams.last, sysStaffGroups);
                 });
@@ -2722,7 +2726,8 @@ internal sealed class LayoutEngine
         // showcase/04-advanced 4/0. It saves a build only where the ABOVE and BELOW passes
         // want the SAME (system, staff) in one run; on the three that saved nothing the below
         // pass asks for nothing at all (no below-staff mover), so there was never a duplicate.
-        // ⚠️ AND IT CANNOT SEE THE BIGGER ONE. test/notes' 4 is 2 staves-with-movers × the
+        // ⚠️ AND IT CANNOT SEE THE BIGGER ONE. test/notes' 4 is its 2 SYSTEMS (it has one
+        // staff, not two — the earlier note here said "2 staves-with-movers") × the
         // annotation pass running TWICE (once for the extents, once final), and this cache
         // lives inside ONE of those runs. Hoisting it to the layout context would halve that —
         // but the two runs do not necessarily hold the same measure layouts, so a shared cache
@@ -2736,6 +2741,44 @@ internal sealed class LayoutEngine
         // test/fermata-down at min-of-20 = 4.98 ms in one run and 14.70 ms in another, so a
         // 10-20% difference at 5-15 ms is below the noise floor here (HANDOFF 5.3 — count the
         // calls, do not time them).
+        // ⚠️ A BEAM IS SELECTED BY BOTH OF ITS PARENTS, staff and system, and for one session
+        // it was selected by the staff alone. `beamLayouts` is the WHOLE SCORE's beams; each
+        // carries the X its own system laid it out at, and those ranges OVERLAP (every system
+        // starts near x 0), so system 0's profile was reserving system 1's beam ink. MEASURED
+        // on test/notes, whose first system has no beamed note at all: the staff-alone profile
+        // read 0.666644 at x 10 and 0.516527 at x 30 — system 1's beam edges to the digit —
+        // where both this system's own profile and its silhouette read the staff line 0.050
+        // across the whole line. Those two phantom numbers are what a1d22431's message recorded
+        // as "the first system's silhouette carries no music ink"; the silhouette was right.
+        // ⚠️ AND THE PREDICATE READS THE ATTRIBUTION, NOT A RECONSTRUCTION OF IT. The first
+        // repair (50533a8d) recovered the system from the group's measure index and built a
+        // set per call — correct, but a SECOND way of answering a question the producer
+        // already knew the answer to, which is HANDOFF 5.2.1 (2). BeamLayout carries both
+        // parents now (LilyPond's shape: a Beam grob is created inside one System's axis
+        // group), so this is one comparison against carried fields and there is nothing left
+        // to keep in step.
+        // ⚠️ IT IS ALSO WHERE THE COST WAS, and the shape is worth knowing: the leak made every
+        // profile seed EVERY system's beams, so the seeding grew with the system count.
+        // COUNTED (beam seeds summed over one render's profile builds, staff-and-system vs the
+        // staff-alone spelling): test/notes 18 vs 36, showcase/grammar-tour 20 vs 120,
+        // test/feature-tour 16 vs 144 — the ratio IS the number of systems (2x / 6x / 9x), the
+        // signature of a per-system walk doing the whole score. Scores whose profile builds see
+        // no beams at all (showcase/04-advanced, 08-chorale) are unaffected either way.
+        // ⇒ The fix removes work that scaled with score length, which is the preview's axis.
+        // ⚠️ NO MILLISECOND FIGURE IS CLAIMED (HANDOFF 5.3 — this machine timed one binary at
+        // 4.98 ms and 14.70 ms on the same fixture).
+        // ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+        // has no line to cite here because it never performs this step: a Beam is created in
+        // one System's VerticalAxisGroup and Axis_group_interface::skyline_spacing
+        // (axis-group-interface.cc:914-950 building inside_staff_skylines) walks the elements
+        // of the group it was called on. Lily# keeps one flat per-score array and recovers the
+        // grouping with the predicate below, which is why the grouping can be got WRONG at all
+        // — it was, for one session, and the two carried parents are the cheapest true fix
+        // short of the structure.
+        // ⇒ IT DISAPPEARS the day the per-(system, staff) beams are held that way at
+        // production time (LayoutAllSpanners already loops over exactly those pairs), leaving
+        // a lookup rather than a scan. That is the same shape as the remaining beam-GEOMETRY
+        // duplication on the handoff's list, and they should go together.
         Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null;
         if (staffByIndex != null)
         {
@@ -2752,7 +2795,9 @@ internal sealed class LayoutEngine
                             profStaff, systems[sysIdx].Measures,
                             beams: allBeams.IsDefaultOrEmpty
                                 ? ImmutableArray<BeamLayout>.Empty
-                                : allBeams.Where(b => b.StaffIndex == staffIndex).ToImmutableArray(),
+                                : allBeams.Where(b => b.StaffIndex == staffIndex
+                                        && b.SystemIndex == sysIdx)
+                                    .ToImmutableArray(),
                             systemLeft: systems[sysIdx].Indent)
                         : null;
                     profileCache[(sysIdx, staffIndex)] = built;

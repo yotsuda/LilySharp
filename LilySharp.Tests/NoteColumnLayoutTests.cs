@@ -52,7 +52,7 @@ public class NoteColumnLayoutTests
             new BeamMember(e2, 1, 1, 0, 0, 1, memberStemUp: stemUp));
         var group = new BeamGroup(members, 0, 0, stemUp);
         return new BeamLayout(group, leftY: 6, rightY: 6, leftX: 0, rightX: 10,
-            ImmutableArray.Create(0.0, 10.0));
+            ImmutableArray.Create(0.0, 10.0), staffIndex: 0, systemIndex: 0);
     }
 
     // ── HasStem: Stem::is_normal_stem ─────────────────────────────────────────────

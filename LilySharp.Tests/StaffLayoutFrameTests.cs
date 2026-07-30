@@ -128,7 +128,8 @@ public class StaffLayoutFrameTests
     {
         var group = StaffGroup.CreateGrandStaff(CreateStaff(ClefType.Treble), CreateStaff(ClefType.Bass));
         var layout = Layouter().LayoutStaffGroups(
-            ScoreOf(group), new SkylineBuilder(Options.StaffHeight), SimpleMeasureLayouts())[0];
+            ScoreOf(group), new SkylineBuilder(Options.StaffHeight), SimpleMeasureLayouts(),
+            systemIndex: 0)[0];
 
         AssertYUpStacking(layout.Staves);
         var delim = layout.GrandStaffLayout!;

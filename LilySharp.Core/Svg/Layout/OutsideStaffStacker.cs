@@ -573,24 +573,29 @@ internal static class OutsideStaffStacker
                 && !systemSkylines[sys].up.IsEmpty)
             {
                 // No profile: the system silhouette, which is what a harness that builds no
-                // staff has. TWO reasons it is not the production support any more — it is
-                // the whole system's ink, so a lower staff's mover clears the TOP staff's
-                // (the flying-fermata bug), and MEASURED 2026-07-30: on the FIRST system it
-                // carries no music ink at all. Sampled pointwise for fixture test/notes, the
-                // first system's silhouette reads the staff line 0.050 across the whole line
-                // with the clef 1.776 its only maximum, where that staff's own profile reads
-                // the notes (0.667 at x 10, 0.517 at x 30); on the SECOND system the two
-                // agree pointwise. So every first-system mark used to be side-positioned
-                // against the staff line and the clef and nothing else — which is the whole
-                // of test/notes' 0.4 page growth when the profile took over.
-                // ⚠️ AND THIS PASS IS NOT ITS ONLY READER. perSystemExtents (LayoutEngine) is
-                // built from the same skyline, so the page's own first-system reservation
-                // reads it; and ChordNameEngraver, FiguredBassEngraver and LyricEngraver all
-                // still take systemSkylines, i.e. they still side-position against the SYSTEM
-                // (ChordNameEngraver says so in its own comment: lower-staff chords keep a
-                // fixed offset because their staff's skyline "isn't here"). Those are the same
-                // defect in three more places and they are NOT ported: each wants a point of
-                // its own — the delegate this method takes is the shape they would use.
+                // staff has. The reason it is not the production support any more is that it
+                // is the whole SYSTEM's ink, so a lower staff's mover clears the TOP staff's
+                // (the flying-fermata bug).
+                // ⚠️ AND THAT IS THE ONLY REASON. A 2026-07-30 note here claimed a second one —
+                // that the FIRST system's silhouette "carries no music ink at all", sampled as
+                // the staff line 0.050 across the whole line where the staff's own profile read
+                // 0.667 at x 10 and 0.517 at x 30 — and it was WRONG IN THE OTHER DIRECTION.
+                // Re-measured against the live pipeline: those two numbers are system 1's BEAM
+                // edges to the digit, and they were in the PROFILE because the profile's beams
+                // were filtered by staff and not by system (LayoutEngine.SystemStaffBeams now
+                // does both). test/notes' first system has no beamed note at all, so the
+                // silhouette's 0.050 was the correct answer and the profile was reading another
+                // system's ink. With the filter restored the two agree POINTWISE on every
+                // system, up to the exact half-staff frame step this method applies below, and
+                // test/notes' 0.4 page growth is gone — the snapshot is byte-identical to its
+                // pre-port baseline.
+                // ⇒ THE SILHOUETTE IS NOT KNOWN TO BE WRONG ANYWHERE. perSystemExtents reads
+                // it and that is not an island. What remains true of the three other readers
+                // (ChordNameEngraver, FiguredBassEngraver, LyricEngraver) is only the FIRST
+                // reason: they side-position against the system, so a row belonging to one
+                // staff is spaced by another staff's ink. ChordName and Lyric already take a
+                // per-(system, staff) delegate for their NON-edge cases; the edge case and
+                // FiguredBass do not. Each wants a point of its own.
                 supportUp.Merge(systemSkylines[sys].up);
             }
             SeedClefInk(systems, sys, staff, t);

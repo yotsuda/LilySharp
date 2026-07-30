@@ -191,7 +191,8 @@ internal sealed class ElementCoordinator
     /// member's X position is resolved against its OWN measure's layout, and
     /// cross-system spans are split into broken pieces per system.
     /// </remarks>
-    public ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
+    public ImmutableArray<BeamLayout> LayoutBeams(
+        Score score, ImmutableArray<SystemLayout> systems, int staffIndex)
     {
         var beamGroups = _beamDetector.DetectBeamGroups(score);
 
@@ -259,11 +260,14 @@ internal sealed class ElementCoordinator
             collisions.AddRange(CollectCrossVoiceBeamCollisions(
                 score, group, measureLayout, beamLeftX, beamRightX));
 
+            // The system comes from the SAME measureMap lookup that gave the X positions, so
+            // the stamp and the frame the X is in cannot disagree.
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
-                collisions,
-                staffIndex);
+                staffIndex,
+                system.SystemIndex,
+                collisions);
 
             beamLayouts.Add(beamLayout);
         }
@@ -343,7 +347,8 @@ internal sealed class ElementCoordinator
                 group.GrowDirection,
                 group.VoiceIndex);
 
-            var pieceLayout = LayoutSingleSystemBeamPiece(score, subGroup, measureMap, staffIndex);
+            var pieceLayout = LayoutSingleSystemBeamPiece(
+                score, subGroup, measureMap, staffIndex, sysIdx);
             if (pieceLayout != null)
                 yield return pieceLayout;
         }
@@ -359,7 +364,7 @@ internal sealed class ElementCoordinator
     private BeamLayout? LayoutSingleSystemBeamPiece(
         Score score, BeamGroup group,
         Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex)
+        int staffIndex, int systemIndex)
     {
         // Resolve each member's X position via its OWN measure layout.
         var memberXs = new List<double>(group.Members.Length);
@@ -414,8 +419,9 @@ internal sealed class ElementCoordinator
         var beamLayout = _beamEngraver.CalculateBeamLayout(
             renumberedGroup,
             memberXs,
-            collisions: null,
-            staffIndex: staffIndex);
+            staffIndex: staffIndex,
+            systemIndex: systemIndex,
+            collisions: null);
 
         // The dense renumbering above exists ONLY so the scorer can index
         // memberXs by member.ItemIndex. Everything downstream keys on the REAL
@@ -431,6 +437,7 @@ internal sealed class ElementCoordinator
             beamLayout.LeftX, beamLayout.RightX,
             beamLayout.MemberXPositions,
             beamLayout.StaffIndex,
+            beamLayout.SystemIndex,
             beamLayout.MemberStaffIndices);
     }
 

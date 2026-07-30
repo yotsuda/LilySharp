@@ -81,7 +81,7 @@ public class BraceCollapseTests
 
         return layouter.LayoutStaffGroups(
             score, new SkylineBuilder(LayoutOptions.Default.StaffHeight), measureLayouts,
-            0, 1, isFirstSystem);
+            0, 1, isFirstSystem, systemIndex: 0);
     }
 
     [Fact]

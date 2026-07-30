@@ -32,28 +32,33 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第41セッション・**上側 outside-staff pass が譜ごとになった——
-`StaffIndex != 0` guard は 4 本（trill/ottava/script＋未命名だった text spanner）とも消え、
-下段 3 点が同時に閉じた。ottava は「下段が上段と同じ値段」＝OTC の残差と桁まで同一で着地**。
+最終更新 2026-07-30（第42セッション・**★★★ 第41セッションの「第 1 system のシルエットに
+音楽インクが無い」は誤診で、実体は逆——`staffProfile` の beam が譜でしか絞られておらず、
+system 0 の profile が system 1 の beam インクを読んでいた。1 行の絞り込みで
+`test/notes` は port 前と byte 一致に戻り、他は 1 点も動かない**。
 ⚠️ **swing 記法はユーザーが「まだおかしい」＝LP の記法待ち**（下の第40セッション節 8・未着手）。
-詳細は下の第41セッション節）
+詳細は下の第42セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3550 passed / 0 failed / 3 skipped**（台帳 **236 点**全緑＝233＋新規 3）・
+**HEAD は 3551 passed / 0 failed / 3 skipped**（台帳 **236 点**全緑・第42セッションで
+`StaffProfileBeamScopeTests` 1 本追加）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
-**第41セッションの commit（7 本）**: `39dc6184`（**起票＝TXV/TVL/OTL 3 冊＋台帳 3 点**・
+**第41セッションの commit（11 本・コードが動くのは 5 本）**: `39dc6184`（**起票＝TXV/TVL/OTL 3 冊＋台帳 3 点**・
 コード変更ゼロ・出力不変）／`a1d22431`（**port＝上側 tracker を per (system, staff) に**・
 guard 4 本削除・**snapshot 2 枚再ベース・GO 済**・台帳 3 点が SPL +8e-9／TVL 0 exact／
-OTL +0.027480＝OTC と同一で着地）／`1ce33d3b`（handoff）／
+OTL +0.027480＝OTC と同一で着地）／
 `d6eb1cb0`（**引用の訂正＝`outside_staff_axis_group` は LP に存在しない**・14 箇所・
 `KnownUnverifiedSymbols` から削除・未命名引用ラチェット 747→746・コメントのみ）／
 `c56e9213`（**字面化＝「最上段」を定数 0 でなく `TopStaffIndex` で問う**・`-1` の解決先も同じ・
 出力不変）／`c58cad80`（**clef の平箱削除を測って戻した＝snapshot 123 枚動き台帳 0 点**・
 値段と本の設計を残した）／`7fc442f3`（**perf＝profile を (system, staff) ごとに 1 回・
-コピーを配る**・**実測 4 builds 中 2 節約（multi-staff-hairpins）／他 3 譜は 0**・出力不変）。
+コピーを配る**・**実測 4 builds 中 2 節約（multi-staff-hairpins）／他 3 譜は 0**・出力不変）／
+`eb36fd7b`（**perf＝自分が入れた「小節番号ごとの LINQ」を撤去**＝`TopStaffBySystem` で
+pass 1 回に・**port のスケールを回数で実測**（下の ▶ perf）・出力不変）／
+docs のみ: `1ce33d3b`・`ad6d7714`・`a9a5cd97`。
 **第40セッションの commit**（コードが動くのは 3 本）: `e939120c`（**起票＋port を 1 本**＝
 プローブ `script-priority.ly` 5 冊・台帳 5 点・fermata を priority 75 の mover へ（上下とも）・
 profile はグリフの実アウトライン・**TSP exact / 新規 4 点は九桁 / SPA が +1.311 で
@@ -126,7 +131,97 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
 
+### 第42セッション（2026-07-30）＝ **「第 1 system のシルエットに音楽インクが無い」は誤診だった。実体は profile 側が他 system の beam を読んでいたこと**
+
+★★★ **▶ の ★★★ 項目を 1 つ消した**。着手は「三家族の port」を取りに行くつもりで、
+その前提を裏取りしたら**前提そのものが falsify された**。
+**commit 8 本（コードが動くのは 2 本・snapshot が動いたのは 1 枚だけ）**:
+`50533a8d`（**fix＝beam を譜 ∧ その system で選ぶ**・
+snapshot `test/notes` 1 枚が **`a1d22431~1` と byte 一致に戻る**・
+**`StaffProfileBeamScopeTests` を同 commit で**）／`d35b5c34`（**コードと逆を言っていた
+コメント 2 件**＝誤診の記録と ChordName の「固定オフセット」・出力不変）／
+`6acc6e9d`（**字面＝`BeamLayout` が `SystemIndex` を持ち、復元と `-1` 既定が消えた**・
+**出力不変**）／`cbe386d2`（**perf を回数で実測＝漏れは「高い綴り」でもあった**・コメントのみ）／
+`dcb17624`（**§7.5 の自己監査＝平らな配列からの選択に `LILYSHARP-OWN` と「いつ消えるか」**・
+コメントのみ）／docs のみ: `1d3337bd`・`38e845fd`・`c1094bc6`・`e9504ea5`。
+
+9. ★★ **§7.5 の機械的カウントは 146 行に対して REF 0 / OWN 0** だった。
+   ⇒ **REF が 0 なのは正しい**——この差分は**量を 1 つも足していない**（親 index 2 つの配線と、
+   ループ変数／X を出した `measureMap` 引きからの stamp と、述語 1 つ）。`systemIndex: 0` は
+   **構造上 system 0 である呼び出し点の同一性**でマジックナンバーではない。
+   ⇒ ★★★ **OWN が 0 なのは誤りで、それが所見**: **score 全体の配列から grob の兄弟を選ぶ**
+   という**形そのものが LP からの逸脱**（LP は `skyline_spacing` が呼ばれた group の要素を
+   歩くだけ＝この段が存在しない）。**だから grouping を間違え得た**。札を付けて
+   「消える条件」（production 時に per-(system, staff) で保持＝`LayoutAllSpanners` は既に
+   その対でループしている／scan が lookup になる）も書いた。**beam 幾何の 2 生産者と一緒に消す。**
+
+1. ★★★ **測って falsify した順番が要点**: まず**同じ入力**で `BuildSystemSkylines(...).Up` と
+   `BuildStaffSkylines(top staff).Up` を pointwise 比較 ⇒ **全 x・全 system で差が
+   きっちり 2.000000**（＝半譜のフレーム段差。system 原点＝上段の**上線**、staff 原点＝**中央線**）。
+   ⇒ ここで「島ではない」と早合点しかけたが、**生パイプラインの `perSystemSkylines` を
+   一時計装して観測**したら**第41セッションの数字が本当に再現した**
+   （system 0 は全域 0.050／system 1 は x10=0.666644・x25=0.725501・x30=0.516527）。
+   ⇒ ★★ **「再現しない」で止めなかったのが分かれ目**。再現させたうえで**どちらが嘘か**を訊いた。
+2. ★★★ **嘘は profile 側だった**。`test/notes` は**第 1 system に beam 音符が 1 つも無い**
+   （全音符・2分・4分だけ）。だから silhouette の **0.050（譜線）は正解**で、
+   第41セッションが「その譜自身の profile」として記録した **0.667 / 0.517 は system 1 の
+   beam の縁**——`staffProfile` が `allBeams.Where(b => b.StaffIndex == staffIndex)` と
+   **譜でしか絞っていなかった**ため、**score 全体の beam** が system 0 の profile に流れ込んでいた。
+   **各 system は x≈0 から始まるので X 範囲は重なる**＝幽霊インク。
+   ⇒ ★★★ **私の最初のプローブも同じ罠を踏んで「差は 2.0 だけ」と出した**（両側に全 beam を
+   渡していた）。**汚染された比較は「一致」の側にも転ぶ。**
+3. ★★★ **修正は `SystemStaffBeams`（譜 ∧ その system の小節）**。`test/notes` の snapshot は
+   **`a1d22431~1` と byte 一致に戻った**（453.0 ← 457.0）。**他の snapshot 196 枚・台帳 236 点は
+   1 つも動かない** ⇒ **a1d22431 の `test/notes` 再ベース（+0.4）は欠陥修正ではなく退行**だった。
+4. ★★ **なぜ 1 セッション誰にも見えなかったか**: 唯一の観測者が **snapshot で、それが承認された**。
+   ⇒ **`StaffProfileBeamScopeTests` を足した**。**falsifier つき**——「譜だけで絞ると第 1 system が
+   持ち物でない beam を受け取る」ことも同時に assert するので、fixture が witness を失ったら鳴る。
+   ⇒ ★★★ **§5.0 に足すべき教訓**: **snapshot 再ベースの理由が「別の量を測った」ものであるとき、
+   その量にも点か機械を付ける**。今回「pointwise サンプルした」という**強い言い方が
+   審査を通してしまった**。
+5. ★★ **silhouette はどこも間違っていないと分かった**ので、▶ から**2 つ**消える:
+   **「第 1 system のシルエットに音楽インクが無い」島**と、その系である
+   **`perSystemExtents` の第 1 system 予約の島**。
+6. ★★ **三家族の前提も stale だった**（同じ自己監査の産物）: **ChordNameEngraver は
+   `lowerStaffUpSkyline`、LyricEngraver は `noteBoundStaffDownSkyline`** を**もう持っている**
+   ——handoff が証拠として引いた ChordName のコメント自身が stale で、**コードと逆**を言っていた
+   （直した）。**残るのは edge 側（上段の chord 行／下段の歌詞）と FiguredBass の
+   system 単位ドロップ**。
+7. ★★★ **字面の直しをその場で払った**（`6acc6e9d`・**出力不変**・snapshot 197 枚と台帳 236 点が
+   byte 不変）。1 発目の `SystemStaffBeams` は**同じ量の 2 番目の生産者**だった（silhouette 側は
+   `StaffBeamLayouts` が構造的に同じ選択をする）＝§5.2.1②。**LP にはどちらの綴りも無い**
+   ——Beam grob は 1 つの System の VAG の中で生まれるので、帰属は**親が答える**。
+   ⇒ **`BeamLayout` が `SystemIndex` を持つ**ようにして復元を消した。
+   ⇒ ★★ **`staffIndex`/`systemIndex` の既定値 `-1` も外した**（`BeamLayout`・
+   `CalculateBeamLayout`・`LayoutBeams`）。**「どこに居るか知らない beam は選択できない」**——
+   静かに空を返す選択は「beam の無い譜」と見分けが付かず、**今日直した欠陥の 1 つ隣**だった。
+   ⚠️ `StaffBeamLayouts` は **trivial layout の 0 でなく実 system 番号を stamp する**
+   （trivial system は「その譜のフレーム」を作るためのもので、stamp は X が実際に属する
+   system を名指さないと嘘になる）。レイアウト自体には不活性で、**byte 不変がその検査**。
+   ★ **残債は beam の「幾何」の 2 生産者**（帰属とは別の量・上の ▶ に移した）。
+
+8. ★★★ **perf を訊かれる前に測った——のではなく、訊かれてから測った**（`feedback` の
+   「pointwise 化したら訊かれる前に perf を測る」を**また果たしていなかった**）。
+   ⇒ ★★★ **そして漏れは「値段」の側でもあった**: 譜だけで絞る綴りは
+   **profile ごとに全 system の beam を seed していた**ので、**seed 量が system 数に比例して
+   増えていた**。**回数で実測**（1 レンダの profile builds 全体の beam seed 総数・
+   譜∧system 対 譜のみ）:
+   | fixture | systems | profile builds | 修正後 | 修正前 | 比 |
+   |---|---|---|---|---|---|
+   | `test/notes` | 2 | 4 | **18** | 36 | 2.00× |
+   | `showcase/grammar-tour` | 6 | 12 | **20** | 120 | 6.00× |
+   | `test/feature-tour` | 9 | 18 | **16** | 144 | **9.00×** |
+   ⇒ ★★★ **比がちょうど system 数**＝「per-system の walk がスコア全体を歩いていた」署名。
+   `showcase/04-advanced`・`08-chorale` は **profile builds が beam を 1 つも見ない**ので
+   前後とも 0（無影響）。
+   ⇒ ★★ **長い譜ほど効く＝プレビューの軸**。**ms は主張しない**（§5.3・同一バイナリが
+   4.98/14.70ms）。⚠️ **`6acc6e9d` 自体の足し引き**は「beam 1 個につき int 比較 1 回」と
+   `BeamLayout` の +1 フィールドだけで、**1 発目が入れた per-call `HashSet` は消えた**。
+
 ### 第41セッション（2026-07-30）＝ **上側 pass を譜ごとにしたら guard 4 本が消え、「第 1 system のシルエットには音楽インクが 1 つも無い」が落ちてきた**
+
+⚠️ **この節の「第 1 system のシルエットに音楽インクが無い」は第42セッションで falsify 済み**
+（上の第42セッション節 1〜3）。**節 5 の第 2 項と、それを引く ▶ 項目は無効。**
 
 ★★★ **▶ の「上側 pass の tracker を per (system, staff) に」を起票→port まで一気通貫**。
 点は先に 3 つ開けた（`39dc6184`・コード変更ゼロ）。
@@ -1343,13 +1438,64 @@ stem-support,below,accidental}`）のうち 4 点が九桁で着地。詳細は�
   ⇒ ★★ **本は 1 行で書ける**: **行頭のマーク（or 小節番号）の X が clef の平らな台地でなく
   「斜面」に落ちる**配置を LP と突き合わせる。**点ができれば削除は 1 行**。
   （§5.0「観測者の無い出力変更はしない」の実例として、値段つきで残してある。）
-- ★★★ **第 1 system のシルエットに音楽インクが無い**（第41セッション節 5・**新しい島**）。
-  実測: 第 1 system の `systemSkylines[0].up` は**全域で譜線 0.050・最大は clef 1.776 だけ**で、
-  同じ譜の `BuildStaffSkylines` は音符を読む（第 2 system では pointwise 一致）。
-  上側 pass はもう読まないが、**`perSystemExtents` が同じ skyline を読む**ので
-  **ページの第 1 system 予約はまだこれ**。⇒ **点が先**（「第 1 system の音符がページ上端の
-  予約に効くか」の対＝1 冊で足りる）。**出所は `LayoutEngine` の第 1 system 特別扱い
-  （:119-192）を疑うところから。**
+- ~~★★★ **第 1 system のシルエットに音楽インクが無い**~~ — **falsify 済（第42セッション）。
+  島ではない**。`test/notes` の第 1 system には beam 音符が無いので 0.050（譜線）が正解で、
+  「その譜の profile が読む音符」として記録された 0.667/0.517 は**system 1 の beam** だった
+  （`staffProfile` の beam が譜でしか絞られていなかった）。⇒ **系の
+  「`perSystemExtents` の第 1 system 予約」も同時に無効**。silhouette は**どこも間違っていない**。
+- ★★ **`systemSkylines` を読む残り 3 家族**（⚠️ **第41セッションの書き方は stale**——
+  第42セッションで裏取り）。**ChordName と Lyric は非 edge 側の per-(system, staff)
+  デリゲートをもう持っている**（`lowerStaffUpSkyline` / `noteBoundStaffDownSkyline`）。
+  **残っているのは 3 つ**: ⑴ **上段の chord 行**（`systemSkylines[sys].up`）
+  ⑵ **下段の歌詞ブロック**（`systemSkylines[sys].down`・`LyricEngraver` の非 upper 経路）
+  ⑶ **FiguredBass のドロップが system 単位**（`ApplySkylineDrop` は system の全 figure を
+  1 つの skyline に merge し、1 つの `systemDrop[s]` で全部下げる＝譜の帰属が無い）。
+  ⇒ ★★★ **⑶ から始めること。regime が発火するのは実測済（第42セッション末・下）で、
+  本の設計はもう決まっている。**
+
+  ★★★ **FiguredBass の regime は確認した（Lily# 側だけ・出力不変の観測）**。
+  **同じ音楽・同じ figures**（低い加線付き音符＋下向き符尾＝figures を押し下げるべきインク）を
+  3 通りに置いた:
+  | 配置 | `FiguredBassLayout.YUp` |
+  |---|---|
+  | A: 1 譜のみ | **−15.045** |
+  | B: **2 譜の上段**（下に静かな譜） | **−43.640** |
+  | C: 2 譜の下段（＝corpus の `test/figbass-chordname-lower-staff` の形） | **−12.545** |
+  ⇒ ★★★ **B は system 全体の下へ押し出されている**（下段の down-skyline まで距離を取らせる）。
+  第40セッションの「下段 fermata が上段の上へ飛ぶ」と**同型の飛翔バグ**で、
+  **その配置の fixture が 1 つも無いので観測者ゼロ**。
+  ⇒ ⚠️ **C ≠ A（差 2.5）も出た。これは未診断**——`ApplySkylineDrop` は `YUp`（譜中央基準）から
+  **system フレームで計算した `d`** を引くので**フレームが混ざっている**のが第一容疑だが、
+  **確かめていない**。**本は 3 配置すべてを覆うこと**（A と C が LP で同値かは、Lily# の 2.5 が
+  欠陥か座標系の読み違いかを決める）。
+  ⇒ **予測（実測ではない）**: LP の FiguredBass は staff-affinity UP の文脈で**自分の譜の下**に
+  置かれるので、**A=B=C**（譜から figures までの距離が同一）。**falsifier**: LP で B が
+  他の 2 つと違えば、system 単位のドロップは近似している何かがあることになる。
+  ⇒ **起票の中身**: プローブ本 1 冊（3 配置）＋台帳 3 点。`probes/` に figured bass の本は
+  **まだ 1 冊も無い**（台帳点もゼロ）。⚠️ **ドロップは system の全 figure を 1 つの skyline に
+  merge して 1 つの数で下げる**ので、**譜の帰属を入れる港は `ApplySkylineDrop` の中**。
+- ~~★ **`SystemStaffBeams` を `StaffBeamLayouts` と 1 本化する**~~ — **払った（第42セッション・
+  `6acc6e9d`・出力不変）**。`BeamLayout` が **`SystemIndex` を持つ**ようになり（LP の grob が
+  parent を持つ形・stamp は X を出した `measureMap` 引きと同じ場所）、**`MeasureIndex` からの
+  復元は消えた**。**`staffIndex` / `systemIndex` の既定値も両方外した**——`-1`＝単一譜の
+  センチネルは「静かに空を返す選択」の入口で、今回直した欠陥の 1 つ隣だった。
+  ★ **残っているのは beam の「幾何」の 2 生産者**（`StaffBeamLayouts` が trivial system で
+  再計算／`LayoutAllSpanners` が実 system で計算）＝**帰属とは別の量**。
+  ⚠️ **trivial system は indent を持たない**ので X が一致するとは限らず、**測ってから**畳む。
+- ★★ **`CustomTextLayout` / `MusicMarkLayout` に実 StaffIndex を持たせる**（`-1`＝最上段の
+  センチネル撤去）。LP に対応物は無い——**grob の Y-parent が譜そのもの**。いまは
+  `AboveTrackers` が 1 箇所で `TopStaffIndex` に解決している（`c56e9213`）ので**配置は正しい**が、
+  モデルの傷は残っている。⚠️ **出力が動く可能性**あり（下段のマーク／TextScript がその譜の
+  tracker へ移る）ので §5.4 の**格納値網を先に**。
+- ★★ **名前を付けた債務に摂動テストを足す**（第41セッションの自己監査の結論）。
+  今回名前を付けた 10 件のうち、**壊れたら機械が鳴るのは 1 件だけ**
+  （`-1` センチネル＝`tempo.trill-cleared` が実際に鳴った）。残り 9 件は grep で辿れるだけ。
+  ⇒ ★ **「名前を付けたら §5.4 の摂動テストを同時に足す」を実際に払う**回。対象は
+  `staff 0` 系（もう無い）・名目半譜 `StaffBottom/2`・clef 平箱・script/tuplet の seed 箱・
+  fallback 経路。⚠️ **名前そのものも stale になる**（第41セッションに `TrillSpannerLayout`・
+  `OttavaBracketLayout` の 2 件がコードと逆のことを言っていた）。
+- ★ **名目半譜 `StaffBottom / 2.0` は上下 pass の共有債務になった**（§ⓑ の「譜 extent 定数
+  直書き」族）。tab/倍率譜でだけ割れる。**点は倍率譜×床 grob の対**（未作成）。
 - ★★ **perf（プレビュー速度・ユーザーが重視）**。~~上下 pass の共有キャッシュ~~ — **入れた
   （第41セッション・`7fc442f3`・出力不変）**が、**効きは小さい**: 実測（builds/節約）
   **multi-staff-hairpins 4/2・notes 4/0・08-chorale 2/0・04-advanced 4/0**。
@@ -2095,6 +2241,13 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
 > 判断に迷ったら: 「これは**次のセッションだけ**必要か、**ずっと**必要か？」
 > ずっと必要ならこのファイル以外へ。
 
+⚠️ **user memory 側の宿題（2026-07-30 に気づいた・次セッションで処理）**: memory ディレクトリに
+**`MEMORY.md` の索引から参照されていないファイルが 10 件ある**（`project_inc295_tanstack_npm`・
+`project_powershellmcp_ripple_supersede`・`project_uipathorch_tenant_migration_track_record` など。
+第41セッションの索引圧縮で落としたのではなく**以前から未収録**）。索引は「全件の入口」なので、
+**拾うか、古ければ消す**。⚠️ 索引は 200 行で読めなくなるので、拾うときは 1 行に束ねること
+（第41セッションに 160 → 112 行へ圧縮した）。
+
 ---
 
 ## 5. 恒久ルール（滅多に変わらない）
@@ -2175,6 +2328,13 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   ★ **散文にも同じ規則が要る**（2026-07-28・`de270892` → `e1d5c5f8`）: commit message に
   「この注記を消した」と書いて**消していなかった**。残った注記は**コードと逆のことを言う**ので、
   触らなかったより悪い。⇒ **「消した」と書く前に旧文言で grep する**（1 行で済む）。
+- ★★★ ⚠️ **snapshot 再ベースの justification が「別の量を実測した」であるとき、その量にも
+  点か機械を付ける**（2026-07-30・第42セッションが第41セッションの `test/notes` +0.4 を
+  退行と確定）。あの再ベースは「両方の support を pointwise サンプルした」という**強い言い方**で
+  通り、**測った量そのものには観測者が 1 つも付かなかった**——サンプルが汚染されていたので、
+  snapshot は**誤った配置で承認された**。⇒ ★★ **「測った」と書いた量が snapshot 以外に
+  観測者を持たないなら、その commit で機械を 1 本足す**（今回 `StaffProfileBeamScopeTests`）。
+  ⚠️ **snapshot は再ベースできるので網ではない**——承認は観測者ではない。
 - ★★ ⚠️ **1 つの claim が N 個の量に分かれているとき、「1 つずつ当てて良くなったものだけ入れる」は
   使えない。分割すると悪化することがある**（2026-07-28・ossia）。「ossia は spaceable」は
   ばね・spec・spaceable 性の 3 つで、**ばねだけ入れると両方の読みが遠くなった**
@@ -2614,10 +2774,20 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   ＝**範囲自身が「お前が言いたい行はここか？」と答える**。①の「出典を書こうとすると
   書けない箇所が発明の在処を教える」の**一段内側**。
   ⚠️ **今朝の誤りで落ちることを実証済**（747 → 748）。
+  ⚠️ ★★ **抽出は「引用と同じ行」だけを見る**（`AllCitations`: `LILYPOND-REF` を含む行の、
+  **アドレスより後ろ**の文字列から記号を拾う）。⇒ **行を折り返すと未命名に数えられる**——
+  第41セッションに 2 回踏んだ。**アドレスと記号は同じ行に置く**。
+  また **symbol は `_` か `-` を含む複合名でないと数えられない**ので、`\name Score` のような
+  単語 1 個の引用は**名前を書いても未命名扱い**（`:774 \consists Bar_number_engraver` の形にする）。
+  ★ **ラチェットは 2026-07-30 に 747 → 746 へ下げた**（`outside_staff_axis_group` の訂正）。
 - 他 3 本: ファイル実在（hard 0）／行範囲がファイル内（hard 0・**今は何も落ちないが、
   LP の版が動いた日に全ファイルが一斉に狂う**ので置く）／名指した記号がそのファイルに在る
-  （**17 件の明示リスト**。数でなくリストなのは、古い 1 件が開いたまま新しい 1 件を落とすため。
-  **直ったら消さないと落ちる**＝台帳の「改善は diff に出す」を引用にも適用）。
+  （**明示リスト**。数でなくリストなのは、古い 1 件が開いたまま新しい 1 件を落とすため。
+  **直ったら消さないと落ちる**＝台帳の「改善は diff に出す」を引用にも適用。
+  ★ **2026-07-30 に 17 → 16 件**: `outside_staff_axis_group|lily/axis-group-interface.cc` が
+  **C++ に存在しない名前**だと確定して 14 箇所を `Axis_group_interface::skyline_spacing` へ
+  訂正し、entry を削除した。⚠️ **このリストに載っている名前は「まだ誰も確かめていない」
+  という意味**で、載っているだけで何セッションも増殖し得る——**引用するときは必ず先に読む**）。
 - ★ **初回で 7 つの誤住所・35 箇所**が出た（`lily/bar-line.cc`・`ly/tablature-init.ly`・
   `lily/note-collision-interface.cc` ×19・`lily/grace-spacing.cc` ×10 ほか。
   **7 件中 4 件は LP が一度も持ったことのないファイル名**）。
@@ -2671,6 +2841,15 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   貼るな」の裏返しで、こちらは「測ってない配分を書くな」**）。最適化のコメントに
   「マージは trill 多用譜の約 1/4」と書いたが**測っていなかった**（実測は「小さい」）。
   ⇒ **最適化のコメントには実測値 2 つ（前・後）だけを書き、原因の配分を主張しない。**
+- ★★★ ⚠️ **2 つのプロファイルを比べるときは、両側の入力を 1 つずつ名指して揃える。
+  汚染された比較は「不一致」だけでなく「一致」の側にも転ぶ**（2026-07-30・第42セッションで
+  **両方向を 1 セッションのうちに踏んだ**）。⑴ 第41セッションは silhouette（自 system の beam）と
+  profile（**score 全体**の beam）を比べ、**profile 側の幽霊インクを silhouette の欠落と読んだ**。
+  ⑵ その裏取りで**私も**両側に全 beam を渡し、**「差はフレームの 2.0 だけ」＝島は無い**と
+  出した。**どちらの誤りも「差」を見ているだけでは検出できない。**
+  ⇒ ★★ **手順**: **生パイプラインの値を 1 回観測してから**再構成と突き合わせる
+  （再構成が一致しなければ**再構成の入力**が違う）。⇒ ★ **そして「再現しない」で止めない**
+  ——再現させたうえで**どちらの側が嘘か**を訊く。今回は再現させた側が正解だった。
 - **摂動法が強力**: `\override` で esw / padding を振り、係数1で追随するか不変かを見る。
   **全部ゼロにして残った定数**がハードコード値
 - **測定 regime を混ぜない。** ragged-right（force 0）では spring の床、圧縮時は rod が

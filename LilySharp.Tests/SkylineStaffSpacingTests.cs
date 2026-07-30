@@ -84,7 +84,7 @@ public class SkylineStaffSpacingTests
         var group = new BeamGroup(members, measureIndex: 0, startIndex: 0,
             stemUp: false, growDirection: 0, voiceIndex: 0);
         return new BeamLayout(group, leftY: -13, rightY: -13, leftX: 5.0, rightX: 9.0,
-            ImmutableArray.Create(5.0, 9.0));
+            ImmutableArray.Create(5.0, 9.0), staffIndex: 0, systemIndex: 0);
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public class SkylineStaffSpacingTests
         var measureLayouts = CreateSimpleMeasureLayouts(2);
 
         var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-        double height = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts);
+        double height = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts, systemIndex: 0);
         double heightFixed = layouter.CalculateSystemHeight(score);
 
         // Notes in the middle of both staves cannot reach across the gap, so the alignment
@@ -188,7 +188,7 @@ public class SkylineStaffSpacingTests
         var measureLayouts = CreateSimpleMeasureLayouts(1);
 
         var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-        double skylineHeight = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts);
+        double skylineHeight = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts, systemIndex: 0);
         double fixedHeight = layouter.CalculateSystemHeight(score);
 
         // ⚠️ STRICTLY greater, which is what the test's name claims. The old assertion was
@@ -214,7 +214,8 @@ public class SkylineStaffSpacingTests
         var measureLayouts = CreateSimpleMeasureLayouts(1);
 
         var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-        var groups = layouter.LayoutStaffGroups(score, skylineBuilder, measureLayouts);
+        var groups = layouter.LayoutStaffGroups(
+            score, skylineBuilder, measureLayouts, systemIndex: 0);
 
         Assert.Single(groups);
         var grandStaff = groups[0];
@@ -255,7 +256,7 @@ public class SkylineStaffSpacingTests
         var measureLayouts = CreateSimpleMeasureLayouts(0);
 
         var layouter = new MultiStaffLayouter(DefaultOptions, MeasureLayouter);
-        double skylineHeight = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts);
+        double skylineHeight = layouter.CalculateSystemHeight(score, skylineBuilder, measureLayouts, systemIndex: 0);
         double fixedHeight = layouter.CalculateSystemHeight(score);
 
         // With empty skylines, should fall back to the same as fixed formula
@@ -420,7 +421,8 @@ public class SkylineStaffSpacingTests
 
         var skylines = new MultiStaffLayouter(DefaultOptions, new MeasureLayouter())
             .BuildStaffSkylines(
-                score, new SkylineBuilder(DefaultOptions.StaffHeight), layout.Systems[0].Measures);
+                score, new SkylineBuilder(DefaultOptions.StaffHeight),
+                layout.Systems[0].Measures, systemIndex: 0);
 
         // Staff 0 is the chord row (`chords prog` comes first in the score block).
         // The em AND the series come from the engraving defaults rather than literals — see

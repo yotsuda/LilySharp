@@ -149,7 +149,7 @@ public class CrossStaffTests
             new BeamMember(CreateNote(2), 1, 1, 1, 2, 1, targetStaffIndex: 1));
         var group = new BeamGroup(members, 0, 0, true);
         var layout = new BeamLayout(group, 0, 0, 0, 10,
-            ImmutableArray.Create(0.0, 10.0), 0,
+            ImmutableArray.Create(0.0, 10.0), staffIndex: 0, systemIndex: 0,
             ImmutableArray.Create(0, 1));
         Assert.True(layout.IsCrossStaff);
         Assert.Equal(2, layout.MemberStaffIndices.Length);
@@ -163,7 +163,7 @@ public class CrossStaffTests
             new BeamMember(CreateNote(2), 1, 1, 1, 2, 1));
         var group = new BeamGroup(members, 0, 0, true);
         var layout = new BeamLayout(group, 0, 0, 0, 10,
-            ImmutableArray.Create(0.0, 10.0));
+            ImmutableArray.Create(0.0, 10.0), staffIndex: 0, systemIndex: 0);
         Assert.False(layout.IsCrossStaff);
         Assert.True(layout.MemberStaffIndices.IsEmpty);
     }

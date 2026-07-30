@@ -150,8 +150,10 @@ internal static class ChordNameEngraver
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
 
-        // The top staff's chord line is the only one the system up-skyline describes;
-        // lower-staff chords keep the fixed offset (their staff's skyline isn't here).
+        // The top staff's chord line is the only one the system up-skyline describes; a
+        // lower staff's row reads its OWN up-skyline through lowerStaffUpSkyline. (This
+        // comment said "lower-staff chords keep the fixed offset" for longer than that was
+        // true, and a 2026-07-30 handoff entry quoted it as evidence that they still do.)
         // The topmost-staff offset is resolved per chord (minStaffYAt), because under
         // hara-kiri the set of visible staves — and thus the minimum offset — can
         // differ between systems.

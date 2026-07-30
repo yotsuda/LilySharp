@@ -254,8 +254,28 @@ public sealed record BeamLayout
     /// <summary>X positions for each member (in staff spaces).</summary>
     public ImmutableArray<double> MemberXPositions { get; }
 
-    /// <summary>Staff index for multi-staff scores (-1 for single-staff).</summary>
+    /// <summary>The staff this beam is on.</summary>
+    /// <remarks>
+    /// ⚠️ TWO PRODUCERS SPELL THIS DIFFERENTLY, and that is documented rather than fixed:
+    /// <c>LayoutEngine.LayoutAllSpanners</c> stamps the staff's GLOBAL index, while
+    /// <c>MultiStaffLayouter.StaffBeamLayouts</c> lays the staff out on a trivial one-staff
+    /// score and stamps 0 (its consumer re-stamps — see that method's remarks). Only the
+    /// former's beams are ever SELECTED by staff; the latter's are geometry for one
+    /// already-chosen staff.
+    /// </remarks>
     public int StaffIndex { get; }
+
+    /// <summary>The system this beam was laid out in — the X positions are in ITS frame.</summary>
+    /// <remarks>
+    /// ⚠️ CARRIED, NOT RECOVERED, and that is the whole point of the field. LilyPond never
+    /// asks this question: a Beam grob hangs off one System's VerticalAxisGroup, so "which
+    /// system is this beam in" is answered by its parentage and a score-wide beam list does
+    /// not exist to be mis-filtered. Lily# holds a flat per-score array, and for one session
+    /// its per-staff consumer selected on the staff alone and read another system's beam ink
+    /// (fixed in 50533a8d by recovering the system from the group's measure index — this
+    /// field replaces that recovery with the attribution itself).
+    /// </remarks>
+    public int SystemIndex { get; }
 
     /// <summary>Whether this beam is a cross-staff beam.</summary>
     public bool IsCrossStaff => Group.IsCrossStaff;
@@ -273,6 +293,14 @@ public sealed record BeamLayout
     public ImmutableArray<int> MemberStaffIndices { get; }
 
     /// <summary>Creates a computed beam layout for the given beam group.</summary>
+    /// <remarks>
+    /// ⚠️ <paramref name="staffIndex"/> AND <paramref name="systemIndex"/> HAVE NO DEFAULTS,
+    /// deliberately: a beam that does not know where it is cannot be selected, and a
+    /// selection that silently matches nothing is the shape of the defect 50533a8d fixed
+    /// (the profile read no beams at all on one path and phantom ones on another). Both
+    /// producers know both answers at the point they build the grob, which is LilyPond's
+    /// shape — a grob is created inside its parent.
+    /// </remarks>
     public BeamLayout(
         BeamGroup group,
         double leftY,
@@ -280,7 +308,8 @@ public sealed record BeamLayout
         double leftX,
         double rightX,
         ImmutableArray<double> memberXPositions,
-        int staffIndex = -1,
+        int staffIndex,
+        int systemIndex,
         ImmutableArray<int> memberStaffIndices = default)
     {
         Group = group;
@@ -290,6 +319,7 @@ public sealed record BeamLayout
         RightX = rightX;
         MemberXPositions = memberXPositions;
         StaffIndex = staffIndex;
+        SystemIndex = systemIndex;
         MemberStaffIndices = memberStaffIndices.IsDefault ? ImmutableArray<int>.Empty : memberStaffIndices;
     }
 

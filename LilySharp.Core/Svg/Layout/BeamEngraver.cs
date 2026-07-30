@@ -43,8 +43,9 @@ internal sealed class BeamEngraver
     public BeamLayout CalculateBeamLayout(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
-        IReadOnlyList<BeamCollision>? collisions = null,
-        int staffIndex = -1)
+        int staffIndex,
+        int systemIndex,
+        IReadOnlyList<BeamCollision>? collisions = null)
     {
         if (group.Members.Length < 2)
             throw new ArgumentException("Beam group must have at least 2 members");
@@ -62,6 +63,7 @@ internal sealed class BeamEngraver
             group, itemXPositions, _parameters, collisions);
         var (leftY, rightY) = problem.Solve();
 
-        return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex);
+        return new BeamLayout(
+            group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex, systemIndex);
     }
 }

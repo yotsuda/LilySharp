@@ -1492,8 +1492,9 @@ internal sealed class MultiStaffLayouter
     /// </para>
     /// </remarks>
     public double CalculateSystemHeight(
-        MultiStaffScore score, SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
-        => SystemHeightOf(LayoutStaffGroups(score, skylineBuilder, measureLayouts));
+        MultiStaffScore score, SkylineBuilder skylineBuilder,
+        ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
+        => SystemHeightOf(LayoutStaffGroups(score, skylineBuilder, measureLayouts, systemIndex));
 
     /// <summary>
     /// The height of a system: the Y-extent of the staff groups AS PLACED.
@@ -1545,9 +1546,11 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
-        SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
+        SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts,
+        int systemIndex)
         => LayoutStaffGroups(
-            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts), NothingDies);
+            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex),
+            NothingDies);
 
     /// <summary>
     /// Layouts all staff groups for ONE system, hiding the staves that are empty across
@@ -1561,9 +1564,9 @@ internal sealed class MultiStaffLayouter
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
         MultiStaffScore score,
         SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts,
-        int startMeasure, int endMeasure, bool isFirstSystem)
+        int startMeasure, int endMeasure, bool isFirstSystem, int systemIndex)
         => LayoutStaffGroups(
-            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts),
+            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex),
             startMeasure, endMeasure, isFirstSystem);
 
     /// <summary>
@@ -1592,8 +1595,8 @@ internal sealed class MultiStaffLayouter
     /// <summary>Builds the per-staff skylines one system is placed and sprung against.</summary>
     internal List<(VerticalSkyline Up, VerticalSkyline Down)> BuildStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
-        ImmutableArray<MeasureLayout> measureLayouts)
-        => BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
+        ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
+        => BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex);
 
     /// <summary>
     /// THE staff-group placement: one walk over the alignment's surviving elements.
@@ -1909,7 +1912,7 @@ internal sealed class MultiStaffLayouter
     /// </summary>
     private List<(VerticalSkyline Up, VerticalSkyline Down)> BuildAllStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
     {
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
 
@@ -1930,7 +1933,7 @@ internal sealed class MultiStaffLayouter
                 // staff-local extent so the inter-staff gap widens to clear them.
                 var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
                     staff, thisStaff, score.Articulations, measureLayouts);
-                var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts);
+                var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts, systemIndex);
                 var tupletBrackets = StaffTupletBracketLayouts(
                     score, staff, thisStaff, measureLayouts, beams);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
@@ -2090,7 +2093,8 @@ internal sealed class MultiStaffLayouter
             ? beamLayouts
             : beamLayouts.Select(b1 => new BeamLayout(
                 b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX,
-                b1.MemberXPositions, staffIndex, b1.MemberStaffIndices)).ToImmutableArray();
+                b1.MemberXPositions, staffIndex, b1.SystemIndex,
+                b1.MemberStaffIndices)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
             staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
             beamGroups.ToImmutable(), beamLayouts: staffBeams,
@@ -2197,16 +2201,23 @@ internal sealed class MultiStaffLayouter
     /// one. audit/lp-geometry system.beam-{under,over}-notes.
     /// </para>
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ <paramref name="systemIndex"/> IS THE REAL SYSTEM'S, not the trivial layout's 0. The
+    /// trivial system exists to give the beams the staff's own frame; the index the beams are
+    /// STAMPED with has to be the one their X positions actually belong to, or the attribution
+    /// would lie about a quantity a consumer selects on (BeamLayout.SystemIndex). It is inert
+    /// to the layout itself — a one-system measure map has one group whatever it is numbered.
+    /// </remarks>
     internal ImmutableArray<BeamLayout> StaffBeamLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
     {
         var staffLayout = new StaffLayout(
             0, staff.Clef, Y: 0, Height: _options.StaffHeight,
             StaffAffinity: staff.StaffAffinity);
         var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
         var system = new SystemLayout(
-            SystemIndex: 0, Y: 0,
+            SystemIndex: systemIndex, Y: 0,
             Width: _options.ContentWidth,
             PrefixWidth: 0,
             Measures: measureLayouts,

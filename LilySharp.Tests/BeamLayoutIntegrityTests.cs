@@ -60,7 +60,7 @@ public class BeamLayoutIntegrityTests
         var system = new SystemLayout(0, 0, 100, 0, ImmutableArray.Create(measureLayout));
 
         var beams = new ElementCoordinator(LayoutOptions.Default)
-            .LayoutBeams(score, ImmutableArray.Create(system));
+            .LayoutBeams(score, ImmutableArray.Create(system), staffIndex: 0);
 
         Assert.Empty(beams); // skipped, and no ArgumentOutOfRangeException
     }
