@@ -96,6 +96,23 @@ internal static class BassFigureAlignment
     /// distance is taken between SKYLINES (align-interface.cc:71-88 reads the lines' own
     /// <c>vertical-skylines</c>, not their bounding boxes) rather than per column.
     /// </para>
+    /// <para>
+    /// ⚠️ TWO BRANCHES OF THAT LOOP ARE ABSENT HERE, and neither is a shortcut — LilyPond does
+    /// not reach them for THIS grob, which is a different thing from Lily# skipping them
+    /// (HANDOFF §5.2, "LilyPond computes it, so we compute it"):
+    /// <list type="number">
+    /// <item>THE SPACEABLE BRANCH (:240-268, the constraint from the previous spaceable staff,
+    /// and <c>get_fixed_spacing</c>) is gated on <c>include_fixed_spacing</c>, which :185-186
+    /// sets to false whenever the alignment's Y-parent is not a System — and it names
+    /// BassFigureAlignment as the example. It is dead for every figure row there can be.</item>
+    /// <item>THE FIRST ELEMENT'S <c>dy</c> (:217-219) is
+    /// <c>max_height + padding</c> with the ALIGNMENT's own padding, i.e. <c>-inf</c> here, so
+    /// <c>max (0.0, dy)</c> at :271 makes it 0 — which is what entry 0 is. Its back-patch of
+    /// EARLIER (empty) elements would write <c>-stacking_dir * -inf</c> into them; that path
+    /// cannot run for a figure row, since row 0 is empty only when the alignment has no
+    /// figures at all, and this returns an empty array for that.</item>
+    /// </list>
+    /// </para>
     /// </remarks>
     internal static ImmutableArray<double> RowOffsets(IReadOnlyList<Column> columns)
     {

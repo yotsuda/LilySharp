@@ -2299,6 +2299,140 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// Builds the figured-bass PAGE books — the mirrors of figured-bass-page.ly's FBPQ / FBPD
+    /// / FBPN, which read what a figure row does to the foot of a page rather than where it
+    /// sits.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// One builder for all three so they cannot drift: the control is the quiet book with
+    /// <paramref name="figures"/> false and nothing else changed, which is what makes
+    /// LilyPond's difference between them the row's own contribution (HANDOFF §5.0 — a pair
+    /// whose halves are hand-copied has drifted apart twice).
+    /// </para>
+    /// <para>
+    /// 100 bars, because the reading needs a page that is FULL (so the foot spring is on its
+    /// floor rather than taking the page's force) and NOT THE LAST (so nothing suppresses the
+    /// justification). Fourteen systems at this width: twelve on page 1, two on page 2 —
+    /// asserted by the three <c>systems-on-first-page</c> entries, since every distance here
+    /// is read from "the last staff of page 1".
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FIGURES ARE ON EVERY BAR, not just the last system's. The two engines need not
+    /// break lines identically, and a row parked at the end alone would land on different
+    /// systems on the two sides.
+    /// </para>
+    /// <para>
+    /// ⚠️ The stem direction is forced per note for the reason the placement books force it:
+    /// the quiet texture's middle-line d would default DOWN and reach below the staff, which
+    /// is the one thing that texture must not do.
+    /// </para>
+    /// </remarks>
+    private static string FiguredPageScore(string tag, string note, string stem, bool figures)
+    {
+        string fig = figures ? "@fig(5 3)" : "";
+        string bar = $"{note}4@{stem}{fig} {note}@{stem} {note}@{stem} {note}@{stem} | ";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part fig { clef bass }
+
+            section Main {
+              fig { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{tag}}" {
+              staff ~fig
+            }
+            """;
+    }
+
+    /// <summary>The QUIET page book — the mirror of FBPQ. The row is the deepest ink the
+    /// music has, and the smallest row there can be.</summary>
+    private static readonly string FBPQ = FiguredPageScore("FBPQ", "d,", "stemUp", figures: true);
+
+    /// <summary>The DEEP page book — the mirror of FBPD. Two ledger lines below the staff with
+    /// stems forced down, so the column pushes the row far under it.</summary>
+    private static readonly string FBPD = FiguredPageScore("FBPD", "c,,", "stemDown", figures: true);
+
+    /// <summary>The CONTROL — the mirror of FBPN: FBPQ without the figures.</summary>
+    private static readonly string FBPN = FiguredPageScore("FBPN", "d,", "stemUp", figures: false);
+
+    /// <summary>
+    /// The same page books pointed at a BELOW-STAFF ANNOTATION instead of a figure row — the
+    /// mirrors of dynamic-page.ly's DYPQ / DYPD / DYPH.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Same builder shape, same paper, same two textures as
+    /// <see cref="FiguredPageScore"/>, so a difference between the two probes is the
+    /// ANNOTATION and not the music. The control is not repeated: FBPN is this exact music
+    /// with nothing hanging below it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE HAIRPIN SPELLING IS NOT LILYPOND'S, and the probe's header says so at length:
+    /// LilyPond ends a hairpin with <c>\!</c> and Lily# has no terminator (its grammar ends
+    /// one at the next dynamic — docs/GRAMMAR.md:544), so with no dynamic anywhere the two
+    /// sides put a hairpin under every bar but end them one note apart. Measured before the
+    /// book was written: three per-bar <c>@cresc</c> marks draw two hairpins, each spanning
+    /// into the next one's start. The reading is the ink's DEPTH under a uniform texture, so
+    /// it cannot depend on where a hairpin stops — but this book must not be reused for an X
+    /// or a broken-spanner reading.
+    /// </para>
+    /// </remarks>
+    private static string AnnotatedPageScore(string tag, string note, string stem, string mark)
+    {
+        string bar = $"{note}4@{stem}{mark} {note}@{stem} {note}@{stem} {note}@{stem} | ";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part ann { clef bass }
+
+            section Main {
+              ann { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
+            }
+
+            form main { ~Main }
+
+            score main "{{tag}}" {
+              staff ~ann
+            }
+            """;
+    }
+
+    /// <summary>A dynamic under the QUIET texture — the mirror of DYPQ, and the book in which
+    /// the estimate's 2.0 can bind.</summary>
+    private static readonly string DYPQ = AnnotatedPageScore("DYPQ", "d,", "stemUp", "@f");
+
+    /// <summary>The same dynamic under the DEEP texture — the mirror of DYPD.</summary>
+    private static readonly string DYPD = AnnotatedPageScore("DYPD", "c,,", "stemDown", "@f");
+
+    /// <summary>A HAIRPIN and no dynamic text at all — the mirror of DYPH, and the only state
+    /// in which the estimate's 1.5 branch runs (it is gated on there being no dynamics).</summary>
+    private static readonly string DYPH = AnnotatedPageScore("DYPH", "d,", "stemUp", "@cresc");
+
+    /// <summary>
+    /// Twelve systems to a page, the paper figured-bass-page.ly's three books set — enough of
+    /// this one-staff music that the page is full and its foot spring sits on its floor.
+    /// </summary>
+    /// <remarks>
+    /// <c>max-systems-per-page</c> is a <c>\paper</c> variable in LilyPond, so it is set here
+    /// for the same reason <see cref="SixSystemsPerPage"/>'s cap is — see
+    /// <see cref="RenderedGeometry.Render"/>.
+    /// </remarks>
+    private static readonly LayoutOptions TwelveSystemsPerPage =
+        LayoutOptions.Default with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { MaxSystemsPerPage = 12 },
+        };
+
+    /// <summary>
     /// THE METRONOME MARK's baseline over the staff — the mirrors of tempo-mark.ly's
     /// books TMQ / TMT, the tempo island's first points (USER DIRECTIVE 2026-07-29:
     /// tempo does not mimic LilyPond; fix tempo first).
@@ -5220,6 +5354,60 @@ internal static class LpGeometryProbes
         // right place while reserving nothing prints them through the staff below.
         new("figbass.upper-staff.staff-gap", FBB, g => g.StaffGap(), RaggedBottomPaper),
         new("figbass.lower-staff.staff-gap", FBC, g => g.StaffGap(), RaggedBottomPaper),
+
+        // --- what a figure row costs THE PAGE (books FBPQ / FBPD / FBPN) ---
+        // The island's third spelling of the row depth is LayoutEngine.EstimateLooseLineExtents'
+        // `2.0 + n * 1.5`, a LilyPond-less formula the session-45 port could not fold in because
+        // nothing watched it: its effect is a page height, and every figured-bass point so far
+        // measures a placement or a staff gap. These read the foot of the page's spring chain
+        // (last-bottom-spacing, page-layout-problem.cc:538-545), the one term in which the ink
+        // hanging BELOW the last staff stands alone — the same quantity page.{stretched,
+        // compressed}.last-staff-to-foot read on JSS/JSK, here on a music that hangs a figure
+        // row there.
+        //
+        // THE PAIR IS A FORK: the invention is a constant in the texture (5.000000 for two
+        // rows), so the QUIET book's real ink loses to it and the DEEP book's beats it. One
+        // prices the over-reservation; the other says whether the real row is in the system's
+        // silhouette at all, which decides whether the port is a deletion or a merge.
+        // The CONTROL is the quiet music with the figures taken out — LilyPond's difference
+        // between the two IS the row's contribution, and on this side it is the net: no
+        // figures means none of the five figured-bass guards is even entered.
+        new("figbass.page.quiet.last-staff-to-foot", FBPQ,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        new("figbass.page.deep.last-staff-to-foot", FBPD,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        new("figbass.page.control.last-staff-to-foot", FBPN,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        // Every reading above is taken from THE LAST STAFF OF PAGE 1, which means that staff
+        // only while the page holds the systems the probe assumes (HANDOFF §5.0 trap 8) — and
+        // the count carries the regime too: a page that is not full opens the foot spring, and
+        // a page 1 that is also the LAST page is not justified at all.
+        new("figbass.page.quiet.systems-on-first-page", FBPQ,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
+        new("figbass.page.deep.systems-on-first-page", FBPD,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
+        new("figbass.page.control.systems-on-first-page", FBPN,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
+
+        // --- the same reading for the DYNAMIC family (books DYPQ / DYPD / DYPH) ---
+        // EstimateLooseLineExtents' next two branches: 2.0 for a dynamic and 1.5 for a
+        // hairpin, both citing DynamicLineSpanner's outside-staff-priority 250, which is a
+        // PRIORITY and not either number. One family in LilyPond's model — a hairpin and a
+        // dynamic text hang off the same DynamicLineSpanner. The control is
+        // figbass.page.control.last-staff-to-foot: this exact paper and this exact quiet
+        // music with nothing hanging below it, so it is referenced rather than duplicated.
+        new("dynamic.page.quiet.last-staff-to-foot", DYPQ,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        new("dynamic.page.deep.last-staff-to-foot", DYPD,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        new("hairpin.page.quiet.last-staff-to-foot", DYPH,
+            g => g.LastStaffRefpointToFoot(), TwelveSystemsPerPage),
+        new("dynamic.page.quiet.systems-on-first-page", DYPQ,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
+        new("dynamic.page.deep.systems-on-first-page", DYPD,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
+        new("hairpin.page.quiet.systems-on-first-page", DYPH,
+            g => g.SystemsOnPage(0), TwelveSystemsPerPage),
 
         // --- where the METRONOME MARK's baseline sits (books TMQ/TMT) ---
         // The tempo island's first points (user-directed, fix tempo first). See

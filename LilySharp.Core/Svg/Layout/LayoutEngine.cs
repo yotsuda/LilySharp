@@ -219,7 +219,6 @@ internal sealed class LayoutEngine
         var inlineChordNames = score.ChordNames
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
         AugmentExtentsWithLooseLines(perSystemExtents,
-            score.Dynamics, score.FiguredBasses,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
             inlineChordNames, perSystemBands, placed.LyricBands);
 
@@ -1021,35 +1020,43 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Estimates the additional down extent contributed by loose lines (lyrics, dynamics, figured bass)
-    /// for a range of measures in a system.
+    /// Estimates the additional UP extent a system's above-staff annotations contribute, for a
+    /// range of measures.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
     /// LILYPOND-REF: lily/axis-group-interface.cc:138-173 pure_height estimation
     /// LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside-staff-priority
-    ///
-    /// In LilyPond, non-spaceable staves (lyrics, dynamics, figured bass) are "loose lines"
-    /// that are distributed between spaceable staves after the main vertical spring calculation.
-    /// We estimate their height contribution so that page breaking accounts for them.
-    ///
-    /// Pure height estimation covers both below-staff (downExtent) and above-staff (upExtent)
-    /// elements so that page breaking can accurately predict system heights.
+    /// <para>
+    /// ⚠️ IT USED TO ESTIMATE THE DOWN SIDE TOO, and was named for that: lyrics, dynamics,
+    /// hairpins and figured bass each had a hand-picked constant here. Every one of them was a
+    /// SECOND model of ink this engine already places and already puts into these extents
+    /// (HANDOFF §5.2.1②), and they went one at a time as observers were opened for them — the
+    /// lyric block to its alignment's own walk, and the other three to
+    /// audit/lp-geometry's {figbass,dynamic,hairpin}.page.* readings in 2026-07-30's sessions.
+    /// LilyPond never had any of them: a system's pure height comes from the same grobs' pure
+    /// extents. ⇒ THE DOWN SIDE IS NOT ESTIMATED AT ALL ANY MORE — it is the down skyline's,
+    /// and the caller's only remaining below-staff term is the lyric block's measured
+    /// reservation, which it holds itself.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IS LEFT HERE IS THE SAME SPECIES, unported: every constant below is
+    /// hand-assembled and its LILYPOND-REF names the grob's outside-staff-priority rather than
+    /// the number. They stand because no reading watches them yet — the page counterpart for
+    /// an ABOVE-staff annotation is the other end of the chain (the top spring, i.e.
+    /// page.*.first-staff-refpoint), which the below-staff trio's book shape does not measure.
+    /// </para>
     /// </remarks>
-    private static (double downExtent, double upExtent, double bandDown, double bandUp) EstimateLooseLineExtents(
-        ImmutableArray<DynamicItem> dynamics,
-        ImmutableArray<FiguredBassItem> figuredBasses,
+    private static (double upExtent, double bandUp) EstimateAboveStaffExtents(
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         int startMeasure, int endMeasure,
         ImmutableArray<ChordNameItem> chordNames = default)
     {
-        double downExtent = 0;
         double upExtent = 0;
-        // Whole-line bands: annotation classes that span the system's full
-        // width (lyric lines below, chord-symbol rows above). These floor the
-        // inter-system skyline distance — see FloorDistance in CreatePages.
-        double bandDown = 0;
+        // A whole-line band: an annotation class that spans the system's full width (a
+        // chord-symbol row). It floors the inter-system skyline distance — see FloorDistance
+        // in CreatePages. The lyric row is the band on the other side and the caller owns it.
         double bandUp = 0;
 
         // LILYPOND-REF: scm/define-grobs.scm ChordName (a TextScript-class grob
@@ -1068,77 +1075,15 @@ internal sealed class LayoutEngine
             }
         }
 
-        // --- Below-staff elements (downExtent) ---
-
-        // ⚠️ NO LYRIC BRANCH HERE ANY MORE. The block's reservation is
-        // LyricReservationBelowSystem — the alignment's own walk over the real syllable ink
-        // and the real staff skyline — and the caller max-es it into the same two figures
-        // this returns. An estimate built from the items alone cannot see either, and while
-        // it existed it was a SECOND model of the walk (HANDOFF 5.2.1②).
-
-        // LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner.outside-staff-priority = 250
-        // Dynamics + hairpins: staffPadding(0.2) + padding(0.6) + textAscent(1.2) = 2.0
-        bool hasDynamic = false;
-        if (!dynamics.IsDefaultOrEmpty)
-        {
-            foreach (var dyn in dynamics)
-            {
-                if (dyn.MeasureIndex >= startMeasure && dyn.MeasureIndex < endMeasure)
-                {
-                    hasDynamic = true;
-                    break;
-                }
-            }
-            if (hasDynamic)
-                downExtent = Math.Max(downExtent, 2.0);
-        }
-
-        // LILYPOND-REF: scm/define-grobs.scm Hairpin — same DynamicLineSpanner (priority 250)
-        // Hairpins share Y level with dynamics; estimate ~1.5 ss if no dynamics
-        if (!musicMarks.IsDefaultOrEmpty && !hasDynamic)
-        {
-            bool hasHairpin = false;
-            foreach (var mark in musicMarks)
-            {
-                if (mark.MeasureIndex >= startMeasure && mark.MeasureIndex < endMeasure
-                    && (mark.Type == MusicMarkType.Cresc || mark.Type == MusicMarkType.Decresc
-                        || mark.Type == MusicMarkType.Dim))
-                {
-                    hasHairpin = true;
-                    break;
-                }
-            }
-            if (hasHairpin)
-                downExtent = Math.Max(downExtent, 1.5);
-        }
-
-        // ⚠️ LILYSHARP-OWN, AND THE THIRD SPELLING OF THE ROW DEPTH — the one the
-        // BassFigureAlignment port (2026-07-30) did NOT fold in. The other two became one
-        // house that session (BassFigureAlignment.RowOffsets, read by the drawing, the
-        // between-staff reservation and the per-measure extent); this estimate still says
-        // "2.0 of padding stack + one 1.5 PER ROW", counting n rows where the row stack has
-        // n−1 steps, and LilyPond has no such formula at all: its pure height comes from the
-        // same grobs' pure extents, not from a second model of them (which is exactly why the
-        // LYRIC branch above was deleted — HANDOFF §5.2.1②).
-        // ⚠️ IT IS LOAD-BEARING, MEASURED, not guessed: zeroing this branch moves
-        // test/figbass-below-script's page height by −0.59 and
-        // test/figbass-chordname-lower-staff's by −0.55, i.e. it is what floors those pages
-        // and it MASKED the ported reservation (which moved them by only −0.01 and −0.05).
-        // showcase/04-advanced does not use it — there the real skyline binds.
-        // ⇒ THE POINT TO OPEN IS A PAGE HEIGHT under a figured-bass row; no ledger entry
-        // watches one today, which is why this is labelled and left (HANDOFF §5.0: no output
-        // change without an observer) instead of being deleted with the port.
-        if (!figuredBasses.IsDefaultOrEmpty)
-        {
-            int maxFigures = 0;
-            foreach (var fb in figuredBasses)
-            {
-                if (fb.MeasureIndex >= startMeasure && fb.MeasureIndex < endMeasure)
-                    maxFigures = Math.Max(maxFigures, fb.Figures.Length);
-            }
-            if (maxFigures > 0)
-                downExtent = Math.Max(downExtent, 2.0 + maxFigures * 1.5);
-        }
+        // ⚠️ THERE IS NO BELOW-STAFF SIDE HERE ANY MORE — see the remarks. The four constants
+        // that used to live here (lyrics, dynamics, hairpins, figured bass) were each a second
+        // model of ink this engine places, and each went once a reading watched it. Two of
+        // them differed in kind and the readings said which was which: the figure row's
+        // OVER-reserved by +1.825204583 (deleting it moved two pages), the dynamic's and the
+        // hairpin's were already DOMINATED by the real placed ink (deleting them moved
+        // nothing). ⚠️ The hairpin's margin was only 0.04 and that was checked rather than
+        // assumed: 3.540000 is the floor for a below-staff hairpin, so no texture can bring
+        // the real ink under the 3.5 the branch offered and it cannot come back to life.
 
         // --- Above-staff elements (upExtent) ---
 
@@ -1188,17 +1133,8 @@ internal sealed class LayoutEngine
             }
         }
 
-        return (downExtent, upExtent, bandDown, bandUp);
+        return (upExtent, bandUp);
     }
-
-    /// <summary>
-    /// Augments per-system extents with estimated loose line heights.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:138-173 pure_height
-    /// Estimates both above-staff (upExtent) and below-staff (downExtent)
-    /// contributions from annotations, so page breaking accounts for full system height.
-    /// </remarks>
 
     /// <summary>
     /// Measures each system's REAL vertical protrusions from a preliminary
@@ -1816,8 +1752,6 @@ internal sealed class LayoutEngine
 
     private static void AugmentExtentsWithLooseLines(
         List<(double upExtent, double downExtent)> perSystemExtents,
-        ImmutableArray<DynamicItem> dynamics,
-        ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         List<(int startMeasure, int measureCount)> systemMeasureRanges,
@@ -1828,20 +1762,17 @@ internal sealed class LayoutEngine
         for (int i = 0; i < perSystemExtents.Count && i < systemMeasureRanges.Count; i++)
         {
             var (start, count) = systemMeasureRanges[i];
-            var (looseDown, looseUp, bandDown, bandUp) = EstimateLooseLineExtents(
-                dynamics, figuredBasses, musicMarks, voltaBrackets,
-                start, start + count, chordNames);
+            var (looseUp, bandUp) = EstimateAboveStaffExtents(
+                musicMarks, voltaBrackets, start, start + count, chordNames);
 
             // The lyric block's reservation is the WALK's, computed per system by
             // LyricReservationBelowSystem where the staff skylines live — not an estimate
-            // made from the items alone. It joins the same two maxima the estimate feeds.
+            // made from the items alone. ⚠️ IT IS NOW THE ONLY BELOW-STAFF TERM here: every
+            // other class reserves through its own placed ink (see EstimateAboveStaffExtents'
+            // remarks for the four constants that went and what measured each one out).
             double lyricBand = i < lyricBands.Count ? lyricBands[i] : 0;
-            if (lyricBand > 0)
-            {
-                looseDown = Math.Max(looseDown, lyricBand);
-                bandDown = Math.Max(bandDown, lyricBand);
-            }
-            perSystemBands?.Add((bandUp, bandDown));
+            double looseDown = lyricBand;
+            perSystemBands?.Add((bandUp, lyricBand));
 
             var ext = perSystemExtents[i];
             if (looseDown > 0 || looseUp > 0)

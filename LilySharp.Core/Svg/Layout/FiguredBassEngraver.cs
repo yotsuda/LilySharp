@@ -141,8 +141,19 @@ internal static class FiguredBassEngraver
     /// (<see cref="ApplySkylineDrop"/>) and by the reservation
     /// (<see cref="RowInkBelowStaff"/>). ⚠️ AND THERE IS A THIRD SPELLING that this does NOT
     /// yet cover: <c>LayoutEngine</c>'s inter-SYSTEM seed uses <see cref="MinFigureBoxWidth"/>
-    /// as a HALF-width where these two use it as a full one. Left alone deliberately —
-    /// changing it moves the page's system spacing, which no figured-bass point observes yet.
+    /// as a HALF-width where these two use it as a full one — a box 1.6 wide against a glyph
+    /// run of 0.898.
+    /// <para>
+    /// ⚠️ ITS "changing it moves the page's system spacing" IS FALSIFIED, and by measurement
+    /// rather than by reading (2026-07-30, session 46): halving that seed to the same
+    /// full-width these two use leaves ALL 3566 tests and all 237 ledger points untouched —
+    /// including figbass.page.deep.systems-on-first-page, the first point that DOES watch a
+    /// figured-bass page's system spacing and which stands at -2 for a reason this width is
+    /// not. So the seed is inert on everything committed, and the confusion is a spelling
+    /// debt, not a live defect. It closes with the X pair (HANDOFF's figured-bass ⒝), because
+    /// the literal answer is neither number: LilyPond's BassFigure has its stencil's X-extent,
+    /// which is <see cref="FiguredBassGlyphRun.Width"/>, left-aligned in its line.
+    /// </para>
     /// </remarks>
     internal static VerticalSkyline ColumnUpSkyline(double x, string topFigureText)
         => VerticalSkyline.FromBox(

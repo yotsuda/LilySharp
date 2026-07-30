@@ -241,10 +241,11 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// LILYPOND-REF: lily/axis-group-interface.cc:138-173 pure_height
     ///
-    /// Pure height = base staff spacing + estimated loose line heights (lyrics, dynamics, etc.)
+    /// Pure height = base staff spacing + the extents the caller hands in.
     /// This allows the page breaker to account for variable system heights without
-    /// requiring full layout. The base height comes from CalculateSystemHeight;
-    /// the loose line extents are provided by the caller (from LayoutEngine.EstimateLooseLineExtents).
+    /// requiring full layout. The base height comes from CalculateSystemHeight; the extents
+    /// come from LayoutEngine (the placed annotations' own protrusions, the lyric block's
+    /// measured reservation, and — above the staff only — LayoutEngine.EstimateAboveStaffExtents).
     /// </remarks>
     public double CalculatePureSystemHeight(MultiStaffScore score, double looseDownExtent, double looseUpExtent)
     {
