@@ -16,6 +16,7 @@
 
 using Xunit;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using System.Collections.Immutable;
@@ -160,39 +161,58 @@ public class NoteColumnLayoutTests
         Assert.Equal(2.0 - (2.0 + (3.5 - 5.0 / 6.0)), col.OutwardTipDeviceY(towardUp: true), 9);
     }
 
-    // ── The dynamics/trill raw support model (LILYSHARP-OWN, pinned) ──────────────
+    // ── The trill support model (drawn stem end, ledger-gated) ────────────────────
 
     [Fact]
-    public void RawSupportEdge_StemSide_IsTheRawDefaultLength()
+    public void SupportEdge_StemSide_IsTheDrawnStemEnd()
     {
-        // The TRILL's support still extends by the RAW DefaultStemLength 3.5 — no
-        // shortening, no middle-line pull, no beam face. This test PINS the deviation.
-        // The DYNAMICS left this read in session 37 (their five points measured the
-        // support as POINTWISE — DynamicEngraver.ColumnSupportSkylines); what remains
-        // here is the trill's aligned_side support (ColumnUpEdge), which has no point
-        // of its own yet — accidental drift in EITHER direction fails here.
+        // The trill's support reads the DRAWN stem end — shortened, middle-line
+        // pulled, beam-quanted — via the same house the tuplet encompass reads
+        // (OutwardTipDeviceY). PORTED 2026-07-30, gated by ledger
+        // trill.{shortened-stem,beam-face,stemless-control}.staff-to-line: LilyPond's
+        // support edge is the drawn tip (TLS measured 6.5 where the old raw model
+        // said 7.5 — that raw pin retired with the port, as its own comment demanded).
+        // FULL SHORTEN: forced-up quarter at +8 → 4.0 + (3.5 − 1.0) = 6.5, the TLS
+        // number. LILYPOND-REF: lily/stem.cc:519-555 (shorten when dir*hp[dir] >= 0).
+        var forcedUp = NoteColumnLayout.Of(
+            Note(8, Fraction.Quarter), forcedStemUp: true)!.Value;
+        Assert.Equal(6.5, forcedUp.SupportEdgeUp(up: true), 9);
+
+        // A natural-direction stem is NOT shortened: the up stem from −2 still ends
+        // at −1.0 + 3.5 — the raw and drawn models agree off the shortening regimes.
         var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // natural: up
         Assert.True(note.StemUp);
-        Assert.Equal(-1.0 + 3.5, note.RawSupportEdgeUp(up: true), 12);
+        Assert.Equal(-1.0 + 3.5, note.SupportEdgeUp(up: true), 12);
 
+        // ONE house, two frames: the stem side IS OutwardTipDeviceY's model, converted
+        // from the staff-top device frame — a second stem model here would be the
+        // §5.2.1② shape this record exists to prevent.
+        Assert.Equal(
+            EngravingDefaults.StaffMiddle - note.OutwardTipDeviceY(towardUp: true),
+            note.SupportEdgeUp(up: true), 12);
         var chord = NoteColumnLayout.Of(Chord(Fraction.Quarter, -2, 4))!.Value; // natural: down
         Assert.False(chord.StemUp);
-        Assert.Equal(-1.0 - 3.5, chord.RawSupportEdgeUp(up: false), 12);
+        Assert.Equal(
+            EngravingDefaults.StaffMiddle - chord.OutwardTipDeviceY(towardUp: false),
+            chord.SupportEdgeUp(up: false), 12);
     }
 
     [Fact]
-    public void RawSupportEdge_HeadSide_IsTheGlyphInk()
+    public void SupportEdge_HeadSide_IsTheGlyphInk()
     {
         // The no-stem side reads the head's LILC glyph ink (±0.545 — the extent LilyPond
-        // itself dumps for the black head), not the nominal half space.
+        // itself dumps for the black head), not the nominal half space. UNCHANGED by the
+        // drawn-stem port: the TLW control landed 0 exact on this branch and must not move.
         // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents.
         var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // stem up
-        Assert.InRange(note.RawSupportEdgeUp(up: false), -1.56, -1.53);
+        Assert.InRange(note.SupportEdgeUp(up: false), -1.56, -1.53);
 
-        // Multi-voice forcing is the CALLER's policy and flips which side has the stem.
+        // Multi-voice forcing is the CALLER's policy and flips which side has the stem
+        // — and the forced (unnatural) direction now takes the drawn shortening:
+        // head +4, shorten 1/3·(1+4)/2 = 5/6 (the OutwardTipDeviceY arithmetic above).
         var forcedUp = NoteColumnLayout.Of(
             Chord(Fraction.Quarter, -2, 4), forcedStemUp: true)!.Value;
-        Assert.Equal(2.0 + 3.5, forcedUp.RawSupportEdgeUp(up: true), 12);
+        Assert.Equal(2.0 + 3.5 - 5.0 / 6.0, forcedUp.SupportEdgeUp(up: true), 12);
     }
 
     // ── The skyline seed's length model ───────────────────────────────────────────

@@ -1886,6 +1886,120 @@ internal static class LpGeometryProbes
         "c'''4@rit c''' c''' c''' | c'''4 c''' c''' c''' |");
 
     /// <summary>
+    /// THE TRILL LINE over a REAL stemmed column — the mirrors of
+    /// trill-stem-support.ly's books TLS / TLB / TLW, the points that gate the LAST
+    /// raw-3.5 read (<c>NoteColumnLayout.RawSupportEdgeUp</c>, the trill's support
+    /// since the dynamics left it in session 37).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/trill-stem-support.ly, 2026-07-30; every
+    /// prediction landed on its primary branch, six-digit). The trill's facing DOWN
+    /// profile is FLAT — LilyPond wraps the left-bound text in its own "straight line
+    /// as the vertical skyline" device (define-grobs.scm:4054-4068) — so the support
+    /// reading is the SCALAR max of the spanned columns' up edges: a scalar CAN serve
+    /// the trill, unlike the dynamics' pointwise support. Lily#'s scalar is just the
+    /// wrong one (the raw 3.5).
+    /// <list type="bullet">
+    /// <item>TLS (voice-one c at drawn position +8, forced-up = FULLY SHORTENED
+    /// quarter): line at 8.000000 = drawn tip 6.5 (dumped Stem ext upper 6.500000;
+    /// stem.cc:519-555 shortens whenever dir*hp[dir] &gt;= 0 — full 2.0 half-spaces at
+    /// which_step 9) + trill padding 0.5 + glyph reach 1.0. The 0.46-pass candidate
+    /// (7.96) lost: aligned_side's support wins.</item>
+    /// <item>TLB (the same columns as forced-up beamed PAIRS): 8.240000 = the quanted
+    /// beam's outer face 6.74 (the drawn Stem ends AT the face: Stem ext upper ==
+    /// Beam ext upper, 6.740000) + 0.5 + 1.0 — aligned_side again, where the
+    /// dynamics' DSB was won by the 0.46 pass. The beamed quant sits 0.24 ABOVE the
+    /// unbeamed shortened tip.</item>
+    /// <item>TLW (the control: whole notes; the Stem grobs dump EMPTY extents):
+    /// 6.045000 = head box top 4.545 (4.0 + half-ink 0.545) + 0.5 + 1.0.
+    /// TLS − TLW = 1.955 isolates the stem term with the trill chain cancelled.</item>
+    /// </list>
+    /// Voice two is spacer rests only: it makes both engines run their two-voice stem
+    /// forcing (a per-note <c>@stemUp</c> cannot serve — Lily#'s BEAM direction
+    /// ignores the per-note override while the voice forcing steers it,
+    /// <c>BeamDetector.DefaultBeamStemUp</c>) and contributes no ink anywhere.
+    /// LilyPond twin (TLS): <c>&lt;&lt; { \voiceOne c'''4\startTrillSpan c''' c'''
+    /// c'''\stopTrillSpan } \\ { s1 } &gt;&gt;</c>.
+    /// <para>
+    /// PORTED (same day): <c>NoteColumnLayout.SupportEdgeUp</c>'s stem branch converts
+    /// <c>OutwardTipDeviceY</c> (one house, two frames) and the trill engraver hands
+    /// <c>ColumnUpEdge</c> the beam-member lookup. TLS and TLB landed 0 NINE-DIGIT
+    /// EXACT, TLW unmoved; the corpus stayed byte-identical as a RESULT (no fixture
+    /// spans a trill over a shortened or beamed same-direction stem column).
+    /// </para>
+    /// </remarks>
+    private static string TrillStemSupportScore(
+        string name, string voiceOne, string voiceTwo) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { voice { {{voiceOne}} } voice { {{voiceTwo}} } }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>The fully shortened forced-up quarter: LP reads the drawn tip 6.5.</summary>
+    private static readonly string TLS = TrillStemSupportScore("TLS",
+        "c''4@startTrillSpan c'' c'' c''@stopTrillSpan |", "s1 |");
+
+    /// <summary>The forced-up beamed pairs: LP reads the quanted face 6.74.</summary>
+    private static readonly string TLB = TrillStemSupportScore("TLB",
+        "c''8[@startTrillSpan c''] c''[ c''] c''[ c''] c''[ c''@stopTrillSpan] |", "s1 |");
+
+    /// <summary>The whole-note control: no stem ink; the head chain isolator.</summary>
+    private static readonly string TLW = TrillStemSupportScore("TLW",
+        "c''1@startTrillSpan | c'1@stopTrillSpan |", "s1 | s1 |");
+
+    /// <summary>Round 2 (the X pair): the tall shortened column FIRST, under the tr
+    /// glyph — both X hypotheses read 8.000000 here.</summary>
+    private static readonly string TXG = TrillStemSupportScore("TXG",
+        "c''4@startTrillSpan c c c@stopTrillSpan |", "s1 |");
+
+    /// <summary>Round 2 (the X pair): the tall column LAST, under the WAVE. LilyPond
+    /// measured 4.720721 = the stop column's LEDGER ink 4.05 + 0.5 + the wave's own
+    /// reach 0.170721 — aligned_side is POINTWISE for the trill too, and Lily#'s
+    /// scalar max reads 8.0 (the X-blindness defect this entry gates).</summary>
+    private static readonly string TXW = TrillStemSupportScore("TXW",
+        "c4@startTrillSpan c c c''@stopTrillSpan |", "s1 |");
+
+    /// <summary>Round 2: SLOPED forced-up beamed pairs, high member first — the
+    /// support is the high member's drawn stem end (the face at ITS X, not the beam
+    /// envelope's corner).</summary>
+    private static readonly string TSB = TrillStemSupportScore("TSB",
+        "c''8[@startTrillSpan a'] c''[ a'] c''[ a'] c''[ a'@stopTrillSpan] |", "s1 |");
+
+    /// <summary>Round 2: a fermata on the first note of a trill over natural-down
+    /// columns (single voice — voice-1 forcing would flip the fermata below). LilyPond's
+    /// fermata carries outside-staff-priority 75 &gt; trill 50, so the TRILL stays at
+    /// its quiet 3.55 and the fermata clears IT.</summary>
+    private static readonly string TSP = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { c'4@fermata@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "TSP" {
+          staff mel
+        }
+        """;
+
+    /// <summary>
     /// THE METRONOME MARK's baseline over the staff — the mirrors of tempo-mark.ly's
     /// books TMQ / TMT, the tempo island's first points (USER DIRECTIVE 2026-07-29:
     /// tempo does not mimic LilyPond; fix tempo first).
@@ -4712,6 +4826,36 @@ internal static class LpGeometryProbes
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
         new("textspanner.support.staff-to-line", TSC,
             g => g.TextSpannerLineAboveStaff(), RaggedBottomPaper),
+
+        // --- the TRILL LINE over a REAL stemmed column (books TLS/TLB/TLW) ---
+        // The points that gated the LAST raw-3.5 read out (now
+        // NoteColumnLayout.SupportEdgeUp -> DynamicEngraver.ColumnUpEdge -> the trill
+        // engraver's aligned_side; ported same-day, TLS/TLB nine-digit exact). See
+        // TrillStemSupportScore for the measured decomposition: the trill's facing
+        // profile is FLAT, so a scalar support edge CAN serve it — its value is the
+        // DRAWN tip (shortened / beam-quanted), which the pre-port raw 3.5 was blind
+        // to (TLS ≡ TLB nine-digit was the blindness falsifier, and it fired).
+        new("trill.shortened-stem.staff-to-line", TLS,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.beam-face.staff-to-line", TLB,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.stemless-control.staff-to-line", TLW,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        // Round 2 — the audit's three unmeasured regimes. TXG/TXW measured that
+        // aligned_side is POINTWISE for the trill too (my_dim = glyph plateau −1.0 /
+        // wave ink ±0.17, X-overlap gated, LEDGER ink in the supports): the scalar max
+        // matches LilyPond only when the binding support sits under the glyph. TSB:
+        // the sloped support is the high member's stem END (its own X), not the beam
+        // envelope corner. TSP: the fermata (priority 75) clears the TRILL, which
+        // stays at quiet — Lily# seeds scripts immovable, the inverted order.
+        new("trill.x.glyph-zone.staff-to-line", TXG,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.x.wave-zone.staff-to-line", TXW,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.beam-face-sloped.staff-to-line", TSB,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.fermata-priority.staff-to-line", TSP,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
 
         // --- where the METRONOME MARK's baseline sits (books TMQ/TMT) ---
         // The tempo island's first points (user-directed, fix tempo first). See

@@ -32,15 +32,19 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-29（第37セッション・**dynamics pointwise 支持＋下側 outside-staff pass を
-GO 済で landing（DSB は face欠片族 exact・snapshot 28 枚再ベース済）**。
-詳細は下の第37セッション節）
+最終更新 2026-07-30（第38セッション・**trill raw 3.5 を起票→同セッションで port まで完遂
+（TLS/TLB 九桁 exact・corpus byte 不変は「結果」）**。詳細は下の第38セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3534 passed / 0 failed / 3 skipped**（台帳 220 点全緑）・Core 0 warn 0 err・
+**HEAD は 3540 passed / 0 failed / 3 skipped**（台帳 227 点全緑）・Core 0 warn 0 err・
 **ワーキングツリーは clean**（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第38セッションの commit**: `2b6fb21d`（起票＝trill-stem-support.ly＋台帳 3 点＋ミラー・
+出力不変）／`daeb203c`（port＝`SupportEdgeUp`・TLS/TLB 九桁 exact・**snapshot 全 byte 不変
+＝結果**。台帳 3 点だけが観測者）／`79f7c0fc`（字面箇所へ LILYPOND-REF・コメントのみ）／
+`224a3cba`（**round 2＝監査が名指した未測定 3 regime を測定・台帳 4 点追加・出力不変**。
+下の round 2 節）。
 **第37セッションの commit**: `34a3d8d0`（pointwise 支持＋下側 pass＋X アンカー port・
 GO 済・snapshot 28 枚再ベース）／`0cdb3efe`（延長＝ハック 4 件の字面化・GO 済・
 snapshot 4 枚再ベース・延長 8-9）／`1e174298`（延長2＝perf 実退行 3.4× の検出と 3 修正・
@@ -85,6 +89,66 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第38セッション（2026-07-30）＝ **trill raw 3.5 を起票→port まで一気通貫——支持の「形」（平ら my_dim のスカラー）は正しく、違うのは値だけだった**
+
+★★★ **第37セッションが名指した「raw 3.5 の最後の消費者 trill・点が先」を、起票（`2b6fb21d`）
+→port（`daeb203c`）まで同セッションで閉じた**。新プローブ `trill-stem-support.ly`
+（12 秒級・3 冊）＋台帳 3 点 `trill.{shortened-stem,beam-face,stemless-control}.staff-to-line`。
+**予測は 3 冊とも主枝で六桁的中し、Lily# 側も九桁まで的中**:
+
+1. ★★★ **TLS（+8 の強制上向き四分）**: LP **8.000000**＝full shorten の実 tip 6.5
+   （dump の Stem ext 上端 6.500000 そのもの・stem.cc:519-555）+ 0.5 + 1.0。
+   0.46 pass 候補 7.96 は敗退。Lily# 9.000000000 → **残差 +1.000000000 ＝ raw−短縮の純量**。
+2. ★★★ **TLB（同列の強制上向き beamed pair）**: LP **8.240000**＝**quant beam 外面 6.74**
+   （Stem は外面まで描かれ Stem ext 上端 == Beam ext 上端）+ 0.5 + 1.0——
+   **aligned_side が勝つ**（下側の DSB では 0.46 pass が勝った・**上下で勝つ鎖が違うと確定**。
+   pass 候補 8.2 は padding 差 0.04 でちょうど負け）。**Lily# は TLS ≡ TLB 九桁同一
+   （9.000000000）＝beam 盲目恒等が予告どおり鳴った**（§5.3 の falsifier）。残差 +0.76。
+3. **TLW（全音符 control）**: 6.045000 → **残差 0 exact**（両側 LILC 0.545・丸い鎖＝TRC の前例）。
+   TLS−TLW＝1.955 が stem 項を trill 鎖ごと打ち消して単離。Stem grob は**空 extent** で dump
+   された（「0 本」の構造 falsifier は実質成立・grob は在るがインクが無い）。
+4. ★★★ **port 済（`daeb203c`・同セッション続行時）**: trill の my_dim は**平ら**
+   （straight-line skyline wrapper・define-grobs.scm:4054-4068）なので **dynamics と違い
+   スカラー edge の「形」は生き残る**——`RawSupportEdgeUp` → **`SupportEdgeUp`**＝stem 枝を
+   `OutwardTipDeviceY` の変換（**1 軒 2 フレーム**・恒等を pin 網
+   `SupportEdge_StemSide_IsTheDrawnStemEnd` が主張）へ、trill エングレーバへ
+   `BuildBeamMembers` の beam lookup を配線（dynamics と同じ map＝2 消費者が「誰が beamed か」で
+   割れない）。**着地: TLS +1.0 → 0・TLB +0.76 → 0（両方九桁 exact——Lily# の beam quanter は
+   この regime で LP の face 6.74 を桁まで再現）・TLW/TRF/TRC/TMT 不動＝対の要件どおり**。
+   旧 raw pin 網は退役し drawn 主張（旧模型なら落ちる 6.5 対 7.5）に差し替え。
+   ★ **snapshot は全 byte 不変＝「結果」であって構成ではない**（短縮/beamed の同方向 stem 列の
+   上に trill を張る fixture が corpus に無い——観測者は台帳 3 点だけ）。目視 1 枚
+   （短縮四分＋beamed pair×trill）で重なり無し・beamed 側が 0.24 高い絵を確認済。
+5. ★ **texture の学び（probe/score remark に記録済）**: per-note `@stemUp` では対が組めない——
+   **Lily# の beam 方向は per-note override を見ない**（`BeamDetector.DefaultBeamStemUp`）ので、
+   両エンジンとも **voice 強制**（voice 2 は spacer `s` のみ＝インクゼロの強制スイッチ）で組む。
+6. **残した named 事項**: ⑴ `GetLowestExtent` の下側は production 到達不能（ColumnUpEdge が
+   唯一の呼び手・dir=+1）だが対称性のため同じ drawn 模型 ⑵ trill の単一 pass
+   「支えに 0.5 を全 entry へ」近似は不変（点なし・trill.support の why どおり）。
+
+**Round 2（同セッション・ユーザーの字面度監査→未測定 3 regime を測定・`224a3cba`・
+台帳 4 点・出力不変）**:
+
+7. ★★★ **TXW が第3候補に落ち、二分 3 冊（TXN/TXE/TXS）で六桁分解**: 4.720721 ＝
+   **stop 列の加線 ink top 4.05 + 0.5 + 波の実 ink reach 0.170721**。
+   ⇒ **trill の aligned_side も pointwise**（my_dim＝グリフ台地 −1.0／波 ±0.17 の 2 片・
+   X 重なりで gate・支持に**加線 ink**）。tall の head/stem は spanner ink の外（gap 0.0486）
+   で**何も課さず、LP は stem tip が trill 線を突き抜けた絵を自分で描く**。TXS（全体を
+   1 小節右へ）が 13 桁同一＝絶対 X（pure xc=0）仮説は死亡。**Lily# のスカラー max は
+   8.0 → 残差 +3.279279＝X 盲目欠陥の定量**。port＝pointwise trill 支持（第37セッションの
+   dynamics の形を trill へ・`trill.x.{glyph,wave}-zone` が gate）。TXG（グリフ帯 control）は
+   両側 8.0 exact。
+8. ★★ **TSB（sloped 強制上向き pair）**: LP 8.221188659 ＝ **高側 member の stem 端
+   （自分の X での face）+ 1.5・15 桁**——Beam 包絡の角 6.74 ではない（半 stem 幅の
+   slope 分 0.019 離れる）。**Lily# の sloped quant face は 3e-10 で一致**＝残差 0。
+9. ★★★ **TSP は falsifier が発火して別の欠陥を出した**: fermata は
+   **(outside-staff-priority . 75)**（scm/script.scm）＞ trill 50 ⇒ **LP では trill が
+   3.550000 に留まり fermata が trill を越える**。Lily# は script を不動 seed にするので
+   trill が fermata を越える（5.235・**残差 +1.685＝priority 逆転**）。port＝**宣言 priority
+   を持つ script は priority pass の mover**（無宣言 script は seed のまま＝LP 自身の分業）。
+10. ⚠️ **正直に残る未測定 1 件**: 単一 pass の 0.46 対 0.5 は **priority 無しの障害物
+    （slur の弓）**の対が要る——TSP では測れない（why に明記・混同禁止）。
 
 ### 第37セッション（2026-07-29）＝ **pointwise 支持＋下側 pass を同時着地——DSB は face欠片族 exact、残る e-3 対の正体は「Pango が整形幅で中心化する」だった**
 
@@ -193,7 +257,10 @@ DSQ↔DSB を LP と同じ 2.077 で分離）／DMF +1.031307 → +0.001793／DS
      消える。字面と速度が同じ扉。
    - **下側 profile への slurs/ties/brackets/scripts 合流**（上 7⑶ の非対称解消）——
      発火 regime（下向き slur×dynamic の X 重なり）の対を組めるか検討から。
-   - **trill の raw 3.5**（`RawSupportEdgeUp` 最後の消費者）——trill 対の起票が先。
+   - ~~**trill の raw 3.5**（`RawSupportEdgeUp` 最後の消費者）——trill 対の起票が先~~ —
+     **閉じた（第38セッション・起票 `2b6fb21d` → port `daeb203c`・TLS/TLB 九桁 exact・
+     corpus byte 不変は結果）**。生 3.5 の予約系読みは**残ゼロ**（残るのは
+     `SharedRenderer.GraceNotes` の描画側と tab の `RawOutwardTip`＝別島）。
 
 ### 第36セッション（2026-07-29）＝ **「stem は支持でない」を実ソースが否定した——\f の着地と \fff の着地は同じ pointwise 計算の 2 つの顔**
 
@@ -903,8 +970,9 @@ support seed が箱のまま（OTC の分解には support のアウトライン
   **相違表は家の doc にある**（値のセルは 4 家とも割れていた＝どれを畳むのも output-moving・
   点が先）。**残り**: ~~⑴ dynamics の生 3.5~~ — **閉じた（第37セッション・`34a3d8d0`・
   GO 済）**。DSB face欠片族 exact／DSQ・DMF は Pango X 量子化の named 族
-  （+0.001512／+0.001793・fit 禁止）。**raw 3.5 の最後の消費者は trill**（`RawSupportEdgeUp`・
-  点が先）。
+  （+0.001512／+0.001793・fit 禁止）。~~**raw 3.5 の最後の消費者は trill**~~ —
+  **閉じた（第38セッション・`daeb203c`）**: `RawSupportEdgeUp` は `SupportEdgeUp`＝
+  `OutwardTipDeviceY` の変換になり、予約系の生 3.5 は残ゼロ。
   ⑵ beam 所属 lookup は綴りが残る（key/gate が消費者ごと——dynamics は第37セッションで
   **全 voice の 4 キー map**（`BuildBeamMembers`）を足したので 4 綴り目）⑶ grace 描画 stem の
   生 3.5（`SharedRenderer.GraceNotes`・島の外）⑷ 予告どおり行頭 beam quant 差・slope 非字面・

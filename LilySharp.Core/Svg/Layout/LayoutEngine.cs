@@ -2686,11 +2686,15 @@ internal sealed class LayoutEngine
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
             percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
 
-        // Layout trill spanners (tr + wavy line)
+        // Layout trill spanners (tr + wavy line). The drawn beams ride along so a
+        // beamed support column's stem ends at the quanted face (ledger
+        // trill.beam-face.staff-to-line), the same beam model every other consumer reads.
+        // LILYPOND-REF: lily/grob.cc:81-89 simple_vertical_skylines_from_extents — a
+        //   support's skyline defaults to its EXTENT, and a Stem's extent is the drawn one.
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
-            voicesByStaff);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

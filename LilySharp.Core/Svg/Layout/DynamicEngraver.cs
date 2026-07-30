@@ -538,11 +538,13 @@ internal static class DynamicEngraver
     /// spanned note columns, floored by the staff extent) on the UP side.
     /// </summary>
     internal static double ColumnUpEdge(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
-        => ColumnSupportEdge(voices, measureIndex, itemIndex, 1.0);
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex,
+        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamAt = null)
+        => ColumnSupportEdge(voices, measureIndex, itemIndex, 1.0, beamAt);
 
     private static double ColumnSupportEdge(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex, double dir)
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex, double dir,
+        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamAt = null)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         // :323-330 — the staff is the floor under whatever the notes contribute.
@@ -560,9 +562,15 @@ internal static class DynamicEngraver
             // voice 2 down) regardless of the note's pitch-default StemUp, so a
             // low note in the lower voice still has a long DOWN stem to clear.
             bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
+            // A beamed member's direction and stem end are the BEAM's (one direction
+            // per group, quanted face at the member's X) — the same resolution
+            // PointwiseBaselineY hands the pointwise support.
+            // LILYPOND-REF: lily/beam.cc:238-243 — get_default_dir then
+            //   set_stem_directions: the beam stamps ONE direction onto its stems.
+            var beamed = beamAt?.Invoke(vi);
             double e = dir > 0
-                ? GetHighestExtent(items[itemIndex], forcedStemUp)
-                : GetLowestExtent(items[itemIndex], forcedStemUp);
+                ? GetHighestExtent(items[itemIndex], forcedStemUp, beamed)
+                : GetLowestExtent(items[itemIndex], forcedStemUp, beamed);
             edge = dir > 0 ? Math.Max(edge, e) : Math.Min(edge, e);
         }
         return edge;
@@ -595,16 +603,18 @@ internal static class DynamicEngraver
     /// </summary>
     /// <remarks>
     /// A note/chord column reads the single house of a column's reach
-    /// (<see cref="NoteColumnLayout.RawSupportEdgeUp"/> — HANDOFF §5.2.1②): the head's
-    /// LILC glyph ink, extended by the RAW <see cref="EngravingDefaults.DefaultStemLength"/>
-    /// when the stem points this way. That raw model is this consumer's named deviation —
-    /// see the house's model table before changing it. Rests and other items are not
-    /// columns and stay here.
+    /// (<see cref="NoteColumnLayout.SupportEdgeUp"/> — HANDOFF §5.2.1②): the head's
+    /// LILC glyph ink, extended to the DRAWN stem end (shortened / beam-quanted face)
+    /// when the stem points this way — ledger trill.{shortened-stem,beam-face,
+    /// stemless-control} gated the raw-3.5 model out on 2026-07-30. A beamed member's
+    /// direction is the beam's own. Rests and other items are not columns and stay here.
     /// </remarks>
-    private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null)
+    private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null,
+        (BeamLayout Beam, double MemberX, bool StemUp)? beam = null)
     {
-        if (NoteColumnLayout.Of(item, forcedStemUp) is { } column)
-            return column.RawSupportEdgeUp(up: false);
+        if (NoteColumnLayout.Of(item, beam is { } b ? b.StemUp : forcedStemUp,
+                beam?.Beam, beam?.MemberX ?? 0.0) is { } column)
+            return column.SupportEdgeUp(up: false);
         return item switch
         {
             // Rest is typically around middle of staff (1 ss below the middle line)
@@ -618,10 +628,12 @@ internal static class DynamicEngraver
     /// middle) of a music item — the mirror of <see cref="GetLowestExtent"/>,
     /// accounting for an up-stem.
     /// </summary>
-    private static double GetHighestExtent(MusicItem item, bool? forcedStemUp = null)
+    private static double GetHighestExtent(MusicItem item, bool? forcedStemUp = null,
+        (BeamLayout Beam, double MemberX, bool StemUp)? beam = null)
     {
-        if (NoteColumnLayout.Of(item, forcedStemUp) is { } column)
-            return column.RawSupportEdgeUp(up: true);
+        if (NoteColumnLayout.Of(item, beam is { } b ? b.StemUp : forcedStemUp,
+                beam?.Beam, beam?.MemberX ?? 0.0) is { } column)
+            return column.SupportEdgeUp(up: true);
         return item switch
         {
             RestItem => 1.0, // 1 ss above the middle line

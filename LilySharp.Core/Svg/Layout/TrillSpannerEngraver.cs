@@ -101,12 +101,21 @@ internal static class TrillSpannerEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Func<int, int, double>? staffYAt = null,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
 
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+        // Beam membership per (staff, voice, measure, item) — a beamed support
+        // column's stem ends at the quanted beam face, not the unbeamed formula
+        // (ledger trill.beam-face.staff-to-line). The same map the dynamics' support
+        // uses, so the two consumers cannot disagree about who is beamed.
+        // LILYPOND-REF: lily/stem.cc:490-497 internal_calc_stem_end_position — a
+        //   beamed stem's end fires `quantized-positions` and reads the beam, so the
+        //   support extent the trill clears IS the quanted face.
+        var beamMembers = DynamicEngraver.BuildBeamMembers(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<TrillSpannerLayout>();
 
         for (int ti = 0; ti < trillSpanners.Length; ti++)
@@ -117,8 +126,9 @@ internal static class TrillSpannerEngraver
 
             // Y-up from the system top (staff top = 0 in this frame): the trill's
             // resting height, transcribed from aligned_side. The SUPPORT is the
-            // spanned note columns' UP edges (DynamicEngraver.ColumnUpEdge — the same
-            // side supports the dynamic's port reads, stems included), floored by the
+            // spanned note columns' UP edges (DynamicEngraver.ColumnUpEdge — the
+            // DRAWN stem end: shortened / beam-quanted face, ledger
+            // trill.{shortened-stem,beam-face}.staff-to-line), floored by the
             // STAFF EXTENT (declaring staff-padding turns include_staff on and the
             // staff's ink edge enters the support as a minimum); the grob pays its own
             // padding 0.5 over that with its facing edge — the "tr" glyph's
@@ -151,8 +161,12 @@ internal static class TrillSpannerEngraver
                     {
                         // ColumnUpEdge answers in the staff-middle frame; this frame's
                         // origin is the staff TOP line, 2 above it.
+                        int cmi = mi, cii = ii;
                         support = Math.Max(support,
-                            DynamicEngraver.ColumnUpEdge(trillVoices, mi, ii) - 2.0);
+                            DynamicEngraver.ColumnUpEdge(trillVoices, mi, ii,
+                                vi => beamMembers.TryGetValue(
+                                    (spanner.StaffIndex, vi, cmi, cii), out var b)
+                                    ? b : null) - 2.0);
                     }
                 }
             }
