@@ -875,6 +875,76 @@ internal sealed class LayoutEngine
             : cache.GetOrComputeSkyline(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
                 indent, commonShortestDuration, systemHeight, compute);
 
+    /// <summary>
+    /// Splits every system's paging silhouette into the two buckets the page BREAKER
+    /// prices lines by: the ink that is there because the line starts here, and the ink
+    /// that is there anywhere along it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:512-547 fill_line_details, which fills
+    /// Line_shape from <c>System::begin_of_line_pure_height</c> /
+    /// <c>rest_of_line_pure_height</c>. See <see cref="LineShape"/> for what LilyPond's own
+    /// dump says the two buckets hold, and PageBreaker.CalcLineHeights for the deviation:
+    /// LilyPond partitions the GROBS by the column they hang off, and this partitions the
+    /// SKYLINE by X at the line's first musical column, which is where that membership
+    /// lands geometrically.
+    /// <para>
+    /// ⚠️ THE UNION IS PRESERVED, deliberately. The scalar extents carry terms the paging
+    /// skylines do not (whole-line bands, and anything a caller enriched them with), so
+    /// whatever the skyline cannot account for is given to BOTH buckets: this can only
+    /// close a gap the skyline proves is X-disjoint, never open one. A system with no
+    /// skyline, no measures or an empty silhouette gets no shape at all and is priced
+    /// exactly as it was before the split existed.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<LineShape?>? BuildLineShapes(
+        ImmutableArray<SystemLayout> systems,
+        List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines,
+        List<(double upExtent, double downExtent)> perSystemExtents,
+        Func<int, double> sysHeight)
+    {
+        if (perSystemSkylines == null)
+            return null;
+        var shapes = ImmutableArray.CreateBuilder<LineShape?>(systems.Length);
+        for (int i = 0; i < systems.Length; i++)
+        {
+            if (i >= perSystemSkylines.Count || i >= perSystemExtents.Count
+                || systems[i].Measures.IsDefaultOrEmpty)
+            {
+                shapes.Add(null);
+                continue;
+            }
+            // Where the line's first measure begins, in the skylines' own X frame. Left of
+            // it is the line-start prefix — the clef/key/time and the bar number that sits
+            // over them — and that is what hangs off the first breakable column, which is
+            // LilyPond's begin bucket. ⚠️ NOT the first musical column's X: a grob ANCHORED
+            // there is in LilyPond's rest bucket however far its ink spreads, and a figure
+            // row is centred on that column, so splitting at the column itself puts half of
+            // every figure into the begin bucket and the two buckets come out identical.
+            double xSplit = systems[i].Measures[0].X;
+            var (up, down) = perSystemSkylines[i];
+            double h = sysHeight(i);
+            var ext = perSystemExtents[i];
+
+            // ONE walk per direction. max(begin, rest) is the whole skyline's own extent, so
+            // the union below costs no further pass — see MaxHeightsSplitAt.
+            var (upBegin, upRest) = up.IsEmpty ? (0.0, 0.0) : up.MaxHeightsSplitAt(xSplit);
+            var (downBegin, downRest) = down.IsEmpty ? (0.0, 0.0) : down.MaxHeightsSplitAt(xSplit);
+            double beginUp = up.IsEmpty ? 0 : Math.Max(0, upBegin);
+            double restUp = up.IsEmpty ? 0 : Math.Max(0, upRest);
+            double beginDown = down.IsEmpty ? 0 : Math.Max(0, -downBegin - h);
+            double restDown = down.IsEmpty ? 0 : Math.Max(0, -downRest - h);
+
+            // What the skyline could not account for belongs to both buckets.
+            double excessUp = Math.Max(0, ext.upExtent - Math.Max(beginUp, restUp));
+            double excessDown = Math.Max(0, ext.downExtent - Math.Max(beginDown, restDown));
+            shapes.Add(new LineShape(
+                beginUp + excessUp, beginDown + excessDown,
+                restUp + excessUp, restDown + excessDown));
+        }
+        return shapes.MoveToImmutable();
+    }
+
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
@@ -921,7 +991,8 @@ internal sealed class LayoutEngine
                 .ToImmutableArray();
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
-                perSystemBands?.ToImmutableArray(), perSystemHeights, anchors);
+                perSystemBands?.ToImmutableArray(), perSystemHeights, anchors,
+                BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight));
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -1325,14 +1396,39 @@ internal sealed class LayoutEngine
         foreach (var d in ann.Dynamics)
         {
             // d.YUp is Y-up above the staff middle; system-relative device is 2 − YUp.
+            // The label's OWN ink, from the font, per glyph — the same house the placement
+            // and the stacker read (DynamicEngraver.InkOf; free @text falls back there).
+            // ⚠️ THIS SITE WAS MISSED when the three other spellings were unified on it: it
+            // kept a flat 1.2 / 0.3 box, and 0.3 against the `f` glyph's real 0.692002 is why
+            // audit/lp-geometry dynamic.page.{quiet,deep} opened at -0.412774 and -0.390489,
+            // i.e. a page that ends closer under its own ink than LilyPond's does.
             double dY = 2.0 - d.YUp;
-            Add(d.MeasureIndex, dY - 1.2, dY + 0.3);
+            var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
+            Add(d.MeasureIndex, dY - dAscent, dY + dDescent);
         }
         foreach (var h in ann.Hairpins)
         {
             // h.YUp is Y-up from the system top; this pass is system-relative device.
+            // The DRAWN wedge: its arms sit at the layout's own openings (a half-height,
+            // capped by HairpinEngraver.Height — which carries the LilyPond citation for that
+            // number, and citing it twice is how a second address gets to be wrong) and the
+            // rule adds half its thickness, which is exactly the two lines
+            // SharedRenderer.DrawHairpins puts on the page. The flat 0.34 it replaces was
+            // about half of that (ledger hairpin.page.quiet, -0.543200).
+            // ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+            // `vertical-skylines` from its STENCIL, so its profile is the wedge itself and
+            // narrows to the apex; this reserves the WIDEST half-height across the whole
+            // span, because the pass it feeds registers one box per measure for every
+            // annotation class. It can only over-reserve (near the point), never under. It
+            // goes when this pass registers outlines pointwise — the island the script,
+            // clef and trill seeds already closed on their own side.
+            // ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+            // DEEPEST ink under the staff, which is the max either way. The pair that would
+            // see it is a hairpin whose apex sits under something tall.
             double hY = -h.YUp;
-            Add(h.StartMeasureIndex, hY - 0.34, hY + 0.34);
+            double hHalf = Math.Max(h.StartOpening, h.EndOpening)
+                + EngravingDefaults.StaffLineThickness / 2.0;
+            Add(h.StartMeasureIndex, hY - hHalf, hY + hHalf);
         }
         foreach (var sp in ann.TextSpanners)
         {

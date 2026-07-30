@@ -734,6 +734,52 @@ public class PageBreakerTests
         return new PageSpacing(pageHeight, topMargin, bottomMargin, vs.TopSystem, vs.LastBottom);
     }
 
+    /// <summary>
+    /// The two buckets are compared bucket to bucket, so a line-start grob is only ever
+    /// measured against the previous line's line-start grobs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1154-1177 calc_line_heights, whose
+    /// <c>max (prev_hanging_begin + a, prev_hanging_rest + b)</c> is this claim.
+    /// <para>
+    /// The numbers are the deep figured-bass page book's, measured: a bass staff with a
+    /// figure row 7.622462 under it and a line-start bar number 2.310714 over it, where the
+    /// rest of the line carries only the staff line's 0.050000 on both sides. The pair is
+    /// worth 12.672462 — which is what the PLACEMENT chain's pointwise skyline distance
+    /// independently says (11.672462 + the spec's padding 1), the two models meeting on one
+    /// number. Without the split the same line prices the pair by the scalar sum, 2.260714
+    /// more, and eleven of those are two systems' worth of page: audit/lp-geometry
+    /// figbass.page.deep.systems-on-first-page, which read 10 against LilyPond's 12 until
+    /// the shape arrived. The second case is the guard on the fallback, not a leftover: a
+    /// caller that cannot split a system must get exactly the old arithmetic.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void CalcLineHeights_PricesTheBucketsSeparately_SoALineStartGrobNeverMeetsTheDeepInk()
+    {
+        var shaped = new SystemDetails
+        {
+            Height = 13.933176,
+            TopExtent = 2.310714,
+            BottomExtent = 7.622462,
+            StaffHeight = 4,
+            Padding = 1,
+            MinDistance = 8,
+            RefpointExtentUp = -2,
+            RefpointExtentDown = -2,
+            Shape = new LineShape(
+                BeginUp: 2.310714, BeginDown: 0.050000,
+                RestUp: 0.050000, RestDown: 7.622462),
+        };
+
+        var withShape = PageBreaker.CalcLineHeights(new[] { shaped, shaped });
+        Assert.Equal(12.672462, withShape[1].Tallness, 6);
+
+        var flat = shaped with { Shape = null };
+        var withoutShape = PageBreaker.CalcLineHeights(new[] { flat, flat });
+        Assert.Equal(14.933176, withoutShape[1].Tallness, 6);
+    }
+
     private static SystemDetails CreateSystem(
         double height = 20,
         double staffHeight = 10,

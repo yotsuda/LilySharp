@@ -20,6 +20,34 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
+/// A line's silhouette as the page breaker prices it: what is there because the line
+/// STARTS here, and what is there anywhere along it.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/include/constrained-breaking.hh:35-43 Line_shape, whose two
+/// intervals come from <c>System::begin_of_line_pure_height</c> and
+/// <c>rest_of_line_pure_height</c> (lily/constrained-breaking.cc:512-547).
+/// <para>
+/// The split is LilyPond's own X-awareness for the BREAKER, and it is a different device
+/// from the pointwise skyline the placement chain uses: two buckets, compared bucket to
+/// bucket, so a line-start grob is only ever measured against the previous line's
+/// line-start grobs. MEASURED in LilyPond 2.26.0 on the deep figured-bass texture
+/// (a bass staff, stems down, a figure row under every bar), dumping
+/// <c>adjacent-pure-heights</c>: the staff's own buckets are
+/// <c>begin (-2.05 . 2.05)</c> — the staff and nothing else — against
+/// <c>rest (-10.0 . 2.05)</c>, and the line-start bar number appears in the begin
+/// bucket alone. The figure row and the next line's bar number therefore never meet.
+/// </para>
+/// <para>
+/// The two extents below are in Lily#'s system frame, like
+/// <see cref="SystemDetails.TopExtent"/> and <see cref="SystemDetails.BottomExtent"/>:
+/// UP above the system origin (the top staff's top line), DOWN below the body.
+/// </para>
+/// </remarks>
+internal readonly record struct LineShape(
+    double BeginUp, double BeginDown, double RestUp, double RestDown);
+
+/// <summary>
 /// Vertical spacing details for a single system (line of music).
 /// </summary>
 /// <remarks>
@@ -27,6 +55,31 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed record SystemDetails
 {
+    /// <summary>
+    /// This line's two silhouette buckets, when the caller could split them. Absent, the
+    /// whole line's extents stand in for both, which is what this breaker did everywhere
+    /// before the split existed.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:49 — Line_details' shape_ field,
+    /// of type Line_shape.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
+    /// fill_line_details fills it for every line (lily/constrained-breaking.cc:547) and the
+    /// Prob constructor hands a markup line the same interval twice (:618-619, "pretend it
+    /// goes all the way across"). Lily# has callers that cannot split: a system with no
+    /// paging skyline, no measures or an empty silhouette, and the hand-built details in
+    /// this breaker's own tests. Those get null and are priced by the whole-line extents on
+    /// both sides — arithmetic identical to this file before the split, which is the point.
+    /// It goes when every producer can split, i.e. when the paging skylines are the only
+    /// source of a system's extents. IT IS OBSERVED, so it cannot silently become the live
+    /// path: PageBreakerTests' CalcLineHeights_PricesTheBucketsSeparately_… asserts BOTH
+    /// branches, and audit/lp-geometry figbass.page.deep.systems-on-first-page is the
+    /// end-to-end point that the split one is what reaches the page.
+    /// </para>
+    /// </remarks>
+    public LineShape? Shape { get; init; }
+
     /// <summary>
     /// Full height of the system including top and bottom extents.
     /// </summary>
@@ -829,13 +882,20 @@ internal sealed class PageBreaker
     /// system's tallness depends only on its predecessor, so the page breaker can then
     /// price any candidate page by summing them.
     /// <para>
-    /// Lily#'s system origin is the top staff's TOP LINE, so the Line_shape LilyPond
-    /// carries becomes <c>begin_ = rest_ = (-(StaffHeight + BottomExtent) . TopExtent)</c>.
-    /// LilyPond distinguishes the shape at the START of a line from the rest of it (a
-    /// line's first column can be taller); Lily# has one extent per system, so the two
-    /// are the same interval here and the max() over them is inert. It is kept so the
-    /// transcription matches the source line for line and so a future begin/rest split
-    /// has somewhere to land.
+    /// Lily#'s system origin is the top staff's TOP LINE, so LilyPond's Line_shape becomes
+    /// <c>(-(StaffHeight + Down) . Up)</c> per bucket, out of
+    /// <see cref="SystemDetails.Shape"/>. A system whose caller could not split it carries
+    /// no shape and lends its whole-line extents to both buckets, which makes the max()
+    /// over them inert — what this transcription did everywhere until the split arrived.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SPLIT IS BY X, NOT BY COLUMN, and the deviation is here rather than hidden.
+    /// LilyPond partitions the GROBS (lily/axis-group-interface.cc:441-458: a grob whose
+    /// rank span starts at the line's first breakable column goes to the begin bucket,
+    /// everything later to the other), which is why a wide rehearsal mark at a line start
+    /// stays wholly in its begin bucket there and would spill into the rest bucket here.
+    /// Lily# has no grob-to-column map at this seam; it has the paging skylines, and the
+    /// same partition lives in them geometrically — see LayoutEngine.BuildLineShapes.
     /// </para>
     /// <para>
     /// <c>tight_spacing_</c> has no Lily# counterpart, so the padding is never dropped
@@ -858,8 +918,10 @@ internal sealed class PageBreaker
         for (int i = 0; i < lines.Count; i++)
         {
             var cur = lines[i];
-            double a = cur.TopExtent;                                   // shape.begin_[UP]
-            double b = cur.TopExtent;                                   // shape.rest_[UP]
+            var shape = cur.Shape ?? new LineShape(
+                cur.TopExtent, cur.BottomExtent, cur.TopExtent, cur.BottomExtent);
+            double a = shape.BeginUp;                                   // shape.begin_[UP]
+            double b = shape.RestUp;                                    // shape.rest_[UP]
             double refpointHanging = Math.Max(prevHangingBegin + a, prevHangingRest + b);
 
             if (i > 0)
@@ -873,9 +935,10 @@ internal sealed class PageBreaker
                         + cur.RefpointExtentUp + minDist);
             }
 
-            double shapeDown = -(cur.StaffHeight + cur.BottomExtent);   // shape.*_[DOWN]
-            double hangingBegin = refpointHanging - shapeDown;
-            double hangingRest = refpointHanging - shapeDown;
+            double hangingBegin                                         // shape.begin_[DOWN]
+                = refpointHanging + cur.StaffHeight + shape.BeginDown;
+            double hangingRest                                          // shape.rest_[DOWN]
+                = refpointHanging + cur.StaffHeight + shape.RestDown;
             double hanging = Math.Max(hangingBegin, hangingRest);
 
             result.Add(cur with { Tallness = hanging - prevHanging });

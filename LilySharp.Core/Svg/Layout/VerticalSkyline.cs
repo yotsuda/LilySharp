@@ -724,28 +724,67 @@ internal sealed class VerticalSkyline
     /// - DOWN skyline: returns the smallest Y-up (bottommost point)
     /// </remarks>
     public double MaxHeight()
-    {
-        if (IsEmpty)
-            return _direction == VerticalDirection.Up ? NegativeInfinity : PositiveInfinity;
+        // ONE walk, not two spellings of it: a cut at +∞ leaves every building on the left,
+        // so MaxHeightsSplitAt's left half IS this. (It used to be a second copy of the same
+        // loop, which is the duplication HANDOFF §5.2.1② names — two of a quantity and one
+        // of them drifts.) The empty answer matches: with no buildings the left half comes
+        // back as this direction's ∓∞ too.
+        => MaxHeightsSplitAt(PositiveInfinity).Left;
 
-        // Find maximum internal height across all buildings
-        double maxInternalHeight = NegativeInfinity;
+    /// <summary>
+    /// <see cref="MaxHeight"/> for the two halves this skyline is cut into at
+    /// <paramref name="xSplit"/> — left of it and right of it — in real Y coordinates.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height, taken over the two halves
+    /// in one walk. LilyPond has no such call: it reaches the same partition by asking a
+    /// SUBSET of the grobs for their pure height (lily/axis-group-interface.cc:359-474
+    /// adjacent_pure_heights, which splits by which COLUMN a grob hangs off rather than by
+    /// where its ink lands). Both name the same cut — the ink that is there only because the
+    /// line starts here, against everything else — and the deviation is stated where this is
+    /// consumed (PageBreaker.CalcLineHeights).
+    /// <para>
+    /// BOTH HALVES IN ONE PASS, deliberately: this runs per system on the paged path, which
+    /// a preview re-enters on every edit to a score longer than one page. A building is a
+    /// straight line, so its extreme over a half is at that half's ends and a building
+    /// straddling the cut is counted in both — which also makes <c>max(left, right)</c> the
+    /// whole skyline's <see cref="MaxHeight"/> exactly, so the caller needs no second walk
+    /// for the union.
+    /// </para>
+    /// Either half is the empty answer (∓∞) when nothing lies on that side, exactly as
+    /// <see cref="MaxHeight"/> is for an empty skyline.
+    /// </remarks>
+    public (double Left, double Right) MaxHeightsSplitAt(double xSplit)
+    {
+        int sky = (int)_direction;
+        double left = NegativeInfinity;
+        double right = NegativeInfinity;
         foreach (var b in _buildings)
         {
-            double hLeft = b.ValueAt(b.Start);
-            double hRight = b.ValueAt(b.End);
-
-            if (!double.IsNegativeInfinity(hLeft))
-                maxInternalHeight = Math.Max(maxInternalHeight, hLeft);
-            if (!double.IsNegativeInfinity(hRight))
-                maxInternalHeight = Math.Max(maxInternalHeight, hRight);
+            if (b.Start < xSplit)
+            {
+                double r = Math.Min(b.End, xSplit);
+                left = Max3(left, b.ValueAt(b.Start), b.ValueAt(r));
+            }
+            if (b.End > xSplit)
+            {
+                double l = Math.Max(b.Start, xSplit);
+                right = Max3(right, b.ValueAt(l), b.ValueAt(b.End));
+            }
         }
+        double empty = _direction == VerticalDirection.Up ? NegativeInfinity : PositiveInfinity;
+        return (double.IsNegativeInfinity(left) ? empty : sky * left,
+                double.IsNegativeInfinity(right) ? empty : sky * right);
 
-        // Convert to real Y-up coordinate: sky * internal_height
-        // UP (sky=+1): +internal -> largest Y-up (topmost)
-        // DOWN (sky=-1): -internal -> smallest Y-up (bottommost)
-        int sky = (int)_direction;  // UP=+1, DOWN=-1
-        return sky * maxInternalHeight;
+        // The ±∞ sentinels the resolved form carries must not become the answer.
+        static double Max3(double acc, double a, double b)
+        {
+            if (!double.IsNegativeInfinity(a))
+                acc = Math.Max(acc, a);
+            if (!double.IsNegativeInfinity(b))
+                acc = Math.Max(acc, b);
+            return acc;
+        }
     }
 
     /// <summary>

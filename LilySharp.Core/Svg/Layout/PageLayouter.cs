@@ -85,7 +85,8 @@ internal sealed class PageLayouter
         ImmutableArray<(double bandUp, double bandDown)>? systemBands = null,
         IReadOnlyList<double>? systemBodyHeights = null,
         ImmutableArray<(double toFirst, double toLast, double halfFirst, double halfLast)>?
-            systemAnchors = null)
+            systemAnchors = null,
+        ImmutableArray<LineShape?>? systemShapes = null)
     {
         if (systems.Length == 0)
         {
@@ -155,6 +156,10 @@ internal sealed class PageLayouter
 
             systemDetails.Add(new SystemDetails
             {
+                // LILYPOND-REF: lily/constrained-breaking.cc:547 fill_line_details, the line
+                // that builds Line_shape — the pair of pure heights the breaker prices this
+                // line by. Absent, CalcLineHeights lends the whole-line extents to both.
+                Shape = systemShapes is { } sh && i < sh.Length ? sh[i] : null,
                 Height = topExtent + staffHeight + bottomExtent,
                 TopExtent = topExtent,
                 BottomExtent = bottomExtent,

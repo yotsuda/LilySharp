@@ -89,13 +89,51 @@ internal static class HairpinEngraver
     private const double MinimumLength = 2.0;
 
     /// <summary>
-    /// Y position below staff for hairpins (same level as dynamics).
-    /// Staff bottom sits at 4.0 ss; DynamicLineSpanner reserves ~1.2 ss below it
-    /// (staff-padding 0.2 + padding 0.6 + text/glyph ascent), so the resting level is
-    /// ~5.2. This is a fixed resting position; the per-staff stacker (staffYAt) then
-    /// lifts it clear of that staff's own dynamics. Not a single named LP constant.
-    /// LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner (staff-padding . 0.2).
+    /// ⚠️ LILYSHARP-OWN, AND MEASURED WRONG BY 0.166600: the hairpin's resting level below
+    /// the staff, as a constant, where LilyPond computes it — and where Lily# ALREADY
+    /// computes it for the other grob on the same spanner.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The sentence this remark used to carry is FALSIFIED, and both of its halves were
+    /// wrong. It read "staff-padding 0.2 + padding 0.6 + ascent" and cited
+    /// DynamicLineSpanner's staff-padding as 0.2; LilyPond's is 0.1
+    /// (scm/define-grobs.scm:1411), and staff-padding is not a SUMMAND at all — the
+    /// :433-453 block of aligned_side is a FLOOR on the grob's refpoint, reached only when
+    /// the supports put it nearer than that (the same trap DynamicEngraver.BaselineY's
+    /// remark records for the text). MEASURED IN LILYPOND 2.26.0, dumping the
+    /// DynamicLineSpanner's own offset on this exact texture (a quiet d with a hairpin
+    /// under every bar): its refpoint sits 3.366600 below the staff refpoint with an ink
+    /// extent of ±0.7166, so the ink bottom is 4.083200 — which is the number
+    /// audit/lp-geometry hairpin.page.quiet.last-staff-to-foot reads through the page's
+    /// foot. PERTURBED to find each owner, rather than fitted:
+    /// <list type="bullet">
+    /// <item>padding 0.6 → 1.6 moves it by exactly 1.0 ⇒ the 0.6 is side-position's
+    /// padding, spent after the skyline distance.</item>
+    /// <item>staff-padding 0.1 → 1.1 does not move it at all, and → 2.1 lands it on
+    /// 4.150000 = 2.05 + 2.1 ⇒ a dominated floor, proved from both sides.</item>
+    /// <item>outside-staff-padding 0.46 → 1.46 moves it ⇒ that pass is live but dominated
+    /// at the default (2.05 + 0.46 + 0.7166 = 3.2266 &lt; 3.3666).</item>
+    /// <item>a note below the staff drags it down ⇒ the support is the notes UNION the
+    /// staff's own extent, which is aligned_side's include_staff minimum.</item>
+    /// </list>
+    /// ⇒ 3.366600 = staff ink 2.05 + padding 0.6 + the wedge's own half height 0.7166
+    /// (HairpinEngraver.Height 0.6666 + half the rule's thickness). ⚠️ The ledger's earlier
+    /// arithmetic fit 2.05 + 0.1 + 0.6 + 0.6666 reached the right INK BOTTOM by two
+    /// compensating errors of 0.05 — HANDOFF §5.0's "a fit is not a decomposition", caught
+    /// here by the dump.
+    /// </para>
+    /// <para>
+    /// THE PORT IS NAMED AND IT IS NOT A NEW NUMBER: DynamicEngraver.BaselineY is already
+    /// the full aligned_side transcription, and LilyPond hangs BOTH grobs off ONE
+    /// DynamicLineSpanner (scm/define-grobs.scm:1428-1431 says so in its own description).
+    /// Calling it with the wedge's own dim — and without the text's TextOffsetInSpanner,
+    /// which is DynamicText's Y-offset inside the spanner and not the spanner's — returns
+    /// −3.366600 by construction. PREDICTION, written before the move: this constant goes,
+    /// the level becomes −5.366600 in this frame, and
+    /// hairpin.page.quiet.last-staff-to-foot lands at 0 from −0.166600181.
+    /// </para>
+    /// </remarks>
     private const double BaseYUp = -5.2; // Y-up: 5.2 below the system top
 
     /// <summary>
