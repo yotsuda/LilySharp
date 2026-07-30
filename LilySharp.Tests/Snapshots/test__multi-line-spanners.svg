@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="674.7" viewBox="0 0 119.50 67.47" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="674.9" viewBox="0 0 119.50 67.49" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -109,11 +109,11 @@
   <path d="M 9.54,21.02 C 13.06,18.95 98.60,17.11 102.13,19.02 C 98.60,17.23 13.07,19.07 9.54,21.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 3.67,30.02 C 6.40,28.40 27.70,29.99 30.42,32.02 C 27.69,30.11 6.39,28.52 3.67,30.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="56.32" y="49.88" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
-  <text x="78.24" y="61.09" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
+  <text x="78.24" y="61.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
   <line x1="67.75" y1="48.40" x2="102.43" y2="47.96" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <line x1="67.75" y1="48.40" x2="102.43" y2="48.85" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="3.37" y1="60.47" x2="77.08" y2="60.03" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="3.37" y1="60.91" x2="77.08" y2="61.36" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="3.37" y1="60.85" x2="77.08" y2="60.41" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="3.37" y1="61.30" x2="77.08" y2="61.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <text x="0.00" y="29.49" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
   <text x="0.00" y="41.49" font-size="1.75" font-weight="bold" text-anchor="end">6</text>
   <text x="0.00" y="53.49" font-size="1.75" font-weight="bold" text-anchor="end">8</text>

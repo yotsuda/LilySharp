@@ -215,9 +215,9 @@
   <rect x="101.34" y="20.21" width="0.19" height="13.00"/>
   <rect x="101.83" y="20.21" width="0.60" height="13.00"/>
   <text x="9.26" y="26.93" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="247">p</text>
-  <text x="51.81" y="26.74" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="303">f</text>
-  <line x1="36.44" y1="25.41" x2="50.62" y2="24.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="275"/>
-  <line x1="36.44" y1="25.41" x2="50.62" y2="26.08" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="275"/>
+  <text x="51.81" y="26.76" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="303">f</text>
+  <line x1="36.44" y1="25.58" x2="50.62" y2="24.91" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="275"/>
+  <line x1="36.44" y1="25.58" x2="50.62" y2="26.24" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="275"/>
   <text x="57.45" y="12.40" font-size="1.80" font-weight="bold" font-style="italic" data-pos="338">8va</text>
   <line x1="61.19" y1="12.40" x2="84.03" y2="12.40" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="338"/>
   <line x1="84.03" y1="12.40" x2="84.03" y2="13.20" stroke="#000000" stroke-width="0.100" data-pos="338"/>

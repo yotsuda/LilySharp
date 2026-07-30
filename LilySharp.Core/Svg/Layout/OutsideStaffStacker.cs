@@ -94,7 +94,21 @@ internal static class OutsideStaffStacker
     // define-grobs.scm:1450 — which is the Y-offset (-0.6) inside the line spanner, not an
     // ascent. A LILYPOND-REF beside a number is not evidence that the number came from it.
 
-    // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin height = 0.6666
+    // ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
+    // the §7.7 pass over the placement port, not fixed, because no point observes it.
+    // The wedge's real ink half-height is its OWN opening plus half the rule's thickness,
+    // and the drawn opening's cap IS 0.6666 (HairpinEngraver.Height carries that citation),
+    // so this is about HALF the ink LilyPond's Hairpin skyline has. The other two spellings
+    // are already right and already differ in shape on purpose: HairpinEngraver.WedgeSkylines
+    // is the pointwise outline (side-position, the wedge narrows to its apex) and
+    // LayoutEngine's annotation-protrusion pass is the max fold over the piece. This one is
+    // neither — it UNDER-reserves, which is the direction that prints a collision.
+    // ⚠️ WHY IT IS NOT FIXED HERE: no ledger point reads it. hairpin.page.quiet reads the
+    // DEEPEST ink under the last staff, which the protrusion pass supplies either way, and
+    // this box only decides how far the collision pass pushes a wedge that sits under
+    // something tall. The pair that observes it is a hairpin under a below-staff script or a
+    // second dynamic — the same missing pair the script seed box waits on. Point first.
+    // LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666)
     private const double HairpinHalfHeight = 0.6666 / 2.0;
 
     // (DynamicHalfWidth 0.75 — the last nominal box of the dynamic pipeline — died on

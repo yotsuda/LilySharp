@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -251,19 +252,50 @@ public class HairpinTests
         Assert.Equal(0.6666, result[0].EndOpening, 4);  // Full opening at end
     }
 
+    /// <summary>
+    /// The wedge's resting level is LilyPond's <c>aligned_side</c> for its
+    /// DynamicLineSpanner, not a constant — and with nothing under the staff to support
+    /// off, that is the staff's own ink plus the spanner's padding plus the wedge's own
+    /// half height.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// THE ARITHMETIC IS WRITTEN OUT rather than asserted as 5.3666, because every term is
+    /// a measured LilyPond one and the point of the test is which terms there are: staff
+    /// ink 2.05 (the outermost line's centre plus half its thickness) + DynamicLineSpanner's
+    /// <c>padding</c> 0.6 + the drawn wedge's half height (<c>height</c> 0.6666 plus half
+    /// the rule's thickness), all below the staff MIDDLE, which is itself
+    /// <see cref="EngravingDefaults.StaffMiddle"/> below the frame's origin at the system
+    /// top. MEASURED in LilyPond 2.26.0 by dumping the spanner's own offset — the
+    /// decomposition, the perturbation that found each term's owner, and the two
+    /// compensating 0.05 errors it replaced are in HairpinEngraver's own remark and in
+    /// audit/lp-geometry <c>hairpin.page.quiet.last-staff-to-foot</c>, which reads the same
+    /// quantity through a page foot and lands at 0.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT BREAKS THIS: putting a constant back. Before 2026-07-31 the level was
+    /// <c>BaseYUp = -5.2</c>, a LILYSHARP-OWN number 0.166600 shallower than LilyPond's,
+    /// and no unit test could tell — the old assertion pinned the constant to itself.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void Calculate_Y_AtDynamicLevel()
+    public void Calculate_Y_IsAlignedSideOffTheStaff_NotAConstant()
     {
-        // Hairpins Y should be at the same level as dynamics (BaseY = 5.2)
         var measures = CreateMeasureLayouts(3);
         var systems = CreateSingleSystem(3);
         var hairpins = ImmutableArray.Create(new HairpinItem(
             HairpinDirection.Crescendo, 0, 0, 2, 0, 0));
 
+        // No voices: nothing hangs under the staff, so the staff's own extent is the
+        // whole support — aligned_side's include_staff minimum.
         var result = HairpinEngraver.Calculate(hairpins, systems, measures);
 
-        // Y-up from the system top: device baseline 5.2 below the top = -5.2 up.
-        Assert.Equal(-5.2, result[0].YUp);
+        double staffInk = EngravingDefaults.StaffMiddle + EngravingDefaults.StaffLineThickness / 2;
+        double wedgeHalf = 0.6666 + EngravingDefaults.StaffLineThickness / 2;
+        double expected = -(EngravingDefaults.StaffMiddle + staffInk + 0.6 + wedgeHalf);
+
+        Assert.Equal(expected, result[0].YUp, 9);
+        Assert.Equal(-5.3666, result[0].YUp, 9);
     }
 
     // --- Broken hairpin (cross-system) tests ---

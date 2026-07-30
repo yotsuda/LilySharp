@@ -2676,7 +2676,12 @@ internal sealed class LayoutEngine
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
-        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt);
+        // Same supports as the dynamics on the same DynamicLineSpanner: the staff's own
+        // voices, its measures, and the beams that quant its stems.
+        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt,
+            score != null && staffVoices.IsDefaultOrEmpty
+                ? ImmutableArray.Create(score.Voice) : staffVoices,
+            voicesByStaff, measuresByStaff, beamLayouts ?? default);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them

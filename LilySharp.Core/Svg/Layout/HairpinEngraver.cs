@@ -70,6 +70,7 @@ public readonly record struct HairpinLayout(
 /// </remarks>
 internal static class HairpinEngraver
 {
+
     /// <summary>
     /// Maximum opening of the wedge (half-height).
     /// </summary>
@@ -89,52 +90,12 @@ internal static class HairpinEngraver
     private const double MinimumLength = 2.0;
 
     /// <summary>
-    /// ⚠️ LILYSHARP-OWN, AND MEASURED WRONG BY 0.166600: the hairpin's resting level below
-    /// the staff, as a constant, where LilyPond computes it — and where Lily# ALREADY
-    /// computes it for the other grob on the same spanner.
+    /// The staff middle's own place in the frame a <see cref="HairpinLayout"/> stores:
+    /// Y-up from the SYSTEM TOP, and the staff's top line is the system top, so its middle
+    /// is half a staff below. The side-position port works in the staff-middle frame that
+    /// <see cref="DynamicEngraver"/> shares; this is the only conversion between them.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The sentence this remark used to carry is FALSIFIED, and both of its halves were
-    /// wrong. It read "staff-padding 0.2 + padding 0.6 + ascent" and cited
-    /// DynamicLineSpanner's staff-padding as 0.2; LilyPond's is 0.1
-    /// (scm/define-grobs.scm:1411), and staff-padding is not a SUMMAND at all — the
-    /// :433-453 block of aligned_side is a FLOOR on the grob's refpoint, reached only when
-    /// the supports put it nearer than that (the same trap DynamicEngraver.BaselineY's
-    /// remark records for the text). MEASURED IN LILYPOND 2.26.0, dumping the
-    /// DynamicLineSpanner's own offset on this exact texture (a quiet d with a hairpin
-    /// under every bar): its refpoint sits 3.366600 below the staff refpoint with an ink
-    /// extent of ±0.7166, so the ink bottom is 4.083200 — which is the number
-    /// audit/lp-geometry hairpin.page.quiet.last-staff-to-foot reads through the page's
-    /// foot. PERTURBED to find each owner, rather than fitted:
-    /// <list type="bullet">
-    /// <item>padding 0.6 → 1.6 moves it by exactly 1.0 ⇒ the 0.6 is side-position's
-    /// padding, spent after the skyline distance.</item>
-    /// <item>staff-padding 0.1 → 1.1 does not move it at all, and → 2.1 lands it on
-    /// 4.150000 = 2.05 + 2.1 ⇒ a dominated floor, proved from both sides.</item>
-    /// <item>outside-staff-padding 0.46 → 1.46 moves it ⇒ that pass is live but dominated
-    /// at the default (2.05 + 0.46 + 0.7166 = 3.2266 &lt; 3.3666).</item>
-    /// <item>a note below the staff drags it down ⇒ the support is the notes UNION the
-    /// staff's own extent, which is aligned_side's include_staff minimum.</item>
-    /// </list>
-    /// ⇒ 3.366600 = staff ink 2.05 + padding 0.6 + the wedge's own half height 0.7166
-    /// (HairpinEngraver.Height 0.6666 + half the rule's thickness). ⚠️ The ledger's earlier
-    /// arithmetic fit 2.05 + 0.1 + 0.6 + 0.6666 reached the right INK BOTTOM by two
-    /// compensating errors of 0.05 — HANDOFF §5.0's "a fit is not a decomposition", caught
-    /// here by the dump.
-    /// </para>
-    /// <para>
-    /// THE PORT IS NAMED AND IT IS NOT A NEW NUMBER: DynamicEngraver.BaselineY is already
-    /// the full aligned_side transcription, and LilyPond hangs BOTH grobs off ONE
-    /// DynamicLineSpanner (scm/define-grobs.scm:1428-1431 says so in its own description).
-    /// Calling it with the wedge's own dim — and without the text's TextOffsetInSpanner,
-    /// which is DynamicText's Y-offset inside the spanner and not the spanner's — returns
-    /// −3.366600 by construction. PREDICTION, written before the move: this constant goes,
-    /// the level becomes −5.366600 in this frame, and
-    /// hairpin.page.quiet.last-staff-to-foot lands at 0 from −0.166600181.
-    /// </para>
-    /// </remarks>
-    private const double BaseYUp = -5.2; // Y-up: 5.2 below the system top
+    private const double StaffMiddleBelowSystemTop = EngravingDefaults.StaffMiddle;
 
     /// <summary>
     /// Height fraction for the broken end of a continued hairpin (right edge at line break).
@@ -162,7 +123,11 @@ internal static class HairpinEngraver
         ImmutableArray<HairpinItem> hairpins,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Func<int, int, double>? staffYAt = null)
+        Func<int, int, double>? staffYAt = null,
+        ImmutableArray<Voice> voices = default,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -170,6 +135,7 @@ internal static class HairpinEngraver
         // LILYPOND-REF: lily/system.cc:143-192 — fixup_refpoints walks all systems once.
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<HairpinLayout>();
+        var beamMembers = DynamicEngraver.BuildBeamMembers(beamLayouts);
 
         // Height IS the wedge's half-opening (LP's `height` property): the two
         // arms sit at ±fullOpening, so the open end's full mouth is 2·Height,
@@ -188,17 +154,27 @@ internal static class HairpinEngraver
                 hairpin.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // The wedge hangs a fixed distance below ITS staff; add the staff's
-            // within-system offset so a hairpin on staff 2 sits under staff 2, not
-            // staff 1. Staff 0 (or a single staff) has offset 0 -> unchanged. The
-            // per-staff stacker then keeps it clear of that staff's dynamics only.
+            // The wedge hangs below ITS staff; add the staff's within-system offset so a
+            // hairpin on staff 2 sits under staff 2, not staff 1. Staff 0 (or a single
+            // staff) has offset 0 -> unchanged. The per-staff stacker then keeps it clear
+            // of that staff's dynamics only.
             double staffOffset = staffYAt?.Invoke(hairpin.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
-            // Y-up from the system top; staffOffset is a within-system downward offset,
-            // so it SUBTRACTS.
-            double hairpinYUp = BaseYUp - staffOffset;
+
+            // This hairpin's own staff: its voices (to support off the right heads and
+            // stems) and its measures (to place the columns in X).
+            var hpVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(hairpin.StaffIndex, out var vv) ? vv : voices;
+            var hpMeasures = LayoutUtilities.ResolveStaffMeasures(
+                measuresByStaff, hairpin.StaffIndex,
+                hpVoices.IsDefaultOrEmpty ? ImmutableArray<Measure>.Empty : hpVoices[0].Measures);
+            int staffIdx = hairpin.StaffIndex;
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
-            // reattached to the system edges.
+            // reattached to the system edges. LilyPond breaks the DynamicLineSpanner with
+            // it and side-positions EACH piece against the supports that fall inside it
+            // (break-substitution.cc:67-153 substitute_grob / do_break_substitution
+            // rewrites the support list per piece), so the level is resolved here and not
+            // once for the whole span.
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 hairpin.StartMeasureIndex, hairpin.EndMeasureIndex, systems, measureToSystemIdx))
             {
@@ -226,6 +202,28 @@ internal static class HairpinEngraver
                     endOpening = segment.IsLast ? 0 : continuingOpening;
                 }
 
+                // THE LEVEL IS THE DynamicLineSpanner'S OWN OFFSET, not a constant: the
+                // same aligned_side DynamicEngraver runs for the text on the same spanner,
+                // called with the WEDGE's outline and spending no child offset (the
+                // Hairpin is self-alignment-Y CENTER on the spanner, where DynamicText
+                // hangs 0.6 below it). MEASURED in LilyPond 2.26.0 on the ledger's own
+                // texture: the spanner refpoint sits 3.366600 below the staff refpoint
+                // = staff ink 2.05 + padding 0.6 + the wedge's own half height 0.7166.
+                // LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner
+                //   (Y-offset . side-position-interface::y-aligned-side) and its own
+                //   description, "a vertical baseline to align successive dynamic grobs
+                //   (DynamicText, DynamicTextSpanner, and Hairpin)".
+                var support = DynamicEngraver.SpanSupportSkylines(
+                    hpVoices, VoiceIndex,
+                    SpanColumns(hairpin, segment, hpMeasures, measureLayouts),
+                    (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
+                        ? b : null);
+                double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support,
+                    WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0));
+                // spannerY is Y-up about the staff middle; the layout frame is Y-up from
+                // the SYSTEM top, and staffOffset is a within-system downward offset.
+                double hairpinYUp = spannerY - StaffMiddleBelowSystemTop - staffOffset;
+
                 layouts.Add(new HairpinLayout(
                     segment.StartMeasureIndex, segStartX, segEndX, hairpinYUp,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
@@ -234,6 +232,93 @@ internal static class HairpinEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
+    /// Dynamic_align_engraver is consisted into the <c>Voice</c> context
+    /// (ly/engraver-init.ly:359,410), so a hairpin in the lower voice sides off the LOWER
+    /// voice's heads and stems. Lily# cannot ask that question here — a hairpin comes from
+    /// a <see cref="MusicMarkItem"/>, which carries a staff but no voice — so it takes the
+    /// staff's first voice. The other voices' ink still reaches the wedge, through the
+    /// outside-staff collision pass over the whole staff profile
+    /// (<see cref="OutsideStaffStacker"/>), which is the route LilyPond uses for them too;
+    /// what is lost is only the 0.6-padding side-position support of a hairpin authored in
+    /// a non-first voice. It goes when MusicMarkItem carries its voice.
+    /// ⚠️ NOTHING OBSERVES IT: the corpus has no point on a hairpin in a lower voice, and
+    /// the pair that would see it is a two-voice staff whose lower voice descends further
+    /// than 0.14 below where the collision pass would put the wedge anyway (the gap
+    /// between this padding, 0.6, and outside-staff-padding, 0.46).
+    /// </summary>
+    private const int VoiceIndex = 0;
+
+    /// <summary>
+    /// The wedge's OWN skyline pair (<c>my_dim</c>) about the spanner origin: the two
+    /// drawn arms, each a straight edge from its start opening to its end opening, widened
+    /// by half the rule's thickness — the same two lines
+    /// <c>SharedRenderer.DrawHairpins</c> puts on the page.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Hairpin
+    ///   <c>(vertical-skylines . grob::unpure-vertical-skylines-from-stencil)</c> — the
+    ///   profile is the STENCIL, so it narrows to the apex rather than being the max
+    ///   half-height in a box; and <c>(self-alignment-Y . CENTER)</c> with
+    ///   <c>(Y-offset . self-alignment-interface::y-aligned-on-self)</c> centres the wedge
+    ///   on the spanner, which is why <paramref name="centreYUp"/> is the spanner's own
+    ///   origin and no child offset is spent.
+    /// LILYPOND-REF: lily/hairpin.cc:110-358 <c>Hairpin::print</c> (:124 <c>grow_dir</c>,
+    ///   :304-309 <c>starth</c> / <c>endh</c>) — the arms are straight lines from ±starth to
+    ///   ±endh, and the rule is centred on them at <c>thickness</c>.
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) WedgeSkylines(
+        double startX, double endX, double startOpening, double endOpening, double centreYUp)
+    {
+        double half = EngravingDefaults.StaffLineThickness / 2.0;
+        return (VerticalSkyline.FromSlope(
+                    startX, centreYUp + startOpening + half,
+                    endX, centreYUp + endOpening + half,
+                    thickness: 0, VerticalDirection.Up),
+                VerticalSkyline.FromSlope(
+                    startX, centreYUp - startOpening - half,
+                    endX, centreYUp - endOpening - half,
+                    thickness: 0, VerticalDirection.Down));
+    }
+
+    /// <summary>
+    /// The (measure, item, column X) of every note column this broken piece runs over —
+    /// the timesteps whose heads and stems LilyPond's Dynamic_align_engraver adds as
+    /// support while the line spanner is alive.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dynamic-align-engraver.cc:222-223 <c>add_support</c> per
+    ///   <c>stop_translation_timestep</c>, from the timestep that created the spanner to
+    ///   the one that ends it — so the range is the hairpin's own span, clipped to this
+    ///   piece's measures.
+    /// </remarks>
+    private static IEnumerable<(int Measure, int Item, double X)> SpanColumns(
+        HairpinItem hairpin, SpannerBreakSegment segment,
+        ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        // No measures means no caller supplied a staff — the harness case (a unit test that
+        // builds layouts directly). The support is then the staff's own extent alone, which
+        // is aligned_side's include_staff minimum and NOT a silent empty: HairpinTests'
+        // Calculate_Y_IsAlignedSideOffTheStaff_NotAConstant is that state, asserted.
+        if (staffMeasures.IsDefaultOrEmpty)
+            yield break;
+        int first = Math.Max(segment.StartMeasureIndex, hairpin.StartMeasureIndex);
+        int last = Math.Min(segment.EndMeasureIndex, hairpin.EndMeasureIndex);
+        for (int m = first; m <= last && m < measureLayouts.Length; m++)
+        {
+            if (m >= staffMeasures.Length)
+                break;
+            var layout = measureLayouts[m];
+            int itemCount = staffMeasures[m].Items.Length;
+            int from = m == hairpin.StartMeasureIndex ? hairpin.StartItemIndex : 0;
+            int to = m == hairpin.EndMeasureIndex ? hairpin.EndItemIndex : itemCount - 1;
+            for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
+                yield return (m, i,
+                    layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
+        }
     }
 
     private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)

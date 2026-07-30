@@ -102,7 +102,7 @@
   <rect x="101.34" y="19.48" width="0.19" height="4.00" data-pos="655"/>
   <rect x="101.83" y="19.48" width="0.60" height="4.00" data-pos="655"/>
   <text x="11.75" y="26.30" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="285">p</text>
-  <text x="31.97" y="26.01" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
+  <text x="31.97" y="26.03" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="316">f</text>
   <text x="35.50" y="28.06" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="380">ff</text>
   <text x="55.65" y="29.80" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="448">pp</text>
   <text x="59.52" y="26.33" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="529">mf</text>
@@ -112,8 +112,8 @@
   <text class="music" x="40.93" y="25.88" font-size="4.00" data-pos="405"></text>
   <text class="music" x="43.64" y="26.38" font-size="4.00" data-pos="416"></text>
   <text class="music" x="99.48" y="18.90" font-size="4.00" data-pos="646"></text>
-  <line x1="26.40" y1="25.28" x2="30.82" y2="24.61" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="26.40" y1="25.28" x2="30.82" y2="25.94" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="26.40" y1="25.49" x2="30.82" y2="24.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="26.40" y1="25.49" x2="30.82" y2="26.15" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
   <line x1="50.07" y1="30.51" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <line x1="50.07" y1="31.84" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <text class="music" x="7.54" y="18.12" font-size="3.56" data-pos="0"></text>

@@ -340,4 +340,62 @@ public class SkylineMergeTests
         double distPadded = right.Distance(left, 6.0);
         Assert.Equal(20.0, distPadded, Epsilon);
     }
+
+    /// <summary>
+    /// A building that reaches ±∞ still reaches ±∞ after a FINITE one is merged over it —
+    /// the invariant every floor in the engine stands on.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/skyline.cc:259-282 empty_skyline / single_skyline — the two
+    /// builders that pad every gap with a -infinity building, which is how LilyPond keeps
+    /// the invariant its own file header states ("the start of the first building is at
+    /// -infinity, the end of the last building is at infinity"). Lily# stores only the
+    /// non-empty stretches, so the same invariant has to be kept by the merge's interval
+    /// walk instead.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS FAILED FOR AS LONG AS THE MERGE COLLECTED ONLY FINITE BOUNDARIES: the walk
+    /// covered the finite hull and everything outside it came back EMPTY, so one note-column
+    /// box deleted the staff floor either side of itself. The ledger reading that caught it
+    /// is dynamic.page.quiet.last-staff-to-foot (-0.020774041 → -0.000075985): an `f` whose
+    /// ink overhangs its notehead's advance binds OUTSIDE the column's box, on floor that had
+    /// been punched out. The hairpin span that first exposed it (session 48) had to pass a
+    /// bounded horizon to work around it; that workaround is gone with this.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Merge_KeepsAnUnboundedBuildingsTails()
+    {
+        // The staff floor: -2.05 over the whole horizon, as side-position's
+        // set_minimum_height raises it (side-position-interface.cc:323-330).
+        var floor = VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity, -2.05, -2.05,
+            VerticalDirection.Down);
+        // One note column's head, a finite box well above that floor.
+        floor.Merge(VerticalSkyline.FromBox(0, 1.3, -0.545, 0.545, VerticalDirection.Down));
+
+        // Inside the box and either side of it, the floor is the floor: the head is higher,
+        // so it never wins on a DOWN skyline.
+        Assert.Equal(-2.05, floor.Height(-50), Epsilon);
+        Assert.Equal(-2.05, floor.Height(0.65), Epsilon);
+        Assert.Equal(-2.05, floor.Height(50), Epsilon);
+
+        // ...and a reading taken OUTSIDE the box still sees it. A 1-wide roof at Y-up 1.296
+        // sitting to the right of the column is 3.346 above the floor, wherever it is.
+        var mine = VerticalSkyline.FromBox(2.0, 3.0, 1.296, 1.296, VerticalDirection.Up);
+        Assert.Equal(3.346, mine.Distance(floor), Epsilon);
+
+        // TWO unbounded buildings and no finite boundary at all: the walk had nothing to
+        // walk between and returned an EMPTY skyline. The outer one wins, everywhere.
+        var deeper = VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity, -3.0, -3.0,
+            VerticalDirection.Down);
+        deeper.Merge(VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity, -2.05, -2.05,
+            VerticalDirection.Down));
+        Assert.False(deeper.IsEmpty);
+        Assert.Equal(-3.0, deeper.Height(0), Epsilon);
+        Assert.Equal(-3.0, deeper.Height(1000), Epsilon);
+    }
 }

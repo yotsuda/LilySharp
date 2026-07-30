@@ -242,12 +242,21 @@ internal static class DynamicEngraver
         => StaffMiddle + EngravingDefaults.StaffLineThickness / 2;
 
     /// <summary>
-    /// The DynamicText baseline that <c>side-position-interface</c> produces for a
-    /// DynamicLineSpanner over the given SUPPORT skylines on the <paramref name="dir"/>
-    /// side (+1 up, −1 down), in the native Y-up frame — the distance is POINTWISE
-    /// against the spanner's own outline (<paramref name="spannerDim"/>, the label at
-    /// its −0.6 offset about the spanner origin).
+    /// The DynamicLineSpanner's OWN offset that <c>side-position-interface</c> produces
+    /// over the given SUPPORT skylines on the <paramref name="dir"/> side (+1 up, −1
+    /// down), in the native Y-up frame — the distance is POINTWISE against the spanner's
+    /// own outline (<paramref name="spannerDim"/>, its elements composed about the
+    /// spanner origin).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS RETURNS THE SPANNER, NOT A BASELINE. LilyPond hangs BOTH dynamic grobs off
+    /// ONE DynamicLineSpanner (define-grobs.scm:1428-1431 says so in its own description),
+    /// and they sit at DIFFERENT offsets inside it: DynamicText at
+    /// <see cref="TextOffsetInSpanner"/> below (self-alignment on an 'm'), the Hairpin
+    /// centred on it (<c>self-alignment-Y . CENTER</c>, define-grobs.scm Hairpin). So each
+    /// caller spends its own child offset — <see cref="PointwiseBaselineY"/> for the text,
+    /// <see cref="HairpinEngraver"/> for the wedge, which spends none.
+    /// </remarks>
     /// <remarks>
     /// LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side, transcribed for
     ///   this grob (side-axis Y, so <c>a == Y_AXIS</c> and <c>ss == 1</c> staff space):
@@ -272,7 +281,7 @@ internal static class DynamicEngraver
     ///   a nominal 0.64 descent reach the same total as 2.05 + 0.6 and the `f` glyph's
     ///   own 0.692002.
     /// </remarks>
-    private static double BaselineY(double dir,
+    internal static double SpannerOffsetY(double dir,
         (VerticalSkyline Up, VerticalSkyline Down) support,
         (VerticalSkyline Up, VerticalSkyline Down) spannerDim)
     {
@@ -292,8 +301,7 @@ internal static class DynamicEngraver
         double diff = StaffExtent + StaffPadding - dir * totalOff;
         totalOff += dir * Math.Max(diff, 0.0);
 
-        // total_off positions the SPANNER; the baseline sits TextOffsetInSpanner below.
-        return totalOff - TextOffsetInSpanner;
+        return totalOff;
     }
 
     /// <summary>
@@ -315,7 +323,9 @@ internal static class DynamicEngraver
         var support = ColumnSupportSkylines(
             voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
         var my = LabelSkylines(text, expressive, xLabel, -TextOffsetInSpanner);
-        return BaselineY(above ? 1.0 : -1.0, support, my);
+        // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
+        // below it (define-grobs.scm:1450 DynamicText Y-offset, "center on an 'm'").
+        return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - TextOffsetInSpanner;
     }
 
     /// <summary>
@@ -345,14 +355,74 @@ internal static class DynamicEngraver
         double xColumn,
         Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
     {
-        // :323-330 — the staff extent is the floor under whatever the column contributes.
-        var up = VerticalSkyline.FromBox(
-            double.NegativeInfinity, double.PositiveInfinity,
-            StaffExtent, StaffExtent, VerticalDirection.Up);
-        var down = VerticalSkyline.FromBox(
-            double.NegativeInfinity, double.PositiveInfinity,
-            -StaffExtent, -StaffExtent, VerticalDirection.Down);
+        var (up, down) = StaffFloorSupport();
+        MergeColumnSupport(up, down, voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
+        return (up, down);
+    }
 
+    /// <summary>
+    /// The side-position SUPPORT skylines of EVERY note column a DynamicLineSpanner runs
+    /// over — the same head/stem ingredients as <see cref="ColumnSupportSkylines"/>, merged
+    /// across the whole span, floored by the staff symbol.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dynamic-align-engraver.cc:222-223 <c>add_support</c> — the engraver
+    ///   calls <c>add_support (line_, support_[i])</c> at EVERY <c>stop_translation_timestep</c>
+    ///   while the line spanner is alive, so a hairpin's supports are all the heads and
+    ///   stems from its first timestep to its last, not just one column. (A DynamicText
+    ///   alone ends its line in the timestep that created it — that is why
+    ///   <see cref="ColumnSupportSkylines"/> is the one-column case of this and not a
+    ///   different rule.)
+    /// </remarks>
+    /// <param name="columns">(measure, item, column X) for each timestep in the span.</param>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) SpanSupportSkylines(
+        ImmutableArray<Voice> voices, int voiceIndex,
+        IEnumerable<(int Measure, int Item, double X)> columns,
+        Func<int, int, int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+    {
+        var (up, down) = StaffFloorSupport();
+        // A span is many boxes into one skyline, which is the shape Merge's batch mode
+        // exists for: append now, resolve once, O(K log K) instead of O(K²). Byte-identical
+        // — the resolve keeps the highest at each point, and max is commutative.
+        up.BeginBatch();
+        down.BeginBatch();
+        foreach (var (mi, ii, x) in columns)
+            MergeColumnSupport(up, down, voices, voiceIndex, mi, ii, x,
+                beamOf is null ? null : vi => beamOf(vi, mi, ii));
+        up.EndBatch();
+        down.EndBatch();
+        return (up, down);
+    }
+
+    /// <summary>
+    /// :323-330 — the staff extent is the floor under whatever the columns contribute, over
+    /// the WHOLE horizon.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT USED TO BE BOUNDED, and that was a workaround rather than a model choice:
+    /// <see cref="VerticalSkyline.Merge"/> dropped an unbounded building's tails, so a
+    /// note-column box punched the floor out from under the rest of a span (MEASURED
+    /// 2026-07-31: a wedge whose distance should have been 2.7666 to a −2.05 floor came
+    /// back 1.0849). The merge carries them now — LilyPond's own invariant, kept there by
+    /// <c>empty_skyline</c> / <c>single_skyline</c> (skyline.cc:259-282) — so this is back to
+    /// what <c>set_minimum_height</c> says: no horizon at all, the whole dim is raised.
+    /// </remarks>
+    private static (VerticalSkyline Up, VerticalSkyline Down) StaffFloorSupport()
+        => (VerticalSkyline.FromBox(
+                double.NegativeInfinity, double.PositiveInfinity,
+                StaffExtent, StaffExtent, VerticalDirection.Up),
+            VerticalSkyline.FromBox(
+                double.NegativeInfinity, double.PositiveInfinity,
+                -StaffExtent, -StaffExtent, VerticalDirection.Down));
+
+    /// <summary>Merges ONE note column's head and direction-matching real stem into an
+    /// accumulating support pair. See <see cref="ColumnSupportSkylines"/> for the refs.</summary>
+    private static void MergeColumnSupport(
+        VerticalSkyline up, VerticalSkyline down,
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
+        double xColumn,
+        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
+    {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         if (vs.Length > 0)
         {
@@ -405,7 +475,6 @@ internal static class DynamicEngraver
                 // A rest has no head/stem grob to support off — the staff floor stands.
             }
         }
-        return (up, down);
     }
 
     /// <summary>

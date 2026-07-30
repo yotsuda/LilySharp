@@ -407,14 +407,34 @@ internal sealed class VerticalSkyline
         // system-skyline construction and Padded(). Duplicate boundaries are not
         // removed here; the interval loop skips zero-width spans below, which is
         // equivalent to the set's dedup.
-        var boundaryList = new List<double>(existing.Count * 2 + 2);
+        //
+        // ⚠️ ±∞ ARE BOUNDARIES TOO, and leaving them out DELETED A REAL FLOOR. LilyPond's
+        // invariant is that a skyline spans the whole horizon — its own file header says
+        // "the start of the first building is at -infinity, the end of the last building is
+        // at infinity" — and it keeps it by padding every gap with a -infinity building.
+        // Lily# stores only the NON-EMPTY stretches, which is the same skyline written
+        // shorter; but then a building that DOES reach ±∞ has to put that end into the
+        // interval walk, or the walk covers only the finite hull and everything outside it
+        // comes back empty. Merging one finite box over an (-∞ . +∞) floor used to erase the
+        // floor either side of that box — and merging two unbounded buildings used to leave
+        // NOTHING, there being no finite boundary to walk between.
+        // LILYPOND-REF: lily/skyline.cc:259-282 empty_skyline / single_skyline — the two
+        //   builders that keep that invariant (non_overlapping_skyline :284-326 fills the
+        //   gaps the same way).
+        bool reachesLeft = double.IsNegativeInfinity(newBuilding.Start);
+        bool reachesRight = double.IsPositiveInfinity(newBuilding.End);
+        var boundaryList = new List<double>(existing.Count * 2 + 4);
         foreach (var b in existing)
         {
-            if (!double.IsInfinity(b.Start)) boundaryList.Add(b.Start);
-            if (!double.IsInfinity(b.End)) boundaryList.Add(b.End);
+            if (double.IsNegativeInfinity(b.Start)) reachesLeft = true;
+            else boundaryList.Add(b.Start);
+            if (double.IsPositiveInfinity(b.End)) reachesRight = true;
+            else boundaryList.Add(b.End);
         }
         if (!double.IsInfinity(newBuilding.Start)) boundaryList.Add(newBuilding.Start);
         if (!double.IsInfinity(newBuilding.End)) boundaryList.Add(newBuilding.End);
+        if (reachesLeft) boundaryList.Add(double.NegativeInfinity);
+        if (reachesRight) boundaryList.Add(double.PositiveInfinity);
 
         // Add intersection points
         foreach (var b in existing)
@@ -438,7 +458,15 @@ internal sealed class VerticalSkyline
             double left = boundaryList[i];
             double right = boundaryList[i + 1];
             if (right <= left) continue; // zero-width span (duplicate boundary) — matches SortedSet dedup
-            double mid = (left + right) / 2;
+            // A probe point INSIDE the interval. An unbounded end cannot be averaged
+            // ((-∞ + ∞)/2 is NaN, and (-∞ + x)/2 is -∞, which no finite building contains),
+            // so step one unit in from the finite side — the tail intervals are outside every
+            // finite boundary by construction, so no finite building can be reached there and
+            // the probe can only find the buildings that actually run to infinity.
+            double mid = double.IsNegativeInfinity(left)
+                ? (double.IsPositiveInfinity(right) ? 0.0 : right - 1.0)
+                : double.IsPositiveInfinity(right) ? left + 1.0
+                : (left + right) / 2;
 
             // Find highest building at midpoint
             SkylineBuilding? best = null;
