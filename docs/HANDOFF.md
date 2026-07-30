@@ -40,7 +40,27 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第44セッション・**★★★ figured bass の cap 債務を face 移植で閉じた**
+最終更新 2026-07-30（第45セッション・**★★★ figured bass の row 深さを `BassFigureAlignment`
+移植で閉じ、島は「1 つの数」になった**（`a8763ca7`・**snapshot 3 枚・GO 済**）。
+**step は spec の `minimum-distance` で、しかも 2 枝の max**——`BassFigureLine` は
+`staff-affinity` を宣言しないので **spaceable**（`page-layout-problem.cc:1174-1177`）、
+だから 2 本の間の spec は上の line の **`staff-staff-spacing = ((minimum-distance . 1.5)
+(padding . 0.1))`**（`define-grobs.scm:449-450`）で、その padding が alignment 自身の
+**−inf を上書きする**（`align-interface.cc:225-226`）。⇒ **step = max(skyline 距離 + 0.1, 1.5)**。
+⚠️ **1.5 は定数として書いていない**——数字は minimum 枝が勝つだけ（インクは 1.222462）で、
+**臨時記号は反対側へ行く**（♯ over ♯ = 1.505402・単体テストで実測）。
+**着地は予測どおり**: `figbass.upper-staff.staff-gap` **+0.597666813 → −0.002333187**
+（drift −0.600000 ちょうど）＝**5 点すべてが同じ −0.002333187**。
+⚠️ **この島はもう算術では閉じない**（emmentaler-11 対 -20 の光学サイズ。**定数で埋めない**）。
+★★★ **そして「masked な第3の綴り」が実測で出た**——`EstimateLooseLineExtents` の
+`2.0 + n × 1.5` が**ページ高の床**で、**零にすると 2 譜が −0.59／−0.55 動く**。
+移植の効果がページ高で 0.01/0.05 にしか見えなかったのはこれ。**点が無いので札だけ付けて据え置き**。
+★★★ **perf も測った（ユーザー指示・訊かれた時点で未測定だった）＝本物の退行 1 件を出して直した**:
+初版は figure 多用譜で **+10%**（`RowOffsets` が列ごとに skyline を解き直していた）。
+**`BeginBatch`/`EndBatch` で 104.24 → 87.00 ms**（base 93.02・対照譜は全 RUN 平ら）。
+⚠️ **figured bass の無い譜は新しいコードを 1 行も通らない**（guard 5 か所）。
+詳細は下の第45セッション節）
+/ 第44セッションは **figured bass の cap 債務を face 移植で閉じた**
 （`b5c9bd40`・**snapshot 3 枚・GO 済**）。**鍵は「引継ぎが書いた鎖の推測が外れていた」こと**——
 figure は font-size 0 ではなく **markup が `-5` を持つ**（`translation-functions.scm:468-470`）、
 そして **fetaText の base size は `staff-height`**（`font-select.cc:99-117`・text-font-size は
@@ -58,8 +78,9 @@ latin1 の枝）。⇒ em は歌詞の鎖の 2.2 ではなく **4 ss × magstep(
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3557 passed / 0 failed / 3 skipped**（台帳 **231 点**全緑・第43セッションで
-figured bass **6 点**追加＝225 → 231・第44セッションは**点を足さず 5 点の残差を動かした**）・
+**HEAD は 3560 passed / 0 failed / 3 skipped**（台帳 **231 点**全緑・第43セッションで
+figured bass **6 点**追加＝225 → 231・第44・45 セッションは**点を足さず残差を動かした**。
+第45セッションは**台帳でなく単体テストを 3 本足した**＝3557 → 3560）・
 ⚠️ **台帳の点数は `lp-geometry.json` の entry を数えること**（`ConvertFrom-Json` で 1 行）。
 `--filter LpGeometryLedger` は **242** と出るが、それは同ファイルの他 11 本を含んだ**テスト数**で
 点数ではない。**第42セッションまでの「236 点」はこの取り違えで、当時の実数は 225 だった**
@@ -151,9 +172,86 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
 
+### 第45セッション（2026-07-30）＝ **row 深さを移植して figured bass 島は「1 つの数」になった。予測は全節当たり、収穫は「移植を隠していた第3の綴り」のほうだった**
+
+★★ **commit（コードが動くのは 1 本）**: `ced37438`（**予測＝台帳 why とプローブ本に、移植前に**・
+コード変更ゼロ）／`a8763ca7`（**移植＝`BassFigureAlignment`・snapshot 3 枚・GO 済**）／
+`4acc14b2`（**自己監査＝裏取り 1 件・札 1 件・単体テスト 3 本**・出力不変）／
+`b1a09460`（**perf＝スカイライン merge の batch 化・実測 104.24 → 87.00 ms**・出力不変・下の 8）。
+**3560 passed / 0 failed / 3 skipped**・台帳 **231 点**全緑（**点は増えていない**）。
+
+1. ★★★ **step は「LP の 1.5」ではなく「spec の minimum-distance と、それを床にした 2 枝の max」**。
+   `BassFigureAlignment` は `BassFigureLine` を積む（`align-interface.cc:163-285`・
+   `stacking-dir DOWN`）。**line は `staff-affinity` を宣言しない ⇒ spaceable**
+   （`page-layout-problem.cc:1174-1177`）⇒ **2 本の間の spec は上の line の
+   `staff-staff-spacing`**（`get_spacing_spec` :1277-1281）＝
+   **`((minimum-distance . 1.5) (padding . 0.1))`**（`define-grobs.scm:449-450`）。
+   ★ **その padding が alignment 自身の `-inf` を上書きする**（:225-226）——
+   **`-inf` は「最初の要素の dy」にしか残らず、そこは `max(0, dy)` が食う**。
+   ⇒ **step = max(down_skyline.distance(次の line の UP) + 0.1, 1.5)**。
+2. ★★★ **「1.5 を定数で書かない」は判断でなく事実**。digit は
+   **0 .. 2.000 design-ss ＝ 0 .. 1.122462048**（この em で）なので ink 枝は
+   **1.222462048** しか出さず minimum が勝つ——**LP の dump が 1.5 なのはこれ**。
+   だが **figbass の臨時記号は両端に出る**（♯ は −0.252 .. 2.252 ＝ −0.141430 .. 1.263972）ので
+   **♯ over ♯ は 1.505402 で ink 枝が勝つ**。⇒ **単体テストで両枝を留めた**（下の 6）。
+   ⚠️ **プローブの texture だけ見て定数化していたら、そのまま fit だった**（§5.2）。
+3. ★★★ **着地は予測の全節が当たった**（台帳）:
+   | 点 | 前 | 後 |
+   |---|---|---|
+   | `figbass.upper-staff.staff-gap` | +0.597666813 | **−0.002333187**（drift −0.600000 ちょうど） |
+   | baseline 4 点 | −0.002333187 | **不動** |
+   | `figbass.lower-staff.staff-gap` | 0 exact | **不動** |
+   | 他 225 点 | — | **不動**（台帳 1 走で 241/242・動いたのはこの 1 点だけ） |
+   ⇒ ★★★ **figured bass 島は 5 点すべてが同じ −0.002333187**＝**emmentaler-11 対 -20 の
+   光学サイズ**。**算術は残っていない**。⚠️ **定数で埋めない**——閉じるのは同梱したときだけ。
+4. ★★★ **収穫は「移植を隠していた第3の綴り」**。ページ高は **−0.01／−0.05 しか動かなかった**
+   （row 深さは −0.6 動いたのに）。**推論せず摂動した**（§5.3・持ち主の特定）:
+   `EstimateLooseLineExtents` の `2.0 + n × 1.5` を零にすると
+   **figbass-below-script −0.59・figbass-chordname-lower-staff −0.55**。
+   ⇒ **あれがページ高の床で、移植を mask していた**。**LP にこの式は無い**（pure height は
+   同じ grob の pure extent から出る＝この関数から**歌詞の枝が削除されたのと同じ理由**）。
+   ⚠️ **点が無いので札だけ付けて据え置いた**（§5.0「観測者の無い出力変更はしない」）。
+   ⇒ ★★ **次の figured bass は「figure row の下のページ高」の点**。
+5. ★★ **snapshot 3 枚はすべて「部屋」で「配置」ではない**——figbass 2 枚は **SVG のヘッダ 1 行
+   だけ**が違い（＝**描かれた数字は 1 つも動いていない**）、showcase/04 は
+   **第2 system が剛体で 0.23 上がった**（95 個の y のうち 93 個が −0.23・2 個は 2 桁丸め）。
+   **提示してから GO をもらった。**
+6. ★★ **自己監査（§7.5）が 3 件**: ⑴ **裏取り**＝予約側と描画側が**同じ列集合**を積むかは
+   `measureLayouts` が system 単位かどうかで決まる（`LayoutMeasures` が system ごとに作る＝
+   **per-system で一致**）。**digit の texture では食い違っても見えない**ので呼び出し側に明記。
+   ⑵ **`MinFigureBoxWidth 0.8` に消費者が増えた**——stacking は**スカイライン距離**を取るので、
+   この箱幅が「どの列がどの列を見るか」を決める。台帳の texture では不活性、一般には違う。
+   ⑶ **ink 枝には観測者が 1 つも無かった**ので**単体テスト 3 本**（digit＝minimum／
+   ♯ over ♯＝ink・**先に「床の向こう側だ」と assert してから**／短い列は自分の最終 row の深さだけ）。
+7. ★ **機械が 2 回鳴って 2 回とも払った**（`CitationsThatNameNothing`・742）。
+   **同じ行に symbol が要る**——次の行に書いた引用は 8 本とも落ちた。
+   ⚠️ **`align-interface` は 2 節で symbol と見なされない**（3 節か `_` が要る）。
+8. ★★★ **perf を訊かれて測ったら、本物の退行が 1 件出て直した**（`b1a09460`・出力不変）。
+   **worktree A/B**（セッション前 `baf2c01a`）・**同一ハーネスを両ツリーへコピー**・
+   48 小節 × 4 figure × 2 row × 2 譜・warmup 3 ＋ **min-of-30 × 3 セット × 2 RUN**・
+   **label ごとの全体最小**（§5.3）:
+   | 譜 | base | 初版 | batch 後 |
+   |---|---|---|---|
+   | figured | 93.02 ms | **104.24 ms** | **87.00 ms** |
+   | plain（対照） | 56.27 ms | 60.67 ms | 56.85 ms |
+   ⇒ **原因は自分の構造的ミス**: `RowOffsets` は**列ごとに 1 箱**を row のスカイラインへ
+   merge するが、`VerticalSkyline.Merge` は**毎回オーバーラップを解決する**ので、
+   192 figure の row は**自分のプロファイルを 192 回解き直していた**。
+   `BeginBatch`/`EndBatch` はまさにこの形（構築中だけ merge し、終わるまで読まない）。
+   ★ **対照譜（figured bass 無し）は新しいコードを 1 行も通らない**——5 か所の guard
+   （`Calculate`／`StackRows`／`RowInkBelowStaff`／`LayoutEngine` の extent 2 か所／
+   `DrawFiguredBass`）が全部 `FiguredBasses` 非空で閉じている——**全 RUN で平ら**で、
+   それが「ハーネスがツリー間で偏っていない」ことの根拠。
+   ⚠️ **修正後の差は帯の内側**なので**「退行なし」であって「速くなった」ではない**
+   （1 RUN 内のセットが 87〜101 ms に散る）。**初版の +10% は帯の外**で対照も平らだった
+   ——**だから退行と呼べた**。
+
 ### 第44セッション（2026-07-30）＝ **cap 債務を face 移植で閉じた。鎖の推測は 2 か所外れており、外れの訂正がそのまま移植だった**
 
-★★ **commit**: `b5c9bd40`（**移植＝グリフ＋em＋インク・台帳 5 点・snapshot 3 枚・GO 済**）。
+★★ **commit（コードが動くのは 1 本）**: `b5c9bd40`（**移植＝グリフ＋em＋インク・台帳 5 点・
+snapshot 3 枚・GO 済**）／`cf47e38f`（**自己監査＝padding を呼び手の装置から払う＋残した own
+3 件に札**・出力不変）／`b0023e42`（**horizon padding は装置違いと判明・測って据え置き**・
+出力不変）／docs・プローブのみ: `de97f78e`・`545711e3`・`9f3a26d2`。
 **3557 passed / 0 failed / 3 skipped**・台帳 **231 点**全緑（**点は増えていない**）。
 
 1. ★★★ **引継ぎの「font-size 0 の em は鎖にある＝2.2」は 2 か所で外れていた**。
@@ -209,6 +307,29 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 9. ★ **perf は測っていない（測る対象が無い）**: pointwise 化ではなく、skyline に積む箱の数も
    形も不変で、差分は「テキスト 1 本の draw がグリフ 1〜2 本になった」ことと
    `FigureInkTop` の switch だけ。⚠️ **次に figured bass で skyline を触るときは測ること。**
+10. ★★★ **自己監査（§7.5・commit の後に §5.2 片手で読み直す）が本物を 1 件出した**＝
+   **配置が払っていた padding は歌詞行のもの**だった。`SkylineDrop.Compute` は
+   `RelatedStaffPadding`（`engraver-init.ly:651`＝**Lyrics** の
+   `nonstaff-relatedstaff-spacing`）を内部で払っていたが、**台帳はもう Staff 文脈の装置**を
+   測っている（その padding は `define-grobs.scm:393`・`aligned_side :370` で払う別宣言）。
+   **同じ 0.5 なので出力は動かない**——**だから何セッションでも生き残る形**（§5.2.1②）。
+   ⇒ **引数にして呼び手が自分の装置を名指す**ようにした。`EngravingDefaults.BassFigurePadding`
+   が**読み手のいない宣言**になっていたのも同時に解消（**読まれない宣言は宣言が無いより悪い**）。
+11. ★★ **残した own device に札を付けた**（grep で辿れる）: **中央揃え**（LP は
+   `BassFigureLine` 内で左揃え）・**0.8 の箱幅**（**縦は字面化して横は据え置き**＝X の点が無く、
+   system spacing が動く）・**継続ダッシュのテキスト描画**（LP は `BassFigureContinuation`）。
+   ★ **em の `4.0` も「LP は `lookup_variable("staff-height")` で引く」と明記**——
+   ossia／倍率譜で割れる §5ⓑ 族。
+12. ★★★ **`horizon-padding` は装置が違った。試して、据え置いた**。`SkylineDrop` の 0.1 は
+   `VerticalAxisGroup.skyline-horizontal-padding`（`define-grobs.scm:4243`）＝**loose line 側**で、
+   side-position の既定は **0.0**（`side-position-interface.cc:357`・
+   `BassFigureAlignmentPositioning` は override しない）。
+   ⇒ **0.0 にしたら `test/figbass-below-script` が動き、台帳は 1 点も動かない**——
+   あの本の障害物は**細い staccatissimo の短剣**で、0.1 の左右幅が「どの x で測るか」を変える。
+   ⇒ **観測者の無い出力変更はしない**（§5.0・clef 平箱と同じ扱い）ので **0.1 のまま**、
+   **開くべき点は「細い障害物の下の figure row」**＝あの fixture そのもの。
+   ⚠️ ★★★ **そして自分の罠を 1 つ記録した**——**実行する前に「測ったが動かない」と
+   コメントに書いていた**。**予測を測定の文体で書くと、後から読んで区別が付かない。**
 
 ### 第43セッション（2026-07-30）＝ **FiguredBass 島を開いて閉じた。LP は 8 冊すべてで同じ 8.124795235605315 を返し、Lily# の欠陥は「cap 定数 1.5」と「譜の帰属が無いドロップ」の 2 つに割れた**
 
@@ -1697,11 +1818,27 @@ stem-support,below,accidental}`）のうち 4 点が九桁で着地。詳細は�
   ~~**次の一手は face の移植**~~ — **済（第44セッション・`b5c9bd40`・GO 済・snapshot 3 枚）**。
   **cap 債務は落ちた**（baseline 4 点が揃って **−0.002333187**＝emmentaler-11 対 -20 の
   **光学サイズ**・定数で埋めない）。
-  ⇒ ★★ **残るのは row 深さだけ**（`figbass.upper-staff.staff-gap` **+0.597666813**＝
-  予約 `(n−1)×1.6 + 0.5` 対 LP の 1.5 刻み・descent 無し）。**単一項の点になったので次が引ける**:
-  **`BassFigureAlignment` の stacking を移植する**（`scm/define-grobs.scm:366-374`＝
-  `align-to-minimum-distances`・`stacking-dir DOWN`・`padding -inf`。LP の実測刻みは **1.5**）。
-  ⚠️ **予約 1.6 と描画 1.5 は同じ量の 2 綴り**（§5.2.1②）なので**一緒に畳む**。
+  ★ **同時に開いた小さい島（点が先）**: **figure row の `horizon-padding`**。Lily# は
+  loose line の 0.1（`VerticalAxisGroup.skyline-horizontal-padding`）を払うが、
+  side-position の既定は **0.0**。**0.0 にすると `test/figbass-below-script` だけ動き、
+  台帳は動かない**（第44セッション節 12）＝**細い障害物（staccatissimo 短剣）の下の figure row**
+  の対を起票してから 1 引数で閉じる。
+  ~~⇒ ★★ **残るのは row 深さだけ**~~ — **済（第45セッション・`a8763ca7`・GO 済・snapshot 3 枚）**。
+  `BassFigureAlignment` を移植して **+0.597666813 → −0.002333187**（drift −0.600000）。
+  ⇒ ★★★ **figured bass の台帳 5 点はすべて −0.002333187 で、残っているのは光学サイズだけ
+  ＝この島は算術では閉じない**（`figbass.lower-staff.staff-gap` は 0 exact のまま）。
+  **次の figured bass は 3 つ**（どれも「点が先」）:
+  - ★★★ **⒜ ページ高の点**。`EstimateLooseLineExtents` の `2.0 + n × 1.5` が**row 深さの
+    第3の綴り**で、**ページ高の床として実際に効いている**——**摂動で実測**（零にすると
+    figbass-below-script **−0.59**／figbass-chordname-lower-staff **−0.55**）。
+    **移植の効果がページ高で 0.01/0.05 にしか見えなかったのはこれが mask していたから**。
+    **LP にこの式は無い**（pure height は同じ grob の pure extent から。**歌詞の枝が同じ関数
+    から削除されたのと同じ理由**）。⇒ **点は「figure row の下のページ高」**。それができれば削除。
+  - ★★ **⒝ figure の X**（3 件まとめて）: **中央揃え**（LP は `BassFigureLine` 内で左揃え）・
+    **`MinFigureBoxWidth 0.8`**（LP は実 stencil 幅 0.898・**第45セッションで stacking という
+    消費者が増えた**＝どの列がどの列を見るかを決める）・**臨時記号の左右**（LP は既定 LEFT に
+    0.1 pad・Lily# は数字の後ろで pad 無し）。**X を測る点が 1 つも無い**のが共通の理由。
+  - ★ **⒞ 継続ダッシュ**（LP は `BassFigureContinuation` スパナ・Lily# はテキストの en dash）。
 - ~~★ **`SystemStaffBeams` を `StaffBeamLayouts` と 1 本化する**~~ — **払った（第42セッション・
   `6acc6e9d`・出力不変）**。`BeamLayout` が **`SystemIndex` を持つ**ようになり（LP の grob が
   parent を持つ形・stamp は X を出した `measureMap` 引きと同じ場所）、**`MeasureIndex` からの

@@ -27,6 +27,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/figured-bass-engraver.cc:197-269 center_continuations,
 /// center_repeated_continuations, clear_spanners, process_music
 /// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure (bass-figure-interface at :359)
+/// <para>
+/// <c>RowOffsets</c> is the alignment's answer, not this column's: each entry is a ROW's
+/// baseline as a distance below the top row's, and every column of the same staff and system
+/// carries the same array because they are the same <c>BassFigureAlignment</c>
+/// (scm/define-grobs.scm:366-385, stacked by <see cref="BassFigureAlignment.RowOffsets"/>). A
+/// column with fewer figures than the deepest one simply uses the first entries.
+/// </para>
 /// </remarks>
 public readonly record struct FiguredBassLayout(
     int MeasureIndex,
@@ -36,7 +43,8 @@ public readonly record struct FiguredBassLayout(
     ImmutableArray<string> FigureTexts,               // Text for each figure, top to bottom
     int SourcePosition,
     int SourceIndex = -1,                             // F3/B: index into score.FiguredBasses
-    int StaffIndex = -1                               // owning staff, so the draw resolves its middle
+    int StaffIndex = -1,                              // owning staff, so the draw resolves its middle
+    ImmutableArray<double> RowOffsets = default       // each row's baseline below the top one's
 );
 
 /// <summary>
@@ -47,21 +55,13 @@ public readonly record struct FiguredBassLayout(
 /// LILYPOND-REF: lily/figured-bass-position-engraver.cc - positioning
 /// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure (bass-figure-interface at :359)
 ///
-/// Figured bass appears below the staff, with figures stacked vertically.
-/// Each figure occupies ~1.6 staff spaces of vertical height (an approximation of
-/// LP's BassFigureAlignment stacking; see FigureSpacing).
+/// Figured bass appears below the staff, with figures stacked vertically by
+/// <see cref="BassFigureAlignment"/> — the one home for the row step, which is where the
+/// hand-picked 1.6 that used to live here went (HANDOFF §5.2.1②: the renderer spelled the
+/// same quantity 1.5).
 /// </remarks>
 internal static class FiguredBassEngraver
 {
-    // APPROXIMATION (ungrounded value): LP has no BassFigure baseline-skip. Stacked
-    // figures are aligned by BassFigureAlignment (define-grobs.scm:366 —
-    // align-to-minimum-distances, stacking-dir DOWN, padding -inf), i.e. purely by each
-    // BassFigureLine's Y-extent. We don't model that alignment skyline; 1.6 ss is a
-    // hand-picked per-row height standing in for it. ⚠️ ITS OBSERVER IS THE LEDGER'S
-    // figbass.upper-staff.staff-gap (+0.600000 = the two rows' 1.6 + a 0.5 tail against
-    // LilyPond's 1.5 step and no descent) — and the RENDERER draws 1.5 (§5.2.1②).
-    internal const double FigureSpacing = 1.6;  // Vertical spacing between stacked figures
-
     /// <summary>
     /// The floor <c>aligned_side</c> puts under the row — the staff's own ink plus
     /// <c>BassFigureAlignmentPositioning</c>'s staff-padding, as a distance below the staff
@@ -115,8 +115,23 @@ internal static class FiguredBassEngraver
     internal static double FigureInkTop(string topFigureText)
         => FiguredBassGlyphRun.InkTop(topFigureText);
 
+    // LILYSHARP-OWN: the WIDTH of the box a figure offers the skyline. LilyPond has no such
+    // number — a BassFigure's X-extent is its stencil's, i.e. the same run
+    // FiguredBassGlyphRun.Width now measures (1.6 design-ss per digit at this em = 0.898 ss,
+    // where this box is 0.8). ⚠️ THE VERTICAL HALF OF THIS BOX WENT LITERAL on 2026-07-30 and
+    // the horizontal half did not, deliberately: the width moves the page's system spacing
+    // through LayoutEngine's inter-system seed, and no figured-bass point observes X at all.
+    // It closes with the pair that opens X — the same shape as every other box-vs-ink debt.
+    // ⚠️ IT GAINED A CONSUMER with the stacking port: BassFigureAlignment.RowOffsets takes a
+    // SKYLINE distance between rows, so this width decides which columns of one row see which
+    // columns of the next. It is inert for the ledger's texture (the minimum-distance branch
+    // wins for digits whatever the overlap) and it is not inert in general — a row whose only
+    // tall figure is far to the left of the next row's would step by the minimum here and by
+    // the ink in LilyPond, or the reverse.
     internal const double MinFigureBoxWidth = 0.8;
-    // relatedstaff-spacing padding + the distance→drop math live in SkylineDrop (shared with lyrics).
+    // The grob's own padding and the distance→drop arithmetic live in SkylineDrop; the padding
+    // is passed IN (EngravingDefaults.BassFigurePadding), so the figure row spends its own
+    // declaration and not the lyric line's.
 
     /// <summary>
     /// The up-skyline one figure column offers the placement, about its own baseline.
@@ -133,6 +148,22 @@ internal static class FiguredBassEngraver
         => VerticalSkyline.FromBox(
             x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
             0, FigureInkTop(topFigureText), VerticalDirection.Up);
+
+    /// <summary>
+    /// The down-skyline one figure offers the row BELOW it, about its own baseline — the
+    /// other edge of the box <see cref="ColumnUpSkyline"/> offers upward.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:451 <c>ly:axis-group-interface::combine-skylines</c>,
+    /// which is BassFigureLine's <c>vertical-skylines</c> — a line's profile is its figures'
+    /// stencils, both ways up, which is what <see cref="BassFigureAlignment.RowOffsets"/>
+    /// stacks against. Zero-deep for a digit and not for an accidental (see
+    /// <see cref="FiguredBassGlyphRun.InkBottom"/>).
+    /// </remarks>
+    internal static VerticalSkyline ColumnDownSkyline(double x, string figureText)
+        => VerticalSkyline.FromBox(
+            x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
+            FiguredBassGlyphRun.InkBottom(figureText), 0, VerticalDirection.Down);
 
     /// <summary>
     /// The ink a staff's figure row occupies, as a DOWN skyline about that staff's MIDDLE
@@ -176,7 +207,7 @@ internal static class FiguredBassEngraver
         // The row's own basic position, in this staff's frame: Y-up above the middle line.
         double baselineYUp = -AlignedSideFloorBelowStaff;
 
-        var columns = new List<(double X, int Count, string TopText)>();
+        var columns = new List<BassFigureAlignment.Column>();
         var rowUp = new VerticalSkyline(VerticalDirection.Up);
         foreach (var fb in figuredBasses)
         {
@@ -189,25 +220,39 @@ internal static class FiguredBassEngraver
             // The SAME X the engraver computes (Calculate), so seed and draw agree.
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 staffMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
-            string topText = fb.Figures.Length > 0 ? fb.Figures[0].DisplayText : string.Empty;
-            columns.Add((x, fb.Figures.Length, topText));
+            var texts = fb.Figures.Select(f => f.DisplayText).ToImmutableArray();
+            string topText = texts.Length > 0 ? texts[0] : string.Empty;
+            columns.Add(new BassFigureAlignment.Column(x, texts));
             rowUp.Merge(ColumnUpSkyline(x, topText));
         }
         if (columns.Count == 0) return ink;
+
+        // The rows of THIS staff's alignment, stacked once for all of its columns — the same
+        // house Calculate hands to the drawing, asked again here because this profile is an
+        // INPUT to the pass that produces those layouts (see the remark above).
+        // ⚠️ THE TWO CALLS SEE THE SAME COLUMNS, checked rather than assumed: `measureLayouts`
+        // is ONE system's (LayoutEngine builds it per system from LayoutMeasures and hands it
+        // to MultiStaffLayouter.BuildStaffSkylines with that system's index), so the
+        // membership test above is a per-system filter and matches StackRows' (system, staff)
+        // grouping. If it ever became the whole score's, this would stack a different
+        // alignment from the one that is drawn, and no digit texture could tell.
+        var rowOffsets = BassFigureAlignment.RowOffsets(columns);
 
         // The drop, by the same two steps the placement takes. The frame here is the staff's
         // MIDDLE line, so the basic floor is that Y-up read downward.
         var drops = SkylineDrop.Compute(
             new Dictionary<int, VerticalSkyline> { [staffIndex] = rowUp },
             _ => -baselineYUp,
-            _ => downSoFar);
+            _ => downSoFar,
+            EngravingDefaults.BassFigurePadding, SkylineDrop.HorizonPadding);
         double placedYUp = baselineYUp - (drops.TryGetValue(staffIndex, out var d) ? d : 0);
 
-        foreach (var (x, count, topText) in columns)
+        foreach (var col in columns)
         {
+            string topText = col.Texts.Length > 0 ? col.Texts[0] : string.Empty;
             ink.Merge(VerticalSkyline.FromBox(
-                x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
-                placedYUp - ((count - 1) * FigureSpacing + 0.5),
+                col.X - MinFigureBoxWidth / 2.0, col.X + MinFigureBoxWidth / 2.0,
+                placedYUp - BassFigureAlignment.ColumnDepth(rowOffsets, col.Texts),
                 placedYUp + FigureInkTop(topText),
                 VerticalDirection.Down));
         }
@@ -266,10 +311,57 @@ internal static class FiguredBassEngraver
                 StaffIndex: fb.StaffIndex));
         }
 
-        var result = layouts.ToImmutable();
+        var result = StackRows(layouts.ToImmutable(), systems);
         if (systemSkylines != null && !systems.IsDefaultOrEmpty)
             result = ApplySkylineDrop(result, systems, systemSkylines, staffDownSkyline);
         return result;
+    }
+
+    /// <summary>
+    /// Stacks each alignment's rows once and writes the result onto every column of it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:370 <c>ly:align-interface::align-to-minimum-distances</c>,
+    /// BassFigureAlignment's <c>positioning-done</c> — it positions its lines ONCE and every figure on a
+    /// line then rides that translation, which is why the offsets are stored on the layouts
+    /// rather than recomputed by each consumer (the drawing, the per-measure extent, the
+    /// inter-system silhouette).
+    /// <para>
+    /// ⚠️ ONE ALIGNMENT IS ONE STAFF OF ONE SYSTEM. The grob is a Spanner, so line-breaking
+    /// gives each system its own broken piece with its own <c>positioning-done</c>, and
+    /// <c>BassFigureAlignmentPositioning</c> is per staff by construction. Grouping any wider
+    /// would let a figure in one system decide a step in another.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<FiguredBassLayout> StackRows(
+        ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems)
+    {
+        if (layouts.IsDefaultOrEmpty) return layouts;
+
+        var measureToSystem = systems.IsDefaultOrEmpty
+            ? null
+            : SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+
+        var columnsByAlignment = new Dictionary<(int Sys, int Staff), List<BassFigureAlignment.Column>>();
+        foreach (var lay in layouts)
+        {
+            var key = (SystemOf(lay), lay.StaffIndex);
+            if (!columnsByAlignment.TryGetValue(key, out var cols))
+                columnsByAlignment[key] = cols = new List<BassFigureAlignment.Column>();
+            cols.Add(new BassFigureAlignment.Column(lay.X, lay.FigureTexts));
+        }
+
+        var offsetsByAlignment = new Dictionary<(int Sys, int Staff), ImmutableArray<double>>();
+        foreach (var (key, cols) in columnsByAlignment)
+            offsetsByAlignment[key] = BassFigureAlignment.RowOffsets(cols);
+
+        return layouts
+            .Select(lay => lay with { RowOffsets = offsetsByAlignment[(SystemOf(lay), lay.StaffIndex)] })
+            .ToImmutableArray();
+
+        int SystemOf(FiguredBassLayout lay)
+            => measureToSystem != null && measureToSystem.TryGetValue(lay.MeasureIndex, out int s)
+                ? s : 0;
     }
 
     /// <summary>
@@ -326,7 +418,13 @@ internal static class FiguredBassEngraver
         // five-line staff has — the staff's own ink 2.05 + padding 0.5 + the top digit's cap
         // already exceeds staff ink + staff-padding 1.0, for any figure whose cap beats
         // staff-padding − padding = 0.5.
-        var drop = SkylineDrop.Compute(fbUp, k => basicY[k], k => StaffDown(k.Sys, k.Staff));
+        // LILYPOND-REF: lily/side-position-interface.cc:370 aligned_side —
+        // total_off += dir * ss * padding, the grob's OWN declared padding
+        // (scm/define-grobs.scm:393 padding of BassFigureAlignmentPositioning). It is passed
+        // in rather than taken from SkylineDrop's lyric constant: the two devices declare the
+        // same 0.5 today and that agreement is not an invariant (§5.2.1②).
+        var drop = SkylineDrop.Compute(fbUp, k => basicY[k], k => StaffDown(k.Sys, k.Staff),
+            EngravingDefaults.BassFigurePadding, SkylineDrop.HorizonPadding);
 
         if (drop.Count == 0)
             return layouts;

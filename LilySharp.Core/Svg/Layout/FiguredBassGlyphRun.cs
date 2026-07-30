@@ -60,13 +60,34 @@ internal static class FiguredBassGlyphRun
     internal readonly record struct Piece(char Ch, double X, double Advance, bool IsGlyph);
 
     /// <summary>The em a figure is drawn at, in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: lily/font-select.cc:99-117 select_font over
+    /// scm/translation-functions.scm:468-470 format-bass-figure — see
+    /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, where the derivation lives.</remarks>
     internal static double Em => EngravingDefaults.FiguredBassFontSize;
 
-    // The generated boxes and advances are per EM at the font's design size, where one em
-    // spans the staff's 4 spaces (GlyphMetricsGenerated's header: 1 ss = unitsPerEm / 4).
+    /// <summary>Design-size boxes and advances to this figure's em.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/modified-font-metric.cc:62-68 <c>Modified_font_metric</c>'s
+    /// <c>b.scale (magnification_)</c> — LilyPond does not multiply at the call sites; the
+    /// grob reads a font that is ALREADY at its size, and every dimension that font reports
+    /// is scaled once, here. The 4 is the design size in staff spaces (the font's own
+    /// convention, GlyphMetricsGenerated's header: 1 ss = unitsPerEm / 4).
+    /// </remarks>
     private static double Scale => Em / 4.0;
 
     /// <summary>The run's pieces, left to right, with X relative to the run's left edge.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/modified-font-metric.cc:125-143 <c>text_stencil</c> — a text
+    /// stencil is its glyphs fed by their own advances, which for these digits is the hmtx
+    /// advance the font declares (all ten are 1.6 design-ss wide: "tnum" is TABULAR
+    /// figures, so a two-digit figure cannot shift its column).
+    /// ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
+    /// Lily#'s continuation dash (<c>FiguredBassFigure.DisplayText</c>'s en dash for a held
+    /// figure), which LilyPond does not draw as text at all — it is a
+    /// <c>BassFigureContinuation</c> spanner (lily/figured-bass-engraver.cc:197-238
+    /// center_continuations). Drawn in the serif face at this em so that the fallback's size
+    /// and its metric still come from one place; it retires with the continuation port.
+    /// </remarks>
     internal static ImmutableArray<Piece> Pieces(string text)
     {
         if (string.IsNullOrEmpty(text)) return ImmutableArray<Piece>.Empty;
@@ -94,6 +115,15 @@ internal static class FiguredBassGlyphRun
     /// The run's ink above its baseline — the union of its glyphs' outline tops, which is
     /// what a BassFigure's <c>Y-extent</c> is.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:356 BassFigure's Y-extent (bass-figure-interface at :359),
+    /// <c>grob::always-Y-extent-from-stencil</c> — the extent IS the drawn stencil's.
+    /// LILYPOND-REF: lily/modified-font-metric.cc:125-143 <c>text_stencil</c> — the text path
+    /// measures the OUTLINE through Pango and never reads LILC, which is why the boxes asked
+    /// for here are the <c>...Outline</c> ones (the same argument the dynamic letters carry in
+    /// <see cref="GlyphMetrics.TryGetDynamicInk"/>); a multi-glyph run's box is the UNION of
+    /// its glyphs', measured on <c>\mp</c> when the dynamics went this way.
+    /// </remarks>
     internal static double InkTop(string text)
     {
         double top = 0;
@@ -108,5 +138,36 @@ internal static class FiguredBassGlyphRun
             top = System.Math.Max(top, t);
         }
         return top;
+    }
+
+    /// <summary>
+    /// The run's ink BELOW its baseline (≤ 0) — the other end of the same
+    /// <c>Y-extent</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:356 BassFigure's Y-extent (bass-figure-interface at :359),
+    /// <c>grob::always-Y-extent-from-stencil</c> — one stencil, two edges, so the descent is
+    /// asked of the same outlines <see cref="InkTop"/> asks.
+    /// <para>
+    /// ⚠️ IT IS NOT ALWAYS ZERO, which is the whole reason it is a call and not a 0. A digit
+    /// of the <c>fattened.fixedwidth</c> cut sits ON the baseline (all ten box bottoms are
+    /// 0.000 design-ss, bar the seven's −0.004), and that is why LilyPond's dumped figure
+    /// extent bottoms at exactly 0.0 in every book of figured-bass-placement.ly — but the
+    /// figured-bass accidentals hang below it (the sharp by 0.252 design-ss), and a row whose
+    /// lowest figure carries one both reserves deeper and pushes the next row further down.
+    /// </para>
+    /// </remarks>
+    internal static double InkBottom(string text)
+    {
+        double bottom = 0;
+        if (string.IsNullOrEmpty(text)) return bottom;
+        foreach (char c in text)
+        {
+            double b = GlyphMetrics.TryGetFiguredBassGlyph(c, out _, out var outline, out _)
+                ? outline.Bottom * Scale
+                : TextFontMetrics.Ink(c.ToString(), Em).Bottom;
+            bottom = System.Math.Min(bottom, b);
+        }
+        return bottom;
     }
 }

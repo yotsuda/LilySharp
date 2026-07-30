@@ -125,7 +125,8 @@
 %%     make-number-markup, and scm/define-markup-commands.scm:3872-3878 says what that is:
 %%     "the (music) font for numbers … also contains symbols for figured bass". So the digits
 %%     are EMMENTALER NUMBER GLYPHS, where Lily# draws a serif TEXT face at an em of its own
-%%     (SharedRenderer.FiguredBassFontSize = 3.0, whose real digit ink is 2.112000 against
+%%     (SharedRenderer.FiguredBassFontSize = 3.0 — the constant is GONE; the em now lives in
+%%     EngravingDefaults.FiguredBassFontSize — whose real digit ink was 2.112000 against
 %%     LilyPond's 1.124795235605315). NEITHER grob declares a font-size — checked, TimeSignature
 %%     and BassFigure both leave it unset — and the numeric time signature dumped alongside it
 %%     (ext -2.0 . 2.004019, i.e. ~2.004 per digit) is NOT a second size of the same thing, so
@@ -151,6 +152,16 @@
 %%     its cap from the same outline (Svg.Layout.FiguredBassGlyphRun). All four baseline points
 %%     landed together at -0.002333187, which is the emmentaler-11-vs-20 optical size (LilyPond
 %%     picks the design size nearest 11.2246pt; Lily# bundles only -20) — see the ledger.
+%%   * THE ROW STEP (session 45, read from the source before porting it, not measured off
+%%     this book's dump): BassFigureAlignment stacks its BassFigureLine children with
+%%     lily/align-interface.cc:163-285 at stacking-dir DOWN. A BassFigureLine declares no
+%%     staff-affinity, hence is SPACEABLE (page-layout-problem.cc:1174-1177), hence the spec
+%%     between two of them is the upper one's staff-staff-spacing = ((minimum-distance . 1.5)
+%%     (padding . 0.1)) (define-grobs.scm:449-450), whose padding overwrites the alignment's
+%%     own -inf at :225-226. So the step is max(skyline distance + 0.1, 1.5) and the dumped
+%%     1.5 in this book is the MINIMUM branch: two digits offer 0 + 1.124795 + 0.1 only.
+%%     ⚠️ The other branch is reachable — a figbass accidental has both a descent and a taller
+%%     cap — so 1.5 is not a constant to copy.
 %%   * THE QUIET BOOKS (FBLQ / FBSQ, added the same day for the port): 3.674795235605315 =
 %%     staff ink 2.05 + padding 0.5 + the digit's 1.124795235605315, i.e. the ink top at
 %%     2.550000. So staff-padding 1.0 is include_staff and NOT a refpoint floor — and it can

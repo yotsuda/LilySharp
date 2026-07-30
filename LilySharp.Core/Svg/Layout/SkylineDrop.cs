@@ -20,8 +20,9 @@ using System.Collections.Generic;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
-/// Shared "lower a below-staff line so its text clears the notes" spacing, used by
-/// the lyric and figured-bass engravers (both stack text under the staff). Mirrors
+/// Shared "lower a below-staff line so its text clears the notes" spacing. ⚠️ <see
+/// cref="Compute"/> itself now has ONE caller, the figured-bass engraver: the lyric line went
+/// onto <c>LooseLineSpacer</c>'s chain and reads only the constants below. Mirrors
 /// LilyPond's Align_interface per-pair spacing: each line is placed at
 ///   realized = max(basic-distance, staffDownSkyline.distance(lineUpSkyline) + padding)
 /// so the fixed basic-distance wins for ordinary music and only notes poking far
@@ -38,7 +39,25 @@ internal static class SkylineDrop
     /// distance beats the basic-distance.</summary>
     public const double RelatedStaffPadding = 0.5;
 
-    /// <summary>skyline-horizontal-padding for the line/staff skyline distance.</summary>
+    /// <summary>
+    /// The horizontal padding the line/staff skyline distance is taken with.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:4243 skyline-horizontal-padding 0.1 of
+    /// VerticalAxisGroup — the LOOSE-LINE device's number, read where a line's axis group is
+    /// spaced against a staff's.
+    /// ⚠️ IT IS NOT THE SIDE-POSITION DEVICE'S NUMBER, and the figure row is side-positioned:
+    /// lily/side-position-interface.cc:357 aligned_side reads <c>horizon-padding</c> with a
+    /// default of <b>0.0</b> and <c>BassFigureAlignmentPositioning</c> declares none, so
+    /// LilyPond takes that distance with NO horizontal padding at all.
+    /// ⚠️ MEASURED (2026-07-30), which is why this is still 0.1 for both callers: switching the
+    /// figure row to 0.0 MOVES <c>test/figbass-below-script</c> — the row there clears a
+    /// staccatissimo DAGGER, an obstacle narrow enough that 0.1 either side changes which x
+    /// the distance is taken at — and NO ledger point moves with it. An output change no point
+    /// observes is not made (HANDOFF §5.0; the clef flat-box deletion was held back for the
+    /// same reason). ⇒ THE POINT TO OPEN FIRST is a figure row under a NARROW obstacle, which
+    /// is what that fixture is; the port is then one argument.
+    /// </remarks>
     public const double HorizonPadding = 0.1;
 
     /// <summary>
@@ -118,10 +137,26 @@ internal static class SkylineDrop
     /// that puts them there, so this has no staff geometry in it at all.
     /// </para>
     /// </remarks>
+    /// <param name="padding">The gap the CALLER's device declares between the line's
+    /// up-skyline and the profile it hangs from. It is a parameter because the two callers
+    /// read two different LilyPond declarations that happen to hold the same number: a lyric
+    /// line pays <see cref="RelatedStaffPadding"/> (ly/engraver-init.ly:651, the Lyrics
+    /// context's nonstaff-relatedstaff-spacing) and a figure row pays
+    /// <c>EngravingDefaults.BassFigurePadding</c> (scm/define-grobs.scm:393,
+    /// BassFigureAlignmentPositioning's side-position padding, spent at aligned_side :370).
+    /// Passing one home's constant for the other device's spacing is the shape §5.2.1② warns
+    /// about — it stays right only for as long as the two numbers agree.</param>
+    /// <param name="horizonPadding">The horizontal padding the distance is taken with. A
+    /// parameter so the caller has to name its device — see <see cref="HorizonPadding"/>,
+    /// whose remark carries the one open case: a side-positioned grob's own default is 0.0
+    /// and the figure row passes 0.1 anyway, held there until a point observes the
+    /// difference.</param>
     public static Dictionary<TKey, double> Compute<TKey>(
         IReadOnlyDictionary<TKey, VerticalSkyline> upByLine,
         Func<TKey, double> basicY,
-        Func<TKey, VerticalSkyline?> downSkyline)
+        Func<TKey, VerticalSkyline?> downSkyline,
+        double padding,
+        double horizonPadding)
         where TKey : notnull
     {
         var drops = new Dictionary<TKey, double>();
@@ -129,10 +164,10 @@ internal static class SkylineDrop
         {
             var down = downSkyline(key);
             if (down is null || down.IsEmpty || up.IsEmpty) continue;
-            double dist = down.Distance(up, HorizonPadding);
+            double dist = down.Distance(up, horizonPadding);
             if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
             double basic = basicY(key);
-            double drop = Math.Max(basic, dist + RelatedStaffPadding) - basic;
+            double drop = Math.Max(basic, dist + padding) - basic;
             if (drop > 1e-6) drops[key] = drop;
         }
         return drops;

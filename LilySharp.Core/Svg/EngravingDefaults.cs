@@ -326,6 +326,12 @@ internal static class EngravingDefaults
     // LILYPOND-REF: scm/translation-functions.scm:468-470 format-bass-figure —
     // (make-fontsize-markup -5 fig-markup); lily/font-select.cc:99-117 select_font — for
     // fetaText the base size is staff-height (4 staff spaces), stepped by 2^(font-size/6).
+    // ⚠️ THE 4.0 IS THE DEFAULT STAFF'S HEIGHT, WRITTEN AS A CONSTANT where LilyPond LOOKS IT
+    // UP (layout->lookup_variable ("staff-height") at :104-106). It is the §5 "staff extent
+    // written as a constant" family: a magnified or ossia staff scales its music font and
+    // this em would not follow. Lily# does not scale a figure for an ossia today either
+    // (SharedRenderer.DrawFiguredBass passes no OssiaShrink size), so the two halves are at
+    // least consistent — and both close from StaffLayout, with the rest of that family.
     public static readonly double FiguredBassFontSize = 4.0 * Math.Pow(2.0, -5.0 / 6.0);
 
     /// <summary>

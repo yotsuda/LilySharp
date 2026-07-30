@@ -379,4 +379,78 @@ public class FiguredBassTests
 
         Assert.True(score.FiguredBasses.IsEmpty);
     }
+
+    // --- BassFigureAlignment: the row step, and the fact that it is a MAX of two branches ---
+
+    /// <summary>
+    /// Digits step by the spec's minimum-distance, because their ink does not reach it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:449-450 <c>staff-staff-spacing</c> of BassFigureLine —
+    /// the ledger's own texture (books FBSA..FBSC use <c>&lt;5 3&gt;</c> and <c>&lt;6 4&gt;</c>),
+    /// where LilyPond's dumped step is 1.5 exactly.
+    /// </remarks>
+    [Fact]
+    public void BassFigureAlignment_DigitRows_StepByTheSpecMinimum()
+    {
+        var offsets = BassFigureAlignment.RowOffsets(new[]
+        {
+            new BassFigureAlignment.Column(10.0, ImmutableArray.Create("5", "3")),
+        });
+
+        Assert.Equal(2, offsets.Length);
+        Assert.Equal(0.0, offsets[0], 9);
+        Assert.Equal(BassFigureAlignment.LineMinimumDistance, offsets[1], 9);
+    }
+
+    /// <summary>
+    /// ⚠️ THE OTHER BRANCH, which no ledger point reaches: an alteration both descends below
+    /// its baseline and caps higher than a digit, so a row of them steps by INK and the
+    /// minimum stops deciding. This is the machine that stops the port being "simplified"
+    /// back to the constant 1.5 the probe's texture happens to show (HANDOFF §5.2).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:228-233 <c>internal_get_minimum_translations</c>'s
+    /// <c>dy</c> — the skyline distance plus the spec's padding, floored by its
+    /// minimum-distance, and this pair is on the other side of that floor.
+    /// </remarks>
+    [Fact]
+    public void BassFigureAlignment_AlteredRows_StepByTheirInk()
+    {
+        var sharp = "5♯";
+        var offsets = BassFigureAlignment.RowOffsets(new[]
+        {
+            new BassFigureAlignment.Column(10.0, ImmutableArray.Create(sharp, sharp)),
+        });
+
+        double byInk = FiguredBassGlyphRun.InkTop(sharp)
+                       - FiguredBassGlyphRun.InkBottom(sharp)
+                       + BassFigureAlignment.LinePadding;
+        Assert.True(byInk > BassFigureAlignment.LineMinimumDistance,
+            $"the ink branch must be the larger one for this pair, was {byInk}");
+        Assert.Equal(byInk, offsets[1], 9);
+    }
+
+    /// <summary>
+    /// A column with fewer figures than the deepest one stops at its OWN last row, and its
+    /// depth is that row's offset plus its own descent — not a tail added to the baseline.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:374 <c>axis-group-interface::height</c>,
+    /// BassFigureAlignment's Y-extent.</remarks>
+    [Fact]
+    public void BassFigureAlignment_ShallowColumn_IsAsDeepAsItsOwnLastRow()
+    {
+        var columns = new[]
+        {
+            new BassFigureAlignment.Column(10.0, ImmutableArray.Create("5", "3")),
+            new BassFigureAlignment.Column(20.0, ImmutableArray.Create("6")),
+        };
+        var offsets = BassFigureAlignment.RowOffsets(columns);
+
+        // The digits sit ON their baseline, so a one-row column is zero deep and a two-row
+        // one is exactly the step — no 0.5 tail under either (the debt this port paid).
+        Assert.Equal(0.0, BassFigureAlignment.ColumnDepth(offsets, columns[1].Texts), 9);
+        Assert.Equal(BassFigureAlignment.LineMinimumDistance,
+            BassFigureAlignment.ColumnDepth(offsets, columns[0].Texts), 9);
+    }
 }

@@ -91,18 +91,18 @@ internal static partial class SharedRenderer
     /// 2026-07-30 this drew a SERIF face at an em of its own (3.0 ss, whose digit ink was
     /// 2.112000 against LilyPond's 1.124795235605315), which is why the digits reached
     /// 0.112 through the stem the row was placed below.
-    /// ⚠️ The row step drawn here is 1.5 while <see cref="FiguredBassEngraver.FigureSpacing"/>
-    /// RESERVES 1.6 — one quantity, two spellings that disagree (HANDOFF §5.2.1②). Neither is
-    /// LilyPond's, whose BassFigureAlignment stacks by each BassFigureLine's own Y-extent
-    /// (scm/define-grobs.scm:366-374, align-to-minimum-distances with padding -inf), and the
-    /// ledger's <c>figbass.upper-staff.staff-gap</c> is that debt's observer (+0.600000).
+    /// ⚠️ THE ROW STEP IS NOT SPELLED HERE ANY MORE. It was a local 1.5 against the
+    /// engraver's reserved 1.6 — one quantity, two spellings, and neither LilyPond's
+    /// (HANDOFF §5.2.1②; the ledger's <c>figbass.upper-staff.staff-gap</c> carried the
+    /// +0.600000 the pair of them cost). The offsets now come from
+    /// <see cref="BassFigureAlignment.RowOffsets"/> through the layout, i.e. from the grob
+    /// that does the stacking (scm/define-grobs.scm:366-385).
     /// </remarks>
     private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
         double size = FiguredBassGlyphRun.Em;
-        const double figureSpacing = 1.5;
         foreach (var fb in layout.FiguredBassLayouts)
         {
             if (!sysTopYUp.ContainsKey(fb.MeasureIndex)) continue;
@@ -114,11 +114,24 @@ internal static partial class SharedRenderer
                 for (int i = 0; i < fb.FigureTexts.Length; i++)
                 {
                     string text = fb.FigureTexts[i];
-                    double y = baseY - i * figureSpacing;
-                    // The run keeps the centring the text anchor used to do, so this port
-                    // moves the FACE and the SIZE only; where a figure sits horizontally is
-                    // a separate claim with no ledger point yet (FiguredBassGlyphRun).
+                    // The alignment already placed this row (FiguredBassEngraver.StackRows,
+                    // which every layout goes through). Indexed rather than guarded: a layout
+                    // without offsets is a bug in the producer, and a fallback here would draw
+                    // the rows on top of each other while looking like it worked.
+                    double y = baseY - fb.RowOffsets[i];
+                    // LILYSHARP-OWN: the CENTRING. LilyPond's figures are left-aligned in a
+                    // BassFigureLine (scm/define-grobs.scm:366-374 BassFigureAlignment stacks
+                    // the lines; the figure itself is a rhythmic grob at its column's X), so
+                    // this half-width shift has no LilyPond counterpart. It is the anchor the
+                    // old TextAnchor.Middle draw had, kept unchanged so this port moves the
+                    // FACE and the SIZE only — no figured-bass point measures X yet, and the
+                    // pair to open is a figure whose digits differ in width (the "tnum"
+                    // advances are equal, so a centred and a left-aligned row differ only
+                    // where an alteration joins the run).
                     double x0 = fb.X - FiguredBassGlyphRun.Width(text) / 2.0;
+                    // LILYPOND-REF: lily/modified-font-metric.cc:125-143 text_stencil — the
+                    // glyphs of the run at their own advances, which FiguredBassGlyphRun has
+                    // already accumulated; the reservation reads the same house.
                     foreach (var piece in FiguredBassGlyphRun.Pieces(text))
                     {
                         if (piece.IsGlyph)

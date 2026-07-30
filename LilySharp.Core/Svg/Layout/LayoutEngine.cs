@@ -1112,8 +1112,22 @@ internal sealed class LayoutEngine
                 downExtent = Math.Max(downExtent, 1.5);
         }
 
-        // LILYPOND-REF: scm/define-grobs.scm BassFigure
-        // Figured bass: staffPadding(1.0) + belowStaffOffset(1.0) + figCount * figureSpacing(1.5)
+        // ⚠️ LILYSHARP-OWN, AND THE THIRD SPELLING OF THE ROW DEPTH — the one the
+        // BassFigureAlignment port (2026-07-30) did NOT fold in. The other two became one
+        // house that session (BassFigureAlignment.RowOffsets, read by the drawing, the
+        // between-staff reservation and the per-measure extent); this estimate still says
+        // "2.0 of padding stack + one 1.5 PER ROW", counting n rows where the row stack has
+        // n−1 steps, and LilyPond has no such formula at all: its pure height comes from the
+        // same grobs' pure extents, not from a second model of them (which is exactly why the
+        // LYRIC branch above was deleted — HANDOFF §5.2.1②).
+        // ⚠️ IT IS LOAD-BEARING, MEASURED, not guessed: zeroing this branch moves
+        // test/figbass-below-script's page height by −0.59 and
+        // test/figbass-chordname-lower-staff's by −0.55, i.e. it is what floors those pages
+        // and it MASKED the ported reservation (which moved them by only −0.01 and −0.05).
+        // showcase/04-advanced does not use it — there the real skyline binds.
+        // ⇒ THE POINT TO OPEN IS A PAGE HEIGHT under a figured-bass row; no ledger entry
+        // watches one today, which is why this is labelled and left (HANDOFF §5.0: no output
+        // change without an observer) instead of being deleted with the port.
         if (!figuredBasses.IsDefaultOrEmpty)
         {
             int maxFigures = 0;
@@ -1361,7 +1375,7 @@ internal sealed class LayoutEngine
             Add(fb.MeasureIndex,
                 fbY - FiguredBassEngraver.FigureInkTop(
                     fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty),
-                fbY + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
+                fbY + BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts));
         }
         // Note-bound scripts (a fermata over the top staff, a staccatissimo
         // under the bottom) extend the system silhouette like any other
@@ -1685,8 +1699,7 @@ internal sealed class LayoutEngine
             double fbY = fb.YUp - 2.0 + fbStaffOffsetUp;
             double top = fbY + FiguredBassEngraver.FigureInkTop(
                 fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
-            double bottom = fbY
-                - ((fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
+            double bottom = fbY - BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts);
             var down = new VerticalSkyline(VerticalDirection.Down);
             down.Merge(result[s].down);
             down.Merge(VerticalSkyline.FromBox(
