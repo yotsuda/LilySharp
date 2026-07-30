@@ -728,8 +728,13 @@ internal sealed class RenderedGeometry
     /// would satisfy this predicate — the ottava probes carry no trill, and the count
     /// guard fails loudly if a second horizontal rule appears up there.
     /// </remarks>
-    public double OttavaLineAboveStaff(int page = 0)
-        => SoleRuleAboveStaff("the ottava line", page);
+    /// <param name="staff">Which staff's refpoint the reading is about, TOP first. The
+    /// default -1 also asserts that the book has exactly ONE staff; naming a staff explicitly
+    /// says the book is multi-staff on purpose (the lower-staff regime, ledger
+    /// <c>ottava.lower-staff.*</c>), and then the rule has to be found between that staff and
+    /// the one above it.</param>
+    public double OttavaLineAboveStaff(int page = 0, int staff = -1)
+        => SoleRuleAboveStaff("the ottava line", page, staff);
 
     /// <summary>
     /// The text spanner's dashed LINE above the first staff, measured from that staff's
@@ -752,17 +757,22 @@ internal sealed class RenderedGeometry
     /// glyph's Y plus that offset — through the glyph because the wave is drawn as
     /// short sloped segments no rule predicate should try to own.
     /// </summary>
-    public double TrillLineAboveStaff(int page = 0)
+    /// <param name="staff">Which staff's refpoint the reading is about, TOP first. The
+    /// default -1 also asserts that the book has exactly ONE staff; naming a staff explicitly
+    /// says the book is multi-staff on purpose (the lower-staff regime, ledger
+    /// <c>trill.lower-staff.*</c>) and then only the count has to cover it.</param>
+    public double TrillLineAboveStaff(int page = 0, int staff = -1)
     {
         // The wavy segments are short (< 1 ss) and sloped, so StaffLineYs never sees
         // them and StaffRefpoints stays usable here (unlike the ottava/text-spanner
         // books, whose rule shares the staff lines' predicate).
         var refs = StaffRefpoints(page);
-        if (refs.Count != 1)
+        if (staff < 0 ? refs.Count != 1 : refs.Count <= staff)
         {
             throw new InvalidOperationException(
-                $"page {page}: expected exactly ONE staff, found {refs.Count} — the "
-                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+                $"page {page}: expected {(staff < 0 ? "exactly ONE staff" : $"more than {staff} staves")}, "
+                + $"found {refs.Count} — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
         }
         var tr = Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.OrnTrill).ToList();
         if (tr.Count != 1)
@@ -772,7 +782,7 @@ internal sealed class RenderedGeometry
                 + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
         // Device-down: the glyph sits BELOW the line, so the line is offset less deep.
-        return refs[0] - (tr[0].Y - EngravingDefaults.TrillSpannerTextOffsetDown);
+        return refs[staff < 0 ? 0 : staff] - (tr[0].Y - EngravingDefaults.TrillSpannerTextOffsetDown);
     }
 
     /// <summary>
@@ -891,7 +901,7 @@ internal sealed class RenderedGeometry
         return heads[0].X - meters[0].X;
     }
 
-    private double SoleRuleAboveStaff(string what, int page)
+    private double SoleRuleAboveStaff(string what, int page, int staff = -1)
     {
         // ⚠️ Self-contained on purpose: the spanner line is itself a long horizontal rule
         // of staff-line thickness, so StaffRefpoints' predicate would count SIX lines
@@ -904,20 +914,33 @@ internal sealed class RenderedGeometry
                 && Math.Abs(l.X2 - l.X1) >= 1.0)
             .ToList();
         double sysLeft = rules.Min(l => Math.Min(l.X1, l.X2));
-        var staffLines = rules
+        var edgeLines = rules
             .Where(l => Math.Min(l.X1, l.X2) - sysLeft < 1e-6)
             .Select(l => l.Y1).Distinct().OrderBy(y => y).ToList();
-        if (staffLines.Count != 5
-            || Enumerable.Range(0, 4).Any(i => Math.Abs(staffLines[i + 1] - staffLines[i] - 1.0) > 1e-6))
+        // Device-down: the first five are the TOP staff, so grouping by five and taking
+        // group `staff` counts staves top first, like StaffRefpoints.
+        int wantStaves = staff < 0 ? 1 : staff + 1;
+        if (edgeLines.Count != 5 * wantStaves
+            || Enumerable.Range(0, edgeLines.Count - 1).Any(i =>
+                // 1 apart inside a staff; the boundary between two staves is wider.
+                (i + 1) % 5 == 0
+                    ? edgeLines[i + 1] - edgeLines[i] < 1.0 + 1e-6
+                    : Math.Abs(edgeLines[i + 1] - edgeLines[i] - 1.0) > 1e-6))
         {
             throw new InvalidOperationException(
-                $"page {page}: expected one 5-line staff at the system's left edge, found "
-                + $"{staffLines.Count} rule(s) — the probe is not measuring what it "
+                $"page {page}: expected {wantStaves} 5-line staff/staves at the system's left "
+                + $"edge, found {edgeLines.Count} rule(s) — the probe is not measuring what it "
                 + "claims.\nDrawn geometry:\n" + Describe());
         }
+        var staffLines = edgeLines.Skip(5 * Math.Max(0, staff)).Take(5).ToList();
         double refpoint = staffLines[2];
+        // The rule has to be found in THIS staff's own band: above its top line and, when a
+        // staff sits above, below that one's bottom line — otherwise a two-staff page would
+        // happily return the other staff's spanner.
+        double ceiling = staff <= 0 ? double.NegativeInfinity : edgeLines[5 * staff - 1];
         var ys = rules
-            .Where(l => Math.Min(l.X1, l.X2) - sysLeft >= 1e-6 && l.Y1 < staffLines[0] - 1e-6)
+            .Where(l => Math.Min(l.X1, l.X2) - sysLeft >= 1e-6
+                && l.Y1 < staffLines[0] - 1e-6 && l.Y1 > ceiling + 1e-6)
             .Select(l => l.Y1).Distinct().ToList();
         if (ys.Count != 1)
         {

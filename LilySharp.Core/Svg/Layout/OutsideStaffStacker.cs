@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// priority-based stacking.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
+/// LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
 /// LILYPOND-REF: scm/define-grobs.scm outside-staff-priority values
 ///
 /// Elements with lower outside-staff-priority are placed closer to the staff.
@@ -105,7 +105,7 @@ internal static class OutsideStaffStacker
     // the draw uses (TextFontMetrics.Ink) — never from a letter-class fraction of the em.
     // LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript (the outside-staff-priority block) —
     // its Y-extent is grob::always-Y-extent-from-stencil, its stencil ly:text-interface::print, so
-    // what outside_staff_axis_group clears is the TEXT'S ink; the same declaration pattern
+    // what skyline_spacing clears is the TEXT'S ink; the same declaration pattern
     // covers the tuplet number, the ottava label and the mark texts this file stacks.
     // The letter-class trio that used to live here (CapHeightEm 0.71 / TextAscentEm 0.75 /
     // TextDescentEm 0.25, "no single LP grob source") priced "dolce" and "poco" identically;
@@ -116,7 +116,7 @@ internal static class OutsideStaffStacker
     /// Adjusts below-staff element Y positions using priority-based stacking.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
     ///
     /// Processing order:
     /// 1. Priority 250 (DynamicLineSpanner): dynamics registered first, then hairpins
@@ -394,19 +394,51 @@ internal static class OutsideStaffStacker
     // priority) grobs are pushed ABOVE everything already placed.
 
     /// <summary>
-    /// Unified above-staff stacking: every above-staff annotation is placed
-    /// in ascending outside-staff-priority order against a per-system
-    /// occupancy seeded from the system's UP skyline (note/stem/beam
-    /// content) and the above-staff tuplet brackets (which are bound to
-    /// their beams and therefore registered as immovable).
+    /// Unified above-staff stacking: every above-staff annotation is placed in ascending
+    /// outside-staff-priority order against a per-(system, staff) occupancy seeded from that
+    /// STAFF's own profile (staff symbol, clef, notes, real thin stems, beams), the
+    /// note-bound scripts and the above-staff tuplet brackets (which are bound to their beams
+    /// and therefore registered as immovable).
     /// Replaces the previous pairwise special cases (bar-number-vs-volta in
     /// the renderer, music-mark-vs-volta in MusicMarkEngraver).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:359-474
-    /// outside_staff_axis_group — sort by priority, side-position each grob
-    /// against the accumulated skyline, then merge its extent in.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 <c>Axis_group_interface::skyline_spacing</c>
+    /// — sort by priority, side-position each grob against the accumulated skyline, then merge
+    /// its extent in (:969 <c>add_grobs_of_one_priority</c>, defined at :700).
+    /// <para>
+    /// ⚠️ ONE TRACKER PER STAFF, and this is the LITERAL shape rather than a reading of it:
+    /// the pass is a property callback on ONE axis group — <c>calc_skylines</c> takes a single
+    /// grob and hands it straight to <c>skyline_spacing (Grob *me)</c> — and the interface it
+    /// belongs to says what that grob is in so many words: "A vertical axis group on which
+    /// outside-staff skyline calculations are done".
+    /// LILYPOND-REF: scm/define-grob-interfaces.scm:532-535 <c>outside-staff-axis-group-interface</c>
+    ///   — that sentence is its docstring, verbatim.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:476-484 <c>Axis_group_interface::calc_skylines</c>
+    ///   (the <c>ly:axis-group-interface::calc-skylines</c> callback) → :860
+    ///   <c>skyline_spacing (Grob *me)</c>.
+    /// ⚠️ THE C++ FUNCTION IS <c>skyline_spacing</c>. The snake-cased interface name this file
+    /// and its siblings cited for many sessions is not a C++ symbol at all — only the
+    /// hyphenated Scheme interface exists — which is why LpReferenceCitationTests carried it
+    /// as a known-unverifiable name. Checked against the real source on 2026-07-30, corrected
+    /// here and everywhere it had spread, and the test's entry removed with it.
+    /// Until 2026-07-30 there was one tracker per SYSTEM, seeded from the system's
+    /// silhouette: a mover on the lower staff then "cleared" the TOP staff's ink and flew
+    /// over it, and four movers dodged that with the same line (<c>if (StaffIndex != 0)
+    /// continue</c>) which held every lower-staff trill, ottava, script and text spanner out
+    /// of the pass entirely. MEASURED, three grob families, LilyPond identical on the lower
+    /// staff to fifteen digits and Lily# short by one whole pass: ledger
+    /// <c>script.lower-staff.staff-to-ink-bottom</c> −0.261, <c>trill.lower-staff.staff-to-line</c>
+    /// −2.455 (its base <c>trill.other-voice</c> being 0 exact), and
+    /// <c>ottava.lower-staff.staff-to-line</c> −1.727520, whose bracket was DRAWN through the
+    /// noteheads.
+    /// </para>
     /// </remarks>
+    /// <param name="staffProfile">That staff's real up/down profile, per (system, staff) —
+    /// <c>MultiStaffLayouter</c>/<c>SkylineBuilder.BuildStaffSkylines</c>, the same delegate
+    /// (and the same arguments) <see cref="StackBelowStaff"/> takes. Fresh skylines per call:
+    /// the tracker raises them into its own frame. Without it the support falls back to the
+    /// system silhouette, which is what a harness that builds no staff has.</param>
     public static (ImmutableArray<TrillSpannerLayout> Trills,
                    ImmutableArray<BarNumberLayout> BarNumbers,
                    ImmutableArray<OttavaBracketLayout> Ottavas,
@@ -428,7 +460,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<MusicMarkLayout> musicMarks,
             ImmutableArray<ArticulationLayout> articulations = default,
             ImmutableArray<DynamicLayout> aboveDynamics = default,
-            ImmutableArray<TextSpannerLayout> textSpanners = default)
+            ImmutableArray<TextSpannerLayout> textSpanners = default,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
@@ -439,19 +472,21 @@ internal static class OutsideStaffStacker
             foreach (var m in systems[sysIdx].Measures)
                 measureToSystem[m.MeasureIndex] = sysIdx;
 
-        var trackers = SeedAboveTrackers(systems, systemSkylines, articulations, tupletBrackets, measureToSystem);
+        var topStaff = TopStaffBySystem(systems);
+        var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff);
+        SeedAboveTrackers(systems, trackers, articulations, tupletBrackets, measureToSystem);
 
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
         var adjArticulations = PlaceArticulations(
             articulations, trackers, measureToSystem, systems);
-        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem);
+        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem, topStaff);
         var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
-        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem);
+        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem);
         var adjCustomTexts = PlaceCustomTexts(customTexts, trackers, measureToSystem, systems);
-        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem);
+        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem, topStaff);
         var adjMarks = PlaceMusicMarks(musicMarks, trackers, measureToSystem, systems);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
@@ -459,78 +494,233 @@ internal static class OutsideStaffStacker
     }
 
     /// <summary>
-    /// Builds and seeds the per-system UP occupancy trackers: the system
-    /// up-skyline (staff protrusions), the top-staff prefix clef ink, the
-    /// note-bound above-staff scripts, and the above-staff tuplet brackets.
-    /// These carry no outside-staff priority, so they seed the occupancy that
-    /// the movable grobs must clear.
+    /// The per-(system, staff) UP occupancy trackers, built on first use: that staff's own
+    /// real profile (staff symbol, clef, notes, thin real stems, beams) and its prefix clef
+    /// ink. LilyPond's pass runs on one staff's VerticalAxisGroup at a time and its support
+    /// starts from that staff's INSIDE-staff skylines.
     /// </summary>
-    private static OutsideStaffSkylines[] SeedAboveTrackers(
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860 <c>Axis_group_interface::skyline_spacing
+    ///   (Grob *me)</c> — one call per axis group; :914 <c>std::vector&lt;Skyline_pair&gt;
+    ///   inside_staff_skylines</c> collects the grobs with no outside-staff-priority and
+    ///   :937 <c>Skyline_pair skylines (inside_staff_skylines)</c> is what :969's
+    ///   <c>add_grobs_of_one_priority</c> then places against. That copy-construction IS this
+    ///   method: the tracker's support opens as that staff's inside-staff ink and the movers
+    ///   accumulate onto it.
+    /// <para>
+    /// FRAME: system-relative Y-up (up-positive, the SYSTEM TOP = 0), the native LP frame the
+    /// grobs store — above the staff is positive Y-up. Only the support's CONTENT became
+    /// per-staff; every seed/box/grob Y below is still measured from the system top and every
+    /// grob writes back its unchanged system-relative YUp, so the stacker reads no absolute
+    /// <c>SystemLayout.Y</c> (decoupled for the Stage-4 W2 stacking-origin flip).
+    /// </para>
+    /// <para>
+    /// Lazily, because building one costs a real staff profile: a (system, staff) that places
+    /// nothing never asks. The same scope <see cref="StackBelowStaff"/> keeps. COUNTED
+    /// (2026-07-30, HANDOFF 5.3's "measure performance in CALLS, not milliseconds"): the added
+    /// builds per render are 2 for showcase/08-chorale (one (system, staff)), 4 for test/notes
+    /// and 4 for showcase/04-advanced (two each) — i.e. one per (system, staff) that places
+    /// something, TWICE, because the annotation pass runs once for the extents and once final.
+    /// Halving that is the shared per-(system, staff) profile cache the handoff names; it needs
+    /// the cache to hand out COPIES, since the tracker raises the skyline it is given.
+    /// </para>
+    /// </remarks>
+    private static Func<int, int, OutsideStaffSkylines> AboveTrackers(
         ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+        int[] topStaff)
+    {
+        var trackers = new Dictionary<(int Sys, int Staff), OutsideStaffSkylines>();
+        return (sys, rawStaff) =>
+        {
+            // ⚠️ -1 IS THE TOP STAFF, not a staff of its own. CustomTextLayout and
+            // MusicMarkLayout both spell "the top staff" as -1 (their draw resolves the
+            // middle from it), and a tracker keyed on -1 would be a PHANTOM staff: it would
+            // hold none of the occupancy the trill and the scripts merged into the real
+            // staff's, so a mark would clear thin air. MEASURED while porting: ledger
+            // tempo.trill-cleared went 5.110000000 -> 2.883000002, i.e. the mark stopped
+            // seeing the trill under it at all.
+            // It resolves to the system's TOPMOST PLACED staff rather than to the constant 0,
+            // which is what "-1" means and is not always the same number (TopStaffIndex).
+            // ⚠️ The real end of this is the two layouts carrying a staff index like every
+            // other above-staff grob does; LilyPond has no such sentinel, a grob's Y-parent IS
+            // its staff. Until then this is where the sentinel is resolved, once.
+            int staff = rawStaff < 0 && sys >= 0 && sys < topStaff.Length ? topStaff[sys] : Math.Max(0, rawStaff);
+            if (trackers.TryGetValue((sys, staff), out var found))
+                return found;
+            // This staff's TOP line in the tracker frame — 0 for the first staff, negative
+            // below it. The support starts as that flat edge and merges the staff's real
+            // profile RAW: sloped buildings (beams) keep their slopes, and the base plays
+            // the old "max(edge, h)" clamp pointwise. The support's DOWN side stays the flat
+            // base: for an UP stack it only enters the forbidden intervals' lower bounds,
+            // which positive moves never reach.
+            double topUp = sys >= 0 && sys < systems.Length
+                ? LayoutUtilities.StaffOffsetInSystemUp(systems[sys], staff)
+                : 0;
+            var supportUp = FlatBase(topUp, VerticalDirection.Up);
+            var t = new OutsideStaffSkylines(dir: +1,
+                supportUp, FlatBase(topUp, VerticalDirection.Down));
+            if (staffProfile?.Invoke(sys, staff) is { } p)
+            {
+                // The profile is about the staff MIDDLE; the tracker frame is
+                // system-relative Y-up, where that middle sits half a staff below the
+                // staff's top line. The same reflection StackBelowStaff makes.
+                p.Up.Raise(topUp - StaffBottom / 2.0);
+                supportUp.Merge(p.Up);
+            }
+            else if (systemSkylines != null && sys >= 0 && sys < systemSkylines.Count
+                && !systemSkylines[sys].up.IsEmpty)
+            {
+                // No profile: the system silhouette, which is what a harness that builds no
+                // staff has. TWO reasons it is not the production support any more — it is
+                // the whole system's ink, so a lower staff's mover clears the TOP staff's
+                // (the flying-fermata bug), and MEASURED 2026-07-30: on the FIRST system it
+                // carries no music ink at all. Sampled pointwise for fixture test/notes, the
+                // first system's silhouette reads the staff line 0.050 across the whole line
+                // with the clef 1.776 its only maximum, where that staff's own profile reads
+                // the notes (0.667 at x 10, 0.517 at x 30); on the SECOND system the two
+                // agree pointwise. So every first-system mark used to be side-positioned
+                // against the staff line and the clef and nothing else — which is the whole
+                // of test/notes' 0.4 page growth when the profile took over.
+                // ⚠️ AND THIS PASS IS NOT ITS ONLY READER. perSystemExtents (LayoutEngine) is
+                // built from the same skyline, so the page's own first-system reservation
+                // reads it; and ChordNameEngraver, FiguredBassEngraver and LyricEngraver all
+                // still take systemSkylines, i.e. they still side-position against the SYSTEM
+                // (ChordNameEngraver says so in its own comment: lower-staff chords keep a
+                // fixed offset because their staff's skyline "isn't here"). Those are the same
+                // defect in three more places and they are NOT ported: each wants a point of
+                // its own — the delegate this method takes is the shape they would use.
+                supportUp.Merge(systemSkylines[sys].up);
+            }
+            SeedClefInk(systems, sys, staff, t);
+            trackers[(sys, staff)] = t;
+            return t;
+        };
+    }
+
+    /// <summary>
+    /// The index of the system's TOPMOST placed staff — the axis group a Score-context grob
+    /// hangs on. Falls back to 0 when the system places none.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT the constant 0. The staff whose index is 0 is not always the top one: a
+    /// <c>\RemoveEmptyStaves</c> system drops staves, and an ossia adds one, so "the first
+    /// staff" and "the staff at the top of this system" are different questions and only the
+    /// second one is what LilyPond's Score-context grobs are side-positioned against.
+    /// LILYPOND-REF: lily/align-interface.cc:274 <c>where += stacking_dir * dy</c> — the
+    ///   accumulator walks with <c>stacking_dir</c> = DOWN, so the topmost placed staff is the
+    ///   one with the greatest Y-up; that is how <c>SkylineBuilder.OuterStaff</c> picks the
+    ///   silhouette's edge staff too.
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ ONE PASS, NO SORT, and asked ONCE PER SYSTEM rather than once per grob (see
+    /// <see cref="TopStaffBySystem"/>): a bar number exists on every system, so a LINQ
+    /// SelectMany + OrderByDescending per bar number would put an allocation and a sort on the
+    /// preview's per-keystroke path for a quantity that cannot change between two grobs of the
+    /// same system.
+    /// </remarks>
+    private static int TopStaffIndex(ImmutableArray<SystemLayout> systems, int sys)
+    {
+        if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
+            return 0;
+        int best = 0;
+        double bestY = double.NegativeInfinity;
+        foreach (var group in systems[sys].StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty)
+                continue;
+            foreach (var staff in group.Staves)
+            {
+                // staff.Y is Y-up ⇒ the TOP staff is the LARGEST.
+                if (!staff.IsHidden && staff.Y > bestY)
+                {
+                    bestY = staff.Y;
+                    best = staff.StaffIndex;
+                }
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// The topmost placed staff of each system, computed once for the whole pass.
+    /// </summary>
+    private static int[] TopStaffBySystem(ImmutableArray<SystemLayout> systems)
+    {
+        var top = new int[systems.Length];
+        for (int i = 0; i < systems.Length; i++)
+            top[i] = TopStaffIndex(systems, i);
+        return top;
+    }
+
+    /// <summary>
+    /// This staff's prefix clef ink, as a flat line at the glyph's top over the glyph's
+    /// X span. Geometry mirrors DrawClef: glyph at (Indent + 0.3, staff top + anchor line).
+    /// </summary>
+    /// <remarks>
+    /// EVERY staff's clef, because a Clef is inside-staff ink of ITS OWN axis group — the same
+    /// sentence <c>SkylineBuilder.SeedClef</c> quotes for the per-staff silhouette.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914 <c>inside_staff_skylines</c> — a grob
+    ///   whose outside-staff-priority is unset goes in, and a Clef never declares one
+    ///   (scm/define-grobs.scm Clef), so it is in the skyline the pass starts from.
+    /// <para>
+    /// ⚠️ A SECOND SPELLING of a seed the profile already carries: with a staff profile the
+    /// clef is in it as its real OUTLINE (SkylineBuilder.SeedClef, ported 2026-07-27), where
+    /// this is a flat plateau at the same top. A max-merge keeps the plateau, so what this
+    /// costs is pointwise: a mark whose X falls where the clef's outline has dropped away
+    /// clears the plateau here and the outline in LilyPond. It was the TOP staff's clef only
+    /// until 2026-07-30.
+    /// </para>
+    /// <para>
+    /// ⚠️ DELETING IT WAS TRIED AND REVERTED (2026-07-30), and the measurement is why it is
+    /// still here: with the seed removed, 123 SNAPSHOTS move and NOT ONE LEDGER POINT does.
+    /// Every line-start grob in the corpus shifts and nothing says whether the new place is
+    /// LilyPond's — the <c>system.clef-floor.*</c> family measures the CLEF's own floor, not a
+    /// grob side-positioned over the clef, so it never fires here. ⇒ The book this needs, in
+    /// one line: a mark (or bar number) at a line start whose X falls over the clef's SLOPE
+    /// rather than its plateau, read against LilyPond. Until that exists, removing the seed
+    /// would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+    /// </para>
+    /// </remarks>
+    private static void SeedClefInk(
+        ImmutableArray<SystemLayout> systems, int sys, int staffIndex, OutsideStaffSkylines t)
+    {
+        if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
+            return;
+        var staff = systems[sys].StaffGroups
+            .SelectMany(g => g.Staves)
+            .FirstOrDefault(s => !s.IsHidden && s.StaffIndex == staffIndex);
+        if (staff == null)
+            return;
+        var (clefBox, anchorLine) = staff.Clef switch
+        {
+            ClefType.Bass => (GlyphMetrics.ClefF, 1.0),
+            ClefType.Alto => (GlyphMetrics.ClefC, 2.0),
+            ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
+            _ => (GlyphMetrics.ClefG, 3.0),
+        };
+        double clefProtrusion = clefBox.Top - anchorLine;
+        if (clefProtrusion <= 0)
+            return;
+        double clefX = systems[sys].Indent + 0.3;
+        double top = clefProtrusion + staff.Y;
+        t.MergeSupport(up: VerticalSkyline.FromBox(
+            clefX + clefBox.Left, clefX + clefBox.Right, top, top, VerticalDirection.Up));
+    }
+
+    /// <summary>
+    /// Merges the immovable above-staff occupancy into the trackers: the note-bound scripts
+    /// (which carry no outside-staff-priority) and the above-staff tuplet brackets (bound to
+    /// their beams in this model), each into ITS OWN staff's tracker.
+    /// </summary>
+    private static void SeedAboveTrackers(
+        ImmutableArray<SystemLayout> systems,
+        Func<int, int, OutsideStaffSkylines> trackers,
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<TupletBracketLayout> tupletBrackets,
         Dictionary<int, int> measureToSystem)
     {
-        // UP stacking: larger Y-up = further above the staff.
-        // FRAME: system-relative Y-up (up-positive, the SYSTEM TOP = 0), the native
-        // LP frame the grobs store — above the staff is positive Y-up. Every
-        // seed/box/grob Y below is measured from the system top, and every grob
-        // writes back its unchanged system-relative YUp, so the stacker reads no
-        // absolute SystemLayout.Y — decoupled for the Stage-4 W2 stacking-origin flip.
-        var trackers = new OutsideStaffSkylines[systems.Length];
-        for (int i = 0; i < systems.Length; i++)
-        {
-            // The support starts at the flat staff-top base (Y-up 0) and merges the
-            // system's up-skyline RAW — sloped buildings (beams) keep their slopes,
-            // where the interval tracker used to flatten each building at its
-            // midpoint. The base plays the old "max(0, h)" clamp pointwise. The
-            // support's DOWN side stays the flat base: for an UP stack it only
-            // enters the forbidden intervals' lower bounds, which positive moves
-            // never reach.
-            var supportUp = FlatBase(0.0, VerticalDirection.Up);
-            trackers[i] = new OutsideStaffSkylines(dir: +1,
-                supportUp, FlatBase(0.0, VerticalDirection.Down));
-            if (systemSkylines != null && i < systemSkylines.Count
-                && !systemSkylines[i].up.IsEmpty)
-            {
-                supportUp.Merge(systemSkylines[i].up);
-            }
-
-            // Prefix clef ink: the up-skyline is built from music items
-            // only, so a treble clef's ~1.8sp protrusion above the staff
-            // top is invisible to it. Seed the TOP staff's clef ink so
-            // line-start marks clear the clef. Geometry mirrors DrawClef:
-            // glyph at (Indent + 0.3, staffTop + anchor line).
-            var firstStaff = systems[i].StaffGroups.IsDefaultOrEmpty
-                ? null
-                : systems[i].StaffGroups
-                    .SelectMany(g => g.Staves)
-                    .Where(s => !s.IsHidden)
-                    // staff.Y is Y-up ⇒ the TOP staff is the LARGEST.
-                    .OrderByDescending(s => s.Y)
-                    .FirstOrDefault();
-            if (firstStaff != null)
-            {
-                var (clefBox, anchorLine) = firstStaff.Clef switch
-                {
-                    ClefType.Bass => (GlyphMetrics.ClefF, 1.0),
-                    ClefType.Alto => (GlyphMetrics.ClefC, 2.0),
-                    ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
-                    _ => (GlyphMetrics.ClefG, 3.0),
-                };
-                double clefProtrusion = clefBox.Top - anchorLine;
-                if (clefProtrusion > 0)
-                {
-                    double clefX = systems[i].Indent + 0.3;
-                    double top = clefProtrusion + firstStaff.Y;
-                    trackers[i].MergeSupport(up: VerticalSkyline.FromBox(
-                        clefX + clefBox.Left, clefX + clefBox.Right,
-                        top, top, VerticalDirection.Up));
-                }
-            }
-        }
-
         // Above-staff scripts that declare NO outside-staff-priority (accents, staccato,
         // ornaments, bows, editorial accidentals …) are bound to their notes: they enter
         // the skyline BEFORE any outside-staff grob is placed, so movable marks
@@ -551,10 +741,11 @@ internal static class OutsideStaffStacker
                 // a.YUp is Y-up above the staff middle; reflect to system-relative
                 // Y-up against this staff's WITHIN-SYSTEM middle, which in that frame
                 // is the staff's own Y-up offset less half a staff.
-                double relY = a.YUp + (LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex) - 2.0);
+                double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex);
+                double relY = a.YUp + (staffTopUp - 2.0);
                 double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
-                if (inkTop <= 0)
-                    continue; // entirely inside the staff — the up-skyline covers it
+                if (inkTop <= staffTopUp)
+                    continue; // entirely inside the staff — its own profile covers it
                 // ⚠️ The SEED still reads the designed ink box's TOP as a flat line, where a
                 // mover of the same grob reads the glyph's real outline
                 // (ArticulationEngraver.ScriptSkylines) — LilyPond has ONE profile for both
@@ -564,7 +755,7 @@ internal static class OutsideStaffStacker
                 // editorial accidentals, the swing mark), so it waits for its book: a mark
                 // over a WIDE script whose outline drops away under the mark's X. No point
                 // reaches this today.
-                trackers[sysIdx].MergeSupport(up: VerticalSkyline.FromBox(
+                trackers(sysIdx, a.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
                     a.X + a.Ink.Left, a.X + a.Ink.Right, inkTop, inkTop,
                     VerticalDirection.Up));
             }
@@ -590,7 +781,7 @@ internal static class OutsideStaffStacker
                 {
                     double lineTop = Math.Max(tb.StartYUp, tb.EndYUp)
                         + EngravingDefaults.TupletBracketThickness / 2.0;
-                    trackers[sysIdx].MergeSupport(up: VerticalSkyline.FromBox(
+                    trackers(sysIdx, tb.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
                         tb.StartX, tb.EndX, lineTop, lineTop, VerticalDirection.Up));
                 }
                 if (!string.IsNullOrEmpty(tb.NumberText))
@@ -600,19 +791,17 @@ internal static class OutsideStaffStacker
                         tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
                     double halfH = TextFontMetrics.InkHeight(
                         tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
-                    trackers[sysIdx].MergeSupport(up: VerticalSkyline.FromBox(
+                    trackers(sysIdx, tb.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
                         tb.NumberX - halfW, tb.NumberX + halfW,
                         tb.NumberYUp + halfH, tb.NumberYUp + halfH, VerticalDirection.Up));
                 }
             }
         }
-
-        return trackers;
     }
 
     // ---- 50: TrillSpanner ----
     private static ImmutableArray<TrillSpannerLayout> PlaceTrills(
-        ImmutableArray<TrillSpannerLayout> trills, OutsideStaffSkylines[] trackers,
+        ImmutableArray<TrillSpannerLayout> trills, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem)
     {
         if (trills.IsDefaultOrEmpty)
@@ -621,11 +810,6 @@ internal static class OutsideStaffStacker
         for (int i = 0; i < b.Count; i++)
         {
             var t = b[i];
-            // Lower-staff trills are already positioned over their own staff
-            // by the engraver; the staff-0 seeded occupancy would wrongly pull
-            // them back up to the top staff.
-            if (t.StaffIndex != 0)
-                continue;
             if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
                 continue;
             // System-relative Y-up: t.YUp is Y-up from the system top, entering the
@@ -709,7 +893,7 @@ internal static class OutsideStaffStacker
                 qUp.Merge(line.Up);
                 qDown.Merge(line.Down);
             }
-            double move = trackers[sysIdx].Place(qUp, qDown, OutsideStaffPadding, 0);
+            double move = trackers(sysIdx, t.StaffIndex).Place(qUp, qDown, OutsideStaffPadding, 0);
             b[i] = t with { YUp = t.YUp + move };
         }
         return b.ToImmutable();
@@ -740,7 +924,7 @@ internal static class OutsideStaffStacker
     /// </para>
     /// </remarks>
     private static ImmutableArray<ArticulationLayout> PlaceArticulations(
-        ImmutableArray<ArticulationLayout> articulations, OutsideStaffSkylines[] trackers,
+        ImmutableArray<ArticulationLayout> articulations, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (articulations.IsDefaultOrEmpty)
@@ -752,24 +936,6 @@ internal static class OutsideStaffStacker
             if (!a.IsAbove || a.OutsideStaffPriority is null
                 || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
-            // ⚠️ Lower-staff scripts are left where their engraver put them, the same
-            // treatment lower-staff trills and ottava brackets get above — and for the same
-            // reason, which is a DEFECT of this pass and not of the grobs: the ABOVE tracker
-            // is seeded per SYSTEM (systemSkylines), so its support profile is the topmost
-            // ink of the whole system, and a script on staff 2 would be "cleared" over
-            // staff 1's notes. MEASURED (session 40, a two-staff score with an above fermata
-            // on the bass staff): without this line the fermata lands above the TOP staff.
-            // LilyPond has no such problem because its pass runs per VerticalAxisGroup — one
-            // per STAFF (axis-group-interface.cc:836-985 outside_staff_axis_group is called
-            // on the staff's own group), which is also why the BELOW pass here (per
-            // (system, staff), with a real per-staff profile) needs no guard.
-            // ⇒ The island: give the above pass per-(system, staff) trackers reading
-            // BuildStaffSkylines, as StackBelowStaff already does, and these three guards
-            // (trill, ottava, script) all disappear. It moves multi-staff output, so it
-            // wants its own points first — no fixture and no ledger entry reaches this
-            // regime today, which is exactly why the port shipped with the bug.
-            if (a.StaffIndex != 0)
-                continue;
             // Stack in system-relative Y-up: a.YUp is above this staff's WITHIN-SYSTEM
             // middle, so it enters at a.YUp + midUp and the move reflects straight back.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex) - 2.0;
@@ -777,7 +943,7 @@ internal static class OutsideStaffStacker
             // Script declares no outside-staff-horizontal-padding, so the horizon padding
             // is the 0.0 default (its horizon-padding 0.1 is aligned_side's, spent by the
             // engraver, not this pass's).
-            double move = trackers[sysIdx].Place(myUp, myDown, OutsideStaffPadding);
+            double move = trackers(sysIdx, a.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             if (move != 0)
                 b[i] = a with { YUp = a.YUp + move };
         }
@@ -785,9 +951,14 @@ internal static class OutsideStaffStacker
     }
 
     // ---- 100: BarNumber (absolute page Y) ----
+    // A BarNumber belongs to the SCORE context, so it hangs on the top staff's axis group and
+    // clears that staff's ink and no other.
+    // LILYPOND-REF: ly/engraver-init.ly:774 \consists Bar_number_engraver — declared inside
+    //   the Score context (its \name is at :729), not in Staff, so there is one BarNumber per
+    //   system and its side support is the topmost staff.
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
-        ImmutableArray<BarNumberLayout> barNumbers, OutsideStaffSkylines[] trackers,
-        Dictionary<int, int> measureToSystem)
+        ImmutableArray<BarNumberLayout> barNumbers, Func<int, int, OutsideStaffSkylines> trackers,
+        Dictionary<int, int> measureToSystem, int[] topStaff)
     {
         if (barNumbers.IsDefaultOrEmpty)
             return barNumbers;
@@ -804,7 +975,7 @@ internal static class OutsideStaffStacker
             // baseline, and the cap height is the face's, not a tuning.
             // LILYPOND-REF: scm/define-grobs.scm BarNumber — side-axis Y, direction UP,
             // padding 1.0, and its stencil is ly:text-interface::print, so what
-            // outside_staff_axis_group clears is the TEXT's ink and not a designed box
+            // skyline_spacing clears is the TEXT's ink and not a designed box
             // (lily/grob.cc:85-89 simple_vertical_skylines_from_extents).
             // MEASURED (audit/lp-geometry/probes/page-vertical.ly, books BNL/BNH): LilyPond
             // puts the number's ink bottom at 3.050000 over the staff refpoint — which is
@@ -821,7 +992,8 @@ internal static class OutsideStaffStacker
             var (bnUp, bnDown) = TextOutlineSkylines.Place(
                 bn.Text, BarNumberEngraver.FontSize, sans: false, FontStyle.Bold,
                 originX, bn.YUp);
-            double move = trackers[sysIdx].Place(bnUp, bnDown, OutsideStaffPadding);
+            double move = trackers(sysIdx, topStaff[sysIdx])
+                .Place(bnUp, bnDown, OutsideStaffPadding);
             b[i] = bn with { YUp = bn.YUp + move };
         }
         return b.ToImmutable();
@@ -833,7 +1005,7 @@ internal static class OutsideStaffStacker
     // stack outward from the staff and push higher-priority above-staff grobs (ottava,
     // marks, …) clear of them. Text ascends UP from its baseline anchor.
     private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
-        ImmutableArray<DynamicLayout> aboveDynamics, OutsideStaffSkylines[] trackers,
+        ImmutableArray<DynamicLayout> aboveDynamics, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (aboveDynamics.IsDefaultOrEmpty)
@@ -852,7 +1024,7 @@ internal static class OutsideStaffStacker
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
                 dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
-            double move = trackers[sysIdx].Place(myUp, myDown, OutsideStaffPadding);
+            double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = dyn with { YUp = dyn.YUp + move };
         }
         return b.ToImmutable();
@@ -863,8 +1035,8 @@ internal static class OutsideStaffStacker
     //   (outside-staff-priority . 350). Placed above the staff, clearing the
     //   up-skyline, instead of below where it hit low notes.
     private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
-        ImmutableArray<TextSpannerLayout> textSpanners, OutsideStaffSkylines[] trackers,
-        Dictionary<int, int> measureToSystem)
+        ImmutableArray<TextSpannerLayout> textSpanners, Func<int, int, OutsideStaffSkylines> trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return textSpanners;
@@ -872,7 +1044,6 @@ internal static class OutsideStaffStacker
         for (int i = 0; i < b.Count; i++)
         {
             var ts = b[i];
-            if (ts.StaffIndex != 0) continue; // top staff only, like trills
             if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
             // aligned_side's staff-padding refpoint floor, applied to the anchor (the
             // LINE) BEFORE the collision pass — the same order PlaceCustomTexts uses.
@@ -880,10 +1051,18 @@ internal static class OutsideStaffStacker
             // reach of just the dash half-thickness, this floor is what stands on a
             // quiet staff (ledger textspanner.floor.staff-to-line = 2.05 + 0.8, exact;
             // the old anchor was staff edge + 0.46 + an invented 0.3 box descent).
-            // LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side —
-            //   staff_padding; :361-363 padding default 0.0.
+            // ⚠️ OVER ITS OWN STAFF's ink edge, not the system's: aligned_side floors the
+            // refpoint at that STAFF's own extent plus staff-padding, so on a lower staff the
+            // floor sits that staff's offset lower. It read the system top until 2026-07-30,
+            // when lower-staff spanners were held out of this pass entirely and nothing could
+            // see it.
+            // LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side — the
+            //   staff-padding branch reads staff_extent[dir] of the grob's OWN staff symbol
+            //   ("Ensure 'staff-padding' from my refpoint to the staff"); :361-363 padding
+            //   default 0.0.
             double anchor = Math.Max(ts.YUp,
-                EngravingDefaults.StaffLineThickness / 2.0
+                LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], ts.StaffIndex)
+                + EngravingDefaults.StaffLineThickness / 2.0
                 + EngravingDefaults.TextSpannerStaffPadding);
             // The drawn ink about the line: the dashed rule's half thickness both
             // ways, widened by the text's own ink on the piece that carries it — the
@@ -900,7 +1079,7 @@ internal static class OutsideStaffStacker
                 top = Math.Max(top, ink.Top);
                 bottom = Math.Max(bottom, -ink.Bottom);
             }
-            double newRel = Place(trackers[sysIdx], ts.StartX, ts.EndX,
+            double newRel = Place(trackers(sysIdx, ts.StaffIndex), ts.StartX, ts.EndX,
                 anchor,
                 topOffset: top, bottomOffset: bottom);
             b[i] = ts with { YUp = newRel };
@@ -910,7 +1089,7 @@ internal static class OutsideStaffStacker
 
     // ---- 400: OttavaBracket (above-staff only) ----
     private static ImmutableArray<OttavaBracketLayout> PlaceOttavas(
-        ImmutableArray<OttavaBracketLayout> ottavas, OutsideStaffSkylines[] trackers,
+        ImmutableArray<OttavaBracketLayout> ottavas, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem)
     {
         if (ottavas.IsDefaultOrEmpty)
@@ -921,17 +1100,11 @@ internal static class OutsideStaffStacker
             var o = b[i];
             if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
                 continue;
-            // Lower-staff brackets are already placed over their OWN staff by
-            // OttavaBracketEngraver (via staffYByIndex); the staff-0 seeded
-            // occupancy would wrongly pull them up to the top staff. Same
-            // treatment as lower-staff trills above.
-            if (o.StaffIndex != 0)
-                continue;
             // System-relative Y-up: o.YUp is Y-up from the system top, entering directly.
             // anchor = text baseline / line Y; the label's ascent is its own ink at the
             // size and face the draw uses (DrawOttavaBrackets: BoldItalic at 0.45 x 4sp);
             // the end hook drops EdgeHeight below.
-            double newRel = Place(trackers[sysIdx], o.StartX, o.EndX,
+            double newRel = Place(trackers(sysIdx, o.StaffIndex), o.StartX, o.EndX,
                 o.YUp,
                 topOffset: TextFontMetrics.Ink(
                     o.Text, 0.45 * 4.0, sans: false, FontStyle.BoldItalic).Top,
@@ -943,7 +1116,7 @@ internal static class OutsideStaffStacker
 
     // ---- 450: TextScript (^"...") ----
     private static ImmutableArray<CustomTextLayout> PlaceCustomTexts(
-        ImmutableArray<CustomTextLayout> customTexts, OutsideStaffSkylines[] trackers,
+        ImmutableArray<CustomTextLayout> customTexts, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (customTexts.IsDefaultOrEmpty)
@@ -976,7 +1149,7 @@ internal static class OutsideStaffStacker
             double anchor = Math.Max(ct.YUp + midUp, staffPaddingFloor);
             var (ctUp, ctDown) = TextOutlineSkylines.Place(
                 ct.Text, ctFs, sans: false, FontStyle.Italic, ct.X, anchor);
-            double move = trackers[sysIdx].Place(ctUp, ctDown, OutsideStaffPadding,
+            double move = trackers(sysIdx, ct.StaffIndex).Place(ctUp, ctDown, OutsideStaffPadding,
                 OutsideStaffHorizontalPadding);
             b[i] = ct with { YUp = anchor + move - midUp };
         }
@@ -990,9 +1163,13 @@ internal static class OutsideStaffStacker
     // finding its own height over its own bars.
     // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
     //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
+    // A VoltaBracketSpanner belongs to the SCORE context too, so like the bar number it hangs
+    // on the top staff's axis group.
+    // LILYPOND-REF: ly/engraver-init.ly:767 \consists Volta_engraver — in the Score context
+    //   (its \name is at :729), the same place the bar number's engraver lives.
     private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
-        ImmutableArray<VoltaBracketLayout> voltas, OutsideStaffSkylines[] trackers,
-        Dictionary<int, int> measureToSystem)
+        ImmutableArray<VoltaBracketLayout> voltas, Func<int, int, OutsideStaffSkylines> trackers,
+        Dictionary<int, int> measureToSystem, int[] topStaff)
     {
         if (voltas.IsDefaultOrEmpty)
             return voltas;
@@ -1039,7 +1216,8 @@ internal static class OutsideStaffStacker
                     anchor0 - VoltaBottom(v), anchor0 + 0.1, VerticalDirection.Down));
             }
 
-            double anchor = anchor0 + trackers[sysIdx].Place(spanUp, spanDown, OutsideStaffPadding);
+            double anchor = anchor0 + trackers(sysIdx, topStaff[sysIdx])
+                .Place(spanUp, spanDown, OutsideStaffPadding);
 
             foreach (int i in sysGroup)
                 b[i] = b[i] with { YUp = anchor };
@@ -1049,7 +1227,7 @@ internal static class OutsideStaffStacker
 
     // ---- 1500: MusicMark (rehearsal/section labels) ----
     private static ImmutableArray<MusicMarkLayout> PlaceMusicMarks(
-        ImmutableArray<MusicMarkLayout> musicMarks, OutsideStaffSkylines[] trackers,
+        ImmutableArray<MusicMarkLayout> musicMarks, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (musicMarks.IsDefaultOrEmpty)
@@ -1179,7 +1357,7 @@ internal static class OutsideStaffStacker
                             anchor - 0.5, anchor + 2.0, VerticalDirection.Down));
                     }
                 }
-                double tMove = trackers[sysIdx].Place(tUp, tDown, OutsideStaffPadding,
+                double tMove = trackers(sysIdx, m.StaffIndex).Place(tUp, tDown, OutsideStaffPadding,
                     OutsideStaffHorizontalPadding);
                 b[i] = m with { YUp = m.YUp + tMove };
                 continue;
@@ -1198,14 +1376,14 @@ internal static class OutsideStaffStacker
                 double halfW = TextFontMetrics.Advance(m.Text, fs, sans: false, style) / 2;
                 var (mUp, mDown) = TextOutlineSkylines.Place(
                     m.Text, fs, sans: false, style, m.X - halfW, m.YUp + midUp);
-                double mMove = trackers[sysIdx].Place(mUp, mDown, OutsideStaffPadding,
+                double mMove = trackers(sysIdx, m.StaffIndex).Place(mUp, mDown, OutsideStaffPadding,
                     OutsideStaffHorizontalPadding);
                 b[i] = m with { YUp = m.YUp + mMove };
                 continue;
             }
             var (x0, x1, top, bottom) = MusicMarkExtents(m);
             // The whole mark family declares the horizontal 0.2 (see the constant).
-            double newRel = Place(trackers[sysIdx], m.X + x0, m.X + x1,
+            double newRel = Place(trackers(sysIdx, m.StaffIndex), m.X + x0, m.X + x1,
                 m.YUp + midUp, topOffset: top, bottomOffset: bottom,
                 horizonPadding: OutsideStaffHorizontalPadding);
             b[i] = m with { YUp = newRel - midUp };

@@ -139,7 +139,7 @@
 %% this with the same one line (PlaceTrills / PlaceOttavas / PlaceArticulations:
 %% `if (StaffIndex != 0) continue`), which leaves every lower-staff script at its engraver
 %% position — i.e. the pre-port behaviour, in a regime no fixture and no ledger entry
-%% reaches. LilyPond has no such problem: outside_staff_axis_group runs on the STAFF's own
+%% reaches. LilyPond has no such problem: Axis_group_interface::skyline_spacing runs on the STAFF's own
 %% VerticalAxisGroup (axis-group-interface.cc:836-985), once per staff, so its support is
 %% that staff's ink and nothing else.
 %%

@@ -23,7 +23,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// Tests for outside-staff-priority stacking (G-2).
-/// LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
+/// LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
 /// </summary>
 [Trait("Category", "Unit")]
 public class OutsideStaffStackerTests

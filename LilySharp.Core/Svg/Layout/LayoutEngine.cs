@@ -2702,30 +2702,65 @@ internal sealed class LayoutEngine
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
         var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml);
 
-        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 outside_staff_axis_group
+        // LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
         // Post-process below-staff elements using priority-based stacking.
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
-        // The below pass runs over each staff's REAL down profile — the same
-        // ingredients the inter-staff seed accumulated (staff symbol, clef, notes with
-        // real thin stems, beams) — so the draw lands where the seed reserved. Fresh
-        // skylines per call: the tracker raises them into its own frame.
+        // BOTH passes run over each staff's REAL profile — the same ingredients the
+        // inter-staff seed accumulated (staff symbol, clef, notes with real thin stems,
+        // beams) — so the draw lands where the seed reserved.
         // LILYPOND-REF: lily/axis-group-interface.cc:937-950 skyline_spacing.
-        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? belowProfile = null;
+        // ⚠️ BUILT ONCE PER (system, staff), HANDED OUT AS COPIES. The trackers RAISE and then
+        // MERGE INTO the skyline they are given, so a shared instance would accumulate one
+        // pass's movers into the other's support. The copy is the cheap half — a resolved
+        // skyline's buildings are already sorted and non-overlapping and a wrap preserves
+        // that (VerticalSkyline.FromResolvedBuildings, the same shape TextOutlineSkylines and
+        // SeedClef use for their caches) — where the BUILD walks the whole system's music.
+        // COUNTED (HANDOFF 5.3, calls not milliseconds) — AND THE GAIN IS SMALLER THAN THE
+        // OBVIOUS GUESS, so here is what was actually measured (builds / saved):
+        // multi-staff-hairpins 4/2, test/notes 4/0, showcase/08-chorale 2/0,
+        // showcase/04-advanced 4/0. It saves a build only where the ABOVE and BELOW passes
+        // want the SAME (system, staff) in one run; on the three that saved nothing the below
+        // pass asks for nothing at all (no below-staff mover), so there was never a duplicate.
+        // ⚠️ AND IT CANNOT SEE THE BIGGER ONE. test/notes' 4 is 2 staves-with-movers × the
+        // annotation pass running TWICE (once for the extents, once final), and this cache
+        // lives inside ONE of those runs. Hoisting it to the layout context would halve that —
+        // but the two runs do not necessarily hold the same measure layouts, so a shared cache
+        // is only correct if that is checked first. Next session's lever, not this one's.
+        // ⚠️ HOW IT SCALES, counted on the longest fixtures: grammar-tour 12 builds,
+        // feature-tour 18, multi-page-vertical 66. A BAR NUMBER sits on every system, so a
+        // (system, staff) that places something is nearly every system — and each build walks
+        // that ONE system's measures. So the port costs about TWO extra walks over the score's
+        // music per render (once per annotation pass), not one per system per system. On this
+        // machine that is not measurable in milliseconds: the same binary rendered
+        // test/fermata-down at min-of-20 = 4.98 ms in one run and 14.70 ms in another, so a
+        // 10-20% difference at 5-15 ms is below the noise floor here (HANDOFF 5.3 — count the
+        // calls, do not time them).
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null;
         if (staffByIndex != null)
         {
             var allBeams = beamLayouts ?? ImmutableArray<BeamLayout>.Empty;
-            belowProfile = (sysIdx, staffIndex) =>
+            var profileCache = new Dictionary<(int Sys, int Staff),
+                (VerticalSkyline Up, VerticalSkyline Down)?>();
+            staffProfile = (sysIdx, staffIndex) =>
             {
-                if (sysIdx < 0 || sysIdx >= systems.Length
-                    || !staffByIndex.TryGetValue(staffIndex, out var profStaff))
+                if (!profileCache.TryGetValue((sysIdx, staffIndex), out var built))
+                {
+                    built = sysIdx >= 0 && sysIdx < systems.Length
+                            && staffByIndex.TryGetValue(staffIndex, out var profStaff)
+                        ? _skylineBuilder.BuildStaffSkylines(
+                            profStaff, systems[sysIdx].Measures,
+                            beams: allBeams.IsDefaultOrEmpty
+                                ? ImmutableArray<BeamLayout>.Empty
+                                : allBeams.Where(b => b.StaffIndex == staffIndex).ToImmutableArray(),
+                            systemLeft: systems[sysIdx].Indent)
+                        : null;
+                    profileCache[(sysIdx, staffIndex)] = built;
+                }
+                if (built is not { } p)
                     return null;
-                var staffBeams = allBeams.IsDefaultOrEmpty
-                    ? ImmutableArray<BeamLayout>.Empty
-                    : allBeams.Where(b => b.StaffIndex == staffIndex).ToImmutableArray();
-                return _skylineBuilder.BuildStaffSkylines(
-                    profStaff, systems[sysIdx].Measures, beams: staffBeams,
-                    systemLeft: systems[sysIdx].Indent);
+                return (VerticalSkyline.FromResolvedBuildings(VerticalDirection.Up, p.Up.Buildings),
+                        VerticalSkyline.FromResolvedBuildings(VerticalDirection.Down, p.Down.Buildings));
             };
         }
         // The scripts come BACK out: the fermata family declares outside-staff-priority 75
@@ -2735,11 +2770,12 @@ internal sealed class LayoutEngine
         var (stackedDynamics, stackedHairpins, stackedArticulations) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
-                staffProfile: belowProfile);
+                staffProfile: staffProfile);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
-        // volta 600, marks 1500), seeded from the per-system up-skylines.
+        // volta 600, marks 1500), seeded per (system, STAFF) from that staff's own profile —
+        // LilyPond runs the pass on one staff's VerticalAxisGroup at a time.
         // Replaces the old pairwise hacks (bar-number-vs-volta in the
         // renderer; music-mark-vs-volta inside MusicMarkEngraver).
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
@@ -2765,7 +2801,8 @@ internal sealed class LayoutEngine
             systems, systemSkylines, tupletBracketLayouts,
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
-            stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
+            stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts,
+            staffProfile: staffProfile);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's

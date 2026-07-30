@@ -32,18 +32,28 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第40セッション・**fermata が priority pass の mover になった——
-TSP +1.685 → 0 exact。新規 5 点のうち 4 点が九桁で着地し、5 点目（SPA）が
-「臨時記号の縦 seed が箱」という別 grob の欠陥を +1.311 で開いた**。
-⚠️ **swing 記法はユーザーが「まだおかしい」＝LP の記法待ち**（下の第40セッション節 8）。
-詳細は下の第40セッション節）
+最終更新 2026-07-30（第41セッション・**上側 outside-staff pass が譜ごとになった——
+`StaffIndex != 0` guard は 4 本（trill/ottava/script＋未命名だった text spanner）とも消え、
+下段 3 点が同時に閉じた。ottava は「下段が上段と同じ値段」＝OTC の残差と桁まで同一で着地**。
+⚠️ **swing 記法はユーザーが「まだおかしい」＝LP の記法待ち**（下の第40セッション節 8・未着手）。
+詳細は下の第41セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3547 passed / 0 failed / 3 skipped**（台帳 **233 点**全緑＝227＋新規 6）・
+**HEAD は 3550 passed / 0 failed / 3 skipped**（台帳 **236 点**全緑＝233＋新規 3）・
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第41セッションの commit（7 本）**: `39dc6184`（**起票＝TXV/TVL/OTL 3 冊＋台帳 3 点**・
+コード変更ゼロ・出力不変）／`a1d22431`（**port＝上側 tracker を per (system, staff) に**・
+guard 4 本削除・**snapshot 2 枚再ベース・GO 済**・台帳 3 点が SPL +8e-9／TVL 0 exact／
+OTL +0.027480＝OTC と同一で着地）／`1ce33d3b`（handoff）／
+`d6eb1cb0`（**引用の訂正＝`outside_staff_axis_group` は LP に存在しない**・14 箇所・
+`KnownUnverifiedSymbols` から削除・未命名引用ラチェット 747→746・コメントのみ）／
+`c56e9213`（**字面化＝「最上段」を定数 0 でなく `TopStaffIndex` で問う**・`-1` の解決先も同じ・
+出力不変）／`c58cad80`（**clef の平箱削除を測って戻した＝snapshot 123 枚動き台帳 0 点**・
+値段と本の設計を残した）／`7fc442f3`（**perf＝profile を (system, staff) ごとに 1 回・
+コピーを配る**・**実測 4 builds 中 2 節約（multi-staff-hairpins）／他 3 譜は 0**・出力不変）。
 **第40セッションの commit**（コードが動くのは 3 本）: `e939120c`（**起票＋port を 1 本**＝
 プローブ `script-priority.ly` 5 冊・台帳 5 点・fermata を priority 75 の mover へ（上下とも）・
 profile はグリフの実アウトライン・**TSP exact / 新規 4 点は九桁 / SPA が +1.311 で
@@ -115,6 +125,62 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第41セッション（2026-07-30）＝ **上側 pass を譜ごとにしたら guard 4 本が消え、「第 1 system のシルエットには音楽インクが 1 つも無い」が落ちてきた**
+
+★★★ **▶ の「上側 pass の tracker を per (system, staff) に」を起票→port まで一気通貫**。
+点は先に 3 つ開けた（`39dc6184`・コード変更ゼロ）。
+
+1. ★★★ **恒等の対を 2 家族ぶん作った**（§5.0 の「LP 側が恒等になる対が最強」）:
+   **TXV/TVL**（trill・`trill-stem-support.ly`）と **OTL**（ottava・`ottava-floor.ly`）。
+   **LP は 3 家族すべてで 15 桁同一**（OTL 5.777519990798647 対 OTC の …646／TVL 6.005000 対
+   TXV の 6.005000／SPL は第40セッションで済）⇒ **falsifier は 1 つも鳴らず、guard 4 本は
+   純粋なハックと確定**。
+2. ★★★ **trill の本は 1 回作り直した。捨てた 1 冊目が所見**: 「TXW の texture を下段へ」は
+   LP が**静止 3.550000** を返した——cross-staff を見たからではなく、**regime を出ていた**。
+   2 譜だと system-start bar が幅を食い、stop 列が 0.125 左へ、波の run 量子化が要素 1 個ぶん
+   （1.0）落ちて波の終わりが**加線の 0.326 の張り出しから 0.9236 手前**になる。
+   ⇒ ★★ **TXW 自身の binding は X で 0.277 しか余裕が無い**（−0.000180 の残差が斜面に
+   乗っているのと同じ理由）。⇒ ★★★ **§5.0 の「対の両側が同じ音楽か確かめる」に
+   「同じ spacing か」を足すこと**——音高も voice も完全に一致していて、なお別 regime だった。
+3. ★★★ **作り直した対は「他 voice の背の高い列」**: TrillSpanner は priority 50＝表の最下位
+   なので**先に置かれる grob が存在せず**、かつ aligned_side で 0.5・pass で 0.46 を払うので
+   **自分の支持に入るものは pass では絶対に動かない**。支持は per-voice（Voice 文脈）なので
+   **同じ譜の別 voice のインクだけが pass にしか見えない広い障害物**。
+   LP **6.005000 ＝ 他voice列のインク上端 4.545 ＋ 0.46 ＋ stencil-offset 1.0**——
+   binding は**tr グリフの平らな台地の下**（他voice の第1列がグリフ X に 1.25 重なる）。
+   ⇒ ★ **平らな台地に乗る binding は texture 編集に耐える**。点を作るときはこの形を狙う。
+4. ★★★ **port**: `AboveTrackers` が **(system, staff) キーの遅延生成**になり、support は
+   その譜自身の `BuildStaffSkylines`（下側 pass と**同じデリゲート・同じ引数**）。
+   **guard は 4 本**だった——`PlaceTextSpanners` の 1 行は誰も数えていなかった。
+   **着地: SPL −0.261 → +8e-9／TVL −2.455 → 0 exact／OTL −1.727520 → +0.027480＝OTC と桁まで
+   同一**。⇒ ★★ **最後の行が主張の形**: 下段が上段と同じ値段になった＝pass は 1 本。
+5. ★★★ **snapshot 2 枚（どちらも欠陥修正・GO 済）**:
+   - `test/multi-staff-text-spanners`: 下段 `rit.` の線が **y 27.92（下段譜の**下**）→ 20.06
+     （自分の譜の上・加線付き音符を clear）**。`PlaceTextSpanners` の staff-padding 床も
+     **system 上端基準**だった（正しくは自分の譜の `staff_extent[UP]`）。**guard が
+     下段 spanner を pass から外していたので、どちらの欠陥も観測者ゼロだった。**
+   - `test/notes`: テンポマークが +0.4。★★★ **推測せず両 support を pointwise サンプルした**:
+     **第 1 system のシルエットは音楽インクを 1 つも持っていない**（全域で譜線 0.050・
+     最大は clef 1.776 だけ）のに対し**その譜自身の profile は音符を読む**（x10 で 0.667・
+     x30 で 0.517）。**第 2 system では両者が pointwise 一致**。⇒ **第 1 system のマークは
+     ずっと「譜線と clef だけ」を避けていた。**
+     ⚠️ ★★ **同じ skyline が `perSystemExtents` に入る**ので**ページの第 1 system 予約も
+     これを読んでいる**——**別の島。点が先**（コードに明記）。
+6. ★★ **port 中に落ちた 2 件（どちらも実測が見つけた・読んでは見つからない）**:
+   ⑴ ★★★ **`-1` は「最上段」**（`CustomTextLayout`・`MusicMarkLayout`）。**-1 をキーにすると
+   幽霊の譜**になり、trill や script が staff 0 に積んだ占有を 1 つも持たない。
+   **台帳 `tempo.trill-cleared` が 5.110000000 → 2.883000002** で鳴った（マークが真下の trill を
+   見なくなった）＝**lookup で 0 に正規化**。⑵ script seed の「譜の中に収まっているから skip」の
+   判定が **system 上端**と比べていた（正しくはその譜の上端）。
+7. ★★ **perf は「回数」で測った**（§5.3）: 追加 profile ビルドは **08-chorale 2 回／notes 4 回／
+   04-advanced 4 回**＝**「置くものがある (system, staff) ごとに 1 回 ×（extent と最終の 2 周）」**。
+   ⇒ ★ **共有キャッシュで半減できる**（引数が同一なのは確認済み）が、**tracker が渡された
+   skyline を `Raise` する**ので**キャッシュはコピーを配る必要がある**。
+8. **温存した債務（コードに名前あり）**: clef の**平らな箱 seed は profile が持つアウトラインの
+   2 つ目の綴り**（max-merge なので効くのは pointwise だけ・`system.clef-floor.*` が点）。
+   **per-staff にはした**（どの譜の clef も自分の axis group のインクだから）。
+   **消すのは別の測定段階**——この port には入れていない。
 
 ### 第40セッション（2026-07-30）＝ **fermata は seed でなく mover——priority pass に入れて TSP が exact に。ただし 5 点目が「臨時記号の縦 seed は箱」という別 grob の欠陥を開いた**
 
@@ -234,7 +300,7 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
    `PlaceTrills`/`PlaceOttavas` は前から `StaffIndex != 0` で逃げており、**同じ 1 行を
    `PlaceArticulations` にも入れた**（＝下段 script は engraver の位置のまま＝pre-port 同等）。
    ⚠️ **LP にこの問題は無い**——pass は **VerticalAxisGroup ごと＝譜ごと**に走る
-   （`axis-group-interface.cc:836-985`）。**下側 pass は既に per (system, staff)** なので
+   （`axis-group-interface.cc:860-985 skyline_spacing`）。**下側 pass は既に per (system, staff)** なので
    guard 不要（＝非対称の理由はここ）。
    ⇒ ★★ **島**: 上側 tracker も per (system, staff) にして `BuildStaffSkylines` を読ませれば、
    **guard 3 本（trill・ottava・script）が同時に消える**。多段出力が動くので点が先。
@@ -1267,22 +1333,42 @@ stem-support,below,accidental}`）のうち 4 点が九桁で着地。詳細は�
   **点が先**: 上は「幅広 script のアウトラインが mark の X で落ちる」対、下は「script の下の
   dynamic」対。第40セッションで**切り替えを試した実測**は handoff 節 7（`ornaments`・
   `editorial-accidental`・`dynamics` 系が動く）。
-- ★★★ **上側 pass の tracker を per (system, staff) にする＝ハック 3 本が同時に消える**
-  （第40セッション節 9）。今は system ごとなので下段の grob が上段のインクを clear してしまい、
-  **trill・ottava・script の 3 本が `StaffIndex != 0` で逃げている**。LP は譜ごとに pass を
-  走らせる（そもそも起きない・`axis-group-interface.cc:836-985`）。
-  **下側 pass が既に per (system, staff)＋`BuildStaffSkylines` なので機構は在る**——
-  足りないのは上側の配線。
-  ★★ **点は開いている**: `script.lower-staff.staff-to-ink-bottom`（SPL・**残差 −0.261**）。
-  **ここから始められる。** ⚠️ **trill と ottava の下段点も同じ commit で開ける**こと
-  （§5.3 の「鎖の両端を同じ commit で」）——3 本の guard は 1 個の欠陥の 3 つの顔なので、
-  1 本だけ外すと残り 2 本が「なぜ在るのか」を説明できなくなる。
-- ★★ **perf（プレビュー速度・ユーザーが重視）**: 実譜で採れたのは **`fermata-down` の
-  +約 0.6ms（≒+10%）**＝**下向き script を持つ (system, staff) ごとの `BuildStaffSkylines`
-  1 本**（第40セッション節 10）。⇒ **一手は「per-(system, staff) 譜プロファイルの共有
-  キャッシュ」**（下側 pass と `LayoutEngine` の 4 箇所が同じ呼び出しをしている・引数同一性の
-  確認が先・出力不変なのでコーパスが網）。⚠️ **⑸ の `Merge(buildings,dx,dy)` は総当たり距離を
-  消さない**ので後回し。256 個の合成譜の +152% は**実譜ではない regime**。
+- ~~★★★ **上側 pass の tracker を per (system, staff) にする**~~ — **済（第41セッション・
+  `a1d22431`・GO 済・snapshot 2 枚）**。guard は **4 本**（text spanner が 4 本目）とも消え、
+  SPL +8e-9／TVL 0 exact／OTL +0.027480（＝OTC と同一）で着地。詳細は第41セッション節。
+- ★★★ **clef の平らな箱 seed を消す**（`OutsideStaffStacker.SeedClefInk`・**値段は測った**）。
+  profile が同じ clef を**実アウトライン**で持っているので、これは 1 grob 2 綴り。
+  ⚠️ **第41セッションに削除を試して戻した**: **snapshot 123 枚が動き、台帳点は 1 つも落ちない**。
+  `system.clef-floor.*` は**clef 自身の床**を測る点で、**clef の上に置かれる grob**を見ていない。
+  ⇒ ★★ **本は 1 行で書ける**: **行頭のマーク（or 小節番号）の X が clef の平らな台地でなく
+  「斜面」に落ちる**配置を LP と突き合わせる。**点ができれば削除は 1 行**。
+  （§5.0「観測者の無い出力変更はしない」の実例として、値段つきで残してある。）
+- ★★★ **第 1 system のシルエットに音楽インクが無い**（第41セッション節 5・**新しい島**）。
+  実測: 第 1 system の `systemSkylines[0].up` は**全域で譜線 0.050・最大は clef 1.776 だけ**で、
+  同じ譜の `BuildStaffSkylines` は音符を読む（第 2 system では pointwise 一致）。
+  上側 pass はもう読まないが、**`perSystemExtents` が同じ skyline を読む**ので
+  **ページの第 1 system 予約はまだこれ**。⇒ **点が先**（「第 1 system の音符がページ上端の
+  予約に効くか」の対＝1 冊で足りる）。**出所は `LayoutEngine` の第 1 system 特別扱い
+  （:119-192）を疑うところから。**
+- ★★ **perf（プレビュー速度・ユーザーが重視）**。~~上下 pass の共有キャッシュ~~ — **入れた
+  （第41セッション・`7fc442f3`・出力不変）**が、**効きは小さい**: 実測（builds/節約）
+  **multi-staff-hairpins 4/2・notes 4/0・08-chorale 2/0・04-advanced 4/0**。
+  上下**両方**に mover がある (system, staff) でしか重複が無いため。
+  ⇒ ★★ **残っている本体はこちら**: **notes の 4 は「2 譜 ×（extent と最終の 2 周）」**で、
+  キャッシュは 1 周の中にしか居ない。**`ctx` へ持ち上げれば半減する**（実測 **66 → 33**）が、
+  ⚠️ **2 周が同じ measure layout を持つとは限らない**ので**先に確認**すること（確認せずに
+  共有すると extent 周の古い X で最終の配置が決まる）。
+  ⚠️ 他の呼び手（`LayoutEngine` :2298/:2872/:2935/:3302）は引数が同一か未確認。
+  ★★ **port のスケールは実測済（回数）**: **grammar-tour 12／feature-tour 18／
+  multi-page-vertical 66 builds**。**小節番号が全 system に居る**ので「置くものがある
+  (system, staff)」＝ほぼ全 system で、各 build は**その system の小節だけ**を歩く。
+  ⇒ **コストは「音楽をもう 2 周」（annotation pass 2 周ぶん）で、system 数の二乗ではない。**
+  ⚠️ ★★★ **この機械では時間で測れない**（第41セッションで A/B を試した結論）:
+  **同一バイナリの `fermata-down` が min-of-20 で 4.98ms と 14.70ms**。08-chorale は
+  順序を変えると「+54% 退行」と「base より速い」が両方出た。**5〜15ms 級では雑音が効果より
+  大きい**ので、**この島の判定は必ず回数で行うこと**（§5.3 の本機ノイズ記述の更新版）。
+  ⚠️ **trill 島の ⑸ `Merge(buildings,dx,dy)` は総当たり距離を消さない**ので後回し。
+  第40セッションの実譜数字（`fermata-down` +約 0.6ms）はそのまま有効。
 - ~~**trill の描画を glyph run へ**~~ — **済（`81c46545`・GO 済・snapshot 2 枚）**。
 - ~~**`TrillSpannerItem` に VoiceIndex**~~ — **済（`50fc6a80`・出力不変＝結果）**。
 ★★ **trill 島に残る非字面は 4 件**（第39セッションの自己監査＝`29fe9c65`／`81c46545`）。
@@ -2133,6 +2219,16 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   ⚠️ **「対照」と名前が付いていても対照とは限らない。** 自然幅を測る ragged 対照は、
   **本体と同じ音楽が 1 行に収まる幅**で組むこと（収まらないと LP は行を割り、
   列ごとの引き算が静かに壊れる）。
+  ★★★ ⚠️ **④ spacing も確かめる**（2026-07-30・第41セッション）。「TXW の texture を
+  下段へ」は**音高も voice も完全に一致**していて、なお**別 regime を測った**——2 譜だと
+  system-start bar が幅を食い、列が 0.125 左へ、**波の run 量子化が要素 1 個ぶん（1.0）落ちて**
+  binding していた加線の張り出し（0.326）から 0.9236 も手前で終わった。LP は静止値を返し、
+  「cross-staff を見た」と読み違えるところだった。
+  ⇒ ★★ **binding の X 余裕を先に見る**: TXW の binding は 0.277 しか余裕が無い（残差が
+  斜面に乗っているのと同じ理由）。**余裕が 1 桁小さい点は texture 編集で regime を出る。**
+  ⇒ ★★★ **狙って作るなら「平らな台地に乗る binding」**（第41セッションの TXV/TVL は
+  他 voice の列が **tr グリフの平らな台地**の下に 1.25 重なる形にした＝spacing が 0.1 動いても
+  読みは変わらない）。
 - ★ ⚠️ **残差の内訳を spring／列ごとに出す。** 総和だけ見ていると「幅ではなく force の問題」
   のような誤った切り分けに落ちる。列ごとに出せば **1 本だけ符号が逆**のような形が見え、
   符号違いは定数誤りではなく**入力（符尾向き・音高）の違い**を指す。

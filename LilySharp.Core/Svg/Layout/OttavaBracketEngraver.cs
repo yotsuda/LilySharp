@@ -53,8 +53,12 @@ public readonly record struct OttavaBracketLayout(
     // F3/B: index of the originating ottava mark in score.MusicMarks,
     // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    // The staff this bracket belongs to (0 = the first/only staff),
-    // so above-staff stacking leaves lower-staff brackets over their own staff.
+    // The staff this bracket belongs to (0 = the first/only staff). It selects the
+    // above-staff stacker's tracker — one per (system, staff), as LilyPond runs
+    // Axis_group_interface::skyline_spacing per VerticalAxisGroup — so the bracket clears its OWN
+    // staff's ink. (Until 2026-07-30 lower-staff brackets were held out of that pass
+    // and fell back to the bare staff-padding floor, drawing through their noteheads:
+    // ledger ottava.lower-staff.staff-to-line, −1.727520.)
     int StaffIndex = 0
 );
 

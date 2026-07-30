@@ -41,9 +41,11 @@ public readonly record struct TrillSpannerLayout(
     double YUp,
     // Source position for click-to-source mapping.
     int SourcePosition,
-    // Global staff index this spanner belongs to (multi-staff). The
-    // above-staff stacker only de-collides staff 0; lower staves keep their
-    // engraver Y so they stay over their own staff.
+    // Global staff index this spanner belongs to (multi-staff). It selects the
+    // above-staff stacker's tracker: that pass keeps one per (system, staff), the way
+    // LilyPond runs Axis_group_interface::skyline_spacing on each staff's own VerticalAxisGroup.
+    // (Until 2026-07-30 the stacker de-collided staff 0 only and lower staves kept
+    // their engraver Y — ledger trill.lower-staff.staff-to-line priced that at −2.455.)
     int StaffIndex = 0,
     int SourceIndex = -1   // F3/B: index into score.TrillSpanners (shared by all broken pieces)
 );

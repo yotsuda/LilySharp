@@ -1819,6 +1819,36 @@ internal static class LpGeometryProbes
         "c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' |");
 
     /// <summary>
+    /// OTC moved to the LOWER staff of a two-staff system — the ottava's face of the guard
+    /// three movers carry (<c>PlaceOttavas</c>: <c>if (StaffIndex != 0) continue</c>).
+    /// OTC and not OTF because OTC is the regime whose answer COMES FROM THE PASS:
+    /// <c>OttavaBracketEngraver</c> computes only the staff-padding floor (4.05) and the whole
+    /// support side is the collision pass's work, so skipping the pass is visible here and
+    /// free in OTF. LilyPond reads 5.777519990798647 — OTC's number to FIFTEEN digits, its
+    /// pass being per-VerticalAxisGroup.
+    /// </summary>
+    private static readonly string OTL = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef treble }
+
+        section Main {
+          upper { b4 b b b | b b b b | }
+          lower { c'''4@ottava c''' c''' c''' | c''4@loco c'' c'' c'' | }
+        }
+
+        form main { ~Main }
+
+        score main "OTL" {
+          staff upper
+          staff lower
+        }
+        """;
+
+    /// <summary>
     /// THE TRILL / TEXT SPANNER LINE over the staff — the mirrors of spanner-floors.ly's
     /// books TRF / TRC / TSF / TSC, the first points that reach TrillSpanner's and
     /// TextSpanner's quiet-support heights.
@@ -1973,6 +2003,54 @@ internal static class LpGeometryProbes
     /// why.) Lily#'s pre-port scalar max read 8.0, the X-blindness this entry gated.</summary>
     private static readonly string TXW = TrillStemSupportScore("TXW",
         "c4@startTrillSpan c c c''@stopTrillSpan |", "s1 |");
+
+    /// <summary>
+    /// Round 3, the single-staff base of the lower-staff pair: voice one carries the trill
+    /// over LOW columns (its own support is low, so aligned_side alone reads the quiet 3.55)
+    /// and VOICE TWO puts a tall drawn-position-8 column under the span. The trill's
+    /// side-support is per-voice (Trill_spanner_engraver lives in the Voice context,
+    /// engraver-init.ly:376), so the other voice's ink is invisible to aligned_side and
+    /// visible only to the collision pass — the one WIDE obstacle a priority-50 grob can
+    /// have. MEASURED (LilyPond): 6.005000 = that column's ink top 4.545000 + outside-staff
+    /// padding 0.460000 + the trill's stencil-offset reach 1.000000, because voice two's
+    /// FIRST column lies under the "tr" GLYPH, whose profile is the flat plateau at
+    /// line − 1.0 (define-grobs.scm:4054-4068) — a binding that is flat over 1.25 of X and
+    /// therefore immune to a tenth of spacing, unlike TXW's 0.277 of slack.
+    /// </summary>
+    private static readonly string TXV = TrillStemSupportScore("TXV",
+        "c4@startTrillSpan c c c@stopTrillSpan |", "c''4 c'' c'' c'' |");
+
+    /// <summary>
+    /// TXV moved to the LOWER staff of a two-staff system — the trill's face of the guard
+    /// (<c>PlaceTrills</c>: <c>if (StaffIndex != 0) continue</c>). LilyPond reads TXV's
+    /// 6.005000 to fifteen digits; Lily#'s guard holds the trill out of the pass entirely.
+    /// The upper staff is deliberately QUIET: its ink is what the per-system tracker would
+    /// wrongly let this trill clear.
+    /// <para>
+    /// Tagged TVL, not TXL: the textscript-ink pair already owns that tag (book TXL, "mum"
+    /// over "poco"), and a book tag is what the ledger's <c>score</c> field names.
+    /// </para>
+    /// </summary>
+    private static readonly string TVL = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef treble }
+
+        section Main {
+          upper { b4 b b b | }
+          lower { voice { c4@startTrillSpan c c c@stopTrillSpan | } voice { c''4 c'' c'' c'' | } }
+        }
+
+        form main { ~Main }
+
+        score main "TVL" {
+          staff upper
+          staff lower
+        }
+        """;
 
     /// <summary>Round 2: SLOPED forced-up beamed pairs, high member first — the
     /// support is the high member's drawn stem end (the face at ITS X, not the beam
@@ -4911,6 +4989,12 @@ internal static class LpGeometryProbes
         // support-arithmetic reading (padding 0.5 + the label's half-ink to the EDGE).
         new("ottava.floor.staff-to-line", OTF, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
         new("ottava.support.staff-to-line", OTC, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
+        // Round 2 (book OTL) — the ottava's face of the guard three above-staff movers
+        // carry. LilyPond repeats OTC's number on the lower staff to fifteen digits (its
+        // pass is per-VerticalAxisGroup); Lily#'s guard skips the pass, which for THIS grob
+        // is the whole support side, so the bracket falls back to the bare floor.
+        new("ottava.lower-staff.staff-to-line", OTL,
+            g => g.OttavaLineAboveStaff(staff: 1), RaggedBottomPaper),
 
         // --- where the TRILL / TEXT SPANNER LINE sits (books TRF/TRC/TSF/TSC) ---
         // The last two of the four floors the TextScript port left named unported. See
@@ -4953,6 +5037,15 @@ internal static class LpGeometryProbes
             g => g.TrillLineAboveStaff(), RaggedBottomPaper),
         new("trill.fermata-priority.staff-to-line", TSP,
             g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        // Round 3 (books TXV/TXL) — the trill's face of the same guard, as an IDENTITY pair:
+        // the obstacle is a tall column in the OTHER VOICE, which the per-voice side-support
+        // cannot see and the collision pass can, and it lands under the "tr" glyph's flat
+        // plateau so the binding survives a texture edit (TXW's does not — 0.277 of slack in
+        // X, and the two-staff spacing alone was enough to leave its regime).
+        new("trill.other-voice.staff-to-line", TXV,
+            g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+        new("trill.lower-staff.staff-to-line", TVL,
+            g => g.TrillLineAboveStaff(staff: 1), RaggedBottomPaper),
 
         // --- where a FERMATA's own ink lands (books SPQ/SPH/SPS/SPD) ---
         // The observers TSP does not have: it watches the trill, and the port it gates moves

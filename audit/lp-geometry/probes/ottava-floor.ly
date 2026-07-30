@@ -50,6 +50,56 @@
 %% skylines, so the serif pin is load-bearing (svg backend resolves fonts.serif via this
 %% machine's fontconfig otherwise; page-vertical.ly's header has the history).
 
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 2 (2026-07-30, session 41) — the ottava's face of the hack the fermata's SPL
+%% priced. Lily#'s ABOVE outside-staff tracker is one per SYSTEM (seeded from the system's
+%% up-skyline), so a grob on the lower staff would be "cleared" over the TOP staff's ink;
+%% three movers dodge that with one line each (PlaceTrills / PlaceOttavas /
+%% PlaceArticulations: `if (StaffIndex != 0) continue`). LilyPond has no such problem — its
+%% pass runs on the staff's own VerticalAxisGroup, once per staff
+%% (axis-group-interface.cc:836-985). The three guards are three faces of ONE defect, so
+%% they come out together and each grob family needs its own observer: SPL (script-
+%% priority.ly), TXL (trill-stem-support.ly) and this one.
+%%
+%%   OTL — OTC moved to the LOWER staff of a two-staff system: a quiet treble staff above,
+%%         and below it OTC's exact music (\ottava 1 over drawn c''', two ledger lines,
+%%         loco bar 2). OTC and not OTF, because OTC is the regime where Lily#'s answer
+%%         COMES FROM THE PASS: OttavaBracketEngraver computes only the staff-padding floor
+%%         (AboveStaffYUp = 4.05), and everything above it — the whole support side — is the
+%%         collision pass's work. In OTF the floor already stands and the pass moves
+%%         nothing, so the guard would be free there and the book would measure nothing
+%%         (HANDOFF 5.0: do not seat the reading on a floor).
+%%
+%% PREDICTION (before running): 5.777520 — IDENTICAL to OTC, LilyPond's pass being
+%% per-staff. FALSIFIER: anything else means its pass does see cross-staff ink, and then
+%% the guards approximate something real (SPL says otherwise for the Script; this is the
+%% third family asked).
+%% Lily# mirror (predicted, written before its run): the guard skips the pass entirely, so
+%% the bracket falls all the way back to its ENGRAVER value — the bare staff-padding FLOOR
+%% 4.050000 — and the residual is −1.727520. That is far bigger than SPL's −0.261 or TXL's
+%% −1.170721 because for this grob the pass is not a correction on top of an engraver
+%% chain, it IS the chain. ⚠️ It also predicts a VISIBLE defect in the corpus: a lower-staff
+%% 8va over ledgered notes draws its bracket THROUGH the noteheads. No fixture has one (the
+%% same blind spot that shipped the lower-staff fermata bug), so the book is the only
+%% observer until the port lands. FORK: if Lily# reads ≈5.8, the bracket is being placed by
+%% something other than the pass on the lower staff and this whole reading of PlaceOttavas
+%% is wrong — find that before deleting the guard.
+%%
+%% MEASURED (2026-07-30, session 41): OTL 5.777519990798647, and OTC re-read in the same run
+%% is 5.777519990798646 — the SAME NUMBER TO FIFTEEN DIGITS (rel −8.891706 about the lower
+%% staff's refpoint −14.669226, against rel −0.792039 about −6.569559). ⇒ LilyPond's
+%% outside-staff pass sees its own staff's ink and nothing else, for the OttavaBracket as it
+%% does for the Script (SPL) and the TrillSpanner (TVL). The falsifier did not fire: the
+%% guards are pure hacks, not approximations of a real cross-staff term.
+%% Lily#, PRE-port: 4.050000000, residual -1.727520000 -- the bare staff-padding floor, the
+%% prediction to the digit, and a png confirmed the bracket drawn THROUGH the noteheads.
+%%
+%% PORTED (2026-07-30, same session): the above pass keeps one tracker per (system, staff),
+%% built from that staff's own BuildStaffSkylines profile, and the four StaffIndex != 0 guards
+%% are gone. Lily#: 5.805000000, residual +0.027480000 = OTC's residual TO THE DIGIT. ⇒ A
+%% lower-staff bracket now costs exactly what a top-staff one costs, which is the shape of the
+%% claim; what is left is what OTC already names, not a staff-position term.
+
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"
            (ly:output-def-lookup layout 'top-margin)
@@ -117,5 +167,20 @@ probeTag =
   \paper { ragged-bottom = ##t indent = 0 }
   \score {
     \new Staff { \ottava 1 c''''4 c'''' c'''' c'''' \ottava 0 | c'''4 c''' c''' c''' \bar "|." }
+  }
+}
+
+%% OTL — round 2: OTC on the LOWER staff of a two-staff system. Read about the LOWER
+%%     staff's own refpoint, so the inter-staff distance cannot enter the reading. The
+%%     upper staff is deliberately QUIET (middle-line quarters) — its ink is what the
+%%     per-system tracker would wrongly let this bracket clear.
+\book {
+  \probeTag "OTL"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    <<
+      \new Staff { b'4 b' b' b' | b' b' b' b' \bar "|." }
+      \new Staff { \ottava 1 c''''4 c'''' c'''' c'''' \ottava 0 | c'''4 c''' c''' c''' \bar "|." }
+    >>
   }
 }

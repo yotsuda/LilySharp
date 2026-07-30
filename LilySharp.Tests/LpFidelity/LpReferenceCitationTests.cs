@@ -72,7 +72,7 @@ public sealed class LpReferenceCitationTests
     /// ⚠️ Lowering it is the point; raising it to make a build pass is the one forbidden
     /// move (HANDOFF 5.2.1①).
     /// </remarks>
-    private const int UnnamedCitationBaseline = 747;
+    private const int UnnamedCitationBaseline = 746;
 
     /// <summary>
     /// (symbol, LilyPond file) pairs a citation names that the file does not contain.
@@ -100,7 +100,6 @@ public sealed class LpReferenceCitationTests
         "Line_details|lily/simple-spacer.cc",
         "max_pages|lily/page-spacing.cc",
         "min_pages|lily/page-spacing.cc",
-        "outside_staff_axis_group|lily/axis-group-interface.cc",
         "Slur_scoring|lily/slur-scoring.cc",
         "strict_note_spacing|lily/note-spacing.cc",
         "Tuplet_bracket_interface|lily/tuplet-bracket.cc",

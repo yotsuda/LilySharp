@@ -275,6 +275,110 @@
 %%            from it, once, as make_trill_line does. Recorded as an observation, not a
 %%            story (HANDOFF §5.3: do not write a cause you have not pinned).
 
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 3 (2026-07-30, session 41) — the trill's face of the SAME hack the fermata's SPL
+%% priced. Lily#'s ABOVE outside-staff tracker is one per SYSTEM (seeded from the system's
+%% up-skyline), so a grob on the lower staff would be "cleared" over the TOP staff's ink;
+%% three movers dodge that with one line each (PlaceTrills / PlaceOttavas /
+%% PlaceArticulations: `if (StaffIndex != 0) continue`), which holds every lower-staff
+%% trill, ottava and fermata OUT of the collision pass entirely. LilyPond has no such
+%% problem: Axis_group_interface::skyline_spacing runs on the staff's own VerticalAxisGroup, once per
+%% staff (axis-group-interface.cc:836-985), so its support is that staff's ink and nothing
+%% else. script.lower-staff.staff-to-ink-bottom (book SPL of script-priority.ly) opened
+%% this for the Script; the three guards are three faces of ONE defect, so removing one
+%% without the other two leaves the other two unexplainable — hence this book and
+%% ottava-floor.ly's OTL, in the same commit.
+%%
+%% ⚠️ FIRST ATTEMPT, DISCARDED — AND WORTH KEEPING AS AN OBSERVATION. The obvious book was
+%% "TXW's texture on the lower staff", and LilyPond read the QUIET 3.550000 for it: not
+%% because its pass looked across staves, but because the book had left TXW's regime. The
+%% dump says it exactly. TXW's wave ends at x 17.793100 and its stop column starts at
+%% 17.841735, i.e. the wave stops 0.048600 short of the bound and the tall column's LEDGER
+%% overhangs its head by 0.326 — so the overlap that binds is 0.277. On two staves the
+%% system-start bar takes width, the stop column lands at 17.716735 instead (0.125000
+%% left), the run quantizer (1.448 + n × 1.000, session 39) therefore fits ONE FEWER
+%% element and the wave ends at 16.793100 — 0.923600 short of the bound, well clear of the
+%% ledger's 0.326 overhang. Nothing binds, and the reading is the quiet value.
+%% ⇒ TWO things to carry forward: TXW's own binding has only 0.277 of slack in X (its
+%% −0.000180 residual sits on a slope for the same reason), and HANDOFF 5.0's "check that
+%% both sides of a pair are the same MUSIC" needs "… and the same SPACING": the pitches and
+%% the voices matched exactly, and the book still measured a different regime.
+%%
+%% SO THE OBSTACLE HAS TO BE WIDE, and there is exactly one wide obstacle a trill's
+%% collision pass can see that its aligned_side cannot. TrillSpanner is priority 50, the
+%% LOWEST in the table, so no other outside-staff grob is ever placed before it; and it
+%% pays 0.5 in aligned_side against 0.46 in the pass, so for anything inside its own
+%% support set the engraver always wins. What is left is ink on its own staff that is NOT in
+%% its side-support — and the support is per-VOICE (Trill_spanner_engraver lives in the
+%% Voice context, engraver-init.ly:376; scheme-engravers.scm:1816,1824-1830 collects that
+%% voice's note columns). A tall column in the OTHER VOICE of the same staff is therefore
+%% invisible to aligned_side and fully visible to the pass, across a whole notehead's width
+%% of X. That is the pair:
+%%
+%%   TXV — the single-staff base: voice one carries the trill over four low c' columns
+%%         (its own support is low, so aligned_side alone would read the quiet 3.55), and
+%%         voice two puts a tall c''' (drawn position 8, head ink top 4.545, two ledgers)
+%%         under the middle of the span.
+%%   TVL — TXV moved to the LOWER staff of a two-staff system, the upper staff deliberately
+%%         QUIET (middle-line quarters): its ink is what the per-system tracker would
+%%         wrongly let this trill clear. Read about the LOWER staff's own refpoint, so the
+%%         inter-staff distance cannot enter the reading.
+%%
+%% PREDICTIONS, written before running (HANDOFF 5.0-2, with signs and forks):
+%%   * TXV == TVL to the digit. This is the claim, and it is the strongest shape of pair —
+%%     LilyPond being identity on the thing that changed (which staff the music is on), any
+%%     Lily# difference IS the defect's size. FALSIFIER: they differ ⇒ LilyPond's own pass
+%%     does see cross-staff ink and the three guards approximate something real; record the
+%%     mechanism before touching the trackers. (SPL asked this for the Script and the
+%%     falsifier did not fire; asking it for a second grob family is what makes it a claim
+%%     about the PASS rather than about scripts.)
+%%   * The VALUE: ≈ 5.0-5.2 = voice two's head ink top 4.545000 + outside-staff padding
+%%     0.460000 + the wave's own underside where that head starts (≈ 0.16 — NOT a constant;
+%%     session 39 established the binding value is read at the obstacle's X off the
+%%     trill_element outline). FORK: 6.045000 (= 4.545 + the trill's own padding 0.5 + the
+%%     stencil-offset reach 1.0) means the other voice IS in the side-support after all,
+%%     aligned_side decides, the pass contributes nothing — then this book cannot price the
+%%     guard either, and session 39's per-voice support claim needs revisiting. FORK:
+%%     3.550000 means the tall column is invisible to BOTH stages, which no reading of
+%%     axis-group-interface.cc allows — treat the book as unmeasured and dump the skylines.
+%%   * Lily# mirrors (predicted, written before their run): TXV lands on LilyPond's number
+%%     (session 39's port made staff 0's pass pointwise over the real staff profile, and
+%%     session 39 also made the trill's support per-voice, so both stages should already be
+%%     literal here); TVL reads the quiet 3.550000000, because the guard holds it out of the
+%%     pass entirely, giving a residual of about −1.5. FORK: if TVL matches TXV, the guard
+%%     is NOT load bearing and the price lives somewhere else — find it before deleting the
+%%     line.
+%%
+%% MEASURED (2026-07-30, session 41). THE IDENTITY HELD AND THE VALUE FORK MISSED — both
+%% halves are findings:
+%%   TXV 6.005000 and TVL 6.005000, equal to FIFTEEN digits (rel −1.100000 about staff
+%%     −7.105000, and rel −9.209333 about the lower staff's −15.214333). ⇒ LilyPond's
+%%     outside-staff pass sees its own staff's ink and nothing else, for the TrillSpanner as
+%%     it does for the Script (SPL). The falsifier did not fire; the guards are pure hacks.
+%%   THE VALUE is 6.005000 = the other voice's column ink top 4.545000 (LilyPond's own dump
+%%     prints that NoteColumn's ext as (0.0 . 4.545)) + outside-staff-padding 0.460000 + the
+%%     trill's stencil-offset reach 1.000000 — i.e. the obstacle binds under the "tr" GLYPH,
+%%     not under the wave, so the profile that clears it is the flat plateau at line − 1.0,
+%%     the same 1.0 that puts the quiet trill at 2.05 + 0.5 + 1.0. Voice two's FIRST column
+%%     (x 8.585000 .. 9.889200) overlaps the glyph's outline (x 8.392528 .. ≈9.840528) by
+%%     1.25, and the glyph zone's demand (6.005) is far above what the same head would ask
+%%     under the wave (≈4.545 + 0.46 + 0.16 ≈ 5.165). The ≈5.0-5.2 prediction had simply
+%%     forgotten that the other voice's first note lies under the glyph.
+%%   ⇒ ★ AND THAT MAKES THE BOOK ROBUST, which the discarded first attempt was not: the
+%%     plateau is FLAT over 1.25 of X, so the reading cannot be moved by a tenth of spacing
+%%     or by the run quantizer. A pair whose binding lives on a flat plateau is the shape to
+%%     reach for when the point has to survive a texture edit.
+%%   ⇒ The 0.5-vs-0.46 question is answered a second time, here in the glyph zone: 6.045000
+%%     (the aligned_side fork) did NOT happen, so the other voice really is outside the
+%%     side-support and the collision pass really pays 0.46.
+%%
+%% PORTED (2026-07-30, same session): the above pass keeps ONE TRACKER PER (SYSTEM, STAFF),
+%% built on first use from that staff's own BuildStaffSkylines profile, and all FOUR guards
+%% are gone (the fourth, PlaceTextSpanners, had never been named). Lily#: TXV unmoved at
+%% 6.005000000, TVL 3.550000000 -> 6.005000000, both residual 0. The other two families
+%% closed in the same commit (script.lower-staff -0.261 -> +8e-9, ottava.lower-staff
+%% -1.727520 -> +0.027480 = OTC's residual to the digit).
+
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"
            (ly:output-def-lookup layout 'top-margin)
@@ -437,6 +541,39 @@ probeTag =
     \new Staff <<
       { \voiceOne c'4\startTrillSpan c' c'\stopTrillSpan c''' \bar "|." }
       \\ { s1 }
+    >>
+  }
+}
+
+%% TXV — round 3, the single-staff base: the trill's own voice is LOW (so aligned_side
+%%     alone would read the quiet 3.55) and the OTHER voice carries a tall c''' under the
+%%     middle of the span. Per-voice support ⇒ invisible to aligned_side, visible to the
+%%     collision pass, over a whole notehead's width of X.
+\book {
+  \probeTag "TXV"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff <<
+      { \voiceOne c'4\startTrillSpan c' c' c'\stopTrillSpan \bar "|." }
+      \\ { \voiceTwo c'''4 c''' c''' c''' }
+    >>
+  }
+}
+
+%% TVL — round 3: TXV on the LOWER staff of a two-staff system. Read about the LOWER
+%%     staff's own refpoint, so the inter-staff distance cannot enter the reading. The
+%%     upper staff is deliberately QUIET (middle-line quarters) — its ink is what the
+%%     per-system tracker would wrongly let this trill clear.
+\book {
+  \probeTag "TVL"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    <<
+      \new Staff { b'4 b' b' b' \bar "|." }
+      \new Staff <<
+        { \voiceOne c'4\startTrillSpan c' c' c'\stopTrillSpan \bar "|." }
+        \\ { \voiceTwo c'''4 c''' c''' c''' }
+      >>
     >>
   }
 }
