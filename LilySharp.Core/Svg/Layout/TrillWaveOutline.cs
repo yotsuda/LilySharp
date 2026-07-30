@@ -42,13 +42,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// whatever does not make a whole element (0.0486 in the TXW book).
 /// </para>
 /// <para>
-/// ⚠️ The DRAWN wave is still Lily#'s parabolic polyline
-/// (<c>SharedRenderer.DrawTrillSpanners</c>, amplitude
-/// <see cref="EngravingDefaults.TrillWaveAmplitude"/>), so reservation and drawing differ
-/// here as they already do for the dynamics (feta outline reserved, serif drawn). The
-/// reservation is the LARGER of the two (this outline reaches 0.404 either side of the
-/// line, the polyline 0.25), so nothing can overlap on account of it; drawing the glyph run
-/// is the other half of this port and changes how every trill LOOKS.
+/// The DRAWN line is the same run: <c>SharedRenderer.DrawTrillSpanners</c> places
+/// <c>EmmentalerGlyphs.OrnTrillElement</c> at <see cref="ElementOrigins"/> with the
+/// baseline at <see cref="GlyphBaselineOffset"/>, so what is reserved and what is inked are
+/// one calculation rather than two models. (Until 2026-07-30 the drawing was a parabolic
+/// polyline with an amplitude of its own.)
 /// </para>
 /// <para>
 /// Resolved per element COUNT and cached, then placed by shift/raise — the same shape as
@@ -108,10 +106,44 @@ internal static class TrillWaveOutline
         double startX, double allotted, double lineY)
     {
         var r = Resolved(ElementCount(allotted));
-        double y = lineY - CentreOffset;
+        double y = lineY + GlyphBaselineOffset;
         return (PlaceResolved(VerticalDirection.Up, r.Up, startX, y),
                 PlaceResolved(VerticalDirection.Down, r.Down, startX, y));
     }
+
+    /// <summary>
+    /// Where each copy's glyph ORIGIN goes for a line of <paramref name="allotted"/> length
+    /// whose ink starts at <paramref name="startX"/> — what the renderer draws the element
+    /// at, so the drawn run and the reserved run are placed by the same arithmetic.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/line-interface.cc:86-97 make_trill_line —
+    ///   <c>line.translate_axis (-elt_true_ext[LEFT], X_AXIS)</c> then
+    ///   <c>add_at_edge (X_AXIS, RIGHT, elt, 0)</c> per extra copy, which advances by the
+    ///   stencil (LILC) width.</remarks>
+    public static IEnumerable<double> ElementOrigins(double startX, double allotted)
+    {
+        int n = ElementCount(allotted);
+        for (int i = 0; i < n; i++)
+            yield return startX + i * ElementStep - GlyphMetrics.OrnTrillElementGlyphOutline.Left;
+    }
+
+    /// <summary>
+    /// How far BELOW the line an element's glyph baseline sits — negative, because
+    /// <c>align_to (Y_AXIS, CENTER)</c> puts the element's stencil box centre ON the line
+    /// and that box runs upward from the baseline.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/line-interface.cc:69 make_trill_line —
+    ///   <c>elt.align_to (Y_AXIS, CENTER)</c>.</remarks>
+    public static double GlyphBaselineOffset => -CentreOffset;
+
+    /// <summary>
+    /// How far the run's INK reaches either side of the line — the outline's extreme about
+    /// the centred stencil box. For the paging extent pass, which wants an extent rather
+    /// than a profile; anything that places against the line reads <see cref="Place"/>.
+    /// </summary>
+    public static double InkReach
+        => Math.Max(GlyphMetrics.OrnTrillElementGlyphOutline.Top - CentreOffset,
+                    CentreOffset - GlyphMetrics.OrnTrillElementGlyphOutline.Bottom);
 
     // Keyed by element count: the run of that many copies, with the FIRST copy's outline
     // left edge at x = 0 (LilyPond's `line.translate_axis (-elt_true_ext[LEFT], X_AXIS)`)
@@ -129,6 +161,15 @@ internal static class TrillWaveOutline
             // and each further copy sits one STEP right (add_at_edge on the stencil boxes).
             for (int i = 0; i < n; i++)
             {
+                // ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
+                // a trill-local one. LilyPond reads the element from the grob's own context
+                // font (modified-font-metric.cc:62-68), so an ossia trill gets a smaller
+                // wave and a proportionally shorter step; Lily# reserves every annotation
+                // layout full size because those layouts do not carry the staff they belong
+                // to — the same sentence LayoutEngine's bracket/slur/tie seeding carries at
+                // its own StaffSize.FullSize calls, and it closes for all of them at once
+                // when they do. The ossia shrink is applied at DRAW time, so the reservation
+                // over-reserves there, never under.
                 double origin = i * ElementStep - GlyphMetrics.OrnTrillElementGlyphOutline.Left;
                 up.Merge(VerticalSkyline.FromGlyphOutline(
                     VerticalDirection.Up, uQuads, StaffSize.FullSize, origin, 0));

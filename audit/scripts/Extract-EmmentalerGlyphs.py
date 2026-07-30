@@ -177,6 +177,10 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("OrnReverseTurn", "scripts.reverseturn", ""),
     ("OrnTurn", "scripts.turn", ""),
     ("OrnTrill", "scripts.trill", ""),
+    # The wavy line's unit: LilyPond DRAWS a trill spanner's line by repeating this glyph
+    # (lily/line-interface.cc:48-108 make_trill_line), so the renderer places copies of it
+    # rather than stroking a curve of its own.
+    ("OrnTrillElement", "scripts.trill_element", "the trill line's repeating unit"),
     ("MarkSegno", "scripts.segno", ""),
     ("MarkCoda", "scripts.coda", ""),
     ("OrnPrall", "scripts.prall", ""),

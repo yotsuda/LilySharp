@@ -229,6 +229,41 @@
 %%            binding value sits on a building of slope ~1.2, so a sub-1e-4 difference in
 %%            the ledger's left edge or in a flattened vertex shows at this size; LP's
 %%            recorded figure is six-digit rounded). Not fitted.
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% STILL NOT LITERAL after session 39, and the ONE BOOK that measures both (write this
+%% before touching the support code — HANDOFF §5.0: the point comes first):
+%%   ⑴ THE SUPPORT SET. LilyPond's side-support here is each NoteColumn's whole skyline,
+%%      so every element of the column is in it; Lily# builds the HEAD and the STEM only
+%%      (DynamicEngraver.ColumnSupportSkylines, which is literal where it was written —
+%%      dynamic-align-engraver.cc:108-117 acknowledges heads and stems SEVERALLY — so
+%%      reusing it for the trill imported the gap).
+%%      ★ NARROWED, which is what makes the book small: of the elements a NoteColumn
+%%      carries, only an ACCIDENTAL can bind on the trill's side. Dots sit at the head's
+%%      own height to its right (never out-reach it); a flag sits on the stem's side
+%%      within the stem's X and below its tip (an up stem's flag is under the tip, a down
+%%      stem's is below the head); but an accidental's ink is TALLER than the head it
+%%      belongs to — a sharp reaches about 0.7 either side of its centre against the
+%%      head's LILC 0.545 — so it out-reaches head AND stem exactly when the stem points
+%%      DOWN. Expected size of the defect: about 0.15, the sharp's half-height less the
+%%      head's.
+%%   ⑵ THE LEFT BOUND'S X. attach-dir CENTER centres the tr glyph on the bound COLUMN's
+%%      extent (line-spanner.cc:171-175 robust_relative_extent . linear_combination), and
+%%      an accidental widens that extent to the LEFT; Lily# reads column X + half the head
+%%      advance, so its glyph sits right of LilyPond's by half the accidental's width.
+%%   THE BOOK (one score answers both — the session-27 trick of adding ONE thing to a
+%%   book already understood): TXA = TXN's texture (single voice, natural DOWN stems, so
+%%   no stem reaches up) with a SHARP on one spanned column, placed under the WAVE for ⑴
+%%   and a second book with it on the START column for ⑵.
+%%     * ⑴ FORK: line = accidental ink top + 0.5 + the wave's local reach => the
+%%       accidental IS a support and Lily# under-reserves by ~0.15, the gap above; line =
+%%       head ink top + 0.5 + reach (i.e. TXN's own number) => the accidental is NOT in
+%%       the support set, the gap does not exist, and the CODE COMMENT is what needs
+%%       correcting. Either branch is a finding; neither is a patch.
+%%     * ⑵ FORK: the dumped TrillSpanner x left vs the start column's dumped x left tells
+%%       directly whether the centre includes the accidental.
+%%   ⚠️ Do NOT widen the support without this book. Lily# would then reserve for an
+%%   element LilyPond may not read, and no existing point could tell which of us moved.
+%%
 %%            ⚠️ WORTH THE RECORD: storing the FITTED end in the layout (so the fit ran
 %%            once in the engraver and again in the profile builder) made this entry fall
 %%            back to its quiet 3.550000 — and it read exactly like "the ledger does not

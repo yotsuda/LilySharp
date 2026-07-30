@@ -40,5 +40,12 @@ public sealed record TrillSpannerItem(
     int SourcePosition,
     // Global staff index this spanner belongs to (multi-staff routing;
     // see DynamicItem.StaffIndex). 0 for single-staff.
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    // Which VOICE of that staff engraved it — the voice whose note columns are its
+    // side-support and whose column the left bound attaches to. LilyPond consists
+    // Trill_spanner_engraver in the Voice context (ly/engraver-init.ly:376), so a trill
+    // sides off ITS OWN voice's grobs; another voice's ink reaches it through the
+    // outside-staff collision pass instead. Same field, same reason, as
+    // DynamicItem.VoiceIndex.
+    int VoiceIndex = 0
 );

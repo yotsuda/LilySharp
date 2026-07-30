@@ -33,9 +33,9 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 2026-07-30（第39セッション・**TXW の分解が全項ハズレだった（和だけ合っていた）——
-真の鎖は 0.46 衝突 pass ×加線。そして trill 島を 4 commit で閉じた：pointwise 支持／
-右バウンド＋profile 1 本／波は glyph 反復。残差 3.279279 → 0.000179688**。
-詳細は下の第39セッション節）
+真の鎖は 0.46 衝突 pass ×加線。trill の残差を 3.279279 → 0.000179688 まで詰め、字面度の
+自己監査で 8 件の非字面を洗い出して 4 件を直した。⚠️ 「島は閉じた」ではない**——
+残り 4 件（うち 2 件は本が先）＋ **trill 多用譜の perf +14〜19%**。詳細は下の第39セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
@@ -48,8 +48,15 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 attach-dir CENTER・snapshot 2 枚再ベース・GO 済・スカラー支持辺を削除**）／
 `aa30ca83`（**port (b)+(c1)＝右バウンドは列左端・stacker の profile を 1 本に**・TXW
 4.810000＝予測どおり・snapshot 2 枚）／`0a522899`（**port (c2)＝波は
-`scripts.trill_element` の反復**・TXW **−0.000179688**＝平坦化族のみ・snapshot 2 枚）。
-⇒ **trill 台帳 8 点は 7 点 exact ＋ 1 点 1.8e-4。この島は閉じた。**
+`scripts.trill_element` の反復**・TXW **−0.000179688**＝平坦化族のみ・snapshot 2 枚）／
+`50fc6a80`（**支持を自 voice だけに**＋`TrillSpannerItem.VoiceIndex`・出力不変＝**結果**）／
+`29fe9c65`（**§7.5 の自己監査**＝死んだローカルに生きた REF・stale 散文・無名の FullSize・
+不在プロパティの明記。コメントのみ）／`81c46545`（**描画も glyph run へ**＋piece ごとの Y＋
+ページ extent を同じ家から＋**`TrillWaveAmplitude` 削除**＝読み手ゼロ・snapshot 2 枚）／
+`20713d6b`（**残る非字面 4 件と、2 件を測る本 TXA の設計**をプローブヘッダと ▶ に）／
+`d1f4df64`（**perf 実測 → マージ 1 つ撤回・残りを lever つきで名前付け**）。
+⇒ **trill 台帳 8 点は 7 点 exact ＋ 1 点 1.8e-4。ただし島は閉じていない**——
+非字面 4 件（▶ 参照）と perf +14〜19% が残る。
 **第38セッションの commit**: `2b6fb21d`（起票＝trill-stem-support.ly＋台帳 3 点＋ミラー・
 出力不変）／`daeb203c`（port＝`SupportEdgeUp`・TLS/TLB 九桁 exact・**snapshot 全 byte 不変
 ＝結果**。台帳 3 点だけが観測者）／`79f7c0fc`（字面箇所へ LILYPOND-REF・コメントのみ）／
@@ -182,10 +189,22 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
      **機構は未特定**。出荷形は字面のほう（layout はバウンドを持ち、各消費者が 1 回 fit）で
      どちらでも同じなので、コード・台帳 why・プローブヘッダには**観測だけを書き、原因は
      撤回した**（§5.3「ピンできていない原因を書かない」・§5.2 の六桁トラップの一段下）。
-   - ⑸ **残す named 事項**: **描画はまだ放物線ポリライン**（予約＝グリフのアウトライン／
-     描画＝ポリライン。dynamics の feta 対 serif と同じ既存の分裂）。**glyph run を描くのが
-     正しい終端で、全 trill の見た目が変わる**ので独立の一手。予約のほうが大きい
-     （±0.404 対 ±0.25）ので**重なりは起きない**。
+   - ⑸ ~~**描画はまだ放物線ポリライン**~~ — **閉じた（`81c46545`）**: 描画も
+     `scripts.trill_element` を並べる（`EmmentalerGlyphs.OrnTrillElement`＝U+E070・位置は
+     `TrillWaveOutline` の同じ家）。**予約とインクが 1 つの計算**になり、
+     ⇒ **`EngravingDefaults.TrillWaveAmplitude` は読み手ゼロになったので削除**した。
+     LP に対応物が無い LILYSHARP-OWN だったので、名前を直すのではなく消すのが終端。
+     同 commit で ⑵ **broken piece ごとの Y**（LP は system ごとに clone して各自
+     aligned_side・`spanner.cc:36-144`。max を取るのをやめた）と ⑶ **ページ extent も
+     同じ家から**（`InkReach`）も字面化した。
+10. ★ **支持を自 voice だけにした**（`50fc6a80`・**出力不変＝結果**）:
+    `TrillSpannerItem.VoiceIndex` を collector が START イベントの `_currentVoiceIndex` から
+    焼き込み、engraver の支持walk と左バウンドの列がその voice だけになった
+    （LP の Trill_spanner_engraver は **Voice 文脈**・engraver-init.ly:376／
+    scheme-engravers.scm:1816,1824-1830）。他 voice のインクは衝突 pass が担う＝LP の分業。
+    ⚠️ **byte 不変が「結果」である裏取り済**: trill を持つ fixture は 2 本ともに
+    `voice { }` が**ゼロ**（＝多声 trill のページがコーパスに無い）で、プローブの voice 2 は
+    spacer rests＝インク無し（ヘッダに明記済）。**どちらの網もこの regime を踏まない。**
 
 ### 第38セッション（2026-07-30）＝ **trill raw 3.5 を起票→port まで一気通貫——支持の「形」（平ら my_dim のスカラー）は正しく、違うのは値だけだった** ⚠️ **「スカラーで足りる」は第39セッションで反証済み（下の 4・7 と round 2 の 7 を参照）**
 
@@ -1063,10 +1082,49 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
   無宣言は seed**（LP 自身の分業）。⚠️ stacker が articulations を**返す**必要がある
   （今は seed するだけ）＝`LayoutEngine` 側の配線も動く。fermata はコーパスに多いので
   snapshot は広めに割れる見込み。
-- **trill の描画を glyph run へ**（第39セッション節 9⑸・予約は既に glyph run なので
-  **描画だけが残る**）。⚠️ **全 trill の見た目が変わる**ので独立の GO 案件。
-- **`TrillSpannerItem` に VoiceIndex**（支持を LP どおり自 voice だけに。第37セッションの
-  `DynamicItem.VoiceIndex` と同じモデル追加・第39セッション節 8⑴）。
+- ~~**trill の描画を glyph run へ**~~ — **済（`81c46545`・GO 済・snapshot 2 枚）**。
+- ~~**`TrillSpannerItem` に VoiceIndex**~~ — **済（`50fc6a80`・出力不変＝結果）**。
+★★ **trill 島に残る非字面は 4 件**（第39セッションの自己監査＝`29fe9c65`／`81c46545`）。
+**うち 2 件は「本が先」で、その本は 1 冊で両方測れる**——設計はプローブヘッダ
+（`trill-stem-support.ly` の「STILL NOT LITERAL」節）に fork つきで書いた:
+
+- ★ ⑴ **支持が head+stem** で、LP は **NoteColumn の skyline 全体**（`side-support-elements`
+  は列 grob そのもの）。`DynamicEngraver.ColumnSupportSkylines` は **dynamics 用には字面**
+  （`dynamic-align-engraver.cc:108-117` は head と stem を**個別に** acknowledge する）で、
+  **流用がギャップを持ち込んだ**。**過小予約**になり得る。
+  ★ **絞り込み済**（本が小さくなる理由）: 列の要素のうち trill 側で binding し得るのは
+  **臨時記号だけ**。dot は符頭と同じ高さで右（越えない）・旗は符尾側の X 内で先端より内側。
+  **臨時記号だけが自分の符頭より背が高い**（sharp は中心から約 0.7 対 符頭 LILC 0.545）ので、
+  **符尾が下向きのとき head も stem も越える**。予想欠陥量 **約 0.15**。
+- ⑵ **左バウンド中心が列X+advance/2** で、LP は列 extent 全体
+  （`line-spanner.cc:171-175` `robust_relative_extent`.`linear_combination`）。
+  **臨時記号が extent を左へ広げる**ので、Lily# のグリフは LP より臨時記号の半幅ぶん右。
+- **本 TXA**: TXN の texture（単一 voice・自然な**下向き**符尾＝上へ伸びる stem が無い）に
+  **♯ を 1 個足すだけ**。波の下に置けば ⑴、開始列に置けば ⑵。
+  **fork**: 線 = 臨時記号インク上端+0.5+波の局所リーチ ⇒ 臨時記号は支持で Lily# が約 0.15
+  過小／線 = 符頭インク上端+0.5+リーチ（＝TXN と同値）⇒ **臨時記号は支持に居らず、直すのは
+  コメントのほう**。**どちらの枝も所見で、どちらもパッチではない。**
+  ⚠️ **この本より先に支持を広げないこと**——LP が読まない要素を予約することになり、
+  どちらが動いたか既存の点では区別できない。
+- ⑶ **`BoundPadding 0.5`** が barline バウンド（`to-barline #t`）と継続 piece の左端に残る
+  （LP は bar line と system 開始列に attach）。**点が無い。**
+- ★★ ⑸ **perf: trill 多用譜で +14〜19% が残る**（`d1f4df64`・§5.3 の min-of-50×3・
+  pre-session worktree `6406d0cf` と同一ハーネス A/B）。
+  **base 41.6ms → 49.6ms**（8×4小節 trill）・**~41 → 46.8**（32×1小節）。
+  **trill の無い譜は中立**（showcase/04: 11.68 → 9.98）。
+  **原因**: 線の profile が実 glyph run になったので**要素×グリフ辺ぶんの building** を持つ
+  （旧: 箱 1 個）。コストは譜全体の**要素数に比例**（2 つの合成譜が数 % 内で一致＝要素数
+  8800 対 7400）。
+  ⇒ ★ **次の lever は skyline 層**: run profile は **trill ごとに 2 回**建つ
+  （engraver の my_dim と stacker の mover pair）うえ、呼ぶたびに cache 済み resolved
+  buildings を**コピー**する（`TrillWaveOutline.PlaceResolved`）。**`Merge(buildings, dx, dy)`
+  を足せばコピー 2 回と resolve 1 回が消える**——trill の変更ではなく skyline 層の追加で、
+  それ自体の測定が要る。⚠️ **箱に戻す理由にはならない**（箱は LP に対応物の無い発明）。
+  ⚠️ **最初の測定は逆の答えを出した**: base worktree のビルド直後は HEAD が全譜で速く見えた。
+  **1 セットは測定ではない**——**複数 RUN の最小**を採る。
+- ⑷ **`TrillWaveOutline` の `StaffSize.FullSize`** は **annotation 島の共有債務**——
+  annotation layout が自分の譜を持たないので bracket/slur/tie の seeding も同じ
+  `FullSize` を抱えている（`LayoutEngine` の該当箇所に同じ一文）。**まとめて閉じる。**
 
 ★★ **字面度負債（第30セッションの自己監査で名指し・全部「点が先」）**。
 ~~▶1 の「stacker の interval 箱」~~ — **閉じた**（第31セッション・X 揃え＋0.2 padding まで込み）。
@@ -1573,8 +1631,19 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### E. 未移植の LP 計算・座標系の島2
 
-- **未移植 LP 計算**: tuplet on-line / volta shorten / hairpin niente / ledger / brace / 開 chord /
-  Ignatzek。出典 `HANDOFF-lp-calc-incorporation.md`（§8）。**伝聞なので着手前に実コードで裏取り。**
+- **未移植 LP 計算**: tuplet on-line / volta shorten / hairpin niente / ~~ledger~~ / brace /
+  開 chord / Ignatzek。出典 `HANDOFF-lp-calc-incorporation.md`（§8）。
+  **伝聞なので着手前に実コードで裏取り。**
+  ★ **その裏取りを 1 件やった（2026-07-30・第39セッション）——「ledger」は半分 stale だった**:
+  **加線インクは最初から staff skyline に入っている**（`SkylineBuilder.AddNoteBoxToSkylines`・
+  `LedgerLengthFraction * headWidth` で左右に広げ厚みは `LegerLineThickness`）。
+  第38セッションが TXW を「加線が支持に入る」と誤読したのは**この事実を知らなかったから**でもある。
+  **本当に未移植なのは `LedgerLineSpanner` 自身の計算**: 隣接加線が近いときの
+  `max_ledger_extent` 短縮と `ledger_shortening_range`（`ledger-line-spanner.cc:279-330`）、
+  `Staff_symbol::ledger_positions`（線位置を変えた譜）。⚠️ そして
+  **`LedgerLineSpannerEngraver` の出力（`LedgerLineSpan`）は `ScoreLayout` に載るだけで
+  誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**。その engraver は
+  `MergeThreshold 1.5` という独自装置を持つので、**短縮を移植する人はそこが家**。
 - **座標系の島2（device 島群）は繰延**: TieVariant / 水平 skyline の Y horizon / TabStaffGeometry /
   beam collision island。`StaffOffsetInSystemDown` の残り呼び出しは**意図的な device 境界＝消さない**。
   島1 が残した手順: ①格納を反転する前に格納値を主張するテストを書く ②生産側は全部同時に
@@ -2281,6 +2350,18 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 ### 5.3 測定の原則
 
 - **推論せず測る。** 実測 → 予測との照合 → 一致しなければ**まず自分の当てはめを検算**
+- ★★★ ⚠️ **perf の A/B は「1 セット」では測れない。最小は RUN をまたいで採る**
+  （2026-07-30・第39セッション。**逆の答えを報告しかけた**）。base worktree を作った直後に
+  min-of-50×3 を回したら **HEAD が全譜で速く**見えた——落ち着いてから base の 3 セットは
+  41/41/42 になり、最初の **65/65/44** が雑音だったと判明（HEAD は退行側で +25%）。
+  ⚠️ **判定法**: **同じ label の 3 セットが互いに 10% 以内か**。1 セットだけ大きく外れて
+  いたら、それは測定ではなくマシンの状態。**両ツリーを 2 回以上まわし、label ごとの
+  全体最小**を採る。⚠️ **ビルド直後・テスト実行直後のツリーは遅い側に偏る**（JIT/GC/
+  ディスク）。
+- ★★ ⚠️ **perf コメントに測っていない内訳を書かない**（同セッション・**§5.2 の「実測を
+  貼るな」の裏返しで、こちらは「測ってない配分を書くな」**）。最適化のコメントに
+  「マージは trill 多用譜の約 1/4」と書いたが**測っていなかった**（実測は「小さい」）。
+  ⇒ **最適化のコメントには実測値 2 つ（前・後）だけを書き、原因の配分を主張しない。**
 - **摂動法が強力**: `\override` で esw / padding を振り、係数1で追随するか不変かを見る。
   **全部ゼロにして残った定数**がハードコード値
 - **測定 regime を混ぜない。** ragged-right（force 0）では spring の床、圧縮時は rod が

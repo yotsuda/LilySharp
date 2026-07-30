@@ -564,26 +564,28 @@ internal static partial class SharedRenderer
     // ---------- Trill spanners (tr + wavy line) ----------
 
     /// <summary>
-    /// Draws trill spanners: the "tr" Emmentaler glyph followed by a wavy
-    /// extension line. The wave is approximated as a polyline through
-    /// peak/valley points (enough segments per cycle that it reads as smooth).
+    /// Draws trill spanners: the "tr" Emmentaler glyph, then the line as a RUN of
+    /// <c>scripts.trill_element</c> glyphs — which is what the line is.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
-    /// LILYPOND-REF: scm/define-grobs.scm:4082 (style . trill)
+    /// LILYPOND-REF: scm/define-grobs.scm:4083 (style . trill) selects
+    ///   lily/line-interface.cc:226-229 <c>line</c> -> :48-108 make_trill_line, which repeats
+    ///   the element along the line rather than stroking a curve.
+    /// ⚠️ Until 2026-07-30 this stroked a parabolic polyline with an amplitude of its own,
+    ///   so the drawn line and the reserved one were two models. They are one now: the
+    ///   element positions come from <see cref="Svg.Layout.TrillWaveOutline"/>, the same
+    ///   house the engraver's aligned_side and the outside-staff pass read.
     /// </remarks>
     private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
-        const double wavePeriod = 0.8;
-        double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TrillSpannerLayouts)
         {
             if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top, add the stored offset, then ossia.
             double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
-            double waveAmplitude = os.Size(EngravingDefaults.TrillWaveAmplitude, s.StaffIndex);
             using (gc.Source(s.SourcePosition))
             {
                 bool isContinuation = Math.Abs(s.GlyphX - s.LineStartX) < 0.01;
@@ -601,32 +603,19 @@ internal static partial class SharedRenderer
                 }
                 if (s.LineStartX < s.LineEndX)
                 {
-                    // The line ends where its last WHOLE element does, not at the bound:
-                    // LilyPond's line is a run of scripts.trill_element glyphs and only
-                    // whole ones are added (which is why its dumps stop short of the
-                    // bound). Same house the reservation reads, one spelling.
-                    // LILYPOND-REF: lily/line-interface.cc:84-102 make_trill_line — total_len.
-                    double length = TrillWaveOutline.DrawnLength(
-                        s.LineEndX - s.LineStartX);
-                    int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
-                    double seg = length / halfWaves;
-                    double prevX = s.LineStartX, prevY = absY;
-                    // Approximate Q-curves with 4 line segments per half-wave;
-                    // visually indistinguishable at typical print sizes.
-                    const int subdivisions = 4;
-                    for (int i = 0; i < halfWaves; i++)
+                    // The line: one element glyph per copy, at the run's own positions, with
+                    // the element's stencil box CENTRED on the line (align_to Y CENTER), so
+                    // only whole elements are drawn and the run stops short of the bound by
+                    // the remainder — LilyPond's own picture.
+                    // LILYPOND-REF: lily/line-interface.cc:68-97 make_trill_line — find the
+                    //   element by name, align_to (Y_AXIS, CENTER), add_at_edge per copy.
+                    double baseline = absY
+                        + os.Size(TrillWaveOutline.GlyphBaselineOffset, s.StaffIndex);
+                    double size = os.Size(FontSize, s.StaffIndex);
+                    foreach (double originX in TrillWaveOutline.ElementOrigins(
+                                 s.LineStartX, s.LineEndX - s.LineStartX))
                     {
-                        double startX = s.LineStartX + i * seg;
-                        double sign = (i % 2 == 0) ? -1 : 1;
-                        for (int j = 1; j <= subdivisions; j++)
-                        {
-                            double t = (double)j / subdivisions;
-                            double x = startX + t * seg;
-                            // Parabolic shape (offset flips into the Y-up frame).
-                            double y = absY - sign * waveAmplitude * 4 * t * (1 - t);
-                            gc.DrawLine(prevX, prevY, x, y, Color.Black, thickness);
-                            prevX = x; prevY = y;
-                        }
+                        gc.DrawGlyph(EmmentalerGlyphs.OrnTrillElement, originX, baseline, size);
                     }
                 }
             }

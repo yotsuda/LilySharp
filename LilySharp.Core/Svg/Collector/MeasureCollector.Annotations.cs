@@ -390,11 +390,11 @@ public sealed partial class MeasureCollector
                     var nameLower = nameText.ToLowerInvariant();
                     if (nameLower == "starttrillspan")
                     {
-                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex));
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
                     }
                     else if (nameLower == "stoptrillspan")
                     {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex));
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
                     }
                     else if (nameLower == "courtesy")
                     {
@@ -440,11 +440,11 @@ public sealed partial class MeasureCollector
                 var markName = markSyntax.MarkName.ToLowerInvariant();
                 if (markName == "trillspan.start")
                 {
-                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
+                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
                 }
                 else if (markName == "trillspan.stop")
                 {
-                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
                 }
                 else if (markName.StartsWith("pluck.") && markName.Length == 7
                          && markName[6] is 'p' or 'i' or 'm' or 'a')
@@ -594,7 +594,8 @@ public sealed partial class MeasureCollector
             return ImmutableArray<TrillSpannerItem>.Empty;
 
         var items = ImmutableArray.CreateBuilder<TrillSpannerItem>();
-        (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex)? pendingStart = null;
+        (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex,
+            int voiceIndex)? pendingStart = null;
 
         foreach (var evt in _trillSpannerEvents)
         {
@@ -604,13 +605,17 @@ public sealed partial class MeasureCollector
             }
             else if (pendingStart != null)
             {
+                // The START event's voice owns the spanner: LilyPond's engraver lives in
+                // that Voice context and makes the grob there (scheme-engravers.scm:1816),
+                // so its supports and its left bound are that voice's columns.
                 items.Add(new TrillSpannerItem(
                     pendingStart.Value.measureIndex,
                     pendingStart.Value.itemIndex,
                     evt.measureIndex,
                     evt.itemIndex,
                     pendingStart.Value.sourcePosition,
-                    pendingStart.Value.staffIndex));
+                    pendingStart.Value.staffIndex,
+                    pendingStart.Value.voiceIndex));
                 pendingStart = null;
             }
         }

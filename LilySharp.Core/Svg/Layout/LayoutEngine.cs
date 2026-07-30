@@ -1330,10 +1330,12 @@ internal sealed class LayoutEngine
             // The "tr" glyph rides stencil-offset (0 . -1) below the LINE tr.YUp
             // anchors (DrawTrillSpanners), so a glyph-bearing piece's drawn ink is
             // (glyphTop − offset) up and offset down — LilyPond's own ext (-1.0 . 1.1)
-            // — and a glyphless continuation carries just the wave.
+            // — and a glyphless continuation carries just the line, whose ink is the
+            // element run's own reach either side (TrillWaveOutline.InkReach — the same
+            // house the profile and the drawing read, so this coarse extent cannot drift
+            // from them).
             bool trHasGlyph = tr.GlyphX < tr.LineStartX;
-            double trWave = EngravingDefaults.TrillWaveAmplitude
-                + EngravingDefaults.StaffLineThickness / 2.0;
+            double trWave = TrillWaveOutline.InkReach;
             double trY = -tr.YUp;
             Add(tr.StartMeasureIndex,
                 trY - (trHasGlyph

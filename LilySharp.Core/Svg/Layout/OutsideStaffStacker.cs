@@ -563,10 +563,10 @@ internal static class OutsideStaffStacker
             // System-relative Y-up: t.YUp is Y-up from the system top, entering the
             // tracker directly; the placed anchor writes back unchanged.
             // anchor = the LINE. The grob's ink about it: the "tr" glyph rides
-            // stencil-offset (0 . -1), so on a glyph-bearing piece the pair spans
-            // (line - reach .. line + glyphTop - reach) — LilyPond's own ext dump reads
-            // (-1.0 . 1.1) — and a glyphless continuation carries just the wave
-            // (draw amplitude 0.2 + half thickness).
+            // stencil-offset (0 . -1), so on a glyph-bearing piece the glyph's plateau
+            // spans (line - reach .. line + glyphTop - reach) — LilyPond's own ext dump
+            // reads (-1.0 . 1.1) — and the LINE's own ink, on every piece, is the run of
+            // trill_element glyphs (TrillWaveOutline).
             //
             // LilyPond's TWO steps both exist here: aligned_side pays the trill's OWN
             // padding 0.5 against its side supports (the note columns and, via
@@ -582,16 +582,7 @@ internal static class OutsideStaffStacker
             bool hasGlyph = t.GlyphX < t.LineStartX;
             double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
             double top = GlyphMetrics.OrnTrillGlyph.Top - reach;
-            // X reach: the glyph's TRUE (outline) left, not its bounding box —
-            // LilyPond wraps the bound text in make-with-true-dimension-markup exactly
-            // because "the trill glyph has a loop on its left, which sticks out of its
-            // bounding box" (its own comment).
-            // LILYPOND-REF: scm/define-grobs.scm:4056-4066 TrillSpanner bound-details,
-            //   make-with-true-dimension-markup on scripts.trill
-            double x0 = hasGlyph
-                ? t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left
-                : t.LineStartX;
-            // The REGISTERED entry likewise carries the outside-staff-padding — the
+            // The entry carries the outside-staff-padding — the
             // trill declares none, so the 0.46 default — which is what a later grob
             // (a metronome mark at 1300) pays to clear it. MEASURED:
             // tempo.trill-cleared.staff-to-baseline read +0.073 with the trill's 0.5
@@ -626,6 +617,12 @@ internal static class OutsideStaffStacker
             var qDown = new VerticalSkyline(VerticalDirection.Down);
             if (hasGlyph)
             {
+                // X reach: the glyph's TRUE (outline) left and right, not its bounding
+                // box — LilyPond wraps the bound text in make-with-true-dimension-markup
+                // exactly because "the trill glyph has a loop on its left, which sticks
+                // out of its bounding box" (its own comment).
+                // LILYPOND-REF: scm/define-grobs.scm:4056-4066 TrillSpanner bound-details,
+                //   make-with-true-dimension-markup on scripts.trill
                 double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
                 double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
                 qUp.Merge(VerticalSkyline.FromBox(gx0, gx1,

@@ -237,6 +237,8 @@ internal static partial class EmmentalerGlyphs
     public const char OrnTurn = '\uE05B';
     /// <summary>scripts.trill</summary>
     public const char OrnTrill = '\uE05E';
+    /// <summary>scripts.trill_element (the trill line's repeating unit)</summary>
+    public const char OrnTrillElement = '\uE070';
     /// <summary>scripts.segno</summary>
     public const char MarkSegno = '\uE065';
     /// <summary>scripts.coda</summary>

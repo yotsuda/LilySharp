@@ -497,11 +497,13 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2718 OttavaBracket staff-padding, read by aligned_side.</remarks>
     public const double OttavaBracketStaffPadding = 2.0;
 
-    /// <summary>Half-amplitude of the drawn trill wave about its line.</summary>
-    /// <remarks>LILYSHARP-OWN: a drawing device — LilyPond builds the wave from the
-    /// wave glyph via ly:line-interface::line, Lily# draws a parabolic polyline. One
-    /// home for the amplitude the renderer draws and the stacker reserves.</remarks>
-    public const double TrillWaveAmplitude = 0.2;
+    // TrillWaveAmplitude (0.2, "half-amplitude of the drawn trill wave") is GONE
+    // (2026-07-30). It was a LILYSHARP-OWN drawing device with no LilyPond counterpart at
+    // all — LilyPond's trill line has no amplitude, being a run of scripts.trill_element
+    // glyphs (lily/line-interface.cc:48-108 make_trill_line). Now that the run is what
+    // Lily# reserves AND draws (Svg.Layout.TrillWaveOutline), the constant had no reader
+    // left in any of its three former seats: the renderer, the outside-staff profile and
+    // LayoutEngine's paging extent all take their reach from the element itself.
 
     /// <summary>DynamicLineSpanner's side-position padding — the gap from the
     /// note/staff skyline to a dynamic or hairpin, NOT outside-staff-padding.</summary>
