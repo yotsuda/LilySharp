@@ -32,17 +32,26 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第39セッション・**TXW の分解が全項ハズレだった（和だけ合っていた）——
-真の鎖は 0.46 衝突 pass ×加線。trill の残差を 3.279279 → 0.000179688 まで詰め、字面度の
-自己監査で 8 件の非字面を洗い出して 4 件を直した。⚠️ 「島は閉じた」ではない**——
-残り 4 件（うち 2 件は本が先）＋ **trill 多用譜の perf +14〜19%**。詳細は下の第39セッション節）
+最終更新 2026-07-30（第40セッション・**fermata が priority pass の mover になった——
+TSP +1.685 → 0 exact。新規 5 点のうち 4 点が九桁で着地し、5 点目（SPA）が
+「臨時記号の縦 seed が箱」という別 grob の欠陥を +1.311 で開いた**。
+⚠️ **swing 記法はユーザーが「まだおかしい」＝LP の記法待ち**（下の第40セッション節 8）。
+詳細は下の第40セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3541 passed / 0 failed / 3 skipped**（台帳 227 点全緑・削った pin 網 2 本と
-足した `TrillWaveOutlineTests` 3 本の差）・Core 0 warn 0 err・**ワーキングツリーは clean**
+**HEAD は 3547 passed / 0 failed / 3 skipped**（台帳 **233 点**全緑＝227＋新規 6）・
+Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第40セッションの commit**（コードが動くのは 3 本）: `e939120c`（**起票＋port を 1 本**＝
+プローブ `script-priority.ly` 5 冊・台帳 5 点・fermata を priority 75 の mover へ（上下とも）・
+profile はグリフの実アウトライン・**TSP exact / 新規 4 点は九桁 / SPA が +1.311 で
+臨時記号 seed の島を開いた**・snapshot 11 枚再ベース・GO 済）／
+`b8b8f115`（**バグ修正＝下段 fermata が上段の上へ飛んでいた**・guard 1 行・下の 9）／
+`ec7dd5bd`（**字面化＝priority は `int?`（LP の `#f`）**＋**書 SPL＝guard の点**・出力不変）／
+docs のみ: `16fba46b`・`bc79d9d4`（perf 切り分け）・`e087df81`（hash 訂正）・
+`568ee529`（プレビュー観点の perf 実測）。
 **第39セッションの commit**: `fb5b8111`（**訂正＝TXW の分解を実 skyline dump から書き直し・
 コード不変**）／`2181e311`（**port (a)＝trill の aligned_side を pointwise へ＋左バウンドの
 attach-dir CENTER・snapshot 2 枚再ベース・GO 済・スカラー支持辺を削除**）／
@@ -106,6 +115,171 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第40セッション（2026-07-30）＝ **fermata は seed でなく mover——priority pass に入れて TSP が exact に。ただし 5 点目が「臨時記号の縦 seed は箱」という別 grob の欠陥を開いた**
+
+★★★ **▶ の先頭に置かれていた port（`trill.fermata-priority` TSP・残差 +1.685）を実施した。
+先に本を書いた**——TSP は**trill を見ている点**で、この port が動かすのは**fermata の方**
+（しかもコーパスの全 fermata）。観測者が無いまま出力を動かさない（§5.2.1③）。
+
+1. ★★★ **新プローブ `script-priority.ly`（5 冊・約 12 秒）**。fermata は
+   **script.scm で outside-staff-priority を宣言する唯一の族**（7 entry 全部 75）なので、
+   pass に入れると `add_grobs_of_one_priority` が **inside-staff スカイライン**
+   （譜線そのもの・符頭・符尾・加線＝`axis-group-interface.cc:914-950`）に対して
+   **outside-staff-padding 0.46** を払う ⇒ **aligned_side が 0.40 で置いた grob が 0.46 まで
+   持ち上がる**。それを測る 5 冊:
+   - **SPQ**（中央線の符頭・自然な下向き符尾＝コーパスの大多数）: **2.511000**
+     ＝譜インク 2.05 ＋ **0.46** ＋ 0.001。**予測の主枝どおり**。⇒ pass は譜線に届く。
+   - **SPH**（高い符頭・加線 2 本）: **5.006000** ＝符頭インク 4.545 ＋ 0.46 ＋ 0.001。
+     **SPQ と対で「pass は必ず 0.46、script 自身の 0.40 ではない」**。加線（4.10）は
+     **アーチの下**なので binding しない。
+   - **SPS**（強制上向き符尾の上）: **3.734333** ＝**符尾先端 10/3 ＋ 0.400000** ＋ 0.001＝
+     **aligned_side が勝ち、pass は 1 mm も動かさない**。★★★ **機構は LP 源を読んで確定**:
+     `add-stem-support` は **符尾のスカイラインを先端の高さで X 方向に平らに潰す**
+     （`side-position-interface.cc:302-305` `set_minimum_height (max_height ())`）ので
+     aligned_side ではスカラーに見え、**pass は細い符尾をそのまま見る**ため fermata の
+     **アーチが符尾をまたぐ**。⇒ **fermata に単一の padding は存在しない**（広い障害物＝0.46・
+     細い符尾＝engraver の 0.40）。
+   - **SPD**（下向き＝SPQ の鏡）: **−2.511000**。**pass は下側でも走る**。
+   - **SPA**（臨時記号・**port 後のコーパス差分を見て追加**）: 下の 6 参照。
+2. ★★★ **Lily# の pre-port ミラーは 4 冊とも予測に桁まで一致**（分解も 3 項ずつ当たった）:
+   SPQ 2.250000000（−0.261＝譜インク 0.05 ＋ 0.46 対 0.25 の 0.21 ＋ 0.001）／
+   SPH 4.900000000（−0.106＝名目 0.5 対 LILC 0.545 の 0.045 ＋ 0.06 ＋ 0.001）／
+   SPS 3.733333333（**−0.001＝sliver だけ**）／SPD −2.250000000（+0.261）。
+3. ★★★ **port**: `ArticulationLayout` が**宣言 priority を焼き込み**
+   （`ArticulationSpacing.OutsideStaffPriority`＝fermata 族 75・他は 0）、
+   seed ループは priority を持つ script を**外し**、`PlaceArticulations` が **75 の位置**
+   （trill 50 と barnumber 100 の間）で置く。**下側も同じ**（dynamics 250 より先）。
+   ⚠️ **下側 pass は「dynamic か hairpin が在るページ」でしか走っていなかった**——
+   下向き fermata 自身が mover なので**無条件で走る**ようにした（LP の pass は条件付きでない）。
+4. ★★★ **mover の profile はグリフの実アウトライン**（`ArticulationEngraver.ScriptSkylines`＝
+   `always-vertical-skylines-from-stencil` の字面）。**これを決めたのは SPS**:
+   平らな箱（ink box でも outline bbox でも）だと符尾を避けて **tip+0.46 = 3.793** に上がり、
+   **−0.001 が +0.059 に悪化する**。⇒ **箱では通らない点が先にあったのが幸運。**
+5. **着地**: TSP **5.235 → 3.550000000 exact**／SPQ **2.511000008**・SPH **5.006000008**・
+   SPD **−2.511000008**（いずれも九桁＝アウトラインの**平坦化族** 8e-9・fit 禁止）／
+   SPS **3.733333333 で不動**（要件どおり）。**snapshot 11 枚**——10 枚は
+   **fermata 1 個だけが 0.02〜0.26 外へ**（`fermata-down` はページが 0.11 伸びる）、
+   `tempo-swing` は fermata +0.26 と**テンポマークが剛体で追随**（priority 1300 が 75 を
+   clear する＝機構どおり）。**目視 5 枚**（articulations／fermata-down／tempo-swing／
+   scripts-stem-support／fermata-note-spacing）で重なり無しを確認。
+6. ★★★ **`fermata-note-spacing` の 1.41 移動が観測者を持っていなかったので、その場で
+   5 冊目 SPA を書いた**（§5.2.1③ を後追いで満たした形・順序としては反省点）。
+   **LP 4.506000 ＝符頭 4.045 ＋ 0.46 ＋ 0.001＝「臨時記号は binding しない」**。
+   ★ 理由は skyline dump で確定: ♭の**背の高い部分（縦棒・ink top 1.86）は x 7.897..8.113**
+   で、**Script 自身の extent は 8.482 から**——**重なっていない**。Script の X 範囲に在るのは
+   ♭の**ボウルだけ**（4.084＝符頭より 0.04 高いだけ）で、fermata の脚がそこを 0.025 だけ
+   clear する。⇒ ★ **Script は「符頭の中心」に乗る**（dump の Script 中心＝符頭中心・
+   NoteColumn の X extent 自体が臨時記号を含まない＝AccidentalPlacement は別 grob）。
+   ⚠️ **Lily# は 5.817000008＝残差 +1.311**: `SkylineBuilder.AddAccidentalBoxToSkylines` が
+   臨時記号を**アウトライン箱（幅いっぱいの平ら）**で seed するので、**ボウルの上でも 1.86**
+   を主張し、fermata が**在りもしない壁**を避ける。**port が作った欠陥ではなく、露出させた
+   欠陥**（pre-port は 4.400000＝−0.106 で、fermata が譜スカイラインを読んでいなかっただけ）。
+   ⇒ ★★ **SPA が「臨時記号の縦 seed をアウトラインへ」の gate になった**。これは
+   **別の島で、しかも大きい**（譜スカイラインは譜間距離・ページ高・和音記号行・全 mark に
+   効く）。⚠️ **trill 島にも返ってくる**: `trill-stem-support.ly` の STILL-NOT-LITERAL ⑴ は
+   「臨時記号が半分の高さ 0.7 で binding する」前提で TXA を設計しているが、**SPA は
+   「mover 自身の reach が覆う部分でしか binding しない」と測った**。**TXA は SPA の所見に
+   合わせて書き直すこと。**
+7. ★★★ **この port が残した非字面／ハックの全リスト**（ユーザー依頼で棚卸し・2026-07-30。
+   **全部コードにも名前がある**。「無い」と書けるのはここに挙がっていないものだけ）:
+   - ★ ⑴ **`StaffIndex != 0` guard 3 本**（`PlaceTrills`・`PlaceOttavas`・**`PlaceArticulations`**）
+     ＝**純粋なハック**。**LP にこの問題は存在しない**（pass は VerticalAxisGroup＝譜ごと）。
+     詳細と島は下の 9。**下段 script は engraver の位置のまま**＝この regime では port の恩恵ゼロ。
+     ★★ **点は開けた（同セッション・`ec7dd5bd`）**: 台帳 **`script.lower-staff.staff-to-ink-bottom`**
+     （書 SPL＝SPQ を 2 譜の下段へ）。**LP 2.511000＝SPQ と同一**（falsifier は鳴らず＝LP の
+     pass は自分の譜のインクだけを見る）／**Lily# 2.250000000・残差 −0.261000000
+     ＝guard の値段そのもの**（fit の問題ではない・pass 丸ごと 1 本を飛ばしている）。
+     ⇒ **次セッションはこの点を閉じる形で着手できる。**
+   - ⑵ **seed の綴りが mover と別**——上側は ink box の top を平らな線、下側は**名目 ±0.6 箱**
+     （`LILYSHARP-OWN`）。LP は 1 つの grob に 1 つの profile。切り替えは**測る点が要る**
+     （上＝「幅広 script のアウトラインが mark の X で落ちる」対、下＝「script の下の dynamic」）。
+     **実験済み**: 切り替えると `ornaments`・`editorial-accidental`・`dynamics` 系がさらに動く
+     （下側は dynamic が 0.4〜0.5 譜へ寄る）ので**この commit から外した**。
+   - ⑶ **engraver の aligned_side は 2.0（線の中心）に staff-padding 0.25 を積む**まま
+     （LP は譜インク **2.05** に padding **0.40** を、譜を含む支持ごと払う）＋**符頭半分を
+     名目 0.5 で読む**まま（LP は LILC 0.545）。**pass が上書きするので SPQ/SPH は閉じた
+     ＝いま観測者が無い**（fit するな。直すなら「aligned_side が勝つ regime」の点が先——
+     script の padding が 0.46 を超える族が要る。portato 0.45 でも足りない）。
+   - ⑷ **`MultiMeasureRestScript` は別 grob**（priority **40**・outside-staff-padding **0**・
+     `define-grobs.scm`）で未モデル＝Lily# は R1 上の fermata も 75/0.46 で扱う。
+     **コーパス未到達**（`r4@fermata` は普通の Script なので該当しない）。
+   - ~~⑸ **「宣言なし」を `0` で表している**（LP は `#f`）~~ — **直した（同セッション・
+     `ec7dd5bd`・出力不変）**: `int?` になり、判定は `is null` / `is not null`。
+     **LP の `#f` は 0 とは別の値**（0 を宣言した grob は「最初に置かれる mover」）という
+     区別がコードに入った。
+   - ⑹ **`anyBelowScriptMover` の早期 return**（`StackBelowStaff` 冒頭）＝Lily# 自前の scope。
+     **置くものが 1 つも無ければ pass を回さない**＝配置には中立（LP の pass は無条件）。
+     既存の `placedStaves` scope（第37セッション）と同じ性格。
+   - ⑺ **`ScriptSkylines` の fallback は箱**——グリフが 1 文字でないセンティネル
+     （bend / fret frame / TAB 技法文字 / snap pizz）と、タブの staff-local 配列（glyph 文字列が
+     空）。**該当する grob は LP の Script ではない**ものが多いので、これは債務ではなく境界。
+   - ⑻ **l2r polite マルチパスと rider は依然未移植**（`axis-group-interface.cc:739-767,:776-796`・
+     第29セッションからの既存債務）。**同一 priority の grob が同じ system で X 重なりするとき
+     だけ**割れる。fermata 族は 1 音符に 1 個なので、この port で新たに踏む regime は増えていない。
+8. ⚠️ **swing の記法はやり直し待ち（ユーザー指示・2026-07-30）**。`tempo-swing` の
+   feel equation が**小さ過ぎる**と指摘を受け、`MetronomeMarkGeometry.SwingNoteSize`
+   （＝マーク自身の `\smaller` 音符）へ揃えて全定数を同じ係数で拡大する版を作ったが、
+   **「まだおかしい」＝LP での swing 記法を共有してもらってから改めて対処**することになり、
+   **この版は撤回した（未 commit・ツリーに残していない）**。
+   ⇒ ★ **次にやる人は「サイズを調整」しない**——**LP の記法を移植する**。今の実装は
+   `SharedRenderer.DrawSwingEquation` の LILYSHARP-OWN 装置（1.6 の小音符＋手描きの
+   三連ブラケット）で、**LP に対応物が無いと書いてある**のが出発点。
+9. ★★★ **出荷直後にユーザーの「変なハックは無いか」で自己監査したら、自分が入れたバグが
+   出た**（`21f8ba4a`・下段 fermata の guard）。**多段譜で下段に上向き fermata を置くと、
+   fermata が上段の上まで飛ぶ**（実測: 2 譜の bass 側に `@fermata` 1 個 → glyph Y 17.2＝
+   上段の上。guard 後は 26.03＝自分の譜の上）。**原因は port ではなく this pass の構造**:
+   **上側の tracker は system ごと**（`systemSkylines`）なので support profile が
+   **system 全体の最上インク**になり、staff 2 の grob が staff 1 の音符を「clear」してしまう。
+   `PlaceTrills`/`PlaceOttavas` は前から `StaffIndex != 0` で逃げており、**同じ 1 行を
+   `PlaceArticulations` にも入れた**（＝下段 script は engraver の位置のまま＝pre-port 同等）。
+   ⚠️ **LP にこの問題は無い**——pass は **VerticalAxisGroup ごと＝譜ごと**に走る
+   （`axis-group-interface.cc:836-985`）。**下側 pass は既に per (system, staff)** なので
+   guard 不要（＝非対称の理由はここ）。
+   ⇒ ★★ **島**: 上側 tracker も per (system, staff) にして `BuildStaffSkylines` を読ませれば、
+   **guard 3 本（trill・ottava・script）が同時に消える**。多段出力が動くので点が先。
+   ⇒ ★★★ **教訓（§5.0 の親戚）**: **コーパスに無い regime は snapshot も台帳も守らない。**
+   mover を 1 つ足したら「**下段に置いたらどうなるか**」を**自分で 1 枚描く**こと——
+   全 3546 緑・台帳 232 点全緑のまま、このバグは出荷された。
+   ⚠️ **PNG で確認するときは `--no-build` を使わないこと**（このバグの「直った」画像は
+   古いバイナリのままで、一度誤って直ったと報告しかけた）。
+10. ★★ **perf（§5.3 の worktree A/B・pre-session `4a867a0d` と同一ハーネス・
+   warmup 3＋50 回の最小×複数 RUN）——切り分けまでやったので、採れる主張は 1 つだけ**:
+   ★★★ **下向き fermata 256 個の合成譜で base 299.61ms 対 HEAD 755.34ms＝+152%**。
+   **これだけが測定**（base 3 セット 300/310/314＝5% 内・HEAD 3 セット 755/758/778＝3% 内）。
+   **同じ譜の fermata を 1 個に落とすと HEAD 294.89**＝**255 個ぶんで +460ms ≒ 1 個 1.8ms**
+   ⇒ **コストは mover の個数に比例する**（1 譜に貯まった entry と実アウトライン profile の
+   総当たり距離＝LP 自身のアルゴリズムを C# で払っている形）。
+   ⚠️ ★★ **「下側 pass が無条件に走るようになった分」は測れなかった**（当初そう書きかけた）:
+   **同一ツリー内**で fermata 0 個 対 1 個を比べても 205〜320ms と重なり、**この機械の
+   このハーネスでは 300ms 級の合成譜が ±50% ばらつく**（base 側も 208〜322）。
+   ⇒ **1 個の fermata・`08-chorale`・`04-advanced` はいずれも雑音帯の中＝計測不能**。
+   **実譜への影響は観測されていない。**
+   ★★★ **プレビュー観点で採れた実譜の数字（ユーザー質問・同セッション後半、機械が静かに
+   なってから 6 セット×2 ツリー）**: **`fermata-down`（1 譜・8 音・下向き fermata 1 個・
+   dynamic 無し）が base 6.43-6.88ms 対 HEAD 7.06-7.63ms＝+約 0.6ms（≒+10%）**。
+   暖まった 5 セットは label 内 7〜8% に収まる＝**これは測定**（各 label の第1セットだけ
+   4.3ms の外れ値で、そこだけ見ると同値に見える）。`08-chorale`（9.3-9.7 対 7.9-10.2）と
+   `grammar-tour`（24.5-34.6 対 24.9-33.6）は**帯が重なって計測不能**。
+   ⇒ ★★ **増えた仕事の正体は名前で言える（推測ではなく構造）**: ⑴ **下向き script を持つ
+   (system, staff) ごとに `BuildStaffSkylines` が 1 本**——以前は dynamic か hairpin が
+   無ければ下側 pass ごと skip していた。1 本のコストは**その system の小節数に比例**なので、
+   **譜全体では「音楽をもう 1 周」ぶん**（大きい譜なら +5〜15% のオーダー）。
+   ⑵ **mover 1 個ごとに実アウトライン profile 1 個**（cache 済み resolved を copy+merge）。
+   **seed 側はアウトライン化していない**ので、コストは **fermata の個数にしか比例しない**。
+   ⇒ ★ **次の perf 一手はこれ（lever ⑸ ではない）**: **per-(system, staff) の譜プロファイルを
+   共有キャッシュにする**。下側 pass（`belowProfile`）と `LayoutEngine` の他の 4 箇所
+   （:2298 / :2872 / :2935 / :3302）が同じ `BuildStaffSkylines` を呼んでおり、
+   **同じ (staff, system の小節範囲) なら 1 回で済む**。⚠️ **引数が本当に同一かは未確認**
+   （確認してから）。出力不変なのでコーパスが網。⚠️ **上側 pass は `BuildSystemSkylines`
+   （system 単位・`systemCache` 済み）で別物なので、「上下で二重に建てている」わけではない**
+   ——確認済み。
+   ⇒ ★ **したがって ⑸ の lever（`Merge(buildings, dx, dy)`）の優先度は下がる**——
+   コピーは消えても**総当たり距離そのものは残る**し、**1 譜に 256 個の fermata は実譜ではない**。
+   ⚠️ **箱に戻す理由にはならない**（SPS が箱を否定している）。
+   ★ **ハーネスの教訓（§5.3 へ）**: **300ms 級の合成譜は本機では ±50% 揺れる**。
+   **label 内が 10% 内に収まったセット群だけを主張に使う**（今回 755/758/778 と 300/310/314 が
+   それに当たり、205〜322 の帯は全部捨てた）。
 
 ### 第39セッション（2026-07-30）＝ **前セッションの分解が「和は合って全項ハズレ」だった——真犯人は 0.46 衝突 pass ×加線インク、そして支持は trill でも pointwise**
 
@@ -1073,15 +1247,42 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
 ★★★ **trill 島は第39セッションで閉じた**（8 点中 7 点 exact ＋ TXW 1.8e-4＝平坦化族）。
+~~★★ **script の outside-staff-priority を priority pass の mover に**~~ — **済（第40セッション・
+GO 済・snapshot 11 枚）**。TSP +1.685 → **0 exact**。新規 5 点（`script.{quiet,high-head,
+stem-support,below,accidental}`）のうち 4 点が九桁で着地。詳細は第40セッション節。
+
 **次に手を動かせる候補（点が既に開いているもの）**:
-- ★★ **script の outside-staff-priority を priority pass の mover に**（第38セッションが
-  起票した残りの port・台帳 `trill.fermata-priority` TSP・**残差 +1.685**）。fermata は
-  `(outside-staff-priority . 75)`（scm/script.scm）＞ trill 50 なので LP では trill が先に
-  置かれ fermata がそれを越える。Lily# は script を**不動 seed** にするので逆に鳴る
-  （`OutsideStaffStacker.SeedAboveTrackers`）。⇒ **宣言 priority を持つ script は mover、
-  無宣言は seed**（LP 自身の分業）。⚠️ stacker が articulations を**返す**必要がある
-  （今は seed するだけ）＝`LayoutEngine` 側の配線も動く。fermata はコーパスに多いので
-  snapshot は広めに割れる見込み。
+- ★★★ **臨時記号の縦 seed をアウトラインへ**（台帳 `script.accidental.staff-to-ink-bottom`
+  SPA・**残差 +1.311**）。`SkylineBuilder.AddAccidentalBoxToSkylines` が**幅いっぱいの平らな箱**を
+  seed するので、♭のボウルの上でも縦棒の高さ 1.86 を主張する。LP の Accidental は
+  `grob::unpure-vertical-skylines-from-stencil`＝**実アウトライン**（縦棒は幅 0.216）。
+  ⚠️ **島は大きい**——譜スカイラインは譜間距離・ページ高・和音記号行・全 mark に効くので
+  snapshot は広く割れる。**perf も要測定**（臨時記号は fermata よりずっと多い）。
+  ★ **同時に trill 島に返る**: `trill-stem-support.ly` の ⑴ / TXA の設計は「臨時記号は
+  半分の高さ 0.7 で binding」前提だが、**SPA は「mover の reach が覆う部分だけ」と測った**。
+  **TXA は書き直してから起票する。**
+- ★★ **swing の記法を LP から移植**（ユーザー指示・**LP の記法が共有され次第**）。
+  第40セッション節 8 のとおり**サイズ調整は却下**。今の `DrawSwingEquation` は LILYSHARP-OWN。
+- ★★ **script seed の綴りを mover と一本化**（上＝ink box の top を平らな線／下＝名目 ±0.6 箱）。
+  **点が先**: 上は「幅広 script のアウトラインが mark の X で落ちる」対、下は「script の下の
+  dynamic」対。第40セッションで**切り替えを試した実測**は handoff 節 7（`ornaments`・
+  `editorial-accidental`・`dynamics` 系が動く）。
+- ★★★ **上側 pass の tracker を per (system, staff) にする＝ハック 3 本が同時に消える**
+  （第40セッション節 9）。今は system ごとなので下段の grob が上段のインクを clear してしまい、
+  **trill・ottava・script の 3 本が `StaffIndex != 0` で逃げている**。LP は譜ごとに pass を
+  走らせる（そもそも起きない・`axis-group-interface.cc:836-985`）。
+  **下側 pass が既に per (system, staff)＋`BuildStaffSkylines` なので機構は在る**——
+  足りないのは上側の配線。
+  ★★ **点は開いている**: `script.lower-staff.staff-to-ink-bottom`（SPL・**残差 −0.261**）。
+  **ここから始められる。** ⚠️ **trill と ottava の下段点も同じ commit で開ける**こと
+  （§5.3 の「鎖の両端を同じ commit で」）——3 本の guard は 1 個の欠陥の 3 つの顔なので、
+  1 本だけ外すと残り 2 本が「なぜ在るのか」を説明できなくなる。
+- ★★ **perf（プレビュー速度・ユーザーが重視）**: 実譜で採れたのは **`fermata-down` の
+  +約 0.6ms（≒+10%）**＝**下向き script を持つ (system, staff) ごとの `BuildStaffSkylines`
+  1 本**（第40セッション節 10）。⇒ **一手は「per-(system, staff) 譜プロファイルの共有
+  キャッシュ」**（下側 pass と `LayoutEngine` の 4 箇所が同じ呼び出しをしている・引数同一性の
+  確認が先・出力不変なのでコーパスが網）。⚠️ **⑸ の `Merge(buildings,dx,dy)` は総当たり距離を
+  消さない**ので後回し。256 個の合成譜の +152% は**実譜ではない regime**。
 - ~~**trill の描画を glyph run へ**~~ — **済（`81c46545`・GO 済・snapshot 2 枚）**。
 - ~~**`TrillSpannerItem` に VoiceIndex**~~ — **済（`50fc6a80`・出力不変＝結果）**。
 ★★ **trill 島に残る非字面は 4 件**（第39セッションの自己監査＝`29fe9c65`／`81c46545`）。
@@ -1099,6 +1300,12 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 - ⑵ **左バウンド中心が列X+advance/2** で、LP は列 extent 全体
   （`line-spanner.cc:171-175` `robust_relative_extent`.`linear_combination`）。
   **臨時記号が extent を左へ広げる**ので、Lily# のグリフは LP より臨時記号の半幅ぶん右。
+- ⚠️ **第40セッションの SPA が前提を 1 つ潰した**（台帳 `script.accidental`）: LP で
+  **臨時記号が binding するのは「mover 自身の reach が覆う部分」だけ**で、♭の背の高い縦棒は
+  Script の extent の外に居た（dump: 縦棒 x 7.897..8.113 対 Script 8.482 から）。
+  ⇒ **下の「予想欠陥量 約 0.15＝sharp の半分の高さ 0.7 対 符頭 0.545」という見積りは
+  そのままでは使えない**。TXA は**波（あるいはグリフ）の X が♯のどこを覆うか**を
+  先に決めてから書くこと。
 - **本 TXA**: TXN の texture（単一 voice・自然な**下向き**符尾＝上へ伸びる stem が無い）に
   **♯ を 1 個足すだけ**。波の下に置けば ⑴、開始列に置けば ⑵。
   **fork**: 線 = 臨時記号インク上端+0.5+波の局所リーチ ⇒ 臨時記号は支持で Lily# が約 0.15
@@ -2358,6 +2565,12 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   いたら、それは測定ではなくマシンの状態。**両ツリーを 2 回以上まわし、label ごとの
   全体最小**を採る。⚠️ **ビルド直後・テスト実行直後のツリーは遅い側に偏る**（JIT/GC/
   ディスク）。
+- ★★★ ⚠️ **本機の雑音帯は「300ms 級の合成譜で ±50%」**（2026-07-30・第40セッション）。
+  **同一ツリー内**で内容の違う 2 譜を比べても 205〜320ms と重なった＝**この帯より小さい差は
+  この harness では存在を主張できない**。⇒ **判定は「label 内が 10% 内に収まったセット群」
+  だけで行う**（実例: 755/758/778 対 300/310/314 は採用、205〜322 の帯は全部破棄）。
+  ⇒ ★ **差が帯より小さいなら「退行なし」ではなく「計測不能」と書く**。そして
+  **同一ツリー内の A/B**（同じ二分木の 2 譜）を 1 本入れておくと、帯の広さがその場で分かる。
 - ★★ ⚠️ **perf コメントに測っていない内訳を書かない**（同セッション・**§5.2 の「実測を
   貼るな」の裏返しで、こちらは「測ってない配分を書くな」**）。最適化のコメントに
   「マージは trill 多用譜の約 1/4」と書いたが**測っていなかった**（実測は「小さい」）。

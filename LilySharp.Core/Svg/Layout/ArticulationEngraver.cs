@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
@@ -44,7 +45,15 @@ internal readonly record struct ArticulationLayout(
     double Scale = 1.0,     // Glyph scale (editorial accidentals: magstep(-2))
     GlyphMetrics.BBox Ink = default, // Ink box relative to the anchor (for skyline seeding)
     int SourceIndex = -1,   // F3/B: index into score.Articulations (data-pos resolved at render)
-    int StaffIndex = 0      // Which staff this script sits on (per-staff below-staff seeding)
+    int StaffIndex = 0,     // Which staff this script sits on (per-staff below-staff seeding)
+    int? OutsideStaffPriority = null // The script's DECLARED outside-staff-priority (the
+                            // fermata family's 75), or null for the scripts that declare
+                            // none — LilyPond's #f, which is not a zero (a grob declaring 0
+                            // would be the first MOVER placed). Baked from the type by the
+                            // engraver, the way LilyPond resolves a Script's properties out
+                            // of scm/script.scm: a script WITH a priority is a mover in the
+                            // outside-staff collision pass, one without seeds the occupancy
+                            // the movers clear. See ArticulationSpacing.OutsideStaffPriority.
 );
 
 /// <summary>
@@ -500,7 +509,8 @@ internal static class ArticulationEngraver
                 scale,
                 seedBBox,
                 SourceIndex: arti,
-                StaffIndex: effArt.StaffIndex
+                StaffIndex: effArt.StaffIndex,
+                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt.Type)
             ));
         }
 
@@ -572,7 +582,11 @@ internal static class ArticulationEngraver
 
             result.Add(new ArticulationLayout(
                 art.MeasureIndex, art.ItemIndex, colX, yUp, string.Empty, above,
-                art.SourcePosition, 1.0, GetSeedBBoxFor(art), StaffIndex: staffIndex));
+                art.SourcePosition, 1.0, GetSeedBBoxFor(art), StaffIndex: staffIndex,
+                // Carried so the record never lies about the grob, though this array
+                // only ever feeds the per-staff skyline that reserves the band — the
+                // outside-staff pass runs on Calculate's layouts.
+                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(art.Type)));
         }
         return result.ToImmutable();
     }
@@ -702,6 +716,51 @@ internal static class ArticulationEngraver
         is ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
         or ArticulationType.EditorialNatural or ArticulationType.EditorialDoubleSharp
         or ArticulationType.EditorialDoubleFlat;
+
+    /// <summary>
+    /// THE Script grob's vertical-skyline pair: the drawn glyph's real OUTLINE, anchored at
+    /// the layout's own (X, <paramref name="anchorY"/>) in the caller's Y-up frame. ONE home
+    /// for every consumer — the occupancy a script seeds, and the profile a script that
+    /// declares a priority is placed with — because LilyPond hands the SAME
+    /// <c>vertical-skylines</c> to <c>avoid_outside_staff_collisions</c> and to
+    /// <c>all_v_skylines</c> (HANDOFF §5.2.1②; the trill paid for two spellings of one
+    /// grob's profile in session 39).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3006 Script
+    ///   <c>vertical-skylines = grob::always-vertical-skylines-from-stencil</c> — so the
+    ///   profile is the glyph's outline, not its designed box. It MATTERS pointwise: the
+    ///   ufermata's underside is -0.076 at the centre where the dot hangs but rises past
+    ///   +1.0 under the arch, so a thin stem tucks INTO the arch where a flat box would be
+    ///   pushed clear of it (ledger script.stem-support.staff-to-ink-bottom = the drawn tip
+    ///   + the script's own 0.40, with no collision move at all).
+    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments — the walk
+    ///   TextOutlineSkylines.PlaceMusicGlyph reproduces.
+    /// <para>
+    /// Falls back to the designed ink box when there is no single music glyph to walk: the
+    /// sentinel "glyphs" (bends, fret frames, TAB technique letters, snap pizzicato) and the
+    /// staff-local tab array, which carries no glyph string at all.
+    /// </para>
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
+        in ArticulationLayout a, double anchorY)
+    {
+        // The size the renderer draws at (SharedRenderer: FontSize × the layout's scale);
+        // the flattening happens at the transformed size, which is why it is in the key.
+        if (a.Glyph.Length == 1)
+        {
+            var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
+                a.Glyph[0], SharedRenderer.FontSize * a.Scale, a.X, anchorY);
+            if (!up.IsEmpty || !down.IsEmpty)
+                return (up, down);
+        }
+        // No walkable glyph: the designed box, as before.
+        var box = a.Ink;
+        return (VerticalSkyline.FromBox(a.X + box.Left, a.X + box.Right,
+                    anchorY + box.Bottom, anchorY + box.Top, VerticalDirection.Up),
+                VerticalSkyline.FromBox(a.X + box.Left, a.X + box.Right,
+                    anchorY + box.Bottom, anchorY + box.Top, VerticalDirection.Down));
+    }
 
     /// <summary>
     /// Ink box used to seed the outside-staff occupancy (so movable grobs —

@@ -2728,7 +2728,11 @@ internal sealed class LayoutEngine
                     systemLeft: systems[sysIdx].Indent);
             };
         }
-        var (stackedDynamics, stackedHairpins) =
+        // The scripts come BACK out: the fermata family declares outside-staff-priority 75
+        // (scm/script.scm), so it is a MOVER of this pass — below here, above in
+        // StackAboveStaff, which is handed the below pass's result so one array carries
+        // both halves' moves.
+        var (stackedDynamics, stackedHairpins, stackedArticulations) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
                 staffProfile: belowProfile);
@@ -2756,12 +2760,14 @@ internal sealed class LayoutEngine
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
-             stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners) = OutsideStaffStacker.StackAboveStaff(
+             stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
+             stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
             systems, systemSkylines, tupletBracketLayouts,
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
-            articulationLayouts, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
+            stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
         stackedDynamics = stackedDynamicsAbove;
+        stackedArticulations = stackedArticulationsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.
         stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
@@ -2770,12 +2776,14 @@ internal sealed class LayoutEngine
         // already stacked them pointwise, LilyPond's shape. The chart-pair device
         // died with the tempo port — see MusicMarkEngraver's note.)
 
+        // The fingerings clear the scripts where the pass LEFT them — one array, read after
+        // the pass, so a fingering never dodges a fermata's pre-move height.
         var fingeringLayouts = LayoutFingerings(
-            score, systems, voicesByStaff, articulationLayouts, staffYAt);
+            score, systems, voicesByStaff, stackedArticulations, staffYAt);
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
-            Articulations: articulationLayouts,
+            Articulations: stackedArticulations,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),

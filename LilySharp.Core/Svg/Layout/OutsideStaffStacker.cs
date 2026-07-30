@@ -128,7 +128,8 @@ internal static class OutsideStaffStacker
     /// below the staff, larger Y-up above.
     /// </remarks>
     public static (ImmutableArray<DynamicLayout> Dynamics,
-                    ImmutableArray<HairpinLayout> Hairpins)
+                    ImmutableArray<HairpinLayout> Hairpins,
+                    ImmutableArray<ArticulationLayout> Articulations)
         StackBelowStaff(
             ImmutableArray<SystemLayout> systems,
             ImmutableArray<DynamicLayout> dynamics,
@@ -137,10 +138,16 @@ internal static class OutsideStaffStacker
             bool applyStaffOffsets = false,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null)
     {
-        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty)
+        // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
+        // of this pass in its own right, so the pass has to run for it even on a page with
+        // no dynamic and no hairpin anywhere — LilyPond's pass is not conditional on what
+        // else is present.
+        bool anyBelowScriptMover = !articulations.IsDefaultOrEmpty
+            && articulations.Any(a => !a.IsAbove && a.OutsideStaffPriority is not null);
+        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && !anyBelowScriptMover)
             || systems.Length == 0)
         {
-            return (dynamics, hairpins);
+            return (dynamics, hairpins, articulations);
         }
 
         // Build measure-to-system mapping
@@ -228,18 +235,27 @@ internal static class OutsideStaffStacker
             foreach (var hp in hairpins)
                 if (measureToSystem.TryGetValue(hp.StartMeasureIndex, out int hs))
                     placedStaves.Add((hs, hp.StaffIndex));
+        // A below-staff script that declares a priority is itself placed here, so its
+        // (system, staff) needs a tracker whatever else is on that staff.
+        if (!articulations.IsDefaultOrEmpty)
+            foreach (var a in articulations)
+                if (!a.IsAbove && a.OutsideStaffPriority is not null
+                    && measureToSystem.TryGetValue(a.MeasureIndex, out int asys))
+                    placedStaves.Add((asys, a.StaffIndex));
 
-        // Below-staff articulations (Script grobs) have NO outside-staff
-        // priority in LilyPond: they sit against the note and everything at
-        // priority 250+ side-positions BELOW them. Seed them as immovable.
-        // LILYPOND-REF: scm/define-grobs.scm Script — no outside-staff-priority;
-        //   DynamicLineSpanner side-positions against the staff skyline
-        //   which includes the scripts.
+        // Below-staff scripts that declare NO outside-staff-priority sit against the note,
+        // and everything at 250+ side-positions BELOW them: seed them as occupancy. The
+        // fermata family declares 75 and is placed instead, below — before the dynamics,
+        // which is what its lower priority means.
+        // LILYPOND-REF: scm/define-grobs.scm:2992 Script — no outside-staff-priority of its
+        //   own; scm/script.scm gives the fermata family 75.
+        //   lily/axis-group-interface.cc:914-935 — no priority ⇒ inside_staff_skylines.
         if (!articulations.IsDefaultOrEmpty)
         {
             foreach (var a in articulations)
             {
-                if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                if (a.IsAbove || a.OutsideStaffPriority is not null
+                    || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 if (!placedStaves.Contains((sysIdx, a.StaffIndex)))
                     continue;   // no mover on this staff — nothing would read the merge
@@ -253,9 +269,42 @@ internal static class OutsideStaffStacker
                 // Glyph roughly centered on its anchor; half-extent ~0.6sp below.
                 // Support ink: only the DOWN side carries information for a
                 // below-staff stack (the up side stays the staff-edge base).
+                // ⚠️ A nominal ±0.6 box (LILYSHARP-OWN): the same grob's MOVERS read the
+                // glyph's real outline (ArticulationEngraver.ScriptSkylines), which is the
+                // one profile LilyPond uses for both roles. Replacing it moves every
+                // below-staff dynamic that sits under a script (measured: ~0.4-0.5 closer to
+                // the staff, because a staccato's real ink is far smaller than this box), so
+                // it waits for the point that observes it — a dynamic under a script, which
+                // the dynamic island's books (dynamic-support.ly) do not have.
                 Track(sysIdx, a.StaffIndex).MergeSupport(down: VerticalSkyline.FromBox(
                     a.X - 0.6, a.X + 0.6, aYup - 0.6, aYup + 0.6, VerticalDirection.Down));
             }
+        }
+
+        // --- Priority 75: the fermata family, BELOW the staff ---
+        // The down half of the same pass the above side runs (LilyPond's is one pass over
+        // both directions, axis-group-interface.cc:945-972 looping over UP and DOWN), and
+        // it comes BEFORE the dynamics at 250, so a dynamic under a fermata clears the
+        // fermata where it has landed.
+        var adjArticulations = articulations;
+        if (!articulations.IsDefaultOrEmpty)
+        {
+            var artBuilder = articulations.ToBuilder();
+            for (int i = 0; i < artBuilder.Count; i++)
+            {
+                var a = artBuilder[i];
+                if (a.IsAbove || a.OutsideStaffPriority is null
+                    || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                    continue;
+                double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
+                    && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var so2) ? so2 : 0;
+                double aYup = a.YUp - off - 2.0;
+                var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
+                double move = Track(sysIdx, a.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+                if (move != 0)
+                    artBuilder[i] = a with { YUp = a.YUp + move };
+            }
+            adjArticulations = artBuilder.ToImmutable();
         }
 
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
@@ -331,7 +380,7 @@ internal static class OutsideStaffStacker
 
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
-        return (adjDynamics, adjHairpins);
+        return (adjDynamics, adjHairpins, adjArticulations);
     }
 
     // =================================================================
@@ -365,7 +414,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<VoltaBracketLayout> Voltas,
                    ImmutableArray<MusicMarkLayout> MusicMarks,
                    ImmutableArray<DynamicLayout> Dynamics,
-                   ImmutableArray<TextSpannerLayout> TextSpanners)
+                   ImmutableArray<TextSpannerLayout> TextSpanners,
+                   ImmutableArray<ArticulationLayout> Articulations)
         StackAboveStaff(
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
@@ -381,7 +431,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<TextSpannerLayout> textSpanners = default)
     {
         if (systems.IsDefaultOrEmpty)
-            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks, aboveDynamics, textSpanners);
+            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
+                aboveDynamics, textSpanners, articulations);
 
         var measureToSystem = new Dictionary<int, int>();
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
@@ -393,6 +444,8 @@ internal static class OutsideStaffStacker
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
+        var adjArticulations = PlaceArticulations(
+            articulations, trackers, measureToSystem, systems);
         var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem);
         var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem);
@@ -401,7 +454,8 @@ internal static class OutsideStaffStacker
         var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem);
         var adjMarks = PlaceMusicMarks(musicMarks, trackers, measureToSystem, systems);
 
-        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics, adjTextSpanners);
+        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
+            adjDynamics, adjTextSpanners, adjArticulations);
     }
 
     /// <summary>
@@ -477,17 +531,22 @@ internal static class OutsideStaffStacker
             }
         }
 
-        // Above-staff scripts (trill, turn, fermata, editorial accidentals …)
-        // are bound to their notes: they carry no outside-staff-priority and
-        // enter the skyline BEFORE any outside-staff grob is placed, so
-        // movable marks (rehearsal/section marks etc.) must clear them.
-        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
-        // outside-staff-priority stay in the support skyline.
+        // Above-staff scripts that declare NO outside-staff-priority (accents, staccato,
+        // ornaments, bows, editorial accidentals …) are bound to their notes: they enter
+        // the skyline BEFORE any outside-staff grob is placed, so movable marks
+        // (rehearsal/section marks etc.) must clear them. The ones that DO declare a
+        // priority — the fermata family's 75 — are movers instead, placed by
+        // PlaceArticulations in priority order; seeding them here as well would both
+        // reserve their old height and forbid their move.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-935 — the grobs whose priority is
+        //   infinite (unset) are exactly the ones that go into inside_staff_skylines;
+        //   :952-972 places the others by ascending priority.
         if (!articulations.IsDefaultOrEmpty)
         {
             foreach (var a in articulations)
             {
-                if (!a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                if (!a.IsAbove || a.OutsideStaffPriority is not null
+                    || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 // a.YUp is Y-up above the staff middle; reflect to system-relative
                 // Y-up against this staff's WITHIN-SYSTEM middle, which in that frame
@@ -496,6 +555,15 @@ internal static class OutsideStaffStacker
                 double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop <= 0)
                     continue; // entirely inside the staff — the up-skyline covers it
+                // ⚠️ The SEED still reads the designed ink box's TOP as a flat line, where a
+                // mover of the same grob reads the glyph's real outline
+                // (ArticulationEngraver.ScriptSkylines) — LilyPond has ONE profile for both
+                // roles. Pointwise it matters: a mark over a fermata's arch or an accent's
+                // wedge clears a flat plateau here where LilyPond clears the slope. Switching
+                // it is a measured step of its own and it moves the corpus (ornaments,
+                // editorial accidentals, the swing mark), so it waits for its book: a mark
+                // over a WIDE script whose outline drops away under the mark's X. No point
+                // reaches this today.
                 trackers[sysIdx].MergeSupport(up: VerticalSkyline.FromBox(
                     a.X + a.Ink.Left, a.X + a.Ink.Right, inkTop, inkTop,
                     VerticalDirection.Up));
@@ -643,6 +711,75 @@ internal static class OutsideStaffStacker
             }
             double move = trackers[sysIdx].Place(qUp, qDown, OutsideStaffPadding, 0);
             b[i] = t with { YUp = t.YUp + move };
+        }
+        return b.ToImmutable();
+    }
+
+    // ---- 75: Script, but ONLY the family that declares a priority (fermatas) ----
+    /// <summary>
+    /// Places the above-staff scripts that DECLARE an outside-staff-priority — the fermata
+    /// family's 75, which lands between the trill's 50 and the bar number's 100. Scripts
+    /// that declare none are not here: they seeded the occupancy (SeedAboveTrackers).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/script.scm fermata (outside-staff-priority . 75);
+    ///   lily/axis-group-interface.cc:699-810 add_grobs_of_one_priority — the padding is the
+    ///   grob's own outside-staff-padding, and Script declares none, so the 0.46 default.
+    /// <para>
+    /// TWO stages, and only the second is here: the ENGRAVER already spent the script's own
+    /// side-position padding (scm/script.scm fermata 0.40) against its supports — the heads
+    /// and, with add-stem-support, the stem FLATTENED to its tip across all X
+    /// (side-position-interface.cc:302-305 <c>set_minimum_height (max_height ())</c>) —
+    /// floored by include_staff. This pass pays 0.46 against the real accumulated
+    /// skylines, where the stem is thin again. MEASURED: over a plain staff the pass
+    /// decides (ledger script.quiet.staff-to-ink-bottom = staff ink 2.05 + 0.46), over a
+    /// high head too (script.high-head = head ink 4.545 + 0.46), and over a forced-up stem
+    /// the engraver's 0.40 stands because the fermata's ARCH straddles the thin stem
+    /// (script.stem-support = drawn tip + 0.40, no move at all) — which is why the profile
+    /// here has to be the glyph's real outline and not its box.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<ArticulationLayout> PlaceArticulations(
+        ImmutableArray<ArticulationLayout> articulations, OutsideStaffSkylines[] trackers,
+        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        if (articulations.IsDefaultOrEmpty)
+            return articulations;
+        var b = articulations.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var a = b[i];
+            if (!a.IsAbove || a.OutsideStaffPriority is null
+                || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                continue;
+            // ⚠️ Lower-staff scripts are left where their engraver put them, the same
+            // treatment lower-staff trills and ottava brackets get above — and for the same
+            // reason, which is a DEFECT of this pass and not of the grobs: the ABOVE tracker
+            // is seeded per SYSTEM (systemSkylines), so its support profile is the topmost
+            // ink of the whole system, and a script on staff 2 would be "cleared" over
+            // staff 1's notes. MEASURED (session 40, a two-staff score with an above fermata
+            // on the bass staff): without this line the fermata lands above the TOP staff.
+            // LilyPond has no such problem because its pass runs per VerticalAxisGroup — one
+            // per STAFF (axis-group-interface.cc:836-985 outside_staff_axis_group is called
+            // on the staff's own group), which is also why the BELOW pass here (per
+            // (system, staff), with a real per-staff profile) needs no guard.
+            // ⇒ The island: give the above pass per-(system, staff) trackers reading
+            // BuildStaffSkylines, as StackBelowStaff already does, and these three guards
+            // (trill, ottava, script) all disappear. It moves multi-staff output, so it
+            // wants its own points first — no fixture and no ledger entry reaches this
+            // regime today, which is exactly why the port shipped with the bug.
+            if (a.StaffIndex != 0)
+                continue;
+            // Stack in system-relative Y-up: a.YUp is above this staff's WITHIN-SYSTEM
+            // middle, so it enters at a.YUp + midUp and the move reflects straight back.
+            double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], a.StaffIndex) - 2.0;
+            var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, a.YUp + midUp);
+            // Script declares no outside-staff-horizontal-padding, so the horizon padding
+            // is the 0.0 default (its horizon-padding 0.1 is aligned_side's, spent by the
+            // engraver, not this pass's).
+            double move = trackers[sysIdx].Place(myUp, myDown, OutsideStaffPadding);
+            if (move != 0)
+                b[i] = a with { YUp = a.YUp + move };
         }
         return b.ToImmutable();
     }

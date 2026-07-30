@@ -776,6 +776,56 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The sole fermata's staff-FACING ink edge above the first staff's refpoint (middle
+    /// line), signed up-positive: the ink BOTTOM of an above fermata, the ink TOP of a below
+    /// one (so a below reading is negative). The comparable LilyPond quantity is the Script
+    /// grob's own Y-extent edge about the staff refpoint, and the two boxes are the same
+    /// number: LilyPond dumps <c>ext=(-0.075 . 1.45)</c> for scripts.ufermata and Lily#'s
+    /// <c>GlyphMetrics.FermataAboveGlyph</c> is <c>(-0.075 . 1.45)</c>.
+    /// </summary>
+    /// <remarks>
+    /// The EDGE, not the origin, because the edge is what both engines' padding chains talk
+    /// about (staff ink + 0.46, head ink + 0.46, drawn stem tip + 0.40). ⚠️ It is the LILC
+    /// box's edge on both sides — the SKYLINE's is a thousandth further out (LilyPond's
+    /// flattened outline reads -0.076, Lily#'s <c>FermataAboveGlyphOutline</c> the same), and
+    /// that sliver is what every one of these entries carries.
+    /// <para>
+    /// ONE staff and ONE fermata per page, for the reason <see cref="TrillLineAboveStaff"/>
+    /// gives: a book that grew a second staff or a second script is not measuring what it
+    /// claims, and saying so loudly beats averaging.
+    /// </para>
+    /// </remarks>
+    /// <param name="staff">Which staff's refpoint the reading is about, TOP first. The
+    /// default 0 also asserts that the book has exactly one staff; naming a staff explicitly
+    /// says the book is multi-staff on purpose (the lower-staff regime, ledger
+    /// <c>script.lower-staff.*</c>) and then only the count has to cover it.</param>
+    public double FermataInkEdgeAboveStaff(bool above = true, int page = 0, int staff = -1)
+    {
+        var refs = StaffRefpoints(page);
+        if (staff < 0 ? refs.Count != 1 : refs.Count <= staff)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected {(staff < 0 ? "exactly ONE staff" : $"more than {staff} staves")}, "
+                + $"found {refs.Count} — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        int staffIndex = staff < 0 ? 0 : staff;
+        char glyph = above ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow;
+        var f = Glyphs.Where(g => g.Glyph == glyph).ToList();
+        if (f.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE {(above ? "above" : "below")} fermata "
+                + $"glyph, found {f.Count} — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        var box = above ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph;
+        // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
+        double edge = above ? box.Bottom : box.Top;
+        return refs[staffIndex] - (f[0].Y - edge);
+    }
+
+    /// <summary>
     /// The metronome mark's "= N" equation baseline above the first staff, measured
     /// from that staff's refpoint (middle line). In LilyPond the markup's baseline
     /// carries the digits AND the \smaller note's bottom (general-align Y DOWN,

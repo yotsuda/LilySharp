@@ -60,4 +60,41 @@ internal static class ArticulationSpacing
         ArticulationType.Portato => 0.45,
         _ => 0.20,
     };
+
+    /// <summary>
+    /// A script's declared <c>outside-staff-priority</c>, or <c>null</c> when it declares
+    /// none — LilyPond's <c>#f</c>, which is a distinct value and not a zero: a grob whose
+    /// priority is unset stays in the support skyline, while a grob that declared 0 would be
+    /// the FIRST mover placed. A script that declares one is a MOVER in the outside-staff
+    /// collision pass, placed in priority order; one that declares none stays in the
+    /// support skyline the movers clear — LilyPond's own split.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/script.scm — the FERMATA family is the only one that declares
+    ///   this property, and all seven entries declare 75: fermata, shortfermata,
+    ///   longfermata, verylongfermata, veryshortfermata, henzelongfermata,
+    ///   henzeshortfermata. Everything else in script.scm (accents, staccato, bows,
+    ///   ornaments, pedal marks, …) leaves it unset, so the Script grob's own
+    ///   declaration stands — and scm/define-grobs.scm:2992 Script declares none.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 — grobs with no priority go
+    ///   into <c>inside_staff_skylines</c>; :952-972 the rest are placed in ascending
+    ///   priority order. 75 lands between TrillSpanner 50 and BarNumber 100.
+    /// <para>
+    /// Lily# has three of the seven shapes (normal / short-angled / long-square). The
+    /// Henze and very-long/short glyphs have no Lily# spelling yet; when they arrive they
+    /// belong in this arm, not in a new one.
+    /// </para>
+    /// <para>
+    /// ⚠️ MultiMeasureRestScript is a DIFFERENT grob (scm/define-grobs.scm: priority 40,
+    /// <c>outside-staff-padding 0</c>), so a fermata over a multi-measure rest is not this
+    /// number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
+    /// plain rest (<c>r4@fermata</c>, fixture feature-tour) IS an ordinary Script.
+    /// </para>
+    /// </remarks>
+    public static int? OutsideStaffPriority(ArticulationType type) => type switch
+    {
+        ArticulationType.Fermata or ArticulationType.FermataShort
+            or ArticulationType.FermataLong => 75,
+        _ => null,
+    };
 }

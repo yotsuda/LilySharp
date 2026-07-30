@@ -1965,9 +1965,12 @@ internal static class LpGeometryProbes
         "c''4@startTrillSpan c c c@stopTrillSpan |", "s1 |");
 
     /// <summary>Round 2 (the X pair): the tall column LAST, under the WAVE. LilyPond
-    /// measured 4.720721 = the stop column's LEDGER ink 4.05 + 0.5 + the wave's own
-    /// reach 0.170721 — aligned_side is POINTWISE for the trill too, and Lily#'s
-    /// scalar max reads 8.0 (the X-blindness defect this entry gates).</summary>
+    /// measured 4.720721 = the stop column's LEDGER ink top 4.100000 + outside-staff-padding
+    /// 0.460000 + the wave outline's local value 0.160721 there — so aligned_side gives the
+    /// QUIET height and the extra comes from the COLLISION pass. (Round 2 read this chain as
+    /// ledger 4.05 + the trill's own 0.5 + a wave reach 0.170721; session 39 dumped the
+    /// grobs' skylines and found the sum right and all three terms wrong — see the ledger
+    /// why.) Lily#'s pre-port scalar max read 8.0, the X-blindness this entry gated.</summary>
     private static readonly string TXW = TrillStemSupportScore("TXW",
         "c4@startTrillSpan c c c''@stopTrillSpan |", "s1 |");
 
@@ -1996,6 +1999,100 @@ internal static class LpGeometryProbes
 
         score main "TSP" {
           staff mel
+        }
+        """;
+
+    /// <summary>
+    /// WHERE A FERMATA'S INK SITS — the mirrors of script-priority.ly's books SPQ / SPH /
+    /// SPS / SPD, the observers for making a declared-priority Script a MOVER of the
+    /// outside-staff pass (the port gated by <c>trill.fermata-priority</c>, which watches
+    /// the TRILL and cannot see the fermata itself).
+    /// </summary>
+    /// <remarks>
+    /// A fermata is the ONLY script family that declares outside-staff-priority (75, seven
+    /// entries in scm/script.scm), so it is the only one that moves in the pass — and the
+    /// pass pays outside-staff-padding 0.46 against skylines that START from the inside-staff
+    /// ones (axis-group-interface.cc:914-950): the staff symbol, the heads, the stems, the
+    /// ledgers. That is why joining the pass moves EVERY fermata, not only one over a trill.
+    /// <list type="bullet">
+    /// <item>SPQ (a middle-line head, natural down stem — the regime almost every corpus
+    /// fermata is in): ink bottom 2.511000 = staff ink 2.050000 + 0.460000 + the
+    /// outline/LILC sliver 0.001. The engraver's own 0.40 and the staff-padding floor 0.25
+    /// are both dominated.</item>
+    /// <item>SPH (a high head, drawn position 8, two ledgers): 5.006000 = head ink top
+    /// 4.545000 + 0.460000 + the sliver. The ledgers (ink top 4.100000) lie under the arch
+    /// and cannot bind.</item>
+    /// <item>SPS (a FORCED-UP stem under the fermata): 3.734333 = the drawn tip 3.333333
+    /// (the middle line's 10/3) + the script's own padding 0.400000 + the sliver, with NO
+    /// collision move: <c>add-stem-support</c> flattens the stem's skyline to its tip across
+    /// all X for aligned_side (side-position-interface.cc:302-305), but the pass sees the
+    /// thin stem again and the fermata's ARCH straddles it. The pointwise claim in person —
+    /// a flat-box mover would be pushed to tip + 0.46 here.</item>
+    /// <item>SPD (the down mirror of SPQ, stem forced up so it is on the far side): ink top
+    /// -2.511000 — the pass runs on the down side too.</item>
+    /// </list>
+    /// </remarks>
+    private static string FermataScore(string name, string bars, string voiceTwo = "") => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { {{(voiceTwo.Length == 0 ? bars : $"voice {{ {bars} }} voice {{ {voiceTwo} }}")}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>The corpus-wide regime: everything low, so the STAFF decides.</summary>
+    private static readonly string SPQ = FermataScore("SPQ", "b4@fermata b b b |");
+
+    /// <summary>A high head (drawn position 8, two ledgers): the HEAD decides.</summary>
+    private static readonly string SPH = FermataScore("SPH", "c''4@fermata c'' c'' c'' |");
+
+    /// <summary>A forced-up stem under the fermata — the pointwise falsifier. Voice two is
+    /// spacer rests: it makes both engines run their two-voice stem forcing and contributes
+    /// no ink (HANDOFF §5.0 trap 5).</summary>
+    private static readonly string SPS = FermataScore("SPS", "b4@fermata b b b |", "s1 |");
+
+    /// <summary>The down mirror of SPQ: fermata forced below, stem forced up.</summary>
+    private static readonly string SPD = FermataScore("SPD", "b4@fermata.down b b b |", "s1 |");
+
+    /// <summary>A FLAT under the fermata (high head): the accidental's tall ascender turns
+    /// out to sit LEFT of the script's own extent, so the HEAD still binds.</summary>
+    private static readonly string SPA = FermataScore("SPA", "bes'4@fermata bes' bes' bes' |");
+
+    /// <summary>
+    /// SPQ moved to the LOWER staff of a two-staff system — the book for the guard the port
+    /// had to keep (<c>PlaceArticulations</c>: <c>if (StaffIndex != 0) continue</c>).
+    /// LilyPond reads 2.511000, IDENTICAL to SPQ, because its pass runs per staff; Lily#'s
+    /// ABOVE tracker is per SYSTEM, so without the guard the fermata flies over the top
+    /// staff and with it the fermata never enters the pass at all.
+    /// </summary>
+    private static readonly string SPL = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef treble }
+        part lower { clef bass }
+
+        section Main {
+          upper { b4 b b b | }
+          lower { d,4@fermata d, d, d, | }
+        }
+
+        form main { ~Main }
+
+        score main "SPL" {
+          staff upper
+          staff lower
         }
         """;
 
@@ -4856,6 +4953,30 @@ internal static class LpGeometryProbes
             g => g.TrillLineAboveStaff(), RaggedBottomPaper),
         new("trill.fermata-priority.staff-to-line", TSP,
             g => g.TrillLineAboveStaff(), RaggedBottomPaper),
+
+        // --- where a FERMATA's own ink lands (books SPQ/SPH/SPS/SPD) ---
+        // The observers TSP does not have: it watches the trill, and the port it gates moves
+        // the FERMATA — every fermata in the corpus, because the collision pass pays 0.46
+        // against the staff's own ink. See FermataScore for the measured decompositions; SPS
+        // is the one that says the mover's profile must be the glyph's real outline (a flat
+        // box cannot straddle a thin stem inside the arch).
+        new("script.quiet.staff-to-ink-bottom", SPQ,
+            g => g.FermataInkEdgeAboveStaff(), RaggedBottomPaper),
+        new("script.high-head.staff-to-ink-bottom", SPH,
+            g => g.FermataInkEdgeAboveStaff(), RaggedBottomPaper),
+        new("script.stem-support.staff-to-ink-bottom", SPS,
+            g => g.FermataInkEdgeAboveStaff(), RaggedBottomPaper),
+        new("script.below.staff-to-ink-top", SPD,
+            g => g.FermataInkEdgeAboveStaff(above: false), RaggedBottomPaper),
+        new("script.accidental.staff-to-ink-bottom", SPA,
+            g => g.FermataInkEdgeAboveStaff(), RaggedBottomPaper),
+        // The guard's own price: the same quiet regime on the LOWER staff of two. LilyPond
+        // reads SPQ's number because its pass is per-staff; Lily#'s above tracker is per
+        // SYSTEM, so the fermata is held out of the pass entirely (PlaceArticulations'
+        // StaffIndex != 0, the same line PlaceTrills and PlaceOttavas carry). This entry
+        // closes when the above pass gets per-(system, staff) trackers.
+        new("script.lower-staff.staff-to-ink-bottom", SPL,
+            g => g.FermataInkEdgeAboveStaff(staff: 1), RaggedBottomPaper),
 
         // --- where the METRONOME MARK's baseline sits (books TMQ/TMT) ---
         // The tempo island's first points (user-directed, fix tempo first). See
