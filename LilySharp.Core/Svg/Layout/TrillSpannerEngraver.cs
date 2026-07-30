@@ -74,19 +74,16 @@ internal static class TrillSpannerEngraver
     /// horizontal padding, so this stays a Lily# device with the same value.</remarks>
     private const double BoundPadding = 0.5;
 
-    /// <summary>
-    /// Width of the "tr" glyph in staff spaces.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: feta-scripts.mf scripts.trill glyph metrics
-    /// Measured from Emmentaler font: ~1.6 staff spaces
-    /// </remarks>
-    private const double TrillGlyphWidth = 1.6;
-
-    /// <summary>
-    /// Gap between "tr" glyph and wavy line start.
-    /// </summary>
-    private const double GlyphLinePadding = 0.3;
+    // The invented TrillGlyphWidth 1.6 / GlyphLinePadding 0.3 are GONE (2026-07-30):
+    // the glyph-bearing bound is one LilyPond calculation, not two constants. The bound
+    // text attaches at the CENTRE of the bound note column's X extent (bound-details.left
+    // attach-dir CENTER, the default), and the line's own left end advances by the bound
+    // stencil's X extent on the line's side — the glyph's TRUE (outline) right — with no
+    // gap, because TrillSpanner declares no bound-details padding.
+    // LILYPOND-REF: lily/line-spanner.cc:155-175 calc_bound_info — attach-dir read from
+    //   bound-details, x_coord = the bound grob's extent linear_combination (attach);
+    //   :621-626 print — span_points[d] += the bound stencil's extent[-d];
+    //   :561-562 print — gaps[d] = the bound-details padding (absent for TrillSpanner).
 
     /// <summary>
     /// Calculates layout for all trill spanners.
@@ -124,56 +121,9 @@ internal static class TrillSpannerEngraver
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // Y-up from the system top (staff top = 0 in this frame): the trill's
-            // resting height, transcribed from aligned_side. The SUPPORT is the
-            // spanned note columns' UP edges (DynamicEngraver.ColumnUpEdge — the
-            // DRAWN stem end: shortened / beam-quanted face, ledger
-            // trill.{shortened-stem,beam-face}.staff-to-line), floored by the
-            // STAFF EXTENT (declaring staff-padding turns include_staff on and the
-            // staff's ink edge enters the support as a minimum); the grob pays its own
-            // padding 0.5 over that with its facing edge — the "tr" glyph's
-            // stencil-offset reach 1.0 below the line. The :433-453 refpoint floor
-            // (ink + staff-padding) is written too, though the padding term subsumes
-            // it for the trill's reach (ledger trill.quiet.staff-to-line = 2.05 + 0.5
-            // + 1.0 = 3.550000, the staff-extent case; trill.support.staff-to-line =
-            // column box top + 0.5 + 1.0, the column case. The old resting height
-            // StaffPadding + TrillGlyphHeight = 2.2 was an invention, +0.65 high —
-            // and it left a lower-staff trill with NO column support at all, so a
-            // stem ran through the lowered glyph).
-            // LILYPOND-REF: lily/side-position-interface.cc:219-222 include_staff,
-            //   :323-330 set_minimum_height, :361-370 padding, :433-453 staff_padding
-            double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
-            double staffInkUp = EngravingDefaults.StaffLineThickness / 2.0;
-            double support = staffInkUp;
-            if (voicesByStaff != null
-                && voicesByStaff.TryGetValue(spanner.StaffIndex, out var trillVoices)
-                && !trillVoices.IsDefaultOrEmpty)
-            {
-                for (int mi = spanner.StartMeasureIndex; mi <= spanner.EndMeasureIndex; mi++)
-                {
-                    int count = trillVoices.Max(
-                        v => mi < v.Measures.Length ? v.Measures[mi].Items.Length : 0);
-                    int first = mi == spanner.StartMeasureIndex ? spanner.StartItemIndex : 0;
-                    int last = mi == spanner.EndMeasureIndex
-                        ? Math.Min(spanner.EndItemIndex, count - 1)
-                        : count - 1;
-                    for (int ii = first; ii <= last; ii++)
-                    {
-                        // ColumnUpEdge answers in the staff-middle frame; this frame's
-                        // origin is the staff TOP line, 2 above it.
-                        int cmi = mi, cii = ii;
-                        support = Math.Max(support,
-                            DynamicEngraver.ColumnUpEdge(trillVoices, mi, ii,
-                                vi => beamMembers.TryGetValue(
-                                    (spanner.StaffIndex, vi, cmi, cii), out var b)
-                                    ? b : null) - 2.0);
-                    }
-                }
-            }
-            double supported = support + EngravingDefaults.TrillSpannerPadding
-                + EngravingDefaults.TrillSpannerTextOffsetDown;
-            double floored = staffInkUp + EngravingDefaults.TrillSpannerStaffPadding;
-            double yUp = Math.Max(supported, floored) - staffOffset;
+            var trillVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv)
+                ? vv : ImmutableArray<Voice>.Empty;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
             if (spanner.StartItemIndex >= startMeasure.Items.Length)
@@ -181,8 +131,23 @@ internal static class TrillSpannerEngraver
 
             var startItem = startMeasure.Items[spanner.StartItemIndex];
             double startX = startMeasure.X + startItem.X;
+            // The left bound attaches at the CENTRE of the bound note column's X extent
+            // (attach-dir CENTER), which Lily# reads as the column X plus half the drawn
+            // head's advance — the same aligned_on_parent quantity the dynamics' anchor
+            // spends, so the two consumers cannot disagree about where a column's centre is.
+            // ⚠️ LILYSHARP-OWN gap, not a device: LilyPond takes the whole NoteColumn's
+            // extent (accidentals and a down stem widen it) and the trill's OWN voice's
+            // column at that; TrillSpannerItem carries no VoiceIndex yet, so this reads the
+            // primary voice. Closing it is the DynamicItem.VoiceIndex move of session 37,
+            // repeated for the trill (model addition first).
+            double glyphOrigin = startX + DynamicEngraver.AnchorCentreOffset(
+                DynamicEngraver.AnchorItem(trillVoices, 0,
+                    spanner.StartMeasureIndex, spanner.StartItemIndex));
 
+            // The broken pieces' X geometry first: aligned_side is POINTWISE, so the Y
+            // below is read against these very X ranges.
             // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+            var pieces = new List<(SpannerBreakSegment Segment, double GlyphX, double LineStartX, double EndX)>();
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem))
             {
@@ -190,8 +155,8 @@ internal static class TrillSpannerEngraver
                 double glyphX, lineStartX;
                 if (segment.IsFirst)
                 {
-                    glyphX = startX;
-                    lineStartX = startX + TrillGlyphWidth + GlyphLinePadding;
+                    glyphX = glyphOrigin;
+                    lineStartX = glyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
                 }
                 else
                 {
@@ -213,15 +178,178 @@ internal static class TrillSpannerEngraver
                 if (endX <= glyphX)
                     continue;
 
+                // ⚠️ LineEndX stays the BOUND, not the drawn end. The line is a run of
+                // glyphs and ends where its last whole element does — short of the bound by
+                // the remainder (0.0486 in the TXW dump) — but that fit is ONE LilyPond
+                // calculation, run ONCE on the allotted span inside make_trill_line, and
+                // every consumer here (this aligned_side, the outside-staff entry, the
+                // renderer) reaches it through TrillWaveOutline from this same bound.
+                // ⚠️ Storing the FITTED end in the layout instead was tried, and ledger
+                // trill.x.wave-zone fell from 4.720541 back to its quiet 3.550000. The
+                // mechanism was NOT isolated — it is not the obvious re-fit arithmetic,
+                // which measures identical both orders for every span these books use — so
+                // this comment records the observation and not a story. Keep the bound.
+                // LILYPOND-REF: lily/line-interface.cc:84-102 make_trill_line — the
+                //   at-least-one-element rule and total_len.
+                pieces.Add((segment, glyphX, lineStartX, endX));
+            }
+            if (pieces.Count == 0)
+                continue;
+
+            // ⚠️ Lily# keeps ONE Y for every broken piece where LilyPond side-positions
+            // each clone against its own system's grobs; since the reading is pointwise
+            // now, each piece is measured in ITS OWN system's X frame (measure X restarts
+            // per system) and the highest answer wins, so one Y still clears every piece.
+            // Per-piece Y is the model change that would close it.
+            double lineUp = double.NegativeInfinity;
+            foreach (var piece in pieces)
+            {
+                lineUp = Math.Max(lineUp, AlignedSideLineY(
+                    spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
+                    trillVoices, measureLayouts, beamMembers));
+            }
+
+            // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
+            // staff-to-line entries read); this record's frame has its origin on the staff
+            // TOP line, 2 above it, and carries the staff's own offset within the system.
+            double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
+            double yUp = lineUp - EngravingDefaults.StaffMiddle - staffOffset;
+
+            foreach (var piece in pieces)
+            {
                 layouts.Add(new TrillSpannerLayout(
-                    segment.StartMeasureIndex, glyphX, lineStartX, endX, yUp,
-                    spanner.SourcePosition, spanner.StaffIndex, ti));
+                    piece.Segment.StartMeasureIndex, piece.GlyphX, piece.LineStartX,
+                    piece.EndX, yUp, spanner.SourcePosition, spanner.StaffIndex, ti));
             }
         }
 
         return layouts.ToImmutable();
     }
 
+    /// <summary>
+    /// The trill line's resting Y in the staff-MIDDLE frame (up-positive) for one broken
+    /// piece: <c>aligned_side</c> transcribed POINTWISE — the piece's spanned note columns
+    /// as support skylines at their own X, floored by the staff extent, and the distance
+    /// taken against the spanner's OWN facing (DOWN) profile: the flat glyph plateau over
+    /// the "tr" glyph's true X extent and the wave over the rest of the piece.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side, transcribed for
+    ///   this grob (side axis Y, dir UP, one staff space per <c>ss</c>):
+    /// <code>
+    ///   :225-259  my_dim = skyp[-dir], the grob's OWN vertical-skylines on the facing side
+    ///   :265-321  every side-support element's skyline merged into dim
+    ///   :323-330  if (include_staff) dim.set_minimum_height (staff_extents[dir])
+    ///   :354-358  total_off = dir * dim.distance (my_dim, horizon-padding)
+    ///   :370      total_off += dir * ss * padding
+    ///   :433-453  diff = dir * staff_extent[dir] + staff_padding - dir * total_off;
+    ///             total_off += dir * max (diff, 0.0)
+    /// </code>
+    ///   The support set is the spanned NOTE COLUMNS — whole columns, not heads and stems
+    ///   severally (scm/scheme-engravers.scm:1830 side-support-elements adds the
+    ///   note-column-interface grob), so the Stem-direction skip at :273-281 never fires
+    ///   here; on the UP side an away-pointing stem's box lies under its own head anyway.
+    ///   my_dim is a 2-PIECE profile because that is what the grob's stencil is: the left
+    ///   bound text is wrapped so as to "set up a straight line as the vertical skyline for
+    ///   the trill glyph" (LilyPond's own comment) — a FLAT plateau at the stencil-offset
+    ///   reach 1.0 below the line over the glyph's true X extent — and the line itself is
+    ///   the repeated wave over the rest.
+    /// LILYPOND-REF: scm/define-grobs.scm:4085 TrillSpanner vertical-skylines
+    ///   (grob::unpure-vertical-skylines-from-stencil), :4054-4068 bound-details left text
+    ///   (make-with-dimension-from-markup / make-with-true-dimension-markup, stencil-offset).
+    /// ⚠️ MEASURED, and it is why this is pointwise and not a scalar max: ledger
+    ///   trill.x.wave-zone (TXW) puts an X-away tall column under the WAVE and LilyPond
+    ///   reads the QUIET 3.550000 — the column imposes NOTHING because the line's ink ends
+    ///   0.0486 left of it — while trill.x.glyph-zone (TXG) puts the same column under the
+    ///   GLYPH and reads 8.000000. A scalar edge cannot answer both; it read 8.000000 twice.
+    /// The wave part is the real thing: <see cref="TrillWaveOutline"/>, the run of
+    ///   scripts.trill_element glyphs LilyPond builds the line from, whose binding value
+    ///   depends on WHERE the obstacle starts (there is no constant reach — TXW's ledger
+    ///   meets it at -0.160721).
+    /// </remarks>
+    private static double AlignedSideLineY(
+        TrillSpannerItem spanner, in SpannerBreakSegment segment,
+        double glyphX, double lineStartX, double endX,
+        ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers)
+    {
+        // :225-259 — my_dim: the grob's own DOWN profile about its line (Y = 0 here).
+        var my = new VerticalSkyline(VerticalDirection.Down);
+        double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
+        if (segment.IsFirst)
+        {
+            my.Merge(VerticalSkyline.FromBox(
+                glyphX + GlyphMetrics.OrnTrillGlyphOutline.Left,
+                glyphX + GlyphMetrics.OrnTrillGlyphOutline.Right,
+                -reach, GlyphMetrics.OrnTrillGlyph.Top - reach, VerticalDirection.Down));
+        }
+        if (lineStartX < endX)
+        {
+            // The line's own ink: the run of trill_element glyphs, pointwise.
+            my.Merge(TrillWaveOutline.Place(lineStartX, endX - lineStartX, 0.0).Down);
+        }
+
+        // :323-330 — the staff symbol's extent is the minimum under whatever the columns
+        // contribute (include_staff, which declaring staff-padding turns on).
+        var support = VerticalSkyline.FromBox(
+            double.NegativeInfinity, double.PositiveInfinity,
+            DynamicEngraver.StaffExtent, DynamicEngraver.StaffExtent, VerticalDirection.Up);
+        // :265-321 — the spanned columns of THIS piece, each at its own X.
+        for (int mi = segment.StartMeasureIndex;
+             !voices.IsDefaultOrEmpty
+                 && mi <= segment.EndMeasureIndex && mi < measureLayouts.Length; mi++)
+        {
+            var ml = measureLayouts[mi];
+            int count = voices.Max(v => mi < v.Measures.Length ? v.Measures[mi].Items.Length : 0);
+            int first = mi == spanner.StartMeasureIndex ? spanner.StartItemIndex : 0;
+            int last = mi == spanner.EndMeasureIndex
+                ? Math.Min(spanner.EndItemIndex, count - 1)
+                : count - 1;
+            for (int ii = first; ii <= last; ii++)
+            {
+                double xColumn = ml.X + (ii < ml.Items.Length ? ml.Items[ii].X : 0.0);
+                for (int vi = 0; vi < voices.Length; vi++)
+                {
+                    int cmi = mi, cii = ii;
+                    var (up, _) = DynamicEngraver.ColumnSupportSkylines(voices, vi, mi, ii,
+                        xColumn,
+                        v => beamMembers.TryGetValue((spanner.StaffIndex, v, cmi, cii),
+                            out var b) ? b : null);
+                    support.Merge(up);
+                }
+            }
+        }
+
+        // :354-358 (dir = UP, horizon-padding absent) and :370.
+        double totalOff = my.Distance(support) + EngravingDefaults.TrillSpannerPadding;
+        // :433-453 — the refpoint floor. The trill's reach subsumes it whenever
+        // reach > staff-padding - padding, which 1.0 always satisfies; it is written
+        // because LilyPond computes it (HANDOFF §5.2: do not fold a term to its value).
+        double diff = DynamicEngraver.StaffExtent
+            + EngravingDefaults.TrillSpannerStaffPadding - totalOff;
+        return totalOff + Math.Max(diff, 0.0);
+    }
+
+    /// <summary>
+    /// The line's right end: the stop note column's LEFT edge.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-spanner.cc:155-175 calc_bound_info — the right
+    ///   bound-details declare <c>(attach-dir . LEFT)</c> (scm/define-grobs.scm:4072-4074),
+    ///   so <c>x_coord</c> is the bound column extent's LEFT point, and :561-562 reads no
+    ///   bound-details padding for TrillSpanner, so nothing is subtracted from it.
+    /// ⚠️ Until 2026-07-30 this spent <see cref="BoundPadding"/> here, and that 0.5 was
+    ///   load bearing in the wrong direction: it held the line's ink clear of the stop
+    ///   column's LEDGER lines, which reach only length-fraction * head width (0.326) left
+    ///   of the column, so Lily#'s outside-staff pass never saw the obstacle LilyPond
+    ///   clears. Ledger trill.x.wave-zone is that measurement (its binding support is the
+    ///   ledger at 4.100000, not the head or the stem).
+    /// ⚠️ LilyPond then shortens the DRAWN line to whole <c>scripts.trill_element</c>
+    ///   repetitions (line-interface.cc:86-102 make_trill_line), which is why its dump ends
+    ///   0.0486 short of this point. Lily# draws a continuous polyline, so it reaches the
+    ///   bound exactly; the remainder goes when the wave becomes the real glyph run.
+    /// </remarks>
     private static double GetEndX(TrillSpannerItem spanner, ImmutableArray<MeasureLayout> measureLayouts)
     {
         if (spanner.EndMeasureIndex < measureLayouts.Length)
@@ -230,8 +358,11 @@ internal static class TrillSpannerEngraver
             if (spanner.EndItemIndex < endMeasure.Items.Length)
             {
                 var endItem = endMeasure.Items[spanner.EndItemIndex];
-                return endMeasure.X + endItem.X - BoundPadding;
+                return endMeasure.X + endItem.X;
             }
+            // No stop column: the bound is the bar line (to-barline #t). Lily# stops a
+            // BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
+            // named at the constant), because no point measures a barline-bound trill.
             return endMeasure.X + endMeasure.Width - BoundPadding;
         }
         var lastMeasure = measureLayouts[^1];

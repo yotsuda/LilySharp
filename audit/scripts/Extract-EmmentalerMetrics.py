@@ -89,6 +89,15 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("AugmentationDot", "dots.dot", "Augmentation dot", "mf/feta-noteheads.mf — dots.dot"),
     # Ornament / mark glyphs (ink extents for outside-staff stacking)
     GlyphSpec("OrnTrillGlyph", "scripts.trill", "Trill ornament", "mf/feta-scripts.mf — scripts.trill"),
+    # The wavy line's UNIT. LilyPond builds a trill spanner's line by repeating this one
+    # glyph (lily/line-interface.cc:48-108 make_trill_line), and BOTH boxes matter there:
+    # the LILC bbox is the repetition STEP (elt_len = elt.extent(X_AXIS).length()) while
+    # the OUTLINE span is the first element's own length (elt_true_len, taken from the
+    # stencil's horizontal skylines), and the difference is the overhang by which two
+    # neighbours blend — LilyPond's own comment at :72-74. So the run's total length is
+    # elt_true_len + n * elt_len for as many whole elements as fit, which is why a trill
+    # line stops SHORT of its right bound.
+    GlyphSpec("OrnTrillElementGlyph", "scripts.trill_element", "Trill line element (the wave's repeating unit)", "mf/feta-scripts.mf — scripts.trill_element"),
     GlyphSpec("OrnTurnGlyph", "scripts.turn", "Turn ornament", "mf/feta-scripts.mf — scripts.turn"),
     GlyphSpec("OrnReverseTurnGlyph", "scripts.reverseturn", "Inverted (reverse) turn ornament", "mf/feta-scripts.mf — scripts.reverseturn"),
     GlyphSpec("OrnPrallGlyph", "scripts.prall", "Prall (upper mordent) ornament", "mf/feta-scripts.mf — scripts.prall"),

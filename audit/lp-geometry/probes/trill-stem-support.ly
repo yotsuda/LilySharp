@@ -136,16 +136,14 @@
 %% MEASURED (2026-07-30, round 2 — two forks fell on branches the predictions did not
 %% list, and the bisection books TXN/TXE/TXS decomposed both):
 %%   TXG 8.000000 (the control, as predicted, Lily# 0 exact).
-%%   TXW 4.720721 — a THIRD branch: = the stop column's LEDGER ink top 4.05 (4.0 +
-%%     StaffLineThickness/2) + 0.5 + the WAVE's own ink reach 0.170721. Aligned_side is
-%%     POINTWISE for the trill exactly as for the dynamics: the tall head and stem lie
-%%     entirely beyond the spanner's ink (gap 0.0486) and impose NOTHING — the stem tip
-%%     6.5 pokes above the trill line in LilyPond's own output — while the ledger line
-%%     reaches ~0.35 left into the wave. TXN (natural-down tall, wider gap) and TXE
+%%   TXW 4.720721 — a THIRD branch, decomposed below. TXN (natural-down tall) and TXE
 %%     (tall outside the span) both read 3.550000 quiet; TXS (everything shifted a
 %%     measure right) repeats 4.720721 to THIRTEEN digits, killing the absolute-X
 %%     (pure xc=0) hypothesis. Lily#'s scalar-max mirror reads 8.000000000: residual
-%%     +3.279279 IS the X-blindness, gated for the pointwise-trill-support port.
+%%     +3.279279 IS the X-blindness. ⚠️ Round 2 read the chain as LEDGER top 4.05 +
+%%     the trill's own padding 0.5 + a wave reach 0.170721 (aligned_side gone
+%%     pointwise); see the ROUND 3 correction below — that sum is right and all three
+%%     terms are wrong.
 %%   TSB 8.221189 = the HIGH member's dumped Stem upper end 6.721188658669575 + 1.5,
 %%     FIFTEEN-digit — the support is the STEM's own end at ITS X, not the Beam
 %%     envelope corner 6.74 (0.019 of slope over half a stem-width apart). Lily#'s
@@ -154,8 +152,93 @@
 %%     trill (Script bottom 5.111 ≈ tr glyph top 4.65 + 0.46): fermata declares
 %%     (outside-staff-priority . 75) > trill 50 (scm/script.scm). Lily# seeds scripts
 %%     immovable, so its trill lifts over the fermata instead (5.235, +1.685) — the
-%%     priority-inversion defect, gated. The 0.46-vs-0.5 single-pass question remains
-%%     unmeasured and needs a priority-LESS obstacle (a slur bow) — do not conflate.
+%%     priority-inversion defect, gated.
+%%
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 3 (2026-07-30, session 39) — TXW's decomposition was WRONG IN EVERY TERM and
+%% right in its sum, which is exactly the failure HANDOFF 5.2 warns about: two errors
+%% that cancel. Round 2 inferred the chain (4.05 + 0.5 + 0.170721); round 3 READ IT,
+%% by dumping the grobs' own skylines with ly:skyline->points instead of reasoning from
+%% extents. What the dump says:
+%%   * ALIGNED_SIDE gives the QUIET 3.550000 in TXW. The support set is the spanned
+%%     NOTE COLUMNS (scheme-engravers.scm:1830 side-support-elements — the column grob,
+%%     so the Stem-direction skip at side-position-interface.cc:273-281 never applies),
+%%     and the tall column's ink is entirely RIGHT of the line's end: column x left
+%%     17.841735 vs TrillSpanner x right 17.793100 (the 0.0486 gap round 2 saw). So the
+%%     staff extent decides: 2.05 + padding 0.5 + glyph plateau 1.0.
+%%   * The remaining 1.170721 is the OUTSIDE-STAFF COLLISION PASS, and the obstacle is
+%%     the LEDGER. ⚠️ LedgerLineSpanner declares X-extent #f and Y-extent #f but
+%%     vertical-skylines FROM STENCIL (define-grobs.scm:2072-2074): ledger lines are
+%%     INVISIBLE to every extent computation and PRESENT in the staff skyline. That is
+%%     why no extent-based reading could find them, and why they can bind only here.
+%%     Dumped ledger skyline: x (17.515685 . 19.471985) = the head extent widened by
+%%     length-fraction 0.25 (define-grobs.scm:2068), UP height 4.100000 = position 8 +
+%%     half of ledger-line-thickness (1.0 . 0.1) = 1.0*line-thickness + 0.1*staff-space
+%%     = 0.2 (staff-symbol.cc:337-344 get_ledger_line_thickness). NOT 4.05.
+%%   * The mover's own profile is its vertical-skylines (axis-group-interface.cc:770-773
+%%     add_grobs_of_one_priority), a real 2-piece OUTLINE: flat -1.000000 over the
+%%     glyph's true X extent, then the repeated scripts.trill_element as a wavy polygon
+%%     (line-interface.cc:48-108 make_trill_line, elt aligned Y CENTER). At the ledger's
+%%     left edge it reads -0.160721 — on the rising building between the dumped points
+%%     (8.764100 . -0.360000) and (9.192100 . 0.152000), grob X origin 8.585000. There
+%%     is no constant wave reach: the binding value is wherever the obstacle starts.
+%%   ⇒ 4.100000 + outside-staff-padding 0.460000 (axis-group-interface.cc:747-749) +
+%%     0.160721 = 4.720721 SIX-DIGIT.
+%%   ⇒ AND THIS SETTLES THE 0.46-vs-0.5 QUESTION carried since session 32: the ledger
+%%     declares no outside-staff-priority, so TXW *is* the priority-less obstacle TSP
+%%     asked a slur book for. The pass pays 0.46. No new book needed.
+%% PORT, three named halves (only (a) is this probe's island):
+%%   (a) the engraver's aligned_side goes POINTWISE (support = the spanned columns'
+%%       head/stem boxes at their own X, floored by the staff extent; my_dim = the
+%%       2-piece facing profile). Gate: TXW must land on the QUIET 3.550000, TXG must
+%%       NOT move, TLS/TLB/TLW/TSB/TSP must NOT move. Residual after (a): -1.170721.
+%%       ★ DONE (session 39, same day): TrillSpannerEngraver.AlignedSideLineY. TXW landed
+%%       3.550000000 and all seven other trill entries held. ⚠️ The left bound's
+%%       attach-dir CENTER had to come WITH it, not after: LilyPond centres the bound
+%%       text on the bound COLUMN (line-spanner.cc:155-175), Lily# had it centred on the
+%%       column's LEFT EDGE, and a glyph plateau that misses its own column's stem would
+%%       have dropped TXG from 8.000000 to 6.045000 — the halves regress apart
+%%       (HANDOFF 5.0's ossia lesson). The line now starts at the glyph's true right
+%%       (:621-626) instead of Lily#'s invented 1.6 + 0.3.
+%%   (b) LEDGER ink into Lily#'s staff skylines (SkylineBuilder) — an unported LP
+%%       calculation that moves the whole corpus, not only trills.
+%%       ⚠️ WRONG — it was ALREADY PORTED (found session 39 by reading Lily# instead of
+%%       assuming): SkylineBuilder.AddNoteBoxToSkylines has seeded ledger boxes all
+%%       along, same length-fraction widening, same thickness. What hid the obstacle was
+%%       the LINE's X — Lily# stopped the wave a BoundPadding 0.5 short of the stop
+%%       column, LilyPond attaches the right bound AT the column's left edge
+%%       (line-spanner.cc:155-175 attach-dir LEFT, :561-562 no bound-details padding),
+%%       and the ledger reaches only 0.326 left of the column. The wave ended 0.174 shy
+%%       of the ink it was supposed to clear. ★ DONE (session 39).
+%%   (c) the stacker's trill profile becomes the real trill_element outline instead of
+%%       the flat wave box. ⚠️ This was TWO things:
+%%       (c1) the stacker passed ONE profile for the collision and ANOTHER for the
+%%            registration — the collision ran on a flat glyph-high box over the WHOLE
+%%            span, where LilyPond hands the same v_skylines to
+%%            avoid_outside_staff_collisions and to all_v_skylines
+%%            (axis-group-interface.cc:770-773,:798-803). ★ DONE (session 39).
+%%       (c2) the wave box (Lily#'s TrillWaveAmplitude 0.2 + half thickness) vs the real
+%%            scripts.trill_element outline. Predicted 4.100000 + 0.460000 + 0.250000 =
+%%            4.810000 before running, MEASURED 4.810000000, residual +0.089279000 =
+%%            exactly 0.25 − 0.160721. ★ DONE (session 39): TrillWaveOutline is
+%%            make_trill_line — the element baked (23 DOWN + 23 UP buildings), copies
+%%            stepped by the LILC width 1.0 with the first copy's own length the OUTLINE
+%%            width 1.448, Y CENTER on the line, run quantized to whole elements (which
+%%            is also the 0.0486 by which LilyPond's line stops short of its bound).
+%%            MEASURED: 4.720541312, residual −0.000179688 — the FLATTENING family (the
+%%            binding value sits on a building of slope ~1.2, so a sub-1e-4 difference in
+%%            the ledger's left edge or in a flattened vertex shows at this size; LP's
+%%            recorded figure is six-digit rounded). Not fitted.
+%%            ⚠️ WORTH THE RECORD: storing the FITTED end in the layout (so the fit ran
+%%            once in the engraver and again in the profile builder) made this entry fall
+%%            back to its quiet 3.550000 — and it read exactly like "the ledger does not
+%%            overlap at Lily#'s spacing", which sent the first diagnosis after the
+%%            X-spacing island. It is NOT that, and it is NOT the obvious re-fit
+%%            arithmetic either (measured: fitting a fitted length returns the same length
+%%            for every span these books use). The mechanism is unisolated; the shipped
+%%            shape is the literal one — the layout keeps the BOUND and each consumer fits
+%%            from it, once, as make_trill_line does. Recorded as an observation, not a
+%%            story (HANDOFF §5.3: do not write a cause you have not pinned).
 
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"

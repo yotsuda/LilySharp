@@ -121,6 +121,21 @@ CLEFS = [
 # Extract-EmmentalerMetrics.py's DynamicLetter* block).
 DYNAMICS = [(c, c) for c in "fmnprsz"]
 
+# The trill line's repeating UNIT, for TrillSpanner's own vertical profile (my_dim in
+# aligned_side, and the mover's pair in the outside-staff pass).
+#
+# WHY. A trill spanner's stencil is not a drawn curve with an amplitude: LilyPond repeats
+# THIS GLYPH along the line (lily/line-interface.cc:48-108 make_trill_line, the element
+# aligned Y CENTER on the line), and scm/define-grobs.scm:4085 declares the spanner's
+# vertical-skylines from that stencil. So the profile a trill clears an obstacle with is
+# the glyph run's real outline, and its binding value depends on WHERE the obstacle
+# starts — there is no constant wave reach. Measured: audit/lp-geometry/probes/
+# trill-stem-support.ly TXW = the stop column's ledger ink 4.100000 + outside-staff
+# 0.460000 + 0.160721, the last term being this outline at the ledger's left edge.
+SCRIPTS = [
+    ("trillElement", "scripts.trill_element"),
+]
+
 
 def glyph_outline_scale(glyphset, glyph):
     """LilyPond's `scale` at lily/stencil-integral.cc:551-557 add_named_glyph_segments,
@@ -470,6 +485,19 @@ def main():
         L.append("")
         dyn_kinds.append((kind, cap))
 
+    script_kinds = []
+    for kind, glyph in SCRIPTS:
+        if glyph not in order:
+            sys.stderr.write(f"ERROR: glyph name not in font: {glyph}\n")
+            return 1
+        down, up = build(glyphset, glyph, horizon_axis=0)
+        cap = kind[0].upper() + kind[1:]
+        L.append(f"    // ===== script {kind} ({glyph}): {len(down)} DOWN + {len(up)} UP buildings =====")
+        L.extend(emit_side(f"ScrSky{cap}D", down))
+        L.extend(emit_side(f"ScrSky{cap}U", up))
+        L.append("")
+        script_kinds.append((kind, cap))
+
     kerns = dynamic_kern_pairs(font, [g for _, g in DYNAMICS])
 
     acc_kinds = [(k, c) for (k, c) in kinds if k not in ("leftParen", "rightParen")]
@@ -528,6 +556,20 @@ def main():
         L.append(f"        '{kind}' => (DynSky{cap}D, DynSky{cap}U),")
     L.append("        _ => default,")
     L.append("    };")
+    L.append("")
+    L.append("    /// <summary>The (DOWN, UP) VERTICAL skyline of the trill line's repeating element,")
+    L.append("    /// as raw sign-framed buildings in the glyph's own frame (X from the glyph origin, Y")
+    L.append("    /// from its baseline — the caller centres it, as <c>align_to (Y_AXIS, CENTER)</c>")
+    L.append("    /// does, and steps copies by the LILC width).")
+    L.append("    /// LILYPOND-REF: lily/line-interface.cc:48-108 make_trill_line repeats")
+    L.append("    /// scripts.trill_element along the line; scm/define-grobs.scm:4085 TrillSpanner")
+    L.append("    /// <c>grob::unpure-vertical-skylines-from-stencil</c> makes that run the grob's own")
+    L.append("    /// profile, which side-position-interface.cc:353-358 and")
+    L.append("    /// axis-group-interface.cc:770-773 both measure against.</summary>")
+    L.append("    public static (double[] Down, double[] Up) TrillElementVerticalSkylineQuads()")
+    for kind, cap in script_kinds:
+        if kind == "trillElement":
+            L.append(f"        => (ScrSky{cap}D, ScrSky{cap}U);")
     L.append("")
     L.append("    /// <summary>GPOS pair kern between two adjacent fetaText dynamic letters, in staff")
     L.append("    /// spaces (negative pulls the second letter in; 0 for every pair the font does not")

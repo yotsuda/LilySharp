@@ -1623,6 +1623,60 @@ internal static partial class GlyphMetrics
         1.056000, 0.508000, 0.410000, 1.128500,
     };
 
+    // ===== script trillElement (scripts.trill_element): 23 DOWN + 23 UP buildings =====
+    private static readonly double[] ScrSkyTrillElementD =
+    {
+        -0.112000, -0.168000, -0.292000, -0.012000,
+        -0.012000, -0.292000, -0.344000, 0.077500,
+        0.176000, -0.360000, -0.336500, 0.289500,
+        0.388000, -0.268000, -0.088500, 0.548500,
+        0.700000, 0.004000, -0.006000, 0.741500,
+        0.780000, -0.040000, -0.552000, 1.208000,
+        1.208000, -0.552000, -0.572000, 1.220500,
+        -0.224000, -0.208000, -0.162500, -0.204000,
+        -0.160000, -0.144000, -0.150000, -0.134500,
+        0.077500, -0.344000, -0.360000, 0.176000,
+        0.289500, -0.336500, -0.268000, 0.388000,
+        0.548500, -0.088500, 0.004000, 0.700000,
+        0.741500, -0.006000, -0.040000, 0.780000,
+        1.220500, -0.572000, -0.592000, 1.224000,
+        1.160000, -0.656000, -0.637500, 1.204000,
+        1.112000, -0.632000, -0.650000, 1.134500,
+        0.824000, -0.440000, -0.456000, 0.922500,
+        0.612000, -0.532000, -0.463500, 0.710500,
+        0.300000, -0.804000, -0.711500, 0.451500,
+        0.220000, -0.760000, -0.794000, 0.258500,
+        -0.224000, -0.208000, -0.228000, -0.220500,
+        -0.204000, -0.162500, -0.144000, -0.160000,
+        -0.134500, -0.150000, -0.168000, -0.112000,
+    };
+    private static readonly double[] ScrSkyTrillElementU =
+    {
+        1.204000, 0.637500, 0.592000, 1.224000,
+        1.134500, 0.650000, 0.656000, 1.160000,
+        1.012000, 0.508000, 0.632000, 1.112000,
+        0.922500, 0.456000, 0.508000, 1.012000,
+        0.710500, 0.463500, 0.440000, 0.824000,
+        0.451500, 0.711500, 0.532000, 0.612000,
+        0.258500, 0.794000, 0.804000, 0.300000,
+        -0.208000, 0.248000, 0.760000, 0.220000,
+        -0.220500, 0.228000, 0.248000, -0.208000,
+        0.077500, 0.344000, 0.360000, 0.176000,
+        0.289500, 0.336500, 0.268000, 0.388000,
+        0.548500, 0.088500, -0.004000, 0.700000,
+        0.741500, 0.006000, 0.040000, 0.780000,
+        1.220500, 0.572000, 0.592000, 1.224000,
+        1.160000, 0.656000, 0.637500, 1.204000,
+        1.112000, 0.632000, 0.650000, 1.134500,
+        0.824000, 0.440000, 0.456000, 0.922500,
+        0.612000, 0.532000, 0.463500, 0.710500,
+        0.300000, 0.804000, 0.711500, 0.451500,
+        0.220000, 0.760000, 0.794000, 0.258500,
+        -0.224000, 0.208000, 0.228000, -0.220500,
+        -0.204000, 0.162500, 0.144000, -0.160000,
+        -0.134500, 0.150000, 0.168000, -0.112000,
+    };
+
     /// <summary>The (LEFT, RIGHT) horizontal skyline pair for an accidental kind,
     /// in the glyph's own frame (X from the glyph origin, Y centred on the note).</summary>
     public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalSkylinePair(string kind) => kind switch
@@ -1682,6 +1736,18 @@ internal static partial class GlyphMetrics
         'z' => (DynSkyZD, DynSkyZU),
         _ => default,
     };
+
+    /// <summary>The (DOWN, UP) VERTICAL skyline of the trill line's repeating element,
+    /// as raw sign-framed buildings in the glyph's own frame (X from the glyph origin, Y
+    /// from its baseline — the caller centres it, as <c>align_to (Y_AXIS, CENTER)</c>
+    /// does, and steps copies by the LILC width).
+    /// LILYPOND-REF: lily/line-interface.cc:48-108 make_trill_line repeats
+    /// scripts.trill_element along the line; scm/define-grobs.scm:4085 TrillSpanner
+    /// <c>grob::unpure-vertical-skylines-from-stencil</c> makes that run the grob's own
+    /// profile, which side-position-interface.cc:353-358 and
+    /// axis-group-interface.cc:770-773 both measure against.</summary>
+    public static (double[] Down, double[] Up) TrillElementVerticalSkylineQuads()
+        => (ScrSkyTrillElementD, ScrSkyTrillElementU);
 
     /// <summary>GPOS pair kern between two adjacent fetaText dynamic letters, in staff
     /// spaces (negative pulls the second letter in; 0 for every pair the font does not

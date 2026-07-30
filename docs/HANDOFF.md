@@ -32,14 +32,24 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第38セッション・**trill raw 3.5 を起票→同セッションで port まで完遂
-（TLS/TLB 九桁 exact・corpus byte 不変は「結果」）**。詳細は下の第38セッション節）
+最終更新 2026-07-30（第39セッション・**TXW の分解が全項ハズレだった（和だけ合っていた）——
+真の鎖は 0.46 衝突 pass ×加線。そして trill 島を 4 commit で閉じた：pointwise 支持／
+右バウンド＋profile 1 本／波は glyph 反復。残差 3.279279 → 0.000179688**。
+詳細は下の第39セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3540 passed / 0 failed / 3 skipped**（台帳 227 点全緑）・Core 0 warn 0 err・
-**ワーキングツリーは clean**（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**HEAD は 3541 passed / 0 failed / 3 skipped**（台帳 227 点全緑・削った pin 網 2 本と
+足した `TrillWaveOutlineTests` 3 本の差）・Core 0 warn 0 err・**ワーキングツリーは clean**
+（未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
+**第39セッションの commit**: `fb5b8111`（**訂正＝TXW の分解を実 skyline dump から書き直し・
+コード不変**）／`2181e311`（**port (a)＝trill の aligned_side を pointwise へ＋左バウンドの
+attach-dir CENTER・snapshot 2 枚再ベース・GO 済・スカラー支持辺を削除**）／
+`aa30ca83`（**port (b)+(c1)＝右バウンドは列左端・stacker の profile を 1 本に**・TXW
+4.810000＝予測どおり・snapshot 2 枚）／`0a522899`（**port (c2)＝波は
+`scripts.trill_element` の反復**・TXW **−0.000179688**＝平坦化族のみ・snapshot 2 枚）。
+⇒ **trill 台帳 8 点は 7 点 exact ＋ 1 点 1.8e-4。この島は閉じた。**
 **第38セッションの commit**: `2b6fb21d`（起票＝trill-stem-support.ly＋台帳 3 点＋ミラー・
 出力不変）／`daeb203c`（port＝`SupportEdgeUp`・TLS/TLB 九桁 exact・**snapshot 全 byte 不変
 ＝結果**。台帳 3 点だけが観測者）／`79f7c0fc`（字面箇所へ LILYPOND-REF・コメントのみ）／
@@ -90,7 +100,94 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
 
-### 第38セッション（2026-07-30）＝ **trill raw 3.5 を起票→port まで一気通貫——支持の「形」（平ら my_dim のスカラー）は正しく、違うのは値だけだった**
+### 第39セッション（2026-07-30）＝ **前セッションの分解が「和は合って全項ハズレ」だった——真犯人は 0.46 衝突 pass ×加線インク、そして支持は trill でも pointwise**
+
+★★★ **第38セッション round 2 が TXW を「加線 4.05 ＋ trill 自身の padding 0.5 ＋ 波リーチ
+0.170721」＝aligned_side の pointwise 化と読んだ。六桁で閉じていた。全部違った**——
+`4.05+0.5+0.170721` と `4.100000+0.460000+0.160721` は**同じ数**（§5.2 の「打ち消し合う 2 つの
+誤り」そのもの）。**推論をやめて grob の skyline を dump した**（`ly:skyline->points`）:
+
+1. ★★★ **aligned_side は TXW では静止値 3.550000 を出す**。支持集合は**音符列そのもの**
+   （scheme-engravers.scm:1830 の side-support-elements＝note-column grob。だから
+   :273-281 の Stem 方向スキップは発火しない）で、tall 列のインクは**線の右端より右に丸ごと居る**
+   （列左 17.841735 対 線右 17.793100＝round 2 が見た 0.0486 の隙間）——**譜 extent 2.05 が決める**。
+2. ★★★ **残る 1.170721 は outside-staff 衝突 pass で、障害物は加線**。⚠️ **LedgerLineSpanner は
+   `X-extent #f` / `Y-extent #f` を宣言しつつ `vertical-skylines` を stencil から持つ**
+   （define-grobs.scm:2072-2074）＝**extent 計算からは完全に見えず、skyline には居る**。
+   だから extent ベースの読みでは決して見つからず、**この pass 以外では絶対に binding しない**。
+   dump の加線 skyline は x (17.515685 . 19.471985)＝符頭 extent を length-fraction 0.25 で
+   広げたもの・UP 高さ **4.100000**＝position 8 ＋ ledger-line-thickness (1.0 . 0.1) の半分
+   ＝`1.0*line-thickness + 0.1*staff-space` の 0.2/2（staff-symbol.cc:337-344）。**4.05 ではない**。
+3. ★★★ **mover 側の profile は自分の vertical-skylines**（axis-group-interface.cc:770-773）＝
+   **実アウトラインの 2 片**: グリフの真 X extent 上は平ら −1.000000、その先は
+   `scripts.trill_element` の反復（line-interface.cc:48-108・Y CENTER 揃え）の**波形多角形**。
+   加線の左端でその値は **−0.160721**（dump の点 (8.764100 . −0.360000)〜(9.192100 . 0.152000)
+   を結ぶ上り building 上）。⇒ **4.100000 + 0.460000 + 0.160721 = 4.720721 六桁**。
+   ★ **一定の「波リーチ」は存在しない**——binding 値は障害物が始まる X で決まる。
+4. ★★★ **副産物: 第32セッションから未測定だった 0.46 対 0.5 が閉じた**。加線は
+   outside-staff-priority を宣言しないので、**TXW が TSP の言う「priority の無い障害物」そのもの**
+   ＝**slur の本は要らなかった**。pass は 0.46 を払う（台帳 `trill.support`・TSP の why に反映）。
+5. ★★★ **port (a) を landing（`2181e311`・GO 済・snapshot 2 枚）**:
+   `TrillSpannerEngraver.AlignedSideLineY`＝aligned_side の pointwise 字面
+   （my_dim＝平らグリフ台地＋波／支持＝各列を `DynamicEngraver.ColumnSupportSkylines` で
+   自分の X に・譜 extent が :323-330 の最小・+0.5・:433-453 の床も書く）。
+   ⚠️ **左バウンドの X を「後で」にはできなかった**: LP は bound text を**列 extent の中心**に
+   付け（line-spanner.cc:155-175 attach-dir CENTER）、線はその stencil の真右から始まる
+   （:621-626・gap なし）。Lily# は**列の左端**に中心を置いて発明 1.6+0.3 を払っていた——
+   **自分の列の符尾を覆わない台地では TXG が 8.000000 → 6.045000 に落ちる**＝半分ずつ入れると
+   悪化する（§5.0 の ossia の教訓）。⇒ 同時投入。**着地: TXW 8.000000000 → 3.550000000
+   （残差 +3.279279 → −1.170721＝予測どおり）・他 7 点（TXG/TLS/TLB/TLW/TSB/TSP/TRF/TRC）不動。**
+6. ★★★ **スカラー支持辺が production から消えた**（承認済で削除）: 最後の消費者が trill だったので
+   `DynamicEngraver.ColumnUpEdge`/`ColumnSupportEdge`/`GetHighestExtent`/`GetLowestExtent` と
+   **`NoteColumnLayout.SupportEdgeUp`**（＋pin 網 2 本）を削除。**第34セッションの「列の到達距離
+   4 家」は 3 家になった**——支持辺の行は dynamics（第37）と trill（今回）が pointwise に移って
+   消えた。⚠️ 網が運んでいた主張は残っている（drawn stem 模型は `OutwardTip_*`＝削った read が
+   変換していた同じ家／符頭の LILC インクは `DynamicSupportPointwiseTests`）。
+7. **snapshot 2 枚の中身**（目視＋SVG 数値で衝突確認済）: `trill-spanner` は**中央の trill が
+   3.86 降りた**（X の遠い加線付き stop 列がもう持ち上げない＝コーパスに出た TXW 欠陥）・
+   全部の tr が列中心へ +0.652・波の始まりが −0.14／`trillspan-lower-staff` は X のみ。
+   波は加線より左で終わるので**インク衝突なし**。
+8. **残した named 事項**: ⑴ 支持がまだ**全 voice union**（LP の Trill_spanner_engraver は
+   **Voice 文脈**・engraver-init.ly:376）——`TrillSpannerItem` に VoiceIndex が無い＝
+   第37セッションの `DynamicItem.VoiceIndex` と同じモデル追加が先 ⑵ my_dim の波は Lily# の
+   描画装置（＝半分 (c)）⑶ broken piece は 1 つの Y のまま（**per-piece の pointwise 解の max**
+   にしたので各 piece は自分の system の X フレームで読む）⑷ 右バウンドは Lily# の
+   BoundPadding 0.5（LP は列左端＋波要素の端数分だけ短い）。
+9. ★★★ **続けて (b)(c) も同セッションで閉じた——そして (b) の記述は間違っていた**
+   （`aa30ca83`・`0a522899`・どちらも GO 済・snapshot 各 2 枚）:
+   - ⑴ ★★ **(b)「加線インクを staff skyline へ」は既に移植済だった**——
+     `SkylineBuilder.AddNoteBoxToSkylines` は最初から加線の箱を seed している
+     （同じ length-fraction・同じ厚み）。**障害物を隠していたのは線の X**: Lily# は波を
+     stop 列の 0.5（`BoundPadding`・出典なしの発明）手前で止めており、LP は右バウンドを
+     **列の左端**に付ける（line-spanner.cc:155-175 attach-dir LEFT・:561-562 bound-details
+     padding なし）。加線は列の左 0.326 までしか届かないので、**波は clear すべきインクの
+     0.174 手前で終わっていた**。⇒ **「未移植」と引き継がれた項目は、まず Lily# を読む。**
+   - ⑵ **(c1) stacker が move 計算と登録で別の profile を渡していた**（move 側は全 span を
+     覆う平らなグリフ高の箱）。LP は `avoid_outside_staff_collisions` と `all_v_skylines` に
+     **同じ v_skylines** を渡す（axis-group-interface.cc:770-773,:798-803）。1 本にした。
+     **予測を先に書いて 4.100000+0.460000+0.250000 = 4.810000・残差 +0.089279＝
+     0.25−0.160721 → 実測 4.810000000 で桁まで的中。**
+   - ⑶ ★★★ **(c2) 波は「振幅」ではなく `scripts.trill_element` の反復だった**
+     （`TrillWaveOutline`＝make_trill_line の字面）。**グリフの箱は 2 つ両方使う**:
+     LILC 幅 1.0 が**反復ステップ**、アウトライン幅 1.448 が**先頭 1 個の長さ**——差が
+     「隣とブレンドするためのはみ出し」（LP 自身のコメント :72-74）。だから run 長は
+     `1.448 + n*1.0` で、**線は必ずバウンドの手前で終わる**（dump の 0.0486）。
+     消費者は 3 つ（engraver の my_dim／stacker の mover／renderer の線長）で**家は 1 つ**。
+     **着地: TXW −0.000179688＝平坦化族**（傾き ~1.2 の building 上の点なので 1e-4 の X 差が
+     そのまま出る・LP の記録値も六桁丸め）。**fit しない。**
+   - ⑷ ⚠️ **誤った原因を 2 回書いて 2 回撤回した**（このセッション内で）: layout に
+     **fit 済みの端**を持たせた版で TXW が静止 3.550000 に落ちた。①「Lily# の spacing では
+     加線が重ならない」→ 実測で否定（span は LP と一致）②「`(int)(delta/elt_len)` が
+     6.0−ε を 5 に切る」→ **自分で書いた単体テストが否定**、両順序の直接測定も否定。
+     **機構は未特定**。出荷形は字面のほう（layout はバウンドを持ち、各消費者が 1 回 fit）で
+     どちらでも同じなので、コード・台帳 why・プローブヘッダには**観測だけを書き、原因は
+     撤回した**（§5.3「ピンできていない原因を書かない」・§5.2 の六桁トラップの一段下）。
+   - ⑸ **残す named 事項**: **描画はまだ放物線ポリライン**（予約＝グリフのアウトライン／
+     描画＝ポリライン。dynamics の feta 対 serif と同じ既存の分裂）。**glyph run を描くのが
+     正しい終端で、全 trill の見た目が変わる**ので独立の一手。予約のほうが大きい
+     （±0.404 対 ±0.25）ので**重なりは起きない**。
+
+### 第38セッション（2026-07-30）＝ **trill raw 3.5 を起票→port まで一気通貫——支持の「形」（平ら my_dim のスカラー）は正しく、違うのは値だけだった** ⚠️ **「スカラーで足りる」は第39セッションで反証済み（下の 4・7 と round 2 の 7 を参照）**
 
 ★★★ **第37セッションが名指した「raw 3.5 の最後の消費者 trill・点が先」を、起票（`2b6fb21d`）
 →port（`daeb203c`）まで同セッションで閉じた**。新プローブ `trill-stem-support.ly`
@@ -130,15 +227,15 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 **Round 2（同セッション・ユーザーの字面度監査→未測定 3 regime を測定・`224a3cba`・
 台帳 4 点・出力不変）**:
 
-7. ★★★ **TXW が第3候補に落ち、二分 3 冊（TXN/TXE/TXS）で六桁分解**: 4.720721 ＝
-   **stop 列の加線 ink top 4.05 + 0.5 + 波の実 ink reach 0.170721**。
-   ⇒ **trill の aligned_side も pointwise**（my_dim＝グリフ台地 −1.0／波 ±0.17 の 2 片・
-   X 重なりで gate・支持に**加線 ink**）。tall の head/stem は spanner ink の外（gap 0.0486）
-   で**何も課さず、LP は stem tip が trill 線を突き抜けた絵を自分で描く**。TXS（全体を
-   1 小節右へ）が 13 桁同一＝絶対 X（pure xc=0）仮説は死亡。**Lily# のスカラー max は
-   8.0 → 残差 +3.279279＝X 盲目欠陥の定量**。port＝pointwise trill 支持（第37セッションの
-   dynamics の形を trill へ・`trill.x.{glyph,wave}-zone` が gate）。TXG（グリフ帯 control）は
-   両側 8.0 exact。
+7. ★★★ **TXW が第3候補に落ち、二分 3 冊（TXN/TXE/TXS）で六桁分解**: 4.720721。
+   ⚠️ **この節が書いた分解「加線 4.05 + trill の padding 0.5 + 波リーチ 0.170721＝aligned_side の
+   pointwise 化」は第39セッションで全項ハズレと判明**（和だけ合っていた・上の第39節）。
+   **正しくは 加線 ink top 4.100000 + outside-staff 0.460000 + 波アウトラインの局所値 0.160721。**
+   ここで**正しかった観測**: tall の head/stem は spanner ink の外（gap 0.0486）で**何も課さない**
+   （LP は stem tip が trill 線を突き抜けた絵を自分で描く）・TXS（全体を 1 小節右へ）が 13 桁同一
+   ＝絶対 X（pure xc=0）仮説は死亡・**Lily# のスカラー max 8.0 ＝残差 +3.279279 が X 盲目欠陥**・
+   TXG（グリフ帯 control）は両側 8.0 exact。**pointwise 化そのものは正しい port で、第39セッションで
+   landing 済（TXW 3.550000000）**——ただし「支持に加線が入る」は誤りで、加線は衝突 pass 側。
 8. ★★ **TSB（sloped 強制上向き pair）**: LP 8.221188659 ＝ **高側 member の stem 端
    （自分の X での face）+ 1.5・15 桁**——Beam 包絡の角 6.74 ではない（半 stem 幅の
    slope 分 0.019 離れる）。**Lily# の sloped quant face は 3e-10 で一致**＝残差 0。
@@ -956,6 +1053,21 @@ Lily# は **bold**。**コーパスはアンカーしか測らず記号の幅は
 ⚠️★★ **残差はもう最大 0.027480（OTC・支持側の箱）。「総和が下がったか」では何も見えない**——
 **変更の効果は落ちた点の id で読むこと**（§5.0）。**残っているのは全部「点が無い regime」。**
 
+★★★ **trill 島は第39セッションで閉じた**（8 点中 7 点 exact ＋ TXW 1.8e-4＝平坦化族）。
+**次に手を動かせる候補（点が既に開いているもの）**:
+- ★★ **script の outside-staff-priority を priority pass の mover に**（第38セッションが
+  起票した残りの port・台帳 `trill.fermata-priority` TSP・**残差 +1.685**）。fermata は
+  `(outside-staff-priority . 75)`（scm/script.scm）＞ trill 50 なので LP では trill が先に
+  置かれ fermata がそれを越える。Lily# は script を**不動 seed** にするので逆に鳴る
+  （`OutsideStaffStacker.SeedAboveTrackers`）。⇒ **宣言 priority を持つ script は mover、
+  無宣言は seed**（LP 自身の分業）。⚠️ stacker が articulations を**返す**必要がある
+  （今は seed するだけ）＝`LayoutEngine` 側の配線も動く。fermata はコーパスに多いので
+  snapshot は広めに割れる見込み。
+- **trill の描画を glyph run へ**（第39セッション節 9⑸・予約は既に glyph run なので
+  **描画だけが残る**）。⚠️ **全 trill の見た目が変わる**ので独立の GO 案件。
+- **`TrillSpannerItem` に VoiceIndex**（支持を LP どおり自 voice だけに。第37セッションの
+  `DynamicItem.VoiceIndex` と同じモデル追加・第39セッション節 8⑴）。
+
 ★★ **字面度負債（第30セッションの自己監査で名指し・全部「点が先」）**。
 ~~▶1 の「stacker の interval 箱」~~ — **閉じた**（第31セッション・X 揃え＋0.2 padding まで込み）。
 ⚠️ **ottava の +0.027480 はまだ割れていない**——stacker は skyline を持ったが ottava 自身と
@@ -1676,6 +1788,21 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   LYRRV の予測は 3 つの数を挙げていたが、照合は**両 book の dump を機械的に行単位で差分**した
   （59 行・完全一致）。3 つだけ見ていたら**4 つ目が動いても「恒等」と書いていた**。
   ⚠️ 目視で「同じに見える」も同じ穴——**差分は道具に取らせる。**
+- ★★★ ⚠️ **六桁で閉じた分解は、各項を出典から読むまで証拠にならない**（2026-07-30・第39セッション
+  が第38セッションの TXW 分解を全項訂正）。`加線 4.05 + padding 0.5 + 波 0.170721` と
+  `加線 4.100000 + 0.460000 + 0.160721` は**同じ 4.720721**——項が 3 つあれば、誤った機構でも
+  和はいくらでも合わせられる（§5.2 の「打ち消し合う 2 つの誤り」の 3 項版）。
+  ⚠️ **判定法**: その項の**数**を LP のどの行から引いたか（4.05 は引けない・4.1 は
+  `staff-symbol.cc:337-344` から引ける）。引けない項が 1 つでもあれば、分解ではなく当てはめ。
+  ⇒ ★★ **そして当てはめは「どの pass が勝ったか」を取り違える**——0.5 と 0.46 のどちらを
+  払っているかは**port 先が別のファイルになる**ほどの違いだった（engraver か stacker か）。
+- ★★★ ⚠️ **extent から推論すると、skyline にしか居ない grob を構造的に見落とす**
+  （同上）。LP には **`X-extent #f`/`Y-extent #f` を宣言しつつ `vertical-skylines` を stencil から
+  持つ grob**が居る（LedgerLineSpanner・`define-grobs.scm:2072-2074`）＝**どんな extent 計算にも
+  現れず、衝突 pass だけが見る**。ext dump だけを読んでいた第38セッションはこれを
+  「支持に加線が入る」と誤読した。⇒ ★ **分解は grob の skyline を dump して読む**:
+  `ly:skyline->points` / `ly:skyline-max-height`（`lily/skyline-scheme.cc`）で
+  **プロファイルそのもの**が出る。**mover 側の 2 片アウトラインも、障害物の X も、これで見える。**
 - ★★ ⚠️ **commit message で「この配置に対応した」と書いたら、その配置を 1 回描く**
   （2026-07-28・同セッションで回帰を出して直した）。`fe679617` は
   「音符束縛と行が同じアンカーに共存する譜のためにキーを一般化した」と**名指したうえで、

@@ -177,6 +177,15 @@ internal static partial class GlyphMetrics
     /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTrillGlyphAdvance = 0.848000;
 
+    /// <summary>Trill line element (the wave's repeating unit) — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.trill_element (scripts.trill_element = U+E070 in this build)</remarks>
+    public static readonly BBox OrnTrillElementGlyph = new(0.000000, 0.000000, 1.000000, 0.800000);
+    /// <summary>Trill line element (the wave's repeating unit) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox OrnTrillElementGlyphOutline = new(-0.224000, -0.004000, 1.224000, 0.804000);
+    /// <summary>Trill line element (the wave's repeating unit) — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnTrillElementGlyphAdvance = 1.000000;
+
     /// <summary>Turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.turn (scripts.turn = U+E05B in this build)</remarks>
     public static readonly BBox OrnTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);

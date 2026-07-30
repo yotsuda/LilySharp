@@ -235,7 +235,10 @@ internal static class DynamicEngraver
     ///   <c>include_staff</c> (:217-220) is true exactly because DynamicLineSpanner sets
     ///   staff-padding.
     /// </remarks>
-    private static double StaffExtent
+    /// <remarks>Exposed for <see cref="TrillSpannerEngraver"/>, the other aligned_side
+    /// consumer that declares staff-padding — one home for the staff symbol's own extent
+    /// rather than a second spelling of the derivation.</remarks>
+    internal static double StaffExtent
         => StaffMiddle + EngravingDefaults.StaffLineThickness / 2;
 
     /// <summary>
@@ -522,59 +525,14 @@ internal static class DynamicEngraver
         return (box.Left + box.Right) / 2.0;
     }
 
-    /// <summary>
-    /// The supports' skyline edge on the <paramref name="dir"/> side (+1 up, −1 down):
-    /// the extreme of EVERY voice's note column at this timing — so in a
-    /// &lt;&lt; \\ &gt;&gt; the dynamic sides off the lower voice's down-stem rather than
-    /// sitting through it — with the staff symbol's own extent as the minimum.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/side-position-interface.cc:265-321 (supports merged into
-    ///   <c>dim</c>) and :323-330 (<c>dim.set_minimum_height (staff_extents[dir])</c>).
-    /// </remarks>
-    /// <summary>
-    /// The UP support edge of one note column in the staff-middle Y-up frame — exposed
-    /// for the trill spanner's aligned_side, which reads the same side supports (its
-    /// spanned note columns, floored by the staff extent) on the UP side.
-    /// </summary>
-    internal static double ColumnUpEdge(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex,
-        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamAt = null)
-        => ColumnSupportEdge(voices, measureIndex, itemIndex, 1.0, beamAt);
-
-    private static double ColumnSupportEdge(
-        ImmutableArray<Voice> voices, int measureIndex, int itemIndex, double dir,
-        Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamAt = null)
-    {
-        var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
-        // :323-330 — the staff is the floor under whatever the notes contribute.
-        double edge = dir * StaffExtent;
-        bool multiVoice = vs.Length > 1;
-        for (int vi = 0; vi < vs.Length; vi++)
-        {
-            var voice = vs[vi];
-            if (measureIndex >= voice.Measures.Length)
-                continue;
-            var items = voice.Measures[measureIndex].Items;
-            if (itemIndex >= items.Length)
-                continue;
-            // In a multi-voice staff the stems are force-flipped (voice 1 up,
-            // voice 2 down) regardless of the note's pitch-default StemUp, so a
-            // low note in the lower voice still has a long DOWN stem to clear.
-            bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
-            // A beamed member's direction and stem end are the BEAM's (one direction
-            // per group, quanted face at the member's X) — the same resolution
-            // PointwiseBaselineY hands the pointwise support.
-            // LILYPOND-REF: lily/beam.cc:238-243 — get_default_dir then
-            //   set_stem_directions: the beam stamps ONE direction onto its stems.
-            var beamed = beamAt?.Invoke(vi);
-            double e = dir > 0
-                ? GetHighestExtent(items[itemIndex], forcedStemUp, beamed)
-                : GetLowestExtent(items[itemIndex], forcedStemUp, beamed);
-            edge = dir > 0 ? Math.Max(edge, e) : Math.Min(edge, e);
-        }
-        return edge;
-    }
+    // The SCALAR support edge (ColumnUpEdge / ColumnSupportEdge / GetHighestExtent /
+    // GetLowestExtent, over NoteColumnLayout.SupportEdgeUp) is GONE (2026-07-30,
+    // session 39). Its last consumer was the trill spanner, and ledger
+    // trill.x.{glyph,wave}-zone measured that the trill's aligned_side is POINTWISE too:
+    // the same tall column reads 8.000000 under the glyph and NOTHING under the wave,
+    // which no single scalar can answer. Both consumers now build
+    // ColumnSupportSkylines (above) and take Skyline::distance against their own facing
+    // profile, which is what side-position-interface.cc:265-330,:353-358 does.
 
     // The dynamic/expressive label is drawn at FontSize*0.5 = 2.0 with
     // TextAnchor.Middle (see DrawDynamics), so it extends this far to each side of
@@ -597,47 +555,4 @@ internal static class DynamicEngraver
     // avoid_outside_staff_collisions, 0.46, pointwise), the device LilyPond actually
     // has. audit/lp-geometry staff.staff.dynamic-beam-avoid.
 
-    /// <summary>
-    /// Gets the lowest Y extent of a music item in the native Y-up frame
-    /// (staff-spaces above the staff middle, up-positive; lowest = smallest).
-    /// </summary>
-    /// <remarks>
-    /// A note/chord column reads the single house of a column's reach
-    /// (<see cref="NoteColumnLayout.SupportEdgeUp"/> — HANDOFF §5.2.1②): the head's
-    /// LILC glyph ink, extended to the DRAWN stem end (shortened / beam-quanted face)
-    /// when the stem points this way — ledger trill.{shortened-stem,beam-face,
-    /// stemless-control} gated the raw-3.5 model out on 2026-07-30. A beamed member's
-    /// direction is the beam's own. Rests and other items are not columns and stay here.
-    /// </remarks>
-    private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null,
-        (BeamLayout Beam, double MemberX, bool StemUp)? beam = null)
-    {
-        if (NoteColumnLayout.Of(item, beam is { } b ? b.StemUp : forcedStemUp,
-                beam?.Beam, beam?.MemberX ?? 0.0) is { } column)
-            return column.SupportEdgeUp(up: false);
-        return item switch
-        {
-            // Rest is typically around middle of staff (1 ss below the middle line)
-            RestItem => -1.0,
-            _ => -StaffMiddle,
-        };
-    }
-
-    /// <summary>
-    /// Highest Y extent (most-above = largest Y-up, staff-spaces above the staff
-    /// middle) of a music item — the mirror of <see cref="GetLowestExtent"/>,
-    /// accounting for an up-stem.
-    /// </summary>
-    private static double GetHighestExtent(MusicItem item, bool? forcedStemUp = null,
-        (BeamLayout Beam, double MemberX, bool StemUp)? beam = null)
-    {
-        if (NoteColumnLayout.Of(item, beam is { } b ? b.StemUp : forcedStemUp,
-                beam?.Beam, beam?.MemberX ?? 0.0) is { } column)
-            return column.SupportEdgeUp(up: true);
-        return item switch
-        {
-            RestItem => 1.0, // 1 ss above the middle line
-            _ => StaffMiddle, // staff top
-        };
-    }
 }

@@ -26,8 +26,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// HANDOFF §5.2.1②: session 34 counted FOUR homes of a column's vertical reach —
 /// <c>TupletBracketEngraver.ColumnOutwardTip</c>, <c>ArticulationEngraver.StemSupportExtent</c>,
-/// <c>DynamicEngraver</c>'s column support edges (<c>GetHighestExtent</c>/<c>GetLowestExtent</c>)
-/// and <c>SkylineBuilder</c>'s stem seed. Each had its own spelling of one skeleton
+/// <c>DynamicEngraver</c>'s column support edges and <c>SkylineBuilder</c>'s stem seed.
+/// (The support-edge row is GONE since session 39: both of its consumers — the dynamics
+/// in session 37, the trill in 39 — now read a POINTWISE support instead of a scalar
+/// edge, so the table below has THREE reads.) Each had its own spelling of one skeleton
 /// (pick the head on the reach's side; no stem for a whole/breve; a beamed stem ends
 /// on the quanted beam; an unbeamed one where the renderer draws it), and fidelity
 /// ports kept landing on one home at a time — the raw 3.5 left the articulations in
@@ -49,10 +51,6 @@ namespace LilySharp.Core.Svg.Layout;
 /// │                                        │ (<see cref="StemCalculator.CalculateStemEndY"/>) │                │
 /// │ <see cref="StemSupportDistanceDeviceY"/>│ the same two                         │ NOMINAL half head 0.5     │
 /// │ (articulation side-support)            │                                       │ (whole/breve only)        │
-/// │ <see cref="SupportEdgeUp"/>            │ the same two (via                     │ glyph ink, true side      │
-/// │ (trill support; the dynamics left for  │ <see cref="OutwardTipDeviceY"/> — the │                           │
-/// │ the pointwise support, session 37; the │ raw 3.5 died 2026-07-30, gated by     │                           │
-/// │ raw 3.5 ported out, session 38)        │ ledger trill.{shortened-stem,…})      │                           │
 /// │ <see cref="RendererStemLength"/>       │ length rule only (no middle-line      │ (seeded separately by the │
 /// │ (skyline stem seed, per chord HEAD)    │ extension, no minimum floor — both    │ skyline, glyph ink)       │
 /// │                                        │ bind only inside the staff)           │                           │
@@ -230,64 +228,16 @@ public readonly record struct NoteColumnLayout
         return Math.Abs(anchorY - tipY);
     }
 
-    /// <summary>
-    /// The TRILL support edge on <paramref name="up"/>'s side, in the Y-up staff-middle
-    /// frame (staff-spaces above the middle line, up-positive) — the head's glyph ink,
-    /// extended to the DRAWN stem end (<see cref="OutwardTipDeviceY"/>'s model: the
-    /// quanted beam face for a beamed column, <c>StemCalculator.CalculateStemEndY</c>
-    /// for an unbeamed one) when the stem points toward that side.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/grob.cc:81-89 simple_vertical_skylines_from_extents — every
-    ///   support grob's skyline defaults to its EXTENT, and a Stem's extent is the
-    ///   drawn one; the head's own extent is its LILC glyph ink, not a nominal half
-    ///   staff space.
-    /// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position — duration
-    ///   lengths, the unnatural-direction shortening (middle line included), the
-    ///   middle-line pull; a beamed stem ends at the quanted beam face.
-    /// <para>
-    /// ⚠️ PORTED 2026-07-30 (session 38), gated by ledger
-    /// trill.{shortened-stem,beam-face,stemless-control}.staff-to-line (probe
-    /// trill-stem-support.ly). Until then this was the LAST raw-3.5 read (head +
-    /// <c>DefaultStemLength</c>, no shortening, beam-blind — Lily# read TLS ≡ TLB
-    /// nine-digit at 9.0 where LilyPond separates them, 8.000000 = shortened tip 6.5
-    /// + 0.5 + 1.0 and 8.240000 = quanted face 6.74 + 0.5 + 1.0). The measurement
-    /// also fixed the SHAPE: the trill's facing profile is FLAT (LilyPond's
-    /// straight-line skyline wrapper, define-grobs.scm:4054-4068), so this stays a
-    /// SCALAR edge — unlike the dynamics, whose five points measured a pointwise
-    /// support (<c>DynamicEngraver.ColumnSupportSkylines</c>) — and aligned_side
-    /// (not the 0.46 outside-staff pass) is the winning chain, measured (TLB lost
-    /// the pass candidate by exactly the padding difference 0.04).
-    /// </para>
-    /// <para>
-    /// The head branch is unchanged by the port (true-side glyph ink) — the TLW
-    /// control landed 0 exact on it and must not move.
-    /// </para>
-    /// </remarks>
-    public double SupportEdgeUp(bool up)
-    {
-        // A stem is a support on this side only when it POINTS this way — a stem
-        // pointing away is dropped and the head speaks for the column.
-        // LILYPOND-REF: lily/side-position-interface.cc:273-281 — the get_grob_direction
-        //   mismatch skip (`dir == -get_grob_direction (e)` drops the stem).
-        if (HasStem && StemUp == up)
-        {
-            // The drawn stem end, via the same house the tuplet encompass reads —
-            // OutwardTipDeviceY: the beam-quanted end for a beamed column, the drawn
-            // stem end for an unbeamed one. It answers in the staff-top device frame;
-            // this read's frame is staff-middle Y-up, so the conversion is
-            // StaffMiddle − deviceY.
-            // LILYPOND-REF: lily/stem.cc:490-497 internal_calc_stem_end_position —
-            //   the beamed branch fires `quantized-positions` and returns the
-            //   beam-quanted end; the unbeamed branch is the drawn length chain
-            //   (:499-596) StemCalculator ports.
-            return EngravingDefaults.StaffMiddle - OutwardTipDeviceY(towardUp: up);
-        }
-
-        double headUp = HeadPositionToward(up) * 0.5;
-        var head = GlyphMetrics.GetNoteheadBBox(NoteValue);
-        return headUp + (up ? head.Top : head.Bottom);
-    }
+    // SupportEdgeUp is GONE (2026-07-30, session 39). It was the SCALAR support edge —
+    // the head's glyph ink extended to the drawn stem end when the stem pointed that way
+    // — and the trill spanner was its last consumer. Ledger trill.x.{glyph,wave}-zone
+    // then measured that LilyPond's aligned_side is POINTWISE for the trill too (an
+    // X-away column imposes NOTHING: TXW reads the quiet 3.550000 where TXG, the same
+    // column under the glyph, reads 8.000000), so the trill moved to the pointwise
+    // support the dynamics already use (DynamicEngraver.ColumnSupportSkylines, which
+    // reads OutwardTipDeviceY and the head's LILC ink out of this same house). A scalar
+    // edge cannot answer both books at any value, so there is nothing left to keep:
+    // the four reads in the table above are three.
 
     /// <summary>
     /// The skyline stem seed's LENGTH (staff-spaces): the renderer's duration-and-shortening

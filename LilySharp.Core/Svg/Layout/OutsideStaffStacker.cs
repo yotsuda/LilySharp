@@ -580,14 +580,8 @@ internal static class OutsideStaffStacker
             // lily/axis-group-interface.cc:747-749 add_grobs_of_one_priority — the
             //   collision padding is outside-staff-padding (default 0.46).
             bool hasGlyph = t.GlyphX < t.LineStartX;
-            double wave = EngravingDefaults.TrillWaveAmplitude
-                + EngravingDefaults.StaffLineThickness / 2.0;
-            double reach = hasGlyph
-                ? EngravingDefaults.TrillSpannerTextOffsetDown
-                : wave;
-            double top = hasGlyph
-                ? GlyphMetrics.OrnTrillGlyph.Top - EngravingDefaults.TrillSpannerTextOffsetDown
-                : wave;
+            double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
+            double top = GlyphMetrics.OrnTrillGlyph.Top - reach;
             // X reach: the glyph's TRUE (outline) left, not its bounding box —
             // LilyPond wraps the bound text in make-with-true-dimension-markup exactly
             // because "the trill glyph has a loop on its left, which sticks out of its
@@ -605,46 +599,52 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: lily/axis-group-interface.cc:747-749,:804 add_grobs_of_one_priority
             //   — all_paddings gets outside-staff-padding.
             //
-            // And the entry's PROFILE is the trill's stencil skyline shape, not its
-            // extent box: a FLAT plateau over the glyph's x-range — LilyPond's OWN
-            // construction, not an approximation: the bound text wraps the glyph so as
-            // to "set up a straight line as the vertical skyline for the trill glyph"
-            // (its comment's words) — and the low WAVE over the rest of the span. The
-            // placement itself stays the extent box (aligned_side Y-offsets by extents
-            // — that is what the TRF/TRC ledger arithmetic reads), but what a later
-            // grob must clear over the wave is the wave, not a glyph-high plateau.
-            // MEASURED: the metronome mark's digits sit over the wave; with one flat
-            // plateau over the whole SPAN registered, TMT read the "0"'s overshoot
-            // (+0.033); with the glyph/wave split it reads 0.000000000 — the binding
-            // ink is a flat-baseline glyph over the plateau, LilyPond's own split.
+            // The trill's profile is its STENCIL skyline shape, not its extent box: a FLAT
+            // plateau over the glyph's x-range — LilyPond's OWN construction, not an
+            // approximation: the bound text wraps the glyph so as to "set up a straight
+            // line as the vertical skyline for the trill glyph" (its comment's words) —
+            // and the low WAVE over the rest of the span.
+            // ⚠️ ONE profile does BOTH jobs (2026-07-30): the collision the move is
+            // computed from and the entry a later grob clears. Until then the move ran on
+            // a flat glyph-high box over the WHOLE span while the 2-piece pair was only
+            // registered — two spellings of one grob's skyline, and the wrong one was
+            // load bearing. LilyPond passes the SAME v_skylines to
+            // avoid_outside_staff_collisions and to all_v_skylines, so a grob's own thin
+            // wave is what it clears an obstacle with. MEASURED: ledger trill.x.wave-zone
+            // = the stop column's LEDGER ink 4.100000 + 0.460000 + the wave's own reach;
+            // with the glyph-high box the trill sat a full 1.0 - waveReach too high there.
+            // MEASURED (the registration half, session 33): the metronome mark's digits
+            // sit over the wave; with one flat plateau over the whole SPAN registered, TMT
+            // read the "0"'s overshoot (+0.033); with the glyph/wave split it reads
+            // 0.000000000 — the binding ink is a flat-baseline glyph over the plateau.
             // LILYPOND-REF: scm/define-grobs.scm:4054-4068 TrillSpanner bound-details,
             //   make-with-dimension-from-markup ("straight line as the vertical
-            //   skyline");
-            // lily/axis-group-interface.cc:770-773 add_grobs_of_one_priority
-            //   — all_v_skylines gets the grob's vertical-skylines (from the stencil).
-            var qUp = VerticalSkyline.FromBox(x0, t.LineEndX,
-                t.YUp - reach, t.YUp + top, VerticalDirection.Up);
-            var qDown = VerticalSkyline.FromBox(x0, t.LineEndX,
-                t.YUp - reach, t.YUp + top, VerticalDirection.Down);
-            VerticalSkyline? regUp = null, regDown = null;
+            //   skyline"), :4085 vertical-skylines from the stencil;
+            // lily/axis-group-interface.cc:770-773,:798-800 add_grobs_of_one_priority
+            //   — v_skylines goes to avoid_outside_staff_collisions AND to all_v_skylines.
+            var qUp = new VerticalSkyline(VerticalDirection.Up);
+            var qDown = new VerticalSkyline(VerticalDirection.Down);
             if (hasGlyph)
             {
-                regUp = new VerticalSkyline(VerticalDirection.Up);
-                regDown = new VerticalSkyline(VerticalDirection.Down);
                 double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
                 double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
-                regUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                qUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
                     t.YUp - reach, t.YUp + top, VerticalDirection.Up));
-                regDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                qDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
                     t.YUp - reach, t.YUp + top, VerticalDirection.Down));
-                regUp.Merge(VerticalSkyline.FromBox(t.LineStartX, t.LineEndX,
-                    t.YUp - wave, t.YUp + wave, VerticalDirection.Up));
-                regDown.Merge(VerticalSkyline.FromBox(t.LineStartX, t.LineEndX,
-                    t.YUp - wave, t.YUp + wave, VerticalDirection.Down));
             }
-            double move = trackers[sysIdx].Place(qUp, qDown,
-                OutsideStaffPadding, 0,
-                registerUp: regUp, registerDown: regDown);
+            // The line itself: the run of trill_element glyphs, the same house the
+            // engraver's aligned_side reads (TrillWaveOutline). Its ink is what a later
+            // grob clears over the wave — measured: a metronome mark's digits sit there
+            // (ledger tempo.trill-cleared.staff-to-baseline).
+            if (t.LineStartX < t.LineEndX)
+            {
+                var line = TrillWaveOutline.Place(
+                    t.LineStartX, t.LineEndX - t.LineStartX, t.YUp);
+                qUp.Merge(line.Up);
+                qDown.Merge(line.Down);
+            }
+            double move = trackers[sysIdx].Place(qUp, qDown, OutsideStaffPadding, 0);
             b[i] = t with { YUp = t.YUp + move };
         }
         return b.ToImmutable();
@@ -1252,8 +1252,7 @@ internal static class OutsideStaffStacker
         /// <c>Interval_set::interval_union(...).complement().nearest_point(0, dir)</c>.
         /// </remarks>
         public double Place(VerticalSkyline up, VerticalSkyline down,
-            double padding, double horizonPadding = 0, double? registerPadding = null,
-            VerticalSkyline? registerUp = null, VerticalSkyline? registerDown = null)
+            double padding, double horizonPadding = 0, double? registerPadding = null)
         {
             // The padded copy of the mover's own profile is the same object for every
             // entry that resolves to the same horizon padding (LP recomputes it per
@@ -1298,26 +1297,24 @@ internal static class OutsideStaffStacker
             }
 
             double move = NearestAllowed(forbidden, _dir);
-            // The entry stored for LATER grobs may differ from the pair the move was
-            // computed with, in two LilyPond-lettered ways:
-            //  - its PADDING is the grob's outside-staff-padding (registerPadding) — a
-            //    grob whose SIDE-POSITION padding differs (the trill's 0.5) pays that
-            //    against the support in this single pass, but later grobs pay the
-            //    outside-staff value against it, not the side padding;
-            //  - its PROFILE is the grob's stencil skyline pair (registerUp/Down) where
-            //    the placement itself ran on aligned_side's extent BOX — LilyPond
-            //    Y-offsets by extents and registers vertical-skylines.
-            // LILYPOND-REF: lily/axis-group-interface.cc:747-749,:770-773,:803-804 add_grobs_of_one_priority
-            //   — padding = outside-staff-padding (default), all_v_skylines gets the
-            //   grob's vertical-skylines pair, all_paddings.push_back (padding).
-            var storeUp = registerUp ?? up;
-            var storeDown = registerDown ?? down;
+            // The pair stored for LATER grobs is the SAME pair the move was computed with
+            // — LilyPond hands one v_skylines to avoid_outside_staff_collisions and then
+            // pushes that same pair onto all_v_skylines (:798-803). (Until 2026-07-30 the
+            // trill passed a different profile for each job; the placement one was a flat
+            // glyph-high box and it was the load-bearing one. Ledger trill.x.wave-zone.)
+            // Only the PADDING may differ: a grob whose SIDE-POSITION padding differs (the
+            // trill's 0.5) pays that against the support in this single pass, but later
+            // grobs pay its outside-staff-padding against it, not the side padding.
+            // LILYPOND-REF: lily/axis-group-interface.cc:747-749,:770-773,:798-804 add_grobs_of_one_priority
+            //   — padding = outside-staff-padding (default), avoid_outside_staff_collisions
+            //   then all_v_skylines.push_back get the same v_skylines,
+            //   all_paddings.push_back (padding).
             if (move != 0)
             {
-                storeUp.Raise(move);
-                storeDown.Raise(move);
+                up.Raise(move);
+                down.Raise(move);
             }
-            _entries.Add((storeUp, storeDown, registerPadding ?? padding, horizonPadding));
+            _entries.Add((up, down, registerPadding ?? padding, horizonPadding));
             return move;
         }
 

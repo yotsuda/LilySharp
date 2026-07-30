@@ -601,7 +601,13 @@ internal static partial class SharedRenderer
                 }
                 if (s.LineStartX < s.LineEndX)
                 {
-                    double length = s.LineEndX - s.LineStartX;
+                    // The line ends where its last WHOLE element does, not at the bound:
+                    // LilyPond's line is a run of scripts.trill_element glyphs and only
+                    // whole ones are added (which is why its dumps stop short of the
+                    // bound). Same house the reservation reads, one spelling.
+                    // LILYPOND-REF: lily/line-interface.cc:84-102 make_trill_line — total_len.
+                    double length = TrillWaveOutline.DrawnLength(
+                        s.LineEndX - s.LineStartX);
                     int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
                     double seg = length / halfWaves;
                     double prevX = s.LineStartX, prevY = absY;

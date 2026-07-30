@@ -161,59 +161,17 @@ public class NoteColumnLayoutTests
         Assert.Equal(2.0 - (2.0 + (3.5 - 5.0 / 6.0)), col.OutwardTipDeviceY(towardUp: true), 9);
     }
 
-    // ── The trill support model (drawn stem end, ledger-gated) ────────────────────
-
-    [Fact]
-    public void SupportEdge_StemSide_IsTheDrawnStemEnd()
-    {
-        // The trill's support reads the DRAWN stem end — shortened, middle-line
-        // pulled, beam-quanted — via the same house the tuplet encompass reads
-        // (OutwardTipDeviceY). PORTED 2026-07-30, gated by ledger
-        // trill.{shortened-stem,beam-face,stemless-control}.staff-to-line: LilyPond's
-        // support edge is the drawn tip (TLS measured 6.5 where the old raw model
-        // said 7.5 — that raw pin retired with the port, as its own comment demanded).
-        // FULL SHORTEN: forced-up quarter at +8 → 4.0 + (3.5 − 1.0) = 6.5, the TLS
-        // number. LILYPOND-REF: lily/stem.cc:519-555 (shorten when dir*hp[dir] >= 0).
-        var forcedUp = NoteColumnLayout.Of(
-            Note(8, Fraction.Quarter), forcedStemUp: true)!.Value;
-        Assert.Equal(6.5, forcedUp.SupportEdgeUp(up: true), 9);
-
-        // A natural-direction stem is NOT shortened: the up stem from −2 still ends
-        // at −1.0 + 3.5 — the raw and drawn models agree off the shortening regimes.
-        var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // natural: up
-        Assert.True(note.StemUp);
-        Assert.Equal(-1.0 + 3.5, note.SupportEdgeUp(up: true), 12);
-
-        // ONE house, two frames: the stem side IS OutwardTipDeviceY's model, converted
-        // from the staff-top device frame — a second stem model here would be the
-        // §5.2.1② shape this record exists to prevent.
-        Assert.Equal(
-            EngravingDefaults.StaffMiddle - note.OutwardTipDeviceY(towardUp: true),
-            note.SupportEdgeUp(up: true), 12);
-        var chord = NoteColumnLayout.Of(Chord(Fraction.Quarter, -2, 4))!.Value; // natural: down
-        Assert.False(chord.StemUp);
-        Assert.Equal(
-            EngravingDefaults.StaffMiddle - chord.OutwardTipDeviceY(towardUp: false),
-            chord.SupportEdgeUp(up: false), 12);
-    }
-
-    [Fact]
-    public void SupportEdge_HeadSide_IsTheGlyphInk()
-    {
-        // The no-stem side reads the head's LILC glyph ink (±0.545 — the extent LilyPond
-        // itself dumps for the black head), not the nominal half space. UNCHANGED by the
-        // drawn-stem port: the TLW control landed 0 exact on this branch and must not move.
-        // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents.
-        var note = NoteColumnLayout.Of(Note(-2, Fraction.Quarter))!.Value; // stem up
-        Assert.InRange(note.SupportEdgeUp(up: false), -1.56, -1.53);
-
-        // Multi-voice forcing is the CALLER's policy and flips which side has the stem
-        // — and the forced (unnatural) direction now takes the drawn shortening:
-        // head +4, shorten 1/3·(1+4)/2 = 5/6 (the OutwardTipDeviceY arithmetic above).
-        var forcedUp = NoteColumnLayout.Of(
-            Chord(Fraction.Quarter, -2, 4), forcedStemUp: true)!.Value;
-        Assert.Equal(2.0 + 3.5 - 5.0 / 6.0, forcedUp.SupportEdgeUp(up: true), 12);
-    }
+    // ── The trill support model ───────────────────────────────────────────────────
+    //
+    // SupportEdge_StemSide_IsTheDrawnStemEnd and SupportEdge_HeadSide_IsTheGlyphInk are
+    // GONE (2026-07-30, session 39) with the read they pinned: SupportEdgeUp was the
+    // SCALAR support edge, and ledger trill.x.{glyph,wave}-zone measured that LilyPond's
+    // aligned_side is POINTWISE for the trill as well (the same column reads 8.000000
+    // under the glyph and imposes nothing under the wave — no scalar answers both), so
+    // the trill now builds DynamicEngraver.ColumnSupportSkylines like the dynamics. The
+    // claims those two tests carried did not evaporate: the drawn-stem model is pinned by
+    // OutwardTip_* above (the same house the support read converted), and the head's LILC
+    // ink by DynamicSupportPointwiseTests on the pointwise side.
 
     // ── The skyline seed's length model ───────────────────────────────────────────
 
