@@ -192,6 +192,31 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("DynamicLetterR", "r", "Dynamic letter 'r' (fetaText)", "mf/feta-dynamics.mf — r", source="outline"),
     GlyphSpec("DynamicLetterS", "s", "Dynamic letter 's' (fetaText)", "mf/feta-dynamics.mf — s", source="outline"),
     GlyphSpec("DynamicLetterZ", "z", "Dynamic letter 'z' (fetaText)", "mf/feta-dynamics.mf — z", source="outline"),
+
+    # --- Figured-bass digits and alterations (fetaText, like the dynamics above) ---
+    # A BassFigure's stencil is ly:text-interface::print over `\number` markup
+    # (scm/define-grobs.scm:352-356, scm/translation-functions.scm:349-470
+    # format-bass-figure), so it is the TEXT path and the outline is the box LilyPond
+    # measures -- the same argument as the dynamic letters, and the reason source is
+    # "outline" here too. WHICH glyph is decided by BassFigure's font-features
+    # ("tnum" "cv47" "ss01") = fixedwidth + .alt(4,7) + fattened.
+    # ⚠️ THE SIZE IS NOT IN THIS FILE. These boxes are per EM at the font's design size;
+    # a figure is set at font-size -5 (translation-functions.scm:468-470's
+    # make-fontsize-markup), i.e. 4 ss * magstep(-5) -- see
+    # EngravingDefaults.FiguredBassFontSize, which is what scales them.
+    GlyphSpec("FigBassDigit0", "fattened.fixedwidth.zero",  "Figured-bass digit 0",  "mf/feta-numbers.mf — fattened.fixedwidth.zero", source="outline"),
+    GlyphSpec("FigBassDigit1", "fattened.fixedwidth.one",   "Figured-bass digit 1",  "mf/feta-numbers.mf — fattened.fixedwidth.one", source="outline"),
+    GlyphSpec("FigBassDigit2", "fattened.fixedwidth.two",   "Figured-bass digit 2",  "mf/feta-numbers.mf — fattened.fixedwidth.two", source="outline"),
+    GlyphSpec("FigBassDigit3", "fattened.fixedwidth.three", "Figured-bass digit 3",  "mf/feta-numbers.mf — fattened.fixedwidth.three", source="outline"),
+    GlyphSpec("FigBassDigit4", "fattened.fixedwidth.four.alt", "Figured-bass digit 4 (cv47 variant)", "mf/feta-numbers.mf — fattened.fixedwidth.four.alt", source="outline"),
+    GlyphSpec("FigBassDigit5", "fattened.fixedwidth.five",  "Figured-bass digit 5",  "mf/feta-numbers.mf — fattened.fixedwidth.five", source="outline"),
+    GlyphSpec("FigBassDigit6", "fattened.fixedwidth.six",   "Figured-bass digit 6",  "mf/feta-numbers.mf — fattened.fixedwidth.six", source="outline"),
+    GlyphSpec("FigBassDigit7", "fattened.fixedwidth.seven.alt", "Figured-bass digit 7 (cv47 variant)", "mf/feta-numbers.mf — fattened.fixedwidth.seven.alt", source="outline"),
+    GlyphSpec("FigBassDigit8", "fattened.fixedwidth.eight", "Figured-bass digit 8",  "mf/feta-numbers.mf — fattened.fixedwidth.eight", source="outline"),
+    GlyphSpec("FigBassDigit9", "fattened.fixedwidth.nine",  "Figured-bass digit 9",  "mf/feta-numbers.mf — fattened.fixedwidth.nine", source="outline"),
+    GlyphSpec("FigBassFlat",    "accidentals.flat.figbass",    "Figured-bass flat (U+266D)",    "mf/feta-flats.mf — flat.figbass", source="outline"),
+    GlyphSpec("FigBassNatural", "accidentals.natural.figbass", "Figured-bass natural (U+266E)", "mf/feta-naturals.mf — natural.figbass", source="outline"),
+    GlyphSpec("FigBassSharp",   "accidentals.sharp.figbass",   "Figured-bass sharp (U+266F)",   "mf/feta-sharps.mf — sharp.figbass", source="outline"),
 ]
 
 # --- Advance-only glyphs (just the horizontal advance width) ---

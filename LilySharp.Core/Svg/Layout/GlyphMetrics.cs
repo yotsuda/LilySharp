@@ -593,4 +593,50 @@ internal static partial class GlyphMetrics
         }
         return any;
     }
+
+    /// <summary>
+    /// The Emmentaler glyph a figured-bass character draws, with its outline box and its
+    /// advance — all three per EM at the font's design size, so a caller scales them by
+    /// <c>EngravingDefaults.FiguredBassFontSize / 4</c>. False for a character LilyPond has
+    /// no bass-figure glyph for (Lily#'s continuation dash), which the caller draws as text.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/translation-functions.scm:349-470 <c>format-bass-figure</c> — the
+    /// digits are <c>make-number-markup</c> (the <c>fetaText</c> encoding, per
+    /// scm/define-markup-commands.scm:3872-3881 <c>\number</c>: "the (music) font for
+    /// numbers … also contains symbols for figured bass") and the alteration is the same
+    /// markup over the Unicode accidental of <c>figbass-accidental-alist</c> (:338-343).
+    /// LILYPOND-REF: scm/define-grobs.scm:354 font-features of BassFigure (bass-figure-interface at :359) —
+    /// <c>("tnum" "cv47" "ss01")</c>, three OpenType SUBSTITUTIONS, so they
+    /// name the glyph: fixedwidth + the .alt four/seven + fattened. A numeric TIME signature
+    /// declares no features and therefore draws the BASE digits; the two are different cuts,
+    /// which is why the ratio between their inks says nothing about either.
+    /// <para>
+    /// ONE HOME, because the same three answers are wanted twice: by
+    /// <c>SharedRenderer.DrawFiguredBass</c> and by <c>FiguredBassEngraver</c>'s reservation
+    /// (HANDOFF §5.0 — the size and the metric source are two halves of one claim).
+    /// </para>
+    /// </remarks>
+    public static bool TryGetFiguredBassGlyph(char c, out char glyph, out BBox outline,
+        out double advance)
+    {
+        (glyph, outline, advance) = c switch
+        {
+            '0' => (Svg.EmmentalerGlyphs.FigBassDigit0, FigBassDigit0Outline, FigBassDigit0Advance),
+            '1' => (Svg.EmmentalerGlyphs.FigBassDigit1, FigBassDigit1Outline, FigBassDigit1Advance),
+            '2' => (Svg.EmmentalerGlyphs.FigBassDigit2, FigBassDigit2Outline, FigBassDigit2Advance),
+            '3' => (Svg.EmmentalerGlyphs.FigBassDigit3, FigBassDigit3Outline, FigBassDigit3Advance),
+            '4' => (Svg.EmmentalerGlyphs.FigBassDigit4, FigBassDigit4Outline, FigBassDigit4Advance),
+            '5' => (Svg.EmmentalerGlyphs.FigBassDigit5, FigBassDigit5Outline, FigBassDigit5Advance),
+            '6' => (Svg.EmmentalerGlyphs.FigBassDigit6, FigBassDigit6Outline, FigBassDigit6Advance),
+            '7' => (Svg.EmmentalerGlyphs.FigBassDigit7, FigBassDigit7Outline, FigBassDigit7Advance),
+            '8' => (Svg.EmmentalerGlyphs.FigBassDigit8, FigBassDigit8Outline, FigBassDigit8Advance),
+            '9' => (Svg.EmmentalerGlyphs.FigBassDigit9, FigBassDigit9Outline, FigBassDigit9Advance),
+            '♭' => (Svg.EmmentalerGlyphs.FigBassFlat, FigBassFlatOutline, FigBassFlatAdvance),
+            '♮' => (Svg.EmmentalerGlyphs.FigBassNatural, FigBassNaturalOutline, FigBassNaturalAdvance),
+            '♯' => (Svg.EmmentalerGlyphs.FigBassSharp, FigBassSharpOutline, FigBassSharpAdvance),
+            _ => ('\0', default, 0.0),
+        };
+        return glyph != '\0';
+    }
 }

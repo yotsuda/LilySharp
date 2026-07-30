@@ -293,6 +293,42 @@ internal static class EngravingDefaults
     public static readonly double TextScriptFontSize = 11.0 / 5.0;
 
     /// <summary>
+    /// The em a bass figure is set at, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/translation-functions.scm:468-470 <c>format-bass-figure</c> ends
+    /// <c>(make-fontsize-markup -5 fig-markup)</c> — every figure carries an explicit
+    /// font-size step of −5, which is why <c>BassFigure</c> itself declares none
+    /// (scm/define-grobs.scm:352-364 declares only <c>font-features</c>).
+    /// LILYPOND-REF: lily/font-select.cc:99-117 <c>select_font</c> — for the <c>fetaText</c>
+    /// encoding the base size is <b><c>staff-height</c></b>, NOT <c>text-font-size</c>
+    /// (that branch is latin1's), and the requested size is
+    /// <c>base * 2^(font-size / 6)</c>. A `\number` markup at font-size 0 is therefore set
+    /// at the MUSIC em — 20pt over a 5pt staff space = 4 ss — and a bass figure at 4 ss ×
+    /// magstep(−5).
+    /// <para>
+    /// ⚠️ SO THE NUMBER FACE IS NOT ON THE TEXT LADDER AT ALL. The handoff's chain guess was
+    /// that a figure is "that face at font-size 0" = the paper's 2.2 ss
+    /// (<see cref="LyricTextFontSize"/>'s base); it is not, and the two differ by 2%, an
+    /// order of magnitude more than the Pango-quantisation residual the corpus reads. The
+    /// same branch is what makes a numeric TIME signature's digit 2 ss tall from the very
+    /// same glyph family at font-size 0 — the ratio between the two is the magstep, not a
+    /// difference of face.
+    /// </para>
+    /// <para>
+    /// It lives here because both sides must agree on it (the same reason
+    /// <see cref="LyricTextFontSize"/> does): <c>FiguredBassEngraver</c> reserves the row's
+    /// ink at this em and <c>SharedRenderer.DrawFiguredBass</c> draws at it.
+    /// ⚠️ IT WAS <c>FontSize * 0.75</c> = 3.0 with a serif face — 34% large AND the wrong
+    /// font — which is the +0.375204764 that stood under every figured-bass ledger point.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: scm/translation-functions.scm:468-470 format-bass-figure —
+    // (make-fontsize-markup -5 fig-markup); lily/font-select.cc:99-117 select_font — for
+    // fetaText the base size is staff-height (4 staff spaces), stepped by 2^(font-size/6).
+    public static readonly double FiguredBassFontSize = 4.0 * Math.Pow(2.0, -5.0 / 6.0);
+
+    /// <summary>
     /// The chord symbol's font series: REGULAR, in one home the reserving engraver, the
     /// spacing rules and the renderer all read.
     /// </summary>
@@ -491,6 +527,27 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3816 TextScript staff-padding;
     /// lily/side-position-interface.cc:401-453 aligned_side.</remarks>
     public const double TextScriptStaffPadding = 0.5;
+
+    /// <summary>BassFigureAlignmentPositioning's staff-padding — the floor under a figure
+    /// ROW's refpoint, and (by being declared at all) what puts the staff extent into the
+    /// row's side-position support. MEASURED INERT in every regime a five-line staff has:
+    /// the support placement is staff ink + padding 0.5 + the top digit's cap, and every
+    /// figure's cap beats staff-padding − padding = 0.5 (ledger
+    /// figbass.quiet.staff-to-baseline = 2.05 + 0.5 + 1.124795235605315). Spelled anyway
+    /// because LilyPond computes both and takes the larger.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:395 staff-padding of BassFigureAlignmentPositioning (side-position-interface at :407);
+    /// lily/side-position-interface.cc:219-222 include_staff; lily/side-position-interface.cc:433-453 aligned_side's floor.</remarks>
+    public const double BassFigureStaffPadding = 1.0;
+
+    /// <summary>BassFigureAlignmentPositioning's side-position padding, paid against the
+    /// supports — the same 0.5 the loose-line device spells as
+    /// nonstaff-relatedstaff-spacing's padding (ly/engraver-init.ly:1121), which is why the
+    /// two devices put a figure row in the same place to fifteen digits (the probe measured
+    /// both). ⚠️ Lily# still SPENDS it in SkylineDrop, shared with the lyric line, so this
+    /// declaration is not yet its only home.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:393 padding of BassFigureAlignmentPositioning (side-position-interface at :407),
+    /// read by aligned_side :370.</remarks>
+    public const double BassFigurePadding = 0.5;
 
     /// <summary>OttavaBracket's staff-padding — the floor its LINE rests on over a
     /// quiet staff (ledger ottava.floor.staff-to-line = 2.05 + 2.0, exact).</summary>

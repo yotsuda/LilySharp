@@ -1359,7 +1359,8 @@ internal sealed class LayoutEngine
                 : 0;
             double fbY = fbOff + (2.0 - fb.YUp);
             Add(fb.MeasureIndex,
-                fbY - FiguredBassEngraver.FigureTopExtent,
+                fbY - FiguredBassEngraver.FigureInkTop(
+                    fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty),
                 fbY + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
         }
         // Note-bound scripts (a fermata over the top staff, a staccatissimo
@@ -1682,7 +1683,8 @@ internal sealed class LayoutEngine
             // figure column then extends downward (smaller Y-up).
             double fbStaffOffsetUp = LayoutUtilities.StaffOffsetInSystemUp(systems[s], fb.StaffIndex);
             double fbY = fb.YUp - 2.0 + fbStaffOffsetUp;
-            double top = fbY + FiguredBassEngraver.FigureTopExtent;
+            double top = fbY + FiguredBassEngraver.FigureInkTop(
+                fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
             double bottom = fbY
                 - ((fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
             var down = new VerticalSkyline(VerticalDirection.Down);
@@ -2681,9 +2683,60 @@ internal sealed class LayoutEngine
 
         // Layout figured bass (drops below below-staff scripts via the
         // script-augmented DOWN skylines)
+        var fbItems = figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty;
+
+        // ...and it drops below ITS OWN STAFF's profile, not the system silhouette. Built
+        // lazily per (system, staff) — the shape LayoutChordNames uses for a chord row under
+        // a non-top staff — so a score with no figures does no extra work.
+        // ⚠️ WHAT IS IN THE PROFILE IS DECIDED BY PRIORITY. BassFigureAlignmentPositioning
+        // declares outside-staff-priority 25 (scm/define-grobs.scm:387-411
+        // side-position-interface, outside-staff-priority, add-stem-support), so it is placed
+        // BEFORE the dynamics at 250 and clears the INSIDE-staff ink only: the staff, the
+        // clef, the notes, the beams and the note-bound scripts (which declare no priority of
+        // their own and so stay in the support skyline). Dynamics are deliberately NOT passed
+        // — at 250 it is the dynamic that clears the figures.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-950 skyline_spacing — the inside
+        //   skylines first, then add_grobs_of_one_priority in ascending priority order.
+        Func<int, int, VerticalSkyline?>? figuredBassStaffDown = null;
+        if (!fbItems.IsDefaultOrEmpty && staffByIndex != null)
+        {
+            var fbSkyCache = new Dictionary<(int, int), VerticalSkyline?>();
+            figuredBassStaffDown = (sysIdx, staffIndex) =>
+            {
+                if (sysIdx < 0 || sysIdx >= systems.Length
+                    || !staffByIndex.TryGetValue(staffIndex, out var staff))
+                    return null;
+                var key = (sysIdx, staffIndex);
+                if (!fbSkyCache.TryGetValue(key, out var sky))
+                {
+                    // The scripts enter with NO step: an ArticulationLayout's YUp is already
+                    // about its own staff's middle, which is the frame BuildStaffSkylines
+                    // works in. (AugmentSkylinesWithScripts takes the step because ITS target
+                    // is the system frame.)
+                    var staffScripts = articulationLayouts.IsDefaultOrEmpty
+                        ? ImmutableArray<ArticulationLayout>.Empty
+                        : articulationLayouts.Where(a => a.StaffIndex == staffIndex)
+                                             .ToImmutableArray();
+                    var down = _skylineBuilder.BuildStaffSkylines(
+                        staff, systems[sysIdx].Measures,
+                        articulationLayouts: staffScripts,
+                        beams: beamLayouts ?? ImmutableArray<BeamLayout>.Empty,
+                        systemLeft: systems[sysIdx].Indent).Down;
+                    // ⚠️ REFLECTED ONCE, HERE AT THE EDGE, into the system Y-up frame the drop
+                    // works in — and by the SAME expression AugmentSkylinesWithScripts uses for
+                    // "this staff's middle in the system's frame", so the two cannot drift.
+                    down.Raise(LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], staffIndex)
+                               - _options.StaffHeight / 2.0);
+                    sky = down;
+                    fbSkyCache[key] = sky;
+                }
+                return sky;
+            };
+        }
+
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
-            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, scriptedSkylines);
+            fbItems, systems, ml, measures,
+            measuresByStaff, scriptedSkylines, figuredBassStaffDown);
 
         var chordNameLayouts = LayoutChordNames(
             ctx, ml, scriptedSkylines, staffYAt, minStaffYAt);

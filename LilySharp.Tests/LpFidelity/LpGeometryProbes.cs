@@ -2175,6 +2175,130 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The figured-bass arrangements — the mirrors of figured-bass-placement.ly's books
+    /// FBLA / FBLB / FBLC, the corpus's FIRST figured-bass points.
+    /// </summary>
+    /// <remarks>
+    /// The figure-bearing part is identical in all three: bass clef, forced-down-stem C2
+    /// half notes (LilyPond <c>c,</c>, drawn position −8 = two ledger lines below the staff),
+    /// so the staff's ink reaches well past its own edge and neither engine can sit on a
+    /// floor. FBB and FBC are the SAME SCORE with the figures moved from one staff to the
+    /// other — the companion carries the identical deep-ink music, which is what a
+    /// system-wide reading would wrongly pick up.
+    /// ⚠️ <c>@stemDown</c> is a per-note override and works here because the notes are
+    /// UNBEAMED; a beam ignores per-note direction (HANDOFF §1 session-37 note 5), which is
+    /// why the fermata books force stems with a voice split instead.
+    /// ⚠️ The staff names are suppressed (<c>staff ~fig</c>) because the LilyPond books carry
+    /// no instrument name either. It ALSO used to be load-bearing for the harness: Lily# drew
+    /// an instrument name in the same serif face and the same em as a bass figure, so a named
+    /// staff put a decoy into <see cref="RenderedGeometry.BassFigures"/>. Since the face port
+    /// (2026-07-30) a figure is a music GLYPH and a name is text, so the decoy is gone —
+    /// the suppression stays for the first reason.
+    /// <para>
+    /// The three differ ONLY in where the figure-bearing staff sits, which is the entire
+    /// claim: LilyPond reads the same 8.124795235605315 in all three
+    /// (audit/lp-geometry/probes/figured-bass-placement.ly, measured 2026-07-30), because
+    /// both of its devices resolve against the figures' OWN staff.
+    /// </para>
+    /// </remarks>
+    /// <summary>The figure-bearing staff ALONE — the mirror of book FBLA.</summary>
+    private static readonly string FBA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part fig { clef bass }
+
+        section Main {
+          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+        }
+
+        form main { ~Main }
+
+        score main "FBA" {
+          staff ~fig
+        }
+        """;
+
+    /// <summary>
+    /// THE QUIET CONTROL — the mirror of book FBLQ. The same figures under a staff whose
+    /// column reaches nowhere (middle-line d, stems forced UP), so the STAFF's own ink is the
+    /// deepest thing there is and whatever floors the row is what reads.
+    /// </summary>
+    /// <remarks>
+    /// This is the pair-mate the placement port needs, the figured-bass form of the trill
+    /// island's TRF/TRC: with a deep column the support decides, and with a quiet one the
+    /// staff does. MEASURED (LilyPond): 3.674795235605315 = staff ink 2.05 + padding 0.5
+    /// (the figure's INK TOP at 2.550000 below the centre line) + the digit's own
+    /// 1.124795235605315 — the staff enters the SUPPORT because staff-padding is declared,
+    /// and is not a separate refpoint floor.
+    /// </remarks>
+    private static readonly string FBQ = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part fig { clef bass }
+
+        section Main {
+          fig { d,2@stemUp@fig(5 3) d,@stemUp@fig(6) | d,2@stemUp@fig(7) d,@stemUp@fig(6 4) | }
+        }
+
+        form main { ~Main }
+
+        score main "FBQ" {
+          staff ~fig
+        }
+        """;
+
+    /// <summary>The figure-bearing staff as the UPPER of two identical staves — the mirror of
+    /// book FBLB. THE ARRANGEMENT NO COMMITTED FIXTURE HAS.</summary>
+    private static readonly string FBB = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part fig { clef bass }
+        part comp { clef bass }
+
+        section Main {
+          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+          comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
+        }
+
+        form main { ~Main }
+
+        score main "FBB" {
+          staff ~fig
+          staff ~comp
+        }
+        """;
+
+    /// <summary>The same two staves with the figures on the LOWER one — the mirror of book
+    /// FBLC, and the shape of the committed fixture test/figbass-chordname-lower-staff.
+    /// </summary>
+    private static readonly string FBC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part comp { clef bass }
+        part fig { clef bass }
+
+        section Main {
+          comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
+          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+        }
+
+        form main { ~Main }
+
+        score main "FBC" {
+          staff ~comp
+          staff ~fig
+        }
+        """;
+
+    /// <summary>
     /// THE METRONOME MARK's baseline over the staff — the mirrors of tempo-mark.ly's
     /// books TMQ / TMT, the tempo island's first points (USER DIRECTIVE 2026-07-29:
     /// tempo does not mimic LilyPond; fix tempo first).
@@ -5070,6 +5194,32 @@ internal static class LpGeometryProbes
         // closes when the above pass gets per-(system, staff) trackers.
         new("script.lower-staff.staff-to-ink-bottom", SPL,
             g => g.FermataInkEdgeAboveStaff(staff: 1), RaggedBottomPaper),
+
+        // --- where FIGURED BASS lands, and WHICH STAFF decides (books FBLA/FBLB/FBLC) ---
+        // The corpus's first figured-bass points. The same music and the same figures in
+        // three arrangements; LilyPond reads ONE number for all three, so the LP side is an
+        // IDENTITY and whatever spread Lily# shows IS the defect (HANDOFF §5.0). The middle
+        // one is the arrangement no committed fixture has — figures under the UPPER staff of
+        // two — and it is the one Lily#'s single per-system drop throws below the whole
+        // system, the same shape as the session-40 lower-staff fermata.
+        new("figbass.alone.staff-to-baseline", FBA,
+            g => g.FigureBaselineBelowStaff(staffIndex: 0, staffCount: 1), RaggedBottomPaper),
+        // The QUIET half of the placement pair: the staff decides, not the column. Without
+        // it a port would have to guess how side-position's staff-padding is spelled.
+        new("figbass.quiet.staff-to-baseline", FBQ,
+            g => g.FigureBaselineBelowStaff(staffIndex: 0, staffCount: 1), RaggedBottomPaper),
+        new("figbass.upper-staff.staff-to-baseline", FBB,
+            g => g.FigureBaselineBelowStaff(staffIndex: 0, staffCount: 2), RaggedBottomPaper),
+        new("figbass.lower-staff.staff-to-baseline", FBC,
+            g => g.FigureBaselineBelowStaff(staffIndex: 1, staffCount: 2), RaggedBottomPaper),
+        // The OTHER half of the two-staff claim, and a different quantity: how much room the
+        // system leaves BETWEEN the staves. LilyPond's own pair is not an identity here — the
+        // figure row lives between the staves in FBB and below both in FBC, and the two gaps
+        // differ by exactly the row's height. So these two say whether the row is RESERVED,
+        // where the baseline points say where it is PLACED; a system that puts figures in the
+        // right place while reserving nothing prints them through the staff below.
+        new("figbass.upper-staff.staff-gap", FBB, g => g.StaffGap(), RaggedBottomPaper),
+        new("figbass.lower-staff.staff-gap", FBC, g => g.StaffGap(), RaggedBottomPaper),
 
         // --- where the METRONOME MARK's baseline sits (books TMQ/TMT) ---
         // The tempo island's first points (user-directed, fix tempo first). See

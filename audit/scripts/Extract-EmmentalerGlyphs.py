@@ -135,6 +135,33 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("TimeSigCommon", "timesig.C44", ""),
     ("TimeSigCutCommon", "timesig.C22", ""),
 
+    # A bass figure is `\number` markup (scm/translation-functions.scm:349-470
+    # format-bass-figure -> make-number-markup), i.e. the fetaText encoding, and
+    # scm/define-grobs.scm:354 declares BassFigure's font-features ("tnum" "cv47" "ss01").
+    # Those three OpenType features are SUBSTITUTIONS, so they name the glyph LilyPond
+    # actually draws: tnum -> fixedwidth.*, ss01 -> fattened.*, cv47 -> the .alt forms of
+    # FOUR and SEVEN. Hence fattened.fixedwidth.<digit>, with .alt on 4 and 7 -- a
+    # different digit design from the time signature's (which declares no features at all
+    # and so takes the base glyphs).
+    ("#", "Figured bass digits (fetaText, tnum + cv47 + ss01 applied)", ""),
+    ("FigBassDigit0", "fattened.fixedwidth.zero", ""),
+    ("FigBassDigit1", "fattened.fixedwidth.one", ""),
+    ("FigBassDigit2", "fattened.fixedwidth.two", ""),
+    ("FigBassDigit3", "fattened.fixedwidth.three", ""),
+    ("FigBassDigit4", "fattened.fixedwidth.four.alt", "cv47 picks the .alt four"),
+    ("FigBassDigit5", "fattened.fixedwidth.five", ""),
+    ("FigBassDigit6", "fattened.fixedwidth.six", ""),
+    ("FigBassDigit7", "fattened.fixedwidth.seven.alt", "cv47 picks the .alt seven"),
+    ("FigBassDigit8", "fattened.fixedwidth.eight", ""),
+    ("FigBassDigit9", "fattened.fixedwidth.nine", ""),
+    # The alteration of a figure is fetaText too, addressed by the Unicode accidental
+    # (scm/translation-functions.scm:338-343 figbass-accidental-alist -> U+266D/266E/266F
+    # through make-number-markup), and the font maps those code points to the FIGBASS cuts
+    # of the accidentals -- taller and narrower than the notation ones.
+    ("FigBassFlat", "accidentals.flat.figbass", "U+266D in figbass-accidental-alist"),
+    ("FigBassNatural", "accidentals.natural.figbass", "U+266E"),
+    ("FigBassSharp", "accidentals.sharp.figbass", "U+266F"),
+
     ("#", "Articulations", ""),
     ("FermataAbove", "scripts.ufermata", ""),
     ("FermataBelow", "scripts.dfermata", ""),

@@ -259,6 +259,7 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
 | LayoutEngine | `SystemLayout.Y`(page top から下), header/margin/spacing | Y | **down+** | ss | :187,193,:64-65 |
 | LayoutEngine | prelim extent の `-YUp`/`ToDevice` 反射（tuplet/volta/mark/chord/lyric/tie/slur） | Y | Yup→down 変換 | ss | :839-967 |
 | LayoutEngine | `AugmentSkylinesForPaging` は `YUp` 直用（skyline は Y-up） | Y | up+ | ss | :1087-1187 |
+| LayoutEngine | **譜ごとの skyline を system フレームへ端で 1 回だけ反射**（chord 行の `lowerStaffUpSkyline`／figured bass の `figuredBassStaffDown`）。式は `StaffOffsetInSystemUp(sys, staff) − StaffHeight/2` で、`AugmentSkylinesWithScripts` が script に対して取る歩と**同一の式**（2 綴りにしない） | Y | staff中央線→system原点 | ss | `LayoutChordNames` / figured bass 呼び出し点 |
 | OutsideStaffStacker | `DirectionalOccupancy` frontier, 各 padding | Y | device down+(dir±1) | ss | :48-65,:800-838 |
 | ScoreLayout | 大半 | — | — | ss | header「全て staff spaces」 |
 | ScoreLayout | **`GetRestShift`「in staff positions」** | Y | — | **half-space** | :259-267 |

@@ -28,22 +28,42 @@ dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q 2>&1 | Select-String 'P
 HEAD・テスト数・シンボル名・「完了」表記は開始時に実コードで再確認する。
 過去の引継ぎでは stale な記述を毎セッション複数踏んでいる（§5.2）。
 
+⚠️ ★ **数を引き継ぐときは「数え方」も書く。** 2026-07-30 に「台帳 236 点」が
+**開始時点で既に嘘**だった（実数 225）——`--filter LpGeometryLedger` の**テスト数**を
+点数として書き写したのが出所で、同ファイルには点でないテストが 11 本ある。
+**台帳の点数はこれで数える**:
+```powershell
+(Get-Content audit\lp-geometry\lp-geometry.json -Raw | ConvertFrom-Json).entries.PSObject.Properties.Name.Count
+```
+
 ---
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-30（第42セッション・**★★★ 第41セッションの「第 1 system のシルエットに
-音楽インクが無い」は誤診で、実体は逆——`staffProfile` の beam が譜でしか絞られておらず、
-system 0 の profile が system 1 の beam インクを読んでいた。1 行の絞り込みで
-`test/notes` は port 前と byte 一致に戻り、他は 1 点も動かない**。
+最終更新 2026-07-30（第44セッション・**★★★ figured bass の cap 債務を face 移植で閉じた**
+（`b5c9bd40`・**snapshot 3 枚・GO 済**）。**鍵は「引継ぎが書いた鎖の推測が外れていた」こと**——
+figure は font-size 0 ではなく **markup が `-5` を持つ**（`translation-functions.scm:468-470`）、
+そして **fetaText の base size は `staff-height`**（`font-select.cc:99-117`・text-font-size は
+latin1 の枝）。⇒ em は歌詞の鎖の 2.2 ではなく **4 ss × magstep(−5) = 2.244924096**、
+グリフは `font-features` が名指す **`fattened.fixedwidth.<digit>`**（4/7 は `.alt`）。
+**baseline 4 点が揃って −0.002333187** で着地（島の falsifier）・**gap は +0.597666813
+＝ row 深さ債務だけ**。⚠️ **残差は emmentaler-11 対 -20 の光学サイズ**で、
+**定数で埋めない**（同梱するか閉じないか）。
+★★★ **そして移植が「不活性な発明」を load-bearing にした**——face だけで quiet 点が
+`BelowStaffY 5.0+1.0` の床 4.000000 に張り付き、同 commit で `aligned_side` の床
+（2.05+1.0）へ置換した。**quiet 点が無ければ気づかなかった**。
+詳細は下の第44セッション節）
 ⚠️ **swing 記法はユーザーが「まだおかしい」＝LP の記法待ち**（下の第40セッション節 8・未着手）。
-詳細は下の第42セッション節）
 / HEAD・ahead 数は §0 で確認すること
 （⚠️ **ここに数字を書かない**——自己参照で、書いた瞬間から commit のたびに嘘になる）。
 ⚠️ **未 push が溜まっている**（第21セッション末から。push はユーザー・§5.1）。
 
-**HEAD は 3551 passed / 0 failed / 3 skipped**（台帳 **236 点**全緑・第42セッションで
-`StaffProfileBeamScopeTests` 1 本追加）・
+**HEAD は 3557 passed / 0 failed / 3 skipped**（台帳 **231 点**全緑・第43セッションで
+figured bass **6 点**追加＝225 → 231・第44セッションは**点を足さず 5 点の残差を動かした**）・
+⚠️ **台帳の点数は `lp-geometry.json` の entry を数えること**（`ConvertFrom-Json` で 1 行）。
+`--filter LpGeometryLedger` は **242** と出るが、それは同ファイルの他 11 本を含んだ**テスト数**で
+点数ではない。**第42セッションまでの「236 点」はこの取り違えで、当時の実数は 225 だった**
+（§0 の「stale を毎セッション踏む」の実例——**数字は必ず出所を書く**）。
 Core 0 warn 0 err・**ワーキングツリーは clean**
 （未追跡の `HANDOFF-*.md` 14 本はセッション前からのもの＝§8）。
 **第41セッションの commit（11 本・コードが動くのは 5 本）**: `39dc6184`（**起票＝TXV/TVL/OTL 3 冊＋台帳 3 点**・
@@ -130,6 +150,223 @@ trill で 1 回繕った）。**装置ごと LP の形にすれば繕いは全�
 ⇒ snapshot は**もう網ではない**。だから**各段階の前に台帳点を開く**（§5.2.1③ は従来どおり）。
 出力が動く段は**提示して GO を待つ**（承認ゲートは維持）。
 
+
+### 第44セッション（2026-07-30）＝ **cap 債務を face 移植で閉じた。鎖の推測は 2 か所外れており、外れの訂正がそのまま移植だった**
+
+★★ **commit**: `b5c9bd40`（**移植＝グリフ＋em＋インク・台帳 5 点・snapshot 3 枚・GO 済**）。
+**3557 passed / 0 failed / 3 skipped**・台帳 **231 点**全緑（**点は増えていない**）。
+
+1. ★★★ **引継ぎの「font-size 0 の em は鎖にある＝2.2」は 2 か所で外れていた**。
+   §5.2 どおり**出典を引きに行った**のが分岐点で、**引けなかった時点で推測だと分かった**:
+   ⑴ `scm/translation-functions.scm:468-470` — `format-bass-figure` は最後に
+   **`(make-fontsize-markup -5 fig-markup)`** を掛ける。⇒ **figure は font-size 0 ではない**。
+   **grob が font-size を宣言しない（dump が `unset`）のは、段が markup に載っているから**で、
+   「宣言が無い＝0」と読んだのが第1の誤り。
+   ⑵ `lily/font-select.cc:99-117` — **fetaText の base size は `staff-height`**、
+   `text-font-size` は **latin1 の枝**。⇒ `\number` の font-size 0 は**音楽の em＝4 ss**で、
+   歌詞・和音記号・TextScript が乗っている **2.2 ss の梯子とは別の梯子**。
+   ⇒ **em = 4 × magstep(−5) = 2.244924096**。2.2 を採っていたら **2% 小**＝残差の一桁上。
+2. ★★★ **「比は lever にならない」は正しかったが、理由が違った**。第43セッションは
+   「time signature の print が自分の markup を拡大するから」と書いたが、**実際は字母が違う**——
+   `scm/define-grobs.scm:354` の `font-features ("tnum" "cv47" "ss01")` は **OpenType の置換**で、
+   **グリフを名指している**（`fattened.fixedwidth.<digit>`・4/7 は `.alt`）。
+   time signature は features を宣言しないので**素の digit**。**同じ font・同じ base・別の段・別の cut**。
+   ⇒ ★ **「features は見た目の微調整」と読み飛ばさない。substitution は grob の綴りの一部。**
+3. ★★★ **着地は falsifier どおり**（台帳）:
+   | 点 | 前 | 後 |
+   |---|---|---|
+   | `figbass.{alone,quiet,upper-staff,lower-staff}.staff-to-baseline` | +0.375204764 | **−0.002333187（4 点とも同値）** |
+   | `figbass.upper-staff.staff-gap` | +0.975204764 | **+0.597666813 ＝ 0.600000 − 0.002333187** |
+   | `figbass.lower-staff.staff-gap` | 0 exact | **不動** |
+   ⇒ **gap は単一項の点になった**（row 深さ＝予約 1.6 対 描画 1.5・最下段に descent 無し）。
+   **次の figured bass 移植は `BassFigureAlignment` の stacking**（`define-grobs.scm:366-374`）で、
+   **その点が「何を動かすべきか」を先に言っている**。
+4. ★★ **残差 −0.002333187 は「フォントの同梱」の事実で、算術ではない**。LP は要求サイズに
+   **最も近い design size** を選ぶ（`font-select.cc:41-70` ＋ `lily-library.scm:1702-1710`）ので
+   11.2246pt では **emmentaler-11**（digit 2.004 design-ss）、Lily# は **-20 のみ同梱**（2.000）。
+   **0.001 em × 2.244924 = 0.002245** がその項で、残りは Pango の量子化族。
+   ⚠️ **定数で埋めない**——閉じるのは**光学サイズを同梱したとき**。
+   ⇒ ★ **これは clef/歌詞と同じ「サイズとメトリクスの出所」族の、フォント本体側の残り**。
+5. ★★★ **移植が「不活性な発明」を load-bearing にした**——face だけ入れた時点で
+   `figbass.quiet` が **ちょうど 4.000000**（＝`BelowStaffY 5.0 + StaffPadding 1.0`）に張り付いた。
+   **cap 1.5 のときは 2.05+0.5+1.5 = 4.05 で 0.05 だけ床を越えていた**ので不活性に見えていた。
+   同 commit で **`aligned_side` の床**（`side-position-interface.cc:433-453`・
+   `staff_extent 2.05 + staff-padding 1.0 = 3.05`）へ置換＝**LP どおり不活性のまま計算する**。
+   ⇒ ★★★ **§5 に汎化した**（下の 5.0 の新項）。**捕まえたのは quiet 点 1 つ**で、
+   それが無ければ「4 点揃う」falsifier が黙って壊れていた。
+6. ★★ **描画と予約が 1 軒になった**（`FiguredBassGlyphRun`＝em／グリフ／advance／インク）。
+   **符尾突き抜け 0.112 も同時に消えた**——第43セッションが「配置を 1 枚描け」で見つけた症状は
+   **同じ債務の裏側**だった。⚠️ **予約だけ直すな**の警告は正しく、**両方一緒**で閉じた。
+7. ★ **harness は「面と大きさ」で選び続けている**: `RenderedGeometry.BassFigures` は
+   テキスト選択から**グリフ選択**へ移したが、**判定は描画側の家から引く**
+   （`GlyphMetrics.TryGetFiguredBassGlyph` ＋ `EngravingDefaults.FiguredBassFontSize`）ので
+   §5.2.1⑤ の「測る値の写しを持たない」は保っている。
+   ★ 楽器名のデコイは**消えた**（名前はテキスト・figure はグリフ）ので、プローブ本の
+   `staff ~fig` は「LP 側にも名前が無い」という理由だけで残る（コメント訂正済み）。
+8. ★ **機械が 2 本鳴って、2 本とも払った**: `LpProvenanceTests`（宣言の直上に REF が要る＝
+   lookback 14 行）と `CitationsThatNameNothing`（**ラチェットを 746 → 742 へ下げた**——
+   figured bass の既存の無名引用も名前を付けた）。⚠️ **上げない**。
+9. ★ **perf は測っていない（測る対象が無い）**: pointwise 化ではなく、skyline に積む箱の数も
+   形も不変で、差分は「テキスト 1 本の draw がグリフ 1〜2 本になった」ことと
+   `FigureInkTop` の switch だけ。⚠️ **次に figured bass で skyline を触るときは測ること。**
+
+### 第43セッション（2026-07-30）＝ **FiguredBass 島を開いて閉じた。LP は 8 冊すべてで同じ 8.124795235605315 を返し、Lily# の欠陥は「cap 定数 1.5」と「譜の帰属が無いドロップ」の 2 つに割れた**
+
+★★ **commit 7 本**（起票 `ad118d74`＋`d7c005db`／**移植 `4cdcbb66`**／face 調査 `5cd9624b`／
+docs `7577d807`・`254a387a`・`b436f9a2`）。プローブ本 8 冊＋**台帳 6 点**＋harness 2 本。
+**3557 passed / 0 failed / 3 skipped**・**snapshot は 1 枚も動いていない**
+（＝**結果**であって構成ではない。非最下段に figures を置く fixture が 1 つも無い）。
+⚠️ **以下の 1〜9 は起票時点の記録**で、**移植後の値は 10 にある**（表 3 の「後」列）。
+
+1. ★★★ **先に「`@fig()` は LP のどの装置か」を決めた**。LP には**2 つ**あり、Lily# は
+   **両方を半分ずつ綴っている**:
+   ⑴ **`FiguredBass` コンテキスト＝loose line**（`ly/engraver-init.ly:1108-1123`）。
+   `staff-affinity UP` と `nonstaff-relatedstaff-spacing.padding 0.5` **だけ**を宣言し、
+   **basic-distance を持たない**（Lyrics は :649-652 で 5.5 を宣言する）。
+   ⇒ **実現距離は「インク＋0.5」以外にならない**。
+   ⑵ **`Staff` コンテキスト＝`BassFigureAlignmentPositioning`**
+   （`scm/define-grobs.scm:387-411`）。side-position・padding 0.5・staff-padding 1.0・
+   **outside-staff-priority 25**・add-stem-support。**構造上 per-staff**。
+   ⇒ Lily# の `StaffPadding 1.0` は⑵の staff-padding（コメントは BassFigure を誤引用）、
+   `SkylineDrop` は歌詞から借りた⑴、**その間の `BelowStaffY 5.0` はどちらにも無い**。
+   ⇒ **両方を測った**（本は 6 冊＝3 配置 × 2 装置）。
+2. ★★★ **6 冊すべてが 8.124795235605315**（譜の中央線→最上段 figure のベースライン）。
+   **プローブヘッダに先に書いたフォークは第 1 枝に落ちた**——**LP は自分の譜から吊る**ので、
+   Lily# の system 単位ドロップは**近似ではなく素の欠陥**で、港は帰属である。
+   ★ **分解は全項 dump から読んだ**（推論しない・§5.0 の TXW の教訓）:
+   `NoteColumn` の ext が **(−6.500000 . −3.455)**、figure のインク上端が**ちょうど −7.000000**
+   ＝列インク下端 6.5 ＋ **両装置が宣言する 0.5**、ベースラインはさらに
+   **1.124795235605315＝BassFigure 自身の Y-extent**。
+   ⚠️ **NoteColumn を dump に足したのはこのため**——3 項あれば誤った機構でも和は合う。
+3. ★★★ **B と C は「同じ譜面で figures だけを移した」鏡**（伴譜も同じ深いインク）。
+   だから **LP 側は構成上の恒等**で、Lily# の差が**そのまま欠陥量**になる。
+   | 点 | LP | Lily# | residual |
+   |---|---|---|---|
+   | `figbass.alone.staff-to-baseline` | 8.124795235605315 | 8.500000000 | **+0.375204764** |
+   | `figbass.upper-staff.staff-to-baseline` | 同 | 18.050000000 | **+9.925204764** |
+   | `figbass.lower-staff.staff-to-baseline` | 同 | 8.500000000 | **+0.375204764** |
+   | `figbass.upper-staff.staff-gap` | 12.174795235605316 | 9.550000000 | **−2.624795236** |
+   | `figbass.lower-staff.staff-gap` | 9.550000 | 9.550000000 | **0 exact** |
+   ⚠️ **この表の gap の LP 値は loose line 側**。**移植後は台帳を Staff 文脈の本へ付け替えた**
+   ので **12.674795235605316**（差 0.5＝2 装置の padding 違い・下の 10）。**baseline の
+   8.124795235605315 はどちらの装置でも同じ**なので付け替えで動かない。
+4. ★★★ **共有の +0.375204764 は 1 項**: **1.5 − 1.124795235605315**。
+   **Lily# の「想定インク上端」は −7.000000＝LP の実インク上端と同じ場所**
+   （自分の down-skyline も同じ 6.5 を読み、同じ 0.5 を払っている）。**そこから
+   `FigureTopExtent = 1.5` 下にベースラインを引く**のが全部で、LP は figure の**実 stencil
+   extent** を使う。⇒ **箱 vs インクの最小形**。**書体差ではない**（Lily# の serif 数字は
+   どこでも測られていない）。**閉じるのは図形のインクを実グリフから取ったとき。**
+5. ★★★ **+9.55 は「譜が無い」**。`ApplySkylineDrop` は system の全 figure を 1 skyline に
+   merge し、**system の down-skyline** に対して測り、1 つの `d` で全部下げる
+   ——**この文に譜が出てこない**。⇒ 非最下段の figures は system 全体の下へ飛ぶ。
+   ★★ **そして gap 点が「第2の半分」を出した**: LP は row が譜間に居るとき
+   **12.174795235605316**（最下 figure 9.624795235605315 ＋ **nonstaff-unrelatedstaff の
+   padding 0.5**＝`scm/define-grobs.scm:4240`・FiguredBass が override しない唯一の member
+   ＋ 下段のインク 2.05）を空けるが、**Lily# は何も居ないときと同じ 9.55**。
+   ⇒ ⚠️ **帰属だけ直すと figures はその 9.55 の中へ入る**（§5.0「分割すると悪化する」）。
+   **2 つ一緒に移植すること。**
+6. ★★ **C == A（exact）だったので、第42セッションの「C ≠ A（差 2.5）」はこの texture では
+   再現しない**。あれは別の texture で `YUp` を見た観測で、**第2の欠陥ではない**
+   （フレーム混在の疑いも未確認のまま）。
+7. ★ **`figbass.lower-staff.staff-gap` が 0 exact** ＝ 素の譜間ばね
+   （列インク 6.5 ＋ `default-staff-staff-spacing` の padding 1 ＋ 2.05・basic 9 が負ける）は
+   両エンジン一致。**これは移植後も exact のままでなければならない**——row が譜間に**居ない**
+   ときに部屋を予約したら動く。
+8. ★ **読んでいて見つけた別の債務**: 描画は figure 行を **1.5 間隔**で積むが
+   `FiguredBassEngraver.FigureSpacing` は **1.6 を予約**する。**1 つの量に 2 綴りで、しかも
+   食い違う**（§5.2.1②）。**どちらも LP のものではない**（LP は BassFigureAlignment が
+   各 BassFigureLine の Y-extent で積む）。コメントで名指しただけで直していない。
+9. ★★★ **静かな regime も測った**（`d7c005db`・本 FBLQ/FBSQ・台帳 `figbass.quiet.staff-to-baseline`）。
+   **移植のために開いた点**——他の 4 点はどれも列が最深インクの texture なので、
+   **「誰も手を伸ばさないとき何が床か」を corpus が持っておらず、side-position の
+   staff-padding の綴りを推測することになる**（trill 島の TRF/TRC の figured bass 版）。
+   **LP 3.674795235605315 ＝ 譜インク 2.05 ＋ padding 0.5**（figure のインク上端が
+   **ちょうど 2.550000**）**＋ 数字の 1.124795235605315**。
+   ⇒ **staff-padding 1.0 は include_staff で、refpoint の床ではない**。
+   ⚠️ **この grob ではどの regime でも床になり得ない**——床は 2.05+1.0=3.05 だが、
+   縁配置は既に 2.05+0.5+cap を返し、**cap（1.124795）は staff-padding − padding（0.5）より
+   大きい**。**畳まずに「不活性」として実装する**（LP は両方計算する・§5.2）。
+   ⇒ ★★★ **Lily# は 4.050000＝また同じ cap 項 1 つ**。**つまり単一譜では上下どちらの
+   regime でも配置の算術は既に LP と一致している**（想定インク上端が 2.550000 と 7.000000・
+   両方 exact）。**移植はドロップの「フレーム」であって算術ではない。**
+   ⇒ ★ **engraver の `BelowStaffY 5.0 + StaffPadding 1.0 = 6.0` も同じ理由で不活性**
+   （2.05+0.5+1.5=4.05 > 4.0 で、2.05 が五線インクの最浅）。
+10. ★★★ **移植した（`4cdcbb66`・regime S・snapshot 0 枚）**。**着地は falsifier どおり**:
+   | 点 | 前 | 後 |
+   |---|---|---|
+   | `figbass.upper-staff.staff-to-baseline` | 18.050000（+9.925204764） | **8.500000（+0.375204764）** |
+   | `figbass.upper-staff.staff-gap` | 9.550000（−2.624795236） | **13.650000（+0.975204764）** |
+   | alone / quiet / lower-staff の baseline | — | **不動**（8.5 / 4.05 / 8.5） |
+   | `figbass.lower-staff.staff-gap` | — | **不動・exact のまま** |
+   ★★ **2 つ一緒でなければならないことは、途中状態が証明した**——帰属だけ入れた時点で
+   gap は −2.624795236 のまま figures が自分の譜の下（＝下段の譜の中）へ入った。
+   ★★★ **台帳の `score` を S の本（FBSA/FBSQ/FBSB/FBSC）へ付け替えた**——**gap は LP の
+   2 装置が食い違う唯一の量**（loose line 12.174795235605316 は padding 0.5／Staff 文脈
+   12.674795235605316 は `default-staff-staff-spacing` の padding 1・差はちょうど 0.5）。
+   **台帳点はどちらの装置に対して測っているかを言わねばならない。**
+   ★ **残差は 2 項とも名前付き**: baseline 全点の +0.375204764＝cap 項／gap の追加
+   +0.600000＝**row 深さ**（予約 `(n−1)×1.6 + 0.5` 対 LP の 1.5 刻み・最下段に descent 無し）。
+   **その 1.6 は描画の 1.5 と食い違う量の予約側で、gap 点が初めてその観測者になった。**
+   ★★★ **そして「配置を 1 枚描け」が数字の見つけなかったものを出した＝数字が符尾を突き抜ける**。
+   実測（描画 SVG・中央線から下）: 符頭 4.0／**符尾先端 6.5（LP の短縮符尾と完全一致＝描画は正しい）**／
+   figure ベースライン 8.5。配置は符尾先端の下に 0.5 空け、ベースラインの上に **1.5** 予約するが、
+   **描かれる数字の実インクは 2.112000**（`TextFontMetrics.Ink`・全数字同値）なので
+   **上端が符尾先端より 0.112 上**に来る。⇒ **同じ cap 債務の裏側で、移植前から在る**
+   （単一譜配置＝この移植が触らない側で同じに出る）。
+   ⚠️ **予約だけ直すな**——実 2.112 を読ませると符尾は避けるが残差は +0.375 → 約 +0.99 へ**悪化**する。
+   **描画サイズのほうが誤った半分**（Lily# は LP の約 1.9 倍で描いている）。
+   **歌詞 em と同じ形（サイズとメトリクスの出所は 1 つの主張の 2 つの半分）**で、
+   **BassFigure の font-size チェーンを LP から読んでから**閉じる。**1.124795/2.112 に
+   合わせた定数は禁止。**
+   ⇒ ★★★ **その face を読んだ（本 FBLN・出力不変）＝ゲートはサイズではなく face だった**。
+   LP の figures は **`\number` markup**（`scm/translation-functions.scm:349-362`
+   `format-bass-figure` が `make-number-markup` で組む）で、
+   `scm/define-markup-commands.scm:3872-3878` がその正体を書いている——
+   **「the (music) font for numbers … also contains symbols for figured bass」**。
+   ⇒ **数字は Emmentaler の number グリフ**で、Lily# は**serif テキスト face を自前の em 3.0** で
+   描いている。**TimeSignature も BassFigure も font-size を宣言していない**（確認済）ので
+   figure は**その face の font-size 0**。⚠️ **同じ本で dump した numeric TimeSignature
+   （ext −2.0 . 2.004019＝1 桁 ~2.004）は「同じものの別サイズ」ではない**——time signature の
+   print が自分の markup を独自に拡大するので、**両者の比は lever にならない**（比に合わせるのは fit）。
+   ⇒ ★★★ **次の一手はこれ**: **figure を number グリフで描き**
+   （`EmmentalerGlyphs.GetTimeSigDigit` が既にある）、**`FigureTopExtent` は定数 1.5 でなく
+   グリフのアウトラインから取る**。**サイズとメトリクスの出所を同時に**（§5.0）。
+   ★ **font-size 0 の em は既に codebase の鎖にある**——歌詞島が `LyricText font-size 1.0`
+   ＝2.469417 を確定させたので、font-size 0 は `2.469417 / magstep(1)` ＝ **2.2**。
+   **その数を fit ではなく鎖から出せるかを最初に確かめること。**
+   ⇒ **着地予想**: baseline 全点の +0.375204764 が落ち、符尾との重なりも同時に消える
+   （LP の figure は Lily# の約半分の高さなので、予約も描画も小さくなる）。
+   **snapshot は figbass 2 枚が動く見込み＝GO ゲート。**
+   （**旧・設計メモ**——実装済みだが次に触る人のために残す）:
+   ⑴ **`ApplySkylineDrop` に (system, staff) の down-skyline を渡す**
+   （`LayoutChordNames` の `lowerStaffUpSkyline` が字面どおりの雛形＝
+   `BuildStaffSkylines` を lazy に建てて frame を 1 回だけ反射する）。
+   ⚠️ **frame**: `SkylineDrop.Compute` の `dist` も `basicY` も **system 上端からの device-down**
+   なので、譜中央基準の skyline は **`Raise(-(staffOffset + 2.0))`**。
+   ⚠️ **`basicY` も (system, staff) 単位にする**（`Compute` のキーを一般化）。
+   ⚠️ **script の augment を落とさないこと**——`figbass-below-script` はそれが観測者なので、
+   `BuildStaffSkylines` に **その譜の `articulationLayouts` を渡す**（`scriptedSkylines` と
+   同じインクを per-staff で）。
+   ⑵ **row のインクを自分の譜の down-skyline に seed する**＝`AddDynamicsToSkyline` と
+   同じ形（配置を建てなおして自分のインクを merge し、譜間のばねが予約する）。
+   **これが無いと ⑴ だけでは `figbass.upper-staff.staff-gap` の 2.624795 が残ったまま
+   figures がその隙間に入る**（§5.0「分割すると悪化する」）。
+   ⇒ **着地条件（移植前に書いた予測。★ 3 つのうち 2 つ当たり、1 つ外れた）**:
+   baseline 3 点が**全部 +0.375204764 で揃う**（0 ではない・cap 項は別島）→ **当たり**／
+   `figbass.lower-staff.staff-gap` は **exact のまま** → **当たり**／
+   ~~`figbass.upper-staff.staff-gap` が **0** へ~~ → ★★ **外れ。着地は +0.975204764**。
+   **外れの向きが真因を指した**（§5.0）——予約は入ったが、**その予約が LP と同じ形ではない**
+   （row 深さ 1.6+0.5 対 LP の 1.5 刻み・descent 無し＝+0.600000）。
+   **「0 へ」と書けたのは、予約の中身を LP と突き合わせずに『入れれば閉じる』と思っていたから**で、
+   **深さの分解は移植中に初めて読んだ**。⇒ ★ **着地条件を書くときは「入れる」ではなく
+   「何と同じ形になる」を書く。**
+11. ⚠️ **harness の罠を 1 つ塞いだ**: Lily# は**楽器名を bass figure と同じ face・同じ em**
+   （`FontSize*0.75`）で描くので、名前付きの譜は figure セレクタに**デコイ**を入れる。
+   スコアは `staff ~fig` で名前を抑止（LP 側の本にも楽器名は無い）。
+   Core の唯一の変更は **`SharedRenderer.FiguredBassFontSize` の命名**
+   （harness が「測っている値の写し」を持たないため・§5.2.1⑤）。
+   ⇒ ★ **§7.5 のカウントは Core +22 行に対して REF 0 / OWN 1**。**REF 0 は正しい**
+   ——この差分は**何も移植していないし量を 1 つも足していない**。
 
 ### 第42セッション（2026-07-30）＝ **「第 1 system のシルエットに音楽インクが無い」は誤診だった。実体は profile 側が他 system の beam を読んでいたこと**
 
@@ -1443,37 +1680,28 @@ stem-support,below,accidental}`）のうち 4 点が九桁で着地。詳細は�
   「その譜の profile が読む音符」として記録された 0.667/0.517 は**system 1 の beam** だった
   （`staffProfile` の beam が譜でしか絞られていなかった）。⇒ **系の
   「`perSystemExtents` の第 1 system 予約」も同時に無効**。silhouette は**どこも間違っていない**。
-- ★★ **`systemSkylines` を読む残り 3 家族**（⚠️ **第41セッションの書き方は stale**——
-  第42セッションで裏取り）。**ChordName と Lyric は非 edge 側の per-(system, staff)
+- ★★ **`systemSkylines` を読む残り 2 家族**（元は 3・⑶ は第43セッションで閉じた。
+  ⚠️ **第41セッションの書き方は stale**——第42セッションで裏取り）。
+  **ChordName と Lyric は非 edge 側の per-(system, staff)
   デリゲートをもう持っている**（`lowerStaffUpSkyline` / `noteBoundStaffDownSkyline`）。
-  **残っているのは 3 つ**: ⑴ **上段の chord 行**（`systemSkylines[sys].up`）
-  ⑵ **下段の歌詞ブロック**（`systemSkylines[sys].down`・`LyricEngraver` の非 upper 経路）
-  ⑶ **FiguredBass のドロップが system 単位**（`ApplySkylineDrop` は system の全 figure を
-  1 つの skyline に merge し、1 つの `systemDrop[s]` で全部下げる＝譜の帰属が無い）。
-  ⇒ ★★★ **⑶ から始めること。regime が発火するのは実測済（第42セッション末・下）で、
-  本の設計はもう決まっている。**
-
-  ★★★ **FiguredBass の regime は確認した（Lily# 側だけ・出力不変の観測）**。
-  **同じ音楽・同じ figures**（低い加線付き音符＋下向き符尾＝figures を押し下げるべきインク）を
-  3 通りに置いた:
-  | 配置 | `FiguredBassLayout.YUp` |
-  |---|---|
-  | A: 1 譜のみ | **−15.045** |
-  | B: **2 譜の上段**（下に静かな譜） | **−43.640** |
-  | C: 2 譜の下段（＝corpus の `test/figbass-chordname-lower-staff` の形） | **−12.545** |
-  ⇒ ★★★ **B は system 全体の下へ押し出されている**（下段の down-skyline まで距離を取らせる）。
-  第40セッションの「下段 fermata が上段の上へ飛ぶ」と**同型の飛翔バグ**で、
-  **その配置の fixture が 1 つも無いので観測者ゼロ**。
-  ⇒ ⚠️ **C ≠ A（差 2.5）も出た。これは未診断**——`ApplySkylineDrop` は `YUp`（譜中央基準）から
-  **system フレームで計算した `d`** を引くので**フレームが混ざっている**のが第一容疑だが、
-  **確かめていない**。**本は 3 配置すべてを覆うこと**（A と C が LP で同値かは、Lily# の 2.5 が
-  欠陥か座標系の読み違いかを決める）。
-  ⇒ **予測（実測ではない）**: LP の FiguredBass は staff-affinity UP の文脈で**自分の譜の下**に
-  置かれるので、**A=B=C**（譜から figures までの距離が同一）。**falsifier**: LP で B が
-  他の 2 つと違えば、system 単位のドロップは近似している何かがあることになる。
-  ⇒ **起票の中身**: プローブ本 1 冊（3 配置）＋台帳 3 点。`probes/` に figured bass の本は
-  **まだ 1 冊も無い**（台帳点もゼロ）。⚠️ **ドロップは system の全 figure を 1 つの skyline に
-  merge して 1 つの数で下げる**ので、**譜の帰属を入れる港は `ApplySkylineDrop` の中**。
+  **残っているのは 2 つ**: ⑴ **上段の chord 行**（`systemSkylines[sys].up`）
+  ⑵ **下段の歌詞ブロック**（`systemSkylines[sys].down`・`LyricEngraver` の非 upper 経路）。
+  ★ **型は⑶が出した**: キーを (system, staff) にし、`BuildStaffSkylines` を lazy に建て、
+  **端で 1 回だけ frame を反射**し、**置いたインクを自分の譜の skyline へ merge し返す**
+  （配置と予約は必ず一組・下）。
+  ~~⑶ **FiguredBass のドロップが system 単位**~~ — **閉じた（第43セッション・
+  `4cdcbb66`）**。`ApplySkylineDrop` は (system, staff) キーで自分の譜の down-skyline を読み、
+  row のインクは `BuildAllStaffSkylines` がその譜の down へ merge する
+  （起票 `ad118d74`＋`d7c005db`・台帳 6 点・snapshot 0 枚）。
+  ⚠️ **配置だけ直すと悪化する**——途中状態で実証済（figures が下段の譜の中へ入った）。
+  ~~**次の一手は face の移植**~~ — **済（第44セッション・`b5c9bd40`・GO 済・snapshot 3 枚）**。
+  **cap 債務は落ちた**（baseline 4 点が揃って **−0.002333187**＝emmentaler-11 対 -20 の
+  **光学サイズ**・定数で埋めない）。
+  ⇒ ★★ **残るのは row 深さだけ**（`figbass.upper-staff.staff-gap` **+0.597666813**＝
+  予約 `(n−1)×1.6 + 0.5` 対 LP の 1.5 刻み・descent 無し）。**単一項の点になったので次が引ける**:
+  **`BassFigureAlignment` の stacking を移植する**（`scm/define-grobs.scm:366-374`＝
+  `align-to-minimum-distances`・`stacking-dir DOWN`・`padding -inf`。LP の実測刻みは **1.5**）。
+  ⚠️ **予約 1.6 と描画 1.5 は同じ量の 2 綴り**（§5.2.1②）なので**一緒に畳む**。
 - ~~★ **`SystemStaffBeams` を `StaffBeamLayouts` と 1 本化する**~~ — **払った（第42セッション・
   `6acc6e9d`・出力不変）**。`BeamLayout` が **`SystemIndex` を持つ**ようになり（LP の grob が
   parent を持つ形・stamp は X を出した `measureMap` 引きと同じ場所）、**`MeasureIndex` からの
@@ -2335,6 +2563,41 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   snapshot は**誤った配置で承認された**。⇒ ★★ **「測った」と書いた量が snapshot 以外に
   観測者を持たないなら、その commit で機械を 1 本足す**（今回 `StaffProfileBeamScopeTests`）。
   ⚠️ **snapshot は再ベースできるので網ではない**——承認は観測者ではない。
+- ★★★ ⚠️ **配置と予約は 1 つの claim。片方だけ入れると、正しい場所に部屋の無い grob が置かれる**
+  （2026-07-30・第43セッション・figured bass。**途中状態で実証した**）。帰属だけ直した時点で
+  figures は自分の譜の下へ戻ったが、譜間のばねはその row を知らないままなので**下の譜の中へ
+  入った**。⇒ ★ **外側 grob を「どこへ置くか」直すときは、同じ commit で「誰がその場所を
+  空けるか」も直す。** LP ではこれが 1 つの機構（`skyline_spacing` が priority 順に置いて、
+  置いた stencil を**その group の skyline へ merge し返す**）なので、**2 段に分かれているのは
+  Lily# 側の都合**であって claim は 1 つ。
+  ⚠️ **判定法**: その grob のインクは、置いたあと**誰かの skyline に入るか**。入らないなら
+  予約は無い。
+- ★★★ ⚠️ **「不活性な発明」は 1 回の移植で load-bearing になる。移植の後、床と上限を必ず測り直す**
+  （2026-07-30・第44セッション・figured bass）。`BelowStaffY 5.0 + StaffPadding 1.0` は
+  「LP に対応物が無いが、支持配置が常に勝つので不活性」と**測って記録してあった**——
+  ところが cap を正しい 1.122462 にした瞬間に支持配置が 3.672462 まで上がり、
+  **床 4.0 が効いて quiet 点をそこに釘付けにした**（`figbass.quiet` が **ちょうど 4.000000**）。
+  ⇒ ⚠️ **「不活性」は regime であって不変条件ではない**——**その不活性を保証していた量を
+  移植で動かすなら、同じ commit で床も LP のものに置き換える**（今回は `aligned_side` の
+  `staff_extent + staff-padding`）。
+  ⇒ ★★ **捕まえたのは quiet 点 1 つ**。**「誰も手を伸ばさないとき何が床か」を測る点は、
+  移植のたびに効く**（trill の TRF/TRC、figured bass の FBSQ）。**床の点を持たない島は、
+  この形の退行を snapshot でしか見られない。**
+  ⚠️ **判定法**: 移植で動く量の**符号**を見る。**小さくなる方向なら床を、大きくなる方向なら
+  上限・衝突相手を疑う。**
+- ★★★ ⚠️ **同じ量に LP の装置が 2 つあるなら、台帳点はどちらに対して測っているかを言う**
+  （2026-07-30・第43セッション）。figured bass には `FiguredBass` コンテキスト（loose line）と
+  Staff コンテキストの `BassFigureAlignmentPositioning` があり、**譜から figures までの距離は
+  15 桁一致するのに、譜間の gap だけが 0.5 食い違う**（loose 側は nonstaff-unrelatedstaff の
+  padding 0.5／Staff 側は default-staff-staff-spacing の padding 1）。
+  ⇒ **「LP は N を返す」だけ書いた点は、装置を取り違えたまま exact になり得る。**
+  ⚠️ **移植先を決めたら台帳の `score` をその装置の本へ付け替える**——**一致する量だけ見て
+  「どちらでも同じ」と判断すると、食い違う量が出た日に点が嘘をつく**。
+- ★★ ⚠️ **着地条件は「入れる」ではなく「何と同じ形になるか」で書く**（2026-07-30・第43セッション。
+  **3 つ書いて 1 つ外した**）。「予約を入れれば gap は 0 へ」と書いたが着地は +0.975204764 で、
+  **予約は入ったがその中身が LP と別の形だった**（row 深さ `(n−1)×1.6 + 0.5` 対 LP の 1.5 刻み・
+  descent 無し）。**外れの向きが真因を指した**のは §5.0 どおりだが、**「入れれば閉じる」は
+  中身を突き合わせていない証拠**——予測を書く時点で**その量の LP 側の分解を読んでおく**。
 - ★★ ⚠️ **1 つの claim が N 個の量に分かれているとき、「1 つずつ当てて良くなったものだけ入れる」は
   使えない。分割すると悪化することがある**（2026-07-28・ossia）。「ossia は spaceable」は
   ばね・spec・spaceable 性の 3 つで、**ばねだけ入れると両方の読みが遠くなった**
@@ -2419,6 +2682,16 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   片方だけ入れると**行き過ぎる**（歌詞: 旧 em でアウトラインを読むと 1.539200 で*悪化*）。
   ⇒ ★ **`LILYSHARP-OWN` の隣に LP の規則が引用してあるなら、その規則を計算してみる**——
   和音記号の 2.6 は**自分のコメントが名指した数の近似**だった。
+  ⚠️ ★★★ **そして「鎖から出せる」と書いた数も、出典を引くまでは推測**（2026-07-30・第44セッション）。
+  引継ぎは「figure は number face の **font-size 0**＝歌詞の鎖の 2.2」と書いていたが、
+  **2 か所とも外れていた**: figure の段は **markup が持つ `-5`**
+  （`translation-functions.scm:468-470`）で、しかも **fetaText の base size は `staff-height`**
+  （`font-select.cc:99-117`・`text-font-size` は **latin1 の枝**）。
+  ⇒ **em の梯子は grob ごとでなく encoding ごとに別**——**テキスト族の 2.2 を音楽 face に
+  当てない**。⚠️ **見分け方**: その grob の `font-encoding` を先に読む
+  （`fetaMusic`/`fetaBraces`/`fetaText` は譜の高さ・`latin1` だけが 2.2 の梯子）。
+  ⚠️ そして **`font-size` の dump が `unset` でも「段が無い」ではない**——
+  `\markup` 側が `fontsize` を掛けていることがある（figured bass と fingering がその形）。
 
 - ★★★ ⚠️ **量を直すと、その量を直書きしている「網」が一斉に落ちる。落ち方は全部
   「測っていない」向き**（2026-07-28・**1 セッションで 5 件**）。

@@ -24,8 +24,9 @@ namespace LilySharp.Core.Svg.Layout;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print method
-/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure defaults
+/// LILYPOND-REF: lily/figured-bass-engraver.cc:197-269 center_continuations,
+/// center_repeated_continuations, clear_spanners, process_music
+/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure (bass-figure-interface at :359)
 /// </remarks>
 public readonly record struct FiguredBassLayout(
     int MeasureIndex,
@@ -44,7 +45,7 @@ public readonly record struct FiguredBassLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/figured-bass-engraver.cc - Figured_bass_engraver
 /// LILYPOND-REF: lily/figured-bass-position-engraver.cc - positioning
-/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure defaults
+/// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure (bass-figure-interface at :359)
 ///
 /// Figured bass appears below the staff, with figures stacked vertically.
 /// Each figure occupies ~1.6 staff spaces of vertical height (an approximation of
@@ -52,27 +53,166 @@ public readonly record struct FiguredBassLayout(
 /// </remarks>
 internal static class FiguredBassEngraver
 {
-    // LILYPOND-REF: scm/define-grobs.scm:352 BassFigure (no numeric padding/baseline-skip of its own)
-    private const double StaffPadding = 1.0;   // Padding below staff bottom
     // APPROXIMATION (ungrounded value): LP has no BassFigure baseline-skip. Stacked
     // figures are aligned by BassFigureAlignment (define-grobs.scm:366 —
     // align-to-minimum-distances, stacking-dir DOWN, padding -inf), i.e. purely by each
     // BassFigureLine's Y-extent. We don't model that alignment skyline; 1.6 ss is a
-    // hand-picked per-row height standing in for it (revisit in the B-tier value pass).
+    // hand-picked per-row height standing in for it. ⚠️ ITS OBSERVER IS THE LEDGER'S
+    // figbass.upper-staff.staff-gap (+0.600000 = the two rows' 1.6 + a 0.5 tail against
+    // LilyPond's 1.5 step and no descent) — and the RENDERER draws 1.5 (§5.2.1②).
     internal const double FigureSpacing = 1.6;  // Vertical spacing between stacked figures
-    private const double BelowStaffY = 5.0;    // Y offset below staff (staff bottom = 4.0)
 
     /// <summary>
-    /// Calculates layout for all figured bass items.
+    /// The floor <c>aligned_side</c> puts under the row — the staff's own ink plus
+    /// <c>BassFigureAlignmentPositioning</c>'s staff-padding, as a distance below the staff
+    /// middle.
     /// </summary>
-    // Digit CAP height at the 3.0 ss figure font (measured ~0.5 em for the
-    // serif face): the top digit's ink above its baseline. The old 0.76
-    // was roughly half the real ascent, so a skyline-dropped row could
-    // still print its digit tops through the content above (e.g. a
-    // staccatissimo dagger under a stem).
-    internal const double FigureTopExtent = 1.5;
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:433-453 aligned_side's staff_padding floor:
+    /// <c>diff = dir * staff_extent[dir] + staff_padding - dir * total_off;
+    /// total_off += dir * max (diff, 0.0)</c>, the same block
+    /// <c>DynamicEngraver.BaselineY</c> transcribes; the staff extent comes from
+    /// <see cref="DynamicEngraver.StaffExtent"/>, the one home for it.
+    /// LILYPOND-REF: scm/define-grobs.scm:395 staff-padding 1.0 of BassFigureAlignmentPositioning (side-position-interface at :407).
+    /// <para>
+    /// ⚠️ MEASURED INERT, and computed anyway because LilyPond computes it (HANDOFF §5.2):
+    /// the support placement is staff ink + padding 0.5 + the top digit's cap, and a cap
+    /// beats staff-padding − padding = 0.5 for every figure the font draws, so this floor
+    /// can never bind for this grob. Ledger <c>figbass.quiet.staff-to-baseline</c> is the
+    /// observer — LilyPond reads 3.674795235605315 there, the support placement.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT WAS <c>BelowStaffY 5.0 + StaffPadding 1.0</c> = 4.0 below the middle line, a
+    /// Lily#-own fixed offset with no LilyPond counterpart (neither device has one: the
+    /// FiguredBass context declares no basic-distance and side-position has no fixed
+    /// offset). It was invisible while the cap was the invented 1.5 — 2.05 + 0.5 + 1.5 =
+    /// 4.05 cleared it by 0.05 — and the moment the cap became the real one it started
+    /// BINDING, holding the quiet regime at exactly 4.000000. An inert invention is one
+    /// texture away from being load-bearing.
+    /// </para>
+    /// </remarks>
+    private static double AlignedSideFloorBelowStaff
+        => DynamicEngraver.StaffExtent + EngravingDefaults.BassFigureStaffPadding;
+
+    /// <summary>
+    /// The figure's own ink above its baseline — <c>BassFigure</c>'s Y-extent.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:356 BassFigure's Y-extent (bass-figure-interface at :359):
+    /// <c>(Y-extent . grob::always-Y-extent-from-stencil)</c> —
+    /// the extent is the drawn stencil's, per figure, so it is asked of the glyphs that
+    /// figure actually draws (<see cref="FiguredBassGlyphRun"/>) rather than of a constant.
+    /// <para>
+    /// ⚠️ IT WAS A CONSTANT 1.5, described as "the digit CAP height at the 3.0 ss figure
+    /// font". Both halves of that were Lily#'s own: the em is 4 ss × magstep(−5) = 2.244924
+    /// (<see cref="EngravingDefaults.FiguredBassFontSize"/>) and the face is Emmentaler's
+    /// number cut, whose digit is 0.5 em — so the reservation asked for 1.5 where LilyPond
+    /// reads 1.124795235605315, and the DRAWING (a serif face whose real digit ink was
+    /// 2.112000) agreed with neither. That single term stood under every figured-bass ledger
+    /// point as +0.375204764 and printed the digits 0.112 through the stem above them.
+    /// </para>
+    /// </remarks>
+    internal static double FigureInkTop(string topFigureText)
+        => FiguredBassGlyphRun.InkTop(topFigureText);
+
     internal const double MinFigureBoxWidth = 0.8;
     // relatedstaff-spacing padding + the distance→drop math live in SkylineDrop (shared with lyrics).
+
+    /// <summary>
+    /// The up-skyline one figure column offers the placement, about its own baseline.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME, because the same box is asked for twice: by the placement
+    /// (<see cref="ApplySkylineDrop"/>) and by the reservation
+    /// (<see cref="RowInkBelowStaff"/>). ⚠️ AND THERE IS A THIRD SPELLING that this does NOT
+    /// yet cover: <c>LayoutEngine</c>'s inter-SYSTEM seed uses <see cref="MinFigureBoxWidth"/>
+    /// as a HALF-width where these two use it as a full one. Left alone deliberately —
+    /// changing it moves the page's system spacing, which no figured-bass point observes yet.
+    /// </remarks>
+    internal static VerticalSkyline ColumnUpSkyline(double x, string topFigureText)
+        => VerticalSkyline.FromBox(
+            x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
+            0, FigureInkTop(topFigureText), VerticalDirection.Up);
+
+    /// <summary>
+    /// The ink a staff's figure row occupies, as a DOWN skyline about that staff's MIDDLE
+    /// line — what the staff below has to clear.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:387-411 <c>side-position-interface</c>,
+    /// <c>outside-staff-priority</c>, <c>add-stem-support</c> —
+    /// <c>BassFigureAlignmentPositioning</c> is an outside-staff grob of its own staff's axis
+    /// group, so once it is placed its stencil is part of that group's vertical skyline and
+    /// <c>Align_interface</c> spaces the next staff against it.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 <c>skyline_spacing</c> — each
+    /// priority's grobs are placed against the accumulated profile and then merged INTO it.
+    /// <para>
+    /// ⚠️ THE PLACEMENT IS RE-RUN HERE rather than read off the layouts, for the same reason
+    /// <c>AddDynamicsToSkyline</c> re-runs a dynamic's: this profile is an INPUT to the layout
+    /// pass that produces those layouts. The arithmetic is not duplicated — it is
+    /// <see cref="SkylineDrop.Compute"/> and <see cref="ColumnUpSkyline"/>, the same two the
+    /// placement calls.
+    /// </para>
+    /// <para>
+    /// ⚠️ WITHOUT THIS THE ROW IS PLACED CORRECTLY AND RESERVED NOWHERE. MEASURED (ledger
+    /// <c>figbass.upper-staff.staff-gap</c>): LilyPond leaves 12.174795235605316 between two
+    /// staves when the row lives between them and Lily# left 9.550000 — the gap it leaves
+    /// with nothing there — so giving the drop a staff without this would have moved the
+    /// figures out of the system's basement and into the staff below.
+    /// </para>
+    /// </remarks>
+    /// <param name="downSoFar">The staff's accumulated inside-staff DOWN profile — what the
+    /// row is placed against. Not mutated.</param>
+    internal static VerticalSkyline RowInkBelowStaff(
+        ImmutableArray<FiguredBassItem> figuredBasses,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex,
+        ImmutableArray<Measure> staffMeasures,
+        VerticalSkyline downSoFar)
+    {
+        var ink = new VerticalSkyline(VerticalDirection.Down);
+        if (figuredBasses.IsDefaultOrEmpty) return ink;
+
+        // The row's own basic position, in this staff's frame: Y-up above the middle line.
+        double baselineYUp = -AlignedSideFloorBelowStaff;
+
+        var columns = new List<(double X, int Count, string TopText)>();
+        var rowUp = new VerticalSkyline(VerticalDirection.Up);
+        foreach (var fb in figuredBasses)
+        {
+            if (fb.StaffIndex != staffIndex) continue;
+            int layoutIdx = -1;
+            for (int i = 0; i < measureLayouts.Length; i++)
+                if (measureLayouts[i].MeasureIndex == fb.MeasureIndex) { layoutIdx = i; break; }
+            if (layoutIdx < 0) continue;
+            var measureLayout = measureLayouts[layoutIdx];
+            // The SAME X the engraver computes (Calculate), so seed and draw agree.
+            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                staffMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
+            string topText = fb.Figures.Length > 0 ? fb.Figures[0].DisplayText : string.Empty;
+            columns.Add((x, fb.Figures.Length, topText));
+            rowUp.Merge(ColumnUpSkyline(x, topText));
+        }
+        if (columns.Count == 0) return ink;
+
+        // The drop, by the same two steps the placement takes. The frame here is the staff's
+        // MIDDLE line, so the basic floor is that Y-up read downward.
+        var drops = SkylineDrop.Compute(
+            new Dictionary<int, VerticalSkyline> { [staffIndex] = rowUp },
+            _ => -baselineYUp,
+            _ => downSoFar);
+        double placedYUp = baselineYUp - (drops.TryGetValue(staffIndex, out var d) ? d : 0);
+
+        foreach (var (x, count, topText) in columns)
+        {
+            ink.Merge(VerticalSkyline.FromBox(
+                x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
+                placedYUp - ((count - 1) * FigureSpacing + 0.5),
+                placedYUp + FigureInkTop(topText),
+                VerticalDirection.Down));
+        }
+        return ink;
+    }
 
     public static ImmutableArray<FiguredBassLayout> Calculate(
         ImmutableArray<FiguredBassItem> figuredBasses,
@@ -80,7 +220,8 @@ internal static class FiguredBassEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        Func<int, int, VerticalSkyline?>? staffDownSkyline = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)
             return ImmutableArray<FiguredBassLayout>.Empty;
@@ -106,10 +247,10 @@ internal static class FiguredBassEngraver
 
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
-            // Y-up (frame B): the topmost figure sits below the staff, in staff-spaces
-            // above the staff middle (BelowStaffY+StaffPadding below the staff top,
-            // reflected through the middle at 2).
-            double yUp = 2.0 - (BelowStaffY + StaffPadding);
+            // Y-up (frame B): the topmost figure starts on aligned_side's floor below the
+            // staff middle, and ApplySkylineDrop then lowers it until it clears its own
+            // staff's ink (the support half of the same aligned_side).
+            double yUp = -AlignedSideFloorBelowStaff;
 
             var figureTexts = fb.Figures
                 .Select(f => f.DisplayText)
@@ -127,44 +268,85 @@ internal static class FiguredBassEngraver
 
         var result = layouts.ToImmutable();
         if (systemSkylines != null && !systems.IsDefaultOrEmpty)
-            result = ApplySkylineDrop(result, systems, systemSkylines);
+            result = ApplySkylineDrop(result, systems, systemSkylines, staffDownSkyline);
         return result;
     }
 
+    /// <summary>
+    /// Lowers each staff's figure row until it clears THAT STAFF's down-skyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/figured-bass-position-engraver.cc:90-100 <c>acknowledge_note_column</c>,
+    /// <c>acknowledge_stem</c> — the supports <c>BassFigureAlignmentPositioning</c> is
+    /// side-positioned against are the ones its OWN engraver acknowledged, i.e. its own
+    /// staff's; the loose-line device reaches the same staff from the other end
+    /// (ly/engraver-init.ly:1108-1123 <c>\consists Figured_bass_engraver</c>,
+    /// <c>VerticalAxisGroup.staff-affinity</c>, <c>nonstaff-relatedstaff-spacing</c> — affinity
+    /// UP hangs the line from the staff above it).
+    /// <para>
+    /// ⚠️ THE KEY IS (system, staff), AND UNTIL 2026-07-30 IT WAS THE SYSTEM. Every figure of
+    /// a system was merged into one skyline, measured against the SYSTEM's down-skyline and
+    /// lowered by one number, so a row on a non-bottom staff was thrown below all of the
+    /// system's ink — the same shape as the lower-staff fermata that flew over the top staff
+    /// before the above pass went per-(system, staff). MEASURED, one score in three
+    /// arrangements: LilyPond reads 8.124795235605315 whichever staff owns the figures, and
+    /// Lily# read 8.500000 / 18.050000 / 8.500000 (ledger <c>figbass.{alone,upper-staff,
+    /// lower-staff}.staff-to-baseline</c>). No committed fixture had the middle arrangement.
+    /// </para>
+    /// </remarks>
     private static ImmutableArray<FiguredBassLayout> ApplySkylineDrop(
         ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
+        Func<int, int, VerticalSkyline?>? staffDownSkyline)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
-        var fbUp = new Dictionary<int, VerticalSkyline>();
-        var basicY = new Dictionary<int, double>();
+        var fbUp = new Dictionary<(int Sys, int Staff), VerticalSkyline>();
+        var basicY = new Dictionary<(int Sys, int Staff), double>();
         foreach (var lay in layouts)
         {
             if (!measureToSystem.TryGetValue(lay.MeasureIndex, out int s)) continue;
-            double halfW = MinFigureBoxWidth / 2.0;
-            var box = VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, FigureTopExtent, VerticalDirection.Up);
-            if (fbUp.TryGetValue(s, out var sky)) sky.Merge(box);
-            else fbUp[s] = box;
+            var key = (s, lay.StaffIndex);
+            var box = ColumnUpSkyline(
+                lay.X, lay.FigureTexts.Length > 0 ? lay.FigureTexts[0] : string.Empty);
+            if (fbUp.TryGetValue(key, out var sky)) sky.Merge(box);
+            else fbUp[key] = box;
             // basicY is the system-relative device floor (the old lay.Y). Reconstruct
             // it from Y-up against this figure's own staff offset.
             double staffOffset = LayoutUtilities.StaffOffsetInSystemDown(systems[s], lay.StaffIndex);
             double layY = staffOffset + (2.0 - lay.YUp);
-            basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, layY) : layY;
+            basicY[key] = basicY.TryGetValue(key, out var b) ? System.Math.Min(b, layY) : layY;
         }
 
-        // Figured bass uses each system's own lowest figure as the basic-distance floor.
-        var systemDrop = SkylineDrop.Compute(fbUp, s => basicY[s], systemSkylines);
+        // Figured bass uses each staff's own lowest figure as the basic-distance floor.
+        // ⚠️ The floor is INERT and is computed anyway, because LilyPond computes its own:
+        // aligned_side takes the larger of the support placement and the staff-padding floor
+        // (lily/side-position-interface.cc:401-453), and MEASURED (ledger
+        // figbass.quiet.staff-to-baseline) the support placement wins in the quietest regime a
+        // five-line staff has — the staff's own ink 2.05 + padding 0.5 + the top digit's cap
+        // already exceeds staff ink + staff-padding 1.0, for any figure whose cap beats
+        // staff-padding − padding = 0.5.
+        var drop = SkylineDrop.Compute(fbUp, k => basicY[k], k => StaffDown(k.Sys, k.Staff));
 
-        if (systemDrop.Count == 0)
+        if (drop.Count == 0)
             return layouts;
 
         // The drop d is a downward (device) shift; in Y-up that is a decrease.
         return System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(layouts, lay =>
             measureToSystem.TryGetValue(lay.MeasureIndex, out int s)
-            && systemDrop.TryGetValue(s, out var d) && d > 0
+            && drop.TryGetValue((s, lay.StaffIndex), out var d) && d > 0
                 ? lay with { YUp = lay.YUp - d }
                 : lay)).ToImmutableArray();
+
+        // The profile this staff's row has to clear, in the system's Y-up frame. The caller
+        // supplies it per (system, staff); the system silhouette is the degenerate support for
+        // a harness that builds no staff, where it is the same profile because there is only
+        // one staff to be the silhouette of.
+        VerticalSkyline? StaffDown(int sys, int staff)
+        {
+            if (staffDownSkyline?.Invoke(sys, staff) is { } own)
+                return own;
+            return sys >= 0 && sys < systemSkylines.Count ? systemSkylines[sys].down : null;
+        }
     }
 }

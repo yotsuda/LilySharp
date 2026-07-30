@@ -618,6 +618,123 @@ internal static partial class GlyphMetrics
     /// <summary>Dynamic letter 'z' (fetaText) — advance width (next-glyph horizontal feed).</summary>
     public const double DynamicLetterZAdvance = 1.140000;
 
+    /// <summary>Figured-bass digit 0 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.zero (fattened.fixedwidth.zero = U+E0C4 in this build)</remarks>
+    public static readonly BBox FigBassDigit0 = new(0.068000, 0.000000, 1.532000, 2.000000);
+    /// <summary>Figured-bass digit 0 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit0Outline = new(0.068000, 0.000000, 1.532000, 2.000000);
+    /// <summary>Figured-bass digit 0 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit0Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 1 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.one (fattened.fixedwidth.one = U+E0C5 in this build)</remarks>
+    public static readonly BBox FigBassDigit1 = new(0.172000, 0.000000, 1.476000, 2.016000);
+    /// <summary>Figured-bass digit 1 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit1Outline = new(0.172000, 0.000000, 1.476000, 2.016000);
+    /// <summary>Figured-bass digit 1 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit1Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 2 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.two (fattened.fixedwidth.two = U+E0C6 in this build)</remarks>
+    public static readonly BBox FigBassDigit2 = new(0.068000, 0.000000, 1.532000, 2.000000);
+    /// <summary>Figured-bass digit 2 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit2Outline = new(0.068000, 0.000000, 1.532000, 2.000000);
+    /// <summary>Figured-bass digit 2 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit2Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 3 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.three (fattened.fixedwidth.three = U+E0C7 in this build)</remarks>
+    public static readonly BBox FigBassDigit3 = new(0.132000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Figured-bass digit 3 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit3Outline = new(0.132000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Figured-bass digit 3 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit3Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 4 (cv47 variant) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.four.alt (fattened.fixedwidth.four.alt = U+E0C9 in this build)</remarks>
+    public static readonly BBox FigBassDigit4 = new(-0.012000, 0.000000, 1.612000, 2.004000);
+    /// <summary>Figured-bass digit 4 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit4Outline = new(-0.012000, 0.000000, 1.612000, 2.004000);
+    /// <summary>Figured-bass digit 4 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit4Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 5 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.five (fattened.fixedwidth.five = U+E0CA in this build)</remarks>
+    public static readonly BBox FigBassDigit5 = new(0.088000, 0.000000, 1.508000, 2.000000);
+    /// <summary>Figured-bass digit 5 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit5Outline = new(0.088000, 0.000000, 1.508000, 2.000000);
+    /// <summary>Figured-bass digit 5 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit5Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 6 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.six (fattened.fixedwidth.six = U+E0CB in this build)</remarks>
+    public static readonly BBox FigBassDigit6 = new(0.120000, 0.000000, 1.480000, 2.000000);
+    /// <summary>Figured-bass digit 6 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit6Outline = new(0.120000, 0.000000, 1.480000, 2.000000);
+    /// <summary>Figured-bass digit 6 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit6Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 7 (cv47 variant) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.seven.alt (fattened.fixedwidth.seven.alt = U+E0CD in this build)</remarks>
+    public static readonly BBox FigBassDigit7 = new(0.148000, -0.004000, 1.632000, 2.000000);
+    /// <summary>Figured-bass digit 7 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit7Outline = new(0.148000, -0.004000, 1.632000, 2.000000);
+    /// <summary>Figured-bass digit 7 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit7Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 8 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.eight (fattened.fixedwidth.eight = U+E0CE in this build)</remarks>
+    public static readonly BBox FigBassDigit8 = new(0.068000, 0.000000, 1.552000, 2.000000);
+    /// <summary>Figured-bass digit 8 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit8Outline = new(0.068000, 0.000000, 1.552000, 2.000000);
+    /// <summary>Figured-bass digit 8 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit8Advance = 1.600000;
+
+    /// <summary>Figured-bass digit 9 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.fixedwidth.nine (fattened.fixedwidth.nine = U+E0CF in this build)</remarks>
+    public static readonly BBox FigBassDigit9 = new(0.120000, 0.000000, 1.480000, 2.000000);
+    /// <summary>Figured-bass digit 9 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassDigit9Outline = new(0.120000, 0.000000, 1.480000, 2.000000);
+    /// <summary>Figured-bass digit 9 — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassDigit9Advance = 1.600000;
+
+    /// <summary>Figured-bass flat (U+266D) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-flats.mf — flat.figbass (accidentals.flat.figbass = U+266D in this build)</remarks>
+    public static readonly BBox FigBassFlat = new(0.112000, -0.176000, 0.988000, 2.204000);
+    /// <summary>Figured-bass flat (U+266D) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassFlatOutline = new(0.112000, -0.176000, 0.988000, 2.204000);
+    /// <summary>Figured-bass flat (U+266D) — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassFlatAdvance = 1.100000;
+
+    /// <summary>Figured-bass natural (U+266E) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-naturals.mf — natural.figbass (accidentals.natural.figbass = U+266E in this build)</remarks>
+    public static readonly BBox FigBassNatural = new(0.136000, -0.200000, 0.964000, 2.200000);
+    /// <summary>Figured-bass natural (U+266E) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassNaturalOutline = new(0.136000, -0.200000, 0.964000, 2.200000);
+    /// <summary>Figured-bass natural (U+266E) — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassNaturalAdvance = 1.100000;
+
+    /// <summary>Figured-bass sharp (U+266F) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-sharps.mf — sharp.figbass (accidentals.sharp.figbass = U+266F in this build)</remarks>
+    public static readonly BBox FigBassSharp = new(0.000000, -0.252000, 1.100000, 2.252000);
+    /// <summary>Figured-bass sharp (U+266F) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FigBassSharpOutline = new(0.000000, -0.252000, 1.100000, 2.252000);
+    /// <summary>Figured-bass sharp (U+266F) — advance width (next-glyph horizontal feed).</summary>
+    public const double FigBassSharpAdvance = 1.100000;
+
     // ========== Up-stem attachment points (from the font's LILC table) ==========
     // The point where an up stem's lower-right corner meets the head — X is the
     // head's designed right edge, Y the height above the centre line the stem's

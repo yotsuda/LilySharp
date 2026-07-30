@@ -72,7 +72,7 @@ public sealed class LpReferenceCitationTests
     /// ⚠️ Lowering it is the point; raising it to make a build pass is the one forbidden
     /// move (HANDOFF 5.2.1①).
     /// </remarks>
-    private const int UnnamedCitationBaseline = 746;
+    private const int UnnamedCitationBaseline = 742;
 
     /// <summary>
     /// (symbol, LilyPond file) pairs a citation names that the file does not contain.

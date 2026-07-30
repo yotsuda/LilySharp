@@ -1992,6 +1992,25 @@ internal sealed class MultiStaffLayouter
                     sky.Down.Merge(rowInk.Down);
                 }
 
+                // A figure row hangs below its own staff exactly as a chord row sits above
+                // it, and the staff below has to clear it — LilyPond's
+                // BassFigureAlignmentPositioning is an outside-staff grob of THIS staff's
+                // axis group, so its stencil is in the skyline Align_interface walks. Merged
+                // after the inside-staff profile is complete, because that profile is what
+                // the row is placed against (the same order the priority passes run in).
+                // ⚠️ Until 2026-07-30 the row was in the SYSTEM silhouette only, so it was
+                // reserved between systems and nowhere between staves — measured against
+                // LilyPond at 2.624795 short (ledger figbass.upper-staff.staff-gap), which is
+                // the row's whole depth plus the nonstaff-unrelatedstaff padding.
+                if (!score.FiguredBasses.IsDefaultOrEmpty)
+                {
+                    var fbInk = FiguredBassEngraver.RowInkBelowStaff(
+                        score.FiguredBasses, measureLayouts, thisStaff,
+                        staff.PrimaryVoice.Measures, sky.Down);
+                    if (!fbInk.IsEmpty)
+                        sky.Down.Merge(fbInk);
+                }
+
                 result.Add(sky);
                 staffIndex++;
             }

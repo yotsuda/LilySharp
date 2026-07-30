@@ -84,13 +84,24 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/figured-bass-engraver.cc:269 process_music / :157 stop_translation_timestep
-    /// LILYPOND-REF: scm/define-grobs.scm:352 BassFigure defaults
+    /// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure — <c>ly:text-interface::print</c>
+    /// over <c>\number</c> markup, i.e. Emmentaler's fetaText number glyphs with this grob's
+    /// <c>font-features</c> applied. The glyph, its advance and its ink all come from
+    /// <see cref="FiguredBassGlyphRun"/>, the same house the reservation reads — before
+    /// 2026-07-30 this drew a SERIF face at an em of its own (3.0 ss, whose digit ink was
+    /// 2.112000 against LilyPond's 1.124795235605315), which is why the digits reached
+    /// 0.112 through the stem the row was placed below.
+    /// ⚠️ The row step drawn here is 1.5 while <see cref="FiguredBassEngraver.FigureSpacing"/>
+    /// RESERVES 1.6 — one quantity, two spellings that disagree (HANDOFF §5.2.1②). Neither is
+    /// LilyPond's, whose BassFigureAlignment stacks by each BassFigureLine's own Y-extent
+    /// (scm/define-grobs.scm:366-374, align-to-minimum-distances with padding -inf), and the
+    /// ledger's <c>figbass.upper-staff.staff-gap</c> is that debt's observer (+0.600000).
     /// </remarks>
     private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
-        double size = FontSize * 0.75;
+        double size = FiguredBassGlyphRun.Em;
         const double figureSpacing = 1.5;
         foreach (var fb in layout.FiguredBassLayouts)
         {
@@ -101,8 +112,22 @@ internal static partial class SharedRenderer
             using (gc.Source(fb.SourcePosition))
             {
                 for (int i = 0; i < fb.FigureTexts.Length; i++)
-                    gc.DrawText(fb.FigureTexts[i], fb.X, baseY - i * figureSpacing,
-                        size, "serif", FontStyle.Regular, TextAnchor.Middle, Color.Black);
+                {
+                    string text = fb.FigureTexts[i];
+                    double y = baseY - i * figureSpacing;
+                    // The run keeps the centring the text anchor used to do, so this port
+                    // moves the FACE and the SIZE only; where a figure sits horizontally is
+                    // a separate claim with no ledger point yet (FiguredBassGlyphRun).
+                    double x0 = fb.X - FiguredBassGlyphRun.Width(text) / 2.0;
+                    foreach (var piece in FiguredBassGlyphRun.Pieces(text))
+                    {
+                        if (piece.IsGlyph)
+                            gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
+                        else
+                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
+                                FontStyle.Regular, TextAnchor.Start, Color.Black);
+                    }
+                }
             }
         }
     }

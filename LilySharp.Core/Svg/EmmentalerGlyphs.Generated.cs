@@ -176,6 +176,34 @@ internal static partial class EmmentalerGlyphs
     /// <summary>timesig.C22</summary>
     public const char TimeSigCutCommon = '\uE096';
 
+    // === Figured bass digits (fetaText, tnum + cv47 + ss01 applied) ===
+    /// <summary>fattened.fixedwidth.zero</summary>
+    public const char FigBassDigit0 = '\uE0C4';
+    /// <summary>fattened.fixedwidth.one</summary>
+    public const char FigBassDigit1 = '\uE0C5';
+    /// <summary>fattened.fixedwidth.two</summary>
+    public const char FigBassDigit2 = '\uE0C6';
+    /// <summary>fattened.fixedwidth.three</summary>
+    public const char FigBassDigit3 = '\uE0C7';
+    /// <summary>fattened.fixedwidth.four.alt (cv47 picks the .alt four)</summary>
+    public const char FigBassDigit4 = '\uE0C9';
+    /// <summary>fattened.fixedwidth.five</summary>
+    public const char FigBassDigit5 = '\uE0CA';
+    /// <summary>fattened.fixedwidth.six</summary>
+    public const char FigBassDigit6 = '\uE0CB';
+    /// <summary>fattened.fixedwidth.seven.alt (cv47 picks the .alt seven)</summary>
+    public const char FigBassDigit7 = '\uE0CD';
+    /// <summary>fattened.fixedwidth.eight</summary>
+    public const char FigBassDigit8 = '\uE0CE';
+    /// <summary>fattened.fixedwidth.nine</summary>
+    public const char FigBassDigit9 = '\uE0CF';
+    /// <summary>accidentals.flat.figbass (U+266D in figbass-accidental-alist)</summary>
+    public const char FigBassFlat = '\u266D';
+    /// <summary>accidentals.natural.figbass (U+266E)</summary>
+    public const char FigBassNatural = '\u266E';
+    /// <summary>accidentals.sharp.figbass (U+266F)</summary>
+    public const char FigBassSharp = '\u266F';
+
     // === Articulations ===
     /// <summary>scripts.ufermata</summary>
     public const char FermataAbove = '\uE039';

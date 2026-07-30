@@ -95,28 +95,45 @@ internal static class SkylineDrop
     public const double UnrelatedStaffPadding = 1.5;
 
     /// <summary>
-    /// Per-system downward Y-shift so each system's UP-skyline clears the staff's
-    /// DOWN-skyline: <c>drop = max(0, max(basicY, distance + RelatedStaffPadding) - basicY)</c>.
-    /// Only systems that need a shift appear in the result. <paramref name="basicY"/>
-    /// gives the line's basic-distance floor for a system (a scalar for lyrics, the
-    /// per-system minimum for figured bass).
+    /// The downward Y-shift that makes each line's UP-skyline clear the DOWN-skyline it
+    /// hangs from: <c>drop = max(0, max(basicY, distance + RelatedStaffPadding) - basicY)</c>.
+    /// Only lines that need a shift appear in the result. <paramref name="basicY"/> gives the
+    /// line's basic-distance floor and <paramref name="downSkyline"/> the profile it has to
+    /// clear; both are asked per KEY, which is whatever identifies one line — a system for
+    /// lyrics, a (system, staff) pair for figured bass.
     /// </summary>
-    public static Dictionary<int, double> Compute(
-        IReadOnlyDictionary<int, VerticalSkyline> upBySystem,
-        Func<int, double> basicY,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines)
+    /// <remarks>
+    /// ⚠️ THE KEY IS A PARAMETER BECAUSE IT WAS THE DEFECT. This took a system index and read
+    /// <c>systemSkylines[s].down</c> — the whole system's silhouette — so a figure row on a
+    /// non-bottom staff was measured against the LOWEST ink in the system and thrown below all
+    /// of it. LilyPond's is per-line by construction, from either end: the loose-line spacer
+    /// hangs a FiguredBass context off the staff <c>page-layout-problem.cc</c> records as
+    /// <c>last_spaceable_line</c>, and <c>BassFigureAlignmentPositioning</c> side-positions
+    /// against the note columns its own engraver acknowledged
+    /// (lily/figured-bass-position-engraver.cc:90-100 <c>acknowledge_note_column</c>,
+    /// <c>acknowledge_stem</c>). MEASURED, three arrangements of one score: LilyPond reads
+    /// 8.124795235605315 whichever staff the figures belong to (ledger <c>figbass.*</c>).
+    /// <para>
+    /// Every argument is in ONE frame — Y-up about the system's origin — and it is the caller
+    /// that puts them there, so this has no staff geometry in it at all.
+    /// </para>
+    /// </remarks>
+    public static Dictionary<TKey, double> Compute<TKey>(
+        IReadOnlyDictionary<TKey, VerticalSkyline> upByLine,
+        Func<TKey, double> basicY,
+        Func<TKey, VerticalSkyline?> downSkyline)
+        where TKey : notnull
     {
-        var drops = new Dictionary<int, double>();
-        foreach (var (s, up) in upBySystem)
+        var drops = new Dictionary<TKey, double>();
+        foreach (var (key, up) in upByLine)
         {
-            if (s >= systemSkylines.Count) continue;
-            var down = systemSkylines[s].down;
-            if (down.IsEmpty || up.IsEmpty) continue;
+            var down = downSkyline(key);
+            if (down is null || down.IsEmpty || up.IsEmpty) continue;
             double dist = down.Distance(up, HorizonPadding);
             if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
-            double basic = basicY(s);
+            double basic = basicY(key);
             double drop = Math.Max(basic, dist + RelatedStaffPadding) - basic;
-            if (drop > 1e-6) drops[s] = drop;
+            if (drop > 1e-6) drops[key] = drop;
         }
         return drops;
     }

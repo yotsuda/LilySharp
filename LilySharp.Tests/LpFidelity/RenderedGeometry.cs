@@ -1276,6 +1276,100 @@ internal sealed class RenderedGeometry
         return rows[1] - rows[0];
     }
 
+    /// <summary>The glyphs a figure is spelled from — the fetaText digits and the figbass
+    /// accidentals — asked of the same house the renderer draws through, so the harness
+    /// never holds its own copy of the code points.</summary>
+    private static bool IsFiguredBassGlyph(char g) =>
+        "0123456789♭♮♯".Any(
+            c => GlyphMetrics.TryGetFiguredBassGlyph(c, out char drawn, out _, out _)
+                 && drawn == g);
+
+    /// <summary>
+    /// Bass figures, left to right — the number-font glyph runs at the figure em.
+    /// </summary>
+    /// <remarks>
+    /// Selected by FACE and SIZE, the way <see cref="LyricSyllables"/> is: the glyph says it
+    /// is a bass figure (Emmentaler's fetaText digits with BassFigure's font-features
+    /// applied, which no other Lily# grob draws) and the em says it is one of THESE figures.
+    /// Both are read from the drawing houses —
+    /// <see cref="GlyphMetrics.TryGetFiguredBassGlyph"/> and
+    /// <see cref="EngravingDefaults.FiguredBassFontSize"/> — rather than copied, because a
+    /// harness that pins the value it measures against stops measuring the day that value
+    /// moves (HANDOFF §5.2.1⑤: the lyric em's move failed eighteen points with "no syllable
+    /// was drawn", which is the loud version; a copy that still matched would have been the
+    /// quiet one).
+    /// <para>
+    /// ⚠️ IT USED TO SELECT SERIF TEXT AT THE FIGURE EM, which is what Lily# drew until the
+    /// face was ported on 2026-07-30. The instrument-name decoy that made the probe books
+    /// suppress staff names (LpGeometryProbes' figured-bass block) is gone with it — a name
+    /// is text and a figure is a glyph now — but the books keep suppressing them, because
+    /// the LilyPond side has no names either.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<DrawnGlyph> BassFigures =>
+        Glyphs.Where(g => IsFiguredBassGlyph(g.Glyph)
+                          && Math.Abs(g.FontSize - EngravingDefaults.FiguredBassFontSize) < 1e-9)
+              .ToList();
+
+    /// <summary>
+    /// The topmost bass-figure baseline below staff <paramref name="staffIndex"/>, measured
+    /// from that staff's middle line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:1108-1123 <c>\consists Figured_bass_engraver</c>,
+    /// <c>VerticalAxisGroup.staff-affinity</c>, <c>nonstaff-relatedstaff-spacing</c> — the
+    /// FiguredBass context declares affinity UP and that spec's padding 0.5 and NOTHING else,
+    /// so unlike a lyric line (:649-652, basic-distance 5.5) there is no ideal to fall back
+    /// on: the realized distance IS the staff's own ink plus 0.5, and it is the staff ABOVE
+    /// the line that supplies that ink.
+    /// LILYPOND-REF: scm/define-grobs.scm:387-411 <c>side-position-interface</c>,
+    /// <c>outside-staff-priority</c>, <c>add-stem-support</c> — BassFigureAlignmentPositioning,
+    /// the OTHER device, for figures entered in a Staff context: padding 0.5 and staff-padding
+    /// 1.0, per-staff by construction. Both were measured
+    /// (audit/lp-geometry/probes/figured-bass-placement.ly) and they agree to fifteen digits.
+    /// <para>
+    /// ⚠️ BOTH SIDES ARE BASELINES, and this one carries the FACE: with no basic-distance in
+    /// either LilyPond device, the figure's own ink ALWAYS binds, so the reading can never
+    /// fall into a regime where the digit's cap height cancels (contrast
+    /// <see cref="FirstStaffToLyricBaseline"/>, whose probes deliberately stay on the
+    /// basic-distance). The three arrangements therefore close by their residuals becoming
+    /// EQUAL — the shared face term — and not by reaching zero.
+    /// </para>
+    /// <para>
+    /// <paramref name="staffCount"/> asserts the arrangement rather than assuming it: the
+    /// two-staff readings mean what they claim only while the second staff is actually on the
+    /// page, and a removed staff would otherwise return a plausible number from the wrong
+    /// pairing (HANDOFF §5.0 trap 7).
+    /// </para>
+    /// <para>PAGE 1 ONLY — <see cref="Texts"/> reads the first page, so a page argument here
+    /// would silently pair one page's staff with another page's figures.</para>
+    /// </remarks>
+    public double FigureBaselineBelowStaff(int staffIndex = 0, int staffCount = 0)
+    {
+        const int page = 0;
+        var refpoints = StaffRefpoints(page);
+        if (staffCount > 0 && refpoints.Count != staffCount)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the arrangement wanted {staffCount} staff/staves and the page "
+                + $"has {refpoints.Count} — this reading is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        if (staffIndex < 0 || staffIndex >= refpoints.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff {staffIndex} but only {refpoints.Count} "
+                + "staff/staves are on it.");
+        }
+        double staff = refpoints[staffIndex];
+        var below = BassFigures.Where(t => t.Y > staff).ToList();
+        if (below.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: no bass figure was drawn below staff {staffIndex}'s middle line "
+                + $"({staff:F6}).\nDrawn geometry:\n" + Describe());
+        return below.Min(t => t.Y) - staff;
+    }
+
     /// <summary>The first (leftmost) chord symbol's anchor.</summary>
     public double FirstChordSymbolAnchor()
     {
