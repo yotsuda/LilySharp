@@ -3774,8 +3774,10 @@ internal static class LpGeometryProbes
     /// CONTROL: sixteenths in 4/4 — four beams of four.
     /// </summary>
     /// <remarks>
-    /// The one control that is NOT pure eighths, so no beamException applies and the bare
-    /// beat structure answers: the quarter, not the half measure. Without it, a port could
+    /// The one control that is NOT pure eighths, so the 1/8 entry cannot apply: the lookup
+    /// takes `larger-setting` to 4/4's 1/12 entry, whose groups of three twelfths are the
+    /// quarter — not the half measure. (⚠️ NOT "the bare beat structure answers", which is
+    /// only true because the two agree in 4/4; see BG64S, where they do not.) Without it, a port could
     /// satisfy every book above by beaming eighths per measure and nothing would notice.
     /// LilyPond twin: score C44S.
     /// </remarks>
@@ -3950,8 +3952,11 @@ internal static class LpGeometryProbes
     /// SIXTEENTH triplets — a twenty-fourth each, for which NO exception entry exists.
     /// </summary>
     /// <remarks>
-    /// LilyPond twin (score T44S): FOUR beams of SIX. With no entry to find, the bare beat
-    /// structure answers and the run groups by the quarter — which means LilyPond beams
+    /// LilyPond twin (score T44S): FOUR beams of SIX. With no entry keyed on a twenty-fourth,
+    /// the lookup takes the smallest key that is at least the type
+    /// (scm/auto-beam.scm:48-49 larger-setting) to the 1/12 entry, whose
+    /// groups of three twelfths are the quarter — so the run groups by the quarter, which means
+    /// LilyPond beams
     /// straight ACROSS the boundary between two tuplets, joining two triplets of sixteenths
     /// into one beam.
     /// <para>
@@ -3981,6 +3986,171 @@ internal static class LpGeometryProbes
         form main { ~Main }
 
         score main "BGT44S" { staff m }
+        """;
+
+    // --- the beamExceptions keyed on 1/16 and 1/32, which no book above reaches.
+    //
+    // These are the entries that make the LOOKUP decide where a beam ends rather than the beat
+    // structure, and they are what a two-pass grouper cannot express: they ask for groups
+    // FINER than the beat, and Lily#'s second pass can only merge groups COARSER. Four books
+    // where the two answers differ, four controls where they do not — and the controls are
+    // what say the rule is the smallest key that is AT LEAST the type
+    // (scm/auto-beam.scm:48-49 larger-setting) and not "these meters group by the quarter".
+    // LILYPOND-REF: scm/time-signature-settings.scm:69-173 default-time-signature-settings —
+    //   the 1/16 and 1/32 entries: 2/2 at :74, 3/2 at :90, 4/2 at :112, 6/4 at :133, and the
+    //   1/32 controls 9/4 at :144 and 12/4 at :155.
+
+    /// <summary>Builds a one-bar book of <paramref name="count"/> notes of one value in a meter.</summary>
+    private static string NotesIn(string name, int beats, int beatType, int noteValue, int count) => $$"""
+        octave absolute
+        time {{beats}}/{{beatType}}
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c{{noteValue}} {{string.Join(" ", Enumerable.Repeat("c", count - 1))}} | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { staff m }
+        """;
+
+    /// <summary>
+    /// 6/4 sixteenths — SIX beams of four, from <c>(1/16 . (4 4 4 4 4 4))</c>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: score S64. The entry is an exact match for the type, so its groups of
+    /// four sixteenths — a QUARTER each — answer, while 6/4's beat structure is the compound
+    /// default (3 3) and would beam by the dotted HALF. This is the plainest book in the
+    /// family: no tuplet, no rest, no manual bracket, and the two engines differ by a factor
+    /// of three in group length.
+    /// </remarks>
+    private static readonly string BG64S = NotesIn("BG64S", 6, 4, 16, 24);
+
+    /// <summary>
+    /// 4/2 sixteenths — EIGHT beams of four, from <c>(1/16 . (4 4 4 4 4 4 4 4))</c>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: score S42. The same shape as <see cref="BG64S"/> against a different
+    /// beat: 4/2's structure is (1 1 1 1) of half notes, so the entry's quarter is FOUR times
+    /// finer. Both books are needed — a port that read the entry but kept applying it at the
+    /// beat would satisfy neither, and one that hard-coded "the quarter" would satisfy both
+    /// and then fail the controls below.
+    /// </remarks>
+    private static readonly string BG42S = NotesIn("BG42S", 4, 2, 16, 32);
+
+    /// <summary>
+    /// 2/2 thirty-seconds — FOUR beams of eight, from <c>(1/32 . (8 8 8 8))</c>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: score T22. ⚠️ Its SIXTEENTHS are exact today and must stay so: a
+    /// sixteenth is LARGER than a thirty-second, so <c>larger-setting</c> finds nothing and
+    /// the beat structure answers — which is what Lily# already draws. The entry moves the
+    /// thirty-seconds only.
+    /// </remarks>
+    private static readonly string BG22T = NotesIn("BG22T", 2, 2, 32, 32);
+
+    /// <summary>3/2 thirty-seconds — SIX beams of eight, from <c>(1/32 . (8 8 8 8 8 8))</c>.</summary>
+    /// <remarks>LilyPond twin: score T32. See <see cref="BG22T"/>.</remarks>
+    private static readonly string BG32T = NotesIn("BG32T", 3, 2, 32, 48);
+
+    /// <summary>
+    /// CONTROL 9/4 sixteenths — THREE beams of twelve, the dotted-half beat.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: score S94. 9/4 carries an exception too, but keyed on 1/32, and
+    /// <c>larger-setting</c> takes the smallest key that is at least the type — a sixteenth is
+    /// larger than a thirty-second, so NOTHING is found and the beat structure (3 3 3) of
+    /// quarters answers. This is the control that separates "the lookup decides" from "these
+    /// meters group by the quarter": a port that applied every 1/16-and-finer entry to every
+    /// short note would beam this bar in nine and be wrong.
+    /// </remarks>
+    private static readonly string BG94S = NotesIn("BG94S", 9, 4, 16, 36);
+
+    /// <summary>CONTROL 12/4 sixteenths — FOUR beams of twelve. See <see cref="BG94S"/>.</summary>
+    /// <remarks>LilyPond twin: score S124.</remarks>
+    private static readonly string BG124S = NotesIn("BG124S", 12, 4, 16, 48);
+
+    /// <summary>
+    /// CONTROL 3/4 thirty-seconds — THREE beams of eight, the quarter.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: score T34X. The mirror of <see cref="BG94S"/>: here the lookup DOES find
+    /// an entry — a thirty-second is smaller than a twelfth, so <c>larger-setting</c> takes
+    /// 3/4's 1/12 entry — and the groups it asks for, three twelfths, are the quarter, which is
+    /// what the beat structure would have said anyway. Exact before the port and after it, for
+    /// two different reasons.
+    /// </remarks>
+    private static readonly string BG34T = NotesIn("BG34T", 3, 4, 32, 24);
+
+    /// <summary>CONTROL 4/4 thirty-seconds — FOUR beams of eight. See <see cref="BG34T"/>.</summary>
+    /// <remarks>LilyPond twin: score T44X, via 4/4's own 1/12 entry (3 3 3 3).</remarks>
+    private static readonly string BG44T = NotesIn("BG44T", 4, 4, 32, 32);
+
+    /// <summary>
+    /// A triplet that starts OFF the beat, with a plain eighth either side of it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score TOFF): <c>c'8 \tuplet 3/2 { c'8 c' c' } c'8 c'2</c> — ONE beam of
+    /// FIVE. LilyPond's end test is exact membership of the measure position in the ending
+    /// moments, and none of this run's positions is one: the triplet's notes fall at 1/8, 5/24
+    /// and 7/24, never on the quarter its 1/12 entry ends groups at, and the eighth after them
+    /// at 3/8 is not an ending moment either. So the beam runs from the first eighth to the
+    /// last, straight through both edges of the tuplet.
+    /// <para>
+    /// ⚠️ This is the only book that observes Lily#'s SECOND tuplet guard (tupletInteriors,
+    /// which suppresses the beat flush inside a tuplet) — a triplet that starts ON a beat is
+    /// already inside one beat and nothing would cut it. Today Lily# draws one beam of three:
+    /// tupletBoundaries cuts at both edges, and the two lone eighths are dropped as groups of
+    /// one. The group COUNT is 1 on both sides, so only the first-group reading can see it.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGTOFF = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 tuplet 3/2 { c8 c c } c8 c2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGTOFF" { staff m }
+        """;
+
+    /// <summary>
+    /// CONTROL: three eighths starting at the HALF MEASURE of 3/4 — one beam, not three flags.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score H34): <c>c'4. c'8 c' c'</c> — ONE beam of three. The START rule
+    /// (scm/auto-beam.scm:66-79, the start? branch of default-auto-beam-check) forbids a beam
+    /// from starting at the half measure of a 3/N meter, so as not to suggest a 6/N beat
+    /// structure — but only when <c>beamHalfMeasure</c> is false, and the default is TRUE
+    /// (ly/engraver-init.ly:880, beside autoBeamCheck = #default-auto-beam-check at :882),
+    /// so the first branch is
+    /// always taken and a beam may always start. This book is what makes it safe to write that
+    /// rule down literally: it proves the default answer is "yes" in the one meter and at the
+    /// one position where the rule has anything to say.
+    /// </remarks>
+    private static readonly string BGH34 = """
+        octave absolute
+        time 3/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c4. c8 c c | }
+        }
+
+        form main { ~Main }
+
+        score main "BGH34" { staff m }
         """;
 
     /// <summary>
@@ -6370,6 +6540,33 @@ internal static class LpGeometryProbes
         new("beam.grouping.triplet-then-eighths-common-time.last-group", BGT44M, g => g.LastBeamGroupStemCount()),
         new("beam.grouping.sixteenth-triplets.groups", BGT44S, g => g.BeamGroupCount()),
         new("beam.grouping.sixteenth-triplets.first-group", BGT44S, g => g.BeamGroupStemCount(0)),
+        // …and the exceptions keyed on a SIXTEENTH and a THIRTY-SECOND, which ask for groups
+        // FINER than the beat — the half of the table a merge pass cannot reach.
+        new("beam.grouping.six-four-sixteenths.groups", BG64S, g => g.BeamGroupCount()),
+        new("beam.grouping.six-four-sixteenths.first-group", BG64S, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.four-two-sixteenths.groups", BG42S, g => g.BeamGroupCount()),
+        new("beam.grouping.four-two-sixteenths.first-group", BG42S, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.two-two-thirtyseconds.groups", BG22T, g => g.BeamGroupCount()),
+        new("beam.grouping.two-two-thirtyseconds.first-group", BG22T, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.three-two-thirtyseconds.groups", BG32T, g => g.BeamGroupCount()),
+        new("beam.grouping.three-two-thirtyseconds.first-group", BG32T, g => g.BeamGroupStemCount(0)),
+        // …and the four controls that say it is the LOOKUP that decides: two meters whose
+        // entry is too fine to be found for the note in the bar, two whose entry is found and
+        // asks for the beat anyway.
+        new("beam.grouping.nine-four-sixteenths.groups", BG94S, g => g.BeamGroupCount()),
+        new("beam.grouping.nine-four-sixteenths.first-group", BG94S, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.twelve-four-sixteenths.groups", BG124S, g => g.BeamGroupCount()),
+        new("beam.grouping.twelve-four-sixteenths.first-group", BG124S, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.three-four-thirtyseconds.groups", BG34T, g => g.BeamGroupCount()),
+        new("beam.grouping.three-four-thirtyseconds.first-group", BG34T, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.common-time-thirtyseconds.groups", BG44T, g => g.BeamGroupCount()),
+        new("beam.grouping.common-time-thirtyseconds.first-group", BG44T, g => g.BeamGroupStemCount(0)),
+        // …the off-beat tuplet, the only book that observes the second tuplet guard…
+        new("beam.grouping.offbeat-triplet.groups", BGTOFF, g => g.BeamGroupCount()),
+        new("beam.grouping.offbeat-triplet.first-group", BGTOFF, g => g.BeamGroupStemCount(0)),
+        // …and the half-measure START of a 3/N meter, whose rule is off by default.
+        new("beam.grouping.half-measure-start.groups", BGH34, g => g.BeamGroupCount()),
+        new("beam.grouping.half-measure-start.first-group", BGH34, g => g.BeamGroupStemCount(0)),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

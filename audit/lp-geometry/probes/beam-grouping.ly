@@ -85,9 +85,53 @@ sweep =
 \score { \sweep "T34M" { \time 3/4 \tuplet 3/2 { c'8 c' c' } c'8 c' c' c' } }
 \score { \sweep "T44M" { \time 4/4 \tuplet 3/2 { c'8 c' c' } \tuplet 3/2 { c'8 c' c' }
                          c'8 c' c' c' } }
-% CONTROL: sixteenths inside the same tuplet are 1/24, for which NO entry exists, so the
-% bare beat structure answers and they group by the quarter rather than by the tuplet.
+% CONTROL: sixteenths inside the same tuplet are 1/24, for which NO entry exists — so the
+% lookup takes `larger-setting` (auto-beam.scm:48-49), the smallest key that is at least the
+% type, which here is the 1/12 entry, and its groups of three twelfths ARE the quarter. They
+% group by the quarter rather than by the tuplet. ⚠️ NOT "it falls back to the beat
+% structure": in 4/4 the two agree, but in 6/4 they do not (the 1/16 entry gives quarters,
+% the beat structure dotted halves), and this sentence was written wrong in four places
+% before the 6/4 books below were measured.
 \score { \sweep "T44S" { \time 4/4 \tuplet 3/2 { c'16 c' c' } \tuplet 3/2 { c'16 c' c' }
                          \tuplet 3/2 { c'16 c' c' } \tuplet 3/2 { c'16 c' c' }
                          \tuplet 3/2 { c'16 c' c' } \tuplet 3/2 { c'16 c' c' }
                          \tuplet 3/2 { c'16 c' c' } \tuplet 3/2 { c'16 c' c' } } }
+
+% --- the beamExceptions keyed on 1/16 and 1/32, which no book above reaches. These are the
+% entries that make the LOOKUP, not the beat structure, decide where a beam ends — and they
+% are the ones a two-pass grouper (beat first, then merge runs of eighths) cannot express,
+% because they ask for groups FINER than the beat and a merge can only make groups coarser.
+%   6/4  (1/16 . (4 4 4 4 4 4))          :133 — quarters, against a (3 3) dotted-half beat
+%   4/2  (1/16 . (4 4 4 4 4 4 4 4))      :112 — quarters, against a (1 1 1 1) half-note beat
+%   2/2  (1/32 . (8 8 8 8))              :74  — quarters, against a (1 1) half-note beat
+%   3/2  (1/32 . (8 8 8 8 8 8))          :90  — quarters, against a (1 1 1) half-note beat
+\score { \sweep "S64"  { \time 6/4  \repeat unfold 24 { c'16 } } }
+\score { \sweep "S42"  { \time 4/2  \repeat unfold 32 { c'16 } } }
+\score { \sweep "T22"  { \time 2/2  \repeat unfold 32 { c'32 } } }
+\score { \sweep "T32"  { \time 3/2  \repeat unfold 48 { c'32 } } }
+
+% --- and the CONTROLS that say the rule is the LOOKUP and not "these meters group by the
+% quarter". 9/4 and 12/4 carry an entry too, but keyed on 1/32, and `larger-setting` takes
+% the smallest key that is AT LEAST the type (auto-beam.scm:48-49) — a sixteenth is larger
+% than a thirty-second, so nothing is found and the beat structure answers: dotted halves,
+% which is what Lily# already draws. 3/4 and 4/4 have the mirror shape: their 1/12 entry IS
+% found for thirty-seconds, and the groups it asks for (three twelfths) are the quarter,
+% which is again what Lily# already draws. All four must stay exact across the port.
+\score { \sweep "S94"  { \time 9/4  \repeat unfold 36 { c'16 } } }
+\score { \sweep "S124" { \time 12/4 \repeat unfold 48 { c'16 } } }
+\score { \sweep "T34X" { \time 3/4  \repeat unfold 24 { c'32 } } }
+\score { \sweep "T44X" { \time 4/4  \repeat unfold 32 { c'32 } } }
+
+% --- a tuplet that starts OFF the beat, which is the only thing Lily#'s second tuplet guard
+% (tupletInteriors, which suppresses the beat flush inside a tuplet) can actually be
+% suppressing: a triplet that starts ON a beat is already inside one. The eighth before it
+% and the eighth after it are plain, and LilyPond's end test is exact membership of the
+% measure position in the ending moments — no triplet note lands on 1/4, and 3/8 is not an
+% ending moment of the 1/12 entry either, so the question is whether one beam holds all five.
+\score { \sweep "TOFF" { \time 4/4 c'8 \tuplet 3/2 { c'8 c' c' } c'8 c'2 } }
+
+% --- the START rule (auto-beam.scm:66-79): in a 3/N meter a beam may not START at the half
+% measure, so as not to suggest 6/N — but only when beamHalfMeasure is #f, and the default is
+% #t (ly/engraver-init.ly:880). So this is a CONTROL for a port that writes the rule down
+% literally: the three eighths from 3/8 must be ONE beam, not three flags.
+\score { \sweep "H34"  { \time 3/4 c'4. c'8 c' c' } }

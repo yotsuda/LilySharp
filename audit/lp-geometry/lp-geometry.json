@@ -1135,13 +1135,113 @@
     },
     "beam.grouping.sixteenth-triplets.groups": {
       "probe": "beam-grouping.ly", "score": "T44S", "unit": "count",
-      "lilypond": 4, "residual": 4.0,
-      "why": "OPEN, and it is where the 1/12 investigation actually led. These triplets are SIXTEENTHS, a twenty-fourth each, and no beamExceptions entry exists at 1/24 — so LilyPond finds nothing, falls back to the bare beat structure, and groups by the QUARTER: four beams of SIX, each one running straight ACROSS the boundary between two tuplets. Lily# draws EIGHT beams of three, because BeamDetector ends a beam at every tuplet boundary unconditionally (its tupletBoundaries set, whose comment claims 'a tuplet is its own rhythmic group'). ⚠️ LILYPOND HAS NO SUCH RULE. What breaks the beam in the 1/12 books above is the exception LOOKUP changing between two runs of different shortest duration, not the tuplet's edge — which is why those books agree with LilyPond and this one does not. ⚠️ THE RESIDUAL IS POSITIVE, the signature of beams that were broken and should not have been, as against the negative ones elsewhere in this family, which were beams never built. CLOSING IT means replacing the tuplet-boundary rule with LilyPond's question — 'what is the shortest duration in this run, and what does the table say for it' — which MergePureEighthNoteGroups can only ask as 'are these all eighths'. That moves where beams break, so it is its own island with its own snapshots to justify; the eleven points here are what it will be measured against."
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT, and it is the point that retired the invention. These triplets are SIXTEENTHS, a twenty-fourth each, and LilyPond groups them by the QUARTER: four beams of SIX, each running straight ACROSS the boundary between two tuplets. There is no entry AT 1/24, and LilyPond does not thereby fall back to the beat structure — scm/auto-beam.scm:48-49 larger-setting takes the SMALLEST exception key that is still >= the tested duration, here 1/12, and counts that entry's grouping in that entry's key: (3 3 3 3) twelfths, which is the quarter. (In 4/4 the beat structure says quarters too, which is why this reading could not tell the two mechanisms apart and why the wrong one went unnoticed for a session; 6/4 is where they differ, and beam.grouping.six-four-sixteenths.groups is that book.) Lily# used to draw EIGHT beams of three, because BeamDetector ended a beam at every tuplet boundary unconditionally — a LILYSHARP-OWN rule whose comment claimed 'a tuplet is its own rhythmic group'. LilyPond has no such rule, and the guard is gone: what breaks the beam in the 1/12 books is the exception LOOKUP changing between two runs of different shortest duration, which AutoBeamCheck now performs. ⚠️ THE RESIDUAL WAS POSITIVE, the signature of beams that were broken and should not have been, as against the negative ones elsewhere in this family, which were beams never built."
     },
     "beam.grouping.sixteenth-triplets.first-group": {
       "probe": "beam-grouping.ly", "score": "T44S", "unit": "count",
-      "lilypond": 6, "residual": -3.0,
-      "why": "OPEN. The companion reading: LilyPond's first beam joins six sixteenths, two tuplets' worth. See beam.grouping.sixteenth-triplets.groups."
+      "lilypond": 6, "residual": 0.0,
+      "why": "EXACT. The companion reading: LilyPond's first beam joins six sixteenths, two tuplets' worth, and so does Lily#'s. See beam.grouping.sixteenth-triplets.groups."
+    },
+    "beam.grouping.six-four-sixteenths.groups": {
+      "probe": "beam-grouping.ly", "score": "S64", "unit": "count",
+      "lilypond": 6, "residual": 0.0,
+      "why": "EXACT since the one-pass port. The beamException keyed on 1/16 (scm/time-signature-settings.scm:133, (4 4 4 4 4 4)) ends this bar's beams every QUARTER; Lily# used to end them every dotted half, because it consulted the beat structure for everything that was not a run of pure eighths. This is the plainest book in the family — no tuplet, no rest, no bracket — and it is the one that said the missing half of the table asks for groups FINER than the beat, which a merge pass (which can only make groups coarser) could not reach. It was 2 beams of 12 against LilyPond's 6 of 4."
+    },
+    "beam.grouping.six-four-sixteenths.first-group": {
+      "probe": "beam-grouping.ly", "score": "S64", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. The companion reading, and the one that carried the SIGN: a beam three times too long was a POSITIVE residual here and a negative one on the count. See beam.grouping.six-four-sixteenths.groups."
+    },
+    "beam.grouping.four-two-sixteenths.groups": {
+      "probe": "beam-grouping.ly", "score": "S42", "unit": "count",
+      "lilypond": 8, "residual": 0.0,
+      "why": "EXACT since the one-pass port. The same 1/16 entry (scm/time-signature-settings.scm:112) against a different beat: 4/2's structure is (1 1 1 1) of HALF notes, so the entry's quarter is four times finer, where 6/4's was three times. Two books, because a port that hard-coded 'sixteenths beam by the quarter' would satisfy both and then fail beam.grouping.nine-four-sixteenths. See beam.grouping.six-four-sixteenths.groups."
+    },
+    "beam.grouping.four-two-sixteenths.first-group": {
+      "probe": "beam-grouping.ly", "score": "S42", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. The companion reading. See beam.grouping.four-two-sixteenths.groups."
+    },
+    "beam.grouping.two-two-thirtyseconds.groups": {
+      "probe": "beam-grouping.ly", "score": "T22", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT since the one-pass port. The 1/32 entry (scm/time-signature-settings.scm:74, (8 8 8 8)) — the same defect one duration lower. ⚠️ 2/2's SIXTEENTHS were exact before the port and must stay exact: a sixteenth is LARGER than a thirty-second, so larger-setting (scm/auto-beam.scm:48-49) finds nothing for them and the beat structure answers. The entry moves the thirty-seconds only, which is why this book is written in them."
+    },
+    "beam.grouping.two-two-thirtyseconds.first-group": {
+      "probe": "beam-grouping.ly", "score": "T22", "unit": "count",
+      "lilypond": 8, "residual": 0.0,
+      "why": "EXACT. The companion reading. See beam.grouping.two-two-thirtyseconds.groups."
+    },
+    "beam.grouping.three-two-thirtyseconds.groups": {
+      "probe": "beam-grouping.ly", "score": "T32", "unit": "count",
+      "lilypond": 6, "residual": 0.0,
+      "why": "EXACT since the one-pass port. 3/2's 1/32 entry (scm/time-signature-settings.scm:90), the same rule in the meter whose beat structure is (1 1 1). See beam.grouping.two-two-thirtyseconds.groups."
+    },
+    "beam.grouping.three-two-thirtyseconds.first-group": {
+      "probe": "beam-grouping.ly", "score": "T32", "unit": "count",
+      "lilypond": 8, "residual": 0.0,
+      "why": "EXACT. The companion reading. See beam.grouping.three-two-thirtyseconds.groups."
+    },
+    "beam.grouping.nine-four-sixteenths.groups": {
+      "probe": "beam-grouping.ly", "score": "S94", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL, and the point that says the rule is the LOOKUP rather than 'these meters beam by the quarter'. 9/4 carries an exception too (scm/time-signature-settings.scm:144) but keyed on 1/32, and larger-setting takes the smallest key that is AT LEAST the type (scm/auto-beam.scm:48-49) — a sixteenth is larger than a thirty-second, so nothing is found and the beat structure (3 3 3) answers: three beams of twelve, which is what Lily# already draws. ⚠️ The standing handoff listed this book as divergent alongside 6/4; measuring it showed it is not. A port that applied every 1/16-and-finer entry to every short note would beam this bar in nine and fail here."
+    },
+    "beam.grouping.nine-four-sixteenths.first-group": {
+      "probe": "beam-grouping.ly", "score": "S94", "unit": "count",
+      "lilypond": 12, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.nine-four-sixteenths.groups."
+    },
+    "beam.grouping.twelve-four-sixteenths.groups": {
+      "probe": "beam-grouping.ly", "score": "S124", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. CONTROL — the same shape as beam.grouping.nine-four-sixteenths.groups in the meter with four dotted-half beats (scm/time-signature-settings.scm:155)."
+    },
+    "beam.grouping.twelve-four-sixteenths.first-group": {
+      "probe": "beam-grouping.ly", "score": "S124", "unit": "count",
+      "lilypond": 12, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.twelve-four-sixteenths.groups."
+    },
+    "beam.grouping.three-four-thirtyseconds.groups": {
+      "probe": "beam-grouping.ly", "score": "T34X", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL, and the MIRROR of beam.grouping.nine-four-sixteenths.groups: here the lookup DOES find an entry — a thirty-second is smaller than a twelfth, so larger-setting takes 3/4's 1/12 entry (scm/time-signature-settings.scm:100) — and the groups it asks for, three twelfths, ARE the quarter, which is what the beat structure would have said anyway. Exact before the port and after it, for two different reasons. ⚠️ Also listed as divergent by the standing handoff; it is not."
+    },
+    "beam.grouping.three-four-thirtyseconds.first-group": {
+      "probe": "beam-grouping.ly", "score": "T34X", "unit": "count",
+      "lilypond": 8, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.three-four-thirtyseconds.groups."
+    },
+    "beam.grouping.common-time-thirtyseconds.groups": {
+      "probe": "beam-grouping.ly", "score": "T44X", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. CONTROL — the same via 4/4's own 1/12 entry (scm/time-signature-settings.scm:121, (3 3 3 3)). See beam.grouping.three-four-thirtyseconds.groups."
+    },
+    "beam.grouping.common-time-thirtyseconds.first-group": {
+      "probe": "beam-grouping.ly", "score": "T44X", "unit": "count",
+      "lilypond": 8, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.common-time-thirtyseconds.groups."
+    },
+    "beam.grouping.offbeat-triplet.groups": {
+      "probe": "beam-grouping.ly", "score": "TOFF", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT, and it is the half of this pair that CANNOT see the defect: both engines draw exactly one beam in this bar, for different reasons and over different notes. See beam.grouping.offbeat-triplet.first-group."
+    },
+    "beam.grouping.offbeat-triplet.first-group": {
+      "probe": "beam-grouping.ly", "score": "TOFF", "unit": "count",
+      "lilypond": 5, "residual": 0.0,
+      "why": "EXACT since the one-pass port, and it is the only point that ever observed Lily#'s SECOND tuplet guard (BeamDetector's tupletInteriors, which suppressed the beat flush inside a tuplet — a triplet that starts ON a beat is already inside one beat, so an OFF-beat one was all it could be suppressing). LilyPond's end test is exact membership of the measure position in the ending moments, and this run has none: the triplet's notes fall at 1/8, 5/24 and 7/24, never on the quarter its 1/12 entry ends groups at, and the plain eighth after them at 3/8 is not an ending moment either — so ONE beam holds all five stems, straight through both edges of the tuplet. Lily# used to cut at both edges (tupletBoundaries) and then drop the two lone eighths as groups of one, leaving a beam of three. Both guards went with the port; nothing replaced them, because exact membership is the whole rule."
+    },
+    "beam.grouping.half-measure-start.groups": {
+      "probe": "beam-grouping.ly", "score": "H34", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT. CONTROL for the START rule (scm/auto-beam.scm:66-79), which forbids a beam from STARTING at the half measure of a 3/N meter so as not to suggest a 6/N beat structure — but only when beamHalfMeasure is false, and the default is TRUE (ly/engraver-init.ly:880), so the first branch is always taken. This book is what makes it safe to write that rule down literally in the one-pass port: it holds the default answer at the one position where the rule has anything to say."
+    },
+    "beam.grouping.half-measure-start.first-group": {
+      "probe": "beam-grouping.ly", "score": "H34", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.half-measure-start.groups."
     },
     "line-start.clef-to-time.mixed-key-grand-staff": {
       "probe": "barline-spacing.ly",

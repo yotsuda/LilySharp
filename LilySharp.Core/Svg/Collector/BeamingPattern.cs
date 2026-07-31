@@ -78,8 +78,27 @@ internal static class BeamingPattern
     /// grows a way to set them.
     /// </remarks>
     internal readonly record struct Options(
-        Fraction BeatBase, ImmutableArray<int> BeatStructure, Fraction Period)
+        Fraction BeatBase, ImmutableArray<int> BeatStructure, Fraction Period,
+        ImmutableArray<(Fraction Key, ImmutableArray<int> Groups)> BeamExceptions = default)
     {
+        /// <summary>
+        /// The meter's <c>beamExceptions</c>, sorted by key ascending — groupings that end a
+        /// beam somewhere other than the beat, keyed on the note value they answer for.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: scm/time-signature-settings.scm:69-173 default-time-signature-settings —
+        /// every <c>(beamExceptions . ((end . ((key . (groups…))))))</c> in the table: 2/2 at
+        /// :74, 2/8 at :81, 3/2 at :90, 3/4 at :99-100, 3/8 at :104, 4/2 at :112, 4/4 at
+        /// :120-121, 6/4 at :133, 9/4 at :144, 12/4 at :155. Sorted here because the lookup
+        /// that misses an exact key takes the SMALLEST key that is at least the type
+        /// (scm/auto-beam.scm:48-49 larger-setting), and LilyPond sorts the alist by key for
+        /// exactly that reason (scm/auto-beam.scm:91-100, the <c>car&lt;</c> sort).
+        /// ⚠️ A meter absent from the table has NO exceptions and beams by its beats alone —
+        /// that is what makes 2/4 group its eighths in twos where 4/4 groups them in fours.
+        /// </remarks>
+        public ImmutableArray<(Fraction Key, ImmutableArray<int> Groups)> BeamExceptions { get; }
+            = BeamExceptions.IsDefault ? [] : BeamExceptions;
+
         /// <summary>
         /// The beat grid of a meter, as LilyPond's default settings define it.
         /// </summary>
@@ -110,8 +129,83 @@ internal static class BeamingPattern
             var structure = DefaultBeatStructure(timeSig);
             int totalBeats = 0;
             foreach (int b in structure) totalBeats += b;
-            return new Options(beatBase, structure, beatBase * new Fraction(totalBeats));
+            return new Options(beatBase, structure, beatBase * new Fraction(totalBeats),
+                DefaultBeamExceptions(timeSig));
         }
+
+        /// <summary>
+        /// The <c>beamExceptions</c> the default settings give this meter, sorted by key.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: scm/time-signature-settings.scm:69-173 default-time-signature-settings.
+        /// The whole table, transcribed: every entry that carries a <c>beamExceptions</c>, and
+        /// no others. 4/8, 5/8 and 8/8 are in the table too but carry a <c>beatStructure</c>
+        /// instead, which <see cref="DefaultBeatStructure"/> holds.
+        /// <para>
+        /// ⚠️ THE KEY IS A NOTE VALUE, NOT A GROUP LENGTH, and the groups are counted in it:
+        /// 6/4's <c>(1/16 . (4 4 4 4 4 4))</c> means six groups of four SIXTEENTHS — the
+        /// quarter — against a beat structure of dotted halves. The lookup that consumes this
+        /// (scm/auto-beam.scm:101-120) multiplies the running sum by the key, or by the
+        /// LARGER key it settled for, which is why both are kept.
+        /// </para>
+        /// </remarks>
+        private static ImmutableArray<(Fraction Key, ImmutableArray<int> Groups)> DefaultBeamExceptions(
+            TimeSignature timeSig)
+            // The table is a CONSTANT, so it is built once and handed out, not rebuilt per
+            // measure. (It was rebuilt per measure for one commit, and the price showed up on
+            // the one benchmark label that has no beams in it at all: 0.060 ms of walking 400
+            // bars of quarters became 0.155.)
+            => (timeSig.Beats, timeSig.BeatType) switch
+            {
+                // :74 in 2/2: end beams with 32nd notes each 1/4 beat.
+                (2, 2) => TwoTwo,
+                // :81 in 2/8: beam the entire measure together.
+                (2, 8) => TwoEight,
+                // :90 in 3/2: 32nd notes and finer each 1/4 beat.
+                (3, 2) => ThreeTwo,
+                // :99-100 in 3/4: eighths the whole measure, anything shorter back to the beat.
+                (3, 4) => ThreeFour,
+                // :104 in 3/8: beam the entire measure together.
+                (3, 8) => ThreeEight,
+                // :112 in 4/2: 16th notes or finer each 1/4 beat.
+                (4, 2) => FourTwo,
+                // :120-121 in 4/4: eighths by the half measure, anything shorter by the beat.
+                (4, 4) => FourFour,
+                // :133 in 6/4: 16th or finer each 1/4 beat.
+                (6, 4) => SixFour,
+                // :144 in 9/4 and :155 in 12/4: 32nd or finer each 1/4 beat.
+                (9, 4) => NineFour,
+                (12, 4) => TwelveFour,
+                _ => [],
+            };
+
+        private static ImmutableArray<int> Repeat(int value, int count)
+        {
+            var b = ImmutableArray.CreateBuilder<int>(count);
+            for (int i = 0; i < count; i++) b.Add(value);
+            return b.MoveToImmutable();
+        }
+
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> TwoTwo
+            = [(new Fraction(1, 32), Repeat(8, 4))];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> TwoEight
+            = [(new Fraction(1, 8), [2])];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> ThreeTwo
+            = [(new Fraction(1, 32), Repeat(8, 6))];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> ThreeFour
+            = [(new Fraction(1, 12), [3, 3, 3]), (new Fraction(1, 8), [6])];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> ThreeEight
+            = [(new Fraction(1, 8), [3])];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> FourTwo
+            = [(new Fraction(1, 16), Repeat(4, 8))];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> FourFour
+            = [(new Fraction(1, 12), [3, 3, 3, 3]), (new Fraction(1, 8), [4, 4])];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> SixFour
+            = [(new Fraction(1, 16), Repeat(4, 6))];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> NineFour
+            = [(new Fraction(1, 32), Repeat(8, 8))];
+        private static readonly ImmutableArray<(Fraction, ImmutableArray<int>)> TwelveFour
+            = [(new Fraction(1, 32), Repeat(8, 12))];
 
         private static ImmutableArray<int> DefaultBeatStructure(TimeSignature timeSig)
         {
@@ -278,14 +372,17 @@ internal static class BeamingPattern
     /// </para>
     /// <para>
     /// ⚠️ THE TUPLET SPAN CONTEXTS ARE NOT PORTED (:296-347, the <c>Span_position</c> list and
-    /// <c>current_factor</c>). They rescale a stem's position by the tuplet it is written
-    /// inside, and Lily# has no tuplet span in its beam model at all — a beam group carries
-    /// notes at their WRITTEN positions (see BeamDetector's tupletInteriors), which is the
-    /// same convention this reads. What is lost is a beam INSIDE a tuplet whose interior stem
-    /// exceeds both neighbours AND whose neighbours' counts are equal AND which is ambiguous
-    /// on the beat test: only then does the answer come from here at all. NO POINT OBSERVES
-    /// IT — the six ledger books are all in plain 4/4 — so it would have to be measured
-    /// before it could be closed. It disappears when the beam model carries tuplet spans.
+    /// <c>current_factor</c>), and Lily# has no tuplet span in its beam model to port them
+    /// onto. The moments themselves agree with LilyPond's: a Lily# item carries its ACTUAL
+    /// duration, scaled by the tuplet's base/ratio (MeasureCollector.ProcessTuplet —
+    /// <c>tuplet 3/2 { c8 c c } c2.</c> fills one 4/4 bar), exactly as LilyPond's do. What is
+    /// missing is the DIVISION by <c>current_factor</c>, with which LilyPond reads a stem
+    /// inside a tuplet in WRITTEN proportions again; this port reads it in actual ones.
+    /// So the divergence is confined to a beam INSIDE a tuplet whose interior stem exceeds
+    /// both neighbours AND whose neighbours' counts are equal AND which is ambiguous on the
+    /// beat test: only then does the answer come from here at all. NO POINT OBSERVES IT —
+    /// the six ledger books are all in plain 4/4 — so it would have to be measured before it
+    /// could be closed. It disappears when the beam model carries tuplet spans.
     /// </para>
     /// <para>
     /// ⚠️ Two more branches are left out because their options are unsettable in Lily#:

@@ -28,10 +28,12 @@ namespace LilySharp.Core.Svg.Collector;
 /// LILYPOND-REF: lily/beaming-pattern.cc
 /// LILYPOND-REF: lily/auto-beam-engraver.cc
 ///
-/// Beams are grouped according to the time signature's beat structure.
-/// Mixed durations (8th + 16th) within the same beat are beamed together.
-/// - Pure 8th notes: grouped per half-measure (4 notes in 4/4)
-/// - 16th notes or mixed: grouped per beat
+/// A beam ends where <see cref="AutoBeamCheck"/> says it must — at the end of one of the
+/// groups the meter's beamExceptions ask for, chosen by the SHORTEST duration in the beam so
+/// far, and at the beats themselves when the meter offers no entry for that duration. So the
+/// eighths of a 4/4 bar make two beams of four (the half-measure exception), its sixteenths
+/// four of four (the beat), and the sixteenths of a 6/4 bar six of four (an exception FINER
+/// than that meter's dotted-half beat).
 /// </remarks>
 internal sealed class BeamDetector
 {
@@ -88,31 +90,28 @@ internal sealed class BeamDetector
         var beamGroups = new List<BeamGroup>();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
 
-        // Auto beams never cross a tuplet boundary: a tuplet is its own
-        // rhythmic group, so a beam ends where a tuplet starts or ends.
-        // LILYPOND-REF: lily/auto-beam-engraver.cc — tuplet spans bound beams.
-        var tupletBoundaries = new HashSet<(int measureIndex, int itemIndex)>();
-        // A tuplet is ONE beaming unit: its notes carry their WRITTEN duration (an 8th
-        // triplet's notes each read 1/8), so the per-beat grouping would cut the run
-        // where the written positions cross a beat — splitting a 3-note 8th triplet 2+1.
-        // Suppress the beat-boundary flush INSIDE a tuplet so all its notes beam.
-        var tupletInteriors = new HashSet<(int measureIndex, int itemIndex)>();
         // The two ENDS of each tuplet span, which a beam that runs through one must not hang
         // a beamlet out of: LilyPond keeps such a stem's flag CENTER and then clamps its
         // outward count to the neighbour's.
         // LILYPOND-REF: lily/beaming-pattern.cc:524-540 at_span_start / at_span_stop.
+        //
+        // ⚠️ THESE ARE THE ONLY THING A TUPLET DOES TO A BEAM. Two further sets used to live
+        // here — one that ended a beam at every tuplet edge, one that suppressed the beat cut
+        // inside a tuplet — and both were LILYSHARP-OWN inventions, falsified by measurement
+        // (ledger beam.grouping.sixteenth-triplets.groups: LilyPond beams sixteenth triplets
+        // in four groups of six, straight across the edge between two tuplets, where Lily#
+        // drew eight of three; beam.grouping.offbeat-triplet.first-group: LilyPond runs one
+        // beam of five through both edges of an off-beat triplet). What ends a beam between a
+        // triplet and the plain eighths after it is the exception LOOKUP changing with the
+        // run's shortest duration, which the one-pass check below now performs.
         var tupletStarts = new HashSet<(int measureIndex, int itemIndex)>();
         var tupletStops = new HashSet<(int measureIndex, int itemIndex)>();
         if (!tupletBrackets.IsDefaultOrEmpty)
         {
             foreach (var bracket in tupletBrackets)
             {
-                tupletBoundaries.Add((bracket.MeasureIndex, bracket.StartNoteIndex));
-                tupletBoundaries.Add((bracket.MeasureIndex, bracket.EndNoteIndex + 1));
                 tupletStarts.Add((bracket.MeasureIndex, bracket.StartNoteIndex));
                 tupletStops.Add((bracket.MeasureIndex, bracket.EndNoteIndex));
-                for (int i = bracket.StartNoteIndex; i <= bracket.EndNoteIndex; i++)
-                    tupletInteriors.Add((bracket.MeasureIndex, i));
             }
         }
 
@@ -134,7 +133,7 @@ internal sealed class BeamDetector
             foreach (var item in measure.Items)
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
-            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletBoundaries, tupletInteriors, tupletStarts, tupletStops, voiceIndex, forceStemUp);
+            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletStarts, tupletStops, voiceIndex, forceStemUp);
         }
 
         return beamGroups.ToImmutableArray();
@@ -327,295 +326,141 @@ internal sealed class BeamDetector
             voiceIndex: voiceIndex));
     }
 
+    /// <summary>
+    /// The automatic beams of one measure — LilyPond's auto-beam engraver, walked once.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:336-407 Auto_beam_engraver::handle_current_stem
+    /// — the shape of this loop, stem by stem: keep the SHORTEST duration seen so far; ask
+    /// whether the beam must end here (with that shortest); ask whether one may begin here
+    /// (with this note's own duration); add the stem; and if the shortest just got shorter,
+    /// recheck the boundaries already passed.
+    /// <para>
+    /// ⚠️ THIS REPLACED TWO PASSES AND COULD NOT HAVE BEEN SPLIT OUT OF THEM. Lily# used to
+    /// cut at every beat and then merge back the runs that were all eighths, which can only
+    /// produce groups COARSER than the beat. Half of LilyPond's table asks for FINER ones —
+    /// 6/4 and 4/2 beam sixteenths by the quarter against beats of a dotted half and a half
+    /// (ledger beam.grouping.six-four-sixteenths, four-two-sixteenths), 2/2 and 3/2 do the
+    /// same to thirty-seconds — so the merge, the eighth-only exception length it consulted,
+    /// and the two tuplet guards that were papering over the difference all went together.
+    /// </para>
+    /// </remarks>
     private void DetectBeamGroupsInMeasure(
         Measure measure,
         int measureIndex,
         TimeSignature timeSig,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)>? consumed = null,
-        HashSet<(int, int)>? tupletBoundaries = null,
-        HashSet<(int, int)>? tupletInteriors = null,
         HashSet<(int, int)>? tupletStarts = null,
         HashSet<(int, int)>? tupletStops = null,
         int voiceIndex = 0,
         bool? forceStemUp = null)
     {
-        // The beat grid the beamlet rule reads. Derived ONCE per measure rather than per beam
-        // group: it depends only on the meter, and building it allocates.
+        // The beat grid and the meter's beamExceptions. Derived ONCE per measure rather than
+        // per beam group: they depend only on the meter, and building them allocates.
         var beamOptions = BeamingPattern.Options.For(timeSig);
 
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
             tupletStarts, tupletStops, voiceIndex, forceStemUp);
 
-        // First pass: collect groups at beat boundaries
-        var beatGroups = new List<List<(MusicItem item, int index, Fraction startPos)>>();
-        var currentGroup = new List<(MusicItem item, int index, Fraction startPos)>();
-        Fraction currentPosition = Fraction.Zero;
-        Fraction groupStartPosition = Fraction.Zero;
+        var stems = new List<(MusicItem item, int index, Fraction startPos)>();
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_
+        // is a quarter whenever no beam is being built, which is why the first stem of a beam
+        // never sets it: nothing beamable is that long, so the SECOND stem is what makes the
+        // lookup real, and recheck_beam is what goes back for the boundary the first one passed.
+        var shortest = Fraction.Quarter;
+        Fraction position = Fraction.Zero;
 
-        // The beats a beam may not cross come from beamOptions — the SAME grid the beamlet
-        // rule reads, and LilyPond's own (beatBase times beatStructure). There used to be a
-        // second, flatter spelling here (the dotted quarter for compound meters, one over the
-        // denominator otherwise), which agreed for 4/4, 3/4, 2/4, 6/8, 9/8 and 12/8 and drew
-        // NO BEAM AT ALL in 4/8, 5/8, 8/8 and 2/8, where a grid of one eighth per group left
-        // every group holding a single note.
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:252-279 end_beam — a beam of fewer than two
+        // stems is junked, not typeset. This is the ONLY place that decides a lone note is a
+        // flagged note rather than a beam.
+        void EndBeam()
+        {
+            if (stems.Count >= 2)
+                beamGroups.Add(CreateBeamGroup(stems, measureIndex, beamOptions,
+                    tupletStarts, tupletStops, voiceIndex, forceStemUp));
+            stems.Clear();
+            shortest = Fraction.Quarter;
+        }
 
-        // ⚠️ EVERY flush below keeps a group of ONE. The beat grid is not the last word — a
-        // beamException may beam eighths straight across several beats — so a group holding a
-        // single note has to survive until MergePureEighthNoteGroups has had its say. Groups
-        // still holding one note after that are dropped, at the end of this method. What
-        // makes it safe to carry them is the merge's own ADJACENCY test: two groups that were
-        // split by a rest, or by a manual beam, are not adjacent in time and are never
-        // rejoined. See beam.grouping.beat-split-inside-exception (this) and
-        // beam.grouping.rest-inside-exception (that) in the ledger.
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:409-459 recheck_beam — the beam's own
+        // boundaries are re-asked once a shorter note has changed which exception answers. A
+        // split typesets the head and keeps the tail, then starts over from the beginning,
+        // because the tail may break again. ⚠️ shortest_dur_ SURVIVES the split (LilyPond
+        // saves and restores it around end_beam, :434-451): the tail still holds the short
+        // note that caused the recheck.
+        void RecheckBeam()
+        {
+            for (int i = 0; i + 1 < stems.Count; )
+            {
+                var endOfStem = stems[i].startPos + GetDuration(stems[i].item);
+                if (!AutoBeamCheck.EndsBeam(endOfStem, shortest, beamOptions))
+                {
+                    i++;
+                    continue;
+                }
+
+                var head = stems.GetRange(0, i + 1);
+                var tail = stems.GetRange(i + 1, stems.Count - (i + 1));
+                if (head.Count >= 2)
+                    beamGroups.Add(CreateBeamGroup(head, measureIndex, beamOptions,
+                        tupletStarts, tupletStops, voiceIndex, forceStemUp));
+                stems.Clear();
+                stems.AddRange(tail);
+                i = 0;
+            }
+        }
+
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
             var duration = GetDuration(item);
 
-            // Skip items covered by manual beam groups (single-measure or cross-measure)
+            // A rest, a note too long to be beamed, and a stem that already carries a beam of
+            // its own (manual, or a cross-measure pair claimed by the first pass) all end the
+            // beam being built.
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:324-328 acknowledge_rest (force_end_),
+            //   :350-355 the head_count / get_beam test, :368-373 duration_log <= 2.
             if (IsInManualRange(i, manualRanges) ||
-                (consumed != null && consumed.Contains((measureIndex, i))))
+                (consumed != null && consumed.Contains((measureIndex, i))) ||
+                !IsBeamable(item))
             {
-                // Non-beamable break logic still applies for position tracking
-                if (currentGroup.Count > 0)
-                {
-                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
-                }
-                currentGroup.Clear();
-                currentPosition = currentPosition + duration;
+                EndBeam();
+                position = position + duration;
                 continue;
             }
 
-            if (IsBeamable(item))
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:385-390 in handle_current_stem — a new
+            // shortest duration is remembered in shortest_dur_ and marks the beam for rechecking.
+            bool recheckNeeded = false;
+            if (duration < shortest)
             {
-                // Tuplet boundary: never beam across it (the tuplet is its
-                // own rhythmic group, see DetectBeamGroups).
-                if (currentGroup.Count > 0 && tupletBoundaries != null
-                    && tupletBoundaries.Contains((measureIndex, i)))
-                {
-                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
-                    currentGroup.Clear();
-                    groupStartPosition = currentPosition;
-                }
-
-                if (currentGroup.Count > 0
-                    && !(tupletInteriors != null && tupletInteriors.Contains((measureIndex, i)))
-                    && CrossesBeatBoundary(groupStartPosition, currentPosition, beamOptions))
-                {
-                    // Flush current group at beat boundary
-                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
-                    currentGroup.Clear();
-                    groupStartPosition = currentPosition;
-                }
-
-                if (currentGroup.Count == 0)
-                {
-                    groupStartPosition = currentPosition;
-                }
-
-                currentGroup.Add((item, i, currentPosition));
-            }
-            else
-            {
-                // Non-beamable item breaks the beam
-                if (currentGroup.Count > 0)
-                {
-                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
-                }
-                currentGroup.Clear();
+                shortest = duration;
+                recheckNeeded = true;
             }
 
-            currentPosition = currentPosition + duration;
-        }
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:392-395 consider_end / consider_begin —
+            // "end should be based on shortest_dur_, begin should be based on current duration".
+            if (stems.Count > 0 && AutoBeamCheck.EndsBeam(position, shortest, beamOptions))
+                EndBeam();
 
-        // Flush any remaining group
-        if (currentGroup.Count > 0)
-        {
-            beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
-        }
-
-        // Second pass: merge consecutive pure-8th-note groups in same half-measure
-        var mergedGroups = MergePureEighthNoteGroups(beatGroups, timeSig, measureIndex, tupletBoundaries);
-
-        // Convert to BeamGroups. A group of one note is not a beam — it is a flagged note —
-        // and this is the ONLY place that decides so, now that the passes above carry them.
-        foreach (var group in mergedGroups)
-        {
-            if (group.Count < 2)
+            if (stems.Count == 0 && !AutoBeamCheck.StartsBeam(position, duration, beamOptions))
+            {
+                position = position + duration;
                 continue;
-            var beamGroup = CreateBeamGroup(group, measureIndex, beamOptions,
-                tupletStarts, tupletStops, voiceIndex, forceStemUp);
-            beamGroups.Add(beamGroup);
-        }
-    }
-
-    /// <summary>
-    /// Merges consecutive pure-8th-note groups that fall within the same grouping unit.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/time-signature-settings.scm:69-171 default-time-signature-settings —
-    /// the beamExceptions entries keyed on 1/8, which are what beam eighths BEYOND the beat.
-    /// See <see cref="EighthNoteBeamExceptionLength"/> for the four of them.
-    /// </remarks>
-    private List<List<(MusicItem item, int index, Fraction startPos)>> MergePureEighthNoteGroups(
-        List<List<(MusicItem item, int index, Fraction startPos)>> beatGroups,
-        TimeSignature timeSig,
-        int measureIndex = 0,
-        HashSet<(int, int)>? tupletBoundaries = null)
-    {
-        if (beatGroups.Count == 0)
-            return beatGroups;
-
-        if (EighthNoteBeamExceptionLength(timeSig) is not { } groupLength)
-            return beatGroups;                  // no exception: beam by the beat
-
-        var result = new List<List<(MusicItem item, int index, Fraction startPos)>>();
-        var currentMerged = new List<(MusicItem item, int index, Fraction startPos)>();
-        Fraction mergeStartPos = Fraction.Zero;
-
-        foreach (var group in beatGroups)
-        {
-            bool isPureEighths = group.All(g => GetBeamCount(g.item) == 1);
-            Fraction groupStart = group[0].startPos;
-            if (isPureEighths)
-            {
-                // Check if we can merge with current
-                if (currentMerged.Count > 0)
-                {
-                    // Check if in same group
-                    bool sameGroup = !CrossesGroupBoundary(mergeStartPos, groupStart, groupLength);
-                    bool currentIsPureEighths = currentMerged.All(g => GetBeamCount(g.item) == 1);
-                    // Never re-join groups split at a tuplet boundary.
-                    bool atTupletBoundary = tupletBoundaries != null
-                        && tupletBoundaries.Contains((measureIndex, group[0].index));
-                    // …nor groups split by anything that OCCUPIED TIME between them. The
-                    // exception says where a beam may run to, not that a beam may swallow a
-                    // rest: LilyPond ends a beam at one whatever the exception says (ledger
-                    // beam.grouping.rest-inside-exception, where 3/4 — the only meter whose
-                    // exception group is long enough to hold two runs and a rest — drew one
-                    // beam straight over it). A tuplet boundary passes this test, since it
-                    // takes no time; that is what the line above is still for.
-                    var last = currentMerged[^1];
-                    bool adjacentInTime = last.startPos + GetDuration(last.item) == groupStart;
-
-                    if (sameGroup && currentIsPureEighths && !atTupletBoundary && adjacentInTime)
-                    {
-                        // Merge
-                        currentMerged.AddRange(group);
-                        continue;
-                    }
-                    else
-                    {
-                        // Flush current and start new
-                        result.Add(new List<(MusicItem, int, Fraction)>(currentMerged));
-                        currentMerged.Clear();
-                    }
-                }
-
-                currentMerged.AddRange(group);
-                mergeStartPos = groupStart;
             }
-            else
-            {
-                // Not pure eighths - flush current and add this group separately
-                if (currentMerged.Count > 0)
-                {
-                    result.Add(new List<(MusicItem, int, Fraction)>(currentMerged));
-                    currentMerged.Clear();
-                }
-                result.Add(group);
-            }
+
+            stems.Add((item, i, position));
+            if (recheckNeeded)
+                RecheckBeam();
+
+            position = position + duration;
         }
 
-        // Flush remaining
-        if (currentMerged.Count > 0)
-        {
-            result.Add(currentMerged);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// How long a run of eighths this meter beams as one unit, ACROSS its beats — or null
-    /// when the meter has no such exception and eighths beam by the beat like everything else.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/time-signature-settings.scm:69-171 default-time-signature-settings —
-    /// every entry there whose beamExceptions is keyed on 1/8, and no others:
-    /// <list type="bullet">
-    /// <item>:120 <c>((4 . 4) … (1/8 . (4 4)))</c> — two groups of four eighths, a half measure</item>
-    /// <item>:99 <c>((3 . 4) … (1/8 . (6)))</c> — one group of six, the whole measure</item>
-    /// <item>:81 <c>((2 . 8) … (1/8 . (2)))</c> — the whole measure</item>
-    /// <item>:104 <c>((3 . 8) … (1/8 . (3)))</c> — the whole measure</item>
-    /// </list>
-    /// Every list is uniform, so ONE length says all of it. ⚠️ 6/8, 9/8 and 12/8 are absent on
-    /// purpose — their eighths beam by the dotted-quarter BEAT, which the beat structure
-    /// already gives. So is 2/4, which is what says the exceptions are not applied wherever
-    /// they would fit (ledger beam.grouping.two-four.groups).
-    /// <para>
-    /// ⚠️ NOT PORTED, and no point observes it: the same table's exceptions keyed on 1/12
-    /// (triplet eighths in 3/4 and 4/4, :100 and :121) and on 1/16 and 1/32 (2/2, 4/2, 6/4,
-    /// 9/4, 12/4, 3/2). They want the run's SHORTEST duration to choose the entry, which is a
-    /// lookup this pass does not have — it only asks "are these all eighths". It comes back
-    /// when that question becomes "what is the shortest note here".
-    /// </para>
-    /// </remarks>
-    private static Fraction? EighthNoteBeamExceptionLength(TimeSignature timeSig) =>
-        (timeSig.Beats, timeSig.BeatType) switch
-        {
-            (4, 4) => new Fraction(1, 2),
-            (3, 4) => new Fraction(3, 4),
-            (2, 8) => new Fraction(1, 4),
-            (3, 8) => new Fraction(3, 8),
-            _ => null,
-        };
-
-    /// <summary>
-    /// Whether a BEAT boundary lies between <paramref name="groupStart"/> and
-    /// <paramref name="currentPos"/> — where an automatic beam ends unless an exception
-    /// carries it further.
-    /// </summary>
-    /// <remarks>
-    /// The beats are LilyPond's: beatBase times each entry of beatStructure, which is uneven
-    /// for 4/8, 5/8 and 8/8. The structure REPEATS past the period, as LilyPond's own walk
-    /// does when a beam runs past the end of the beat list
-    /// (lily/beaming-pattern.cc:135-144 remaining_beats).
-    /// </remarks>
-    private static bool CrossesBeatBoundary(
-        Fraction groupStart, Fraction currentPos, BeamingPattern.Options options)
-        => BeatIndexAt(currentPos, options) > BeatIndexAt(groupStart, options);
-
-    /// <summary>Which beat of the grid <paramref name="position"/> falls in, counting from 0.</summary>
-    private static int BeatIndexAt(Fraction position, BeamingPattern.Options options)
-    {
-        int index = 0;
-        var edge = Fraction.Zero;
-        // Every step adds beatBase times a structure entry, both strictly positive, so this
-        // reaches any finite position.
-        for (int k = 0; ; k++)
-        {
-            edge += new Fraction(options.BeatStructure[k % options.BeatStructure.Length])
-                    * options.BeatBase;
-            if (position < edge)
-                return index;
-            index++;
-        }
-    }
-
-    /// <summary>
-    /// Checks if the current position crosses a group boundary from the group start.
-    /// </summary>
-    private bool CrossesGroupBoundary(Fraction groupStart, Fraction currentPos, Fraction groupLength)
-    {
-        long startGroup = (groupStart.Numerator * groupLength.Denominator) /
-                          (groupStart.Denominator * groupLength.Numerator);
-        long currentGroup = (currentPos.Numerator * groupLength.Denominator) /
-                            (currentPos.Denominator * groupLength.Numerator);
-
-        return currentGroup > startGroup;
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:462-485 process_acknowledged — currentBarLine
+        // forces the beam to end. Lily# builds one measure at a time, so the bar line is here.
+        EndBeam();
     }
 
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
