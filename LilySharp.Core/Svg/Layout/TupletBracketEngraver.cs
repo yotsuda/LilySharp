@@ -547,16 +547,36 @@ internal static class TupletBracketEngraver
         return isStemUp ? noteY - reach : noteY + reach;
     }
 
-    // LILYSHARP-OWN: the SLOPE machinery below is simpler than LilyPond's. LilyPond's
-    // general branch slopes from the outer columns' GRAPHICAL extents (rv[dir]-lv[dir],
-    // zeroed when its sign disagrees with the musical head contour,
-    // lily/tuplet-bracket.cc:530-549), damps against the covering beam's own slope
-    // (:566-630 max_slope from quantized-positions), and QUANTIZES a near-flat bracket
-    // onto staff positions when it lies within the widened staff (:726-746). Lily#
-    // slopes from the outer MUSICAL positions with the max-slope-factor cap only. The
-    // ledger pair staff.staff.tuplet-bracket-* pins the ENCOMPASS (flat, outside the
-    // staff — none of the three differences fire there); a sloped or staff-adjacent
-    // bracket regime has no point yet, so the slope port waits for its own pair.
+    // LILYPOND-REF: lily/tuplet-bracket.cc:530-549 calc_position_and_height's general
+    //   branch — graphical_dy = rv[dir] - lv[dir] off cross_staff_extent, zeroed when its
+    //   sign disagrees with the musical head contour (head_positions_interval).
+    // ⚠️ DERIVED, NOT TRANSCRIBED, and REF'd for exactly that reason (HANDOFF 5.2 / 7.6 ⒝):
+    //   the quantity below is LilyPond's, the form is not, so the address has to stay
+    //   readable or the next hand reads this as an invention and rebuilds it. It is NOT
+    //   LILYSHARP-OWN — that label is for a quantity LilyPond does not have, and LilyPond
+    //   has this one.
+    // Three differences, all in the direction of SIMPLER, none of them yet measured:
+    //   ⑴ Lily# slopes from the outer MUSICAL positions (firstPos/lastPos, staff positions),
+    //      LilyPond from the GRAPHICAL extents with the sign guard above;
+    //   ⑵ LilyPond damps against the covering beam's own slope (:566-630, max_slope read
+    //      off quantized-positions), Lily# applies the max-slope-factor cap only;
+    //   ⑶ LilyPond QUANTIZES a near-flat bracket onto staff positions when it lies inside
+    //      the widened staff (:726-746); Lily# does not quantize at all.
+    // ⚠️ WHY IT IS SIMPLER: NOT a trade-off anyone made, and NOT performance. The body
+    //   predates the porting discipline (it arrives whole in the bulk commit 26f91d85 of
+    //   2026-02-24, before the ledger existed); the words "simpler than LilyPond's" were
+    //   written on 2026-07-29 while the encompass beside it was being ported, i.e. they
+    //   DESCRIBE an unported device rather than record a decision. Read them that way.
+    // ★ AND THE INPUTS ARE ALREADY HERE — checked 2026-08-01, after a first version of this
+    //   comment guessed otherwise and was wrong. The same loop below already builds the
+    //   columns' real outward reach (NoteColumnLayout.OutwardTipDeviceY, under
+    //   useRealExtents) and already resolves the covering beam through MemberBeam(i), whose
+    //   BeamLayout carries the quanted positions. So ⑴ and ⑵ want a different READ of data
+    //   this function holds, not new data threaded in, and ⑶ is free after ⑵.
+    // ⚠️ WHAT ACTUALLY BLOCKS IT IS THE MISSING PAIR, not the plumbing. The ledger pair
+    //   staff.staff.tuplet-bracket-* pins the ENCOMPASS only (flat, outside the staff —
+    //   none of the three fire there), so a sloped / staff-adjacent pair has to be opened
+    //   first (HANDOFF 5.0: points before ports).
     private static (double startY, double endY) CalculateSlope(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth,
         ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,

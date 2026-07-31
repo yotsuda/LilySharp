@@ -30,7 +30,7 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// Draws grace-note groups: small noteheads (with optional accidentals)
-    /// scaled to GraceNoteLayout.Scale (typically 0.65), placed before the
+    /// scaled to GraceNoteLayout.Scale (GraceNoteItem.ScaleFactor), placed before the
     /// main note's column.
     /// </summary>
     /// <remarks>
@@ -123,8 +123,12 @@ internal static partial class SharedRenderer
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
                 // The beam's own height comes from the QUANTER, in the layout stage
                 // (GraceNoteEngraver.QuantGraceBeam) — the renderer places it, it does not
-                // decide it. Beam.positions are staff positions at the beam's drawn ends,
-                // so they land in this frame through the staff middle and the ossia affine.
+                // decide it. The pair is in staff positions at the beam's OUTER STEMS, which
+                // is where BeamScoringProblem.Solve answers (its last step is AtOuterStems);
+                // they land in this frame through the staff middle and the ossia affine.
+                // ⚠️ This comment said "at the beam's drawn ends" until 2026-08-01, and the
+                //   renderer below believed it — that misreading was half the grace beam's
+                //   residual (ledger beam.quant.grace.left).
                 (double, double)? beamEnds =
                     g.BeamLeftY is { } bl && g.BeamRightY is { } br
                         ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
@@ -167,9 +171,9 @@ internal static partial class SharedRenderer
         int[] tuningArray = Tunings.GetTuning(tuning);
         int octaveShift = Tunings.SoundingShift(clef, transposition);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
-        // Tab grace digits sit only slightly below the main fret size (NOT the
-        // 0.65 notehead grace scale): on a tab staff the fret number IS the note,
-        // so the size contrast that reads as "grace" in notation would here just
+        // Tab grace digits sit only slightly below the main fret size (NOT the notehead
+        // grace scale, GraceNoteItem.ScaleFactor): on a tab staff the fret number IS the
+        // note, so the size contrast that reads as "grace" in notation would here just
         // make the digit illegibly tiny.
         double fontSize = TabFretFontSize * TabGraceFretScale;
         // The columns are the ones the layout reserved (SpacingRules.GraceColumns), the same

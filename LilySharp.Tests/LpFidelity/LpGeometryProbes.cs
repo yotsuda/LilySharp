@@ -3686,15 +3686,88 @@ internal static class LpGeometryProbes
         score main "BGRT" { staff m }
         """;
 
+    /// <summary>
+    /// …and the register BGR / BGRT never reach: a grace sitting HIGH in the staff, whose
+    /// beam therefore clears the top line instead of lying across it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score J): <c>\grace { c''16 d'' } e''4 g''2 r4</c> — <c>(2.858 . 3.142)</c>,
+    /// stem-info ideals <c>2.608 / 3.108</c>.
+    /// <para>
+    /// LilyPond gives every OTHER grace in this probe the same slope, dy 0.358 — G at
+    /// (0.142 . 0.5), I at (1.142 . 1.5), K at (2.142 . 2.5) — and gives this one dy 0.284
+    /// from the same ideal spacing of 0.5. The family is a translation until the beam leaves
+    /// the staff, and then it is not. Nothing about the grace scaling changes between them:
+    /// same size, same durations, same interval, only the register.
+    /// </para>
+    /// <para>
+    /// ★★★ THIS WAS OPENED AS THE DIVERGENT ONE AND IS EXACT. <see cref="BGRK"/>, opened as
+    /// its control, is the one that misses — Lily# changes the family's slope one step
+    /// EARLIER than LilyPond does. The two engines agree on both sides of their own
+    /// boundary and put the boundary in different places, which no single point could have
+    /// said. This one is now the control: it must stay exact while BGRK is chased.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGRJ = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { c' d' } e'4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGRJ" { staff m }
+        """;
+
+    /// <summary>
+    /// …and the one that actually diverges: the same grace just BELOW the middle line, where
+    /// the beam clears the staff but only barely.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score K): <c>\grace { a'16 b' } c''4 g'2 r4</c> — <c>(2.142 . 2.5)</c>,
+    /// dy 0.358, i.e. still the ordinary family. Lily# answers <c>(1.858 . 2.142)</c>: one
+    /// grid step down at both ends, with <see cref="BGRJ"/>'s slope.
+    /// <para>
+    /// ⚠️ It was written as the BRACKET — the control that locates where BGRJ's regime
+    /// begins — and it is the divergence instead. The reading is better for it: with G, I
+    /// and BGRJ all exact, this pair says the two engines put the same regime change one
+    /// step apart rather than that they compute a different beam.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGRK = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { a b } c'4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGRK" { staff m }
+        """;
+
     // ---- the X FRAME the grace beam is quanted in: how wide is a grace COLUMN? ------------
     //
     // beam.quant.grace.* left a SYMMETRIC residual — the height exact, the slope short — and a
     // slope-only residual cannot come from a length or a thickness. It has to be the span the
-    // quanter fits over, i.e. the distance between the grace columns, which Lily# spells three
-    // separate times and LilyPond does not spell at all:
+    // quanter fits over, i.e. the distance between the grace columns, which Lily# SPELT THREE
+    // SEPARATE TIMES (all three gone since 2026-08-01 — SpacingRules.GraceColumns is the one
+    // house now; kept here because it is why these points exist) and LilyPond does not spell
+    // at all:
     //   GraceNoteEngraver.xs                        i * (1.2 + 0.3) * 0.65 = 0.975 per column
     //   SpacingRules.CalculateGraceGroupSpringWidth 1.28 per note + a 0.4 junction rod
     //   GraceNoteEngraver.GetGraceGroupWidth(int)   1.2*0.65 per note + 0.3*0.65 per gap + 0.4
+    // (the 0.65 in two of them was the grace scale's own approximation, since derived —
+    //  GraceNoteItem.ScaleFactor = magstep(-3); five spellings were counted in the end.)
     // against LilyPond's 1.417939 for the corpus texture. ⚠️ 1.417939 IS NOT THE ANSWER: it is
     // two SIXTEENTH graces, one texture, and this ledger has been burned by writing exactly
     // such a number into a constant before (the figured-bass 1.5). LilyPond computes it, from
@@ -7172,6 +7245,19 @@ internal static class LpGeometryProbes
             g => g.BeamOverhangPastOuterStem(0, false)),
         new("grace.beam.overhang.full-size-control.right", BGRC,
             g => g.BeamOverhangPastOuterStem(0, true)),
+
+        // …and the register the six above never leave. Every grace point so far puts the
+        // beam INSIDE the staff; these two walk up out of it. LilyPond gives the whole
+        // family one slope (dy 0.358 at G, I and K) right up until the beam clears the top
+        // line, and then gives J a different one (0.284) from the same ideals — so the
+        // boundary is a property of the quanter, not of the grace scaling, which all four
+        // share. ★ LILY# PUTS THAT BOUNDARY ONE STEP LOWER: J is exact and K is not.
+        new("beam.quant.grace.above-staff.left", BGRJ, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.grace.above-staff.right", BGRJ, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.grace.near-middle-bracket.left", BGRK,
+            g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.grace.near-middle-bracket.right", BGRK,
+            g => g.BeamPositionAboveStaffMiddle(0, true)),
 
         // …and the X FRAME those six read through. Until now the grace column's width was
         // measured only INDIRECTLY, by the slope it leaves in the beam; these read it. Head

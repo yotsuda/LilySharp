@@ -58,3 +58,38 @@ sweep =
 
 % The same grace beam a third up: LilyPond translates, it does not re-quant.
 \score { \sweep "I" { \time 4/4 \grace { f'16 g' } a'4 g'2 r4 } }
+
+% ---- 2026-08-01, session 60: A REGISTER SWEEP, BECAUSE G AND I ARE THE SAME REGISTER ----
+% G and I both put the grace low in the staff. J puts it high, so the beam clears the top
+% line instead of lying across it — a different regime both for score_forbidden_quants (no
+% staff line left to fall in the gap) and for the quant RANGE.
+%
+% WHAT LILYPOND SAID (all four are graces, same size, same durations, same interval):
+%   G  heads -5/-4   (0.142 . 0.5)     dy 0.358
+%   I  heads -3/-2   (1.142 . 1.5)     dy 0.358
+%   K  heads -2/-1   (2.142 . 2.5)     dy 0.358
+%   J  heads +1/+2   (2.858 . 3.142)   dy 0.284   <- the family slope changes HERE
+%
+% ★★★ AND LILY# CHANGES ONE STEP EARLIER. J is exact to nine places; K is not, and Lily#
+% gives K exactly J's slope (dy 0.284) one grid step down: (1.858 . 2.142) against
+% (2.142 . 2.5). So the two engines agree on both sides of their own boundary and put the
+% boundary in different places — which is a far sharper statement than a residual, and it
+% was found by opening J as the divergent point and K as its control and being WRONG about
+% which was which. Ledger beam.quant.grace.near-middle-bracket.* / .above-staff.*.
+\score { \sweep "J" { \time 4/4 \grace { c''16 d'' } e''4 g''2 r4 } }
+
+% ⚠️ THE FULL-SIZE CONTROL THAT H IS FOR G CANNOT EXIST HERE, and finding that out is
+% worth writing down. Ordinary sixteenths at c''/d'' take DOWN stems (measured: LilyPond
+% answers (-3.0 . -2.81) with dirs (-1 -1)), because a full-size beam only points up when
+% its notes sit LOW, and then the beam is back inside the staff. A grace's stems are forced
+% up whatever the pitch (scm/music-functions.scm:633-637), so "grace above the staff with
+% up stems" has no natural full-size counterpart at all. Forcing \stemUp would make one,
+% at the price of the forced-direction shorten (beam.cc:1061-1091, the 1/12 that closed
+% beam.quant.mixed-count.peak-32.forced-stem) landing inside the control.
+%
+% ★ IT IS NOT NEEDED. The sweep's own members control each other: G, I, J and K are all
+% graces at the same scale with the same durations and the same interval, differing only in
+% register, so the grace scaling is common to all four and cannot be what separates them.
+% K is the one just BELOW the middle line, where the beam clears the staff but only barely
+% — meant as the bracket that locates the boundary, and it turned out to BE the divergence.
+\score { \sweep "K" { \time 4/4 \grace { a'16 b' } c''4 g'2 r4 } }

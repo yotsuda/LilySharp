@@ -57,9 +57,55 @@ public class LilyPondExporterTests
     public void RelativeIsTheDefault_WrapsInRelative()
     {
         // No `octave absolute` directive -> Lily#'s default relative mode.
+        // The helper's part is `clef bass`, so the anchor is octave 3 = LilyPond's bare `c`.
         var ly = Export(Score("c d e", headers: ""));
-        Assert.Contains("\\relative c' {", ly);
+        Assert.Contains("\\relative c {", ly);
         Assert.DoesNotContain("\\fixed", ly);
+    }
+
+    /// <summary>
+    /// A relative part is anchored at ITS OWN default octave, which follows its clef.
+    /// </summary>
+    /// <remarks>
+    /// Lily#'s relative anchor is the part's default octave (MeasureCollector →
+    /// InstrumentDefaults.GetDefaultOctave), so a bass, alto or tenor part starts at
+    /// octave 3 and a treble part at 4. The exporter wrote <c>\relative c'</c> for every
+    /// part until 2026-08-01, which put every non-treble part's twin AN OCTAVE HIGH — a
+    /// quarter of the fixture corpus, and silently, because the twin is perfectly valid
+    /// LilyPond and merely plays different music.
+    /// <para>
+    /// ⚠️ BOTH clefs in ONE test on purpose: an anchor that is constant is wrong whichever
+    /// constant it is, and only a case that must answer two different things can tell.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void RelativeAnchor_FollowsThePartsClef()
+    {
+        var ly = Export("""
+            part low { clef bass section S { c d e } }
+            part high { clef treble section T { c d e } }
+            form main { ~S ~T }
+            score main { staff low staff high }
+            """);
+        Assert.Contains("low = \\relative c {", ly);
+        Assert.Contains("high = \\relative c' {", ly);
+    }
+
+    /// <summary>An explicit <c>octave N</c> part property beats the clef's default.</summary>
+    /// <remarks>
+    /// The same precedence the layout applies (MeasureCollector.GetPartDefaults:
+    /// <c>partOctave ?? GetDefaultOctave(clef)</c>). LilyPond writes octave 4 as
+    /// <c>c'</c>, so octave 5 is <c>c''</c> and octave 2 is <c>c,</c>.
+    /// </remarks>
+    [Fact]
+    public void RelativeAnchor_ExplicitPartOctaveBeatsTheClef()
+    {
+        var ly = Export("""
+            part v { clef bass octave 5 section S { c d e } }
+            form main { ~S }
+            score main { staff v }
+            """);
+        Assert.Contains("v = \\relative c'' {", ly);
     }
 
     [Fact]

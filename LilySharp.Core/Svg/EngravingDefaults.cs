@@ -117,8 +117,10 @@ internal static class EngravingDefaults
     /// <summary>A grace Beam's and Stem's <c>length-fraction</c>.</summary>
     /// <remarks>
     /// LILYPOND-REF: ly/grace-init.ly graceSettings. ⚠️ NOT the notehead's scale: the heads
-    /// shrink with <c>fontSize = -3</c>, i.e. <c>magstep(-3)</c> = 0.7071, which is a third
-    /// number again (Lily# draws them at <see cref="Model.GraceNoteItem.ScaleFactor"/> 0.65).
+    /// shrink with <c>fontSize = -3</c>, i.e. <c>magstep(-3)</c>, which is a different number
+    /// again — <see cref="Model.GraceNoteItem.ScaleFactor"/>, which DERIVES it rather than
+    /// writing the result down. ⚠️ This line used to say the heads were drawn at 0.65; that
+    /// stopped being true on 2026-08-01 and the sentence outlived it by one session.
     /// Three quantities, three values — do not fold them.
     /// </remarks>
     public const double GraceBeamLengthFraction = 0.8;

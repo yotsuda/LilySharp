@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Text;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.LilyPond;
@@ -26,9 +28,17 @@ namespace LilySharp.Core.LilyPond;
 /// and the <c>'</c>/<c>,</c> octave marks) are copied through VERBATIM so the
 /// octave the author wrote in the <c>.lys</c> is preserved byte-for-byte. To keep
 /// those verbatim marks pitch-correct in real LilyPond, the music is wrapped in a
-/// reference that matches Lily#'s own octave convention (octave 4 = middle C):
-///   • <c>octave absolute</c> input → <c>\fixed c' { … }</c> (bare <c>c</c> = middle C)
-///   • relative input (the default) → <c>\relative c' { … }</c> (first note nearest c')
+/// reference that matches Lily#'s own octave convention:
+///   • <c>octave absolute</c> input → <c>\fixed c' { … }</c> (bare <c>c</c> = middle C;
+///     absolute mode is anchored at middle C whatever the clef — OctaveContext's
+///     "clef default is deliberately NOT used here")
+///   • relative input (the default) → <c>\relative</c> at THE PART'S OWN anchor, which is
+///     not always <c>c'</c>: Lily#'s relative anchor is the part's default octave, and that
+///     follows the clef (InstrumentDefaults.GetDefaultOctave — bass/alto/tenor anchor at
+///     octave 3, i.e. LilyPond <c>c</c>), with an explicit <c>octave N</c> part property
+///     overriding it. ⚠️ This file used to write <c>\relative c'</c> unconditionally and
+///     say so in this very comment, which made every non-treble part export AN OCTAVE HIGH
+///     — 54 of the 204 fixtures declare a bass, alto or tenor clef.
 ///
 /// It reproduces the MUSIC and the staff/tab structure the score declares; it does
 /// NOT reconstruct anything the <c>.lys</c> does not hold (a hand <c>.ly</c>'s
@@ -41,6 +51,20 @@ public sealed class LilyPondExporter
     private readonly StringBuilder _sb = new();
     private readonly List<string> _warnings = new();
     private bool _octaveAbsolute; // false = relative (Lily#'s default)
+
+    /// <summary>
+    /// The octave the part being emitted anchors its relative pitches to — Lily#'s
+    /// "default octave", 4 for treble.
+    /// </summary>
+    /// <remarks>
+    /// It is state rather than a parameter because the two places that spell an anchor are
+    /// not adjacent: the part's own wrapper (<see cref="EmitPartVariable"/>) and every
+    /// nested <c>\relative</c> a phrase reference opens (<see cref="ReferencePitch"/>).
+    /// Both have to move together or a bass part's phrases land an octave off its own
+    /// wrapper, which is worse than both being wrong the same way.
+    /// ⚠️ Sub-exporters must inherit it — see the phrase-body buffer.
+    /// </remarks>
+    private int _anchorOctave = InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
 
     /// <summary>
     /// Phrase (and variable) bodies by name, so a bare reference in a section can be
@@ -82,6 +106,7 @@ public sealed class LilyPondExporter
             {
                 string varName = SanitizeVar(part.Name.Text);
                 partVars[part.Name.Text] = varName;
+                _anchorOctave = AnchorOctaveOf(part);
                 EmitPartVariable(varName, OrderedMusic(part, form, sections), root);
             }
         }
@@ -172,6 +197,7 @@ public sealed class LilyPondExporter
             var buf = new LilyPondExporter
             {
                 _octaveAbsolute = _octaveAbsolute,
+                _anchorOctave = _anchorOctave,
                 _phrases = _phrases,
                 _activePhrases = _activePhrases,
             };
@@ -201,13 +227,55 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
-    /// The nested block's reference pitch: Lily#'s own default (octave 4 = middle C = LilyPond
-    /// <c>c'</c>), moved by the reference's trailing marks.
+    /// The nested block's reference pitch: the PART's anchor octave written LilyPond's way,
+    /// moved by the reference's trailing marks.
     /// </summary>
-    private static string ReferencePitch(int octaveOffset)
+    /// <remarks>
+    /// LilyPond writes octave 4 as <c>c'</c>, so the mark count is the anchor minus 3 — a
+    /// treble part's <c>c'</c>, a bass part's bare <c>c</c>. See <see cref="_anchorOctave"/>.
+    /// </remarks>
+    private string ReferencePitch(int octaveOffset) => AnchorPitch(_anchorOctave + octaveOffset);
+
+    /// <summary>An octave number as a LilyPond pitch: 4 → <c>c'</c>, 3 → <c>c</c>.</summary>
+    private static string AnchorPitch(int octave)
     {
-        int marks = 1 + octaveOffset; // c' is the default anchor
+        int marks = octave - 3;
         return marks >= 0 ? "c" + new string('\'', marks) : "c" + new string(',', -marks);
+    }
+
+    /// <summary>
+    /// The octave a part's relative pitches are anchored to, resolved the way the layout
+    /// resolves it.
+    /// </summary>
+    /// <remarks>
+    /// The same precedence MeasureCollector applies (an explicit <c>octave N</c> property
+    /// beats the clef's default, MeasureCollector.cs GetPartDefaults →
+    /// <c>partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))</c>), read
+    /// off the same two part properties.
+    /// <para>
+    /// ⚠️ <c>instrument</c> is NOT read, which is the gate this exporter already declares
+    /// and not a new one. An <c>instrument</c> preset is a BUNDLE:
+    /// <c>instrument bass</c> means bass clef AND octave 3 AND a sounding pitch an octave
+    /// down (InstrumentDefaults.GetTransposition — an electric bass is written an octave
+    /// above where it sounds, and that −12 is deliberate). Reading the octave third of that
+    /// and not the other two would move the twin's written pitch while leaving its sounding
+    /// pitch wrong, i.e. make it wrong in a way that LOOKS right — the failure mode this
+    /// file's "transpiler, not a re-derivation" rule exists to avoid. A part whose octave
+    /// comes only from an instrument preset therefore still exports at the treble anchor,
+    /// exactly as before, and its twin is already known not to be a pair
+    /// (HANDOFF: test/tab-as-numbers).
+    /// </para>
+    /// </remarks>
+    private static int AnchorOctaveOf(PartDeclarationSyntax part)
+    {
+        string? octave = PartProperty(part, "octave");
+        if (octave != null && int.TryParse(octave, out int explicitOctave))
+            return explicitOctave;
+        string? clef = PartProperty(part, "clef");
+        return InstrumentDefaults.GetDefaultOctave(
+            clef != null
+                ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
+                : ClefType.Treble);
     }
 
     // ---- Header ------------------------------------------------------------
@@ -240,7 +308,12 @@ public sealed class LilyPondExporter
 
     private void EmitPartVariable(string varName, List<SyntaxNode> music, CompilationUnitSyntax root)
     {
-        string wrapper = _octaveAbsolute ? "\\fixed c'" : "\\relative c'";
+        // ⚠️ The two modes anchor DIFFERENTLY on purpose. Absolute octave is middle C
+        //   whatever the clef (OctaveContext: "clef default is deliberately NOT used here"),
+        //   so \fixed is always c'; relative follows the part's own default octave.
+        string wrapper = _octaveAbsolute
+            ? "\\fixed c'"
+            : "\\relative " + AnchorPitch(_anchorOctave);
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 
         // Score-level settings (tempo/key/time live at file scope in Lily#).
@@ -672,7 +745,8 @@ public sealed class LilyPondExporter
         var inner = new StringBuilder();
         var saved = _sb.Length;
         // Reuse EmitMusicStream via a temporary buffer.
-        var buf = new LilyPondExporter { _octaveAbsolute = _octaveAbsolute };
+        var buf = new LilyPondExporter
+        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         buf.EmitMusicStream(MusicItems(tup.Body).ToList(), "");
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
@@ -682,7 +756,8 @@ public sealed class LilyPondExporter
     private string EmitGrace(GraceExpressionSyntax g)
     {
         string kw = g.IsAcciaccatura ? "\\acciaccatura" : g.IsAppoggiatura ? "\\appoggiatura" : "\\grace";
-        var buf = new LilyPondExporter { _octaveAbsolute = _octaveAbsolute };
+        var buf = new LilyPondExporter
+        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
@@ -693,7 +768,8 @@ public sealed class LilyPondExporter
     {
         string type = rep.RepeatType.Text;
         string count = rep.Count.Text;
-        var buf = new LilyPondExporter { _octaveAbsolute = _octaveAbsolute };
+        var buf = new LilyPondExporter
+        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         buf.EmitMusicStream(MusicItems(rep.Body).ToList(), "");
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();

@@ -36,7 +36,7 @@ public readonly record struct GraceNoteLayout(
     double X,                            // X position (left edge of grace group)
     ImmutableArray<GraceNoteInfo> Notes, // Notes in the grace group
     GraceNoteType Type,                  // Grace type (for slash rendering)
-    double Scale,                        // Scale factor (0.65 for grace notes)
+    double Scale,                        // GraceNoteItem.ScaleFactor (magstep of fontSize -3)
     int SourcePosition,                  // For click-to-source mapping
     // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
     // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur
