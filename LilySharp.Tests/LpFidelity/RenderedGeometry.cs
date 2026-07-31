@@ -1151,6 +1151,178 @@ internal sealed class RenderedGeometry
         return refs[0] - (rightEnd ? beam.RightY : beam.LeftY);
     }
 
+    /// <summary>
+    /// How many beam lines reach a stem on one side — LilyPond's <c>Stem.beaming</c>, read
+    /// off what was DRAWN.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is a different quantity from <see cref="BeamPositionAboveStaffMiddle"/>, which
+    /// reads the primary line's HEIGHT and deliberately ignores every stub. What is under
+    /// test here is the COUNT: whether the beamlet a stem should carry was drawn at all.
+    /// LilyPond's <c>beaming</c> property is a pair of rank lists, one per side, and their
+    /// LENGTHS are these numbers.
+    /// </para>
+    /// <para>
+    /// A beam line covers the stem's x on a side exactly when it is drawn across it, so the
+    /// count is read by probing a hair either side of the stem. A stub pointing right from
+    /// stem <c>i</c> starts AT that stem and runs <c>beamlet-default-length</c> (1.1, capped
+    /// at 0.75 of the gap — lily/beam.cc:604-624) toward the next, which is four orders of
+    /// magnitude past <see cref="BeamletProbeOffset"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ The OUTWARD side of a terminal stem is refused rather than answered. A beam's
+    /// drawn end is extended half a stem thickness past its outer stem (lily/beam.cc:631),
+    /// so probing outside stem 0 would find the primary line and report a beam that reaches
+    /// nothing — LilyPond prints <c>#f</c> there. Only the interior sides are counts.
+    /// </para>
+    /// </remarks>
+    /// <param name="beamIndex">Which beam group, left to right.</param>
+    /// <param name="stemIndex">Which stem of that group, left to right.</param>
+    /// <param name="rightSide">false = the stem's left side, true = its right.</param>
+    public int BeamletsAtStem(int beamIndex, int stemIndex, bool rightSide, int page = 0)
+    {
+        var stems = BeamGroupStems(beamIndex, page, out var beam);
+
+        if (stemIndex < 0 || stemIndex >= stems.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for stem {stemIndex} of beam {beamIndex}, which has "
+                + $"{stems.Count}.\nDrawn geometry:\n" + Describe());
+        }
+
+        if ((stemIndex == 0 && !rightSide) || (stemIndex == stems.Count - 1 && rightSide))
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the outward side of terminal stem {stemIndex} is not a beamlet "
+                + "count — the beam's drawn end is extended half a stem thickness past it "
+                + "(lily/beam.cc:631), and LilyPond prints #f for that side.");
+        }
+
+        double probe = stems[stemIndex] + (rightSide ? BeamletProbeOffset : -BeamletProbeOffset);
+        return _pages[page].Quads.Count(q =>
+            Math.Min(q.X0, q.X3) <= probe && probe <= Math.Max(q.X1, q.X2));
+    }
+
+    /// <summary>
+    /// How far either side of a stem <see cref="BeamletsAtStem"/> looks for beam lines.
+    /// </summary>
+    /// <remarks>
+    /// Small enough that nothing but a line touching the stem can be caught (the shortest
+    /// beamlet in the corpus is a fifth of a staff space) and large enough to be immune to
+    /// the arithmetic: a segment's end is the stem's own x, computed by the same expression
+    /// on both sides (LayoutUtilities.StemAttachX), so the only requirement is to be off it.
+    /// </remarks>
+    private const double BeamletProbeOffset = 1e-6;
+
+    /// <summary>
+    /// The beam groups drawn on <paramref name="page"/>, left to right: each group's PRIMARY
+    /// line, which is the widest segment starting at that group's left.
+    /// </summary>
+    /// <remarks>
+    /// A beamlet stub lies strictly inside its group's primary, so containment is what tells
+    /// the two apart — no assumption about how long a stub is.
+    /// </remarks>
+    private List<(double Left, double Right)> PrimaryBeams(int page)
+    {
+        var quads = _pages[page].Quads
+            .Select(q => (Left: Math.Min(q.X0, q.X3), Right: Math.Max(q.X1, q.X2)))
+            .OrderBy(q => q.Left).ThenByDescending(q => q.Right - q.Left)
+            .ToList();
+        var primaries = new List<(double Left, double Right)>();
+        foreach (var q in quads)
+            if (!primaries.Any(p => q.Left >= p.Left - 1e-9 && q.Right <= p.Right + 1e-9))
+                primaries.Add(q);
+        return primaries;
+    }
+
+    /// <summary>
+    /// The x of every stem beam <paramref name="beamIndex"/> joins, left to right.
+    /// </summary>
+    /// <remarks>
+    /// The FRAME is asserted, not assumed: a beam's drawn ends sit half a stem thickness
+    /// outside its outer stems (lily/beam.cc:631), so if the vertical strokes found inside
+    /// the span do not line up with that, they are not this group's stems and every count
+    /// taken from them would be measured against the wrong x.
+    /// </remarks>
+    private List<double> BeamGroupStems(int beamIndex, int page, out (double Left, double Right) beam)
+    {
+        var primaries = PrimaryBeams(page);
+        if (primaries.Count <= beamIndex)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for beam {beamIndex} but only {primaries.Count} beam "
+                + "group(s) were drawn.\nDrawn geometry:\n" + Describe());
+        }
+
+        var span = primaries[beamIndex];
+        beam = span;
+        double half = EngravingDefaults.StemThickness / 2;
+
+        // Staff and ledger lines are horizontal, so "x1 == x2" separates them; a bar line
+        // would qualify but cannot fall inside a beam's span.
+        var stems = _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9)
+            .Select(l => l.X1)
+            .Where(x => x >= span.Left - 1e-9 && x <= span.Right + 1e-9)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        if (stems.Count < 2
+            || Math.Abs(stems[0] - (span.Left + half)) > 1e-9
+            || Math.Abs(stems[^1] - (span.Right - half)) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: beam {beamIndex} spans [{span.Left:F6}, {span.Right:F6}] but the "
+                + $"vertical strokes inside it are [{string.Join(", ", stems.Select(s => s.ToString("F6")))}] "
+                + $"— expected the outermost two at {span.Left + half:F6} and {span.Right - half:F6}."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+
+        return stems;
+    }
+
+    /// <summary>
+    /// How many beam groups were drawn — where the automatic beaming BROKE.
+    /// </summary>
+    /// <remarks>
+    /// The quantity LilyPond's beat structure decides. ⚠️ ZERO IS A READING, not a failure:
+    /// a grid that puts one note in every group leaves nothing to beam, and a bar of eighths
+    /// then prints as separate flagged notes. That is exactly the shape of the defect these
+    /// points were opened for, so this must not throw on an empty page.
+    /// </remarks>
+    public int BeamGroupCount(int page = 0) => PrimaryBeams(page).Count;
+
+    /// <summary>
+    /// How many stems beam group <paramref name="beamIndex"/> joins — 0 when that group was
+    /// not drawn at all.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The missing group ANSWERS ZERO rather than throwing, for the same reason
+    /// <see cref="BeamGroupCount"/> tolerates an empty page: a wrong beat grid does not draw
+    /// a differently-shaped beam, it draws none, and a point that cannot be read at all
+    /// records no residual and holds nothing. Asking for a group past the end of a bar that
+    /// DID beam is caught by the ledger's LilyPond number instead.
+    /// </remarks>
+    public int BeamGroupStemCount(int beamIndex, int page = 0)
+        => beamIndex < PrimaryBeams(page).Count
+            ? BeamGroupStems(beamIndex, page, out _).Count
+            : 0;
+
+    /// <summary>
+    /// How many stems the LAST beam group of the page joins — 0 when nothing beamed.
+    /// </summary>
+    /// <remarks>
+    /// Named from the end because that is what an uneven grid puts there: 8/8 is 3+3+2 and
+    /// its group COUNT plus its FIRST group cannot tell 3+3+2 from 3+2+3.
+    /// </remarks>
+    public int LastBeamGroupStemCount(int page = 0)
+    {
+        int n = PrimaryBeams(page).Count;
+        return n == 0 ? 0 : BeamGroupStems(n - 1, page, out _).Count;
+    }
+
     /// <summary>Straight strokes in drawing order — stems, staff lines, ledger lines.</summary>
     public IReadOnlyList<DrawnLine> Lines => _page.Lines;
 

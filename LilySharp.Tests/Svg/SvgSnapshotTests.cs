@@ -123,6 +123,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/accidental-octave-straddle" };
         // Partial secondary beams (beamlets) on isolated 16ths in dotted rhythms.
         yield return new object[] { "test/beamlets" };
+        // …and the shape that book does NOT have: an interior stem whose count exceeds BOTH
+        // its neighbours', where the beamlets survive on one side only. The ledger's
+        // beam.beamlet.* points hold the counts against LilyPond; this holds the drawing.
+        yield return new object[] { "test/beamlet-peaks" };
         // Slur lifts to clear high interior notes (encompass obstacles).
         yield return new object[] { "test/slur-obstacle-clearance" };
         // Line breaker prices lyric widths so long syllables wrap instead of overflowing.

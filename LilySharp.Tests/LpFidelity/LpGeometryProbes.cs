@@ -3513,6 +3513,476 @@ internal static class LpGeometryProbes
         score main "BQF" { staff m }
         """;
 
+    // ---------------------------------------------------------------------------------
+    // Which side does an interior stem's BEAMLET point? (audit/lp-geometry/probes/
+    // beam-beamlet.ly). Six books, one per branch of the rule, all with MANUAL brackets so
+    // the grouping is not also under test, all starting on beat one, all filling the bar
+    // exactly so the beat arithmetic in the rule is the intended one.
+    //
+    // Lily# gives an interior member left = min(count, prev) and right = min(count, next)
+    // (BeamDetector.CreateBeamGroup). LilyPond starts a stem with its OWN count on BOTH
+    // sides (lily/beaming-pattern.cc:50-62) and then, for interior stems only, picks ONE
+    // side to keep and chips the other (:121-183). The two agree whenever a stem's count
+    // exceeds only one neighbour's; when it exceeds BOTH, min() deletes the stub on both
+    // sides and the stem draws nothing.
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Counts <c>1 2 1</c> — the reported defect. The sixteenth between two eighths draws no
+    /// stub at all in Lily#, where LilyPond gives it a full second beam on one side.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score A): <c>c'8[ c'16 c'8] r8. r2</c> — stem 1's <c>beaming</c> is
+    /// <c>((0) 1 0)</c>, i.e. one beam on the left and TWO on the right.
+    /// <para>
+    /// This is the branch that costs the most to reach: the neighbours' counts are equal, so
+    /// the rule falls past the <c>right_count &gt; left_count</c> test; the sixteenth starts
+    /// neither on a beat nor ends on the next one, so it falls past the moment test too; and
+    /// the answer comes from <c>rhythmic_importance_</c>, which is a whole second pass
+    /// (:292-404). The simplest case anybody would report is the one that needs all of it.
+    /// </para>
+    /// </remarks>
+    private static readonly string BLA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8[ c16 c8] r8. r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLA" { staff m }
+        """;
+
+    /// <summary>
+    /// Counts <c>2 1 2</c> — the interior stem exceeds NEITHER neighbour, so nothing is
+    /// chipped and both engines must answer one beam each side.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score B): <c>c'16[ c'8 c'16] r4 r2</c> — <c>((0) 0)</c>.
+    /// This is the control that says the port did not start chipping stems it should leave
+    /// alone: a rule that always kept its own count on one side would answer 1 . 1 here too,
+    /// but only because the eighth HAS one beam — see <see cref="BLC"/> and
+    /// <see cref="BLD"/>, where keeping the own count is visible.
+    /// </remarks>
+    private static readonly string BLB = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c16[ c8 c16] r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLB" { staff m }
+        """;
+
+    /// <summary>
+    /// Counts <c>2 2 1</c> — the interior stem exceeds exactly ONE neighbour, the right one,
+    /// so the flag points LEFT and the RIGHT side is chipped.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score C): <c>c'16[ c'16 c'8] r4 r2</c> — <c>((1 0) 0)</c>, two beams
+    /// left and one right. <c>min()</c> lands on the same pair here, which is why this book
+    /// and <see cref="BLD"/> are the pair that says WHY the two rules usually agree rather
+    /// than merely that they do: with one neighbour lower, the side min() deletes is the same
+    /// side LilyPond chips.
+    /// </remarks>
+    private static readonly string BLC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c16[ c16 c8] r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLC" { staff m }
+        """;
+
+    /// <summary>
+    /// Counts <c>1 2 2</c> — <see cref="BLC"/> mirrored: the flag points RIGHT and the LEFT
+    /// side is chipped.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score D): <c>c'8[ c'16 c'16] r4 r2</c> — <c>((0) 1 0)</c>. Both
+    /// orientations, because the rule's first branch is an inequality between the two
+    /// neighbours and a port that got its sense backwards would still pass <see cref="BLC"/>.
+    /// </remarks>
+    private static readonly string BLD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8[ c16 c16] r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLD" { staff m }
+        """;
+
+    /// <summary>
+    /// Counts <c>2 1 1 2</c> — the only book with TWO interior stems, and neither is touched.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score E): <c>c'16[ c'8 c'8 c'16] r8 r2</c> — <c>((0) 0)</c> for both
+    /// interior stems. The chip loop and the correction pass at :161-167 both run over a
+    /// four-element pattern here, so this is what says a port did not make the counts depend
+    /// on the group's LENGTH.
+    /// ⚠️ The LilyPond probe's header claims this book gives the correction pass "something to
+    /// correct". It does not: both interior stems come out CENTER, and the pass only ever
+    /// rewrites a CENTER that stands next to a LEFT or a RIGHT.
+    /// </remarks>
+    private static readonly string BLE = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c16[ c8 c8 c16] r8 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLE" { staff m }
+        """;
+
+    /// <summary>
+    /// Counts <c>1 3 1</c> — <see cref="BLA"/> with the gap two beams wide, so the chip is
+    /// bigger than one and the kept side carries THREE beams.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score F): <c>c'8[ c'32 c'8] r8 r16. r2</c> — <c>((0) 2 1 0)</c>, one
+    /// beam left and three right. This is what separates "the stub is one line" from the
+    /// actual rule: the opposite side is reduced by <c>max(count − neighbour, 1)</c>
+    /// (:179-181), which is 2 here, and the kept side is not reduced at all.
+    /// </remarks>
+    private static readonly string BLF = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8[ c32 c8] r8 r16. r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BLF" { staff m }
+        """;
+
+    // ---------------------------------------------------------------------------------
+    // WHERE DOES AN AUTOMATIC BEAM END? (audit/lp-geometry/probes/beam-grouping.ly)
+    //
+    // LilyPond ends a beam at the ends of the beats its meter declares: beatBase (one over
+    // the denominator) times beatStructure, which is (1 1 1 …) for most meters, (3 3 …) when
+    // the numerator is over three and divisible by three, and an explicit uneven list for the
+    // three whose table entry overrides that — 4/8 as 2+2, 5/8 as 3+2, 8/8 as 3+3+2
+    // (scm/time-signature-settings.scm:125-171 default-time-signature-settings). Over that
+    // sit beamExceptions, which beam eighths BEYOND the beat: 4/4 by the half measure, 3/4
+    // and 2/8 and 3/8 by the whole one.
+    //
+    // Lily# had a second, flatter spelling (BeamDetector's beatLength): the dotted quarter
+    // for compound meters, one over the denominator otherwise. It agrees with LilyPond for
+    // 4/4, 3/4, 2/4, 6/8, 9/8 and 12/8 and disagrees for every other x/8 meter — and since a
+    // grid of one eighth per group leaves each group holding a single note, the disagreement
+    // is not a differently-placed beam but NO BEAM AT ALL.
+    //
+    // Every book is plain eighths filling one bar with no manual bracket, so the grouping is
+    // the only thing under test. The controls carry the same weight as the rest: a change to
+    // the grid that moves 4/4 or 6/8 has broken what LilyPond already agreed with.
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>Builds a one-bar book of <paramref name="count"/> eighths in a meter.</summary>
+    private static string EighthsIn(string name, int beats, int beatType, int count) => $$"""
+        octave absolute
+        time {{beats}}/{{beatType}}
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { {{string.Join(" ", Enumerable.Repeat("c8", count))}} | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { staff m }
+        """;
+
+    /// <summary>4/8 — beatStructure (2 2). LilyPond twin: score M48, two beams of two.</summary>
+    private static readonly string BG48 = EighthsIn("BG48", 4, 8, 4);
+
+    /// <summary>5/8 — beatStructure (3 2). LilyPond twin: score M58, beams of three and two.</summary>
+    private static readonly string BG58 = EighthsIn("BG58", 5, 8, 5);
+
+    /// <summary>8/8 — beatStructure (3 3 2). LilyPond twin: score M88, three beams.</summary>
+    private static readonly string BG88 = EighthsIn("BG88", 8, 8, 8);
+
+    /// <summary>
+    /// 2/8 — the whole measure, and NOT from the beat structure.
+    /// </summary>
+    /// <remarks>
+    /// Its structure is the default (1 1), which would break the beam between the two
+    /// eighths; what joins them is the beamException <c>(end (1/8 . (2)))</c>
+    /// (scm/time-signature-settings.scm:81). So this book and <see cref="BG38"/> separate the
+    /// two mechanisms: a port that fixes only the beat structure leaves these two unbeamed.
+    /// LilyPond twin: score M28, one beam of two.
+    /// </remarks>
+    private static readonly string BG28 = EighthsIn("BG28", 2, 8, 2);
+
+    /// <summary>3/8 — one beam of three, likewise from a beamException, not the beats.</summary>
+    /// <remarks>LilyPond twin: score M38 (scm/time-signature-settings.scm:104).</remarks>
+    private static readonly string BG38 = EighthsIn("BG38", 3, 8, 3);
+
+    /// <summary>CONTROL 4/4 — two beams of four, from the half-measure beamException.</summary>
+    private static readonly string BG44 = EighthsIn("BG44", 4, 4, 8);
+
+    /// <summary>CONTROL 3/4 — one beam of six, from the whole-measure beamException.</summary>
+    private static readonly string BG34 = EighthsIn("BG34", 3, 4, 6);
+
+    /// <summary>CONTROL 2/4 — two beams of two: no exception, so the bare quarter beat.</summary>
+    private static readonly string BG24 = EighthsIn("BG24", 2, 4, 4);
+
+    /// <summary>CONTROL 6/8 — two beams of three, the compound default (3 3).</summary>
+    private static readonly string BG68 = EighthsIn("BG68", 6, 8, 6);
+
+    /// <summary>CONTROL 9/8 — three beams of three, the compound default (3 3 3).</summary>
+    private static readonly string BG98 = EighthsIn("BG98", 9, 8, 9);
+
+    /// <summary>
+    /// CONTROL: sixteenths in 4/4 — four beams of four.
+    /// </summary>
+    /// <remarks>
+    /// The one control that is NOT pure eighths, so no beamException applies and the bare
+    /// beat structure answers: the quarter, not the half measure. Without it, a port could
+    /// satisfy every book above by beaming eighths per measure and nothing would notice.
+    /// LilyPond twin: score C44S.
+    /// </remarks>
+    private static readonly string BG44S = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c16 c c c c c c c c c c c c c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "BG44S" { staff m }
+        """;
+
+    /// <summary>
+    /// A REST inside what the eighth-note exception would otherwise beam as one group.
+    /// </summary>
+    /// <remarks>
+    /// 3/4 beams eighths by the WHOLE measure, and this bar's six slots hold two runs of
+    /// eighths either side of a rest. LilyPond (score M34R) draws TWO beams, of two and
+    /// three: a rest ends a beam whatever the exception says.
+    /// <para>
+    /// ⚠️ 3/4 is the only meter where the question can be put to eighths at all — 4/4's
+    /// exception group is a half measure, four eighths, which cannot hold two runs of two AND
+    /// a rest. That is why nothing noticed: Lily# merges consecutive pure-eighth groups
+    /// inside the exception's length without asking whether they are ADJACENT IN TIME, and
+    /// the only meter that can show it is 3/4.
+    /// </para>
+    /// </remarks>
+    private static readonly string BG34R = """
+        octave absolute
+        time 3/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 c r8 c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "BG34R" { staff m }
+        """;
+
+    /// <summary>
+    /// Three eighths inside ONE exception group, split unevenly by the beats underneath.
+    /// </summary>
+    /// <remarks>
+    /// The half measure from 1/2 holds eighths at 1/2, 5/8 and 3/4, and 4/4's beat boundary
+    /// at 3/4 falls between the second and the third. LilyPond (score M44B) beams all three:
+    /// the exception is what ends the beam, and it ends it at the bar.
+    /// <para>
+    /// ⚠️ This is the point that watches the OTHER half of the grid port. Lily#'s first pass
+    /// groups by the beat and throws away any group holding a single note, so the eighth at
+    /// 3/4 is gone before the exception pass can claim it — and once the beat grid becomes
+    /// LilyPond's, every meter whose exception spans several beats (2/8 and 3/8 among them)
+    /// depends on those one-note groups surviving to be merged.
+    /// </para>
+    /// </remarks>
+    private static readonly string BG44B = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c2 c8 c c r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "BG44B" { staff m }
+        """;
+
+    // --- the beamExceptions that are NOT keyed on an eighth. 3/4 and 4/4 each carry a second
+    // entry at 1/12 (scm/time-signature-settings.scm:100 and :121) whose own comment says what
+    // it is for: "Anything shorter by beat … we set triplets back to every beat". A tuplet's
+    // notes are looked up by their ACTUAL length, so an eighth inside a 3/2 tuplet is a
+    // twelfth. What the entry asks for — threes of a twelfth — IS the quarter, the same as the
+    // bare beat structure; all it really does is keep the EIGHTH entry away from triplets.
+    //
+    // ⚠️ Which means the entry is only observable through what it PREVENTS, and Lily#, which
+    // ends a beam at every tuplet boundary, already prevents it. The books below were opened
+    // to close that gap and found it shut — except for the control, which is where the real
+    // divergence turned out to be. See beam.grouping.sixteenth-triplets.groups.
+
+    /// <summary>3/4 filled with eighth triplets. LilyPond twin: score T34, three beams of three.</summary>
+    private static readonly string BGT34 = """
+        octave absolute
+        time 3/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
+        }
+
+        form main { ~Main }
+
+        score main "BGT34" { staff m }
+        """;
+
+    /// <summary>4/4 filled with eighth triplets. LilyPond twin: score T44, four beams of three.</summary>
+    private static readonly string BGT44 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
+        }
+
+        form main { ~Main }
+
+        score main "BGT44" { staff m }
+        """;
+
+    /// <summary>
+    /// An eighth triplet followed by plain eighths in 3/4 — two grouping rules in one bar.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score T34M): beams of THREE and FOUR. The triplet's run has a shortest
+    /// duration of a twelfth, so the 1/12 entry ends its beam at the quarter; the plain
+    /// eighths that follow have a shortest of an eighth, so the 1/8 entry carries them to the
+    /// bar line. The break between them is not "a tuplet edge" — it is two different entries
+    /// answering for two different runs, which score T44S shows by NOT breaking at one.
+    /// </remarks>
+    private static readonly string BGT34M = """
+        octave absolute
+        time 3/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { tuplet 3/2 { c8 c c } c8 c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "BGT34M" { staff m }
+        """;
+
+    /// <summary>The same mixture in 4/4. LilyPond twin: score T44M, beams of 3, 3 and 4.</summary>
+    private static readonly string BGT44M = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } c8 c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "BGT44M" { staff m }
+        """;
+
+    /// <summary>
+    /// SIXTEENTH triplets — a twenty-fourth each, for which NO exception entry exists.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score T44S): FOUR beams of SIX. With no entry to find, the bare beat
+    /// structure answers and the run groups by the quarter — which means LilyPond beams
+    /// straight ACROSS the boundary between two tuplets, joining two triplets of sixteenths
+    /// into one beam.
+    /// <para>
+    /// ⚠️ This was written as the control for the 1/12 books and is where the divergence
+    /// actually lives: Lily# ends a beam at every tuplet boundary unconditionally
+    /// (BeamDetector's tupletBoundaries), so it draws eight beams of three. LilyPond has no
+    /// such rule — what breaks the beam in the 1/12 books is the exception LOOKUP changing
+    /// between two runs, not the tuplet's edge.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGT44S = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m {
+            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
+            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
+            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
+            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c } |
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BGT44S" { staff m }
+        """;
+
     /// <summary>
     /// <see cref="BMD"/> with the beam on the other side — an up-stemmed beam reaching UP into
     /// the gap from the lower staff, the mirror of book BMU.
@@ -5830,6 +6300,76 @@ internal static class LpGeometryProbes
         new("beam.quant.chord.left", BQC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.chord.right", BQC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.chord.single-note-control", BQCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+
+        // --- and the OTHER thing a beam group decides, which no point above can see: how
+        // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which
+        // the count does not move. These read the count itself, off the drawn segments
+        // (RenderedGeometry.BeamletsAtStem), for the interior stems — the only ones
+        // lily/beaming-pattern.cc:121-183 touches. Both sides of each, because the answer
+        // is a PAIR and a rule that chips the wrong side gets one of them right by itself.
+        new("beam.beamlet.peak-8-16-8.left", BLA, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.peak-8-16-8.right", BLA, g => g.BeamletsAtStem(0, 1, true)),
+        new("beam.beamlet.valley-16-8-16.left", BLB, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.valley-16-8-16.right", BLB, g => g.BeamletsAtStem(0, 1, true)),
+        new("beam.beamlet.step-down-16-16-8.left", BLC, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.step-down-16-16-8.right", BLC, g => g.BeamletsAtStem(0, 1, true)),
+        new("beam.beamlet.step-up-8-16-16.left", BLD, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.step-up-8-16-16.right", BLD, g => g.BeamletsAtStem(0, 1, true)),
+        new("beam.beamlet.plateau-16-8-8-16.first.left", BLE, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.plateau-16-8-8-16.first.right", BLE, g => g.BeamletsAtStem(0, 1, true)),
+        new("beam.beamlet.plateau-16-8-8-16.second.left", BLE, g => g.BeamletsAtStem(0, 2, false)),
+        new("beam.beamlet.plateau-16-8-8-16.second.right", BLE, g => g.BeamletsAtStem(0, 2, true)),
+        new("beam.beamlet.peak-8-32-8.left", BLF, g => g.BeamletsAtStem(0, 1, false)),
+        new("beam.beamlet.peak-8-32-8.right", BLF, g => g.BeamletsAtStem(0, 1, true)),
+
+        // --- and the question one step above the beamlets: where does the beam END. Two
+        // readings each, because the group COUNT alone cannot tell 3+2 from 2+3 — and, for
+        // 8/8, a third, because count plus first cannot tell 3+3+2 from 3+2+3.
+        new("beam.grouping.four-eight.groups", BG48, g => g.BeamGroupCount()),
+        new("beam.grouping.four-eight.first-group", BG48, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.five-eight.groups", BG58, g => g.BeamGroupCount()),
+        new("beam.grouping.five-eight.first-group", BG58, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.eight-eight.groups", BG88, g => g.BeamGroupCount()),
+        new("beam.grouping.eight-eight.first-group", BG88, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.eight-eight.last-group", BG88, g => g.LastBeamGroupStemCount()),
+        new("beam.grouping.two-eight.groups", BG28, g => g.BeamGroupCount()),
+        new("beam.grouping.two-eight.first-group", BG28, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.three-eight.groups", BG38, g => g.BeamGroupCount()),
+        new("beam.grouping.three-eight.first-group", BG38, g => g.BeamGroupStemCount(0)),
+        // The controls, which LilyPond and Lily# already agree on. A port of the grid that
+        // moves any of these has broken what was right.
+        new("beam.grouping.common-time.groups", BG44, g => g.BeamGroupCount()),
+        new("beam.grouping.common-time.first-group", BG44, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.three-four.groups", BG34, g => g.BeamGroupCount()),
+        new("beam.grouping.three-four.first-group", BG34, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.two-four.groups", BG24, g => g.BeamGroupCount()),
+        new("beam.grouping.two-four.first-group", BG24, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.six-eight.groups", BG68, g => g.BeamGroupCount()),
+        new("beam.grouping.six-eight.first-group", BG68, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.nine-eight.groups", BG98, g => g.BeamGroupCount()),
+        new("beam.grouping.nine-eight.first-group", BG98, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.common-time-sixteenths.groups", BG44S, g => g.BeamGroupCount()),
+        new("beam.grouping.common-time-sixteenths.first-group", BG44S, g => g.BeamGroupStemCount(0)),
+        // …and the defect the controls turned up: a rest inside an exception group.
+        new("beam.grouping.rest-inside-exception.groups", BG34R, g => g.BeamGroupCount()),
+        new("beam.grouping.rest-inside-exception.first-group", BG34R, g => g.BeamGroupStemCount(0)),
+        // …and the mirror of it: a beat boundary INSIDE an exception group, which the
+        // exception is supposed to beam straight through.
+        new("beam.grouping.beat-split-inside-exception.groups", BG44B, g => g.BeamGroupCount()),
+        new("beam.grouping.beat-split-inside-exception.first-group", BG44B, g => g.BeamGroupStemCount(0)),
+        // …and the exceptions keyed on a TWELFTH rather than an eighth, plus the control that
+        // found what those were hiding.
+        new("beam.grouping.eighth-triplets-three-four.groups", BGT34, g => g.BeamGroupCount()),
+        new("beam.grouping.eighth-triplets-three-four.first-group", BGT34, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.eighth-triplets-common-time.groups", BGT44, g => g.BeamGroupCount()),
+        new("beam.grouping.eighth-triplets-common-time.first-group", BGT44, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.triplet-then-eighths-three-four.groups", BGT34M, g => g.BeamGroupCount()),
+        new("beam.grouping.triplet-then-eighths-three-four.first-group", BGT34M, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.triplet-then-eighths-common-time.groups", BGT44M, g => g.BeamGroupCount()),
+        new("beam.grouping.triplet-then-eighths-common-time.first-group", BGT44M, g => g.BeamGroupStemCount(0)),
+        new("beam.grouping.triplet-then-eighths-common-time.last-group", BGT44M, g => g.LastBeamGroupStemCount()),
+        new("beam.grouping.sixteenth-triplets.groups", BGT44S, g => g.BeamGroupCount()),
+        new("beam.grouping.sixteenth-triplets.first-group", BGT44S, g => g.BeamGroupStemCount(0)),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

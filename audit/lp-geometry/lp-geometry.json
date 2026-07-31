@@ -841,6 +841,308 @@
       "residual": 0.0,
       "why": "EXACT. The CONTROL for the two above: the same two eighths with nobody overhead. It says the 5.81 they record is 2.81 of real lift and not a floor, and it is the falsifier for the port — a change that moves this reading has changed the beam's own seat rather than what it is quanted against. The second voice is kept as a bar of skips rather than deleted, because a lone voice would let Lily# take the stem direction from the pitch and b sits ON the middle line."
     },
+    "beam.beamlet.peak-8-16-8.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "A",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT, and it is the half of the pair that must STAY exact: the defect is on the right side, and a port that merely stopped clamping would put a second beam here too. Both sides are recorded for every book in this family because the answer is a PAIR — LilyPond's `beaming` is one rank list per side — and a rule that chips the wrong side gets one of the two right for free."
+    },
+    "beam.beamlet.peak-8-16-8.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "A",
+      "unit": "count",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "EXACT — this was the reported defect, and it is closed. BeamDetector.CreateBeamGroup used to give an interior member left = min(count, prev) and right = min(count, next), so a sixteenth between two eighths got min(2,1) on BOTH sides and drew no stub at all. LilyPond starts a stem with its OWN count on both sides (lily/beaming-pattern.cc:50-62 Beam_rhythmic_element) and, for interior stems only, keeps one side whole and chips the other (:121-183 flag_directions): here the flag points RIGHT, so the right side keeps 2 and only the left is reduced. ⚠️ THE BRANCH THIS BOOK REACHES IS THE EXPENSIVE ONE: the two neighbours have equal counts, so the rule falls past `right_count > left_count`; the sixteenth neither starts on a beat nor ends on the next one, so it falls past the moment test; and the decision comes from `rhythmic_importance_`, a second pass (:291-404 set_rhythmic_importance). The simplest case anyone would report needs all of it — a one-line clamp removal could not have closed this point. PREDICTED BEFORE THE PORT AND HELD ON ALL THREE BRANCHES: this landed on 0; beam.beamlet.peak-8-32-8.right landed on 0 with it (had it stayed at -2 the chip would have been written as a constant 1 instead of max(count - neighbour, 1)); and none of the twelve points recorded 0 in this family moved — each is a stem LilyPond leaves alone, so any of them moving would have meant the `count > min(left, right)` gate was wrong rather than the chip. ⚠️ THE CORPUS DID NOT MOVE ONE BYTE: no snapshot changed, i.e. no fixture has an interior stem whose beam count exceeds BOTH its neighbours'. Byte-invariance is not evidence of a port; these fourteen points are."
+    },
+    "beam.beamlet.valley-16-8-16.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "B",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. The eighth between two sixteenths exceeds NEITHER neighbour, so LilyPond's gate (`count > min(left, right)`, :131-132) never opens and both sides keep the stem's own single beam. A control for the port: this is the shape a rule that always kept its own count on one side would also produce, which is why it is paired with step-down/step-up, where keeping the own count is visible."
+    },
+    "beam.beamlet.valley-16-8-16.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "B",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. The mirror side of beam.beamlet.valley-16-8-16.left, and the same control: no chip on either side of a stem that exceeds neither neighbour."
+    },
+    "beam.beamlet.step-down-16-16-8.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "C",
+      "unit": "count",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "EXACT. The interior sixteenth exceeds exactly ONE neighbour (the eighth on its right), so the flag points LEFT and the LEFT side keeps both beams. This is where min() and LilyPond agree BY CONSTRUCTION rather than by accident: with one neighbour lower, the side min() deletes is the side LilyPond chips, so the two rules cannot be told apart here. That is the point of recording it — the port must not move a reading the two rules already share."
+    },
+    "beam.beamlet.step-down-16-16-8.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "C",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. The chipped side of the step-down book: reduced by max(count - neighbour, 1) = 1, from 2 to 1 (lily/beaming-pattern.cc:179-181). min() lands on the same 1, for the different reason recorded on the left half of this pair."
+    },
+    "beam.beamlet.step-up-8-16-16.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "D",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. step-down mirrored: the lower neighbour is now on the LEFT, so the flag points RIGHT and it is the left side that is chipped. Both orientations are recorded because LilyPond's first branch is an inequality BETWEEN the two neighbours (`point_right = right_count > left_count`, :147-148) and a port that got its sense backwards would still satisfy the step-down pair."
+    },
+    "beam.beamlet.step-up-8-16-16.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "D",
+      "unit": "count",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "EXACT. The kept side of the step-up book — the stem's own two beams, untouched."
+    },
+    "beam.beamlet.plateau-16-8-8-16.first.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "E",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. The only book in this family with TWO interior stems, and neither is touched: each eighth's neighbours are a sixteenth and an eighth, so `count > min(left, right)` is false for both. It is the point that says the port did not make the counts depend on the group's LENGTH — the chip loop, and the CENTER-correction pass at :161-167, both run over a four-element pattern here. ⚠️ The LilyPond probe's header claims this book gives that correction pass something to correct. It does not: both interior stems come out CENTER, and the pass only rewrites a CENTER standing next to a LEFT or a RIGHT."
+    },
+    "beam.beamlet.plateau-16-8-8-16.first.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "E",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. See beam.beamlet.plateau-16-8-8-16.first.left — the other side of the same untouched stem."
+    },
+    "beam.beamlet.plateau-16-8-8-16.second.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "E",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. The SECOND interior stem of the plateau book. Recorded separately from the first because the two are the only pair in the family that could come out asymmetric — everything the rule reads about stem i (its neighbours' counts, its start moment, its rhythmic importance) differs between them, and an off-by-one in the loop bounds would show here and nowhere else."
+    },
+    "beam.beamlet.plateau-16-8-8-16.second.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "E",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT. See beam.beamlet.plateau-16-8-8-16.second.left."
+    },
+    "beam.beamlet.peak-8-32-8.left": {
+      "probe": "beam-beamlet.ly",
+      "score": "F",
+      "unit": "count",
+      "lilypond": 1,
+      "residual": 0.0,
+      "why": "EXACT, and NOT a coincidence with the reading it shares with peak-8-16-8.left: here the chip is 2, not 1. The thirty-second has three beams and the left neighbour one, so LilyPond reduces the flagged-away side by max(3 - 1, 1) = 2, landing on 1; Lily#'s min(3, 1) lands on 1 by deleting instead. The two rules meet at the same number from opposite directions, which is why this side is recorded as well as the right one."
+    },
+    "beam.beamlet.peak-8-32-8.right": {
+      "probe": "beam-beamlet.ly",
+      "score": "F",
+      "unit": "count",
+      "lilypond": 3,
+      "residual": 0.0,
+      "why": "EXACT — peak-8-16-8 with the gap TWO beams wide, and the point that separates 'the stub is one line' from the actual rule. LilyPond keeps the flagged side WHOLE (three beams here, two of them stubs, since the neighbouring eighths carry one) and reduces only the other side, by max(count - neighbour, 1) (lily/beaming-pattern.cc:179-181 beam_count_drul_). Lily#'s min(3, 1) left one. PREDICTED WITH beam.beamlet.peak-8-16-8.right and landed with it: a port that closed the 16th book and left this one at -1 would have written the chip as a constant 1; one that closed this and left the other open would have skipped set_rhythmic_importance, since only that decides which side a symmetric 1 2 1 peak points to."
+    },
+    "beam.grouping.four-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "M48", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. Before the port Lily# drew NO beam here at all, and the residual was the whole beam rather than a misplaced one. LilyPond's beatStructure for this meter is the table entry (2 2) (scm/time-signature-settings.scm:125 default-time-signature-settings), so its beats fall at 0 and 2/8 and the four eighths beam as two pairs; BeamDetector had a SECOND, flatter spelling of the beat grid — the dotted quarter for compound meters and one over the denominator otherwise — which made every eighth its own group, and a group of one note was dropped for want of a second. The grid is now BeamingPattern.Options, the one house the beamlet rule also reads. PREDICTED BEFORE THE PORT and held: this and its first-group partner landed on 0 with the five-eight, eight-eight and two-eight pairs, and none of the six control meters moved."
+    },
+    "beam.grouping.four-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "M48", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. The companion reading to beam.grouping.four-eight.groups: the group count alone cannot tell 2+2 from 1+3, so both are recorded for every meter in this family."
+    },
+    "beam.grouping.five-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "M58", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. 5/8 is the table's (3 2) (scm/time-signature-settings.scm:165-166), so LilyPond beams three then two. This is the book the defect was first SEEN in — five flagged eighths where a musician expects 3+2 — and the one that made the island worth opening."
+    },
+    "beam.grouping.five-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "M58", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT, and the reading that pins the grid's SHAPE rather than its mere presence: three, not two. A port that installed an even (1 1 1 1 1) or a (2 3) would satisfy beam.grouping.five-eight.groups and fail here."
+    },
+    "beam.grouping.eight-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "M88", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. 8/8 is the table's (3 3 2) (scm/time-signature-settings.scm:170-171) — note that this is NOT what the default rule for a numerator over three and divisible by three would give, since 8 is not divisible by three; the entry exists precisely for that."
+    },
+    "beam.grouping.eight-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "M88", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.eight-eight.groups."
+    },
+    "beam.grouping.eight-eight.last-group": {
+      "probe": "beam-grouping.ly", "score": "M88", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT, and the only THIRD reading in the family: for 8/8 the group count and the first group cannot tell 3+3+2 from 3+2+3, so the last group is read as well. The short group belongs at the END, which is where the table puts it."
+    },
+    "beam.grouping.two-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "M28", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT, and it does NOT come from the beat structure: 2/8's structure is the default (1 1), which would break the beam between the two eighths. What joins them is the beamException `(end (1/8 . (2)))` (scm/time-signature-settings.scm:81) — a separate mechanism that beams eighths BEYOND the beat, of which Lily# implemented only the 4/4 and 3/4 entries. This book and beam.grouping.three-eight are what separated the two halves of the port: fixing the beat grid alone would have left this one at -1, and would have BROKEN three-eight."
+    },
+    "beam.grouping.two-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "M28", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.two-eight.groups."
+    },
+    "beam.grouping.three-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "M38", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT — AND IT WAS EXACT BEFORE THE PORT FOR THE WRONG REASON, WHICH IS WHY IT IS RECORDED. LilyPond beams 3/8 as one group because of the beamException `(end (1/8 . (3)))` (scm/time-signature-settings.scm:104); its beat structure is the default (1 1 1). Lily# used to get the same answer because its flat beatLength took the COMPOUND branch (denominator 8, numerator divisible by three) and handed back a dotted quarter — the whole measure. ⚠️ THE TWO MECHANISMS AGREED ON THE ANSWER AND ON NOTHING ELSE: installing LilyPond's beat structure WITHOUT its exception turns this book from right to wrong, three groups of one note and no beam at all. That is why the exception table grew in the same commit as the grid. ⚠️ TWO FIXTURES RIDE ON THIS (test/beamed-rest and test/timesig-grandstaff are both 3/8), so here — and only here in this family — the corpus staying byte-identical is real evidence rather than the absence of it."
+    },
+    "beam.grouping.three-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "M38", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT — see beam.grouping.three-eight.groups, and the reason it was exact before the port too."
+    },
+    "beam.grouping.common-time.groups": {
+      "probe": "beam-grouping.ly", "score": "C44", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. CONTROL. 4/4's eighths beam by the HALF MEASURE, from the beamException `(end (1/8 . (4 4)))` (scm/time-signature-settings.scm:120) rather than from its (1 1 1 1) beats. A change to the beat grid that moved this reading would have broken what was already right; it did not move."
+    },
+    "beam.grouping.common-time.first-group": {
+      "probe": "beam-grouping.ly", "score": "C44", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.common-time.groups."
+    },
+    "beam.grouping.three-four.groups": {
+      "probe": "beam-grouping.ly", "score": "C34", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT. CONTROL. 3/4's eighths beam by the WHOLE measure, from `(end (1/8 . (6)))` (scm/time-signature-settings.scm:99). The longest exception group in the corpus, which is what makes beam.grouping.rest-inside-exception askable at all."
+    },
+    "beam.grouping.three-four.first-group": {
+      "probe": "beam-grouping.ly", "score": "C34", "unit": "count",
+      "lilypond": 6, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.three-four.groups."
+    },
+    "beam.grouping.two-four.groups": {
+      "probe": "beam-grouping.ly", "score": "C24", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. CONTROL, and the one that says the exceptions are not applied everywhere they would fit: 2/4 has NO table entry, so its eighths group by the bare quarter beat, two and two. A port that beamed eighths by the measure whenever it could would fail here and nowhere else in this family."
+    },
+    "beam.grouping.two-four.first-group": {
+      "probe": "beam-grouping.ly", "score": "C24", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.two-four.groups."
+    },
+    "beam.grouping.six-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "C68", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. CONTROL. The compound default: a numerator over three and divisible by three groups in threes (scm/time-signature-settings.scm:367-381 calc-simple-fraction-structure), which was the one case the old flat grid already knew. It had to survive the port unchanged, and did."
+    },
+    "beam.grouping.six-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "C68", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.six-eight.groups."
+    },
+    "beam.grouping.nine-eight.groups": {
+      "probe": "beam-grouping.ly", "score": "C98", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL. The compound default again, with three beats rather than two, so a port that hard-coded the number of groups rather than deriving it fails here."
+    },
+    "beam.grouping.nine-eight.first-group": {
+      "probe": "beam-grouping.ly", "score": "C98", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.nine-eight.groups."
+    },
+    "beam.grouping.common-time-sixteenths.groups": {
+      "probe": "beam-grouping.ly", "score": "C44S", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. CONTROL, and the only book in the family that is NOT pure eighths: the 1/8 exception does not apply to sixteenths, so 4/4's bare beat structure answers and they group by the QUARTER, four beams of four rather than two of eight. Without it a port could satisfy every other book by beaming eighths per exception and never consult the beats at all."
+    },
+    "beam.grouping.common-time-sixteenths.first-group": {
+      "probe": "beam-grouping.ly", "score": "C44S", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. CONTROL — see beam.grouping.common-time-sixteenths.groups."
+    },
+    "beam.grouping.rest-inside-exception.groups": {
+      "probe": "beam-grouping.ly", "score": "M34R", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT — a SECOND defect, found by the control meters rather than aimed at, and closed with them. 3/4 beams eighths by the whole measure, and this bar holds two runs of eighths either side of a rest. LilyPond draws two beams, of two and three: a rest ends a beam whatever the exception says. Lily# drew ONE BEAM STRAIGHT OVER THE REST, because MergePureEighthNoteGroups joined consecutive pure-eighth groups inside the exception's length without ever asking whether they were ADJACENT IN TIME. The merge now asks (the previous group's last note must END where the next begins), which also lets a group of ONE note be carried safely to it — see beam.grouping.beat-split-inside-exception.first-group, whose fix needs that. ⚠️ 3/4 is the only meter that can show this: 4/4's exception group is four eighths, which cannot hold two runs of two AND a rest, and every other group is shorter still. ⚠️ A tuplet boundary passes the adjacency test, taking no time, which is why the separate tuplet guard beside it stays."
+    },
+    "beam.grouping.rest-inside-exception.first-group": {
+      "probe": "beam-grouping.ly", "score": "M34R", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT, and it was the only residual in this family with a POSITIVE sign: Lily#'s single group held five stems where LilyPond's first holds two. A count too HIGH is the signature of a merge that should not have happened, as against the too-low counts everywhere else in the family, which were beams never built. See beam.grouping.rest-inside-exception.groups."
+    },
+    "beam.grouping.beat-split-inside-exception.groups": {
+      "probe": "beam-grouping.ly", "score": "M44B", "unit": "count",
+      "lilypond": 1, "residual": 0.0,
+      "why": "EXACT, and it is the HALF of the pair that could not see the defect — one beam was drawn either way, and only its size was wrong. Recorded so that a port which splits this bar in two is caught: see beam.grouping.beat-split-inside-exception.first-group."
+    },
+    "beam.grouping.beat-split-inside-exception.first-group": {
+      "probe": "beam-grouping.ly", "score": "M44B", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT — a third defect in this family, and the point that watches the other half of the grid port. The half measure from 1/2 holds eighths at 1/2, 5/8 and 3/4; 4/4's beat boundary at 3/4 falls between the second and the third, and the eighth-note exception beams all three straight through it. Lily#'s first pass grouped by the BEAT and threw away any group holding a single note, so the eighth at 3/4 was gone before the exception could claim it, and the bar printed a beam of two plus a flagged eighth. ⚠️ THIS IS WHY THE GRID PORT COULD NOT JUST SWAP THE BEAT LENGTH: with the beats now LilyPond's, every meter whose exception spans several beats depends on those one-note groups surviving — 3/8 becomes three groups of one and would lose its beam entirely (see beam.grouping.three-eight.groups). Groups of one are now carried through both passes and dropped only at the very end, where a beam group is turned into a BeamGroup. That is safe ONLY with the adjacency test from beam.grouping.rest-inside-exception, which is what stops a surviving singleton being merged across a rest: the two fixes are one claim and went in together."
+    },
+    "beam.grouping.eighth-triplets-three-four.groups": {
+      "probe": "beam-grouping.ly", "score": "T34", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT, AND NO CODE WAS WRITTEN FOR IT — the 1/12 exception was opened as an unported mechanism and closed by measurement. 3/4 carries a second beamExceptions entry at 1/12 (scm/time-signature-settings.scm:100), whose own comment says what it is for: 'Anything shorter by beat … we set triplets back to every beat'. A tuplet's notes are looked up by their ACTUAL length, so an eighth inside a 3/2 tuplet is a twelfth. ⚠️ WHAT THE ENTRY ASKS FOR IS THE BEAT: threes of a twelfth is a quarter, which is exactly what the bare beat structure already gives. Its whole job is to keep the EIGHTH entry — which would beam this bar as nine notes — away from a run of triplets. Lily# keeps it away by a different route (it ends a beam at every tuplet boundary), so the answers agree. ⚠️ THAT AGREEMENT IS THE SAME SHAPE AS beam.grouping.three-eight: right answer, different device. It is recorded rather than assumed because the day the tuplet-boundary rule goes (see beam.grouping.sixteenth-triplets.groups, where it is wrong), this bar has to keep its three beams — and then only the 1/12 entry can hold it."
+    },
+    "beam.grouping.eighth-triplets-three-four.first-group": {
+      "probe": "beam-grouping.ly", "score": "T34", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.eighth-triplets-three-four.groups."
+    },
+    "beam.grouping.eighth-triplets-common-time.groups": {
+      "probe": "beam-grouping.ly", "score": "T44", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT. The same in 4/4, whose 1/12 entry is (3 3 3 3) (scm/time-signature-settings.scm:121) — four beats rather than three, so a port that hard-coded the count fails here. See beam.grouping.eighth-triplets-three-four.groups."
+    },
+    "beam.grouping.eighth-triplets-common-time.first-group": {
+      "probe": "beam-grouping.ly", "score": "T44", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.eighth-triplets-common-time.groups."
+    },
+    "beam.grouping.triplet-then-eighths-three-four.groups": {
+      "probe": "beam-grouping.ly", "score": "T34M", "unit": "count",
+      "lilypond": 2, "residual": 0.0,
+      "why": "EXACT. Two grouping rules in one bar: the triplet's run has a shortest duration of a twelfth, so the 1/12 entry ends its beam at the quarter, and the plain eighths that follow have a shortest of an eighth, so the 1/8 entry carries them to the bar line — three then four. ⚠️ THE BREAK BETWEEN THEM IS NOT 'A TUPLET EDGE': it is two different entries answering for two different runs. beam.grouping.sixteenth-triplets is the book that proves the distinction, by NOT breaking at one."
+    },
+    "beam.grouping.triplet-then-eighths-three-four.first-group": {
+      "probe": "beam-grouping.ly", "score": "T34M", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.triplet-then-eighths-three-four.groups."
+    },
+    "beam.grouping.triplet-then-eighths-common-time.groups": {
+      "probe": "beam-grouping.ly", "score": "T44M", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. The same mixture in 4/4: two triplets and then four eighths, which is 3, 3 and 4."
+    },
+    "beam.grouping.triplet-then-eighths-common-time.first-group": {
+      "probe": "beam-grouping.ly", "score": "T44M", "unit": "count",
+      "lilypond": 3, "residual": 0.0,
+      "why": "EXACT. See beam.grouping.triplet-then-eighths-common-time.groups."
+    },
+    "beam.grouping.triplet-then-eighths-common-time.last-group": {
+      "probe": "beam-grouping.ly", "score": "T44M", "unit": "count",
+      "lilypond": 4, "residual": 0.0,
+      "why": "EXACT, and the third reading this book needs: the count plus the first group cannot tell 3+3+4 from 3+4+3. The FOUR belongs at the end — it is the second half measure's worth of plain eighths, joined by the 1/8 entry."
+    },
+    "beam.grouping.sixteenth-triplets.groups": {
+      "probe": "beam-grouping.ly", "score": "T44S", "unit": "count",
+      "lilypond": 4, "residual": 4.0,
+      "why": "OPEN, and it is where the 1/12 investigation actually led. These triplets are SIXTEENTHS, a twenty-fourth each, and no beamExceptions entry exists at 1/24 — so LilyPond finds nothing, falls back to the bare beat structure, and groups by the QUARTER: four beams of SIX, each one running straight ACROSS the boundary between two tuplets. Lily# draws EIGHT beams of three, because BeamDetector ends a beam at every tuplet boundary unconditionally (its tupletBoundaries set, whose comment claims 'a tuplet is its own rhythmic group'). ⚠️ LILYPOND HAS NO SUCH RULE. What breaks the beam in the 1/12 books above is the exception LOOKUP changing between two runs of different shortest duration, not the tuplet's edge — which is why those books agree with LilyPond and this one does not. ⚠️ THE RESIDUAL IS POSITIVE, the signature of beams that were broken and should not have been, as against the negative ones elsewhere in this family, which were beams never built. CLOSING IT means replacing the tuplet-boundary rule with LilyPond's question — 'what is the shortest duration in this run, and what does the table say for it' — which MergePureEighthNoteGroups can only ask as 'are these all eighths'. That moves where beams break, so it is its own island with its own snapshots to justify; the eleven points here are what it will be measured against."
+    },
+    "beam.grouping.sixteenth-triplets.first-group": {
+      "probe": "beam-grouping.ly", "score": "T44S", "unit": "count",
+      "lilypond": 6, "residual": -3.0,
+      "why": "OPEN. The companion reading: LilyPond's first beam joins six sixteenths, two tuplets' worth. See beam.grouping.sixteenth-triplets.groups."
+    },
     "line-start.clef-to-time.mixed-key-grand-staff": {
       "probe": "barline-spacing.ly",
       "score": "TSA",

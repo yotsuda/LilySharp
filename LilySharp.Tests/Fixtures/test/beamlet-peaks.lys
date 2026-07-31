@@ -1,0 +1,19 @@
+// An interior stem whose beam count exceeds BOTH its neighbours': the peak that the
+// corpus had no book for. LilyPond keeps such a stem's extra beams whole on ONE side and
+// chips the other by max(count - neighbour, 1), so the sixteenth in 8-16-8 draws a full
+// second beam to its right and the thirty-second in 8-32-8 draws two.
+// Bar 3 is the shape the rule agrees with min() on (each stem exceeds only one neighbour),
+// so a regression that deletes the stubs shows in bars 1 and 2 alone.
+// LILYPOND-REF: lily/beaming-pattern.cc:121-183 flag_directions.
+title "Beamlet peaks"
+octave absolute
+part m { clef treble }
+section Main {
+  m {
+    c'8[ e'16 g'8] r8. c'8[ e'32 g'8] r8 r16. |
+    a8[ c'16 e'8] r8. a8[ c'32 e'8] r8 r16. |
+    c'16[ e'16 g'8] a8[ c'16 e'16] r2 |
+  }
+}
+form main { Main }
+score main "beamlet-peaks" { staff m }
