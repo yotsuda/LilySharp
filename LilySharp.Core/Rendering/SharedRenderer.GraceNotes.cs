@@ -321,8 +321,22 @@ internal static partial class SharedRenderer
         for (int i = 0; i < n; i++)
             gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
 
-        double beamThick = EngravingDefaults.BeamThickness * scale;
-        double beamTrans = EngravingDefaults.BeamTranslation * scale;
+        // A grace beam's thickness is DECLARED, not scaled: ly/grace-init.ly sets
+        // Voice.Beam.beam-thickness = #0.384 where scm/define-grobs.scm declares 0.48, and the
+        // gap between its lines follows from that (lily/beam.cc:130-145). Both are the numbers
+        // the QUANTER was handed (GraceNoteEngraver passes the same two constants), so drawing
+        // from anything else draws a beam that is not the configuration that was scored.
+        // ⚠️ It used to be BeamThickness × scale with scale = magstep(-3) = 0.7071 — 0.339411
+        // thick, 0.572757 apart, against LilyPond's 0.384 and 0.648. The grace's HEADS scale by
+        // magstep(-3); its beam does not, and the two are different numbers (0.7071 vs 0.8).
+        // MEASURED on 2.26.0 (audit/lp-geometry/probes/beam-grace.ly): the grace Beam grob's
+        // drawn height is 1.390 = 0.384 + 0.648 + its own dy 0.358, against 1.480 = 0.48 +
+        // 0.81 + 0.19 for the full-size control. Ledger grace.beam.thickness / .stack-gap.
+        double beamThick = EngravingDefaults.GraceBeamThickness;
+        double beamTrans = EngravingDefaults.BeamTranslationOf(
+            EngravingDefaults.GraceBeamThickness,
+            EngravingDefaults.GraceBeamLengthFraction,
+            maxBeams);
         // The beam's ends reach half a stem thickness past its outer stems — the SAME
         // unscaled 0.065 the quanter measured its x_span_ with, so the corner lands exactly
         // on the scored configuration and squares off against the stem's own edge.

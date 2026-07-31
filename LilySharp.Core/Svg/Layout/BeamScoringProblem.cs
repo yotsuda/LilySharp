@@ -308,9 +308,10 @@ internal sealed class BeamScoringProblem
         // Calculations are in staff-space units
         _beamThickness = beamThickness;                         // 0.48 staff spaces full size
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.1 staff spaces
-        // Derived from THIS beam's thickness and fraction, not the full-size constant:
-        // lily/beam.cc Beam::get_beam_translation reads both off the grob.
-        _beamTranslation = EngravingDefaults.BeamTranslationOf(beamThickness, lengthFraction);
+        // Derived from THIS beam's thickness, fraction and count, not the full-size constant:
+        // lily/beam.cc:130-145 Beam::get_beam_translation reads all three off the grob.
+        _beamTranslation = EngravingDefaults.BeamTranslationOf(
+            beamThickness, lengthFraction, _maxBeamCount);
         _lengthFraction = lengthFraction;
         _stemDetails = lengthFraction == 1.0
             ? StemDetails.Default
@@ -1243,7 +1244,17 @@ internal sealed class BeamScoringProblem
     {
         // LILYPOND-REF: lily/beam-quanting.cc:1266-1268 — divided by the larger
         // EDGE beam count (not the global maximum over all members).
+        // LILYPOND-REF: lily/beam-quanting.cc:80-87 Beam_quant_parameters::fill — and scaled
+        //   DOWN by exp(-8·|1 − length-fraction|) first, with LilyPond's reason in its own
+        //   words: "For stems that are non-standard, the forbidden beam quanting doesn't
+        //   really work, so decrease their importance." A grace (fraction 0.8) therefore pays
+        //   e^-1.6 = 0.2019 of the full charge, i.e. an extra_demerit of 1.0095 where a
+        //   full-size beam of the same count pays 5.0.
+        // ⚠️ MEASURED, not assumed: LilyPond's own score card for a flat grace quant shows
+        //   Fs 2.02, and the Fs block below adds extra_demerit exactly twice
+        //   (audit/lp-geometry/probes/beam-grace.ly score J through inspect-quants).
         double extraDemerit = _parameters.SecondaryBeamDemerit
+            * Math.Exp(-8.0 * Math.Abs(1.0 - _lengthFraction))
             / Math.Max(Math.Max(_edgeBeamCounts[0], _edgeBeamCounts[1]), 1);
 
         double dem = 0.0;

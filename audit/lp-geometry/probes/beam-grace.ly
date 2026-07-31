@@ -3,17 +3,33 @@
 % WHAT DOES A GRACE NOTE'S BEAM QUANT TO?
 %
 % Every beam point in the ledger reads a beam at full size. A grace beam is the same quanter
-% run with three of its inputs scaled: ly/grace-init.ly sets Voice.fontSize = -3 and, on the
-% Beam itself, beam-thickness = 0.384 and length-fraction = (magstep -3), with the Stem's
-% length-fraction scaled to match. The beam TRANSLATION is derived, not declared —
-% lily/beam.cc:558-571 Beam::get_beam_translation returns
-%   fract * ((2 * staff_space + line_thickness - beam_thickness) / 2)   [beam_count < 4]
-% so the scaling reaches the quant grid through the thickness AND through the fraction.
+% run with scaled inputs: ly/grace-init.ly sets Voice.fontSize = -3 and, on the Beam itself,
+% beam-thickness = 0.384 and length-fraction = 0.8, with the Stem's length-fraction to match.
+% ⚠️ THREE DIFFERENT NUMBERS, and folding any two of them costs a session: the HEADS shrink by
+% magstep(-3) = 0.7071, the beam's LENGTH-FRACTION is 0.8, and its THICKNESS is DECLARED 0.384.
 %
-% This is the one divergence a twin sweep of the whole fixture corpus left standing outside a
-% known gate (2026-08-01): every ordinary beam reading in the corpus matches LilyPond exactly,
+% The beam TRANSLATION is derived — lily/beam.cc:130-145 Beam::get_beam_translation returns
+%   (2 * staff_space * fract + line_thickness * fract - beam_thickness) / 2   [beam_count < 4]
+%   (3 * staff_space * fract + line_thickness * fract - beam_thickness) / 3   [from four up]
+% ⚠️ THE STAFF SPACE AND THE LINE ARE SCALED BY fract; THE THICKNESS IS NOT, because it arrives
+% already scaled. LilyPond's comment at :138-141 says so — "we divide the thickness by fract".
+% For a grace that is (2*0.8 + 0.1*0.8 - 0.384)/2 = 0.648, i.e. the full-size 0.81 scaled ONCE.
+% ⚠️ THIS COMMENT USED TO SAY fract * ((2 + line - thickness) / 2) = 0.6864, and Lily# was
+% built from the comment. It cost a quant step: beam_translation_ builds the gap a staff line
+% may not fall into (lily/beam-quanting.cc:1287-1294), so the wrong gap moved which
+% configuration wins. Ledger grace.beam.stack-gap.
+%
+% The OTHER input that only a grace can see: lily/beam-quanting.cc:80-87 multiplies
+% SECONDARY_BEAM_DEMERIT by exp(-8 * |1 - length-fraction|) — "For stems that are non-standard,
+% the forbidden beam quanting doesn't really work, so decrease their importance." A grace pays
+% e^-1.6 = 0.2019 of the full charge, extra_demerit 1.0095 against a full-size beam's 5.0.
+% ★ READ IT OFF LILYPOND, do not derive it: force a flat quant with \override Beam.inspect-quants
+% and its card shows Fs, which adds extra_demerit exactly twice.
+%
+% This was the one divergence a twin sweep of the whole fixture corpus left standing outside a
+% known gate (2026-08-01): every ordinary beam reading in the corpus matched LilyPond exactly,
 % and the three books that carry a grace beam — test/grace-notes, test/grace-lower-staff,
-% showcase/02-ornaments — all miss it by the SAME two numbers.
+% showcase/02-ornaments — all missed it. All three are exact as of 2026-08-01.
 %
 % Output: PROBEGR <name> BEAM pos=<positions> thick=<beam-thickness> fract=<length-fraction>
 %                        dirs=<...> info=<per-stem stem-info>
@@ -65,17 +81,24 @@ sweep =
 % staff line left to fall in the gap) and for the quant RANGE.
 %
 % WHAT LILYPOND SAID (all four are graces, same size, same durations, same interval):
-%   G  heads -5/-4   (0.142 . 0.5)     dy 0.358
-%   I  heads -3/-2   (1.142 . 1.5)     dy 0.358
-%   K  heads -2/-1   (2.142 . 2.5)     dy 0.358
-%   J  heads +1/+2   (2.858 . 3.142)   dy 0.284   <- the family slope changes HERE
+%   G  (0.142 . 0.5)     dy 0.358
+%   I  (1.142 . 1.5)     dy 0.358
+%   K  (2.142 . 2.5)     dy 0.358
+%   J  (2.858 . 3.142)   dy 0.284   <- the family slope changes HERE
 %
-% ★★★ AND LILY# CHANGES ONE STEP EARLIER. J is exact to nine places; K is not, and Lily#
-% gives K exactly J's slope (dy 0.284) one grid step down: (1.858 . 2.142) against
-% (2.142 . 2.5). So the two engines agree on both sides of their own boundary and put the
-% boundary in different places — which is a far sharper statement than a residual, and it
-% was found by opening J as the divergent point and K as its control and being WRONG about
-% which was which. Ledger beam.quant.grace.near-middle-bracket.* / .above-staff.*.
+% ⚠️★★★ THE FIRST READING OF THIS SWEEP WAS AN ARTEFACT OF A MISMATCHED PAIR, and it is the
+% cheapest lesson in the file. The .lys books for J and K were written `grace { c' d' }` and
+% `grace { a b }`, WITHOUT the 16 — and a bare grace note is an EIGHTH in Lily#, so both were
+% one-beam books measured against these two-beam twins. J landed on LilyPond's answer by luck
+% and K did not, which read as "the two engines put the same regime change one step apart".
+% They do not. Matched, K is exact and J missed by +0.642 / +0.716, which is what the fixture
+% test/grace-lower-staff had been reporting the whole time.
+% ⇒ ★★ WHEN A SWEEP INVERTS, CHECK THAT THE TWO SIDES ARE THE SAME MUSIC BEFORE BELIEVING IT.
+%
+% What J's divergence actually was, once the pair was a pair: LilyPond's own score cards
+% agreed on every term but Fl, and both halves of that are in the header above (the 0.648
+% translation and the exp(-8*|1-fract|) demerit scaling). Both ported 2026-08-01; all four
+% books are exact. Ledger beam.quant.grace.above-staff.* / .near-middle-bracket.*.
 \score { \sweep "J" { \time 4/4 \grace { c''16 d'' } e''4 g''2 r4 } }
 
 % ⚠️ THE FULL-SIZE CONTROL THAT H IS FOR G CANNOT EXIST HERE, and finding that out is
@@ -90,6 +113,8 @@ sweep =
 % ★ IT IS NOT NEEDED. The sweep's own members control each other: G, I, J and K are all
 % graces at the same scale with the same durations and the same interval, differing only in
 % register, so the grace scaling is common to all four and cannot be what separates them.
-% K is the one just BELOW the middle line, where the beam clears the staff but only barely
-% — meant as the bracket that locates the boundary, and it turned out to BE the divergence.
+% K is the one just BELOW the middle line, where the beam clears the staff but only barely.
+% ★ IT EARNED ITS KEEP as the bracket after all: it is the register where the forbidden-quant
+% term FIRES on both engines and the same configuration still wins both, so it separates "the
+% term is scaled wrong" (K does not move) from "the term is computed wrong" (K moves).
 \score { \sweep "K" { \time 4/4 \grace { a'16 b' } c''4 g'2 r4 } }

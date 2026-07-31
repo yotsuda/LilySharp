@@ -125,17 +125,35 @@ internal static class EngravingDefaults
     /// </remarks>
     public const double GraceBeamLengthFraction = 0.8;
     /// <summary>
-    /// The distance between beam centres for a beam of the given thickness and
-    /// <c>length-fraction</c> — the derivation <see cref="BeamTranslation"/> is the
-    /// full-size case of.
+    /// The distance between beam centres for a beam of the given thickness,
+    /// <c>length-fraction</c> and beam count — the derivation <see cref="BeamTranslation"/>
+    /// is the full-size, fewer-than-four case of.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — <c>fract × ((2·ss + line −
-    ///   beam-thickness) / 2)</c> for fewer than four beams, where <c>fract</c> is the beam's
-    ///   length-fraction and the staff space and line thickness are NOT scaled with it.
+    /// LILYPOND-REF: lily/beam.cc:130-145 Beam::get_beam_translation —
+    ///   <c>(2·ss·fract + line·fract − beam-thickness) / 2</c> for fewer than four beams and
+    ///   <c>(3·ss·fract + line·fract − beam-thickness) / 3</c> from four up.
+    /// <para>
+    /// ⚠️ THE STAFF SPACE AND THE LINE THICKNESS ARE SCALED BY <c>fract</c>; THE BEAM
+    /// THICKNESS IS NOT — it arrives already scaled (0.384 for a grace, ly/grace-init.ly).
+    /// LilyPond's own comment at :138-141 says exactly that: "if fract != 1.0, as is the case
+    /// for grace notes, we want the gap to decrease too. To achieve this, we divide the
+    /// thickness by fract." So a grace's translation is <c>(2×0.8 + 0.1×0.8 − 0.384)/2 =
+    /// 0.648</c>, which is the full-size 0.81 scaled ONCE.
+    /// </para>
+    /// <para>
+    /// ⚠️ This line used to read <c>fract × ((2 + line − thickness) / 2)</c> — scaling the
+    /// already-scaled thickness a second time, for 0.6864 — and its own reference sentence
+    /// stated the rule backwards. It was worth a whole quant step: the gap a staff line may
+    /// not fall into is built from this number (lily/beam-quanting.cc:1287-1294), so a grace
+    /// beam above the staff bought the next configuration up. Ledger grace.beam.stack-gap and
+    /// beam.quant.grace.above-staff.*.
+    /// </para>
     /// </remarks>
-    public static double BeamTranslationOf(double beamThickness, double lengthFraction) =>
-        lengthFraction * ((2.0 + LineThickness - beamThickness) / 2.0);
+    public static double BeamTranslationOf(double beamThickness, double lengthFraction, int beamCount) =>
+        beamCount < 4
+            ? (2.0 * lengthFraction + LineThickness * lengthFraction - beamThickness) / 2.0
+            : (3.0 * lengthFraction + LineThickness * lengthFraction - beamThickness) / 3.0;
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
     public const double BeamletLength = 1.1;

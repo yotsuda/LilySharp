@@ -3701,11 +3701,14 @@ internal static class LpGeometryProbes
     /// same size, same durations, same interval, only the register.
     /// </para>
     /// <para>
-    /// ★★★ THIS WAS OPENED AS THE DIVERGENT ONE AND IS EXACT. <see cref="BGRK"/>, opened as
-    /// its control, is the one that misses — Lily# changes the family's slope one step
-    /// EARLIER than LilyPond does. The two engines agree on both sides of their own
-    /// boundary and put the boundary in different places, which no single point could have
-    /// said. This one is now the control: it must stay exact while BGRK is chased.
+    /// ⚠️ ★★★ THIS BOOK SPENT ONE SESSION SPELLED <c>grace { c' d' }</c>, WITHOUT THE 16 —
+    /// and a bare grace note is an EIGHTH in Lily# (Svg/Collector/MeasureCollector.cs
+    /// graceDefaultDuration), so it was a ONE-beam book measured against a TWO-beam twin.
+    /// It came out exact anyway, by luck, and its neighbour <see cref="BGRK"/> did not, which
+    /// is where "the regime boundary is one step low" came from. With the durations matched
+    /// it is the other way round again: K is exact and THIS one misses, by +0.642 / +0.716 —
+    /// which is what the fixture test/grace-lower-staff had been saying all along, and what
+    /// this point's own ledger entry quoted while recording residual 0.
     /// </para>
     /// </remarks>
     private static readonly string BGRJ = """
@@ -3716,7 +3719,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { c' d' } e'4 g2 r4 | }
+          m { grace { c'16 d' } e'4 g2 r4 | }
         }
 
         form main { ~Main }
@@ -3725,18 +3728,22 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
-    /// …and the one that actually diverges: the same grace just BELOW the middle line, where
-    /// the beam clears the staff but only barely.
+    /// …and the bracket that locates where <see cref="BGRJ"/>'s regime begins: the same grace
+    /// just BELOW the middle line, where the beam clears the staff but only barely.
     /// </summary>
     /// <remarks>
     /// LilyPond twin (score K): <c>\grace { a'16 b' } c''4 g'2 r4</c> — <c>(2.142 . 2.5)</c>,
-    /// dy 0.358, i.e. still the ordinary family. Lily# answers <c>(1.858 . 2.142)</c>: one
-    /// grid step down at both ends, with <see cref="BGRJ"/>'s slope.
+    /// dy 0.358, the ordinary grace family's slope. Lily# answers the same to nine places.
     /// <para>
-    /// ⚠️ It was written as the BRACKET — the control that locates where BGRJ's regime
-    /// begins — and it is the divergence instead. The reading is better for it: with G, I
-    /// and BGRJ all exact, this pair says the two engines put the same regime change one
-    /// step apart rather than that they compute a different beam.
+    /// ⚠️ This book was also spelled without the 16 for a session — see <see cref="BGRJ"/>.
+    /// As a ONE-beam book it answered (1.858 . 2.142) against the twin's two-beam
+    /// (2.142 . 2.5), which read as a divergence and is not one: the beam count changes the
+    /// quant grid's bounds and every stem ideal. Matched, it is exact.
+    /// </para>
+    /// <para>
+    /// ★ It stays a control worth keeping: it is the register where the forbidden-quant term
+    /// fires on BOTH engines (LilyPond charges <c>Fl 0.82</c> here) and they still agree, so
+    /// a fix that moves this point has changed the term rather than its scale.
     /// </para>
     /// </remarks>
     private static readonly string BGRK = """
@@ -3747,7 +3754,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { a b } c'4 g2 r4 | }
+          m { grace { a16 b } c'4 g2 r4 | }
         }
 
         form main { ~Main }
@@ -7247,17 +7254,30 @@ internal static class LpGeometryProbes
             g => g.BeamOverhangPastOuterStem(0, true)),
 
         // …and the register the six above never leave. Every grace point so far puts the
-        // beam INSIDE the staff; these two walk up out of it. LilyPond gives the whole
-        // family one slope (dy 0.358 at G, I and K) right up until the beam clears the top
-        // line, and then gives J a different one (0.284) from the same ideals — so the
-        // boundary is a property of the quanter, not of the grace scaling, which all four
-        // share. ★ LILY# PUTS THAT BOUNDARY ONE STEP LOWER: J is exact and K is not.
+        // beam INSIDE the staff; these two walk up out of it, where LilyPond's forbidden-quant
+        // term stops finding a staff line in the beam's gap. J is the divergence (Lily# draws
+        // (3.50 . 3.858) against LilyPond's (2.858 . 3.142) — higher AND steeper); K is the
+        // bracket just below it, where BOTH engines pay the term and agree to nine places.
         new("beam.quant.grace.above-staff.left", BGRJ, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.grace.above-staff.right", BGRJ, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.grace.near-middle-bracket.left", BGRK,
             g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.grace.near-middle-bracket.right", BGRK,
             g => g.BeamPositionAboveStaffMiddle(0, true)),
+
+        // …and the two numbers the four quant points above are SCORED with but cannot see.
+        // A beam's height says nothing about how thick its lines are drawn or how far apart
+        // they sit, and LilyPond spends both inside score_forbidden_quants: the gap a staff
+        // line may not fall into is built out of beam_thickness_ and beam_translation_
+        // (lily/beam-quanting.cc:1287-1294). ★ LILYPOND'S SIDE IS TWO DECLARED NUMBERS, not
+        // a scale: beam-thickness is 0.384 for a grace and 0.48 full size (ly/grace-init.ly,
+        // scm/define-grobs.scm), and the translation follows from them at lily/beam.cc:142-144.
+        // Reading them here separates a wrong CONSTANT from a wrong quant, which the position
+        // points alone conflate.
+        new("grace.beam.thickness", BGR, g => g.BeamLineThickness(0)),
+        new("grace.beam.thickness.full-size-control", BGRC, g => g.BeamLineThickness(0)),
+        new("grace.beam.stack-gap", BGR, g => g.BeamStackGap(0)),
+        new("grace.beam.stack-gap.full-size-control", BGRC, g => g.BeamStackGap(0)),
 
         // …and the X FRAME those six read through. Until now the grace column's width was
         // measured only INDIRECTLY, by the slope it leaves in the beam; these read it. Head

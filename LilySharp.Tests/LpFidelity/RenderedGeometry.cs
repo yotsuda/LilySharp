@@ -1375,6 +1375,103 @@ internal sealed class RenderedGeometry
         return first;
     }
 
+    /// <summary>
+    /// How thick ONE line of a beam is drawn — LilyPond's <c>Beam.beam-thickness</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Beam <c>(beam-thickness . 0.48)</c>, and
+    /// ly/grace-init.ly <c>Voice.Beam.beam-thickness = #0.384</c> for a grace — a DECLARED
+    /// pair of numbers, not a scale applied to one of them. MEASURED on 2.26.0: the grace
+    /// beam's drawn quad is 0.304 tall with a 0.08 blot, i.e. 0.384 exactly, against 0.48 for
+    /// the same two pitches written as ordinary sixteenths.
+    /// <para>
+    /// ⚠️ Worth its own point because the quanter and the renderer can disagree about it and
+    /// the beam's POSITION will not say so: the height a quant is measured to is the primary
+    /// line's centre, which does not move when the line is drawn too thin.
+    /// </para>
+    /// </remarks>
+    public double BeamLineThickness(int beamIndex, int page = 0)
+    {
+        var lines = FullWidthBeamQuads(beamIndex, page);
+        var q = lines[0];
+        double atLeft = Math.Abs(q.BottomLeftY - q.TopLeftY);
+        double atRight = Math.Abs(q.BottomRightY - q.TopRightY);
+        if (Math.Abs(atLeft - atRight) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: beam {beamIndex} is drawn {atLeft:F6} thick at its left end and "
+                + $"{atRight:F6} at its right — a beam is a parallelogram with vertical ends, so "
+                + "there is no single thickness to report.\nDrawn geometry:\n" + Describe());
+        }
+        return atLeft;
+    }
+
+    /// <summary>
+    /// The distance between the CENTRES of two adjacent lines of a beam stack — LilyPond's
+    /// <c>Beam::get_beam_translation</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:130-145 — for fewer than four beams,
+    /// <c>(2·staff_space·fract + line·fract − beam_thickness) / 2</c>. ⚠️ The staff space and
+    /// the line thickness are scaled by <c>length-fraction</c>; the BEAM THICKNESS IS NOT,
+    /// because it arrives already scaled (0.384 from ly/grace-init.ly). LilyPond's own comment
+    /// at :138-141 says exactly that — "we divide the thickness by fract".
+    /// <para>
+    /// MEASURED on 2.26.0 (audit/lp-geometry/probes/beam-grace.ly): the grace Beam grob's drawn
+    /// height is 1.316 = 0.384 + 0.648 + its own dy 0.284, so LilyPond's grace translation is
+    /// 0.648 — which is <c>0.8 × 0.81</c>, the full-size translation scaled ONCE.
+    /// </para>
+    /// </remarks>
+    public double BeamStackGap(int beamIndex, int page = 0)
+    {
+        var lines = FullWidthBeamQuads(beamIndex, page);
+        if (lines.Count < 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: beam {beamIndex} is drawn as {lines.Count} full-width line(s) — "
+                + "a stack of at least two is needed before there is a gap to read."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        var centres = lines
+            .Select(q => (q.TopLeftY + q.BottomLeftY) / 2)
+            .OrderBy(y => y)
+            .ToList();
+        double first = centres[1] - centres[0];
+        for (int i = 2; i < centres.Count; i++)
+        {
+            if (Math.Abs(centres[i] - centres[i - 1] - first) > 1e-9)
+            {
+                throw new InvalidOperationException(
+                    $"page {page}: beam {beamIndex}'s lines are not evenly spaced "
+                    + $"({string.Join(", ", centres.Select(c => c.ToString("F6")))}) — there is no "
+                    + "single translation to report.\nDrawn geometry:\n" + Describe());
+            }
+        }
+        return first;
+    }
+
+    /// <summary>
+    /// The quads of one beam group that run its FULL width — the stack, with every beamlet
+    /// stub left out.
+    /// </summary>
+    private List<(double TopLeftY, double TopRightY, double BottomRightY, double BottomLeftY)>
+        FullWidthBeamQuads(int beamIndex, int page)
+    {
+        var span = PrimaryBeamSpan(beamIndex, page);
+        var lines = _pages[page].Quads
+            .Where(q => Math.Abs(Math.Min(q.X0, q.X3) - span.Left) < 1e-9
+                        && Math.Abs(Math.Max(q.X1, q.X2) - span.Right) < 1e-9)
+            .Select(q => (TopLeftY: q.Y0, TopRightY: q.Y1, BottomRightY: q.Y2, BottomLeftY: q.Y3))
+            .ToList();
+        if (lines.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: beam {beamIndex} spans [{span.Left:F6}, {span.Right:F6}] but no quad "
+                + "was drawn across the whole of it.\nDrawn geometry:\n" + Describe());
+        }
+        return lines;
+    }
+
     /// <summary>The x span of one drawn beam group's primary line.</summary>
     private (double Left, double Right) PrimaryBeamSpan(int beamIndex, int page)
     {

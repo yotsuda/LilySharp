@@ -3428,8 +3428,17 @@ public sealed partial class MeasureCollector
         // Collect notes from the grace body
         var graceNoteInfos = new List<GraceNoteInfo>();
 
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace notes carry their own durations
-        // Default to eighth note if no explicit duration (LilyPond grace note default)
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace notes carry their own durations.
+        // LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+        // LILYPOND DEFAULT and the comment used to claim it was: LilyPond has no grace-specific
+        // rule at all — a bare note takes the PREVIOUS written duration, which at the start of
+        // a grace group is whatever the main stream last wrote, or 4 if nothing has.
+        // ⚠️ Lily# answers this question in THREE places and gets three answers: here (1/8),
+        // Midi/MidiExporter.ProcessGrace (1/32), and LilyPond/LilyPondExporter, which writes the
+        // grace out with no duration at all and so hands LilyPond a QUARTER. That third one is a
+        // silent twin defect — the .ly is valid and plays different music. Found 2026-08-01,
+        // when two ledger books spelled `grace { c' d' }` were quanting one beam against a
+        // twin's two; see docs/HANDOFF.md §1.
         Fraction graceDefaultDuration = Fraction.Eighth;
 
         foreach (var item in grace.Body.Items)

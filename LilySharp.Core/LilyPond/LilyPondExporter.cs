@@ -76,6 +76,12 @@ public sealed class LilyPondExporter
     /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
     private HashSet<string> _activePhrases = new(StringComparer.Ordinal);
 
+    /// <summary>Sections standing in for the single-part shorthand, so
+    /// <see cref="ContainerMusic"/> knows to take only their LOOSE music and leave any other
+    /// part's cell alone. Identity, not name: the same section can be a container here and a
+    /// mere holder of somebody else's cell for the next part.</summary>
+    private readonly HashSet<SyntaxNode> _looseSections = new();
+
     /// <summary>Diagnostics collected while exporting (e.g. constructs dropped
     /// because they are deprecated or out of scope). Not fatal.</summary>
     public IReadOnlyList<string> Warnings => _warnings;
@@ -370,7 +376,22 @@ public sealed class LilyPondExporter
                 : PartBlockBody(s.DescendantNodes<PartBlockSyntax>()
                     .FirstOrDefault(b => b.Name == part.Name.Text));
             if (container == null)
+            {
+                // THE THIRD spelling, and it was missing for the same reason the second was.
+                // `part bl { clef bass }  section A { c d e }` — the lone part's music written
+                // straight into a top-level section, with no cell wrapping it. The collector
+                // reads it (MeasureCollector.Form.cs "Single-part shorthand"), so a book
+                // written this way renders; the exporter dropped it SILENTLY — no warning, an
+                // empty part variable, a valid .ly with a blank staff. 35 of the 204 fixtures
+                // are written this way, including every book that reaches a tab staff.
+                if (s.Parent is CompilationUnitSyntax && LooseSectionMusic(s).Any())
+                {
+                    byName[s.SectionName] = s;
+                    inOrder.Add(s);
+                    _looseSections.Add(s);
+                }
                 continue;
+            }
             byName[s.SectionName] = container;
             inOrder.Add(container);
         }
@@ -380,12 +401,12 @@ public sealed class LilyPondExporter
         {
             foreach (var name in FormSectionOrder(form))
                 if (byName.TryGetValue(name, out var section))
-                    result.AddRange(MusicItems(section));
+                    result.AddRange(ContainerMusic(section));
         }
         else
         {
             foreach (var s in inOrder)
-                result.AddRange(MusicItems(s));
+                result.AddRange(ContainerMusic(s));
         }
 
         // Also carry any part-level clef declared outside a section (e.g. a
@@ -581,6 +602,7 @@ public sealed class LilyPondExporter
         ClefDeclarationSyntax cl => "\\clef " + cl.ClefName.Text,
         PartialDeclarationSyntax p => EmitPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
+        ParallelExpressionSyntax par => EmitParallel(par),
         GraceExpressionSyntax g => EmitGrace(g),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
         MusicMarkSyntax mk => EmitMark(mk),
@@ -751,6 +773,56 @@ public sealed class LilyPondExporter
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         return $"\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
+    }
+
+    /// <summary>
+    /// A <c>voice { … } voice { … }</c> run as LilyPond's simultaneous-voice shorthand.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's <c>&lt;&lt; { … } \\ { … } &gt;&gt;</c> is not merely "these play together":
+    /// the <c>\\</c> separator creates a Voice per branch AND applies \voiceOne, \voiceTwo, …
+    /// to them (ly/engraver-init.ly), which is where the forced stem directions come from.
+    /// That is the same rule Lily# bakes into the model — MeasureCollector's
+    /// ResolveVoiceStemDirections, via VoiceDefaults.GetDefaultStemUp — so the two sides agree
+    /// by construction.
+    /// <para>
+    /// ⚠️ A LONE voice block emits its contents bare, with no wrapper. Both engines leave a
+    /// single voice's stems to the pitch rule (ResolveVoiceStemDirections returns early at
+    /// <c>voices.Length &lt;= 1</c>; LilyPond applies no voice settings without a <c>\\</c>),
+    /// and wrapping it would not change that on either side — but the bare form says so.
+    /// </para>
+    /// <para>
+    /// ⚠️ Before this existed the whole run fell to <see cref="Skip"/> ("ParallelExpression not
+    /// exported", 29 of them across the corpus) and every polyphonic book exported as an EMPTY
+    /// staff — 11 twins, which the twin sweep then read as layout divergence. That is the
+    /// FOURTH hole of this shape; the other three were VariableReference, phrase references and
+    /// the relative-octave anchor. docs/HANDOFF.md §1 gate list.
+    /// </para>
+    /// </remarks>
+    private string EmitParallel(ParallelExpressionSyntax par)
+    {
+        var bodies = new List<string>();
+        foreach (var (_, block) in par.NamedVoices)
+        {
+            var buf = new LilyPondExporter
+            {
+                _octaveAbsolute = _octaveAbsolute,
+                _anchorOctave = _anchorOctave,
+                _phrases = _phrases,
+                _activePhrases = _activePhrases,
+            };
+            buf.EmitMusicStream(MusicItems(block).ToList(), "");
+            _warnings.AddRange(buf._warnings);
+            string body = buf._sb.ToString().Replace("\n", " ").Trim();
+            if (body.Length > 0)
+                bodies.Add(body);
+        }
+
+        if (bodies.Count == 0)
+            return "";
+        if (bodies.Count == 1)
+            return bodies[0];
+        return "<< { " + string.Join(" } \\\\ { ", bodies) + " } >>";
     }
 
     private string EmitGrace(GraceExpressionSyntax g)
@@ -940,6 +1012,50 @@ public sealed class LilyPondExporter
         foreach (var child in EnumerateChildren(container))
             if (IsMusicItem(child))
                 yield return child;
+    }
+
+    /// <summary>
+    /// The music of a container chosen by <see cref="OrderedMusic"/> — its items, except that
+    /// a section standing in for the single-part shorthand contributes only its LOOSE music.
+    /// </summary>
+    private IEnumerable<SyntaxNode> ContainerMusic(SyntaxNode container)
+        => _looseSections.Contains(container) ? LooseSectionMusic(container) : MusicItems(container);
+
+    /// <summary>
+    /// A top-level section's own direct music — the "single-part shorthand", where the lone
+    /// part's notes are written into the section with no cell around them.
+    /// </summary>
+    /// <remarks>
+    /// Narrower than <see cref="MusicItems"/> on purpose: a section can hold OTHER parts' cells
+    /// and its own track blocks (lyrics/chords) beside the loose music, and those belong to
+    /// somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+    /// <para>
+    /// ⚠️ It is MeasureCollector's <c>IsCollectableMusicNode</c> MINUS the three grob
+    /// directives (override / revert / once) and PLUS three nodes that only an exporter needs:
+    /// a phrase <c>VariableReference</c> (which <see cref="EmitPhraseReference"/> expands where
+    /// it stands), and <c>Dynamic</c> / <c>Articulation</c>, which the collector reaches by
+    /// attachment rather than as loose children. The overrides are left out because
+    /// <see cref="Skip"/> is still all this exporter can do with them — listing them here would
+    /// only move a silent drop into a warning, and the two sets would then differ for a reason
+    /// nobody had written down.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<SyntaxNode> LooseSectionMusic(SyntaxNode section)
+    {
+        foreach (var child in EnumerateChildren(section))
+        {
+            if (child is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+                or ArpeggioSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax
+                or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax
+                or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
+                or MusicMarkSyntax or NavigationMarkSyntax or ClefDeclarationSyntax
+                or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax
+                or TempoDeclarationSyntax or PartialDeclarationSyntax
+                or VariableReferenceSyntax or DynamicSyntax or ArticulationSyntax)
+            {
+                yield return child;
+            }
+        }
     }
 
     private static bool IsMusicItem(SyntaxNode n) => n is not SyntaxTokenNode
