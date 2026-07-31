@@ -79,8 +79,6 @@ public enum SyntaxKind : ushort
     FormKeyword,
     /// <summary>The <c>using</c> keyword.</summary>
     UsingKeyword,
-    /// <summary>The <c>version</c> keyword (optional language-version directive).</summary>
-    VersionKeyword,
     /// <summary>The <c>score</c> keyword (legacy).</summary>
     ScoreKeyword,
     /// <summary>The <c>part</c> keyword (legacy).</summary>
@@ -347,10 +345,6 @@ public enum SyntaxKind : ushort
     FormDeclaration,
     /// <summary>A using directive node (<c>using "file.lys"</c>).</summary>
     UsingDirective,
-    /// <summary>An optional language-version directive node (<c>version 1</c>) —
-    /// a soft top-level marker that lets future grammar revisions branch behavior
-    /// without breaking documents that declare their version.</summary>
-    VersionDeclaration,
     /// <summary>A render declaration node (<c>render Name "file.svg" { ... }</c>).</summary>
     RenderDeclaration,
     /// <summary>A part block node (e.g. <c>guitar { ... }</c> inside a section).</summary>

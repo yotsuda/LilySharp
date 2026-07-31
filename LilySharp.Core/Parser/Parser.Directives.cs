@@ -427,29 +427,6 @@ internal sealed partial class Parser
         return new UsingDirectiveGreen(keyword, path);
     }
 
-    // Optional `version 1` directive.
-    private VersionDeclarationGreen ParseVersionDeclaration()
-    {
-        var keyword = Expect(SyntaxKind.VersionKeyword);
-
-        // The language version is a bare integer, like the other structured
-        // directives (time 4/4, tempo 100, key c major) — not a quoted string.
-        // A quoted `version "1"` (a LilyPond habit) gets a clear pointer, then
-        // recovers by taking the value inside the quotes.
-        if (Check(SyntaxKind.StringLiteral))
-        {
-            int start = _textPosition;
-            var quoted = Advance();
-            var span = new TextSpan(start, Math.Max(1, _textPosition - start));
-            _diagnostics.Error(span, DiagnosticCodes.VersionNumberNotQuoted,
-                $"The language version is a bare number: write 'version {quoted.Text.Trim('"')}', not 'version {quoted.Text}'.");
-            return new VersionDeclarationGreen(keyword, quoted);
-        }
-
-        var value = Expect(SyntaxKind.IntegerLiteral);   // the language version number
-        return new VersionDeclarationGreen(keyword, value);
-    }
-
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);

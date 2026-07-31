@@ -66,28 +66,6 @@ public sealed class UsingDirectiveSyntax : SyntaxNode
 }
 
 /// <summary>
-/// An optional language-version directive: <c>version 1</c>. A top-level marker
-/// recording the grammar version a document targets, so future grammar revisions
-/// can branch behavior on it. Absence means the current/default grammar.
-/// </summary>
-public sealed class VersionDeclarationSyntax : SyntaxNode
-{
-    internal VersionDeclarationSyntax(InternalSyntax.VersionDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    /// <summary>The <c>version</c> directive word token.</summary>
-    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The version value token (a bare integer, e.g. <c>1</c>).</summary>
-    public SyntaxTokenNode ValueToken => (SyntaxTokenNode)GetChild(1)!;
-
-    /// <summary>The declared version string (e.g. <c>1</c>). Any surrounding quotes
-    /// from the rejected legacy <c>version "1"</c> form are stripped for recovery.</summary>
-    public string Version => ValueToken.Text.Trim('"');
-}
-
-/// <summary>
 /// Represents a part block inside a section: partName { ... }
 /// </summary>
 public sealed partial class PartBlockSyntax : SyntaxNode
@@ -473,6 +451,28 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
                 return t;
         }
         return null;
+    }
+
+    /// <summary>
+    /// The score body's own <c>{</c> … <c>}</c> span. Nested braces (a <c>form</c> or a
+    /// <c>grandStaff</c> inside the block) belong to CHILD nodes, so scanning the direct
+    /// children can only ever find this score's pair. Null when either brace is missing
+    /// (a malformed header the parser already reported).
+    /// </summary>
+    public TextSpan? BodySpan
+    {
+        get
+        {
+            SyntaxTokenNode? open = null, close = null;
+            for (int i = 1; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode t) continue;
+                if (t.Kind == SyntaxKind.OpenBrace && open == null) open = t;
+                else if (t.Kind == SyntaxKind.CloseBrace) close = t;
+            }
+            if (open == null || close == null) return null;
+            return new TextSpan(open.Span.Start, close.Span.End - open.Span.Start);
+        }
     }
 
     /// <summary>

@@ -4,26 +4,26 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="16">degree chord order independence</text>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="6">degree chord order independence</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="13.12" x2="18.48" y2="13.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="14.12" x2="18.48" y2="14.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.12" x2="18.48" y2="15.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.12" x2="18.48" y2="16.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="17.12" x2="18.48" y2="17.12" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="16.12" font-size="4.00" data-pos="80"></text>
-  <text class="music" x="4.88" y="15.12" font-size="4.00" data-pos="50"></text>
-  <text class="music" x="8.59" y="14.62" font-size="4.00" data-pos="113"></text>
-  <text class="music" x="8.59" y="17.12" font-size="4.00" data-pos="116"></text>
-  <text class="music" x="8.59" y="16.12" font-size="4.00" data-pos="118"></text>
+  <text class="music" x="0.80" y="16.12" font-size="4.00" data-pos="70"></text>
+  <text class="music" x="4.88" y="15.12" font-size="4.00" data-pos="40"></text>
+  <text class="music" x="8.59" y="14.62" font-size="4.00" data-pos="103"></text>
+  <text class="music" x="8.59" y="17.12" font-size="4.00" data-pos="106"></text>
+  <text class="music" x="8.59" y="16.12" font-size="4.00" data-pos="108"></text>
   <line x1="9.82" y1="17.12" x2="9.82" y2="11.45" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.86" y="17.12" font-size="4.00" data-pos="123"></text>
-  <text class="music" x="12.86" y="16.12" font-size="4.00" data-pos="125"></text>
-  <text class="music" x="12.86" y="14.62" font-size="4.00" data-pos="127"></text>
+  <text class="music" x="12.86" y="17.12" font-size="4.00" data-pos="113"></text>
+  <text class="music" x="12.86" y="16.12" font-size="4.00" data-pos="115"></text>
+  <text class="music" x="12.86" y="14.62" font-size="4.00" data-pos="117"></text>
   <line x1="14.10" y1="17.12" x2="14.10" y2="11.45" stroke="#000000" stroke-width="0.130"/>
-  <rect x="17.39" y="13.12" width="0.19" height="4.00" data-pos="131"/>
-  <rect x="17.88" y="13.12" width="0.60" height="4.00" data-pos="131"/>
-  <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="94"/>
-  <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="94">A</text>
+  <rect x="17.39" y="13.12" width="0.19" height="4.00" data-pos="121"/>
+  <rect x="17.88" y="13.12" width="0.60" height="4.00" data-pos="121"/>
+  <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="84"/>
+  <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="84">A</text>
   </g>
 </svg>

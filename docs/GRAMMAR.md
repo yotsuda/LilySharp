@@ -114,8 +114,7 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 
 File           = { TopLevelItem } ;
 
-TopLevelItem   = VersionDecl                      (* optional language-version marker *)
-               | MetadataDecl                     (* title, composer *)
+TopLevelItem   = MetadataDecl                     (* title, composer *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
@@ -125,20 +124,12 @@ TopLevelItem   = VersionDecl                      (* optional language-version m
                | OverrideDecl                     (* engraving overrides *)
                ;
 
-### 2.2 Version (optional)
-
-VersionDecl    = 'version' , Integer ;
-                 (* optional, recommended first line: the language version the
-                    file targets, a bare number e.g. version 1 (not quoted).
-                    Recorded so future grammar revisions can branch on it;
-                    omitting it = current grammar. *)
-
-### 2.3 Metadata
+### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
 MetadataKey    = 'title' | 'composer' ;
 
-### 2.4 Global Settings
+### 2.3 Global Settings
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl ;
 
@@ -333,6 +324,8 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
 ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } , '}' ;
+                 (* at least one ScoreItem is required: a score with an empty body
+                    engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
                | 'grandStaff' , '{' , { StaffRender } , '}'

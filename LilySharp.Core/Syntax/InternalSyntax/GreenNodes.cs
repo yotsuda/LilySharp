@@ -680,17 +680,6 @@ internal sealed class UsingDirectiveGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Optional language-version directive: version 1
-/// </summary>
-internal sealed class VersionDeclarationGreen : GreenSyntaxNode
-{
-    public VersionDeclarationGreen(SyntaxToken keyword, SyntaxToken value)
-        : base(SyntaxKind.VersionDeclaration, [keyword, value])
-    {
-    }
-}
-
-/// <summary>
 /// Part block inside section: guitar { ... }
 /// </summary>
 internal sealed class PartBlockGreen : GreenSyntaxNode

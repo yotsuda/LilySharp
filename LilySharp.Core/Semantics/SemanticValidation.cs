@@ -74,6 +74,7 @@ public static class SemanticValidation
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
+        new EmptyScoreValidator(),          // a score block with no staff to engrave
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
         new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
         new RevertContextValidator(),       // a revert/once outside a music stream

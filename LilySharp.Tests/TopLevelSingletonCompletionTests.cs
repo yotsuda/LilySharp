@@ -21,7 +21,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A singleton global — metadata (title/composer/font/version) or a piece-wide default
+/// A singleton global — metadata (title/composer/font) or a piece-wide default
 /// (time/key/tempo/octave) — is dropped from the top-level completion once the file already
 /// declares it at the global scope, so it is never offered twice. Duplicable keywords
 /// (override, part, section, …) are always offered.

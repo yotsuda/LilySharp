@@ -401,9 +401,6 @@ internal sealed partial class Parser
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),
 
-            // Optional language-version directive: `version 1`.
-            SyntaxKind.VersionKeyword => ParseVersionDeclaration(),
-
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
 

@@ -1969,7 +1969,6 @@ public sealed partial class LilySharpLanguageServer
     {
         var items = new System.Collections.Generic.List<CompletionItem>
         {
-                new CompletionItem { Label = "version", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "version ${1:1}", Detail = "Language version this file targets (a bare number; optional, first line)" },
                 new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
                 new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
@@ -2029,10 +2028,10 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
-    /// (title/composer/font/version) and the piece-wide defaults (time/key/tempo/octave).
+    /// (title/composer/font) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "version", "title", "composer", "font", "tempo", "time", "key", "octave" };
+        new(StringComparer.Ordinal) { "title", "composer", "font", "tempo", "time", "key", "octave" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

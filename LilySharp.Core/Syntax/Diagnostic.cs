@@ -196,11 +196,6 @@ public static class DiagnosticCodes
     /// kept in the source but not shown; a nudge that it is currently hidden.</summary>
     public const string HiddenSectionLabel = "LYS0012";
 
-    /// <summary>Parser error: the language <c>version</c> value was quoted
-    /// (<c>version "1"</c>, a LilyPond habit). It is a bare number like the other
-    /// structured directives (<c>time</c>, <c>tempo</c>, <c>key</c>): <c>version 1</c>.</summary>
-    public const string VersionNumberNotQuoted = "LYS0013";
-
     /// <summary>Parser warning: a key gave no mode (<c>key bes</c>). The mode is
     /// assumed to be <c>major</c>; write it explicitly (<c>key bes major</c>) to be
     /// clear. A warning, not an error, so the piece still renders.</summary>
@@ -382,6 +377,12 @@ public static class DiagnosticCodes
 
     /// <summary>Render error: a score name was declared more than once.</summary>
     public const string DuplicateScoreName = "LYS6001";
+
+    /// <summary>Render error: a <c>score</c> block holds no render item (no
+    /// <c>staff</c> / <c>grandStaff</c> / <c>tab</c> / <c>ossia</c> / <c>chords</c> /
+    /// <c>lyrics</c> row), so it engraves a page with no music on it. Reported
+    /// rather than shipped, because an empty page looks like a layout failure.</summary>
+    public const string EmptyScore = "LYS6002";
 
     // Structure / section-part grid errors (LYS7xxx)
 

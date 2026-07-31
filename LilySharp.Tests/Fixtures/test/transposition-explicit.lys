@@ -1,4 +1,3 @@
-version 1
 // The explicit `transposition 8vb` states the sounding octave a bass carries — the
 // same knob `instrument bass` sets as a default. With plain `clef bass` + `tuning
 // bass`, a bare `c` (written C3) frets on the tab exactly as `instrument bass` does

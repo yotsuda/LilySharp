@@ -576,7 +576,6 @@ internal sealed class Lexer
         return text switch
         {
             // New structure keywords
-            "version" => SyntaxKind.VersionKeyword,
             "section" => SyntaxKind.SectionKeyword,
             "form" => SyntaxKind.FormKeyword,   // piece-level form (play/render order); node kind stays "Structure" internally
             "using" => SyntaxKind.UsingKeyword,

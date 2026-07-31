@@ -63,9 +63,7 @@ function migratePreviewKey(oldUri: string, newUri: string) {
 // piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
 // and demonstrates relative octaves (' / ,), the |: :| repeat, and form replay.
 // (The same content is offered as a `score` snippet for files that already exist.)
-const NEW_SCORE_TEMPLATE = `version 1  // the Lily# language version this file targets
-
-// Twinkle, Twinkle, Little Star (public domain).
+const NEW_SCORE_TEMPLATE = `// Twinkle, Twinkle, Little Star (public domain).
 // Relative octave (the default): each note sits in the octave nearest the
 // previous one. Add ' to jump up an octave (the leap to G is g'), , to jump down (g,).
 title "Twinkle, Twinkle, Little Star"

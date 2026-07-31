@@ -182,7 +182,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(version|score|part|staff|grandStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|relative|absolute|repeat|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
+                    "match": "\\b(score|part|staff|grandStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|relative|absolute|repeat|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",

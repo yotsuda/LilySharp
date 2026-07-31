@@ -13,7 +13,6 @@ with `|`.
 ## Document skeleton (top level, in this order)
 
 ```
-version 1               // optional; declares the language version this file targets (a bare number)
 title "Song"            // optional metadata
 composer "Composer"     // optional
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
@@ -44,11 +43,6 @@ score main "out" {                   // one or more render blocks
   }
 }
 ```
-
-`version 1` is an optional top-level directive (recommended as the first line). The
-value is a bare number (like `time`/`tempo`/`key`), not quoted.
-It records the language version the file targets so future grammar revisions can
-branch behavior on it. Omitting it means the current grammar.
 
 A minimal single-staff document:
 
@@ -351,7 +345,7 @@ These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-
 part is fine). Keywords:
 
 ```text
-version section structure include tab ossia transpose octave instrument
+section structure include tab ossia transpose octave instrument
 score part staff grandStaff voice phrase repeat volta alternative break partial
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
