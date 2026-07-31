@@ -28,6 +28,19 @@ internal readonly record struct DrawnRect(double X, double Y, double Width, doub
 internal readonly record struct DrawnLine(double X1, double Y1, double X2, double Y2, double StrokeWidth);
 
 /// <summary>
+/// A filled quadrilateral — a BEAM segment, drawn corner by corner because it is sloped.
+/// Corners are in the order the renderer passes them: top-left, top-right, bottom-right,
+/// bottom-left.
+/// </summary>
+/// <remarks>
+/// A bounding box cannot stand in for it. LilyPond's <c>Beam.positions</c> is a PAIR — the
+/// centre line's height at each end — and a sloped beam's box only knows their average, so
+/// a beam that is too steep and one that is too high would read the same.
+/// </remarks>
+internal readonly record struct DrawnQuad(
+    double X0, double Y0, double X1, double Y1, double X2, double Y2, double X3, double Y3);
+
+/// <summary>
 /// Plain text — titles, lyrics, chord symbols, dynamics. The font and the anchor are kept
 /// because the string and position alone cannot say WHICH of those a text is, and a
 /// measurement that picked up a title instead of a chord symbol would look plausible.
@@ -91,6 +104,7 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     private readonly List<DrawnRect> _rects = new();
     private readonly List<DrawnLine> _lines = new();
     private readonly List<DrawnText> _texts = new();
+    private readonly List<DrawnQuad> _quads = new();
 
     // Cumulative transform: a point p maps to (TranslateX + ScaleX * p.X, ...).
     //
@@ -116,6 +130,7 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public IReadOnlyList<DrawnRect> Rects => _rects;
     public IReadOnlyList<DrawnLine> Lines => _lines;
     public IReadOnlyList<DrawnText> Texts => _texts;
+    public IReadOnlyList<DrawnQuad> Quads => _quads;
 
     private double Tx(double x) => _current.TranslateX + _current.ScaleX * x;
     private double Ty(double y) => _current.TranslateY + _current.ScaleY * y;
@@ -134,7 +149,12 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
                                (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {
-        // Recorded as its bounding box; no probe measures beams yet.
+        // The corners, for a beam's own height and slope...
+        _quads.Add(new DrawnQuad(Tx(p0.X), Ty(p0.Y), Tx(p1.X), Ty(p1.Y),
+                                 Tx(p2.X), Ty(p2.Y), Tx(p3.X), Ty(p3.Y)));
+
+        // ...and its bounding box, which the probes that only need "there is ink here"
+        // already read as a rect.
         double minX = Math.Min(Math.Min(p0.X, p1.X), Math.Min(p2.X, p3.X));
         double maxX = Math.Max(Math.Max(p0.X, p1.X), Math.Max(p2.X, p3.X));
         double minY = Math.Min(Math.Min(p0.Y, p1.Y), Math.Min(p2.Y, p3.Y));

@@ -126,6 +126,95 @@ public class SpacingInvariantTests
     }
 
     /// <summary>
+    /// A key change that OPENS a continuation system. Its signature is engraved in that
+    /// system's PREFIX (and, as a courtesy, after the previous line's final bar line) — never
+    /// as a column inside bar one. Measure index 4 opens system 2.
+    /// </summary>
+    private const string KeyChangeOpensSystemTwo = """
+        time 4/4
+        key a major
+        octave absolute
+        part m { clef bass }
+        section S1 { m { a,4 b, cis d | a,4 b, cis d | a,4 b, cis d | a,4 b, cis d | break } }
+        section S2 { key ees major
+          m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
+        form main { S1 S2 }
+        score main "x" { staff m }
+        """;
+
+    /// <summary>The control: the SAME music and the SAME signature on system 2, declared up
+    /// front, so no change lands on the break.</summary>
+    private const string SameKeyThroughout = """
+        time 4/4
+        key ees major
+        octave absolute
+        part m { clef bass }
+        section S1 { m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | break } }
+        section S2 {
+          m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
+        form main { S1 S2 }
+        score main "x" { staff m }
+        """;
+
+    /// <summary>
+    /// LilyPond's invariant, MEASURED: a key change that opens a system costs that system's
+    /// line start NOTHING. On 2.26.0 the two probes below (audit/lp-geometry/probes/
+    /// line-start-key-change.ly, scores A and B) put system 2's ink at the SAME places —
+    /// blob starts 0.79 / 3.03 / 4.33 / 6.17 / 9.57 / 15.02 / 20.47 ss from the staff origin
+    /// in both — because the new signature is engraved break-aligned in the prefix exactly
+    /// like a reprinted one.
+    /// <para>
+    /// Lily# broke it in TWO places, and this asserts the head width half: the prefix
+    /// reservation walked only measures BEFORE the system, so it booked the OUTGOING key
+    /// (3 sharps, 3.30) while the renderer drew the incoming one (3 flats, 2.76) — 0.54 of
+    /// line start nobody engraves.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void KeyChangeOpeningASystem_ReservesTheSignatureItDraws()
+    {
+        var (_, _, _, changed) = Collect(KeyChangeOpensSystemTwo);
+        var (_, _, _, control) = Collect(SameKeyThroughout);
+
+        var a = MultiStaffLayouter.SolveLineStartPrefix(changed, 4, isFirstSystem: false);
+        var b = MultiStaffLayouter.SolveLineStartPrefix(control, 4, isFirstSystem: false);
+
+        Assert.NotNull(a.LeadingKeyChange);   // the regime this test exists for
+        Assert.Null(b.LeadingKeyChange);
+        Assert.Equal(b.Columns.Right, a.Columns.Right, precision: 9);
+    }
+
+    /// <summary>
+    /// The other half: a hoisted change is not charged to bar one. <c>ownFixedFloor</c> is
+    /// Lily#'s own device — the measure's spring-0 minimum folds in leading grace / lyric
+    /// widths that LilyPond keeps in separate paper columns — but a change engraved in the
+    /// PREFIX is not in the measure at all, so it must not floor the line-start spring.
+    /// Asserted by PERTURBING the floor rather than by pinning a number: with the change
+    /// hoisted the floor is ignored, without it the floor bites. Leaving it in charged the
+    /// cancellation+signature a second time and pushed the first note 5.51 ss right on
+    /// scratch/repro.lys bar 9.
+    /// </summary>
+    [Fact]
+    public void AHoistedChange_DoesNotChargeBarOneForItsColumn()
+    {
+        var (_, _, _, changed) = Collect(KeyChangeOpensSystemTwo);
+        var (_, _, _, control) = Collect(SameKeyThroughout);
+
+        // ownFixedFloor is a lower bound on each wish's FIXED distance, so it lands on the
+        // spring's IDEAL — not on its minimum, which MinimumDistanceAtLineStart owns.
+        static double IdealFor(MultiStaffScore score, double floor) =>
+            MultiStaffLayouter.LineStartSpringForLine(
+                score, 4, isFirstSystem: false, new Spring(0.0, floor, 1.0)).IdealDistance;
+
+        // Hoisted: the measure's own minimum is not consulted, so moving it changes nothing.
+        Assert.Equal(IdealFor(changed, 0.0), IdealFor(changed, 40.0), precision: 9);
+
+        // Not hoisted: the same perturbation DOES move the spring — proof the assertion above
+        // is about the hoist and not about an inert parameter.
+        Assert.NotEqual(IdealFor(control, 0.0), IdealFor(control, 40.0), precision: 9);
+    }
+
+    /// <summary>
     /// The control for the test above: with NO transposed part every model reads the same key,
     /// so the score-level key agrees too. Without this, "the score key was 2.65 short" could be
     /// read as a constant offset rather than as the missing per-staff signature it is.

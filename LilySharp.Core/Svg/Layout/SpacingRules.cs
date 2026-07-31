@@ -476,6 +476,21 @@ internal static class SpacingRules
             foreach (var item in pv.Measures[m].Items)
                 if (item is KeySignatureChangeItem kc)
                     key = kc.NewKey;
+
+        // A change that OPENS this system's first measure is engraved in the PREFIX as the
+        // NEW signature (SharedRenderer.GetSystemStartKeyChange; the cancellation goes to the
+        // previous line as a courtesy). The reservation must therefore be the new key's ink,
+        // not the outgoing one's — booking the old key made the head reserve a width nobody
+        // draws and pushed the first note by the difference (3 sharps 3.30 against 3 flats
+        // 2.76 = 0.54 on the kb-A/kb-B pair, where LilyPond's two lines are identical).
+        // startMeasureIndex == 0 is the first system, whose head IS the initial signature.
+        if (startMeasureIndex > 0 && startMeasureIndex < pv.Measures.Length)
+            foreach (var item in pv.Measures[startMeasureIndex].Items)
+            {
+                if (item is KeySignatureChangeItem opening) { key = opening.NewKey; break; }
+                if (item.Duration > Fraction.Zero) break;
+            }
+
         return EngravedKeyInkWidth(staff, key);
     }
 

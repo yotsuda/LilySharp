@@ -3263,6 +3263,78 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A beam whose left end runs over a printed ACCIDENTAL — the first book that reads the
+    /// beam QUANTER's own answer rather than the room a beam takes on a page.
+    /// </summary>
+    /// <remarks>
+    /// In bass clef, key A major, only <c>dis</c> prints a sharp (D sharp is not in the key),
+    /// and it stands on the middle line right under the beam's left end — under the
+    /// SIXTEENTH's beamlet stub, which is the second beam line. So the reading binds against
+    /// the stack's inner beam over a stub's own horizontal extent, which is exactly what
+    /// <c>add_collision</c> walks the beam segments for.
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-over-accidental.ly, score A):
+    /// <c>\new Staff { \clef bass \key a \major r2 r4 gis,16 dis8 fis16 }</c> — its
+    /// <c>Beam.positions</c> is <c>(2.81 . 4.5)</c>. Score B of the same probe is the CONTROL
+    /// with the sharp spelled away (<c>d</c> for <c>dis</c>): <c>(2.0 . 3.5)</c>, so the
+    /// accidental is worth +0.81 / +1.0 of beam height and the point is not sitting on a
+    /// floor.
+    /// </para>
+    /// ⚠️ Lily#'s <c>octave absolute</c> sits an octave above LilyPond's, hence the extra
+    /// commas here.
+    /// </remarks>
+    private static readonly string BQA = """
+        octave absolute
+        time 4/4
+        key a major
+
+        part m { clef bass }
+
+        section Main { m { r2 r4 gis,,16 dis,8 fis,16 | } }
+
+        form main { ~Main }
+
+        score main "BQA" { staff m }
+        """;
+
+    /// <summary>
+    /// A beam running over a note SUSTAINED IN ANOTHER VOICE — the cross-voice half of the
+    /// covered-grob supply, and the source of test/multivoice-beam-collision.
+    /// </summary>
+    /// <remarks>
+    /// Voice one beams eight eighths with stems up; voice two holds a whole note a sixth
+    /// above them, whose head reaches under the FIRST beam group only. So the two groups in
+    /// one book are a PAIR: the first is the covered reading, the second the free one, and a
+    /// defect in the supply moves them by different amounts while a paper or spacing mismatch
+    /// moves both.
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-over-other-voice.ly, score A):
+    /// <c>\new Staff &lt;&lt; \new Voice { \voiceOne c''8 c'' c'' c'' c'' c'' c'' c'' }
+    /// \new Voice { \voiceTwo a''1 } &gt;&gt;</c> — <c>Beam.positions</c> <c>(4.19 . 4.19)</c>
+    /// then <c>(2.81 . 2.81)</c>. Score B is the CONTROL, the same eighths alone: both groups
+    /// at <c>(2.81 . 2.81)</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string BQV = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m {
+            voice { c'8 c' c' c' c' c' c' c' }
+            voice { a'1 }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BQV" { staff m }
+        """;
+
+    /// <summary>
     /// <see cref="BMD"/> with the beam on the other side — an up-stemmed beam reaching UP into
     /// the gap from the lower staff, the mirror of book BMU.
     /// </summary>
@@ -5550,6 +5622,19 @@ internal static class LpGeometryProbes
         // keeps in the skylines (only CROSS-staff grobs are left out) and Lily# seeds not at
         // all, substituting each member's fixed 3.5 stem. See KNE.
         new("system.knee-beam-notes", KNE, g => g.StaffGap()),
+
+        // --- the beam QUANTER itself (Beam.positions), which every point above reads only
+        // through the room a beam takes on a page. These are the covered-grob points: a beam
+        // is quanted against the INK of the grobs it runs over (lily/beam-quanting.cc:377-392
+        // init_instance_variables, :186-209 add_collision), and until 2026-07-31 Lily# fed it
+        // one nominal POINT per note column, in a frame a notehead width away from the beam
+        // it was compared with. Both ends of the sloped book, because positions is a pair.
+        new("beam.quant.over-accidental.left", BQA, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-accidental.right", BQA, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        // The cross-voice pair in one book: group one is covered by the other voice's head,
+        // group two is free. Flat beams, so one end each says everything.
+        new("beam.quant.over-other-voice.covered", BQV, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-other-voice.free", BQV, g => g.BeamPositionAboveStaffMiddle(1, false)),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

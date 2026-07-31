@@ -107,6 +107,15 @@ internal static class EngravingDefaults
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
     public const double BeamletLength = 1.1;
+    /// <summary>A beamlet may not eat more than this share of the gap to the next stem.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3432 beamlet-max-length-proportion — read by
+    ///   lily/beam.cc:607-622 calc_beam_segments (max_proportion), which caps the stub at
+    ///   <c>|neighbour_stem_x − stem_x| × proportion</c>.
+    /// It lives here because both sides must agree on it: the quanter measures a beam's
+    /// ink against a collision at that stub's x, and the renderer draws the stub.
+    /// </remarks>
+    public const double BeamletMaxLengthProportion = 0.75;
 
     // === Barlines ===
     // All barline metrics scale with line-thickness, mirroring LilyPond.

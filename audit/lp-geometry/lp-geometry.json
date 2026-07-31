@@ -771,6 +771,34 @@
       "residual": 0.0,
       "why": "EXACT, and what it settles is that a KNEE is a structural divergence that does not reach the page. LilyPond leaves only CROSS-staff grobs out of the vertical skylines (lily/axis-group-interface.cc:850-858, its own comment), so a same-staff kneed Beam and its Stems ARE in them; Lily# seeds NEITHER — SkylineBuilder.AddBeamsToSkyline skips IsKnee and BeamedItemsToSuppress skips it too, so each member keeps the per-note FIXED 3.5 stem, in the member's OWN direction (AddNoteBoxToSkylines takes note.StemUp). WHY THAT SUBSTITUTE IS ENOUGH HERE: a knee's stems point INWARD — the low note stems up to the beam, the high note down to it — so the band and both stems live BETWEEN the two heads, and the heads are the envelope either way. LilyPond's own numbers say the same: its kneed ink TOP is 8.545000 above the refpoint, exactly d''''`s head (8.0 + 0.545), with no beam above it. THE POINT IS NOT SITTING ON A FLOOR, which is what makes it worth keeping: 18.090000 is neither the 12.000000 system-system basic-distance nor the 20.285000 the SAME music gives with the knee forbidden (\\override Beam.auto-knee-gap = #100, probe book KNEC) — so the knee is worth 2.195000 of vertical room and this entry is measuring the kneed envelope itself. A future port that seeds the knee's band with the wrong geometry moves this number. PREDICTED BEFORE THE RUN and held: exact. ⚠️ TWO FIXTURE ERRORS ARE RECORDED IN THE PROBE HEADER, both the same trap: the first control was the same shape WITHOUT the leap (so its 6.090000 was almost all d''''`s own ink, not the knee), and the first pair had 4 bars with an explicit break where Lily# fitted all four on ONE system and the gap could not be read at all."
     },
+    "beam.quant.over-accidental.left": {
+      "probe": "beam-over-accidental.ly",
+      "score": "A",
+      "lilypond": 2.810000,
+      "residual": 0.0,
+      "why": "EXACT, and it is the first ledger point on the beam QUANTER's own answer (Beam.positions) rather than on the room a beam takes. What it pins is that a beam is scored against the INK of the grobs it covers, in the BEAM's frame: the sharp on dis stands under the sixteenth's beamlet STUB, so the reading binds against the stack's inner beam over that stub's own horizontal extent — which only a scorer that walks the beam SEGMENTS can see (lily/beam-quanting.cc:194-200 add_collision). Three things had to be true together and none of them alone moves this number: the covered grob is booked as a BOX at both x edges with sqrt(width) weighting (:377-392), the x frame is the beam's STEMS and not the note columns (Lily# was a notehead width out, 1.235 ss), and beam_y_ comes from the segments and not from min(neighbouring stem beam counts). ⚠️ NOT ON A FLOOR: score B of the same probe spells the sharp away (d for dis) and LilyPond answers 2.0 . 3.5, so the accidental is worth +0.81 here and +1.0 at the right end. ⚠️ The two ends are separate points on purpose — a sloped beam's height and its slope are two numbers, and their average matches a beam that is both too steep and too low."
+    },
+    "beam.quant.over-accidental.right": {
+      "probe": "beam-over-accidental.ly",
+      "score": "A",
+      "lilypond": 4.500000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam, which the accidental does NOT touch: it is the slope that carries the reading here, so the pair with beam.quant.over-accidental.left says the collision lifted the LEFT end without tilting the beam into a different quant. LilyPond's control (score B, no accidental) is 3.5, i.e. this end moved a full staff space with the left one."
+    },
+    "beam.quant.over-other-voice.covered": {
+      "probe": "beam-over-other-voice.ly",
+      "score": "A",
+      "lilypond": 4.190000,
+      "residual": 0.0,
+      "why": "EXACT — and it opened at +0.310000 for one session's worth of an hour, which is the whole story of this entry. Lily# took 4.500000 (4 + inter) where LilyPond takes 4.190000 (4 + sit): the NEXT quant candidate, not a continuous divergence, so the cause had to be a term that flips a comparison rather than a geometry that drifts. LilyPond named it itself: \\override Beam.inspect-quants forces a chosen quant to be scored to completion and leaves the winning score card in Beam.annotation (lily/beam-quanting.cc:1038-1043 force_score, :1093-1096), and the cards for this book read C 700.36 at 2.81, C 560.75 at 3.81, C 40.19 at 4.00 and NO C TERM AT ALL at 4.19. Those three numbers solve for one padding and one only: (COLLISION_PADDING - dist)^3 / COLLISION_PADDING^3 * 500 * sqrt(1.962) fits them at 0.350 exactly, and Lily# was using 0.5 — the FALLBACK in beam-quanting.cc:116 for a grob that does not declare the detail, where Beam declares (collision-padding . 0.35) at scm/define-grobs.scm:508. ⇒ The C++ default of a get_detail call is not the value; the grob's own details alist is. ⚠️ PREDICTED BEFORE THE CHANGE and held on all three branches: this point closes to 0, the over-accidental pair does NOT move (a printed accidental INTERSECTS the beam there, dist 0, which no padding change can reach), and the corpus loses the lifts that only 0.5 was buying."
+    },
+    "beam.quant.over-other-voice.free": {
+      "probe": "beam-over-other-voice.ly",
+      "score": "A",
+      "lilypond": 2.810000,
+      "residual": 0.0,
+      "why": "EXACT, and it is the CONTROL for beam.quant.over-other-voice.covered: the second beam group of the same book, past the whole note's ink, so nothing is overhead. LilyPond gives the same 2.81 for BOTH groups of score B (the one-voice control), which is how we know 4.19 in the first group is the head's doing and not the bar's spacing."
+    },
     "line-start.clef-to-time.mixed-key-grand-staff": {
       "probe": "barline-spacing.ly",
       "score": "TSA",

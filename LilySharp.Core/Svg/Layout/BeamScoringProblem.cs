@@ -37,6 +37,23 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed class BeamScoringProblem
 {
+    /// <summary>
+    /// One booked collision: the x it sits at, the covered grob's y extent, and the
+    /// beam's OWN y extent at that x (relative to the quanted line — add the
+    /// configuration's y to get real offsets). All staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/beam-scoring-problem.hh:101-109 Beam_collision —
+    ///   <c>x_</c>, <c>y_</c>, <c>base_penalty_</c> and <c>beam_y_</c>, whose comment
+    ///   reads "Need to add beam_config->y to get actual offsets".
+    /// This is NOT <see cref="BeamCollision"/>: that one is the covered grob the caller
+    /// supplies (LilyPond passes the Grob itself), this one is what add_collision makes
+    /// of it.
+    /// </remarks>
+    private readonly record struct BeamCollisionPoint(
+        double X, double MinY, double MaxY,
+        double BeamYMin, double BeamYMax, double BasePenalty);
+
     private readonly BeamGroup _group;
     private readonly BeamQuantParameters _parameters;
 
@@ -50,6 +67,17 @@ internal sealed class BeamScoringProblem
     private readonly int[] _headMax;
     private readonly int _maxBeamCount;
     private readonly IReadOnlyList<BeamCollision> _collisions;
+
+    // LILYPOND-REF: lily/beam-quanting.cc:362 segments_ = Beam::get_beam_segments (beams[i]) —
+    //   the quanter holds the beam's DRAWN segments, so it knows how many beam lines lie
+    //   over a given x and where a beamlet stub stops. Sorted by left edge (:363
+    //   beam_segment_less), which is what lets add_collision leave the walk early.
+    private readonly List<BeamSubdivision.Segment> _segments;
+
+    // LILYPOND-REF: lily/include/beam-scoring-problem.hh:170 std::vector<Beam_collision>
+    //   collisions_ — filled once by add_collision; each entry already carries the beam's
+    //   own y extent at its x.
+    private readonly List<BeamCollisionPoint> _collisionPoints;
 
     // LILYPOND-REF: lily/beam-quanting.cc:232-234 beam_thickness_, line_thickness_
     // All calculations are in staff-space units (not staff positions)
@@ -203,6 +231,87 @@ internal sealed class BeamScoringProblem
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
         _beamTranslation = EngravingDefaults.BeamTranslation;
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
+
+        // The beam's own segments — the SAME maths the renderer draws with, so the ink a
+        // collision is measured against is the ink that gets drawn. Their x is the
+        // quanter's: _stemXPositions is already measured from the beam's drawn LEFT EDGE.
+        // LILYPOND-REF: lily/beam-quanting.cc:362-365 segments_ — get_beam_segments, sorted,
+        //   then shifted by (x_span_ − x_pos[LEFT]) into that same left-edge frame.
+        var beaming = new BeamSubdivision.StemBeaming[group.Members.Length];
+        for (int i = 0; i < group.Members.Length; i++)
+            beaming[i] = new BeamSubdivision.StemBeaming(
+                group.Members[i].BeamCountLeft, group.Members[i].BeamCountRight,
+                // The direction SharedRenderer.DrawBeams feeds the same call with. LilyPond
+                // asks every stem for its own (lily/beam.cc:524 get_grob_direction), which is
+                // the same answer off a knee; taking the renderer's spelling is what keeps
+                // the segments scored identical to the segments drawn.
+                _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]);
+        _segments = BeamSubdivision.CalcBeamSegments(
+            beaming, BeamSubdivision.CalcBeaming(beaming),
+            EngravingDefaults.BeamletLength, EngravingDefaults.BeamletMaxLengthProportion,
+            halfBeamOverhang);
+        _segments.Sort(static (a, b) => a.XLeft.CompareTo(b.XLeft));
+
+        // LILYPOND-REF: lily/beam-quanting.cc:386 init_instance_variables — the shift
+        //   b[X_AXIS] += (x_span_ - x_pos[LEFT]):
+        //   a covered grob's x is booked from the beam's drawn left edge, half a stem width
+        //   left of the first stem (lily/beam.cc:631 horizontal_[dir] += dir*stem_width/2).
+        //   The supply hands it over relative to that first STEM, so shift it here — the
+        //   one place both frames are in view.
+        _collisionPoints = new List<BeamCollisionPoint>(_collisions.Count);
+        foreach (var c in _collisions)
+            AddCollision(c.X + halfBeamOverhang, c.MinY, c.MaxY, c.BasePenalty);
+    }
+
+    /// <summary>
+    /// Books one covered-grob edge as a collision, together with the y extent the beam
+    /// itself occupies at that x.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:186-209 Beam_scoring_problem::add_collision —
+    ///   walks the beam's segments, adds <c>vertical_count_ * beam_translation_</c> for
+    ///   every segment whose horizontal extent contains x, and widens the result by half
+    ///   the beam thickness. A rank is signed: it counts beam translations from the
+    ///   primary line TOWARD that stem's noteheads (lily/beam.cc:477-478), so the stack
+    ///   hangs on the correct side of a knee without asking for the beam's direction.
+    /// <para>
+    /// ⚠️ x may fall over NO segment (past the end of a beamlet stub, or outside the
+    /// beam): the interval stays empty and the collision scores nothing, exactly as in
+    /// LilyPond. There is no screen against the beam's span here — LilyPond dropped it
+    /// (":189 We used to screen for quant range, but no more") and rejects a covered grob
+    /// at collect time instead, by X BOX overlap (:381).
+    /// </para>
+    /// </remarks>
+    private void AddCollision(double x, double yMin, double yMax, double scoreFactor)
+    {
+        // LILYPOND-REF: lily/beam-quanting.cc:192 c.beam_y_.set_empty () —
+        //   flower/include/interval.hh:173-177 set_empty is [+∞, −∞].
+        double beamYMin = double.PositiveInfinity;
+        double beamYMax = double.NegativeInfinity;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:194-200 add_collision — segments_ is sorted
+        //   by left edge, so the walk stops at the first segment starting right of x.
+        for (int j = 0; j < _segments.Count; j++)
+        {
+            var seg = _segments[j];
+            if (seg.XLeft <= x && x <= seg.XRight)
+            {
+                double y = seg.Rank * _beamTranslation;
+                beamYMin = Math.Min(beamYMin, y);
+                beamYMax = Math.Max(beamYMax, y);
+            }
+            if (seg.XLeft > x)
+                break;
+        }
+
+        // LILYPOND-REF: lily/beam-quanting.cc:201 c.beam_y_.widen (0.5 * beam_thickness_) —
+        //   on an empty interval this widens [+∞, −∞] and leaves it empty.
+        beamYMin -= 0.5 * _beamThickness;
+        beamYMax += 0.5 * _beamThickness;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:205-207 y *= 1 / staff_space_; c.y_ = y —
+        //   staff_space_ is 1 in this frame and the supply already speaks staff spaces.
+        _collisionPoints.Add(new BeamCollisionPoint(x, yMin, yMax, beamYMin, beamYMax, scoreFactor));
     }
 
     /// <summary>
@@ -1136,59 +1245,38 @@ internal sealed class BeamScoringProblem
     /// Penalizes beam collisions with other objects.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1370-1401 score_collisions()
-    ///
-    /// Uses cubic falloff: penalty * ((padding - dist) / padding)^3
+    /// LILYPOND-REF: lily/beam-quanting.cc:1369-1401 Beam_scoring_problem::score_collisions —
+    ///   the beam's own y extent at the collision's x is <c>center_beam_y + beam_y_</c>,
+    ///   the distance is 0 when the two intervals meet, and the falloff is cubic in
+    ///   <c>(COLLISION_PADDING − dist) / COLLISION_PADDING</c>.
+    /// Everything here is in staff spaces, the frame the rest of the quanter speaks.
     /// </remarks>
     private void ScoreCollisions(BeamConfiguration config)
     {
-        if (_collisions.Count == 0)
-            return;
-
         double demerits = 0.0;
 
-        foreach (var collision in _collisions)
+        foreach (var collision in _collisionPoints)
         {
-            if (collision.X < 0 || collision.X > _xSpan)
-                continue;
+            // LILYPOND-REF: lily/beam-quanting.cc:1378-1379 center_beam_y = y_at (x, config);
+            //   Interval beam_y = center_beam_y + collisions_[i].beam_y_
+            double centerBeamY = config.GetYAt(collision.X + _leftX, _leftX, _xSpan);
+            double beamYMin = centerBeamY + collision.BeamYMin;
+            double beamYMax = centerBeamY + collision.BeamYMax;
 
-            // LILYPOND-REF: lily/beam-quanting.cc:1378-1380
-            // HALF-SPACE ISLAND: this collision scorer is a coarse approximation
-            // of LilyPond's segment-based add_collision (beam_y_ from beam
-            // segments). Its inputs (collision.MinY/MaxY from ElementCoordinator)
-            // and the stackInner/padding terms below are still half-space, so the
-            // ss config centre is converted back (×2) to keep the frame internally
-            // consistent. A faithful ss rewrite driven by BeamSubdivision segments
-            // is deferred; until then this island is unchanged (no regression).
-            double centerBeamY = config.GetYAt(collision.X + _leftX, _leftX, _xSpan) * 2.0;
-
-            // Beam stack extent at this X: inner beams extend from the quanted
-            // (outer) beam toward the noteheads by (count−1)·translation, the
-            // whole stack widened by half the beam thickness — LilyPond's
-            // collision beam_y_ (add_collision, :187-201). Staff-space values
-            // ×2 into the staff-position frame.
-            int stackCount = BeamCountAtX(collision.X);
-            double stackInner = -_beamDir * (stackCount - 1) * _beamTranslation * 2.0;
-            double beamYMin = centerBeamY + Math.Min(0.0, stackInner) - _beamThickness;
-            double beamYMax = centerBeamY + Math.Max(0.0, stackInner) + _beamThickness;
-
+            // LILYPOND-REF: lily/beam-quanting.cc:1381-1386 score_collisions — dist is 0
+            //   while the intervals intersect (flower/include/interval.hh:212 is_empty is a
+            //   STRICT >, so touching still counts), else the nearer of the two edges.
             double dist;
-            bool intersects = beamYMax >= collision.MinY && beamYMin <= collision.MaxY;
-
-            if (intersects)
-            {
+            if (beamYMin <= collision.MaxY && collision.MinY <= beamYMax)
                 dist = 0.0;
-            }
             else
-            {
                 dist = Math.Min(
-                    Math.Abs(beamYMin - collision.MaxY),
-                    Math.Abs(beamYMax - collision.MinY));
-            }
+                    IntervalDistance(beamYMin, beamYMax, collision.MinY),
+                    IntervalDistance(beamYMin, beamYMax, collision.MaxY));
 
-            // LILYPOND-REF: lily/beam-quanting.cc:1390-1394
-            double padding = _parameters.CollisionPadding * 2; // Convert to staff positions
-            double scaleFree = Math.Max(padding - dist, 0.0) / Math.Max(padding, 0.001);
+            // LILYPOND-REF: lily/beam-quanting.cc:1388-1397 scale_free, collision_demerit
+            double scaleFree =
+                Math.Max(_parameters.CollisionPadding - dist, 0.0) / _parameters.CollisionPadding;
             double collisionDemerit = collision.BasePenalty
                                      * Math.Pow(scaleFree, 3)
                                      * _parameters.CollisionPenalty;
@@ -1202,19 +1290,21 @@ internal sealed class BeamScoringProblem
     }
 
     /// <summary>
-    /// Number of beam lines present at a given X offset (relative to the left
-    /// stem): between two stems a beam segment exists for the smaller of the
-    /// neighbours' counts. Approximates LilyPond's per-segment lookup
-    /// (add_collision walks get_beam_segments).
+    /// Distance from the interval [<paramref name="left"/>, <paramref name="right"/>] to
+    /// the point <paramref name="t"/>; 0 when the point is inside.
     /// </summary>
-    private int BeamCountAtX(double x)
+    /// <remarks>
+    /// LILYPOND-REF: flower/include/interval.hh:130-138 Interval_t::distance.
+    /// ⚠️ An EMPTY interval is [+∞, −∞] there, and this returns +∞ for it — which is
+    /// what makes a collision the beam has no ink over score nothing (scale_free 0).
+    /// </remarks>
+    private static double IntervalDistance(double left, double right, double t)
     {
-        for (int i = 0; i + 1 < _stemXPositions.Length; i++)
-        {
-            if (x >= _stemXPositions[i] && x <= _stemXPositions[i + 1])
-                return Math.Min(_memberBeamCounts[i], _memberBeamCounts[i + 1]);
-        }
-        return x < _stemXPositions[0] ? _memberBeamCounts[0] : _memberBeamCounts[^1];
+        if (t > right)
+            return t - right;
+        if (t < left)
+            return left - t;
+        return 0.0;
     }
 
     // ========================================

@@ -71,11 +71,21 @@ public sealed record BeamQuantParameters
 
     /// <summary>Padding for collision detection (staff spaces).</summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:113-118 COLLISION_PADDING —
-    /// default 0.5 (scaled by length-fraction² for grace beams, which
-    /// Lily# does not have yet).
+    /// LILYPOND-REF: scm/define-grobs.scm:508 Beam details — the (collision-padding . 0.35)
+    ///   that get_detail actually finds, and so the value that is used.
+    /// LILYPOND-REF: lily/beam-quanting.cc:115-117 get_detail (details, collision-padding,
+    ///   0.5) — scaled by length-fraction² for grace beams (which Lily# does not have yet).
+    /// ⚠️ THE 0.5 THERE IS THE FALLBACK FOR A GROB THAT DOES NOT DECLARE THE DETAIL, and
+    /// Beam always declares it — so 0.5 is a number LilyPond never uses. Reading it was
+    /// worth a whole quant step: with 0.35 a beam clears a covered head at 4.19 and with
+    /// 0.5 it pays 4.80 demerits there and buys the next quant up instead. MEASURED
+    /// (audit/lp-geometry/probes/beam-over-other-voice.ly through
+    /// <c>\override Beam.inspect-quants</c>, which puts the winning score card in
+    /// Beam.annotation): LilyPond's cards are C 700.36 at 2.81, C 560.75 at 3.81,
+    /// C 40.19 at 4.00 and NO C term at 4.19 — the three numbers solve for a padding of
+    /// exactly 0.350 and for nothing else.
     /// </remarks>
-    public double CollisionPadding { get; init; } = 0.5;
+    public double CollisionPadding { get; init; } = 0.35;
 
     /// <summary>Penalty for horizontal inter-quant positioning.</summary>
     public double HorizontalInterQuantPenalty { get; init; } = 500.0;

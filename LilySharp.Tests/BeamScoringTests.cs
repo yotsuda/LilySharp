@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using Xunit;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Semantics;
@@ -157,10 +158,11 @@ public class BeamScoringTests
         var (leftYWithout, rightYWithout) = problemWithout.Solve();
 
         // With collision - place a large collision object directly at the beam position
-        // Use high base penalty to ensure the collision scorer triggers movement
+        // Use high base penalty to ensure the collision scorer triggers movement.
+        // ⚠️ Solve() answers in staff POSITIONS; BeamCollision speaks staff SPACES.
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 75.0 - 50.0, MinY: leftYWithout - 0.5, MaxY: leftYWithout + 0.5, BasePenalty: 5.0)
+            new BeamCollision(X: 75.0 - 50.0, MinY: leftYWithout / 2 - 0.5, MaxY: leftYWithout / 2 + 0.5, BasePenalty: 5.0)
         };
         var problemWith = new BeamScoringProblem(group, xPositions, collisions: collisions);
         var (leftYWith, _) = problemWith.Solve();
@@ -221,11 +223,11 @@ public class BeamScoringTests
         var xPositions = new List<double> { 50.0, 100.0 };
 
         // Create a collision object directly in the beam's expected path.
-        // BeamCollision.X is relative to the beam's left stem (here: mid-span).
-        // Beam for stem up typically goes from about staffPos+7 (ideal stem length)
+        // BeamCollision.X is relative to the beam's left stem (here: mid-span); its Y is
+        // in staff SPACES (a stem-up beam over a note on the middle line lands near 4).
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 25.0, MinY: 8, MaxY: 10, BasePenalty: 5.0) // Collision near expected beam Y
+            new BeamCollision(X: 25.0, MinY: 4, MaxY: 5, BasePenalty: 5.0) // Collision near expected beam Y
         };
 
         // The collision scorer should add demerits when beam is near collision
@@ -250,10 +252,10 @@ public class BeamScoringTests
         var (baseLeft, _) = new BeamScoringProblem(group, xPositions).Solve();
 
         // A fat obstacle straddling exactly the baseline beam height at mid-span
-        // (X is relative to the left stem).
+        // (X is relative to the left stem; Y is staff spaces, Solve() answers positions).
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 25.0, MinY: baseLeft - 1, MaxY: baseLeft + 1, BasePenalty: 4.0)
+            new BeamCollision(X: 25.0, MinY: baseLeft / 2 - 1, MaxY: baseLeft / 2 + 1, BasePenalty: 4.0)
         };
         var (withLeft, _) =
             new BeamScoringProblem(group, xPositions, collisions: collisions).Solve();
@@ -267,6 +269,9 @@ public class BeamScoringTests
     {
         // X beyond the beam span (e.g. an absolute coordinate passed by
         // mistake) must not influence the result — the relative-X contract.
+        // ⚠️ NOT a range check any more: there is no beam SEGMENT over that x, so the
+        // beam's own y extent there is empty and the distance to it is infinite
+        // (LILYPOND-REF: lily/beam-quanting.cc:186-209 add_collision).
         var members = ImmutableArray.Create(
             new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
             new BeamMember(CreateNote(0), 1, 1, 0, 0, 1));
@@ -277,13 +282,62 @@ public class BeamScoringTests
 
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 75.0, MinY: baseLeft - 1, MaxY: baseLeft + 1, BasePenalty: 4.0)
+            new BeamCollision(X: 75.0, MinY: baseLeft / 2 - 1, MaxY: baseLeft / 2 + 1, BasePenalty: 4.0)
         };
         var (withLeft, withRight) =
             new BeamScoringProblem(group, xPositions, collisions: collisions).Solve();
 
         Assert.Equal(baseLeft, withLeft, 3);
         Assert.Equal(baseRight, withRight, 3);
+    }
+
+    /// <summary>
+    /// The second beam of <c>c16[ c8]</c> is a STUB: it reaches 1.1 staff spaces to the
+    /// right of the first stem and stops. An obstacle under the stub is under two beams;
+    /// the same obstacle a little further right is under one, and the quanter must see the
+    /// difference — it is the horizontal extent of the beam's segments that decides, not
+    /// the neighbouring stems' beam counts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:194-200 add_collision — beam_y_ collects
+    ///   <c>vertical_count_ * beam_translation_</c> for every segment whose horizontal
+    ///   extent CONTAINS x. The x is perturbed rather than the y, so a scorer that read a
+    ///   per-stem beam count (the same number at every x between two stems) fails it.
+    /// LILYPOND-REF: lily/beam.cc:604-624 calc_beam_segments — the stub's own length,
+    ///   <c>beamlet-default-length</c> capped by <c>beamlet-max-length-proportion</c>.
+    /// </remarks>
+    [Fact]
+    public void BeamletStub_ShieldsOnlyWithinItsOwnHorizontalExtent()
+    {
+        // c16[ c8]: the first stem carries two beams to the right, the second only one.
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 2, 0, 2, 0, 0),
+            new BeamMember(CreateNote(0), 1, 1, 0, 0, 1));
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        var xPositions = new List<double> { 50.0, 100.0 };
+
+        var (baseLeft, _) = new BeamScoringProblem(group, xPositions).Solve();
+
+        // A thin obstacle exactly where the SECOND beam line runs (one beam translation
+        // below the primary, for a stem-up beam), in staff spaces.
+        double secondBeamY = baseLeft / 2 - EngravingDefaults.BeamTranslation;
+        List<BeamCollision> At(double x) => new()
+        {
+            new BeamCollision(X: x, MinY: secondBeamY - 0.05, MaxY: secondBeamY + 0.05,
+                              BasePenalty: 4.0)
+        };
+
+        // Under the stub (it runs 1.1 ss from the stem) — the beam has ink here.
+        var (underStub, _) =
+            new BeamScoringProblem(group, xPositions, collisions: At(0.5)).Solve();
+        // Past its end, still between the stems — only the primary beam is overhead, and
+        // that is more than COLLISION_PADDING away.
+        var (pastStub, _) =
+            new BeamScoringProblem(group, xPositions, collisions: At(2.0)).Solve();
+
+        Assert.Equal(baseLeft, pastStub, 3);
+        Assert.True(Math.Abs(underStub - baseLeft) > 0.01,
+            $"an obstacle under the stub must move the beam: under={underStub} base={baseLeft}");
     }
 }
 

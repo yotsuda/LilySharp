@@ -179,7 +179,8 @@ internal static partial class SharedRenderer
             var beamRanks = BeamSubdivision.CalcBeaming(beamingInput);
             foreach (var seg in BeamSubdivision.CalcBeamSegments(
                          beamingInput, beamRanks,
-                         EngravingDefaults.BeamletLength, 0.75, halfStem))
+                         EngravingDefaults.BeamletLength,
+                         EngravingDefaults.BeamletMaxLengthProportion, halfStem))
             {
                 double yOff = EngravingDefaults.BeamTranslation * seg.Rank;
                 DrawBeamSegment(seg.XLeft, PrimaryBeamYAt(seg.XLeft) + yOff,

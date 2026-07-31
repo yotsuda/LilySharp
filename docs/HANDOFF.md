@@ -40,7 +40,125 @@ HEAD・テスト数・シンボル名・「完了」表記は開始時に実コ�
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-31（第49セッション・**後半＝★★★ 臨時記号の縦 seed をアウトラインにした**
+最終更新 2026-07-31（第51セッション＝**島②「ビーム衝突」を閉じ、そこで開いた +0.31 も同じセッションで閉じた**。
+HEAD **`aae9d0fc`**・**未 push 12**・テスト **3584 passed / 0 failed / 3 skipped**・
+台帳 **247 点**（非ゼロ **74**・総和 **4.108590402**）。**新しい 4 点は全部 exact**）。
+
+★★★ **+0.31 の正体は定数 1 つで、LP が自分で名指した**（`aae9d0fc`・**snapshot 3 枚・GO 済**）。
+`beam-quanting.cc:116` は `get_detail (details, "collision-padding", **0.5**)` だが、
+`scm/define-grobs.scm:508` の Beam が **`(collision-padding . 0.35)` を宣言している**
+⇒ **0.5 は LP が一度も使わない数**（§5.2 に規則として追加した）。
+**割り方**: `\override Beam.inspect-quants` で候補ごとのスコアカードを取る（§5.3 に手順を追加）。
+LP のカードは **2.81 `C 700.36` / 3.81 `C 560.75` / 4.00 `C 40.19` / 4.19 `C 項なし`**——
+この 3 数が **P = 0.350 でのみ**成立し、0.5 なら 4.19 に **4.80** が残って次の量子を買ってしまう。
+⚠️ **予測を 3 枝書いて 3 枝とも当たった**（点は 0 へ／臨時記号の対は**不動**＝あそこは dist 0 の交差 regime／
+コーパスは 0.5 が買っていた持ち上がりを失う）。
+★★ **fixture 側でも独立に裏取り**: `multivoice-crossing-collision` の LP 双子は**両群 4.19**、Lily# も **4.19**。
+
+★ **`LayoutOptions.CollisionXPadding`（±2 の窓）を撤去**（`6cdfa9ad`・**ユーザー GO 済**）。
+LP に窓は無く、棄却は**箱の重なり**（`:381`）——供給が全 grob でそれをやるようになった今、
+窓は**LP が残す grob を落とすことしかできず、しかもそれすらできない**（符頭の箱は 1.3 幅なので
+2 ss 外のコラムは重ならない）。⚠️ **「不活性」は regime の主張なので実測で確かめた**＝
+**全緑・snapshot 1 枚も動かず**（§5.0 罠 14 の「この経路は踏まない」は書いた本人が翌セッションに踏む）。
+
+★★★ **1 つの主張が 3 つに割れていた**（`aff42dfd`・**snapshot 3 枚・GO 済**）。
+**どれ 1 つでも欠けると答えは動かない**——引継ぎ ▶ が名指していたのは ③ だけだった:
+① **供給**が「音符コラムに 1 点・penalty 1.0・名目の箱」だった。LP は覆われた grob の**箱を両端で**
+  `sqrt(width)` 重みで積む（`beam-quanting.cc:377-392`）。符頭・和音の符頭（描画と同じ stagger）・
+  休符・臨時記号が **`AddBoxCollision` 1 軒**に。
+② ★★★ **フレームが割れていた（誰も見ていなかった）**——衝突の X は**音符コラム**基準なのに、
+  ビームの segment と描画インクは**ステム**基準＝**符頭 1 個分 1.235 ss ずれ**。
+  LP にコラムという概念は無い（`:403-405` は stem 自身の座標）。`:381` の X 棄却もコラム相手だった。
+③ **スコアラ**が「隣接ステムの beam count の min」＝**2 ステム間で変わりようのない数**だった。
+  いまは `add_collision`（`:186-209`）が**実 segment**（renderer と同じ `BeamSubdivision`）を歩き、
+  **x を含む segment だけ** `vertical_count_ * beam_translation_` を集めて `widen(0.5*thickness)`。
+  **segment の無い x は区間が空**＝`Interval::distance` が ∞ を返して 0 点＝
+  「範囲外の衝突は無視」はこれが担う（**LP は自分の範囲チェックを削除した**・`:189`）。
+  `BeamCollision` の Y は staff position → **staff space**（**これ単体は byte 不変**）。
+
+**LP 実測**（新プローブ 2 本・新台帳 4 点。**どれも `Beam.positions`＝量子器の答えそのもの**。
+台帳がこれまで見ていたのは「ビームがページで取る部屋」だけだった）:
+
+| 点 | LP | Lily# |
+|---|---|---|
+| `beam.quant.over-accidental.left` | 2.81 | **2.810000000** |
+| `beam.quant.over-accidental.right` | 4.50 | **4.500000000** |
+| `beam.quant.over-other-voice.free` | 2.81 | **2.810000000** |
+| `beam.quant.over-other-voice.covered` | 4.19 | **4.190000000**（定数を直して閉じた） |
+
+**両プローブとも対照 score を持つ**（障害物を消すと 2.0/3.5・2.81）＝**床に座っていない**。
+
+▶ **次の一手＝覆われた「ステム」の供給**（`beam-quanting.cc:401-418`）。**この島の残り半分**で、
+`BeamQuantParameters.StemCollisionFactor`（0.1）に**読み手がゼロ**なのがその証拠。
+LP は**衝突した grob の `stem` オブジェクト**を集め、`chord_start_y` から**符尾方向へ無限に伸びる
+区間**を `add_collision` する（`factor = STEM_COLLISION_FACTOR`・**ビームを持たない符尾なら 1.0**）。
+**観測者はもう在る**: `covered-grobs` の dump に**空 extent の Stem** が現れる（`:383` で棄却される個体）ので、
+**符尾が実体を持つ本**（他 voice の 4 分音符など）を組めば LP 側の効きがカードの `C` 項に出る。
+⚠️ **`multivoice-crossing-collision` はまさにその本**（他 voice が 4 分音符＝符尾あり）で、
+**いま両engineとも 4.19 で一致している**——つまり**この本では効いていない**。
+**先に「どの regime で効くか」を LP のカードで確かめてから移植すること**（§5.0 の「exact は
+regime に入っていないだけかもしれない」）。
+
+⚠️ **perf は訊かれる前に測った**（計算を足したので・§5.3）——**遅くなるのは「覆う grob が増えたビーム」だけ**:
+合成 300 小節（bass・全音符に臨時記号・小節に 2 群）で **after 6180 / 6310 ms 対 before 5147 / 4336 ms**
+（2 RUN・min-of-7 と min-of-5）。⚠️ **台がプロセス起動込みで粗く、RUN 間の振れが量より大きい**
+（同じ側で 5147〜14129 まで振れる）ので **向きだけ主張し、量は主張しない**。
+★ **対照（臨時記号ゼロ・同じリズム）は逆に速い**（**3167 対 3564**）＝**一般の遅延ではない**。
+**構造**（LP も同じ形）: 臨時記号が覆う grob になった瞬間 `regionSize += 2` が効き
+（`beam-quanting.cc:901-902`・**候補がおよそ 4 倍**）、さらに 1 config あたりの衝突が **2 → 14** になる。
+⇒ **「戻す」ではなくコストの在処**: 効く lever は**候補側**（lazy scoring の打ち切り）か
+**供給の重複**（同じ x に 2 点を積む grob が並ぶ）。⚠️ **`LilySharp.Benchmarks` に beam の項は無い。**
+
+★ **今回名前が付いた、直していないもの**:
+・⚠️ **`dense-chromatic` 第2小節の和音は符尾方向が LP と逆**（LP 上・Lily# 下）。**独立の欠陥**で、
+  **この本のビーム高さを LP と比べられない**状態が続いている（今セッションだけで 2 回再ベースした本）。
+  **▶ の次点はこれ**——潰せばこの本が判定に使えるようになる。
+・**量子器の stem x は knee では今もコラム由来**（②はビーム外の供給側だけ直した）。
+・⚠️ **`columnX + (up ? StemUpAttachX : StemDownAttachX)` の綴りが 6 軒になった**（§7.7 の
+  「同じ量の 2 つ目の綴り」・**今回 6 軒目 `ElementCoordinator.BeamStemX` を足したのは私**）。
+  既存は `SharedRenderer.Beams.StemAttachX` / `SharedRenderer.Tab` / `TupletBracketEngraver`（3 か所）/
+  `ArticulationEngraver`。⚠️ **②のフレーム統一は「量子器の x は renderer が描くステムの x と同じ」
+  という主張なのに、それを assert する観測者が 1 つも無い**——renderer 側の attach が動いた日に
+  **静かに割れる**（衝突だけが 1.235 ss ずれ、テストは全緑）。
+  ⇒ **1 軒に寄せる（`LayoutUtilities.StemX(columnX, up)` 等）＋その 1 軒を両者が読むことを
+  assert する点**を、次に beam か stem を触るときに同時に入れる。
+
+/ 第50セッションは **ユーザーが画面で見つけたリリースブロッカーを 5 件処理**した
+（`93b83e87`〜`dda2bc20`・全緑・GO 済）。**まだ生きている残り**: **`DiagnosticCodes` の LYS0014 が重複**
+（`KeyModeAssumedMajor` と `UnexpectedCharacter`。LYS0013 は空いたが**退役番号は再利用しない**）／
+**VS Code 拡張の再デプロイが要る**（tmLanguage と LSP を変えた）／
+**内側メンバーの beamlet も `min` で消える**（`8-16-8` で LP は片側 beamlet を描く。clamp を外すだけでは
+両側に stub が出る＝**`flag_directions`（`beaming-pattern.cc:114-183` の `set_rhythmic_importance`）の
+移植が要る別島**）／**`dense-chromatic` の符尾方向**（上の ★ に移した）。以下は第50セッションの 5 件（経緯）:
+① `93b83e87` **`version` ディレクティブを全層から削除**。`SyntaxTree.DeclaredVersion` に production の
+読み手が 1 つも無かった＝**観測者ゼロの宣言**。LP の `\version` は `convert-ly` が読むから在るが
+Lily# に convert-ly は無い（唯一の変換器 `PartSectionLayoutConverter` は version を見ない）。
+⚠️ **未リリースなので後方互換は考えない・撤去に専用エラーも足さない**（ユーザー判断・§5.1 の族に
+memory も追加）。LYS0013 は**退役・再利用しない**。
+② `e374ea16` + ③ `ffb7e668` **空の `score { }` を LYS6002 に**。従来は「音楽の無いページ」を黙って出していた。
+検証は render item の型リストを写さず **`RenderSpecParser.Parse` の結果を読む**（家を 1 つに）。
+③ は赤線を `score` キーワードから**自分の波かっこ**へ（`RenderDeclarationSyntax.BodySpan`）。
+⚠️ **プレビューのバナーは `tree.Diagnostics`＝構文エラーだけ**を載せる作りなので、LYS6002 は
+Problems には出るがバナーには出ない。**意味エラーもバナーに載せるかは未判断**。
+④ `4d84f70e` ★★★ **行頭の調号変更が小節 1 に二重課金されていた**（ユーザーの読みが的中）。
+LP 実測（新プローブ `audit/lp-geometry/probes/line-start-key-change.ly`・A/B 対）＝**行頭の調号変更は
+新しい行に 1 つも課金しない**（system 2 のインクが A と B で完全一致）。Lily# の欠陥は 2 つ:
+⑴ `LineStartSpringForLine` の「**持ち上げたら小節側の予約を外す**」分岐が**時値記号にしか無かった**（**5.51 ss**）
+⑵ `ActiveKeyInkForStaff` が system より前しか歩かず**出ていく調号を予約**（♯3=3.30 対 ♭3=2.76 で **0.54**）。
+`LineStartPrefix.LeadingKeyChange` を `LeadingTimeChange` の隣に足して 1 概念 1 綴りに。
+⚠️ **コーパス byte 不変は結果であって構成ではない**——改行に調号変更が乗る fixture が 1 つも無い。
+だから観測者は**LP プローブ＋不変条件テスト 2 本**（片方は `ownFixedFloor` を**摂動**して規則を主張）。
+⑤ `dda2bc20` ★★★ **ビーム群の最後の音符が 2 本目を失っていた**（`16-8-16` の終端 beamlet）。
+`BeamDetector.CreateBeamGroup` が最終メンバーだけ `Math.Min(beamCount, prevBeamCount)` していた。
+LP は `Beam_rhythmic_element` が**両側を自分の count で初期化**し（`beaming-pattern.cc:50-62`）、
+**減らすループは `i = 1 … size()-2` の内側だけ**（`:169-183`・`:192-200`）＝**両端は削られない**。
+snapshot 3 枚再ベース（`test/beamlets` 他）＝**各 `<polygon>` +1・座標移動ゼロ**を機械で分類して確認。
+`test/beamlets` は**この機能自身の fixture** で、ヘッダに「最後の音符は左を向く」と書いてあるのに
+**欠けた状態が焼き込まれていた**。
+
+⑤ の未 commit ファイル（臨時記号の供給）は**第51セッションが島②ごと入れた**（上）。
+
+/ 第49セッションは **後半＝★★★ 臨時記号の縦 seed をアウトラインにした**
 （移植 `791b3e1e`・**snapshot 1 枚・GO 済**）。`script.accidental.staff-to-ink-bottom`
 **+1.311000008 → +0.000000008**（`script.quiet`／`script.high-head` と同じ 8e-9 の欠片）。
 ★★★ **予測は fork (a) で的中**——(b)（フラットのボウルが binding して +0.038）は**生きた枝**だった
@@ -3577,6 +3695,16 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
 > ⚠️ 実際に 2 件を見つけたのは**コミット後に自分の差分を §5.2 片手に読み直したとき**なので、
 > §7 のチェックリストに手順として入れてある（運任せにしない）。
 
+- ★★★ ⚠️ **`get_detail` / `robust_scm2*` の C++ 側の既定値は「値」ではない。値は grob の
+  `details` alist のほう**（2026-07-31・第51セッション・**1 定数で量子 1 段ぶん外していた**）。
+  `beam-quanting.cc:116` は `get_detail (details, "collision-padding", **0.5**)` と書くが、
+  `scm/define-grobs.scm:508` の Beam が `(collision-padding . **0.35**)` を**宣言している**ので
+  **0.5 は LP が一度も使わない数**。Lily# はその 0.5 を写していた。
+  ⚠️ **判定法**: その名前で `scm/define-grobs.scm` を grep する。**宣言があれば C++ の既定は死んでいる。**
+  ⇒ ★ **`LILYPOND-REF` は「読まれる側」を指す**——`.cc` の行だけ引くと、この形の取り違えは
+  **出典付きのまま**残る（§5.2 の「REF が付いていても式が一致しているとは限らない」の定数版）。
+  ⚠️ **同じ形は `details` を持つ全 grob に効く**（Beam・Tie・Slur・…）。
+
 - ★★★ ⚠️ **「掛け忘れ」を名前で防ごうとする前に、LP が掛けていないかを見る**
   （2026-07-28・第25セッション・`94705160`）。ossia のインクを縮める作業は「幅を持つ seed 15 か所で
   掛ける・漏らさない」に見えたが、**LP には掛ける場所が無い**——grob は**自分の文脈のフォント**から
@@ -3753,6 +3881,23 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 ### 5.3 測定の原則
 
 - **推論せず測る。** 実測 → 予測との照合 → 一致しなければ**まず自分の当てはめを検算**
+- ★★★ **LP の「なぜその配置を選んだか」は LP 自身が dump できる。ビームは 2 行で出る**
+  （2026-07-31・第51セッション。**これで定数 1 つの取り違えが 30 分で割れた**）:
+  ```lilypond
+  \layout { debug-beam-scoring = ##t }
+  \override Beam.inspect-quants = #'(4.19 . 4.19)   % その量子を強制採点する
+  % → 勝った config のスコアカードが Beam.annotation に入る
+  %   after-line-breaking で (ly:grob-property grob 'annotation) を print
+  ```
+  `inspect-quants` は `force_score` を呼ぶ（`beam-quanting.cc:1038-1043`）ので、
+  **LP が選ばなかった候補のカードも取れる**——`L 8.35` 対 `L 9.90 / C 40.19` のように
+  **項ごとに**出る（`add` は**非ゼロの項しか書かない**ので、**項が無い＝その罰は 0**）。
+  ⇒ ★★ **量子が 1 段ずれる型の残差は、これで「どの scorer が符号を決めたか」が一発で出る。**
+  ⇒ ★★ **さらにカードの数から定数を逆算できる**（`base × ((P−dist)/P)³ × 500` の 3 点で
+  P が一意に解ける＝**0.350 と分かり、0.5 を写していたのが確定した**）。
+  ★ **覆う grob そのものも dump できる**: `(ly:grob-object grob 'covered-grobs)` を歩いて
+  `grob::name` と `ly:grob-extent` を print（**空 extent の Stem が混じるのも見える**＝
+  `:383` の棄却相手）。⚠️ **`annotation` が `()` なら debug が立っていない本**を見ている。
 - ★★★ ⚠️ **perf の A/B は「1 セット」では測れない。最小は RUN をまたいで採る**
   （2026-07-30・第39セッション。**逆の答えを報告しかけた**）。base worktree を作った直後に
   min-of-50×3 を回したら **HEAD が全譜で速く**見えた——落ち着いてから base の 3 セットは

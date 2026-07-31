@@ -107,9 +107,11 @@ internal enum BeamScorer
 /// LILYPOND-REF: lily/include/beam-scoring-problem.hh:101-109 Beam_collision struct
 /// </remarks>
 public readonly record struct BeamCollision(
-    // X position relative to beam start (in staff spaces).
+    // X position relative to the beam's LEFT STEM (in staff spaces).
     double X,
-    // Y range of the collision object (in staff positions, minY to maxY).
+    // Y range of the collision object (in STAFF SPACES, minY to maxY) — the frame
+    // the whole quanter speaks. LilyPond books a covered grob's y extent in the same
+    // unit: add_collision divides by staff_space_ (beam-quanting.cc:205) before storing.
     double MinY,
     double MaxY,
     // Base penalty factor for this collision.

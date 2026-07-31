@@ -464,6 +464,13 @@ internal sealed class ElementCoordinator
         int lastMemberIndex = group.Members[^1].ItemIndex;
         double beamLeftX = itemXPositions[firstMemberIndex];
         double beamRightX = itemXPositions[lastMemberIndex];
+        // The beam's own frame: its stems, and its drawn extent half a stem width past
+        // each outer one. LILYPOND-REF: lily/beam.cc:631 horizontal_[dir] += dir * stem_width/2.
+        double beamOriginX = BeamStemX(group, 0, beamLeftX);
+        double halfStemWidth = EngravingDefaults.StemThickness / 2;
+        double beamEdgeLeftX = beamOriginX - halfStemWidth;
+        double beamEdgeRightX =
+            BeamStemX(group, group.Members.Length - 1, beamRightX) + halfStemWidth;
 
         for (int i = 0; i < measure.Items.Length; i++)
         {
@@ -484,54 +491,225 @@ internal sealed class ElementCoordinator
                 continue;
             double itemX = itemXPositions[i];
 
-            double xPadding = _options.CollisionXPadding;
-            if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
-                continue;
-
-            if (!TryGetCollisionExtent(item, out int staffPosition, out double halfHeight))
-                continue;
-
-            // BeamCollision.X is relative to the beam's left stem —
-            // BeamScoringProblem range-checks it against [0, xSpan] and
-            // evaluates the beam Y at that offset. Passing the absolute
-            // item X silently discarded most collisions.
-            collisions.Add(new BeamCollision(
-                X: itemX - beamLeftX,
-                MinY: staffPosition - halfHeight,
-                MaxY: staffPosition + halfHeight,
-                BasePenalty: 1.0));
+            AddItemCollisions(collisions, item, itemX,
+                              beamEdgeLeftX, beamEdgeRightX, beamOriginX);
         }
 
+        AddAccidentalCollisions(collisions, measure, itemXPositions,
+                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
         return collisions;
     }
 
     /// <summary>
-    /// Staff-position centre and half-height of an item's ink for beam collision
-    /// scoring; false for items a beam never needs to clear (clef/key changes).
+    /// Books one non-member item — a note head, a chord's heads, or a rest — as covered
+    /// grobs of the beam.
     /// </summary>
-    private static bool TryGetCollisionExtent(MusicItem item, out int staffPosition, out double halfHeight)
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:377-392 init_instance_variables — one BOX per
+    ///   covered grob, rejected when it misses the beam's x span (:381) or is empty
+    ///   (:383), weighted by <c>width_factor = sqrt (width / staff_space_)</c> and booked
+    ///   at BOTH x edges. A chord's heads are separate grobs there, so they are separate
+    ///   boxes here, each with the stagger the renderer draws it at.
+    /// <para>
+    /// ⚠️ The head's own STEM is a covered grob too, with its own
+    /// <c>STEM_COLLISION_FACTOR</c> (:401-418). Lily# does not collect stems yet; that is
+    /// the remaining half of this supply, and it is why
+    /// <see cref="BeamQuantParameters.StemCollisionFactor"/> has no reader.
+    /// </para>
+    /// </remarks>
+    private static void AddItemCollisions(
+        List<BeamCollision> collisions, MusicItem item, double itemX,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
         switch (item)
         {
-            case RestItem:
-                staffPosition = (int)EngravingDefaults.RestCenterPosition;
-                halfHeight = EngravingDefaults.RestExtent;
-                return true;
+            case RestItem rest:
+            {
+                var box = GlyphMetrics.GetRestBBox(
+                    LayoutUtilities.GetNoteValueFromFraction(rest.BaseDuration));
+                // ⚠️ The rest is taken at its DEFAULT position. A rest that another voice
+                // (or CalculateRestShifts) has moved covers a different band, and this does
+                // not know it — the same staleness the rest's own shift already carries.
+                double centreSs = EngravingDefaults.RestCenterPosition * 0.5;
+                AddBoxCollision(collisions, itemX + box.Left, itemX + box.Right,
+                                centreSs + box.Bottom, centreSs + box.Top,
+                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                break;
+            }
             case NoteItem note:
-                staffPosition = note.StaffPosition;
-                halfHeight = EngravingDefaults.NoteheadHalfHeight;
-                return true;
+                AddHeadCollision(collisions, itemX, note.StaffPosition,
+                                 LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration),
+                                 beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                break;
             case ChordItem chord:
-                int minPos = chord.Notes.Min(n => n.StaffPosition);
-                int maxPos = chord.Notes.Max(n => n.StaffPosition);
-                staffPosition = (minPos + maxPos) / 2;
-                halfHeight = (maxPos - minPos) / 2.0 + EngravingDefaults.NoteheadHalfHeight;
-                return true;
-            default:
-                staffPosition = 0;
-                halfHeight = 0;
-                return false;
+            {
+                // The heads the renderer draws, stagger and all — a reversed head sits a
+                // notehead width off the column and covers a different part of the beam.
+                int noteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
+                var offsets = ChordHeadPositioning.CalculateOffsets(
+                    chord.Notes, chord.StemUp, noteValue);
+                for (int n = 0; n < chord.Notes.Length; n++)
+                    AddHeadCollision(collisions, itemX + offsets[n], chord.Notes[n].StaffPosition,
+                                     noteValue, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                break;
+            }
         }
+    }
+
+    /// <summary>One note head's box as a covered grob.</summary>
+    private static void AddHeadCollision(
+        List<BeamCollision> collisions, double headX, int staffPosition, int noteValue,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        var box = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double centreSs = staffPosition * 0.5;
+        AddBoxCollision(collisions, headX + box.Left, headX + box.Right,
+                        centreSs + box.Bottom, centreSs + box.Top,
+                        beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+    }
+
+    /// <summary>
+    /// The shared body of <see cref="AddItemCollisions"/> and
+    /// <see cref="AddAccidentalCollision"/>: LilyPond's per-covered-grob booking.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:377-392 init_instance_variables — the x-span
+    ///   reject, the empty reject, <c>width_factor</c>, and one add_collision per x edge.
+    /// </remarks>
+    private static void AddBoxCollision(
+        List<BeamCollision> collisions,
+        double inkLeft, double inkRight, double minY, double maxY,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        // :381 — the box must overlap the beam's DRAWN x extent (x_pos), not the note
+        // columns: LilyPond's x_pos is the beam's own stencil span.
+        if (inkRight < beamEdgeLeftX || inkLeft > beamEdgeRightX)
+            return;
+        // :383
+        if (inkRight <= inkLeft || maxY <= minY)
+            return;
+
+        // :388-389 — staff_space_ is 1 in this frame, so the factor is sqrt(width).
+        double widthFactor = Math.Sqrt(inkRight - inkLeft);
+
+        // :391-392 — TWO entries per grob, at its two x edges, each carrying the WHOLE y
+        // extent. x is measured from the beam's left STEM; the quanter moves it the last
+        // half stem width onto the beam's drawn edge.
+        collisions.Add(new BeamCollision(inkLeft - beamOriginX, minY, maxY, widthFactor));
+        collisions.Add(new BeamCollision(inkRight - beamOriginX, minY, maxY, widthFactor));
+    }
+
+    /// <summary>
+    /// The x a beam member's STEM stands at, given its note column's x.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:403-405 robust_relative_extent — a covered
+    ///   grob's x is measured against the STEMS' own coordinates, and the beam's own
+    ///   x_pos comes from those stems; LilyPond has no second "note column x" to
+    ///   confuse with them. In Lily# a stem stands a notehead width right of its column
+    ///   when it points up, which is the offset SharedRenderer.DrawBeams draws it at
+    ///   (<see cref="EngravingDefaults.StemUpAttachX"/>) — so a collision measured from
+    ///   the COLUMN is a notehead width out of frame from the beam it is measured against.
+    /// </remarks>
+    private static double BeamStemX(BeamGroup group, int memberIndex, double columnX)
+    {
+        bool up = group.IsKnee ? group.Members[memberIndex].MemberStemUp : group.StemUp;
+        return columnX + (up ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+    }
+
+    /// <summary>Single-ape / chord accidental placement — the SAME instance path the
+    /// renderer draws with, so the ink a beam is quanted against is the ink drawn.</summary>
+    private static readonly AccidentalPlacement BeamAccidentalColumn = new();
+
+    /// <summary>
+    /// Registers every printed accidental under the beam as a covered grob.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:61-69 Beam_collision_engraver — the
+    ///   engraver that fills a beam's
+    ///   <c>covered-grobs</c> acknowledges note heads, stems, ACCIDENTALS, clefs, clef
+    ///   modifiers, key signatures, time signatures, beams and flags. Lily# collected only
+    ///   what is a MusicItem (heads/rests), so an accidental was invisible to the quanter and
+    ///   a beam came to rest on a sharp (scratch/repro.lys bar 5, beat 4).
+    /// <para>
+    /// ⚠️ The beam's OWN members are not skipped here. In LilyPond an Accidental is a grob of
+    /// its own, so the accidental of a beamed note is a covered grob like any other — it is
+    /// only the head and stem of a member that the quanter handles through its stem model.
+    /// </para>
+    /// </remarks>
+    private void AddAccidentalCollisions(
+        List<BeamCollision> collisions, Measure measure,
+        IReadOnlyList<double> itemXPositions,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            double itemX = itemXPositions[i];
+            switch (measure.Items[i])
+            {
+                case NoteItem note when note.Accidental != null:
+                    if (BeamAccidentalColumn.CalculateSinglePosition(
+                            note, note.IsCue ? CueAccidentalScale : 1.0) is { } single)
+                        AddAccidentalCollision(
+                            collisions, single, itemX, note.IsCue ? CueAccidentalScale : 1.0,
+                            beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                    break;
+
+                case ChordItem chord:
+                    // The stagger the renderer uses: reversed heads move their accidentals,
+                    // so the column must be solved, not assumed.
+                    // LILYPOND-REF: lily/accidental-placement.cc position_apes.
+                    var offsets = ChordHeadPositioning.CalculateOffsets(
+                        chord.Notes, chord.StemUp,
+                        LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration));
+                    foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets))
+                        AddAccidentalCollision(collisions, al, itemX, 1.0,
+                                               beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head.</summary>
+    private const double CueAccidentalScale = 0.66;
+
+    /// <summary>
+    /// One accidental as a covered grob: its LILC extent, booked at BOTH x edges.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:377-392 Beam_scoring_problem::init_instance_variables
+    ///   — <c>b[a] = collisions[j]->extent (common[a], a)</c>,
+    ///   the X-overlap reject at :381, the empty-extent reject at :383, then
+    ///   <c>width_factor = sqrt (width / staff_space_)</c> and
+    ///   <c>for (d : {LEFT, RIGHT}) add_collision (b[X_AXIS][d], b[Y_AXIS], width_factor)</c>.
+    ///   TWO entries per grob, at its two x edges, each carrying the WHOLE y extent.
+    /// <para>
+    /// ⚠️ The box is the grob's EXTENT (the LILC box, <see cref="GlyphMetrics.GetAccidentalBBox"/>),
+    /// NOT the outline box a skyline is built from — LilyPond reads <c>extent</c> here. The two
+    /// differ, and picking by habit is the defect <see cref="GlyphMetrics"/> warns about.
+    /// </para>
+    /// </remarks>
+    private static void AddAccidentalCollision(
+        List<BeamCollision> collisions, AccidentalLayout layout,
+        double itemX, double scale,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        var box = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
+        // XOffset is the INK LEFT (AccidentalPlacement.InkLeft): the glyph origin plus the
+        // LILC left bearing, and a courtesy accidental's left parenthesis in front of it.
+        double inkLeft = itemX + layout.XOffset;
+        double width = box.Width * scale;
+        if (layout.IsCourtesy)
+            width += (GlyphMetrics.AccidentalLeftParen.Width
+                      + GlyphMetrics.AccidentalRightParen.Width) * scale;
+
+        // Y: the glyph box hangs off the note's own position. The note's position is
+        // in staff positions, the box is in staff spaces — and staff spaces is what
+        // BeamCollision speaks.
+        double headSs = layout.StaffPosition * 0.5;
+        AddBoxCollision(collisions, inkLeft, inkLeft + width,
+                        headSs + box.Bottom * scale, headSs + box.Top * scale,
+                        beamEdgeLeftX, beamEdgeRightX, beamOriginX);
     }
 
     /// <summary>
@@ -551,7 +729,11 @@ internal sealed class ElementCoordinator
             || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
             return collisions;
 
-        double xPadding = _options.CollisionXPadding;
+        double beamOriginX = BeamStemX(group, 0, beamLeftX);
+        double halfStemWidth = EngravingDefaults.StemThickness / 2;
+        double beamEdgeLeftX = beamOriginX - halfStemWidth;
+        double beamEdgeRightX =
+            BeamStemX(group, group.Members.Length - 1, beamRightX) + halfStemWidth;
         for (int v = 0; v < score.Voices.Length; v++)
         {
             if (v == group.VoiceIndex) continue;
@@ -563,15 +745,10 @@ internal sealed class ElementCoordinator
             {
                 double itemX = measureLayout.X + measureLayout.GetXForTiming(timing);
                 timing += GetItemDuration(item);
-                if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
-                    continue;
-                if (!TryGetCollisionExtent(item, out int staffPosition, out double halfHeight))
-                    continue;
-                collisions.Add(new BeamCollision(
-                    X: itemX - beamLeftX,
-                    MinY: staffPosition - halfHeight,
-                    MaxY: staffPosition + halfHeight,
-                    BasePenalty: 1.0));
+                // No window here: the x-span reject IS LilyPond's, against the beam's
+                // drawn extent and the grob's own box (AddBoxCollision, :381).
+                AddItemCollisions(collisions, item, itemX,
+                                  beamEdgeLeftX, beamEdgeRightX, beamOriginX);
             }
         }
 

@@ -1100,6 +1100,57 @@ internal sealed class RenderedGeometry
         return refs[index + 1] - refs[index];
     }
 
+    /// <summary>
+    /// A beam's own height above the staff's middle line, up-positive, at one END of it —
+    /// the quantity LilyPond calls <c>Beam.positions</c>.
+    /// </summary>
+    /// <remarks>
+    /// The PRIMARY beam line (rank 0) is measured, which is the widest segment of the group:
+    /// LilyPond's positions is that line's CENTRE, and every other beam of the stack is drawn
+    /// at <c>positions + beam_dy × vertical_count</c> from it (lily/beam.cc:810-814
+    /// Beam::print). Reading a beamlet stub instead would report a translation, not a quant.
+    /// <para>
+    /// ⚠️ Both ends, not their average: a sloped beam's height and its slope are two numbers
+    /// and a single reading cannot separate them (an average matches a beam that is too steep
+    /// AND too low). LilyPond quotes both for the same reason.
+    /// </para>
+    /// </remarks>
+    /// <param name="beamIndex">Which beam group, left to right.</param>
+    /// <param name="rightEnd">false = the beam's left end, true = its right end.</param>
+    public double BeamPositionAboveStaffMiddle(int beamIndex, bool rightEnd, int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the probe is "
+                + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+
+        // Group the drawn quads into beams by x span: the widest quad starting at each
+        // group's left is that group's primary line; a stub is strictly inside it.
+        var quads = _pages[page].Quads
+            .Select(q => (Left: Math.Min(q.X0, q.X3), Right: Math.Max(q.X1, q.X2),
+                          LeftY: (q.Y0 + q.Y3) / 2, RightY: (q.Y1 + q.Y2) / 2))
+            .OrderBy(q => q.Left).ThenByDescending(q => q.Right - q.Left)
+            .ToList();
+        var primaries = new List<(double Left, double Right, double LeftY, double RightY)>();
+        foreach (var q in quads)
+            if (!primaries.Any(p => q.Left >= p.Left - 1e-9 && q.Right <= p.Right + 1e-9))
+                primaries.Add(q);
+
+        if (primaries.Count <= beamIndex)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for beam {beamIndex} but only {primaries.Count} beam "
+                + "group(s) were drawn.\nDrawn geometry:\n" + Describe());
+        }
+
+        var beam = primaries[beamIndex];
+        // Device y is down; the staff refpoint is the middle line.
+        return refs[0] - (rightEnd ? beam.RightY : beam.LeftY);
+    }
+
     /// <summary>Music glyphs in drawing order, left to right.</summary>
     public IReadOnlyList<DrawnGlyph> Glyphs =>
         _page.Glyphs.OrderBy(g => g.X).ToList();

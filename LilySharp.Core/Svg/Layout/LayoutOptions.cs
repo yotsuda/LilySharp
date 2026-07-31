@@ -108,11 +108,6 @@ internal sealed record LayoutOptions
     /// </summary>
     public double TopSystemPadding { get; init; } = 1;
 
-    // === Spacing Parameters (in staff spaces) ===
-
-    /// <summary>Horizontal padding for collision detection in staff spaces.</summary>
-    public double CollisionXPadding { get; init; } = 2;
-
     // === Layout Algorithm Options ===
 
     /// <summary>

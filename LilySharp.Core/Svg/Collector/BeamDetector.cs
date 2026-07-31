@@ -546,8 +546,24 @@ internal sealed class BeamDetector
             }
             else if (i == group.Count - 1)
             {
-                int prevBeamCount = GetBeamCount(group[i - 1].item);
-                beamCountLeft = Math.Min(beamCount, prevBeamCount);
+                // The LAST stem keeps its OWN count on the inward side. LilyPond gives both
+                // sides the stem's own beam count and then only ever REDUCES that, in loops
+                // that run over the interior — `for (vsize i = 1; i < infos_.size () - 1;)` —
+                // so an outer stem is never chipped down to its neighbour's count.
+                // LILYPOND-REF: lily/beaming-pattern.cc:50-62 Beaming_pattern::Beam_rhythmic_element
+                //   — the constructor sets beam_count_drul_[LEFT] = beam_count_drul_[RIGHT] =
+                //   beam_count_, i.e. the stem's own duration_log, on both sides.
+                // LILYPOND-REF: lily/beaming-pattern.cc:169-183 Beaming_pattern::beamify —
+                //   the flag_directions pass, which subtracts from beam_count_drul_ only for
+                //   1 <= i < infos_.size () - 1.
+                // LILYPOND-REF: lily/beaming-pattern.cc:192-200 Beaming_pattern::beamify —
+                //   the at_span_start / at_span_stop clamp (beamlets must not stick out of a
+                //   tuplet), likewise interior-only.
+                // Clamping to the neighbour here deleted the terminal beamlet: in 16-8-16 the
+                // closing sixteenth got min(2, 1) = 1 and drew a single beam, while the
+                // opening sixteenth — which is NOT clamped below — kept its stub. That
+                // asymmetry was the reported defect (repro.lys bar 5).
+                beamCountLeft = beamCount;
                 beamCountRight = 0;
             }
             else

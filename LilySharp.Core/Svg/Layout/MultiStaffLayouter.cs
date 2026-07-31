@@ -907,12 +907,20 @@ internal sealed class MultiStaffLayouter
     {
         var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
 
-        // When the opening meter change is hoisted into the prefix, its hang-left width is no
+        // When an opening CHANGE is hoisted into the prefix, its hang-left width is no
         // longer reserved in the measure, so the bare space-alist fixed distance holds;
         // otherwise the measure's own spring-0 minimum still floors it (min_dist does not
         // cover the leading grace / lyric widths — LilyPond puts those in their own paper
         // columns; an accidental on the first note DOES reach min_dist, probe TKA +1.55).
-        double? ownFixedFloor = prefix.LeadingTimeChange != null ? null : measureSpring0.MinDistance;
+        // A KEY change hoists exactly like a meter change: it is drawn in the prefix and, as
+        // a courtesy, after the previous line's final bar line, so leaving the measure's
+        // spring-0 minimum in place charged its column width A SECOND time and pushed the
+        // first note right by the whole cancellation+signature (measured: 5.51 ss on
+        // scratch/repro.lys bar 9, where the courtesy is 3 naturals + 3 flats = 5.39 ink).
+        double? ownFixedFloor =
+            prefix.LeadingTimeChange != null || prefix.LeadingKeyChange != null
+                ? null
+                : measureSpring0.MinDistance;
 
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
         // do NOT agree: a tab staff ends its prefix on the TAB clef (minimum-fixed-space 5.0)
@@ -932,7 +940,12 @@ internal sealed class MultiStaffLayouter
         TimeSignatureChangeItem? LeadingTimeChange,
         bool HasTime,
         int Beats,
-        int BeatType);
+        int BeatType,
+        // The key change that OPENS this system's first measure, or null. Like the meter
+        // change above it is engraved in the PREFIX (and as a courtesy at the end of the
+        // previous line), never as a column inside bar one — so its width must not be
+        // reserved twice. SharedRenderer.GetSystemStartKeyChange finds the same item.
+        KeySignatureChangeItem? LeadingKeyChange = null);
 
     /// <summary>
     /// Solves the line-start break-align column table for the system opening at
@@ -963,6 +976,19 @@ internal sealed class MultiStaffLayouter
                 if (item.Duration > Fraction.Zero) break;
             }
 
+        // A key change that OPENS a continuation system is likewise engraved break-aligned in
+        // the prefix — the NEW signature there, the cancellation as a courtesy at the end of
+        // the PREVIOUS line (SharedRenderer.GetSystemStartKeyChange / GetSystemEndKeyChange,
+        // and KeyCourtesySuffixWidth for the suffix). It is therefore not a column inside bar
+        // one, exactly as the meter change is not.
+        KeySignatureChangeItem? leadingKeyChange = null;
+        if (!isFirstSystem && startMeasureIndex < primaryVoice.Measures.Length)
+            foreach (var item in primaryVoice.Measures[startMeasureIndex].Items)
+            {
+                if (item is KeySignatureChangeItem kc) { leadingKeyChange = kc; break; }
+                if (item.Duration > Fraction.Zero) break;
+            }
+
         // …and no meter is booked when NO row engraves one (a chords / lyrics-only system):
         // SpacingRules.AnyStaffEngravesTime.
         bool prefixHasTime = !score.AllStavesTab && SpacingRules.AnyStaffEngravesTime(score)
@@ -977,7 +1003,8 @@ internal sealed class MultiStaffLayouter
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
             maxClefWidth, activeKeyInk, prefixHasTime, prefixBeats, prefixBeatType);
         return new LineStartPrefix(
-            prefixColumns, leadingTimeChange, prefixHasTime, prefixBeats, prefixBeatType);
+            prefixColumns, leadingTimeChange, prefixHasTime, prefixBeats, prefixBeatType,
+            leadingKeyChange);
     }
 
 
