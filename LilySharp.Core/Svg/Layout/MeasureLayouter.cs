@@ -30,8 +30,10 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed class MeasureLayouter
 {
     // Beam membership is NOT threaded through this class. It is a property of the item —
-    // NoteItem.IsBeamed / ChordItem.IsBeamed, baked by MeasureCollector's
-    // ResolveBeamStemDirections before any spacing runs — so every consumer reads the same
+    // NoteItem.BeamId / ChordItem.BeamId (and the IsBeamed it answers), baked by
+    // MeasureCollector's ResolveBeamStemDirections before any spacing runs, which is also
+    // how the knee correction asks whether two columns share ONE beam. So every consumer
+    // reads the same
     // answer and none can be handed a wrong one. That mirrors LilyPond, where a beamed
     // stem's Flag grob has already SUICIDED by spacing time (lily/stem-engraver.cc:165-172)
     // and the column skyline simply walks the grobs that exist

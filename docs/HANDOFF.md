@@ -58,15 +58,64 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-31（第55セッション＝**引継ぎ ▶「knee の残差の在処」に答えを出した。
-在処は 2 つで、片方（LP が最小二乗の *前* に取る分岐）を移植して閉じ、もう片方
-（フレーム）は「直せない理由」を実測して据え置いた。⚠️ 引継ぎが 1 行差で誤読していた
-LP の宣言を反証した**）。
-HEAD **`cb8b99ae`**（＋handoff commit）・**未 push 47**・
-テスト **3673 passed / 0 failed / 3 skipped**・
-台帳 **329 点**（**ss 非ゼロ 74・総和 0.109763282**／**count 点 99・うち非ゼロ 2**）。
+最終更新 2026-07-31（第56セッション＝**引継ぎ ▶ の `knee_correction` を移植し、同じ commit で
+量子器のフレームも入れた。2 つで 1 つの claim なので片方ずつだと両方とも退行する——
+それを実測で確かめてから束ねた。`beam.quant.knee.left/right` は **exact**。
+⚠️ 移植を塞いでいた「説明のつかない 0.13」は `Stem::thickness` だった**）。
+HEAD **`bdf35ef0`**（＋この handoff commit）・**未 push 55**・
+テスト **3680 passed / 0 failed / 3 skipped**・
+台帳 **329 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**（HEAD を書く commit が HEAD を動かす）。§0 のとおり
 **開始時に必ず実測すること**。
+
+## ① `knee_correction` を移植した（`bdf35ef0`・**snapshot 2 枚・GO 済**）
+
+★★★ **0.13 の正体は `Stem::thickness`**——`knee_correction`（`note-spacing.cc:117-137`）は
+head extent から**符尾自身の太さを引いてから**掛ける（`:131`）。
+**1.304200**（LILC 箱＝`GlyphMetricsGenerated.NoteheadBlack.Right`）**− 0.130000**
+（`stem.cc:909-913` ＝ `define-grobs.scm:3469` の 1.3 × `paper.scm:52-66` の 0.1 ss）
+**= 1.174200** ＝ LP の広い gap **3.6784 − 2.5042** ちょうど。
+⇒ **引継ぎが「+1.3042 で 0.13 合わない」と書いていた項は、最初から 2 項だった。**
+★ **列は LP と一致**: `c'8 c' c' c'''` が **2.50 / 2.50 / 3.68**（LP 2.5042/2.5042/3.6784）。
+**前は 2.50 / 2.50 / 2.58**。
+★★ **新 3 冊 E/F/G で「向きの非対称」を反証**（`beam-column-spacing.ly`・**予測を先に書いて全部当てた**）:
+`knee-spacing-correction` を **0 / 0.5 / 2** に振ると項は**両符号とも比例して動き**
+（2.5042 平坦／±0.5871／+2.3484）、**下→上だけが 1.8042 で頭打ち**になる
+＝**あの狭い gap は補正ではなく rod（ばねの最小距離）**。
+★ **E は分岐そのものの falsifier**——`different_directions_correction` はこの property を
+読まないので、**振って動く本は knee 枝に居る**。
+
+## ② フレームは①と同じ commit でしか入らない（**それが「1 つの claim」の実証**）
+
+★★★ **量子器は列で測り、renderer はステムで描いていた**（`define-grobs.scm:3471` →
+`stem.cc:1090-1114`・実測 1.2392 上／0.065 下）。向きが揃った beam では定数で相殺するが、
+**knee では相殺しない**＝残差が反対称の **∓0.00058644**。
+⇒ 量子器を **`LayoutUtilities.StemX`**（renderer と衝突収集が既に読んでいる家）に載せ替え、
+**`beam.quant.knee.left/right` は 0 exact**（台帳 ss 非ゼロ 74→72）。
+★★★ **片方ずつだと両方退行する（実測）**: spacing だけ入れると knee.left が **+0.189315**、
+frame だけ入れると **+0.19**。**過去 2 回 frame 単独で試して失敗していた理由がこれ。**
+⇒ §5.0 の「1 つの claim が N 個の量に分かれているとき分割すると悪化する」の実例が 3 例目。
+★ **`BeamId`**＝spacing 時に「同じ beam か」を訊くための **Beam grob ポインタの代役**。
+`MeasureCollector.ResolveBeamStemDirections`（既に群を解決し向きを焼いている場所）が押す。
+**`IsBeamed` はそこから導出**（`BeamId is not null`）＝**同じ事実に 2 つ目の綴りを作らない**。
+⚠️ **タブの beam だけ LP 参照が無い変化**（`test/tab-percent-repeat`・記譜側は Y 不動）——
+タブの符尾向きは**弦位置で決まる Lily# 固有の device** なので、**LP に無い knee** が立つ。
+入ったのは「量子器が描かれる場所で測る」ことだけ。**忠実度の改善としては数えない**（ユーザー了承済）。
+
+## ▶ 次の一手＝**`lysc ly` が phrase 参照を落とす**（双子を作る道具がまだ壊れている）
+
+★★★ **第55セッションが直したのは半分だった。** `showcase/05-special-techniques` を
+`lysc ly` に通すと **`melody = \relative c' { }`（空）+ warning `VariableReference not exported`**
+が出る——section の中身が**素の phrase 参照**（`melody { featheredAccel … }`）だと、
+`LilyPondExporter.Skip`（`:602-604`）が**黙って捨てる**。
+⚠️ **fixtures 204 冊のうち 52 冊が phrase 宣言を持つ**（参照する側はさらに多い）。
+⇒ **memory「双子は手で書かず `lysc ly` で出す」は、この形の本ではまだ守れない。**
+★ **今回それを踏んだ**（showcase/05 の双子が作れず、beam の Y は snapshot の polygon を
+直接読んで LP 値と照合した——**それはできたが、列の絶対 X は照合できていない**）。
+★ **その次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第55セッションの経緯
 
 ## ① LP は「最小二乗を取らない分岐」を持っていた（`cb8b99ae`・**snapshot 3 枚・GO 済**）
 
@@ -92,8 +141,16 @@ HEAD **`cb8b99ae`**（＋handoff commit）・**未 push 47**・
 ★ **新プローブ `audit/lp-geometry/probes/beam-least-squares.ly`**（10 読み・**ヘッダに全部の
 実測値を書いてある**ので自分で照合できる）。**再ベース前に 3 冊とも LP 双子で実測**＝
 **LP から離れたビームは 1 本も無い**。
+★ **perf は測っていない——計算を足していないから**（§7.9 の「足していない例」）。
+分岐は条件が立つと**最小二乗を走らせない**ぶん軽く、足したのは float 比較 2 本と
+`ChordStartY` 2 回（どちらも O(1)・新しい走査なし）。⚠️ **commit message に 1 行書き忘れた**。
+⚠️ **`ChordStartY` は `Stem::chord_start_y` の 2 つ目の綴り**（1 つ目は
+`ElementCoordinator.AddStemCollision` の `chordStartPosition * 0.5`）。LP は 1 関数で両方を
+賄っている。**式は 1 個の掛け算・向きの取り方だけ違う**（こちらは `last_head` を
+`dir>0 ? _headMax : _headMin` で取る）。**符号は観測されている**——`test/beamlets` の
+第1群は上り・第2群は下りで、**両方 LP と一致**。⇒ **今は害が無いが、2 つある以上いつかずれる。**
 
-## ② フレームは LP と違う。**が、直せない**（**移植せず・理由を実測**）
+## ② フレームは LP と違う。~~**が、直せない**~~ ← **第56セッションで直った**（**単独では直せない、が正しかった**）
 
 ⚠️★★★ **引継ぎの「Stem は X-offset を宣言していない（`define-grobs.scm:3429-3470`）」は
 偽で、外し方は 1 行**。**`:3471` が `(X-offset . ,ly:stem::offset-callback)`**、本体は
@@ -113,16 +170,66 @@ HEAD **`cb8b99ae`**（＋handoff commit）・**未 push 47**・
 傾きが 2 倍ずれる**。⇒ **フレームと「加線の多い knee の列 spacing」は同時に着地させるしかない**。
 **LP 行・実測値・「いつ戻るか」は `BeamScoringProblem` と台帳 knee 3 点に書いた。**
 
-▶ **次の一手＝その spacing**（**点は 4 つ揃っている**・上の数字がそのまま観測点になる）。
-**先に測るべきは「LP はなぜ列を不等間隔に置くのか」**——LP の**列**は 8.585 / 11.089 / 13.593 /
-17.272 と不等間隔で、**ステムのほうが等間隔**になる。加線・符頭の extent が rod を作っている疑い。
-★ **その次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
-ユーザー側作業）。
-★ **ついでに見つけた、直していないもの**（**点なし**）:
-・`showcase/05-special-techniques` の kneedBeam 第2群（`c, c'' c, c''`）は
-  **Lily# が knee と判定していない**（`IsKnee=False`）が **LP は `knee=#t`**（`(-1.81 . -0.19)`）。
-  ⚠️ 同じ dump が**その群の staff position を `[1,15,8,22]` と報告している**（期待は
-  `[-13,8,-13,8]`）＝**判定より前に読みが壊れている可能性**。まず position を確かめること。
+~~▶ **次の一手＝その spacing**~~ — **第56セッションで移植し、フレームと同時に着地させた**
+（§1①②）。以下は**その島を割った測定の記録**として残す。
+★★★ **原因は加線ではなく「符尾の向き」**（実測で切り分けた・列の gap）:
+
+| 本 | 中身 | 列 gap |
+|---|---|---|
+| A knee | `c'8 c' c' c'''` | 2.5042 / 2.5042 / **3.6784** |
+| B noknee | `c'''` ×4（**全列に加線**・向きは一様） | 2.5042 ×3（**均等**） |
+| C plain | `b'` ×4（譜内・一様） | 2.5042 ×3 |
+| D mixeddir | `b'` ×4（**加線ゼロ**・`\stemUp/\stemDown` で交互） | **3.6784 / 1.8042 / 3.6784** |
+
+⇒ **B が「加線が広げる」を反証し、D が「向きが広げる」を確定させる**（加線ゼロで再現する）。
+★ **機構＝`note-spacing.cc:111 stem_dir_correction` の分岐**（`:288-302`）——**向きが逆のとき**、
+**両ステムが同じ beam に属していれば `knee_correction`（`:117-137`）**が
+`different_directions_correction` を**置き換える**:
+`-note_head_width × dir(右ステム) × knee-spacing-correction`（`define-grobs.scm:2653`＝**1.0**）。
+⚠️★★★ **Lily# は他の 2 分岐を移植して、これだけ移植していない**——
+`SpacingRules.CalculateStemCorrection` の remarks が**自分で「the knee special case (:289-292)
+is not applied」と書いており**、`NoteSpacingParameters.KneeSpacingCorrection` は**宣言され、
+`SpringRodModelTests` が 1.0 を主張し、production の読み手がゼロ**
+（`audit/property_coverage.csv` が **"Mention"** と分類している）＝**観測者ゼロの宣言**。
+★ **やったこと（第56セッション）**: membership は `BeamId` で通した（§1②）。
+⚠️ **そして「数の裏取り」の答えは `left_head_end` ではなかった**——ここが
+「`note_spacing` は補正の前に `left_head_end` を引いている・`:47-` を読む」と当て推量を
+書いていたが、**0.13 は `knee_correction` 自身の `:131`（`Stem::thickness`）**。
+⇒ ★★ **「どの行を読め」まで書いた推測も推測**。§5.0 の「六桁で閉じた分解も出典を引くまで
+証拠にならない」の、**閉じていない側**の形。
+## ③ `lysc ly` は普通の書き方のファイルを**空で出力していた**（`b485e558`・**テスト3点**）
+
+★★★ **section の綴りは 2 通りあり、exporter は少数派しか読んでいなかった**:
+**part-major** `part m { section A { … } }`（music は section に直書き）／
+**section-major** `section A { m { … } }`（section は part の**外**にあり、`PartBlock` で part を名指す）。
+`OrderedMusic` は前者だけを見ており、**呼び側が集めた全 section を渡しているのに引数は未使用**。
+⇒ **普通に書いたファイルは `m = \fixed c' { }` を出す**＝**エラーも警告も無い正当な .ly が
+空の譜を描く**。**showcase 10 冊全部と test/ の大半が section-major**。
+★ **もう半分**: `PartBlock` の green は `[partName, ..options, body]`（`GreenNodes.cs:685-694`）で
+section より 1 段深い。`MusicItems` を block に当てると **body が 1 個の不透明ノードとして返り**
+emitter に捨てられる。`PartBlockBody` が最終スロットを取る。
+★★★ **検証は round trip**（ここではこれしか意味を持たない）——`test/beamlets` と
+`test/mixed-meters` を export → **実 LP に通して `Beam.positions` を読み戻す** ＝
+**(−0.19 . 0)／(0 . .19)／(0 . 0)** と **(0.19 . .81)／(2.19 . 2.81)／(−2.81 . −2.19)／
+(−0.19 . 0)×4**＝**同日に手書きした双子と完全一致**。
+⚠️ **`MusicXmlExporter.EmitPartMajorSection` は鏡像の注意書きを持っている**（あちらは*逆*の
+綴りが抜けて同じ症状を出した）。★ **ただし MusicXml 側は点を持っている**——
+`PartMajorSection_ExportsItsInlineNotes_NotAnEmptyPart` がまさにその guard で、
+他のテストは section-major を使っている。**無かったのは .ly 側だけ**。
+★ **`LilyPondExporterTests` は 13 本すべて part-major のヘルパ `Score()` を通していた**
+＝**だから生き延びた**。**同じヘルパしか使わないテストファイルは、綴りが 2 通りある機能の
+片方を丸ごと素通しする。**
+
+⚠️★★★ **この欠陥の代償を同じセッションで払った**——beam の双子を作ろうとして空が返り、
+**手書きしたらオクターブを間違え、存在しない「発散」を 2 つでっち上げた**（下）。
+
+★ **ついでに潰した、私自身の誤報 2 件**（**どちらも偽・実測で反証済み**）:
+・~~`showcase/05` の kneedBeam 第2群を Lily# が knee と判定していない~~ ——
+  **LP も `knee=#f`**（4 音すべて中央線より上＝全ステム下向きで auto-knee が発火しない）。
+  **両群とも Lily# は LP と exact**（`(0.19 . 0.81)` と `(-2.0 . -0.81)`・`kneebar2.ly` で実測）。
+・~~staff position `[1,15,8,22]` が壊れている~~ —— **正しい**。この fixture は**相対オクターブ**で、
+  `c'' c, c'' c,` は **C5 C7 C6 C8**。**私が絶対と思い込んだ双子を書いたのが誤りの出所**。
+  ⇒ ★★ **双子は手で書かず `lysc ly` で出す**（③ でそれが可能になった）。
 ・`least_squares_positions` の else 枝で **LP は左端を固定して dy を右へ伸ばす**
   （`:597 unquanted_y_ = {y, (y + dy)}`）が Lily# は**中心を保って両端を動かす**。
   **`MinimumDy` が実際に効いたときだけ**半分ずれる。**緩やかな傾きのビーム全部が動く**ので
@@ -3212,6 +3319,11 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
 - **mid-line clef change の origin** — 行頭 clef で閉じた origin ズレ（percussion）と同型の疑い。
   台帳点が無いので未着手。
+- ~~★★★ **`knee_correction` が未移植**~~ — **閉じた**（第56セッション・`bdf35ef0`・§1①②）。
+  **フレームと同じ commit**。★ **残した教訓は 3 つ**: ⑴ **「説明のつかない差」は項が足りない**
+  （0.13 ＝ `Stem::thickness`）⑵ **観測者ゼロの宣言は、移植と同時に観測者を足す**
+  （`SpringRodModelTests` の 3 本が property を 0/0.5/2 に振る＝LP の E/F/G 冊と同じ形）
+  ⑶ **`property_coverage.csv` の "Mention" は「宣言だけ」の索引**——他にも同じ形が居る。
 - ~~★★ **拍グリッドが 2 軒ある**~~ — **閉じた**（第53セッション・`5e2dd497`・§1②）。
 - ~~**`test/` に `8-16-8` の本が無い**~~ — **入れた**（`5c989f68`・`test/beamlet-peaks`）。
 - ~~★ **1/12 の `beamExceptions` が未移植**~~ — **測って閉じた。移植するものが無かった**
@@ -3576,6 +3688,16 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   LYRRV の予測は 3 つの数を挙げていたが、照合は**両 book の dump を機械的に行単位で差分**した
   （59 行・完全一致）。3 つだけ見ていたら**4 つ目が動いても「恒等」と書いていた**。
   ⚠️ 目視で「同じに見える」も同じ穴——**差分は道具に取らせる。**
+- ★★★ ⚠️ **閉じない差も同じ**——**「LP の式はこれだけ」と言い切る前に、その関数を最後まで読む。
+  足りないのは項であって、たいてい説明ではない**（2026-07-31・第56セッション）。
+  `knee_correction` は **1 セッション「+1.1742 対 +1.3042 の 0.13 が説明できない」で
+  移植を止めていた**が、差は**同じ関数の 2 行下**（`note-spacing.cc:131`＝
+  `note_head_width -= Stem::thickness`）だった。⚠️ **止めた側は代わりに「どの行を読め」まで
+  書いていた**（「`:47-` の `left_head_end` を読め」）——**それも推測**で、外れていた。
+  ⇒ ★★ **判定法**: 差を**説明する候補**を挙げる前に、**その値を作っている関数の全行**を
+  声に出して数える。**候補が要るのは、関数を読み切ってなお余ったときだけ。**
+  ⇒ ★ **そして差が「よく知っている定数」の形をしていたら（0.13＝符尾の太さ・0.5＝padding）
+  それは項の見落とし**であって、フォントでも丸めでもない。
 - ★★★ ⚠️ **六桁で閉じた分解は、各項を出典から読むまで証拠にならない**（2026-07-30・第39セッション
   が第38セッションの TXW 分解を全項訂正）。`加線 4.05 + padding 0.5 + 波 0.170721` と
   `加線 4.100000 + 0.460000 + 0.160721` は**同じ 4.720721**——項が 3 つあれば、誤った機構でも

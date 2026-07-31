@@ -39,6 +39,72 @@ public class SpringRodModelTests
         Assert.True(p.SpaceToBarline);
     }
 
+    // --- knee_correction: LILYPOND-REF: lily/note-spacing.cc:117-137 knee_correction,
+    //     forked to at :288-293 by stem_dir_correction ---
+    //
+    // KneeSpacingCorrection, asserted just above, had NO production reader at all until this
+    // branch was ported — audit/property_coverage.csv classified it "Mention". These are its
+    // observers, and they are written the way LilyPond's own books falsify the term
+    // (audit/lp-geometry/probes/beam-column-spacing.ly, 2.26.0): book A's kneed bar carries
+    // its last column gap 1.1742 wider than the two before it, and books E/F/G override
+    // knee-spacing-correction to 0 / 0.5 / 2 and move the term in proportion, both signs.
+
+    private static NoteItem BeamedEighth(int staffPosition, bool stemUp, int? beamId) =>
+        new NoteItem(staffPosition, Fraction.Eighth, 0, null, false, 0)
+        { StemUpOverride = stemUp, BeamId = beamId };
+
+    [Theory]
+    [InlineData(true, false, +1)]  // up -> down: the pair LilyPond pushes APART
+    [InlineData(false, true, -1)]  // down -> up: pulled together by exactly as much
+    public void OppositeStemsInOneBeam_EarnOneHeadWidthLessTheStem_SignedByTheRightStem(
+        bool leftUp, bool rightUp, int sign)
+    {
+        // The term as LilyPond writes it: the right stem's support head extent[RIGHT], less
+        // Stem::thickness (:131), times the property, signed by the RIGHT stem's direction.
+        double expected = sign
+            * (GlyphMetrics.NoteheadBlack.Right - LilySharp.Core.Svg.EngravingDefaults.StemThickness)
+            * NoteSpacingParameters.Default.KneeSpacingCorrection;
+
+        double corr = SpacingRules.CalculateStemCorrection(
+            BeamedEighth(-6, leftUp, 1), BeamedEighth(6, rightUp, 1),
+            NoteSpacingParameters.Default);
+
+        Assert.Equal(expected, corr, 9);
+        // …and that is LilyPond's measured 1.1742, which is NOT the head width 1.3042.
+        Assert.Equal(1.1742, Math.Abs(corr), 4);
+    }
+
+    [Fact]
+    public void OppositeStemsInDifferentBeams_TakeTheOverlapBranch_JustLikeUnbeamedOnes()
+    {
+        // LilyPond forks on `beams_drul[LEFT] == beams_drul[RIGHT]` — one BEAM, not merely
+        // "both beamed". Two adjacent beams must therefore behave exactly like no beam.
+        double twoBeams = SpacingRules.CalculateStemCorrection(
+            BeamedEighth(-6, true, 1), BeamedEighth(6, false, 2),
+            NoteSpacingParameters.Default);
+        double unbeamed = SpacingRules.CalculateStemCorrection(
+            BeamedEighth(-6, true, null), BeamedEighth(6, false, null),
+            NoteSpacingParameters.Default);
+
+        Assert.Equal(unbeamed, twoBeams, 9);
+        // The overlap branch cannot reach the knee term: it is bounded by its own property.
+        Assert.True(Math.Abs(twoBeams) <= NoteSpacingParameters.Default.StemSpacingCorrection);
+    }
+
+    [Fact]
+    public void TheKneeCorrection_ScalesWithTheProperty_NotWithALiteral()
+    {
+        NoteItem left = BeamedEighth(-6, true, 1), right = BeamedEighth(6, false, 1);
+        double Corr(double knee) => SpacingRules.CalculateStemCorrection(
+            left, right, NoteSpacingParameters.Default with { KneeSpacingCorrection = knee });
+
+        double full = Corr(1.0);
+        // The shape of LilyPond's E / F / G books. A literal would ignore all three.
+        Assert.Equal(0.0, Corr(0.0), 9);
+        Assert.Equal(full * 0.5, Corr(0.5), 9);
+        Assert.Equal(full * 2.0, Corr(2.0), 9);
+    }
+
     // --- Spring.MergeSprings (lily/spring.cc:101-129 merge_springs) ---
 
     [Fact]

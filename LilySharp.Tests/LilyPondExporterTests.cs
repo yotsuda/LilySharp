@@ -148,4 +148,76 @@ public class LilyPondExporterTests
         var ly = Export(Score("c,4"));
         Assert.StartsWith("\\version", ly);
     }
+
+    // ---- section-major, the ordinary spelling -------------------------------
+    //
+    // ⚠️ Every test above uses Score(), which puts the section INSIDE the part
+    // (`part m { section S { … } }`). That is the minority spelling. The corpus — all ten
+    // showcase fixtures and most of test/ — writes the section at FILE level and names the
+    // part with a block inside it, and that form exported an EMPTY part variable: a valid
+    // .ly that renders a blank staff, with no error. Nothing here covered it, which is
+    // exactly why it survived. These are the points that say the music arrives.
+
+    [Fact]
+    public void SectionMajorScore_ExportsTheMusicAndNotAnEmptyPart()
+    {
+        var ly = Export("""
+            octave absolute
+            part m { clef treble }
+            section Main { m { c'8 d' e' f' } }
+            form main { Main }
+            score main { staff m }
+            """);
+        Assert.Contains("c'8", ly);
+        Assert.Contains("d'", ly);
+        Assert.Contains("f'", ly);
+        // The failure this guards is silent: the variable was emitted, just empty.
+        Assert.DoesNotContain("\\fixed c' {\n}", ly.Replace("\r\n", "\n"));
+    }
+
+    [Fact]
+    public void SectionMajorScore_GivesEachPartItsOwnMusic()
+    {
+        // The block name is what routes the notes; if it were ignored, one part would
+        // swallow both streams and the other would come out empty.
+        var ly = Export("""
+            octave absolute
+            part up { clef treble }
+            part down { clef bass }
+            section Main {
+              up { c''4 d'' }
+              down { c,4 d, }
+            }
+            form main { Main }
+            score main { staff up
+              staff down }
+            """);
+        int upVar = ly.IndexOf("up = ", System.StringComparison.Ordinal);
+        int downVar = ly.IndexOf("down = ", System.StringComparison.Ordinal);
+        Assert.True(upVar >= 0 && downVar > upVar, ly);
+        string upBody = ly[upVar..downVar];
+        string downBody = ly[downVar..];
+        Assert.Contains("c''4", upBody);
+        Assert.DoesNotContain("c,4", upBody);
+        Assert.Contains("c,4", downBody);
+        Assert.DoesNotContain("c''4", downBody);
+    }
+
+    [Fact]
+    public void SectionMajorScore_FollowsTheFormsOrderNotTheFilesOrder()
+    {
+        // B is declared first and referenced second: the form wins.
+        var ly = Export("""
+            octave absolute
+            part m { clef treble }
+            section B { m { g'4 } }
+            section A { m { c'4 } }
+            form main { A B }
+            score main { staff m }
+            """);
+        int a = ly.IndexOf("c'4", System.StringComparison.Ordinal);
+        int b = ly.IndexOf("g'4", System.StringComparison.Ordinal);
+        Assert.True(a >= 0 && b >= 0, ly);
+        Assert.True(a < b, "the form orders the sections, not the declarations:\n" + ly);
+    }
 }

@@ -116,10 +116,27 @@ public sealed record NoteItem : MusicItem
     public bool HasBeamStart { get; init; }
     /// <summary>Whether this note ends a manual beam group.</summary>
     public bool HasBeamEnd { get; init; }
+    /// <summary>
+    /// Identity of the beam this note's stem belongs to, or null when it carries no beam.
+    /// Set by <see cref="Collector.MeasureCollector"/> once BeamDetector has resolved the
+    /// groups; the number itself is meaningless — only equality with another item's
+    /// <see cref="BeamId"/> is.
+    /// </summary>
+    /// <remarks>
+    /// This stands in for a Beam grob pointer. LilyPond asks whether two adjacent note
+    /// columns share a beam by comparing the two <c>Stem::get_beam</c> results directly —
+    /// LILYPOND-REF: lily/note-spacing.cc:288-293 stem_dir_correction
+    /// (<c>beams_drul[LEFT] == beams_drul[RIGHT]</c> selects knee_correction over
+    /// different_directions_correction). Nothing else about the beam is needed there, so
+    /// nothing else is carried here.
+    /// </remarks>
+    public int? BeamId { get; init; }
+
     /// <summary>Whether this note belongs to a beam group (set by BeamDetector once the
     /// group is resolved). Unlike <see cref="HasBeamStart"/>/<see cref="HasBeamEnd"/> this
-    /// is true for a mid-beam note too, so slur edge scoring can ask "is this note beamed".</summary>
-    public bool IsBeamed { get; init; }
+    /// is true for a mid-beam note too, so slur edge scoring can ask "is this note beamed".
+    /// It is exactly "<see cref="BeamId"/> is set" — one fact, one field.</summary>
+    public bool IsBeamed => BeamId is not null;
     /// <summary>Whether this note has a glissando to the next note.</summary>
     public bool HasGlissando { get; }
     /// <summary>Feathered beam direction: 0=none, 1=right (accel), -1=left (rit).</summary>
@@ -376,9 +393,12 @@ public sealed record ChordItem : MusicItem
     public bool HasBeamStart { get; }
     /// <summary>Whether this chord ends a manual beam group.</summary>
     public bool HasBeamEnd { get; }
+    /// <summary>Identity of the beam this chord's stem belongs to; see
+    /// <see cref="NoteItem.BeamId"/>.</summary>
+    public int? BeamId { get; init; }
     /// <summary>Whether this chord belongs to a beam group (set by BeamDetector; true for a
     /// mid-beam chord too). See <see cref="NoteItem.IsBeamed"/>.</summary>
-    public bool IsBeamed { get; init; }
+    public bool IsBeamed => BeamId is not null;
     /// <summary>Whether this chord has an arpeggio marking.</summary>
     public bool HasArpeggio { get; }
     /// <summary>Whether this chord is a cue chord (drawn at reduced size).</summary>

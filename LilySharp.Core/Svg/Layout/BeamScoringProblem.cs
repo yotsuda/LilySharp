@@ -165,8 +165,6 @@ internal sealed class BeamScoringProblem
         // seed dy = slope * x_span is a touch larger than the stem-to-stem dy. That
         // small difference is what lets LP land on a slightly steeper quant for gentle
         // beams; measuring stem-to-stem instead flattened them by ~one quant step.
-        // ⚠️ THE NOTE COLUMN'S x, AND THAT IS **NOT** LILYPOND'S — this frame is KNOWN WRONG
-        // for a knee and is left here deliberately. Read the whole note before changing it.
         //
         // LILYPOND-REF: lily/beam-quanting.cc:313-315, where Beam_scoring_problem fills
         // stem_xpositions_ — it reads s->relative_coordinate (common[X_AXIS], X_AXIS), and a
@@ -184,20 +182,24 @@ internal sealed class BeamScoringProblem
         // With every member pointing the same way the offset is a constant: it translates the
         // whole frame and cancels out of the span, the slope, the least squares AND the drawn
         // positions alike, so only a KNEE can see it.
-        // ⚠️ WHY IT IS STILL WRONG HERE. Switching to the stem x was tried and MEASURED, and
-        // it moves two LilyPond-verified knee readings the wrong way on its own:
-        // beam.quant.knee.left -0.000586 -> +0.19, and the kneed bar of
-        // showcase/05-special-techniques from LilyPond's exact (0.19 . 0.81) to (-0.19 . 0.19).
-        // The reason is NOT the frame — it is the SPACING the frame is built on. For
-        // `c'8 c' c' c'''` LilyPond's stems land at 0.065 / 2.569 / 5.073 / 7.578 (evenly
-        // spaced, span 7.643) and Lily#'s at 0.065 / 1.669 / 3.273 / 3.759 (span 3.823), so
-        // the least squares fits a slope off by a factor of two whichever frame it runs in.
-        // ⇒ COME BACK when the beamed columns of a ledger-heavy knee are spaced like
-        // LilyPond's. The frame and the spacing have to land together.
+        // ⚠️ IT COULD NOT LAND ALONE, AND DID NOT. The frame was tried by itself twice and
+        // each time it moved beam.quant.knee.left from -0.000586 to +0.19 and took the kneed
+        // bar of showcase/05-special-techniques off LilyPond's exact (0.19 . 0.81). The cause
+        // was never the frame: it was the SPACING underneath it. LilyPond widens the column
+        // gap where a beam's stems change direction (knee_correction, ported in
+        // SpacingRules.KneeCorrection), and without it `c'8 c' c' c'''` had its last gap at
+        // 2.58 against LilyPond's 3.6784, so the least squares fitted a different slope in
+        // EITHER frame. The two are ONE claim and are committed together; splitting them
+        // regresses both readings, which is how it is known that they are one claim.
         var firstMember = group.Members[0];
         var lastMember = group.Members[^1];
-        _leftX = itemXPositions[firstMember.ItemIndex];
-        _rightX = itemXPositions[lastMember.ItemIndex];
+        _leftX = StemXOf(firstMember);
+        _rightX = StemXOf(lastMember);
+        // The stem's own x, not its column's — LayoutUtilities.StemX is the single house the
+        // renderer and the collision collector already read, so the beam is scored in the
+        // frame it is drawn in (BeamStemFrameTests asserts the two agree).
+        double StemXOf(BeamMember m) =>
+            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 
@@ -213,7 +215,7 @@ internal sealed class BeamScoringProblem
         for (int i = 0; i < group.Members.Length; i++)
         {
             var member = group.Members[i];
-            _stemXPositions[i] = (itemXPositions[member.ItemIndex] - _leftX) + halfBeamOverhang;
+            _stemXPositions[i] = (StemXOf(member) - _leftX) + halfBeamOverhang;
             if (stemPositions != null)
             {
                 // Tab: the note's STRING line is its stem position; a single digit

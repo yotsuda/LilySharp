@@ -753,6 +753,9 @@ public sealed partial class MeasureCollector
     // per-note metadata — dynamics, articulations, etc. — lands at the span's
     // real measure index instead of measure 0. Zero for the primary stream.
     private int _metadataMeasureOffset = 0;
+    // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
+    // this collector so two voices of the same staff cannot be handed the same number.
+    private int _nextBeamId;
     // Tuplet brackets
     private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Arpeggio markings
@@ -1685,6 +1688,10 @@ public sealed partial class MeasureCollector
 
         foreach (var group in groups)
         {
+            // One identity per BeamGroup, stamped on every member — the stand-in for the
+            // Beam grob pointer two stems are compared through. Running across calls so
+            // the voices of one staff never collide.
+            int beamId = _nextBeamId++;
             foreach (var member in group.Members)
             {
                 int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
@@ -1696,8 +1703,8 @@ public sealed partial class MeasureCollector
 
                 MusicItem? updated = measure.Items[member.ItemIndex] switch
                 {
-                    NoteItem n => n with { StemUpOverride = member.MemberStemUp, IsBeamed = true },
-                    ChordItem c => c with { StemUpOverride = member.MemberStemUp, IsBeamed = true },
+                    NoteItem n => n with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
+                    ChordItem c => c with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
                     _ => null,
                 };
                 if (updated == null)

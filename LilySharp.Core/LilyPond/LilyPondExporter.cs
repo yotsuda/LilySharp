@@ -148,10 +148,33 @@ public sealed class LilyPondExporter
         PartDeclarationSyntax part, FormDeclarationSyntax? form,
         List<SectionDeclarationSyntax> allSections)
     {
+        // A section reaches this part in one of TWO spellings, and both must be read.
+        //   part-major:    part m { section A { c8 d } }   — music inline in the section
+        //   section-major: section A { m { c8 d } }        — the section sits OUTSIDE the
+        //                                                    part and names it with a PartBlock
+        // ⚠️ Only the first was read here. `allSections` was collected by the caller FOR the
+        // second and then never used, so every file written the ordinary way exported an
+        // EMPTY part variable — a valid .ly that renders a blank staff, silently. All ten
+        // showcase fixtures and most of test/ are section-major.
+        // (MusicXmlExporter.EmitPartMajorSection carries the mirror-image note: that exporter
+        // was missing the OTHER spelling and had the same symptom.)
         var partSections = part.DescendantNodes<SectionDeclarationSyntax>().ToList();
-        var byName = new Dictionary<string, SectionDeclarationSyntax>(StringComparer.Ordinal);
-        foreach (var s in partSections)
-            byName[s.SectionName] = s;
+        var byName = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        var inOrder = new List<SyntaxNode>();
+        foreach (var s in allSections)
+        {
+            // `allSections` is a DESCENDANT walk of the whole file, so it already carries
+            // both spellings in document order; a section belonging to some OTHER part
+            // holds no PartBlock of ours and drops out.
+            SyntaxNode? container = partSections.Contains(s)
+                ? s
+                : PartBlockBody(s.DescendantNodes<PartBlockSyntax>()
+                    .FirstOrDefault(b => b.Name == part.Name.Text));
+            if (container == null)
+                continue;
+            byName[s.SectionName] = container;
+            inOrder.Add(container);
+        }
 
         var result = new List<SyntaxNode>();
         if (form != null)
@@ -162,13 +185,32 @@ public sealed class LilyPondExporter
         }
         else
         {
-            foreach (var s in partSections)
+            foreach (var s in inOrder)
                 result.AddRange(MusicItems(s));
         }
 
         // Also carry any part-level clef declared outside a section (e.g. a
         // mid-part clef change is inside a section and handled there).
         return result;
+    }
+
+    /// <summary>
+    /// The node holding a part block's music items — its LAST slot.
+    /// </summary>
+    /// <remarks>
+    /// A <c>PartBlock</c> green node is <c>[partName, ..options, body]</c>
+    /// (Syntax/InternalSyntax/GreenNodes.cs:685-694), so unlike a section its items are one
+    /// level further down and <see cref="MusicItems"/> applied to the block itself would
+    /// hand back the body as a single opaque node — which the emitter drops on the floor.
+    /// </remarks>
+    private static SyntaxNode? PartBlockBody(PartBlockSyntax? block)
+    {
+        if (block == null)
+            return null;
+        SyntaxNode? body = null;
+        foreach (var child in EnumerateChildren(block))
+            body = child;
+        return body;
     }
 
     private static IEnumerable<string> FormSectionOrder(FormDeclarationSyntax form)

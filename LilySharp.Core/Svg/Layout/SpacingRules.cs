@@ -949,17 +949,19 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction:
-    /// - opposite directions → correction scales with the stems' vertical
+    /// - opposite directions, BOTH STEMS IN ONE BEAM → the knee correction, which
+    ///   REPLACES the overlap one: −note_head_width · rightDir ·
+    ///   knee-spacing-correction (knee_correction, :117-137, selected at :288-293)
+    /// - opposite directions otherwise → correction scales with the stems' vertical
     ///   OVERLAP: min(|overlap|/7, 1) · leftDir · stem-spacing-correction
     ///   (different_directions_correction, :140-160)
     /// - same direction → only when the head ranges do NOT overlap and the gap
     ///   exceeds one staff position: ±same-direction-correction depending on
     ///   which side is lower (same_direction_correction, :162-197); skipped
     ///   when an accidental sticks out of the right side (:305-308)
-    /// Simplifications vs LilyPond (beam membership is not visible at spacing
-    /// time): the flagged-unbeamed-left gate (:264-266) and the knee special
-    /// case (:289-292) are not applied. Stem directions ARE beam-resolved —
-    /// the collector bakes the beam's direction into the items.
+    /// Simplification vs LilyPond: the flagged-unbeamed-left gate (:264-266) is not
+    /// applied. Stem directions ARE beam-resolved — the collector bakes the beam's
+    /// direction, and its identity (<see cref="NoteItem.BeamId"/>), into the items.
     /// </remarks>
     internal static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
                                                    NoteSpacingParameters noteParams)
@@ -972,6 +974,12 @@ internal static class SpacingRules
 
         if (leftDir != rightDir)
         {
+            // LILYPOND-REF: note-spacing.cc:288-293 knee_correction replaces
+            // different_directions_correction — inside ONE beam the knee branch takes over
+            // entirely (LilyPond writes it as an if/else, not as a sum).
+            if (l.BeamId is { } leftBeam && leftBeam == r.BeamId)
+                return KneeCorrection(nextItem, rightDir, noteParams);
+
             // LILYPOND-REF: note-spacing.cc:140-160 different_directions_correction
             double lo = Math.Max(l.StemMin, r.StemMin);
             double hi = Math.Min(l.StemMax, r.StemMax);
@@ -997,6 +1005,72 @@ internal static class SpacingRules
         double delta = lowest > 0 ? l.HeadMin - r.HeadMax : r.HeadMin - l.HeadMax;
         return delta > 1 ? -lowest * noteParams.SameDirectionCorrection : 0;
     }
+
+    /// <summary>
+    /// The optical correction for a KNEE — two columns of one beam whose stems point
+    /// opposite ways. Unlike the overlap correction it does not scale with anything the
+    /// two stems share: it is one note-head width, signed by the RIGHT stem's direction,
+    /// so an up→down pair is pushed apart by as much as a down→up pair is pulled together.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:117-137 knee_correction —
+    /// <c>-note_head_width * get_grob_direction (right_stem) * knee-spacing-correction</c>,
+    /// where note_head_width is the right stem's SUPPORT HEAD extent[RIGHT] taken in the
+    /// column's frame, less the stem's own thickness (:131), and the spacing increment
+    /// stands in when that stem has no head at all (:120).
+    /// <para>
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/beam-column-spacing.ly): for a black head
+    /// the term is 1.304200 − 0.130000 = 1.174200, and LilyPond's kneed bar
+    /// <c>c'8 c' c' c'''</c> has column gaps 2.5042 / 2.5042 / 3.6784 — the last one wide by
+    /// exactly that. Perturbing knee-spacing-correction to 0 / 0.5 / 2 moves both signs of
+    /// the term in proportion (2.5042 flat / ±0.5871 / +2.3484), which is what says this is
+    /// the term and not the overlap branch beside it: that branch never reads this property.
+    /// The down→up gap saturates at 1.8042 under a large correction because the spring's
+    /// MINIMUM distance stops it — the rod, not this term.
+    /// </para>
+    /// </remarks>
+    private static double KneeCorrection(MusicItem? rightItem, int rightDir,
+                                         NoteSpacingParameters noteParams)
+    {
+        // LILYPOND-REF: note-spacing.cc:120 knee_correction's note_head_width seed — the
+        // spacing increment (Spacing_options::increment_) when the stem carries
+        // no head. Written as LilyPond writes it. Nothing head-less reaches here today
+        // (StemSpacingInfo already returned null for it), but that is a property of this
+        // caller, not of the rule.
+        double noteHeadWidth = EngravingDefaults.SpacingIncrement;
+
+        if (SupportHeadRightExtent(rightItem) is { } headRight)
+        {
+            noteHeadWidth = headRight;
+            // LILYPOND-REF: note-spacing.cc:131 note_head_width -= Stem::thickness (right_stem)
+            // — and the stem's thickness is a LINE thickness, not a head quantity:
+            // LILYPOND-REF: lily/stem.cc:909-913 Stem::thickness = thickness · line_thickness
+            // (scm/define-grobs.scm:3469 Stem (thickness . 1.3) over the 0.1 ss line).
+            noteHeadWidth -= EngravingDefaults.StemThickness;
+        }
+
+        return -noteHeadWidth * rightDir * noteParams.KneeSpacingCorrection;
+    }
+
+    /// <summary>
+    /// The right edge of the stem's support head, measured in its COLUMN's frame — the
+    /// quantity <c>head-&gt;extent (head-&gt;get_column (), X_AXIS)[RIGHT]</c> reads. Null
+    /// for an item with no head.
+    /// </summary>
+    /// <remarks>
+    /// The support head is the one the stem starts from —
+    /// LILYPOND-REF: lily/stem.cc:179-204 Stem::support_head, the head with the widest part
+    /// inside the stem, which for a chord of one glyph is the first, i.e. the extreme head
+    /// in the stem's direction. That head
+    /// is never the displaced one: <see cref="ChordHeadPositioning"/> gives it offset 0 and
+    /// walks the reversals off it, so its column-frame right edge is the head glyph's own
+    /// right edge — the same <c>ell</c> that file takes from stem.cc:684.
+    /// </remarks>
+    private static double? SupportHeadRightExtent(MusicItem? item) => item switch
+    {
+        NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(GetNoteValue(item)).Right,
+        _ => null,
+    };
 
     /// <summary>
     /// Stem-direction optical correction for the spring that runs from a note column
@@ -1227,9 +1301,13 @@ internal static class SpacingRules
 
     /// <summary>
     /// Stem and head vertical ranges (staff positions, +up) used by the stem
-    /// direction correction. Null for stemless items (rests, whole notes).
+    /// direction correction, and the identity of the beam the stem hangs from
+    /// (<see cref="NoteItem.BeamId"/>; null when unbeamed). Null for stemless items
+    /// (rests, whole notes) — LilyPond's <c>if (!stem || Stem::is_invisible (stem))
+    /// return;</c> at note-spacing.cc:248-249.
     /// </summary>
-    private static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax)?
+    private static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
+                    int? BeamId)?
         StemSpacingInfo(MusicItem? item)
     {
         switch (item)
@@ -1247,7 +1325,7 @@ internal static class SpacingRules
                 double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition);
                 return (n.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
-                    n.StaffPosition, n.StaffPosition);
+                    n.StaffPosition, n.StaffPosition, n.BeamId);
             }
             case ChordItem c when c.Notes.Length > 0:
             {
@@ -1265,7 +1343,7 @@ internal static class SpacingRules
                 double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos);
                 return (c.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
-                    minPos, maxPos);
+                    minPos, maxPos, c.BeamId);
             }
             default:
                 return null;
