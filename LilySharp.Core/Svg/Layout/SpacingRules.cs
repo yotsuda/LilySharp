@@ -1870,16 +1870,190 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Calculates the total width of a grace note group using spring-based spacing.
+    /// Where a grace run's columns sit: an offset per grace from the run's FIRST column,
+    /// plus the distance from the LAST grace column to the main note's column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
-    /// Creates individual springs for each grace note using per-group common shortest
-    /// duration, then sums the minimum distances to get the rod (minimum width).
-    /// The grace→main junction adds GraceToMainRod padding.
-    ///
-    /// This replaces the fixed-width calculation in GetGraceGroupWidth with a
-    /// LP-compliant spring-based approach.
+    /// One object because the run is one chain: the reservation, the drawn heads and the
+    /// beam quanter's x frame all have to read the same numbers. Until 2026-08-01 they read
+    /// four different ones — see <see cref="GraceColumns"/>.
+    /// </remarks>
+    internal readonly record struct GraceColumnLayout(
+        ImmutableArray<double> Offsets, double ToMain)
+    {
+        /// <summary>First grace column → the main note's column.</summary>
+        public double Span => (Offsets.IsDefaultOrEmpty ? 0 : Offsets[^1]) + ToMain;
+    }
+
+    /// <summary>
+    /// A grace run's column positions, LilyPond's way: one spring per column, floored by the
+    /// two columns' facing separation skylines.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond has no grace-column WIDTH. Every gap of the run — including the last grace to
+    /// the main note, which is not a junction of its own — is
+    /// <c>max(ideal, min_dist + 0.3)</c>:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>LILYPOND-REF: lily/spacing-basic.cc:163-180 <c>Spacing_spanner::note_spacing</c> —
+    ///   when <c>delta_t.grace_part_</c> is non-zero the spring's options come from the
+    ///   GraceSpacing grob: <c>len = grace_opts.get_duration_space (delta_t.grace_part_)</c>.</item>
+    /// <item>LILYPOND-REF: lily/spacing-options.cc:71-107 <c>Spacing_options::get_duration_space</c>
+    ///   — the Gourlay formula, here with GraceSpacing's own parameters
+    ///   (scm/define-grobs.scm:1721-1725: <c>shortest-duration-space</c> 1.6,
+    ///   <c>spacing-increment</c> 0.8).</item>
+    /// <item>LILYPOND-REF: scm/output-lib.scm:1403-1422 grace-spacing::calc-shortest-duration
+    ///   — the ratio is taken against the
+    ///   MINIMUM gap of the run's OWN columns, so a run of equal graces always has ratio 1
+    ///   whatever the note value, and the ratio-below-1 branch is unreachable here.</item>
+    /// <item>LILYPOND-REF: lily/note-spacing.cc:42-115 <c>Note_spacing::get_spacing</c> —
+    ///   <c>ideal = base.ideal_distance () - increment + left_head_end</c>, where
+    ///   <c>left_head_end</c> is the RIGHT edge of the left column's first note head measured
+    ///   in that column, and <c>min_dist</c> is the facing skylines' distance.</item>
+    /// <item>LILYPOND-REF: lily/spring.cc:103-129 <c>merge_springs</c>, :122 — the
+    ///   <see cref="SpringHeadroom"/> above the minimum, applied even to a single wish
+    ///   (lily/spacing-spanner.cc:392-393).</item>
+    /// </list>
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/grace-column-width.ly, 14 books, ledger
+    /// <c>grace.column.*</c>): the corpus texture reads the FLOOR, not the spring —
+    /// 1.6*0.8 - 0.8 + 0.917939 = 1.397939 against a floor of 0.917939 + 0.1 + 0.1 + 0.3 =
+    /// 1.417939, and LilyPond draws 1.417939. Only a run with mixed durations gets far
+    /// enough above the floor to read the ideal (2.197939 for the eighth of a run whose
+    /// minimum is a sixteenth), which is why the mixed books are in the ledger.
+    /// </para>
+    /// </remarks>
+    internal static GraceColumnLayout GraceColumns(
+        ImmutableArray<GraceNoteInfo> notes, MusicItem? mainItem,
+        GraceSpacingParameters? graceParams = null)
+    {
+        if (notes.IsDefaultOrEmpty)
+            return new GraceColumnLayout(ImmutableArray<double>.Empty, 0);
+
+        var gp = graceParams ?? GraceSpacingParameters.Default;
+        double dtMin = CalculateGraceGroupShortestDuration(notes);
+        // A run draws a beam only when EVERY head carries one; otherwise each head draws a
+        // flag, and the flag is ink in its column's RIGHT skyline. Same gate as
+        // GraceNoteEngraver.QuantGraceBeam and the renderer's DrawGraceStemsAndBeam.
+        bool beamed = notes.Length >= 2
+            && notes.All(n => n.BaseDuration.Denominator >= 8);
+
+        var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
+        double x = 0, toMain = 0;
+        for (int i = 0; i < notes.Length; i++)
+        {
+            offsets.Add(x);
+            double rightReach = GraceColumnRightReach(notes[i], beamed);
+            double leftReach = i + 1 < notes.Length
+                ? GraceColumnLeftReach(notes[i + 1])
+                : MainColumnLeftReach(mainItem);
+            double gap = GraceColumnGap(notes[i], dtMin, gp, rightReach + leftReach);
+            if (i + 1 < notes.Length) x += gap; else toMain = gap;
+        }
+        return new GraceColumnLayout(offsets.ToImmutable(), toMain);
+    }
+
+    /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
+    private static double GraceColumnGap(GraceNoteInfo left, double dtMin,
+                                         GraceSpacingParameters gp, double minDistance)
+    {
+        var baseSpring = CreateGraceSpring(left.BaseDuration, gp, dtMin);
+        // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
+        double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd;
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
+        return Math.Max(ideal, minDistance + SpringHeadroom);
+    }
+
+    /// <summary>
+    /// The grace note head's right edge in its own column — LilyPond's
+    /// <c>left_head_end</c> for a grace spring.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:47-70 — <c>left_head_end =
+    /// g-&gt;extent (col, X_AXIS)[RIGHT]</c>. MEASURED: LilyPond reports 0.917939 for a grace
+    /// head and 1.304200 for a full-size black one, and Lily#'s
+    /// <see cref="GlyphMetricsGenerated.NoteheadBlack"/> right edge is that same 1.304200.
+    /// The residual between 0.917939 and <c>1.304200 × magstep(-3)</c> = 0.922205 is
+    /// Emmentaler's OPTICAL sizing — LilyPond selects a different design size for a smaller
+    /// font, Lily# scales one — and belongs to the glyph-metrics island, not to this one.
+    /// </remarks>
+    private static double GraceHeadEnd =>
+        GlyphMetrics.NoteheadBlack.Width * GraceNoteItem.ScaleFactor;
+
+    /// <summary>
+    /// How far a grace column's ink reaches RIGHT of its origin, in the separation-skyline
+    /// sense: the head (plus its flag when the run is not beamed) widened by
+    /// <see cref="DefaultExtraSpacingWidth"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:120-190 Separation_item::boxes — every grob's box
+    /// is widened by its own <c>extra-spacing-width</c>, defaulting to <c>(-0.1 . 0.1)</c>
+    /// (:166-167). MEASURED: a beamed grace column's right skyline is 1.017939 and a flagged
+    /// one's is 1.538627 (probes/grace-column-width.ly, books GCW2 and GCW1).
+    /// </remarks>
+    private static double GraceColumnRightReach(GraceNoteInfo note, bool beamed)
+    {
+        double ink = GraceHeadEnd;
+        if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
+        {
+            var flag = GlyphMetrics.GetFlagBBox(note.BaseDuration.Denominator, stemUp: true);
+            if (flag != default)
+                ink = Math.Max(ink,
+                    (GlyphMetrics.StemUpSE.X + flag.Width) * GraceNoteItem.ScaleFactor);
+        }
+        return ink + DefaultExtraSpacingWidth;
+    }
+
+    /// <summary>
+    /// How far a grace column's ink reaches LEFT of its origin: nothing but the head, unless
+    /// the grace carries an accidental, which hangs left and declares a wider box.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental <c>(extra-spacing-width . (-0.2 . 0.0))</c>
+    /// — see <see cref="AccidentalExtraSpacingWidthLeft"/>. MEASURED (book GCWA): an
+    /// accidental on the SECOND grace of a pair pushes that gap from 1.417939 to 2.560895,
+    /// which is 1.017939 + (1.042957 + 0.2) + 0.3.
+    /// </remarks>
+    private static double GraceColumnLeftReach(GraceNoteInfo note)
+    {
+        if (note.Accidental is not { } acc)
+            return DefaultExtraSpacingWidth;
+        var placement = new AccidentalPlacement();
+        var layout = placement.CalculateSinglePosition(
+            note.StaffPosition, acc, isCourtesy: false, GraceNoteItem.ScaleFactor);
+        return layout is { } al
+            ? Math.Abs(al.XOffset) + AccidentalExtraSpacingWidthLeft
+            : DefaultExtraSpacingWidth;
+    }
+
+    /// <summary>The same reading for the MAIN note's column, which closes the run.</summary>
+    private static double MainColumnLeftReach(MusicItem? mainItem)
+    {
+        if (mainItem is null)
+            return DefaultExtraSpacingWidth;
+        double acc = CalculateLeftExtent(mainItem);
+        return acc > 0 ? acc + AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth;
+    }
+
+    /// <summary>
+    /// The distance a grace run needs in front of its main note — the first grace column to
+    /// the main column.
+    /// </summary>
+    /// <remarks>
+    /// This is <see cref="GraceColumnLayout.Span"/>, i.e. the sum of the run's own gaps and
+    /// nothing else. There is no junction padding:
+    /// LILYPOND-REF lily/spacing-basic.cc:163 Spacing_spanner::note_spacing
+    /// takes the grace branch for the last-grace-to-main pair too, because
+    /// <c>delta_t.grace_part_</c> is non-zero there. Lily# used to add 0.4 here and another
+    /// 0.4 when placing the group; MEASURED (ledger grace.column.*.to-main) LilyPond adds
+    /// neither.
+    /// <para>
+    /// A LEADING accidental is the one thing outside the chain: it hangs left of the FIRST
+    /// column, so a caller reserving room in front of the main note has to add that reach on
+    /// top of the span. (LilyPond does not add it either — it falls out of the approach
+    /// spring's own min_dist, which this measure stands in for.)
+    /// </para>
     /// </remarks>
     public static double CalculateGraceGroupSpringWidth(
         ImmutableArray<GraceNoteInfo> notes,
@@ -1887,49 +2061,9 @@ internal static class SpacingRules
     {
         if (notes.IsDefaultOrEmpty)
             return 0;
-
-        var gp = graceParams ?? GraceSpacingParameters.Default;
-
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
-        double bsd = CalculateGraceGroupShortestDuration(notes);
-
-        double totalIdealDistance = 0;
-
-        // Create a spring for each grace note and sum ideal distances
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
-        // Grace columns are positioned at ideal distances (not compressed to min)
-        for (int i = 0; i < notes.Length; i++)
-        {
-            var spring = CreateGraceSpring(notes[i].BaseDuration, gp, bsd);
-            totalIdealDistance += spring.IdealDistance;
-        }
-
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc:65-80
-        // Add rod from grace group to main note (junction padding)
-        totalIdealDistance += GraceToMainRod;
-
-        // The leftmost grace note's accidental hangs further left of the group's
-        // first head, so it sets how far the group protrudes before the main note;
-        // reserve it (scaled with the grace head). Without this a grace accidental
-        // (e.g. \grace { fis16 }) could overrun the barline or the previous note.
-        // LILYPOND-REF: lily/accidental-placement.cc — accidentals reserve left extent.
-        if (notes[0].Accidental is { } acc0)
-        {
-            double accW = GlyphMetrics.GetAccidentalBBox(acc0).Width
-                        + GlyphMetrics.AccidentalNoteGap;
-            totalIdealDistance += accW * GraceNoteItem.ScaleFactor;
-        }
-
-        return totalIdealDistance;
+        double span = GraceColumns(notes, mainItem: null, graceParams).Span;
+        return span + GraceColumnLeftReach(notes[0]) - DefaultExtraSpacingWidth;
     }
-
-    /// <summary>
-    /// Rod distance from last grace note to the main note.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing-engraver.cc — distance from grace column to main column
-    /// </remarks>
-    public const double GraceToMainRod = 0.4;
 
     /// <summary>
     /// Adjusts a spring's MinDistance to accommodate grace notes before the next item.

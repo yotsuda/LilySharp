@@ -58,62 +58,142 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-08-01（第58セッション＝**引継ぎ ▶ の「双子でコーパスを一周する」を実行した。
-収穫は 2 つ**——⑴ **ゲートは引継ぎが挙げていた 2 つよりずっと大きい**（双子が beam を描くのは
-**199 本中 31 本**だけで、理由の大半は音楽ではなく **exporter**）、⑵ **そのゲートの外に残った
-食い違いは 1 つだけ＝grace の beam**（3 冊・4 読み・**残差は 9 桁まで同じ**）。**対で起票済み・
-移植は次**。
-★★★ **そして最初に出た「食い違い」3 件は自分の計器の欠陥だった**——LP の `positions` が
-指す beam 線を取り違えていた（0.81＝beam translation 1 つぶん）。**§5.0 に汎化した。**
-**そして同じセッションで移植まで通した**（⑤）——**高さは exact になり、残るのは傾きだけ**。
-**そして残った傾きの正体まで測った**（⑥＝**LP の grace 列は Lily# より 45% 広い**）。
-HEAD **`e75d3bff`**（＋handoff commit 1 本）・**未 push 72**（handoff commit 込みの総数）・
-テスト **3706 passed / 0 failed / 3 skipped**・
-台帳 **349 点**（**ss 非ゼロ 76・総和 0.218839538**／**count 点 99・うち非ゼロ 2**）。
-★ **総和が 0.1086 → 0.2188**＝**新しく 4 点開いて（+1.184）そのうち 1.075 を同じ日に閉じた**。
+最終更新 2026-08-01（第59セッション＝**引継ぎ ▶ の「grace 列の幅に点を作る（定数を当てはめない）」を
+⑴⑵⑶ とも実行した。LP に「grace 列の幅」という量は無く、あるのは*ばね*と*床*だった**——
+`gap = max(ideal, min_dist + 0.3)`。**15 点で法則を起票し、同じセッションで移植して閉じた**。
+★★★ **予測は半分だけ当たった**——**X フレームはほぼ exact になったのに `beam.quant.grace.*` は
+まだ対称で 0.019 残る**。⇒ **傾きには第 2 の項がある**。**そこで LP に直接訊いた**（⑤）——
+**grace は対照が一切払わない scorer を払っており、Lily# の答えは LP の格子に乗っていない。**
+HEAD **`c9600e3c`**（＋handoff commit 1 本）・**未 push 79**（handoff commit 込みの総数）・
+テスト **3721 passed / 0 failed / 3 skipped**・
+台帳 **364 点**（**ss 非ゼロ 90・総和 1.164516471**／**count 点 99・うち非ゼロ 2**）。
+★ **総和は 0.2188 → 10.4926 →(移植)→ 1.1645**。**10.27 は開けた穴の中身**で、
+**そのうち 9.33 を同じ日に閉じた**。
 ⚠️ **この行は書いた直後に stale になる**（HEAD を書く commit が HEAD を動かす）。§0 のとおり
 **開始時に必ず実測すること**。
 
-## ① 機械を 1 本足した＝`TwinBeamSweep`（`6522cdc5`・**Core 変更ゼロ**）
+## ① 法則を 15 点で起票した（`85672001`・**Core 変更ゼロ**）
 
-★★★ **コーパスを一周する手順はもう手作業ではない**: fixture 全部を `lysc ly` で双子にして
-LP に通し（`-dinclude-settings` で `Beam.after-line-breaking` を注入すれば**双子を書き換えずに済む**）、
-Lily# 側は `LILYSHARP_BEAM_SWEEP=<csv>` で `TwinBeamSweep` が同じ語彙（**譜の中央線 − beam 中心・
-その譜の staff space で割る**＝タブも ossia も自分のスケールで読む）で吐く。**env が無ければ何もしない**。
-★ **LP 側 199 冊は `-dbackend=null` で 1 冊 1 秒**（svg backend だと 6.6 秒）。
+★★★ **新プローブ `audit/lp-geometry/probes/grace-column-width.ly`（14 冊）**。
+```
+gap = max(ideal, min_dist + 0.3)
+  ideal    = (1.6 + log2(dt / dt_min)) * 0.8 - 0.8 + left_head_end
+  min_dist = 両列の向き合うセパレーションスカイライン（各 grob の箱が自分の
+             extra-spacing-width で広がる。既定 -0.1 . 0.1／Accidental は -0.2 . 0.0）
+  + 0.3    = merge_springs（wish が 1 本でも走る）
+```
+出典は `lily/spacing-basic.cc:163-180`（grace 枝は GraceSpacing grob から options を取る）／
+`lily/spacing-options.cc:71-107`／`scm/define-grobs.scm:1721-1725`（1.6・0.8）／
+`scm/output-lib.scm:1403-1422`（**dt_min は*その run 自身*の最小**＝run は音価に対してスケールフリー、
+かつ ratio<1 枝は構造的に到達不能）／`lily/note-spacing.cc:42-115`（`- increment + left_head_end`）／
+`lily/separation-item.cc:120-190`／`lily/spring.cc:103-129`。
+★★ **1 冊が 1 項を動かす**: 個数 GCW3/GCW4・音価 GCW2E/GCW2T・log2 GCWM/GCWN・
+左の床 GCW1（**旗**）・右の床 GCWA（**2 番目の grace の臨時記号**）・approach GCWP（**同じ本の中に対照**）。
+★★★ **コーパスの texture が読むのは*床*であって*ばね*ではない**（ideal 1.397939 対 床 1.417939）。
+**ばねだけ移植すると 0.02 足りず beam の点は閉じない。**
+★ **ばねのパラメータを押さえる 3 冊は台帳に入れられない**（Lily# に override を綴る手段が無い）。
+`.ly` に置いてある: sds 3.0 → 2.517939・incr 1.6 → 1.877939（九桁）・**sds 1.0 は 1.417939 から動かない**
+＝**床の発見はこれ**。
 
-## ② 計器自身の欠陥が 3 件出た（同 commit）
+## ② 移植した（`ccae4e32`・**snapshot 9 枚・GO 済**）
 
-★★★ ⑴ **`positions` は stack の *外側* の線**（`beam.cc:810-814` `Beam::print` が
-`positions + beam_dy × rank` で**符頭の側へ**積む）。「群の左端で最も広い quad」は**描画順で
-決まる**ので 16分群で**内側**を読み、**ちょうど 0.81 ずれる**＝**量子器の欠陥にしか見えない**。
-`test/beaming` と `test/notes` を**そう誤診した**。⇒ **符尾がどちら側に伸びているかで決める。**
-★★ ⑵⑶ **quad と符尾を「ページ単位」で束ねていた**——**2 つの system は同じ x 帯を占める**ので、
-片方の beam がもう片方の群に**呑まれて読みが消え**、片方の符尾が**向き判定を反転させた**。
-⇒ **束ねる前に必ず譜へ割り当てる。**
-★ **既存の台帳点は 1 つも動かなかった**＝**stack を読む点はこれが最初**。
+★★★ **同じ量の綴りが 5 つあった**（grep で数えた）: `GraceNoteEngraver.Calculate`（配置）／
+`QuantGraceBeam`（量子器の x）／`GetGraceGroupWidth(int)`（フォールバック）／
+`SharedRenderer.DrawGraceNotes`（描画・`(1.2+0.3)*eff` の直書き）／
+`DrawTabGraceNotes`（`1.2*scale` の直書き）。**全部 `SpacingRules.GraceColumns` 1 本に寄せた。**
+★★ **撤去した発明**: `GraceToMainRod` 0.4・`GraceToMainSpacing` 0.4・`GraceNoteWidth` 1.2・
+`GraceNoteSpacing` 0.3。**最後の grace → 本音符も普通の grace ばね**（その対でも
+`delta_t.grace_part_` が非ゼロ）。**本音符の臨時記号は二重に予約されていた**（engraver と最後の gap）。
+★★ **`GraceNoteItem.ScaleFactor` 0.65 → `magstep(-3)`**。コメント自身が
+「font size -3 ≒ 0.65」と**評価結果を書いていた**（§5.2 違反）。**描画サイズだけの話ではない**——
+**列の幅が符頭の右端を読む**ので、丸めが新しい法則の中に入る。⇒ **同じ commit**。
+★ **タブは byte 不変だが、それは「結果」であって「構成」ではない**——
+**コーパスのタブ grace は全部単発**なので step を一度も取らない。
 
-## ③ grace の beam を対で起票した（`ff373bfb`・**Core 変更ゼロ**・6 点）
+## ③ 落ちた数（台帳 21 点）
 
-★★★ **新プローブ `audit/lp-geometry/probes/beam-grace.ly`**（3 冊）。**G** ＝ `test/grace-notes`
-の 1 小節目（LP **(0.142 . 0.5)**・`beam-thickness 0.384`・`length-fraction 0.8`＝`ly/grace-init.ly`）。
-**H** ＝ **対の本命の control**＝**同じ 2 音を普通の 16分で**（LP **(0.81 . 1.0)**・thickness 0.48）。
-**2 冊の LP 側の違いは grace のスケールだけ**なので、**Lily# が両者の間に置いた量がそのまま欠陥**＝
-**左 −0.388667 / 右 −0.203333**。**H は開いた時点で exact。**
-★★ **I** ＝ **平行移動の control**（同じ grace beam を 3 度上）。**LP は 1.0 ss 平行移動して傾きを保つ**、
-そして **Lily# の残差は 9 桁まで同じ**⇒ **欠陥は 1 項で、音高に依存しない。**
-★★★ **予測（台帳に書いた・移植前）＝そもそも量子していない**。grace beam は
-**2 つ目の実装** `SharedRenderer.GraceNotes.DrawGraceStemsAndBeam` が描いており、
-**そのコメント自身が「equal-length stems, so the beam runs parallel to the head contour
-(LilyPond solves a quanted slope)」と宣言している**。
-**falsifier**: ⑴ 読みは**格子から 1 quant ずれる**のではなく**格子に乗らない**（乗っていない）
-⑵ **dy が音程を超えられる**（0.5434 対 d–e の 0.5）——**減衰した傾きは決して超えない**
-⑶ **スケール定数 1 つなら両端が同じだけ動く**（動いていない）。
-⚠️ **候補の項はどれもまだ LP の行から読んでいない**: Lily# の grace スケールは **0.65**
-（`GraceNoteItem.ScaleFactor`・REF は `define-grobs.scm:1389 font-size -3`）、LP の
-`magstep(-3)` は **0.7071**、Beam 自身の `length-fraction` は **0.8**——**3 つとも違う数**。
+| 点 | 前 | 後 |
+|---|---|---|
+| step / to-main 12 点 | −0.443 … +1.367 | **+0.004270045（全部同じ）** |
+| `grace.column.single.to-main` | −0.258627065 | +0.069066014 |
+| `grace.column.accidental.step` | −1.585895197 | −0.013381700 |
+| `beam.quant.grace.*` 4 点 | ±0.027562284 | **±0.019014715** |
+| `grace.column.approach` | +0.850449000 | **不動** |
+| approach の対照・full-size 対照 | 0 | **0 のまま** |
 
-## ④ ゲートの棚卸し＝**双子を塞いでいるのは exporter**
+★★★ **falsifier は通った**——**6 つの step が互いに等しいのをやめた**
+（`mixed-long-short.step` だけ 2.202209＝`log2(2)*0.8` ぶん上、九桁）。
+★ **12 点が共有する +0.004270045 は Emmentaler の optical sizing**
+（`1.3042 × magstep(-3) − 0.917939 = 0.004266`）＝**グリフメトリクスの島**。ここで追わない。
+
+## ④ 残った 3 つ（**どれも「頭のスリバー」ではない・別々の機構**）
+
+⑴ **+0.069066＝旗のインク**。LP の旗付き列の右スカイラインは 1.538627・Lily# は 1.607693。
+**他のどの texture にも出ない**（列が旗を持つのは単発 grace だけ）。
+⑵ **−0.017652＝内側 grace の臨時記号の置き場所**（`AccidentalPlacement` の読み）。
+⚠️ **この commit の前は内側の臨時記号を誰も予約していなかった**（隣の符頭の上に描いていた）。
+⑶ **+0.850449＝approach、手つかず**。**ただし正体は分かった**: **Lily# は run の幅を
+前のばねの min に*足して*部屋を作る**ので、`c' → grace` は残り物になり、**run の幅が動いても動かない**
+（この点が 1 桁も動かなかったのはそのため）。**LP は既にあるばねを*縮める***
+（`spring *= 0.8`・`lily/spacing-spanner.cc:396-403`）。⇒ **次の移植で、量ではなく機構が違う。**
+
+## ⑤ そのまま LP に「なぜその傾きか」を訊いた（`beam-grace-score.ly`・**コード変更ゼロ**）
+
+★★★ **`debug-beam-scoring` ＋ `inspect-quants` を grace の本に当てた**（§5.3 の道具）。
+```
+GBSG  grace・LP 自身の答え  (0.142 . 0.5)  Si 0.65  Fl 0.82  L 0.58   c1/130
+GBSH  原寸の対照           (0.81  . 1.0)  Si 1.21           L 1.13   c1/143
+```
+★★★ ⑴ **grace は対照が払わない項を払う**——**`Fl`＝`score_forbidden_quants`**
+（beam 端の 2 本の beam 線の隙間に**譜線**が入る・`beam-quanting.cc:1262-1325`）。
+**`add` は非ゼロの項しか書かない**ので、対照は「安い」のではなく**ゼロ**。
+⇒ **対照がずっと exact だったのは当然で、この島について何も言っていない。**
+`Fl` は `beam_translation_`・`beam_thickness_`・`line_thickness_` を読み、
+**前 2 つは grace で scale され、3 つ目はされない**（`:1287-1294`）。
+★★★ ⑵ **Lily# の答えは LP の格子に乗っていない**。`force_score` は**渡した対を採点しない**
+——**生成済み config のうち最も近いもの**を採点する（`mindist`）。Lily# の
+`(0.161014715 . 0.480985285)` を渡すと **LP 自身の答えのカードがそのまま返る**＝
+**130 個のうち最も近いのが LP の答え**。同じ手で読んだ格子点:
+`(0 . 0)` `Sd 800.00`／`(1 . 1)` `Sd 800.00`／`(0 . 1.5)` `Sm 381.66`／
+**`(0.30 . 0.35)` は `(0.142 . 0.5)` に落ちる**（間に LP の点は無い）。
+★★ ⑶ **Lily# の対は LP の対を*同じ中点のまわりに回転*させたもの**（両側とも 0.321・九桁）。
+**これは「別の quant」の形ではなく、「stem から*描画端*への射影」が違う形**。
+`BeamScoringProblem.Solve` は最後に **`AtOuterStems(...)`** を通しており、
+**LP は張り出しを grace で scale しない**ことは ⑥ で測ってある（描画端＝符尾の外
+**原寸の符尾太さの半分**）。⚠️ **ただし形は説明できても大きさはまだ**——
+`0.065 × (1 − magstep(-3)) = 0.019038` は **x の staff space** で、この傾き
+（0.358 staff position / 1.417939 ss）では **0.0048 staff position** にしかならない。
+残差は 0.019015。**0.019038 と 0.019015 が似て見えるのは単位が違うから**で、
+**飛びつかないこと**（§5.3）。
+
+## ▶ 次の一手＝**その回転の出所を割る（格子か、射影か）**
+
+⚠️ ★★★ **問いは 2 択になっている**: Lily# が選ぶ **quanted config そのもの**が LP と違うのか、
+**config は同じで `AtOuterStems` の射影だけ**が違うのか。**⑸ の形（同中点の回転）は後者を指すが、
+大きさは 4 倍合わない**ので、**両方を 1 回ずつ直接読む**。
+⑴ **`BeamScoringProblem` に「選んだ config の生の y」を吐かせる**（`AtOuterStems` の*前*）。
+**`(0.142 . 0.5)` と一致すれば射影だけ**——そのとき ⑥ の「renderer が符尾太さの張り出しを
+scale している」がそのまま港で、**大きさが合わない理由は張り出しの量のほう**になる。
+**一致しなければ格子**で、次は ⑵。
+⑵ **格子を突き合わせる**: `GenerateQuantCandidates` が出す候補と、上で読んだ LP の 4 点
+（`(0 . 0)`・`(1 . 1)`・`(0 . 1.5)`・`(0.142 . 0.5)`）。**LP は 130 個**——
+**数も比べる**（`c1/130` はカードに出る）。
+⑶ **`Fl` を疑うのはそのあと**。⚠️ **Lily# の `ScoreForbiddenQuants` は既に一致している**
+——**この場で 3 項とも確かめた**: `_beamTranslation` は `BeamTranslationOf(thickness, fraction)`
+＝grace のもの、`_beamThickness` も grace のもの、`_lineThickness` は
+`StaffLineThickness = 1.0 × LineThickness = 0.1`（**grace で scale していない・LP と同じ**）。
+⚠️ **コメントだけが `// 0.13 staff spaces` と嘘を書いていたので直した**（値は 0.1）——
+**「よく知っている定数の形」に見えたのはコメントのほうだった**。
+⇒ **`Fl` は容疑から外してよい。⑴ と ⑵ に集中する。**
+★ **その次は approach**（④⑶）——**`spring *= 0.8` は機構の置き換え**で、
+`AdjustSpringForGraceNotes` が `min += graceWidth` をやめて**列の鎖そのもの**になる形。
+★ **その次**: **exporter の穴 ⑴⑵⑶ を塞ぐ**（下の「第58セッションから持ち越し」）——
+**塞ぐたびに測れる本が増える**。
+⚠️ **穴を塞ぐ commit では「双子が何本 beam を描くようになったか」を書く**。
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 第58セッションから持ち越し＝**ゲートの棚卸し（双子を塞いでいるのは exporter）**
 
 **204 fixture → 双子 199 本**（**5 本は今の文法で parse しない**: `test/beamed-rest`・
 `test/cue-notes`・`test/dot-force-down`・`test/multi-movement`・`showcase/grammar-2026-06-09`）。
@@ -133,55 +213,6 @@ Lily# 側は `LILYSHARP_BEAM_SWEEP=<csv>` で `TwinBeamSweep` が同じ語彙（
 ⑷ ★ **タブは双子では測れない**（**欠陥ではない**）——**LP の `TabStaff` は既定で符尾も beam も
 描かない**ので、双子の Beam grob は**置かれておらず**、`positions` は **−76.5** のような数を返す。
 **Lily# 側のタブ beam は弦位置で向きを決める固有 device** でもあるので、**この経路では対にならない。**
-
-## ⑤ grace beam を移植した（`aac9931c`・**snapshot 3 枚・GO 済**・**予測は当たり**）
-
-★★★ **grace beam は量子器を通っていなかった**——③ の予測どおり。`GraceNoteEngraver.QuantGraceBeam`
-が**普通の `BeamScoringProblem`** を回し、renderer は**置くだけ**になった。
-**4 読みとも −0.388667/−0.203333 → +0.027562/−0.027562。**
-★★★ **LP が何を scale して何を scale しないか**（`ly/grace-init.ly`・probe で実測）:
-**`beam-thickness` は 0.384 と *宣言*（導出ではない）**／**`length-fraction` は Beam も Stem も 0.8**／
-**translation は両方から導出**（`fract × ((2·ss + line − thickness)/2)`＝`BeamTranslationOf`）／
-**符頭は `magstep(-3)` = 0.7071 で第 3 の数**（Lily# は 0.65）。⇒ **3 つの量・3 つの値・畳まない**
-（ctor は `lengthFraction` / `beamThickness` / `headScale` を別々に取る）。
-★ **perf は回数で測った**（§7.9・時間では測れない規模）: 増えるのは**beam を持つ grace 群 1 つにつき
-量子器 1 回**で、**コーパス全 204 fixture の grace 群 20 のうち 2 音以上は 4 つだけ**。
-⇒ **コーパス全体で +4 回**。pass も skyline も増やしていない。
-★★ **落ちる点を持たない項が 2 つ、「スケールを書き下す」だけで出た**:
-⑴ `StemCalculator` が `beamed-extreme-minimum-free-lengths` に `length-fraction` を掛けていなかった
-（`stem.cc:1247-1259` は掛ける・**fraction 1 では不可視**）
-⑵ `LayoutUtilities.StemX` が head scale を取らず、**0.65 の符頭に原寸の右端で符尾を付けていた**
-（`StemAttachX` は既に取っていた＝**対の片方だけ**）。
-★★★ ▼ **残差が「対称」になったこと自体が次の falsifier**——**高さは 9 桁 exact・傾きだけ**
-（dy 0.302875 対 LP 0.358）。**傾きだけの残差は長さや太さからは出ない**（どちらも高さを動かす）
-⇒ **残りは X フレーム**: ⒜ grace 列の刻み `(1.2 + 0.3) × 0.65`（**LP 側を測ったことがない**）
-⒝ **符尾太さの張り出しを renderer だけが scale している**（LP の `Stem.thickness` は
-line-thickness 単位で、`fontSize` は line-thickness を scale しない）。
-
-## ⑥ その X フレームを測った（`beam-grace.ly` に `stemx`/`xext` を追加・**コード変更ゼロ**）
-
-★★★ **LP の grace 列は 1.417939**（符尾 8.437939 → 9.855877）。**Lily# は
-`(1.2 + 0.3) × 0.65 = 0.975`**＝**45% 狭い**。⇒ 理想 dy 0.5 が **1.548 の span** ではなく
-**1.105** に載るので、減衰後の傾きが足りない＝⑤ の対称残差の正体。
-★★ **beam の drawn extent は 8.372939 . 9.920877**＝**符尾の外 0.065 ずつ**＝**原寸の符尾太さの半分**。
-⇒ **⒝ は決着**: **LP は張り出しを grace サイズで scale しない**（`Stem.thickness` は
-line-thickness 単位）が、**Lily# の renderer は scale している**。
-
-## ▶ 次の一手＝**grace 列の幅に点を作る（定数を当てはめない）**
-
-⚠️ ★★★ **1.417939 を `GraceNoteWidth` に書き写さないこと**。**16分 grace 2 個という 1 つの
-texture**でしかなく、**この repo はまさにそれで焼かれている**（figured bass の `1.5`）。
-LP 側は**ばね**（`lily/grace-spacing-engraver.cc`）なので:
-⑴ **grace の個数と音価を振るプローブ**を書いて `stemx` を読む（**幅の法則**を出す）
-⑵ **幅そのものに台帳点を作る**（今は beam の点が間接的に測っているだけ）
-⑶ そのうえで移植。**閉じたかどうかは `beam.quant.grace.*` 4 点が同時にゼロになること**で決まる
-（**対称**なので**片方だけ動いたら傾き以外を触った証拠**）。
-★ **同じ島の小さい方**: **renderer が符尾太さの張り出しを scale しているのをやめる**（⑥）。
-**単独では入れない**——列の幅と同じ 1 つの claim（どちらも X フレーム）。
-★ **その次**: **exporter の穴 ⑴⑵⑶ を塞ぐ**——**塞ぐたびに測れる本が増える**（今回 `voice {}` だけで
-11 本が空だった）。⚠️ **穴を塞ぐ commit では「双子が何本 beam を描くようになったか」を書く**。
-★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
-ユーザー側作業）。
 
 ## 以下は第57セッションの経緯
 
@@ -3842,7 +3873,15 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   厳密だが、LP は空の command 列を実体として持つ）⑶ **mid-measure clef/key/time**（LP はそれを
   command 列に載せる。Lily# は `MidMeasureChangeGaps` が代役・§2B の mid-line clef 残件と同根）。
   モデルに列を足す日はこの 3 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
-  ⚠️ ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ
+  ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
+  ★★★ **2026-08-01（第59セッション）に⑴に点が出た**＝`grace.column.approach` **+0.850449**。
+  **「合成が厳密だから乖離ゼロ」は grace については偽**だった: **LP は前のばねを*縮める***
+  （`spring *= 0.8`・`lily/spacing-spanner.cc:396-403`）のに、**Lily# は run の幅を前のばねの
+  min に*足す***（`AdjustSpringForGraceNotes`）。**足すと引くでは、run の幅が動いても
+  `前の音符 → 最初の grace` が動かない**——実際この点は列の幅を 46% 変えても 1 桁も動かなかった。
+  ⇒ **⑴ は「表現できないから畳み込んだ」だけでなく「畳み込んだせいで別の機構になっている」。**
+  **着手根拠はもう regime ではなく点**（同じ本の中に対照 `grace.column.approach.main-control`
+  があり、そちらは exact なので**普通の音符間は無罪**と分かっている）。
 - ~~**中心合わせされた 2 つの text grob**~~ — **両方とも片付いた**（和音記号 `dcbf08e9`・
   音節 `98672c3a`）。⚠️ ただし `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**残っている**
   （`LILYSHARP-OWN` と明示済・1 文字の "C" 1.877882 を上書きするので**実際に効く**）
@@ -3961,6 +4000,18 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   出したので grace は本物だと分かった） ⑶ **前セッションが exact と書いた本を通すと exact か**。
   ⚠️ **そして「ページ単位で束ねる」は計器の定番の穴**——**2 つの system は同じ x 帯を占める**ので、
   x だけで群を作ると**別の行の grob を呑む**。**束ねる前に譜へ割り当てる。**
+- ★★★ ⚠️ **「同じ量の綴りは N 個」を*シンボルで* grep して数えると、描画側の直書きを構造的に
+  取りこぼす**（2026-08-01・第59セッション。**5 つのうち 2 つがそれだった**）。grace 列の幅は
+  `GraceNoteWidth` / `GraceNoteSpacing` という名前を持っていたが、**renderer の 2 か所は名前を
+  使わず数字を打ち直していた**——`currentX += (1.2 + 0.3) * eff` と `currentX += 1.2 * g.Scale`。
+  **定数名の grep には 1 件も出ない**（出るのは*コメント*だけで、しかもそのコメントは
+  「`GraceNoteEngraver` の GraceNoteWidth + GraceNoteSpacing」と**正しい出典を名乗っていた**ので、
+  読んでも「参照している」と読める）。⇒ ★★ **数えるのは名前ではなく*値*と*役割***:
+  その量が現れる**数字**（`1.2`・`0.3`・`1.5`）と、**その量を消費する関数**
+  （ここでは「grace を描く」「grace を予約する」）の両方で grep する。
+  ⇒ ★ **判定法**: その量を**わざと壊して**（`GraceNoteWidth = 99`）ビルドし、**出力が全部
+  壊れるか**を見る。壊れない経路が、名前を使っていない綴りである。
+  ⚠️ §5.2.1② の「潰す前に grep で数え直す」の**穴**であって、否定ではない。
 - ★★★ ⚠️ **値の「意味」を変える移植は、動機になった site ではなく grep 全件に当てる**
   （2026-08-01・同セッション。**自分の移植を同じセッションで 1 site 取りこぼした**）。
   `beamCount` を「ステム自身」から「向きの最大」へ変えたとき、**落ちている点が指す 2 site**

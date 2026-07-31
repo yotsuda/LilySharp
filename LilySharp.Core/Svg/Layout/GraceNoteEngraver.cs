@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
@@ -62,7 +63,12 @@ public readonly record struct GraceNoteLayout(
     // LILYPOND-REF: lily/beam-quanting.cc — a grace beam is quanted by the same machine as
     //   any other, with beam-thickness 0.384 and length-fraction 0.8 (ly/grace-init.ly).
     double? BeamLeftY = null,
-    double? BeamRightY = null
+    double? BeamRightY = null,
+    // Where each grace column sits, relative to <see cref="X"/> — the SAME numbers the
+    // reservation and the beam quanter used, so the drawn heads cannot land anywhere else.
+    // Before 2026-08-01 the renderer stepped by its own literal (1.2 + 0.3) and the group's
+    // reserved width was computed a third way; see SpacingRules.GraceColumns.
+    ImmutableArray<double> ColumnOffsets = default
 );
 
 /// <summary>
@@ -82,17 +88,14 @@ public readonly record struct GraceNoteLayout(
 /// </remarks>
 internal static class GraceNoteEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:1389 font-size = -3 (approximately 0.65)
-    private const double GraceScale = GraceNoteItem.ScaleFactor;
+    // LILYPOND-REF: ly/grace-init.ly graceSettings — Voice.fontSize = -3, i.e.
+    //   scm/lily-library.scm magstep(-3) = 2^(-3/6). See GraceNoteItem.ScaleFactor.
+    private static readonly double GraceScale = GraceNoteItem.ScaleFactor;
 
-    // Width of a single grace note in staff spaces (scaled)
-    private const double GraceNoteWidth = 1.2;
-
-    // Space between grace notes
-    private const double GraceNoteSpacing = 0.3;
-
-    // Space between grace group and main note
-    private const double GraceToMainSpacing = 0.4;
+    // The grace column step, the space between graces and the grace-to-main junction all
+    // used to be constants here (1.2 / 0.3 / 0.4). LilyPond has none of them: the run is a
+    // chain of springs with a skyline floor, and it is computed once in
+    // SpacingRules.GraceColumns (ledger grace.column.*).
 
     /// <summary>
     /// Calculates layout for all grace notes in a score.
@@ -149,30 +152,19 @@ internal static class GraceNoteEngraver
             double mainNoteX = LayoutUtilities.GetItemXOffset(
                 graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
 
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc:46 process_music — spring-based grace group width
-            double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
-                                   - SpacingRules.GraceToMainRod;  // Exclude junction rod (added separately below)
-
-            // Account for the main item's leftward accidental reach so the grace
-            // clears it. For a CHORD this is the STAGGERED accidental stack's leftmost
-            // extent, not one accidental — a chord main note reserved nothing before,
-            // so a grace collided with the chord's flats/sharps.
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc:46 positioning before main note;
-            //   lily/accidental-placement.cc for the staggered stack.
-            double accidentalExtent = 0;
+            // Where the run's columns sit — ONE computation, read here for the placement,
+            // below for the quanter's x frame, and by the renderer for the drawn heads.
+            // LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing, its
+            //   grace branch; see SpacingRules.GraceColumns for the whole law.
             var measure = graceMeasures[grace.MeasureIndex];
-            if (grace.MainNoteItemIndex < measure.Items.Length)
-            {
-                var mainItem = measure.Items[grace.MainNoteItemIndex];
-                bool hasAccidental = mainItem switch
-                {
-                    NoteItem n => n.Accidental != null,
-                    ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
-                    _ => false
-                };
-                if (hasAccidental)
-                    accidentalExtent = SpacingRules.CalculateLeftExtent(mainItem);
-            }
+            var mainItem = grace.MainNoteItemIndex < measure.Items.Length
+                ? measure.Items[grace.MainNoteItemIndex]
+                : null;
+            var columns = SpacingRules.GraceColumns(grace.Notes, mainItem);
+            // The main note's own leftward accidental reach is already inside the run's LAST
+            // gap (it is that column's left separation skyline), so it is no longer added
+            // here — doing both reserved it twice.
+            double graceGroupWidth = columns.Span;
 
             // A wide above-script on the main note (fermata / ornament) overhangs
             // its notehead to the LEFT; a leading grace's flag collides with it
@@ -185,9 +177,8 @@ internal static class GraceNoteEngraver
             double scriptOverhang = ScriptOverhangForGrace(
                 articulations, grace, measure, graceGroupWidth);
 
-            // Position grace notes to the left of the main note (including accidental)
-            double x = measureLayout.X + mainNoteX - accidentalExtent - graceGroupWidth
-                     - GraceToMainSpacing - scriptOverhang;
+            // Position the run's FIRST column that far in front of the main note's.
+            double x = measureLayout.X + mainNoteX - graceGroupWidth - scriptOverhang;
 
             // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
             int mainStaffPosition = grace.MainNoteItemIndex < measure.Items.Length
@@ -200,7 +191,7 @@ internal static class GraceNoteEngraver
                 : 0;
 
             var (beamLeftY, beamRightY) = tabTuning is null
-                ? QuantGraceBeam(grace)
+                ? QuantGraceBeam(grace, columns.Offsets)
                 : (null, null);   // a TAB grace is a bare fret number: no stem, no beam
 
             layouts.Add(new GraceNoteLayout(
@@ -220,7 +211,8 @@ internal static class GraceNoteEngraver
                 SourceIndex: gi,
                 StaffIndex: grace.StaffIndex,
                 BeamLeftY: beamLeftY,
-                BeamRightY: beamRightY
+                BeamRightY: beamRightY,
+                ColumnOffsets: columns.Offsets
             ));
         }
 
@@ -241,22 +233,19 @@ internal static class GraceNoteEngraver
     ///   to the head contour at a fixed stem length, which is off LilyPond's quant grid
     ///   entirely (ledger beam.quant.grace.*).
     /// <para>
-    /// The x frame is the group's own: heads one grace column apart, the step the renderer
-    /// advances by. Only the SPAN reaches the quanter, and an ossia scales x and y alike, so
-    /// the unscaled staff-space frame here is the right one for both.
-    /// </para>
-    /// <para>
-    /// ⚠️ LILYSHARP-OWN: the heads are drawn at <see cref="GraceNoteItem.ScaleFactor"/> 0.65
-    /// where LilyPond's <c>fontSize = -3</c> is <c>magstep(-3)</c> = 0.7071, so the x an UP
-    /// stem attaches at differs from LilyPond's by 0.057 of a head width. That scale belongs
-    /// to the grace COLUMN (GraceNoteWidth and GraceNoteSpacing are stated in it), not to
-    /// this port; the ledger points beam.quant.grace.* say what it is worth.
+    /// The x frame is the run's own column chain — <see cref="SpacingRules.GraceColumns"/>,
+    /// the same offsets the reservation and the renderer use. Only the SPAN reaches the
+    /// quanter, and an ossia scales x and y alike, so the unscaled staff-space frame here is
+    /// the right one for both.
     /// </para>
     /// </remarks>
-    private static (double?, double?) QuantGraceBeam(GraceNoteItem grace)
+    private static (double?, double?) QuantGraceBeam(
+        GraceNoteItem grace, ImmutableArray<double> columnOffsets)
     {
         var notes = grace.Notes;
         if (notes.Length < 2) return (null, null);
+        if (columnOffsets.IsDefault || columnOffsets.Length != notes.Length)
+            return (null, null);
 
         var counts = new int[notes.Length];
         for (int i = 0; i < notes.Length; i++)
@@ -270,7 +259,7 @@ internal static class GraceNoteEngraver
         var xs = new double[notes.Length];
         for (int i = 0; i < notes.Length; i++)
         {
-            xs[i] = i * (GraceNoteWidth + GraceNoteSpacing) * GraceScale;
+            xs[i] = columnOffsets[i];
             // A beam line reaches a neighbour only if BOTH stems carry it.
             int left = i > 0 ? Math.Min(counts[i], counts[i - 1]) : 0;
             int right = i < notes.Length - 1 ? Math.Min(counts[i], counts[i + 1]) : 0;
@@ -348,7 +337,7 @@ internal static class GraceNoteEngraver
                 : mainItem.Duration.Denominator <= 2 ? 2 : 4;
             double centerX = GlyphMetrics.GetNoteheadBBox(noteValue).CenterX;
             // The grace's rightmost ink, measured LEFTWARD from the main centre.
-            double graceInkRightFromCenter = centerX + graceGroupWidth + GraceToMainSpacing
+            double graceInkRightFromCenter = centerX + graceGroupWidth
                 - GraceInkRight(grace, graceGroupWidth);
             double overhang = leftFromCenter + 2 * ArticulationSpacing.ScriptExtraSpacingWidth
                             - graceInkRightFromCenter;
@@ -377,14 +366,24 @@ internal static class GraceNoteEngraver
     }
 
     /// <summary>
-    /// Gets the total width required for a grace note group (fixed-width fallback).
-    /// Used when grace note durations are not available.
+    /// The width a group of <paramref name="noteCount"/> graces needs, for the one caller
+    /// that has a count and no durations.
     /// </summary>
+    /// <remarks>
+    /// The same law as <see cref="SpacingRules.GraceColumns"/>, over a uniform run — and a
+    /// uniform run's gaps do not depend on the note value at all, because
+    /// <c>grace-spacing::calc-shortest-duration</c> normalises by the run's own minimum
+    /// (scm/output-lib.scm:1403-1422, and MEASURED: ledger grace.column.two-eighths.step and
+    /// grace.column.two-thirtyseconds.step both read what the sixteenths do). So this is not
+    /// an approximation of the duration-aware answer for uniform input; it IS it.
+    /// </remarks>
     public static double GetGraceGroupWidth(int noteCount)
     {
-        return noteCount * GraceNoteWidth * GraceScale
-             + (noteCount - 1) * GraceNoteSpacing * GraceScale
-             + GraceToMainSpacing;
+        if (noteCount <= 0) return 0;
+        var uniform = ImmutableArray.CreateBuilder<GraceNoteInfo>(noteCount);
+        for (int i = 0; i < noteCount; i++)
+            uniform.Add(new GraceNoteInfo(0, null, false, Fraction.Eighth));
+        return SpacingRules.CalculateGraceGroupSpringWidth(uniform.ToImmutable());
     }
 
     /// <summary>

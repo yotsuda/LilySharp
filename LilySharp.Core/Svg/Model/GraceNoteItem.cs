@@ -100,8 +100,19 @@ public sealed record GraceNoteItem
     /// Scale factor for grace notes relative to normal notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: define-grobs.scm:1389 font-size = -3
-    /// Font size -3 corresponds to approximately 0.65 scaling.
+    /// LILYPOND-REF: ly/grace-init.ly <c>graceSettings</c> — <c>Voice.fontSize = #-3</c>;
+    ///   scm/lily-library.scm <c>magstep</c> = <c>2^(s/6)</c>, so the scale is
+    ///   <c>magstep(-3)</c> = <c>2^(-1/2)</c>.
+    /// <para>
+    /// This was 0.65 until 2026-08-01, with a comment that said "font size -3 corresponds to
+    /// approximately 0.65" — an evaluation, and a wrong one (magstep(-3) = 0.707107). It is
+    /// not only the drawn size: the grace COLUMN's width reads the head's right edge
+    /// (lily/note-spacing.cc:77 <c>left_head_end</c>), so the rounding sat inside the spacing
+    /// law as well. MEASURED: LilyPond's grace head ends at 0.917939 in its column against a
+    /// full-size 1.304200; 1.304200 × magstep(-3) = 0.922205, and the 0.004266 left over is
+    /// Emmentaler's OPTICAL sizing (LilyPond picks a different design size for a smaller
+    /// font, Lily# scales one face), which belongs to the glyph-metrics island.
+    /// </para>
     /// </remarks>
-    public const double ScaleFactor = 0.65;
+    public static readonly double ScaleFactor = Math.Pow(2.0, -3.0 / 6.0);
 }

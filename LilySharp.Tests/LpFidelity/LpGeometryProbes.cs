@@ -3686,6 +3686,287 @@ internal static class LpGeometryProbes
         score main "BGRT" { staff m }
         """;
 
+    // ---- the X FRAME the grace beam is quanted in: how wide is a grace COLUMN? ------------
+    //
+    // beam.quant.grace.* left a SYMMETRIC residual — the height exact, the slope short — and a
+    // slope-only residual cannot come from a length or a thickness. It has to be the span the
+    // quanter fits over, i.e. the distance between the grace columns, which Lily# spells three
+    // separate times and LilyPond does not spell at all:
+    //   GraceNoteEngraver.xs                        i * (1.2 + 0.3) * 0.65 = 0.975 per column
+    //   SpacingRules.CalculateGraceGroupSpringWidth 1.28 per note + a 0.4 junction rod
+    //   GraceNoteEngraver.GetGraceGroupWidth(int)   1.2*0.65 per note + 0.3*0.65 per gap + 0.4
+    // against LilyPond's 1.417939 for the corpus texture. ⚠️ 1.417939 IS NOT THE ANSWER: it is
+    // two SIXTEENTH graces, one texture, and this ledger has been burned by writing exactly
+    // such a number into a constant before (the figured-bass 1.5). LilyPond computes it, from
+    // a spring and a floor, and audit/lp-geometry/probes/grace-column-width.ly measures the
+    // law rather than the number. Every book below is one term of it:
+    //
+    //   gap = max (ideal, min_dist + 0.3)
+    //     ideal    = (1.6 + log2 (dt / dt_min)) * 0.8 - 0.8 + left_head_end
+    //                lily/spacing-basic.cc:163-180 (the grace branch takes its options from
+    //                the GraceSpacing grob), lily/spacing-options.cc:71-107 get_duration_space,
+    //                scm/define-grobs.scm:1721-1725 GraceSpacing (shortest-duration-space 1.6,
+    //                spacing-increment 0.8), lily/note-spacing.cc:42-115 get_spacing (the
+    //                `- increment + left_head_end` rewrite), and dt_min from
+    //                scm/output-lib.scm:1403-1422 grace-spacing::calc-shortest-duration — the
+    //                MINIMUM gap of the run's OWN columns, which is what makes the run
+    //                scale-free in duration and puts the ratio at >= 1 by construction.
+    //     min_dist = the two columns' facing separation skylines, each grob's box widened by
+    //                its extra-spacing-width (lily/separation-item.cc:120-190, default
+    //                -0.1 . 0.1; Accidental declares -0.2 . 0.0 at scm/define-grobs.scm:40)
+    //     + 0.3    = merge_springs' `avg_distance = max (min_distance + 0.3, avg_distance)`
+    //                (lily/spring.cc:103-129), which runs even for a SINGLE spring
+    //                (lily/spacing-spanner.cc:392-393)
+    //
+    // MEASURED, and every term of it read from a line above rather than fitted:
+    //   grace head_end 0.917939 (a font metric at magstep(-3), NOT 0.7071 * the full-size
+    //   1.3042 = 0.922205 — Emmentaler is optically sized), so the default-parameter ideal is
+    //   1.6*0.8 - 0.8 + 0.917939 = 1.397939 and the floor is 0.917939 + 0.1 + 0.1 + 0.3 =
+    //   1.417939. THE FLOOR IS WHAT THE CORPUS TEXTURE READS — a port that implements only
+    //   the spring lands 0.02 short and the beam points stay open.
+    //
+    // ⚠️ The three books that pin the spring's own parameters (GraceSpacing's
+    // shortest-duration-space at 1.0 and 3.0, spacing-increment at 1.6) are in the .ly probe
+    // and NOT here: Lily# has no way to spell that override, so they are law, not ledger.
+    // They are what says the formula is the formula — GCWS3 lands on 2.517939 and GCWI on
+    // 1.877939 to nine places, and GCWS1, whose ideal would be 0.917939, does not move off
+    // 1.417939 at all, which is how the floor was found.
+
+    /// <summary>
+    /// THREE sixteenth graces. The gap is a spring per column, so a third grace must not
+    /// change what the first two are worth.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score GCW3): <c>\grace { d'16 e' f' } g'4 g'2 r4</c> — every gap
+    /// 1.417939, the same as <see cref="BGR"/>'s. A reserved GROUP WIDTH divided among the
+    /// graces would shrink here; Lily#'s <c>CalculateGraceGroupSpringWidth</c> sums a spring
+    /// per note and then adds one junction rod, which is a group width in spring clothing.
+    /// </remarks>
+    private static readonly string GCW3 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 e f } g4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCW3" { staff m }
+        """;
+
+    /// <summary>…and FOUR, whose last gap is the one that reaches the main note.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCW4): <c>\grace { d'16 e' f' g' } a'4 g'2 r4</c> — four gaps,
+    /// all 1.417939, INCLUDING the last one. The grace → main gap is an ordinary grace spring
+    /// (<c>delta_t.grace_part_</c> is non-zero, lily/spacing-basic.cc:163), not a junction of
+    /// its own, so the reading that would expose an invented junction padding is this one.
+    /// </remarks>
+    private static readonly string GCW4 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 e f g } a4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCW4" { staff m }
+        """;
+
+    /// <summary>Two EIGHTH graces — the same gap, because the run normalises by its own min.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCW2E): <c>\grace { d'8 e' } f'4 g'2 r4</c> — 1.417939, identical
+    /// to the sixteenths. <c>grace-spacing::calc-shortest-duration</c> takes the minimum gap of
+    /// THIS run's columns, so a run of equal graces always has ratio 1 whatever the note value.
+    /// A width that scaled with the duration would show up here and nowhere else.
+    /// </remarks>
+    private static readonly string GCW2E = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d8 e } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCW2E" { staff m }
+        """;
+
+    /// <summary>…and two THIRTY-SECOND graces, the same claim from the other side.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCW2T): <c>\grace { d'32 e' } f'4 g'2 r4</c> — 1.417939 again.
+    /// Two books rather than one because a single duration cannot tell "normalised by the run"
+    /// from "normalised by the sixteenth".
+    /// </remarks>
+    private static readonly string GCW2T = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d32 e } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCW2T" { staff m }
+        """;
+
+    /// <summary>
+    /// ONE grace, which draws a FLAG — so the floor, not the spring, decides.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score GCW1): <c>\grace { d'16 } f'4 g'2 r4</c> — 1.938627, where the
+    /// beamed pairs read 1.417939. The ideal has not moved (ratio is still 1); what moved is
+    /// the left column's separation skyline, which the flag pushes from 1.017939 to 1.538627,
+    /// and 1.538627 + 0.1 + 0.3 = 1.938627 to nine places.
+    /// <para>
+    /// This is the book that proves the floor is a SKYLINE and not <c>head_end + 0.5</c>:
+    /// the same arithmetic with a different ink gives a different answer.
+    /// </para>
+    /// </remarks>
+    private static readonly string GCW1 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCW1" { staff m }
+        """;
+
+    /// <summary>A sixteenth then an EIGHTH grace: the run splits, by log2 of the ratio.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCWM): <c>\grace { d'16 e'8 } f'4 g'2 r4</c> — 1.417939 then
+    /// 2.197939. <c>dt_min</c> is 1/16, so the eighth's gap is
+    /// <c>(1.6 + log2 2) * 0.8 - 0.8 + 0.917939 = 2.197939</c>, exactly 0.8 wider, and it is
+    /// above the floor so it reads the IDEAL directly. This is the only pair of books that
+    /// separates the two halves of the formula: one gap on the floor, one on the spring.
+    /// </remarks>
+    private static readonly string GCWM = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 e8 } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCWM" { staff m }
+        """;
+
+    /// <summary>…and the same two durations the other way round.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCWN): <c>\grace { d'8 e'16 } f'4 g'2 r4</c> — 2.197939 then
+    /// 1.417939, i.e. <see cref="GCWM"/> mirrored. The wide gap follows the LONG note wherever
+    /// it sits, which is what says the term is the gap's own <c>delta_t</c> and not the run's
+    /// first duration or its total.
+    /// </remarks>
+    private static readonly string GCWN = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d8 e16 } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCWN" { staff m }
+        """;
+
+    /// <summary>An ACCIDENTAL on the second grace — the floor's other half.</summary>
+    /// <remarks>
+    /// LilyPond twin (score GCWA): <c>\grace { d'16 eis' } f'4 g'2 r4</c> — 2.560895. The
+    /// spring's ideal has not moved; the RIGHT column's leftward reach has, from 0.1 to
+    /// 1.242957, because the accidental sits at <c>-1.042957</c> in its column and Accidental
+    /// declares <c>extra-spacing-width (-0.2 . 0.0)</c> (scm/define-grobs.scm:40). Then
+    /// <c>1.017939 + 1.242957 + 0.3 = 2.560895</c>, nine places.
+    /// <para>
+    /// <see cref="GCW1"/> widens the left column and this widens the right one; between them
+    /// the floor is pinned as a two-sided skyline computation, which is what a port has to
+    /// implement rather than a constant.
+    /// </para>
+    /// </remarks>
+    private static readonly string GCWA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 eis } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCWA" { staff m }
+        """;
+
+    /// <summary>
+    /// A note BEFORE the grace, so the approach spring is visible — with its control in the
+    /// same book.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score GCWP): <c>\time 4/4 c'4 \grace { d'16 e' } f'4 g'2</c>. The
+    /// c' → grace gap is 2.401796 and the f' → g' gap in the same book is 3.002245, and
+    /// <c>3.002245 * 0.8 = 2.401796</c> to fifteen places: the approach is an ORDINARY note
+    /// spring (lily/spacing-basic.cc:148-162 takes the main-part branch, because the LEFT
+    /// column has no grace part) multiplied by lily/spacing-spanner.cc:396-403's 0.8.
+    /// <para>
+    /// The control has to live in THIS book. A grace changes the score's
+    /// common-shortest-duration, so `c'4 f'4 g'2` on its own measures a different spring —
+    /// the trap HANDOFF 5.0 calls "the pair's two sides were not the same music", in its
+    /// spacing form. Both left heads here are black quarter heads and neither pair reaches
+    /// <c>same_direction_correction</c> (adjacent staff positions give delta 1, and the rule
+    /// wants delta &gt; 1, lily/note-spacing.cc:162-197), so the two springs differ by the 0.8
+    /// and by nothing else.
+    /// </para>
+    /// </remarks>
+    private static readonly string GCWP = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c4 grace { d16 e } f4 g2 | }
+        }
+
+        form main { ~Main }
+
+        score main "GCWP" { staff m }
+        """;
+
     /// <summary>
     /// A beam over CHORDS — measure 2 of test/dense-chromatic, which a handoff had recorded
     /// as a stem-direction divergence.
@@ -6871,6 +7152,46 @@ internal static class LpGeometryProbes
         new("beam.quant.grace.full-size-control.right", BGRC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.grace.third-up.left", BGRT, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.grace.third-up.right", BGRT, g => g.BeamPositionAboveStaffMiddle(0, true)),
+
+        // …and the FRAME those six are projected through, which nothing above can see. The
+        // quanter answers a beam line; what gets drawn is that line evaluated at two x's, and
+        // both of them are one number — half a stem thickness (lily/beam.cc:631). LilyPond
+        // spends the SAME 0.065 on a grace as on a full-size beam, because Stem.thickness is
+        // in line-thickness units and a fontSize does not reach it
+        // (audit/lp-geometry/probes/grace-stem-frame.ly: thick=1.3 and a drawn stem extent
+        // 0.130000 wide in BOTH books; beam-grace.ly: the beam ends 0.065 outside each stem
+        // in BOTH). ★ THE PAIR IS AN IDENTITY ON LILYPOND'S SIDE — the same number four
+        // times — so whatever Lily# puts between the two books is the defect's whole size.
+        // Both ends of the overhang: one stepped end and one true one is a shape no single
+        // reading can tell from a beam that is merely too short.
+        new("grace.stem.thickness", BGR, g => g.BeamGroupStemThickness(0)),
+        new("grace.stem.thickness.full-size-control", BGRC, g => g.BeamGroupStemThickness(0)),
+        new("grace.beam.overhang.left", BGR, g => g.BeamOverhangPastOuterStem(0, false)),
+        new("grace.beam.overhang.right", BGR, g => g.BeamOverhangPastOuterStem(0, true)),
+        new("grace.beam.overhang.full-size-control.left", BGRC,
+            g => g.BeamOverhangPastOuterStem(0, false)),
+        new("grace.beam.overhang.full-size-control.right", BGRC,
+            g => g.BeamOverhangPastOuterStem(0, true)),
+
+        // …and the X FRAME those six read through. Until now the grace column's width was
+        // measured only INDIRECTLY, by the slope it leaves in the beam; these read it. Head
+        // anchor to head anchor, which is the column step in both engines (see
+        // RenderedGeometry.NoteheadAnchorStep). The whole law is in the block above GCW3.
+        new("grace.column.two-sixteenths.step", BGR, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.two-sixteenths.to-main", BGR, g => g.NoteheadAnchorStep(1)),
+        new("grace.column.three-sixteenths.step", GCW3, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.four-sixteenths.step", GCW4, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.four-sixteenths.to-main", GCW4, g => g.NoteheadAnchorStep(3)),
+        new("grace.column.two-eighths.step", GCW2E, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.two-thirtyseconds.step", GCW2T, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.single.to-main", GCW1, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.mixed-short-long.step", GCWM, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.mixed-short-long.to-main", GCWM, g => g.NoteheadAnchorStep(1)),
+        new("grace.column.mixed-long-short.step", GCWN, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.mixed-long-short.to-main", GCWN, g => g.NoteheadAnchorStep(1)),
+        new("grace.column.accidental.step", GCWA, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.approach", GCWP, g => g.NoteheadAnchorStep(0)),
+        new("grace.column.approach.main-control", GCWP, g => g.NoteheadAnchorStep(3)),
 
         // --- and the OTHER thing a beam group decides, which no point above can see: how
         // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which

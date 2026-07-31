@@ -307,7 +307,7 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
         _beamThickness = beamThickness;                         // 0.48 staff spaces full size
-        _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
+        _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.1 staff spaces
         // Derived from THIS beam's thickness and fraction, not the full-size constant:
         // lily/beam.cc Beam::get_beam_translation reads both off the grob.
         _beamTranslation = EngravingDefaults.BeamTranslationOf(beamThickness, lengthFraction);

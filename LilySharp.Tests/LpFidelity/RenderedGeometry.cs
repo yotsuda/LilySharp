@@ -1317,6 +1317,102 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How far a beam's drawn end reaches past the outer stem it ends over.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:631 <c>horizontal_[d] += d * stem_width / 2</c> — a beam
+    /// ends half a stem thickness outside its outer stem, so the corner squares off against
+    /// the stem's own edge. It is also the number the quanter's <c>x_span_</c> is measured
+    /// with (lily/beam-quanting.cc:419), which is what makes it worth a point of its own:
+    /// the quanter and the renderer have to spend the SAME one or the drawn beam is not the
+    /// configuration that was scored.
+    /// <para>
+    /// ⚠️ Deliberately NOT routed through <see cref="BeamGroupStems"/>, which ASSERTS this
+    /// very frame in order to trust the strokes it finds. A point that measures a quantity
+    /// cannot be built on a helper that assumes it.
+    /// </para>
+    /// </remarks>
+    /// <param name="beamIndex">Which beam group, left to right.</param>
+    /// <param name="rightEnd">false = the beam's left end, true = its right end.</param>
+    public double BeamOverhangPastOuterStem(int beamIndex, bool rightEnd, int page = 0)
+    {
+        var span = PrimaryBeamSpan(beamIndex, page);
+        var stems = VerticalStrokesUnder(span, page);
+        return rightEnd ? span.Right - stems[^1].X : stems[0].X - span.Left;
+    }
+
+    /// <summary>
+    /// The stroke width a beam group's stems are drawn with — LilyPond's
+    /// <c>Stem.thickness</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:909-913 Stem::thickness = thickness x line_thickness.
+    /// The property is declared 1.3 at
+    /// scm/define-grobs.scm:3469, so a stem is 0.13 staff spaces wide — and a
+    /// <c>fontSize</c> does not reach LINE thickness.
+    /// <para>
+    /// ⚠️ MEASURED, not read (audit/lp-geometry/probes/grace-stem-frame.ly): a grace stem's
+    /// drawn X extent is 0.130000 wide, the same as a full-size one, and its x sits 0.065
+    /// left of its notehead's right edge in BOTH. LilyPond's answer is the same number twice,
+    /// so whatever Lily# puts between the two books is the whole defect.
+    /// </para>
+    /// </remarks>
+    public double BeamGroupStemThickness(int beamIndex, int page = 0)
+    {
+        var span = PrimaryBeamSpan(beamIndex, page);
+        var stems = VerticalStrokesUnder(span, page);
+        double first = stems[0].Width;
+        foreach (var s in stems)
+        {
+            if (Math.Abs(s.Width - first) > 1e-9)
+            {
+                throw new InvalidOperationException(
+                    $"page {page}: beam {beamIndex} joins stems of DIFFERENT widths "
+                    + $"({string.Join(", ", stems.Select(t => t.Width.ToString("F6")))}) — "
+                    + "there is no single thickness to report.\nDrawn geometry:\n" + Describe());
+            }
+        }
+        return first;
+    }
+
+    /// <summary>The x span of one drawn beam group's primary line.</summary>
+    private (double Left, double Right) PrimaryBeamSpan(int beamIndex, int page)
+    {
+        var primaries = PrimaryBeams(page);
+        if (primaries.Count <= beamIndex)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for beam {beamIndex} but only {primaries.Count} beam "
+                + "group(s) were drawn.\nDrawn geometry:\n" + Describe());
+        }
+        return primaries[beamIndex];
+    }
+
+    /// <summary>
+    /// The vertical strokes standing under a beam's drawn span, left to right, with the
+    /// width each is drawn at. These are its stems: staff and ledger lines are horizontal,
+    /// and a bar line cannot fall inside a beam.
+    /// </summary>
+    private List<(double X, double Width)> VerticalStrokesUnder(
+        (double Left, double Right) span, int page)
+    {
+        var stems = _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9)
+            .Where(l => l.X1 >= span.Left - 1e-9 && l.X1 <= span.Right + 1e-9)
+            .Select(l => (X: l.X1, Width: l.StrokeWidth))
+            .OrderBy(s => s.X)
+            .ToList();
+        if (stems.Count < 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: a beam spanning [{span.Left:F6}, {span.Right:F6}] stands over "
+                + $"{stems.Count} vertical stroke(s) — a beam joins at least two stems."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return stems;
+    }
+
+    /// <summary>
     /// How many beam groups were drawn — where the automatic beaming BROKE.
     /// </summary>
     /// <remarks>
@@ -1867,6 +1963,25 @@ internal sealed class RenderedGeometry
                 + "Drawn geometry:\n" + Describe());
         return heads[index].X;
     }
+
+    /// <summary>
+    /// Notehead <paramref name="index"/>'s anchor → the next notehead's, 0-based, left to
+    /// right. For a probe with one head per column this is the COLUMN STEP.
+    /// </summary>
+    /// <remarks>
+    /// The two engines are compared head-to-head rather than column-to-column because Lily#
+    /// draws glyphs, not columns — but the two agree by measurement, not by assumption: in
+    /// LilyPond every note head's extent in its own paper column starts at exactly 0.0
+    /// (audit/lp-geometry/probes/grace-column-width.ly dumps <c>ext=</c> for every head of
+    /// every book, grace and full size alike), so a head anchor IS its column's origin there.
+    /// <para>
+    /// A head anchor difference is also the only reading that survives the grace scaling: the
+    /// heads are different SIZES, so anything measured from a head's right edge or centre
+    /// would mix the column step with the font metric.
+    /// </para>
+    /// </remarks>
+    public double NoteheadAnchorStep(int index) =>
+        NoteheadAnchor(index + 1) - NoteheadAnchor(index);
 
     /// <summary>
     /// The clef anchor → first-notehead anchor on system <paramref name="systemIndex"/>

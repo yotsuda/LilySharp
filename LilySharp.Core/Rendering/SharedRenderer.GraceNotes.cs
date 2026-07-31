@@ -64,8 +64,16 @@ internal static partial class SharedRenderer
             // twice in LP too — fontSize composes).
             double eff = os.Size(g.Scale, g.StaffIndex);
             double scaledFontSize = FontSize * eff;
+            // The run's column offsets come from the LAYOUT — the same chain the reservation
+            // and the beam quanter read (SpacingRules.GraceColumns). The renderer places, it
+            // does not decide: it used to step by its own literal (1.2 + 0.3) * eff, which
+            // was neither of the two widths the layout had reserved. The offsets are in
+            // grace-scaled staff spaces already, so only the OSSIA factor is applied here.
+            double unit = os.Size(1.0, g.StaffIndex);
+            var colX = g.ColumnOffsets;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
+            int headIndex = 0;
             int lastGraceStaffPos = 0;
             // Per-head geometry, collected so the stems/beam can be drawn once
             // the whole group's positions are known.
@@ -76,6 +84,8 @@ internal static partial class SharedRenderer
             {
                 foreach (var note in g.Notes)
                 {
+                    if (!colX.IsDefault && headIndex < colX.Length)
+                        currentX = g.X + colX[headIndex] * unit;
                     double y = os.YUp(staffMiddleY + note.StaffPosition / 2.0,
                         g.StaffIndex, g.MeasureIndex);
                     // Ledgers under the head — layer 0 with the staff lines.
@@ -103,12 +113,7 @@ internal static partial class SharedRenderer
                     lastNoteX = currentX;
                     lastNoteY = y;
                     lastGraceStaffPos = note.StaffPosition;
-                    // Advance one grace column = head width + inter-grace space, the
-                    // SAME per-note step the layout reserves; the old width-only step
-                    // left the heads short of their reserved room and read as cramped.
-                    // LILYPOND-REF: GraceNoteEngraver GraceNoteWidth (1.2) +
-                    //   GraceNoteSpacing (0.3); lily/grace-spacing-engraver.cc.
-                    currentX += (1.2 + 0.3) * eff;
+                    headIndex++;
                 }
 
                 // Stems (forced UP) plus the connecting beam, or a flag for a lone
@@ -167,12 +172,23 @@ internal static partial class SharedRenderer
         // so the size contrast that reads as "grace" in notation would here just
         // make the digit illegibly tiny.
         double fontSize = TabFretFontSize * TabGraceFretScale;
+        // The columns are the ones the layout reserved (SpacingRules.GraceColumns), the same
+        // as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+        // draws no stem and no beam, so its grace run has no Beam grob and this geometry has
+        // no twin to be measured against (HANDOFF §1 ④ — a tab beam reads -76.5 through that
+        // path). What is NOT own is the step: reading the reserved columns rather than a
+        // literal 1.2 is what keeps the drawn digits inside the room the spacing gave them.
+        var colX = g.ColumnOffsets;
         double currentX = g.X;
+        int headIndex = 0;
 
         using (gc.Source(g.SourcePosition))
         {
             foreach (var note in g.Notes)
             {
+                if (!colX.IsDefault && headIndex < colX.Length)
+                    currentX = g.X + colX[headIndex];
+                headIndex++;
                 var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
                 double noteY = tabTopY - (stringNum - 1) * stringSpace;
                 string fretText = fret.ToString();
@@ -184,7 +200,6 @@ internal static partial class SharedRenderer
                     fill: Color.White);
                 gc.DrawText(fretText, currentX, noteY - fontSize * 0.32, fontSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
-                currentX += 1.2 * g.Scale;
             }
         }
     }
@@ -213,11 +228,15 @@ internal static partial class SharedRenderer
     /// to per-head flags rather than a partial beam.
     /// </remarks>
     /// <param name="beamEnds">
-    /// The quanted beam's Y at its two DRAWN ends, from LilyPond's <c>Beam.positions</c>
-    /// (GraceNoteEngraver.QuantGraceBeam). ⚠️ Not optional in practice: the fallback below
-    /// is the pre-2026-08-01 device — equal-length stems with the beam parallel to the head
-    /// contour — which is off LilyPond's quant grid entirely. It survives only for a group
-    /// the layout could not quant (a test constructing a GraceNoteLayout by hand).
+    /// The quanted beam's Y at its two OUTER STEMS, from GraceNoteEngraver.QuantGraceBeam —
+    /// which is where BeamScoringProblem.Solve answers, its last step being AtOuterStems.
+    /// ⚠️ NOT at the beam's drawn ends: those sit half a stem thickness further out, and
+    /// reading these two numbers there draws a flatter line than the one that was scored.
+    /// ⚠️ Not optional in practice either: the fallback is the pre-2026-08-01 device —
+    /// equal-length stems with the beam parallel to the head contour — which is off
+    /// LilyPond's quant grid entirely. It survives only for a group the layout could not
+    /// quant (a test constructing a GraceNoteLayout by hand), and it now shares this frame,
+    /// its stem ends being at the stems by construction.
     /// </param>
     private static void DrawGraceStemsAndBeam(
         List<double> xs, List<double> ys, List<int> beamCounts, double scale,
@@ -226,11 +245,24 @@ internal static partial class SharedRenderer
         int n = xs.Count;
         if (n == 0) return;
 
-        double stemThick = EngravingDefaults.StemThickness * scale;
+        // A grace stem is drawn exactly as wide as a full-size one.
+        // LILYPOND-REF: lily/stem.cc:909-913 Stem::thickness = thickness x line_thickness.
+        //   The property is declared 1.3 at scm/define-grobs.scm:3469, so a
+        //   stem is 0.13 staff spaces wide — and a fontSize does not reach LINE thickness, so
+        //   the grace scaling never touches it.
+        // ⚠️ MEASURED, not read (audit/lp-geometry/probes/grace-stem-frame.ly): thickness 1.3
+        //   and a drawn stem extent 0.130000 wide in BOTH the grace book and the full-size
+        //   control, with the stem standing 0.065 left of its notehead's right edge in both.
+        //   Ledger grace.stem.thickness (and its full-size control, exact from the first run).
+        double stemThick = EngravingDefaults.StemThickness;
         double stemLen = EngravingDefaults.DefaultStemLength * scale;
-        // Stem-up attaches at the right edge of the (scaled) notehead.
-        double upAttach = EngravingDefaults.NoteheadBlackWidth * scale - stemThick / 2;
-        double StemX(int i) => xs[i] + upAttach;
+        // THE one house for where a stem stands, and the whole point of using it here: it is
+        // the expression the beam was SCORED in (BeamScoringProblem's StemXOf reads the same
+        // LayoutUtilities.StemX at the same headScale) and the one the collision collector
+        // reads. Spelling it a second time here is what let the two frames drift — the second
+        // spelling pulled the stem back by half a SCALED thickness while the quanter used the
+        // unscaled one, and nothing observed either.
+        double StemX(int i) => LayoutUtilities.StemX(xs[i], up: true, headScale: scale);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame.
         double StemEndY(int i) => ys[i] + stemLen;
@@ -267,20 +299,17 @@ internal static partial class SharedRenderer
         // the corner squares off against the vertical stem edge.
         // LILYPOND-REF: lily/beam.cc — stems terminate on the beam; beam.cc:631
         //   horizontal_[dir] += dir * stem_width / 2 (flush end).
-        // The quanter's frame: it answers at the beam's DRAWN ends, which sit half a stem
-        // thickness outside the outer stems (lily/beam.cc:631), and it measures that
-        // overhang with the unscaled stem thickness — so the line is fixed by those two
-        // x's, whatever the quad's own corners are stepped out by below.
-        double quantOverhang = EngravingDefaults.StemThickness / 2.0;
-        double edgeL = StemX(0) - quantOverhang, edgeR = StemX(n - 1) + quantOverhang;
+        // The quanter's frame: BeamScoringProblem.Solve ends in AtOuterStems, so what comes
+        // back is the scored line's Y AT THE OUTER STEMS — not at the beam's drawn ends,
+        // which sit half a stem thickness further out (lily/beam.cc:631). Anchoring the line
+        // at the stems is therefore the whole of it: evaluated back out at the drawn ends it
+        // reproduces the configuration the scorer chose, and evaluated at any inner stem it
+        // gives that stem its length. Reading these two numbers at the EDGES instead drew the
+        // configuration flattened by 0.13 / x_span, which is where +-0.014991541 of the
+        // grace beam's residual came from (ledger beam.quant.grace.left).
+        double edgeL = StemX(0), edgeR = StemX(n - 1);
         double beamLeftY = beamEnds?.Left ?? StemEndY(0);
         double beamRightY = beamEnds?.Right ?? StemEndY(n - 1);
-        if (beamEnds is null)
-        {
-            // The old device, kept only for a hand-built layout: equal-length stems.
-            edgeL = StemX(0);
-            edgeR = StemX(n - 1);
-        }
         double span = edgeR - edgeL;
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
@@ -290,6 +319,11 @@ internal static partial class SharedRenderer
 
         double beamThick = EngravingDefaults.BeamThickness * scale;
         double beamTrans = EngravingDefaults.BeamTranslation * scale;
+        // The beam's ends reach half a stem thickness past its outer stems — the SAME
+        // unscaled 0.065 the quanter measured its x_span_ with, so the corner lands exactly
+        // on the scored configuration and squares off against the stem's own edge.
+        // LILYPOND-REF: lily/beam.cc:631 horizontal_[d] += d * stem_width / 2.
+        // Ledger grace.beam.overhang.left / .right.
         double halfStem = stemThick / 2;
 
         // LILYPOND-REF: lily/lookup.cc Lookup::beam — the beam quad is a parallelogram

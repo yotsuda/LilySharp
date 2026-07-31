@@ -180,9 +180,13 @@ public class GraceSpacingTests
 
         double width = SpacingRules.CalculateGraceGroupSpringWidth(notes);
 
-        // Should be at least one grace spring min (0.8) + junction rod (0.4)
-        Assert.True(width >= 0.8 + SpacingRules.GraceToMainRod,
-            $"Single grace width ({width:F3}) should be >= min + rod ({0.8 + SpacingRules.GraceToMainRod:F3})");
+        // One gap — the grace to the main note — and it is an ordinary grace spring, not a
+        // junction of its own. Its floor is merge_springs' headroom over the two columns'
+        // facing skylines (lily/spring.cc:122), which a flagged grace makes the larger term.
+        // LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing;
+        //   MEASURED 1.938627 for a lone sixteenth grace (grace.column.single.to-main).
+        Assert.True(width >= SpacingRules.SpringHeadroom,
+            $"Single grace width ({width:F3}) should clear merge_springs' headroom");
     }
 
     [Fact]
@@ -291,10 +295,35 @@ public class GraceSpacingTests
         Assert.Equal(expectedWidth, springWidth, 4);
     }
 
+    /// <summary>
+    /// The last grace → main note gap is an ordinary grace spring, NOT a junction of its own
+    /// — so it moves with the run's parameters like any other gap.
+    /// </summary>
+    /// <remarks>
+    /// This replaces <c>GraceToMainRod_MatchesLilyPond</c>, which asserted that a 0.4 rod was
+    /// LilyPond's. It is not: <c>delta_t.grace_part_</c> is non-zero for that pair too, so
+    /// lily/spacing-basic.cc:163 takes the grace branch, and MEASURED (ledger
+    /// grace.column.four-sixteenths.to-main) LilyPond gives the closing gap exactly what it
+    /// gives the interior ones. The rule is asserted by PERTURBATION rather than by a value,
+    /// per HANDOFF 5.4: widen the run's <c>spacing-increment</c> and the closing gap has to
+    /// follow, which a constant junction would not.
+    /// </remarks>
     [Fact]
-    public void GraceToMainRod_MatchesLilyPond()
+    public void GraceToMainGap_IsAGraceSpring_NotAConstantJunction()
     {
-        // LILYPOND-REF: lily/grace-spacing-engraver.cc — junction rod
-        Assert.Equal(0.4, SpacingRules.GraceToMainRod, 2);
+        var notes = ImmutableArray.Create(MakeGrace(Fraction.Eighth), MakeGrace(Fraction.Eighth));
+
+        var narrow = SpacingRules.GraceColumns(notes, mainItem: null);
+        var wide = SpacingRules.GraceColumns(
+            notes, mainItem: null, new GraceSpacingParameters { SpacingIncrement = 1.6 });
+
+        // The closing gap IS the interior gap — same spring, same floor, same answer.
+        Assert.Equal(narrow.Offsets[1] - narrow.Offsets[0], narrow.ToMain, 9);
+        Assert.Equal(wide.Offsets[1] - wide.Offsets[0], wide.ToMain, 9);
+        // And it follows the run's parameters. A constant junction would not move at all;
+        // the default run sits on its skyline floor, so this also proves the spring can
+        // lift the closing gap off that floor.
+        Assert.True(wide.ToMain > narrow.ToMain + 0.4,
+            $"closing gap {narrow.ToMain:F6} -> {wide.ToMain:F6} did not follow spacing-increment");
     }
 }

@@ -21,6 +21,7 @@
 | `probes/*.ly` | **LP 側のプローブ**。committed・再実行可能。値の出所がここにある |
 | `Measure-LilyPondGeometry.ps1` | **X**（system 内の anchor 間距離）のプローブを通す |
 | `Measure-LilyPondPageGeometry.ps1` | **Y**（ページ縦）のプローブを通す。`probes/page-vertical.ly` 用 |
+| `Measure-LilyPondProbe.ps1` | **専用プローブ 1 本**を通して、その `PROBE*` 行を生のまま印字する。上の 2 本と違い dump の形を知らないので、**プローブが自分で出力を整形する**。新しい対はこちらで固める（上の 2 本は既存の点を丸ごと引きずるので値段が桁違い） |
 | `lp-geometry.json` | **台帳**。LP 実測値 ＋ 現在の residual ＋ その原因 |
 | `LilySharp.Tests/LpFidelity/LpGeometryProbes.cs` | **Lily# 側のプローブ**（同じ音楽を .lys で書いたもの）と測る量の定義 |
 | `LilySharp.Tests/LpFidelity/RenderedGeometry.cs` | 描画結果を LP と同じ語彙（anchor 間距離）で問い合わせる |
