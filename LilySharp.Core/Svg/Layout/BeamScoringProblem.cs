@@ -165,6 +165,35 @@ internal sealed class BeamScoringProblem
         // seed dy = slope * x_span is a touch larger than the stem-to-stem dy. That
         // small difference is what lets LP land on a slightly steeper quant for gentle
         // beams; measuring stem-to-stem instead flattened them by ~one quant step.
+        // ⚠️ THE NOTE COLUMN'S x, AND THAT IS **NOT** LILYPOND'S — this frame is KNOWN WRONG
+        // for a knee and is left here deliberately. Read the whole note before changing it.
+        //
+        // LILYPOND-REF: lily/beam-quanting.cc:313-315, where Beam_scoring_problem fills
+        // stem_xpositions_ — it reads s->relative_coordinate (common[X_AXIS], X_AXIS), and a
+        // Stem DOES declare an X-offset: scm/define-grobs.scm:3471 declares
+        // (X-offset . ly:stem::offset-callback), whose body is lily/stem.cc:1090-1114
+        // Stem::offset_callback ("move the stem to right of the notehead if it is up").
+        // ⚠️ MEASURED, not read (audit/lp-geometry/probes/beam-stem-x.ly): the X-offset is
+        // 1.2392 for an up stem and 0.065 for a down one, and the Beam's own X-positions run
+        // from the first stem's left EDGE to the last stem's right edge. So LilyPond's frame
+        // is [stem(0) - w/2 … stem(n-1) + w/2] and this one is [column(0) - w/2 …].
+        // ⚠️ An earlier handoff recorded "a Stem declares no X-offset at all
+        // (scm/define-grobs.scm:3429-3470)" and told the next hand not to fix this. That
+        // range ends ONE LINE above the X-offset. The claim is FALSE; do not restore it.
+        //
+        // With every member pointing the same way the offset is a constant: it translates the
+        // whole frame and cancels out of the span, the slope, the least squares AND the drawn
+        // positions alike, so only a KNEE can see it.
+        // ⚠️ WHY IT IS STILL WRONG HERE. Switching to the stem x was tried and MEASURED, and
+        // it moves two LilyPond-verified knee readings the wrong way on its own:
+        // beam.quant.knee.left -0.000586 -> +0.19, and the kneed bar of
+        // showcase/05-special-techniques from LilyPond's exact (0.19 . 0.81) to (-0.19 . 0.19).
+        // The reason is NOT the frame — it is the SPACING the frame is built on. For
+        // `c'8 c' c' c'''` LilyPond's stems land at 0.065 / 2.569 / 5.073 / 7.578 (evenly
+        // spaced, span 7.643) and Lily#'s at 0.065 / 1.669 / 3.273 / 3.759 (span 3.823), so
+        // the least squares fits a slope off by a factor of two whichever frame it runs in.
+        // ⇒ COME BACK when the beamed columns of a ledger-heavy knee are spaced like
+        // LilyPond's. The frame and the spacing have to land together.
         var firstMember = group.Members[0];
         var lastMember = group.Members[^1];
         _leftX = itemXPositions[firstMember.ItemIndex];
@@ -450,38 +479,97 @@ internal sealed class BeamScoringProblem
             ideals.Add((_stemXPositions[i], idealY));
         }
 
-        double slope, intercept;
-        if (ideals.Count == 1 || _xSpan < 0.001)
+        double leftY, rightY;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:551-580 least_squares_positions — the branch
+        // BEFORE the least squares: when the ideal Y of the first and last stems agree there
+        // is no least squares at all. The beam is flat at that ideal and least-squares-dy
+        // (musical_dy_) is ZERO, which is what makes score_slope_direction demand a flat
+        // beam and score_slope_musical charge every sloped candidate.
+        // ⚠️ MEASURED, not read (audit/lp-geometry/probes/beam-least-squares.ly):
+        // `c'8 d' e' c'` answers (0.81 . 0.81) with least-squares-dy 0 while the same
+        // book ending on g' answers (0.81 . 2.0) with 1.997; and the three-stem knee
+        // `c'8 c''' c'`, whose outer stems are the SAME note, is flat for this reason —
+        // not because anything looked at the knee.
+        // The equality is LilyPond's exact float compare: both sides come from the same
+        // calc_stem_info expression, so equal inputs give a bit-identical answer.
+        if (ideals[0].y == ideals[^1].y)
         {
-            slope = 0;
-            intercept = ideals[0].y;
+            // LILYPOND-REF: :562-575 — two stems that both reach the middle line have
+            // equal ideals for a second reason, and a flat beam there reads as squashed;
+            // LilyPond gives those an artificial half-thickness slope in the direction the
+            // chord moves. chord_start_y is the head at the stem's own end
+            // (lily/stem.cc:114-122 last_head).
+            double chordLeft = ChordStartY(0);
+            double chordRight = ChordStartY(ideals.Count - 1);
+            if (ideals[0].y == 0.0 && chordRight != chordLeft && ideals.Count == 2)
+            {
+                double half = _beamThickness / 2;
+                bool rising = chordRight > chordLeft;
+                leftY = rising ? -half : half;
+                rightY = rising ? half : -half;
+            }
+            else
+            {
+                leftY = rightY = ideals[0].y;
+            }
+
+            _musicalDy = rightY - leftY;
         }
         else
         {
-            // Least-squares linear regression
-            MinimiseLeastSquares(ideals, out slope, out intercept);
+            double slope, intercept;
+            if (ideals.Count == 1 || _xSpan < 0.001)
+            {
+                slope = 0;
+                intercept = ideals[0].y;
+            }
+            else
+            {
+                // Least-squares linear regression
+                MinimiseLeastSquares(ideals, out slope, out intercept);
+            }
+
+            leftY = intercept;
+            rightY = intercept + slope * _xSpan;
+
+            // Ensure dy is not smaller than the smallest quant step.
+            // ⚠️ LilyPond keeps the LEFT end and lengthens dy rightward
+            // (:597 unquanted_y_ = {y, (y + dy)}); this recentres instead, so the two
+            // differ by half the bump whenever MinimumDy actually bites. Not ported here
+            // because it moves every gently-sloped beam, not just the ones under test.
+            double dy = rightY - leftY;
+            if (Math.Abs(dy) > 0.001)
+            {
+                dy = MinimumDy(dy);
+
+                double center = (leftY + rightY) / 2;
+                leftY = center - dy / 2;
+                rightY = center + dy / 2;
+            }
+
+            _musicalDy = rightY - leftY;
         }
-
-        double leftY = intercept;
-        double rightY = intercept + slope * _xSpan;
-
-        // Ensure dy is not smaller than the smallest quant step.
-        double dy = rightY - leftY;
-        if (Math.Abs(dy) > 0.001)
-        {
-            dy = MinimumDy(dy);
-
-            double center = (leftY + rightY) / 2;
-            leftY = center - dy / 2;
-            rightY = center + dy / 2;
-        }
-
-        _musicalDy = rightY - leftY;
 
         // Ensure minimum stem length for all notes
         EnsureMinimumStemLength(ref leftY, ref rightY, minStemLen);
 
         return (leftY, rightY);
+    }
+
+    /// <summary>
+    /// Where a member's chord STARTS — the head at the far end of its own stem, in
+    /// staff-spaces up from the middle line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:114-122 Stem::chord_start_y — the position of
+    ///   <c>last_head</c> (the head the stem's tip runs away from) times half a staff
+    ///   space. Our head positions are half-spaces, so ×0.5 is the same conversion.
+    /// </remarks>
+    private double ChordStartY(int i)
+    {
+        int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+        return (dir > 0 ? _headMax[i] : _headMin[i]) * 0.5;
     }
 
     /// <summary>

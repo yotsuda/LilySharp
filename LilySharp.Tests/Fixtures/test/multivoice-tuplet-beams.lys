@@ -1,12 +1,14 @@
-// Regression: a tuplet in ONE voice must not break another voice's beaming.
+// Regression: a tuplet in ONE voice must not reach another voice's beaming.
 // Voice 1 has a quarter-note triplet (its "3" bracket sits above); voice 2 has
 // eight straight eighths that must beam 4+4 (two half-measure groups), below,
-// stems down. Auto-beaming breaks at a tuplet boundary, but only within the
-// tuplet's OWN voice — the boundary index is voice-local. Before the fix the
-// detector shared score.TupletBrackets across every voice, so voice 1's triplet
-// end-index split voice 2's first group into [e' f'] + two stray flags, matching
-// LilyPond only if you squint. Now tuplets carry a VoiceIndex and the detector
-// filters by it. LILYPOND-REF: lily/auto-beam-engraver.cc — beaming is per Voice.
+// stems down. The detector once shared score.TupletBrackets across every voice,
+// so voice 1's triplet end-index split voice 2's first group into [e' f'] + two
+// stray flags; tuplets now carry a VoiceIndex and the detector filters by it.
+// ⚠️ The rule that made that reachable — "a beam ends at a tuplet boundary" — was
+// an invention and is gone (2026-07-31); what the filter still feeds is the
+// beamlet clamp at a tuplet's own ends. The grouping here is answered by voice 2's
+// own durations against 4/4's beamExceptions, and the book holds it there.
+// LILYPOND-REF: lily/auto-beam-engraver.cc — beaming is per Voice.
 octave absolute
 title "Multi-voice tuplet + beams"
 part mel { clef treble }

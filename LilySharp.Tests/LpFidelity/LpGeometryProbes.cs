@@ -3334,6 +3334,98 @@ internal static class LpGeometryProbes
         score main "BQV" { staff m }
         """;
 
+    // --- the one regime where the quanter's stems do NOT all point the same way
+    // (audit/lp-geometry/probes/beam-knee.ly).
+    //
+    // Lily#'s quanter takes each stem's x from the NOTE COLUMN
+    // (BeamScoringProblem.cs:187) rather than from the stem. A stem sits at the column plus
+    // an attachment offset that depends on its DIRECTION — a notehead's width for an up
+    // stem, about zero for a down one — so with every member pointing the same way the
+    // offset is a constant that cancels out of the span, the slope and the least squares
+    // alike. Under a KNEE it alternates, and nothing cancels. These are the points that can
+    // see that.
+
+    /// <summary>
+    /// A four-stem KNEE: C4 against C6, alternating, so both engravers knee it unasked.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe beam-knee.ly, score A): <c>c'8 c''' c' c''' r2</c> —
+    /// <c>Beam.positions</c> <c>(-0.19 . 0.19)</c>, stem directions <c>(1 -1 1 -1)</c>.
+    /// <para>
+    /// Its IDENTITY PAIR is in the same probe (score B): the same music with
+    /// <c>Beam.auto-knee-gap = #100</c>, which forbids the knee, answers <c>(-5.5 . -5.5)</c>
+    /// with every stem down. So the reading is the knee's and not a floor's. ⚠️ That pair has
+    /// no Lily#-side twin — there is no syntax for auto-knee-gap — which is why it is
+    /// recorded here rather than as a point.
+    /// </para>
+    /// Both ends, because the beam is sloped and a defect in the stems' x is a defect in the
+    /// SLOPE: a reading at one end alone could be right by accident.
+    /// </remarks>
+    private static readonly string BQK = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 c'' c c'' r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQK" { staff m }
+        """;
+
+    /// <summary>
+    /// A THREE-stem knee, whose middle stem is the one whose x offset differs from both ends'.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score C): <c>c'8 c''' c' r4 r2</c> — <c>(0.19 . 0.19)</c>, directions
+    /// <c>(1 -1 1)</c>. Not a repetition of <see cref="BQK"/>: with four stems the two
+    /// mis-offset members sit symmetrically about the middle and a slope error can cancel in
+    /// the least squares, and with three it cannot.
+    /// </remarks>
+    private static readonly string BQK3 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 c'' c r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQK3" { staff m }
+        """;
+
+    /// <summary>
+    /// The CONTROL for both: the same rhythm with no leap, so no knee and every stem up.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score D): <c>c'8 e' c' e' r2</c> — <c>(1.0 . 1.0)</c>. This is the
+    /// regime where the column-versus-stem offset provably cancels, so it must be exact
+    /// whatever the knee points say — and if it ever moves, the port broke the ordinary case.
+    /// </remarks>
+    private static readonly string BQKC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 e c e r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQKC" { staff m }
+        """;
+
     /// <summary>
     /// A beam over CHORDS — measure 2 of test/dense-chromatic, which a handoff had recorded
     /// as a stem-direction divergence.
@@ -3422,8 +3514,12 @@ internal static class LpGeometryProbes
     /// ⚠️ Eighths for the measured beam and sixteenths for the covering voice ON PURPOSE:
     /// a sixteenth group draws two full-width beam lines and
     /// <see cref="RenderedGeometry.BeamPositionAboveStaffMiddle"/> names a group's line by x
-    /// containment, which cannot tell two equally wide lines apart. Beat one, because Lily#
-    /// ends an eighth beam at every quarter where LilyPond ends it at the half-measure.
+    /// containment, which cannot tell two equally wide lines apart. Beat one, and the rest of
+    /// the bar a skip, so exactly one beam of two eighths is drawn and there is nothing to
+    /// name it against. (⚠️ The reason written here used to be "Lily# ends an eighth beam at
+    /// every quarter where LilyPond ends it at the half-measure". That divergence is closed —
+    /// both end it at the half measure now — and this book never depended on it: what ends
+    /// the beam here is the skip, in both engines.)
     /// </remarks>
     private static readonly string BQM = """
         octave absolute
@@ -3961,10 +4057,11 @@ internal static class LpGeometryProbes
     /// into one beam.
     /// <para>
     /// ⚠️ This was written as the control for the 1/12 books and is where the divergence
-    /// actually lives: Lily# ends a beam at every tuplet boundary unconditionally
-    /// (BeamDetector's tupletBoundaries), so it draws eight beams of three. LilyPond has no
-    /// such rule — what breaks the beam in the 1/12 books is the exception LOOKUP changing
-    /// between two runs, not the tuplet's edge.
+    /// turned out to live: Lily# used to end a beam at every tuplet boundary unconditionally
+    /// (BeamDetector's tupletBoundaries), and drew eight beams of three. LilyPond has no such
+    /// rule — what breaks the beam in the 1/12 books is the exception LOOKUP changing between
+    /// two runs, not the tuplet's edge — and the guard went with the one-pass port, which is
+    /// what this book now holds down.
     /// </para>
     /// </remarks>
     private static readonly string BGT44S = """
@@ -4100,11 +4197,12 @@ internal static class LpGeometryProbes
     /// at 3/8 is not an ending moment either. So the beam runs from the first eighth to the
     /// last, straight through both edges of the tuplet.
     /// <para>
-    /// ⚠️ This is the only book that observes Lily#'s SECOND tuplet guard (tupletInteriors,
-    /// which suppresses the beat flush inside a tuplet) — a triplet that starts ON a beat is
-    /// already inside one beat and nothing would cut it. Today Lily# draws one beam of three:
-    /// tupletBoundaries cuts at both edges, and the two lone eighths are dropped as groups of
-    /// one. The group COUNT is 1 on both sides, so only the first-group reading can see it.
+    /// ⚠️ This is the only book that ever observed Lily#'s SECOND tuplet guard
+    /// (tupletInteriors, which suppressed the beat flush inside a tuplet) — a triplet that
+    /// starts ON a beat is already inside one beat and nothing would cut it. Before the
+    /// one-pass port Lily# drew one beam of three: tupletBoundaries cut at both edges and the
+    /// two lone eighths were dropped as groups of one. The group COUNT is 1 either way, so
+    /// only the first-group reading could see it — which is why both are here.
     /// </para>
     /// </remarks>
     private static readonly string BGTOFF = """
@@ -6470,6 +6568,12 @@ internal static class LpGeometryProbes
         new("beam.quant.chord.left", BQC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.chord.right", BQC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.chord.single-note-control", BQCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // …and the KNEE, the one regime where the members' stems point different ways and the
+        // quanter's column-for-stem x therefore cannot cancel.
+        new("beam.quant.knee.left", BQK, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.knee.right", BQK, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.knee.three-stem", BQK3, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.knee.no-leap-control", BQKC, g => g.BeamPositionAboveStaffMiddle(0, false)),
 
         // --- and the OTHER thing a beam group decides, which no point above can see: how
         // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which

@@ -27,6 +27,15 @@
 % is reckoned from the head at the stem's far end, so B is what this beam would do if the
 % upper chord notes were not there — A minus B is what the chord costs.
 %
+% C is the OTHER half of "are both sides the same music", added 2026-07-31 after the same
+% false report was reached for a second time by a second route: the .lys writes these pitches
+% in RELATIVE octaves, and a transcription that resolves them one octave down puts every head
+% BELOW the middle line, where LilyPond really does stem them up — which is precisely the
+% reported divergence, manufactured. C asks LilyPond to resolve the relative source itself
+% (\relative c' takes the nearest note to C4 for the first one, which is Lily#'s rule), and
+% it must answer with the same (1 3 5) … (3 5 7) that A does. ⚠️ C's GROUPING is not
+% comparable for the bar-check reason above; C is about PITCH.
+%
 % Output: PROBEB <name> BEAM dir=<direction> pos=<positions>
 %         PROBEB <name> STEM dir=<direction> heads=<staff positions>
 
@@ -61,3 +70,10 @@ bottoms  = { cis''8 d'' ees'' e'' r2 }
     \override Beam.after-line-breaking = #(dump-beam "B")
     \override Stem.after-line-breaking = #(dump-stem "B")
   } { \time 4/4 \bottoms } }
+
+\score { \new Staff \with {
+    \override Beam.after-line-breaking = #(dump-beam "C")
+    \override Stem.after-line-breaking = #(dump-stem "C")
+  } { \time 4/4 \relative c' {
+        cis16 d dis e f fis g gis a ais b c |
+        <cis e gis>8 <d f aes> <ees ges bes> <e g b> r2 } } }

@@ -1,8 +1,12 @@
 // A tuplet in the LOWER voice: its "3" bracket must sit BELOW the triplet (the
 // voice's stem side, voice 2 = stems down), anchored to voice 2's own notes —
 // not above by the staff-wide "multi-voice => bracket up" rule, and not on the
-// primary voice's noteheads. Also guards that voice 2's OWN tuplet still breaks
-// its beaming: the triplet beams separately from the following eighths.
+// primary voice's noteheads. Also guards that voice 2's triplet still beams
+// separately from the eighths after it — ⚠️ not because a tuplet's edge cuts a
+// beam (that rule was an invention and is gone), but because the exception LOOKUP
+// changes with the run's shortest duration: the triplet's twelfths take 4/4's 1/12
+// entry and end at the quarter, the plain eighths take the 1/8 entry and run to the
+// half measure. Three beams: 3, then 2, then 4.
 // LILYPOND-REF: lily/tuplet-bracket.cc get_default_dir — bracket on the stem side.
 octave absolute
 title "Lower-voice tuplet"

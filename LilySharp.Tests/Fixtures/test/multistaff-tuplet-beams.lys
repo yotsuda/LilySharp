@@ -1,9 +1,11 @@
-// Regression: a tuplet on ONE staff must not break another staff's beaming.
+// Regression: a tuplet on ONE staff must not reach another staff's beaming.
 // Upper staff has a quarter-note triplet; lower staff has eight straight eighths
-// that must beam 4+4. Auto-beaming breaks at a tuplet boundary by note index, so
-// a per-staff beam pass must see only its OWN staff's tuplets — else the upper
-// triplet's end-index splits the lower staff's first beam group ([c d] + two stray
-// flags + [g a b c']). Tuplets carry a StaffIndex; the beam pass now filters by it.
+// that must beam 4+4. The beam pass once broke at a tuplet boundary BY NOTE INDEX,
+// so the upper triplet's end-index split the lower staff's first group ([c d] +
+// two stray flags + [g a b c']); tuplets carry a StaffIndex and the pass filters
+// by it. ⚠️ The boundary rule itself was an invention and is gone (2026-07-31) —
+// the filter now feeds only the beamlet clamp at a tuplet's own ends, and the
+// lower staff's 4+4 comes from its own eighths against 4/4's beamExceptions.
 // LILYPOND-REF: lily/auto-beam-engraver.cc — beaming is per Voice/Staff context.
 octave absolute
 title "Multi-staff tuplet + beams"

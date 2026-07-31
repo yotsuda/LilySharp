@@ -1,0 +1,26 @@
+// The beam quanter's covered-STEM supply, which the corpus stepped on nowhere.
+// Every bar holds the SAME beam — two eighths on the middle line, voice 1, stems up —
+// and differs only in what hangs above it in voice 2:
+//   bar 1  a BEAMED stem reaching down into the beam's path (weight 0.1)
+//   bar 2  an UNBEAMED one (weight 1.0, and its drawn box already spans the path)
+//   bar 3  nothing at all — the control, which is what says the first two are lifted
+//          rather than sitting on a floor.
+// LilyPond books each covered grob TWICE: its own box, and an interval from its stem's
+// chord_start_y running to INFINITY in the stem's direction. Here the covered head's box
+// clears the beam by 0.76, past the 0.35 padding, so nothing but that interval can lift
+// the beam — and it does, by 2.81 staff spaces in both of the first two bars.
+// Ledger: beam.quant.over-stem.{beamed,unbeamed,free} = 5.81 / 5.81 / 3.00, measured from
+// LilyPond (audit/lp-geometry/probes/beam-over-stem.ly, scores qA/qB/qC).
+// LILYPOND-REF: lily/beam-quanting.cc:401-418 Beam_scoring_problem::init_collisions — the
+// stem interval and STEM_COLLISION_FACTOR.
+octave absolute
+title "Beam over another voice's stem"
+part mel { clef treble }
+section S {
+  mel {
+    voice { b8 b s2. | b8 b s2. | b8 b s2. | }
+    voice { s16 d''16 d'' d'' s2. | s16 d''4 s8. s2 | s1 | }
+  }
+}
+form main { S }
+score main "beam-over-stem" { staff mel }

@@ -147,18 +147,26 @@ public class SvgSnapshotTests
         // Second-voice beaming: voice 2's eighths/sixteenths beam per voice, BELOW
         // the notes (stems forced down), while voice 1's quarters stay unbeamed.
         yield return new object[] { "test/multivoice-beams" };
-        // A tuplet in voice 1 must not break voice 2's beaming (tuplet boundaries
-        // are voice-local): voice 2's eighths still beam 4+4.
+        // A tuplet in voice 1 must not break voice 2's beaming: voice 2's eighths beam
+        // 4+4. ⚠️ It was a tuplet-boundary rule that made this askable; that rule was
+        // an invention and is gone. What is voice-local now is the beamlet clamp at a
+        // tuplet's ends, and the grouping answer comes from voice 2's own durations.
         yield return new object[] { "test/multivoice-tuplet-beams" };
-        // A tuplet on the UPPER staff must not break the LOWER staff's beaming
-        // (tuplet boundaries are staff-scoped too): the bass eighths beam 4+4.
+        // The same across STAVES: a tuplet above must not reach the bass eighths, which
+        // beam 4+4.
         yield return new object[] { "test/multistaff-tuplet-beams" };
         // A tuplet in the LOWER voice: its "3" bracket sits BELOW (the voice's
-        // stem side), and its own triplet still breaks that voice's beaming.
+        // stem side), and its twelfths group by the quarter while the plain eighths
+        // around them run to the half measure — two exception lookups in one voice.
         yield return new object[] { "test/multivoice-voice2-tuplet" };
         // Cross-voice beam collision: the upper voice's beam clears a high note
         // held in the lower voice (raised, not cutting across it).
         yield return new object[] { "test/multivoice-beam-collision" };
+        // The covered-STEM half of that supply, which no other book reaches: the same
+        // beam three times, under a beamed stem, an unbeamed one, and nothing. The
+        // ledger holds the three heights against LilyPond (beam.quant.over-stem.*);
+        // this holds the drawing, and is the only corpus book with the lift in it.
+        yield return new object[] { "test/beam-over-stem" };
         // Crossing voices: the lower (stem-down) voice sits above the upper voice,
         // so its heads shift LEFT to clear the upper voice's stems (meshing shift).
         yield return new object[] { "test/multivoice-crossing-collision" };

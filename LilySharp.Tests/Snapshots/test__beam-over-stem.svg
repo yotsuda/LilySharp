@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="243.5" viewBox="0 0 119.50 24.35" font-family="TeX Gyre Schola, serif">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  .music { font-family: 'Emmentaler', serif; }
+</style>
+  <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="1178">Beam over another voice's stem</text>
+  <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <line x1="0.00" y1="13.12" x2="62.30" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.12" x2="62.30" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.12" x2="62.30" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="62.30" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.12" x2="62.30" y2="17.12" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.80" y="16.12" font-size="4.00" data-pos="1222"></text>
+  <text class="music" x="4.88" y="15.12" font-size="4.00"></text>
+  <text class="music" x="8.59" y="15.12" font-size="4.00" data-pos="1268"></text>
+  <text class="music" x="13.59" y="15.12" font-size="4.00" data-pos="1271"></text>
+  <text class="music" x="26.39" y="15.12" font-size="4.00" data-pos="1279"></text>
+  <text class="music" x="30.80" y="15.12" font-size="4.00" data-pos="1282"></text>
+  <text class="music" x="47.10" y="15.12" font-size="4.00" data-pos="1290"></text>
+  <text class="music" x="50.80" y="15.12" font-size="4.00" data-pos="1293"></text>
+  <line x1="10.76" y1="12.12" x2="12.72" y2="12.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="10.76" y1="11.12" x2="12.72" y2="11.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="12.82" y1="12.12" x2="14.78" y2="12.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="12.82" y1="11.12" x2="14.78" y2="11.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="15.77" y1="12.12" x2="17.73" y2="12.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="15.77" y1="11.12" x2="17.73" y2="11.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="28.57" y1="12.12" x2="30.53" y2="12.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="28.57" y1="11.12" x2="30.53" y2="11.12" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="11.09" y="10.62" font-size="4.00" data-pos="1319"></text>
+  <text class="music" x="13.15" y="10.62" font-size="4.00" data-pos="1325"></text>
+  <text class="music" x="16.10" y="10.62" font-size="4.00" data-pos="1329"></text>
+  <text class="music" x="28.90" y="10.62" font-size="4.00" data-pos="1343"></text>
+  <line x1="28.96" y1="10.77" x2="28.96" y2="15.12" stroke="#000000" stroke-width="0.130"/>
+  <rect x="25.30" y="13.12" width="0.19" height="4.00" data-pos="1277"/>
+  <rect x="46.01" y="13.12" width="0.19" height="4.00" data-pos="1288"/>
+  <rect x="61.21" y="13.12" width="0.19" height="4.00" data-pos="1299"/>
+  <rect x="61.70" y="13.12" width="0.60" height="4.00" data-pos="1299"/>
+  <polygon points="9.76,9.07 14.90,9.07 14.90,9.55 9.76,9.55"/>
+  <line x1="9.82" y1="14.97" x2="9.82" y2="9.31" stroke="#000000" stroke-width="0.130"/>
+  <line x1="14.83" y1="14.97" x2="14.83" y2="9.31" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="27.57,9.07 32.11,9.07 32.11,9.55 27.57,9.55"/>
+  <line x1="27.63" y1="14.97" x2="27.63" y2="9.31" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.04" y1="14.97" x2="32.04" y2="9.31" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="48.27,11.88 52.11,11.88 52.11,12.36 48.27,12.36"/>
+  <line x1="48.34" y1="14.97" x2="48.34" y2="12.12" stroke="#000000" stroke-width="0.130"/>
+  <line x1="52.04" y1="14.97" x2="52.04" y2="12.12" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="11.09,16.88 16.23,16.88 16.23,17.36 11.09,17.36"/>
+  <polygon points="11.09,16.07 16.23,16.07 16.23,16.55 11.09,16.55"/>
+  <line x1="11.15" y1="10.77" x2="11.15" y2="17.12" stroke="#000000" stroke-width="0.130"/>
+  <line x1="13.66" y1="10.77" x2="13.66" y2="17.12" stroke="#000000" stroke-width="0.130"/>
+  <line x1="16.16" y1="10.77" x2="16.16" y2="17.12" stroke="#000000" stroke-width="0.130"/>
+  <rect x="0.30" y="8.26" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1236"/>
+  <text x="1.23" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1236">S</text>
+  </g>
+</svg>
