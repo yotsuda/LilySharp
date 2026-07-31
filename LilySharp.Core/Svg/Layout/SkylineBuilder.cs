@@ -1506,9 +1506,7 @@ internal sealed class SkylineBuilder
         // stem LilyPond's thin sliver lets it tuck beside (DSQ).
         // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head;
         //   scm/define-grobs.scm Stem thickness 1.3 (line-thickness units).
-        double stemCentre = x + size.Span(stemUp
-            ? EngravingDefaults.NoteheadBlackWidth - EngravingDefaults.StemThickness / 2
-            : EngravingDefaults.StemDownAttachX);
+        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp));
         double stemHalfWidth = size.Span(EngravingDefaults.StemThickness / 2);
         double flagWidth = size.Span(EngravingDefaults.FlagWidth);
 

@@ -227,9 +227,7 @@ internal static class TupletBracketEngraver
             // LILYPOND-REF: lily/tuplet-bracket.cc:71-85 get_x_bound_item —
             //   bound = the column's stem when Note_column::dir == bracket
             //   dir; :180-189 x_span = bound extent LEFT/RIGHT edges.
-            double stemAttach = isStemUp
-                ? EngravingDefaults.StemUpAttachX
-                : EngravingDefaults.StemDownAttachX;
+            double stemAttach = LayoutUtilities.StemAttachX(isStemUp);
             double halfStem = EngravingDefaults.StemThickness / 2;
             double startX = measureLayout.X + startOffset + stemAttach - halfStem;
             double endX = measureLayout.X + endOffset + stemAttach + halfStem;
@@ -265,9 +263,7 @@ internal static class TupletBracketEngraver
                     // BeamLayout X values are notehead anchors; the stems (and
                     // thus the beam bar) sit at the attach offset — right of
                     // the head for up-stems (same correction DrawBeams makes).
-                    double stemOffset = isStemUp
-                        ? EngravingDefaults.StemUpAttachX
-                        : EngravingDefaults.StemDownAttachX;
+                    double stemOffset = LayoutUtilities.StemAttachX(isStemUp);
                     startX = beam.LeftX + stemOffset;
                     endX = beam.RightX + stemOffset;
                     // TAB BRANCH ONLY: the tab renderer's text offset assumes a
@@ -306,9 +302,7 @@ internal static class TupletBracketEngraver
                         // Group.StemUp — so the number sits on the tab beam's OWN side.
                         // Read it from the tuplet's tab notes (which carry the strings).
                         isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
-                        double tabStemOffset = isStemUp
-                            ? EngravingDefaults.StemUpAttachX
-                            : EngravingDefaults.StemDownAttachX;
+                        double tabStemOffset = LayoutUtilities.StemAttachX(isStemUp);
                         startX = beam.LeftX + tabStemOffset;
                         endX = beam.RightX + tabStemOffset;
                         const double tabClearance = 0.5; // baseline above beam edge
@@ -664,7 +658,7 @@ internal static class TupletBracketEngraver
                     ? mb.beam.MemberXPositions[mb.memberIndex]
                     : ml.X
                       + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml)
-                      + (itemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+                      + LayoutUtilities.StemAttachX(itemUp);
                 // The single house of a column's reach (HANDOFF §5.2.1②). Of() cannot
                 // return null here — the `pos` gate above keeps only notes/chords.
                 tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col

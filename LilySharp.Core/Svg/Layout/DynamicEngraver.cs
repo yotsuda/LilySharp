@@ -460,9 +460,7 @@ internal static class DynamicEngraver
                     {
                         double tipUp = StaffMiddle - col.OutwardTipDeviceY(col.StemUp);
                         double anchorUp = col.HeadPositionToward(col.StemUp) * 0.5;
-                        double stemCentre = xColumn + (col.StemUp
-                            ? EngravingDefaults.NoteheadBlackWidth - EngravingDefaults.StemThickness / 2
-                            : EngravingDefaults.StemDownAttachX);
+                        double stemCentre = LayoutUtilities.StemX(xColumn, col.StemUp);
                         double half = EngravingDefaults.StemThickness / 2;
                         if (col.StemUp)
                             up.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,

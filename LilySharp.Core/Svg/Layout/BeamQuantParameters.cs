@@ -90,4 +90,26 @@ public sealed record BeamQuantParameters
     /// <summary>Penalty for horizontal inter-quant positioning.</summary>
     public double HorizontalInterQuantPenalty { get; init; } = 500.0;
 
+    /// <summary>
+    /// What a covered grob's STEM is worth, relative to a full collision, when that stem
+    /// carries a beam of its own.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:118-119 get_detail (details,
+    ///   stem-collision-factor, 0.1) — the Beam grob does NOT declare this one, so unlike
+    ///   collision-padding the C++ fallback IS the value (scm/define-grobs.scm:505-512).
+    /// LILYPOND-REF: lily/beam-quanting.cc:414-416 STEM_COLLISION_FACTOR, get_object (s,
+    ///   "beam") — a stem with no beam of its own is charged 1.0 instead, because its drawn
+    ///   length is settled and this one's is not.
+    /// <para>
+    /// ⚠️ This property existed before, unread, and a dead-code sweep deleted it as
+    /// unreferenced. The supply it belonged to (<c>ElementCoordinator.AddStemCollision</c>)
+    /// is now written, and it is worth staff spaces: six of the sixteen books in LilyPond's
+    /// own input/regression/beam-collision-opposite-stem.ly move when it is switched off,
+    /// by as much as five. MEASURED, as an LP-side identity pair, in
+    /// audit/lp-geometry/probes/beam-over-stem.ly — see ledger points
+    /// beam.quant.over-stem.{beamed,unbeamed,free}.
+    /// </para>
+    /// </remarks>
+    public double StemCollisionFactor { get; init; } = 0.1;
 }

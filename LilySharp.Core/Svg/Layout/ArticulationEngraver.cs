@@ -889,7 +889,7 @@ internal static class ArticulationEngraver
         // A tab beam's direction is string-based, not the notation pitch direction.
         bool up = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
         int n = beam.Group.Members.Length;
-        double attach = up ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX;
+        double attach = LayoutUtilities.StemAttachX(up);
         var xs = new double[n];
         for (int i = 0; i < n; i++)
             xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0) + attach;

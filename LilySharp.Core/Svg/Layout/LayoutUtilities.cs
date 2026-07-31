@@ -26,6 +26,39 @@ namespace LilySharp.Core.Svg.Layout;
 internal static class LayoutUtilities
 {
     /// <summary>
+    /// How far right of a note column its STEM stands, given the stem's direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:1050-1085 Stem::internal_calc_stem_offset_from_head — the
+    ///   stem is offset from its support head by the font's attachment coordinate, then
+    ///   pulled back half a stem thickness so the stem's EDGE meets the head.
+    /// LILYPOND-REF: scm/define-grobs.scm:2608 ly:note-head::calc-stem-attachment (NoteHead's
+    ///   stem-attachment) — the coordinate itself, so an up stem stands at the notehead's
+    ///   right edge and a down stem at its left. A stem's x is NOT its column's x.
+    /// <para>
+    /// ⚠️ THE one house. This offset had SEVEN spellings, and the quanter's frame claim
+    /// ("a beam is scored against ink in the beam's own frame, whose x is its STEMS") is a
+    /// claim that the quanter and the renderer compute it the SAME way — which nothing
+    /// asserted, so a change on the renderer's side would have broken the scoring silently
+    /// while every test stayed green. <c>BeamStemXMatchesTheDrawnStem</c> asserts it.
+    /// </para>
+    /// </remarks>
+    /// <param name="headScale">
+    /// The head's own scale. A cue head is drawn at 0.66×, so an UP stem attaches at the
+    /// scaled head's right edge or it floats off the small head; a down stem attaches at the
+    /// left edge, which does not move with the scale. At 1.0 this is
+    /// <see cref="EngravingDefaults.StemUpAttachX"/> exactly.
+    /// </param>
+    public static double StemAttachX(bool up, double headScale = 1.0) =>
+        up
+            ? EngravingDefaults.NoteheadBlackWidth * headScale - EngravingDefaults.StemThickness / 2
+            : EngravingDefaults.StemDownAttachX;
+
+    /// <summary>The x a stem stands at, given its note column's x.</summary>
+    /// <remarks>See <see cref="StemAttachX"/>.</remarks>
+    public static double StemX(double columnX, bool up) => columnX + StemAttachX(up);
+
+    /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.
     /// </summary>
     /// <remarks>

@@ -36,6 +36,16 @@ internal sealed class BeamEngraver
         _parameters = parameters ?? BeamQuantParameters.Default;
     }
 
+    /// <summary>The parameters this engraver will score with.</summary>
+    /// <remarks>
+    /// The collision SUPPLY needs them too — LilyPond weights a covered stem by
+    /// <c>STEM_COLLISION_FACTOR</c> where it collects it (lily/beam-quanting.cc:414), in the
+    /// same init_instance_variables that has <c>parameters_</c> to hand. Exposed rather
+    /// than let the collector reach for <see cref="BeamQuantParameters.Default"/>, so a
+    /// caller that passes its own parameters gets them on both sides.
+    /// </remarks>
+    public BeamQuantParameters Parameters => _parameters;
+
     /// <summary>
     /// Calculates the layout for a beam group.
     /// X positions are in staff spaces, Y positions are in staff positions.

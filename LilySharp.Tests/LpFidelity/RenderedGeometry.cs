@@ -1151,6 +1151,12 @@ internal sealed class RenderedGeometry
         return refs[0] - (rightEnd ? beam.RightY : beam.LeftY);
     }
 
+    /// <summary>Straight strokes in drawing order — stems, staff lines, ledger lines.</summary>
+    public IReadOnlyList<DrawnLine> Lines => _page.Lines;
+
+    /// <summary>Filled quadrilaterals in drawing order — the beam lines.</summary>
+    public IReadOnlyList<DrawnQuad> Quads => _page.Quads;
+
     /// <summary>Music glyphs in drawing order, left to right.</summary>
     public IReadOnlyList<DrawnGlyph> Glyphs =>
         _page.Glyphs.OrderBy(g => g.X).ToList();

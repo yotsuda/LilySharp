@@ -127,8 +127,11 @@ internal static partial class SharedRenderer
             // note column). On a tab staff the fret digit is centred a
             // TabHeadCenterOffset to the RIGHT of the column, so this edge x lands
             // on the digit and, crucially, matches the companion notation stem's x.
-            double StemAttachX(int i) => beam.MemberXPositions[i]
-                + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+            // The one house, shared with the QUANTER: BeamScoringProblem measures a covered
+            // grob's x against the beam's stems, and that is only the same frame if the two
+            // spell this offset the same way. See LayoutUtilities.StemAttachX.
+            double StemAttachX(int i) =>
+                LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i));
 
             double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
             double rightBeamY = staffMiddleY + beam.RightY / 2.0;

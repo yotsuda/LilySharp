@@ -3335,6 +3335,185 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A beam over CHORDS — measure 2 of test/dense-chromatic, which a handoff had recorded
+    /// as a stem-direction divergence.
+    /// </summary>
+    /// <remarks>
+    /// Every other beam point in this file is a beam over single note heads. A chord is a
+    /// different input to the same quanter: the stem attaches at one extreme head and its
+    /// length is reckoned from the other (lily/stem.cc:103-112 Stem::head_positions,
+    /// lily/stem.cc:114-122 Stem::chord_start_y).
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-chord.ly, score A) — MEASURED, all four
+    /// stems DOWN at heads (1 3 5), (2 4 6), (3 5 7), (3 5 7), and
+    /// <c>Beam.positions</c> <c>(-1.81 . -1.19)</c>.
+    /// </para>
+    /// ⚠️ The handoff's claim — "the chords' stem direction is the opposite of LilyPond's,
+    /// LP up and Lily# down" — is FALSE, and this point exists to keep it dead. What made it
+    /// possible: the fixture's first bar holds twelve sixteenths in 4/4, and Lily#'s <c>|</c>
+    /// is a bar line while LilyPond's bare <c>|</c> is only a bar CHECK that does not reset
+    /// the measure position. Transcribed with the <c>|</c> kept, LilyPond beams the four
+    /// chords as TWO groups starting three quarters into a bar — a different piece of music,
+    /// whose beams say nothing about Lily#'s.
+    /// </remarks>
+    private static readonly string BQC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { <cis' e' gis'>8 <d' f' aes'> <ees' ges' bes'> <e' g' b'> r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQC" { staff m }
+        """;
+
+    /// <summary>
+    /// The CONTROL for <see cref="BQC"/>: the same rhythm with only each chord's BOTTOM
+    /// note.
+    /// </summary>
+    /// <remarks>
+    /// The stems point down, so the head at the stem's far end is the bottom one and this is
+    /// what the beam would do with the upper chord notes taken away. LilyPond answers the
+    /// IDENTICAL <c>(-1.81 . -1.19)</c> (score B of the same probe), which is the useful
+    /// shape: LilyPond is an identity across the pair, so any difference Lily# shows between
+    /// these two readings is a defect by definition, with no LilyPond-side quantity to
+    /// explain it away.
+    /// </remarks>
+    private static readonly string BQCC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { cis'8 d' ees' e' r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQCC" { staff m }
+        """;
+
+    /// <summary>
+    /// A beam quanted against the STEM of a note in another voice — the half of the
+    /// covered-grob supply that is not a box at all.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond books, per covered grob, a SECOND collision made from that grob's
+    /// <c>stem</c> object: an interval starting at <c>Stem::chord_start_y</c> and running to
+    /// INFINITY in the stem's direction (lily/beam-quanting.cc:401-418), weighted by
+    /// <c>STEM_COLLISION_FACTOR</c>. Here voice one's two eighths fill beat one with stems
+    /// up, and voice two's sixteenths hang a fifth above them with stems DOWN reaching into
+    /// the beam's path: the covered head's own box leaves the beam alone (it clears by 0.76,
+    /// past the 0.35 padding), so nothing but that interval can lift the beam.
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-over-stem.ly, score qA):
+    /// <c>&lt;&lt; { b'8 b' s2. } \\ { s16 d'''16 d''' d''' s2. } &gt;&gt;</c> — the measured
+    /// beam's <c>Beam.positions</c> is <c>(5.81 . 5.81)</c>. That probe's IDENTITY pair (the
+    /// same run with <c>Beam.details.stem-collision-factor</c> at 0) answers
+    /// <c>(3.0 . 3.0)</c>, so the whole 2.81 is this one supply.
+    /// </para>
+    /// ⚠️ Eighths for the measured beam and sixteenths for the covering voice ON PURPOSE:
+    /// a sixteenth group draws two full-width beam lines and
+    /// <see cref="RenderedGeometry.BeamPositionAboveStaffMiddle"/> names a group's line by x
+    /// containment, which cannot tell two equally wide lines apart. Beat one, because Lily#
+    /// ends an eighth beam at every quarter where LilyPond ends it at the half-measure.
+    /// </remarks>
+    private static readonly string BQM = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m {
+            voice { b8 b s2. }
+            voice { s16 d''16 d'' d'' s2. }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BQM" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="BQM"/> with the covering note UNBEAMED — the same lift through a different
+    /// door.
+    /// </summary>
+    /// <remarks>
+    /// The weight is 1.0 rather than 0.1 when the covered grob's stem carries no beam of its
+    /// own (lily/beam-quanting.cc:415-416), and such a stem is also a covered grob in its OWN
+    /// right — <c>Beam_collision_engraver</c> drops only BEAMED stems
+    /// (lily/beam-collision-engraver.cc:179-181). So its drawn box, head to tip, already
+    /// spans the beam's path. This book and <see cref="BQM"/> are therefore a FORK, not a
+    /// repetition: BQM can only be explained by the infinite interval, this one can also be
+    /// explained by booking the Stem's box, and both must land.
+    /// <para>
+    /// LilyPond twin (score qB of the same probe):
+    /// <c>&lt;&lt; { b'8 b' s2. } \\ { s16 d'''4 s8. s2 } &gt;&gt;</c> — <c>(5.81 . 5.81)</c>,
+    /// the same seat BQM takes. ⚠️ No override reaches the 1.0, so this book has no
+    /// LilyPond-side identity twin; <see cref="BQF"/> is its control instead.
+    /// </para>
+    /// </remarks>
+    private static readonly string BQU = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m {
+            voice { b8 b s2. }
+            voice { s16 d''4 s8. s2 }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BQU" { staff m }
+        """;
+
+    /// <summary>
+    /// The CONTROL for <see cref="BQM"/> and <see cref="BQU"/>: the same beam with nobody
+    /// overhead.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score qC of the same probe):
+    /// <c>&lt;&lt; { b'8 b' s2. } \\ { s1 } &gt;&gt;</c> — <c>(3.0 . 3.0)</c>. This is what says
+    /// the other two are not sitting on a floor: 5.81 is 2.81 of real lift, and a paper or
+    /// spacing mismatch would move this reading too. The second voice is kept (as a bar of
+    /// skips) rather than deleted, because a lone voice would let Lily# pick the stem
+    /// direction from the pitch and b sits ON the middle line.
+    /// </remarks>
+    private static readonly string BQF = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m {
+            voice { b8 b s2. }
+            voice { s1 }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "BQF" { staff m }
+        """;
+
+    /// <summary>
     /// <see cref="BMD"/> with the beam on the other side — an up-stemmed beam reaching UP into
     /// the gap from the lower staff, the mirror of book BMU.
     /// </summary>
@@ -5635,6 +5814,22 @@ internal static class LpGeometryProbes
         // group two is free. Flat beams, so one end each says everything.
         new("beam.quant.over-other-voice.covered", BQV, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.over-other-voice.free", BQV, g => g.BeamPositionAboveStaffMiddle(1, false)),
+        // The other half of that supply, which no point above reaches: a covered grob is
+        // booked TWICE, once as its own box and once as its STEM — an interval from
+        // chord_start_y to infinity in the stem's direction (:401-418). BQM's covered head
+        // clears the beam by 0.76, past the 0.35 padding, so only that interval can explain
+        // the lift; BQU is the same lift with an unbeamed stem, which is also reachable by
+        // booking the Stem grob's own box. BQF is the control both are measured against.
+        // Beam 0 in each book: the measured beam starts at the bar's first column.
+        new("beam.quant.over-stem.beamed", BQM, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-stem.unbeamed", BQU, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-stem.free", BQF, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // A beam over CHORDS, which no point above reaches, and the only ledger entry whose
+        // job is to keep a FALSIFIED claim dead (see BQC). Both ends because the beam is
+        // sloped; the single-note control must print the same pair, because LilyPond does.
+        new("beam.quant.chord.left", BQC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.chord.right", BQC, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.chord.single-note-control", BQCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
 
         // --- line-start clef -> first note (BreakAlignSpacing.FirstNoteSpring, the
         // minimum-fixed-space branch of Staff_spacing::get_spacing). Measured on an INTERIOR

@@ -799,6 +799,48 @@
       "residual": 0.0,
       "why": "EXACT, and it is the CONTROL for beam.quant.over-other-voice.covered: the second beam group of the same book, past the whole note's ink, so nothing is overhead. LilyPond gives the same 2.81 for BOTH groups of score B (the one-voice control), which is how we know 4.19 in the first group is the head's doing and not the bar's spacing."
     },
+    "beam.quant.chord.left": {
+      "probe": "beam-chord.ly",
+      "score": "A",
+      "lilypond": -1.810000,
+      "residual": 0.0,
+      "why": "EXACT. The first ledger point on a beam over CHORDS rather than over single note heads, and the only one whose job is to keep a FALSIFIED claim dead. A handoff recorded measure 2 of test/dense-chromatic as 'the chords' stem direction is the opposite of LilyPond's, LP up and Lily# down'. MEASURED: LilyPond puts all four stems DOWN, at heads (1 3 5), (2 4 6), (3 5 7), (3 5 7) — the same positions and the same direction Lily# draws — and both engines quant the beam to (-1.81 . -1.19). There is no divergence in this book at all. ⚠️ What made the misreading possible, and the trap not to repeat: the fixture's first bar holds TWELVE sixteenths in 4/4, and Lily#'s `|` is a bar line while LilyPond's bare `|` is only a bar CHECK that does not reset the measure position. Transcribed with the `|` kept, LilyPond beams the four chords as TWO groups starting three quarters into a bar — a different piece of music, whose beams say nothing about Lily#'s (HANDOFF 5.0, trap 5's family, in the one form the checklist there does not list: not the pitches and not the bar line GLYPH, but whether a bar line RESETS the measure)."
+    },
+    "beam.quant.chord.right": {
+      "probe": "beam-chord.ly",
+      "score": "A",
+      "lilypond": -1.190000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam. Both ends, because a sloped beam's height and its slope are two numbers and one reading cannot separate them — the reason beam.quant.over-accidental is also a pair."
+    },
+    "beam.quant.chord.single-note-control": {
+      "probe": "beam-chord.ly",
+      "score": "B",
+      "lilypond": -1.810000,
+      "residual": 0.0,
+      "why": "EXACT, and Lily# reproduces the identity. The CONTROL for beam.quant.chord.*: the same rhythm with only each chord's BOTTOM note. The stems point down, so the head at the stem's far end is the bottom one, and LilyPond answers the IDENTICAL (-1.81 . -1.19). That identity is what makes the pair worth keeping after the falsification: LilyPond is flat across it, so any difference Lily# shows between the chord reading and this one is a defect by definition, with no LilyPond-side quantity left to explain it away."
+    },
+    "beam.quant.over-stem.beamed": {
+      "probe": "beam-over-stem.ly",
+      "score": "qA",
+      "lilypond": 5.810000,
+      "residual": 0.0,
+      "why": "EXACT. A covered grob is booked TWICE by LilyPond: once as its own box, and once as its `stem` object — an interval that starts at Stem::chord_start_y and runs to INFINITY in the stem's direction, weighted by STEM_COLLISION_FACTOR (lily/beam-quanting.cc:401-418). Lily# supplied only the box, and BeamQuantParameters.StemCollisionFactor had been DELETED by a dead-code sweep as unreferenced (9cbb407c) — the handoff's note that it merely 'has no reader' was itself stale. Here voice two's sixteenths hang a fifth above voice one's beamed eighths with their stems pointing DOWN into the beam's path: the covered HEAD's box clears the beam by 0.76, well past the 0.35 padding, so nothing but the stem interval can lift it. ⚠️ Its own Stem grob is not a covered grob either — Beam_collision_engraver drops every BEAMED stem (lily/beam-collision-engraver.cc:179-181) — so :401-418 is the only door. MEASURED AS AN LP-SIDE IDENTITY PAIR: the same book scored again with Beam.details.stem-collision-factor at 0 answers 3.0, i.e. exactly Lily#'s reading, so the whole gap is this one supply and nothing else is mixed in. ⚠️ NOT A FLOOR: beam.quant.over-stem.free is the same beam with nobody overhead and LilyPond puts it at 3.0. The regime is real and it is worth staff spaces, not hundredths: of the sixteen books in LilyPond's own input/regression/beam-collision-opposite-stem.ly, SIX move when the supply is switched off, by as much as 5.0. PREDICTED BEFORE THE PORT and held on all four branches: this lands on 0, beam.quant.over-stem.unbeamed lands with it, beam.quant.over-stem.free does NOT move (a port that moves the control has changed the beam's own seat, not what it is quanted against), and beam.quant.over-other-voice.covered does NOT move either — a whole note has no normal stem, so that book is not in this regime at all. ⚠️ THE CORPUS DID NOT MOVE ONE BYTE: no snapshot changed, so nothing in the fixtures meshes stems. Byte-invariance is not evidence of a port; these three points are."
+    },
+    "beam.quant.over-stem.unbeamed": {
+      "probe": "beam-over-stem.ly",
+      "score": "qB",
+      "lilypond": 5.810000,
+      "residual": 0.0,
+      "why": "EXACT, and the FORK against beam.quant.over-stem.beamed rather than a repeat of it: the covering note is a quarter, so its stem carries no beam, and LilyPond then weights the interval 1.0 instead of 0.1 (lily/beam-quanting.cc:415-416) — AND that stem is a covered grob in its own right, whose drawn box already spans head to tip. So this reading is reachable two ways and the beamed one only one way. Both land on the same 5.81, which is what makes them a fork: a port that books only the Stem's box closes this point and leaves the beamed one open, and a port that books only the interval closes both. ⇒ The port took the interval, and both closed. ⚠️ The covered Stem's own BOX is still not booked, and there is deliberately no point for it: the interval CONTAINS that box in y (it starts at the head's centre and runs past the tip) and carries the heavier weight, so a second booking could only be dominated. ⚠️ No override reaches the hard-coded 1.0, so this book has no LilyPond-side identity twin; beam.quant.over-stem.free is its control."
+    },
+    "beam.quant.over-stem.free": {
+      "probe": "beam-over-stem.ly",
+      "score": "qC",
+      "lilypond": 3.000000,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL for the two above: the same two eighths with nobody overhead. It says the 5.81 they record is 2.81 of real lift and not a floor, and it is the falsifier for the port — a change that moves this reading has changed the beam's own seat rather than what it is quanted against. The second voice is kept as a bar of skips rather than deleted, because a lone voice would let Lily# take the stem direction from the pitch and b sits ON the middle line."
+    },
     "line-start.clef-to-time.mixed-key-grand-staff": {
       "probe": "barline-spacing.ly",
       "score": "TSA",

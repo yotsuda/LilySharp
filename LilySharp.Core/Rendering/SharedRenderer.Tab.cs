@@ -249,7 +249,7 @@ internal static partial class SharedRenderer
         double stringSpace = EngravingDefaults.TabStringSpace(
             Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
         double stemLength = 3.0 * stringSpace;
-        double stemX = columnX + (stemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+        double stemX = LayoutUtilities.StemX(columnX, stemUp);
         // TabStemHeadY works in device coordinates; round-trip through it, then lift
         // both stem ends to the page Y-up frame.
         double nearYDev = TabStemHeadY(item, stemUp, pageHeight - staffY, staff);
