@@ -98,9 +98,17 @@ internal sealed class BeamScoringProblem
     // Per-member stem directions (needed for kneed beams)
     private readonly int[] _memberBeamDirs;
 
-    // Per-member beam count (1 = eighth, 2 = sixteenth, ...) — drives per-stem
-    // ideal/shortest stem length, matching LilyPond's Stem_info.
+    // Per-member beam count (1 = eighth, 2 = sixteenth, ...). This is the stem's OWN
+    // multiplicity, and it is what the beam ENDS are checked with (_edgeBeamCounts).
     private readonly int[] _memberBeamCounts;
+
+    // …and the count a stem's ideal LENGTH is bought with, which is a different number.
+    // LILYPOND-REF: lily/stem.cc:1158 beam_count = Beam::get_direction_beam_count (beam, my_dir)
+    //   → lily/beam.cc:1517-1532 get_direction_beam_count: the MAXIMUM multiplicity over every
+    //   stem pointing that way, not the stem's own. LilyPond says why at stem.cc:1196-1202 —
+    //   "\score { \relative c'' { a8[ a32] } } must be horizontal".
+    // Indexed [0] = stems down, [1] = stems up, because a knee has both.
+    private readonly int[] _directionBeamCounts;
 
     // Beam-level stem shortening applied to every stem's IDEAL beam Y (not its
     // shortest_y_). LilyPond shortens stems forced into their unnatural direction;
@@ -245,6 +253,17 @@ internal sealed class BeamScoringProblem
             _memberBeamDirs[i] = group.Members[i].MemberStemUp ? 1 : -1;
         }
 
+        // LILYPOND-REF: lily/beam.cc:1517-1532 Beam::get_direction_beam_count — one pass over
+        //   the stems, taking the maximum multiplicity within each direction. Held rather than
+        //   recomputed per call: both readers below already walk the members once.
+        _directionBeamCounts = new int[2];
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            int stemDir = StemDirOf(i);
+            int slot = stemDir > 0 ? 1 : 0;
+            _directionBeamCounts[slot] = Math.Max(_directionBeamCounts[slot], _memberBeamCounts[i]);
+        }
+
         // Beam-level forced-direction shortening applied to every stem's ideal beam Y.
         _beamShorten = ComputeBeamShorten();
 
@@ -375,7 +394,7 @@ internal sealed class BeamScoringProblem
         {
             // Beam-side head; a single note has close == far == StaffPosition (half-spaces).
             int headPos = _staffPositions[i];
-            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            int dir = StemDirOf(i);
             // default-direction: a note below the middle line naturally stems up.
             int naturalDir = headPos < 0 ? 1 : -1;
             // |chord_start_y| > 0.1 excludes middle-line heads; integer half-spaces
@@ -387,6 +406,35 @@ internal sealed class BeamScoringProblem
         double forcedFraction = forced / (double)_staffPositions.Length;
         return beamedStemShorten[idx] * forcedFraction;
     }
+
+    /// <summary>
+    /// One member's stem direction: its own off a knee, the beam's otherwise.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:524 get_grob_direction (stem) — LilyPond always asks the
+    /// stem, and off a knee every stem answers the beam's own direction.
+    /// </remarks>
+    private int StemDirOf(int i) => _isKnee ? _memberBeamDirs[i] : _beamDir;
+
+    /// <summary>
+    /// The beam count a stem's IDEAL LENGTH is bought with — the maximum multiplicity among
+    /// the stems pointing the same way, not the stem's own.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:1158 Beam::get_direction_beam_count (beam, my_dir), whose
+    /// body is lily/beam.cc:1517-1532. It feeds three places in calc_stem_info — beamed-lengths
+    /// (:1169), beamed-minimum-free-lengths (:1183) and height_of_my_beams (:1204) — and
+    /// LilyPond's own comment at :1196-1202 says why it is a maximum: with the stem's own count
+    /// the eighth of <c>a8[ a32]</c> would be shorter than the thirty-second and the beam would
+    /// tilt, where it must be horizontal.
+    /// <para>
+    /// ⚠️ NOT the same number as <c>_edgeBeamCounts</c>, which is per-END and stays the stem's
+    /// own (lily/beam-quanting.cc edge_beam_counts_): the forbidden-quant checks ask how many
+    /// beam lines actually reach that end, and the ideal length asks how long the group's
+    /// stems have to be. Two questions, two counts.
+    /// </para>
+    /// </remarks>
+    private int DirectionBeamCount(int dir) => _directionBeamCounts[dir > 0 ? 1 : 0];
 
     /// <summary>
     /// Solves for the optimal beam position.
@@ -473,9 +521,9 @@ internal sealed class BeamScoringProblem
         var ideals = new List<(double x, double y)>();
         for (int i = 0; i < _staffPositions.Length; i++)
         {
-            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], dir > 0, _memberBeamCounts[i],
+                _staffPositions[i], dir > 0, DirectionBeamCount(dir),
                 _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY; // staff-spaces (native quanter frame)
             ideals.Add((_stemXPositions[i], idealY));
@@ -849,9 +897,9 @@ internal sealed class BeamScoringProblem
             // calc_stem_info — NOT a flat 2.5-space length. The flat constant over-
             // constrained the tip note (shortest stem), pushing the whole beam up.
             // LILYPOND-REF: lily/beam-quanting.cc:794-805 (stem_infos_[i].shortest_y_).
-            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], dir > 0, _memberBeamCounts[i],
+                _staffPositions[i], dir > 0, DirectionBeamCount(dir),
                 _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double minBeamY = info.ShortestY; // staff-spaces (native quanter frame)
             // Convert to left Y: leftY = beamAtStem - slope * stemX
@@ -1273,17 +1321,22 @@ internal sealed class BeamScoringProblem
             double currentY = beamY;  // beam Y at this stem
 
             // For kneed beams, use per-member stem direction
-            int memberDir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            int memberDir = StemDirOf(i);
             int d = memberDir > 0 ? 1 : 0; // index into score array
 
-            // Per-stem ideal/shortest beam Y, varying with beam count (16th/32nd
-            // stems are longer) — LilyPond's Stem_info, not a flat constant.
+            // Per-stem ideal/shortest beam Y — LilyPond's Stem_info, not a flat constant.
             // CalculateBeamedStemInfo returns staff-space Y, matching the ss
             // config frame directly (no conversion).
             // LILYPOND-REF: lily/stem.cc:1137 calc_stem_info;
-            //               lily/beam-quanting.cc:1133-1137 score_stem_lengths.
+            //               lily/beam-quanting.cc:1133-1137 score_stem_lengths — this
+            //   reads the SAME stem_infos_ the seed does (they are built once, at
+            //   beam-quanting.cc:303 stem_infos_.push_back), so the count here is the
+            //   direction maximum for the same reason it is there. ⚠️ This site was
+            //   MISSED when the maximum was ported: the seed moved and the scorer went
+            //   on grading it against a floor built from each stem's own count, which
+            //   is how an 8-32-8 beam kept a quant LilyPond charges 5000 × 0.11 for.
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], memberDir > 0, _memberBeamCounts[i],
+                _staffPositions[i], memberDir > 0, DirectionBeamCount(memberDir),
                 _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY;
             double shortestY = info.ShortestY;

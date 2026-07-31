@@ -246,7 +246,10 @@ public static class StemCalculator
     /// </summary>
     /// <param name="headPosition">Staff position of the note head (half-spaces).</param>
     /// <param name="stemUp">True if stem points up.</param>
-    /// <param name="beamCount">Number of beams on this stem.</param>
+    /// <param name="beamCount">The beam's MAXIMUM beam count for this stem's direction, not
+    /// the stem's own multiplicity — LilyPond reads it from
+    /// <c>Beam::get_direction_beam_count</c> (lily/stem.cc:1158), so a group's stems all get
+    /// the same ideal length and <c>a8[ a32]</c> comes out horizontal (:1196-1202).</param>
     /// <param name="beamThickness">Beam thickness in staff spaces.</param>
     /// <param name="beamTranslation">Distance between beam centers in staff spaces.</param>
     /// <param name="details">Stem details parameters.</param>

@@ -3426,6 +3426,177 @@ internal static class LpGeometryProbes
         score main "BQKC" { staff m }
         """;
 
+    // --- the other regime every beam point above is blind to: a group whose members do NOT
+    // all carry the same NUMBER of beam lines (audit/lp-geometry/probes/beam-mixed-count.ly).
+    //
+    // LilyPond reckons a beamed stem's ideal length from a beam count that is not the stem's
+    // own: lily/stem.cc:1158 asks Beam::get_direction_beam_count (lily/beam.cc:1517-1532),
+    // which is the MAXIMUM multiplicity over every stem pointing that way. Its own source says
+    // why, at stem.cc:1196-1202 — "\score { \relative c'' { a8[ a32] } } must be horizontal".
+    // MEASURED: in that book both stems answer stem-info (-0.62 -0.11) despite carrying one
+    // beam and three, and the beam comes out (-0.81 . -0.81).
+
+    /// <summary>
+    /// The corpus regime: the mixedBeams bar of test/beaming, whose three beams each mix an
+    /// eighth with two sixteenths.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe beam-mixed-count.ly, score A) — MEASURED, THREE beams of three
+    /// stems each, every stem UP:
+    /// <list type="bullet">
+    /// <item>c-d-e rising: <c>(0.19 . 0.81)</c>, stem-info <c>(0.26 0.76 1.26)</c></item>
+    /// <item>f-g-a rising: <c>(2.19 . 2.81)</c>, stem-info <c>(1.76 2.26 2.76)</c></item>
+    /// <item>g-f-e falling: <c>(2.19 . 1.81)</c>, stem-info <c>(2.26 1.76 1.26)</c></item>
+    /// </list>
+    /// ⚠️ The ideal Ys step by exactly 0.5 per note, i.e. by the PITCH alone: LilyPond gives
+    /// all three stems the same ideal LENGTH although their own counts are 1, 2 and 2. That is
+    /// the maximum-count rule, visible in the corpus.
+    /// <para>
+    /// The two rising beams are where a round trip of the fixture found Lily# at 0.19/1.00 and
+    /// 2.00/2.81 — one END each, so the height is right and the SLOPE is not. The falling beam
+    /// is their control: same counts, same shape mirrored, and already exact. A port that
+    /// moves it has broken what was right.
+    /// </para>
+    /// </remarks>
+    private static readonly string BMC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c8 d16 e f8 g16 a g8 f16 e d4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMC" { staff m }
+        """;
+
+    /// <summary>
+    /// LilyPond's own named case: the smallest group whose members' counts differ at all.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score B): <c>a''8[ a''32] r16. r4 r2</c> — <c>(-0.81 . -0.81)</c>, both
+    /// stems DOWN, and both stem-infos <c>(-0.62 -0.11)</c>. Flat, which is the whole point of
+    /// the comment at stem.cc:1196-1202 that put the maximum there.
+    /// <para>
+    /// Both ends, because flatness is the claim: a reading at one end alone cannot see a slope.
+    /// </para>
+    /// </remarks>
+    private static readonly string BMCX = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { a'8[ a'32] r16. r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMCX" { staff m }
+        """;
+
+    /// <summary>
+    /// The IDENTITY PAIR for <see cref="BMCX"/>: the same two stems with their counts made
+    /// equal.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score C): <c>a''8[ a''8] r4 r2</c> — <c>(0.0 . 0.0)</c>, both stems DOWN,
+    /// both stem-infos <c>(-0.02 0.76)</c>. Flat too, for a reason that has nothing to do with
+    /// a maximum: there is no maximum to take.
+    /// <para>
+    /// ⚠️ The pair is identical in SLOPE, not in height — three beam lines need more room than
+    /// one, so LilyPond puts B lower. What LilyPond answers identically is <c>right - left</c>,
+    /// which is 0 in both, so whatever Lily# puts between the two slopes is the defect and
+    /// nothing else (HANDOFF 5.0).
+    /// </para>
+    /// </remarks>
+    private static readonly string BMCC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { a'8[ a'8] r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMCC" { staff m }
+        """;
+
+    /// <summary>
+    /// The second defect the mixed-count pair exposed: an 8-32-8 group clear of the staff,
+    /// every stem in its natural direction.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score D): <c>c''8[ e''32 g''8] r8 r16. r2</c> — <c>(-3.0 . -1.81)</c>,
+    /// every stem DOWN, stem-info ideals <c>-2.86 / -1.86 / -0.86</c>, a clean 1.0 step per
+    /// third with one ideal LENGTH of 3.36 (beamed-lengths[count 3] 3.6 minus half the beam
+    /// thickness) across counts 1, 3, 1.
+    /// <para>
+    /// This is bar 1 of test/beamlet-peaks, which the maximum-count port closed exactly. It is
+    /// the CONTROL: it must stay exact while <see cref="BMCF"/> is chased.
+    /// </para>
+    /// </remarks>
+    private static readonly string BMCU = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'8[ e'32 g'8] r8 r16. r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMCU" { staff m }
+        """;
+
+    /// <summary>
+    /// …and the same rhythm a third lower, where the first stem is FORCED against its natural
+    /// direction — bar 2 of test/beamlet-peaks, which the port did not move at all.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score E): <c>a'8[ c''32 e''8] r8 r16. r2</c> — <c>(-4.0 . -2.81)</c>,
+    /// every stem DOWN, stem-info ideals <c>-3.776667 / -2.776667 / -1.776667</c>.
+    /// <para>
+    /// ⚠️ MEASURED, and it is NOT a translation of <see cref="BMCU"/>: a third down is 1.0
+    /// staff space, but the ideals moved by 0.916667 — 1.0 minus <c>1/12</c>. That 1/12 is the
+    /// beam's <c>shorten</c> (lily/beam.cc:1061-1091 calc_stem_shorten, applied at
+    /// lily/stem.cc:1245): <c>beamed-stem-shorten[count 3]</c> is 0.25 and exactly ONE of the
+    /// three stems is forced against its natural direction (a' sits below the middle line and
+    /// would stem up), so the forced fraction is 1/3 and 0.25 × 1/3 = 0.083333. In D no stem
+    /// is forced and <c>shorten</c> is 0. The two books differ in that term and in nothing
+    /// else — LilyPond gives them the same slope, dy 1.19 both.
+    /// </para>
+    /// Both ends of each, because what is being separated is height from slope.
+    /// </remarks>
+    private static readonly string BMCF = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { a8[ c'32 e'8] r8 r16. r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "BMCF" { staff m }
+        """;
+
     /// <summary>
     /// A beam over CHORDS — measure 2 of test/dense-chromatic, which a handoff had recorded
     /// as a stem-direction divergence.
@@ -6574,6 +6745,29 @@ internal static class LpGeometryProbes
         new("beam.quant.knee.right", BQK, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.knee.three-stem", BQK3, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.knee.no-leap-control", BQKC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // …and the regime none of the above can see, because every one of them beams members
+        // that carry the SAME number of beam lines: a group where the count CHANGES along the
+        // beam. LilyPond takes each stem's ideal length from the beam's MAXIMUM count for that
+        // direction (lily/stem.cc:1158 -> lily/beam.cc:1517-1532), not from the stem's own.
+        // Both ends of every reading, because what diverges is the SLOPE.
+        new("beam.quant.mixed-count.rising-first.left", BMC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.mixed-count.rising-first.right", BMC, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.mixed-count.rising-second.left", BMC, g => g.BeamPositionAboveStaffMiddle(1, false)),
+        new("beam.quant.mixed-count.rising-second.right", BMC, g => g.BeamPositionAboveStaffMiddle(1, true)),
+        new("beam.quant.mixed-count.falling-control.left", BMC, g => g.BeamPositionAboveStaffMiddle(2, false)),
+        new("beam.quant.mixed-count.falling-control.right", BMC, g => g.BeamPositionAboveStaffMiddle(2, true)),
+        new("beam.quant.mixed-count.max-count.left", BMCX, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.mixed-count.max-count.right", BMCX, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.mixed-count.uniform-control.left", BMCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.mixed-count.uniform-control.right", BMCC, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        // …and the pair the maximum-count port left behind: the SAME 8-32-8 rhythm twice, a
+        // third apart, one of which the port closed exactly and the other of which it did not
+        // touch. LilyPond gives them the same slope and a height one third apart, minus the
+        // 1/12 that one forced stem buys (lily/beam.cc:1061-1091 -> lily/stem.cc:1245).
+        new("beam.quant.mixed-count.peak-32.unforced.left", BMCU, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.mixed-count.peak-32.unforced.right", BMCU, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.mixed-count.peak-32.forced-stem.left", BMCF, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.mixed-count.peak-32.forced-stem.right", BMCF, g => g.BeamPositionAboveStaffMiddle(0, true)),
 
         // --- and the OTHER thing a beam group decides, which no point above can see: how
         // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which

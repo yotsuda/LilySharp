@@ -1163,6 +1163,76 @@
       "lilypond": 1.0, "residual": 0.0,
       "why": "EXACT. CONTROL — the same rhythm with no leap, so no knee and every stem up, which is the regime where the column-versus-stem offset provably cancels. It must stay exact whatever the knee points do: if it ever moves, the fix broke the ordinary beam. ⚠️ It is also what makes the knee readings above attributable at all — a quanter that were wrong in general would move this one too."
     },
+    "beam.quant.mixed-count.rising-first.left": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 0.19, "residual": 0.0,
+      "why": "EXACT, and it is the anchored end of a beam that is NOT right — read it with rising-first.right (+0.19). PREDICTION, written before any port: Lily# gives every member its OWN beam count (BeamScoringProblem._memberBeamCounts, fed to StemCalculator.CalculateBeamedStemInfo); LilyPond gives them all the beam's MAXIMUM count for that direction (lily/stem.cc:1158 -> Beam::get_direction_beam_count, lily/beam.cc:1517-1532). MEASURED in the probe: LilyPond's three ideal Ys here are 0.26 / 0.76 / 1.26, i.e. ONE ideal LENGTH of 3.26 = beamed-lengths[count 2] 3.5 minus half the beam thickness (stem.cc:1169-1174), for stems whose own counts are 1, 2 and 2. Per-stem counts give the leading EIGHTH 3.26 - 0.24 = 3.02 instead, so its ideal Y is 0.02 and the fitted dy 1.24 rather than 1.0 — a beam steeper by one quantisation step, which is what the readings say (dy 0.81 against LilyPond's 0.62). FALSIFIER: porting the maximum must close rising-first.right and rising-second.left, must make max-count FLAT, and must leave this point, rising-second.right, falling-control and uniform-control where they are. If max-count closes and the rising pair does not, the slope has a SECOND term and the maximum was only half of it."
+    },
+    "beam.quant.mixed-count.rising-first.right": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 0.81, "residual": 0.0,
+      "why": "EXACT — was +0.19, one whole quantisation step, and the cause was the count. Lily#'s quanter took each stem's beam count from the stem; LilyPond takes the beam's MAXIMUM count for that direction (lily/stem.cc:1158 -> lily/beam.cc:1517-1532 get_direction_beam_count), and the count is what buys the ideal stem LENGTH out of beamed-lengths (3.26 3.5 3.6). The leading eighth of an eighth-plus-two-sixteenths group was therefore 0.24 short, the least squares fitted dy 1.24 where LilyPond fits 1.0, and the quanter rounded the extra tilt onto whichever end scored better — here the right. Ported as BeamScoringProblem.DirectionBeamCount. ⚠️ Which end moved was not the defect: the next beam of the same bar carried the same tilt on its LEFT (rising-second.left). Read the two together or neither."
+    },
+    "beam.quant.mixed-count.rising-second.left": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 2.19, "residual": 0.0,
+      "why": "EXACT — was -0.19, the SAME defect as rising-first.right and the same magnitude, landed on the other end. This is the second rising beam of the bar (f-g-a), the same rhythm a third higher: MEASURED LilyPond ideals 1.76 / 2.26 / 2.76, one ideal length of 3.26 across counts 1, 2, 2, positions (2.19 . 2.81). Before the port Lily# printed 2.00 / 2.81 — dy 0.81 against LilyPond's 0.62, exactly as in the first beam. It is not a repetition of that beam: it is what proved the divergence was a slope rather than an end, because the sign of the residual flipped with the end the quanter chose while the tilt did not. See rising-first.left."
+    },
+    "beam.quant.mixed-count.rising-second.right": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 2.81, "residual": 0.0,
+      "why": "EXACT — the anchored end of the beam whose left end is -0.19. See rising-second.left. Recorded because a beam's height and its slope are two numbers: this reading is what says the height is right and only the tilt is wrong, and it must STAY exact when the tilt is fixed."
+    },
+    "beam.quant.mixed-count.falling-control.left": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 2.19, "residual": 0.0,
+      "why": "EXACT. CONTROL — the third beam of the same bar (g-f-e), the same counts (8th, 16th, 16th) with the pitch line mirrored. MEASURED LilyPond ideals 2.26 / 1.76 / 1.26, positions (2.19 . 1.81). The defect is present here too and does not show: per-stem counts shorten the LEADING stem, which makes a falling beam SHALLOWER (ideal dy -0.76 against LilyPond's -1.0) where it makes a rising one steeper (+1.24 against +1.0), and shallower survived the quantisation while steeper did not. ⚠️ So this point is not evidence that falling beams are safe — it is the point that must NOT move when the maximum is ported. If it does, the term is right but something else was cancelling it."
+    },
+    "beam.quant.mixed-count.falling-control.right": {
+      "probe": "beam-mixed-count.ly", "score": "A",
+      "lilypond": 1.81, "residual": 0.0,
+      "why": "EXACT. CONTROL — see falling-control.left. Both ends, because a control that holds only one end can be tilted by a slope error and still look green — which is precisely what happened to the two beams next to it."
+    },
+    "beam.quant.mixed-count.max-count.left": {
+      "probe": "beam-mixed-count.ly", "score": "B",
+      "lilypond": -0.81, "residual": 0.0,
+      "why": "EXACT — was +0.62, and this is the point that NAMED the defect. LilyPond's own comment at lily/stem.cc:1196-1202 says `\\score { \\relative c'' { a8[ a32] } }` must be horizontal, and that is why lily/stem.cc:1158 asks Beam::get_direction_beam_count (lily/beam.cc:1517-1532) — the MAXIMUM multiplicity over the stems pointing that way — instead of the stem's own. MEASURED: LilyPond gives both stems stem-info (-0.62 -0.11) although one carries a single beam and the other three, and the beam comes out (-0.81 . -0.81). Lily# printed -0.19 / -0.50: not flat. The two stems are the SAME PITCH, so nothing but the count can separate their ideals — this reading is the mechanism with everything else held still. Ported as BeamScoringProblem.DirectionBeamCount, and the beam went flat at LilyPond's height in one step."
+    },
+    "beam.quant.mixed-count.max-count.right": {
+      "probe": "beam-mixed-count.ly", "score": "B",
+      "lilypond": -0.81, "residual": 0.0,
+      "why": "EXACT — was +0.31, against +0.62 at the other end: Lily# tilted this beam by 0.31 where LilyPond keeps it FLAT. Both ends, because flatness is the claim — LilyPond's comment does not say where the beam sits, it says the two ends are equal, and one reading cannot see that. The tilt had the sign the mechanism predicts: the 32nd stem (right) is the one whose own count IS the maximum, so it was the end Lily# already placed nearly correctly, and the eighth (left) was the one it left too short. See max-count.left."
+    },
+    "beam.quant.mixed-count.uniform-control.left": {
+      "probe": "beam-mixed-count.ly", "score": "C",
+      "lilypond": 0.0, "residual": 0.0,
+      "why": "EXACT. CONTROL and IDENTITY PAIR for max-count: the same two stems with their counts made equal, so there is no maximum to take. MEASURED: both stem-infos (-0.02 0.76), positions (0.0 . 0.0). LilyPond answers BOTH books flat, so the LP-side difference in SLOPE between this and max-count is exactly ZERO — and Lily# puts 0.31 between them, which is therefore the defect and nothing else (HANDOFF 5.0). ⚠️ The two books are NOT identical in height: three beam lines need more room than one, so LilyPond puts max-count 0.81 lower. The identity is in `right - left`."
+    },
+    "beam.quant.mixed-count.uniform-control.right": {
+      "probe": "beam-mixed-count.ly", "score": "C",
+      "lilypond": 0.0, "residual": 0.0,
+      "why": "EXACT. CONTROL — see uniform-control.left. A port of the maximum must leave this point untouched: this is the ordinary beam, and a change that moves it has broken every beam in the corpus rather than the mixed ones."
+    },
+    "beam.quant.mixed-count.peak-32.unforced.left": {
+      "probe": "beam-mixed-count.ly", "score": "D",
+      "lilypond": -3.0, "residual": 0.0,
+      "why": "EXACT. CONTROL for peak-32.forced-stem, and the half of this pair the maximum-count port CLOSED. Bar 1 of test/beamlet-peaks: an 8-32-8 group clear of the staff, every stem in its natural direction. MEASURED LilyPond ideals -2.86 / -1.86 / -0.86, a clean 1.0 step per third with ONE ideal length of 3.36 (beamed-lengths[count 3] 3.6 minus half the beam thickness) across counts 1, 3, 1, positions (-3.0 . -1.81). It must stay exact while the forced pair is chased: if it moves, the fix broke the case that already works."
+    },
+    "beam.quant.mixed-count.peak-32.unforced.right": {
+      "probe": "beam-mixed-count.ly", "score": "D",
+      "lilypond": -1.81, "residual": 0.0,
+      "why": "EXACT. CONTROL — see peak-32.unforced.left. Both ends, because the pair is being used to separate a height error from a slope error and a one-ended control cannot hold either."
+    },
+    "beam.quant.mixed-count.peak-32.forced-stem.left": {
+      "probe": "beam-mixed-count.ly", "score": "E",
+      "lilypond": -4.0, "residual": 0.0,
+      "why": "EXACT — was +0.5, and it closed because the maximum-count port had a THIRD call site nobody had counted. ScoreStemLengths (lily/beam-quanting.cc:1114-1171) was still building this stem's floor and ideal from the stem's OWN beam count while the seed had moved to the direction maximum, so the scorer graded the new seed against the old ladder. With the stem's own count the leading eighth's shortest_y is -2.74; with LilyPond's it is -3.61, and Lily#'s -3.50 sits 0.11 the wrong side of it — a quant LilyPond charges STEM_LENGTH_LIMIT_PENALTY 5000 × 0.11 for and therefore never picks. ⚠️ THE FLOOR WAS THE RIGHT SUSPECT AT THE WRONG ADDRESS: the prediction below named ShiftRegionToValid, and the reader was the scorer. ★ AND THE FORK WAS MIS-DRAWN — see peak-32.forced-stem.right. ★ The arithmetic that stands, and that is worth keeping: LilyPond's ideals here are -3.776667 / -2.776667 / -1.776667 against D's -2.86 / -1.86 / -0.86 — NOT a translation, because a third is 1.0 staff space and the ladder moved 0.916667, i.e. 1.0 minus 1/12. The 1/12 is the beam's `shorten` (lily/beam.cc:1061-1091 calc_stem_shorten, applied at lily/stem.cc:1245): beamed-stem-shorten[count 3] is 0.25 and exactly ONE of the three stems is forced against its natural direction (a' sits below the middle line and would stem up), so the forced fraction is 1/3. In D nothing is forced and shorten is 0. That single term is the whole LP-side difference between the two books, and LilyPond gives them the same slope — which is what made the pair able to answer at all."
+    },
+    "beam.quant.mixed-count.peak-32.forced-stem.right": {
+      "probe": "beam-mixed-count.ly", "score": "E",
+      "lilypond": -2.81, "residual": 0.0,
+      "why": "EXACT — was +0.62 against +0.5 at the other end, and BOTH closed in one edit. ★★★ THAT OUTCOME REFUTED THE FORK AS IT WAS WRITTEN. The ledger said: if the floor is the cause the LEFT end moves and about 0.12 of slope stays; if both ends close together the floor is not it and the term is in the ideal ladder. Both ends closed together AND the floor was the cause — because `shortest_y` and `ideal_y` are the two halves of ONE return value (lily/stem.cc:1265 returns the pair), read by ONE call, so no edit can move the floor without moving the ideal attraction with it. ⇒ ★★ The fork split a single function's two outputs into two hypotheses and made them look independently testable. This is HANDOFF 5.0's 'one claim in N quantities' in its mirror image: there the error is porting the halves separately, here it is PREDICTING them separately. ⚠️ Judgement to keep: a fork's two branches must be things that can actually happen apart. Check that they come from different CALLS before writing them."
+    },
     "beam.grouping.six-four-sixteenths.groups": {
       "probe": "beam-grouping.ly", "score": "S64", "unit": "count",
       "lilypond": 6, "residual": 0.0,
