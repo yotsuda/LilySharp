@@ -56,7 +56,8 @@ internal static class LayoutUtilities
 
     /// <summary>The x a stem stands at, given its note column's x.</summary>
     /// <remarks>See <see cref="StemAttachX"/>.</remarks>
-    public static double StemX(double columnX, bool up) => columnX + StemAttachX(up);
+    public static double StemX(double columnX, bool up, double headScale = 1.0) =>
+        columnX + StemAttachX(up, headScale);
 
     /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.

@@ -104,6 +104,36 @@ internal static class EngravingDefaults
     // LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — for <4 beams,
     // (2·ss + line − beam-thickness)/2 (ss = staff-space = 1.0 here).
     public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
+    /// <summary>A GRACE beam's declared thickness — LilyPond states it, it is not derived.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly graceSettings — <c>Voice.Beam.beam-thickness = #0.384</c>,
+    ///   alongside <c>Voice.Beam.length-fraction</c> and <c>Voice.Stem.length-fraction</c>
+    ///   (both <see cref="GraceBeamLengthFraction"/>) and <c>Voice.fontSize = #-3</c>.
+    /// MEASURED on 2.26.0 (audit/lp-geometry/probes/beam-grace.ly, score G): the Beam grob of
+    /// <c>\grace { d'16 e' }</c> reports beam-thickness 0.384 and length-fraction 0.8, against
+    /// 0.48 and unset for the same two pitches written as ordinary sixteenths (score H).
+    /// </remarks>
+    public const double GraceBeamThickness = 0.384;
+    /// <summary>A grace Beam's and Stem's <c>length-fraction</c>.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly graceSettings. ⚠️ NOT the notehead's scale: the heads
+    /// shrink with <c>fontSize = -3</c>, i.e. <c>magstep(-3)</c> = 0.7071, which is a third
+    /// number again (Lily# draws them at <see cref="Model.GraceNoteItem.ScaleFactor"/> 0.65).
+    /// Three quantities, three values — do not fold them.
+    /// </remarks>
+    public const double GraceBeamLengthFraction = 0.8;
+    /// <summary>
+    /// The distance between beam centres for a beam of the given thickness and
+    /// <c>length-fraction</c> — the derivation <see cref="BeamTranslation"/> is the
+    /// full-size case of.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — <c>fract × ((2·ss + line −
+    ///   beam-thickness) / 2)</c> for fewer than four beams, where <c>fract</c> is the beam's
+    ///   length-fraction and the staff space and line thickness are NOT scaled with it.
+    /// </remarks>
+    public static double BeamTranslationOf(double beamThickness, double lengthFraction) =>
+        lengthFraction * ((2.0 + LineThickness - beamThickness) / 2.0);
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
     public const double BeamletLength = 1.1;

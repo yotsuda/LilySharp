@@ -318,7 +318,11 @@ public static class StemCalculator
         // --- Extreme minimum ---
         // LILYPOND-REF: stem.cc:1247-1259
         int extremeMinIdx = Math.Clamp(beamCount - 1, 0, d.BeamedExtremeMinimumFreeLengths.Length - 1);
-        double minimumFree = d.BeamedExtremeMinimumFreeLengths[extremeMinIdx];
+        // ⚠️ length_fraction scales this one too — lily/stem.cc:1247-1259 multiplies the
+        // extreme minimum by staff_space AND length_fraction, exactly as it does the ideal
+        // and the minimum-free above. Invisible while the fraction is 1; a grace beam is
+        // where it starts to matter.
+        double minimumFree = d.BeamedExtremeMinimumFreeLengths[extremeMinIdx] * d.LengthFraction;
         double minimumLength = minimumFree + heightOfMyBeams - 0.5 * beamThickness;
         double shortestY = (noteStart + minimumLength) * dir;
 

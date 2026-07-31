@@ -116,8 +116,17 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
+                // The beam's own height comes from the QUANTER, in the layout stage
+                // (GraceNoteEngraver.QuantGraceBeam) — the renderer places it, it does not
+                // decide it. Beam.positions are staff positions at the beam's drawn ends,
+                // so they land in this frame through the staff middle and the ossia affine.
+                (double, double)? beamEnds =
+                    g.BeamLeftY is { } bl && g.BeamRightY is { } br
+                        ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
+                           os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
+                        : null;
                 DrawGraceStemsAndBeam(headX, headY, beamCounts, eff,
-                    g.Type == GraceNoteType.Acciaccatura, gc);
+                    g.Type == GraceNoteType.Acciaccatura, beamEnds, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -200,14 +209,19 @@ internal static partial class SharedRenderer
     ///   the heads, i.e. downward on the page).
     /// LILYPOND-REF: lily/beam.cc secondary beams translated by beam-thickness +
     ///   gap; here BeamTranslation, scaled.
-    /// Simplification: equal-length stems, so the beam runs parallel to the head
-    /// contour (LilyPond solves a quanted slope). A grace group mixing
-    /// beamed (≥8th) and unbeamed (≤quarter) durations falls back to per-head
-    /// flags rather than a partial beam.
+    /// A grace group mixing beamed (≥8th) and unbeamed (≤quarter) durations falls back
+    /// to per-head flags rather than a partial beam.
     /// </remarks>
+    /// <param name="beamEnds">
+    /// The quanted beam's Y at its two DRAWN ends, from LilyPond's <c>Beam.positions</c>
+    /// (GraceNoteEngraver.QuantGraceBeam). ⚠️ Not optional in practice: the fallback below
+    /// is the pre-2026-08-01 device — equal-length stems with the beam parallel to the head
+    /// contour — which is off LilyPond's quant grid entirely. It survives only for a group
+    /// the layout could not quant (a test constructing a GraceNoteLayout by hand).
+    /// </param>
     private static void DrawGraceStemsAndBeam(
         List<double> xs, List<double> ys, List<int> beamCounts, double scale,
-        bool acciaccatura, IDrawingContext gc)
+        bool acciaccatura, (double Left, double Right)? beamEnds, IDrawingContext gc)
     {
         int n = xs.Count;
         if (n == 0) return;
@@ -253,10 +267,23 @@ internal static partial class SharedRenderer
         // the corner squares off against the vertical stem edge.
         // LILYPOND-REF: lily/beam.cc — stems terminate on the beam; beam.cc:631
         //   horizontal_[dir] += dir * stem_width / 2 (flush end).
-        double beamLeftY = StemEndY(0), beamRightY = StemEndY(n - 1);
-        double span = StemX(n - 1) - StemX(0);
+        // The quanter's frame: it answers at the beam's DRAWN ends, which sit half a stem
+        // thickness outside the outer stems (lily/beam.cc:631), and it measures that
+        // overhang with the unscaled stem thickness — so the line is fixed by those two
+        // x's, whatever the quad's own corners are stepped out by below.
+        double quantOverhang = EngravingDefaults.StemThickness / 2.0;
+        double edgeL = StemX(0) - quantOverhang, edgeR = StemX(n - 1) + quantOverhang;
+        double beamLeftY = beamEnds?.Left ?? StemEndY(0);
+        double beamRightY = beamEnds?.Right ?? StemEndY(n - 1);
+        if (beamEnds is null)
+        {
+            // The old device, kept only for a hand-built layout: equal-length stems.
+            edgeL = StemX(0);
+            edgeR = StemX(n - 1);
+        }
+        double span = edgeR - edgeL;
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
-        double BeamY(double x) => beamLeftY + beamSlope * (x - StemX(0));
+        double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
         for (int i = 0; i < n; i++)
             gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);

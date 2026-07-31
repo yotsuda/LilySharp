@@ -1127,17 +1127,50 @@ internal sealed class RenderedGeometry
                 + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
 
-        // Group the drawn quads into beams by x span: the widest quad starting at each
-        // group's left is that group's primary line; a stub is strictly inside it.
+        // Group the drawn quads into beams by x span: a stub, and every further line of a
+        // STACK, spans no wider than the group's widest quad.
         var quads = _pages[page].Quads
             .Select(q => (Left: Math.Min(q.X0, q.X3), Right: Math.Max(q.X1, q.X2),
                           LeftY: (q.Y0 + q.Y3) / 2, RightY: (q.Y1 + q.Y2) / 2))
             .OrderBy(q => q.Left).ThenByDescending(q => q.Right - q.Left)
             .ToList();
-        var primaries = new List<(double Left, double Right, double LeftY, double RightY)>();
+        var groups = new List<List<(double Left, double Right, double LeftY, double RightY)>>();
         foreach (var q in quads)
-            if (!primaries.Any(p => q.Left >= p.Left - 1e-9 && q.Right <= p.Right + 1e-9))
-                primaries.Add(q);
+        {
+            var owner = groups.FirstOrDefault(g =>
+                q.Left >= g[0].Left - 1e-9 && q.Right <= g[0].Right + 1e-9);
+            if (owner != null) owner.Add(q);
+            else groups.Add(new List<(double, double, double, double)> { q });
+        }
+
+        // ⚠️ Of a STACK, the line LilyPond's positions describes is the OUTERMOST: every
+        // further beam is drawn at positions + beam_dy × rank TOWARD the noteheads
+        // (lily/beam.cc:810-814 Beam::print). Reading the inner line instead reports a beam
+        // exactly one beam translation (0.81 at full size) off, which looks like a quanter
+        // defect and is not — the corpus twin sweep of 2026-08-01 was fooled by it twice
+        // before the rule was written down. The stems say which side the noteheads are on:
+        // whichever way a stem runs past the stack is the way the music lies.
+        var verticals = _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9 && Math.Abs(l.Y2 - l.Y1) > 0.3)
+            .Select(l => (X: l.X1, Top: Math.Min(l.Y1, l.Y2), Bottom: Math.Max(l.Y1, l.Y2)))
+            .ToList();
+        var primaries = new List<(double Left, double Right, double LeftY, double RightY)>();
+        foreach (var g in groups)
+        {
+            var full = g.Where(q => q.Right - q.Left >= (g[0].Right - g[0].Left) - 1e-9).ToList();
+            double top = full.Min(q => Math.Min(q.LeftY, q.RightY));
+            double bottom = full.Max(q => Math.Max(q.LeftY, q.RightY));
+            double below = 0, above = 0;
+            foreach (var s in verticals)
+            {
+                if (s.X < g[0].Left - 0.2 || s.X > g[0].Right + 0.2) continue;
+                below = Math.Max(below, s.Bottom - bottom);
+                above = Math.Max(above, top - s.Top);
+            }
+            primaries.Add(below > above
+                ? full.OrderBy(q => q.LeftY + q.RightY).First()      // stems run DOWN: topmost
+                : full.OrderByDescending(q => q.LeftY + q.RightY).First());
+        }
 
         if (primaries.Count <= beamIndex)
         {

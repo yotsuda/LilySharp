@@ -89,6 +89,18 @@ internal sealed class BeamScoringProblem
     // (LilyPond calc_stem_info); only the flat minimum floor remains for EnsureMinimumStemLength.
     private readonly double _minStemLength;
 
+    // This beam's length-fraction, which buys every stem's ideal and floor lengths.
+    // LILYPOND-REF: lily/stem.cc:1164-1259 calc_stem_info — beamed-lengths,
+    //   beamed-minimum-free-lengths and beamed-extreme-minimum-free-lengths are each
+    //   multiplied by staff_space AND length_fraction. 1.0 for an ordinary beam.
+    private readonly double _lengthFraction;
+
+    // …carried as the details record the three calc_stem_info readers share. THREE, counted
+    // by grep: CalculateInitialPosition, ScoreStemLengths and the knee seed. The maximum-count
+    // port of 2026-08-01 missed one of exactly these and the miss had no failing point,
+    // because it only bites when the floor binds (HANDOFF 5.0).
+    private readonly StemDetails _stemDetails;
+
     // Direction
     private readonly int _beamDir; // +1 for stem up, -1 for stem down
 
@@ -154,12 +166,29 @@ internal sealed class BeamScoringProblem
     /// STRING lines instead of their pitch. One value per member, in staff
     /// positions (half-spaces). Null keeps the notation-staff behaviour.
     /// </param>
+    /// <param name="lengthFraction">
+    /// The beam's (and its stems') <c>length-fraction</c>. 1.0 for an ordinary beam;
+    /// <see cref="EngravingDefaults.GraceBeamLengthFraction"/> for a grace one.
+    /// </param>
+    /// <param name="beamThickness">
+    /// The beam's declared thickness. LilyPond STATES this per context rather than deriving
+    /// it from the fraction (ly/grace-init.ly declares 0.384 for a grace beam), so it is a
+    /// separate argument and not <c>BeamThickness × lengthFraction</c>.
+    /// </param>
+    /// <param name="headScale">
+    /// The scale the note heads are drawn at, which is where an UP stem attaches. Distinct
+    /// from <paramref name="lengthFraction"/> again: LilyPond's grace heads shrink by
+    /// <c>magstep(-3)</c> while its grace beam's fraction is 0.8.
+    /// </param>
     public BeamScoringProblem(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
         BeamQuantParameters? parameters = null,
         IReadOnlyList<BeamCollision>? collisions = null,
-        IReadOnlyList<int>? stemPositions = null)
+        IReadOnlyList<int>? stemPositions = null,
+        double lengthFraction = 1.0,
+        double beamThickness = EngravingDefaults.BeamThickness,
+        double headScale = 1.0)
     {
         _group = group;
         _parameters = parameters ?? BeamQuantParameters.Default;
@@ -207,7 +236,7 @@ internal sealed class BeamScoringProblem
         // renderer and the collision collector already read, so the beam is scored in the
         // frame it is drawn in (BeamStemFrameTests asserts the two agree).
         double StemXOf(BeamMember m) =>
-            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp);
+            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp, headScale);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 
@@ -277,9 +306,15 @@ internal sealed class BeamScoringProblem
 
         // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
-        _beamThickness = EngravingDefaults.BeamThickness;  // 0.48 staff spaces
+        _beamThickness = beamThickness;                         // 0.48 staff spaces full size
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
-        _beamTranslation = EngravingDefaults.BeamTranslation;
+        // Derived from THIS beam's thickness and fraction, not the full-size constant:
+        // lily/beam.cc Beam::get_beam_translation reads both off the grob.
+        _beamTranslation = EngravingDefaults.BeamTranslationOf(beamThickness, lengthFraction);
+        _lengthFraction = lengthFraction;
+        _stemDetails = lengthFraction == 1.0
+            ? StemDetails.Default
+            : StemDetails.Default with { LengthFraction = lengthFraction };
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
 
         // The beam's own segments — the SAME maths the renderer draws with, so the ink a
@@ -524,7 +559,8 @@ internal sealed class BeamScoringProblem
             int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, DirectionBeamCount(dir),
-                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
+                _beamThickness, _beamTranslation, _stemDetails,
+                isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY; // staff-spaces (native quanter frame)
             ideals.Add((_stemXPositions[i], idealY));
         }
@@ -900,7 +936,8 @@ internal sealed class BeamScoringProblem
             int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, DirectionBeamCount(dir),
-                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
+                _beamThickness, _beamTranslation, _stemDetails,
+                isKnee: _isKnee, beamShorten: _beamShorten);
             double minBeamY = info.ShortestY; // staff-spaces (native quanter frame)
             // Convert to left Y: leftY = beamAtStem - slope * stemX
             double leftYForMin = minBeamY - slope * _stemXPositions[i];
@@ -1337,7 +1374,8 @@ internal sealed class BeamScoringProblem
             //   is how an 8-32-8 beam kept a quant LilyPond charges 5000 × 0.11 for.
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], memberDir > 0, DirectionBeamCount(memberDir),
-                _beamThickness, _beamTranslation, isKnee: _isKnee, beamShorten: _beamShorten);
+                _beamThickness, _beamTranslation, _stemDetails,
+                isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY;
             double shortestY = info.ShortestY;
 

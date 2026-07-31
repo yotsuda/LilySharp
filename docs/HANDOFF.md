@@ -58,6 +58,133 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-01（第58セッション＝**引継ぎ ▶ の「双子でコーパスを一周する」を実行した。
+収穫は 2 つ**——⑴ **ゲートは引継ぎが挙げていた 2 つよりずっと大きい**（双子が beam を描くのは
+**199 本中 31 本**だけで、理由の大半は音楽ではなく **exporter**）、⑵ **そのゲートの外に残った
+食い違いは 1 つだけ＝grace の beam**（3 冊・4 読み・**残差は 9 桁まで同じ**）。**対で起票済み・
+移植は次**。
+★★★ **そして最初に出た「食い違い」3 件は自分の計器の欠陥だった**——LP の `positions` が
+指す beam 線を取り違えていた（0.81＝beam translation 1 つぶん）。**§5.0 に汎化した。**
+**そして同じセッションで移植まで通した**（⑤）——**高さは exact になり、残るのは傾きだけ**。
+**そして残った傾きの正体まで測った**（⑥＝**LP の grace 列は Lily# より 45% 広い**）。
+HEAD **`e75d3bff`**（＋handoff commit 1 本）・**未 push 72**（handoff commit 込みの総数）・
+テスト **3706 passed / 0 failed / 3 skipped**・
+台帳 **349 点**（**ss 非ゼロ 76・総和 0.218839538**／**count 点 99・うち非ゼロ 2**）。
+★ **総和が 0.1086 → 0.2188**＝**新しく 4 点開いて（+1.184）そのうち 1.075 を同じ日に閉じた**。
+⚠️ **この行は書いた直後に stale になる**（HEAD を書く commit が HEAD を動かす）。§0 のとおり
+**開始時に必ず実測すること**。
+
+## ① 機械を 1 本足した＝`TwinBeamSweep`（`6522cdc5`・**Core 変更ゼロ**）
+
+★★★ **コーパスを一周する手順はもう手作業ではない**: fixture 全部を `lysc ly` で双子にして
+LP に通し（`-dinclude-settings` で `Beam.after-line-breaking` を注入すれば**双子を書き換えずに済む**）、
+Lily# 側は `LILYSHARP_BEAM_SWEEP=<csv>` で `TwinBeamSweep` が同じ語彙（**譜の中央線 − beam 中心・
+その譜の staff space で割る**＝タブも ossia も自分のスケールで読む）で吐く。**env が無ければ何もしない**。
+★ **LP 側 199 冊は `-dbackend=null` で 1 冊 1 秒**（svg backend だと 6.6 秒）。
+
+## ② 計器自身の欠陥が 3 件出た（同 commit）
+
+★★★ ⑴ **`positions` は stack の *外側* の線**（`beam.cc:810-814` `Beam::print` が
+`positions + beam_dy × rank` で**符頭の側へ**積む）。「群の左端で最も広い quad」は**描画順で
+決まる**ので 16分群で**内側**を読み、**ちょうど 0.81 ずれる**＝**量子器の欠陥にしか見えない**。
+`test/beaming` と `test/notes` を**そう誤診した**。⇒ **符尾がどちら側に伸びているかで決める。**
+★★ ⑵⑶ **quad と符尾を「ページ単位」で束ねていた**——**2 つの system は同じ x 帯を占める**ので、
+片方の beam がもう片方の群に**呑まれて読みが消え**、片方の符尾が**向き判定を反転させた**。
+⇒ **束ねる前に必ず譜へ割り当てる。**
+★ **既存の台帳点は 1 つも動かなかった**＝**stack を読む点はこれが最初**。
+
+## ③ grace の beam を対で起票した（`ff373bfb`・**Core 変更ゼロ**・6 点）
+
+★★★ **新プローブ `audit/lp-geometry/probes/beam-grace.ly`**（3 冊）。**G** ＝ `test/grace-notes`
+の 1 小節目（LP **(0.142 . 0.5)**・`beam-thickness 0.384`・`length-fraction 0.8`＝`ly/grace-init.ly`）。
+**H** ＝ **対の本命の control**＝**同じ 2 音を普通の 16分で**（LP **(0.81 . 1.0)**・thickness 0.48）。
+**2 冊の LP 側の違いは grace のスケールだけ**なので、**Lily# が両者の間に置いた量がそのまま欠陥**＝
+**左 −0.388667 / 右 −0.203333**。**H は開いた時点で exact。**
+★★ **I** ＝ **平行移動の control**（同じ grace beam を 3 度上）。**LP は 1.0 ss 平行移動して傾きを保つ**、
+そして **Lily# の残差は 9 桁まで同じ**⇒ **欠陥は 1 項で、音高に依存しない。**
+★★★ **予測（台帳に書いた・移植前）＝そもそも量子していない**。grace beam は
+**2 つ目の実装** `SharedRenderer.GraceNotes.DrawGraceStemsAndBeam` が描いており、
+**そのコメント自身が「equal-length stems, so the beam runs parallel to the head contour
+(LilyPond solves a quanted slope)」と宣言している**。
+**falsifier**: ⑴ 読みは**格子から 1 quant ずれる**のではなく**格子に乗らない**（乗っていない）
+⑵ **dy が音程を超えられる**（0.5434 対 d–e の 0.5）——**減衰した傾きは決して超えない**
+⑶ **スケール定数 1 つなら両端が同じだけ動く**（動いていない）。
+⚠️ **候補の項はどれもまだ LP の行から読んでいない**: Lily# の grace スケールは **0.65**
+（`GraceNoteItem.ScaleFactor`・REF は `define-grobs.scm:1389 font-size -3`）、LP の
+`magstep(-3)` は **0.7071**、Beam 自身の `length-fraction` は **0.8**——**3 つとも違う数**。
+
+## ④ ゲートの棚卸し＝**双子を塞いでいるのは exporter**
+
+**204 fixture → 双子 199 本**（**5 本は今の文法で parse しない**: `test/beamed-rest`・
+`test/cue-notes`・`test/dot-force-down`・`test/multi-movement`・`showcase/grammar-2026-06-09`）。
+**beam を描く双子は 31 本・うち 18 本が LP exact**。**残り 13 本の内訳＝grace 3・タブ 6・
+`bar check` 2・`instrument` 1・`voice {}` 1**（＝**ゲート外は grace だけ**）。
+★★★ **exporter の穴は既知の 2 つでは終わっていない**（`lysc ly` は自分で warning を出す・
+**176 行 / 62 fixture**）:
+⑴ ★★ **`voice { }` が丸ごと落ちる**（`ParallelExpression not exported` **29 件**）＝
+**多声の本は空の譜になる**。**これで空になる双子が 11 本**（`test/multivoice-*`・`test/drum-groove`・
+`test/beam-over-stem`・`test/bend`・`test/dead-note`）。**過去 2 回直した穴と同じ形の 3 つ目。**
+⑵ ★★ **`grandStaff { staff a staff b }` は譜 0 本と数えられ、fallback で 1 譜になる**——
+`EmitScore` は `EnumerateChildren(render)` の**直下の `staff`/`tab` しか見ない**ので、
+**入れ子のグループを丸ごと見落とす**。`lh` の変数は出力されるのに `\score` から参照されない
+（`test/beam-under-staves`・`test/timesig-grandstaff`・`test/multistaff-tuplet-beams`）。
+⑶ **`ossia` は render 項目として落ちる**、かつ **`part` 宣言を持たない本は音楽ごと空になる**
+（`TopLevelMusic` しか拾わない・`test/ossia-beams` が両方踏む）。
+⑷ ★ **タブは双子では測れない**（**欠陥ではない**）——**LP の `TabStaff` は既定で符尾も beam も
+描かない**ので、双子の Beam grob は**置かれておらず**、`positions` は **−76.5** のような数を返す。
+**Lily# 側のタブ beam は弦位置で向きを決める固有 device** でもあるので、**この経路では対にならない。**
+
+## ⑤ grace beam を移植した（`aac9931c`・**snapshot 3 枚・GO 済**・**予測は当たり**）
+
+★★★ **grace beam は量子器を通っていなかった**——③ の予測どおり。`GraceNoteEngraver.QuantGraceBeam`
+が**普通の `BeamScoringProblem`** を回し、renderer は**置くだけ**になった。
+**4 読みとも −0.388667/−0.203333 → +0.027562/−0.027562。**
+★★★ **LP が何を scale して何を scale しないか**（`ly/grace-init.ly`・probe で実測）:
+**`beam-thickness` は 0.384 と *宣言*（導出ではない）**／**`length-fraction` は Beam も Stem も 0.8**／
+**translation は両方から導出**（`fract × ((2·ss + line − thickness)/2)`＝`BeamTranslationOf`）／
+**符頭は `magstep(-3)` = 0.7071 で第 3 の数**（Lily# は 0.65）。⇒ **3 つの量・3 つの値・畳まない**
+（ctor は `lengthFraction` / `beamThickness` / `headScale` を別々に取る）。
+★ **perf は回数で測った**（§7.9・時間では測れない規模）: 増えるのは**beam を持つ grace 群 1 つにつき
+量子器 1 回**で、**コーパス全 204 fixture の grace 群 20 のうち 2 音以上は 4 つだけ**。
+⇒ **コーパス全体で +4 回**。pass も skyline も増やしていない。
+★★ **落ちる点を持たない項が 2 つ、「スケールを書き下す」だけで出た**:
+⑴ `StemCalculator` が `beamed-extreme-minimum-free-lengths` に `length-fraction` を掛けていなかった
+（`stem.cc:1247-1259` は掛ける・**fraction 1 では不可視**）
+⑵ `LayoutUtilities.StemX` が head scale を取らず、**0.65 の符頭に原寸の右端で符尾を付けていた**
+（`StemAttachX` は既に取っていた＝**対の片方だけ**）。
+★★★ ▼ **残差が「対称」になったこと自体が次の falsifier**——**高さは 9 桁 exact・傾きだけ**
+（dy 0.302875 対 LP 0.358）。**傾きだけの残差は長さや太さからは出ない**（どちらも高さを動かす）
+⇒ **残りは X フレーム**: ⒜ grace 列の刻み `(1.2 + 0.3) × 0.65`（**LP 側を測ったことがない**）
+⒝ **符尾太さの張り出しを renderer だけが scale している**（LP の `Stem.thickness` は
+line-thickness 単位で、`fontSize` は line-thickness を scale しない）。
+
+## ⑥ その X フレームを測った（`beam-grace.ly` に `stemx`/`xext` を追加・**コード変更ゼロ**）
+
+★★★ **LP の grace 列は 1.417939**（符尾 8.437939 → 9.855877）。**Lily# は
+`(1.2 + 0.3) × 0.65 = 0.975`**＝**45% 狭い**。⇒ 理想 dy 0.5 が **1.548 の span** ではなく
+**1.105** に載るので、減衰後の傾きが足りない＝⑤ の対称残差の正体。
+★★ **beam の drawn extent は 8.372939 . 9.920877**＝**符尾の外 0.065 ずつ**＝**原寸の符尾太さの半分**。
+⇒ **⒝ は決着**: **LP は張り出しを grace サイズで scale しない**（`Stem.thickness` は
+line-thickness 単位）が、**Lily# の renderer は scale している**。
+
+## ▶ 次の一手＝**grace 列の幅に点を作る（定数を当てはめない）**
+
+⚠️ ★★★ **1.417939 を `GraceNoteWidth` に書き写さないこと**。**16分 grace 2 個という 1 つの
+texture**でしかなく、**この repo はまさにそれで焼かれている**（figured bass の `1.5`）。
+LP 側は**ばね**（`lily/grace-spacing-engraver.cc`）なので:
+⑴ **grace の個数と音価を振るプローブ**を書いて `stemx` を読む（**幅の法則**を出す）
+⑵ **幅そのものに台帳点を作る**（今は beam の点が間接的に測っているだけ）
+⑶ そのうえで移植。**閉じたかどうかは `beam.quant.grace.*` 4 点が同時にゼロになること**で決まる
+（**対称**なので**片方だけ動いたら傾き以外を触った証拠**）。
+★ **同じ島の小さい方**: **renderer が符尾太さの張り出しを scale しているのをやめる**（⑥）。
+**単独では入れない**——列の幅と同じ 1 つの claim（どちらも X フレーム）。
+★ **その次**: **exporter の穴 ⑴⑵⑶ を塞ぐ**——**塞ぐたびに測れる本が増える**（今回 `voice {}` だけで
+11 本が空だった）。⚠️ **穴を塞ぐ commit では「双子が何本 beam を描くようになったか」を書く**。
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第57セッションの経緯
+
 最終更新 2026-08-01（第57セッション＝**引継ぎ ▶ の「2 本のビーム」を対で起票し、同じ島を
 移植まで通した。犯人は `beamCount` で、LP は*ステム自身の*多重度を使っていない**——
 `Beam::get_direction_beam_count`（**その向きの最大値**）。**LP のソースが自分でその理由を
@@ -132,7 +259,7 @@ Lily# は左端を **−3.50** に置いていた＝**LP の床の 0.11 外側**
 ★ **`_memberBeamCounts` の読み手は `_edgeBeamCounts` 1 つだけになった**＝**その数が本来
 答えている問い**（端に何本届くか）。
 
-## ▶ 次の一手＝**双子でコーパスを一周する**
+## ~~▶ 次の一手＝**双子でコーパスを一周する**~~ ← **第58セッションで実行した（上の ①〜④）**
 
 ★★★ **根拠は今セッションの歩留まり**——第56セッションが exporter を直して**最初に動いた双子**が
 `test/beaming` で**2 本**を出し、今回そのついでに測った `test/beamlet-peaks` が**もう 1 本**出した。
@@ -3610,6 +3737,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `font` を書いたときだけ。⚠️ **新しくテキスト量を測るコードは自前で face を持たず
   `TextFontMetrics` に乗せること**（1 つの家）。ここを塞げば全部同時に直る。
   **着手するなら対を先に**（`font` 指定つきの fixture が要る）
+- ★★ **`lysc ly`（双子 exporter）の穴 3 つ**（2026-08-01・第58セッションがコーパス一周で実測。
+  **§1 ④ に内訳**）。**塞ぐたびに LP と突き合わせられる本が増える**ので、忠実度作業の
+  **測定可能面積そのもの**が懸かっている:
+  ⑴ **`voice { }` が丸ごと落ちる**（`ParallelExpression not exported`・**空の譜になる双子 11 本**）
+  ⑵ **`grandStaff { … }` の入れ子を `EmitScore` が見ない**（`EnumerateChildren(render)` の
+     直下しか switch していない）⇒ **譜 0 本と数えて fallback の 1 譜になる**
+  ⑶ **`ossia` が落ちる**／**`part` 宣言を持たない本は音楽ごと空**（`TopLevelMusic` しか拾わない）
+  ⚠️ **これは「exporter が空を返す」欠陥の 3 度目**（第55・第56セッションが 2 度直している）。
+  ⇒ ★ **塞ぐときは 1 本ずつ直さず、`Warnings` を全 fixture に対して回す機械を先に作る**
+  （今回は手で回した: **176 行 / 62 fixture**）
+- ★ **fixture 5 本が今の文法で parse しない**（`test/beamed-rest`・`test/cue-notes`・
+  `test/dot-force-down`・`test/multi-movement`・`showcase/grammar-2026-06-09`）。
+  `p`/`chords` の予約語化・`name = …` 宣言の撤去・`time`/`tempo` の score レベル化で置き去りに
+  なったもの。**snapshot リストには載っていないので誰も落ちない**⇒ **直すか消すかを決める**
+  （未リリースなので後方互換は考えない・§3）
 - MusicXML インポート — ほぼ完遂、**実ファイル検証が残**
 - AI 協調編集 M1–5 — **実機 E2E 未検証**
 - 文法改善 5 件は完了。**0.3.0 リリースは GO 待ち**
@@ -3806,6 +3948,19 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   戻り値なら、それは 1 枝であって 2 枝ではない。⚠️ **住所も同じ罠**——同じ回で
   「床を読んでいるのは `ShiftRegionToValid`」と名指して外した（実際は `ScoreStemLengths`）。
   **機構が当たっても住所は別に確かめる。**
+- ★★★ ⚠️ **新しい計器が出した最初の食い違いは、まず計器を疑う。「既に exact と分かっている本」を
+  必ず 1 冊通す**（2026-08-01・第58セッション。**3 件連続で計器の欠陥だった**）。コーパスを
+  双子で一周する sweep を書いたら `test/beaming` と `test/notes` が **0.81 ずれ**て出たが、
+  **0.81 は beam translation そのもの**（`(2·ss + line − thickness)/2`）で、正体は
+  **`positions` が指す線の取り違え**——LP は **stack の外側**を指す（`beam.cc:810-814` が
+  `positions + beam_dy × rank` で**符頭側へ**積む）のに、「群の左端で最も広い quad」は
+  **描画順で決まる**ので内側を拾っていた。
+  ⇒ ★★ **判定法は 3 つ**: ⑴ **残差がその島の既知の定数ちょうどか**（0.81・0.13・0.5 ——
+  §5.0 の「よく知っている定数の形をしていたら項の見落とし」の**計器版**）
+  ⑵ **同じ量を別の経路で 1 回読めるか**（今回は台帳点と sweep の 2 経路が**同じ −0.3887** を
+  出したので grace は本物だと分かった） ⑶ **前セッションが exact と書いた本を通すと exact か**。
+  ⚠️ **そして「ページ単位で束ねる」は計器の定番の穴**——**2 つの system は同じ x 帯を占める**ので、
+  x だけで群を作ると**別の行の grob を呑む**。**束ねる前に譜へ割り当てる。**
 - ★★★ ⚠️ **値の「意味」を変える移植は、動機になった site ではなく grep 全件に当てる**
   （2026-08-01・同セッション。**自分の移植を同じセッションで 1 site 取りこぼした**）。
   `beamCount` を「ステム自身」から「向きの最大」へ変えたとき、**落ちている点が指す 2 site**
@@ -4914,6 +5069,21 @@ cmd /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dno-point-and-click out.l
 #    ⚠️ 双子の tuning が合って見えても `TabTuning` の既定フォールバックのことがある。
 # ⚠️ プローブの .ly を手で書くときはオクターブを 1 段上げる（Lily# の `c'` ＝ LP の `c''`）。
 #    2026-08-01 に踏んだ: 符尾の向きごと別 regime になり、しかも間違って見えない。
+
+# コーパスを双子で一周する（第58セッションの手順・1 冊ずつ手で回さない）
+#  1) 全 fixture を双子に: lysc ly を fixture ごとに回す（warning も拾う＝exporter の穴の一覧）
+#  2) LP 側: \layout の override を .ly に挿さず -dinclude-settings で注入する（双子は無改変）
+#     dump.ily = \layout { \context { \Score \override Beam.after-line-breaking = #(lambda …) } }
+#     ⚠️ \Voice ではなく \Score（\Voice は TabVoice/CueVoice に届かない）
+#     cmd /d /s /c "…\lilypond.exe -dbackend=null -dinclude-settings=dump.ily -o out NAME.ly …"
+#     ⚠️ -dbackend=null で 1 冊 1 秒（svg backend だと 6.6 秒・199 冊で 20 分の差）
+#  3) Lily# 側:
+$env:LILYSHARP_BEAM_SWEEP = "$PWD\beams.csv"
+dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build --filter 'FullyQualifiedName~TwinBeamSweep'
+Remove-Item Env:\LILYSHARP_BEAM_SWEEP
+#  4) 突き合わせは (posLeft,posRight) の多重集合で。⚠️ 順序で突き合わせない（改行位置が両側で違う）
+# ⚠️ 測れない本の仕分けは §1 ④ のゲート一覧（parse 不能 5 / voice{} / grandStaff / ossia /
+#    part 宣言なし / bar check / instrument / タブ）
 
 # フォント由来の生成物（フォント更新後は必ず両方。py -3.13 必須 — PATH の python は
 # LilyPond 2.24.4 同梱で fontTools も pip も無い）

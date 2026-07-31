@@ -55,7 +55,14 @@ public readonly record struct GraceNoteLayout(
     // the written→sounding shift, matching the main tab digits.
     int TabTransposition = 0,
     int SourceIndex = -1,                // F3/B: index into score.GraceNotes (data-pos resolved at render)
-    int StaffIndex = -1                  // owning staff (ossia shrink); -1 = unknown/test construction
+    int StaffIndex = -1,                 // owning staff (ossia shrink); -1 = unknown/test construction
+    // The quanted beam, when this group has one: LilyPond's Beam.positions, i.e. the beam
+    // centre's height at each DRAWN end (half a stem thickness outside the outer stems), in
+    // staff positions up from the middle line. Null when the group draws flags instead.
+    // LILYPOND-REF: lily/beam-quanting.cc — a grace beam is quanted by the same machine as
+    //   any other, with beam-thickness 0.384 and length-fraction 0.8 (ly/grace-init.ly).
+    double? BeamLeftY = null,
+    double? BeamRightY = null
 );
 
 /// <summary>
@@ -192,6 +199,10 @@ internal static class GraceNoteEngraver
                 }
                 : 0;
 
+            var (beamLeftY, beamRightY) = tabTuning is null
+                ? QuantGraceBeam(grace)
+                : (null, null);   // a TAB grace is a bare fret number: no stem, no beam
+
             layouts.Add(new GraceNoteLayout(
                 grace.MeasureIndex,
                 grace.MainNoteItemIndex,
@@ -207,11 +218,87 @@ internal static class GraceNoteEngraver
                 TabClef: tabClef,
                 TabTransposition: tabTransposition,
                 SourceIndex: gi,
-                StaffIndex: grace.StaffIndex
+                StaffIndex: grace.StaffIndex,
+                BeamLeftY: beamLeftY,
+                BeamRightY: beamRightY
             ));
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Quants a grace group's beam with the ORDINARY beam quanter, at the grace scale —
+    /// LilyPond's <c>Beam.positions</c> for that beam, in staff positions from the middle
+    /// line at each drawn end. Null when the group has no beam (a lone grace, a
+    /// quarter-or-longer one, or a mixed group, all of which draw flags).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly graceSettings — a grace beam is an ordinary Beam with
+    ///   <c>beam-thickness 0.384</c> and <c>length-fraction 0.8</c> on it and on its Stems,
+    ///   so it goes through lily/beam-quanting.cc like any other. There is no second
+    ///   algorithm, and until 2026-08-01 Lily# had one: the renderer drew the beam parallel
+    ///   to the head contour at a fixed stem length, which is off LilyPond's quant grid
+    ///   entirely (ledger beam.quant.grace.*).
+    /// <para>
+    /// The x frame is the group's own: heads one grace column apart, the step the renderer
+    /// advances by. Only the SPAN reaches the quanter, and an ossia scales x and y alike, so
+    /// the unscaled staff-space frame here is the right one for both.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: the heads are drawn at <see cref="GraceNoteItem.ScaleFactor"/> 0.65
+    /// where LilyPond's <c>fontSize = -3</c> is <c>magstep(-3)</c> = 0.7071, so the x an UP
+    /// stem attaches at differs from LilyPond's by 0.057 of a head width. That scale belongs
+    /// to the grace COLUMN (GraceNoteWidth and GraceNoteSpacing are stated in it), not to
+    /// this port; the ledger points beam.quant.grace.* say what it is worth.
+    /// </para>
+    /// </remarks>
+    private static (double?, double?) QuantGraceBeam(GraceNoteItem grace)
+    {
+        var notes = grace.Notes;
+        if (notes.Length < 2) return (null, null);
+
+        var counts = new int[notes.Length];
+        for (int i = 0; i < notes.Length; i++)
+        {
+            counts[i] = BeamCountForDuration(notes[i].BaseDuration.Denominator);
+            // The same gate the renderer draws by: a group is beamed only if EVERY head is.
+            if (counts[i] < 1) return (null, null);
+        }
+
+        var members = ImmutableArray.CreateBuilder<BeamMember>(notes.Length);
+        var xs = new double[notes.Length];
+        for (int i = 0; i < notes.Length; i++)
+        {
+            xs[i] = i * (GraceNoteWidth + GraceNoteSpacing) * GraceScale;
+            // A beam line reaches a neighbour only if BOTH stems carry it.
+            int left = i > 0 ? Math.Min(counts[i], counts[i - 1]) : 0;
+            int right = i < notes.Length - 1 ? Math.Min(counts[i], counts[i + 1]) : 0;
+            members.Add(new BeamMember(
+                new NoteItem(notes[i].StaffPosition, notes[i].BaseDuration, 0,
+                             notes[i].Accidental, notes[i].NeedsLedger, grace.SourcePosition),
+                counts[i], left, right, notes[i].StaffPosition, i,
+                // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+                //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch.
+                memberStemUp: true));
+        }
+
+        var group = new BeamGroup(members.ToImmutable(), grace.MeasureIndex, 0, stemUp: true);
+        var (leftY, rightY) = new BeamScoringProblem(
+            group, xs,
+            lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
+            beamThickness: EngravingDefaults.GraceBeamThickness,
+            headScale: GraceScale).Solve();
+        return (leftY, rightY);
+    }
+
+    /// <summary>Number of beam lines for a duration denominator (8th = 1, 16th = 2, …);
+    /// 0 for a quarter or longer, which carries no beam.</summary>
+    private static int BeamCountForDuration(int denominator)
+    {
+        int beams = 0;
+        for (int d = denominator; d >= 8; d /= 2) beams++;
+        return beams;
     }
 
     /// <summary>

@@ -3598,6 +3598,95 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A GRACE beam: two sixteenth graces before the main note — bar 1 of test/grace-notes.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score G of probes/beam-grace.ly):
+    /// <c>\grace { d'16 e' } f'4 g'2 r4</c> — <c>(0.142 . 0.5)</c>, both stems UP, stem-info
+    /// ideals <c>0.108 / 0.608</c> and floors <c>-0.66 / -0.16</c>, with
+    /// <c>beam-thickness 0.384</c> and <c>length-fraction 0.8</c> (ly/grace-init.ly), against
+    /// the full-size 0.48 and unset that <see cref="BGRC"/> reads.
+    /// <para>
+    /// This is the one divergence a twin sweep of the whole fixture corpus left standing
+    /// outside a known gate (2026-08-01): 31 fixtures export a twin that draws a beam, and
+    /// every beam reading in them matches LilyPond except the three books that carry a GRACE
+    /// beam — test/grace-notes, test/grace-lower-staff, showcase/02-ornaments — which all
+    /// miss by the same two numbers.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGR = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { d16 e } f4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGR" { staff m }
+        """;
+
+    /// <summary>
+    /// …the same two pitches as ORDINARY sixteenths — the size the quanter is already exact at.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score H): <c>d'16 e' r8 g'2 r4</c> — <c>(0.81 . 1.0)</c>, stem-info
+    /// ideals <c>0.76 / 1.26</c>, floors <c>-0.2 / 0.3</c>, <c>beam-thickness 0.48</c>.
+    /// <para>
+    /// The CONTROL and the whole point of the pair: the two books differ by the grace scaling
+    /// and by nothing else, so whatever Lily# puts between them is the defect's entire size.
+    /// It must stay exact while <see cref="BGR"/> is chased.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGRC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { d16 e r8 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGRC" { staff m }
+        """;
+
+    /// <summary>
+    /// …and the same grace beam a third up: LilyPond TRANSLATES it, it does not re-quant.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score I): <c>\grace { f'16 g' } a'4 g'2 r4</c> — <c>(1.142 . 1.5)</c>,
+    /// i.e. <see cref="BGR"/> plus exactly 1.0 staff space with the slope kept.
+    /// <para>
+    /// Lily# already reproduces that offset (test/grace-notes and showcase/02-ornaments are
+    /// 1.0 apart on both sides), so this reading says the defect is ONE term and not a
+    /// pitch-dependent family — and a fix that moves the offset has broken something else.
+    /// </para>
+    /// </remarks>
+    private static readonly string BGRT = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { grace { f16 g } a4 g2 r4 | }
+        }
+
+        form main { ~Main }
+
+        score main "BGRT" { staff m }
+        """;
+
+    /// <summary>
     /// A beam over CHORDS — measure 2 of test/dense-chromatic, which a handoff had recorded
     /// as a stem-direction divergence.
     /// </summary>
@@ -6768,6 +6857,20 @@ internal static class LpGeometryProbes
         new("beam.quant.mixed-count.peak-32.unforced.right", BMCU, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.mixed-count.peak-32.forced-stem.left", BMCF, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.mixed-count.peak-32.forced-stem.right", BMCF, g => g.BeamPositionAboveStaffMiddle(0, true)),
+
+        // …and the regime every point above misses because they are all full size: a GRACE
+        // beam, where LilyPond runs the same quanter with three scaled inputs (ly/grace-init.ly
+        // — fontSize -3, Beam.beam-thickness 0.384, Beam.length-fraction 0.8, Stem's to match)
+        // and Lily# runs a SECOND implementation that does not quant at all
+        // (SharedRenderer.GraceNotes.DrawGraceStemsAndBeam, whose own comment says
+        // "equal-length stems, so the beam runs parallel to the head contour"). Both ends of
+        // all three, because what diverges is height AND slope.
+        new("beam.quant.grace.left", BGR, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.grace.right", BGR, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.grace.full-size-control.left", BGRC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.grace.full-size-control.right", BGRC, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.grace.third-up.left", BGRT, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.grace.third-up.right", BGRT, g => g.BeamPositionAboveStaffMiddle(0, true)),
 
         // --- and the OTHER thing a beam group decides, which no point above can see: how
         // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which
