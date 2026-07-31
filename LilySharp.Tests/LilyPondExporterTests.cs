@@ -26,7 +26,9 @@ public class LilyPondExporterTests
     private static string Export(string lys) =>
         new LilyPondExporter().Export(SyntaxTree.Parse(lys));
 
-    // A part-major score with one bass section, the shape the corpus uses.
+    // A part-major score with one bass section. ⚠️ NOT the shape the corpus uses (that is
+    // section-major, with phrase references) — this helper's monopoly on the suite is what
+    // hid two whole export gaps; see the phrase-reference tests at the bottom.
     private static string Score(string music, string headers = "octave absolute",
         string render = "staff bassline") => $$"""
         {{headers}}
@@ -219,5 +221,99 @@ public class LilyPondExporterTests
         int b = ly.IndexOf("g'4", System.StringComparison.Ordinal);
         Assert.True(a >= 0 && b >= 0, ly);
         Assert.True(a < b, "the form orders the sections, not the declarations:\n" + ly);
+    }
+
+    // ---- Phrase references -------------------------------------------------
+    //
+    // A section body written the ordinary way is a list of bare phrase REFERENCES, and the
+    // exporter used to drop every one of them: `melody { partA partB }` produced
+    // `melody = \relative c' { }` — a valid .ly that draws an empty staff, with nothing but
+    // a "VariableReference not exported" warning to show for it. 52 of the corpus's 204
+    // fixtures declare phrases, so the tool for building LilyPond twins could not build one
+    // for any of them. These tests are written in that spelling on purpose: the suite's
+    // other 13 all go through the part-major Score() helper, which is exactly how the gap
+    // survived (a test file that only ever uses one helper cannot see the other spelling).
+
+    private static string PhraseScore(string phrases, string body,
+        string headers = "octave absolute") => $$"""
+        {{headers}}
+        part m { clef treble }
+        {{phrases}}
+        section Main { m { {{body}} } }
+        form main { ~Main }
+        score main { staff m }
+        """;
+
+    [Fact]
+    public void ABarePhraseReference_ExportsItsNotes_NotAnEmptyStaff()
+    {
+        var ly = Export(PhraseScore(
+            "phrase A { c'4 d' }\nphrase B { e'4 f' }", "A B"));
+
+        Assert.Contains("c'4", ly);
+        Assert.Contains("d'", ly);
+        Assert.Contains("e'4", ly);
+        Assert.Contains("f'", ly);
+    }
+
+    [Fact]
+    public void EachReferenceGetsItsOwnRelativeBlock_BecauseLilySharpResetsTheFrame()
+    {
+        // Lily# evaluates every phrase body in the default frame (the collector's
+        // RelativeResetMarker), so the second phrase must NOT continue from the first's
+        // last note. LilyPond's own spelling of that is a nested \relative, whose
+        // reference pitch is absolute.
+        var ly = Export(PhraseScore(
+            "phrase A { c d }\nphrase B { c d }", "A B", headers: ""));
+
+        int first = ly.IndexOf("\\relative c' {", System.StringComparison.Ordinal);
+        int second = ly.IndexOf("\\relative c' {", first + 1, System.StringComparison.Ordinal);
+        int third = ly.IndexOf("\\relative c' {", second + 1, System.StringComparison.Ordinal);
+        // the part variable's wrapper, then one per reference
+        Assert.True(third > second && second > first,
+            "each phrase reference needs its own frame:\n" + ly);
+    }
+
+    [Fact]
+    public void AnAbsoluteOctaveFile_InlinesThePhrase_WithNoFrameToReset()
+    {
+        var ly = Export(PhraseScore("phrase A { c'4 }", "A"));
+
+        Assert.Contains("c'4", ly);
+        // \fixed is the file's own wrapper; the reference adds no second one, because in
+        // absolute mode the body's marks already say everything.
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(ly, @"\\fixed").Count);
+        Assert.DoesNotContain("\\relative", ly);
+    }
+
+    [Fact]
+    public void ASelfReferencingPhrase_StopsAndSaysSo_InsteadOfRecursingForever()
+    {
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c'4 A }", "A")));
+
+        Assert.Contains("c'4", ly);
+        Assert.Contains(exporter.Warnings, w => w.Contains("refers to itself"));
+    }
+
+    [Fact]
+    public void ANoteAfterAReference_IsReported_BecauseTheTwoEnginesAnchorItDifferently()
+    {
+        // LILYPOND-REF: lily/relative-octave-music.cc:39-45 relative_callback — a nested
+        // \relative hands the ENCLOSING frame back unchanged, while Lily# hands off the
+        // phrase's anchor. The bodies agree; only a pitch AFTER the reference can differ,
+        // and a twin that is silently different music is worse than no twin.
+        var exporter = new LilyPondExporter();
+        exporter.Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c d }", "A e f", headers: "")));
+
+        Assert.Contains(exporter.Warnings, w => w.Contains("a note follows the phrase reference"));
+
+        // …and a body that is ALL references — how the corpus is written — says nothing.
+        var quiet = new LilyPondExporter();
+        quiet.Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c d }\nphrase B { e f }", "A B", headers: "")));
+        Assert.DoesNotContain(quiet.Warnings, w => w.Contains("a note follows the phrase reference"));
     }
 }

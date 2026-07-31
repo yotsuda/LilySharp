@@ -42,6 +42,16 @@ public sealed class LilyPondExporter
     private readonly List<string> _warnings = new();
     private bool _octaveAbsolute; // false = relative (Lily#'s default)
 
+    /// <summary>
+    /// Phrase (and variable) bodies by name, so a bare reference in a section can be
+    /// expanded in place. Shared with the sub-exporters that emit nested bodies.
+    /// </summary>
+    private Dictionary<string, SyntaxNode> _phrases = new(StringComparer.Ordinal);
+
+    /// <summary>References being expanded right now — the cycle guard, the same one
+    /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
+    private HashSet<string> _activePhrases = new(StringComparer.Ordinal);
+
     /// <summary>Diagnostics collected while exporting (e.g. constructs dropped
     /// because they are deprecated or out of scope). Not fatal.</summary>
     public IReadOnlyList<string> Warnings => _warnings;
@@ -54,6 +64,8 @@ public sealed class LilyPondExporter
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
         _octaveAbsolute = octaveDir?.IsAbsolute ?? false;
+
+        CollectPhrases(root);
 
         EmitHeader(root);
 
@@ -82,6 +94,120 @@ public sealed class LilyPondExporter
 
         EmitScore(root, parts, partVars);
         return _sb.ToString();
+    }
+
+    // ---- Phrases -----------------------------------------------------------
+
+    /// <summary>
+    /// Indexes every phrase / variable body in the file so a bare reference inside a
+    /// section can be expanded where it stands.
+    /// </summary>
+    /// <remarks>
+    /// The same two declaration shapes MusicXmlExporter indexes (see its
+    /// <c>PhraseDeclarationSyntax</c> / <c>VariableDeclarationSyntax</c> cases): this is the
+    /// THIRD reader of that pair, and it exists because it was the one missing — a section
+    /// body written the ordinary way (<c>melody { partA partB }</c>) exported as an EMPTY
+    /// staff, with only a "VariableReference not exported" warning to show for it.
+    /// </remarks>
+    private void CollectPhrases(CompilationUnitSyntax root)
+    {
+        foreach (var node in root.DescendantNodes<SyntaxNode>())
+        {
+            switch (node)
+            {
+                case PhraseDeclarationSyntax phrase:
+                    _phrases[phrase.Name.Text] = phrase.Body;
+                    break;
+                case VariableDeclarationSyntax varDecl:
+                    _phrases[varDecl.Name.Text] = varDecl.Expression;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Expands a bare phrase reference in place, in a FRESH octave frame.
+    /// </summary>
+    /// <remarks>
+    /// Lily# evaluates every phrase body in the default frame, so the same phrase means the
+    /// same pitches at every call site (the collector's <c>RelativeResetMarker</c>); the
+    /// reference's own marks (<c>Chorus'</c> / <c>Chorus,</c>) shift that frame. In
+    /// LilyPond the same thing is a NESTED <c>\relative</c>, whose reference pitch is
+    /// absolute — so the body lands on the pitches Lily# gives it whatever precedes the
+    /// reference.
+    /// <para>
+    /// ⚠️ WHAT THIS CANNOT RENDER, and warns about rather than emitting quietly. LilyPond's
+    /// nested <c>\relative</c> is TRANSPARENT to the enclosing frame —
+    /// LILYPOND-REF: lily/relative-octave-music.cc:39-45 Relative_octave_music::relative_callback,
+    /// which hands the incoming pitch straight
+    /// back — whereas Lily# hands off the phrase's ANCHOR (its first note's bare letter,
+    /// MeasureCollector.Form.cs). The two agree on the body and disagree only on what a
+    /// note AFTER the reference is relative to, so a body that is all references (how the
+    /// corpus is written) transpiles exactly, and a mixed one gets a warning naming the
+    /// spot. The interval argument (<c>Melody'(3)</c>) and a movable phrase's
+    /// auto-transpose are likewise reported, not guessed: both would need the pitches
+    /// re-derived, and this exporter is a transpiler that copies pitch tokens verbatim.
+    /// </para>
+    /// </remarks>
+    private string EmitPhraseReference(VariableReferenceSyntax v)
+    {
+        string name = v.Name.Text;
+        if (!_phrases.TryGetValue(name, out var body))
+        {
+            _warnings.Add($"phrase '{name}' is referenced but not declared — nothing exported for it");
+            return "";
+        }
+        if (!_activePhrases.Add(name))
+        {
+            _warnings.Add($"phrase '{name}' refers to itself — the inner reference is not expanded");
+            return "";
+        }
+        try
+        {
+            if (v.DiatonicShiftSteps != 0)
+                _warnings.Add(
+                    $"phrase reference '{name}' carries an interval argument, which needs the "
+                    + "pitches re-derived — the body is exported UNSHIFTED");
+
+            var buf = new LilyPondExporter
+            {
+                _octaveAbsolute = _octaveAbsolute,
+                _phrases = _phrases,
+                _activePhrases = _activePhrases,
+            };
+            buf.EmitMusicStream(MusicItems(body).ToList(), "");
+            _warnings.AddRange(buf._warnings);
+            string inner = buf._sb.ToString().Replace("\n", " ").Trim();
+            if (inner.Length == 0)
+                return "";
+
+            // In absolute mode there is no frame to reset: the body's own octave marks are
+            // already absolute, so the reference is pure inlining.
+            if (_octaveAbsolute)
+            {
+                if (v.OctaveOffset != 0)
+                    _warnings.Add(
+                        $"phrase reference '{name}' shifts the octave frame, which an "
+                        + "absolute-octave file has none of — the body is exported UNSHIFTED");
+                return inner;
+            }
+
+            return $"\\relative {ReferencePitch(v.OctaveOffset)} {{ {inner} }}";
+        }
+        finally
+        {
+            _activePhrases.Remove(name);
+        }
+    }
+
+    /// <summary>
+    /// The nested block's reference pitch: Lily#'s own default (octave 4 = middle C = LilyPond
+    /// <c>c'</c>), moved by the reference's trailing marks.
+    /// </summary>
+    private static string ReferencePitch(int octaveOffset)
+    {
+        int marks = 1 + octaveOffset; // c' is the default anchor
+        return marks >= 0 ? "c" + new string('\'', marks) : "c" + new string(',', -marks);
     }
 
     // ---- Header ------------------------------------------------------------
@@ -259,6 +385,17 @@ public sealed class LilyPondExporter
                 continue;
             }
 
+            // The one regime where a phrase reference does not transpile exactly: LilyPond's
+            // nested \relative hands the enclosing frame back UNCHANGED
+            // (lily/relative-octave-music.cc:39-45 relative_callback), while Lily# hands off
+            // the phrase's ANCHOR. Nothing after the reference sees the difference unless
+            // something after it is a pitch, so the warning is raised there and only there.
+            if (item is VariableReferenceSyntax vref && FollowedByPitch(items, i))
+                _warnings.Add(
+                    $"a note follows the phrase reference '{vref.Name.Text}': LilyPond makes it "
+                    + "relative to the pitch BEFORE the reference, Lily# to the phrase's anchor "
+                    + "— check that stretch by hand");
+
             string tok = EmitItem(item);
             if (tok.Length == 0) { i++; continue; }
 
@@ -271,6 +408,18 @@ public sealed class LilyPondExporter
             i++;
         }
         FlushLine(line, indent);
+    }
+
+    /// <summary>
+    /// Whether anything after <paramref name="index"/> in this stream carries a pitch —
+    /// i.e. whether the enclosing octave frame is read again after this point.
+    /// </summary>
+    private static bool FollowedByPitch(List<SyntaxNode> items, int index)
+    {
+        for (int j = index + 1; j < items.Count; j++)
+            if (items[j] is NoteSyntax or ChordSyntax)
+                return true;
+        return false;
     }
 
     // items[start] is |: . Returns the index just past the matching :| (and any
@@ -365,6 +514,7 @@ public sealed class LilyPondExporter
         NavigationMarkSyntax nav => EmitNavMark(nav),
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text,
         ArticulationSyntax a => MapArticulation(a),
+        VariableReferenceSyntax vr => EmitPhraseReference(vr),
         // Structural nodes that carry no inline music are skipped silently.
         OctaveDirectiveSyntax or MetadataDeclarationSyntax
             or SectionDeclarationSyntax or FormDeclarationSyntax

@@ -58,12 +58,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-07-31（第56セッション＝**引継ぎ ▶ の `knee_correction` を移植し、同じ commit で
+最終更新 2026-08-01（第56セッション＝**引継ぎ ▶ の `knee_correction` を移植し、同じ commit で
 量子器のフレームも入れた。2 つで 1 つの claim なので片方ずつだと両方とも退行する——
 それを実測で確かめてから束ねた。`beam.quant.knee.left/right` は **exact**。
-⚠️ 移植を塞いでいた「説明のつかない 0.13」は `Stem::thickness` だった**）。
-HEAD **`bdf35ef0`**（＋この handoff commit）・**未 push 55**・
-テスト **3680 passed / 0 failed / 3 skipped**・
+⚠️ 移植を塞いでいた「説明のつかない 0.13」は `Stem::thickness` だった。
+**続けて `lysc ly` の phrase 参照落ちを直し**、その双子が**新しい発散を 2 本**出した**）。
+HEAD **`74f536d1`**（＋handoff commit 2 本）・**未 push 58**・
+テスト **3685 passed / 0 failed / 3 skipped**・
 台帳 **329 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**（HEAD を書く commit が HEAD を動かす）。§0 のとおり
 **開始時に必ず実測すること**。
@@ -102,16 +103,44 @@ frame だけ入れると **+0.19**。**過去 2 回 frame 単独で試して失�
 タブの符尾向きは**弦位置で決まる Lily# 固有の device** なので、**LP に無い knee** が立つ。
 入ったのは「量子器が描かれる場所で測る」ことだけ。**忠実度の改善としては数えない**（ユーザー了承済）。
 
-## ▶ 次の一手＝**`lysc ly` が phrase 参照を落とす**（双子を作る道具がまだ壊れている）
+## ③ `lysc ly` が phrase 参照を落としていた（`74f536d1`・**テスト5点**・出力不変）
 
-★★★ **第55セッションが直したのは半分だった。** `showcase/05-special-techniques` を
-`lysc ly` に通すと **`melody = \relative c' { }`（空）+ warning `VariableReference not exported`**
-が出る——section の中身が**素の phrase 参照**（`melody { featheredAccel … }`）だと、
-`LilyPondExporter.Skip`（`:602-604`）が**黙って捨てる**。
-⚠️ **fixtures 204 冊のうち 52 冊が phrase 宣言を持つ**（参照する側はさらに多い）。
-⇒ **memory「双子は手で書かず `lysc ly` で出す」は、この形の本ではまだ守れない。**
-★ **今回それを踏んだ**（showcase/05 の双子が作れず、beam の Y は snapshot の polygon を
-直接読んで LP 値と照合した——**それはできたが、列の絶対 X は照合できていない**）。
+★★★ **第55セッションが直したのは半分だった。** section の中身が**素の phrase 参照**
+（`melody { featheredAccel … }`）だと `EmitItem` に case が無く `Skip` へ落ちる
+⇒ **`melody = \relative c' { }`（空）**＝**エラーも出ない正当な .ly が空の譜を描く**。
+**fixtures 204 冊のうち 52 冊が phrase 宣言を持つ**＝**双子を作る道具が corpus の大半で使えなかった**。
+★ **LP 側の綴りは入れ子 `\relative`**（参照ごとに 1 つ・参照の `'`/`,` で anchor を動かす）。
+絶対 octave の本は**枠が無いので素の inline**。表と cycle guard は MusicXml/Midi と同じ 2 形。
+★★ **推測せず warning を出す 3 件**: ⑴ **参照の *後ろ* に音符がある**
+（LP の入れ子 `\relative` は**外枠を素通し**＝`relative-octave-music.cc:39-45` が
+入ってきた pitch をそのまま返す／Lily# は**phrase の anchor** を渡す。**本体は一致し、
+食い違うのは参照の後ろだけ**。**全部が参照の本＝corpus の書き方は exact**）⑵ 音程引数 `'(3)`
+⑶ 絶対 octave の本での octave マーク。**黙って違う音楽の双子を出すほうが害**（2 セッション前に
+手書き双子で発散を 2 つでっち上げた）。
+⚠️ **perf（§7.9・commit message に書き忘れたのでここに書く）**: `CollectPhrases` は
+**export 1 回につき構文木を 1 周する**＝**走査を足している**。ただし `LilyPondExporter` の
+呼び手は **CLI の `ly` と LSP の明示 export コマンドだけ**（`LilySharpLanguageServer.Commands.cs`
+の `case "ly"`）＝**プレビュー経路には無い**ので時間は測っていない。
+
+## ▶ 次の一手＝**その双子が即座に見つけた 2 本のビーム**（点を開けるだけ）
+
+★★★ **`test/beaming` を round trip したら 10 本中 8 本が exact、2 本が片端だけ 1 量子ずれた**
+（LP 2.26.0・警告なし・Lily# は snapshot の polygon から換算＝**中央線 20.57・positions は
+ビームの中心線**）:
+
+| 本 | LP | Lily# |
+|---|---|---|
+| mixed 8分+16分 ① | **(0.19 . 0.81)** | 0.19 / **1.00** |
+| mixed 8分+16分 ② | **(2.19 . 2.81)** | **2.00** / 2.81 |
+
+⇒ **どちらも `mixedBeams`（`c8 d16 e f8 g16 a g8 f16 e d4`）＝ビーム数が端で変わる regime**。
+**傾きの欠陥**（片端だけ動く）。⚠️ **今セッションの beam 作業とは無関係**——10 本とも
+`knee=#f` で、①②の変更は向きが揃ったビームでは恒等。**先に台帳点を対で起票すること**（§5.0）。
+
+⚠️ **その双子でまだ測れない本がある＝`|` の罠 17**。exporter は Lily# の小節線を `|` で出すが
+**LP の `|` は小節チェック**なので、**小節が満たない本**（`showcase/05` の phrase は半小節）は
+LP が `bar check failed` を出して**小節を切らない**＝**別の音楽**。塞ぐには transpiler が
+持っていない**音価の算術**が要る。**これが双子の次の関門。**
 ★ **その次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
 ユーザー側作業）。
 
@@ -3319,6 +3348,11 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
 - **mid-line clef change の origin** — 行頭 clef で閉じた origin ズレ（percussion）と同型の疑い。
   台帳点が無いので未着手。
+- ★★ **ビーム数が端で変わるビームの傾き**（`test/beaming` の `mixedBeams`
+  ＝`c8 d16 e f8 g16 a g8 f16 e d4`）。**双子で実測済・点は未起票**（§1 ▶）:
+  LP `(0.19 . 0.81)`／`(2.19 . 2.81)` に対し Lily# は `0.19 / 1.00`／`2.00 / 2.81`
+  ＝**片端だけ 1 量子**（＝傾きの欠陥）。同じ本の他 8 本は exact。
+  ⚠️ **`knee=#f`**（第56セッションの knee 作業とは無関係）。**先に対で起票すること。**
 - ~~★★★ **`knee_correction` が未移植**~~ — **閉じた**（第56セッション・`bdf35ef0`・§1①②）。
   **フレームと同じ commit**。★ **残した教訓は 3 つ**: ⑴ **「説明のつかない差」は項が足りない**
   （0.13 ＝ `Stem::thickness`）⑵ **観測者ゼロの宣言は、移植と同時に観測者を足す**
@@ -4752,6 +4786,17 @@ dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build `
 # LP 実測（プローブを LilyPond に通す。既定 exe は 2.26.0）
 pwsh audit\lp-geometry\Measure-LilyPondGeometry.ps1        # X（小節線まわり）
 pwsh audit\lp-geometry\Measure-LilyPondPageGeometry.ps1    # Y（ページ縦）
+
+# fixture の双子を出して round trip する（手書き禁止・§8 の memory と同じ手順）
+dotnet run --project LilySharp.Cli -- ly LilySharp.Tests\Fixtures\test\NAME.lys out.ly
+#   → out.ly の \score の *前* に下を挿してから LilyPond に通す（後ろに置くと効かない）
+#      \layout { \context { \Voice \override Beam.after-line-breaking =
+#        #(lambda (g) (format #t "BEAM ~a knee=~a\n"
+#                             (ly:grob-property g 'positions) (ly:grob-property g 'knee))) } }
+cmd /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dno-point-and-click out.ly < NUL > out.log 2>&1"
+# ⚠️ Lily# 側の同じ量は snapshot の <polygon> から: position = 中央線Y − (上端Y + 0.24)
+#    （0.24 ＝ beam 厚 0.48 の半分。LP の positions は中心線）
+# ⚠️ log に `bar check failed` が出たらその双子は使わない（LP の `|` は小節チェック＝罠17）
 
 # フォント由来の生成物（フォント更新後は必ず両方。py -3.13 必須 — PATH の python は
 # LilyPond 2.24.4 同梱で fontTools も pip も無い）
