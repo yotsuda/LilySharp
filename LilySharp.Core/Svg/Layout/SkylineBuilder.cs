@@ -567,6 +567,17 @@ internal sealed class SkylineBuilder
         // audit/lp-geometry staff.staff.beam-{under,over}-notes.
         var suppressStems = BeamedItemsToSuppress(beams);
 
+        // Everything up to the dynamics is a pure ACCUMULATION — one skyline built from many
+        // boxes and outlines, with nothing reading it in between — which is what the batch
+        // contract is for: append now, resolve once at EndBatch, instead of re-resolving the
+        // whole profile at each of a staff's hundreds of seeds. Byte-identical (the resolve
+        // keeps the highest at each point and max is commutative), and the same lever the
+        // figure row's stacking needed for the same reason.
+        // ⚠️ THE BATCH ENDS BEFORE AddDynamicsToSkyline, which READS the accumulated down
+        // profile (its collision pass) and must see each dynamic it merges.
+        upSkyline.BeginBatch();
+        downSkyline.BeginBatch();
+
         // The staff symbol itself (the 5 lines, ±StaffHeight/2 around the middle)
         // is part of LilyPond's VerticalAxisGroup skyline, so adjacent staves are
         // spaced to clear each other's STAFF LINES — not just their notes. Seed it
@@ -625,6 +636,10 @@ internal sealed class SkylineBuilder
         // staff below must clear its outer edge exactly as it clears a tuplet bracket. The
         // members' fixed stems were suppressed above; this seeds the real drawn geometry.
         AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
+
+        // ...and the accumulation is complete: resolve once, before the one pass that reads.
+        upSkyline.EndBatch();
+        downSkyline.EndBatch();
 
         // Dynamics LAST — they are OUTSIDE-staff grobs: LilyPond first builds the
         // inside-staff skyline (everything above) and then places each outside-staff
@@ -1184,7 +1199,7 @@ internal sealed class SkylineBuilder
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
                     upSkyline, downSkyline, forcedStemUp, reserveStem);
                 if (note.Accidental != null)
-                    AddAccidentalBoxToSkylines(note.Accidental, x,
+                    AddAccidentalToSkylines(note.Accidental, x,
                         size.Span(note.StaffPosition * 0.5) + staffMiddleUp, size,
                         upSkyline, downSkyline);
                 break;
@@ -1211,16 +1226,13 @@ internal sealed class SkylineBuilder
                     chord.Notes,
                     ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
                 {
-                    var accBox = size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(al.Accidental));
                     // Head Y in the skyline's Y-up frame: staff-position → staff-spaces
                     // above the middle (pos*0.5), then to the skyline origin (staff top).
                     double accHeadY = size.Span(al.StaffPosition * 0.5) + staffMiddleUp;
                     // The stagger's offset is a distance in staff-spaces from the column, so
                     // it belongs to this staff too; `x` alone is the column.
                     double accX = x + size.Span(al.XOffset);
-                    MergeAccidentalInk(
-                        accX, accX + accBox.Width,
-                        accHeadY + accBox.Top, accHeadY + accBox.Bottom,
+                    MergeAccidentalInk(al.Accidental, accX, accHeadY, size,
                         upSkyline, downSkyline);
                 }
                 break;
@@ -1242,40 +1254,76 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Seeds a printed accidental's ink box (left of its head) into the
-    /// skylines. LilyPond's skylines are built from every grob's stencil,
-    /// accidentals included — omitting them made everything spaced against
-    /// these skylines (the chord-name line, page stacking) graze a sharp or
-    /// flat over a high note, papered over by a flat allowance until now.
+    /// Seeds a printed accidental (left of its head) into the skylines. LilyPond's skylines
+    /// are built from every grob's stencil, accidentals included — omitting them made
+    /// everything spaced against these skylines (the chord-name line, page stacking) graze a
+    /// sharp or flat over a high note, papered over by a flat allowance until now.
     /// Chord accidental COLUMNS go through the real placement machinery
     /// (see the ChordItem case in AddMusicItemToSkylines).
-    /// LILYPOND-REF: lily/stencil-integral.cc — every stencil contributes
-    /// its box.
+    /// LILYPOND-REF: lily/stencil-integral.cc — every stencil contributes its box.
     /// </summary>
-    private static void AddAccidentalBoxToSkylines(
+    private static void AddAccidentalToSkylines(
         string accidental, double headX, double headY, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
-        // The OUTLINE box: an Accidental's skyline is built from its stencil, unlike the
-        // NoteHead below it.
-        // LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil
         var bbox = size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(accidental));
         double right = headX - size.Span(GlyphMetrics.AccidentalNoteGap);
-        // headY is Y-up; BBox Top/Bottom are up-positive so they ADD.
-        MergeAccidentalInk(right - bbox.Width, right,
-            headY + bbox.Top, headY + bbox.Bottom, upSkyline, downSkyline);
+        MergeAccidentalInk(accidental, right - bbox.Width, headY, size,
+            upSkyline, downSkyline);
     }
 
     /// <summary>Placement machinery shared with the renderer, for chord
     /// accidental columns (see the ChordItem case).</summary>
     private static readonly AccidentalPlacement AccidentalStagger = new();
 
+    /// <summary>
+    /// Merges one accidental's OWN PROFILE — the drawn glyph's outline, walked — into the
+    /// staff skylines, its ink starting at <paramref name="inkLeft"/> and its origin line at
+    /// <paramref name="headY"/> (Y-up).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil
+    ///   — so what enters a staff's profile is the glyph's OUTLINE, and the walk is
+    ///   lily/stencil-integral.cc:535-563 add_named_glyph_segments, which
+    ///   <see cref="TextOutlineSkylines.PlaceMusicGlyph"/> reproduces (the same house the
+    ///   Script's own profile reads, so a mover and the ink it clears cannot drift apart).
+    /// <para>
+    /// ⚠️ IT USED TO BE A FLAT BOX AT THE OUTLINE'S TOP, and pointwise that is a WALL where
+    /// the glyph is a spike: a flat's ascender is 0.216 wide against a glyph 0.92 wide
+    /// (LilyPond's own dump, ledger script.accidental.staff-to-ink-bottom), so a fermata over
+    /// an accidental-bearing head cleared 1.86 of ink that is not above it. The X is
+    /// unchanged by this — the glyph is placed so its ink lands exactly where the box's edges
+    /// were — and only the SHAPE between them is now the font's.
+    /// </para>
+    /// </remarks>
     private static void MergeAccidentalInk(
-        double left, double right, double top, double bottom,
+        string accidental, double inkLeft, double headY, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
-        upSkyline.Merge(VerticalSkyline.FromBox(left, right, bottom, top, VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(left, right, bottom, top, VerticalDirection.Down));
+        // headY is Y-up; the outline's own Y is measured from the same origin line the
+        // renderer draws the glyph on (SharedRenderer.DrawAccidentalAtInkLeft's noteheadY).
+        var bbox = size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(accidental));
+        // The glyph ORIGIN: the outline carries its own left bearing, so the origin sits one
+        // bearing left of where the ink starts — the same conversion the renderer makes.
+        // The RESOLVED profile, merged with its placement rather than copied into a skyline
+        // of its own first: an accidental's outline is about eight buildings and a staff
+        // carries hundreds of them (see VerticalSkyline.Merge's own remark for the measurement).
+        var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
+            EmmentalerGlyphs.AccidentalGlyph(accidental),
+            size.Span(Rendering.SharedRenderer.FontSize));
+        if (up.Count > 0 || down.Count > 0)
+        {
+            double originX = inkLeft - bbox.Left;
+            upSkyline.Merge(up, originX, headY);
+            downSkyline.Merge(down, originX, headY);
+            return;
+        }
+        // No walkable glyph — the bundled music font could not be located. The designed
+        // outline box, which is what this seeded before the walk existed.
+        upSkyline.Merge(VerticalSkyline.FromBox(inkLeft, inkLeft + bbox.Width,
+            headY + bbox.Bottom, headY + bbox.Top, VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(inkLeft, inkLeft + bbox.Width,
+            headY + bbox.Bottom, headY + bbox.Top, VerticalDirection.Down));
     }
 
     /// <summary>

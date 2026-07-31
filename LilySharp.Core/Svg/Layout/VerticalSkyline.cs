@@ -274,6 +274,40 @@ internal sealed class VerticalSkyline
         MergeInternal(other._buildings);
     }
 
+    /// <summary>
+    /// Merges an ALREADY-RESOLVED building set — a cached glyph or text profile — shifted by
+    /// <paramref name="dx"/> along the horizon and raised by <paramref name="dy"/> in the
+    /// caller's Y-up frame.
+    /// </summary>
+    /// <remarks>
+    /// The same result as building a placed <see cref="VerticalSkyline"/> and merging it, with
+    /// one copy of the profile instead of two: a placement is a shift plus a raise, both
+    /// monotone, so they commute with the resolve — which is what lets the profile be resolved
+    /// once per (glyph, size) and placed per grob.
+    /// <para>
+    /// ⚠️ MEASURED, and it is why this exists: seeding accidentals from their real outline
+    /// (about eight buildings a glyph against a box's one) cost +44% on a 320-accidental
+    /// score, and every one of those buildings was copied twice before it reached the batch.
+    /// </para>
+    /// </remarks>
+    public void Merge(IReadOnlyList<SkylineBuilding> resolved, double dx, double dy)
+    {
+        if (resolved.Count == 0) return;
+        double raise = (int)_direction * dy;
+        if (!_deferResolve && !IsEmpty)
+        {
+            var placed = new List<SkylineBuilding>(resolved.Count);
+            foreach (var b in resolved)
+                placed.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+            MergeInternal(placed);
+            return;
+        }
+        // Batch (or empty): append the placed buildings straight in — the same filtering
+        // Merge(VerticalSkyline) does, since a resolved profile carries no empty padders.
+        foreach (var b in resolved)
+            _buildings.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+    }
+
     private bool _deferResolve;
 
     /// <summary>Start deferring overlap resolution; every <see cref="Merge"/> just

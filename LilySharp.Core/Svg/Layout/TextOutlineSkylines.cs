@@ -111,10 +111,28 @@ internal static class TextOutlineSkylines
     /// LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments;
     /// lily/freetype.cc:174-202 ly_FT_add_outline_to_skyline.
     /// </remarks>
+    /// <summary>
+    /// The same profile, RESOLVED and unplaced — for a caller that merges it straight into a
+    /// skyline with <see cref="VerticalSkyline.Merge(IReadOnlyList{SkylineBuilding}, double,
+    /// double)"/> rather than taking a placed copy of its own. Empty when the bundled music
+    /// font cannot be located.
+    /// </summary>
+    public static (IReadOnlyList<SkylineBuilding> Up, IReadOnlyList<SkylineBuilding> Down)
+        MusicGlyphProfile(char glyph, double fontSize)
+        => ResolvedMusicGlyph(glyph, fontSize);
+
     public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
         char glyph, double fontSize, double x, double y)
     {
-        var (up, down) = MusicProfileCache.GetOrAdd((glyph, fontSize), static key =>
+        var (up, down) = ResolvedMusicGlyph(glyph, fontSize);
+        return (PlaceResolved(VerticalDirection.Up, up, x, y),
+                PlaceResolved(VerticalDirection.Down, down, x, y));
+    }
+
+    private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
+        char glyph, double fontSize)
+    {
+        return MusicProfileCache.GetOrAdd((glyph, fontSize), static key =>
         {
             var path = TextFontMetrics.MusicGlyphPath(key.Glyph);
             if (path == null || path.IsEmpty)
@@ -124,8 +142,6 @@ internal static class TextOutlineSkylines
                 Resolve(VerticalDirection.Up, upQuads),
                 Resolve(VerticalDirection.Down, downQuads));
         });
-        return (PlaceResolved(VerticalDirection.Up, up, x, y),
-                PlaceResolved(VerticalDirection.Down, down, x, y));
     }
 
     private static SkylineBuilding[] Resolve(VerticalDirection direction, double[] quads)
