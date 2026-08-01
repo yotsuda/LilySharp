@@ -965,9 +965,16 @@ public sealed class LilyPondExporter
     /// head of a piece. The twin was then a different piece of music, and LilyPond said so:
     /// test/ossia-beams failed its bar check at 7/8.
     /// <para>
-    /// So the event after a grace writes its duration out. Everything else keeps copying the
-    /// source, because a transpiler that re-spells durations everywhere is much harder to read
-    /// against the .lys it came from.
+    /// A DOT parts them the same way, and in the other direction: Lily# carries the note VALUE
+    /// and drops the dots, LilyPond carries the duration whole. So <c>c4. d</c> is 5/8 of music
+    /// on the page and 6/8 in the twin — and in 6/8 that twin's bar is COMPLETE, so LilyPond
+    /// has nothing to say about it. Measured 2026-08-01: <c>c'4. d'</c> and <c>c'4. d'4</c>
+    /// draw the same six glyphs and raise the same short-measure LYS2006, while
+    /// <c>c'4. d'4.</c> draws seven. ⇒ the event after a DOTTED one writes its value out too.
+    /// </para>
+    /// <para>
+    /// Those two cases aside, everything keeps copying the source, because a transpiler that
+    /// re-spells durations everywhere is much harder to read against the .lys it came from.
     /// </para>
     /// <para>
     /// ⚠️ <see cref="_lastWrittenValue"/> mirrors Lily#'s rule and not LilyPond's: the note
@@ -982,7 +989,9 @@ public sealed class LilyPondExporter
         if (d != null)
         {
             _lastWrittenValue = d.NumberToken.Text;
-            _forceNextDuration = false;
+            // Lily#'s carry is the value alone, so the next event has to be told the value
+            // whenever this one wrote dots LilyPond would carry with it.
+            _forceNextDuration = d.DotCount > 0;
             return EmitDuration(d);
         }
         if (!_forceNextDuration)
@@ -1466,6 +1475,13 @@ public sealed class LilyPondExporter
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         CarryFrameInto(buf);
+        // The grace body has its OWN default duration, an eighth, and it is Lily#'s own rule
+        // (MeasureCollector.CollectGraceNotes graceDefaultDuration = Fraction.Eighth;
+        // LilyPond has no grace-specific default and would take whatever the main stream last
+        // wrote). So the body's first event writes its value out unless it states one, and the
+        // events after it inherit — which is the same carry on both sides from there on.
+        buf._lastWrittenValue = "8";
+        buf._forceNextDuration = true;
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
         // ⚠️ The OCTAVE frame does NOT leak the way the duration does: the grace body advances
         // it on BOTH sides, so it carries out like a tuplet's. MeasureCollector.CollectGraceNotes

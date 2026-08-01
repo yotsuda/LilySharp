@@ -458,6 +458,43 @@ public class LilyPondExporterTests
         Assert.DoesNotContain(quiet.Warnings, w => w.Contains("degree chord"));
     }
 
+    /// <summary>
+    /// After a DOTTED duration the next event writes its value out, because the two engines
+    /// carry a dot differently.
+    /// </summary>
+    /// <remarks>
+    /// Lily# carries the note VALUE and drops the dots (MeasureCollector.ItemFactory
+    /// <c>_defaultDuration = Fraction.FromNoteValue(noteValue)</c>); LilyPond carries the whole
+    /// duration (lily/parser.yy default_duration_). So <c>c4. d</c> is 5/8 on the page and 6/8
+    /// in the twin — and in 6/8 that twin's bar is complete, so LilyPond does not complain
+    /// either. Measured: <c>c'4. d'</c> draws the same six glyphs as <c>c'4. d'4</c> and raises
+    /// the same LYS2006, while <c>c'4. d'4.</c> draws seven.
+    /// </remarks>
+    [Fact]
+    public void AnEventAfterADottedOne_WritesItsValue_BecauseLilyPondCarriesTheDot()
+    {
+        var ly = Export("""
+            octave absolute
+            time 6/8
+            part m { clef treble }
+            section S { m { c'4. d' | } }
+            form main { S }
+            score main { staff m }
+            """);
+        Assert.Contains("c'4. d'4 |", ly);
+
+        // An undotted duration still carries silently — the source is copied, not re-spelled.
+        var plain = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section S { m { c'8 d' e' f' | } }
+            form main { S }
+            score main { staff m }
+            """);
+        Assert.Contains("c'8 d' e' f' |", plain);
+    }
+
     // ---- Drum kit ------------------------------------------------------------
     //
     // A drum note is a NAME, not a pitch, and LilyPond reads those names only inside

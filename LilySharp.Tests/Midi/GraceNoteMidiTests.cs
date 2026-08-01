@@ -88,8 +88,12 @@ public class GraceNoteMidiTests
         Assert.Equal(9, (int)Math.Round(g16 * 40.0 / NoteDur("16")));      // factor == 9/40
         Assert.Equal(9, (int)Math.Round(g32 * 40.0 / NoteDur("32")));
 
-        int gDefault = GraceDur("");                                       // unwritten → notated 1/32 fallback
-        Assert.Equal(g32, gDefault);                                       // 9/40 of a 1/32, same as an explicit c32 grace
+        // An unwritten grace duration is an EIGHTH — the LAYOUT's rule, read from
+        // MeasureCollector.CollectGraceNotes (graceDefaultDuration = Fraction.Eighth).
+        // ⚠️ It used to be a 1/32 here and a 1/8 on the page: one spelling with two
+        // answers, which is what this line now guards against coming back.
+        int gDefault = GraceDur(""), g8 = GraceDur("8");
+        Assert.Equal(g8, gDefault);
     }
 
     [Fact]

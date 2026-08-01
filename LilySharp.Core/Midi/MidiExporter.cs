@@ -1455,19 +1455,24 @@ public sealed class MidiExporter
         // _pendingGraceSteal), so the beat after the grace pair stays on the
         // metric grid. Duration threads WITHIN the grace group: a written value
         // (grace c16) is honored and carried to later unwritten items; an
-        // unwritten leading grace falls back to a 1/32 note. The main stream's
+        // unwritten leading grace falls back to an EIGHTH. The main stream's
         // _defaultDuration is untouched — the grace has its own local memory.
+        //
+        // ⚠️ That eighth is the LAYOUT's rule, and it has to be read from there:
+        // MeasureCollector.CollectGraceNotes' graceDefaultDuration = Fraction.Eighth.
+        // LilyPond has no grace-specific default at all (a bare note takes the
+        // previous written duration), so this is LILYSHARP-OWN and Lily# used to
+        // answer it in three places with three answers — 1/8 on the page, 1/32
+        // here, and a quarter in the .ly twin. The page is the one that decides;
+        // fixed 2026-08-01 (docs/HANDOFF.md §1).
         //
         // Sounding time is 9/40 of the grace's NOTATED duration, LilyPond's
         // built-in MIDI behavior. LILYPOND-REF: ly/articulate.ly
         // ac:defaultGraceFactor = 9/40 ("though the notation reference says 1/4").
         Fraction? written = null;
-        // Sounding time is 9/40 of the NOTATED duration for both a written value
-        // and the unwritten 1/32 fallback (the fallback previously emitted a full
-        // 1/32, ~4× too long, skipping the 9/40 scaling every other path applies).
         int GraceTicks(Fraction? w)
         {
-            long notatedTicks = w is { } d ? FractionToTicks(d) : _ticksPerQuarter / 8;
+            long notatedTicks = FractionToTicks(w ?? Fraction.Eighth);
             return (int)RoundedDiv(notatedTicks * 9, 40);
         }
 

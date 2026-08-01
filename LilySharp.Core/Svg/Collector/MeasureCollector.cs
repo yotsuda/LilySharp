@@ -3441,12 +3441,13 @@ public sealed partial class MeasureCollector
         // LILYPOND DEFAULT and the comment used to claim it was: LilyPond has no grace-specific
         // rule at all — a bare note takes the PREVIOUS written duration, which at the start of
         // a grace group is whatever the main stream last wrote, or 4 if nothing has.
-        // ⚠️ Lily# answers this question in THREE places and gets three answers: here (1/8),
-        // Midi/MidiExporter.ProcessGrace (1/32), and LilyPond/LilyPondExporter, which writes the
-        // grace out with no duration at all and so hands LilyPond a QUARTER. That third one is a
-        // silent twin defect — the .ly is valid and plays different music. Found 2026-08-01,
+        // ⚠️ Lily# used to answer this in THREE places and get three answers: here (1/8),
+        // Midi/MidiExporter.ProcessGrace (1/32), and LilyPond/LilyPondExporter, which wrote the
+        // grace out with no duration at all and so handed LilyPond a QUARTER — a silent twin
+        // defect, since that .ly is valid and merely plays something else. Found 2026-08-01,
         // when two ledger books spelled `grace { c' d' }` were quanting one beam against a
-        // twin's two; see docs/HANDOFF.md §1.
+        // twin's two. ⇒ THIS LINE IS NOW THE ONE ANSWER: the MIDI exporter reads the eighth
+        // from the same rule and the twin writes it out explicitly (docs/HANDOFF.md §1).
         Fraction graceDefaultDuration = Fraction.Eighth;
 
         foreach (var item in grace.Body.Items)
