@@ -1137,6 +1137,27 @@ internal sealed class RenderedGeometry
                 + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
 
+        var primaries = PrimaryBeamLines(page);
+
+        if (primaries.Count <= beamIndex)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for beam {beamIndex} but only {primaries.Count} beam "
+                + "group(s) were drawn.\nDrawn geometry:\n" + Describe());
+        }
+
+        var beam0 = primaries[beamIndex];
+        // Device y is down; the staff refpoint is the middle line.
+        return refs[0] - (rightEnd ? beam0.RightY : beam0.LeftY);
+    }
+
+    /// <summary>
+    /// One reading per beam GROUP: the group's OUTERMOST beam line, which is what LilyPond's
+    /// <c>positions</c> describes. Shared by the five-line and the tab readers.
+    /// </summary>
+    private List<(double Left, double Right, double LeftY, double RightY)> PrimaryBeamLines(
+        int page)
+    {
         // Group the drawn quads into beams by x span: a stub, and every further line of a
         // STACK, spans no wider than the group's widest quad.
         var quads = _pages[page].Quads
@@ -1182,6 +1203,39 @@ internal sealed class RenderedGeometry
                 : full.OrderByDescending(q => q.LeftY + q.RightY).First());
         }
 
+        return primaries;
+    }
+
+    /// <summary>
+    /// The same reading on a staff that is NOT five lines of unit space — a TAB staff — and
+    /// in that staff's OWN spaces, which is the frame LilyPond's <c>positions</c> speaks.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="BeamPositionAboveStaffMiddle"/> cannot serve twice over: it refuses any
+    /// page whose line count is not a multiple of five, and it answers in DRAWN spaces, where
+    /// a tab staff's own space is 1.5. Both the middle line and the space are read back off
+    /// the drawn cluster here, so a four- and a six-string staff are the same reading and the
+    /// number can be compared with LilyPond's without a conversion in between.
+    /// <para>
+    /// ⚠️ The page must hold exactly ONE staff — the same demand the five-line reader makes,
+    /// for the same reason: two staves make "the middle line" a question.
+    /// </para>
+    /// </remarks>
+    public double TabBeamPositionAboveStaffMiddle(int beamIndex, bool rightEnd, int page = 0)
+    {
+        var ys = StaffLineYs(page);
+        if (ys.Count < 4)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: found {ys.Count} staff line(s); a tab staff reading needs at "
+                + "least four strings.\nDrawn geometry:\n" + Describe());
+        }
+
+        double top = ys.Min(), bottom = ys.Max();
+        double space = (bottom - top) / (ys.Count - 1);
+        double middle = (top + bottom) / 2;
+
+        var primaries = PrimaryBeamLines(page);
         if (primaries.Count <= beamIndex)
         {
             throw new InvalidOperationException(
@@ -1190,8 +1244,7 @@ internal sealed class RenderedGeometry
         }
 
         var beam = primaries[beamIndex];
-        // Device y is down; the staff refpoint is the middle line.
-        return refs[0] - (rightEnd ? beam.RightY : beam.LeftY);
+        return (middle - (rightEnd ? beam.RightY : beam.LeftY)) / space;
     }
 
     /// <summary>

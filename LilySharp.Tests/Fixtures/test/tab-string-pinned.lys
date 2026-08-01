@@ -13,13 +13,14 @@
 // string (stems up, beam above the digits) and flat on the highest (stems down, beam
 // below), which is the string-based direction rule on its own.
 //
-// Measured against LilyPond 2.26.0 (Beam.stencil dumping positions + line-count):
-//   notation  LP (-3.81 . -1.19) (-1.81 . -4.19) (1.81 . 1.81) (0.00 . 0.00)  = Lily#, exact
-//   tab       LP (-3.873 . -2.127) (-2.127 . -3.873) (1.50 . 1.50) (-1.50 . -1.50)
-//             Lily# (-3.113 . -1.446) (-1.476 . -3.114) (1.797 . 1.797) (-1.797 . -1.797)
-// The DIRECTIONS agree on all four; the heights do not, and on a flat single-string group
-// the gap is exactly 0.297 staff spaces — LilyPond sits on the outer line (1.50 on a
-// four-line staff of space 1.5), Lily# sits past it. Filed, not fixed.
+// Measured against LilyPond 2.26.0 (Beam.stencil dumping positions + line-count), and EXACT
+// on both staves since 2026-08-02:
+//   notation  (-3.81 . -1.19) (-1.81 . -4.19) (1.81 . 1.81) (0.00 . 0.00)
+//   tab       (-3.873 . -2.127) (-2.127 . -3.873) (1.50 . 1.50) (-1.50 . -1.50)
+// The tab readings are in the TAB staff's own spaces (its staff-space is 1.5). They were
+// 0.297 out on the flat groups until the tab beam was routed through the ported quanter with
+// the staff's own constants; audit/lp-geometry/probes/beam-tab.ly holds the same four groups
+// as ledger points beam.quant.tab.*.
 octave absolute
 part bl { clef bass tuning bass }
 section A {

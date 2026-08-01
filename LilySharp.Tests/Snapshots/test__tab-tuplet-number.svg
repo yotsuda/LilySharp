@@ -55,13 +55,13 @@
   <line x1="32.53" y1="15.14" x2="32.53" y2="12.49" stroke="#000000" stroke-width="0.130"/>
   <line x1="35.03" y1="15.64" x2="35.03" y2="12.89" stroke="#000000" stroke-width="0.130"/>
   <line x1="37.54" y1="16.14" x2="37.54" y2="13.28" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="32.46,20.16 37.60,20.16 37.60,20.64 32.46,20.64"/>
-  <polygon points="32.46,19.35 37.60,19.35 37.60,19.83 32.46,19.83"/>
-  <line x1="32.53" y1="23.19" x2="32.53" y2="19.59" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.03" y1="23.19" x2="35.03" y2="19.59" stroke="#000000" stroke-width="0.130"/>
-  <line x1="37.54" y1="23.19" x2="37.54" y2="19.59" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="32.46,20.05 37.60,20.05 37.60,20.53 32.46,20.53"/>
+  <polygon points="32.46,19.24 37.60,19.24 37.60,19.72 32.46,19.72"/>
+  <line x1="32.53" y1="23.19" x2="32.53" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.03" y1="23.19" x2="35.03" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.54" y1="23.19" x2="37.54" y2="19.48" stroke="#000000" stroke-width="0.130"/>
   <text x="35.03" y="10.74" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="90">3</text>
-  <text x="35.03" y="19.15" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="90">3</text>
+  <text x="35.03" y="19.04" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="90">3</text>
   <text class="music" x="13.62" y="9.92" font-size="3.56" data-pos="0"></text>
   <line x1="14.72" y1="9.76" x2="14.72" y2="7.25" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="15.39" y="10.41" font-size="2.20" data-pos="0">= 100</text>

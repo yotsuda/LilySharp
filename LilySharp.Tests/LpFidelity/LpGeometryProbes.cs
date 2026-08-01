@@ -4239,6 +4239,52 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A TAB beam — the first ledger entry on the tab quanter at all, and the regime every
+    /// other beam point misses because a tab staff is a different staff, not a different beam.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond runs tab beams through the same quanter; what changes is the STAFF, and
+    /// everything the quanter reads is in that staff's own spaces. A TabStaff's space is 1.5,
+    /// so LilyPond re-tunes exactly two beam constants for it and leaves every length alone
+    /// (ly/engraver-init.ly:1234-1246 — beam-thickness, length-fraction, staff-symbol-staff-space):
+    /// <c>beam-thickness 0.32</c> (= 0.48/1.5, the absolute thickness kept) and
+    /// <c>length-fraction 0.62</c>. The quanter then divides both thicknesses by the staff
+    /// space again (lily/beam-quanting.cc:232-234 beam_thickness_ and line_thickness_), which
+    /// puts the sit/hang quants at 0.12667 and the beam translation at 0.480667.
+    /// <para>
+    /// The music is <c>test/tab-string-pinned</c>'s, tab staff only, and every note names its
+    /// STRING. That is what makes it comparable at all: the two engines' string allocators do
+    /// not agree, and a beam sits on the string — a book that leaves the choice open compares
+    /// two different fingerings.
+    /// </para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-tab.ly) — MEASURED, four groups:
+    /// <c>(-3.873333 . -2.126667)</c>, <c>(-2.126667 . -3.873333)</c>, <c>(1.5 . 1.5)</c>,
+    /// <c>(-1.5 . -1.5)</c>, in the tab staff's own spaces.
+    /// <para>
+    /// ⚠️ UNIT: read with <c>TabBeamPositionAboveStaffMiddle</c>, which answers in the TAB
+    /// staff's own spaces, so the ledger holds LilyPond's numbers unconverted.
+    /// <c>BeamPositionAboveStaffMiddle</c> would answer in DRAWN spaces (a tab space is 1.5 of
+    /// them) AND refuse the page for not being a whole number of five-line staves; recording
+    /// its answer against LilyPond's would be the em mistake in another costume.
+    /// </para>
+    /// </remarks>
+    private static readonly string BQT = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part bl { clef bass tuning bass }
+
+        section Main {
+          bl { a,,8\4 d,\3 g,\2 c\1 c\1 g,\2 d,\3 a,,\4 | a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 | }
+        }
+
+        form main { ~Main }
+
+        score main "BQT" { tab bl }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -7321,6 +7367,17 @@ internal static class LpGeometryProbes
         new("beam.quant.chord.spanning.left", BQCD, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.chord.spanning.right", BQCD, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.chord.spanning.beam-side-head-control", BQCDC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // The TAB quanter, which no point above reaches: same scorer, a different STAFF.
+        // Both ends of a rising group (its slope is the string contour), the same group
+        // mirrored (falling), and the two flat single-string groups — one stems-up on the
+        // lowest string, one stems-down on the highest — because a flat tab beam is where
+        // the staff's own line grid decides and the sloped ones are where its translation
+        // does. ⚠️ Read in the TAB staff's own spaces — see the unit note on BQT.
+        new("beam.quant.tab.rising.left", BQT, g => g.TabBeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.tab.rising.right", BQT, g => g.TabBeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.tab.falling.left", BQT, g => g.TabBeamPositionAboveStaffMiddle(1, false)),
+        new("beam.quant.tab.flat-lowest-string", BQT, g => g.TabBeamPositionAboveStaffMiddle(2, false)),
+        new("beam.quant.tab.flat-highest-string", BQT, g => g.TabBeamPositionAboveStaffMiddle(3, false)),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

@@ -94,6 +94,11 @@ internal sealed class BeamScoringProblem
     //   multiplied by staff_space AND length_fraction. 1.0 for an ordinary beam.
     private readonly double _lengthFraction;
 
+    // The BEAM's own length-fraction, which is a different grob's property from the one
+    // above — see the note where it is assigned. Buys the beam translation and the
+    // forbidden-quant weighting.
+    private readonly double _beamLengthFraction;
+
     // …carried as the details record the three calc_stem_info readers share. THREE, counted
     // by grep: CalculateInitialPosition, ScoreStemLengths and the knee seed. The maximum-count
     // port of 2026-08-01 missed one of exactly these and the miss had no failing point,
@@ -140,8 +145,14 @@ internal sealed class BeamScoringProblem
     private readonly int[] _edgeBeamCounts; // [0]=left, [1]=right
     private readonly int[] _edgeDirs;       // [0]=left, [1]=right
 
-    // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
-    private const double StaffRadius = 2.0;
+    // How far the outermost staff line lies from the middle, in this staff's own SPACES:
+    // (line-count − 1)/2, so 2.0 for a five-line staff and 1.5 for a four-string tab. Two
+    // scorers walk the lines with it and a third asks whether the beam is still inside the
+    // staff, so it is the staff's LINE COUNT reaching the quanter — not a tuning constant.
+    // LILYPOND-REF: lily/beam-quanting.cc:1248 (score_horizontal_inter_quants),
+    //   :1300 (score_forbidden_quants' line walk), :1349 — all staff_radius_, which
+    //   lily/staff-symbol-referencer.cc reads off the staff symbol.
+    private readonly double _staffRadius;
 
     // Staff-line gap scoring tuning. LILYPOND-REF: lily/beam-quanting.cc:1280-1322.
     private const double BeamGapFudgeFactor = 2.2;   // beam-edge inset when testing gaps
@@ -192,7 +203,10 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
         double beamThickness = EngravingDefaults.BeamThickness,
-        double headScale = 1.0)
+        double headScale = 1.0,
+        double lineThickness = EngravingDefaults.StaffLineThickness,
+        int staffLineCount = 5,
+        double? beamLengthFraction = null)
     {
         _group = group;
         _parameters = parameters ?? BeamQuantParameters.Default;
@@ -309,11 +323,20 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
         _beamThickness = beamThickness;                         // 0.48 staff spaces full size
-        _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.1 staff spaces
+        _lineThickness = lineThickness;                         // 0.1 staff spaces full size
+        _staffRadius = (staffLineCount - 1) / 2.0;              // 2.0 for five lines
         // Derived from THIS beam's thickness, fraction and count, not the full-size constant:
         // lily/beam.cc:130-145 Beam::get_beam_translation reads all three off the grob.
+        // ⚠️ TWO length-fractions, because LilyPond reads two grobs. The BEAM's is read by
+        // lily/beam.cc:136 get_beam_translation and by lily/beam-quanting.cc:80-87
+        // Beam_quant_parameters::fill; the STEM's by lily/stem.cc:1159-1160 calc_stem_info.
+        // They agree for a grace,
+        // where ly/grace-init.ly sets both — and they do NOT for a TAB staff, where
+        // ly/engraver-init.ly:1238 overrides the Beam's alone (0.62) and \tabFullNotation
+        // hands the Stem its ordinary details back.
+        _beamLengthFraction = beamLengthFraction ?? lengthFraction;
         _beamTranslation = EngravingDefaults.BeamTranslationOf(
-            beamThickness, lengthFraction, _maxBeamCount);
+            beamThickness, _beamLengthFraction, _maxBeamCount, lineThickness);
         _lengthFraction = lengthFraction;
         _stemDetails = lengthFraction == 1.0
             ? StemDetails.Default
@@ -1033,8 +1056,10 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam-quanting.cc:911-918 — with more than 4 beams
         // the outer beam (used for quanting) never meets the staff lines, but
         // pins the inner beams awkwardly; shift the quant grid to compensate.
+        // LILYPOND-REF: :917 also requires length_fraction_ == 1.0 — a non-standard beam's
+        //   grid is left where it is.
         double gridShift = 0.0;
-        if (!_isKnee && _maxBeamCount > 4)
+        if (!_isKnee && _maxBeamCount > 4 && _beamLengthFraction == 1.0)
             gridShift = (_maxBeamCount - 4) * (1.0 - _beamTranslation);
 
         // LILYPOND-REF: lily/beam-quanting.cc:343-360 quant_range_ — at each
@@ -1251,7 +1276,7 @@ internal sealed class BeamScoringProblem
         // (staff_space_ = 1). Only penalize horizontal beams within the staff.
         double dy = config.RightY - config.LeftY;
 
-        if (Math.Abs(dy) < 0.001 && Math.Abs(config.LeftY) < StaffRadius)
+        if (Math.Abs(dy) < 0.001 && Math.Abs(config.LeftY) < _staffRadius)
         {
             // config.LeftY is in staff-spaces; staff lines at integer positions.
             // Penalize a beam sitting exactly between two lines (half-integer).
@@ -1287,7 +1312,7 @@ internal sealed class BeamScoringProblem
         //   Fs 2.02, and the Fs block below adds extra_demerit exactly twice
         //   (audit/lp-geometry/probes/beam-grace.ly score J through inspect-quants).
         double extraDemerit = _parameters.SecondaryBeamDemerit
-            * Math.Exp(-8.0 * Math.Abs(1.0 - _lengthFraction))
+            * Math.Exp(-8.0 * Math.Abs(1.0 - _beamLengthFraction))
             / Math.Max(Math.Max(_edgeBeamCounts[0], _edgeBeamCounts[1]), 1);
 
         double dem = 0.0;
@@ -1316,7 +1341,7 @@ internal sealed class BeamScoringProblem
 
                 // LILYPOND-REF: lily/beam-quanting.cc:1300-1322
                 // Check if any staff line falls within the gap
-                for (double k = -StaffRadius; k <= StaffRadius + eps; k += 1.0)
+                for (double k = -_staffRadius; k <= _staffRadius + eps; k += 1.0)
                 {
                     if (k >= gapMin && k <= gapMax)
                     {
@@ -1349,7 +1374,7 @@ internal sealed class BeamScoringProblem
                 double frac = endYSS - Math.Floor(endYSS); // my_modf
 
                 if (_edgeBeamCounts[e] >= 2
-                    && Math.Abs(endYSS - edgeDir * _beamTranslation) < StaffRadius + 0.5)
+                    && Math.Abs(endYSS - edgeDir * _beamTranslation) < _staffRadius + 0.5)
                 {
                     if (edgeDir > 0 && dy <= eps && Math.Abs(frac - sit) < eps)
                         dem += extraDemerit;
@@ -1360,7 +1385,7 @@ internal sealed class BeamScoringProblem
                 // LILYPOND-REF: lily/beam-quanting.cc:1352-1365 — the straddle
                 // check is also gated by edge direction and slope sign.
                 if (_edgeBeamCounts[e] >= 3
-                    && Math.Abs(endYSS - 2 * edgeDir * _beamTranslation) < StaffRadius + 0.5)
+                    && Math.Abs(endYSS - 2 * edgeDir * _beamTranslation) < _staffRadius + 0.5)
                 {
                     if (edgeDir > 0 && dy <= eps && Math.Abs(frac - straddle) < eps)
                         dem += extraDemerit;

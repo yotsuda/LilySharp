@@ -841,6 +841,41 @@
       "residual": 0.0,
       "why": "EXACT. The CONTROL for beam.quant.chord.spanning.*: the same bar with the chord replaced by its BEAM-SIDE head alone. calc_stem_info reads that one head and no other, so LilyPond must answer the identical (3.81 . 2.19) — measured (score E), it does. LilyPond is flat across the pair, so any difference Lily# shows between the chord reading and this one is a defect by definition. It is also what makes the pair a real observer rather than one number: this control read EXACT while the chord reading was 1.0 out, so the defect showed up as a BROKEN IDENTITY and not as a constant anyone could have absorbed into a fudge."
     },
+    "beam.quant.tab.rising.left": {
+      "probe": "beam-tab.ly",
+      "score": "A",
+      "lilypond": -3.873333333333333,
+      "residual": 0.0,
+      "why": "EXACT, and the first ledger point on a TAB beam at all. LilyPond runs tab beams through the SAME quanter as notation beams; what differs is the STAFF, and everything the quanter reads is expressed in that staff's own spaces. A TabStaff's space is 1.5, so LilyPond re-tunes exactly two beam constants for it and leaves every LENGTH alone (ly/engraver-init.ly:1234-1246 — beam-thickness, length-fraction, staff-symbol-staff-space): beam-thickness 0.32 (= 0.48/1.5, the absolute thickness kept) and length-fraction 0.62. The quanter divides both thicknesses by the staff space again (lily/beam-quanting.cc:232-234 beam_thickness_ and line_thickness_), which puts the sit/hang quants at 0.12667 and the beam translation at 0.480667 — MEASURED, by reading the drawn separation of a 16th beam's two lines off LilyPond's own stencil (0.721 absolute = 0.480667 tab spaces), which is what exposed the 0.62 in the first place. Until 2026-08-02 Lily# did not quant tab beams at all: TabBeamQuant placed them with 0.6*tanh of the string contour and three LILYSHARP-OWN constants (2.4/1.4/1.6 string gaps), reading 0.297 past LilyPond on a flat group, while its own class doc claimed it went through BeamScoringProblem. LILYPOND-REF: lily/beam.cc:142-144 Beam::get_beam_translation; lily/beam-quanting.cc:80-87 Beam_quant_parameters::fill (the exp(-8*|1-length-fraction|) weighting that all but silences the forbidden-quant scorer here)."
+    },
+    "beam.quant.tab.rising.right": {
+      "probe": "beam-tab.ly",
+      "score": "A",
+      "lilypond": -2.126666666666667,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam, because a sloped beam is two numbers. This end is also the one that made the port's last term visible: with the beam translation left at a notation staff's 0.81/1.5, the forbidden-quant gap at this end swallowed the string line at -1.5 and charged 6.22 for LilyPond's own answer, which LilyPond charges nothing for."
+    },
+    "beam.quant.tab.falling.left": {
+      "probe": "beam-tab.ly",
+      "score": "A",
+      "lilypond": -2.126666666666667,
+      "residual": 0.0,
+      "why": "EXACT. The same group mirrored — the strings run 1 to 4 instead of 4 to 1 — so the pair asserts that nothing in the reading depends on the direction of travel. LilyPond answers the first group's numbers swapped, and so does Lily#."
+    },
+    "beam.quant.tab.flat-lowest-string": {
+      "probe": "beam-tab.ly",
+      "score": "A",
+      "lilypond": 1.500000,
+      "residual": 0.0,
+      "why": "EXACT. A flat group on the LOWEST string, stems up: LilyPond lands on the outer string line exactly, and this is the reading that was 0.297 past it before the port. Flat groups are where the staff's own LINE GRID decides (the quant is 1 + inter), sloped ones where its translation does, so the two kinds are kept as separate points. ⚠️ It is also the point that caught the third staff constant: the horizontal-inter-quant scorer charges 500 only INSIDE the staff (lily/beam-quanting.cc:1248 score_horizontal_inter_quants), and a four-line staff's radius is 1.5, so 1.5 is not inside it. With the notation staff's 2.0 left in place Lily# refused this quant."
+    },
+    "beam.quant.tab.flat-highest-string": {
+      "probe": "beam-tab.ly",
+      "score": "A",
+      "lilypond": -1.500000,
+      "residual": 0.0,
+      "why": "EXACT. The same flat group on the HIGHEST string with stems DOWN, which LilyPond answers as the exact negative. The pair is the up/down control: a reading that had absorbed a constant on one side would break the symmetry."
+    },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
       "score": "qA",

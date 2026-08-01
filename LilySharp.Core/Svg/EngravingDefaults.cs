@@ -150,10 +150,20 @@ internal static class EngravingDefaults
     /// beam.quant.grace.above-staff.*.
     /// </para>
     /// </remarks>
-    public static double BeamTranslationOf(double beamThickness, double lengthFraction, int beamCount) =>
+    /// <param name="lineThickness">
+    /// The staff's line thickness IN THAT STAFF'S OWN SPACES. Only a TAB staff passes
+    /// anything but the default: LilyPond builds this quantity from absolute lengths and
+    /// the quanter then divides the lot by the staff space (lily/beam-quanting.cc:232-234
+    /// beam_thickness_ and line_thickness_),
+    /// so on a four-line tab of space 1.5 the staff-space term stays 2 while the line and
+    /// the beam thicknesses arrive already divided — 0.1/1.5 and 0.48/1.5, for 0.873333
+    /// against the notation staff's 0.81.
+    /// </param>
+    public static double BeamTranslationOf(double beamThickness, double lengthFraction, int beamCount,
+                                           double lineThickness = LineThickness) =>
         beamCount < 4
-            ? (2.0 * lengthFraction + LineThickness * lengthFraction - beamThickness) / 2.0
-            : (3.0 * lengthFraction + LineThickness * lengthFraction - beamThickness) / 3.0;
+            ? (2.0 * lengthFraction + lineThickness * lengthFraction - beamThickness) / 2.0
+            : (3.0 * lengthFraction + lineThickness * lengthFraction - beamThickness) / 3.0;
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
     public const double BeamletLength = 1.1;

@@ -189,16 +189,16 @@
   <line x1="52.03" y1="34.91" x2="52.03" y2="14.06" stroke="#000000" stroke-width="0.130"/>
   <line x1="54.52" y1="37.91" x2="54.52" y2="14.06" stroke="#000000" stroke-width="0.130"/>
   <line x1="57.02" y1="40.91" x2="57.02" y2="14.06" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="18.09,41.72 25.74,41.72 25.74,42.20 18.09,42.20"/>
-  <line x1="18.16" y1="45.56" x2="18.16" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.66" y1="45.56" x2="20.66" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.17" y1="45.56" x2="23.17" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.67" y1="45.56" x2="25.67" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="28.10,41.72 35.74,41.72 35.74,42.20 28.10,42.20"/>
-  <line x1="28.17" y1="45.56" x2="28.17" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.67" y1="45.56" x2="30.67" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="33.17" y1="45.56" x2="33.17" y2="41.96" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.68" y1="45.56" x2="35.68" y2="41.96" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="18.09,42.16 25.74,42.16 25.74,42.64 18.09,42.64"/>
+  <line x1="18.16" y1="45.56" x2="18.16" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.66" y1="45.56" x2="20.66" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.17" y1="45.56" x2="23.17" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.67" y1="45.56" x2="25.67" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="28.10,42.16 35.74,42.16 35.74,42.64 28.10,42.64"/>
+  <line x1="28.17" y1="45.56" x2="28.17" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.67" y1="45.56" x2="30.67" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="33.17" y1="45.56" x2="33.17" y2="42.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.68" y1="45.56" x2="35.68" y2="42.40" stroke="#000000" stroke-width="0.130"/>
   <rect x="8.80" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="491"/>
   <text x="9.83" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="491">A</text>
   </g>

@@ -172,6 +172,32 @@ internal static class TabConstants
     /// </remarks>
     public static double StemClearance(double stringSpace)
         => (FretDigitHeight / 2 + stringSpace) / 2;
+
+    /// <summary>
+    /// A tab beam's <c>length-fraction</c>: 0.62, the one number LilyPond states rather than
+    /// derives when it re-tunes beams for the wider tab staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:1234-1246 — beam-thickness, length-fraction, staff-symbol-staff-space
+    ///   in the TabStaff context's beam block,
+    ///   under the comment "TabStaff increase
+    ///   the staff-space, which in turn increases beam thickness and spacing; beams are too
+    ///   big. We have to adjust the beam settings", then
+    ///   <c>\override Beam.beam-thickness = #0.32</c> and
+    ///   <c>\override Beam.length-fraction = #0.62</c>.
+    /// It buys two things and neither is a stem length: the beam translation
+    /// (lily/beam.cc:142-144 Beam::get_beam_translation, giving 0.480667 against a notation
+    /// staff's 0.81) and the weight of the forbidden-quant scorer, which LilyPond scales by
+    /// <c>exp(−8·|1 − length-fraction|)</c> because "for stems that are non-standard, the
+    /// forbidden beam quanting doesn't really work" (lily/beam-quanting.cc:80-87
+    /// Beam_quant_parameters::fill) — 0.0478 of the full charge here.
+    /// <para>
+    /// ⚠️ It is the BEAM's, not the STEM's: <c>\tabFullNotation</c> reverts
+    /// <c>Stem.details</c> and <c>Stem.no-stem-extend</c> and leaves these two alone, so a tab
+    /// stem is bought with ordinary beamed-lengths.
+    /// </para>
+    /// </remarks>
+    public const double BeamLengthFraction = 0.62;
 }
 
 /// <summary>
@@ -186,26 +212,34 @@ internal static class TabBeamMath
 }
 
 /// <summary>
-/// Places a TAB beam from the notes' STRING lines. Returns the beam line in DEVICE Y
-/// (evaluate with <see cref="TabBeamMath.At"/>).
+/// Quants a TAB beam through the ported LilyPond quanter
+/// (<see cref="BeamScoringProblem"/>), fed the notes' STRING lines as stem positions and
+/// the TAB staff's own constants. Returns the beam line in DEVICE Y (evaluate with
+/// <see cref="TabBeamMath.At"/>).
 /// </summary>
 /// <remarks>
-/// ⚠️⚠️ THIS IS NOT A QUANTER AND DOES NOT GO THROUGH <see cref="BeamScoringProblem"/>.
-/// This doc used to say it did, and it stopped being true at <c>88f98480</c> (2026-07-12),
-/// which replaced the quanter call with the arithmetic below. What is actually here:
-/// <list type="bullet">
-///   <item>a slope of <c>0.6 · tanh(string contour)</c> — LilyPond's damping FORMULA with
-///     its least squares, concaveness and damping denominator all missing;</item>
-///   <item>a position of <c>min(farAnchor − 2.4·stringSpace, nearAnchor − 1.4·stringSpace)</c>
-///     and an overhang clamp at <c>1.6·stringSpace</c> — three LILYSHARP-OWN constants
-///     "measured from LilyPond's own tab SVG", with no landing on a quant grid at all.</item>
-/// </list>
-/// ⚠️ LilyPond runs tab beams through the SAME quanter as notation beams, in the tab staff's
-/// own units: MEASURED on <c>test/tab-string-pinned</c>, its TabStaff reports
-/// <c>staff-space 1.5</c> and <c>beam-thickness 0.32</c> (= 0.48/1.5, so the beam keeps its
-/// absolute thickness), and its flat single-string groups land EXACTLY on the outer string
-/// line (<c>1.5</c>), where this code sits 0.297 past it. See HANDOFF §1 and §2 B — the port
-/// is filed, not done, because every tab beam in the corpus moves.
+/// LilyPond runs a tab beam through the same quanter as a notation beam. Everything the
+/// quanter reads is expressed in the staff's OWN spaces, and on a TabStaff that space is
+/// 1.5 — so the lengths (beamed-lengths and friends) come through unchanged, while the two
+/// thicknesses, which LilyPond builds from absolute quantities and then divides by the
+/// staff space (lily/beam-quanting.cc:232-234), arrive scaled:
+/// <code>
+///                    notation   tab (space 1.5)
+///   beam-thickness     0.48        0.32   = 0.48/1.5   ← MEASURED off LilyPond's grob
+///   line thickness     0.10        0.0667 = 0.10/1.5
+///   ⇒ sit/hang quant   0.19        0.12667                (thickness − line)/2
+///   ⇒ beam translation 0.81        0.87333
+/// </code>
+/// ⚠️ THE STRINGS ARE ONE STAFF SPACE APART IN THAT FRAME, not 1.5. A four-string tab is
+/// positions (3, 1, −1, −3), exactly what LilyPond's TabNoteHead reports; the 1.5 lives in
+/// the staff's space, not in the positions. An earlier attempt at this route (<c>26e553d9</c>)
+/// spelled the strings three half-spaces apart and left the notation staff's thicknesses in
+/// place — a stretched notation staff rather than a tab one — and was replaced by hand-fitted
+/// arithmetic (<c>88f98480</c>) whose flat groups sat 0.297 past LilyPond's.
+/// <para>
+/// ⚠️ Directions come from the STRINGS (<paramref name="stemUp"/>), not the notated pitch, so
+/// the group handed to the quanter is re-stemmed. A tab beam is never kneed.
+/// </para>
 /// </remarks>
 internal static class TabBeamQuant
 {
@@ -214,75 +248,67 @@ internal static class TabBeamQuant
     {
         int n = group.Members.Length;
         double leftX = memberStemXs[0], rightX = memberStemXs[n - 1];
-        double span = rightX - leftX;
 
-        // Slope follows the STRING CONTOUR (first→last string), NOT the notation pitch:
-        // the ported notation quanter tilts a run by pitch, so a same-string group of
-        // different frets (all on one line) came out sloped and its stems inverted. A
-        // tab beam is parallel to the strings; same string ⇒ flat.
-        double firstStr = geom.StringY(geom.StemHeadString(group.Members[0].Item, stemUp));
-        double lastStr = geom.StringY(geom.StemHeadString(group.Members[n - 1].Item, stemUp));
-        double rawSlope = span > 0.001 ? (lastStr - firstStr) / span : 0.0;
-        // Damp the tilt exactly as LilyPond does — a raw string jump makes far too
-        // steep a beam. LILYPOND-REF: beam-quanting.cc:766
-        //   slope = 0.6 * tanh(slope) / (damping + concaveness),
-        // with the default damping = 1 and concaveness = 0 for a monotonic run.
-        double slope = 0.6 * System.Math.Tanh(rawSlope);
-
-        // Anchor the beam a fixed length from the digit HEADS (string line ± the digit
-        // clearance), measured along the slope. The FARTHEST member (longest stem) gets
-        // stemLen; a floor keeps the CLOSEST member's stem from collapsing to nothing
-        // when the run crosses strings — LilyPond's tab stems sit ~2–2.5 string gaps
-        // from the head, shorter than a notation stem.
-        // LILYPOND-REF: measured from LilyPond's own tab SVG (\tabFullNotation).
-        double stemLen = 2.4 * geom.StringSpace;
-        double minStem = 1.4 * geom.StringSpace;
-        double clearance = TabConstants.StemClearance(geom.StringSpace);
-        double farAnchor = 0, nearAnchor = 0;
+        // String s (1 = the top line) sits at staff position StringCount + 1 − 2s: the lines
+        // of an N-line staff are one staff SPACE apart in that staff's own frame, whatever
+        // the space measures on the page. A four-string tab is (3, 1, −1, −3).
+        var stemPos = new int[n];
+        int maxIdx = 0;
         for (int i = 0; i < n; i++)
         {
             int str = geom.StemHeadString(group.Members[i].Item, stemUp);
-            double headY = geom.StringY(str) + (stemUp ? -clearance : clearance);
-            double v = headY - slope * memberStemXs[i]; // beam intercept giving a zero stem here
-            if (i == 0) { farAnchor = nearAnchor = v; }
-            else if (stemUp)
-            {
-                farAnchor = System.Math.Max(farAnchor, v);   // lowest head = longest up-stem
-                nearAnchor = System.Math.Min(nearAnchor, v); // highest head = shortest
-            }
-            else
-            {
-                farAnchor = System.Math.Min(farAnchor, v);   // highest head = longest down-stem
-                nearAnchor = System.Math.Max(nearAnchor, v); // lowest head = shortest
-            }
+            stemPos[i] = geom.StringCount + 1 - 2 * str;
+            if (group.Members[i].ItemIndex > maxIdx) maxIdx = group.Members[i].ItemIndex;
         }
-        double beamFar = farAnchor + (stemUp ? -stemLen : stemLen);
-        double beamFloor = nearAnchor + (stemUp ? -minStem : minStem);
-        double intercept = stemUp
-            ? System.Math.Min(beamFar, beamFloor)   // above the notes: the higher (smaller Y) wins
-            : System.Math.Max(beamFar, beamFloor);  // below the notes: the lower (larger Y) wins
-        double leftY = intercept + slope * leftX;
-        double rightY = intercept + slope * rightX;
 
-        // Keep the beam from hanging far past the staff. LilyPond's tab stems shorten
-        // as the note sits lower on the fretboard so the beam clears the outer string
-        // by only ~1.6 gaps, not a full stem below it — otherwise a mid-string run (a
-        // 9 on string 3) drew a beam two gaps under the bottom line. Pull the beam back
-        // toward the staff, preserving the slope.
-        double edge = stemUp ? geom.StringY(1) : geom.StringY(geom.StringCount);
-        double maxOverhang = 1.6 * geom.StringSpace;
-        if (stemUp)
-        {
-            double top = System.Math.Min(leftY, rightY);
-            double shift = (edge - maxOverhang) - top;
-            if (shift > 0) { leftY += shift; rightY += shift; }
-        }
-        else
-        {
-            double bot = System.Math.Max(leftY, rightY);
-            double shift = bot - (edge + maxOverhang);
-            if (shift > 0) { leftY -= shift; rightY -= shift; }
-        }
+        // The quanter reads x by ItemIndex and re-applies the notehead-edge offset itself.
+        // Feeding it the stem x already offset only adds a CONSTANT to every member, which
+        // cancels: the problem keeps x relative to its own left edge and the span is a
+        // difference. It matters that the offsets are the same for all of them, and they
+        // are — a tab beam is never kneed, so every stem takes the same side.
+        var xById = new double[maxIdx + 1];
+        for (int i = 0; i < n; i++)
+            xById[group.Members[i].ItemIndex] = memberStemXs[i];
+
+        // Re-stem the group from the STRINGS. A tab stem's direction is the string's, not
+        // the notated pitch's — a bass run on the low strings beams UP where the notation
+        // staff beams DOWN — and the quanter asks the group, not the caller.
+        var members = System.Collections.Immutable.ImmutableArray.CreateBuilder<BeamMember>(n);
+        foreach (var m in group.Members)
+            members.Add(new BeamMember(
+                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight, m.StaffPosition,
+                m.ItemIndex, memberStemUp: stemUp, targetStaffIndex: m.TargetStaffIndex,
+                measureIndex: m.MeasureIndex,
+                headPositionMin: m.HeadPositionMin, headPositionMax: m.HeadPositionMax));
+        var tabGroup = new BeamGroup(members.ToImmutable(), group.MeasureIndex,
+                                     group.StartIndex, stemUp, group.GrowDirection, group.VoiceIndex);
+
+        // What a TabStaff changes, in LilyPond's own words (ly/engraver-init.ly:1234, the
+        // comment above the two overrides at :1237 and :1238): "TabStaff increase the
+        // staff-space, which in turn increases beam thickness and spacing; beams are too
+        // big. We have to adjust the beam settings":
+        //   \override Beam.beam-thickness  = #0.32   (= 0.48/1.5, the absolute thickness kept)
+        //   \override Beam.length-fraction = #0.62
+        // The line thickness follows the same division the quanter applies to both
+        // (lily/beam-quanting.cc:232-234). Everything else is already in the staff's own
+        // spaces on both sides and comes through untouched — in particular the STEM's
+        // length-fraction stays 1, because \tabFullNotation reverts Stem.details and
+        // Stem.no-stem-extend but leaves the two Beam overrides standing.
+        double space = geom.StringSpace;
+        var (leftPos, rightPos) = new BeamScoringProblem(
+            tabGroup, xById,
+            stemPositions: stemPos,
+            beamThickness: EngravingDefaults.BeamThickness / space,
+            lineThickness: EngravingDefaults.StaffLineThickness / space,
+            staffLineCount: geom.StringCount,
+            beamLengthFraction: TabConstants.BeamLengthFraction).Solve();
+
+        // Quanter Y is in staff POSITIONS (half-spaces) above the staff's MIDDLE; the tab
+        // staff's middle is halfway down its strings, and one position is half a string gap.
+        double middleY = geom.StringY(1) + (geom.StringCount - 1) * space / 2;
+        double leftY = middleY - leftPos * space / 2;
+        double rightY = middleY - rightPos * space / 2;
+        double slope = rightX - leftX > 0.001 ? (rightY - leftY) / (rightX - leftX) : 0.0;
         return (slope, leftY, leftX);
     }
 }
