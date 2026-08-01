@@ -70,14 +70,16 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **「双子の part 変数が空」を 0 本にした**。⑹ **その双子でコーパスを一周＝26 冊が梁ごと一致**、
 **未説明の食い違いは 1 冊だけ**。⚠️ ★★★ **そのうち 2 冊は測定器のほうが間違っていた**
 （`TwinBeamSweep` が梁を最寄りの譜で測る）＝**「対を疑え」を*同じ日に 3 回*踏んだ**。
-HEAD **`72bc8285`**（＋handoff commit 1 本）・**未 push 96**（handoff commit 込みの総数）・
+⚠️ **第61セッションの commit はユーザーが squash 済**——**作業の実体は `3a002e2d`**
+（**⑤ の exporter・②③ の移植・snapshot 4 枚・台帳がすべてここ**）。**個別 SHA は残っていない。**
+HEAD **`a7ad087a`**（＝⑦ の訂正 handoff commit）・**未 push 1**・
 テスト **3737 passed / 0 failed / 3 skipped**・
 台帳 **378 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **総和は比較に使えない**——**閉じた 1.358 は総和に入っていなかった**（対が壊れていて J を 0 と
 記録していた）。**減った 0.642 は K の*嘘の記録***で、**増えた 0.1198 は新しく可視化した発散**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
-## ① 対が対でなかった＝**`16` が抜けていた**（`bd3787c7`・**Core 変更ゼロ**）
+## ① 対が対でなかった＝**`16` が抜けていた**（**起票時 Core 変更ゼロ**）
 
 ★★★ **`grace { c' d' }` は Lily# では 8分**（`MeasureCollector.graceDefaultDuration`）。
 双子は `\grace { c''16 d'' }`＝**2 本梁**。⇒ **量子範囲の下限も stem ideal も全部違う**。
@@ -87,7 +89,7 @@ HEAD **`72bc8285`**（＋handoff commit 1 本）・**未 push 96**（handoff com
 ⇒ ★★ **`why` と数が矛盾している点は、engine ではなく*対*が壊れている。**
 **sweep が反転したら、まず両側が同じ音楽かを確かめる**（§5.0 に汎化した）。
 
-## ② 真因は **`Fl` 1 項**＝length-fraction の未移植 2 件（`527ff0bd`・**snapshot 1 枚・GO 済**）
+## ② 真因は **`Fl` 1 項**＝length-fraction の未移植 2 件（**snapshot 1 枚・GO 済**）
 
 ★★★ **LP のカードを両方の config で取った**（`inspect-quants` → `annotation`）:
 ```
@@ -107,7 +109,7 @@ HEAD **`72bc8285`**（＋handoff commit 1 本）・**未 push 96**（handoff com
 動く snapshot は `test/grace-lower-staff` 1 枚だけ・その第2小節は byte 不変）。
 ★ **`beam_count ≥ 4` の枝も同時に移植した**（今日のコーパスは 1 冊も読まない＝**対が無い**）。
 
-## ③ レンダラは 3 つ目の値を描いていた（`4a1ddd82`・**snapshot 3 枚・GO 済**）
+## ③ レンダラは 3 つ目の値を描いていた（**snapshot 3 枚・GO 済**）
 
 ★★★ **grace の梁の太さは*宣言*であって scale ではない**（`grace-init.ly` の 0.384 対
 `define-grobs.scm` の 0.48）。レンダラは `BeamThickness × magstep(-3)`＝**0.339411** を描き、
@@ -123,7 +125,7 @@ HEAD **`72bc8285`**（＋handoff commit 1 本）・**未 push 96**（handoff com
 **どれが正しいかは Lily# 側の設計判断**なので、**コメントの誤り（「LilyPond grace note default」）
 だけ訂正して起票**。⚠️ **④ と同じ「静かに別の音楽になる」形。**
 
-## ⑤ exporter の穴を 2 つ塞いだ＝**空の譜がゼロになった**（`da4edd1b`・**出力不変**）
+## ⑤ exporter の穴を 2 つ塞いだ＝**空の譜がゼロになった**（**出力不変**）
 
 ★★★ **⑴ `voice { }`**（`ParallelExpression not exported` 29 件）→ **`<< { } \\ { } >>`**。
 **`\\` は「同時」だけでなく `\voiceOne/\voiceTwo` を配る**（`ly/engraver-init.ly`）＝
@@ -136,7 +138,7 @@ HEAD **`72bc8285`**（＋handoff commit 1 本）・**未 push 96**（handoff com
 ⇒ ★★ **実測: 双子 199 本・「part 変数が空」は 0 本になった**（残る warning は
 `DrumNote` 24＝1 冊と `Override/Revert` 各 1）。
 
-## ⑥ その双子でコーパスを一周した＝**26 冊が梁ごと一致・未説明は 1 冊**
+## ⑥ その双子でコーパスを一周した＝**26 冊が梁ごと一致・未説明は 2 冊**
 
 ```
 26  一致（Beam.positions が多重集合ごと）
