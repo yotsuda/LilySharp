@@ -1204,20 +1204,32 @@ public sealed class LilyPondExporter
                 chainStep = firstStep = anchorStep;
                 chainOctave = firstOctave = want;
             }
+            else if (_octaveAbsolute)
+            {
+                // Absolute: every pitch stands on its own, so every one carries the shift.
+                sb.Append(EmitPitch(p)).Append(marks);
+            }
             else
             {
-                // Absolute: every member carries the whole-chord shift. Relative: the members
-                // after the root keep the source's marks — Lily# STACKS them on the root while
-                // LilyPond CHAINS them member to member, a deliberate Lily# divergence
-                // (MeasureCollector.ItemFactory) this transpiler does not try to spell away.
-                sb.Append(EmitPitch(p));
-                if (_octaveAbsolute) sb.Append(marks);
-                else
-                {
-                    int step = RelativeOctave.StepIndex(p.PitchName[0]);
-                    chainOctave = RelativeOctave.Resolve(chainStep, chainOctave, step, p.OctaveOffset);
-                    chainStep = step;
-                }
+                // Relative: Lily# STACKS the member on the ROOT — same octave as the root,
+                // bumped when its letter is below the root's, plus its own marks — while
+                // LilyPond CHAINS member to member and takes the nearest. So the source's
+                // marks are not the twin's: they are recomputed against the chain, exactly
+                // as the degrees below are. LILYPOND-REF for the chain: music-sequence.cc
+                // :142-160; Lily#'s rule: MeasureCollector.ItemFactory CreateChordItem
+                // (`firstOctave + (step >= rootStepForStack ? 0 : 1) + pitch.OctaveOffset`),
+                // which the collector's own comment calls a deliberate divergence.
+                // ⚠️ Copying them verbatim made `<a c g>` a DIFFERENT CHORD in the twin
+                // (Lily# A3 C4 G4, LilyPond A3 C4 G3) — measured on test/tab-beam-slope,
+                // whose notation beam was the last one differing after gate ⑹.
+                // ⚠️ The LETTER is still the source's, verbatim (PitchToken.Text carries the
+                // accidental and any quarter tone) — only the octave MARKS are recomputed.
+                int step = RelativeOctave.StepIndex(p.PitchName[0]);
+                int want = anchorOctave + (step >= anchorStep ? 0 : 1) + p.OctaveOffset;
+                sb.Append(p.PitchToken.Text)
+                  .Append(OctaveMarks(want - RelativeOctave.Resolve(chainStep, chainOctave, step, 0)));
+                chainStep = step;
+                chainOctave = want;
             }
             first = false;
         }

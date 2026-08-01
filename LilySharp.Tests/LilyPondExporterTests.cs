@@ -402,6 +402,59 @@ public class LilyPondExporterTests
             Assert.DoesNotContain("\\clef", ly);
     }
 
+    /// <summary>
+    /// A chord's members are re-octaved for the twin: Lily# STACKS them on the root,
+    /// LilyPond CHAINS them member to member, so the source's marks are not the twin's.
+    /// </summary>
+    /// <remarks>
+    /// Lily# places each member in the root's octave, bumped when its letter is below the
+    /// root's (MeasureCollector.ItemFactory CreateChordItem, which calls the rule a
+    /// deliberate divergence); LilyPond octaves each member against the one before it and
+    /// takes the nearest (lily/music-sequence.cc:142-160). Written verbatim, <c>&lt;a c
+    /// g&gt;</c> is A3 C4 G4 on the page and A3 C4 G3 in the twin — a different chord.
+    /// Measured on <c>test/tab-beam-slope</c>, whose notation beam was the only one still
+    /// differing after the <c>instrument</c> gate closed, and confirmed against the page
+    /// as a PNG.
+    /// <para>
+    /// ⚠️ The ASCENDING chord is the control: LilyPond's nearest and Lily#'s stack agree
+    /// there, so it must come through with no marks at all. Without it this point would
+    /// pass against an exporter that marked every member.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ChordMembers_AreReOctavedForLilyPondsChain()
+    {
+        var ly = Export("""
+            part gt {
+              section S { <c e g>2 <a c g>2 | <c a f>2 <c e g>2 | }
+            }
+            form main { ~S }
+            score main { staff gt }
+            """);
+        Assert.Contains("<c e g>2 <a c g'>2", ly);   // g is BELOW a, so it stacks an octave up
+        Assert.Contains("<c a' f>2 <c e g>2", ly);   // a and f both sit above the root c
+    }
+
+    /// <summary>Re-octaving the members does not move what comes AFTER the chord.</summary>
+    /// <remarks>
+    /// LilyPond leaves an EventChord standing on its FIRST member (music-sequence.cc
+    /// :213-219 <c>ret_first</c>) and Lily# on the chord's anchor — the root's bare letter —
+    /// so the two agree for an ordinary chord however the other members are spelled. The
+    /// following note therefore keeps the source's own marks.
+    /// </remarks>
+    [Fact]
+    public void ChordMembers_ReOctaving_LeavesTheFollowingNoteAlone()
+    {
+        var ly = Export("""
+            part gt {
+              section S { <a c g>4 a4 e4 f4 | }
+            }
+            form main { ~S }
+            score main { staff gt }
+            """);
+        Assert.Contains("<a c g'>4 a4 e4 f4", ly);
+    }
+
     [Fact]
     public void Ties_AndBreaks_ArePreserved()
     {
