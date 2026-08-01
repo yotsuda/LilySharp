@@ -217,6 +217,18 @@ internal sealed class MusicXmlAttributes
     /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
     public int? ClefOctaveChange { get; set; }
 
+    /// <summary>
+    /// The INSTRUMENT's written→sounding shift in semitones (&lt;transpose&gt;), or null when
+    /// the part sounds as it prints.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT the same octave as <see cref="ClefOctaveChange"/>, and the two must not both
+    /// carry it: an octave CLEF is notation (it says where the written pitch is drawn) while
+    /// this is the instrument (it says what that written pitch sounds). A reader that honours
+    /// both — which is what the spec asks of it — would otherwise drop a guitar two octaves.
+    /// </remarks>
+    public int? TransposeSemitones { get; set; }
+
     public XElement ToXml()
     {
         var attrs = new XElement("attributes",
@@ -260,6 +272,20 @@ internal sealed class MusicXmlAttributes
                     : null));
         }
 
+        if (TransposeSemitones is { } semis && semis != 0)
+        {
+            // Whole octaves get <octave-change> and a zero chromatic, which is how every
+            // octave-transposing instrument is written; anything else is a plain chromatic
+            // shift with the diatonic step it implies.
+            int octaves = semis / 12, rest = semis % 12;
+            var tr = new XElement("transpose",
+                new XElement("diatonic", rest == 0 ? 0 : DiatonicStepsFor(rest)),
+                new XElement("chromatic", rest));
+            if (octaves != 0)
+                tr.Add(new XElement("octave-change", octaves));
+            attrs.Add(tr);
+        }
+
         if (MeasureRepeat != null)
         {
             var mr = new XElement("measure-repeat", new XAttribute("type", MeasureRepeat));
@@ -269,6 +295,23 @@ internal sealed class MusicXmlAttributes
         }
 
         return attrs;
+    }
+
+    /// <summary>
+    /// The diatonic step count that goes with a chromatic shift of <paramref name="semis"/>
+    /// (|semis| &lt; 12) — how many letter names the spelling moves by.
+    /// </summary>
+    /// <remarks>
+    /// MusicXML wants both numbers and they are not the same: a B♭ instrument transposes
+    /// −2 chromatic and −1 diatonic. This is the usual reading of each interval within an
+    /// octave; Lily# only produces octaves today, so it is here for the shape rather than
+    /// for a case in the corpus.
+    /// </remarks>
+    private static int DiatonicStepsFor(int semis)
+    {
+        int[] steps = { 0, 0, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6 };
+        int mag = steps[System.Math.Abs(semis)];
+        return semis < 0 ? -mag : mag;
     }
 }
 

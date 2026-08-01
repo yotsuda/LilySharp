@@ -39,6 +39,13 @@ public sealed class MusicXmlExporter
     // normally C4 but is set per-member while stacking an arpeggio (`<< … >>`).
     private bool _octaveAbsolute;
     private int _octaveAnchor = 4;
+
+    // The part's RELATIVE-frame anchor (its clef's or preset's octave), and the instrument's
+    // written→sounding shift for <transpose>. Both come from the part header; see
+    // ApplyPartHeader. ⚠️ _octaveAnchor above is the ABSOLUTE-mode base and is a DIFFERENT
+    // rule — only an explicit `octave N` moves it.
+    private int _partAnchorOctave = 4;
+    private int _partTransposeSemitones;
     private bool _initialOctaveAbsolute; // file-level default, restored per part
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
@@ -586,11 +593,12 @@ public sealed class MusicXmlExporter
     {
         EnsurePart(partName);
         _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
-        ApplyPartHeaderClef(partName);
+        ApplyPartHeader(partName);
         _lastPitchedNote = null; // ho/po never pairs across parts
 
-        // Reset state for this part's continuation
-        _currentOctave = 4;
+        // Reset state for this part's continuation. The relative frame starts at the part's
+        // own anchor — the octave it PRINTS — not at a fixed middle C.
+        _currentOctave = _partAnchorOctave;
         _currentStep = 0;
         _ambientTonic = _homeTonic; // each voice starts at the score's home key
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
@@ -756,7 +764,10 @@ public sealed class MusicXmlExporter
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
                 ClefLine = _clefLine > 0 ? _clefLine : null,
-                ClefOctaveChange = _clefOctaveChange
+                ClefOctaveChange = _clefOctaveChange,
+                TransposeSemitones = _partTransposeSemitones != 0
+                    ? _partTransposeSemitones
+                    : null
             };
 
             _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
@@ -1194,26 +1205,37 @@ public sealed class MusicXmlExporter
         _ambientTonic = KeyTonic.Of(key);
     }
 
-    /// <summary>The part declaration's `clef` property (if any) sets the
-    /// part's opening clef — the walk only sees IN-MUSIC clef changes, so a
-    /// header-only clef (the normal case) used to export as G.</summary>
-    private void ApplyPartHeaderClef(string partName)
+    /// <summary>
+    /// Applies everything the part's HEADER says about pitch: the clef it reads in, the
+    /// octave its bare letters anchor to, and its written→sounding transposition.
+    /// </summary>
+    /// <remarks>
+    /// The walk only sees IN-MUSIC clef changes, so a header-only clef (the normal case)
+    /// has to be applied here.
+    /// <para>
+    /// ⚠️ It used to read the <c>clef</c> PROPERTY and nothing else, which left this
+    /// exporter answering for a header it had barely read: <c>instrument bass</c> exported a
+    /// treble clef, every part exported at octave 4 whatever it printed, and no part ever
+    /// carried a <c>transpose</c>. All three come off one reading
+    /// (<see cref="PartHeaderDefaults"/>), the same one the MIDI exporter takes.
+    /// </para>
+    /// </remarks>
+    private void ApplyPartHeader(string partName)
     {
-        if (_root == null) return;
-        foreach (var pd in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
-        {
-            if (pd.Name.Text != partName) continue;
-            foreach (var prop in pd.Properties)
-            {
-                if (prop.NameToken.Text.Equals("clef", StringComparison.OrdinalIgnoreCase)
-                    && prop.GetChild(2) is SyntaxTokenNode v)
-                {
-                    SetClef(v.Text.ToLowerInvariant());
-                    return;
-                }
-            }
-            return;
-        }
+        var header = PartHeaderDefaults.Read(
+            _root?.DescendantNodes().OfType<PartDeclarationSyntax>()
+                 .FirstOrDefault(pd => pd.Name.Text == partName));
+
+        if (header.ClefWord != null)
+            SetClef(header.ClefWord);
+
+        _partAnchorOctave = header.AnchorOctave;
+        _octaveAnchor = header.AbsoluteBaseOctave;
+
+        // ⚠️ Only the INSTRUMENT's share goes in <transpose>. The octave a transposing CLEF
+        // carries is already spelled by <clef-octave-change>, and an importer that honours
+        // both would apply it twice — a guitar would come back two octaves down.
+        _partTransposeSemitones = header.TranspositionSemitones;
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)

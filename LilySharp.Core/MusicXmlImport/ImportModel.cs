@@ -45,6 +45,17 @@ internal sealed class ImportPart
     public string SafeName { get; set; } = "";
     /// <summary>The part's opening clef as a Lily# clef name ("treble", "bass", ...).</summary>
     public string Clef { get; set; } = "treble";
+
+    /// <summary>
+    /// The part's <c>&lt;transpose&gt;</c> in semitones — the INSTRUMENT's written→sounding
+    /// shift, which Lily# spells <c>transposition</c>. Null when it sounds as it prints.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Separate from the octave a transposing CLEF carries: that one arrives inside
+    /// <see cref="Clef"/> as <c>treble_8</c>. Folding the two together would double the
+    /// octave every time a guitar part came back in.
+    /// </remarks>
+    public int? TranspositionSemitones { get; set; }
     /// <summary>When several parts came from splitting one multi-staff MusicXML part
     /// (a piano grand staff), they share this group id so the score wraps them in a
     /// single <c>grandStaff { }</c>. Null for an ordinary standalone part.</summary>

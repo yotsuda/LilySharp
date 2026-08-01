@@ -54,6 +54,61 @@ public class MusicXmlRoundTripTests
             """);
     }
 
+    /// <summary>
+    /// A transposing part exports at WRITTEN pitch with its shift declared, which is what
+    /// MusicXML asks for — and the two ways a part can sound an octave low stay apart.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE OCTAVE MUST BE CARRIED ONCE. MusicXML has two elements for it and they mean
+    /// different things: <c>clef-octave-change</c> is NOTATION (a treble clef with an 8
+    /// under it) and <c>transpose</c> is the INSTRUMENT (what the written pitch sounds). A
+    /// guitar's 8vb comes from its <c>treble_8</c> clef, so it must NOT also get a
+    /// <c>transpose</c> — a reader honouring both, as the spec asks, would drop it two
+    /// octaves. A bass's comes from the instrument, so it must.
+    /// <para>
+    /// Both directions are checked because the pair has to agree: the importer reads
+    /// <c>transpose</c> back into <c>transposition</c>, and re-exporting the imported source
+    /// has to produce the same attributes. Exporting a shift nobody reads back would look
+    /// right in a diff and lose the octave on the way home.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    // instrument, expected written pitch, expected clef-octave-change, expected transpose
+    [InlineData("instrument bass", "C3", null, -1)]      // the 8vb is the INSTRUMENT's
+    [InlineData("instrument guitar", "C4", -1, null)]    // …and here it is the CLEF's
+    [InlineData("clef treble_8", "C4", -1, null)]
+    [InlineData("clef bass", "C3", null, null)]
+    [InlineData("clef treble", "C4", null, null)]
+    public void TransposingPart_DeclaresItsShiftOnceAndSurvivesRoundTrip(
+        string header, string writtenPitch, int? clefOctaveChange, int? octaveChange)
+    {
+        string source = $"part m {{ {header} }}\nsection A {{ m {{ c4 d e f | }} }}\n"
+                        + "form main { A }\nscore main { staff m }";
+
+        static (string Pitch, int? Clef, int? Transpose) Attributes(string lys)
+        {
+            var doc = XDocument.Parse(
+                new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
+            var first = doc.Descendants().First(e => e.Name.LocalName == "pitch");
+            var clef = doc.Descendants().First(e => e.Name.LocalName == "clef");
+            var trans = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "transpose");
+            string Val(XElement? p, string n) =>
+                p?.Elements().FirstOrDefault(e => e.Name.LocalName == n)?.Value ?? "";
+            return (Val(first, "step") + Val(first, "octave"),
+                    Val(clef, "clef-octave-change") is { Length: > 0 } c ? int.Parse(c) : null,
+                    trans == null ? null
+                        : Val(trans, "octave-change") is { Length: > 0 } o ? int.Parse(o) : 0);
+        }
+
+        var exported = Attributes(source);
+        Assert.Equal((writtenPitch, clefOctaveChange, octaveChange), exported);
+
+        // …and the same again after a trip through the importer.
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (reimported, _) = new MusicXmlImporter().Import(xml);
+        Assert.Equal(exported, Attributes(reimported));
+    }
+
     [Fact]
     public void FlatKeyAndAccidentals_SurviveRoundTrip()
     {

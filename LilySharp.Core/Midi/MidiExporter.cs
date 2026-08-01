@@ -725,76 +725,7 @@ public sealed class MidiExporter
     /// an octave above — so the .mid plays what the instrument really sounds, matching
     /// the tab. Shares the same resolution as the tab's fret shift.
     /// </summary>
-    private int PartSoundingShift(string partName)
-    {
-        if (!_partDecls.TryGetValue(partName, out var partDecl))
-            return 0;
-
-        string? clefText = null, transText = null, tuningText = null;
-        string? instrument = null;
-        foreach (var prop in partDecl.Properties)
-        {
-            var name = prop.NameToken.Text.ToLowerInvariant();
-            string Joined()
-            {
-                var sb = new System.Text.StringBuilder();
-                for (int vi = 2; vi < prop.SlotCount; vi++)
-                    if (prop.GetChild(vi) is SyntaxTokenNode vt) sb.Append(vt.Text);
-                return sb.ToString();
-            }
-            switch (name)
-            {
-                case "clef": clefText = (prop.GetChild(2) as SyntaxTokenNode)?.Text.ToLowerInvariant(); break;
-                case "transposition": transText = (prop.GetChild(2) as SyntaxTokenNode)?.Text; break;
-                case "tuning": tuningText = Joined().ToLowerInvariant(); break;
-                case "instrument":
-                    instrument = LilySharp.Core.Svg.Model.InstrumentDefaults
-                        .SplitInstrument(new[] { Joined() }.Where(s => s.Length > 0)).Preset.ToLowerInvariant();
-                    break;
-            }
-        }
-
-        // Clef octave: explicit clef, else the instrument preset's default clef.
-        var clef = clefText != null ? ClefFromText(clefText)
-            : instrument != null
-                ? LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults(instrument).Clef
-                : Svg.Model.ClefType.Treble;
-        int clefShift = Tablature.Tunings.ClefOctaveShift(clef);
-
-        // Transposition: explicit `transposition` > instrument preset > tuning default.
-        int transposition;
-        if (transText != null &&
-            LilySharp.Core.Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(transText) is int ex)
-            transposition = ex;
-        else if (instrument != null)
-            transposition = LilySharp.Core.Svg.Model.InstrumentDefaults.GetTransposition(instrument);
-        else if (tuningText != null)
-            transposition = Tablature.Tunings.TuningTransposition(TuningFromText(tuningText));
-        else
-            transposition = 0;
-
-        return clefShift + transposition;
-    }
-
-    private static Svg.Model.ClefType ClefFromText(string clef) => clef switch
-    {
-        "bass" => Svg.Model.ClefType.Bass,
-        "alto" => Svg.Model.ClefType.Alto,
-        "tenor" => Svg.Model.ClefType.Tenor,
-        "treble_8" => Svg.Model.ClefType.Treble8Below,
-        "treble^8" => Svg.Model.ClefType.Treble8Above,
-        "bass_8" => Svg.Model.ClefType.Bass8Below,
-        _ => Svg.Model.ClefType.Treble,
-    };
-
-    private static TuningType TuningFromText(string tuning) => tuning switch
-    {
-        "bass" => TuningType.Bass,
-        "bass5" => TuningType.Bass5,
-        "bass6" => TuningType.Bass6,
-        "ukulele" or "uke" => TuningType.Ukulele,
-        _ => TuningType.Guitar,
-    };
+    private int PartSoundingShift(string partName) => Header(partName).SoundingShiftSemitones;
 
     /// <summary>The part's octave anchor, resolved the way the page resolves it, so a bare
     /// <c>c</c> sounds at the octave it prints.</summary>
@@ -807,36 +738,15 @@ public sealed class MidiExporter
     /// </remarks>
     private (int Relative, int Absolute) PartOctaveAnchors(string partName)
     {
-        int? explicitOctave = null;
-        string? instrument = null;
-        string? clef = null;
-        if (_partDecls.TryGetValue(partName, out var partDecl))
-        {
-            foreach (var prop in partDecl.Properties)
-            {
-                var name = prop.NameToken.Text.ToLowerInvariant();
-                if (name == "octave"
-                    && prop.GetChild(2) is SyntaxTokenNode v
-                    && int.TryParse(v.Text, out int oct))
-                    explicitOctave = oct;
-                else if (name == "clef" && prop.GetChild(2) is SyntaxTokenNode cv)
-                    clef = cv.Text;
-                else if (name == "instrument")
-                {
-                    var texts = new System.Collections.Generic.List<string>();
-                    for (int vi = 2; vi < prop.SlotCount; vi++)
-                        if (prop.GetChild(vi) is SyntaxTokenNode vt) texts.Add(vt.Text);
-                    instrument = Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
-                }
-            }
-        }
-
-        return (Svg.Model.InstrumentDefaults.AnchorOctave(
-                    explicitOctave, instrument,
-                    clef != null ? ClefFromText(clef.ToLowerInvariant())
-                                 : Svg.Model.ClefType.Treble),
-                Svg.Model.InstrumentDefaults.AbsoluteBaseOctave(explicitOctave));
+        var header = Header(partName);
+        return (header.AnchorOctave, header.AbsoluteBaseOctave);
     }
+
+    /// <summary>What this part's header says about pitch, read once per lookup.</summary>
+    private Semantics.PartHeaderDefaults Header(string partName)
+        => _partDecls.TryGetValue(partName, out var pd)
+            ? Semantics.PartHeaderDefaults.Read(pd)
+            : Semantics.PartHeaderDefaults.Empty;
 
     private void ProcessChildren(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {

@@ -121,6 +121,7 @@ internal static class MusicXmlReader
     {
         int divisions = 1;              // ticks per quarter; may change mid-part
         string? clefSet = null;         // most recent clef, for the part header
+        int? transposeSet = null;       // the part's <transpose>, in semitones
         int measureNo = 0;
         var staffClefs = new Dictionary<int, string>();   // staff number -> clef
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
@@ -146,7 +147,8 @@ internal static class MusicXmlReader
                 switch (el.Name.LocalName)
                 {
                     case "attributes":
-                        ReadAttributes(el, measure, ref divisions, ref clefSet, staffClefs, report, measureNo);
+                        ReadAttributes(el, measure, ref divisions, ref clefSet, ref transposeSet,
+                                       staffClefs, report, measureNo);
                         break;
 
                     case "direction":
@@ -233,6 +235,7 @@ internal static class MusicXmlReader
         }
 
         part.Clef = clefSet ?? "treble";
+        part.TranspositionSemitones = transposeSet;
 
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
@@ -292,6 +295,7 @@ internal static class MusicXmlReader
 
     private static void ReadAttributes(
         XElement el, ImportMeasure measure, ref int divisions, ref string? clefSet,
+        ref int? transposeSet,
         Dictionary<int, string> staffClefs, ImportReport report, int measureNo)
     {
         if (int.TryParse(Local(el, "divisions")?.Value, out int d) && d > 0)
@@ -330,6 +334,27 @@ internal static class MusicXmlReader
             staffClefs.TryAdd(staff, name);
             measure.Clef = name;        // mid-piece single-staff clef change
             clefSet ??= name;           // first clef becomes the part header clef
+        }
+
+        // <transpose> is the INSTRUMENT's written→sounding shift, which Lily# spells as the
+        // part's `transposition`. ⚠️ It is NOT the octave a transposing CLEF carries — that
+        // one is <clef-octave-change> and is already in the clef name above. Adding them
+        // together here would drop a guitar two octaves on the way back in.
+        var transEl = Local(el, "transpose");
+        if (transEl != null && transposeSet == null)
+        {
+            int chromatic = int.TryParse(Local(transEl, "chromatic")?.Value, out int c) ? c : 0;
+            int octaveChange = int.TryParse(Local(transEl, "octave-change")?.Value, out int oc) ? oc : 0;
+            int semis = chromatic + octaveChange * 12;
+            if (semis != 0)
+            {
+                if (semis % 12 == 0)
+                    transposeSet = semis;
+                else
+                    report.Warn(measureNo,
+                        $"a transposing part ({semis} semitones) is imported at written pitch — "
+                        + "Lily#'s `transposition` states whole octaves only.");
+            }
         }
     }
 

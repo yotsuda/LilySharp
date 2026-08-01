@@ -63,8 +63,16 @@ internal static class LysWriter
 
         // ---- part declarations ----
         foreach (var part in doc.Parts)
+        {
             sb.Append("part ").Append(part.SafeName)
-              .Append(" { clef ").Append(part.Clef).Append(" }\n");
+              .Append(" { clef ").Append(part.Clef);
+            // <transpose> comes back as `transposition`, the same knob that produced it.
+            // Only whole octaves reach here (the reader warns about anything else), and the
+            // clef's own octave is already in the clef word — see ImportPart.
+            if (part.TranspositionSemitones is { } semis && semis % 12 == 0 && semis != 0)
+                sb.Append(" transposition ").Append(semis < 0 ? "8vb" : "8va");
+            sb.Append(" }\n");
+        }
         sb.Append('\n');
 
         // ---- sections + structure ----
