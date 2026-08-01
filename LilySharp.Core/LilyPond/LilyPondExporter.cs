@@ -1205,17 +1205,24 @@ public sealed class LilyPondExporter
     /// same thing twice rather than inventing a convention:
     /// <list type="bullet">
     /// <item><c>alignAboveContext</c> — RenderSpec.OrderedItems moves an ossia directly above
-    ///   the nearest PRECEDING main row (NR "Ossia staves").</item>
+    ///   the nearest PRECEDING main row, which is the property LilyPond's own ossia recipe
+    ///   uses for it (Documentation/en/notation/staff.itely, NR "Ossia staves").</item>
     /// <item><c>\remove Time_signature_engraver</c> — SharedRenderer prints no meter on an
-    ///   ossia at all.</item>
+    ///   ossia at all. LILYPOND-REF: ly/engraver-init.ly Time_signature_engraver, the Staff
+    ///   context's engraver that the same recipe removes.</item>
     /// <item><c>firstClef = ##f</c> — SharedRenderer's <c>drawClef</c> is false on the ossia's
-    ///   FIRST appearance (lily/clef-engraver.cc creates the clef only when a previous clef
-    ///   exists or firstClef is true).</item>
+    ///   FIRST appearance. LILYPOND-REF: lily/clef-engraver.cc Clef_engraver, which creates
+    ///   the opening clef only when a previous clef exists or firstClef is true.</item>
     /// <item><c>fontSize = #-3</c> with <c>StaffSymbol.staff-space</c>/<c>thickness</c> at
-    ///   <c>magstep -3</c> — EngravingDefaults.OssiaScale IS magstep(-3) = 0.7071, and cites
-    ///   this spelling. ⚠️ NOT <c>\magnifyStaff #2/3</c>, which the NR example uses: 2/3 is a
-    ///   different number (0.667) and the twin would be a size apart.</item>
+    ///   <c>magstep -3</c> — EngravingDefaults.OssiaScale IS magstep(-3) = 0.7071 and cites
+    ///   this spelling. LILYPOND-REF: scm/lily-library.scm magstep, 2^(s/6).
+    ///   ⚠️ NOT <c>\magnifyStaff #2/3</c>, which the NR example uses: 2/3 is a different
+    ///   number (0.667) and the twin would be a size apart.</item>
     /// </list>
+    /// ⚠️ These are LP-DERIVED even though none is a literal transcription — §7.6 ⒝, so they
+    /// carry LILYPOND-REF and not LILYSHARP-OWN. What could not be copied literally is the
+    /// SHAPE: Lily# spells the ossia convention as renderer behaviour and LilyPond as context
+    /// properties, so the twin has to restate it in the other vocabulary.
     /// </remarks>
     private string EmitOssia(OssiaRenderSyntax ossia, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, string? alignAbovePart)
