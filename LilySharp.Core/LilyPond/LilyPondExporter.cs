@@ -116,6 +116,21 @@ public sealed class LilyPondExporter
     private int _lyStep, _lyOctave;
     private bool _frameTracked = true;
 
+    /// <summary>
+    /// The parts whose music is drum-kit music, and whether the variable being written now is
+    /// one of them. A drum note (<c>hh8 bd4</c>) is a NAME, not a pitch, and LilyPond only
+    /// reads those names inside <c>\drummode</c> — so the part is wrapped in that instead of
+    /// <c>\relative</c>, and its staff is a <c>DrumStaff</c>.
+    /// </summary>
+    /// <remarks>
+    /// The vocabulary itself needs no translation: Lily#'s drum names and aliases ARE
+    /// LilyPond's (DrumNameRegistry cites ly/drumpitch-init.ly drumPitchNames), so the token
+    /// goes through verbatim like any other. Before this, all 24 of them in the corpus were
+    /// dropped with a warning and test/drum-groove's twin was a bar-check failure.
+    /// </remarks>
+    private readonly HashSet<string> _drumParts = new(StringComparer.Ordinal);
+    private bool _drumMode;
+
     /// <summary>The note value Lily# would give an event that writes no duration — its own
     /// rule, not LilyPond's. See <see cref="EmitEventDuration"/>.</summary>
     private string _lastWrittenValue = "4";
@@ -183,7 +198,22 @@ public sealed class LilyPondExporter
                 _anchorOctave = part != null
                     ? AnchorOctaveOf(part)
                     : InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
-                EmitPartVariable(varName, OrderedMusic(name, part, form, sections), root);
+                var music = OrderedMusic(name, part, form, sections);
+                if (IsDrumPart(name, music))
+                {
+                    _drumParts.Add(name);
+                    // A drummap block re-tables position / notehead / MIDI key for the score
+                    // (DrumOverrides). LilyPond spells that as drumPitchTable and
+                    // drumStyleTable overrides, which this transpiler does not write — so the
+                    // twin plays the DEFAULT kit and is a different page wherever the map bit.
+                    if (root.DescendantNodes<DrummapDeclarationSyntax>().Any())
+                        _warnings.Add(
+                            "drummap { } is not exported — the twin uses LilyPond's default "
+                            + "drum table, so any remapped position, notehead or MIDI key differs");
+                }
+                _drumMode = _drumParts.Contains(name);
+                EmitPartVariable(varName, music, root);
+                _drumMode = false;
             }
         }
         else
@@ -483,12 +513,53 @@ public sealed class LilyPondExporter
 
     // ---- Part music variable ----------------------------------------------
 
+    /// <summary>
+    /// Whether a part's music is DRUM music — it names drum instruments rather than pitches.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's two vocabularies do not mix in one stream: inside <c>\drummode</c> a
+    /// <c>c</c> is not a pitch, and outside it <c>hh</c> is not a drum. Lily# has no such
+    /// mode — a bare identifier is a drum name wherever the registry knows it — so a part
+    /// that writes both cannot be spelled at all, and saying so is better than writing a
+    /// <c>.ly</c> LilyPond refuses to read.
+    /// </remarks>
+    private bool IsDrumPart(string partName, List<SyntaxNode> music)
+    {
+        bool drums = false, pitched = false;
+        foreach (var item in music)
+        {
+            foreach (var n in item.DescendantNodes().Prepend(item))
+            {
+                switch (n)
+                {
+                    case DrumNoteSyntax: drums = true; break;
+                    case NoteSyntax: pitched = true; break;
+                    case ChordSyntax c:
+                        if (c.DrumNames.Any()) drums = true;
+                        if (c.Pitches.Any() || c.Degrees.Any()) pitched = true;
+                        break;
+                }
+            }
+        }
+        if (drums && pitched)
+        {
+            _warnings.Add(
+                $"part '{partName}' writes drum names and pitches in one stream, which "
+                + "LilyPond's \\drummode cannot hold — the drum notes are dropped");
+            return false;
+        }
+        return drums;
+    }
+
     private void EmitPartVariable(string varName, List<SyntaxNode> music, CompilationUnitSyntax root)
     {
         // ⚠️ The two modes anchor DIFFERENTLY on purpose. Absolute octave is middle C
         //   whatever the clef (OctaveContext: "clef default is deliberately NOT used here"),
         //   so \fixed is always c'; relative follows the part's own default octave.
-        string wrapper = _octaveAbsolute
+        // A drum part has no octave to anchor at all — its notes are names.
+        string wrapper = _drumMode
+            ? "\\drummode"
+            : _octaveAbsolute
             ? "\\fixed c'"
             : "\\relative " + AnchorPitch(_anchorOctave);
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
@@ -848,6 +919,7 @@ public sealed class LilyPondExporter
     private string EmitItem(SyntaxNode item) => item switch
     {
         NoteSyntax n => EmitNote(n),
+        DrumNoteSyntax dn => EmitDrumNote(dn),
         RestSyntax r => EmitRest(r),
         ChordSyntax c => EmitChord(c),
         BarlineSyntax b => EmitBarline(b),
@@ -927,6 +999,25 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
+    /// A drum note (<c>hh8</c>, <c>bd4</c>) — the name verbatim, because Lily#'s drum
+    /// vocabulary IS LilyPond's (see <see cref="_drumParts"/>).
+    /// </summary>
+    private string EmitDrumNote(DrumNoteSyntax d)
+    {
+        if (!_drumMode)
+        {
+            // Reached through a phrase reference the part scan did not follow, or from a part
+            // that also writes pitches. Either way \drummode is not open and the name would
+            // be read as something else entirely.
+            _warnings.Add($"drum note '{d.DrumName}' is outside \\drummode and was dropped");
+            return "";
+        }
+        var (prefix, suffix) = SplitAttachments(d.Articulations);
+        string trem = d.Tremolo is { } t ? t.Text : "";
+        return prefix + d.DrumName + EmitEventDuration(d.Duration) + trem + suffix;
+    }
+
+    /// <summary>
     /// A pitch in the music stream: the source's own token, and the octave frames advanced
     /// past it. See <see cref="_lysStep"/> for why the marks are not always the source's.
     /// </summary>
@@ -955,6 +1046,7 @@ public sealed class LilyPondExporter
     /// </summary>
     private void CarryFrameInto(LilyPondExporter buf)
     {
+        buf._drumMode = _drumMode;
         buf._lysStep = _lysStep;
         buf._lysOctave = _lysOctave;
         buf._lyStep = _lyStep;
@@ -1127,10 +1219,19 @@ public sealed class LilyPondExporter
             first = false;
         }
 
-        // A drum chord (<bd hh>) has neither, and its members are not exported at all — the
-        // same hole degrees used to have, so say so rather than write `<>`.
-        if (first && c.DrumNames.Any())
-            _warnings.Add("drum chord member(s) not exported — the twin's chord is empty");
+        // Drum members (<bd hh>): names, like a bare drum note, and only inside \drummode.
+        foreach (var drum in c.DrumNames)
+        {
+            if (!_drumMode)
+            {
+                _warnings.Add(
+                    $"drum chord member '{drum.DrumName}' is outside \\drummode and was dropped");
+                continue;
+            }
+            if (!first) sb.Append(' ');
+            sb.Append(drum.DrumName);
+            first = false;
+        }
 
         // Where the two sides stand now: Lily# on the chord's anchor, LilyPond on its first
         // member. Equal for an ordinary chord; a degree chord can part them (see _lysStep).
@@ -1674,6 +1775,16 @@ public sealed class LilyPondExporter
             if (tuning.Length > 0)
                 sb.Append(" \\with { stringTunings = #").Append(tuning).Append(" }");
             sb.Append(" { \\").Append(varName).Append(" }\n");
+        }
+        else if (partName != null && _drumParts.Contains(partName))
+        {
+            // A DrumStaff is what reads \drummode: it carries the percussion clef, the
+            // drum-kit notehead table and the position table, which is where the part's
+            // `clef percussion` and Lily#'s DrumNameRegistry placements both come from
+            // (LILYPOND-REF: ly/engraver-init.ly DrumStaff, ly/drumpitch-init.ly drums-style).
+            // No \clef is written: the context's own is that clef, and a second one would be
+            // this exporter inventing a convention.
+            sb.Append(indent).Append("\\new DrumStaff { \\").Append(varName).Append(" }\n");
         }
         else
         {

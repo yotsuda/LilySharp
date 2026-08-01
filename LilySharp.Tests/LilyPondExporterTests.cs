@@ -458,6 +458,55 @@ public class LilyPondExporterTests
         Assert.DoesNotContain(quiet.Warnings, w => w.Contains("degree chord"));
     }
 
+    // ---- Drum kit ------------------------------------------------------------
+    //
+    // A drum note is a NAME, not a pitch, and LilyPond reads those names only inside
+    // \drummode. All 24 in the corpus were dropped with a warning until 2026-08-01, which
+    // left test/drum-groove's twin a bar-check failure — the last hole that lost music.
+
+    private static string DrumScore(string music) => $$"""
+        part kit { clef percussion }
+        section S { kit { {{music}} } }
+        form main { S }
+        score main { staff kit }
+        """;
+
+    [Fact]
+    public void ADrumPart_IsWrittenInDrummode_OnADrumStaff()
+    {
+        var ly = Export(DrumScore("hh8 hh bd4 sn4"));
+        // The names go through verbatim: Lily#'s vocabulary IS LilyPond's (DrumNameRegistry
+        // cites ly/drumpitch-init.ly), so nothing has to be translated — only the mode and
+        // the context, which is what LilyPond needs to read them at all.
+        Assert.Contains("kit = \\drummode {", ly);
+        Assert.Contains("hh8 hh bd4 sn4", ly);
+        Assert.Contains("\\new DrumStaff { \\kit }", ly);
+        Assert.DoesNotContain("\\relative", ly);
+        // No second clef: DrumStaff's own is the percussion clef.
+        Assert.DoesNotContain("\\clef", ly);
+    }
+
+    [Fact]
+    public void ADrumChord_KeepsItsMembers()
+    {
+        var ly = Export(DrumScore("<bd hh>4 <sn hh>4"));
+        Assert.Contains("<bd hh>4 <sn hh>4", ly);
+        Assert.DoesNotContain("<>", ly);
+    }
+
+    [Fact]
+    public void APartThatMixesDrumsAndPitches_IsReported_BecauseDrummodeCannotHoldBoth()
+    {
+        // Inside \drummode a `c` is not a pitch and outside it `hh` is not a drum, so the
+        // stream cannot be spelled at all. A .ly LilyPond refuses to read would be worse
+        // than the drums going missing with a name on the loss.
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(DrumScore("hh8 hh c4 d4")));
+        Assert.Contains(exporter.Warnings, w => w.Contains("drum names and pitches in one stream"));
+        Assert.DoesNotContain("\\drummode", ly);
+        Assert.Contains("c4", ly);
+    }
+
     [Fact]
     public void ANoteAfterAReference_IsReported_BecauseTheTwoEnginesAnchorItDifferently()
     {
