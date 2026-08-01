@@ -16,7 +16,10 @@
 
 using Xunit;
 using LilySharp.Core.LilyPond;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Tests;
 
@@ -205,6 +208,198 @@ public class LilyPondExporterTests
         var numbers = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline as numbers"));
         Assert.DoesNotContain("\\tabFullNotation", numbers);
         Assert.Contains("\\new TabStaff", numbers);
+    }
+
+    // ---- the `instrument` preset (HANDOFF gate ⑹) ---------------------------
+    //
+    // An instrument preset is a BUNDLE — clef, relative anchor, tab tuning and sounding
+    // transposition — and LilyPond has no spelling for the bundle, only for its parts. The
+    // exporter used not to read it at all, so ten fixtures declaring `instrument bass` and
+    // no `clef` exported a TREBLE twin against a BASS page: valid LilyPond playing other
+    // music. These points say the twin now spells what the page resolved.
+
+    /// <summary>A part whose clef comes only from its <c>instrument</c> writes that clef,
+    /// and anchors its relative pitches where the preset says.</summary>
+    /// <remarks>
+    /// ⚠️ Two presets in ONE test on purpose: a bundle read wrong tends to be read wrong
+    /// CONSTANTLY (the old behaviour was treble/c' for everything), and only a case that
+    /// must answer two different things can tell the difference.
+    /// </remarks>
+    [Fact]
+    public void InstrumentPreset_WritesItsClef_AndAnchorsItsOctave()
+    {
+        var ly = Export("""
+            part bs { instrument bass section S { c d e } }
+            part fl { instrument flute section T { c d e } }
+            form main { ~S ~T }
+            score main { staff bs staff fl }
+            """);
+        // bass = bass clef, octave 3; flute = treble clef, octave 5 (NOT the treble
+        // default of 4 — the preset's own octave, which is why the bundle is read whole).
+        Assert.Contains("bs = \\relative c {", ly);
+        Assert.Contains("\\new Staff { \\clef bass \\bs }", ly);
+        Assert.Contains("fl = \\relative c'' {", ly);
+        Assert.Contains("\\new Staff { \\clef treble \\fl }", ly);
+    }
+
+    /// <summary>A hyphenated preset (<c>electric-bass</c>) is read whole.</summary>
+    /// <remarks>
+    /// It is word+minus+word in the green tree, so reading only the property's FIRST value
+    /// token yields "electric", which no preset matches and which therefore falls silently
+    /// through to treble — the same failure the collector had to fix in its own reader.
+    /// </remarks>
+    [Fact]
+    public void InstrumentPreset_HyphenatedNameIsReadWhole()
+    {
+        var ly = Export("""
+            part bs { instrument electric-bass section S { c d e } }
+            form main { ~S }
+            score main { staff bs }
+            """);
+        Assert.Contains("\\new Staff { \\clef bass \\bs }", ly);
+        Assert.Contains("bs = \\relative c {", ly);
+    }
+
+    /// <summary>An explicit <c>clef</c> beats the preset's clef — and the preset's OCTAVE
+    /// still wins, which is what the layout does.</summary>
+    /// <remarks>
+    /// MeasureCollector.GetPartDefaults resolves the clef first and then fills the octave in
+    /// (<c>resolvedOctave ??= defaultOctave</c>), so <c>clef treble instrument bass</c> is a
+    /// treble staff anchored at octave 3. Odd, but mirrored rather than approximated: an
+    /// anchor an octave off is a twin that plays other pitches.
+    /// </remarks>
+    [Fact]
+    public void ExplicitClef_BeatsThePreset_ButThePresetsOctaveStands()
+    {
+        var ly = Export("""
+            part bs {
+              clef treble
+              instrument bass
+              section S { c d e }
+            }
+            form main { ~S }
+            score main { staff bs }
+            """);
+        Assert.Contains("\\new Staff { \\clef treble \\bs }", ly);
+        Assert.Contains("bs = \\relative c {", ly);
+    }
+
+    /// <summary>
+    /// A tab part with neither <c>tuning</c> nor <c>instrument</c> is a GUITAR, the way the
+    /// page reads it — the exporter used to fall back to a four-string bass.
+    /// </summary>
+    /// <remarks>
+    /// The two defaults were opposite ends of the same switch (RenderSpecParser: explicit →
+    /// property → preset → guitar; this exporter: property → bass), so
+    /// <c>test/tab-part-key</c> drew six tab lines on the page against four in the twin. Once
+    /// the twin also started writing the tab's transposition, the same wrong default moved
+    /// its PITCHES too (bass tunings carry −12), so the twin fretted other notes as well.
+    /// </remarks>
+    [Fact]
+    public void TabTwin_DefaultsToGuitar_NotBass()
+    {
+        var ly = Export("""
+            part gt { section S { c'4 d' e' f' } }
+            form main { ~S }
+            score main { staff gt  tab gt }
+            """);
+        Assert.Contains("stringTunings = #guitar-tuning", ly);
+        Assert.DoesNotContain("bass-four-string-tuning", ly);
+        Assert.DoesNotContain("\\transpose", ly);
+    }
+
+    /// <summary>An explicit <c>transposition</c> property is what the tab frets against.</summary>
+    /// <remarks>
+    /// RenderSpecParser.ResolvePartTransposition: the property beats the preset's default,
+    /// which beats the tuning's. A guitar tuning carries none of its own, so the property is
+    /// the whole shift here and the twin either writes it or frets an octave off.
+    /// </remarks>
+    [Fact]
+    public void TabTwin_ExplicitTranspositionProperty_IsWritten()
+    {
+        string Source(string extra) => $$"""
+            part gt {
+              clef bass
+              tuning guitar
+            {{extra}}
+              section S { c4 d e f }
+            }
+            form main { ~S }
+            score main { staff gt  tab gt }
+            """;
+        Assert.DoesNotContain("\\transpose", Export(Source("")));
+        Assert.Contains("\\transpose c c, ", Export(Source("  transposition 8vb")));
+    }
+
+    /// <summary>
+    /// The twin's tab spells exactly what the PAGE resolved — same tuning, same written→
+    /// sounding shift, same clef — for every way a part can say (or not say) it.
+    /// </summary>
+    /// <remarks>
+    /// The two resolutions are separate code (RenderSpecParser for the page,
+    /// LilyPondExporter for the twin) reading one table, and the corpus only notices they
+    /// have drifted when a book happens to be comparable. This is the invariant that
+    /// notices instead: it fails the moment either side changes alone.
+    /// ⚠️ The cases must DISAGREE with each other — a set that all resolve to the same
+    /// tuning would pass against a constant.
+    /// </remarks>
+    [Theory]
+    [InlineData("")]                                   // nothing said → guitar, no shift
+    [InlineData("  tuning bass")]                      // tuning alone carries −12
+    [InlineData("  instrument bass")]                  // preset: bass clef + tuning + −12
+    [InlineData("  instrument electric-bass")]
+    [InlineData("  instrument guitar")]                // treble_8: the octave rides the clef
+    [InlineData("  instrument ukulele")]
+    [InlineData("  clef bass\n  tuning bass")]
+    [InlineData("  clef treble\n  instrument bass")]   // explicit clef, preset tuning
+    [InlineData("  tuning guitar\n  transposition 8vb")]
+    public void TabTwin_SpellsWhatThePageResolved(string properties)
+    {
+        string source = $$"""
+            part pt {
+            {{properties}}
+              section S { c4 d e f }
+            }
+            form main { ~S }
+            score main { staff pt  tab pt }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var tab = Assert.IsType<TabStaffSpec>(spec.Items.First(i => i is TabStaffSpec));
+        string ly = new LilyPondExporter().Export(tree);
+
+        // ⑴ the tuning, by LilyPond's name for it
+        string expectedTuning = tab.Tuning switch
+        {
+            TuningType.Bass => "bass-four-string-tuning",
+            TuningType.Bass5 => "bass-five-string-tuning",
+            TuningType.Bass6 => "bass-six-string-tuning",
+            TuningType.Ukulele => "ukulele-tuning",
+            _ => "guitar-tuning",
+        };
+        Assert.Contains($"stringTunings = #{expectedTuning}", ly);
+
+        // ⑵ the written→sounding shift the frets are taken at, as \transpose marks
+        int shift = Tunings.SoundingShift(tab.Staff.Clef, tab.Transposition);
+        Assert.Equal(0, shift % 12);
+        string expectedTranspose = shift == 0
+            ? null!
+            : "\\transpose c c" + new string(shift < 0 ? ',' : '\'', System.Math.Abs(shift) / 12);
+        if (shift == 0)
+            Assert.DoesNotContain("\\transpose", ly);
+        else
+            Assert.Contains(expectedTranspose + " ", ly);
+
+        // ⑶ the clef the notation staff reads in (nothing written when the part named none
+        //    and no preset implies one — LilyPond's own default is treble, and so is Lily#'s)
+        bool declaresClef = properties.Contains("clef") || properties.Contains("instrument");
+        if (declaresClef)
+            Assert.Contains($"\\new Staff {{ \\clef {InstrumentDefaults.ClefWord(tab.Staff.Clef)} ", ly);
+        else
+            Assert.DoesNotContain("\\clef", ly);
     }
 
     [Fact]

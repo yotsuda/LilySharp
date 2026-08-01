@@ -45,6 +45,12 @@ namespace LilySharp.Core.LilyPond;
 /// It reproduces the MUSIC and the staff/tab structure the score declares; it does
 /// NOT reconstruct anything the <c>.lys</c> does not hold (a hand <c>.ly</c>'s
 /// comments, multiple <c>\book</c> variants, custom definitions).
+///
+/// A preset the <c>.lys</c> DOES hold but LilyPond has no spelling for is EXPANDED, not
+/// dropped: <c>instrument bass</c> becomes the clef, the relative anchor, the string
+/// tuning and the sounding transposition it stands for (<see cref="PartClefWord"/>), the
+/// way a degree chord becomes its pitches. Expanding what the source says is transpiling;
+/// inventing what it never said is the re-derivation this file refuses.
 /// </summary>
 public sealed class LilyPondExporter
 {
@@ -79,9 +85,11 @@ public sealed class LilyPondExporter
     /// <see cref="SectionHeaderMusic"/> already emits a section's own key where the collector
     /// applies it. A custom/atonal key has no tonic (<c>Valid</c> false), and the collector
     /// falls back to C there, so this does the same.
-    /// ⚠️ It is the written key, NOT the sounding one: a part transpose moves the key AND the
-    /// pitches, and this exporter writes neither (the <c>instrument</c> gate — see
-    /// <see cref="AnchorOctaveOf"/>).
+    /// ⚠️ It is the written key, NOT the sounding one: a part-level <c>transpose</c> property
+    /// moves the key AND the pitches (MeasureCollector's PartTranspose.Read), and this
+    /// exporter writes neither — a standing gate of its own, with one fixture in it
+    /// (<c>test/transpose-score</c>). ⚠️ It is NOT the <c>instrument</c> gate, which is
+    /// closed: see <see cref="PartClefWord"/>.
     /// </remarks>
     private int _keySharps;
     private KeyTonic _tonic = KeyTonic.CMajor;
@@ -455,22 +463,26 @@ public sealed class LilyPondExporter
     /// resolves it.
     /// </summary>
     /// <remarks>
-    /// The same precedence MeasureCollector applies (an explicit <c>octave N</c> property
-    /// beats the clef's default, MeasureCollector.cs GetPartDefaults →
-    /// <c>partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))</c>), read
-    /// off the same two part properties.
+    /// The same precedence MeasureCollector applies (MeasureCollector.cs GetPartDefaults →
+    /// <c>partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))</c>, where
+    /// <c>partOctave</c> is the explicit <c>octave N</c> property or, failing that, the
+    /// <c>instrument</c> preset's own octave), read off the same part properties through the
+    /// same table.
     /// <para>
-    /// ⚠️ <c>instrument</c> is NOT read, which is the gate this exporter already declares
-    /// and not a new one. An <c>instrument</c> preset is a BUNDLE:
-    /// <c>instrument bass</c> means bass clef AND octave 3 AND a sounding pitch an octave
-    /// down (InstrumentDefaults.GetTransposition — an electric bass is written an octave
-    /// above where it sounds, and that −12 is deliberate). Reading the octave third of that
-    /// and not the other two would move the twin's written pitch while leaving its sounding
-    /// pitch wrong, i.e. make it wrong in a way that LOOKS right — the failure mode this
-    /// file's "transpiler, not a re-derivation" rule exists to avoid. A part whose octave
-    /// comes only from an instrument preset therefore still exports at the treble anchor,
-    /// exactly as before, and its twin is already known not to be a pair
-    /// (HANDOFF: test/tab-as-numbers).
+    /// ⚠️ The preset's octave beats the CLEF's default even when a clef is written too —
+    /// <c>instrument flute</c> anchors at octave 5 while <c>GetDefaultOctave(Treble)</c> is
+    /// 4 — because <c>resolvedOctave ??= defaultOctave</c> runs after the clef is resolved.
+    /// Mirrored here rather than approximated: an anchor that is off by an octave is a twin
+    /// that plays other pitches.
+    /// </para>
+    /// <para>
+    /// ⚠️ An <c>instrument</c> preset is a BUNDLE — <c>instrument bass</c> means bass clef
+    /// AND octave 3 AND a sounding pitch an octave down (InstrumentDefaults.GetTransposition;
+    /// an electric bass is written an octave above where it sounds, and that −12 is
+    /// deliberate). It is read WHOLE or not at all: taking the octave third of it and leaving
+    /// the other two would move the twin's written pitch while its sounding pitch stayed
+    /// wrong, i.e. make it wrong in a way that LOOKS right. See <see cref="PartClefWord"/>
+    /// for why reading it is still a transpilation and not a re-derivation.
     /// </para>
     /// </remarks>
     private static int AnchorOctaveOf(PartDeclarationSyntax part)
@@ -478,6 +490,8 @@ public sealed class LilyPondExporter
         string? octave = PartProperty(part, "octave");
         if (octave != null && int.TryParse(octave, out int explicitOctave))
             return explicitOctave;
+        if (InstrumentPresetOf(part) is string preset)
+            return InstrumentDefaults.GetDefaults(preset).Octave;
         string? clef = PartProperty(part, "clef");
         return InstrumentDefaults.GetDefaultOctave(
             clef != null
@@ -1752,13 +1766,13 @@ public sealed class LilyPondExporter
         sb.Append("      \\override StaffSymbol.thickness = #(magstep -3)\n");
         sb.Append("      firstClef = ##f\n");
         sb.Append("    } { ");
-        // The ossia's own clef word (`ossia bass melody`) when it has one, else the part's.
+        // The ossia's own clef word (`ossia bass melody`) when it has one, else the part's —
+        // which is its `clef` property or the one its `instrument` implies, the same two the
+        // page reads (RenderSpecParser.ParseOssia → GetPartClef).
         // ⚠️ An explicit clef is written even though firstClef suppresses the OPENING one:
         // the glyph stays hidden, but the notes still have to be READ in that clef.
         string? clef = OssiaClef(ossia)
-                       ?? (parts.FirstOrDefault(p => p.Name.Text == partName) is { } part
-                           ? PartProperty(part, "clef")
-                           : null);
+                       ?? PartClefWord(parts.FirstOrDefault(p => p.Name.Text == partName));
         if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
         sb.Append('\\').Append(varName).Append(" }\n");
         return sb.ToString();
@@ -1815,7 +1829,7 @@ public sealed class LilyPondExporter
             ? v : partVars.Values.FirstOrDefault() ?? "music";
         var part = parts.FirstOrDefault(p => p.Name.Text == partName)
                    ?? (parts.Count == 1 ? parts[0] : null);
-        string? clef = part != null ? PartProperty(part, "clef") : null;
+        string? clef = PartClefWord(part);
 
         var sb = new StringBuilder();
         if (tab)
@@ -1864,17 +1878,31 @@ public sealed class LilyPondExporter
         return sb.ToString();
     }
 
-    // `tuning bass` on the part → the tuning Lily# frets against. ⚠️ The fallback is BASS,
-    // so a part that names no tuning still gets a four-string bass here; a twin whose
-    // tuning "looks right" may only be this default.
+    /// <summary>
+    /// The tuning Lily# frets this part against: its explicit <c>tuning</c> property, else
+    /// the one its <c>instrument</c> preset implies, else guitar.
+    /// </summary>
+    /// <remarks>
+    /// The page's own precedence (RenderSpecParser.ParseTab → <c>explicit ?? property ??
+    /// InstrumentDefaults.GetTuning(preset)</c>, unknown/none = guitar), asked of the same
+    /// table. ⚠️ It used to fall back to BASS while the page fell back to GUITAR, so a part
+    /// naming neither tuning nor instrument got a four-string bass in the twin and six
+    /// strings on the page (<c>test/tab-part-key</c>) — and after the twin started writing
+    /// the tab's transposition, the same wrong default moved its pitches too.
+    /// ⚠️ STILL NOT READ: the render item's own tuning modifier (<c>tab bass melody</c>),
+    /// which outranks both on the page. No fixture writes it, and reading it here means
+    /// re-deriving the token stripping ParseTab does (<c>as numbers</c>, <c>with chords</c>);
+    /// it is a known gate, not an oversight.
+    /// </remarks>
     private static Syntax.TuningType TabTuningType(PartDeclarationSyntax? part)
-        => (part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null) switch
+        => ((part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null)
+            ?? InstrumentDefaults.GetTuning(InstrumentPresetOf(part))) switch
         {
+            "bass" => Syntax.TuningType.Bass,
             "bass5" => Syntax.TuningType.Bass5,
             "bass6" => Syntax.TuningType.Bass6,
-            "guitar" => Syntax.TuningType.Guitar,
-            "ukulele" => Syntax.TuningType.Ukulele,
-            _ => Syntax.TuningType.Bass,
+            "ukulele" or "uke" => Syntax.TuningType.Ukulele,
+            _ => Syntax.TuningType.Guitar,
         };
 
     // The LilyPond predefined tuning name for that tuning.
@@ -1899,9 +1927,9 @@ public sealed class LilyPondExporter
     /// </remarks>
     private void AppendTabTranspose(StringBuilder sb, PartDeclarationSyntax? part, string? partName)
     {
-        var clef = ClefFromName(part != null ? PartProperty(part, "clef") : null);
+        var clef = ClefFromName(PartClefWord(part));
         int shift = Tablature.Tunings.ClefOctaveShift(clef)
-                    + Tablature.Tunings.TuningTransposition(TabTuningType(part));
+                    + PartTransposition(part);
         if (shift == 0)
             return;
         if (shift % 12 != 0)
@@ -1913,6 +1941,86 @@ public sealed class LilyPondExporter
         }
         sb.Append("\\transpose c ").Append('c')
           .Append(new string(shift < 0 ? ',' : '\'', Math.Abs(shift) / 12)).Append(' ');
+    }
+
+    /// <summary>
+    /// The part's <c>instrument</c> PRESET — the bare words, lowercased — or null when the
+    /// part declares no instrument (or only a quoted display label).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Every value token is joined, not just the first: a hyphenated preset
+    /// (<c>electric-bass</c>) is word+minus+word in the green tree, so
+    /// <see cref="PartProperty"/> alone would read "electric" and fall through to the
+    /// defaults. This is the reading MeasureCollector.GetPartDefaults takes, through the
+    /// same <c>SplitInstrument</c>.
+    /// </remarks>
+    private static string? InstrumentPresetOf(PartDeclarationSyntax? part)
+    {
+        if (part == null) return null;
+        foreach (var prop in part.Properties)
+        {
+            if (!prop.NameToken.Text.Equals("instrument", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var texts = new List<string>();
+            for (int vi = 2; vi < prop.SlotCount; vi++)
+                if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                    texts.Add(vt.Text);
+            if (texts.Count == 0) return null;
+            string preset = InstrumentDefaults.SplitInstrument(texts).Preset;
+            return preset.Length == 0 ? null : preset.ToLowerInvariant();
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The clef word this part reads in: its explicit <c>clef</c> property, else the clef its
+    /// <c>instrument</c> preset implies, else null (nothing to write — LilyPond's own default
+    /// is treble, and so is Lily#'s).
+    /// </summary>
+    /// <remarks>
+    /// The page's precedence, through the same table (RenderSpecParser.GetPartClef,
+    /// MeasureCollector.GetPartDefaults → <c>resolvedClef ??=
+    /// InstrumentDefaults.ClefWord(GetDefaults(preset).Clef)</c>).
+    /// <para>
+    /// ⚠️ Reading <c>instrument</c> is still a TRANSPILATION, not the re-derivation this file
+    /// refuses. The distinction is whether the <c>.lys</c> HOLDS the thing: an instrument
+    /// preset is written down in the source, LilyPond simply has no spelling for it, so it is
+    /// expanded into the spellings LilyPond does have — the same move degree chords needed
+    /// (ChordDegrees.Resolve). What stays refused is inventing what the source never said: a
+    /// phrase's auto-transpose, an interval argument, a hand <c>.ly</c>'s comments.
+    /// </para>
+    /// <para>
+    /// ⚠️ Read WHOLE: the clef here, the octave in <see cref="AnchorOctaveOf"/>, the tuning in
+    /// <see cref="TabTuningType"/> and the sounding shift in <see cref="PartTransposition"/>
+    /// all come off the same preset. Any one of them alone makes the twin wrong in a way that
+    /// looks right. Until this was read, ten fixtures declaring <c>instrument bass</c> and no
+    /// <c>clef</c> exported a treble twin against a bass page (docs/HANDOFF.md gate ⑹).
+    /// </para>
+    /// </remarks>
+    private static string? PartClefWord(PartDeclarationSyntax? part)
+    {
+        if (part == null) return null;
+        if (PartProperty(part, "clef") is string clef) return clef;
+        return InstrumentPresetOf(part) is string preset
+            ? InstrumentDefaults.ClefWord(InstrumentDefaults.GetDefaults(preset).Clef)
+            : null;
+    }
+
+    /// <summary>
+    /// The part's SOUNDING transposition in semitones, excluding the octave the clef itself
+    /// carries: an explicit <c>transposition</c> property (<c>8vb</c> …) &gt; the instrument
+    /// preset's default (bass = −12, piccolo = +12) &gt; the tuning's default (bass tunings =
+    /// −12). RenderSpecParser.ResolvePartTransposition, on the same two tables.
+    /// </summary>
+    private static int PartTransposition(PartDeclarationSyntax? part)
+    {
+        if (part == null) return 0;
+        if (PartProperty(part, "transposition") is string text
+            && InstrumentDefaults.ParseTranspositionSemitones(text) is int explicitShift)
+            return explicitShift;
+        return InstrumentPresetOf(part) is string preset
+            ? InstrumentDefaults.GetTransposition(preset)
+            : Tablature.Tunings.TuningTransposition(TabTuningType(part));
     }
 
     /// <summary>The clef word of a part header as the model's clef, for the octave it carries

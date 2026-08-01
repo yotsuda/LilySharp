@@ -2225,21 +2225,7 @@ public sealed partial class MeasureCollector
             if (instrument != null)
             {
                 var (defaultClef, defaultOctave) = InstrumentDefaults.GetDefaults(instrument);
-                resolvedClef ??= defaultClef switch
-                {
-                    ClefType.Treble => "treble",
-                    ClefType.Bass => "bass",
-                    ClefType.Alto => "alto",
-                    ClefType.Tenor => "tenor",
-                    ClefType.Treble8Below => "treble_8",
-                    ClefType.Treble8Above => "treble^8",
-                    ClefType.Soprano => "soprano",
-                    ClefType.MezzoSoprano => "mezzosoprano",
-                    ClefType.Baritone => "baritone",
-                    ClefType.Bass8Below => "bass_8",
-                    ClefType.Percussion => "percussion",
-                    _ => "treble"
-                };
+                resolvedClef ??= InstrumentDefaults.ClefWord(defaultClef);
                 resolvedOctave ??= defaultOctave;
             }
 

@@ -114,6 +114,37 @@ public static class InstrumentDefaults
     }
 
     /// <summary>
+    /// The <c>.lys</c> clef WORD for a clef — the spelling a part's <c>clef</c> property
+    /// would have to use to name it, and the inverse of the word→<see cref="ClefType"/>
+    /// switches the parsers read.
+    /// </summary>
+    /// <remarks>
+    /// One source for "what would a part have to write to get this clef", because two
+    /// places need it and they must agree: the collector, resolving an <c>instrument</c>
+    /// preset to the clef it implies (MeasureCollector.GetPartDefaults), and the LilyPond
+    /// exporter, writing that same clef into the twin.
+    /// ⚠️ NOT the two DISPLAY mappings — <c>LayoutReport.StaffLabel</c> (prints <c>tab</c>
+    /// and falls back to the enum name) and <c>LayoutEngine.ClefToString</c> (folds every
+    /// unlisted clef to treble). Both are lossy on purpose and neither is a clef word a
+    /// part could be written with.
+    /// </remarks>
+    public static string ClefWord(ClefType clef) => clef switch
+    {
+        ClefType.Treble => "treble",
+        ClefType.Bass => "bass",
+        ClefType.Alto => "alto",
+        ClefType.Tenor => "tenor",
+        ClefType.Treble8Below => "treble_8",
+        ClefType.Treble8Above => "treble^8",
+        ClefType.Soprano => "soprano",
+        ClefType.MezzoSoprano => "mezzosoprano",
+        ClefType.Baritone => "baritone",
+        ClefType.Bass8Below => "bass_8",
+        ClefType.Percussion => "percussion",
+        _ => "treble",
+    };
+
+    /// <summary>
     /// The default tablature tuning for a fretted/bass instrument, as a tuning name
     /// (the same names a <c>tab</c> render accepts), or null for instruments that are
     /// not played from tab. Lets <c>instrument bass</c> imply <c>tuning bass</c> when a
