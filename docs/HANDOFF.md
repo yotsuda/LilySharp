@@ -58,6 +58,117 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-01（第67セッション＝**⑥ を閉じた。起票を測りに行ったら、原因は
+「和音の平均」という発明で、LP の字面に置き換えたら exact に一致した**——`249e487d`。
+**ユーザー承認のうえ snapshot 1 枚を再ベース**）。
+★★★ **LP は和音に頭を 1 つしか訊かない**——**ステム方向の端の頭**（`head_positions (me)[my_dir]`・
+`lily/stem.cc:1214-1215`／`chord_start_y` は `last_head`＝**同じ頭**・`:114-122`）。
+**Lily# は和音の頭の算術平均を渡していた**（`BeamDetector.GetChordStaffPosition`）。
+**平均は頭ではなく、LP のどの式も計算しない量。**
+★★★ **⑥ の 1.0 はまるごとこれ**——`<a c g'>` の頭は **(-3, -1, +3)**、平均は **0**。
+**ステムの床が `0 + 2.24` になり、`1.5 + 2.24 = 3.74` より 1 段低い quant が合法になっていた**
+（**3.81 は 3.74 の直上の quant**）。⇒ **Lily# は `(3.81 . 2.19)`＝LP と同値**になった。
+★★★ **裏取りは LP 自身の採点カード**（②）——**平均の答へ強制すると `L 942.03`／LP 自身は `L 5.91`**。
+★★★ **`_staffPositions` は消えた**——**「メンバーの頭はどこか」を訊く全 site が `BeamSideHead` を通る**。
+⚠️ **同じファイルの 2 か所は、平均が流れている間ずっと「これは beam 側の頭だ」と書いていた**
+（`quant_range_` の注は「境界が*緩いだけ*」とまで論じていた）＝**§5.2 の形**。
+★★ **`ComputeBeamShorten` は `default-direction` の移植が対で要った**（⑤）——
+**平均が対称和音でたまたま 0 を返して隠していた**。
+★★★ **台帳 3 点（`beam.quant.chord.spanning.*`）を足した**（④・**旧コードは落ちる**）。
+**既存の `beam.quant.chord.*` が見えなかった理由も測った**——**中央線の近くでは
+`stem.cc:1239` の clamp がどちらの頭から来ても同じ答に落とす**。
+**未 push 54**（**この引継ぎ commit まで数えた値**）・
+テスト **3790 passed / 0 failed / 3 skipped**（**+3**）・
+台帳 **383 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ① **どこを直したか**（`249e487d`・**描画は 1 冊だけ動く**）
+
+| 読み手 | 前 | 後 |
+|---|---|---|
+| `CalculateBeamedStemInfo` ×3（seed・feasible・scorer） | 平均 | `BeamSideHead(i)` |
+| `EnsureMinimumStemLength` | 平均 | 同上 |
+| `GenerateQuants` の `quant_range_` | 平均（注は「beam 側」と主張） | 同上 |
+| `ComputeBeamShorten` | 平均＋`headPos < 0` | beam 側の頭＋`sign(-min - max)` |
+
+★ **`BeamSideHead(i) = StemDirOf(i) > 0 ? _headMax[i] : _headMin[i]`**——
+**データは concaveness 用に最初からあった**（`_headMin`/`_headMax`）。**新しく測った量はゼロ。**
+⚠️ **concaveness だけは `BeamSideHead` にしない**——**LP は :700-702 で導いた 1 つの `beam_dir` で
+索引する**ので、**knee のメンバーがそれぞれ自分の側を選んではいけない**（コメントに固定済み）。
+★ **`BeamMember.StaffPosition`（＝平均）は残っている**が、**読み手は 1 つだけ**＝
+`DefaultBeamStemUp` の**完全同数のときの tiebreak**。⚠️ **そこも LP とは別物**
+（LP は方向ごとの far 頭の距離を足す・`beam.cc:913-935`）＝**▶ に起票**。
+
+## ② **LP 自身に喋らせた**（★ **そのまま再実行できる形**）
+
+```powershell
+# ⑴ 双子: lysc ly（手書き禁止）  ⑵ カード: \layout { debug-beam-scoring = ##t } ＋
+#    Beam.stencil で positions と 'annotation を印字（scratch\s67\dump-card.ily）
+cmd /c "lilypond.exe -dinclude-settings=dump-card.ily -dno-print-pages -o out tab-beam-slope.ly < NUL"
+```
+```
+LP 自身の (3.81 . 2.19)                     card=[ Si 0.66 L 5.91 ]
+平均の答へ強制（inspect-quants → (3.0 . 2.0)） card=[ Si 5.76 L 942.03 ]   ← 最短ステム床の違反
+```
+⚠️ **`inspect-quants` は生成済みの格子の最近傍にスナップする**（`2.81` を渡すと `3.0` が返る）。
+**「渡した値のカード」ではなく「スナップ先のカード」**として読むこと。
+★ **カードに項が無い＝罰 0**（`Beam_configuration::add` は 0 を書かない・`beam-quanting.cc:148-149`）。
+
+## ③ **血の広がり＝1 本だけ**（★ **数え方**）
+
+```
+コーパス sweep（LILYSHARP_BEAM_SWEEP）  179 行中 動いた梁 1  ＝ test/tab-beam-slope 記譜譜
+                                        (2.81 . 2.00) → (3.81 . 2.19)
+snapshot                                落ちた 1 枚だけ（同じ本）
+台帳                                    383 点すべて不動（新規 3 点を除く）
+```
+★ **snapshot の中身も数えた**——**梁 1 本・符尾 4 本・フェルマータ 1 つ（0.49 上がる）だけ**。
+**tab 譜も 2 本目の梁も 1 バイトも動いていない。**
+
+## ④ **観測者を足した＝台帳 3 点**（`audit/lp-geometry/probes/beam-chord.ly` の score D/E）
+
+```
+beam.quant.chord.spanning.left                   3.81   residual 0   ← 旧コードは 2.81
+beam.quant.chord.spanning.right                  2.19   residual 0   ← 旧コードは 2.00
+beam.quant.chord.spanning.beam-side-head-control 3.81   residual 0   ← 旧コードでも 3.81
+```
+★★★ **control は「和音を beam 側の頭 1 つに置き換えた同じ小節」**——
+**`calc_stem_info` はその頭しか読まないので LP は同一の対を返す（実測）**。
+⇒ **欠陥は「壊れた恒等」として出る**（定数として吸収できない形）。
+★★★ **既存の `beam.quant.chord.*`（A/B）が何か月も EXACT だった理由も測った**——
+**あの梁は中央線の近くにあり、`stem.cc:1239` の `ideal_y = max(ideal_y, 0)` が
+どちらの頭から来ても同じ答に落とす**。⇒ ★★ **教訓＝「点が EXACT」は
+「その量が正しい」ではなく「その本ではその量が binding していない」**（§5.3 の族）。
+⚠️ **probe の本文は `lysc ly` に出させた**（octave は Lily# の `c` 基準＝**手書きすると割れる**）。
+
+## ⑤ **対で要った移植＝`default-direction`**（`lily/stem.cc:793-809`）
+
+**`forced_stem_count` は `|chord_start_y| > 0.1 && defdir && dir != defdir`**（`beam.cc:1289`）。
+**`defdir` は `sign(ddistance - udistance)`＝和音の 2 つの端のどちらが中央線から遠いか**。
+⇒ **`<a c g'>` は対称なので CENTER＝forced に数えない**。
+⚠️ **平均のままだと `BeamSideHead` に替えた瞬間に `+3 → 自然は下 → forced` と数えてしまい、
+`shorten` が湧いて出る**。**片側だけ替えると壊れる対だった。**
+
+## ▶ 次の一手
+
+★★ **tab の梁の高さ**（**要承認＝描画が動く**）。**判定器は `test/tab-string-pinned`**——
+**平らな単一弦の群で差はきっかり ±0.297**（**LP は外側の線の上ちょうど**）。
+⚠️ **弦を明示していない tab 本で測らないこと**（弦の選び方が両者で違う）。
+★ **⑤（MIDI が `clef bass` の part で 1 オクターブ高い）**——**ページと MIDI のどちらが
+正しいかは設計判断**（memory は「最初 C4 最寄り」だが**ページは clef を見ている**）。
+⚠️ **オクターブの裏取りに MIDI を使わないこと。**
+★ **起票＝`DefaultBeamStemUp` の完全同数 tiebreak が LP と別物**（**今回名指しただけ・未測定**）。
+**LP は方向ごとに `max(-dir * head_positions[-dir], 0)` を足して平均で比べる**（`beam.cc:913-935`）／
+**Lily# は `BeamMember.StaffPosition`（＝和音の平均）の総和の符号**。
+**踏む対がまだ無い**ので、**先に probe を書いて対で起票する**（§2 B の作法）。
+★ **量子器側の残り＝`grace.column.approach` +0.850449**（**機構が違う**: Lily# は run の幅を
+前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
+`lily/spacing-spanner.cc:396-403`）。**これは描画が動く＝snapshot 再ベース＝要承認。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第66セッションの経緯
+
 最終更新 2026-08-01（第66セッション＝**ゲート ⑹ を閉じ、その下から出てきた和音の穴も閉じた**——
 **⑴ ユーザー決定 A＝exporter に `instrument` プリセットを「束ごと」展開させる**（`9766dfc9`）、
 **⑵ 和音メンバーのオクターブを LP の連鎖に対して綴り直す**（`b5d2da64`）。
@@ -189,7 +300,7 @@ MIDI    60 62 64 65 ＝ C4 D4 E4 F4
 ⚠️⚠️ **この起票の本当の重みは「第64セッションが MIDI を裏取りの第2経路に使った」こと**——
 **非 treble の part では MIDI はページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
 
-## ⑥ ★★★ **起票＝和音の上の記譜譜の梁が 1.0 ずれる**（**未修正・要承認＝描画が動く**）
+## ⑥ ★★★ ~~**起票＝和音の上の記譜譜の梁が 1.0 ずれる**~~ — **閉じた**（第67セッション `249e487d`・§1）
 
 **④ で両側が同じ音楽になって初めて earned になった**（それまでは別の和音を比べていた）:
 ```
@@ -200,7 +311,7 @@ test/tab-beam-slope 記譜譜   LP (3.81 . 2.19)   Lily# (2.81 . 2.00)     ← �
 （1.62 対 0.81）。**右端の差は 0.19。**
 ⚠️ **`tab-string-pinned` の tab 側 ±0.297 とは別の話**（あちらは tab 譜・こちらは記譜譜）。
 
-## ▶ 次の一手
+## ▶ 次の一手（**第66セッション当時。この節は読まないこと**——**⑥ は第67セッションで閉じた**）
 
 ⚠️ **「④ を直せば記譜譜が 9/9 になる」という予想は外れた**——**直したら音楽は 1 音ずつ揃ったが、
 梁は揃わなかった**（⑥）。**「別の音楽だから比べられない」を潰すと「比べたら違う」が出てくる**
@@ -4724,6 +4835,12 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ~~**`test/` に meshing の本が無い**~~ — **入れた**（`8bf5bb1a`・`test/beam-over-stem`・§1）。
   ★ **教訓は「点の値を本の検証に流用しない」**——点は別々の score の値で、本は 3 小節を
   1 行に置く別入力。**双子を新しく 1 本書いて測り直した**（`probes/beam-over-stem-book.ly`）。
+- ★ **`DefaultBeamStemUp` の「完全同数」tiebreak が LP と別物**（2026-08-01・第67セッションで
+  **名指しただけ・未測定**）。**LP は方向ごとに `max(-dir × head_positions[-dir], 0)` を足し、
+  `total[UP]/count[UP] − total[DOWN]/count[DOWN]` で比べ、それも同数なら `total` の差**
+  （`lily/beam.cc:913-935`）／**Lily# は `BeamMember.StaffPosition`（＝和音の頭の平均）の総和の符号**。
+  ⚠️ **`BeamMember.StaffPosition` が今も存在する唯一の理由がこれ**——**梁の幾何はもう読まない**
+  （第67セッションで `BeamSideHead` に統一）。**踏む対がまだ無いので、先に probe を書くこと。**
 - ★★ **fixture のコメントを直すと snapshot が動く**（`data-pos` は**ソース offset**）。
   直すこと自体は正しい（stale な prose を残さない）が、**GO ゲートになる**ので
   ⑴ **属性を落として 1 行ずつ照合し「data-pos だけ」を証明する** ⑵ **その証明を
@@ -5986,6 +6103,16 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⇒ ★★ **量子が 1 段ずれる型の残差は、これで「どの scorer が符号を決めたか」が一発で出る。**
   ⇒ ★★ **さらにカードの数から定数を逆算できる**（`base × ((P−dist)/P)³ × 500` の 3 点で
   P が一意に解ける＝**0.350 と分かり、0.5 を写していたのが確定した**）。
+  ⚠️ **`inspect-quants` は生成済みの格子の最近傍にスナップする**——**渡した値のカードではなく
+  スナップ先のカード**（`2.81` を渡して `3.0` が返る）。**カードと一緒に `positions` も印字すること。**
+- ★★★ **「点が EXACT」は「その量が正しい」ではなく「その本ではその量が binding していない」**
+  （2026-08-01・第67セッション。**`beam.quant.chord.*` は和音の梁の点でありながら、
+  和音の頭の読み方が間違ったまま何か月も EXACT だった**）。**あの梁は中央線の近くにあり、
+  `stem.cc:1239` の `ideal_y = max(ideal_y, 0)` が*どちらの頭から来ても*同じ答に落とす**。
+  ⇒ ★★ **点を足すときは「その量が答を決める regime か」を先に確かめる**——
+  **床・clamp・max がある式では、入力を間違えても出力が動かない領域のほうが広いことがある。**
+  ⇒ ★★ **新しい点は「旧コードで落ちること」を実際に確かめてから記録する**
+  （摂動で確かめた: 旧コードは `left 2.81`・`right 2.00`／control だけ EXACT のまま）。
 - ★★★ **LP 側の「恒等の対」は grob の `details` を override して作れる。移植の前に
   「どの regime で効くか」はこれで決める**（2026-07-31・第52セッション。**移植そのものより
   この測定のほうが長かったし、価値もそこにあった**）:
