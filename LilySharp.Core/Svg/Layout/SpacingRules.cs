@@ -3538,7 +3538,7 @@ internal static class SpacingRules
         if (!any)
             return springs;
 
-        const double tabGap = 0.2; // clearance between adjacent digit columns
+        double tabGap = TabConstants.FretColumnGap; // clearance between adjacent digit columns
         var result = springs.ToBuilder();
         void Widen(int idx, double needed)
         {

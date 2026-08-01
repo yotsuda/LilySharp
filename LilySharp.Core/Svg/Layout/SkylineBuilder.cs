@@ -549,8 +549,8 @@ internal sealed class SkylineBuilder
                     {
                         var (stringNum, fret) = Tunings.CalculateFret(midi + shift, tuning, preferred);
                         double lineUp = topLineUp - (stringNum - 1) * space;
-                        double width = (fret.ToString(CultureInfo.InvariantCulture).Length == 1
-                            ? 0.625 : 1.0) * TabConstants.FretFontSize;
+                        double width = TabConstants.FretGlyphWidth(
+                            fret.ToString(CultureInfo.InvariantCulture), TabConstants.FretFontSize);
                         upSkyline.Merge(VerticalSkyline.FromBox(
                             x - width / 2, x + width / 2, lineUp - half, lineUp + half,
                             VerticalDirection.Up));

@@ -358,7 +358,8 @@ internal static partial class SharedRenderer
 
     /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
     private static double TabFretWidth(int fret) =>
-        (fret.ToString().Length == 1 ? 0.625 : 1.0) * TabFretFontSize;
+        LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
+            fret.ToString(System.Globalization.CultureInfo.InvariantCulture), TabFretFontSize);
 
     /// <summary>
     /// Half-extents left and right of a tab note/chord's column X, spanning its
@@ -367,6 +368,15 @@ internal static partial class SharedRenderer
     /// overprint. Tab fret numbers are a Lily# enlargement (LilyPond's are tiny
     /// and unspaced), so this width has no LilyPond analogue — it is designed on
     /// the "digits must not overlap" principle that also drives the zigzag itself.
+    /// <para>
+    /// ⚠️ THE GLYPH'S OWN REACH, WITH NO PADDING IN IT. Clear air between neighbouring
+    /// columns belongs to the gap BETWEEN them
+    /// (<see cref="LilySharp.Core.Svg.Layout.TabConstants.FretColumnGap"/>, applied in
+    /// SpacingRules), not to the column's extent: an extent is also what the FIRST note of a
+    /// line is placed from, and padding folded in here pushed
+    /// <c>line-start.time-to-first-note.tab-*</c> off LilyPond by 0.023550 — a measured point,
+    /// moved by a quantity that has nothing to do with a neighbour that is not there.
+    /// </para>
     /// </summary>
     internal static (double Left, double Right) TabItemHalfExtent(
         MusicItem item, int[] tuning, int octaveShift)
@@ -411,7 +421,9 @@ internal static partial class SharedRenderer
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
         DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead);
         double noteY = staffY - (stringNum - 1) * stringSpace;
-        double digitWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
+        double digitWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
+            isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            TabFretFontSize);
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
 
@@ -455,7 +467,9 @@ internal static partial class SharedRenderer
         double noteY = staffY - (stringNum - 1) * stringSpace;
         // A dead (muted) note shows an "×" in place of the fret number.
         string fretText = isDead ? "×" : fret.ToString();
-        double bgWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
+        double bgWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
+            isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            TabFretFontSize);
 
         // The string line is BROKEN around the digit rather than painted over: the span is
         // booked here and DrawTabStringLines emits the segments either side of it.

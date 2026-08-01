@@ -232,7 +232,8 @@ internal static partial class SharedRenderer
             var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
             string fretText = fret.ToString();
             yield return new TabGraceDigit(
-                stringNum, fretText, currentX, (fretText.Length == 1 ? 0.625 : 1.0) * fontSize);
+                stringNum, fretText, currentX,
+                LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fretText, fontSize));
         }
     }
 

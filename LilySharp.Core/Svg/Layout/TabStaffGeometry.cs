@@ -107,6 +107,46 @@ internal static class TabConstants
         return (top + bottom) / 2;
     }
 
+    /// <summary>The drawn width of a fret glyph — its advance in the face it is set in.</summary>
+    /// <remarks>
+    /// One house for the width, read by the spacing reservation (so two digits are given room
+    /// for two digits), by the string-line gap (so the hole is the glyph's own width) and by
+    /// the skyline (so the chord row above knows how wide the number under it is).
+    /// <para>
+    /// ⚠️ IT USED TO BE A DIGIT COUNT, and it was wrong in BOTH directions. One digit was
+    /// declared 0.625 of the font size and two digits 1.0, against a measured advance of
+    /// 0.5740 each — so a single digit was over-reserved by 0.17 and a PAIR under-reserved by
+    /// 0.49, which is why frets from 10 up crowded their neighbours at every size while
+    /// single digits sat slightly too far apart. The face sets digits tabular, so two of them
+    /// are exactly twice one; nothing about that was derivable from the count alone.
+    /// </para>
+    /// </remarks>
+    public static double FretGlyphWidth(string glyph, double fontSize)
+        => Rendering.TextFontMetrics.Advance(
+            glyph, fontSize, sans: false, style: Rendering.FontStyle.Bold);
+
+    /// <summary>
+    /// Clear air the spacing engine keeps BETWEEN one column's fret digits and the next
+    /// column's.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. Reserving the glyph WIDTH alone only promises the digits will not
+    /// overprint, and "not overprinting" is not the same as legible: MEASURED on a chromatic
+    /// run at font size 3.3, single digits fell 0.606–0.866 apart because the musical spacing
+    /// was already wider than they needed, while two-digit frets — where the reservation is
+    /// what binds — closed to exactly this gap. The same rhythm of numbers read at two
+    /// different densities depending on the fret. Raised 0.2 → 0.6 so the binding case reads
+    /// like the loose one; measured after, the run comes out 0.796–0.866 throughout.
+    /// <para>
+    /// ⚠️ IT BELONGS BETWEEN COLUMNS, NOT IN A COLUMN'S EXTENT. Folding it into
+    /// <c>TabItemHalfExtent</c> also pushed the FIRST note of a line, which is placed from
+    /// that extent with no neighbour to clear, and moved the measured point
+    /// <c>line-start.time-to-first-note.tab-*</c> 0.023550 off LilyPond. A gap is a relation
+    /// between two things; an extent is a property of one.
+    /// </para>
+    /// </remarks>
+    public const double FretColumnGap = 0.6;
+
     /// <summary>
     /// How far a tab stem's NEAR end sits from the string line its digit is centred on —
     /// midway between the digit's ink edge and the neighbouring string line.

@@ -15,13 +15,13 @@
   <text x="11.71" y="15.76" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="455">5</text>
   <text x="14.21" y="15.76" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="469">5</text>
   <line x1="0.00" y1="13.12" x2="17.18" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.62" x2="10.68" y2="14.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="12.74" y1="14.62" x2="13.18" y2="14.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="15.25" y1="14.62" x2="17.18" y2="14.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.62" x2="10.76" y2="14.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="12.66" y1="14.62" x2="13.27" y2="14.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="15.16" y1="14.62" x2="17.18" y2="14.62" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.12" x2="17.18" y2="16.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.62" x2="5.42" y2="17.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="7.48" y1="17.62" x2="7.92" y2="17.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="9.99" y1="17.62" x2="17.18" y2="17.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.62" x2="5.50" y2="17.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="7.40" y1="17.62" x2="8.01" y2="17.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="9.90" y1="17.62" x2="17.18" y2="17.62" stroke="#000000" stroke-width="0.100"/>
   <polygon points="6.97,12.21 14.87,10.46 14.87,10.94 6.97,12.69"/>
   <line x1="7.04" y1="16.27" x2="7.04" y2="12.43" stroke="#000000" stroke-width="0.130"/>
   <line x1="9.54" y1="16.27" x2="9.54" y2="11.88" stroke="#000000" stroke-width="0.130"/>
