@@ -1150,7 +1150,7 @@ internal static class SpacingRules
             if (left is null || right is null)
                 continue;
 
-            double corr = CalculateStemCorrection(left, right, noteParams);
+            double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141).
@@ -2166,6 +2166,57 @@ internal static class SpacingRules
         double newMin = approach.MinDistance + graceRunClearance;
         double newIdeal = Math.Max(approach.IdealDistance + graceRunSpan, newMin);
         return new Spring(newIdeal, newMin, approach.InverseStretchStrength);
+    }
+
+    /// <summary>
+    /// The column a spring coming from the left actually ARRIVES at: the FIRST GRACE when a
+    /// run leads the item, the item itself otherwise.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — the spring
+    ///   whose RIGHT column has the grace part is the one that stops at the grace, so that
+    ///   column is what the pair is built from.
+    /// LILYPOND-REF: lily/note-spacing.cc:162-197 same_direction_correction — the rule that
+    ///   then reads the two stems, and which wants the head ranges more than one staff
+    ///   position apart.
+    /// LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+    ///   <c>((Voice Stem direction ,UP))</c>, why the stand-in's stem is forced up.
+    /// <para>
+    /// LilyPond's spring stops at the grace column — the run is columns of its own, so the
+    /// pair whose stems the optical correction compares is (previous note, first grace), not
+    /// (previous note, main note). Lily# hangs the run off the main column and therefore has
+    /// ONE spring where LilyPond has three, so the correction has to be told which column
+    /// the spring's right end really is.
+    /// </para>
+    /// <para>
+    /// MEASURED, and it is the whole of what was left of grace.column.approach: in that book
+    /// the ordinary spring arrives at 3.252245 against the control's 3.002245, and c→f is
+    /// three staff positions (the correction fires) where c→d is one (LilyPond's
+    /// lily/note-spacing.cc:162-197 same_direction_correction wants more than one). The 0.25
+    /// it added became 0.2 after the approach scaling.
+    /// </para>
+    /// <para>
+    /// ⚠️ The stand-in's stem is forced UP, not derived from its pitch: a grace stem is up
+    /// whatever the note (scm/music-functions.scm:633-637 score-grace-settings, the same
+    /// rule GraceNoteEngraver draws by). Letting the pitch decide would flip the correction's
+    /// sign on any grace above the middle line.
+    /// </para>
+    /// </remarks>
+    private static MusicItem? ApproachColumn(MusicItem? item)
+    {
+        if (item == null)
+            return null;
+        var grace = GraceNotesOf(item);
+        if (grace.IsDefaultOrEmpty)
+            return item;
+
+        var first = grace[0];
+        return new NoteItem(
+            first.StaffPosition, first.BaseDuration, 0,
+            first.Accidental, first.NeedsLedger, 0)
+        {
+            StemUpOverride = true,
+        };
     }
 
     /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>
