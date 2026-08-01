@@ -319,9 +319,11 @@ internal static partial class SharedRenderer
             ?? Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0).stringNum;
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
         double digitY = tabStaffTopY + (stringNum - 1) * stringSpace;
-        // Half the digit height (0.6875 × font) plus a small gap, so the stem meets
-        // the bigger number without overlapping it.
-        double clearance = 0.6875 * TabFretFontSize / 2 + 0.3;
+        // The stem starts midway between the digit's ink edge and the next string line —
+        // the one house for that window, shared with the tab beam quanter so the drawn stem
+        // and the scored one cannot drift. (It used to be spelled out here a second time, as
+        // `0.6875 * TabFretFontSize / 2 + 0.3`, which is the same quantity in different words.)
+        double clearance = TabConstants.StemClearance(stringSpace);
         return digitY + (stemUp ? -clearance : clearance);
     }
 

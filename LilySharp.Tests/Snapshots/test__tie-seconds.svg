@@ -4,6 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
+  <rect x="0" y="0" width="119.50" height="27.68" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="456">Ties on seconds</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="483">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">

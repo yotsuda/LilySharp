@@ -4,6 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
+  <rect x="0" y="0" width="119.50" height="21.80" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="555">Single-staff arpeggio + grace accidentals</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="12.06" x2="28.21" y2="12.06" stroke="#000000" stroke-width="0.100"/>

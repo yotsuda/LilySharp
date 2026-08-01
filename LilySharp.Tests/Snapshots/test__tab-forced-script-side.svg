@@ -4,6 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
+  <rect x="0" y="0" width="119.50" height="24.73" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="6">tab forced script side</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="13.12" x2="19.26" y2="13.12" stroke="#000000" stroke-width="0.100"/>
@@ -13,21 +14,21 @@
   <text class="music" x="0.60" y="15.37" font-size="4.00"></text>
   <rect x="18.17" y="13.12" width="0.19" height="4.50" data-pos="138"/>
   <rect x="18.66" y="13.12" width="0.60" height="4.50" data-pos="138"/>
-  <rect x="5.64" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="98"/>
-  <text x="6.45" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="98">0</text>
-  <line x1="5.87" y1="14.31" x2="5.87" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="8.64" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="113"/>
-  <text x="9.45" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="113">2</text>
-  <line x1="8.87" y1="14.31" x2="8.87" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="11.89" y="12.22" width="1.62" height="1.79" fill="#FFFFFF" data-pos="123"/>
-  <text x="12.71" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="123">7</text>
-  <line x1="12.12" y1="14.31" x2="12.12" y2="18.81" stroke="#000000" stroke-width="0.130"/>
-  <rect x="14.66" y="12.22" width="2.60" height="1.79" fill="#FFFFFF" data-pos="137"/>
-  <text x="15.96" y="13.95" font-size="2.60" font-weight="bold" text-anchor="middle" data-pos="137">12</text>
-  <line x1="15.37" y1="14.31" x2="15.37" y2="18.81" stroke="#000000" stroke-width="0.130"/>
+  <rect x="5.42" y="11.93" width="2.06" height="2.38" fill="#FFFFFF" data-pos="98"/>
+  <text x="6.45" y="14.26" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="98">0</text>
+  <line x1="5.87" y1="14.46" x2="5.87" y2="18.96" stroke="#000000" stroke-width="0.130"/>
+  <rect x="8.42" y="11.93" width="2.06" height="2.38" fill="#FFFFFF" data-pos="113"/>
+  <text x="9.45" y="14.28" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="113">2</text>
+  <line x1="8.87" y1="14.46" x2="8.87" y2="18.96" stroke="#000000" stroke-width="0.130"/>
+  <rect x="11.68" y="11.93" width="2.06" height="2.38" fill="#FFFFFF" data-pos="123"/>
+  <text x="12.71" y="14.26" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="123">7</text>
+  <line x1="12.12" y1="14.46" x2="12.12" y2="18.96" stroke="#000000" stroke-width="0.130"/>
+  <rect x="14.31" y="11.93" width="3.30" height="2.38" fill="#FFFFFF" data-pos="137"/>
+  <text x="15.96" y="14.28" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="137">12</text>
+  <line x1="15.37" y1="14.46" x2="15.37" y2="18.96" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="6.45" y="18.62" font-size="4.00" data-pos="101"></text>
-  <text class="music" x="9.45" y="11.22" font-size="4.00" data-pos="115"></text>
-  <text class="music" x="12.71" y="11.22" font-size="4.00" data-pos="125"></text>
+  <text class="music" x="9.45" y="10.93" font-size="4.00" data-pos="115"></text>
+  <text class="music" x="12.71" y="10.93" font-size="4.00" data-pos="125"></text>
   <rect x="0.30" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="86"/>
   <text x="1.33" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="86">A</text>
   </g>

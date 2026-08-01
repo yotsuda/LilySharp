@@ -197,12 +197,19 @@ internal static partial class SharedRenderer
                 double noteY = tabTopY - (stringNum - 1) * stringSpace;
                 string fretText = fret.ToString();
                 double bgWidth = (fretText.Length == 1 ? 0.625 : 1.0) * fontSize;
-                double bgHeight = 0.6875 * fontSize;
-                // White background occludes the string line behind the digit. The
-                // rect's visual-top edge is above the string line (larger Y-up).
+                // The glyph's own ink height and baseline, from the face — the grace fret
+                // digit is the full-size one at a smaller size, so it takes the same two
+                // answers rather than a second copy of the fractions (which is what these
+                // were: a literal 0.6875 and a literal 0.32, drifting beside their originals).
+                double bgHeight = TextFontMetrics.InkHeight(
+                    fretText, fontSize, sans: false, style: FontStyle.Bold);
+                // The background occludes the string line behind the digit. The rect's
+                // visual-top edge is above the string line (larger Y-up).
                 gc.DrawRectangle(currentX - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
                     fill: Color.White);
-                gc.DrawText(fretText, currentX, noteY - fontSize * 0.32, fontSize, "serif",
+                gc.DrawText(fretText, currentX,
+                    noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(fretText, fontSize),
+                    fontSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }

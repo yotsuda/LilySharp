@@ -15,8 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Globalization;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -435,6 +438,20 @@ internal sealed class SkylineBuilder
         if (staff.IsTextRow)
             return;
 
+        // A TAB staff draws FRET DIGITS, not noteheads and stems at pitch positions, so the
+        // notation seeds below describe ink that is never drawn — and, worse, omit the ink
+        // that IS. Everything that reads a staff's silhouette (the chord row, the lyric row,
+        // inter-system distance) was therefore placed against a tab staff it could not see.
+        // MEASURED on test/tab-with-chords: growing the digits from 2.6 to 3.3 left the chord
+        // name's baseline at y=11.70 to the hundredth — it had never depended on them — while
+        // the digits grew up past it. The overlap was latent at 2.6 too, with 0.894 of digit
+        // above the top line against 0.65 of clearance; enlarging them only made it visible.
+        if (staff.IsTab)
+        {
+            AddTabStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline);
+            return;
+        }
+
         bool multiVoice = staff.Voices.Length > 1;
         for (int vi = 0; vi < staff.Voices.Length; vi++)
         {
@@ -477,6 +494,87 @@ internal sealed class SkylineBuilder
                         upSkyline, downSkyline, forcedStemUp, reserveStem);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// A TAB staff's own ink: one box per fret digit, on the string line it is drawn on.
+    /// </summary>
+    /// <remarks>
+    /// The tab analogue of <see cref="AddNoteBoxToSkylines"/>, and it exists for the same
+    /// reason that one seeds a notehead's LILC ink rather than a nominal staff space — the
+    /// silhouette has to be what gets drawn. A digit is centred on its string line and is
+    /// <see cref="TabConstants.FretDigitHeight"/> tall, which is more than the 1.5 string gap,
+    /// so the digits on the OUTER strings are the extreme of a tab staff's silhouette in both
+    /// directions. Everything else about the staff (stems, beams, articulations) is seeded by
+    /// the shared paths, which already read the tab geometry.
+    /// <para>
+    /// The string a note lands on is asked of <c>Tunings.CalculateFret</c> — the same call the
+    /// renderer makes, with the same sounding shift — so the box is at the drawn string and
+    /// not at a pitch position. The width follows the digit count for the same reason: a
+    /// two-digit fret really is wider, and the chord row above it should know.
+    /// </para>
+    /// </remarks>
+    private static void AddTabStaffToSkylines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        int[] tuning = Tunings.GetTuning(staff.Tuning ?? TuningType.Guitar);
+        if (tuning.Length == 0)
+            return;
+        double space = EngravingDefaults.TabStringSpace(tuning.Length);
+        // String 1 is the TOP line; the middle of the span is this staff's reference point.
+        double topLineUp = staffMiddleUp + (tuning.Length - 1) * space / 2.0;
+        int shift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
+        double half = TabConstants.FretDigitHeight / 2.0;
+
+        foreach (var voice in staff.Voices)
+        {
+            foreach (var measureLayout in measureLayouts)
+            {
+                int measureIndex = measureLayout.MeasureIndex;
+                if (measureIndex >= voice.Measures.Length)
+                    continue;
+                var measure = voice.Measures[measureIndex];
+                for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
+                {
+                    var item = measure.Items[itemIndex];
+                    // The digit sits under the notehead CENTRE, the same offset the renderer
+                    // draws it at (SharedRenderer.Tab, TabHeadCenterOffset).
+                    double x = measureLayout.X
+                        + LayoutUtilities.GetItemXOffset(
+                            voice.Measures, measureIndex, itemIndex, measureLayout)
+                        + EngravingDefaults.TabHeadCenterOffset;
+                    foreach (var (midi, preferred) in TabSoundingNotes(item))
+                    {
+                        var (stringNum, fret) = Tunings.CalculateFret(midi + shift, tuning, preferred);
+                        double lineUp = topLineUp - (stringNum - 1) * space;
+                        double width = (fret.ToString(CultureInfo.InvariantCulture).Length == 1
+                            ? 0.625 : 1.0) * TabConstants.FretFontSize;
+                        upSkyline.Merge(VerticalSkyline.FromBox(
+                            x - width / 2, x + width / 2, lineUp - half, lineUp + half,
+                            VerticalDirection.Up));
+                        downSkyline.Merge(VerticalSkyline.FromBox(
+                            x - width / 2, x + width / 2, lineUp - half, lineUp + half,
+                            VerticalDirection.Down));
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>The (midi, preferred string) of every fret digit an item draws.</summary>
+    private static IEnumerable<(int Midi, int PreferredString)> TabSoundingNotes(MusicItem item)
+    {
+        switch (item)
+        {
+            case NoteItem note:
+                yield return (note.Midi, note.StringNumber ?? 0);
+                break;
+            case ChordItem chord:
+                foreach (var n in chord.Notes)
+                    yield return (n.Midi, n.StringNumber ?? 0);
+                break;
         }
     }
 

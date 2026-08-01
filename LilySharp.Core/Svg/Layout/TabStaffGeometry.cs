@@ -32,28 +32,106 @@ internal static class TabConstants
     /// <summary>Font size of a tab fret number, in staff spaces.</summary>
     /// <remarks>
     /// LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-    /// enough to be hard to read. A single digit here is 0.625 × 2.6 = 1.625 wide and
-    /// 0.6875 × 2.6 = 1.7875 tall, against the 0.990155 LilyPond's TabNoteHead measures
-    /// (audit/lp-geometry/probes/line-start-mindist.ly, score TKC) — about 1.64×. The
+    /// enough to be hard to read. A single digit here is 0.625 × 2.9 = 1.8125 wide and
+    /// 0.6875 × 2.9 = 1.99375 tall, against the 0.990155 LilyPond's TabNoteHead measures
+    /// (audit/lp-geometry/probes/line-start-mindist.ly, score TKC) — about 2.0×. The
     /// collisions that follow from bigger digits are solved rather than avoided: chords
     /// stagger their digits into two columns (the zigzag), and the columns reserve that
     /// real extent (SpacingRules.ApplyTabChordSpacing).
+    /// <para>
+    /// Raised 2.6 → 2.9 on request, together with dropping the opaque background the digits
+    /// used to sit on: with the string line now running THROUGH the digit rather than being
+    /// painted out behind it, the digit has to carry the contrast on its own.
+    /// </para>
     /// <para>
     /// ⚠️ This is a RATIFIED deviation (docs/HANDOFF.md §3), not an un-ported LilyPond
     /// quantity. Do not "fix" it toward LilyPond. The tab STRING SPACING is a separate
     /// question and does follow LilyPond — see <c>EngravingDefaults.TabStringSpace</c>.
     /// </para>
     /// </remarks>
-    public const double FretFontSize = 2.6;
+    public const double FretFontSize = 3.3;
 
     /// <summary>Grace fret digits relative to the main fret size (just slightly smaller).</summary>
     public const double GraceFretScale = 0.8;
 
     /// <summary>Height (staff spaces) of a fret digit's occluding box — the digit's
     /// visual extent, centred on its string line. Shared by the renderer (the
-    /// white background) and the articulation engraver (clearing a digit that
+    /// page-coloured background) and the articulation engraver (clearing a digit that
     /// protrudes past the outer staff line).</summary>
-    public const double FretDigitHeight = 0.6875 * FretFontSize;
+    /// <remarks>
+    /// MEASURED from the face itself rather than declared: the bundled serif's bold digits
+    /// ink 2.3826 tall at font size 3.3, i.e. 0.7220 of the size — the round ones overshoot
+    /// both the cap line and the baseline, which a cap-height figure misses. This used to be
+    /// a flat <c>0.6875</c>, so the box was 0.11 SHORTER than the ink it was meant to occlude
+    /// and the digit poked out of its own background at top and bottom.
+    /// <para>
+    /// ⚠️ This is what puts a CEILING on <see cref="FretFontSize"/>: the box is measured
+    /// against a string gap of 1.5 (EngravingDefaults.TabStringSpace), so it exceeds one gap
+    /// at any size above about 2.08 and eats into the NEIGHBOURING string lines — visibly so
+    /// past about 3.0. Enlarging the digits further means occluding less, not more: breaking
+    /// the string line around the digit instead of painting a box over it.
+    /// </para>
+    /// <para>
+    /// ⚠️ A dead note's <c>×</c> is a DIFFERENT shape (ink 0.436 of the size, centred lower),
+    /// which is why the renderer asks the face per glyph for the BASELINE
+    /// (<see cref="FretBaselineDrop"/>) instead of sharing one number. This height stays a
+    /// digit's, because it is what the layout reserves and every reader of it is asking
+    /// "how tall is a fret number".
+    /// </para>
+    /// </remarks>
+    public static readonly double FretDigitHeight =
+        Rendering.TextFontMetrics.InkHeight("0", FretFontSize, sans: false,
+            style: Rendering.FontStyle.Bold);
+
+    /// <summary>
+    /// How far BELOW its string line a fret glyph's baseline sits, so the glyph's INK is
+    /// centred on the line.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the face per glyph, because the answer is not one number: the bundled serif's
+    /// bold digits centre 0.3470 of the font size above their baseline, and a dead note's
+    /// <c>×</c> centres 0.2500 above its own. Both used to be drawn at a hard-coded
+    /// <c>0.32 × fontSize</c>, which put a digit 0.089 too HIGH and an <c>×</c> 0.231 too LOW
+    /// at font size 3.3 — the digit's gap to the line above it read visibly narrower than the
+    /// gap below, which is how it was spotted.
+    /// <para>
+    /// The same principle the noteheads already follow: a grob's extent comes from its
+    /// stencil, not from a nominal fraction (see SkylineBuilder's notehead seed, which takes
+    /// the LILC ink for exactly this reason).
+    /// </para>
+    /// </remarks>
+    public static double FretBaselineDrop(string glyph, double fontSize)
+    {
+        var (bottom, top) = Rendering.TextFontMetrics.Ink(
+            glyph, fontSize, sans: false, style: Rendering.FontStyle.Bold);
+        return (top + bottom) / 2;
+    }
+
+    /// <summary>
+    /// How far a tab stem's NEAR end sits from the string line its digit is centred on —
+    /// midway between the digit's ink edge and the neighbouring string line.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, and it has to be: LilyPond's TabStaff draws no stems at all by default,
+    /// so there is no quantity to port. The stem may only begin in the window between the
+    /// digit it leaves (<see cref="FretDigitHeight"/> / 2) and the next string line
+    /// (<paramref name="stringSpace"/>), and this centres it in that window.
+    /// <para>
+    /// ⚠️ IT IS A WINDOW, NOT A PADDING, and that is the whole point. This used to be
+    /// <c>FretDigitHeight / 2 + 0.3</c> — a fixed gap past the digit — which walks toward the
+    /// next line as the font grows because the digit grows and the line does not. MEASURED on
+    /// test/tab-with-chords at font 3.3: stems ran 13.78..18.28 against string lines at 13.85
+    /// and 18.35, i.e. both ends stopping 0.07 short of a line and reading as flush with it.
+    /// Centring instead keeps the clearance proportional at any size.
+    /// </para>
+    /// <para>
+    /// ★ At the size the old constant was tuned for (2.6) the two agree to 0.003 —
+    /// <c>1.197</c> against <c>1.194</c> — so this is a re-derivation of the same intent, not
+    /// a new number. What changes is that it no longer decays as the digits grow.
+    /// </para>
+    /// </remarks>
+    public static double StemClearance(double stringSpace)
+        => (FretDigitHeight / 2 + stringSpace) / 2;
 }
 
 /// <summary>
@@ -105,7 +183,7 @@ internal static class TabBeamQuant
         // LILYPOND-REF: measured from LilyPond's own tab SVG (\tabFullNotation).
         double stemLen = 2.4 * geom.StringSpace;
         double minStem = 1.4 * geom.StringSpace;
-        double clearance = TabConstants.FretDigitHeight / 2 + 0.3;
+        double clearance = TabConstants.StemClearance(geom.StringSpace);
         double farAnchor = 0, nearAnchor = 0;
         for (int i = 0; i < n; i++)
         {

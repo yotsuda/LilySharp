@@ -176,7 +176,36 @@ internal sealed class SvgDocumentContext : IDocumentContext
             sb.AppendLine("  " + fontFaceRule);
         sb.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
         sb.AppendLine("</style>");
+        WritePageBackground(sb, widthSpaces, heightSpaces);
     }
+
+    /// <summary>
+    /// The page itself — an opaque rectangle behind every mark, the first element in the
+    /// document.
+    /// </summary>
+    /// <remarks>
+    /// Not decoration: it is what the OCCLUDING marks have to match. A tab fret digit and a
+    /// section mark are drawn on a <c>fill="#FFFFFF"</c> box that hides the string line (or
+    /// the staff) behind them, and that box is only invisible when the page under it is the
+    /// same colour. Without a page rect the SVG's background is TRANSPARENT, so the two were
+    /// never the same thing and only looked it — against a white viewer chrome.
+    /// <para>
+    /// ⚠️ THE CASE THAT PROVED IT, and the reason this is the right fix rather than "force
+    /// white": editors/vscode/src/extension.ts:1498 renders the preview under
+    /// <c>filter: invert(1) hue-rotate(180deg)</c> when the VS Code theme is dark. A filter
+    /// applies to the whole image UNIFORMLY, so page and box invert together and stay equal —
+    /// but only if the page is part of the image. Transparency is not a colour and does not
+    /// invert, so the box alone went black and every fret number sat in a hole.
+    /// ⇒ The invariant to keep is not "the background is white", it is
+    /// <b>THE PAGE AND ITS OCCLUDERS ARE THE SAME PAINT</b>. That survives any theme, any
+    /// filter, and any viewer, and it also makes the SVG agree with the PDF and PNG backends,
+    /// whose pages have always been opaque.
+    /// </para>
+    /// </remarks>
+    private static void WritePageBackground(StringBuilder sb, double widthSpaces, double heightSpaces)
+        => sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+            "  <rect x=\"0\" y=\"0\" width=\"{0:F2}\" height=\"{1:F2}\" fill=\"{2}\"/>",
+            widthSpaces, heightSpaces, Color.White.ToHex()));
 
     private string GetFontFaceRule()
     {

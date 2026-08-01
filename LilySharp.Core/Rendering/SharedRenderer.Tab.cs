@@ -35,8 +35,8 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// Draws a tablature staff: one line per string, the TAB clef, and fret
-    /// numbers (with white backgrounds occluding the string line) instead of
-    /// noteheads. Rests draw nothing on a tab staff.
+    /// numbers (on a page-coloured background occluding the string line) instead
+    /// of noteheads. Rests draw nothing on a tab staff.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tab-note-heads-engraver.cc — fret numbers as note heads
@@ -402,12 +402,25 @@ internal static partial class SharedRenderer
 
         using (gc.Source(sourcePosition))
         {
-            // White background occludes the string line behind the number; the rect's
+            // The background occludes the string line behind the number; the rect's
             // visual-top edge is above the line (larger Y-up).
+            // ⚠️ IT MUST BE THE PAGE'S OWN BACKGROUND COLOUR, not "white" in the abstract.
+            // This rect is the only opaque light element in the document — everything else
+            // omits fill and takes the SVG default — so a viewer that themes a page by
+            // INVERTING it (the VS Code preview in a dark theme) turns it black while the
+            // page around it stays transparent, and every fret number sits in a black hole.
+            // The knockout is only correct when the page HAS a defined background for it to
+            // match, which is why SvgDrawingContext now paints one. Dropping the rect instead
+            // is not an option: the string line then runs through the digit.
             gc.DrawRectangle(x - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
                 fill: Color.White);
-            // Bold so the fret numbers read clearly over the string lines.
-            gc.DrawText(fretText, x, noteY - TabFretFontSize * 0.32, TabFretFontSize, "serif",
+            // Bold so the fret numbers read clearly over the string lines. The baseline is
+            // asked of the FACE so the glyph's ink lands centred on the line — a digit and a
+            // dead note's × are different shapes and a shared fraction cannot centre both.
+            gc.DrawText(fretText, x,
+                noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
+                    fretText, TabFretFontSize),
+                TabFretFontSize, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
         }
     }
