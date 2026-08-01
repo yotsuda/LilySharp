@@ -189,18 +189,70 @@ public static class Tunings
     }
 
     /// <summary>
+    /// How many frets the left hand covers from where it sits — one finger per fret, so the
+    /// hand reaches <c>position</c> through <c>position + HandSpan - 1</c> without moving.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
+    /// LilyPond picks for the neighbouring question of how far apart one CHORD's frets may
+    /// sit (<c>maximumFretStretch</c>, default 4, scm/define-context-properties.scm) — so it
+    /// is at least a number the same instrument suggested, not one invented here.
+    /// </remarks>
+    public const int HandSpan = 4;
+
+    /// <summary>
+    /// What moving the left hand is worth, measured in FRETS of height: a shift is taken
+    /// when it buys more than this many frets of lower position.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats
+    /// every alternative, so a passage that once climbed to the twelfth fret stays there
+    /// until an open string happens along. With it the choice is a single number per string,
+    /// <c>fret + (the hand must move ? HandShiftCost : 0)</c>, smallest wins, and a tie is
+    /// broken toward NOT moving. Five is a hand's width plus one: a shift pays for itself
+    /// only if it lands more than a whole hand lower, so a scale sitting at the seventh fret
+    /// stays put while a stray twelfth-fret note drops to the second.
+    /// <para>
+    /// ⚠️ It costs nothing to compute — the same single pass over the strings, one addition
+    /// per string — which is the budget this chooser was given: cheap and roughly right,
+    /// because no automatic fingering is right anyway.
+    /// </para>
+    /// </remarks>
+    public const int HandShiftCost = HandSpan + 1;
+
+    /// <summary>
     /// Calculates the best string and fret for a given MIDI pitch.
     /// </summary>
     /// <param name="midiPitch">The MIDI note number to place.</param>
     /// <param name="tuning">The tuning array (index 0 = lowest string).</param>
     /// <param name="preferredString">Preferred string (1 = highest, 0 = auto).</param>
-    /// <param name="nearFret">When set (and no preferred string applies), pick the
-    /// string whose fret is CLOSEST to this value — the previous note's fret — so
-    /// the hand stays in position. When null, auto-selection prefers the lowest
-    /// fret (the historical behaviour).</param>
+    /// <param name="handPosition">The fret the left hand is at, or null when it is not
+    /// placed yet. A note the hand can reach WITHOUT MOVING wins; among those, and among
+    /// all of them when the hand must move anyway, the lowest fret wins.</param>
     /// <returns>A tuple of (stringNumber, fret) where stringNumber 1 = highest pitch string.</returns>
+    /// <remarks>
+    /// LILYSHARP-OWN, and deliberately not LilyPond's. LilyPond takes the first string from
+    /// the top with a non-negative integer fret (scm/translation-functions.scm:591-796
+    /// determine-frets-and-strings), so an open string always wins and the hand is never
+    /// considered — playable, but awkward to read. What this wants instead, in the words it
+    /// was specified in: track where the left hand IS and pick the fret that moves it least;
+    /// if it must move, move it as low as possible; and do not pay much for the answer,
+    /// because no automatic chooser gets fingering right anyway.
+    /// <para>
+    /// So: the hand covers <see cref="HandSpan"/> frets from where it sits, an OPEN string
+    /// needs no hand at all, and the tie-break in both branches is simply the lowest fret.
+    /// One pass over the strings, no lookahead, no backtracking.
+    /// </para>
+    /// <para>
+    /// ⚠️ This replaced a rule that scored |fret − previous fret| and nothing else, which
+    /// kept the hand still by walking one string all the way up: <c>test/tab-indent</c> came
+    /// out 3 5 7 8 10 12 on a single string, and <c>test/tab-beam-script</c> took an A at the
+    /// fifth fret with the open string right there. Distance alone has no reason to come back
+    /// down.
+    /// </para>
+    /// </remarks>
     public static (int stringNum, int fret) CalculateFret(int midiPitch, int[] tuning,
-        int preferredString = 0, int? nearFret = null)
+        int preferredString = 0, int? handPosition = null)
     {
         int stringCount = tuning.Length;
 
@@ -222,28 +274,39 @@ public static class Tunings
             }
         }
 
-        // Auto: score each playable string. Without a hand-position hint the score
-        // is the fret itself (prefer low positions); with one it is the distance to
-        // the previous fret, ties broken toward the lower fret.
+        // Auto: one pass, one number per string — how high the note sits, plus what the
+        // shift would cost if the hand cannot reach it from where it is. Smallest wins;
+        // a tie goes to NOT moving, so the hand only leaves a position for a clearly lower
+        // one. Both halves of the answer fall out of the same comparison: "stay if you can"
+        // and "if you must move, move low".
         int bestString = stringCount; // lowest string as fallback
         int bestFret = 99;
         int bestScore = int.MaxValue;
+        bool bestReachable = false;
 
         // Search from highest to lowest string
         for (int idx = stringCount - 1; idx >= 0; idx--)
         {
             int openPitch = tuning[idx];
             int fret = midiPitch - openPitch;
+            if (fret < 0 || fret > 24) continue;
 
-            if (fret >= 0 && fret <= 24)
+            // An open string is reached with no hand at all; a stopped one only from where
+            // the hand already sits.
+            bool reachable = fret == 0
+                || (handPosition.HasValue
+                    && fret >= handPosition.Value
+                    && fret <= handPosition.Value + HandSpan - 1);
+            int score = fret + (reachable ? 0 : HandShiftCost);
+
+            if (score < bestScore
+                || (score == bestScore && reachable && !bestReachable)
+                || (score == bestScore && reachable == bestReachable && fret < bestFret))
             {
-                int score = nearFret.HasValue ? System.Math.Abs(fret - nearFret.Value) : fret;
-                if (score < bestScore || (score == bestScore && fret < bestFret))
-                {
-                    bestScore = score;
-                    bestString = ToStringNum(idx);
-                    bestFret = fret;
-                }
+                bestScore = score;
+                bestReachable = reachable;
+                bestString = ToStringNum(idx);
+                bestFret = fret;
             }
         }
 

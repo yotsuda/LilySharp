@@ -263,7 +263,24 @@ internal sealed class TabResolver
         int[] tun = Tunings.GetTuning(tuning);
         int shift = Tunings.SoundingShift(clef, transposition);
         int lowestOpen = tun.Min();
-        int? prevFret = null; // hand position, carried across bar lines
+
+        // Where the left hand sits, carried across bar lines. It moves only when a note
+        // cannot be reached from here (Tunings.CalculateFret decides that), and then it
+        // moves TO that note — which, being the lowest fret available, is as low as the
+        // music allows.
+        //
+        // An OPEN string forgets the position rather than keeping it: while the open note
+        // rings the left hand is not holding anything down, so the next shift costs almost
+        // nothing and there is no reason to stay high. "Cheap" is spelled as free here
+        // because free is one line and the next note then simply takes the lowest fret it
+        // can — which is the answer a cheap chooser wants anyway.
+        int? handPosition = null;
+        void PlaceHand(int fret)
+        {
+            if (fret <= 0) { handPosition = null; return; }
+            if (handPosition is not { } p || fret < p || fret > p + Tunings.HandSpan - 1)
+                handPosition = fret;
+        }
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
         foreach (var measure in voice.Measures)
@@ -287,7 +304,8 @@ internal sealed class TabResolver
                     {
                         var low = newNotes[0];
                         foreach (var c in newNotes) if (c.Midi < low.Midi) low = c;
-                        prevFret = Tunings.CalculateFret(low.Midi + shift, tun, low.StringNumber ?? 0).fret;
+                        PlaceHand(Tunings.CalculateFret(
+                            low.Midi + shift, tun, low.StringNumber ?? 0).fret);
                     }
                     continue;
                 }
@@ -320,12 +338,12 @@ internal sealed class TabResolver
                 }
                 else
                 {
-                    (strNum, fret) = Tunings.CalculateFret(midi, tun, 0, nearFret: prevFret);
+                    (strNum, fret) = Tunings.CalculateFret(midi, tun, 0, handPosition);
                     items[i] = note with { StringNumber = strNum };
                     barString[note.Midi] = strNum;
                     changed = true;
                 }
-                prevFret = fret;
+                PlaceHand(fret);
             }
             rebuilt.Add(changed ? measure with { Items = ImmutableArray.Create(items) } : measure);
         }

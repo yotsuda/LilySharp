@@ -88,6 +88,52 @@ public sealed class TabStringNumberTests
         Assert.Equal(5, fret);
     }
 
+    /// <summary>
+    /// The hand reaches <c>HandSpan</c> frets from where it sits — at 5 that is 5, 6, 7, 8 —
+    /// and it stays there unless another string offers a position more than
+    /// <c>HandShiftCost</c> frets lower.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (see <see cref="Tunings.CalculateFret"/>): not LilyPond's rule, which
+    /// never looks at the hand and would answer fret 2 every time. E2 (40) on a 4-string bass
+    /// is fret 12 on string 4 (E1=28), 7 on string 3 (A1=33) and 2 on string 2 (D2=38); no
+    /// string plays it open, which is what makes it the case that separates the two rules —
+    /// and, with three positions five frets apart, the case that shows where the shift cost
+    /// bites. From 7 the drop to 2 is exactly a hand's width and is refused; from 9 or 12 it
+    /// is worth more than that and taken.
+    /// </remarks>
+    [Theory]
+    [InlineData(null, 2, 2)]  // hand nowhere: the lowest fret on the instrument
+    [InlineData(2, 2, 2)]     // hand at 2 reaches 2..5 — it is already there
+    [InlineData(7, 3, 7)]     // hand at 7 reaches 7..10: 7 ties with 2 + shift, so stay
+    [InlineData(9, 2, 2)]     // hand at 9 reaches 9..12, but 12 loses to 2 + shift: come down
+    [InlineData(12, 2, 2)]    // and the same from 12
+    public void CalculateFret_StaysPutUnlessAClearlyLowerPositionIsOffered(
+        int? hand, int expectedString, int expectedFret)
+    {
+        var (str, fret) = Tunings.CalculateFret(40, Tunings.Bass, 0, handPosition: hand);
+        Assert.Equal(expectedString, str);
+        Assert.Equal(expectedFret, fret);
+    }
+
+    /// <summary>
+    /// An OPEN string needs no hand, so it is always reachable — and being fret 0 it always
+    /// wins the "lowest" tie-break, wherever the hand happens to be.
+    /// </summary>
+    /// <remarks>
+    /// This is also the whole of "a shift right after an open string is cheap": the note
+    /// costs the hand nothing to play, and <c>TabResolver.PlaceHand</c> forgets the position
+    /// when it sees one, so nothing keeps the NEXT note up the neck either.
+    /// </remarks>
+    [Theory]
+    [InlineData(null)]
+    [InlineData(10)]
+    public void CalculateFret_TakesAnOpenStringWhereverTheHandIs(int? hand)
+    {
+        // G2 (43) is string 1's open pitch, and 15 / 10 / 5 on the strings below it.
+        Assert.Equal((1, 0), Tunings.CalculateFret(43, Tunings.Bass, 0, handPosition: hand));
+    }
+
     // ---- Tab tie behaviour ----
 
     private static (Score Score, MeasureCollector Collector) CollectBody(string body)
