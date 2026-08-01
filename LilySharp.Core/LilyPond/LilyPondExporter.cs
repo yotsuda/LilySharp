@@ -102,29 +102,129 @@ public sealed class LilyPondExporter
         var parts = root.DescendantNodes<PartDeclarationSyntax>().ToList();
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();
         var form = PrimaryForm(root);
+        var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
 
-        // One music variable per declared part. A part-major score keeps its
-        // sections inside the part block; the form orders them.
+        // One music variable per part. A part-major score keeps its sections inside
+        // the part block; the form orders them.
         var partVars = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (parts.Count > 0)
+        var names = PartNames(parts, render);
+        if (names.Count > 0)
         {
-            foreach (var part in parts)
+            foreach (string name in names)
             {
-                string varName = SanitizeVar(part.Name.Text);
-                partVars[part.Name.Text] = varName;
-                _anchorOctave = AnchorOctaveOf(part);
-                EmitPartVariable(varName, OrderedMusic(part, form, sections), root);
+                var part = parts.FirstOrDefault(p => p.Name.Text == name);
+                string varName = SanitizeVar(name);
+                partVars[name] = varName;
+                // An undeclared part has no clef property to anchor to, so it takes the
+                // same default the collector gives it (RenderSpecParser.GetPartClef returns
+                // null → ClefType.Treble → octave 4).
+                _anchorOctave = part != null
+                    ? AnchorOctaveOf(part)
+                    : InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
+                EmitPartVariable(varName, OrderedMusic(name, part, form, sections), root);
             }
         }
         else
         {
-            // No explicit part: treat the whole file's music stream as one voice.
+            // No part at all — neither declared nor named by a score: treat the whole
+            // file's music stream as one voice.
             partVars["music"] = "music";
             EmitPartVariable("music", TopLevelMusic(root), root);
         }
 
-        EmitScore(root, parts, partVars);
+        EmitScore(render, parts, partVars);
         return _sb.ToString();
+    }
+
+    /// <summary>
+    /// Every part this file has music for: the declared parts, then any part a score
+    /// NAMES but never declares.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A <c>part</c> declaration is not what makes a part — the SCORE is. The collector
+    /// takes its voice names from the render items (RenderSpec.GetVoiceNames) and looks each
+    /// one up as a <c>PartBlock</c> inside the sections; a part with nothing to declare (no
+    /// clef, no instrument) is simply never written down. This walked the declarations only,
+    /// so such a file fell to the "no explicit part" branch below and exported the FILE-level
+    /// music stream — which holds the key and the meter and no notes at all. That is the same
+    /// silent shape as the loose-section hole: a valid <c>.ly</c> with a blank staff, and a
+    /// twin sweep reads it as layout divergence (docs/HANDOFF.md §1 gate list ⑶,
+    /// <c>test/ossia-beams</c>).
+    /// </remarks>
+    private static List<string> PartNames(
+        List<PartDeclarationSyntax> parts, RenderDeclarationSyntax? render)
+    {
+        var names = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in parts)
+            if (seen.Add(part.Name.Text))
+                names.Add(part.Name.Text);
+        if (render == null)
+            return names;
+        foreach (var item in RenderRows(render))
+            foreach (string? name in RowPartNames(item))
+                if (name != null && seen.Add(name))
+                    names.Add(name);
+        return names;
+    }
+
+    /// <summary>
+    /// The parts a render row puts MUSIC on: a group's every staff, a staff/tab/ossia's own.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A <c>chords</c> / <c>lyrics</c> row names a part too, and it is deliberately NOT
+    /// here: its body is a chord or lyric block, not a music stream, so a music variable for
+    /// it would be empty and the score would grow a <c>\new Staff</c> for a row this
+    /// transpiler cannot write at all (test/lead-sheet has nothing else, and would export a
+    /// staff of its chord part). EmitScore reports those rows instead.
+    /// </remarks>
+    private static IEnumerable<string?> RowPartNames(SyntaxNode item) => item switch
+    {
+        GrandStaffRenderSyntax group => group.Staves.Select(RenderPartName),
+        OssiaRenderSyntax ossia => new[] { OssiaPartName(ossia) },
+        StaffRenderSyntax or TabRenderSyntax => new[] { RenderPartName(item) },
+        _ => Enumerable.Empty<string?>(),
+    };
+
+    /// <summary>
+    /// The score's render items, in source order — the same walk
+    /// <see cref="Svg.Collector.RenderSpecParser.Parse"/> makes.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ DESCENDANTS, not direct children. A <c>grandStaff { staff a staff b }</c> holds its
+    /// staves one level down, so scanning the score's own children found NO staff in such a
+    /// book and the fallback emitted a single staff for the first part — a twin missing a
+    /// whole staff, which the sweep then read as layout divergence rather than as a different
+    /// score (docs/HANDOFF.md §1 gate list ⑵). A staff INSIDE a group is emitted by that
+    /// group, so it drops out here exactly as RenderSpecParser's
+    /// <c>IsInsideGrandStaff</c> drops it.
+    /// </remarks>
+    private static IEnumerable<SyntaxNode> RenderRows(RenderDeclarationSyntax render)
+    {
+        foreach (var child in render.DescendantNodes())
+        {
+            switch (child)
+            {
+                case GrandStaffRenderSyntax:
+                case TabRenderSyntax:
+                case OssiaRenderSyntax:
+                case ChordRowRenderSyntax:
+                case LyricsRowRenderSyntax:
+                    yield return child;
+                    break;
+                case StaffRenderSyntax staff when !IsInsideGrandStaff(staff):
+                    yield return staff;
+                    break;
+            }
+        }
+    }
+
+    private static bool IsInsideGrandStaff(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is GrandStaffRenderSyntax)
+                return true;
+        return false;
     }
 
     // ---- Phrases -----------------------------------------------------------
@@ -350,7 +450,7 @@ public sealed class LilyPondExporter
     // primary form references them. A |: … :| repeat can span several sections,
     // so grouping must happen AFTER this flattening (in EmitMusicStream).
     private List<SyntaxNode> OrderedMusic(
-        PartDeclarationSyntax part, FormDeclarationSyntax? form,
+        string partName, PartDeclarationSyntax? part, FormDeclarationSyntax? form,
         List<SectionDeclarationSyntax> allSections)
     {
         // A section reaches this part in one of TWO spellings, and both must be read.
@@ -363,7 +463,11 @@ public sealed class LilyPondExporter
         // showcase fixtures and most of test/ are section-major.
         // (MusicXmlExporter.EmitPartMajorSection carries the mirror-image note: that exporter
         // was missing the OTHER spelling and had the same symptom.)
-        var partSections = part.DescendantNodes<SectionDeclarationSyntax>().ToList();
+        // A part a score names but never declares (`ossia melody` with no `part melody`)
+        // has no block of its own to hold sections — only the second and third spellings
+        // can reach it.
+        var partSections = part?.DescendantNodes<SectionDeclarationSyntax>().ToList()
+            ?? new List<SectionDeclarationSyntax>();
         var byName = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
         var inOrder = new List<SyntaxNode>();
         foreach (var s in allSections)
@@ -374,7 +478,7 @@ public sealed class LilyPondExporter
             SyntaxNode? container = partSections.Contains(s)
                 ? s
                 : PartBlockBody(s.DescendantNodes<PartBlockSyntax>()
-                    .FirstOrDefault(b => b.Name == part.Name.Text));
+                    .FirstOrDefault(b => b.Name == partName));
             if (container == null)
             {
                 // THE THIRD spelling, and it was missing for the same reason the second was.
@@ -905,50 +1009,204 @@ public sealed class LilyPondExporter
 
     // ---- Score / staff / tab ----------------------------------------------
 
-    private void EmitScore(CompilationUnitSyntax root, List<PartDeclarationSyntax> parts,
+    private void EmitScore(RenderDeclarationSyntax? render, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars)
     {
-        var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
         _sb.Append("\\score {\n");
 
-        var staves = new List<string>();
+        // The rows of the system, in source order. An ossia is a row like any other and
+        // is MOVED into place by alignAboveContext, exactly as RenderSpec.OrderedItems
+        // moves it — see EmitOssia.
+        var rows = new List<string>();
+        string? lastMainStaffPart = null;   // what an ossia written next would sit above
+        var alignedAbove = new HashSet<string>(StringComparer.Ordinal);
         if (render != null)
         {
-            foreach (var child in EnumerateChildren(render))
+            foreach (var item in RenderRows(render))
             {
-                switch (child)
+                switch (item)
                 {
+                    case GrandStaffRenderSyntax group:
+                        rows.Add(EmitStaffGroup(group, parts, partVars));
+                        // LilyPond aligns above a STAFF, so a group is named by its first
+                        // staff — the row Lily# would insert the ossia in front of.
+                        lastMainStaffPart = group.Staves
+                            .Select(RenderPartName).FirstOrDefault(n => n != null)
+                            ?? lastMainStaffPart;
+                        break;
                     case StaffRenderSyntax st:
-                        staves.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false));
+                        rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    "));
+                        lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
                     case TabRenderSyntax tb:
-                        staves.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true));
+                        rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    "));
+                        lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
+                        break;
+                    case OssiaRenderSyntax os:
+                        rows.Add(EmitOssia(os, parts, partVars, lastMainStaffPart));
+                        if (lastMainStaffPart != null)
+                            alignedAbove.Add(lastMainStaffPart);
+                        break;
+                    // A chord / lyrics row needs a music stream this transpiler has no reader
+                    // for (chord and lyric blocks are collected separately), so it is REPORTED
+                    // rather than dropped: a twin silently missing a row is the shape that has
+                    // cost this exporter five holes already.
+                    case ChordRowRenderSyntax chords:
+                        _warnings.Add($"chord row '{chords.PartName}' is not exported — the twin has no chord row");
+                        break;
+                    case LyricsRowRenderSyntax lyrics:
+                        _warnings.Add($"lyrics row '{lyrics.PartName}' is not exported — the twin has no lyrics row");
                         break;
                 }
             }
         }
-        if (staves.Count == 0 && partVars.Count > 0)
+        if (rows.Count == 0 && partVars.Count > 0)
         {
             // Fall back to a plain staff for the first part.
             var first = partVars.First();
-            staves.Add(EmitStaff(first.Key, parts, partVars, tab: false));
+            rows.Add(EmitStaff(first.Key, parts, partVars, tab: false, "    "));
         }
 
-        if (staves.Count == 1)
+        // An ossia's alignAboveContext names a context, so the staff it decorates has to
+        // carry that id. Only the staves an ossia actually names get one.
+        foreach (string partName in alignedAbove)
+            for (int i = 0; i < rows.Count; i++)
+                rows[i] = NameStaffContext(rows[i], partName, partVars);
+
+        if (rows.Count == 1)
         {
-            _sb.Append(staves[0]);
+            _sb.Append(rows[0]);
         }
         else
         {
-            _sb.Append("  \\new StaffGroup <<\n");
-            foreach (var s in staves) _sb.Append(s);
+            // ⚠️ Plain simultaneity, NOT \new StaffGroup. Loose `staff a staff b` rows are
+            // separate single-staff groups in Lily# (RenderSpec.ToStaffGroups →
+            // StaffGroup.CreateSingle each), so a StaffGroup context would add a bracket and
+            // span bars the .lys never asked for. A DECLARED group emits its own context.
+            _sb.Append("  <<\n");
+            foreach (var s in rows) _sb.Append(s);
             _sb.Append("  >>\n");
         }
         _sb.Append("  \\layout {}\n}\n");
     }
 
+    /// <summary>
+    /// A declared staff group — <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c> —
+    /// as the LilyPond context of the same name.
+    /// </summary>
+    /// <remarks>
+    /// The three map one-to-one, and LilyPond derives them from one another the same way
+    /// Lily# does: <c>GrandStaff</c> is <c>StaffGroup</c> with a brace instead of a bracket,
+    /// <c>ChoirStaff</c> is <c>StaffGroup</c> minus the span bars
+    /// (LILYPOND-REF: ly/engraver-init.ly:468-557 Span_bar_engraver — the StaffGroup
+    /// context, then GrandStaff and ChoirStaff derived from it).
+    /// <para>
+    /// ⚠️ <c>GrandStaff</c>, not <c>PianoStaff</c>: PianoStaff adds
+    /// <c>Keep_alive_together_engraver</c>, so its staves are "only removed together, never
+    /// separately" (ly/engraver-init.ly:535-544 PianoStaff / Keep_alive_together_engraver)
+    /// — and Lily#'s grandStaff removes them
+    /// separately, so a PianoStaff twin would not be a pair for any book with
+    /// <c>removeEmpty</c>.
+    /// </para>
+    /// </remarks>
+    private string EmitStaffGroup(GrandStaffRenderSyntax group,
+        List<PartDeclarationSyntax> parts, Dictionary<string, string> partVars)
+    {
+        string context = group.GrandStaffKeyword.Kind switch
+        {
+            SyntaxKind.StaffGroupKeyword => "StaffGroup",
+            SyntaxKind.ChoirStaffKeyword => "ChoirStaff",
+            _ => "GrandStaff",
+        };
+        var sb = new StringBuilder();
+        sb.Append("    \\new ").Append(context).Append(" <<\n");
+        foreach (var staff in group.Staves)
+            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, "      "));
+        sb.Append("    >>\n");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// An <c>ossia</c> row: a small staff with no meter and no opening clef, pulled above
+    /// the staff it decorates.
+    /// </summary>
+    /// <remarks>
+    /// Every tweak here is one Lily# already spells in its own renderer, so the twin says the
+    /// same thing twice rather than inventing a convention:
+    /// <list type="bullet">
+    /// <item><c>alignAboveContext</c> — RenderSpec.OrderedItems moves an ossia directly above
+    ///   the nearest PRECEDING main row (NR "Ossia staves").</item>
+    /// <item><c>\remove Time_signature_engraver</c> — SharedRenderer prints no meter on an
+    ///   ossia at all.</item>
+    /// <item><c>firstClef = ##f</c> — SharedRenderer's <c>drawClef</c> is false on the ossia's
+    ///   FIRST appearance (lily/clef-engraver.cc creates the clef only when a previous clef
+    ///   exists or firstClef is true).</item>
+    /// <item><c>fontSize = #-3</c> with <c>StaffSymbol.staff-space</c>/<c>thickness</c> at
+    ///   <c>magstep -3</c> — EngravingDefaults.OssiaScale IS magstep(-3) = 0.7071, and cites
+    ///   this spelling. ⚠️ NOT <c>\magnifyStaff #2/3</c>, which the NR example uses: 2/3 is a
+    ///   different number (0.667) and the twin would be a size apart.</item>
+    /// </list>
+    /// </remarks>
+    private string EmitOssia(OssiaRenderSyntax ossia, List<PartDeclarationSyntax> parts,
+        Dictionary<string, string> partVars, string? alignAbovePart)
+    {
+        string? partName = OssiaPartName(ossia);
+        string varName = partName != null && partVars.TryGetValue(partName, out var v)
+            ? v : partVars.Values.FirstOrDefault() ?? "music";
+
+        var sb = new StringBuilder();
+        sb.Append("    \\new Staff \\with {\n");
+        sb.Append("      \\remove Time_signature_engraver\n");
+        if (alignAbovePart != null && partVars.TryGetValue(alignAbovePart, out var above))
+            sb.Append("      alignAboveContext = \"").Append(above).Append("\"\n");
+        sb.Append("      fontSize = #-3\n");
+        sb.Append("      \\override StaffSymbol.staff-space = #(magstep -3)\n");
+        sb.Append("      \\override StaffSymbol.thickness = #(magstep -3)\n");
+        sb.Append("      firstClef = ##f\n");
+        sb.Append("    } { ");
+        // The ossia's own clef word (`ossia bass melody`) when it has one, else the part's.
+        // ⚠️ An explicit clef is written even though firstClef suppresses the OPENING one:
+        // the glyph stays hidden, but the notes still have to be READ in that clef.
+        string? clef = OssiaClef(ossia)
+                       ?? (parts.FirstOrDefault(p => p.Name.Text == partName) is { } part
+                           ? PartProperty(part, "clef")
+                           : null);
+        if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
+        sb.Append('\\').Append(varName).Append(" }\n");
+        return sb.ToString();
+    }
+
+    /// <summary>The part an ossia row names — its LAST token, the same slot
+    /// <see cref="Svg.Collector.RenderSpecParser"/>'s ParseOssia reads.</summary>
+    private static string? OssiaPartName(OssiaRenderSyntax ossia)
+        => ossia.SlotCount >= 2 && ossia.GetChild(ossia.SlotCount - 1) is SyntaxTokenNode name
+            ? name.Text
+            : null;
+
+    /// <summary>The clef word of <c>ossia [clef] part</c>, or null when the row is just
+    /// <c>ossia part</c> (a lone word is the PART, never a clef).</summary>
+    private static string? OssiaClef(OssiaRenderSyntax ossia)
+        => ossia.SlotCount >= 3 && ossia.GetChild(1) is SyntaxTokenNode clef ? clef.Text : null;
+
+    /// <summary>
+    /// Gives an already-emitted <c>\new Staff</c> row the context id an ossia aligns above.
+    /// </summary>
+    private static string NameStaffContext(string row, string partName,
+        Dictionary<string, string> partVars)
+    {
+        if (!partVars.TryGetValue(partName, out var varName))
+            return row;
+        // The row's own variable reference is what identifies it; `\with` rows (the ossias
+        // themselves) never match, because the marker is immediately followed by `{`.
+        string marker = "\\new Staff { ";
+        int at = row.IndexOf(marker, StringComparison.Ordinal);
+        if (at < 0 || !row.Contains("\\" + varName + " }", StringComparison.Ordinal))
+            return row;
+        return row.Insert(at + "\\new Staff".Length, " = \"" + varName + "\"");
+    }
+
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
-        Dictionary<string, string> partVars, bool tab)
+        Dictionary<string, string> partVars, bool tab, string indent)
     {
         string varName = partName != null && partVars.TryGetValue(partName, out var v)
             ? v : partVars.Values.FirstOrDefault() ?? "music";
@@ -960,14 +1218,14 @@ public sealed class LilyPondExporter
         if (tab)
         {
             string tuning = TabTuning(part);
-            sb.Append("    \\new TabStaff");
+            sb.Append(indent).Append("\\new TabStaff");
             if (tuning.Length > 0)
                 sb.Append(" \\with { stringTunings = #").Append(tuning).Append(" }");
             sb.Append(" { \\").Append(varName).Append(" }\n");
         }
         else
         {
-            sb.Append("    \\new Staff { ");
+            sb.Append(indent).Append("\\new Staff { ");
             if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");
         }
