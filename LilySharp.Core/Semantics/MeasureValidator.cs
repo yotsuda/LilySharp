@@ -149,6 +149,15 @@ internal sealed class MeasureValidator : ISemanticValidator
         if (node is NestedVoiceRecoverySyntax)
             return;
 
+        // A voice span's blocks are not standalone bar streams: voice 1 is INLINED into
+        // the enclosing stream by SplitIntoMeasures (the collector walks it inline too),
+        // and voices 2..N are validated from there with the bar's lead-in. Recursing here
+        // would validate each voice as its own stream starting on a barline — which is
+        // what reported three short "first measures" for `c'2 voice { d'2 } voice { e'2 }`,
+        // a bar the renderer fills exactly.
+        if (node is ParallelExpressionSyntax)
+            return;
+
         switch (node)
         {
             case MusicBlockSyntax block:
@@ -221,7 +230,12 @@ internal sealed class MeasureValidator : ISemanticValidator
             ValidateItemsScoped(items, section.Position);
     }
 
-    private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos)
+    /// <param name="leadIn">Beats already elapsed in the bar this stream starts inside —
+    /// non-zero only for voices 2..N of a span opened mid-bar, which sound from there.</param>
+    /// <param name="initialDefault">The running default note value at that point (a bare
+    /// note inherits the previous note's duration), or null for a fresh quarter-note frame.</param>
+    private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos,
+        Fraction? leadIn = null, Fraction? initialDefault = null)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
         // only — the state must not leak into the next part's block (each part
@@ -234,7 +248,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         var savedSenza = _senzaMisura;
         try
         {
-            ValidateMeasures(items, startPos);
+            ValidateMeasures(items, startPos, leadIn, initialDefault);
         }
         finally
         {
@@ -244,18 +258,52 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
     }
 
-    private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos)
+    private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
+        Fraction? leadIn = null, Fraction? initialDefault = null)
     {
-        var measures = SplitIntoMeasures(items, startPos);
+        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans);
 
         // Measure durations in one pass, threading the running default note
         // value (a bare note inherits the previous note's duration across bar
         // lines). Precomputed so the FINAL bar can be compared against the
         // OPENING pickup (anacrusis complement) below.
         var durations = new Fraction[measures.Count];
-        var defaultDuration = Fraction.Quarter;
+        var defaultDuration = initialDefault ?? Fraction.Quarter;
+        // Where each voice span opened: the beats already elapsed in its bar, and the
+        // running default note value there. Voices 2..N sound from that instant, so this
+        // is the lead-in their own first bar is validated with.
+        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default)>();
         for (int di = 0; di < measures.Count; di++)
-            durations[di] = MeasureDurations.CalculateMeasureDuration(measures[di].Items, ref defaultDuration);
+        {
+            var barItems = measures[di].Items;
+            var total = Fraction.Zero;
+            int from = 0;
+            foreach (var vs in voiceSpans)
+            {
+                if (vs.MeasureIndex != di)
+                    continue;
+                // Count up to the span's item index, snapshot, then carry on — one
+                // spelling of the beat count (MeasureDurations), just read twice.
+                total += MeasureDurations.CalculateMeasureDuration(
+                    barItems.GetRange(from, vs.ItemIndex - from), ref defaultDuration);
+                spanEntry.Add((vs.Span, total, defaultDuration));
+                from = vs.ItemIndex;
+            }
+            total += MeasureDurations.CalculateMeasureDuration(
+                barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
+            durations[di] = total;
+        }
+
+        // The bar this stream starts inside may already be part-elapsed (a voice span
+        // opened mid-bar); those beats belong to this voice's first bar too.
+        if (measures.Count > 0 && leadIn is { } lead && lead != Fraction.Zero)
+            durations[0] += lead;
+
+        // A span whose bar never materialized (voice 1 empty at the very end of a stream)
+        // still has voices to check; they simply start on the boundary.
+        foreach (var vs in voiceSpans)
+            if (vs.MeasureIndex >= measures.Count)
+                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration));
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -334,7 +382,11 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // doubt anacrusis: no strict length check, just a nudge to
                     // declare it. A measure carrying an explicit 'partial N' is
                     // always checked strictly — that is the whole point of \partial.
-                    bool isBarePickup = isFirst && partialLength == null;
+                    // A voice of a span (leadIn is set) has no opening of its own to
+                    // be an anacrusis of: it starts wherever the span opened, and a
+                    // pickup is section-wide anyway, so its short bar is a plain
+                    // short bar and gets the plain message.
+                    bool isBarePickup = isFirst && partialLength == null && leadIn is null;
 
                     EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup, isBarePickup);
                 }
@@ -344,7 +396,19 @@ internal sealed class MeasureValidator : ISemanticValidator
                 }
             }
         }
+
+        // Voices 2..N of each span, once this stream's own bars are counted: they are
+        // simultaneous with the music just validated, so each is its own bar stream that
+        // begins with the span's lead-in already elapsed (and inherits the running note
+        // value at that instant, as a bare note does anywhere else).
+        foreach (var (span, spanLeadIn, spanDefault) in spanEntry)
+            foreach (var voice in span.Voices.Skip(1))
+                ValidateItemsScoped(ItemsOf(voice), voice.Position, spanLeadIn, spanDefault);
     }
+
+    /// <summary>The music items of one voice block of a span.</summary>
+    private static IEnumerable<SyntaxNode> ItemsOf(SyntaxNode voice)
+        => voice is MusicBlockSyntax block ? block.Items : [];
 
     /// <summary>Emits the diagnostic (if any) for a bar shorter than its expected
     /// fill: a hard incomplete-measure warning, a soft pickup-without-partial nudge
@@ -451,10 +515,16 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     private record MeasureContent(List<SyntaxNode> Items, int StartPosition);
 
-    private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos)
+    /// <summary>A voice span met while splitting: the measure it opened in, the item index
+    /// within that measure's (already inlined) items where it opened, and the span node.</summary>
+    private readonly record struct VoiceSpan(int MeasureIndex, int ItemIndex, ParallelExpressionSyntax Span);
+
+    private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos,
+        out List<VoiceSpan> voiceSpans)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
+        var spans = new List<VoiceSpan>();
         int startPos = blockStartPos;
 
         void AddItems(IEnumerable<SyntaxNode> items)
@@ -478,6 +548,20 @@ internal sealed class MeasureValidator : ISemanticValidator
                         if (item.GetChild(ci) is MusicBlockSyntax inner)
                             AddItems(inner.Items);
                 }
+                else if (item is ParallelExpressionSyntax par)
+                {
+                    // A voice span is SIMULTANEOUS music, not a sequence. The collector
+                    // walks voice 1 INLINE in this stream — barlines and all — and
+                    // reconstructs voices 2..N as their own tracks over the same bars
+                    // (MeasureCollector.ProcessMusicNode, the ParallelExpressionSyntax
+                    // case). Count it the same way. Before this the span was one item of
+                    // zero duration, so the bar it sat in was never checked at all:
+                    // `voice { c d e f } e f g a` drew eight quarters in one 4/4 bar and
+                    // said nothing, while the bare spelling warns LYS2002.
+                    spans.Add(new VoiceSpan(measures.Count, currentItems.Count, par));
+                    if (par.Voices.FirstOrDefault() is MusicBlockSyntax lead)
+                        AddItems(lead.Items);
+                }
                 else
                 {
                     currentItems.Add(item);
@@ -492,6 +576,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             measures.Add(new MeasureContent(currentItems, startPos));
         }
 
+        voiceSpans = spans;
         return measures;
     }
 }

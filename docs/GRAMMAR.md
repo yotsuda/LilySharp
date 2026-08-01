@@ -278,7 +278,17 @@ VoiceBlock     = 'voice' , [ Identifier ] , MusicBlock , { 'voice' , [ Identifie
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
    section Main { piano { voice { c'2 d } voice { e2 f } } }
    // A named voice binds its own lyrics: voice sop { … }  +  lyrics sop { … }
-*)
+
+   The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
+   the staff's barlines, and music written after the span continues in the bar it left
+   off in. The other voices sound alongside it, starting from the instant the span opened
+   (mid-bar spans included), and add no bars of their own. The bar check counts them the
+   same way, so both 'voice { c d e f } e f g a' and the same music without the braces
+   report the one overfull bar they engrave.
+
+   ONE voice { } is transparent — up/down stem forcing needs a second voice — so it
+   engraves exactly like the music without it, and an UNNAMED lone voice warns (LYS4011).
+   A named one does not: its name is what a 'lyrics NAME { }' block binds to. *)
 
 ================================================================================
 ## 6. Structure Definition

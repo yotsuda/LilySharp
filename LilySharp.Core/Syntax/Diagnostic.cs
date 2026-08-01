@@ -383,6 +383,12 @@ public static class DiagnosticCodes
     /// (LilyPond's Slur_engraver lives in the Voice context), so one left open when the
     /// voice ends is unpaired too.</summary>
     public const string UnpairedSlur = "LYS4010";
+    /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
+    /// block is then entirely transparent — stem forcing needs a second voice, so the
+    /// music engraves as if the braces were not there. Someone who wrote it meaning
+    /// "polyphonic from here" gets a single-voice score with nothing said. A NAMED lone
+    /// voice is exempt: its name is what a <c>lyrics NAME { … }</c> block binds to.</summary>
+    public const string LoneVoiceBlock = "LYS4011";
     /// <summary>Warning: an annotation on a broken-chord group
     /// (<c>&lt;&lt; … &gt;&gt;@staccato</c>) or on one of its bare pitch members is
     /// not applied — only a dynamic (<c>@f</c>) and a chord name (<c>@chord</c>)

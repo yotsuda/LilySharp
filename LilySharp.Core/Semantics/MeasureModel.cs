@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -153,6 +154,16 @@ internal static class MeasureModel
                 || IsInside<RepeatExpressionSyntax>(n, scope))
                 continue;
 
+            // A voice span's voices sound SIMULTANEOUSLY, so only voice 1 advances the
+            // scope's timeline — it is the one the collector walks inline, and the bars
+            // it closes are the staff's bars. Reading every voice in document order
+            // concatenated them: a two-voice section counted twice its bars and twice
+            // its beats, which cancelled only because the parts around it were shaped
+            // the same way. Voices 2..N are checked for fullness by MeasureValidator,
+            // which knows the lead-in they start with.
+            if (IsInsideNonLeadVoice(n, scope))
+                continue;
+
             switch (n)
             {
                 case NoteSyntax:
@@ -206,6 +217,18 @@ internal static class MeasureModel
         for (var p = node.Parent; p != null && p != scope; p = p.Parent)
             if (p is T)
                 return true;
+        return false;
+    }
+
+    /// <summary>True when <paramref name="node"/> sits in a voice span but NOT in its first
+    /// voice — the branches that sound alongside the timeline rather than advancing it.</summary>
+    private static bool IsInsideNonLeadVoice(SyntaxNode node, SyntaxNode scope)
+    {
+        for (var p = node.Parent; p != null && p != scope; p = p.Parent)
+        {
+            if (p.Parent is ParallelExpressionSyntax par && !ReferenceEquals(p, par.Voices.FirstOrDefault()))
+                return true;
+        }
         return false;
     }
 }
