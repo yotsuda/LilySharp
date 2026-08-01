@@ -182,13 +182,23 @@ internal sealed class RenderedGeometry
     /// <c>page.tab-control.*</c>'s does — and a grouping that swallowed one would report a
     /// staff where there is none.
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE SPAN IS THE LOGICAL LINE'S, NOT ONE DRAWN SEGMENT'S. A tab string line is
+    /// emitted in PIECES — it breaks around every fret digit sitting on it
+    /// (SharedRenderer.Tab, DrawTabStringLine) — so testing each drawn rule against
+    /// <see cref="MinStaffLineSpan"/> individually dropped whole string lines whose pieces
+    /// were each short, and the staff-count guards below then reported "10 staff lines, not
+    /// the 5 + 6 this reading is about". Grouping by Y first and measuring the union's reach
+    /// asks the question the guard means: how far does this line get across the system.
+    /// </remarks>
     private List<double> StaffLineYs(int page) =>
         _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
-                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
-                        && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
-            .Select(l => l.Y1)
-            .Distinct()
+                        && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9)
+            .GroupBy(l => Math.Round(l.Y1, 9))
+            .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
+                        >= MinStaffLineSpan)
+            .Select(g => g.Key)
             .OrderBy(y => y)
             .ToList();
 

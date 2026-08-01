@@ -182,36 +182,57 @@ internal static partial class SharedRenderer
         // no twin to be measured against (HANDOFF §1 ④ — a tab beam reads -76.5 through that
         // path). What is NOT own is the step: reading the reserved columns rather than a
         // literal 1.2 is what keeps the drawn digits inside the room the spacing gave them.
-        var colX = g.ColumnOffsets;
-        double currentX = g.X;
-        int headIndex = 0;
-
         using (gc.Source(g.SourcePosition))
         {
-            foreach (var note in g.Notes)
+            foreach (var d in TabGraceDigits(g, tuning, clef, transposition))
             {
-                if (!colX.IsDefault && headIndex < colX.Length)
-                    currentX = g.X + colX[headIndex];
-                headIndex++;
-                var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
-                double noteY = tabTopY - (stringNum - 1) * stringSpace;
-                string fretText = fret.ToString();
-                double bgWidth = (fretText.Length == 1 ? 0.625 : 1.0) * fontSize;
-                // The glyph's own ink height and baseline, from the face — the grace fret
-                // digit is the full-size one at a smaller size, so it takes the same two
-                // answers rather than a second copy of the fractions (which is what these
-                // were: a literal 0.6875 and a literal 0.32, drifting beside their originals).
-                double bgHeight = TextFontMetrics.InkHeight(
-                    fretText, fontSize, sans: false, style: FontStyle.Bold);
-                // The background occludes the string line behind the digit. The rect's
-                // visual-top edge is above the string line (larger Y-up).
-                gc.DrawRectangle(currentX - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
-                    fill: Color.White);
-                gc.DrawText(fretText, currentX,
-                    noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(fretText, fontSize),
+                double noteY = tabTopY - (d.StringNum - 1) * stringSpace;
+                // No occluding box: the string line is broken around this digit instead, and
+                // the bite was booked by the tab staff pass (SharedRenderer.Tab —
+                // TabGraceDigits is the shared producer, so the hole and the glyph cannot
+                // disagree about where the digit is).
+                gc.DrawText(d.Text, d.CenterX,
+                    noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(d.Text, fontSize),
                     fontSize, "serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
+        }
+    }
+
+    /// <summary>One tab grace digit: which string it sits on, its text, and its drawn span.</summary>
+    internal readonly record struct TabGraceDigit(
+        int StringNum, string Text, double CenterX, double Width);
+
+    /// <summary>
+    /// The fret digits a tab grace run draws — the ONE producer, read both by the renderer
+    /// that draws them and by the tab staff pass that has to break its string lines around
+    /// them.
+    /// </summary>
+    /// <remarks>
+    /// The two used to be impossible to disagree because there was only one of them (the
+    /// digit painted its own opaque box). With the box replaced by a hole in the line, the
+    /// hole is computed in a different pass from the glyph — so the geometry has to come from
+    /// a single place or the two drift, which is the defect this repository keeps re-finding
+    /// under other names.
+    /// </remarks>
+    internal static IEnumerable<TabGraceDigit> TabGraceDigits(
+        GraceNoteLayout g, TuningType tuning, ClefType clef, int transposition)
+    {
+        int[] tuningArray = Tunings.GetTuning(tuning);
+        int octaveShift = Tunings.SoundingShift(clef, transposition);
+        double fontSize = TabFretFontSize * TabGraceFretScale;
+        var colX = g.ColumnOffsets;
+        double currentX = g.X;
+        int headIndex = 0;
+        foreach (var note in g.Notes)
+        {
+            if (!colX.IsDefault && headIndex < colX.Length)
+                currentX = g.X + colX[headIndex];
+            headIndex++;
+            var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
+            string fretText = fret.ToString();
+            yield return new TabGraceDigit(
+                stringNum, fretText, currentX, (fretText.Length == 1 ? 0.625 : 1.0) * fontSize);
         }
     }
 

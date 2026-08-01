@@ -42,7 +42,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/tab-note-heads-engraver.cc — fret numbers as note heads
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets
     /// </remarks>
-    private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
+    private static void DrawTabStaff(Staff staff, ScoreLayout layout, SystemLayout system,
+        int staffIndex,
         double staffY, double staffRight, double systemStartX, double clefGroupInkLeft,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems,
         HashSet<int> percentCovered, IDrawingContext gc, double pageHeight)
@@ -55,12 +56,13 @@ internal static partial class SharedRenderer
         // resolved transposition (bass = −12) — one value shared with MIDI.
         int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
 
-        // One staff line per string, spaced stringSpace apart. Lines start at the
-        // system indent (systemStartX), like the notation staff — not the page
-        // margin, or on the first (indented) system they overrun to the left.
-        for (int i = 0; i < stringCount; i++)
-            gc.DrawLine(systemStartX, staffY - i * stringSpace, staffRight, staffY - i * stringSpace,
-                Color.Black, EngravingDefaults.StaffLineThickness);
+        // ⚠️ THE STRING LINES ARE DRAWN AT THE END OF THIS METHOD, not here, because each
+        // fret digit takes a BITE out of the line it sits on rather than being painted over.
+        // Every digit this staff draws appends its span to `digitGaps`; the lines are then
+        // emitted as the segments between them. Deferring is what lets the gap be the drawn
+        // digit's own span instead of a second computation of it — the "one house" rule that
+        // the two spellings of the stem clearance had just broken.
+        var digitGaps = new List<(int StringIndex, double Left, double Right)>();
 
         // Per-measure barlines at the tab staff height.
         var primaryVoice = staff.PrimaryVoice;
@@ -134,15 +136,69 @@ internal static partial class SharedRenderer
                 var voice = staff.Voices[vi];
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
-                        tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems, gc, pageHeight);
+                        tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems,
+                        gc, digitGaps, pageHeight);
             }
         }
+
+        // ⚠️ GRACE DIGITS ARE DRAWN IN A LATER PASS (SharedRenderer.cs, DrawGraceNotes), so
+        // their bites have to be booked here or the line would run straight through them.
+        // The spans come from TabGraceDigits — the same producer that pass draws from — so
+        // the hole and the glyph cannot drift apart.
+        foreach (var g in layout.GraceNoteLayouts)
+        {
+            if (g.Tuning is not { } graceTuning || g.StaffIndex != staffIndex)
+                continue;
+            if (!system.Measures.Any(m => m.MeasureIndex == g.MeasureIndex))
+                continue;
+            foreach (var d in TabGraceDigits(g, graceTuning, g.TabClef, g.TabTransposition))
+                digitGaps.Add((d.StringNum - 1, d.CenterX - d.Width / 2, d.CenterX + d.Width / 2));
+        }
+
+        // LAST, so every digit above has booked its bite out of the line it sits on.
+        // One line per string, spaced stringSpace apart, starting at the system indent
+        // (systemStartX) like the notation staff — not the page margin, or on the first
+        // (indented) system they overrun to the left.
+        for (int i = 0; i < stringCount; i++)
+            DrawTabStringLine(systemStartX, staffRight, staffY - i * stringSpace, i, digitGaps, gc);
+    }
+
+    /// <summary>
+    /// One tab string line, drawn as the segments BETWEEN the fret digits sitting on it.
+    /// </summary>
+    /// <remarks>
+    /// The gaps arrive as x spans already booked by the digits that were drawn, so the hole
+    /// is the drawn glyph's own extent and not a second computation of it.
+    /// <para>
+    /// Overlapping spans (a chord's zigzag can put two digits close on one string) merge
+    /// naturally: the cursor only ever moves right, so an overlap collapses into one hole
+    /// instead of emitting a negative-width segment.
+    /// </para>
+    /// </remarks>
+    private static void DrawTabStringLine(double left, double right, double y, int stringIndex,
+        List<(int StringIndex, double Left, double Right)> digitGaps, IDrawingContext gc)
+    {
+        double x = left;
+        foreach (var gap in digitGaps
+                     .Where(g => g.StringIndex == stringIndex)
+                     .OrderBy(g => g.Left))
+        {
+            if (gap.Right <= x) continue;              // already behind the cursor
+            if (gap.Left > x)
+                gc.DrawLine(x, y, Math.Min(gap.Left, right), y,
+                    Color.Black, EngravingDefaults.StaffLineThickness);
+            x = gap.Right;
+            if (x >= right) return;
+        }
+        if (x < right)
+            gc.DrawLine(x, y, right, y, Color.Black, EngravingDefaults.StaffLineThickness);
     }
 
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
         double staffY, int[] tuning, int stringCount, int octaveShift,
         Staff staff, int staffIndex, int voiceNumber,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
+        List<(int StringIndex, double Left, double Right)> digitGaps,
         double pageHeight)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
@@ -183,13 +239,13 @@ internal static partial class SharedRenderer
                     if (!note.IsTieTarget)
                         DrawTabNote(note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
-                            numbersOnly ? 0 : note.Dots, gc, note.IsDead);
+                            numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
                     break;
                 case ChordItem chord:
-                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
+                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc, digitGaps);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(chord, chord.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(chord)),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
@@ -348,11 +404,12 @@ internal static partial class SharedRenderer
 
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
-        double stringSpace, int sourcePosition, int dots, IDrawingContext gc, bool isDead = false)
+        double stringSpace, int sourcePosition, int dots, IDrawingContext gc,
+        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
-        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, isDead);
+        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead);
         double noteY = staffY - (stringNum - 1) * stringSpace;
         double digitWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
@@ -390,7 +447,8 @@ internal static partial class SharedRenderer
     /// given string line and x. Chord notes share this after their x is shifted.
     /// </summary>
     private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
-        double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)
+        double stringSpace, int sourcePosition, IDrawingContext gc,
+        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom
         // (device down = smaller Y-up).
@@ -398,22 +456,21 @@ internal static partial class SharedRenderer
         // A dead (muted) note shows an "×" in place of the fret number.
         string fretText = isDead ? "×" : fret.ToString();
         double bgWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
-        double bgHeight = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight;
+
+        // The string line is BROKEN around the digit rather than painted over: the span is
+        // booked here and DrawTabStringLines emits the segments either side of it.
+        // ⚠️ THE OLD FORM WAS AN OPAQUE BOX, and it had two faults an occluder always has.
+        // It depended on a COLOUR — it was the only opaque light element in the document, so
+        // a viewer that themes a page by inverting it turned the box black and every fret
+        // number sat in a hole (fixed once by giving the page a background to match, but only
+        // ever as a match). And it was as tall as the DIGIT, which at any size past about
+        // 2.08 is taller than the 1.5 string gap, so it blanked pieces of the NEIGHBOURING
+        // lines too — the ceiling that stopped the digits growing. A gap has neither
+        // problem: it spends no colour, and it is confined to the digit's own line.
+        digitGaps.Add((stringNum - 1, x - bgWidth / 2, x + bgWidth / 2));
 
         using (gc.Source(sourcePosition))
         {
-            // The background occludes the string line behind the number; the rect's
-            // visual-top edge is above the line (larger Y-up).
-            // ⚠️ IT MUST BE THE PAGE'S OWN BACKGROUND COLOUR, not "white" in the abstract.
-            // This rect is the only opaque light element in the document — everything else
-            // omits fill and takes the SVG default — so a viewer that themes a page by
-            // INVERTING it (the VS Code preview in a dark theme) turns it black while the
-            // page around it stays transparent, and every fret number sits in a black hole.
-            // The knockout is only correct when the page HAS a defined background for it to
-            // match, which is why SvgDrawingContext now paints one. Dropping the rect instead
-            // is not an option: the string line then runs through the digit.
-            gc.DrawRectangle(x - bgWidth / 2, noteY + bgHeight / 2, bgWidth, bgHeight,
-                fill: Color.White);
             // Bold so the fret numbers read clearly over the string lines. The baseline is
             // asked of the FACE so the glyph's ink lands centred on the line — a digit and a
             // dead note's × are different shapes and a shared fraction cannot centre both.
@@ -432,7 +489,8 @@ internal static partial class SharedRenderer
     /// zigzag between two columns (rather than slanting) so the stack stays compact.
     /// </summary>
     private static void DrawTabChord(ChordItem chord, double itemX, double staffY,
-        int[] tuning, int octaveShift, double stringSpace, IDrawingContext gc)
+        int[] tuning, int octaveShift, double stringSpace, IDrawingContext gc,
+        List<(int StringIndex, double Left, double Right)> digitGaps)
     {
         // LP-style exclusive allocation: each chord note gets its OWN string
         // (assigned strings first, then highest pitch → highest free string),
@@ -447,7 +505,8 @@ internal static partial class SharedRenderer
 
         double[] dx = AssignTabChordOffsets(notes);
         for (int i = 0; i < notes.Count; i++)
-            DrawTabFret(notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace, chord.SourcePosition, gc);
+            DrawTabFret(notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
+                chord.SourcePosition, gc, digitGaps);
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
         // edge), one per string row — the tab analogue of the notation dot column.

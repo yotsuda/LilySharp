@@ -459,7 +459,8 @@ internal static partial class SharedRenderer
                     foreach (var prItem in score.PercentRepeats)
                         if (prItem.StaffIndex == globalIdx)
                             tabPercentCovered.Add(prItem.MeasureIndex);
-                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX,
+                    DrawTabStaff(staff, layout, system, globalIdx, localStaffY, staffRight,
+                        systemStartX,
                         clefGroupInkLeft, beamedItems, tabPercentCovered, sgc, pageHeight);
                     continue;
                 }

@@ -128,10 +128,15 @@ public sealed class TwinBeamSweep
     private static List<(double Top, double Bottom, double Middle, double Space)> StavesOf(
         RecordingDrawingContext page)
     {
+        // ⚠️ The span is the LOGICAL line's: a tab string line is drawn in pieces, breaking
+        // around each fret digit, so each piece can fall under the threshold while the line
+        // crosses the whole system. Group by Y, then measure the union's reach.
         var ys = page.Lines
-            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && Math.Abs(l.X2 - l.X1) >= MinStaffLineSpan)
-            .Select(l => Math.Round(l.Y1, 6))
-            .Distinct()
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9)
+            .GroupBy(l => Math.Round(l.Y1, 6))
+            .Where(g => g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))
+                        >= MinStaffLineSpan)
+            .Select(g => g.Key)
             .OrderBy(y => y)
             .ToList();
 

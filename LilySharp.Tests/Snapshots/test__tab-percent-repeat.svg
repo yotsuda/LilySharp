@@ -857,10 +857,6 @@
   <rect x="77.80" y="11.29" width="0.19" height="4.00" data-pos="485"/>
   <rect x="101.34" y="11.29" width="0.19" height="4.00" data-pos="485"/>
   <rect x="101.83" y="11.29" width="0.60" height="4.00" data-pos="485"/>
-  <line x1="0.00" y1="212.14" x2="102.43" y2="212.14" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="213.64" x2="102.43" y2="213.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="215.14" x2="102.43" y2="215.14" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="216.64" x2="102.43" y2="216.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="214.39" font-size="4.00"></text>
   <rect x="30.73" y="212.14" width="0.19" height="4.50" data-pos="415"/>
   <rect x="54.27" y="212.14" width="0.19" height="4.50" data-pos="485"/>
@@ -869,6 +865,10 @@
   <rect x="101.83" y="212.14" width="0.60" height="4.50" data-pos="485"/>
   <text class="music" x="11.94" y="214.27" font-size="4.00" data-pos="377"></text>
   <text class="music" x="35.47" y="214.27" font-size="4.00" data-pos="447"></text>
+  <line x1="0.00" y1="212.14" x2="102.43" y2="212.14" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="213.64" x2="102.43" y2="213.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="215.14" x2="102.43" y2="215.14" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="216.64" x2="102.43" y2="216.64" stroke="#000000" stroke-width="0.100"/>
   <polygon points="14.65,13.86 17.05,14.05 17.05,14.53 14.65,14.34"/>
   <polygon points="14.65,13.05 17.05,13.24 17.05,13.72 14.65,13.53"/>
   <line x1="14.72" y1="29.14" x2="14.72" y2="13.30" stroke="#000000" stroke-width="0.130"/>
