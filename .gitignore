@@ -82,3 +82,4 @@ scratch/
 # Claude Code local files
 work_progress.md
 .claude/
+__pycache__/
