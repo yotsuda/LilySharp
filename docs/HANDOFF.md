@@ -58,6 +58,97 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-01（第62セッション＝**引継ぎ ▶ を実行した。exporter の ⑵ `grandStaff` と
+⑶ `ossia`／`part` 宣言なしを塞いだ**——`1793d9ea`・**Core の描画は 1 行も動かない**）。
+**作業の実体は `1793d9ea`**（＋この handoff commit 1 本が HEAD）・**未 push 7**・
+テスト **3737 passed / 0 failed / 3 skipped**・
+台帳 **378 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**台帳は不変**。
+⚠️ **開始時に HEAD が引継ぎと違った**——**tab の 3 commit（`bacdf9ff`・`3d165ec2`・`45754971`・
+すべて 2026-08-01）が §1 に書かれないまま入っていた**。**この 3 つの経緯はどこにも残っていない。**
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ① 塞いだ＝**score は子ではなく子孫で読む・part は宣言でなく score が作る**
+
+★★★ **⑵ `grandStaff`**: `EmitScore` が `EnumerateChildren(render)` の**直下しか見ない**ので
+**`grandStaff { staff a staff b }` は譜 0 本**と数えられ、fallback が**先頭 part の 1 譜だけ**を出していた。
+⇒ **`RenderSpecParser.Parse` と同じ子孫walk**にし、**グループ内の `staff` はそのグループに任せる**
+（`IsInsideGrandStaff`）。**`grandStaff`/`staffGroup`/`choirStaff` → 同名の LP コンテキスト**
+（`ly/engraver-init.ly:468-557`）。★★ **`PianoStaff` ではない**——あれは
+`Keep_alive_together_engraver` を足す側で、**Lily# の `grandStaff` は譜を単独で消す**。
+★★★ **⑶ `part` 宣言のない本**: exporter は**宣言をwalkして part 変数を作っていた**が、
+**part を作るのは SCORE のほう**（collector は `RenderSpec.GetVoiceNames` から名前を取り、
+それを section の `PartBlock` として引く）。⇒ **宣言なしの本は「file レベルの音楽」を出していた**
+＝**key と meter だけで音符ゼロ**。**`ossia` 系 3 冊が全部これ**。
+⇒ **part 名 ＝ 宣言された part ＋ staff/tab/ossia/group が名指す part**。
+★★ **`chords`/`lyrics` 行はここに入れない**（本体が音楽ストリームでない）——**警告にした**。
+入れると `test/lead-sheet` が**和音 part の空の `\new Staff`** を生やす（**実際に一度そうなった**）。
+★ **`ossia` の綴りは全部レンダラ側に既にある**: `alignAboveContext`（`OrderedItems` が直前の
+main 行の上へ動かす）・`\remove Time_signature_engraver`・`firstClef = ##f`（`drawClef`）・
+**`fontSize = #-3` ＋ `magstep -3`**（`EngravingDefaults.OssiaScale` そのもの）。
+⚠️ **NR の `\magnifyStaff #2/3` は使わない**——**0.667 は 0.7071 と別の数**。
+★ **ばらの `staff a staff b` を `\new StaffGroup` で包むのをやめた**——Lily# 側は
+`StaffGroup.CreateSingle` が並ぶだけなので、**ブラケットと span bar は exporter の発明**だった。
+
+## ② 裏取り＝**双子 199 本の before/after を全部突き合わせた**
+
+**138 本が byte 不変・動いた 61 本は全部 4 形のどれか**（`unwrap` 41／`group` 16／
+`group+unwrap` 1／`newvar+ossia` 3）＝**`OTHER` ゼロ**。
+⇒ ★★ **この before/after 全数比較は毎回やる価値がある**——**1 回目で本物の退行を捕まえた**
+（`chords`/`lyrics` 行に part 変数を作ってしまい `lead-sheet` 系 5 冊が壊れた）。
+
+## ③ 測った＝**予告の 4 冊のうち 2 冊が梁ごと一致・残り 2 冊は「初めて対になった」**
+
+```
+test/timesig-grandstaff       LP (-2.000 . -1.190) (-2.810 . -2.190)   Lily# 同一   ← 一致
+test/ossia-beams              LP (-1.190 . -1.810) (-2.190 . -1.190)   Lily# 同一   ← 一致
+test/multistaff-tuplet-beams  LP (-0.190 . 0.000) (0.000 . 0.000)      Lily# 全点 -1.000
+test/beam-under-staves        LP (-6.810 . -6.810) ×2                  Lily# +3.290 ×2
+```
+★★★ **`beam-under-staves` の 10.100 は「別の楽譜」ではなかった**——**双子は今 2 譜ある**のに
+**差はそのまま**で、**`3.290 − 10.100 = −6.810` ＝ LP の答えに三桁で乗る**。
+⇒ ★★ **`TwinBeamSweep` が譜間の梁を*最寄りの譜*（下の譜）の中央線から測っている**
+という第61セッションの診断は**当たっていた**。CSV が動かなかったのは**当時の直し方が
+割り当てを変えていなかったから**で、**仮説の反証ではない**。⇒ **§5.0 の「動かない修正は反証」に
+限界を書き足した**（*その修正が本当に値の作り方を変えている*ときだけ成立する）。
+★ **`multistaff-tuplet-beams` の −1.000 は一様**＝**高さだけ 1 space 低い**（傾きは一致）。
+**これは本物の発散**で、**今日初めて測れるようになった**。
+
+## ⚠️ ④ 測定器は再現しなかった＝**「26 冊一致」は手順書から再現できない**
+
+⚠️ ★★★ **§6 の手順どおりに sweep を組み直したら、一致は 11 冊**（梁のある本 44 冊中）。
+**食い違う 33 冊のうち約 20 冊は今日の変更が触れていない双子**（byte 不変）なので、
+**私の変更の退行ではない＝手順書と第61セッションの実測の間に差がある**。
+★ **形はきれい**: `test/beaming` は**全点きっかり +0.500**、`test/notes` は
+**system 0 が +0.500・system 1 が +2.000**——**一様なオフセットなので量子器の話ではなく
+「どの中央線から測るか」の話**（③ の `beam-under-staves` と同じ族の疑い）。
+⇒ ★★ **§1 ⑥ の「26 冊一致」は、出所の手順が分かるまで引用しないこと。**
+★ **今回の LP 側**: `-dinclude-settings` に `\Score` の `Beam.after-line-breaking` を入れ
+`positions` を印字、`-dno-print-pages`（**`-dbackend=null` は 2.26.0 に無い**——
+`possible values are (ps cairo svg)`）。199 冊で約 5 分。
+
+## ▶ 次の一手＝**測定器を直す。③ が「どう直すか」まで教えている**
+
+★★★ **`TwinBeamSweep` の `NearestStaff` を捨てる**——**梁は自分の譜に属する**のであって
+最寄りの譜ではない。**`beam-under-staves` は答えが分かっている**（`−6.810`）ので、
+**直したらその 1 冊がその値になるかで判定できる**＝**「出力が動いたか」で判定せよ**（§5.0）。
+★ **そのあと ④ の一様オフセット**（+0.500 / +2.000）を同じ道具で当たる。
+**`test/beaming` は単一譜・単一 system なので最小の再現**。
+⚠️ **これが済むまでコーパスの「一致 N 冊」を §1 に書かない。**
+★ **その次＝`multistaff-tuplet-beams` の −1.000**（本物の発散・傾きは一致・高さだけ）。
+★ **⑺ の音価の既定はまだ決まっていない**——**新しい実例が出た**:
+`test/ossia-beams` の双子が `bar check failed at: 7/8`。**`\grace { d8 } c` の `c` が
+LP では 8分**（直前の音価＝grace の中身）**・Lily# では 4分**（`CreateNoteItem` の
+`_defaultDuration` は**明示された音価でしか更新されず、grace 本体はローカル変数
+`graceDefaultDuration` を使うので外に漏れない**）。⇒ ★★ **これは ⑺ の「裸の grace の既定」
+とは*独立*に直せる**（grace の後ろの音符に音価を明示的に書けばよい）。**今日は起票のみ。**
+★ **量子器側で残っているのは `grace.column.approach` +0.850449**（**機構が違う**:
+Lily# は run の幅を前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
+`lily/spacing-spanner.cc:396-403`）。
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第61セッションの経緯
+
 最終更新 2026-08-01（第61セッション＝**引継ぎ ▶ のフォークに答えた。答えは「格子でも scorer でもなく、
 まず*対が対でなかった*」**——⑴ **J と K の .lys に `16` が無く**、**Lily# の裸の grace は 8分**なので
 **1 本梁の本を 2 本梁の双子と比べていた**。直したら**役割がもう一度入れ替わり**、
@@ -166,7 +257,12 @@ Lily# は 1 本を staff 0 の下に報告する**・双子の構造は正しい
 LP は**別の楽譜**を測っている。**−10.1 は「同じ楽譜の frame ずれ」ではなく「別の楽譜」。**
 ⇒ ★★ **§5.0 に汎化した**: **出力が動かない修正は no-op ではなく*反証*。**
 
-## ▶ 次の一手＝**exporter の ⑵⑶ を塞ぐ。それで 4 冊のうち 3 冊が消えるはず**
+## ~~▶ 次の一手＝**exporter の ⑵⑶ を塞ぐ。それで 4 冊のうち 3 冊が消えるはず**~~ ← **第62セッションで実行した**
+
+⚠️ **予告は「3 冊消える」だったが、消えたのは 2 冊**（`timesig-grandstaff`・`ossia-beams`）。
+**残り 2 冊は「消えなかった」のではなく*初めて対になった***——`beam-under-staves` は
+**測定器の欠陥が残っている**（③ で −6.810 と分かった）、`multistaff-tuplet-beams` は
+**本物の一様 −1.000 の発散**。**以下は当時の記述。**
 
 ★★★ **⑵ `grandStaff` の入れ子**（`EmitScore` が `EnumerateChildren(render)` の**直下しか見ない**）
 ・**⑶ `ossia`**。**これで LP 側が 0 本／1 譜だった 4 冊が本物の対になる**——
@@ -329,12 +425,10 @@ Lily# は run の幅を前のばねの min に*足す*／LP は**既にあるば
 ⑴ ~~**`voice { }` が丸ごと落ちる**~~ ← **第61セッションで塞いだ（⑤）**。
 ⑻ ~~**section の素の音楽が落ちる**（35 冊・**警告も出ない**）~~ ← **同上**。
 ⇒ **今の実測: 双子 199 本のうち「part 変数が空」は 0 本。**
-⑵ ★★ **`grandStaff { staff a staff b }` は譜 0 本と数えられ、fallback で 1 譜になる**——
-`EmitScore` は `EnumerateChildren(render)` の**直下の `staff`/`tab` しか見ない**ので、
-**入れ子のグループを丸ごと見落とす**（`test/beam-under-staves`・`test/timesig-grandstaff`・
-`test/multistaff-tuplet-beams`）。
-⑶ **`ossia` は render 項目として落ちる**、かつ **`part` 宣言を持たない本は音楽ごと空になる**
-（`TopLevelMusic` しか拾わない・`test/ossia-beams` が両方踏む）。
+⑵ ~~**`grandStaff { staff a staff b }` は譜 0 本と数えられ、fallback で 1 譜になる**~~
+← **第62セッションで塞いだ（§1 ①）**。
+⑶ ~~**`ossia` は render 項目として落ちる**、かつ **`part` 宣言を持たない本は音楽ごと空になる**~~
+← **同上**。⇒ **今の実測: 双子 199 本のうち譜を落としている本は 0。**
 ⑷ ~~**相対オクターブのアンカー**~~ ← **第60セッションで塞いだ（④）**。
 ⑸ ★ **タブは双子では測れない**（**欠陥ではない**）——**LP の `TabStaff` は既定で符尾も beam も
 描かない**ので、双子の Beam grob は**置かれておらず**、`positions` は **−76.5** のような数を返す。
@@ -346,6 +440,14 @@ Lily# は run の幅を前のばねの min に*足す*／LP は**既にあるば
 **MIDI 1/32**（`MidiExporter.ProcessGrace`）／**双子 4分**（exporter が何も書かない）。
 **どれが正しいかは Lily# 側の設計判断**なので**起票のみ**（コメントは訂正済）。
 **⑷ と同じ「静かに別の音楽になる」形**＝双子 sweep は**レイアウトの発散として読む**。
+⚠️ ★★★ **第62セッションで*別の顔*が出た（こちらは ⑺ の設計判断を待たずに直せる）**:
+**grace の音価が*後ろの音符*に漏れる**。`grace { d8 } c` の `c` は
+**LP では 8分**（LP の「直前の音価」は grace の中身）**・Lily# では 4分**——
+`CreateNoteItem` の `_defaultDuration` は**明示された音価でしか更新されず**、
+**grace 本体はローカルの `graceDefaultDuration` を使うので外に漏れない**。
+⇒ **exporter が grace の後ろの裸の音符に音価を明示すれば閉じる**。
+**実例＝`test/ossia-beams` の双子が `bar check failed at: 7/8`**（梁 2 本は一致するので
+今日は測れた／§5 の「bar check の出た双子は使わない」規則には掛かる）。
 
 ## 以下は第57セッションの経緯
 
@@ -4158,7 +4260,16 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   **2 度目**（*縦線には小節線が混じる・grace は小節線の直後に立つ*）**でも 1 行も変わらなかった**。
   ⇒ **仮説は反証された**（実際は `beam-under-staves` は**双子が 1 譜しか持たない**＝
   exporter の穴 ⑵ で、**別の楽譜を測っていた**）。
-  ⇒ ★★★ **原則**: **「直したら出力が動いたか」を毎回確かめる。** 動かなければ**診断が違う**。
+  ⚠️ ★★★ **その「反証」は間違いだった（2026-08-01・第62セッションが訂正）。**
+  **穴 ⑵ を塞いで双子が 2 譜になっても差は 10.100 のまま**で、
+  **`3.290 − 10.100 = −6.810` ＝ LP の `positions` に三桁で乗る**。
+  ⇒ **最初の診断（最寄りの譜で測っている）は当たっていた**——**2 度の修正が
+  *割り当てを変えていなかった*だけ**。⇒ ★★★ **原則の限界**: **「出力が動かない＝反証」は
+  *その修正が本当に対象の値の作り方を変えている*ときだけ成立する。**
+  **修正が効いたことを別の観測（割り当てそのものを print する等）で確かめてから、
+  出力が動かないことを反証として使う。**
+  ⇒ ★★★ **原則**: **「直したら出力が動いたか」を毎回確かめる。** 動かなければ**診断が違う**——
+  **か、直っていない。この 2 つを分けるのが上の一手。**
   ⚠️ **危ないのは「もっともらしい実装ミス」で二重に隠れる形**——1 度目が動かなかったのを
   「実装が甘かった」と読んで 2 度目を書いた。**2 度目も動かなくて初めて仮説を捨てた。**
   ⇒ ★★ **仮説を先に安く試す**: 直す前に**中間値を 1 回 print して仮説を確かめる**（§5.3）。
@@ -5376,7 +5487,10 @@ cmd /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dno-point-and-click out.l
 #     dump.ily = \layout { \context { \Score \override Beam.after-line-breaking = #(lambda …) } }
 #     ⚠️ \Voice ではなく \Score（\Voice は TabVoice/CueVoice に届かない）
 #     cmd /d /s /c "…\lilypond.exe -dbackend=null -dinclude-settings=dump.ily -o out NAME.ly …"
-#     ⚠️ -dbackend=null で 1 冊 1 秒（svg backend だと 6.6 秒・199 冊で 20 分の差）
+#     ⚠️ ★ `-dbackend=null` は 2.26.0 に無い（`possible values are (ps cairo svg)` と言って
+#        無視される）。代わりに `-dno-print-pages`＝199 冊で約 5 分（2026-08-01 実測）。
+#     ⚠️ -dinclude-settings のパスは / 区切りで渡す（\ だと
+#        `programming error: file name not normalized` が出る。動きはする）
 #  3) Lily# 側:
 $env:LILYSHARP_BEAM_SWEEP = "$PWD\beams.csv"
 dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build --filter 'FullyQualifiedName~TwinBeamSweep'
