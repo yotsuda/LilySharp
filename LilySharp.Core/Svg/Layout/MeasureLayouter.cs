@@ -419,14 +419,13 @@ internal sealed class MeasureLayouter
                 spring.InverseStretchStrength);
         }
 
-        // Leading grace on the next note hangs left of that column; reserve its width
-        // here so the renderer's hung glyphs have room.
-        double gracePrefix = SpacingRules.LeadingGracePrefixWidth(nextItems);
-        if (gracePrefix > 0)
-            spring = new Spring(
-                spring.IdealDistance + gracePrefix,
-                spring.MinDistance + gracePrefix,
-                spring.InverseStretchStrength);
+        // Leading grace on the next note hangs left of that column; reserve its width here
+        // so the renderer's hung glyphs have room — and shrink the APPROACH by LilyPond's
+        // 0.8 first, which is the half this used to skip (SpacingRules.SpringIntoGraceRun).
+        spring = SpacingRules.SpringIntoGraceRun(
+            spring,
+            SpacingRules.LeadingGraceRunSpan(nextItems),
+            SpacingRules.LeadingGracePrefixWidth(nextItems));
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at
         // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor).

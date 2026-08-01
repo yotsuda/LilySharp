@@ -2086,25 +2086,86 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Adjusts a spring's MinDistance using spring-based grace note width calculation.
+    /// What LilyPond charges the spring that RUNS INTO a grace: it is scaled by
+    /// <c>0.8</c> — LilyPond's own comment on the number is "Ugh. 0.8 is arbitrary."
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
-    /// Uses per-group common shortest duration and individual grace springs
-    /// to calculate the rod (minimum distance) more accurately than fixed widths.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 in musical_column_spacing — applied when the RIGHT column has a
+    ///   grace part and the LEFT column has none, i.e. exactly once per grace run, at its
+    ///   approach. The spring itself is an ORDINARY note spring: lily/spacing-basic.cc takes
+    ///   the main-part branch because the left column carries no grace.
+    /// MEASURED (ledger grace.column.approach): LilyPond spaces that gap at 2.401796 where
+    /// the same book's ordinary quarter gap is 3.002245, and 3.002245 × 0.8 = 2.401796 to
+    /// fifteen places.
+    /// </remarks>
+    public const double GraceApproachScale = 0.8;
+
+    /// <summary>
+    /// Makes room for the grace notes hanging left of the next column: the approach is
+    /// SHRUNK the way LilyPond shrinks it, and the run's own width is what is added.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing (the 0.8);
+    ///   lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs (the run's own
+    ///   springs, whose total is <see cref="CalculateGraceGroupSpringWidth"/>).
+    /// <para>
+    /// ⚠️ THE TWO ENGINES MAKE ROOM IN OPPOSITE DIRECTIONS, and this used to make room the
+    /// other way: it added the run's width to the spring and left the approach alone, so the
+    /// gap before a grace came out 0.850449 too wide (ledger grace.column.approach, open
+    /// since 2026-08-01). LilyPond does not widen anything — it takes the spring it already
+    /// had and shrinks it, then the grace columns live inside the run's own springs.
+    /// </para>
+    /// <para>
+    /// Lily# draws a run as glyphs hanging off the main column rather than as columns of its
+    /// own, so both halves land on ONE spring here: scale first (that is the approach), then
+    /// add the run (that is what the grace columns would have spanned). The scaling is
+    /// <see cref="Spring.Scale"/>, which is LilyPond's <c>Spring::operator*=</c> and so
+    /// refuses to push the ideal below the rod.
+    /// </para>
     /// </remarks>
     public static Spring AdjustSpringForGraceNotes(Spring spring,
         ImmutableArray<GraceNoteInfo> graceNotes,
-        GraceSpacingParameters? graceParams = null)
+        GraceSpacingParameters? graceParams = null,
+        MusicItem? mainItem = null)
+        => graceNotes.IsDefaultOrEmpty
+            ? spring
+            : SpringIntoGraceRun(spring,
+                GraceColumns(graceNotes, mainItem, graceParams).Span,
+                CalculateGraceGroupSpringWidth(graceNotes, graceParams));
+
+    /// <summary>
+    /// The spring that runs into a grace run, given how wide the run itself is: LilyPond's
+    /// 0.8 on the approach, then the run.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME for the rule, because Lily# builds springs in two places and they must
+    /// agree — the column system (<see cref="AdjustSpringForGraceNotes"/>) and the drawn
+    /// timing-column system (MeasureLayouter). The 0.8 was added to the first alone at
+    /// first and the ledger did not move a hair, because the drawn output comes from the
+    /// second (HANDOFF §2 A's "two places computing one quantity", in its spring form).
+    /// </remarks>
+    /// <param name="graceRunSpan">
+    /// The run's own ANCHOR-TO-ANCHOR width — first grace to main note. This is what the
+    /// ideal grows by, because it is the distance the drawn glyphs actually occupy between
+    /// two column origins.
+    /// </param>
+    /// <param name="graceRunClearance">
+    /// The same plus whatever ink hangs LEFT of the first grace's anchor. This is what the
+    /// MIN grows by. ⚠️ Putting it in the ideal instead pushes the approach out by exactly
+    /// that ink (0.2 in the ledger's book): LilyPond keeps the clearance in the approach
+    /// spring's own min_dist, so it binds only when the line is squeezed and never widens a
+    /// comfortable line.
+    /// </param>
+    public static Spring SpringIntoGraceRun(
+        Spring spring, double graceRunSpan, double graceRunClearance)
     {
-        if (graceNotes.IsDefaultOrEmpty)
+        if (graceRunClearance <= 0)
             return spring;
 
-        double graceWidth = CalculateGraceGroupSpringWidth(graceNotes, graceParams);
-        double newMin = Math.Max(spring.MinDistance, spring.MinDistance + graceWidth);
-        double newIdeal = Math.Max(spring.IdealDistance, newMin);
-
-        return new Spring(newIdeal, newMin, spring.InverseStretchStrength);
+        var approach = spring.Scale(GraceApproachScale);
+        double newMin = approach.MinDistance + graceRunClearance;
+        double newIdeal = Math.Max(approach.IdealDistance + graceRunSpan, newMin);
+        return new Spring(newIdeal, newMin, approach.InverseStretchStrength);
     }
 
     /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>
@@ -2515,6 +2576,39 @@ internal static class SpacingRules
             w = Math.Max(w, hang);
         }
         return w;
+    }
+
+    /// <summary>
+    /// The widest leading grace run's ANCHOR-TO-ANCHOR span among <paramref name="items"/> —
+    /// first grace origin to main note origin, with no ink allowance.
+    /// </summary>
+    /// <remarks>
+    /// The companion of <see cref="LeadingGracePrefixWidth"/>, which is the same runs
+    /// measured WITH the leading ink. The two go to different halves of the spring — see
+    /// <see cref="SpringIntoGraceRun"/> — so they are separate readings rather than one
+    /// number with a fudge.
+    /// </remarks>
+    internal static double LeadingGraceRunSpan(IEnumerable<MusicItem>? items)
+    {
+        if (items == null) return 0;
+        double w = 0;
+        foreach (var item in items)
+            w = Math.Max(w, LeadingGraceRunSpan(item));
+        return w;
+    }
+
+    /// <summary>One item's leading grace run span, measured the way the run is PLACED.</summary>
+    /// <remarks>
+    /// ⚠️ The main item has to go in. <c>GraceColumns</c> answers a different span without
+    /// it — 0.2 wider on the ledger's book, which is the first grace's own left ink — and
+    /// GraceNoteEngraver places the run WITH it. Feeding the mainItem-less number to the
+    /// ideal put that ink straight back into the approach the scaling had just taken out.
+    /// </remarks>
+    internal static double LeadingGraceRunSpan(MusicItem? item)
+    {
+        if (item == null) return 0;
+        var grace = GraceNotesOf(item);
+        return grace.IsDefaultOrEmpty ? 0 : GraceColumns(grace, item).Span;
     }
 
     /// <summary>
@@ -3051,7 +3145,8 @@ internal static class SpacingRules
             // this is LilyPond's ideal, and leaving it out made every spring here
             // ~0.104 ss narrow for a black head.
             spring = ApplyLeftHeadWidth(spring, One(prevItem));
-            spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
+            spring = AdjustSpringForGraceNotes(
+                spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem);
             // A pair touching a mid-measure change column is priced by the change column,
             // not by duration — and NOT by merge_springs' headroom afterwards, which would
             // add 0.3 to a gap LilyPond has already fixed.
