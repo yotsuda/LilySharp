@@ -468,8 +468,12 @@ public sealed class LilyPondExporter
         // can reach it.
         var partSections = part?.DescendantNodes<SectionDeclarationSyntax>().ToList()
             ?? new List<SectionDeclarationSyntax>();
-        var byName = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-        var inOrder = new List<SyntaxNode>();
+        // Keyed by the SECTION as well as its container, because the section's own header
+        // (`section A { partial 4  m { … } }`) belongs to every part of it and the container
+        // is usually the part cell one level down — see SectionHeaderMusic.
+        var byName = new Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)>(
+            StringComparer.Ordinal);
+        var inOrder = new List<(SectionDeclarationSyntax Section, SyntaxNode Container)>();
         foreach (var s in allSections)
         {
             // `allSections` is a DESCENDANT walk of the whole file, so it already carries
@@ -490,32 +494,98 @@ public sealed class LilyPondExporter
                 // are written this way, including every book that reaches a tab staff.
                 if (s.Parent is CompilationUnitSyntax && LooseSectionMusic(s).Any())
                 {
-                    byName[s.SectionName] = s;
-                    inOrder.Add(s);
+                    byName[s.SectionName] = (s, s);
+                    inOrder.Add((s, s));
                     _looseSections.Add(s);
                 }
                 continue;
             }
-            byName[s.SectionName] = container;
-            inOrder.Add(container);
+            byName[s.SectionName] = (s, container);
+            inOrder.Add((s, container));
         }
 
         var result = new List<SyntaxNode>();
         if (form != null)
         {
             foreach (var name in FormSectionOrder(form))
-                if (byName.TryGetValue(name, out var section))
-                    result.AddRange(ContainerMusic(section));
+                if (byName.TryGetValue(name, out var entry))
+                {
+                    result.AddRange(SectionHeaderMusic(entry.Section));
+                    result.AddRange(ContainerMusic(entry.Container));
+                }
         }
         else
         {
-            foreach (var s in inOrder)
-                result.AddRange(ContainerMusic(s));
+            foreach (var entry in inOrder)
+            {
+                result.AddRange(SectionHeaderMusic(entry.Section));
+                result.AddRange(ContainerMusic(entry.Container));
+            }
         }
 
         // Also carry any part-level clef declared outside a section (e.g. a
         // mid-part clef change is inside a section and handled there).
         return result;
+    }
+
+    /// <summary>
+    /// A section's OWN header directives, which belong to every part of it.
+    /// </summary>
+    /// <remarks>
+    /// <c>section Main { partial 4  m { g4 | c4 d e f | } }</c> — the <c>partial</c> is a
+    /// direct child of the SECTION, not of the part cell, so neither the file-level pass
+    /// (<see cref="EmitScoreSettings"/>, which reads only <c>root.Members</c>) nor the cell's
+    /// own items reached it and the twin lost the pickup. LilyPond then counts the pickup bar
+    /// as a short bar and every bar line after it is a bar check failure — a twin that is
+    /// silently a different piece, the same shape as the four holes before it.
+    /// <para>
+    /// Mirrors MeasureCollector: the same four directives, the same "first direct child wins",
+    /// the same exclusion of a section that has INLINE MUSIC (such a section walks its own
+    /// <c>key</c> as music — here that is <see cref="LooseSectionMusic"/>, which already
+    /// yields them — so emitting them again would apply them twice), and the same order the
+    /// collector applies them in (MeasureCollector.Form.cs: time, tempo, key, partial).
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<SyntaxNode> SectionHeaderMusic(SectionDeclarationSyntax section)
+    {
+        if (SectionHasInlineMusic(section))
+            yield break;
+        if (FirstDirect<TimeSignatureSyntax>(section) is { } time) yield return time;
+        if (FirstDirect<TempoDeclarationSyntax>(section) is { } tempo) yield return tempo;
+        if (FirstDirect<KeySignatureSyntax>(section) is { } key) yield return key;
+        if (FirstDirect<PartialDeclarationSyntax>(section) is { } partial) yield return partial;
+    }
+
+    /// <summary>The first direct-child directive of type <typeparamref name="T"/>.</summary>
+    private static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode
+    {
+        foreach (var child in EnumerateChildren(section))
+            if (child is T t)
+                return t;
+        return null;
+    }
+
+    /// <summary>
+    /// True when the section has a direct-child MUSIC node, as opposed to only directives and
+    /// part / chord / lyric blocks — MeasureCollector.Form.cs SectionHasInlineMusic.
+    /// </summary>
+    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
+    {
+        foreach (var child in EnumerateChildren(section))
+        {
+            // ⚠️ The keyword and the braces are children too. Dropping this line made every
+            // section look like it had inline music, so the header was never emitted.
+            if (child is SyntaxTokenNode)
+                continue;
+            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
+                continue;
+            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
+                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
+                continue;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
