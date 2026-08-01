@@ -3334,6 +3334,62 @@ internal static class LpGeometryProbes
         score main "BQV" { staff m }
         """;
 
+    /// <summary>
+    /// A beamed measure that shares a part with a <c>voice { } voice { }</c> span ONE BAR
+    /// LATER — the reach of the span, measured where the span is not.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's <c>\\</c> wraps each sublist in its own Voice context with
+    /// <c>make-voice-props-set</c> at its head (scm/music-functions.scm:1042-1057
+    /// voicify-sublist), so <c>\voiceOne</c> dies with the span and this measure keeps the
+    /// pitch-derived direction: the run sits at staff positions +5..+12, well above the
+    /// middle line, so its stems point DOWN and the beam lands near the centre.
+    /// <para>
+    /// Its IDENTITY PAIR is <see cref="BVSC"/>: the same measure with no span anywhere in
+    /// the part. LilyPond prints the two the same, so any difference is Lily# alone.
+    /// </para>
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-voice-span-scope.ly, score A):
+    /// <c>\fixed c' { g'8 a' b' c'' d'' e'' fis'' g'' | &lt;&lt; { b2 a } \\ { d2 e } &gt;&gt; }</c>
+    /// — 4/4 beams the eighths in two groups of four, <c>Beam.positions</c>
+    /// <c>(-0.19 . 0.0)</c> then <c>(0.0 . 0.0)</c>. Score B prints both identically.
+    /// </para>
+    /// <para>
+    /// ⚠️ Until 2026-08-01 Lily# asked <c>Voices.Length &gt; 1</c> — a PART-wide question —
+    /// so one span anywhere pinned every bar of voice 1 stem-up and this beam came out on
+    /// the wrong side of its heads while the control stayed put.
+    /// </para>
+    /// </remarks>
+    private static readonly string BVS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
+        section B { m { voice { b2 a } voice { d2 e } } }
+
+        form main { ~A ~B }
+
+        score main "BVS" { staff m }
+        """;
+
+    /// <summary>The control for <see cref="BVS"/>: the same beamed measure, no span.</summary>
+    private static readonly string BVSC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
+
+        form main { ~A }
+
+        score main "BVSC" { staff m }
+        """;
+
     // --- the one regime where the quanter's stems do NOT all point the same way
     // (audit/lp-geometry/probes/beam-knee.ly).
     //
@@ -7189,6 +7245,11 @@ internal static class LpGeometryProbes
         new("beam.quant.chord.left", BQC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.chord.right", BQC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.chord.single-note-control", BQCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // The REACH of a voice { } span, measured one bar outside it, against the same bar
+        // with no span in the part at all. LilyPond prints the pair identically because
+        // \voiceOne dies with the span; a part-wide reading moves only the first.
+        new("beam.voice-span.outside-span", BVS, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.voice-span.no-span-control", BVSC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         // …and the KNEE, the one regime where the members' stems point different ways and the
         // quanter's column-for-stem x therefore cannot cancel.
         new("beam.quant.knee.left", BQK, g => g.BeamPositionAboveStaffMiddle(0, false)),

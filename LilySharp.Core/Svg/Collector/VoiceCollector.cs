@@ -104,13 +104,16 @@ internal sealed class VoiceCollector
             var voice = voices[voiceIndex];
             int voiceId = voiceIndex + 1;
 
-            // Get default stem direction for this voice
-            bool? defaultStemUp = VoiceDefaults.GetDefaultStemUp(voiceId);
-
             for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
             {
                 var measure = voice.Measures[measureIndex];
                 var timePosition = Fraction.Zero;
+
+                // Forced stem direction for this voice, where the voice { } span
+                // actually reaches.
+                // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+                bool? defaultStemUp = VoiceDefaults.GetDefaultStemUpAt(
+                    voices, voiceIndex, measureIndex);
 
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
                 {

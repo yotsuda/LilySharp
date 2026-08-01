@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
@@ -42,12 +43,15 @@ internal sealed class BeamDetector
     /// </summary>
     /// <remarks>
     /// Automatic beaming never crosses voices — each voice groups its own notes.
-    /// In a polyphonic staff the stem direction is FORCED by voice (voice 1 up,
-    /// voice 2 down), mirroring the renderer's <see cref="VoiceDefaults.GetDefaultStemUp"/>,
-    /// so a lower voice's beam sits below its notes. A single-voice staff keeps
-    /// the position-based direction (and thus stays byte-identical).
+    /// Inside a <c>voice { }</c> span the stem direction is FORCED by voice (voice 1
+    /// up, voice 2 down), mirroring the renderer's
+    /// <see cref="VoiceDefaults.GetDefaultStemUpAt"/>, so a lower voice's beam sits
+    /// below its notes. Measures the span does not reach keep the position-based
+    /// direction — the forcing lives and dies with the span, so a monophonic section
+    /// elsewhere in the part is untouched.
     /// LILYPOND-REF: lily/auto-beam-engraver.cc — one Beam per Voice context.
-    /// LILYPOND-REF: ly/engraver-init.ly — \voiceOne/\voiceTwo force stem direction.
+    /// LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+    ///   — each <c>\\</c> sublist gets its own Voice context with the property set at its head.
     /// </remarks>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
     {
@@ -63,9 +67,11 @@ internal sealed class BeamDetector
             var voiceTuplets = score.TupletBrackets.IsDefaultOrEmpty
                 ? score.TupletBrackets
                 : score.TupletBrackets.Where(t => t.VoiceIndex == v).ToImmutableArray();
+            int voiceIndex = v;
             all.AddRange(DetectBeamGroups(
                 score.Voices[v], score.TimeSignature, voiceTuplets,
-                voiceIndex: v, forceStemUp: VoiceDefaults.GetDefaultStemUp(v + 1)));
+                voiceIndex: v,
+                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(score.Voices, voiceIndex, mi)));
         }
         return all.ToImmutable();
     }
@@ -85,7 +91,7 @@ internal sealed class BeamDetector
     /// </remarks>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature,
         ImmutableArray<TupletBracketItem> tupletBrackets = default,
-        int voiceIndex = 0, bool? forceStemUp = null)
+        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
     {
         var beamGroups = new List<BeamGroup>();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
@@ -117,7 +123,7 @@ internal sealed class BeamDetector
 
         // Pass 1: cross-measure manual beams.
         DetectCrossMeasureManualBeams(voice, timeSignature, beamGroups, consumed,
-            tupletStarts, tupletStops, voiceIndex, forceStemUp);
+            tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
 
         // Pass 2: single-measure detection (skipping consumed items). The beam
         // grouping depends on the meter, which a mid-piece \time changes — track
@@ -133,7 +139,7 @@ internal sealed class BeamDetector
             foreach (var item in measure.Items)
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
-            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletStarts, tupletStops, voiceIndex, forceStemUp);
+            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
         }
 
         return beamGroups.ToImmutableArray();
@@ -157,7 +163,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? tupletStarts = null,
         HashSet<(int, int)>? tupletStops = null,
         int voiceIndex = 0,
-        bool? forceStemUp = null)
+        Func<int, bool?>? forceStemUpAt = null)
     {
         // Collect every (measureIndex, itemIndex, isStart) marker.
         var markers = new List<(int Measure, int Item, bool IsStart)>();
@@ -199,7 +205,7 @@ internal sealed class BeamDetector
                     continue; // within-measure: per-measure pass handles it.
 
                 BuildCrossMeasureBeamGroup(voice, timeSignature, startM, startI, mi, ii, beamGroups,
-                    consumed, tupletStarts, tupletStops, voiceIndex, forceStemUp);
+                    consumed, tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
             }
         }
     }
@@ -223,7 +229,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? tupletStarts = null,
         HashSet<(int, int)>? tupletStops = null,
         int voiceIndex = 0,
-        bool? forceStemUp = null)
+        Func<int, bool?>? forceStemUpAt = null)
     {
         var allEntries = new List<(MusicItem Item, int Index, Fraction StartPos, int Measure)>();
         // Items this pair WOULD consume — committed to the shared `consumed` set
@@ -303,7 +309,8 @@ internal sealed class BeamDetector
         }
 
         // A polyphonic voice forces its direction; otherwise the farthest head decides.
-        bool stemUp = forceStemUp ?? DefaultBeamStemUp(members);
+        // The beam is asked where it STARTS — one beam has one direction.
+        bool stemUp = forceStemUpAt?.Invoke(startMeasure) ?? DefaultBeamStemUp(members);
         for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
@@ -354,7 +361,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? tupletStarts = null,
         HashSet<(int, int)>? tupletStops = null,
         int voiceIndex = 0,
-        bool? forceStemUp = null)
+        Func<int, bool?>? forceStemUpAt = null)
     {
         // The beat grid and the meter's beamExceptions. Derived ONCE per measure rather than
         // per beam group: they depend only on the meter, and building them allocates.
@@ -362,7 +369,7 @@ internal sealed class BeamDetector
 
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
-            tupletStarts, tupletStops, voiceIndex, forceStemUp);
+            tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
 
         var stems = new List<(MusicItem item, int index, Fraction startPos)>();
         // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_
@@ -379,7 +386,7 @@ internal sealed class BeamDetector
         {
             if (stems.Count >= 2)
                 beamGroups.Add(CreateBeamGroup(stems, measureIndex, beamOptions,
-                    tupletStarts, tupletStops, voiceIndex, forceStemUp));
+                    tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
             stems.Clear();
             shortest = Fraction.Quarter;
         }
@@ -405,7 +412,7 @@ internal sealed class BeamDetector
                 var tail = stems.GetRange(i + 1, stems.Count - (i + 1));
                 if (head.Count >= 2)
                     beamGroups.Add(CreateBeamGroup(head, measureIndex, beamOptions,
-                        tupletStarts, tupletStops, voiceIndex, forceStemUp));
+                        tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
                 stems.Clear();
                 stems.AddRange(tail);
                 i = 0;
@@ -466,7 +473,7 @@ internal sealed class BeamDetector
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
         BeamingPattern.Options beamOptions,
         HashSet<(int, int)>? tupletStarts = null, HashSet<(int, int)>? tupletStops = null,
-        int voiceIndex = 0, bool? forceStemUp = null)
+        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
     {
         var members = new List<BeamMember>();
 
@@ -509,7 +516,8 @@ internal sealed class BeamDetector
 
         // A polyphonic voice forces its direction (voice 1 up / voice 2 down);
         // otherwise the head farthest from the middle line decides (LP get_default_dir).
-        bool stemUp = forceStemUp ?? DefaultBeamStemUp(members);
+        bool? forcedStemUp = forceStemUpAt?.Invoke(measureIndex);
+        bool stemUp = forcedStemUp ?? DefaultBeamStemUp(members);
 
         // Check if first note has feathered beam direction
         // LILYPOND-REF: beam.cc:1039-1082 grow-direction
@@ -521,7 +529,7 @@ internal sealed class BeamDetector
         // LILYPOND-REF: define-grobs.scm:476 auto-knee-gap = 5.5
         // A forced-direction (polyphonic) voice never knees — every stem stays on
         // the voice's side, so auto-knee only runs in a neutral single voice.
-        double? kneeGapCenter = forceStemUp is null ? AutoKneeGapCenter(members) : null;
+        double? kneeGapCenter = forcedStemUp is null ? AutoKneeGapCenter(members) : null;
 
         for (int i = 0; i < members.Count; i++)
         {
@@ -767,7 +775,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? tupletStarts = null,
         HashSet<(int, int)>? tupletStops = null,
         int voiceIndex = 0,
-        bool? forceStemUp = null)
+        Func<int, bool?>? forceStemUpAt = null)
     {
         var ranges = new List<(int start, int end)>();
         int? beamStart = null;
@@ -818,7 +826,7 @@ internal sealed class BeamDetector
                 if (group.Count >= 2)
                 {
                     beamGroups.Add(CreateBeamGroup(group, measureIndex, beamOptions,
-                        tupletStarts, tupletStops, voiceIndex, forceStemUp));
+                        tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
                     ranges.Add((start, end));
                 }
 

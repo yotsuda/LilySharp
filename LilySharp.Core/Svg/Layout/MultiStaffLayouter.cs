@@ -2131,9 +2131,11 @@ internal sealed class MultiStaffLayouter
             // A tuplet bounds beaming only inside its OWN voice — the same filter
             // BeamDetector.DetectBeamGroups(Score) applies, for the same reason.
             var voiceTuplets = staffTuplets.Where(t => t.VoiceIndex == v).ToImmutableArray();
+            int voiceIndex = v;
             beamGroups.AddRange(detector.DetectBeamGroups(
                 staff.Voices[v], score.TimeSignature, voiceTuplets,
-                voiceIndex: v, forceStemUp: VoiceDefaults.GetDefaultStemUp(v + 1)));
+                voiceIndex: v,
+                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(staff.Voices, voiceIndex, mi)));
         }
 
         var staffBeams = beamLayouts.IsDefaultOrEmpty

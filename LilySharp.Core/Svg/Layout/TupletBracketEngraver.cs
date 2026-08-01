@@ -196,7 +196,12 @@ internal static class TupletBracketEngraver
             // OWN stem direction — not the staff's primary voice.
             ImmutableArray<Voice> tupVoices = default;
             voicesByStaff?.TryGetValue(tuplet.StaffIndex, out tupVoices);
-            bool staffMultiVoice = !tupVoices.IsDefaultOrEmpty ? tupVoices.Length > 1 : forceStemUp;
+            // Polyphonic HERE, not somewhere else in the part: \voiceOne/\voiceTwo
+            // live and die with the voice { } span.
+            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+            bool staffMultiVoice = !tupVoices.IsDefaultOrEmpty
+                ? VoiceDefaults.IsPolyphonicAt(tupVoices, tuplet.MeasureIndex)
+                : forceStemUp;
             ImmutableArray<Measure> tupMeasures =
                 !tupVoices.IsDefaultOrEmpty && tuplet.VoiceIndex < tupVoices.Length
                     ? tupVoices[tuplet.VoiceIndex].Measures

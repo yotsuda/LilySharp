@@ -305,10 +305,13 @@ internal static class ArticulationEngraver
             // PRIMARY voice (LayoutEngine sets measuresByStaff = PrimaryVoice), so use
             // voice 1's forced direction. Mirrors SkylineBuilder / DynamicEngraver.
             // (Beamed members refine this from the beam just below.)
+            // Only inside the voice { } span, though — outside it voice 1 is the
+            // only voice and keeps its pitch-natural direction.
+            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
             if (staffByIndex != null
                 && staffByIndex.TryGetValue(articulation.StaffIndex, out var ownStaff)
-                && ownStaff.Voices.Length > 1
-                && VoiceDefaults.GetDefaultStemUp(1) is { } voiceStemUp)
+                && VoiceDefaults.GetDefaultStemUpAt(
+                    ownStaff.Voices, 0, articulation.MeasureIndex) is { } voiceStemUp)
                 stemUp = voiceStemUp;
 
             // A beamed member's stem ends on the BEAM, not at the unbeamed

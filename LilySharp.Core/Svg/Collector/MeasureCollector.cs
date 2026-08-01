@@ -1606,7 +1606,12 @@ public sealed partial class MeasureCollector
     /// Applied last, and unconditionally, to match the renderer's precedence: the
     /// voice default wins over a beam-resolved or explicitly annotated direction.
     /// Voices 5+ get <c>null</c> from GetDefaultStemUp and keep their own.
-    /// LILYPOND-REF: ly/engraver-init.ly — \voiceOne/\voiceTwo force stem direction.
+    ///
+    /// Only INSIDE the span, though — see <see cref="VoiceDefaults.IsPolyphonicAt"/>.
+    /// LilyPond's <c>\\</c> gives each block its own Voice context, so the forcing
+    /// dies with the span; baking it across the whole part instead pinned the stems
+    /// of monophonic sections that merely shared a part with one <c>voice { }</c>.
+    /// LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
     /// </remarks>
     private static ImmutableArray<Voice> ResolveVoiceStemDirections(ImmutableArray<Voice> voices)
     {
@@ -1623,6 +1628,9 @@ public sealed partial class MeasureCollector
             bool changed = false;
             for (int mi = 0; mi < measures.Count; mi++)
             {
+                if (!VoiceDefaults.IsPolyphonicAt(voices, mi))
+                    continue;
+
                 var measure = measures[mi];
                 var items = measure.Items.ToBuilder();
                 bool measureChanged = false;

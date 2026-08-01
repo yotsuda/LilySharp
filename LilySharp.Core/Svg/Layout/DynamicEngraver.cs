@@ -433,8 +433,10 @@ internal static class DynamicEngraver
             {
                 var item = voice.Measures[measureIndex].Items[itemIndex];
                 // Direction policy stays the caller side's (NoteColumnLayout's contract):
-                // multi-voice forcing, overridden by the beam's resolved direction.
-                bool? forcedStemUp = vs.Length > 1 ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
+                // the voice { } span's forcing, overridden by the beam's resolved
+                // direction.
+                // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+                bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(vs, vi, measureIndex);
                 var beamInfo = beamOf?.Invoke(vi);
                 if (beamInfo is { } bi)
                     forcedStemUp = bi.StemUp;

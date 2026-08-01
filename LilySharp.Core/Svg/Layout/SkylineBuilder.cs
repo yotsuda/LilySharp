@@ -452,18 +452,9 @@ internal sealed class SkylineBuilder
             return;
         }
 
-        bool multiVoice = staff.Voices.Length > 1;
         for (int vi = 0; vi < staff.Voices.Length; vi++)
         {
             var voice = staff.Voices[vi];
-            // A staff with multiple voices forces stem directions by voice (v1 up,
-            // v2 down, ...), exactly as the renderer does (SharedRenderer uses
-            // VoiceDefaults.GetDefaultStemUp). The note's own pitch-based StemUp is
-            // wrong for the skyline then — e.g. a low bass note in voice 2 is drawn
-            // stem-DOWN but its natural direction is up, so its down-stem would be
-            // missing from the down-skyline and lyrics/staves below would collide.
-            bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
-
             // Iterate over measureLayouts (which are for the current system only).
             // Use MeasureLayout.MeasureIndex to look up the correct voice measure.
             for (int layoutIndex = 0; layoutIndex < measureLayouts.Length; layoutIndex++)
@@ -473,6 +464,17 @@ internal sealed class SkylineBuilder
 
                 if (measureIndex >= voice.Measures.Length)
                     continue;
+
+                // Inside a voice { } span the stems are forced by voice (v1 up,
+                // v2 down, ...), exactly as the renderer draws them. The note's own
+                // pitch-based StemUp is wrong for the skyline then — a low bass note
+                // in voice 2 is drawn stem-DOWN but its natural direction is up, so
+                // its down-stem would be missing from the down-skyline and
+                // lyrics/staves below would collide. Outside the span nothing forces
+                // it.
+                // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+                bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(
+                    staff.Voices, vi, measureIndex);
 
                 var measure = voice.Measures[measureIndex];
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)

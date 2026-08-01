@@ -1143,6 +1143,16 @@
       "lilypond": 6, "residual": 0.0,
       "why": "EXACT. The companion reading: LilyPond's first beam joins six sixteenths, two tuplets' worth, and so does Lily#'s. See beam.grouping.sixteenth-triplets.groups."
     },
+    "beam.voice-span.outside-span": {
+      "probe": "beam-voice-span-scope.ly", "score": "A",
+      "lilypond": -0.19, "residual": 0,
+      "why": "EXACT — and it opened at +5.690000, which is the whole point of the pair. The quantity is a beam ONE BAR OUTSIDE a `voice { } voice { }` span, and its control (beam.voice-span.no-span-control) is the same bar with no span in the part at all. LilyPond prints the two identically: `\\\\` wraps each sublist in its OWN Voice context with make-voice-props-set at its head (scm/music-functions.scm:1042-1057 voicify-sublist, :666-674 make-voice-props-set), so \\voiceOne lives and dies with the span and the surrounding music keeps the pitch-derived direction. Lily# asked `Voices.Length > 1` — a PART-wide question — in EIGHT places (MeasureCollector.ResolveVoiceStemDirections, SharedRenderer, SkylineBuilder, DynamicEngraver, ArticulationEngraver, TupletBracketEngraver, VoiceCollector, BeamDetector x2), so ONE span anywhere pinned every bar of voice 1 stem-up and this beam came out 5.69 above LilyPond's while the control did not move. All eight now ask VoiceDefaults.IsPolyphonicAt(voices, measureIndex). ⚠️ VERIFIED AGAINST LILYPOND STEM BY STEM, not just here: Stem.after-line-breaking printed `direction` for the twins of voice-mixed / voice-grandstaff / voice-dynamics-mid / voice-dynamics-multistaff / hara-kiri, and every stem outside a span is pitch-natural in all five while the spans alternate +1/-1. That sweep is what justified the seven snapshot rebases in the same commit. ⚠️ The reach is still measured at MEASURE granularity, and off the model rather than from the span itself — see the LILYSHARP-OWN note on IsPolyphonicAt for the one case (later voices running out before voice 1 does) where LilyPond would keep forcing and Lily# stops."
+    },
+    "beam.voice-span.no-span-control": {
+      "probe": "beam-voice-span-scope.ly", "score": "B",
+      "lilypond": -0.19, "residual": 0,
+      "why": "EXACT, and it was exact before the fix too — that is its job. Without this reading the +5.690000 of beam.voice-span.outside-span could have been a paper, spacing or quanter difference in the book rather than the span's reach; the two books share the beamed measure byte for byte and differ only in whether a `voice { }` span appears one bar later, so a term that moves only one of them can be nothing else. See beam.voice-span.outside-span."
+    },
     "beam.quant.knee.left": {
       "probe": "beam-knee.ly", "score": "A",
       "lilypond": -0.19, "residual": 0,

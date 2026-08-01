@@ -29,7 +29,7 @@ internal static partial class SharedRenderer
     // ---------- Notes & rests per staff ----------
 
     private static void DrawStaffMeasures(
-        Voice voice, int voiceNumber, bool? forcedStemUp,
+        Voice voice, int voiceNumber, ImmutableArray<Voice> staffVoices,
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
@@ -67,6 +67,12 @@ internal static partial class SharedRenderer
             // forced below the line (instead of the default up) to clear the up
             // voice's dot. LILYPOND-REF: lily/note-collision.cc:411-448.
             bool dotForceDown = layout.IsDotForcedDown(ml.MeasureIndex, voiceNumber, itemIdx);
+
+            // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
+            // is asked per measure — not once per part.
+            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+            bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(
+                staffVoices, voiceNumber - 1, ml.MeasureIndex);
 
             // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
             // Each voice/staff pass restarts at its first measure; the resolver detects the
