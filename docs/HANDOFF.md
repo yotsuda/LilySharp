@@ -58,17 +58,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-08-01（第67セッション＝**第66セッションの ⑥ を閉じ、その次の ★★ を測りに行ったら
-別の起票が出た**）。
-**⑴ 起票を測りに行ったら、原因は「和音の平均」という発明で、LP の字面に置き換えたら
-exact に一致した**——`249e487d`・**ユーザー承認のうえ snapshot 1 枚を再ベース**。
-**⑵ `tab` の梁は「高さがずれている」のではなく、そもそも量子器を通っていなかった**（⑦）——
-**同じセッションで量子器に戻した**（⑧・`03a54cfb`・**ユーザー承認・snapshot 8 枚を再ベース**）。
-★★★ **今日は「実装と違う doc」を 2 件踏んだ**（`quant_range_` の注と `TabBeamQuant` の
-クラス doc）。**どちらも「LP のこれを使っている」と名指しで書いてあり、どちらも使っていなかった。**
+最終更新 2026-08-02（第67セッション＝**▶ の LP 忠実度の項目を全部空にし、次の島の入口まで作った**）。
+**閉じたもの**（**すべてユーザー承認のうえ再ベース**）:
+```
+⑥  和音の頭＝「平均」という発明        249e487d   snapshot 1 枚   台帳 3 点追加・EXACT
+⑦⑧ tab の梁が量子器を通っていない      03a54cfb   snapshot 8 枚   台帳 5 点追加・EXACT
+⑩  弦選択をユーザー仕様で書き直し      c8d03b1b   snapshot 6 枚   単体テスト 13 本
+⑤  オクターブのアンカー（MIDI+XML）    92727a74 / 781034c3        描画は動かない
+⑪  grace の approach                  af968e4a / 5730dd45  5 枚  0.850449 → EXACT
+⑫  梁の向きの完全同数 tiebreak         2ab6f943   snapshot 0 枚   LP の答え 4 行で固定
+⑬a 光学サイズの入口                    f7edb1ac   出力不変        ← 続きは ⑬
+```
+★★★ **今日は「実装と違う doc」を 3 件踏んだ**（`quant_range_` の注・`TabBeamQuant` の
+クラス doc・`BeamMember.StaffPosition` の doc）。**どれも「LP のこれを使っている」と
+名指しで書いてあり、どれも使っていなかった**（§5.2）。
 ★★★ **⑧ の教訓＝「LP のソースには *レシピごと* 書いてあることがある**」——
 **tab の梁の定数は `ly/engraver-init.ly` に 2 行で、LP 自身のコメントつきで置いてあった**。
 **`lily/*.cc` を測る前に `ly/` の context 定義を読むこと。**
+★★★ **⑪ の教訓＝規則は「描画を出している系統」に届かないと 1 ミリも動かない**
+（**spring 系統が 2 つある**）。**⑫ の教訓＝コーパスが 1 冊も踏まない分岐は単体テストだけが観測者。**
 ★★★ **LP は和音に頭を 1 つしか訊かない**——**ステム方向の端の頭**（`head_positions (me)[my_dir]`・
 `lily/stem.cc:1214-1215`／`chord_start_y` は `last_head`＝**同じ頭**・`:114-122`）。
 **Lily# は和音の頭の算術平均を渡していた**（`BeamDetector.GetChordStaffPosition`）。
@@ -85,8 +93,8 @@ exact に一致した**——`249e487d`・**ユーザー承認のうえ snapshot
 ★★★ **台帳 3 点（`beam.quant.chord.spanning.*`）を足した**（④・**旧コードは落ちる**）。
 **既存の `beam.quant.chord.*` が見えなかった理由も測った**——**中央線の近くでは
 `stem.cc:1239` の clamp がどちらの頭から来ても同じ答に落とす**。
-**未 push 71**（**この引継ぎ commit まで数えた値**）・
-テスト **3816 passed / 0 failed / 3 skipped**（**+29**）・
+**未 push 75**（**この引継ぎ commit まで数えた値**）・
+テスト **3824 passed / 0 failed / 3 skipped**（**+37**）・
 台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）
 ＝**総和が 1.088457611 から 0.850449 縮み、非ゼロが 1 つ減った**（⑪）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
@@ -337,7 +345,7 @@ score-grace-settings）——**音高から導くと中央線より上の grace 
 **観測者は `BeamContinuationTests` の 4 行だけ**（**LP の答え -1/1/-1/1 をそのまま**・
 **周りの 3 行は「DOWN 決め打ち」で通らないようにするため**）。
 
-## ⑬ ★★★ **`grace.column` の 12 点は 1 つの原因＝Emmentaler の光学サイズ**（**実測で確定・未着手**）
+## ⑬ ★★★ **`grace.column` の 12 点は 1 つの原因＝Emmentaler の光学サイズ**（**⑴a まで landed**）
 
 ★★★ **LP はサイズごとに別のデザインファイルへ持ち替える**（`lily/font-select.cc:41-70`
 `best_rounded_design_size` ＋ `scm/lily-library.scm:1702` `feta-design-size-mapping`）:
@@ -365,10 +373,28 @@ design   11        13        14        16        18        20        23        2
 **ただし step 0 の呼び出しは今のテーブルのままで動く**ので、**触るのは scaled な経路だけ**。
 ★ **段取り**（各段が単体で完結する形）:
 ```
-⑴ 決定を 1 つ作る: 8 デザインを bundle・生成器を per-design 化・best_rounded_design_size を移植
-   （出力は不変。テストは上の 8 値を LP の答えとして固定する）
-⑵ scaled な経路を通す: grace → ossia → cue。メトリクスと描画を同じ決定から引く
-⑶ 残りのサイズと snapshot 再ベース（要承認）
+⑴a 済（`f7edb1ac`）: 8 デザインを bundle ＋ 選択規則を移植（`EmmentalerDesignSize`）。出力不変。
+⑴b ← ★ここから★ 生成器を per-design 化する（`GlyphMetricsGenerated` を designTable 引きに）
+⑵  scaled な経路を通す: grace → ossia → cue。メトリクスと描画を同じ決定から引く
+⑶  残りのサイズと snapshot 再ベース（要承認）
+```
+★★★ **⑴a で入ったもの**（**出力は 1 ドットも動いていない**）:
+**`LilySharp.Core/Svg/Layout/EmmentalerDesignSize.cs`**＝`BestRounded` / `ForFontSizeStep` /
+`RequestedSize` / `Magnification` と `Designs` 表。**テストは `EmmentalerDesignSizeTests`**。
+⚠️ **選択は「比」であって「差」ではない**——**比は 2 つのデザインサイズの*幾何*平均で、
+差は*算術*平均で切り替わる**。**12.60 と 14.14 なら 13.3475 と 13.37 で、その帯は引くファイルが変わる**
+（テストがそこを固定している）。
+★★★ **⑴b の形**（**着手前にこれを読むこと**）:
+**LP の縮尺は magstep そのもの**なので、**`main-staff ss の値 = designTable[選択] × 2^(step/6)`**。
+⇒ **乗算は Lily# が既にやっている**ので、**変えるのは「どのテーブルを引くか」だけ**。
+**`GlyphMetrics.` の参照は 230 箇所あるが、step 0 の呼び出しは今のテーブルのままで動く**
+——**触るのは scaled な経路（62 箇所）だけ**。
+★ **生成器**: `audit/scripts/Extract-EmmentalerMetrics.py`（`main()` が
+`Fonts/emmentaler-20.otf` 固定・出力は `GlyphMetricsGenerated.cs`）。**8 デザインを回す。**
+★ **裏取りに使う値**（LP の LILC を直接読んだもの・`noteheads.s2` の右端）:
+```
+design   11        13        14        16        18        20        23        26
+        1.289478  1.294282  1.298161  1.300819  1.302806  1.304200  1.305122  1.305873
 ```
 ⚠️ **fontTools は `%LOCALAPPDATA%\Programs\Python\Python313\python.exe` に入っている**
 （`python` は LP 同梱のものに解決されるので使えない）。**生成器はそちらで走らせる。**
@@ -388,7 +414,8 @@ design   11        13        14        16        18        20        23        2
 ★★ **`grace.column.approach` は EXACT になった**（`af968e4a` ＋ `5730dd45`・**ユーザー承認・snapshot 5 枚**）。
 **残った 0.2 も同じセッションで閉じた**（ステム補正の相手・⑪）。
 ★ **`DefaultBeamStemUp` の tiebreak も閉じた**（`2ab6f943`・⑫）。**snapshot は 1 枚も動かない。**
-★★★ **⑬ 光学サイズの実装**（**ユーザー決定＝全 8 デザイン**・**§1 ⑬ に実測と段取り**）。
+★★★ **⑬ 光学サイズの実装＝続きから**（**ユーザー決定＝全 8 デザイン**・**§1 ⑬ に実測・段取り・入口**）。
+**⑴a は済んで landed**（`f7edb1ac`・出力不変）。**次は ⑴b＝生成器の per-design 化**。
 **`grace.column` の 12 点はこれ 1 つで閉じる**（残り 2 点は旗と臨時記号で、同じ族だが別グリフ）。
 ⚠️ **メトリクスと描画を別段階にしないこと**（ユーザー指摘）。**⑶ で描画が動く＝要承認。**
 ★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
