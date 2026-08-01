@@ -1619,7 +1619,8 @@ public sealed class LilyPondExporter
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
                     case TabRenderSyntax tb:
-                        rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    "));
+                        rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    ",
+                            tabNumbersOnly: TabIsNumbersOnly(tb)));
                         lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
                         break;
                     case OssiaRenderSyntax os:
@@ -1792,8 +1793,23 @@ public sealed class LilyPondExporter
         return row.Insert(at + "\\new Staff".Length, " = \"" + varName + "\"");
     }
 
+    /// <summary>
+    /// True for <c>tab part as numbers</c> — fret digits only. Mirrors
+    /// <c>RenderSpecParser</c>'s reading of the same trailing <c>as …</c> selector; the two
+    /// must agree, or the twin is drawn in the other mode from the page.
+    /// </summary>
+    private static bool TabIsNumbersOnly(TabRenderSyntax tab)
+    {
+        var toks = tab.DescendantNodes().OfType<SyntaxTokenNode>().ToList();
+        for (int i = 1; i < toks.Count - 1; i++)
+            if (string.Equals(toks[i].Text, "as", StringComparison.Ordinal))
+                return string.Equals(toks[i + 1].Text, "numbers", StringComparison.OrdinalIgnoreCase);
+        return false;
+    }
+
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
-        Dictionary<string, string> partVars, bool tab, string indent)
+        Dictionary<string, string> partVars, bool tab, string indent,
+        bool tabNumbersOnly = false)
     {
         string varName = partName != null && partVars.TryGetValue(partName, out var v)
             ? v : partVars.Values.FirstOrDefault() ?? "music";
@@ -1808,7 +1824,18 @@ public sealed class LilyPondExporter
             sb.Append(indent).Append("\\new TabStaff");
             if (tuning.Length > 0)
                 sb.Append(" \\with { stringTunings = #").Append(tuning).Append(" }");
-            sb.Append(" { \\").Append(varName).Append(" }\n");
+            sb.Append(" { ");
+            // ⚠️ The two engines' DEFAULTS are opposite ends of the same switch. A bare
+            // LilyPond TabStaff prints fret digits ALONE — it omits Stem, Beam, Flag, Dots,
+            // Rest and TupletBracket (ly/engraver-init.ly TabStaff / `\tabFullNotation` in
+            // ly/property-init.ly) — and that is Lily#'s `tab part as numbers`. Lily#'s
+            // DEFAULT `tab part` draws the rhythm, so its twin has to ask for it back.
+            // Measured: without this the twin of `tab-beam-script` held TWO Beam grobs (the
+            // notation staff's) against the page's four, so every tab book was uncomparable
+            // on beams and was written off as a frame problem in the sweep.
+            if (!tabNumbersOnly)
+                sb.Append("\\tabFullNotation ");
+            sb.Append('\\').Append(varName).Append(" }\n");
         }
         else if (partName != null && _drumParts.Contains(partName))
         {

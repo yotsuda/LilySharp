@@ -182,6 +182,31 @@ public class LilyPondExporterTests
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
     }
 
+    /// <summary>
+    /// The two engines' tab DEFAULTS are opposite ends of the same switch, so a bare
+    /// <c>\new TabStaff</c> is the twin of <c>tab part AS NUMBERS</c>, never of a plain
+    /// <c>tab part</c>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's TabStaff omits Stem, Beam, Flag, Dots, Rest and TupletBracket unless
+    /// <c>\tabFullNotation</c> asks for them; Lily#'s plain <c>tab part</c> draws all of it.
+    /// Measured against real LilyPond: the twin of <c>test/tab-beam-script</c> held TWO Beam
+    /// grobs (both on the 5-line notation staff) against the page's four, and with
+    /// <c>\tabFullNotation</c> it holds four — the extra two on a 4-line staff of space 1.5.
+    /// Every tab book was therefore uncomparable on beams, which had been recorded as a
+    /// missing tab FRAME in the sweep rather than as a twin in the wrong mode.
+    /// </remarks>
+    [Fact]
+    public void TabTwin_AsksForFullNotation_UnlessTheScoreSaidAsNumbers()
+    {
+        var full = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline"));
+        Assert.Contains("\\tabFullNotation", full);
+
+        var numbers = Export(Score("c,8 d, e, f,", render: "staff bassline\n  tab bassline as numbers"));
+        Assert.DoesNotContain("\\tabFullNotation", numbers);
+        Assert.Contains("\\new TabStaff", numbers);
+    }
+
     [Fact]
     public void Ties_AndBreaks_ArePreserved()
     {
