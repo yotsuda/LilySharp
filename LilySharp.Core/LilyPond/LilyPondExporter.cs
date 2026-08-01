@@ -66,6 +66,14 @@ public sealed class LilyPondExporter
     /// </remarks>
     private int _anchorOctave = InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
 
+    /// <summary>The note value Lily# would give an event that writes no duration — its own
+    /// rule, not LilyPond's. See <see cref="EmitEventDuration"/>.</summary>
+    private string _lastWrittenValue = "4";
+
+    /// <summary>Set when the next event must write its duration out because LilyPond would
+    /// otherwise infer a different one. See <see cref="EmitEventDuration"/>.</summary>
+    private bool _forceNextDuration;
+
     /// <summary>
     /// Phrase (and variable) bodies by name, so a bare reference in a section can be
     /// expanded in place. Shared with the sub-exporters that emit nested bodies.
@@ -421,6 +429,11 @@ public sealed class LilyPondExporter
             ? "\\fixed c'"
             : "\\relative " + AnchorPitch(_anchorOctave);
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
+
+        // Each part starts from Lily#'s own default duration, as the collector does
+        // (MeasureCollector resets _defaultDuration to a quarter per part).
+        _lastWrittenValue = "4";
+        _forceNextDuration = false;
 
         // Score-level settings (tempo/key/time live at file scope in Lily#).
         EmitScoreSettings(root);
@@ -791,35 +804,113 @@ public sealed class LilyPondExporter
         _ => Skip(item),
     };
 
+    /// <summary>
+    /// The duration to WRITE for an event, and the two pieces of state that decide it.
+    /// </summary>
+    /// <remarks>
+    /// An omitted duration is not the same thing on the two sides once a grace has gone by.
+    /// LilyPond repeats the last duration it READ, and it read the grace body
+    /// (<c>\grace { d8 } c</c> makes that <c>c</c> an EIGHTH); Lily# collects the grace with
+    /// its own local default (MeasureCollector.CollectGraceNotes' graceDefaultDuration) which
+    /// never escapes, so its <c>c</c> is whatever the main stream last said — a QUARTER at the
+    /// head of a piece. The twin was then a different piece of music, and LilyPond said so:
+    /// test/ossia-beams failed its bar check at 7/8.
+    /// <para>
+    /// So the event after a grace writes its duration out. Everything else keeps copying the
+    /// source, because a transpiler that re-spells durations everywhere is much harder to read
+    /// against the .lys it came from.
+    /// </para>
+    /// <para>
+    /// ⚠️ <see cref="_lastWrittenValue"/> mirrors Lily#'s rule and not LilyPond's: the note
+    /// VALUE only, dots dropped (MeasureCollector.ItemFactory
+    /// <c>_defaultDuration = Fraction.FromNoteValue(noteValue)</c>), reset to a quarter per
+    /// part variable. It is fed only by the main stream — the grace body is emitted by its own
+    /// exporter instance, which is exactly why its durations do not leak in here either.
+    /// </para>
+    /// </remarks>
+    private string EmitEventDuration(DurationSyntax? d)
+    {
+        if (d != null)
+        {
+            _lastWrittenValue = d.NumberToken.Text;
+            _forceNextDuration = false;
+            return EmitDuration(d);
+        }
+        if (!_forceNextDuration)
+            return "";
+        _forceNextDuration = false;
+        return _lastWrittenValue;
+    }
+
     private string EmitNote(NoteSyntax n)
     {
         var (prefix, suffix) = SplitAttachments(n.Articulations);
         string trem = n.Tremolo is { } t ? t.Text : "";
-        return prefix + EmitPitch(n.Pitch) + EmitDuration(n.Duration) + trem + suffix;
+        return prefix + EmitPitch(n.Pitch) + EmitEventDuration(n.Duration) + trem + suffix;
     }
 
     private string EmitRest(RestSyntax r)
     {
         var (prefix, suffix) = SplitAttachments(r.Articulations);
         string mmr = r.IsMultiMeasure ? "*" + r.MeasureCount : "";
-        return prefix + r.RestToken.Text + EmitDuration(r.Duration) + mmr + suffix;
+        return prefix + r.RestToken.Text + EmitEventDuration(r.Duration) + mmr + suffix;
     }
 
+    /// <summary>
+    /// A chord. Lily#'s chord-level octave marks go AFTER the <c>&gt;</c>
+    /// (<c>&lt;d f a&gt;,</c> = the whole chord down an octave); LilyPond has no such
+    /// spelling and rejects it outright (<c>syntax error, unexpected ','</c>), so the
+    /// shift is pushed onto the members.
+    /// </summary>
+    /// <remarks>
+    /// WHICH members depends on the mode this variable is wrapped in, and the two answers
+    /// are different:
+    /// <list type="bullet">
+    /// <item><c>\fixed</c> — every pitch stands on its own against the reference, so every
+    /// one of them carries the shift.</item>
+    /// <item><c>\relative</c> — inside a chord each pitch is octaved against the PREVIOUS
+    /// member, so shifting the first one carries the rest with it; adding the marks to all
+    /// of them would move member N by N octaves.</item>
+    /// </list>
+    /// LILYPOND-REF: lily/music-sequence.cc:142-160 music_list_to_relative — walks the
+    ///   members CHAINING <c>last = m-&gt;to_relative_octave (last)</c>, so member N is
+    ///   octaved against member N-1, and returns the FIRST member when ret_first.
+    /// LILYPOND-REF: lily/music-sequence.cc:213-219 event_chord_relative_callback — an
+    ///   EventChord calls that with ret_first true, which is also why the chord's first
+    ///   note is what the NEXT event octaves against
+    ///   (scm/define-music-types.scm:268-269 wires the to-relative-callback).
+    /// </remarks>
     private string EmitChord(ChordSyntax c)
     {
+        // A degree member (`<1 3 5>`, `<d 3 5 7>`) resolves against the chord's root AND the
+        // current key, which this transpiler does not carry — the collector does it
+        // (MeasureCollector.ItemFactory). Dropping them silently spelt `<1 3 5>` as `<>`,
+        // which LilyPond reads as a zero-length event: test/chord-octave-marks then failed its
+        // bar check at 1/4 and was mistaken for a book with no beams. REPORT it.
+        int degrees = 0;
+        foreach (var _ in c.Degrees) degrees++;
+        if (degrees > 0)
+            _warnings.Add(
+                $"degree chord member(s) x{degrees} not exported — the twin's chord is "
+                + "missing them and is a different chord");
+
+        int off = c.ChordOctaveOffset;
+        string marks = off > 0 ? new string('\'', off)
+                     : off < 0 ? new string(',', -off)
+                     : "";
+
         var sb = new StringBuilder("<");
         bool first = true;
         foreach (var p in c.Pitches)
         {
             if (!first) sb.Append(' ');
+            // Absolute: every member. Relative: the first member only.
             sb.Append(EmitPitch(p));
+            if (_octaveAbsolute || first) sb.Append(marks);
             first = false;
         }
         sb.Append('>');
-        int off = c.ChordOctaveOffset;
-        if (off > 0) sb.Append(new string('\'', off));
-        else if (off < 0) sb.Append(new string(',', -off));
-        sb.Append(EmitDuration(c.Duration));
+        sb.Append(EmitEventDuration(c.Duration));
         var (prefix, suffix) = SplitAttachments(c.Articulations);
         return prefix + sb.ToString() + suffix;
     }
@@ -1007,6 +1098,9 @@ public sealed class LilyPondExporter
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        // LilyPond carries the grace body's last duration out to the next event; Lily# does
+        // not. See EmitEventDuration.
+        _forceNextDuration = true;
         return $"{kw} {{ {body} }}";
     }
 
