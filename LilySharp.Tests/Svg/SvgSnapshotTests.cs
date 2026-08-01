@@ -240,6 +240,10 @@ public class SvgSnapshotTests
         // A staccato on a beamed tab note sits opposite the BEAM's direction, not the
         // note's own string — so a string-2 note under an up-beam gets its dot below.
         yield return new object[] { "test/tab-staccato-beam-side" };
+        // Every note names its string, so this is the one tab book whose beams can be
+        // compared with LilyPond's at all: the two engines' string allocators disagree,
+        // and a tab beam sits on the STRING. Directions match, heights do not.
+        yield return new object[] { "test/tab-string-pinned" };
         // A fermata reaches sideways past the head; the next note's accidental is
         // spaced clear of it (skyline-gated, so only when they overlap in Y).
         yield return new object[] { "test/fermata-note-spacing" };

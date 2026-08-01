@@ -1,0 +1,35 @@
+// The one tab book that can be COMPARED with LilyPond, because it removes both variables
+// that stop the others:
+//   * every note names its string (\4 \3 \2 \1), so the two engines cannot pick different
+//     strings — their fret/string allocators do not agree, and a beam sits on the STRING,
+//     so a book that leaves the choice open is comparing two different fingerings;
+//   * the part writes `clef bass` explicitly, so the twin carries a \clef and is not in the
+//     `instrument` gate (the exporter does not re-derive an instrument's clef).
+// Bass tuning E1 A1 D2 G2, and a tab frets the SOUNDING pitch (written -12), so every note
+// here is fret 5 on its own string — the fret is constant and only the STRING moves, which
+// is what the beam follows.
+//
+// Bar 1 runs 4→1 then 1→4, so both beam slopes are exercised; bar 2 is flat on the lowest
+// string (stems up, beam above the digits) and flat on the highest (stems down, beam
+// below), which is the string-based direction rule on its own.
+//
+// Measured against LilyPond 2.26.0 (Beam.stencil dumping positions + line-count):
+//   notation  LP (-3.81 . -1.19) (-1.81 . -4.19) (1.81 . 1.81) (0.00 . 0.00)  = Lily#, exact
+//   tab       LP (-3.873 . -2.127) (-2.127 . -3.873) (1.50 . 1.50) (-1.50 . -1.50)
+//             Lily# (-3.113 . -1.446) (-1.476 . -3.114) (1.797 . 1.797) (-1.797 . -1.797)
+// The DIRECTIONS agree on all four; the heights do not, and on a flat single-string group
+// the gap is exactly 0.297 staff spaces — LilyPond sits on the outer line (1.50 on a
+// four-line staff of space 1.5), Lily# sits past it. Filed, not fixed.
+octave absolute
+part bl { clef bass tuning bass }
+section A {
+  bl {
+    a,,8\4 d,\3 g,\2 c\1 c\1 g,\2 d,\3 a,,\4 |
+    a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 |
+  }
+}
+form main { A }
+score main {
+  staff bl
+  tab bl
+}
