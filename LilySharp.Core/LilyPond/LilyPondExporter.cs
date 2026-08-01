@@ -1835,6 +1835,14 @@ public sealed class LilyPondExporter
             // on beams and was written off as a frame problem in the sweep.
             if (!tabNumbersOnly)
                 sb.Append("\\tabFullNotation ");
+            // ⚠️ LilyPond pitches are SOUNDING; Lily# writes DISPLAY pitches and recovers the
+            // sounding octave when it frets (Tunings.SoundingShift, read by
+            // TabResolver.ResolveTabStrings). Written verbatim, the twin frets the DISPLAY
+            // pitch and lands somewhere else entirely: `tab-percent-repeat` fingered
+            // 17 0 17 5 5 17 0 17 against the page's 5 3 5 3 3 5 3 5, because A2 written is
+            // A1 sounding. The shift is asked of the same table the page uses, so the two
+            // cannot drift.
+            AppendTabTranspose(sb, part, partName);
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         else if (partName != null && _drumParts.Contains(partName))
@@ -1856,17 +1864,69 @@ public sealed class LilyPondExporter
         return sb.ToString();
     }
 
-    // `tuning bass` on the part → LilyPond predefined tuning name.
-    private static string TabTuning(PartDeclarationSyntax? part)
-    {
-        string? name = part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null;
-        return name switch
+    // `tuning bass` on the part → the tuning Lily# frets against. ⚠️ The fallback is BASS,
+    // so a part that names no tuning still gets a four-string bass here; a twin whose
+    // tuning "looks right" may only be this default.
+    private static Syntax.TuningType TabTuningType(PartDeclarationSyntax? part)
+        => (part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null) switch
         {
-            "bass5" => "bass-five-string-tuning",
-            "guitar" => "guitar-tuning",
-            _ => "bass-four-string-tuning",
+            "bass5" => Syntax.TuningType.Bass5,
+            "bass6" => Syntax.TuningType.Bass6,
+            "guitar" => Syntax.TuningType.Guitar,
+            "ukulele" => Syntax.TuningType.Ukulele,
+            _ => Syntax.TuningType.Bass,
         };
+
+    // The LilyPond predefined tuning name for that tuning.
+    private static string TabTuning(PartDeclarationSyntax? part) => TabTuningType(part) switch
+    {
+        Syntax.TuningType.Bass5 => "bass-five-string-tuning",
+        Syntax.TuningType.Bass6 => "bass-six-string-tuning",
+        Syntax.TuningType.Guitar => "guitar-tuning",
+        Syntax.TuningType.Ukulele => "ukulele-tuning",
+        _ => "bass-four-string-tuning",
+    };
+
+    /// <summary>
+    /// Writes the written→sounding transposition the tab frets against, so the twin's fret
+    /// numbers are the page's. Asked of <see cref="Tablature.Tunings"/> — the same table
+    /// <c>TabResolver</c> reads — rather than restated here.
+    /// </summary>
+    /// <remarks>
+    /// Only whole octaves are written (<c>\transpose c c,</c>), which is every shift the
+    /// tunings and clefs produce. Anything else is REPORTED rather than dropped: a twin
+    /// silently fretting other pitches is the shape that hid this hole in the first place.
+    /// </remarks>
+    private void AppendTabTranspose(StringBuilder sb, PartDeclarationSyntax? part, string? partName)
+    {
+        var clef = ClefFromName(part != null ? PartProperty(part, "clef") : null);
+        int shift = Tablature.Tunings.ClefOctaveShift(clef)
+                    + Tablature.Tunings.TuningTransposition(TabTuningType(part));
+        if (shift == 0)
+            return;
+        if (shift % 12 != 0)
+        {
+            _warnings.Add($"tab part '{partName ?? "?"}' sounds {shift} semitones from what is "
+                          + "written, which is not a whole octave — the twin frets the written "
+                          + "pitch and its fret numbers will not be the score's");
+            return;
+        }
+        sb.Append("\\transpose c ").Append('c')
+          .Append(new string(shift < 0 ? ',' : '\'', Math.Abs(shift) / 12)).Append(' ');
     }
+
+    /// <summary>The clef word of a part header as the model's clef, for the octave it carries
+    /// (<c>treble_8</c> sounds 8vb). Unknown or absent reads as treble, which carries none.</summary>
+    private static Svg.Model.ClefType ClefFromName(string? name) => name?.ToLowerInvariant() switch
+    {
+        "bass" => Svg.Model.ClefType.Bass,
+        "alto" => Svg.Model.ClefType.Alto,
+        "tenor" => Svg.Model.ClefType.Tenor,
+        "treble_8" => Svg.Model.ClefType.Treble8Below,
+        "bass_8" => Svg.Model.ClefType.Bass8Below,
+        "treble^8" => Svg.Model.ClefType.Treble8Above,
+        _ => Svg.Model.ClefType.Treble,
+    };
 
     // The first value token of a part-header property (`clef bass` → "bass").
     private static string? PartProperty(PartDeclarationSyntax part, string name)
