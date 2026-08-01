@@ -58,6 +58,140 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-01（第66セッション＝**ゲート ⑹ を閉じた**——**ユーザー決定 A＝exporter に
+`instrument` プリセットを「束ごと」展開させる**（`9766dfc9`）。**exporter だけ＝描画は 1 行も動かない**
+（テスト全緑・snapshot 不動で確認）。
+★★★ **`instrument bass` は束**（**bass 記号 ＋ octave 3 ＋ 4弦 tuning ＋ 実音 −12**）で、
+**LP には束の綴りが無いが部品の綴りは全部ある**。⇒ **ページと同じ `InstrumentDefaults` を読んで
+部品に展開する**（clef・相対アンカー・`stringTunings`・`\transpose`）。
+**「ソースが言っていることを展開するのが transpile／言っていないことを作るのが re-derivation」**
+と file 冒頭に線を引き直した（**度数和音 ⑴ と同じ move**）。
+★★★ **⑫（tuning 既定が逆）も同じ commit で消えた**——**exporter は bass・ページは guitar** に
+落ちていた。**⑩ 以降は移調も同じ既定から出る**ので、**放置すると音まで違った**。
+★★★ **実測 200 冊: 17 冊が動き 183 冊は byte 不変**（②）。**LP 2.26.0 に通し直した成績**（③）:
+```
+比較できた本 41 ← 一致 34 / 不一致 7      （前回 40: 一致 32 / 不一致 8・199 冊）
+bar check 6 / 両側とも梁なし 153 / fatal 0            合計 200
+```
+★★★ ★ **本命は譜ごとの突き合わせ**——**tab 本の記譜譜が 2/8 → 8/9**（③）。
+**引継ぎの「書けば残り 6 冊も記譜譜は揃うはず（予想）」は実測で当たった。**
+★★★ **残る 1 冊 `tab-beam-slope` は clef ではなく和音の綴りだった**（④・**起票・PNG で裏取り**）——
+**Lily# は和音メンバーを根音の上のオクターブに置く／LP はメンバー間で連鎖する**ので、
+**`<a c g>` が両者で別の和音**。**exporter は和音メンバーを verbatim で写している。**
+★★★ ⚠️ **ついでに MIDI の欠陥を 1 つ踏んだ**（⑤・**起票**）——**`clef bass` だけの part で
+MIDI がページより 1 オクターブ高い**。⚠️ **オクターブの裏取りに MIDI を使わないこと**
+（第64セッションは MIDI を第2経路として使っている）。
+**未 push 45**・テスト **3785 passed / 0 failed / 3 skipped**（**+14**）・
+台帳 **380 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ① **何を読むようになったか**（4 つ・**束は全部か無か**）
+
+| 量 | ページ | exporter（今回） |
+|---|---|---|
+| clef | `clef` プロパティ → preset → treble | 同じ（`PartClefWord`） |
+| 相対アンカー | `octave N` → preset の octave → clef の既定 | 同じ（`AnchorOctaveOf`） |
+| tab tuning | 明示 → `tuning` → preset → **guitar** | 同じ（`TabTuningType`・**既定が bass から反転**） |
+| 実音移調 | `transposition` → preset → tuning の既定 | 同じ（`PartTransposition`・**プロパティは今回初めて読む**） |
+
+★ **preset の octave は clef の既定より強い**（`instrument flute` は treble なのに octave 5）。
+**ページの `resolvedOctave ??= defaultOctave` がそう書いてある**ので**近似せず写した**。
+★ **clef の語（`ClefWord`）は `InstrumentDefaults` の 1 か所になった**（collector と exporter で
+同じ switch を 2 本持っていた）。⚠️ **`LayoutReport.StaffLabel`・`LayoutEngine.ClefToString` は
+別物**（どちらも意図的に lossy＝part が書ける語ではない）。
+★ **ossia も preset を読む**が、**preset を持つ ossia 本は 1 冊も無い**（4 冊とも byte 不変＝**今は不活性**）。
+⚠️ **まだ読まないもの＝render 側の tuning 修飾**（`tab bass melody`）。**ページはこれを最優先**で
+読むが、**exporter が読むには `as numbers`／`with chords` の token 剥がしを再実装することになる**。
+**fixture 0 冊**なので**既定として明記**した（`TabTuningType` の doc）。
+
+## ② **動いた双子＝17 / 200**（★ **数え方**）
+
+**変更前後で 200 本の `.ly` を吐いて byte 比較**（`lysc ly` を 2 回・間に `git stash`）:
+```
+byte 不変 183 / 動いた 17
+  fermata-down / instrument-defaults / instrument-hyphenated-clef / treble8
+  tab-articulations{,-multistaff} / tab-as-numbers / tab-beam-{script,slope}
+  tab-below-range / tab-dotted-values / tab-forced-script-side / tab-indent
+  tab-part-key / tab-rest / tab-staccato-beam-side / tab-tuplet-number
+```
+⚠️ ★ **grep で見積もった 12 冊は過少だった**（`^\s*instrument` にしたので
+`part x { instrument electric-bass }` の 1 行書きを落としていた）＝**見積もりでなく差分で数える**。
+★ **動き方は 3 種類だけ**: `\clef X` が増える／`\relative c'` → `\relative c`／
+`stringTunings` と `\transpose` が変わる。**音符トークンは 1 文字も動いていない。**
+
+## ③ **コーパス再集計**（★ **そのまま再実行できる形**）
+
+```powershell
+# ⑴ 双子 200 本（205 冊 − parse 不能 5）  ⑵ LP: dump2.ily で Beam.positions と line-count
+cmd /c "lilypond.exe -dinclude-settings=$ILY -dno-print-pages -o $LPO\$name $twin < NUL"
+# ⑶ Lily# 側: LILYSHARP_BEAM_SWEEP=…\sweep.csv で TwinBeamSweep
+# ⑷ 突き合わせ: (posL,posR) を F2 で丸め Sort-Object して join した多重集合
+```
+⚠️⚠️ **`@($null).Count` は 1**（§0 の罠）——**Hashtable に無いキーを `@(...)` で包むと
+「梁 0 本」が「梁 1 本（空文字）」になり、「両側とも梁なし 153」が全部「一致」に化けた**。
+**`ContainsKey` で空配列に落とすこと。** ★ **この罠は 2 回目**（前回は `-o` の親 dir）。
+★ **譜ごとの突き合わせ**（LP は `lines=`・Lily# は `staffSpace`≥1.2 が tab）:
+```
+                        記譜譜   tab
+dead-note                一致     ✗
+tab-beam-script          一致     ✗
+tab-beam-slope           ✗ ←④    ✗
+tab-below-range          一致     ✗
+tab-percent-repeat       一致     ✗
+tab-string-pinned        一致     ✗
+tab-tuplet-number        一致     ✗
+tab-as-numbers           一致    （梁なし）   ← 今回まるごと一致した 2 冊
+fermata-down             一致    （tab 無し）  ←
+```
+
+## ④ ★★★ **起票＝和音メンバーの綴りが両者で違う**（**未修正・ページで裏取り済み**）
+
+**`tab-beam-slope` の記譜譜だけが残った**理由。**clef を書いたら初めて土俵に乗り、
+中身が別の和音だと分かった**:
+```
+<c a f>2 <a c g>2  を treble・relative で（chordprobe2）
+Lily# ページ  C4 A4 F4   A3 C4 G4     ← PNG で確認（MusicXML/MIDI とも一致）
+LP   双子     C4 A3 F3   A3 C4 G3
+```
+★★★ **規則が違う**: **Lily# は各メンバーを「根音の上のオクターブ」に置く**（＝和音アンカーモデル。
+`<d 3 5 7,>` の `,` が下げるための記法）／**LP はメンバー間で連鎖して最近傍**
+（`lily/music-sequence.cc`・memory `reference_lilypond_relative_frame_chord_grace_voice`）。
+⇒ **上行に書かれた和音（`<c e g>`）は偶然一致する**が、**`<a c g>` のように途中で下がる綴りは割れる**。
+★ **直し方は度数和音 ⑴ と同じ**——**exporter がメンバーを解決して書く**（verbatim をやめる）。
+**exporter だけ＝描画は動かない。** **判定器は `test/tab-beam-slope` の記譜譜**（2.19,1.81 対 2.81,2.00）。
+⚠️ **コーパスで割れているのはこの 1 冊だけ**（他の和音は上行に書かれている）。
+
+## ⑤ ★ **起票＝MIDI が `clef bass` の part で 1 オクターブ高い**（**未修正・別系統**）
+
+```
+part m { clef bass }   section A { c4 d e f }
+ページ  C3 D3 E3 F3   （PNG で確認・双子 \relative c と一致）
+MIDI    60 62 64 65 ＝ C4 D4 E4 F4
+```
+★ **`instrument bass` では起きない**（preset が `octave 3` を埋めるので両者 3）。
+**`clef bass` だけだと `OctaveBase = partOctave ?? 4` が 4 のまま**なのが疑わしい
+（`MeasureCollector` :1001-1002 の 2 つのフィールド）。**MusicXML も同じ値を出す**＝**collector より
+下流の共有経路**。
+⚠️⚠️ **この起票の本当の重みは「第64セッションが MIDI を裏取りの第2経路に使った」こと**——
+**非 treble の part では MIDI はページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
+
+## ▶ 次の一手
+
+★★★ **④（和音メンバー）を直す**——**exporter だけ・描画は動かない・判定器あり**。
+**記譜譜が 8/9 → 9/9 になるはず**（⚠️ これは予想）。
+★★ **そのあと tab の梁の高さ**（**要承認＝描画が動く**）。**判定器は `test/tab-string-pinned`**——
+**平らな単一弦の群で差はきっかり ±0.297**（**LP は外側の線の上ちょうど**）。
+⚠️ **弦を明示していない tab 本で測らないこと**（弦の選び方が両者で違う）。
+★ **⑤（MIDI のオクターブ）**——**ページと MIDI のどちらが正しいかは設計判断**
+（memory は「最初 C4 最寄り」と書いてあるが**ページは clef を見ている**）。
+★ **量子器側の残り＝`grace.column.approach` +0.850449**（**機構が違う**: Lily# は run の幅を
+前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
+`lily/spacing-spanner.cc:396-403`）。**これは描画が動く＝snapshot 再ベース＝要承認。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第65セッションの経緯
+
 最終更新 2026-08-01（第65セッション＝**起票 2 件を閉じ、「測定器の宿題」の前提が違うことを実測した**——
 **`1d3a8c9b`**（⑴ **`voice{}` span を「描かれるとおり」に数える**、⑵ **単独 voice の警告 `LYS4011`**）
 ＋ **`4efe10ea`**（⑶ **tab 双子が LP に `\tabFullNotation` を頼む**＝④⑤）。
@@ -275,7 +409,8 @@ tab  4本  LP    (-3.873 . -2.127) (-2.127 . -3.873) ( 1.500 .  1.500) (-1.500 .
 （4 線・space 1.5 の staff で `1.500`）、**Lily# はその外**。
 ⇒ **これが tab の梁の起票の判定器**（⑩ までは判定器が無かった）。
 
-## ⑫ ★ **起票＝exporter の tuning 既定が Lily# と逆**（**未修正・⑩ で影響が倍になった**）
+## ⑫ ★ ~~**起票＝exporter の tuning 既定が Lily# と逆**~~ — **閉じた**（第66セッション `9766dfc9`・
+ゲート ⑹ と同じ commit。**既定は guitar＝ページと同じ源**）
 
 ★★★ **Lily# の既定は guitar・exporter の既定は bass**:
 **`RenderSpecParser`**＝「明示 `tuning` → part の `instrument` プリセット → **else guitar**」／
@@ -304,7 +439,8 @@ tab  4本  LP    (-3.873 . -2.127) (-2.127 . -3.873) ( 1.500 .  1.500) (-1.500 .
 ★ **譜ごとに分けた突き合わせは変わらず 2/8**（`dead-note`・`tab-percent-repeat` の記譜譜だけ一致）
 ＝**残っているのはゲート ⑹ そのもの**（**双子に `clef` が出ている 2 冊**）。⇒ **次はそこ。**
 
-## ⑥ ★ **tab 本はもう 1 つのゲートに当たったまま**（**ゲート ⑹ `instrument`**）
+## ⑥ ★ ~~**tab 本はもう 1 つのゲートに当たったまま**（**ゲート ⑹ `instrument`**）~~ — **閉じた**
+（第66セッション `9766dfc9`。**記譜譜は 2/8 → 8/9**）
 
 **`\tabFullNotation` を入れても tab 本の多くは比べられない**——**exporter は `instrument` を読まない**
 （transpiler であって re-derivation ではない＝§7 の既定）ので、**双子に `\clef` が出ず LP は treble**、
@@ -328,7 +464,8 @@ Lily# (-2.81 . -2.19) (-2.19 . -2.81) (-0.19 . 0.0)
 `data-pos="…"` を落として比較 → **26/26 が一致**）＝**幾何はゼロ**。**これが「音楽を変えていない」証拠。**
 ★ **書き換えは 106 箇所 / 48 ファイル**（コーパス・テスト・文法文書・MusicXML importer）。
 
-## ▶ 次の一手
+## ▶ 次の一手（**第65セッション当時。この節は読まないこと**——**ゲート ⑹ も ⑫ も第66セッションで
+閉じた**。現在の ▶ はこのファイルの上）
 
 ★★★ **ゲート ⑹ を決める**（**設計判断**＝exporter に part の `instrument` を読ませるか）。
 **④'''' で 6 冊ぶんと確定**（tab 5 ＋ `fermata-down`）。**`clef` を書いている 2 冊だけ記譜譜が
@@ -6170,10 +6307,12 @@ cmd /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dno-point-and-click out.l
 # ⚠️ Lily# 側の同じ量は snapshot の <polygon> から: position = 中央線Y − (上端Y + 0.24)
 #    （0.24 ＝ beam 厚 0.48 の半分。LP の positions は中心線）
 # ⚠️ log に `bar check failed` が出たらその双子は使わない（LP の `|` は小節チェック＝罠17）
-# ⚠️ part に `instrument` があったらその双子も使わない（別の音楽になる・仕様どおり）。
-#    `instrument bass` は「ベース記号＋octave 3＋実音 −12」の束だが exporter は読まない
-#    （transpiler であって re-derivation ではない）＝双子は treble の `\relative c'` になる。
-#    ⚠️ 双子の tuning が合って見えても `TabTuning` の既定フォールバックのことがある。
+# ⚠️ ~~part に `instrument` があったらその双子も使わない~~ ← **2026-08-01 に閉じた（ゲート ⑹）**。
+#    exporter は preset を**束ごと**展開する（clef・相対アンカー・stringTunings・\transpose）。
+#    ⚠️ **exporter の tab tuning 既定も bass → guitar に直った**（ページと同じ源）ので、
+#    「双子の tuning が合って見えても既定フォールバック」の罠は**消えた**。
+#    ⚠️ **残っているのは render 側の tuning 修飾**（`tab bass melody`）＝ページはこれを最優先で
+#    読むが exporter は読まない。fixture には 1 冊も無い。
 # ⚠️ プローブの .ly を手で書くときはオクターブを 1 段上げる（Lily# の `c'` ＝ LP の `c''`）。
 #    2026-08-01 に踏んだ: 符尾の向きごと別 regime になり、しかも間違って見えない。
 #    ⚠️ ただし ★ **treble の場合だけ**。相対アンカーは part の clef で決まる
