@@ -63,7 +63,9 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ★★★ **`grammar-tour` が LP と 10 対 10 で一致し、コーパスの未説明はゼロになった**
 （② に**数え方つき**）。**台帳に対を 1 組足した**（`beam.voice-span.*`・**両方 exact**・
 **旧規則へ摂動すると片方だけ +5.690000 開く**）。
-**作業は `4b043b59` 1 本**（＋この handoff commit）・**未 push 16**・
+**そのあと exporter の穴を 3 つ塞いだ**（`275c12ee`＝④）——**`ossia-beams` が bar check から
+一致側へ移り**、**`scripts-dynamics` の双子が初めて作れるようになり**、**8 つ目の穴が出た**。
+**作業は `4b043b59`（Core）＋`275c12ee`（exporter）**（＋handoff commit）・**未 push 18**・
 テスト **3739 passed / 0 failed / 3 skipped**（**+2 は今回足した台帳点**）・
 台帳 **380 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）
 ＝**残差は不変**（足した 2 点が exact で着地したので総和が動かない）。
@@ -98,11 +100,14 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **(posLeft,posRight) を小数2桁に丸めた多重集合**で `LILYSHARP_BEAM_SWEEP` の CSV と突き合わせる。
 
 ```
-比較できた本   38   ← 一致 30 / 不一致 8
+比較できた本   39   ← 一致 31 / 不一致 8      （④ の前は 38 ← 30 / 8）
 bar check      8    ← 比較不能（LP の `|` は小節チェック）
-両側とも梁なし 153
+両側とも梁なし 152                             （④ の前は 153）
                     合計 199
 ```
+★ **bar check の 8 冊**: `05-special-techniques`・`barcheck`（**わざと短い**フィクスチャ）・
+`beamlets`・`chord-octave-marks`（**④ で新しく見えた**）・`dense-chromatic`・
+`drum-groove`（`DrumNote not exported`）・`tab-staccato-beam-side`・`tuplet-lower-staff`。
 ★★★ **不一致 8 冊は全部 `tab` か `instrument` の本**＝既知ゲート ⑸⑹。
 **`grammar-tour` は 10 対 10 で一致**（LP `(-2.19 . -3.0) (0.0 . 0.19) (-3.81 . -1.81) …`）。
 ⇒ **tab でも instrument でもない本で説明のつかない発散は 1 冊も無い。**
@@ -125,22 +130,41 @@ B は動かない**——**点が binding していることを摂動で確か�
 印字させ、`voice-mixed`／`voice-grandstaff`／`voice-dynamics-mid`／`-multistaff`／`hara-kiri` の
 双子を符尾 1 本ずつ突き合わせた**。**5 冊とも span の外は全部音高由来・span の中だけ +1/−1 交互。**
 
-## ④ 起票のみ＝**7 つ目の exporter の穴**（`<d f a>,2`）
+## ④ **exporter の穴を 3 つ塞いだ**（`275c12ee`・**Core は 1 行も触っていない**）
 
-**`scripts-dynamics` だけ双子が作れない**——exporter が**和音の後ろにオクターブ記号を書く**
-（`<d f a>,2`）ので LP が `syntax error, unexpected ','`。**LP は各音に付ける**（`<d, f, a,>`）。
-⇒ **この 1 冊だけ ③ の符尾照合ができておらず、描画から読んだだけ**。**今日は起票のみ。**
+★★★ **⑺ 和音のオクターブ記号**: Lily# は**閉じ括弧の後ろ**に書く（`<d f a>,`＝和音ごと 1 オクターブ下）。
+**LP にその綴りは無く、ファイルごと拒否する**（`syntax error, unexpected ','`）ので
+**`scripts-dynamics` は双子が 1 度も作れていなかった**。⇒ **記号をメンバーへ移した**。
+★★ **どのメンバーに付けるかはモードで違う**: **`\fixed` は全員／`\relative` は先頭だけ**——
+**和音の中では各音が「直前のメンバー」に対してオクターブを取り、和音全体の基準は先頭**
+（`lily/music-sequence.cc:142-160 music_list_to_relative`・`:213-219
+event_chord_relative_callback`）。**全員に付けると N 番目が N オクターブ動く。**
+★★★ **⑻ grace のあとの音価**: **省略した音価は両側で別物**——**LP は「最後に*読んだ*音価」を繰り返し、
+それは grace の中身**（`\grace { d8 } c` の `c` は 8分）。**Lily# の grace はローカル既定を使い外へ漏れない**
+（`c` は 4分）。⇒ **grace の直後の音符だけ音価を明示的に書く**。
+**`test/ossia-beams` の `bar check failed at: 7/8` はこれで消え、梁 2 本とも LP と一致した。**
+★ **他の音符は今まで通り原文を写す**——全部書き直すと `.lys` と突き合わせられなくなる。
+★★★ **⑼ 塞いだら 8 つ目が出た＝度数和音が `<>` になっていた**。**`<1 3 5>` は
+`Pitches` にしか出ない**ので**メンバーごと落ちていた**（度数は root と調に対して解決するもので、
+このトランスパイラはどちらも持っていない）。**LP は構文エラーで死ぬほうが先だったので見えなかった**——
+今は **`bar check failed at: 1/4`** と言う。⇒ **今回は「落としている」と*言わせる*ところまで**
+（**度数の解決は独立した移植**）。⚠️ **黙って `<>` を書くのがこの exporter の穴の典型形。**
 
 ## ▶ 次の一手
 
+★★ **⑼ 度数和音の exporter 移植**（**いま警告だけ出している**）。`<1 3 5>` / `<d 3 5 7,>` を
+**root ＋ 調に対して解決して具体的な音高で書く**。**読む場所は `MeasureCollector.ItemFactory`
+（`chord.Degrees` を解決している側）**——**字面移植の対象がすでにある**。
+**閉じれば `chord-octave-marks` の bar check が消え、比較できる本が 1 冊増える。**
 ★ **⑺ の grace の音価の既定はまだ決まっていない**（**1 つの綴り `grace { a b }` に既定が 3 つ**＝
-レイアウト 1/8・MIDI 1/32・双子 4分）。**独立に直せる隣の穴**として、
-`\grace { d8 } c` の `c` が **LP では 8分・Lily# では 4分**（`_defaultDuration` が
-grace のローカル変数から漏れない）＝`test/ossia-beams` の bar check の正体。
+**レイアウト 1/8・MIDI 1/32・双子は「直前の音価」**）。⚠️ **④ で直したのは grace の*あと*の音符だけ**で、
+**grace の*中身*の既定はまだ 3 つのまま**。**どれが正しいかは Lily# 側の設計判断**なので、
+**ユーザーに訊いてから**。
 ★ **量子器側の残り＝`grace.column.approach` +0.850449**（**機構が違う**: Lily# は run の幅を
 前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
-`lily/spacing-spanner.cc:396-403`）。
-★ **④ の exporter の穴**（`<d f a>,2`）——**直せば `scripts-dynamics` が測れるようになる。**
+`lily/spacing-spanner.cc:396-403`）。**これは描画が動く＝snapshot 再ベース＝要承認。**
+★ **測定器の宿題**: **sweep に tab 譜の frame を教える**（② の警告）。**教えるまで tab 8 冊は
+「不一致」ではなく「土俵に乗っていない」。**
 ★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
 ユーザー側作業）。
 
