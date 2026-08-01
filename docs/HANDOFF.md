@@ -84,7 +84,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **間違っていたのは双子の表示モード**（22/23 本）。
 ★★★ **⑷ `test/tab-percent-repeat` を直した**（`7b3abe48`・**ユーザー承認・snapshot 1 枚を再ベース**）＝⑤。
 **その結果 tab 本が初めて LP と比較でき、tab の梁が反対側だと分かった**（⑦・**起票**）。
-**未 push 37**・テスト **3768 passed / 0 failed / 3 skipped**（**+15**）・
+★★★ **⑸ コーパスを数え直した**（④''・**成績は 1 つも動かない**が **tab 本の中身は別物**＝④'''）。
+**未 push 38**・テスト **3768 passed / 0 failed / 3 skipped**（**+15**）・
 台帳 **380 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
@@ -152,6 +153,48 @@ bytes  82565 → 12679
 ★ **sweep の `-31`・`-80` も消えた**——**加線の行が 4 本以上の束を 10 組以上作って
 ページが十数個の幻の譜になっていた**のが出所。**今は記譜 6 行 + tab 6 行の素直な読み。**
 
+## ④'' **コーパス再集計（⑶⑷ のあと・全 199 本を LP に通し直した）**
+
+★★★ **成績は 1 つも動かない**——**同じ数・同じ本**。⚠️ **だが中身は別物になっている**（下）。
+```
+比較できた本   40   ← 一致 32 / 不一致 8
+bar check      6    ← 05-special-techniques・barcheck・beamlets・dense-chromatic・
+                       tab-staccato-beam-side・tuplet-lower-staff
+両側とも梁なし 153
+                    合計 199        LP の fatal error 0（必ず一緒に数える・§1④' 罠⑵）
+```
+★ **数え方**（**そのまま再実行できる形**）:
+```powershell
+# ⑴ 双子: test + showcase の 204 冊 → 199 本（parse 不能 5 は beamed-rest・cue-notes・
+#    dot-force-down・multi-movement・grammar-2026-06-09）
+foreach ($b in @(Get-ChildItem LilySharp.Tests\Fixtures\test, LilySharp.Tests\Fixtures\showcase -Filter *.lys)) {
+  dotnet …\lysc.dll ly $b.FullName -o "$TW\$($b.Directory.Name)__$($b.BaseName).ly" }
+# ⑵ LP: dump2.ily = \Score の Beam.stencil で positions と staff-symbol の line-count を印字
+#    （after-line-breaking でも同値／⚠️ -o の親 dir が無いと fatal で無出力）
+cmd /c "lilypond.exe -dinclude-settings=$ILY -dno-print-pages -o $LPO\$name $twin < NUL"
+# ⑶ 突き合わせ: (posL,posR) を F2 に丸めた文字列を Sort-Object して join した多重集合を比較。
+#    ⚠️ 「梁が両側とも 0 本」は先に nobeams へ落とす（`@($null).Count` は 1）。
+```
+
+## ④''' ★★★ **数は同じでも tab 本は別物になった**（**ここが ⑶⑷ の効き目**）
+
+★★★ **LP 側の梁の本数が tab 本で倍近くになった**（`\tabFullNotation` を外した双子で測り直した「前」）:
+```
+                       LP前 → LP後   Lily#
+dead-note                2 →  4        4    ✓本数一致
+tab-beam-script          2 →  4        4    ✓
+tab-beam-slope           2 →  4        4    ✓
+tab-percent-repeat       6 → 12       12    ✓
+tab-tuplet-number        1 →  2        2    ✓
+tab-below-range          4 →  7        6    ✗ ← 群の数が違う（新しい所見・未調査）
+tab-as-numbers           3 →  3        3    ✓（numbers-only なので動かないのが正しい）
+```
+⇒ **本数一致は 0/7 → 6/7**。**前は「LP がそもそも描いていない」ので比べようが無かった。**
+★★★ **記譜譜だけで突き合わせると 2 冊が一致する**——**`dead-note` と `tab-percent-repeat`**、
+**＝双子に `\clef` が出ている 2 冊ちょうど**。**残り 6 冊**（tab 5 ＋ `fermata-down`）は
+**`instrument bass` だけで `clef` を書いていない**ので**双子が treble・ページが bass**＝**ゲート ⑹**。
+⇒ ★★★ **ゲート ⑹ は 6 冊ぶんの価値がある**（今までは「tab だから」で一括りにされていた）。
+
 ## ⑦ ★★★ **その結果 tab 本が初めて比較の土俵に乗り、tab の梁が反対側だと分かった**（**起票・未修正**）
 
 **`tab-percent-repeat` は `clef bass` を明示している**ので**ゲート ⑹ に当たらない**唯一の tab 本。
@@ -164,6 +207,9 @@ tab  (lines=4)  LP (-2.873 . -4.127) (-1.873 . -3.500) (-2.500 . -4.000) ×2
 ⚠️ **`SharedRenderer.Tab.cs` は「低い弦のランは LilyPond と同じく上を向く」と書いている**が、
 **この対では LP が下**。**Lily# 固有規則（方向＝弦位置）が LP と合っているかは未検証だった**
 ＝**この 1 対が初めての判定材料**。⇒ **描画が動く＝要承認**なので起票のみ。
+★★★ **④''' の再集計で「1 対だけの所見」ではなくなった**——**tab の梁は 7 冊すべてで
+LP が負・Lily# が正**（＝**反対側**）。**どちらも大半は平ら**（LP は `-1.50` が並び、Lily# は `1.80`）で、
+**弦が変わるところだけ両側とも傾く**。⇒ **食い違っているのは高さではなく向き 1 つ**。
 
 ## ⑥ ★ **tab 本はもう 1 つのゲートに当たったまま**（**ゲート ⑹ `instrument`**）
 
@@ -181,12 +227,14 @@ Lily# (-2.81 . -2.19) (-2.19 . -2.81) (-0.19 . 0.0)
 ★★ **`voice { … } { … }`（`voice` を 1 回だけ書く綴り）を入れるかは保留中**——**ユーザーと議論して
 現状維持と代案の 2 つまで絞ってある**。⚠️ **`{ } { }`（裸の括弧を並べる）は採らないと決めた**:
 **LP では連結の意味**で、**Lily# でも今日すでに「静かに連結として通る」**（実測: 8音が順番に鳴る）。
-★★★ ⚠️ **コーパスの集計 ④'（比較できた本 40／一致 32／bar check 6）は stale になった**——
-**双子が 22 本モードを変わり、`tab-percent-repeat` が別の本になった**。**次に触る前に数え直すこと**
-（§1② の数え方 ＋ 「LP をバッチで回したら `fatal error` を必ず一緒に数える」）。
-★★ **⑦ の tab 符尾方向を決める**（**要承認＝描画が動く**）。**判定材料は `tab-percent-repeat` の
-対 1 組しかない**ので、**先に `clef` を明示した tab probe を 2〜3 冊足す**のが安全。
-★★ **⑥ のゲート ⑹**（`instrument` を exporter に読ませるか）は**設計判断**。
+★★ **⑦ の tab 符尾方向を決める**（**要承認＝描画が動く**）——**7 冊すべてで向きだけが逆**（④'''）。
+**`SharedRenderer.Tab.cs` の「LilyPond と同じく上を向く」というコメントが実測と食い違う**ので、
+**まずそのコメントの出所を当たること**（LP の `TabVoice` の符尾方向は `\tabFullNotation` の
+下でどう決まるか）。
+★★ **⑥ のゲート ⑹**（`instrument` を exporter に読ませて双子に `clef` を書くか）は**設計判断**——
+**④''' で 6 冊ぶんの価値があると分かった**（tab 5 ＋ `fermata-down`）。**`clef` を書いている 2 冊は
+記譜譜が一致している**ので、**書けば残り 6 冊も記譜譜は揃うはず**という予想が立つ。⚠️ **予想**。
+★ **`tab-below-range` の群の数が LP 7 / Lily# 6**（④'''）——**未調査**。
 ★ **量子器側の残り＝`grace.column.approach` +0.850449**（**機構が違う**: Lily# は run の幅を
 前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
 `lily/spacing-spanner.cc:396-403`）。**これは描画が動く＝snapshot 再ベース＝要承認。**
