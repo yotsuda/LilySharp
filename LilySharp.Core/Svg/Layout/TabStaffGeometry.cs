@@ -186,13 +186,27 @@ internal static class TabBeamMath
 }
 
 /// <summary>
-/// Quants a TAB beam through LilyPond's ported beam quanter
-/// (<see cref="BeamScoringProblem"/>) by feeding the notes' STRING lines as the
-/// stem positions — so tab beams get the same least-squares → damping →
-/// concaveness → quanting treatment as notation beams (a chord/outlier flattens,
-/// a monotonic run slopes), instead of an ad-hoc slope. Returns the beam line in
-/// DEVICE Y (evaluate with <see cref="TabBeamMath.At"/>).
+/// Places a TAB beam from the notes' STRING lines. Returns the beam line in DEVICE Y
+/// (evaluate with <see cref="TabBeamMath.At"/>).
 /// </summary>
+/// <remarks>
+/// ⚠️⚠️ THIS IS NOT A QUANTER AND DOES NOT GO THROUGH <see cref="BeamScoringProblem"/>.
+/// This doc used to say it did, and it stopped being true at <c>88f98480</c> (2026-07-12),
+/// which replaced the quanter call with the arithmetic below. What is actually here:
+/// <list type="bullet">
+///   <item>a slope of <c>0.6 · tanh(string contour)</c> — LilyPond's damping FORMULA with
+///     its least squares, concaveness and damping denominator all missing;</item>
+///   <item>a position of <c>min(farAnchor − 2.4·stringSpace, nearAnchor − 1.4·stringSpace)</c>
+///     and an overhang clamp at <c>1.6·stringSpace</c> — three LILYSHARP-OWN constants
+///     "measured from LilyPond's own tab SVG", with no landing on a quant grid at all.</item>
+/// </list>
+/// ⚠️ LilyPond runs tab beams through the SAME quanter as notation beams, in the tab staff's
+/// own units: MEASURED on <c>test/tab-string-pinned</c>, its TabStaff reports
+/// <c>staff-space 1.5</c> and <c>beam-thickness 0.32</c> (= 0.48/1.5, so the beam keeps its
+/// absolute thickness), and its flat single-string groups land EXACTLY on the outer string
+/// line (<c>1.5</c>), where this code sits 0.297 past it. See HANDOFF §1 and §2 B — the port
+/// is filed, not done, because every tab beam in the corpus moves.
+/// </remarks>
 internal static class TabBeamQuant
 {
     public static (double Slope, double InterceptY, double FirstX) Compute(
