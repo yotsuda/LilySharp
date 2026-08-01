@@ -85,8 +85,8 @@ exact に一致した**——`249e487d`・**ユーザー承認のうえ snapshot
 ★★★ **台帳 3 点（`beam.quant.chord.spanning.*`）を足した**（④・**旧コードは落ちる**）。
 **既存の `beam.quant.chord.*` が見えなかった理由も測った**——**中央線の近くでは
 `stem.cc:1239` の clamp がどちらの頭から来ても同じ答に落とす**。
-**未 push 63**（**この引継ぎ commit まで数えた値**）・
-テスト **3807 passed / 0 failed / 3 skipped**（**+20**）・
+**未 push 65**（**この引継ぎ commit まで数えた値**）・
+テスト **3812 passed / 0 failed / 3 skipped**（**+25**）・
 台帳 **388 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**残差は不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
@@ -294,13 +294,9 @@ Lily# フレット 0 1 3 5   弦 4 4 4 4   ← nearFret（直前 3）が |5−3|
 ので、**fixture を 1 冊足さないと「壊れても気づかない」規則が 2 つある**（⑩）。
 ★ **tab の残り 3 冊を土俵に乗せたいなら、直すのは弦選択ではなく fixture のほう**
 （`\N` で弦を固定する／固定した対を足す）。**これは描画が動く＝要承認。**
-★★ **⑤ の残り＝MusicXML のオクターブと `<transpose>`**（**MIDI は `92727a74` で閉じた**・§1 ⑤）。
-**`MusicXmlExporter` は part のアンカーを一度も読まず、全部 C4**（`octave 3` でも `instrument flute` でも）。
-**`<transpose>` も一度も出さない**（`transposition 8vb` を明示しても）。
-⚠️ **着手前にユーザー判断が要る**: **`<pitch>` を書かれた音高にして `<transpose>` を出すか／実音で出すか。**
-★ **決まれば作業は小さい**——**アンカーは `InstrumentDefaults.AnchorOctave` を読むだけ**で、
-**絶対モード側は `AbsoluteBaseOctave`**（**2 つを畳むと `octave absolute` が壊れる**——MIDI で実証済み）。
+★ **⑤ は閉じた**（MIDI `92727a74` ＋ MusicXML `781034c3`・§1 ⑤）。
 ⚠️ **オクターブの裏取りに MIDI を使わないこと**（**非 treble はもう合っているが、習慣として**）。
+★★ **残る量子器の仕事＝`grace.column.approach` +0.850449**（**要承認＝描画が動く**・下）。
 ★ **起票＝`DefaultBeamStemUp` の完全同数 tiebreak が LP と別物**（**今回名指しただけ・未測定**）。
 **LP は方向ごとに `max(-dir * head_positions[-dir], 0)` を足して平均で比べる**（`beam.cc:913-935`）／
 **Lily# は `BeamMember.StaffPosition`（＝和音の平均）の総和の符号**。
@@ -430,8 +426,8 @@ LP の連鎖に対して計算し直す**（`EmitChord` の relative 分岐）�
 ⚠️ **上行に書かれた和音（`<c e g>`）は marks ゼロのまま**——**テストの control**
 （そうしないと「全メンバーに marks を付ける exporter」でも通ってしまう）。
 
-## ⑤ ★★ **オクターブのアンカー＝MIDI は閉じた（`92727a74`）・MusicXML だけ残る**
-（**起票の当ては 2 つとも外れていた**）
+## ⑤ ★★★ ~~**オクターブのアンカー**~~ — **閉じた**（MIDI `92727a74` ＋ MusicXML `781034c3`・
+**起票の当ては 2 つとも外れていた**）
 
 ★★★ **実測（`part m { … }` ＋ `section A { m { c4 d e f } }`・ページは SVG の譜位置と加線で確認）**:
 ```
@@ -465,10 +461,22 @@ part のオクターブアンカーを一度も読まない**。だから **`oct
 （`clef bass transposition 8vb` → MIDI 48。**ページの実音 C2＝36 が正**）。
 ⚠️⚠️ **この起票の本当の重みは変わらない**——**第64セッションが MIDI を裏取りの第2経路に使った**。
 **非 treble の part では MIDI もページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
-⇒ **残っているのは MusicXML だけ**で、**要る設計判断も 1 つだけ**:
-**`<pitch>` を「書かれた音高」とし、移調は `<transpose>` で出すのか**（MusicXML の規約）／
-**実音で出すのか**。**決まれば ⒝⒞ は一緒に直る**（**アンカーは `InstrumentDefaults.AnchorOctave`
-を読むだけ・`_octaveAnchor` は `AbsoluteBaseOctave` 側**）。
+⇒ ★★★ **MusicXML も同じセッションで閉じた**（`781034c3`・**ユーザー決定＝規約どおり**）:
+**`<pitch>` は書かれた音高・移調は `<transpose>`**。**⒝⒞ は同じ「part header を読む一段」で片付いた。**
+⚠️⚠️ ★★★ **octave は 1 回だけ運ぶ**——**MusicXML には 2 つの要素があり、意味が違う**:
+```
+clef-octave-change  記譜（treble clef の下の 8）      ← guitar の 8vb はこちら
+transpose           楽器（書かれた音高が何を鳴らすか） ← bass の 8vb はこちら
+```
+**両方に出すと、規約どおり両方を読む実装で 2 オクターブ落ちる**。⇒ **`<transpose>` に出すのは
+「楽器ぶん」だけ**（**実測: guitar は `clef-octave-change` のみ・bass は `transpose` のみ**）。
+★★★ **importer にも読ませた**——**書いて読まない移調は「diff では正しく見えて帰りに落ちる」**。
+**オクターブ以外の移調は警告**（`transposition` は全オクターブしか綴れない）。
+★★★ **part header の読み取りは 1 つの型になった**（`Semantics.PartHeaderDefaults`）——
+**MIDI と MusicXML が同じものを読む**。**MidiExporter の 2 つの読み手と、重複していた
+clef 語 / tuning 語の switch もそこへ畳まれた。**
+★ **観測者**: **5 行の Theory**（`TransposingPart_DeclaresItsShiftOnceAndSurvivesRoundTrip`）——
+**export と再 import の両方を見て、octave が二重にならない 2 例を含む。**
 
 ## ⑥ ★★★ ~~**起票＝和音の上の記譜譜の梁が 1.0 ずれる**~~ — **閉じた**（第67セッション `249e487d`・§1）
 
