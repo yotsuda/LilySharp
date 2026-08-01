@@ -695,6 +695,10 @@ internal sealed class BeamDetector
         };
     }
 
+    /// <summary>
+    /// A chord's single "staff position": the mean of its heads. See the warning on
+    /// <see cref="BeamMember.StaffPosition"/> — the beam geometry does not read this.
+    /// </summary>
     private int GetChordStaffPosition(ChordItem chord)
     {
         if (chord.Notes.Length == 0)

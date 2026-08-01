@@ -4170,6 +4170,75 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The chord beam that <see cref="BQC"/> and <see cref="BQCC"/> cannot see: one where the
+    /// chord's arithmetic MEAN and its beam-side HEAD give different answers.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond reads exactly one head of a chord — the extreme in the stem's own direction
+    /// (lily/stem.cc:1214-1215 <c>head_positions (me)[my_dir]</c>, and lily/stem.cc:114-122
+    /// <c>chord_start_y</c> via <c>last_head</c>, which is the same head). Lily# read the mean
+    /// of the heads, which is not a head and which no LilyPond expression computes.
+    /// <para>
+    /// BQC/BQCC could not catch it: their beams sit near the middle line, where
+    /// lily/stem.cc:1239 clamps the ideal Y to 0 whichever head it came from, so both readings
+    /// land on the same quant. Here the chord spans the staff (heads -3, -1, +3, stems UP) and
+    /// nothing clamps: the floor decides alone, at <c>1.5 + 2.24 = 3.74</c> from the real head
+    /// against <c>0 + 2.24 = 2.24</c> from the mean. LilyPond's own quant is the first one
+    /// above 3.74.
+    /// </para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-chord.ly, score D) — MEASURED, heads
+    /// <c>(-3 -1 3)</c> and <c>Beam.positions</c> <c>(3.81 . 2.19)</c>. Forced toward the
+    /// mean's answer with <c>inspect-quants</c>, LilyPond's <c>debug-beam-scoring</c> card
+    /// reads <c>L 942.03</c> against <c>L 5.91</c> for its own.
+    /// <para>
+    /// This is the notation staff of <c>test/tab-beam-slope</c>, and it only became readable
+    /// once the exporter stopped spelling that chord's octaves differently from the page.
+    /// </para>
+    /// </remarks>
+    private static readonly string BQCD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef bass }
+
+        section Main {
+          m { <a,, c, g,>8 a,, a,, a,, e,, f,, g,, a,, | }
+        }
+
+        form main { ~Main }
+
+        score main "BQCD" { staff m }
+        """;
+
+    /// <summary>
+    /// The CONTROL for <see cref="BQCD"/>: the same bar with the chord replaced by its
+    /// BEAM-SIDE head alone.
+    /// </summary>
+    /// <remarks>
+    /// <c>calc_stem_info</c> reads that one head and no other, so LilyPond must answer the
+    /// identical pair — measured (score E), it does. That identity is what makes the pair
+    /// worth keeping: LilyPond is flat across it, so any difference Lily# shows between the
+    /// chord reading and this one is a defect by definition. Under the mean the pair was
+    /// broken by a full staff space; the beam-side head restores it.
+    /// </remarks>
+    private static readonly string BQCDC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef bass }
+
+        section Main {
+          m { g,8 a,, a,, a,, e,, f,, g,, a,, | }
+        }
+
+        form main { ~Main }
+
+        score main "BQCDC" { staff m }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -7245,6 +7314,13 @@ internal static class LpGeometryProbes
         new("beam.quant.chord.left", BQC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.chord.right", BQC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.chord.single-note-control", BQCC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // …and the chord beam those three cannot see, because near the middle line the ideal-Y
+        // clamp hides which head the length was reckoned from. Both ends, plus the control that
+        // keeps LilyPond's identity honest: LilyPond reads ONE head of a chord and this pair
+        // differs only in whether the other two heads are written. See BQCD/BQCDC.
+        new("beam.quant.chord.spanning.left", BQCD, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.chord.spanning.right", BQCD, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.chord.spanning.beam-side-head-control", BQCDC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

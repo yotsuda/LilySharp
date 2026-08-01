@@ -77,3 +77,43 @@ bottoms  = { cis''8 d'' ees'' e'' r2 }
   } { \time 4/4 \relative c' {
         cis16 d dis e f fis g gis a ais b c |
         <cis e gis>8 <d f aes> <ees ges bes> <e g b> r2 } } }
+
+% ─────────────────────────────────────────────────────────────────────────────
+% D/E, added 2026-08-01: THE SAME QUESTION WHERE THE ANSWER IS NOT MASKED.
+%
+% A and B agree in LilyPond AND agreed in Lily# while Lily# was reading the chord's
+% arithmetic MEAN where LilyPond reads head_positions[my_dir]. They could not tell the two
+% apart: those beams sit near the middle line, where stem.cc:1239 clamps the ideal Y to 0
+% whichever head it started from, so both readings arrive at the same quant.
+%
+% D is the chord that DOES separate them: <a,, c, g,> spans the staff (heads -3, -1, +3),
+% stems UP, so the beam-side head is +3 and the mean is 0 — and the beam sits high enough
+% that nothing clamps. The floor alone decides it: shortest_y = 1.5 + 2.24 = 3.74 from the
+% real head, 0 + 2.24 = 2.24 from the mean, and 3.81 is the first quant above 3.74.
+% LilyPond charges 942.03 for the quant the mean makes legal (debug-beam-scoring with
+% inspect-quants) against 5.91 for its own.
+%
+% E is the CONTROL, and it is the same identity B has: the chord replaced by its BEAM-SIDE
+% head alone. calc_stem_info reads that one head and no other, so LilyPond must answer the
+% IDENTICAL pair — measured, it does. Any difference Lily# shows across D/E is therefore a
+% defect with no LilyPond-side quantity left to explain it.
+%
+% This is the notation staff of LilySharp.Tests/Fixtures/test/tab-beam-slope, which is where
+% the divergence was found once the twin and the page finally held the same chord.
+%
+% ⚠️ Both bodies came out of `lysc ly`, not a hand transcription — the octaves in the .lys
+% are relative to Lily#'s c, not LilyPond's, and hand-spelling them is how two earlier
+% false divergences were manufactured.
+
+bqcd  = \fixed c' { <a,, c, g,>8 a,, a,, a,, e,, f,, g,, a,, | }
+bqcdc = \fixed c' { g,8       a,, a,, a,, e,, f,, g,, a,, | }
+
+\score { \new Staff \with {
+    \override Beam.after-line-breaking = #(dump-beam "D")
+    \override Stem.after-line-breaking = #(dump-stem "D")
+  } { \time 4/4 \key c \major \clef bass \bqcd } }
+
+\score { \new Staff \with {
+    \override Beam.after-line-breaking = #(dump-beam "E")
+    \override Stem.after-line-breaking = #(dump-stem "E")
+  } { \time 4/4 \key c \major \clef bass \bqcdc } }

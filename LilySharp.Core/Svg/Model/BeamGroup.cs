@@ -145,9 +145,20 @@ public sealed record BeamMember
     public int BeamCountRight { get; }
 
     /// <summary>
-    /// Staff position of the note (or lowest note in chord).
-    /// Used for beam slope calculation.
+    /// Staff position of the note; for a CHORD, the arithmetic mean of its heads
+    /// (rounded toward zero) — not a head, and not a quantity LilyPond computes.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ This is NOT the beam's view of the member: the quanter asks
+    /// <see cref="HeadPositionMin"/>/<see cref="HeadPositionMax"/> for the head on the
+    /// beam's side, which is what <c>Stem::head_positions (me)[my_dir]</c> and
+    /// <c>Stem::chord_start_y</c> both mean (lily/stem.cc:1214, :114-122). The mean used
+    /// to flow into the stem-length floor and put a beam over a chord a full staff space
+    /// too low. Its ONE remaining reader is the fully-balanced tiebreak in
+    /// <c>BeamDetector.DefaultBeamStemUp</c>, where LilyPond sums per-direction far-head
+    /// distances instead (lily/beam.cc:913-935) — a divergence that is named but not yet
+    /// measured, and the reason this property still exists.
+    /// </remarks>
     public int StaffPosition { get; }
 
     /// <summary>Index of this member in the measure's items.</summary>

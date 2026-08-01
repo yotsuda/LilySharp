@@ -820,6 +820,27 @@
       "residual": 0.0,
       "why": "EXACT, and Lily# reproduces the identity. The CONTROL for beam.quant.chord.*: the same rhythm with only each chord's BOTTOM note. The stems point down, so the head at the stem's far end is the bottom one, and LilyPond answers the IDENTICAL (-1.81 . -1.19). That identity is what makes the pair worth keeping after the falsification: LilyPond is flat across it, so any difference Lily# shows between the chord reading and this one is a defect by definition, with no LilyPond-side quantity left to explain it away."
     },
+    "beam.quant.chord.spanning.left": {
+      "probe": "beam-chord.ly",
+      "score": "D",
+      "lilypond": 3.810000,
+      "residual": 0.0,
+      "why": "EXACT, and the point that closed the mean. beam.quant.chord.* (A/B) is a beam over chords too, and it read EXACT for months while Lily# was feeding the quanter the arithmetic MEAN of a chord's heads — LilyPond reads one head and only one, the extreme in the stem's own direction (lily/stem.cc:1214-1215 head_positions (me)[my_dir]; lily/stem.cc:114-122 chord_start_y is last_head, which is that same head). A/B could not tell them apart because their beams sit near the middle line, where lily/stem.cc:1239 clamps the ideal Y to 0 whichever head it came from. D is the chord where nothing clamps: <a,, c, g,> spans the staff (heads -3, -1, +3) with stems UP, so the floor alone decides the left end — shortest_y = 1.5 + 2.24 = 3.74 from the real head against 0 + 2.24 = 2.24 from the mean, and 3.81 is the first quant above 3.74. Lily# answered 2.81 (residual -1.0) until BeamScoringProblem.BeamSideHead replaced the mean at every site that asks a member where its head is. MEASURED on LilyPond's side, not inferred: forced with inspect-quants toward the mean's answer, debug-beam-scoring charges L 942.03 where its own quant costs L 5.91. Found in the notation staff of test/tab-beam-slope, which only became comparable once the exporter stopped spelling that chord's octaves differently from the page. LILYPOND-REF: lily/stem.cc:1214-1215, :1239, :114-122; lily/beam-quanting.cc:1133-1137."
+    },
+    "beam.quant.chord.spanning.right": {
+      "probe": "beam-chord.ly",
+      "score": "D",
+      "lilypond": 2.190000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam, because a sloped beam's height and its slope are two numbers and one reading cannot separate them. Under the mean this end read 2.00 (residual -0.19) while the left end was a full staff space out — the two errors are not the same size, which is what says the seed moved and not the whole beam."
+    },
+    "beam.quant.chord.spanning.beam-side-head-control": {
+      "probe": "beam-chord.ly",
+      "score": "E",
+      "lilypond": 3.810000,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL for beam.quant.chord.spanning.*: the same bar with the chord replaced by its BEAM-SIDE head alone. calc_stem_info reads that one head and no other, so LilyPond must answer the identical (3.81 . 2.19) — measured (score E), it does. LilyPond is flat across the pair, so any difference Lily# shows between the chord reading and this one is a defect by definition. It is also what makes the pair a real observer rather than one number: this control read EXACT while the chord reading was 1.0 out, so the defect showed up as a BROKEN IDENTITY and not as a constant anyone could have absorbed into a fudge."
+    },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
       "score": "qA",

@@ -62,7 +62,6 @@ internal sealed class BeamScoringProblem
     private readonly double _leftX;
     private readonly double _rightX;
     private readonly double[] _stemXPositions;
-    private readonly int[] _staffPositions;
     private readonly int[] _headMin;
     private readonly int[] _headMax;
     private readonly int _maxBeamCount;
@@ -243,7 +242,6 @@ internal sealed class BeamScoringProblem
         // Extract stem positions (in staff positions), inset half the overhang from each
         // beam edge so the outer stems sit at [halfOverhang, _xSpan - halfOverhang].
         _stemXPositions = new double[group.Members.Length];
-        _staffPositions = new int[group.Members.Length];
         _headMin = new int[group.Members.Length];
         _headMax = new int[group.Members.Length];
         _memberBeamCounts = new int[group.Members.Length];
@@ -257,11 +255,10 @@ internal sealed class BeamScoringProblem
             {
                 // Tab: the note's STRING line is its stem position; a single digit
                 // has close == far, so both concaveness heads use the same value.
-                _staffPositions[i] = _headMin[i] = _headMax[i] = stemPositions[i];
+                _headMin[i] = _headMax[i] = stemPositions[i];
             }
             else
             {
-                _staffPositions[i] = member.StaffPosition;
                 _headMin[i] = member.HeadPositionMin;
                 _headMax[i] = member.HeadPositionMax;
             }
@@ -426,20 +423,24 @@ internal sealed class BeamScoringProblem
         int idx = Math.Clamp(_maxBeamCount - 1, 0, beamedStemShorten.Length - 1);
 
         int forced = 0;
-        for (int i = 0; i < _staffPositions.Length; i++)
+        for (int i = 0; i < _headMin.Length; i++)
         {
-            // Beam-side head; a single note has close == far == StaffPosition (half-spaces).
-            int headPos = _staffPositions[i];
+            // |chord_start_y| > 0.1 excludes a head ON the middle line; chord_start_y is
+            // the beam-side head in half-spaces, so that is exactly != 0.
+            int headPos = BeamSideHead(i);
             int dir = StemDirOf(i);
-            // default-direction: a note below the middle line naturally stems up.
-            int naturalDir = headPos < 0 ? 1 : -1;
-            // |chord_start_y| > 0.1 excludes middle-line heads; integer half-spaces
-            // means that is exactly headPos != 0.
-            if (headPos != 0 && dir != naturalDir)
+            // LILYPOND-REF: lily/stem.cc:793-809 Stem::calc_default_direction —
+            //   sign (ddistance - udistance) with udistance = hp[UP] and
+            //   ddistance = -hp[DOWN]. A single note reduces to "below the line stems up";
+            //   a chord asks which of its two extremes is FARTHER from the middle line,
+            //   and a symmetric one (⑥'s <a c g'>) answers CENTER = no natural direction,
+            //   which beam.cc:1289 then refuses to count as forced (`&& defdir`).
+            int naturalDir = Math.Sign(-_headMin[i] - _headMax[i]);
+            if (headPos != 0 && naturalDir != 0 && dir != naturalDir)
                 forced++;
         }
 
-        double forcedFraction = forced / (double)_staffPositions.Length;
+        double forcedFraction = forced / (double)_headMin.Length;
         return beamedStemShorten[idx] * forcedFraction;
     }
 
@@ -451,6 +452,30 @@ internal sealed class BeamScoringProblem
     /// stem, and off a knee every stem answers the beam's own direction.
     /// </remarks>
     private int StemDirOf(int i) => _isKnee ? _memberBeamDirs[i] : _beamDir;
+
+    /// <summary>
+    /// The one head of a member that the quanter ever asks about: the EXTREME head in the
+    /// stem's own direction — the top head of an up stem, the bottom head of a down one.
+    /// A single note is its own extreme, so this is that note's staff position.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:1214-1215 calc_stem_info takes
+    ///   <c>head_positions (me)[my_dir]</c> for note_start, and lily/stem.cc:114-122
+    ///   chord_start_y takes <c>last_head</c>, which is
+    ///   <c>extremal_heads (me)[direction]</c> (:225-231) — the SAME head. LilyPond has
+    ///   exactly one "the chord's position" and this is it.
+    /// <para>
+    /// ⚠️ This replaced the arithmetic MEAN of the chord's heads, which is not a head at
+    /// all and no LilyPond expression computes. It is the whole of divergence ⑥: for
+    /// <c>&lt;a c g'&gt;</c> (heads -3, -1, +3) the mean is 0 and the beam-side head is +3,
+    /// so the stem's floor came out at 0 + 2.24 instead of 1.5 + 2.24 = 3.74 and a quant a
+    /// full staff space too low became legal. LilyPond charges 942.03 for it
+    /// (<c>debug-beam-scoring</c> forced with <c>inspect-quants</c>); its own answer costs
+    /// 5.91. Two comments in this file already ASSERTED this was the beam-side head while
+    /// the mean was flowing through — see the quant_range_ note in GenerateQuants.
+    /// </para>
+    /// </remarks>
+    private int BeamSideHead(int i) => StemDirOf(i) > 0 ? _headMax[i] : _headMin[i];
 
     /// <summary>
     /// The beam count a stem's IDEAL LENGTH is bought with — the maximum multiplicity among
@@ -540,7 +565,7 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private (double leftY, double rightY) CalculateInitialPosition()
     {
-        if (_staffPositions.Length < 1)
+        if (_headMin.Length < 1)
             return (0, 0);
 
         double minStemLen = _minStemLength; // staff-spaces
@@ -555,11 +580,11 @@ internal sealed class BeamScoringProblem
         // what ScoreStemLengths optimises against.
         // LILYPOND-REF: lily/stem.cc:1137-1266 calc_stem_info.
         var ideals = new List<(double x, double y)>();
-        for (int i = 0; i < _staffPositions.Length; i++)
+        for (int i = 0; i < _headMin.Length; i++)
         {
             int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], dir > 0, DirectionBeamCount(dir),
+                BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
                 _beamThickness, _beamTranslation, _stemDetails,
                 isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY; // staff-spaces (native quanter frame)
@@ -716,12 +741,12 @@ internal sealed class BeamScoringProblem
         double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
         double maxShortage = 0;
 
-        for (int i = 0; i < _staffPositions.Length; i++)
+        for (int i = 0; i < _headMin.Length; i++)
         {
             double beamY = leftY + slope * _stemXPositions[i];
             // Y is in staff-spaces; the integer staff position is a half-space,
             // so ×0.5 converts it. Stem length is then a staff-space quantity.
-            double stemLength = _beamDir * (beamY - _staffPositions[i] * 0.5);
+            double stemLength = _beamDir * (beamY - BeamSideHead(i) * 0.5);
 
             if (stemLength < minStemLen)
                 maxShortage = Math.Max(maxShortage, minStemLen - stemLength);
@@ -746,7 +771,7 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ApplySlopeDamping()
     {
-        if (_staffPositions.Length <= 1)
+        if (_headMin.Length <= 1)
             return;
 
         double damping = _parameters.Damping;
@@ -802,12 +827,15 @@ internal sealed class BeamScoringProblem
         if (_isKnee || _group.IsCrossStaff)
             return 0;
 
-        if (_staffPositions.Length <= 2)
+        if (_headMin.Length <= 2)
             return 0;
 
         // LILYPOND-REF: lily/beam-quanting.cc:709-726 — for chords the close
         // head (beam side) and far head feed separate measures; single notes
-        // have close == far == StaffPosition.
+        // have close == far.
+        // ⚠️ Deliberately NOT BeamSideHead: LilyPond indexes these with the ONE
+        // beam_dir it derives at :700-702, not with each stem's own direction, so
+        // a knee's members do not each pick their own side here.
         var close = new int[_group.Members.Length];
         var far = new int[_group.Members.Length];
         for (int i = 0; i < _group.Members.Length; i++)
@@ -917,7 +945,7 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ShiftRegionToValid()
     {
-        if (_staffPositions.Length == 0)
+        if (_headMin.Length == 0)
             return;
 
         double beamDy = _unquantedRightY - _unquantedLeftY;
@@ -928,7 +956,7 @@ internal sealed class BeamScoringProblem
         double feasibleMin = double.NegativeInfinity;
         double feasibleMax = double.PositiveInfinity;
 
-        for (int i = 0; i < _staffPositions.Length; i++)
+        for (int i = 0; i < _headMin.Length; i++)
         {
             // The minimum beam Y at this stem comes from the per-stem shortest_y of
             // calc_stem_info — NOT a flat 2.5-space length. The flat constant over-
@@ -936,7 +964,7 @@ internal sealed class BeamScoringProblem
             // LILYPOND-REF: lily/beam-quanting.cc:794-805 (stem_infos_[i].shortest_y_).
             int dir = StemDirOf(i);
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], dir > 0, DirectionBeamCount(dir),
+                BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
                 _beamThickness, _beamTranslation, _stemDetails,
                 isKnee: _isKnee, beamShorten: _beamShorten);
             double minBeamY = info.ShortestY; // staff-spaces (native quanter frame)
@@ -1007,14 +1035,14 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam-quanting.cc:343-360 quant_range_ — at each
         // edge the beam may not come closer to the edge notehead than half a
         // staff space plus the stacked inner beams plus half the beam
-        // thickness. (For chord edges our member StaffPosition is the head
-        // AVERAGE, not the beam-side head, so the bound is merely looser than
-        // LilyPond's — never tighter.)
+        // thickness. The edge head is the beam-side one, as everywhere else
+        // here; this note used to say the mean was flowing through and that the
+        // bound was "merely looser, never tighter" — it is now LilyPond's.
         double[] quantMin = { double.NegativeInfinity, double.NegativeInfinity };
         double[] quantMax = { double.PositiveInfinity, double.PositiveInfinity };
         for (int e = 0; e < 2; e++)
         {
-            double headSS = _staffPositions[e == 0 ? 0 : ^1] / 2.0;
+            double headSS = BeamSideHead(e == 0 ? 0 : _headMin.Length - 1) / 2.0;
             double widen = 0.5
                 + (_edgeBeamCounts[e] - 1) * _beamTranslation
                 + _beamThickness * 0.5;
@@ -1384,7 +1412,7 @@ internal sealed class BeamScoringProblem
             //   on grading it against a floor built from each stem's own count, which
             //   is how an 8-32-8 beam kept a quant LilyPond charges 5000 × 0.11 for.
             var info = StemCalculator.CalculateBeamedStemInfo(
-                _staffPositions[i], memberDir > 0, DirectionBeamCount(memberDir),
+                BeamSideHead(i), memberDir > 0, DirectionBeamCount(memberDir),
                 _beamThickness, _beamTranslation, _stemDetails,
                 isKnee: _isKnee, beamShorten: _beamShorten);
             double idealY = info.IdealY;
