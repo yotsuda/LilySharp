@@ -4211,16 +4211,19 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `font` を書いたときだけ。⚠️ **新しくテキスト量を測るコードは自前で face を持たず
   `TextFontMetrics` に乗せること**（1 つの家）。ここを塞げば全部同時に直る。
   **着手するなら対を先に**（`font` 指定つきの fixture が要る）
-- ★★ **`lysc ly`（双子 exporter）の穴 3 つ**（2026-08-01・第58セッションがコーパス一周で実測。
-  **§1 ④ に内訳**）。**塞ぐたびに LP と突き合わせられる本が増える**ので、忠実度作業の
-  **測定可能面積そのもの**が懸かっている:
-  ⑴ **`voice { }` が丸ごと落ちる**（`ParallelExpression not exported`・**空の譜になる双子 11 本**）
-  ⑵ **`grandStaff { … }` の入れ子を `EmitScore` が見ない**（`EnumerateChildren(render)` の
-     直下しか switch していない）⇒ **譜 0 本と数えて fallback の 1 譜になる**
-  ⑶ **`ossia` が落ちる**／**`part` 宣言を持たない本は音楽ごと空**（`TopLevelMusic` しか拾わない）
-  ⚠️ **これは「exporter が空を返す」欠陥の 3 度目**（第55・第56セッションが 2 度直している）。
-  ⇒ ★ **塞ぐときは 1 本ずつ直さず、`Warnings` を全 fixture に対して回す機械を先に作る**
-  （今回は手で回した: **176 行 / 62 fixture**）
+- ★★ **`lysc ly`（双子 exporter）の穴**。**塞ぐたびに LP と突き合わせられる本が増える**ので、
+  忠実度作業の**測定可能面積そのもの**が懸かっている。
+  ~~⑴ `voice { }`~~・~~⑵ `grandStaff` の入れ子~~・~~⑶ `ossia`／`part` 宣言なし~~・
+  ~~⑷ section のヘッダ~~・~~⑸ 和音のオクターブ記号~~・~~⑹ grace のあとの音価~~ — **すべて完了**
+  （第61〜63セッション。最後の 2 つは `275c12ee`）。
+  **残っているのは 1 つ**:
+  ⑺ **度数和音が `<>` になる**（`<1 3 5>`・`<d 3 5 7,>`）。**今は警告を出すだけ**で、
+     **解決は独立した移植**——`MeasureCollector.ItemFactory` が root ＋ 調に対して解決している
+     側から**字面で写せる**。**閉じれば `chord-octave-marks` の bar check が消える。**
+  ⚠️ **「exporter が黙って空を返す」欠陥はこれで 6 度目**（第55・56・61・62・63）。
+  ⇒ ★ **落とすなら必ず `Warnings` に出す**。**`<>` や空の part 変数を黙って書かない。**
+  ⇒ ★ **塞いだら双子 199 本の before/after を全数比較する**（第62セッション ② の手順。
+     1 回目で本物の退行を捕まえている）
 - ★ **fixture 5 本が今の文法で parse しない**（`test/beamed-rest`・`test/cue-notes`・
   `test/dot-force-down`・`test/multi-movement`・`showcase/grammar-2026-06-09`）。
   `p`/`chords` の予約語化・`name = …` 宣言の撤去・`time`/`tempo` の score レベル化で置き去りに
