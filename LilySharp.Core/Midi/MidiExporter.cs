@@ -362,6 +362,11 @@ public sealed class MidiExporter
                     voicesEndTick = Math.Max(voicesEndTick, _currentTick);
                 }
                 _currentTick = voicesEndTick;
+                // …and the music AFTER the span reads from the frame the span opened in
+                // too: no branch moves it, so which branch was written last cannot matter
+                // (MeasureCollector's _parallelSpans carries the same rule for the page).
+                _currentNoteName = startNoteName;
+                _currentOctave = startOctave;
                 break;
 
             case PhraseDeclarationSyntax:

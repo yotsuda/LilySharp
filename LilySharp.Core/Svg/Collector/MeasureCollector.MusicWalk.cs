@@ -360,13 +360,20 @@ public sealed partial class MeasureCollector
                     // builder) so measure indices stay continuous; the extra
                     // voices are reconstructed later from the recorded span.
                     var voiceBlocks = parallel.Voices.ToList();
-                    _parallelSpans.Add((parallel, builder.CurrentMeasureIndex));
+                    // The frame at the span's OPENING is what every voice reads from, and
+                    // what the music after the span reads from — a span of simultaneous
+                    // music does not move the relative frame (see _parallelSpans). Voice 0
+                    // is walked inline here, so it is saved and restored around that walk;
+                    // the other voices take the recorded frame in BuildExtraVoiceTracks.
+                    var spanFrame = _octave.Snapshot();
+                    _parallelSpans.Add((parallel, builder.CurrentMeasureIndex, spanFrame));
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
                         _currentVoiceScope = 1;
                         ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
                         _currentVoiceScope = null;
+                        _octave.Restore(spanFrame);
                     }
                 }
                 break;

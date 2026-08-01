@@ -747,7 +747,14 @@ public sealed partial class MeasureCollector
     // Voice 0 flows into the primary stream so measure indices stay continuous;
     // the remaining voices are reconstructed afterwards (BuildMultiVoiceScore).
     // Cleared at the start of each collection.
-    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure)> _parallelSpans = new();
+    // The Frame is the relative-octave state at the span's OPENING: every voice of the
+    // span reads from it, and the music after the span reads from it too. A voice span is
+    // simultaneous music, so its branches do not chain into one another and none of them
+    // moves the frame — the same rule Lily# already applies inside a CHORD, where every
+    // member stacks on the root and `<c e g>` == `<c g e>` (CreateChordItem). Written
+    // 2026-08-01 on the user's call; before that voices 2..N restarted at the PART's
+    // default octave and voice 0 leaked its last pitch into the music after the span.
+    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, OctaveSnapshot Frame)> _parallelSpans = new();
     // Added to the local measure index when collecting a parallel span's EXTRA
     // voices (they're collected with a fresh 0-based builder), so their
     // per-note metadata — dynamics, articulations, etc. — lands at the span's
@@ -1786,7 +1793,7 @@ public sealed partial class MeasureCollector
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
-        foreach (var (parallel, _) in _parallelSpans)
+        foreach (var (parallel, _, _) in _parallelSpans)
         {
             int vi = 0;
             foreach (var (name, _) in parallel.NamedVoices)
@@ -1836,7 +1843,7 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _) in _parallelSpans)
+        foreach (var (parallel, _, _) in _parallelSpans)
             voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
 
         var tracks = new List<ImmutableArray<Measure>>();
@@ -1846,18 +1853,21 @@ public sealed partial class MeasureCollector
             for (int m = 0; m < totalMeasures; m++)
                 trackMeasures[m] = EmptyMeasure(track0[m]);
 
-            foreach (var (parallel, start) in _parallelSpans)
+            foreach (var (parallel, start, spanFrame) in _parallelSpans)
             {
                 var blocks = parallel.Voices.ToList();
                 if (t >= blocks.Count)
                     continue;
 
-                // Each sub-voice evaluates in a fresh relative frame anchored at
-                // this voice's initial octave (the part's default), then maps onto
-                // the span's measures.
+                // Each sub-voice evaluates from the frame the SPAN OPENED IN — the same
+                // one voice 0 read, so the voices are order-independent and none of them
+                // drags the next (see _parallelSpans). ⚠️ It used to be the part's default
+                // octave, which made `voice { c'1 } voice { d1 }` after a low g read its d
+                // two octaves from where the MIDI put it.
                 var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
-                EnterDefaultFrame();
+                _octave.Restore(spanFrame);
+                _defaultDuration = Fraction.Quarter;
 
                 // Per-note metadata in this sub-voice is keyed by its local 0-based
                 // measure index; shift it to the span's real start so dynamics etc.
