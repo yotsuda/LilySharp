@@ -343,6 +343,120 @@ public class LilyPondExporterTests
         Assert.Contains(exporter.Warnings, w => w.Contains("refers to itself"));
     }
 
+    // ---- Scale-degree chords ------------------------------------------------
+    //
+    // LilyPond has no spelling for a degree at all, so a degree member cannot be copied
+    // through the way every other pitch token is: it has to be RESOLVED, against the chord's
+    // root (or the key's tonic when the root is omitted) and against the running key. Until
+    // 2026-08-01 they were dropped instead, which spelt `<1 3 5>` as `<>` — a zero-length
+    // event, so test/chord-octave-marks failed its bar check at 1/4 and the sweep read it as
+    // a book with no beams. The expected strings below are the pitches Lily# SOUNDS
+    // (MeasureCollector.ItemFactory / MidiExporter agree on them note for note).
+
+    private static string DegreeScore(string music, string key = "key c major") => $$"""
+        {{key}}
+        part m { clef treble }
+        section S { m { {{music}} } }
+        form main { S }
+        score main { staff m }
+        """;
+
+    [Fact]
+    public void ARootlessDegreeChord_IsSpelledOut_NotAnEmptyChord()
+    {
+        // <1 3 5> in C major is the tonic triad, and degree 1 IS the tonic.
+        var ly = Export(DegreeScore("<1 3 5>4"));
+        Assert.Contains("<c e g>4", ly);
+        Assert.DoesNotContain("<>", ly);
+    }
+
+    [Fact]
+    public void ADegreeTakesItsAccidentalFromTheRunningKey()
+    {
+        // The key gives the letter its alteration (ChordDegrees.Resolve → KeySpelling), and
+        // LilyPond note names are absolute: a bare `f` under \key g \major is F NATURAL, so
+        // the leading note has to be written out as fis or the twin is a different chord.
+        var ly = Export(DegreeScore("<1 3 5 7>4", key: "key g major"));
+        Assert.Contains("fis", ly);
+    }
+
+    [Fact]
+    public void AnOmittedRootAnchorsOnTheKeysTonic_NotOnC()
+    {
+        // F major, degrees 2 4 6 → the ii chord g-bes-d. The `bes` is the key's, the `g'` is
+        // the frame's: Lily# anchors the (unsounded) tonic f above the c the part opens on,
+        // and LilyPond, reading a bare g, would put it BELOW that c.
+        var ly = Export(DegreeScore("<2 4 6>4", key: "key f major"));
+        Assert.Contains("<g' bes d>4", ly);
+    }
+
+    [Fact]
+    public void AWrittenRootIsTheAnchor_AndTheDegreesStackOnIt()
+    {
+        // <d 3 5 7,> — a seventh chord on d with its seventh dropped an octave. The `,` is
+        // the degree's own mark, and what it takes to spell that in LilyPond's member-to-
+        // member chain is not the same mark it had in the source.
+        var ly = Export(DegreeScore("<d 3 5 7,>4"));
+        Assert.Contains("<d f a c,>4", ly);
+    }
+
+    [Fact]
+    public void WholeChordMarks_MoveADegreeChordTogether()
+    {
+        var ly = Export(DegreeScore("<1 3 5>4 <1 3 5>'4 <1 3 5>,4"));
+        Assert.Contains("<c e g>4 <c' e g>4 <c, e g>4", ly);
+    }
+
+    /// <summary>
+    /// A degree chord can leave the two engines' octave frames apart, and the next note's
+    /// marks absorb the difference rather than reporting it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond octaves the note after a chord against the chord's FIRST MEMBER
+    /// (lily/music-sequence.cc:213-219, ret_first); Lily# octaves it against the chord's
+    /// ANCHOR, which for <c>&lt;1' 3 5&gt;</c> is the tonic an octave BELOW the C5 that had to
+    /// be written first. Copying the source's bare <c>c</c> through would put the twin's next
+    /// note an octave high — silently, which is the failure mode this exporter exists to
+    /// avoid.
+    /// </remarks>
+    [Fact]
+    public void AFrameADegreeChordMoved_IsCarried_ByTheNextNotesMarks()
+    {
+        var ly = Export(DegreeScore("<1' 3 5>2 c2"));
+        Assert.Contains("<c' e, g>2 c,2", ly);
+    }
+
+    [Fact]
+    public void InAbsoluteMode_DegreesAreWrittenAgainstTheFixedAnchor()
+    {
+        // No frame to chase: \fixed c' means a bare letter is the octave of middle C, so the
+        // whole-chord ' is one mark on every member.
+        var ly = Export("""
+            octave absolute
+            key c major
+            part m { clef treble }
+            section S { m { <1 3 5>4 <1 3 5>'4 } }
+            form main { S }
+            score main { staff m }
+            """);
+        Assert.Contains("<c e g>4 <c' e' g'>4", ly);
+    }
+
+    [Fact]
+    public void ADegreeChordAfterAGrace_IsReported_BecauseTheFrameIsNoLongerTracked()
+    {
+        // A grace body advances LilyPond's octave frame and not Lily#'s (the collector
+        // restores it), so past that point the anchor a degree would stack on is a guess.
+        var exporter = new LilyPondExporter();
+        exporter.Export(SyntaxTree.Parse(DegreeScore("grace { d8 } c4 <1 3 5>4")));
+        Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a grace"));
+
+        // …and the ordinary book says nothing.
+        var quiet = new LilyPondExporter();
+        quiet.Export(SyntaxTree.Parse(DegreeScore("<1 3 5>4")));
+        Assert.DoesNotContain(quiet.Warnings, w => w.Contains("degree chord"));
+    }
+
     [Fact]
     public void ANoteAfterAReference_IsReported_BecauseTheTwoEnginesAnchorItDifferently()
     {

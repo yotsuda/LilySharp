@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Text;
+using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -66,6 +68,54 @@ public sealed class LilyPondExporter
     /// </remarks>
     private int _anchorOctave = InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
 
+    /// <summary>
+    /// The running WRITTEN key signature (sharps positive, flats negative) and the tonic an
+    /// omitted chord root anchors on — the two things a scale-degree member resolves against.
+    /// </summary>
+    /// <remarks>
+    /// Seeded from the score's top-level key (<see cref="ScoreHomeKey"/>, the same reading the
+    /// collector and the MIDI / MusicXML exporters take) and advanced by every <c>\key</c> this
+    /// exporter WRITES, in emission order — which is the collector's order too, because
+    /// <see cref="SectionHeaderMusic"/> already emits a section's own key where the collector
+    /// applies it. A custom/atonal key has no tonic (<c>Valid</c> false), and the collector
+    /// falls back to C there, so this does the same.
+    /// ⚠️ It is the written key, NOT the sounding one: a part transpose moves the key AND the
+    /// pitches, and this exporter writes neither (the <c>instrument</c> gate — see
+    /// <see cref="AnchorOctaveOf"/>).
+    /// </remarks>
+    private int _keySharps;
+    private KeyTonic _tonic = KeyTonic.CMajor;
+    private int _homeKeySharps;
+    private KeyTonic _homeTonic = KeyTonic.CMajor;
+
+    /// <summary>
+    /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
+    /// has written puts LilyPond. Both are absolute octave numbers (4 = the octave of middle C).
+    /// </summary>
+    /// <remarks>
+    /// They are the same number everywhere the transpiler is exact, and a chord is what parts
+    /// them: the next event is relative to the chord's ANCHOR in Lily# (the root's bare letter,
+    /// or the key's tonic when the root is omitted — MeasureCollector.ItemFactory) and to the
+    /// chord's FIRST MEMBER in LilyPond (lily/music-sequence.cc:213-219, <c>ret_first</c>).
+    /// A degree chord written <c>&lt;1' 3 5&gt;</c> sounds C5 E4 G4 and leaves Lily# on C4 —
+    /// LilyPond, reading the C5 this exporter had to write first, would be an octave up.
+    /// <para>
+    /// The difference is carried, not warned about: the next pitch's marks absorb it
+    /// (<see cref="EmitMusicPitch"/>), which puts both frames back on the same note. Only a
+    /// degree chord can open the gap, so in every book without one the correction is 0 and
+    /// every pitch token is still the source's, byte for byte.
+    /// </para>
+    /// <para>
+    /// ⚠️ <see cref="_frameTracked"/> goes false where this exporter hands pitches to a
+    /// sub-exporter whose frame it does not model (a grace body, a phrase reference's nested
+    /// <c>\relative</c>, a voice span). A degree chord after that point is reported rather
+    /// than trusted.
+    /// </para>
+    /// </remarks>
+    private int _lysStep, _lysOctave;
+    private int _lyStep, _lyOctave;
+    private bool _frameTracked = true;
+
     /// <summary>The note value Lily# would give an event that writes no duration — its own
     /// rule, not LilyPond's. See <see cref="EmitEventDuration"/>.</summary>
     private string _lastWrittenValue = "4";
@@ -102,6 +152,10 @@ public sealed class LilyPondExporter
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
         _octaveAbsolute = octaveDir?.IsAbsolute ?? false;
+
+        // The key a part starts in, before any section header or mid-stream change.
+        _homeTonic = ScoreHomeKey.Read(root);
+        _homeKeySharps = ScoreHomeKey.Sharps(root);
 
         CollectPhrases(root);
 
@@ -315,9 +369,18 @@ public sealed class LilyPondExporter
                 _phrases = _phrases,
                 _activePhrases = _activePhrases,
             };
+            CarryFrameInto(buf);
+            // Both sides open a FRESH frame for the body — LilyPond the nested \relative
+            // written below, Lily# its EnterDefaultFrame — at the part's anchor moved by the
+            // reference's own marks.
+            buf._lysStep = buf._lyStep = 0;
+            buf._lysOctave = buf._lyOctave = _anchorOctave + v.OctaveOffset;
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
             _warnings.AddRange(buf._warnings);
             string inner = buf._sb.ToString().Replace("\n", " ").Trim();
+            // The nested \relative the reference opens is where the two frames part company
+            // (the warning above says so); stop tracking rather than guess.
+            _frameTracked = false;
             if (inner.Length == 0)
                 return "";
 
@@ -434,6 +497,16 @@ public sealed class LilyPondExporter
         // (MeasureCollector resets _defaultDuration to a quarter per part).
         _lastWrittenValue = "4";
         _forceNextDuration = false;
+
+        // …and from its own octave frame and the score's home key, for the same reason
+        // (MeasureCollector.cs sets LastPitchName = 'c' and re-arms the ambient tonic per
+        // voice). The wrapper this method just wrote IS the frame: `\relative c'` starts
+        // both sides on c at the anchor octave.
+        _lysStep = _lyStep = 0;
+        _lysOctave = _lyOctave = _anchorOctave;
+        _frameTracked = true;
+        _keySharps = _homeKeySharps;
+        _tonic = _homeTonic;
 
         // Score-level settings (tempo/key/time live at file scope in Lily#).
         EmitScoreSettings(root);
@@ -850,7 +923,87 @@ public sealed class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(n.Articulations);
         string trem = n.Tremolo is { } t ? t.Text : "";
-        return prefix + EmitPitch(n.Pitch) + EmitEventDuration(n.Duration) + trem + suffix;
+        return prefix + EmitMusicPitch(n.Pitch) + EmitEventDuration(n.Duration) + trem + suffix;
+    }
+
+    /// <summary>
+    /// A pitch in the music stream: the source's own token, and the octave frames advanced
+    /// past it. See <see cref="_lysStep"/> for why the marks are not always the source's.
+    /// </summary>
+    private string EmitMusicPitch(PitchSyntax p)
+    {
+        // \fixed has no frame: every mark is an absolute offset from the wrapper's c'.
+        if (_octaveAbsolute)
+            return EmitPitch(p);
+
+        int step = RelativeOctave.StepIndex(p.PitchName[0]);
+        int source = p.OctaveOffset;
+        int lys = RelativeOctave.Resolve(_lysStep, _lysOctave, step, source);
+        // What LilyPond would do with the source's own marks, and what it takes to land on
+        // Lily#'s note instead. The two agree — and this is source + 0 — unless a degree
+        // chord has left the frames apart.
+        int written = source + lys - RelativeOctave.Resolve(_lyStep, _lyOctave, step, source);
+        _lysStep = _lyStep = step;
+        _lysOctave = _lyOctave = lys;
+        return p.PitchToken.Text + OctaveMarks(written);
+    }
+
+    /// <summary>
+    /// Hands a nested body's exporter the state a pitch resolves against — the two octave
+    /// frames and the running key — so a body emitted into a temporary buffer sees what the
+    /// stream around it sees.
+    /// </summary>
+    private void CarryFrameInto(LilyPondExporter buf)
+    {
+        buf._lysStep = _lysStep;
+        buf._lysOctave = _lysOctave;
+        buf._lyStep = _lyStep;
+        buf._lyOctave = _lyOctave;
+        buf._frameTracked = _frameTracked;
+        buf._keySharps = _keySharps;
+        buf._tonic = _tonic;
+        buf._homeKeySharps = _homeKeySharps;
+        buf._homeTonic = _homeTonic;
+    }
+
+    /// <summary>
+    /// Takes the state back out of a body that is plain sequential music on BOTH sides (a
+    /// tuplet, a repeat) — the stream continues where the body left off. Bodies whose frame
+    /// the two engines hand over differently (a grace, a voice span, a phrase reference) do
+    /// not call this; they clear <see cref="_frameTracked"/> instead.
+    /// </summary>
+    private void CarryFrameBack(LilyPondExporter buf)
+    {
+        _lysStep = buf._lysStep;
+        _lysOctave = buf._lysOctave;
+        _lyStep = buf._lyStep;
+        _lyOctave = buf._lyOctave;
+        _frameTracked = buf._frameTracked;
+        _keySharps = buf._keySharps;
+        _tonic = buf._tonic;
+    }
+
+    /// <summary>Octave marks for a net shift: <c>'</c> up, <c>,</c> down.</summary>
+    private static string OctaveMarks(int offset)
+        => offset > 0 ? new string('\'', offset)
+         : offset < 0 ? new string(',', -offset)
+         : "";
+
+    /// <summary>
+    /// A resolved (step, alteration) as a LilyPond pitch name — the same suffixes the parser
+    /// spells (<see cref="KeySpelling.SpellLetter"/>): <c>fis</c>, <c>bes</c>, <c>ees</c>.
+    /// </summary>
+    private string SpellPitch(int step, int alteration)
+    {
+        char letter = "cdefgab"[step];
+        if (alteration is < -2 or > 2)
+            _warnings.Add(
+                $"a scale degree resolved to {Math.Abs(alteration)} accidentals on {letter}, "
+                + "which LilyPond's note names do not spell — written as a double");
+        int n = Math.Clamp(alteration, -2, 2);
+        return letter + (n > 0 ? string.Concat(Enumerable.Repeat("is", n))
+                       : n < 0 ? string.Concat(Enumerable.Repeat("es", -n))
+                       : "");
     }
 
     private string EmitRest(RestSyntax r)
@@ -886,38 +1039,127 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitChord(ChordSyntax c)
     {
-        // A degree member (`<1 3 5>`, `<d 3 5 7>`) resolves against the chord's root AND the
-        // current key, which this transpiler does not carry — the collector does it
-        // (MeasureCollector.ItemFactory). Dropping them silently spelt `<1 3 5>` as `<>`,
-        // which LilyPond reads as a zero-length event: test/chord-octave-marks then failed its
-        // bar check at 1/4 and was mistaken for a book with no beams. REPORT it.
-        int degrees = 0;
-        foreach (var _ in c.Degrees) degrees++;
-        if (degrees > 0)
-            _warnings.Add(
-                $"degree chord member(s) x{degrees} not exported — the twin's chord is "
-                + "missing them and is a different chord");
-
         int off = c.ChordOctaveOffset;
-        string marks = off > 0 ? new string('\'', off)
-                     : off < 0 ? new string(',', -off)
-                     : "";
+        string marks = OctaveMarks(off);
+        bool hasDegrees = c.Degrees.Any();
+        if (hasDegrees && !_frameTracked)
+            _warnings.Add(
+                "a degree chord follows a grace, a phrase reference or a voice span, whose "
+                + "octave frame this exporter does not track — check its octave by hand");
+
+        // LilyPond's chain WITHIN the chord: each member is octaved against the one written
+        // before it, so what a degree has to write depends on its neighbour, not on the root.
+        int chainStep = _lyStep, chainOctave = _lyOctave;
+        int firstStep = -1, firstOctave = 0;
+
+        // Lily#'s anchor: the root's LETTER resolved bare in the incoming frame, plus the
+        // whole-chord marks. The root's OWN marks are local to its sounding pitch — the anchor
+        // is what the degrees stack on and what the next event is relative to
+        // (MeasureCollector.ItemFactory CreateChordItem).
+        int anchorStep = _lysStep, anchorOctave = _lysOctave;
+        if (c.Root is { } root)
+        {
+            anchorStep = RelativeOctave.StepIndex(root.PitchName[0]);
+            anchorOctave = _octaveAbsolute
+                ? AbsoluteBaseOctave + root.OctaveOffset + off
+                : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0) + off;
+        }
+        else if (hasDegrees)
+        {
+            // Omitted root (<1 3 5>): degree 1 is the KEY'S TONIC, anchored in the frame as a
+            // written root would be. A custom/atonal key has no tonic, so C — the collector's
+            // own fallback.
+            anchorStep = _tonic.Valid ? _tonic.Step : 0;
+            anchorOctave = _octaveAbsolute
+                ? AbsoluteBaseOctave + off
+                : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0) + off;
+        }
 
         var sb = new StringBuilder("<");
         bool first = true;
         foreach (var p in c.Pitches)
         {
             if (!first) sb.Append(' ');
-            // Absolute: every member. Relative: the first member only.
-            sb.Append(EmitPitch(p));
-            if (_octaveAbsolute || first) sb.Append(marks);
+            if (first && !_octaveAbsolute)
+            {
+                // The root, written where Lily# sounds it: the anchor plus its own marks.
+                int want = anchorOctave + p.OctaveOffset;
+                sb.Append(p.PitchToken.Text)
+                  .Append(OctaveMarks(want - RelativeOctave.Resolve(chainStep, chainOctave, anchorStep, 0)));
+                chainStep = firstStep = anchorStep;
+                chainOctave = firstOctave = want;
+            }
+            else
+            {
+                // Absolute: every member carries the whole-chord shift. Relative: the members
+                // after the root keep the source's marks — Lily# STACKS them on the root while
+                // LilyPond CHAINS them member to member, a deliberate Lily# divergence
+                // (MeasureCollector.ItemFactory) this transpiler does not try to spell away.
+                sb.Append(EmitPitch(p));
+                if (_octaveAbsolute) sb.Append(marks);
+                else
+                {
+                    int step = RelativeOctave.StepIndex(p.PitchName[0]);
+                    chainOctave = RelativeOctave.Resolve(chainStep, chainOctave, step, p.OctaveOffset);
+                    chainStep = step;
+                }
+            }
             first = false;
         }
+
+        // Scale-degree members (<d 3 5 7,>, <1 3 5>): resolved here, because LilyPond has no
+        // spelling for a degree at all — it was the last thing this exporter dropped in
+        // silence, and `<>` is a zero-length event, so test/chord-octave-marks failed its bar
+        // check at 1/4 and read as a book with no beams. Same call the collector makes.
+        foreach (var degree in c.Degrees)
+        {
+            if (!first) sb.Append(' ');
+            var (step, alteration, octave) = ChordDegrees.Resolve(
+                anchorStep, anchorOctave, degree.Number, degree.Alteration,
+                degree.OctaveOffset, _keySharps);
+            int written = _octaveAbsolute
+                ? octave - AbsoluteBaseOctave
+                : octave - RelativeOctave.Resolve(chainStep, chainOctave, step, 0);
+            sb.Append(SpellPitch(step, alteration)).Append(OctaveMarks(written));
+            if (first) { firstStep = step; firstOctave = octave; }
+            chainStep = step;
+            chainOctave = octave;
+            first = false;
+        }
+
+        // A drum chord (<bd hh>) has neither, and its members are not exported at all — the
+        // same hole degrees used to have, so say so rather than write `<>`.
+        if (first && c.DrumNames.Any())
+            _warnings.Add("drum chord member(s) not exported — the twin's chord is empty");
+
+        // Where the two sides stand now: Lily# on the chord's anchor, LilyPond on its first
+        // member. Equal for an ordinary chord; a degree chord can part them (see _lysStep).
+        if (!_octaveAbsolute && firstStep >= 0)
+        {
+            _lysStep = anchorStep;
+            _lysOctave = anchorOctave;
+            _lyStep = firstStep;
+            _lyOctave = firstOctave;
+        }
+
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
         var (prefix, suffix) = SplitAttachments(c.Articulations);
         return prefix + sb.ToString() + suffix;
     }
+
+    /// <summary>
+    /// The octave a bare letter means in absolute mode — the <c>\fixed c'</c> this exporter
+    /// wraps every absolute part in, i.e. the octave of middle C.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Lily#'s own absolute anchor is the part's <c>octave N</c> when it states one
+    /// (OctaveContext.OctaveBase), and this exporter writes <c>\fixed c'</c> regardless — an
+    /// existing gate, not a new one (see the class remarks). Resolving degrees against the
+    /// wrapper that was actually written keeps them consistent with the verbatim pitches
+    /// beside them instead of correct on their own.
+    /// </remarks>
+    private const int AbsoluteBaseOctave = 4;
 
     // A note's attachments split into those that must precede the note (a
     // rehearsal \mark, a \deadNote prefix) and those that trail it (string
@@ -1000,8 +1242,17 @@ public sealed class LilyPondExporter
         _ => "|",
     };
 
+    /// <summary>
+    /// A key signature — and the running key a scale-degree chord stacks in, advanced here
+    /// because this is the one place a key is WRITTEN (the file's own settings, a section's
+    /// header, and a mid-stream change all come through it, in emission order).
+    /// </summary>
     private string EmitKey(KeySignatureSyntax k)
     {
+        _tonic = KeyTonic.Of(k);
+        // MeasureCollector.CalculateKeySharps — PitchName, which carries the accidental
+        // suffix and normalizes LilyPond's `es`/`as` contractions the table does not hold.
+        _keySharps = k.IsCustom ? 0 : KeySpelling.SharpsFor(k.Pitch.PitchName, k.Mode.Text) ?? 0;
         if (k.IsCustom) { _warnings.Add("custom key signature emitted as \\key c \\major (unsupported)"); return "\\key c \\major"; }
         string mode = k.IsMajor ? "major" : k.Mode.Text.ToLowerInvariant();
         return "\\key " + EmitPitch(k.Pitch) + " \\" + mode;
@@ -1038,7 +1289,11 @@ public sealed class LilyPondExporter
         // Reuse EmitMusicStream via a temporary buffer.
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
+        CarryFrameInto(buf);
         buf.EmitMusicStream(MusicItems(tup.Body).ToList(), "");
+        // A tuplet is plain sequential music on both sides: its notes are in the enclosing
+        // frame and the note after it follows the tuplet's last, so the frame comes back.
+        CarryFrameBack(buf);
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         return $"\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
@@ -1080,12 +1335,18 @@ public sealed class LilyPondExporter
                 _phrases = _phrases,
                 _activePhrases = _activePhrases,
             };
+            CarryFrameInto(buf);
             buf.EmitMusicStream(MusicItems(block).ToList(), "");
             _warnings.AddRange(buf._warnings);
             string body = buf._sb.ToString().Replace("\n", " ").Trim();
             if (body.Length > 0)
                 bodies.Add(body);
         }
+
+        // Every branch starts in the frame the span opened in — on both sides — but what the
+        // span hands OUT is not the same thing (LilyPond takes the first branch's last pitch,
+        // Lily# restores the frame the span opened in), so the frame stops being tracked here.
+        _frameTracked = false;
 
         if (bodies.Count == 0)
             return "";
@@ -1099,12 +1360,17 @@ public sealed class LilyPondExporter
         string kw = g.IsAcciaccatura ? "\\acciaccatura" : g.IsAppoggiatura ? "\\appoggiatura" : "\\grace";
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
+        CarryFrameInto(buf);
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         // LilyPond carries the grace body's last duration out to the next event; Lily# does
         // not. See EmitEventDuration.
         _forceNextDuration = true;
+        // The OCTAVE leaks the same way and is not repaired here: LilyPond octaves the note
+        // after the grace against the grace's last pitch, Lily# against the note before it
+        // (MeasureCollector.CollectGraceNotes restores the frame). Not tracked past this point.
+        _frameTracked = false;
         return $"{kw} {{ {body} }}";
     }
 
@@ -1114,7 +1380,11 @@ public sealed class LilyPondExporter
         string count = rep.Count.Text;
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
+        CarryFrameInto(buf);
         buf.EmitMusicStream(MusicItems(rep.Body).ToList(), "");
+        // The body is WRITTEN once and read once by the relative pass on both sides, however
+        // many times it is played, so its frame carries out like a tuplet's.
+        CarryFrameBack(buf);
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         return $"\\repeat {type} {count} {{ {body} }}";
