@@ -2,6 +2,15 @@
 // on BOTH staves. The notation staff hides its notes and the tab must hide its fret
 // digits the same way (their stems/beams are already suppressed) — otherwise the tab
 // left bare, stemless fret digits sitting under the % sign.
+//
+// ⚠️ ABSOLUTE octave, and it has to stay that way. Written relative — which is what the
+// file was until 2026-08-01 — every `,,` reads against the note BEFORE it, so this riff
+// fell two octaves per note and ran a hundred ledger lines off the bottom of the page.
+// Every one of the sixteen notes warned LYS5002 (below the tab's lowest string) and none
+// of them reached the tab at all, so the book tested nothing it claims to. It also broke
+// the beam sweep, which read the ledger rows as a dozen phantom staves. The other tab
+// fixtures that spell their own octaves are written the same way.
+octave absolute
 part bl {
   clef bass
   tuning bass
