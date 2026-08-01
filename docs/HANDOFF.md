@@ -58,6 +58,94 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-01（第63セッション＝**引継ぎ ▶ の ⑤ を直した**——
+`voice{}` の符尾強制を **LP と同じ「span の中だけ」**に絞り、**snapshot 7 枚を再ベースした**。
+★★★ **`grammar-tour` が LP と 10 対 10 で一致し、コーパスの未説明はゼロになった**
+（② に**数え方つき**）。**台帳に対を 1 組足した**（`beam.voice-span.*`・**両方 exact**・
+**旧規則へ摂動すると片方だけ +5.690000 開く**）。
+**作業は `4b043b59` 1 本**（＋この handoff commit）・**未 push 16**・
+テスト **3739 passed / 0 failed / 3 skipped**（**+2 は今回足した台帳点**）・
+台帳 **380 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）
+＝**残差は不変**（足した 2 点が exact で着地したので総和が動かない）。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ① 直した＝**`\voiceOne` は span と一緒に死ぬ**（part 全体ではない）
+
+★★★ **出所は `scm/music-functions.scm:1042-1057 voicify-sublist`**——`\\` は各ブロックを
+**自分専用の Voice コンテキスト**（`context-spec-music … 'Bottom "1"`）に包み、その頭で
+`make-voice-props-set`（`:666-674`・`direction = (if (odd? n) -1 1)`）を撃つ。だから
+**強制は span と一緒に生まれて死に、その前後の音楽は音高由来のまま**。
+⚠️ **引継ぎが引いていた `ly/engraver-init.ly` ではない**（`\voiceOne` の*定義*は
+`ly/property-init.ly:966-970`、**`\\` が誰にそれを配るかは music-functions.scm**）。
+★★★ **Lily# は `Voices.Length > 1` を 8 か所で訊いていた**＝**part 単位の問い**。
+`ResolveVoiceStemDirections`（collector の焼込）・`SharedRenderer`・`SkylineBuilder`・
+`DynamicEngraver`・`ArticulationEngraver`・`TupletBracketEngraver`・`VoiceCollector`・
+`BeamDetector` の layout 側 2 か所。⇒ **8 か所とも
+`VoiceDefaults.IsPolyphonicAt(voices, measureIndex)` を訊くようにした。**
+★ **`BeamDetector` だけ器を変えた**（`bool?` → `Func<int,bool?>`）——**群の向きと knee 抑止**は
+小節ごとに答が要るため。**同じ規則の 2 つ目の綴りを作らない**のが目的（§5.2.1②）。
+★ **span の到達範囲はモデルから読み戻している**（voice 2..N は span の外が空の全長トラック）。
+⚠️ **これは LP との発散を 1 つ抱える**——**後続 voice が voice 1 より先に尽きる span**
+（`voice { a1 b1 } voice { c1 }`）では**そこで強制が止まる**が、LP は span の終わりまで続ける。
+**`IsPolyphonicAt` の注釈に「LILYSHARP-OWN ではなく DIVERGENCE」として書いた**
+（§7.6 ⒝——**LP に対応物がある以上 `LILYSHARP-OWN` は誤ラベル**）。**コーパスには届いていない。**
+
+## ② 実測＝**コーパスの未説明はゼロ**（★ **数え方を必ず一緒に読むこと**）
+
+★★★ **数え方**（§0 の「数を引き継ぐときは数え方も書く」）:
+`lysc ly` で全 fixture を双子にし、**199 本**（204 − parse 不能 5）を
+`-dinclude-settings` の `Beam.after-line-breaking` に通して `Beam.positions` を印字、
+**(posLeft,posRight) を小数2桁に丸めた多重集合**で `LILYSHARP_BEAM_SWEEP` の CSV と突き合わせる。
+
+```
+比較できた本   38   ← 一致 30 / 不一致 8
+bar check      8    ← 比較不能（LP の `|` は小節チェック）
+両側とも梁なし 153
+                    合計 199
+```
+★★★ **不一致 8 冊は全部 `tab` か `instrument` の本**＝既知ゲート ⑸⑹。
+**`grammar-tour` は 10 対 10 で一致**（LP `(-2.19 . -3.0) (0.0 . 0.19) (-3.81 . -1.81) …`）。
+⇒ **tab でも instrument でもない本で説明のつかない発散は 1 冊も無い。**
+⚠️ **ただし tab の本の数字を「発散」と読まないこと**——**sweep は tab 譜の梁を staff 0 の
+中央線に対して報告する**（`tab-percent-repeat` は 6 本とも `staff=0` で、うち 2 本が
+**−31 と −80**）。**LP と同じ frame に入っていない**ので、**比較の土俵に乗っていない**が正しい。
+**tab を測るなら先に sweep に tab 譜の frame を教える。**
+⚠️ **`Compare-Object` 式に数えると嘘が出る**: 最初の集計で **183 一致**と出たのは、
+**梁が 1 本も無い 153 冊が「空 vs 空」で一致に混ざった**から（`@($null).Count` は 1）。
+**「梁のある本」を先に分母にすること。**
+
+## ③ 台帳＝**対で足した**（`beam.voice-span.*`・`probes/beam-voice-span-scope.ly`）
+
+**A** ＝ 梁の**1 小節あと**に `voice{}` span がある本／**B** ＝ **span がどこにも無い**同じ小節。
+**LP は両方 `(-0.19 . 0.0)`** で同じ。**Lily# も両方 exact。**
+★★★ **`IsPolyphonicAt` を旧規則（`voices.Length > 1`）へ摂動すると A だけ +5.690000 開き、
+B は動かない**——**点が binding していることを摂動で確かめた**（§5.2.1 の「量を足したら
+それが読まれる経路を摂動で 1 回確かめる」）。**この対が snapshot 7 枚の再ベースの根拠。**
+★ **再ベースは台帳だけで承認していない**——**LP の `Stem.after-line-breaking` に `direction` を
+印字させ、`voice-mixed`／`voice-grandstaff`／`voice-dynamics-mid`／`-multistaff`／`hara-kiri` の
+双子を符尾 1 本ずつ突き合わせた**。**5 冊とも span の外は全部音高由来・span の中だけ +1/−1 交互。**
+
+## ④ 起票のみ＝**7 つ目の exporter の穴**（`<d f a>,2`）
+
+**`scripts-dynamics` だけ双子が作れない**——exporter が**和音の後ろにオクターブ記号を書く**
+（`<d f a>,2`）ので LP が `syntax error, unexpected ','`。**LP は各音に付ける**（`<d, f, a,>`）。
+⇒ **この 1 冊だけ ③ の符尾照合ができておらず、描画から読んだだけ**。**今日は起票のみ。**
+
+## ▶ 次の一手
+
+★ **⑺ の grace の音価の既定はまだ決まっていない**（**1 つの綴り `grace { a b }` に既定が 3 つ**＝
+レイアウト 1/8・MIDI 1/32・双子 4分）。**独立に直せる隣の穴**として、
+`\grace { d8 } c` の `c` が **LP では 8分・Lily# では 4分**（`_defaultDuration` が
+grace のローカル変数から漏れない）＝`test/ossia-beams` の bar check の正体。
+★ **量子器側の残り＝`grace.column.approach` +0.850449**（**機構が違う**: Lily# は run の幅を
+前のばねの min に*足す*／LP は**既にあるばねを縮める** `spring *= 0.8`・
+`lily/spacing-spanner.cc:396-403`）。
+★ **④ の exporter の穴**（`<d f a>,2`）——**直せば `scripts-dynamics` が測れるようになる。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第62セッションの経緯
+
 最終更新 2026-08-01（第62セッション＝**引継ぎ ▶ を実行し、そのまま測定器まで直した**——
 ⑴ exporter の ⑵ `grandStaff` と ⑶ `ossia`／`part` 宣言なしを塞ぎ（`1793d9ea`）、
 ⑵ **測り直したら測定器のほうが壊れていた**ので直し（`69bedd9c`）、
@@ -73,7 +161,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 台帳 **378 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**台帳は不変**。
 ⚠️ **開始時に HEAD が引継ぎと違った**——**tab の 3 commit（`bacdf9ff`・`3d165ec2`・`45754971`・
 すべて 2026-08-01）が §1 に書かれないまま入っていた**。**この 3 つの経緯はどこにも残っていない。**
-⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+⚠️ ★★★ **第62セッションの「31 冊一致／梁のある 44 冊」は数え方が違う**（第63セッション ② を見よ）。
+**bar check の 8 冊を分母に入れているか、両側とも梁ゼロの本をどう扱うかで数が変わる。**
 
 ## ① 塞いだ＝**score は子ではなく子孫で読む・part は宣言でなく score が作る**
 
@@ -149,7 +238,7 @@ test/ossia-beams              LP (-1.190 . -1.810) (-2.190 . -1.190)    一致
 ★ **LP 側の手順**: `-dinclude-settings` に `\Score` の `Beam.after-line-breaking` を入れて
 `positions` を印字・`-dno-print-pages`（**`-dbackend=null` は 2.26.0 に無い**）。199 冊で約 5 分。
 
-## ⑤ その 1 冊も割れた＝**`voice{}` の符尾方向が part 全体に漏れている**（**起票のみ・未修正**）
+## ⑤ その 1 冊も割れた＝**`voice{}` の符尾方向が part 全体に漏れている**（~~起票のみ・未修正~~ ← **第63セッション ① で修正済**（`4b043b59`）。**以下は当時の診断で、14 行の再現はそのまま判定器として生きている**）
 
 ★★★ **`grammar-tour` は本物の Lily# 欠陥だった。**手順は §5.3 のとおり **1 つずつ読んだ**:
 ⑴ **群のサイズが LP と完全一致**（`4,4,8,8,3,3,5,4,4,4`）⇒ **双子は同じ音楽・同じ群**
@@ -206,11 +295,14 @@ exporter は**ファイルの top-level（`root.Members`）と part セルの中
 **`ossia-beams`**（**⑺ の grace の音価漏れ**・下）。
 ⇒ ★ **「bar check が出た双子は使わない」規則は残す**が、**内訳はもう分かっている**。
 
-## ▶ 次の一手＝**⑤ を直す（snapshot 再ベース＝要承認）**
+## ~~▶ 次の一手＝**⑤ を直す（snapshot 再ベース＝要承認）**~~ ← **第63セッションで完了**
 
 ★★★ **上の 14 行の再現が判定器**——**`section B` 有りでも `(-3.810 . -1.810)` になれば正しい**。
 そのあと **`grammar-tour` を測り直す**と**コーパスの未説明がゼロになる見込み**。
 ⚠️ **測定器はもう疑わなくてよい**（4 冊の既知解で校正済）。
+★★★ **実際にそうなった**（第63セッション）: **判定器は通り**（`section B` 有りでも
+`(-3.810 . -1.810)`）、**`grammar-tour` は 10 対 10 で一致**、**未説明はゼロ**。
+**見込みが当たった予測として記録する。**
 ★ **⑺ の音価の既定はまだ決まっていない**——**新しい実例が出た**:
 `test/ossia-beams` の双子が `bar check failed at: 7/8`。**`\grace { d8 } c` の `c` が
 LP では 8分**（直前の音価＝grace の中身）**・Lily# では 4分**（`CreateNoteItem` の
