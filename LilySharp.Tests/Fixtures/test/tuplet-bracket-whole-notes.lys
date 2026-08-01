@@ -30,11 +30,11 @@ part lh { clef bass }
 section S {
   rh {
     voice { b1 b1 | b1 b1 | }
-    voice { tuplet 3/2 { d,1 d,1 d,1 } | d,1 d,1 | }
+    { tuplet 3/2 { d,1 d,1 d,1 } | d,1 d,1 | }
   }
   lh {
     voice { d,1 d,1 | tuplet 3/2 { a1 a1 a1 } | }
-    voice { d,,1 d,,1 | d,,1 d,,1 | }
+    { d,,1 d,,1 | d,,1 d,,1 | }
   }
 }
 form main { S }

@@ -43,7 +43,7 @@ public sealed class MusicXmlPhraseAutoTransposeTests
     {
         // Section B modulates to G; Lick (written in C) is respelled down a fourth
         // (nearest octave) to G3 A3 B3 G3. Section A (home) stays C4 D4 E4 C4.
-        // (The key sits inside the m { } voice block so the voice walk sees it.)
+        // (The key sits inside the m { } block so the voice walk sees it.)
         var pitches = Pitches("""
             key c major
             phrase Lick { c d e c }

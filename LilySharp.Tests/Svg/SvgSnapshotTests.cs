@@ -340,19 +340,19 @@ public class SvgSnapshotTests
         // matches the true ink. Guards the lyric/note overlap regression.
         yield return new object[] { "test/lyrics-skyline" };
         yield return new object[] { "test/multi-voice" };
-        // Sequential measures around a voice { } voice { } span — the single-voice measures
+        // Sequential measures around a voice { } { } span — the single-voice measures
         // before and after the parallel block must not be dropped.
         yield return new object[] { "test/voice-mixed" };
-        // Intra-staff polyphony on a grand staff: both voices of a voice { } voice { } in
+        // Intra-staff polyphony on a grand staff: both voices of a voice { } { } in
         // the upper staff render, with the surrounding single-voice measures.
         yield return new object[] { "test/voice-grandstaff" };
         // Two voices each with a dynamic on the same note column — both render
         // (stacked) rather than one hiding the other.
         yield return new object[] { "test/voice-dynamics" };
-        // A voice { } voice { } span mid-stream: its voices' dynamics land in the span's
+        // A voice { } { } span mid-stream: its voices' dynamics land in the span's
         // measure, not back in measure 0.
         yield return new object[] { "test/voice-dynamics-mid" };
-        // Multi-staff: a low lower-voice dynamic in the TOP staff's voice { } voice { } must
+        // Multi-staff: a low lower-voice dynamic in the TOP staff's voice { } { } must
         // widen the inter-staff gap so it clears the staff below instead of
         // overlapping its lines (dynamics join the outside-staff skyline).
         yield return new object[] { "test/voice-dynamics-multistaff" };

@@ -46,7 +46,7 @@ public sealed class LoneVoiceValidatorTests
 
     [Fact]
     public void TwoVoices_AreThePoint_AndDoNotWarn()
-        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice { c4 d e f } voice { e4 f g a } | }\n}\n"));
+        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice { c4 d e f } { e4 f g a } | }\n}\n"));
 
     [Fact]
     public void ASingleNAMEDVoice_DoesNotWarn_ItPublishesATrackForLyrics()

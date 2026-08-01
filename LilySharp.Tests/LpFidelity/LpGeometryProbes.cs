@@ -1967,7 +1967,7 @@ internal static class LpGeometryProbes
         part mel { clef treble }
 
         section Main {
-          mel { voice { {{voiceOne}} } voice { {{voiceTwo}} } }
+          mel { voice { {{voiceOne}} } { {{voiceTwo}} } }
         }
 
         form main { ~Main }
@@ -2041,7 +2041,7 @@ internal static class LpGeometryProbes
 
         section Main {
           upper { b4 b b b | }
-          lower { voice { c4@startTrillSpan c c c@stopTrillSpan | } voice { c''4 c'' c'' c'' | } }
+          lower { voice { c4@startTrillSpan c c c@stopTrillSpan | } { c''4 c'' c'' c'' | } }
         }
 
         form main { ~Main }
@@ -2118,7 +2118,7 @@ internal static class LpGeometryProbes
         part mel { clef treble }
 
         section Main {
-          mel { {{(voiceTwo.Length == 0 ? bars : $"voice {{ {bars} }} voice {{ {voiceTwo} }}")}} }
+          mel { {{(voiceTwo.Length == 0 ? bars : $"voice {{ {bars} }} {{ {voiceTwo} }}")}} }
         }
 
         form main { ~Main }
@@ -2581,7 +2581,7 @@ internal static class LpGeometryProbes
         part lower { clef bass }
 
         section Main {
-          upper { voice { b1 } voice { {{upperVoiceTwo}} } | }
+          upper { voice { b1 } { {{upperVoiceTwo}} } | }
           lower { d,1 | }
         }
 
@@ -2881,7 +2881,7 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 } voice { a,1@f } | }
+          rh { voice { b1 } { a,1@f } | }
           lh { d,1 | }
         }
 
@@ -2984,7 +2984,7 @@ internal static class LpGeometryProbes
 
         section Main {
           rh { b1 b1 | }
-          lh { voice { tuplet 3/2 { a1 a1 a1 } } voice { d,1 d,1 } | }
+          lh { voice { tuplet 3/2 { a1 a1 a1 } } { d,1 d,1 } | }
         }
 
         form main { ~Main }
@@ -3021,7 +3021,7 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 b1 } voice { tuplet 3/2 { d,1 d,1 d,1 } } | }
+          rh { voice { b1 b1 } { tuplet 3/2 { d,1 d,1 d,1 } } | }
           lh { d,1 d,1 | }
         }
 
@@ -3248,7 +3248,7 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 } voice { g,8 g, g, g, g, g, g, g, } | }
+          rh { voice { b1 } { g,8 g, g, g, g, g, g, g, } | }
           lh { d,1 | }
         }
 
@@ -3325,7 +3325,7 @@ internal static class LpGeometryProbes
         section Main {
           m {
             voice { c'8 c' c' c' c' c' c' c' }
-            voice { a'1 }
+            { a'1 }
           }
         }
 
@@ -3335,7 +3335,7 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
-    /// A beamed measure that shares a part with a <c>voice { } voice { }</c> span ONE BAR
+    /// A beamed measure that shares a part with a <c>voice { } { }</c> span ONE BAR
     /// LATER — the reach of the span, measured where the span is not.
     /// </summary>
     /// <remarks>
@@ -3368,7 +3368,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
-        section B { m { voice { b2 a } voice { d2 e } } }
+        section B { m { voice { b2 a } { d2 e } } }
 
         form main { ~A ~B }
 
@@ -4208,7 +4208,7 @@ internal static class LpGeometryProbes
         section Main {
           m {
             voice { b8 b s2. }
-            voice { s16 d''16 d'' d'' s2. }
+            { s16 d''16 d'' d'' s2. }
           }
         }
 
@@ -4246,7 +4246,7 @@ internal static class LpGeometryProbes
         section Main {
           m {
             voice { b8 b s2. }
-            voice { s16 d''4 s8. s2 }
+            { s16 d''4 s8. s2 }
           }
         }
 
@@ -4277,7 +4277,7 @@ internal static class LpGeometryProbes
         section Main {
           m {
             voice { b8 b s2. }
-            voice { s1 }
+            { s1 }
           }
         }
 
@@ -4956,7 +4956,7 @@ internal static class LpGeometryProbes
 
         section Main {
           rh { b1 | }
-          lh { voice { f8 f f f f f f f } voice { d,1 } | }
+          lh { voice { f8 f f f f f f f } { d,1 } | }
         }
 
         form main { ~Main }
@@ -5012,7 +5012,7 @@ internal static class LpGeometryProbes
         section Main {
           melody {
             voice { {{string.Concat(Enumerable.Repeat("a1 tuplet 3/2 { d'''1 d'''1 d'''1 } | ", 6)).Trim()}} }
-            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+            { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
           }
         }
 
@@ -5041,7 +5041,7 @@ internal static class LpGeometryProbes
         section Main {
           melody {
             voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
-            voice { {{string.Concat(Enumerable.Repeat("a1 tuplet 3/2 { g,,1 g,,1 g,,1 } | ", 6)).Trim()}} }
+            { {{string.Concat(Enumerable.Repeat("a1 tuplet 3/2 { g,,1 g,,1 g,,1 } | ", 6)).Trim()}} }
           }
         }
 
@@ -5289,7 +5289,7 @@ internal static class LpGeometryProbes
         section Main {
           melody {
             voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
-            voice { {{string.Concat(Enumerable.Repeat("a1 g,,8 g,, g,, g,, g,, g,, g,, g,, a1 | ", 6)).Trim()}} }
+            { {{string.Concat(Enumerable.Repeat("a1 g,,8 g,, g,, g,, g,, g,, g,, g,, a1 | ", 6)).Trim()}} }
           }
         }
 
@@ -5329,7 +5329,7 @@ internal static class LpGeometryProbes
         section Main {
           melody {
             voice { {{string.Concat(Enumerable.Repeat("a1 d'''8 d''' d''' d''' d''' d''' d''' d''' a1 | ", 6)).Trim()}} }
-            voice { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
+            { {{string.Concat(Enumerable.Repeat("b1 b1 b1 | ", 6)).Trim()}} }
           }
         }
 

@@ -9,12 +9,12 @@ part melody
 
 phrase twoVoices {
   // Two voices: upper (stems up) and lower (stems down)
-  voice { c'2 d | e2 f | } voice { e2 f | g2 a | } 
+  voice { c'2 d | e2 f | } { e2 f | g2 a | } 
 }
 
 phrase threeVoices {
   // Three voices
-  voice { c'2 d } voice { g2 a } voice { e2 f }  |
+  voice { c'2 d } { g2 a } { e2 f }  |
 }
 
 section Main {

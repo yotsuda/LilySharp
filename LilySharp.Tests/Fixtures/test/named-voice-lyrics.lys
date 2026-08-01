@@ -16,7 +16,7 @@ part m { clef treble }
 section Main {
   m {
     voice sop { c'4 d' e' f' | g'2 e' | }
-    voice alt { e2  f4 g4    | c'2 c'  | }
+    alt { e2  f4 g4    | c'2 c'  | }
   }
   lyrics sop { Sing a love song | soft now | }
   lyrics alt { Low part deep   | slow now | }

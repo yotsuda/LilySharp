@@ -51,7 +51,7 @@ public class BeamLayoutIntegrityTests
         // ArgumentOutOfRangeException out of CollectBeamCollisions and kill the
         // whole layout. The uncoverable beam must be skipped instead (same
         // convention as the renderer's item-range guard).
-        string src = Wrap("voice { c'1 | } voice { g8 g g g g g g g | }");
+        string src = Wrap("voice { c'1 | } { g8 g g g g g g g | }");
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
 
         // A column-less measure layout for the primary voice — the degenerate

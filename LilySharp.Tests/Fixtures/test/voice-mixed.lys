@@ -1,4 +1,4 @@
-// Sequential measures interleaved with a voice { } voice { } parallel-voice span: the
+// Sequential measures interleaved with a voice { } { } parallel-voice span: the
 // single-voice measures BEFORE and AFTER the span must survive (regression
 // guard for the bug where a parallel block discarded the surrounding stream).
 title "Mixed Voices"
@@ -12,7 +12,7 @@ part m { clef treble }
 section Main {
   m {
     c'4 d e f |
-    voice { g'2 f } voice { e2 d }  |
+    voice { g'2 f } { e2 d }  |
     e'4 d c b |
     a2 g2 |
   }

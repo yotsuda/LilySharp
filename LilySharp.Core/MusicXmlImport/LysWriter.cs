@@ -220,9 +220,13 @@ internal static class LysWriter
         var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
         if (voices.Count <= 1)
             return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report, Rel(relative));
-        return string.Join(" ",
-            voices.Select(v => "voice { " + WriteVoiceRange(part, v, start, end, report, Rel(relative)) + " }"));
+        return VoiceSpan(voices.Select(v => WriteVoiceRange(part, v, start, end, report, Rel(relative))));
     }
+
+    /// <summary>Wraps several simultaneous streams in one span. <c>voice</c> opens the span
+    /// ONCE and each further voice is another block (repeating the keyword is LYS0019).</summary>
+    private static string VoiceSpan(IEnumerable<string> bodies)
+        => "voice " + string.Join(" ", bodies.Select(b => "{ " + b + " }"));
 
     private static string WriteVoiceRange(
         ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel)
@@ -246,11 +250,10 @@ internal static class LysWriter
         if (voices.Count <= 1)
             return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report, Rel(relative));
 
-        // Several voices on one staff → parallel voice { } blocks. Ascending voice
-        // order puts voice 1 (the upper part, stems up) first. Each voice is its own
+        // Several voices on one staff → one parallel span. Ascending voice order puts
+        // voice 1 (the upper part, stems up) first. Each voice is its own
         // relative-octave stream.
-        return string.Join(" ",
-            voices.Select(v => "voice { " + WriteVoiceStream(part, v, report, Rel(relative)) + " }"));
+        return VoiceSpan(voices.Select(v => WriteVoiceStream(part, v, report, Rel(relative))));
     }
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;

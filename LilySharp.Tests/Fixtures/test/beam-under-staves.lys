@@ -22,7 +22,7 @@ title "A beam reserves its room in the staff gap"
 part rh { clef treble }
 part lh { clef bass }
 section S {
-  rh { voice { b1 } voice { g,8 g, g, g, g, g, g, g, } | }
+  rh { voice { b1 } { g,8 g, g, g, g, g, g, g, } | }
   lh { d,1 | }
 }
 form main { S }

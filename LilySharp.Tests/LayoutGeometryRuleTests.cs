@@ -150,7 +150,7 @@ public class LayoutGeometryRuleTests
         // has beamed eighths covering the same item range. The if-no-beam
         // check consults the bracket's OWN beam — another voice's beam must
         // not hide this voice's bracket.
-        var score = Collect("voice { tuplet 3/2 { c4 d e } r4 r4 | } voice { g8 g g g g g g g | }");
+        var score = Collect("voice { tuplet 3/2 { c4 d e } r4 r4 | } { g8 g g g g g g g | }");
         var layout = new LayoutEngine().Layout(score);
 
         var bracket = Assert.Single(layout.TupletBracketLayouts);

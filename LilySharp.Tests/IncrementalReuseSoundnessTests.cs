@@ -122,7 +122,7 @@ public class IncrementalReuseSoundnessTests
         key c major
         part melody
         section Main {
-          melody { voice { c'2 d | e2 f | } voice { a2 g | b2 a | } }
+          melody { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
         }
         form main { Main }
         score main "x" { staff melody }
@@ -250,7 +250,7 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody
-        phrase p { voice { c'2 d | e2 f | } voice { a2 g | b2 a | } }
+        phrase p { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
         section Main { melody { $p } }
         form main { Main }
         score main "x" { staff melody }

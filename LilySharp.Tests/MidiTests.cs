@@ -55,10 +55,10 @@ public class MidiTests
     [Fact]
     public void ExportParallelVoices_AllVoicesSoundSimultaneously()
     {
-        // << v1 \\ v2 >> written as `voice { } voice { }`. Every voice must sound
+        // << v1 \\ v2 >> written as `voice { } { }`. Every voice must sound
         // (regression: only voices[0] was exported), each starting at the block's
         // tick rather than appended after the previous voice.
-        var source = "voice { c4 d4 } voice { e4 f4 }";
+        var source = "voice { c4 d4 } { e4 f4 }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var notes = midi.Tracks[1].Notes;

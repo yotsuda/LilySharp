@@ -26,7 +26,7 @@ section Main {
   lh {
     r1 | r1 |
     c4 d e f | g4@f a b c |
-    voice { r1 | r1 | } voice { c4 e g e | c4 e g e | }
+    voice { r1 | r1 | } { c4 e g e | c4 e g e | }
     r1 | r1 |
   }
 }

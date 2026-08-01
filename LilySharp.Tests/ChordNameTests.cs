@@ -226,7 +226,7 @@ public class ChordNameTests
         // Regression: a single-staff score with voice { } polyphony used to drop
         // chord names (BuildMultiVoiceScore omitted them). It must keep them, just
         // like the single-voice case above.
-        var source = "c4 @chord(c) voice { d e } voice { d e } f";
+        var source = "c4 @chord(c) voice { d e } { d e } f";
         var tree = SyntaxTree.Parse(source);
         Assert.Empty(tree.Diagnostics); // supported syntax, no rejection
 
@@ -252,7 +252,7 @@ form main {{ A }}
 score main {{ staff m with chords prog }}
 ";
         var sTree = SyntaxTree.Parse(Doc("c'4 d' e' f' | g'4 a' b' c'' |"));
-        var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } voice { c4 d e f | }"));
+        var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } { c4 d e f | }"));
         Assert.Empty(sTree.Diagnostics);
         Assert.Empty(mTree.Diagnostics);
 

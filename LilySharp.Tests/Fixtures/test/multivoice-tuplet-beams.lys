@@ -15,7 +15,7 @@ part mel { clef treble }
 section S {
   mel {
     voice { tuplet 3/2 { c''4 c'' c'' } c''2 | }
-    voice { e'8 f' g' a' b' a' g' f' | }
+    { e'8 f' g' a' b' a' g' f' | }
   }
 }
 form main { S }

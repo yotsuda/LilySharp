@@ -101,9 +101,11 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Each voice block with its optional name (<c>voice sop { … }</c> → "sop";
-    /// <c>voice { … }</c> → null). A name token, when present, sits immediately
-    /// before its block; a separating <c>voice</c> keyword clears the pending name.
+    /// Each voice block with its optional name (<c>voice sop { … } alt { … }</c> → "sop",
+    /// "alt"; <c>voice { … } { … }</c> → null, null). A name token, when present, sits
+    /// immediately before its block. A <c>voice</c> keyword clears the pending name — it
+    /// appears here only in a file that repeated it (LYS0019) or in the recovered
+    /// <c>&lt;&lt; … &gt;&gt;</c> shape.
     /// </summary>
     public IEnumerable<(string? Name, MusicBlockSyntax Block)> NamedVoices
     {

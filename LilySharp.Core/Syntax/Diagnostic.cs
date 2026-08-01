@@ -186,6 +186,14 @@ public static class DiagnosticCodes
     /// <summary>Parser error: a voice block was nested where not allowed.</summary>
     public const string NestedVoiceBlock = "LYS0010";
 
+    /// <summary>Parser error: the <c>voice</c> keyword was written again inside a span
+    /// (<c>voice { … } voice { … }</c>). It opens the span ONCE; the other voices are
+    /// further blocks (<c>voice { … } { … }</c>). Unlike the other retired spellings this
+    /// one gets its own code, because it still parses: a second <c>voice</c> opens a
+    /// SECOND span, and two one-voice spans play in sequence rather than together — so
+    /// without this the file holds different music and says nothing.</summary>
+    public const string RepeatedVoiceKeyword = "LYS0019";
+
     /// <summary>Parser warning: a bare clef name (treble/bass/…) was used like a
     /// staff block at the top level (e.g. <c>treble { … }</c>), which the grammar
     /// silently drops. Points to the real grand-staff form.</summary>

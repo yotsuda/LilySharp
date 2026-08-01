@@ -23,7 +23,7 @@ All ✅ implemented:
   durations.
 - **Connectors** — ties, slurs (over notes *and* chords), automatic & manual beams.
 - **Groupings** — tuplets (nested), grace / acciaccatura / appoggiatura, multi-voice
-  (`voice { } voice { }`).
+  (`voice { } { }`).
 - **Annotations** (`@name`, with `.up`/`.down`) — articulations (incl. staccatissimo,
   up/down-bow, harmonic), ornaments, dynamics (incl. the sfz family), free text
   `@text("…")`, hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio,

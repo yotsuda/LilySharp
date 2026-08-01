@@ -268,7 +268,7 @@ public class SystemLayoutCacheTests
     [Fact]
     public void MultiVoice_EditToSecondVoice_DeclinesReuse_AndStaysByteIdentical()
     {
-        // grammar-tour has a staff with two simultaneous voices (voice { } voice { }).
+        // grammar-tour has a staff with two simultaneous voices (voice { } { }).
         // A polyphonic score is no longer gated out of reuse wholesale: the per-measure
         // content key folds every voice, and the spring gate always saw them. So the
         // per-system cache IS installed here — and an edit that changes voice 2 moves

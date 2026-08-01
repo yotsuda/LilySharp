@@ -91,7 +91,7 @@ public class SlurPairingValidatorTests
         // SlurDetector clears its stack at each voice change (Slur_engraver lives in the
         // Voice context), so voice one's '(' can never pair with voice two's ')' — both
         // marks are dropped, and both are reported.
-        Assert.Equal(2, WarningCount("voice { c4( d e f } voice { g4 a b c') }"));
+        Assert.Equal(2, WarningCount("voice { c4( d e f } { g4 a b c') }"));
 
     [Fact]
     public void RunsViaSemanticValidation() =>

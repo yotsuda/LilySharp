@@ -278,8 +278,12 @@ public class MusicXmlRoundTripTests
             """);
         var importedTree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
-        // Two parallel voice { } blocks came back, in ascending voice order.
-        Assert.Equal(2, CountOccurrences(lys, "voice {"));
+        // ONE span holding two voices, in ascending voice order. Counted from the tree
+        // rather than the text: `voice` opens the span once and the second voice is a
+        // bare block, so there is nothing distinctive left to grep for.
+        var span = Assert.Single(importedTree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>());
+        Assert.Equal(2, span.Voices.Count());
         int v1 = lys.IndexOf("c'4", System.StringComparison.Ordinal); // voice 1 upper
         int v2 = lys.IndexOf("c2", System.StringComparison.Ordinal);  // voice 2 lower half note
         Assert.True(v1 >= 0 && v2 >= 0 && v1 < v2, lys);

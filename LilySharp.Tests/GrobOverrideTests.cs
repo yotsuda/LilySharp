@@ -116,7 +116,7 @@ public class GrobOverrideTests
         // voice number 1 and 2), so they don't bleed into each other.
         var score = CollectMulti(
             "part m { clef treble }\n" +
-            "section A { m { voice { override NoteHead.color = red c4 d e f | } voice { override NoteHead.color = blue c2 g | } } }\n" +
+            "section A { m { voice { override NoteHead.color = red c4 d e f | } { override NoteHead.color = blue c2 g | } } }\n" +
             "form main { A }\nscore main { staff m }");
         Assert.Equal(1, Assert.Single(score.GrobOverrides.Where(o => o.Value == "red")).VoiceIndex);
         Assert.Equal(2, Assert.Single(score.GrobOverrides.Where(o => o.Value == "blue")).VoiceIndex);

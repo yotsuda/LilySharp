@@ -43,18 +43,18 @@
   <line x1="42.17" y1="12.54" x2="42.17" y2="10.19" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="43.94" y="12.19" font-size="4.00" data-pos="943"></text>
   <line x1="45.17" y1="12.04" x2="45.17" y2="9.69" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="34.93" y="15.19" font-size="4.00" data-pos="956"></text>
+  <text class="music" x="34.93" y="15.19" font-size="4.00" data-pos="950"></text>
   <line x1="34.99" y1="15.34" x2="34.99" y2="18.52" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="37.93" y="14.69" font-size="4.00" data-pos="963"></text>
+  <text class="music" x="37.93" y="14.69" font-size="4.00" data-pos="957"></text>
   <line x1="38.00" y1="14.84" x2="38.00" y2="18.19" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="40.93" y="14.19" font-size="4.00" data-pos="966"></text>
+  <text class="music" x="40.93" y="14.19" font-size="4.00" data-pos="960"></text>
   <line x1="41.00" y1="14.34" x2="41.00" y2="17.69" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="43.94" y="13.69" font-size="4.00" data-pos="969"></text>
+  <text class="music" x="43.94" y="13.69" font-size="4.00" data-pos="963"></text>
   <line x1="44.00" y1="13.84" x2="44.00" y2="17.19" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.61" y="13.19" width="0.19" height="4.00" data-pos="877"/>
   <rect x="33.73" y="13.19" width="0.19" height="4.00" data-pos="915"/>
-  <rect x="46.82" y="13.19" width="0.19" height="4.00" data-pos="974"/>
-  <rect x="47.31" y="13.19" width="0.60" height="4.00" data-pos="974"/>
+  <rect x="46.82" y="13.19" width="0.19" height="4.00" data-pos="968"/>
+  <rect x="47.31" y="13.19" width="0.60" height="4.00" data-pos="968"/>
   <text x="9.24" y="11.85" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="854">f</text>
   <text x="12.24" y="19.91" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="861">p</text>
   <text x="15.49" y="11.85" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="866">mf</text>
@@ -64,7 +64,7 @@
   <text x="28.53" y="9.96" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="901">p</text>
   <text x="31.53" y="9.35" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="909">mf</text>
   <text x="35.58" y="11.24" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="932">f</text>
-  <text x="35.58" y="9.06" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="958">p</text>
+  <text x="35.58" y="9.06" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="952">p</text>
   <rect x="0.30" y="8.33" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="830"/>
   <text x="1.23" y="10.53" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="830">S</text>
   </g>

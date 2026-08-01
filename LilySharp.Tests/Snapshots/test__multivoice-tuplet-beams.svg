@@ -33,14 +33,14 @@
   <line x1="16.57" y1="13.66" x2="18.53" y2="13.66" stroke="#000000" stroke-width="0.200"/>
   <line x1="19.08" y1="13.66" x2="21.03" y2="13.66" stroke="#000000" stroke-width="0.200"/>
   <line x1="21.65" y1="13.66" x2="23.61" y2="13.66" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="15.16" font-size="4.00" data-pos="1022"></text>
-  <text class="music" x="11.09" y="14.66" font-size="4.00" data-pos="1026"></text>
-  <text class="music" x="13.99" y="14.16" font-size="4.00" data-pos="1029"></text>
-  <text class="music" x="16.90" y="13.66" font-size="4.00" data-pos="1032"></text>
-  <text class="music" x="19.40" y="13.16" font-size="4.00" data-pos="1035"></text>
-  <text class="music" x="21.98" y="13.66" font-size="4.00" data-pos="1038"></text>
-  <text class="music" x="24.48" y="14.16" font-size="4.00" data-pos="1041"></text>
-  <text class="music" x="26.99" y="14.66" font-size="4.00" data-pos="1044"></text>
+  <text class="music" x="8.59" y="15.16" font-size="4.00" data-pos="1016"></text>
+  <text class="music" x="11.09" y="14.66" font-size="4.00" data-pos="1020"></text>
+  <text class="music" x="13.99" y="14.16" font-size="4.00" data-pos="1023"></text>
+  <text class="music" x="16.90" y="13.66" font-size="4.00" data-pos="1026"></text>
+  <text class="music" x="19.40" y="13.16" font-size="4.00" data-pos="1029"></text>
+  <text class="music" x="21.98" y="13.66" font-size="4.00" data-pos="1032"></text>
+  <text class="music" x="24.48" y="14.16" font-size="4.00" data-pos="1035"></text>
+  <text class="music" x="26.99" y="14.66" font-size="4.00" data-pos="1038"></text>
   <rect x="29.26" y="14.66" width="0.19" height="4.00" data-pos="1006"/>
   <rect x="29.75" y="14.66" width="0.60" height="4.00" data-pos="1006"/>
   <polygon points="8.59,17.61 17.03,16.61 17.03,17.09 8.59,18.09"/>

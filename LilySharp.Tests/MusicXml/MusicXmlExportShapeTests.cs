@@ -45,7 +45,7 @@ public class MusicXmlExportShapeTests
             section A {
               pno {
                 voice { c'4 d' e' f' | g'1 | }
-                voice { c4 c c c | c1 | }
+                { c4 c c c | c1 | }
               }
             }
             form main { A }
@@ -72,8 +72,8 @@ public class MusicXmlExportShapeTests
             section A {
               pno {
                 voice { c'4 d' e' f' | }
-                voice { c4 d e f | }
-                voice { e4 f g a | }
+                { c4 d e f | }
+                { e4 f g a | }
               }
             }
             form main { A }

@@ -11,7 +11,7 @@ part melody
 
 phrase voiceCollision {
   // Adjacent pitch voices
-  voice { e2 f | g2 a | } voice { d2 e | f2 g | } 
+  voice { e2 f | g2 a | } { d2 e | f2 g | } 
 }
 
 phrase accidentalCollision {

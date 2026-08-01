@@ -853,7 +853,7 @@ $theme");
     [Fact]
     public void ParseParallelExpression()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 d } voice { e2 f }");
+        var tree = SyntaxTree.Parse(@"voice { c2 d } { e2 f }");
         Assert.False(tree.HasErrors);
 
         var parallel = tree.Root.GetSlot(0) as ParallelExpressionGreen;
@@ -864,14 +864,14 @@ $theme");
     [Fact]
     public void ParseParallelWithMusicBlocks()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 d } voice { e2 f }");
+        var tree = SyntaxTree.Parse(@"voice { c2 d } { e2 f }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseParallelRoundTrip()
     {
-        var source = @"voice { c2 d } voice { e2 f }";
+        var source = @"voice { c2 d } { e2 f }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
@@ -880,19 +880,55 @@ $theme");
     [Fact]
     public void ParseParallelThreeVoices()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 } voice { e2 } voice { g2 }");
+        var tree = SyntaxTree.Parse(@"voice { c2 } { e2 } { g2 }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNamedVoices_CarryTheirNames()
     {
-        var tree = SyntaxTree.Parse(@"voice sop { c2 } voice alt { e2 }");
+        var tree = SyntaxTree.Parse(@"voice sop { c2 } alt { e2 }");
         Assert.False(tree.HasErrors);
         var parallel = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>().Single();
         var names = parallel.NamedVoices.Select(v => v.Name).ToArray();
         Assert.Equal(new[] { "sop", "alt" }, names);
+    }
+
+    /// <summary>
+    /// A voice NAME is an ordinary identifier, and a bare identifier in a music stream is a
+    /// PHRASE REFERENCE — so the span may only take one when a <c>{</c> follows it, or a
+    /// reference written after the span would be swallowed as a nameless fourth voice.
+    /// </summary>
+    [Fact]
+    public void AnIdentifierAfterTheSpan_IsAPhraseReference_NotAVoiceName()
+    {
+        // Inside a PART BLOCK, where a bare identifier is a phrase reference (directly in a
+        // section it would be a part-block name, which is a different question).
+        var tree = SyntaxTree.Parse(
+            "phrase tail { g2 }\npart m { }\nsection A { m { voice { c2 } { e2 } tail } }");
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics.Select(d => d.Message)));
+        var parallel = tree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>().Single();
+        Assert.Equal(2, parallel.Voices.Count());
+        Assert.Contains(tree.GetRoot().DescendantNodes().OfType<VariableReferenceSyntax>(),
+            r => r.Name.Text == "tail");
+    }
+
+    /// <summary>
+    /// <c>voice { … } voice { … }</c> — the spelling before <c>voice</c> became a one-time
+    /// opener. It has to be reported, because it still PARSES: the second keyword would
+    /// open a SECOND span, and two one-voice spans sound in sequence, not together.
+    /// </summary>
+    [Fact]
+    public void RepeatingTheVoiceKeyword_IsAnError_AndRecoversIntoOneSpan()
+    {
+        var tree = SyntaxTree.Parse(@"voice { c2 } voice { e2 }");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.RepeatedVoiceKeyword);
+        // Recovery keeps the music that was meant: ONE span with both voices, not two spans.
+        var parallel = Assert.Single(tree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>());
+        Assert.Equal(2, parallel.Voices.Count());
     }
 
     [Fact]
@@ -907,7 +943,7 @@ $theme");
     [Fact]
     public void ParseUnnamedVoicesAndLyrics_HaveNoNames()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 } voice { e2 }");
+        var tree = SyntaxTree.Parse(@"voice { c2 } { e2 }");
         Assert.False(tree.HasErrors);
         var parallel = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>().Single();
@@ -972,7 +1008,7 @@ $theme");
     {
         var tree = SyntaxTree.Parse(@"section Main {
     melody {
-        voice { c2 d } voice { e2 f }
+        voice { c2 d } { e2 f }
     }
 }");
         Assert.False(tree.HasErrors);

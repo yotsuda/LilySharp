@@ -27,30 +27,30 @@
   <line x1="41.42" y1="15.82" x2="41.42" y2="13.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="47.50" y="16.82" font-size="4.00" data-pos="626"></text>
   <line x1="48.73" y1="16.82" x2="48.73" y2="13.99" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="9.65" y="20.32" font-size="4.00" data-pos="649"></text>
+  <text class="music" x="9.65" y="20.32" font-size="4.00" data-pos="643"></text>
   <line x1="9.71" y1="20.32" x2="9.71" y2="22.99" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="24.75" y="19.82" font-size="4.00" data-pos="653"></text>
+  <text class="music" x="24.75" y="19.82" font-size="4.00" data-pos="647"></text>
   <line x1="24.81" y1="19.97" x2="24.81" y2="22.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="32.56" y="19.32" font-size="4.00" data-pos="656"></text>
+  <text class="music" x="32.56" y="19.32" font-size="4.00" data-pos="650"></text>
   <line x1="32.63" y1="19.47" x2="32.63" y2="22.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="40.18" y="17.82" font-size="4.00" data-pos="664"></text>
+  <text class="music" x="40.18" y="17.82" font-size="4.00" data-pos="658"></text>
   <line x1="40.25" y1="17.82" x2="40.25" y2="21.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="47.50" y="17.82" font-size="4.00" data-pos="668"></text>
+  <text class="music" x="47.50" y="17.82" font-size="4.00" data-pos="662"></text>
   <line x1="47.56" y1="17.82" x2="47.56" y2="21.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="36.99" y="16.32" width="0.19" height="4.00" data-pos="620"/>
   <rect x="51.70" y="16.32" width="0.19" height="4.00" data-pos="629"/>
   <rect x="52.19" y="16.32" width="0.60" height="4.00" data-pos="629"/>
-  <text x="10.30" y="25.31" font-size="2.47" text-anchor="middle" data-pos="695">Sing</text>
-  <text x="17.82" y="25.31" font-size="2.47" text-anchor="middle" data-pos="700">a</text>
-  <text x="25.40" y="25.31" font-size="2.47" text-anchor="middle" data-pos="702">love</text>
-  <text x="33.22" y="25.31" font-size="2.47" text-anchor="middle" data-pos="707">song</text>
-  <text x="40.87" y="25.31" font-size="2.47" text-anchor="middle" data-pos="714">soft</text>
-  <text x="48.18" y="25.31" font-size="2.47" text-anchor="middle" data-pos="719">now</text>
-  <text x="10.30" y="28.11" font-size="2.47" text-anchor="middle" data-pos="742">Low</text>
-  <text x="25.40" y="28.11" font-size="2.47" text-anchor="middle" data-pos="746">part</text>
-  <text x="33.22" y="28.11" font-size="2.47" text-anchor="middle" data-pos="751">deep</text>
-  <text x="40.87" y="28.11" font-size="2.47" text-anchor="middle" data-pos="760">slow</text>
-  <text x="48.18" y="28.11" font-size="2.47" text-anchor="middle" data-pos="765">now</text>
+  <text x="10.30" y="25.31" font-size="2.47" text-anchor="middle" data-pos="689">Sing</text>
+  <text x="17.82" y="25.31" font-size="2.47" text-anchor="middle" data-pos="694">a</text>
+  <text x="25.40" y="25.31" font-size="2.47" text-anchor="middle" data-pos="696">love</text>
+  <text x="33.22" y="25.31" font-size="2.47" text-anchor="middle" data-pos="701">song</text>
+  <text x="40.87" y="25.31" font-size="2.47" text-anchor="middle" data-pos="708">soft</text>
+  <text x="48.18" y="25.31" font-size="2.47" text-anchor="middle" data-pos="713">now</text>
+  <text x="10.30" y="28.11" font-size="2.47" text-anchor="middle" data-pos="736">Low</text>
+  <text x="25.40" y="28.11" font-size="2.47" text-anchor="middle" data-pos="740">part</text>
+  <text x="33.22" y="28.11" font-size="2.47" text-anchor="middle" data-pos="745">deep</text>
+  <text x="40.87" y="28.11" font-size="2.47" text-anchor="middle" data-pos="754">slow</text>
+  <text x="48.18" y="28.11" font-size="2.47" text-anchor="middle" data-pos="759">now</text>
   <text x="2.58" y="25.31" font-size="2.40" font-weight="bold">1.</text>
   <text x="2.58" y="28.11" font-size="2.40" font-weight="bold">2.</text>
   <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="570"/>

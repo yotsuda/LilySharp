@@ -15,7 +15,7 @@ section S {
   m {
     b4@f.up c'@p e'@mf.up f'@f |
     g'4@ff.up a'@f.up b'@p.up c''@mf.up |
-    voice { e'4@f.up f' g' a' } voice { b4@p.up c' d' e' } |
+    voice { e'4@f.up f' g' a' } { b4@p.up c' d' e' } |
   }
 }
 form main { S }

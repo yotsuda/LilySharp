@@ -115,7 +115,7 @@ public class MultiVoiceRenderingTests
     // Before 2026-08-01 none of the three walkers agreed: the page restarted voices 2..N at
     // the PART's default octave and let voice 1 leak its last pitch out of the span, the MIDI
     // kept the running frame throughout, and the .ly twin chained the branches like chord
-    // members. `g4 g4 g4 g4 | voice { c'1 } voice { d1 }` put that d at D4, D3 and D5.
+    // members. `g4 g4 g4 g4 | voice { c'1 } { d1 }` put that d at D4, D3 and D5.
 
     /// <summary>Staff positions of one voice track (0 = the primary stream).</summary>
     private static ImmutableArray<int> StaffPositions(string music, int voiceIndex)
@@ -154,8 +154,8 @@ public class MultiVoiceRenderingTests
     {
         // The same two branches written the other way round sound the same notes: neither
         // branch is read against the other's last pitch.
-        var ab = StaffPositions("g'4 g g g | voice { c1 } voice { e1 } |");
-        var ba = StaffPositions("g'4 g g g | voice { e1 } voice { c1 } |");
+        var ab = StaffPositions("g'4 g g g | voice { c1 } { e1 } |");
+        var ba = StaffPositions("g'4 g g g | voice { e1 } { c1 } |");
         Assert.Equal(ab.Sort(), ba.Sort());
     }
 
@@ -166,7 +166,7 @@ public class MultiVoiceRenderingTests
         // did in between: DELETING the span does not move the music that follows it.
         // (A plain `c1` in its place WOULD move it — that note is sequential music and
         // advances the frame like any other. Only the span is transparent.)
-        var withSpan = StaffPositions("g'4 g g g | voice { c1 } voice { e1 } | a4 a a a |", 0);
+        var withSpan = StaffPositions("g'4 g g g | voice { c1 } { e1 } | a4 a a a |", 0);
         var withoutSpan = StaffPositions("g'4 g g g | a4 a a a |", 0);
 
         Assert.Equal(withoutSpan.TakeLast(4), withSpan.TakeLast(4));

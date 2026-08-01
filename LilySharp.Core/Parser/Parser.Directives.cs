@@ -135,24 +135,50 @@ internal sealed partial class Parser
         return ParseVoiceBlocks();
     }
 
+    /// <summary>
+    /// A voice span: the <c>voice</c> keyword ONCE, then one block per voice —
+    /// <c>voice { … } { … }</c>, or <c>voice sop { … } alt { … }</c> when the voices are
+    /// named (a name binds a <c>lyrics NAME { }</c> block to that voice).
+    /// </summary>
+    /// <remarks>
+    /// A name is an ordinary identifier, which in a music stream is also a PHRASE
+    /// REFERENCE, so the two are told apart by the token after it: an identifier followed
+    /// by <c>{</c> opens a named voice, anything else is a reference and ends the span.
+    /// </remarks>
     private ParallelExpressionGreen ParseVoiceBlocks()
     {
         var firstVoice = Expect(SyntaxKind.VoiceKeyword);
         var children = new List<GreenNode?>();
-        if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
-        _voiceBodyDepth++;
-        children.Add(ParseMusicBlock());
-        _voiceBodyDepth--;
-
-        while (Check(SyntaxKind.VoiceKeyword))
+        do
         {
-            // Keep the separating `voice` keyword in the tree so ToFullString
-            // round-trips exactly; Voices skips it (only MusicBlocks are voices).
-            children.Add(Advance());
             if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
             _voiceBodyDepth++;
             children.Add(ParseMusicBlock());
             _voiceBodyDepth--;
+        }
+        while (StartsAnotherVoiceBlock());
+
+        // `voice { … } voice { … }` — the spelling before the keyword became a one-time
+        // opener. It is reported rather than left alone because it still PARSES: the
+        // second `voice` would open a SECOND span, and two one-voice spans sound one after
+        // the other instead of together, so the file would quietly hold different music.
+        while (Check(SyntaxKind.VoiceKeyword))
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.RepeatedVoiceKeyword,
+                "'voice' opens the span once — write the other voices as further blocks: "
+                + "voice { … } { … } (named: voice sop { … } alt { … }). Repeating the keyword "
+                + "would start a SECOND span, and two one-voice spans play one after the other, "
+                + "not together.");
+            Advance(); // recover INTO this span, so the music stays what was meant
+            do
+            {
+                if (Check(SyntaxKind.Identifier)) children.Add(Advance());
+                _voiceBodyDepth++;
+                children.Add(ParseMusicBlock());
+                _voiceBodyDepth--;
+            }
+            while (StartsAnotherVoiceBlock());
         }
 
         // ParallelExpression carries an open/close token; voice blocks have no
@@ -162,6 +188,13 @@ internal sealed partial class Parser
         var close = new SyntaxToken(SyntaxKind.VoiceKeyword, "", null, null);
         return new ParallelExpressionGreen(firstVoice, [.. children], close);
     }
+
+    /// <summary>True when the next tokens open another voice of the span: a <c>{</c>, or a
+    /// name followed by one. A bare identifier NOT followed by <c>{</c> is a phrase
+    /// reference in the enclosing stream and ends the span.</summary>
+    private bool StartsAnotherVoiceBlock()
+        => Check(SyntaxKind.OpenBrace)
+           || (Check(SyntaxKind.Identifier) && Peek().Kind == SyntaxKind.OpenBrace);
 
     /// <summary>
     /// Reports that the old <c>&lt;&lt; … \\ … &gt;&gt;</c> polyphony was removed in

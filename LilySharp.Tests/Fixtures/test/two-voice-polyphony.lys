@@ -1,4 +1,4 @@
-// Coverage: two voices on one staff (voice { } voice { }) — the upper voice gets
+// Coverage: two voices on one staff (voice { } { }) — the upper voice gets
 // stems up, the lower voice stems down, and they continue independent relative-
 // octave chains. Guards multi-voice stem direction and layout.
 title "Two-voice polyphony"
@@ -7,7 +7,7 @@ key c major
 part m { clef treble }
 section Main {
   m {
-    voice { g'2 a | b4 c b a | } voice { c4 d e f | g2 g | } 
+    voice { g'2 a | b4 c b a | } { c4 d e f | g2 g | } 
   }
 }
 form main { Main }

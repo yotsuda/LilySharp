@@ -273,11 +273,17 @@ ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Q
 
 ### 5.1 Multi-voice (one staff)
 
-VoiceBlock     = 'voice' , [ Identifier ] , MusicBlock , { 'voice' , [ Identifier ] , MusicBlock } ;
+VoiceBlock     = 'voice' , VoicePart , { VoicePart } ;
+VoicePart      = [ Identifier ] , MusicBlock ;
+(* 'voice' opens the span ONCE; every further voice is another block. Repeating the
+   keyword ('voice { … } voice { … }') is LYS0019 — it would open a SECOND span, and
+   two one-voice spans play in sequence rather than together. A voice NAME is an
+   ordinary identifier, told apart from a phrase reference by the '{' after it. *)
 
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
-   section Main { piano { voice { c'2 d } voice { e2 f } } }
-   // A named voice binds its own lyrics: voice sop { … }  +  lyrics sop { … }
+   section Main { piano { voice { c'2 d } { e2 f } } }
+   // Named voices bind their own lyrics — the name goes before each block:
+   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … }
 
    The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
    the staff's barlines, and music written after the span continues in the bar it left

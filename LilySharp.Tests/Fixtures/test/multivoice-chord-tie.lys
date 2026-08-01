@@ -10,7 +10,7 @@ part mel { clef treble }
 section S {
   mel {
     voice { c''4 d'' e'' f'' | g''1 }
-    voice { <e' g'>4~ <e' g'> e' g' | c'1 }
+    { <e' g'>4~ <e' g'> e' g' | c'1 }
   }
 }
 form main { S }

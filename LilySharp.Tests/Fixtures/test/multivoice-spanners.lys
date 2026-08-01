@@ -1,5 +1,5 @@
 // Slur, tie and glissando in the SECOND voice of a single-staff polyphony
-// (voice { } voice { }). The detectors used to scan only the primary voice, so
+// (voice { } { }). The detectors used to scan only the primary voice, so
 // voice 2's spanners vanished entirely. They now run per voice and lay out
 // against voice 2's own note columns (its stem-down slur curves UP, its tie and
 // glissando attach to voice-2 heads). Voice 1 carries no spanners, so any curve
@@ -11,7 +11,7 @@ part mel { clef treble }
 section S {
   mel {
     voice { c''4 d'' e'' f'' | g''4 a'' b'' c''' | }
-    voice { e'4@glissando g' g'( e') | f'4 f'~ f' f' | }
+    { e'4@glissando g' g'( e') | f'4 f'~ f' f' | }
   }
 }
 form main { S }

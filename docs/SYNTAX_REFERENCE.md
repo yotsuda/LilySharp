@@ -190,7 +190,7 @@ The group must fit within one measure (otherwise it crosses the barline and the 
 overflows its meter).
 
 > **Note:** this reuses `<< … >>`, which in LilyPond means simultaneous voices. Lily#
-> writes parallel voices as `voice { … } voice { … }` (§ Voices), so `<< … >>` is free to
+> writes parallel voices as `voice { … } { … }` (§ Voices), so `<< … >>` is free to
 > mean an arpeggio here. A `\\` inside still reports the removed-polyphony hint.
 
 ## Articulations
@@ -415,12 +415,17 @@ whole group).
 ## Parallel Voices (Multi-Voice)
 
 ```
-voice { c'2 d } voice { e2 f }
+voice { c'2 d } { e2 f }
+voice sop { c'2 d } alt { e2 f }     // named — binds lyrics sop / lyrics alt
 ```
 
-Each `voice { … }` block is a simultaneous voice on the same staff. (The
-LilyPond `<< … \\ … >>` form is **not** Lily# — the parser rejects it with a
-hint to use `voice { … }`.)
+`voice` opens the span **once**; each `{ … }` after it is one simultaneous voice on the
+same staff. Repeating the keyword (`voice { … } voice { … }`) is an error (LYS0019): it
+would open a *second* span, and two one-voice spans play one after the other rather than
+together. A single voice is transparent and warns (LYS4011) unless it is named — a name
+is what a `lyrics NAME { … }` block binds to.
+
+(The LilyPond `<< … \\ … >>` form is **not** Lily# — the parser rejects it with a hint.)
 
 ## Named Music (Phrases)
 

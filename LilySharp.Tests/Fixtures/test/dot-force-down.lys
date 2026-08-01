@@ -10,7 +10,7 @@ part p { clef treble }
 section Main {
   p {
     voice { c'4 c'4 }
-    voice { b4. b8 }
+    { b4. b8 }
   }
 }
 form main { Main }

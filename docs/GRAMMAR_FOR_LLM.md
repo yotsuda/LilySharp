@@ -223,7 +223,7 @@ appoggiatura { c8 } d4       // unslashed grace
 ## Multi-voice (one staff)
 
 ```
-voice { c'2 d } voice { e2 f }     // each voice { } is a simultaneous voice
+voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 ```
 
 ## Lyrics (a named track, attached to a staff)

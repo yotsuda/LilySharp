@@ -23,38 +23,38 @@
   <line x1="19.53" y1="20.20" x2="19.53" y2="17.37" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.56" y="19.70" font-size="4.00" data-pos="187"></text>
   <line x1="23.80" y1="19.70" x2="23.80" y2="17.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.88" y="21.20" font-size="4.00" data-pos="270"></text>
+  <text class="music" x="27.88" y="21.20" font-size="4.00" data-pos="264"></text>
   <line x1="29.12" y1="21.20" x2="29.12" y2="18.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="32.16" y="20.70" font-size="4.00" data-pos="274"></text>
+  <text class="music" x="32.16" y="20.70" font-size="4.00" data-pos="268"></text>
   <line x1="33.40" y1="20.70" x2="33.40" y2="17.70" stroke="#000000" stroke-width="0.130"/>
   <line x1="27.54" y1="24.70" x2="29.60" y2="24.70" stroke="#000000" stroke-width="0.200"/>
   <line x1="27.54" y1="25.70" x2="29.60" y2="25.70" stroke="#000000" stroke-width="0.200"/>
   <line x1="31.81" y1="24.70" x2="33.88" y2="24.70" stroke="#000000" stroke-width="0.200"/>
   <line x1="31.81" y1="25.70" x2="33.88" y2="25.70" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="23.70" font-size="4.00" data-pos="201"></text>
+  <text class="music" x="8.59" y="23.70" font-size="4.00" data-pos="195"></text>
   <line x1="8.65" y1="23.70" x2="8.65" y2="26.37" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.86" y="23.20" font-size="4.00" data-pos="204"></text>
+  <text class="music" x="12.86" y="23.20" font-size="4.00" data-pos="198"></text>
   <line x1="12.93" y1="23.20" x2="12.93" y2="26.04" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="18.29" y="22.70" font-size="4.00" data-pos="208"></text>
+  <text class="music" x="18.29" y="22.70" font-size="4.00" data-pos="202"></text>
   <line x1="18.35" y1="22.70" x2="18.35" y2="25.70" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.56" y="22.20" font-size="4.00" data-pos="211"></text>
+  <text class="music" x="22.56" y="22.20" font-size="4.00" data-pos="205"></text>
   <line x1="22.63" y1="22.20" x2="22.63" y2="25.37" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="27.88" y="26.20" font-size="4.00" data-pos="286"></text>
+  <text class="music" x="27.88" y="26.20" font-size="4.00" data-pos="274"></text>
   <line x1="27.95" y1="26.20" x2="27.95" y2="28.70" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="32.16" y="25.70" font-size="4.00" data-pos="289"></text>
+  <text class="music" x="32.16" y="25.70" font-size="4.00" data-pos="277"></text>
   <line x1="32.22" y1="25.70" x2="32.22" y2="28.20" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="29.19" y="23.70" font-size="4.00" data-pos="301"></text>
+  <text class="music" x="29.19" y="23.70" font-size="4.00" data-pos="283"></text>
   <line x1="30.43" y1="23.70" x2="30.43" y2="20.20" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="33.46" y="23.20" font-size="4.00" data-pos="304"></text>
+  <text class="music" x="33.46" y="23.20" font-size="4.00" data-pos="286"></text>
   <line x1="34.70" y1="23.20" x2="34.70" y2="19.70" stroke="#000000" stroke-width="0.130"/>
   <rect x="17.15" y="19.70" width="0.19" height="4.00" data-pos="182"/>
   <rect x="26.79" y="19.70" width="0.19" height="4.00" data-pos="189"/>
-  <rect x="36.53" y="19.70" width="0.19" height="4.00" data-pos="309"/>
-  <rect x="37.02" y="19.70" width="0.60" height="4.00" data-pos="309"/>
+  <rect x="36.53" y="19.70" width="0.19" height="4.00" data-pos="291"/>
+  <rect x="37.02" y="19.70" width="0.60" height="4.00" data-pos="291"/>
   <text class="music" x="4.88" y="17.20" font-size="3.56" data-pos="0"></text>
   <line x1="5.99" y1="17.03" x2="5.99" y2="14.52" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="6.66" y="17.68" font-size="2.20" data-pos="0">= 80</text>
-  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="314"/>
-  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="314">Main</text>
+  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="296"/>
+  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="296">Main</text>
   </g>
 </svg>
