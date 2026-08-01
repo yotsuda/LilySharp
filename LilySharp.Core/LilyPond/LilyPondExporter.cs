@@ -809,6 +809,10 @@ public sealed class LilyPondExporter
     /// </summary>
     /// <remarks>
     /// An omitted duration is not the same thing on the two sides once a grace has gone by.
+    /// LILYPOND-REF: lily/parser.yy:3503-3515 maybe_notemode_duration / optional_notemode_duration
+    ///   — a written duration becomes <c>parser-&gt;default_duration_</c> and an omitted one is
+    ///   replaced by it. That is PARSER state (lily/include/lily-parser.hh:44), which is why it
+    ///   reaches straight through a grace body.
     /// LilyPond repeats the last duration it READ, and it read the grace body
     /// (<c>\grace { d8 } c</c> makes that <c>c</c> an EIGHTH); Lily# collects the grace with
     /// its own local default (MeasureCollector.CollectGraceNotes' graceDefaultDuration) which
