@@ -488,15 +488,14 @@ public sealed class LilyPondExporter
     private static int AnchorOctaveOf(PartDeclarationSyntax part)
     {
         string? octave = PartProperty(part, "octave");
-        if (octave != null && int.TryParse(octave, out int explicitOctave))
-            return explicitOctave;
-        if (InstrumentPresetOf(part) is string preset)
-            return InstrumentDefaults.GetDefaults(preset).Octave;
         string? clef = PartProperty(part, "clef");
-        return InstrumentDefaults.GetDefaultOctave(
-            clef != null
-                ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
-                : ClefType.Treble);
+        return InstrumentDefaults.AnchorOctave(
+            octave != null && int.TryParse(octave, out int explicitOctave)
+                ? explicitOctave
+                : null,
+            InstrumentPresetOf(part),
+            clef != null ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
+                         : ClefType.Treble);
     }
 
     // ---- Header ------------------------------------------------------------

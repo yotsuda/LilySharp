@@ -50,6 +50,31 @@ public class InstrumentTranspositionMidiTests
         Assert.Equal(36, FirstPitch("part x { instrument bass section A { c1 | } }"));
     }
 
+    /// <summary>
+    /// A part's bare letters play at the octave they PRINT, which for a non-treble clef is
+    /// not 4 — and the clef is the step the MIDI exporter used to be missing.
+    /// </summary>
+    /// <remarks>
+    /// The page's chain is <c>octave N</c> &gt; instrument preset &gt; the clef's own octave
+    /// (InstrumentDefaults.AnchorOctave). MEASURED against the page rather than assumed: the
+    /// SVG for <c>part m { clef bass }</c> draws the four notes at staff positions −1, 0, +1,
+    /// +2 with no ledger line, i.e. C3 D3 E3 F3 — while MIDI played C4.
+    /// <para>
+    /// ⚠️ The last row is the CONTROL and it is the one that matters: <c>octave absolute</c>
+    /// anchors at middle C whatever the clef ("the clef default is deliberately NOT used
+    /// here" — OctaveContext), so giving the relative seed its clef step must NOT move it.
+    /// One field served both anchors and this row is what caught it.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("part x { clef bass section A { c1 | } }", 48)]         // prints C3, plays C3
+    [InlineData("part x { clef treble section A { c1 | } }", 60)]
+    [InlineData("part x { clef alto section A { c1 | } }", 48)]
+    [InlineData("part x { clef bass octave 4 section A { c1 | } }", 60)] // explicit wins
+    [InlineData("octave absolute part x { clef bass section A { c1 | } }", 60)] // ← control
+    public void PartOctaveAnchor_FollowsTheClefInRelativeModeOnly(string source, int expected)
+        => Assert.Equal(expected, FirstPitch(source));
+
     [Fact]
     public void Guitar_SoundsOctaveBelowWrittenViaTreble8Clef()
     {
@@ -67,9 +92,12 @@ public class InstrumentTranspositionMidiTests
     [Fact]
     public void ExplicitTransposition8vb_ShiftsPlaybackDownAnOctave()
     {
-        // The explicit `transposition` property is the same knob the preset sets:
-        // written C4 (default octave) sounds C3 (48).
-        Assert.Equal(48, FirstPitch(
+        // The explicit `transposition` property is the same knob the preset sets.
+        // ⚠️ The written pitch here is C3, not C4: a `clef bass` part anchors its bare
+        // letters at octave 3, which is what the page prints. This assertion used to read
+        // 48 and said "written C4 (default octave)" — it was pinning the MIDI exporter's
+        // missing clef step, not the transposition. Written C3 (48) sounds C2 (36).
+        Assert.Equal(36, FirstPitch(
             "part x { clef bass transposition 8vb section A { c1 | } }"));
     }
 

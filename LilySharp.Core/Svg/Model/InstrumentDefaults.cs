@@ -114,6 +114,55 @@ public static class InstrumentDefaults
     }
 
     /// <summary>
+    /// The octave a part's bare letters are anchored to, from the three things that can say
+    /// so: an explicit <c>octave N</c>, else an <c>instrument</c> preset's own octave, else
+    /// the octave the CLEF implies.
+    /// </summary>
+    /// <param name="explicitOctave">The part's <c>octave N</c>, or null.</param>
+    /// <param name="instrumentPreset">The part's <c>instrument</c> preset, or null.</param>
+    /// <param name="clef">The part's clef; treble when it names none.</param>
+    /// <remarks>
+    /// ⚠️ ONE HOME, because it is one quantity and it had drifted into three: the layout
+    /// (MeasureCollector.GetPartDefaults), the LilyPond exporter (which wrote
+    /// <c>\relative c'</c> for every part until it was given this chain) and the MIDI
+    /// exporter — which had the first two steps and NOT the clef, so a bare
+    /// <c>part m { clef bass }</c> printed C3 and played C4. MusicXML has none of the three
+    /// and writes C4 for everything; when that is fixed it comes here too.
+    /// <para>
+    /// ⚠️ The preset beats the clef even when both are written: <c>instrument flute</c>
+    /// anchors at 5 while its treble clef would say 4. See <see cref="GetDefaults"/>.
+    /// </para>
+    /// ⚠️ NOT used by ABSOLUTE mode, which anchors at middle C whatever the clef
+    /// (OctaveContext says so in as many words).
+    /// </remarks>
+    public static int AnchorOctave(int? explicitOctave, string? instrumentPreset, ClefType clef)
+    {
+        if (explicitOctave is { } o)
+            return o;
+        if (!string.IsNullOrEmpty(instrumentPreset))
+            return GetDefaults(instrumentPreset!).Octave;
+        return GetDefaultOctave(clef);
+    }
+
+    /// <summary>
+    /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else
+    /// middle C — and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TWO MODES ANCHOR DIFFERENTLY ON PURPOSE, and this one is the short rule.
+    /// OctaveContext says it in as many words: "Absolute-mode anchor: bare c =
+    /// C(OctaveBase). Defaults to 4 … and is overridden ONLY by an explicit
+    /// <c>part X { octave N }</c> … The clef default is deliberately NOT used here."
+    /// Neither the clef nor an instrument preset reaches it — <see cref="AnchorOctave"/>
+    /// is the relative-mode chain and takes both.
+    /// <para>
+    /// Reading one where the other belongs is not academic: it made a bass part written
+    /// <c>octave absolute</c> play a third lower than it prints.
+    /// </para>
+    /// </remarks>
+    public static int AbsoluteBaseOctave(int? explicitOctave) => explicitOctave ?? 4;
+
+    /// <summary>
     /// The <c>.lys</c> clef WORD for a clef — the spelling a part's <c>clef</c> property
     /// would have to use to name it, and the inverse of the word→<see cref="ClefType"/>
     /// switches the parsers read.

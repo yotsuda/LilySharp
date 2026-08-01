@@ -39,10 +39,16 @@ public sealed class MidiExporter
     // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
     private bool _octaveAbsolute;
 
-    // Part header `octave N` anchor: the base octave for bare letters in
-    // absolute mode and the seed of the relative frame (matches the
-    // collector, where `part lh { octave 3 }` roots the left hand at C3).
+    // The part's RELATIVE-frame seed: `octave N` > instrument preset > the clef's own
+    // octave, exactly as the page resolves it (InstrumentDefaults.AnchorOctave).
     private int _partOctaveAnchor = 4;
+
+    // …and the part's ABSOLUTE-mode base, which is a DIFFERENT rule and must not be folded
+    // into the one above: only an explicit `octave N` moves it (OctaveContext: "the clef
+    // default is deliberately NOT used here"). One field served both until 2026-08-02, so
+    // giving the relative seed its clef step immediately dragged `octave absolute` parts
+    // down with it.
+    private int _partAbsoluteBase = 4;
 
     // Preview-synth timbre family of the part currently playing, resolved
     // from its `instrument` property (or the part name itself).
@@ -215,10 +221,10 @@ public sealed class MidiExporter
                 break;
 
             case PartDeclarationSyntax part:
-                _partOctaveAnchor = PartOctaveAnchor(part.Name.Text);
+                (_partOctaveAnchor, _partAbsoluteBase) = PartOctaveAnchors(part.Name.Text);
                 _currentTimbre = PartTimbre(part.Name.Text);
                 ProcessChildren(part, track, conductorTrack);
-                _partOctaveAnchor = 4;
+                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
                 _currentTimbre = 0;
                 break;
 
@@ -512,7 +518,7 @@ public sealed class MidiExporter
                 // reference) keep independent relative-octave chains across their
                 // sections instead of inheriting the previous part's last note.
                 string pname = owner.Name.Text;
-                int anchor = PartOctaveAnchor(pname);
+                var (anchor, absBase) = PartOctaveAnchors(pname);
                 var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
                     ? saved
                     : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
@@ -520,6 +526,7 @@ public sealed class MidiExporter
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
                 _partOctaveAnchor = anchor;
+                _partAbsoluteBase = absBase;
                 _currentTimbre = PartTimbre(pname);
                 // Part-major music plays inside its own part declaration (no
                 // PartBlockSyntax), so arm the instrument's sounding shift here too —
@@ -527,7 +534,7 @@ public sealed class MidiExporter
                 _currentTransposeSemitones = PartSoundingShift(pname);
                 ProcessChildren(section, track, conductorTrack);
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
-                _partOctaveAnchor = 4;
+                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
                 _currentTimbre = 0;
                 _currentTransposeSemitones = 0;
                 _diatonicShiftSteps = 0;
@@ -546,7 +553,7 @@ public sealed class MidiExporter
             if (child is PartBlockSyntax sectionPart)
             {
                 string pname = sectionPart.Name;
-                int anchor = PartOctaveAnchor(pname);
+                var (anchor, absBase) = PartOctaveAnchors(pname);
                 var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
                     ? saved
                     : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
@@ -555,12 +562,13 @@ public sealed class MidiExporter
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
                 _partOctaveAnchor = anchor;
+                _partAbsoluteBase = absBase;
                 _currentTimbre = PartTimbre(pname);
                 ProcessNode(sectionPart, track, conductorTrack);
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
-                _partOctaveAnchor = 4;
+                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
             }
             else
             {
@@ -788,33 +796,46 @@ public sealed class MidiExporter
         _ => TuningType.Guitar,
     };
 
-    /// <summary>The part's octave anchor: an explicit <c>octave N</c> &gt; the
-    /// instrument preset's default octave (bass = 3) &gt; 4. Mirrors the notation
-    /// collector's priority so a bare <c>c</c> sounds at the same octave it prints.</summary>
-    private int PartOctaveAnchor(string partName)
+    /// <summary>The part's octave anchor, resolved the way the page resolves it, so a bare
+    /// <c>c</c> sounds at the octave it prints.</summary>
+    /// <remarks>
+    /// ⚠️ The CLEF step is not optional and used to be missing here: this read
+    /// <c>octave N</c> &gt; preset &gt; 4 and stopped, so <c>part m { clef bass }</c> printed
+    /// C3 and played C4 while <c>instrument bass</c> — whose preset fills the octave — was
+    /// right. MEASURED across six part headers before and after; see HANDOFF §1 ⑤.
+    /// The chain itself lives in <see cref="LilySharp.Core.Svg.Model.InstrumentDefaults.AnchorOctave"/>.
+    /// </remarks>
+    private (int Relative, int Absolute) PartOctaveAnchors(string partName)
     {
+        int? explicitOctave = null;
+        string? instrument = null;
+        string? clef = null;
         if (_partDecls.TryGetValue(partName, out var partDecl))
         {
-            string? instrument = null;
             foreach (var prop in partDecl.Properties)
             {
                 var name = prop.NameToken.Text.ToLowerInvariant();
                 if (name == "octave"
                     && prop.GetChild(2) is SyntaxTokenNode v
                     && int.TryParse(v.Text, out int oct))
-                    return oct; // explicit wins
-                if (name == "instrument")
+                    explicitOctave = oct;
+                else if (name == "clef" && prop.GetChild(2) is SyntaxTokenNode cv)
+                    clef = cv.Text;
+                else if (name == "instrument")
                 {
                     var texts = new System.Collections.Generic.List<string>();
                     for (int vi = 2; vi < prop.SlotCount; vi++)
                         if (prop.GetChild(vi) is SyntaxTokenNode vt) texts.Add(vt.Text);
-                    instrument = LilySharp.Core.Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
+                    instrument = Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
                 }
             }
-            if (instrument != null)
-                return LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults(instrument).Octave;
         }
-        return 4;
+
+        return (Svg.Model.InstrumentDefaults.AnchorOctave(
+                    explicitOctave, instrument,
+                    clef != null ? ClefFromText(clef.ToLowerInvariant())
+                                 : Svg.Model.ClefType.Treble),
+                Svg.Model.InstrumentDefaults.AbsoluteBaseOctave(explicitOctave));
     }
 
     private void ProcessChildren(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
@@ -967,7 +988,7 @@ public sealed class MidiExporter
         // shared with the collector and the MusicXML exporter (RelativeOctave is
         // the single source of truth). Matches MeasureCollector exactly.
         int targetOctave = _octaveAbsolute
-            ? _partOctaveAnchor + pitch.OctaveOffset
+            ? _partAbsoluteBase + pitch.OctaveOffset
             : RelativeOctave.Resolve(
                 _currentNoteName, _currentOctave, noteName, pitch.OctaveOffset);
 
@@ -1040,7 +1061,9 @@ public sealed class MidiExporter
         // are order-independent — while rests keep the normal frame. Absolute mode makes
         // each stacked member's octave = anchor + (step >= root ? 0 : 1) + its own '/, marks.
         bool savedAbsolute = _octaveAbsolute;
-        int savedAnchor = _partOctaveAnchor;
+        // ⚠️ The ABSOLUTE base, because the stacking below switches absolute mode ON and
+        // spells each member's octave itself. The relative seed is untouched.
+        int savedAnchor = _partAbsoluteBase;
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
@@ -1069,7 +1092,7 @@ public sealed class MidiExporter
             if (rootSet && letter is { } l)
             {
                 _octaveAbsolute = true;
-                _partOctaveAnchor = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
+                _partAbsoluteBase = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
             }
             else
             {
@@ -1089,7 +1112,7 @@ public sealed class MidiExporter
             }
         }
         _octaveAbsolute = savedAbsolute;
-        _partOctaveAnchor = savedAnchor;
+        _partAbsoluteBase = savedAnchor;
         if (sub.HasTuplet)
             _tupletStack.Pop();
         // Acts like one note: a trailing `>>N` carries N as the running duration; an inherited
