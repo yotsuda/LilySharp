@@ -1145,7 +1145,7 @@ public sealed class LilyPondExporter
         bool hasDegrees = c.Degrees.Any();
         if (hasDegrees && !_frameTracked)
             _warnings.Add(
-                "a degree chord follows a voice span or a phrase reference, which leave the "
+                "a degree chord follows a phrase reference, whose nested \\relative leaves the "
                 + "octave frame with a different answer on each side — check its octave by hand");
 
         // LilyPond's chain WITHIN the chord: each member is octaved against the one written
@@ -1435,6 +1435,21 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitParallel(ParallelExpressionSyntax par)
     {
+        // The two sides read a span completely differently, so this is where the octave
+        // frames earn their keep:
+        //   Lily# — every branch reads from the frame the span OPENED in, and so does the
+        //     music after it: a span is simultaneous music and moves nothing
+        //     (MeasureCollector's _parallelSpans).
+        //   LilyPond — the branches CHAIN into one another and the span hands out the LAST
+        //     one's pitch. Measured with `c4 c c c << { c''1 } \\ { c,,,1 } >> c1`, which
+        //     reads C4 C4 C4 C4 / C6 / C3 / C3: branch 2 is octaved against branch 1's end,
+        //     and the note after the span against branch 2's.
+        // So each branch is emitted with Lily#'s frame set to the span's and LilyPond's set
+        // to wherever the previous branch left it; every first pitch then absorbs the
+        // difference by itself (EmitMusicPitch), and so does the first pitch after the span.
+        int spanStep = _lysStep, spanOctave = _lysOctave;
+        int chainStep = _lyStep, chainOctave = _lyOctave;
+
         var bodies = new List<string>();
         foreach (var (_, block) in par.NamedVoices)
         {
@@ -1446,21 +1461,24 @@ public sealed class LilyPondExporter
                 _activePhrases = _activePhrases,
             };
             CarryFrameInto(buf);
+            buf._lysStep = spanStep;
+            buf._lysOctave = spanOctave;
+            buf._lyStep = chainStep;
+            buf._lyOctave = chainOctave;
             buf.EmitMusicStream(MusicItems(block).ToList(), "");
+            chainStep = buf._lyStep;
+            chainOctave = buf._lyOctave;
+            _frameTracked &= buf._frameTracked;
             _warnings.AddRange(buf._warnings);
             string body = buf._sb.ToString().Replace("\n", " ").Trim();
             if (body.Length > 0)
                 bodies.Add(body);
         }
 
-        // ⚠️ THREE answers, measured — the frame stops being tracked here.
-        // `g4 g4 g4 g4 | voice { c'1 } voice { d1 }` puts that d at D4 on the page
-        // (MeasureCollector rebuilds voices 2..N in a FRESH frame at the part's default —
-        // EnterDefaultFrame), at D5 in this twin (LilyPond CHAINS the branches like chord
-        // members and hands the first one out — music-sequence.cc simultaneous_relative_callback)
-        // and at D3 in the MIDI (MidiExporter keeps the running frame). Voice 1 agrees
-        // everywhere; the disagreement is Lily#'s own and is not the exporter's to settle.
-        _frameTracked = false;
+        _lysStep = spanStep;
+        _lysOctave = spanOctave;
+        _lyStep = chainStep;
+        _lyOctave = chainOctave;
 
         if (bodies.Count == 0)
             return "";

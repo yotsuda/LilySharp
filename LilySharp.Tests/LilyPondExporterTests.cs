@@ -443,14 +443,22 @@ public class LilyPondExporterTests
     }
 
     [Fact]
-    public void ADegreeChordAfterAVoiceSpan_IsReported_BecauseTheFrameIsNoLongerTracked()
+    public void ADegreeChordAfterAPhraseReference_IsReported_BecauseTheFrameIsNoLongerTracked()
     {
-        // A voice span leaves the frame with three different answers — the page's, the
-        // twin's and the MIDI's (see EmitParallel) — so past that point the anchor a degree
-        // would stack on is a guess, and the guess is reported.
+        // A phrase reference's nested \relative hands the enclosing frame back unchanged in
+        // LilyPond and the phrase's anchor in Lily#, so past that point the anchor a degree
+        // would stack on is a guess, and the guess is reported. (A voice span used to be in
+        // this list; it is now compensated exactly — see EmitParallel.)
         var exporter = new LilyPondExporter();
-        exporter.Export(SyntaxTree.Parse(DegreeScore("voice { c1 } voice { e1 } <1 3 5>4")));
-        Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a voice span"));
+        exporter.Export(SyntaxTree.Parse("""
+            key c major
+            part m { clef treble }
+            phrase P { c4 d }
+            section S { m { P <1 3 5>4 } }
+            form main { S }
+            score main { staff m }
+            """));
+        Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a phrase reference"));
 
         // …and the ordinary book says nothing.
         var quiet = new LilyPondExporter();
