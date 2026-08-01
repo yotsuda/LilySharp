@@ -54,7 +54,13 @@ public sealed class TwinBeamSweep
 
         string root = FixtureRoot();
         var sb = new StringBuilder();
-        sb.Append("fixture,page,staff,xleft,posLeft,posRight,staffSpace\n");
+        // `stems` is what makes a mismatch READABLE: positions cannot be paired across the two
+        // engines (they break lines differently, so neither the order nor the x agrees), but
+        // the multiset of GROUP SIZES is break-independent. If it matches, the twin holds the
+        // same music beamed the same way and only the geometry is in question; if it does not,
+        // the disagreement is upstream of the quanter and pairing positions is meaningless.
+        // LilyPond's side of it is (length (ly:grob-array->list (ly:grob-object beam 'stems))).
+        sb.Append("fixture,page,staff,xleft,posLeft,posRight,staffSpace,stems\n");
 
         foreach (string dir in new[] { "test", "showcase" })
         {
@@ -68,7 +74,7 @@ public sealed class TwinBeamSweep
                 }
                 catch (Exception ex)
                 {
-                    sb.Append(name).Append(",ERROR,,,,,\"")
+                    sb.Append(name).Append(",ERROR,,,,,,\"")
                       .Append(ex.Message.Replace("\"", "'").Replace("\n", " ")).Append("\"\n");
                 }
             }
@@ -124,11 +130,12 @@ public sealed class TwinBeamSweep
                 foreach (var beam in PrimaryBeams(mine, stems))
                 {
                     rows.Add(string.Format(CultureInfo.InvariantCulture,
-                        "{0},{1},{2:F6},{3:F6},{4:F6},{5:F6}",
+                        "{0},{1},{2:F6},{3:F6},{4:F6},{5:F6},{6}",
                         p, si, beam.Left,
                         Snap((st.Middle - beam.LeftY) / st.Space),
                         Snap((st.Middle - beam.RightY) / st.Space),
-                        st.Space));
+                        st.Space,
+                        StemsTouching(stems, beam).Count()));
                 }
             }
         }
