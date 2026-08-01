@@ -753,18 +753,48 @@ internal sealed class BeamDetector
         // the test is `>=`, not `>`.
         // LILYPOND-REF: lily/beam.cc:895-916 (per-stem default/neutral direction tally),
         // LILYPOND-REF: lily/beam.cc:928 (count[UP] - count[DOWN] majority vote).
-        int upVotes = 0, downVotes = 0, total = 0;
+        // Each stem also contributes HOW FAR it reaches on its own side, which is what
+        // breaks a tied vote: LilyPond accumulates
+        // `total[dir] += max (int (-dir * head_positions (s)[-dir]), 0)` — the position of
+        // the head the stem STARTS from, i.e. the far one, and never below zero.
+        // LILYPOND-REF: lily/beam.cc:913-914 in get_default_dir, over head_positions.
+        int upVotes = 0, downVotes = 0, totalUp = 0, totalDown = 0;
         foreach (var m in members)
         {
             int mUp = Math.Max(0, m.HeadPositionMax);
             int mDown = Math.Min(0, m.HeadPositionMin);
-            if (Math.Abs(mUp) >= -mDown) downVotes++; else upVotes++;
-            total += m.StaffPosition;
+            if (Math.Abs(mUp) >= -mDown)
+            {
+                downVotes++;
+                totalDown += Math.Max(m.HeadPositionMax, 0);
+            }
+            else
+            {
+                upVotes++;
+                totalUp += Math.Max(-m.HeadPositionMin, 0);
+            }
         }
         if (upVotes != downVotes) return upVotes > downVotes;
-        // Fully balanced: below the line -> up, otherwise LP's neutral-direction = DOWN.
-        // LILYPOND-REF: lily/beam.cc:937 get_default_dir final neutral-direction fallback.
-        return total < 0;
+
+        // Tied vote: compare how far the two sides reach ON AVERAGE, then in total, and
+        // only then fall back to the neutral direction.
+        // LILYPOND-REF: lily/beam.cc:930-937 get_default_dir's tail —
+        //   `total[UP]/count[UP] - total[DOWN]/count[DOWN]`
+        //   (both sides non-empty), else `total[UP] - total[DOWN]`, else neutral-direction.
+        // ⚠️ INTEGER division, because LilyPond's total_ and count_ are Drul_array<int>:
+        //   two sides reaching 5 and 4 average the same there and fall through to the sum.
+        // ⚠️ This replaced the SUM OF THE MEMBERS' StaffPosition — a chord's arithmetic mean,
+        //   which is not a quantity LilyPond computes. MEASURED on the pair
+        //   `<d' f'>8 <c'' g''>`: extremes tie at ±5 and the vote ties 1-1, LilyPond answers
+        //   DOWN (both averages 5, both totals 5, so neutral wins) and the mean sum said −1
+        //   and answered UP.
+        if (upVotes > 0 && downVotes > 0)
+        {
+            int avgDiff = totalUp / upVotes - totalDown / downVotes;
+            if (avgDiff != 0) return avgDiff > 0;
+        }
+        if (totalUp != totalDown) return totalUp > totalDown;
+        return false; // neutral-direction = DOWN
     }
 
     /// <summary>

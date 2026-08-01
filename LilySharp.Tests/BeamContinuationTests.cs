@@ -96,6 +96,45 @@ public class BeamContinuationTests
         Assert.NotEmpty(layout.BeamLayouts);
     }
 
+    /// <summary>
+    /// When the extremes tie AND the per-stem vote ties, the direction is decided by how far
+    /// each side REACHES — average first, then total, then LilyPond's neutral direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:876-940 Beam::get_default_dir — the tail of it, which no
+    ///   book in the corpus reaches: this change moved ZERO snapshots, so these rows are the
+    ///   only thing holding it.
+    /// <para>
+    /// MEASURED against LilyPond 2.26.0 (Beam.direction dumped from after-line-breaking):
+    /// <c>&lt;d' f'&gt;8 &lt;c'' g''&gt;</c> answers DOWN. The extremes tie at ±5, the vote
+    /// ties 1-1, both sides reach 5, so the neutral direction wins. Lily# used to sum the
+    /// members' StaffPosition — a chord's arithmetic MEAN, which no LilyPond expression
+    /// computes — get −1, and answer UP.
+    /// </para>
+    /// <para>
+    /// ALL FOUR rows are LilyPond's own answers, not Lily#'s: the twins came out of
+    /// <c>lysc ly</c> and LilyPond printed <c>-1, 1, -1, 1</c> for them in order. The last
+    /// three are the branches around the tied one, so a future edit cannot satisfy this test
+    /// by hard-coding DOWN — an unambiguous low pair still beams up, a high one down, and an
+    /// uneven vote still wins outright before any of this arithmetic runs.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("<d f>8 <c' g'> r4 r2 |", false)]   // ties all the way down → neutral = DOWN
+    [InlineData("<d f>8 <e g> r4 r2 |", true)]      // both chords below the line → UP
+    [InlineData("<c' g'>8 <d' a'> r4 r2 |", false)] // both above → DOWN
+    [InlineData("<d f>8 <e g> <f a> <c' g'> |", true)] // 3 votes up, 1 down → UP outright
+    public void BeamDirection_TiedVote_IsDecidedByHowFarEachSideReaches(
+        string body, bool expectUp)
+    {
+        var detector = new LilySharp.Core.Svg.Collector.BeamDetector();
+        var (score, _) = BuildLayout("octave absolute\n" + body);
+        var groups = detector.DetectBeamGroups(score);
+
+        var group = Assert.Single(groups);
+        Assert.Equal(expectUp, group.StemUp);
+    }
+
     [Fact]
     public void CrossMeasureManualBeam_ProducesSingleMultiMeasureGroup()
     {
