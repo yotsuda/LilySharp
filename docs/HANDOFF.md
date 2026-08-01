@@ -85,8 +85,8 @@ exact に一致した**——`249e487d`・**ユーザー承認のうえ snapshot
 ★★★ **台帳 3 点（`beam.quant.chord.spanning.*`）を足した**（④・**旧コードは落ちる**）。
 **既存の `beam.quant.chord.*` が見えなかった理由も測った**——**中央線の近くでは
 `stem.cc:1239` の clamp がどちらの頭から来ても同じ答に落とす**。
-**未 push 60**（**この引継ぎ commit まで数えた値**）・
-テスト **3802 passed / 0 failed / 3 skipped**（**+15**）・
+**未 push 63**（**この引継ぎ commit まで数えた値**）・
+テスト **3807 passed / 0 failed / 3 skipped**（**+20**）・
 台帳 **388 点**（**ss 非ゼロ 86・総和 1.088457611**／**count 点 99・うち非ゼロ 2**）＝**残差は不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
@@ -294,11 +294,13 @@ Lily# フレット 0 1 3 5   弦 4 4 4 4   ← nearFret（直前 3）が |5−3|
 ので、**fixture を 1 冊足さないと「壊れても気づかない」規則が 2 つある**（⑩）。
 ★ **tab の残り 3 冊を土俵に乗せたいなら、直すのは弦選択ではなく fixture のほう**
 （`\N` で弦を固定する／固定した対を足す）。**これは描画が動く＝要承認。**
-★★ **⑤（オクターブのアンカーが MIDI と MusicXML に届いていない）**——**第67セッションで
-測り直して住所まで確定した**（§1 ⑤ に実測表）。**MIDI 側は設計判断が要らない**
-（`MidiExporter.PartOctaveAnchor` に clef の段を足すだけ＝ページの連鎖に揃える）。
-**MusicXML 側だけ判断が要る**（`<pitch>` を書かれた音高にして `<transpose>` を出すか、実音で出すか）。
-⚠️ **オクターブの裏取りに MIDI を使わないこと。**
+★★ **⑤ の残り＝MusicXML のオクターブと `<transpose>`**（**MIDI は `92727a74` で閉じた**・§1 ⑤）。
+**`MusicXmlExporter` は part のアンカーを一度も読まず、全部 C4**（`octave 3` でも `instrument flute` でも）。
+**`<transpose>` も一度も出さない**（`transposition 8vb` を明示しても）。
+⚠️ **着手前にユーザー判断が要る**: **`<pitch>` を書かれた音高にして `<transpose>` を出すか／実音で出すか。**
+★ **決まれば作業は小さい**——**アンカーは `InstrumentDefaults.AnchorOctave` を読むだけ**で、
+**絶対モード側は `AbsoluteBaseOctave`**（**2 つを畳むと `octave absolute` が壊れる**——MIDI で実証済み）。
+⚠️ **オクターブの裏取りに MIDI を使わないこと**（**非 treble はもう合っているが、習慣として**）。
 ★ **起票＝`DefaultBeamStemUp` の完全同数 tiebreak が LP と別物**（**今回名指しただけ・未測定**）。
 **LP は方向ごとに `max(-dir * head_positions[-dir], 0)` を足して平均で比べる**（`beam.cc:913-935`）／
 **Lily# は `BeamMember.StaffPosition`（＝和音の平均）の総和の符号**。
@@ -428,8 +430,8 @@ LP の連鎖に対して計算し直す**（`EmitChord` の relative 分岐）�
 ⚠️ **上行に書かれた和音（`<c e g>`）は marks ゼロのまま**——**テストの control**
 （そうしないと「全メンバーに marks を付ける exporter」でも通ってしまう）。
 
-## ⑤ ★★ **起票＝オクターブのアンカーが MIDI と MusicXML に届いていない**（**未修正**・
-**第67セッションで測り直し＝起票の当ては 2 つとも外れ**）
+## ⑤ ★★ **オクターブのアンカー＝MIDI は閉じた（`92727a74`）・MusicXML だけ残る**
+（**起票の当ては 2 つとも外れていた**）
 
 ★★★ **実測（`part m { … }` ＋ `section A { m { c4 d e f } }`・ページは SVG の譜位置と加線で確認）**:
 ```
@@ -441,10 +443,18 @@ instrument bass          C3    36 = C2  ✓（8vb）C4  ✗
 clef treble              C4    60       ✓     C4  ✓（偶然）
 instrument flute         C5    72 = C5  ✓     C4  ✗
 ```
-★★★ **MIDI の欠陥は「素の `clef` だけ」**——**`MidiExporter.PartOctaveAnchor`（:794-818）の連鎖が
-`octave N` → preset → **4** で、**clef の段が無い**。**ページの連鎖は
-`partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))`**
-（`LilyPondExporter` の :467 が字面で書いている）。**`ClefFromText` は同じファイルの :770-780 に既にある。**
+★★★ **MIDI の欠陥は「素の `clef` だけ」だった**——**連鎖に clef の段が無かった**。
+⇒ ★★★ **閉じた**（`92727a74`）: **連鎖は `InstrumentDefaults.AnchorOctave` の 1 軒になり**、
+**ページ側（`LilyPondExporter.AnchorOctaveOf`）と MIDI が同じものを読む**。
+**実測: 素の `clef bass` だけが 60 → 48 に動き、他の 5 形は不変。**
+⚠️⚠️ ★★★ **同じフィールドが 2 つのアンカーを兼ねていた**——**絶対モードは clef を見ない**
+（`OctaveContext`「clef default is deliberately NOT used here」）ので、
+**相対の種に clef を足した瞬間に `octave absolute` の part まで下がった**
+（**既存の shape テストが同じ run で捕まえた**）。⇒ **`_partAbsoluteBase` を別フィールドにし、
+`InstrumentDefaults.AbsoluteBaseOctave` が綴る**。**アルペジオ span も絶対側を書くのでそちらへ移した。**
+★ **観測者**: **5 行の Theory**（`PartOctaveAnchor_FollowsTheClefInRelativeModeOnly`）——
+**最後の 1 行が `octave absolute` の control で、2 つのアンカーをまた畳んだら落ちる**。
+★ **欠陥を固定していた既存テスト 2 本は理由つきで直した**（`48 → 36`）。
 ★★★ ⚠️ **起票の「MusicXML も同じ値＝collector より下流の共有経路」は誤り**——**別経路で、もっと広い**。
 **`MusicXmlExporter` は part ごとに `_currentOctave = 4`（:593）と `_octaveAnchor = 4`（:41）を置くだけで、
 part のオクターブアンカーを一度も読まない**。だから **`octave 3` を明示しても `instrument flute` でも C4**。
@@ -455,8 +465,10 @@ part のオクターブアンカーを一度も読まない**。だから **`oct
 （`clef bass transposition 8vb` → MIDI 48。**ページの実音 C2＝36 が正**）。
 ⚠️⚠️ **この起票の本当の重みは変わらない**——**第64セッションが MIDI を裏取りの第2経路に使った**。
 **非 treble の part では MIDI もページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
-⇒ **要る設計判断は 1 つだけ**: **MusicXML の `<pitch>` を「書かれた音高」とし、移調は `<transpose>` で
-出すのか**（MusicXML の規約）／**実音で出すのか**。**MIDI 側は判断不要＝ページに合わせるだけ。**
+⇒ **残っているのは MusicXML だけ**で、**要る設計判断も 1 つだけ**:
+**`<pitch>` を「書かれた音高」とし、移調は `<transpose>` で出すのか**（MusicXML の規約）／
+**実音で出すのか**。**決まれば ⒝⒞ は一緒に直る**（**アンカーは `InstrumentDefaults.AnchorOctave`
+を読むだけ・`_octaveAnchor` は `AbsoluteBaseOctave` 側**）。
 
 ## ⑥ ★★★ ~~**起票＝和音の上の記譜譜の梁が 1.0 ずれる**~~ — **閉じた**（第67セッション `249e487d`・§1）
 
