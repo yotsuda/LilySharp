@@ -1044,8 +1044,8 @@ public sealed class LilyPondExporter
         bool hasDegrees = c.Degrees.Any();
         if (hasDegrees && !_frameTracked)
             _warnings.Add(
-                "a degree chord follows a grace, a phrase reference or a voice span, whose "
-                + "octave frame this exporter does not track — check its octave by hand");
+                "a degree chord follows a voice span or a phrase reference, which leave the "
+                + "octave frame with a different answer on each side — check its octave by hand");
 
         // LilyPond's chain WITHIN the chord: each member is octaved against the one written
         // before it, so what a degree has to write depends on its neighbour, not on the root.
@@ -1343,9 +1343,13 @@ public sealed class LilyPondExporter
                 bodies.Add(body);
         }
 
-        // Every branch starts in the frame the span opened in — on both sides — but what the
-        // span hands OUT is not the same thing (LilyPond takes the first branch's last pitch,
-        // Lily# restores the frame the span opened in), so the frame stops being tracked here.
+        // ⚠️ THREE answers, measured — the frame stops being tracked here.
+        // `g4 g4 g4 g4 | voice { c'1 } voice { d1 }` puts that d at D4 on the page
+        // (MeasureCollector rebuilds voices 2..N in a FRESH frame at the part's default —
+        // EnterDefaultFrame), at D5 in this twin (LilyPond CHAINS the branches like chord
+        // members and hands the first one out — music-sequence.cc simultaneous_relative_callback)
+        // and at D3 in the MIDI (MidiExporter keeps the running frame). Voice 1 agrees
+        // everywhere; the disagreement is Lily#'s own and is not the exporter's to settle.
         _frameTracked = false;
 
         if (bodies.Count == 0)
@@ -1362,15 +1366,18 @@ public sealed class LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         CarryFrameInto(buf);
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
+        // ⚠️ The OCTAVE frame does NOT leak the way the duration does: the grace body advances
+        // it on BOTH sides, so it carries out like a tuplet's. MeasureCollector.CollectGraceNotes
+        // writes _octave.CurrentOctave per grace note and never restores it (the save/restore
+        // OctaveContext.Snapshot mentions is the parallel span's, not this). Measured, because
+        // the comment here used to claim the opposite: `a4 grace { e8 } c4` renders A3 E3 C3,
+        // and its twin reads A3 E3 C3 in LilyPond.
+        CarryFrameBack(buf);
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         // LilyPond carries the grace body's last duration out to the next event; Lily# does
         // not. See EmitEventDuration.
         _forceNextDuration = true;
-        // The OCTAVE leaks the same way and is not repaired here: LilyPond octaves the note
-        // after the grace against the grace's last pitch, Lily# against the note before it
-        // (MeasureCollector.CollectGraceNotes restores the frame). Not tracked past this point.
-        _frameTracked = false;
         return $"{kw} {{ {body} }}";
     }
 

@@ -443,13 +443,14 @@ public class LilyPondExporterTests
     }
 
     [Fact]
-    public void ADegreeChordAfterAGrace_IsReported_BecauseTheFrameIsNoLongerTracked()
+    public void ADegreeChordAfterAVoiceSpan_IsReported_BecauseTheFrameIsNoLongerTracked()
     {
-        // A grace body advances LilyPond's octave frame and not Lily#'s (the collector
-        // restores it), so past that point the anchor a degree would stack on is a guess.
+        // A voice span leaves the frame with three different answers — the page's, the
+        // twin's and the MIDI's (see EmitParallel) — so past that point the anchor a degree
+        // would stack on is a guess, and the guess is reported.
         var exporter = new LilyPondExporter();
-        exporter.Export(SyntaxTree.Parse(DegreeScore("grace { d8 } c4 <1 3 5>4")));
-        Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a grace"));
+        exporter.Export(SyntaxTree.Parse(DegreeScore("voice { c1 } voice { e1 } <1 3 5>4")));
+        Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a voice span"));
 
         // …and the ordinary book says nothing.
         var quiet = new LilyPondExporter();
