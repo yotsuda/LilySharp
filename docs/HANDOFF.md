@@ -294,8 +294,10 @@ Lily# フレット 0 1 3 5   弦 4 4 4 4   ← nearFret（直前 3）が |5−3|
 ので、**fixture を 1 冊足さないと「壊れても気づかない」規則が 2 つある**（⑩）。
 ★ **tab の残り 3 冊を土俵に乗せたいなら、直すのは弦選択ではなく fixture のほう**
 （`\N` で弦を固定する／固定した対を足す）。**これは描画が動く＝要承認。**
-★ **⑤（MIDI が `clef bass` の part で 1 オクターブ高い）**——**ページと MIDI のどちらが
-正しいかは設計判断**（memory は「最初 C4 最寄り」だが**ページは clef を見ている**）。
+★★ **⑤（オクターブのアンカーが MIDI と MusicXML に届いていない）**——**第67セッションで
+測り直して住所まで確定した**（§1 ⑤ に実測表）。**MIDI 側は設計判断が要らない**
+（`MidiExporter.PartOctaveAnchor` に clef の段を足すだけ＝ページの連鎖に揃える）。
+**MusicXML 側だけ判断が要る**（`<pitch>` を書かれた音高にして `<transpose>` を出すか、実音で出すか）。
 ⚠️ **オクターブの裏取りに MIDI を使わないこと。**
 ★ **起票＝`DefaultBeamStemUp` の完全同数 tiebreak が LP と別物**（**今回名指しただけ・未測定**）。
 **LP は方向ごとに `max(-dir * head_positions[-dir], 0)` を足して平均で比べる**（`beam.cc:913-935`）／
@@ -426,19 +428,35 @@ LP の連鎖に対して計算し直す**（`EmitChord` の relative 分岐）�
 ⚠️ **上行に書かれた和音（`<c e g>`）は marks ゼロのまま**——**テストの control**
 （そうしないと「全メンバーに marks を付ける exporter」でも通ってしまう）。
 
-## ⑤ ★ **起票＝MIDI が `clef bass` の part で 1 オクターブ高い**（**未修正・別系統**）
+## ⑤ ★★ **起票＝オクターブのアンカーが MIDI と MusicXML に届いていない**（**未修正**・
+**第67セッションで測り直し＝起票の当ては 2 つとも外れ**）
 
+★★★ **実測（`part m { … }` ＋ `section A { m { c4 d e f } }`・ページは SVG の譜位置と加線で確認）**:
 ```
-part m { clef bass }   section A { c4 d e f }
-ページ  C3 D3 E3 F3   （PNG で確認・双子 \relative c と一致）
-MIDI    60 62 64 65 ＝ C4 D4 E4 F4
+part                   ページ  MIDI          MusicXML
+clef bass                C3    60 = C4  ✗     C4  ✗
+clef bass octave 3       C3    48 = C3  ✓     C4  ✗
+octave 3                 C3    48       ✓     C4  ✗
+instrument bass          C3    36 = C2  ✓（8vb）C4  ✗
+clef treble              C4    60       ✓     C4  ✓（偶然）
+instrument flute         C5    72 = C5  ✓     C4  ✗
 ```
-★ **`instrument bass` では起きない**（preset が `octave 3` を埋めるので両者 3）。
-**`clef bass` だけだと `OctaveBase = partOctave ?? 4` が 4 のまま**なのが疑わしい
-（`MeasureCollector` :1001-1002 の 2 つのフィールド）。**MusicXML も同じ値を出す**＝**collector より
-下流の共有経路**。
-⚠️⚠️ **この起票の本当の重みは「第64セッションが MIDI を裏取りの第2経路に使った」こと**——
-**非 treble の part では MIDI はページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
+★★★ **MIDI の欠陥は「素の `clef` だけ」**——**`MidiExporter.PartOctaveAnchor`（:794-818）の連鎖が
+`octave N` → preset → **4** で、**clef の段が無い**。**ページの連鎖は
+`partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(clef))`**
+（`LilyPondExporter` の :467 が字面で書いている）。**`ClefFromText` は同じファイルの :770-780 に既にある。**
+★★★ ⚠️ **起票の「MusicXML も同じ値＝collector より下流の共有経路」は誤り**——**別経路で、もっと広い**。
+**`MusicXmlExporter` は part ごとに `_currentOctave = 4`（:593）と `_octaveAnchor = 4`（:41）を置くだけで、
+part のオクターブアンカーを一度も読まない**。だから **`octave 3` を明示しても `instrument flute` でも C4**。
+⚠️ **`clef treble` が合って見えるのは偶然**（既定が 4 だから）。
+★ **3 つ目**: **MusicXML は `<transpose>` を一度も出さない**——**`transposition 8vb` を明示しても
+`instrument bass` でも `<chromatic>` 無し**。⇒ **移調楽器の part は他ソフトで開くと実音が違う。**
+★ **`transposition` は MIDI には効いている**が、**アンカーが 4 のままなので結果は 1 オクターブ高い**
+（`clef bass transposition 8vb` → MIDI 48。**ページの実音 C2＝36 が正**）。
+⚠️⚠️ **この起票の本当の重みは変わらない**——**第64セッションが MIDI を裏取りの第2経路に使った**。
+**非 treble の part では MIDI もページと違う**。**オクターブは PNG かページ由来の量で確かめる。**
+⇒ **要る設計判断は 1 つだけ**: **MusicXML の `<pitch>` を「書かれた音高」とし、移調は `<transpose>` で
+出すのか**（MusicXML の規約）／**実音で出すのか**。**MIDI 側は判断不要＝ページに合わせるだけ。**
 
 ## ⑥ ★★★ ~~**起票＝和音の上の記譜譜の梁が 1.0 ずれる**~~ — **閉じた**（第67セッション `249e487d`・§1）
 
