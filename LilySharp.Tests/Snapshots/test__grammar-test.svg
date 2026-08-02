@@ -114,10 +114,10 @@
   <text x="6.66" y="17.68" font-size="2.20" data-pos="0">= 120</text>
   <rect x="0.30" y="11.46" width="6.27" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
   <text x="3.44" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
-  <rect x="28.88" y="14.77" width="6.82" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
-  <text x="32.29" y="16.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
-  <rect x="50.70" y="12.41" width="8.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
-  <text x="55.03" y="14.61" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
+  <rect x="28.88" y="14.77" width="6.65" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
+  <text x="32.20" y="16.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
+  <rect x="50.70" y="12.41" width="8.73" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
+  <text x="55.07" y="14.61" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
   <rect x="77.11" y="12.41" width="6.27" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
   <text x="80.25" y="14.61" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
   </g>

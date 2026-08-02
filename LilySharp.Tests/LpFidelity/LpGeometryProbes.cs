@@ -1788,6 +1788,11 @@ internal static class LpGeometryProbes
     /// <summary>A NEGATIVE one: −5 px, the same two glyphs, the other order of error.</summary>
     private static readonly string TAV = TextWidthScore("TAV", "AV");
 
+    /// <summary>The SAME PAIR REVERSED — and LilyPond's identity: it reads "VA" and "AV" as
+    /// the same 85 pixels, so any difference Lily# shows between the two is its own, with no
+    /// LilyPond term to explain it away.</summary>
+    private static readonly string TK3 = TextWidthScore("TK3", "VA");
+
     /// <summary>The ottava's string, in the weight a pair can reach: rounding +0.254 px and
     /// one pixel of kern.</summary>
     private static readonly string T8V = TextWidthScore("T8V", "8va");
@@ -7417,6 +7422,7 @@ internal static class LpGeometryProbes
         new("text.width.v1", TG2, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
         new("text.width.aa", TAA, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
         new("text.width.av", TAV, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.va", TK3, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
         new("text.width.8va", T8V, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
 
         // --- the FULLY BEAMED tuplet's number as staff-staff binding ink (TNB/TNC) ---

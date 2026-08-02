@@ -33,6 +33,16 @@
          (CI) needs the native asset package explicitly or every Skia
          call dies with DllNotFoundException: libSkiaSharp. -->
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
+    <!-- HarfBuzz is the SHAPER LilyPond itself measures text through (Pango calls it),
+         and pair kerning cannot be produced without one: SKPaint.MeasureText answers
+         per code point and has no notion of a pair. Ledger text.width.{aa,av,8va}
+         measured what that costs. Managed binding + the three desktop natives; the
+         drawing backends are untouched, this is the measuring path only.
+         See TextFontMetrics.Advance. -->
+    <PackageReference Include="HarfBuzzSharp" Version="8.3.1.3" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.3" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.3" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.3" />
   </ItemGroup>
 
   <!-- Include font files as content so they are copied to output -->

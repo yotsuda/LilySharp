@@ -144,22 +144,89 @@ public static class TextFontMetrics
             return 0;
         return AdvanceCache.GetOrAdd((sans, style, text, fontSize), static key =>
         {
-            var typeface = Face(key.Sans, key.Style);
-            using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
             double total = 0;
-            for (int i = 0; i < key.Text.Length;)
+            foreach (var (perEm, missingCodepoint) in ShapedAdvancesPerEm(key.Text, key.Sans, key.Style))
             {
-                int cp = char.ConvertToUtf32(key.Text, i);
-                int len = char.IsSurrogatePair(key.Text, i) ? 2 : 1;
-                double perEm = typeface.GetGlyph(cp) != 0
-                    ? paint.MeasureText(key.Text.Substring(i, len)) / 1000.0
-                    : MissingGlyphAdvance(cp);
-                total += QuantiseToPangoPixel(perEm * key.FontSize);
-                i += len;
+                double advance = missingCodepoint is int cp ? MissingGlyphAdvance(cp) : perEm;
+                total += QuantiseToPangoPixel(advance * key.FontSize);
             }
             return total;
         });
     }
+
+    /// <summary>
+    /// The string SHAPED: one entry per output glyph, its advance per em with the pair
+    /// adjustments already in it, and the source code point when the face has no glyph.
+    /// </summary>
+    /// <remarks>
+    /// This is the whole of what HarfBuzz is here for. LilyPond measures text through Pango,
+    /// which shapes with HarfBuzz and has the <c>kern</c> feature on, so its advances carry
+    /// pair adjustments; <c>SKPaint.MeasureText</c> answers per code point and cannot —
+    /// CHECKED before reaching for a dependency: MeasureText("8va") equals the sum of its
+    /// three characters, so nothing was being lost in Skia, it was never being asked.
+    /// MEASURED (audit/lp-geometry/probes/text-advance.ly): "AA" is 4 pixels wider than "A"
+    /// twice, "AAA" 8 (per pair), "AV" and "VA" 5 narrower, "VV" exactly twice "V".
+    /// <para>
+    /// ⚠️ SHAPED IN FONT UNITS, quantised by the CALLER. The scale is set to units-per-em so
+    /// what comes back is the design's own numbers, and each glyph's advance is snapped to a
+    /// Pango pixel afterwards — the order LilyPond's own pipeline has (FreeType hints the
+    /// advance, GPOS adjusts it, and the result is whole pixels either way; every width in
+    /// the probe is an exact multiple of one).
+    /// </para>
+    /// <para>
+    /// ⚠️ A MISSING GLYPH IS REPORTED, NOT MEASURED. The bundled Latin faces have no CJK, and
+    /// a shaper returns .notdef for those with the .notdef advance — the 0.28 em that used to
+    /// make a CJK lyric reserve a third of its width. The cluster maps back to the source
+    /// code point so <see cref="MissingGlyphAdvance"/> keeps deciding those.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<(double PerEm, int? MissingCodepoint)> ShapedAdvancesPerEm(
+        string text, bool sans, FontStyle style)
+    {
+        var (font, upem) = ShapingFont(sans, style);
+        using var buffer = new HarfBuzzSharp.Buffer();
+        buffer.AddUtf16(text);
+        buffer.GuessSegmentProperties();
+        lock (font)
+            font.Shape(buffer);
+        var infos = buffer.GlyphInfos;
+        var positions = buffer.GlyphPositions;
+        var result = new List<(double, int?)>(infos.Length);
+        for (int i = 0; i < infos.Length; i++)
+        {
+            int? missing = infos[i].Codepoint == 0
+                ? char.ConvertToUtf32(text, (int)infos[i].Cluster)
+                : null;
+            result.Add((positions[i].XAdvance / (double)upem, missing));
+        }
+        return result;
+    }
+
+    // One shaping font per face, built from the same bundled file the measuring and drawing
+    // paths already use (FontLocator), and shared: building a Face parses the tables.
+    // ⚠️ hb_font_t is not thread-safe for shaping, hence the lock above; the engine measures
+    // from parallel layout passes.
+    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style),
+        (HarfBuzzSharp.Font Font, uint UnitsPerEm)> ShapingFonts = new();
+
+    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm) ShapingFont(bool sans, FontStyle style)
+        => ShapingFonts.GetOrAdd((sans, style), static key =>
+        {
+            var file = FileName(key.Sans, key.Style);
+            var path = FontLocator.ResolveFile(file)
+                ?? throw new InvalidOperationException(
+                    $"Bundled text font '{file}' was not found. Text metrics come from the " +
+                    "bundled faces only — falling back to a system font would make the same " +
+                    "score lay out differently on different machines.");
+            var blob = HarfBuzzSharp.Blob.FromFile(path);
+            blob.MakeImmutable();
+            var face = new HarfBuzzSharp.Face(blob, 0);
+            uint upem = (uint)face.UnitsPerEm;
+            var font = new HarfBuzzSharp.Font(face);
+            font.SetScale((int)upem, (int)upem);
+            font.SetFunctionsOpenType();
+            return (font, upem);
+        });
 
     // Keyed by SIZE as well as string, because the snap makes the advance non-linear in the
     // size — one string at two sizes is two different pixel counts, not one number scaled.

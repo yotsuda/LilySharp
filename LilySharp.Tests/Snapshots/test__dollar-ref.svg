@@ -89,11 +89,11 @@
   <text class="music" x="4.88" y="17.20" font-size="3.56" data-pos="0"></text>
   <line x1="5.99" y1="17.03" x2="5.99" y2="14.52" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="6.66" y="17.68" font-size="2.20" data-pos="0">= 120</text>
-  <rect x="0.30" y="11.46" width="5.97" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
-  <text x="3.28" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
+  <rect x="0.30" y="11.46" width="6.00" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
+  <text x="3.30" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First</text>
   <rect x="34.38" y="14.77" width="8.66" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="368"/>
   <text x="38.71" y="16.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="368">Second</text>
-  <rect x="61.53" y="14.77" width="16.45" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
-  <text x="69.76" y="16.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
+  <rect x="61.53" y="14.77" width="16.52" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="322"/>
+  <text x="69.79" y="16.97" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="322">First (reprise)</text>
   </g>
 </svg>

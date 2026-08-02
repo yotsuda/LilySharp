@@ -329,3 +329,45 @@ probeTag =
   \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "VA" c'' c'' c'' |
                         c''4 c'' c'' c'' | c''1 \bar "|." } }
 }
+
+%% TM1..TM4 — THE A·A ANOMALY, added when the kerning port landed (2026-08-02). Shaping the
+%%     same strings through HarfBuzz — the shaper Pango itself calls — reproduced A·V and
+%%     "8va" to the last digit and gave A·A NO adjustment at all, and the face has no legacy
+%%     `kern` table either (its tables are CFF GPOS GSUB OS/2 cmap head hhea hmtx maxp name
+%%     post). So the +4 pixels TAA reads over two "A"s are NOT IN THE FONT, and a claim that
+%%     strong gets checked before it is believed rather than after (HANDOFF §5.0: 強い言明ほど
+%%     先に対を検算する). These four books ask what the term actually attaches to:
+%%       TM1 "An" / TM2 "nA" — is it any pair with an A, or the A·A pair?
+%%       TM3 "AAAA"          — does it stay +4 per pair at four (predicted 180 + 12 = 192
+%%                             if per pair, 4 x 47 = 188 if the A is simply wider in a run)?
+%%       TM4 \concat of two \italic "A" — the SAME two glyphs in TWO markup atoms. If the
+%%                             term survives that it is not a shaping term at all, because
+%%                             concat juxtaposes two independently shaped stencils.
+\book {
+  \probeTag "TM1"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "An" c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}
+
+\book {
+  \probeTag "TM2"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "nA" c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}
+
+\book {
+  \probeTag "TM3"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "AAAA" c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}
+
+\book {
+  \probeTag "TM4"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' |
+                        c''4^\markup \concat { \italic "A" \italic "A" } c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}

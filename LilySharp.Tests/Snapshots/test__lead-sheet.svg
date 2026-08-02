@@ -7,32 +7,32 @@
   <rect x="0" y="0" width="119.50" height="25.91" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="405">Lead sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="24.19" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="43.13" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="67.08" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="77.27" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="77.76" y="16.22" width="0.60" height="4.00" data-pos="0"/>
-  <text x="3.81" y="18.82" font-size="2.47" text-anchor="middle" data-pos="511">Twin</text>
-  <text x="11.38" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
-  <text x="16.79" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
-  <text x="21.86" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
-  <text x="27.73" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
+  <rect x="24.23" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="43.09" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="66.98" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="77.17" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="77.66" y="16.22" width="0.60" height="4.00" data-pos="0"/>
+  <text x="3.82" y="18.82" font-size="2.47" text-anchor="middle" data-pos="511">Twin</text>
+  <text x="11.42" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
+  <text x="16.83" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
+  <text x="21.90" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
+  <text x="27.77" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
   <text x="35.21" y="18.82" font-size="2.47" text-anchor="middle" data-pos="537">how</text>
-  <text x="40.41" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
-  <text x="46.74" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
-  <text x="53.70" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
-  <text x="62.96" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
-  <text x="70.30" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
-  <text x="3.13" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="458">C</text>
-  <text x="16.12" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="461">G7</text>
-  <text x="27.06" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="467">Am</text>
-  <text x="46.06" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="476">F</text>
-  <text x="55.22" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="479">G7</text>
-  <text x="69.63" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="485">C</text>
+  <text x="40.37" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
+  <text x="46.67" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
+  <text x="53.60" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
+  <text x="62.86" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
+  <text x="70.17" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
+  <text x="3.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="458">C</text>
+  <text x="16.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="461">G7</text>
+  <text x="27.09" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="467">Am</text>
+  <text x="46.00" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="476">F</text>
+  <text x="55.12" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="479">G7</text>
+  <text x="69.49" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="485">C</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
-  <line x1="7.78" y1="18.32" x2="8.58" y2="18.32" stroke="#000000" stroke-width="0.160"/>
-  <line x1="18.82" y1="18.32" x2="19.62" y2="18.32" stroke="#000000" stroke-width="0.160"/>
-  <line x1="50.04" y1="18.32" x2="50.84" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="7.83" y1="18.32" x2="8.63" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="18.85" y1="18.32" x2="19.65" y2="18.32" stroke="#000000" stroke-width="0.160"/>
+  <line x1="49.94" y1="18.32" x2="50.74" y2="18.32" stroke="#000000" stroke-width="0.160"/>
   </g>
 </svg>
