@@ -61,7 +61,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 2026-08-02（第68セッション＝**⑬⑴b＝光学サイズの「テーブル」を 8 デザインぶん焼いた**）。
 **閉じたもの**（**出力不変・承認不要のぶんだけ**）:
 ```
-⑬b 生成器の per-design 化   066b2f85   snapshot 0 枚・台帳不動   テスト +12
+⑬b 生成器の per-design 化       066b2f85   snapshot 0 枚・台帳不動   テスト +12
+⑬c サイズ付きフォント＋顔 8 枚  0bba0076   同上                     テスト +2
 ```
 ★★★ **入ったもの**: `GlyphMetricsGenerated.cs` が **8 つの `DesignMetrics`** を持つ——
 **BBox・skyline outline・advance・stem attachment を、そのデザイン自身の staff space で**。
@@ -82,34 +83,54 @@ HEAD fs=()  extent=(0.0 . 1.9619999999999997)   ← 全サイズの全音符＝�
 **14 のテーブル × magstep(-3) が 2e-7 で再現**（**テーブルは 6 桁丸め**）／**20 を縮小すると 0.004270 外す**
 ＝**`grace.column` の 12 点が運んでいる残差そのもの**。
 ⚠️ **`GraceNoteItem` の注は `0.922205` / `0.004266` と書いていた**（**どちらも末桁違い**）＝**実測に直した**。
-★★★ **⑵ のために測った 2 件**（**どちらも「描画をどう出すか」を決めるのに要る**）:
+★★★ **`GlyphMetrics.AtFontSize(step)` が「サイズ付きフォント」**＝**選ばれたデザインに magstep を
+既に掛けた表**（`DesignMetrics.Scaled` は生成器が全メンバーぶん出す）。⇒ **読み手は掛け算をしない**
+＝`modified-font-metric.cc:62-68` の 3 行そのもの。**⑵ はこの上に site を載せ替える作業。**
+★★★ **顔（描画用）も 8 枚そろえた**（`audit/scripts/Convert-EmmentalerWoff2.py`・**ユーザー決定 ⒜**）:
 ```
+emmentaler-{11,13,14,16,18,23,26}.woff2 を新規同梱（各 52KB／.otf は 103KB）
+20 の woff2 は*再生成しない*——中身は同じで byte が変わり、埋め込み SVG が全部変わるだけ（--all で再生成）
+⚠️ recalcTimestamp=False 必須：既定だと head.modified に現在時刻が入り、同じ入力で毎回別バイト
+   （52916 → 52788 を実際に踏んだ）
 8 デザインは cmap も glyph order も同一（差 0・各 664 グリフ）
   ⇒ コードポイント生成器（EmmentalerGlyphs.Generated.cs）は per-design 化 不要
-描画側は emmentaler-20.woff2 を 1 枚だけ base64 で埋めている（52KB → 約 70KB/SVG）
-  SvgDocumentContext.GetFontFaceRule ＋ PngGenerator.RegisterFont ＝ family 'Emmentaler' 1 つ
 ```
 ⚠️ ★ **⑵ が触る「縮尺」には magstep でない綴りが混じっている**——
 `EngravingDefaults.OssiaScale = 0.7071`（**4 桁丸め**・magstep(-3) は 0.70710678）・
 `ArticulationEngraver.EditorialScale = 0.7937`・**cue の 0.66**（`SharedRenderer.Noteheads` ほか・
 **LP の出所が見えない**）。**テーブルを繋ぐ前にこの 3 つの出所を決めること。**
-**未 push 77**（**この引継ぎ commit まで数えた値**）・
-テスト **3836 passed / 0 failed / 3 skipped**（**+12**）・
+**未 push 79**（**この引継ぎ commit まで数えた値**）・
+テスト **3838 passed / 0 failed / 3 skipped**（**+14**）・
 台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
 ## ▶ 次の一手
 
-★★★ **⑬⑵＝scaled な経路を「1 つの決定」に繋ぐ**（**grace → ossia → cue**・**§1 の第67セッション ⑬ に段取り**）。
-⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（**ユーザー指摘＝「そもそも同じグリフを選ぶべき」**）。
-⇒ ★★★ **着手前にユーザー決定が 1 つ要る＝描画側のフェイスをどう出すか**:
+★★★ **⑬⑵＝scaled な経路を `AtFontSize` に載せ替える**（**grace → ossia → cue**）。
+**ユーザー決定は 2 つとも出ている**（2026-08-02）:
 ```
-⒜ 残り 7 デザインを woff2 に変換し、その本が使うデザインだけ埋める（+約 70KB/SVG・
-   fontTools と brotli は Python 3.13 に入っている）
-⒝ .otf をそのまま埋める（変換不要・さらに大きい）
-⒞ 使うグリフだけ subset して焼く（最小・道具が要る）
+⒜ 顔は woff2・その本が使うデザインだけ埋める          ← 資産は ⑬c で同梱済み
+⒝ 丸め済みの縮尺も同じ島で LP の magstep に直す        OssiaScale 0.7071 / EditorialScale 0.7937
+   ⚠️ cue の 0.66 は LP の出所が見えないので別途調べてから（決定に含まれない）
+```
+⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（**ユーザー指摘＝「そもそも同じグリフを選ぶべき」**）
+＝**1 つの経路はメトリクスと描画を同時に載せ替える**。
+★★★ **grace の site は数えてある**（**着手時はまず実コードで再確認**）:
+```
+メトリクス  SpacingRules.GraceHeadEnd:1982（← ここ 1 つで台帳 12 点が動く）/
+            GraceColumnRightReach:2000-2003（旗）/ GraceColumnLeftReach:2024（臨時記号・scale 引数）
+            GraceNoteEngraver:338（頭の中心）/360-362（旗）/203・280（BeamScoringProblem の headScale）
+描画        SharedRenderer.GraceNotes:98（加線幅）/104-106（臨時記号）/107-109（頭）
+道具の穴    GlyphMetrics.GetNoteheadBBox / GetFlagBBox は平の定数固定
+              ⇒ font を受ける overload が要る（Design20 を既定にすれば既存 site は不変）
+            AccidentalColumn.CalculateSinglePosition(scale) は内部で 20 を掛けている
+            IDrawingContext.DrawNotehead に「どの顔で描くか」の口が無い（family は .music 固定）
+            SvgDocumentContext.GetFontFaceRule は body より前に @font-face を書く
+              ⇒ 「使ったデザイン」を集めてから書く形に変える必要がある
 ```
 ★ **⑵ は出力が動く**（**grace 列が 0.004270 狭くなる ⇒ spacing ⇒ snapshot**）＝**要承認**。
+★ **台帳は `grace.column.*` の 12 点＋`beam.quant.grace.*`**（**`residual 0.004270045` を持つ点が観測者**・
+**閉じたら why に「⑬ で閉じた」と書いて residual を更新する**）。
 ★ **⑶ 残りのサイズと snapshot 再ベース（要承認）**。
 ★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
 **触るなら fixture 側（`\N` で弦を固定）**。**描画が動く＝要承認。**
