@@ -850,6 +850,18 @@ internal static partial class GlyphMetrics
         /// (scm/lily-library.scm:1702-1710 feta-design-size-mapping).</remarks>
         public double DesignSize { get; init; }
 
+        /// <summary>The magnification this table has ALREADY been read at — 1.0 for a
+        /// design's own table, magstep(font-size) for what <see cref="AtFontSize"/>
+        /// hands back.</summary>
+        /// <remarks>A font is a design AND a magnification, not one of the two
+        /// (lily/modified-font-metric.cc:44-56 holds <c>orig_</c> and
+        /// <c>magnification_</c> side by side). Boxes here are scaled already; this is
+        /// for the dimensions that are NOT in this table and have to be read from the
+        /// same face by hand — the glyph OUTLINE skylines
+        /// (GlyphMetrics.AccidentalSkylinePair), which a caller scales itself because
+        /// a skyline is mutable and every seat wants its own copy.</remarks>
+        public double Magnification { get; init; } = 1.0;
+
         /// <summary>Whole notehead — BBox (LILC bbox).</summary>
         public BBox NoteheadWhole { get; init; }
         /// <summary>Whole notehead — the box its SKYLINE is built from (glyph outline).</summary>
@@ -1364,6 +1376,7 @@ internal static partial class GlyphMetrics
         {
             Rounded = Rounded,
             DesignSize = DesignSize,
+            Magnification = Magnification * magnification,
             NoteheadWhole = new(NoteheadWhole.Left * magnification, NoteheadWhole.Bottom * magnification,
                 NoteheadWhole.Right * magnification, NoteheadWhole.Top * magnification),
             NoteheadWholeOutline = new(NoteheadWholeOutline.Left * magnification, NoteheadWholeOutline.Bottom * magnification,

@@ -649,6 +649,18 @@ def main() -> int:
     lines.append("        /// (scm/lily-library.scm:1702-1710 feta-design-size-mapping).</remarks>")
     lines.append("        public double DesignSize { get; init; }")
     lines.append("")
+    lines.append("        /// <summary>The magnification this table has ALREADY been read at — 1.0 for a")
+    lines.append("        /// design's own table, magstep(font-size) for what <see cref=\"AtFontSize\"/>")
+    lines.append("        /// hands back.</summary>")
+    lines.append("        /// <remarks>A font is a design AND a magnification, not one of the two")
+    lines.append("        /// (lily/modified-font-metric.cc:44-56 holds <c>orig_</c> and")
+    lines.append("        /// <c>magnification_</c> side by side). Boxes here are scaled already; this is")
+    lines.append("        /// for the dimensions that are NOT in this table and have to be read from the")
+    lines.append("        /// same face by hand — the glyph OUTLINE skylines")
+    lines.append("        /// (GlyphMetrics.AccidentalSkylinePair), which a caller scales itself because")
+    lines.append("        /// a skyline is mutable and every seat wants its own copy.</remarks>")
+    lines.append("        public double Magnification { get; init; } = 1.0;")
+    lines.append("")
     for kind, name, summary, _get in members:
         lines.append(f"        /// <summary>{summary}</summary>")
         lines.append(f"        public {csharp_type[kind]} {name} {{ get; init; }}")
@@ -668,6 +680,7 @@ def main() -> int:
     lines.append("        {")
     lines.append("            Rounded = Rounded,")
     lines.append("            DesignSize = DesignSize,")
+    lines.append("            Magnification = Magnification * magnification,")
     for kind, name, _summary, _get in members:
         if kind == "bbox":
             lines.append(f"            {name} = new({name}.Left * magnification, {name}.Bottom * magnification,")
