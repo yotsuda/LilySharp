@@ -502,7 +502,7 @@ public class StaffSkylineFrameTests
             OneStaff(note),
             ties: ImmutableArray.Create(new TieLayout(
                 tie, startX: 5.0, startY: y, endX: 30.0, endY: y,
-                control1: (12.0, y - dip), control2: (23.0, y - dip))));
+                control1: (12.0, y - dip), control2: (23.0, y - dip), curveUp: false)));
 
         // The cubic reaches 3/4 of the way to its interior controls at the midpoint, and
         // those controls are pushed a further half-thickness out before it is sampled.

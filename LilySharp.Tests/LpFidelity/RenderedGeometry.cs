@@ -1355,6 +1355,29 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How wide bow <paramref name="index"/> comes out — end to end, which is LilyPond's
+    /// <c>control-points</c> [3].x − [0].x.
+    /// </summary>
+    /// <remarks>
+    /// The span is the whole attachment question in one number: LilyPond reads the column's
+    /// chord-outline skyline at the tie's own Y, so a tie that clears its heads attaches at
+    /// the head CENTRES and a tie running alongside a head, a neighbouring head or a stem
+    /// attaches at their EDGES — a difference of one notehead per end. Bows are indexed in
+    /// draw order (ties bottom to top within a chord, then along the staff).
+    /// </remarks>
+    public double BowSpan(int index, int page = 0)
+    {
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return bows[index].P1.X - bows[index].P0.X;
+    }
+
+    /// <summary>
     /// One reading per beam GROUP: the group's OUTERMOST beam line, which is what LilyPond's
     /// <c>positions</c> describes. Shared by the five-line and the tab readers.
     /// </summary>

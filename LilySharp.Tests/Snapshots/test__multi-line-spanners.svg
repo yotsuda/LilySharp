@@ -106,7 +106,7 @@
   <rect x="101.34" y="54.57" width="0.19" height="4.00" data-pos="635"/>
   <rect x="101.83" y="54.57" width="0.60" height="4.00" data-pos="635"/>
   <path d="M 89.93,35.32 C 91.26,36.16 100.90,36.16 102.23,35.32 C 100.90,36.28 91.26,36.28 89.93,35.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 3.57,46.79 C 4.06,47.25 5.11,47.25 5.60,46.79 C 5.11,47.37 4.06,47.37 3.57,46.79 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 3.57,47.32 C 4.17,47.86 5.65,47.86 6.25,47.32 C 5.65,47.98 4.17,47.98 3.57,47.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 9.54,21.02 C 13.06,18.95 98.60,17.11 102.13,19.02 C 98.60,17.23 13.07,19.07 9.54,21.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 3.67,30.02 C 6.40,28.40 27.70,29.99 30.42,32.02 C 27.69,30.11 6.39,28.52 3.67,30.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="56.32" y="49.88" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>

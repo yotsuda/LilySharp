@@ -31,7 +31,15 @@ internal sealed record TieLayout : BowLayout
     public Model.TieItem Tie { get; }
 
     /// <summary>Direction: true = curve up, false = curve down.</summary>
-    public override bool CurveUp => Tie.CurveUp;
+    /// <remarks>
+    /// The direction the SEARCH settled on, not one the tie arrived carrying: an ordinary
+    /// tie reaches <see cref="TieFormattingProblem"/> with none
+    /// (<see cref="Model.TieItem.ForcedCurveUp"/> null) and every candidate is a direction as
+    /// much as a position. This used to read <c>Tie.CurveUp</c>, which meant that whenever
+    /// the scorer chose the other way the drawn bow and this flag disagreed — and the flag is
+    /// what the skyline and the renderer's taper read.
+    /// </remarks>
+    public override bool CurveUp { get; }
 
     public TieLayout(
         Model.TieItem tie,
@@ -41,10 +49,12 @@ internal sealed record TieLayout : BowLayout
         double endY,
         (double X, double Y) control1,
         (double X, double Y) control2,
+        bool curveUp,
         bool isBrokenLeft = false,
         bool isBrokenRight = false)
         : base(startX, startY, endX, endY, control1, control2, isBrokenLeft, isBrokenRight)
     {
         Tie = tie;
+        CurveUp = curveUp;
     }
 }

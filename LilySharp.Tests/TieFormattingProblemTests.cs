@@ -36,10 +36,17 @@ public class TieFormattingProblemTests
     private static NoteItem CreateNote(int staffPosition) =>
         new(staffPosition, Fraction.Quarter, 0, null, false, 0);
 
+    /// <summary>
+    /// A tie with its direction IMPOSED, which is what these fixtures need: they assert the
+    /// shape a given direction produces, and an ordinary tie now arrives with no direction at
+    /// all and lets the search pick one (see <see cref="TieItem.ForcedCurveUp"/>). Which
+    /// direction the search picks is held by the ledger books
+    /// <c>tie.direction.*</c>, not here.
+    /// </summary>
     private static TieItem CreateTie(int staffPosition, bool curveUp = true)
     {
         var note = CreateNote(staffPosition);
-        return new TieItem(note, note, staffPosition, curveUp, 0, 0, 0, 1);
+        return new TieItem(note, note, staffPosition, forcedCurveUp: curveUp, 0, 0, 0, 1);
     }
 
     [Fact]
@@ -174,8 +181,8 @@ public class TieFormattingProblemTests
         // CurveUp tie should be penalized if it curves toward the dot.
         var startNote = new NoteItem(0, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
         var endNote = CreateNote(0);
-        var tieUp = new TieItem(startNote, endNote, 0, curveUp: true, 0, 0, 0, 1);
-        var tieDown = new TieItem(startNote, endNote, 0, curveUp: false, 0, 0, 0, 1);
+        var tieUp = new TieItem(startNote, endNote, 0, forcedCurveUp: true, 0, 0, 0, 1);
+        var tieDown = new TieItem(startNote, endNote, 0, forcedCurveUp: false, 0, 0, 0, 1);
 
         // With dot, the solver should favor the direction that avoids the dot
         var problemUp = new TieFormattingProblem(tieUp, 5, 15, 5, 15, 2, startDots: 1);
@@ -214,7 +221,7 @@ public class TieFormattingProblemTests
         // CurveUp should be affected if tie attachment is near position 1.
         var startNote = new NoteItem(1, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
         var endNote = CreateNote(1);
-        var tie = new TieItem(startNote, endNote, 1, curveUp: true, 0, 0, 0, 1);
+        var tie = new TieItem(startNote, endNote, 1, forcedCurveUp: true, 0, 0, 0, 1);
 
         var problem = new TieFormattingProblem(tie, 5, 15, 5, 15, 1.5, startDots: 1);
         var layout = problem.Solve();

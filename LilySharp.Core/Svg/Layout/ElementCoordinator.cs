@@ -1050,6 +1050,12 @@ internal sealed class ElementCoordinator
                 // We supply both anchors; the scorer picks per candidate. See TieFormattingProblem.GetAttachment.
                 double segStartX;
                 double segStartCenterX;
+                // The bound HEAD's own X extent, which the horizontal-distance term reads and
+                // the attachment does not: LilyPond's outline carries the head's dots and its
+                // stem, its head_x carries neither (tie-formatting-problem.cc:670 against
+                // :103-140). Null on a side with no head — a piece broken at a system edge.
+                (double Left, double Right)? startHead = null;
+                (double Left, double Right)? endHead = null;
                 if (segment.IsFirst)
                 {
                     // The item X is the head's LEFT edge; seconds displacement follows the head.
@@ -1074,6 +1080,7 @@ internal sealed class ElementCoordinator
                     // Head centre — dots are NOT subtracted (they sit on the note line, off the
                     // cleared tie Y, so LilyPond's outline recedes past them to the head centre).
                     segStartCenterX = startBase + advance / 2.0;
+                    startHead = (startBase, startBase + advance);
                 }
                 else
                 {
@@ -1093,7 +1100,9 @@ internal sealed class ElementCoordinator
                         ? 1
                         : tie.EndNote.BaseDuration.Denominator;
                     segEndX = endBase;                                                      // inner (left) edge of the right head
-                    segEndCenterX = endBase + GlyphMetrics.GetNoteheadAdvance(endNoteValue) / 2.0; // right head centre
+                    double endAdvance = GlyphMetrics.GetNoteheadAdvance(endNoteValue);
+                    segEndCenterX = endBase + endAdvance / 2.0;                             // right head centre
+                    endHead = (endBase, endBase + endAdvance);
                 }
                 else
                 {
@@ -1124,6 +1133,12 @@ internal sealed class ElementCoordinator
                     // does not apply to fret digits), so keep the edge/centre rule a no-op here.
                     segStartCenterX = segStartX;
                     segEndCenterX = segEndX;
+                    // ...and for the same reason there is no head extent to measure the
+                    // horizontal distance against: a TabNoteHead is a digit, not a NoteHead,
+                    // and Lily# chooses a tab tie's side from the STRING anyway (below), which
+                    // is a Lily#-own feature and not something LilyPond is asked about.
+                    startHead = null;
+                    endHead = null;
                     // On a tab the tie connects two fret digits on ONE string, so it
                     // belongs on that string's line — NOT at the notation pitch height.
                     // It curves OPPOSITE the stem: below the digits when the stem
@@ -1148,9 +1163,12 @@ internal sealed class ElementCoordinator
                     double clearance = 0.36 * TabConstants.FretFontSize + 0.1; // ~0.54 sp at font 2.6
                     bool stemUp = tie.StartNote.StemUp;
                     y = digitY + (stemUp ? clearance : -clearance);
-                    // Curve opposite the stem (constructor-set property, no `with`).
+                    // Curve opposite the stem (constructor-set property, no `with`). On a tab
+                    // this IS a decision and is IMPOSED — a Lily#-own feature (the tie belongs
+                    // to a string line, not to a pitch), so it does not go through the scored
+                    // search the notation staff's ties now use.
                     tieForProblem = new TieItem(
-                        tie.StartNote, tie.EndNote, tie.StaffPosition, curveUp: !stemUp,
+                        tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: !stemUp,
                         tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex);
                 }
                 else
@@ -1179,17 +1197,63 @@ internal sealed class ElementCoordinator
                         && tl.Tie.StartItemIndex == tie.StartItemIndex)
                     .ToList();
 
+                // The two bound stems, which decide the direction whenever they AGREE
+                // (TieFormattingProblem.ScoreDirectionAgainstStems). Read at each BOUND, not
+                // once at the start note: LilyPond asks both heads (
+                // tie-formatting-problem.cc:687-697), and the two disagreeing is what the
+                // whole port is about. A piece broken at a system edge has no head on the
+                // broken side, so no stem either.
+                bool? startStemUp = segment.IsFirst
+                    ? BoundStemUp(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex)
+                    : null;
+                bool? endStemUp = segment.IsLast
+                    ? BoundStemUp(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex)
+                    : null;
+
                 var problem = new TieFormattingProblem(
                     tieForProblem, segStartX, segEndX, segStartCenterX, segEndCenterX, y,
                     existingTies: columnTies,
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
-                    isBrokenRight: !segment.IsLast);
+                    isBrokenRight: !segment.IsLast,
+                    startHead: startHead,
+                    endHead: endHead,
+                    startStemUp: startStemUp,
+                    endStemUp: endStemUp);
                 tieLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }
 
         return tieLayouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Which way the stem of the note/chord at (<paramref name="measureIndex"/>,
+    /// <paramref name="itemIndex"/>) points, or null when it has no stem to point.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:687-697 score_aptitude — the tie's scorer
+    /// takes the stem off each bound head and keeps it only if <c>Stem::is_normal_stem</c>,
+    /// which a whole note's is not. Null therefore means "this bound casts no vote", not "down".
+    /// </remarks>
+    private static bool? BoundStemUp(Voice voice, int measureIndex, int itemIndex)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return null;
+        var items = voice.Measures[measureIndex].Items;
+        if (itemIndex < 0 || itemIndex >= items.Length)
+            return null;
+
+        bool stemUp;
+        Fraction baseDuration;
+        switch (items[itemIndex])
+        {
+            case NoteItem n: stemUp = n.StemUp; baseDuration = n.BaseDuration; break;
+            case ChordItem c: stemUp = c.StemUp; baseDuration = c.BaseDuration; break;
+            default: return null;   // rest / spacer — no stem
+        }
+        // Whole notes (value 1) and breves have no stem, as in ResolveSlurEdge.
+        return GlyphMetrics.NoteValueOf(baseDuration) >= 2 ? stemUp : null;
     }
 
     /// <summary>

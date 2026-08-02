@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="310.3" viewBox="0 0 119.50 31.03" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="316.7" viewBox="0 0 119.50 31.67" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-14'; src: local('Emmentaler-14'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="31.03" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="31.67" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="111">Ornaments &amp; Techniques</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="145">Lily# Showcase</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -137,7 +137,7 @@
   <rect x="94.37" y="16.80" width="0.19" height="4.00" data-pos="676"/>
   <rect x="101.34" y="16.80" width="0.19" height="4.00" data-pos="720"/>
   <rect x="101.83" y="16.80" width="0.60" height="4.00" data-pos="720"/>
-  <path d="M 40.99,25.02 C 41.30,25.30 41.81,25.30 42.12,25.02 C 41.81,25.42 41.30,25.42 40.99,25.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 40.30,25.55 C 40.87,26.07 42.20,26.07 42.77,25.55 C 42.20,26.19 40.87,26.19 40.30,25.55 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 30.48,24.34 C 31.77,25.12 35.16,24.27 36.48,22.84 C 35.19,24.39 31.80,25.24 30.48,24.34 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="48.44" y1="15.45" x2="48.44" y2="16.15" stroke="#000000" stroke-width="0.160" data-pos="425"/>
   <line x1="48.44" y1="15.45" x2="49.38" y2="15.20" stroke="#000000" stroke-width="0.160" data-pos="425"/>

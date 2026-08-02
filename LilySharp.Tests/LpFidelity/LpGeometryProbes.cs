@@ -3317,23 +3317,92 @@ internal static class LpGeometryProbes
         TieDirectionBook("d,4~ d,8. a,,16 d,8 d, b,,4 |", "TDBEAM");
 
     /// <summary>
-    /// <see cref="TDBEAM"/> with that beam FORCED down, so both stems agree. LilyPond: UP.
+    /// <see cref="TDBEAM"/> with that beam pointing DOWN instead, so both stems agree.
+    /// LilyPond: UP.
     /// </summary>
     /// <remarks>
-    /// Same notes, same spacing, same first stem — only the second note's stem direction
-    /// differs, and now <c>same-dir-as-stem-penalty</c> 8 fires against every DOWN
-    /// configuration and the base wins by that margin instead of losing by 0.02.
+    /// The tie is held fixed — same two notes, same position, same first stem, same bar
+    /// shape — and only the beam turns over, because the sixteenth it is beamed to sits
+    /// ABOVE the group's centre of gravity here instead of below it. Now
+    /// <c>same-dir-as-stem-penalty</c> 8 fires against every DOWN configuration and the base
+    /// wins by that margin instead of losing by 0.02.
     /// <para>
-    /// ⚠️ THE TWIN CARRIES ONE HAND EDIT, for the reason given on <see cref="TDFRC"/>:
-    /// <c>lysc ly</c> drops <c>@stemDown</c> as well.
+    /// ⚠️ THE BEAM IS TURNED BY ITS OWN PITCHES AND NOT BY <c>@stemDown</c>, deliberately.
+    /// That annotation does NOT reach a beamed note: <c>BeamDetector</c> takes the group's
+    /// direction from the pitches (or from a polyphonic voice) and
+    /// <c>MeasureCollector.ResolveBeamStemDirections</c> then stamps it over every member's
+    /// <c>StemUpOverride</c>. A book written that way would have an UP beam here and a DOWN
+    /// beam in the twin — not a pair at all, which is how it was first written and what the
+    /// debug dump caught. MEASURED: LilyPond gives <c>\stemDown</c> and the higher sixteenth
+    /// the SAME card, so nothing is lost by choosing the spelling both engines can express.
+    /// The dropped annotation is a separate defect, recorded in HANDOFF 1.
     /// </para>
     /// <para>
     /// LilyPond twin: score TDBEAMD,
-    /// <c>\fixed c' { d,4 ~ \stemDown d,8. a,,16 \stemNeutral d,8 d, b,,4 }</c>.
+    /// <c>\fixed c' { d,4 ~ d,8. b,16 d,8 d, b,,4 }</c>.
     /// </para>
     /// </remarks>
     private static readonly string TDBEAMD =
-        TieDirectionBook("d,4~ d,8.@stemDown a,,16@stemDown d,8 d, b,,4 |", "TDBEAMD");
+        TieDirectionBook("d,4~ d,8. b,16 d,8 d, b,,4 |", "TDBEAMD");
+
+    // ------------------------------------------------------------------------------
+    // HOW WIDE A TIE COMES OUT, which is the direction question seen from the other side.
+    //
+    // The attachment is Y-DEPENDENT: LilyPond reads the column's chord-outline skyline at the
+    // tie's own Y (tie-formatting-problem.cc:73-94 get_attachment), and that outline is built
+    // from EVERY box the column has — each head, the dots, the stem, the flag (:96-287
+    // set_column_chord_outline) — with a recession box added ABOVE the topmost head and BELOW
+    // the bottommost one that stands at the head CENTRE rather than its edge (:243-258).
+    //
+    // ⚠️ LILY# KNOWS ONLY THIS TIE'S OWN HEAD BOX, and these books are what says so. It was
+    // invisible while every short tie took the narrow attachment anyway; correcting the height
+    // quantity (BezierBow.MidpointHeight) moved several ties out of their own box, and the
+    // gap became legible — one book toward LilyPond, one exact, one away from it.
+
+    private static string TieWidthBook(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// A single tie whose scored endpoint CLEARS its own head box, so both ends recede to the
+    /// head centres. LilyPond: 2.602245 wide.
+    /// </summary>
+    /// <remarks>
+    /// The regime the corrected height quantity moved this engine INTO — before it, the tie
+    /// took the narrow edge attachment and came out one notehead short.
+    /// <para>LilyPond twin: score TWCLR of tie-direction.ly, <c>\fixed c' { c4 ~ c4 d2 }</c>.</para>
+    /// </remarks>
+    private static readonly string TWCLR = TieWidthBook("c4~ c4 d2 |", "TWCLR");
+
+    /// <summary>
+    /// A chord of tied SECONDS. Its LOWER tie clears everything below and takes the centre
+    /// attachment (LilyPond 3.875445); its UPPER tie runs past the chord's STEM and is pulled
+    /// back to it (LilyPond 2.986745).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PAIR IS THE POINT, and only one half of it can be right here. Both ties span the
+    /// same two columns and differ by 0.888700 in LilyPond, all of it the stem: the upper
+    /// tie's card reads <c>rhdist=2.19</c>, i.e. its right end sits 0.399 OUTSIDE the head,
+    /// which is <c>get_stem_extent (…)[-d] - d * stem-gap</c> (tie-formatting-problem.cc:583-609,
+    /// <c>stem-gap</c> 0.35). Lily# has no stem in its outline and no such pull-back, so it
+    /// gives the two ties the same span and one of them has to be wrong.
+    /// <para>LilyPond twin: score TWSEC, <c>\fixed c' { &lt;c d&gt;2 ~ &lt;c d&gt;2 }</c>.</para>
+    /// </remarks>
+    private static readonly string TWSEC = TieWidthBook("<c d>2~ <c d>2 |", "TWSEC");
 
     /// <summary>
     /// The slur pair (<see cref="SD"/>/<see cref="SU"/>) again with a TIE — the adjacent
@@ -8048,6 +8117,14 @@ internal static class LpGeometryProbes
         new("tie.direction.forced-stems-up", TDFRC, g => g.SoleBowDirection()),
         new("tie.direction.beam-opposes-stem", TDBEAM, g => g.SoleBowDirection()),
         new("tie.direction.beam-agrees-with-stem", TDBEAMD, g => g.SoleBowDirection()),
+
+        // ...and how wide the tie comes out, which is the same Y-dependent attachment read as
+        // a distance. TWSEC's two ties span the SAME two columns and LilyPond makes them
+        // differ by 0.888700 — all of it the chord's stem, which Lily#'s outline does not
+        // have. See the probe sources above.
+        new("tie.width.clears-head", TWCLR, g => g.BowSpan(0)),
+        new("tie.width.seconds.lower", TWSEC, g => g.BowSpan(0)),
+        new("tie.width.seconds.upper", TWSEC, g => g.BowSpan(1)),
 
         // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
         // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s

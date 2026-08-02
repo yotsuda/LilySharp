@@ -119,6 +119,19 @@ public sealed record TieDetails
     /// </summary>
     public double SameDirAsStemPenalty { get; init; } = 8.0;
 
+    /// <summary>
+    /// Which way a tie curves when nothing else decides — when no direction was imposed on
+    /// it and it sits ON the middle line, so the sign of its position says nothing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-details.cc:43-46 <c>neutral_direction_</c>, read from the grob's
+    /// <c>neutral-direction</c> and floored at DOWN when unset; scm/define-grobs.scm:3899
+    /// declares the Tie's as UP. It is the LAST resort in
+    /// <c>set_ties_config_standard_directions</c> (tie-formatting-problem.cc:1039-1041),
+    /// reached only after <c>sign (position)</c> comes out zero.
+    /// </remarks>
+    public bool NeutralDirectionUp { get; init; } = true;
+
     // --- Length penalties ---
 
     /// <summary>

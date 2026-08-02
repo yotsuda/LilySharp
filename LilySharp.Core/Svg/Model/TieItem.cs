@@ -32,8 +32,28 @@ public sealed record TieItem
     /// <summary>Staff position of the tie (same as notes).</summary>
     public int StaffPosition { get; }
 
-    /// <summary>Direction of the tie curve (up or down).</summary>
-    public bool CurveUp { get; }
+    /// <summary>
+    /// A direction imposed on the tie before it is placed — <c>true</c> up, <c>false</c>
+    /// down — or <c>null</c> to let <see cref="Layout.TieFormattingProblem"/> decide.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-specification.cc:41-51 <c>Tie_specification::from_grob</c> —
+    /// LilyPond takes a direction from the grob only when <c>direction</c> holds a NUMBER
+    /// (<c>has_manual_dir_</c>), i.e. when something set it: <c>\voiceOne</c>/<c>\voiceTwo</c>
+    /// (ly/engraver-init.ly), <c>\tieUp</c>, or the Tie_column's own distribution over a
+    /// chord's ties. The default is the callback <c>ly:tie::calc-direction</c>, which is not
+    /// a number, so an ordinary tie arrives with NO direction and the scored search decides
+    /// (lily/tie-formatting-problem.cc:1004-1023 generate_optimal_configuration).
+    /// <para>
+    /// ⚠️ THIS USED TO BE A PLAIN <c>bool</c> SET AT COLLECTION TIME from the FIRST note's
+    /// stem, and that rule is not LilyPond's — measured, it gives the same answer to two bars
+    /// LilyPond answers oppositely (audit/lp-geometry <c>tie.direction.beam-opposes-stem</c>
+    /// and <c>tie.direction.beam-agrees-with-stem</c>, the same music with the second note's
+    /// beam reversed). <c>Tie::get_default_dir</c> reads like that rule and is not it either:
+    /// lily/tie.cc:203-208 only calls it for a BROKEN piece.
+    /// </para>
+    /// </remarks>
+    public bool? ForcedCurveUp { get; }
 
     /// <summary>Measure index where the tie starts.</summary>
     public int StartMeasureIndex { get; }
@@ -57,7 +77,7 @@ public sealed record TieItem
         NoteItem startNote,
         NoteItem endNote,
         int staffPosition,
-        bool curveUp,
+        bool? forcedCurveUp,
         int startMeasureIndex,
         int endMeasureIndex,
         int startItemIndex,
@@ -67,7 +87,7 @@ public sealed record TieItem
         StartNote = startNote;
         EndNote = endNote;
         StaffPosition = staffPosition;
-        CurveUp = curveUp;
+        ForcedCurveUp = forcedCurveUp;
         StartMeasureIndex = startMeasureIndex;
         EndMeasureIndex = endMeasureIndex;
         StartItemIndex = startItemIndex;

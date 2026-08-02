@@ -62,6 +62,32 @@ internal static class BezierBow
     }
 
     /// <summary>
+    /// The bow's own MIDPOINT height — how far the drawn curve actually rises at its middle,
+    /// which is three quarters of the control-point <see cref="Height"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-configuration.cc:80-87 <c>Tie_configuration::height</c> —
+    /// <c>slur_shape (l, height_limit, ratio).curve_point (0.5)[Y_AXIS]</c>, i.e. the shape
+    /// EVALUATED at its middle and not the control point that shapes it. With
+    /// <c>slur_shape</c>'s ends at Y 0 and both middle controls at Y <c>h</c>
+    /// (lily/bezier-bow.cc:126-131), a cubic reads <c>(0 + 3h + 3h + 0) / 8 = 0.75 h</c>
+    /// there.
+    /// <para>
+    /// ⚠️ THE DIFFERENCE IS NOT COSMETIC. Every LilyPond test written against
+    /// <c>conf-&gt;height ()</c> — the intra-space branch that decides whether a tie is
+    /// nudged off a staff line or kept clear of one at its top
+    /// (tie-formatting-problem.cc:530-560), the curve-top reading in
+    /// <c>score_configuration</c> (:759) — reads THIS, and using the control height instead
+    /// makes a bow measure 4/3 of its real rise. A tie 3.6 staff spaces wide rises 0.517 and
+    /// its control sits at 0.689: one is under the 0.625 threshold and the other is over it,
+    /// so the two answers are different BRANCHES and not merely different numbers.
+    /// audit/lp-geometry <c>tie.direction.beam-opposes-stem</c> is the book that says so.
+    /// </para>
+    /// </remarks>
+    public static double MidpointHeight(double heightLimit, double ratio, double width)
+        => 0.75 * Height(heightLimit, ratio, width);
+
+    /// <summary>
     /// Horizontal indent of the control points from the bow ends.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/bezier-bow.cc:109-118 get_slur_indent_height()</remarks>

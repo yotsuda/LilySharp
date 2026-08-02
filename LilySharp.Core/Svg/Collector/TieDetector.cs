@@ -52,13 +52,21 @@ internal sealed class TieDetector
                     };
                     if (note != null)
                     {
-                        // Polyphony fixes the tie direction by voice; a single
-                        // voice curves opposite the stem.
-                        bool curveUp = VoiceScan.SpanCurvesUp(score.Voices.Length, v, !startNote.StemUp);
+                        // Polyphony fixes the tie direction by voice — that is a grob
+                        // property LilyPond really does set (\voiceOne/\voiceTwo,
+                        // ly/engraver-init.ly), so it arrives at the placement as a MANUAL
+                        // direction. A single voice hands over NOTHING: LilyPond's ordinary
+                        // Tie carries the callback ly:tie::calc-direction, not a number, and
+                        // the direction falls out of the scored search
+                        // (lily/tie-formatting-problem.cc:1004-1023). See TieItem.ForcedCurveUp
+                        // for what used to be here and what measured it wrong.
+                        bool? forcedCurveUp = score.Voices.Length > 1
+                            ? VoiceScan.SpanCurvesUp(score.Voices.Length, v, singleVoiceFallback: true)
+                            : null;
                         ties.Add(new TieItem(
                             startNote, note,
                             startNote.StaffPosition,
-                            curveUp,
+                            forcedCurveUp,
                             measureIdx, endMeasureIdx,
                             itemIdx, endItemIdx,
                             voiceIndex: v));
@@ -160,12 +168,21 @@ internal sealed class TieDetector
     /// Emits the chord's ties with LilyPond's standard direction assignment:
     /// the bottom tie curves DOWN, the top tie UP, adjacent seconds split
     /// (lower DOWN / upper UP), and remaining inner ties follow the sign of
-    /// their staff position (middle line → DOWN). A single matched tie keeps
-    /// the stem-opposite default.
+    /// their staff position (middle line → DOWN). A single matched tie is a
+    /// column of ONE and hands no direction over at all.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc
-    /// set_ties_config_standard_directions.
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:1026-1084 set_ties_config_standard_directions
+    /// <para>
+    /// ⚠️ A ONE-TIE COLUMN TAKES THE OTHER BRANCH. LilyPond's own distribution reads
+    /// <c>if (tie_configs-&gt;size () == 1) front.dir_ = Direction (sign (front.position_))</c>
+    /// and falls to <c>neutral_direction_</c> from there (:1036-1041) — it does NOT read a
+    /// stem, and the search that follows can still move it. So a chord whose single matching
+    /// pitch ties is left unforced here and decided by <see cref="Layout.TieFormattingProblem"/>,
+    /// exactly like a plain note-to-note tie. It is only the MULTI-tie distribution above
+    /// that is a decision this collector has to make, because Lily# solves a column's ties
+    /// one at a time rather than as one Ties_configuration.
+    /// </para>
     /// </remarks>
     private static void EmitChordTies(
         List<(ChordNoteInfo Start, NoteItem End)> matched,
@@ -194,7 +211,8 @@ internal sealed class TieDetector
         }
         else if (matched.Count == 1)
         {
-            dirs[0] = !startChord.StemUp;
+            // A column of one: no direction is imposed (see the remarks).
+            dirs[0] = null;
         }
         else
         {
@@ -225,7 +243,7 @@ internal sealed class TieDetector
             ties.Add(new TieItem(
                 SynthesizeNote(startPitch, startChord), endNote,
                 startPitch.StaffPosition,
-                dirs[i]!.Value,
+                dirs[i],
                 startMeasureIdx, endMeasureIdx,
                 startItemIdx, endItemIdx,
                 voiceIndex: voiceIndex));

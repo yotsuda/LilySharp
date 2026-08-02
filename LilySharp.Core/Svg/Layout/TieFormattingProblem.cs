@@ -26,7 +26,20 @@ internal sealed class TieCandidate
 {
     public double StartX { get; set; }
     public double EndX { get; set; }
+
+    /// <summary>
+    /// The bow's MIDPOINT height — LilyPond's <c>Tie_configuration::height</c>, the quantity
+    /// every branch and every score reads. See <see cref="BezierBow.MidpointHeight"/>.
+    /// </summary>
     public double Height { get; set; }
+
+    /// <summary>
+    /// The bezier CONTROL points' height, which is what the drawn curve is built from
+    /// (<c>slur_shape</c>'s <c>control_[1..2]</c>) and is four thirds of
+    /// <see cref="Height"/>. Only <see cref="TieFormattingProblem.CreateLayout"/> wants it.
+    /// </summary>
+    public double ControlHeight { get; set; }
+
     public bool CurveUp { get; set; }
 
     /// <summary>
@@ -76,6 +89,16 @@ internal sealed class TieFormattingProblem
     private readonly int _startDots;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
+    // The two bound NOTE HEADS' X extents, and the two bound STEMS' directions (true = up).
+    // Null on a side that has neither -- a piece broken at a system edge, or a tab digit,
+    // which is not a NoteHead at all. LilyPond skips exactly the same sides:
+    // score_aptitude's loops read spec.note_head_drul_[d] and bail when it is null
+    // (tie-formatting-problem.cc:665-668, :690-691), and a stem enters only through
+    // Stem::is_normal_stem, which a whole note has none of.
+    private readonly (double Left, double Right)? _startHead;
+    private readonly (double Left, double Right)? _endHead;
+    private readonly bool? _startStemUp;
+    private readonly bool? _endStemUp;
 
     public TieFormattingProblem(
         TieItem tie,
@@ -88,7 +111,11 @@ internal sealed class TieFormattingProblem
         IReadOnlyList<TieLayout>? existingTies = null,
         int startDots = 0,
         bool isBrokenLeft = false,
-        bool isBrokenRight = false)
+        bool isBrokenRight = false,
+        (double Left, double Right)? startHead = null,
+        (double Left, double Right)? endHead = null,
+        bool? startStemUp = null,
+        bool? endStemUp = null)
     {
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
@@ -101,6 +128,10 @@ internal sealed class TieFormattingProblem
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
         _startDots = startDots;
+        _startHead = startHead;
+        _endHead = endHead;
+        _startStemUp = startStemUp;
+        _endStemUp = endStemUp;
     }
 
     // ---------------------------------------------------------------
@@ -113,7 +144,16 @@ internal sealed class TieFormattingProblem
     /// </summary>
     // Bow arc height / control-point indent: the shared bezier-bow math, bound to
     // this tie's height-limit and ratio. See BezierBow (LilyPond bezier-bow.cc).
+    //
+    // ⚠️ TWO HEIGHTS, AND LILYPOND MEANS THE FIRST ONE EVERYWHERE BUT THE STENCIL.
+    // Tie_configuration::height is the shape evaluated at its MIDDLE (0.75 of the control
+    // height); slur_shape's control_[1..2] is what the drawn bezier is built from. This
+    // engine had only the second and tested the first against it — see
+    // BezierBow.MidpointHeight for what that costs.
     private double CalculateTieHeight(double width) =>
+        BezierBow.MidpointHeight(_details.HeightLimit, _details.Ratio, width);
+
+    private double CalculateControlHeight(double width) =>
         BezierBow.Height(_details.HeightLimit, _details.Ratio, width);
 
     private double CalculateIndent(double width) =>
@@ -187,6 +227,11 @@ internal sealed class TieFormattingProblem
         }
 
         // Find best configuration (lowest demerits)
+        // ⚠️ MinBy KEEPS THE FIRST MINIMUM, and the base configuration is generated first —
+        // which is LilyPond's tie-break, not an accident of LINQ. find_best_variation seeds
+        // `best` with the base and replaces it only on a STRICTLY smaller score
+        // (tie-formatting-problem.cc:978-998), and audit/lp-geometry
+        // tie.direction.beam-opposes-stem is decided by 0.02, so the rule is legible there.
         var best = candidates.MinBy(c => c.Demerits) ?? candidates[0];
 
         return CreateLayout(best);
@@ -207,17 +252,25 @@ internal sealed class TieFormattingProblem
     private List<TieCandidate> GenerateCandidates()
     {
         // LILYPOND-REF: lily/tie-formatting-problem.cc:1120-1151
-        // generate_single_tie_variations — the base configuration sits AT the
-        // note's staff position with the tie's default direction; variations
-        // walk outward one half-space at a time, in BOTH directions, with the
-        // walk direction doubling as the candidate's curve direction.
+        // generate_single_tie_variations — variations walk outward from the BASE
+        // configuration one half-space at a time, in BOTH directions, with the walk
+        // direction doubling as the candidate's curve direction.
         int notePos = _tie.StaffPosition;
         double staffMiddleY = _y + notePos * 0.5; // page Y of the middle line
-        int defaultDir = _tie.CurveUp ? +1 : -1;       // LP convention: up = +1
+        int defaultDir = BaseDirection();
+
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:964-966 generate_base_chord_configuration
+        // — the base configuration does NOT sit at the note's own position: it steps
+        // it one half-space DIRWARDS (position_ += dir_) once the standard directions are
+        // in, and every variation is measured from THERE. This engine used to start at the
+        // note position, which shifted the whole candidate set by one and left LilyPond's
+        // (position + dir, -dir) neighbour -- the one a stem or a dot most often drives the
+        // answer onto -- out of the search altogether.
+        int basePos = notePos + defaultDir;
 
         var candidates = new List<TieCandidate>
         {
-            GenerateConfiguration(notePos, defaultDir, notePos, staffMiddleY),
+            GenerateConfiguration(basePos, defaultDir, notePos, staffMiddleY),
         };
 
         int regionSize = (_existingTies != null && _existingTies.Count > 0)
@@ -230,11 +283,42 @@ internal sealed class TieFormattingProblem
             {
                 if (i == 0 && d == defaultDir)
                     continue;
-                candidates.Add(GenerateConfiguration(notePos + i * d, d, notePos, staffMiddleY));
+                // A direction imposed on the tie admits only its own candidates.
+                // LILYPOND-REF: tie-formatting-problem.cc:1138-1139 has_manual_dir_ —
+                //   !specifications_[0].has_manual_dir_ || d == manual_dir_.
+                if (_tie.ForcedCurveUp is { } forced && d != (forced ? +1 : -1))
+                    continue;
+                candidates.Add(GenerateConfiguration(basePos + i * d, d, notePos, staffMiddleY));
             }
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// The base configuration's direction: the one imposed on the tie if there is one, else
+    /// the sign of its staff position, else <c>neutral-direction</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:1026-1045 set_ties_config_standard_directions
+    /// — for a column of ONE this is
+    /// <c>Direction (sign (front.position_))</c> and then <c>details_.neutral_direction_</c>
+    /// when that is zero; lily/tie-details.cc:43-46 reads <c>neutral-direction</c>, which the
+    /// Tie declares UP (scm/define-grobs.scm:3899).
+    /// <para>
+    /// ⚠️ NO STEM IS READ HERE, and that is the point of the port. The stems reach the answer
+    /// only as a PENALTY, in <see cref="ScoreAptitude"/>, and only when the two bounds agree
+    /// about them.
+    /// </para>
+    /// </remarks>
+    private int BaseDirection()
+    {
+        if (_tie.ForcedCurveUp is { } forced)
+            return forced ? +1 : -1;
+        int bySign = Math.Sign(_tie.StaffPosition);
+        if (bySign != 0)
+            return bySign;
+        return _details.NeutralDirectionUp ? +1 : -1;
     }
 
     /// <summary>
@@ -309,13 +393,10 @@ internal sealed class TieFormattingProblem
                     else if (withinStaff)
                     {
                         // center_tie_vertically: center = (edge + middle)/2 where
-                        // edge = curve_point(0) = 0 and middle = curve_point(0.5).
-                        // Our control points sit at ±height (slur_shape control_[1..2]),
-                        // so the bezier midpoint is 0.75*height, NOT height itself.
-                        // LILYPOND-REF: lily/tie-configuration.cc:37-44 center_tie_vertically;
-                        //               lily/bezier-bow.cc:127-130 slur_shape.
-                        double middleY = 0.75 * height;
-                        deltaY = -dir * middleY / 2.0;
+                        // edge = curve_point(0) = 0 and middle = curve_point(0.5) — which is
+                        // exactly `height` here (BezierBow.MidpointHeight).
+                        // LILYPOND-REF: lily/tie-configuration.cc:36-45 center_tie_vertically.
+                        deltaY = -dir * height / 2.0;
                     }
                 }
                 else
@@ -340,7 +421,9 @@ internal sealed class TieFormattingProblem
         // LILYPOND-REF: tie-formatting-problem.cc:563-581.
         double curveYFromMiddle = y + deltaY;        // sp, up+ from the middle line
         var (attachStartX, attachEndX) = GetAttachment(curveYFromMiddle);
-        double finalHeight = CalculateTieHeight(WidthAt(curveYFromMiddle));
+        double finalWidth = WidthAt(curveYFromMiddle);
+        double finalHeight = CalculateTieHeight(finalWidth);
+        double finalControlHeight = CalculateControlHeight(finalWidth);
         // Native page Y-up attachment. The whole vertical model is Y-up (= -device);
         // the middle line sits at page-Y-up -staffMiddleY (staffMiddleY is the middle
         // line's device Y, reconstructed from the caller's device anchor), and the
@@ -354,6 +437,7 @@ internal sealed class TieFormattingProblem
             StartX = attachStartX,
             EndX = attachEndX,
             Height = finalHeight,
+            ControlHeight = finalControlHeight,
             CurveUp = dir > 0,
             AttachmentY = attachmentY,
             Position = pos,
@@ -487,16 +571,94 @@ internal sealed class TieFormattingProblem
             config.Demerits += p;
         }
 
-        // --- Direction preference (same dir as stem) ---
-        // LILYPOND-REF: tie-formatting-problem.cc:687-720
-        if (config.CurveUp != _tie.CurveUp)
+        // --- Horizontal distance penalty ---
+        // LILYPOND-REF: tie-formatting-problem.cc:665-683 score_aptitude — one reading per END: the
+        // distance from that bound's NOTE HEAD extent to the attachment LilyPond has just
+        // computed for this candidate, amplified by convex_amplifier (1.25, 1.0, d).
+        //
+        // ⚠️ THIS IS WHAT MAKES THE ATTACHMENT'S Y-DEPENDENCE COST SOMETHING. A candidate
+        // inside the head's one-space box attaches at the head's INNER EDGE and is then
+        // inset by note-head-gap, which lands it note-head-gap OUTSIDE the head: 1.01 per
+        // end at the defaults. One that clears the box attaches at the head CENTRE, which
+        // stays inside the head and costs nothing. Without this term every candidate scores
+        // the same for it and the whole edge/centre distinction is invisible to the search
+        // -- which is how it stood: TieDetails.HorizontalDistancePenaltyFactor was declared
+        // (and asserted by a test) and never read. audit/lp-geometry
+        // tie.direction.beam-opposes-stem is decided by 2.02 against 2.04 and is the book
+        // that says so.
+        foreach (var (head, attachment) in new[]
+                 {
+                     (_startHead, config.StartX),
+                     (_endHead, config.EndX),
+                 })
         {
-            config.Demerits += _details.SameDirAsStemPenalty;
+            if (head is not { } h)
+                continue;   // no head on this side (broken piece, tab digit)
+            double gap = attachment < h.Left ? h.Left - attachment
+                       : attachment > h.Right ? attachment - h.Right
+                       : 0.0;
+            config.Demerits += _details.HorizontalDistancePenaltyFactor
+                               * BezierBow.ConvexAmplifier(1.25, 1.0, gap);
         }
+
+        // --- Direction preference (same dir as stem) ---
+        ScoreDirectionAgainstStems(config, dir);
 
         // --- Tie-tie collision ---
         // LILYPOND-REF: tie-formatting-problem.cc:847-912 score_ties_configuration()
         ScoreTieTieCollision(config);
+    }
+
+    /// <summary>
+    /// Charges <c>same-dir-as-stem-penalty</c> when a candidate curves the way the tie's
+    /// stems point — reading BOTH bounds, and only when they agree about it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:685-718 score_aptitude — the four-branch
+    /// chain: one stem present decides alone; two stems decide only when they AGREE
+    /// (:705-708); otherwise the tie's own POSITION is asked instead (:709-710), and a tie on
+    /// the middle line (position 0) reaches neither, so nothing at all is charged and the
+    /// answer falls to the distance terms.
+    /// <para>
+    /// ⚠️ THE FALL-THROUGH IS NOT AN OVERSIGHT TO TIDY UP, it is the case this port exists
+    /// for. <c>d4~ d8.</c> with that eighth beamed to a lower note has the left stem down and
+    /// the right one up, and LilyPond charges nothing — so the tie goes DOWN on a 0.02 margin
+    /// in a narrow bar and UP in a wide one. audit/lp-geometry
+    /// <c>tie.direction.beam-opposes-stem</c> / <c>...beam-agrees-with-stem</c> are the same
+    /// music with that beam reversed, and LilyPond answers them oppositely.
+    /// </para>
+    /// <para>
+    /// ⚠️ SKIPPED WHEN A DIRECTION IS IMPOSED, where LilyPond skips it when the COLUMN holds
+    /// more than one tie (<c>ties_conf-&gt;size () == 1</c>, :685). The two agree on the
+    /// outcome: an imposed direction admits only its own candidates
+    /// (<see cref="GenerateCandidates"/>), so this term would be the same constant on all of
+    /// them and could not move the winner. A chord's ties are exactly the ties Lily# imposes
+    /// a direction on, which is why the gate can be stated on this side.
+    /// </para>
+    /// </remarks>
+    private void ScoreDirectionAgainstStems(TieCandidate config, int dir)
+    {
+        if (_tie.ForcedCurveUp is not null)
+            return;
+
+        int? left = _startStemUp is { } l ? (l ? +1 : -1) : null;
+        int? right = _endStemUp is { } r ? (r ? +1 : -1) : null;
+
+        bool stemDirOk = true;
+        bool positionDirOk = true;
+        if (left is { } lv && right is null)
+            stemDirOk = dir != lv;
+        else if (left is null && right is { } rv)
+            stemDirOk = dir != rv;
+        else if (left is { } lv2 && right is { } rv2 && lv2 == rv2)
+            stemDirOk = dir != lv2;
+        else if (_tie.StaffPosition != 0)
+            positionDirOk = dir == Math.Sign(_tie.StaffPosition);
+
+        if (!stemDirOk)
+            config.Demerits += _details.SameDirAsStemPenalty;
+        if (!positionDirOk)
+            config.Demerits += _details.SameDirAsStemPenalty;
     }
 
     /// <summary>
@@ -520,14 +682,14 @@ internal sealed class TieFormattingProblem
         if (_existingTies == null || _existingTies.Count == 0)
             return;
 
-        // Edge = attachment; center = bezier midpoint = LP curve_point(0.5). With
-        // control points at ±Height (slur_shape), the midpoint is 0.75*Height off
-        // the edge — using the full Height overstated the center whenever stacked
-        // ties differ in height. LILYPOND-REF: lily/tie-formatting-problem.cc:860.
+        // Edge = attachment; center = bezier midpoint = LP curve_point(0.5), which IS
+        // config.Height (BezierBow.MidpointHeight) — three quarters of the control height,
+        // and using the control height instead overstated the center whenever stacked ties
+        // differ in height. LILYPOND-REF: lily/tie-formatting-problem.cc:858-861 score_ties_configuration
         double configEdgeY = config.AttachmentY;
         double configCenterY = config.CurveUp
-            ? config.AttachmentY + 0.75 * config.Height
-            : config.AttachmentY - 0.75 * config.Height;
+            ? config.AttachmentY + config.Height
+            : config.AttachmentY - config.Height;
 
         foreach (var existing in _existingTies)
         {
@@ -589,7 +751,10 @@ internal sealed class TieFormattingProblem
         // negation. An up curve's control sits ABOVE the attachment (larger Y-up),
         // so directedHeight is +Height up / -Height down. DrawBow flips to device once.
         double baseYUp = config.AttachmentY;
-        double directedHeightUp = config.CurveUp ? config.Height : -config.Height;
+        // The CONTROL height here — this builds the drawn bezier, and slur_shape's
+        // control_[1..2] is what a Tie's stencil is made of (lily/tie.cc:154-188
+        // get_default_control_points -> get_transformed_bezier).
+        double directedHeightUp = config.CurveUp ? config.ControlHeight : -config.ControlHeight;
 
         var control1 = (X: config.StartX + indent, Y: baseYUp + directedHeightUp);
         var control2 = (X: config.EndX - indent, Y: baseYUp + directedHeightUp);
@@ -602,6 +767,7 @@ internal sealed class TieFormattingProblem
             baseYUp,
             control1,
             control2,
+            curveUp: config.CurveUp,
             isBrokenLeft: _isBrokenLeft,
             isBrokenRight: _isBrokenRight);
     }
