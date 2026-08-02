@@ -116,9 +116,9 @@ MISMATCH          0 冊
 **前 median 1540 ms / 後 1527 ms**＝**差はノイズの中**。⚠️ プロセス全体の時間なので数 ms は見えない。
 
 **未 push 104**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
-テスト **3870 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
+テスト **3880 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
 オクターブ監査の `ProbeSourceDump` ＝**手で回す前段**で、Lily# については何も主張しない）・
-台帳 **398 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
+台帳 **403 点**（**ss 非ゼロ 76・総和 1.295801634**＝cue 5 点を開いたぶん増えた／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
 ## ▶ 次の一手
@@ -148,15 +148,46 @@ da159be4  cue { } / cue <clef> { } ・@cue 廃止・\new CueVoice 出力   snaps
 950a75c7  LYS4013 入れ子禁止 / LYS4014 cue 内 voice 禁止・テスト 8 本
 ⇒ **描画は 1 バイトも動いていない**（data-pos を伏せると snapshot は完全一致）。CueScale=0.66 は据え置き。
 ```
-★★ **残り 2 件**（ユーザー指示・**未着手**）:
 ```
-⑴ MusicXML の <cue/> import。現在は ReadNote が "cue note dropped." で捨てている
-   ＝連続する cue 音符を範囲にまとめて cue { } を出す。**壊れるものは無い**（今は捨てているので）。
-⑵ **0.66 → per-design font-size**（LP と同じにする）。**描画が動く＝台帳点を先に開く＋要承認**。
-   測定済み: cue 符頭 0.815348908（原寸 1.304200）／cue ♯ 0.692956577（原寸 1.100000）
-   ⚠️ **1 つのスカラーでは両方出せない**——♯ の比だけが magstep(-4)=0.629961、符頭は 0.625172。
-   ⚠️ **cue の中の grace は font-size −7.0**（context −4 と grace −3 が合成）。どのデザインかは**未測定**。
+b2c01d78  MusicXML <cue/> import。連続する cue 音符の最大区間ごとに 1 つの cue { }
+0e3c43db  cue の台帳点 5 つを起票（予測を why に先書き）。コード変更なし・描画不変
 ```
+★★★ **残り＝`CueScale = 0.66` → per-design font-size の移植（③）。点は開いてある。**
+```
+cue.column.control          3.002244999   EXACT で開いた ← dowry。**動いたら移植が島の外に届いている**
+cue.column.step             2.513393907   +0.488851092
+cue.column.main-to-cue      2.898044999   +0.104200000
+cue.accidental.to-notehead  1.042956577   +0.033043423
+cue.grace.column.to-main    1.377510498   +0.561116717
+```
+★★★ **開けて分かったのは「0.66 が違う」より深い 3 つ**（各 `why` に予測つきで記録済み）:
+```
+⑴ **Lily# の間隔は cue を全く知らない**。cue.column.step は 3.002244999 ＝ 対照と 9 桁一致で、
+   残差は 1.304200 − 0.815348908 **そのもの**（符頭幅の項がまるごと不在）。縮むのは**描画だけ**。
+⑵ **臨時記号は既に半分 LP 準拠**。Lily# = 0.350000 + 1.100000×0.66 ＝ padding は LP のもの
+   （第70セッションで移植済み）で、**グリフだけ**が 0.66。
+⑶ **cue の中の grace は「ただの grace」**。1.938627215 は grace.column.single.to-main の
+   1.938627065 と 7 桁一致＝font-size −7 への合成が**ミススケールでなく丸ごと不在**。
+```
+★★★ **移植の道具は全部そろっている**（grace の島が敷いた）。⚠️ **1 つのスカラーでは出せない**——
+♯ の比だけが magstep(−4)=0.629961、符頭は 0.625172。**設計は「font-size を渡してフォントを引く」**:
+```
+EngravingDefaults.CueFontSizeStep = -4.0        （ly/engraver-init.ly の字面）
+GlyphMetrics.AtFontSize(step)                    既存。design 選択＋magstep まで済んだ表を返す
+GlyphMetrics.AtFontSize(-4)  → design 13        cue の符頭・臨時記号
+GlyphMetrics.AtFontSize(-7)  → design 11        cue の中の grace（**検算済み**:
+   Design11.NoteheadBlack.Width 1.289478 × magstep(-7) = 0.574397 ≒ LP 実測 0.574399405）
+gc.MusicFace(design) + font.Magnification        描画側（grace が同じ形で使っている）
+```
+⚠️ **触る場所**（第72セッションで数えた）: `SharedRenderer.Noteheads.cs` **11 か所**／
+`SharedRenderer.Connectors.cs` 1／`ElementCoordinator.cs` 3（うち `CueAccidentalFont` は
+**コード自身が「まだ AtFontSize(-4) でない」と書いてある**）／`ChordHeadPositioning.CalculateOffsets`
+の `headScale`／**そして間隔側は新規**（`SpacingRules.ApplyLeftHeadWidth` の
+`GetNoteheadBBox(GetNoteValue(p)).Right`・`CalculateNoteheadRightExtent`・`CalculateLeftExtent`・
+`ItemSkylineFactory`）。
+⚠️⚠️ **半端に止めないこと**——**測るフォントと描くフォントが割れた状態が最悪**で、grace の島が
+まさにそれを潰すために存在する（`grace.column.accidental.step` の `why`）。第72セッションは
+着手して**この分量を確認した時点で作業ツリーを緑に戻した**（点は commit 済み・コードは無傷）。
 ★ **実装中に見つかった 2 つ**（どちらも「読んで」ではなく「動かして」出た・commit メッセージに詳細）:
 `IsInsideProcessedContainer` に cue を入れ忘れると**範囲が平坦化されて全部原寸**（症状は font-size だけ）／
 `MeasureDurations.ItemDuration` は cue を**実時間として数える**必要がある（grace と違う。忘れると LYS2006）。
