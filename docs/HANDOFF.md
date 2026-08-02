@@ -64,6 +64,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ⑬⑵ grace の光学サイズ        c25f74c0  snapshot 9 枚  台帳 11 点が EXACT・テスト +3
 ⑬⑵ 編集臨時記号（font-size −2） d9d0c5f5  snapshot 1 枚  台帳 3 点を新規起票（LP 実測）
 ⑬⑶ advance → extent（3 site） 8f4f019b  snapshot 29 枚 台帳 4 点が EXACT
+cue の出所を見つけた            e52a13fb  snapshot 0 枚  出力不変（定数 1 か所化＋事実の記録）
 ```
 ★★★ **⑬⑶＝LP は符頭に何かを当てるとき hmtx の advance を読まない**——**必ず extent**
 （1.304200 対 1.304000）。**Lily# は 3 か所で advance を読んでいて、それは 1 つの claim だった**
@@ -119,7 +120,7 @@ PNG が 2 つのデザインに同じ file を返したら落ちる点。**Skia 
 ★★★ **3 点が同じ −0.000100 を読んだのが手がかりだった**——**グリフで変わらない残差はグリフではない**。
 **⇒ `grace.column` の島は `accidental.step` を除いて全部 EXACT**（残りは per-design skyline 待ち）。
 ★★ **見つけたが直していない**＝**旗つき下向き符尾の draw ≠ reserve**（▶ に起票・注記はコード側）。
-**未 push 88**（**この引継ぎ commit まで数えた値**）・
+**未 push 90**（**この引継ぎ commit まで数えた値**）・
 テスト **3844 passed / 0 failed / 3 skipped**（**+6**）・
 台帳 **391 点**（**ss 非ゼロ 73・総和 0.126242320**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
@@ -168,6 +169,11 @@ TextFontMetrics.MusicGlyphPath(glyph, design) 縦 skyline の outline（実行�
 旗つき下向き符尾の予約が符頭の左端から始まる（描画は符尾＝左端+0.065）＝draw ≠ reserve。
   ItemSkylineFactory の該当行に注記あり。⚠️ 直すとコーパス 30 冊が 0.02 動く。
   ⇒ **LP に「旗つき下向き符尾の列」を訊く点を開いてから**（probes/jn-line-forces.ly が近い）。
+⚠️ ★ 点の設計に注意：**ふつうの 8 分音符 2 つでは旗が床を binding しない**（ばねの ideal が
+  ink より広いので、旗の予約が何ミリ動いても列間は動かない＝**何も観測しない点**になる）。
+  **GCW1 と同じ作り方**をすること＝**床が決める texture**（詰まった行・32 分・次の列に臨時記号）を
+  選び、**「この点は floor を読んでいる」ことを本文で先に確かめる**（grace-column-width.ly の
+  ヘッダが手本）。
 ```
 ★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
 **触るなら fixture 側（`\N` で弦を固定）。描画が動く＝要承認。**
