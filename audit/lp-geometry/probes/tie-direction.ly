@@ -118,6 +118,20 @@ dump = #(define-music-function (tag) (string?)
   \fixed c' { d,4 ~ d,8. b,16 d,8 d, b,,4 \bar "|." } }
   \layout { debug-tie-scoring = ##t } }
 
+%% ...and the SAME notes as TDBEAM with the beamed eighth's stem TURNED BY HAND. The beam
+%% does not simply follow it: with a forced stem in the group LilyPond stops using the
+%% farthest-head rule and takes a VOTE (beam.cc:894-924), which here comes out UP, while the
+%% forced stem KEEPS its own side (:946-956) -- a KNEE, measured `dir=1 stems=(-1 1)`. The
+%% tie's two bounds then both point DOWN, so same-dir-as-stem 8 fires and the tie goes UP.
+%%
+%% ⚠️ THIS BOOK EXISTS BECAUSE THE ANNOTATION USED TO DO NOTHING. Lily#'s `@stemDown` never
+%% reached a beamed note (BeamDetector took the group's direction from the pitches and
+%% ResolveBeamStemDirections stamped it over every member), so this and TDBEAM were the same
+%% engraving on that side and different ones here. It is the pair that says the wish is read.
+\score { \new Staff { \clef bass \time 4/4 \key c \major \dump "TDBEAMF"
+  \fixed c' { d,4 ~ \once \override Stem.direction = #DOWN d,8. a,,16 d,8 d, b,,4 \bar "|." } }
+  \layout { debug-tie-scoring = ##t } }
+
 %% ---------------------------------------------------------------------------------------
 %% HOW WIDE THE TIE COMES OUT, which is the same mechanism seen from the other side.
 %%

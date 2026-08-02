@@ -219,8 +219,28 @@ public sealed record NoteItem : MusicItem
     /// stem-direction corrections) sees the same stems the renderer draws.
     /// LilyPond resolves directions in the engravers BEFORE spacing runs.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/beam.cc — Beam::calc_direction.</remarks>
+    /// <remarks>LILYPOND-REF: lily/beam.cc:182-246 Beam::calc_direction.</remarks>
     public bool? StemUpOverride { get; init; }
+
+    /// <summary>
+    /// A stem direction the WRITER asked for — <c>@stemUp</c> / <c>@stemDown</c> — or null.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:894-905 Beam::get_default_dir and :946-956
+    /// set_stem_directions — LilyPond keeps the asked-for direction and the derived one in
+    /// SEPARATE properties (<c>direction</c>, set by <c>\stemUp</c>, against
+    /// <c>default-direction</c>, the pitch callback), and the beam reads both: a stem that
+    /// already carries a <c>direction</c> makes <c>force_dir</c> true — which turns OFF the
+    /// "farthest head decides" rule and hands the beam to a vote among the stems — and it
+    /// KEEPS its own direction when the beam stamps the group's onto the others.
+    /// <para>
+    /// ⚠️ THIS USED TO BE THE SAME FIELD AS <see cref="StemUpOverride"/>, and that is exactly
+    /// why <c>@stemDown</c> did nothing to a beamed note: the beam resolver wrote the group's
+    /// direction over every member and the annotation vanished without a word. Two quantities
+    /// in one slot — the mirror of the trap HANDOFF 5.2 records about a bow's two heights.
+    /// </para>
+    /// </remarks>
+    public bool? ForcedStemUp { get; init; }
 
     /// <summary>
     /// Grace notes written immediately before this note, "hanging" to the left of
@@ -270,8 +290,8 @@ public sealed record NoteItem : MusicItem
     /// </summary>
     public bool TabBelowRange { get; init; }
 
-    /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
-    public bool StemUp => StemUpOverride ?? StaffPosition < 0;
+    /// <summary>Stem direction: beam-resolved if beamed, else asked for, else by staff position.</summary>
+    public bool StemUp => StemUpOverride ?? ForcedStemUp ?? StaffPosition < 0;
 
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
@@ -418,6 +438,9 @@ public sealed record ChordItem : MusicItem
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
     public bool? StemUpOverride { get; init; }
 
+    /// <summary>A stem direction the writer asked for; see <see cref="NoteItem.ForcedStemUp"/>.</summary>
+    public bool? ForcedStemUp { get; init; }
+
     /// <summary>Leading grace notes hanging left of this chord's column; see
     /// <see cref="NoteItem.LeadingGrace"/>.</summary>
     public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
@@ -429,7 +452,7 @@ public sealed record ChordItem : MusicItem
     /// its stem from the side with the more distant note.</summary>
     /// <remarks>LILYPOND-REF: lily/stem.cc:800-805 calc_default_direction —
     /// dir = sign(ddistance − udistance) = sign(−(hp[UP] + hp[DOWN])).</remarks>
-    public bool StemUp => StemUpOverride ?? (Notes.Length > 0
+    public bool StemUp => StemUpOverride ?? ForcedStemUp ?? (Notes.Length > 0
         && Notes.Max(n => n.StaffPosition) + Notes.Min(n => n.StaffPosition) < 0);
 
     /// <summary>Whether this chord has a tremolo marking.</summary>

@@ -1298,8 +1298,8 @@ public sealed class LilyPondExporter
     private const int AbsoluteBaseOctave = 4;
 
     // A note's attachments split into those that must precede the note (a
-    // rehearsal \mark, a \deadNote prefix) and those that trail it (string
-    // numbers, ties, dynamics, articulation scripts).
+    // rehearsal \mark, a \deadNote prefix, a forced stem direction) and those
+    // that trail it (string numbers, ties, dynamics, articulation scripts).
     private (string Prefix, string Suffix) SplitAttachments(IEnumerable<SyntaxNode> arts)
     {
         var prefix = new StringBuilder();
@@ -1315,6 +1315,10 @@ public sealed class LilyPondExporter
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
                     break;
+                case ArticulationSyntax art when StemDirectionOverride(art) is { } up:
+                    prefix.Append(up ? "\\once \\override Stem.direction = #UP "
+                                     : "\\once \\override Stem.direction = #DOWN ");
+                    break;
                 default:
                     suffix.Append(EmitAttachment(a));
                     break;
@@ -1325,6 +1329,31 @@ public sealed class LilyPondExporter
 
     private static bool IsDeadNote(ArticulationSyntax a)
         => a.NameToken.Text.Equals("dead", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// <c>@stemUp</c> / <c>@stemDown</c> as a nullable direction, or null for anything else.
+    /// </summary>
+    /// <remarks>
+    /// Written as <c>\once \override Stem.direction</c> rather than <c>\stemUp</c>, because
+    /// Lily#'s annotation belongs to ONE note while LilyPond's command is a context setting
+    /// that runs until <c>\stemNeutral</c>. <c>\once</c> is the same scope — one timestep —
+    /// and needs no closing command, so a run of annotated and un-annotated notes comes out
+    /// note for note.
+    /// <para>
+    /// LILYPOND-REF: ly/property-init.ly <c>stemUp</c> — <c>\override Stem.direction = #UP</c>;
+    /// lily/beam.cc:898-903 Beam::get_default_dir is what then reads it, which is why the
+    /// twin needs it at all: without this the beamed books of
+    /// audit/lp-geometry/probes/tie-direction.ly would engrave a DOWN beam in LilyPond and
+    /// an UP one in Lily#.
+    /// </para>
+    /// </remarks>
+    private static bool? StemDirectionOverride(ArticulationSyntax a)
+        => a.NameToken.Text.ToLowerInvariant() switch
+        {
+            "stemup" => true,
+            "stemdown" => false,
+            _ => null,
+        };
 
     // `@mark("Intro")` → a rehearsal mark. MarkName joins the tokens with '.',
     // so the label is what follows "mark." with the quotes stripped.

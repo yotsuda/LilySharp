@@ -3228,9 +3228,10 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Forced stem direction from a <c>@stemUp</c> / <c>@stemDown</c> annotation:
     /// <c>true</c> = up, <c>false</c> = down, <c>null</c> = automatic (from staff
-    /// position). Feeds <see cref="NoteItem.StemUpOverride"/>, the same slot beam
-    /// resolution writes — so a stem override on a BEAMED note is superseded by the
-    /// beam's shared direction (the beam carries one stem direction for the group).
+    /// position). Feeds <see cref="NoteItem.ForcedStemUp"/> — the writer's WISH, which
+    /// LilyPond keeps apart from the derived direction and which the beam then reads
+    /// (see that property; a beam with a forced stem in it stops using the
+    /// farthest-head rule and the forced stem keeps its own side).
     /// </summary>
     private static bool? GetStemDirectionOverride(SyntaxNode node)
     {

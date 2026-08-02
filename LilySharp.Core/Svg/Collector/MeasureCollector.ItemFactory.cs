@@ -133,7 +133,7 @@ public sealed partial class MeasureCollector
             // transpose that pushes a pitch across an octave boundary frets correctly.
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
             IsDead = HasNamedArticulation(note, "dead"),
-            StemUpOverride = GetStemDirectionOverride(note),
+            ForcedStemUp = GetStemDirectionOverride(note),
         };
     }
 
@@ -163,7 +163,7 @@ public sealed partial class MeasureCollector
         {
             Notehead = info.Notehead,
             Midi = info.GmKey,
-            StemUpOverride = GetStemDirectionOverride(drum),
+            ForcedStemUp = GetStemDirectionOverride(drum),
         };
     }
 
@@ -362,7 +362,11 @@ public sealed partial class MeasureCollector
             dots = combined.Dots;
         }
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+        {
+            // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
+            ForcedStemUp = GetStemDirectionOverride(chord),
+        };
     }
 
     /// <summary>

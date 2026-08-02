@@ -317,7 +317,8 @@ internal sealed class BeamDetector
             members[i] = new BeamMember(
                 m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
                 m.StaffPosition, m.ItemIndex,
-                memberStemUp: stemUp,
+                // A stem the writer turned keeps its own side (beam.cc:946-956).
+                memberStemUp: ForcedStemUpOf(m) ?? stemUp,
                 targetStaffIndex: m.TargetStaffIndex,
                 measureIndex: m.MeasureIndex,
                 headPositionMin: m.HeadPositionMin,
@@ -536,10 +537,13 @@ internal sealed class BeamDetector
             var m = members[i];
             // Knee: each stem points INTO the gap — UP when its head sits
             // below the gap center, DOWN above (beam.cc:1047-1049). Without a
-            // knee, every member takes the group direction.
-            bool memberUp = kneeGapCenter is { } gapCenter
+            // knee, every member takes the group direction — EXCEPT one the writer
+            // turned, which keeps its own side: LilyPond stamps the group's direction
+            // only onto stems that do not already carry one.
+            // LILYPOND-REF: lily/beam.cc:946-956 Beam::set_stem_directions.
+            bool memberUp = ForcedStemUpOf(m) ?? (kneeGapCenter is { } gapCenter
                 ? (m.HeadPositionMin + m.HeadPositionMax) / 2.0 < gapCenter
-                : stemUp;
+                : stemUp);
             members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
                 m.StaffPosition, m.ItemIndex, memberUp,
                 headPositionMin: m.HeadPositionMin,
@@ -739,10 +743,25 @@ internal sealed class BeamDetector
             if (m.HeadPositionMin < 0) extremeDown = Math.Min(extremeDown, m.HeadPositionMin);
         }
 
+        // ⚠️ A STEM THE WRITER TURNED (@stemUp / @stemDown) TURNS THE RULE OFF. LilyPond
+        // sets force_dir while tallying — a stem whose `direction` property is already a
+        // Direction contributes THAT rather than its pitch-derived one — and then skips the
+        // extremes check entirely, so the beam is decided by the VOTE below instead of by
+        // the farthest head. This is what makes `\stemDown` turn a whole beam over.
+        // LILYPOND-REF: lily/beam.cc:894-905 Beam::get_default_dir (force_dir), :918 (the gate).
+        bool forceDir = false;
+        foreach (var m in members)
+        {
+            if (ForcedStemUpOf(m) is not null) { forceDir = true; break; }
+        }
+
         // The farther extreme wins.
         // LILYPOND-REF: lily/beam.cc:918-924 Beam::get_default_dir (extremes check).
-        if (Math.Abs(extremeUp) > -extremeDown) return false; // DOWN
-        if (extremeUp < -extremeDown) return true;            // UP
+        if (!forceDir)
+        {
+            if (Math.Abs(extremeUp) > -extremeDown) return false; // DOWN
+            if (extremeUp < -extremeDown) return true;            // UP
+        }
 
         // Tie: per-stem majority vote by each stem's own natural direction.
         // A stem whose head is exactly on (or symmetric about) the middle line has no
@@ -758,12 +777,19 @@ internal sealed class BeamDetector
         // `total[dir] += max (int (-dir * head_positions (s)[-dir]), 0)` — the position of
         // the head the stem STARTS from, i.e. the far one, and never below zero.
         // LILYPOND-REF: lily/beam.cc:913-914 in get_default_dir, over head_positions.
+        // ⚠️ A FORCED STEM VOTES ITS OWN WAY, not its pitch's. LilyPond reads
+        // `get_property_data (s, "direction")` first and only falls back to
+        // `default-direction` when nothing set it — the same branch that raises force_dir.
+        // The DISTANCE it contributes is still read off its heads, on the side its
+        // (forced) direction starts from.
+        // LILYPOND-REF: lily/beam.cc:895-916 Beam::get_default_dir (the per-stem tally).
         int upVotes = 0, downVotes = 0, totalUp = 0, totalDown = 0;
         foreach (var m in members)
         {
             int mUp = Math.Max(0, m.HeadPositionMax);
             int mDown = Math.Min(0, m.HeadPositionMin);
-            if (Math.Abs(mUp) >= -mDown)
+            bool voteUp = ForcedStemUpOf(m) ?? !(Math.Abs(mUp) >= -mDown);
+            if (!voteUp)
             {
                 downVotes++;
                 totalDown += Math.Max(m.HeadPositionMax, 0);
@@ -796,6 +822,24 @@ internal sealed class BeamDetector
         if (totalUp != totalDown) return totalUp > totalDown;
         return false; // neutral-direction = DOWN
     }
+
+    /// <summary>
+    /// The stem direction the writer asked for on this member (<c>@stemUp</c> /
+    /// <c>@stemDown</c>), or null when nothing did.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ READS <c>ForcedStemUp</c> AND NOT <c>StemUp</c>, which is the whole point: by the
+    /// time a beam has been resolved <c>StemUp</c> answers the GROUP's direction for every
+    /// member, so asking it here would make the beam read its own output.
+    /// LILYPOND-REF: lily/beam.cc:898-903 — <c>get_property_data (s, "direction")</c>, the
+    /// property nothing has written yet, against the <c>default-direction</c> callback.
+    /// </remarks>
+    private static bool? ForcedStemUpOf(BeamMember m) => m.Item switch
+    {
+        NoteItem n => n.ForcedStemUp,
+        ChordItem c => c.ForcedStemUp,
+        _ => null,
+    };
 
     /// <summary>
     /// Detects manual beam groups from HasBeamStart/HasBeamEnd flags on notes/chords.

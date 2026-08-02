@@ -3345,6 +3345,37 @@ internal static class LpGeometryProbes
     private static readonly string TDBEAMD =
         TieDirectionBook("d,4~ d,8. b,16 d,8 d, b,,4 |", "TDBEAMD");
 
+    /// <summary>
+    /// <see cref="TDBEAM"/>'s notes exactly, with the beamed eighth's stem TURNED BY HAND
+    /// (<c>@stemDown</c>). LilyPond: UP — the opposite of TDBEAM.
+    /// </summary>
+    /// <remarks>
+    /// The beam does not simply follow the wish. A forced stem in the group makes LilyPond
+    /// stop using the farthest-head rule and take a VOTE instead
+    /// (lily/beam.cc:894-924 <c>force_dir</c>), which comes out UP here, while the forced
+    /// stem KEEPS its own side (:946-956 <c>set_stem_directions</c>) — a KNEE. MEASURED on
+    /// the twin: <c>dir=1 stems=(-1 1)</c>, and Lily# draws the same two stems. The tie's two
+    /// bounds then both point DOWN, so <c>same-dir-as-stem-penalty</c> 8 fires against every
+    /// DOWN candidate and the tie goes UP.
+    /// <para>
+    /// ⚠️ THIS BOOK EXISTS BECAUSE THE ANNOTATION USED TO DO NOTHING. <c>@stemDown</c> never
+    /// reached a beamed note — <c>BeamDetector</c> took the group's direction from the
+    /// pitches and <c>MeasureCollector.ResolveBeamStemDirections</c> stamped it over every
+    /// member's <c>StemUpOverride</c>, the same slot the annotation had been written into.
+    /// So this book and TDBEAM were the SAME engraving on the Lily# side and different ones
+    /// on LilyPond's. It is the pair that says the wish is read at all, and nothing else in
+    /// the corpus reaches it.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: score TDBEAMF,
+    /// <c>\fixed c' { d,4 ~ \once \override Stem.direction = #DOWN d,8. a,,16 d,8 d, b,,4 }</c>
+    /// — which is what <c>lysc ly</c> now writes for <c>@stemDown</c> (a per-note wish needs
+    /// <c>\once</c>, not the context-wide <c>\stemDown</c>).
+    /// </para>
+    /// </remarks>
+    private static readonly string TDBEAMF =
+        TieDirectionBook("d,4~ d,8.@stemDown a,,16 d,8 d, b,,4 |", "TDBEAMF");
+
     // ------------------------------------------------------------------------------
     // HOW WIDE A TIE COMES OUT, which is the direction question seen from the other side.
     //
@@ -8117,6 +8148,7 @@ internal static class LpGeometryProbes
         new("tie.direction.forced-stems-up", TDFRC, g => g.SoleBowDirection()),
         new("tie.direction.beam-opposes-stem", TDBEAM, g => g.SoleBowDirection()),
         new("tie.direction.beam-agrees-with-stem", TDBEAMD, g => g.SoleBowDirection()),
+        new("tie.direction.beam-stem-turned-by-hand", TDBEAMF, g => g.SoleBowDirection()),
 
         // ...and how wide the tie comes out, which is the same Y-dependent attachment read as
         // a distance. TWSEC's two ties span the SAME two columns and LilyPond makes them
