@@ -4289,6 +4289,120 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A cue REGION, whose columns read the cue head's own metric.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe cue-span.ly, score A-HIGH):
+    /// <c>\time 4/4 g''4 g'' \new CueVoice { g''4 g'' }</c> — column steps
+    /// 3.002245 / 2.898045 / 2.513394, against <see cref="CUEC"/>'s three identical
+    /// 3.002245. The cue→cue step is the direct reading: LilyPond refines a note spring's
+    /// ideal by the LEFT column's head width (lily/note-spacing.cc:77), and
+    /// <c>3.002245 − (1.304200 − 0.815348908) = 2.513394</c> to nine places, so this step IS
+    /// the cue head's width with the full-size one subtracted.
+    /// </remarks>
+    private static readonly string CUE1 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 g' cue { g'4 g' } | }
+        }
+
+        form main { ~Main }
+
+        score main "CUE1" { staff m }
+        """;
+
+    /// <summary>The same four quarters with no cue anywhere — the one-variable control, and
+    /// the dowry: if it does not open EXACT, the cue books are not measuring the cue.</summary>
+    private static readonly string CUEC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 g' g'4 g' | }
+        }
+
+        form main { ~Main }
+
+        score main "CUEC" { staff m }
+        """;
+
+    /// <summary>
+    /// A cue ACCIDENTAL, read inside its own column where no spring can hide it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe cue-span.ly, score A-ACCX): <c>\time 4/4 c''4 \new CueVoice
+    /// { fis''4 } r2</c> — the cue sharp's extent in its column is
+    /// <c>(−1.042956577 . −0.350000)</c>, so the anchor distance is 1.042956577.
+    /// <para>
+    /// ⚠️ TWO FACTS IN ONE NUMBER, and they pull opposite ways — the same shape the grace
+    /// accidental turned out to have. The GLYPH is the thirteen design (0.692956577, not
+    /// 1.100000 × any scale of the twenty), while the PADDING does not shrink at all: the
+    /// right edge is exactly −0.350000, the full-size <c>right-padding</c> + <c>padding</c>
+    /// that <c>lily/accidental-placement.cc:391-416 position_apes</c> reads raw.
+    /// A single scalar cannot produce both, which is why this point exists.
+    /// </para>
+    /// <para>
+    /// The book carries ONE accidental on purpose: the reading takes the first, and a
+    /// full-size accidental earlier in the bar would be the one measured.
+    /// </para>
+    /// </remarks>
+    private static readonly string CUEA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'4 cue { fis'4 } r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "CUEA" { staff m }
+        """;
+
+    /// <summary>
+    /// A GRACE inside a cue, where the two font sizes COMPOUND.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe cue-span.ly, score C-GRACE): <c>\time 4/4 c''2 \new CueVoice
+    /// { \grace { d''16 } e''2 }</c>. MEASURED: the grace head inside the cue answers
+    /// <c>font-size −7.0</c> — the CueVoice context's −4 plus the grace's own −3 — and its
+    /// box is 0.574399405 against a full-size black head's 1.304200. The grace→main step
+    /// inside the region is 1.377510498.
+    /// <para>
+    /// ⚠️ 0.574399405 / 1.304200 = 0.440421, and <c>magstep(−7) = 0.445449</c>. Not equal,
+    /// for the third time in this corpus: the design the size selects is not the twenty
+    /// scaled. WHICH design it is has NOT been measured — the number is the target, and
+    /// naming the design is the port's job.
+    /// </para>
+    /// </remarks>
+    private static readonly string CUEG = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'2 cue { grace { d'16 } e'2 } | }
+        }
+
+        form main { ~Main }
+
+        score main "CUEG" { staff m }
+        """;
+
+    /// <summary>
     /// A note BEFORE the grace, so the approach spring is visible — with its control in the
     /// same book.
     /// </summary>
@@ -7729,6 +7843,16 @@ internal static class LpGeometryProbes
         new("column.floor.accidental.spring-control", CFQN, g => g.NoteheadAnchorStep(0)),
         new("column.floor.accidental.wide", CFQD, g => g.NoteheadAnchorStep(0)),
         new("column.floor.accidental.wide-flagged", CFFD, g => g.NoteheadAnchorStep(0)),
+
+        // A CUE region's own metric. EngravingDefaults.CueScale = 0.66 is declared
+        // LILYSHARP-OWN and is an invented rounding; these are what it has to be replaced by.
+        // The control is the dowry: it shares the book's shape and must open EXACT.
+        new("cue.column.step", CUE1, g => g.NoteheadAnchorStep(2)),
+        new("cue.column.main-to-cue", CUE1, g => g.NoteheadAnchorStep(1)),
+        new("cue.column.control", CUEC, g => g.NoteheadAnchorStep(1)),
+        new("cue.accidental.to-notehead", CUEA,
+            g => g.AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalSharp)),
+        new("cue.grace.column.to-main", CUEG, g => g.NoteheadAnchorStep(1)),
 
         // A MUSICA FICTA accidental, which is a grob that STATES font-size −2 — so it is
         // read and drawn out of the SIXTEEN Emmentaler design, not the twenty scaled. The

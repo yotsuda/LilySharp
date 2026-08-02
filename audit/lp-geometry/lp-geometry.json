@@ -2655,6 +2655,41 @@
       "lilypond": 3.822200000000000,
       "residual": 0,
       "why": "THE SAME BOOK WITH THE LEFT COLUMN FLAGGED, at an eighth instead of a quarter, and LilyPond answers column.floor.accidental.wide to six places. That identity is the arithmetic statement that the flag contributes NOTHING to this gap: a down stem stands at the head's LEFT edge, so its flag hangs inside the head's shadow and never sets the column's reach at the head's own height (flagged-stem-reach.ly's FSD8/FSD16/FSD32 report 1.404200 at every duration). Kept so that the next reader who finds a common offset on a flagged book has a point that removes the flag from the question instead of having to build one."
+    },
+    "cue.column.step": {
+      "probe": "cue-span.ly",
+      "score": "A-HIGH",
+      "lilypond": 2.513393907138009,
+      "residual": 0.488851092,
+      "why": "OPENED 2026-08-02 (session 72) AS THE DIRECT READING OF THE CUE HEAD'S WIDTH. LilyPond refines a note spring's ideal by the LEFT column's head width (lily/note-spacing.cc:77), so a cue-to-cue step is the ordinary quarter's 3.002244999 with the cue head's shortfall taken out: 3.002244999 - (1.304200 - 0.815348908) = 2.513393907, nine places. IT OPENED AT THE FULL-SIZE STEP -- Lily# reads 3.002244999, the control's number to nine places -- so Lily#'s SPACING does not know about cue at all: the residual +0.488851092 IS 1.304200 - 0.815348908 exactly, the whole head-width term, missing. (The renderer does shrink the drawn head, by EngravingDefaults.CueScale = 0.66; only the spacing ignores it.) PREDICTION FOR THE PORT, written before it: giving the cue head the THIRTEEN design at font-size -4 and routing the SPACING through the same metric closes this to EXACT. If it moves but not to zero, the remaining part is not the head width. ⚠️ 0.66 CANNOT CLOSE IT EVEN IF THE SPACING IS WIRED UP: 1.304200 * 0.66 = 0.860772 against LilyPond's 0.815348908, so a wired-up 0.66 would leave +0.045423 here -- which is the falsifiable half of the claim that the scalar is wrong and not merely unused. Its control is cue.column.control (same shape, no cue), which OPENED EXACT."
+    },
+    "cue.column.main-to-cue": {
+      "probe": "cue-span.ly",
+      "score": "A-HIGH",
+      "lilypond": 2.898044999134612,
+      "residual": 0.104200000,
+      "why": "OPENED 2026-08-02 (session 72) AS THE OTHER HALF OF THE PAIR: the step INTO the cue, where the left column is full size and the right one is not. Lily# reads 3.002244999 -- the control's number -- so this term is missing too. ⚠️ WHAT PRODUCES LilyPond's 0.104200 IS NOT IDENTIFIED, and saying so is the point of opening it separately. It CANNOT be the left column's head width: lily/note-spacing.cc:77 refines the ideal by the LEFT head, which is full size in this book, so that path predicts the control's 3.002244999 exactly. Something on the RIGHT (the cue column) shortens the spring by 0.104200 and it has not been named. PREDICTION, written before the port: porting the head width alone should close cue.column.step and leave THIS one at +0.104200. If the head-width port moves this number as well, it is reaching a term it should not, and the pair is what says so. ⚠️ Do not fit 0.104200 to anything -- name it or leave it open (HANDOFF 5.2)."
+    },
+    "cue.column.control": {
+      "probe": "cue-span.ly",
+      "score": "A-CTL",
+      "lilypond": 3.002244999134612,
+      "residual": 0,
+      "why": "THE DOWRY, AND IT ARRIVED (2026-08-02, session 72): the same four quarters with no cue anywhere, EXACT at open. That is worth more than a non-zero control (HANDOFF 5.0): it says the ordinary note spacing around this shape is already right, so every difference the cue books show is the cue machinery and nothing else -- not the paper, not the duration space, not the book. ⚠️ IT MUST NOT MOVE when the cue sizing is ported. If it does, the port reached outside its island, and this point is the only thing that would say so."
+    },
+    "cue.accidental.to-notehead": {
+      "probe": "cue-span.ly",
+      "score": "A-ACCX",
+      "lilypond": 1.042956577442180,
+      "residual": 0.033043423,
+      "why": "OPENED 2026-08-02 (session 72), AND IT OPENED WITH THE TWO HALVES ALREADY SPLIT -- which is exactly what the grace accidental's entry predicted would happen here. Lily# reads 1.076000000 = 0.350000 + 1.100000 * 0.66, so the PADDING is already LilyPond's (0.350000, unscaled, ported in session 70) and the GLYPH is still the twenty design times the invented 0.66. LilyPond's 1.042956577 = 0.350000 + 0.692956577, where 0.692956577 is the THIRTEEN design's sharp -- the same number the grace accidental already reads, because a cue's fontSize -4 and a grace accidental's font-size -4 select the same face. MEASURED in the column frame so no spring can hide it: the cue sharp's extent is (-1.042956577 . -0.350000), i.e. its right edge sits at exactly -0.350000, the full-size right-padding + padding that lily/accidental-placement.cc:391-416 position_apes reads raw. PREDICTION, written before the port: replacing 0.66 with the design lookup closes this to EXACT, and the padding term must NOT move -- if the residual overshoots to negative, the port has scaled the padding too, which is the mistake session 70 had to undo for the grace."
+    },
+    "cue.grace.column.to-main": {
+      "probe": "cue-span.ly",
+      "score": "C-GRACE",
+      "lilypond": 1.377510497711750,
+      "residual": 0.561116717,
+      "why": "OPENED 2026-08-02 (session 72): a GRACE inside a CUE, where the two sizes COMPOUND. MEASURED (cue-span.ly C-GRACE): the grace head inside the region answers font-size -7.0 -- the CueVoice context's -4 plus the grace's own -3 -- and its box is 0.574399405 against a full-size black head's 1.304200. Lily# reads 1.938627215, which is 1.938627065 to seven places: grace.column.single.to-main, THE ORDINARY GRACE STEP. So Lily# is engraving an ordinary full-size-context grace inside the cue and the compounding is absent entirely, not merely mis-scaled. ⚠️ AND IT IS NOT A SCALE EITHER: 0.574399405 / 1.304200 = 0.440421 while magstep(-7) = 0.445449 -- the third time in this corpus that a font-size's box is not the twenty design scaled. WHICH Emmentaler design -7 selects is NOT MEASURED; the number above is the target and naming the design is the port's job (GlyphMetrics.ForDesign has 11/13/14/16/18/20/23/26). PREDICTION, written before the port: making a grace inherit the enclosing cue's font-size step and reading the resulting design closes this; if it lands near but not on the target, the design choice is wrong rather than the compounding."
     }
   }
 }

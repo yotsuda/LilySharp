@@ -56,6 +56,18 @@ sweep =
 \score { \sweep "A-CTL"  { \time 4/4 g''4 g'' g''4 g'' } }
 \score { \sweep "A-LOW"  { \time 4/4 d'4 d' \new CueVoice { d'4 d' } } }
 \score { \sweep "A-ACC"  { \time 4/4 cis''4 dis'' \new CueVoice { fis''4 gis'' } } }
+% …and the accidental's own placement INSIDE its column, which the steps above cannot read
+% (they come out spring-bound). This is the reading grace-column-width.ly's GCWA takes.
+#(define (dumpaccx name)
+   (lambda (g)
+     (let ((e (ly:grob-extent g (ly:item-get-column g) X)))
+       (format #t "CUEP ~a ACCX glyph=~a fontsize=~a ext=(~a . ~a)\n" name
+               (ly:grob-property g 'glyph-name) (ly:grob-property g 'font-size)
+               (car e) (cdr e)))))
+\score { \new Staff \with {
+    \override Accidental.after-line-breaking = #(dumpaccx "A-ACCX")
+    \override NoteHead.after-line-breaking   = #(dumph "A-ACCX")
+  } { \clef treble \time 4/4 c''4 \new CueVoice { fis''4 } r2 } }
 
 % ---- B. WHAT CROSSES THE BOUNDARY ------------------------------------------------------
 \score { \sweep "B-BEAM"  { \time 4/4 c''8 d'' \new CueVoice { e''8 f'' } } }  % 2 beams
