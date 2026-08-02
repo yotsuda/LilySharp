@@ -1317,6 +1317,44 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Which way the page's ONE bow curves: +1 up, −1 down — LilyPond's <c>Tie.direction</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ READ OFF THE CONTROL POINTS, NOT THE ENDPOINTS. A tie curving up and one curving
+    /// down share their two ends exactly — <c>TieFormattingProblem.CreateLayout</c> puts both
+    /// at the same attachment Y — and differ only in which side the controls sit, so a
+    /// reading taken from the drawn extremes would report the arc's height and call it a
+    /// direction. See <see cref="DrawnBezier"/> for why the sandwich's two halves are averaged.
+    /// <para>
+    /// ⚠️ THROWS UNLESS THERE IS EXACTLY ONE BOW, rather than taking the first. A tie and a
+    /// slur are the same primitive here (both go through <c>SharedRenderer.DrawCurve</c>), so
+    /// a probe that grew a slur — or a second tie — would otherwise silently start measuring
+    /// a different grob and keep reporting a plausible ±1.
+    /// </para>
+    /// </remarks>
+    public double SoleBowDirection(int page = 0)
+    {
+        var bows = _pages[page].Beziers;
+        if (bows.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE bow (tie or slur), found {bows.Count} — "
+                + "the probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+
+        var bow = bows[0];
+        // Device Y is down, so a control ABOVE the endpoint has the SMALLER y.
+        double lift = bow.P0.Y - bow.Centreline1.Y;
+        if (Math.Abs(lift) < 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the bow is flat ({lift:E3}), so it has no direction to read."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return lift > 0 ? +1 : -1;
+    }
+
+    /// <summary>
     /// One reading per beam GROUP: the group's OUTERMOST beam line, which is what LilyPond's
     /// <c>positions</c> describes. Shared by the five-line and the tab readers.
     /// </summary>

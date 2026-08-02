@@ -41,6 +41,23 @@ internal readonly record struct DrawnQuad(
     double X0, double Y0, double X1, double Y1, double X2, double Y2, double X3, double Y3);
 
 /// <summary>
+/// A tapered bow — a tie or a slur — as the renderer actually placed it. The renderer emits
+/// the "bezier sandwich" (lily/lookup.cc Lookup::slur): one curve out along
+/// <c>P0 → C1 C2 → P1</c> and one back along <c>P1 → C2Back C1Back → P0</c>, the two middle
+/// controls offset by ±half the mid-thickness PERPENDICULAR to the chord. The bow's own
+/// control point — the one <c>TieFormattingProblem</c>/<c>SlurScoringProblem</c> solved — is
+/// the MIDPOINT of each pair, which is why both halves are kept rather than one.
+/// </summary>
+internal readonly record struct DrawnBezier(
+    (double X, double Y) P0, (double X, double Y) C1, (double X, double Y) C2,
+    (double X, double Y) P1, (double X, double Y) C2Back, (double X, double Y) C1Back)
+{
+    /// <summary>The solved first control point: the sandwich's two halves averaged.</summary>
+    public (double X, double Y) Centreline1
+        => ((C1.X + C1Back.X) / 2, (C1.Y + C1Back.Y) / 2);
+}
+
+/// <summary>
 /// Plain text — titles, lyrics, chord symbols, dynamics. The font and the anchor are kept
 /// because the string and position alone cannot say WHICH of those a text is, and a
 /// measurement that picked up a title instead of a chord symbol would look plausible.
@@ -105,6 +122,7 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     private readonly List<DrawnLine> _lines = new();
     private readonly List<DrawnText> _texts = new();
     private readonly List<DrawnQuad> _quads = new();
+    private readonly List<DrawnBezier> _beziers = new();
 
     // Cumulative transform: a point p maps to (TranslateX + ScaleX * p.X, ...).
     //
@@ -131,6 +149,7 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public IReadOnlyList<DrawnLine> Lines => _lines;
     public IReadOnlyList<DrawnText> Texts => _texts;
     public IReadOnlyList<DrawnQuad> Quads => _quads;
+    public IReadOnlyList<DrawnBezier> Beziers => _beziers;
 
     private double Tx(double x) => _current.TranslateX + _current.ScaleX * x;
     private double Ty(double y) => _current.TranslateY + _current.ScaleY * y;
@@ -174,8 +193,17 @@ internal sealed class RecordingDrawingContext : IDrawingContext
                                  (double X, double Y) c2Back, (double X, double Y) c1Back,
                                  Color? fill = null, double strokeWidth = 0)
     {
-        // Endpoints only; no probe measures slur/tie geometry yet.
+        // The endpoints as a line, which the probes that only need "there is a bow here"
+        // already read...
         _lines.Add(new DrawnLine(Tx(p0.X), Ty(p0.Y), Tx(p1.X), Ty(p1.Y), Sx(strokeWidth)));
+
+        // ...and the whole sandwich, because a bow's DIRECTION lives in its control points
+        // and not in its endpoints: a tie curving up and one curving down share the two
+        // ends exactly (TieFormattingProblem.CreateLayout puts both at the same attachment
+        // Y) and differ only in which side the controls sit.
+        _beziers.Add(new DrawnBezier(
+            (Tx(p0.X), Ty(p0.Y)), (Tx(c1.X), Ty(c1.Y)), (Tx(c2.X), Ty(c2.Y)),
+            (Tx(p1.X), Ty(p1.Y)), (Tx(c2Back.X), Ty(c2Back.Y)), (Tx(c1Back.X), Ty(c1Back.Y))));
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)

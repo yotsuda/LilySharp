@@ -3198,6 +3198,143 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // ------------------------------------------------------------------------------
+    // WHICH SIDE A TIE CURVES TO. Six one-bar books; twin
+    // audit/lp-geometry/probes/tie-direction.ly, which carries the full account.
+    //
+    // Lily# decides this when it COLLECTS the tie (Svg/Collector/TieDetector.cs:55-57 — "a
+    // single voice curves opposite the stem", read off the FIRST note). LilyPond decides it
+    // when it PLACES the tie: the direction is the winner of a scored search
+    // (tie-formatting-problem.cc:1004-1023 generate_optimal_configuration), and NOTHING in
+    // that search reads one note's stem. Tie::get_default_dir exists but tie.cc:203-208 only
+    // calls it for a BROKEN piece.
+    //
+    // ⚠️ TDBEAM/TDBEAMD ARE THE PAIR, AND THEY ARE THE SAME MUSIC. They differ only in which
+    // way the SECOND note's beam points, and LilyPond answers them oppositely (-1 / +1).
+    // A rule that reads the FIRST note's stem must give them the same answer, so no such
+    // rule can be right — the claim is stated as a pair rather than as six numbers, and it
+    // is the pair that no constant and no one-note rule can satisfy (HANDOFF 5.0).
+    // MEASURED before the port: Lily# reads +1 for BOTH, with byte-identical geometry.
+    //
+    // ⚠️ AND THE OTHER FOUR ARE IDENTITIES — Lily# already agrees with LilyPond on all of
+    // them. That is deliberate: they are what says the port must not buy TDBEAM by breaking
+    // the ordinary cases (HANDOFF 5.0, "the strongest pair is one LilyPond reads as an
+    // identity"), and TDFRC in particular holds the STEM's own contribution fixed while
+    // TDMID holds everything else fixed.
+
+    private static string TieDirectionBook(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef bass }
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// A tie on the MIDDLE LINE with both stems down. LilyPond: UP.
+    /// </summary>
+    /// <remarks>
+    /// The base configuration is <c>(position + dir, dir)</c> where dir is
+    /// <c>sign (position)</c> — zero here — and so falls to <c>neutral-direction</c>, which is
+    /// UP for a Tie (scm/define-grobs.scm:3899). It then survives scoring because both stems
+    /// point DOWN and <c>same-dir-as-stem-penalty</c> 8 is charged to the DOWN configurations
+    /// (tie-formatting-problem.cc:705-708).
+    /// <para>LilyPond twin: score TDMID of tie-direction.ly, <c>\fixed c' { d,4 ~ d,2. }</c>.</para>
+    /// </remarks>
+    private static readonly string TDMID = TieDirectionBook("d,4~ d,2. |", "TDMID");
+
+    /// <summary>A tie one half-space ABOVE the middle line, stems down. LilyPond: UP.</summary>
+    /// <remarks>
+    /// <c>sign (position)</c> is +1, so the base is already UP and agrees with the stem rule —
+    /// the book where the two candidate mechanisms cannot be told apart, kept as the control
+    /// for <see cref="TDDN"/>.
+    /// <para>LilyPond twin: score TDUP, <c>\fixed c' { e,4 ~ e,2. }</c>.</para>
+    /// </remarks>
+    private static readonly string TDUP = TieDirectionBook("e,4~ e,2. |", "TDUP");
+
+    /// <summary>A tie one half-space BELOW the middle line, stems up. LilyPond: DOWN.</summary>
+    /// <remarks>LilyPond twin: score TDDN, <c>\fixed c' { c,4 ~ c,2. }</c>.</remarks>
+    private static readonly string TDDN = TieDirectionBook("c,4~ c,2. |", "TDDN");
+
+    /// <summary>
+    /// <see cref="TDMID"/> with both stems FORCED up. LilyPond: DOWN.
+    /// </summary>
+    /// <remarks>
+    /// The same pitch and the same position as TDMID, so the base configuration is the same
+    /// (P1, up); only the stems moved, and the answer flips. That is what makes the two books
+    /// a pair: the stems ARE read, and they are read at PLACEMENT time.
+    /// <para>
+    /// ⚠️ THE TWIN CARRIES ONE HAND EDIT. <c>lysc ly</c> drops the <c>@stemUp</c> annotation
+    /// ("warning: articulation @stemUp not mapped, dropped"), so <c>\stemUp</c> was written
+    /// into tie-direction.ly by hand — an exporter hole, recorded in HANDOFF 1.
+    /// </para>
+    /// <para>LilyPond twin: score TDFRC, <c>\fixed c' { \stemUp d,4 ~ d,2. }</c>.</para>
+    /// </remarks>
+    private static readonly string TDFRC = TieDirectionBook("d,4@stemUp~ d,2.@stemUp |", "TDFRC");
+
+    /// <summary>
+    /// The USER'S BAR (scratch/ベースタブLy/repro.lys, section D bar 3): a tie from a quarter
+    /// on the middle line into a dotted eighth BEAMED with a lower sixteenth, so the left
+    /// stem points down and the right one up. LilyPond: DOWN. Lily#: UP.
+    /// </summary>
+    /// <remarks>
+    /// With the two bounds disagreeing about the stem direction, NEITHER branch of
+    /// tie-formatting-problem.cc:701-710 fires — and the position branch (:709) is skipped
+    /// because position 0 is false — so no direction penalty is charged at all and the answer
+    /// falls out of the remaining terms. MEASURED (<c>debug-tie-scoring</c>): the winner
+    /// (P0, down) scores <c>lhdist 1.01 + rhdist 1.01 = 2.02</c> and the base (P1, up) scores
+    /// <c>tipline 0.02 + 2.02 = 2.04</c>.
+    /// <para>
+    /// ⚠️ 1.01 PER END IS THE HORIZONTAL DISTANCE PENALTY, which Lily# declares
+    /// (<c>TieDetails.HorizontalDistancePenaltyFactor</c>) and never computes — so before the
+    /// port EVERY candidate scores 0 for it and the term that decides this book is absent
+    /// from the engine. It is <c>10 * convex_amplifier (1.25, 1.0, 0.2)</c>: a configuration
+    /// inside the head's one-space box attaches at the head's INNER EDGE and is then inset by
+    /// <c>note-head-gap</c> 0.2, landing 0.2 OUTSIDE the head; one that clears the box
+    /// attaches at the head CENTRE, which stays inside it and pays nothing.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS BOOK READS THE HORIZONTAL SPACING TOO, and that is the quantity and not a flaw
+    /// in the probe: 2.02 against 2.04. The SAME bar justified instead of ragged reads UP
+    /// (measured: <c>1 (0.25) u: vdist=1.21 TOTAL=1.21</c> — a wide tie clears the head box
+    /// and pays no hdist), which is why the user's own score prints this figure DOWN in bar 11
+    /// and UP in bar 26. <see cref="TDBEAMD"/> is decided by 8 instead, so the two books bound
+    /// the mechanism from both sides.
+    /// </para>
+    /// <para>LilyPond twin: score TDBEAM, <c>\fixed c' { d,4 ~ d,8. a,,16 d,8 d, b,,4 }</c>.</para>
+    /// </remarks>
+    private static readonly string TDBEAM =
+        TieDirectionBook("d,4~ d,8. a,,16 d,8 d, b,,4 |", "TDBEAM");
+
+    /// <summary>
+    /// <see cref="TDBEAM"/> with that beam FORCED down, so both stems agree. LilyPond: UP.
+    /// </summary>
+    /// <remarks>
+    /// Same notes, same spacing, same first stem — only the second note's stem direction
+    /// differs, and now <c>same-dir-as-stem-penalty</c> 8 fires against every DOWN
+    /// configuration and the base wins by that margin instead of losing by 0.02.
+    /// <para>
+    /// ⚠️ THE TWIN CARRIES ONE HAND EDIT, for the reason given on <see cref="TDFRC"/>:
+    /// <c>lysc ly</c> drops <c>@stemDown</c> as well.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: score TDBEAMD,
+    /// <c>\fixed c' { d,4 ~ \stemDown d,8. a,,16 \stemNeutral d,8 d, b,,4 }</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string TDBEAMD =
+        TieDirectionBook("d,4~ d,8.@stemDown a,,16@stemDown d,8 d, b,,4 |", "TDBEAMD");
+
     /// <summary>
     /// The slur pair (<see cref="SD"/>/<see cref="SU"/>) again with a TIE — the adjacent
     /// inside-staff grob, drooping DOWN into the staff gap from the upper staff.
@@ -7899,6 +8036,18 @@ internal static class LpGeometryProbes
         // the upper staff's bottom line against one going up. See probes TID and TIU.
         new("staff.staff.tie-under-notes", TID, g => g.StaffGap()),
         new("staff.staff.tie-over-notes", TIU, g => g.StaffGap()),
+
+        // WHICH SIDE the tie curves to — a direction, so these are counts and stay out of the
+        // staff-space headline (see LedgerEntry.Unit). Six one-bar books; TDBEAM/TDBEAMD are
+        // the same music with the second note's beam reversed, and LilyPond answers them
+        // oppositely, which is what no rule reading the FIRST note's stem can do. See the
+        // probe sources above and audit/lp-geometry/probes/tie-direction.ly.
+        new("tie.direction.middle-line", TDMID, g => g.SoleBowDirection()),
+        new("tie.direction.above-middle", TDUP, g => g.SoleBowDirection()),
+        new("tie.direction.below-middle", TDDN, g => g.SoleBowDirection()),
+        new("tie.direction.forced-stems-up", TDFRC, g => g.SoleBowDirection()),
+        new("tie.direction.beam-opposes-stem", TDBEAM, g => g.SoleBowDirection()),
+        new("tie.direction.beam-agrees-with-stem", TDBEAMD, g => g.SoleBowDirection()),
 
         // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
         // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s

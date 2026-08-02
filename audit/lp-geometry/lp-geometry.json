@@ -352,6 +352,54 @@
       "residual": 0.001391435,
       "why": "The mirror of staff.staff.tie-under-notes: TID binds the lower staff's top line against a tie coming down, TIU the upper staff's bottom line against one going up. a' (A4) sits +11 above the bass middle line, the mirror of e's -11 below the treble one, so LilyPond prints the same 9.655901202802955 -- measured identical, the pair's cross-check. Prediction and full account on staff.staff.tie-under-notes."
     },
+    "tie.direction.middle-line": {
+      "probe": "tie-direction.ly",
+      "score": "TDMID",
+      "lilypond": 1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-03, code change zero. WHICH SIDE the tie curves to: +1 up, -1 down, LilyPond's Tie.direction. A direction is not a distance, so it is a count and stays out of the staff-space total (unit). d on the bass middle line, both stems down. LilyPond's base configuration is (position + dir, dir) with dir = sign (position) -- zero here, so it falls to neutral-direction, UP (define-grobs.scm:3899) -- and it survives because same-dir-as-stem-penalty 8 is charged to the DOWN candidates (tie-formatting-problem.cc:705-708). Lily# agrees TODAY for a different reason: TieDetector.cs:55-57 curves opposite the FIRST note's stem. This is one of the four IDENTITIES that say the port must not buy tie.direction.beam-opposes-stem by breaking the ordinary cases. PREDICTION (written before the port): stays 0."
+    },
+    "tie.direction.above-middle": {
+      "probe": "tie-direction.ly",
+      "score": "TDUP",
+      "lilypond": 1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-03, code change zero. e, one half-space above the bass middle line, stems down. sign (position) is +1, so LilyPond's base is UP for the POSITION reason while Lily# gets UP for the STEM reason -- the book where the two mechanisms cannot be told apart, kept as the control for tie.direction.below-middle. PREDICTION: stays 0."
+    },
+    "tie.direction.below-middle": {
+      "probe": "tie-direction.ly",
+      "score": "TDDN",
+      "lilypond": -1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-03, code change zero. c, one half-space below the bass middle line, stems up. Both mechanisms say DOWN. PREDICTION: stays 0."
+    },
+    "tie.direction.forced-stems-up": {
+      "probe": "tie-direction.ly",
+      "score": "TDFRC",
+      "lilypond": -1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-03, code change zero. tie.direction.middle-line with both stems FORCED up (@stemUp / \\stemUp): same pitch, same position, same base configuration (P1, up) -- only the stems moved, and LilyPond's answer flips to DOWN. That is what says the stems ARE read, and read at PLACEMENT time. ⚠️ The twin carries one hand edit: `lysc ly` drops @stemUp ('warning: articulation @stemUp not mapped, dropped'), so \\stemUp was written into tie-direction.ly by hand. PREDICTION: stays 0."
+    },
+    "tie.direction.beam-opposes-stem": {
+      "probe": "tie-direction.ly",
+      "score": "TDBEAM",
+      "lilypond": -1,
+      "unit": "count",
+      "residual": 2.0,
+      "why": "SEEDED 2026-08-03, code change zero. THE USER'S BAR (scratch/ベースタブLy/repro.lys section D bar 3): a quarter on the middle line tied into a dotted eighth BEAMED with a lower sixteenth, so the LEFT stem points down and the RIGHT one up. LilyPond DOWN, Lily# UP -- residual +2. With the two bounds disagreeing about the stem direction NEITHER branch of tie-formatting-problem.cc:701-710 fires, and the position branch (:709) is skipped because position 0 is false, so no direction penalty is charged at all and the answer falls out of the remaining terms. MEASURED with debug-tie-scoring: the winner (P0, down) scores lhdist 1.01 + rhdist 1.01 = 2.02 and the base (P1, up) scores tipline 0.02 + 2.02 = 2.04. ⚠️ 1.01 PER END IS THE HORIZONTAL DISTANCE PENALTY, which Lily# DECLARES (TieDetails.HorizontalDistancePenaltyFactor = 10, asserted by a test) and NEVER COMPUTES -- so today every candidate scores 0 for it and the term that decides this book is absent from the engine. It is 10 * convex_amplifier (1.25, 1.0, 0.2): a configuration inside the head's one-space box attaches at the head's INNER EDGE and is then inset by note-head-gap 0.2, landing 0.2 OUTSIDE the head; one that clears the box attaches at the head CENTRE and stays inside it. ⚠️ THIS BOOK READS THE HORIZONTAL SPACING TOO, and that is the quantity rather than a flaw in the probe: 2.02 against 2.04. The SAME bar justified instead of ragged reads UP (measured: '1 (0.25) u: vdist=1.21 TOTAL=1.21'), which is why the user's own score prints this figure DOWN in bar 11 and UP in bar 26 -- both `d,4~ d,8. a,,16`, measured -1 and +1. tie.direction.beam-agrees-with-stem is decided by 8 instead, so the two bound the mechanism from both sides. PREDICTION (written before the port): moving the decision to TieFormattingProblem -- base at (position + dir) with dir = sign (position) else neutral UP, the horizontal distance term, and LilyPond's two-stem direction test -- closes this to 0 while the other five stay 0. FALSIFIERS: (a) if it is closed by reading the SECOND note's stem instead of the first, tie.direction.beam-agrees-with-stem flips to -1 and fails; (b) if it is closed by any 'beamed -> down' shortcut, the same book fails; (c) the winner must be position 0 DOWN, i.e. the drawn tie sits BELOW the middle line with its ends at the head INNER EDGES -- a SHORT tie -- not at the head centres."
+    },
+    "tie.direction.beam-agrees-with-stem": {
+      "probe": "tie-direction.ly",
+      "score": "TDBEAMD",
+      "lilypond": 1,
+      "unit": "count",
+      "residual": 0.0,
+      "why": "SEEDED 2026-08-03, code change zero. tie.direction.beam-opposes-stem with that beam FORCED down, so both stems agree: same notes, same spacing, same FIRST stem, opposite LilyPond answer (+1 against -1). ⚠️ THAT IS THE PAIR AND IT IS THE WHOLE CLAIM -- any rule reading the first note's stem must give the two books the same answer, and MEASURED before the port Lily# does exactly that: +1 for both, with byte-identical geometry. Here same-dir-as-stem-penalty 8 fires against every DOWN candidate, so the base wins by 8 rather than losing by 0.02. ⚠️ The twin carries one hand edit, for the reason given on tie.direction.forced-stems-up. PREDICTION: stays 0, and it is the book that fails if the port closes the other one the wrong way."
+    },
     "staff.staff.beam-under-notes": {
       "probe": "page-vertical.ly",
       "score": "BMD",
