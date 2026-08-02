@@ -107,7 +107,7 @@
   <text class="music" x="40.42" y="27.64" font-size="4.00" data-pos="323"></text>
   <line x1="41.66" y1="27.49" x2="41.66" y2="20.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="43.43" y="27.14" font-size="4.00" data-pos="329"></text>
-  <line x1="44.66" y1="26.99" x2="44.66" y2="20.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="44.67" y1="26.99" x2="44.67" y2="20.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="46.43" y="26.64" font-size="4.00" data-pos="331"></text>
   <line x1="47.67" y1="26.49" x2="47.67" y2="20.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="49.43" y="26.14" font-size="4.00" data-pos="333"></text>

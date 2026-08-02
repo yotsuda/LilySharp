@@ -29,8 +29,8 @@
   <text class="music" x="13.57" y="19.07" font-size="4.00"></text>
   <text class="music" x="14.76" y="20.57" font-size="4.00" data-pos="176"></text>
   <text class="music" x="16.43" y="21.57" font-size="4.00" data-pos="178"></text>
-  <line x1="17.66" y1="21.42" x2="17.66" y2="18.07" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="17.66" y="18.07" font-size="4.00"></text>
+  <line x1="17.67" y1="21.42" x2="17.67" y2="18.07" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="17.67" y="18.07" font-size="4.00"></text>
   <text class="music" x="18.86" y="20.57" font-size="4.00" data-pos="180"></text>
   <text class="music" x="20.52" y="20.57" font-size="4.00" data-pos="182"></text>
   <line x1="20.59" y1="20.72" x2="20.59" y2="23.94" stroke="#000000" stroke-width="0.130"/>
@@ -98,8 +98,8 @@
   <line x1="49.63" y1="21.92" x2="49.63" y2="19.03" stroke="#000000" stroke-width="0.130"/>
   <line x1="51.60" y1="22.42" x2="51.60" y2="19.29" stroke="#000000" stroke-width="0.130"/>
   <line x1="53.57" y1="22.92" x2="53.57" y2="19.56" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="56.60,20.14 61.65,19.33 61.65,19.81 56.60,20.62"/>
-  <polygon points="56.60,19.33 61.65,18.52 61.65,19.00 56.60,19.81"/>
+  <polygon points="56.61,20.14 61.65,19.33 61.65,19.81 56.61,20.62"/>
+  <polygon points="56.61,19.33 61.65,18.52 61.65,19.00 56.61,19.81"/>
   <line x1="56.67" y1="23.42" x2="56.67" y2="19.56" stroke="#000000" stroke-width="0.130"/>
   <line x1="58.31" y1="22.92" x2="58.31" y2="19.29" stroke="#000000" stroke-width="0.130"/>
   <line x1="59.94" y1="22.42" x2="59.94" y2="19.03" stroke="#000000" stroke-width="0.130"/>
@@ -119,7 +119,7 @@
   <polygon points="76.25,19.33 81.29,20.14 81.29,20.62 76.25,19.81"/>
   <polygon points="76.25,18.52 81.29,19.33 81.29,19.81 76.25,19.00"/>
   <line x1="76.32" y1="21.42" x2="76.32" y2="18.77" stroke="#000000" stroke-width="0.130"/>
-  <line x1="77.95" y1="21.92" x2="77.95" y2="19.03" stroke="#000000" stroke-width="0.130"/>
+  <line x1="77.96" y1="21.92" x2="77.96" y2="19.03" stroke="#000000" stroke-width="0.130"/>
   <line x1="79.59" y1="22.42" x2="79.59" y2="19.29" stroke="#000000" stroke-width="0.130"/>
   <line x1="81.23" y1="22.92" x2="81.23" y2="19.56" stroke="#000000" stroke-width="0.130"/>
   <polygon points="85.96,20.61 87.67,20.33 87.67,20.81 85.96,21.09"/>

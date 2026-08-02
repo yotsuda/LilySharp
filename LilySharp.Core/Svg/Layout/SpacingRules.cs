@@ -1997,20 +1997,18 @@ internal static class SpacingRules
         double ink = GraceHeadEnd;
         if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
         {
-            // The flag hangs off the stem, so its reach is the stem's x plus the flag's own
-            // width — both read from the grace's OWN font (see GraceHeadEnd).
-            // ⚠️ KNOWN WRONG BY 0.063472, and the ledger names it: this hangs the flag off the
-            // head's ADVANCE where LilyPond hangs it off the STEM, which stands at the head's
-            // EXTENT minus half a stem thickness (0.917939 − 0.065 = 0.852939, and
-            // 0.852939 + 0.585689 = 1.438627 is LilyPond's own reading to nine places).
-            // Ledger grace.column.single.to-main. It is left standing because the second half
-            // of the same defect — LayoutUtilities.StemAttachX reading an advance where
-            // LilyPond reads an extent — moves EVERY stem in every score, and the two are one
-            // claim (HANDOFF §5.0: a fork whose branches cannot happen separately).
+            // The flag hangs off the STEM, so its reach is the stem's x plus the flag's own
+            // width — both read from the grace's OWN font (see GraceHeadEnd). The stem's x is
+            // the one house, LayoutUtilities.StemAttachX, which is where the drawn flag is
+            // put too (SharedRenderer.DrawGraceStemsAndBeam).
+            // MEASURED: 0.852939 + 0.585689 = 1.438627 is LilyPond's own reading to nine
+            // places (ledger grace.column.single.to-main). It hung off the head's ADVANCE
+            // until 2026-08-02, 0.063472 too far right.
             var font = GraceNoteItem.Font;
             var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
             if (flag != default)
-                ink = Math.Max(ink, font.NoteheadBlackAdvance + flag.Width);
+                ink = Math.Max(ink,
+                    LayoutUtilities.StemAttachX(up: true, font) + flag.Width);
         }
         return ink + DefaultExtraSpacingWidth;
     }

@@ -29,12 +29,22 @@ internal static class LayoutUtilities
     /// How far right of a note column its STEM stands, given the stem's direction.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:1050-1085 Stem::internal_calc_stem_offset_from_head — the
-    ///   stem is offset from its support head by the font's attachment coordinate, then
-    ///   pulled back half a stem thickness so the stem's EDGE meets the head.
+    /// LILYPOND-REF: lily/stem.cc:1050-1085 internal_calc_stem_offset_from_head — the stem is
+    ///   offset from its support head by the font's attachment coordinate, then pulled back
+    ///   half a stem thickness so the stem's EDGE meets the head.
     /// LILYPOND-REF: scm/define-grobs.scm:2608 ly:note-head::calc-stem-attachment (NoteHead's
     ///   stem-attachment) — the coordinate itself, so an up stem stands at the notehead's
     ///   right edge and a down stem at its left. A stem's x is NOT its column's x.
+    /// <para>
+    /// ⚠️ THE ATTACHMENT POINT, NOT THE ADVANCE — they differ by 0.000200, and this line read
+    /// the advance until 2026-08-02. LilyPond's arithmetic is
+    /// <c>head-&gt;extent(X).linear_combination(attach)</c> over an <c>attach</c> that
+    /// lily/note-head.cc:164-196 get_stem_attachment NORMALISES out of the same box
+    /// (<c>2·(wx − centre)/length</c>), so the round trip is the identity and what is left is
+    /// the font's own attachment coordinate: <see cref="GlyphMetrics.NoteheadBlackStemAttachment"/>
+    /// = 1.304200, where the hmtx advance is 1.304000. MEASURED (probes/beam-stem-x.ly) an up
+    /// stem's X-offset is 1.2392 = 1.304200 − 0.065, and NOT 1.2390.
+    /// </para>
     /// <para>
     /// ⚠️ THE one house. This offset had SEVEN spellings, and the quanter's frame claim
     /// ("a beam is scored against ink in the beam's own frame, whose x is its STEMS") is a
@@ -45,13 +55,14 @@ internal static class LayoutUtilities
     /// </remarks>
     /// <param name="headScale">
     /// The head's own scale. A cue head is drawn at 0.66×, so an UP stem attaches at the
-    /// scaled head's right edge or it floats off the small head; a down stem attaches at the
-    /// left edge, which does not move with the scale. At 1.0 this is
+    /// scaled head's attachment point or it floats off the small head; a down stem attaches at
+    /// the left edge, which does not move with the scale. At 1.0 this is
     /// <see cref="EngravingDefaults.StemUpAttachX"/> exactly.
     /// </param>
     public static double StemAttachX(bool up, double headScale = 1.0) =>
         up
-            ? EngravingDefaults.NoteheadBlackWidth * headScale - EngravingDefaults.StemThickness / 2
+            ? GlyphMetrics.NoteheadBlackStemAttachment.X * headScale
+              - EngravingDefaults.StemThickness / 2
             : EngravingDefaults.StemDownAttachX;
 
     /// <summary>
@@ -66,7 +77,8 @@ internal static class LayoutUtilities
     /// </remarks>
     public static double StemAttachX(bool up, GlyphMetrics.DesignMetrics? font) =>
         up
-            ? (font?.NoteheadBlackAdvance ?? EngravingDefaults.NoteheadBlackWidth)
+            ? (font?.NoteheadBlackStemAttachment.X
+               ?? GlyphMetrics.NoteheadBlackStemAttachment.X)
               - EngravingDefaults.StemThickness / 2
             : EngravingDefaults.StemDownAttachX;
 

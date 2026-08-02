@@ -443,7 +443,13 @@ internal static class EngravingDefaults
     // The ±0.168 Y is the black notehead's stem-attachment vertical offset, from the
     // feta font metrics that back ly:note-head::calc-stem-attachment (define-grobs.scm:2608
     // NoteHead.stem-attachment; NoteHead grob @2595); an up-stem attaches slightly above centre, a down-stem below.
-    public const double StemUpAttachX = NoteheadBlackWidth - StemThickness / 2;
+    // ⚠️ THE ATTACHMENT POINT, NOT THE ADVANCE. It read NoteheadBlackWidth (the hmtx
+    // advance, 1.304000) until 2026-08-02; LilyPond reads the font's own attachment
+    // coordinate, 1.304200 — see LayoutUtilities.StemAttachX, which is the house every
+    // caller goes through, and audit/lp-geometry/probes/beam-stem-x.ly (1.2392, not 1.2390).
+    public static readonly double StemUpAttachX =
+        LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackStemAttachment.X
+        - StemThickness / 2;
     public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = StemThickness / 2;
     public const double StemDownAttachY = -0.168;

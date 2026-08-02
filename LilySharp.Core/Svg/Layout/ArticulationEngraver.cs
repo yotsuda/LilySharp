@@ -297,7 +297,7 @@ internal static class ArticulationEngraver
                 double bx = measureLayout.X
                     + LayoutUtilities.GetItemXOffset(artMeasures,
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
-                    + 2.0 * NoteheadHalfWidth(item)  // full notehead advance → right edge
+                    + 2.0 * NoteheadHalfWidth(item)  // twice the half-extent → the head's right edge
                     + BreathGap;
                 // Y-up: BreathStaffY is a device staff-top offset; reflect to Y-up
                 // about the staff middle. No staff offset — resolved at draw time.
@@ -650,10 +650,23 @@ internal static class ArticulationEngraver
     };
 
     /// <summary>
-    /// Half the notehead's advance width, i.e. the offset from the notehead's left
-    /// edge (the item X) to its horizontal centre. Picks the head glyph by note
-    /// value (whole / half / black) so the script centres on the actual head.
+    /// The offset from the notehead's left edge (the item X) to its horizontal CENTRE —
+    /// half its EXTENT. Picks the head glyph by note value (whole / half / black) so the
+    /// script centres on the actual head.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:1906-1907 script-interface::calc-x-offset takes its
+    ///   note-head-location from ly:self-alignment-interface::aligned-on-x-parent — the same
+    ///   callback scm/define-grobs.scm:110 gives an AccidentalSuggestion outright.
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:116-160 aligned_on_parent — it reads the
+    ///   X parent's EXTENT (the note column's, i.e. the head's box) and takes a
+    ///   linear_combination of it, so what a script centres on is the head's extent centre
+    ///   and never its advance.
+    /// ⚠️ IT WAS THE ADVANCE (1.304000/2) UNTIL 2026-08-02, which put every script 0.000100
+    /// left of LilyPond's — MEASURED by all three editorial.accidental.* ledger points at
+    /// once, the same residual on three different glyphs, which is what said it was not the
+    /// accidental's own box but this one.
+    /// </remarks>
     private static double NoteheadHalfWidth(MusicItem item)
     {
         int noteValue = item switch
@@ -662,13 +675,7 @@ internal static class ArticulationEngraver
             ChordItem c => c.BaseDuration.Numerator == 1 ? c.BaseDuration.Denominator : 1,
             _ => 4
         };
-        double advance = noteValue switch
-        {
-            1 => GlyphMetrics.NoteheadWholeAdvance,
-            2 => GlyphMetrics.NoteheadHalfAdvance,
-            _ => GlyphMetrics.NoteheadBlackAdvance
-        };
-        return advance / 2.0;
+        return GlyphMetrics.GetNoteheadBBox(noteValue).CenterX;
     }
 
     /// <summary>

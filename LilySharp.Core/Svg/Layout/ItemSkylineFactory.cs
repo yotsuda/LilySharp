@@ -132,6 +132,15 @@ internal static class ItemSkylineFactory
                     double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
 
                     // Flag position (attached at stem)
+                    // ⚠️ KNOWN NOT TO BE THE STEM, and left alone on purpose (2026-08-02).
+                    // The renderer draws this flag at LayoutUtilities.StemX
+                    // (SharedRenderer.DrawNoteheads), which for a DOWN stem is the head's
+                    // left edge PLUS half a stem thickness — 0.065 right of where this
+                    // reserves it, so draw and reserve disagree by that much on every
+                    // flagged down-stem note. Moving it here is a 0.065 spacing change with
+                    // NO ledger point on it (the corpus moves ~0.02 in 30 books), and the
+                    // rule is that an output change needs an observer first: open a point
+                    // on a flagged down-stem column before touching this line.
                     double stemX = note2.StemUp
                         ? noteheadLeftX + GlyphMetrics.StemUpSE.X
                         : noteheadLeftX + GlyphMetrics.StemDownNW.X;

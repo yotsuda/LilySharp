@@ -45,7 +45,7 @@
   <text class="music" x="82.03" y="22.52" font-size="4.00" data-pos="607"></text>
   <line x1="83.27" y1="22.37" x2="83.27" y2="19.02" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="87.03" y="23.02" font-size="4.00" data-pos="609"></text>
-  <line x1="88.26" y1="23.02" x2="88.26" y2="19.52" stroke="#000000" stroke-width="0.130"/>
+  <line x1="88.27" y1="23.02" x2="88.27" y2="19.52" stroke="#000000" stroke-width="0.130"/>
   <rect x="29.64" y="18.02" width="0.19" height="4.00" data-pos="545"/>
   <rect x="52.27" y="18.02" width="0.19" height="4.00" data-pos="567"/>
   <rect x="74.04" y="18.02" width="0.19" height="4.00" data-pos="591"/>

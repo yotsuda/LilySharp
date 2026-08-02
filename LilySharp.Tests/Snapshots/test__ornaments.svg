@@ -44,8 +44,8 @@
   <text class="music" x="55.78" y="24.49" font-size="4.00" data-pos="366"></text>
   <line x1="57.02" y1="24.49" x2="57.02" y2="20.99" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="61.38" y="25.99" font-size="4.00" data-pos="395"></text>
-  <line x1="62.61" y1="25.99" x2="62.61" y2="22.49" stroke="#000000" stroke-width="0.130"/>
-  <line x1="61.86" y1="24.43" x2="63.36" y2="24.06" stroke="#000000" stroke-width="0.480"/>
+  <line x1="62.62" y1="25.99" x2="62.62" y2="22.49" stroke="#000000" stroke-width="0.130"/>
+  <line x1="61.87" y1="24.43" x2="63.37" y2="24.06" stroke="#000000" stroke-width="0.480"/>
   <text class="music" x="65.65" y="25.49" font-size="4.00" data-pos="402"></text>
   <line x1="66.89" y1="25.49" x2="66.89" y2="21.99" stroke="#000000" stroke-width="0.130"/>
   <line x1="66.14" y1="23.29" x2="67.64" y2="22.92" stroke="#000000" stroke-width="0.480"/>
