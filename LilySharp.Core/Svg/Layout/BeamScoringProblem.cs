@@ -190,10 +190,11 @@ internal sealed class BeamScoringProblem
     /// it from the fraction (ly/grace-init.ly declares 0.384 for a grace beam), so it is a
     /// separate argument and not <c>BeamThickness × lengthFraction</c>.
     /// </param>
-    /// <param name="headScale">
-    /// The scale the note heads are drawn at, which is where an UP stem attaches. Distinct
-    /// from <paramref name="lengthFraction"/> again: LilyPond's grace heads shrink by
-    /// <c>magstep(-3)</c> while its grace beam's fraction is 0.8.
+    /// <param name="headFont">
+    /// The FONT the note heads are read from, which is where an UP stem attaches — null for
+    /// the score's own size. Distinct from <paramref name="lengthFraction"/> again: LilyPond's
+    /// grace heads come out of the 14 design at <c>magstep(-3)</c> while its grace beam's
+    /// fraction is 0.8.
     /// </param>
     public BeamScoringProblem(
         BeamGroup group,
@@ -203,7 +204,7 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
         double beamThickness = EngravingDefaults.BeamThickness,
-        double headScale = 1.0,
+        GlyphMetrics.DesignMetrics? headFont = null,
         double lineThickness = EngravingDefaults.StaffLineThickness,
         int staffLineCount = 5,
         double? beamLengthFraction = null)
@@ -254,7 +255,7 @@ internal sealed class BeamScoringProblem
         // renderer and the collision collector already read, so the beam is scored in the
         // frame it is drawn in (BeamStemFrameTests asserts the two agree).
         double StemXOf(BeamMember m) =>
-            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp, headScale);
+            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp, headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 

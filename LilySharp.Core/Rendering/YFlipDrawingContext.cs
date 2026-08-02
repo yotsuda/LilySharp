@@ -123,6 +123,10 @@ internal sealed class YFlipDrawingContext : IDrawingContext
     public IDisposable Source(int sourcePosition, IReadOnlyList<int> aliases)
         => _inner.Source(sourcePosition, aliases);
 
+    // Forwarded, NOT left to the interface default: the default is a no-op, so a decorated
+    // backend would silently keep drawing graces from the 20 face.
+    public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);
+
     public void DrawHitRect(double x, double y, double width, double height)
         // y is the Y-up top edge; height is a size (extends downward), unchanged.
         => _inner.DrawHitRect(x, F(y), width, height);

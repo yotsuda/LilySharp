@@ -113,5 +113,9 @@ internal sealed class TextFontDrawingContext : IDrawingContext
 
     public IDisposable Source(int sourcePosition) => _inner.Source(sourcePosition);
 
+    // Forwarded, NOT left to the interface default (which is a no-op): this decorator
+    // rewrites TEXT families only, and the music face has to reach the real backend.
+    public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);
+
     public IDisposable BeginGroup(DrawingTransform transform) => _inner.BeginGroup(transform);
 }

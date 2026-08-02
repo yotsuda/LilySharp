@@ -94,6 +94,10 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
 
     public IDisposable Source(int sourcePosition) => _inner.Source(sourcePosition);
 
+    // Forwarded, NOT left to the interface default (which is a no-op): this decorator
+    // compensates X only, and the music face has to reach the real backend.
+    public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);
+
     // A nested group's X translation is a POSITION and gets the same
     // compensation; its own scale factors pass through untouched.
     public IDisposable BeginGroup(DrawingTransform transform)

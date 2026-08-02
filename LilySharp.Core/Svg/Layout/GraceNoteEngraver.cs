@@ -277,7 +277,7 @@ internal static class GraceNoteEngraver
             group, xs,
             lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
             beamThickness: EngravingDefaults.GraceBeamThickness,
-            headScale: GraceScale).Solve();
+            headFont: GraceNoteItem.Font).Solve();
         return (leftY, rightY);
     }
 
@@ -357,9 +357,12 @@ internal static class GraceNoteEngraver
             var d = grace.Notes[0].BaseDuration;
             if (d.Numerator == 1 && d.Denominator >= 8)
             {
-                var flag = GlyphMetrics.GetFlagBBox(d.Denominator, stemUp: true);
+                // Read from the grace's own font, exactly as SpacingRules.GraceColumnRightReach
+                // does — this is the same ink, measured for a different caller.
+                var font = GraceNoteItem.Font;
+                var flag = GlyphMetrics.GetFlagBBox(font, d.Denominator, stemUp: true);
                 if (flag != default)
-                    return (GlyphMetrics.StemUpSE.X + flag.Width) * GraceScale;
+                    return font.NoteheadBlackAdvance + flag.Width;
             }
         }
         return graceGroupWidth;

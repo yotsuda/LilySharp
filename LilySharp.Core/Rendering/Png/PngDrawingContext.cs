@@ -29,6 +29,10 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// the SKFonts derived from them). Called by PngDocumentContext.EndPage.</summary>
     public void Dispose() => _fonts.Dispose();
 
+    /// <summary>The Emmentaler design music glyphs are drawn from — see
+    /// <see cref="IDrawingContext.MusicFace"/>.</summary>
+    private int _musicDesign = EmmentalerFaces.DefaultDesign;
+
     public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory)
     {
         _canvas = canvas;
@@ -153,7 +157,9 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
-        var font = _fonts.GetFont("Emmentaler", T(fontSize), FontStyle.Regular);
+        // The FACE follows the music-face scope; the SIZE does not change with it — every
+        // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
+        var font = _fonts.GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize), FontStyle.Regular);
         using var paint = new SKPaint
         {
             Color = ToSKColor(fill),
@@ -233,6 +239,13 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         return NullScope.Instance;
     }
 
+    public IDisposable MusicFace(int rounded)
+    {
+        var prev = _musicDesign;
+        _musicDesign = rounded;
+        return new ScopeAction(() => _musicDesign = prev);
+    }
+
     public IDisposable BeginGroup(DrawingTransform transform)
     {
         int saveCount = _canvas.Save();
@@ -303,12 +316,16 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
         private SKTypeface? TryLoadEmmentaler(string family)
         {
-            string? fileName = family.ToLowerInvariant() switch
-            {
-                "emmentaler" or "emmentaler-20" => "emmentaler-20.otf",
-                "emmentaler-brace" => "emmentaler-brace.otf",
-                _ => null
-            };
+            // Every Emmentaler DESIGN is its own file — the font is optically sized, so a
+            // grace's 14 is not the 20 scaled (see EmmentalerFaces).
+            string? fileName =
+                EmmentalerFaces.TryParseFamily(family, out int design)
+                    ? EmmentalerFaces.OtfFile(design)
+                    : family.ToLowerInvariant() switch
+                    {
+                        "emmentaler-brace" => "emmentaler-brace.otf",
+                        _ => null
+                    };
             if (fileName == null) return null;
             string? path = ResolveFontPath(fileName);
             return path != null ? SKTypeface.FromFile(path) : null;

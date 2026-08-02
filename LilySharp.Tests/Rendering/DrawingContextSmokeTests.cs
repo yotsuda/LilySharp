@@ -61,6 +61,13 @@ public sealed class DrawingContextSmokeTests
         using (gc.Source(42))
             gc.DrawCircle(20, 8, 0.3, Color.Black);
 
+        // A glyph out of ANOTHER Emmentaler design (a grace's 14) — every backend has to
+        // resolve that face, not just SVG: PdfSharpCore asks its font resolver by family
+        // name and SkiaSharp loads a typeface by file, and a missing branch there throws at
+        // render time rather than at layout time.
+        using (gc.MusicFace(14))
+            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, 22, 8, 2.83);
+
         // Group with scale (ossia)
         using (gc.BeginGroup(new DrawingTransform(25, 5, 0.65, 0.65)))
             gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, 0, 2, 4);
@@ -89,6 +96,9 @@ public sealed class DrawingContextSmokeTests
         Assert.Contains("<path ", svg);
         Assert.Contains("<text ", svg);
         Assert.Contains("class=\"music\"", svg);
+        // The other design names its own face and falls back to the default one, so a viewer
+        // without it draws the right glyph from the wrong design instead of tofu.
+        Assert.Contains("font-family=\"Emmentaler-14, Emmentaler, serif\"", svg);
         Assert.Contains("data-pos=\"42\"", svg);
         Assert.Contains("transform=\"translate(", svg);
         Assert.EndsWith("</svg>" + Environment.NewLine, svg);

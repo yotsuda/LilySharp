@@ -70,6 +70,15 @@ internal static partial class SharedRenderer
             // was neither of the two widths the layout had reserved. The offsets are in
             // grace-scaled staff spaces already, so only the OSSIA factor is applied here.
             double unit = os.Size(1.0, g.StaffIndex);
+            // THE FONT this grace's glyphs come out of — the design its font-size selected,
+            // magnified again by the ossia the staff carries (fontSize composes in LilyPond
+            // too). Everything drawn below reads a dimension out of this and multiplies
+            // nothing: it is the same table the LAYOUT reserved with
+            // (SpacingRules.GraceColumns via GraceNoteItem.Font), so the box and the ink
+            // cannot disagree.
+            var graceFont = unit == 1.0
+                ? GraceNoteItem.Font
+                : GraceNoteItem.Font.Scaled(unit);
             var colX = g.ColumnOffsets;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
@@ -80,7 +89,12 @@ internal static partial class SharedRenderer
             var headX = new List<double>(g.Notes.Length);
             var headY = new List<double>(g.Notes.Length);
             var beamCounts = new List<int>(g.Notes.Length);
+            // Music glyphs from HERE come out of the grace's own design, not the score's:
+            // Emmentaler is optically sized, so a grace head is the 14 design's outline at
+            // magstep(-3) and not the 20's drawn small (IDrawingContext.MusicFace). The scope
+            // covers the same grobs `graceFont` measures.
             using (gc.Source(g.SourcePosition))
+            using (gc.MusicFace(GraceNoteItem.DesignSize))
             {
                 foreach (var note in g.Notes)
                 {
@@ -95,18 +109,29 @@ internal static partial class SharedRenderer
                     if (note.NeedsLedger)
                         DrawLedgerLines(note.StaffPosition, currentX,
                             os.YUp(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
-                            EngravingDefaults.NoteheadBlackWidth * eff,
+                            graceFont.NoteheadBlackAdvance,
                             unit: os.Size(1.0, g.StaffIndex));
                     // Same single-ape skyline path as full notes (draw = reserve): a grace
                     // natural clears its head by its real right skyline, not the fixed gap.
+                    // ⚠️ STILL THE 20 DESIGN, metric AND face alike, and deliberately the pair:
+                    // the accidental is PLACED by its glyph's real outline skyline
+                    // (AccidentalPlacement.GlyphSkylinePair) and those skylines are baked for
+                    // the 20 only (GlyphSkylinesGenerated.cs). Drawing this one from the 14
+                    // while packing it with the 20's outline is exactly the metric/ink split
+                    // this island exists to remove, so the accidental moves as a pair when the
+                    // skyline generator goes per-design. Ledger grace.column.accidental.step
+                    // carries what is left.
                     if (note.Accidental is { } acc
                         && AccidentalColumn.CalculateSinglePosition(
                             note.StaffPosition, acc, isCourtesy: false, eff) is { } al)
-                        DrawAccidentalAtInkLeft(acc, isCourtesy: false, currentX + al.XOffset, y,
-                            g.SourcePosition, gc, eff);
+                    {
+                        using (gc.MusicFace(EmmentalerFaces.DefaultDesign))
+                            DrawAccidentalAtInkLeft(acc, isCourtesy: false, currentX + al.XOffset, y,
+                                g.SourcePosition, gc, eff);
+                    }
                     gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
-                        GlyphMetrics.NoteheadBlackAdvance * eff,
-                        GlyphMetrics.NoteheadBlack.Height * eff);
+                        graceFont.NoteheadBlackAdvance,
+                        graceFont.NoteheadBlack.Height);
                     headX.Add(currentX);
                     headY.Add(y);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
@@ -134,7 +159,7 @@ internal static partial class SharedRenderer
                         ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
-                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff,
+                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff, graceFont,
                     g.Type == GraceNoteType.Acciaccatura, beamEnds, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
@@ -271,8 +296,13 @@ internal static partial class SharedRenderer
     /// quant (a test constructing a GraceNoteLayout by hand), and it now shares this frame,
     /// its stem ends being at the stems by construction.
     /// </param>
+    /// <param name="headFont">
+    /// The font the HEADS came out of — an up stem attaches at that font's head advance, so
+    /// the stem stands where the drawn head ends and not where a scaled 20 would have.
+    /// </param>
     private static void DrawGraceStemsAndBeam(
         List<double> xs, List<double> ys, List<int> beamCounts, double scale,
+        GlyphMetrics.DesignMetrics headFont,
         bool acciaccatura, (double Left, double Right)? beamEnds, IDrawingContext gc)
     {
         int n = xs.Count;
@@ -291,11 +321,11 @@ internal static partial class SharedRenderer
         double stemLen = EngravingDefaults.DefaultStemLength * scale;
         // THE one house for where a stem stands, and the whole point of using it here: it is
         // the expression the beam was SCORED in (BeamScoringProblem's StemXOf reads the same
-        // LayoutUtilities.StemX at the same headScale) and the one the collision collector
+        // LayoutUtilities.StemX from the same head font) and the one the collision collector
         // reads. Spelling it a second time here is what let the two frames drift — the second
         // spelling pulled the stem back by half a SCALED thickness while the quanter used the
         // unscaled one, and nothing observed either.
-        double StemX(int i) => LayoutUtilities.StemX(xs[i], up: true, headScale: scale);
+        double StemX(int i) => LayoutUtilities.StemX(xs[i], up: true, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame.
         double StemEndY(int i) => ys[i] + stemLen;

@@ -97,24 +97,65 @@ public sealed record GraceNoteItem
     }
 
     /// <summary>
+    /// The <c>font-size</c> a grace note's voice carries, in LilyPond's sixths of an octave.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly <c>graceSettings</c> — <c>Voice.fontSize = #-3</c>.
+    /// This is the number a grace grob STATES; everything else about its size follows from
+    /// it — which Emmentaler design its glyphs come out of
+    /// (<see cref="Svg.Layout.EmmentalerDesignSize.ForFontSizeStep"/>) and the magnification
+    /// that design is then read at (<see cref="ScaleFactor"/>).
+    /// </remarks>
+    public const double FontSizeStep = -3.0;
+
+    /// <summary>
     /// Scale factor for grace notes relative to normal notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/grace-init.ly <c>graceSettings</c> — <c>Voice.fontSize = #-3</c>;
-    ///   scm/lily-library.scm <c>magstep</c> = <c>2^(s/6)</c>, so the scale is
-    ///   <c>magstep(-3)</c> = <c>2^(-1/2)</c>.
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c> = <c>2^(s/6)</c>, over
+    ///   <see cref="FontSizeStep"/>, so the scale is <c>magstep(-3)</c> = <c>2^(-1/2)</c>.
     /// <para>
     /// This was 0.65 until 2026-08-01, with a comment that said "font size -3 corresponds to
     /// approximately 0.65" — an evaluation, and a wrong one (magstep(-3) = 0.707107). It is
     /// not only the drawn size: the grace COLUMN's width reads the head's right edge
     /// (lily/note-spacing.cc:77 <c>left_head_end</c>), so the rounding sat inside the spacing
-    /// law as well. MEASURED: LilyPond's grace head ends at 0.9179386 in its column against a
-    /// full-size 1.304200; 1.304200 × magstep(-3) = 0.922209, and the 0.004270 left over is
-    /// Emmentaler's OPTICAL sizing — LilyPond reads the FOURTEEN design's head (1.298161 in
-    /// its own staff spaces, <c>GlyphMetrics.ForFontSizeStep(-3)</c>) where Lily# scales the
-    /// twenty's. The tables are bundled; the drawn size still comes off the twenty until the
-    /// scaled paths are wired to them.
+    /// law as well.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS IS THE MAGNIFICATION, NOT THE WHOLE SIZE. A grace glyph is the FOURTEEN
+    /// design's glyph at this magnification, not the twenty's: Emmentaler is optically sized
+    /// and LilyPond picks the file before it scales anything. Ask
+    /// <see cref="Svg.Layout.GlyphMetrics.AtFontSize"/> for a grace metric rather than
+    /// multiplying a full-size one by this — the difference is 0.004270 on the head's right
+    /// edge, which is what the <c>grace.column.*</c> ledger island carried until 2026-08-02.
+    /// This factor stays because it is still one of the two terms: it is what
+    /// <c>AtFontSize</c> multiplies the chosen design's table by.
     /// </para>
     /// </remarks>
-    public static readonly double ScaleFactor = Math.Pow(2.0, -3.0 / 6.0);
+    public static readonly double ScaleFactor = Math.Pow(2.0, FontSizeStep / 6.0);
+
+    /// <summary>
+    /// The FONT a grace grob reads its glyph dimensions from: the design
+    /// <see cref="FontSizeStep"/> selects, already magnified into the page's staff spaces.
+    /// Nothing read out of it is multiplied again.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/font-select.cc:115-186 select_font — one call answers both halves,
+    ///   WHICH file and at WHAT magnification, and hands back a font that has applied the
+    ///   second (lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions).
+    /// </remarks>
+    internal static Svg.Layout.GlyphMetrics.DesignMetrics Font
+        => Svg.Layout.GlyphMetrics.AtFontSize(FontSizeStep);
+
+    /// <summary>
+    /// The Emmentaler design a grace is DRAWN from — the rounded size in the file name, the
+    /// number a drawing context's music-face scope takes.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE DECISION, TWO READERS: this and <see cref="Font"/> must come from the same
+    /// <see cref="FontSizeStep"/>, or the box a grace column reserves stops being the box its
+    /// glyph fills. See <see cref="Svg.Layout.EmmentalerDesignSize"/>'s remarks.
+    /// </remarks>
+    internal static int DesignSize
+        => Svg.Layout.EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
 }

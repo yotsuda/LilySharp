@@ -80,4 +80,34 @@ public sealed class SharedRendererPngTests
         Assert.True(bytes.Length > 2_000);
         Assert.Equal(0x89, bytes[0]);
     }
+
+    /// <summary>
+    /// The PNG backend really loads the OTHER design's face when a music-face scope asks for
+    /// it — the same glyph, the same size, drawn from the 14 and from the 20, must not come
+    /// out as the same pixels.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FAILURE THIS EXISTS FOR IS SILENT. Unlike PDF (whose resolver throws on an
+    /// unknown face) SkiaSharp falls back to SKTypeface.Default when a family does not
+    /// resolve, so a wrong or missing branch in PngDrawingContext.FontCache would draw
+    /// something — the 20's outline, or tofu — and every other test would stay green.
+    /// Emmentaler is optically sized, so identical bytes here mean one file answered twice.
+    /// </remarks>
+    [Fact]
+    public void PngDrawsTheDesignTheMusicFaceScopeAsksFor()
+    {
+        static byte[] HeadDrawnFrom(int design)
+        {
+            using var doc = new LilySharp.Core.Rendering.Png.PngDocumentContext(
+                new LilySharp.Core.Rendering.Png.PngDocumentOptions { PixelsPerSpace = 40 });
+            var gc = doc.BeginPage(3, 3);
+            using (gc.MusicFace(design))
+                gc.DrawGlyph(LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadBlack, 0.2, 2, 4);
+            doc.EndPage();
+            doc.Dispose();
+            return doc.GetBytes();
+        }
+
+        Assert.NotEqual(HeadDrawnFrom(20), HeadDrawnFrom(14));
+    }
 }

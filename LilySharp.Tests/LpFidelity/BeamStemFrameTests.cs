@@ -59,10 +59,32 @@ public class BeamStemFrameTests
         score main "x" { staff m }
         """;
 
-    [Fact]
-    public void ABeamsDrawnEdge_IsHalfAStemThicknessOutsideItsDrawnStem()
+    /// <summary>
+    /// A GRACE beam, whose stems attach at another Emmentaler design's head advance
+    /// (GraceNoteItem.Font, since 2026-08-02). The quanter is handed that font and the
+    /// renderer reads it back through LayoutUtilities.StemX; if either side goes back to
+    /// scaling the 20 design's advance, the two frames differ by 0.0056 and this fails.
+    /// </summary>
+    private const string GraceSrc = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main { m { grace { d'16 e' } f'4 g'2 r4 | } }
+
+        form main { ~Main }
+
+        score main "x" { staff m }
+        """;
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ABeamsDrawnEdge_IsHalfAStemThicknessOutsideItsDrawnStem(bool grace)
     {
-        var page = RenderedGeometry.Render(Src);
+        var page = RenderedGeometry.Render(grace ? GraceSrc : Src);
 
         // The stems: vertical strokes at the beam's own thickness. Staff lines and ledger
         // lines are horizontal, so "x1 == x2" is enough to tell them apart.

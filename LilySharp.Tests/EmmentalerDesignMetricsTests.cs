@@ -17,6 +17,7 @@
 using System;
 using System.Linq;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -29,9 +30,9 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size picks the file,
 ///   lily/open-type-font.cc:390-408 get_indexed_char_dimensions reads that file's own table.
-/// Nothing in the engraver reads the new tables yet — the scaled paths (grace, ossia, cue)
-/// are wired to them in the next step of the island. These are the observers that say the
-/// data is real and says what it claims to.
+/// The GRACE path reads them since 2026-08-02, metrics and drawn face together
+/// (<see cref="AGraceIsMeasuredAndDrawnFromOneDesign"/>); ossia and cue are still the 20
+/// scaled. These are the observers that say the data is real and says what it claims to.
 /// </remarks>
 public sealed class EmmentalerDesignMetricsTests
 {
@@ -117,8 +118,9 @@ public sealed class EmmentalerDesignMetricsTests
     /// places here. The gap this closes is 0.004270, four orders of magnitude larger.
     /// </para>
     /// <para>
-    /// ⚠️ This says the DATA is right, not that the engraver reads it: the drawn size still
-    /// comes off the flat constants until the scaled paths are wired to the tables.
+    /// ⚠️ This says the DATA is right. That the ENGRAVER reads it is
+    /// <see cref="AGraceIsMeasuredAndDrawnFromOneDesign"/>, and what LilyPond says about the
+    /// result is the <c>grace.column.*</c> ledger island.
     /// </para>
     /// </remarks>
     [Fact]
@@ -187,6 +189,40 @@ public sealed class EmmentalerDesignMetricsTests
             Assert.NotNull(LilySharp.Core.Rendering.FontLocator.ResolveFile($"emmentaler-{rounded}.otf"));
             Assert.NotNull(LilySharp.Core.Rendering.FontLocator.ResolveFile($"emmentaler-{rounded}.woff2"));
         }
+    }
+
+    /// <summary>
+    /// ONE DECISION, TWO READERS: the design a grace is MEASURED with is the design it is
+    /// DRAWN from — asserted on the drawn document, which is the only place the two meet.
+    /// </summary>
+    /// <remarks>
+    /// This is the invariant the island exists for, and neither half can observe it alone: the
+    /// <c>grace.column.*</c> ledger points see the METRICS (they measure notehead anchors) and
+    /// would stay exact if the renderer went on drawing the 20's outlines, while a snapshot
+    /// sees the DRAWN bytes and would stay green if the layout went back to scaling the 20.
+    /// Splitting them is how a box stops being the box its glyph fills.
+    /// <para>
+    /// The full-size assertion is the other half: a score's ordinary glyphs must keep the bare
+    /// <c>.music</c> family, or every existing SVG would have changed for nothing.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AGraceIsMeasuredAndDrawnFromOneDesign()
+    {
+        // The two spellings a caller reaches for — the metric font and the face — are one
+        // decision taken once, from the font-size ly/grace-init.ly states.
+        Assert.Equal(GraceNoteItem.DesignSize, GraceNoteItem.Font.Rounded);
+        Assert.Equal(14, GraceNoteItem.DesignSize);
+
+        var svg = LiveRender.Svg("grace { d16 e } f4 g2 r4");
+        var family = "Emmentaler-" + GraceNoteItem.DesignSize;
+
+        // The grace's own glyphs name that design's face…
+        Assert.Contains($"font-family=\"{family},", svg);
+        // …the document declares it (embedded or local, per SvgDocumentOptions.EmbedFont)…
+        Assert.Contains($"font-family: '{family}'", svg);
+        // …and the full-size glyphs are untouched: the bare class, no per-element override.
+        Assert.Contains("<text class=\"music\" x=", svg);
     }
 
     /// <summary>There are eight designs and nothing between them: 12 is not a rounded size.</summary>

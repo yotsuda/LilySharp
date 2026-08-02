@@ -488,11 +488,22 @@ internal static partial class GlyphMetrics
     /// Gets the notehead bounding box for a given note value.
     /// </summary>
     /// <param name="noteValue">1=whole, 2=half, 4=quarter, etc.</param>
-    public static BBox GetNoteheadBBox(int noteValue) => noteValue switch
+    public static BBox GetNoteheadBBox(int noteValue) => GetNoteheadBBox(Design20, noteValue);
+
+    /// <summary>
+    /// The same lookup asked of ONE font — the design a grob's <c>font-size</c> selected,
+    /// optionally already scaled (<see cref="AtFontSize"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/open-type-font.cc:390-408 get_indexed_char_dimensions — a dimension
+    ///   is a question put to a FONT, never to a glyph name alone. The parameterless overload
+    ///   is this one asked of <see cref="Design20"/>, which is the score's own size.
+    /// </remarks>
+    public static BBox GetNoteheadBBox(DesignMetrics font, int noteValue) => noteValue switch
     {
-        1 => NoteheadWhole,
-        2 => NoteheadHalf,
-        _ => NoteheadBlack
+        1 => font.NoteheadWhole,
+        2 => font.NoteheadHalf,
+        _ => font.NoteheadBlack
     };
 
     // ========== The boxes a SKYLINE is built from ==========
@@ -544,13 +555,18 @@ internal static partial class GlyphMetrics
             : baseDuration.Numerator == 1 ? baseDuration.Denominator : 1;
 
     /// <summary>Gets the notehead advance width for a given note value.</summary>
-    public static double GetNoteheadAdvance(int noteValue) => noteValue switch
+    public static double GetNoteheadAdvance(int noteValue)
+        => GetNoteheadAdvance(Design20, noteValue);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    public static double GetNoteheadAdvance(DesignMetrics font, int noteValue) => noteValue switch
     {
         // Breve: the sM1 glyph is the whole head plus its side bars.
-        0 => NoteheadWholeAdvance * 1.30,
-        1 => NoteheadWholeAdvance,
-        2 => NoteheadHalfAdvance,
-        _ => NoteheadBlackAdvance,
+        0 => font.NoteheadWholeAdvance * 1.30,
+        1 => font.NoteheadWholeAdvance,
+        2 => font.NoteheadHalfAdvance,
+        _ => font.NoteheadBlackAdvance,
     };
 
     /// <summary>
@@ -559,15 +575,21 @@ internal static partial class GlyphMetrics
     /// <param name="noteValue">8=eighth, 16=sixteenth, etc.</param>
     /// <param name="stemUp">True if stem points upward</param>
     /// <returns>Flag bounding box, or default if no flag needed</returns>
-    public static BBox GetFlagBBox(int noteValue, bool stemUp) => (noteValue, stemUp) switch
+    public static BBox GetFlagBBox(int noteValue, bool stemUp)
+        => GetFlagBBox(Design20, noteValue, stemUp);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    public static BBox GetFlagBBox(DesignMetrics font, int noteValue, bool stemUp)
+        => (noteValue, stemUp) switch
     {
-        (8, true) => Flag8thUp,
-        (8, false) => Flag8thDown,
-        (16, true) => Flag16thUp,
-        (16, false) => Flag16thDown,
+        (8, true) => font.Flag8thUp,
+        (8, false) => font.Flag8thDown,
+        (16, true) => font.Flag16thUp,
+        (16, false) => font.Flag16thDown,
         // For 32nd, 64th etc., use 16th as approximation (they're similar width)
-        (>= 32, true) => Flag16thUp,
-        (>= 32, false) => Flag16thDown,
+        (>= 32, true) => font.Flag16thUp,
+        (>= 32, false) => font.Flag16thDown,
         _ => default
     };
 

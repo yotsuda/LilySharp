@@ -1971,15 +1971,15 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-spacing.cc:47-70 — <c>left_head_end =
-    /// g-&gt;extent (col, X_AXIS)[RIGHT]</c>. MEASURED: LilyPond reports 0.917939 for a grace
-    /// head and 1.304200 for a full-size black one, and Lily#'s
-    /// <see cref="GlyphMetricsGenerated.NoteheadBlack"/> right edge is that same 1.304200.
-    /// The residual between 0.917939 and <c>1.304200 × magstep(-3)</c> = 0.922205 is
-    /// Emmentaler's OPTICAL sizing — LilyPond selects a different design size for a smaller
-    /// font, Lily# scales one — and belongs to the glyph-metrics island, not to this one.
+    /// g-&gt;extent (col, X_AXIS)[RIGHT]</c>, the head's right edge IN THE FONT ITS GROB READS.
+    /// MEASURED: LilyPond reports 0.917939 for a grace head and 1.304200 for a full-size
+    /// black one. The grace one is NOT the full-size one scaled (that is 0.922205): Emmentaler
+    /// is optically sized, so a font-size −3 grob reads the FOURTEEN design's head, 1.298161
+    /// in its own staff spaces, and magstep(−3) of that is 0.917939 — LilyPond's own number to
+    /// six places. <see cref="GraceNoteItem.Font"/> is that font, so this reads a width and
+    /// multiplies nothing.
     /// </remarks>
-    private static double GraceHeadEnd =>
-        GlyphMetrics.NoteheadBlack.Width * GraceNoteItem.ScaleFactor;
+    private static double GraceHeadEnd => GraceNoteItem.Font.NoteheadBlack.Width;
 
     /// <summary>
     /// How far a grace column's ink reaches RIGHT of its origin, in the separation-skyline
@@ -1997,10 +1997,20 @@ internal static class SpacingRules
         double ink = GraceHeadEnd;
         if (!beamed && note.BaseDuration.Numerator == 1 && note.BaseDuration.Denominator >= 8)
         {
-            var flag = GlyphMetrics.GetFlagBBox(note.BaseDuration.Denominator, stemUp: true);
+            // The flag hangs off the stem, so its reach is the stem's x plus the flag's own
+            // width — both read from the grace's OWN font (see GraceHeadEnd).
+            // ⚠️ KNOWN WRONG BY 0.063472, and the ledger names it: this hangs the flag off the
+            // head's ADVANCE where LilyPond hangs it off the STEM, which stands at the head's
+            // EXTENT minus half a stem thickness (0.917939 − 0.065 = 0.852939, and
+            // 0.852939 + 0.585689 = 1.438627 is LilyPond's own reading to nine places).
+            // Ledger grace.column.single.to-main. It is left standing because the second half
+            // of the same defect — LayoutUtilities.StemAttachX reading an advance where
+            // LilyPond reads an extent — moves EVERY stem in every score, and the two are one
+            // claim (HANDOFF §5.0: a fork whose branches cannot happen separately).
+            var font = GraceNoteItem.Font;
+            var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
             if (flag != default)
-                ink = Math.Max(ink,
-                    (GlyphMetrics.StemUpSE.X + flag.Width) * GraceNoteItem.ScaleFactor);
+                ink = Math.Max(ink, font.NoteheadBlackAdvance + flag.Width);
         }
         return ink + DefaultExtraSpacingWidth;
     }

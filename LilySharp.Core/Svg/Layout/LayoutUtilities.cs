@@ -54,10 +54,31 @@ internal static class LayoutUtilities
             ? EngravingDefaults.NoteheadBlackWidth * headScale - EngravingDefaults.StemThickness / 2
             : EngravingDefaults.StemDownAttachX;
 
+    /// <summary>
+    /// The same offset for a head read from ANOTHER FONT — a grace's, whose head comes out of
+    /// a different Emmentaler design and not out of a scaled 20 (<c>GraceNoteItem.Font</c>).
+    /// Null is the score's own size, i.e. the <c>headScale = 1.0</c> overload exactly.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The stem's THICKNESS does not come from the font and is not scaled with it:
+    /// MEASURED (ledger grace.stem.thickness against grace.stem.thickness.full-size-control)
+    /// LilyPond draws both at 0.13.
+    /// </remarks>
+    public static double StemAttachX(bool up, GlyphMetrics.DesignMetrics? font) =>
+        up
+            ? (font?.NoteheadBlackAdvance ?? EngravingDefaults.NoteheadBlackWidth)
+              - EngravingDefaults.StemThickness / 2
+            : EngravingDefaults.StemDownAttachX;
+
     /// <summary>The x a stem stands at, given its note column's x.</summary>
-    /// <remarks>See <see cref="StemAttachX"/>.</remarks>
+    /// <remarks>See <see cref="StemAttachX(bool, double)"/>.</remarks>
     public static double StemX(double columnX, bool up, double headScale = 1.0) =>
         columnX + StemAttachX(up, headScale);
+
+    /// <summary>The x a stem stands at, for a head read from <paramref name="font"/>.</summary>
+    /// <remarks>See <see cref="StemAttachX(bool, GlyphMetrics.DesignMetrics)"/>.</remarks>
+    public static double StemX(double columnX, bool up, GlyphMetrics.DesignMetrics? font) =>
+        columnX + StemAttachX(up, font);
 
     /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.

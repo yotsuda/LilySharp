@@ -178,6 +178,28 @@ public interface IDrawingContext
         => Source(sourcePosition);
 
     /// <summary>
+    /// Draws subsequent MUSIC glyphs (until <see cref="IDisposable.Dispose"/>) from another
+    /// Emmentaler DESIGN — <paramref name="rounded"/> is the size in the file name, 20 being
+    /// the score's own. Text is unaffected.
+    /// </summary>
+    /// <remarks>
+    /// Emmentaler is optically sized: a grace is not the 20 design drawn small, it is the 14
+    /// design drawn at <c>magstep(-3)</c>, and its outlines differ (a head's right edge is
+    /// 1.298161 of its own staff spaces against the 20's 1.304200). The glyph's FONT SIZE
+    /// does not change with the face — every design's em is four of ITS OWN staff spaces, so
+    /// the caller passes the same <c>fontSize</c> it already computed and only the file
+    /// changes.
+    /// <para>
+    /// ⚠️ ONE DECISION, TWO READERS: the design opened here must be the one the LAYOUT
+    /// measured with (<c>GlyphMetrics.AtFontSize</c> of the same font-size), or the box a
+    /// column reserved stops being the box the glyph fills.
+    /// </para>
+    /// The default ignores the scope: a backend that has only the 20 face keeps drawing from
+    /// it, which is what every caller got before this existed.
+    /// </remarks>
+    IDisposable MusicFace(int rounded) => NullScope.Instance;
+
+    /// <summary>
     /// In interactive SVG, draws a transparent click target over the given
     /// rectangle, carrying the current <see cref="Source"/> position — used to
     /// give thin ink (a barline) a comfortably clickable area. Static backends

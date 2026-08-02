@@ -99,8 +99,13 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
         var name = familyName.ToLowerInvariant();
-        if (name == "emmentaler" || name == "emmentaler-20")
-            return new FontResolverInfo("Emmentaler#");
+        // Every Emmentaler DESIGN is its own face — the font is optically sized, so a grace's
+        // 14 is not the 20 scaled (see EmmentalerFaces). The default design keeps the bare
+        // "Emmentaler#" face name so existing PDFs are unchanged.
+        if (EmmentalerFaces.TryParseFamily(name, out int design))
+            return new FontResolverInfo(design == EmmentalerFaces.DefaultDesign
+                ? "Emmentaler#"
+                : EmmentalerFaces.Family(design) + "#");
         if (name == "emmentaler-brace")
             return new FontResolverInfo("EmmentalerBrace#");
         // SharedRenderer asks for the CSS generics for titles/lyrics/dynamics/chord
@@ -130,9 +135,21 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             return _embedBytes ?? throw new InvalidOperationException(
                 "Embed font requested but its bytes were not loaded.");
 
+        // "Emmentaler-14#" and friends — the face name is the family plus the '#' this
+        // resolver marks its own faces with, so one bundled OTF answers per design.
+        if (faceName.EndsWith("#", StringComparison.Ordinal)
+            && EmmentalerFaces.TryParseFamily(faceName[..^1], out int design)
+            && design != EmmentalerFaces.DefaultDesign)
+        {
+            var designPath = ResolveFontPath(EmmentalerFaces.OtfFile(design));
+            if (designPath != null) return File.ReadAllBytes(designPath);
+            throw new FileNotFoundException(
+                $"Font file not found: {EmmentalerFaces.OtfFile(design)}");
+        }
+
         var fileName = faceName switch
         {
-            "Emmentaler#" => "emmentaler-20.otf",
+            "Emmentaler#" => EmmentalerFaces.OtfFile(EmmentalerFaces.DefaultDesign),
             "EmmentalerBrace#" => "emmentaler-brace.otf",
             "Schola#" => "texgyreschola-regular.otf",
             "ScholaBold#" => "texgyreschola-bold.otf",

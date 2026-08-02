@@ -29,6 +29,10 @@ internal sealed class PdfDrawingContext : IDrawingContext
     // a full score draws thousands, so cache them instead of allocating per draw.
     private readonly Dictionary<(string Family, double Size, XFontStyle Style), XFont> _fontCache = new();
 
+    /// <summary>The Emmentaler design music glyphs are drawn from — see
+    /// <see cref="IDrawingContext.MusicFace"/>.</summary>
+    private int _musicDesign = EmmentalerFaces.DefaultDesign;
+
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0)
     {
         _gfx = gfx;
@@ -166,7 +170,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
-        var font = GetFont("Emmentaler", T(fontSize));
+        // The FACE follows the music-face scope; the SIZE does not change with it — every
+        // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
+        var font = GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize));
         // SVG <text y="..."> places the baseline at y; PdfSharpCore's
         // XStringFormats.BaseLineLeft matches that, so we draw at (x, y).
         _gfx.DrawString(glyph.ToString(), font,
@@ -211,6 +217,13 @@ internal sealed class PdfDrawingContext : IDrawingContext
         // PDF backend ignores source-position metadata. A future enhancement
         // could emit PDF link annotations or named destinations.
         return NullScope.Instance;
+    }
+
+    public IDisposable MusicFace(int rounded)
+    {
+        var prev = _musicDesign;
+        _musicDesign = rounded;
+        return new ScopeAction(() => _musicDesign = prev);
     }
 
     public IDisposable BeginGroup(DrawingTransform transform)

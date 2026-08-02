@@ -26,13 +26,20 @@ internal sealed class SvgDrawingContext : IDrawingContext
 
     private readonly StringBuilder _sb;
     private readonly bool _interactive;
+    /// <summary>The designs whose glyphs this page actually drew — the document embeds a
+    /// face for each. Shared with the document context, which writes the header after every
+    /// page has been drawn.</summary>
+    private readonly HashSet<int>? _usedDesigns;
     private int? _currentSourcePosition;
     private IReadOnlyList<int>? _currentAliases;
+    private int _musicDesign = EmmentalerFaces.DefaultDesign;
 
-    public SvgDrawingContext(StringBuilder sb, bool interactive = false)
+    public SvgDrawingContext(StringBuilder sb, bool interactive = false,
+        HashSet<int>? usedDesigns = null)
     {
         _sb = sb;
         _interactive = interactive;
+        _usedDesigns = usedDesigns;
     }
 
     /// <summary>A fill attribute for a glyph/shape whose default is black. SVG's initial
@@ -122,12 +129,31 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.AppendLine($"  <path d=\"{d}\"{FillAttr(fill)}{strokeAttr}{SourceAttr()}/>");
     }
 
+    /// <summary>
+    /// The face attribute a music glyph carries: nothing at the score's own size (the
+    /// <c>.music</c> CSS class already names that family), and an explicit
+    /// <c>font-family</c> — which overrides the class — for any other design. Also RECORDS
+    /// the design, so the document embeds exactly the faces the score drew with.
+    /// </summary>
+    private string MusicFaceAttr()
+    {
+        _usedDesigns?.Add(_musicDesign);
+        // The fallback chain matters: a viewer that has not been given this design's face
+        // (the VS Code preview injects Emmentaler itself and omits @font-face entirely) then
+        // draws the glyph from the default design instead of showing tofu. It is the wrong
+        // OUTLINE by ~0.5% and the right glyph, which is the better of the two failures.
+        return _musicDesign == EmmentalerFaces.DefaultDesign
+            ? ""
+            : string.Format(Inv, " font-family=\"{0}, Emmentaler, serif\"",
+                            EmmentalerFaces.Family(_musicDesign));
+    }
+
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+            "  <text class=\"music\"{6} x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
+            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
     }
 
     public void DrawNotehead(char glyph, double x, double y, double fontSize,
@@ -150,8 +176,8 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // when it recolors highlights so the transparent box never shows.
         var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+            "  <text class=\"music\"{6} pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
+            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
         _sb.AppendLine(string.Format(Inv,
             "  <rect class=\"nh-hit\" x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\" fill=\"none\" pointer-events=\"all\"{4}/>",
             x, y - inkHeight / 2, inkWidth, inkHeight, SourceAttr()));
@@ -182,8 +208,8 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // notehead's nh-hit rect owns the click.
         var fillAttr = FillAttr(fill);
         _sb.AppendLine(string.Format(Inv,
-            "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
-            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+            "  <text class=\"music\"{6} pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
+            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph), MusicFaceAttr()));
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
@@ -231,6 +257,13 @@ internal sealed class SvgDrawingContext : IDrawingContext
             _currentSourcePosition = prevPos;
             _currentAliases = prevAliases;
         });
+    }
+
+    public IDisposable MusicFace(int rounded)
+    {
+        var prev = _musicDesign;
+        _musicDesign = rounded;
+        return new ScopeAction(() => _musicDesign = prev);
     }
 
     public IDisposable BeginGroup(DrawingTransform transform)

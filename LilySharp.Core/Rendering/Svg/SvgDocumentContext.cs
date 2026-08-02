@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace LilySharp.Core.Rendering.Svg;
@@ -61,6 +62,14 @@ internal sealed class SvgDocumentContext : IDocumentContext
     private string? _result;
     private bool _disposed;
 
+    /// <summary>
+    /// The Emmentaler designs the pages actually drew glyphs from. The header is assembled
+    /// AFTER every page (see <see cref="Assemble"/>), so "embed the faces this score uses"
+    /// is a set the pages fill in as they go — the alternative, always writing all eight
+    /// <c>@font-face</c> rules, would put ~400 KB of base64 into every SVG.
+    /// </summary>
+    private readonly HashSet<int> _usedDesigns = new();
+
     public SvgDocumentContext(SvgDocumentOptions? options = null)
     {
         _options = options ?? new SvgDocumentOptions();
@@ -75,7 +84,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
         _currentContent = new StringBuilder();
         _currentWidth = widthSpaces;
         _currentHeight = heightSpaces;
-        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive);
+        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns);
         return _currentPage;
     }
 
@@ -219,12 +228,31 @@ internal sealed class SvgDocumentContext : IDocumentContext
             // brace face the brace glyph renders blank in any viewer that lacks
             // the font installed (the bug that hid it in the VS Code preview).
             var faces = new StringBuilder();
-            AppendEmbeddedFontFace(faces, "Emmentaler", "emmentaler-20.woff2", "woff2");
+            AppendEmbeddedFontFace(faces, "Emmentaler",
+                EmmentalerFaces.Woff2File(EmmentalerFaces.DefaultDesign), "woff2");
             AppendEmbeddedFontFace(faces, "Emmentaler-Brace", "emmentaler-brace.woff", "woff");
+            // …plus one face per OTHER design this score drew from. Emmentaler is optically
+            // sized, so a grace is the 14 design's own outlines, not the 20's scaled down —
+            // without its face the viewer would draw the small glyphs from the 20 and stop
+            // matching the boxes the layout reserved (GlyphMetrics.AtFontSize).
+            // Sorted so the same score always produces the same bytes.
+            foreach (var design in _usedDesigns.Where(d => d != EmmentalerFaces.DefaultDesign)
+                                               .OrderBy(d => d))
+                AppendEmbeddedFontFace(faces, EmmentalerFaces.Family(design),
+                    EmmentalerFaces.Woff2File(design), "woff2");
             if (faces.Length > 0)
                 return faces.ToString().TrimEnd();
         }
-        return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }";
+        var local = new StringBuilder("@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }");
+        foreach (var design in _usedDesigns.Where(d => d != EmmentalerFaces.DefaultDesign)
+                                           .OrderBy(d => d))
+        {
+            var family = EmmentalerFaces.Family(design);
+            local.AppendLine();
+            local.Append(CultureInfo.InvariantCulture,
+                $"  @font-face {{ font-family: '{family}'; src: local('{family}'); }}");
+        }
+        return local.ToString();
     }
 
     private void AppendEmbeddedFontFace(StringBuilder sb, string family, string fileName, string format)
