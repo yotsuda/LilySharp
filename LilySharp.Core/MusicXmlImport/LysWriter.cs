@@ -298,6 +298,47 @@ internal static class LysWriter
         string? pendingChord = null;
         string? pendingFig = null;
 
+        // ⚠️ MusicXML MARKS EACH NOTE; Lily# (like LilyPond) has a REGION. One region per
+        // maximal run of consecutive cue notes is the only grouping that can round-trip: a
+        // region per note would forbid a beam inside a cue, because a cue region is a voice
+        // of its own and a beam cannot cross it (MEASURED,
+        // audit/lp-geometry/probes/cue-span.ly, book B-BEAM). A <cue/> used to be dropped
+        // outright here — Lily# had nowhere to put it.
+        bool inCue = false;
+        int tupletDepth = 0;
+        void OpenCueIfNeeded(ImportNote n)
+        {
+            if (n.IsCue == inCue)
+                return;
+            if (n.IsCue)
+            {
+                tokens.Add("cue {");
+                inCue = true;
+                return;
+            }
+            CloseCue();
+        }
+        void CloseCue()
+        {
+            if (!inCue)
+                return;
+            // Brackets may not cross. A tuplet that opened inside the run and has not closed
+            // would be cut by the cue's brace, so say so rather than emit music that will not
+            // parse; the notes stay, un-cued.
+            if (tupletDepth > 0)
+            {
+                report.Warn(
+                    "a cue run ends inside a tuplet; the cue braces would cross the tuplet's, "
+                    + "so this run is written without 'cue { … }'.");
+                tokens.RemoveAt(tokens.FindLastIndex(t => t == "cue {"));
+            }
+            else
+            {
+                tokens.Add("}");
+            }
+            inCue = false;
+        }
+
         for (int i = 0; i < items.Count;)
         {
             if (items[i] is ImportHarmony harmony)
@@ -314,6 +355,7 @@ internal static class LysWriter
             }
 
             var note = (ImportNote)items[i];
+            OpenCueIfNeeded(note);
             if (note.IsRest)
             {
                 tokens.Add("r" + Value(note.NoteValue, note.Dots));
@@ -364,15 +406,24 @@ internal static class LysWriter
 
             // Wrap a tuplet group: `tuplet A/N { … }` around the notes it spans.
             if (note.TupletStart is { } tr)
+            {
                 tokens.Add($"tuplet {tr.Actual}/{tr.Normal} {{");
+                tupletDepth++;
+            }
             // Leading grace notes hang before the main note (inside any tuplet wrap).
             if (graceToken != null)
                 tokens.Add(graceToken);
             tokens.Add(token);
             if (note.TupletStop)
+            {
                 tokens.Add("}");
+                tupletDepth = Math.Max(0, tupletDepth - 1);
+            }
             i = j;
         }
+
+        // A run that reaches the end of the measure closes here.
+        CloseCue();
 
         return tokens.Count == 0 ? "r" + "1" : string.Join(" ", tokens);
     }

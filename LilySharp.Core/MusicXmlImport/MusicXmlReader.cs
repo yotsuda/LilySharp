@@ -389,17 +389,14 @@ internal static class MusicXmlReader
 
     private static ImportNote? ReadNote(XElement el, int divisions, ImportReport report, int measureNo)
     {
-        // Grace notes are handled by the caller (attached as leading grace); a cue
-        // note is dropped for now.
-        if (Local(el, "cue") != null)
-        {
-            report.Warn(measureNo, "cue note dropped.");
-            return null;
-        }
-
+        // Grace notes are handled by the caller (attached as leading grace).
+        // ⚠️ A <cue/> is NOT dropped any more. It used to be — "cue note dropped." — because
+        // Lily# spelled a cue per note and had nowhere sensible to put it; now Lily# has the
+        // region LilyPond has, and the serializer groups consecutive cue notes into one.
         var note = new ImportNote
         {
             ChordWithPrev = Local(el, "chord") != null,
+            IsCue = Local(el, "cue") != null,
         };
 
         var (value, dots) = NoteValue(el, divisions);

@@ -176,6 +176,18 @@ internal sealed class ImportNote : ImportItem
     public int TremoloMarks { get; set; }
     /// <summary>Sung syllables, one per verse, in MusicXML note order.</summary>
     public List<ImportLyric> Lyrics { get; } = new();
+    /// <summary>
+    /// MusicXML's <c>&lt;cue/&gt;</c> — this note is a cue.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TWO FORMATS DISAGREE ON THE UNIT and the serializer is where they are
+    /// reconciled: MusicXML marks each note, Lily# (like LilyPond) has a REGION,
+    /// <c>cue { … }</c>. <see cref="LysWriter"/> emits one region per maximal run of
+    /// consecutive cue notes, which is the only reading that can round-trip — a region
+    /// per note would forbid a beam inside a cue, since a Lily# cue region is a voice of
+    /// its own and a beam cannot cross it (MEASURED, audit/lp-geometry/probes/cue-span.ly).
+    /// </remarks>
+    public bool IsCue { get; set; }
 }
 
 /// <summary>
