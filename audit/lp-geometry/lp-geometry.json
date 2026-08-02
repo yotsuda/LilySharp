@@ -2369,6 +2369,20 @@
       "residual": 0.0,
       "why": "OPENED 2026-07-30 (session 46) -- the same guard for hairpin.page.quiet.last-staff-to-foot. MEASURED (Lily#): 12, exact."
     },
+    "ottava.label.ink-height": {
+      "probe": "ottava-floor.ly",
+      "score": "OTC",
+      "lilypond": 1.5840627276082676,
+      "residual": -0.288062616,
+      "why": "OPENED 2026-08-02 (session 73), the first entry that reads the ottava LABEL instead of reading THROUGH it. Session 73 named OTC's +0.027480 by asking LilyPond for the two profiles rather than subtracting totals, and the mover's half of it is the label's OWN OUTLINE at the binding x -- so the port has to move the DRAWING with the reservation, and the drawing's two claims (how big the label is, where it sits about the line) need observers first. MEASURED (LilyPond, ottava-floor.ly OTC): the OttavaBracket's Y-extent is (-0.7920313638041337 . 0.7920313638041339), and that extent IS the centred label's ink (ottava-bracket.cc erases the bracket's own box -- 'vertical lines should not take space' -- so only the text counts), giving an ink height of 1.5840627276082676. The size behind it: OttavaBracket declares font-series bold and font-shape italic and NO font-size (scm/define-grobs.scm:2708-2731), so the label rides the undeclared text font size, the 2.2 the TextScript pair measured. PREDICTION for Lily# (before its run, sign certain NEGATIVE): DrawOttavaBrackets draws at FontSize * 0.45 = 1.8, whose ink height is 1.296000112 -- residual -0.288062616. That would be the em mislabel's FOURTH instance (lyrics 3.2, chords 2.6, TextScript 2.4 -- HANDOFF 5.0's 'a font-quantity label is weak'). ⚠️ AFTER the port this entry lands at 1.584000136, NOT at zero: -0.0000626 is the face/flattening noise every ink reading here carries (textscript.stacked.box-step sits at -4.8e-5). Driving it closer to zero than that would be fitting, not porting. MEASURED (Lily#, before the port): 1.296000112, residual -0.288062616 -- the prediction TO THE DIGIT, so the label really is drawn at 1.8 and the em mislabel has a fourth instance."
+    },
+    "ottava.label.line-to-ink-centre": {
+      "probe": "ottava-floor.ly",
+      "score": "OTC",
+      "lilypond": 0.0,
+      "residual": 0.621000054,
+      "why": "OPENED 2026-08-02 (session 73), the pair's second half: WHERE the label sits about the drawn line. MEASURED (LilyPond): 0 BY CONSTRUCTION -- lily/ottava-bracket.cc Ottava_bracket::print calls text.align_to (Y_AXIS, CENTER) and then builds the line at the stencil's own Y=0, and the grob's symmetric extent (-0.7920313638041337 . 0.7920313638041339) is that centring showing through in the dump. This is the DRAWING claim ottava-floor.ly's header has carried as unmeasured since session 30 ('Lily# draws the TEXT's BASELINE on the line where LilyPond centres the text's INK on it -- that second claim is a DRAWING difference the rel dump cannot see'). PREDICTION for Lily# (before its run, sign certain POSITIVE): DrawOttavaBrackets passes the line's Y straight to DrawText as the baseline, so the ink centre sits (Top+Bottom)/2 above it = +0.621000054 at the current size 1.8, and +0.759000066 once the size lands at 2.2 -- the two entries are NOT independent, and the SIZE must land first or this one reads a number that belongs to neither engine. FALSIFIER: a Lily# reading near 0 means the draw already centres the ink and this reading of DrawOttavaBrackets is wrong -- find that before touching the draw. ⚠️ This entry must land EXACT (0 is arithmetic on both sides, not a measurement); a residual of the ink-height's noise size would mean the centring was spelled from the same ink twice instead of from the anchor. MEASURED (Lily#, before the port): 0.621000054, residual +0.621000054 -- the prediction TO THE DIGIT; the falsifier did not fire, the draw does put the baseline on the line."
+    },
     "ottava.lower-staff.staff-to-line": {
       "probe": "ottava-floor.ly",
       "score": "OTL",

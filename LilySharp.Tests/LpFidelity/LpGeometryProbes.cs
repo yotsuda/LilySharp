@@ -7363,6 +7363,32 @@ internal static class LpGeometryProbes
         // support-arithmetic reading (padding 0.5 + the label's half-ink to the EDGE).
         new("ottava.floor.staff-to-line", OTF, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
         new("ottava.support.staff-to-line", OTC, g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
+        // Round 3 (book OTC again) — the LABEL, which every entry above reads THROUGH
+        // without ever reading it. Session 73 named OTC's +0.027480 by dumping the two
+        // profiles instead of subtracting totals, and the mover's half of it turned out to
+        // be the label's own outline; these two open what that outline is made of, because
+        // the port has to move the DRAWING with the reservation or the island splits into
+        // "what is measured" and "what is drawn" (HANDOFF 5.0, the state the grace island
+        // exists to prevent).
+        //   * ink-height: LilyPond's label rides the undeclared text font size — 2.2, the
+        //     em the TextScript pair measured — and its grob extent is the centred ink, so
+        //     LilyPond reads 2 × 0.7920313638041338 = 1.5840627276082676. PREDICTION for
+        //     Lily# (before its run, sign certain NEGATIVE): DrawOttavaBrackets draws at
+        //     FontSize × 0.45 = 1.8, giving 1.296000112 — residual −0.288062616. This is
+        //     the em mislabel's FOURTH instance (lyrics 3.2, chords 2.6, TextScript 2.4).
+        //     ⚠️ After the port it lands at 1.584000136, NOT at zero: −0.0000626 is the
+        //     face/flattening noise the other ink readings carry (textscript box-step sits
+        //     at −4.8e-5). Anything closer to zero than that is a fit, not a port.
+        //   * line-to-ink-centre: 0 BY CONSTRUCTION for LilyPond (ottava-bracket.cc centres
+        //     the text on the line). PREDICTION for Lily# (sign certain POSITIVE): the draw
+        //     puts the BASELINE on the line, so the centre sits (Top+Bottom)/2 above it =
+        //     +0.621000054 at the current 1.8, and would be +0.759000066 at 2.2 — i.e. the
+        //     two entries are NOT independent and the size must land first. FALSIFIER: a
+        //     Lily# reading near 0 means the draw already centres and this whole reading of
+        //     DrawOttavaBrackets is wrong — find that before touching the draw.
+        new("ottava.label.ink-height", OTC, g => g.OttavaLabelInkHeight(), RaggedBottomPaper),
+        new("ottava.label.line-to-ink-centre", OTC,
+            g => g.OttavaLabelInkCentreToLine(), RaggedBottomPaper),
         // Round 2 (book OTL) — the ottava's face of the guard three above-staff movers
         // carry. LilyPond repeats OTC's number on the lower staff to fifteen digits (its
         // pass is per-VerticalAxisGroup); Lily#'s guard skips the pass, which for THIS grob

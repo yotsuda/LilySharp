@@ -913,6 +913,18 @@ internal sealed class RenderedGeometry
 
     private double SoleRuleAboveStaff(string what, int page, int staff = -1)
     {
+        var (refpoint, ruleY) = SoleRuleAboveStaffRaw(what, page, staff);
+        return refpoint - ruleY;
+    }
+
+    /// <summary>
+    /// The same selection, handing back the two DEVICE Y's instead of their difference —
+    /// for a reading about the rule itself rather than about the staff (the ottava label's
+    /// ink centre, ledger <c>ottava.label.line-to-ink-centre</c>).
+    /// </summary>
+    private (double Refpoint, double RuleY) SoleRuleAboveStaffRaw(
+        string what, int page, int staff = -1)
+    {
         // ⚠️ Self-contained on purpose: the spanner line is itself a long horizontal rule
         // of staff-line thickness, so StaffRefpoints' predicate would count SIX lines
         // here and refuse the page. What separates them is the LEFT END: the five staff
@@ -959,7 +971,72 @@ internal sealed class RenderedGeometry
                 + $"the staff ({what}), found {ys.Count} — the probe is not "
                 + "measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
-        return refpoint - ys[0];
+        return (refpoint, ys[0]);
+    }
+
+    /// <summary>
+    /// The ottava bracket's LABEL — the page's only serif run in the ottava books.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Told apart by FACE alone, not by size, on purpose: the size IS what one of the
+    /// two entries below measures, so a size filter would make the reading circular
+    /// (<see cref="CustomTexts"/> can afford one because the script's size is not in
+    /// question). The count guard is what keeps the selection honest — a book that grows
+    /// a second serif run fails loudly instead of returning the wrong one.
+    /// </remarks>
+    private DrawnText SoleSerifText(string what, int page)
+    {
+        var texts = Texts.Where(t => t.FontFamily != "sans-serif").ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE serif text run ({what}), found "
+                + $"{texts.Count} — the probe is not measuring what it claims."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return texts[0];
+    }
+
+    /// <summary>
+    /// The ottava LABEL's own ink height — the drawn "8va" measured at the face, size and
+    /// style <c>DrawOttavaBrackets</c> draws it with.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's OttavaBracket declares <c>font-series bold</c> and <c>font-shape italic</c>
+    /// and NO font-size (scm/define-grobs.scm:2708-2731), so its label rides the text font
+    /// size every undeclared text grob rides — the 2.2 the TextScript pair measured
+    /// (ledger <c>textscript.*</c>, HANDOFF: the em mislabel, three times before this one).
+    /// The grob's Y-extent is the centred label's ink, so LilyPond's half of this reading is
+    /// its <c>ext</c> doubled: 2 × 0.7920313638041338.
+    /// </remarks>
+    public double OttavaLabelInkHeight(int page = 0)
+    {
+        var t = SoleSerifText("the ottava label", page);
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.BoldItalic);
+        return ink.Top - ink.Bottom;
+    }
+
+    /// <summary>
+    /// How far the ottava LABEL's ink CENTRE sits above the drawn bracket LINE.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-bracket.cc <c>Ottava_bracket::print</c> —
+    /// <c>text.align_to (Y_AXIS, CENTER)</c> before the line is built at the stencil's own
+    /// Y=0, so LilyPond's answer is 0 BY CONSTRUCTION, and the grob's symmetric extent
+    /// (−0.7920313638041337 . 0.7920313638041339) is that centring showing through.
+    /// <c>DrawOttavaBrackets</c> puts the label's BASELINE there instead, so this reads the
+    /// baseline-vs-centre difference the ottava-floor probe's header has flagged as an
+    /// unmeasured DRAWING claim since session 30.
+    /// </remarks>
+    public double OttavaLabelInkCentreToLine(int page = 0, int staff = -1)
+    {
+        var (_, lineY) = SoleRuleAboveStaffRaw("the ottava line", page, staff);
+        var t = SoleSerifText("the ottava label", page);
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.BoldItalic);
+        // Device Y is DOWN-positive; the ink centre sits (Top+Bottom)/2 ABOVE the baseline.
+        return (lineY - t.Y) + (ink.Top + ink.Bottom) / 2;
     }
 
     /// <summary>
