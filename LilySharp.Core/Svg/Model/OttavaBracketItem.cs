@@ -56,5 +56,14 @@ public sealed record OttavaBracketItem(
     int SourceIndex = -1,
     // The staff this ottava was authored on (0 = the first/only staff).
     // The bracket is stacked over/under THAT staff on a grand staff.
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    // Index, within the start measure, of the NOTE the ottava mark was written on —
+    // the spanner's LEFT BOUND. -1 when the mark did not resolve to a note, and then
+    // the measure's own origin stands in for it.
+    // LILYPOND-REF: lily/ottava-bracket.cc:121-176 Ottava_bracket::print — span_points[LEFT]
+    //   is the BOUND note column's note-heads' X extent, not the measure's. Measured:
+    //   ledger ottava.x.label-to-notehead read -2.800000000 against LilyPond's -0.800000000
+    //   while this was the measure's origin, and -2.0 is exactly the clef-and-time-signature
+    //   gap the first column sits past it.
+    int StartItemIndex = -1
 );

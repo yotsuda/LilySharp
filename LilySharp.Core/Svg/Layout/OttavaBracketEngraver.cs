@@ -145,23 +145,28 @@ internal static class OttavaBracketEngraver
     private const double RightShorten = -0.6;
 
     /// <summary>
-    /// The gap between the label's advance and the dashed line's left end.
+    /// The gap between the label's INK right and the dashed line's left end.
     /// </summary>
-    /// <remarks>⚠️ LILYSHARP-OWN. LilyPond builds the line from the label stencil's own
-    /// right edge inside <c>Ottava_bracket::print</c>; its OTC dump has the label's ink
-    /// ending at 8.997254 and the line starting at 9.298302, i.e. 0.301 of INK-to-line
-    /// where this spends 0.5 of ADVANCE-to-line. No ledger point reads the ottava's X, so
-    /// this stays as it was rather than becoming a second unobserved invention — but it is
-    /// now spelled ONCE, for the draw and for both skyline consumers, instead of being
-    /// recomputed in the renderer.</remarks>
-    private const double LabelLineGap = 0.5;
+    /// <remarks>LILYPOND-REF: lily/ottava-bracket.cc:124-135 Ottava_bracket::print —
+    /// <c>text_size = text.extent (X_AXIS)[RIGHT] + 0.3</c>, and the source's own comment
+    /// beside it is "0.3 is ~ italic correction".
+    /// MEASURED: ledger ottava.x.line-start-to-notehead — the 0.5 spent off the ADVANCE
+    /// until 2026-08-02 put the line 2.937897638 too far right in the OTC book, which the
+    /// bracket's 2.0-early bound then partly cancelled.</remarks>
+    private const double LabelLineItalicCorrection = 0.3;
 
     /// <summary>
-    /// Where the dashed line starts: past the label's advance plus
-    /// <see cref="LabelLineGap"/>. The one spelling the draw and the reservations share.
+    /// Where the dashed line starts: past the label's INK right plus
+    /// <see cref="LabelLineItalicCorrection"/>. The one spelling the draw and the
+    /// reservations share.
     /// </summary>
+    /// <remarks>⚠️ The INK right, not the advance — LilyPond's text stencils carry ink
+    /// extents, and the side bearing is exactly what the 0.3 italic correction is sized
+    /// against.</remarks>
     internal static double LineStartX(string text, double startX, double fontSize)
-        => startX + TextFontMetrics.SerifBold(text, fontSize) + LabelLineGap;
+        => startX
+           + TextFontMetrics.InkX(text, fontSize, sans: false, FontStyle.BoldItalic).Right
+           + LabelLineItalicCorrection;
 
     /// <summary>
     /// The bracket's OWN vertical skyline pair about its LINE at <paramref name="lineY"/>:
@@ -286,7 +291,26 @@ internal static class OttavaBracketEngraver
                 var segStartMeasure = measureLayouts[segment.StartMeasureIndex];
                 var segEndMeasure = measureLayouts[segment.EndMeasureIndex];
 
-                double startX = segStartMeasure.X + LeftShorten;
+                // The LEFT BOUND is the ottava's own start NOTE COLUMN, shortened by
+                // LeftShorten — not the measure's origin, which on a first measure sits a
+                // clef and a time signature to the left of it (ledger
+                // ottava.x.label-to-notehead read -2.800000000 against LilyPond's
+                // -0.800000000 while this was the measure, and -2.0 was exactly that gap).
+                // LILYPOND-REF: lily/ottava-bracket.cc:121-176 Ottava_bracket::print —
+                //   span_points[LEFT] = ext[LEFT], ext being the union of the BOUND NOTE
+                //   COLUMN's note-heads' X extents, then span_points[d] -= d * shorten[d].
+                // ⚠️ Named approximation: LilyPond unites the note-HEADS' extents, so a
+                //   chord with a shifted head starts its bracket further left than the
+                //   column's X; Lily# reads the column. No book has such a chord under an
+                //   ottava — the next step there is a book, not a widening.
+                // ⚠️ A CONTINUATION piece keeps the measure's origin: its bound is broken,
+                //   and LilyPond's broken branch takes generic_bound_extent and sets
+                //   shorten to 0, which is a different arithmetic with no point on it yet.
+                double startX = segment.IsFirst && bracket.StartItemIndex >= 0
+                        && bracket.StartItemIndex < segStartMeasure.Items.Length
+                    ? segStartMeasure.X + segStartMeasure.Items[bracket.StartItemIndex].X
+                        + LeftShorten
+                    : segStartMeasure.X + LeftShorten;
                 double endX = segEndMeasure.X + segEndMeasure.Width + RightShorten;
 
                 // First segment shows the bare text ("8va"); continuation pieces use "(8va)".
@@ -504,7 +528,12 @@ internal static class OttavaBracketEngraver
                     EndMeasureIndex: endMeasure,
                     SourcePosition: mark.SourcePosition,
                     SourceIndex: srcIndex,
-                    StaffIndex: mark.StaffIndex
+                    StaffIndex: mark.StaffIndex,
+                    // The note the mark was written on IS the spanner's left bound. The
+                    // collector already anchors ottava marks to their host column
+                    // (MeasureCollector.Annotations, the compound-mark path), so this is a
+                    // hand-over, not a new resolution.
+                    StartItemIndex: mark.AnchorItemIndex
                 ));
             }
         }

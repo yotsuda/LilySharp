@@ -94,11 +94,11 @@
   <rect x="29.05" y="22.50" width="0.19" height="4.00" data-pos="946"/>
   <rect x="42.28" y="22.50" width="0.19" height="4.00" data-pos="969"/>
   <rect x="42.77" y="22.50" width="0.60" height="4.00" data-pos="969"/>
-  <text x="14.40" y="10.43" font-size="2.20" font-weight="bold" font-style="italic" data-pos="847">8va</text>
-  <line x1="18.85" y1="9.67" x2="28.64" y2="9.67" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="847"/>
+  <text x="16.40" y="10.43" font-size="2.20" font-weight="bold" font-style="italic" data-pos="847">8va</text>
+  <line x1="20.61" y1="9.67" x2="28.64" y2="9.67" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="847"/>
   <line x1="28.64" y1="9.67" x2="28.64" y2="10.47" stroke="#000000" stroke-width="0.100" data-pos="847"/>
-  <text x="14.40" y="29.35" font-size="2.20" font-weight="bold" font-style="italic" data-pos="919">8vb</text>
-  <line x1="18.94" y1="28.55" x2="28.64" y2="28.55" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="919"/>
+  <text x="16.40" y="29.35" font-size="2.20" font-weight="bold" font-style="italic" data-pos="919">8vb</text>
+  <line x1="20.41" y1="28.55" x2="28.64" y2="28.55" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="919"/>
   <line x1="28.64" y1="28.55" x2="28.64" y2="27.75" stroke="#000000" stroke-width="0.100" data-pos="919"/>
   <rect x="8.80" y="8.64" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="822"/>
   <text x="9.73" y="10.84" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="822">S</text>

@@ -66,7 +66,8 @@ public static class TextFontMetrics
     public const string SansFamily = "TeX Gyre Heros";
 
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style), SKTypeface> Faces = new();
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), (double Advance, double Bottom, double Top)>
+    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text),
+        (double Advance, double Bottom, double Top, double Left, double Right)>
         Cache = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), SKPath> Paths = new();
 
@@ -126,12 +127,30 @@ public static class TextFontMetrics
         return top - bottom;
     }
 
+    /// <summary>
+    /// The HORIZONTAL ink extent of <paramref name="text"/> in staff spaces, relative to
+    /// the PEN origin: where the drawn glyphs actually start and stop, which is shorter
+    /// than <see cref="Advance"/> by the side bearings.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's text stencils carry INK extents, not advances, so a port that measures
+    /// off a label's right edge wants this and not the advance — e.g. the ottava's
+    /// <c>text_size = text.extent (X_AXIS)[RIGHT] + 0.3</c>
+    /// (lily/ottava-bracket.cc:124-135 Ottava_bracket::print).
+    /// </remarks>
+    public static (double Left, double Right) InkX(string text, double fontSize,
+        bool sans = false, FontStyle style = FontStyle.Regular)
+    {
+        var m = Measure(text, sans, style);
+        return (m.Left * fontSize, m.Right * fontSize);
+    }
+
     /// <summary>Per-em metrics of one string, cached.</summary>
-    private static (double Advance, double Bottom, double Top) Measure(
+    private static (double Advance, double Bottom, double Top, double Left, double Right) Measure(
         string text, bool sans, FontStyle style)
     {
         if (string.IsNullOrEmpty(text))
-            return (0, 0, 0);
+            return (0, 0, 0, 0, 0);
         return Cache.GetOrAdd((sans, style, text), static key =>
         {
             var typeface = Face(key.Sans, key.Style);
@@ -141,11 +160,12 @@ public static class TextFontMetrics
             double advance = AdvancePerEm(key.Text, typeface, paint);
             var path = OutlinePath(key.Text, key.Sans, key.Style);
             if (path.IsEmpty)
-                return (advance, 0, 0);
+                return (advance, 0, 0, 0, 0);
             var b = path.Bounds;
             // Skia's path is Y-DOWN about the baseline: Top is negative above it. Reflect
-            // to this engine's Y-up ink convention.
-            return (advance, -b.Bottom / 1000.0, -b.Top / 1000.0);
+            // to this engine's Y-up ink convention. X needs no reflection.
+            return (advance, -b.Bottom / 1000.0, -b.Top / 1000.0,
+                    b.Left / 1000.0, b.Right / 1000.0);
         });
     }
 
