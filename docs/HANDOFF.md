@@ -99,7 +99,7 @@ emmentaler-{11,13,14,16,18,23,26}.woff2 を新規同梱（各 52KB／.otf は 10
 `EngravingDefaults.OssiaScale = 0.7071`（**4 桁丸め**・magstep(-3) は 0.70710678）・
 `ArticulationEngraver.EditorialScale = 0.7937`・**cue の 0.66**（`SharedRenderer.Noteheads` ほか・
 **LP の出所が見えない**）。**テーブルを繋ぐ前にこの 3 つの出所を決めること。**
-**未 push 80**（**この引継ぎ commit まで数えた値**）・
+**未 push 82**（**この引継ぎ commit まで数えた値**）・
 テスト **3838 passed / 0 failed / 3 skipped**（**+14**）・
 台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
