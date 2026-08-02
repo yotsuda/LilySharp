@@ -83,6 +83,18 @@ internal static class BezierBow
     /// so the two answers are different BRANCHES and not merely different numbers.
     /// audit/lp-geometry <c>tie.direction.beam-opposes-stem</c> is the book that says so.
     /// </para>
+    /// <para>
+    /// ⚠️ NOT A LITERAL PORT, and the debt is the missing器: LilyPond writes
+    /// <c>slur_shape (…).curve_point (0.5)</c> because it HAS a Bezier that can be evaluated
+    /// (lily/bezier.cc <c>Bezier::curve_point</c>), and this engine has no Bezier type at all
+    /// — every bow is four loose tuples carried to the renderer. So the value is written as
+    /// the closed form of that same evaluation instead. ⚠️ THE FACTOR IS EXACT, not an
+    /// approximation: with <c>slur_shape</c>'s ends at Y 0 and both middle controls at Y
+    /// <c>h</c>, the cubic at t=0.5 is <c>(0 + 3h + 3h + 0) / 8</c>. TO MAKE IT LITERAL, give
+    /// the layout a Bezier with <c>curve_point</c> and let this call it — the slur scorer
+    /// samples its own curve by hand too (<c>SlurScoringProblem.InterpolateSlurY</c>), so
+    /// that器 would have two readers, not one.
+    /// </para>
     /// </remarks>
     public static double MidpointHeight(double heightLimit, double ratio, double width)
         => 0.75 * Height(heightLimit, ratio, width);

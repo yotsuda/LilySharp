@@ -310,6 +310,20 @@ internal sealed class TieFormattingProblem
     /// only as a PENALTY, in <see cref="ScoreAptitude"/>, and only when the two bounds agree
     /// about them.
     /// </para>
+    /// <para>
+    /// ⚠️ TWO LILYPOND FUNCTIONS FOLDED INTO ONE. There, an imposed direction is already in
+    /// the configuration before the standard directions run — <c>generate_base_chord_configuration</c>
+    /// copies <c>spec.manual_dir_</c> into it (:944-945) and
+    /// <c>set_ties_config_standard_directions</c> then skips it with <c>if (!dir_)</c> — so
+    /// the two steps are a write and a fill-in-the-blank. This engine has no configuration to
+    /// write into ahead of time (candidates are generated on demand), so the same precedence
+    /// is spelt as one chain. TO MAKE IT LITERAL, the candidate set would have to be built
+    /// from a seeded base configuration the way LilyPond's is.
+    /// ⚠️ AND ONLY THE ONE-TIE BRANCH IS HERE: LilyPond's same function also distributes a
+    /// CHORD's directions (front DOWN / back UP / seconds split, :1044-1084), which Lily#
+    /// does in <c>TieDetector.EmitChordTies</c> because it solves a column one tie at a time.
+    /// That split is named there.
+    /// </para>
     /// </remarks>
     private int BaseDirection()
     {
@@ -586,20 +600,8 @@ internal sealed class TieFormattingProblem
         // (and asserted by a test) and never read. audit/lp-geometry
         // tie.direction.beam-opposes-stem is decided by 2.02 against 2.04 and is the book
         // that says so.
-        foreach (var (head, attachment) in new[]
-                 {
-                     (_startHead, config.StartX),
-                     (_endHead, config.EndX),
-                 })
-        {
-            if (head is not { } h)
-                continue;   // no head on this side (broken piece, tab digit)
-            double gap = attachment < h.Left ? h.Left - attachment
-                       : attachment > h.Right ? attachment - h.Right
-                       : 0.0;
-            config.Demerits += _details.HorizontalDistancePenaltyFactor
-                               * BezierBow.ConvexAmplifier(1.25, 1.0, gap);
-        }
+        config.Demerits += HorizontalDistancePenalty(_startHead, config.StartX);
+        config.Demerits += HorizontalDistancePenalty(_endHead, config.EndX);
 
         // --- Direction preference (same dir as stem) ---
         ScoreDirectionAgainstStems(config, dir);
@@ -607,6 +609,36 @@ internal sealed class TieFormattingProblem
         // --- Tie-tie collision ---
         // LILYPOND-REF: tie-formatting-problem.cc:847-912 score_ties_configuration()
         ScoreTieTieCollision(config);
+    }
+
+    /// <summary>
+    /// One END's share of the horizontal-distance penalty: how far its attachment lies
+    /// OUTSIDE the head it belongs to, amplified. Zero when that bound has no head.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:665-683 score_aptitude —
+    /// <c>head_x.distance (conf-&gt;attachment_x_[d])</c> times
+    /// <c>convex_amplifier (1.25, 1.0, …)</c>, skipped when <c>note_head_drul_[d]</c> is null.
+    /// <para>
+    /// ⚠️ <c>Interval::distance</c> IS SPELT OUT HERE rather than called, because this engine
+    /// has no Interval type — LilyPond's is a first-class value with <c>distance</c>,
+    /// <c>widen</c>, <c>linear_combination</c> and <c>intersect</c> on it (lily/interval.hh),
+    /// and the tie code alone uses all four. The arithmetic is that function's, verbatim:
+    /// zero inside, otherwise the gap to the nearer end. TO MAKE IT LITERAL, give the layout
+    /// an Interval — the two <c>widen</c>s in <see cref="GetAttachment"/> and the
+    /// <c>intersect</c> the chord outline still needs (:565-579) would all read as LilyPond's
+    /// own lines instead of as open code.
+    /// </para>
+    /// </remarks>
+    private double HorizontalDistancePenalty((double Left, double Right)? head, double attachment)
+    {
+        if (head is not { } h)
+            return 0.0;   // no head on this side (a broken piece, a tab digit)
+        double distance = attachment < h.Left ? h.Left - attachment
+                        : attachment > h.Right ? attachment - h.Right
+                        : 0.0;
+        return _details.HorizontalDistancePenaltyFactor
+               * BezierBow.ConvexAmplifier(1.25, 1.0, distance);
     }
 
     /// <summary>
@@ -628,12 +660,18 @@ internal sealed class TieFormattingProblem
     /// music with that beam reversed, and LilyPond answers them oppositely.
     /// </para>
     /// <para>
-    /// ⚠️ SKIPPED WHEN A DIRECTION IS IMPOSED, where LilyPond skips it when the COLUMN holds
-    /// more than one tie (<c>ties_conf-&gt;size () == 1</c>, :685). The two agree on the
-    /// outcome: an imposed direction admits only its own candidates
-    /// (<see cref="GenerateCandidates"/>), so this term would be the same constant on all of
-    /// them and could not move the winner. A chord's ties are exactly the ties Lily# imposes
-    /// a direction on, which is why the gate can be stated on this side.
+    /// ⚠️ THE GATE IS NOT LILYPOND'S, and the difference is stated rather than hidden.
+    /// LilyPond skips this term when the COLUMN holds more than one tie
+    /// (<c>ties_conf-&gt;size () == 1</c>, :685); this asks instead whether a direction was
+    /// imposed. The two agree on the OUTCOME — an imposed direction admits only its own
+    /// candidates (<see cref="GenerateCandidates"/>), so the term would be the same constant
+    /// on all of them and could not move the winner, and a chord's ties are exactly the ties
+    /// this engine imposes a direction on. ⚠️ THEY WOULD STOP AGREEING if a one-tie column
+    /// ever arrived with an imposed direction AND candidates in both directions; nothing
+    /// produces that today. TO MAKE IT LITERAL, the problem would have to be handed the
+    /// column (all its ties at once) instead of one tie plus the others' finished layouts —
+    /// the same restructuring the chord OUTLINE needs (audit/lp-geometry
+    /// <c>tie.width.seconds.upper</c>), which is where it should be done.
     /// </para>
     /// </remarks>
     private void ScoreDirectionAgainstStems(TieCandidate config, int dir)

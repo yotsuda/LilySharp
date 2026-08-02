@@ -1133,10 +1133,21 @@ internal sealed class ElementCoordinator
                     // does not apply to fret digits), so keep the edge/centre rule a no-op here.
                     segStartCenterX = segStartX;
                     segEndCenterX = segEndX;
-                    // ...and for the same reason there is no head extent to measure the
-                    // horizontal distance against: a TabNoteHead is a digit, not a NoteHead,
-                    // and Lily# chooses a tab tie's side from the STRING anyway (below), which
-                    // is a Lily#-own feature and not something LilyPond is asked about.
+                    // LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+                    // (tie-formatting-problem.cc:665-683) scores 0 for BOTH ends here and the
+                    // attachment is whatever the digit rule above chose.
+                    //   departs from: :670, `spec.note_head_drul_[d]->extent (…)`. LilyPond
+                    //     builds that from a TabNoteHead like any other head, so it HAS the
+                    //     term; this engine's tab tie is anchored to a fret digit's edge by a
+                    //     rule of its own (see just above), and there is no box for the
+                    //     penalty to measure against that would mean the same thing.
+                    //   goes away when: the tab tie stops being a Lily#-own placement — i.e.
+                    //     when a tab digit carries a head extent the scorer can read. That is
+                    //     a decision, not a defect: HANDOFF 3 records that Lily# chooses a
+                    //     tab tie's SIDE from the string, which LilyPond is not asked about.
+                    //   observed by: NOTHING. There is no ledger point on a tab tie's width,
+                    //     and there cannot be one until the tab fixtures pin their strings
+                    //     (HANDOFF 1's "tab の残り 3 冊"). test/tab-tie holds the drawing only.
                     startHead = null;
                     endHead = null;
                     // On a tab the tie connects two fret digits on ONE string, so it
