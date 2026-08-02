@@ -994,12 +994,14 @@ public sealed partial class MeasureCollector
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
-            var (partClef, partOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _meta.Clef = partClef;
             _meta.ClefPosition = partClefPos;
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
-            _octave.OctaveBase = partOctave ?? 4;
+            // ABSOLUTE mode sees the part's OWN `octave N` and nothing else — not the preset
+            // and not the clef. See GetPartDefaults' remarks for what folding them cost.
+            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
             ApplyTranspose(partTranspose);
             // A part-header key overrides the file key for THIS part (CollectDefinitions
             // left the global key in place; a part that sets none keeps it).
@@ -1258,14 +1260,15 @@ public sealed partial class MeasureCollector
             }
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             _meta.Clef = partClef ?? "treble";
             _meta.ClefPosition = partClefPos;
 
             // Set initial octave: explicit > instrument default > clef default
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             _octave.InitialOctave = _octave.CurrentOctave;
-            _octave.OctaveBase = partOctave ?? 4;
+            // …and the ABSOLUTE base from the part's OWN `octave N` alone (see GetPartDefaults).
+            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
             _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
@@ -2171,7 +2174,26 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
+    /// <remarks>
+    /// ⚠️ <paramref name="octave"/> AND <paramref name="explicitOctave"/> ARE NOT THE SAME
+    /// QUANTITY and the caller must not use one for the other. <c>octave</c> is the RELATIVE
+    /// mode's anchor and folds in the instrument preset (explicit &gt; preset &gt; clef, the
+    /// chain InstrumentDefaults.AnchorOctave spells); <c>explicitOctave</c> is only what the
+    /// part WROTE, and it is all that ABSOLUTE mode may see
+    /// (InstrumentDefaults.AbsoluteBaseOctave). Folding them was a real defect until
+    /// 2026-08-02: the preset's octave reached the absolute base, so `octave absolute` was
+    /// not absolute at all. MEASURED then, one `c4` per part:
+    ///   instrument bass   drew C3 and sounded C3 — the preset's −1 octave silently CANCELLED
+    ///                     the instrument's own −12, so a bass sounded what it printed.
+    ///   instrument flute  drew C5 and sounded C4 — a −12 on a non-transposing instrument.
+    ///   instrument tuba   drew C2 and sounded C4 — the two shifts ADDED, to +24.
+    ///   instrument guitar drew C4 and sounded C3 — the only correct one, and correct because
+    ///                     its octave rides a treble_8 CLEF and never went through here.
+    /// The written→sounding shift is one mode-independent quantity
+    /// (PartHeaderDefaults.SoundingShiftSemitones); only the ANCHOR is per-mode, which is what
+    /// the two modes are for. See AbsoluteModeAnchorTests.
+    /// </remarks>
+    private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
@@ -2229,10 +2251,10 @@ public sealed partial class MeasureCollector
                 resolvedOctave ??= defaultOctave;
             }
 
-            return (resolvedClef, resolvedOctave, transpose, clefPos, partKey);
+            return (resolvedClef, resolvedOctave, octave, transpose, clefPos, partKey);
         }
 
-        return (null, null, null, 0, null);
+        return (null, null, null, null, 0, null);
     }
 
     // Applies a part-header key as THIS part's written key: mirrors the global-key
